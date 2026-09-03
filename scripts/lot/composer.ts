@@ -28,8 +28,11 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
+import { LIVREE } from './avancement';
 
-const STATUTS_TERMINES = new Set(['fusionnee', 'deployee', 'verifiee']);
+// La cinquieme copie de l'ensemble « livree », sous un autre nom — c'est ainsi qu'un doublon
+// echappe a une recherche. Elle se DERIVE desormais du bareme unique de `./avancement`.
+const STATUTS_TERMINES = LIVREE;
 const HEURES_AVANT_REPRISE = 6;
 
 interface Tache {

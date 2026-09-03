@@ -40,6 +40,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 
 const CHEMIN_GABARIT = '.github/PULL_REQUEST_TEMPLATE.md';
 const CHEMIN_CODEOWNERS = '.github/CODEOWNERS';
@@ -93,7 +94,23 @@ type Depot = { gabarit: string; codeowners: string; charte: string; fiches: stri
  * VUE de ce fichier, et une garde qui lit une vue rougit le jour où quelqu'un oublie de la
  * régénérer — pour une raison qui n'est pas la faute qu'elle cherche (RM-01).
  */
-const LIVREES = new Set(['fusionnee', 'deployee', 'verifiee']);
+// L'ensemble « livrée » ne s'écrit plus ici : il se DÉRIVE du barème unique de
+// `scripts/lot/avancement.ts`, dont l'exhaustivité est confrontée à l'enum `statut` du schéma.
+// Il était recopié dans CINQ fichiers — relevé par la lentille `schema` sur la PR 28, dans la
+// PR même qui écrivait la règle l'interdisant (RM-04, `docs/GLOSSAIRE.md` §4 : « deux copies du
+// même vocabulaire divergent toujours »). Un dixième statut faisait rougir `gov:inventaire` et
+// laissait les cinq copies se taire en se trompant.
+const LIVREES = LIVREE_DERIVEE;
+
+// Une garde qui lit un statut ne tourne pas sur un barème incomplet sans le dire.
+{
+  const ecarts = verifierExhaustivite();
+  if (ecarts.length > 0) {
+    console.error("❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :");
+    ecarts.forEach((e) => console.error("   " + e));
+    process.exit(1);
+  }
+}
 function phaseCourante(): number {
   const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
     taches: { phase: number; statut: string }[];

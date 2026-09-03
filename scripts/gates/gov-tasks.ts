@@ -25,6 +25,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import Ajv2020 from 'ajv/dist/2020.js';
+import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
@@ -61,7 +62,23 @@ type Tache = {
 type Faute = { famille: string; message: string };
 
 /** Les statuts qui valent « livrée ». Une dépendance doit y être avant que son dépendant y entre. */
-const LIVREE = new Set(['fusionnee', 'deployee', 'verifiee']);
+// L'ensemble « livrée » ne s'écrit plus ici : il se DÉRIVE du barème unique de
+// `scripts/lot/avancement.ts`, dont l'exhaustivité est confrontée à l'enum `statut` du schéma.
+// Il était recopié dans CINQ fichiers — relevé par la lentille `schema` sur la PR 28, dans la
+// PR même qui écrivait la règle l'interdisant (RM-04, `docs/GLOSSAIRE.md` §4 : « deux copies du
+// même vocabulaire divergent toujours »). Un dixième statut faisait rougir `gov:inventaire` et
+// laissait les cinq copies se taire en se trompant.
+const LIVREE = LIVREE_DERIVEE;
+
+// Une garde qui lit un statut ne tourne pas sur un barème incomplet sans le dire.
+{
+  const ecarts = verifierExhaustivite();
+  if (ecarts.length > 0) {
+    console.error("❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :");
+    ecarts.forEach((e) => console.error("   " + e));
+    process.exit(1);
+  }
+}
 
 // ── le registre des décisions ────────────────────────────────────────────────
 /**

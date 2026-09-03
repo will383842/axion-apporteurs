@@ -46,6 +46,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 
 const CHEMIN_PLAN_STATE = 'docs/PLAN-STATE.md';
 const CHEMIN_JOURNAL = 'docs/journal';
@@ -53,7 +54,23 @@ const CHEMIN_README_JOURNAL = 'docs/journal/README.md';
 const CHEMIN_TACHES = 'docs/tasks.json';
 
 /** Les états dans lesquels une tâche est livrée : sa revendication est de l'histoire, pas un verrou. */
-const LIVREES = new Set(['fusionnee', 'deployee', 'verifiee']);
+// L'ensemble « livrée » ne s'écrit plus ici : il se DÉRIVE du barème unique de
+// `scripts/lot/avancement.ts`, dont l'exhaustivité est confrontée à l'enum `statut` du schéma.
+// Il était recopié dans CINQ fichiers — relevé par la lentille `schema` sur la PR 28, dans la
+// PR même qui écrivait la règle l'interdisant (RM-04, `docs/GLOSSAIRE.md` §4 : « deux copies du
+// même vocabulaire divergent toujours »). Un dixième statut faisait rougir `gov:inventaire` et
+// laissait les cinq copies se taire en se trompant.
+const LIVREES = LIVREE_DERIVEE;
+
+// Une garde qui lit un statut ne tourne pas sur un barème incomplet sans le dire.
+{
+  const ecarts = verifierExhaustivite();
+  if (ecarts.length > 0) {
+    console.error("❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :");
+    ecarts.forEach((e) => console.error("   " + e));
+    process.exit(1);
+  }
+}
 
 /**
  * Les rubriques que REQ-GOV-006 énumère nommément. La vue doit toutes les rendre ; l'exigence est

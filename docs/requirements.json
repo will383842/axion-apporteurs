@@ -3232,7 +3232,8 @@
       "etape": 9,
       "phase": -1,
       "taches": [
-        "INT-T01a"
+        "INT-T01a",
+        "INT-T01b"
       ]
     },
     {

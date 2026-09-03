@@ -97,7 +97,8 @@ le champ sans dire si la monotonie est globale ou par sujet ; c'est INT-T02 qui 
 **`prisma/schema.prisma` n'est pas créé par cette tâche.** Le contrat d'événements est un format de
 fil ; il n'impose aucune table à Partners. Les deux tables que l'on pourrait croire siennes ont
 chacune leur porteur ailleurs : l'outbox est côté axionia (REQ-INT-001, tâche INT-T02, dont les
-`paths[]` visent `axionia/prisma/schema.prisma`) et le journal d'événements est porté par DM-01
+chemins PROPOSÉS — `docs/paths-proposes.json`, pas ses `paths[]`, qui portent encore le marque-place
+`axionia/INT-T02` — visent `axionia/prisma/schema.prisma`) et le journal d'événements est porté par DM-01
 (REQ-DM-041). `docs/paths-proposes.json` compte par ailleurs **41 tâches** qui déclarent
 `prisma/schema.prisma` : c'est le deuxième chemin le plus partagé du backlog, et l'ouvrir ici pour
 n'y rien écrire aurait bloqué un lot entier.
@@ -154,27 +155,34 @@ n'y rien écrire aurait bloqué un lot entier.
 
 ## Reste à faire
 
+> ⚠️ **Trois points de cette liste ont été FERMÉS par le commit d'intégration du lot L-1-03**
+> (`a77508b`), le jour même où cet ADR est passé `accepte` : l'acceptation d'INT-T01a dans
+> `docs/tasks.json`, le chemin de `partners:contrat:hash` dans `docs/gates.json`, et les scripts
+> `contracts:export` / `contracts:hash` avec leur étape de Gate A. Ils sont retirés ci-dessous
+> plutôt que barrés : un lecteur d'un ADR `accepte` qui trouve une tâche déjà faite la refait.
+> Relevé par la lentille `schema` (A02) sur la PR 28.
+
 1. **`REQ-INT-004` compte sept types, quatre autres circulent au registre.** L'alignement — les
    ouvrir dans le texte de l'exigence, ou les rattacher explicitement à une `schema_version` 2 —
    revient au `gardien-spec` : `docs/requirements.json` est un fichier réservé
    (`docs/CONVENTIONS.md` §8). Tant qu'il n'est pas fait, `TYPES_HORS_CONTRAT_V1` porte la dette et
-   le test la tient.
-2. **L'acceptation d'INT-T01a dans `docs/tasks.json` dit « 11 types » et « camelCase ».** Les deux
-   sont contredites par les exigences que la tâche sert. La correction revient à l'orchestrateur ;
-   la phrase de remplacement est proposée dans le RENDU de la tâche.
-3. **`docs/CONVENTIONS.md` §1 ne nomme pas l'exemption du format de fil.** Elle exempte « les noms
+   le test la tient. **Trois nombres cohabitent encore** : REQ-QA-007 et REQ-GOV-020 disent cinq
+   événements, REQ-INT-004 en dit sept.
+2. **`docs/CONVENTIONS.md` §1 ne nomme pas l'exemption du format de fil.** Elle exempte « les noms
    imposés par un tiers » ; un contrat inter-dépôts est le même cas et mérite d'y être écrit, sans
-   quoi la prochaine enveloppe sera traduite en camelCase par bonne volonté.
-4. **`docs/gates.json` déclare `partners:contrat:hash` sous `tests/contract/contrat-hash.spec.ts`.**
-   Ce chemin n'est ramassé par aucun `include` de `vitest.config.ts` : le test y serait posé sans
-   jamais s'exécuter. Il est livré sous `tests/unit/integration/`, à nom de fichier identique ; la
-   correction du registre et l'entrée `preuveRouge` sont demandées dans le RENDU.
-5. **`zod`, l'alias `contracts:export` et l'étape de Gate A** ne peuvent pas être ajoutés par cette
-   tâche : `package.json` et `.github/workflows/ci.yml` sont partagés. Les diffs exacts sont dans le
-   RENDU.
-6. **Les payloads et les fixtures réelles sont à INT-T01b**, qui les génère depuis les producteurs
+   quoi la prochaine enveloppe sera traduite en camelCase par bonne volonté. `docs/GLOSSAIRE.md` §5
+   porte désormais l'écart et ses synonymes interdits — mais **aucune garde ne lit le glossaire**
+   tant que GOV-006 n'a pas livré `glossaire-enums.spec.ts` : c'est une consigne, pas un contrôle.
+3. **Les payloads et les fixtures réelles sont à INT-T01b**, qui les génère depuis les producteurs
    d'axionia. La fixture livrée ici déclare qu'elle est provisoire et nomme cette tâche.
-7. **Un arbitrage attend INT-T01b sur la frontière de REQ-INT-029.** Le détecteur de la famille
+   **INT-T01b porte désormais `REQ-QA-007`** (`docs/tasks.json`), et c'est le correctif d'un défaut
+   que la lentille `schema` a nommé : INT-T01a en était le SEUL porteur, si bien qu'une fois
+   `fusionnee`, la matrice de traçabilité déclarait l'exigence couverte — alors que la moitié de son
+   texte, « les fixtures sont générées par le producteur réel et non écrites à la main », n'est pas
+   tenue et que la fixture le dit elle-même. L'invariant RM-03 aurait disparu du backlog en étant
+   rapporté vert. INT-T01b passe aussi **`schema: true`** : elle ferme les `$defs`, donc elle change
+   l'empreinte publiée, et sa PR doit porter le label qui appelle l'architecte en relecteur bloquant.
+4. **Un arbitrage attend INT-T01b sur la frontière de REQ-INT-029.** Le détecteur de la famille
    `identite_autre_apporteur` est réglé large — il échoue FERMÉ, comme doit le faire une garde de
    confidentialité. Conséquence connue : le champ `parrainCodeCapture` que REQ-INT-032 décrit dans
    le payload de `candidature.recue` le ferait rougir. Ce type n'est pas dans le contrat v1 ; le
@@ -182,3 +190,26 @@ n'y rien écrire aurait bloqué un lot entier.
    resserrer le motif, soit écrire l'exemption avec l'exigence qui la porte. Ce n'est pas un
    détail de mise au point : c'est le seul endroit du contrat où la garde et une exigence se
    contrediront, et il vaut mieux qu'il soit écrit avant d'être découvert.
+5. **Ce que coûte une évolution, écrit avant d'y être.** Ajouter un champ de *payload* est
+   compatible : les sept `$defs/payload_*` sont ouverts, l'ancien consommateur accepte, seule
+   l'empreinte bouge. Mais ajouter un **type**, ajouter un champ d'**enveloppe**, ou passer à
+   `schema_version` 2 sont tous trois en **lockstep** : l'enum fermé, `additionalProperties: false`
+   à la racine et `const: 1` font qu'un consommateur v1 rend 422 sur **tout** événement, de tout
+   type, et que REQ-INT-003 les passe en `gave_up`. Rien n'est perdu — REQ-INT-009 garde la ligne
+   abandonnée rejouable par `event_id` — mais le flux entier s'arrête tant que les deux dépôts
+   n'ont pas republié. Le `held` de REQ-QA-009, qui aurait amorti, a été absorbé par REQ-ARG-003
+   dont le texte ne le reprend pas. Une évolution d'enveloppe se planifie donc comme un
+   déploiement coordonné, jamais comme un ajout.
+6. **Une réserve sur `additionalProperties: false` à la racine.** En JSON Schema 2020-12, il ne voit
+   pas les `properties` déclarées dans un `allOf`/`then`. Aujourd'hui les `then` ne redéclarent que
+   `payload`, déjà présent à la racine : aucun faux refus. Le jour où INT-T01b posera un champ
+   d'**enveloppe** conditionné par le type, il sera rejeté — et le message ne dira pas pourquoi.
+7. **La table `EvenementRecu` (REQ-DM-036) est portée par SEC-06**, pas par le contrat. Le contrat
+   est un format de fil et n'impose aucune table ; mais `event_id` est la clé d'idempotence du
+   récepteur, et le `$comment` de `packages/contracts/enveloppe.ts` le cite désormais avec son
+   exigence et son porteur. Aucune table ne manque au backlog — il manquait la citation.
+8. **L'empreinte publiée a changé une fois après l'acceptation de cet ADR**, en ajoutant cette
+   citation au `$comment` d'`event_id` : `d5a3231…` → `8b0b09a…`. C'est le comportement attendu — le
+   texte du schéma a changé, donc son empreinte — et c'est sans conséquence tant qu'aucun dépôt ne
+   l'a copiée. Après la première copie côté axionia, tout changement d'empreinte, fût-il un
+   commentaire, devient un déploiement coordonné (voir le point 5).

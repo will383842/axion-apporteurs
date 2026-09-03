@@ -61,7 +61,7 @@ export const CHAMPS_ENVELOPPE: readonly ChampEnveloppe[] = [
       type: 'string',
       format: 'uuid',
       pattern: MOTIF_UUID_V4,
-      $comment: "REQ-INT-003 : uuid v4. C'est la clé d'idempotence du récepteur.",
+      $comment: "REQ-INT-003 : uuid v4. C'est la clé d'idempotence du récepteur — celle de `EvenementRecu` (REQ-DM-036, `docs/GLOSSAIRE.md` §5), table portée par SEC-06 dans ce dépôt et non par le contrat : le contrat est un format de fil, il n'impose aucune table.",
     },
     zod: `z.string().regex(/${MOTIF_UUID_V4}/)`,
   },
