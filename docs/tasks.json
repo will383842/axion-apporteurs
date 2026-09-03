@@ -865,7 +865,8 @@
           "tests/unit/gouvernance/paths-derives.spec.ts#REQ-GOV-025 — aucune tache `repo: axionia` ne pretend ecrire un fichier de ce depot"
         ],
         "REQ-GOV-027": [
-          "tests/unit/gouvernance/paths-derives.spec.ts#sait rougir : une vue truquee d'un seul caractere fait echouer `--check`"
+          "tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la famille `phase_gelee` est prouvee, temoin et contre-temoin",
+          "tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la phase courante se lit dans le backlog, pas dans la vue PLAN-STATE"
         ]
       }
     },

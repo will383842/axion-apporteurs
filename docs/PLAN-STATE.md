@@ -52,7 +52,7 @@ Reste sur ce chemin : **18.25 j**.
 
 ## PR ouvertes
 
-Aucune.
+- #27 `lot/L-1-01-cloture` — BLOCKED
 
 ## Dernier atterrissage
 

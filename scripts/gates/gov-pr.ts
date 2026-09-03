@@ -6,6 +6,7 @@
  *                                     plus la PR elle-même si GitHub Actions en fournit une
  *         pnpm gov:pr --pr <numero>   tout ce qui précède, REVUES COMPRISES (`gh pr view`) —
  *                                     c'est la commande que A04 lance AVANT de fusionner
+ *         pnpm gov:pr --apres-fusion <n>  la 8ᵉ case en plus : l'atterrissage attesté (après fusion)
  *         pnpm gov:pr --prove         un témoin par famille de règle, des contre-témoins verts
  *
  * CE QU'ELLE TIENT, ET POURQUOI CHAQUE FAMILLE EXISTE.
@@ -71,9 +72,36 @@ const INTRODUIT_UNE_GARDE = (f: string) =>
   /\.spec\.ts$/.test(f) || f.startsWith('scripts/gates/') || f.startsWith('.github/workflows/');
 
 type Revue = { auteur: string; etat: string; corps: string };
-type Pr = { titre: string; corps: string; labels: string[]; fichiers: string[]; revues: Revue[] | null };
+type Pr = {
+  titre: string;
+  corps: string;
+  labels: string[];
+  fichiers: string[];
+  revues: Revue[] | null;
+  /**
+   * Vrai seulement sous `--apres-fusion <n>`, la commande qu'A04 lance APRES l'atterrissage.
+   * C'est le seul moment ou la huitieme case peut etre vraie : elle atteste la fusion.
+   */
+  apresFusion?: boolean;
+};
 type Tache = { id: string; sensible: string[] };
 type Depot = { gabarit: string; codeowners: string; charte: string; fiches: string[]; architecte: string; taches: Tache[] };
+/**
+ * LA PHASE COURANTE — la plus petite phase qui porte encore une tâche non livrée.
+ *
+ * Dérivée de `docs/tasks.json`, pas lue dans `docs/PLAN-STATE.md` : PLAN-STATE est lui-même une
+ * VUE de ce fichier, et une garde qui lit une vue rougit le jour où quelqu'un oublie de la
+ * régénérer — pour une raison qui n'est pas la faute qu'elle cherche (RM-01).
+ */
+const LIVREES = new Set(['fusionnee', 'deployee', 'verifiee']);
+function phaseCourante(): number {
+  const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
+    taches: { phase: number; statut: string }[];
+  };
+  const restantes = doc.taches.filter((t) => !LIVREES.has(t.statut)).map((t) => t.phase);
+  return restantes.length === 0 ? Math.max(...doc.taches.map((t) => t.phase)) : Math.min(...restantes);
+}
+
 type Faute = { famille: string; message: string };
 
 const FAMILLES = [
@@ -94,6 +122,9 @@ const FAMILLES = [
   'schema_sans_label',
   // la PR — évaluées seulement avec les revues (`--pr <numero>`)
   'lentilles_manquantes',
+  'lentille_en_refus',
+  'dod_atterrissage_non_atteste',
+  'phase_gelee',
   'schema_sans_approbation',
   'dod_non_cochee',
 ];
@@ -325,16 +356,38 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
       `Corps de la PR — ${cochees + vides} case(s) entre les marqueurs dod ; REQ-GOV-013 en exige ` +
         `${NB_CASES}. Le gabarit a été amputé ou les marqueurs sont absents.`
     );
-  } else if (pr.revues !== null && cochees !== NB_CASES) {
-    // Cochées : jugé seulement sous `--pr <numero>`, la commande qu'A04 lance AVANT de fusionner.
-    // La huitième case atteste la fusion et l'atterrissage : elle ne peut être vraie à l'événement
-    // `pull_request`. L'exiger en CI rendrait `gate-a` — check requis de `main` — soit rouge sur
-    // toute PR, soit vert sur une attestation fausse.
-    ajouter(
-      'dod_non_cochee',
-      `Corps de la PR — ${cochees} case(s) cochée(s) sur ${NB_CASES} entre les marqueurs dod ; ` +
-        `REQ-GOV-013 les exige toutes avant la fusion. A04 refuse la PR.`
-    );
+  } else if (pr.revues !== null) {
+    // Jugé seulement sous `--pr <numero>` / `--apres-fusion <n>` : les revues n'existent pas à
+    // l'événement `pull_request`, et `gate-a` est le check requis de `main`.
+    //
+    // LA HUITIÈME CASE EST À PART, et c'est un défaut de conception qu'on corrige ici. Elle
+    // atteste « Fusionnée par A04 et atterrissage vérifié » : elle ne peut pas être vraie AVANT
+    // la fusion. Or `--pr <n>` est précisément la commande d'avant-fusion. L'exiger là ne
+    // laissait que deux issues, toutes deux mauvaises : refuser toute PR, ou cocher une
+    // attestation fausse. Mesuré : la PR 26 a été fusionnée avec la huitième case vide et
+    // ZÉRO revue — la garde n'a jamais été verte, et on a appris à passer outre.
+    //
+    // Les sept premières se jugent avant la fusion ; la huitième sous `--apres-fusion <n>`.
+    // On lit les cases DANS L'ORDRE : un compte de sept ne dit pas LESQUELLES sont cochées.
+    const cases = (blocDodPr.match(/^- \[[ x]\]/gm) ?? []);
+    const avantFusion = cases.slice(0, NB_CASES - 1);
+    const videsAvant = avantFusion.filter((c) => c === '- [ ]').length;
+    if (videsAvant > 0) {
+      ajouter(
+        'dod_non_cochee',
+        `Corps de la PR — ${videsAvant} case(s) vide(s) parmi les ${NB_CASES - 1} premières entre les ` +
+          `marqueurs dod ; REQ-GOV-013 les exige avant la fusion. A04 refuse la PR. ` +
+          `(La ${NB_CASES}ᵉ atteste la fusion : elle se contrôle par \`--apres-fusion\`.)`
+      );
+    }
+    if (pr.apresFusion === true && cases[NB_CASES - 1] !== '- [x]') {
+      ajouter(
+        'dod_atterrissage_non_atteste',
+        `Corps de la PR — la ${NB_CASES}ᵉ case « fusionnée par A04 et atterrissage vérifié » n'est ` +
+          `pas cochée alors que la PR est fusionnée. Tant qu'elle est vide, personne n'a attesté ` +
+          `avoir lu le sha de build : un run vert n'est pas un atterrissage (RM-09).`
+      );
+    }
   }
 
   const blocRouge = bloc(pr.corps, 'rouge-vert');
@@ -392,10 +445,56 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
     );
   }
 
+  // REQ-GOV-027 — le périmètre est gelé par phase. Contrôlé AVANT le retour anticipé sur les
+  // revues : un label de phase existe dès l'ouverture de la PR, et c'est justement à ce
+  // moment-là qu'il faut refuser du travail de la phase suivante, pas après l'avoir relu.
+  const labelPhase = pr.labels.map((l) => /^phase:(-?\d+)$/.exec(l)).find((m) => m !== null);
+  if (labelPhase) {
+    const declaree = Number(labelPhase[1]);
+    const courante = phaseCourante();
+    if (declaree > courante) {
+      ajouter(
+        'phase_gelee',
+        `La PR porte \`phase:${declaree}\` alors que la phase courante est ${courante}, qui n'est ` +
+          `pas close : docs/tasks.json y porte encore des tâches non livrées. REQ-GOV-027 — le ` +
+          `périmètre est gelé par phase, et une phase se ferme avant que la suivante ne s'ouvre. ` +
+          `Sans ce gel, la phase 1 démarre pendant que la 0 traîne, et les deux restent ouvertes ` +
+          `jusqu'à la fin.`
+      );
+    }
+  }
+
   if (pr.revues === null) return fautes;
 
   // ---- les revues (seulement sous `--pr <numero>`) ---------------------------
-  const approuvees = pr.revues.filter((r) => r.etat.toUpperCase() === 'APPROVED');
+  /**
+   * CE QUI COMPTE COMME UNE REVUE. `APPROVED` serait le bon état — c'est celui que GitHub
+   * protège. Mais ce dépôt n'a QU'UN compte (W13, `docs/lots/REPRISE-NOTES.md`), et GitHub
+   * refuse une approbation venant de l'auteur de la PR : « Can not approve your own pull
+   * request ». Exiger `APPROVED` rendait donc `gov:pr --pr` INSATISFIABLE. Ce n'est pas une
+   * hypothèse : la PR 26 a été fusionnée avec zéro revue, et la garde n'a jamais tourné verte.
+   * Une gate que personne ne peut satisfaire n'est pas une gate — c'est une étape qu'on
+   * apprend à sauter, et le jour où elle aurait servi elle est déjà hors du geste.
+   *
+   * On accepte donc `APPROVED` ET `COMMENTED`, et on exige EN ÉCHANGE ce qu'un état GitHub ne
+   * dit pas : une ligne `Verdict: accepte` ou `Verdict: refuse`. Un commentaire qui ne tranche
+   * pas ne compte pour aucune lentille — c'est ce qui empêche une remarque de passer pour une
+   * revue. Et un `refuse` n'est pas une lentille manquante : c'est un refus, famille à part.
+   */
+  const VERDICT = /^Verdict\s*:\s*(accepte|refuse)\b/im;
+  const RENDUES = ['APPROVED', 'COMMENTED'];
+  const rendues = pr.revues.filter((r) => RENDUES.includes(r.etat.toUpperCase()) && VERDICT.test(r.corps));
+  const verdictDe = (r: Revue): string => (VERDICT.exec(r.corps)![1] ?? '').toLowerCase();
+  const refusees = rendues.filter((r) => verdictDe(r) === 'refuse');
+  const approuvees = rendues.filter((r) => verdictDe(r) === 'accepte');
+  for (const r of refusees) {
+    const l = lentilleDeLaRevue(r);
+    ajouter(
+      'lentille_en_refus',
+      `Revues — ${l ? `${l.code} · ${l.lentille}` : 'une revue'} rend « Verdict: refuse ». ` +
+        `A04 ne fusionne pas sur un refus${l && l.lentille === 'securite' ? ' — et un refus de la lentille securite vaut veto (REQ-GOV-011)' : ''}.`
+    );
+  }
   const lues = approuvees.map(lentilleDeLaRevue).filter((x): x is { code: string; lentille: string } => x !== null);
   const exigees = toucheSchema ? ['exactitude', 'securite', 'schema'] : ['exactitude', 'securite', 'simplicite'];
   const manquantes = exigees.filter((l) => !lues.some((x) => x.lentille === l));
@@ -582,13 +681,25 @@ if (process.argv.includes('--prove')) {
     labels: [],
     fichiers: ['docs/CHARTE-AGENTS.md', '.github/PULL_REQUEST_TEMPLATE.md', 'scripts/gates/gov-pr.ts', 'tests/gov/charte-pr.spec.ts'],
     revues: [
-      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · exactitude\nles quatre REQ sont couvertes' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · securite\nrien à signaler' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · simplicite\nle §7 est lu, pas recopié' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A10 · mutation\nmarqueur dupliqué : la garde rougit' },
+      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · exactitude\nVerdict: accepte\nles quatre REQ sont couvertes' },
+      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · securite\nVerdict: accepte\nrien à signaler' },
+      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · simplicite\nVerdict: accepte\nle §7 est lu, pas recopié' },
+      { auteur: 'w', etat: 'APPROVED', corps: 'A10 · mutation\nVerdict: accepte\nmarqueur dupliqué : la garde rougit' },
     ],
   };
   const copiePr = (p: Pr): Pr => JSON.parse(JSON.stringify(p)) as Pr;
+  /** Vide la DERNIÈRE case cochée du corps — la huitième, celle qui atteste l'atterrissage. */
+  const videLaDerniereCase = (corps: string): string => {
+    const l = corps.split(SAUT);
+    for (let i = l.length - 1; i >= 0; i--) {
+      const ligne = l[i];
+      if (ligne !== undefined && ligne.startsWith('- [x]')) {
+        l[i] = ligne.replace('- [x]', '- [ ]');
+        break;
+      }
+    }
+    return l.join(SAUT);
+  };
   const copieDepot = (): Depot => ({ ...depot, fiches: [...depot.fiches] });
 
   const PR_SCHEMA: Pr = {
@@ -597,10 +708,10 @@ if (process.argv.includes('--prove')) {
     labels: ['schema'],
     fichiers: ['prisma/schema.prisma'],
     revues: [
-      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · exactitude\nok' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · securite\nok' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A02 · schema\nmigration additive, aucune perte' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A10 · mutation\nvue rougir' },
+      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · exactitude\nVerdict: accepte\nok' },
+      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · securite\nVerdict: accepte\nok' },
+      { auteur: 'w', etat: 'APPROVED', corps: 'A02 · schema\nVerdict: accepte\nmigration additive, aucune perte' },
+      { auteur: 'w', etat: 'APPROVED', corps: 'A10 · mutation\nVerdict: accepte\nvue rougir' },
     ],
   };
   PR_SCHEMA.corps = remplacer(
@@ -720,10 +831,36 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
+      // Une revue qui REFUSE n'est pas une lentille manquante : la distinguer est ce qui permet
+      // à A04 de dire pourquoi il ne fusionne pas.
+      famille: 'phase_gelee',
+      defaut: () => [copieDepot(), { ...copiePr(PR_TEMOIN), labels: ['phase:3'] }],
+    },
+    {
+      famille: 'lentille_en_refus',
+      defaut: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.revues = p.revues!.map((r) =>
+          r.corps.startsWith('A09 · securite') ? { ...r, corps: 'A09 · securite\nVerdict: refuse\nIDOR non couvert' } : r
+        );
+        return [copieDepot(), p];
+      },
+    },
+    {
+      // La huitième case, jugée APRÈS la fusion — le seul moment où elle peut être vraie.
+      famille: 'dod_atterrissage_non_atteste',
+      defaut: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.apresFusion = true;
+        p.corps = videLaDerniereCase(p.corps);
+        return [copieDepot(), p];
+      },
+    },
+    {
       famille: 'schema_sans_approbation',
       defaut: () => {
         const p = copiePr(PR_SCHEMA);
-        p.revues = p.revues!.map((r) => (r.corps.startsWith('A02') ? { ...r, corps: 'A09 · schema\nok' } : r));
+        p.revues = p.revues!.map((r) => (r.corps.startsWith('A02') ? { ...r, corps: 'A09 · schema\nVerdict: accepte\nok' } : r));
         return [copieDepot(), p];
       },
     },
@@ -743,15 +880,34 @@ if (process.argv.includes('--prove')) {
       cas: () => {
         const p = copiePr(PR_TEMOIN);
         p.revues = null;
-        const l = p.corps.split(SAUT);
-        for (let i = l.length - 1; i >= 0; i--) {
-          const ligne = l[i];
-          if (ligne !== undefined && ligne.startsWith('- [x]')) {
-            l[i] = ligne.replace('- [x]', '- [ ]');
-            break;
-          }
-        }
-        p.corps = l.join(SAUT);
+        p.corps = videLaDerniereCase(p.corps);
+        return [depot, p];
+      },
+    },
+    {
+      // LE contre-témoin qui manquait, et sans lequel la correction ne vaut rien : la même PR,
+      // huitième case vide, jugée AVEC ses revues — c'est-à-dire sous `--pr <n>`, la commande
+      // d'avant-fusion. Elle doit rester VERTE : la case atteste une fusion qui n'a pas eu lieu.
+      quoi: "une PR dont la seule case vide est la huitième, jugée AVANT la fusion (--pr)",
+      cas: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.corps = videLaDerniereCase(p.corps);
+        return [depot, p];
+      },
+    },
+    {
+      // Une PR de la phase COURANTE porte son label et doit passer. Sans ce contre-témoin, une
+      // garde qui refuserait tout label `phase:` serait « prouvée » par son seul témoin.
+      quoi: 'une PR étiquetée de la phase courante',
+      cas: () => [depot, { ...copiePr(PR_TEMOIN), labels: [`phase:${phaseCourante()}`] }],
+    },
+    {
+      // Les quatre lentilles rendues en `COMMENTED` : c'est le seul état que ce dépôt à un
+      // compte sait produire, et il doit compter autant qu'un `APPROVED`.
+      quoi: 'une PR dont les quatre revues sont des commentaires portant `Verdict: accepte`',
+      cas: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.revues = p.revues!.map((r) => ({ ...r, etat: 'COMMENTED' }));
         return [depot, p];
       },
     },
@@ -796,13 +952,15 @@ if (process.argv.includes('--prove')) {
 
 const depot = lireDepot();
 const iPr = process.argv.indexOf('--pr');
+const iApres = process.argv.indexOf('--apres-fusion');
 let pr: Pr | null = null;
 let portee = 'structure du gabarit, de CODEOWNERS et de la charte';
 
-if (iPr >= 0) {
-  const numero = process.argv[iPr + 1];
+if (iPr >= 0 || iApres >= 0) {
+  const i = iPr >= 0 ? iPr : iApres;
+  const numero = process.argv[i + 1];
   if (!numero || !/^\d+$/.test(numero)) {
-    console.error('❌ gov:pr — `--pr` attend un numéro de PR.');
+    console.error('❌ gov:pr — `--pr` et `--apres-fusion` attendent un numéro de PR.');
     process.exit(1);
   }
   try {
@@ -812,7 +970,8 @@ if (iPr >= 0) {
     console.error('   Les familles de revue ne peuvent pas être contrôlées ; la garde refuse plutôt que de passer.');
     process.exit(1);
   }
-  portee += `, puis la PR #${numero}, REVUES COMPRISES`;
+  if (iApres >= 0 && pr) pr.apresFusion = true;
+  portee += `, puis la PR #${numero}, REVUES COMPRISES` + (iApres >= 0 ? ", APRÈS FUSION (la 8ᵉ case est exigée)" : '');
 } else {
   pr = prParEvenement();
   if (pr) portee += ', puis la PR de l’événement GitHub — SANS les revues, qui n’existent pas encore';
