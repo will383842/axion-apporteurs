@@ -119,23 +119,47 @@ export const FRONTIERE_INTERDITE: readonly FamilleInterdite[] = [
     // La même liste que REQ-DM-041 refuse au journal : ni nom, ni e-mail, ni téléphone, ni IBAN,
     // ni adresse. Un champ « chiffré » n'est pas une exception : chiffré, il traverse quand même.
     motifCle: /mail|telephone|^tel$|nom$|prenom|adresse|iban|^bic$|chiffre/i,
-    motifValeur: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    // NON ANCRÉ, et c'est délibéré. `/^…$/` n'attrapait une adresse que si elle était TOUTE la
+    // valeur — or « rencontré jean@exemple.fr sur place » traverse la frontière exactement pareil.
+    // Trouvé par la lentille sécurité sur la PR 28, sur le cas même que le commentaire ci-dessus
+    // invoquait. Une garde de confidentialité échoue FERMÉ : elle préfère un faux positif, qu'un
+    // humain lève en une ligne, à une coordonnée qui passe en silence.
+    motifValeur: /[^\s@,;:<>()"']+@[^\s@,;:<>()"']+\.[a-z]{2,}/i,
   },
 ];
 
 export type ChampInterdit = { famille: string; chemin: string };
 
-/** Les feuilles d'une valeur JSON, avec leur chemin pointé. */
-function feuilles(valeur: unknown, chemin: string, acc: { chemin: string; cle: string; valeur: unknown }[]): void {
+/**
+ * Les feuilles d'une valeur JSON, avec leur chemin pointé.
+ *
+ * ⚠️ CHAQUE ÉLÉMENT DE TABLEAU EST UN NŒUD, primitifs compris — et c'est le correctif d'un défaut
+ * réel, trouvé par la lentille sécurité sur la PR 28 et JOUÉ contre cette fonction :
+ *
+ *     payload.contacts = ["jean.dupont@exemple.fr"]   →  passait
+ *     subject_ref      = ["jean@exemple.fr"]          →  passait
+ *
+ * La récursion descendait bien dans les tableaux, mais seul `Object.entries` POUSSAIT des nœuds :
+ * un primitif dans un tableau n'était jamais inspecté. La frontière échouait donc OUVERT sur la
+ * forme la plus banale de fuite — une liste de contacts.
+ *
+ * L'élément hérite de la CLÉ de son tableau (`contacts[0]` porte la clé `contacts`) : sans quoi
+ * `motifCle` ne s'appliquerait plus dès qu'une valeur entre dans une liste.
+ */
+function feuilles(valeur: unknown, chemin: string, acc: { chemin: string; cle: string; valeur: unknown }[], cleHeritee = ''): void {
   if (Array.isArray(valeur)) {
-    valeur.forEach((v, i) => feuilles(v, `${chemin}[${i}]`, acc));
+    valeur.forEach((v, i) => {
+      const sous = `${chemin}[${i}]`;
+      acc.push({ chemin: sous, cle: cleHeritee, valeur: v });
+      feuilles(v, sous, acc, cleHeritee);
+    });
     return;
   }
   if (valeur !== null && typeof valeur === 'object') {
     for (const [cle, v] of Object.entries(valeur as Record<string, unknown>)) {
       const sous = chemin === '' ? cle : `${chemin}.${cle}`;
       acc.push({ chemin: sous, cle, valeur: v });
-      feuilles(v, sous, acc);
+      feuilles(v, sous, acc, cle);
     }
     return;
   }
@@ -154,7 +178,7 @@ export function champsInterdits(evenement: Record<string, unknown>): ChampInterd
     // libre peut porter une adresse de courriel. Ne descendre que dans les objets aurait laissé
     // passer le seul champ du contrat dont la forme n'est pas arrêtée.
     noeuds.push({ chemin: racine, cle: racine, valeur: evenement[racine] });
-    feuilles(evenement[racine], racine, noeuds);
+    feuilles(evenement[racine], racine, noeuds, racine);
   }
 
   const trouves: ChampInterdit[] = [];

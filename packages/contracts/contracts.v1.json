@@ -176,7 +176,7 @@
       "type": "string"
     },
     "event_id": {
-      "$comment": "REQ-INT-003 : uuid v4. C'est la clé d'idempotence du récepteur.",
+      "$comment": "REQ-INT-003 : uuid v4. C'est la clé d'idempotence du récepteur — celle de `EvenementRecu` (REQ-DM-036, `docs/GLOSSAIRE.md` §5), table portée par SEC-06 dans ce dépôt et non par le contrat : le contrat est un format de fil, il n'impose aucune table.",
       "format": "uuid",
       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
       "type": "string"

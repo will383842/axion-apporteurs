@@ -50,8 +50,18 @@ process.stdin.on('end', () => {
   try {
     commande = (JSON.parse(brut || '{}').tool_input || {}).command || '';
   } catch {
-    // entrée illisible : on n'a rien à garder, on laisse passer (le hook n'est pas un antivirus)
-    process.exit(0);
+    // ENTREE ILLISIBLE = REFUS. Le defaut est le refus (RM-05) : une entree non analysable
+    // desarmait les cinq invariants D UN COUP, et la seule chose qu on sache alors, c est
+    // qu'on ne sait pas ce que la commande fait. Trouve par la lentille securite sur la PR 28.
+    //
+    // Une entree VIDE reste permise : elle n'atteint meme pas ce bloc (`brut || '{}'` en fait
+    // un objet vide), et certains hotes appellent le hook sans charge utile. Ce qui est refuse
+    // ici, c'est un contenu present et MALFORME — le seul cas ou quelque chose ne va pas.
+    refuser(
+      "l'entree du hook n'est pas un JSON analysable, donc la commande n'a pas pu etre lue. " +
+        "Le defaut est le refus : une garde qui laisse passer ce qu'elle n'a pas su lire ne " +
+        "garde rien. (charge utile de " + brut.length + " octet(s))"
+    );
   }
 
   // 3. surcharge en ligne interdite — ancrée en POSITION DE COMMANDE.

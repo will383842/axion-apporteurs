@@ -92,7 +92,16 @@ const DANGEREUSES = [
   'gh api -X DELETE repos/o/r/rulesets/42',
   'gh issue edit 7 --remove-label owner:A01',
   'gh issue edit 7 --remove-label en_cours',
-];
+  // LES VARIANTES, ajoutees apres la lentille securite de la PR 28. Les cinq temoins
+  // ci-dessus etaient les formes CANONIQUES de l'incident ; la gate annoncait 17 refus
+  // pendant que les six formes ci-dessous passaient, chacune JOUEE contre `jugerGh` :
+  'gh api --method=DELETE repos/will383842/axion-apporteurs/issues/12/labels/owner:A01',
+  'gh api graphql -f query="mutation{deleteBranchProtectionRule(input:{})}"',
+  'gh api -H "Accept: application/vnd.github+json" -X DELETE repos/o/r/keys/1',
+  'gh issue edit 12 --remove-label "prio:haute,owner:A01"',
+  'gh api -XDELETE repos/o/r/branches/main/protection',
+  'gh api -H "Accept: x" --method PUT repos/o/r/hooks/9',
+]
 
 /**
  * Les commandes LÉGITIMES. Une garde qui refuse tout est prouvée par n'importe quel témoin :
@@ -113,7 +122,14 @@ const LEGITIMES = [
   'gh issue edit 7 --add-label en_cours --add-label owner:A01',
   'gh pr merge 27 --squash --delete-branch',
   'echo gh api -X DELETE repos/o/r/branches/main/protection',
-];
+  // Les contre-temoins des memes variantes : ce que le resserrement ne doit PAS emporter.
+  // Une requete GraphQL de LECTURE en fait partie — GraphQL POSTe toujours, et juger sur la
+  // methode aurait refuse toute lecture.
+  'gh api graphql -f query="query{viewer{login}}"',
+  'gh api -H "Accept: application/vnd.github+json" repos/o/r/branches/main/protection',
+  'gh issue edit 7 --remove-label "prio:haute,bug"',
+  'gh pr view 28 --json body -q .body',
+]
 
 type Verdict = { refuse: boolean; motif: string | null };
 /**
