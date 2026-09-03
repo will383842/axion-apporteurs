@@ -91,3 +91,33 @@ describe("gov:identifiants — citer n'est pas se servir", () => {
     expect(sortie).toContain('3 témoins rougissent, 10 contre-témoins restent verts');
   });
 });
+
+describe('gates:prouvees — le décompte de ce qui est réellement armé', () => {
+  const SCRIPT = 'scripts/gates/gates-prouvees.ts';
+
+  it('sait rougir : ses 10 familles ont chacune un témoin, sur un disque feint', () => {
+    // La preuve ne touche pas au dépôt : registre de fixture et disque INJECTÉ. Sans quoi elle
+    // verdirait ou rougirait au gré des fichiers présents le jour où elle tourne (RM-11).
+    const { code, sortie } = lancer(SCRIPT, '--prove');
+    expect(code).toBe(0);
+    expect(sortie).toContain('Les 10 familles rougissent');
+  });
+
+  it('ROUGIT sur le socle : la phase -1 n’est pas sortie, et c’est ce que le test fige', () => {
+    // Ce test dit l'inverse des autres : ici le ROUGE est l'état attendu. La plupart des gates
+    // de phase -1 n'ont ni script écrit ni preuveRouge ; le jour où ce test devra être réécrit
+    // sera le jour où la phase -1 sort, et ce sera une décision, pas un effet de bord.
+    const { code, sortie } = lancer(SCRIPT, '--phase', '-1');
+    expect(code).not.toBe(0);
+    expect(sortie).toContain('script_introuvable');
+    expect(sortie).toContain('preuve_rouge_absente');
+  });
+
+  it('REFUSE de deviner la phase quand on ne la lui donne pas', () => {
+    // Une phase par défaut aurait rendu la garde silencieusement fausse : c'est elle qui décide
+    // du périmètre, donc de ce qui doit DÉJÀ être armé. Sans elle, on ne juge rien.
+    const { code, sortie } = lancer(SCRIPT);
+    expect(code).not.toBe(0);
+    expect(sortie).toContain('il manque le niveau de phase');
+  });
+});

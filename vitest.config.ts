@@ -18,6 +18,10 @@ export default defineConfig({
       'src/**/*.{test,spec}.{ts,tsx}',
       'tests/unit/**/*.{test,spec}.{ts,tsx}',
       'tests/schemas/**/*.{test,spec}.{ts,tsx}',
+      // `tests/gov/**` est declare par DEUX sources de verite — `docs/REGLES-MAISON.md:5`
+      // (`tests/gov/regles-maison.spec.ts`) et `docs/tasks.json` (quatre REQ de GOV-007 sur
+      // `tests/gov/charte-pr.spec.ts`). Sans cette ligne les deux existent sans jamais tourner.
+      'tests/gov/**/*.{test,spec}.{ts,tsx}',
     ],
     exclude: ['node_modules', '.next', 'tests/e2e/**', 'tests/integration/**'],
     // Les gardes lancent `tsx` en sous-processus : 20 s par défaut ne suffisent pas toujours.

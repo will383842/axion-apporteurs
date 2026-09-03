@@ -54,7 +54,7 @@
       "tache": "GOV-009",
       "verifie": "dossier unique partners/ADR-0001+, numeros consecutifs, index derive du systeme de fichiers, references qualifiees, chaque ADR porte une assertion ou la mention hors-code",
       "fixtureRouge": "referencer ADR-9999 dans une PR",
-      "preuveRouge": null
+      "preuveRouge": "12 familles, un temoin chacune, 5 contre-temoins verts (pnpm gov:adr --prove)"
     },
     {
       "id": "gov:tasks",
@@ -72,7 +72,7 @@
       "tache": "GOV-007",
       "verifie": "relecteur != auteur ; titre <type>(<ID-TACHE>): <titre> ; 3 reviews GitHub de 3 lentilles distinctes + 1 du verificateur rouge ; bloc ROUGE/VERT present ; section Attaque si tache sensible (refus de la lentille securite = veto) ; 8 cases de la DoD ; PR touchant prisma/** ou packages/contracts/** porte le label schema et l'approbation bloquante de l'architecte A02",
       "fixtureRouge": "PR temoin ou l'auteur s'auto-approuve",
-      "preuveRouge": null
+      "preuveRouge": "16 familles, un temoin chacune, 6 contre-temoins verts dont celui de la scission dod (pnpm gov:pr --prove)"
     },
     {
       "id": "gov:depot-visibilite",
@@ -108,7 +108,7 @@
       "tache": "GOV-004",
       "verifie": "les faits affirmes sur le code d'axionia (>= 25, dates 'verifie le') sont rejoues contre le depot ; tout fait devenu faux -> rouge",
       "fixtureRouge": "affirmer que le modele Invoice existe",
-      "preuveRouge": null
+      "preuveRouge": "11 familles, un temoin chacune, 5 contre-temoins verts (pnpm gov:sonde --prove)"
     },
     {
       "id": "gov:hypotheses",
@@ -165,7 +165,7 @@
       "tache": "QA-T00",
       "verifie": "chaque gate de phase <= courante a un script cable dans un check requis, une fixtureRouge qui rougit encore (rejouee en nightly par prove.sh) et une preuveRouge non nulle ; CALCULE la gate de sortie de phase N",
       "fixtureRouge": "poser une gate sans run rouge archive",
-      "preuveRouge": null
+      "preuveRouge": "10 familles, un temoin chacune, 8 contre-temoins verts, 5 temoins de forme (pnpm gates:prouvees:prove)"
     },
     {
       "id": "GATE-JUR-SEUILS-SSOT",
@@ -1014,6 +1014,15 @@
       "verifie": "docs/requirements.json valide scripts/lot/requirements.schema.json ; ids uniques ; source non vide ; une exigence absorbee nomme une survivante ACTIVE (aucune chaine d'absorption) ; les 21 modules et les 12 etapes de l'audit portent chacun au moins une exigence ; toute exigence active est citee par au moins une tache, et aucune tache ne cite une exigence inexistante ; phase et taches[] sont DERIVEES du backlog, jamais saisies",
       "fixtureRouge": "vider la source d'une exigence, ou retirer le dernier porteur d'une exigence active",
       "preuveRouge": "pnpm gov:requirements:prove — 11 familles, chacune vue rougir sur son defaut injecte"
+    },
+    {
+      "id": "gov:preseance",
+      "phase": -1,
+      "script": "scripts/gates/gov-preseance.ts",
+      "tache": "GOV-002",
+      "verifie": "la table de preseance est complete et toute expression arbitree cite son porteur",
+      "fixtureRouge": "expression arbitree sans ancre de porteur",
+      "preuveRouge": "7 familles, un temoin chacune, 8 contre-temoins verts (pnpm gov:preseance --prove)"
     }
   ]
 }

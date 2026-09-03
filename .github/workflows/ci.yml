@@ -1,11 +1,22 @@
-# CI minimale. Cinq gardes sont armées à ce stade : `gov:publication` (GOV-000), `gov:tasks`
-# (GOV-017a) `gov:requirements` (GOV-001) `gov:hypotheses` (GOV-005) et `gov:identifiants` (GOV-003). Les autres sont ajoutées par leur tâche, chacune APRÈS avoir été vue rougir.
+# CI minimale. Le compte des gardes armées n'est PAS recopié ici : il se lit dans
+# `docs/GATES.md`, vue dérivée de `docs/gates.json` par `pnpm gov:gates-derivees --render`.
+# Une garde entre dans ce fichier par sa tâche, chacune APRÈS avoir été vue rougir.
+#
+# ⚠️ `pnpm gates:prouvees --phase -1` n'est PAS ici, et ce n'est pas un oubli : la plupart des
+# gates du socle n'ont ni script ni preuve, la commande est donc ROUGE aujourd'hui et rendrait
+# la CI définitivement rouge — une CI toujours rouge ne garde plus rien. Elle tourne en nightly,
+# où son rouge est le décompte de ce qui reste à armer, pas le refus d'une PR. Ce qui entre ici,
+# c'est `gates:prouvees:prove` : la preuve ne dépend d'aucun état du dépôt, elle doit rester verte.
 # Chaque garde est suivie de SA PREUVE : une garde dont on ne vérifie pas qu'elle sait rougir
 # cesse un jour de garder sans que rien ne le signale.
 name: Gate A
 on:
   push: { branches: [main] }
+  # `gov:pr` juge le TITRE et les LABELS de la PR. Sans `types`, GitHub ne declenche que sur
+  # opened/synchronize/reopened : corriger un titre refuse par la garde ne relancait donc RIEN,
+  # et un `gh run rerun` rejoue l'evenement d'ORIGINE, donc l'ancien titre. Constate sur la PR 26.
   pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
 jobs:
   gate-a:
     runs-on: ubuntu-latest
@@ -37,6 +48,28 @@ jobs:
         run: pnpm gov:hypotheses
       - name: La garde des decisions sait rougir
         run: pnpm gov:hypotheses:prove
+      - name: Table de preseance
+        run: pnpm gov:preseance
+      - name: La garde de preseance sait rougir
+        run: pnpm gov:preseance:prove
+      - name: Affirmations verifiees sur axionia
+        run: pnpm gov:sonde
+      - name: La sonde sait rougir
+        run: pnpm gov:sonde:prove
+      - name: ADR — index derive et gabarit
+        run: pnpm gov:adr
+      - name: La garde des ADR sait rougir
+        run: pnpm gov:adr:prove
+      - name: Gabarit de PR, CODEOWNERS et charte des agents
+        run: pnpm gov:pr
+      - name: La garde de PR sait rougir
+        run: pnpm gov:pr:prove
+      - name: Vue GATES.md derivee du registre
+        run: pnpm gov:gates-derivees
+      - name: Le decompte des gardes sait rougir
+        run: pnpm gates:prouvees:prove
+      - name: Les paths derives sont a jour
+        run: pnpm lot:paths:check
       - name: Typecheck
         run: pnpm typecheck
       - name: Tests

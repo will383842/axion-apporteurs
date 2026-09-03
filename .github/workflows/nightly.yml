@@ -1,0 +1,51 @@
+# Nightly — la gate `gate-nightly` du registre (QA-T00, REQ-QA-013).
+#
+# CE QU'ELLE EST. Un rendez-vous quotidien pour les contrôles qui n'ont pas leur place dans une
+# Gate A de PR : ceux qui sont LENTS, ceux qui touchent un TIERS, et ceux qui mesurent une DETTE
+# plutôt qu'une régression. Un contrôle de dette rouge sur une PR bloque tout le monde pour un
+# manque que la PR n'a pas créé ; ici, son rouge est un décompte, lu le matin.
+#
+# ⚠️ CE WORKFLOW EST ROUGE TANT QUE LA PHASE -1 N'EST PAS SORTIE, et c'est ce qu'on lui demande.
+# `gates:prouvees --phase -1` refuse toute gate du socle sans script câblé, sans fixture et sans
+# preuveRouge : au 2026-09-03 la plupart des gates du socle n'ont rien de tout cela. Le jour où ce
+# job passe au vert, la phase -1 est sortie — c'est le seul endroit du dépôt qui le dise. Ne le
+# passez PAS en `continue-on-error` pour le faire taire : un job qui ne bloque rien ne garde rien
+# (RM-02), et `G-SEC-CI-BLOQUANTE` le refuse.
+#
+# CE QUI MANQUE ENCORE ICI. `docs/gates.json` décrit `gate-nightly` comme portant aussi : le
+# contrat réel de l'API gouv (INT-T09), les heartbeats (QA-T19), la réconciliation quotidienne
+# (INT-T08), le ZAP baseline (QA-T07 et QA-T19), l'audit de dépendances, Stryker complet (QA-T30),
+# le drill de restauration mensuel (QA-T12) et le drill de résilience trimestriel (QA-T27).
+# Aucun de ces contrôles n'existe encore. Chaque tâche citée ajoute SON job ici, au moment où elle
+# livre son contrôle — pas avant, pour ne pas poser un job vide qui verdit sans rien mesurer.
+# Est aussi à ouvrir : le REJEU des `fixtureRouge` (`scripts/gates/prove.sh <id>` : injecter la
+# fixture, attendre un rouge). `gates:prouvees` vérifie qu'une fixture est NOMMÉE, jamais qu'elle
+# rougit encore ; sans ce rejeu, une gate dont la cible a dérivé reste « armée » indéfiniment.
+name: Nightly
+on:
+  schedule:
+    # 03:17 UTC — hors des heures de fusion, et décalé de l'heure ronde où tout le monde planifie.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: "Niveau de phase à juger (-1 = socle). C'est la phase à la SORTIE de laquelle les gates doivent être armées."
+        required: false
+        default: '-1'
+jobs:
+  gates-prouvees:
+    name: Sortie de phase — les gates sont-elles armées
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # La preuve d'abord : si la garde ne sait plus rougir, son verdict de la ligne suivante ne
+      # vaut rien, et on veut le savoir AVANT de lire le décompte.
+      - name: La garde des gates prouvees sait rougir
+        run: pnpm gates:prouvees:prove
+      - name: Les gates de la phase sont armees
+        run: pnpm gates:prouvees --phase ${{ inputs.phase || '-1' }}

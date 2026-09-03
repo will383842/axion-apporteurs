@@ -1,0 +1,66 @@
+# CODEOWNERS — Axion Partners (GOV-007, REQ-GOV-010)
+#
+# CE FICHIER NE PEUT PAS NOMMER LES POSTES. GitHub ne resout ni @A01 ni @A02 : il marque la ligne
+# « Unknown owner » et IGNORE la regle entiere — y compris prisma/, la seule ligne exigee par
+# l'acceptation de GOV-007. Un fichier plein de codes de poste est un fichier inoperant.
+#
+# D'ou la forme retenue, deux lignes par chemin :
+#   1. un commentaire qui nomme le POSTE responsable (docs/CHARTE-AGENTS.md, sections 2 et 7) ;
+#   2. la regle effective, avec un proprietaire que GitHub sait resoudre.
+#
+# Le seul collaborateur du depot will383842/axion-apporteurs est son proprietaire (decision W13,
+# docs/DECISIONS.md). C'est donc lui qui est nomme, afin que « Require review from Code Owners »
+# puisse etre arme des aujourd'hui. Le jour ou un compte GitHub existera par poste, seule la
+# colonne des proprietaires changera : les chemins et les commentaires de poste restent.
+#
+# CE QUE CE FICHIER NE FAIT PAS. Il n'attribue AUCUN label et ne compte AUCUNE lentille : c'est
+# `pnpm gov:pr` (scripts/gates/gov-pr.ts) qui exige le label `schema` et l'approbation de A02 sur
+# une PR touchant prisma/ ou packages/contracts/, et qui exige le label `role:<fiche>` sur un
+# chemin reserve. Ce fichier declenche la DEMANDE de revue ; la garde verifie qu'elle a eu lieu.
+
+# Par defaut, tout le depot.
+*                               @will383842
+
+# --- Le schema et les contrats : poste A02 (`architecte`), approbation bloquante, label `schema`
+/prisma/                        @will383842
+# poste A02 (`architecte`) — docs/CONVENTIONS.md section 5 et section 8
+/packages/contracts/            @will383842
+
+# --- Les registres : poste A01 (`gardien-spec`), label `role:gardien-spec`
+/docs/REQUIREMENTS.md           @will383842
+# poste A01 (`gardien-spec`)
+/docs/DECISIONS.md              @will383842
+# poste A01 (`gardien-spec`)
+/docs/GLOSSAIRE.md              @will383842
+# poste A01 (`gardien-spec`)
+/docs/PRESEANCE.md              @will383842
+# poste A01 (`gardien-spec`)
+/docs/tasks.json                @will383842
+# poste A01 (`gardien-spec`) — fichier DERIVE, regenere par `pnpm plan-state:build`
+/docs/PLAN-STATE.md             @will383842
+
+# --- Les decisions de conception : poste A02 accepte, poste A03 (`documentaliste`) indexe
+/docs/adr/                      @will383842
+
+# --- La memoire ecrite : poste A03 (`documentaliste`), label `role:documentaliste`
+/docs/runbooks/                 @will383842
+# poste A03 (`documentaliste`)
+/docs/tiers/                    @will383842
+# poste A03 (`documentaliste`)
+/CHANGELOG.md                   @will383842
+
+# --- Ce que l'apporteur lit : poste A06 (`ux-redaction`), label `role:ux-redaction`
+/docs/maquettes/                @will383842
+
+# --- La flotte elle-meme : AUCUN poste n'en est proprietaire.
+# .claude/settings.json et .claude/agents/ sont ecrits par le lot dedie GOV-000 / GOV-023, lance
+# avec --settings surcharge, JAMAIS par un agent en session : .claude/settings.json porte
+# lui-meme `deny` sur Write et Edit de ce chemin. Les nommer ici a un poste declarerait
+# proprietaire quelqu'un que la matrice d'autonomie empeche d'ecrire. Ils sont donc laisses au
+# proprietaire par defaut, et c'est la garde `gov:autonomie` (GOV-000, "preuveRouge": null a ce
+# jour) qui les gardera le jour ou elle sera ecrite.
+
+# CE QUI N'EST PAS DECLARE ICI
+# - la revue `apporteur-facing` du poste A07 (`juriste`) : ni le label, ni la section du gabarit,
+#   ni les chemins n'existent encore. Ils sont poses par la tache juridique qui les porte, pas par
+#   GOV-007 (docs/CHARTE-AGENTS.md, section 9).
