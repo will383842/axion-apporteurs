@@ -45,6 +45,10 @@ jobs:
         run: pnpm gov:sonde
       - name: La sonde sait rougir
         run: pnpm gov:sonde:prove
+      - name: ADR — index derive et gabarit
+        run: pnpm gov:adr
+      - name: La garde des ADR sait rougir
+        run: pnpm gov:adr:prove
       - name: Typecheck
         run: pnpm typecheck
       - name: Tests

@@ -54,7 +54,7 @@
       "tache": "GOV-009",
       "verifie": "dossier unique partners/ADR-0001+, numeros consecutifs, index derive du systeme de fichiers, references qualifiees, chaque ADR porte une assertion ou la mention hors-code",
       "fixtureRouge": "referencer ADR-9999 dans une PR",
-      "preuveRouge": null
+      "preuveRouge": "12 familles, un temoin chacune, 5 contre-temoins verts (pnpm gov:adr --prove)"
     },
     {
       "id": "gov:tasks",
