@@ -12,7 +12,11 @@
 name: Gate A
 on:
   push: { branches: [main] }
+  # `gov:pr` juge le TITRE et les LABELS de la PR. Sans `types`, GitHub ne declenche que sur
+  # opened/synchronize/reopened : corriger un titre refuse par la garde ne relancait donc RIEN,
+  # et un `gh run rerun` rejoue l'evenement d'ORIGINE, donc l'ancien titre. Constate sur la PR 26.
   pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
 jobs:
   gate-a:
     runs-on: ubuntu-latest
