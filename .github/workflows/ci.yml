@@ -60,6 +60,10 @@ jobs:
         run: pnpm gov:adr
       - name: La garde des ADR sait rougir
         run: pnpm gov:adr:prove
+      - name: Matrice d autonomie des agents et garde des pushes
+        run: pnpm gov:autonomie
+      - name: La garde d autonomie sait rougir
+        run: pnpm gov:autonomie:prove
       - name: Gabarit de PR, CODEOWNERS et charte des agents
         run: pnpm gov:pr
       - name: La garde de PR sait rougir

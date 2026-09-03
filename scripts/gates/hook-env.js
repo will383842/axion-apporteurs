@@ -13,10 +13,19 @@
  *   2. Hors production, `NOTIFY_SINK` doit valoir "true" : aucun e-mail, SMS, Telegram ou enveloppe
  *      DocuSeal ne part vers une vraie personne depuis un poste d'agent ou la CI.
  *   3. Aucune commande ne peut fixer ces variables en ligne (`DATABASE_URL=… pnpm …`).
+ *   4. Aucun `git push` n'atteint la branche principale, et aucun n'ecrase l'historique distant.
+ *      Ce quatrieme invariant DOUBLE les six regles `deny` de `.claude/settings.json`, qui sont
+ *      des sous-chaines et supposent donc une FORME de commande. La lentille `securite` a montre
+ *      sur la PR 27 que `git push origin lot/x:main --force` et `git push -u origin lot/x:main`
+ *      passent entre toutes les six : la destination y est ecrite apres un deux-points, le
+ *      drapeau de force est en fin de ligne. On ne rattrape pas une syntaxe par des morceaux de
+ *      texte — `git-push-sur.js` la LIT. Voir ce fichier pour le detail.
  *
  * POURQUOI : 40 agents qui testent, ce sont 40 sources d'envois réels. La règle est portée par un
  * hook et non par une consigne, parce qu'une consigne ne rougit pas.
  */
+
+const { jugerPush } = require('./git-push-sur.js');
 
 const LOCAL = /^(postgres(ql)?:\/\/)[^@]*@(localhost|127\.0\.0\.1|db|postgres)(:\d+)?\//i;
 const TESTCONTAINER = /^(postgres(ql)?:\/\/)[^@]*@(localhost|127\.0\.0\.1):\d{4,5}\//i;
@@ -49,6 +58,10 @@ process.stdin.on('end', () => {
         '(si tu voulais seulement citer la variable dans un texte, mets-la entre guillemets sans le signe `=` collé)'
     );
   }
+
+  // 4. la branche principale et l'historique distant — juges sur les JETONS, pas sur du texte.
+  const verdict = jugerPush(commande);
+  if (verdict.refuse) refuser(verdict.motif);
 
   const url = process.env.DATABASE_URL || '';
   if (url && !(LOCAL.test(url) || TESTCONTAINER.test(url) || STUB.test(url))) {

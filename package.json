@@ -11,7 +11,7 @@
   "scripts": {
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
-    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr",
+    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
@@ -45,7 +45,9 @@
     "gov:gates-derivees:render": "tsx scripts/gates/gates-derivees.ts --render",
     "lot:paths": "tsx scripts/lot/paths-proposes.ts",
     "lot:paths:check": "tsx scripts/lot/paths-proposes.ts --check",
-    "lot:integrer": "tsx scripts/lot/integrer.ts"
+    "lot:integrer": "tsx scripts/lot/integrer.ts",
+    "gov:autonomie": "tsx scripts/gates/gov-autonomie.ts",
+    "gov:autonomie:prove": "tsx scripts/gates/gov-autonomie.ts --prove"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

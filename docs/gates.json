@@ -63,7 +63,7 @@
       "tache": "GOV-017a",
       "verifie": "docs/tasks.json valide scripts/lot/tasks.schema.json (ajv, invariants conditionnels compris) ; ids uniques ; deps resolues, acycliques, jamais vers une phase ulterieure ; aucun identifiant scinde (INT-T01, GOV-017, EXT-T02) ni identifiant de decision en dependance ; chaque hyp[] declaree dans DECISIONS.md (alias de la section 0 compris) ; paths[] non vide ; <= 1,5 j hors tache externe ; externe non nul implique statut attente_externe. HORS PERIMETRE, repris par GOV-017b : la disjonction des paths dans un lot (le composeur) et l'egalite total affiche = somme des estimations (la vue TASKS.md n'est pas encore generee dans ce depot)",
       "fixtureRouge": "dupliquer un id de tache",
-      "preuveRouge": "pnpm gov:tasks:prove — 11 familles, chacune vue rougir sur son propre defaut injecte"
+      "preuveRouge": "pnpm gov:tasks:prove — 12 familles, chacune vue rougir sur son propre defaut injecte, 2 contre-temoins verts sur les deux formes de branche (partners/ADR-0007)"
     },
     {
       "id": "gov:pr",
@@ -89,8 +89,8 @@
       "script": "scripts/gates/gov-autonomie.ts",
       "tache": "GOV-000",
       "verifie": "la matrice d'autonomie EST .claude/settings.json + hook-env.js : deny sur git push origin main*, git push --force*, prisma migrate deploy*, pnpm db:deploy*, Write/Edit de PLAN-STATE.md, REQUIREMENTS.md, DECISIONS.md, tasks.json ; hook PreToolUse declare sur Bash ; toute ligne de la matrice (REQ-CPL-021) sans regle correspondante -> rouge",
-      "fixtureRouge": "retirer une regle deny de settings.json",
-      "preuveRouge": null
+      "fixtureRouge": "retirer une regle deny de settings.json ; ou rendre `jugerPush` toujours permissif — c'est l'etat du depot AVANT cette garde, ou `git push origin lot/x:main --force` passait",
+      "preuveRouge": "pnpm gov:autonomie:prove — 4 familles (deny_manquant, hook_non_declare, hook_sans_analyse, commande_laissee_passer), un temoin chacune, 12 commandes dangereuses refusees et 7 legitimes acceptees en contre-temoins"
     },
     {
       "id": "gov:plan-state",
