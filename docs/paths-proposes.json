@@ -1,0 +1,1125 @@
+{
+  "version": 1,
+  "resume": {
+    "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne — la comparaison exacte que fait `scripts/lot/composer.ts` (`pris.has(p)`). Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
+    "tachesCouvertes": 197,
+    "pairesEnIntersection": 3600,
+    "cheminsDeclares": 601,
+    "cheminsDistincts": 347,
+    "cheminsPartages": 91,
+    "tachesSansAucuneIntersection": 25,
+    "listeDesTachesIsolees": [
+      "INT-T01b",
+      "CPL-T01",
+      "QA-T08",
+      "QA-T06",
+      "QA-T12",
+      "QA-T13",
+      "DM-03-A",
+      "INT-T04",
+      "INT-T22",
+      "JUR-T04",
+      "CPL-T13",
+      "INT-T07-A",
+      "INT-T08-P",
+      "INT-T21-P",
+      "JUR-T09",
+      "QA-T21",
+      "UX-P2-04",
+      "UX-P2-05",
+      "T-ARG-035",
+      "QA-T25",
+      "QA-T29",
+      "CPL-T23",
+      "UX-P3-03",
+      "UX-P3-05",
+      "JUR-T22"
+    ],
+    "cheminsLesPlusPartages": [
+      {
+        "chemin": "docs/gates.json",
+        "taches": 74
+      },
+      {
+        "chemin": "prisma/schema.prisma",
+        "taches": 41
+      },
+      {
+        "chemin": ".github/workflows/ci.yml",
+        "taches": 10
+      },
+      {
+        "chemin": ".github/workflows/nightly.yml",
+        "taches": 5
+      },
+      {
+        "chemin": "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+        "taches": 5
+      },
+      {
+        "chemin": "emails/apporteur/",
+        "taches": 5
+      }
+    ],
+    "_consequence": "ce que ces totaux imposent au composeur, et qui n'est pas un choix de ce fichier mais une lecture des deux registres : `docs/gates.json` est écrit par toute tâche qui pose une garde (son en-tête le dit : « `preuveRouge` = l'URL du run CI rouge archivé, remplie par la PR qui pose la gate »), et `prisma/schema.prisma` par toute tâche `schema: true`. Deux tâches de ces familles ne peuvent donc plus entrer dans le MÊME lot — c'est exactement le conflit d'édition que le contrôle de disjonction existe pour empêcher, et il était invisible au premier tour.",
+    "testsSansRepertoire": [
+      "GOV-018 — regles-maison.spec.ts",
+      "GOV-008 — plan-state-frais.spec.ts",
+      "GOV-008 — une-tache-un-owner.spec.ts",
+      "GOV-002 — preseance.spec.ts",
+      "GOV-004 — affirmations-verifiees.spec.ts",
+      "GOV-006 — glossaire-enums.spec.ts",
+      "GOV-009 — adr-index-derive.spec.ts",
+      "GOV-011 — tracabilite.spec.ts",
+      "GOV-013 — lexique.spec.ts",
+      "GOV-014 — gardes-transposees.spec.ts",
+      "GOV-015 — fiches-tiers.spec.ts",
+      "GOV-019 — poids-du-bundle-garde-vraiment.spec.ts",
+      "GOV-023 — fiches-agents.spec.ts",
+      "QA-T03 — req-check.spec.ts",
+      "INT-T02 — outbox-produit-des-evenements-valides.spec.ts",
+      "JUR-T03 — vocabulaire-apporteur.spec.ts",
+      "UX-P0-02 — maquettes-validees.spec.ts",
+      "JUR-T29 — remuneration-indicative.spec.ts",
+      "JUR-T01b — decisions-ouvertes.spec.ts",
+      "JUR-T13 — textes-apporteurs-charte-relationnelle.spec.ts",
+      "GOV-021 — revue-adversariale-exigee.spec.ts",
+      "JUR-T27 — contrat-sobre.spec.ts"
+    ],
+    "registreHorsDepot": [
+      "DM-03-A",
+      "INT-T02",
+      "INT-T03",
+      "JUR-T03",
+      "JUR-T29",
+      "INT-T08-A"
+    ],
+    "schemaContredit": [
+      "DM-01",
+      "QA-T06",
+      "DM-03-P",
+      "INT-T02",
+      "SEC-06",
+      "SEC-03",
+      "SEC-04",
+      "SEC-11",
+      "DM-09",
+      "DM-11",
+      "DM-12",
+      "SEC-18",
+      "INT-T12",
+      "SEC-21",
+      "CPL-T06",
+      "UX-P1-15",
+      "DM-16",
+      "DM-19",
+      "T-ARG-032",
+      "CPL-T11",
+      "CPL-T15",
+      "EXT-T08",
+      "EXT-T01"
+    ],
+    "gardesSansEntreeAuRegistre": [
+      "JUR-T30 — jur:aucune-instruction",
+      "JUR-T30 — jur:date-contact-inerte",
+      "JUR-T30 — jur:supports-de-presentation"
+    ]
+  },
+  "paths": {
+    "GOV-000": [
+      "package.json",
+      "README.md",
+      ".github/workflows/ci.yml",
+      ".claude/settings.json",
+      ".claude/agents/",
+      ".claude/skills/lot/SKILL.md",
+      "scripts/lot/composer.ts",
+      "scripts/lot/cloture.ts",
+      "scripts/lot/lot.workflow.js",
+      "scripts/lot/tasks.schema.json",
+      "scripts/plan-state/build.ts",
+      "scripts/gates/gov-check.ts",
+      "scripts/gates/hook-env.js",
+      "docs/tasks.json",
+      "scripts/gates/gov-autonomie.ts",
+      "scripts/gates/deploy-verify.ts",
+      "scripts/gates/gov-publication.ts",
+      "docs/gates.json",
+      "tests/unit/gouvernance/gardes.spec.ts"
+    ],
+    "GOV-007": [
+      "docs/CHARTE-AGENTS.md",
+      ".github/PULL_REQUEST_TEMPLATE.md",
+      ".github/CODEOWNERS",
+      "scripts/gates/gov-pr.ts",
+      "docs/gates.json",
+      "tests/gov/charte-pr.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "GOV-001": [
+      "docs/REQUIREMENTS.md",
+      "docs/requirements.json",
+      "docs/REQUIREMENTS-ANNEXE-FUSIONS.md",
+      "scripts/gates/gov-requirements.ts",
+      "docs/gates.json",
+      "tests/unit/gouvernance/gardes.spec.ts"
+    ],
+    "GOV-018": [
+      "docs/REGLES-MAISON.md",
+      "docs/LECONS.md",
+      ".github/PULL_REQUEST_TEMPLATE.md"
+    ],
+    "GOV-008": [
+      "docs/PLAN-STATE.md",
+      "scripts/plan-state/build.ts",
+      ".claude/skills/lot/SKILL.md",
+      "scripts/gates/plan-state-derive.spec.ts",
+      "docs/gates.json"
+    ],
+    "GOV-002": [
+      "docs/PRESEANCE.md",
+      "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+      "scripts/gates/gov-preseance.ts",
+      "docs/gates.json"
+    ],
+    "GOV-003": [
+      "scripts/gates/gov-identifiants.ts",
+      "docs/gates.json",
+      "tests/unit/gouvernance/gardes.spec.ts"
+    ],
+    "GOV-004": [
+      "docs/VERIFICATIONS-AXIONIA.md",
+      "scripts/gates/gov-sonde.ts",
+      "docs/gates.json"
+    ],
+    "GOV-005": [
+      "docs/DECISIONS.md",
+      "scripts/gates/gov-hypotheses.ts",
+      "docs/gates.json",
+      "tests/unit/gouvernance/gardes.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "GOV-006": [
+      "docs/GLOSSAIRE.md",
+      "scripts/gates/schema-enums.ts",
+      "prisma/schema.prisma"
+    ],
+    "GOV-009": [
+      "docs/adr/",
+      "scripts/gates/gov-adr.ts",
+      "docs/gates.json"
+    ],
+    "GOV-010": [
+      "scripts/gates/gov-adr.ts"
+    ],
+    "GOV-011": [
+      "docs/TRACEABILITE.md",
+      "scripts/plan-state/traceabilite.ts",
+      "scripts/gates/req-check.ts",
+      "docs/gates.json"
+    ],
+    "GOV-012": [
+      "docs/runbooks/fusion-partners.md",
+      ".github/workflows/ci.yml",
+      "docs/gates.json",
+      "scripts/gates/gov-depot-visibilite.sh",
+      "tests/unit/ci/aucun-workflow-ne-pousse-sur-main.spec.ts",
+      "tests/unit/ci/tout-check-est-cable.spec.ts"
+    ],
+    "GOV-013": [
+      "docs/gates.json",
+      "scripts/gates/lexique-apporteurs.ts"
+    ],
+    "GOV-014": [
+      "docs/CONVENTIONS.md",
+      "eslint.config.mjs",
+      ".prettierrc",
+      "package.json",
+      "scripts/gates/gov-derivation.ts",
+      "docs/gates.json"
+    ],
+    "GOV-015": [
+      "docs/tiers/recherche-entreprises.md",
+      "docs/tiers/docuseal.md",
+      "docs/tiers/zeptomail.md",
+      "docs/tiers/telegram.md",
+      "docs/tiers/sepa-pain001.md",
+      "docs/tiers/urssaf.md",
+      "docs/tiers/tiime.md"
+    ],
+    "INT-T01a": [
+      "packages/contracts/events.ts",
+      "packages/contracts/enveloppe.ts",
+      "scripts/contracts/export.ts",
+      "package.json",
+      "tests/fixtures/axionia/",
+      "scripts/gates/detect-pii.ts",
+      "scripts/gates/contrat-epingle.ts",
+      "tests/contract/contrat-hash.spec.ts",
+      "scripts/gates/fixtures-source.ts",
+      "docs/gates.json",
+      "prisma/schema.prisma"
+    ],
+    "INT-T01b": [
+      "axionia/scripts/partners/fixtures.ts",
+      "axionia/src/server/partners-sync/contracts/"
+    ],
+    "GOV-017a": [
+      "docs/tasks.json",
+      "scripts/lot/tasks.schema.json",
+      "scripts/gates/gov-tasks.ts",
+      "docs/gates.json",
+      "tests/unit/gouvernance/gardes.spec.ts"
+    ],
+    "GOV-017b": [
+      "docs/tasks.json",
+      "scripts/lot/tasks.schema.json",
+      "scripts/gates/gov-tasks.ts",
+      "docs/paths-proposes.json",
+      "scripts/lot/paths-proposes.ts"
+    ],
+    "GOV-019": [
+      "scripts/gates/bundle-par-route.ts"
+    ],
+    "GOV-020": [
+      "docs/VERIFICATIONS-AXIONIA.md"
+    ],
+    "GOV-023": [
+      "docs/agents.json",
+      ".claude/agents/",
+      "package.json",
+      "scripts/gates/gov-agents.ts",
+      "docs/gates.json"
+    ],
+    "QA-T00": [
+      "scripts/gates/prove.sh",
+      "docs/gates.json",
+      ".github/workflows/nightly.yml",
+      "scripts/gates/gates-derivees.ts",
+      "scripts/gates/gates-prouvees.ts"
+    ],
+    "JUR-T02": [
+      "src/domain/seuils/ssot.ts",
+      "docs/gates.json",
+      "scripts/gates/seuils-ssot.ts"
+    ],
+    "CPL-T01": [
+      "docs/decisions/CPL-T01"
+    ],
+    "QA-T01": [
+      "vitest.config.ts",
+      "tests/setup.ts",
+      ".github/workflows/ci.yml",
+      "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
+      "docs/gates.json"
+    ],
+    "SEC-01": [
+      "src/lib/env.ts",
+      ".env.example",
+      "scripts/gates/env-boot.spec.ts",
+      "docs/gates.json"
+    ],
+    "SEC-02": [
+      "src/middleware.ts",
+      "next.config.ts",
+      "tests/security/headers.spec.ts",
+      "docs/gates.json"
+    ],
+    "SEC-10": [
+      "src/server/securite/rate-limit.ts",
+      "scripts/gates/rate-famille.ts",
+      "docs/gates.json"
+    ],
+    "QA-T08": [
+      "src/lib/logger.ts",
+      "src/lib/notify.ts",
+      "sentry.server.config.ts"
+    ],
+    "DM-01": [
+      "prisma/schema.prisma",
+      "prisma/migrations/",
+      "src/domain/evenement/journal.ts",
+      "tests/integration/journal.spec.ts",
+      "scripts/gates/journal-sans-pii.ts",
+      "docs/gates.json"
+    ],
+    "DM-02": [
+      "scripts/gates/schema-enums.ts",
+      "docs/gates.json",
+      "scripts/gates/schema-cents.ts"
+    ],
+    "QA-T02": [
+      "tests/integration/harnais.ts",
+      "vitest.config.ts",
+      ".github/workflows/ci.yml",
+      "docs/gates.json"
+    ],
+    "QA-T04": [
+      "src/lib/env.ts",
+      "src/app/api/livez/route.ts",
+      "src/app/api/readyz/route.ts",
+      "Dockerfile",
+      "docker-entrypoint.sh",
+      "prisma/schema.prisma"
+    ],
+    "QA-T03": [
+      "scripts/gates/req-check.ts",
+      "docs/requirements.json",
+      ".github/workflows/ci.yml"
+    ],
+    "QA-T07": [
+      ".semgrep.yml",
+      ".github/workflows/ci.yml",
+      "docs/gates.json",
+      "scripts/gates/ast-prisma.ts"
+    ],
+    "QA-T30": [
+      "stryker.config.json",
+      ".github/workflows/nightly.yml",
+      "scripts/gates/stryker.sh",
+      "docs/gates.json"
+    ],
+    "CPL-T22": [
+      ".github/workflows/ci.yml",
+      "docs/gates.json",
+      ".github/workflows/red-first.yml"
+    ],
+    "SEC-08": [
+      "src/server/securite/pii.ts",
+      "scripts/gates/schema-pii.ts",
+      "docs/gates.json"
+    ],
+    "QA-T05": [
+      ".github/workflows/deploy.yml",
+      "Dockerfile",
+      "scripts/gates/gate-c.sh",
+      "docs/gates.json"
+    ],
+    "QA-T11": [
+      ".github/workflows/ci.yml",
+      "docs/gates.json",
+      "scripts/gates/migrations-additive.ts",
+      "scripts/gates/gate-d.sh"
+    ],
+    "QA-T06": [
+      ".github/workflows/preview.yml",
+      "prisma/seed.ts"
+    ],
+    "QA-T12": [
+      ".github/workflows/backup.yml",
+      "docs/runbooks/sauvegarde.md"
+    ],
+    "QA-T13": [
+      ".github/workflows/rollback.yml",
+      "docs/runbooks/rollback.md",
+      "docs/runbooks/socle.md"
+    ],
+    "DM-03-A": [
+      "axionia/src/content/pricing.ts",
+      "axionia/src/server/partners-sync/grille/export.ts",
+      "axionia/scripts/gates/grille-check.ts"
+    ],
+    "DM-03-P": [
+      "src/server/grille/import.ts",
+      "src/domain/commission/grille.ts",
+      "prisma/schema.prisma"
+    ],
+    "DM-04": [
+      "src/domain/commission/calcul.ts",
+      "tests/domain/conservation.spec.ts",
+      "docs/gates.json"
+    ],
+    "INT-T02": [
+      "axionia/src/server/partners-sync/outbox.ts",
+      "axionia/prisma/schema.prisma",
+      "axionia/scripts/gates/inertie.ts"
+    ],
+    "INT-T03": [
+      "axionia/src/server/partners-sync/producteurs/client.ts",
+      "axionia/prisma/schema.prisma",
+      "axionia/scripts/gates/cliquet-ecrivains.ts"
+    ],
+    "INT-T04": [
+      "axionia/src/server/partners-sync/producteurs/devis.ts"
+    ],
+    "INT-T05": [
+      "axionia/src/server/partners-sync/producteurs/facturation.ts",
+      "axionia/prisma/schema.prisma"
+    ],
+    "INT-T22": [
+      "axionia/src/server/partners-sync/producteurs/candidature.ts"
+    ],
+    "SEC-06": [
+      "src/app/api/webhooks/axionia/route.ts",
+      "src/server/integrations/axionia/reception.ts",
+      "src/server/queue/workers/evenement-recu.ts",
+      "prisma/schema.prisma",
+      "tests/integration/webhook.spec.ts",
+      "tests/security/webhook-signature.spec.ts",
+      "tests/integration/webhook-verdicts.spec.ts",
+      "docs/gates.json"
+    ],
+    "SEC-07": [
+      "src/server/integrations/axionia/api-entrante.ts",
+      "src/app/api/integrations/axionia/",
+      "tests/integration/frontiere.spec.ts",
+      "docs/gates.json"
+    ],
+    "SEC-03": [
+      "src/server/auth/lien-magique.ts",
+      "src/app/(espace)/connexion/",
+      "prisma/schema.prisma"
+    ],
+    "SEC-04": [
+      "src/server/auth/session.ts",
+      "prisma/schema.prisma",
+      "tests/security/revocation.spec.ts",
+      "docs/gates.json"
+    ],
+    "SEC-05": [
+      "src/server/acces/for-apporteur.ts",
+      "docs/gates.json",
+      "tests/security/idor.spec.ts"
+    ],
+    "SEC-17": [
+      "src/server/roles/matrice.ts",
+      "src/server/roles/require-role.ts",
+      "prisma/schema.prisma",
+      "scripts/gates/roles.ts",
+      "docs/gates.json"
+    ],
+    "INT-T09": [
+      "src/server/integrations/recherche-entreprises/",
+      "docs/tiers/recherche-entreprises.md",
+      "tests/fixtures/recherche-entreprises/",
+      "scripts/gates/aucun-annee-de-naissance.ts",
+      "tests/integration/api-gouv.spec.ts",
+      "docs/gates.json"
+    ],
+    "INT-T10": [
+      "src/server/integrations/zeptomail/",
+      "docs/tiers/zeptomail.md",
+      "src/app/api/webhooks/zeptomail/route.ts",
+      "tests/unit/email/emetteur.spec.ts",
+      "docs/gates.json"
+    ],
+    "INT-T11": [
+      "src/server/mcp/",
+      "scripts/gates/harnais-mcp.ts",
+      "docs/gates.json"
+    ],
+    "INT-T14": [
+      "src/server/integrations/telegram/",
+      "docs/tiers/telegram.md",
+      "tests/security/notif-sans-pii.spec.ts",
+      "docs/gates.json"
+    ],
+    "DM-06": [
+      "prisma/schema.prisma",
+      "src/domain/apporteur/statut.ts",
+      "src/domain/apporteur/matrice.ts"
+    ],
+    "JUR-T01": [
+      "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+      "docs/contrat/ANNEXE-2-MANDAT.md",
+      "docs/DECISIONS.md",
+      "scripts/gates/lexique-apporteurs.ts",
+      "scripts/gates/jur-grille-chiffree.ts",
+      "tests/unit/contrat/contract-template-complete.spec.ts",
+      "docs/gates.json"
+    ],
+    "JUR-T03": [
+      "axionia/src/content/commercial-offer.ts",
+      "axionia/scripts/gates/vocab-public.ts"
+    ],
+    "JUR-T04": [
+      "docs/rgpd/registre-article-30.md",
+      "docs/rgpd/aipd.md",
+      "src/app/(espace)/confidentialite/page.tsx"
+    ],
+    "UX-P0-01": [
+      "messages/fr.json",
+      "src/content/micro-copy/",
+      "scripts/gates/ux-exhaustivite.ts",
+      "docs/gates.json"
+    ],
+    "UX-P0-02": [
+      "docs/maquettes/",
+      "docs/ESPACE-ROUTES.md",
+      "scripts/gates/maquettes-validees.ts",
+      "docs/gates.json"
+    ],
+    "UX-P0-03": [
+      "tests/a11y/",
+      "playwright.config.ts",
+      "tests/a11y/axe.spec.ts",
+      "tests/a11y/cibles.spec.ts",
+      "tests/a11y/reflow.spec.ts",
+      "docs/gates.json"
+    ],
+    "QA-T20": [
+      "lighthouserc.json",
+      ".github/workflows/ci.yml",
+      "scripts/gates/bundle-par-route.ts",
+      "docs/gates.json"
+    ],
+    "JUR-T29": [
+      "axionia/src/content/commercial-offer.ts",
+      "axionia/scripts/gates/jur-copy-indicative.ts"
+    ],
+    "CPL-T13": [
+      "src/domain/temps/",
+      "src/domain/attribution/seuil-prioritaire.ts"
+    ],
+    "JUR-T01b": [
+      "docs/contrat/CONTRAT-APPORTEUR-V1.md"
+    ],
+    "JUR-T01c": [
+      "docs/contrat/ANNEXE-2-MANDAT.md"
+    ],
+    "DM-07": [
+      "prisma/schema.prisma",
+      "prisma/migrations/",
+      "src/domain/attribution/etats.ts",
+      "tests/integration/index-partiel.spec.ts",
+      "docs/gates.json"
+    ],
+    "DM-08": [
+      "src/domain/attribution/machine.ts",
+      "src/domain/attribution/etats.ts",
+      "tests/domain/transitions.spec.ts",
+      "docs/gates.json"
+    ],
+    "DM-24": [
+      "src/server/crons/confirmation-tacite.ts",
+      "src/domain/attribution/machine.ts"
+    ],
+    "DM-25": [
+      "src/server/crons/anteriorite-retroactive.ts",
+      "src/domain/entreprise-connue/anteriorite.ts"
+    ],
+    "INT-T07-P": [
+      "src/app/api/integrations/axionia/",
+      "src/server/integrations/axionia/attributions-dto.ts"
+    ],
+    "INT-T07-A": [
+      "axionia/src/server/partners-sync/client-attributions.ts"
+    ],
+    "INT-T08-A": [
+      "axionia/src/app/api/partners/relecture/route.ts",
+      "axionia/tests/integration/reconciliation.spec.ts"
+    ],
+    "INT-T08-P": [
+      "src/server/crons/reconciliation.ts"
+    ],
+    "SEC-11": [
+      "src/server/auth/jeton-depot.ts",
+      "prisma/schema.prisma"
+    ],
+    "SEC-12": [
+      "src/server/depot/controles.ts",
+      "src/domain/attribution/depot.ts",
+      "tests/integration/concurrence.spec.ts",
+      "docs/gates.json"
+    ],
+    "DM-09": [
+      "prisma/schema.prisma",
+      "src/domain/qualification/"
+    ],
+    "DM-10-P": [
+      "prisma/schema.prisma",
+      "src/domain/entreprise-connue/anteriorite.ts",
+      "src/domain/seuils/ssot.ts"
+    ],
+    "DM-11": [
+      "prisma/schema.prisma",
+      "src/domain/kyc/pieces.ts"
+    ],
+    "DM-12": [
+      "prisma/schema.prisma",
+      "src/domain/anomalie/"
+    ],
+    "DM-13": [
+      "src/server/crons/attribution.ts",
+      "src/domain/attribution/machine.ts",
+      "tests/integration/purge.spec.ts",
+      "docs/gates.json"
+    ],
+    "SEC-14": [
+      "src/domain/anomalie/",
+      "src/server/anomalie/evaluation.ts"
+    ],
+    "SEC-15": [
+      "prisma/schema.prisma",
+      "src/domain/apporteur/suspension.ts"
+    ],
+    "SEC-28": [
+      "src/server/crons/levee-gel.ts",
+      "src/domain/apporteur/suspension.ts",
+      "tests/security/cliquet-gel.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "SEC-16": [
+      "src/server/verification/dto.ts",
+      "src/domain/verification/etats.ts",
+      "tests/security/oracle.spec.ts",
+      "docs/gates.json"
+    ],
+    "SEC-18": [
+      "src/server/parrainage/anti-auto.ts",
+      "prisma/schema.prisma"
+    ],
+    "SEC-19": [
+      "src/domain/apporteur/resiliation.ts",
+      "src/server/auth/session.ts",
+      "prisma/schema.prisma",
+      "tests/domain/acteur-humain.spec.ts",
+      "docs/gates.json"
+    ],
+    "INT-T12": [
+      "src/server/integrations/docuseal/",
+      "docs/tiers/docuseal.md",
+      "src/app/api/webhooks/docuseal/route.ts",
+      "prisma/schema.prisma",
+      "tests/integration/docuseal.spec.ts",
+      "tests/integration/signature-avant-depot.spec.ts",
+      "docs/gates.json"
+    ],
+    "INT-T13": [
+      "src/server/mcp/"
+    ],
+    "INT-T21-A": [
+      "axionia/src/app/api/partners/relecture/route.ts"
+    ],
+    "INT-T21-P": [
+      "scripts/backfill/axionia.ts"
+    ],
+    "SEC-21": [
+      "src/server/parrainage/code.ts",
+      "prisma/schema.prisma"
+    ],
+    "JUR-T09": [
+      "emails/prospect/information-article-14.tsx",
+      "src/content/script-qualification.ts"
+    ],
+    "JUR-T13": [
+      "emails/apporteur/",
+      "src/content/micro-copy/",
+      "src/app/(espace)/",
+      "scripts/gates/lexique-apporteurs.ts"
+    ],
+    "CPL-T06": [
+      "prisma/schema.prisma",
+      "src/domain/candidature/decision.ts"
+    ],
+    "UX-P1-04": [
+      "src/app/(espace)/connexion/"
+    ],
+    "UX-P1-01": [
+      "src/app/(espace)/entreprise/page.tsx",
+      "src/app/(espace)/page.tsx",
+      "docs/ESPACE-ROUTES.md"
+    ],
+    "UX-P1-02": [
+      "src/app/(espace)/deposer/page.tsx",
+      "src/components/depot/formulaire.tsx"
+    ],
+    "UX-P1-03": [
+      "src/app/(espace)/d/[jeton]/page.tsx",
+      "src/components/depot/formulaire.tsx",
+      "tests/ux/hors-ligne.spec.ts",
+      "docs/gates.json"
+    ],
+    "UX-P1-05": [
+      "src/app/(espace)/mes-entreprises/page.tsx"
+    ],
+    "UX-P1-06": [
+      "src/app/(console)/qualification/[id]/page.tsx"
+    ],
+    "UX-P1-07": [
+      "src/app/(console)/qualification/page.tsx",
+      "src/app/(console)/qualification/[id]/page.tsx"
+    ],
+    "UX-P1-08": [
+      "src/app/(espace)/page.tsx",
+      "src/app/(espace)/layout.tsx",
+      "tests/ux/etats-vides.spec.ts",
+      "docs/gates.json"
+    ],
+    "QA-T20b": [
+      ".github/workflows/ci.yml"
+    ],
+    "UX-P1-09": [
+      "src/app/(espace)/conformite/page.tsx",
+      "src/app/(espace)/profil/page.tsx"
+    ],
+    "UX-P1-15": [
+      "src/app/(espace)/profil/page.tsx",
+      "src/components/depot/formulaire.tsx",
+      "prisma/schema.prisma"
+    ],
+    "UX-P1-10": [
+      "src/server/notifications/table-ssot.ts",
+      "emails/apporteur/"
+    ],
+    "UX-P1-11": [
+      "src/server/queue/workers/onboarding.ts",
+      "emails/apporteur/"
+    ],
+    "UX-P1-12": [
+      "src/app/(console)/apporteurs/page.tsx",
+      "src/app/(console)/apporteurs/[id]/page.tsx",
+      "prisma/schema.prisma"
+    ],
+    "UX-P1-13": [
+      "src/app/(console)/attributions/page.tsx",
+      "src/app/(console)/contrats/page.tsx"
+    ],
+    "DM-23": [
+      "prisma/schema.prisma",
+      "src/domain/commission/grille.ts"
+    ],
+    "UX-P1-14": [
+      "src/app/(console)/grille/page.tsx",
+      "src/domain/commission/grille.ts",
+      "scripts/gates/grille-complete.ts",
+      "docs/gates.json"
+    ],
+    "INT-T24": [
+      "src/server/integrations/docuseal/",
+      "src/app/(console)/contrats/page.tsx"
+    ],
+    "GOV-021": [
+      ".github/PULL_REQUEST_TEMPLATE.md",
+      ".claude/agents/",
+      "tests/e2e/squatteur.spec.ts"
+    ],
+    "QA-T16": [
+      "tests/e2e/",
+      "playwright.config.ts",
+      "tests/unit/ci/spec-espace-mobile.spec.ts",
+      "docs/gates.json"
+    ],
+    "QA-T19": [
+      "src/server/observabilite/metriques.ts",
+      "src/server/integrations/telegram/",
+      ".github/workflows/nightly.yml",
+      "scripts/gates/sante.ts",
+      "docs/gates.json"
+    ],
+    "JUR-T16": [
+      "src/domain/versement/controles.ts",
+      "docs/gates.json",
+      "tests/argent/controles-versement.spec.ts"
+    ],
+    "T-ARG-010": [
+      "prisma/schema.prisma",
+      "src/domain/commission/ligne.ts"
+    ],
+    "T-ARG-034": [
+      "prisma/migrations/",
+      "prisma/schema.prisma"
+    ],
+    "DM-15": [
+      "src/domain/commission/resolution.ts",
+      "src/domain/commission/ligne.ts",
+      "tests/argent/non-silence.spec.ts",
+      "tests/domain/fait-generateur.spec.ts",
+      "docs/gates.json"
+    ],
+    "DM-16": [
+      "prisma/schema.prisma",
+      "src/domain/parrainage/"
+    ],
+    "DM-18": [
+      "src/domain/apporteur/resiliation.ts",
+      "prisma/schema.prisma"
+    ],
+    "T-ARG-015": [
+      "src/server/argent/releve-mensuel.ts",
+      "src/domain/versement/controles.ts",
+      "tests/argent/double-paiement.spec.ts",
+      "docs/gates.json"
+    ],
+    "T-ARG-016": [
+      "src/server/argent/autofacture.ts",
+      "src/server/pdf/autofacture.tsx",
+      "tests/argent/tva-snapshot.spec.ts",
+      "docs/gates.json"
+    ],
+    "SEC-22": [
+      "src/server/securite/iban.ts",
+      "src/server/securite/pii.ts"
+    ],
+    "T-ARG-017": [
+      "src/app/(console)/lots/page.tsx",
+      "src/server/argent/lot.ts"
+    ],
+    "T-ARG-018": [
+      "src/server/argent/pain001.ts",
+      "docs/tiers/sepa-pain001.md",
+      "schemas/pain.001.001.03.xsd",
+      "tests/argent/sepa-xsd.spec.ts",
+      "docs/gates.json"
+    ],
+    "T-ARG-019": [
+      "src/server/argent/rapprochement.ts",
+      "src/app/(console)/lots/page.tsx"
+    ],
+    "DM-19": [
+      "prisma/migrations/",
+      "src/server/argent/cumuls.ts",
+      "tests/argent/das2.spec.ts",
+      "docs/gates.json"
+    ],
+    "T-ARG-032": [
+      "prisma/schema.prisma",
+      "src/domain/kyc/pieces.ts",
+      "docs/tiers/urssaf.md"
+    ],
+    "UX-P2-03": [
+      "src/app/(console)/lots/page.tsx",
+      "src/server/argent/lot.ts"
+    ],
+    "T-ARG-022": [
+      "tests/argent/rejeu-golden.spec.ts",
+      "tests/argent/scenarios/",
+      "docs/gates.json"
+    ],
+    "QA-T21": [
+      "tests/argent/proprietes.spec.ts"
+    ],
+    "T-ARG-036": [
+      "tests/argent/scenarios/",
+      "docs/gates.json",
+      "tests/argent/contre-calcul.spec.ts"
+    ],
+    "T-ARG-037": [
+      "src/domain/commission/calcul.ts",
+      "tests/domain/grille-du-contrat.spec.ts",
+      "docs/gates.json"
+    ],
+    "UX-P2-07": [
+      "src/app/(console)/grille/page.tsx"
+    ],
+    "INT-T17": [
+      "src/app/api/integrations/axionia/",
+      "src/server/integrations/axionia/releve-signe.ts",
+      "tests/security/cloisonnement-documents.spec.ts",
+      "docs/gates.json"
+    ],
+    "UX-P2-01": [
+      "src/app/(espace)/mes-commissions/page.tsx"
+    ],
+    "UX-P2-02": [
+      "src/app/(espace)/page.tsx"
+    ],
+    "UX-P2-04": [
+      "src/app/(espace)/documents/page.tsx",
+      "src/app/(espace)/filleuls/page.tsx",
+      "src/app/(espace)/plus/page.tsx"
+    ],
+    "UX-P2-05": [
+      "src/app/(console)/parametres/page.tsx"
+    ],
+    "UX-P2-06": [
+      "tests/security/idor.spec.ts",
+      "tests/security/cloisonnement-documents.spec.ts"
+    ],
+    "CPL-T12": [
+      "src/domain/contestation/",
+      "src/domain/seuils/ssot.ts"
+    ],
+    "CPL-T14-A": [
+      "axionia/src/server/partners-sync/producteurs/client.ts"
+    ],
+    "CPL-T14-P": [
+      "src/server/integrations/axionia/fusion-client.ts",
+      "src/domain/commission/resolution.ts"
+    ],
+    "INT-T23": [
+      "src/server/integrations/docuseal/"
+    ],
+    "T-ARG-035": [
+      "src/app/(console)/commissions/page.tsx"
+    ],
+    "T-ARG-038": [
+      "src/server/argent/mandat.ts",
+      "src/server/argent/releve-mensuel.ts"
+    ],
+    "T-ARG-039": [
+      "src/server/argent/releve-mensuel.ts",
+      "src/domain/seuils/ssot.ts"
+    ],
+    "QA-T25": [
+      "docs/runbooks/argent.md"
+    ],
+    "QA-T29": [
+      "tests/charge/depots-concurrents.spec.ts"
+    ],
+    "CPL-T11": [
+      "src/lib/env.ts",
+      "prisma/schema.prisma",
+      "scripts/gates/mois-a-blanc.ts",
+      "docs/gates.json"
+    ],
+    "CPL-T23": [
+      "docs/runbooks/pilote.md"
+    ],
+    "T-ARG-030": [
+      "src/server/argent/export-comptable.ts",
+      "docs/tiers/tiime.md"
+    ],
+    "T-ARG-033": [
+      "src/server/argent/mandat.ts",
+      "src/domain/apporteur/resiliation.ts",
+      "prisma/schema.prisma"
+    ],
+    "DM-20": [
+      "src/server/rgpd/",
+      "src/server/crons/purge.ts",
+      "src/domain/seuils/retention.ts",
+      "tests/integration/rgpd-export.spec.ts",
+      "docs/gates.json"
+    ],
+    "DM-21": [
+      "prisma/schema.prisma",
+      "prisma/migrations/"
+    ],
+    "CPL-T15": [
+      "prisma/schema.prisma",
+      "src/server/pilotage/indicateurs.ts"
+    ],
+    "UX-P3-01": [
+      "src/app/manifest.ts",
+      "public/sw.js",
+      "src/server/notifications/push.ts"
+    ],
+    "UX-P3-02": [
+      "src/app/(espace)/activite/page.tsx",
+      "src/app/(espace)/ressources/page.tsx",
+      "scripts/gates/lexique-financement-ressources.ts",
+      "docs/gates.json"
+    ],
+    "UX-P3-03": [
+      "src/app/(espace)/aide/page.tsx"
+    ],
+    "UX-P3-04": [
+      "src/app/(console)/pilotage/page.tsx",
+      "src/server/pilotage/indicateurs.ts"
+    ],
+    "UX-P3-05": [
+      "src/app/(console)/conformite/page.tsx",
+      "src/app/(console)/anomalies/page.tsx"
+    ],
+    "UX-P3-06": [
+      "src/domain/apporteur/activite.ts"
+    ],
+    "JUR-T22": [
+      "axionia/src/app/(site)/retraite/page.tsx"
+    ],
+    "SEC-26": [
+      "src/server/notifications/table-ssot.ts",
+      "public/sw.js"
+    ],
+    "QA-T27": [
+      "docs/runbooks/resilience.md",
+      ".github/workflows/nightly.yml"
+    ],
+    "QA-T28": [
+      "docs/runbooks/audit-securite.md",
+      ".github/workflows/nightly.yml"
+    ],
+    "GOV-022": [
+      "docs/TRACEABILITE.md",
+      "scripts/plan-state/traceabilite.ts"
+    ],
+    "EXT-T08": [
+      "prisma/schema.prisma",
+      "src/domain/geo/lambert93.ts",
+      "src/server/depot/controles.ts"
+    ],
+    "EXT-T01": [
+      "src/app/(espace)/mes-entreprises/[id]/page.tsx",
+      "prisma/schema.prisma"
+    ],
+    "EXT-T02a": [
+      "src/app/(console)/attributions/[id]/page.tsx",
+      "src/app/(console)/qualification/[id]/page.tsx"
+    ],
+    "EXT-T03": [
+      "prisma/schema.prisma",
+      "src/domain/candidature/origine.ts"
+    ],
+    "EXT-T04": [
+      "src/app/(console)/candidatures/page.tsx",
+      "src/server/stockage/piece-jointe.ts"
+    ],
+    "EXT-T06": [
+      "src/domain/verification/etats.ts",
+      "src/server/anomalie/evaluation.ts"
+    ],
+    "EXT-T02b": [
+      "src/app/(espace)/mes-commissions/page.tsx",
+      "src/app/(espace)/mes-entreprises/[id]/page.tsx"
+    ],
+    "EXT-T07": [
+      "src/domain/attribution/machine.ts",
+      "src/server/crons/attribution.ts"
+    ],
+    "EXT-T09": [
+      "src/app/(console)/pilotage/carte/page.tsx",
+      "src/components/carte/departements.tsx",
+      "scripts/build/carte-svg.ts"
+    ],
+    "EXT-T10": [
+      "src/app/(espace)/mes-entreprises/page.tsx",
+      "src/components/carte/departements.tsx"
+    ],
+    "EXT-T05": [
+      "src/app/(console)/candidatures/page.tsx",
+      "src/server/candidature/import-csv.ts"
+    ],
+    "EXT-T11": [
+      "src/app/(console)/candidatures/page.tsx",
+      "src/server/candidature/extraction-cv.ts"
+    ],
+    "JUR-T26": [
+      ".github/CODEOWNERS",
+      "docs/gates.json",
+      "scripts/gates/jur-aucun-agregat-reseau.ts",
+      "scripts/gates/jur-aucune-progression.ts",
+      "scripts/gates/jur-revue-apporteur-facing.ts",
+      "scripts/gates/jur-lexique-social.ts"
+    ],
+    "JUR-T24": [
+      "src/domain/apporteur/suspension.ts",
+      "src/content/micro-copy/",
+      "src/domain/apporteur/resiliation.ts",
+      "src/domain/apporteur/activite.ts",
+      "emails/apporteur/",
+      "tests/domain/suspension-motifs.spec.ts",
+      "docs/gates.json",
+      "prisma/schema.prisma"
+    ],
+    "JUR-T30": [
+      "scripts/gates/jur-aucune-instruction.ts",
+      "docs/gates.json",
+      "scripts/gates/lexique-apporteurs.ts",
+      "scripts/gates/jur-date-contact-inerte.ts",
+      "scripts/gates/jur-supports-de-presentation.ts"
+    ],
+    "JUR-T25": [
+      "src/server/notifications/lettre-reseau.ts",
+      "emails/apporteur/",
+      "src/domain/apporteur/activite.ts"
+    ],
+    "JUR-T27": [
+      "docs/contrat/CONTRAT-APPORTEUR-V1.md"
+    ],
+    "JUR-T28": [
+      "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+      "src/domain/apporteur/resiliation.ts"
+    ]
+  }
+}

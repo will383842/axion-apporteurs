@@ -64,6 +64,8 @@ jobs:
         run: pnpm gov:gates-derivees
       - name: Le decompte des gardes sait rougir
         run: pnpm gates:prouvees:prove
+      - name: Les paths derives sont a jour
+        run: pnpm lot:paths:check
       - name: Typecheck
         run: pnpm typecheck
       - name: Tests

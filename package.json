@@ -42,7 +42,9 @@
     "gates:prouvees": "tsx scripts/gates/gates-prouvees.ts",
     "gates:prouvees:prove": "tsx scripts/gates/gates-prouvees.ts --prove",
     "gov:gates-derivees": "tsx scripts/gates/gates-derivees.ts",
-    "gov:gates-derivees:render": "tsx scripts/gates/gates-derivees.ts --render"
+    "gov:gates-derivees:render": "tsx scripts/gates/gates-derivees.ts --render",
+    "lot:paths": "tsx scripts/lot/paths-proposes.ts",
+    "lot:paths:check": "tsx scripts/lot/paths-proposes.ts --check"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
