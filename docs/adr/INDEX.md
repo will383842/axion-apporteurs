@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**6 ADR · 6 `propose`, 0 `accepte`, 0 `remplace`.**
+**7 ADR · 6 `propose`, 1 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -17,3 +17,4 @@
 | [`partners/ADR-0004`](0004-authentification-et-roles.md) | Authentification et rôles : le défaut est le refus | `propose` | 2026-09-03 | GOV-009 |
 | [`partners/ADR-0005`](0005-gouvernance-source-vue-et-ecrivains.md) | La gouvernance : ce qui est source, ce qui est vue, qui écrit quoi | `propose` | 2026-09-03 | GOV-009 |
 | [`partners/ADR-0006`](0006-fusion-serialisee-et-atterrissage-verifie.md) | La fusion : file sérialisée, une PR à la fois, atterrissage vérifié | `propose` | 2026-09-03 | GOV-009 |
+| [`partners/ADR-0007`](0007-la-branche-porte-le-lot-pas-la-tache.md) | La branche porte le LOT, la tâche porte le COMMIT | `accepte` | 2026-09-03 | GOV-012 |
