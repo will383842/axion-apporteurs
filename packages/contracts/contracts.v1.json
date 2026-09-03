@@ -1,0 +1,238 @@
+{
+  "$comment": "schema_version 1. La version lisible par une machine est le `const` du champ `schema_version` ; le nom du fichier la répète pour un lecteur, il ne la définit pas.",
+  "$defs": {
+    "payload_avoir_emis": {
+      "$comment": "OUVERT en schema_version 1 — le contenu du payload de `avoir.emis` est fermé par INT-T01b, depuis le producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007). Aucun champ n'est deviné ici.",
+      "type": "object"
+    },
+    "payload_client_cree": {
+      "$comment": "OUVERT en schema_version 1 — le contenu du payload de `client.cree` est fermé par INT-T01b, depuis le producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007). Aucun champ n'est deviné ici.",
+      "type": "object"
+    },
+    "payload_client_mis_a_jour": {
+      "$comment": "OUVERT en schema_version 1 — le contenu du payload de `client.mis_a_jour` est fermé par INT-T01b, depuis le producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007). Aucun champ n'est deviné ici.",
+      "type": "object"
+    },
+    "payload_devis_signe": {
+      "$comment": "OUVERT en schema_version 1 — le contenu du payload de `devis.signe` est fermé par INT-T01b, depuis le producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007). Aucun champ n'est deviné ici.",
+      "type": "object"
+    },
+    "payload_facture_emise": {
+      "$comment": "OUVERT en schema_version 1 — le contenu du payload de `facture.emise` est fermé par INT-T01b, depuis le producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007). Aucun champ n'est deviné ici.",
+      "type": "object"
+    },
+    "payload_paiement_recu": {
+      "$comment": "OUVERT en schema_version 1 — le contenu du payload de `paiement.recu` est fermé par INT-T01b, depuis le producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007). Aucun champ n'est deviné ici.",
+      "type": "object"
+    },
+    "payload_paiement_rembourse": {
+      "$comment": "OUVERT en schema_version 1 — le contenu du payload de `paiement.rembourse` est fermé par INT-T01b, depuis le producteur réel (REQ-INT-005, REQ-INT-006, REQ-INT-032, REQ-QA-007). Aucun champ n'est deviné ici.",
+      "type": "object"
+    }
+  },
+  "$id": "https://axion-ia.com/contrats/partners/evenements/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "client.cree"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_client_cree"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "client.mis_a_jour"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_client_mis_a_jour"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "devis.signe"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_devis_signe"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "facture.emise"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_facture_emise"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "avoir.emis"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_avoir_emis"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "paiement.recu"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_paiement_recu"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "paiement.rembourse"
+          }
+        },
+        "required": [
+          "event_type"
+        ]
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/payload_paiement_rembourse"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "emitted_at": {
+      "$comment": "L'instant de l'ÉMISSION. Distinct du précédent : l'outbox peut rejouer (REQ-INT-001).",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "type": "string"
+    },
+    "event_id": {
+      "$comment": "REQ-INT-003 : uuid v4. C'est la clé d'idempotence du récepteur.",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "type": "string"
+    },
+    "event_type": {
+      "$comment": "REQ-INT-004 : liste fermée, injectée depuis `events.ts`.",
+      "enum": [
+        "client.cree",
+        "client.mis_a_jour",
+        "devis.signe",
+        "facture.emise",
+        "avoir.emis",
+        "paiement.recu",
+        "paiement.rembourse"
+      ],
+      "type": "string"
+    },
+    "occurred_at": {
+      "$comment": "L'instant du FAIT métier, côté axionia.",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?(?:Z|[+-]\\d{2}:\\d{2})$",
+      "type": "string"
+    },
+    "payload": {
+      "$comment": "Fermé par type dans `$defs`, et par INT-T01b (REQ-INT-005, REQ-INT-006, REQ-INT-032).",
+      "type": "object"
+    },
+    "producer": {
+      "$comment": "OUVERT — aucune exigence du registre n'énumère les producteurs. La liste fermée est à trancher par INT-T01b ; en attendant, une chaîne non vide, jamais une valeur devinée.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "schema_version": {
+      "$comment": "La version du contrat. Une enveloppe qui en porte une autre est refusée, pas devinée.",
+      "const": 1,
+      "type": "integer"
+    },
+    "sequence": {
+      "$comment": "OUVERT sur sa PORTÉE — le registre nomme le champ sans dire si la monotonie est globale ou par sujet. C'est l'outbox (INT-T02) qui la tranche ; aucune borne n'est inventée ici.",
+      "type": "integer"
+    },
+    "subject_ref": {
+      "$comment": "OUVERT — la forme de la référence de sujet n'est écrite dans aucune exigence. Le champ est EXIGÉ (sa présence est un invariant) et sa forme reste libre jusqu'à INT-T01b."
+    }
+  },
+  "required": [
+    "event_id",
+    "event_type",
+    "schema_version",
+    "occurred_at",
+    "emitted_at",
+    "producer",
+    "subject_ref",
+    "sequence",
+    "payload"
+  ],
+  "title": "Contrat d'événements axionia → Axion Partners",
+  "type": "object"
+}

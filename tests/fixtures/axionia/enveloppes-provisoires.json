@@ -1,0 +1,83 @@
+{
+  "Source": "PROVISOIRE — AUCUNE provenance de producteur. Ce jeu a été ÉCRIT À LA MAIN par INT-T01a le 2026-09-03, faute de producteur disponible dans ce dépôt. RM-03 et REQ-QA-007 exigent des fixtures GÉNÉRÉES depuis les modèles réels d'axionia (Client, Devis, FactureFormation, Payment) par `pnpm partners:fixtures` — c'est INT-T01b qui livre ce script, et c'est sa sortie qui doit REMPLACER ce fichier. En attendant, le jeu ne porte que l'ENVELOPPE (REQ-INT-003) : tous les payloads sont vides, et aucun champ de payload n'a été deviné. Une fixture sans provenance est un défaut ; une fixture qui déclare n'en pas avoir encore est une dette nommée.",
+  "schemaVersion": 1,
+  "evenements": [
+    {
+      "event_id": "982e1e41-8fe1-4ece-a5cd-7677f03b5550",
+      "event_type": "client.cree",
+      "schema_version": 1,
+      "occurred_at": "2026-09-03T09:00:00Z",
+      "emitted_at": "2026-09-03T09:00:01Z",
+      "producer": "axionia",
+      "subject_ref": "forme non arrêtée — fermée par INT-T01b",
+      "sequence": 1,
+      "payload": {}
+    },
+    {
+      "event_id": "279b5094-92f9-4fd7-9413-043a024812c5",
+      "event_type": "client.mis_a_jour",
+      "schema_version": 1,
+      "occurred_at": "2026-09-03T09:01:00Z",
+      "emitted_at": "2026-09-03T09:01:01Z",
+      "producer": "axionia",
+      "subject_ref": "forme non arrêtée — fermée par INT-T01b",
+      "sequence": 2,
+      "payload": {}
+    },
+    {
+      "event_id": "cd3ccb59-8309-4633-a24f-88b329d5a353",
+      "event_type": "devis.signe",
+      "schema_version": 1,
+      "occurred_at": "2026-09-03T09:02:00Z",
+      "emitted_at": "2026-09-03T09:02:01Z",
+      "producer": "axionia",
+      "subject_ref": "forme non arrêtée — fermée par INT-T01b",
+      "sequence": 3,
+      "payload": {}
+    },
+    {
+      "event_id": "c3981867-fc29-4892-b7aa-455d2398c4b6",
+      "event_type": "facture.emise",
+      "schema_version": 1,
+      "occurred_at": "2026-09-03T09:03:00Z",
+      "emitted_at": "2026-09-03T09:03:01Z",
+      "producer": "axionia",
+      "subject_ref": "forme non arrêtée — fermée par INT-T01b",
+      "sequence": 4,
+      "payload": {}
+    },
+    {
+      "event_id": "de72d8b0-1d23-490c-8762-6583083ff94b",
+      "event_type": "avoir.emis",
+      "schema_version": 1,
+      "occurred_at": "2026-09-03T09:04:00Z",
+      "emitted_at": "2026-09-03T09:04:01Z",
+      "producer": "axionia",
+      "subject_ref": "forme non arrêtée — fermée par INT-T01b",
+      "sequence": 5,
+      "payload": {}
+    },
+    {
+      "event_id": "8f7af068-fee4-499b-ae77-f99d0366d48a",
+      "event_type": "paiement.recu",
+      "schema_version": 1,
+      "occurred_at": "2026-09-03T09:05:00Z",
+      "emitted_at": "2026-09-03T09:05:01Z",
+      "producer": "axionia",
+      "subject_ref": "forme non arrêtée — fermée par INT-T01b",
+      "sequence": 6,
+      "payload": {}
+    },
+    {
+      "event_id": "8485fd49-70d3-416d-9b0e-ad64df228390",
+      "event_type": "paiement.rembourse",
+      "schema_version": 1,
+      "occurred_at": "2026-09-03T09:06:00Z",
+      "emitted_at": "2026-09-03T09:06:01Z",
+      "producer": "axionia",
+      "subject_ref": "forme non arrêtée — fermée par INT-T01b",
+      "sequence": 7,
+      "payload": {}
+    }
+  ]
+}
