@@ -3,13 +3,12 @@
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne — la comparaison exacte que fait `scripts/lot/composer.ts` (`pris.has(p)`). Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
     "tachesCouvertes": 197,
-    "pairesEnIntersection": 3746,
-    "cheminsDeclares": 621,
+    "pairesEnIntersection": 3749,
+    "cheminsDeclares": 622,
     "cheminsDistincts": 364,
     "cheminsPartages": 92,
-    "tachesSansAucuneIntersection": 26,
+    "tachesSansAucuneIntersection": 25,
     "listeDesTachesIsolees": [
-      "INT-T01b",
       "CPL-T01",
       "QA-T08",
       "QA-T06",
@@ -270,7 +269,8 @@
     ],
     "INT-T01b": [
       "axionia/scripts/partners/fixtures.ts",
-      "axionia/src/server/partners-sync/contracts/"
+      "axionia/src/server/partners-sync/contracts/",
+      "axionia/prisma/schema.prisma"
     ],
     "GOV-017a": [
       "docs/tasks.json",

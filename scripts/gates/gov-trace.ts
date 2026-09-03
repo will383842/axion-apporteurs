@@ -54,6 +54,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join, basename, posix } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 
 
 const CHEMIN_REGISTRE = 'docs/requirements.json';
@@ -65,7 +66,23 @@ const VUE_PAR_DEFAUT = 'docs/TRACABILITE.md';
 const PR_NON_CONSULTEE = 'non consultée par ce mode';
 
 /** Les statuts de tâche qui valent « livrée » — la même liste que `gov:tasks`. */
-const LIVREE = new Set(['fusionnee', 'deployee', 'verifiee']);
+// L'ensemble « livrée » ne s'écrit plus ici : il se DÉRIVE du barème unique de
+// `scripts/lot/avancement.ts`, dont l'exhaustivité est confrontée à l'enum `statut` du schéma.
+// Il était recopié dans CINQ fichiers — relevé par la lentille `schema` sur la PR 28, dans la
+// PR même qui écrivait la règle l'interdisant (RM-04, `docs/GLOSSAIRE.md` §4 : « deux copies du
+// même vocabulaire divergent toujours »). Un dixième statut faisait rougir `gov:inventaire` et
+// laissait les cinq copies se taire en se trompant.
+const LIVREE = LIVREE_DERIVEE;
+
+// Une garde qui lit un statut ne tourne pas sur un barème incomplet sans le dire.
+{
+  const ecarts = verifierExhaustivite();
+  if (ecarts.length > 0) {
+    console.error("❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :");
+    ecarts.forEach((e) => console.error("   " + e));
+    process.exit(1);
+  }
+}
 
 /** Un identifiant d'exigence, tel que `gov:identifiants` l'exige : préfixe, domaine, trois chiffres. */
 const MOTIF_REQ = /REQ-[A-Z]{2,4}-\d{3}/g;
@@ -247,7 +264,21 @@ export function controler(u: Univers): Faute[] {
 
   // ── ce que `tests{}` promet, confronté au disque ───────────────────────────
   for (const t of u.taches) {
-    if (!LIVREE.has(t.statut)) continue; // une tâche à faire promet un test à venir : ce n'est pas un défaut
+    // LE FILTRE DE STATUT NE PORTE PLUS SUR TOUT, et le motif est mesuré.
+    //
+    // Il écartait toute tâche non livrée, au motif — juste — qu'« une tâche à faire promet un test
+    // à venir ». Conséquence trouvée par la lentille « exactitude » sur la PR 28 : les huit tâches
+    // du lot L-1-03 étaient encore `a_faire` au moment de leur revue, donc les 33 entrées
+    // `tests{}` que ce lot écrivait n'étaient confrontées au disque PAR AUCUNE GARDE. La sortie
+    // verte « 22 exigences réputées testées » était vraie et ne disait RIEN de ce que le lot
+    // ajoutait — et c'est par ce trou qu'une promesse inventée est passée, dans la tâche même qui
+    // livre la garde censée l'attraper.
+    //
+    // La distinction juste n'est pas le STATUT, c'est l'EXISTENCE DU FICHIER :
+    //   — le fichier n'existe pas encore  → toléré tant que la tâche n'est pas livrée ;
+    //   — le fichier EXISTE et ne porte pas ce titre → la promesse est FAUSSE, quel que soit le
+    //     statut. Elle ne deviendra pas vraie en attendant.
+    const livree = LIVREE.has(t.statut);
     for (const [req, promesses] of Object.entries(t.tests ?? {})) {
       for (const promesse of promesses) {
         const [chemin, ...reste] = promesse.split('#');
@@ -261,7 +292,10 @@ export function controler(u: Univers): Faute[] {
               `${t.id} promet « ${promesse} » pour ${req} : ${r.candidats.length} fichiers portent ` +
                 `ce nom (${r.candidats.join(', ')}). Écris le chemin complet — la garde refuse de choisir.`
             );
-          } else {
+          } else if (livree) {
+            // Le fichier n'existe pas : c'est un défaut SEULEMENT si la tâche est livrée. Avant,
+            // c'est une promesse de test à venir, et une garde qui la refuserait interdirait
+            // d'écrire une acceptance avant son code.
             ajouter(
               'test_promis_absent',
               `${t.id} promet « ${promesse} » pour ${req} : aucun fichier de test de ce nom sur le disque.`
@@ -272,6 +306,7 @@ export function controler(u: Univers): Faute[] {
 
         const f = r.fichier;
         if (!f.execute) {
+          if (!livree) continue;
           ajouter(
             'test_promis_absent',
             `${t.id} promet « ${promesse} » pour ${req} : ${f.chemin} existe mais ${CHEMIN_VITEST} ne ` +
@@ -289,6 +324,9 @@ export function controler(u: Univers): Faute[] {
                 `Le contrôle ne se déclare pas vert sur ce qu'il n'a pas pu lire.`
             );
           } else if (!f.titresResolus.some((x) => nomPorteLaPromesse(x, titre))) {
+            // Jugé pour TOUTE tâche, livrée ou non : le fichier est là, le titre n'y est pas, la
+            // promesse est fausse aujourd'hui et le restera. C'est le cas que le filtre de statut
+            // laissait passer sur les huit tâches du lot L-1-03.
             ajouter(
               'test_promis_absent',
               `${t.id} promet « ${promesse} » pour ${req} : ${f.chemin} ne contient aucun test dont ` +
@@ -709,7 +747,14 @@ function chargerUnivers(avecPr: boolean): Univers {
   const parChemin = new Map(fichiers.map((f) => [f.chemin, f]));
   const besoins = new Set<string>();
   for (const t of taches) {
-    if (!LIVREE.has(t.statut)) continue;
+    // PLUS DE FILTRE DE STATUT ICI NON PLUS, et il fallait les deux : le contrôle des titres a été
+    // élargi à toute tâche dont le fichier promis EXISTE (voir plus haut), mais la RÉSOLUTION ne
+    // portait toujours que sur les tâches livrées. Résultat mesuré : 26 `titres_non_resolus` — la
+    // garde disait honnêtement « je n'ai pas pu lire », ce qui vaut mieux qu'un vert, mais ne
+    // vérifiait toujours rien. Un contrôle élargi dont la source ne l'est pas ne contrôle pas.
+    //
+    // Le coût est borné : on ne résout que les fichiers qu'une promesse NOMME avec un `#`, pas
+    // tout le dépôt — 19 fichiers aujourd'hui contre 7, quelques secondes.
     for (const promesses of Object.values(t.tests ?? {})) {
       for (const p of promesses) {
         if (!p.includes('#')) continue;

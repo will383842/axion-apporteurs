@@ -549,9 +549,9 @@
       "motif": null,
       "tests": {
         "REQ-GOV-005": [
-          "tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 : une promesse de test qui ne cite pas son exigence est refusee",
-          "tests/unit/gouvernance/tracabilite.spec.ts#REQ-QA-014 : chaque famille a son temoin, et les contre-temoins restent verts",
-          "tests/unit/gouvernance/tracabilite.spec.ts#REQ-QA-014 : sait rougir — une vue truquee d’une ligne fait echouer `--verifier`"
+          "tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 : la famille `req_non_citee_par_son_test` a son témoin",
+          "tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 : le registre porte bien l’absorption, et c’est REQ-QA-014 qui fait foi",
+          "tests/unit/gouvernance/tracabilite.spec.ts#REQ-QA-014 : chaque famille a son témoin, et les contre-témoins restent verts"
         ]
       },
       "acceptance": "`pnpm gov:trace` derive la matrice REQ -> tache -> test -> PR de quatre sources : le registre des exigences, le backlog, les fichiers de test presents sur le disque, et les corps de PR fusionnees (source FACULTATIVE, dont l'indisponibilite est imprimee, jamais tue, et ne rend jamais vert). Les titres de `it()` sont RESOLUS par `vitest list --json`, gabarits `describe.each` compris — une promesse perimee (« ses 11 familles » pour un fichier qui en annonce douze) est refusee ; le perimetre d'execution est LU dans `vitest.config.ts`, un test promis que vitest ne lance pas est refuse. « >= testee » est DERIVE (le registre ne porte aucune echelle de maturite). `docs/TRACABILITE.md` est la VUE, ecrite par `--render`, gardee par `--verifier`, reseau-free par construction. 10 familles, 8 contre-temoins verts."
@@ -724,7 +724,8 @@
         "packages/contracts/",
         "scripts/contracts/export.ts",
         "tests/unit/integration/contrat-hash.spec.ts",
-        "tests/fixtures/axionia/"
+        "tests/fixtures/axionia/",
+        "docs/adr/"
       ],
       "schema": true,
       "sensible": [],
@@ -781,7 +782,7 @@
       "paths": [
         "axionia/INT-T01b"
       ],
-      "schema": false,
+      "schema": true,
       "sensible": [],
       "deps": [
         "INT-T01a"
@@ -799,7 +800,8 @@
         "REQ-INT-005",
         "REQ-INT-006",
         "REQ-INT-032",
-        "REQ-QA-008"
+        "REQ-QA-008",
+        "REQ-QA-007"
       ],
       "hyp": [],
       "externe": null,
