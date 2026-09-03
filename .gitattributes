@@ -1,0 +1,24 @@
+# Fins de ligne : LF PARTOUT, dans l'index ET dans l'arbre de travail.
+#
+# POURQUOI. `core.autocrlf=true` est le réglage par défaut d'un poste Windows : il checkout en
+# CRLF ce que l'index stocke en LF. Or plusieurs gardes de ce dépôt comparent un fichier DÉRIVÉ
+# (docs/adr/INDEX.md, docs/GATES.md, docs/paths-proposes.json) au texte que leur générateur
+# produit — et un générateur produit du `\n`. Sans ce fichier, ces tests échouent sur le poste et
+# passent en CI : l'instrument ment, et il ment dans le sens qui rassure le moins souvent.
+# Mesuré le 2026-09-03 : `adr-index-derive.spec.ts` et `fiches-tiers.spec.ts` rouges en local,
+# verts sur la PR #26.
+#
+# `eol=lf` (et pas seulement `text=auto`) est ce qui force l'ARBRE DE TRAVAIL, donc ce que les
+# tests lisent. `text=auto` seul ne corrigerait que l'index, où le problème n'était pas.
+* text=auto eol=lf
+
+# Binaires : aucune conversion, jamais.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.pdf binary
+*.ico binary
+*.woff binary
+*.woff2 binary
