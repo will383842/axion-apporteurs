@@ -137,3 +137,30 @@ celles reprises ci-dessus. En cas de contradiction entre un document et ce regis
 - **Aucun barème de sanctions, aucune déchéance, aucun compteur de gradation** : retirés du produit le
   2026-09-03 (`HYP-D11`). Le vocabulaire disciplinaire (sanction, faute grave, contradictoire,
   avertissement) n'a plus de ligne ici et n'en aura pas.
+
+## 6. Affirmations invalidées sur le code d'axionia
+
+Ces cinq affirmations ont circulé dans les documents sources comme des faits établis. Elles sont
+**FAUSSES**. Elles sont consignées ici parce qu'une décision prise sur une affirmation fausse ne se
+distingue pas, plus tard, d'une décision prise sur un fait — et parce que c'est la liste que REQ-GOV-004
+nomme. La vérification complète, ligne à ligne, est dans `docs/AFFIRMATIONS-AXIONIA.md` §2, au commit
+`ad53f14a81f559c806500a78a6e545bba20ada88` d'axionia, vérifiée le 2026-09-03.
+
+Cette section est **fournie par GOV-004** et écrite ici par le `gardien-spec` (`docs/CONVENTIONS.md` §8).
+Elle est dérivée du tableau §2 de `docs/AFFIRMATIONS-AXIONIA.md`, jamais recopiée à la main : chaque ligne
+renvoie à son repère, et c'est le repère qui porte le chemin, la ligne, la date et le SHA. Le test
+`tests/unit/gouvernance/affirmations-verifiees.spec.ts` et la famille `invalidee_absente_du_registre` de
+`pnpm gov:sonde` rougissent si l'une des cinq disparaît d'ici.
+
+| Affirmation invalidée | Mention | Réalité constatée | Repère |
+| --- | --- | --- | --- |
+| Le modèle `Invoice` existe chez axionia | **FAUSSE** | Aucun `model Invoice` dans `prisma/schema.prisma`. La facture est `FactureFormation` (`prisma/schema.prisma:6913`) ; le nom `Invoice` ne survit que dans un commentaire (`prisma/schema.prisma:6910`) | `AFF-01` |
+| Le modèle `Refund` existe chez axionia | **FAUSSE** | Aucun `model Refund`. Le remboursement n'est pas une entité mais deux valeurs d'énumération : `refund` de `PaymentType` (`prisma/schema.prisma:229`) et `refunded` de `PaymentStatus` (`prisma/schema.prisma:238`) | `AFF-02` |
+| Un champ `payerSiret` porte l'identifiant du payeur | **FAUSSE** | Zéro occurrence de `payerSiret` dans `prisma/**` et `src/**`. L'identifiant du destinataire vit sur la facture, et il est nullable : `FactureFormation.destinataireSiret` (`prisma/schema.prisma:6954`) | `AFF-05` |
+| `Payment.amountCents` est un montant HT encaissé | **FAUSSE** | Le montant est confronté au **TTC** de la facture : `montantTtcCents ?? montantHtCents` (`src/server/qualiopi/financements/facture-libre.ts:582-586`), même calcul dans `src/server/actions/qualiopi/rapprochement.ts:110-121`. Toute règle assise sur ce champ sans conversion travaille sur une base incluant la taxe | `AFF-04` |
+| La chaîne de résolution du client est codée et complète (« C3 codé ») | **FAUSSE** | Elle est optionnelle à quatre maillons : `Payment.factureFormationId String?` (`prisma/schema.prisma:1565`) → `FactureFormation.clientId String?` (`prisma/schema.prisma:6924`) → `TrainingSession.clientId String?` (`prisma/schema.prisma:5371`) → `Client.siren String?` (`prisma/schema.prisma:4670`), et `Client.siren` n'est ni unique ni indexé (`prisma/schema.prisma:4668-4670`). Un encaissement peut n'être rattaché à aucun SIREN | `AFF-06` |
+
+**Ce que ces cinq lignes changent.** Aucune règle de Partners ne peut supposer qu'un encaissement porte un
+SIREN, ni qu'un montant lu chez axionia est hors taxe. Les deux cas non résolus se rendent **visibles**,
+jamais comblés par un repli : c'est la même doctrine que `HYP-E1-30`, qui bloque une ligne plutôt que de
+deviner un régime de taxe.

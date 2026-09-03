@@ -124,7 +124,9 @@ w('## Ce qu’il faut taper pour repartir');
 w();
 w('```bash');
 w('pnpm install                       # si le dépôt vient d’être cloné');
-w('pnpm gov:check                     # les cinq gardes, d’un coup');
+// Pas de compte écrit ici : `gov:check` en enchaîne six depuis GOV-004, et un nombre recopié
+// dans une vue dérivée redevient faux à la garde suivante sans que rien ne le signale.
+w('pnpm gov:check                     # les gardes de gouvernance, d’un coup');
 w('pnpm plan-state:build              # régénère PLAN-STATE, dont le chemin critique');
 w(`pnpm lot:composer -- --phase ${phaseCourante} --repo partners --max 8 --now <AAAA-MM-JJ>`);
 w('```');

@@ -108,7 +108,7 @@
       "tache": "GOV-004",
       "verifie": "les faits affirmes sur le code d'axionia (>= 25, dates 'verifie le') sont rejoues contre le depot ; tout fait devenu faux -> rouge",
       "fixtureRouge": "affirmer que le modele Invoice existe",
-      "preuveRouge": null
+      "preuveRouge": "11 familles, un temoin chacune, 5 contre-temoins verts (pnpm gov:sonde --prove)"
     },
     {
       "id": "gov:hypotheses",
