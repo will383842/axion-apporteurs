@@ -3,9 +3,9 @@
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne — la comparaison exacte que fait `scripts/lot/composer.ts` (`pris.has(p)`). Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
     "tachesCouvertes": 197,
-    "pairesEnIntersection": 3600,
-    "cheminsDeclares": 601,
-    "cheminsDistincts": 347,
+    "pairesEnIntersection": 3604,
+    "cheminsDeclares": 604,
+    "cheminsDistincts": 348,
     "cheminsPartages": 91,
     "tachesSansAucuneIntersection": 25,
     "listeDesTachesIsolees": [
@@ -49,15 +49,15 @@
         "taches": 10
       },
       {
+        "chemin": "tests/unit/gouvernance/gardes.spec.ts",
+        "taches": 7
+      },
+      {
         "chemin": ".github/workflows/nightly.yml",
         "taches": 5
       },
       {
         "chemin": "docs/contrat/CONTRAT-APPORTEUR-V1.md",
-        "taches": 5
-      },
-      {
-        "chemin": "emails/apporteur/",
         "taches": 5
       }
     ],
@@ -276,7 +276,9 @@
       "scripts/lot/tasks.schema.json",
       "scripts/gates/gov-tasks.ts",
       "docs/paths-proposes.json",
-      "scripts/lot/paths-proposes.ts"
+      "scripts/lot/paths-proposes.ts",
+      "tests/unit/gouvernance/paths-derives.spec.ts",
+      "tests/unit/gouvernance/gardes.spec.ts"
     ],
     "GOV-019": [
       "scripts/gates/bundle-par-route.ts"
@@ -296,7 +298,8 @@
       "docs/gates.json",
       ".github/workflows/nightly.yml",
       "scripts/gates/gates-derivees.ts",
-      "scripts/gates/gates-prouvees.ts"
+      "scripts/gates/gates-prouvees.ts",
+      "tests/unit/gouvernance/gardes.spec.ts"
     ],
     "JUR-T02": [
       "src/domain/seuils/ssot.ts",
