@@ -1,5 +1,12 @@
-# CI minimale. Cinq gardes sont armées à ce stade : `gov:publication` (GOV-000), `gov:tasks`
-# (GOV-017a) `gov:requirements` (GOV-001) `gov:hypotheses` (GOV-005) et `gov:identifiants` (GOV-003). Les autres sont ajoutées par leur tâche, chacune APRÈS avoir été vue rougir.
+# CI minimale. Le compte des gardes armées n'est PAS recopié ici : il se lit dans
+# `docs/GATES.md`, vue dérivée de `docs/gates.json` par `pnpm gov:gates-derivees --render`.
+# Une garde entre dans ce fichier par sa tâche, chacune APRÈS avoir été vue rougir.
+#
+# ⚠️ `pnpm gates:prouvees --phase -1` n'est PAS ici, et ce n'est pas un oubli : la plupart des
+# gates du socle n'ont ni script ni preuve, la commande est donc ROUGE aujourd'hui et rendrait
+# la CI définitivement rouge — une CI toujours rouge ne garde plus rien. Elle tourne en nightly,
+# où son rouge est le décompte de ce qui reste à armer, pas le refus d'une PR. Ce qui entre ici,
+# c'est `gates:prouvees:prove` : la preuve ne dépend d'aucun état du dépôt, elle doit rester verte.
 # Chaque garde est suivie de SA PREUVE : une garde dont on ne vérifie pas qu'elle sait rougir
 # cesse un jour de garder sans que rien ne le signale.
 name: Gate A
@@ -53,6 +60,10 @@ jobs:
         run: pnpm gov:pr
       - name: La garde de PR sait rougir
         run: pnpm gov:pr:prove
+      - name: Vue GATES.md derivee du registre
+        run: pnpm gov:gates-derivees
+      - name: Le decompte des gardes sait rougir
+        run: pnpm gates:prouvees:prove
       - name: Typecheck
         run: pnpm typecheck
       - name: Tests

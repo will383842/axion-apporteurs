@@ -38,7 +38,11 @@
     "adr:index": "tsx scripts/adr/index.ts",
     "adr:index:verifier": "tsx scripts/adr/index.ts --verifier",
     "gov:pr": "tsx scripts/gates/gov-pr.ts",
-    "gov:pr:prove": "tsx scripts/gates/gov-pr.ts --prove"
+    "gov:pr:prove": "tsx scripts/gates/gov-pr.ts --prove",
+    "gates:prouvees": "tsx scripts/gates/gates-prouvees.ts",
+    "gates:prouvees:prove": "tsx scripts/gates/gates-prouvees.ts --prove",
+    "gov:gates-derivees": "tsx scripts/gates/gates-derivees.ts",
+    "gov:gates-derivees:render": "tsx scripts/gates/gates-derivees.ts --render"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

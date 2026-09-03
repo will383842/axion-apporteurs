@@ -165,7 +165,7 @@
       "tache": "QA-T00",
       "verifie": "chaque gate de phase <= courante a un script cable dans un check requis, une fixtureRouge qui rougit encore (rejouee en nightly par prove.sh) et une preuveRouge non nulle ; CALCULE la gate de sortie de phase N",
       "fixtureRouge": "poser une gate sans run rouge archive",
-      "preuveRouge": null
+      "preuveRouge": "10 familles, un temoin chacune, 8 contre-temoins verts, 5 temoins de forme (pnpm gates:prouvees:prove)"
     },
     {
       "id": "GATE-JUR-SEUILS-SSOT",
