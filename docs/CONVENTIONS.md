@@ -1,7 +1,7 @@
 # Conventions — Axion Partners
 
 > Livré par **GOV-014** (REQ-GOV-018, REQ-GOV-029). Version normative des conventions du plan directeur §4, corrigées
-> par la synthèse des juges (A5). Ce fichier **prévaut** sur le §4 du plan en cas d'écart : le plan cite, ce fichier
+> par la synthèse des juges du 2026-09-03. Ce fichier **prévaut** sur le §4 du plan en cas d'écart : le plan cite, ce fichier
 > fixe. Gates : lint et format bloquants dès le socle (Gate A) ; `gov:tasks`, `gov:pr`, `gov:autonomie`.
 
 ## 1. Langue

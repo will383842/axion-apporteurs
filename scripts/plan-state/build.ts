@@ -99,6 +99,62 @@ for (const s of ['a_faire', 'en_cours', 'en_revue', 'fusionnee', 'deployee', 've
 }
 lignes.push('');
 
+// ── Chemin critique ─────────────────────────────────────────────────────────
+// Le plus long enchainement de taches liees par une dependance, pondere par les jours estimes.
+// C'est lui qui donne la duree PLANCHER du projet : elargir la flotte d'agents ne le raccourcit
+// pas d'une heure. Une estimation totale de 149 j ne dit rien de la date de fin ; ce chemin, si.
+{
+  const parId = new Map(taches.map((t) => [t.id, t]));
+  const memo = new Map<string, { poids: number; suite: string[] }>();
+  const plusLong = (id: string, vus: Set<string>): { poids: number; suite: string[] } => {
+    const cache = memo.get(id);
+    if (cache) return cache;
+    const t = parId.get(id);
+    if (!t) return { poids: 0, suite: [] };
+    if (vus.has(id)) return { poids: 0, suite: [] }; // garde-fou : gov:tasks garantit l'acyclicite
+    vus.add(id);
+    let meilleur = { poids: 0, suite: [] as string[] };
+    for (const d of t.deps) {
+      const r = plusLong(d, vus);
+      if (r.poids > meilleur.poids) meilleur = r;
+    }
+    vus.delete(id);
+    const res = { poids: meilleur.poids + t.estimateDays, suite: [...meilleur.suite, id] };
+    memo.set(id, res);
+    return res;
+  };
+
+  let sommet = { poids: 0, suite: [] as string[] };
+  for (const t of taches) {
+    const r = plusLong(t.id, new Set());
+    if (r.poids > sommet.poids) sommet = r;
+  }
+
+  lignes.push('## Chemin critique');
+  lignes.push('');
+  lignes.push(
+    `**${sommet.poids.toFixed(2)} j** sur ${sommet.suite.length} taches enchainees — duree PLANCHER du projet. ` +
+      `Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.`
+  );
+  lignes.push('');
+  lignes.push(
+    sommet.suite
+      .map((id) => {
+        const t = parId.get(id)!;
+        const fait = TERMINES.has(t.statut);
+        return `${fait ? '~~' : ''}${id}${fait ? '~~' : ''} (${t.estimateDays} j, ph ${t.phase})`;
+      })
+      .join(' → ')
+  );
+  lignes.push('');
+  const restantCritique = sommet.suite
+    .map((id) => parId.get(id)!)
+    .filter((t) => !TERMINES.has(t.statut))
+    .reduce((a, t) => a + t.estimateDays, 0);
+  lignes.push(`Reste sur ce chemin : **${restantCritique.toFixed(2)} j**.`);
+  lignes.push('');
+}
+
 if (bloquees.length || attente.length) {
   lignes.push('## Bloquées');
   lignes.push('');

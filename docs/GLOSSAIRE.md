@@ -64,7 +64,7 @@ Synonymes interdits : `actif` en colonne, `inactif`, `churn`, « commercial », 
 
 `type` enum : `commission`, `reprise`, `parrainage`, `bonus_filleul`.
 
-`statut` enum (6 + 1) — **la valeur `dechue` est supprimée le 2026-09-03 (décision D11) : aucun chemin de code ne peut
+`statut` enum (6 + 1) — **la valeur `dechue` est supprimée le 2026-09-03 (décision `HYP-D11`) : aucun chemin de code ne peut
 la produire, et elle ne doit pas revenir au glossaire, sans quoi la gate `partners:schema:enums` la ferait renaître** :
 
 | Valeur      | Sens                                                                                       |
@@ -77,7 +77,7 @@ la produire, et elle ne doit pas revenir au glossaire, sans quoi la gate `partne
 | `annulee`   | Devis annulé avant tout encaissement                                                        |
 | `contestee` | Contestation ouverte (REQ-CPL-012) ; sortie `maintenue \| ajustee` → `LigneAjustement`      |
 
-`motifBlocage` enum `MotifBlocage` (REQ-ARG-017 + A2) : `rib_manquant`, `rib_a_verifier`, `siret_invalide`,
+`motifBlocage` enum `MotifBlocage` (REQ-ARG-017, complété par la synthèse des juges du 2026-09-03) : `rib_manquant`, `rib_a_verifier`, `siret_invalide`,
 `tva_non_declaree`, `mandat_non_signe`, `vigilance_perimee`, `sous_seuil`, `commission_sup_ht`, `a_qualifier`,
 `non_resolue`, `regime_tva_inattendu`, `ttc_manquant`, `plafond`, `bareme_indefini`.
 

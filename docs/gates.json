@@ -43,9 +43,9 @@
       "phase": -1,
       "script": "scripts/gates/gov-identifiants.ts",
       "tache": "GOV-003",
-      "verifie": "aucun identifiant nu ('conforme a D3') ; HYP-* orphelin -> rouge ; toute decision citee existe dans docs/DECISIONS.md ; tout id de gate cite dans un document a une entree dans gates.json",
-      "fixtureRouge": "citer 'conforme a D3' dans un commentaire de code",
-      "preuveRouge": null
+      "verifie": "aucun identifiant nu (lettre + un ou deux chiffres) dans un fichier suivi. Deux distinctions portees par le code, que l'enonce de REQ-GOV-003 confondait : 'A' suivi de DEUX chiffres est un code de POSTE d'agent (espace de noms declare par tasks.schema.json), et un identifiant entre guillemets est une CITATION, pas une reference — les documents qui expliquent la regle doivent pouvoir ecrire son contre-exemple",
+      "fixtureRouge": "ecrire une reference nue hors guillemets, par exemple « la decision D11 » sans prefixe",
+      "preuveRouge": "pnpm gov:identifiants:prove — 3 temoins rouges, 10 contre-temoins verts"
     },
     {
       "id": "gov:adr",
@@ -118,9 +118,9 @@
       "alias": [
         "HYP-*"
       ],
-      "verifie": "chaque hypothese posee a un test nomme ; HYP-D7 rougit si REQ-ARG-025 et REQ-JUR-014 divergent ; HYP-E1-9 rougit si fenetreFinAt != confirmeeAt + 12 mois ; tout identifiant d'hypothese doit valider ^(HYP|DEC)-[A-Z0-9-]+$",
-      "fixtureRouge": "reecrire REQ-ARG-025 en 'a l'approche du seuil'",
-      "preuveRouge": "couvert par gov:tasks:prove (famille hyp_hors_registre) le 2026-09-03"
+      "verifie": "forme des trois tableaux de docs/DECISIONS.md (alias, decisions bloquantes, hypotheses par defaut) ; ids uniques ; decision et hypothese ecrites ; reversibilite dans {parametre, migration, avenant} ; toute ligne `avenant` porte « premier DocuSeal » ; les alias de la section 0 resolvent et aucun ne pointe vers un alias ; reciproque de gov:tasks (toute decision citee par une tache est declaree) ; toute decision `avenant` ou `migration` NON TRANCHEE est citee par au moins une tache, sinon rien n'est bloque par elle et son arbitrage ne sera jamais reclame. Sous --avant-docuseal, exige en plus une date d'arbitrage sur chaque ligne `avenant` : verrou du PREMIER ENVOI, non arme en CI",
+      "fixtureRouge": "retirer le dernier porteur d'une decision `avenant` non tranchee",
+      "preuveRouge": "pnpm gov:hypotheses:prove — 10 familles vues rougir sur une fixture minimale"
     },
     {
       "id": "gov:agents",

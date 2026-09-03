@@ -23,7 +23,7 @@
  * sessions écrivent en parallèle (`pnpm lot:cloture`). Un test unitaire ne le relit pas ; la CI, si.
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import Ajv2020 from 'ajv/dist/2020.js';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
@@ -39,17 +39,29 @@ const SCINDES: Record<string, string> = {
 
 type Tache = {
   id: string;
+  titre: string;
   phase: number;
   repo: string;
+  zone: string;
   deps: string[];
   hyp: string[];
+  reqs: string[];
   paths: string[];
+  schema: boolean;
+  sensible: string[];
   estimateDays: number;
   externe: string | null;
   statut: string;
+  acceptance?: string;
+  tests?: Record<string, string[]>;
+  owner?: string | null;
+  branch?: string | null;
 };
 
 type Faute = { famille: string; message: string };
+
+/** Les statuts qui valent « livrée ». Une dépendance doit y être avant que son dépendant y entre. */
+const LIVREE = new Set(['fusionnee', 'deployee', 'verifiee']);
 
 // ── le registre des décisions ────────────────────────────────────────────────
 /**
@@ -120,6 +132,14 @@ function controler(doc: unknown, schema: object, registre: Set<string>): Faute[]
             `ne pourrait jamais se terminer.`
         );
       }
+      if (LIVREE.has(t.statut) && !LIVREE.has(cible.statut)) {
+        ajouter(
+          'dep_non_livree',
+          `${t.id} est « ${t.statut} » mais dépend de ${d}, encore « ${cible.statut} ». Une tâche ` +
+            `livrée avant sa dépendance a été livrée sur une base qui n'existe pas : l'éligibilité ` +
+            `que le composeur calcule ensuite est fausse.`
+        );
+      }
     }
 
     for (const h of t.hyp) {
@@ -181,7 +201,7 @@ function controler(doc: unknown, schema: object, registre: Set<string>): Faute[]
 const FAMILLES = [
   'schema', 'id_double', 'dep_inconnue', 'dep_circulaire', 'dep_phase_ulterieure',
   'dep_identifiant_scinde', 'dep_decision_nue', 'hyp_hors_registre', 'paths_vide',
-  'estimation_hors_plafond', 'externe_sans_attente',
+  'estimation_hors_plafond', 'externe_sans_attente', 'dep_non_livree',
 ];
 
 // ── chargement ───────────────────────────────────────────────────────────────
@@ -194,6 +214,87 @@ for (const f of [CHEMIN_TACHES, CHEMIN_SCHEMA, CHEMIN_DECISIONS]) {
 const schema = JSON.parse(readFileSync(CHEMIN_SCHEMA, 'utf8')) as object;
 const registre = decisionsDeclarees(readFileSync(CHEMIN_DECISIONS, 'utf8'));
 const doc = JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] };
+
+// ── mode --render : docs/TASKS.md est une VUE de ce fichier ───────────────────
+// `TASKS.md` a longtemps ete la source, tenue a la main : trois comptages differents y
+// circulaient, tous faux, et un correctif ecrit dans un constat ne rejoignait jamais le texte
+// de la tache. La source est desormais `docs/tasks.json` ; ce rendu produit la vue, et rien
+// d'autre ne doit ecrire dans `docs/TASKS.md`.
+if (process.argv.includes('--render')) {
+  const fautes = controler(doc, schema, registre);
+  if (fautes.length > 0) {
+    console.error(`❌ Refus de rendre une vue d'un backlog fautif (${fautes.length}). Lance \`pnpm gov:tasks\`.`);
+    process.exit(1);
+  }
+
+  const PHASES: Record<number, string> = {
+    [-1]: 'Gouvernance (prealable bloquant)',
+    0: 'Socle technique',
+    1: 'Operationnel',
+    2: 'Argent',
+    3: 'Pilotage et conformite',
+  };
+  const l: string[] = [];
+  const total = doc.taches.reduce((a, t) => a + t.estimateDays, 0);
+
+  l.push('# Taches par phase — Axion Apporteurs');
+  l.push('');
+  l.push('> ⚠️ **Ce fichier est une VUE. La source est `docs/tasks.json`.**');
+  l.push('> Regenere par `pnpm gov:tasks --render`, jamais edite a la main : une correction tapee ici');
+  l.push('> disparait au rendu suivant. Trois comptages differents ont circule dans la version tenue');
+  l.push('> a la main, tous faux — les nombres ci-dessous sont comptes a la generation.');
+  l.push('>');
+  l.push('> Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.');
+  l.push('');
+  l.push(`**${doc.taches.length} taches · ${total.toFixed(2)} j estimes.**`);
+  l.push('');
+  l.push('| Phase | Taches | Jours | Terminees |');
+  l.push('| --- | ---: | ---: | ---: |');
+  for (const p of [-1, 0, 1, 2, 3]) {
+    const liste = doc.taches.filter((t) => t.phase === p);
+    const faites = liste.filter((t) => LIVREE.has(t.statut)).length;
+    l.push(`| ${p} — ${PHASES[p]} | ${liste.length} | ${liste.reduce((a, t) => a + t.estimateDays, 0).toFixed(2)} | ${faites} |`);
+  }
+  l.push('');
+
+  for (const p of [-1, 0, 1, 2, 3]) {
+    const liste = doc.taches.filter((t) => t.phase === p);
+    if (liste.length === 0) continue;
+    l.push(`## Phase ${p} — ${PHASES[p]}`);
+    l.push('');
+    for (const t of liste) {
+      const marques: string[] = [];
+      if (t.repo !== 'partners') marques.push(`\`${t.repo}\``);
+      if (t.schema) marques.push('`schema`');
+      if (t.sensible.length > 0) marques.push(`sensible : ${t.sensible.join(', ')}`);
+      const etat = LIVREE.has(t.statut) ? ` ✅ **${t.statut}**` : t.statut === 'a_faire' ? '' : ` — **${t.statut}**`;
+      l.push(`### ${t.id} — ${t.titre}${etat}`);
+      l.push('');
+      l.push(
+        `\`${t.estimateDays} j\` · zone \`${t.zone}\`` +
+          (marques.length ? ` · ${marques.join(' · ')}` : '') +
+          (t.deps.length ? ` · depend de ${t.deps.map((d) => `\`${d}\``).join(', ')}` : ' · aucune dependance') +
+          (t.hyp.length ? ` · decisions ${t.hyp.map((h) => `\`${h}\``).join(', ')}` : '')
+      );
+      l.push('');
+      l.push(`Couvre : ${t.reqs.map((r) => `\`${r}\``).join(', ')}`);
+      l.push('');
+      if (t.acceptance) {
+        l.push(`**Acceptation.** ${t.acceptance}`);
+        l.push('');
+      }
+      const tests = t.tests ? Object.values(t.tests).flat() : [];
+      if (tests.length > 0) {
+        l.push(`**Tests.** ${[...new Set(tests)].map((x) => `\`${x}\``).join(' · ')}`);
+        l.push('');
+      }
+    }
+  }
+
+  writeFileSync('docs/TASKS.md', l.join('\n') + '\n');
+  console.log(`✅ docs/TASKS.md rendu depuis ${CHEMIN_TACHES} — ${doc.taches.length} taches, ${total.toFixed(2)} j.`);
+  process.exit(0);
+}
 
 // ── mode --prove : un défaut par famille, chacun vu rougir ────────────────────
 if (process.argv.includes('--prove')) {
@@ -220,6 +321,15 @@ if (process.argv.includes('--prove')) {
     { famille: 'paths_vide', defaut: () => { const d = copie(); premiere(d).paths = []; return d; } },
     { famille: 'estimation_hors_plafond', defaut: () => { const d = copie(); derniere(d).estimateDays = 3; return d; } },
     { famille: 'externe_sans_attente', defaut: () => { const d = copie(); const e = d.taches.find((t) => t.externe !== null)!; e.statut = 'a_faire'; return d; } },
+    // Une tâche livrée dont la dépendance ne l'est pas : le témoin prend une tâche `fusionnee`
+    // et remet sa dépendance à `a_faire`.
+    { famille: 'dep_non_livree', defaut: () => {
+      const d = copie();
+      const livree = d.taches.find((t) => LIVREE.has(t.statut) && t.deps.length > 0)!;
+      const dep = d.taches.find((t) => t.id === livree.deps[0])!;
+      dep.statut = 'a_faire'; dep.owner = null; dep.branch = null;
+      return d;
+    } },
   ];
 
   const prouvees = new Set<string>();
