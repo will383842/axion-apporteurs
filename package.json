@@ -44,7 +44,8 @@
     "gov:gates-derivees": "tsx scripts/gates/gates-derivees.ts",
     "gov:gates-derivees:render": "tsx scripts/gates/gates-derivees.ts --render",
     "lot:paths": "tsx scripts/lot/paths-proposes.ts",
-    "lot:paths:check": "tsx scripts/lot/paths-proposes.ts --check"
+    "lot:paths:check": "tsx scripts/lot/paths-proposes.ts --check",
+    "lot:integrer": "tsx scripts/lot/integrer.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
