@@ -25,8 +25,9 @@ function lancer(script: string, ...args: string[]): { code: number; sortie: stri
 
 const GARDES = [
   { nom: 'gov:publication', script: 'scripts/gates/gov-publication.ts', familles: 7 },
-  { nom: 'gov:tasks', script: 'scripts/gates/gov-tasks.ts', familles: 11 },
+  { nom: 'gov:tasks', script: 'scripts/gates/gov-tasks.ts', familles: 12 },
   { nom: 'gov:requirements', script: 'scripts/gates/gov-requirements.ts', familles: 11 },
+  { nom: 'gov:hypotheses', script: 'scripts/gates/gov-hypotheses.ts', familles: 10 },
 ];
 
 describe.each(GARDES)('$nom', ({ script, familles }) => {
@@ -51,5 +52,42 @@ describe('la preuve n’est pas un décompte', () => {
     const { sortie } = lancer('scripts/gates/gov-publication.ts', '--prove');
     const lignes = sortie.split('\n').filter((l) => l.trim().startsWith('•'));
     expect(lignes.length).toBe(7);
+  });
+});
+
+describe('gov:hypotheses — le verrou du premier envoi DocuSeal', () => {
+  it('laisse passer les lignes « avenant » en attente, et les NOMME', () => {
+    // Huit lignes `avenant` attendent une décision de Will : c'est l'état normal du projet.
+    // Les faire rougir à chaque PR rendrait la CI définitivement rouge, et une CI toujours
+    // rouge ne garde plus rien. Elles doivent donc passer — mais être dites.
+    const { code, sortie } = lancer('scripts/gates/gov-hypotheses.ts');
+    expect(code).toBe(0);
+    expect(sortie).toContain('PREMIER ENVOI DOCUSEAL');
+  });
+
+  it('ROUGIT sous --avant-docuseal tant qu’une ligne « avenant » n’est pas datée', () => {
+    // Le même registre, le même instant : seul le drapeau change. C'est ce contrôle qui
+    // s'arme au jalon du premier contrat envoyé, quand chaque changement d'une clause
+    // `avenant` impose une campagne de re-signature à tout le réseau.
+    const { code, sortie } = lancer('scripts/gates/gov-hypotheses.ts', '--avant-docuseal');
+    expect(code).not.toBe(0);
+    expect(sortie).toContain('avenant_non_tranchee');
+  });
+});
+
+describe("gov:identifiants — citer n'est pas se servir", () => {
+  it('est verte sur l’état du dépôt', () => {
+    const { code, sortie } = lancer('scripts/gates/gov-identifiants.ts');
+    expect(sortie).toContain('✅');
+    expect(code).toBe(0);
+  });
+
+  it('sait rougir : 3 témoins et 10 contre-témoins', () => {
+    // Les contre-témoins comptent autant que les témoins ici : la garde a d'abord rougi sur
+    // CINQ occurrences qui étaient sa propre documentation (« conforme à D3 » cité comme
+    // contre-exemple), et sur les quinze codes de poste des agents (A01…A15).
+    const { code, sortie } = lancer('scripts/gates/gov-identifiants.ts', '--prove');
+    expect(code).toBe(0);
+    expect(sortie).toContain('3 témoins rougissent, 10 contre-témoins restent verts');
   });
 });

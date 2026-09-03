@@ -11,14 +11,21 @@
   "scripts": {
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
-    "gov:check": "pnpm gov:publication && pnpm gov:tasks && pnpm gov:requirements",
+    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
     "gov:tasks:prove": "tsx scripts/gates/gov-tasks.ts --prove",
     "gov:requirements": "tsx scripts/gates/gov-requirements.ts",
     "gov:requirements:prove": "tsx scripts/gates/gov-requirements.ts --prove",
-    "lot:cloture": "tsx scripts/lot/cloture.ts"
+    "lot:cloture": "tsx scripts/lot/cloture.ts",
+    "gov:hypotheses": "tsx scripts/gates/gov-hypotheses.ts",
+    "gov:hypotheses:prove": "tsx scripts/gates/gov-hypotheses.ts --prove",
+    "gov:hypotheses:avant-docuseal": "tsx scripts/gates/gov-hypotheses.ts --avant-docuseal",
+    "plan-state:build": "tsx scripts/plan-state/build.ts",
+    "gov:tasks:render": "tsx scripts/gates/gov-tasks.ts --render",
+    "gov:identifiants": "tsx scripts/gates/gov-identifiants.ts",
+    "gov:identifiants:prove": "tsx scripts/gates/gov-identifiants.ts --prove"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

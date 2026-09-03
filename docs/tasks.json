@@ -280,19 +280,20 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A01",
+      "lot": "gov-amorcage-3",
+      "branch": "t/gov-005-decisions",
+      "pr": 3,
       "issue": null,
       "attempts": 0,
       "motif": null,
       "tests": {
         "REQ-GOV-003": [
-          "identifiants-qualifies.spec.ts"
+          "tests/unit/gouvernance/gardes.spec.ts#'gov:identifiants' > sait rougir : 3 témoins et 10 contre-témoins"
         ]
-      }
+      },
+      "acceptance": "Garde `gov:identifiants` : un identifiant nu de la forme lettre + un ou deux chiffres (`D3`, `C12`, `D11`) est refusé dans tout fichier suivi. Deux distinctions sont portées par le code, parce que l'énoncé de REQ-GOV-003 les confondait : (a) `A` suivi de DEUX chiffres est un code de POSTE d'agent, espace de noms déclaré par `tasks.schema.json` (`^A[0-9]{2}$`), non un identifiant de décision ; (b) un identifiant entre guillemets est une CITATION, pas une référence — les documents qui expliquent la règle doivent pouvoir écrire son contre-exemple. Trois témoins vus rougir, dix contre-témoins vus rester verts."
     },
     {
       "id": "GOV-004",
@@ -359,21 +360,21 @@
       ],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A01",
+      "lot": "gov-amorcage-2",
+      "branch": "t/gov-005-decisions",
+      "pr": 3,
       "issue": null,
       "attempts": 0,
       "motif": null,
       "acceptance": "toutes les questions de la section E avec hypothèse, propriétaire, impact, phase bloquée ; livrable `docs/DECISIONS.md` (= `DECISIONS-INDEX.md` de REQ-GOV-003, un seul nom) avec table `DEC-*` ← identifiants d'origine (INT-Q01, INT-Q02, INT-Q04, INT-Q10, C12, A12-A16, F-DM-13, D12…) et champ `reversibilite ∈ {parametre, migration, avenant}` ; W1, W3, W4, W6 sans valeur par défaut.",
       "tests": {
         "REQ-GOV-003": [
-          "decisions-ouvertes.spec.ts"
+          "tests/unit/gouvernance/gardes.spec.ts#'gov:hypotheses' > sait rougir : ses 10 familles ont chacune un témoin"
         ],
         "REQ-GOV-015": [
-          "decisions-ouvertes.spec.ts"
+          "tests/unit/gouvernance/gardes.spec.ts#'gov:hypotheses' > sait rougir : ses 10 familles ont chacune un témoin"
         ]
       }
     },
@@ -442,7 +443,8 @@
         "REQ-GOV-008"
       ],
       "hyp": [
-        "HYP-BEB-D2"
+        "HYP-BEB-D2",
+        "HYP-TENANT"
       ],
       "externe": null,
       "estimateDays": 1,
@@ -789,8 +791,7 @@
       "sensible": [],
       "deps": [
         "GOV-001",
-        "GOV-005",
-        "GOV-011"
+        "GOV-005"
       ],
       "reqs": [
         "REQ-GOV-021",
@@ -2778,7 +2779,9 @@
         "REQ-ARG-018",
         "REQ-JUR-017"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-D9"
+      ],
       "externe": "expert_comptable",
       "estimateDays": 0,
       "statut": "attente_externe",
@@ -2895,7 +2898,9 @@
         "REQ-DM-008",
         "REQ-DM-042"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-C1"
+      ],
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
@@ -3107,7 +3112,9 @@
         "REQ-SEC-006",
         "REQ-SEC-007"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-C6"
+      ],
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
@@ -3190,7 +3197,9 @@
         "REQ-DM-010",
         "REQ-JUR-006"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-C1"
+      ],
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
@@ -3272,7 +3281,9 @@
         "REQ-JUR-029",
         "REQ-SEC-026"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-RESIDENCE"
+      ],
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
@@ -3750,7 +3761,9 @@
         "REQ-JUR-028",
         "REQ-SEC-037"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-C6"
+      ],
       "externe": null,
       "estimateDays": 0.25,
       "statut": "a_faire",
@@ -3992,7 +4005,9 @@
         "REQ-SEC-033",
         "REQ-UX-013"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-E1-12"
+      ],
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
@@ -4830,7 +4845,10 @@
         "REQ-JUR-021",
         "REQ-UX-006"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-D14",
+        "HYP-E1-19"
+      ],
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
@@ -4912,7 +4930,8 @@
         "REQ-QA-027"
       ],
       "hyp": [
-        "HYP-E1-17"
+        "HYP-E1-17",
+        "HYP-E1-22"
       ],
       "externe": null,
       "estimateDays": 1,
@@ -4952,7 +4971,9 @@
         "REQ-ARG-035",
         "REQ-JUR-017"
       ],
-      "hyp": [],
+      "hyp": [
+        "HYP-D9"
+      ],
       "externe": null,
       "estimateDays": 1.5,
       "statut": "a_faire",
