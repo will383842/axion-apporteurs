@@ -1,5 +1,5 @@
-# CI minimale. Deux gardes sont armées à ce stade : `gov:publication` (GOV-000) et `gov:tasks`
-# (GOV-017a). Les autres sont ajoutées par leur tâche, chacune APRÈS avoir été vue rougir.
+# CI minimale. Trois gardes sont armées à ce stade : `gov:publication` (GOV-000), `gov:tasks`
+# (GOV-017a) et `gov:requirements` (GOV-001). Les autres sont ajoutées par leur tâche, chacune APRÈS avoir été vue rougir.
 # Chaque garde est suivie de SA PREUVE : une garde dont on ne vérifie pas qu'elle sait rougir
 # cesse un jour de garder sans que rien ne le signale.
 name: Gate A
@@ -25,5 +25,11 @@ jobs:
         run: pnpm gov:tasks
       - name: La garde du backlog sait rougir
         run: pnpm gov:tasks:prove
+      - name: Registre des exigences
+        run: pnpm gov:requirements
+      - name: La garde du registre sait rougir
+        run: pnpm gov:requirements:prove
       - name: Typecheck
         run: pnpm typecheck
+      - name: Tests
+        run: pnpm test

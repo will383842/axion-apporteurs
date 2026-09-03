@@ -11,11 +11,14 @@
   "scripts": {
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
-    "gov:check": "pnpm gov:publication && pnpm gov:tasks",
+    "gov:check": "pnpm gov:publication && pnpm gov:tasks && pnpm gov:requirements",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
-    "gov:tasks:prove": "tsx scripts/gates/gov-tasks.ts --prove"
+    "gov:tasks:prove": "tsx scripts/gates/gov-tasks.ts --prove",
+    "gov:requirements": "tsx scripts/gates/gov-requirements.ts",
+    "gov:requirements:prove": "tsx scripts/gates/gov-requirements.ts --prove",
+    "lot:cloture": "tsx scripts/lot/cloture.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

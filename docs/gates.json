@@ -120,7 +120,7 @@
       ],
       "verifie": "chaque hypothese posee a un test nomme ; HYP-D7 rougit si REQ-ARG-025 et REQ-JUR-014 divergent ; HYP-E1-9 rougit si fenetreFinAt != confirmeeAt + 12 mois ; tout identifiant d'hypothese doit valider ^(HYP|DEC)-[A-Z0-9-]+$",
       "fixtureRouge": "reecrire REQ-ARG-025 en 'a l'approche du seuil'",
-      "preuveRouge": null
+      "preuveRouge": "couvert par gov:tasks:prove (famille hyp_hors_registre) le 2026-09-03"
     },
     {
       "id": "gov:agents",
@@ -1005,6 +1005,15 @@
       "verifie": "aucun fichier SUIVI PAR GIT ne porte (a) un mot d'analyse du risque relationnel, (b) un seuil de detection d'abus — en constante de code ou en toutes lettres, dans les deux sens de lecture —, (c) un montant en euros ou un taux de remuneration du reseau. Les montants fixes par la loi (DAS2, vigilance, indemnite de recouvrement) sont neutralises avant analyse et couverts par des contre-temoins",
       "fixtureRouge": "ecrire un seuil de detection ou un montant de grille dans un fichier suivi",
       "preuveRouge": "pnpm gov:publication:prove — 7 familles vues rougir, 5 contre-temoins vus rester verts"
+    },
+    {
+      "id": "gov:requirements",
+      "phase": -1,
+      "script": "scripts/gates/gov-requirements.ts",
+      "tache": "GOV-001",
+      "verifie": "docs/requirements.json valide scripts/lot/requirements.schema.json ; ids uniques ; source non vide ; une exigence absorbee nomme une survivante ACTIVE (aucune chaine d'absorption) ; les 21 modules et les 12 etapes de l'audit portent chacun au moins une exigence ; toute exigence active est citee par au moins une tache, et aucune tache ne cite une exigence inexistante ; phase et taches[] sont DERIVEES du backlog, jamais saisies",
+      "fixtureRouge": "vider la source d'une exigence, ou retirer le dernier porteur d'une exigence active",
+      "preuveRouge": "pnpm gov:requirements:prove — 11 familles, chacune vue rougir sur son defaut injecte"
     }
   ]
 }
