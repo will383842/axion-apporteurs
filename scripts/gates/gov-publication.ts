@@ -57,7 +57,10 @@ const TAUX_REMUNERATION = '(?:commission|parrainage|filleul|bonus|palier|forfait
 // Le pourcentage s'arrête à 99 : « 100 % » n'est jamais un taux de rémunération, c'est un taux de
 // COUVERTURE (« 100 % des cellules testées »). Écrite en `\d{1,3}`, la règle rougissait sur
 // `docs/gates.json`, où elle n'avait rien à dire.
-const EUROS = '(?:\\d[\\d\\s\\u202f\\u00a0]{0,8}(?:€|EUR\\b))';
+// Le montant commence par un chiffre NON NUL. « 0 € » n'est pas une valeur du réseau : c'est
+// précisément ce que plusieurs exigences INTERDISENT d'afficher (« jamais « 0 € », jamais un taux
+// deviné »). Écrite avec `\d`, la règle rougissait sur l'interdiction elle-même.
+const EUROS = '(?:[1-9][\\d\\s\\u202f\\u00a0]{0,8}(?:€|EUR\\b))';
 const POURCENT = '(?:\\b\\d{1,2}\\s*%)';
 
 /**
@@ -195,6 +198,7 @@ if (process.argv.includes('--prove')) {
     `const PLAFOND_QUESTIONS = 10;`,
     `"verifie": "100 % des cellules (etat x evenement) testees pour Attribution et LigneCommission"`,
     `Stryker sur src/domain : seuil aligne sur la mesure puis >= 80 % bloquant sur les fichiers touches`,
+    `le libelle apporteur de la commission n'affiche jamais « 0 € », jamais un taux devine`,
   ];
 
   const rouges = new Set<string>();
