@@ -61,9 +61,9 @@
       "phase": -1,
       "script": "scripts/gates/gov-tasks.ts",
       "tache": "GOV-017a",
-      "verifie": "docs/tasks.json valide le schema ; ids uniques ; deps existantes ; acyclique ; <= 1,5 j ; une PR par tache ; phase <= courante ; une seule etiquette repo ; paths[] non vide et disjoints dans un lot ; statut >= en_cours implique owner et branch non nuls ; hyp[] toutes presentes dans DECISIONS.md ; total affiche = somme des estimations ; aucune tache ne depend d'une tache de phase strictement superieure",
+      "verifie": "docs/tasks.json valide scripts/lot/tasks.schema.json (ajv, invariants conditionnels compris) ; ids uniques ; deps resolues, acycliques, jamais vers une phase ulterieure ; aucun identifiant scinde (INT-T01, GOV-017, EXT-T02) ni identifiant de decision en dependance ; chaque hyp[] declaree dans DECISIONS.md (alias de la section 0 compris) ; paths[] non vide ; <= 1,5 j hors tache externe ; externe non nul implique statut attente_externe. HORS PERIMETRE, repris par GOV-017b : la disjonction des paths dans un lot (le composeur) et l'egalite total affiche = somme des estimations (la vue TASKS.md n'est pas encore generee dans ce depot)",
       "fixtureRouge": "dupliquer un id de tache",
-      "preuveRouge": null
+      "preuveRouge": "pnpm gov:tasks:prove — 11 familles, chacune vue rougir sur son propre defaut injecte"
     },
     {
       "id": "gov:pr",
@@ -75,12 +75,12 @@
       "preuveRouge": null
     },
     {
-      "id": "gov:depot-prive",
+      "id": "gov:depot-visibilite",
       "phase": -1,
-      "script": "scripts/gates/gov-depot-prive.sh",
+      "script": "scripts/gates/gov-depot-visibilite.sh",
       "tache": "GOV-012",
-      "verifie": "gh repo view --json visibility == PRIVATE ; image GHCR privee (Coolify tire avec un PAT read:packages, HYP-E1-27)",
-      "fixtureRouge": "depot temoin public",
+      "verifie": "la visibilite du depot est celle qu'a decidee W13 (PUBLIC) et le check requis `gate-a` est arme sur main ; l'image GHCR reste privee (Coolify tire avec un PAT read:packages, seul reliquat de HYP-E1-27)",
+      "fixtureRouge": "basculer un depot temoin dans l'autre visibilite, ou retirer le check requis",
       "preuveRouge": null
     },
     {
@@ -996,6 +996,15 @@
       "verifie": "aucun terme du droit social dans ce qu'un apporteur peut lire (espace, e-mails, micro-copy, gabarits de documents, ressources) : bulletin, fiche de paie, net a payer, brut, salaire, charges salariales, cotisations retenues, attestation d'emploi, certificat de travail, solde de tout compte, conges, anciennete, prime ; et aucun gabarit de document reprenant les rubriques d'un bulletin de paie",
       "fixtureRouge": "intituler un gabarit « bulletin de commission »",
       "preuveRouge": null
+    },
+    {
+      "id": "gov:publication",
+      "phase": -1,
+      "script": "scripts/gates/gov-publication.ts",
+      "tache": "GOV-000",
+      "verifie": "aucun fichier SUIVI PAR GIT ne porte (a) un mot d'analyse du risque relationnel, (b) un seuil de detection d'abus — en constante de code ou en toutes lettres, dans les deux sens de lecture —, (c) un montant en euros ou un taux de remuneration du reseau. Les montants fixes par la loi (DAS2, vigilance, indemnite de recouvrement) sont neutralises avant analyse et couverts par des contre-temoins",
+      "fixtureRouge": "ecrire un seuil de detection ou un montant de grille dans un fichier suivi",
+      "preuveRouge": "pnpm gov:publication:prove — 7 familles vues rougir, 5 contre-temoins vus rester verts"
     }
   ]
 }

@@ -22,6 +22,29 @@
 > Gate `gov:identifiants` : tout code ou ADR citant un identifiant absent de ce fichier rougit.
 > Généré et tenu par le gardien du spec (tâche GOV-005). Dernière mise à jour : 2026-09-03.
 
+## 0. Identifiants d'origine → identifiant canonique
+
+Les relecteurs ont nommé certaines décisions autrement que ce registre. Ces noms survivent dans
+`docs/tasks.json` (champ `hyp`) et dans les documents sources. Le tableau ci-dessous les résout.
+Il est **lu par `pnpm gov:tasks`** : une tâche qui repose sur un identifiant absent d'ici *et* absent
+des sections 1 et 2 fait rougir la garde. Chaque correspondance était déjà écrite en prose dans la
+ligne canonique — ce tableau ne décide rien, il rend lisible par la machine ce qui ne l'était que
+par un lecteur attentif.
+
+| Identifiant cité | Canonique | Où la correspondance est écrite |
+| --- | --- | --- |
+| `W2` | `HYP-W2` | §2, ligne « Banque réceptrice du SEPA » |
+| `W5` | `HYP-W5` | §2, ligne « Stack » |
+| `W7` | `HYP-W7` | §2, ligne « Signal *déjà travaillée* » |
+| `HYP-BEB-D2` | `HYP-W5` | §2 — « absorbe `HYP-BEB-D2`, l'identifiant cité par GOV-009 » |
+| `HYP-W6` | `HYP-W6-BIS` | §2 — « absorbe […] l'orthographe `HYP-W6` » |
+| `DEC-BEB-A12` | `HYP-W6-BIS` | §2 — « absorbe `DEC-BEB-A12` […] cité par DM-03-A » |
+| `DEC-DM-013` | `HYP-E1-7` | §2 — « absorbe `DEC-DM-013` et `DEC-INT-010` » |
+| `DEC-INT-010` | `HYP-E1-7` | §2 — même ligne |
+| `DEC-INT-002` | `W3` | §1 — « Sous-domaine d'envoi dédié […] aligné DMARC (`DEC-INT-002`) » |
+| `DEC-INT-004` | `EXT-2a` | §1 — « identifiant d'origine `DEC-INT-004` (E.3-5) » |
+| `DEC-ABUS-C12` | `HYP-C12` | §2 — « absorbe `DEC-ABUS-C12`, l'identifiant cité par DM-10-A » |
+
 ## 1. Sans valeur par défaut possible — bloquent le code
 
 | Id | Décision | Pourquoi aucune hypothèse | Phase bloquée | Propriétaire |
@@ -46,7 +69,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | HYP-W2 | Banque réceptrice du SEPA | Générateur `pain.001.001.03` générique + **saisie manuelle avec EndToEndId** ; la banque ne gate que le mois à blanc | paramètre | 2 | armement SEPA | — |
 | HYP-W5 | Stack (absorbe `HYP-BEB-D2`, l'identifiant cité par GOV-009) | Next.js 16 + Prisma + Postgres 16 + Redis/BullMQ + Tailwind v4 (ADR-0001) | — | −1 | sortie de phase −1 | — |
-| HYP-W7 | Signal « déjà travaillée » | L'écran Vérifier distingue `libre` de `libre_deja_travaillee` — **sans** identité, **sans** date précise, **sans** résultat ; au-delà de 70 % de dépôts sur des entreprises déjà travaillées, signal d'anomalie (jamais un refus) | paramètre | 1 | — | — |
+| HYP-W7 | Signal « déjà travaillée » | L'écran Vérifier distingue `libre` de `libre_deja_travaillee` — **sans** identité, **sans** date précise, **sans** résultat ; un signal (jamais un refus) s'ouvre lorsque la part de dépôts sur des entreprises déjà travaillées dépasse le seuil de configuration | paramètre | 1 | — | — |
 | HYP-D3 | Seuil de dépôt | `seuilPrioritaire = min(palierConfiance, capaciteRestante)` ; `surchargeManuelle > 0` remplace le min ; **une seule fonction pure** ; jamais un plafond | paramètre | 1 | — | — |
 | HYP-C1 | Naissance de l'attribution | **Provisoire** jusqu'à confirmation par l'entreprise lors de la qualification | **avenant** | 1 | **premier DocuSeal** | — |
 | HYP-C4 | Collision sur un SIREN | File d'attente, **maximum 2**, promotion automatique | paramètre | 1 | — | — |
@@ -60,24 +83,24 @@
 | HYP-C12 | Antériorité d'Axion-IA (absorbe `DEC-ABUS-C12`, l'identifiant cité par DM-10-A) | Client · devis < 6 mois · formulaire/Calendly < 90 j · fenêtre 180 j | paramètre | 1 | — | — |
 | HYP-D7 | Attestation de vigilance | **Bloqué par défaut** : aucun versement sans attestation valide, quel que soit le cumul ; le seuil de 5 000 € ne sert qu'au rappel J-15 et à la DAS2 | paramètre | 2 | — | — |
 | HYP-D9 | Autofacturation | Oui dès la V1, mandat dans le contrat, série par apporteur ; seuil DAS2 = paramètre (2 400 €, à confirmer avec l'expert-comptable) | **avenant** | 2 | **premier DocuSeal** | — |
-| **HYP-D11** | Sortie de collaboration | **Aucune déchéance** : les lignes `acquise` sont payées au dernier relevé sans le seuil de 50 € (`HYP-E1-17`), les lignes `prevue` suivent la règle ordinaire du contrat art. 12.3. **Aucun barème de sanctions graduées, aucun compteur, aucun « contradictoire »** : la suspension est une mesure de vérification à motifs fermés (`non_confirme`, `fraude`), la résiliation une décision humaine motivée avec préavis. La valeur `dechue` est retirée de l'enum | **avenant** | 1 | **premier DocuSeal** | **2026-09-03** |
+| **HYP-D11** | Sortie de collaboration | **Aucune déchéance** : les lignes `acquise` sont payées au dernier relevé sans le seuil de versement minimal (`HYP-E1-17`), les lignes `prevue` suivent la règle ordinaire du contrat art. 12.3. **Aucun barème de sanctions graduées, aucun compteur, aucun « contradictoire »** : la suspension est une mesure de vérification à motifs fermés (`non_confirme`, `fraude`), la résiliation une décision humaine motivée avec préavis. La valeur `dechue` est retirée de l'enum | **avenant** | 1 | **premier DocuSeal** | **2026-09-03** |
 | HYP-D12 | Notifications apporteurs | E-mail + push PWA en V1 ; Telegram/SMS en V2 | paramètre | 3 | — | — |
-| HYP-D14 | Bonus de parrainage | 100 € à la **première ligne acquise** du filleul (jamais à l'inscription). ⚠️ **Aucune base contractuelle aujourd'hui** : l'art. 4.6 affirme l'inverse (« Aucune somme n'est due au titre de l'inscription elle-même » et ne prévoit pas ce forfait). À trancher avec W11 : soit le bonus est écrit au 4.6 (`{{BONUS_FILLEUL}}`), soit cette ligne est retirée | **avenant** | 2 | **premier DocuSeal** | — |
+| HYP-D14 | Bonus de parrainage | Un forfait (montant en configuration, `{{BONUS_FILLEUL}}`) dû à la **première ligne acquise** du filleul, jamais à l'inscription. ⚠️ **Aucune base contractuelle aujourd'hui** : l'art. 4.6 affirme l'inverse (« Aucune somme n'est due au titre de l'inscription elle-même » et ne prévoit pas ce forfait). À trancher avec W11 : soit le bonus est écrit au 4.6 (`{{BONUS_FILLEUL}}`), soit cette ligne est retirée | **avenant** | 2 | **premier DocuSeal** | — |
 | HYP-E1-7 | Frontière candidature (absorbe `DEC-DM-013` et `DEC-INT-010`, les identifiants cités par DM-06 et INT-T21-P) | Le tunnel **reste dans axionia** en V1 ; axionia émet `candidature.recue` ; migration = V2. Backfill : clients avec SIREN et devis signés depuis le 2026-08-13, **aucun** `paiement.recu` antérieur | paramètre | 0 | — | — |
 | HYP-E1-5 | Hébergement | Serveur Coolify **dédié** ; previews ≤ 2 simultanées, TTL 48 h ; RPO/RTO 1 h ; sauvegardes R2 préfixe `partners/` — coût soumis à Will | migration | 0 | — | — |
 | HYP-E1-13 | Producteur axionia | **Un seul auteur** (poste A08) pour toutes les PR axionia du chantier ; créneau annoncé, runbook suivi | — | 0 | — | — |
 | HYP-E1-15 | Session de l'espace | **30 jours** (la sécurité prime sur le confort) | paramètre | 0 | — | — |
-| HYP-E1-17 | Dernier relevé d'un résilié | Versé **sans** le seuil de 50 € | paramètre | 2 | — | — |
-| HYP-E1-19 | Parrainage — taux, propagation et fenêtre | Taux **10 %** versionné, appliqué aux lignes `commission` **et** `reprise` du filleul (même méthode d'arrondi) ; fenêtre = `contratFilleulSigneAt + 12 mois`, éligibilité mesurée sur `dateRef` ; profondeur 1, jamais de ligne pour le parrain du parrain (REQ-DM-023) | **avenant** | 2 | **premier DocuSeal** | — |
+| HYP-E1-17 | Dernier relevé d'un résilié | Versé **sans** le seuil de versement minimal | paramètre | 2 | — | — |
+| HYP-E1-19 | Parrainage — taux, propagation et fenêtre | Taux versionné (valeur en configuration), appliqué aux lignes `commission` **et** `reprise` du filleul (même méthode d'arrondi) ; fenêtre = `contratFilleulSigneAt + 12 mois`, éligibilité mesurée sur `dateRef` ; profondeur 1, jamais de ligne pour le parrain du parrain (REQ-DM-023) | **avenant** | 2 | **premier DocuSeal** | — |
 | HYP-E1-22 | Ligne acquise bloquée par le KYC | Conservée **sans limite de durée**, rappel mensuel, **aucune déchéance automatique** ; le versement reste dû tant que le KYC peut être complété. Base contractuelle : art. 5.4 du gabarit (« les sommes dont le versement est différé demeurent acquises à l'Apporteur ») | **avenant** | 1 | **premier DocuSeal** | — |
 | HYP-E1-24 | Secrets et rotation | Sept secrets distincts + `IP_HASH_SALT`, ≥ 32 octets, validés par Zod au boot, `kid` dans les jetons ; **double clé acceptée pendant 24 h** à la rotation, déclenchée par Will (REQ-SEC-028, REQ-QA-030) | — | −1 | — | — |
 | HYP-E1-25 | SLO de visibilité d'un événement | **Pas d'engagement « visible sous 1 min » en V1** : la réconciliation sous 24 h fait foi ; les métriques SLA 48 h p50/p95 sont calculées à la lecture, jamais stockées en double (REQ-QA-025) | paramètre | 2 | — | — |
 | HYP-E1-26 | Retour arrière | **Aucun rollback automatique** : un `readyz` 503 laisse l'ancien container servi (REQ-QA-019) ; le retour arrière est déclenché à la main par le runbook `workflow_dispatch` et vérifié sur `x-partners-build-sha` (REQ-QA-022) | — | 0 | — | — |
-| HYP-E1-27 | Dépôt et image | `axion-partners` **privé**, image GHCR privée (PAT `read:packages`) ; gate `gov:depot-prive` | migration | −1 | — | — |
+| HYP-E1-27 | Dépôt et image | ⚠️ **Renversée par W13** (tranchée le 2026-09-03) : le dépôt est **`will383842/axion-apporteurs`, PUBLIC**. Ce qui subsiste de cette ligne : l'**image GHCR reste privée** (Coolify tire avec un PAT `read:packages`). Gate `gov:depot-visibilite` | migration | −1 | — | — |
 | HYP-E1-30 | TVA inattendue sur une facture | `regimeTva ≠ assujetti` ou `montantTtcCents` null → ligne `bloquee` (`regime_tva_inattendu` / `ttc_manquant`) + alerte ; **jamais de repli HT = TTC** | paramètre | 2 | — | — |
 | HYP-E1-31 | « Mes filleuls » | Gains de parrainage **agrégés par mois**, jamais montant par filleul (REQ-UX-006) | paramètre | 2 | — | — |
 | HYP-E1-33 | File de fusion | GitHub Merge Queue natif si disponible ; sinon sérialisation par le script de lot | — | −1 | — | — |
-| HYP-W6-BIS | Grille, en attendant W6 (absorbe `DEC-BEB-A12` et l'orthographe `HYP-W6`, les identifiants cités par DM-03-A et par `GATES.md` — l'identifiant canonique est `HYP-W6-BIS`) | Toute ligne de `PRICING_CATEGORIES` sans `commissionId` → `bareme_indefini` bloquant + alerte au boot ; 1 j à 400 € HT → `bloquee` motif `plafond` | paramètre | 0 | — | — |
+| HYP-W6-BIS | Grille, en attendant W6 (absorbe `DEC-BEB-A12` et l'orthographe `HYP-W6`, les identifiants cités par DM-03-A et par `GATES.md` — l'identifiant canonique est `HYP-W6-BIS`) | Toute ligne de `PRICING_CATEGORIES` sans `commissionId` → `bareme_indefini` bloquant + alerte au boot ; une journée valorisée au-dessus du plafond de configuration → `bloquee` motif `plafond` | paramètre | 0 | — | — |
 | HYP-QUALIOPI | Discours financement | Formulation SSOT = phrase validée par Will le 2026-08-19 ; **gate lexicale inconditionnelle** (ne lit aucun drapeau) sur « prise en charge à 100 % », « financé par Qualiopi », « sans avance de frais », « Qualiopi » nu | — | 0 | — | — |
 | HYP-TENANT | Multi-tenant | **Mono-tenant** en V1, aucune colonne tenant (ADR-0002) | migration | −1 | — | — |
 | HYP-RESIDENCE | Résidence fiscale | **Française obligatoire** (SIRET FR actif), refus fermé au KYC. ⚠️ **Aucune stipulation contractuelle ne la porte** aujourd'hui, alors que REQ-CPL-004 refuse en dur un SIRET non français. Deux issues, au choix de Will : ajouter à l'art. 6.1 « L'Apporteur exerce depuis un établissement immatriculé en France (SIRET actif) », ou ramener cette ligne à `paramètre` et assouplir REQ-CPL-004 | **avenant** | 1 | **premier DocuSeal** | — |

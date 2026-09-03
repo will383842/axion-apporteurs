@@ -1,0 +1,7154 @@
+{
+  "version": 1,
+  "taches": [
+    {
+      "id": "GOV-000",
+      "titre": "Dépôt axion-partners, CI minimale, outillage d'autopilote",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-000"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-CPL-021",
+        "REQ-GOV-014",
+        "REQ-QA-001"
+      ],
+      "hyp": [
+        "W13"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "dépôt public (W13) ; `main` protégée (strict, `required_linear_history`, check requis **`gate-a`**) ; `package.json` déclarant les scripts que le SKILL et le workflow appellent — **`plan-state:build`, `lot:composer`, `lot:cloture`, `prevol`, `deploy:verify`, `gov:check`, `gov:autonomie`, `gov:issues`** — plus vitest ; `.github/workflows/ci.yml` avec un job **`name: gate-a`** exécutant `pnpm gov:check`, le check requis de la protection de branche portant **ce nom exact** (sinon GitHub reste en « Expected — Waiting for status », `gh pr checks --watch` n'aboutit jamais et la file se bloque dès la PR témoin) ; `scripts/gates/gov-check.ts` et `scripts/gates/gov-autonomie.ts` écrits, chacun avec sa fixture rouge archivée (`gates.json` les attribue à GOV-000) ; `scripts/gates/hook-env.js` ; `.claude/settings.json` (matrice d'autonomie : `permissions.allow`/`deny`, hook `PreToolUse` → `scripts/gates/hook-env.js` refusant toute `DATABASE_URL` non locale ou `NOTIFY_SINK ≠ true`) ; `scripts/lot/{composer.ts,lot.workflow.js,tasks.schema.json}` ; `scripts/plan-state/build.ts` ; `scripts/lot/cloture.ts` (écrivain de statut : `pnpm lot:cloture --lot <id>` écrit `statut`, `pr`, `branch`, `owner` dans `docs/tasks.json` d'après le retour du workflow, puis commite — sans lui la boucle ne progresse jamais) ; `.claude/skills/lot/SKILL.md` ; **`.claude/agents/` (15 fiches de rôle)** ; `docs/PLAN-STATE.md` v0 ; **`docs/tasks.json` amorcé avec les tâches de phase −1 au statut `a_faire`** (sans quoi GOV-017a n'est atteignable par aucun outillage : `build.ts` et `composer.ts` commencent par le lire) ; déplacement de `axionia/docs/partners/*` + du plan vers `axion-partners/docs/` avec `README.md` de renvoi. Toutes les tâches de phase −1 en dépendent (directement pour les racines GOV-007, GOV-001, JUR-T02 ; par transitivité pour les autres)."
+    },
+    {
+      "id": "GOV-007",
+      "titre": "Charte des agents, gabarit de PR",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-007",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "GOV-000"
+      ],
+      "reqs": [
+        "REQ-GOV-010",
+        "REQ-GOV-011",
+        "REQ-GOV-012",
+        "REQ-GOV-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`CHARTE-AGENTS.md` (~15 rôles de sous-agents, fiches générées par GOV-023), `PULL_REQUEST_TEMPLATE.md` (8 cases, `Auteur:`, `Relecteur:`, `Couvre:`, bloc ROUGE/VERT), CODEOWNERS (`prisma/** @A02`, `packages/contracts/** @A02`) ; suppléant A12 pour les PR de A04 ; toute PR modifiant `prisma/**` ou `packages/contracts/**` porte le label `schema` et A02 est troisième relecteur bloquant.",
+      "tests": {
+        "REQ-GOV-010": [
+          "tests/gov/charte-pr.spec.ts"
+        ],
+        "REQ-GOV-011": [
+          "tests/gov/charte-pr.spec.ts"
+        ],
+        "REQ-GOV-012": [
+          "tests/gov/charte-pr.spec.ts"
+        ],
+        "REQ-GOV-013": [
+          "tests/gov/charte-pr.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-001",
+      "titre": "Registre d'exigences consolidé",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-001"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-000"
+      ],
+      "reqs": [
+        "REQ-GOV-001",
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`REQUIREMENTS.md` + `requirements.json` avec toutes les REQ de ce rapport (B.1-B.9), champs `phase`, `module (1-21)`, `etape (1-12)` ; premier livrable `docs/partners/REQUIREMENTS-ANNEXE-FUSIONS.md` (couples de REQ fusionnées avec la REQ survivante, préséance DM > INT > SEC)."
+    },
+    {
+      "id": "GOV-018",
+      "titre": "Règles maison et leçons dans le dépôt",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-018"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "GOV-007"
+      ],
+      "reqs": [
+        "REQ-GOV-024"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`REGLES-MAISON.md` RM-01… (9 + 3), `LECONS.md`, ligne « Règle maison appliquée » dans le gabarit.",
+      "tests": {
+        "REQ-GOV-024": [
+          "regles-maison.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-008",
+      "titre": "PLAN-STATE vivant, protocole de session, verrou d'écriture",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-008"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "GOV-007"
+      ],
+      "reqs": [
+        "REQ-GOV-006",
+        "REQ-GOV-007",
+        "REQ-GOV-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "tests": {
+        "REQ-GOV-006": [
+          "plan-state-frais.spec.ts",
+          "une-tache-un-owner.spec.ts"
+        ],
+        "REQ-GOV-007": [
+          "plan-state-frais.spec.ts",
+          "une-tache-un-owner.spec.ts"
+        ],
+        "REQ-GOV-023": [
+          "plan-state-frais.spec.ts",
+          "une-tache-un-owner.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-002",
+      "titre": "Table de préséance et bandeaux",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-002"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-001"
+      ],
+      "reqs": [
+        "REQ-GOV-002",
+        "REQ-GOV-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "≥ 7 couples ; bandeaux sur fonctionnement §3.2/R3/R5/§9, contrat art. 1.2/1.5.",
+      "tests": {
+        "REQ-GOV-002": [
+          "preseance.spec.ts"
+        ],
+        "REQ-GOV-030": [
+          "preseance.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-003",
+      "titre": "Identifiants qualifiés + gate anti-identifiant nu",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-003"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-001"
+      ],
+      "reqs": [
+        "REQ-GOV-003"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "tests": {
+        "REQ-GOV-003": [
+          "identifiants-qualifies.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-004",
+      "titre": "Vérification des affirmations sur le code d'axionia",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-004"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "GOV-001"
+      ],
+      "reqs": [
+        "REQ-GOV-004"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "≥ 25 affirmations avec « vérifié le » ; fausses marquées (Invoice, Refund, payerSiret, HT encaissé, C3 codé, patron Calendly, EmargementToken index, score non snapshoté…).",
+      "tests": {
+        "REQ-GOV-004": [
+          "affirmations-verifiees.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-005",
+      "titre": "Registre des décisions ouvertes, hypothèses par défaut, tests HYP-*",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-005",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "GOV-001",
+        "GOV-003"
+      ],
+      "reqs": [
+        "REQ-GOV-003",
+        "REQ-GOV-015"
+      ],
+      "hyp": [
+        "W1",
+        "W3",
+        "W4",
+        "W6"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "toutes les questions de la section E avec hypothèse, propriétaire, impact, phase bloquée ; livrable `docs/DECISIONS.md` (= `DECISIONS-INDEX.md` de REQ-GOV-003, un seul nom) avec table `DEC-*` ← identifiants d'origine (INT-Q01, INT-Q02, INT-Q04, INT-Q10, C12, A12-A16, F-DM-13, D12…) et champ `reversibilite ∈ {parametre, migration, avenant}` ; W1, W3, W4, W6 sans valeur par défaut.",
+      "tests": {
+        "REQ-GOV-003": [
+          "decisions-ouvertes.spec.ts"
+        ],
+        "REQ-GOV-015": [
+          "decisions-ouvertes.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-006",
+      "titre": "Glossaire + gate schéma enum",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-006",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "GOV-002"
+      ],
+      "reqs": [
+        "REQ-DM-003",
+        "REQ-GOV-016",
+        "REQ-JUR-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`docs/GLOSSAIRE.md` (13 états d'attribution, `EvenementRecu`, « Déposer » retenu contre « Déclarer », rôle `qualifieur`, `ETATS_OCCUPANTS` à 7 états dérivés de REQ-DM-003).",
+      "tests": {
+        "REQ-DM-003": [
+          "glossaire-enums.spec.ts"
+        ],
+        "REQ-GOV-016": [
+          "glossaire-enums.spec.ts"
+        ],
+        "REQ-JUR-027": [
+          "glossaire-enums.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-009",
+      "titre": "Squelette ADR + 6 ADR fondateurs",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-009"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-005"
+      ],
+      "reqs": [
+        "REQ-CPL-018",
+        "REQ-GOV-008"
+      ],
+      "hyp": [
+        "HYP-BEB-D2"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "ADR-0001 stack (HYP-BEB-D2), 0002 frontière/sources de vérité/mono-tenant (REQ-CPL-018), 0003 grille publiée, 0004 auth + rôles défaut refus, 0005 gouvernance, 0006 fusion.",
+      "tests": {
+        "REQ-CPL-018": [
+          "adr-index-derive.spec.ts"
+        ],
+        "REQ-GOV-008": [
+          "adr-index-derive.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-010",
+      "titre": "Gate ADR ↔ assertion",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-010"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-009"
+      ],
+      "reqs": [
+        "REQ-GOV-009"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "GOV-011",
+      "titre": "Matrice de traçabilité dérivée",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-011"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-001",
+        "GOV-007"
+      ],
+      "reqs": [
+        "REQ-GOV-005"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "tests": {
+        "REQ-GOV-005": [
+          "tracabilite.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-012",
+      "titre": "Protocole de fusion, release manager, protection de main",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-012"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "GOV-007"
+      ],
+      "reqs": [
+        "REQ-GOV-014"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "squash + `required_linear_history` ; gate `gov:depot-visibilite` (`gh repo view --json visibility` ≠ la valeur decidee par W13, ou check requis `gate-a` absent → rouge).",
+      "tests": {
+        "REQ-GOV-014": [
+          "aucun-workflow-ne-pousse-sur-main.spec.ts",
+          "tout-check-est-cable.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-013",
+      "titre": "Gate lexicale « commercial »",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-013"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-012"
+      ],
+      "reqs": [
+        "REQ-GOV-017"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "tests": {
+        "REQ-GOV-017": [
+          "lexique.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-014",
+      "titre": "Conventions + sélection des gardes d'axionia",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-014"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-012",
+        "GOV-013"
+      ],
+      "reqs": [
+        "REQ-GOV-018",
+        "REQ-GOV-029"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`docs/CONVENTIONS.md` (branches `t/<id-en-minuscules>`, worktrees `../axion-partners-wt/<id>`, titre de PR `<type>(<ID-TÂCHE>): <titre>`, commits `<type>(<domaine>): …` ≤ 100 car., camelCase français, suffixes `…Cents`/`…At`, snake_case Postgres par `@map`, `pnpm perf:bundle -- <route>`, `pnpm prevol`, « les hooks locaux ne font pas foi », jamais de jonction `node_modules` en worktree).",
+      "tests": {
+        "REQ-GOV-018": [
+          "gardes-transposees.spec.ts"
+        ],
+        "REQ-GOV-029": [
+          "gardes-transposees.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-015",
+      "titre": "Fiches tiers",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-015"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "GOV-001"
+      ],
+      "reqs": [
+        "REQ-CPL-002",
+        "REQ-GOV-022"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "tests": {
+        "REQ-CPL-002": [
+          "fiches-tiers.spec.ts"
+        ],
+        "REQ-GOV-022": [
+          "fiches-tiers.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T01a",
+      "titre": "Contrat d'événements, enveloppe et nomenclature : Zod + JSON Schema + `schemaVersion` + hash",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T01a",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "GOV-004",
+        "GOV-009",
+        "GOV-015"
+      ],
+      "reqs": [
+        "REQ-GOV-020",
+        "REQ-INT-003",
+        "REQ-INT-004",
+        "REQ-INT-029",
+        "REQ-QA-007"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "nomenclature unique (REQ-INT-004 : liste fermée des 11 types littéraux, source unique `packages/contracts/events.ts`), enveloppe camelCase (REQ-INT-003), schéma Zod + JSON Schema + `schemaVersion` + hash ; `pnpm contracts:export` → `contracts.v<N>.json` + `contracts.sha256` copié à hash identique dans `axionia/src/server/partners-sync/contracts/` (jamais retapé).",
+      "tests": {
+        "REQ-GOV-020": [
+          "contrat-hash.spec.ts"
+        ],
+        "REQ-INT-003": [
+          "contrat-hash.spec.ts"
+        ],
+        "REQ-INT-004": [
+          "contrat-hash.spec.ts"
+        ],
+        "REQ-INT-029": [
+          "contrat-hash.spec.ts"
+        ],
+        "REQ-QA-007": [
+          "contrat-hash.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T01b",
+      "titre": "Contrat d'événements, payloads et fixtures produites par le producteur réel",
+      "phase": -1,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/INT-T01b"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T01a"
+      ],
+      "reqs": [
+        "REQ-ARG-002",
+        "REQ-ARG-005",
+        "REQ-ARG-006",
+        "REQ-ARG-030",
+        "REQ-CPL-015",
+        "REQ-DM-018",
+        "REQ-DM-036",
+        "REQ-DM-039",
+        "REQ-DM-040",
+        "REQ-INT-005",
+        "REQ-INT-006",
+        "REQ-INT-032",
+        "REQ-QA-008"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "payloads (REQ-INT-005/006/032, REQ-DM-039/040, K-18 payers[], `client.fusionne`, `candidature.recue`), dérivation HT, deux formes de remboursement ; `pnpm partners:fixtures` (dans axionia, `scripts/partners/fixtures.ts`, base de dev port 5434, pseudonymisation, sortie commitée dans Partners avec `Source:`) — **aucune fixture écrite à la main, aucun helper qui « complète » un champ manquant**."
+    },
+    {
+      "id": "GOV-017a",
+      "titre": "Backlog converti en `docs/tasks.json` : champs déjà écrits, acyclique",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-017a"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-001",
+        "GOV-005",
+        "GOV-011"
+      ],
+      "reqs": [
+        "REQ-GOV-021",
+        "REQ-GOV-025",
+        "REQ-GOV-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "conversion **mécanique** de `TASKS.md` en `docs/tasks.json` pour les champs qui existent déjà (`id`, `titre`, `phase`, `deps`, `reqs`, `hyp`, `externe`, `repo`, `estimateDays`, `statut`), validé par `scripts/lot/tasks.schema.json` ; `repo` absent → `partners` par défaut ; grappes fusionnées ; chemin critique écrit dans PLAN-STATE ; `TASKS.md` devient une vue générée (`pnpm gov:tasks --render`)."
+    },
+    {
+      "id": "GOV-017b",
+      "titre": "`paths",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-017b"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "GOV-017a"
+      ],
+      "reqs": [
+        "REQ-GOV-021",
+        "REQ-GOV-025",
+        "REQ-GOV-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "chaque tâche porte `zone`, `paths[]` (≥ 1 entrée) et `sensible[]` ; **c'est ce qui fonde la disjonction de chemins du composeur** — sans ces champs, deux tâches d'un même lot peuvent écrire le même fichier et la file casse ; `acceptance` et `tests{}` deviennent requis **à l'attribution** (`statut: en_cours`), pas à l'écriture."
+    },
+    {
+      "id": "GOV-019",
+      "titre": "Budgets de performance après première mesure",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-019"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-014"
+      ],
+      "reqs": [
+        "REQ-GOV-028"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "tests": {
+        "REQ-GOV-028": [
+          "poids-du-bundle-garde-vraiment.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-020",
+      "titre": "Inventaire prouvé C1-C8",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-020"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-004"
+      ],
+      "reqs": [
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "GOV-023",
+      "titre": "Fiches de rôle générées depuis `agents.json`",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-023"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-000",
+        "GOV-007"
+      ],
+      "reqs": [
+        "REQ-GOV-010"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`pnpm gov:agents` génère `.claude/agents/<role>.md` (~15 fiches : mission, entrées, sorties, interdits, documents à lire avec chemins, `tools`).",
+      "tests": {
+        "REQ-GOV-010": [
+          "fiches-agents.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "QA-T00",
+      "titre": "`prove.sh` + `gates.json` {id, script, fixtureRouge, phase, preuveRouge} + nightly `gates:prouvees`",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T00"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-000"
+      ],
+      "reqs": [
+        "REQ-QA-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "chaque gate porte un champ `phase` et une `preuveRouge` archivée ; `gates:prouvees` calcule « toutes les gates de phase ≤ N présentes, bloquantes, avec `preuveRouge` »."
+    },
+    {
+      "id": "JUR-T02",
+      "titre": "SSOT des seuils et **de TOUS les délais du contrat** + garde « aucun littéral »",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T02"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "rgpd"
+      ],
+      "deps": [
+        "GOV-000",
+        "JUR-T01"
+      ],
+      "reqs": [
+        "REQ-EXT-028",
+        "REQ-JUR-015",
+        "REQ-JUR-029"
+      ],
+      "hyp": [
+        "W9"
+      ],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "chaque constante est **nommée d'après son article** — `PRISE_DE_CONTACT_JOURS_OUVRES = 2 // art. 3.2`, `CONFIRMATION_TACITE_JOURS = 30 // art. 3.2`, `FILE_FENETRE_REDECLARATION_JOURS = 15` et `FILE_EXPIRATION_MOIS = 12 // art. 3.5`, `SUSPENSION_MAX_JOURS = 15 // art. 3.7`, `ANTERIORITE_CLIENT_MOIS = 24` et `ANTERIORITE_DEVIS_MOIS = 6 // art. 3.3`, `PEREMPTION_JOURS = 90 // art. 3.4`, `PROLONGATION_DEVIS_MOIS = 3 // art. 3.4 (W9)`, `MISE_EN_DEMEURE_JOURS = 15 // art. 11.2`, `REPONSE_CONTESTATION_JOURS = 15 // art. 3.3 et 5.6`, `CONTESTATION_FACTURE_JOURS = 30 // art. 5.2`, `FORCLUSION_CONTESTATION_MOIS = 12 // art. 5.5`, `REPRISE_MOIS = 12 // art. 4.5`, `VERSEMENT_JOURS_OUVRES = 10` et `VERSEMENT_PLAFOND_JOURS = 60 // art. 5.3`, `SEUIL_VERSEMENT`, `SEUIL_VIGILANCE`, `PREAVIS_JOURS = 30 // art. 11.1`, `PALIER_HORS_GRILLE_JOURS = 60 // annexe A1.7`, `MANDAT_DENONCIATION_JOURS = 30 // annexe 2.5`, `CONFIDENTIALITE_ANS = 2 // art. 9`, `FORCE_MAJEURE_MOIS = 3 // art. 15`. **Aucune constante de gradation ni de contradictoire** n'y figure (décision du 2026-09-03)."
+    },
+    {
+      "id": "CPL-T01",
+      "titre": "Décisions sans valeur par défaut à trancher par Will : W1 entité contractante, W9 prolongation de fenêtre si devis en cours",
+      "phase": -1,
+      "repo": "externe",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/decisions/CPL-T01"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "GOV-005"
+      ],
+      "reqs": [
+        "REQ-CPL-001",
+        "REQ-CPL-002",
+        "REQ-CPL-003",
+        "REQ-CPL-004",
+        "REQ-CPL-017",
+        "REQ-CPL-018"
+      ],
+      "hyp": [
+        "HYP-E1-5",
+        "W1",
+        "W11",
+        "W2",
+        "W3",
+        "W4",
+        "W5",
+        "W6",
+        "W9"
+      ],
+      "externe": "will",
+      "estimateDays": 0.0,
+      "statut": "attente_externe",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "W1, W3, W4 tranchées avant la sortie de phase −1 ; **W6 est tranchée le 2026-09-03** — quatre familles commissionnées (formations collectives, accompagnement 1-to-1, audits, implémentations), soit **30 paliers** ; cinq familles non commissionnées à écrire noir sur blanc dans l'annexe (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) ; banque (W2) et stack (W5) sont des hypothèses écrites dans DECISIONS.md (pain.001.001.03 générique + saisie manuelle avec EndToEndId, REQ-CPL-002 ; la banque ne gate que le mois à blanc) ; coût mensuel de l'hébergement dédié (HYP-E1-5) soumis à Will ; test de cohérence SIREN/IBAN sur les trois fixtures (contrat, mandat, pain.001) dès que l'entité est nommée."
+    },
+    {
+      "id": "QA-T01",
+      "titre": "Squelette de tests et Gate A bloquante",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T01"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-014"
+      ],
+      "reqs": [
+        "REQ-QA-001",
+        "REQ-QA-002",
+        "REQ-QA-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "tests": {
+        "REQ-QA-001": [
+          "aucune-gate-en-continue-on-error.spec.ts"
+        ],
+        "REQ-QA-002": [
+          "aucune-gate-en-continue-on-error.spec.ts"
+        ],
+        "REQ-QA-013": [
+          "aucune-gate-en-continue-on-error.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "SEC-01",
+      "titre": "Secrets distincts et validation d'environnement au boot",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-01"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-SEC-028"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-02",
+      "titre": "En-têtes de sécurité et CSP par nonce",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-02"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-SEC-029"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-10",
+      "titre": "Bibliothèque rate-limit avec garde de famille, honeypot observable",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-10"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-SEC-016",
+        "REQ-SEC-035"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T08",
+      "titre": "Logger pino structuré, redaction PII, Sentry, notify",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T08"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-QA-024"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-01",
+      "titre": "Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-01"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-DM-001",
+        "REQ-DM-024",
+        "REQ-DM-038",
+        "REQ-JUR-026",
+        "REQ-SEC-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-02",
+      "titre": "Gates de schéma : enums, centimes, index partiels, migrations additives",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-02"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-01"
+      ],
+      "reqs": [
+        "REQ-DM-001",
+        "REQ-DM-003",
+        "REQ-DM-037",
+        "REQ-DM-038",
+        "REQ-JUR-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T02",
+      "titre": "Harnais d'intégration testcontainers",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T02"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-01",
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-QA-006"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T04",
+      "titre": "env.ts Zod fail-fast, /api/livez, /api/readyz, entrypoint bloquant, Dockerfile + HEALTHCHECK",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T04",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "QA-T02",
+        "SEC-01"
+      ],
+      "reqs": [
+        "REQ-CPL-021",
+        "REQ-QA-019",
+        "REQ-QA-020",
+        "REQ-QA-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T03",
+      "titre": "Traçabilité REQ→test : requirements.yaml, @req, req:check",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T03"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-011",
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-QA-014"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`req:check` vérifie la PAIRE (tâche, REQ) → test nommé existant, annoté, vert.",
+      "tests": {
+        "REQ-QA-014": [
+          "req-check.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "QA-T07",
+      "titre": "Gate sécurité : semgrep",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T07"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-QA-011",
+        "REQ-QA-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T30",
+      "titre": "Stryker sur `src/domain` : seuil aligné sur la mesure puis ≥ 80 % bloquant sur fichiers touchés, complet en nightly",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T30"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-QA-002"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "CPL-T22",
+      "titre": "Job CI « red-first »",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/conformite/CPL-T22"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-CPL-022"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "tests nouveaux de la PR exécutés contre `main`, doivent échouer sauf `@no-red-first` justifié."
+    },
+    {
+      "id": "SEC-08",
+      "titre": "Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-08"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "DM-02",
+        "SEC-01"
+      ],
+      "reqs": [
+        "REQ-SEC-024"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T05",
+      "titre": "Pipeline GHCR privé → Coolify pull",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T05"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T04"
+      ],
+      "reqs": [
+        "REQ-QA-018",
+        "REQ-QA-032",
+        "REQ-QA-033"
+      ],
+      "hyp": [
+        "HYP-E1-5"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T11",
+      "titre": "Gate D migrations : base vierge, dump N-1, migrate diff vide, image N-1, lint expand/contract",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T11"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T05"
+      ],
+      "reqs": [
+        "REQ-QA-021"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T06",
+      "titre": "Preview par PR sur Coolify, base éphémère, seed déterministe",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T06"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T05"
+      ],
+      "reqs": [
+        "REQ-QA-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T12",
+      "titre": "Sauvegarde horaire R2 + drill mensuel",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T12"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-01",
+        "QA-T05"
+      ],
+      "reqs": [
+        "REQ-QA-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T13",
+      "titre": "Workflow rollback + runbooks socle exercés en preview",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T13"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T05",
+        "QA-T06"
+      ],
+      "reqs": [
+        "REQ-QA-022",
+        "REQ-QA-030",
+        "REQ-QA-034"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-03-A",
+      "titre": "Export de la grille : GrilleCommission versionnée dérivée de COMMERCIAL_COMMISSIONS + extension SSOT",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "domaine",
+      "paths": [
+        "axionia/DM-03-A"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "INT-T01b"
+      ],
+      "reqs": [
+        "REQ-ARG-031",
+        "REQ-DM-014",
+        "REQ-GOV-019",
+        "REQ-INT-017",
+        "REQ-JUR-019"
+      ],
+      "hyp": [
+        "DEC-BEB-A12",
+        "HYP-W6",
+        "W6"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "garde de COHÉRENCE : chaque id de `pricing.ts` a soit un taux, soit une entrée `bareme_indefini` explicite et datée (HYP-W6) ; ligne absente → rouge ; toute ligne de `PRICING_CATEGORIES` sans `commissionId` → `bareme_indefini` bloquant + alerte au boot."
+    },
+    {
+      "id": "DM-03-P",
+      "titre": "Import de la grille côté Partners : `GrilleCommission` versionnée, `partners:grille:check`",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-03-P"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "DM-01",
+        "DM-03-A"
+      ],
+      "reqs": [
+        "REQ-ARG-031",
+        "REQ-DM-014",
+        "REQ-INT-017"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-04",
+      "titre": "Fonction pure de calcul de commission et de prorata entier",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-04"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "DM-03-P"
+      ],
+      "reqs": [
+        "REQ-ARG-004",
+        "REQ-ARG-006",
+        "REQ-ARG-007",
+        "REQ-ARG-017",
+        "REQ-DM-015",
+        "REQ-DM-017",
+        "REQ-DM-040"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T02",
+      "titre": "Outbox Partners côté axionia",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/INT-T02"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T01b"
+      ],
+      "reqs": [
+        "REQ-INT-001",
+        "REQ-INT-002",
+        "REQ-INT-008",
+        "REQ-INT-009",
+        "REQ-INT-012",
+        "REQ-INT-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "tests": {
+        "REQ-INT-001": [
+          "outbox-produit-des-evenements-valides.spec.ts"
+        ],
+        "REQ-INT-002": [
+          "outbox-produit-des-evenements-valides.spec.ts"
+        ],
+        "REQ-INT-008": [
+          "outbox-produit-des-evenements-valides.spec.ts"
+        ],
+        "REQ-INT-009": [
+          "outbox-produit-des-evenements-valides.spec.ts"
+        ],
+        "REQ-INT-012": [
+          "outbox-produit-des-evenements-valides.spec.ts"
+        ],
+        "REQ-INT-031": [
+          "outbox-produit-des-evenements-valides.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "INT-T03",
+      "titre": "Producteurs `client.*` + normalisation SIREN",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/INT-T03"
+      ],
+      "schema": true,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "INT-T02"
+      ],
+      "reqs": [
+        "REQ-DM-021",
+        "REQ-INT-007",
+        "REQ-INT-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T04",
+      "titre": "Producteur `devis.signe` unifié",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/INT-T04"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "DM-03-A",
+        "INT-T02"
+      ],
+      "reqs": [
+        "REQ-INT-006",
+        "REQ-INT-007"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T05",
+      "titre": "Producteurs `facture.emise`, `facture.annulee`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/INT-T05"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent",
+        "auth"
+      ],
+      "deps": [
+        "INT-T02"
+      ],
+      "reqs": [
+        "REQ-ARG-001",
+        "REQ-ARG-005",
+        "REQ-ARG-030",
+        "REQ-DM-039",
+        "REQ-INT-004",
+        "REQ-INT-005",
+        "REQ-INT-007",
+        "REQ-INT-032"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T22",
+      "titre": "Producteur `candidature.recue`",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/INT-T22"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T02"
+      ],
+      "reqs": [
+        "REQ-CPL-015",
+        "REQ-DM-035",
+        "REQ-INT-032",
+        "REQ-QA-035"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "émission depuis l'écrivain de `Submission` (cliquet nominatif) ; payload `{candidatureId, reponsesJson, scoreInitial, scorePartsJson, scoreBaremeVersion, sourceCanal, utm, campagneId, parrainCodeCapture}`."
+    },
+    {
+      "id": "SEC-06",
+      "titre": "Réception des webhooks axionia : signature, tolérance, outbox, rejeu, attente de dépendance, worker",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-06"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T01a",
+        "INT-T01b",
+        "QA-T02",
+        "SEC-01"
+      ],
+      "reqs": [
+        "REQ-ARG-002",
+        "REQ-ARG-003",
+        "REQ-INT-010",
+        "REQ-INT-011",
+        "REQ-QA-008",
+        "REQ-QA-009",
+        "REQ-SEC-010",
+        "REQ-SEC-011"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-07",
+      "titre": "API entrantes pour axionia : jeton dédié/HMAC, allowlist, réponse minimale, journal",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-07"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "SEC-01"
+      ],
+      "reqs": [
+        "REQ-INT-014",
+        "REQ-SEC-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-03",
+      "titre": "Lien magique apporteur",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-03"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "SEC-01",
+        "SEC-08",
+        "SEC-10"
+      ],
+      "reqs": [
+        "REQ-SEC-001",
+        "REQ-SEC-002",
+        "REQ-SEC-016"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-04",
+      "titre": "Sessions révocables en base, `sessionVersion`, step-up",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-04"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "SEC-03"
+      ],
+      "reqs": [
+        "REQ-SEC-003",
+        "REQ-SEC-004"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-05",
+      "titre": "Couche d'accès `forApporteur",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-05"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T07",
+        "SEC-04"
+      ],
+      "reqs": [
+        "REQ-ARG-029",
+        "REQ-QA-010",
+        "REQ-QA-011",
+        "REQ-QA-012",
+        "REQ-SEC-008",
+        "REQ-SEC-009",
+        "REQ-SEC-022",
+        "REQ-UX-006"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-17",
+      "titre": "Rôles console : enum `ConsoleRole { admin, qualifieur, comptable, lecteur }`, matrice SSOT, `requireRole`, garde AST",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-17",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "attribution",
+        "espace"
+      ],
+      "deps": [
+        "SEC-04"
+      ],
+      "reqs": [
+        "REQ-SEC-023",
+        "REQ-UX-024"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T09",
+      "titre": "Client recherche-entreprises : proxy, cache, limiteur, circuit-breaker, repli manuel, minimisation, fixtures enregistrées, contrat nightly",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T09"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-015",
+        "SEC-10"
+      ],
+      "reqs": [
+        "REQ-INT-020",
+        "REQ-INT-021",
+        "REQ-QA-028",
+        "REQ-SEC-013",
+        "REQ-UX-020"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T10",
+      "titre": "Émetteur e-mail Partners : agent ZeptoMail, domaine, DKIM, drapeau DMARC, webhook rebonds",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T10"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "SEC-01"
+      ],
+      "reqs": [
+        "REQ-INT-022",
+        "REQ-INT-023"
+      ],
+      "hyp": [
+        "DEC-INT-002"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T11",
+      "titre": "Adaptateur MCP `partners` : porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T11"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "SEC-01"
+      ],
+      "reqs": [
+        "REQ-INT-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T14",
+      "titre": "Alertes console par bot Telegram dédié",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T14"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "QA-T08"
+      ],
+      "reqs": [
+        "REQ-INT-024"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-06",
+      "titre": "Entité Apporteur : statut enum + matrice, snapshot candidature/score, codeParrainage, JetonDepot, `isTest`, `IdentitesFacturation",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-06",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "DM-01",
+        "DM-02"
+      ],
+      "reqs": [
+        "REQ-CPL-005",
+        "REQ-CPL-020",
+        "REQ-CPL-027",
+        "REQ-DM-010",
+        "REQ-DM-011",
+        "REQ-DM-012",
+        "REQ-DM-035",
+        "REQ-QA-035"
+      ],
+      "hyp": [
+        "DEC-DM-013"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "JUR-T01",
+      "titre": "Gabarit de contrat v1 complet",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T01"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "CPL-T01"
+      ],
+      "reqs": [
+        "REQ-CPL-012",
+        "REQ-JUR-003",
+        "REQ-JUR-007",
+        "REQ-JUR-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "le gabarit reprend `CONTRAT-APPORTEUR-V1.md` **dans sa version corrigée par les cinq examens du 2026-09-03** (12 bloquants + 30 majeurs), annoté des identifiants `CL-*` ; `docs/DECISIONS.md` porte une valeur **tranchée et datée** pour chacune des lignes marquées `avenant` du registre (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ des 12 mois E.1-9). 🔴 **Complétée le 2026-09-03 (synthèse M-20 et P-4).** (1) **Six acceptations distinctes**, et la **note encadrée** qui les signale figure **dans le corps** sous chacun des articles 3.7, 4.5, 5.2, 7, 12 **et** 14 — le corps ne la portait que sous l'art. 14, et la mention « très apparente » de l'art. 48 CPC était renvoyée à une note **hors clause**. (2) La variable `{{APPORTEUR_QUALITE}}` est **alimentée depuis le statut d'exercice recueilli au KYC** (DM-11), jamais saisie à la main : la validité de la clause attributive dépend d'un fait — la qualité de commerçant des deux parties — qu'une part significative des 300 apporteurs (professions libérales, retraités en cumul, associations) ne remplira pas. (3) **Gate lexicale étendue au gabarit de contrat** (P-4 ; elle ne couvrait que `micro-copy/**`, `emails/apporteur/**`, `src/app/(espace)/**`), liste noire : `L.134-12`, `L.134-16`, « indemnité de fin de contrat », « indemnité de clientèle », « renonce », « renonciation » (hors le titre de l'art. 19, exclu nommément), « kit de vente ». C'est le seul moyen d'empêcher qu'une relecture future « améliore » l'art. 11.3 : **une renonciation par avance à un droit d'ordre public est sans effet**, et sa seule présence affaiblit rétrospectivement la portée des articles 1 et 2.",
+      "tests": {
+        "REQ-CPL-012": [
+          "contract-template-complete.spec.ts"
+        ],
+        "REQ-JUR-003": [
+          "contract-template-complete.spec.ts"
+        ],
+        "REQ-JUR-007": [
+          "contract-template-complete.spec.ts"
+        ],
+        "REQ-JUR-023": [
+          "contract-template-complete.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T03",
+      "titre": "Corriger la copy publique d'axionia + garde lexicale des textes apporteurs et gate financement inconditionnelle",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "juridique",
+      "paths": [
+        "axionia/JUR-T03"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-JUR-001",
+        "REQ-JUR-002",
+        "REQ-JUR-024"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`COMMERCIAL_OPPORTUNITY` corrigé (l. 103 et 274 de `commercial-offer.ts`, « n'a parfois même pas à avancer les fonds ») sans lire le drapeau `QUALIOPI_CERTIFICATION_OBTENUE` ; formulation SSOT = phrase validée par Will le 2026-08-19 ; gate lexicale INCONDITIONNELLE sur « prise en charge à 100 % », « financé par Qualiopi », « sans avance de frais », « Qualiopi » nu et toute périphrase ; liste d'exclusion `src/content/keywords/**` (« commercial » toléré seulement là et dans une phrase de désambiguïsation) et badge « N°1 en France » (assumé par Will, hors périmètre).",
+      "tests": {
+        "REQ-JUR-001": [
+          "vocabulaire-apporteur.spec.ts"
+        ],
+        "REQ-JUR-002": [
+          "vocabulaire-apporteur.spec.ts"
+        ],
+        "REQ-JUR-024": [
+          "vocabulaire-apporteur.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T04",
+      "titre": "Registre RGPD, LIA, AIPD, mention art. 14, politique de confidentialité",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T04"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "rgpd"
+      ],
+      "deps": [
+        "JUR-T02"
+      ],
+      "reqs": [
+        "REQ-CPL-009",
+        "REQ-JUR-009",
+        "REQ-JUR-025",
+        "REQ-SEC-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "push PWA (APNs/FCM) et Telegram = sous-traitants hors UE, payload sans PII, registre art. 30 + AIPD."
+    },
+    {
+      "id": "UX-P0-01",
+      "titre": "Vocabulaire et micro-copy SSOT",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P0-01"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "GOV-006"
+      ],
+      "reqs": [
+        "REQ-UX-002",
+        "REQ-UX-003",
+        "REQ-UX-019"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "la partie enums et vocabulaire est livrable dès GOV-006 ; les libellés d'états d'attribution sont ajoutés une fois DM-07 livré, dans une PR de suite portant le même identifiant. ⚠️ **Seule exception au contrôle « aucune tâche ne dépend d'une tâche de phase strictement supérieure »** (GOV-017a) : elle est déclarée ici et dans la table de résolution en tête de fichier, et doit être portée par une entrée explicite d'exemption dans `docs/tasks.json` — jamais par un contrôle affaibli. Si l'exemption gêne, la bonne réponse est de découper en `UX-P0-01a` (phase 0, vocabulaire) et `UX-P0-01b` (phase 1, libellés d'états), pas de rendre la garde muette."
+    },
+    {
+      "id": "UX-P0-02",
+      "titre": "Maquettes des 6 écrans clés + charte de l'espace",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P0-02"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "espace"
+      ],
+      "deps": [],
+      "reqs": [
+        "REQ-UX-008",
+        "REQ-UX-017",
+        "REQ-UX-034"
+      ],
+      "hyp": [
+        "HYP-E1-10"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`docs/maquettes/<ecran>.html` + `docs/maquettes/VALIDATION.md` (écran · date · validé par Will) ; `docs/ESPACE-ROUTES.md` (route · écran · onglet · REQ · maquette ; HYP-E1-10 : un champ sur `/`, résultat `/entreprise?q=`, onglets Accueil · Mes entreprises · Mes commissions · Plus).",
+      "tests": {
+        "REQ-UX-008": [
+          "maquettes-validees.spec.ts"
+        ],
+        "REQ-UX-017": [
+          "maquettes-validees.spec.ts"
+        ],
+        "REQ-UX-034": [
+          "maquettes-validees.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P0-03",
+      "titre": "Harnais a11y et mobile",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P0-03"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-QA-016",
+        "REQ-UX-017",
+        "REQ-UX-018"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T20",
+      "titre": "Budget bundle absolu par route + LHCI lab mobile — configuration",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T20"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-019",
+        "QA-T05"
+      ],
+      "reqs": [
+        "REQ-QA-031",
+        "REQ-UX-033"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "budget 75 KB gz par route mesuré par script maison sur `.next/static/chunks/app/` (une entrée par route) ; non bloquant jusqu'à QA-T20b (seuil aligné d'abord, blocage ensuite)."
+    },
+    {
+      "id": "JUR-T29",
+      "titre": "Copy publique de rémunération en formulation indicative",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "juridique",
+      "paths": [
+        "axionia/JUR-T29"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "JUR-T03"
+      ],
+      "reqs": [
+        "REQ-JUR-001",
+        "REQ-JUR-002",
+        "REQ-JUR-019",
+        "REQ-JUR-041"
+      ],
+      "hyp": [
+        "W12"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "toute mention de rémunération d'apporteur dans la copy publique d'axionia — pages, landings, **documents de présentation** (l'expression « kit de vente » est bannie, REQ-JUR-041 / JUR-T30 : le contrat ne peut pas nommer « vente » ce que l'art. 1.2 dit n'être pas une vente), micro-copy, blocs JSON-LD — passe en formulation **indicative** (« à partir de », « selon profil », « à titre indicatif ») ; aucun taux ni montant présenté comme ferme ; les blocs JSON-LD ne portent aucune valeur de commission ; garde `jur:remuneration-indicative` importée de la SSOT, qui rougit sur une formulation ferme (un montant, un taux, « vous touchez », « commission de X % ») **non accompagnée** d'une mention indicative.",
+      "tests": {
+        "REQ-JUR-001": [
+          "remuneration-indicative.spec.ts"
+        ],
+        "REQ-JUR-002": [
+          "remuneration-indicative.spec.ts"
+        ],
+        "REQ-JUR-019": [
+          "remuneration-indicative.spec.ts"
+        ],
+        "REQ-JUR-041": [
+          "remuneration-indicative.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "CPL-T13",
+      "titre": "Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle D3 en fonction pure",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/conformite/CPL-T13"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T01"
+      ],
+      "reqs": [
+        "REQ-CPL-013",
+        "REQ-CPL-026",
+        "REQ-QA-027",
+        "REQ-UX-022",
+        "REQ-UX-028"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`seuilPrioritaire()` = `min(palierConfiance, capaciteRestante)` ; `surchargeManuelle > 0` remplace le min ; une seule fonction pure, consommée par DM-09 et UX-P1-07."
+    },
+    {
+      "id": "JUR-T01b",
+      "titre": "Contrat v1 arrêté par Will",
+      "phase": 1,
+      "repo": "externe",
+      "zone": "juridique",
+      "paths": [
+        "docs/decisions/JUR-T01b"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "CPL-T01",
+        "JUR-T01"
+      ],
+      "reqs": [
+        "REQ-GOV-015",
+        "REQ-JUR-003",
+        "REQ-JUR-007"
+      ],
+      "hyp": [
+        "W11"
+      ],
+      "externe": "will",
+      "estimateDays": 0.0,
+      "statut": "attente_externe",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "relecture du gabarit v1 et des décisions « avenant » (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ E.1-9 `fenetreFinAt = confirmeeAt + 12 mois`, sort d'une ligne acquise bloquée pour KYC à 12 mois) reçue et consignée dans `docs/DECISIONS.md` avant INT-T12.",
+      "tests": {
+        "REQ-GOV-015": [
+          "decisions-ouvertes.spec.ts"
+        ],
+        "REQ-JUR-003": [
+          "decisions-ouvertes.spec.ts"
+        ],
+        "REQ-JUR-007": [
+          "decisions-ouvertes.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T01c",
+      "titre": "Mandat d'autofacturation validé — expert-comptable s'il y en a un, sinon décision de Will avec les défauts du registre",
+      "phase": 1,
+      "repo": "externe",
+      "zone": "juridique",
+      "paths": [
+        "docs/decisions/JUR-T01c"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "CPL-T01",
+        "JUR-T01"
+      ],
+      "reqs": [
+        "REQ-ARG-018",
+        "REQ-JUR-017"
+      ],
+      "hyp": [],
+      "externe": "expert_comptable",
+      "estimateDays": 0.0,
+      "statut": "attente_externe",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "mandat d'autofacturation (art. 289 CGI) relu par l'expert-comptable AVANT le premier envoi DocuSeal ; avis consigné dans `docs/DECISIONS.md`."
+    },
+    {
+      "id": "DM-07",
+      "titre": "Entité Attribution : colonnes structurées, chiffrement + hashes du contact, index unique partiel occupant et file",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-07",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "attribution",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-01",
+        "DM-02",
+        "DM-06",
+        "QA-T02",
+        "SEC-08"
+      ],
+      "reqs": [
+        "REQ-DM-002",
+        "REQ-DM-003",
+        "REQ-DM-004",
+        "REQ-DM-005",
+        "REQ-DM-030",
+        "REQ-DM-031",
+        "REQ-SEC-014"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-08",
+      "titre": "Machine à états d'attribution : matrice, délais recalculés, **file d'attente sans promotion automatique**, événement en transaction",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-08"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-07"
+      ],
+      "reqs": [
+        "REQ-DM-004",
+        "REQ-DM-006",
+        "REQ-DM-007",
+        "REQ-DM-022",
+        "REQ-QA-004"
+      ],
+      "hyp": [
+        "HYP-E1-9"
+      ],
+      "externe": null,
+      "estimateDays": 1.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-24",
+      "titre": "Cron de **confirmation tacite à trente jours** — le porteur manquant",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-24"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "CPL-T13",
+        "DM-08",
+        "DM-09",
+        "JUR-T02"
+      ],
+      "reqs": [
+        "REQ-DM-006",
+        "REQ-DM-008",
+        "REQ-DM-042"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "cron quotidien, horloge injectée, qui promeut en `active` toute `provisoire` de plus de `CONFIRMATION_TACITE_JOURS` (30) **sans Qualification `confirme` ni `non_confirme`** — y compris `injoignable` et `ne_se_souvient_pas` —, écrit `attribution.confirmee_tacitement` **dans la même transaction** et fait courir `fenetreFinAt` à compter de cette date ; c'est la **seule** conséquence attachée au défaut ou au retard de contact."
+    },
+    {
+      "id": "DM-25",
+      "titre": "Antériorité établie **après** l'enregistrement + contestation écrite d'un refus",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-25"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution",
+        "espace"
+      ],
+      "deps": [
+        "DM-08",
+        "DM-10-P",
+        "SEC-17",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-DM-043",
+        "REQ-JUR-007",
+        "REQ-SEC-022",
+        "REQ-UX-002"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "un job quotidien rapproche les nouvelles lignes d'`EntrepriseConnue` des attributions occupantes ; en cas d'antériorité établie après coup, l'attribution passe `annulee` (événement écrit), l'apporteur est **informé avec le motif**, **aucune commission nouvelle n'est due** et **les commissions déjà acquises restent acquises** (aucune reprise, aucun `dechue` — REQ-JUR-007) ; **tout refus de dépôt et toute annulation sont contestables par écrit**, la contestation ouvre une entrée console et la Société **répond de façon motivée dans `REPONSE_CONTESTATION_JOURS` (15 j)**, réponse journalisée."
+    },
+    {
+      "id": "INT-T07-P",
+      "titre": "API 1 `GET /api/integrations/axionia/attributions?siren=` côté Partners : réponse `{statut: libre|attribuee|cliente, until: 'AAAA-MM'|null, apporteurRef: opaque|null}`, jamais nom, prénom, e-mail",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T07-P"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "auth"
+      ],
+      "deps": [
+        "DM-08",
+        "SEC-06",
+        "SEC-07"
+      ],
+      "reqs": [
+        "REQ-INT-014",
+        "REQ-INT-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T07-A",
+      "titre": "Client API 1 côté axionia : timeout 2 s, cache 5 min, échec ouvert",
+      "phase": 1,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/INT-T07-A"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "INT-T03",
+        "INT-T07-P"
+      ],
+      "reqs": [
+        "REQ-INT-014",
+        "REQ-INT-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T08-A",
+      "titre": "Relecture par `sequence` + endpoint Σ HT par SIREN pour la réconciliation quotidienne",
+      "phase": 1,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/INT-T08-A"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "INT-T02"
+      ],
+      "reqs": [
+        "REQ-INT-012",
+        "REQ-INT-013",
+        "REQ-INT-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T08-P",
+      "titre": "Job quotidien de réconciliation",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T08-P"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T08-A",
+        "SEC-06"
+      ],
+      "reqs": [
+        "REQ-INT-012",
+        "REQ-INT-013",
+        "REQ-INT-030",
+        "REQ-QA-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-11",
+      "titre": "Jeton de dépôt privé : émission, hash, révocation, régénération, accusé « ce n'est pas moi »",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-11"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "auth"
+      ],
+      "deps": [
+        "DM-01",
+        "DM-06",
+        "SEC-08",
+        "SEC-10"
+      ],
+      "reqs": [
+        "REQ-SEC-005",
+        "REQ-SEC-006",
+        "REQ-SEC-007"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-12",
+      "titre": "Contrôles de dépôt atomiques : verrous, index partiel, quota glissant, file M2, horodatage µs, relecture du statut, case RGPD serveur, **motifs de refus alignés sur les articles 3.3 et 3.3 bis**, lien",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-12"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-08",
+        "DM-10-P",
+        "INT-T09",
+        "SEC-11"
+      ],
+      "reqs": [
+        "REQ-CPL-008",
+        "REQ-DM-010",
+        "REQ-JUR-008",
+        "REQ-JUR-023",
+        "REQ-SEC-014",
+        "REQ-SEC-015",
+        "REQ-SEC-020",
+        "REQ-SEC-022",
+        "REQ-SEC-032",
+        "REQ-UX-002",
+        "REQ-UX-039"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-09",
+      "titre": "Qualification append-only, dérivation du palier et du seuil, verrou optimiste",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-09"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "auth",
+        "espace"
+      ],
+      "deps": [
+        "CPL-T13",
+        "DM-08"
+      ],
+      "reqs": [
+        "REQ-CPL-024",
+        "REQ-DM-008",
+        "REQ-DM-009",
+        "REQ-DM-010",
+        "REQ-JUR-006"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13)."
+    },
+    {
+      "id": "DM-10-P",
+      "titre": "EntrepriseConnue",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-10-P",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "DM-07",
+        "INT-T05"
+      ],
+      "reqs": [
+        "REQ-DM-028",
+        "REQ-DM-029",
+        "REQ-SEC-022"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "évaluation **locale**, sans appel réseau au dépôt (la dépendance à DM-10-A est retirée) ; `origine` enum réduit à **{client, devis, financeur}** — **`demande_entrante` est retirée**, aucun des cinq événements arrêtés ne la transporte ; **deux fenêtres distinctes** alignées sur l'art. 3.3 réécrit, `ANTERIORITE_CLIENT_MOIS = 24` (prestation **facturée**) et `ANTERIORITE_DEVIS_MOIS = 6` (**devis** émis), toutes deux en SSOT (JUR-T02), jamais un paramètre unique ; `financeur` est alimentée par la liste tenue par la Société (DM-028), **dont l'existence et le principe sont portés à la connaissance de l'apporteur** (art. 3.3 bis b) et dont le refus est notifié avec sa **catégorie**."
+    },
+    {
+      "id": "DM-11",
+      "titre": "Contrat versionné",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-11"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution",
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-03-P",
+        "DM-06",
+        "INT-T09",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-CPL-004",
+        "REQ-CPL-005",
+        "REQ-DM-013",
+        "REQ-DM-027",
+        "REQ-JUR-018",
+        "REQ-JUR-022",
+        "REQ-JUR-029",
+        "REQ-SEC-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "se limite aux données KYC et à `PieceKyc.valideJusquAu` ; la règle de vigilance et le blocage du versement sont la propriété de JUR-T16 (`controlesVersement()`). 🔴 **Complétée le 2026-09-03 (synthèse A-10 et M-20).** (1) **`rc_pro` porte `expireAt NOT NULL`** et un rappel d'échéance annuel (contrat art. 6.4 : attestation à la signature puis à chaque échéance, information de toute résiliation de police sous 15 jours) — **sans être ajoutée à `piecesBloquantPaiement()` ni à `controlesVersement()`** : l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement. (2) Le KYC recueille et stocke le **statut d'exercice** de l'apporteur (`qualiteExercice`), qui alimente `{{APPORTEUR_QUALITE}}` du gabarit (JUR-T01) et la déclaration de l'art. 23 (« exercer sous un statut régulièrement déclaré l'autorisant à percevoir et à facturer les commissions », « ne faire l'objet ni d'une liquidation judiciaire ni d'une interdiction de gérer », M-29)."
+    },
+    {
+      "id": "DM-12",
+      "titre": "Verification, AlerteLiberation, Anomalie, RattachementManuel",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-12"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-07",
+        "DM-08"
+      ],
+      "reqs": [
+        "REQ-DM-032",
+        "REQ-DM-033",
+        "REQ-DM-034"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-13",
+      "titre": "Crons péremption 90 j **depuis le premier contact**, expiration 12 mois, injoignable ×3, **file d'attente",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-13"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "rgpd"
+      ],
+      "deps": [
+        "CPL-T13",
+        "DM-08",
+        "DM-12"
+      ],
+      "reqs": [
+        "REQ-DM-004",
+        "REQ-DM-006",
+        "REQ-DM-007",
+        "REQ-DM-031",
+        "REQ-DM-042",
+        "REQ-QA-027",
+        "REQ-UX-038"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-14",
+      "titre": "Détecteurs de sincérité : **5 signaux de CONTENU**, score, ouverture d'Anomalie",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-14"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "auth",
+        "espace"
+      ],
+      "deps": [
+        "INT-T09",
+        "SEC-12",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-DM-033",
+        "REQ-JUR-031",
+        "REQ-JUR-040",
+        "REQ-SEC-017",
+        "REQ-SEC-020",
+        "REQ-SEC-036",
+        "REQ-SEC-038"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "le score ne se compose que de signaux qui décrivent **CE QUI EST DÉCLARÉ** — leur liste et leurs seuils vivent en configuration hors dépôt (REQ-GOV-031) ; **tout signal portant sur le RYTHME, l'HORAIRE ou le LIEU du travail est exclu du score**, conformément à REQ-JUR-031 et à la phrase du contrat « elle n'obéit à aucun barème, à aucun compteur et à aucun seuil » ; le test de cette tâche porte sur la NATURE des signaux retenus, pas sur leurs valeurs ; ils ne subsistent que comme **critères de priorisation d'une revue humaine en console**, hors score, hors alerte automatique, hors DTO exposé. 🔴 **Le franchissement du seuil OUVRE une Anomalie `ouverte` et ne pose AUCUN gel** : `gele_fraude` n'est posé que par une Anomalie **confirmée par un humain** (SEC-15, REQ-DM-033)."
+    },
+    {
+      "id": "SEC-15",
+      "titre": "Suspension de vérification : **faculté** posée par un rôle, point d'entrée unique, portée limitée, levée de plein droit à 15 jours",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-15",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent",
+        "attribution",
+        "auth",
+        "espace"
+      ],
+      "deps": [
+        "DM-09",
+        "SEC-14",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-JUR-031",
+        "REQ-SEC-018",
+        "REQ-SEC-019",
+        "REQ-SEC-038"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "(1) **c'est une FACULTÉ, pas un automatisme** — une déclaration `non_confirme` ouvre une entrée console, elle ne suspend rien toute seule ; la mesure est **posée par un rôle habilité**, notifiée avec les faits qui la motivent (le contrat écrit « la Société **peut** suspendre » ; le produit exécutait de plein droit) ; (2) **enum de gel à TROIS valeurs** — `libre`, `gele_non_confirmation`, `gele_fraude` : `gele_anomalie` est renommée, **`gele_manuel` est supprimée** ; (3) **un seul point d'entrée**, la fonction typée sur ces deux motifs, gardée par `jur:suspension-motifs-fermes` **et par le test-cliquet nominatif des appelants** (SEC-28) ; (4) **portée strictement limitée à l'enregistrement de nouvelles déclarations** : sans effet sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès à l'espace** — aucun jeton révoqué, `sessionVersion` inchangé, aucune attribution annulée ; les `provisoire` restent `provisoire` avec `verificationPrioritaire` ; (5) **quinze jours maximum** (`SUSPENSION_MAX_JOURS`) — un cron lève de plein droit, écrit l'événement et notifie, la Société demeurant libre de résilier selon l'art. 11 ; **aucun seuil, aucun compteur, aucun rang**, et aucune conséquence attachée au nombre de suspensions antérieures (REQ-JUR-031, M-17)."
+    },
+    {
+      "id": "SEC-28",
+      "titre": "Test-cliquet nominatif des poseurs et leveurs de gel + cron de levée de plein droit à 15 jours",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-28",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-13",
+        "QA-T01",
+        "SEC-15"
+      ],
+      "reqs": [
+        "REQ-INT-007",
+        "REQ-SEC-019",
+        "REQ-SEC-038"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "sur le modèle de REQ-INT-007, un test-cliquet **énumère nominativement** tous les écrivains de `Apporteur.depotsGelesDepuis` et de l'enum de gel dans `src/` et `scripts/` et **rougit** si l'un d'eux n'appelle pas la fonction unique de SEC-15 ; le même cliquet couvre la **levée** ; un cron quotidien (horloge injectée, CPL-T13) lève tout gel de plus de `SUSPENSION_MAX_JOURS` jours, écrit l'événement et enfile la notification."
+    },
+    {
+      "id": "SEC-16",
+      "titre": "« Vérifier une entreprise » : session seule, doubles limites, journal, DTO 4 états {libre, suivie_place_disponible, suivie_file_complete, non_disponible}, messages non-oracle",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-16"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "auth"
+      ],
+      "deps": [
+        "DM-12",
+        "INT-T09",
+        "SEC-05",
+        "UX-P0-01"
+      ],
+      "reqs": [
+        "REQ-JUR-011",
+        "REQ-QA-012",
+        "REQ-SEC-021",
+        "REQ-SEC-022",
+        "REQ-UX-007"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-18",
+      "titre": "Anti auto-parrainage par hash, à la candidature et au RIB",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-18"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-06",
+        "SEC-08"
+      ],
+      "reqs": [
+        "REQ-JUR-021",
+        "REQ-SEC-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-19",
+      "titre": "**Résiliation** : transaction unique de coupure + session en lecture seule survivante",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-19",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent",
+        "attribution",
+        "auth"
+      ],
+      "deps": [
+        "DM-08",
+        "SEC-04",
+        "SEC-11",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-DM-011",
+        "REQ-JUR-042",
+        "REQ-SEC-003",
+        "REQ-SEC-005",
+        "REQ-SEC-032"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "(1) **la coupure appartient à la RÉSILIATION seule** — la suspension n'en produit aucun effet (SEC-15) ; le nom de la tâche et le module cessent de traiter les deux ensemble ; (2) après résiliation, une **session en LECTURE SEULE survit** : l'apporteur accède à ses relevés, factures, motifs de blocage et au journal de ses propres déclarations **jusqu'à l'extinction de ses droits** (contrat art. 12.3), ou les reçoit par e-mail à sa dernière adresse déclarée (UX-P1-10) — sans quoi la Société notifierait valablement dans un espace fermé et devrait payer des commissions que l'apporteur ne peut plus lire ; aucune écriture n'est ouverte ; (3) `resiliationMotif` reste l'enum **fermé** `{ordinaire_apporteur, ordinaire_axion, manquement_grave}`, **aucun motif d'inactivité**, ni en liste ni en texte libre (REQ-JUR-042)."
+    },
+    {
+      "id": "INT-T12",
+      "titre": "DocuSeal Partners : client REST, gabarit versionné, cases d'acceptation distinctes, webhook strict, archivage PDF + audit trail + SHA-256, rattrapage 24 h, blocage du dépôt avant signature",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T12"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-11",
+        "JUR-T01",
+        "JUR-T01b",
+        "JUR-T01c",
+        "SEC-03",
+        "SEC-06"
+      ],
+      "reqs": [
+        "REQ-INT-018",
+        "REQ-INT-019",
+        "REQ-JUR-004",
+        "REQ-JUR-005",
+        "REQ-SEC-034"
+      ],
+      "hyp": [
+        "DEC-INT-001"
+      ],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T13",
+      "titre": "Outils MCP `partners.verifier_entreprise` et `partners.contacts_a_qualifier`",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T13"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-12",
+        "INT-T09",
+        "INT-T11"
+      ],
+      "reqs": [
+        "REQ-INT-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T21-A",
+      "titre": "Relecture pour backfill : fenêtre depuis le 2026-08-13, clients avec SIREN, devis signés, candidatures reçues",
+      "phase": 1,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/INT-T21-A"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "INT-T02"
+      ],
+      "reqs": [
+        "REQ-INT-011",
+        "REQ-INT-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T21-P",
+      "titre": "Backfill des clients, devis signés et candidatures reçues via l'API de relecture",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T21-P"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "INT-T12",
+        "INT-T21-A",
+        "SEC-06"
+      ],
+      "reqs": [
+        "REQ-CPL-016",
+        "REQ-INT-011",
+        "REQ-INT-012"
+      ],
+      "hyp": [
+        "DEC-INT-010"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-21",
+      "titre": "Code public de parrainage ≥ 25 bits, `?p=` inconnu silencieux, propagation sans cookie persistant",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-21"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "SEC-10"
+      ],
+      "reqs": [
+        "REQ-JUR-028",
+        "REQ-SEC-037"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "JUR-T09",
+      "titre": "Information art. 14 du prospect dans le script de qualification + e-mail journalisé",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T09"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "JUR-T04",
+        "UX-P1-06"
+      ],
+      "reqs": [
+        "REQ-JUR-009"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "JUR-T13",
+      "titre": "Audit de la charte relationnelle sur les écrans et e-mails + garde lexicale textes apporteurs",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T13"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "JUR-T03",
+        "UX-P0-01"
+      ],
+      "reqs": [
+        "REQ-JUR-012",
+        "REQ-JUR-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "tests": {
+        "REQ-JUR-012": [
+          "textes-apporteurs-charte-relationnelle.spec.ts"
+        ],
+        "REQ-JUR-013": [
+          "textes-apporteurs-charte-relationnelle.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "CPL-T06",
+      "titre": "Étape 3 du cycle : `DecisionCandidature`, présence webinaire déclarative, seuil initial, séquence vivier",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/conformite/CPL-T06"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-06",
+        "INT-T10"
+      ],
+      "reqs": [
+        "REQ-CPL-006"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P1-04",
+      "titre": "Lien magique mobile : code 6 chiffres, page « lien déjà utilisé », détection standalone",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-04"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth",
+        "rgpd"
+      ],
+      "deps": [
+        "SEC-03",
+        "SEC-04"
+      ],
+      "reqs": [
+        "REQ-SEC-003",
+        "REQ-UX-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P1-01",
+      "titre": "Écran unique Entreprise : recherche, carte 4 états, « Déposer » pré-remplie, compteur 30/j",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-01"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "espace"
+      ],
+      "deps": [
+        "INT-T09",
+        "SEC-16",
+        "UX-P0-01",
+        "UX-P0-02"
+      ],
+      "reqs": [
+        "REQ-UX-001",
+        "REQ-UX-007"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "route citée depuis `docs/ESPACE-ROUTES.md` (un champ sur `/`, résultat `/entreprise?q=`)."
+    },
+    {
+      "id": "UX-P1-02",
+      "titre": "Formulaire de dépôt : autocomplétion < 300 ms, tolérance, ville, repli, **rendu de chaque issue de `IssueDepot`**, case facultative de lien d'intérêt",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-02"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "espace"
+      ],
+      "deps": [
+        "INT-T09",
+        "SEC-12",
+        "UX-P0-01"
+      ],
+      "reqs": [
+        "REQ-UX-001",
+        "REQ-UX-002",
+        "REQ-UX-039"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P1-03",
+      "titre": "Dépôt sans connexion par lien privé + brouillon hors-ligne",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-03"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "auth"
+      ],
+      "deps": [
+        "SEC-11",
+        "UX-P1-02"
+      ],
+      "reqs": [
+        "REQ-SEC-033",
+        "REQ-UX-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P1-05",
+      "titre": "Mes entreprises : `statutApporteur",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-05"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "espace"
+      ],
+      "deps": [
+        "CPL-T13",
+        "DM-08",
+        "DM-09",
+        "UX-P0-01"
+      ],
+      "reqs": [
+        "REQ-UX-004",
+        "REQ-UX-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P1-06",
+      "titre": "Fiche de qualification console",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-06"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "DM-09",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-CPL-024",
+        "REQ-UX-021"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P1-07",
+      "titre": "File de qualification : tri prioritaire > `aQualifierDepuis`, chrono SLA 48 h ouvrées, fiche inline, alertes",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-07"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "CPL-T13",
+        "DM-08",
+        "UX-P1-06"
+      ],
+      "reqs": [
+        "REQ-UX-022"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P1-08",
+      "titre": "Accueil et navigation : 3 chiffres, 1 alerte priorisée, 1 champ, barre 4 onglets, Plus, états vides",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-08"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "UX-P0-02",
+        "UX-P0-03",
+        "UX-P1-01"
+      ],
+      "reqs": [
+        "REQ-UX-008",
+        "REQ-UX-019",
+        "REQ-UX-033"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T20b",
+      "titre": "Armement bloquant budget/LHCI",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T20b"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T20",
+        "UX-P1-08"
+      ],
+      "reqs": [
+        "REQ-QA-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "seuil aligné sur la première mesure de la première route de l'espace, puis bloquant."
+    },
+    {
+      "id": "UX-P1-09",
+      "titre": "Ma conformité + Mon profil : pièces, changement de RIB sécurisé, changement d'e-mail sécurisé, dernières connexions, préférences",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-09"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-11",
+        "SEC-04",
+        "UX-P1-08"
+      ],
+      "reqs": [
+        "REQ-CPL-019",
+        "REQ-UX-016",
+        "REQ-UX-027",
+        "REQ-UX-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P1-15",
+      "titre": "Mon profil : **personnes agissant pour le compte de l'apporteur**",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-15"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "auth",
+        "espace"
+      ],
+      "deps": [
+        "SEC-12",
+        "UX-P1-02",
+        "UX-P1-09"
+      ],
+      "reqs": [
+        "REQ-CPL-029",
+        "REQ-UX-039"
+      ],
+      "hyp": [
+        "W4"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`PersonneDeclaree {apporteurId, nom, qualite, declareeAt, retireeAt}` — **liste déclarative éditable dans Mon profil, sans compte, sans session, sans jeton de dépôt, sans code de parrainage, sans DTO propre** (la décision **W4 « un apporteur = une personne » est intacte**) ; le champ « personne ayant rencontré » du dépôt propose cette liste, l'apporteur restant seul titulaire et seul responsable. (2) **Case facultative de lien d'intérêt** au dépôt (art. 8.4) : « j'ai une relation d'affaires ou d'intérêt avec cette entreprise » + champ libre court, **sans effet sur l'issue** — jamais un refus, jamais un signal, jamais un compteur, jamais une entrée dans le score ; visible en console et journalisé."
+    },
+    {
+      "id": "UX-P1-10",
+      "titre": "Table SSOT des notifications + e-mail + liens profonds + **drapeau `faitCourirUnDelai`**",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-10"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "INT-T10",
+        "JUR-T02",
+        "UX-P0-01"
+      ],
+      "reqs": [
+        "REQ-JUR-033",
+        "REQ-JUR-039",
+        "REQ-JUR-042",
+        "REQ-UX-003",
+        "REQ-UX-016",
+        "REQ-UX-038"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P1-11",
+      "titre": "Onboarding J0/J2/J7 depuis Partners",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-11"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-03-P",
+        "INT-T12",
+        "SEC-11",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-JUR-012",
+        "REQ-JUR-013",
+        "REQ-JUR-041",
+        "REQ-SEC-005",
+        "REQ-UX-016"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "déclenché par `contrat.signe`, BullMQ delay ; J0 = **documents de présentation** (jamais « kit de vente », REQ-JUR-041) **en PDF non modifiable, sans aucun fichier de logo, de charte ni de gabarit de signature** (art. 22 réécrit : aucun droit d'usage de la dénomination n'est concédé) + grille snapshotée **de l'apporteur** + code de parrainage + lien de dépôt privé + règle du premier déclarant ; J2 = rappel ; J7 → dépôt."
+    },
+    {
+      "id": "UX-P1-12",
+      "titre": "Console Apporteurs : liste, fiche 5 blocs",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-12",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "DM-06",
+        "DM-09",
+        "SEC-15",
+        "SEC-17",
+        "SEC-19"
+      ],
+      "reqs": [
+        "REQ-CPL-027",
+        "REQ-JUR-031",
+        "REQ-JUR-042",
+        "REQ-UX-036"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P1-13",
+      "titre": "Console Attributions + Contrats : filtres état/département/apporteur, rattachement manuel motivé, versions signées",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-13"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "espace"
+      ],
+      "deps": [
+        "DM-08",
+        "DM-12",
+        "INT-T12",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-UX-037"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-23",
+      "titre": "Grille par contrat : `GrilleContrat`, `GrilleModele`, une ligne par palier",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-23",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "DM-03-P",
+        "DM-06",
+        "DM-11"
+      ],
+      "reqs": [
+        "REQ-DM-013",
+        "REQ-EXT-021",
+        "REQ-EXT-022",
+        "REQ-EXT-023",
+        "REQ-EXT-024",
+        "REQ-EXT-025",
+        "REQ-JUR-019",
+        "REQ-JUR-023"
+      ],
+      "hyp": [
+        "W6"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`GrilleContrat` (une par contrat, figée à la signature, `Contrat.grilleId` **non nul**) et `GrilleModele` (jeu complet nommé et réutilisable : « Standard », « Tête de réseau », « Zone difficile »…) ; la granularité n'est pas la famille mais **le palier** — les quatre familles commissionnées (W6, tranchée le 2026-09-03) comptent **30 paliers vendables** dans `pricing.ts`, la durée y étant un axe distinct ; une ligne porte `prestationPalier`, `type ∈ {forfait, pourcentage, aucune}`, `montantCents` entier si `forfait`, `tauxBps` entier en points de base si `pourcentage` (le point de base vaut un centième de pour cent), jamais un flottant, **`cpfEligible` Boolean NOT NULL dérivé de `pricing.ts` par le script d'export (jamais saisi — 🔴 ce champ MANQUAIT et toute la garde CPF de REQ-JUR-023 reposait dessus : la gate n'avait aucune donnée à lire, synthèse M-15)**, et `motifEcart` **obligatoire dès que la ligne diffère de la grille publiée** ; 🔴 **un forfait est dû UNE FOIS par commande portant le palier — la durée est déjà dans le palier, `montantCents` n'est jamais multiplié par les journées** (DM-04, synthèse A-2) ; les cinq familles non commissionnées (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) n'ont aucune ligne et sont énoncées dans l'annexe 1 ; **séquence verrouillée** KYC complet → grille complète 30/30 → génération du contrat → envoi DocuSeal : la fonction de génération refuse une grille incomplète, la fonction d'envoi refuse un contrat sans grille figée ; annexe 1 **générée** depuis la grille, jamais retapée ; une grille figée ne se modifie que par avenant (INT-T23), les lignes de commission déjà nées gardant leur `grilleVersionId` ; un palier créé au catalogue **après** la signature n'existe dans aucune grille figée → ligne `bloquee` motif **`a_qualifier`** (le cas « barème indéfini » ; `bareme_indefini` n'est pas une valeur de l'enum, arbitrage l. 410), libellé apporteur « Prestation hors grille de commissions », jamais un taux deviné, jamais u"
+    },
+    {
+      "id": "UX-P1-14",
+      "titre": "Éditeur de grille en console : modèles, édition en masse, complétude 30/30 bloquante",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P1-14"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "espace"
+      ],
+      "deps": [
+        "DM-23",
+        "SEC-17",
+        "UX-P1-13"
+      ],
+      "reqs": [
+        "REQ-EXT-023",
+        "REQ-EXT-024",
+        "REQ-UX-026"
+      ],
+      "hyp": [
+        "W12"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "édition réservée au rôle `admin`, journalisée, **inaccessible tant que le KYC n'est pas complet** ; départ depuis un `GrilleModele`, puis ajustement ; **édition en masse** (« toutes les formations à 300 € », « tous les audits à 25 % ») puis dérogation ligne par ligne — 30 lignes à saisir à la main à chaque recrutement est intenable, et une ligne oubliée devient une commission bloquée le jour d'une vente ; valeur publiée pré-remplie et rappelée en regard de chaque ligne ; ligne inférieure à la grille publiée → **avertissement non bloquant** « cette ligne est inférieure à la grille publiée » (W12 : c'est permis) **assorti d'un motif obligatoire** — l'avertissement n'empêche pas l'envoi, il oblige à le regarder ; compteur de complétude **30/30 bloquant** : le bouton de génération du contrat reste inactif tant qu'une ligne est indéfinie ; l'écran Contrats montre la grille de chaque apporteur, l'écart à la grille publiée, le motif, qui l'a fixée et quand. 🔴 **L'écart et son motif sont en outre portés à la connaissance de l'APPORTEUR AVANT la signature** (contrat art. 4.1 al. nouveau, synthèse M-9) : le produit stockait déjà `motifEcart` mais rien n'obligeait à le montrer à celui qui signe, ce qui est le cas d'école de l'art. 1112-1 C. civ. dans un contrat d'adhésion. Le **document de présentation qui accompagne l'enveloppe DocuSeal** est **généré** (jamais retapé) et liste chaque ligne en écart avec sa valeur publiée, sa valeur contractuelle et son motif ; **l'envoi de l'enveloppe est refusé si une ligne en écart n'y figure pas**."
+    },
+    {
+      "id": "INT-T24",
+      "titre": "Cycle de vie de l'enveloppe DocuSeal : relances, alerte, refus, expiration, réémission, repli",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T24"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "auth",
+        "espace"
+      ],
+      "deps": [
+        "INT-T12",
+        "SEC-17",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-CPL-028",
+        "REQ-INT-018",
+        "REQ-INT-019",
+        "REQ-UX-016"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "relance automatique à **J+3** puis **J+7**, alerte console à **J+10**, trois relances au maximum ; refus dans DocuSeal → statut `refuse`, la candidature revient en `retenu`, alerte console, **aucun accès ouvert** ; expiration à **30 jours** → statut `expire`, la réémission est une action de console tracée ; action `admin` « **renvoyer à une adresse corrigée** » — une faute de frappe dans l'e-mail bloquerait sinon l'apporteur définitivement — qui annule l'enveloppe, en crée une nouvelle et **journalise l'ancienne et la nouvelle adresse** ; DocuSeal indisponible → l'envoi part en file d'attente et est réessayé, l'apporteur n'est jamais laissé sans nouvelle, alerte console si le service est muet plus d'une heure ; l'envoi reste **impossible** tant que le KYC n'est pas complet et la grille (DM-23) pas figée."
+    },
+    {
+      "id": "GOV-021",
+      "titre": "Revue adversariale outillée : scénario du squatteur et checklist « Attaque » sur chaque PR argent/attribution/auth",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-021"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "GOV-007",
+        "GOV-017a",
+        "GOV-017b",
+        "SEC-12"
+      ],
+      "reqs": [
+        "REQ-GOV-011"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "tests": {
+        "REQ-GOV-011": [
+          "revue-adversariale-exigee.spec.ts",
+          "tests/e2e/squatteur.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "QA-T16",
+      "titre": "E2E Playwright : espace sur iPhone/Pixel",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T16"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "auth",
+        "espace"
+      ],
+      "deps": [
+        "QA-T06",
+        "SEC-05",
+        "UX-P1-07",
+        "UX-P1-08"
+      ],
+      "reqs": [
+        "REQ-QA-016",
+        "REQ-QA-017",
+        "REQ-QA-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T19",
+      "titre": "Métriques métier, heartbeats, alertes Telegram, carte de santé, job nightly ZAP baseline",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T19"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-13",
+        "INT-T08-P",
+        "QA-T08"
+      ],
+      "reqs": [
+        "REQ-INT-030",
+        "REQ-QA-025",
+        "REQ-QA-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "JUR-T16",
+      "titre": "Garde de versement `controlesVersement",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T16"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "DM-11",
+        "INT-T12",
+        "JUR-T02"
+      ],
+      "reqs": [
+        "REQ-ARG-016",
+        "REQ-ARG-025",
+        "REQ-ARG-034",
+        "REQ-DM-027",
+        "REQ-JUR-018"
+      ],
+      "hyp": [
+        "HYP-D7"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "un seul module exporte `controlesVersement` ; il ne connaît que **trois** contrôles — SIREN valide et actif, coordonnées bancaires valides au nom de l'apporteur, attestation de vigilance **lorsque le cumul atteint `SEUIL_VIGILANCE`** (L.8222-1 et D.8222-5 C. trav.) ; sous le seuil, l'absence d'attestation **ne bloque rien** et lève une alerte. **Aucune autre pièce ne peut différer un versement** : `rc_pro` porte une échéance et un rappel mais **n'entre pas** dans la liste (A-10), et `commission_sup_ht`, `a_qualifier`, `non_resolue` sont des **alertes** qui ne peuvent différer au-delà de soixante jours (REQ-ARG-034, art. 5.4). Gate : toute comparaison à `SEUIL_VIGILANCE` hors de ce module rougit ; **tout ajout à la liste des pièces bloquantes rougit** (test-cliquet nominatif sur son contenu)."
+    },
+    {
+      "id": "T-ARG-010",
+      "titre": "Modèle Prisma argent : `LigneCommission`",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-010",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "DM-03-P",
+        "DM-04",
+        "DM-08",
+        "INT-T01a"
+      ],
+      "reqs": [
+        "REQ-ARG-017",
+        "REQ-ARG-021",
+        "REQ-ARG-027",
+        "REQ-ARG-033",
+        "REQ-CPL-010",
+        "REQ-DM-020",
+        "REQ-DM-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "T-ARG-034",
+      "titre": "Triggers anti-UPDATE/DELETE sur les tables d'argent",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-034",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "T-ARG-010"
+      ],
+      "reqs": [
+        "REQ-ARG-028"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-15",
+      "titre": "Résolution des encaissements et reprises : `paiement.recu` → acquise au prorata ; `avoir.emis`/`facture.annulee` → recalcul de l'attendu ; `paiement.rembourse` → reprise ; blocage `siren_manquant`/`ba",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-15"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution",
+        "auth",
+        "espace"
+      ],
+      "deps": [
+        "DM-04",
+        "DM-10-P",
+        "SEC-06",
+        "T-ARG-010"
+      ],
+      "reqs": [
+        "REQ-ARG-001",
+        "REQ-ARG-005",
+        "REQ-ARG-008",
+        "REQ-ARG-009",
+        "REQ-ARG-010",
+        "REQ-ARG-027",
+        "REQ-ARG-030",
+        "REQ-DM-016",
+        "REQ-DM-017",
+        "REQ-DM-018",
+        "REQ-DM-019",
+        "REQ-DM-021",
+        "REQ-DM-022",
+        "REQ-INT-032",
+        "REQ-SEC-011"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-16",
+      "titre": "Parrainage : entité, identité distincte, lignes parrainage, propagation des reprises, un seul niveau, **bonus filleul verrouillé fermé**, DTO sans activité du filleul",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-16"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution",
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-06",
+        "DM-15",
+        "SEC-18",
+        "T-ARG-010"
+      ],
+      "reqs": [
+        "REQ-ARG-011",
+        "REQ-ARG-012",
+        "REQ-ARG-013",
+        "REQ-DM-023",
+        "REQ-JUR-020",
+        "REQ-JUR-021",
+        "REQ-UX-006"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-18",
+      "titre": "Effets de suspension/résiliation sur attributions et lignes, en une transaction",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-18",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "DM-09",
+        "DM-15",
+        "SEC-19"
+      ],
+      "reqs": [
+        "REQ-ARG-026",
+        "REQ-DM-011"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "les effets sont les **mêmes quel que soit le motif de résiliation** — il n'existe aucune conséquence pécuniaire différenciée (décision du 2026-09-03, `dechue` retiré de l'enum)."
+    },
+    {
+      "id": "T-ARG-015",
+      "titre": "Job de gel mensuel : relevé par apporteur, seuil de versement minimal **au stade de la facturation**, trois contrôles bloquants, mode ombre, notification",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-015"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "CPL-T13",
+        "DM-11",
+        "DM-15",
+        "JUR-T16",
+        "T-ARG-010"
+      ],
+      "reqs": [
+        "REQ-ARG-014",
+        "REQ-ARG-015",
+        "REQ-ARG-016",
+        "REQ-ARG-017",
+        "REQ-ARG-034",
+        "REQ-CPL-011",
+        "REQ-CPL-020",
+        "REQ-DM-025",
+        "REQ-QA-027"
+      ],
+      "hyp": [
+        "HYP-E1-17"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "T-ARG-016",
+      "titre": "Autofacture : série par apporteur, PDF, CII EN 16931, mentions L.441-9, régime TVA figé, hash, **repli « facture de l'apporteur » sans mandat**",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-016"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "DM-11",
+        "JUR-T01c",
+        "T-ARG-015",
+        "T-ARG-034"
+      ],
+      "reqs": [
+        "REQ-ARG-018",
+        "REQ-ARG-028",
+        "REQ-ARG-033",
+        "REQ-ARG-035",
+        "REQ-JUR-017"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-22",
+      "titre": "IBAN : chiffrement, masquage, step-up, carence 72 h, exclusion du lot, alertes",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-22"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "SEC-04",
+        "SEC-08",
+        "SEC-17",
+        "T-ARG-015"
+      ],
+      "reqs": [
+        "REQ-SEC-004",
+        "REQ-SEC-025",
+        "REQ-UX-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "T-ARG-017",
+      "titre": "Écran et actions « Lot du mois » : états, approbation journalisée, anomalies au-delà de l'écart configuré, no-op double approbation",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-017"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "espace"
+      ],
+      "deps": [
+        "SEC-17",
+        "T-ARG-016"
+      ],
+      "reqs": [
+        "REQ-ARG-019",
+        "REQ-UX-025"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "T-ARG-018",
+      "titre": "Générateur SEPA pain.001 pur, XSD, hash, ré-export identique",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-018"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "CPL-T01",
+        "GOV-015",
+        "T-ARG-017"
+      ],
+      "reqs": [
+        "REQ-ARG-020",
+        "REQ-ARG-021",
+        "REQ-CPL-001",
+        "REQ-CPL-002",
+        "REQ-QA-029"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "T-ARG-019",
+      "titre": "Rapprochement bancaire : import CSV, match EndToEndId puis heuristique, rejets, `payee`",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-019"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "T-ARG-018"
+      ],
+      "reqs": [
+        "REQ-ARG-021",
+        "REQ-ARG-022",
+        "REQ-DM-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-19",
+      "titre": "Cumuls dérivés : DAS2 par bénéficiaire/année, cumul contrat, cumul de vigilance, vues SQL",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-19"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "T-ARG-019"
+      ],
+      "reqs": [
+        "REQ-ARG-024",
+        "REQ-DM-027",
+        "REQ-JUR-016"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "T-ARG-032",
+      "titre": "Attestation de vigilance + immatriculation + **échéance RC pro non bloquante** : modèle, cumul, 6 mois, blocage **au seuil légal**, rappels",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-032"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "espace"
+      ],
+      "deps": [
+        "DM-11",
+        "DM-19",
+        "JUR-T16",
+        "T-ARG-015"
+      ],
+      "reqs": [
+        "REQ-ARG-016",
+        "REQ-ARG-025",
+        "REQ-DM-027",
+        "REQ-JUR-014",
+        "REQ-JUR-018"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P2-03",
+      "titre": "Console Lot de paiement : machine d'états, export unique, régénération motivée, rapprochement CSV",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P2-03"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "espace"
+      ],
+      "deps": [
+        "JUR-T16",
+        "SEC-17",
+        "T-ARG-018",
+        "T-ARG-019"
+      ],
+      "reqs": [
+        "REQ-UX-024",
+        "REQ-UX-025"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "T-ARG-022",
+      "titre": "Rejeu complet golden + hash de registre",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-022"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-15",
+        "DM-16",
+        "T-ARG-015"
+      ],
+      "reqs": [
+        "REQ-ARG-002",
+        "REQ-ARG-003",
+        "REQ-QA-009"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T21",
+      "titre": "Property-based sur l'argent : prorata, arrondis, reprises, parrainage, seuil de versement minimal, cofinancement",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T21"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "DM-15",
+        "DM-16",
+        "T-ARG-015"
+      ],
+      "reqs": [
+        "REQ-QA-003"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "T-ARG-036",
+      "titre": "Contre-calcul SQL indépendant + 50 scénarios nommés",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-036"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "DM-15",
+        "T-ARG-010"
+      ],
+      "reqs": [
+        "REQ-ARG-004"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`tests/argent/contre-calcul.sql` (recalcul des lignes depuis les événements reçus, sans passer par le code applicatif), `scenarios/*.json` (50 scénarios nommés : prorata, reprises, cofinancement, parrainage, blocages), gate `argent:contre-calcul` diff = 0 ; dépendance de la gate de phase 2."
+    },
+    {
+      "id": "T-ARG-037",
+      "titre": "Le moteur de commissions lit `contrat.grilleId`, jamais la grille globale",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-037"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "DM-15",
+        "DM-23",
+        "T-ARG-010"
+      ],
+      "reqs": [
+        "REQ-ARG-004",
+        "REQ-ARG-008",
+        "REQ-EXT-022",
+        "REQ-EXT-025"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "la fonction de calcul reçoit **la grille du contrat** sous lequel l'attribution a été confirmée, et rien d'autre ; aucun chemin de code ne lit la grille publiée (`GrilleCommission` importée par DM-03-P) pour calculer une ligne — cette dernière ne sert plus que de valeur par défaut à l'éditeur ; palier absent de la grille du contrat → ligne `bloquee` motif **`a_qualifier`** (cas « barème indéfini ») + alerte, **jamais un taux de repli immédiat, jamais 0** ; garde AST : toute lecture de la grille publiée hors du module d'import, de l'éditeur **et du cron de règlement à 60 jours** rougit. 🔴 **Deux corrections du 2026-09-03.** (a) **Le pivot de version est la date de CONFIRMATION de l'attribution, jamais `dateRef`** (REQ-ARG-008, synthèse M-9) : le contrat rattache la commission à la grille en vigueur à la confirmation, le code la rattachait à la signature du devis — **jusqu'à quinze mois séparent les deux, soit deux montants pour une même vente** ; le contrat est signé et plus protecteur, c'est lui qui gagne. (b) **Règlement à soixante jours** (annexe A1.7 réécrite, synthèse A-11) : `PALIER_HORS_GRILLE_JOURS` court depuis l'encaissement ; **à défaut de décision de la Société dans ce délai, la commission est due au taux ou au forfait que la GRILLE PUBLIÉE portait à la date de la vente** — un cron l'applique, écrit l'événement et débloque la ligne. Sans ce terme, la commission restait suspendue **indéfiniment à la seule volonté du débiteur** (art. 1304-2 C. civ.), les deux issues dépendant entièrement de la Société alors que l'art. 13.3 garantit à l'apporteur qu'il n'a pas à signer l'avenant. Ce repli est une **valeur écrite et opposable**, jamais un taux fabriqué par proximité de prix (arbitrage C-6)."
+    },
+    {
+      "id": "UX-P2-07",
+      "titre": "Écran console « N contrats ne couvrent pas la prestation X »",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P2-07"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "espace"
+      ],
+      "deps": [
+        "DM-23",
+        "SEC-17",
+        "T-ARG-037"
+      ],
+      "reqs": [
+        "REQ-EXT-025",
+        "REQ-UX-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "liste des paliers apparus au catalogue **après** signature, avec pour chacun le nombre de contrats dont la grille figée ne le couvre pas et les lignes `bloquee` motif **`a_qualifier`** (cas « barème indéfini ») qui en découlent ; 🔴 **chaque ligne affiche son échéance de règlement à soixante jours de l'encaissement** (`PALIER_HORS_GRILLE_JOURS`, annexe A1.7 réécrite, synthèse A-11) ; deux sorties explicites par palier — **avenant** (déclenche la campagne de re-signature INT-T23 sur les contrats visés) ou **décision écrite « non commissionnée pour ces contrats »**, motivée, journalisée **et portée à la connaissance de l'apporteur avec son motif** ; 🔴 **à défaut de décision dans le délai, la commission est due au taux ou au forfait de la GRILLE PUBLIÉE à la date de la vente**, appliqué par le cron de T-ARG-037 — jamais un taux deviné, jamais une fermeture silencieuse, jamais une suspension sans terme."
+    },
+    {
+      "id": "INT-T17",
+      "titre": "API 2 relevé mensuel signé `GET /api/integrations/axionia/apporteurs/:ref/releve/:mois`",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T17"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "INT-T11",
+        "SEC-07",
+        "T-ARG-016"
+      ],
+      "reqs": [
+        "REQ-ARG-029",
+        "REQ-INT-016",
+        "REQ-INT-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P2-01",
+      "titre": "Mes commissions : ventilation par payeur, échéance ou délai habituel, prévisionnel, bloquées avec motif, **« Prestation hors grille de commissions » avec son échéance à 60 jours**, remontée à l'encais",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P2-01"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "espace"
+      ],
+      "deps": [
+        "DM-15",
+        "INT-T05",
+        "T-ARG-037",
+        "UX-P1-08"
+      ],
+      "reqs": [
+        "REQ-ARG-017",
+        "REQ-ARG-032",
+        "REQ-UX-005",
+        "REQ-UX-010",
+        "REQ-UX-011",
+        "REQ-UX-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P2-02",
+      "titre": "Tuile « à verser » à 4 états + accueil argent",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P2-02"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "T-ARG-015",
+        "UX-P2-01"
+      ],
+      "reqs": [
+        "REQ-UX-009"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P2-04",
+      "titre": "Mes documents + Mes filleuls : contrats, relevés, autofactures, attestation, export RGPD, parrainage agrégé, lien partageable",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P2-04"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution",
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "INT-T12",
+        "SEC-19",
+        "T-ARG-016",
+        "UX-P1-08"
+      ],
+      "reqs": [
+        "REQ-ARG-035",
+        "REQ-UX-006",
+        "REQ-UX-030",
+        "REQ-UX-032"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P2-05",
+      "titre": "Paramètres console : grille lecture seule",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P2-05"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "DM-03-P",
+        "DM-11",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-CPL-007",
+        "REQ-UX-011",
+        "REQ-UX-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P2-06",
+      "titre": "Test de cloisonnement automatisé complet",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P2-06"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "SEC-05",
+        "UX-P2-01",
+        "UX-P2-04"
+      ],
+      "reqs": [
+        "REQ-SEC-009",
+        "REQ-UX-005",
+        "REQ-UX-006"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "CPL-T12",
+      "titre": "Contestation : **deux délais distincts**",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/conformite/CPL-T12"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution",
+        "espace"
+      ],
+      "deps": [
+        "JUR-T02",
+        "T-ARG-010",
+        "T-ARG-015",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-ARG-017",
+        "REQ-CPL-010",
+        "REQ-CPL-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "CPL-T14-A",
+      "titre": "Producteur `client.fusionne`",
+      "phase": 2,
+      "repo": "axionia",
+      "zone": "gouvernance",
+      "paths": [
+        "axionia/CPL-T14-A"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "INT-T05"
+      ],
+      "reqs": [
+        "REQ-CPL-014"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "CPL-T14-P",
+      "titre": "Re-résolution des attributions et lignes après `client.fusionne`",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/conformite/CPL-T14-P"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "CPL-T14-A",
+        "DM-15"
+      ],
+      "reqs": [
+        "REQ-CPL-014"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "INT-T23",
+      "titre": "Avenant et campagne de re-signature",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "integration",
+      "paths": [
+        "src/integration/INT-T23"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution"
+      ],
+      "deps": [
+        "DM-03-P",
+        "DM-11",
+        "INT-T12",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-CPL-007",
+        "REQ-CPL-028",
+        "REQ-DM-013",
+        "REQ-JUR-004"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "nouvelle version de gabarit ou de grille → soumission DocuSeal à chaque contrat `signe` ; ancien contrat `signe → remplace`  **à la signature du nouveau, et à elle seule** ; 🔴 **le refus ou l'absence de signature ne bloque RIEN** — aucun état `contrat_a_resigner`, aucun délai de grâce, aucun dépôt refusé (contrat art. 13.3, REQ-CPL-028, corrigé le 2026-09-03) ; lignes antérieures gardent `grilleVersionId`."
+    },
+    {
+      "id": "T-ARG-035",
+      "titre": "Console « Commissions » : registre filtrable, traçabilité snapshot, saisie journalisée des lignes bloquées, rattachement manuel",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-035"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution",
+        "espace"
+      ],
+      "deps": [
+        "DM-12",
+        "DM-15",
+        "T-ARG-034"
+      ],
+      "reqs": [
+        "REQ-ARG-006",
+        "REQ-ARG-027",
+        "REQ-ARG-030",
+        "REQ-DM-034"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "T-ARG-038",
+      "titre": "**Après la fin du contrat, quelqu'un peut encore payer** : survie du mandat, mode « facture de l'apporteur », dernier relevé sans seuil",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-038"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "DM-18",
+        "SEC-19",
+        "T-ARG-015",
+        "T-ARG-016"
+      ],
+      "reqs": [
+        "REQ-ARG-015",
+        "REQ-ARG-016",
+        "REQ-ARG-018",
+        "REQ-ARG-026",
+        "REQ-ARG-035",
+        "REQ-SEC-032"
+      ],
+      "hyp": [
+        "HYP-E1-17"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "(1) `Mandat.surviePostContrat` vrai de plein droit tant qu'il reste une ligne `prevue` ou `acquise` non payée au titre de l'art. 12.3 ; (2) à défaut de mandat — dénonciation avec préavis de `MANDAT_DENONCIATION_JOURS`, ou extinction — le relevé bascule en **mode « facture de l'apporteur »** : mise à disposition, facture établie par l'apporteur, paiement dans les trente jours de la réception conforme, lot de paiement acceptant ce mode ; (3) **dernier relevé produit sans le seuil** (HYP-E1-17) ; (4) l'apporteur conserve l'**accès en lecture** ou reçoit relevés, factures et motifs par e-mail à sa dernière adresse déclarée (SEC-19, UX-P1-10)."
+    },
+    {
+      "id": "T-ARG-039",
+      "titre": "Délai de versement mesuré et **plafond de 60 jours** alerté",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-039"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "espace"
+      ],
+      "deps": [
+        "CPL-T13",
+        "T-ARG-015",
+        "T-ARG-017"
+      ],
+      "reqs": [
+        "REQ-ARG-017",
+        "REQ-ARG-018",
+        "REQ-ARG-034"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "un indicateur **par relevé** affiche l'âge depuis l'établissement et depuis l'émission de la facture ; **alerte console à J+45** depuis l'émission ; tout relevé non payé à **J+60** est une anomalie de premier rang, nommée, quel que soit son motif ; **aucun motif de la liste « alertes » de REQ-ARG-017 (`commission_sup_ht`, `a_qualifier`, `non_resolue`) ne peut porter un relevé au-delà** ; les pénalités de retard et l'indemnité de 40 € sont dues de plein droit et figurent aux mentions de T-ARG-016."
+    },
+    {
+      "id": "QA-T25",
+      "titre": "Runbooks argent",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T25"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "QA-T13",
+        "T-ARG-017",
+        "T-ARG-022"
+      ],
+      "reqs": [
+        "REQ-QA-034"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T29",
+      "titre": "Test de charge léger : 50 dépôts simultanés même SIREN",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T29"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "QA-T06",
+        "SEC-12"
+      ],
+      "reqs": [
+        "REQ-QA-005"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "CPL-T11",
+      "titre": "Mois « à blanc » : gate de phase 2 → 3",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/conformite/CPL-T11"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "T-ARG-015",
+        "T-ARG-018"
+      ],
+      "reqs": [
+        "REQ-CPL-011"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "un cycle complet en mode ombre, écart 0 centime vs feuille manuelle sur ≥ 5 apporteurs réels — feuille manuelle produite par l'expert-comptable ou Will, jamais par un agent —, consigné dans PLAN-STATE avant d'ouvrir `SEPA_EXPORT_ENABLED` (paramètre en base `Parametre.sepaArmeLe` modifiable par `admin` + step-up + journal chaîné ; l'env ne peut que le fermer ; boot prod avec drapeau ouvert sans `MOIS_A_BLANC_VALIDE_LE` → exit ≠ 0)."
+    },
+    {
+      "id": "CPL-T23",
+      "titre": "Pilote : 3 à 5 apporteurs réels, un cycle calendaire, feuille de contre-calcul externe",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/conformite/CPL-T23"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "CPL-T11"
+      ],
+      "reqs": [
+        "REQ-CPL-011",
+        "REQ-GOV-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "gate de phase 2 → 3 avec CPL-T11 ; encaissements attribués autorisés sous `SEPA_EXPORT_ENABLED=false` ; écart 0 centime vs feuille de contre-calcul externe (EC ou Will) ; premier VERSEMENT seulement après clôture de phase 2."
+    },
+    {
+      "id": "T-ARG-030",
+      "titre": "Export comptable équilibré",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-030"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "T-ARG-019"
+      ],
+      "reqs": [
+        "REQ-ARG-023",
+        "REQ-INT-016"
+      ],
+      "hyp": [
+        "DEC-INT-004"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "T-ARG-033",
+      "titre": "Sortie de collaboration côté argent : dernier relevé sans seuil, **survie du mandat et mode facture de l'apporteur**, créance, attestation de fin, export RGPD, purge",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "argent",
+      "paths": [
+        "src/argent/T-ARG-033",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-18",
+        "JUR-T28",
+        "SEC-19",
+        "T-ARG-015",
+        "T-ARG-030",
+        "T-ARG-038"
+      ],
+      "reqs": [
+        "REQ-ARG-015",
+        "REQ-ARG-026",
+        "REQ-ARG-035",
+        "REQ-CPL-025",
+        "REQ-JUR-007",
+        "REQ-JUR-025",
+        "REQ-JUR-029"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "aucune ligne ne peut prendre le statut `dechue` — la valeur n'existe plus dans l'enum ; les `acquise` sont payées au dernier relevé **sans le seuil de versement minimal**, les `prevue` suivent la règle ordinaire (contrat art. 12.3). 🔴 **Complétée le 2026-09-03 (synthèse A-4)** : la **chaîne de paiement survit à la fin du contrat** (T-ARG-038) — mandat survivant de plein droit pour les commissions restant à acquérir, ou bascule en mode « facture de l'apporteur » ; l'apporteur conserve un **accès en lecture** ou reçoit relevés, factures et motifs par e-mail à sa dernière adresse (SEC-19, UX-P1-10) ; l'**attestation de fin** énumère les droits restant à acquérir et la voie de paiement retenue."
+    },
+    {
+      "id": "DM-20",
+      "titre": "RGPD data-level : export art. 15, purge des journaux, vérification de chaîne, effacement tiers, registre, cron de purge",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-20"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "DM-01",
+        "DM-12",
+        "DM-13",
+        "SEC-08"
+      ],
+      "reqs": [
+        "REQ-DM-024",
+        "REQ-DM-031",
+        "REQ-JUR-010",
+        "REQ-SEC-027",
+        "REQ-SEC-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "DM-21",
+      "titre": "Vues territoriales et sectorielles + paramètre « saturé »",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domaine/DM-21",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [],
+      "deps": [
+        "DM-07",
+        "DM-15"
+      ],
+      "reqs": [
+        "REQ-DM-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "CPL-T15",
+      "titre": "Indicateurs d'activité et funnel par canal/cohorte, `CampagneRecrutement`, € / actif",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/conformite/CPL-T15"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-06",
+        "DM-21",
+        "INT-T21-P"
+      ],
+      "reqs": [
+        "REQ-CPL-015",
+        "REQ-UX-035"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P3-01",
+      "titre": "PWA : manifest, SW, écran hors-ligne, push opt-in différé, liens profonds, Telegram/SMS",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P3-01"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth",
+        "espace"
+      ],
+      "deps": [
+        "UX-P1-03",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-INT-025",
+        "REQ-UX-014",
+        "REQ-UX-016",
+        "REQ-UX-033"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P3-02",
+      "titre": "Mon activité + Ressources par palier",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P3-02"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "CPL-T15",
+        "JUR-T13",
+        "JUR-T30",
+        "UX-P1-08"
+      ],
+      "reqs": [
+        "REQ-CPL-023",
+        "REQ-JUR-041",
+        "REQ-UX-003",
+        "REQ-UX-029"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P3-03",
+      "titre": "Aide / Messages : fil à états, FAQ-first, engagement 2 j ouvrés",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P3-03"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "CPL-T13",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-UX-028"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P3-04",
+      "titre": "Console Pilotage : funnel, Territoire tableau",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P3-04"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "CPL-T15",
+        "INT-T05",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-UX-018",
+        "REQ-UX-035"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P3-05",
+      "titre": "Console Conformité + Anomalies : apporteurs × pièces, échéances, DAS2, signaux F8, gel/levée par rôle",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P3-05"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "attribution",
+        "espace"
+      ],
+      "deps": [
+        "DM-11",
+        "DM-19",
+        "SEC-14",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-UX-002",
+        "REQ-UX-024",
+        "REQ-UX-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "UX-P3-06",
+      "titre": "Ré-engagement : dérivation `actif`/`dormant`",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/UX-P3-06"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "CPL-T13",
+        "CPL-T15",
+        "JUR-T25",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-CPL-027",
+        "REQ-JUR-033",
+        "REQ-UX-016"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "JUR-T22",
+      "titre": "Page « Retraité » gatée par validation EC",
+      "phase": 3,
+      "repo": "axionia",
+      "zone": "juridique",
+      "paths": [
+        "axionia/JUR-T22"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-JUR-030"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "SEC-26",
+      "titre": "Notifications sans PII ni montant ; brouillon hors-ligne minimal",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "securite",
+      "paths": [
+        "src/securite/SEC-26"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "SEC-11",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-SEC-033"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T27",
+      "titre": "Résilience : axionia indisponible 3 j, Redis perdu, API gouv en panne — drill trimestriel",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T27"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "QA-T19",
+        "T-ARG-022"
+      ],
+      "reqs": [
+        "REQ-QA-009",
+        "REQ-QA-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "QA-T28",
+      "titre": "Audit sécurité pré-lancement : ZAP authentifié sur preview, `/security-review`, revue semgrep, charge",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "qualite",
+      "paths": [
+        "scripts/gates/QA-T28"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth"
+      ],
+      "deps": [
+        "QA-T06",
+        "QA-T16",
+        "SEC-05"
+      ],
+      "reqs": [
+        "REQ-QA-005",
+        "REQ-QA-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "GOV-022",
+      "titre": "Audit de traçabilité de fin de phase + rapport de décisions restantes",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/gouvernance/GOV-022"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-010",
+        "GOV-011",
+        "GOV-017a",
+        "GOV-017b"
+      ],
+      "reqs": [
+        "REQ-GOV-005",
+        "REQ-GOV-009",
+        "REQ-GOV-015",
+        "REQ-GOV-027"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "EXT-T08",
+      "titre": "Coordonnées géographiques au dépôt + projection serveur",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T08"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-07",
+        "INT-T09"
+      ],
+      "reqs": [
+        "REQ-EXT-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`latitude`/`longitude` capturées depuis le siège renvoyé par l'API publique, projection Lambert-93 → coordonnées d'affichage en fonction pure côté serveur."
+    },
+    {
+      "id": "EXT-T01",
+      "titre": "Fiche prospect et suivi des échanges, espace apporteur",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T01"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-07",
+        "DM-08",
+        "SEC-05",
+        "UX-P0-01",
+        "UX-P1-05"
+      ],
+      "reqs": [
+        "REQ-EXT-001",
+        "REQ-EXT-002",
+        "REQ-EXT-003",
+        "REQ-EXT-004",
+        "REQ-JUR-025"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "une frise unique (événements Axion-IA + échanges), formulaire d'échange à 4 champs, **mention explicite avant la première saisie que les échanges sont visibles de la Société** (reprise dans la politique de confidentialité, JUR-T04), purge branchée sur le cron d'attribution."
+    },
+    {
+      "id": "EXT-T02a",
+      "titre": "Fiche prospect console : échanges, fiche de qualification, journal",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T02a"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "espace"
+      ],
+      "deps": [
+        "EXT-T01",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-EXT-003",
+        "REQ-EXT-005"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "EXT-T03",
+      "titre": "Candidatures multi-canal : origine, canal, campagne, anti-doublon",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T03",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "DM-06",
+        "INT-T22"
+      ],
+      "reqs": [
+        "REQ-EXT-008",
+        "REQ-EXT-009",
+        "REQ-EXT-010"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création."
+    },
+    {
+      "id": "EXT-T04",
+      "titre": "Saisie manuelle en console + pièce jointe CV",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T04"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "EXT-T03",
+        "SEC-08",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-EXT-011",
+        "REQ-EXT-012",
+        "REQ-EXT-014"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "formulaire console reprenant les champs du tunnel, upload CV, type réel vérifié par octets d'en-tête, stockage privé + URL signée courte, purge à 2 ans avec la candidature."
+    },
+    {
+      "id": "EXT-T06",
+      "titre": "Signal « déjà travaillée » + détecteur de ramassage",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T06"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-12",
+        "SEC-14",
+        "SEC-16"
+      ],
+      "reqs": [
+        "REQ-EXT-006",
+        "REQ-EXT-007"
+      ],
+      "hyp": [
+        "HYP-W7",
+        "W7"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "cinquième état `libre_deja_travaillee` dans le DTO de vérification ; signal d'anomalie au-delà du seuil de configuration prévu pour la part de dépôts sur des entreprises déjà travaillées (valeur hors dépôt, REQ-GOV-031)."
+    },
+    {
+      "id": "EXT-T02b",
+      "titre": "Double navigation commission ↔ fiche ↔ encaissement",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T02b"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "EXT-T02a",
+        "T-ARG-010"
+      ],
+      "reqs": [
+        "REQ-EXT-005"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "depuis une ligne de commission on atteint la fiche prospect, et réciproquement ; l'encaissement qui a produit la ligne est atteignable depuis les deux."
+    },
+    {
+      "id": "EXT-T07",
+      "titre": "Prolongation de fenêtre si un devis est en cours",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T07"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "DM-08",
+        "DM-15",
+        "INT-T04"
+      ],
+      "reqs": [
+        "REQ-EXT-020"
+      ],
+      "hyp": [
+        "W9"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "prolongation unique de 3 mois, automatique, notifiée aux deux parties, journalisée."
+    },
+    {
+      "id": "EXT-T09",
+      "titre": "Carte console : couverture, activité, détail",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T09"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "DM-21",
+        "EXT-T08",
+        "SEC-17",
+        "UX-P3-04"
+      ],
+      "reqs": [
+        "REQ-EXT-016",
+        "REQ-EXT-017",
+        "REQ-EXT-018"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "SVG des départements simplifié au build, 3 couches, filtre par apporteur avec surbrillance, agrégation serveur au-delà de 2 000 points, segment chargé à la demande."
+    },
+    {
+      "id": "EXT-T10",
+      "titre": "Carte de l'espace apporteur",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T10"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "EXT-T09",
+        "SEC-05"
+      ],
+      "reqs": [
+        "REQ-EXT-019"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null
+    },
+    {
+      "id": "EXT-T05",
+      "titre": "Import CSV de jobboard",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T05"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "EXT-T03"
+      ],
+      "reqs": [
+        "REQ-EXT-008",
+        "REQ-EXT-009"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "import idempotent, colonnes mappées, rapport de rattachements et de rejets."
+    },
+    {
+      "id": "EXT-T11",
+      "titre": "Extraction assistée de CV, derrière drapeau fermé",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/EXT-T11"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "EXT-T04",
+        "JUR-T04"
+      ],
+      "reqs": [
+        "REQ-EXT-013"
+      ],
+      "hyp": [
+        "W10"
+      ],
+      "externe": null,
+      "estimateDays": 1.0,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "extraction de faits vers les champs du formulaire, chacun modifiable, aucune écriture sans validation humaine, **aucun score, aucun rang, aucun avis** (l'extraction est une aide à la lecture), journal du proposé et du corrigé."
+    },
+    {
+      "id": "JUR-T26",
+      "titre": "Gates structurelles de la charte relationnelle",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T26"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace"
+      ],
+      "deps": [
+        "QA-T01",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-JUR-034",
+        "REQ-JUR-035",
+        "REQ-JUR-036",
+        "REQ-JUR-037"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "`jur:aucun-agregat-reseau` (analyse AST des DTO de l'espace), `jur:aucune-progression` (noms et types interdits), gate lexicale durcie sur `src/app/(espace)/**` + `emails/apporteur/**` + `micro-copy/**` + ressources, et label `apporteur-facing` → revue `juriste` bloquante déclarée dans CODEOWNERS."
+    },
+    {
+      "id": "JUR-T24",
+      "titre": "Reformulation de la suspension et du palier + **verrou « aucune résiliation pour inactivité »**",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T24",
+        "prisma/schema.prisma"
+      ],
+      "schema": true,
+      "sensible": [
+        "attribution",
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-09",
+        "JUR-T26",
+        "SEC-15",
+        "SEC-19",
+        "UX-P0-01"
+      ],
+      "reqs": [
+        "REQ-CPL-027",
+        "REQ-DM-010",
+        "REQ-JUR-031",
+        "REQ-JUR-032",
+        "REQ-JUR-042"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.75,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "l'entrée de `suspendreDeclarations()` n'accepte que `non_confirme | fraude` (type fermé) ; aucun compteur de gradation dans l'espace ; libellés « déclaration non confirmée » / « contrôle de sincérité ». 🔴 **Deux corrections du 2026-09-03.** (1) **Le libellé de plafond est RETIRÉ** (synthèse P-2) : « vous pouvez déclarer jusqu'à 15 entreprises par semaine » annonçait un plafond que REQ-DM-010 ne pose pas — « aucun dépôt n'est refusé pour dépassement de seuil » ; soit l'espace mentait sur l'étendue des droits (art. 1112-1 C. civ., al. 5 d'ordre public, que l'art. 17 ne peut pas écarter), soit le plafond existait et était inopposable. Libellé unique, qui ne promet ni ne restreint : « **Vos déclarations au-delà de quinze par semaine font l'objet d'une vérification prioritaire ; aucune n'est refusée.** » (2) **Verrou « aucune résiliation pour inactivité »** (synthèse §B.2, arbitré par Will) — l'art. 11.1 permet déjà de résilier à tout moment sans motiver sous 30 jours, donc la clause n'apporterait **rien** et ajouterait le risque : `resiliationMotif` reste l'enum fermé `{ordinaire_apporteur, ordinaire_axion, manquement_grave}` sous **test-cliquet** ; l'écran de résiliation n'offre **aucun** motif d'inactivité ; **aucun gabarit d'e-mail de résiliation ne mentionne l'absence de dépôt** ; `dormant` reste un indicateur de console et **n'entre dans aucun DTO exposé** (REQ-CPL-027, JUR-T25, UX-P3-06)."
+    },
+    {
+      "id": "JUR-T30",
+      "titre": "Gates de l'article 2.7 et de `dateContact` + bannissement de « kit de vente »",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T30"
+      ],
+      "schema": false,
+      "sensible": [
+        "auth",
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "JUR-T26",
+        "SEC-14",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-JUR-039",
+        "REQ-JUR-040",
+        "REQ-JUR-041"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "trois gardes, chacune **vue rougir** sur un témoin. (a) `jur:aucune-instruction` — aucun message, notification, contenu ou fonctionnalité n'est une instruction, une consigne de méthode ou une **demande de compte rendu** (l'art. 17 les privait de valeur *contractuelle*, pas de leur qualité de **faits**, et le juge apprécie des faits) ; **`lastSeenAt`, `dernierUsageAt` et les délais de réponse n'entrent dans aucun score, aucun indicateur restitué, aucun DTO exposé et aucun déclencheur** — aucune relance ne naît de l'absence de connexion ou de réponse. (b) `jur:date-contact-inerte` — `dateContact` est la **seule** donnée du contrat d'où un rythme d'activité peut être reconstitué, et le signal `nocturne` prouve que le produit savait l'exploiter : toute lecture hors de l'affichage de la fiche prospect et du contrôle de sincérité humain → **rouge** (témoin : un `groupBy` par tranche horaire). (c) `jur:supports-de-presentation` — **aucun fichier de logo, de charte, de gabarit de signature électronique, de visuel de profil ou de carte** n'est mis à disposition (l'ancien art. 22 concédait un droit d'usage du nom et du logo : autoriser à *présenter l'offre* est précisément ce qui caractérise la négociation depuis CJUE C-828/18 et Cass. com. 2 déc. 2020, et le port du nom crée un mandat apparent, art. 1156 C. civ.) ; les documents sont servis en **PDF non modifiable**, transmissibles **en l'état** ; **l'expression « kit de vente » est bannie** de tout support, écran, REQ et tâche au profit de « documents de présentation » (glossaire, GOV-006) — le contrat ne peut pas nommer « vente » ce que l'art. 1.2 dit n'être pas une vente."
+    },
+    {
+      "id": "JUR-T25",
+      "titre": "Lettre du réseau, en remplacement de la relance de dormance",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T25"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "espace"
+      ],
+      "deps": [
+        "INT-T10",
+        "JUR-T26",
+        "UX-P1-10"
+      ],
+      "reqs": [
+        "REQ-JUR-033"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "envoi à intervalle fixe, **contenu identique pour tous**, la fonction d'envoi ne reçoit aucun filtre d'activité (signature sans paramètre de date de dernier dépôt) ; désinscription ; « dormant » reste un indicateur de console."
+    },
+    {
+      "id": "JUR-T27",
+      "titre": "Gabarit de contrat sobre : retrait de la déchéance, du barème gradué et du vocabulaire disciplinaire",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T27"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "JUR-T01"
+      ],
+      "reqs": [
+        "REQ-JUR-031"
+      ],
+      "hyp": [
+        "HYP-D11",
+        "W11"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "le gabarit ne contient plus « déchéance », « sanction », « faute grave », « contradictoire », ni aucun barème de gradation ; il conserve les clauses de protection (SIREN, 12 mois, absence d'exclusivité et de mandat, premier déclarant, parrainage sur ventes, CPF, RGPD, autofacturation, compétence).",
+      "tests": {
+        "REQ-JUR-031": [
+          "contrat-sobre.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "JUR-T28",
+      "titre": "Résiliation sans barème : suspension de fait + résiliation motivée avec préavis",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "juridique",
+      "paths": [
+        "docs/contrat/JUR-T28"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "DM-18",
+        "JUR-T24",
+        "SEC-19"
+      ],
+      "reqs": [
+        "REQ-JUR-031"
+      ],
+      "hyp": [
+        "HYP-D11"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "plus aucun compteur de gradation nulle part ; la suspension est une mesure de vérification (motif fermé `non_confirme | fraude`) ; la résiliation exige un motif écrit et un préavis ; **aucune déchéance de commission** — les acquises sont payées, les autres suivent la règle ordinaire."
+    }
+  ]
+}

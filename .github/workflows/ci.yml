@@ -1,5 +1,7 @@
-# CI minimale — la seule gate armée à ce stade est `gov:publication`.
-# Les autres gates sont ajoutées par leur tâche, chacune APRÈS avoir été vue rougir.
+# CI minimale. Deux gardes sont armées à ce stade : `gov:publication` (GOV-000) et `gov:tasks`
+# (GOV-017a). Les autres sont ajoutées par leur tâche, chacune APRÈS avoir été vue rougir.
+# Chaque garde est suivie de SA PREUVE : une garde dont on ne vérifie pas qu'elle sait rougir
+# cesse un jour de garder sans que rien ne le signale.
 name: Gate A
 on:
   push: { branches: [main] }
@@ -10,14 +12,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      # La version de pnpm vient de  dans package.json — une seule source.
+      # La version de pnpm vient de `packageManager` dans package.json — une seule source.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
       - run: pnpm install --frozen-lockfile
       - name: Regle de publication (depot public)
         run: pnpm gov:publication
-      - name: La garde sait rougir
+      - name: La garde de publication sait rougir
         run: pnpm gov:publication:prove
+      - name: Coherence du backlog
+        run: pnpm gov:tasks
+      - name: La garde du backlog sait rougir
+        run: pnpm gov:tasks:prove
       - name: Typecheck
         run: pnpm typecheck
