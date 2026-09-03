@@ -105,7 +105,17 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `OrigineEntrepriseConnue` | `client`, `devis`, `demande_entrante`, `financeur`                                     | REQ-DM-029   |
 | `TypeReprise`          | `avoir`, `paiement_rembourse` (synonyme interdit : `payment_refund`)                       | REQ-DM-019   |
 | `ConsoleRole`          | `admin`, `qualifieur`, `comptable`, `lecteur`                                              | REQ-SEC-023  |
-| `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe` | REQ-GOV-021 |
+| `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe`, `proposee` — **neuf valeurs**, celles de `scripts/lot/tasks.schema.json` ; `proposee` manquait ici depuis GOV-017a et rien ne l'attrapait | REQ-GOV-021 |
+
+> ⚠️ **La légende d'avancement de REQ-GOV-026 n'est PAS un enum de colonne**, et n'a donc pas de
+> ligne dans ce tableau. Ses sept états — `specifie`, `code`, `teste`, `revu`, `fusionne`,
+> `deploye`, `verifie_en_prod` — forment une **échelle ordonnée de lecture**, jamais écrite dans un
+> fichier de données : elle est **dérivée** de `StatutTache` par le barème unique de
+> `scripts/gates/gov-inventaire.ts`, dont l'exhaustivité sur les neuf statuts est vérifiée par
+> `pnpm gov:inventaire` — un dixième statut sans rang rougit. Écrire une colonne « avancement » à
+> côté de « statut » serait la faute que RM-04 nomme : deux copies du même vocabulaire divergent
+> toujours. Détail dans `docs/INVENTAIRE-CHANTIERS.md` §1.
+
 
 ## 5. Événements
 

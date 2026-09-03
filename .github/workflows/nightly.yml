@@ -49,3 +49,28 @@ jobs:
         run: pnpm gates:prouvees:prove
       - name: Les gates de la phase sont armees
         run: pnpm gates:prouvees --phase ${{ inputs.phase || '-1' }}
+      # Sort en 2 (INDETERMINE) tant qu aucun jeton ne peut lire la protection de `main` :
+      # le jeton d Actions ne le peut pas. Un 2 n est PAS un vert : c est l aveu que le
+      # controle n a pas ete joue. Le jour ou un secret d administration existe, il passe.
+      - name: Visibilite du depot et protection de main
+        run: pnpm gov:depot-visibilite
+
+  # GOV-018, REQ-GOV-023 — la fraicheur du journal des lecons. JOB SEPARE, et c est
+  # NECESSAIRE : le job ci-dessus est rouge par construction tant que la phase -1 n est pas
+  # sortie, donc une etape ajoutee a sa suite ne s executerait JAMAIS.
+  lecons-fraiches:
+    name: Journal des lecons — consolide depuis moins de 7 jours
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # La preuve d abord : si la garde ne sait plus rougir, le verdict suivant ne vaut rien.
+      - name: La garde des lecons sait rougir
+        run: pnpm gov:lecons:prove
+      # `--now` est FOURNI, en UTC. La garde ne lit pas l horloge : c est la convention de
+      # `lot:composer --now`, et un rouge qui depend de l heure du lancement ne se rejoue pas.
+      - name: Les lecons sont consolidees depuis moins de 7 jours
+        run: pnpm gov:lecons --now $(date -u +%F)

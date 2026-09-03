@@ -3,11 +3,11 @@
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne — la comparaison exacte que fait `scripts/lot/composer.ts` (`pris.has(p)`). Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
     "tachesCouvertes": 197,
-    "pairesEnIntersection": 3605,
-    "cheminsDeclares": 605,
-    "cheminsDistincts": 348,
+    "pairesEnIntersection": 3746,
+    "cheminsDeclares": 621,
+    "cheminsDistincts": 364,
     "cheminsPartages": 92,
-    "tachesSansAucuneIntersection": 25,
+    "tachesSansAucuneIntersection": 26,
     "listeDesTachesIsolees": [
       "INT-T01b",
       "CPL-T01",
@@ -33,12 +33,13 @@
       "CPL-T23",
       "UX-P3-03",
       "UX-P3-05",
-      "JUR-T22"
+      "JUR-T22",
+      "GOV-022"
     ],
     "cheminsLesPlusPartages": [
       {
         "chemin": "docs/gates.json",
-        "taches": 74
+        "taches": 76
       },
       {
         "chemin": "prisma/schema.prisma",
@@ -49,33 +50,28 @@
         "taches": 10
       },
       {
-        "chemin": "tests/unit/gouvernance/gardes.spec.ts",
-        "taches": 7
-      },
-      {
         "chemin": ".github/workflows/nightly.yml",
         "taches": 5
       },
       {
         "chemin": "docs/contrat/CONTRAT-APPORTEUR-V1.md",
         "taches": 5
+      },
+      {
+        "chemin": "emails/apporteur/",
+        "taches": 5
       }
     ],
     "_consequence": "ce que ces totaux imposent au composeur, et qui n'est pas un choix de ce fichier mais une lecture des deux registres : `docs/gates.json` est écrit par toute tâche qui pose une garde (son en-tête le dit : « `preuveRouge` = l'URL du run CI rouge archivé, remplie par la PR qui pose la gate »), et `prisma/schema.prisma` par toute tâche `schema: true`. Deux tâches de ces familles ne peuvent donc plus entrer dans le MÊME lot — c'est exactement le conflit d'édition que le contrôle de disjonction existe pour empêcher, et il était invisible au premier tour.",
     "testsSansRepertoire": [
-      "GOV-018 — regles-maison.spec.ts",
-      "GOV-008 — plan-state-frais.spec.ts",
-      "GOV-008 — une-tache-un-owner.spec.ts",
       "GOV-002 — preseance.spec.ts",
       "GOV-004 — affirmations-verifiees.spec.ts",
       "GOV-006 — glossaire-enums.spec.ts",
       "GOV-009 — adr-index-derive.spec.ts",
-      "GOV-011 — tracabilite.spec.ts",
       "GOV-013 — lexique.spec.ts",
       "GOV-014 — gardes-transposees.spec.ts",
       "GOV-015 — fiches-tiers.spec.ts",
       "GOV-019 — poids-du-bundle-garde-vraiment.spec.ts",
-      "GOV-023 — fiches-agents.spec.ts",
       "QA-T03 — req-check.spec.ts",
       "INT-T02 — outbox-produit-des-evenements-valides.spec.ts",
       "JUR-T03 — vocabulaire-apporteur.spec.ts",
@@ -145,6 +141,8 @@
       "scripts/gates/deploy-verify.ts",
       "scripts/gates/gov-publication.ts",
       "docs/gates.json",
+      "tests/unit/gouvernance/autonomie.spec.ts",
+      "tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts",
       "tests/unit/gouvernance/gardes.spec.ts"
     ],
     "GOV-007": [
@@ -162,19 +160,26 @@
       "docs/REQUIREMENTS-ANNEXE-FUSIONS.md",
       "scripts/gates/gov-requirements.ts",
       "docs/gates.json",
-      "tests/unit/gouvernance/gardes.spec.ts"
+      "tests/unit/gouvernance/gardes.spec.ts",
+      "tests/unit/gouvernance/inventaire-prouve.spec.ts"
     ],
     "GOV-018": [
       "docs/REGLES-MAISON.md",
       "docs/LECONS.md",
-      ".github/PULL_REQUEST_TEMPLATE.md"
+      ".github/PULL_REQUEST_TEMPLATE.md",
+      "scripts/gates/gov-lecons.ts",
+      "tests/unit/gouvernance/regles-maison.spec.ts",
+      "docs/gates.json"
     ],
     "GOV-008": [
       "docs/PLAN-STATE.md",
       "scripts/plan-state/build.ts",
       ".claude/skills/lot/SKILL.md",
       "scripts/gates/plan-state-derive.spec.ts",
-      "docs/gates.json"
+      "scripts/gates/gov-etat.ts",
+      "docs/gates.json",
+      "tests/unit/gouvernance/plan-state-frais.spec.ts",
+      "tests/unit/gouvernance/une-tache-un-owner.spec.ts"
     ],
     "GOV-002": [
       "docs/PRESEANCE.md",
@@ -188,7 +193,7 @@
       "tests/unit/gouvernance/gardes.spec.ts"
     ],
     "GOV-004": [
-      "docs/VERIFICATIONS-AXIONIA.md",
+      "docs/AFFIRMATIONS-AXIONIA.md",
       "scripts/gates/gov-sonde.ts",
       "docs/gates.json"
     ],
@@ -210,21 +215,24 @@
       "docs/gates.json"
     ],
     "GOV-010": [
-      "scripts/gates/gov-adr.ts"
+      "scripts/gates/gov-adr.ts",
+      "tests/unit/gouvernance/adr-assertion-existe.spec.ts"
     ],
     "GOV-011": [
-      "docs/TRACEABILITE.md",
-      "scripts/plan-state/traceabilite.ts",
-      "scripts/gates/req-check.ts",
+      "docs/TRACABILITE.md",
+      "scripts/gates/gov-trace.ts",
+      "tests/unit/gouvernance/tracabilite.spec.ts",
       "docs/gates.json"
     ],
     "GOV-012": [
       "docs/runbooks/fusion-partners.md",
       ".github/workflows/ci.yml",
       "docs/gates.json",
-      "scripts/gates/gov-depot-visibilite.sh",
+      "scripts/gates/gov-depot.ts",
       "tests/unit/ci/aucun-workflow-ne-pousse-sur-main.spec.ts",
-      "tests/unit/ci/tout-check-est-cable.spec.ts"
+      "tests/unit/ci/tout-check-est-cable.spec.ts",
+      "tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts",
+      "tests/unit/gouvernance/tout-check-est-cable.spec.ts"
     ],
     "GOV-013": [
       "docs/gates.json",
@@ -255,7 +263,7 @@
       "tests/fixtures/axionia/",
       "scripts/gates/detect-pii.ts",
       "scripts/gates/contrat-epingle.ts",
-      "tests/contract/contrat-hash.spec.ts",
+      "tests/unit/integration/contrat-hash.spec.ts",
       "scripts/gates/fixtures-source.ts",
       "docs/gates.json",
       "prisma/schema.prisma"
@@ -269,7 +277,8 @@
       "scripts/lot/tasks.schema.json",
       "scripts/gates/gov-tasks.ts",
       "docs/gates.json",
-      "tests/unit/gouvernance/gardes.spec.ts"
+      "tests/unit/gouvernance/paths-derives.spec.ts",
+      "tests/gov/charte-pr.spec.ts"
     ],
     "GOV-017b": [
       "docs/tasks.json",
@@ -278,21 +287,24 @@
       "docs/paths-proposes.json",
       "scripts/lot/paths-proposes.ts",
       "tests/unit/gouvernance/paths-derives.spec.ts",
-      "tests/unit/gouvernance/gardes.spec.ts",
       "tests/gov/charte-pr.spec.ts"
     ],
     "GOV-019": [
       "scripts/gates/bundle-par-route.ts"
     ],
     "GOV-020": [
-      "docs/VERIFICATIONS-AXIONIA.md"
+      "docs/INVENTAIRE-CHANTIERS.md",
+      "scripts/gates/gov-inventaire.ts",
+      "tests/unit/gouvernance/inventaire-prouve.spec.ts",
+      "docs/gates.json"
     ],
     "GOV-023": [
       "docs/agents.json",
       ".claude/agents/",
       "package.json",
       "scripts/gates/gov-agents.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/gouvernance/fiches-agents.spec.ts"
     ],
     "QA-T00": [
       "scripts/gates/prove.sh",
@@ -300,7 +312,7 @@
       ".github/workflows/nightly.yml",
       "scripts/gates/gates-derivees.ts",
       "scripts/gates/gates-prouvees.ts",
-      "tests/unit/gouvernance/gardes.spec.ts"
+      "tests/unit/gouvernance/tout-check-est-cable.spec.ts"
     ],
     "JUR-T02": [
       "src/domain/seuils/ssot.ts",
