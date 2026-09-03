@@ -115,5 +115,11 @@ jobs:
         run: pnpm lot:paths:check
       - name: Typecheck
         run: pnpm typecheck
+      # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :
+      # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
+      # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
+      # Sans le jeton ici, la suite rougissait sur deux tests qui ne disaient rien du code.
       - name: Tests
         run: pnpm test
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
