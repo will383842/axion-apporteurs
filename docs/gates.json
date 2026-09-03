@@ -1014,6 +1014,15 @@
       "verifie": "docs/requirements.json valide scripts/lot/requirements.schema.json ; ids uniques ; source non vide ; une exigence absorbee nomme une survivante ACTIVE (aucune chaine d'absorption) ; les 21 modules et les 12 etapes de l'audit portent chacun au moins une exigence ; toute exigence active est citee par au moins une tache, et aucune tache ne cite une exigence inexistante ; phase et taches[] sont DERIVEES du backlog, jamais saisies",
       "fixtureRouge": "vider la source d'une exigence, ou retirer le dernier porteur d'une exigence active",
       "preuveRouge": "pnpm gov:requirements:prove — 11 familles, chacune vue rougir sur son defaut injecte"
+    },
+    {
+      "id": "gov:preseance",
+      "phase": -1,
+      "script": "scripts/gates/gov-preseance.ts",
+      "tache": "GOV-002",
+      "verifie": "la table de preseance est complete et toute expression arbitree cite son porteur",
+      "fixtureRouge": "expression arbitree sans ancre de porteur",
+      "preuveRouge": "7 familles, un temoin chacune, 8 contre-temoins verts (pnpm gov:preseance --prove)"
     }
   ]
 }

@@ -11,7 +11,7 @@
   "scripts": {
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
-    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses",
+    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
@@ -28,7 +28,9 @@
     "gov:identifiants:prove": "tsx scripts/gates/gov-identifiants.ts --prove",
     "lot:composer": "tsx scripts/lot/composer.ts",
     "gov:issues": "tsx scripts/lot/issues.ts",
-    "reprise": "tsx scripts/reprise.ts"
+    "reprise": "tsx scripts/reprise.ts",
+    "gov:preseance": "tsx scripts/gates/gov-preseance.ts",
+    "gov:preseance:prove": "tsx scripts/gates/gov-preseance.ts --prove"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

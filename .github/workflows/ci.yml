@@ -37,6 +37,10 @@ jobs:
         run: pnpm gov:hypotheses
       - name: La garde des decisions sait rougir
         run: pnpm gov:hypotheses:prove
+      - name: Table de preseance
+        run: pnpm gov:preseance
+      - name: La garde de preseance sait rougir
+        run: pnpm gov:preseance:prove
       - name: Typecheck
         run: pnpm typecheck
       - name: Tests
