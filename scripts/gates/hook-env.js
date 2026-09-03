@@ -20,12 +20,19 @@
  *      passent entre toutes les six : la destination y est ecrite apres un deux-points, le
  *      drapeau de force est en fin de ligne. On ne rattrape pas une syntaxe par des morceaux de
  *      texte — `git-push-sur.js` la LIT. Voir ce fichier pour le detail.
+ *   5. Aucune commande `gh` n'ecrit sur la protection de la branche principale, ni ne retire
+ *      la revendication d'une tache. MEME FAMILLE DE DEFAUT que l'invariant 4, trouvee deux
+ *      fois le 2026-09-04 : la regle `Bash(gh api * /branches/main/protection*)` exige une
+ *      ESPACE devant `/branches`, que la commande reelle de `gh` n'a jamais — elle ne peut
+ *      donc matcher qu'une commande INVALIDE, pendant que `Bash(gh api*)` est en `allow`.
+ *      Voir `gh-sur.js`.
  *
  * POURQUOI : 40 agents qui testent, ce sont 40 sources d'envois réels. La règle est portée par un
  * hook et non par une consigne, parce qu'une consigne ne rougit pas.
  */
 
 const { jugerPush } = require('./git-push-sur.js');
+const { jugerGh } = require('./gh-sur.js');
 
 const LOCAL = /^(postgres(ql)?:\/\/)[^@]*@(localhost|127\.0\.0\.1|db|postgres)(:\d+)?\//i;
 const TESTCONTAINER = /^(postgres(ql)?:\/\/)[^@]*@(localhost|127\.0\.0\.1):\d{4,5}\//i;
@@ -62,6 +69,10 @@ process.stdin.on('end', () => {
   // 4. la branche principale et l'historique distant — juges sur les JETONS, pas sur du texte.
   const verdict = jugerPush(commande);
   if (verdict.refuse) refuser(verdict.motif);
+
+  // 5. la forge — meme lecture par jetons, pour la meme raison.
+  const verdictGh = jugerGh(commande);
+  if (verdictGh.refuse) refuser(verdictGh.motif);
 
   const url = process.env.DATABASE_URL || '';
   if (url && !(LOCAL.test(url) || TESTCONTAINER.test(url) || STUB.test(url))) {

@@ -42,6 +42,7 @@ const require_ = createRequire(import.meta.url);
 const CHEMIN_MATRICE = '.claude/settings.json';
 const CHEMIN_HOOK = 'scripts/gates/hook-env.js';
 const CHEMIN_ANALYSE = 'scripts/gates/git-push-sur.js';
+const CHEMIN_ANALYSE_GH = 'scripts/gates/gh-sur.js';
 
 type Faute = { famille: string; message: string };
 
@@ -84,6 +85,13 @@ const DANGEREUSES = [
   'git status && git push origin lot/x:main',
   'git -C ../axion-partners-wt/dm-07 push origin lot/x:main',
   'git push',
+  // Les deux trous de la meme famille, trouves le 2026-09-04 par GOV-012 et GOV-008. Ecrits
+  // mot pour mot : un temoin reformule cesse d'etre le temoin d'un incident.
+  'gh api -X DELETE repos/will383842/axion-apporteurs/branches/main/protection',
+  'gh api --method PUT repos/o/r/branches/main/protection -f required_status_checks=null',
+  'gh api -X DELETE repos/o/r/rulesets/42',
+  'gh issue edit 7 --remove-label owner:A01',
+  'gh issue edit 7 --remove-label en_cours',
 ];
 
 /**
@@ -98,9 +106,22 @@ const LEGITIMES = [
   'grep -rn "git push origin main" docs/',
   'git commit -m "chore: on poussera main plus tard"',
   'git fetch origin && git merge origin/main',
+  // La LECTURE de la protection reste permise : c'est ainsi que `gov:depot-visibilite` la
+  // verifie. Interdire la lecture aurait rendu cette gate impossible a satisfaire.
+  'gh api repos/o/r/branches/main/protection',
+  'gh api repos/will383842/axion-apporteurs --jq .visibility',
+  'gh issue edit 7 --add-label en_cours --add-label owner:A01',
+  'gh pr merge 27 --squash --delete-branch',
+  'echo gh api -X DELETE repos/o/r/branches/main/protection',
 ];
 
-type Analyse = { jugerPush: (ligne: string) => { refuse: boolean; motif: string | null } };
+type Verdict = { refuse: boolean; motif: string | null };
+/**
+ * Les DEUX analyseurs, composes. Une commande est refusee si l'un des deux la refuse : ils
+ * ne se recouvrent pas — l'un lit `git push`, l'autre `gh` — et les traiter ensemble evite
+ * qu'une famille de temoin n'exerce qu'un seul des deux.
+ */
+type Analyse = { jugerPush: (ligne: string) => Verdict };
 
 /** Contrôle le dépôt, ou une VUE mutée de lui — c'est ce qui rend `--prove` possible. */
 function controler(vue: { matrice: string; hook: string; analyse: Analyse | null }): Faute[] {
@@ -140,6 +161,15 @@ function controler(vue: { matrice: string; hook: string; analyse: Analyse | null
     );
   }
 
+  if (!vue.hook.includes('gh-sur')) {
+    ajouter(
+      'hook_sans_analyse',
+      `${CHEMIN_HOOK} n'appelle plus \`${CHEMIN_ANALYSE_GH}\`. \`gh api -X DELETE ` +
+        `.../branches/main/protection\` redevient possible : la regle \`deny\` censee ` +
+        `l'interdire exige une espace que la commande reelle n'a jamais.`
+    );
+  }
+
   if (!vue.hook.includes('git-push-sur')) {
     ajouter(
       'hook_sans_analyse',
@@ -163,8 +193,18 @@ function controler(vue: { matrice: string; hook: string; analyse: Analyse | null
   return fautes;
 }
 
+/** Un seul juge a partir des deux : refuse si l'un des deux refuse. */
+function composer(git: Analyse, gh: { jugerGh: (l: string) => Verdict }): Analyse {
+  return {
+    jugerPush: (ligne: string): Verdict => {
+      const a = git.jugerPush(ligne);
+      return a.refuse ? a : gh.jugerGh(ligne);
+    },
+  };
+}
+
 function lireVue(): { matrice: string; hook: string; analyse: Analyse | null } {
-  for (const c of [CHEMIN_MATRICE, CHEMIN_HOOK, CHEMIN_ANALYSE]) {
+  for (const c of [CHEMIN_MATRICE, CHEMIN_HOOK, CHEMIN_ANALYSE, CHEMIN_ANALYSE_GH]) {
     if (!existsSync(c)) {
       console.error(`❌ gov:autonomie — ${c} est introuvable. La matrice ne peut pas être contrôlée.`);
       process.exit(1);
@@ -173,7 +213,10 @@ function lireVue(): { matrice: string; hook: string; analyse: Analyse | null } {
   return {
     matrice: readFileSync(CHEMIN_MATRICE, 'utf8'),
     hook: readFileSync(CHEMIN_HOOK, 'utf8'),
-    analyse: require_(`${process.cwd()}/${CHEMIN_ANALYSE}`) as Analyse,
+    analyse: composer(
+      require_(`${process.cwd()}/${CHEMIN_ANALYSE}`) as Analyse,
+      require_(`${process.cwd()}/${CHEMIN_ANALYSE_GH}`) as { jugerGh: (l: string) => Verdict }
+    ),
   };
 }
 
