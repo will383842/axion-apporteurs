@@ -26,7 +26,8 @@
     "gov:tasks:render": "tsx scripts/gates/gov-tasks.ts --render",
     "gov:identifiants": "tsx scripts/gates/gov-identifiants.ts",
     "gov:identifiants:prove": "tsx scripts/gates/gov-identifiants.ts --prove",
-    "lot:composer": "tsx scripts/lot/composer.ts"
+    "lot:composer": "tsx scripts/lot/composer.ts",
+    "gov:issues": "tsx scripts/lot/issues.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
