@@ -311,6 +311,10 @@ if (process.argv.includes('--prove')) {
 
   const TEMOINS: { famille: string; defaut: () => { taches: Tache[] } }[] = [
     { famille: 'schema', defaut: () => { const d = copie(); (premiere(d) as unknown as { phase: number }).phase = 42; return d; } },
+    // Second témoin de `schema`, ciblé sur le motif de `branch` (partners/ADR-0007). Le témoin
+    // `phase = 42` ci-dessus prouve que la famille rougit ; il ne prouve rien du champ `branch`,
+    // dont le motif a été élargi. Une branche sans préfixe reconnu doit rester refusée.
+    { famille: 'schema', defaut: () => { const d = copie(); premiere(d).branch = 'feature/ce-prefixe-nexiste-pas'; return d; } },
     { famille: 'id_double', defaut: () => { const d = copie(); d.taches.push(JSON.parse(JSON.stringify(premiere(d))) as Tache); return d; } },
     { famille: 'dep_inconnue', defaut: () => { const d = copie(); premiere(d).deps.push('NEXISTE-PAS-01'); return d; } },
     { famille: 'dep_circulaire', defaut: () => { const d = copie(); const [a, b] = [d.taches[0]!, d.taches[1]!]; a.deps = [b.id]; b.deps = [a.id]; return d; } },
@@ -332,6 +336,30 @@ if (process.argv.includes('--prove')) {
     } },
   ];
 
+  /**
+   * Ce que la garde doit LAISSER PASSER. Un témoin prouve qu'une garde sait rougir ; il ne prouve
+   * jamais qu'elle ne rougit pas sur du légitime. Les deux formes de branche arrêtées par
+   * `partners/ADR-0007` sont exactement le cas où une garde trop stricte bloquerait
+   * `pnpm lot:cloture`, seul écrivain du statut — c'est ce qui est arrivé au lot L-1-01.
+   */
+  const CONTRE_TEMOINS: { nom: string; muter: () => { taches: Tache[] } }[] = [
+    { nom: 'une branche de LOT — la forme normale (partners/ADR-0007)',
+      muter: () => { const d = copie(); premiere(d).branch = 'lot/L-9-99-integration'; return d; } },
+    { nom: 'une branche de TÂCHE — la forme dérogatoire (partners/ADR-0007)',
+      muter: () => { const d = copie(); premiere(d).branch = 't/gov-012'; return d; } },
+  ];
+
+  for (const c of CONTRE_TEMOINS) {
+    const f = controler(c.muter(), schema, registre);
+    if (f.length > 0) {
+      console.error(
+        `\u274c Le contre-t\u00e9moin \u00ab ${c.nom} \u00bb a fait rougir la garde alors qu'il est l\u00e9gitime :`
+      );
+      f.slice(0, 5).forEach((x) => console.error(`   [${x.famille}] ${x.message}`));
+      process.exit(1);
+    }
+  }
+
   const prouvees = new Set<string>();
   for (const t of TEMOINS) {
     const f = controler(t.defaut(), schema, registre);
@@ -352,6 +380,7 @@ if (process.argv.includes('--prove')) {
   }
 
   console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(`   ${CONTRE_TEMOINS.length} contre-t\u00e9moin(s) restent verts.`);
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   process.exit(0);
 }

@@ -74,11 +74,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A01",
+      "lot": "L-1-01",
+      "branch": "lot/L-1-01-integration",
+      "pr": 26,
       "issue": 5,
       "attempts": 0,
       "motif": null,
@@ -242,11 +242,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A01",
+      "lot": "L-1-01",
+      "branch": "lot/L-1-01-integration",
+      "pr": 26,
       "issue": 8,
       "attempts": 0,
       "motif": null,
@@ -317,11 +317,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A01",
+      "lot": "L-1-01",
+      "branch": "lot/L-1-01-integration",
+      "pr": 26,
       "issue": 9,
       "attempts": 0,
       "motif": null,
@@ -448,11 +448,11 @@
       ],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A01",
+      "lot": "L-1-01",
+      "branch": "lot/L-1-01-integration",
+      "pr": 26,
       "issue": 11,
       "attempts": 0,
       "motif": null,
@@ -665,11 +665,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A01",
+      "lot": "L-1-01",
+      "branch": "lot/L-1-01-integration",
+      "pr": 26,
       "issue": 17,
       "attempts": 0,
       "motif": null,
@@ -680,7 +680,8 @@
         "REQ-GOV-022": [
           "fiches-tiers.spec.ts"
         ]
-      }
+      },
+      "acceptance": "chaque tiers dont une valeur est produite pour lui porte sa fiche `docs/tiers/<nom>.md` avec URL officielle, date de lecture, extrait cite, exemple officiel, quotas et comportement en panne (REQ-GOV-022) ; la fiche `banque.md` repond a REQ-CPL-002 ou nomme ce qui manque ; `docs/tiers/README.md` est l'index du dossier et la garde `fiches-tiers` rougit sur toute fiche amputee d'une rubrique ecrivable, chacune de ses familles vue rougir sur son temoin."
     },
     {
       "id": "INT-T01a",
@@ -846,15 +847,28 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A01",
+      "lot": "L-1-01",
+      "branch": "lot/L-1-01-integration",
+      "pr": 26,
       "issue": 20,
       "attempts": 0,
       "motif": null,
-      "acceptance": "chaque tâche porte `zone`, `paths[]` (≥ 1 entrée) et `sensible[]` ; **c'est ce qui fonde la disjonction de chemins du composeur** — sans ces champs, deux tâches d'un même lot peuvent écrire le même fichier et la file casse ; `acceptance` et `tests{}` deviennent requis **à l'attribution** (`statut: en_cours`), pas à l'écriture."
+      "acceptance": "chaque tâche porte `zone`, `paths[]` (≥ 1 entrée) et `sensible[]` ; **c'est ce qui fonde la disjonction de chemins du composeur** — sans ces champs, deux tâches d'un même lot peuvent écrire le même fichier et la file casse ; `acceptance` et `tests{}` deviennent requis **à l'attribution** (`statut: en_cours`), pas à l'écriture.",
+      "tests": {
+        "REQ-GOV-021": [
+          "tests/unit/gouvernance/paths-derives.spec.ts#la vue commitee est a jour : `--check` est vert sur le depot",
+          "tests/unit/gouvernance/gardes.spec.ts#sait rougir : ses 12 familles ont chacune un temoin"
+        ],
+        "REQ-GOV-025": [
+          "tests/unit/gouvernance/paths-derives.spec.ts#REQ-GOV-025 — aucune tache `repo: axionia` ne pretend ecrire un fichier de ce depot"
+        ],
+        "REQ-GOV-027": [
+          "tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la famille `phase_gelee` est prouvee, temoin et contre-temoin",
+          "tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la phase courante se lit dans le backlog, pas dans la vue PLAN-STATE"
+        ]
+      }
     },
     {
       "id": "GOV-019",
@@ -975,15 +989,22 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
-      "pr": null,
+      "statut": "fusionnee",
+      "owner": "A01",
+      "lot": "L-1-01",
+      "branch": "lot/L-1-01-integration",
+      "pr": 26,
       "issue": 24,
       "attempts": 0,
       "motif": null,
-      "acceptance": "chaque gate porte un champ `phase` et une `preuveRouge` archivée ; `gates:prouvees` calcule « toutes les gates de phase ≤ N présentes, bloquantes, avec `preuveRouge` »."
+      "acceptance": "chaque gate porte un champ `phase` et une `preuveRouge` archivée ; `gates:prouvees` calcule « toutes les gates de phase ≤ N présentes, bloquantes, avec `preuveRouge` ».",
+      "tests": {
+        "REQ-QA-013": [
+          "tests/unit/gouvernance/gardes.spec.ts#sait rougir : ses 10 familles ont chacune un temoin, sur un disque feint",
+          "tests/unit/gouvernance/gardes.spec.ts#ROUGIT sur le socle : la phase -1 n'est pas sortie, et c'est ce que le test fige",
+          "tests/unit/gouvernance/gardes.spec.ts#REFUSE de deviner la phase quand on ne la lui donne pas"
+        ]
+      }
     },
     {
       "id": "JUR-T02",

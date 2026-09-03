@@ -5,6 +5,7 @@
  * @req REQ-GOV-011
  * @req REQ-GOV-012
  * @req REQ-GOV-013
+ * @req REQ-GOV-027
  *
  * POURQUOI CE FICHIER EXISTE. `docs/tasks.json` mappe les quatre exigences de GOV-007 sur ce
  * chemin. Sans lui, la clôture de phase du gardien du spec — « chaque REQ a un test annoté,
@@ -88,6 +89,32 @@ describe('gov:pr — la garde livrée avec GOV-007', () => {
   it('REQ-GOV-011 : la famille qui refuse un auteur devenu son propre relecteur est prouvée', () => {
     const { sortie } = lancer(GARDE, '--prove');
     expect(sortie).toContain('relecteur_est_auteur');
+  });
+});
+
+describe('REQ-GOV-027 — le périmètre est gelé par phase', () => {
+  // Une PR étiquetée de la phase suivante ne se fusionne pas tant que la phase courante n'est
+  // pas close. Sans ce gel, la phase 1 démarre pendant que la 0 traîne, et les deux restent
+  // ouvertes jusqu'à la fin — c'est le mode d'échec que REQ-GOV-027 nomme.
+  //
+  // La phase courante est DÉRIVÉE de `docs/tasks.json` par la garde, pas lue dans PLAN-STATE :
+  // PLAN-STATE est une vue, et une garde qui lit une vue rougit le jour où on oublie de la
+  // régénérer, pour une raison qui n'est pas la faute qu'elle cherche.
+  it('REQ-GOV-027 : la famille `phase_gelee` est prouvée, témoin et contre-témoin', () => {
+    const { code, sortie } = lancer(GARDE, '--prove');
+    expect(code).toBe(0);
+    // Le témoin : une PR `phase:3` alors que la phase courante est -1.
+    expect(sortie).toContain('phase_gelee');
+    // Le contre-témoin vit dans la garde : une PR étiquetée de la phase COURANTE reste verte.
+    // Sans lui, une garde qui refuserait TOUT label `phase:` serait « prouvée » par son témoin.
+    expect(sortie).toMatch(/\d+ contre-témoins restent verts/);
+  });
+
+  it('REQ-GOV-027 : la phase courante se lit dans le backlog, pas dans la vue PLAN-STATE', () => {
+    const garde = readFileSync(GARDE, 'utf8');
+    const corps = section(garde, 'function phaseCourante', 'type Faute');
+    expect(corps).toContain('docs/tasks.json');
+    expect(corps).not.toContain('PLAN-STATE');
   });
 });
 

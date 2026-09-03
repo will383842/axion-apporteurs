@@ -5,16 +5,16 @@
 
 ## Phase courante : -1
 
-5/26 tâches terminées · reste 12.00 j estimés.
+12/26 tâches terminées · reste 7.00 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 189 | GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-006, GOV-009, GOV-010, GOV-011, GOV-012, GOV-013, GOV-014 … |
+| `a_faire` | 182 | GOV-018, GOV-008, GOV-006, GOV-010, GOV-011, GOV-012, GOV-013, GOV-014, INT-T01a, INT-T01b, GOV-019, GOV-020 … |
 | `en_cours` | 0 | — |
 | `en_revue` | 0 | — |
-| `fusionnee` | 5 | GOV-000, GOV-001, GOV-003, GOV-005, GOV-017a |
+| `fusionnee` | 12 | GOV-000, GOV-007, GOV-001, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-015, GOV-017a, GOV-017b, QA-T00 |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 | `bloquee` | 0 | — |
@@ -24,9 +24,9 @@
 
 **19.75 j** sur 22 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → GOV-007 (0.5 j, ph -1) → GOV-012 (0.5 j, ph -1) → GOV-013 (0.25 j, ph -1) → GOV-014 (1 j, ph -1) → QA-T01 (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (0.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → GOV-012 (0.5 j, ph -1) → GOV-013 (0.25 j, ph -1) → GOV-014 (1 j, ph -1) → QA-T01 (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (0.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **18.75 j**.
+Reste sur ce chemin : **18.25 j**.
 
 ## Bloquées
 
@@ -52,11 +52,11 @@ Reste sur ce chemin : **18.75 j**.
 
 ## PR ouvertes
 
-Aucune.
+- #27 `lot/L-1-01-cloture` — BLOCKED
 
 ## Dernier atterrissage
 
-`origin/main` = `c4a029d` (2026-09-03T17:18:26+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `9272c04` (2026-09-03T21:44:51+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 ## Dette déclarée
 

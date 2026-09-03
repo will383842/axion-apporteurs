@@ -50,12 +50,12 @@
 
 | Objet            | Règle                                                                                                  |
 | ---------------- | ------------------------------------------------------------------------------------------------------ |
-| Branche          | `t/<id-en-minuscules>` — ex. `t/dm-07`, `t/int-t01`, `t/ux-p1-08`                                       |
+| Branche          | `lot/<id-de-lot>-<suffixe>` — ex. `lot/L-1-01-integration` — la forme normale : un lot, une branche, une PR, **un commit par tâche**. `t/<slug>` — ex. `t/dm-07` — la forme dérogatoire, pour une tâche livrée seule (correctif urgent, tâche `sensible` relue isolément). Motif fermé, tenu par `scripts/lot/tasks.schema.json` et `partners/ADR-0007`. |
 | Worktree         | `../axion-partners-wt/<id>` (créé par le script de lot ; `git worktree prune` au balayage)              |
 | Titre de PR      | `<type>(<ID-TÂCHE>): <titre>` — ex. `feat(DM-07): attribution provisoire et index partiel` — clé de `gov:pr` |
 | Labels de PR     | `phase:<n>`, `role:<rôle>`, `repo:partners` ou `repo:axionia`, `schema` si `prisma/**` ou `packages/contracts/**` |
 | Commits          | `<type>(<domaine>): …` ≤ 100 caractères (commitlint), conventional commits ; `type ∈ feat, fix, test, docs, chore, refactor, ci, perf` |
-| Taille           | Une tâche = une PR ≤ 600 lignes de diff                                                                  |
+| Taille           | Un **lot** = une PR ; chaque tâche du lot = un commit ≤ 600 lignes de diff. Une PR par tâche a été écartée par `partners/ADR-0007` : 185 créneaux de fusion sur une file partagée avec quatre sessions coûtent plus que le travail qu'ils gardent. |
 | Corps de PR      | Gabarit 8 cases (REQ-GOV-013) : REQ · tests par REQ vus rougir (bloc ROUGE/VERT verbatim) · relecteur ≠ auteur · ADR si décision · glossaire/enum à jour · mesure bundle avant/après si route UI · PLAN-STATE (dérivé) · fusion + atterrissage · **section « Attaque »** si `commissions/**\|attributions/**\|auth/**\|espace/**` · **Règle maison appliquée : RM-nn** |
 | Fusion           | squash + `required_linear_history` ; une à la fois ; `mergeStateStatus` lu et `gh pr merge --squash --delete-branch` dans le **même** appel ; jamais `--auto`, jamais `--force` |
 | Schéma           | Toute PR `schema` a A02 (`architecte`) en troisième relecteur, approbation bloquante ; CODEOWNERS `prisma/** @A02` |
