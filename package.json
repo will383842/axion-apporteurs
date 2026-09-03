@@ -11,7 +11,7 @@
   "scripts": {
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
-    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr",
+    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
@@ -36,7 +36,9 @@
     "gov:adr": "tsx scripts/gates/gov-adr.ts",
     "gov:adr:prove": "tsx scripts/gates/gov-adr.ts --prove",
     "adr:index": "tsx scripts/adr/index.ts",
-    "adr:index:verifier": "tsx scripts/adr/index.ts --verifier"
+    "adr:index:verifier": "tsx scripts/adr/index.ts --verifier",
+    "gov:pr": "tsx scripts/gates/gov-pr.ts",
+    "gov:pr:prove": "tsx scripts/gates/gov-pr.ts --prove"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

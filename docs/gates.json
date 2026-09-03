@@ -72,7 +72,7 @@
       "tache": "GOV-007",
       "verifie": "relecteur != auteur ; titre <type>(<ID-TACHE>): <titre> ; 3 reviews GitHub de 3 lentilles distinctes + 1 du verificateur rouge ; bloc ROUGE/VERT present ; section Attaque si tache sensible (refus de la lentille securite = veto) ; 8 cases de la DoD ; PR touchant prisma/** ou packages/contracts/** porte le label schema et l'approbation bloquante de l'architecte A02",
       "fixtureRouge": "PR temoin ou l'auteur s'auto-approuve",
-      "preuveRouge": null
+      "preuveRouge": "16 familles, un temoin chacune, 6 contre-temoins verts dont celui de la scission dod (pnpm gov:pr --prove)"
     },
     {
       "id": "gov:depot-visibilite",
