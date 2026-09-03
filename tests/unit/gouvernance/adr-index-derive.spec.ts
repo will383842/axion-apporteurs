@@ -112,11 +112,11 @@ describe('gov:adr — la garde du dossier des ADR', () => {
     expect(code).toBe(0);
   });
 
-  it('REQ-GOV-008 — sait rougir : ses 12 familles ont chacune un témoin, 5 contre-témoins restent verts', () => {
+  it('REQ-GOV-008 — sait rougir : ses 16 familles ont chacune un témoin, 11 contre-témoins restent verts', () => {
     const { code, sortie } = lancer('scripts/gates/gov-adr.ts', '--prove');
     expect(code).toBe(0);
-    expect(sortie).toContain('Les 12 familles rougissent');
-    expect(sortie).toContain('5 contre-témoins restent verts');
+    expect(sortie).toContain('Les 16 familles rougissent');
+    expect(sortie).toContain('11 contre-témoins restent verts');
   });
 
   it('REQ-GOV-008 — la preuve énumère ses familles, elle ne les compte pas', () => {
@@ -124,7 +124,7 @@ describe('gov:adr — la garde du dossier des ADR', () => {
     // réputées prouvées sans témoin (gov:publication, 2026-09-03).
     const { sortie } = lancer('scripts/gates/gov-adr.ts', '--prove');
     const lignes = sortie.split('\n').filter((l) => l.trim().startsWith('•'));
-    expect(lignes.length).toBe(12);
+    expect(lignes.length).toBe(16);
   });
 });
 

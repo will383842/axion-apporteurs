@@ -70,10 +70,17 @@ même chose fausse ; ils disent maintenant la même chose vraie.
 
 ## Ce qui le vérifie
 
-- **Assertion** — `tests/unit/gouvernance/gardes.spec.ts` · `it("'gov:tasks' > sait rougir : ses 12
-  familles ont chacune un témoin")` : la famille `schema` du témoin de `gov:tasks --prove` couvre le
-  motif de `branch`. Une branche `feature/x`, sans préfixe reconnu, fait rougir la garde ; les deux
-  formes décidées ici la laissent verte.
+- **Assertion** — `tests/unit/gouvernance/gardes.spec.ts` · `it('est verte sur l’état du dépôt')`,
+  celle que le `describe.each` instancie pour `gov:tasks`. C'est l'assertion qui verrait cette
+  décision mourir **sur les données réelles** : sept lignes de `docs/tasks.json` portent aujourd'hui
+  `lot/L-1-01-integration`, donc restreindre à nouveau le motif à `^t/[a-z0-9-]+$` rendrait
+  `gov:tasks` rouge sur le backlog du dépôt, et ce test avec lui.
+- Le second témoin `schema` de `pnpm gov:tasks --prove` est, lui, ciblé sur le motif de `branch`
+  (`scripts/gates/gov-tasks.ts`) : une branche `feature/x`, sans préfixe reconnu, fait rougir la
+  garde, et les deux formes décidées ici sont ses contre-témoins. Son titre n'est pas cité ici
+  parce qu'il est **calculé** par le `describe.each` — partners/ADR-0003 et partners/ADR-0005
+  avaient déjà écrit pourquoi on ne cite pas un titre calculé : il fige un nombre dont la source est
+  ailleurs (RM-01). GOV-010 en a fait une règle, et c'est cet ADR qui la lui a fait trouver.
 
 ## Reste à faire
 
