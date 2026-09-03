@@ -138,7 +138,7 @@ refuse `git push origin main*`.
 
 ## RM-10 — Un seuil, une source, une date — aucun littéral
 
-**Énoncé.** Les seuils et durées légaux ou métier (DAS2, vigilance 500 000 cents, 6 mois, 50 €, **30 j de préavis de
+**Énoncé.** Les seuils et durées légaux ou métier (DAS2, vigilance 500 000 cents, 6 mois, seuil de versement minimal, **30 j de préavis de
 résiliation ordinaire — `PREAVIS_JOURS`, contrat art. 11.1**, 12 mois, 90 j, 60 j de dormance, 30 j de session) vivent
 dans **une** SSOT avec `source` et `verifieLe` (REQ-JUR-015) ; aucun littéral ailleurs ; une constante sans source fait
 échouer le test.

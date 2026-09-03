@@ -21,13 +21,13 @@ règles des documents, sans lire l'implémentation TypeScript.
 
 | Famille | Cas |
 | --- | --- |
-| Prorata | 3 échéances égales · 3 échéances inégales · un solde qui absorbe le reliquat d'arrondi · 1 000 € en trois tiers (33 333 / 33 333 / 33 334) |
+| Prorata | 3 échéances égales · 3 échéances inégales · un solde qui absorbe le reliquat d'arrondi · 100 000 cents en trois tiers (33 333 / 33 333 / 33 334) |
 | Cofinancement | OPCO 8 000 + entreprise 4 000 sur 12 000 → commission **pleine** · OPCO refuse, personne ne paie le solde → **aucune** commission, **aucune** reprise · facture adressée à l'OPCO → résolution par l'entreprise **bénéficiaire**, jamais par le destinataire |
 | Reprises | Avoir sur facture **non encaissée** → 0 reprise · remboursement partiel → reprise au prorata · remboursement > acquis → plafonné |
 | Fenêtre | Vente à J+365 → ligne · à J+366 → refus journalisé · grille changée après le devis → montant **inchangé** (snapshot) |
 | Blocages | `siren_manquant` · `bareme_indefini` · `regime_tva_inattendu` · `ttc_manquant` · `commission_sup_ht` |
-| Parrainage | 10 % d'une commission · propagation d'une reprise · après la fin des 12 mois → 0 · filleul du filleul → 0 · filleul signé sans vente → 0 |
-| Seuil | Solde 30 € → report · résilié → dernier relevé versé **sans** seuil · solde négatif → créance |
+| Parrainage | taux versé (valeur en configuration) d'une commission · propagation d'une reprise · après la fin des 12 mois → 0 · filleul du filleul → 0 · filleul signé sans vente → 0 |
+| Seuil | Solde sous le seuil de versement → report · résilié → dernier relevé versé **sans** seuil · solde négatif → créance |
 | Idempotence | Même `paiement.recu` deux fois → **une** ligne · même avoir deux fois → **une** reprise |
 
 ## Les propriétés (fast-check, ≥ 500 tirages chacune)

@@ -11,12 +11,15 @@
   "scripts": {
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
-    "gov:check": "pnpm gov:publication",
+    "gov:check": "pnpm gov:publication && pnpm gov:tasks",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
+    "gov:tasks:prove": "tsx scripts/gates/gov-tasks.ts --prove"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "ajv": "^8.17.1",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "vitest": "^2.1.8"
