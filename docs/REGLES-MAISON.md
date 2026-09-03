@@ -2,8 +2,8 @@
 
 > Livré par **GOV-018** (REQ-GOV-024). Neuf règles héritées d'axionia et d'axion-ops, plus trois que le plan directeur
 > cite sans les numéroter. Chaque règle porte un numéro `RM-nn` ; les ADR et le gabarit de PR (« Règle maison
-> appliquée : RM-nn ») y renvoient par numéro, jamais par paraphrase. Test : `tests/gov/regles-maison.spec.ts`
-> (chaque RM a une section, chaque gate citée existe dans `gates.json`).
+> appliquée : RM-nn ») y renvoient par numéro, jamais par paraphrase. Test : `tests/unit/gouvernance/regles-maison.spec.ts`
+> (chaque RM a une section ; les neuf règles que REQ-GOV-024 énumère sont chacune couvertes).
 >
 > Ordre de lecture d'une session d'agent (REQ-GOV-023) : `docs/PLAN-STATE.md` → **ce fichier** → la fiche de rôle →
 > la tâche → ses REQ. Un agent qui n'a pas lu ce fichier ne prend pas de tâche.
@@ -181,5 +181,5 @@ marqueur `// HYP-` sans entrée dans `DECISIONS.md` → rouge.
 ## Leçons
 
 Les « appris » rendus par les agents (bloc `## RENDU`) sont consolidés chaque semaine par le `documentaliste` dans
-`docs/LECONS.md`. Une leçon qui se répète deux fois devient une règle `RM-13+` par ADR, jamais par édition directe de
-ce fichier.
+`docs/LECONS.md`, qui porte une date de consolidation machine-lisible : `gov:lecons` rougit au-delà de sept jours si
+des « appris » attendent. Une leçon qui se répète devient une règle par ADR, jamais par édition directe de ce fichier.
