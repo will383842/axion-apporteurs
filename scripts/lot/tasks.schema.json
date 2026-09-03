@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://axion-partners/schemas/tasks.json",
+  "title": "docs/tasks.json — la liste des tâches, source de vérité du backlog",
+  "description": "TASKS.md est une VUE générée de ce fichier (pnpm gov:tasks --render). Les invariants non exprimables ici (deps existantes, acyclicité, paths disjoints par lot) sont vérifiés par la gate `gov:tasks`.",
+  "type": "object",
+  "required": ["version", "taches"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "taches": { "type": "array", "items": { "$ref": "#/$defs/tache" } }
+  },
+  "$defs": {
+    "tache": {
+      "type": "object",
+      "additionalProperties": false,
+      "_commentaire_required": [
+        "`acceptance` et `tests` ne sont PAS requis à la conversion (GOV-017a) : ils le deviennent",
+        "à l'ATTRIBUTION (statut en_cours et au-delà), via le bloc allOf. Les exiger dès la",
+        "conversion rendait GOV-017 infaisable : 126 tâches sur 184 n'ont pas d'acceptance écrite,",
+        "et 184 sur 184 pas de `tests`."
+      ],
+      "required": [
+        "id", "titre", "phase", "repo", "zone", "paths", "schema", "sensible",
+        "deps", "reqs", "hyp", "externe", "estimateDays", "statut"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z]+(-[A-Z0-9]+)*-[A-Za-z0-9]+$",
+          "description": "Unique. Ex. DM-07, INT-T01, T-ARG-036, UX-P1-11, GOV-000."
+        },
+        "titre": { "type": "string", "minLength": 5 },
+        "phase": { "type": "integer", "minimum": -1, "maximum": 3 },
+        "repo": {
+          "enum": ["partners", "axionia", "externe"],
+          "description": "Une seule étiquette. Les tâches `axionia` sont écrites par le poste A08 et fusionnées via docs/runbooks/fusion-axionia.md."
+        },
+        "zone": {
+          "enum": ["gouvernance", "domaine", "securite", "argent", "integration", "juridique", "espace", "console", "qualite", "devops"],
+          "description": "Deux tâches d'un même lot peuvent partager une zone, mais jamais un chemin."
+        },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "description": "Chemins que la tâche modifie. Le composeur refuse deux tâches d'un lot dont les paths s'intersectent."
+        },
+        "schema": {
+          "type": "boolean",
+          "description": "true si la tâche touche prisma/** ou packages/contracts/** : label `schema`, l'architecte devient relecteur bloquant."
+        },
+        "sensible": {
+          "type": "array",
+          "items": { "enum": ["argent", "attribution", "auth", "espace", "rgpd"] },
+          "description": "Non vide → section « Attaque » obligatoire dans la PR et VETO de la lentille sécurité."
+        },
+        "deps": { "type": "array", "items": { "type": "string" } },
+        "reqs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^REQ-[A-Z]+-[0-9]{3}$" }
+        },
+        "hyp": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^(HYP|DEC|W)-?[A-Z0-9-]+$" },
+          "description": "Décisions non tranchées dont la tâche dépend. Chacune DOIT avoir une entrée dans la §2 de docs/DECISIONS.md, sinon la tâche n'est pas éligible. Les décisions de Will s'écrivent `W1`…`W12` : sans elles, les six décisions qui bloquent réellement le code ne seraient déclarables que par `externe: \"will\"`, indistinctes les unes des autres — et le motif d'arrêt `decision_sans_hypothese` disparaîtrait."
+        },
+        "externe": {
+          "enum": [null, "will", "expert_comptable", "banque"],
+          "description": "Non nul → tâche inéligible tant que la réponse n'est pas reçue (statut attente_externe). `avocat` et `dpo` sont RETIRÉS de l'enum le 2026-09-03 : il n'y a pas d'avocat sur le projet, et une valeur à laquelle personne ne peut répondre immobilise définitivement la tâche qui la porte. Une question juridique se rend en `stop` à Will."
+        },
+        "estimateDays": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.5,
+          "description": "Jours de DÉVELOPPEMENT. Une tâche de décision coûte 0 j : le minimum est inclusif. Le plafond réel (> 1,5 j → rouge) est porté par la gate `gov:tasks`, qui sait distinguer une tâche de code d'une tâche d'arbitrage."
+        },
+        "acceptance": { "type": "string", "minLength": 20 },
+        "tests": {
+          "type": "object",
+          "description": "REQ couverte → tests qui la prouvent, au format fichier#nom-du-it. Lu par `req:check`.",
+          "patternProperties": {
+            "^REQ-[A-Z]+-[0-9]{3}$": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "statut": {
+          "enum": ["a_faire", "en_cours", "en_revue", "fusionnee", "deployee", "verifiee", "bloquee", "attente_externe", "proposee"]
+        },
+        "issue": {
+          "type": ["integer", "null"],
+          "description": "Numéro de l'issue GitHub de la tâche, écrit par `pnpm gov:issues --sync` (GOV-017). C'est le `<n>` de `gh issue edit <n>` : sans lui, la revendication du SKILL §3 n'a aucun numéro à citer et la première session s'arrête là."
+        },
+        "owner": { "type": ["string", "null"], "pattern": "^A[0-9]{2}$" },
+        "lot": { "type": ["string", "null"] },
+        "branch": { "type": ["string", "null"], "pattern": "^t/[a-z0-9-]+$" },
+        "pr": { "type": ["integer", "null"] },
+        "attempts": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "motif": { "type": ["string", "null"], "description": "Pourquoi la tâche est bloquée. Obligatoire si statut = bloquee." }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "statut": { "enum": ["en_cours", "en_revue", "fusionnee"] } } },
+          "then": { "required": ["owner", "branch"], "properties": { "owner": { "type": "string" }, "branch": { "type": "string" } } }
+        },
+        {
+          "_commentaire": "Une tâche ATTRIBUÉE doit porter son critère d'acceptation et ses tests : c'est ce qui rend la revue et `req:check` possibles. Avant l'attribution, les deux champs sont facultatifs.",
+          "if": { "properties": { "statut": { "enum": ["en_cours", "en_revue", "fusionnee", "deployee", "verifiee"] } } },
+          "then": { "required": ["acceptance", "tests"] }
+        },
+        {
+          "_commentaire": "L'invariant que le composeur suppose : `externe` non nul ⇒ statut `attente_externe`. Il était DÉCRIT dans la description du champ et imposé par rien — une tâche `externe: \"will\"` restée `a_faire` traversait le filtre.",
+          "if": { "properties": { "externe": { "type": "string" } }, "required": ["externe"] },
+          "then": { "properties": { "statut": { "const": "attente_externe" } } }
+        },
+        {
+          "if": { "properties": { "statut": { "const": "bloquee" } } },
+          "then": { "required": ["motif"], "properties": { "motif": { "type": "string", "minLength": 10 } } }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,23 @@
+# CI minimale — la seule gate armée à ce stade est `gov:publication`.
+# Les autres gates sont ajoutées par leur tâche, chacune APRÈS avoir été vue rougir.
+name: Gate A
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  gate-a:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Regle de publication (depot public)
+        run: pnpm gov:publication
+      - name: La garde sait rougir
+        run: pnpm gov:publication:prove
+      - name: Typecheck
+        run: pnpm typecheck

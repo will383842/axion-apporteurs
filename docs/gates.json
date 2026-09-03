@@ -1,0 +1,1001 @@
+{
+  "_commentaire": [
+    "Registre des gates — SOURCE DE VERITE. `GATES.md` est la vue humaine derivee de ce fichier ;",
+    "toute divergence est tranchee ici, et `gov:gates-derivees` (QA-T00) refuse toute ligne de",
+    "`GATES.md` sans entree de meme id, et toute entree sans ligne.",
+    "`gates:prouvees` (nightly) refuse toute gate de phase <= phase courante dont `preuveRouge` est",
+    "null : une gate qui n'a jamais rougi n'existe pas.",
+    "`fixtureRouge` = le cas d'echec injecte par `scripts/gates/prove.sh <id>`.",
+    "`preuveRouge` = l'URL du run CI rouge archive, remplie par la PR qui pose la gate.",
+    "`alias` = les autres noms sous lesquels la meme gate est citee dans les documents ; un alias ne",
+    "cree JAMAIS une seconde entree.",
+    "`phase` = la PREMIERE phase citee par `GATES.md` quand la colonne en porte plusieurs (0 · 2) :",
+    "celle a la sortie de laquelle la gate doit exister, etre bloquante et avoir rougi.",
+    "Complete le 2026-09-03 : 25 entrees -> toutes les gates de GATES.md, y compris les gates `jur:*`",
+    "posees par JUR-T26, JUR-T24, JUR-T28, JUR-T29 et JUR-T01, sans lesquelles la phase 0 passait au",
+    "vert sans qu'aucune garde de charte relationnelle n'existe."
+  ],
+  "version": 2,
+  "gates": [
+    {
+      "id": "gov:check",
+      "phase": -1,
+      "script": "scripts/gates/gov-check.ts",
+      "tache": "GOV-000",
+      "verifie": "termes interdits partout (code, docs, registre) : Invoice, Refund, refund.issued, payment.received, invoice.issued, devis.signed, ('provisoire','active'), 'prenom, nom', qualificateur ; aucun nom d'evenement litteral hors packages/contracts",
+      "fixtureRouge": "ajouter 'payment.received' dans un fichier de docs/",
+      "preuveRouge": null
+    },
+    {
+      "id": "req:check",
+      "phase": -1,
+      "script": "scripts/gates/req-check.ts",
+      "tache": "GOV-011",
+      "alias": [
+        "gov:trace"
+      ],
+      "verifie": "matrice REQ -> test -> PR derivee ; la PAIRE (tache, REQ) pointe vers un test nomme (identifiant dans le titre du it()), annote @req et vert ; orphelins dans les deux sens -> rouge ; chaque module (1-21) et chaque etape (1-12) ont au moins une REQ. GOV-011 pose la matrice et le script en phase -1 ; QA-T03 l'etend et l'arme dans Gate A en phase 0",
+      "fixtureRouge": "citer une REQ sans test",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:identifiants",
+      "phase": -1,
+      "script": "scripts/gates/gov-identifiants.ts",
+      "tache": "GOV-003",
+      "verifie": "aucun identifiant nu ('conforme a D3') ; HYP-* orphelin -> rouge ; toute decision citee existe dans docs/DECISIONS.md ; tout id de gate cite dans un document a une entree dans gates.json",
+      "fixtureRouge": "citer 'conforme a D3' dans un commentaire de code",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:adr",
+      "phase": -1,
+      "script": "scripts/gates/gov-adr.ts",
+      "tache": "GOV-009",
+      "verifie": "dossier unique partners/ADR-0001+, numeros consecutifs, index derive du systeme de fichiers, references qualifiees, chaque ADR porte une assertion ou la mention hors-code",
+      "fixtureRouge": "referencer ADR-9999 dans une PR",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:tasks",
+      "phase": -1,
+      "script": "scripts/gates/gov-tasks.ts",
+      "tache": "GOV-017a",
+      "verifie": "docs/tasks.json valide le schema ; ids uniques ; deps existantes ; acyclique ; <= 1,5 j ; une PR par tache ; phase <= courante ; une seule etiquette repo ; paths[] non vide et disjoints dans un lot ; statut >= en_cours implique owner et branch non nuls ; hyp[] toutes presentes dans DECISIONS.md ; total affiche = somme des estimations ; aucune tache ne depend d'une tache de phase strictement superieure",
+      "fixtureRouge": "dupliquer un id de tache",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:pr",
+      "phase": -1,
+      "script": "scripts/gates/gov-pr.ts",
+      "tache": "GOV-007",
+      "verifie": "relecteur != auteur ; titre <type>(<ID-TACHE>): <titre> ; 3 reviews GitHub de 3 lentilles distinctes + 1 du verificateur rouge ; bloc ROUGE/VERT present ; section Attaque si tache sensible (refus de la lentille securite = veto) ; 8 cases de la DoD ; PR touchant prisma/** ou packages/contracts/** porte le label schema et l'approbation bloquante de l'architecte A02",
+      "fixtureRouge": "PR temoin ou l'auteur s'auto-approuve",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:depot-prive",
+      "phase": -1,
+      "script": "scripts/gates/gov-depot-prive.sh",
+      "tache": "GOV-012",
+      "verifie": "gh repo view --json visibility == PRIVATE ; image GHCR privee (Coolify tire avec un PAT read:packages, HYP-E1-27)",
+      "fixtureRouge": "depot temoin public",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:autonomie",
+      "phase": -1,
+      "script": "scripts/gates/gov-autonomie.ts",
+      "tache": "GOV-000",
+      "verifie": "la matrice d'autonomie EST .claude/settings.json + hook-env.js : deny sur git push origin main*, git push --force*, prisma migrate deploy*, pnpm db:deploy*, Write/Edit de PLAN-STATE.md, REQUIREMENTS.md, DECISIONS.md, tasks.json ; hook PreToolUse declare sur Bash ; toute ligne de la matrice (REQ-CPL-021) sans regle correspondante -> rouge",
+      "fixtureRouge": "retirer une regle deny de settings.json",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:plan-state",
+      "phase": -1,
+      "script": "scripts/gates/plan-state-derive.spec.ts",
+      "tache": "GOV-008",
+      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : plan-state:build regenere un fichier identique au fichier commite ; PLAN-STATE derive de tasks.json, gh issue list, gh pr list et git, jamais edite a la main",
+      "fixtureRouge": "editer PLAN-STATE.md a la main",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:sonde",
+      "phase": -1,
+      "script": "scripts/gates/gov-sonde.ts",
+      "tache": "GOV-004",
+      "verifie": "les faits affirmes sur le code d'axionia (>= 25, dates 'verifie le') sont rejoues contre le depot ; tout fait devenu faux -> rouge",
+      "fixtureRouge": "affirmer que le modele Invoice existe",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:hypotheses",
+      "phase": -1,
+      "script": "scripts/gates/gov-hypotheses.ts",
+      "tache": "GOV-005",
+      "alias": [
+        "HYP-*"
+      ],
+      "verifie": "chaque hypothese posee a un test nomme ; HYP-D7 rougit si REQ-ARG-025 et REQ-JUR-014 divergent ; HYP-E1-9 rougit si fenetreFinAt != confirmeeAt + 12 mois ; tout identifiant d'hypothese doit valider ^(HYP|DEC)-[A-Z0-9-]+$",
+      "fixtureRouge": "reecrire REQ-ARG-025 en 'a l'approche du seuil'",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:agents",
+      "phase": -1,
+      "script": "scripts/gates/gov-agents.ts",
+      "tache": "GOV-023",
+      "verifie": "chaque fiche .claude/agents/<role>.md a 5 sections (mission, entrees, sorties, interdits, documents a lire) et chaque document cite existe ; aucun appel agent() du workflow sans agentType correspondant a un fichier de .claude/agents/",
+      "fixtureRouge": "retirer la section interdits d'une fiche",
+      "preuveRouge": null
+    },
+    {
+      "id": "aucun-workflow-ne-pousse-sur-main",
+      "phase": -1,
+      "script": "tests/unit/ci/aucun-workflow-ne-pousse-sur-main.spec.ts",
+      "tache": "GOV-012",
+      "verifie": "aucun workflow ne declare push sur main",
+      "fixtureRouge": "workflow temoin poussant sur main",
+      "preuveRouge": null
+    },
+    {
+      "id": "tout-check-est-cable",
+      "phase": -1,
+      "script": "tests/unit/ci/tout-check-est-cable.spec.ts",
+      "tache": "GOV-012",
+      "verifie": "chaque check requis par la protection de main existe dans un workflow, sous son nom exact (le job de Gate A s'appelle gate-a)",
+      "fixtureRouge": "retirer le job gate-a des workflows en gardant le check requis",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:gates-derivees",
+      "phase": -1,
+      "script": "scripts/gates/gates-derivees.ts",
+      "tache": "QA-T00",
+      "verifie": "GATES.md est une VUE de gates.json : toute ligne de GATES.md a une entree de meme id ici (phase et tache identiques), et toute entree a une ligne la-bas ; les alias cites avec = ou + sont portes par alias[], jamais par une seconde entree",
+      "fixtureRouge": "ajouter une ligne a GATES.md sans entree dans gates.json",
+      "preuveRouge": null
+    },
+    {
+      "id": "gates:prouvees",
+      "phase": -1,
+      "script": "scripts/gates/gates-prouvees.ts",
+      "tache": "QA-T00",
+      "verifie": "chaque gate de phase <= courante a un script cable dans un check requis, une fixtureRouge qui rougit encore (rejouee en nightly par prove.sh) et une preuveRouge non nulle ; CALCULE la gate de sortie de phase N",
+      "fixtureRouge": "poser une gate sans run rouge archive",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-JUR-SEUILS-SSOT",
+      "phase": -1,
+      "script": "scripts/gates/seuils-ssot.ts",
+      "tache": "JUR-T02",
+      "alias": [
+        "ssot:seuils"
+      ],
+      "verifie": "chaque seuil et chaque duree porte source + verifieLe ; aucun litteral 2400 / 5000 / 50 / 90 / 12 mois hors du SSOT ; la SSOT ne contient AUCUNE constante de gradation ni de delai de contradictoire (CONTRADICTOIRE_JOURS ou un seuil de strikes y font rougir)",
+      "fixtureRouge": "ecrire le litteral 2400 hors du SSOT",
+      "preuveRouge": null
+    },
+    {
+      "id": "detectPii",
+      "phase": -1,
+      "script": "scripts/gates/detect-pii.ts",
+      "tache": "INT-T01a",
+      "verifie": "aucune PII reelle dans les fixtures commitees (generees par pnpm partners:fixtures, pseudonymisees) ni dans docs/spec/** ; meme fonction que le harnais MCP (INT-T11 livre detectPii)",
+      "fixtureRouge": "fixture portant une adresse e-mail reelle",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:contrat",
+      "phase": -1,
+      "script": "scripts/gates/contrat-epingle.ts",
+      "tache": "INT-T01a",
+      "verifie": "SHA du JSON Schema et schemaVersion identiques dans les deux depots (contracts.v<N>.json + contracts.sha256 copies par pnpm contracts:export, jamais retapes) ; fixtures generees par pnpm partners:fixtures ; changement d'un seul cote -> rouge ; fixture sans en-tete Source: -> rouge",
+      "fixtureRouge": "renommer un champ d'un seul cote",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:contrat:hash",
+      "phase": -1,
+      "script": "tests/contract/contrat-hash.spec.ts",
+      "tache": "INT-T01a",
+      "verifie": "le test executable de gov:contrat : le hash du JSON Schema embarque est identique dans les deux depots ; un champ renomme d'un seul cote fait rougir des deux cotes",
+      "fixtureRouge": "renommer un champ dans packages/contracts sans republier",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-JUR-TEXTES-APPORTEURS",
+      "phase": -1,
+      "script": "scripts/gates/lexique-apporteurs.ts",
+      "tache": "GOV-013",
+      "alias": [
+        "GATE-UX-JARGON",
+        "gov:lexique"
+      ],
+      "verifie": "liste noire IMPORTEE de la SSOT lexique-interdit.ts (REQ-JUR-037), jamais recopiee dans la gate ni dans GATES.md ; perimetre src/app/(espace)/**, emails/apporteur/**, micro-copy/** et les ressources diffusees ; les exclusions declarees par la SSOT sont importees avec elle (etendue par UX-P0-01, JUR-T13 et JUR-T26)",
+      "fixtureRouge": "libelle factice 'objectif du mois' dans micro-copy",
+      "preuveRouge": null
+    },
+    {
+      "id": "gate-a",
+      "phase": -1,
+      "script": ".github/workflows/ci.yml#gate-a",
+      "tache": "GOV-000",
+      "verifie": "tsc strict, ESLint (no-console, imports interdits sous src/domain, new Date() interdit dans le domaine), Prettier, Vitest 100 % src/domain et >= 80 % global, req:check, idor:check, aucun stub.invalid, projets mobile ; le job porte le nom exact gate-a, qui est le check requis de la protection de main (minimale gov:check en phase -1, complete par QA-T01 en phase 0)",
+      "fixtureRouge": "retirer un it() sous src/domain",
+      "preuveRouge": null
+    },
+    {
+      "id": "gate-deploiement",
+      "phase": -1,
+      "script": "scripts/gates/deploy-verify.ts",
+      "tache": "GOV-000",
+      "verifie": "un seul producteur (release-manager, fusion serialisee auTour) ; aucune concurrency avec cancel-in-progress ; squash + required_linear_history ; x-partners-build-sha == sha avant la fusion suivante ; purge de cache ; smoke readyz (protocole et protection de main en phase -1, deploy:verify en phase 0 par QA-T05)",
+      "fixtureRouge": "lancer deploy:verify sur un sha non atterri",
+      "preuveRouge": null
+    },
+    {
+      "id": "notify-sink-hors-prod",
+      "phase": -1,
+      "script": "scripts/gates/hook-env.js",
+      "tache": "GOV-000",
+      "verifie": "NOTIFY_SINK=true obligatoire hors prod (refus au boot) ; le hook PreToolUse hook-env.js refuse toute DATABASE_URL non locale / non testcontainers ou NOTIFY_SINK != true, ancre en position de commande",
+      "fixtureRouge": "booter hors prod sans NOTIFY_SINK",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:schema:enums",
+      "phase": 0,
+      "script": "scripts/gates/schema-enums.ts",
+      "tache": "DM-02",
+      "alias": [
+        "GATE-JUR-ENUMS",
+        "GATE-ARG-enum",
+        "gov:glossaire"
+      ],
+      "verifie": "toute colonne statut/type/motif/resultat/etat/origine/kind/palier/priorite/status est un enum Prisma ; aucune chaine libre de vocabulaire ; chaque valeur figure au glossaire (GOV-006)",
+      "fixtureRouge": "declarer statut String dans le schema",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:schema:cents",
+      "phase": 0,
+      "script": "scripts/gates/schema-cents.ts",
+      "tache": "DM-02",
+      "verifie": "aucun Float ni Decimal ; toute colonne monetaire est Int et suffixee Cents",
+      "fixtureRouge": "ajouter une colonne montantEuros Float",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:schema:partial-index",
+      "phase": 1,
+      "script": "tests/integration/index-partiel.spec.ts",
+      "tache": "DM-07",
+      "verifie": "pg_indexes contient attributions_un_occupant avec la clause WHERE GENEREE depuis ETATS_OCCUPANTS (REQ-DM-003, 7 etats, jamais ('provisoire','active') litteral), attributions_en_attente, contrats_un_en_vigueur, rattachements_un_actif ; double insertion -> 23505",
+      "fixtureRouge": "inserer deux attributions occupantes sur le meme SIREN",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:migrations:additive",
+      "phase": 0,
+      "script": "scripts/gates/migrations-additive.ts",
+      "tache": "QA-T11",
+      "verifie": "lint expand/contract : DROP, RENAME et NOT NULL sans defaut interdits hors ADR",
+      "fixtureRouge": "PR temoin portant un DROP COLUMN",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-SCHEMA-PII",
+      "phase": 0,
+      "script": "scripts/gates/schema-pii.ts",
+      "tache": "SEC-08",
+      "verifie": "aucune colonne ip sans suffixe Hash ; toute PII est ecrite via encryptPii (AAD), jamais en direct",
+      "fixtureRouge": "declarer createdIp String? dans le schema",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:journal:immutable",
+      "phase": 0,
+      "script": "tests/integration/journal.spec.ts",
+      "tache": "DM-01",
+      "alias": [
+        "G-SEC-AUDIT",
+        "GATE-JUR-JOURNAL-IMMUABLE",
+        "GATE-ARG-immutabilite"
+      ],
+      "verifie": "UPDATE et DELETE sur le journal levent une erreur ; verifierChaine() detecte toute alteration ; le worker de purge ne reference pas la table (etendue aux tables d'argent en phase 2 par T-ARG-034)",
+      "fixtureRouge": "UPDATE evenements SET payload = '{}'",
+      "preuveRouge": null
+    },
+    {
+      "id": "journal:sans-pii",
+      "phase": 0,
+      "script": "scripts/gates/journal-sans-pii.ts",
+      "tache": "DM-01",
+      "verifie": "le payload d'un evenement est un schema Zod FERME par type (identifiants, hashes, enums, montants, horodatages) : ni nom, ni email, ni telephone, ni IBAN, ni adresse ; apres effacement d'un tiers, verifierChaine() reste vrai (REQ-DM-041, etendue en phase 3 par DM-20)",
+      "fixtureRouge": "ajouter un champ email au payload d'un evenement",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:transitions:exhaustive",
+      "phase": 1,
+      "script": "tests/domain/transitions.spec.ts",
+      "tache": "DM-08",
+      "verifie": "100 % des cellules (etat x evenement) testees pour Attribution (13 etats), Apporteur et LigneCommission (etendue en phase 2 par T-ARG-010)",
+      "fixtureRouge": "retirer une cellule de la matrice",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-UX-EXHAUSTIVITE",
+      "phase": 1,
+      "script": "scripts/gates/ux-exhaustivite.ts",
+      "tache": "UX-P0-01",
+      "verifie": "chaque valeur d'enum d'affichage a un libelle et une phrase 'prochaine etape et par qui' ; switch avec branche never",
+      "fixtureRouge": "ajouter une valeur a l'enum sans libelle",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:rgpd:export-complet",
+      "phase": 3,
+      "script": "tests/integration/rgpd-export.spec.ts",
+      "tache": "DM-20",
+      "verifie": "toute table portant apporteurId est presente dans l'export art. 15, la liste etant derivee du schema",
+      "fixtureRouge": "ajouter une table apporteurId sans l'exporter",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-JUR-PURGE",
+      "phase": 1,
+      "script": "tests/integration/purge.spec.ts",
+      "tache": "DM-13",
+      "alias": [
+        "G-SEC-RGPD-PURGE"
+      ],
+      "verifie": "bornes de duree a +/- 1 jour (J+90 : contacts nuls ; J+89 : intacts) ; l'effacement d'un tiers conserve le journal (etendue en phase 3 par DM-20)",
+      "fixtureRouge": "purger a J+89",
+      "preuveRouge": null
+    },
+    {
+      "id": "aucun-annee-de-naissance",
+      "phase": 0,
+      "script": "scripts/gates/aucun-annee-de-naissance.ts",
+      "tache": "INT-T09",
+      "verifie": "ni colonne ni payload persiste annee_de_naissance (reponse de l'API recherche-entreprises minimisee au mapping)",
+      "fixtureRouge": "fixture de reponse portant le champ annee_de_naissance",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:money:conservation",
+      "phase": 0,
+      "script": "tests/domain/conservation.spec.ts",
+      "tache": "DM-04",
+      "alias": [
+        "GATE-ARG-prorata"
+      ],
+      "verifie": "property-based sur 500 a 1 000 tirages : somme des parts = commission totale, chaque part dans [0, total], plafond -> ligne bloquee motif plafond, methode du cumul (REQ-ARG-004) ; etendue en phase 2 par QA-T21",
+      "fixtureRouge": "muter le floor ou le reliquat d'arrondi",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:webhook:idempotent",
+      "phase": 1,
+      "script": "tests/integration/webhook.spec.ts",
+      "tache": "SEC-06",
+      "alias": [
+        "GATE-ARG-idempotence"
+      ],
+      "verifie": "fixture livree deux fois -> une ligne par beneficiaire, seconde reponse duplicate:true ; index uniques (paymentId) et (refundId) ; ordre inverse -> meme etat final ; t a -600 s -> 401 ; 200 Ko -> 413 (etendue en phase 2 par DM-15)",
+      "fixtureRouge": "retirer l'unicite sur paymentId",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:grille:check",
+      "phase": 0,
+      "script": "scripts/gates/grille-check.ts",
+      "tache": "DM-03-A",
+      "alias": [
+        "GATE-ARG-derivation-grille",
+        "GATE-JUR-GRILLE-DERIVEE",
+        "GATE-UX-GRILLE"
+      ],
+      "verifie": "hash de pricing.ts = hash embarque des deux cotes (GET /api/partners/grille cote axionia, import cote Partners) ; aucun litteral de taux hors snapshot ; meme grilleVersionId dans Parametres, contrat et calcul ; chaque id de pricing.ts a soit un taux, soit une entree bareme_indefini explicite et datee (HYP-W6-BIS) ; posee par DM-03-A [axionia] et DM-03-P [partners], etendue par UX-P2-05",
+      "fixtureRouge": "modifier pricing.ts sans republier la grille",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:grille:complete",
+      "phase": 1,
+      "script": "scripts/gates/grille-complete.ts",
+      "tache": "UX-P1-14",
+      "verifie": "aucun contrat genere sans une grille figee COMPLETE : les 30 paliers des quatre familles commissionnees (formations collectives, accompagnement 1-to-1, audits, implementations — W6) sont tous values, et les cinq familles non commissionnees (developpement web, maintenance, coaching recurrent, conferences, interventions sur demande) figurent explicitement a l'annexe ; 29 paliers, un palier nul ou une famille absente -> generation refusee",
+      "fixtureRouge": "generer un contrat sur une grille temoin a 29 paliers",
+      "preuveRouge": null
+    },
+    {
+      "id": "partners:grille:contrat",
+      "phase": 2,
+      "script": "tests/domain/grille-du-contrat.spec.ts",
+      "tache": "T-ARG-037",
+      "verifie": "tout calcul de commission lit contrat.grilleId (la grille snapshotee du contrat signe), jamais la grille globale courante ; aucune lecture de la GrilleCommission 'en vigueur' depuis le moteur ; chaque ecart entre la grille d'un contrat et la grille publiee porte un motif obligatoire non vide (W12)",
+      "fixtureRouge": "faire lire la grille courante au moteur au lieu de contrat.grilleId",
+      "preuveRouge": null
+    },
+    {
+      "id": "argent:contre-calcul",
+      "phase": 2,
+      "script": "tests/argent/contre-calcul.spec.ts",
+      "tache": "T-ARG-036",
+      "verifie": "diff entre le domaine TypeScript et l'implementation SQL independante = 0 centime sur les 50 scenarios nommes de scenarios/*.json ; DEPENDANCE de la gate de sortie de phase 2",
+      "fixtureRouge": "changer l'arrondi du prorata dans le domaine",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-ARG-rejeu-golden",
+      "phase": 2,
+      "script": "tests/argent/rejeu-golden.spec.ts",
+      "tache": "T-ARG-022",
+      "verifie": "rejeu complet sur base vide = hash golden ; fixtures en ordre inverse = meme etat final",
+      "fixtureRouge": "rendre un handler non idempotent",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-ARG-double-paiement",
+      "phase": 2,
+      "script": "tests/argent/double-paiement.spec.ts",
+      "tache": "T-ARG-015",
+      "verifie": "deux gels sans rapprochement -> aucune ligne dans deux releves ; deux exports -> octets identiques ; approbation deux fois -> un seul journal (etendue par T-ARG-017 et T-ARG-018)",
+      "fixtureRouge": "second gel creant un second releve",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-ARG-sepa-xsd",
+      "phase": 2,
+      "script": "tests/argent/sepa-xsd.spec.ts",
+      "tache": "T-ARG-018",
+      "verifie": "pain.001 valide contre le XSD, translitteration, EndToEndId <= 35 caracteres, debiteur = entite contractante (W1) ; un apporteur isTest n'apparait JAMAIS dans un pain.001 (REQ-QA-029)",
+      "fixtureRouge": "generer un fichier incluant un apporteur isTest",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-ARG-echec-ferme",
+      "phase": 2,
+      "script": "tests/argent/controles-versement.spec.ts",
+      "tache": "JUR-T16",
+      "alias": [
+        "GATE-JUR-VERSEMENT-ECHEC-FERME"
+      ],
+      "verifie": "controlesVersement() (RIB, mandat, SIRET, contrat, vigilance) n'est exporte que par UN SEUL module (JUR-T16, proprietaire unique) ; toute comparaison a SEUIL_VIGILANCE ailleurs rougit ; defaut = bloque sans attestation valide quel que soit le cumul (HYP-D7) ; etendue par T-ARG-032",
+      "fixtureRouge": "exporter controlesVersement depuis un second module",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-ARG-non-silence",
+      "phase": 2,
+      "script": "tests/argent/non-silence.spec.ts",
+      "tache": "DM-15",
+      "verifie": "aucune regle non resoluble ne rend un retour muet : ligne bloquee + motif enum + alerte ; motifs siren_manquant, bareme_indefini, commission_sup_ht, regime_tva_inattendu, ttc_manquant, plafond (etendue par T-ARG-015)",
+      "fixtureRouge": "regle rendant null sans ligne bloquee",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-ARG-tva-snapshot",
+      "phase": 2,
+      "script": "tests/argent/tva-snapshot.spec.ts",
+      "tache": "T-ARG-016",
+      "verifie": "regime TVA fige par autofacture ; changement le 15 -> la suivante est TTC, la precedente reste inchangee",
+      "fixtureRouge": "recalculer l'autofacture precedente",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-ARG-das2-seuil",
+      "phase": 3,
+      "script": "tests/argent/das2.spec.ts",
+      "tache": "DM-19",
+      "verifie": "cumul par beneficiaire et par annee, frontiere 2 399,99 / 2 400,00 (parametre SSOT), rattachement au versement bancaire, seuil absent -> export refuse",
+      "fixtureRouge": "declarer un cumul de 2 399,99",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-JUR-FAIT-GENERATEUR",
+      "phase": 2,
+      "script": "tests/domain/fait-generateur.spec.ts",
+      "tache": "DM-15",
+      "verifie": "seul paiement.recu cree une ligne acquise ; seul paiement.rembourse cree une reprise ; noms importes de packages/contracts/events.ts ; filleul sans vente -> 0 ligne ; second niveau de parrainage -> 0 (etendue par DM-16)",
+      "fixtureRouge": "faire creer une ligne acquise par devis.signe",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-ARG-cloisonnement",
+      "phase": 2,
+      "script": "tests/security/cloisonnement-documents.spec.ts",
+      "tache": "INT-T17",
+      "verifie": "releve, autofacture ou document d'un autre apporteur -> 404 byte-identique, jamais 403 (etendue par UX-P2-04)",
+      "fixtureRouge": "appeler /documents/:id avec l'id d'un autre apporteur",
+      "preuveRouge": null
+    },
+    {
+      "id": "mois-a-blanc",
+      "phase": 2,
+      "script": "scripts/gates/mois-a-blanc.ts",
+      "tache": "CPL-T11",
+      "verifie": "un cycle calendaire en mode ombre, ecart 0 centime contre la feuille manuelle (expert-comptable ou Will, jamais un agent) sur >= 5 apporteurs reels ; pilote CPL-T23 vert ; SEPA_EXPORT_ENABLED est un parametre en base sous step-up, l'environnement ne peut que le fermer ; conditionne l'ouverture de la phase 3",
+      "fixtureRouge": "booter en prod avec le drapeau ouvert sans MOIS_A_BLANC_VALIDE_LE",
+      "preuveRouge": null
+    },
+    {
+      "id": "idor:check",
+      "phase": 0,
+      "script": "tests/security/idor.spec.ts",
+      "tache": "SEC-05",
+      "alias": [
+        "G-SEC-IDOR",
+        "GATE-UX-CLOISONNEMENT"
+      ],
+      "verifie": "liste des routes derivee du systeme de fichiers ; chaque route appelee avec l'id d'un autre apporteur rend un 404 byte-identique a un id inexistant, PDF inclus ; DTO Zod strict (etendue en phase 2 par UX-P2-06)",
+      "fixtureRouge": "retirer un where d'une route de l'espace",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-AST-PRISMA",
+      "phase": 0,
+      "script": "scripts/gates/ast-prisma.ts",
+      "tache": "QA-T07",
+      "verifie": "Prisma brut hors scopedPrisma, new Date() dans le domaine et console.* -> refus ; 3 regles semgrep maison testees par semgrep --test (QA-T07)",
+      "fixtureRouge": "ecrire un findUnique non scope dans une page de l'espace",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-RATE-FAMILLE",
+      "phase": 0,
+      "script": "scripts/gates/rate-famille.ts",
+      "tache": "SEC-10",
+      "verifie": "chaque famille de limiteur declare surPanne (refuser ou laisser-passer) ; le comportement Redis coupe est exerce par un test",
+      "fixtureRouge": "declarer une famille depot:x sans surPanne",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-CONCURRENCE",
+      "phase": 1,
+      "script": "tests/integration/concurrence.spec.ts",
+      "tache": "SEC-12",
+      "verifie": "20 a 50 depots paralleles sur le meme SIREN -> exactement 1 occupante et au plus 2 en_attente (etendue en charge en phase 2 par QA-T29)",
+      "fixtureRouge": "retirer l'index partiel ou le verrou",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-WEBHOOK",
+      "phase": 1,
+      "script": "tests/security/webhook-signature.spec.ts",
+      "tache": "SEC-06",
+      "verifie": "200 / 401 / 401 / 413 / duplicate ; fixtures signees par le producteur reel ; jamais de 5xx",
+      "fixtureRouge": "accepter une signature plaintext seule",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-REVOCATION",
+      "phase": 0,
+      "script": "tests/security/revocation.spec.ts",
+      "tache": "SEC-04",
+      "verifie": "jeton revoque, sessionVersion++ et apporteur resilie -> refus (etendue en phase 1 par SEC-19)",
+      "fixtureRouge": "accepter une session apres sessionVersion++",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-ROLES",
+      "phase": 0,
+      "script": "scripts/gates/roles.ts",
+      "tache": "SEC-17",
+      "alias": [
+        "GATE-UX-ROLES"
+      ],
+      "verifie": "garde AST requireRole sur toute Server Action ; roles admin, qualifieur, comptable, lecteur ; lecteur et qualifieur -> 403 sur les 7 actions sensibles ; comptable sur lever_gel -> 403 ; route non declaree refusee",
+      "fixtureRouge": "ecrire une Server Action sans requireRole",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-HEADERS",
+      "phase": 0,
+      "script": "tests/security/headers.spec.ts",
+      "tache": "SEC-02",
+      "verifie": "CSP par nonce, frame-ancestors et HSTS sur /, /connexion, /espace, /deposer/[token] et les routes d'API",
+      "fixtureRouge": "retirer frame-ancestors de la CSP",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-ENV",
+      "phase": 0,
+      "script": "scripts/gates/env-boot.spec.ts",
+      "tache": "SEC-01",
+      "verifie": "boot en prod sans secret, ou avec un prefixe dev_ ou stub -> exit != 0 ; gitleaks (etendue par QA-T04)",
+      "fixtureRouge": "retirer un secret de l'environnement de test",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-ORACLE",
+      "phase": 1,
+      "script": "tests/security/oracle.spec.ts",
+      "tache": "SEC-16",
+      "alias": [
+        "GATE-JUR-VERIFIER-BINAIRE"
+      ],
+      "verifie": "DTO a 4 etats {libre, suivie_place_disponible, suivie_file_complete, non_disponible} (REQ-UX-007) ; libelles sans jour, sans nom et sans UUID ; client existant et attribution active -> DTO byte-identique ; cles exactes (etendue par UX-P1-01)",
+      "fixtureRouge": "rendre un DTO different entre 'cliente' et 'suivie'",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-NOTIF",
+      "phase": 1,
+      "script": "tests/security/notif-sans-pii.spec.ts",
+      "tache": "INT-T14",
+      "verifie": "aucune cle de contact, de montant ni de raison sociale dans Telegram, SMS ou push (etendue en phase 3 par SEC-26)",
+      "fixtureRouge": "envoyer un payload portant montantCents",
+      "preuveRouge": null
+    },
+    {
+      "id": "G-SEC-CI-BLOQUANTE",
+      "phase": 0,
+      "script": "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
+      "tache": "QA-T01",
+      "verifie": "aucun job de gate ne porte continue-on-error",
+      "fixtureRouge": "ajouter continue-on-error a un job de gate",
+      "preuveRouge": null
+    },
+    {
+      "id": "docuseal-strict",
+      "phase": 1,
+      "script": "tests/integration/docuseal.spec.ts",
+      "tache": "INT-T12",
+      "verifie": "signature <ts>.<hex64> seule acceptee ; plaintext seul -> 401 ; rejeu (type, submission_id, timestamp) -> duplicate ; apporteurId d'un autre -> ignore et alerte",
+      "fixtureRouge": "accepter une signature plaintext",
+      "preuveRouge": null
+    },
+    {
+      "id": "cliquet-ecrivains",
+      "phase": 0,
+      "script": "scripts/gates/cliquet-ecrivains.ts",
+      "tache": "INT-T03",
+      "verifie": "liste nominative des ecrivains de Payment, Devis.accepte, FactureFormation et avoir, Client, Submission ; tout nouvel ecrivain hors liste -> rouge (etendue par INT-T05 et INT-T22)",
+      "fixtureRouge": "ajouter un ecrivain sans entree dans la liste",
+      "preuveRouge": null
+    },
+    {
+      "id": "webhook-4-verdicts",
+      "phase": 1,
+      "script": "tests/integration/webhook-verdicts.spec.ts",
+      "tache": "SEC-06",
+      "verifie": "503 sans secret / 401 hors tolerance / 401 signature / 200 duplicate ; jamais de 5xx sur un dispatch qui throw (processedAt null, retryCount 1, 200)",
+      "fixtureRouge": "faire throw le dispatch et laisser remonter un 500",
+      "preuveRouge": null
+    },
+    {
+      "id": "inertie",
+      "phase": 0,
+      "script": "scripts/gates/inertie.ts",
+      "tache": "INT-T02",
+      "verifie": "PARTNERS_SYNC_ENABLED absent -> 0 ligne d'outbox, 0 job, 0 fetch cote axionia ; Partners ne contient jamais stub.invalid ; build sans DATABASE_URL (etendue par QA-T04)",
+      "fixtureRouge": "ecrire une ligne d'outbox avec le drapeau absent",
+      "preuveRouge": null
+    },
+    {
+      "id": "frontiere",
+      "phase": 1,
+      "script": "tests/integration/frontiere.spec.ts",
+      "tache": "SEC-07",
+      "verifie": "detectPii plus controle de contenu : ni montant avant devis.signe, ni identite d'un autre apporteur, ni coordonnees du contact ne traversent (API 1 rend {statut, until, apporteurRef} opaque, jamais nom, prenom ou e-mail) ; etendue par UX-P2-01",
+      "fixtureRouge": "faire traverser un champ nom dans le corps de reponse",
+      "preuveRouge": null
+    },
+    {
+      "id": "harnais-mcp",
+      "phase": 0,
+      "script": "scripts/gates/harnais-mcp.ts",
+      "tache": "INT-T11",
+      "verifie": "9 controles plus C13.3 ; manifeste a jour (pnpm mcp:manifeste) ; <= 6 500 octets par outil ; detectPii = 0 sur les fixtures maximales (etendue par INT-T13 et INT-T17)",
+      "fixtureRouge": "publier un outil de 6 501 octets",
+      "preuveRouge": null
+    },
+    {
+      "id": "api-gouv-degrade",
+      "phase": 0,
+      "script": "tests/integration/api-gouv.spec.ts",
+      "tache": "INT-T09",
+      "verifie": "429 moque -> mode degrade sans 500 ; <= 5 requetes/s ; breaker ouvert -> repli sans reseau ; contrat nightly rejoue sur fixture reelle",
+      "fixtureRouge": "faire rendre un 500 sur un 429",
+      "preuveRouge": null
+    },
+    {
+      "id": "email-emetteur",
+      "phase": 0,
+      "script": "tests/unit/email/emetteur.spec.ts",
+      "tache": "INT-T10",
+      "verifie": "sendEmail refuse un expediteur noreply@ et refuse d'envoyer sans PARTNERS_EMAIL_DMARC_VERIFIE ; le domaine d'envoi est celui tranche par W3",
+      "fixtureRouge": "envoyer depuis noreply@",
+      "preuveRouge": null
+    },
+    {
+      "id": "sante",
+      "phase": 1,
+      "script": "scripts/gates/sante.ts",
+      "tache": "QA-T19",
+      "verifie": "pending > 15 min, silence de 7 j, compteurs journalises meme a 0 ecart ; heartbeat perime -> notify() exactement une fois",
+      "fixtureRouge": "perimer un heartbeat sans notify()",
+      "preuveRouge": null
+    },
+    {
+      "id": "reconciliation-quotidienne",
+      "phase": 1,
+      "script": "tests/integration/reconciliation.spec.ts",
+      "tache": "INT-T08-A",
+      "verifie": "job QUOTIDIEN (REQ-INT-013), fenetre de 7 jours glissants, relecture par sequence plus somme HT par SIREN ; ecart -> alerte nommant les eventId manquants plus rejeu ; compteurs journalises meme a 0 ecart (INT-T08-A cote axionia)",
+      "fixtureRouge": "supprimer un evenement sans le rattraper",
+      "preuveRouge": null
+    },
+    {
+      "id": "jur:aucun-agregat-reseau",
+      "phase": 0,
+      "script": "scripts/gates/jur-aucun-agregat-reseau.ts",
+      "tache": "JUR-T26",
+      "verifie": "aucun DTO expose a l'espace apporteur ne contient de valeur agregee du reseau (moyenne, mediane, rang, percentile, total, comparaison) : un apporteur ne voit que ses donnees",
+      "fixtureRouge": "DTO temoin portant moyenneReseau",
+      "preuveRouge": null
+    },
+    {
+      "id": "jur:aucune-progression",
+      "phase": 0,
+      "script": "scripts/gates/jur-aucune-progression.ts",
+      "tache": "JUR-T26",
+      "verifie": "aucun composant de l'espace nomme ou type comme une progression vers un seuil (progress, remaining, toGoal, nextTier, objectif, restant)",
+      "fixtureRouge": "composant temoin ProgressToNextTier",
+      "preuveRouge": null
+    },
+    {
+      "id": "jur:suspension-motifs-fermes",
+      "phase": 1,
+      "script": "tests/domain/suspension-motifs.spec.ts",
+      "tache": "JUR-T24",
+      "verifie": "la fonction de suspension n'accepte que non_confirme et fraude : aucun compteur de volume, de rythme, de delai ou de methode ne peut l'atteindre",
+      "fixtureRouge": "appeler la suspension avec un motif de volume",
+      "preuveRouge": null
+    },
+    {
+      "id": "jur:revue-apporteur-facing",
+      "phase": 0,
+      "script": "scripts/gates/jur-revue-apporteur-facing.ts",
+      "tache": "JUR-T26",
+      "verifie": "toute PR touchant l'espace, les e-mails apporteur, la micro-copy ou les ressources porte le label apporteur-facing, la revue du role juriste et la checklist des 12 motifs cochee",
+      "fixtureRouge": "PR temoin d'ecran sans revue juriste",
+      "preuveRouge": null
+    },
+    {
+      "id": "jur:copy-indicative",
+      "phase": 0,
+      "script": "scripts/gates/jur-copy-indicative.ts",
+      "tache": "JUR-T29",
+      "verifie": "aucune formulation FERME de remuneration dans la copy publique : toute mention d'un taux, d'un forfait ou d'un montant de commission hors du gabarit de contrat porte la mention indicative et le renvoi a la grille annexee au contrat signe (W12) ; perimetre pages publiques d'axionia, kit de vente, ressources et e-mails de recrutement",
+      "fixtureRouge": "ecrire 'vous percevez 10 %' sans mention indicative dans une page publique",
+      "preuveRouge": null
+    },
+    {
+      "id": "jur:grille-chiffree",
+      "phase": 0,
+      "script": "scripts/gates/jur-grille-chiffree.ts",
+      "tache": "JUR-T01",
+      "verifie": "refus de publier un gabarit dont l'annexe 1 contient les mots forfait, bareme ou pourcentage SANS valeur numerique dans la meme cellule",
+      "fixtureRouge": "annexe temoin portant 'forfait' seul",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-JUR-VOCAB-PUBLIC",
+      "phase": 0,
+      "script": "scripts/gates/vocab-public.ts",
+      "tache": "JUR-T03",
+      "verifie": "copy publique d'axionia : 'mandataire permanent', 'VRP', 'vente signee', 'des la signature' interdits ; gate lexicale financement INCONDITIONNELLE (ne lit aucun drapeau, ni isQualiopiCertificationObtenue(), ni QUALIOPI_CERTIFICATION_OBTENUE) sur 'prise en charge a 100 %', 'finance par Qualiopi', 'sans avance de frais', 'Qualiopi' nu et toute periphrase ; formulation SSOT = phrase validee par Will le 2026-08-19 ; exclusions src/content/keywords/** et le badge 'N°1 en France'",
+      "fixtureRouge": "reintroduire la phrase de commercial-offer.ts l. 103",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-JUR-CONTRAT-COMPLET",
+      "phase": 0,
+      "script": "tests/unit/contrat/contract-template-complete.spec.ts",
+      "tache": "JUR-T01",
+      "verifie": "chaque identifiant de clause CL-* du gabarit v1 est present ; clause de competence et de loi, mandat d'autofacturation, cases d'acceptation distinctes",
+      "fixtureRouge": "retirer une clause CL-* du gabarit",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-JUR-SIGNATURE-AVANT-DEPOT",
+      "phase": 1,
+      "script": "tests/integration/signature-avant-depot.spec.ts",
+      "tache": "INT-T12",
+      "verifie": "depot refuse tant que le contrat est pending ; cases d'acceptation distinctes (non cochee -> pas signed) ; contrat a_resigner -> refus a J+30 (REQ-CPL-028, etendue par INT-T23)",
+      "fixtureRouge": "accepter un depot avec un contrat pending",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-JUR-ACTEUR-HUMAIN",
+      "phase": 1,
+      "script": "tests/domain/acteur-humain.spec.ts",
+      "tache": "SEC-19",
+      "verifie": "transition suspendu/resilie sans acteur humain identifie et sans motif ecrit -> throw ; resiliation ordinaire sans preavis PREAVIS_JOURS -> refus ; AUCUNE ligne dechue ne peut etre produite, quel que soit le motif ; aucun compteur de gradation atteignable (etendue par JUR-T28 ; remplace GATE-JUR-SANCTION-HUMAINE, retiree le 2026-09-03 avec le bareme, la decheance et le contradictoire)",
+      "fixtureRouge": "faire produire une ligne dechue par une resiliation",
+      "preuveRouge": null
+    },
+    {
+      "id": "lexique-financement-ressources",
+      "phase": 3,
+      "script": "scripts/gates/lexique-financement-ressources.ts",
+      "tache": "UX-P3-02",
+      "verifie": "meme liste d'interdits que GATE-JUR-VOCAB-PUBLIC, inconditionnelle, sur le kit, la FAQ et les argumentaires Partners ; chaque affirmation sourcee (REQ-CPL-023)",
+      "fixtureRouge": "ressource portant 'sans avance de frais'",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-UX-A11Y",
+      "phase": 0,
+      "script": "tests/a11y/axe.spec.ts",
+      "tache": "UX-P0-03",
+      "verifie": "axe : 0 violation serious ou critical, profils iPhone et desktop, espace et console",
+      "fixtureRouge": "commiter une page-piege",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-UX-CIBLES",
+      "phase": 0,
+      "script": "tests/a11y/cibles.spec.ts",
+      "tache": "UX-P0-03",
+      "verifie": "cibles tactiles >= 48 px dans l'espace, >= 44 px dans la console",
+      "fixtureRouge": "commiter une page-piege a 32 px",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-UX-REFLOW",
+      "phase": 0,
+      "script": "tests/a11y/reflow.spec.ts",
+      "tache": "UX-P0-03",
+      "verifie": "320 px et zoom 200 % sans defilement horizontal",
+      "fixtureRouge": "commiter une page-piege a largeur fixe",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-UX-ETATS-VIDES",
+      "phase": 1,
+      "script": "tests/ux/etats-vides.spec.ts",
+      "tache": "UX-P1-08",
+      "verifie": "snapshots sur base vide ET sur seed volumetrique pour chaque ecran",
+      "fixtureRouge": "livrer un ecran sans etat vide",
+      "preuveRouge": null
+    },
+    {
+      "id": "GATE-UX-HORS-LIGNE",
+      "phase": 1,
+      "script": "tests/ux/hors-ligne.spec.ts",
+      "tache": "UX-P1-03",
+      "verifie": "brouillon IndexedDB, envoi au retour de connexion, horodatage a la RECEPTION par le serveur, brouillon de 25 h purge (etendue en phase 3 par UX-P3-01 et SEC-26)",
+      "fixtureRouge": "afficher 'a votre nom' avant la reception serveur",
+      "preuveRouge": null
+    },
+    {
+      "id": "perf:bundle",
+      "phase": 0,
+      "script": "scripts/gates/bundle-par-route.ts",
+      "tache": "QA-T20",
+      "alias": [
+        "GATE-UX-BUNDLE"
+      ],
+      "verifie": "budget 75 KB gz PAR ROUTE mesure par script maison sur .next/static/chunks/app/ (une entree par route ; jamais size-limit, qui somme les globs) plus LHCI lab mobile (LCP <= 1 800 ms, CLS 0, INP <= 100 ms) ; seuils poses apres premiere mesure (GOV-019), armes bloquants par QA-T20b ; continue-on-error interdit",
+      "fixtureRouge": "importer une librairie de graphiques dans une route de l'espace",
+      "preuveRouge": null
+    },
+    {
+      "id": "spec-espace-mobile",
+      "phase": 1,
+      "script": "tests/unit/ci/spec-espace-mobile.spec.ts",
+      "tache": "QA-T16",
+      "verifie": "toute spec Playwright de l'espace tourne sur les projets mobile seulement",
+      "fixtureRouge": "taguer une spec de l'espace en chromium desktop",
+      "preuveRouge": null
+    },
+    {
+      "id": "maquettes-validees",
+      "phase": 0,
+      "script": "scripts/gates/maquettes-validees.ts",
+      "tache": "UX-P0-02",
+      "verifie": "docs/maquettes/VALIDATION.md (ecran, date, valide par Will) ; une tache UX-P1-*, UX-P2-* ou UX-P3-* sans ligne 'valide' n'est pas attribuable, et le composeur l'ecarte avec la raison 'maquette non validee par Will'",
+      "fixtureRouge": "attribuer une UX-P1-* sans ligne validee",
+      "preuveRouge": null
+    },
+    {
+      "id": "gate-sec",
+      "phase": 0,
+      "script": ".github/workflows/ci.yml#gate-sec",
+      "tache": "QA-T07",
+      "verifie": "semgrep (regles publiques plus 3 regles maison testees par semgrep --test), pnpm audit --prod --audit-level=high, gitleaks",
+      "fixtureRouge": "PR temoin avec un findUnique non scope",
+      "preuveRouge": null
+    },
+    {
+      "id": "gate-b",
+      "phase": 0,
+      "script": ".github/workflows/ci.yml#gate-b",
+      "tache": "QA-T02",
+      "verifie": "testcontainers (Postgres 16 et Redis), contrat, rejeu, perf:bundle, LHCI, Playwright sur preview, axe (etendue en phase 1 par QA-T06 et QA-T20)",
+      "fixtureRouge": "deux fichiers portant le meme SIREN avec collision",
+      "preuveRouge": null
+    },
+    {
+      "id": "gate-c",
+      "phase": 0,
+      "script": "scripts/gates/gate-c.sh",
+      "tache": "QA-T05",
+      "verifie": "image demarree, readyz 200, migrations_pending 0 en <= 3 min, webhook signe de test -> 200, migration cassee -> exit en < 60 s ; pnpm deploy:verify <sha> lit x-partners-build-sha",
+      "fixtureRouge": "livrer une migration cassee",
+      "preuveRouge": null
+    },
+    {
+      "id": "gate-d",
+      "phase": 0,
+      "script": "scripts/gates/gate-d.sh",
+      "tache": "QA-T11",
+      "verifie": "base vierge, dump N-1, migrate diff vide, image N-1 sur schema N, lint SQL",
+      "fixtureRouge": "PR temoin portant un DROP COLUMN",
+      "preuveRouge": null
+    },
+    {
+      "id": "mutation",
+      "phase": 0,
+      "script": "scripts/gates/stryker.sh",
+      "tache": "QA-T30",
+      "verifie": "Stryker sur src/domain : seuil aligne sur la mesure puis >= 80 % bloquant sur les fichiers touches ; run complet en nightly",
+      "fixtureRouge": "laisser survivre un mutant sous le seuil",
+      "preuveRouge": null
+    },
+    {
+      "id": "gate-nightly",
+      "phase": 0,
+      "script": ".github/workflows/nightly.yml",
+      "tache": "QA-T00",
+      "verifie": "contrat reel API gouv (INT-T09), heartbeats (QA-T19), reconciliation quotidienne (INT-T08), ZAP baseline (QA-T07 et QA-T19), audit, Stryker complet (QA-T30), gates:prouvees (QA-T00), drill de restauration mensuel (QA-T12), drill de resilience trimestriel (QA-T27)",
+      "fixtureRouge": "alterer la fixture API gouv",
+      "preuveRouge": null
+    },
+    {
+      "id": "red-first",
+      "phase": 0,
+      "script": ".github/workflows/red-first.yml",
+      "tache": "CPL-T22",
+      "verifie": "les tests nouveaux d'une PR, executes contre main, DOIVENT echouer (sauf marqueur @no-red-first justifie)",
+      "fixtureRouge": "PR temoin dont le test passe deja sur main",
+      "preuveRouge": null
+    },
+    {
+      "id": "gov:derivation",
+      "phase": -1,
+      "script": "scripts/gates/gov-derivation.ts",
+      "tache": "GOV-014",
+      "verifie": "toute valeur presente dans deux endroits est DERIVEE d'une source unique, jamais recopiee : grille, seuils legaux, listes d'etats, libelles d'enum",
+      "fixtureRouge": "recopier un taux de commission dans un second fichier",
+      "preuveRouge": null
+    },
+    {
+      "id": "fixtures:source",
+      "phase": 0,
+      "script": "scripts/gates/fixtures-source.ts",
+      "tache": "INT-T01a",
+      "verifie": "toute fixture porte un en-tete `Source:` nommant le producteur reel qui l'a generee ; une fixture ecrite a la main est refusee",
+      "fixtureRouge": "ajouter une fixture sans en-tete Source",
+      "preuveRouge": null
+    },
+    {
+      "id": "jur:lexique-social",
+      "phase": 0,
+      "script": "scripts/gates/jur-lexique-social.ts",
+      "tache": "JUR-T26",
+      "verifie": "aucun terme du droit social dans ce qu'un apporteur peut lire (espace, e-mails, micro-copy, gabarits de documents, ressources) : bulletin, fiche de paie, net a payer, brut, salaire, charges salariales, cotisations retenues, attestation d'emploi, certificat de travail, solde de tout compte, conges, anciennete, prime ; et aucun gabarit de document reprenant les rubriques d'un bulletin de paie",
+      "fixtureRouge": "intituler un gabarit « bulletin de commission »",
+      "preuveRouge": null
+    }
+  ]
+}

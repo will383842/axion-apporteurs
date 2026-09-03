@@ -1,0 +1,67 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  ⚠️  CE DÉPÔT EST PUBLIC.
+#  Tout ce qui est poussé ici est définitivement lisible — y compris après un
+#  passage en privé (forks, caches, miroirs). Voir REQ-GOV-031 et la décision W13.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# (a) Doctrine anti-requalification — ne JAMAIS publier.
+#     Ces documents établiraient la connaissance du risque et l'intention :
+#     ce sont des pièces à charge, pas de la documentation.
+docs/ANTI-REQUALIFICATION.md
+docs/**/ANTI-REQUALIFICATION*.md
+docs/CONSTATS.md
+docs/MANQUES-ET-RISQUES.md
+docs/EXTENSIONS-*.md
+docs/GRILLE-PAR-APPORTEUR*.md
+docs/W6-*.md
+docs/spec/
+
+# (b) Seuils de détection d'abus — publiés, les détecteurs sont contournables.
+#     Ils vivent en configuration ou en base, jamais dans un fichier versionné.
+config/seuils.local.*
+**/detecteurs.seuils.*
+
+# (c) Montants de la grille et économie du réseau.
+config/grille.*.json
+docs/annexe-1-montants.*
+
+# Contrat : le gabarit est public (il est remis à chaque apporteur), mais pas
+# ses notes d'arbitrage ni la version de travail portant les commentaires.
+docs/CONTRAT-APPORTEUR-V1.md
+
+# ── Secrets — sur un dépôt public, un jeton commité est moissonné en minutes ──
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+
+# ── Node / Next / build ──
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+.turbo/
+
+# ── Tests et outils ──
+coverage/
+playwright-report/
+test-results/
+.nyc_output/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ── Environnement de travail ──
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# ── Lots de travail (générés par le composeur, propres à une session) ──
+docs/lots/

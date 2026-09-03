@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_commentaire": [
+    "MATRICE D'AUTONOMIE DES AGENTS — Axion Partners.",
+    "Ce fichier EST la matrice (REQ-CPL-021) : il n'y a pas de document séparé qui la décrirait.",
+    "La gate `gov:autonomie` rougit sur toute ligne de la matrice documentaire sans règle correspondante ici.",
+    "Cible : axion-partners/.claude/settings.json — déplacé par GOV-000.",
+    "Ne jamais assouplir un `deny` pour débloquer une tâche : rendre `stop` et remonter à Will.",
+    "L'allow-list doit couvrir TOUT ce que le SKILL /lot et lot.workflow.js exigent textuellement :",
+    "en autopilote, une commande hors allow ouvre une demande de permission qui FIGE la session."
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(pnpm *)",
+      "Bash(npx vitest *)",
+      "Bash(npx tsx*)",
+      "Bash(node scripts/*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git fetch*)",
+      "Bash(git merge*)",
+      "Bash(git rebase*)",
+      "Bash(git checkout -b t/*)",
+      "Bash(git switch*)",
+      "Bash(git push -u origin t/*)",
+      "Bash(git worktree add*)",
+      "Bash(git worktree list*)",
+      "Bash(git worktree prune*)",
+      "Bash(git worktree remove*)",
+      "Bash(gh pr create*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr checks*)",
+      "Bash(gh pr review*)",
+      "Bash(gh pr diff*)",
+      "Bash(gh pr merge*)",
+      "Bash(gh pr update-branch*)",
+      "Bash(gh issue list*)",
+      "Bash(gh issue view*)",
+      "Bash(gh issue create*)",
+      "Bash(gh issue edit*)",
+      "Bash(gh issue comment*)",
+      "Bash(gh label*)",
+      "Bash(gh repo view*)",
+      "Bash(gh api*)",
+      "Bash(gh run list*)",
+      "Bash(gh run view*)",
+      "Bash(curl -sI*)",
+      "Bash(docker compose*)"
+    ],
+    "deny": [
+      "Bash(gh pr merge * --auto*)",
+      "Bash(gh pr merge * --admin*)",
+      "Bash(gh api * /branches/main/protection*)",
+      "Bash(git push origin main*)",
+      "Bash(git push * main*)",
+      "Bash(git push * HEAD:main*)",
+      "Bash(git push * +main*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(rm -rf *)",
+      "Bash(prisma migrate deploy*)",
+      "Bash(pnpm prisma migrate deploy*)",
+      "Bash(npx prisma migrate*)",
+      "Bash(pnpm exec prisma migrate*)",
+      "Bash(pnpm db:deploy*)",
+      "Bash(pnpm db:push*)",
+      "Bash(psql*)",
+      "Bash(curl * -X POST https://api.coolify*)",
+      "Write(docs/PLAN-STATE.md)",
+      "Edit(docs/PLAN-STATE.md)",
+      "Write(docs/REQUIREMENTS.md)",
+      "Edit(docs/REQUIREMENTS.md)",
+      "Write(docs/DECISIONS.md)",
+      "Edit(docs/DECISIONS.md)",
+      "Write(docs/tasks.json)",
+      "Edit(docs/tasks.json)",
+      "Write(docs/gates.json)",
+      "Edit(docs/gates.json)",
+      "Write(.claude/settings.json)",
+      "Edit(.claude/settings.json)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/gates/hook-env.js"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "NOTIFY_SINK": "true",
+    "SEPA_EXPORT_ENABLED": "false"
+  }
+}
