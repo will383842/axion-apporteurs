@@ -16,6 +16,16 @@ cd C:\Users\willi\Documents\Projets\axion-apporteurs   # ⚠️ DEPUIS le dépô
 claude                                                  #    de rôle ne résolvent pas
 ```
 
+> **Comment une session arrive ici sans qu'on le lui demande.** Le `CLAUDE.md` à la racine du dépôt
+> est lu automatiquement par toute session ouverte dans `axion-apporteurs`, et sa première consigne
+> est de venir lire le paragraphe ci-dessous — quelle que soit la formulation de la demande.
+> **Ne pas figer le premier geste dans `CLAUDE.md`** : il change à chaque session, et un `CLAUDE.md`
+> qui le recopie devient faux sans que rien ne le signale. Il pointe, il ne duplique pas.
+>
+> La mémoire de session, elle, ne sert à rien ici : elle est rangée **par répertoire de projet**, et
+> celle du chantier vit sous `Projets\Axion-IA`. Une session ouverte depuis `axion-apporteurs` ne la
+> charge pas. Le dépôt doit donc se suffire à lui-même — c'est le sens de cette note.
+
 ### ⚠️ Le premier geste de la prochaine session n'est PAS de composer un lot
 
 **La PR #30 est ouverte et incomplète — elle se finit avant tout le reste.** Elle porte la clôture

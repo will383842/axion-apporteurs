@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `ab5caf5` — 2026-09-04T07:58:37+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #30 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #30 (rien) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase -1 — 20/26 tâches, reste 3.00 j |
-| Le prochain pas | GOV-013 — Gate lexicale « commercial » (chemin critique) |
+| Le prochain pas | fusionner #30, puis GOV-013 — Gate lexicale « commercial » (chemin critique) |
 | Ce qui bloque | 3 tâche(s) bloquée(s) ou en attente externe · 9 question(s) pour Will |
 | Dernière entrée de journal | PR #30 — 2026-09-04 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 30 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
@@ -68,7 +68,7 @@ Reste sur ce chemin : **17.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #30 — chore(GOV-012): cloture du lot L-1-03 — huit taches fusionnee, atterrissage atteste | `lot/L-1-03-cloture` | un contrôle requis rouge ou une revue manquante |
+| 1 | #30 — chore(GOV-012): cloture du lot L-1-03 — huit taches fusionnee, atterrissage atteste | `lot/L-1-03-cloture` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -89,7 +89,8 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 
 ## Prochain pas
 
-1. **GOV-013** — Gate lexicale « commercial » (0.25 j, **sur le chemin critique**) : 3 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+1. **Fusionner #30** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+2. **GOV-013** — Gate lexicale « commercial » (0.25 j, **sur le chemin critique**) : 3 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
@@ -109,7 +110,9 @@ le dépôt passe de 12 à 20 tâches livrées sur 197, de 9,50 à 13,50 j sur 14
 affirmé : le run `Gate A` du `push` sur `main` a été lu vert (`33842493472`, `ab5caf5`), puis la
 8ᵉ case de #28 et #29 cochée, puis `lot:cloture` lancé. `docs/TRACABILITE.md` passe de 22 à 31
 exigences réputées testées — non par ajout de tests, mais parce que la clôture rend enfin visibles
-les promesses `tests{}` de huit tâches jusque-là non livrées.
+les promesses `tests{}` de huit tâches jusque-là non livrées ; et le dépôt reçoit un `CLAUDE.md`
+racine, lu automatiquement par toute session ouverte ici, qui renvoie au §1 de
+`docs/REPRISE-SESSION.md` pour le premier geste plutôt que de le figer.
 
 **Reste.** Les quatre lentilles n'ont pas rendu leur verdict sur cette PR : la session qui l'ouvre
 avait pour consigne de clôturer `L-1-03` et de s'arrêter sans composer le lot suivant, et
