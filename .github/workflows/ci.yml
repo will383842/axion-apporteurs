@@ -66,6 +66,45 @@ jobs:
         run: pnpm gov:autonomie:prove
       - name: Gabarit de PR, CODEOWNERS et charte des agents
         run: pnpm gov:pr
+      - name: Inventaire prouve — tout etat >= code porte une preuve
+        run: pnpm gov:inventaire
+      - name: La garde de l inventaire sait rougir
+        run: pnpm gov:inventaire:prove
+      - name: Fiches de role derivees de docs/agents.json
+        run: pnpm gov:agents
+      - name: La garde des fiches sait rougir
+        run: pnpm gov:agents:prove
+      - name: Les fiches sur le disque sont egales a leur source
+        run: pnpm gov:agents:verifier
+      # Seule la PREUVE entre ici : le mode en ligne rend 2 sous le jeton d Actions, qui ne
+      # lit pas la protection de branche. Le mode en ligne tourne en nightly.
+      - name: La garde du depot sait rougir
+        run: pnpm gov:depot-visibilite:prove
+      # Les 16 ruptures que cette garde a trouvees le 2026-09-04 sont CORRIGEES : elle est verte,
+      # donc bloquante. La cause racine des 13 premieres etait `gardes.spec.ts`, douze promesses
+      # de couverture et zero annotation `@req`.
+      - name: Matrice de tracabilite REQ vers tache vers test vers PR
+        run: pnpm gov:trace
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: La matrice de tracabilite sait rougir
+        run: pnpm gov:trace:prove
+      - name: La vue de tracabilite est derivee de ses sources
+        run: pnpm gov:trace:verifier
+      # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,
+      # elle ECHOUE en nommant les cinq familles non evaluees — et c est voulu : une gate verte
+      # parce qu elle n a pas pu lire est pire que pas de gate. Constate en CI le 2026-09-04,
+      # premier run de cette etape : « gh: To use GitHub CLI in a GitHub Actions workflow, set the
+      # GH_TOKEN environment variable ». La reponse n est PAS `--hors-ligne`, qui abandonnerait les
+      # cinq familles en silence : c est de lui donner le jeton pour qu elle fasse son travail.
+      - name: Etat vivant — fraicheur, verrou d owner, journal
+        run: pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: La garde de l etat vivant sait rougir
+        run: pnpm gov:etat:prove
+      - name: contracts:hash — le contrat est derive, et son empreinte le tient
+        run: pnpm contracts:hash
       - name: La garde de PR sait rougir
         run: pnpm gov:pr:prove
       - name: Vue GATES.md derivee du registre
@@ -76,5 +115,11 @@ jobs:
         run: pnpm lot:paths:check
       - name: Typecheck
         run: pnpm typecheck
+      # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :
+      # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
+      # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
+      # Sans le jeton ici, la suite rougissait sur deux tests qui ne disaient rien du code.
       - name: Tests
         run: pnpm test
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

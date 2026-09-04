@@ -93,6 +93,19 @@ décision d'architecture que rien ne peut voir mourir est une intention, pas une
 l'assertion n'est pas écrite et vue rougir (RM-02), l'ADR reste `propose` et nomme la tâche qui la
 posera.
 
+**Et cette assertion EXISTE** (GOV-010). Le fichier cité est sur le disque, sous `tests/` ou `src/`,
+et un `it()` — ou un `test()` — y porte **exactement** le titre cité, aux espaces de mise en page
+près. Trois conséquences pratiques :
+
+- **Le titre cité est LITTÉRAL.** Un `it()` dont le titre est calculé (`describe.each`, gabarit de
+  chaîne `` `… ${n} …` ``) n'a pas de titre avant l'exécution, et le recopier fige une valeur dont la
+  source est ailleurs (RM-01) — c'est déjà la doctrine de partners/ADR-0003 et partners/ADR-0005.
+  On cite un titre littéral du même fichier, et la garde nomme le gabarit qu'elle a reconnu.
+- **Une assertion à venir se cite sous « Reste à faire »**, jamais sous « Ce qui le vérifie » : cette
+  rubrique-là est jugée, et un ADR `accepte` dont toutes les assertions restent à poser n'est pas
+  `accepte`. Un ADR `propose`, lui, annonce librement ce qu'il attend — la garde ne le juge pas.
+- **Le motif d'un `hors-code` fait au moins quarante caractères.** La mention seule ne suffit pas.
+
 ## 3. Ce qu'un ADR ne fait jamais
 
 - **Trancher une décision de Will.** Ces décisions vivent dans `docs/DECISIONS.md` ; un ADR les cite
@@ -105,7 +118,7 @@ posera.
 ## 4. Ce qui tient ce dossier
 
 **La garde `gov:adr`** (`scripts/gates/gov-adr.ts`, ligne inscrite dans `docs/gates.json`) est livrée
-avec ce gabarit et tient douze familles de règles, chacune vue rougir sur son propre témoin
+avec ce gabarit et tient **seize** familles de règles, chacune vue rougir sur son propre témoin
 (`pnpm gov:adr --prove`, RM-02) : dossier unique ; noms de fichiers conformes ; numéros uniques et
 consécutifs depuis `0001`, `0000` exclu ; titre qualifié par son dépôt ; statut dans le vocabulaire
 fermé ; six rubriques présentes ; tout ADR `accepte` porteur d'une assertion ou d'un `hors-code`
@@ -114,9 +127,21 @@ dépôt ; toute référence `partners/ADR-nnnn` désignant un ADR qui existe —
 déclaré au registre, recopié ici mot pour mot : « referencer ADR-9999 dans une PR ». Les guillemets
 ne sont pas un ornement : sans eux, cette phrase ferait rougir la garde qu'elle décrit.
 
+Les **quatre dernières familles sont celles de GOV-010** (REQ-GOV-009), et elles ne jugent que les
+ADR `accepte` : `assertion_fichier_absent` (le fichier cité n'existe pas, ou un titre est cité sans
+fichier) ; `assertion_titre_absent` (le fichier existe, aucun `it()` n'y porte ce titre) ;
+`assertion_titre_calcule` (le seul `it()` qui corresponde est un gabarit de chaîne) ;
+`hors_code_sans_motif`. Avant elles, la garde ne jugeait que la **présence** du texte : un ADR
+pouvait citer un fichier qui n'existait pas et rester vert.
+
 **Le test `adr-index-derive.spec.ts`** (déclaré par GOV-009 pour REQ-CPL-018 et REQ-GOV-008) est
 livré sous `tests/unit/gouvernance/` : il compare l'index au listage, exerce la garde dans ses deux
 modes, et a été vu rougir sur un index amputé à la main.
+
+**Le test `adr-assertion-existe.spec.ts`** (déclaré par GOV-010 pour REQ-GOV-009) relit les ADR
+`accepte` **sans passer par la garde** — un test qui juge une garde en lui demandant si elle est
+contente ne juge rien — et exige que chaque titre cité se retrouve littéralement dans le fichier
+cité. Il a été vu rougir sur partners/ADR-0007, qui citait un titre calculé.
 
 ## 5. Reste à faire
 
@@ -126,10 +151,11 @@ modes, et a été vu rougir sur un index amputé à la main.
    source REQ-GOV-009 et pour synonymes interdits `Accepted`, `Proposed`, `Superseded`, `deprecated`.
    Ce gabarit ne peut pas l'écrire lui-même : `docs/GLOSSAIRE.md` est un fichier réservé
    (CONVENTIONS §8).
-2. **GOV-010 lit `accepte`, pas « Accepted ».** Le texte de REQ-GOV-009 emploie le mot anglais
-   *Accepted* ; CONVENTIONS §1 impose le français pour les ADR. Le vocabulaire retenu ici est
-   `accepte` : la garde de GOV-010 doit le reconnaître, et le `gardien-spec` reste seul habilité à
-   reformuler REQ-GOV-009.
+2. ~~**GOV-010 lit `accepte`, pas « Accepted ».**~~ **Fait.** Le texte de REQ-GOV-009 emploie le mot
+   anglais *Accepted* ; CONVENTIONS §1 impose le français pour les ADR. Le vocabulaire retenu ici
+   est `accepte`, et c'est ce que lit la garde de GOV-010 : elle ne connaît que les trois valeurs
+   françaises, et `Accepted` rougit déjà comme `statut_hors_vocabulaire`. Reformuler le texte de
+   REQ-GOV-009 reste au `gardien-spec`, seul habilité.
 3. **Trois renvois d'ADR restent non qualifiés dans des fichiers réservés** — `docs/DECISIONS.md`
    (deux) et `docs/TASKS.md` (un, rendu depuis `docs/tasks.json`). GOV-009 n'a pas le droit de les
    écrire : `gov:adr` les nomme à chaque exécution au lieu de les refuser, et

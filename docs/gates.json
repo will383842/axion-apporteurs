@@ -29,14 +29,14 @@
     {
       "id": "req:check",
       "phase": -1,
-      "script": "scripts/gates/req-check.ts",
+      "script": "scripts/gates/gov-trace.ts",
       "tache": "GOV-011",
       "alias": [
         "gov:trace"
       ],
-      "verifie": "matrice REQ -> test -> PR derivee ; la PAIRE (tache, REQ) pointe vers un test nomme (identifiant dans le titre du it()), annote @req et vert ; orphelins dans les deux sens -> rouge ; chaque module (1-21) et chaque etape (1-12) ont au moins une REQ. GOV-011 pose la matrice et le script en phase -1 ; QA-T03 l'etend et l'arme dans Gate A en phase 0",
-      "fixtureRouge": "citer une REQ sans test",
-      "preuveRouge": null
+      "verifie": "matrice REQ -> tache -> test -> PR derivee de quatre sources (registre, backlog, disque, corps des PR fusionnees ; la quatrieme est FACULTATIVE et son absence est imprimee, jamais tue). PERIMETRE EXACT, dit plutot que suppose : environ la MOITIE des promesses de `tests{}` ne portent aucun `#` et ne nomment donc qu'un FICHIER — pour celles-la le controle se ramene a l'existence et a l'execution de ce fichier, et il refuse de choisir en cas d'ambiguite (famille `promesse_ambigue`). Pour celles qui portent un `#`, le titre est RESOLU par `vitest list --json`, gabarits `describe.each` compris, et confronte au disque QUEL QUE SOIT le statut de la tache des lors que le fichier existe — un filtre de statut laissait passer 33 entrees ecrites par le lot en cours (PR 28, lentille exactitude). Orphelins dans les deux sens, tache sans REQ, test citant une REQ inconnue, vue divergente. GOV-011 pose la matrice en phase -1 ; QA-T03 l'etend et l'arme dans Gate A en phase 0",
+      "fixtureRouge": "promettre pour une REQ un test qui existe mais ne la cite jamais (temoin req_non_citee_par_son_test), ou promettre un titre de it() perime (temoin test_promis_absent)",
+      "preuveRouge": "pnpm gov:trace --prove — 10 familles, un temoin chacune, 8 contre-temoins verts ; et `pnpm gov:trace` sur la branche lot/L-1-03-integration le 2026-09-04, 16 ruptures nommees (7 req_sans_test, 3 test_promis_absent, 6 req_non_citee_par_son_test)"
     },
     {
       "id": "gov:identifiants",
@@ -52,9 +52,9 @@
       "phase": -1,
       "script": "scripts/gates/gov-adr.ts",
       "tache": "GOV-009",
-      "verifie": "dossier unique partners/ADR-0001+, numeros consecutifs, index derive du systeme de fichiers, references qualifiees, chaque ADR porte une assertion ou la mention hors-code",
-      "fixtureRouge": "referencer ADR-9999 dans une PR",
-      "preuveRouge": "12 familles, un temoin chacune, 5 contre-temoins verts (pnpm gov:adr --prove)"
+      "verifie": "dossier unique partners/ADR-0001+, numeros consecutifs, index derive du systeme de fichiers, references qualifiees, chaque ADR porte une assertion ou la mention hors-code — et (GOV-010, REQ-GOV-009) cette assertion EXISTE : le fichier de test est sur le disque, un it() y porte exactement ce titre, litteral et non calcule par un gabarit de chaine, et un hors-code porte au moins 40 caracteres de motif",
+      "fixtureRouge": "referencer ADR-9999 dans une PR ; ou faire citer par un ADR accepte un it() qui n'existe dans aucun fichier de test",
+      "preuveRouge": "16 familles, un temoin chacune, 11 contre-temoins verts (pnpm gov:adr --prove)"
     },
     {
       "id": "gov:tasks",
@@ -77,11 +77,11 @@
     {
       "id": "gov:depot-visibilite",
       "phase": -1,
-      "script": "scripts/gates/gov-depot-visibilite.sh",
+      "script": "scripts/gates/gov-depot.ts",
       "tache": "GOV-012",
-      "verifie": "la visibilite du depot est celle qu'a decidee W13 (PUBLIC) et le check requis `gate-a` est arme sur main ; l'image GHCR reste privee (Coolify tire avec un PAT read:packages, seul reliquat de HYP-E1-27)",
-      "fixtureRouge": "basculer un depot temoin dans l'autre visibilite, ou retirer le check requis",
-      "preuveRouge": null
+      "verifie": "la visibilite reelle du depot (`gh repo view --json visibility`) vaut la valeur LUE dans la ligne W13 de docs/DECISIONS.md (jamais recopiee) ; le check requis de main porte le nom EXACT du job produit par ci.yml sur pull_request (derive du fichier) ; `required_linear_history` arme ; `allow_force_pushes`/`allow_deletions` refuses ; aucun workflow ne pousse sur main (jugerPush de git-push-sur.js, source unique) ; une protection SUPPRIMEE (« Branch not protected ») est un ROUGE, une protection NON LUE est un INDETERMINE (sortie 2), jamais un vert. L'image GHCR reste privee (seul reliquat de HYP-E1-27)",
+      "fixtureRouge": "basculer la visibilite de la vue injectee, retirer `gate-a` des contexts, ou poser une etape `git push origin lot/x:main --force` dans un workflow temoin",
+      "preuveRouge": "pnpm gov:depot-visibilite:prove — 9 familles, chacune vue rougir sur son propre defaut injecte, 5 etapes de workflow legitimes en contre-temoins"
     },
     {
       "id": "gov:autonomie",
@@ -90,7 +90,7 @@
       "tache": "GOV-000",
       "verifie": "la matrice d'autonomie EST .claude/settings.json + hook-env.js : deny sur git push origin main*, git push --force*, prisma migrate deploy*, pnpm db:deploy*, Write/Edit de PLAN-STATE.md, REQUIREMENTS.md, DECISIONS.md, tasks.json ; hook PreToolUse declare sur Bash ; toute ligne de la matrice (REQ-CPL-021) sans regle correspondante -> rouge",
       "fixtureRouge": "retirer une regle deny de settings.json ; ou rendre `jugerPush` toujours permissif — c'est l'etat du depot AVANT cette garde, ou `git push origin lot/x:main --force` passait",
-      "preuveRouge": "pnpm gov:autonomie:prove — 4 familles (deny_manquant, hook_non_declare, hook_sans_analyse, commande_laissee_passer), un temoin chacune, 12 commandes dangereuses refusees et 7 legitimes acceptees en contre-temoins"
+      "preuveRouge": "pnpm gov:autonomie:prove — 4 familles (deny_manquant, hook_non_declare, hook_sans_analyse, commande_laissee_passer), un temoin chacune, 17 commandes dangereuses refusees et 12 legitimes acceptees en contre-temoins — dont `gh api -X DELETE .../branches/main/protection` et `gh issue edit --remove-label owner:A01`, les deux trous trouves le 2026-09-04"
     },
     {
       "id": "gov:plan-state",
@@ -127,9 +127,9 @@
       "phase": -1,
       "script": "scripts/gates/gov-agents.ts",
       "tache": "GOV-023",
-      "verifie": "chaque fiche .claude/agents/<role>.md a 5 sections (mission, entrees, sorties, interdits, documents a lire) et chaque document cite existe ; aucun appel agent() du workflow sans agentType correspondant a un fichier de .claude/agents/",
-      "fixtureRouge": "retirer la section interdits d'une fiche",
-      "preuveRouge": null
+      "verifie": "docs/agents.json est la SOURCE des 15 fiches : chaque fiche .claude/agents/<role>.md est egale au rendu (frontmatter + bloc marque) et porte 5 sections (mission, entrees, sorties, interdits, documents a lire) ; chaque document cite existe sur le disque ; le tableau des postes du §2 de la charte et les chemins reserves du §7 sont CONFRONTES a la source (code, libelle, outils declares, droit d'ecriture) ; aucun appel agent() du workflow sans agentType resolvant vers une fiche",
+      "fixtureRouge": "editer a la main le frontmatter d'une fiche, ou citer dans documents[] un chemin qui n'existe pas",
+      "preuveRouge": "pnpm gov:agents:prove — 14 familles vues rougir sur leur temoin, 7 contre-temoins verts"
     },
     {
       "id": "aucun-workflow-ne-pousse-sur-main",
@@ -200,11 +200,11 @@
     {
       "id": "partners:contrat:hash",
       "phase": -1,
-      "script": "tests/contract/contrat-hash.spec.ts",
+      "script": "tests/unit/integration/contrat-hash.spec.ts",
       "tache": "INT-T01a",
       "verifie": "le test executable de gov:contrat : le hash du JSON Schema embarque est identique dans les deux depots ; un champ renomme d'un seul cote fait rougir des deux cotes",
       "fixtureRouge": "renommer un champ dans packages/contracts sans republier",
-      "preuveRouge": null
+      "preuveRouge": "renommage de `occurred_at` en `occurredAt` dans packages/contracts/enveloppe.ts, 2026-09-03 : 4 cas sur 9 rouges + `contracts:export --verifier` rouge sur les 3 artefacts"
     },
     {
       "id": "GATE-JUR-TEXTES-APPORTEURS",
@@ -1023,6 +1023,33 @@
       "verifie": "la table de preseance est complete et toute expression arbitree cite son porteur",
       "fixtureRouge": "expression arbitree sans ancre de porteur",
       "preuveRouge": "7 familles, un temoin chacune, 8 contre-temoins verts (pnpm gov:preseance --prove)"
+    },
+    {
+      "id": "gov:inventaire",
+      "phase": -1,
+      "script": "scripts/gates/gov-inventaire.ts",
+      "tache": "GOV-020",
+      "verifie": "tout etat d'avancement >= « code » porte une preuve qui RESOUT : un chemin present sur le disque (paths[] de docs/tasks.json ou docs/paths-proposes.json) ou un SHA que git retrouve (derive de la portee conventionnelle du commit, jamais recopie ; un numero de PR n'en est pas une — GOV-000 est fusionnee avec pr: null). La legende de REQ-GOV-026 n'est PAS une seconde colonne : c'est une echelle ordonnee derivee de l'enum statut de scripts/lot/tasks.schema.json, dont l'exhaustivite est verifiee — un dixieme statut sans rang rougit — et dont le rang est le PLANCHER garanti (en_cours vaut specifie). Garde aussi docs/INVENTAIRE-CHANTIERS.md : un etat pose sur une etiquette dont ce depot ne resout pas le referent rougit, une preuve inventee etant pire qu'une preuve absente",
+      "fixtureRouge": "passer une tache `a_faire` en `fusionnee` sans qu'aucun de ses chemins n'existe et sans commit qui la cite ; ou ecrire un etat `code` sur une etiquette de chantier dont le referent n'est pas resolu",
+      "preuveRouge": "pnpm gov:inventaire:prove — 7 familles, chacune vue rougir sur son propre defaut injecte, 6 contre-temoins verts. Rouge reel constate sur le fichier : « docs/INVENTAIRE-CHANTIERS.md:79 — le chantier « C5 » porte l'etat « code » alors que ce depot ne dit pas ce que l'etiquette DESIGNE »"
+    },
+    {
+      "id": "gov:lecons",
+      "phase": -1,
+      "script": "scripts/gates/gov-lecons.ts",
+      "tache": "GOV-018",
+      "verifie": "docs/LECONS.md porte une date de consolidation machine-lisible ; chaque lecon LEC-nn cite une source verifiable (SHA, chemin:ligne ou message verbatim) et la RM qu'elle a produite, ou dit qu'elle n'en a produit aucune ; une RM citee existe dans REGLES-MAISON.md ; numeros consecutifs. Consolidation de plus de 7 jours ALORS QUE des « appris » attendent -> rouge ; sans dette, l'age seul ne rougit pas. Deux sources d'appris : docs/journal/ (un appris est consolide quand LECONS.md cite le numero de sa PR) et la section « A consolider ». Ne lit jamais l'horloge : --now est fourni",
+      "fixtureRouge": "ajouter une entree « Appris. » dans docs/journal/ sans citer sa PR dans docs/LECONS.md, puis lancer gov:lecons --now a J+8",
+      "preuveRouge": "pnpm gov:lecons --prove — 12 familles, 13 temoins (consolidation_perimee en a deux, un par source), 9 contre-temoins verts"
+    },
+    {
+      "id": "gov:etat",
+      "phase": -1,
+      "script": "scripts/gates/gov-etat.ts",
+      "tache": "GOV-008",
+      "verifie": "PLAN-STATE porte les 7 rubriques de REQ-GOV-006 (bloc REPRENDRE EN 30 SECONDES en tete, SHA de main) ; sa date de commit >= date du COMMIT de la derniere PR fusionnee (le commit, jamais mergedAt : 1 s d'ecart systematique mesure) ; au plus un revendiqueur par tache (labels owner: de l'issue + owner de tasks.json) ; aucune tache citee par deux PR ouvertes ; aucune PR ouverte sur une tache non revendiquee ; toute PR fusionnee au-dessus du plancher citee par une entree fait/reste/appris de docs/journal/. Sans gh ou sans reseau elle ECHOUE en nommant les 5 familles non evaluees ; --hors-ligne les declare hors perimetre ; --now <ISO> au lieu de l'horloge",
+      "fixtureRouge": "un gh forge qui rend deux PR ouvertes citant GOV-008",
+      "preuveRouge": "pnpm gov:etat:prove — 9 familles, un temoin chacune, 8 contre-temoins verts ; plus 6 scenarios joues contre la garde reelle via un gh compromis"
     }
   ]
 }

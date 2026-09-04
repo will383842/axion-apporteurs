@@ -13,6 +13,23 @@
  *
  * Le mode `--prove` échoue lui-même si une famille de règle n'a pas de témoin, ou si un
  * contre-témoin rougit. C'est lui qui porte la preuve ; ce test le rend exécutable ici.
+ *
+ * ⚠️ LES ANNOTATIONS CI-DESSOUS MANQUAIENT, ET LEUR ABSENCE A COÛTÉ SIX PR. Ce fichier portait
+ * douze promesses de couverture dans `docs/tasks.json` et AUCUNE annotation `@req` — si bien que
+ * la deuxième case de la définition de « terminé » (« chaque REQ a son test, nommé par son
+ * identifiant, annoté `// @req` ») a été cochée sur les PR de GOV-000, GOV-001, GOV-003, GOV-005,
+ * GOV-017a et QA-T00 sans être vraie. `pnpm gov:trace`, livrée par GOV-011 le 2026-09-04, l'a vu :
+ * treize de ses seize ruptures tenaient à ce seul fichier.
+ *
+ * Les quatre exigences ci-dessous sont celles que ce fichier exerce RÉELLEMENT — vérifié une par
+ * une contre le `describe` qui les couvre. Les autres promesses ont été RE-POINTÉES vers les
+ * fichiers qui les portent vraiment, dans `docs/tasks.json` : les écrire ici aurait été refaire
+ * la faute d'un cran plus bas.
+ *
+ * @req REQ-GOV-031  la règle de publication du dépôt public — les deux cas `gov:publication`
+ * @req REQ-GOV-001  le registre d'exigences unique — les deux cas `gov:requirements`
+ * @req REQ-GOV-003  aucun identifiant nu — `describe("gov:identifiants — citer n'est pas se servir")`
+ * @req REQ-GOV-015  le registre des décisions — `describe('gov:hypotheses — le verrou du premier envoi DocuSeal')`
  */
 
 import { describe, it, expect } from 'vitest';

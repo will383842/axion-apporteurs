@@ -392,8 +392,15 @@ prenne pas pour ce qu'elle n'est pas.
   règle**. Le fichier livré nomme donc, en règle effective, le seul collaborateur du dépôt
   `will383842/axion-apporteurs` (décision `W13`), et porte le code de poste en commentaire au-dessus de
   chaque chemin. Le jour où un compte par poste existera, seule la colonne des propriétaires changera.
-- **La fiche `orchestrateur`** (§4) — arbitrage de A01, porté par GOV-023.
-- **`docs/LECONS.md`**, qui n'existe pas encore : il est livré par GOV-008, avec sa gate de fraîcheur.
+- **La fiche `orchestrateur`** (§4) — **tranché par GOV-023 : elle n'existera pas.** La garde
+  `gov:pr` exige une ligne du §2 par fiche, ni plus ni moins : une seizième fiche sans son code au
+  §2 ne serait pas un ajout, ce serait une panne — `pnpm gov:pr` rougirait sur tout le dépôt. Sur
+  le fond il n'y a pas de trou : le §4 attribue déjà les deux droits de l'orchestrateur (attribuer,
+  écrire PLAN-STATE) à **A01 + l'outillage de lot**, et `gov:agents` VÉRIFIE que les neuf droits
+  exclusifs du §4 citent des postes qui existent dans `docs/agents.json`. Ce qui manque est un nom
+  dans le TEXTE de REQ-GOV-010 — reformulation à faire par le `gardien-spec`, pas une fiche à créer.
+- **`docs/LECONS.md`** : livré par **GOV-018** avec sa gate de fraîcheur `gov:lecons` (REQ-GOV-023,
+  moitié « leçons »). GOV-008 en fournit la source amont : le journal de session `docs/journal/`.
 - **La revue `apporteur-facing` bloquante de A07** (§3) : le label, la section du gabarit et les chemins de
   `CODEOWNERS` sont posés par la tâche juridique qui la porte, pas ici — cette charte ne préempte pas le
   périmètre d'une autre tâche, et elle n'affirme pas non plus que le mécanisme existe déjà.

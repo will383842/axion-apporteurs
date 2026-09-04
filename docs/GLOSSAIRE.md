@@ -105,7 +105,17 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `OrigineEntrepriseConnue` | `client`, `devis`, `demande_entrante`, `financeur`                                     | REQ-DM-029   |
 | `TypeReprise`          | `avoir`, `paiement_rembourse` (synonyme interdit : `payment_refund`)                       | REQ-DM-019   |
 | `ConsoleRole`          | `admin`, `qualifieur`, `comptable`, `lecteur`                                              | REQ-SEC-023  |
-| `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe` | REQ-GOV-021 |
+| `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe`, `proposee` — **neuf valeurs**, celles de `scripts/lot/tasks.schema.json` ; `proposee` manquait ici depuis GOV-017a et rien ne l'attrapait | REQ-GOV-021 |
+
+> ⚠️ **La légende d'avancement de REQ-GOV-026 n'est PAS un enum de colonne**, et n'a donc pas de
+> ligne dans ce tableau. Ses sept états — `specifie`, `code`, `teste`, `revu`, `fusionne`,
+> `deploye`, `verifie_en_prod` — forment une **échelle ordonnée de lecture**, jamais écrite dans un
+> fichier de données : elle est **dérivée** de `StatutTache` par le barème unique de
+> `scripts/gates/gov-inventaire.ts`, dont l'exhaustivité sur les neuf statuts est vérifiée par
+> `pnpm gov:inventaire` — un dixième statut sans rang rougit. Écrire une colonne « avancement » à
+> côté de « statut » serait la faute que RM-04 nomme : deux copies du même vocabulaire divergent
+> toujours. Détail dans `docs/INVENTAIRE-CHANTIERS.md` §1.
+
 
 ## 5. Événements
 
@@ -118,17 +128,43 @@ source, eventType, payloadHash, receivedAt, processedAt, error, retryCount}` (RE
 Synonymes interdits : `WebhookRecu`, `InboundEvent`, `WebhookEvent`, `EventLog` pour cette table. Ne pas confondre
 avec `evenements` (journal append-only chaîné du domaine, REQ-DM-041).
 
-### Types d'événements axionia → Partners — liste fermée (REQ-INT-004, source `packages/contracts/events.ts`)
+### Types d'événements axionia → Partners — liste fermée de SEPT (REQ-INT-004, source `packages/contracts/events.ts`)
 
-`client.cree` · `client.mis_a_jour` · `client.fusionne` · `candidature.recue` · `devis.signe` · `facture.emise` ·
-`facture.annulee` · `avoir.emis` · `paiement.recu` · `paiement.rembourse` · `financement.mis_a_jour` — **11 types**.
+`client.cree` · `client.mis_a_jour` · `devis.signe` · `facture.emise` · `avoir.emis` · `paiement.recu` ·
+`paiement.rembourse` — **7 types**, ceux que REQ-INT-004 énumère, nommés sur les modèles RÉELS d'axionia.
 
-Enveloppe camelCase (REQ-INT-003) : `{eventId, eventType, schemaVersion, occurredAt, emittedAt, producer, subjectRef,
-sequence, payload}`.
+Quatre autres noms d'événements existent au registre et sont **hors contrat v1**, recensés dans
+`TYPES_HORS_CONTRAT_V1` avec l'exigence qui les nomme : `candidature.recue` et `financement.mis_a_jour`
+(REQ-INT-032), `facture.annulee` (REQ-ARG-010), `client.fusionne` (REQ-CPL-014). Sept plus quatre font les
+onze qu'un texte antérieur annonçait — aucun n'est perdu, aucun n'est inventé.
 
-Synonymes interdits (vus rougir par `gov:check`) : `payment.received`, `refund.paid`, `refund.issued`,
-`invoice.issued`, `invoice.cancelled`, `avoir.issued`, `devis.signed`, `candidature.submitted`, `client.created`,
-`client.updated`, `Invoice`, `Refund`, `PaymentScheduleProfile`, `event_id`/`event_type` (snake_case d'enveloppe).
+**Enveloppe : `snake_case`** (REQ-INT-003) : `{event_id, event_type, schema_version, occurred_at, emitted_at,
+producer, subject_ref, sequence, payload}`. C'est un écart ASSUMÉ à `docs/CONVENTIONS.md` §1, borné par
+`partners/ADR-0008` : l'enveloppe est un **format de fil**, au même titre que les champs d'une API tierce que
+le §1 exempte nommément. Le camelCase et les suffixes `…Cents` / `…At` restent la règle **dans le payload** et
+partout ailleurs dans le code.
+
+Synonymes interdits : `eventId`, `eventType`, `schemaVersion`, `occurredAt`, `emittedAt`, `subjectRef` — la
+forme camelCase des champs d'enveloppe ; `payment.received`, `refund.paid`, `refund.issued`, `invoice.issued`,
+`invoice.cancelled`, `avoir.issued`, `devis.signed`, `candidature.submitted`, `client.created`,
+`client.updated` ; `Invoice`, `Refund`, `PaymentScheduleProfile` — des modèles supprimés d'axionia qu'aucun
+événement ne référence.
+
+> ⚠️ **CE PARAGRAPHE DISAIT L'INVERSE JUSQU'AU 2026-09-04, en citant `events.ts` comme sa source.** Il
+> annonçait **onze** types et une enveloppe **camelCase**, et rangeait `event_id` / `event_type` parmi les
+> synonymes interdits « **vus rougir par `gov:check`** ». Trois choses étaient fausses à la fois : le compte,
+> la casse, et le fait qu'une garde le vérifie — `grep -rn GLOSSAIRE scripts/gates/*.ts` ne rend rien, et le
+> `glossaire-enums.spec.ts` que **GOV-006** promet n'existe sur aucun chemin du dépôt.
+>
+> Ce n'est pas un détail de rédaction. `docs/PRESEANCE.md` §2 donne au glossaire la **primauté** sur tout
+> autre document « sur un terme et ses synonymes interdits », et précise qu'il n'est dérivé de personne sur
+> ce point. Le prochain agent qui écrivait un producteur lisait donc ce paragraphe, écrivait `eventId`, et
+> **aucune garde ne le voyait**. Trouvé par la lentille `schema` (A02) sur la PR 28, dans un fichier que la
+> PR ne touchait pas — c'est-à-dire par quelqu'un qui est allé lire ce que le diff ne montrait pas.
+>
+> ⚠️ **Aucune garde ne lit encore ce paragraphe.** Tant que **GOV-006** n'a pas livré
+> `glossaire-enums.spec.ts`, cette liste est une consigne, pas un contrôle. Le dire vaut mieux que laisser
+> croire le contraire, comme ce fichier le faisait.
 
 ## 6. Déposer vs Déclarer
 

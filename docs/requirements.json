@@ -3144,9 +3144,8 @@
       "remplaceePar": null,
       "module": 13,
       "etape": 10,
-      "phase": -1,
+      "phase": 0,
       "taches": [
-        "GOV-000",
         "QA-T01"
       ]
     },
@@ -3233,7 +3232,8 @@
       "etape": 9,
       "phase": -1,
       "taches": [
-        "INT-T01a"
+        "INT-T01a",
+        "INT-T01b"
       ]
     },
     {
@@ -3959,7 +3959,8 @@
       "etape": null,
       "phase": -1,
       "taches": [
-        "GOV-008"
+        "GOV-008",
+        "GOV-018"
       ]
     },
     {

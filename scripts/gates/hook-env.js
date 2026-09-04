@@ -20,12 +20,19 @@
  *      passent entre toutes les six : la destination y est ecrite apres un deux-points, le
  *      drapeau de force est en fin de ligne. On ne rattrape pas une syntaxe par des morceaux de
  *      texte — `git-push-sur.js` la LIT. Voir ce fichier pour le detail.
+ *   5. Aucune commande `gh` n'ecrit sur la protection de la branche principale, ni ne retire
+ *      la revendication d'une tache. MEME FAMILLE DE DEFAUT que l'invariant 4, trouvee deux
+ *      fois le 2026-09-04 : la regle `Bash(gh api * /branches/main/protection*)` exige une
+ *      ESPACE devant `/branches`, que la commande reelle de `gh` n'a jamais — elle ne peut
+ *      donc matcher qu'une commande INVALIDE, pendant que `Bash(gh api*)` est en `allow`.
+ *      Voir `gh-sur.js`.
  *
  * POURQUOI : 40 agents qui testent, ce sont 40 sources d'envois réels. La règle est portée par un
  * hook et non par une consigne, parce qu'une consigne ne rougit pas.
  */
 
 const { jugerPush } = require('./git-push-sur.js');
+const { jugerGh } = require('./gh-sur.js');
 
 const LOCAL = /^(postgres(ql)?:\/\/)[^@]*@(localhost|127\.0\.0\.1|db|postgres)(:\d+)?\//i;
 const TESTCONTAINER = /^(postgres(ql)?:\/\/)[^@]*@(localhost|127\.0\.0\.1):\d{4,5}\//i;
@@ -43,8 +50,18 @@ process.stdin.on('end', () => {
   try {
     commande = (JSON.parse(brut || '{}').tool_input || {}).command || '';
   } catch {
-    // entrée illisible : on n'a rien à garder, on laisse passer (le hook n'est pas un antivirus)
-    process.exit(0);
+    // ENTREE ILLISIBLE = REFUS. Le defaut est le refus (RM-05) : une entree non analysable
+    // desarmait les cinq invariants D UN COUP, et la seule chose qu on sache alors, c est
+    // qu'on ne sait pas ce que la commande fait. Trouve par la lentille securite sur la PR 28.
+    //
+    // Une entree VIDE reste permise : elle n'atteint meme pas ce bloc (`brut || '{}'` en fait
+    // un objet vide), et certains hotes appellent le hook sans charge utile. Ce qui est refuse
+    // ici, c'est un contenu present et MALFORME — le seul cas ou quelque chose ne va pas.
+    refuser(
+      "l'entree du hook n'est pas un JSON analysable, donc la commande n'a pas pu etre lue. " +
+        "Le defaut est le refus : une garde qui laisse passer ce qu'elle n'a pas su lire ne " +
+        "garde rien. (charge utile de " + brut.length + " octet(s))"
+    );
   }
 
   // 3. surcharge en ligne interdite — ancrée en POSITION DE COMMANDE.
@@ -62,6 +79,10 @@ process.stdin.on('end', () => {
   // 4. la branche principale et l'historique distant — juges sur les JETONS, pas sur du texte.
   const verdict = jugerPush(commande);
   if (verdict.refuse) refuser(verdict.motif);
+
+  // 5. la forge — meme lecture par jetons, pour la meme raison.
+  const verdictGh = jugerGh(commande);
+  if (verdictGh.refuse) refuser(verdictGh.motif);
 
   const url = process.env.DATABASE_URL || '';
   if (url && !(LOCAL.test(url) || TESTCONTAINER.test(url) || STUB.test(url))) {
