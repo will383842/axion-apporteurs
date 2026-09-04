@@ -500,15 +500,37 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
    */
   const VERDICT = /^Verdict\s*:\s*(accepte|refuse)\b/im;
   const RENDUES = ['APPROVED', 'COMMENTED'];
-  const rendues = pr.revues.filter((r) => RENDUES.includes(r.etat.toUpperCase()) && VERDICT.test(r.corps));
+  const toutes = pr.revues.filter((r) => RENDUES.includes(r.etat.toUpperCase()) && VERDICT.test(r.corps));
   const verdictDe = (r: Revue): string => (VERDICT.exec(r.corps)![1] ?? '').toLowerCase();
+
+  /**
+   * LE DERNIER VERDICT D'UNE LENTILLE PRIME, et sans cette règle la garde redeviendrait
+   * INSATISFIABLE — le piège exact corrigé sur la PR 27, où elle exigeait un `APPROVED` que
+   * GitHub refuse à l'auteur de sa propre PR.
+   *
+   * Un refus est un ÉTAT DE LA REVUE, pas une marque indélébile sur la PR. Le cycle réel est :
+   * la lentille refuse, l'auteur corrige, la lentille relit et tranche à nouveau. Sans cette
+   * règle, une PR refusée une fois ne pourrait plus JAMAIS être fusionnée quoi qu'on corrige, et
+   * la seule issue serait d'ouvrir une PR neuve pour effacer l'ardoise — c'est-à-dire de perdre la
+   * trace du refus au moment précis où elle a le plus de valeur.
+   *
+   * Les revues arrivent dans l'ordre chronologique (`gh pr view --json reviews`) : on garde la
+   * DERNIÈRE par couple (poste, lentille). Les refus antérieurs restent visibles sur la PR — ils
+   * ne sont pas effacés, ils sont datés.
+   */
+  const dernierPar = new Map<string, Revue>();
+  for (const r of toutes) {
+    const l = lentilleDeLaRevue(r);
+    dernierPar.set(l ? `${l.code}·${l.lentille}` : `sans-lentille-${dernierPar.size}`, r);
+  }
+  const rendues = [...dernierPar.values()];
   const refusees = rendues.filter((r) => verdictDe(r) === 'refuse');
   const approuvees = rendues.filter((r) => verdictDe(r) === 'accepte');
   for (const r of refusees) {
     const l = lentilleDeLaRevue(r);
     ajouter(
       'lentille_en_refus',
-      `Revues — ${l ? `${l.code} · ${l.lentille}` : 'une revue'} rend « Verdict: refuse ». ` +
+      `Revues — ${l ? `${l.code} · ${l.lentille}` : 'une revue'} rend « Verdict: refuse », et c'est son DERNIER mot. ` +
         `A04 ne fusionne pas sur un refus${l && l.lentille === 'securite' ? ' — et un refus de la lentille securite vaut veto (REQ-GOV-011)' : ''}.`
     );
   }
@@ -917,6 +939,22 @@ if (process.argv.includes('--prove')) {
       // garde qui refuserait tout label `phase:` serait « prouvée » par son seul témoin.
       quoi: 'une PR étiquetée de la phase courante',
       cas: () => [depot, { ...copiePr(PR_TEMOIN), labels: [`phase:${phaseCourante()}`] }],
+    },
+    {
+      // LE CONTRE-TEMOIN DE LA REGLE DU DERNIER MOT : une lentille qui REFUSE, puis relit et
+      // ACCEPTE. La PR doit passer. Sans lui, la regle du dernier verdict serait une intention
+      // ecrite en commentaire ; avec lui, un refus fige a nouveau la PR des que la regle saute.
+      quoi: "une lentille qui a refuse, puis relu et accepte : son DERNIER mot compte",
+      cas: () => {
+        const p = copiePr(PR_TEMOIN);
+        const securite = p.revues!.find((r) => r.corps.startsWith('A09 · securite'))!;
+        p.revues = [
+          ...p.revues!.filter((r) => r !== securite),
+          { ...securite, corps: 'A09 · securite\nVerdict: refuse\nIDOR non couvert' },
+          { ...securite, corps: 'A09 · securite\nVerdict: accepte\nleve : la garde est posee' },
+        ];
+        return [depot, p];
+      },
     },
     {
       // Les quatre lentilles rendues en `COMMENTED` : c'est le seul état que ce dépôt à un
