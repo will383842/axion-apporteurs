@@ -110,15 +110,23 @@ le dépôt passe de 12 à 20 tâches livrées sur 197, de 9,50 à 13,50 j sur 14
 affirmé : le run `Gate A` du `push` sur `main` a été lu vert (`33842493472`, `ab5caf5`), puis la
 8ᵉ case de #28 et #29 cochée, puis `lot:cloture` lancé. `docs/TRACABILITE.md` passe de 22 à 31
 exigences réputées testées — non par ajout de tests, mais parce que la clôture rend enfin visibles
-les promesses `tests{}` de huit tâches jusque-là non livrées ; et le dépôt reçoit un `CLAUDE.md`
-racine, lu automatiquement par toute session ouverte ici, qui renvoie au §1 de
-`docs/REPRISE-SESSION.md` pour le premier geste plutôt que de le figer.
+les promesses `tests{}` de huit tâches jusque-là non livrées.
 
-**Reste.** Les quatre lentilles n'ont pas rendu leur verdict sur cette PR : la session qui l'ouvre
-avait pour consigne de clôturer `L-1-03` et de s'arrêter sans composer le lot suivant, et
-`pnpm gov:pr --pr 30` reste donc ROUGE sur `lentilles_manquantes` et sur la 3ᵉ case, laissée vide
-exprès. Les sept revendications périmées ne sont pas effacées — `lot:cloture` écrit le backlog, pas
-les labels d'issue — et `deploy:verify` (`GOV-012`, `partners/ADR-0006`) manque toujours, de sorte
+**Reste.** Les quatre lentilles ont rendu : `securite` et `mutation` acceptent, `exactitude` et
+`simplicite` ont **refusé**, et leurs six motifs sont corrigés dans cette PR — vue `docs/TASKS.md`
+non régénérée (relevée trois fois indépendamment), « sept » revendications périmées pour quinze, et
+un `CLAUDE.md` racine hors périmètre, retiré. Deux constats sont renvoyés en tâche plutôt que
+corrigés ici, parce qu'un manque devient une tâche arbitrée et non un correctif glissé dans le lot
+en cours (`docs/CHARTE-AGENTS.md`, A11) : `gov:tasks` n'a pas de mode qui compare sa vue à sa source
+— rien ne rougit quand `docs/TASKS.md` dérive —, et `gov:identifiants` est **aveugle en fin de
+phrase**, sa lookahead `(?![A-Za-z0-9_.-])` incluant le point : une étiquette de relecteur placée
+juste avant un point final n'est pas vue, alors que la même suivie d'un espace l'est. Ses propres
+témoins `--prove` évitent tous cette position, de sorte que l'auto-preuve ne l'exerce jamais — la
+garde reste verte sur le texte qu'elle condamne. La rédaction de cette entrée l'a vérifié malgré
+elle : des deux occurrences écrites pour l'illustrer, la garde n'en a relevé qu'une, celle qui
+n'était pas collée au point. Les **quinze** revendications périmées ne sont pas effacées — `lot:cloture` écrit le
+backlog, pas les labels d'issue ; `pnpm gov:etat` les compte, et c'est lui qu'il faut relire plutôt
+que ce chiffre, qui est daté du jour de la clôture — et `deploy:verify` (`GOV-012`, `partners/ADR-0006`) manque toujours, de sorte
 que l'atterrissage se vérifie encore par le repli daté du Pas 7 de `docs/PROTOCOLE-FUSION.md`.
 
 **Appris.** Le motif du **premier** échec de clôture d'une tâche n'est écrit nulle part : `cloture.ts`

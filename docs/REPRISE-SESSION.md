@@ -16,11 +16,18 @@ cd C:\Users\willi\Documents\Projets\axion-apporteurs   # ⚠️ DEPUIS le dépô
 claude                                                  #    de rôle ne résolvent pas
 ```
 
-> **Comment une session arrive ici sans qu'on le lui demande.** Le `CLAUDE.md` à la racine du dépôt
-> est lu automatiquement par toute session ouverte dans `axion-apporteurs`, et sa première consigne
-> est de venir lire le paragraphe ci-dessous — quelle que soit la formulation de la demande.
-> **Ne pas figer le premier geste dans `CLAUDE.md`** : il change à chaque session, et un `CLAUDE.md`
-> qui le recopie devient faux sans que rien ne le signale. Il pointe, il ne duplique pas.
+> **Comment une session arrivera ici sans qu'on le lui demande — pas encore fait.** Un `CLAUDE.md`
+> à la racine serait lu automatiquement par toute session ouverte dans `axion-apporteurs`, et
+> pourrait renvoyer ici quelle que soit la formulation de la demande. Il avait été écrit dans cette
+> PR et en a été **retiré** : la lentille `exactitude` a relevé qu'il portait une règle de
+> gouvernance absente de `docs/REGLES-MAISON.md`, qu'il n'appartenait aux `paths` d'aucune tâche, et
+> qu'il sortait donc du périmètre d'une PR de clôture. Il revient dans une tâche à lui, avec sa
+> règle registrée.
+>
+> Deux contraintes pour qui l'écrira. **Ne pas y figer le premier geste** : il change à chaque
+> session, et un fichier qui le recopie devient faux sans que rien ne le signale. **Ne pas y
+> résumer `docs/PRESEANCE.md`** : le résumé de la version retirée avait déjà divergé de sa source.
+> Il pointe, il ne duplique pas.
 >
 > La mémoire de session, elle, ne sert à rien ici : elle est rangée **par répertoire de projet**, et
 > celle du chantier vit sous `Projets\Axion-IA`. Une session ouverte depuis `axion-apporteurs` ne la
@@ -294,7 +301,8 @@ de contact réel, et il est loin.
   du §2 de la charte par fiche, donc une seizième fiche rendrait la garde rouge sur tout le dépôt. Le
   §4 attribue déjà ses deux droits à A01 + l'outillage. Ce qui manque est un nom dans le texte de
   l'exigence.
-- **Sept revendications périmées** : `lot:cloture` écrit le backlog mais n'efface pas les labels
+- **Quinze revendications périmées** (compte du 2026-09-04, rendu par `pnpm gov:etat` — le
+  relire plutôt que ce nombre) : `lot:cloture` écrit le backlog mais n'efface pas les labels
   d'issue. Nommées dans PLAN-STATE, volontairement pas gardées — une gate rouge en permanence sur une
   dette connue ne garde plus rien.
 - **`deploy:verify` n'existe pas**, alors que l'acceptation de GOV-000 et `partners/ADR-0006` le

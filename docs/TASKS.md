@@ -11,7 +11,7 @@
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
-| -1 — Gouvernance (prealable bloquant) | 26 | 16.50 | 5 |
+| -1 — Gouvernance (prealable bloquant) | 26 | 16.50 | 20 |
 | 0 — Socle technique | 50 | 37.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
@@ -23,13 +23,13 @@
 
 `1 j` · zone `gouvernance` · sensible : attribution · aucune dependance · decisions `W13`
 
-Couvre : `REQ-CPL-021`, `REQ-GOV-014`, `REQ-GOV-031`, `REQ-QA-001`
+Couvre : `REQ-CPL-021`, `REQ-GOV-014`, `REQ-GOV-031`
 
 **Acceptation.** dépôt public (W13) ; `main` protégée (strict, `required_linear_history`, check requis **`gate-a`**) ; `package.json` déclarant les scripts que le SKILL et le workflow appellent — **`plan-state:build`, `lot:composer`, `lot:cloture`, `prevol`, `deploy:verify`, `gov:check`, `gov:autonomie`, `gov:issues`** — plus vitest ; `.github/workflows/ci.yml` avec un job **`name: gate-a`** exécutant `pnpm gov:check`, le check requis de la protection de branche portant **ce nom exact** (sinon GitHub reste en « Expected — Waiting for status », `gh pr checks --watch` n'aboutit jamais et la file se bloque dès la PR témoin) ; `scripts/gates/gov-check.ts` et `scripts/gates/gov-autonomie.ts` écrits, chacun avec sa fixture rouge archivée (`gates.json` les attribue à GOV-000) ; `scripts/gates/hook-env.js` ; `.claude/settings.json` (matrice d'autonomie : `permissions.allow`/`deny`, hook `PreToolUse` → `scripts/gates/hook-env.js` refusant toute `DATABASE_URL` non locale ou `NOTIFY_SINK ≠ true`) ; `scripts/lot/{composer.ts,lot.workflow.js,tasks.schema.json}` ; `scripts/plan-state/build.ts` ; `scripts/lot/cloture.ts` (écrivain de statut : `pnpm lot:cloture --lot <id>` écrit `statut`, `pr`, `branch`, `owner` dans `docs/tasks.json` d'après le retour du workflow, puis commite — sans lui la boucle ne progresse jamais) ; `.claude/skills/lot/SKILL.md` ; **`.claude/agents/` (15 fiches de rôle)** ; `docs/PLAN-STATE.md` v0 ; **`docs/tasks.json` amorcé avec les tâches de phase −1 au statut `a_faire`** (sans quoi GOV-017a n'est atteignable par aucun outillage : `build.ts` et `composer.ts` commencent par le lire) ; déplacement de `axionia/docs/partners/*` + du plan vers `axion-partners/docs/` avec `README.md` de renvoi. Toutes les tâches de phase −1 en dépendent (directement pour les racines GOV-007, GOV-001, JUR-T02 ; par transitivité pour les autres).
 
-**Tests.** `tests/unit/gouvernance/gardes.spec.ts#'gov:publication' > sait rougir : ses 7 familles ont chacune un témoin`
+**Tests.** `tests/unit/gouvernance/autonomie.spec.ts#REQ-CPL-021 — le hook juge sur les JETONS, pas sur des sous-chaînes` · `tests/unit/gouvernance/autonomie.spec.ts#REQ-CPL-021 — `gh api` : l’écriture est refusée, la lecture reste permise` · `tests/unit/gouvernance/autonomie.spec.ts#REQ-CPL-021 — `pnpm gov:autonomie` et sa preuve sont vertes sur l’état du dépôt` · `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts#REQ-GOV-014 — aucun workflow ne pousse sur la branche principale` · `tests/unit/gouvernance/gardes.spec.ts#'gov:publication' > sait rougir : ses 7 familles ont chacune un témoin`
 
-### GOV-007 — Charte des agents, gabarit de PR
+### GOV-007 — Charte des agents, gabarit de PR ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · `schema` · depend de `GOV-000`
 
@@ -47,27 +47,29 @@ Couvre : `REQ-GOV-001`, `REQ-GOV-026`
 
 **Acceptation.** `REQUIREMENTS.md` + `requirements.json` avec toutes les REQ de ce rapport (B.1-B.9), champs `phase`, `module (1-21)`, `etape (1-12)` ; premier livrable `docs/partners/REQUIREMENTS-ANNEXE-FUSIONS.md` (couples de REQ fusionnées avec la REQ survivante, préséance DM > INT > SEC).
 
-**Tests.** `tests/unit/gouvernance/gardes.spec.ts#'gov:requirements' > sait rougir : ses 11 familles ont chacune un témoin`
+**Tests.** `tests/unit/gouvernance/gardes.spec.ts#'gov:requirements' > sait rougir : ses 11 familles ont chacune un témoin` · `tests/unit/gouvernance/inventaire-prouve.spec.ts#REQ-GOV-026 — toute tâche en état ≥ « codé » porte au moins une preuve qui résout (chemin présent ou SHA retrouvé)`
 
-### GOV-018 — Règles maison et leçons dans le dépôt
+### GOV-018 — Règles maison et leçons dans le dépôt ✅ **fusionnee**
 
 `0.25 j` · zone `gouvernance` · sensible : attribution · depend de `GOV-007`
 
-Couvre : `REQ-GOV-024`
+Couvre : `REQ-GOV-024`, `REQ-GOV-023`
 
-**Acceptation.** `REGLES-MAISON.md` RM-01… (9 + 3), `LECONS.md`, ligne « Règle maison appliquée » dans le gabarit.
+**Acceptation.** `docs/REGLES-MAISON.md` porte RM-01 a RM-12 — les neuf regles de REQ-GOV-024 plus trois — une section par regle, le tableau de tete etant leur vue ; la ligne « Regle maison appliquee » vit entre ses marqueurs dans le gabarit de PR, et `gov:pr` la LIT. `docs/LECONS.md` porte le journal des lecons : chacune cite son incident mesure, ce qu'on en tire, une source verifiable (SHA, `chemin:ligne` ou message verbatim) et la `RM-nn` qu'elle a produite — ou dit qu'elle n'en a produit aucune. `pnpm gov:lecons --now <date>` (nightly, jamais l'horloge) rougit quand la consolidation depasse sept jours ALORS QUE des « appris » attendent, et reste verte sans dette. 12 familles, 13 temoins, 9 contre-temoins verts.
 
-**Tests.** `regles-maison.spec.ts`
+**Tests.** `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 a RM-12, une section par regle` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — les neuf regles que l'exigence enumere sont chacune couvertes par une section` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — docs/LECONS.md porte une date de consolidation MACHINE-LISIBLE` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — ROUGE : consolidation de plus de 7 jours ALORS QUE des « appris » attendent` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — CONTRE-TEMOIN : la meme peremption sans aucun « appris » en attente reste VERTE`
 
-### GOV-008 — PLAN-STATE vivant, protocole de session, verrou d'écriture
+### GOV-008 — PLAN-STATE vivant, protocole de session, verrou d'écriture ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · sensible : auth · depend de `GOV-007`
 
 Couvre : `REQ-GOV-006`, `REQ-GOV-007`, `REQ-GOV-023`
 
-**Tests.** `plan-state-frais.spec.ts` · `une-tache-un-owner.spec.ts`
+**Acceptation.** `docs/PLAN-STATE.md` porte les sept rubriques de REQ-GOV-006 — bloc « REPRENDRE EN 30 SECONDES » en tete, file de fusion ORDONNEE avec ce qui bloque chaque PR, revendications rendues depuis leurs deux sources existantes, decisions du jour derivees de `git log`, prochain pas derive du chemin critique, journal rendu depuis `docs/journal/` — le tout DERIVE par `pnpm plan-state:build`, jamais ecrit a la main. La revendication ne cree aucun troisieme endroit : elle vit dans les labels `en_cours` + `owner:<Axx>` de l'issue et dans le champ `owner` du backlog. Garde `gov:etat` : 9 familles dont `plan_state_perime` (date du COMMIT, jamais `mergedAt` : 1 s d'ecart systematique mesure), `deux_pr_meme_tache`, `pr_fusionnee_sans_journal` ; sans `gh` elle ECHOUE en nommant les cinq familles non evaluees, jamais de vert silencieux. 8 contre-temoins verts.
 
-### GOV-002 — Table de préséance et bandeaux
+**Tests.** `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-006 — PLAN-STATE porte les sept rubriques que l’exigence enumere, bloc « REPRENDRE EN 30 SECONDES » compris` · `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-006 — sans lecture GitHub possible, gov:etat ECHOUE au lieu de verdir en silence` · `tests/unit/gouvernance/une-tache-un-owner.spec.ts#REQ-GOV-007 — deux PR OUVERTES citant la meme tache font rougir la famille `deux_pr_meme_tache`` · `tests/unit/gouvernance/une-tache-un-owner.spec.ts#REQ-GOV-007 — la revendication n’a PAS de troisieme endroit : PLAN-STATE la rend, il ne la stocke pas` · `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-023 — chaque entree cite un numero de PR et porte fait / reste / appris`
+
+### GOV-002 — Table de préséance et bandeaux ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-001`
 
@@ -87,7 +89,7 @@ Couvre : `REQ-GOV-003`
 
 **Tests.** `tests/unit/gouvernance/gardes.spec.ts#'gov:identifiants' > sait rougir : 3 témoins et 10 contre-témoins`
 
-### GOV-004 — Vérification des affirmations sur le code d'axionia
+### GOV-004 — Vérification des affirmations sur le code d'axionia ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · sensible : argent · depend de `GOV-001`
 
@@ -117,7 +119,7 @@ Couvre : `REQ-DM-003`, `REQ-GOV-016`, `REQ-JUR-027`
 
 **Tests.** `glossaire-enums.spec.ts`
 
-### GOV-009 — Squelette ADR + 6 ADR fondateurs
+### GOV-009 — Squelette ADR + 6 ADR fondateurs ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · depend de `GOV-005` · decisions `HYP-BEB-D2`, `HYP-TENANT`
 
@@ -127,29 +129,35 @@ Couvre : `REQ-CPL-018`, `REQ-GOV-008`
 
 **Tests.** `adr-index-derive.spec.ts`
 
-### GOV-010 — Gate ADR ↔ assertion
+### GOV-010 — Gate ADR ↔ assertion ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-009`
 
 Couvre : `REQ-GOV-009`
 
-### GOV-011 — Matrice de traçabilité dérivée
+**Acceptation.** `gov:adr` refuse un ADR « accepte » dont l'assertion citee n'existe pas — fichier de test absent, titre `it()` introuvable, titre reconnu seulement comme gabarit de chaine, ou mention `hors-code` suivie de moins de 40 caracteres de motif. Quatre familles ajoutees a la garde existante plutot qu'un second script : deux parseurs jumeaux de la meme rubrique divergent. 16 familles, un temoin chacune, 11 contre-temoins verts (`pnpm gov:adr --prove`).
+
+**Tests.** `tests/unit/gouvernance/adr-assertion-existe.spec.ts#REQ-GOV-009 — chaque ADR « accepte » cite un fichier de test qui existe et un titre it() qu'on y retrouve LITTERALEMENT` · `tests/unit/gouvernance/adr-assertion-existe.spec.ts#REQ-GOV-009 — la preuve NOMME les quatre familles de GOV-010, elle ne les compte pas`
+
+### GOV-011 — Matrice de traçabilité dérivée ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · depend de `GOV-001`, `GOV-007`
 
 Couvre : `REQ-GOV-005`
 
-**Tests.** `tracabilite.spec.ts`
+**Acceptation.** `pnpm gov:trace` derive la matrice REQ -> tache -> test -> PR de quatre sources : le registre des exigences, le backlog, les fichiers de test presents sur le disque, et les corps de PR fusionnees (source FACULTATIVE, dont l'indisponibilite est imprimee, jamais tue, et ne rend jamais vert). Les titres de `it()` sont RESOLUS par `vitest list --json`, gabarits `describe.each` compris — une promesse perimee (« ses 11 familles » pour un fichier qui en annonce douze) est refusee ; le perimetre d'execution est LU dans `vitest.config.ts`, un test promis que vitest ne lance pas est refuse. « >= testee » est DERIVE (le registre ne porte aucune echelle de maturite). `docs/TRACABILITE.md` est la VUE, ecrite par `--render`, gardee par `--verifier`, reseau-free par construction. 10 familles, 8 contre-temoins verts.
 
-### GOV-012 — Protocole de fusion, release manager, protection de main
+**Tests.** `tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 : la famille `req_non_citee_par_son_test` a son témoin` · `tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 : le registre porte bien l’absorption, et c’est REQ-QA-014 qui fait foi` · `tests/unit/gouvernance/tracabilite.spec.ts#REQ-QA-014 : chaque famille a son témoin, et les contre-témoins restent verts`
+
+### GOV-012 — Protocole de fusion, release manager, protection de main ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · sensible : attribution · depend de `GOV-007`
 
 Couvre : `REQ-GOV-014`
 
-**Acceptation.** squash + `required_linear_history` ; gate `gov:depot-visibilite` (`gh repo view --json visibility` ≠ la valeur decidee par W13, ou check requis `gate-a` absent → rouge).
+**Acceptation.** squash + `required_linear_history` ; gate `gov:depot-visibilite` : visibilite reelle differente de la valeur LUE dans la ligne W13 de `docs/DECISIONS.md`, check requis `gate-a` absent de la protection de `main`, check requis qu'aucun job de `ci.yml` ne produit, historique lineaire non exige, ecrasement autorise, ou etape de workflow atteignant `main` (jugee par `jugerPush`, source unique) -> sortie 1 ; protection SUPPRIMEE -> sortie 1 ; protection NON LUE -> sortie 2 INDETERMINE, jamais 0. `docs/PROTOCOLE-FUSION.md` livre neuf pas, chacun avec sa commande et son critere de lecture. 9 familles, 5 contre-temoins verts.
 
-**Tests.** `aucun-workflow-ne-pousse-sur-main.spec.ts` · `tout-check-est-cable.spec.ts`
+**Tests.** `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts#REQ-GOV-014 — aucun workflow ne pousse sur la branche principale` · `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts#REQ-GOV-014 — les étapes des workflows sont réellement LUES, pas survolées` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#branche_non_protegee — la protection SUPPRIMÉE est un ROUGE, pas un indéterminé` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#protection_non_lisible — protection NON LUE ⇒ verdict INDÉTERMINÉ, pas conforme`
 
 ### GOV-013 — Gate lexicale « commercial »
 
@@ -169,29 +177,31 @@ Couvre : `REQ-GOV-018`, `REQ-GOV-029`
 
 **Tests.** `gardes-transposees.spec.ts`
 
-### GOV-015 — Fiches tiers
+### GOV-015 — Fiches tiers ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · sensible : argent · depend de `GOV-001`
 
 Couvre : `REQ-CPL-002`, `REQ-GOV-022`
 
+**Acceptation.** chaque tiers dont une valeur est produite pour lui porte sa fiche `docs/tiers/<nom>.md` avec URL officielle, date de lecture, extrait cite, exemple officiel, quotas et comportement en panne (REQ-GOV-022) ; la fiche `banque.md` repond a REQ-CPL-002 ou nomme ce qui manque ; `docs/tiers/README.md` est l'index du dossier et la garde `fiches-tiers` rougit sur toute fiche amputee d'une rubrique ecrivable, chacune de ses familles vue rougir sur son temoin.
+
 **Tests.** `fiches-tiers.spec.ts`
 
-### INT-T01a — Contrat d'événements, enveloppe et nomenclature : Zod + JSON Schema + `schemaVersion` + hash
+### INT-T01a — Contrat d'événements, enveloppe et nomenclature : Zod + JSON Schema + `schemaVersion` + hash ✅ **fusionnee**
 
 `0.5 j` · zone `integration` · `schema` · depend de `GOV-004`, `GOV-009`, `GOV-015`
 
 Couvre : `REQ-GOV-020`, `REQ-INT-003`, `REQ-INT-004`, `REQ-INT-029`, `REQ-QA-007`
 
-**Acceptation.** nomenclature unique (REQ-INT-004 : liste fermée des 11 types littéraux, source unique `packages/contracts/events.ts`), enveloppe camelCase (REQ-INT-003), schéma Zod + JSON Schema + `schemaVersion` + hash ; `pnpm contracts:export` → `contracts.v<N>.json` + `contracts.sha256` copié à hash identique dans `axionia/src/server/partners-sync/contracts/` (jamais retapé).
+**Acceptation.** nomenclature unique : liste FERMEE des 7 types litteraux que REQ-INT-004 enumere, source unique `packages/contracts/events.ts` ; les 4 noms d'evenements que le registre porte ailleurs sont recenses HORS contrat v1 sous `TYPES_HORS_CONTRAT_V1`, chacun avec l'exigence qui le nomme (7+4=11, rien d'invente). Enveloppe snake_case telle que REQ-INT-003 l'enumere, fermee par `additionalProperties: false`. JSON Schema 2020-12, source Zod, `schema_version` et empreinte DERIVES du descripteur par `pnpm contracts:export`, jamais retapes ; `pnpm contracts:hash` rougit sur tout artefact hors derivation. Test de contrat sur fixtures, dont un contre-temoin REQ-INT-029. L'ecart avec l'ancienne acceptation (11 types, camelCase) est consigne par `partners/ADR-0008`, tranche par `docs/PRESEANCE.md` §2 : le registre prime sur un document hors depot.
 
-**Tests.** `contrat-hash.spec.ts`
+**Tests.** `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — l'enveloppe porte les neuf champs du registre, dans la casse du registre` · `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — un evenement hors schema est REFUSE : c’est ce refus qui vaut le 422` · `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-004 — la liste des types est FERMEE sur les sept que le registre enumere` · `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-029 — aucun champ interdit ne franchit la frontiere, et le detecteur sait rougir` · `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — le JSON Schema publie est DERIVE : regenere, il est identique au fichier commite` · `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — contracts.sha256 est l'empreinte du schema publie, et un champ renomme la change` · `tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)`
 
 ### INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel
 
-`1 j` · zone `integration` · `axionia` · depend de `INT-T01a`
+`1 j` · zone `integration` · `axionia` · `schema` · depend de `INT-T01a`
 
-Couvre : `REQ-ARG-002`, `REQ-ARG-005`, `REQ-ARG-006`, `REQ-ARG-030`, `REQ-CPL-015`, `REQ-DM-018`, `REQ-DM-036`, `REQ-DM-039`, `REQ-DM-040`, `REQ-INT-005`, `REQ-INT-006`, `REQ-INT-032`, `REQ-QA-008`
+Couvre : `REQ-ARG-002`, `REQ-ARG-005`, `REQ-ARG-006`, `REQ-ARG-030`, `REQ-CPL-015`, `REQ-DM-018`, `REQ-DM-036`, `REQ-DM-039`, `REQ-DM-040`, `REQ-INT-005`, `REQ-INT-006`, `REQ-INT-032`, `REQ-QA-008`, `REQ-QA-007`
 
 **Acceptation.** payloads (REQ-INT-005/006/032, REQ-DM-039/040, K-18 payers[], `client.fusionne`, `candidature.recue`), dérivation HT, deux formes de remboursement ; `pnpm partners:fixtures` (dans axionia, `scripts/partners/fixtures.ts`, base de dev port 5434, pseudonymisation, sortie commitée dans Partners avec `Source:`) — **aucune fixture écrite à la main, aucun helper qui « complète » un champ manquant**.
 
@@ -203,15 +213,17 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-025`, `REQ-GOV-027`
 
 **Acceptation.** conversion **mécanique** de `TASKS.md` en `docs/tasks.json` pour les champs qui existent déjà (`id`, `titre`, `phase`, `deps`, `reqs`, `hyp`, `externe`, `repo`, `estimateDays`, `statut`), validé par `scripts/lot/tasks.schema.json` ; `repo` absent → `partners` par défaut ; grappes fusionnées ; chemin critique écrit dans PLAN-STATE ; `TASKS.md` devient une vue générée (`pnpm gov:tasks --render`).
 
-**Tests.** `tests/unit/gouvernance/gardes.spec.ts#'gov:tasks' > sait rougir : ses 11 familles ont chacune un témoin`
+**Tests.** `tests/unit/gouvernance/paths-derives.spec.ts#la vue commitee est a jour : `--check` est vert sur le depot` · `tests/unit/gouvernance/paths-derives.spec.ts#REQ-GOV-025 — aucune tache `repo: axionia` ne pretend ecrire un fichier de ce depot` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la famille `phase_gelee` est prouvee, temoin et contre-temoin`
 
-### GOV-017b — `paths
+### GOV-017b — `paths ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · sensible : attribution · depend de `GOV-017a`
 
 Couvre : `REQ-GOV-021`, `REQ-GOV-025`, `REQ-GOV-027`
 
 **Acceptation.** chaque tâche porte `zone`, `paths[]` (≥ 1 entrée) et `sensible[]` ; **c'est ce qui fonde la disjonction de chemins du composeur** — sans ces champs, deux tâches d'un même lot peuvent écrire le même fichier et la file casse ; `acceptance` et `tests{}` deviennent requis **à l'attribution** (`statut: en_cours`), pas à l'écriture.
+
+**Tests.** `tests/unit/gouvernance/paths-derives.spec.ts#la vue commitee est a jour : `--check` est vert sur le depot` · `tests/unit/gouvernance/paths-derives.spec.ts#REQ-GOV-025 — aucune tache `repo: axionia` ne pretend ecrire un fichier de ce depot` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la famille `phase_gelee` est prouvee, temoin et contre-temoin` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la phase courante se lit dans le backlog, pas dans la vue PLAN-STATE`
 
 ### GOV-019 — Budgets de performance après première mesure
 
@@ -221,29 +233,35 @@ Couvre : `REQ-GOV-028`
 
 **Tests.** `poids-du-bundle-garde-vraiment.spec.ts`
 
-### GOV-020 — Inventaire prouvé C1-C8
+### GOV-020 — Inventaire prouvé C1-C8 ✅ **fusionnee**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-004`
 
 Couvre : `REQ-GOV-026`
 
-### GOV-023 — Fiches de rôle générées depuis `agents.json`
+**Acceptation.** `pnpm gov:inventaire` rougit sur toute entree de `docs/tasks.json` en etat >= « code » qui ne porte aucune preuve QUI RESOUT — un chemin present sur le disque ou un SHA que `git` retrouve, derive de la portee conventionnelle du commit ; un numero de PR n'en est pas une (GOV-000 est `fusionnee` sans PR). La legende de REQ-GOV-026 n'est pas un second vocabulaire : c'est une echelle ordonnee derivee de l'enum `statut`, dont l'exhaustivite est verifiee, et dont le rang est le PLANCHER garanti (`en_cours` vaut `specifie` : revendiquee n'est pas codee). `docs/INVENTAIRE-CHANTIERS.md` porte les huit etiquettes que REQ-GOV-026 nomme ; deux seulement ont un referent resolu dans ce depot, les six autres n'ont AUCUN etat et la garde rougit si quelqu'un leur en ecrit un. 7 familles, 6 contre-temoins verts.
+
+**Tests.** `tests/unit/gouvernance/inventaire-prouve.spec.ts#REQ-GOV-026 — toute tâche en état ≥ « codé » porte au moins une preuve qui résout (chemin présent ou SHA retrouvé)` · `tests/unit/gouvernance/inventaire-prouve.spec.ts#REQ-GOV-026 — une étiquette dont ce dépôt ne résout pas le référent ne porte AUCUN état : une preuve inventée est pire qu'une preuve absente` · `tests/unit/gouvernance/inventaire-prouve.spec.ts#REQ-GOV-026 — la garde sait rougir : ses 7 familles ont chacune un témoin, et ses contre-témoins restent verts`
+
+### GOV-023 — Fiches de rôle générées depuis `agents.json` ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-000`, `GOV-007`
 
 Couvre : `REQ-GOV-010`
 
-**Acceptation.** `pnpm gov:agents` génère `.claude/agents/<role>.md` (~15 fiches : mission, entrées, sorties, interdits, documents à lire avec chemins, `tools`).
+**Acceptation.** `docs/agents.json` est la source des quinze fiches : `pnpm gov:agents:rendre` rend `.claude/agents/<role>.md` (frontmatter + bloc marque : mission, entrees, sorties, interdits, documents a lire avec chemins verifies existants) ; `pnpm gov:agents:verifier` rougit si une fiche a ete editee a la main ; `pnpm gov:agents` confronte en plus la source au tableau §2 et aux chemins reserves §7 de la charte, et a tout `agentType` du workflow de lot. La derivation est FIDELE : `git diff .claude/agents/` ne porte aucune suppression ni aucune modification de ligne, seulement le bloc genere ajoute. 14 familles, 7 contre-temoins verts.
 
-**Tests.** `fiches-agents.spec.ts`
+**Tests.** `tests/unit/gouvernance/fiches-agents.spec.ts#REQ-GOV-010 — la source declare les quinze postes, codes A01 a A15 uniques` · `tests/unit/gouvernance/fiches-agents.spec.ts#REQ-GOV-010 — tout chemin de documents[] existe sur le disque` · `tests/unit/gouvernance/fiches-agents.spec.ts#REQ-GOV-010 — chaque chemin reserve du §7 nomme un poste de la source (gate de l’exigence)` · `tests/unit/gouvernance/fiches-agents.spec.ts#REQ-GOV-010 — sait rougir : ses 14 familles ont chacune un temoin, 7 contre-temoins restent verts`
 
-### QA-T00 — `prove.sh` + `gates.json` {id, script, fixtureRouge, phase, preuveRouge} + nightly `gates:prouvees`
+### QA-T00 — `prove.sh` + `gates.json` {id, script, fixtureRouge, phase, preuveRouge} + nightly `gates:prouvees` ✅ **fusionnee**
 
 `0.5 j` · zone `qualite` · depend de `GOV-000`
 
 Couvre : `REQ-QA-013`
 
-**Acceptation.** chaque gate porte un champ `phase` et une `preuveRouge` archivée ; `gates:prouvees` calcule « toutes les gates de phase ≤ N présentes, bloquantes, avec `preuveRouge` ».
+**Acceptation.** chaque gate porte un champ `phase` et une `preuveRouge` archivee ; `gates:prouvees` calcule « toutes les gates de phase <= N presentes, bloquantes, avec `preuveRouge` ». PERIMETRE EXACT, dit plutot que maquille : de REQ-QA-013, QA-T00 ne couvre que la moitie BLOQUANTE — que le check requis de `main` soit celui que `ci.yml` produit, et que les gates declarees soient reellement armees. Le CONTENU de la gate (ESLint, Prettier, couverture, testcontainers, semgrep, audit, gitleaks, req:check, idor:check, lint de migration, size-limit) n'est livre par aucune tache de la phase -1 : il revient a QA-T01, QA-T07 et QA-T28, qui portent deja l'exigence. `pnpm gov:trace` le redira le jour ou elles entreront.
+
+**Tests.** `tests/unit/gouvernance/tout-check-est-cable.spec.ts#le nom du check requis se lit dans les jobs de ci.yml, il n’est pas tapé` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#check_requis_absent — `gate-a` n’est plus exigé par la protection de `main`` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#un workflow qui ne se déclenche pas sur `pull_request` ne produit aucun check de PR`
 
 ### CPL-T01 — Décisions sans valeur par défaut à trancher par Will : W1 entité contractante, W9 prolongation de fenêtre si devis en cours — **attente_externe**
 
