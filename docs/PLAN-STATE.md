@@ -7,28 +7,28 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `9597865` — 2026-09-04T06:27:42+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #29 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | GOV-018 (A01) · GOV-008 (A01) · GOV-010 (A01) · GOV-011 (A01) · GOV-012 (A01) · INT-T01a (A01) · GOV-020 (A01) · GOV-023 (A01) |
-| Où en est la phase ? | phase -1 — 12/26 tâches, reste 7.00 j |
-| Le prochain pas | GOV-012 — Protocole de fusion, release manager, protection de main (chemin critique) |
+| Où est `main` ? | `ab5caf5` — 2026-09-04T07:58:37+02:00 |
+| Qu’est-ce qui est en vol ? | aucune PR ouverte |
+| Qui tient quoi ? | aucune tâche revendiquée |
+| Où en est la phase ? | phase -1 — 20/26 tâches, reste 3.00 j |
+| Le prochain pas | GOV-013 — Gate lexicale « commercial » (chemin critique) |
 | Ce qui bloque | 3 tâche(s) bloquée(s) ou en attente externe · 9 question(s) pour Will |
 | Dernière entrée de journal | PR #29 — 2026-09-04 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
-12/26 tâches terminées · reste 7.00 j estimés.
+20/26 tâches terminées · reste 3.00 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 182 | GOV-018, GOV-008, GOV-006, GOV-010, GOV-011, GOV-012, GOV-013, GOV-014, INT-T01a, INT-T01b, GOV-019, GOV-020 … |
+| `a_faire` | 174 | GOV-006, GOV-013, GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01 … |
 | `en_cours` | 0 | — |
 | `en_revue` | 0 | — |
-| `fusionnee` | 12 | GOV-000, GOV-007, GOV-001, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-015, GOV-017a, GOV-017b, QA-T00 |
+| `fusionnee` | 20 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 | `bloquee` | 0 | — |
@@ -38,9 +38,9 @@
 
 **19.75 j** sur 22 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → GOV-012 (0.5 j, ph -1) → GOV-013 (0.25 j, ph -1) → GOV-014 (1 j, ph -1) → QA-T01 (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (0.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → GOV-013 (0.25 j, ph -1) → GOV-014 (1 j, ph -1) → QA-T01 (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (0.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **18.25 j**.
+Reste sur ce chemin : **17.75 j**.
 
 ## Bloquées
 
@@ -66,28 +66,15 @@ Reste sur ce chemin : **18.25 j**.
 
 ## File de fusion
 
-| # | PR | Branche | Ce qui la bloque |
-| --- | --- | --- | --- |
-| 1 | #29 — chore(GOV-008): entree de journal de la PR 28 — main etait rouge sans elle | `lot/L-1-03-journal` | un contrôle requis rouge ou une revue manquante |
-
-Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
+Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.
 
 ## Revendications
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-| Tâche | Revendiquée par | Issue | Statut |
-| --- | --- | --- | --- |
-| GOV-018 — Règles maison et leçons dans le dépôt | A01 | #6 | `a_faire` |
-| GOV-008 — PLAN-STATE vivant, protocole de session, verrou d'écriture | A01 | #7 | `a_faire` |
-| GOV-010 — Gate ADR ↔ assertion | A01 | #12 | `a_faire` |
-| GOV-011 — Matrice de traçabilité dérivée | A01 | #13 | `a_faire` |
-| GOV-012 — Protocole de fusion, release manager, protection de main | A01 | #14 | `a_faire` |
-| INT-T01a — Contrat d'événements, enveloppe et nomenclature : Zod + JSON Schema + `schemaVersion` + hash | A01 | #18 | `a_faire` |
-| GOV-020 — Inventaire prouvé C1-C8 | A01 | #22 | `a_faire` |
-| GOV-023 — Fiches de rôle générées depuis `agents.json` | A01 | #23 | `a_faire` |
+Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
 
-⚠️ **7 revendication(s) périmée(s)** — GOV-007, GOV-002, GOV-004, GOV-009, GOV-015, GOV-017b, QA-T00 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
+⚠️ **15 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
@@ -98,11 +85,11 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 
 ## Prochain pas
 
-1. **GOV-012** — Protocole de fusion, release manager, protection de main (0.5 j, **sur le chemin critique**) : 9 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+1. **GOV-013** — Gate lexicale « commercial » (0.25 j, **sur le chemin critique**) : 3 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `9597865` (2026-09-04T06:27:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `ab5caf5` (2026-09-04T07:58:37+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 > Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 

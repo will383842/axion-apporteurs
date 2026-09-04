@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**319 exigences actives · 22 réputées testées · 22 couvertes · 0 orphelines.**
+**319 exigences actives · 31 réputées testées · 31 couvertes · 0 orphelines.**
 
-197 tâches, dont 12 livrées · 19 fichiers de test exécutés par `vitest` sur 19 présents.
+197 tâches, dont 20 livrées · 19 fichiers de test exécutés par `vitest` sur 19 présents.
 
 ## Exigences réputées testées
 
@@ -29,7 +29,10 @@
 | `REQ-GOV-002` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-003` | `GOV-003`, `GOV-005` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-004` | `GOV-004` | `tests/unit/gouvernance/affirmations-verifiees.spec.ts` | couverte |
+| `REQ-GOV-006` | `GOV-008` | `tests/unit/gouvernance/plan-state-frais.spec.ts` | couverte |
+| `REQ-GOV-007` | `GOV-008` | `tests/unit/gouvernance/une-tache-un-owner.spec.ts` | couverte |
 | `REQ-GOV-008` | `GOV-009` | `tests/unit/gouvernance/adr-index-derive.spec.ts` | couverte |
+| `REQ-GOV-009` | `GOV-010`, `GOV-022` | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | couverte |
 | `REQ-GOV-010` | `GOV-007`, `GOV-023` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/fiches-agents.spec.ts` | couverte |
 | `REQ-GOV-011` | `GOV-007`, `GOV-021` | `tests/gov/charte-pr.spec.ts` | couverte |
 | `REQ-GOV-012` | `GOV-007` | `tests/gov/charte-pr.spec.ts` | couverte |
@@ -38,11 +41,17 @@
 | `REQ-GOV-015` | `GOV-005`, `GOV-022`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-021` | `GOV-017a`, `GOV-017b` | `tests/unit/gouvernance/paths-derives.spec.ts` | couverte |
 | `REQ-GOV-022` | `GOV-015` | `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
+| `REQ-GOV-023` | `GOV-008`, `GOV-018` | `tests/unit/gouvernance/plan-state-frais.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts` | couverte |
+| `REQ-GOV-024` | `GOV-018` | `tests/unit/gouvernance/regles-maison.spec.ts` | couverte |
 | `REQ-GOV-025` | `GOV-017a`, `GOV-017b` | `tests/unit/gouvernance/paths-derives.spec.ts` | couverte |
 | `REQ-GOV-026` | `GOV-001`, `GOV-020` | `tests/unit/gouvernance/inventaire-prouve.spec.ts` | couverte |
 | `REQ-GOV-027` | `CPL-T23`, `GOV-017a`, `GOV-017b`, `GOV-022` | `tests/gov/charte-pr.spec.ts` | couverte |
 | `REQ-GOV-030` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-031` | `GOV-000` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
+| `REQ-INT-003` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
+| `REQ-INT-004` | `INT-T01a`, `INT-T05` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
+| `REQ-INT-029` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
+| `REQ-QA-007` | `INT-T01a`, `INT-T01b` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-QA-013` | `QA-T00`, `QA-T01`, `QA-T07`, `QA-T28` | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
 
 ## Exigences actives dont aucune tâche n’est encore livrée
@@ -176,19 +185,12 @@
 | `REQ-EXT-027` | 1 | `DM-23`, `UX-P1-14` | — |
 | `REQ-EXT-028` | 0 | `JUR-T02` | — |
 | `REQ-EXT-029` | 2 | `UX-P2-04` | — |
-| `REQ-GOV-006` | -1 | `GOV-008` | `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-006 — PLAN-STATE porte les sept rubriques que l’exigence enumere, bloc « REPRENDRE EN 30 SECONDES » compris`, `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-006 — sans lecture GitHub possible, gov:etat ECHOUE au lieu de verdir en silence`, `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-023 — chaque entree cite un numero de PR et porte fait / reste / appris`, `tests/unit/gouvernance/une-tache-un-owner.spec.ts#REQ-GOV-007 — deux PR OUVERTES citant la meme tache font rougir la famille `deux_pr_meme_tache``, `tests/unit/gouvernance/une-tache-un-owner.spec.ts#REQ-GOV-007 — la revendication n’a PAS de troisieme endroit : PLAN-STATE la rend, il ne la stocke pas` |
-| `REQ-GOV-007` | -1 | `GOV-008` | `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-006 — PLAN-STATE porte les sept rubriques que l’exigence enumere, bloc « REPRENDRE EN 30 SECONDES » compris`, `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-006 — sans lecture GitHub possible, gov:etat ECHOUE au lieu de verdir en silence`, `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-023 — chaque entree cite un numero de PR et porte fait / reste / appris`, `tests/unit/gouvernance/une-tache-un-owner.spec.ts#REQ-GOV-007 — deux PR OUVERTES citant la meme tache font rougir la famille `deux_pr_meme_tache``, `tests/unit/gouvernance/une-tache-un-owner.spec.ts#REQ-GOV-007 — la revendication n’a PAS de troisieme endroit : PLAN-STATE la rend, il ne la stocke pas` |
-| `REQ-GOV-009` | -1 | `GOV-010`, `GOV-022` | `tests/unit/gouvernance/adr-assertion-existe.spec.ts#REQ-GOV-009 — chaque ADR « accepte » cite un fichier de test qui existe et un titre it() qu'on y retrouve LITTERALEMENT`, `tests/unit/gouvernance/adr-assertion-existe.spec.ts#REQ-GOV-009 — la preuve NOMME les quatre familles de GOV-010, elle ne les compte pas` |
 | `REQ-GOV-016` | -1 | `GOV-006` | `glossaire-enums.spec.ts` |
 | `REQ-GOV-017` | -1 | `GOV-013` | `lexique.spec.ts` |
 | `REQ-GOV-018` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
-| `REQ-GOV-023` | -1 | `GOV-008`, `GOV-018` | `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-006 — PLAN-STATE porte les sept rubriques que l’exigence enumere, bloc « REPRENDRE EN 30 SECONDES » compris`, `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-006 — sans lecture GitHub possible, gov:etat ECHOUE au lieu de verdir en silence`, `tests/unit/gouvernance/plan-state-frais.spec.ts#REQ-GOV-023 — chaque entree cite un numero de PR et porte fait / reste / appris`, `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — CONTRE-TEMOIN : la meme peremption sans aucun « appris » en attente reste VERTE`, `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — ROUGE : consolidation de plus de 7 jours ALORS QUE des « appris » attendent`, `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — docs/LECONS.md porte une date de consolidation MACHINE-LISIBLE`, `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 a RM-12, une section par regle`, `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — les neuf regles que l'exigence enumere sont chacune couvertes par une section`, `tests/unit/gouvernance/une-tache-un-owner.spec.ts#REQ-GOV-007 — deux PR OUVERTES citant la meme tache font rougir la famille `deux_pr_meme_tache``, `tests/unit/gouvernance/une-tache-un-owner.spec.ts#REQ-GOV-007 — la revendication n’a PAS de troisieme endroit : PLAN-STATE la rend, il ne la stocke pas` |
-| `REQ-GOV-024` | -1 | `GOV-018` | `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — CONTRE-TEMOIN : la meme peremption sans aucun « appris » en attente reste VERTE`, `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — ROUGE : consolidation de plus de 7 jours ALORS QUE des « appris » attendent`, `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — docs/LECONS.md porte une date de consolidation MACHINE-LISIBLE`, `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 a RM-12, une section par regle`, `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — les neuf regles que l'exigence enumere sont chacune couvertes par une section` |
 | `REQ-GOV-028` | -1 | `GOV-019` | `poids-du-bundle-garde-vraiment.spec.ts` |
 | `REQ-GOV-029` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
 | `REQ-INT-001` | 0 | `INT-T02` | `outbox-produit-des-evenements-valides.spec.ts` |
-| `REQ-INT-003` | -1 | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — l'enveloppe porte les neuf champs du registre, dans la casse du registre`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — un evenement hors schema est REFUSE : c’est ce refus qui vaut le 422`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-004 — la liste des types est FERMEE sur les sept que le registre enumere`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-029 — aucun champ interdit ne franchit la frontiere, et le detecteur sait rougir`, `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — contracts.sha256 est l'empreinte du schema publie, et un champ renomme la change`, `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — le JSON Schema publie est DERIVE : regenere, il est identique au fichier commite` |
-| `REQ-INT-004` | -1 | `INT-T01a`, `INT-T05` | `tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — l'enveloppe porte les neuf champs du registre, dans la casse du registre`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — un evenement hors schema est REFUSE : c’est ce refus qui vaut le 422`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-004 — la liste des types est FERMEE sur les sept que le registre enumere`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-029 — aucun champ interdit ne franchit la frontiere, et le detecteur sait rougir`, `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — contracts.sha256 est l'empreinte du schema publie, et un champ renomme la change`, `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — le JSON Schema publie est DERIVE : regenere, il est identique au fichier commite` |
 | `REQ-INT-005` | -1 | `INT-T01b`, `INT-T05` | — |
 | `REQ-INT-006` | -1 | `INT-T01b`, `INT-T04` | — |
 | `REQ-INT-007` | 0 | `INT-T03`, `INT-T04`, `INT-T05`, `SEC-28` | — |
@@ -210,7 +212,6 @@
 | `REQ-INT-025` | 3 | `UX-P3-01` | — |
 | `REQ-INT-026` | 0 | `INT-T11` | — |
 | `REQ-INT-027` | 1 | `INT-T13`, `INT-T17` | — |
-| `REQ-INT-029` | -1 | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — l'enveloppe porte les neuf champs du registre, dans la casse du registre`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — un evenement hors schema est REFUSE : c’est ce refus qui vaut le 422`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-004 — la liste des types est FERMEE sur les sept que le registre enumere`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-029 — aucun champ interdit ne franchit la frontiere, et le detecteur sait rougir`, `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — contracts.sha256 est l'empreinte du schema publie, et un champ renomme la change`, `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — le JSON Schema publie est DERIVE : regenere, il est identique au fichier commite` |
 | `REQ-INT-030` | 1 | `INT-T08-A`, `INT-T08-P`, `QA-T19` | — |
 | `REQ-INT-031` | 0 | `INT-T02` | `outbox-produit-des-evenements-valides.spec.ts` |
 | `REQ-INT-032` | -1 | `DM-15`, `INT-T01b`, `INT-T05`, `INT-T22` | — |
@@ -253,7 +254,6 @@
 | `REQ-QA-004` | 1 | `DM-08` | — |
 | `REQ-QA-005` | 2 | `QA-T28`, `QA-T29` | — |
 | `REQ-QA-006` | 0 | `QA-T02` | — |
-| `REQ-QA-007` | -1 | `INT-T01a`, `INT-T01b` | `tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — l'enveloppe porte les neuf champs du registre, dans la casse du registre`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — un evenement hors schema est REFUSE : c’est ce refus qui vaut le 422`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-004 — la liste des types est FERMEE sur les sept que le registre enumere`, `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-029 — aucun champ interdit ne franchit la frontiere, et le detecteur sait rougir`, `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — contracts.sha256 est l'empreinte du schema publie, et un champ renomme la change`, `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — le JSON Schema publie est DERIVE : regenere, il est identique au fichier commite` |
 | `REQ-QA-014` | 0 | `QA-T03` | `req-check.spec.ts` |
 | `REQ-QA-015` | 0 | `QA-T06` | — |
 | `REQ-QA-016` | 0 | `QA-T16`, `UX-P0-03` | — |
@@ -396,11 +396,11 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 2 | 3 | 0 |
 | 3 | 1 | 0 |
 | 4 | 15 | 0 |
-| 5 | 15 | 0 |
+| 5 | 15 | 1 |
 | 6 | 1 | 0 |
 | 7 | 1 | 0 |
 | 8 | 13 | 0 |
-| 9 | 36 | 2 |
+| 9 | 36 | 4 |
 | 10 | 6 | 0 |
 | 11 | 5 | 0 |
 | 12 | 13 | 0 |
@@ -420,11 +420,11 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 2 | 12 | 0 |
 | 3 | 1 | 0 |
 | 4 | 16 | 0 |
-| 5 | 17 | 0 |
+| 5 | 17 | 1 |
 | 6 | 2 | 0 |
-| 7 | 52 | 2 |
+| 7 | 52 | 3 |
 | 8 | 12 | 0 |
-| 9 | 23 | 1 |
+| 9 | 23 | 4 |
 | 10 | 63 | 4 |
 | 11 | 30 | 2 |
 | 12 | 14 | 0 |
