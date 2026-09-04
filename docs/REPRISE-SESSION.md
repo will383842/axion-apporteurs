@@ -198,6 +198,20 @@ autres tâches passent bien `fusionnee` et elle seule retombe `a_faire` avec `at
 L'invariant se juge **tâche par tâche**, pas en bloc : un rendu partiellement faux ne contamine pas
 les lignes saines, et ne les protège pas non plus.
 
+### Un fichier que git ne suit pas n'est lu par AUCUNE garde
+
+`gov:identifiants` finit par « aucun identifiant nu **dans les fichiers suivis** », et c'est la
+portée de presque toutes les gardes de ce dépôt : `gov:publication` le dit explicitement, et le
+gabarit de PR prévient déjà que le corps d'une PR n'est lu par aucune d'elles. Cette note a vécu
+plusieurs sessions dans `docs/lots/`, en `.gitignore` — donc hors de portée de tout. **Le commit qui
+l'a fait entrer dans le dépôt a immédiatement rendu la CI rouge sur six défauts qui y dormaient
+depuis le début**, aucun introduit ce jour-là.
+
+Ce n'est pas un argument pour la laisser dehors : c'est la démonstration que « vert » ne veut rien
+dire sur ce qu'aucune garde ne regarde. La conséquence pratique, quand on commite un document
+jusque-là ignoré : s'attendre à un rouge, et le lire comme un inventaire de dette, pas comme une
+régression.
+
 ### Cette note a déjà annoncé comme acquis un chiffre qui ne l'était pas
 
 L'état du 2026-09-04 écrivait « 20 tâches sur 197, 13,50 j, 9,1 % » **avant** que
@@ -245,10 +259,12 @@ de contact réel, et il est loin.
 
 ## Ce qui reste ouvert, nommément
 
-- **Six étiquettes de chantier sur huit n'ont aucun référent** dans ce dépôt (C2, C4, C5, C6, C7, C8
-  de `docs/INVENTAIRE-CHANTIERS.md`). REQ-GOV-026 affirme « C5 codé » sur une étiquette dont rien ici
-  ne dit ce qu'elle désigne. Pour les remplir : la liste des huit chantiers avec, pour chacun,
-  l'intitulé et le fichier d'axionia qu'il désigne.
+- **Six étiquettes de chantier sur huit n'ont aucun référent** dans ce dépôt (« C2 », « C4 »,
+  « C5 », « C6 », « C7 », « C8 » de `docs/INVENTAIRE-CHANTIERS.md`). REQ-GOV-026 affirme
+  « C5 codé » sur une étiquette dont rien ici ne dit ce qu'elle désigne. Pour les remplir : la liste
+  des huit chantiers avec, pour chacun, l'intitulé et le fichier d'axionia qu'il désigne. Les
+  guillemets ne sont pas de la coquetterie : `gov:identifiants` traite un identifiant entre
+  guillemets comme une **citation**, et hors guillemets comme une **référence** qui doit résoudre.
 - **Trois nombres cohabitent** pour le contrat d'événements : REQ-QA-007 et REQ-GOV-020 disent
   5 événements, REQ-INT-004 en dit 7, l'ancienne acceptation 11. Le code suit REQ-INT-004 ; l'écart
   est consigné dans `partners/ADR-0008`. À aligner par le `gardien-spec`.
