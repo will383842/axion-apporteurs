@@ -198,6 +198,18 @@ autres tâches passent bien `fusionnee` et elle seule retombe `a_faire` avec `at
 L'invariant se juge **tâche par tâche**, pas en bloc : un rendu partiellement faux ne contamine pas
 les lignes saines, et ne les protège pas non plus.
 
+### `plan-state:build` se lance APRÈS l'entrée de journal, jamais avant
+
+`docs/PLAN-STATE.md` **rend** `docs/journal/` — il ne le stocke pas. Régénérer PLAN-STATE puis
+écrire l'entrée de journal produit donc un état vivant qui ne cite pas la PR en cours, et
+`plan-state-frais.spec.ts` rougit en CI : `expected '## Journal…' to contain '#30'`. C'est un
+défaut d'**ordre**, pas de contenu : les deux fichiers étaient corrects séparément.
+
+Le protocole en fin de note l'énonce déjà dans le bon ordre ; il a été suivi à l'envers sur la
+PR #30 parce que la clôture et l'entrée de journal ont été commitées en **deux** temps. Dès qu'une
+PR se construit en plusieurs commits, `plan-state:build` est le **dernier geste avant le push**,
+pas un geste de l'étape où l'on régénère les autres vues.
+
 ### Un fichier que git ne suit pas n'est lu par AUCUNE garde
 
 `gov:identifiants` finit par « aucun identifiant nu **dans les fichiers suivis** », et c'est la
@@ -300,6 +312,9 @@ git checkout -b lot/L<phase>-<seq>-integration
 # → écrire l'ENTRÉE DE JOURNAL de la PR, sur la branche, avec le reste
 # → régénérer les vues : lot:paths · adr:index · gov:gates-derivees --render
 #                        gov:trace --render · plan-state:build
+#   ⚠️ plan-state:build EN DERNIER, et APRÈS l'entrée de journal : PLAN-STATE REND le
+#      journal. Régénéré avant, il ne cite pas l'entrée de la PR courante, et
+#      plan-state-frais.spec.ts rougit en CI — vu sur la PR #30.
 bash <gate-a>            # les 37 étapes, avec leur CODE DE SORTIE, jamais un tube
 git commit               # un commit par tâche + un commit d'intégration
 gh pr create             # gabarit 8 cases, bloc ROUGE/VERT verbatim, section Attaque si sensible

@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `ab5caf5` — 2026-09-04T07:58:37+02:00 |
-| Qu’est-ce qui est en vol ? | aucune PR ouverte |
+| Qu’est-ce qui est en vol ? | 1. #30 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase -1 — 20/26 tâches, reste 3.00 j |
 | Le prochain pas | GOV-013 — Gate lexicale « commercial » (chemin critique) |
 | Ce qui bloque | 3 tâche(s) bloquée(s) ou en attente externe · 9 question(s) pour Will |
-| Dernière entrée de journal | PR #29 — 2026-09-04 |
+| Dernière entrée de journal | PR #30 — 2026-09-04 |
 
-**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
@@ -66,7 +66,11 @@ Reste sur ce chemin : **17.75 j**.
 
 ## File de fusion
 
-Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.
+| # | PR | Branche | Ce qui la bloque |
+| --- | --- | --- | --- |
+| 1 | #30 — chore(GOV-012): cloture du lot L-1-03 — huit taches fusionnee, atterrissage atteste | `lot/L-1-03-cloture` | un contrôle requis rouge ou une revue manquante |
+
+Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
 ## Revendications
 
@@ -96,6 +100,36 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #30 — 2026-09-04 — chore(GOV-012): cloture du lot L-1-03 — huit taches fusionnee, atterrissage atteste
+
+**Fait.** Le lot `L-1-03` est clos : ses huit tâches passent `fusionnee` dans `docs/tasks.json`, et
+le dépôt passe de 12 à 20 tâches livrées sur 197, de 9,50 à 13,50 j sur 149 — 6,4 % à 9,1 %, phase
+−1 à 20 sur 26. L'invariant `fusion.atterri === true` a été satisfait avant l'écriture et non
+affirmé : le run `Gate A` du `push` sur `main` a été lu vert (`33842493472`, `ab5caf5`), puis la
+8ᵉ case de #28 et #29 cochée, puis `lot:cloture` lancé. `docs/TRACABILITE.md` passe de 22 à 31
+exigences réputées testées — non par ajout de tests, mais parce que la clôture rend enfin visibles
+les promesses `tests{}` de huit tâches jusque-là non livrées.
+
+**Reste.** Les quatre lentilles n'ont pas rendu leur verdict sur cette PR : la session qui l'ouvre
+avait pour consigne de clôturer `L-1-03` et de s'arrêter sans composer le lot suivant, et
+`pnpm gov:pr --pr 30` reste donc ROUGE sur `lentilles_manquantes` et sur la 3ᵉ case, laissée vide
+exprès. Les sept revendications périmées ne sont pas effacées — `lot:cloture` écrit le backlog, pas
+les labels d'issue — et `deploy:verify` (`GOV-012`, `partners/ADR-0006`) manque toujours, de sorte
+que l'atterrissage se vérifie encore par le repli daté du Pas 7 de `docs/PROTOCOLE-FUSION.md`.
+
+**Appris.** Le motif du **premier** échec de clôture d'une tâche n'est écrit nulle part : `cloture.ts`
+le calcule, l'imprime — `fusion non atterrie : motif absent` — puis remet `t.motif` à `null`, parce
+qu'une tâche qui repart doit repartir propre ; il n'est persisté qu'à la deuxième tentative, quand
+la tâche bascule `bloquee`. Une session qui n'a pas lu la sortie console de ce run-là ne retrouvera
+jamais la raison. L'attaque a aussi montré que l'invariant se juge **tâche par tâche** et non en
+bloc : avec `atterri: false` sur la seule `GOV-010`, les sept autres passent `fusionnee` et elle
+seule retombe `a_faire` avec `attempts: 1` — un rendu partiellement faux ne contamine pas les lignes
+saines, et ne les protège pas non plus. Enfin, un fichier que git ne suit pas n'est lu par **aucune**
+garde : `gov:identifiants` conclut par « aucun identifiant nu **dans les fichiers suivis** », et le
+commit qui a fait entrer `docs/REPRISE-SESSION.md` dans le dépôt a rendu la CI rouge sur six
+identifiants nus qui y dormaient depuis des sessions, aucun introduit ce jour-là — « vert » ne dit
+rien de ce qu'aucune garde ne regarde.
 
 ### PR #29 — 2026-09-04 — chore(GOV-008): entree de journal de la PR 28 — main etait rouge sans elle
 
@@ -141,26 +175,7 @@ la tâche même qui livre la garde censée l'attraper. Le critère juste n'est p
 mais l'existence du fichier, et il a fallu élargir deux choses : le contrôle, puis la résolution des
 titres — un contrôle élargi dont la source ne l'est pas ne contrôle rien.
 
-### PR #27 — 2026-09-03 — chore(GOV-012): cloture du lot L-1-01, `partners/ADR-0007` sur la branche de lot, LF partout
-
-**Fait.** Le lot `L-1-01` est clos : ses sept tâches de gouvernance passent `fusionnee`.
-`partners/ADR-0007` arrête les deux formes de branche (`lot/<id>-<suffixe>` en forme normale,
-`t/<slug>` en dérogation) et `tasks.schema.json` les accepte toutes deux. `.gitattributes` force le
-LF dans l'arbre de travail, pas seulement dans l'index. `pnpm lot:integrer` refuse de recopier un
-fichier partagé et dit ce que le livrable aurait effacé.
-
-**Reste.** `docs/PROTOCOLE-FUSION.md` et le script `deploy:verify` (REQ-GOV-014, GOV-012) n'existent
-toujours pas : tant qu'ils manquent, la sérialisation des fusions tient par la discipline du
-`release-manager` — c'est-à-dire par rien qui rougisse (`partners/ADR-0006`, « Reste à faire »).
-Les quatre revues passent par le compte de Will, faute d'un second compte GitHub (`W13`).
-
-**Appris.** Un `OK` qui n'a pas lu un code de sortie n'est pas un verdict : le premier passage de
-Gate A a été lancé en `pnpm <cible> | tail -6` sous `set -e` ; le code de sortie d'un tube est celui
-de `tail`, donc zéro, et la boucle a imprimé `GATE A LOCAL: OK` sur trois gates rouges. La seconde
-boucle lit `$?` de chaque commande. Et `gov:pr` exigeait des revues `APPROVED` que GitHub refuse à
-l'auteur d'une PR sur un dépôt à un seul compte : la garde était insatisfiable, donc désarmée.
-
-… 1 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 2 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
