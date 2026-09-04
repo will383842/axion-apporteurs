@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `ff3ef54` — 2026-09-03T23:11:58+02:00 |
+| Où est `main` ? | `9597865` — 2026-09-04T06:27:42+02:00 |
 | Qu’est-ce qui est en vol ? | aucune PR ouverte |
 | Qui tient quoi ? | GOV-018 (A01) · GOV-008 (A01) · GOV-010 (A01) · GOV-011 (A01) · GOV-012 (A01) · INT-T01a (A01) · GOV-020 (A01) · GOV-023 (A01) |
 | Où en est la phase ? | phase -1 — 12/26 tâches, reste 7.00 j |
 | Le prochain pas | GOV-012 — Protocole de fusion, release manager, protection de main (chemin critique) |
 | Ce qui bloque | 3 tâche(s) bloquée(s) ou en attente externe · 9 question(s) pour Will |
-| Dernière entrée de journal | PR #27 — 2026-09-03 |
+| Dernière entrée de journal | PR #28 — 2026-09-04 |
 
 **Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -87,15 +87,10 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’i
 
 ## Décisions du jour
 
-- partners/ADR-0001 — La pile technique — `docs/adr/0001-pile-technique.md`
-- partners/ADR-0002 — La frontière avec axionia, les sources de vérité, le mono-tenant — `docs/adr/0002-frontiere-axionia-sources-de-verite-mono-tenant.md`
-- partners/ADR-0003 — La grille publiée et la grille par contrat — `docs/adr/0003-grille-publiee-et-grille-par-contrat.md`
-- partners/ADR-0004 — Authentification et rôles : le défaut est le refus — `docs/adr/0004-authentification-et-roles.md`
-- partners/ADR-0005 — La gouvernance : ce qui est source, ce qui est vue, qui écrit quoi — `docs/adr/0005-gouvernance-source-vue-et-ecrivains.md`
-- partners/ADR-0006 — La fusion : file sérialisée, une PR à la fois, atterrissage vérifié — `docs/adr/0006-fusion-serialisee-et-atterrissage-verifie.md`
 - partners/ADR-0007 — La branche porte le LOT, la tâche porte le COMMIT — `docs/adr/0007-la-branche-porte-le-lot-pas-la-tache.md`
+- partners/ADR-0008 — Le contrat d'événements : enveloppe sur le fil, sept types, empreinte du JSON Schema — `docs/adr/0008-contrat-evenements-enveloppe-et-nomenclature.md`
 
-Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-03). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
+Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
 
@@ -103,13 +98,36 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-03)
 
 ## Dernier atterrissage
 
-`origin/main` = `ff3ef54` (2026-09-03T23:11:58+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `9597865` (2026-09-04T06:27:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 > Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #28 — 2026-09-04 — feat(GOV-011): lot L-1-03 — huit taches, six gardes armees, seize ruptures de tracabilite fermees
+
+**Fait.** Les huit tâches du lot `L-1-03` sont intégrées : `GOV-008`, `GOV-010`, `GOV-011`,
+`GOV-012`, `GOV-018`, `GOV-020`, `GOV-023` et `INT-T01a`. Le dépôt passe de 25 à 37 étapes de Gate A,
+de 92 à 217 tests sur 19 fichiers, et de 12 à 18 gardes armées ; les seize ruptures de traçabilité
+que `gov:trace` a trouvées le jour de sa livraison sont fermées. Le contrat d'événements est dérivé
+et tenu par son empreinte (`packages/contracts/contracts.sha256`), et les quinze fiches de rôle sont
+générées depuis `docs/agents.json`.
+
+**Reste.** `glossaire-enums.spec.ts` (`GOV-006`) n'existe pas : tant qu'il manque, `docs/GLOSSAIRE.md`
+est une consigne et non un contrôle, alors que `docs/PRESEANCE.md` §2 lui donne la primauté sur les
+termes. `deploy:verify` (`GOV-012`, `partners/ADR-0006`) manque toujours, et le Pas 7 de
+`docs/PROTOCOLE-FUSION.md` porte donc un repli daté. Six des huit étiquettes de chantier de
+`docs/INVENTAIRE-CHANTIERS.md` n'ont aucun référent dans ce dépôt, et l'écart entre les trois
+comptes d'événements (5, 7, 11) est consigné dans `partners/ADR-0008` plutôt que résolu.
+
+**Appris.** Une garde ne juge pas forcément ce que son propre lot écrit : `gov:trace` écartait les
+tâches non livrées, or les huit du lot étaient `a_faire` — les 33 entrées `tests{}` que le lot
+écrivait n'étaient confrontées au disque par aucune garde, et une promesse inventée est passée dans
+la tâche même qui livre la garde censée l'attraper. Le critère juste n'est pas le statut de la tâche
+mais l'existence du fichier, et il a fallu élargir deux choses : le contrôle, puis la résolution des
+titres — un contrôle élargi dont la source ne l'est pas ne contrôle rien.
 
 ### PR #27 — 2026-09-03 — chore(GOV-012): cloture du lot L-1-01, `partners/ADR-0007` sur la branche de lot, LF partout
 
