@@ -142,6 +142,18 @@ commit qui a fait entrer `docs/REPRISE-SESSION.md` dans le dépôt a rendu la CI
 identifiants nus qui y dormaient depuis des sessions, aucun introduit ce jour-là — « vert » ne dit
 rien de ce qu'aucune garde ne regarde.
 
+La même garde en a fourni un second exemple, plus retors : `gov:identifiants` est **aveugle en fin
+de phrase**. Sa lookahead `(?![A-Za-z0-9_.-])` inclut le point, de sorte qu'une étiquette de
+relecteur collée à un point final n'est pas vue, alors que la même suivie d'un espace l'est. Ses
+propres témoins `--prove` évitent tous cette position : l'auto-preuve ne l'exerce jamais, et la
+garde reste **verte sur le texte qu'elle condamne**. La rédaction de cette entrée l'a vérifié
+malgré elle — des deux occurrences écrites pour l'illustrer, une seule a été relevée. Ce n'est donc
+pas « une garde manque » mais « une garde existe et ne couvre pas la position la plus fréquente
+dans de la prose ». Un témoin qui n'éprouve que le milieu d'une phrase mesure la moitié du domaine.
+Le remède est en tâche, avec des témoins aux positions limites — fin de phrase, fin de ligne, avant
+une virgule, avant une parenthèse fermante — et un contre-témoin qui prouve qu'un usage légitime
+passe toujours.
+
 ### PR #29 — 2026-09-04 — chore(GOV-008): entree de journal de la PR 28 — main etait rouge sans elle
 
 **Fait.** L'entrée de journal de la PR #28 est écrite, et `docs/PLAN-STATE.md` régénéré. La PR #28
