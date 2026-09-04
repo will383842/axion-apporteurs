@@ -127,8 +127,8 @@ même garde : `gov:etat` ne voit `pr_fusionnee_sans_journal` que lorsque la PR e
 sur `main`, donc trop tard pour refuser quoi que ce soit — sa seule victime possible est la branche
 par défaut. Le protocole compense en demandant l'entrée sur la branche de la PR, mais rien ne le
 vérifie au moment où c'est encore réparable sans un second aller-retour : la garde qui existe est un
-détecteur d'incident, pas un garde-fou. Le coût mesuré de l'oubli est une PR entière, ses 37 étapes
-de Gate A et un `main` rouge dans l'intervalle.
+détecteur d'incident, pas un garde-fou. Le coût mesuré de l'oubli est une PR entière, sa Gate A
+complète, et un `main` rouge dans l'intervalle.
 
 ### PR #28 — 2026-09-04 — feat(GOV-011): lot L-1-03 — huit taches, six gardes armees, seize ruptures de tracabilite fermees
 
