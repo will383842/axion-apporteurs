@@ -12,7 +12,7 @@
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
-| -1 — Gouvernance (prealable bloquant) | 35 | 21.25 | 20 |
+| -1 — Gouvernance (prealable bloquant) | 35 | 21.25 | 21 |
 | 0 — Socle technique | 50 | 37.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
@@ -200,13 +200,15 @@ Couvre : `REQ-GOV-020`, `REQ-INT-003`, `REQ-INT-004`, `REQ-INT-029`, `REQ-QA-007
 
 **Tests.** `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — l'enveloppe porte les neuf champs du registre, dans la casse du registre` · `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — un evenement hors schema est REFUSE : c’est ce refus qui vaut le 422` · `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-004 — la liste des types est FERMEE sur les sept que le registre enumere` · `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-029 — aucun champ interdit ne franchit la frontiere, et le detecteur sait rougir` · `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — le JSON Schema publie est DERIVE : regenere, il est identique au fichier commite` · `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — contracts.sha256 est l'empreinte du schema publie, et un champ renomme la change` · `tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)`
 
-### INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel
+### INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · `schema` · depend de `INT-T01a`
 
-Couvre : `REQ-ARG-002`, `REQ-ARG-005`, `REQ-ARG-006`, `REQ-ARG-030`, `REQ-CPL-015`, `REQ-DM-018`, `REQ-DM-036`, `REQ-DM-039`, `REQ-DM-040`, `REQ-INT-005`, `REQ-INT-006`, `REQ-INT-032`, `REQ-QA-008`, `REQ-QA-007`
+Couvre : `REQ-ARG-002`, `REQ-ARG-005`, `REQ-ARG-006`, `REQ-ARG-030`, `REQ-CPL-015`, `REQ-DM-018`, `REQ-DM-039`, `REQ-DM-040`, `REQ-INT-005`, `REQ-INT-006`, `REQ-INT-032`, `REQ-QA-008`, `REQ-QA-007`
 
 **Acceptation.** payloads (REQ-INT-005/006/032, REQ-DM-039/040, K-18 payers[], `client.fusionne`, `candidature.recue`), dérivation HT, deux formes de remboursement ; `pnpm partners:fixtures` (dans axionia, `scripts/partners/fixtures.ts`, base de dev port 5434, pseudonymisation, sortie commitée dans Partners avec `Source:`) — **aucune fixture écrite à la main, aucun helper qui « complète » un champ manquant**.
+
+**Tests.** `axionia/src/server/partners/__tests__/enveloppe.spec.ts` · `axionia/src/server/partners/__tests__/payloads.spec.ts` · `axionia/src/server/partners/__tests__/commission.spec.ts` · `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts` · `axionia/src/server/partners/__tests__/derivation-ht.spec.ts` · `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts`
 
 ### GOV-017a — Backlog converti en `docs/tasks.json` : champs déjà écrits, acyclique ✅ **fusionnee**
 
@@ -558,7 +560,7 @@ Couvre : `REQ-CPL-015`, `REQ-DM-035`, `REQ-INT-032`, `REQ-QA-035`
 
 `1 j` · zone `securite` · depend de `INT-T01a`, `INT-T01b`, `QA-T02`, `SEC-01`
 
-Couvre : `REQ-ARG-002`, `REQ-ARG-003`, `REQ-INT-010`, `REQ-INT-011`, `REQ-QA-008`, `REQ-QA-009`, `REQ-SEC-010`, `REQ-SEC-011`
+Couvre : `REQ-ARG-002`, `REQ-ARG-003`, `REQ-DM-036`, `REQ-INT-010`, `REQ-INT-011`, `REQ-QA-008`, `REQ-QA-009`, `REQ-SEC-010`, `REQ-SEC-011`
 
 ### SEC-07 — API entrantes pour axionia : jeton dédié/HMAC, allowlist, réponse minimale, journal
 

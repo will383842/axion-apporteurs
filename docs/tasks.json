@@ -806,7 +806,6 @@
         "REQ-ARG-030",
         "REQ-CPL-015",
         "REQ-DM-018",
-        "REQ-DM-036",
         "REQ-DM-039",
         "REQ-DM-040",
         "REQ-INT-005",
@@ -818,15 +817,70 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A08",
       "lot": null,
-      "branch": null,
+      "branch": "lot/int-t01b-contrat-evenements",
       "pr": null,
       "issue": 19,
       "attempts": 0,
       "motif": null,
-      "acceptance": "payloads (REQ-INT-005/006/032, REQ-DM-039/040, K-18 payers[], `client.fusionne`, `candidature.recue`), dérivation HT, deux formes de remboursement ; `pnpm partners:fixtures` (dans axionia, `scripts/partners/fixtures.ts`, base de dev port 5434, pseudonymisation, sortie commitée dans Partners avec `Source:`) — **aucune fixture écrite à la main, aucun helper qui « complète » un champ manquant**."
+      "acceptance": "payloads (REQ-INT-005/006/032, REQ-DM-039/040, K-18 payers[], `client.fusionne`, `candidature.recue`), dérivation HT, deux formes de remboursement ; `pnpm partners:fixtures` (dans axionia, `scripts/partners/fixtures.ts`, base de dev port 5434, pseudonymisation, sortie commitée dans Partners avec `Source:`) — **aucune fixture écrite à la main, aucun helper qui « complète » un champ manquant**.",
+      "attestation": {
+        "pr": 998,
+        "sha": "41d71a79392bc6aa1a3f60e7853fa5715e076b79",
+        "fusionneeAt": "2026-09-05T11:04:48Z"
+      },
+      "tests": {
+        "REQ-ARG-002": [
+          "axionia/src/server/partners/__tests__/enveloppe.spec.ts"
+        ],
+        "REQ-ARG-005": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts"
+        ],
+        "REQ-ARG-006": [
+          "axionia/src/server/partners/__tests__/commission.spec.ts"
+        ],
+        "REQ-ARG-030": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts"
+        ],
+        "REQ-CPL-015": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts"
+        ],
+        "REQ-DM-018": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/derivation-ht.spec.ts"
+        ],
+        "REQ-DM-039": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts"
+        ],
+        "REQ-DM-040": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/commission.spec.ts"
+        ],
+        "REQ-INT-005": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/derivation-ht.spec.ts",
+          "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts"
+        ],
+        "REQ-INT-006": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/commission.spec.ts",
+          "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts"
+        ],
+        "REQ-INT-032": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts"
+        ],
+        "REQ-QA-008": [
+          "axionia/src/server/partners/__tests__/enveloppe.spec.ts"
+        ],
+        "REQ-QA-007": [
+          "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts",
+          "axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts"
+        ]
+      }
     },
     {
       "id": "GOV-017a",
@@ -2111,6 +2165,7 @@
       "reqs": [
         "REQ-ARG-002",
         "REQ-ARG-003",
+        "REQ-DM-036",
         "REQ-INT-010",
         "REQ-INT-011",
         "REQ-QA-008",
@@ -7648,6 +7703,60 @@
       "tests": {
         "REQ-GOV-006": [
           "tests/unit/gouvernance/plan-state-frais.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-038",
+      "titre": "Attester une livraison faite dans un autre depot, et qualifier toute reference de PR",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/attestation.ts",
+        "scripts/gates/gov-attestation.ts",
+        "scripts/lot/tasks.schema.json",
+        "scripts/lot/cloture.ts",
+        "scripts/lot/lot.workflow.js",
+        "scripts/gates/gov-tasks.ts",
+        "scripts/gates/gov-inventaire.ts",
+        "scripts/gates/gov-trace.ts",
+        "scripts/plan-state/build.ts",
+        "scripts/reprise.ts",
+        "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-017a",
+        "GOV-020"
+      ],
+      "reqs": [
+        "REQ-GOV-008",
+        "REQ-GOV-025",
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "en_cours",
+      "owner": "A05",
+      "lot": null,
+      "branch": "lot/gov-038-attestation",
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "Un champ attestation { pr, sha entier de 40 hex, fusionneeAt UTC } porte la livraison d une tache dont le repo n est pas partners ; le depot n y est PAS recopie, il se derive de repo par DEPOTS (RM-01). gov:tasks porte sept familles nouvelles, chacune vue rougir, trois contre-temoins verts. Toute reference de PR de tache passe par referencePr() : PR#31 ici, will383842/axion-ia#998 (41d71a7) ailleurs, JAMAIS PR#998 — un numero nu est lu comme une PR de CE depot-ci partout ou il est rendu, et repos/will383842/axion-apporteurs/pulls/998 ne resout pas. gov:inventaire accepte l attestation comme troisieme forme de preuve. gov:trace ne confronte plus au disque local les tests d une tache livree ailleurs et le DIT dans son resume. La resolution EN LIGNE du SHA est dans un mode separe, gov:attestation --en-ligne, hors de pnpm test et de gov:check, et ce mode REFUSE de tourner sans son drapeau : sans ce refus quelqu un le cablerait un jour pour etre complet, et une garde qui lance gh rend la suite non deterministe. AFFAIBLISSEMENT ASSUME ET NOMME : un SHA de 40 hex qui ne designe rien passe gov:tasks — mesure, 0000...0000 passe la forme et --en-ligne le rejette en HTTP 422.",
+      "tests": {
+        "REQ-GOV-008": [
+          "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
+        ],
+        "REQ-GOV-025": [
+          "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
+        ],
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
         ]
       }
     }

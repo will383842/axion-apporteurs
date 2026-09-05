@@ -147,7 +147,7 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
 - **REQ-DM-035** — Apporteur porte le snapshot de candidature : candidatureId, reponsesJson, scoreInitial, scorePartsJson, scoreBaremeVersion (hash de SCORE_POIDS), sourceCanal enum, parrainCodeCapture ; le barème SSOT est `scoring.ts`.
   <br>_module 1 · étape 2 · phase 0 · tâches : `DM-06`, `INT-T22`_ · _source : plan §4.4 ; anti-abus C15 ; nouvelle (F-DM-01, F-DM-13)_
 - **REQ-DM-036** — WebhookRecu {source enum {axionia, docuseal}, eventId unique par source, type, payloadHash, receivedAt, processedAt, error, retryCount} — dérivé du patron DocusealWebhookEvent ; rejouer un événement déjà traité ne produit aucune écriture métier.
-  <br>_module 5 · étape 5 · phase -1 · tâches : `INT-T01b`_ · _source : outil §2.3 ; schema.prisma DocusealWebhookEvent_
+  <br>_module 5 · étape 5 · phase 0 · tâches : `SEC-06`_ · _source : outil §2.3 ; schema.prisma DocusealWebhookEvent_
 - **REQ-DM-037** — Les migrations sont additives (aucune suppression de colonne ni changement d'enum destructif sans ADR) ; les index partiels sont écrits en SQL brut et vérifiés par un test qui lit pg_indexes après `migrate deploy`.
   <br>_phase 0 · tâches : `DM-02`_ · _source : nouvelle (F-DM-05) ; précédent prisma/migrations/20260709120000_session_formateurs_
 - **REQ-DM-038** — Toute colonne dont le nom contient statut, type, motif, resultat, etat, origine, kind ou palier est un enum Prisma ; aucune chaîne libre ne porte un vocabulaire.

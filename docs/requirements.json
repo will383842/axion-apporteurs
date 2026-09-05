@@ -533,9 +533,9 @@
       "remplaceePar": null,
       "module": 5,
       "etape": 5,
-      "phase": -1,
+      "phase": 0,
       "taches": [
-        "INT-T01b"
+        "SEC-06"
       ]
     },
     {

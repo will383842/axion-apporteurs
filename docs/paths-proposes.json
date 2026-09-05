@@ -4,8 +4,8 @@
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
     "tachesCouvertes": 206,
     "pairesEnIntersection": 3904,
-    "cheminsDeclares": 635,
-    "cheminsDistincts": 372,
+    "cheminsDeclares": 641,
+    "cheminsDistincts": 378,
     "cheminsPartages": 95,
     "tachesSansAucuneIntersection": 30,
     "listeDesTachesIsolees": [
@@ -273,6 +273,12 @@
     "INT-T01b": [
       "axionia/scripts/partners/fixtures.ts",
       "axionia/src/server/partners-sync/contracts/",
+      "axionia/src/server/partners/__tests__/enveloppe.spec.ts",
+      "axionia/src/server/partners/__tests__/payloads.spec.ts",
+      "axionia/src/server/partners/__tests__/commission.spec.ts",
+      "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts",
+      "axionia/src/server/partners/__tests__/derivation-ht.spec.ts",
+      "axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts",
       "axionia/prisma/schema.prisma"
     ],
     "GOV-017a": [

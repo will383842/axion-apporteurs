@@ -8,27 +8,27 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `794245c` — 2026-09-04T23:10:40+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #31 (rien) |
+| Qu’est-ce qui est en vol ? | 1. #31 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · GOV-014 (A01) · GOV-019 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-028 (A01) · GOV-029 (A01) · GOV-032 (A01) |
-| Où en est la phase ? | phase -1 — 20/35 tâches, reste 7.75 j |
-| Le prochain pas | fusionner #31, puis INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
+| Où en est la phase ? | phase -1 — 21/35 tâches, reste 6.75 j |
+| Le prochain pas | aucune tâche éligible |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 4 question(s) pour Will |
 | Dernière entrée de journal | PR #31 — 2026-09-05 |
 
-**Ce qu’on tape maintenant.** `gh pr view 31 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
-20/35 tâches terminées · reste 7.75 j estimés.
+21/35 tâches terminées · reste 6.75 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 172 | INT-T01b, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03 … |
+| `a_faire` | 171 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
 | `en_cours` | 12 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · GOV-014 (A01) · GOV-019 (A01) · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-028 (A01) · GOV-029 (A01) PR#31 · GOV-032 (A01) PR#31 |
 | `en_revue` | 0 | — |
-| `fusionnee` | 20 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |
+| `fusionnee` | 21 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 | `bloquee` | 0 | — |
@@ -62,7 +62,7 @@ Reste sur ce chemin : **17.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — huit taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | rien — fusionnable maintenant |
+| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — neuf taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -96,8 +96,7 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 
 ## Prochain pas
 
-1. **Fusionner #31** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-2. **INT-T01b** — Contrat d'événements, payloads et fixtures produites par le producteur réel (1 j) : 1 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+Aucune tâche éligible en phase courante : toutes les candidates attendent une dépendance, un tiers ou un arbitrage de Will. Voir « Bloquées » et « Questions ouvertes ».
 
 ## Dernier atterrissage
 
