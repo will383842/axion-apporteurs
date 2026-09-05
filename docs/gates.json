@@ -70,9 +70,9 @@
       "phase": -1,
       "script": "scripts/gates/gov-pr.ts",
       "tache": "GOV-007",
-      "verifie": "relecteur != auteur ; titre <type>(<ID-TACHE>): <titre> ; 3 reviews GitHub de 3 lentilles distinctes + 1 du verificateur rouge ; bloc ROUGE/VERT present ; section Attaque si tache sensible (refus de la lentille securite = veto) ; 8 cases de la DoD ; PR touchant prisma/** ou packages/contracts/** porte le label schema et l'approbation bloquante de l'architecte A02",
+      "verifie": "relecteur != auteur ; titre <type>(<ID-TACHE>): <titre> ; 3 reviews GitHub de 3 lentilles distinctes + 1 du verificateur rouge ; bloc ROUGE/VERT present ; section Attaque si tache sensible (refus de la lentille securite = veto) ; 8 cases de la DoD ; PR touchant prisma/** ou packages/contracts/** porte le label schema et l'approbation bloquante de l'architecte A02 ; revues lues par le lecteur unique scripts/lot/revues.ts : auteur habilite (author_association), avis DISMISSED et PENDING ecartes, code de poste confronte a docs/agents.json, dernier verdict par poste·lentille, discriminant schema derive des FICHIERS et du champ schema de la tache autant que du label — le plus strict gagnant —, et accord PERIME des lors qu'il porte un commit_id autre que la tete. Le depot est PUBLIC : sans le filtre d'identite, quatre avis forges par un compte tiers effacent un veto reel, ce qui a ete mesure sur les 21 revues reelles de la PR 31",
       "fixtureRouge": "PR temoin ou l'auteur s'auto-approuve",
-      "preuveRouge": "16 familles, un temoin chacune, 6 contre-temoins verts dont celui de la scission dod (pnpm gov:pr --prove)"
+      "preuveRouge": "pnpm gov:pr:prove — 20 familles, un temoin chacune, 12 contre-temoins verts ; dont lentille_perimee (un accord rendu sur une autre tete que celle qui sera fusionnee), quatre temoins d'avis qui ne comptent pas (compte tiers, avis DISMISSED, poste A99, refus d'A02 efface par un autre poste) et deux contre-temoins d'identite (MEMBER et COLLABORATOR jugent aussi). ⚠️ La valeur precedente annoncait « 16 familles, 6 contre-temoins » : elle etait FAUSSE avant ce tour et personne ne l'avait vue, la garde n'ayant aucun moyen de confronter ce qu'un registre DECLARE a ce que la preuve MESURE"
     },
     {
       "id": "gov:depot-visibilite",
