@@ -450,8 +450,55 @@ const FORME_SIREN = /\bsire[tn]\b[^\n]{0,24}?\b(\d{9,14})\b/gi;
  * depuis un relevé bancaire ou un traitement de texte, c'est-à-dire le cas le plus probable —
  * ne correspondait à rien et passait. Mesuré par la lentille `securite` le 2026-09-05.
  */
+/**
+ * LES FORMES QUE LA GARDE NEUTRALISE, EXPORTÉES — parce qu'une substitution sans témoin n'est
+ * gardée par rien. La lentille `securite` a muté cette fonction en `return t;` le 2026-09-05 et
+ * a mesuré : `gov:entite` → 0, `gov:entite:prove` → 0, aucune occurrence de `00A0` dans le banc
+ * d'essai. La normalisation MARCHAIT ; rien ne la tenait. Un refactor l'aurait retirée sans qu'une
+ * seule étape de Gate A change de couleur.
+ *
+ * 🔑 Le remède n'est pas d'écrire la liste des caractères une seconde fois dans le test — deux
+ * copies divergent toujours (RM-01), et celle qui garde n'est jamais celle qu'on a corrigée. La
+ * classe est donc la SOURCE, exportée, et `caracteresNeutralises()` l'ÉNUMÈRE : un caractère
+ * ajouté ici gagne son témoin sans qu'une ligne de test bouge, et un caractère retiré fait tomber
+ * le sien.
+ */
+export const SEPARATEURS_NEUTRALISES = /[   -   　‑-]/g;
+
+/**
+ * Les caractères que `normaliserEspaces` ramène à une espace ASCII, ÉNUMÉRÉS depuis la classe
+ * elle-même. Le balayage porte sur le plan multilingue de base : toutes les familles d'espaces et
+ * de tirets typographiques y vivent, et un balayage des 17 plans coûterait une seconde pour ne
+ * rien trouver de plus.
+ *
+ * ⚠️ TÉMOIN POSITIF EXIGÉ. Une liste VIDE et une liste juste sont indiscernables pour un test qui
+ * ne ferait que boucler dessus : zéro cas exécuté se lit exactement comme zéro cas en échec.
+ * `--prove` refuse donc une liste vide, et le banc d'essai vérifie qu'elle contient l'espace
+ * insécable — la forme d'un copier-coller de RIB, c'est-à-dire le geste par défaut de la personne
+ * qui posera la vraie valeur d'AXION en phase 2 — et qu'elle ne contient PAS l'espace ASCII, sans
+ * quoi la classe serait devenue un attrape-tout.
+ */
+export function caracteresNeutralises(): string[] {
+  const forme = new RegExp(SEPARATEURS_NEUTRALISES.source);
+  const trouves: string[] = [];
+  for (let point = 0; point < 0x10000; point += 1) {
+    const c = String.fromCodePoint(point);
+    if (forme.test(c)) trouves.push(c);
+  }
+  return trouves;
+}
+
+/**
+ * Un IBAN écrit avec un séparateur donné entre ses groupes de quatre — la forme exacte d'un RIB
+ * collé depuis un relevé, un traitement de texte ou un courriel. Ce n'est PAS une valeur : c'est
+ * une transformation, et son entrée vient de l'appelant (RM-01).
+ */
+export function ibanAvecSeparateur(iban: string, separateur: string): string {
+  return (iban.replace(/s/g, '').match(/.{1,4}/g) ?? []).join(separateur);
+}
+
 function normaliserEspaces(t: string): string {
-  return t.replace(/[   -   　‑-]/g, ' ');
+  return t.replace(SEPARATEURS_NEUTRALISES, ' ');
 }
 
 /** Un fichier de TEST a le droit de porter un bouchon : c'est le seul endroit où il en a le droit. */
@@ -488,7 +535,7 @@ function coordonneeLegitimeAuRegistre(_valeur: string, formeEstIban: boolean): b
   return !formeEstIban;
 }
 
-function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = ''): string[] {
+export function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = ''): string[] {
   const trouvees: string[] = [];
   const texte = normaliserEspaces(contenu);
   const formes = dansDuCode
@@ -667,6 +714,355 @@ export function controler(u: Univers): Faute[] {
   return fautes;
 }
 
+// ── LE CORPS PUBLIÉ DE LA PR ──────────────────────────────────────────────────────────────────
+
+/**
+ * CE QUE LE DÉPÔT GARDAIT, ET CE QU'IL NE GARDAIT PAS.
+ *
+ * `docs/pr/31.tpl.md` est un fichier suivi : la garde le balaie, et l'IBAN y est masqué. Mais le
+ * gabarit n'existe que pour produire UN artefact — le corps de la PR publié sur une forge dont ce
+ * dépôt est PUBLIC — et cet artefact-là n'était lu par rien : `pr:corps` figure dans les scripts,
+ * dans aucun workflow, et `docs/gates.json` ne portait aucune entrée pour lui.
+ *
+ * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ SUR LA PR #31, le 2026-09-05. GitHub conserve
+ * l'historique d'édition d'un corps de PR (`userContentEdits`, lisible en GraphQL par n'importe
+ * qui). Onze révisions. Quatre portent la forme masquée ; TROIS portent un IBAN à clé mod-97
+ * VRAIE, toujours lisible aujourd'hui. Masquer le corps courant n'a pas dépublié les précédents.
+ *
+ * ATTÉNUATION, ET ELLE NE CHANGE RIEN À CE QU'IL FAUT CONSTRUIRE : cette valeur-là était la SONDE
+ * d'un relecteur, pas la coordonnée d'AXION — il n'y a rien à révoquer. Ce qui manquait, et que
+ * ces lignes ajoutent, c'est la garde qui empêchera le prochain, en phase 2, quand la valeur sera
+ * réelle et l'écriture irréversible.
+ *
+ * CE QU'ELLE GARDE, ET LA FORMULATION EST ÉTROITE À DESSEIN : « le corps publié ne contient aucune
+ * coordonnée ». PAS « le corps publié est égal au rendu local ». Le rendu de `pr:corps` n'est pas
+ * déterministe — `caseRevues()` lit la forge en direct — donc une égalité octet à octet rougirait
+ * sur un corps parfaitement propre, et une garde qui rougit à tort se fait désarmer dans la
+ * semaine. On garde la PROPRIÉTÉ, pas l'identité.
+ *
+ * ET C'EST LE MÊME `coordonneesDe` QUE LES FICHIERS SUIVIS. Un second détecteur en ferait deux qui
+ * divergeraient (RM-01/RM-07) : la casse, les espaces insécables, la clé mod-97 et l'exclusion du
+ * SIREN — public, qu'un corps de PR a le droit de nommer — sont réglés à un seul endroit. Le corps
+ * est jugé comme de la PROSE (`dansDuCode = false`) : un IBAN et un BIC y sont refusés, un SIREN
+ * ne l'est pas.
+ */
+
+/** Un texte publié sur la forge, avec ce qui permet de le retrouver. */
+export type CorpsPublie = { origine: string; texte: string; revision: boolean };
+
+/**
+ * CE QUE LA LECTURE A RENDU — et le refus, explicite, de confondre « rien trouvé » avec « rien lu ».
+ * La forme est une union : il n'existe pas d'état où l'on aurait à la fois un motif d'échec et un
+ * corps. Un `try/catch` qui rendrait un tableau vide en cas d'erreur produirait un vert, et c'est
+ * exactement le défaut que cette garde existe pour ne pas avoir.
+ */
+export type LectureDuCorps =
+  | { lu: true; corps: CorpsPublie[]; revisionsLues: number; revisionsAnnoncees: number }
+  | { lu: false; motif: string };
+
+export const FAMILLES_CORPS_PUBLIE = [
+  'coordonnee_dans_le_corps_courant',
+  'coordonnee_dans_une_revision',
+  'lecture_impossible',
+  'revisions_non_lues',
+];
+
+/** 0 conforme · 1 défaut CONSTATÉ · 2 INDÉTERMINÉ — la garde n'a pas pu lire ce qu'elle juge. */
+export type Verdict = { code: 0 | 1 | 2; fautes: Faute[] };
+
+/**
+ * LE JUGEMENT, PUR ET INJECTÉ (RM-11). Aucun appel réseau ici : la preuve doit tenir hors ligne,
+ * sans quoi elle verdirait ou rougirait au gré de ce que la forge répond le jour où elle tourne.
+ *
+ * TROIS CODES DE SORTIE, comme `gov:depot-visibilite`, et pour la même raison. Le sens de
+ * défaillance est FERMÉ, et il est choisi :
+ *   — `gh` absent, non authentifié, hors ligne, réponse illisible → 2, jamais 0. Une garde qui
+ *     rendrait vert parce qu'elle n'a pas pu lire ferait croire à une vérification qui n'a pas eu
+ *     lieu — c'est le défaut de la gate Lighthouse d'axionia, verte pendant des mois sur le runner.
+ *   — pourquoi 2 et non 1 : un rouge qu'on ne peut pas corriger se fait désarmer. « Je n'ai pas pu
+ *     lire » se répare en donnant un jeton, « il y a une coordonnée » se répare en changeant la
+ *     coordonnée. Deux remèdes différents méritent deux couleurs différentes.
+ *   — une révision ANNONCÉE et non lue (pagination, `diff` nul) est traitée comme une lecture
+ *     manquée, pas comme une révision propre : c'est la même règle appliquée au détail.
+ */
+export function jugerCorpsPublie(lecture: LectureDuCorps): Verdict {
+  const fautes: Faute[] = [];
+
+  if (!lecture.lu) {
+    fautes.push({
+      famille: 'lecture_impossible',
+      message:
+        `Le corps publié n'a PAS pu être lu : ${lecture.motif}. Ce dépôt est PUBLIC ` +
+        `(REQ-GOV-031) et le corps d'une PR y est un artefact publié au même titre qu'un fichier ` +
+        `suivi. Une garde qui rendrait vert ici ferait croire à un contrôle qui n'a pas eu lieu : ` +
+        `elle rend INDÉTERMINÉ (2). Donne-lui un \`gh\` authentifié (\`GH_TOKEN\`), ou relance-la ` +
+        `depuis un poste qui atteint la forge.`,
+    });
+    return { code: 2, fautes };
+  }
+
+  if (lecture.revisionsAnnoncees > lecture.revisionsLues) {
+    fautes.push({
+      famille: 'revisions_non_lues',
+      message:
+        `La forge annonce ${lecture.revisionsAnnoncees} révision(s) du corps et ${lecture.revisionsLues} ` +
+        `ont été lues. Les révisions non lues ne sont PAS réputées propres : le défaut mesuré sur la ` +
+        `PR #31 vivait dans des révisions, pas dans le corps courant. Pagine la requête, ou traite ce ` +
+        `verdict comme INDÉTERMINÉ (2).`,
+    });
+  }
+
+  for (const c of lecture.corps) {
+    for (const coordonnee of coordonneesDe(c.texte, false)) {
+      fautes.push({
+        famille: c.revision ? 'coordonnee_dans_une_revision' : 'coordonnee_dans_le_corps_courant',
+        message:
+          `${c.origine} — coordonnée en clair « ${coordonnee} ». ` +
+          (c.revision
+            ? `C'est une RÉVISION : la corriger est impossible, GitHub sert l'historique d'édition ` +
+              `d'un corps de PR à quiconque le demande. La coordonnée est à considérer comme ` +
+              `DIVULGUÉE — c'est elle qu'il faut changer, pas le texte.`
+            : `Retire-la du corps : ces valeurs vivent dans \`${CHEMIN_REGISTRE}\` ou dans une ` +
+              `variable d'environnement, jamais dans un artefact publié. ⚠️ L'éditer ne suffira ` +
+              `PAS si elle a déjà été publiée une fois : l'historique d'édition la sert encore.`),
+      });
+    }
+  }
+
+  if (fautes.some((f) => f.famille.startsWith('coordonnee_'))) return { code: 1, fautes };
+  return { code: fautes.length > 0 ? 2 : 0, fautes };
+}
+
+/**
+ * LA LECTURE RÉELLE — deux appels, et ils ne se remplacent pas l'un l'autre.
+ *   — `gh pr view <n> --json body` : le corps COURANT, la commande que la revue a nommée ;
+ *   — `gh api graphql … userContentEdits` : les RÉVISIONS, seul endroit où vivait le défaut mesuré.
+ * Toute erreur remonte en `{ lu: false }`. Aucun `catch` ne rend ici de tableau vide.
+ */
+export function lireCorpsPublie(numero: string): LectureDuCorps {
+  const gh = (args: string[]): string =>
+    execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+
+  let corpsCourant: string;
+  try {
+    const brut = gh(['pr', 'view', numero, '--json', 'body']);
+    const j = JSON.parse(brut) as { body?: unknown };
+    if (typeof j.body !== 'string') {
+      return {
+        lu: false,
+        motif: `\`gh pr view ${numero} --json body\` n'a pas rendu de champ \`body\` textuel`,
+      };
+    }
+    corpsCourant = j.body;
+  } catch (e) {
+    return {
+      lu: false,
+      motif: `\`gh pr view ${numero} --json body\` a échoué : ${(e as Error).message.trim()}`,
+    };
+  }
+
+  let depot: string;
+  try {
+    const j = JSON.parse(gh(['repo', 'view', '--json', 'nameWithOwner'])) as { nameWithOwner?: unknown };
+    if (typeof j.nameWithOwner !== 'string') return { lu: false, motif: 'dépôt illisible' };
+    depot = j.nameWithOwner;
+  } catch (e) {
+    return {
+      lu: false,
+      motif: `\`gh repo view --json nameWithOwner\` a échoué : ${(e as Error).message.trim()}`,
+    };
+  }
+  const [proprietaire, nom] = depot.split('/');
+  if (proprietaire === undefined || nom === undefined || nom === '') {
+    return { lu: false, motif: `dépôt illisible : « ${depot} »` };
+  }
+
+  const REQUETE =
+    'query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){' +
+    'userContentEdits(first:100){totalCount nodes{editedAt diff}}}}}';
+
+  let annoncees: number;
+  let noeuds: { editedAt?: unknown; diff?: unknown }[];
+  try {
+    const brut = gh([
+      'api',
+      'graphql',
+      '-f',
+      `query=${REQUETE}`,
+      '-F',
+      `o=${proprietaire}`,
+      '-F',
+      `r=${nom}`,
+      '-F',
+      `n=${numero}`,
+    ]);
+    const j = JSON.parse(brut) as {
+      data?: {
+        repository?: { pullRequest?: { userContentEdits?: { totalCount?: unknown; nodes?: unknown } } };
+      };
+    };
+    const edits = j.data?.repository?.pullRequest?.userContentEdits;
+    if (edits === undefined || typeof edits.totalCount !== 'number' || !Array.isArray(edits.nodes)) {
+      return { lu: false, motif: "la requête GraphQL n'a pas rendu `userContentEdits`" };
+    }
+    annoncees = edits.totalCount;
+    noeuds = edits.nodes as { editedAt?: unknown; diff?: unknown }[];
+  } catch (e) {
+    return {
+      lu: false,
+      motif: `\`gh api graphql … userContentEdits\` a échoué : ${(e as Error).message.trim()}`,
+    };
+  }
+
+  const corps: CorpsPublie[] = [
+    { origine: `PR #${numero} — corps courant`, texte: corpsCourant, revision: false },
+  ];
+  let lues = 0;
+  for (const n of noeuds) {
+    // Un `diff` nul n'est pas une révision propre : c'est une révision qu'on n'a PAS lue. Elle
+    // reste comptée dans `annoncees`, et l'écart fait tomber le verdict en INDÉTERMINÉ.
+    if (typeof n.diff !== 'string') continue;
+    lues += 1;
+    corps.push({
+      origine: `PR #${numero} — révision du ${typeof n.editedAt === 'string' ? n.editedAt : 'date inconnue'}`,
+      texte: n.diff,
+      revision: true,
+    });
+  }
+
+  return { lu: true, corps, revisionsLues: lues, revisionsAnnoncees: annoncees };
+}
+
+/**
+ * LA PREUVE, HORS LIGNE. Un témoin par famille, des contre-témoins verts, et un témoin POSITIF de
+ * la sonde elle-même : la forme masquée que produit le gabarit reste VERTE, sans quoi la garde
+ * rougirait sur le corps qu'elle est censée bénir et se ferait retirer dans la semaine.
+ */
+function prouverCorpsPublie(): number {
+  const corps = (texte: string, revision = false): LectureDuCorps => ({
+    lu: true,
+    corps: [{ origine: 'témoin', texte, revision }],
+    revisionsLues: revision ? 1 : 0,
+    revisionsAnnoncees: revision ? 1 : 0,
+  });
+
+  // La forme MASQUÉE que rend le gabarit : CONSTRUITE, jamais recopiée, et sa clé mod-97 est
+  // fausse par construction. C'est le contre-témoin qui empêche la garde d'être intenable.
+  const MASQUE = 'FR76' + 'X'.repeat(23);
+
+  const TEMOINS: { famille: string; lecture: LectureDuCorps; attendu: 1 | 2 }[] = [
+    { famille: 'coordonnee_dans_le_corps_courant', lecture: corps(`IBAN : ${IBAN_TEMOIN}`), attendu: 1 },
+    {
+      // Le geste par défaut de qui colle un RIB : les espaces d'un traitement de texte. Le même
+      // caractère que le banc d'essai de `normaliserEspaces` — UNE seule normalisation pour les
+      // fichiers suivis et pour le corps publié, sans quoi les deux divergeraient (RM-01).
+      famille: 'coordonnee_dans_le_corps_courant',
+      lecture: corps(`IBAN : ${ibanAvecSeparateur(IBAN_TEMOIN, ' ')}`),
+      attendu: 1,
+    },
+    {
+      // LE DÉFAUT MESURÉ SUR LA PR #31 : corps courant PROPRE, révision qui porte la valeur.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: {
+        lu: true,
+        corps: [
+          { origine: 'témoin — corps courant', texte: `IBAN : ${MASQUE}`, revision: false },
+          {
+            origine: 'témoin — révision',
+            texte: `-IBAN : ${IBAN_TEMOIN}\n+IBAN : ${MASQUE}`,
+            revision: true,
+          },
+        ],
+        revisionsLues: 1,
+        revisionsAnnoncees: 1,
+      },
+      attendu: 1,
+    },
+    { famille: 'lecture_impossible', lecture: { lu: false, motif: 'gh introuvable (témoin)' }, attendu: 2 },
+    {
+      famille: 'revisions_non_lues',
+      lecture: {
+        lu: true,
+        corps: [{ origine: 'témoin', texte: 'aucune coordonnée ici', revision: false }],
+        revisionsLues: 1,
+        revisionsAnnoncees: 4,
+      },
+      attendu: 2,
+    },
+  ];
+
+  const CONTRE_TEMOINS: { quoi: string; lecture: LectureDuCorps }[] = [
+    { quoi: 'un corps vide, sans révision', lecture: corps('') },
+    {
+      quoi: 'la forme MASQUÉE que rend le gabarit — la garde ne rougit pas sur ce qu’elle bénit',
+      lecture: corps(`IBAN débiteur : ${MASQUE}`),
+    },
+    {
+      quoi: 'un corps qui NOMME le SIREN de l’entité — public, et citer n’est pas se servir',
+      lecture: corps(
+        `Entité : ${REGISTRE_TEMOIN.entite.denomination}, SIREN ${REGISTRE_TEMOIN.entite.siren}.`
+      ),
+    },
+    {
+      quoi: 'une révision qui ne porte que de la prose typographiée — insécables et tirets compris',
+      lecture: corps(
+        'Le mandat est signé ; le délai est de 30 jours — dossier AXP‑2026‑001.',
+        true
+      ),
+    },
+  ];
+
+  const caracteres = caracteresNeutralises();
+  if (caracteres.length === 0) {
+    console.error(
+      '❌ `SEPARATEURS_NEUTRALISES` ne reconnaît AUCUN caractère : les témoins qui en dépendent ' +
+        "exécuteraient zéro cas, et zéro cas exécuté se lit exactement comme zéro cas en échec."
+    );
+    return 1;
+  }
+
+  for (const t of TEMOINS) {
+    const v = jugerCorpsPublie(t.lecture);
+    if (!v.fautes.some((f) => f.famille === t.famille) || v.code !== t.attendu) {
+      console.error(
+        `❌ Le témoin de « ${t.famille} » n'a pas rendu ce qu'il devait : code ${v.code} ` +
+          `(attendu ${t.attendu}), familles [${v.fautes.map((f) => f.famille).join(', ') || '—'}].`
+      );
+      return 1;
+    }
+  }
+
+  for (const c of CONTRE_TEMOINS) {
+    const v = jugerCorpsPublie(c.lecture);
+    if (v.code !== 0) {
+      console.error(
+        `❌ Faux positif : « ${c.quoi} » a rendu ${v.code} sur « ${v.fautes[0]?.famille} ».\n` +
+          `   ${v.fautes[0]?.message ?? ''}`
+      );
+      return 1;
+    }
+  }
+
+  const sansTemoin = FAMILLES_CORPS_PUBLIE.filter((f) => !TEMOINS.some((t) => t.famille === f));
+  if (sansTemoin.length > 0) {
+    console.error(
+      `❌ ${sansTemoin.length} famille(s) sans témoin qui rougit : ${sansTemoin.join(', ')}.\n` +
+        `   Une règle jamais vue rougir ne garde rien.`
+    );
+    return 1;
+  }
+
+  console.log(
+    `✅ Les ${FAMILLES_CORPS_PUBLIE.length} familles du corps publié rougissent chacune sur son témoin — preuve faite.`
+  );
+  console.log(`   ${FAMILLES_CORPS_PUBLIE.map((f) => '• ' + f).join('\n   ')}`);
+  console.log(
+    `   ${CONTRE_TEMOINS.length} contre-témoins restent verts, dont la forme masquée du gabarit.\n` +
+      `   ${caracteres.length} forme(s) d'espace ou de tiret sont neutralisées avant toute recherche.`
+  );
+  return 0;
+}
+
 // ── L'univers réel ────────────────────────────────────────────────────────────────────────────
 
 function fichiersSuivis(): string[] {
@@ -703,6 +1099,55 @@ function lireUnivers(): Univers {
  * qu'on n'aurait vue rougir que sur `A-RENSEIGNER` ne prouverait rien du cas qui compte.
  */
 export const IBAN_TEMOIN = 'FR1420041010050500013M02606';
+
+/**
+ * DES IBAN NON FRANÇAIS — ET C'EST LA CAUSE COMMUNE DE QUATRE MUTANTS SURVIVANTS.
+ *
+ * 🔴 CE QUE LA LENTILLE `mutation` A MESURÉ SUR CE FICHIER le 2026-09-05 : réduire `PAYS_ISO` à
+ * `(?:FR)` faisait passer un IBAN allemand et un IBAN espagnol de 1 faute à 0, la gate rendait 0,
+ * `--prove` rendait 0, et le banc d'essai restait entièrement vert. Même mesure en neutralisant
+ * `FORME_TVA_FR` et `FORME_SIREN`. Trois constantes de détection, aucun témoin.
+ *
+ * 🔑 LE DÉFAUT N'ÉTAIT PAS DANS LES TROIS CONSTANTES, IL ÉTAIT DANS LA FIXTURE : **tous les
+ * témoins d'IBAN de ce dépôt étaient français.** `cleIbanValide` résiste aux deux sens de
+ * mutation, et sa solidité MASQUAIT le fait que tout ce qui l'entoure n'était exercé par rien.
+ * Une fixture mono-cas ne prouve jamais la généralité de ce qu'elle traverse.
+ *
+ * Un apporteur peut être établi hors de France : REQ-CPL-004 exige une résidence fiscale dans le
+ * périmètre, pas un compte français. L'IBAN qu'on collera sera donc allemand, espagnol, belge —
+ * et c'est exactement la classe de valeurs que la garde ne voyait pas.
+ *
+ * CE QUE CES CONSTANTES NE SONT PAS. Elles ne DÉRIVENT PAS `PAYS_ISO` et ne prétendent pas la
+ * couvrir : la liste est tapée à la main, 47 entrées dont 7 qui n'émettent aucun IBAN et 51 pays
+ * émetteurs omis, et c'est l'objet de la tâche GOV-036. Ce qui est livré ici, c'est le TÉMOIN QUI
+ * ROUGIT QUAND LA LISTE RÉTRÉCIT — ce qui manquait pour que GOV-036 soit gardée plutôt que promise.
+ * Ce sont des IBAN de documentation bancaire, à clé mod-97 valide, jamais un compte réel.
+ */
+export const IBANS_TEMOINS_ETRANGERS: Record<string, string> = {
+  DE: 'DE89370400440532013000',
+  ES: 'ES9121000418450200051332',
+  BE: 'BE68539007547034',
+  IT: 'IT60X0542811101000000123456',
+  NL: 'NL91ABNA0417164300',
+  PT: 'PT50000201231234567890154',
+  CH: 'CH9300762011623852957',
+};
+
+/**
+ * UNE TVA ET UN SIREN DE TIERS — les deux familles de coordonnées qui n'avaient AUCUN témoin.
+ *
+ * Ni l'un ni l'autre n'est une valeur du monde réel : ils sont SYNTHÉTIQUES, de forme valide, et
+ * choisis pour n'être ni monotones ni répétitifs — sans quoi `estExemplePlausible` les écarterait
+ * et le témoin ne prouverait rien du contrôle qu'il prétend exercer.
+ *
+ * ⚠️ ILS NE SONT REFUSÉS QUE DANS UN FICHIER DE CODE, et c'est la frontière que la garde tient
+ * depuis le premier jour : un SIREN, un SIRET et une TVA sont PUBLICS — n'importe qui les lit au
+ * répertoire des entreprises — donc une spécification a le droit de les citer. Dans du CODE, ils
+ * doivent être LUS et non portés. Les contre-témoins verts sont donc aussi importants que les
+ * témoins rouges : sans eux, on rendrait le dossier illisible sans rien protéger.
+ */
+export const TVA_TEMOIN_TIERS = 'FR47738294615';
+export const SIREN_TEMOIN_TIERS = '738294615';
 
 const DECISIONS_TEMOIN = [
   '## 1. Sans valeur par défaut possible — bloquent le code',
@@ -838,6 +1283,80 @@ function prouver(): number {
     },
   ];
 
+  // ── UN TÉMOIN PAR FORME QUE `normaliserEspaces` NEUTRALISE ─────────────────────────────────
+  //
+  // 🔴 CE QUI ÉTAIT MESURÉ, ET POURQUOI CE N'EST PAS COSMÉTIQUE. Muté en `return t;`, le
+  // `normaliserEspaces` du 2026-09-05 laissait `gov:entite` ET `gov:entite:prove` à 0, et le banc
+  // d'essai ne portait aucune occurrence de `00A0`. La normalisation marchait ; RIEN ne la tenait.
+  //
+  // Or l'IBAN à espaces INSÉCABLES n'est pas un cas d'école : c'est la forme d'un copier-coller de
+  // RIB — un relevé bancaire, un traitement de texte, un courriel — donc le geste PAR DÉFAUT de la
+  // personne qui posera la vraie valeur d'AXION en phase 2. La famille a été signalée au premier
+  // tour de la lentille `securite`, fermée au second, et gardée par rien entre les deux.
+  //
+  // 🔑 La liste des caractères n'est PAS retapée ici : elle est ÉNUMÉRÉE depuis la classe qui sert
+  // à `normaliserEspaces` (RM-01). Un caractère ajouté à la classe gagne son témoin sans qu'une
+  // ligne bouge ; un caractère retiré perd le sien, et la famille reste couverte par les autres —
+  // c'est pourquoi le banc d'essai, lui, assertie la PRÉSENCE de l'espace insécable.
+  // ── UN TÉMOIN PAR FAMILLE DE COORDONNÉE QUE LA GARDE PRÉTEND VOIR ─────────────────────────
+  //
+  // Sans eux, `PAYS_ISO`, `FORME_TVA_FR` et `FORME_SIREN` se neutralisent une par une sans que
+  // `gov:entite:prove` change de couleur — mesuré par la lentille `mutation` le 2026-09-05.
+  // Ils vivent ICI et non dans le seul banc d'essai, parce que c'est `--prove` qui est l'étape
+  // de Gate A : un témoin qui ne tient que `pnpm test` ne garde pas la CI.
+  for (const [pays, iban] of Object.entries(IBANS_TEMOINS_ETRANGERS)) {
+    TEMOINS.push({
+      famille: 'coordonnee_en_clair',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: `docs/rib-${pays.toLowerCase()}.md`,
+          contenu: `Le compte du porteur est ${iban}.\n`,
+        });
+      }),
+    });
+  }
+  TEMOINS.push({
+    // La TVA d'un TIERS, dans du CODE : elle doit être lue, jamais portée.
+    famille: 'coordonnee_en_clair',
+    univers: muter((u) => {
+      u.fichiers.push({
+        chemin: 'src/facturation/fournisseur.ts',
+        contenu: `export const TVA_FOURNISSEUR = '${TVA_TEMOIN_TIERS}';\n`,
+      });
+    }),
+  });
+  TEMOINS.push({
+    // Le SIREN d'un TIERS, dans du CODE. Le mot-clé est exigé : neuf chiffres nus sont trop
+    // souvent autre chose, et une forme nue produirait le bruit qui fait désarmer une garde.
+    famille: 'coordonnee_en_clair',
+    univers: muter((u) => {
+      u.fichiers.push({
+        chemin: 'src/apporteur/structure.ts',
+        contenu: `export const structure = { siren: '${SIREN_TEMOIN_TIERS}' };\n`,
+      });
+    }),
+  });
+
+  const FORMES_NEUTRALISEES = caracteresNeutralises();
+  if (FORMES_NEUTRALISEES.length === 0) {
+    console.error(
+      '❌ `SEPARATEURS_NEUTRALISES` ne reconnaît AUCUN caractère : la boucle ci-dessous ' +
+        "exécuterait zéro témoin, et zéro témoin exécuté se lit exactement comme zéro échec."
+    );
+    return 1;
+  }
+  for (const forme of FORMES_NEUTRALISEES) {
+    TEMOINS.push({
+      famille: 'coordonnee_en_clair',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'docs/rib-colle.md',
+          contenu: `Virement depuis ${ibanAvecSeparateur(IBAN_TEMOIN, forme)}.\n`,
+        });
+      }),
+    });
+  }
+
   const CONTRE_TEMOINS: { quoi: string; univers: Univers }[] = [
     { quoi: 'un registre conforme, secrets à la sentinelle', univers: UNIVERS_CONFORME },
     {
@@ -872,6 +1391,15 @@ function prouver(): number {
         u.fichiers.push({
           chemin: 'packages/contracts.sha256',
           contenu: 'AB12CDEF3456789012345678901234567890ABCD\n',
+        });
+      }),
+    },
+    {
+      quoi: 'une spécification qui CITE la TVA et le SIREN d’un tiers — publics, et citer n’est pas se servir',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'docs/spec/tiers.md',
+          contenu: `Le fournisseur porte la TVA ${TVA_TEMOIN_TIERS} et le SIREN ${SIREN_TEMOIN_TIERS}.\n`,
         });
       }),
     },
@@ -919,6 +1447,15 @@ function prouver(): number {
   console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts, dont l'univers conforme.`);
+  console.log(
+    `   ${FORMES_NEUTRALISEES.length} forme(s) d'espace ou de tiret sont ramenées à une espace ASCII ` +
+      `avant toute recherche, et chacune a son témoin : un IBAN collé depuis un RIB rougit.`
+  );
+  console.log(
+    `   ${Object.keys(IBANS_TEMOINS_ETRANGERS).length} IBAN NON français rougissent aussi ` +
+      `(${Object.keys(IBANS_TEMOINS_ETRANGERS).join(', ')}) : une fixture mono-pays ne prouve rien ` +
+      `de \`PAYS_ISO\`. Une TVA et un SIREN de TIERS rougissent dans du CODE, et restent verts en prose.`
+  );
   return 0;
 }
 
@@ -928,6 +1465,50 @@ function prouver(): number {
 const APPELE_DIRECTEMENT = /gov-entite\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
+  const iCorps = process.argv.indexOf('--corps-publie');
+  if (iCorps >= 0 && !process.argv.includes('--prove')) {
+    // LE MODE EN LIGNE. Il n'entre PAS dans Gate A : sous le jeton d'Actions il dépend du réseau
+    // et de droits qu'un runner n'a pas toujours, et une étape qui rend 2 par intermittence se
+    // fait retirer. C'est le régime déjà tenu par `gov:depot-visibilite` — la PREUVE en CI, le
+    // mode en ligne en nightly et avant fusion.
+    const numero = process.argv[iCorps + 1];
+    if (numero === undefined || !/^\d+$/.test(numero)) {
+      console.error('❌ gov:entite --corps-publie attend un NUMÉRO de PR. Rien n’a été lu : verdict INDÉTERMINÉ.');
+      process.exit(2);
+    }
+    const lecture = lireCorpsPublie(numero);
+    const verdict = jugerCorpsPublie(lecture);
+
+    // TÉMOIN POSITIF, IMPRIMÉ DANS LES TROIS CAS. Un « aucune coordonnée » sans volumétrie est
+    // indiscernable d'une sonde qui ne mesure rien : dix zéros veulent dire « absent » ou « je ne
+    // regarde pas », et rien ne les sépare. On dit donc TOUJOURS ce qui a été lu.
+    if (lecture.lu) {
+      const courant = lecture.corps.find((c) => !c.revision);
+      console.log(
+        `   lu : corps courant ${courant?.texte.length ?? 0} octet(s), ` +
+          `${lecture.revisionsLues}/${lecture.revisionsAnnoncees} révision(s) d'édition, ` +
+          `${lecture.corps.reduce((n, c) => n + c.texte.length, 0)} octet(s) au total.`
+      );
+    }
+
+    if (verdict.code === 0) {
+      console.log(
+        `✅ gov:entite --corps-publie ${numero} — le corps PUBLIÉ et son historique d'édition ne ` +
+          `portent aucune coordonnée bancaire, jugés par le MÊME \`coordonneesDe\` que les fichiers suivis.`
+      );
+      process.exit(0);
+    }
+    const gravite = verdict.code === 1 ? 'défaut CONSTATÉ' : 'INDÉTERMINÉ';
+    console.error(`❌ gov:entite --corps-publie ${numero} — ${gravite} (${verdict.fautes.length}) :\n`);
+    verdict.fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
+    if (verdict.fautes.length > 25) console.error(`   … et ${verdict.fautes.length - 25} autre(s).`);
+    process.exit(verdict.code);
+  }
+
+  if (iCorps >= 0) {
+    process.exit(prouverCorpsPublie());
+  }
+
   if (process.argv.includes('--prove')) {
     process.exit(prouver());
   } else {
