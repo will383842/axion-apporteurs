@@ -141,6 +141,15 @@
       "preuveRouge": "pnpm gov:entite:prove — 11 familles, un temoin chacune sur un univers INJECTE, dont secret_commite (un IBAN commite dans un fichier suivi) et valeur_recopiee (un SIREN du registre recopie ailleurs) ; 7 contre-temoins restent verts, dont l'univers conforme"
     },
     {
+      "id": "gov:entite:corps",
+      "phase": -1,
+      "script": "scripts/gates/gov-entite.ts",
+      "tache": "CPL-T01",
+      "verifie": "le corps PUBLIE d'une PR et son HISTORIQUE d'edition passent par le MEME coordonneesDe que les fichiers suivis (REQ-GOV-031). docs/pr/31.tpl.md etait garde ; l'artefact que le gabarit existe pour produire ne l'etait pas — pr:corps ne figurait dans aucun workflow. Le defaut ne vit pas dans le corps courant : GitHub sert userContentEdits a quiconque, et sur la PR 31 trois revisions portent un IBAN a cle mod-97 vraie que masquer le corps n'a pas depublie. CE QUI EST GARDE : « le corps publie ne contient aucune coordonnee », PAS « le corps publie est egal au rendu local » — le rendu n'est pas deterministe, caseRevues lit la forge en direct, et une egalite octet a octet rougirait sur un corps propre. TROIS CODES : 0 conforme, 1 constate, 2 INDETERMINE. Le sens de defaillance est FERME : gh absent, non authentifie, hors ligne, reponse illisible, revision annoncee et non lue (pagination, diff nul) rendent 2, jamais 0 — une garde verte parce qu'elle n'a pas pu lire ferait croire a un controle qui n'a pas eu lieu. HORS PERIMETRE : le mode en ligne n'entre PAS dans Gate A, il depend du reseau et de droits qu'un runner n'a pas toujours ; seule la PREUVE hors ligne y entre, meme regime que gov:depot-visibilite",
+      "fixtureRouge": "ecrire un IBAN a cle valide dans le corps d'une PR, meme masque ensuite : l'historique d'edition le sert encore (mesure : pnpm gov:entite:corps 31 rend 1 sur trois revisions datees, 28/29/30 rendent 0)",
+      "preuveRouge": "pnpm gov:entite:corps:prove — 4 familles vues rougir sur une lecture INJECTEE (coordonnee dans le corps courant, coordonnee dans une revision, lecture impossible, revisions non lues) ; 4 contre-temoins verts, dont la forme masquee du gabarit"
+    },
+    {
       "id": "aucun-workflow-ne-pousse-sur-main",
       "phase": -1,
       "script": "tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts",

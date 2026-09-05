@@ -93,6 +93,12 @@ jobs:
         run: pnpm gov:entite
       - name: La garde du registre d entite sait rougir
         run: pnpm gov:entite:prove
+
+      # Seule la PREUVE entre ici : le mode en ligne lit la forge et rend 2 quand il ne peut
+      # pas lire, ce qui ferait clignoter une etape de Gate A. Et l'historique d'edition d'une
+      # PR est IMMUABLE : cable en bloquant, il rendrait la PR 31 infusionnable a jamais.
+      - name: La garde du corps publie de la PR sait rougir
+        run: pnpm gov:entite:corps:prove
       # Seule la PREUVE entre ici : le mode en ligne rend 2 sous le jeton d Actions, qui ne
       # lit pas la protection de branche. Le mode en ligne tourne en nightly.
       - name: La garde du depot sait rougir
