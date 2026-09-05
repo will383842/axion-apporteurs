@@ -47,6 +47,7 @@ import {
   cheminsSchema,
   lentillesExigees,
   lireRevues,
+  tachesSchemaDeLaPr,
   touche,
   toucheSchema,
   type RevueBrute,
@@ -86,6 +87,12 @@ const INTRODUIT_UNE_GARDE = (f: string) =>
   /\.spec\.ts$/.test(f) || f.startsWith('scripts/gates/') || f.startsWith('.github/workflows/');
 
 type Pr = {
+  /**
+   * Le numéro de la PR, quand on le connaît. Il n'est PAS décoratif : c'est lui qui permet de
+   * dériver l'ENSEMBLE des tâches de la PR au lieu de la seule tâche que le titre nomme — la
+   * divergence d'entrée mesurée le 2026-09-05 (voir `tachesDeLaPr` dans `scripts/lot/revues.ts`).
+   */
+  numero?: number | null;
   titre: string;
   corps: string;
   labels: string[];
@@ -471,7 +478,9 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
   const schemaExige = toucheSchema({
     fichiers: pr.fichiers,
     labels: pr.labels,
-    tachesSchema: tache?.schema === true,
+    // L'ENSEMBLE des tâches de la PR, pas la seule que le titre nomme. Voir `tachesDeLaPr` :
+    // les deux appelants du lecteur unique composaient chacun le sien, et ils divergeaient.
+    tachesSchema: tachesSchemaDeLaPr(depot.taches, pr.numero ?? null, titre ? titre[2]! : null),
     charte: depot.charte,
   });
   if (fichiersDeSchema && !pr.labels.includes('schema')) {
@@ -643,6 +652,7 @@ function prParGh(numero: string): Pr {
     })
   ) as RevueBrute[];
   return {
+    numero: Number(numero),
     titre: meta.title,
     corps: meta.body ?? '',
     labels: (meta.labels ?? []).map((l) => l.name),
@@ -657,7 +667,7 @@ function prParEvenement(): Pr | null {
   const chemin = process.env['GITHUB_EVENT_PATH'];
   if (!chemin || !existsSync(chemin)) return null;
   const ev = JSON.parse(readFileSync(chemin, 'utf8')) as {
-    pull_request?: { title: string; body: string | null; labels: { name: string }[]; base: { sha: string }; head: { sha: string } };
+    pull_request?: { number?: number; title: string; body: string | null; labels: { name: string }[]; base: { sha: string }; head: { sha: string } };
   };
   if (!ev.pull_request) return null;
   let fichiers: string[] = [];
@@ -675,6 +685,7 @@ function prParEvenement(): Pr | null {
     process.exit(1);
   }
   return {
+    numero: ev.pull_request.number ?? null,
     titre: ev.pull_request.title,
     corps: ev.pull_request.body ?? '',
     labels: ev.pull_request.labels.map((l) => l.name),
