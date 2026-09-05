@@ -490,12 +490,30 @@ export function caracteresNeutralises(): string[] {
 }
 
 /**
- * Un IBAN écrit avec un séparateur donné entre ses groupes de quatre — la forme exacte d'un RIB
- * collé depuis un relevé, un traitement de texte ou un courriel. Ce n'est PAS une valeur : c'est
- * une transformation, et son entrée vient de l'appelant (RM-01).
+ * Un IBAN COMPACT réécrit avec un séparateur entre ses groupes de quatre — la forme exacte d'un
+ * RIB collé depuis un relevé, un traitement de texte ou un courriel. Ce n'est PAS une valeur :
+ * c'est une transformation, et son entrée vient de l'appelant (RM-01).
+ *
+ * 🔴 ELLE A PORTÉ `iban.replace(/s/g, '')` — **la lettre `s`**, pas les blancs ; l'antislash
+ * manquait, et sa docstring annonçait pourtant « collé depuis un relevé ». Mesuré le 2026-09-05 :
+ * une entrée déjà espacée ressortait inchangée puis regroupée n'importe comment, et un IBAN
+ * espagnol ou suisse écrit en minuscules perdait son `s`.
+ *
+ * 🔑 ET LA QUESTION VENAIT AVANT « comment normaliser » : aucun appelant ne lui passe une entrée
+ * espacée. La substitution n'avait aucun témoin parce qu'elle n'avait aucun usage. La réponse
+ * n'est donc pas de réparer la regex, c'est de retirer la réparation — **une fonction qui
+ * « complète » une fixture VÉRIFIE, elle ne fabrique pas** (RM-03).
  */
 export function ibanAvecSeparateur(iban: string, separateur: string): string {
-  return (iban.replace(/s/g, '').match(/.{1,4}/g) ?? []).join(separateur);
+  if (!/^[A-Za-z0-9]+$/.test(iban)) {
+    throw new Error(
+      `ibanAvecSeparateur attend un IBAN COMPACT — lettres et chiffres, aucun séparateur — et ` +
+        `a reçu « ${iban} ». Insérer un séparateur dans une chaîne qui en porte déjà produit une ` +
+        `forme qui n'est plus un IBAN, et une réparation silencieuse ferait passer le défaut pour ` +
+        `un succès : passe la forme compacte (RM-03).`
+    );
+  }
+  return (iban.match(/.{1,4}/g) ?? []).join(separateur);
 }
 
 function normaliserEspaces(t: string): string {
@@ -727,8 +745,15 @@ export function controler(u: Univers): Faute[] {
  *
  * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ SUR LA PR #31, le 2026-09-05. GitHub conserve
  * l'historique d'édition d'un corps de PR (`userContentEdits`, lisible en GraphQL par n'importe
- * qui). Onze révisions. Quatre portent la forme masquée ; TROIS portent un IBAN à clé mod-97
- * VRAIE, toujours lisible aujourd'hui. Masquer le corps courant n'a pas dépublié les précédents.
+ * qui). Le corps y avait été rendu plusieurs fois ; certaines de ces éditions portaient la forme
+ * masquée, et d'autres un IBAN à clé mod-97 VRAIE, toujours lisible aujourd'hui. Masquer le corps
+ * courant n'a pas dépublié les précédents.
+ *
+ * ⚠️ AUCUN TOTAL N'EST ÉCRIT ICI, ET C'EST LA RÈGLE QUE CE FICHIER SERT : le corps est REGÉNÉRÉ à
+ * chaque tour de revue, donc tout total tapé est périmé le jour où on l'écrit — celui-ci l'était.
+ * Le nombre qui a un sens est celui des éditions PORTANT une coordonnée, et il se compte dans
+ * `config/exemptions-corps-publie.json`, sa source unique (RM-01). Le total, lui, s'imprime : la
+ * garde le dit à chaque exécution (« lu : … révision(s) d'édition »).
  *
  * ATTÉNUATION, ET ELLE NE CHANGE RIEN À CE QU'IL FAUT CONSTRUIRE : cette valeur-là était la SONDE
  * d'un relecteur, pas la coordonnée d'AXION — il n'y a rien à révoquer. Ce qui manquait, et que
@@ -755,8 +780,9 @@ export function controler(u: Univers): Faute[] {
  *
  * L'historique d'édition d'un corps de PR est IMMUABLE : GitHub sert `userContentEdits` à
  * quiconque le demande, et aucune édition ultérieure ne dépublie une révision. La PR #31 porte
- * donc, pour toujours, trois révisions avec un IBAN à clé mod-97 vraie. Câbler le mode en ligne
- * en étape bloquante rendait cette PR-là — et toute PR de sa pile — INFUSIONNABLE.
+ * donc, pour toujours, les éditions DÉCLARÉES au registre — leur compte s'y lit, il ne se retape
+ * pas ici. Câbler le mode en ligne en étape bloquante rendait cette PR-là — et toute PR de sa
+ * pile — INFUSIONNABLE.
  *
  * 🔴 LA PREMIÈRE RÉPONSE A ÉTÉ LA MAUVAISE, ET C'EST MOI QUI L'AI PROPOSÉE. Elle consistait à ne
  * câbler que la preuve hors ligne et à laisser le mode en ligne « à lancer avant fusion ». Écrite
@@ -949,8 +975,14 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
       message:
         `La forge annonce ${lecture.revisionsAnnoncees} révision(s) du corps et ${lecture.revisionsLues} ` +
         `ont été lues. Les révisions non lues ne sont PAS réputées propres : le défaut mesuré sur la ` +
-        `PR #31 vivait dans des révisions, pas dans le corps courant. Pagine la requête, ou traite ce ` +
-        `verdict comme INDÉTERMINÉ (2).`,
+        `PR #31 vivait dans des révisions, pas dans le corps courant. La requête EST paginée ` +
+        `(${EDITIONS_PAR_PAGE} par page, ${PAGES_MAX} pages au plus) ; il reste donc DEUX causes, et ` +
+        `elles n'ont pas le même remède. (a) Une révision servie sans \`diff\` ou sans \`editedAt\` : la ` +
+        `forge n'en donne ni le texte ni l'horodatage, et sans horodatage aucune exemption ne peut ` +
+        `s'y apparier — rien à corriger dans ce dépôt, relance la garde. (b) La borne de ` +
+        `${PAGES_MAX * EDITIONS_PAR_PAGE} révision(s) atteinte, ce que le nombre lu rend visible : relève ` +
+        `\`PAGES_MAX\` dans \`scripts/gates/gov-entite.ts\`. Elle existe pour qu'un curseur qui n'avance ` +
+        `pas ne fasse pas tourner la CI sans fin, pas pour limiter ce qui est examiné.`,
     });
   }
 
@@ -1038,6 +1070,141 @@ export function exemptionsServies(lecture: LectureDuCorps, exemptions: Exemption
 }
 
 /**
+ * ── LA PAGINATION DES RÉVISIONS — ET POURQUOI SON ABSENCE ÉTAIT UNE GATE INSATISFIABLE ────────
+ *
+ * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ le 2026-09-05 : la requête demandait
+ * `userContentEdits(first: 100)` alors que `totalCount` compte TOUTES les éditions. Au-delà de
+ * cent, `revisionsAnnoncees > revisionsLues`, donc `revisions_non_lues`, donc le code 2, donc
+ * l'échec de Gate A — **sans aucun remède** : aucune exemption ne couvre cette famille (leur
+ * appariement exige une coordonnée DANS une révision), et l'historique d'édition ne se dé-publie
+ * pas. Le réessai ×3 ne protège de rien non plus : la réponse est STABLE et incomplète, pas
+ * intermittente.
+ *
+ * ET CENT EST À PORTÉE : le corps d'une PR est REGÉNÉRÉ à chaque tour de revue, si bien que le
+ * mécanisme qui produit les révisions est le mécanisme même de la revue.
+ *
+ * 🔑 CE QUE LA PAGINATION CHANGE : elle ne transforme pas un rouge en vert, elle transforme un
+ * verdict SANS remède en verdict AVEC remède. Une coordonnée en deuxième page rendait 2 (« je
+ * n'ai pas tout lu », rien à faire) ; elle rend maintenant 1, nommée et datée, donc changeable
+ * ou déclarable. C'est la différence entre une gate qu'on répare et une gate qu'on saute.
+ */
+export const EDITIONS_PAR_PAGE = 100;
+
+/**
+ * LA BORNE DURE, ET ELLE RESTE NÉCESSAIRE — on dit laquelle et pourquoi. Une boucle non bornée
+ * contre une API distante ne rend jamais la main le jour où la forge sert un curseur qui n'avance
+ * pas, ou renomme un champ de `pageInfo`. Une CI qui tourne sans fin est indiscernable d'une CI
+ * en panne, sauf qu'elle consomme le créneau de fusion (RM-09) au lieu de rendre une couleur.
+ *
+ * Le nombre est haut À DESSEIN : deux ordres de grandeur au-dessus de ce qu'une PR atteint. Et
+ * il est REMÉDIABLE — le message de `revisions_non_lues` le nomme, nomme son fichier, et dit
+ * qu'on le relève. Une borne muette serait le défaut qu'on vient de fermer, réintroduit un cran
+ * plus bas.
+ */
+export const PAGES_MAX = 20;
+
+/** Un nœud d'édition tel que la forge le sert : rien n'y est réputé présent ni typé. */
+export type NoeudEdition = { editedAt?: unknown; diff?: unknown };
+
+/** UNE page de la connexion `userContentEdits`, ramenée à ce dont la boucle a besoin. */
+export type PageDEditions = {
+  totalCount: number;
+  noeuds: NoeudEdition[];
+  encore: boolean;
+  curseur: string | null;
+};
+
+export type EditionsLues = {
+  annoncees: number;
+  noeuds: NoeudEdition[];
+  pages: number;
+  /** Vrai quand on a CESSÉ de lire avant la fin : borne atteinte, ou curseur qui n'avance pas. */
+  inacheve: boolean;
+};
+
+/**
+ * LA REQUÊTE, ET SES TAILLES SONT DÉRIVÉES (RM-01). Retaper `first: 100` ici ferait compter à la
+ * boucle autre chose que ce que la requête demande, et les deux divergeraient sans bruit.
+ * `$a` est nullable : la première page l'omet, GraphQL lit alors `null`.
+ */
+export const REQUETE_EDITIONS =
+  'query($o:String!,$r:String!,$n:Int!,$a:String){repository(owner:$o,name:$r){pullRequest(number:$n){' +
+  `userContentEdits(first:${EDITIONS_PAR_PAGE},after:$a){totalCount ` +
+  'pageInfo{hasNextPage endCursor} nodes{editedAt diff}}}}}';
+
+/**
+ * LA BOUCLE, PURE ET INJECTÉE (RM-11), pour la même raison que `jugerCorpsPublie` : la lecture
+ * réelle passe par le réseau, et une preuve qui dépend de ce que la forge répond le jour où elle
+ * tourne ne prouve rien. Ce qui est injecté ici, c'est « donne-moi la page qui suit ce curseur ».
+ */
+export function paginerEditions(lirePage: (apres: string | null) => PageDEditions): EditionsLues {
+  const noeuds: NoeudEdition[] = [];
+  let annoncees = 0;
+  let curseur: string | null = null;
+  let pages = 0;
+  let inacheve = false;
+  for (;;) {
+    const page = lirePage(curseur);
+    pages += 1;
+    // `totalCount` est celui de la CONNEXION, pas de la page : on le prend une fois. Le relire à
+    // chaque tour ferait dépendre l'écart annoncé/lu de la dernière page servie.
+    if (pages === 1) annoncees = page.totalCount;
+    noeuds.push(...page.noeuds);
+    if (!page.encore) break;
+    // UN CURSEUR QUI N'AVANCE PAS relit la même page indéfiniment, et aucune borne exprimée en
+    // NOMBRE DE RÉVISIONS ne l'attraperait — on en accumulerait sans fin. On s'arrête, et l'écart
+    // annoncé/lu fait tomber le verdict en INDÉTERMINÉ plutôt qu'en vert.
+    if (page.curseur === null || page.curseur === curseur) {
+      inacheve = true;
+      break;
+    }
+    if (pages >= PAGES_MAX) {
+      inacheve = true;
+      break;
+    }
+    curseur = page.curseur;
+  }
+  return { annoncees, noeuds, pages, inacheve };
+}
+
+/**
+ * CE QUE LA LECTURE DEVIENT — le corps courant, puis une entrée par révision RÉELLEMENT lue.
+ * Extraite de `lireUneFois` pour que le banc d'essai exerce la MÊME mise en forme que la lecture
+ * réelle : deux assemblages divergeraient, et c'est celui du test qui resterait vert (RM-01).
+ */
+export function assemblerLecture(
+  numero: string,
+  corpsCourant: string,
+  editions: { annoncees: number; noeuds: NoeudEdition[] }
+): LectureDuCorps {
+  const corps: CorpsPublie[] = [
+    { origine: `PR #${numero} — corps courant`, horodatage: null, texte: corpsCourant, revision: false },
+  ];
+  let lues = 0;
+  for (const n of editions.noeuds) {
+    // Un `diff` nul n'est pas une révision propre : c'est une révision qu'on n'a PAS lue. Elle
+    // reste comptée dans `annoncees`, et l'écart fait tomber le verdict en INDÉTERMINÉ.
+    // Un horodatage nul aussi : sans lui, aucune exemption ne peut s'apparier à cette révision,
+    // donc on ne peut ni l'absoudre ni prétendre l'avoir examinée.
+    if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue;
+    lues += 1;
+    corps.push({
+      origine: `PR #${numero} — révision du ${n.editedAt}`,
+      horodatage: n.editedAt,
+      texte: n.diff,
+      revision: true,
+    });
+  }
+  return {
+    lu: true,
+    pr: Number(numero),
+    corps,
+    revisionsLues: lues,
+    revisionsAnnoncees: editions.annoncees,
+  };
+}
+
+/**
  * LA LECTURE RÉELLE — deux appels, et ils ne se remplacent pas l'un l'autre.
  *   — `gh pr view <n> --json body` : le corps COURANT, la commande que la revue a nommée ;
  *   — `gh api graphql … userContentEdits` : les RÉVISIONS, seul endroit où vivait le défaut mesuré.
@@ -1053,10 +1220,35 @@ export function exemptionsServies(lecture: LectureDuCorps, exemptions: Exemption
  */
 const ESSAIS_DE_LECTURE = 3;
 
-export function lireCorpsPublie(numero: string, essais = ESSAIS_DE_LECTURE): LectureDuCorps {
+/**
+ * CE QUI EXECUTE `gh`, ET POURQUOI C'EST UN PARAMETRE — 🔴 le mutant qui interdisait la fusion
+ * le 2026-09-05. Mutation : en cas d'echec, rendre `{ lu: true, corps: [] }`. Resultat : banc
+ * d'essai ENTIEREMENT vert, `--prove` a 0, et le mode en ligne imprimant un ✅ sur une PR
+ * ILLISIBLE. `jugerCorpsPublie` etait couvert par une trentaine de cas ; la fonction ou le sens
+ * de defaillance est CHOISI ne l'etait par aucun, parce qu'elle passait par le reseau.
+ *
+ * 🔑 La couverture du PUR ne dit rien de l'IMPUR qui l'alimente. On injecte donc l'appel
+ * exterieur, exactement comme `paginerEditions` injecte sa page : la preuve tient hors ligne.
+ */
+export type ExecuteurGh = (args: string[]) => string;
+
+export const GH_REEL: ExecuteurGh = (args) =>
+  execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+
+/**
+ * AUCUN DEFAUT SUR CE QUE LE TEST FAIT VARIER (RM-11) : ni `essais` ni `gh` n'ont de valeur
+ * par defaut. Un defaut sur `gh` reintroduirait tout le probleme — un cas qui l'omettrait
+ * repartirait sur le reseau sans que rien ne le dise, et redeviendrait vert pour la mauvaise
+ * raison. La ligne de commande, elle, passe `ESSAIS_DE_LECTURE` et `GH_REEL` explicitement.
+ */
+export function lireCorpsPublie(
+  numero: string,
+  essais: number,
+  gh: ExecuteurGh
+): LectureDuCorps {
   let derniere: LectureDuCorps = { lu: false, motif: 'aucune tentative' };
   for (let n = 1; n <= Math.max(1, essais); n += 1) {
-    derniere = lireUneFois(numero);
+    derniere = lireUneFois(numero, gh);
     if (derniere.lu) {
       console.log(`   lecture obtenue à la tentative ${n}/${Math.max(1, essais)}.`);
       return derniere;
@@ -1068,10 +1260,7 @@ export function lireCorpsPublie(numero: string, essais = ESSAIS_DE_LECTURE): Lec
   };
 }
 
-function lireUneFois(numero: string): LectureDuCorps {
-  const gh = (args: string[]): string =>
-    execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-
+export function lireUneFois(numero: string, gh: ExecuteurGh): LectureDuCorps {
   let corpsCourant: string;
   try {
     const brut = gh(['pr', 'view', numero, '--json', 'body']);
@@ -1106,36 +1295,63 @@ function lireUneFois(numero: string): LectureDuCorps {
     return { lu: false, motif: `dépôt illisible : « ${depot} »` };
   }
 
-  const REQUETE =
-    'query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){' +
-    'userContentEdits(first:100){totalCount nodes{editedAt diff}}}}}';
-
-  let annoncees: number;
-  let noeuds: { editedAt?: unknown; diff?: unknown }[];
-  try {
-    const brut = gh([
+  /**
+   * UNE page, telle que `gh` la rend. Elle LÈVE en cas d'erreur : le `catch` de l'appelant la
+   * transforme en `{ lu: false }`. Aucun repli sur un tableau vide ici — ce serait un vert
+   * produit par une lecture qui n'a pas eu lieu, c'est-à-dire le défaut que cette garde existe
+   * pour empêcher.
+   */
+  const lirePage = (apres: string | null): PageDEditions => {
+    const args = [
       'api',
       'graphql',
       '-f',
-      `query=${REQUETE}`,
+      `query=${REQUETE_EDITIONS}`,
       '-F',
       `o=${proprietaire}`,
       '-F',
       `r=${nom}`,
       '-F',
       `n=${numero}`,
-    ]);
-    const j = JSON.parse(brut) as {
+    ];
+    // `-f` et non `-F` : un curseur est OPAQUE et doit partir en chaîne. `-F` type sa valeur, et
+    // un curseur qui ressemblerait à un nombre partirait en `Int` — la forge refuserait la
+    // requête, et l'échec ressemblerait à une panne d'authentification.
+    if (apres !== null) args.push('-f', `a=${apres}`);
+    const j = JSON.parse(gh(args)) as {
       data?: {
-        repository?: { pullRequest?: { userContentEdits?: { totalCount?: unknown; nodes?: unknown } } };
+        repository?: {
+          pullRequest?: {
+            userContentEdits?: {
+              totalCount?: unknown;
+              pageInfo?: { hasNextPage?: unknown; endCursor?: unknown };
+              nodes?: unknown;
+            };
+          };
+        };
       };
     };
     const edits = j.data?.repository?.pullRequest?.userContentEdits;
     if (edits === undefined || typeof edits.totalCount !== 'number' || !Array.isArray(edits.nodes)) {
-      return { lu: false, motif: "la requête GraphQL n'a pas rendu `userContentEdits`" };
+      throw new Error("la requête GraphQL n'a pas rendu `userContentEdits`");
     }
-    annoncees = edits.totalCount;
-    noeuds = edits.nodes as { editedAt?: unknown; diff?: unknown }[];
+    // `pageInfo` ABSENT n'est PAS « il n'y a plus rien » : c'est un champ qu'on n'a pas lu. On
+    // annonce donc une suite sans curseur, ce que `paginerEditions` compte comme inachevé — et
+    // l'écart annoncé/lu rend INDÉTERMINÉ. Le sens de défaillance est le même partout ici.
+    const info = edits.pageInfo;
+    const encore = info === undefined ? true : info.hasNextPage === true;
+    const curseur = typeof info?.endCursor === 'string' ? info.endCursor : null;
+    return {
+      totalCount: edits.totalCount,
+      noeuds: edits.nodes as NoeudEdition[],
+      encore,
+      curseur: encore ? curseur : null,
+    };
+  };
+
+  let editions: EditionsLues;
+  try {
+    editions = paginerEditions(lirePage);
   } catch (e) {
     return {
       lu: false,
@@ -1143,27 +1359,7 @@ function lireUneFois(numero: string): LectureDuCorps {
     };
   }
 
-  const corps: CorpsPublie[] = [
-    { origine: `PR #${numero} — corps courant`, horodatage: null, texte: corpsCourant, revision: false },
-  ];
-  let lues = 0;
-  for (const n of noeuds) {
-    // Un `diff` nul n'est pas une révision propre : c'est une révision qu'on n'a PAS lue. Elle
-    // reste comptée dans `annoncees`, et l'écart fait tomber le verdict en INDÉTERMINÉ.
-    // Un horodatage nul aussi : sans lui, aucune exemption ne peut s'apparier à cette révision,
-    // donc on ne peut ni l'absoudre ni prétendre l'avoir examinée.
-    if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue;
-    lues += 1;
-    const horodatage = typeof n.editedAt === 'string' ? n.editedAt : null;
-    corps.push({
-      origine: `PR #${numero} — révision du ${horodatage ?? 'date inconnue'}`,
-      horodatage,
-      texte: n.diff,
-      revision: true,
-    });
-  }
-
-  return { lu: true, pr: Number(numero), corps, revisionsLues: lues, revisionsAnnoncees: annoncees };
+  return assemblerLecture(numero, corpsCourant, editions);
 }
 
 /**
@@ -1181,8 +1377,20 @@ function prouverCorpsPublie(): number {
     revisionsLues: revision ? 1 : 0,
     revisionsAnnoncees: revision ? 1 : 0,
   });
-  /** Une exemption BIEN formée pour le témoin donné — construite, jamais recopiée. */
-  const exemptionPour = (valeur: string, sur = HORODATAGE, pr = PR_TEMOIN): Exemption => ({
+  /**
+   * Une exemption BIEN formée pour le témoin donné — construite, jamais recopiée.
+   *
+   * 🔴 ELLE A PORTÉ DES DÉFAUTS — `sur = HORODATAGE, pr = PR_TEMOIN` — et c'est le fait
+   * d'instrument que la lentille `mutation` a rendu le 2026-09-05 : les mutations qui
+   * retirent la clé d'HORODATAGE ou la clé d'EMPREINTE de l'appariement **mouraient dans
+   * `pnpm test` et SURVIVAIENT ici**. Cause : aucun témoin de ce banc ne différait
+   * SEULEMENT par l'horodatage, ni SEULEMENT par l'empreinte. Le témoin « révision NON
+   * exemptée » avait l'air de couvrir le cas ; il discriminait en réalité sur l'empreinte.
+   *
+   * 🔑 **Un témoin qui bouge pour deux raisons ne discrimine rien** (RM-11). Les trois clés
+   * sont donc écrites à chaque appel, et trois témoins ci-dessous n'en changent QU'UNE.
+   */
+  const exemptionPour = (valeur: string, sur: string, pr: number): Exemption => ({
     pr,
     revision: sur,
     empreinte: empreinteDe(valeur),
@@ -1234,7 +1442,7 @@ function prouverCorpsPublie(): number {
       // de sens, c'est-à-dire une autorisation ouverte sur un texte que personne n'a examiné.
       famille: 'exemption_sans_objet',
       lecture: corps('aucune coordonnée dans cette révision', true),
-      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 1,
     },
     {
@@ -1242,7 +1450,7 @@ function prouverCorpsPublie(): number {
       // personne ne la relit — et elle devient permanente sans que quiconque l'ait voulu.
       famille: 'exemption_malformee',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
-      exemptions: [{ ...exemptionPour(IBAN_TEMOIN), motif: '' }],
+      exemptions: [{ ...exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN), motif: '' }],
       attendu: 1,
     },
     {
@@ -1250,7 +1458,7 @@ function prouverCorpsPublie(): number {
       // la ligne absoudrait alors une AUTRE coordonnée que celle qu'on a examinée.
       famille: 'exemption_malformee',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
-      exemptions: [{ ...exemptionPour(IBAN_TEMOIN), empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16) }],
+      exemptions: [{ ...exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN), empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16) }],
       attendu: 1,
     },
     {
@@ -1273,7 +1481,7 @@ function prouverCorpsPublie(): number {
         revisionsLues: 2,
         revisionsAnnoncees: 2,
       },
-      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 1,
     },
     {
@@ -1281,7 +1489,47 @@ function prouverCorpsPublie(): number {
       // Une exemption qui le couvrirait serait une permission de publier.
       famille: 'coordonnee_dans_le_corps_courant',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`),
-      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
+      attendu: 1,
+    },
+    {
+      // LES TROIS CLÉS, UNE PAR UNE — et chacune change SEULE. C'est ce qui manquait : une
+      // exemption qui ne diffère QUE par l'HORODATAGE n'absout pas. Sans ce cas, retirer la clé
+      // d'horodatage de l'appariement laissait ce banc entièrement vert.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [exemptionPour(IBAN_TEMOIN, '2026-01-02T09:09:09Z', PR_TEMOIN)],
+      attendu: 1,
+    },
+    {
+      // … QUE par l'EMPREINTE : même PR, même horodatage, une AUTRE coordonnée déclarée.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [exemptionPour(IBANS_TEMOINS_ETRANGERS.DE!, HORODATAGE, PR_TEMOIN)],
+      attendu: 1,
+    },
+    {
+      // … QUE par la PR. Exempter une révision d'une AUTRE PR n'absout rien ici : sinon une
+      // ligne écrite pour une PR fermée couvrirait tout ce qui reste à écrire.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN + 1)],
+      attendu: 1,
+    },
+    {
+      // UNE EMPREINTE TRONQUÉE N'ABSOUT PAS. Ce qui était gardé, c'est la forme STOCKÉE ; la
+      // forme COMPARÉE ne l'était pas. Une comparaison par préfixe couvrirait la coordonnée tout
+      // en déclarant la ligne malformée — et le verdict resterait 1, donc indiscernable. La
+      // famille exigée ici est `coordonnee_dans_une_revision`, pas `exemption_malformee` : c'est
+      // la moitié qui manquait.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [
+        {
+          ...exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN),
+          empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16),
+        },
+      ],
       attendu: 1,
     },
     { famille: 'lecture_impossible', lecture: { lu: false, motif: 'gh introuvable (témoin)' }, attendu: 2 },
@@ -1291,7 +1539,7 @@ function prouverCorpsPublie(): number {
       // « je n'ai pas pu lire » à « ton registre est faux » — deux diagnostics opposés.
       famille: 'lecture_impossible',
       lecture: { lu: false, motif: 'réseau injoignable (témoin)' },
-      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 2,
     },
     {
@@ -1316,7 +1564,7 @@ function prouverCorpsPublie(): number {
       // elle peut être verte SANS que la garde cesse de bloquer le reste.
       quoi: 'une révision DÉCLARÉE, dont l’exemption s’apparie sur les TROIS clés',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
-      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
     },
     {
       // Une exemption d'une AUTRE PR n'absout rien ici, et ne compte pas non plus comme sans
@@ -1376,6 +1624,32 @@ function prouverCorpsPublie(): number {
     }
   }
 
+  // ── CE QUE LE VERT AFFICHE : `exemptionsServies` apparie sur les TROIS clés ────────────────
+  // 🔴 MUTANT DU 2026-09-05 : la réduire à `exemptions.find((x) => x.pr === lecture.pr)`. Aucun
+  // témoin ne rougissait. C'est le registre en passoire par la porte d'à côté — la liste que ce
+  // vert imprime est celle qu'un humain relit pour savoir sur quoi la dette repose.
+  {
+    const lue = corps(`IBAN : ${IBAN_TEMOIN}`, true);
+    const bonne = exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN);
+    // Deux leurres, chacun ne différant que par UNE clé, et placés AVANT la bonne.
+    const leurres = [
+      exemptionPour(IBANS_TEMOINS_ETRANGERS.DE!, HORODATAGE, PR_TEMOIN),
+      exemptionPour(IBAN_TEMOIN, '2026-01-02T09:09:09Z', PR_TEMOIN),
+    ];
+    const servies = exemptionsServies(lue, [...leurres, bonne]);
+    // Et le TÉMOIN POSITIF : sur la bonne ligne seule, elle la rend. Sans lui, une fonction qui
+    // rendrait toujours `[]` passerait le cas ci-dessus.
+    const seule = exemptionsServies(lue, [bonne]);
+    if (servies.length !== 1 || servies[0] !== bonne || seule.length !== 1) {
+      console.error(
+        `❌ \`exemptionsServies\` n'apparie pas sur les TROIS clés : ${servies.length} ligne(s) ` +
+          `servie(s) parmi trois candidates de la MÊME PR, dont deux qui ne couvrent pas cette ` +
+          `coordonnée-là. Le vert afficherait une dette qui n'est pas celle sur laquelle il repose.`
+      );
+      return 1;
+    }
+  }
+
   const sansTemoin = FAMILLES_CORPS_PUBLIE.filter((f) => !TEMOINS.some((t) => t.famille === f));
   if (sansTemoin.length > 0) {
     console.error(
@@ -1385,10 +1659,228 @@ function prouverCorpsPublie(): number {
     return 1;
   }
 
+  // ── LA PAGINATION, ÉPROUVÉE HORS LIGNE ──────────────────────────────────────────────────────
+  // Elle vit ICI et pas seulement dans le banc d'essai : c'est `--corps-publie --prove` qui est
+  // l'étape de Gate A, et un témoin qui ne tient que `pnpm test` ne garde pas la CI.
+  {
+    const horodatage = (n: number): string =>
+      `2026-01-02T03:${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}Z`;
+    const RANG_FAUTIF = EDITIONS_PAR_PAGE + 20;
+    const TOTAL = EDITIONS_PAR_PAGE + 50;
+    const textes = Array.from({ length: TOTAL }, (_, i) =>
+      i === RANG_FAUTIF ? `IBAN : ${IBAN_TEMOIN}` : `révision ${i}`
+    );
+    const lirePage = (apres: string | null): PageDEditions => {
+      const debut = apres === null ? 0 : Number(apres);
+      const tranche = textes.slice(debut, debut + EDITIONS_PAR_PAGE);
+      const suivant = debut + tranche.length;
+      const reste = suivant < textes.length;
+      return {
+        totalCount: textes.length,
+        noeuds: tranche.map((texte, i) => ({ editedAt: horodatage(debut + i), diff: texte })),
+        encore: reste,
+        curseur: reste ? String(suivant) : null,
+      };
+    };
+
+    // UNE SEULE PAGE — ce que la requête demandait avant ce correctif : un 2 SANS remède, où la
+    // coordonnée n'est même pas nommée.
+    const page1 = lirePage(null);
+    const tronquee = jugerCorpsPublie(
+      assemblerLecture(String(PR_TEMOIN), 'propre', { annoncees: page1.totalCount, noeuds: page1.noeuds })
+    );
+    if (
+      tronquee.code !== 2 ||
+      !tronquee.fautes.every((f) => f.famille === 'revisions_non_lues') ||
+      tronquee.fautes.some((f) => f.message.includes(IBAN_TEMOIN))
+    ) {
+      console.error(
+        `❌ Le témoin de la lecture TRONQUÉE n'a pas rendu ce qu'il devait : code ${tronquee.code} ` +
+          `(attendu 2), familles [${tronquee.fautes.map((f) => f.famille).join(', ') || '—'}].`
+      );
+      return 1;
+    }
+
+    // TOUTES LES PAGES — la coordonnée est LUE, donc NOMMÉE, donc remédiable.
+    const complet = paginerEditions(lirePage);
+    const juge = jugerCorpsPublie(assemblerLecture(String(PR_TEMOIN), 'propre', complet));
+    if (
+      complet.noeuds.length !== TOTAL ||
+      complet.inacheve ||
+      juge.code !== 1 ||
+      !juge.fautes.some(
+        (f) => f.famille === 'coordonnee_dans_une_revision' && f.message.includes(horodatage(RANG_FAUTIF))
+      )
+    ) {
+      console.error(
+        `❌ La pagination n'a pas rendu ce qu'elle devait : ${complet.noeuds.length}/${TOTAL} ` +
+          `révision(s) lue(s), inachevé=${complet.inacheve}, code ${juge.code} (attendu 1).`
+      );
+      return 1;
+    }
+
+    // LA BORNE DURE — elle s'arrête, et son message NOMME le remède. Une borne muette serait le
+    // défaut qu'on vient de fermer, réintroduit un cran plus bas.
+    let rang = 0;
+    const sansFin = (): PageDEditions => {
+      rang += EDITIONS_PAR_PAGE;
+      return {
+        totalCount: Number.MAX_SAFE_INTEGER,
+        noeuds: Array.from({ length: EDITIONS_PAR_PAGE }, (_, i) => ({
+          editedAt: horodatage(rang + i),
+          diff: 'propre',
+        })),
+        encore: true,
+        curseur: String(rang),
+      };
+    };
+    const borne = paginerEditions(sansFin);
+    const jugeBorne = jugerCorpsPublie(assemblerLecture(String(PR_TEMOIN), 'propre', borne));
+    if (
+      borne.pages !== PAGES_MAX ||
+      !borne.inacheve ||
+      jugeBorne.code !== 2 ||
+      !jugeBorne.fautes.some((f) => f.message.includes('PAGES_MAX'))
+    ) {
+      console.error(
+        `❌ La borne de pagination n'a pas rendu ce qu'elle devait : ${borne.pages} page(s) ` +
+          `(attendu ${PAGES_MAX}), inachevé=${borne.inacheve}, code ${jugeBorne.code} (attendu 2).`
+      );
+      return 1;
+    }
+
+    // UN CURSEUR QUI N'AVANCE PAS — aucune borne exprimée en nombre de révisions ne l'attraperait,
+    // et une boucle qui ne rend jamais la main ne rend aucune couleur : elle prend le créneau.
+    const fige = paginerEditions(() => ({
+      totalCount: 400,
+      noeuds: [{ editedAt: horodatage(1), diff: 'propre' }],
+      encore: true,
+      curseur: 'CURSEUR-QUI-NE-BOUGE-PAS',
+    }));
+    if (fige.pages !== 2 || !fige.inacheve) {
+      console.error(
+        `❌ Un curseur qui n'avance pas n'a pas été reconnu : ${fige.pages} page(s), ` +
+          `inachevé=${fige.inacheve}.`
+      );
+      return 1;
+    }
+  }
+
+  // ── LE SENS DE DÉFAILLANCE DE LA LECTURE, ÉPROUVÉ HORS LIGNE ────────────────────────────────
+  // 🔴 Le mutant du 2026-09-05 : `lireCorpsPublie` rendant `{ lu: true, corps: [] }` en cas
+  // d'échec. Banc d'essai entièrement vert, `--prove` à 0, et un ✅ imprimé sur une PR ILLISIBLE.
+  // `jugerCorpsPublie` est pur et couvert ; la fonction qui CHOISIT le sens de défaillance ne
+  // l'était pas, parce qu'elle passait par le réseau. Elle prend son `gh` en paramètre, et ces
+  // témoins-ci vivent dans `--prove` : un mutant peut mourir dans `pnpm test` et survivre ici.
+  {
+    const DEPOT = 'exemple/depot-de-papier';
+    const HORO_LECTURE = '2026-01-02T03:04:05Z';
+    type GhDePapier = {
+      corps: unknown;
+      depot: unknown;
+      editions: NoeudEdition[];
+      total: number;
+      pageInfo: { hasNextPage: boolean; endCursor: string | null } | undefined;
+      tombeSur: 'pr' | 'repo' | 'graphql' | null;
+    };
+    const ghDePapier =
+      (o: GhDePapier): ExecuteurGh =>
+      (args: string[]): string => {
+        const quoi = args[0] === 'pr' ? 'pr' : args[0] === 'repo' ? 'repo' : 'graphql';
+        if (o.tombeSur === quoi) throw new Error(`gh ${quoi} : panne de papier`);
+        if (quoi === 'pr') return JSON.stringify({ body: o.corps });
+        if (quoi === 'repo') return JSON.stringify({ nameWithOwner: o.depot });
+        return JSON.stringify({
+          data: {
+            repository: {
+              pullRequest: {
+                userContentEdits: { totalCount: o.total, pageInfo: o.pageInfo, nodes: o.editions },
+              },
+            },
+          },
+        });
+      };
+    // AUCUN DÉFAUT sur ce que ces témoins font varier (RM-11) : chaque champ est écrit.
+    const SAIN: GhDePapier = {
+      corps: 'un corps de PR parfaitement propre',
+      depot: DEPOT,
+      editions: [{ editedAt: HORO_LECTURE, diff: 'une révision propre' }],
+      total: 1,
+      pageInfo: { hasNextPage: false, endCursor: null },
+      tombeSur: null,
+    };
+
+    // LE TÉMOIN POSITIF D'ABORD : sans lui, tout ce qui suit passerait sur une lecture qui ne lit
+    // jamais rien. Dix « je n'ai pas pu » ne prouvent pas qu'on sache lire une fois.
+    const saine = lireUneFois(String(PR_TEMOIN), ghDePapier(SAIN));
+    if (!saine.lu || saine.revisionsLues !== 1 || jugerCorpsPublie(saine).code !== 0) {
+      console.error(
+        `❌ La lecture d'un \`gh\` SAIN n'a pas rendu ce qu'elle devait : lu=${saine.lu}. ` +
+          `Sans ce témoin positif, les témoins de panne ci-dessous ne mesurent rien.`
+      );
+      return 1;
+    }
+
+    const PANNES: { quoi: string; o: GhDePapier }[] = [
+      { quoi: '`gh pr view` tombe', o: { ...SAIN, tombeSur: 'pr' } },
+      { quoi: '`gh repo view` tombe', o: { ...SAIN, tombeSur: 'repo' } },
+      { quoi: 'la requête GraphQL tombe', o: { ...SAIN, tombeSur: 'graphql' } },
+      { quoi: "le corps n'est pas textuel", o: { ...SAIN, corps: undefined } },
+      { quoi: 'le dépôt est illisible', o: { ...SAIN, depot: undefined } },
+      { quoi: '`userContentEdits` manque', o: { ...SAIN, total: undefined as unknown as number } },
+    ];
+    for (const p of PANNES) {
+      const lue = lireUneFois(String(PR_TEMOIN), ghDePapier(p.o));
+      const v = jugerCorpsPublie(lue);
+      if (lue.lu || v.code !== 2) {
+        console.error(
+          `❌ « ${p.quoi} » a rendu lu=${lue.lu}, code ${v.code} (attendu lu=false, code 2). ` +
+            `Une lecture qui échoue et se déclare LUE rend la garde verte sur une PR illisible.`
+        );
+        return 1;
+      }
+    }
+
+    // LE RÉESSAI : une INTERMITTENCE devient de la latence, jamais une couleur — et une panne
+    // STABLE reste `lu: false`. Sans le premier, la garde serait capricieuse et on la retirerait ;
+    // sans le second, le réessai effacerait la distinction qu'il existe pour préserver.
+    let tentatives = 0;
+    const capricieux: ExecuteurGh = (args) => {
+      if (args[0] === 'pr') {
+        tentatives += 1;
+        if (tentatives < ESSAIS_DE_LECTURE) throw new Error('réseau injoignable (témoin)');
+      }
+      return ghDePapier(SAIN)(args);
+    };
+    const reprise = lireCorpsPublie(String(PR_TEMOIN), ESSAIS_DE_LECTURE, capricieux);
+    const stable = lireCorpsPublie(
+      String(PR_TEMOIN),
+      ESSAIS_DE_LECTURE,
+      ghDePapier({ ...SAIN, tombeSur: 'pr' })
+    );
+    if (!reprise.lu || tentatives !== ESSAIS_DE_LECTURE || stable.lu) {
+      console.error(
+        `❌ Le réessai n'a pas rendu ce qu'il devait : reprise lu=${reprise.lu} en ${tentatives} ` +
+          `tentative(s), panne stable lu=${stable.lu} (attendu false).`
+      );
+      return 1;
+    }
+  }
+
   console.log(
     `✅ Les ${FAMILLES_CORPS_PUBLIE.length} familles du corps publié rougissent chacune sur son témoin — preuve faite.`
   );
   console.log(`   ${FAMILLES_CORPS_PUBLIE.map((f) => '• ' + f).join('\n   ')}`);
+  console.log(
+    `   La LECTURE elle-même est éprouvée hors ligne : un \`gh\` de papier qui TOMBE rend ` +
+      `toujours \`lu: false\`, donc 2 — jamais un corps vide qui passerait pour propre. Le ` +
+      `réessai reprend une intermittence ; une panne STABLE reste \`lu: false\`.`
+  );
+  console.log(
+    `   Les révisions sont PAGINÉES : ${EDITIONS_PAR_PAGE} par page, ${PAGES_MAX} page(s) au plus, ` +
+      `soit ${PAGES_MAX * EDITIONS_PAR_PAGE} révision(s). Une coordonnée servie APRÈS la première ` +
+      `page est lue, nommée et datée — donc remédiable — au lieu de rendre un INDÉTERMINÉ sans remède.`
+  );
   console.log(
     `   ${CONTRE_TEMOINS.length} contre-témoins restent verts, dont la forme masquée du gabarit.\n` +
       `   ${caracteres.length} forme(s) d'espace ou de tiret sont neutralisées avant toute recherche.\n` +
@@ -1874,7 +2366,7 @@ if (APPELE_DIRECTEMENT) {
       process.exit(2);
     }
 
-    const lecture = lireCorpsPublie(numero);
+    const lecture = lireCorpsPublie(numero, ESSAIS_DE_LECTURE, GH_REEL);
     const verdict = jugerCorpsPublie(lecture, exemptions);
 
     // TÉMOIN POSITIF, IMPRIMÉ DANS LES TROIS CAS. Un « aucune coordonnée » sans volumétrie est
