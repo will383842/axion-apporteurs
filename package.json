@@ -65,6 +65,8 @@
     "gov:trace:verifier": "tsx scripts/gates/gov-trace.ts --verifier",
     "gov:etat": "tsx scripts/gates/gov-etat.ts",
     "gov:etat:prove": "tsx scripts/gates/gov-etat.ts --prove",
+    "partners:schema:enums": "tsx scripts/gates/schema-enums.ts",
+    "partners:schema:enums:prove": "tsx scripts/gates/schema-enums.ts --prove",
     "contracts:export": "tsx scripts/contracts/export.ts",
     "contracts:hash": "tsx scripts/contracts/export.ts --verifier"
   },

@@ -1,0 +1,55 @@
+// Schéma Prisma — Axion Partners.
+//
+// CE QUE CE FICHIER PORTE AUJOURD'HUI, ET POURQUOI SI PEU. GOV-006 ne livre pas le modèle de
+// données : c'est l'objet de DM-01 et DM-02, en phase 0. Ce qu'elle livre, c'est le VOCABULAIRE —
+// REQ-GOV-016 : « toute colonne `statut|status|etat|type|palier|priorite` de type `String` →
+// rouge ; toute valeur d'enum absente du glossaire → rouge ». Une garde a besoin d'un sujet : ce
+// fichier est le sujet, et les deux enums ci-dessous sont ceux que l'acceptation de GOV-006 nomme
+// (les treize états d'attribution, le rôle `qualifieur`). Les modèles viendront s'y poser.
+//
+// LA RÈGLE QUI TIENT CE FICHIER (RM-04). Un vocabulaire est un enum, jamais une `String`. La
+// raison n'est pas esthétique : côté axionia, une colonne de statut en chaîne libre a laissé un
+// seed écrire « valide » là où le code lisait « validee », et deux indicateurs Qualiopi sont
+// passés au rouge pour ça. Le type attrape ce qu'aucune relecture ne voit.
+//
+// DÉRIVATION (RM-01). Les valeurs ci-dessous ne sont pas libres : `pnpm partners:schema:enums`
+// vérifie que chacune figure dans `docs/GLOSSAIRE.md`, et que tout enum que le glossaire ÉNUMÈRE
+// a exactement ces valeurs-là. Ajouter une valeur ici sans l'ajouter au glossaire rougit ; l'y
+// ajouter sans passer par le `gardien-spec` n'est pas permis (`docs/CONVENTIONS.md` §8).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Les treize états d'attribution (REQ-DM-006, `docs/GLOSSAIRE.md` §1). Sept d'entre eux occupent
+/// le SIREN : la liste n'est PAS reprise ici, elle vit dans `src/domain/attribution/etats.ts`
+/// (REQ-DM-003, RM-06), d'où la migration génère la clause `WHERE` de l'index partiel.
+enum EtatAttribution {
+  en_attente
+  provisoire
+  active
+  rdv_pris
+  proposition
+  signee
+  convertie
+  figee_resiliation
+  invalidee
+  perdue
+  perimee
+  expiree
+  annulee
+}
+
+/// Les quatre rôles de la console (REQ-SEC-023, `docs/GLOSSAIRE.md` §7). L'identifiant est
+/// `qualifieur` — `qualificateur` est un synonyme interdit, et le glossaire le dit.
+enum ConsoleRole {
+  admin
+  qualifieur
+  comptable
+  lecteur
+}

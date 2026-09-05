@@ -113,6 +113,13 @@ jobs:
         run: pnpm gates:prouvees:prove
       - name: Les paths derives sont a jour
         run: pnpm lot:paths:check
+      # GOV-006 : le glossaire etait une consigne, pas un controle. Ces deux etapes sont ce qui
+      # le rend opposable — la constante ETATS_OCCUPANTS confrontee a REQ-DM-003, chaque valeur
+      # d enum confrontee au glossaire.
+      - name: Vocabulaire — enums, glossaire et etats occupants
+        run: pnpm partners:schema:enums
+      - name: La garde du vocabulaire sait rougir
+        run: pnpm partners:schema:enums:prove
       - name: Typecheck
         run: pnpm typecheck
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :
