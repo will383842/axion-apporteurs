@@ -1,7 +1,15 @@
 /**
- * corps-de-pr.ts — REND le corps d'une PR depuis les sources du dépôt (GOV-035, REQ-GOV-032).
+ * corps-de-pr.ts — REND le corps d'une PR depuis les sources du dépôt (GOV-024, REQ-GOV-032).
  *
- * USAGE : pnpm pr:corps -- --gabarit <fichier.tpl.md> --sortie <fichier.md> [--tests <journal>]
+ * ⚠️ L'EN-TÊTE NOMMAIT `GOV-035`, ET C'EST LA QUATRIÈME FOIS DE LA JOURNÉE QU'UNE ATTRIBUTION
+ * EST FAUSSE. `docs/tasks.json` range ce fichier dans les `paths` de GOV-024 ; l'acceptance de
+ * GOV-035 écrit elle-même qu'elle ne le porte pas. Les NOMBRES de ce dépôt se dérivent désormais ;
+ * les ATTRIBUTIONS, non — rien ne confronte le nom de tâche écrit dans un en-tête ou dans
+ * `docs/gates.json.tache` aux `paths` du backlog. C'est l'objet de GOV-037.
+ *
+ * USAGE : pnpm pr:corps -- --gabarit <fichier.tpl.md> --sortie <fichier.md> --tests <journal>
+ *         (les trois sont OBLIGATOIRES : sans `--tests`, le rendu échoue. Les crochets qu'a portés
+ *          cette ligne étaient le repli silencieux de la règle 2, ressuscité en prose.)
  *
  * POURQUOI CE FICHIER EXISTE, ET POURQUOI IL EST DANS LE DÉPÔT.
  *

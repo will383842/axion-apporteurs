@@ -163,7 +163,9 @@ const SANS_EXTENSION_BALAYES = /(^|\/)(CODEOWNERS|Dockerfile|Procfile|\.env[^/]*
  * `EXEMPTS` par un attrape-tout, laissait `gov:entite` ET son `--prove` VERTS tous les deux. Les
  * deux listes qui décident de CE QUI EST REGARDÉ étaient le seul endroit non gardé de la garde.
  * Extraites ici, elles ont un TEST — `tests/unit/gouvernance/entite-registre.spec.ts`, cinq
- * témoins et un contre-témoin — et les deux mutations ci-dessus y tombent (7 et 3 échecs).
+ * CINQ CAS, dont un CONTRE-TÉMOIN — « un fichier binaire ou d'image n'est pas balayé », sans
+ * lequel la liste d'extensions pourrait être remplacée par un attrape-tout sans qu'un test tombe.
+ * Les deux mutations ci-dessus y tombent (7 et 3 échecs).
  *
  * ⚠️ Elles n'ont PAS de famille dans `--prove`, et une première rédaction de ce paragraphe en
  * annonçait une, `filtre_trop_large`, qui n'existe nulle part : `FAMILLES` en porte onze, aucune

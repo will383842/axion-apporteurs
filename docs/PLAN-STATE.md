@@ -10,7 +10,7 @@
 | Où est `main` ? | `794245c` — 2026-09-04T23:10:40+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #31 (rien) |
 | Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-029 (A01) · GOV-032 (A01) |
-| Où en est la phase ? | phase -1 — 20/35 tâches, reste 6.75 j |
+| Où en est la phase ? | phase -1 — 20/36 tâches, reste 7.25 j |
 | Le prochain pas | fusionner #31, puis INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 4 question(s) pour Will |
 | Dernière entrée de journal | PR #31 — 2026-09-05 |
@@ -19,13 +19,13 @@
 
 ## Phase courante : -1
 
-20/35 tâches terminées · reste 6.75 j estimés.
+20/36 tâches terminées · reste 7.25 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 175 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
+| `a_faire` | 176 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
 | `en_cours` | 9 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-029 (A01) PR#31 · GOV-032 (A01) PR#31 |
 | `en_revue` | 0 | — |
 | `fusionnee` | 20 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |

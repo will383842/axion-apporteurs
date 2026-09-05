@@ -8,11 +8,11 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**206 taches · 152.75 j estimes.**
+**207 taches · 153.25 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
-| -1 — Gouvernance (prealable bloquant) | 35 | 20.25 | 20 |
+| -1 — Gouvernance (prealable bloquant) | 36 | 20.75 | 20 |
 | 0 — Socle technique | 50 | 37.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
@@ -365,6 +365,16 @@ Couvre : `REQ-GOV-031`
 **Acceptation.** Trois constats de la lentille securite, tous mesures sur les quatre passes de la PR 31, tous non bloquants parce qu'aucun ne laisse fuir un IBAN AUJOURD'HUI — mais tous portant sur ce que la garde REGARDE, c'est-a-dire sur le seul endroit ou une garde peut devenir aveugle en silence. (1) PAYS_ISO est une liste TAPEE : 47 entrees, dont SEPT qui n'emettent aucun IBAN, et CINQUANTE ET UN pays emetteurs OMIS. Mesure : cinq IBAN etrangers a cle mod-97 valide (TR, IL, RS, AL, LB) ne sont pas vus. Le risque est faible tant que la residence fiscale exigee est francaise, mais la garde est repo-wide et servira aux RIB des apporteurs. C'est RM-01 applique a une constante : la liste se DERIVE, elle ne se tape pas. (2) EXTENSIONS_BALAYEES est une liste d'AUTORISATION sous un commentaire qui dit « un secret ne choisit pas son extension ». Ne sont pas balayes : .sh .py .tf .toml .ini .mdx .html .http .rst .jsonc .log .har .pdf Makefile .gitattributes .sha256 — et `scripts/*.sh` exportant PARTNERS_IBAN_DEBITEUR est le cas plausible. La forme juste est une liste de REFUS (binaires), avec le contre-temoin .png qui s'y transpose tel quel. (3) Le commentaire pres de estBalaye annonce des temoins « --prove, famille filtre_trop_large » : cette famille N'EXISTE PAS, FAMILLES en porte onze et aucune de ce nom. Les temoins sont dans le banc d'essai, ce qui suffit — mais le code annonce une couverture qu'il n'a pas, dans la phrase meme qui repond a un constat de mutation.
 
 **Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
+
+### GOV-037 — Les nombres se derivent, les ATTRIBUTIONS non : rien ne confronte un nom de tache a ses paths
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-024`
+
+Couvre : `REQ-GOV-021`
+
+**Acceptation.** Observation de cloture de la lentille exactitude apres CINQ passes sur la PR 31 : « les nombres se derivent maintenant, les ATTRIBUTIONS non ». Un nom de tache ecrit dans l'en-tete d'un fichier, ou dans le champ tache de docs/gates.json, n'est confronte a RIEN — ni aux paths du backlog, ni a l'existence de la tache. QUATRE occurrences mesurees dans la seule journee du 2026-09-05, toutes trouvees a la lecture et aucune par une garde : un correctif de lookahead etiquete GOV-029 alors qu'il corrige GOV-025 ; la derivation d'un instant etiquetee GOV-029 alors qu'elle n'a pas de tache (devenue GOV-032) ; une entree de registre citant GOV-029 pour une lacune que GOV-029 ne porte pas ; l'en-tete de scripts/lot/corps-de-pr.ts nommant GOV-035 alors que le fichier est dans les paths de GOV-024, et que l'acceptance de GOV-035 ecrit elle-meme qu'elle ne le porte pas. ⚠️ CE QUI REND CETTE FAMILLE COUTEUSE : une attribution fausse envoie le lecteur suivant chercher dans un fichier que personne n'a touche, et gov:identifiants ne peut pas la voir — il juge la FORME d'un identifiant, jamais sa RESOLUTION, et GOV-029 a exactement la bonne forme. A livrer : (1) une garde qui, pour tout fichier suivi de scripts/ et tests/ portant un identifiant de tache dans ses vingt premieres lignes, verifie que cette tache EXISTE au backlog ET que le fichier figure dans ses paths — ou que la tache est explicitement citee comme contexte et non comme proprietaire ; (2) le meme controle sur le champ tache de chaque entree de docs/gates.json, confronte aux paths de la tache nommee ; (3) un temoin par famille, vu rougir, et des contre-temoins verts sur les citations legitimes — un fichier a le droit de NOMMER une tache voisine sans etre a elle, et une garde qui l'interdirait serait retiree dans la semaine ; (4) les quatre occurrences ci-dessus rejouees contre la garde livree, chacune vue rougir avant sa correction.
+
+**Tests.** `tests/unit/gouvernance/attributions-resolvent.spec.ts`
 
 ## Phase 0 — Socle technique
 

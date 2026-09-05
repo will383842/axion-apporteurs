@@ -16,7 +16,7 @@
 
 **321 exigences actives · 31 réputées testées · 31 couvertes · 0 orphelines.**
 
-206 tâches, dont 20 livrées · 27 fichiers de test exécutés par `vitest` sur 27 présents.
+207 tâches, dont 20 livrées · 27 fichiers de test exécutés par `vitest` sur 27 présents.
 
 ## Exigences réputées testées
 
@@ -39,7 +39,7 @@
 | `REQ-GOV-013` | `GOV-007` | `tests/gov/charte-pr.spec.ts` | couverte |
 | `REQ-GOV-014` | `GOV-000`, `GOV-012` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
 | `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
-| `REQ-GOV-021` | `GOV-017a`, `GOV-017b`, `GOV-024`, `GOV-027` | `tests/unit/gouvernance/paths-derives.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
+| `REQ-GOV-021` | `GOV-017a`, `GOV-017b`, `GOV-024`, `GOV-027`, `GOV-037` | `tests/unit/gouvernance/paths-derives.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-022` | `GOV-015` | `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-GOV-023` | `GOV-008`, `GOV-018` | `tests/unit/gouvernance/plan-state-frais.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts` | couverte |
 | `REQ-GOV-024` | `GOV-018`, `GOV-026` | `tests/unit/gouvernance/regles-maison.spec.ts` | couverte |
