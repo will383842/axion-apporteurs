@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `794245c` — 2026-09-04T23:10:40+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #31 (rien) |
+| Qu’est-ce qui est en vol ? | 1. #31 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-029 (A01) · GOV-032 (A01) |
 | Où en est la phase ? | phase -1 — 20/36 tâches, reste 7.25 j |
-| Le prochain pas | fusionner #31, puis INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
+| Le prochain pas | INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 4 question(s) pour Will |
 | Dernière entrée de journal | PR #31 — 2026-09-05 |
 
-**Ce qu’on tape maintenant.** `gh pr view 31 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
@@ -62,7 +62,7 @@ Reste sur ce chemin : **17.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — neuf taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | rien — fusionnable maintenant |
+| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — neuf taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -93,8 +93,7 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 
 ## Prochain pas
 
-1. **Fusionner #31** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-2. **INT-T01b** — Contrat d'événements, payloads et fixtures produites par le producteur réel (1 j) : 1 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+1. **INT-T01b** — Contrat d'événements, payloads et fixtures produites par le producteur réel (1 j) : 1 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 

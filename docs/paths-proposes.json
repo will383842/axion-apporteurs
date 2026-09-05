@@ -323,8 +323,8 @@
     "CPL-T01": [
       "docs/decisions/CPL-T01",
       "scripts/gates/gov-entite.ts",
-      "docs/gates.json",
-      "tests/unit/gouvernance/entite-registre.spec.ts"
+      "tests/unit/gouvernance/entite-registre.spec.ts",
+      "docs/gates.json"
     ],
     "QA-T01": [
       "vitest.config.ts",

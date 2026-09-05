@@ -19,12 +19,12 @@
 
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
-| -1 | Socle de gouvernance | 33 | 21 | 12 |
+| -1 | Socle de gouvernance | 34 | 22 | 12 |
 | 0 | Fondations, sécurité, charte | 43 | 1 | 42 |
 | 1 | Parcours, attribution, intégrations | 21 | 0 | 21 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **111** | **22** | **89** |
+| **Total** | | **112** | **23** | **89** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -35,7 +35,7 @@ avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune s
 Ce sont les seules dont on a la trace d'un échec provoqué. La colonne « Preuve rouge » est le
 champ `preuveRouge` du registre, recopié verbatim par le rendu.
 
-### Phase -1 — armées (21)
+### Phase -1 — armées (22)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
@@ -50,10 +50,11 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:hypotheses` | GOV-005 | `scripts/gates/gov-hypotheses.ts` | `HYP-*` | pnpm gov:hypotheses:prove — 10 familles vues rougir sur une fixture minimale |
 | `gov:agents` | GOV-023 | `scripts/gates/gov-agents.ts` | — | pnpm gov:agents:prove — 14 familles vues rougir sur leur temoin, 7 contre-temoins verts |
 | `gov:entite` | CPL-T01 | `scripts/gates/gov-entite.ts` | — | pnpm gov:entite:prove — 11 familles, un temoin chacune sur un univers INJECTE, dont secret_commite (un IBAN commite dans un fichier suivi) et valeur_recopiee (un SIREN du registre recopie ailleurs) ; 7 contre-temoins restent verts, dont l'univers conforme |
-| `gov:entite:corps` | CPL-T01 | `scripts/gates/gov-entite.ts` | — | pnpm gov:entite:corps:prove — 6 familles vues rougir sur une lecture INJECTEE (coordonnee dans le corps courant, coordonnee dans une revision, lecture impossible, revisions non lues, exemption malformee, exemption sans objet) ; 6 contre-temoins verts, dont la forme masquee du gabarit et une revision DECLAREE au registre |
+| `gov:entite:corps` | CPL-T01 | `scripts/gates/gov-entite.ts` | — | pnpm gov:entite:corps:prove — 6 familles vues rougir sur une lecture INJECTEE ; les TROIS cles d'exemption ont chacune un temoin qui n'en change QU'UNE (horodatage seul, empreinte seule, PR seule) ; une empreinte TRONQUEE ne dispense pas ; exemptionsServies appariee sur trois cles face a deux leurres de la meme PR ; la LECTURE elle-meme est eprouvee hors ligne (gh de papier : 6 pannes rendent lu=false donc 2, jamais un corps vide ; le reessai reprend une intermittence, une panne stable reste lu=false) ; la pagination est eprouvee (une coordonnee servie apres la premiere page rend 1 nomme au lieu de 2 sans remede ; borne PAGES_MAX ; curseur qui n'avance pas) ; 6 contre-temoins verts |
 | `gates:prouvees` | QA-T00 | `scripts/gates/gates-prouvees.ts` | — | 10 familles, un temoin chacune, 8 contre-temoins verts, 5 temoins de forme (pnpm gates:prouvees:prove) |
 | `partners:contrat:hash` | INT-T01a | `tests/unit/integration/contrat-hash.spec.ts` | — | renommage de `occurred_at` en `occurredAt` dans packages/contracts/enveloppe.ts, 2026-09-03 : 4 cas sur 9 rouges + `contracts:export --verifier` rouge sur les 3 artefacts |
 | `GATE-JUR-TEXTES-APPORTEURS` | GOV-013 | `scripts/gates/lexique-apporteurs.ts` | `GATE-UX-JARGON`, `gov:lexique` | pnpm gov:lexique:prove — 11 familles rougissent chacune sur son temoin, 8 positions limites rougissent, 4 controles positifs rougissent, 13 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim |
+| `G-SEC-GATE-A-BLOQUANTE` | CPL-T01 | `tests/unit/gouvernance/entite-registre.spec.ts` | — | le cas mute le YAML EN MEMOIRE (ci.yml est reserve) et exige que l'etape « Le corps PUBLIE de la PR ne porte aucune coordonnee » ressorte NOMMEE ; un temoin positif verifie que le bloc extrait est bien celui qui porte gov:entite:corps, et la fonction LEVE si le job gate-a est introuvable — sans quoi elle rendrait une liste vide, donc vert |
 | `gov:publication` | GOV-000 | `scripts/gates/gov-publication.ts` | — | pnpm gov:publication:prove — 7 familles vues rougir, 5 contre-temoins vus rester verts |
 | `gov:requirements` | GOV-001 | `scripts/gates/gov-requirements.ts` | — | pnpm gov:requirements:prove — 11 familles, chacune vue rougir sur son defaut injecte ; et, depuis GOV-024, le mode --verifie-rendu vu rougir en famille vue_perimee sur une vue perime d'UNE exigence, l'ecart nomme « 353 pour 354 », et vu rester vert sur le depot a jour |
 | `gov:preseance` | GOV-002 | `scripts/gates/gov-preseance.ts` | — | 7 familles, un temoin chacune, 8 contre-temoins verts (pnpm gov:preseance --prove) |

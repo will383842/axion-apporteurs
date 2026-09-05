@@ -1,32 +1,5 @@
 {
-  "_commentaire": [
-    "LE REGISTRE DES RÉVISIONS EXEMPTÉES — une dette qu'on ne peut pas rembourser se déclare.",
-    "",
-    "Lu par `scripts/gates/gov-entite.ts --corps-publie`, jugé par `controlerRegistreExemptions`.",
-    "L'historique d'édition d'un corps de PR est IMMUABLE : GitHub sert `userContentEdits` à",
-    "quiconque le demande, et aucune édition ultérieure ne dépublie une révision. Sans ce registre,",
-    "la garde serait INSATISFIABLE sur toute PR déjà polluée — et une gate insatisfiable, on apprend",
-    "à la sauter. La troisième voie est de rendre l'EXCEPTION explicite plutôt que l'ABSENCE de garde.",
-    "",
-    "CE QU'UNE LIGNE COUVRE, ET RIEN DE PLUS : UNE révision précise d'UNE PR précise, portant UNE",
-    "coordonnée précise. Les trois clés — `pr`, `revision`, `empreinte` — doivent concorder. Exempter",
-    "« la PR #31 » aurait absous d'avance toute révision future, c'est-à-dire tout ce qui reste à écrire.",
-    "",
-    "CE QU'UNE LIGNE NE COUVRE JAMAIS :",
-    "  — le corps COURANT d'une PR : il s'édite, il n'y a rien à excuser ;",
-    "  — une coordonnée RÉELLE. Une valeur réellement publiée est DIVULGUÉE, et le remède est de la",
-    "    CHANGER, pas de l'inscrire ici. Le seul motif recevable est qu'il n'y ait rien à révoquer.",
-    "",
-    "L'EMPREINTE, ET JAMAIS LA VALEUR : ce fichier est suivi dans un dépôt PUBLIC. On y écrit un",
-    "SHA-256 COMPLET de la coordonnée normalisée, telle que la garde la remonte. Complet, et non",
-    "tronqué : seize caractères hexadécimaux se collisionnent en 2^32 essais, ce qui laisserait",
-    "absoudre une AUTRE coordonnée que celle qu'on a examinée. La garde imprime l'empreinte dans son",
-    "message d'échec, précisément pour qu'on n'ait jamais à écrire la valeur pour déclarer une ligne.",
-    "",
-    "ET CE QUI EMPÊCHE CE FICHIER D'ÊTRE UNE PASSOIRE : une ligne qui n'absout plus rien ROUGIT",
-    "(famille `exemption_sans_objet`). Une exemption dont l'empreinte ne correspond plus à ce que la",
-    "révision contient est une autorisation ouverte sur un texte que personne n'a examiné."
-  ],
+  "_commentaire": "LE REGISTRE DES RÉVISIONS EXEMPTÉES — une dette qu'on ne peut pas rembourser se déclare.,,Lu par `scripts/gates/gov-entite.ts --corps-publie`, jugé par `controlerRegistreExemptions`.,L'historique d'édition d'un corps de PR est IMMUABLE : GitHub sert `userContentEdits` à,quiconque le demande, et aucune édition ultérieure ne dépublie une révision. Sans ce registre,,la garde serait INSATISFIABLE sur toute PR déjà polluée — et une gate insatisfiable, on apprend,à la sauter. La troisième voie est de rendre l'EXCEPTION explicite plutôt que l'ABSENCE de garde.,,CE QU'UNE LIGNE COUVRE, ET RIEN DE PLUS : UNE révision précise d'UNE PR précise, portant UNE,coordonnée précise. Les trois clés — `pr`, `revision`, `empreinte` — doivent concorder. Exempter,« la PR #31 » aurait absous d'avance toute révision future, c'est-à-dire tout ce qui reste à écrire.,,CE QU'UNE LIGNE NE COUVRE JAMAIS :,  — le corps COURANT d'une PR : il s'édite, il n'y a rien à excuser ;,  — une coordonnée RÉELLE. Une valeur réellement publiée est DIVULGUÉE, et le remède est de la,    CHANGER, pas de l'inscrire ici. Le seul motif recevable est qu'il n'y ait rien à révoquer.,,L'EMPREINTE, ET JAMAIS LA VALEUR : ce fichier est suivi dans un dépôt PUBLIC. On y écrit un,SHA-256 COMPLET de la coordonnée normalisée, telle que la garde la remonte. Complet, et non,tronqué : seize caractères hexadécimaux se collisionnent en 2^32 essais, ce qui laisserait,absoudre une AUTRE coordonnée que celle qu'on a examinée. La garde imprime l'empreinte dans son,message d'échec, précisément pour qu'on n'ait jamais à écrire la valeur pour déclarer une ligne.,,ET CE QUI EMPÊCHE CE FICHIER D'ÊTRE UNE PASSOIRE : une ligne qui n'absout plus rien ROUGIT,(famille `exemption_sans_objet`). Une exemption dont l'empreinte ne correspond plus à ce que la,révision contient est une autorisation ouverte sur un texte que personne n'a examiné. — CE QUE CE REGISTRE NE PEUT PAS VERIFIER : rien de mecanique ne distingue une valeur FABRIQUEE d une valeur reelle qu on n aurait pas voulu changer. L empreinte ne se confronte a rien, puisque la valeur reelle ne vit JAMAIS ici — c est la propriete qu on veut, pas une lacune. Le seul controle est la relecture du motif par un tiers, et c est pour cela que le champ motif est obligatoire et que le champ par signe la ligne.",
   "version": 1,
   "exemptions": [
     {
