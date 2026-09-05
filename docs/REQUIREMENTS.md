@@ -1,12 +1,15 @@
 # Registre des exigences — Axion Apporteurs
 
 > ⚠️ **Ce fichier est une VUE. La source est `docs/requirements.json`.**
-> Il est réécrit par la conversion, jamais à la main : une correction tapée ici disparaît à la
-> régénération suivante. La cohérence des deux est tenue par `pnpm gov:requirements`.
-
+> Regénéré par `pnpm gov:requirements --render`, jamais édité à la main : une correction
+> tapée ici disparaît à la régénération suivante.
+> `pnpm gov:requirements --verifie-rendu` rougit si ce fichier a dérivé de sa source, et
+> NOMME l’écart en nombre d’exigences (REQ-GOV-032). Jusqu’au 2026-09-05, aucune garde ne
+> comparait les deux : la vue annonçait 353 exigences pour 354 au registre.
+>
 > **Aucun total n'est écrit à la main.** Trois comptages différents ont circulé dans les documents
 > sources, tous faux. Ceux qui suivent sont comptés à la génération.
-
+>
 > **Dépôt public** — les renvois à la note d'analyse interne apparaissent sous la forme
 > « note interne (hors dépôt) », et les seuils comme les montants du réseau vivent en
 > configuration (`REQ-GOV-031`, garde `pnpm gov:publication`).
@@ -15,11 +18,11 @@
 
 | | Nombre |
 | --- | ---: |
-| Exigences | **353** |
-| — dont actives | 319 |
+| Exigences | **354** |
+| — dont actives | 320 |
 | — dont absorbées par une autre (l'identifiant résout encore) | 34 |
 | — dont retirées | 0 |
-| Exigences couvertes par au moins une tâche | 352 |
+| Exigences couvertes par au moins une tâche | 353 |
 | Exigences sans porteur | 1 |
 
 ## Couverture des 21 modules de l'audit de bout en bout
@@ -514,7 +517,7 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
 ### qualite-ci-devops
 
 - **REQ-QA-001** — Tout le code métier (commissions, prorata, reprises, parrainage, attributions, quotas, machines à états, scoring) vit sous src/domain/** sans aucune I/O (ni Prisma, ni Redis, ni fetch, ni new Date()) ; un lint bloquant le vérifie.
-  <br>_module 13 · étape 10 · phase -1 · tâches : `GOV-000`, `QA-T01`_ · _source : nouvelle (dérivée de tableaux-de-bord §2 « irréprochable » et audit-anti-abus §2)_
+  <br>_module 13 · étape 10 · phase 0 · tâches : `QA-T01`_ · _source : nouvelle (dérivée de tableaux-de-bord §2 « irréprochable » et audit-anti-abus §2)_
 - **REQ-QA-002** — La couverture de src/domain/** est de 100 % lignes et 100 % branches ; la gate a été vue rougir en retirant un test avant activation.
   <br>_phase 0 · tâches : `QA-T01`, `QA-T30`_ · _source : nouvelle (prompt : couverture du domaine 100 %)_
 - **REQ-QA-003** — Pour toute facture découpée en 1..12 encaissements et tout taux de TVA ∈ {0, 5.5, 10, 20}, la somme des commissions acquises par encaissement est exactement égale à la commission totale (property-based, ≥ 500 cas générés).
@@ -526,7 +529,7 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
 - **REQ-QA-006** — Les tests d'intégration tournent sur un Postgres 16 (pgvector) et un Redis éphémères via testcontainers, un schéma migré par `prisma migrate deploy`, isolation par transaction ou base par fichier ; aucun test ne dépend d'un .env partagé.
   <br>_phase 0 · tâches : `QA-T02`_ · _source : nouvelle (prompt) ; contraste avec vitest.integration.config.ts axionia_
 - **REQ-QA-007** — Les 5 webhooks entrants et les 2 API sortantes ont chacun un schéma Zod versionné (`schemaVersion`) transcrit à l'identique dans les deux dépôts, avec un test de transcription datée de chaque côté ; les fixtures de contrat sont générées par le producteur réel d'axionia (FactureFormation, Payment, Devis, Client) et non écrites à la main.
-  <br>_module 9 · étape 9 · phase -1 · tâches : `INT-T01a`_ · _source : audit-outil-bout-en-bout §2.3 + QA-F01, QA-F14 · patron tests/e2e-crm-sync/contract.spec.ts_
+  <br>_module 9 · étape 9 · phase -1 · tâches : `INT-T01a`, `INT-T01b`_ · _source : audit-outil-bout-en-bout §2.3 + QA-F01, QA-F14 · patron tests/e2e-crm-sync/contract.spec.ts_
 - **REQ-QA-008** → **absorbée par REQ-SEC-010** — Tout webhook entrant est signé HMAC-SHA256 sur « timestamp.corps exact », vérifié en timing-safe, refusé hors fenêtre de 300 s, et persisté dans InboundEvent avec eventId unique avant tout traitement ; un doublon renvoie 200 sans effet ; une signature invalide renvoie 401 et une alerte SECURITY_ALEMENT plafonnée. _(source : audit-outil-bout-en-bout §2.3 · patron src/server/crm-sync/emit.ts et src/app/api/docuseal/webhook/route.ts)_ **→ ABSORBÉE par REQ-SEC-010** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-SEC-010** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-SEC-010.**
   <br>_module 5 · étape 5 · phase -1 · tâches : `INT-T01b`, `SEC-06`_ · _source : critique de complétude (2026-09-03)_
 - **REQ-QA-009** → **absorbée par REQ-ARG-003** — L'état des commissions est recalculable à partir de l'historique des InboundEvent ; le rejeu complet produit des soldes identiques (golden) ; toute permutation des événements d'un même dossier produit le même état final (property-based) ; un événement de schemaVersion inconnue est conservé en `held` et alerté, jamais perdu. _(source : audit-outil-bout-en-bout §2.3 « rejouables » + QA-F13)_ **→ ABSORBÉE par REQ-ARG-003** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-ARG-003** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-ARG-003.**
@@ -589,7 +592,7 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
 - **REQ-GOV-002** — Toute règle métier présente dans au moins deux documents a une entrée dans `docs/PRESEANCE.md` désignant la version qui prévaut et la REQ qui la porte ; les sections périmées portent un bandeau « remplacé par REQ-… ». Test : les sept couples connus (quota, collision, cycle de vie, barème, naissance de l'attribution, péremption, zéro arbitrage) ont une entrée.
   <br>_module 13 · étape 10 · phase -1 · tâches : `GOV-002`_ · _source : audit-bout-en-bout en-tête (« remplace en partie ») ; anti-abus C15_
 - **REQ-GOV-003** — Tout identifiant de décision issu des documents est qualifié par un préfixe de document (PLAN-, REG-, SIREN-, TDB-, ABUS-, BEB-) et figure dans `docs/DECISIONS-INDEX.md`. Gate : un identifiant nu `\b[ABCDR]\d{1,2}\b` dans un titre/corps de PR, un ADR ou un commentaire de code → rouge.
-  <br>_phase -1 · tâches : `GOV-003`, `GOV-005`_ · _source : plan §2/§5, anti-abus §7, audit-bout-en-bout §11 (collisions C/D)_
+  <br>_phase -1 · tâches : `GOV-003`, `GOV-005`, `GOV-025`_ · _source : plan §2/§5, anti-abus §7, audit-bout-en-bout §11 (collisions C/D)_
 - **REQ-GOV-004** — Toute REQ ou tâche dont la source cite du code d'axionia porte une colonne « vérifié le » non vide (chemin, ligne, date, SHA) ; `pnpm gov:check` rougit si une source de type code a la colonne vide ; les affirmations invalidées (`Invoice`, `Refund`, `payerSiret`, « montant HT encaissé », « C3 codé ») figurent dans `docs/DECISIONS-INDEX.md` avec la mention FAUSSE et la réalité constatée, et un test vérifie la présence de ces cinq entrées.
   <br>_étape 10 · phase -1 · tâches : `GOV-004`_ · _source : nouvelle (vérification : plan §5, tableaux §2.3/2.5, audit-siren P10, audit-bout-en-bout §2.3) ; reformulation d'annexe appliquée le 2026-09-03_
 - **REQ-GOV-005** → **absorbée par REQ-QA-014** — La matrice de traçabilité REQ → tâche → test → PR est DÉRIVÉE (jamais rédigée à la main) : les titres `it()` contiennent l'identifiant REQ, les corps de PR listent `Couvre: REQ-…`, `pnpm gov:trace` la génère et rougit si une REQ en statut ≥ « testée » n'a aucun test, si un test cite une REQ inconnue, ou si une tâche n'a aucune REQ. _(source : nouvelle ; patron axion-ops gate G4 (docs/ETAT.md))_ **→ ABSORBÉE par REQ-QA-014** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-QA-014** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-QA-014.**
@@ -613,7 +616,7 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
 - **REQ-GOV-014** — `docs/PROTOCOLE-FUSION.md` : une fusion à la fois sur `main`, historique linéaire (squash ou `--ff-only`), créneau réservé dans PLAN-STATE AVANT `update-branch`, `mergeStateStatus` lu et fusion exécutée dans le même appel, atterrissage vérifié par l'en-tête `x-partners-build-sha` avant la fusion suivante. Gate : aucun workflow ne pousse sur `main` (transposition de `aucun-workflow-ne-pousse-sur-main.spec.ts`) ; `main` protégée exige les gates A/B/D.
   <br>_phase -1 · tâches : `GOV-000`, `GOV-012`_ · _source : mémoire deploy-famine-cancel-in-progress ; la-file-de-fusion-se-reserve-avant-l-update-branch_
 - **REQ-GOV-015** — `docs/DECISIONS.md` liste chaque décision non prise (≈ 60 issues des docs + celles des domaines) avec : id qualifié, question, HYPOTHÈSE PAR DÉFAUT retenue, propriétaire (**Will** par défaut, ou **expert-comptable** pour les seules questions comptables et fiscales — **il n'y a ni avocat ni DPO sur le projet, acté le 2026-09-03** : aucune question ne peut avoir « avocat » ou « DPO » pour décideur, et aucune phase n'est gatée par une relecture d'avocat), impact si renversée, test `HYP-<id>` qui échoue si l'hypothèse change. Gate : un marqueur `// HYP-` dans le code sans entrée correspondante → rouge ; une tâche dépendant d'une décision sans hypothèse → non attribuable.
-  <br>_phase -1 · tâches : `GOV-005`, `GOV-022`, `JUR-T01b`_ · _source : plan §3.4, §4.3 ; audit-siren §8 ; tableaux §8 ; anti-abus §7 ; audit-bout-en-bout §11-12_
+  <br>_phase -1 · tâches : `GOV-005`, `GOV-022`, `GOV-027`, `JUR-T01b`_ · _source : plan §3.4, §4.3 ; audit-siren §8 ; tableaux §8 ; anti-abus §7 ; audit-bout-en-bout §11-12_
 - **REQ-GOV-016** — `docs/GLOSSAIRE.md` fixe un terme canonique par concept (apporteur, dépôt, attribution, actif = premier dépôt CONFIRMÉ, dormant, **déclaration non confirmée** — jamais « strike », qui est un synonyme interdit —, palier, en_attente vs en_attente_encaissement…), ses synonymes interdits et l'enum Prisma qui le porte. Gate schéma : toute colonne `statut|status|etat|type|palier|priorite` de type `String` → rouge ; toute valeur d'enum absente du glossaire → rouge.
   <br>_module 9 · étape 10 · phase -1 · tâches : `GOV-006`_ · _source : règle maison « colonne de vocabulaire = enum » ; contradictions plan §1 / tableaux §4.1 / audit-bout-en-bout §5 étape 6_
 - **REQ-GOV-017** — Le lexique interdit (« commercial », « commerciaux », « commerciale », « objectif », « quota de vente », « classement ») est absent de `prisma/**`, `messages/**`, `src/**/*.tsx`, des templates email et des ADR de Partners, hors liste d'exceptions justifiées ligne à ligne. Gate vue rougir sur un témoin avant activation.
@@ -625,13 +628,13 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
 - **REQ-GOV-020** → **absorbée par REQ-QA-007** — Le contrat d'intégration axionia ↔ Partners (5 événements, 2 API) est un schéma unique (Zod + JSON Schema) versionné, copié à hash identique dans les deux dépôts, avec des fixtures GÉNÉRÉES depuis les producteurs réels (`FactureFormation`, `Payment`, `Client`) d'une base de développement, jamais écrites à la main ; les deux dépôts testent sur les mêmes fixtures. Gate : hash du schéma divergent, ou fixture sans provenance → rouge. _(source : audit-bout-en-bout §2.3 ; règle maison « fixtures depuis le producteur réel » ; vérification schema.prisma (pas d'`Invoice`/`Refund`))_ **→ ABSORBÉE par REQ-QA-007** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-QA-007** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-QA-007.**
   <br>_module 9 · étape 7 · phase -1 · tâches : `INT-T01a`_ · _source : critique de complétude (2026-09-03)_
 - **REQ-GOV-021** — Chaque tâche du backlog (`tasks.json`) a : id, phase, owner unique ou vide, acceptance vérifiable, tests nommés, dépendances (ids), REQ couvertes (≥ 1), estimation ≤ 1 jour, étiquette `repo:partners|repo:axionia`. Gate : `estimateDays > 1`, dépendances cycliques, REQ inconnue ou tâche sans REQ → rouge.
-  <br>_phase -1 · tâches : `GOV-017a`, `GOV-017b`_ · _source : nouvelle ; audit-bout-en-bout §10 (chantiers de 8 à 14 j)_
+  <br>_phase -1 · tâches : `GOV-017a`, `GOV-017b`, `GOV-024`, `GOV-027`_ · _source : nouvelle ; audit-bout-en-bout §10 (chantiers de 8 à 14 j)_
 - **REQ-GOV-022** — Toute valeur produite pour un tiers (API recherche-entreprises, DocuSeal, SEPA pain.001, DAS2, URSSAF vigilance, IBAN/BIC, TIIME) est confrontée à `docs/tiers/<nom>.md` (URL officielle, date de lecture, extrait cité, exemple officiel, quotas, comportement en panne) ; la tâche qui l'utilise dépend de la fiche. Gate : fixture d'un format tiers sans `Source:` vers la fiche → rouge.
   <br>_module 15 · étape 11 · phase -1 · tâches : `GOV-015`_ · _source : règle maison « valeur qu'un tiers doit accepter » ; audit-bout-en-bout §3.3, §6.3 ; audit-siren P4_
 - **REQ-GOV-023** — Toute PR fusionnée est précédée d'une entrée de journal (fait / reste / appris) dans `docs/PLAN-STATE.md` qui cite son numéro ; gate : PR fusionnée sans entrée la citant → rouge. `docs/LECONS.md` porte une date de dernière consolidation ; gate nightly : date > 7 jours alors que des entrées « appris » non consolidées existent → rouge. (La lecture en début de session ne se garde pas ; elle est rappelée dans CHARTE-AGENTS.)
-  <br>_phase -1 · tâches : `GOV-008`_ · _source : nouvelle ; patron mémoire de session d'axionia ; reformulation d'annexe appliquée le 2026-09-03_
+  <br>_phase -1 · tâches : `GOV-008`, `GOV-018`_ · _source : nouvelle ; patron mémoire de session d'axionia ; reformulation d'annexe appliquée le 2026-09-03_
 - **REQ-GOV-024** — Les règles maison (dériver jamais recopier ; garde vue rougir ; fixtures du producteur réel ; enum pour le vocabulaire ; masquage qui échoue ouvert et droit par rôle défaut refus ; index unique partiel ; appelants avant extraction ; tiers confrontés ; une fusion à la fois) vivent dans `docs/REGLES-MAISON.md` du dépôt Partners, référencées par numéro dans les ADR et le gabarit de PR.
-  <br>_module 9 · étape 7 · phase -1 · tâches : `GOV-018`_ · _source : prompt (règles maison) ; mémoire index-methode-et-gardes_
+  <br>_module 9 · étape 7 · phase -1 · tâches : `GOV-018`, `GOV-026`_ · _source : prompt (règles maison) ; mémoire index-methode-et-gardes_
 - **REQ-GOV-025** — Les tâches côté axionia (émetteur de webhooks avec outbox et rejeu, API `GET /attributions` au devis, export de grille, SIREN client obligatoire si attribution active) sont étiquetées `repo:axionia`, suivent le protocole de fusion d'axionia (un producteur, annonce sur le canal des sessions), et ne sont attribuées qu'à un agent nommé « lead intégration ». **Porteurs : `GOV-017` et `GOV-007`** (CODEOWNERS / poste A08) — c'est l'exigence qui fonde le champ `repo` des tâches, absent de 155 d'entre elles, et aucune tâche ne la citait (corrigé le 2026-09-03).
   <br>_étape 9 · phase -1 · tâches : `GOV-017a`, `GOV-017b`_ · _source : audit-bout-en-bout §2.3 ; vérification : patrons webhook axionia entrants seulement_
 - **REQ-GOV-026** — L'état d'avancement d'un chantier utilise la légende unique {spécifié, codé, testé, revu, fusionné, déployé, vérifié en prod} ; tout état ≥ codé porte une preuve (chemin de fichier ou SHA) ; gate : entrée de `tasks.json` ou de PLAN-STATE en état ≥ codé sans preuve → rouge. L'inventaire initial (C1 codé dans axionia à transposer, C5 codé, C2/C3/C4/C6/C7/C8 non codés) est consigné dans PLAN-STATE, pas dans une exigence.
@@ -644,6 +647,8 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
   <br>_phase -1 · tâches : `GOV-014`_ · _source : nouvelle ; vérification `scripts/check-anti-siren.sh` et `tests/unit/ci/*`_
 - **REQ-GOV-030** — L'exception unique au « zéro arbitrage » (rattachement manuel de groupe, motivé, tracé, journalisé) est portée par **REQ-DM-034** ; une garde grep rougit si l'expression « zéro arbitrage » apparaît dans `docs/`, `prisma/` ou `src/` sans la référence `REQ-DM-034` sur la même ligne ou la ligne suivante.
   <br>_phase -1 · tâches : `GOV-002`_ · _source : anti-abus F15 ; contrat art. 3.6 ; fonctionnement R3, §7.1, §10 ; reformulation d'annexe appliquée le 2026-09-03_
+- **REQ-GOV-032** — Toute vue générée du dépôt (`docs/TASKS.md`, `docs/REQUIREMENTS.md`, `docs/TRACABILITE.md`, `docs/paths-proposes.json`, `docs/PLAN-STATE.md`) est produite par un générateur nommé et possède un mode de VÉRIFICATION qui n'écrit rien et sort 1 quand le fichier commité diffère d'un seul octet de ce que sa source produirait ; ce mode est appelé par le job de Gate A. Le message d'échec nomme l'écart en unités du domaine — nombre de tâches livrées, nombre d'exigences — et non « les deux fichiers diffèrent ». Gate : une vue périmée d'une seule ligne → rouge ; le dépôt à jour → vert (contre-témoin exigé, RM-02).
+  <br>_phase -1 · tâches : `GOV-024`_ · _source : nouvelle (relectures de la PR 30, 2026-09-04) ; docs/PRESEANCE.md §2 lignes 1-2 et §5 point 5_
 
 ### complétude (REQ-CPL)
 

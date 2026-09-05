@@ -4,14 +4,15 @@
 > Regenere par `pnpm gov:tasks --render`, jamais edite a la main : une correction tapee ici
 > disparait au rendu suivant. Trois comptages differents ont circule dans la version tenue
 > a la main, tous faux — les nombres ci-dessous sont comptes a la generation.
+> `pnpm gov:tasks --verifie-rendu` rougit si ce fichier a derive de sa source (REQ-GOV-032).
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**197 taches · 149.00 j estimes.**
+**201 taches · 151.00 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
-| -1 — Gouvernance (prealable bloquant) | 26 | 16.50 | 20 |
+| -1 — Gouvernance (prealable bloquant) | 30 | 18.50 | 20 |
 | 0 — Socle technique | 50 | 37.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
@@ -263,13 +264,55 @@ Couvre : `REQ-QA-013`
 
 **Tests.** `tests/unit/gouvernance/tout-check-est-cable.spec.ts#le nom du check requis se lit dans les jobs de ci.yml, il n’est pas tapé` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#check_requis_absent — `gate-a` n’est plus exigé par la protection de `main`` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#un workflow qui ne se déclenche pas sur `pull_request` ne produit aucun check de PR`
 
-### CPL-T01 — Décisions sans valeur par défaut à trancher par Will : W1 entité contractante, W9 prolongation de fenêtre si devis en cours — **attente_externe**
+### CPL-T01 — Registre `config/entite.json` à valeur sentinelle, ses lecteurs et la garde `gov:entite`
 
-`0 j` · zone `gouvernance` · `externe` · sensible : argent, attribution · depend de `GOV-005` · decisions `HYP-E1-5`, `W1`, `W11`, `W2`, `W3`, `W4`, `W5`, `W6`, `W9`
+`0.5 j` · zone `gouvernance` · sensible : argent, attribution · depend de `GOV-005` · decisions `HYP-W2`, `W1`, `W13`, `W3`, `W4`
 
 Couvre : `REQ-CPL-001`, `REQ-CPL-002`, `REQ-CPL-003`, `REQ-CPL-004`, `REQ-CPL-017`, `REQ-CPL-018`
 
-**Acceptation.** W1, W3, W4 tranchées avant la sortie de phase −1 ; **W6 est tranchée le 2026-09-03** — quatre familles commissionnées (formations collectives, accompagnement 1-to-1, audits, implémentations), soit **30 paliers** ; cinq familles non commissionnées à écrire noir sur blanc dans l'annexe (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) ; banque (W2) et stack (W5) sont des hypothèses écrites dans DECISIONS.md (pain.001.001.03 générique + saisie manuelle avec EndToEndId, REQ-CPL-002 ; la banque ne gate que le mois à blanc) ; coût mensuel de l'hébergement dédié (HYP-E1-5) soumis à Will ; test de cohérence SIREN/IBAN sur les trois fixtures (contrat, mandat, pain.001) dès que l'entité est nommée.
+**Acceptation.** Livrable de CODE, arbitré par `partners/ADR-0009`. (1) `config/entite.json` porte, en un seul endroit, la dénomination, la forme, le SIREN, le SIRET, le numéro de TVA et le siège de l'entité contractante (`W1`, tranchée le 2026-09-03), le domaine servi et le domaine d'envoi (`W3`), le modèle des têtes de réseau (`W4`) et les coordonnées bancaires débitrices (`HYP-W2`). (2) Toute valeur que le dépôt ne peut pas porter — les coordonnées bancaires débitrices, qui sont un secret et que `W13` interdit de commiter — vaut la sentinelle littérale `A-RENSEIGNER`, jamais une chaîne vide, jamais `null`, jamais un exemple plausible : un numéro d'exemple oublié dans un document signé ne se distingue pas d'une vraie valeur. (3) Aucun autre fichier ne retape ces valeurs (RM-01) : gabarit de contrat, mandat d'autofacturation, fichier de virement, export annuel et mentions légales les LISENT toutes ici, si bien que le SIREN du contrat, celui du mandat et celui du virement sont le même octet — ce que REQ-CPL-001 demandait déjà. (4) La garde `gov:entite` refuse la MISE EN SERVICE tant qu'un champ vaut la sentinelle, à ses quatre points de sortie (émission d'un contrat, génération d'un mandat, écriture d'un fichier de virement, export annuel) ; elle n'empêche ni le build, ni les tests, ni le développement — les phases 0 à 3 se codent et se prouvent contre la sentinelle. (5) Elle refuse SYMÉTRIQUEMENT qu'une coordonnée bancaire réelle soit commitée : la sentinelle est la seule valeur que ce champ prend dans le dépôt. (6) Deux témoins, l'un rouge et l'autre vert (RM-02) : un champ à `A-RENSEIGNER` fait rougir chacun des quatre points de sortie, un registre complet laisse la garde verte — sans le second, une garde qui rougit toujours finit désarmée. (7) L'entrée `gov:entite` est inscrite au registre des gardes avec sa preuve rouge.
+
+**Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
+
+### GOV-024 — Une vue générée qui a dérivé de sa source doit rougir
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-017b`
+
+Couvre : `REQ-GOV-021`, `REQ-GOV-032`
+
+**Acceptation.** `pnpm gov:tasks` n'a qu'un mode `--render` : rien ne compare `docs/TASKS.md` à `docs/tasks.json`, et `docs/REQUIREMENTS.md` n'a même pas de générateur alors que son bandeau affirme le contraire. C'est ce trou qui a laissé la vue du backlog annoncer cinq tâches livrées quand la source en portait vingt — quinze d'écart, trouvés par trois relecteurs et par aucune garde, sur le fichier qu'on ouvre justement pour savoir où en est le chantier. `docs/TRACABILITE.md`, elle, a un `--verifier` depuis GOV-011 : c'est le patron à reprendre. À livrer : (1) le rendu de `gov-tasks.ts` extrait en fonction pure `rendreVue()`, et un mode `--verifie-rendu` qui compare sans écrire et NOMME l'écart en nombre de tâches livrées — « les deux fichiers diffèrent » n'apprend rien à qui lit un journal de CI ; (2) le même couple rendu / vérification pour `docs/REQUIREMENTS.md`, qui n'a aujourd'hui aucun générateur ; (3) les deux modes câblés dans le job de Gate A ; (4) un témoin rouge — une vue périmée d'une seule tâche fait sortir 1 — et un contre-témoin vert sur le dépôt à jour, sans lequel le rouge ne prouve rien (RM-02) ; (5) le point 5 de `docs/PRESEANCE.md` §5 refermé, et le bandeau du générateur aligné sur ce qu'il fait vraiment. L'extraction de `rendreVue()` est déjà écrite et a été vue rougir sur une vue périmée ; elle n'entre pas dans le lot L-1-05, qui n'écrit pas `scripts/gates/`.
+
+**Tests.** `tests/unit/gouvernance/vues-derivees.spec.ts`
+
+### GOV-025 — La garde des identifiants nus est aveugle en fin de phrase — dépôt public, c'est une garde de publication
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-003`
+
+Couvre : `REQ-GOV-003`
+
+**Acceptation.** La lookahead négative de `scripts/gates/gov-identifiants.ts` inclut le point : une étiquette de relecteur collée à un point final n'est pas vue, la même suivie d'une espace l'est. Ses propres témoins `--prove` évitent tous cette position, si bien que l'auto-preuve n'exerce jamais le seul endroit où la garde est aveugle — elle reste verte sur le texte qu'elle condamne. Trouvé en mutation, puis reproduit involontairement pendant la rédaction de l'entrée de journal de la PR 30 : des deux occurrences écrites pour l'illustrer, une seule a été vue. Le dépôt est public (`W13`, REQ-GOV-031) : un identifiant qui ne résout nulle part y reste lisible pour toujours. À livrer : (1) le point retiré de la classe de la lookahead ; (2) un témoin à CHACUNE des positions limites — fin de phrase, fin de ligne, avant une virgule, avant une parenthèse fermante — parce qu'un témoin qui évite la position limite verdit sur le défaut ; (3) un contre-témoin qui prouve qu'un usage légitime passe toujours, dont la §0 du registre des décisions et les locutions déjà exemptées ; (4) la garde rejouée contre la version CASSÉE pour montrer que les nouveaux témoins la font bien rougir.
+
+**Tests.** `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts`
+
+### GOV-026 — Le CLAUDE.md racine, avec sa règle maison d'abord registrée
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-018`
+
+Couvre : `REQ-GOV-024`
+
+**Acceptation.** Retiré de la PR 30 : le fichier portait une règle de gouvernance absente de `docs/REGLES-MAISON.md` — « on ne compose jamais un lot tant qu'une PR de clôture est ouverte » —, n'appartenait aux `paths` d'aucune tâche du backlog, et son commit se rattachait à une tâche déjà fusionnée. Une règle qui ne vit que dans un fichier d'amorçage n'est référencée par aucun ADR et par aucun gabarit de PR : elle se perd à la première réécriture. À livrer, DANS CET ORDRE : (1) la règle enregistrée comme RM-13 dans `docs/REGLES-MAISON.md`, avec son énoncé, son pourquoi et la garde qui la voit ; (2) `tests/unit/gouvernance/regles-maison.spec.ts` étendu — il exige une section par règle, il doit donc rougir avant l'ajout ; (3) le fichier `CLAUDE.md` lui-même, qui renvoie à RM-13 par son numéro et jamais par paraphrase (RM-12) ; (4) `CLAUDE.md` inscrit dans les `paths` de cette tâche. Deux contraintes de rédaction, consignées dans `docs/REPRISE-SESSION.md` : ne pas y figer le premier geste, qui change à chaque session, et ne pas y résumer `docs/PRESEANCE.md` — le résumé qui avait été retiré avait déjà divergé, il omettait deux des fichiers réservés et affirmait que tout le reste était une vue générée, ce qui interdisait d'éditer les fichiers que la préséance donne justement à éditer.
+
+**Tests.** `tests/unit/gouvernance/regles-maison.spec.ts`
+
+### GOV-027 — Le composeur lit le registre des décisions autrement que la garde, et écarte des tâches dont la décision est posée
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-005`
+
+Couvre : `REQ-GOV-015`, `REQ-GOV-021`
+
+**Acceptation.** Deux lecteurs du même registre, et ils ne lisent pas la même chose (RM-04). `scripts/gates/gov-tasks.ts` reconnaît une décision à la PREMIÈRE CELLULE d'une ligne de tableau et accepte les quatre familles d'identifiants du registre ; `scripts/lot/composer.ts` la cherche par une expression régulière qui ne connaît que deux préfixes et n'applique pas les alias de la §0. Trois conséquences MESURÉES le 2026-09-04, toutes silencieuses : (a) seize tâches sont écartées pour « décision sans hypothèse » alors que leur décision est bel et bien déclarée au registre — il suffit que son identifiant soit une décision de Will ou un alias ; (b) trois identifiants cités dans une NOTE en prose sous la §1 — une note qui explique précisément qu'ils ne bloquent PLUS — sont comptés comme bloquants, et écartent cinq tâches de plus ; (c) le composeur ratisse la §1 entière, si bien qu'une décision TRANCHÉE y bloque encore, alors que la §4 du registre prescrit de la faire descendre en §2. À livrer : (1) un lecteur UNIQUE du registre, importé par la garde et par le composeur, alias de la §0 compris ; (2) la frontière §1/§2 lue sur les LIGNES DE TABLEAU et non sur la prose ; (3) une décision tranchée qui ne bloque plus rien ; (4) un témoin par famille et un contre-témoin vert ; (5) le décompte des tâches redevenues éligibles imprimé, pour qu'on voie la différence au lieu de la supposer.
+
+**Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 
 ## Phase 0 — Socle technique
 
