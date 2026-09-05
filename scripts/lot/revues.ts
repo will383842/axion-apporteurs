@@ -353,8 +353,8 @@ export type TacheDeLaPr = { id: string; pr?: number | null; schema?: boolean; se
  *
  *   — le TITRE seul ne nomme qu'UNE tâche par convention, alors qu'une PR de lot en porte neuf ;
  *     la PR 31 en est la preuve, sa tâche `schema` n'est pas celle du titre ;
- *   — les TÂCHES `pr: <n>` seules laissent un trou mesuré : 179 des 207 tâches du backlog portent
- *     `pr: null`, dont une vingtaine à `schema: true` (compté à la main le 2026-09-05 : la mesure du jour donne 20, une première rédaction disait douze — la conclusion tient *a fortiori*, mais un nombre écrit ici vieillit à chaque composition de lot, et il ne sert quà donner un ordre de grandeur). Une PR ouverte AVANT que `docs/tasks.json` ne porte
+ *   — les TÂCHES `pr: <n>` seules laissent un trou mesuré : la grande majorité des tâches du backlog (181 sur 209 au 2026-09-05 ; c'était 179 sur 207 la veille, et l'écart vient du commit qui a écrit cette phrase — il créait deux tâches) du backlog portent
+ *     `pr: null`, dont une vingtaine à `schema: true` (compté à la main le 2026-09-05 : la mesure du jour donne 20, une première rédaction disait douze — la conclusion tient *a fortiori*, mais un nombre écrit ici vieillit à chaque composition de lot, et il ne sert qu'à donner un ordre de grandeur). Une PR ouverte AVANT que `docs/tasks.json` ne porte
  *     son numéro aurait un ensemble VIDE, et la garde n'exigerait pas `schema` pour une tâche qui
  *     l'est. C'est sur ce point que je contredis la lentille, qui proposait ce dénominateur seul.
  *

@@ -2455,10 +2455,20 @@ if (APPELE_DIRECTEMENT) {
     //      journal de job n'est lu par personne, et un 2 permanent devient invisible en une
     //      semaine : c'est `continue-on-error` réinventé par la porte de derrière. La seule chose
     //      qui garantit qu'un 2 se remarque, c'est qu'il BLOQUE.
-    //   3. Il n'existe pas d'état durable légitime où la CI d'un dépôt PUBLIC ne peut pas lire le
-    //      corps de ses propres PR : le corps et `userContentEdits` sont publics, et
-    //      `GITHUB_TOKEN` les lit. Un 2 durable signifie qu'on a retiré une permission, retiré
-    //      `gh`, ou que la forge a renommé un champ — trois choses qui méritent un rouge.
+    //   3. ⚠️ CETTE RAISON A ÉTÉ RÉFUTÉE. Elle disait : « il n'existe pas d'état durable légitime
+    //      où la CI d'un dépôt PUBLIC ne peut pas lire le corps de ses propres PR ». C'est FAUX, la
+    //      lentille `securite` l'a montré au 7e tour : la requête n'était pas paginée, et au-delà
+    //      de cent révisions le 2 était SANS REMÈDE. C'est fermé — mais ce fichier se contredit
+    //      encore lui-même ailleurs : une révision servie sans `diff` ni `editedAt` ne peut
+    //      s'apparier à aucune exemption, et le message dit alors « rien à corriger dans ce dépôt ».
+    //      CE QUI RESTE JUSTE, ET QUI SUFFIT : un 2 durable est TOUJOURS quelque chose
+    //      qu'un humain doit voir — permission retirée, `gh` absent, champ renommé, ou révision
+    //      que la forge ne sert pas. Aucun de ces états ne doit passer pour un vert.
+    //      La conclusion tient ; son ancienne démonstration ne tenait pas. ⚠️ ET J'AI ANNONCÉ CETTE
+    //      CORRECTION FAITE AU TOUR 8 ALORS QU'ELLE NE L'ÉTAIT PAS : le bloc vivait dans un script
+    //      préparé que j'ai REMPLACÉ par une version plus complète, laquelle l'a omis. Le script
+    //      remplaçant a rendu « 7 mutations ✅ » — un succès qui ne mentionnait pas ce qu'il ne
+    //      faisait plus. La lentille a comparé le diff au lieu de me croire.
     //
     // CE QUI EMPÊCHE UN 2 D'INTERMITTENCE : `lireCorpsPublie` RÉESSAIE. Un incident réseau d'une
     // seconde devient de la latence, jamais une couleur. C'est ce qui rend « 2 = échec » tenable

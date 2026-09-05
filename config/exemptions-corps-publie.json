@@ -26,7 +26,7 @@
       "empreinte": "2847f6106ab6f0da11e73d5c896edc145fae3f8c1b04458a83bca2fe49a846e8",
       "declaree": "2026-09-05",
       "par": "A05 · developpeur-partners, sur veto de la lentille securite",
-      "motif": "Même valeur fabriquée, première révision où elle apparaît. Les révisions antérieures ne portent aucun jeton de forme IBAN — ni valeur, ni exemple — donc la garde n'en signale aucune et elles n'ont pas de ligne ici. Leur nombre n'est pas écrit : il augmente à chaque rendu du corps, et ce registre existe précisément pour qu'aucun compte ne se tape à la main.",
+      "motif": "Même valeur fabriquée, première révision où elle apparaît. Les révisions antérieures n'ont AUCUNE ligne ici parce que la garde n'y signale aucune coordonnée — c'est tout ce que le vert de la garde établit, et c'est tout ce qui est affirmé. ⚠️ NE PAS Y ÉCRIRE CE QU'ELLES CONTIENNENT : deux rédactions successives l'ont fait et se sont trompées. La première comptait « les trois révisions antérieures » — il y en a quatre. La seconde, qui retirait le compte, affirmait qu'elles ne portent « aucun jeton de forme IBAN, ni valeur ni exemple » — trois portent une forme d'exemple à clé mod-97 fausse, que `coordonneesDe` ne voit pas et que le vert ne pouvait donc pas contredire. RETIRER UN COMPTEUR EN LE REMPLAÇANT PAR UNE NÉGATION UNIVERSELLE REND LA PHRASE PLUS FORTE, DONC PLUS FACILEMENT FAUSSE : la version d'avant disait juste sur ce point. Une ligne de ce registre décrit ce qu'elle EXEMPTE, jamais ce que les autres révisions contiennent.",
       "definitive": true
     }
   ]

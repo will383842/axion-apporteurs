@@ -117,12 +117,18 @@ bandeau affirmait le contraire, et un **vérificateur** aux deux vues : `--verif
 et sort 1 sur un octet d'écart, en nommant l'écart en unités du domaine. `GOV-027` supprime le second
 lecteur du registre des décisions ; le composeur imprime l'effet — **18 tâches** que la lecture
 d'avant écartait « pour une raison de décision » sont éligibles, 1 le reste. Le dépôt passe de 109 à
-110 gardes, de 18 à **21 armées**, de 197 à **204 tâches**, de 353 à **355 exigences**.
+**112 gardes**, de 18 à **23 armées**, de 197 à **209 tâches**, de 353 à **355 exigences**.
+⚠️ Ces quatre nombres ont ete TAPES et ils etaient faux — 110/21/204 le 2026-09-05 au soir, quand la
+mesure et le corps DERIVE de cette PR meme donnaient 112/23/209. Trois facons d'etre faux a la fois :
+contre la mesure, contre l'artefact que la PR publie, et contre le bandeau de ce fichier. La garde des
+compteurs ne les atteint pas : elle ne balaie que trois fichiers et ne vise que la tournure « n
+revisions ». Ils restent tapes ici faute d'un marqueur dans ce fichier — c'est une dette, pas un choix.
 
 **Reste.** Trois lots fusionnés en une PR au lieu de six : la Gate A juge l'arbre **combiné**, et
 c'est le seul endroit où le conflit annoncé entre `gov:lexique` et `gov:publication` sur la même
 phrase de `partners/ADR-0009` pouvait être tranché — il est **fermé**, mesuré et non simulé. Restent
-en phase −1 : `GOV-014`, `INT-T01b`, `GOV-019`, `GOV-028` — `INT-T01b` étant la seule tâche de la PHASE −1 à vivre dans
+en phase −1 : `GOV-014`, `INT-T01b`, `GOV-019`, `GOV-028`, `GOV-035`, `GOV-036`, `GOV-037` — les trois
+dernieres etant creees par ce diff meme, ce que la premiere redaction omettait — `INT-T01b` étant la seule tâche de la PHASE −1 à vivre dans
 `axionia` — le chantier en compte quatorze au total. Trois constats sont renvoyés en tâche plutôt que corrigés au
 passage : la neutralisation des citations aveugle la garde sur toute chaîne courte (`GOV-028`), et
 `pnpm gates:prouvees` compte 8 « preuves non référencées » qui sont des refus de **ponctuation**, pas

@@ -33,8 +33,8 @@
 | `REQ-GOV-007` | `GOV-008` | `tests/unit/gouvernance/une-tache-un-owner.spec.ts` | couverte |
 | `REQ-GOV-008` | `GOV-009` | `tests/unit/gouvernance/adr-index-derive.spec.ts` | couverte |
 | `REQ-GOV-009` | `GOV-010`, `GOV-022` | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | couverte |
-| `REQ-GOV-010` | `GOV-007`, `GOV-023` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/fiches-agents.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
-| `REQ-GOV-011` | `GOV-007`, `GOV-021` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
+| `REQ-GOV-010` | `GOV-007`, `GOV-023`, `GOV-024` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/fiches-agents.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
+| `REQ-GOV-011` | `GOV-007`, `GOV-021`, `GOV-024` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-012` | `GOV-007` | `tests/gov/charte-pr.spec.ts` | couverte |
 | `REQ-GOV-013` | `GOV-007` | `tests/gov/charte-pr.spec.ts` | couverte |
 | `REQ-GOV-014` | `GOV-000`, `GOV-012` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
@@ -190,7 +190,7 @@
 | `REQ-GOV-018` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
 | `REQ-GOV-028` | -1 | `GOV-019` | `poids-du-bundle-garde-vraiment.spec.ts` |
 | `REQ-GOV-029` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
-| `REQ-GOV-032` | -1 | `GOV-024`, `GOV-035` | `tests/unit/gouvernance/vues-derivees.spec.ts` |
+| `REQ-GOV-032` | -1 | `GOV-024`, `GOV-035` | `tests/unit/gouvernance/revues-lecteur-unique.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` |
 | `REQ-GOV-033` | -1 | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` |
 | `REQ-INT-001` | 0 | `INT-T02` | `outbox-produit-des-evenements-valides.spec.ts` |
 | `REQ-INT-005` | -1 | `INT-T01b`, `INT-T05` | — |
@@ -256,7 +256,7 @@
 | `REQ-QA-004` | 1 | `DM-08` | — |
 | `REQ-QA-005` | 2 | `QA-T28`, `QA-T29` | — |
 | `REQ-QA-006` | 0 | `QA-T02` | — |
-| `REQ-QA-014` | 0 | `QA-T03` | `req-check.spec.ts` |
+| `REQ-QA-014` | 0 | `GOV-039`, `QA-T03` | `req-check.spec.ts`, `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts` |
 | `REQ-QA-015` | 0 | `QA-T06` | — |
 | `REQ-QA-016` | 0 | `QA-T16`, `UX-P0-03` | — |
 | `REQ-QA-017` | 1 | `QA-T16` | — |
@@ -359,7 +359,7 @@
 | `REQ-ARG-011` | `REQ-DM-023` | `DM-16` |
 | `REQ-ARG-030` | `REQ-DM-021` | `DM-15`, `INT-T01b`, `INT-T05`, `T-ARG-035` |
 | `REQ-ARG-031` | `REQ-DM-014` | `DM-03-A`, `DM-03-P` |
-| `REQ-GOV-005` | `REQ-QA-014` | `GOV-011`, `GOV-022`, `GOV-039` |
+| `REQ-GOV-005` | `REQ-QA-014` | `GOV-011`, `GOV-022` |
 | `REQ-GOV-019` | `REQ-DM-014` | `DM-03-A` |
 | `REQ-GOV-020` | `REQ-QA-007` | `INT-T01a` |
 | `REQ-INT-002` | `REQ-SEC-010` | `INT-T02` |
