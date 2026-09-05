@@ -30,6 +30,7 @@ import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { LIVREE } from './avancement';
 import { lireRegistre, tachesRedevenuesEligibles, CHEMIN_REGISTRE } from './registre-decisions';
+import { prochainIdentifiantDeLot, lotsDuBacklog } from './identifiant-de-lot';
 
 // La cinquieme copie de l'ensemble « livree », sous un autre nom — c'est ainsi qu'un doublon
 // echappe a une recherche. Elle se DERIVE desormais du bareme unique de `./avancement`.
@@ -181,16 +182,13 @@ for (const t of eligibles) {
 
 // --- écriture du lot ------------------------------------------------------------------------------
 mkdirSync('docs/lots', { recursive: true });
-const prefixe = `L${phase}-`;
-// Le numéro se DÉDUIT du plus grand déjà posé, jamais d'un COMPTAGE : un dossier supprimé, archivé ou
-// non commité faisait retomber sur un identifiant déjà utilisé, et écrasait le lot.json précédent.
-const seq = Math.max(
-  0,
-  ...readdirSync('docs/lots')
-    .filter((d) => d.startsWith(prefixe))
-    .map((d) => Number(d.slice(prefixe.length)) || 0)
-) + 1;
-const id = `${prefixe}${String(seq).padStart(2, '0')}`;
+// Le numéro se DÉDUIT du plus grand déjà posé, et il le déduit de DEUX sources (GOV-029) :
+// `docs/lots/` pour les lots composés mais pas encore clos, et le champ `lot` de `docs/tasks.json`
+// pour les lots clos. Ce bloc ne lisait que le dossier — or `.gitignore` l. 67 l'EXCLUT du dépôt :
+// dans un arbre neuf il n'existe pas, le maximum d'un ensemble vide vaut 0, et le composeur
+// repartait sur `L-1-01`, déjà porté par sept tâches `fusionnee`. Le commentaire d'avant nommait
+// pourtant le cas — « un dossier non commité » — et n'en avait corrigé que la moitié.
+const id = prochainIdentifiantDeLot(phase, readdirSync('docs/lots'), [...lotsDuBacklog(taches)]);
 const chemin = join('docs/lots', id, 'lot.json');
 if (existsSync(chemin)) {
   throw new Error(`${chemin} existe déjà : refus d'écraser un lot. Archive-le ou renomme-le avant de recomposer.`);

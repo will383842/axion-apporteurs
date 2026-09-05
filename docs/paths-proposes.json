@@ -2,14 +2,13 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne — la comparaison exacte que fait `scripts/lot/composer.ts` (`pris.has(p)`). Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 197,
-    "pairesEnIntersection": 3749,
-    "cheminsDeclares": 622,
-    "cheminsDistincts": 364,
-    "cheminsPartages": 92,
-    "tachesSansAucuneIntersection": 25,
+    "tachesCouvertes": 203,
+    "pairesEnIntersection": 3826,
+    "cheminsDeclares": 628,
+    "cheminsDistincts": 368,
+    "cheminsPartages": 93,
+    "tachesSansAucuneIntersection": 29,
     "listeDesTachesIsolees": [
-      "CPL-T01",
       "QA-T08",
       "QA-T06",
       "QA-T12",
@@ -33,12 +32,17 @@
       "UX-P3-03",
       "UX-P3-05",
       "JUR-T22",
-      "GOV-022"
+      "GOV-022",
+      "GOV-024",
+      "GOV-025",
+      "GOV-027",
+      "GOV-028",
+      "GOV-029"
     ],
     "cheminsLesPlusPartages": [
       {
         "chemin": "docs/gates.json",
-        "taches": 76
+        "taches": 77
       },
       {
         "chemin": "prisma/schema.prisma",
@@ -174,10 +178,9 @@
       "docs/PLAN-STATE.md",
       "scripts/plan-state/build.ts",
       ".claude/skills/lot/SKILL.md",
-      "scripts/gates/plan-state-derive.spec.ts",
+      "tests/unit/gouvernance/plan-state-frais.spec.ts",
       "scripts/gates/gov-etat.ts",
       "docs/gates.json",
-      "tests/unit/gouvernance/plan-state-frais.spec.ts",
       "tests/unit/gouvernance/une-tache-un-owner.spec.ts"
     ],
     "GOV-002": [
@@ -228,8 +231,6 @@
       ".github/workflows/ci.yml",
       "docs/gates.json",
       "scripts/gates/gov-depot.ts",
-      "tests/unit/ci/aucun-workflow-ne-pousse-sur-main.spec.ts",
-      "tests/unit/ci/tout-check-est-cable.spec.ts",
       "tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts",
       "tests/unit/gouvernance/tout-check-est-cable.spec.ts"
     ],
@@ -320,7 +321,10 @@
       "scripts/gates/seuils-ssot.ts"
     ],
     "CPL-T01": [
-      "docs/decisions/CPL-T01"
+      "docs/decisions/CPL-T01",
+      "scripts/gates/gov-entite.ts",
+      "docs/gates.json",
+      "tests/unit/gouvernance/entite-registre.spec.ts"
     ],
     "QA-T01": [
       "vitest.config.ts",
@@ -1136,6 +1140,24 @@
     "JUR-T28": [
       "docs/contrat/CONTRAT-APPORTEUR-V1.md",
       "src/domain/apporteur/resiliation.ts"
+    ],
+    "GOV-024": [
+      "tests/unit/gouvernance/vues-derivees.spec.ts"
+    ],
+    "GOV-025": [
+      "tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts"
+    ],
+    "GOV-026": [
+      "tests/unit/gouvernance/regles-maison.spec.ts"
+    ],
+    "GOV-027": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "GOV-028": [
+      "tests/unit/gouvernance/citation-json-vs-prose.spec.ts"
+    ],
+    "GOV-029": [
+      "tests/unit/gouvernance/lot-identifiant-unique.spec.ts"
     ]
   }
 }

@@ -169,10 +169,10 @@
       "issue": 6,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`docs/REGLES-MAISON.md` porte RM-01 a RM-12 — les neuf regles de REQ-GOV-024 plus trois — une section par regle, le tableau de tete etant leur vue ; la ligne « Regle maison appliquee » vit entre ses marqueurs dans le gabarit de PR, et `gov:pr` la LIT. `docs/LECONS.md` porte le journal des lecons : chacune cite son incident mesure, ce qu'on en tire, une source verifiable (SHA, `chemin:ligne` ou message verbatim) et la `RM-nn` qu'elle a produite — ou dit qu'elle n'en a produit aucune. `pnpm gov:lecons --now <date>` (nightly, jamais l'horloge) rougit quand la consolidation depasse sept jours ALORS QUE des « appris » attendent, et reste verte sans dette. 12 familles, 13 temoins, 9 contre-temoins verts.",
+      "acceptance": "`docs/REGLES-MAISON.md` porte RM-01 a RM-14 — les neuf regles de REQ-GOV-024 plus trois — une section par regle, le tableau de tete etant leur vue ; la ligne « Regle maison appliquee » vit entre ses marqueurs dans le gabarit de PR, et `gov:pr` la LIT. `docs/LECONS.md` porte le journal des lecons : chacune cite son incident mesure, ce qu'on en tire, une source verifiable (SHA, `chemin:ligne` ou message verbatim) et la `RM-nn` qu'elle a produite — ou dit qu'elle n'en a produit aucune. `pnpm gov:lecons --now <date>` (nightly, jamais l'horloge) rougit quand la consolidation depasse sept jours ALORS QUE des « appris » attendent, et reste verte sans dette. 12 familles, 13 temoins, 9 contre-temoins verts.",
       "tests": {
         "REQ-GOV-024": [
-          "tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 a RM-12, une section par regle",
+          "tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 a RM-14, une section par regle",
           "tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — les neuf regles que l'exigence enumere sont chacune couvertes par une section"
         ],
         "REQ-GOV-023": [
@@ -397,8 +397,11 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-006",
-        "prisma/schema.prisma"
+        "docs/GLOSSAIRE.md",
+        "prisma/schema.prisma",
+        "src/domain/attribution/etats.ts",
+        "scripts/gates/schema-enums.ts",
+        "tests/unit/gouvernance/glossaire-enums.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -606,7 +609,9 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-013"
+        "src/domain/lexique/lexique-interdit.ts",
+        "scripts/gates/lexique-apporteurs.ts",
+        "tests/unit/gouvernance/lexique.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -631,7 +636,8 @@
         "REQ-GOV-017": [
           "lexique.spec.ts"
         ]
-      }
+      },
+      "acceptance": "`pnpm gov:lexique` refuse tout usage PRESCRIPTIF des termes de REQ-GOV-017, durcie par REQ-JUR-037, sur sept motifs — `prisma/**`, `messages/**`, `src/**/*.tsx`, `src/app/(espace)/**`, gabarits e-mail, `micro-copy/**`, `docs/adr/**` — et un motif attendu qui ne balaie plus rien est une faute, pas un succes. La liste noire n'est pas dans la gate : elle est IMPORTEE de `src/domain/lexique/lexique-interdit.ts` — 9 familles, 63 formes flechies, deux portees, les marqueurs de denegation et les exceptions declarees avec elle (RM-01). La garde vise la TOURNURE et non le mot : l'usage denegatif ou definitionnel passe, l'usage prescriptif ou evaluatif rougit. Une garde qui ferait rougir la phrase qui PROTEGE forcerait a la retirer."
     },
     {
       "id": "GOV-014",
@@ -7450,6 +7456,76 @@
         ],
         "REQ-GOV-021": [
           "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-028",
+      "titre": "Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-identifiants.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-025"
+      ],
+      "reqs": [
+        "REQ-GOV-003"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "La constante CITATIONS de scripts/gates/gov-identifiants.ts neutralise TOUTE chaine citee de 120 caracteres ou moins — guillemets francais, guillemets droits ET quotes simples — avant de chercher un identifiant nu. La regle « citer n'est pas se servir » a ete ecrite pour la PROSE et s'applique par accident a la SYNTAXE : dans un .json, un .ts ou un .yml, les guillemets qui entourent une valeur ne citent rien, ils delimitent. Mesure sur ce depot le 2026-09-05 : la meme ligne de docs/gates.json porte 1 faute quand sa valeur fait 166 caracteres et 0 quand elle en fait 62 — le verdict de la garde depend de la LONGUEUR du voisinage, pas de son contenu. Sans neutralisation le depot passe de 1 a 35 identifiants nus sur 28 lignes ; avec la seule regle « dans un fichier de code, la quote est de la syntaxe », il passe de 1 a 3. A livrer : (1) la neutralisation devient CONTEXTUELLE — en prose les trois familles de guillemets citent, dans un fichier de code seuls les guillemets francais et une citation IMBRIQUEE citent ; (2) un temoin par famille de delimiteur montrant qu'un identifiant nu cache dans une chaine courte est desormais VU, et le meme temoin rallonge montrant que l'ancien contournement disparait ; (3) des contre-temoins verts sur les usages legitimes deja connus, soit par exemption nommee soit par un ajustement de la regle, jamais par un retour au silence ; (4) le plafond de 120 caracteres justifie ou supprime — une garde dont le verdict depend de la longueur d'une phrase n'est pas rejouable.",
+      "tests": {
+        "REQ-GOV-003": [
+          "tests/unit/gouvernance/citation-json-vs-prose.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-029",
+      "titre": "L'identifiant d'un lot se derivait d'un dossier que git ignore, et repartait sur un numero deja pris",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/identifiant-de-lot.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-027"
+      ],
+      "reqs": [
+        "REQ-GOV-033"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "scripts/lot/composer.ts tirait le numero du prochain lot de readdirSync('docs/lots'), un dossier que .gitignore l. 67 EXCLUT du depot. Dans un arbre neuf il n'existe pas, le maximum d'un ensemble vide vaut 0, et le composeur repart a L-1-01 — identifiant deja porte par sept taches fusionnee. Mesure le 2026-09-05 dans un worktree neuf : « Lot L-1-01 : 7 tache(s) » pour sept taches dont aucune n'appartient au L-1-01 historique ; pnpm lot:cloture aurait alors ecrit lot: L-1-01 sur les nouvelles, et le lot historique en aurait compte quatorze. Rien ne l'aurait vu : t.lot est une chaine libre qu'aucun schema ne confronte. Le commentaire du code nommait pourtant le cas — « un dossier supprime, archive ou non commite faisait retomber sur un identifiant deja utilise » — et n'en avait corrige que la moitie : le COMPTAGE etait devenu un MAXIMUM, la SOURCE etait restee le dossier ignore. A livrer : (1) le numero se derive de l'UNION du dossier, qui porte les lots composes mais pas encore clos, et du champ lot de docs/tasks.json, seule des deux sources a etre SUIVIE par git ; (2) un temoin par source, aucune ne suffisant seule ; (3) des contre-temoins sur les noms hors nomenclature et sur les identifiants d'une autre phase ; (4) un controle sur le depot REEL, qui verifie que le prochain identifiant de chaque phase n'est porte par aucune tache.",
+      "tests": {
+        "REQ-GOV-033": [
+          "tests/unit/gouvernance/lot-identifiant-unique.spec.ts"
         ]
       }
     }

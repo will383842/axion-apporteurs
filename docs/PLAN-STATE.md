@@ -7,32 +7,32 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `ab5caf5` — 2026-09-04T07:58:37+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #30 (rien) |
+| Où est `main` ? | `794245c` — 2026-09-04T23:10:40+02:00 |
+| Qu’est-ce qui est en vol ? | aucune PR ouverte |
 | Qui tient quoi ? | aucune tâche revendiquée |
-| Où en est la phase ? | phase -1 — 20/26 tâches, reste 3.00 j |
-| Le prochain pas | fusionner #30, puis GOV-013 — Gate lexicale « commercial » (chemin critique) |
-| Ce qui bloque | 3 tâche(s) bloquée(s) ou en attente externe · 9 question(s) pour Will |
-| Dernière entrée de journal | PR #30 — 2026-09-04 |
+| Où en est la phase ? | phase -1 — 20/32 tâches, reste 5.50 j |
+| Le prochain pas | GOV-013 — Gate lexicale « commercial » (chemin critique) |
+| Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 4 question(s) pour Will |
+| Dernière entrée de journal | PR #31 — 2026-09-05 |
 
-**Ce qu’on tape maintenant.** `gh pr view 30 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
-20/26 tâches terminées · reste 3.00 j estimés.
+20/32 tâches terminées · reste 5.50 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 174 | GOV-006, GOV-013, GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01 … |
+| `a_faire` | 181 | GOV-006, GOV-013, GOV-014, INT-T01b, GOV-019, JUR-T02, CPL-T01, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08 … |
 | `en_cours` | 0 | — |
 | `en_revue` | 0 | — |
 | `fusionnee` | 20 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 | `bloquee` | 0 | — |
-| `attente_externe` | 3 | CPL-T01 · JUR-T01b · JUR-T01c |
+| `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 
 ## Chemin critique
 
@@ -44,21 +44,15 @@ Reste sur ce chemin : **17.75 j**.
 
 ## Bloquées
 
-- **CPL-T01** — Décisions sans valeur par défaut à trancher par Will : W1 entité contractante, W9 prolongation de fenêtre si devis en cours · attend will
 - **JUR-T01b** — Contrat v1 arrêté par Will · attend will
 - **JUR-T01c** — Mandat d'autofacturation validé — expert-comptable s'il y en a un, sinon décision de Will avec les défauts du registre · attend expert_comptable
 
 ## Questions ouvertes pour Will
 
 - W1
-- W11
-- W2
+- W13
 - W3
 - W4
-- W5
-- W6
-- W9
-- externe:will
 
 ## Hypothèses par défaut appliquées
 
@@ -66,11 +60,7 @@ Reste sur ce chemin : **17.75 j**.
 
 ## File de fusion
 
-| # | PR | Branche | Ce qui la bloque |
-| --- | --- | --- | --- |
-| 1 | #30 — chore(GOV-012): cloture du lot L-1-03 — huit taches fusionnee, atterrissage atteste | `lot/L-1-03-cloture` | rien — fusionnable maintenant |
-
-Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
+Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.
 
 ## Revendications
 
@@ -89,18 +79,52 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 
 ## Prochain pas
 
-1. **Fusionner #30** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-2. **GOV-013** — Gate lexicale « commercial » (0.25 j, **sur le chemin critique**) : 3 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+1. **GOV-013** — Gate lexicale « commercial » (0.25 j, **sur le chemin critique**) : 8 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `ab5caf5` (2026-09-04T07:58:37+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `794245c` (2026-09-04T23:10:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 > Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — sept taches, le verrou de phase leve, deux regressions fermees
+
+**Fait.** Trois lots entrent en une PR : sept tâches — `GOV-006`, `GOV-013`, `CPL-T01`, `GOV-024`,
+`GOV-025`, `GOV-026`, `GOV-027`. `CPL-T01` lève le verrou qui gelait 171 tâches : une valeur que seul
+Will connaît est une **configuration à sentinelle**, pas un état de tâche, et `attente_externe`
+n'entrait dans aucun lot — la phase −1 restait donc courante à vie, sans qu'aucune garde ne rougisse.
+`GOV-024` donne enfin un générateur à `docs/REQUIREMENTS.md`, qui n'en avait aucun alors que son
+bandeau affirmait le contraire, et un **vérificateur** aux deux vues : `--verifie-rendu` n'écrit rien
+et sort 1 sur un octet d'écart, en nommant l'écart en unités du domaine. `GOV-027` supprime le second
+lecteur du registre des décisions ; le composeur imprime l'effet — **18 tâches** que la lecture
+d'avant écartait « pour une raison de décision » sont éligibles, 1 le reste. Le dépôt passe de 109 à
+110 gardes, de 18 à **21 armées**, de 197 à **203 tâches**, de 354 à **355 exigences**.
+
+**Reste.** Trois lots fusionnés en une PR au lieu de six : la Gate A juge l'arbre **combiné**, et
+c'est le seul endroit où le conflit annoncé entre `gov:lexique` et `gov:publication` sur la même
+phrase de `partners/ADR-0009` pouvait être tranché — il est **fermé**, mesuré et non simulé. Restent
+en phase −1 : `GOV-014`, `GOV-019` (lot suivant), `GOV-028`, `GOV-029` et `INT-T01b`, seule tâche du
+chantier à vivre dans `axionia`. Trois constats sont renvoyés en tâche plutôt que corrigés au
+passage : la neutralisation des citations aveugle la garde sur toute chaîne courte (`GOV-028`), et
+`pnpm gates:prouvees` compte 8 « preuves non référencées » qui sont des refus de **ponctuation**, pas
+des gardes non prouvées.
+
+**Appris.** Deux régressions ont été trouvées en vérifiant, et aucune n'aurait rougi avant d'être en
+production. La première : `GOV-025` a retiré le point de sa lookahead pour attraper l'étiquette collée
+à un point final — c'était juste — mais elle attrapait du même coup les **renvois pointés**, et
+`docs/gates.json` en porte un depuis `main`. Les deux étaient verts **séparément** et rouges
+**ensemble** ; sans l'arbre combiné, Gate A serait tombée sur `main`, sur une ligne que personne n'avait
+touchée. La ligne juste se trace sur ce qui SUIT le point : un chiffre prolonge l'identifiant, autre
+chose termine la phrase. La seconde : le composeur tirait le numéro du prochain lot d'un répertoire
+que `.gitignore` exclut, donc absent de tout arbre neuf — il proposait `L-1-01`, identifiant déjà porté
+par sept tâches livrées. Son commentaire nommait pourtant le cas exact, « un dossier non commité », et
+n'en avait corrigé que la moitié : le comptage était devenu un maximum, la source était restée le
+répertoire ignoré. **Un commentaire juste qui nomme un défaut ne le corrige pas, et il rassure d'autant
+plus qu'il est juste.**
 
 ### PR #30 — 2026-09-04 — chore(GOV-012): cloture du lot L-1-03 — huit taches fusionnee, atterrissage atteste
 
@@ -174,31 +198,7 @@ vérifie au moment où c'est encore réparable sans un second aller-retour : la 
 détecteur d'incident, pas un garde-fou. Le coût mesuré de l'oubli est une PR entière, sa Gate A
 complète, et un `main` rouge dans l'intervalle.
 
-### PR #28 — 2026-09-04 — feat(GOV-011): lot L-1-03 — huit taches, six gardes armees, seize ruptures de tracabilite fermees
-
-**Fait.** Les huit tâches du lot `L-1-03` sont intégrées : `GOV-008`, `GOV-010`, `GOV-011`,
-`GOV-012`, `GOV-018`, `GOV-020`, `GOV-023` et `INT-T01a`. Le dépôt passe de 25 à 37 étapes de Gate A,
-de 92 à 217 tests sur 19 fichiers, et de **11** à 18 gardes armées — sept de plus, quand le titre de
-cette PR en annonce six, et le titre d'une PR fusionnée ne se réécrit pas ; les seize ruptures de
-traçabilité que `gov:trace` a trouvées le jour de sa livraison sont fermées. Le contrat d'événements
-est dérivé et tenu par son empreinte (`packages/contracts/contracts.sha256`), et les quinze fiches de
-rôle sont générées depuis `docs/agents.json`.
-
-**Reste.** `glossaire-enums.spec.ts` (`GOV-006`) n'existe pas : tant qu'il manque, `docs/GLOSSAIRE.md`
-est une consigne et non un contrôle, alors que `docs/PRESEANCE.md` §2 lui donne la primauté sur les
-termes. `deploy:verify` (`GOV-012`, `partners/ADR-0006`) manque toujours, et le Pas 7 de
-`docs/PROTOCOLE-FUSION.md` porte donc un repli daté. Six des huit étiquettes de chantier de
-`docs/INVENTAIRE-CHANTIERS.md` n'ont aucun référent dans ce dépôt, et l'écart entre les trois
-comptes d'événements (5, 7, 11) est consigné dans `partners/ADR-0008` plutôt que résolu.
-
-**Appris.** Une garde ne juge pas forcément ce que son propre lot écrit : `gov:trace` écartait les
-tâches non livrées, or les huit du lot étaient `a_faire` — les 33 entrées `tests{}` que le lot
-écrivait n'étaient confrontées au disque par aucune garde, et une promesse inventée est passée dans
-la tâche même qui livre la garde censée l'attraper. Le critère juste n'est pas le statut de la tâche
-mais l'existence du fichier, et il a fallu élargir deux choses : le contrôle, puis la résolution des
-titres — un contrôle élargi dont la source ne l'est pas ne contrôle rien.
-
-… 2 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 3 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

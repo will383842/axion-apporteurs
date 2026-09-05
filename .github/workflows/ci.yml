@@ -40,10 +40,19 @@ jobs:
         run: pnpm gov:tasks
       - name: La garde du backlog sait rougir
         run: pnpm gov:tasks:prove
+      # GOV-024, REQ-GOV-032. La vue n'est pas seulement REGENERABLE, elle est COMPAREE.
+      # `docs/TASKS.md` avait un generateur et aucun verificateur : la derive etait silencieuse.
+      # Le mode n'ecrit rien — une garde qui repare ce qu'elle controle est toujours verte.
+      - name: La vue du backlog est egale a sa source
+        run: pnpm gov:tasks:verifie-rendu
       - name: Registre des exigences
         run: pnpm gov:requirements
       - name: La garde du registre sait rougir
         run: pnpm gov:requirements:prove
+      # GOV-024, REQ-GOV-032. `docs/REQUIREMENTS.md` n'avait AUCUN generateur, alors que son
+      # bandeau affirmait le contraire — et il avait derive : 353 exigences annoncees pour 354.
+      - name: La vue des exigences est egale a sa source
+        run: pnpm gov:requirements:verifie-rendu
       - name: Registre des decisions
         run: pnpm gov:hypotheses
       - name: La garde des decisions sait rougir

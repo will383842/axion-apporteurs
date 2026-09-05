@@ -19,12 +19,12 @@
 
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
-| -1 | Socle de gouvernance | 31 | 18 | 13 |
-| 0 | Fondations, sécurité, charte | 43 | 0 | 43 |
+| -1 | Socle de gouvernance | 32 | 20 | 12 |
+| 0 | Fondations, sécurité, charte | 43 | 1 | 42 |
 | 1 | Parcours, attribution, intégrations | 21 | 0 | 21 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **109** | **18** | **91** |
+| **Total** | | **110** | **21** | **89** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -35,32 +35,40 @@ avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune s
 Ce sont les seules dont on a la trace d'un échec provoqué. La colonne « Preuve rouge » est le
 champ `preuveRouge` du registre, recopié verbatim par le rendu.
 
-### Phase -1 — armées (18)
+### Phase -1 — armées (20)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
 | `req:check` | GOV-011 | `scripts/gates/gov-trace.ts` | `gov:trace` | pnpm gov:trace --prove — 10 familles, un temoin chacune, 8 contre-temoins verts ; et `pnpm gov:trace` sur la branche lot/L-1-03-integration le 2026-09-04, 16 ruptures nommees (7 req_sans_test, 3 test_promis_absent, 6 req_non_citee_par_son_test) |
-| `gov:identifiants` | GOV-003 | `scripts/gates/gov-identifiants.ts` | — | pnpm gov:identifiants:prove — 3 temoins rouges, 10 contre-temoins verts |
+| `gov:identifiants` | GOV-003 | `scripts/gates/gov-identifiants.ts` | — | pnpm gov:identifiants:prove — 3 temoins rouges, 10 contre-temoins verts ; et, depuis GOV-025, 10 temoins de POSITION rougissent — dont 5 que l'ancienne lookahead MANQUAIT — pendant que 27 contre-temoins de position restent verts, les 13 lignes de la §0 du registre des decisions comprises, et les renvois POINTES que GOV-029 a du rendre a nouveau verts |
 | `gov:adr` | GOV-009 | `scripts/gates/gov-adr.ts` | — | 16 familles, un temoin chacune, 11 contre-temoins verts (pnpm gov:adr --prove) |
-| `gov:tasks` | GOV-017a | `scripts/gates/gov-tasks.ts` | — | pnpm gov:tasks:prove — 12 familles, chacune vue rougir sur son propre defaut injecte, 2 contre-temoins verts sur les deux formes de branche (partners/ADR-0007) |
+| `gov:tasks` | GOV-017a | `scripts/gates/gov-tasks.ts` | — | pnpm gov:tasks:prove — 12 familles, chacune vue rougir sur son propre defaut injecte, 2 contre-temoins verts sur les deux formes de branche (partners/ADR-0007) ; et, depuis GOV-024, le mode --verifie-rendu vu rougir en famille vue_perimee sur une vue perime d'une seule tache livree, vu rougir en vue_absente sur une vue manquante, et vu rester vert sur le depot a jour |
 | `gov:pr` | GOV-007 | `scripts/gates/gov-pr.ts` | — | 16 familles, un temoin chacune, 6 contre-temoins verts dont celui de la scission dod (pnpm gov:pr --prove) |
 | `gov:depot-visibilite` | GOV-012 | `scripts/gates/gov-depot.ts` | — | pnpm gov:depot-visibilite:prove — 9 familles, chacune vue rougir sur son propre defaut injecte, 5 etapes de workflow legitimes en contre-temoins |
 | `gov:autonomie` | GOV-000 | `scripts/gates/gov-autonomie.ts` | — | pnpm gov:autonomie:prove — 4 familles (deny_manquant, hook_non_declare, hook_sans_analyse, commande_laissee_passer), un temoin chacune, 17 commandes dangereuses refusees et 12 legitimes acceptees en contre-temoins — dont `gh api -X DELETE .../branches/main/protection` et `gh issue edit --remove-label owner:A01`, les deux trous trouves le 2026-09-04 |
 | `gov:sonde` | GOV-004 | `scripts/gates/gov-sonde.ts` | — | 11 familles, un temoin chacune, 5 contre-temoins verts (pnpm gov:sonde --prove) |
 | `gov:hypotheses` | GOV-005 | `scripts/gates/gov-hypotheses.ts` | `HYP-*` | pnpm gov:hypotheses:prove — 10 familles vues rougir sur une fixture minimale |
 | `gov:agents` | GOV-023 | `scripts/gates/gov-agents.ts` | — | pnpm gov:agents:prove — 14 familles vues rougir sur leur temoin, 7 contre-temoins verts |
+| `gov:entite` | CPL-T01 | `scripts/gates/gov-entite.ts` | — | pnpm gov:entite:prove — 11 familles, un temoin chacune sur un univers INJECTE, dont secret_commite (un IBAN commite dans un fichier suivi) et valeur_recopiee (un SIREN du registre recopie ailleurs) ; 7 contre-temoins restent verts, dont l'univers conforme |
 | `gates:prouvees` | QA-T00 | `scripts/gates/gates-prouvees.ts` | — | 10 familles, un temoin chacune, 8 contre-temoins verts, 5 temoins de forme (pnpm gates:prouvees:prove) |
 | `partners:contrat:hash` | INT-T01a | `tests/unit/integration/contrat-hash.spec.ts` | — | renommage de `occurred_at` en `occurredAt` dans packages/contracts/enveloppe.ts, 2026-09-03 : 4 cas sur 9 rouges + `contracts:export --verifier` rouge sur les 3 artefacts |
+| `GATE-JUR-TEXTES-APPORTEURS` | GOV-013 | `scripts/gates/lexique-apporteurs.ts` | `GATE-UX-JARGON`, `gov:lexique` | pnpm gov:lexique:prove — 11 familles rougissent chacune sur son temoin, 8 positions limites rougissent, 4 controles positifs rougissent, 13 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim |
 | `gov:publication` | GOV-000 | `scripts/gates/gov-publication.ts` | — | pnpm gov:publication:prove — 7 familles vues rougir, 5 contre-temoins vus rester verts |
-| `gov:requirements` | GOV-001 | `scripts/gates/gov-requirements.ts` | — | pnpm gov:requirements:prove — 11 familles, chacune vue rougir sur son defaut injecte |
+| `gov:requirements` | GOV-001 | `scripts/gates/gov-requirements.ts` | — | pnpm gov:requirements:prove — 11 familles, chacune vue rougir sur son defaut injecte ; et, depuis GOV-024, le mode --verifie-rendu vu rougir en famille vue_perimee sur une vue perime d'UNE exigence, l'ecart nomme « 353 pour 354 », et vu rester vert sur le depot a jour |
 | `gov:preseance` | GOV-002 | `scripts/gates/gov-preseance.ts` | — | 7 familles, un temoin chacune, 8 contre-temoins verts (pnpm gov:preseance --prove) |
 | `gov:inventaire` | GOV-020 | `scripts/gates/gov-inventaire.ts` | — | pnpm gov:inventaire:prove — 7 familles, chacune vue rougir sur son propre defaut injecte, 6 contre-temoins verts. Rouge reel constate sur le fichier : « docs/INVENTAIRE-CHANTIERS.md:79 — le chantier « C5 » porte l'etat « code » alors que ce depot ne dit pas ce que l'etiquette DESIGNE » |
 | `gov:lecons` | GOV-018 | `scripts/gates/gov-lecons.ts` | — | pnpm gov:lecons --prove — 12 familles, 13 temoins (consolidation_perimee en a deux, un par source), 9 contre-temoins verts |
 | `gov:etat` | GOV-008 | `scripts/gates/gov-etat.ts` | — | pnpm gov:etat:prove — 9 familles, un temoin chacune, 8 contre-temoins verts ; plus 6 scenarios joues contre la garde reelle via un gh compromis |
 
+### Phase 0 — armées (1)
+
+| Gate | Tâche | Script | Alias | Preuve rouge |
+| ---- | ----- | ------ | ----- | ------------ |
+| `partners:schema:enums` | DM-02 | `scripts/gates/schema-enums.ts` | `GATE-JUR-ENUMS`, `GATE-ARG-enum`, `gov:glossaire` | pnpm partners:schema:enums:prove — 8 familles rougissent chacune sur son temoin, 6 contre-temoins restent verts ; la vue est INJECTEE et non lue sur le disque (RM-11), sans quoi la preuve mesurerait le depot du jour au lieu de la garde |
+
 ## 3. Ce qui reste à prouver
 
-Aucune de ces **91** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
+Aucune de ces **89** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
 Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les
 gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques
 n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à
@@ -74,29 +82,27 @@ dans une passe séparée, et se cumulent avec les précédentes. Une même gate 
 dans quatre familles au plus. Ce paragraphe décrit le code ; aucune garde ne l’apparie — la
 sortie de la commande, elle, fait foi.
 
-### Phase -1 — socle de gouvernance (13)
+### Phase -1 — socle de gouvernance (12)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
 | `gov:check` | GOV-000 | `scripts/gates/gov-check.ts` | — |
-| `gov:plan-state` | GOV-008 | `scripts/gates/plan-state-derive.spec.ts` | — |
-| `aucun-workflow-ne-pousse-sur-main` | GOV-012 | `tests/unit/ci/aucun-workflow-ne-pousse-sur-main.spec.ts` | — |
-| `tout-check-est-cable` | GOV-012 | `tests/unit/ci/tout-check-est-cable.spec.ts` | — |
+| `gov:plan-state` | GOV-008 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | — |
+| `aucun-workflow-ne-pousse-sur-main` | GOV-012 | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts` | — |
+| `tout-check-est-cable` | GOV-012 | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | — |
 | `gov:gates-derivees` | QA-T00 | `scripts/gates/gates-derivees.ts` | — |
 | `GATE-JUR-SEUILS-SSOT` | JUR-T02 | `scripts/gates/seuils-ssot.ts` | `ssot:seuils` |
 | `detectPii` | INT-T01a | `scripts/gates/detect-pii.ts` | — |
 | `gov:contrat` | INT-T01a | `scripts/gates/contrat-epingle.ts` | — |
-| `GATE-JUR-TEXTES-APPORTEURS` | GOV-013 | `scripts/gates/lexique-apporteurs.ts` | `GATE-UX-JARGON`, `gov:lexique` |
 | `gate-a` | GOV-000 | `.github/workflows/ci.yml#gate-a` | — |
 | `gate-deploiement` | GOV-000 | `scripts/gates/deploy-verify.ts` | — |
 | `notify-sink-hors-prod` | GOV-000 | `scripts/gates/hook-env.js` | — |
 | `gov:derivation` | GOV-014 | `scripts/gates/gov-derivation.ts` | — |
 
-### Phase 0 — fondations, sécurité, charte (43)
+### Phase 0 — fondations, sécurité, charte (42)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
-| `partners:schema:enums` | DM-02 | `scripts/gates/schema-enums.ts` | `GATE-JUR-ENUMS`, `GATE-ARG-enum`, `gov:glossaire` |
 | `partners:schema:cents` | DM-02 | `scripts/gates/schema-cents.ts` | — |
 | `partners:migrations:additive` | QA-T11 | `scripts/gates/migrations-additive.ts` | — |
 | `G-SEC-SCHEMA-PII` | SEC-08 | `scripts/gates/schema-pii.ts` | — |

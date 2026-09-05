@@ -24,11 +24,31 @@ const CHEMIN_PLAN_STATE = 'docs/PLAN-STATE.md';
 const CHEMIN_JOURNAL = 'docs/journal';
 
 /**
- * Un instant FIXE, jamais `new Date()` : une garde qui lit l'horloge n'est pas rejouable, et son
- * verdict dépend alors de l'heure à laquelle la CI a démarré (RM-11 — aucun défaut sur ce que le
- * test fait varier ; ici l'instant ne varie pas, il est donné).
+ * L'INSTANT DE RÉFÉRENCE, ET POURQUOI IL N'EST PLUS FIGÉ DANS LE PASSÉ (GOV-029).
+ *
+ * Ce fichier portait `const MAINTENANT = '2026-09-04T09:00:00Z'`, sous ce commentaire :
+ * « un instant FIXE, jamais `new Date()` : une garde qui lit l'horloge n'est pas rejouable ».
+ * Le raisonnement est juste, et il porte sur le mauvais sujet.
+ *
+ * Il vaut pour une garde qui juge un univers INJECTÉ : là, l'instant fait partie de la fixture, il
+ * doit être donné, et le figer est la seule façon d'obtenir un verdict rejouable. Mais les appels
+ * ci-dessous ne jugent pas une fixture : ils lancent `gov:etat` sur le DÉPÔT RÉEL, dont le journal
+ * ne cesse d'avancer. Un instant figé au 2026-09-04 confronté à un journal qui grandit donne un
+ * test à retardement : la famille `journal_date_future` rougit sur la PREMIÈRE entrée écrite
+ * après cette date — c'est-à-dire sur toute entrée future, pour toujours.
+ *
+ * Il est tombé le 2026-09-05, sur l'entrée de PR #31 : « datée 2026-09-05, postérieure à
+ * 2026-09-04 — une entrée recopiée sans être relue ». Le diagnostic de la garde était exact ; sa
+ * référence ne l'était pas.
+ *
+ * La règle : l'instant se fige par rapport à CE QU'IL JUGE. Contre une fixture, un littéral.
+ * Contre le dépôt vivant, le jour même — sans quoi le test ne demande pas « une entrée est-elle
+ * datée dans le futur ? » mais « une entrée a-t-elle été écrite depuis que j'ai tapé cette
+ * constante ? ». Ce n'est pas une lecture d'horloge déguisée : `gov:etat` REFUSE de lire
+ * l'horloge et exige `--now` précisément pour que l'appelant dise contre quoi il mesure. C'est
+ * ici l'appelant qui le dit, et il le dit juste.
  */
-const MAINTENANT = '2026-09-04T09:00:00Z';
+const MAINTENANT = `${new Date().toISOString().slice(0, 10)}T12:00:00Z`;
 
 function lancer(args: string[], env: Record<string, string> = {}): { code: number; sortie: string } {
   const r = spawnSync('npx', ['tsx', SCRIPT, ...args], {

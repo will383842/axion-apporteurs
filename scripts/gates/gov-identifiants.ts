@@ -56,7 +56,27 @@ import { readFileSync, existsSync } from 'node:fs';
  * ambigu (c'est aussi une étiquette de relecteur), et le lever tient en un mot : nommer Cloudflare.
  * ────────────────────────────────────────────────────────────────────────────────────────────
  */
-export const MOTIF_NU = /(?<![A-Za-z0-9_./:-])([ABCDR]\d{1,2})(?![A-Za-z0-9_-])/g;
+/**
+ * ⚠️ AFFINÉ APRÈS GOV-025, ET C'EST UNE CORRECTION DE SA PROPRE SURCORRECTION (GOV-029).
+ * GOV-025 a retiré le `.` de la lookahead pour attraper l'étiquette collée à un point final —
+ * « conforme à D11. » — et elle avait raison : c'était sa cécité. Mais retirer le point tout
+ * entier fait aussi tomber les RENVOIS POINTÉS, qui ne sont pas des étiquettes nues : `C13.3`
+ * est le numéro d'une section de l'audit anti-abus, il RÉSOUT, et il est cité comme tel.
+ *
+ * Mesuré sur cet arbre le 2026-09-05 : `docs/gates.json:696` porte « 9 controles plus C13.3 »
+ * depuis `main`, et GOV-025 vit sur une branche de lot. Les deux sont verts SÉPARÉMENT et
+ * rouges ENSEMBLE — le jour où le lot atterrit, l'étape « Identifiants qualifies » de Gate A
+ * rougit sur `main`, sur une ligne que personne n'a touchée.
+ *
+ * La ligne se trace sur CE QUI SUIT LE POINT, et elle est exacte parce que les deux cas ne se
+ * ressemblent qu'en surface :
+ *   — un point suivi d'un CHIFFRE prolonge l'identifiant : `C13.3` est un renvoi, pas un jeton nu ;
+ *   — un point suivi d'autre chose — espace, fin de ligne, guillemet — termine une phrase, et
+ *     l'étiquette qui le précède est bien nue. C'est le cas que GOV-025 a ouvert, et il reste vu.
+ *
+ * Ce n'est donc PAS un retour à la forme d'avant GOV-025, qui ignorait les deux.
+ */
+export const MOTIF_NU = /(?<![A-Za-z0-9_./:-])([ABCDR]\d{1,2})(?![A-Za-z0-9_-]|\.\d)/g;
 
 /**
  * SPÉCIMEN HISTORIQUE — la lookahead d'AVANT GOV-025, conservée pour une seule raison : rejouer
@@ -273,6 +293,14 @@ export const CONTRE_TEMOINS_LIMITES: string[] = [
   `le pré-vol lance scripts/gates/gov-pr.ts puis scripts/gates/gov-adr.ts`,
   `la CI épingle pnpm 9.12.0 et node 22.`,
   `le format SEPA reste pain.001.001.09.`,
+  // ── les renvois POINTÉS (GOV-029) ─────────────────────────────────────────
+  // Ceux-ci ne sont pas décoratifs. Le premier est, mot pour mot, la ligne 696 de
+  // `docs/gates.json` sur laquelle GOV-025 faisait rougir la CI : un contre-témoin recopié de la
+  // ligne RÉELLE qui a cassé vaut mieux qu'un contre-témoin inventé qui lui ressemble.
+  // Les deux suivants disent que la règle porte sur la FORME du renvoi, pas sur ce seul cas.
+  `9 controles plus C13.3 ; manifeste a jour (pnpm mcp:manifeste)`,
+  `le détail est en C13.3.2 de la note d'analyse`,
+  `l'étape D3.1 précède l'étape D3.2`,
 ];
 
 /**

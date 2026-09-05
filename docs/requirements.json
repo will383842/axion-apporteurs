@@ -3672,7 +3672,8 @@
       "taches": [
         "GOV-003",
         "GOV-005",
-        "GOV-025"
+        "GOV-025",
+        "GOV-028"
       ]
     },
     {
@@ -5229,6 +5230,20 @@
       "phase": -1,
       "taches": [
         "GOV-024"
+      ]
+    },
+    {
+      "id": "REQ-GOV-033",
+      "domaine": "gouvernance-agents",
+      "texte": "Tout identifiant que le dépôt s'attribue à lui-même et qui doit rester unique sur sa vie entière — identifiant de lot au premier chef — se dérive d'au moins une source SUIVIE par git. Une séquence tirée d'un répertoire ignoré (`.gitignore`) repart de zéro dans tout arbre neuf, worktree, clone ou machine de CI, et réattribue un identifiant déjà porté ; l'écriture qui suit fusionne alors deux ensembles distincts sous un même nom, sans qu'aucune garde ne le voie, le champ porteur étant une chaîne libre. Gate : dans un arbre où le répertoire de travail est absent, le prochain identifiant proposé pour chaque phase n'est porté par aucune entrée de `docs/tasks.json` → vert ; le même calcul privé de sa source suivie → rouge (contre-témoin exigé, RM-02).",
+      "source": "GOV-029, mesuré le 2026-09-05 dans un worktree neuf : « Lot L-1-01 : 7 tache(s) » pour un identifiant déjà porté par sept tâches fusionnées.",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": -1,
+      "taches": [
+        "GOV-029"
       ]
     }
   ]

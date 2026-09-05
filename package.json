@@ -72,7 +72,10 @@
     "partners:schema:enums": "tsx scripts/gates/schema-enums.ts",
     "partners:schema:enums:prove": "tsx scripts/gates/schema-enums.ts --prove",
     "contracts:export": "tsx scripts/contracts/export.ts",
-    "contracts:hash": "tsx scripts/contracts/export.ts --verifier"
+    "contracts:hash": "tsx scripts/contracts/export.ts --verifier",
+    "gov:tasks:verifie-rendu": "tsx scripts/gates/gov-tasks.ts --verifie-rendu",
+    "gov:requirements:render": "tsx scripts/gates/gov-requirements.ts --render",
+    "gov:requirements:verifie-rendu": "tsx scripts/gates/gov-requirements.ts --verifie-rendu"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

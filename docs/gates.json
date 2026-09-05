@@ -43,9 +43,9 @@
       "phase": -1,
       "script": "scripts/gates/gov-identifiants.ts",
       "tache": "GOV-003",
-      "verifie": "aucun identifiant nu (lettre + un ou deux chiffres) dans un fichier suivi. Deux distinctions portees par le code, que l'enonce de REQ-GOV-003 confondait : 'A' suivi de DEUX chiffres est un code de POSTE d'agent (espace de noms declare par tasks.schema.json), et un identifiant entre guillemets est une CITATION, pas une reference — les documents qui expliquent la regle doivent pouvoir ecrire son contre-exemple",
+      "verifie": "aucun identifiant nu (lettre + un ou deux chiffres) dans un fichier suivi. Trois distinctions portees par le code, dont deux que l'enonce de REQ-GOV-003 confondait : 'A' suivi de DEUX chiffres est un code de POSTE d'agent (espace de noms declare par tasks.schema.json) ; un identifiant entre guillemets est une CITATION, pas une reference — les documents qui expliquent la regle doivent pouvoir ecrire son contre-exemple ; et depuis GOV-029 un point suivi d'un CHIFFRE prolonge l'identifiant au lieu de le terminer, de sorte qu'un renvoi pointe comme C13.3 resout et n'est pas nu, alors qu'un point suivi d'autre chose termine une phrase et laisse l'etiquette nue",
       "fixtureRouge": "ecrire une reference nue hors guillemets, par exemple « la decision D11 » sans prefixe",
-      "preuveRouge": "pnpm gov:identifiants:prove — 3 temoins rouges, 10 contre-temoins verts"
+      "preuveRouge": "pnpm gov:identifiants:prove — 3 temoins rouges, 10 contre-temoins verts ; et, depuis GOV-025, 10 temoins de POSITION rougissent — dont 5 que l'ancienne lookahead MANQUAIT — pendant que 27 contre-temoins de position restent verts, les 13 lignes de la §0 du registre des decisions comprises, et les renvois POINTES que GOV-029 a du rendre a nouveau verts"
     },
     {
       "id": "gov:adr",
@@ -61,9 +61,9 @@
       "phase": -1,
       "script": "scripts/gates/gov-tasks.ts",
       "tache": "GOV-017a",
-      "verifie": "docs/tasks.json valide scripts/lot/tasks.schema.json (ajv, invariants conditionnels compris) ; ids uniques ; deps resolues, acycliques, jamais vers une phase ulterieure ; aucun identifiant scinde (INT-T01, GOV-017, EXT-T02) ni identifiant de decision en dependance ; chaque hyp[] declaree dans DECISIONS.md (alias de la section 0 compris) ; paths[] non vide ; <= 1,5 j hors tache externe ; externe non nul implique statut attente_externe. HORS PERIMETRE, repris par GOV-017b : la disjonction des paths dans un lot (le composeur) et l'egalite total affiche = somme des estimations (la vue TASKS.md n'est pas encore generee dans ce depot)",
-      "fixtureRouge": "dupliquer un id de tache",
-      "preuveRouge": "pnpm gov:tasks:prove — 12 familles, chacune vue rougir sur son propre defaut injecte, 2 contre-temoins verts sur les deux formes de branche (partners/ADR-0007)"
+      "verifie": "docs/tasks.json valide scripts/lot/tasks.schema.json (ajv, invariants conditionnels compris) ; ids uniques ; deps resolues, acycliques, jamais vers une phase ulterieure ; aucun identifiant scinde (INT-T01, GOV-017, EXT-T02) ni identifiant de decision en dependance ; chaque hyp[] declaree dans DECISIONS.md (alias de la section 0 compris) ; paths[] non vide ; <= 1,5 j hors tache externe ; externe non nul implique statut attente_externe. Depuis GOV-024 (REQ-GOV-032) : le rendu de docs/TASKS.md est extrait en fonction PURE et DETERMINISTE — deux appels rendent le meme octet, aucune horloge, aucun parcours du disque — et le mode --verifie-rendu compare la vue commitee a ce que la source produit, n'ecrit RIEN, sort 1 des un octet d'ecart et NOMME l'ecart en nombre de taches livrees plutot que « les deux fichiers different ». Une vue ABSENTE est un rouge qui le dit, jamais un vert par defaut. HORS PERIMETRE, repris par GOV-017b : la disjonction des paths dans un lot (le composeur)",
+      "fixtureRouge": "dupliquer un id de tache ; ou, pour le mode --verifie-rendu, editer une seule ligne de docs/TASKS.md sans regenerer",
+      "preuveRouge": "pnpm gov:tasks:prove — 12 familles, chacune vue rougir sur son propre defaut injecte, 2 contre-temoins verts sur les deux formes de branche (partners/ADR-0007) ; et, depuis GOV-024, le mode --verifie-rendu vu rougir en famille vue_perimee sur une vue perime d'une seule tache livree, vu rougir en vue_absente sur une vue manquante, et vu rester vert sur le depot a jour"
     },
     {
       "id": "gov:pr",
@@ -95,9 +95,9 @@
     {
       "id": "gov:plan-state",
       "phase": -1,
-      "script": "scripts/gates/plan-state-derive.spec.ts",
+      "script": "tests/unit/gouvernance/plan-state-frais.spec.ts",
       "tache": "GOV-008",
-      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : plan-state:build regenere un fichier identique au fichier commite ; PLAN-STATE derive de tasks.json, gh issue list, gh pr list et git, jamais edite a la main",
+      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : PLAN-STATE porte les 7 rubriques de REQ-GOV-006, le bloc de reprise en tete avec le SHA de main, et le journal fait/reste/appris est RENDU depuis docs/journal/, jamais tape dans la vue. NON COUVERT a ce jour, et aucune autre gate ne le couvre : que plan-state:build regenere un fichier identique au fichier commite. Tant que cette assertion n'est pas ecrite, PLAN-STATE peut avoir ete edite a la main sans que rien ne rougisse (GOV-029)",
       "fixtureRouge": "editer PLAN-STATE.md a la main",
       "preuveRouge": null
     },
@@ -132,9 +132,18 @@
       "preuveRouge": "pnpm gov:agents:prove — 14 familles vues rougir sur leur temoin, 7 contre-temoins verts"
     },
     {
+      "id": "gov:entite",
+      "phase": -1,
+      "script": "scripts/gates/gov-entite.ts",
+      "tache": "CPL-T01",
+      "verifie": "config/entite.json tient les 19 champs declares par src/config/entite.ts dans les DEUX sens (CPL-T01, partners/ADR-0009). Sens 1, la mise en service : un champ arbitre porte la valeur que sa ligne d'arbitrage donne, et tout champ non arbitre porte la sentinelle A-RENSEIGNER. Le regime de chaque champ est DERIVE de sa ligne de decision, jamais recopie dans la garde (RM-01) : retirer la marque de cloture d'une decision remet ses champs a la sentinelle sans qu'une ligne de code bouge. Sens 2, la publication : le depot est PUBLIC (REQ-GOV-031), donc les 2 champs secrets ne prennent ici aucune autre valeur que la sentinelle, aucun fichier suivi ne porte de coordonnee bancaire en clair, aucune valeur du registre n'est recopiee ailleurs, et un exemple PLAUSIBLE est refuse au meme titre qu'une vraie valeur — un numero d'exemple oublie ne se distingue pas d'une vraie donnee. HORS PERIMETRE, et c'est voulu : elle n'AUTORISE pas la mise en service. Ce refus s'exerce a l'EXECUTION dans exigerEntiteRenseignee, jamais au build, et les phases 0 a 3 se codent et se prouvent contre la sentinelle",
+      "fixtureRouge": "ecrire un IBAN reel dans config/entite.json (temoin secret_commite) ou dans n'importe quel fichier suivi (temoin coordonnee_en_clair) ; ou recopier le SIREN du registre dans un second fichier (temoin valeur_recopiee) ; ou laisser la sentinelle sur un champ dont la decision est tranchee (temoin sentinelle_sur_decision_arretee)",
+      "preuveRouge": "pnpm gov:entite:prove — 11 familles, un temoin chacune sur un univers INJECTE, dont secret_commite (un IBAN commite dans un fichier suivi) et valeur_recopiee (un SIREN du registre recopie ailleurs) ; 7 contre-temoins restent verts, dont l'univers conforme"
+    },
+    {
       "id": "aucun-workflow-ne-pousse-sur-main",
       "phase": -1,
-      "script": "tests/unit/ci/aucun-workflow-ne-pousse-sur-main.spec.ts",
+      "script": "tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts",
       "tache": "GOV-012",
       "verifie": "aucun workflow ne declare push sur main",
       "fixtureRouge": "workflow temoin poussant sur main",
@@ -143,7 +152,7 @@
     {
       "id": "tout-check-est-cable",
       "phase": -1,
-      "script": "tests/unit/ci/tout-check-est-cable.spec.ts",
+      "script": "tests/unit/gouvernance/tout-check-est-cable.spec.ts",
       "tache": "GOV-012",
       "verifie": "chaque check requis par la protection de main existe dans un workflow, sous son nom exact (le job de Gate A s'appelle gate-a)",
       "fixtureRouge": "retirer le job gate-a des workflows en gardant le check requis",
@@ -217,7 +226,7 @@
       ],
       "verifie": "liste noire IMPORTEE de la SSOT lexique-interdit.ts (REQ-JUR-037), jamais recopiee dans la gate ni dans GATES.md ; perimetre src/app/(espace)/**, emails/apporteur/**, micro-copy/** et les ressources diffusees ; les exclusions declarees par la SSOT sont importees avec elle (etendue par UX-P0-01, JUR-T13 et JUR-T26)",
       "fixtureRouge": "libelle factice 'objectif du mois' dans micro-copy",
-      "preuveRouge": null
+      "preuveRouge": "pnpm gov:lexique:prove — 11 familles rougissent chacune sur son temoin, 8 positions limites rougissent, 4 controles positifs rougissent, 13 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim"
     },
     {
       "id": "gate-a",
@@ -258,7 +267,7 @@
       ],
       "verifie": "toute colonne statut/type/motif/resultat/etat/origine/kind/palier/priorite/status est un enum Prisma ; aucune chaine libre de vocabulaire ; chaque valeur figure au glossaire (GOV-006)",
       "fixtureRouge": "declarer statut String dans le schema",
-      "preuveRouge": null
+      "preuveRouge": "pnpm partners:schema:enums:prove — 8 familles rougissent chacune sur son temoin, 6 contre-temoins restent verts ; la vue est INJECTEE et non lue sur le disque (RM-11), sans quoi la preuve mesurerait le depot du jour au lieu de la garde"
     },
     {
       "id": "partners:schema:cents",
@@ -1011,9 +1020,9 @@
       "phase": -1,
       "script": "scripts/gates/gov-requirements.ts",
       "tache": "GOV-001",
-      "verifie": "docs/requirements.json valide scripts/lot/requirements.schema.json ; ids uniques ; source non vide ; une exigence absorbee nomme une survivante ACTIVE (aucune chaine d'absorption) ; les 21 modules et les 12 etapes de l'audit portent chacun au moins une exigence ; toute exigence active est citee par au moins une tache, et aucune tache ne cite une exigence inexistante ; phase et taches[] sont DERIVEES du backlog, jamais saisies",
-      "fixtureRouge": "vider la source d'une exigence, ou retirer le dernier porteur d'une exigence active",
-      "preuveRouge": "pnpm gov:requirements:prove — 11 familles, chacune vue rougir sur son defaut injecte"
+      "verifie": "docs/requirements.json valide scripts/lot/requirements.schema.json ; ids uniques ; source non vide ; une exigence absorbee nomme une survivante ACTIVE (aucune chaine d'absorption) ; les 21 modules et les 12 etapes de l'audit portent chacun au moins une exigence ; toute exigence active est citee par au moins une tache, et aucune tache ne cite une exigence inexistante ; phase et taches[] sont DERIVEES du backlog, jamais saisies. Depuis GOV-024 (REQ-GOV-032) : docs/REQUIREMENTS.md, qui n'avait AUCUN generateur alors que son bandeau affirmait le contraire — et qui avait derive, annoncant 353 exigences pour 354 au registre — est rendu par --render et compare par --verifie-rendu ; rendu deterministe, aucune ecriture en mode verification, sortie 1 des un octet d'ecart, ecart NOMME en nombre d'exigences, vue absente = rouge explicite. Le bandeau de la vue est desormais EMIS par le generateur : il ne peut plus mentir sans que la verification rougisse",
+      "fixtureRouge": "vider la source d'une exigence, ou retirer le dernier porteur d'une exigence active ; ou, pour le mode --verifie-rendu, editer une seule ligne de docs/REQUIREMENTS.md sans regenerer",
+      "preuveRouge": "pnpm gov:requirements:prove — 11 familles, chacune vue rougir sur son defaut injecte ; et, depuis GOV-024, le mode --verifie-rendu vu rougir en famille vue_perimee sur une vue perime d'UNE exigence, l'ecart nomme « 353 pour 354 », et vu rester vert sur le depot a jour"
     },
     {
       "id": "gov:preseance",

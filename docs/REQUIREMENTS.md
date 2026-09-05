@@ -18,11 +18,11 @@
 
 | | Nombre |
 | --- | ---: |
-| Exigences | **354** |
-| — dont actives | 320 |
+| Exigences | **355** |
+| — dont actives | 321 |
 | — dont absorbées par une autre (l'identifiant résout encore) | 34 |
 | — dont retirées | 0 |
-| Exigences couvertes par au moins une tâche | 353 |
+| Exigences couvertes par au moins une tâche | 354 |
 | Exigences sans porteur | 1 |
 
 ## Couverture des 21 modules de l'audit de bout en bout
@@ -592,7 +592,7 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
 - **REQ-GOV-002** — Toute règle métier présente dans au moins deux documents a une entrée dans `docs/PRESEANCE.md` désignant la version qui prévaut et la REQ qui la porte ; les sections périmées portent un bandeau « remplacé par REQ-… ». Test : les sept couples connus (quota, collision, cycle de vie, barème, naissance de l'attribution, péremption, zéro arbitrage) ont une entrée.
   <br>_module 13 · étape 10 · phase -1 · tâches : `GOV-002`_ · _source : audit-bout-en-bout en-tête (« remplace en partie ») ; anti-abus C15_
 - **REQ-GOV-003** — Tout identifiant de décision issu des documents est qualifié par un préfixe de document (PLAN-, REG-, SIREN-, TDB-, ABUS-, BEB-) et figure dans `docs/DECISIONS-INDEX.md`. Gate : un identifiant nu `\b[ABCDR]\d{1,2}\b` dans un titre/corps de PR, un ADR ou un commentaire de code → rouge.
-  <br>_phase -1 · tâches : `GOV-003`, `GOV-005`, `GOV-025`_ · _source : plan §2/§5, anti-abus §7, audit-bout-en-bout §11 (collisions C/D)_
+  <br>_phase -1 · tâches : `GOV-003`, `GOV-005`, `GOV-025`, `GOV-028`_ · _source : plan §2/§5, anti-abus §7, audit-bout-en-bout §11 (collisions C/D)_
 - **REQ-GOV-004** — Toute REQ ou tâche dont la source cite du code d'axionia porte une colonne « vérifié le » non vide (chemin, ligne, date, SHA) ; `pnpm gov:check` rougit si une source de type code a la colonne vide ; les affirmations invalidées (`Invoice`, `Refund`, `payerSiret`, « montant HT encaissé », « C3 codé ») figurent dans `docs/DECISIONS-INDEX.md` avec la mention FAUSSE et la réalité constatée, et un test vérifie la présence de ces cinq entrées.
   <br>_étape 10 · phase -1 · tâches : `GOV-004`_ · _source : nouvelle (vérification : plan §5, tableaux §2.3/2.5, audit-siren P10, audit-bout-en-bout §2.3) ; reformulation d'annexe appliquée le 2026-09-03_
 - **REQ-GOV-005** → **absorbée par REQ-QA-014** — La matrice de traçabilité REQ → tâche → test → PR est DÉRIVÉE (jamais rédigée à la main) : les titres `it()` contiennent l'identifiant REQ, les corps de PR listent `Couvre: REQ-…`, `pnpm gov:trace` la génère et rougit si une REQ en statut ≥ « testée » n'a aucun test, si un test cite une REQ inconnue, ou si une tâche n'a aucune REQ. _(source : nouvelle ; patron axion-ops gate G4 (docs/ETAT.md))_ **→ ABSORBÉE par REQ-QA-014** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-QA-014** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-QA-014.**
@@ -649,6 +649,8 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
   <br>_phase -1 · tâches : `GOV-002`_ · _source : anti-abus F15 ; contrat art. 3.6 ; fonctionnement R3, §7.1, §10 ; reformulation d'annexe appliquée le 2026-09-03_
 - **REQ-GOV-032** — Toute vue générée du dépôt (`docs/TASKS.md`, `docs/REQUIREMENTS.md`, `docs/TRACABILITE.md`, `docs/paths-proposes.json`, `docs/PLAN-STATE.md`) est produite par un générateur nommé et possède un mode de VÉRIFICATION qui n'écrit rien et sort 1 quand le fichier commité diffère d'un seul octet de ce que sa source produirait ; ce mode est appelé par le job de Gate A. Le message d'échec nomme l'écart en unités du domaine — nombre de tâches livrées, nombre d'exigences — et non « les deux fichiers diffèrent ». Gate : une vue périmée d'une seule ligne → rouge ; le dépôt à jour → vert (contre-témoin exigé, RM-02).
   <br>_phase -1 · tâches : `GOV-024`_ · _source : nouvelle (relectures de la PR 30, 2026-09-04) ; docs/PRESEANCE.md §2 lignes 1-2 et §5 point 5_
+- **REQ-GOV-033** — Tout identifiant que le dépôt s'attribue à lui-même et qui doit rester unique sur sa vie entière — identifiant de lot au premier chef — se dérive d'au moins une source SUIVIE par git. Une séquence tirée d'un répertoire ignoré (`.gitignore`) repart de zéro dans tout arbre neuf, worktree, clone ou machine de CI, et réattribue un identifiant déjà porté ; l'écriture qui suit fusionne alors deux ensembles distincts sous un même nom, sans qu'aucune garde ne le voie, le champ porteur étant une chaîne libre. Gate : dans un arbre où le répertoire de travail est absent, le prochain identifiant proposé pour chaque phase n'est porté par aucune entrée de `docs/tasks.json` → vert ; le même calcul privé de sa source suivie → rouge (contre-témoin exigé, RM-02).
+  <br>_phase -1 · tâches : `GOV-029`_ · _source : GOV-029, mesuré le 2026-09-05 dans un worktree neuf : « Lot L-1-01 : 7 tache(s) » pour un identifiant déjà porté par sept tâches fusionnées._
 
 ### complétude (REQ-CPL)
 
