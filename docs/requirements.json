@@ -3703,7 +3703,8 @@
       "phase": -1,
       "taches": [
         "GOV-011",
-        "GOV-022"
+        "GOV-022",
+        "GOV-039"
       ]
     },
     {
@@ -4027,6 +4028,7 @@
       "etape": 10,
       "phase": -1,
       "taches": [
+        "CPL-T01",
         "CPL-T23",
         "GOV-017a",
         "GOV-017b",
@@ -5218,8 +5220,10 @@
       "etape": 7,
       "phase": -1,
       "taches": [
+        "CPL-T01",
         "GOV-000",
-        "GOV-036"
+        "GOV-036",
+        "GOV-040"
       ]
     },
     {

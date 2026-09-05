@@ -314,7 +314,20 @@ export function rendre(gabarit: string, v: Record<string, string>): string {
 if (process.argv[1]?.endsWith('corps-de-pr.ts')) {
   const gabarit = arg('gabarit');
   const sortie = arg('sortie');
-  const pr = Number(arg('pr') ?? '31');
+  // ⚠️ PAS DE VALEUR PAR DÉFAUT. Ce paramètre valait `?? '31'` — le numéro de la PR qui a livré
+  // ce fichier. Sur une AUTRE PR lancée sans `--pr`, `{{COUVRE}}` et `{{LISTE_SUR_LA_PR}}`
+  // auraient été dérivés des tâches de la PR 31 : des valeurs fausses ET PLAUSIBLES, rendues
+  // par un composeur dont tout l'objet est de ne pas laisser taper une valeur à la main.
+  // Trouvé par la lentille `schema` au 8e tour.
+  const prBrut = arg('pr');
+  // `arg()` rend `string | null`, jamais `undefined` : tester la mauvaise absence laissait
+  // `tsc` refuser l'appel suivant. Attrapé par le typecheck, pas par la relecture.
+  if (prBrut === null || !/^\d+$/.test(prBrut)) {
+    console.error('❌ pr:corps — `--pr <numéro>` est OBLIGATOIRE : sans lui, les marqueurs dérivés');
+    console.error('   des tâches de la PR seraient calculés sur une AUTRE PR, sans que rien ne le dise.');
+    process.exit(1);
+  }
+  const pr = Number(prBrut);
   if (!gabarit || !sortie) {
     console.error('usage: pnpm pr:corps -- --gabarit <x.tpl.md> --sortie <x.md> --tests <journal> [--pr <n>]');
     process.exit(1);

@@ -16,7 +16,7 @@
 
 **321 exigences actives · 31 réputées testées · 31 couvertes · 0 orphelines.**
 
-207 tâches, dont 20 livrées · 29 fichiers de test exécutés par `vitest` sur 29 présents.
+209 tâches, dont 20 livrées · 29 fichiers de test exécutés par `vitest` sur 29 présents.
 
 ## Exigences réputées testées
 
@@ -45,9 +45,9 @@
 | `REQ-GOV-024` | `GOV-018`, `GOV-026` | `tests/unit/gouvernance/regles-maison.spec.ts` | couverte |
 | `REQ-GOV-025` | `GOV-017a`, `GOV-017b` | `tests/unit/gouvernance/paths-derives.spec.ts` | couverte |
 | `REQ-GOV-026` | `GOV-001`, `GOV-020` | `tests/unit/gouvernance/inventaire-prouve.spec.ts` | couverte |
-| `REQ-GOV-027` | `CPL-T23`, `GOV-017a`, `GOV-017b`, `GOV-022` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` | couverte |
+| `REQ-GOV-027` | `CPL-T01`, `CPL-T23`, `GOV-017a`, `GOV-017b`, `GOV-022` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` | couverte |
 | `REQ-GOV-030` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
-| `REQ-GOV-031` | `GOV-000`, `GOV-036` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
+| `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-INT-003` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-004` | `INT-T01a`, `INT-T05` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-029` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
@@ -87,9 +87,9 @@
 | `REQ-ARG-033` | 2 | `T-ARG-010`, `T-ARG-016` | — |
 | `REQ-ARG-034` | 2 | `JUR-T16`, `T-ARG-015`, `T-ARG-039` | — |
 | `REQ-ARG-035` | 2 | `T-ARG-016`, `T-ARG-033`, `T-ARG-038`, `UX-P2-04` | — |
-| `REQ-CPL-001` | -1 | `CPL-T01`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts` |
-| `REQ-CPL-003` | -1 | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` |
-| `REQ-CPL-004` | -1 | `CPL-T01`, `DM-11` | `tests/unit/gouvernance/entite-registre.spec.ts` |
+| `REQ-CPL-001` | -1 | `CPL-T01`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` |
+| `REQ-CPL-003` | -1 | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` |
+| `REQ-CPL-004` | -1 | `CPL-T01`, `DM-11` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` |
 | `REQ-CPL-005` | 0 | `DM-06`, `DM-11` | — |
 | `REQ-CPL-006` | 1 | `CPL-T06` | — |
 | `REQ-CPL-007` | 2 | `INT-T23`, `UX-P2-05` | — |
@@ -102,7 +102,7 @@
 | `REQ-CPL-014` | 2 | `CPL-T14-A`, `CPL-T14-P` | — |
 | `REQ-CPL-015` | -1 | `CPL-T15`, `INT-T01b`, `INT-T22` | — |
 | `REQ-CPL-016` | 1 | `INT-T21-P` | — |
-| `REQ-CPL-017` | -1 | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` |
+| `REQ-CPL-017` | -1 | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` |
 | `REQ-CPL-019` | 1 | `UX-P1-09` | — |
 | `REQ-CPL-020` | 0 | `DM-06`, `T-ARG-015` | — |
 | `REQ-CPL-022` | 0 | `CPL-T22` | — |
@@ -359,7 +359,7 @@
 | `REQ-ARG-011` | `REQ-DM-023` | `DM-16` |
 | `REQ-ARG-030` | `REQ-DM-021` | `DM-15`, `INT-T01b`, `INT-T05`, `T-ARG-035` |
 | `REQ-ARG-031` | `REQ-DM-014` | `DM-03-A`, `DM-03-P` |
-| `REQ-GOV-005` | `REQ-QA-014` | `GOV-011`, `GOV-022` |
+| `REQ-GOV-005` | `REQ-QA-014` | `GOV-011`, `GOV-022`, `GOV-039` |
 | `REQ-GOV-019` | `REQ-DM-014` | `DM-03-A` |
 | `REQ-GOV-020` | `REQ-QA-007` | `INT-T01a` |
 | `REQ-INT-002` | `REQ-SEC-010` | `INT-T02` |

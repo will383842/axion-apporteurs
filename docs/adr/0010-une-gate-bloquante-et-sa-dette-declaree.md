@@ -86,7 +86,14 @@ désarmée dans la semaine, et son désarmement est présenté comme une correct
 
 4. **Le vert est bavard.** Quand il repose sur une exemption, il l'affiche — date, propriétaire,
    motif — et le dit en toutes lettres : *« ce vert repose sur une dette DÉCLARÉE, pas sur une
-   absence de défaut »*. C'est la contre-mesure au niveau humain, celui que le code ne garde pas.
+   absence de défaut »*.
+
+   ⚠️ **Ce point ne prétend PAS être un mécanisme, et le §Contexte interdit de le prendre pour
+   tel** : « un mécanisme dont la partie active est l'attention d'un humain n'est pas un
+   mécanisme ». La lentille `schema` a relevé que le point 5 s'appuyait pourtant là-dessus. Ce
+   qui EST mécanique ici, et seul : la garde **rougit** sur toute révision non déclarée, et une
+   exemption qui n'absout plus rien rougit pour elle-même. La verbosité du vert ne garde rien —
+   elle rend une dette LISIBLE à qui relit, et c'est tout ce qu'elle prétend.
 
 5. **Ce registre est gouverné comme une source de décision**, parce qu'il en est une. Une mesure de
    la lentille `schema` a montré qu'il ne l'était pas : chaque registre porteur de décision du dépôt
@@ -97,8 +104,21 @@ désarmée dans la semaine, et son désarmement est présenté comme une correct
    > **La ligne qui sépare les deux cas : `config/entite.json` ne peut que CONTRAINDRE ;
    > `config/exemptions-corps-publie.json` peut ABSOUDRE.**
 
-   Il rejoint donc `.github/CODEOWNERS` et le §7 de la charte, et une ligne qui y est ajoutée passe
-   devant un relecteur comme n'importe quelle décision.
+   Il rejoint donc `.github/CODEOWNERS` et le §7 de la charte.
+
+   ⚠️ **CE PARAGRAPHE SURESTIMAIT SA PROPRE CORRECTION, et les deux lentilles l'ont dit.**
+   Des cinq surfaces prises pour étalon, **deux seulement arment une machine** : le `deny` de
+   `.claude/settings.json` et le label du §7. `.github/CODEOWNERS` porte déjà `*  @will383842`
+   en attrape-tout : la ligne ajoutée nomme le **même propriétaire**, elle ne déclenche donc
+   aucune demande de revue nouvelle. Et le label du §7 vaut `—`. **Le registre est passé de
+   0/5 à 3/5 sans obtenir AUCUNE des deux surfaces qui arment.**
+
+   Ce qui protège réellement aujourd'hui : la lentille `securite` figure dans `DEUX_PREMIERES`
+   (`scripts/lot/revues.ts`), donc elle est exigée sur **toute** PR — toute ligne ajoutée à ce
+   registre passe devant elle. Ce qui manque, et que `schema` a nommé : **le `deny`**. Il ne
+   s'écrit pas en session — `.claude/settings.json` est précisément le fichier qu'aucun agent en
+   session ne peut toucher — il s'écrit par le lot dédié à `--settings` surchargé. **Le §7 ne
+   l'interdit pas : il le désigne.** C'est donc une TÂCHE, et elle est ouverte.
 
 ## Conséquences
 
@@ -151,7 +171,11 @@ désarmée dans la semaine, et son désarmement est présenté comme une correct
 
 ## Reste à faire
 
-- **Paginer `userContentEdits`.** La lecture demande `first: 100` sans pagination alors que
+- ~~**Paginer `userContentEdits`.**~~ ✅ **FAIT DANS CETTE PR MÊME** — `paginerEditions()`,
+  `pageInfo{hasNextPage endCursor}`, `EDITIONS_PAR_PAGE`, `PAGES_MAX`. Cette puce était périmée
+  le jour où elle a été écrite, et `docs/gates.json` disait déjà le contraire dans la même PR :
+  deux documents du même lot se contredisaient sur l'état du code. Gardée barrée plutôt que
+  retirée, parce que c'est la trace de la mesure qui l'a fermée. Le motif d'origine : La lecture demande `first: 100` sans pagination alors que
   `totalCount` compte toutes les éditions : au-delà de cent, `revisions_non_lues` rend `2` **sans
   remède**, aucune exemption ne couvrant cette famille. C'est le **contre-exemple** à la thèse
   « aucun état durable légitime où la CI d'un dépôt public ne peut pas lire le corps de ses PR » —
@@ -161,5 +185,9 @@ désarmée dans la semaine, et son désarmement est présenté comme une correct
   fabriquée » d'une valeur réelle qu'on n'aurait pas voulu changer, l'empreinte ne pouvant être
   confrontée à rien puisque la valeur réelle ne vit jamais dans le dépôt. Résidu inhérent, à écrire
   plutôt qu'à laisser déduire.
-- **`gov:entite:corps` n'a pas d'entrée dans `gates:prouvees`** au titre de son mode en ligne : la
-  garde y est déclarée par son script, partagé avec `gov:entite`. À trancher si cela suffit.
+- ~~**`gov:entite:corps` n'a pas d'entrée dans `gates:prouvees`**~~ ✅ **FAIT** : l'entrée
+  `"id": "gov:entite:corps"` est dans `docs/gates.json`, avec sa `fixtureRouge` et sa
+  `preuveRouge`. Deuxième puce périmée à la rédaction.
+- **Écrire le `deny` de `.claude/settings.json` sur `config/exemptions-corps-publie.json`** —
+  la seule des cinq surfaces qui arme une machine et que ce registre n'a pas. Lot dédié à
+  `--settings` surchargé, jamais en session.
