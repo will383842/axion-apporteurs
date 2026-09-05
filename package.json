@@ -55,6 +55,8 @@
     "gov:agents:prove": "tsx scripts/gates/gov-agents.ts --prove",
     "gov:agents:rendre": "tsx scripts/agents/generer.ts",
     "gov:agents:verifier": "tsx scripts/agents/generer.ts --verifier",
+    "gov:entite": "tsx scripts/gates/gov-entite.ts",
+    "gov:entite:prove": "tsx scripts/gates/gov-entite.ts --prove",
     "gov:depot-visibilite": "tsx scripts/gates/gov-depot.ts",
     "gov:depot-visibilite:prove": "tsx scripts/gates/gov-depot.ts --prove",
     "gov:lecons": "tsx scripts/gates/gov-lecons.ts",

@@ -76,6 +76,14 @@ jobs:
         run: pnpm gov:agents:prove
       - name: Les fiches sur le disque sont egales a leur source
         run: pnpm gov:agents:verifier
+      # Registre d entite : deux sens en une garde. Elle refuse la mise en service tant qu un
+      # champ vaut la sentinelle, et elle refuse tout autant qu une coordonnee bancaire reelle
+      # soit commitee — le depot est PUBLIC, ce qui y entre reste lisible pour toujours. Elle
+      # n empeche ni le build ni les tests : les phases 0 a 3 se codent contre la sentinelle.
+      - name: Registre d entite — sentinelle tenue dans les deux sens
+        run: pnpm gov:entite
+      - name: La garde du registre d entite sait rougir
+        run: pnpm gov:entite:prove
       # Seule la PREUVE entre ici : le mode en ligne rend 2 sous le jeton d Actions, qui ne
       # lit pas la protection de branche. Le mode en ligne tourne en nightly.
       - name: La garde du depot sait rougir

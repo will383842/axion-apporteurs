@@ -1,0 +1,678 @@
+/**
+ * gov-entite.ts — la garde du registre d'entité `config/entite.json`.
+ * (CPL-T01, `partners/ADR-0009`, REQ-CPL-001 à 004, REQ-CPL-017, REQ-CPL-018, REQ-GOV-031)
+ *
+ * USAGE : pnpm gov:entite           juge le dépôt réel (registre + décisions + fichiers suivis)
+ *         pnpm gov:entite:prove     un témoin par famille sur un univers de FIXTURE, plus les
+ *                                   contre-témoins verts
+ *
+ * ELLE TIENT DEUX SENS, ET C'EST TOUT SON OBJET.
+ *
+ *   → Le sens qu'on attend : elle refuse la MISE EN SERVICE tant qu'un champ vaut `A-RENSEIGNER`.
+ *     Ce refus-là n'est pas dans ce fichier, il est dans `exigerEntiteRenseignee` — parce qu'il
+ *     doit s'exercer À L'EXÉCUTION, au moment où une valeur quitte le dépôt, et jamais au build.
+ *     Les phases 0 à 3 se codent et se prouvent contre la sentinelle : si cette garde faisait
+ *     rougir la CI aujourd'hui, la tâche serait ratée (point 4 de l'acceptation de CPL-T01).
+ *
+ *   → Le sens qu'on oublie : elle refuse TOUT AUTANT qu'une coordonnée bancaire réelle soit
+ *     COMMITÉE. Le dépôt `will383842/axion-apporteurs` est PUBLIC (REQ-GOV-031, décision W13). Un
+ *     IBAN débiteur poussé une fois y reste lisible pour toujours — forks, caches, archives — y
+ *     compris après un passage en privé. Dans le dépôt, `banqueDebitrice` ne prend QUE la
+ *     sentinelle. Une garde qui ne tiendrait que le premier sens laisserait le vrai IBAN entrer à
+ *     la première session pressée, et le mal serait irréversible.
+ *
+ * ET ELLE REFUSE AUSSI LES EXEMPLES PLAUSIBLES. Ni `FR7612345678901234567890123`, ni
+ * `FR12123456789`, ni `123456789`. C'est la raison la plus fine du dossier : un numéro d'exemple
+ * oublié dans un document signé ne se distingue pas d'une vraie valeur. La sentinelle est un mot
+ * français en majuscules précisément pour qu'on ne puisse pas la prendre pour une valeur.
+ *
+ * CE QU'ELLE NE RECOPIE PAS (RM-01). Aucune valeur du monde réel n'est écrite ici. Le régime de
+ * chaque champ — arrêté, en attente, secret — se DÉRIVE de la ligne qui l'arbitre : la ligne `W1`,
+ * `W3`, `W4` ou `HYP-W2` de `docs/DECISIONS.md`, ou la ligne de l'exigence dans
+ * `docs/REQUIREMENTS.md`. Retirer la marque de clôture d'une décision remet ses champs à la
+ * sentinelle, sans qu'une ligne de code bouge. C'est la façon dont a été réglée une divergence
+ * relevée en livrant CPL-T01 : `partners/ADR-0009` décrit `W1`, `W3` et `W4` comme non tranchées,
+ * quand `docs/DECISIONS.md` les porte tranchées le 2026-09-03. On ne choisit pas entre deux
+ * documents : on lit celui qui fait registre, à chaque exécution.
+ *
+ * INVARIANT DE LA PREUVE (RM-11). `--prove` ne touche pas au dépôt : registre, textes de décision,
+ * textes d'exigence et fichiers sont INJECTÉS. Sans quoi la preuve verdirait ou rougirait au gré
+ * des fichiers présents le jour où elle tourne.
+ *
+ * INVARIANT DU CONTRE-TÉMOIN (LEC-13, RM-02). Un univers conforme laisse la garde verte. Sans lui,
+ * une garde qui rougit toujours finit désarmée — c'est ce qui est arrivé à la gate Lighthouse
+ * d'axionia, qui a mesuré le runner au lieu du site pendant des mois.
+ */
+
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+
+import {
+  CHAMPS,
+  POINTS_DE_SORTIE,
+  SENTINELLE,
+  estSentinelle,
+  registreDuDepot,
+  valeur,
+  type Registre,
+} from '../../src/config/entite';
+
+const CHEMIN_REGISTRE = 'config/entite.json';
+const CHEMIN_DECISIONS = 'docs/DECISIONS.md';
+const CHEMIN_EXIGENCES = 'docs/REQUIREMENTS.md';
+
+export type Fichier = { chemin: string; contenu: string };
+
+export type Univers = {
+  registre: Registre;
+  /** Le texte de `docs/DECISIONS.md` — la garde y relit W1, W3, W4 et HYP-W2. */
+  decisions: string;
+  /** Le texte de `docs/REQUIREMENTS.md` — la garde y relit REQ-CPL-004 et REQ-CPL-018. */
+  exigences: string;
+  /** Les fichiers suivis par git, hors exemptions : c'est là qu'une valeur peut fuir. */
+  fichiers: Fichier[];
+};
+
+export type Faute = { famille: string; message: string };
+
+export const FAMILLES = [
+  'champ_absent',
+  'champ_vide',
+  'secret_commite',
+  'exemple_plausible',
+  'sentinelle_sur_decision_arretee',
+  'valeur_sans_decision',
+  'divergence_avec_la_source',
+  'source_illisible',
+  'valeur_recopiee',
+  'coordonnee_en_clair',
+  'point_de_sortie_sans_refus',
+];
+
+/**
+ * CE QUI EST EXEMPTÉ DU BALAYAGE, ET POURQUOI CHAQUE LIGNE L'EST.
+ * Le principe est celui que `gov:identifiants` a déjà écrit : CITER N'EST PAS SE SERVIR. Un
+ * registre a le droit de NOMMER ce qu'il arbitre ; partout ailleurs, on le lit.
+ */
+const EXEMPTS: { motif: RegExp; raison: string }[] = [
+  { motif: /^config\/entite\.json$/, raison: 'le registre lui-même : il est jugé champ par champ, pas par balayage' },
+  { motif: /^scripts\/gates\/gov-entite\.ts$/, raison: 'la garde porte ses propres témoins, qui doivent avoir la forme de ce qu’elle refuse' },
+  { motif: /^docs\/DECISIONS\.md$/, raison: 'le registre des décisions NOMME la valeur qu’il arrête — c’est son travail, et c’est la source dont tout le reste dérive' },
+  { motif: /^docs\/adr\/0009-valeurs-du-monde-reel\.md$/, raison: 'l’ADR qui fonde cette garde cite les formes d’exemple qu’elle interdit' },
+  { motif: /^pnpm-lock\.yaml$/, raison: 'empreintes de paquets, aucune prose' },
+];
+
+const EXTENSIONS_BALAYEES = /\.(ts|tsx|js|mjs|cjs|json|md|ya?ml|sql)$/;
+
+/**
+ * Un fichier de CODE : celui qui doit LIRE la valeur, jamais la porter. Les fichiers de `docs/`
+ * en sont exclus — ce sont de la prose et des registres, ils citent. Cette frontière est la même
+ * que celle de `gov:identifiants`, et elle est ce qui empêche la garde de devenir intenable :
+ * exiger d'une spécification qu'elle ne nomme jamais le SIREN de l'entité rendrait le dossier
+ * illisible sans rien protéger.
+ */
+function estCode(chemin: string): boolean {
+  return /\.(ts|tsx|js|mjs|cjs|sql|ya?ml|json)$/.test(chemin) && !chemin.startsWith('docs/');
+}
+
+// ── Lecture des sources d'autorité ────────────────────────────────────────────────────────────
+
+/** Minuscules, sans emphase ni ponctuation typographique, espaces normalisés. */
+export function normaliser(texte: string): string {
+  return texte
+    .replace(/[*`«»"]/g, ' ')
+    .replace(/[   ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * La ligne qui fait autorité pour un identifiant — ligne de tableau de `docs/DECISIONS.md`
+ * (`| **W1** ✅ … |`) ou ligne d'exigence de `docs/REQUIREMENTS.md` (`- **REQ-CPL-004** — …`).
+ * Rend la chaîne vide si elle n'existe pas : ne pas avoir pu lire n'est jamais un vert, c'est la
+ * famille `source_illisible`.
+ */
+export function ligneSource(texte: string, id: string): string {
+  for (const ligne of texte.split('\n')) {
+    if (premiereCellule(ligne) === id) return ligne;
+    const exigence = /^\s*-\s*\*\*(REQ-[A-Z]+-\d+)\*\*/.exec(ligne);
+    if (exigence !== null && exigence[1] === id) return ligne;
+  }
+  return '';
+}
+
+/** `| **W1** ✅ *tranchée 2026-09-03* | …` → `W1`. Le premier jeton, hors emphase. */
+function premiereCellule(ligne: string): string {
+  if (!ligne.startsWith('|')) return '';
+  const cellule = ligne.slice(1).split('|')[0] ?? '';
+  return (cellule.replace(/[*`]/g, '').trim().split(/\s+/)[0] ?? '').trim();
+}
+
+/**
+ * Une décision est-elle ARRÊTÉE ? La réponse se lit, elle ne se tape pas.
+ *   — sous `## 2. Hypothèses par défaut — le code avance`, OUI par construction : une hypothèse de
+ *     cette section EST la valeur que le code applique aujourd'hui ;
+ *   — ailleurs dans `docs/DECISIONS.md`, seulement si la ligne porte la marque de clôture ✅ ;
+ *   — dans `docs/REQUIREMENTS.md`, OUI dès que l'exigence est écrite : une exigence au registre
+ *     est arrêtée par définition.
+ */
+function arretee(texte: string, id: string, source: 'decisions' | 'exigences'): boolean {
+  const ligne = ligneSource(texte, id);
+  if (ligne === '') return false;
+  if (source === 'exigences') return true;
+  if (sectionDe(texte, ligne).startsWith('2.')) return true;
+  return ligne.includes('✅');
+}
+
+/** Le titre de la section `## …` sous laquelle vit une ligne. */
+function sectionDe(texte: string, ligne: string): string {
+  let courante = '';
+  for (const l of texte.split('\n')) {
+    const titre = /^##\s+(.*)$/.exec(l);
+    if (titre !== null) courante = titre[1]!.trim();
+    if (l === ligne) return courante;
+  }
+  return courante;
+}
+
+// ── Formes refusées ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Une valeur d'EXEMPLE : chiffres répétés (`FR99999999999`), ou suite monotone longue
+ * (`123456789`, `FR7612345678901234567890123`). Le détecteur est générique, pas une liste : une
+ * liste d'exemples connus laisserait passer le suivant.
+ */
+export function estExemplePlausible(v: string): boolean {
+  const chiffres = v.replace(/\D/g, '');
+  if (chiffres.length < 6) return false;
+  if (/(\d)\1{5,}/.test(chiffres)) return true;
+  let croissante = 1;
+  let decroissante = 1;
+  for (let i = 1; i < chiffres.length; i += 1) {
+    const a = Number(chiffres[i - 1]);
+    const b = Number(chiffres[i]);
+    croissante = b === a + 1 ? croissante + 1 : 1;
+    decroissante = b === a - 1 ? decroissante + 1 : 1;
+    if (croissante >= 8 || decroissante >= 8) return true;
+  }
+  return false;
+}
+
+/** Un IBAN : deux lettres, deux chiffres, puis 11 à 30 caractères alphanumériques. */
+const FORME_IBAN = /\b([A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,4})?)\b/g;
+/** Un numéro de TVA intracommunautaire français. */
+const FORME_TVA_FR = /\b(FR[0-9A-Z]{2}\d{9})\b/g;
+/** Un SIREN ou un SIRET, reconnu à son mot-clé : neuf chiffres nus sont trop souvent autre chose. */
+const FORME_SIREN = /\bsire[tn]\b[^\n]{0,24}?\b(\d{9,14})\b/gi;
+
+/**
+ * Une coordonnée en clair dans un fichier — et les DEUX exclusions que le contrôle assume.
+ *
+ * (1) TOUS LES NUMÉROS NE SE VALENT PAS. Un IBAN est un secret : divulgué, il ne se reprend pas,
+ *     et il autorise un prélèvement. Un SIREN, un SIRET et un numéro de TVA sont, eux, des données
+ *     PUBLIQUES — n'importe qui les lit au répertoire des entreprises. Les traiter à l'identique
+ *     aurait rendu la garde intenable : `docs/DECISIONS.md` porte le SIREN de l'entité parce que
+ *     c'est son travail de l'arrêter, et une spécification a le droit de le citer. L'IBAN est donc
+ *     refusé PARTOUT ; le SIREN, le SIRET et la TVA ne le sont que dans un fichier de CODE, où ils
+ *     doivent être LUS et non portés (RM-01, famille `valeur_recopiee` pour les nôtres).
+ * (2) UNE VALEUR D'APPARENCE ÉVIDENTE D'EXEMPLE (`123456789`, `000000000`) n'est pas une fuite :
+ *     c'est un bouchon de test, et les fichiers de test en portent légitimement. Le danger de
+ *     l'exemple est ailleurs — dans un document SIGNÉ — et c'est le registre qui le refuse
+ *     (`exemple_plausible`). Sans cette exclusion, la garde rougirait sur son propre fichier de
+ *     test, et on l'aurait désarmée la semaine suivante.
+ */
+function coordonneesDe(contenu: string, dansDuCode: boolean): string[] {
+  const trouvees: string[] = [];
+  const formes = dansDuCode ? [FORME_IBAN, FORME_TVA_FR, FORME_SIREN] : [FORME_IBAN];
+  for (const forme of formes) {
+    forme.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = forme.exec(contenu)) !== null) {
+      const brut = (m[1] ?? '').replace(/\s/g, '');
+      if (forme === FORME_IBAN) {
+        const chiffres = brut.replace(/\D/g, '').length;
+        if (brut.length < 15 || brut.length > 34 || chiffres < 10) continue;
+      }
+      if (estExemplePlausible(brut)) continue;
+      trouvees.push(brut);
+    }
+  }
+  return [...new Set(trouvees)];
+}
+
+// ── Le contrôle ───────────────────────────────────────────────────────────────────────────────
+
+export function controler(u: Univers): Faute[] {
+  const fautes: Faute[] = [];
+  const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
+
+  for (const champ of CHAMPS) {
+    const v = valeur(u.registre, champ.cle);
+
+    if (v === undefined) {
+      ajouter(
+        'champ_absent',
+        `\`${CHEMIN_REGISTRE}\` → \`${champ.cle}\` (${champ.libelle}) est ABSENT. Un champ absent ` +
+          `n'est pas une valeur vide : il est invisible, et personne ne saura qu'il manquait. ` +
+          `Écris-y \`${SENTINELLE}\`.`
+      );
+      continue;
+    }
+    if (v.trim() === '') {
+      ajouter(
+        'champ_vide',
+        `\`${champ.cle}\` (${champ.libelle}) est une chaîne VIDE. \`partners/ADR-0009\` l'interdit ` +
+          `au même titre que \`null\` : seule \`${SENTINELLE}\` se voit et se cherche.`
+      );
+      continue;
+    }
+
+    if (champ.secret) {
+      if (!estSentinelle(v)) {
+        ajouter(
+          'secret_commite',
+          `\`${champ.cle}\` (${champ.libelle}) porte une valeur autre que la sentinelle. Ce dépôt ` +
+            `est PUBLIC (REQ-GOV-031, décision W13) : ce qui y entre reste lisible pour toujours, ` +
+            `forks et caches compris, y compris après un passage en privé. Remets \`${SENTINELLE}\` ` +
+            `et pose la valeur dans \`${champ.env}\`. Si elle a déjà été poussée, elle est à ` +
+            `considérer comme divulguée : c'est la coordonnée qu'il faut changer, pas le commit.`
+        );
+      }
+      continue;
+    }
+
+    if (champ.identifiant && !estSentinelle(v) && estExemplePlausible(v)) {
+      ajouter(
+        'exemple_plausible',
+        `\`${champ.cle}\` (${champ.libelle}) vaut « ${v} », qui a la forme d'un EXEMPLE. C'est le ` +
+          `seul remplissage interdit : un numéro d'exemple oublié dans un document signé ne se ` +
+          `distingue pas d'une vraie valeur. Écris la valeur réelle, ou \`${SENTINELLE}\`.`
+      );
+    }
+
+    if (champ.ancre === null) continue;
+
+    const texte = champ.ancre.source === 'decisions' ? u.decisions : u.exigences;
+    const chemin = champ.ancre.source === 'decisions' ? CHEMIN_DECISIONS : CHEMIN_EXIGENCES;
+    const ligne = ligneSource(texte, champ.ancre.id);
+
+    if (ligne === '') {
+      ajouter(
+        'source_illisible',
+        `\`${champ.cle}\` dit tenir sa valeur de \`${champ.ancre.id}\`, introuvable dans ` +
+          `\`${chemin}\`. La garde ne sait plus ce qu'elle attend : ne pas avoir pu lire n'est ` +
+          `jamais un vert.`
+      );
+      continue;
+    }
+
+    const estArretee = arretee(texte, champ.ancre.id, champ.ancre.source);
+
+    if (estArretee && estSentinelle(v)) {
+      ajouter(
+        'sentinelle_sur_decision_arretee',
+        `\`${champ.cle}\` (${champ.libelle}) vaut ${SENTINELLE} alors que \`${champ.ancre.id}\` ` +
+          `est ARRÊTÉE dans \`${chemin}\`. Une décision prise et non reportée dans le registre est ` +
+          `une décision qui sera reprise à zéro : reporte la valeur.`
+      );
+    } else if (!estArretee && !estSentinelle(v)) {
+      ajouter(
+        'valeur_sans_decision',
+        `\`${champ.cle}\` (${champ.libelle}) porte une valeur alors que \`${champ.ancre.id}\` n'est ` +
+          `PAS arrêtée dans \`${chemin}\`. Le registre affirmerait ce que personne n'a tranché. ` +
+          `Remets \`${SENTINELLE}\`, ou fais trancher la décision.`
+      );
+    } else if (estArretee && !normaliser(ligne).includes(normaliser(v))) {
+      ajouter(
+        'divergence_avec_la_source',
+        `\`${champ.cle}\` vaut « ${v} », qui ne se retrouve pas dans la ligne \`${champ.ancre.id}\` ` +
+          `de \`${chemin}\`. Deux copies divergent toujours, et celle qui est lue n'est jamais ` +
+          `celle qui a été corrigée (RM-01) : aligne le registre sur la décision, ou la décision ` +
+          `sur le registre — mais pas les deux à la fois.`
+      );
+    }
+  }
+
+  // ── Ce qui fuit dans les fichiers ───────────────────────────────────────────────────────────
+  const identifiants = CHAMPS.filter((c) => c.identifiant)
+    .map((c) => ({ champ: c, v: valeur(u.registre, c.cle) }))
+    .filter((x): x is { champ: (typeof CHAMPS)[number]; v: string } => typeof x.v === 'string')
+    .filter((x) => !estSentinelle(x.v) && x.v.length >= 6);
+
+  for (const fichier of u.fichiers) {
+    const code = estCode(fichier.chemin);
+    if (code) {
+      for (const { champ, v } of identifiants) {
+        if (fichier.contenu.includes(v)) {
+          ajouter(
+            'valeur_recopiee',
+            `${fichier.chemin} — \`${champ.cle}\` (${champ.libelle}) est RECOPIÉE ici. Une seule ` +
+              `source (RM-01) : \`import { entiteContractante } from 'src/config/entite'\`. C'est ` +
+              `cette lecture, et rien d'autre, qui fait que le SIREN du contrat, celui du mandat ` +
+              `et celui du virement sont le même octet (REQ-CPL-001).`
+          );
+        }
+      }
+    }
+
+    for (const coordonnee of coordonneesDe(fichier.contenu, code)) {
+      ajouter(
+        'coordonnee_en_clair',
+        `${fichier.chemin} — coordonnée en clair « ${coordonnee} ». Ces valeurs vivent dans ` +
+          `\`${CHEMIN_REGISTRE}\` ou dans une variable d'environnement, jamais dans un fichier ` +
+          `versionné d'un dépôt PUBLIC (REQ-GOV-031).`
+      );
+    }
+
+    for (const point of POINTS_DE_SORTIE) {
+      if (!new RegExp(point.motifChemin).test(fichier.chemin)) continue;
+      if (fichier.contenu.includes('exigerEntiteRenseignee')) continue;
+      ajouter(
+        'point_de_sortie_sans_refus',
+        `${fichier.chemin} — ce fichier a le nom d'un point de sortie (« ${point.libelle} ») et ` +
+          `n'appelle pas \`exigerEntiteRenseignee('${point.id}')\`. Sans cet appel, un contrat, un ` +
+          `mandat, un virement ou une déclaration peut partir avec \`${SENTINELLE}\` imprimé ` +
+          `dessus. Les champs que ce point exige sont déclarés dans \`src/config/entite.ts\`.`
+      );
+    }
+  }
+
+  return fautes;
+}
+
+// ── L'univers réel ────────────────────────────────────────────────────────────────────────────
+
+function fichiersSuivis(): string[] {
+  try {
+    return execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function lireUnivers(): Univers {
+  const fichiers: Fichier[] = [];
+  for (const chemin of fichiersSuivis()) {
+    if (EXEMPTS.some((e) => e.motif.test(chemin))) continue;
+    if (!EXTENSIONS_BALAYEES.test(chemin) || !existsSync(chemin)) continue;
+    fichiers.push({ chemin, contenu: readFileSync(chemin, 'utf8') });
+  }
+  return {
+    registre: registreDuDepot(),
+    decisions: readFileSync(CHEMIN_DECISIONS, 'utf8'),
+    exigences: readFileSync(CHEMIN_EXIGENCES, 'utf8'),
+    fichiers,
+  };
+}
+
+// ── L'univers de FIXTURE — aucune valeur du dépôt (RM-11) ─────────────────────────────────────
+
+/**
+ * Un IBAN de la documentation bancaire, jamais celui d'AXION IA SAS. Il sert de témoin aux deux
+ * familles qui ont besoin d'une forme réelle (`secret_commite`, `coordonnee_en_clair`) : une garde
+ * qu'on n'aurait vue rougir que sur `A-RENSEIGNER` ne prouverait rien du cas qui compte.
+ */
+export const IBAN_TEMOIN = 'FR1420041010050500013M02606';
+
+const DECISIONS_TEMOIN = [
+  '## 1. Sans valeur par défaut possible — bloquent le code',
+  '',
+  '| Id | Décision | Pourquoi aucune hypothèse | Phase bloquée | Propriétaire |',
+  '| --- | --- | --- | --- | --- |',
+  '| **W1** ✅ *tranchée* | Entité qui signe et qui paie | **SOCIETE TEMOIN SAS** — SIREN `204070311`, SIRET `20407031100017`, TVA `FR44204070311`, 7 rue du Temoin, 38000 Ville | — | −1 |',
+  '| **W3** ✅ *tranchée* | Domaine servi et domaine d’envoi | **`temoin.exemple.test`** pour l’espace | migration | −1 |',
+  '| **W4** ✅ *tranchée* | Têtes de réseau | **Un porteur = une personne**, qui peut exercer via une structure | — | −1 |',
+  '',
+  '## 2. Hypothèses par défaut — le code avance',
+  '',
+  '| Id | Décision | Hypothèse appliquée | Réversibilité | Phase | À trancher avant | Tranchée |',
+  '| --- | --- | --- | --- | --- | --- | --- |',
+  '| HYP-W2 | Banque réceptrice du SEPA | Générateur `pain.001.001.03` générique + **remise manuelle avec identifiant de bout en bout** | paramètre | 2 | armement | — |',
+].join('\n');
+
+const EXIGENCES_TEMOIN = [
+  '- **REQ-CPL-004** — Résidence fiscale temoin obligatoire en V1 : le KYC refuse un établissement hors périmètre.',
+  '- **REQ-CPL-018** — ADR « mono-tenant en V1, aucune colonne tenant ».',
+].join('\n');
+
+const REGISTRE_TEMOIN: Registre = {
+  version: 1,
+  entite: {
+    denomination: 'SOCIETE TEMOIN SAS',
+    formeJuridique: 'SAS',
+    siren: '204070311',
+    siret: '20407031100017',
+    tvaIntracommunautaire: 'FR44204070311',
+    siege: '7 rue du Temoin, 38000 Ville',
+  },
+  domaines: { servi: 'temoin.exemple.test', envoi: SENTINELLE },
+  perimetre: {
+    modeleTetesDeReseau: 'Un porteur = une personne',
+    residenceFiscaleExigee: 'temoin',
+    tenance: 'mono-tenant',
+  },
+  banqueDebitrice: { iban: SENTINELLE, bic: SENTINELLE },
+  banqueReceptrice: {
+    versionPain001: 'pain.001.001.03',
+    modeDeRemise: 'remise manuelle avec identifiant de bout en bout',
+    bic: SENTINELLE,
+    jeuDeCaracteres: SENTINELLE,
+    espaceDeTest: SENTINELLE,
+    formatReleveCsv: SENTINELLE,
+  },
+};
+
+/**
+ * L'univers CONFORME — le contre-témoin qui porte tout le reste. Il décrit l'état exact que le
+ * dépôt doit avoir : les décisions arrêtées reportées, les secrets à la sentinelle, ce que la
+ * banque n'a pas encore dit à la sentinelle. C'est là que se joue la distinction qui a failli
+ * rendre cette garde intenable — « complet POUR LE DÉPÔT » n'est pas « complet POUR LA MISE EN
+ * SERVICE ». Les confondre aurait rendu la garde rouge à vie.
+ */
+export const UNIVERS_CONFORME: Univers = {
+  registre: REGISTRE_TEMOIN,
+  decisions: DECISIONS_TEMOIN,
+  exigences: EXIGENCES_TEMOIN,
+  fichiers: [
+    { chemin: 'src/apporteur/profil.ts', contenu: "import { entiteContractante } from '../config/entite';\n" },
+    { chemin: 'docs/spec/note.md', contenu: 'La société est immatriculée sous le SIREN 204070311.\n' },
+  ],
+};
+
+function muter(mutation: (u: Univers) => void): Univers {
+  const copie = structuredClone(UNIVERS_CONFORME);
+  mutation(copie);
+  return copie;
+}
+
+function prouver(): number {
+  const TEMOINS: { famille: string; univers: Univers }[] = [
+    {
+      famille: 'champ_absent',
+      univers: muter((u) => {
+        delete (u.registre.entite as Partial<Registre['entite']>).siren;
+      }),
+    },
+    { famille: 'champ_vide', univers: muter((u) => { u.registre.entite.siren = '   '; }) },
+    {
+      // Le témoin qui compte : le dépôt est public, et c'est ce cas-là qui est irréversible.
+      famille: 'secret_commite',
+      univers: muter((u) => { u.registre.banqueDebitrice.iban = IBAN_TEMOIN; }),
+    },
+    { famille: 'exemple_plausible', univers: muter((u) => { u.registre.entite.siren = '123456789'; }) },
+    {
+      famille: 'sentinelle_sur_decision_arretee',
+      univers: muter((u) => { u.registre.entite.siren = SENTINELLE; }),
+    },
+    {
+      // Une décision ROUVERTE : le régime est dérivé, donc la sentinelle redevient obligatoire.
+      famille: 'valeur_sans_decision',
+      univers: muter((u) => { u.decisions = u.decisions.split('✅').join('⏳'); }),
+    },
+    {
+      famille: 'divergence_avec_la_source',
+      univers: muter((u) => { u.registre.entite.siren = '204070312'; }),
+    },
+    {
+      famille: 'source_illisible',
+      univers: muter((u) => {
+        u.decisions = u.decisions
+          .split('\n')
+          .filter((l) => !l.startsWith('| **W1**'))
+          .join('\n');
+      }),
+    },
+    {
+      famille: 'valeur_recopiee',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'src/facturation/entete.ts',
+          contenu: `export const SIREN_EMETTEUR = '${REGISTRE_TEMOIN.entite.siren}';\n`,
+        });
+      }),
+    },
+    {
+      famille: 'coordonnee_en_clair',
+      univers: muter((u) => {
+        u.fichiers.push({ chemin: 'docs/note-de-travail.md', contenu: `Virement depuis ${IBAN_TEMOIN}.\n` });
+      }),
+    },
+    {
+      famille: 'point_de_sortie_sans_refus',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'src/sortie/mandat-autofacturation.ts',
+          contenu: 'export function emettreMandat() { return "sans garde"; }\n',
+        });
+      }),
+    },
+  ];
+
+  const CONTRE_TEMOINS: { quoi: string; univers: Univers }[] = [
+    { quoi: 'un registre conforme, secrets à la sentinelle', univers: UNIVERS_CONFORME },
+    {
+      quoi: 'une note de spécification qui CITE le SIREN — citer n’est pas se servir',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'docs/spec/entite.md',
+          contenu: `L’entité contractante porte le SIREN ${REGISTRE_TEMOIN.entite.siren}.\n`,
+        });
+      }),
+    },
+    {
+      quoi: 'un point de sortie qui APPELLE le refus',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'src/sortie/mandat-autofacturation.ts',
+          contenu:
+            "import { exigerEntiteRenseignee } from '../config/entite';\n" +
+            "export function emettreMandat() { exigerEntiteRenseignee('mandat-autofacturation'); }\n",
+        });
+      }),
+    },
+    {
+      quoi: 'un bouchon de test d’apparence évidente d’exemple',
+      univers: muter((u) => {
+        u.fichiers.push({ chemin: 'tests/unit/x.spec.ts', contenu: "const siren = '000000000';\n" });
+      }),
+    },
+    {
+      quoi: 'une empreinte hexadécimale, qui ressemble à un IBAN sans en être un',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'packages/contracts.sha256',
+          contenu: 'AB12CDEF3456789012345678901234567890ABCD\n',
+        });
+      }),
+    },
+    {
+      quoi: 'un champ sans ancre, rempli le jour où la banque répond',
+      univers: muter((u) => { u.registre.banqueReceptrice.bic = 'CMCIFR2A'; }),
+    },
+    {
+      quoi: 'le sous-domaine d’envoi, encore à la sentinelle, ne bloque rien',
+      univers: muter((u) => { u.registre.domaines.envoi = SENTINELLE; }),
+    },
+  ];
+
+  for (const t of TEMOINS) {
+    const f = controler(t.univers);
+    if (!f.some((x) => x.famille === t.famille)) {
+      console.error(
+        `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille ` +
+          `(${f.length} faute(s) d'autres familles). La règle ne couvre pas ce qu'elle prétend couvrir.`
+      );
+      return 1;
+    }
+  }
+
+  for (const c of CONTRE_TEMOINS) {
+    const f = controler(c.univers);
+    if (f.length > 0) {
+      console.error(
+        `❌ Faux positif : « ${c.quoi} » a fait rougir « ${f[0]!.famille} ». La règle est trop large.\n` +
+          `   ${f[0]!.message}`
+      );
+      return 1;
+    }
+  }
+
+  const sansTemoin = FAMILLES.filter((f) => !TEMOINS.some((t) => t.famille === f));
+  if (sansTemoin.length > 0) {
+    console.error(
+      `❌ ${sansTemoin.length} famille(s) sans témoin qui rougit : ${sansTemoin.join(', ')}.\n` +
+        `   Une règle jamais vue rougir ne garde rien.`
+    );
+    return 1;
+  }
+
+  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
+  console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts, dont l'univers conforme.`);
+  return 0;
+}
+
+// ── ligne de commande ─────────────────────────────────────────────────────────────────────────
+// Gardée : ce module est IMPORTÉ par son test. Sans ce test d'entrée, l'import déclencherait le
+// contrôle et son `process.exit`, et la suite mourrait au chargement (leçon de `gov-depot.ts`).
+const APPELE_DIRECTEMENT = /gov-entite\.ts$/.test(process.argv[1] ?? '');
+
+if (APPELE_DIRECTEMENT) {
+  if (process.argv.includes('--prove')) {
+    process.exit(prouver());
+  } else {
+    const univers = lireUnivers();
+    const fautes = controler(univers);
+    if (fautes.length > 0) {
+      console.error(`❌ gov:entite — ${fautes.length} défaut(s) du registre d'entité :\n`);
+      fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
+      if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
+      console.error(
+        `\nCe dépôt est PUBLIC : une coordonnée bancaire poussée une fois y reste lisible pour ` +
+          `toujours. La sentinelle \`${SENTINELLE}\` est la seule valeur que ces champs y prennent.`
+      );
+      process.exit(1);
+    }
+
+    const secrets = CHAMPS.filter((c) => c.secret);
+    const attente = CHAMPS.filter(
+      (c) => !c.secret && estSentinelle(valeur(univers.registre, c.cle) ?? '')
+    );
+    const arretes = CHAMPS.length - secrets.length - attente.length;
+    console.log(
+      `✅ gov:entite — \`${CHEMIN_REGISTRE}\` conforme : ${CHAMPS.length} champs, ` +
+        `${arretes} arrêté(s) et attesté(s) par leur ligne de décision, ${attente.length} à la ` +
+        `sentinelle, ${secrets.length} secret(s) qui ne prennent jamais d'autre valeur ici. ` +
+        `${univers.fichiers.length} fichier(s) suivi(s) balayé(s) : aucune coordonnée en clair, ` +
+        `aucune valeur recopiée, aucun point de sortie sans refus.`
+    );
+    console.log(
+      `   ⚠️ Cette garde n'AUTORISE pas la mise en service pour autant : ` +
+        `\`exigerEntiteRenseignee\` refuse encore les points de sortie dont un champ vaut ` +
+        `${SENTINELLE}, et c'est voulu — les phases 0 à 3 se codent contre la sentinelle ` +
+        `(\`partners/ADR-0009\`).`
+    );
+    process.exit(0);
+  }
+}
