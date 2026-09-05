@@ -1,0 +1,230 @@
+{
+  "Source": "gh api repos/will383842/axion-apporteurs/pulls/31/reviews --paginate, enregistré le 2026-09-05. PROJECTION appliquée à la capture, et elle seule : de chaque revue sont conservés id, user.login, author_association, state, commit_id, submitted_at, et de `body` les DEUX SEULES lignes que le lecteur lit — la première (« A<nn> · <lentille> ») et la ligne « Verdict: … », verbatim, sans ajout. Le reste du corps (≈ 200 Ko de prose) est écarté parce qu aucun lecteur ne le lit. Commande de reproduction dans le commentaire d en-tête de tests/unit/gouvernance/revues-lecteur-unique.spec.ts.",
+  "Confronte-a": "docs/tiers/github.md#2-source-officielle — non confrontée (la rubrique 2 de la fiche est vide au 2026-09-05, et la fiche prescrit elle-même cette mention).",
+  "endpoint": "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews",
+  "pr": 31,
+  "tete": "41bc8140b9ea436be809676538dd65cb2263a5bc",
+  "auteurDeLaPr": "will383842",
+  "revues": [
+    {
+      "id": 5120670408,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "10bf4dd672bbfadb457497da2228d31894d36bf2",
+      "submitted_at": "2026-09-05T09:25:28Z",
+      "body": "A08 · securite\nVerdict: refuse"
+    },
+    {
+      "id": 5120697479,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "10bf4dd672bbfadb457497da2228d31894d36bf2",
+      "submitted_at": "2026-09-05T09:34:07Z",
+      "body": "A02 · schema\nVerdict: refuse"
+    },
+    {
+      "id": 5120741442,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "10bf4dd672bbfadb457497da2228d31894d36bf2",
+      "submitted_at": "2026-09-05T09:45:09Z",
+      "body": "A05 · exactitude\nVerdict: refuse"
+    },
+    {
+      "id": 5120742640,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "10bf4dd672bbfadb457497da2228d31894d36bf2",
+      "submitted_at": "2026-09-05T09:45:41Z",
+      "body": "A10 · mutation\nVerdict: accepte"
+    },
+    {
+      "id": 5120864320,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "5bcbe22bb7d7a49d5ab774983813cf18ed27c658",
+      "submitted_at": "2026-09-05T10:26:09Z",
+      "body": "A02 · schema\nVerdict: refuse"
+    },
+    {
+      "id": 5120874994,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "5bcbe22bb7d7a49d5ab774983813cf18ed27c658",
+      "submitted_at": "2026-09-05T10:28:19Z",
+      "body": "A08 · securite\nVerdict: refuse"
+    },
+    {
+      "id": 5120878855,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "5bcbe22bb7d7a49d5ab774983813cf18ed27c658",
+      "submitted_at": "2026-09-05T10:29:51Z",
+      "body": "A05 · exactitude\nVerdict: refuse"
+    },
+    {
+      "id": 5120949867,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "38e1c73b1316e0bafe911321d302e9d5050c9a96",
+      "submitted_at": "2026-09-05T11:01:47Z",
+      "body": "A02 · schema\nVerdict: accepte"
+    },
+    {
+      "id": 5120956850,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "38e1c73b1316e0bafe911321d302e9d5050c9a96",
+      "submitted_at": "2026-09-05T11:05:13Z",
+      "body": "A08 · securite\nVerdict: refuse"
+    },
+    {
+      "id": 5120959611,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "38e1c73b1316e0bafe911321d302e9d5050c9a96",
+      "submitted_at": "2026-09-05T11:05:57Z",
+      "body": "A05 · exactitude\nVerdict: refuse"
+    },
+    {
+      "id": 5121012474,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "9faf4aa5990bc8e54aa65a1082151e89d70b5a21",
+      "submitted_at": "2026-09-05T11:22:31Z",
+      "body": "A08 · securite\nVerdict: accepte"
+    },
+    {
+      "id": 5121017932,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "9faf4aa5990bc8e54aa65a1082151e89d70b5a21",
+      "submitted_at": "2026-09-05T11:25:12Z",
+      "body": "A05 · exactitude\nVerdict: refuse"
+    },
+    {
+      "id": 5121120126,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "4998a9454fd83695826fcbd5be5e5b7554af221d",
+      "submitted_at": "2026-09-05T11:46:13Z",
+      "body": "A05 · exactitude\nVerdict: refuse"
+    },
+    {
+      "id": 5121192854,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "2249475a7f4542bc084f5f01b1bd9c8e9d2cfa64",
+      "submitted_at": "2026-09-05T12:00:07Z",
+      "body": "A05 · exactitude\nVerdict: refuse"
+    },
+    {
+      "id": 5121259293,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "7c3820a33dd28f35b2131a3cf71d71f4d4686ef2",
+      "submitted_at": "2026-09-05T12:16:22Z",
+      "body": "A05 · exactitude\nVerdict: refuse"
+    },
+    {
+      "id": 5121283031,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "19cf87be4403915b4af5bdd93ab42d6f6d8782ca",
+      "submitted_at": "2026-09-05T12:27:15Z",
+      "body": "A05 · exactitude\nVerdict: accepte"
+    },
+    {
+      "id": 5121340935,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "41bc8140b9ea436be809676538dd65cb2263a5bc",
+      "submitted_at": "2026-09-05T12:56:52Z",
+      "body": "A05 · exactitude\nVerdict: accepte"
+    },
+    {
+      "id": 5121345938,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "41bc8140b9ea436be809676538dd65cb2263a5bc",
+      "submitted_at": "2026-09-05T12:59:25Z",
+      "body": "A08 · securite\nVerdict: refuse"
+    },
+    {
+      "id": 5121354058,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "41bc8140b9ea436be809676538dd65cb2263a5bc",
+      "submitted_at": "2026-09-05T13:03:35Z",
+      "body": "A08 · securite\nVerdict: refuse"
+    },
+    {
+      "id": 5121354924,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "state": "COMMENTED",
+      "commit_id": "41bc8140b9ea436be809676538dd65cb2263a5bc",
+      "submitted_at": "2026-09-05T13:04:02Z",
+      "body": "A02 · schema\nVerdict: refuse"
+    }
+  ]
+}

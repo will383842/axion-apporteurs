@@ -52,8 +52,24 @@ import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 import { CHAMPS } from '../../src/config/entite';
+import { lireRevues, toucheSchema, type RevueBrute } from './revues';
 
-type Tache = { id: string; phase: number; statut: string; pr?: number | null; reqs: string[] };
+/**
+ * ⚠️ LE CHAMP `schema` MANQUAIT À CE TYPE, ET C'EST CE MANQUE QUI A CHOISI LE SIGNAL FAIBLE.
+ *
+ * Le signal fort était déjà sous la main — `surLaPr`, les tâches que cette PR porte — mais le type
+ * ne déclarait pas `schema`, donc le champ n'existait pas pour ce module, donc le discriminant
+ * s'est rabattu sur le label, qu'on pose et qu'on oublie à la main. Le type dit ce qu'un module
+ * peut voir : ce qu'il tait, le code ne peut pas le lire, et il ira chercher plus faible ailleurs.
+ */
+type Tache = {
+  id: string;
+  phase: number;
+  statut: string;
+  pr?: number | null;
+  reqs: string[];
+  schema?: boolean;
+};
 
 const LIVREE = new Set(['fusionnee', 'deployee', 'verifiee']);
 const MOTS: Record<number, string> = {
@@ -100,76 +116,84 @@ function suite(chemin: string | null): { fichiers: string; tests: string } {
  * boucle** : chaque geste pour le satisfaire le brisait.
  *
  * La case n'est donc plus un caractère qu'on tape : c'est une ASSERTION DÉRIVÉE du pas 5.
- * Elle vaut `[x]` si, et seulement si, le dernier verdict de chaque lentille exigée est `accepte`
- * ET porte sur le `commit_id` de la tête. Sinon `[ ]`, et le corps dit lui-même pourquoi.
  *
- * ⚠️ Ce que ça répare au-delà du confort : `gov:pr` sort 0 sans jamais lire un `commit_id` — la
- * gate est structurellement aveugle au pas 5, et son vert n'est donc PAS une preuve d'alignement.
- * Quatre lentilles avaient accepté sur quatre commits différents, dont aucun n'était la tête, et
- * l'avis `mutation` était périmé de neuf commits couvrant plus de trois cents lignes de code de
- * garde — c'est-à-dire que les gardes livrées après son avis n'avaient JAMAIS été mutées.
+ * 🔴 ET LA PREMIÈRE DÉRIVATION ÉTAIT FAUSSE DANS LE SENS PERMISSIF — quatre fois. Deux relecteurs
+ * et une passe de mutation l'ont mesuré le même jour sur `41bc814` : elle n'authentifiait
+ * personne (dépôt PUBLIC, quatre avis forgés par un compte tiers cochaient la case, et un avis
+ * forgé EFFAÇAIT le veto d'un vrai refus de `securite`), elle acceptait `A99` comme poste, elle
+ * tirait le discriminant `schema` du seul label — plus faible que la gate qu'elle supplée, qui le
+ * lit sur les FICHIERS — et elle classait le dernier verdict par lentille seule, si bien qu'un
+ * accord d'un AUTRE poste effaçait un refus. Deux mutants type-propres y survivaient, `tsc` à 0
+ * et la suite verte : la comparaison de `commit_id` neutralisée, et la liste des lentilles
+ * tronquée à une seule — le corps publiait alors « les 1 lentilles ont accepté » pendant que
+ * `securite` refusait.
+ *
+ * 🔑 CE FICHIER DIAGNOSTIQUAIT CORRECTEMENT QUE `gov:pr` ÉTAIT AVEUGLE AU PAS 5, PUIS HÉRITAIT DU
+ * MÊME DÉFAUT. La lecture des revues n'est donc plus écrite ici : elle est dans
+ * `scripts/lot/revues.ts`, importée par ce composeur ET par `scripts/gates/gov-pr.ts`. Deux
+ * copies divergent toujours, et celle qui est lue n'est jamais celle qui a été corrigée (RM-01).
+ *
+ * ⚠️ CE QUE CETTE CASE NE PEUT PAS DIRE, ET QU'ELLE DIT PLUTÔT QUE DE LE TAIRE. « Relecteur ≠
+ * auteur » est vérifiée au niveau du POSTE — c'est le niveau où la charte la définit (§6 : « le
+ * code du champ `Auteur:` n'apparaît jamais dans `Relecteur:` »). Au niveau des COMPTES GitHub,
+ * ce dépôt n'en a qu'un (W13) : toutes les revues viennent du compte de l'auteur, et la propriété
+ * n'y est pas mesurable. Le détail publié le NOMME. On ne coche jamais ce qu'on ne mesure pas.
  */
-function caseRevues(pr: number): { marque: string; detail: string } {
+function caseRevues(pr: number, surLaPr: Tache[], gabarit: string): { marque: string; detail: string } {
   let tete: string;
-  let lentilles: string[];
-  let revues: { commit_id: string; body: string; state: string }[];
+  let labels: string[];
+  let fichiers: string[];
+  let revues: RevueBrute[];
+  let auteurCompte: string | null;
   try {
     const meta = JSON.parse(
       execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}`], { encoding: 'utf8', maxBuffer: 32e6 })
-    );
+    ) as {
+      head: { sha: string };
+      user?: { login?: string };
+      labels?: { name: string }[];
+    };
     tete = meta.head.sha;
-    // ⚠️ LES LENTILLES EXIGÉES SE DÉRIVENT DU LABEL, elles ne se tapent pas. Une première version
-    // listait `exactitude, securite, mutation` en dur — elle aurait donc coché la case en IGNORANT
-    // `schema`, la lentille que le label `schema` rend obligatoire à la place de `simplicite`, et
-    // dont le refus est bloquant. Une case dérivée d'une liste fausse est pire qu'une case tapée :
-    // elle a l'air d'avoir été vérifiée.
-    const labels: string[] = (meta.labels ?? []).map((l: { name: string }) => l.name);
-    lentilles = [...(labels.includes('schema')
-      ? ['exactitude', 'securite', 'schema']
-      : ['exactitude', 'securite', 'simplicite']), 'mutation'];
+    auteurCompte = meta.user?.login ?? null;
+    labels = (meta.labels ?? []).map((l) => l.name);
+    fichiers = (
+      JSON.parse(
+        execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/files`, '--paginate'], {
+          encoding: 'utf8',
+          maxBuffer: 32e6,
+        })
+      ) as { filename: string }[]
+    ).map((f) => f.filename);
     revues = JSON.parse(
       execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/reviews`, '--paginate'], {
         encoding: 'utf8',
         maxBuffer: 32e6,
       })
-    );
+    ) as RevueBrute[];
   } catch {
     return { marque: '[ ]', detail: 'revues illisibles (GitHub injoignable) — la case reste vide' };
   }
 
-  // Le DERNIER verdict par lentille prime (règle du dépôt) ; on retient aussi le commit jugé.
-  const dernier = new Map<string, { verdict: string; commit: string }>();
-  for (const r of revues) {
-    const l = lentilles.find((x) => new RegExp(`^A\\d{2}\\s*·\\s*${x}\\b`, 'im').test(r.body ?? ''));
-    const v = /^Verdict\s*:\s*(accepte|refuse)\b/im.exec(r.body ?? '');
-    if (!l || !v) continue;
-    dernier.set(l, { verdict: v[1]!.toLowerCase(), commit: r.commit_id });
-  }
-
-  const manquantes = lentilles.filter((l) => !dernier.has(l));
-  const refusees = [...dernier.entries()].filter(([, d]) => d.verdict === 'refuse').map(([l]) => l);
-  const perimees = [...dernier.entries()]
-    .filter(([, d]) => d.verdict === 'accepte' && d.commit !== tete)
-    .map(([l, d]) => `${l} (jugé ${d.commit.slice(0, 7)})`);
-
-  if (manquantes.length || refusees.length || perimees.length) {
-    const raisons = [
-      manquantes.length ? `manquante(s) : ${manquantes.join(', ')}` : '',
-      refusees.length ? `en refus : ${refusees.join(', ')}` : '',
-      perimees.length ? `périmée(s) sur une autre tête que ${tete.slice(0, 7)} : ${perimees.join(', ')}` : '',
-    ].filter(Boolean);
-    return { marque: '[ ]', detail: raisons.join(' · ') };
-  }
-  return { marque: '[x]', detail: `les ${lentilles.length} lentilles (${lentilles.join(', ')}) ont accepté sur ${tete.slice(0, 7)}` };
+  const lecture = lireRevues({
+    revues,
+    // LE PLUS STRICT DES TROIS SIGNAUX GAGNE : les fichiers de la PR, le champ `schema` des tâches
+    // qu'elle porte, le label. Le label seul était la lecture d'avant — la plus faible des trois,
+    // et plus faible que celle de la gate que cette case supplée.
+    schema: toucheSchema({ fichiers, labels, tachesSchema: surLaPr.some((t) => t.schema === true) }),
+    tete,
+    auteurPoste: /^Auteur:\s*(A\d{2})\s*$/m.exec(gabarit)?.[1] ?? null,
+    auteurCompte,
+  });
+  return { marque: lecture.coche ? '[x]' : '[ ]', detail: lecture.detail };
 }
 
-export function valeurs(pr: number, journalTests: string | null): Record<string, string> {
+export function valeurs(pr: number, journalTests: string | null, gabarit: string): Record<string, string> {
   const T = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: Tache[] }).taches;
   const G = (JSON.parse(readFileSync('docs/gates.json', 'utf8')) as { gates: { preuveRouge: string | null }[] }).gates;
   const R = (JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as { exigences: unknown[] }).exigences;
   const surLaPr = T.filter((t) => t.pr === pr);
   const s = suite(journalTests);
-  const c = caseRevues(pr);
+  const c = caseRevues(pr, surLaPr, gabarit);
 
   return {
     TACHES: String(T.length),
@@ -211,8 +235,9 @@ if (process.argv[1]?.endsWith('corps-de-pr.ts')) {
     process.exit(1);
   }
   try {
-    const v = valeurs(pr, arg('tests'));
-    writeFileSync(sortie, rendre(readFileSync(gabarit, 'utf8'), v));
+    const texte = readFileSync(gabarit, 'utf8');
+    const v = valeurs(pr, arg('tests'), texte);
+    writeFileSync(sortie, rendre(texte, v));
     console.log(`✅ ${sortie} rendu depuis les sources du dépôt :`);
     for (const [k, val] of Object.entries(v)) console.log(`   ${k.padEnd(20)} ${val}`);
   } catch (e) {
