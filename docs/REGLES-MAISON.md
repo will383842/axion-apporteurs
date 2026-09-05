@@ -2,7 +2,9 @@
 
 > Livré par **GOV-018** (REQ-GOV-024), étendu par **GOV-026**. Neuf règles héritées d'axionia et d'axion-ops, plus trois
 > que le plan directeur cite sans les numéroter, plus une treizième née de la revue qui a retiré le `CLAUDE.md` racine
-> de la PR #30 : elle n'existait que dans ce fichier d'amorçage, et elle a disparu avec lui. Chaque règle porte un
+> de la PR #30 : elle n'existait que dans ce fichier d'amorçage, et elle a disparu avec lui — plus une
+> quatorzième consolidée le 2026-09-05 par le `documentaliste` (A03), sur demande de l'intégration du
+> lot `L-1-INT-a`, après deux rencontres du même piège le même jour par deux agents qui ne se parlaient pas. Chaque règle porte un
 > numéro `RM-nn` ; les ADR et le gabarit de PR (« Règle maison
 > appliquée : RM-nn ») y renvoient par numéro, jamais par paraphrase. Test : `tests/unit/gouvernance/regles-maison.spec.ts`
 > (chaque RM a une section ; les neuf règles que REQ-GOV-024 énumère sont chacune couvertes).
@@ -25,6 +27,7 @@
 | RM-11 | Aucun défaut sur ce que le test fait varier             | revue lentille « exactitude », `verificateur-rouge`     |
 | RM-12 | Un identifiant nu n'est pas une référence               | `gov:identifiants`                                      |
 | RM-13 | Aucun lot composé tant qu'une PR de clôture est ouverte | `gov:etat` (`deux_pr_meme_tache`), Pas 7 du protocole de fusion |
+| RM-14 | Un fichier neuf est invisible tant qu'il n'est pas à l'index | aucune — `git status --short` avant les gardes, rattrapé par la Gate A de la PR |
 
 ---
 
@@ -213,6 +216,36 @@ forge avant de composer : `pnpm lot:composer` ne refuse que d'**écraser** un `d
 existant, et `docs/lots/` est en `.gitignore` — ce refus ne survit donc pas à un `clone`, ni à un changement de
 machine. La famille qui manque se nomme : « une PR ouverte portant la clôture du lot précédent interdit la
 composition ». Elle appartient à `lot:composer` (GOV-012), pas à ce fichier.
+
+## RM-14 — Un fichier neuf est invisible tant qu'il n'est pas à l'index
+
+_Posée le 2026-09-05 par le `documentaliste` (A03), sur demande de l'intégration du lot `L-1-INT-a` et sur deux
+rencontres du même jour rapportées par `GOV-026` et `CPL-T01`. La section « Leçons » ci-dessous veut qu'une règle
+naisse d'un ADR plutôt que d'une édition directe : cette régularisation appartient à l'`architecte` (A02) et
+n'est pas faite. Elle est écrite ici plutôt que tue, parce qu'une règle non numérotée n'est citée par aucun ADR ni
+par le champ « Règle maison appliquée » du gabarit de PR — c'est exactement ce qui a coûté RM-13 une fois déjà._
+
+**Énoncé.** Les gardes de ce dépôt balaient `git ls-files`, jamais le disque. Un fichier neuf, écrit mais
+jamais ajouté à l'index, n'est lu par aucune d'elles ; le vert qu'elles rendent ne dit rien de lui. Tout agent qui
+livre un fichier neuf le rend visible à l'index — `git add -N <chemin>` suffit, et n'engage aucun contenu — **avant**
+de lancer ses gardes et avant de conclure. Un « vert » obtenu sur un fichier hors index n'est pas un verdict.
+
+**Pourquoi.** L'absence ne s'imprime pas : rien ne distingue ce vert-là d'un vert légitime. Mesuré sur cet arbre
+le 2026-09-05, un document neuf portant une étiquette de relecteur non qualifiée — laissé hors index,
+`pnpm gov:identifiants` ne le voit pas et ne relève que la dette antérieure de `docs/gates.json` ; le **même**
+fichier après `git add -N`, la **même** commande en relève une de plus et la nomme, ligne comprise. Rien n'avait
+changé que sa visibilité à l'index. Cinq gardes au moins sont concernées :
+`scripts/gates/gov-identifiants.ts:154`, `scripts/gates/gov-publication.ts:149`,
+`scripts/gates/gov-entite.ts:386`, `scripts/gates/gov-preseance.ts:272`,
+`scripts/gates/lexique-apporteurs.ts:346`. Le corollaire vaut dans l'autre sens et évite un faux diagnostic :
+commiter un document jusque-là ignoré rend visible d'un coup la dette qui y dormait — c'est un inventaire, pas une
+régression ; la PR #30 en a fait rougir six d'un coup en faisant entrer `docs/REPRISE-SESSION.md` dans le dépôt.
+
+**Comment on la voit.** Rien ne l'arrête à ce jour, et c'est dit plutôt que supposé : une garde qui comparerait le
+disque à l'index rougirait sur tout brouillon légitime, et une garde qui rougit toujours finit désarmée (RM-02).
+Le contrôle est procédural et tient en un geste — `git status --short` avant de lancer ses gardes, la liste des `??`
+étant exactement ce qu'aucune d'elles ne lira. Le filet d'après est la Gate A de la PR, qui juge l'arbre **tel qu'il
+est poussé**, donc indexé : elle rattrape après coup, au prix d'un aller-retour, ce que la session n'a pas vu.
 
 ---
 

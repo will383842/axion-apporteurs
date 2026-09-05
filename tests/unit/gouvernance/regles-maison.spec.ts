@@ -98,15 +98,17 @@ const ISOLE = ['--regles', 'docs/REGLES-MAISON.md', '--journal', join(tmpdir(), 
 const avecEntrees = (entrees: string[]) => [ENTETE, ...entrees, PIED].join('\n');
 
 describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
-  it('REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 à RM-13, une section par règle', () => {
+  it('REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 à RM-14, une section par règle', () => {
     const texte = readFileSync(CHEMIN_RM, 'utf8');
     const sections = [...texte.matchAll(/^## (RM-\d{2}) — /gm)].map((m) => m[1]!);
     // La liste est LITTÉRALE et non dérivée, exprès : c'est elle qui rougit quand une règle est
     // ajoutée — ou RETIRÉE en silence, ce qui est arrivé à celle qui est aujourd'hui RM-13. Une
     // liste dérivée du fichier qu'elle juge ne peut, par construction, jamais le contredire.
+    // RM-14 y est entrée le 2026-09-05 : elle a fait rougir CETTE assertion et elle seule, ce qui
+    // est le comportement voulu — une règle neuve se déclare ici, elle ne s'y glisse pas.
     expect(sections).toEqual([
       'RM-01', 'RM-02', 'RM-03', 'RM-04', 'RM-05', 'RM-06',
-      'RM-07', 'RM-08', 'RM-09', 'RM-10', 'RM-11', 'RM-12', 'RM-13',
+      'RM-07', 'RM-08', 'RM-09', 'RM-10', 'RM-11', 'RM-12', 'RM-13', 'RM-14',
     ]);
     // Le tableau de tête est une VUE des sections : une ligne sans section, ou l'inverse, et le
     // lecteur qui cite « RM-13 » cite un vide.
