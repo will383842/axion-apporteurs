@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**8 ADR · 6 `propose`, 2 `accepte`, 0 `remplace`.**
+**10 ADR · 7 `propose`, 3 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -19,3 +19,5 @@
 | [`partners/ADR-0006`](0006-fusion-serialisee-et-atterrissage-verifie.md) | La fusion : file sérialisée, une PR à la fois, atterrissage vérifié | `propose` | 2026-09-03 | GOV-009 |
 | [`partners/ADR-0007`](0007-la-branche-porte-le-lot-pas-la-tache.md) | La branche porte le LOT, la tâche porte le COMMIT | `accepte` | 2026-09-03 | GOV-012 |
 | [`partners/ADR-0008`](0008-contrat-evenements-enveloppe-et-nomenclature.md) | Le contrat d'événements : enveloppe sur le fil, sept types, empreinte du JSON Schema | `accepte` | 2026-09-03 | INT-T01a |
+| [`partners/ADR-0009`](0009-valeurs-du-monde-reel.md) | Une valeur que seul Will connaît est une CONFIGURATION, pas un blocage de plan | `accepte` | 2026-09-05 | CPL-T01 |
+| [`partners/ADR-0010`](0010-une-gate-bloquante-et-sa-dette-declaree.md) | Une gate bloquante dont l'exception s'écrit, plutôt qu'une gate qu'on n'exécute pas | `propose` | 2026-09-05 | CPL-T01 |

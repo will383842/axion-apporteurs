@@ -332,7 +332,9 @@ Une PR qui modifie un chemin réservé **sans porter le label du poste** rougit 
 le code de poste, lui, va dans le champ `Auteur:`. **Ce tableau est lu par le script**, ligne par ligne : le
 modifier change ce que la garde exige.
 
-Les six premières lignes sont exactement les six lignes de `docs/CONVENTIONS.md` §8, sans ajout ni retrait :
+Les six premières lignes sont exactement les six lignes de `docs/CONVENTIONS.md` §8, sans ajout ni retrait. La **septième** est venue avec `partners/ADR-0010` : elle ne vient pas des `CONVENTIONS`,
+et elle est écrite ici parce qu'un registre qui peut ABSOUDRE une gate bloquante doit passer
+devant un relecteur comme une décision, pas comme une ligne de configuration :
 
 | Chemin réservé | Poste | Label exigé | Où la règle est écrite |
 | --- | --- | --- | --- |
@@ -342,6 +344,7 @@ Les six premières lignes sont exactement les six lignes de `docs/CONVENTIONS.md
 | `prisma/**`, `packages/contracts/**` | A02, approbation bloquante | `schema` | `docs/CONVENTIONS.md` §5 et §8 ; `.github/CODEOWNERS` |
 | `docs/adr/**` | A02 accepte, A03 indexe | `role:architecte` | `docs/CONVENTIONS.md` §8 |
 | `.claude/settings.json`, `.claude/agents/**` | **aucun agent en session** : lot dédié GOV-000 / GOV-023, lancé avec `--settings` surchargé | — | `docs/CONVENTIONS.md` §8 ; `.claude/settings.json` porte lui-même `deny` sur `Write` et `Edit` de ce fichier |
+| `config/exemptions-corps-publie.json` | A01 commite. ⚠️ **Aucune approbation SUPPLÉMENTAIRE n'est exigée ici** : `securite` figure dans `DEUX_PREMIERES` et juge donc DÉJÀ toute PR — l'écrire dans cette colonne promettait un contrôle qui n'existe pas | — | `partners/ADR-0010` ; `.github/CODEOWNERS`. ⚠️ **Ce `—` ne veut PAS dire « aucun agent ne peut écrire », comme pour la ligne du dessus : A01 commite ce fichier. Il veut dire qu'AUCUN label ne l'arme — c'est une LACUNE, pas une protection** (`GOV-040` la ferme par le `deny`, seul lot `--settings` surchargé). ⚠️ Et `.github/CODEOWNERS` est **mécaniquement INERTE** ici : le fichier porte déjà un attrape-tout au même propriétaire. La protection réelle est que la lentille `securite` juge TOUTE PR. — **le seul fichier du dépôt qui puisse ABSOUDRE un rouge bloquant** : une ligne y transforme un échec de Gate A en vert. `config/entite.json` ne peut que CONTRAINDRE ; celui-ci absout. Le label est celui du poste qui commite, comme les autres registres ; l'approbation bloquante est portée par le protocole de revue et par CODEOWNERS, ce dépôt n'ayant pas de label de rôle pour cette lentille. |
 
 Deux chemins de plus, qui ne viennent pas de `docs/CONVENTIONS.md` §8 mais des fiches — leur source est dite
 dans la dernière colonne, et c'est à ce titre qu'ils entrent ici (RM-01) :

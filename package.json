@@ -11,7 +11,7 @@
   "scripts": {
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
-    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace",
+    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace && pnpm gov:lexique",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
@@ -55,6 +55,10 @@
     "gov:agents:prove": "tsx scripts/gates/gov-agents.ts --prove",
     "gov:agents:rendre": "tsx scripts/agents/generer.ts",
     "gov:agents:verifier": "tsx scripts/agents/generer.ts --verifier",
+    "gov:entite": "tsx scripts/gates/gov-entite.ts",
+    "gov:entite:prove": "tsx scripts/gates/gov-entite.ts --prove",
+    "gov:entite:corps": "tsx scripts/gates/gov-entite.ts --corps-publie",
+    "gov:entite:corps:prove": "tsx scripts/gates/gov-entite.ts --corps-publie --prove",
     "gov:depot-visibilite": "tsx scripts/gates/gov-depot.ts",
     "gov:depot-visibilite:prove": "tsx scripts/gates/gov-depot.ts --prove",
     "gov:lecons": "tsx scripts/gates/gov-lecons.ts",
@@ -65,8 +69,16 @@
     "gov:trace:verifier": "tsx scripts/gates/gov-trace.ts --verifier",
     "gov:etat": "tsx scripts/gates/gov-etat.ts",
     "gov:etat:prove": "tsx scripts/gates/gov-etat.ts --prove",
+    "gov:lexique": "tsx scripts/gates/lexique-apporteurs.ts",
+    "gov:lexique:prove": "tsx scripts/gates/lexique-apporteurs.ts --prove",
+    "partners:schema:enums": "tsx scripts/gates/schema-enums.ts",
+    "partners:schema:enums:prove": "tsx scripts/gates/schema-enums.ts --prove",
     "contracts:export": "tsx scripts/contracts/export.ts",
-    "contracts:hash": "tsx scripts/contracts/export.ts --verifier"
+    "contracts:hash": "tsx scripts/contracts/export.ts --verifier",
+    "gov:tasks:verifie-rendu": "tsx scripts/gates/gov-tasks.ts --verifie-rendu",
+    "gov:requirements:render": "tsx scripts/gates/gov-requirements.ts --render",
+    "gov:requirements:verifie-rendu": "tsx scripts/gates/gov-requirements.ts --verifie-rendu",
+    "pr:corps": "tsx scripts/lot/corps-de-pr.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

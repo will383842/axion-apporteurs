@@ -945,6 +945,26 @@ if (process.argv.includes('--sources')) {
 }
 
 if (process.argv.includes('--render')) {
+  // ⚠️ ON CONTRÔLE AVANT D'ÉCRIRE, comme `gov-requirements.ts` le fait déjà.
+  //
+  // Sans ce refus, cette vue PROPAGE les fautes qu'elle est censée dénoncer : une attribution
+  // fausse fait rougir la garde en `vue_divergente`, et le geste que ce rouge PRESCRIT —
+  // `pnpm gov:trace --render` — réécrit la matrice avec la fausse attribution dedans, après quoi
+  // tout est vert. Mesuré par la lentille `mutation` le 2026-09-05 : un titre légitime
+  // relabellisé, puis `--render`, et la matrice inscrit la fausse attribution comme « couverte »
+  // sans qu'aucune garde ne rougisse.
+  //
+  // L'asymétrie entre les deux générateurs frères était le vrai défaut, et elle se voyait à
+  // vingt lignes de distance dans deux fichiers voisins.
+  const fautesAvantRendu = controler(univers);
+  if (fautesAvantRendu.length > 0) {
+    console.error(
+      `❌ Refus de rendre une matrice dont les sources sont fautives (${fautesAvantRendu.length}). ` +
+        'Lance `pnpm gov:trace` : corrige la SOURCE, ne regénère pas la VUE par-dessus.'
+    );
+    for (const f of fautesAvantRendu.slice(0, 5)) console.error(`   [${f.famille}] ${f.message}`);
+    process.exit(1);
+  }
   writeFileSync(CHEMIN_VUE, rendreVue(univers));
   const testees = univers.exigences.filter(
     (e) => e.statut === 'active' && e.taches.some((id) => LIVREE.has(univers.taches.find((t) => t.id === id)?.statut ?? ''))

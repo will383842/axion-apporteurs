@@ -3339,6 +3339,7 @@
       "etape": null,
       "phase": 0,
       "taches": [
+        "GOV-039",
         "QA-T03"
       ]
     },
@@ -3662,7 +3663,7 @@
     {
       "id": "REQ-GOV-003",
       "domaine": "gouvernance-agents",
-      "texte": "Tout identifiant de décision issu des documents est qualifié par un préfixe de document (PLAN-, REG-, SIREN-, TDB-, ABUS-, BEB-) et figure dans `docs/DECISIONS-INDEX.md`. Gate : un identifiant nu `\\b[ABCDR]\\d{1,2}\\b` dans un titre/corps de PR, un ADR ou un commentaire de code → rouge.",
+      "texte": "Tout identifiant de décision issu des documents est qualifié par un préfixe de document (PLAN-, REG-, SIREN-, TDB-, ABUS-, BEB-) et figure dans `docs/DECISIONS-INDEX.md`. Gate : un identifiant nu `\\b[ABCDR]\\d{1,2}\\b` dans un titre/corps de PR, un ADR ou un commentaire de code → rouge. Un renvoi POINTÉ — un identifiant suivi d'un point et d'un CHIFFRE, comme le numéro d'une sous-section — n'est pas un identifiant nu : il résout, et il est cité comme tel. La garde trace donc la ligne sur ce qui SUIT le point, un chiffre le prolongeant et toute autre chose terminant la phrase ; sans cette distinction, elle rougissait sur un renvoi que personne n'avait écrit pour désigner une décision (GOV-025, mesuré le 2026-09-05).",
       "source": "plan §2/§5, anti-abus §7, audit-bout-en-bout §11 (collisions C/D)",
       "statut": "active",
       "remplaceePar": null,
@@ -3671,7 +3672,10 @@
       "phase": -1,
       "taches": [
         "GOV-003",
-        "GOV-005"
+        "GOV-005",
+        "GOV-025",
+        "GOV-028",
+        "GOV-037"
       ]
     },
     {
@@ -3714,7 +3718,8 @@
       "etape": null,
       "phase": -1,
       "taches": [
-        "GOV-008"
+        "GOV-008",
+        "GOV-032"
       ]
     },
     {
@@ -3772,7 +3777,8 @@
       "phase": -1,
       "taches": [
         "GOV-007",
-        "GOV-023"
+        "GOV-023",
+        "GOV-024"
       ]
     },
     {
@@ -3787,7 +3793,8 @@
       "phase": -1,
       "taches": [
         "GOV-007",
-        "GOV-021"
+        "GOV-021",
+        "GOV-024"
       ]
     },
     {
@@ -3846,6 +3853,7 @@
       "taches": [
         "GOV-005",
         "GOV-022",
+        "GOV-027",
         "JUR-T01b"
       ]
     },
@@ -3931,7 +3939,10 @@
       "phase": -1,
       "taches": [
         "GOV-017a",
-        "GOV-017b"
+        "GOV-017b",
+        "GOV-024",
+        "GOV-027",
+        "GOV-037"
       ]
     },
     {
@@ -3974,7 +3985,8 @@
       "etape": 7,
       "phase": -1,
       "taches": [
-        "GOV-018"
+        "GOV-018",
+        "GOV-026"
       ]
     },
     {
@@ -4018,6 +4030,7 @@
       "etape": 10,
       "phase": -1,
       "taches": [
+        "CPL-T01",
         "CPL-T23",
         "GOV-017a",
         "GOV-017b",
@@ -5209,7 +5222,39 @@
       "etape": 7,
       "phase": -1,
       "taches": [
-        "GOV-000"
+        "CPL-T01",
+        "GOV-000",
+        "GOV-036",
+        "GOV-040"
+      ]
+    },
+    {
+      "id": "REQ-GOV-032",
+      "domaine": "gouvernance-agents",
+      "texte": "Toute vue générée du dépôt (`docs/TASKS.md`, `docs/REQUIREMENTS.md`, `docs/TRACABILITE.md`, `docs/paths-proposes.json`, `docs/PLAN-STATE.md`) est produite par un générateur nommé et possède un mode de VÉRIFICATION qui n'écrit rien et sort 1 quand le fichier commité diffère d'un seul octet de ce que sa source produirait ; ce mode est appelé par le job de Gate A. Le message d'échec nomme l'écart en unités du domaine — nombre de tâches livrées, nombre d'exigences — et non « les deux fichiers diffèrent ». Gate : une vue périmée d'une seule ligne → rouge ; le dépôt à jour → vert (contre-témoin exigé, RM-02).",
+      "source": "nouvelle (relectures de la PR 30, 2026-09-04) ; docs/PRESEANCE.md §2 lignes 1-2 et §5 point 5",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": -1,
+      "taches": [
+        "GOV-024",
+        "GOV-035"
+      ]
+    },
+    {
+      "id": "REQ-GOV-033",
+      "domaine": "gouvernance-agents",
+      "texte": "Tout identifiant que le dépôt s'attribue à lui-même et qui doit rester unique sur sa vie entière — identifiant de lot au premier chef — se dérive d'au moins une source SUIVIE par git. Une séquence tirée d'un répertoire ignoré (`.gitignore`) repart de zéro dans tout arbre neuf, worktree, clone ou machine de CI, et réattribue un identifiant déjà porté ; l'écriture qui suit fusionne alors deux ensembles distincts sous un même nom, sans qu'aucune garde ne le voie, le champ porteur étant une chaîne libre. Gate : dans un arbre où le répertoire de travail est absent, le prochain identifiant proposé pour chaque phase n'est porté par aucune entrée de `docs/tasks.json` → vert ; le même calcul privé de sa source suivie propose au contraire un identifiant DÉJÀ porté → c'est le témoin, et il se joue en confrontant le calcul en vigueur à la fixture du calcul d'avant, conservée dans le module (RM-02). Deux sources vides ne sont PAS ce témoin : elles rendent légitimement le premier identifiant, et c'est un contre-témoin.",
+      "source": "GOV-029, mesuré le 2026-09-05 dans un worktree neuf : « Lot L-1-01 : 7 tache(s) » pour un identifiant déjà porté par sept tâches fusionnées.",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": -1,
+      "taches": [
+        "GOV-029"
       ]
     }
   ]

@@ -4,15 +4,16 @@
 > Regenere par `pnpm gov:tasks --render`, jamais edite a la main : une correction tapee ici
 > disparait au rendu suivant. Trois comptages differents ont circule dans la version tenue
 > a la main, tous faux — les nombres ci-dessous sont comptes a la generation.
+> `pnpm gov:tasks --verifie-rendu` rougit si ce fichier a derive de sa source (REQ-GOV-032).
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**197 taches · 149.00 j estimes.**
+**209 taches · 154.25 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
-| -1 — Gouvernance (prealable bloquant) | 26 | 16.50 | 20 |
-| 0 — Socle technique | 50 | 37.75 | 0 |
+| -1 — Gouvernance (prealable bloquant) | 36 | 20.75 | 20 |
+| 0 — Socle technique | 52 | 38.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -55,9 +56,9 @@ Couvre : `REQ-GOV-001`, `REQ-GOV-026`
 
 Couvre : `REQ-GOV-024`, `REQ-GOV-023`
 
-**Acceptation.** `docs/REGLES-MAISON.md` porte RM-01 a RM-12 — les neuf regles de REQ-GOV-024 plus trois — une section par regle, le tableau de tete etant leur vue ; la ligne « Regle maison appliquee » vit entre ses marqueurs dans le gabarit de PR, et `gov:pr` la LIT. `docs/LECONS.md` porte le journal des lecons : chacune cite son incident mesure, ce qu'on en tire, une source verifiable (SHA, `chemin:ligne` ou message verbatim) et la `RM-nn` qu'elle a produite — ou dit qu'elle n'en a produit aucune. `pnpm gov:lecons --now <date>` (nightly, jamais l'horloge) rougit quand la consolidation depasse sept jours ALORS QUE des « appris » attendent, et reste verte sans dette. 12 familles, 13 temoins, 9 contre-temoins verts.
+**Acceptation.** `docs/REGLES-MAISON.md` porte RM-01 a RM-14 — les neuf regles de REQ-GOV-024 plus cinq — une section par regle, le tableau de tete etant leur vue ; la ligne « Regle maison appliquee » vit entre ses marqueurs dans le gabarit de PR, et `gov:pr` la LIT. `docs/LECONS.md` porte le journal des lecons : chacune cite son incident mesure, ce qu'on en tire, une source verifiable (SHA, `chemin:ligne` ou message verbatim) et la `RM-nn` qu'elle a produite — ou dit qu'elle n'en a produit aucune. `pnpm gov:lecons --now <date>` (nightly, jamais l'horloge) rougit quand la consolidation depasse sept jours ALORS QUE des « appris » attendent, et reste verte sans dette. 12 familles, 13 temoins, 9 contre-temoins verts.
 
-**Tests.** `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 a RM-12, une section par regle` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — les neuf regles que l'exigence enumere sont chacune couvertes par une section` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — docs/LECONS.md porte une date de consolidation MACHINE-LISIBLE` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — ROUGE : consolidation de plus de 7 jours ALORS QUE des « appris » attendent` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — CONTRE-TEMOIN : la meme peremption sans aucun « appris » en attente reste VERTE`
+**Tests.** `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 a RM-14, une section par regle` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — les neuf regles que l'exigence enumere sont chacune couvertes par une section` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — docs/LECONS.md porte une date de consolidation MACHINE-LISIBLE` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — ROUGE : consolidation de plus de 7 jours ALORS QUE des « appris » attendent` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — CONTRE-TEMOIN : la meme peremption sans aucun « appris » en attente reste VERTE`
 
 ### GOV-008 — PLAN-STATE vivant, protocole de session, verrou d'écriture ✅ **fusionnee**
 
@@ -109,7 +110,7 @@ Couvre : `REQ-GOV-003`, `REQ-GOV-015`
 
 **Tests.** `tests/unit/gouvernance/gardes.spec.ts#'gov:hypotheses' > sait rougir : ses 10 familles ont chacune un témoin`
 
-### GOV-006 — Glossaire + gate schéma enum
+### GOV-006 — Glossaire + gate schéma enum — **en_cours**
 
 `0.5 j` · zone `gouvernance` · `schema` · sensible : attribution · depend de `GOV-002`
 
@@ -159,11 +160,13 @@ Couvre : `REQ-GOV-014`
 
 **Tests.** `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts#REQ-GOV-014 — aucun workflow ne pousse sur la branche principale` · `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts#REQ-GOV-014 — les étapes des workflows sont réellement LUES, pas survolées` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#branche_non_protegee — la protection SUPPRIMÉE est un ROUGE, pas un indéterminé` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#protection_non_lisible — protection NON LUE ⇒ verdict INDÉTERMINÉ, pas conforme`
 
-### GOV-013 — Gate lexicale « commercial »
+### GOV-013 — Gate lexicale « commercial » — **en_cours**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-012`
 
 Couvre : `REQ-GOV-017`
+
+**Acceptation.** `pnpm gov:lexique` refuse tout usage PRESCRIPTIF des termes de REQ-GOV-017, durcie par REQ-JUR-037, sur sept motifs — `prisma/**`, `messages/**`, `src/**/*.tsx`, `src/app/(espace)/**`, gabarits e-mail, `micro-copy/**`, `docs/adr/**` — et un motif attendu qui ne balaie plus rien est une faute, pas un succes. La liste noire n'est pas dans la gate : elle est IMPORTEE de `src/domain/lexique/lexique-interdit.ts` — 9 familles, 63 formes flechies, deux portees, les marqueurs de denegation et les exceptions declarees avec elle (RM-01). La garde vise la TOURNURE et non le mot : l'usage denegatif ou definitionnel passe, l'usage prescriptif ou evaluatif rougit. Une garde qui ferait rougir la phrase qui PROTEGE forcerait a la retirer.
 
 **Tests.** `lexique.spec.ts`
 
@@ -263,13 +266,115 @@ Couvre : `REQ-QA-013`
 
 **Tests.** `tests/unit/gouvernance/tout-check-est-cable.spec.ts#le nom du check requis se lit dans les jobs de ci.yml, il n’est pas tapé` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#check_requis_absent — `gate-a` n’est plus exigé par la protection de `main`` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#un workflow qui ne se déclenche pas sur `pull_request` ne produit aucun check de PR`
 
-### CPL-T01 — Décisions sans valeur par défaut à trancher par Will : W1 entité contractante, W9 prolongation de fenêtre si devis en cours — **attente_externe**
+### CPL-T01 — Registre `config/entite.json` à valeur sentinelle, ses lecteurs et la garde `gov:entite` — **en_cours**
 
-`0 j` · zone `gouvernance` · `externe` · sensible : argent, attribution · depend de `GOV-005` · decisions `HYP-E1-5`, `W1`, `W11`, `W2`, `W3`, `W4`, `W5`, `W6`, `W9`
+`0.5 j` · zone `gouvernance` · sensible : argent, attribution · depend de `GOV-005` · decisions `HYP-W2`, `W1`, `W13`, `W3`, `W4`
 
-Couvre : `REQ-CPL-001`, `REQ-CPL-002`, `REQ-CPL-003`, `REQ-CPL-004`, `REQ-CPL-017`, `REQ-CPL-018`
+Couvre : `REQ-CPL-001`, `REQ-CPL-002`, `REQ-CPL-003`, `REQ-CPL-004`, `REQ-CPL-017`, `REQ-CPL-018`, `REQ-GOV-027`, `REQ-GOV-031`
 
-**Acceptation.** W1, W3, W4 tranchées avant la sortie de phase −1 ; **W6 est tranchée le 2026-09-03** — quatre familles commissionnées (formations collectives, accompagnement 1-to-1, audits, implémentations), soit **30 paliers** ; cinq familles non commissionnées à écrire noir sur blanc dans l'annexe (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) ; banque (W2) et stack (W5) sont des hypothèses écrites dans DECISIONS.md (pain.001.001.03 générique + saisie manuelle avec EndToEndId, REQ-CPL-002 ; la banque ne gate que le mois à blanc) ; coût mensuel de l'hébergement dédié (HYP-E1-5) soumis à Will ; test de cohérence SIREN/IBAN sur les trois fixtures (contrat, mandat, pain.001) dès que l'entité est nommée.
+**Acceptation.** Livrable de CODE, arbitré par `partners/ADR-0009`. (1) `config/entite.json` porte, en un seul endroit, la dénomination, la forme, le SIREN, le SIRET, le numéro de TVA et le siège de l'entité contractante (`W1`, tranchée le 2026-09-03), le domaine servi et le domaine d'envoi (`W3`), le modèle des têtes de réseau (`W4`) et les coordonnées bancaires débitrices (`HYP-W2`). (2) Toute valeur que le dépôt ne peut pas porter — les coordonnées bancaires débitrices, qui sont un secret et que `W13` interdit de commiter — vaut la sentinelle littérale `A-RENSEIGNER`, jamais une chaîne vide, jamais `null`, jamais un exemple plausible : un numéro d'exemple oublié dans un document signé ne se distingue pas d'une vraie valeur. (3) Aucun autre fichier ne retape ces valeurs (RM-01) : gabarit de contrat, mandat d'autofacturation, fichier de virement, export annuel et mentions légales les LISENT toutes ici, si bien que le SIREN du contrat, celui du mandat et celui du virement sont le même octet — ce que REQ-CPL-001 demandait déjà. (4) La garde `gov:entite` refuse la MISE EN SERVICE tant qu'un champ vaut la sentinelle, à ses quatre points de sortie (émission d'un contrat, génération d'un mandat, écriture d'un fichier de virement, export annuel) ; elle n'empêche ni le build, ni les tests, ni le développement — les phases 0 à 3 se codent et se prouvent contre la sentinelle. (5) Elle refuse SYMÉTRIQUEMENT qu'une coordonnée bancaire réelle soit commitée : la sentinelle est la seule valeur que ce champ prend dans le dépôt. (6) Deux témoins, l'un rouge et l'autre vert (RM-02) : un champ à `A-RENSEIGNER` fait rougir chacun des quatre points de sortie, un registre complet laisse la garde verte — sans le second, une garde qui rougit toujours finit désarmée. (7) L'entrée `gov:entite` est inscrite au registre des gardes avec sa preuve rouge.
+
+**Tests.** `tests/unit/gouvernance/entite-registre.spec.ts` · `tests/unit/gouvernance/verrou-de-phase.spec.ts`
+
+### GOV-024 — Une vue générée qui a dérivé de sa source doit rougir — **en_cours**
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-017b`
+
+Couvre : `REQ-GOV-010`, `REQ-GOV-011`, `REQ-GOV-021`, `REQ-GOV-032`
+
+**Acceptation.** `pnpm gov:tasks` n'a qu'un mode `--render` : rien ne compare `docs/TASKS.md` à `docs/tasks.json`, et `docs/REQUIREMENTS.md` n'a même pas de générateur alors que son bandeau affirme le contraire. C'est ce trou qui a laissé la vue du backlog annoncer cinq tâches livrées quand la source en portait vingt — quinze d'écart, trouvés par trois relecteurs et par aucune garde, sur le fichier qu'on ouvre justement pour savoir où en est le chantier. `docs/TRACABILITE.md`, elle, a un `--verifier` depuis GOV-011 : c'est le patron à reprendre. À livrer : (1) le rendu de `gov-tasks.ts` extrait en fonction pure `rendreVue()`, et un mode `--verifie-rendu` qui compare sans écrire et NOMME l'écart en nombre de tâches livrées — « les deux fichiers diffèrent » n'apprend rien à qui lit un journal de CI ; (2) le même couple rendu / vérification pour `docs/REQUIREMENTS.md`, qui n'a aujourd'hui aucun générateur ; (3) les deux modes câblés dans le job de Gate A ; (4) un témoin rouge — une vue périmée d'une seule tâche fait sortir 1 — et un contre-témoin vert sur le dépôt à jour, sans lequel le rouge ne prouve rien (RM-02) ; (5) le point 5 de `docs/PRESEANCE.md` §5 refermé, et le bandeau du générateur aligné sur ce qu'il fait vraiment. L'extraction de `rendreVue()` est déjà écrite et a été vue rougir sur une vue périmée ; elle n'entre pas dans le lot L-1-05, qui n'écrit pas `scripts/gates/`. ⚠️ AJOUT DU TOUR 9, motif bloquant de la lentille exactitude, et c'est le meme defaut que celui du tour 8 UNE COUCHE PLUS LOIN : scripts/lot/revues.ts — plus de 1700 lignes, LA MACHINE QUI DECIDE DE LA FUSION — se declare lui-meme « LE lecteur des revues d'une PR (REQ-GOV-010, REQ-GOV-011) » des sa deuxieme ligne, son spec porte les deux annotations @req, et gov-pr.ts cite REQ-GOV-011 dans deux messages ajoutes. Or AUCUNE tache pr:31 ne portait ces exigences, et le fichier n'etait dans les paths d'AUCUNE tache — pendant que docs/pr/31.tpl.md coche « le code ne fait rien de plus qu'elles », sur une PR sensible argent+attribution. La derivation de Couvre: etait donc fidele a une source qui SOUS-DECLARAIT, pour la seconde fois. Rattache a GOV-024 parce que ce lecteur est ne du travail sur caseRevues : il existe pour que la case de DoD dise vrai, et cette case EST le protocole de revue.
+
+**Tests.** `tests/unit/gouvernance/vues-derivees.spec.ts` · `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts` · `tests/unit/gouvernance/revues-lecteur-unique.spec.ts`
+
+### GOV-025 — La garde des identifiants nus est aveugle en fin de phrase — dépôt public, c'est une garde de publication — **en_cours**
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-003`
+
+Couvre : `REQ-GOV-003`
+
+**Acceptation.** La lookahead négative de `scripts/gates/gov-identifiants.ts` inclut le point : une étiquette de relecteur collée à un point final n'est pas vue, la même suivie d'une espace l'est. Ses propres témoins `--prove` évitent tous cette position, si bien que l'auto-preuve n'exerce jamais le seul endroit où la garde est aveugle — elle reste verte sur le texte qu'elle condamne. Trouvé en mutation, puis reproduit involontairement pendant la rédaction de l'entrée de journal de la PR 30 : des deux occurrences écrites pour l'illustrer, une seule a été vue. Le dépôt est public (`W13`, REQ-GOV-031) : un identifiant qui ne résout nulle part y reste lisible pour toujours. À livrer : (1) le point retiré de la classe de la lookahead ; (2) un témoin à CHACUNE des positions limites — fin de phrase, fin de ligne, avant une virgule, avant une parenthèse fermante — parce qu'un témoin qui évite la position limite verdit sur le défaut ; (3) un contre-témoin qui prouve qu'un usage légitime passe toujours, dont la §0 du registre des décisions et les locutions déjà exemptées ; (4) la garde rejouée contre la version CASSÉE pour montrer que les nouveaux témoins la font bien rougir.
+
+**Tests.** `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts`
+
+### GOV-026 — Le CLAUDE.md racine, avec sa règle maison d'abord registrée — **en_cours**
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-018`
+
+Couvre : `REQ-GOV-024`
+
+**Acceptation.** Retiré de la PR 30 : le fichier portait une règle de gouvernance absente de `docs/REGLES-MAISON.md` — « on ne compose jamais un lot tant qu'une PR de clôture est ouverte » —, n'appartenait aux `paths` d'aucune tâche du backlog, et son commit se rattachait à une tâche déjà fusionnée. Une règle qui ne vit que dans un fichier d'amorçage n'est référencée par aucun ADR et par aucun gabarit de PR : elle se perd à la première réécriture. À livrer, DANS CET ORDRE : (1) la règle enregistrée comme RM-13 dans `docs/REGLES-MAISON.md`, avec son énoncé, son pourquoi et la garde qui la voit ; (2) `tests/unit/gouvernance/regles-maison.spec.ts` étendu — il exige une section par règle, il doit donc rougir avant l'ajout ; (3) le fichier `CLAUDE.md` lui-même, qui renvoie à RM-13 par son numéro et jamais par paraphrase (RM-12) ; (4) `CLAUDE.md` inscrit dans les `paths` de cette tâche. Deux contraintes de rédaction, consignées dans `docs/REPRISE-SESSION.md` : ne pas y figer le premier geste, qui change à chaque session, et ne pas y résumer `docs/PRESEANCE.md` — le résumé qui avait été retiré avait déjà divergé, il omettait deux des fichiers réservés et affirmait que tout le reste était une vue générée, ce qui interdisait d'éditer les fichiers que la préséance donne justement à éditer.
+
+**Tests.** `tests/unit/gouvernance/regles-maison.spec.ts`
+
+### GOV-027 — Le composeur lit le registre des décisions autrement que la garde, et écarte des tâches dont la décision est posée — **en_cours**
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-005`
+
+Couvre : `REQ-GOV-015`, `REQ-GOV-021`
+
+**Acceptation.** Deux lecteurs du même registre, et ils ne lisent pas la même chose (RM-04). `scripts/gates/gov-tasks.ts` reconnaît une décision à la PREMIÈRE CELLULE d'une ligne de tableau et accepte les quatre familles d'identifiants du registre ; `scripts/lot/composer.ts` la cherche par une expression régulière qui ne connaît que deux préfixes et n'applique pas les alias de la §0. Trois conséquences MESURÉES le 2026-09-04, toutes silencieuses : (a) des tâches sont écartées pour « décision sans hypothèse » alors que leur décision est bel et bien déclarée au registre — il suffit que son identifiant soit une décision de Will ou un alias ; (b) trois identifiants cités dans une NOTE en prose sous la §1 — une note qui explique précisément qu'ils ne bloquent PLUS — sont comptés comme bloquants, et écartent cinq tâches de plus ; (c) le composeur ratisse la §1 entière, si bien qu'une décision TRANCHÉE y bloque encore, alors que la §4 du registre prescrit de la faire descendre en §2. À livrer : (1) un lecteur UNIQUE du registre, importé par la garde et par le composeur, alias de la §0 compris ; (2) la frontière §1/§2 lue sur les LIGNES DE TABLEAU et non sur la prose ; (3) une décision tranchée qui ne bloque plus rien ; (4) un témoin par famille et un contre-témoin vert ; (5) le décompte des tâches redevenues éligibles imprimé, pour qu'on voie la différence au lieu de la supposer.
+
+**Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
+
+### GOV-028 — Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-025`
+
+Couvre : `REQ-GOV-003`
+
+**Acceptation.** La constante CITATIONS de scripts/gates/gov-identifiants.ts neutralise TOUTE chaine citee de 120 caracteres ou moins — guillemets francais, guillemets droits ET quotes simples — avant de chercher un identifiant nu. La regle « citer n'est pas se servir » a ete ecrite pour la PROSE et s'applique par accident a la SYNTAXE : dans un .json, un .ts ou un .yml, les guillemets qui entourent une valeur ne citent rien, ils delimitent. TEMOIN REJOUABLE, mesure le 2026-09-05 sur la garde livree : un fichier suivi portant `export const note = "conforme a D11 ; rien de plus";` rend ZERO faute ; le MEME identifiant dans la MEME instruction, la chaine rallongee au-dela de 120 caracteres, en rend UNE. Le verdict de la garde depend donc de la LONGUEUR du voisinage et non de son contenu. ⚠️ Les comptes globaux ne sont volontairement PAS asserts ici : ils sont a etablir PAR cette tache, sur un harnais qui rejoue le pipeline complet de la garde (exemptions et locutions legitimes comprises) et non la seule fautesDeLigne — une premiere mesure faite sans ce pipeline a rendu des chiffres invraisemblables, et un compteur qu'on ne sait pas reproduire est exactement ce que cette tache reproche a la garde. A livrer : (1) la neutralisation devient CONTEXTUELLE — en prose les trois familles de guillemets citent, dans un fichier de code seuls les guillemets francais et une citation IMBRIQUEE citent ; (2) un temoin par famille de delimiteur, chacun double par sa version rallongee, montrant que l'ancien contournement disparait ; (3) des contre-temoins verts sur les usages legitimes, soit par exemption nommee soit par un ajustement de la regle, jamais par un retour au silence ; (4) le plafond de 120 caracteres justifie ou supprime — une garde dont le verdict depend de la longueur d'une phrase n'est pas rejouable ; (5) les trois comptes globaux etablis et ecrits ici, avec la commande qui les reproduit.
+
+**Tests.** `tests/unit/gouvernance/citation-json-vs-prose.spec.ts`
+
+### GOV-029 — L'identifiant d'un lot se derivait d'un dossier que git ignore, et repartait sur un numero deja pris — **en_cours**
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-027`
+
+Couvre : `REQ-GOV-033`
+
+**Acceptation.** scripts/lot/composer.ts tirait le numero du prochain lot de readdirSync('docs/lots'), un dossier que .gitignore l. 67 EXCLUT du depot. Dans un arbre neuf il n'existe pas, le maximum d'un ensemble vide vaut 0, et le composeur repart a L-1-01 — identifiant deja porte par sept taches fusionnee. Mesure le 2026-09-05 dans un worktree neuf : « Lot L-1-01 : 7 tache(s) » pour sept taches dont aucune n'appartient au L-1-01 historique ; pnpm lot:cloture aurait alors ecrit lot: L-1-01 sur les nouvelles, et le lot historique en aurait compte quatorze. Rien ne l'aurait vu : t.lot est une chaine libre qu'aucun schema ne confronte. Le commentaire du code nommait pourtant le cas — « un dossier supprime, archive ou non commite faisait retomber sur un identifiant deja utilise » — et n'en avait corrige que la moitie : le COMPTAGE etait devenu un MAXIMUM, la SOURCE etait restee le dossier ignore. A livrer : (1) le numero se derive de l'UNION du dossier, qui porte les lots composes mais pas encore clos, et du champ lot de docs/tasks.json, seule des deux sources a etre SUIVIE par git ; (2) un temoin par source, aucune ne suffisant seule ; (3) des contre-temoins sur les noms hors nomenclature et sur les identifiants d'une autre phase ; (4) un controle sur le depot REEL, qui verifie que le prochain identifiant de chaque phase n'est porte par aucune tache.
+
+**Tests.** `tests/unit/gouvernance/lot-identifiant-unique.spec.ts`
+
+### GOV-032 — Un instant de reference se fige par rapport a CE QU'IL JUGE — **en_cours**
+
+`0.25 j` · zone `gouvernance` · depend de `GOV-008`
+
+Couvre : `REQ-GOV-006`
+
+**Acceptation.** Trois endroits portaient un instant de reference ECRIT EN DUR — `scripts/gates/gov-etat.ts` (la base de son mode --prove et la date de son temoin `journal_date_future`), `tests/unit/gouvernance/plan-state-frais.spec.ts` et `tests/unit/gouvernance/une-tache-un-owner.spec.ts` — sous ce commentaire : « un instant FIXE, jamais new Date() : une garde qui lit l'horloge n'est pas rejouable ». Le raisonnement est JUSTE et porte sur le MAUVAIS SUJET. Il vaut pour un univers INJECTE, ou l'instant fait partie de la fixture ; il ne vaut pas pour un fichier VIVANT. Or ces trois appels confrontent l'instant au JOURNAL REEL, qui avance. Un instant fige au 2026-09-04 confronte a un journal qui grandit est un test A RETARDEMENT : il rougit sur la premiere entree ecrite apres cette date, donc sur toute entree future, pour toujours. Il est tombe le LENDEMAIN. Le meme defaut vivait dans la GARDE : --prove appariait le journal REEL au meme litteral, donc il REFUSAIT de commencer et sortait 1, exactement comme une garde qui aurait trouve un defaut — une preuve qui s'eteint toute seule au bout d'un jour ne prouve rien le second jour, ET RIEN NE LE DIT. Le temoin de `journal_date_future` portait lui aussi une date en dur (2026-12-31) : un temoin dont la date est ecrite a la main cesse d'exercer sa famille le jour ou le present le rattrape, en silence — il devient un contre-temoin. A tenir : les trois instants sont DERIVES ; `controler()` reste PURE et RECOIT son instant, aucune horloge n'entre dans la garde ; la famille `journal_date_future` est rejouee contre une entree datee de DEMAIN et vue rougir ; et le depot tel quel reste vert.
+
+**Tests.** `tests/unit/gouvernance/plan-state-frais.spec.ts`
+
+### GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-024`
+
+Couvre : `REQ-GOV-032`
+
+**Acceptation.** REQ-GOV-032 enumere CINQ vues generees — docs/TASKS.md, docs/REQUIREMENTS.md, docs/TRACABILITE.md, docs/paths-proposes.json et docs/PLAN-STATE.md — et exige de chacune un mode de VERIFICATION qui n'ecrit rien et sort 1 quand le fichier commite differe d'un octet de ce que sa source produirait. GOV-024 en a livre quatre. La cinquieme, PLAN-STATE, n'en a toujours pas : `pnpm plan-state:build` ECRIT, et rien ne compare. ⚠️ CE QUI REND CETTE TACHE URGENTE PLUTOT QU'UTILE : REQ-GOV-032.taches vaut [GOV-024], donc le jour ou GOV-024 passe fusionnee, `gov:requirements` reste VERT avec un tiers de l'exigence sans porteur, et plus AUCUNE commande du depot ne peut rougir dessus. L'exigence ne serait pas violee : elle serait INTROUVABLE. A livrer : (1) `plan-state:build --verifier` qui n'ecrit rien, sort 1 sur un octet d'ecart et NOMME l'ecart en unites du domaine, comme ses quatre soeurs ; (2) le rendu rendu PUR et deterministe — deux appels, le meme octet — sans quoi le verificateur mesurerait la machine ; (3) l'etape de Gate A qui l'appelle, sans continue-on-error ; (4) le temoin qui le voit rougir sur une vue perime d'une ligne, et le contre-temoin vert sur le depot a jour ; (5) tant qu'a ouvrir ce fichier : `scripts/plan-state/build.ts` cite encore `scripts/gates/plan-state-derive.spec.ts`, un chemin MORT que le registre vient d'abandonner — c'est LEC-12 mot pour mot, dans le fichier meme que cette tache touche. NOTE : le TROISIEME objet que la relecture avait rattache a cette tache — le generateur du corps de PR, qui vivait hors du depot — est deja livre par la PR 31 sous `scripts/lot/corps-de-pr.ts`, avec son script `pnpm pr:corps`.
+
+**Tests.** `tests/unit/gouvernance/vues-derivees.spec.ts`
+
+### GOV-036 — Les deux listes qui decident de ce que gov:entite REGARDE sont tapees a la main
+
+`0.5 j` · zone `gouvernance` · sensible : argent · depend de `CPL-T01`
+
+Couvre : `REQ-GOV-031`
+
+**Acceptation.** Trois constats de la lentille securite, tous mesures sur les quatre passes de la PR 31, tous non bloquants parce qu'aucun ne laisse fuir un IBAN AUJOURD'HUI — mais tous portant sur ce que la garde REGARDE, c'est-a-dire sur le seul endroit ou une garde peut devenir aveugle en silence. (1) PAYS_ISO est une liste TAPEE : 47 entrees, dont SEPT qui n'emettent aucun IBAN, et CINQUANTE ET UN pays emetteurs OMIS. Mesure : cinq IBAN etrangers a cle mod-97 valide (TR, IL, RS, AL, LB) ne sont pas vus. Le risque est faible tant que la residence fiscale exigee est francaise, mais la garde est repo-wide et servira aux RIB des apporteurs. C'est RM-01 applique a une constante : la liste se DERIVE, elle ne se tape pas. (2) EXTENSIONS_BALAYEES est une liste d'AUTORISATION sous un commentaire qui dit « un secret ne choisit pas son extension ». Ne sont pas balayes : .sh .py .tf .toml .ini .mdx .html .http .rst .jsonc .log .har .pdf Makefile .gitattributes .sha256 — et `scripts/*.sh` exportant PARTNERS_IBAN_DEBITEUR est le cas plausible. La forme juste est une liste de REFUS (binaires), avec le contre-temoin .png qui s'y transpose tel quel. (3) Le commentaire pres de estBalaye annonce des temoins « --prove, famille filtre_trop_large » : cette famille N'EXISTE PAS, FAMILLES en porte onze et aucune de ce nom. Les temoins sont dans le banc d'essai, ce qui suffit — mais le code annonce une couverture qu'il n'a pas, dans la phrase meme qui repond a un constat de mutation.
+
+**Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
+
+### GOV-037 — Les nombres se derivent, les ATTRIBUTIONS non : rien ne confronte un nom de tache a ses paths
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-024`
+
+Couvre : `REQ-GOV-003`, `REQ-GOV-021`
+
+**Acceptation.** Observation de cloture de la lentille exactitude apres CINQ passes sur la PR 31 : « les nombres se derivent maintenant, les ATTRIBUTIONS non ». Un nom de tache ecrit dans l'en-tete d'un fichier, ou dans le champ tache de docs/gates.json, n'est confronte a RIEN — ni aux paths du backlog, ni a l'existence de la tache. LES occurrences mesurees dans la seule journee du 2026-09-05 — toutes trouvees a la LECTURE, aucune par une garde. Elles sont enumerees ci-dessous et il n'y a volontairement PAS de compte en tete : c'est la troisieme fois dans cette PR qu'un compte ecrit dans une acceptance ne tient pas — « les neuf regles plus trois » de GOV-018 ne suivait pas une addition faite en queue, « seize taches ecartees » de GOV-027 etait une mesure simplement fausse, et celui-ci decrivait la liste placee juste a cote de lui. Les trois causes different ; ce qu'elles ont en commun est qu'un compte tape doit etre tenu a jour et qu'une liste se lit : un correctif de lookahead etiquete GOV-029 alors qu'il corrige GOV-025 ; la derivation d'un instant etiquetee GOV-029 alors qu'elle n'a pas de tache (devenue GOV-032) ; une entree de registre citant GOV-029 pour une lacune que GOV-029 ne porte pas ; l'en-tete de scripts/lot/corps-de-pr.ts nommant GOV-035 alors que le fichier est dans les paths de GOV-024, et que l'acceptance de GOV-035 ecrit elle-meme qu'elle ne le porte pas ; et une CINQUIEME, trouvee le 2026-09-05 en verifiant le refus de la lentille schema sur la tete 41bc814 : la revue elle-meme s'appuie sur GOV-033 pour porter un arbitrage, or GOV-033 n'existe dans AUCUNE branche du depot. C'est la premiere occurrence qui vit dans une REVUE plutot que dans du code, donc hors de portee de toute garde de depot — ce qui borne honnetement ce que cette tache peut fermer. ⚠️ ET ELLE PORTE UNE DISTINCTION QUE LES QUATRE PREMIERES CACHAIENT : on ne peut pas trancher si le relecteur CITE une tache qu'il croit exister ou s'il RESERVE le prochain identifiant libre (GOV-033 et GOV-034 le sont tous les deux). Les deux lectures sont egalement plausibles et rien dans le depot ne les distingue. La garde livree doit donc dire ce qu'elle fait d'un identifiant BIEN FORME QUI NE RESOUT PAS — le refuser, ou exiger une forme explicite de reservation — plutot que de supposer qu'un tel identifiant est forcement une faute. ⚠️ CE QUI REND CETTE FAMILLE COUTEUSE : une attribution fausse envoie le lecteur suivant chercher dans un fichier que personne n'a touche, et gov:identifiants ne peut pas la voir — il juge la FORME d'un identifiant, jamais sa RESOLUTION, et GOV-029 a exactement la bonne forme. A livrer : (1) une garde qui, pour tout fichier suivi de scripts/ et tests/ portant un identifiant de tache dans ses vingt premieres lignes, verifie que cette tache EXISTE au backlog ET que le fichier figure dans ses paths — ou que la tache est explicitement citee comme contexte et non comme proprietaire ; (2) le meme controle sur TOUTE chaine d'une entree de docs/gates.json — pas seulement le champ tache : la lentille schema a mesure que sur gov:plan-state le champ tache vaut GOV-008 et n'a JAMAIS bouge, pendant que toute la valse GOV-029 -> GOV-032 -> GOV-035 se jouait dans la prose du champ verifie. Un controle limite au champ tache aurait rendu VERT sur deux des cinq occurrences qui motivent cette tache, et le livrable (4) aurait ete insatisfiable ; (3) un temoin par famille, vu rougir, et des contre-temoins verts sur les citations legitimes — un fichier a le droit de NOMMER une tache voisine sans etre a elle, et une garde qui l'interdirait serait retiree dans la semaine ; (4) CHACUNE des occurrences enumerees ci-dessus, y compris celle du point (5), rejouee contre la garde livree, chacune vue rougir avant sa correction ; (5) ⚠️ LA GARDE CONFRONTE LE NOM A L'ETAT COURANT DU BACKLOG, ELLE NE VERIFIE PAS UNE FOIS. La cinquieme occurrence le prouve : `docs/gates.json` citait GOV-032 pour la lacune PLAN-STATE, et c'etait DEFENDABLE au moment ou la phrase a ete ecrite — aucune tache ne portait alors cette lacune. Elle est devenue fausse quand GOV-035 a ete creee. Une attribution ne se corrompt donc pas seulement quand l'auteur se trompe : elle se corrompt quand le BACKLOG bouge, et une garde qui ne s'executerait qu'a l'ecriture ne verrait jamais cette moitie-la. ⚠️ TEMOIN DE CLASSE, ET EXPLICITEMENT HORS LIVRAISON DE CETTE TACHE : tests/unit/gouvernance/entite-registre.spec.ts porte 88 titres etiquetes REQ-CPL-018, qui dit « ADR mono-tenant en V1, aucune colonne tenant », alors qu ils parlent d IBAN, de BIC, de SIREN et de corps de PR (la 89e, ligne 267, la teste legitimement). La lentille schema a tranche que cette famille N ENTRE PAS dans le perimetre livrable de GOV-037 : ses confrontations a elle sont MECANISABLES (un nom de tache existe-t-il, le fichier est-il dans ses paths), alors que « ce it() teste un IBAN » contre « REQ-CPL-018 dit mono-tenant » ne l est par aucune garde — l y verser rendrait GOV-037 INFERMABLE, qui est precisement le defaut que cette tache decrit. Elle est donc consignee ici comme OBSERVATION, pour que la garde livree sache dire ce qu elle NE PEUT PAS voir ; la correction des 88 titres est une tache distincte, GOV-039. ⚠️ CINQUIEME LIVRABLE, ajoute au tour 9 et MECANISABLE, lui : confronter le fichier QU UNE TACHE PROMET DE TESTER (son champ tests{}) a ceux qu elle DECLARE TOUCHER (son champ paths). Mesure du 2026-09-05 : ni gov:tasks ni gov:trace ne rougissent quand les deux divergent. C est le trou par lequel verrou-de-phase.spec.ts est devenu orphelin — dans les paths d aucune tache, dans aucun tests, couvert par sa seule annotation @req — et par lequel GOV-040 a ete ecrite avec le meme defaut le jour ou on le fermait ailleurs. scripts/lot/composer.ts compare t.paths pour detecter les collisions de lot : un fichier promis et non declare lui est invisible. Un temoin vu rougir sur GOV-040 telle qu elle a ete redigee, et un contre-temoin vert sur une tache dont les deux champs concordent.
+
+**Tests.** `tests/unit/gouvernance/attributions-resolvent.spec.ts`
 
 ## Phase 0 — Socle technique
 
@@ -618,6 +723,26 @@ Couvre : `REQ-JUR-031`
 **Acceptation.** le gabarit ne contient plus « déchéance », « sanction », « faute grave », « contradictoire », ni aucun barème de gradation ; il conserve les clauses de protection (SIREN, 12 mois, absence d'exclusivité et de mandat, premier déclarant, parrainage sur ventes, CPF, RGPD, autofacturation, compétence).
 
 **Tests.** `contrat-sobre.spec.ts`
+
+### GOV-039 — Quatre-vingt-huit titres de test etiquetes par l'exigence d'un AUTRE sujet
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-037`
+
+Couvre : `REQ-QA-014`
+
+**Acceptation.** Le fichier de la garde d ARGENT porte 88 titres etiquetes REQ-CPL-018 — « ADR mono-tenant en V1, aucune colonne tenant » — alors qu ils parlent d IBAN, de BIC, de SIREN et de corps de PR. La 89e occurrence, ligne 267, la teste legitimement et NE DOIT PAS bouger. ⚠️ CE QUI REND CETTE TACHE PARTICULIERE : ce n est PAS une dette heritee. La lentille exactitude l a mesure — git cat-file -e 794245c:<fichier> rend 128, le fichier est AJOUTE par la PR 31 — et l orchestrateur avait affirme le contraire dans un message de commit et dans trois consignes d agents. Le report a ete juge tenable par DEUX lentilles au huitieme tour (« 84 titres reecrits au huitieme tour serait pire », et « rien de faux ne passe une gate » : gov:trace rend au grain du FICHIER, aucun compte de 89 n est publie, l exigence est couverte au fond). A livrer : chaque titre porte l identifiant de l exigence qu il teste reellement ; le mapping CPL-T01.tests suit ; docs/TRACABILITE.md re-derive ; et la ligne 267 reste intacte, avec un temoin qui la protege. ⚠️ AUCUNE GARDE NE PEUT VERIFIER CE TRAVAIL : confronter « ce it() teste un IBAN » au TEXTE de l exigence n est pas mecanisable — c est ce qui l a fait sortir du perimetre de GOV-037, et c est pourquoi cette tache exige une relecture nommee plutot qu un vert. La mesure de la lentille exactitude borne le probleme : sur les 29 fichiers de spec, AUCUN AUTRE n est dans ce cas (la deuxieme concentration est de 47 titres sur trois fichiers, et sur son propre sujet). ⚠️ L EXIGENCE JUSTE EST REQ-GOV-005, et elle etait sous les yeux : « la matrice de tracabilite est DERIVEE (jamais redigee a la main) : les TITRES it() CONTIENNENT L IDENTIFIANT REQ ». Les 88 titres la violent donc a la lettre. Et cela eclaire ce que la lentille mutation a mesure : gov:trace implemente la FORME de cette exigence — un titre contient un identifiant — et jamais sa RESOLUTION. Pire, elle PROPAGE la faute : une fausse attribution fait rougir gov:trace pour la mauvaise raison (vue_divergente), et le geste que ce rouge prescrit — gov:trace --render — rend l attribution OFFICIELLE et tout repasse au vert. A livrer donc, en plus de la correction des titres : tests/unit/gouvernance/titres-de-test-resolvent.spec.ts , qui confronte l identifiant qu un titre s attribue au TEXTE de l exigence nommee, avec un temoin vu rougir sur les 88 cas reels et des contre-temoins verts sur les titres justes. ⚠️ Ma premiere redaction de cette tache declarait REQ-GOV-021, testee par entite-registre.spec.ts — un fichier qui ne cite JAMAIS cette exigence. gov:trace l a refuse en req_non_citee_par_son_test. La tache qui denonce les mauvaises attributions en portait une. ⚠️⚠️ DEUXIEME MAUVAISE ATTRIBUTION DANS LA TACHE QUI LES DENONCE, et la lentille schema l a trouvee en ACCEPTANT. Ma premiere redaction declarait REQ-GOV-021, que le fichier promis ne cite jamais — gov:trace l a refusee. J ai alors ecrit « l exigence juste etait sous mes yeux, REQ-GOV-005 » : elle est ABSORBEE (remplaceePar REQ-QA-014), et la clause dont je me servais pour la justifier — « les titres it() contiennent l identifiant REQ » — ne vit QUE dans le texte absorbe. REQ-QA-014, le texte EN VIGUEUR, parle d annotations @req et de req:check, JAMAIS des titres it(). J avais donc ancre cette tache sur une exigence morte et l avais justifiee par une clause sans porteur vivant. L exigence portee est desormais REQ-QA-014. ⚠️ CE QUE CELA REVELE, et qui est le vrai livrable de cette tache : la clause sur les titres it() a ete PERDUE a l absorption. Une exigence absorbee emporte avec elle ce que sa remplacante ne reprend pas, et rien ne le signale. Le gardien-spec doit trancher : ou bien la clause revient dans REQ-QA-014, ou bien elle est abandonnee sciemment — mais elle ne peut pas rester dans un texte que le depot declare remplace.
+
+**Tests.** `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts`
+
+### GOV-040 — Le registre d'exemptions n'a AUCUNE des deux surfaces qui arment une machine
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-023`
+
+Couvre : `REQ-GOV-031`
+
+**Acceptation.** Mesure de la lentille schema au 8e tour de la PR 31 : des CINQ surfaces de gouvernance que partners/ADR-0010 prend pour etalon, DEUX SEULEMENT arment une machine — le deny de .claude/settings.json et le label du §7 de la charte. config/exemptions-corps-publie.json — le seul fichier du depot qui puisse ABSOUDRE un rouge bloquant de Gate A — est passe de 0/5 a 3/5 SANS OBTENIR NI L UNE NI L AUTRE : .github/CODEOWNERS porte deja un attrape-tout au meme proprietaire, donc la ligne ajoutee ne declenche aucune demande de revue nouvelle, et le label du §7 vaut « — ». Ce qui protege aujourd hui est la lentille securite, exigee sur TOUTE PR (DEUX_PREMIERES dans scripts/lot/revues.ts) — un controle reel mais qui ne vise pas ce fichier en particulier. A livrer : le deny sur ce chemin dans .claude/settings.json, plus le temoin qui rougit s il disparait. ⚠️ CE TRAVAIL NE PEUT PAS SE FAIRE EN SESSION : .claude/settings.json est precisement le fichier qu aucun agent en session n a le droit d ecrire (charte §7), et il s ecrit par le lot dedie lance avec --settings surcharge, comme GOV-000 et GOV-023. Le §7 ne l interdit pas : IL LE DESIGNE. C est cette lecture qui a manque a l orchestrateur, qui avait pris le panneau pour un mur. ⚠️ Cette tache a ete ecrite avec le defaut qu elle cotoie : ses paths ne portaient que .claude/settings.json alors que son tests{} promet un temoin dans un AUTRE fichier — exactement la lacune par laquelle verrou-de-phase.spec.ts etait devenu orphelin, fermee sur CPL-T01 le jour meme. scripts/lot/composer.ts compare t.paths pour detecter les collisions de lot : le fichier promis lui serait reste invisible. Mesure : ni gov:tasks ni gov:trace ne rougissent sur ce cas — AUCUNE GARDE NE CONFRONTE LE FICHIER QU UNE TACHE PROMET DE TESTER A CEUX QU ELLE DECLARE TOUCHER. Cette confrontation-la, contrairement a celle des titres, EST mecanisable : elle appartient a GOV-037.
+
+**Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
 
 ## Phase 1 — Operationnel
 
