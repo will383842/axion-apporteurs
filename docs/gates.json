@@ -97,7 +97,7 @@
       "phase": -1,
       "script": "tests/unit/gouvernance/plan-state-frais.spec.ts",
       "tache": "GOV-008",
-      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : PLAN-STATE porte les 7 rubriques de REQ-GOV-006, le bloc de reprise en tete avec le SHA de main, et le journal fait/reste/appris est RENDU depuis docs/journal/, jamais tape dans la vue. NON COUVERT a ce jour, et aucune autre gate ne le couvre : que plan-state:build regenere un fichier identique au fichier commite. Tant que cette assertion n'est pas ecrite, PLAN-STATE peut avoir ete edite a la main sans que rien ne rougisse (GOV-032)",
+      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : PLAN-STATE porte les 7 rubriques de REQ-GOV-006, le bloc de reprise en tete avec le SHA de main, et le journal fait/reste/appris est RENDU depuis docs/journal/, jamais tape dans la vue. NON COUVERT a ce jour, et aucune autre gate ne le couvre : que plan-state:build regenere un fichier identique au fichier commite. Tant que cette assertion n'est pas ecrite, PLAN-STATE peut avoir ete edite a la main sans que rien ne rougisse. La tache qui porte cette lacune est GOV-035",
       "fixtureRouge": "editer PLAN-STATE.md a la main",
       "preuveRouge": null
     },
