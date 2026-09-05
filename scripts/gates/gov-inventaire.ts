@@ -34,7 +34,14 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { DEPOT_LOCAL, MOTIF_SHA, depotDeLaTache, type Attestation } from '../lot/attestation';
 
-const CHEMIN_TACHES = 'docs/tasks.json';
+/**
+ * `--taches <chemin>` : juger un AUTRE backlog que celui du dépôt (GOV-038). Même motif que le
+ * `--out` des générateurs de vues : `docs/tasks.json` est RÉSERVÉ, un développeur ne l'écrit pas,
+ * et sans cette option une mutation PROPOSÉE ne peut être ni appliquée ni mesurée — seulement
+ * supposée bonne. Deux ruptures de traçabilité ont été trouvées ainsi, avant d'être écrites.
+ */
+const iTaches = process.argv.indexOf('--taches');
+const CHEMIN_TACHES = iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
 const CHEMIN_PATHS = 'docs/paths-proposes.json';
 const CHEMIN_INVENTAIRE = 'docs/INVENTAIRE-CHANTIERS.md';

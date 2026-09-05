@@ -55,10 +55,24 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from '
 import { join, basename, posix } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
+import { DEPOT_LOCAL } from '../lot/attestation';
 
 
 const CHEMIN_REGISTRE = 'docs/requirements.json';
-const CHEMIN_TACHES = 'docs/tasks.json';
+/**
+ * `--taches <chemin>` : juger un AUTRE backlog que celui du dépôt (GOV-038).
+ *
+ * POURQUOI CETTE OPTION EXISTE. `docs/tasks.json` est un fichier RÉSERVÉ que `.claude/settings.json`
+ * interdit d'écrire à un développeur. Une session qui PROPOSE une mutation de ce fichier — passer
+ * `INT-T01b` à `fusionnee` avec son attestation, par exemple — n'avait donc aucun moyen de savoir
+ * si les gardes l'accepteraient : ni l'appliquer, ni la juger. Elle la rendait en texte et
+ * l'orchestrateur découvrait le rouge après l'avoir écrite. C'est exactement ce qui est arrivé
+ * ici : la mutation proposée faisait rougir DEUX familles que personne n'avait vues venir
+ * (`test_promis_absent`, puis `req_sans_test` sur onze exigences). Une proposition qu'on ne peut
+ * pas mesurer est une supposition.
+ */
+const iTaches = process.argv.indexOf('--taches');
+const CHEMIN_TACHES = iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
 const CHEMIN_VITEST = 'vitest.config.ts';
 const VUE_PAR_DEFAUT = 'docs/TRACABILITE.md';
 
@@ -97,7 +111,15 @@ export type Exigence = {
   etape: number | null;
   phase: number | null;
 };
-export type Tache = { id: string; statut: string; phase: number; reqs: string[]; tests?: Record<string, string[]> };
+export type Tache = {
+  id: string; statut: string; phase: number; reqs: string[]; tests?: Record<string, string[]>;
+  /**
+   * Le dépôt de la tâche. Absent = celui-ci (GOV-038) : les fixtures de `--prove` n'ont pas à le
+   * porter, et c'est la valeur qui rend le contrôle le plus STRICT — un défaut d'omission ne doit
+   * jamais relâcher une garde.
+   */
+  repo?: string;
+};
 
 export type FichierTest = {
   chemin: string;
@@ -185,7 +207,24 @@ export function nomPorteLaPromesse(nomResolu: string, promesse: string): boolean
  */
 function reputeeTestee(e: Exigence, parTache: Map<string, Tache>): boolean {
   if (e.statut !== 'active') return false;
-  return e.taches.some((id) => LIVREE.has(parTache.get(id)?.statut ?? ''));
+  return e.taches.some((id) => livreeIci(parTache.get(id)));
+}
+
+/**
+ * « Livrée » ET « livrée ICI » (GOV-038). Cette garde ne peut affirmer qu'une exigence a un test
+ * que si le test peut se trouver sur CE disque. Une exigence dont la seule tâche livrée vit dans
+ * `axionia` n'a rien à montrer ici : la réputer testée reviendrait à lui réclamer une preuve que
+ * ce dépôt ne peut pas produire, et `req_sans_test` rougirait sur ONZE exigences le jour où
+ * `INT-T01b` passe `fusionnee` — pour un travail bien fait et bien testé, dans son dépôt.
+ *
+ * ⚠️ CE QUE CETTE LIGNE COÛTE, dit plutôt que tu : elle crée un endroit où marquer une tâche
+ * `repo: "axionia"` DISPENSE de la preuve de test. Le contrepoids n'est pas dans ce fichier :
+ * `gov:tasks` exige désormais de toute tâche livrée hors dépôt une `attestation` portant le SHA
+ * ENTIER de son commit de fusion, et `pnpm gov:attestation --en-ligne` le résout contre la forge.
+ * `repo` reste écrit par le `gardien-spec`, jamais par un développeur.
+ */
+function livreeIci(t: Tache | undefined): boolean {
+  return t !== undefined && LIVREE.has(t.statut) && (t.repo ?? DEPOT_LOCAL) === DEPOT_LOCAL;
 }
 
 /** Le fichier de test que désigne une promesse, ou la raison pour laquelle il n'y en a pas. */
@@ -278,7 +317,17 @@ export function controler(u: Univers): Faute[] {
     //   — le fichier n'existe pas encore  → toléré tant que la tâche n'est pas livrée ;
     //   — le fichier EXISTE et ne porte pas ce titre → la promesse est FAUSSE, quel que soit le
     //     statut. Elle ne deviendra pas vraie en attendant.
+    //
+    // ET LE DÉPÔT (GOV-038). La distinction ci-dessus suppose encore une chose : que le fichier
+    // promis PUISSE être sur ce disque. Quatorze tâches du backlog vivent dans `axionia`, leurs
+    // tests aussi, et `INT-T01b` est la première à avoir été livrée. Le schéma EXIGE `tests` dès
+    // `en_cours` ; confronter cette promesse-là au disque de CE dépôt ferait rougir la garde au
+    // moment même où on déclare une livraison réelle, et les seules issues seraient de mentir sur
+    // le chemin ou de désarmer la garde — le mode d'échec que RM-02 décrit par l'autre bout.
+    // L'ignorance n'est pas silencieuse pour autant : `direLesSources()` compte ces tâches et le
+    // DIT. Le contrôle qui les couvre est celui du dépôt d'en face, pas celui-ci.
     const livree = LIVREE.has(t.statut);
+    const surCeDisque = (t.repo ?? DEPOT_LOCAL) === DEPOT_LOCAL;
     for (const [req, promesses] of Object.entries(t.tests ?? {})) {
       for (const promesse of promesses) {
         const [chemin, ...reste] = promesse.split('#');
@@ -292,10 +341,11 @@ export function controler(u: Univers): Faute[] {
               `${t.id} promet « ${promesse} » pour ${req} : ${r.candidats.length} fichiers portent ` +
                 `ce nom (${r.candidats.join(', ')}). Écris le chemin complet — la garde refuse de choisir.`
             );
-          } else if (livree) {
-            // Le fichier n'existe pas : c'est un défaut SEULEMENT si la tâche est livrée. Avant,
-            // c'est une promesse de test à venir, et une garde qui la refuserait interdirait
-            // d'écrire une acceptance avant son code.
+          } else if (livree && surCeDisque) {
+            // Le fichier n'existe pas : c'est un défaut SEULEMENT si la tâche est livrée ET si son
+            // dépôt est celui-ci. Avant la livraison, c'est une promesse de test à venir, et une
+            // garde qui la refuserait interdirait d'écrire une acceptance avant son code ; hors de
+            // ce dépôt, l'absence ne dit rien — le fichier n'a jamais eu vocation à être ici.
             ajouter(
               'test_promis_absent',
               `${t.id} promet « ${promesse} » pour ${req} : aucun fichier de test de ce nom sur le disque.`
@@ -306,7 +356,7 @@ export function controler(u: Univers): Faute[] {
 
         const f = r.fichier;
         if (!f.execute) {
-          if (!livree) continue;
+          if (!livree || !surCeDisque) continue;
           ajouter(
             'test_promis_absent',
             `${t.id} promet « ${promesse} » pour ${req} : ${f.chemin} existe mais ${CHEMIN_VITEST} ne ` +
@@ -788,6 +838,19 @@ function direLesSources(u: Univers): void {
       `backlog : lu ✓ (${u.taches.length} tâches) · ` +
       `disque : lu ✓ (${executes.length} fichiers exécutés, ${resolus.length} aux titres résolus)`
   );
+  // GOV-038. Ce qui n'a PAS été confronté au disque, et pourquoi. Une garde qui saute des lignes en
+  // silence apprend au lecteur que son vert couvre tout ; celle-ci compte ce qu'elle n'a pas pu
+  // lire et le nomme, comme elle le fait déjà pour la source PR juste en dessous.
+  const horsDepot = u.taches.filter(
+    (t) => (t.repo ?? DEPOT_LOCAL) !== DEPOT_LOCAL && LIVREE.has(t.statut) && Object.keys(t.tests ?? {}).length > 0
+  );
+  if (horsDepot.length > 0) {
+    console.log(
+      `   ⚠️  ${horsDepot.length} tâche(s) livrée(s) HORS de ce dépôt (${horsDepot.map((t) => t.id).join(', ')}) : ` +
+        `leurs tests vivent dans leur dépôt et n'ont PAS été confrontés à ce disque. ` +
+        `Leur livraison est attestée par un SHA (\`pnpm gov:attestation --en-ligne\` la résout).`
+    );
+  }
   if (u.pr === null && u.prIndisponible === PR_NON_CONSULTEE) {
     // « Pas consultée » et « pas lisible » ne se confondent PAS. Le premier est une décision de
     // mode, le second est un trou dans le contrôle : les écrire pareil, c'est apprendre au lecteur
@@ -891,6 +954,17 @@ if (process.argv.includes('--prove')) {
    */
   const CONTRE_TEMOINS: { nom: string; muter: () => Univers }[] = [
     { nom: 'une tâche `a_faire` qui promet un test pas encore écrit', muter: () => { const u = copie(base); u.taches[1]!.tests = { 'REQ-AAA-002': ['tests/f/jamais.spec.ts#a venir'] }; return u; } },
+    // GOV-038. Une tâche LIVRÉE dont le dépôt n'est pas celui-ci : ses tests sont là-bas, sur un
+    // disque que cette garde ne voit pas. Sans ce contre-témoin, `INT-T01b` — livrée pour de vrai
+    // le 2026-09-05 dans `axionia` — ferait rougir `test_promis_absent` au moment même où on
+    // déclare sa livraison, alors que le schéma EXIGE `tests` dès `en_cours` : les seules issues
+    // auraient été de mentir sur le chemin, ou de désarmer la garde.
+    { nom: 'une tâche LIVRÉE dans un autre dépôt : ses tests ne sont pas sur ce disque', muter: () => { const u = copie(base); u.taches[0]!.repo = 'axionia'; u.taches[0]!.tests!['REQ-AAA-001'] = ['axionia/tests/partners/contrat.spec.ts#payloads']; return u; } },
+    // GOV-038, second effet du même fait. « Réputée testée » veut dire « réputée testée ICI » :
+    // une exigence dont la SEULE tâche livrée vit ailleurs n'a aucun test à montrer sur ce disque,
+    // et le lui réclamer rendrait `req_sans_test` rouge sur onze exigences le jour où `INT-T01b`
+    // passe `fusionnee` — pour un travail qui, lui, est bien fait et bien testé, dans son dépôt.
+    { nom: 'une exigence dont la seule tâche livrée vit dans un autre dépôt', muter: () => { const u = copie(base); u.taches[0]!.repo = 'axionia'; u.fichiers[0]!.reqsCitees = ['REQ-AAA-003']; return u; } },
     { nom: 'une exigence active dont aucune tâche livrée ne la porte', muter: () => { const u = copie(base); u.exigences[1]!.taches = ['T-FUTURE']; return u; } },
     { nom: 'une exigence ABSORBÉE que plus aucun test ne cite', muter: () => { const u = copie(base); u.fichiers[0]!.reqsCitees = ['REQ-AAA-001']; return u; } },
     { nom: 'une PR hors gabarit sans ligne « Couvre: »', muter: () => { const u = copie(base); u.pr![1]!.couvre = []; return u; } },
@@ -946,9 +1020,13 @@ if (process.argv.includes('--sources')) {
 
 if (process.argv.includes('--render')) {
   writeFileSync(CHEMIN_VUE, rendreVue(univers));
-  const testees = univers.exigences.filter(
-    (e) => e.statut === 'active' && e.taches.some((id) => LIVREE.has(univers.taches.find((t) => t.id === id)?.statut ?? ''))
-  );
+  // ⚠️ CETTE LIGNE RECOPIAIT LA RÈGLE au lieu de l'appeler — `e.statut === 'active' && e.taches.some(…)`
+  // écrit une seconde fois à côté de `reputeeTestee()`. Mesuré le 2026-09-05 en éprouvant la
+  // livraison d'`INT-T01b` : la console annonçait « 41 réputées testées » pendant que la VUE
+  // qu'elle venait d'écrire en portait 31, dans la même sortie, à deux lignes d'intervalle. Les
+  // deux copies avaient divergé au premier raffinement de la règle (RM-01). Elle est APPELÉE.
+  const parTacheDuRendu = new Map(univers.taches.map((t) => [t.id, t]));
+  const testees = univers.exigences.filter((e) => reputeeTestee(e, parTacheDuRendu));
   console.log(`✅ gov:trace — ${CHEMIN_VUE} rendu depuis ${CHEMIN_REGISTRE}, ${CHEMIN_TACHES} et le disque.`);
   console.log(`   ${univers.exigences.length} exigences, dont ${testees.length} réputées testées.`);
   direLesSources(univers);
