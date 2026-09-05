@@ -92,6 +92,34 @@ describe("REQ-GOV-033 — l'identifiant de lot ne se dérive pas d'un dossier ig
     expect(prochainIdentifiantDeLot(-1, ['archives', 'L-1-02'], ['gov-amorcage', 'gov-amorcage-2'])).toBe('L-1-03');
   });
 
+  // ── Le septième mutant survivant du tour 5 de la PR #31 ────────────────────
+  // La lentille `mutation` a retiré `if (!/^\d+$/.test(reste)) continue;` : NEUF tests sur neuf
+  // sont restés VERTS pendant que `['L1-abc']` rendait `L1-NaN`. Le commentaire du module nommait
+  // pourtant le cas exact — et c'est la troisième fois aujourd'hui qu'un commentaire juste tient
+  // lieu de garde. Un commentaire décrit une intention ; seul un test la défend.
+  //
+  // Le contre-témoin `gov-amorcage` juste au-dessus n'atteint PAS cette ligne : ce nom est écarté
+  // par `startsWith(prefixe)`, bien avant le test de chiffres. Il faut un nom qui porte le préfixe
+  // ET une suite non numérique — sinon on croit couvrir une garde qu'on n'a jamais exécutée.
+  it("REQ-GOV-033 — TÉMOIN : un nom qui PORTE le préfixe mais dont la suite n'est pas un nombre ne contamine pas le calcul", () => {
+    // Sans la garde : Number('recette') → NaN, Math.max en propage NaN, et le lot suivant
+    // s'appellerait `L-1-NaN`. Un identifiant que rien ne refuserait ensuite, le champ `lot`
+    // étant une chaîne libre.
+    expect(prochainIdentifiantDeLot(-1, ['L-1-recette'], ['L-1-02'])).toBe('L-1-03');
+  });
+
+  it('REQ-GOV-033 — TÉMOIN : le cas nommé par le commentaire du module, `L1-abc`, sur la phase 1', () => {
+    // `L-1-` n'est le préfixe de rien d'autre, mais `L1-` est celui de `L1-02` ET de `L1-abc`.
+    // C'est le cas que le module DÉCRIT ; il n'était joué nulle part.
+    expect(prochainIdentifiantDeLot(1, ['L1-abc'], ['L1-02'])).toBe('L1-03');
+  });
+
+  it("REQ-GOV-033 — TÉMOIN : un préfixe SEUL (`L-1-`) ne compte pas pour zéro", () => {
+    // `''` n'est pas une suite de chiffres : `/^\d+$/` le refuse, et c'est voulu — `Number('')`
+    // vaut 0, ce qui aurait été silencieusement inoffensif ici et faux ailleurs.
+    expect(prochainIdentifiantDeLot(-1, ['L-1-'], ['L-1-07'])).toBe('L-1-08');
+  });
+
   it('REQ-GOV-033 — `lotsDuBacklog` lit le champ `lot` des tâches, et ignore celles qui n’en portent pas', () => {
     // Le tableau est typé `Tache[]` et non laissé au littéral : la signature de `lotsDuBacklog`
     // ne demande que `lot`, et le contrôle des propriétés en trop refuserait un `id` écrit ici
