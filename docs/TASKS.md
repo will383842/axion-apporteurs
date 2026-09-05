@@ -8,11 +8,11 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**204 taches · 151.75 j estimes.**
+**206 taches · 153.75 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
-| -1 — Gouvernance (prealable bloquant) | 33 | 19.25 | 20 |
+| -1 — Gouvernance (prealable bloquant) | 35 | 21.25 | 20 |
 | 0 — Socle technique | 50 | 37.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
@@ -170,7 +170,7 @@ Couvre : `REQ-GOV-017`
 
 **Tests.** `lexique.spec.ts`
 
-### GOV-014 — Conventions + sélection des gardes d'axionia
+### GOV-014 — Conventions + sélection des gardes d'axionia — **en_cours**
 
 `1 j` · zone `gouvernance` · depend de `GOV-012`, `GOV-013`
 
@@ -228,11 +228,13 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-025`, `REQ-GOV-027`
 
 **Tests.** `tests/unit/gouvernance/paths-derives.spec.ts#la vue commitee est a jour : `--check` est vert sur le depot` · `tests/unit/gouvernance/paths-derives.spec.ts#REQ-GOV-025 — aucune tache `repo: axionia` ne pretend ecrire un fichier de ce depot` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la famille `phase_gelee` est prouvee, temoin et contre-temoin` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la phase courante se lit dans le backlog, pas dans la vue PLAN-STATE`
 
-### GOV-019 — Budgets de performance après première mesure
+### GOV-019 — Budgets de performance après première mesure — **en_cours**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-014`
 
 Couvre : `REQ-GOV-028`
+
+**Acceptation.** `perf/budgets.json` (une entree de budget par route) et `lighthouserc.json` existent, et leurs seuils sont DERIVES du texte de REQ-GOV-028 lu dans `docs/requirements.json` : `--rendre` les ecrit, `--verifier` rougit si le disque en differe, et le test RENVERSE la source pour prouver que l'attente se renverse — sans quoi un retour constant passerait pour une derivation. La garde rougit sur une route de `src/app/(espace)` sans entree, dans les DEUX sens du cliquet, et LEVE si le texte de l'exigence ne dit plus le seuil au lieu de retomber sur un defaut. Perimetre vide ASSUME ET DIT : elle imprime le nombre de routes balayees et declare qu'un vert a zero route ne juge aucune route. Aucune dependance ajoutee — le mesureur entre avec QA-T20. L'etape de Gate A qui l'appelle ne porte pas `continue-on-error`, et la famille `etape_ci_muselee` le refuse.
 
 **Tests.** `poids-du-bundle-garde-vraiment.spec.ts`
 
@@ -335,6 +337,26 @@ Couvre : `REQ-GOV-033`
 **Acceptation.** scripts/lot/composer.ts tirait le numero du prochain lot de readdirSync('docs/lots'), un dossier que .gitignore l. 67 EXCLUT du depot. Dans un arbre neuf il n'existe pas, le maximum d'un ensemble vide vaut 0, et le composeur repart a L-1-01 — identifiant deja porte par sept taches fusionnee. Mesure le 2026-09-05 dans un worktree neuf : « Lot L-1-01 : 7 tache(s) » pour sept taches dont aucune n'appartient au L-1-01 historique ; pnpm lot:cloture aurait alors ecrit lot: L-1-01 sur les nouvelles, et le lot historique en aurait compte quatorze. Rien ne l'aurait vu : t.lot est une chaine libre qu'aucun schema ne confronte. Le commentaire du code nommait pourtant le cas — « un dossier supprime, archive ou non commite faisait retomber sur un identifiant deja utilise » — et n'en avait corrige que la moitie : le COMPTAGE etait devenu un MAXIMUM, la SOURCE etait restee le dossier ignore. A livrer : (1) le numero se derive de l'UNION du dossier, qui porte les lots composes mais pas encore clos, et du champ lot de docs/tasks.json, seule des deux sources a etre SUIVIE par git ; (2) un temoin par source, aucune ne suffisant seule ; (3) des contre-temoins sur les noms hors nomenclature et sur les identifiants d'une autre phase ; (4) un controle sur le depot REEL, qui verifie que le prochain identifiant de chaque phase n'est porte par aucune tache.
 
 **Tests.** `tests/unit/gouvernance/lot-identifiant-unique.spec.ts`
+
+### GOV-030 — `gov:check` designe DEUX choses, et aucune ne fait ce que six documents lui pretent
+
+`1 j` · zone `gouvernance` · depend de `GOV-013`
+
+Couvre : `REQ-DM-003`, `REQ-INT-004`
+
+**Acceptation.** UN SEUL NOM POUR UNE SEULE CHOSE. Aujourd'hui `gov:check` en designe DEUX. (1) L'entree de docs/gates.json decrit une garde de TERMES INTERDITS dont le script scripts/gates/gov-check.ts N'EXISTE PAS, et aucun autre script ne fait ce travail. (2) package.json declare sous le meme nom une CHAINE de gardes de gouvernance qu'AUCUN workflow n'appelle. Six affirmations du depot s'appuient sur la premiere — docs/GLOSSAIRE.md, docs/CONVENTIONS.md, docs/REGLES-MAISON.md (RM-06), packages/contracts/events.ts, REQ-GOV-001 et la vue docs/GATES.md — et la tache qui les promettait, GOV-000, est FUSIONNEE : son acceptance promet le fichier et l'etape de CI, et ni l'un ni l'autre n'existe. A livrer : (1) scripts/gates/gov-check.ts existe, expose un controler() PUR sur une vue INJECTEE et un mode --prove avec un temoin ROUGE par famille et des contre-temoins VERTS, et couvre ce que le registre annonce — termes d'axionia invalides, noms d'evenements en anglais la ou l'exigence impose le francais, listes litterales d'etats hors de leur exigence, synonymes interdits du glossaire, et tout nom d'evenement litteral hors du paquet de contrats ; (2) un CONTRE-TEMOIN prouve que les documents qui EXPLIQUENT la regle peuvent ecrire son contre-exemple entre accents graves — sans quoi la garde interdirait sa propre documentation, defaut deja rencontre et corrige sur gov:identifiants ; (3) le perimetre est IMPRIME avec son compte, `src/` etant vide en phase -1, et « 0 fichier balaye » ne se lit pas comme « aucun defaut » ; (4) l'etape de Gate A qui l'appelle ne porte pas `continue-on-error` ; (5) l'entree du registre recoit sa preuveRouge et docs/GATES.md est regeneree ; (6) les six affirmations disent l'etat REEL de la garde au jour de la livraison. ⚠️ Le choix entre renommer la chaine de package.json et renommer l'entree du registre engage un identifiant que six documents citent : il se tranche par un ADR, pas dans la PR.
+
+**Tests.** `tests/unit/gouvernance/termes-interdits.spec.ts`
+
+### GOV-031 — eslint.config.mjs porte « CE FICHIER N'A JAMAIS ETE EXECUTE », et c'etait vrai
+
+`1 j` · zone `gouvernance` · depend de `GOV-014`
+
+Couvre : `REQ-GOV-018`
+
+**Acceptation.** GOV-014 a livre eslint.config.mjs, .prettierrc.json et .prettierignore, et son propre en-tete avertissait : « CE FICHIER N'A JAMAIS ETE EXECUTE. » Il l'a ete le 2026-09-05, dans un bac d'essai avec les cinq paquets installes : `eslint .` rend 46 erreurs sur 7 fichiers (no-undef 28, no-console 8, no-explicit-any 6, no-irregular-whitespace 2, no-require-imports 2) et `prettier --check .` rend 105 fichiers non formates. Les causes sont dans la CONFIGURATION, pas dans le code : languageOptions.globals absent, donc les globales de Node sont inconnues des scripts ; aucune derogation pour tests/**, donc no-console y frappe ; et scripts/lot/lot.workflow.js est un langage dedie dont les symboles sont injectes par son moteur, il releve d'un `ignores` et non d'un correctif. Le correctif minimal mesure (globals Node + derogation tests) ramene 46 a 25. C'est pourquoi le lot L-1-07 a cable la variante PRUDENTE : les deux etapes gov:conventions, et NI `lint` NI `format:check` — ni comme scripts, ni comme etapes de CI, ni comme devDependencies. La famille outillage_non_epingle ne s'arme que si une etape de CI lance l'outil ; sans etape, rien ne ment. A livrer : (1) la configuration corrigee, chaque derogation portant son motif ; (2) les 5 devDependencies epinglees et les scripts `lint`, `format:check`, `format` ; (3) les etapes de Gate A, SANS continue-on-error ; (4) `pnpm lint` et `pnpm format:check` verts sur le depot, ou tout ecart restant porte une derogation NOMMEE et motivee — jamais une regle desactivee en bloc. Une CI qu'on rend verte en eteignant la regle mesure la regle eteinte.
+
+**Tests.** `tests/unit/gouvernance/gardes-transposees.spec.ts`
 
 ### GOV-032 — Un instant de reference se fige par rapport a CE QU'IL JUGE — **en_cours**
 

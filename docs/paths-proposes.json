@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne — la comparaison exacte que fait `scripts/lot/composer.ts` (`pris.has(p)`). Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 204,
-    "pairesEnIntersection": 3827,
-    "cheminsDeclares": 629,
-    "cheminsDistincts": 368,
-    "cheminsPartages": 94,
-    "tachesSansAucuneIntersection": 29,
+    "tachesCouvertes": 206,
+    "pairesEnIntersection": 3904,
+    "cheminsDeclares": 635,
+    "cheminsDistincts": 372,
+    "cheminsPartages": 95,
+    "tachesSansAucuneIntersection": 30,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T06",
@@ -37,12 +37,13 @@
       "GOV-025",
       "GOV-027",
       "GOV-028",
-      "GOV-029"
+      "GOV-029",
+      "GOV-030"
     ],
     "cheminsLesPlusPartages": [
       {
         "chemin": "docs/gates.json",
-        "taches": 77
+        "taches": 78
       },
       {
         "chemin": "prisma/schema.prisma",
@@ -72,7 +73,6 @@
       "GOV-006 — glossaire-enums.spec.ts",
       "GOV-009 — adr-index-derive.spec.ts",
       "GOV-013 — lexique.spec.ts",
-      "GOV-014 — gardes-transposees.spec.ts",
       "GOV-015 — fiches-tiers.spec.ts",
       "GOV-019 — poids-du-bundle-garde-vraiment.spec.ts",
       "QA-T03 — req-check.spec.ts",
@@ -243,8 +243,10 @@
       "eslint.config.mjs",
       ".prettierrc",
       "package.json",
+      "scripts/gates/gov-conventions.ts",
       "scripts/gates/gov-derivation.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/gouvernance/gardes-transposees.spec.ts"
     ],
     "GOV-015": [
       "docs/tiers/recherche-entreprises.md",
@@ -291,7 +293,9 @@
       "tests/gov/charte-pr.spec.ts"
     ],
     "GOV-019": [
-      "scripts/gates/bundle-par-route.ts"
+      "scripts/gates/bundle-par-route.ts",
+      "scripts/gates/perf-budgets.ts",
+      "docs/gates.json"
     ],
     "GOV-020": [
       "docs/INVENTAIRE-CHANTIERS.md",
@@ -1158,6 +1162,12 @@
     ],
     "GOV-029": [
       "tests/unit/gouvernance/lot-identifiant-unique.spec.ts"
+    ],
+    "GOV-030": [
+      "tests/unit/gouvernance/termes-interdits.spec.ts"
+    ],
+    "GOV-031": [
+      "tests/unit/gouvernance/gardes-transposees.spec.ts"
     ],
     "GOV-032": [
       "tests/unit/gouvernance/plan-state-frais.spec.ts"

@@ -9,8 +9,8 @@
 | --- | --- |
 | Où est `main` ? | `794245c` — 2026-09-04T23:10:40+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #31 (rien) |
-| Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-029 (A01) · GOV-032 (A01) |
-| Où en est la phase ? | phase -1 — 20/33 tâches, reste 5.75 j |
+| Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · GOV-014 (A01) · GOV-019 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-029 (A01) · GOV-032 (A01) |
+| Où en est la phase ? | phase -1 — 20/35 tâches, reste 7.75 j |
 | Le prochain pas | fusionner #31, puis INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 4 question(s) pour Will |
 | Dernière entrée de journal | PR #31 — 2026-09-05 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : -1
 
-20/33 tâches terminées · reste 5.75 j estimés.
+20/35 tâches terminées · reste 7.75 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 173 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
-| `en_cours` | 9 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-029 (A01) PR#31 · GOV-032 (A01) PR#31 |
+| `a_faire` | 173 | INT-T01b, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03 … |
+| `en_cours` | 11 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · GOV-014 (A01) · GOV-019 (A01) · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-029 (A01) PR#31 · GOV-032 (A01) PR#31 |
 | `en_revue` | 0 | — |
 | `fusionnee` | 20 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |
 | `deployee` | 0 | — |
@@ -62,7 +62,7 @@ Reste sur ce chemin : **17.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — sept taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | rien — fusionnable maintenant |
+| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — huit taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -74,6 +74,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’i
 | --- | --- | --- | --- |
 | GOV-006 — Glossaire + gate schéma enum | A01 | #10 | `en_cours` |
 | GOV-013 — Gate lexicale « commercial » | A01 | #15 | `en_cours` |
+| GOV-014 — Conventions + sélection des gardes d'axionia | A01 | #16 | `en_cours` |
+| GOV-019 — Budgets de performance après première mesure | A01 | #21 | `en_cours` |
 | CPL-T01 — Registre `config/entite.json` à valeur sentinelle, ses lecteurs et la garde `gov:entite` | A01 | — | `en_cours` |
 | GOV-024 — Une vue générée qui a dérivé de sa source doit rougir | A01 | — | `en_cours` |
 | GOV-025 — La garde des identifiants nus est aveugle en fin de phrase — dépôt public, c'est une garde de publication | A01 | — | `en_cours` |
