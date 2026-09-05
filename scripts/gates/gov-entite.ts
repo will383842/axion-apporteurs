@@ -916,7 +916,27 @@ export type CorpsPublie = { origine: string; horodatage: string | null; texte: s
  * exactement le défaut que cette garde existe pour ne pas avoir.
  */
 export type LectureDuCorps =
-  | { lu: true; pr: number; corps: CorpsPublie[]; revisionsLues: number; revisionsAnnoncees: number }
+  | {
+      lu: true;
+      pr: number;
+      corps: CorpsPublie[];
+      revisionsLues: number;
+      revisionsAnnoncees: number;
+      /**
+       * VRAI quand on a CESSÉ de lire avant la fin — borne de pagination atteinte, ou curseur
+       * qui n'avance pas. 🔴 Ce champ manquait, et son absence a laissé survivre un mutant le
+       * 2026-09-05 : `inacheve` était calculé par `paginerEditions`, retourné, asserté par
+       * trois témoins — et JAMAIS consommé par le verdict. L'écart annoncé/lu portait donc
+       * seul toute la propriété, et il suffisait de relire `totalCount` à chaque page pour le
+       * faire disparaître.
+       *
+       * 🔑 LES DEUX NE SONT PAS REDONDANTS. L'écart annoncé/lu dépend d'un nombre que la
+       * FORGE contrôle ; celui-ci est notre PROPRE observation, tirée de notre propre flot.
+       * Faire reposer une propriété de sécurité sur la seule honnêteté du serveur distant,
+       * quand on dispose de sa propre mesure, ne se défend pas.
+       */
+      lectureInachevee: boolean;
+    }
   | { lu: false; motif: string };
 
 export const FAMILLES_CORPS_PUBLIE = [
@@ -967,6 +987,21 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
     // Une lecture manquée ne juge AUCUNE exemption : on ne sait pas ce qu'elles couvrent. Les
     // déclarer sans objet ici transformerait une panne de réseau en dette imaginaire.
     return { code: 2, fautes };
+  }
+
+  // CE QUE NOUS AVONS OBSERVÉ NOUS-MÊMES, et qui ne dépend d'aucun nombre servi par la forge.
+  // Deux chemins mènent ici, et ils ont le même sens : on a arrêté de lire avant la fin.
+  if (lecture.lectureInachevee) {
+    fautes.push({
+      famille: 'revisions_non_lues',
+      message:
+        `La lecture s'est ARRÊTÉE avant la fin : la borne de ${PAGES_MAX * EDITIONS_PAR_PAGE} ` +
+        `révision(s) a été atteinte, ou la forge a servi un curseur qui n'avançait plus. Ce n'est ` +
+        `PAS un écart de comptage — c'est notre propre flot qui le dit, et il ne dépend d'aucun ` +
+        `nombre servi par la forge. Les révisions non atteintes ne sont pas réputées propres : ` +
+        `INDÉTERMINÉ (2). Relève \`PAGES_MAX\` dans \`scripts/gates/gov-entite.ts\` si une PR dépasse ` +
+        `réellement cette borne ; si le curseur n'avance pas, c'est la forge qu'il faut relancer.`,
+    });
   }
 
   if (lecture.revisionsAnnoncees > lecture.revisionsLues) {
@@ -1175,7 +1210,7 @@ export function paginerEditions(lirePage: (apres: string | null) => PageDEdition
 export function assemblerLecture(
   numero: string,
   corpsCourant: string,
-  editions: { annoncees: number; noeuds: NoeudEdition[] }
+  editions: { annoncees: number; noeuds: NoeudEdition[]; inacheve: boolean }
 ): LectureDuCorps {
   const corps: CorpsPublie[] = [
     { origine: `PR #${numero} — corps courant`, horodatage: null, texte: corpsCourant, revision: false },
@@ -1201,6 +1236,7 @@ export function assemblerLecture(
     corps,
     revisionsLues: lues,
     revisionsAnnoncees: editions.annoncees,
+    lectureInachevee: editions.inacheve,
   };
 }
 
@@ -1376,6 +1412,9 @@ function prouverCorpsPublie(): number {
     corps: [{ origine: 'témoin', horodatage: revision ? HORODATAGE : null, texte, revision }],
     revisionsLues: revision ? 1 : 0,
     revisionsAnnoncees: revision ? 1 : 0,
+    // La forge a rendu la main d'elle-même : ce n'est PAS une lecture interrompue. Les
+    // témoins qui rougissent le font sur l'écart annoncé/lu, et lui seul (RM-11).
+    lectureInachevee: false,
   });
   /**
    * Une exemption BIEN formée pour le témoin donné — construite, jamais recopiée.
@@ -1433,6 +1472,7 @@ function prouverCorpsPublie(): number {
         ],
         revisionsLues: 1,
         revisionsAnnoncees: 1,
+        lectureInachevee: false,
       },
       attendu: 1,
     },
@@ -1480,6 +1520,7 @@ function prouverCorpsPublie(): number {
         ],
         revisionsLues: 2,
         revisionsAnnoncees: 2,
+        lectureInachevee: false,
       },
       exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 1,
@@ -1550,6 +1591,9 @@ function prouverCorpsPublie(): number {
         corps: [{ origine: 'témoin', horodatage: null, texte: 'aucune coordonnée ici', revision: false }],
         revisionsLues: 1,
         revisionsAnnoncees: 4,
+        // FAUX à dessein : ce témoin doit rougir sur l'ÉCART, pas sur l'interruption.
+        // Deux causes actives d'un coup, et il ne discriminerait plus ni l'une ni l'autre.
+        lectureInachevee: false,
       },
       attendu: 2,
     },
@@ -1631,8 +1675,12 @@ function prouverCorpsPublie(): number {
   {
     const lue = corps(`IBAN : ${IBAN_TEMOIN}`, true);
     const bonne = exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN);
-    // Deux leurres, chacun ne différant que par UNE clé, et placés AVANT la bonne.
+    // TROIS leurres, un par clé, chacun ne différant que par LA SIENNE, et placés AVANT la bonne.
+    // 🔴 LE TROISIÈME MANQUAIT : les deux d'origine étaient tous deux « de la MÊME PR », si bien
+    // que retirer la clé `pr` de l'appariement ne faisait rougir aucun témoin. Deux clés sur
+    // trois étaient mesurées, la troisième n'était que dans le titre.
     const leurres = [
+      exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN + 1),
       exemptionPour(IBANS_TEMOINS_ETRANGERS.DE!, HORODATAGE, PR_TEMOIN),
       exemptionPour(IBAN_TEMOIN, '2026-01-02T09:09:09Z', PR_TEMOIN),
     ];
@@ -1670,24 +1718,41 @@ function prouverCorpsPublie(): number {
     const textes = Array.from({ length: TOTAL }, (_, i) =>
       i === RANG_FAUTIF ? `IBAN : ${IBAN_TEMOIN}` : `révision ${i}`
     );
-    const lirePage = (apres: string | null): PageDEditions => {
-      const debut = apres === null ? 0 : Number(apres);
-      const tranche = textes.slice(debut, debut + EDITIONS_PAR_PAGE);
-      const suivant = debut + tranche.length;
-      const reste = suivant < textes.length;
-      return {
-        totalCount: textes.length,
-        noeuds: tranche.map((texte, i) => ({ editedAt: horodatage(debut + i), diff: texte })),
-        encore: reste,
-        curseur: reste ? String(suivant) : null,
+    // 🔴 CE QUE CETTE FORGE NE SAVAIT PAS FAIRE, et qui a laissé survivre un mutant sérieux le
+    // 2026-09-05 : elle servait un `totalCount` CONSTANT. Relire ce compte à CHAQUE page au lieu
+    // de le prendre une fois donnait alors exactement le même résultat, ici comme dans le banc
+    // d'essai — alors que la mutation supprime la seule chose qui transformait une lecture
+    // partielle en code 2. Ce que la forge ANNONCE est donc un paramètre, et ce qu'elle SERT en
+    // est distinct : c'est précisément leur écart qui se juge.
+    const forge =
+      (annonce: (debut: number, total: number) => number, servies: number) =>
+      (apres: string | null): PageDEditions => {
+        const debut = apres === null ? 0 : Number(apres);
+        const tranche = textes.slice(debut, Math.min(debut + EDITIONS_PAR_PAGE, servies));
+        const suivant = debut + tranche.length;
+        const reste = suivant < servies;
+        return {
+          totalCount: annonce(debut, textes.length),
+          noeuds: tranche.map((texte, i) => ({ editedAt: horodatage(debut + i), diff: texte })),
+          encore: reste,
+          curseur: reste ? String(suivant) : null,
+        };
       };
-    };
+    const ANNONCE_STABLE = (_debut: number, total: number): number => total;
+    const ANNONCE_DECROISSANTE = (debut: number, total: number): number => total - debut;
+    const lirePage = forge(ANNONCE_STABLE, textes.length);
 
     // UNE SEULE PAGE — ce que la requête demandait avant ce correctif : un 2 SANS remède, où la
     // coordonnée n'est même pas nommée.
     const page1 = lirePage(null);
     const tronquee = jugerCorpsPublie(
-      assemblerLecture(String(PR_TEMOIN), 'propre', { annoncees: page1.totalCount, noeuds: page1.noeuds })
+      assemblerLecture(String(PR_TEMOIN), 'propre', {
+        annoncees: page1.totalCount,
+        noeuds: page1.noeuds,
+        // La forge n'a pas été interrompue : c'est l'appelant qui n'a demandé qu'une page.
+        // L'écart annoncé/lu reste donc la seule cause, et c'est celle qu'on mesure ici.
+        inacheve: false,
+      })
     );
     if (
       tronquee.code !== 2 ||
@@ -1715,6 +1780,65 @@ function prouverCorpsPublie(): number {
       console.error(
         `❌ La pagination n'a pas rendu ce qu'elle devait : ${complet.noeuds.length}/${TOTAL} ` +
           `révision(s) lue(s), inachevé=${complet.inacheve}, code ${juge.code} (attendu 1).`
+      );
+      return 1;
+    }
+
+    // LE COMPTE ANNONCÉ EST CELUI DE LA PREMIÈRE PAGE — il se prend UNE fois. Le relire à chaque
+    // tour fait dépendre l'écart annoncé/lu de la DERNIÈRE réponse, c'est-à-dire de la partie
+    // qu'on vient justement de lire : l'écart s'annule alors tout seul. C'est le contrôle qui se
+    // supprime lui-même, et c'est le mutant qui a survécu au tour précédent.
+    const variable = paginerEditions(forge(ANNONCE_DECROISSANTE, textes.length));
+    if (
+      variable.annoncees !== textes.length ||
+      ANNONCE_DECROISSANTE(EDITIONS_PAR_PAGE, textes.length) === textes.length
+    ) {
+      console.error(
+        `❌ Le compte annoncé n'est pas celui de la PREMIÈRE page : ${variable.annoncees} au lieu ` +
+          `de ${textes.length}. Une forge dont le compte varie est la seule qui distingue « lu une ` +
+          `fois » de « relu à chaque page » — sans elle, ce banc ne mesure pas cette dimension.`
+      );
+      return 1;
+    }
+
+    // UNE FORGE QUI SERT MOINS QU'ELLE N'ANNONCE, sans jamais être interrompue : `inacheve` est
+    // FAUX, et l'écart annoncé/lu est la SEULE chose qui reste. La coordonnée vit dans la part
+    // jamais servie — un vert ici voudrait dire « rien à signaler » sur un texte que personne
+    // n'a lu.
+    const avare = paginerEditions(forge(ANNONCE_DECROISSANTE, EDITIONS_PAR_PAGE));
+    const jugeAvare = jugerCorpsPublie(assemblerLecture(String(PR_TEMOIN), 'propre', avare));
+    if (avare.inacheve || jugeAvare.code !== 2) {
+      console.error(
+        `❌ Une forge qui sert ${avare.noeuds.length} révision(s) sur ${avare.annoncees} annoncée(s) ` +
+          `a rendu ${jugeAvare.code} (attendu 2), inachevé=${avare.inacheve} (attendu false).`
+      );
+      return 1;
+    }
+
+    // `inacheve` EST CONSOMMÉ PAR LE VERDICT, et pas seulement retourné. Une valeur calculée,
+    // assertée et jamais lue est un contrôle qui existe pour le lecteur et pas pour la machine.
+    // Les deux moitiés : sans écart NI interruption c'est vert ; le MÊME compte, interrompu, rend
+    // 2 — aucun écart annoncé/lu ne peut donc l'expliquer.
+    const noeudsPropres: NoeudEdition[] = [{ editedAt: horodatage(1), diff: 'propre' }];
+    const complete = jugerCorpsPublie(
+      assemblerLecture(String(PR_TEMOIN), 'propre', {
+        annoncees: 1,
+        noeuds: noeudsPropres,
+        inacheve: false,
+      })
+    );
+    const interrompue = jugerCorpsPublie(
+      assemblerLecture(String(PR_TEMOIN), 'propre', {
+        annoncees: 1,
+        noeuds: noeudsPropres,
+        inacheve: true,
+      })
+    );
+    if (complete.code !== 0 || interrompue.code !== 2) {
+      console.error(
+        `❌ \`lectureInachevee\` n'est pas consommé par le verdict : lecture complète ${complete.code} ` +
+          `(attendu 0), MÊME lecture interrompue ${interrompue.code} (attendu 2). Une lecture qui ` +
+          `s'est arrêtée avant la fin n'est pas une lecture propre, quel que soit le compte servi.`
       );
       return 1;
     }
