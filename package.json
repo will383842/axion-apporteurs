@@ -11,7 +11,7 @@
   "scripts": {
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
-    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace",
+    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace && pnpm gov:lexique",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
@@ -65,6 +65,8 @@
     "gov:trace:verifier": "tsx scripts/gates/gov-trace.ts --verifier",
     "gov:etat": "tsx scripts/gates/gov-etat.ts",
     "gov:etat:prove": "tsx scripts/gates/gov-etat.ts --prove",
+    "gov:lexique": "tsx scripts/gates/lexique-apporteurs.ts",
+    "gov:lexique:prove": "tsx scripts/gates/lexique-apporteurs.ts --prove",
     "partners:schema:enums": "tsx scripts/gates/schema-enums.ts",
     "partners:schema:enums:prove": "tsx scripts/gates/schema-enums.ts --prove",
     "contracts:export": "tsx scripts/contracts/export.ts",

@@ -120,6 +120,15 @@ jobs:
         run: pnpm partners:schema:enums
       - name: La garde du vocabulaire sait rougir
         run: pnpm partners:schema:enums:prove
+      # GOV-013 : le lexique interdit (REQ-GOV-017, durci par REQ-JUR-037). La garde vise la
+      # TOURNURE et non le mot — « aucun objectif, aucun quota » est la phrase qui protege du
+      # la charte relationnelle, et une garde qui la ferait rougir forcerait a la RETIRER. La preuve
+      # suit tient les deux sens : un temoin par famille, huit positions limites, et des
+      # contre-temoins verts, dont la phrase de l'ADR « valeurs du monde réel » verbatim.
+      - name: Lexique interdit — aucun usage prescriptif dans le perimetre de REQ-GOV-017
+        run: pnpm gov:lexique
+      - name: La garde du lexique sait rougir, et laisse passer la negation qui protege
+        run: pnpm gov:lexique:prove
       - name: Typecheck
         run: pnpm typecheck
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :
