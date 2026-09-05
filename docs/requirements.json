@@ -3671,7 +3671,8 @@
       "phase": -1,
       "taches": [
         "GOV-003",
-        "GOV-005"
+        "GOV-005",
+        "GOV-025"
       ]
     },
     {
@@ -3846,6 +3847,7 @@
       "taches": [
         "GOV-005",
         "GOV-022",
+        "GOV-027",
         "JUR-T01b"
       ]
     },
@@ -3931,7 +3933,9 @@
       "phase": -1,
       "taches": [
         "GOV-017a",
-        "GOV-017b"
+        "GOV-017b",
+        "GOV-024",
+        "GOV-027"
       ]
     },
     {
@@ -3974,7 +3978,8 @@
       "etape": 7,
       "phase": -1,
       "taches": [
-        "GOV-018"
+        "GOV-018",
+        "GOV-026"
       ]
     },
     {
@@ -5210,6 +5215,20 @@
       "phase": -1,
       "taches": [
         "GOV-000"
+      ]
+    },
+    {
+      "id": "REQ-GOV-032",
+      "domaine": "gouvernance-agents",
+      "texte": "Toute vue générée du dépôt (`docs/TASKS.md`, `docs/REQUIREMENTS.md`, `docs/TRACABILITE.md`, `docs/paths-proposes.json`, `docs/PLAN-STATE.md`) est produite par un générateur nommé et possède un mode de VÉRIFICATION qui n'écrit rien et sort 1 quand le fichier commité diffère d'un seul octet de ce que sa source produirait ; ce mode est appelé par le job de Gate A. Le message d'échec nomme l'écart en unités du domaine — nombre de tâches livrées, nombre d'exigences — et non « les deux fichiers diffèrent ». Gate : une vue périmée d'une seule ligne → rouge ; le dépôt à jour → vert (contre-témoin exigé, RM-02).",
+      "source": "nouvelle (relectures de la PR 30, 2026-09-04) ; docs/PRESEANCE.md §2 lignes 1-2 et §5 point 5",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": null,
+      "etape": null,
+      "phase": -1,
+      "taches": [
+        "GOV-024"
       ]
     }
   ]
