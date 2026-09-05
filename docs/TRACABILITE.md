@@ -16,7 +16,7 @@
 
 **319 exigences actives · 31 réputées testées · 31 couvertes · 0 orphelines.**
 
-197 tâches, dont 20 livrées · 19 fichiers de test exécutés par `vitest` sur 19 présents.
+197 tâches, dont 20 livrées · 21 fichiers de test exécutés par `vitest` sur 21 présents.
 
 ## Exigences réputées testées
 
@@ -441,11 +441,13 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/autonomie.spec.ts` | oui | `REQ-CPL-021` |
 | `tests/unit/gouvernance/fiches-agents.spec.ts` | oui | `REQ-GOV-010` |
 | `tests/unit/gouvernance/fiches-tiers.spec.ts` | oui | `REQ-CPL-002`, `REQ-GOV-022` |
+| `tests/unit/gouvernance/gardes-transposees.spec.ts` | oui | `REQ-GOV-018`, `REQ-GOV-029` |
 | `tests/unit/gouvernance/gardes.spec.ts` | oui | `REQ-GOV-001`, `REQ-GOV-003`, `REQ-GOV-015`, `REQ-GOV-031` |
 | `tests/unit/gouvernance/integration-livrable.spec.ts` | oui | — |
 | `tests/unit/gouvernance/inventaire-prouve.spec.ts` | oui | `REQ-GOV-026` |
 | `tests/unit/gouvernance/paths-derives.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-025` |
 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | oui | `REQ-GOV-006`, `REQ-GOV-023` |
+| `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts` | oui | `REQ-GOV-028` |
 | `tests/unit/gouvernance/preseance.spec.ts` | oui | `REQ-DM-034`, `REQ-GOV-002`, `REQ-GOV-030` |
 | `tests/unit/gouvernance/regles-maison.spec.ts` | oui | `REQ-GOV-023`, `REQ-GOV-024` |
 | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | oui | `REQ-GOV-014`, `REQ-QA-013` |

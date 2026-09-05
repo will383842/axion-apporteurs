@@ -1,0 +1,17 @@
+{
+  "printWidth": 100,
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "semi": true,
+  "endOfLine": "lf",
+  "overrides": [
+    {
+      "files": ["*.md"],
+      "options": { "printWidth": 120, "proseWrap": "preserve" }
+    },
+    {
+      "files": ["*.json", "*.yml", "*.yaml"],
+      "options": { "singleQuote": false }
+    }
+  ]
+}
