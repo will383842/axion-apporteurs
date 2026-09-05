@@ -61,7 +61,15 @@ import {
 
 import {
   FAMILLES,
+  FAMILLES_CORPS_PUBLIE,
+  IBANS_TEMOINS_ETRANGERS,
   IBAN_TEMOIN,
+  SIREN_TEMOIN_TIERS,
+  TVA_TEMOIN_TIERS,
+  caracteresNeutralises,
+  ibanAvecSeparateur,
+  jugerCorpsPublie,
+  type LectureDuCorps,
   UNIVERS_CONFORME,
   controler,
   ligneSource,
@@ -533,5 +541,414 @@ describe("REQ-CPL-018 — les formes de coordonnées, éprouvées sur les cas qu
         texte
       ).not.toContain('coordonnee_en_clair');
     }
+  });
+});
+
+/**
+ * ── `normaliserEspaces()` — LA SUBSTITUTION QUI N'AVAIT AUCUN TÉMOIN ─────────────────────────
+ *
+ * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ LE 2026-09-05, en mutant la fonction en `return t;` :
+ *
+ *         sur le MUTANT                        sur le fichier SAIN
+ *   >>VERT | IBAN a espaces INSECABLES            ROUGE
+ *   >>VERT | IBAN a TIRETS                        ROUGE
+ *   ROUGE  | IBAN a espaces ASCII (temoin +)      ROUGE
+ *   mutant : gov:entite → 0   |   gov:entite:prove → 0
+ *   grep -E '00A0|insecable|202F|normaliserEspaces' dans ce fichier → AUCUN témoin
+ *
+ * La normalisation MARCHAIT. Rien ne la tenait. Un refactor l'aurait retirée sans qu'une seule
+ * étape de Gate A change de couleur — et la garde aurait continué à s'annoncer complète.
+ *
+ * POURQUOI CE N'EST PAS COSMÉTIQUE. L'IBAN à espaces INSÉCABLES est la forme d'un copier-coller de
+ * RIB : un relevé bancaire, un traitement de texte, un client de messagerie en produisent tous.
+ * C'est donc le geste PAR DÉFAUT de la personne qui posera la vraie valeur d'AXION en phase 2 —
+ * exactement le cas que cette garde existe pour attraper, dans un dépôt PUBLIC où l'écriture est
+ * irréversible. La famille avait été signalée au premier tour, fermée au second, et gardée par
+ * rien entre les deux.
+ *
+ * CE QUI EST DÉRIVÉ (RM-01). La liste des caractères n'est PAS retapée ici :
+ * `caracteresNeutralises()` l'ÉNUMÈRE depuis `SEPARATEURS_NEUTRALISES`, la classe que
+ * `normaliserEspaces` utilise vraiment. Un caractère ajouté à la classe gagne son témoin sans
+ * qu'une ligne de ce fichier bouge ; un caractère retiré perd le sien. Deux copies divergent
+ * toujours, et celle qui garde n'est jamais celle qu'on a corrigée.
+ *
+ * ⚠️ ET C'EST POURQUOI LA SONDE A SON PROPRE TÉMOIN POSITIF. Une liste VIDE et une liste juste
+ * sont indiscernables pour un test qui se contente de boucler : zéro cas exécuté se lit
+ * exactement comme zéro cas en échec. Le premier `it` ci-dessous assertie donc ce que la liste
+ * CONTIENT (l'espace insécable, l'espace fine insécable, le tiret insécable, le tiret ASCII) et ce
+ * qu'elle NE contient PAS (l'espace ASCII, le tiret cadratin, une lettre) — sans quoi la classe
+ * serait devenue un attrape-tout, ce qui est l'autre façon de ne rien garder. Les points de code
+ * sont écrits en toutes lettres : un caractère invisible dans un test est un test qu'on ne relit
+ * pas.
+ */
+describe('REQ-CPL-018 — `normaliserEspaces` : chaque forme qu’elle neutralise a son témoin', () => {
+  const FORMES = caracteresNeutralises();
+  const nom = (c: string) => 'U+' + c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0');
+  const CAR = (point: number) => String.fromCodePoint(point);
+
+  it('REQ-CPL-018 — TÉMOIN POSITIF de la sonde : la liste des formes MESURE quelque chose', () => {
+    // Sans cet `it`, une classe vide ferait passer TOUS les cas ci-dessous sans en exécuter un.
+    expect(FORMES.length, 'aucune forme neutralisée : la boucle qui suit serait vide').toBeGreaterThan(0);
+
+    // Ce qu'elle DOIT contenir. L'espace insécable est la forme du copier-coller de RIB : c'est
+    // la seule de la liste dont l'absence est, à elle seule, le défaut mesuré par la revue.
+    expect(FORMES, 'U+00A0 — espace insécable, la forme d’un RIB collé').toContain(CAR(0x00a0));
+    expect(FORMES, 'U+202F — espace fine insécable, celle des milliers en français').toContain(CAR(0x202f));
+    expect(FORMES, 'U+2011 — tiret insécable').toContain(CAR(0x2011));
+    expect(FORMES, 'U+002D — tiret ASCII, le séparateur d’IBAN le plus courant après l’espace').toContain(CAR(0x002d));
+
+    // CONTRE-TÉMOIN DE LA SONDE. Sans lui, `/[\s\S]/` passerait ce test : une classe attrape-tout
+    // « neutraliserait » tout le texte en espaces et la garde ne verrait plus rien du tout.
+    expect(FORMES, 'l’espace ASCII n’a rien à normaliser vers elle-même').not.toContain(CAR(0x0020));
+    expect(FORMES, 'U+2014 — le tiret cadratin est de la PONCTUATION, pas un séparateur').not.toContain(CAR(0x2014));
+    expect(FORMES, 'une lettre n’est pas un séparateur').not.toContain('A');
+  });
+
+  it('REQ-CPL-018 — TÉMOIN DE RÉFÉRENCE : l’IBAN à espaces ASCII rougit — le cas déjà couvert', () => {
+    // Le « témoin + » de la mesure du relecteur : le seul des trois qui rougissait DÉJÀ sur le
+    // mutant. Il est ici pour que les cas suivants se lisent par différence avec lui.
+    const fautes = controler(
+      universAvecFichier('docs/rib-colle.md', `Virement depuis ${ibanAvecSeparateur(IBAN_TEMOIN, CAR(0x0020))}.`)
+    );
+    expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
+  });
+
+  it.each(FORMES.map((c) => ({ forme: c, code: nom(c) })))(
+    'REQ-CPL-018 — un IBAN collé avec $code rougit',
+    ({ forme }: { forme: string }) => {
+      const colle = ibanAvecSeparateur(IBAN_TEMOIN, forme);
+      // Le témoin doit VRAIMENT porter le séparateur, sinon il testerait la forme ASCII déguisée.
+      expect(colle, `${nom(forme)} n’a pas été inséré`).toContain(forme);
+      expect(colle).not.toBe(IBAN_TEMOIN);
+      const fautes = controler(universAvecFichier('docs/rib-colle.md', `Virement depuis ${colle}.`));
+      expect(fautes.map((f) => f.famille), `${nom(forme)} — l’IBAN passe`).toContain('coordonnee_en_clair');
+      // La valeur est remontée SANS ses séparateurs : un même compte collé de deux façons est un
+      // seul compte, et c'est ce qui permet de le reconnaître d'une révision à l'autre.
+      expect(fautes.some((f) => f.message.includes(IBAN_TEMOIN)), `${nom(forme)} — valeur non normalisée`).toBe(true);
+    }
+  );
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : une prose typographiée légitime reste VERTE, forme par forme', () => {
+    // Une garde lexicale trop large interdit la phrase qui protège. Chaque caractère neutralisé
+    // est ici DANS de la prose ordinaire — celle d'un document de travail français — et aucun ne
+    // doit faire rougir quoi que ce soit. Le contre-témoin est construit sur la MÊME liste
+    // dérivée : élargir la classe sans y penser ferait tomber ce cas-ci en même temps.
+    for (const forme of FORMES) {
+      const prose =
+        `Le mandat est signé${forme}; le délai est de 30${forme}jours ouvrés, ` +
+        `pour un montant de 1${forme}500${forme}€ HT. Dossier AXP${forme}2026${forme}001. ` +
+        `Aucune coordonnée bancaire n’est écrite ici, et c’est la règle.`;
+      expect(
+        controler(universAvecFichier('docs/note-de-travail.md', prose)).map((f) => f.famille),
+        `${nom(forme)} — la prose légitime rougit`
+      ).not.toContain('coordonnee_en_clair');
+    }
+  });
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : une date, une version, un SIREN ne deviennent pas un IBAN', () => {
+    // Le tiret ASCII est dans la classe : tout ce qui s'écrit avec des tirets traverse désormais
+    // `normaliserEspaces`. Si la normalisation fabriquait des faux positifs, c'est ici qu'ils
+    // apparaîtraient — et une garde de publication qui rougit à tort se fait désarmer.
+    const e = UNIVERS_CONFORME.registre.entite;
+    for (const texte of [
+      'Fusionnée le 2026-09-03, revue le 2026-09-05.',
+      'Version 1.2.3-rc.4 — voir CHANGELOG.',
+      `L’entité porte le SIREN ${e.siren} et la TVA ${e.tvaIntracommunautaire}.`,
+      'Branche `fix/gov-036-espaces-corps`, worktree `../wt-espaces`.',
+    ]) {
+      expect(
+        controler(universAvecFichier('docs/note-de-travail.md', texte)).map((f) => f.famille),
+        texte
+      ).not.toContain('coordonnee_en_clair');
+    }
+  });
+
+  it('REQ-CPL-018 — `gov:entite:prove` porte lui aussi ces témoins, et le DIT', () => {
+    // Sans cette assertion, les témoins ci-dessus ne tiendraient que `pnpm test` : `gov:entite:prove`
+    // est l'étape de Gate A, et c'est elle que le relecteur a vue rendre 0 sur le mutant.
+    const { code, sortie } = lancer('--prove');
+    expect(code).toBe(0);
+    expect(sortie).toContain(`${FORMES.length} forme(s) d'espace ou de tiret`);
+  });
+});
+
+/**
+ * ── LE CORPS PUBLIÉ DE LA PR — L'ARTEFACT QUE LE GABARIT EXISTE POUR PRODUIRE ────────────────
+ *
+ * 🔴 CE QUI ÉTAIT MESURÉ. `docs/pr/31.tpl.md` est suivi, donc balayé, et l'IBAN y est masqué.
+ * Mais rien ne lisait le corps PUBLIÉ :
+ *
+ *   pr:corps dans package.json ....... oui (l. 79)
+ *   pr:corps dans .github/workflows/.. AUCUNE occurrence
+ *   corps-de-pr dans docs/gates.json.. AUCUNE entrée
+ *
+ * Et le défaut ne vivait pas dans le corps courant : GitHub sert l'HISTORIQUE d'édition d'un corps
+ * de PR (`userContentEdits`, GraphQL, lisible par quiconque). Sur la PR #31, onze révisions —
+ * quatre portent la forme masquée, TROIS portent un IBAN à clé mod-97 VRAIE. Masquer le corps
+ * courant n'a pas dépublié les précédents.
+ *
+ * ATTÉNUATION : cette valeur-là était la SONDE d'un relecteur, pas la coordonnée d'AXION ; il n'y
+ * a rien à révoquer. Ce qui bloquait, c'est l'absence de la garde qui empêchera le prochain, en
+ * phase 2, quand la valeur sera réelle.
+ *
+ * CE QUI EST GARDÉ, ET LA FORMULATION EST ÉTROITE À DESSEIN : « le corps publié ne contient aucune
+ * coordonnée ». PAS « le corps publié est égal au rendu local » — le rendu de `pr:corps` n'est pas
+ * déterministe (`caseRevues()` lit la forge en direct), donc une égalité octet à octet rougirait
+ * sur un corps parfaitement propre, et une garde qui rougit à tort se fait désarmer.
+ *
+ * ⚠️ LES CAS CI-DESSOUS SONT HORS LIGNE, ET C'EST VOULU (RM-11). Un test qui interroge GitHub
+ * verdirait ou rougirait au gré de ce que la forge répond le jour où il tourne. La lecture réelle
+ * (`lireCorpsPublie`) est isolée dans sa fonction ; ce qui est jugé ici, c'est `jugerCorpsPublie`,
+ * qui est pur. Le mode en ligne, lui, a été joué à la main sur quatre PR réelles : #31 → 1 (les
+ * trois révisions ci-dessus, nommées et datées), #28 / #29 / #30 → 0.
+ */
+describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonneesDe`', () => {
+  /** La forme MASQUÉE que rend le gabarit : construite, jamais recopiée. */
+  const MASQUE = 'FR76' + 'X'.repeat(23);
+  const propre = (texte: string, revision = false): LectureDuCorps => ({
+    lu: true,
+    corps: [{ origine: 'témoin', texte, revision }],
+    revisionsLues: revision ? 1 : 0,
+    revisionsAnnoncees: revision ? 1 : 0,
+  });
+
+  it('REQ-CPL-018 — un IBAN dans le corps COURANT rougit', () => {
+    const v = jugerCorpsPublie(propre(`IBAN débiteur : ${IBAN_TEMOIN}`));
+    expect(v.code).toBe(1);
+    expect(v.fautes.map((f) => f.famille)).toContain('coordonnee_dans_le_corps_courant');
+  });
+
+  it('REQ-CPL-018 — un IBAN collé avec des espaces INSÉCABLES dans le corps rougit AUSSI', () => {
+    // La jonction des deux défauts : le corps publié traverse la MÊME normalisation que les
+    // fichiers suivis. Deux détecteurs en feraient deux qui divergeraient (RM-01/RM-07).
+    const v = jugerCorpsPublie(
+      propre(`IBAN débiteur : ${ibanAvecSeparateur(IBAN_TEMOIN, String.fromCodePoint(0x00a0))}`)
+    );
+    expect(v.code).toBe(1);
+    expect(v.fautes.some((f) => f.message.includes(IBAN_TEMOIN))).toBe(true);
+  });
+
+  it('REQ-CPL-018 — LE DÉFAUT MESURÉ : corps courant PROPRE, révision qui porte la valeur', () => {
+    const v = jugerCorpsPublie({
+      lu: true,
+      corps: [
+        { origine: 'corps courant', texte: `IBAN débiteur : ${MASQUE}`, revision: false },
+        {
+          origine: 'révision',
+          texte: `-IBAN débiteur : ${IBAN_TEMOIN}\n+IBAN débiteur : ${MASQUE}`,
+          revision: true,
+        },
+      ],
+      revisionsLues: 1,
+      revisionsAnnoncees: 1,
+    });
+    expect(v.code).toBe(1);
+    expect(v.fautes.map((f) => f.famille)).toContain('coordonnee_dans_une_revision');
+    expect(v.fautes.map((f) => f.famille)).not.toContain('coordonnee_dans_le_corps_courant');
+    // Le message doit dire que ce rouge-là ne se corrige PAS en éditant : la valeur est divulguée.
+    expect(v.fautes[0]!.message).toContain('DIVULGUÉE');
+  });
+
+  it('REQ-CPL-018 — un échec de lecture rend INDÉTERMINÉ (2), jamais un succès', () => {
+    // Le sens de défaillance, et c'est le cœur de cette garde-ci. `gh` absent, non authentifié,
+    // hors ligne, réponse illisible : 2. Une garde qui rendrait 0 ferait croire à un contrôle qui
+    // n'a pas eu lieu — c'est la gate Lighthouse d'axionia, verte des mois durant sur le runner.
+    const v = jugerCorpsPublie({ lu: false, motif: 'gh: Bad credentials (témoin)' });
+    expect(v.code).toBe(2);
+    expect(v.code).not.toBe(0);
+    expect(v.fautes.map((f) => f.famille)).toEqual(['lecture_impossible']);
+    // Et 2 n'est PAS 1 : « je n'ai pas pu lire » se répare en donnant un jeton, « il y a une
+    // coordonnée » se répare en changeant la coordonnée. Deux remèdes, deux couleurs.
+    expect(v.code).not.toBe(1);
+  });
+
+  it('REQ-CPL-018 — une révision ANNONCÉE et non lue n’est pas réputée propre', () => {
+    // Pagination, ou `diff` nul. Le défaut mesuré vivait dans des révisions : en réputer une
+    // propre parce qu'on ne l'a pas lue reviendrait à écrire le bug qu'on corrige.
+    const v = jugerCorpsPublie({
+      lu: true,
+      corps: [{ origine: 'corps courant', texte: 'rien à signaler', revision: false }],
+      revisionsLues: 2,
+      revisionsAnnoncees: 11,
+    });
+    expect(v.code).toBe(2);
+    expect(v.fautes.map((f) => f.famille)).toContain('revisions_non_lues');
+  });
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : la forme MASQUÉE du gabarit reste VERTE', () => {
+    // Sans lui, la garde rougirait sur le corps qu'elle est censée bénir, et on la retirerait.
+    expect(cleIbanValide(MASQUE), 'la forme masquée doit avoir une clé FAUSSE').toBe(false);
+    expect(jugerCorpsPublie(propre(`IBAN débiteur : ${MASQUE}`)).code).toBe(0);
+  });
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : un corps de PR a le droit de NOMMER le SIREN', () => {
+    // Le corps est jugé comme de la PROSE (`dansDuCode = false`). Un IBAN et un BIC y sont
+    // refusés ; un SIREN, un SIRET, une TVA sont publics — citer n'est pas se servir.
+    const e = UNIVERS_CONFORME.registre.entite;
+    expect(jugerCorpsPublie(propre(`Entité : ${e.denomination}, SIREN ${e.siren}.`)).code).toBe(0);
+  });
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : une révision qui ne porte que de la prose typographiée', () => {
+    const prose =
+      `Le mandat est signé${String.fromCodePoint(0x00a0)}; délai de 30${String.fromCodePoint(0x202f)}jours ` +
+      `— dossier AXP${String.fromCodePoint(0x2011)}2026${String.fromCodePoint(0x2011)}001.`;
+    expect(jugerCorpsPublie(propre(prose, true)).code).toBe(0);
+  });
+
+  it(`REQ-CPL-018 — la garde du corps publié sait rougir : ses ${FAMILLES_CORPS_PUBLIE.length} familles ont un témoin`, () => {
+    const { code, sortie } = lancer('--corps-publie', '--prove');
+    expect(code).toBe(0);
+    expect(sortie).toContain(`Les ${FAMILLES_CORPS_PUBLIE.length} familles du corps publié rougissent`);
+    const puces = sortie.split('\n').filter((l) => l.trim().startsWith('•'));
+    expect(puces.length).toBe(FAMILLES_CORPS_PUBLIE.length);
+  });
+
+  it('REQ-CPL-018 — sans numéro de PR, le mode en ligne rend 2 : rien n’a été lu', () => {
+    const { code, sortie } = lancer('--corps-publie');
+    expect(code).toBe(2);
+    expect(sortie).toContain('INDÉTERMINÉ');
+  });
+});
+
+/**
+ * ── TOUS LES TÉMOINS D'IBAN ÉTAIENT FRANÇAIS — LA CAUSE COMMUNE DE QUATRE MUTANTS SURVIVANTS ──
+ *
+ * 🔴 CE QUE LA LENTILLE `mutation` A MESURÉ SUR CE FICHIER le 2026-09-05 :
+ *
+ *   mutation appliquée              | mesure                                    | témoin qui rougit
+ *   --------------------------------|-------------------------------------------|------------------
+ *   `normaliserEspaces` → `return t`| IBAN à espaces insécables : 1 faute → 0   | AUCUN
+ *   `PAYS_ISO` réduit à `(?:FR)`    | IBAN allemand et espagnol : 1 → 0         | AUCUN
+ *   `FORME_TVA_FR` neutralisée      | TVA tierce dans du code : 1 → 0           | AUCUN
+ *   `FORME_SIREN` neutralisée       | SIREN tiers dans du code : 1 → 0          | AUCUN
+ *
+ * Dans les quatre cas : la gate rend 0, `--prove` rend 0, et le banc d'essai reste entièrement
+ * vert. Quatre symptômes, UNE cause :
+ *
+ *     « Tous les témoins d'IBAN de ce dépôt étaient français. »
+ *
+ * 🔑 ET C'EST LA SOLIDITÉ DE `cleIbanValide` QUI MASQUAIT LE TROU. Elle résiste aux deux sens de
+ * mutation — la lentille le dit — si bien que la moitié « IBAN » de la garde paraissait prouvée.
+ * Ce qui n'était exercé par rien, c'est tout ce qui l'ENTOURE : la normalisation des espaces, les
+ * quarante autres codes pays, et les deux familles de coordonnées qui n'avaient aucun témoin du
+ * tout. Une fixture mono-cas ne prouve jamais la généralité de ce qu'elle traverse — et ici, dans
+ * un dépôt PUBLIC, l'erreur est irréversible.
+ *
+ * POURQUOI CE CAS EST RÉEL, ET PAS UNE COMPLÉTUDE DE PRINCIPE. REQ-CPL-004 exige une résidence
+ * fiscale dans le périmètre, PAS un compte français. L'IBAN qu'un apporteur collera pourra donc
+ * être allemand, espagnol ou belge : c'est exactement la classe que la garde ne voyait pas.
+ *
+ * ⚠️ CE QUE CES TÉMOINS NE FONT PAS. Ils ne DÉRIVENT PAS `PAYS_ISO` et ne prétendent pas la
+ * couvrir — la liste est tapée à la main, et c'est l'objet de la tâche GOV-036. Ce qui est livré
+ * ici, c'est le témoin qui ROUGIT QUAND LA LISTE RÉTRÉCIT, ce qui manquait pour que GOV-036 soit
+ * gardée plutôt que promise. Les valeurs viennent de la garde (RM-01) : aucun IBAN littéral,
+ * aucune TVA, aucun SIREN n'est retapé dans ce fichier.
+ */
+describe('REQ-CPL-018 — les coordonnées NON françaises, et les deux familles sans témoin', () => {
+  it.each(Object.entries(IBANS_TEMOINS_ETRANGERS).map(([pays, iban]) => ({ pays, iban })))(
+    'REQ-CPL-018 — un IBAN $pays en clair rougit — `PAYS_ISO` n’est pas décoratif',
+    ({ pays, iban }: { pays: string; iban: string }) => {
+      // Le témoin ne prouve quelque chose que si sa clé est VRAIE : un IBAN à clé fausse est
+      // écarté en amont par `cleIbanValide`, et le cas mesurerait alors la clé, pas le pays.
+      expect(cleIbanValide(iban), `${pays} — la clé du témoin doit être valide`).toBe(true);
+      expect(iban.startsWith('FR'), `${pays} — le témoin doit être NON français`).toBe(false);
+      expect(
+        controler(universAvecFichier('docs/rib-porteur.md', `Le compte du porteur est ${iban}.`)).map(
+          (f) => f.famille
+        ),
+        `${pays} — l’IBAN passe`
+      ).toContain('coordonnee_en_clair');
+    }
+  );
+
+  it('REQ-CPL-018 — un IBAN étranger collé depuis un RIB rougit aussi : les deux défauts se croisent', () => {
+    // La jonction : réduire `PAYS_ISO` OU retirer `normaliserEspaces` tue ce cas. Il est le seul
+    // qui tombe sur les deux mutations à la fois, et c'est le cas RÉEL — un porteur allemand qui
+    // colle son RIB depuis son relevé.
+    const iban = IBANS_TEMOINS_ETRANGERS.DE!;
+    const colle = ibanAvecSeparateur(iban, String.fromCodePoint(0x00a0));
+    expect(colle).not.toBe(iban);
+    const fautes = controler(universAvecFichier('docs/rib-porteur.md', `Compte : ${colle}`));
+    expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
+    expect(fautes.some((f) => f.message.includes(iban))).toBe(true);
+  });
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : un code pays qui n’en est pas un ne fabrique pas d’IBAN', () => {
+    // Sans lui, `PAYS_ISO` pourrait être remplacée par `[A-Z]{2}` — un attrape-tout qui ferait
+    // rougir la garde sur des identifiants ordinaires, donc qui la ferait désarmer. Les trois
+    // chaînes ci-dessous sont celles qui l'avaient DÉJÀ fait rougir sur un dépôt propre.
+    for (const texte of [
+      'Empreinte FC294892B7AA455D2398C4B6 du contrat.',
+      'Jeton DE72D8B01D23490C87626583083FF94B en base.',
+      'Identifiant AE77F99D0366D48A du lot.',
+    ]) {
+      expect(
+        controler(universAvecFichier('docs/note-de-travail.md', texte)).map((f) => f.famille),
+        texte
+      ).not.toContain('coordonnee_en_clair');
+    }
+  });
+
+  it('REQ-CPL-018 — une TVA de TIERS dans du CODE rougit : elle se LIT, elle ne se porte pas', () => {
+    const fautes = controler(
+      universAvecFichier('src/facturation/fournisseur.ts', `export const TVA = '${TVA_TEMOIN_TIERS}';`)
+    );
+    expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
+    expect(fautes.some((f) => f.message.includes(TVA_TEMOIN_TIERS))).toBe(true);
+  });
+
+  it('REQ-CPL-018 — un SIREN de TIERS dans du CODE rougit, et le mot-clé est ce qui l’identifie', () => {
+    const fautes = controler(
+      universAvecFichier('src/apporteur/structure.ts', `export const s = { siren: '${SIREN_TEMOIN_TIERS}' };`)
+    );
+    expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
+
+    // Le mot-clé est EXIGÉ, et ce n'est pas une faiblesse : neuf chiffres nus sont trop souvent
+    // autre chose — un horodatage, un identifiant, un montant en centimes. Une forme nue
+    // produirait le bruit qui fait désarmer une garde. C'est une limite ASSUMÉE, donc écrite.
+    expect(
+      controler(universAvecFichier('src/lot/compteur.ts', `export const n = ${SIREN_TEMOIN_TIERS};`)).map(
+        (f) => f.famille
+      )
+    ).not.toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : la PROSE garde le droit de CITER une TVA et un SIREN', () => {
+    // La frontière que la garde tient depuis le premier jour, et qui est ce qui la rend tenable :
+    // un IBAN est un SECRET, refusé PARTOUT ; un SIREN, un SIRET et une TVA sont PUBLICS, lisibles
+    // au répertoire des entreprises, et refusés seulement dans du CODE. Exiger d'une spécification
+    // qu'elle ne nomme jamais un SIREN rendrait le dossier illisible sans rien protéger.
+    const prose = `Le fournisseur porte la TVA ${TVA_TEMOIN_TIERS} et le SIREN ${SIREN_TEMOIN_TIERS}.`;
+    expect(
+      controler(universAvecFichier('docs/spec/tiers.md', prose)).map((f) => f.famille)
+    ).not.toContain('coordonnee_en_clair');
+
+    // ⚠️ ET LE MÊME TEXTE, DANS DU CODE, ROUGIT. Sans cette moitié-ci, le contre-témoin
+    // ci-dessus passerait aussi bien sur une garde qui ne regarde plus rien du tout.
+    expect(
+      controler(universAvecFichier('src/spec/tiers.ts', prose)).map((f) => f.famille)
+    ).toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : un IBAN étranger n’est PAS refusé pour sa seule forme', () => {
+    // La clé mod-97 reste le discriminant, y compris hors de France. Un identifiant qui commence
+    // par un vrai code pays et dont la clé est fausse ne doit pas rougir : c'est ce qui a fait
+    // rougir la garde sur un arbre propre, et c'est ce qui la ferait retirer.
+    const faux = 'DE00370400440532013000';
+    expect(cleIbanValide(faux), 'le contre-témoin doit avoir une clé FAUSSE').toBe(false);
+    expect(
+      controler(universAvecFichier('docs/note-de-travail.md', `Référence ${faux}.`)).map((f) => f.famille)
+    ).not.toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-CPL-018 — `gov:entite:prove` porte ces témoins-là AUSSI, et les nomme', () => {
+    // Un témoin qui ne tient que `pnpm test` ne garde pas la CI : l'étape de Gate A, c'est
+    // `gov:entite:prove`, et c'est elle que la lentille a vue rendre 0 sur les quatre mutants.
+    const { code, sortie } = lancer('--prove');
+    expect(code).toBe(0);
+    expect(sortie).toContain(
+      `${Object.keys(IBANS_TEMOINS_ETRANGERS).length} IBAN NON français rougissent aussi`
+    );
+    for (const pays of Object.keys(IBANS_TEMOINS_ETRANGERS)) expect(sortie).toContain(pays);
   });
 });
