@@ -106,9 +106,16 @@ export const FAMILLES = [
  * document n'a de raison légitime de porter un IBAN en clair, et surtout pas celui qui explique
  * qu'il ne faut pas le faire.
  *
- * Chaque entrée déclare donc `exemptDe`, et une seule valeur est admise : `'recopie'`, la famille
- * des valeurs publiques. Aucune n'exempte de `coordonnee_en_clair`. Le type l'impose — ajouter
- * une exemption plus large exigerait d'élargir le type, ce qui se voit en revue.
+ * Chaque entrée déclare donc `exemptDe`, et le type n'admet que DEUX valeurs :
+ *   — `'recopie'` : le fichier peut porter une valeur PUBLIQUE du registre (SIREN, SIRET, TVA)
+ *     sans que ce soit une recopie fautive. C'est le régime de `docs/DECISIONS.md` et de l'ADR :
+ *     ils nomment ce qu'ils arrêtent, et ils ne sont PAS exempts de `coordonnee_en_clair`.
+ *   — `'coordonnee'` : le fichier peut porter une coordonnée. Réservé aux DEUX fichiers qui
+ *     doivent contenir les témoins de cette garde — la garde elle-même et son banc d'essai —
+ *     parce qu'un document qui explique la règle doit pouvoir écrire son contre-exemple.
+ *
+ * Élargir une exemption exige donc d'élargir ce type, ce qui se voit en revue. Et `'coordonnee'`
+ * implique `'recopie'` : un fichier autorisé à PORTER la valeur peut a fortiori la répéter.
  */
 export type FamilleExemptable = 'recopie' | 'coordonnee';
 
@@ -117,7 +124,7 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
     motif: /^config\/entite\.json$/,
     exemptDe: 'recopie',
     raison:
-      "le registre est la SOURCE : il porte legitimement son SIREN, son SIRET et sa TVA, et il ne se recopie pas lui-meme. Il n'est PLUS exempt de coordonnee_en_clair — il l'a ete jusqu'au 2026-09-05, et la raison ecrite alors (« ses champs sont juges un par un plus haut ») etait FAUSSE : les 17 champs non secrets n'etaient confrontes a aucune forme, si bien qu'un IBAN ecrit dans banqueReceptrice.espaceDeTest — le champ ou l'on colle un RIB, trois lignes sous banqueDebitrice.iban — restait invisible. L'exemption en bloc contournait cinq faux positifs legitimes, elle ne decidait rien sur l'IBAN",
+      "le registre est la SOURCE : il porte legitimement son SIREN, son SIRET et sa TVA, et il ne se recopie pas lui-meme. Il n'est PLUS exempt de coordonnee_en_clair — il l'a ete jusqu'au 2026-09-05, et la raison ecrite alors (« ses champs sont juges un par un plus haut ») etait FAUSSE : les 17 champs non secrets n'etaient confrontes a aucune forme, si bien qu'un IBAN ecrit dans banqueReceptrice.espaceDeTest — le champ ou l'on colle un RIB, dans le meme bloc bancaire que banqueDebitrice.iban — restait invisible. L'exemption en bloc contournait QUATRE faux positifs legitimes, elle ne decidait rien sur l'IBAN",
   },
   { motif: /^scripts\/gates\/gov-entite\.ts$/, exemptDe: 'coordonnee', raison: 'la garde porte ses propres témoins, qui doivent avoir la forme de ce qu’elle refuse' },
   {
@@ -352,7 +359,21 @@ const FORME_TVA_FR = /\b(FR[0-9A-Z]{2}\d{9})\b/g;
 // pratique ` = "`, ` :`, `":` ou une fin de ligne. Une première version n'acceptait qu'UN
 // délimiteur, et `PARTNERS_BIC_DEBITEUR = "BNPAFRPPXXX"` lui échappait sur le guillemet — le cas
 // même que ce correctif visait. Un séparateur écrit pour un exemple ne couvre que cet exemple.
-const SEPARATEUR_DE_VALEUR = '(?:[ \\t]*[=:][ \\t\\n]*|[ \\t]*\\n[ \\t]*)["\'`]?[ \\t]*';
+// 🔴 UNE RÉGRESSION, ET ELLE PORTAIT SUR LES FORMATS MÊMES QUE CE LOT AJOUTE AU BALAYAGE.
+// La première version commençait par `[ \t]*[=:]`, si bien que `"bic": "BNPAFRPPXXX"` lui
+// échappait : en JSON, le guillemet FERMANT de la clé s'intercale entre le mot-clé et le
+// deux-points. La forme rougissait à `5bcbe22` et ne rougissait plus après mon correctif — j'ai
+// fermé un faux positif de prose en ouvrant un faux négatif sur du JSON, du XML (`<BICFI>`, la
+// balise réelle d'un `pain.001`) et du CSV, c'est-à-dire sur les fichiers bancaires.
+// Le mot-clé peut donc être suivi de caractères de mot (`BICFI`), d'un guillemet fermant, puis
+// d'un délimiteur pris au sens large : `:`  `=`  `,`  `>` ou une fin de ligne.
+//
+// ⚠️ CE QUI RESTE DEHORS, ET QUI EST ÉCRIT PLUTÔT QUE TU : un BIC en prose SANS délimiteur —
+// « Le BIC est BNPAFRPP. » — n'est pas vu. C'est le prix du contre-témoin `DOCUSEAL` : accepter
+// la prose sans délimiteur fait rougir tout mot de huit lettres proche d'un « BIC », et une garde
+// qui rougit sur du français ordinaire se fait désarmer dans la semaine.
+const SEPARATEUR_DE_VALEUR =
+  '(?:["\'`]?[ \\t]*[=:,>][ \\t\\n]*|[ \\t]*\\n[ \\t]*)["\'`]?[ \\t]*';
 const FORME_BIC = new RegExp(
   `[Bb][Ii][Cc][A-Za-z0-9_-]{0,24}?${SEPARATEUR_DE_VALEUR}([A-Z]{4}${PAYS_ISO}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)(?![A-Za-z0-9])`,
   'g'
@@ -395,16 +416,30 @@ function estFichierDeTest(chemin: string): boolean {
 /**
  * LE REGISTRE EST LA SOURCE, ET C'EST TOUT CE QU'IL A LE DROIT DE PORTER.
  *
- * Il porte legitimement son SIREN, son SIRET et sa TVA — ce sont SES valeurs, publiques, et c'est
- * son travail de les arreter. Il porte aussi, dans ses cles de documentation, les formes d'EXEMPLE
- * qu'il interdit ; les nommer est la seule facon d'expliquer la regle.
+ * Il porte légitimement son SIREN, son SIRET et sa TVA — ce sont SES valeurs, publiques, et c'est
+ * son travail de les arrêter. Il n'a en revanche AUCUNE raison de porter une coordonnée bancaire
+ * ailleurs que dans ses deux champs secrets, où `secret_commite` la juge champ par champ. Un IBAN
+ * qui apparaît dans un troisième champ n'est pas une valeur du registre : c'est une fuite.
  *
- * Il n'a en revanche AUCUNE raison de porter une coordonnee bancaire ailleurs que dans ses deux
- * champs secrets, ou `secret_commite` la juge champ par champ. Un IBAN qui apparait dans un
- * troisieme champ n'est ni une valeur du registre ni un exemple : c'est une fuite.
+ * 🔴 CETTE FONCTION A PORTÉ UNE INDULGENCE, ET ELLE NE PROTÉGEAIT RIEN.
+ * Elle rendait `true` sur `estExemplePlausible(valeur)`, pour laisser le registre documenter les
+ * formes d'exemple qu'il interdit. Or je venais de bannir cette indulgence de tout le dépôt —
+ * « une heuristique d'indulgence appliquée hors de son domaine ouvre une porte » — et je la
+ * réintroduisais pour le seul fichier qu'on ouvre avec un RIB en main.
+ *
+ * La lentille `securite` l'a démontré par CONSTRUCTION, pas par argument : un IBAN à clé mod-97
+ * VALIDE et à compte zéro-padé, posé dans `banqueReceptrice.espaceDeTest`, restait invisible ici
+ * alors que le MÊME IBAN rougissait dans `docs/DECISIONS.md` et dans `.env.example`. Et la clause
+ * ne servait à rien : les deux exemples que le registre documente — `FR7612345678901234567890123`
+ * et `FR12123456789` — ont une clé mod-97 FAUSSE, donc `cleIbanValide` les écarte déjà en amont.
+ * Retirée, l'arbre reste vert, `--prove` reste vert, et le trou se ferme.
+ *
+ * 🔑 Une clause qui ne protège aucun cas réel n'est pas neutre : elle coûte exactement la fuite
+ * qu'elle laisse passer. Et elle est née d'un réflexe — préserver un comportement qu'on venait de
+ * juger dangereux ailleurs, parce qu'ici il « semblait » nécessaire, sans le vérifier.
  */
-function coordonneeLegitimeAuRegistre(valeur: string, formeEstIban: boolean): boolean {
-  return !formeEstIban || estExemplePlausible(valeur);
+function coordonneeLegitimeAuRegistre(_valeur: string, formeEstIban: boolean): boolean {
+  return !formeEstIban;
 }
 
 function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = ''): string[] {

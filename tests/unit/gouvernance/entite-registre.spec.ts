@@ -470,6 +470,37 @@ describe("REQ-CPL-018 — les formes de coordonnées, éprouvées sur les cas qu
     expect(controler(u).map((f) => f.famille)).not.toContain('coordonnee_en_clair');
   });
 
+  it("REQ-CPL-018 — un IBAN à clé VALIDE dans le registre rougit, même s'il RESSEMBLE à un exemple", () => {
+    // 🔴 Troisième occurrence de la même indulgence. `coordonneeLegitimeAuRegistre` rendait `true`
+    // sur `estExemplePlausible`, pour le seul `config/entite.json` — le fichier qu'on ouvre avec
+    // un RIB en main. Un IBAN à clé mod-97 VALIDE et à compte zéro-padé y restait invisible, alors
+    // que le MÊME rougissait dans `docs/DECISIONS.md`. Et la clause ne protégeait rien : les deux
+    // exemples que le registre documente ont une clé FAUSSE, donc `cleIbanValide` les écarte déjà.
+    const zeroPade = 'FR0030004000030000000000019'; // clé valide, compte zéro-padé
+    expect(cleIbanValide(zeroPade), 'le témoin doit avoir une clé VALIDE, sinon il ne prouve rien').toBe(true);
+    const u = structuredClone(UNIVERS_CONFORME) as Univers;
+    u.fichiers.push({ chemin: 'config/entite.json', contenu: `{ "espaceDeTest": "${zeroPade}" }` });
+    expect(controler(u).map((f) => f.famille)).toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-CPL-018 — un BIC dans du JSON, du XML ou du CSV : les formats des fichiers BANCAIRES', () => {
+    // 🔴 RÉGRESSION que j'ai introduite en fermant le faux positif `DOCUSEAL` : mon séparateur
+    // commençait par `[ 	]*[=:]`, or en JSON le guillemet FERMANT de la clé s'intercale. La forme
+    // rougissait avant, plus après — et elle échouait précisément sur les formats que ce lot venait
+    // d'ajouter au balayage parce que ce sont ceux des fichiers bancaires.
+    for (const [nom, texte] of [
+      ['JSON', '{"bic": "BNPAFRPPXXX"}'],
+      ['JSON serré', '{"bic":"BNPAFRPPXXX"}'],
+      ['XML pain.001', '<BICFI>BNPAFRPPXXX</BICFI>'],
+      ['CSV', 'bic,BNPAFRPPXXX'],
+    ] as const) {
+      expect(
+        controler(universAvecFichier('docs/rib.json', texte)).map((f) => f.famille),
+        nom
+      ).toContain('coordonnee_en_clair');
+    }
+  });
+
   it('REQ-CPL-018 — un BIC se donne après un DÉLIMITEUR, jamais au milieu de la prose', () => {
     const rouges = [
       'export const PARTNERS_BIC_DEBITEUR = "BNPAFRPPXXX";',
