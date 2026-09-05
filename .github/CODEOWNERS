@@ -36,6 +36,9 @@
 /docs/PRESEANCE.md              @will383842
 # poste A01 (`gardien-spec`)
 /docs/tasks.json                @will383842
+# Le SEUL fichier du depot qui puisse ABSOUDRE un rouge bloquant (partners/ADR-0010).
+# config/entite.json ne peut que CONTRAINDRE ; celui-ci transforme un echec en vert.
+/config/exemptions-corps-publie.json  @will383842
 # poste A01 (`gardien-spec`) — fichier DERIVE, regenere par `pnpm plan-state:build`
 /docs/PLAN-STATE.md             @will383842
 

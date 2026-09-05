@@ -340,6 +340,7 @@ Les six premières lignes sont exactement les six lignes de `docs/CONVENTIONS.md
 | `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | A01 | `role:gardien-spec` | `docs/CONVENTIONS.md` §8, lot dédié avec `--settings` surchargé |
 | `docs/tasks.json` | A01 (composition), jamais un développeur | `role:gardien-spec` | `docs/CONVENTIONS.md` §8 |
 | `prisma/**`, `packages/contracts/**` | A02, approbation bloquante | `schema` | `docs/CONVENTIONS.md` §5 et §8 ; `.github/CODEOWNERS` |
+| `config/exemptions-corps-publie.json` | A08, approbation bloquante | `sensible` | `partners/ADR-0010` ; `.github/CODEOWNERS` — **le seul fichier du depot qui puisse ABSOUDRE un rouge bloquant** : une ligne y transforme un echec de Gate A en vert. `config/entite.json` ne peut que CONTRAINDRE ; celui-ci absout. Toute ligne ajoutee passe donc devant un relecteur, comme une decision. |
 | `docs/adr/**` | A02 accepte, A03 indexe | `role:architecte` | `docs/CONVENTIONS.md` §8 |
 | `.claude/settings.json`, `.claude/agents/**` | **aucun agent en session** : lot dédié GOV-000 / GOV-023, lancé avec `--settings` surchargé | — | `docs/CONVENTIONS.md` §8 ; `.claude/settings.json` porte lui-même `deny` sur `Write` et `Edit` de ce fichier |
 
