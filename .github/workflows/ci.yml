@@ -20,6 +20,14 @@ on:
 jobs:
   gate-a:
     runs-on: ubuntu-latest
+    # EXPLICITES, et ce n'est pas de la ceinture-bretelles. `gov:entite:corps` est BLOQUANTE et
+    # rend 2 (donc echoue) quand elle ne peut pas lire. Le defaut de `GITHUB_TOKEN` se configure
+    # au niveau du depot ou de l'organisation : le jour ou quelqu'un le passe en restreint, la
+    # garde deviendrait INSATISFIABLE — exactement ce qu'on apprend a sauter. Nommer le droit
+    # ici, c'est le soustraire a un reglage qu'on ne relit jamais.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -94,10 +102,19 @@ jobs:
       - name: La garde du registre d entite sait rougir
         run: pnpm gov:entite:prove
 
-      # Seule la PREUVE entre ici : le mode en ligne lit la forge et rend 2 quand il ne peut
-      # pas lire, ce qui ferait clignoter une etape de Gate A. Et l'historique d'edition d'une
-      # PR est IMMUABLE : cable en bloquant, il rendrait la PR 31 infusionnable a jamais.
-      - name: La garde du corps publie de la PR sait rougir
+      # BLOQUANTE, et le 2 fait ECHOUER. Un vert produit par une lecture qui n'a pas eu lieu est
+      # le defaut meme que cette garde empeche ; « laisser passer en signalant » n'a aucun
+      # mecanisme et redevient continue-on-error. `lireCorpsPublie` reessaie 3 fois : une
+      # intermittence devient de la latence, jamais une couleur. Le numero de PR est LU dans
+      # l'evenement, il ne se recopie pas. Les revisions irreparables sont DECLAREES dans
+      # config/exemptions-corps-publie.json, et le vert les affiche une par une.
+      - name: Le corps PUBLIE de la PR ne porte aucune coordonnee
+        if: github.event_name == 'pull_request'
+        run: pnpm gov:entite:corps
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: La garde du corps publie sait rougir
         run: pnpm gov:entite:corps:prove
       # Seule la PREUVE entre ici : le mode en ligne rend 2 sous le jeton d Actions, qui ne
       # lit pas la protection de branche. Le mode en ligne tourne en nightly.

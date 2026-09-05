@@ -1111,7 +1111,8 @@
       "zone": "gouvernance",
       "paths": [
         "config/entite.json",
-        "scripts/gates/gov-entite.ts"
+        "scripts/gates/gov-entite.ts",
+        "config/exemptions-corps-publie.json"
       ],
       "schema": false,
       "sensible": [
