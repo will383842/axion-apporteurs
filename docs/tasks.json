@@ -7331,7 +7331,8 @@
         "scripts/lot/corps-de-pr.ts",
         "docs/pr",
         "scripts/lot/revues.ts",
-        "tests/unit/gouvernance/revues-lecteur-unique.spec.ts"
+        "tests/unit/gouvernance/revues-lecteur-unique.spec.ts",
+        "tests/unit/gouvernance/tete-de-pr-concorde.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -7361,7 +7362,8 @@
           "tests/unit/gouvernance/vues-derivees.spec.ts"
         ],
         "REQ-GOV-032": [
-          "tests/unit/gouvernance/vues-derivees.spec.ts"
+          "tests/unit/gouvernance/vues-derivees.spec.ts",
+          "tests/unit/gouvernance/tete-de-pr-concorde.spec.ts"
         ],
         "REQ-GOV-010": [
           "tests/unit/gouvernance/revues-lecteur-unique.spec.ts"

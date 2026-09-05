@@ -139,6 +139,19 @@ function suite(chemin: string | null): { fichiers: string; tests: string } {
  * ce dépôt n'en a qu'un (W13) : toutes les revues viennent du compte de l'auteur, et la propriété
  * n'y est pas mesurable. Le détail publié le NOMME. On ne coche jamais ce qu'on ne mesure pas.
  */
+/**
+ * Les deux têtes coïncident-elles ? La forge peut rapporter une tête PÉRIMÉE — constaté le
+ * 2026-09-05, quelques secondes après un `git push` — et l'erreur va dans le sens PERMISSIF :
+ * des accords rendus sur la tête précédente sont alors comptés comme COURANTS.
+ *
+ * Pure et exportée pour qu'un témoin l'exerce : le bloc de script de ce fichier n'est lancé par
+ * aucun test (mesuré par la lentille `mutation` au 8e tour), donc une garde qui n'y vivrait que
+ * comme effet n'aurait pas de témoin.
+ */
+export function tetesConcordent(locale: string, forge: string): boolean {
+  return locale.trim().length > 0 && locale.trim() === forge.trim();
+}
+
 function caseRevues(
   pr: number,
   gabarit: string,
@@ -164,6 +177,31 @@ function caseRevues(
       labels?: { name: string }[];
     };
     tete = meta.head.sha;
+
+    // ⚠️ LA TÊTE QUE LA FORGE RAPPORTE PEUT ÊTRE PÉRIMÉE, ET L'ERREUR EST PERMISSIVE.
+    //
+    // Constaté le 2026-09-05 : ce rendu, lancé juste après un `git push`, a lu la tête
+    // PRÉCÉDENTE. Trois accords rendus sur elle ont donc été comptés comme COURANTS, et le
+    // corps publié annonçait UNE lentille à rejuger quand il y en avait QUATRE. La case ne
+    // s'est pas cochée à tort cette fois-là — mais seulement parce qu'une quatrième lentille
+    // refusait. Avec quatre accords sur la tête précédente, elle se serait cochée.
+    //
+    // On connaît la tête locale : exiger qu'elles coïncident ne coûte rien et ferme le cas.
+    // Le sens de défaillance est FERMÉ — on refuse de rendre plutôt que de rendre un
+    // instantané en retard.
+    const teteLocale = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    if (!tetesConcordent(teteLocale, tete)) {
+      console.error(
+        `❌ pr:corps — la forge rapporte la tête ${tete.slice(0, 7)} alors que l'arbre local est ` +
+          `sur ${teteLocale.slice(0, 7)}. Les deux doivent coïncider : sinon les verdicts de revue ` +
+          `seraient jugés PÉRIMÉS ou COURANTS par rapport à un diff qui n'est pas celui qu'on publie.`
+      );
+      console.error(
+        `   Si tu viens de pousser, la forge est simplement en retard : relance dans quelques ` +
+          `secondes. Sinon, pousse d'abord — le corps décrit ce qui sera fusionné, pas ce qui est local.`
+      );
+      process.exit(1);
+    }
     auteurCompte = meta.user?.login ?? null;
     labels = (meta.labels ?? []).map((l) => l.name);
     fichiers = (

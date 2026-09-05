@@ -16,7 +16,7 @@
 
 **321 exigences actives · 31 réputées testées · 31 couvertes · 0 orphelines.**
 
-209 tâches, dont 20 livrées · 29 fichiers de test exécutés par `vitest` sur 29 présents.
+209 tâches, dont 20 livrées · 30 fichiers de test exécutés par `vitest` sur 30 présents.
 
 ## Exigences réputées testées
 
@@ -190,7 +190,7 @@
 | `REQ-GOV-018` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
 | `REQ-GOV-028` | -1 | `GOV-019` | `poids-du-bundle-garde-vraiment.spec.ts` |
 | `REQ-GOV-029` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
-| `REQ-GOV-032` | -1 | `GOV-024`, `GOV-035` | `tests/unit/gouvernance/revues-lecteur-unique.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` |
+| `REQ-GOV-032` | -1 | `GOV-024`, `GOV-035` | `tests/unit/gouvernance/revues-lecteur-unique.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` |
 | `REQ-GOV-033` | -1 | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` |
 | `REQ-INT-001` | 0 | `INT-T02` | `outbox-produit-des-evenements-valides.spec.ts` |
 | `REQ-INT-005` | -1 | `INT-T01b`, `INT-T05` | — |
@@ -458,6 +458,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | oui | `REQ-GOV-015`, `REQ-GOV-021` |
 | `tests/unit/gouvernance/regles-maison.spec.ts` | oui | `REQ-GOV-023`, `REQ-GOV-024` |
 | `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011` |
+| `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts` | oui | `REQ-GOV-032` |
 | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | oui | `REQ-GOV-014`, `REQ-QA-013` |
 | `tests/unit/gouvernance/tracabilite.spec.ts` | oui | `REQ-GOV-005`, `REQ-QA-014` |
 | `tests/unit/gouvernance/une-tache-un-owner.spec.ts` | oui | `REQ-GOV-007` |
