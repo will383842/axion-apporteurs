@@ -108,6 +108,20 @@ cette branche en retard pendant que ses gates tournent. Chaque fusion sur `main`
 
 **Commande.** `gh pr view <numéro> --json headRefOid,reviews`
 
+⚠️ **ET UNE SECONDE, D'UNE AUTRE SOURCE — sans elle ce pas ne rattrape RIEN.**
+
+```bash
+git ls-remote origin refs/heads/<branche-de-la-PR>   # interroge le serveur GIT, pas l'API REST
+git rev-parse HEAD                                    # et l'arbre local
+```
+
+Les trois doivent coïncider. **Raison, mesurée le 2026-09-05** : la tête que l'API rapporte peut
+être en retard de plusieurs secondes après un `git push`. Le pas 2 la lit, et ce pas 5 lisait **le
+même champ de la même source** — donc une tête périmée produisait elle-même sa propre
+confirmation « inchangée depuis le pas 2 », et aucun témoin du trajet de fusion ne pouvait voir le
+décalage. **Un contrôle qui interroge la source qu'il est censé contrôler ne contrôle rien.**
+`git ls-remote` passe par le protocole git et non par l'API : c'est un chemin réellement distinct.
+
 **Ce qu'on lit.** L'empreinte de tête est celle qui portait les approbations du pas 2. Si elle a
 changé depuis, les revues portent sur autre chose : on retourne au pas 2. A04 est privé d'écriture,
 donc il ne peut pas retoucher ce qu'il fusionne ; quand A12 le supplée, cette propriété n'est plus

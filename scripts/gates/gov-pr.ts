@@ -51,6 +51,7 @@ import {
   touche,
   toucheSchema,
   tachesDeLaPr,
+  tetesConcordent,
   type RevueBrute,
 } from '../lot/revues';
 
@@ -676,6 +677,35 @@ function prParGh(numero: string): Pr {
       maxBuffer: 32e6,
     })
   ) as RevueBrute[];
+  // ⚠️ LA TÊTE QUE LA FORGE RAPPORTE PEUT ÊTRE PÉRIMÉE, ET C'EST ICI QUE ÇA COMPTE LE PLUS.
+  //
+  // Cette valeur alimente `entree.tete`, dont `scripts/lot/revues.ts` dérive `perimees` puis
+  // `coche`. Une tête en retard fait donc compter COURANTS des accords rendus sur le diff
+  // PRÉCÉDENT — sur la gate que `docs/CHARTE-AGENTS.md` appelle « le seul moment où les revues
+  // existent ». Veto de la lentille `securite` au 10e tour, et il visait juste : la garde avait
+  // été posée sur le COMPOSEUR, qui décrit, et pas sur la GATE, qui autorise.
+  //
+  // On refuse plutôt que de juger un diff qui n'est pas celui qu'on fusionnera.
+  //
+  // ⚠️ ET POURQUOI CETTE GARDE NE PEUT PAS ROUGIR EN CI, ce qui la rendrait INSATISFIABLE :
+  // `prParGh()` n'est appelé que sous `--pr` ou `--apres-fusion`, et le workflow lance
+  // `pnpm gov:pr` SANS argument — les familles de revue ne sont donc évaluées qu'à la main,
+  // juste avant de fusionner. En CI l'arbre est sur `refs/pull/N/merge`, dont le sha ne peut
+  // PAS coïncider avec `headRefOid` : y câbler `--pr` rendrait cette garde impossible à
+  // satisfaire, et une gate insatisfiable se fait retirer dans la semaine. Avertissement de la
+  // lentille `schema` au 10e tour, vérifié : `pnpm gov:pr` sans argument rend 0 et n'imprime
+  // aucun message de tête.
+  const teteLocaleGate = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' });
+  if (!tetesConcordent(teteLocaleGate, meta.headRefOid ?? '')) {
+    console.error(
+    `❌ gov:pr — la forge rapporte la tête ${(meta.headRefOid ?? '(aucune)').slice(0, 7)} alors ` +
+      `que l'arbre local est sur ${teteLocaleGate.trim().slice(0, 7)}. Les verdicts de revue seraient ` +
+      `jugés PÉRIMÉS ou COURANTS par rapport à un diff qui n'est pas celui qu'on fusionnera.`
+    );
+    console.error('   Si tu viens de pousser, la forge est en retard : relance. Sinon, pousse d\'abord.');
+    process.exit(1);
+  }
+
   return {
     numero: Number(numero),
     titre: meta.title,

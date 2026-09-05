@@ -52,7 +52,9 @@ import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 import { CHAMPS } from '../../src/config/entite';
-import { lireRevues, tachesDeLaPr, tachesSchemaDeLaPr, toucheSchema, type RevueBrute } from './revues';
+import { lireRevues, tachesDeLaPr, tachesSchemaDeLaPr, toucheSchema, type RevueBrute,
+  tetesConcordent,
+} from './revues';
 
 /**
  * ⚠️ LE CHAMP `schema` MANQUAIT À CE TYPE, ET C'EST CE MANQUE QUI A CHOISI LE SIGNAL FAIBLE.
@@ -139,18 +141,6 @@ function suite(chemin: string | null): { fichiers: string; tests: string } {
  * ce dépôt n'en a qu'un (W13) : toutes les revues viennent du compte de l'auteur, et la propriété
  * n'y est pas mesurable. Le détail publié le NOMME. On ne coche jamais ce qu'on ne mesure pas.
  */
-/**
- * Les deux têtes coïncident-elles ? La forge peut rapporter une tête PÉRIMÉE — constaté le
- * 2026-09-05, quelques secondes après un `git push` — et l'erreur va dans le sens PERMISSIF :
- * des accords rendus sur la tête précédente sont alors comptés comme COURANTS.
- *
- * Pure et exportée pour qu'un témoin l'exerce : le bloc de script de ce fichier n'est lancé par
- * aucun test (mesuré par la lentille `mutation` au 8e tour), donc une garde qui n'y vivrait que
- * comme effet n'aurait pas de témoin.
- */
-export function tetesConcordent(locale: string, forge: string): boolean {
-  return locale.trim().length > 0 && locale.trim() === forge.trim();
-}
 
 function caseRevues(
   pr: number,
@@ -219,7 +209,7 @@ function caseRevues(
       })
     ) as RevueBrute[];
   } catch {
-    return { marque: '[ ]', detail: 'revues illisibles (GitHub injoignable) — la case reste vide' };
+    return { marque: '[ ]', detail: 'revues illisibles (revues illisibles (forge injoignable, jeton absent, ou `git rev-parse` en echec — le sens reste ferme, seul le diagnostic est approximatif)) — la case reste vide' };
   }
 
   const lecture = lireRevues({

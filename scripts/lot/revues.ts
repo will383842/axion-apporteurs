@@ -365,6 +365,21 @@ export type TacheDeLaPr = { id: string; pr?: number | null; schema?: boolean; se
  * construction. Le composeur, lui, passe `null` : il décrit ce que la PR DÉCLARE porter, et c'est
  * exactement ce que `LISTE_SUR_LA_PR` et `COUVRE` doivent dire.
  */
+/**
+ * Les deux têtes coïncident-elles ? La forge peut rapporter une tête PÉRIMÉE — mesuré le
+ * 2026-09-05, quelques secondes après un `git push` — et l'erreur va dans le sens PERMISSIF :
+ * des accords rendus sur la tête précédente sont alors comptés COURANTS.
+ *
+ * ⚠️ ELLE VIT ICI, dans le module PARTAGÉ, et non chez l'un des deux appelants. La première
+ * version la posait sur le composeur — qui DÉCRIT — et pas sur la garde — qui AUTORISE. Le veto
+ * de la lentille `securite` au 10e tour : c'est la garde qui décide d'une fusion, et c'est elle
+ * qui lisait la tête sans jamais la confronter. Même asymétrie entre deux frères que celle qu'on
+ * venait de fermer entre les deux `--render`, reproduite un cran plus haut le même jour.
+ */
+export function tetesConcordent(locale: string, forge: string): boolean {
+  return locale.trim().length > 0 && locale.trim() === forge.trim();
+}
+
 export function tachesDeLaPr<T extends TacheDeLaPr>(
   taches: readonly T[],
   pr: number | null,
