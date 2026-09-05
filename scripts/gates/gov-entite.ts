@@ -45,6 +45,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 
 import {
@@ -747,8 +748,140 @@ export function controler(u: Univers): Faute[] {
  * ne l'est pas.
  */
 
-/** Un texte publié sur la forge, avec ce qui permet de le retrouver. */
-export type CorpsPublie = { origine: string; texte: string; revision: boolean };
+// ── LES EXEMPTIONS DE RÉVISION — UNE DETTE QU'ON NE PEUT PAS REMBOURSER SE DÉCLARE ────────────
+
+/**
+ * POURQUOI CE REGISTRE EXISTE, ET POURQUOI IL A FAILLI NE PAS EXISTER.
+ *
+ * L'historique d'édition d'un corps de PR est IMMUABLE : GitHub sert `userContentEdits` à
+ * quiconque le demande, et aucune édition ultérieure ne dépublie une révision. La PR #31 porte
+ * donc, pour toujours, trois révisions avec un IBAN à clé mod-97 vraie. Câbler le mode en ligne
+ * en étape bloquante rendait cette PR-là — et toute PR de sa pile — INFUSIONNABLE.
+ *
+ * 🔴 LA PREMIÈRE RÉPONSE A ÉTÉ LA MAUVAISE, ET C'EST MOI QUI L'AI PROPOSÉE. Elle consistait à ne
+ * câbler que la preuve hors ligne et à laisser le mode en ligne « à lancer avant fusion ». Écrite
+ * noir sur blanc, elle se reconnaît : **une garde qui ne tourne que quand quelqu'un y pense ne
+ * tourne pas.** Le dépôt voisin connaît le même motif sous une autre forme — toutes ses gates de
+ * budget portent `continue-on-error: true`, aucune PR qui alourdit le bundle n'a jamais rougi, et
+ * pendant des mois les revues ont écrit « le risque est couvert par la gate ». Une gate qui ne
+ * bloque pas produit une FAUSSE SÉCURITÉ, qui est pire que pas de gate du tout.
+ *
+ * 🔑 LA TROISIÈME VOIE : rendre l'EXCEPTION explicite plutôt que l'ABSENCE de garde. Ce qui ne
+ * peut pas être corrigé se déclare — nommé, daté, borné, motivé, avec un propriétaire — et la
+ * garde reste bloquante pour tout le reste. Une dette qu'on ne peut pas rembourser se déclare ;
+ * elle ne se contourne pas.
+ *
+ * CE QUI EST BORNÉ, ET À QUEL GRAIN. Une exemption ne couvre pas une PR : elle couvre UNE
+ * RÉVISION PRÉCISE d'une PR précise, portant UNE coordonnée précise. Trois clés doivent
+ * concorder — `pr`, `revision` (l'horodatage exact), `empreinte`. Exempter « la PR #31 » aurait
+ * absous d'avance toute révision future de cette PR, c'est-à-dire tout ce qui reste à écrire.
+ *
+ * ⚠️ CE QU'UNE EXEMPTION N'EST JAMAIS. Elle ne s'applique PAS au corps COURANT : celui-là
+ * s'édite, donc il n'y a rien à excuser. Et elle ne s'applique jamais à une coordonnée RÉELLE :
+ * une valeur réellement publiée est divulguée, et le remède est de la CHANGER, pas de l'inscrire
+ * ici. Le seul motif recevable est qu'il n'y ait rien à révoquer — une valeur fabriquée.
+ *
+ * L'EMPREINTE, ET JAMAIS LA VALEUR. Ce registre est suivi dans un dépôt PUBLIC : y écrire la
+ * coordonnée serait commettre exactement la faute qu'il documente. On y écrit un SHA-256 complet
+ * de la valeur normalisée. Complet, et non tronqué : seize caractères hexadécimaux se collisionnent
+ * en 2³² essais, ce qui laisserait absoudre une AUTRE coordonnée que celle qu'on a examinée.
+ * Résidu assumé : une empreinte est un oracle de vérification pour qui aurait déjà la valeur en
+ * main — ce qui est sans objet ici, puisque le seul motif recevable est une valeur fabriquée.
+ */
+export type Exemption = {
+  /** Le numéro de la PR. Une exemption ne traverse jamais une PR. */
+  pr: number;
+  /** L'horodatage EXACT de la révision, tel que `userContentEdits` le rend. */
+  revision: string;
+  /** SHA-256 complet de la coordonnée normalisée. JAMAIS la valeur. */
+  empreinte: string;
+  /** La date à laquelle l'exemption a été déclarée — une exception sans date ne se relit pas. */
+  declaree: string;
+  /** Qui la déclare. Une exception sans propriétaire n'est réclamée par personne. */
+  par: string;
+  /** Pourquoi il n'y a rien à révoquer. C'est le seul motif recevable. */
+  motif: string;
+  /**
+   * `true` quand l'exemption ne se refermera JAMAIS — l'historique d'édition est immuable. Le
+   * champ existe pour que le lecteur sache qu'il ne s'agit pas d'un report : il n'y a pas de date
+   * à laquelle cette ligne pourra être retirée, et prétendre le contraire serait un mensonge de
+   * plus dans un registre qui existe pour dire la vérité sur ce qui ne peut pas être réparé.
+   */
+  definitive: boolean;
+};
+
+const CHEMIN_EXEMPTIONS = 'config/exemptions-corps-publie.json';
+
+/** L'empreinte d'une coordonnée : SHA-256 complet de la valeur telle que la garde la remonte. */
+export function empreinteDe(coordonnee: string): string {
+  return createHash('sha256').update(coordonnee, 'utf8').digest('hex');
+}
+
+/**
+ * LA STRUCTURE DU REGISTRE, JUGÉE INDÉPENDAMMENT DE TOUTE PR. Une exemption mal formée est plus
+ * dangereuse qu'une exemption absente : elle a l'air d'une décision prise. Un motif vide, un
+ * horodatage qui n'est pas celui d'une révision, une empreinte tronquée — chacun rend la ligne
+ * illisible pour le prochain, donc irrelisable, donc permanente sans que personne ne l'ait voulue.
+ */
+export function controlerRegistreExemptions(exemptions: Exemption[]): Faute[] {
+  const fautes: Faute[] = [];
+  const vues = new Set<string>();
+  for (const [i, e] of exemptions.entries()) {
+    const ou = `\`${CHEMIN_EXEMPTIONS}\` #${i + 1}`;
+    const manques: string[] = [];
+    if (!Number.isInteger(e.pr) || e.pr <= 0) manques.push('`pr` doit être un numéro de PR');
+    if (typeof e.revision !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(e.revision)) {
+      manques.push("`revision` doit être l'horodatage ISO EXACT rendu par `userContentEdits`");
+    }
+    if (typeof e.empreinte !== 'string' || !/^[0-9a-f]{64}$/.test(e.empreinte)) {
+      manques.push('`empreinte` doit être un SHA-256 COMPLET en minuscules — tronquée, elle se collisionne');
+    }
+    if (typeof e.declaree !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(e.declaree)) {
+      manques.push('`declaree` doit porter la date de déclaration');
+    }
+    if (typeof e.par !== 'string' || e.par.trim() === '') manques.push('`par` doit nommer qui déclare');
+    if (typeof e.motif !== 'string' || e.motif.trim().length < 40) {
+      manques.push('`motif` doit dire POURQUOI il n’y a rien à révoquer — une ligne, pas un mot');
+    }
+    if (typeof e.definitive !== 'boolean') manques.push('`definitive` doit dire si l’exemption se refermera');
+    if (manques.length > 0) {
+      fautes.push({
+        famille: 'exemption_malformee',
+        message:
+          `${ou} — ${manques.join(' ; ')}. Une exemption mal formée est PIRE qu'une exemption ` +
+          `absente : elle a l'air d'une décision prise, donc plus personne ne la relit.`,
+      });
+      continue;
+    }
+    const cle = `${e.pr}@${e.revision}@${e.empreinte}`;
+    if (vues.has(cle)) {
+      fautes.push({
+        famille: 'exemption_malformee',
+        message: `${ou} — cette exemption est déjà déclarée. Deux lignes pour une exception : on ne saura pas laquelle retirer.`,
+      });
+    }
+    vues.add(cle);
+  }
+  return fautes;
+}
+
+/** Le registre du dépôt. ABSENT = aucune exemption, et c'est le bon défaut : rien n'est absous. */
+export function exemptionsDuDepot(): Exemption[] {
+  if (!existsSync(CHEMIN_EXEMPTIONS)) return [];
+  const j = JSON.parse(readFileSync(CHEMIN_EXEMPTIONS, 'utf8')) as { exemptions?: unknown };
+  return Array.isArray(j.exemptions) ? (j.exemptions as Exemption[]) : [];
+}
+
+/**
+ * Un texte publié sur la forge, avec ce qui permet de le retrouver.
+ *
+ * ⚠️ `horodatage` est SÉPARÉ de `origine`, et ce n'est pas un doublon. Une exemption s'apparie
+ * sur l'horodatage EXACT rendu par `userContentEdits` ; l'apparier sur `origine`, qui est une
+ * phrase destinée à un humain, ferait dépendre une décision de sécurité de la façon dont un
+ * message est rédigé. Le jour où quelqu'un reformule « révision du … », toutes les exemptions
+ * cesseraient de s'apparier — et le verdict serait rouge, pas vert, mais pour la mauvaise raison.
+ */
+export type CorpsPublie = { origine: string; horodatage: string | null; texte: string; revision: boolean };
 
 /**
  * CE QUE LA LECTURE A RENDU — et le refus, explicite, de confondre « rien trouvé » avec « rien lu ».
@@ -757,7 +890,7 @@ export type CorpsPublie = { origine: string; texte: string; revision: boolean };
  * exactement le défaut que cette garde existe pour ne pas avoir.
  */
 export type LectureDuCorps =
-  | { lu: true; corps: CorpsPublie[]; revisionsLues: number; revisionsAnnoncees: number }
+  | { lu: true; pr: number; corps: CorpsPublie[]; revisionsLues: number; revisionsAnnoncees: number }
   | { lu: false; motif: string };
 
 export const FAMILLES_CORPS_PUBLIE = [
@@ -765,6 +898,11 @@ export const FAMILLES_CORPS_PUBLIE = [
   'coordonnee_dans_une_revision',
   'lecture_impossible',
   'revisions_non_lues',
+  // Les deux familles qui empêchent l'exemption de devenir une passoire. Sans elles, le registre
+  // serait un blanc-seing : la première refuse une ligne illisible, la seconde refuse une ligne
+  // qui n'absout plus rien de ce qu'elle prétendait absoudre.
+  'exemption_malformee',
+  'exemption_sans_objet',
 ];
 
 /** 0 conforme · 1 défaut CONSTATÉ · 2 INDÉTERMINÉ — la garde n'a pas pu lire ce qu'elle juge. */
@@ -785,8 +923,10 @@ export type Verdict = { code: 0 | 1 | 2; fautes: Faute[] };
  *   — une révision ANNONCÉE et non lue (pagination, `diff` nul) est traitée comme une lecture
  *     manquée, pas comme une révision propre : c'est la même règle appliquée au détail.
  */
-export function jugerCorpsPublie(lecture: LectureDuCorps): Verdict {
-  const fautes: Faute[] = [];
+export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[] = []): Verdict {
+  const fautes: Faute[] = [...controlerRegistreExemptions(exemptions)];
+  /** Les exemptions RÉELLEMENT servies : ce qui reste est sans objet, donc rouge. */
+  const servies = new Set<Exemption>();
 
   if (!lecture.lu) {
     fautes.push({
@@ -798,6 +938,8 @@ export function jugerCorpsPublie(lecture: LectureDuCorps): Verdict {
         `elle rend INDÉTERMINÉ (2). Donne-lui un \`gh\` authentifié (\`GH_TOKEN\`), ou relance-la ` +
         `depuis un poste qui atteint la forge.`,
     });
+    // Une lecture manquée ne juge AUCUNE exemption : on ne sait pas ce qu'elles couvrent. Les
+    // déclarer sans objet ici transformerait une panne de réseau en dette imaginaire.
     return { code: 2, fautes };
   }
 
@@ -814,23 +956,85 @@ export function jugerCorpsPublie(lecture: LectureDuCorps): Verdict {
 
   for (const c of lecture.corps) {
     for (const coordonnee of coordonneesDe(c.texte, false)) {
+      const empreinte = empreinteDe(coordonnee);
+      // L'exemption ne vaut QUE pour une révision : le corps courant s'édite, il n'y a rien à
+      // excuser. Et elle exige les TROIS clés — PR, horodatage exact, empreinte. Exempter « la
+      // PR #31 » absoudrait d'avance toute révision future, c'est-à-dire tout ce qui reste à
+      // écrire.
+      const couverte = c.revision
+        ? exemptions.find(
+            (e) => e.pr === lecture.pr && e.revision === c.horodatage && e.empreinte === empreinte
+          )
+        : undefined;
+      if (couverte !== undefined) {
+        servies.add(couverte);
+        continue;
+      }
       fautes.push({
         famille: c.revision ? 'coordonnee_dans_une_revision' : 'coordonnee_dans_le_corps_courant',
         message:
-          `${c.origine} — coordonnée en clair « ${coordonnee} ». ` +
+          `${c.origine} — coordonnée en clair « ${coordonnee} » (empreinte ${empreinte}). ` +
           (c.revision
             ? `C'est une RÉVISION : la corriger est impossible, GitHub sert l'historique d'édition ` +
               `d'un corps de PR à quiconque le demande. La coordonnée est à considérer comme ` +
-              `DIVULGUÉE — c'est elle qu'il faut changer, pas le texte.`
+              `DIVULGUÉE — c'est elle qu'il faut changer, pas le texte. Si et SEULEMENT SI elle est ` +
+              `FABRIQUÉE et qu'il n'y a rien à révoquer, déclare-la dans \`${CHEMIN_EXEMPTIONS}\` ` +
+              `avec pr=${lecture.pr}, revision="${c.horodatage}", empreinte ci-dessus et un motif. ` +
+              `⚠️ N'inscris JAMAIS ici une coordonnée réelle : le remède est de la CHANGER.`
             : `Retire-la du corps : ces valeurs vivent dans \`${CHEMIN_REGISTRE}\` ou dans une ` +
               `variable d'environnement, jamais dans un artefact publié. ⚠️ L'éditer ne suffira ` +
-              `PAS si elle a déjà été publiée une fois : l'historique d'édition la sert encore.`),
+              `PAS si elle a déjà été publiée une fois : l'historique d'édition la sert encore. ` +
+              `Le corps COURANT n'est jamais exemptable : il s'édite.`),
       });
     }
   }
 
-  if (fautes.some((f) => f.famille.startsWith('coordonnee_'))) return { code: 1, fautes };
+  // CE QUI EMPÊCHE L'EXEMPTION DE DEVENIR UN BLANC-SEING. Une exemption de CETTE PR qui n'a servi
+  // à rien n'absout plus ce qu'elle prétendait absoudre : ou bien elle vise une révision qui
+  // n'existe pas, ou bien le contenu de la révision ne porte plus cette coordonnée-là. Dans les
+  // deux cas, la ligne est une autorisation ouverte sur un texte qu'on n'a pas examiné — c'est
+  // exactement ce qu'on refuse. Elle ROUGIT, elle n'absout pas.
+  // ⚠️ Le contrôle n'a de sens que si TOUTES les révisions ont été lues : sur une lecture
+  // partielle, une exemption « sans objet » peut simplement viser une révision non paginée.
+  if (lecture.revisionsAnnoncees <= lecture.revisionsLues) {
+    for (const e of exemptions) {
+      if (e.pr !== lecture.pr || servies.has(e)) continue;
+      fautes.push({
+        famille: 'exemption_sans_objet',
+        message:
+          `\`${CHEMIN_EXEMPTIONS}\` — l'exemption PR #${e.pr} / révision ${e.revision} / empreinte ` +
+          `${e.empreinte.slice(0, 12)}… n'a RIEN absous : aucune révision lue ne porte cette ` +
+          `coordonnée à cet horodatage. Ou la révision n'existe pas, ou son contenu a changé de ` +
+          `sens. Une exemption qui ne correspond plus à ce qu'elle couvrait est une autorisation ` +
+          `ouverte sur un texte que personne n'a examiné : retire-la, ou redéclare-la sur ce que ` +
+          `la garde signale aujourd'hui.`,
+      });
+    }
+  }
+
+  // Un défaut CONSTATÉ prime sur un indéterminé : on a lu, et ce qu'on a lu est fautif.
+  const constate = fautes.some(
+    (f) => f.famille.startsWith('coordonnee_') || f.famille.startsWith('exemption_')
+  );
+  if (constate) return { code: 1, fautes };
   return { code: fautes.length > 0 ? 2 : 0, fautes };
+}
+
+/** Combien d'exemptions de cette PR ont RÉELLEMENT servi — le chiffre qui rend l'exception visible. */
+export function exemptionsServies(lecture: LectureDuCorps, exemptions: Exemption[]): Exemption[] {
+  if (!lecture.lu) return [];
+  const servies: Exemption[] = [];
+  for (const c of lecture.corps) {
+    if (!c.revision) continue;
+    for (const coordonnee of coordonneesDe(c.texte, false)) {
+      const e = exemptions.find(
+        (x) =>
+          x.pr === lecture.pr && x.revision === c.horodatage && x.empreinte === empreinteDe(coordonnee)
+      );
+      if (e !== undefined && !servies.includes(e)) servies.push(e);
+    }
+  }
+  return servies;
 }
 
 /**
@@ -839,7 +1043,32 @@ export function jugerCorpsPublie(lecture: LectureDuCorps): Verdict {
  *   — `gh api graphql … userContentEdits` : les RÉVISIONS, seul endroit où vivait le défaut mesuré.
  * Toute erreur remonte en `{ lu: false }`. Aucun `catch` ne rend ici de tableau vide.
  */
-export function lireCorpsPublie(numero: string): LectureDuCorps {
+/**
+ * COMBIEN DE FOIS ON RÉESSAIE AVANT DE DÉCLARER QU'ON N'A PAS PU LIRE, et pourquoi ce nombre
+ * existe. Le verdict 2 fait ÉCHOUER la CI (voir l'en-tête du mode en ligne). Il faut donc que 2
+ * signifie « je ne PEUX pas lire », et non « je n'ai pas pu lire à cet instant » : sans réessai,
+ * un incident réseau d'une seconde rendrait rouge une PR qui n'a rien fait, et une garde qui
+ * rougit à tort se fait retirer — c'est le mécanisme même qu'on cherche à éviter.
+ * Le réessai transforme une intermittence en LATENCE, jamais en couleur.
+ */
+const ESSAIS_DE_LECTURE = 3;
+
+export function lireCorpsPublie(numero: string, essais = ESSAIS_DE_LECTURE): LectureDuCorps {
+  let derniere: LectureDuCorps = { lu: false, motif: 'aucune tentative' };
+  for (let n = 1; n <= Math.max(1, essais); n += 1) {
+    derniere = lireUneFois(numero);
+    if (derniere.lu) {
+      console.log(`   lecture obtenue à la tentative ${n}/${Math.max(1, essais)}.`);
+      return derniere;
+    }
+  }
+  return {
+    lu: false,
+    motif: `${(derniere as { motif: string }).motif} (après ${Math.max(1, essais)} tentative(s))`,
+  };
+}
+
+function lireUneFois(numero: string): LectureDuCorps {
   const gh = (args: string[]): string =>
     execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 
@@ -915,22 +1144,26 @@ export function lireCorpsPublie(numero: string): LectureDuCorps {
   }
 
   const corps: CorpsPublie[] = [
-    { origine: `PR #${numero} — corps courant`, texte: corpsCourant, revision: false },
+    { origine: `PR #${numero} — corps courant`, horodatage: null, texte: corpsCourant, revision: false },
   ];
   let lues = 0;
   for (const n of noeuds) {
     // Un `diff` nul n'est pas une révision propre : c'est une révision qu'on n'a PAS lue. Elle
     // reste comptée dans `annoncees`, et l'écart fait tomber le verdict en INDÉTERMINÉ.
-    if (typeof n.diff !== 'string') continue;
+    // Un horodatage nul aussi : sans lui, aucune exemption ne peut s'apparier à cette révision,
+    // donc on ne peut ni l'absoudre ni prétendre l'avoir examinée.
+    if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue;
     lues += 1;
+    const horodatage = typeof n.editedAt === 'string' ? n.editedAt : null;
     corps.push({
-      origine: `PR #${numero} — révision du ${typeof n.editedAt === 'string' ? n.editedAt : 'date inconnue'}`,
+      origine: `PR #${numero} — révision du ${horodatage ?? 'date inconnue'}`,
+      horodatage,
       texte: n.diff,
       revision: true,
     });
   }
 
-  return { lu: true, corps, revisionsLues: lues, revisionsAnnoncees: annoncees };
+  return { lu: true, pr: Number(numero), corps, revisionsLues: lues, revisionsAnnoncees: annoncees };
 }
 
 /**
@@ -939,18 +1172,33 @@ export function lireCorpsPublie(numero: string): LectureDuCorps {
  * rougirait sur le corps qu'elle est censée bénir et se ferait retirer dans la semaine.
  */
 function prouverCorpsPublie(): number {
+  const HORODATAGE = '2026-01-02T03:04:05Z';
+  const PR_TEMOIN = 4242;
   const corps = (texte: string, revision = false): LectureDuCorps => ({
     lu: true,
-    corps: [{ origine: 'témoin', texte, revision }],
+    pr: PR_TEMOIN,
+    corps: [{ origine: 'témoin', horodatage: revision ? HORODATAGE : null, texte, revision }],
     revisionsLues: revision ? 1 : 0,
     revisionsAnnoncees: revision ? 1 : 0,
+  });
+  /** Une exemption BIEN formée pour le témoin donné — construite, jamais recopiée. */
+  const exemptionPour = (valeur: string, sur = HORODATAGE, pr = PR_TEMOIN): Exemption => ({
+    pr,
+    revision: sur,
+    empreinte: empreinteDe(valeur),
+    declaree: '2026-01-02',
+    par: 'témoin de `--corps-publie --prove`',
+    motif:
+      "témoin de la preuve hors ligne : cette valeur est construite à chaque exécution, elle n'a " +
+      'jamais été publiée nulle part, et il n’y a donc rien à révoquer.',
+    definitive: true,
   });
 
   // La forme MASQUÉE que rend le gabarit : CONSTRUITE, jamais recopiée, et sa clé mod-97 est
   // fausse par construction. C'est le contre-témoin qui empêche la garde d'être intenable.
   const MASQUE = 'FR76' + 'X'.repeat(23);
 
-  const TEMOINS: { famille: string; lecture: LectureDuCorps; attendu: 1 | 2 }[] = [
+  const TEMOINS: { famille: string; lecture: LectureDuCorps; exemptions?: Exemption[]; attendu: 1 | 2 }[] = [
     { famille: 'coordonnee_dans_le_corps_courant', lecture: corps(`IBAN : ${IBAN_TEMOIN}`), attendu: 1 },
     {
       // Le geste par défaut de qui colle un RIB : les espaces d'un traitement de texte. Le même
@@ -965,10 +1213,12 @@ function prouverCorpsPublie(): number {
       famille: 'coordonnee_dans_une_revision',
       lecture: {
         lu: true,
+        pr: PR_TEMOIN,
         corps: [
-          { origine: 'témoin — corps courant', texte: `IBAN : ${MASQUE}`, revision: false },
+          { origine: 'témoin — corps courant', horodatage: null, texte: `IBAN : ${MASQUE}`, revision: false },
           {
             origine: 'témoin — révision',
+            horodatage: HORODATAGE,
             texte: `-IBAN : ${IBAN_TEMOIN}\n+IBAN : ${MASQUE}`,
             revision: true,
           },
@@ -978,12 +1228,78 @@ function prouverCorpsPublie(): number {
       },
       attendu: 1,
     },
+    {
+      // UNE EXEMPTION QUI N'ABSOUT PLUS RIEN. C'est le contre-témoin qui compte le plus : sans
+      // lui, une ligne du registre resterait valable sur une révision dont le contenu a changé
+      // de sens, c'est-à-dire une autorisation ouverte sur un texte que personne n'a examiné.
+      famille: 'exemption_sans_objet',
+      lecture: corps('aucune coordonnée dans cette révision', true),
+      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      attendu: 1,
+    },
+    {
+      // UNE LIGNE ILLISIBLE. Une exemption sans motif a l'air d'une décision prise, donc plus
+      // personne ne la relit — et elle devient permanente sans que quiconque l'ait voulu.
+      famille: 'exemption_malformee',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [{ ...exemptionPour(IBAN_TEMOIN), motif: '' }],
+      attendu: 1,
+    },
+    {
+      // UNE EMPREINTE TRONQUÉE. Seize caractères hexadécimaux se collisionnent en 2^32 essais :
+      // la ligne absoudrait alors une AUTRE coordonnée que celle qu'on a examinée.
+      famille: 'exemption_malformee',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [{ ...exemptionPour(IBAN_TEMOIN), empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16) }],
+      attendu: 1,
+    },
+    {
+      // LE TÉMOIN QUI EMPÊCHE L'EXEMPTION D'ÊTRE UNE PASSOIRE : une révision NON exemptée qui
+      // porte une coordonnée rougit MÊME sur une PR qui a par ailleurs des révisions exemptées.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: {
+        lu: true,
+        pr: PR_TEMOIN,
+        corps: [
+          { origine: 'témoin — corps courant', horodatage: null, texte: `IBAN : ${MASQUE}`, revision: false },
+          { origine: 'témoin — révision exemptée', horodatage: HORODATAGE, texte: `IBAN : ${IBAN_TEMOIN}`, revision: true },
+          {
+            origine: 'témoin — révision NON exemptée',
+            horodatage: '2026-01-02T09:09:09Z',
+            texte: `IBAN : ${IBANS_TEMOINS_ETRANGERS.DE}`,
+            revision: true,
+          },
+        ],
+        revisionsLues: 2,
+        revisionsAnnoncees: 2,
+      },
+      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      attendu: 1,
+    },
+    {
+      // LE CORPS COURANT N'EST JAMAIS EXEMPTABLE : il s'édite, donc il n'y a rien à excuser.
+      // Une exemption qui le couvrirait serait une permission de publier.
+      famille: 'coordonnee_dans_le_corps_courant',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`),
+      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      attendu: 1,
+    },
     { famille: 'lecture_impossible', lecture: { lu: false, motif: 'gh introuvable (témoin)' }, attendu: 2 },
+    {
+      // UNE LECTURE MANQUÉE NE JUGE AUCUNE EXEMPTION. Sans cette règle, une panne de réseau
+      // transformerait toutes les exemptions en dettes imaginaires, et le verdict passerait de
+      // « je n'ai pas pu lire » à « ton registre est faux » — deux diagnostics opposés.
+      famille: 'lecture_impossible',
+      lecture: { lu: false, motif: 'réseau injoignable (témoin)' },
+      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      attendu: 2,
+    },
     {
       famille: 'revisions_non_lues',
       lecture: {
         lu: true,
-        corps: [{ origine: 'témoin', texte: 'aucune coordonnée ici', revision: false }],
+        pr: PR_TEMOIN,
+        corps: [{ origine: 'témoin', horodatage: null, texte: 'aucune coordonnée ici', revision: false }],
         revisionsLues: 1,
         revisionsAnnoncees: 4,
       },
@@ -991,8 +1307,25 @@ function prouverCorpsPublie(): number {
     },
   ];
 
-  const CONTRE_TEMOINS: { quoi: string; lecture: LectureDuCorps }[] = [
+  const CONTRE_TEMOINS: { quoi: string; lecture: LectureDuCorps; exemptions?: Exemption[] }[] = [
     { quoi: 'un corps vide, sans révision', lecture: corps('') },
+    {
+      // LE CONTRE-TÉMOIN DE L'EXEMPTION ELLE-MÊME. Sans lui, la garde serait insatisfiable sur
+      // toute PR dont l'historique est déjà pollué — et une gate insatisfiable, on apprend à la
+      // sauter. C'est ce qui rend la troisième voie tenable : l'exception est explicite, donc
+      // elle peut être verte SANS que la garde cesse de bloquer le reste.
+      quoi: 'une révision DÉCLARÉE, dont l’exemption s’apparie sur les TROIS clés',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [exemptionPour(IBAN_TEMOIN)],
+    },
+    {
+      // Une exemption d'une AUTRE PR n'absout rien ici, et ne compte pas non plus comme sans
+      // objet : elle n'a simplement pas été examinée. Sans cette borne, le registre entier
+      // rougirait à chaque PR, ce qui reviendrait à interdire d'en tenir un.
+      quoi: 'une exemption d’une AUTRE PR : elle ne traverse pas, et elle ne rougit pas ici',
+      lecture: corps('rien à signaler'),
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN + 1)],
+    },
     {
       quoi: 'la forme MASQUÉE que rend le gabarit — la garde ne rougit pas sur ce qu’elle bénit',
       lecture: corps(`IBAN débiteur : ${MASQUE}`),
@@ -1022,7 +1355,7 @@ function prouverCorpsPublie(): number {
   }
 
   for (const t of TEMOINS) {
-    const v = jugerCorpsPublie(t.lecture);
+    const v = jugerCorpsPublie(t.lecture, t.exemptions ?? []);
     if (!v.fautes.some((f) => f.famille === t.famille) || v.code !== t.attendu) {
       console.error(
         `❌ Le témoin de « ${t.famille} » n'a pas rendu ce qu'il devait : code ${v.code} ` +
@@ -1033,7 +1366,7 @@ function prouverCorpsPublie(): number {
   }
 
   for (const c of CONTRE_TEMOINS) {
-    const v = jugerCorpsPublie(c.lecture);
+    const v = jugerCorpsPublie(c.lecture, c.exemptions ?? []);
     if (v.code !== 0) {
       console.error(
         `❌ Faux positif : « ${c.quoi} » a rendu ${v.code} sur « ${v.fautes[0]?.famille} ».\n` +
@@ -1058,7 +1391,9 @@ function prouverCorpsPublie(): number {
   console.log(`   ${FAMILLES_CORPS_PUBLIE.map((f) => '• ' + f).join('\n   ')}`);
   console.log(
     `   ${CONTRE_TEMOINS.length} contre-témoins restent verts, dont la forme masquée du gabarit.\n` +
-      `   ${caracteres.length} forme(s) d'espace ou de tiret sont neutralisées avant toute recherche.`
+      `   ${caracteres.length} forme(s) d'espace ou de tiret sont neutralisées avant toute recherche.\n` +
+      `   Une révision DÉCLARÉE au registre reste verte ; une révision NON déclarée rougit sur la ` +
+      `MÊME PR ; une exemption qui n'absout plus rien rougit aussi.`
   );
   return 0;
 }
@@ -1459,6 +1794,25 @@ function prouver(): number {
   return 0;
 }
 
+/**
+ * LE NUMÉRO DE PR QUAND LA CI L'A EN MAIN. Sans cette lecture, l'étape de CI devrait recopier
+ * ${{ github.event.pull_request.number }} dans une commande — une valeur de plus à maintenir à
+ * deux endroits (RM-01), et un oubli qui rendrait la garde muette au lieu de rouge.
+ * Rend `undefined` — jamais une valeur inventée — si l'événement n'en porte pas : c'est alors le
+ * refus explicite du mode en ligne, pas un vert.
+ */
+export function numeroDePrDeLEvenement(): string | undefined {
+  const chemin = process.env.GITHUB_EVENT_PATH;
+  if (chemin === undefined || chemin === '' || !existsSync(chemin)) return undefined;
+  try {
+    const ev = JSON.parse(readFileSync(chemin, 'utf8')) as { pull_request?: { number?: unknown } };
+    const n = ev.pull_request?.number;
+    return typeof n === 'number' && Number.isInteger(n) ? String(n) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // ── ligne de commande ─────────────────────────────────────────────────────────────────────────
 // Gardée : ce module est IMPORTÉ par son test. Sans ce test d'entrée, l'import déclencherait le
 // contrôle et son `process.exit`, et la suite mourrait au chargement (leçon de `gov-depot.ts`).
@@ -1467,17 +1821,61 @@ const APPELE_DIRECTEMENT = /gov-entite\.ts$/.test(process.argv[1] ?? '');
 if (APPELE_DIRECTEMENT) {
   const iCorps = process.argv.indexOf('--corps-publie');
   if (iCorps >= 0 && !process.argv.includes('--prove')) {
-    // LE MODE EN LIGNE. Il n'entre PAS dans Gate A : sous le jeton d'Actions il dépend du réseau
-    // et de droits qu'un runner n'a pas toujours, et une étape qui rend 2 par intermittence se
-    // fait retirer. C'est le régime déjà tenu par `gov:depot-visibilite` — la PREUVE en CI, le
-    // mode en ligne en nightly et avant fusion.
-    const numero = process.argv[iCorps + 1];
+    // ── LE MODE EN LIGNE, ET IL EST BLOQUANT ────────────────────────────────────────────────
+    //
+    // 🔴 UNE PREMIÈRE VERSION DE CE BLOC PORTAIT LE COMMENTAIRE INVERSE : « il n'entre PAS dans
+    // Gate A, il se lance à la main avant fusion ». C'était un adoucissement déguisé, et il se
+    // reconnaît à une phrase : une garde qui ne tourne que quand quelqu'un y pense ne tourne pas.
+    // Le dépôt voisin en donne la version longue — toutes ses gates de budget portent
+    // `continue-on-error: true`, aucune PR qui alourdit le bundle n'a jamais rougi, et les revues
+    // ont écrit pendant des mois « le risque est couvert par la gate ». Une gate qui ne bloque
+    // pas produit une fausse sécurité, qui est pire que pas de gate du tout.
+    //
+    // CE QUE FAIT GATE A D'UN 2, ET C'EST TRANCHÉ : **elle ÉCHOUE.** Trois raisons, dans l'ordre.
+    //   1. Le vert produit par une lecture qui n'a pas eu lieu est EXACTEMENT le défaut que cette
+    //      garde existe pour empêcher. L'admettre au niveau de la CI le réintroduit d'un cran
+    //      plus haut, là où personne ne le regarde.
+    //   2. « Laisser passer un 2 en le signalant » n'a pas de mécanisme. Un avertissement dans un
+    //      journal de job n'est lu par personne, et un 2 permanent devient invisible en une
+    //      semaine : c'est `continue-on-error` réinventé par la porte de derrière. La seule chose
+    //      qui garantit qu'un 2 se remarque, c'est qu'il BLOQUE.
+    //   3. Il n'existe pas d'état durable légitime où la CI d'un dépôt PUBLIC ne peut pas lire le
+    //      corps de ses propres PR : le corps et `userContentEdits` sont publics, et
+    //      `GITHUB_TOKEN` les lit. Un 2 durable signifie qu'on a retiré une permission, retiré
+    //      `gh`, ou que la forge a renommé un champ — trois choses qui méritent un rouge.
+    //
+    // CE QUI EMPÊCHE UN 2 D'INTERMITTENCE : `lireCorpsPublie` RÉESSAIE. Un incident réseau d'une
+    // seconde devient de la latence, jamais une couleur. C'est ce qui rend « 2 = échec » tenable
+    // sans rendre la garde capricieuse — et une garde capricieuse, on la retire.
+    //
+    // ET CE QUI EMPÊCHE LA GARDE D'ÊTRE INSATISFIABLE : le registre des exemptions. L'historique
+    // d'édition est immuable ; sans lui, une PR dont l'historique est déjà pollué ne pourrait
+    // JAMAIS redevenir verte, et une gate insatisfiable, on apprend à la sauter.
+    const numero = process.argv[iCorps + 1] ?? numeroDePrDeLEvenement();
     if (numero === undefined || !/^\d+$/.test(numero)) {
-      console.error('❌ gov:entite --corps-publie attend un NUMÉRO de PR. Rien n’a été lu : verdict INDÉTERMINÉ.');
+      console.error(
+        '❌ gov:entite --corps-publie attend un NUMÉRO de PR, en argument ou dans l’événement ' +
+          'GitHub (`GITHUB_EVENT_PATH`). Rien n’a été lu : verdict INDÉTERMINÉ (2). Une garde ' +
+          'qui ne sait pas ce qu’elle juge ne rend jamais vert.'
+      );
       process.exit(2);
     }
+
+    let exemptions: Exemption[] = [];
+    try {
+      exemptions = exemptionsDuDepot();
+    } catch (e) {
+      // Un registre illisible n'absout rien ET n'est pas un vert : on ne sait plus ce qui est
+      // déclaré. Le sens de défaillance est le même partout dans ce fichier.
+      console.error(
+        `❌ gov:entite --corps-publie — \`${CHEMIN_EXEMPTIONS}\` est illisible : ` +
+          `${(e as Error).message.trim()}. INDÉTERMINÉ (2).`
+      );
+      process.exit(2);
+    }
+
     const lecture = lireCorpsPublie(numero);
-    const verdict = jugerCorpsPublie(lecture);
+    const verdict = jugerCorpsPublie(lecture, exemptions);
 
     // TÉMOIN POSITIF, IMPRIMÉ DANS LES TROIS CAS. Un « aucune coordonnée » sans volumétrie est
     // indiscernable d'une sonde qui ne mesure rien : dix zéros veulent dire « absent » ou « je ne
@@ -1492,10 +1890,30 @@ if (APPELE_DIRECTEMENT) {
     }
 
     if (verdict.code === 0) {
+      const servies = exemptionsServies(lecture, exemptions);
       console.log(
         `✅ gov:entite --corps-publie ${numero} — le corps PUBLIÉ et son historique d'édition ne ` +
-          `portent aucune coordonnée bancaire, jugés par le MÊME \`coordonneesDe\` que les fichiers suivis.`
+          `portent aucune coordonnée bancaire NON DÉCLARÉE, jugés par le MÊME \`coordonneesDe\` ` +
+          `que les fichiers suivis.`
       );
+      // L'EXCEPTION EST ÉCRITE DANS LE VERT, et ce n'est pas de la décoration. Une exemption
+      // invisible est une exemption qu'on ne relit jamais : elle redevient, en quelques semaines,
+      // exactement l'absence de garde qu'elle remplace. Ici, un vert qui repose sur une exception
+      // le DIT, avec sa date, son propriétaire et son motif.
+      if (servies.length > 0) {
+        console.log(
+          `   ⚠️ ${servies.length} révision(s) EXEMPTÉE(S) — ce vert repose sur une dette DÉCLARÉE, ` +
+            `pas sur une absence de défaut. L'historique d'édition est immuable : ces lignes ne se ` +
+            `referment jamais (\`${CHEMIN_EXEMPTIONS}\`).`
+        );
+        for (const e of servies) {
+          console.log(
+            `      • PR #${e.pr}, révision ${e.revision}, empreinte ${e.empreinte.slice(0, 12)}… — ` +
+              `déclarée le ${e.declaree} par ${e.par}${e.definitive ? ' (DÉFINITIVE)' : ''}\n` +
+              `        ${e.motif}`
+          );
+        }
+      }
       process.exit(0);
     }
     const gravite = verdict.code === 1 ? 'défaut CONSTATÉ' : 'INDÉTERMINÉ';
