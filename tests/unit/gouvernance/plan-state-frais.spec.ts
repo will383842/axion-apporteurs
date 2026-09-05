@@ -24,7 +24,7 @@ const CHEMIN_PLAN_STATE = 'docs/PLAN-STATE.md';
 const CHEMIN_JOURNAL = 'docs/journal';
 
 /**
- * L'INSTANT DE RÉFÉRENCE, ET POURQUOI IL N'EST PLUS FIGÉ DANS LE PASSÉ (GOV-029).
+ * L'INSTANT DE RÉFÉRENCE, ET POURQUOI IL N'EST PLUS FIGÉ DANS LE PASSÉ (GOV-032).
  *
  * Ce fichier portait `const MAINTENANT = '2026-09-04T09:00:00Z'`, sous ce commentaire :
  * « un instant FIXE, jamais `new Date()` : une garde qui lit l'horloge n'est pas rejouable ».

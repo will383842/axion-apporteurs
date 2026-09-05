@@ -90,19 +90,71 @@ export const FAMILLES = [
 ];
 
 /**
- * CE QUI EST EXEMPTÉ DU BALAYAGE, ET POURQUOI CHAQUE LIGNE L'EST.
- * Le principe est celui que `gov:identifiants` a déjà écrit : CITER N'EST PAS SE SERVIR. Un
- * registre a le droit de NOMMER ce qu'il arbitre ; partout ailleurs, on le lit.
+ * CE QUI EST EXEMPTÉ, ET DE QUOI EXACTEMENT — la distinction que la première version n'avait pas.
+ *
+ * 🔴 CE QUE CETTE LISTE FAISAIT AVANT (veto de la lentille `securite`, 2026-09-05). Elle était
+ * appliquée dans `lireUnivers()` par un `continue` qui écartait le fichier AVANT de l'ajouter à
+ * l'univers : le fichier n'était donc examiné par AUCUNE famille, l'IBAN compris. Or deux des
+ * cinq motifs visent `docs/` — dont `docs/DECISIONS.md`, qui est très exactement le fichier où
+ * l'arbitrage de la banque réceptrice sera écrit, et où le registre annonce déjà « reste l'IBAN
+ * débiteur, à poser en secret ». Le seul fichier du dépôt où cette phrase existe était l'un des
+ * deux seuls que la garde ne regardait pas. Dépôt PUBLIC, écriture irréversible.
+ *
+ * LA DISTINCTION JUSTE N'EST PAS « CE FICHIER EST-IL REGARDÉ ? » MAIS « DE QUOI EST-IL EXEMPT ? ».
+ * Le motif d'origine — « citer n'est pas se servir » — ne vaut que pour les valeurs PUBLIQUES :
+ * un registre a le droit de NOMMER le SIREN qu'il arrête. Il ne vaut pour aucun SECRET : aucun
+ * document n'a de raison légitime de porter un IBAN en clair, et surtout pas celui qui explique
+ * qu'il ne faut pas le faire.
+ *
+ * Chaque entrée déclare donc `exemptDe`, et une seule valeur est admise : `'recopie'`, la famille
+ * des valeurs publiques. Aucune n'exempte de `coordonnee_en_clair`. Le type l'impose — ajouter
+ * une exemption plus large exigerait d'élargir le type, ce qui se voit en revue.
  */
-const EXEMPTS: { motif: RegExp; raison: string }[] = [
-  { motif: /^config\/entite\.json$/, raison: 'le registre lui-même : il est jugé champ par champ, pas par balayage' },
-  { motif: /^scripts\/gates\/gov-entite\.ts$/, raison: 'la garde porte ses propres témoins, qui doivent avoir la forme de ce qu’elle refuse' },
-  { motif: /^docs\/DECISIONS\.md$/, raison: 'le registre des décisions NOMME la valeur qu’il arrête — c’est son travail, et c’est la source dont tout le reste dérive' },
-  { motif: /^docs\/adr\/0009-valeurs-du-monde-reel\.md$/, raison: 'l’ADR qui fonde cette garde cite les formes d’exemple qu’elle interdit' },
-  { motif: /^pnpm-lock\.yaml$/, raison: 'empreintes de paquets, aucune prose' },
+export type FamilleExemptable = 'recopie' | 'coordonnee';
+
+export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: string }[] = [
+  { motif: /^config\/entite\.json$/, exemptDe: 'coordonnee', raison: 'le registre lui-même : ses champs sont jugés un par un plus haut, et il ne se recopie pas lui-même' },
+  { motif: /^scripts\/gates\/gov-entite\.ts$/, exemptDe: 'coordonnee', raison: 'la garde porte ses propres témoins, qui doivent avoir la forme de ce qu’elle refuse' },
+  { motif: /^docs\/DECISIONS\.md$/, exemptDe: 'recopie', raison: 'le registre des décisions NOMME la valeur PUBLIQUE qu’il arrête — c’est son travail. Il n’est PAS exempt de `coordonnee_en_clair` : c’est le fichier le plus exposé du dépôt, celui où l’arbitrage de la banque sera écrit' },
+  { motif: /^docs\/adr\/0009-valeurs-du-monde-reel\.md$/, exemptDe: 'recopie', raison: 'l’ADR qui fonde cette garde cite les formes d’exemple qu’elle interdit' },
+  { motif: /^pnpm-lock\.yaml$/, exemptDe: 'coordonnee', raison: 'empreintes de paquets, aucune prose' },
 ];
 
-const EXTENSIONS_BALAYEES = /\.(ts|tsx|js|mjs|cjs|json|md|ya?ml|sql)$/;
+/**
+ * Les extensions balayées. `prisma` et `example` ont été ajoutées le 2026-09-05 : la lentille
+ * `securite` a relevé que `prisma/schema.prisma` — introduit par ce lot même — et
+ * `.env.example` — que `.gitignore` dé-exclut exprès pour qu'il soit suivi — passaient tous
+ * deux au travers. Un secret ne choisit pas son extension.
+ */
+const EXTENSIONS_BALAYEES = /\.(ts|tsx|js|mjs|cjs|json|md|ya?ml|sql|prisma|example|txt|csv|xml|env)$/;
+
+/** Les fichiers suivis SANS extension qu'il faut lire quand même (`CODEOWNERS`, `Dockerfile`…). */
+const SANS_EXTENSION_BALAYES = /(^|\/)(CODEOWNERS|Dockerfile|Procfile|\.env[^/]*)$/;
+
+/**
+ * CE FICHIER EST-IL REGARDÉ ? Fonction PURE et EXPORTÉE, et ce n'est pas un rangement.
+ *
+ * 🔴 Tant que cette décision vivait en ligne dans `lireUnivers()`, elle n'était exercée par AUCUN
+ * témoin : `--prove` INJECTE son univers et ne passe jamais par la lecture du disque. La lentille
+ * `mutation` l'a mesuré — remplacer `EXTENSIONS_BALAYEES` par un motif qui ne reconnaît rien, ou
+ * `EXEMPTS` par un attrape-tout, laissait `gov:entite` ET son `--prove` VERTS tous les deux. Les
+ * deux listes qui décident de CE QUI EST REGARDÉ étaient le seul endroit non gardé de la garde.
+ * Extraites ici, elles ont des témoins (`--prove`, famille `filtre_trop_large`) et un test.
+ */
+export function estBalaye(chemin: string): boolean {
+  return EXTENSIONS_BALAYEES.test(chemin) || SANS_EXTENSION_BALAYES.test(chemin);
+}
+
+/** Ce fichier est-il exempt de CETTE famille ? Aucun fichier n'est exempt d'un SECRET. */
+export function estExemptDe(chemin: string, famille: FamilleExemptable): boolean {
+  // `coordonnee` est la plus large des deux et implique `recopie` : un fichier autorisé à PORTER
+  // la valeur est a fortiori autorisé à la répéter. L'inverse est faux, et c'est tout l'objet de
+  // la distinction — `docs/DECISIONS.md` peut NOMMER le SIREN qu'il arrête, il ne peut pas
+  // porter un IBAN.
+  return EXEMPTS.some(
+    (e) => e.motif.test(chemin) && (e.exemptDe === famille || e.exemptDe === 'coordonnee')
+  );
+}
 
 /**
  * Un fichier de CODE : celui qui doit LIRE la valeur, jamais la porter. Les fichiers de `docs/`
@@ -203,6 +255,20 @@ export function estExemplePlausible(v: string): boolean {
 const FORME_IBAN = /\b([A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,4})?)\b/g;
 /** Un numéro de TVA intracommunautaire français. */
 const FORME_TVA_FR = /\b(FR[0-9A-Z]{2}\d{9})\b/g;
+/**
+ * Un BIC, reconnu à son MOT-CLÉ. `config/entite.json` déclare `bic` secret au même titre que
+ * l'IBAN, et aucune forme ne le cherchait : la lentille `securite` a écrit un BIC en clair hors
+ * registre et la garde est restée verte. Le mot-clé est exigé — huit lettres majuscules nues sont
+ * trop souvent autre chose (un identifiant, une constante, un acronyme), et une forme nue aurait
+ * produit un bruit qui aurait fait désarmer la garde.
+ */
+// ⚠️ PAS DE DRAPEAU `i`. Une première version portait `/gi`, et le drapeau s'appliquait aussi
+// à la VALEUR : `[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}` reconnaissait alors n'importe quel mot de huit
+// lettres minuscules. Mesuré sur ce dépôt : « confront », « ceptrice », « variante » — de la
+// prose ordinaire, à vingt-quatre caractères d'un « BIC » écrit juste avant. Le mot-clé doit
+// donc tolérer les deux casses SANS que la valeur les tolère, d'où la classe explicite.
+const FORME_BIC = /\b[Bb][Ii][Cc]\b[^\n]{0,24}?\b([A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)\b/g;
+
 /** Un SIREN ou un SIRET, reconnu à son mot-clé : neuf chiffres nus sont trop souvent autre chose. */
 const FORME_SIREN = /\bsire[tn]\b[^\n]{0,24}?\b(\d{9,14})\b/gi;
 
@@ -222,19 +288,44 @@ const FORME_SIREN = /\bsire[tn]\b[^\n]{0,24}?\b(\d{9,14})\b/gi;
  *     (`exemple_plausible`). Sans cette exclusion, la garde rougirait sur son propre fichier de
  *     test, et on l'aurait désarmée la semaine suivante.
  */
-function coordonneesDe(contenu: string, dansDuCode: boolean): string[] {
+/**
+ * Les espaces NORMALISÉS avant toute recherche. `FORME_IBAN` sépare ses groupes par une espace
+ * ASCII littérale ; un IBAN collé avec des espaces insécables — ce que produit un copier-coller
+ * depuis un relevé bancaire ou un traitement de texte, c'est-à-dire le cas le plus probable —
+ * ne correspondait à rien et passait. Mesuré par la lentille `securite` le 2026-09-05.
+ */
+function normaliserEspaces(t: string): string {
+  return t.replace(/[   -   　‑-]/g, ' ');
+}
+
+/** Un fichier de TEST a le droit de porter un bouchon : c'est le seul endroit où il en a le droit. */
+function estFichierDeTest(chemin: string): boolean {
+  return /(^|\/)tests?\//.test(chemin) || /\.(spec|test)\.[cm]?tsx?$/.test(chemin);
+}
+
+function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = ''): string[] {
   const trouvees: string[] = [];
-  const formes = dansDuCode ? [FORME_IBAN, FORME_TVA_FR, FORME_SIREN] : [FORME_IBAN];
+  const texte = normaliserEspaces(contenu);
+  const formes = dansDuCode
+    ? [FORME_IBAN, FORME_BIC, FORME_TVA_FR, FORME_SIREN]
+    : [FORME_IBAN, FORME_BIC];
+  const tolereUnBouchon = estFichierDeTest(chemin);
   for (const forme of formes) {
     forme.lastIndex = 0;
     let m: RegExpExecArray | null;
-    while ((m = forme.exec(contenu)) !== null) {
+    while ((m = forme.exec(texte)) !== null) {
       const brut = (m[1] ?? '').replace(/\s/g, '');
       if (forme === FORME_IBAN) {
         const chiffres = brut.replace(/\D/g, '').length;
         if (brut.length < 15 || brut.length > 34 || chiffres < 10) continue;
       }
-      if (estExemplePlausible(brut)) continue;
+      // 🔴 L'EXCUSE « ÇA RESSEMBLE À UN EXEMPLE » NE VAUT QUE DANS UN FICHIER DE TEST.
+      // Elle s'appliquait partout, et `estExemplePlausible` rend `true` dès SIX chiffres
+      // identiques consécutifs — or un IBAN français réel porte très souvent un numéro de
+      // compte zéro-padé. La lentille `securite` a produit trois IBAN réels de cette forme :
+      // la garde les a tous laissés passer. Une heuristique d'indulgence appliquée hors de son
+      // domaine ne fait pas taire du bruit, elle ouvre une porte.
+      if (tolereUnBouchon && estExemplePlausible(brut)) continue;
       trouvees.push(brut);
     }
   }
@@ -342,7 +433,10 @@ export function controler(u: Univers): Faute[] {
 
   for (const fichier of u.fichiers) {
     const code = estCode(fichier.chemin);
-    if (code) {
+    // L'exemption ne porte QUE sur la recopie d'une valeur PUBLIQUE. Elle ne dispense d'aucune
+    // recherche de secret : c'est la correction du veto de la lentille `securite` (2026-09-05).
+    const exemptDeRecopie = estExemptDe(fichier.chemin, 'recopie');
+    if (code && !exemptDeRecopie) {
       for (const { champ, v } of identifiants) {
         if (fichier.contenu.includes(v)) {
           ajouter(
@@ -356,7 +450,8 @@ export function controler(u: Univers): Faute[] {
       }
     }
 
-    for (const coordonnee of coordonneesDe(fichier.contenu, code)) {
+    const exemptDeCoordonnee = estExemptDe(fichier.chemin, 'coordonnee');
+    for (const coordonnee of exemptDeCoordonnee ? [] : coordonneesDe(fichier.contenu, code, fichier.chemin)) {
       ajouter(
         'coordonnee_en_clair',
         `${fichier.chemin} — coordonnée en clair « ${coordonnee} ». Ces valeurs vivent dans ` +
@@ -394,8 +489,11 @@ function fichiersSuivis(): string[] {
 function lireUnivers(): Univers {
   const fichiers: Fichier[] = [];
   for (const chemin of fichiersSuivis()) {
-    if (EXEMPTS.some((e) => e.motif.test(chemin))) continue;
-    if (!EXTENSIONS_BALAYEES.test(chemin) || !existsSync(chemin)) continue;
+    // Le fichier n'est PLUS écarté ici : il entre dans l'univers, et c'est `controler()` qui
+    // décide famille par famille. Un `continue` à cet endroit rendait le fichier invisible à
+    // TOUTES les familles, `coordonnee_en_clair` comprise — c'est ce que la lentille `securite`
+    // a mis en veto le 2026-09-05.
+    if (!estBalaye(chemin) || !existsSync(chemin)) continue;
     fichiers.push({ chemin, contenu: readFileSync(chemin, 'utf8') });
   }
   return {

@@ -8,11 +8,11 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**205 taches · 153.50 j estimes.**
+**204 taches · 151.75 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
-| -1 — Gouvernance (prealable bloquant) | 34 | 21.00 | 20 |
+| -1 — Gouvernance (prealable bloquant) | 33 | 19.25 | 20 |
 | 0 — Socle technique | 50 | 37.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
@@ -56,7 +56,7 @@ Couvre : `REQ-GOV-001`, `REQ-GOV-026`
 
 Couvre : `REQ-GOV-024`, `REQ-GOV-023`
 
-**Acceptation.** `docs/REGLES-MAISON.md` porte RM-01 a RM-14 — les neuf regles de REQ-GOV-024 plus trois — une section par regle, le tableau de tete etant leur vue ; la ligne « Regle maison appliquee » vit entre ses marqueurs dans le gabarit de PR, et `gov:pr` la LIT. `docs/LECONS.md` porte le journal des lecons : chacune cite son incident mesure, ce qu'on en tire, une source verifiable (SHA, `chemin:ligne` ou message verbatim) et la `RM-nn` qu'elle a produite — ou dit qu'elle n'en a produit aucune. `pnpm gov:lecons --now <date>` (nightly, jamais l'horloge) rougit quand la consolidation depasse sept jours ALORS QUE des « appris » attendent, et reste verte sans dette. 12 familles, 13 temoins, 9 contre-temoins verts.
+**Acceptation.** `docs/REGLES-MAISON.md` porte RM-01 a RM-14 — les neuf regles de REQ-GOV-024 plus cinq — une section par regle, le tableau de tete etant leur vue ; la ligne « Regle maison appliquee » vit entre ses marqueurs dans le gabarit de PR, et `gov:pr` la LIT. `docs/LECONS.md` porte le journal des lecons : chacune cite son incident mesure, ce qu'on en tire, une source verifiable (SHA, `chemin:ligne` ou message verbatim) et la `RM-nn` qu'elle a produite — ou dit qu'elle n'en a produit aucune. `pnpm gov:lecons --now <date>` (nightly, jamais l'horloge) rougit quand la consolidation depasse sept jours ALORS QUE des « appris » attendent, et reste verte sans dette. 12 familles, 13 temoins, 9 contre-temoins verts.
 
 **Tests.** `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 a RM-14, une section par regle` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — les neuf regles que l'exigence enumere sont chacune couvertes par une section` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — docs/LECONS.md porte une date de consolidation MACHINE-LISIBLE` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — ROUGE : consolidation de plus de 7 jours ALORS QUE des « appris » attendent` · `tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-023 — CONTRE-TEMOIN : la meme peremption sans aucun « appris » en attente reste VERTE`
 
@@ -170,7 +170,7 @@ Couvre : `REQ-GOV-017`
 
 **Tests.** `lexique.spec.ts`
 
-### GOV-014 — Conventions + sélection des gardes d'axionia — **en_cours**
+### GOV-014 — Conventions + sélection des gardes d'axionia
 
 `1 j` · zone `gouvernance` · depend de `GOV-012`, `GOV-013`
 
@@ -228,13 +228,11 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-025`, `REQ-GOV-027`
 
 **Tests.** `tests/unit/gouvernance/paths-derives.spec.ts#la vue commitee est a jour : `--check` est vert sur le depot` · `tests/unit/gouvernance/paths-derives.spec.ts#REQ-GOV-025 — aucune tache `repo: axionia` ne pretend ecrire un fichier de ce depot` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la famille `phase_gelee` est prouvee, temoin et contre-temoin` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la phase courante se lit dans le backlog, pas dans la vue PLAN-STATE`
 
-### GOV-019 — Budgets de performance après première mesure — **en_cours**
+### GOV-019 — Budgets de performance après première mesure
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-014`
 
 Couvre : `REQ-GOV-028`
-
-**Acceptation.** `perf/budgets.json` (une entree de budget par route) et `lighthouserc.json` existent, et leurs seuils sont DERIVES du texte de REQ-GOV-028 lu dans `docs/requirements.json` : `--rendre` les ecrit, `--verifier` rougit si le disque en differe, et le test RENVERSE la source pour prouver que l'attente se renverse — sans quoi un retour constant passerait pour une derivation. La garde rougit sur une route de `src/app/(espace)` sans entree, dans les DEUX sens du cliquet, et LEVE si le texte de l'exigence ne dit plus le seuil au lieu de retomber sur un defaut. Perimetre vide ASSUME ET DIT : elle imprime le nombre de routes balayees et declare qu'un vert a zero route ne juge aucune route. Aucune dependance ajoutee — le mesureur entre avec QA-T20. L'etape de Gate A qui l'appelle ne porte pas `continue-on-error`, et la famille `etape_ci_muselee` le refuse.
 
 **Tests.** `poids-du-bundle-garde-vraiment.spec.ts`
 
@@ -314,7 +312,7 @@ Couvre : `REQ-GOV-024`
 
 Couvre : `REQ-GOV-015`, `REQ-GOV-021`
 
-**Acceptation.** Deux lecteurs du même registre, et ils ne lisent pas la même chose (RM-04). `scripts/gates/gov-tasks.ts` reconnaît une décision à la PREMIÈRE CELLULE d'une ligne de tableau et accepte les quatre familles d'identifiants du registre ; `scripts/lot/composer.ts` la cherche par une expression régulière qui ne connaît que deux préfixes et n'applique pas les alias de la §0. Trois conséquences MESURÉES le 2026-09-04, toutes silencieuses : (a) seize tâches sont écartées pour « décision sans hypothèse » alors que leur décision est bel et bien déclarée au registre — il suffit que son identifiant soit une décision de Will ou un alias ; (b) trois identifiants cités dans une NOTE en prose sous la §1 — une note qui explique précisément qu'ils ne bloquent PLUS — sont comptés comme bloquants, et écartent cinq tâches de plus ; (c) le composeur ratisse la §1 entière, si bien qu'une décision TRANCHÉE y bloque encore, alors que la §4 du registre prescrit de la faire descendre en §2. À livrer : (1) un lecteur UNIQUE du registre, importé par la garde et par le composeur, alias de la §0 compris ; (2) la frontière §1/§2 lue sur les LIGNES DE TABLEAU et non sur la prose ; (3) une décision tranchée qui ne bloque plus rien ; (4) un témoin par famille et un contre-témoin vert ; (5) le décompte des tâches redevenues éligibles imprimé, pour qu'on voie la différence au lieu de la supposer.
+**Acceptation.** Deux lecteurs du même registre, et ils ne lisent pas la même chose (RM-04). `scripts/gates/gov-tasks.ts` reconnaît une décision à la PREMIÈRE CELLULE d'une ligne de tableau et accepte les quatre familles d'identifiants du registre ; `scripts/lot/composer.ts` la cherche par une expression régulière qui ne connaît que deux préfixes et n'applique pas les alias de la §0. Trois conséquences MESURÉES le 2026-09-04, toutes silencieuses : (a) des tâches sont écartées pour « décision sans hypothèse » alors que leur décision est bel et bien déclarée au registre — il suffit que son identifiant soit une décision de Will ou un alias ; (b) trois identifiants cités dans une NOTE en prose sous la §1 — une note qui explique précisément qu'ils ne bloquent PLUS — sont comptés comme bloquants, et écartent cinq tâches de plus ; (c) le composeur ratisse la §1 entière, si bien qu'une décision TRANCHÉE y bloque encore, alors que la §4 du registre prescrit de la faire descendre en §2. À livrer : (1) un lecteur UNIQUE du registre, importé par la garde et par le composeur, alias de la §0 compris ; (2) la frontière §1/§2 lue sur les LIGNES DE TABLEAU et non sur la prose ; (3) une décision tranchée qui ne bloque plus rien ; (4) un témoin par famille et un contre-témoin vert ; (5) le décompte des tâches redevenues éligibles imprimé, pour qu'on voie la différence au lieu de la supposer.
 
 **Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 
@@ -324,7 +322,7 @@ Couvre : `REQ-GOV-015`, `REQ-GOV-021`
 
 Couvre : `REQ-GOV-003`
 
-**Acceptation.** La constante CITATIONS de scripts/gates/gov-identifiants.ts neutralise TOUTE chaine citee de 120 caracteres ou moins — guillemets francais, guillemets droits ET quotes simples — avant de chercher un identifiant nu. La regle « citer n'est pas se servir » a ete ecrite pour la PROSE et s'applique par accident a la SYNTAXE : dans un .json, un .ts ou un .yml, les guillemets qui entourent une valeur ne citent rien, ils delimitent. Mesure sur ce depot le 2026-09-05 : la meme ligne de docs/gates.json porte 1 faute quand sa valeur fait 166 caracteres et 0 quand elle en fait 62 — le verdict de la garde depend de la LONGUEUR du voisinage, pas de son contenu. Sans neutralisation le depot passe de 1 a 35 identifiants nus sur 28 lignes ; avec la seule regle « dans un fichier de code, la quote est de la syntaxe », il passe de 1 a 3. A livrer : (1) la neutralisation devient CONTEXTUELLE — en prose les trois familles de guillemets citent, dans un fichier de code seuls les guillemets francais et une citation IMBRIQUEE citent ; (2) un temoin par famille de delimiteur montrant qu'un identifiant nu cache dans une chaine courte est desormais VU, et le meme temoin rallonge montrant que l'ancien contournement disparait ; (3) des contre-temoins verts sur les usages legitimes deja connus, soit par exemption nommee soit par un ajustement de la regle, jamais par un retour au silence ; (4) le plafond de 120 caracteres justifie ou supprime — une garde dont le verdict depend de la longueur d'une phrase n'est pas rejouable.
+**Acceptation.** La constante CITATIONS de scripts/gates/gov-identifiants.ts neutralise TOUTE chaine citee de 120 caracteres ou moins — guillemets francais, guillemets droits ET quotes simples — avant de chercher un identifiant nu. La regle « citer n'est pas se servir » a ete ecrite pour la PROSE et s'applique par accident a la SYNTAXE : dans un .json, un .ts ou un .yml, les guillemets qui entourent une valeur ne citent rien, ils delimitent. TEMOIN REJOUABLE, mesure le 2026-09-05 sur la garde livree : un fichier suivi portant `export const note = "conforme a D11 ; rien de plus";` rend ZERO faute ; le MEME identifiant dans la MEME instruction, la chaine rallongee au-dela de 120 caracteres, en rend UNE. Le verdict de la garde depend donc de la LONGUEUR du voisinage et non de son contenu. ⚠️ Les comptes globaux ne sont volontairement PAS asserts ici : ils sont a etablir PAR cette tache, sur un harnais qui rejoue le pipeline complet de la garde (exemptions et locutions legitimes comprises) et non la seule fautesDeLigne — une premiere mesure faite sans ce pipeline a rendu des chiffres invraisemblables, et un compteur qu'on ne sait pas reproduire est exactement ce que cette tache reproche a la garde. A livrer : (1) la neutralisation devient CONTEXTUELLE — en prose les trois familles de guillemets citent, dans un fichier de code seuls les guillemets francais et une citation IMBRIQUEE citent ; (2) un temoin par famille de delimiteur, chacun double par sa version rallongee, montrant que l'ancien contournement disparait ; (3) des contre-temoins verts sur les usages legitimes, soit par exemption nommee soit par un ajustement de la regle, jamais par un retour au silence ; (4) le plafond de 120 caracteres justifie ou supprime — une garde dont le verdict depend de la longueur d'une phrase n'est pas rejouable ; (5) les trois comptes globaux etablis et ecrits ici, avec la commande qui les reproduit.
 
 **Tests.** `tests/unit/gouvernance/citation-json-vs-prose.spec.ts`
 
@@ -338,25 +336,15 @@ Couvre : `REQ-GOV-033`
 
 **Tests.** `tests/unit/gouvernance/lot-identifiant-unique.spec.ts`
 
-### GOV-030 — `gov:check` designe DEUX choses, et aucune ne fait ce que six documents lui pretent
+### GOV-032 — Un instant de reference se fige par rapport a CE QU'IL JUGE — **en_cours**
 
-`1 j` · zone `gouvernance` · depend de `GOV-013`
+`0.25 j` · zone `gouvernance` · depend de `GOV-008`
 
-Couvre : `REQ-DM-003`, `REQ-INT-004`
+Couvre : `REQ-GOV-006`
 
-**Acceptation.** UN SEUL NOM POUR UNE SEULE CHOSE. Aujourd'hui `gov:check` en designe DEUX. (1) L'entree de docs/gates.json decrit une garde de TERMES INTERDITS dont le script scripts/gates/gov-check.ts N'EXISTE PAS, et aucun autre script ne fait ce travail. (2) package.json declare sous le meme nom une CHAINE de gardes de gouvernance qu'AUCUN workflow n'appelle. Six affirmations du depot s'appuient sur la premiere — docs/GLOSSAIRE.md, docs/CONVENTIONS.md, docs/REGLES-MAISON.md (RM-06), packages/contracts/events.ts, REQ-GOV-001 et la vue docs/GATES.md — et la tache qui les promettait, GOV-000, est FUSIONNEE : son acceptance promet le fichier et l'etape de CI, et ni l'un ni l'autre n'existe. A livrer : (1) scripts/gates/gov-check.ts existe, expose un controler() PUR sur une vue INJECTEE et un mode --prove avec un temoin ROUGE par famille et des contre-temoins VERTS, et couvre ce que le registre annonce — termes d'axionia invalides, noms d'evenements en anglais la ou l'exigence impose le francais, listes litterales d'etats hors de leur exigence, synonymes interdits du glossaire, et tout nom d'evenement litteral hors du paquet de contrats ; (2) un CONTRE-TEMOIN prouve que les documents qui EXPLIQUENT la regle peuvent ecrire son contre-exemple entre accents graves — sans quoi la garde interdirait sa propre documentation, defaut deja rencontre et corrige sur gov:identifiants ; (3) le perimetre est IMPRIME avec son compte, `src/` etant vide en phase -1, et « 0 fichier balaye » ne se lit pas comme « aucun defaut » ; (4) l'etape de Gate A qui l'appelle ne porte pas `continue-on-error` ; (5) l'entree du registre recoit sa preuveRouge et docs/GATES.md est regeneree ; (6) les six affirmations disent l'etat REEL de la garde au jour de la livraison. ⚠️ Le choix entre renommer la chaine de package.json et renommer l'entree du registre engage un identifiant que six documents citent : il se tranche par un ADR, pas dans la PR.
+**Acceptation.** Trois endroits portaient un instant de reference ECRIT EN DUR — `scripts/gates/gov-etat.ts` (la base de son mode --prove et la date de son temoin `journal_date_future`), `tests/unit/gouvernance/plan-state-frais.spec.ts` et `tests/unit/gouvernance/une-tache-un-owner.spec.ts` — sous ce commentaire : « un instant FIXE, jamais new Date() : une garde qui lit l'horloge n'est pas rejouable ». Le raisonnement est JUSTE et porte sur le MAUVAIS SUJET. Il vaut pour un univers INJECTE, ou l'instant fait partie de la fixture ; il ne vaut pas pour un fichier VIVANT. Or ces trois appels confrontent l'instant au JOURNAL REEL, qui avance. Un instant fige au 2026-09-04 confronte a un journal qui grandit est un test A RETARDEMENT : il rougit sur la premiere entree ecrite apres cette date, donc sur toute entree future, pour toujours. Il est tombe le LENDEMAIN. Le meme defaut vivait dans la GARDE : --prove appariait le journal REEL au meme litteral, donc il REFUSAIT de commencer et sortait 1, exactement comme une garde qui aurait trouve un defaut — une preuve qui s'eteint toute seule au bout d'un jour ne prouve rien le second jour, ET RIEN NE LE DIT. Le temoin de `journal_date_future` portait lui aussi une date en dur (2026-12-31) : un temoin dont la date est ecrite a la main cesse d'exercer sa famille le jour ou le present le rattrape, en silence — il devient un contre-temoin. A tenir : les trois instants sont DERIVES ; `controler()` reste PURE et RECOIT son instant, aucune horloge n'entre dans la garde ; la famille `journal_date_future` est rejouee contre une entree datee de DEMAIN et vue rougir ; et le depot tel quel reste vert.
 
-**Tests.** `tests/unit/gouvernance/termes-interdits.spec.ts`
-
-### GOV-031 — eslint.config.mjs porte « CE FICHIER N'A JAMAIS ETE EXECUTE », et c'etait vrai
-
-`1 j` · zone `gouvernance` · depend de `GOV-014`
-
-Couvre : `REQ-GOV-018`
-
-**Acceptation.** GOV-014 a livre eslint.config.mjs, .prettierrc.json et .prettierignore, et son propre en-tete avertissait : « CE FICHIER N'A JAMAIS ETE EXECUTE. » Il l'a ete le 2026-09-05, dans un bac d'essai avec les cinq paquets installes : `eslint .` rend 46 erreurs sur 7 fichiers (no-undef 28, no-console 8, no-explicit-any 6, no-irregular-whitespace 2, no-require-imports 2) et `prettier --check .` rend 105 fichiers non formates. Les causes sont dans la CONFIGURATION, pas dans le code : languageOptions.globals absent, donc les globales de Node sont inconnues des scripts ; aucune derogation pour tests/**, donc no-console y frappe ; et scripts/lot/lot.workflow.js est un langage dedie dont les symboles sont injectes par son moteur, il releve d'un `ignores` et non d'un correctif. Le correctif minimal mesure (globals Node + derogation tests) ramene 46 a 25. C'est pourquoi le lot L-1-07 a cable la variante PRUDENTE : les deux etapes gov:conventions, et NI `lint` NI `format:check` — ni comme scripts, ni comme etapes de CI, ni comme devDependencies. La famille outillage_non_epingle ne s'arme que si une etape de CI lance l'outil ; sans etape, rien ne ment. A livrer : (1) la configuration corrigee, chaque derogation portant son motif ; (2) les 5 devDependencies epinglees et les scripts `lint`, `format:check`, `format` ; (3) les etapes de Gate A, SANS continue-on-error ; (4) `pnpm lint` et `pnpm format:check` verts sur le depot, ou tout ecart restant porte une derogation NOMMEE et motivee — jamais une regle desactivee en bloc. Une CI qu'on rend verte en eteignant la regle mesure la regle eteinte.
-
-**Tests.** `tests/unit/gouvernance/gardes-transposees.spec.ts`
+**Tests.** `tests/unit/gouvernance/plan-state-frais.spec.ts`
 
 ## Phase 0 — Socle technique
 

@@ -3664,7 +3664,7 @@
     {
       "id": "REQ-GOV-003",
       "domaine": "gouvernance-agents",
-      "texte": "Tout identifiant de décision issu des documents est qualifié par un préfixe de document (PLAN-, REG-, SIREN-, TDB-, ABUS-, BEB-) et figure dans `docs/DECISIONS-INDEX.md`. Gate : un identifiant nu `\\b[ABCDR]\\d{1,2}\\b` dans un titre/corps de PR, un ADR ou un commentaire de code → rouge.",
+      "texte": "Tout identifiant de décision issu des documents est qualifié par un préfixe de document (PLAN-, REG-, SIREN-, TDB-, ABUS-, BEB-) et figure dans `docs/DECISIONS-INDEX.md`. Gate : un identifiant nu `\\b[ABCDR]\\d{1,2}\\b` dans un titre/corps de PR, un ADR ou un commentaire de code → rouge. Un renvoi POINTÉ — un identifiant suivi d'un point et d'un CHIFFRE, comme le numéro d'une sous-section — n'est pas un identifiant nu : il résout, et il est cité comme tel. La garde trace donc la ligne sur ce qui SUIT le point, un chiffre le prolongeant et toute autre chose terminant la phrase ; sans cette distinction, elle rougissait sur un renvoi que personne n'avait écrit pour désigner une décision (GOV-025, mesuré le 2026-09-05).",
       "source": "plan §2/§5, anti-abus §7, audit-bout-en-bout §11 (collisions C/D)",
       "statut": "active",
       "remplaceePar": null,
@@ -3718,7 +3718,8 @@
       "etape": null,
       "phase": -1,
       "taches": [
-        "GOV-008"
+        "GOV-008",
+        "GOV-032"
       ]
     },
     {
@@ -5238,7 +5239,7 @@
     {
       "id": "REQ-GOV-033",
       "domaine": "gouvernance-agents",
-      "texte": "Tout identifiant que le dépôt s'attribue à lui-même et qui doit rester unique sur sa vie entière — identifiant de lot au premier chef — se dérive d'au moins une source SUIVIE par git. Une séquence tirée d'un répertoire ignoré (`.gitignore`) repart de zéro dans tout arbre neuf, worktree, clone ou machine de CI, et réattribue un identifiant déjà porté ; l'écriture qui suit fusionne alors deux ensembles distincts sous un même nom, sans qu'aucune garde ne le voie, le champ porteur étant une chaîne libre. Gate : dans un arbre où le répertoire de travail est absent, le prochain identifiant proposé pour chaque phase n'est porté par aucune entrée de `docs/tasks.json` → vert ; le même calcul privé de sa source suivie → rouge (contre-témoin exigé, RM-02).",
+      "texte": "Tout identifiant que le dépôt s'attribue à lui-même et qui doit rester unique sur sa vie entière — identifiant de lot au premier chef — se dérive d'au moins une source SUIVIE par git. Une séquence tirée d'un répertoire ignoré (`.gitignore`) repart de zéro dans tout arbre neuf, worktree, clone ou machine de CI, et réattribue un identifiant déjà porté ; l'écriture qui suit fusionne alors deux ensembles distincts sous un même nom, sans qu'aucune garde ne le voie, le champ porteur étant une chaîne libre. Gate : dans un arbre où le répertoire de travail est absent, le prochain identifiant proposé pour chaque phase n'est porté par aucune entrée de `docs/tasks.json` → vert ; le même calcul privé de sa source suivie propose au contraire un identifiant DÉJÀ porté → c'est le témoin, et il se joue en confrontant le calcul en vigueur à la fixture du calcul d'avant, conservée dans le module (RM-02). Deux sources vides ne sont PAS ce témoin : elles rendent légitimement le premier identifiant, et c'est un contre-témoin.",
       "source": "GOV-029, mesuré le 2026-09-05 dans un worktree neuf : « Lot L-1-01 : 7 tache(s) » pour un identifiant déjà porté par sept tâches fusionnées.",
       "statut": "active",
       "remplaceePar": null,

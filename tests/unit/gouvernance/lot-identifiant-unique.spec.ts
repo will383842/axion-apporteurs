@@ -34,7 +34,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { prochainIdentifiantDeLot, lotsDuBacklog } from '../../../scripts/lot/identifiant-de-lot';
+import {
+  prochainIdentifiantDeLot,
+  prochainIdentifiantHerite,
+  lotsDuBacklog,
+} from '../../../scripts/lot/identifiant-de-lot';
 
 type Tache = { id: string; lot?: string | null };
 
@@ -61,6 +65,18 @@ describe("REQ-GOV-033 — l'identifiant de lot ne se dérive pas d'un dossier ig
     // le backlog » ne rend ces deux réponses-là.
     expect(prochainIdentifiantDeLot(0, ['L0-07'], ['L0-02'])).toBe('L0-08');
     expect(prochainIdentifiantDeLot(0, ['L0-02'], ['L0-07'])).toBe('L0-08');
+  });
+
+  it("REQ-GOV-033 — le calcul HÉRITÉ retombe bien sur un identifiant DÉJÀ PRIS, et c'est ce qui prouve que le remède change quelque chose", () => {
+    // Sans ce témoin, rien ne montrerait que la correction corrige : deux implémentations qui
+    // rendent la même chose sur le dépôt du jour se ressemblent, et on discute. Ici la fixture du
+    // défaut est confrontée au calcul unique sur l'état RÉEL de l'arbre neuf — dossier absent.
+    const deja = [...lotsDuBacklog(backlog())];
+    const herite = prochainIdentifiantHerite(-1, []);
+    const unique = prochainIdentifiantDeLot(-1, [], deja);
+    expect(deja, `le calcul hérité doit retomber sur un identifiant déjà porté`).toContain(herite);
+    expect(deja, `le calcul unique ne doit JAMAIS retomber dessus`).not.toContain(unique);
+    expect(herite).not.toBe(unique);
   });
 
   it('REQ-GOV-033 — CONTRE-TÉMOIN : deux sources vides donnent le PREMIER identifiant, pas une erreur', () => {

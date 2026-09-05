@@ -57,7 +57,7 @@ import { readFileSync, existsSync } from 'node:fs';
  * ────────────────────────────────────────────────────────────────────────────────────────────
  */
 /**
- * ⚠️ AFFINÉ APRÈS GOV-025, ET C'EST UNE CORRECTION DE SA PROPRE SURCORRECTION (GOV-029).
+ * ⚠️ AFFINÉ APRÈS GOV-025, ET C'EST UNE CORRECTION DE SA PROPRE SURCORRECTION (GOV-025).
  * GOV-025 a retiré le `.` de la lookahead pour attraper l'étiquette collée à un point final —
  * « conforme à D11. » — et elle avait raison : c'était sa cécité. Mais retirer le point tout
  * entier fait aussi tomber les RENVOIS POINTÉS, qui ne sont pas des étiquettes nues : `C13.3`
@@ -293,7 +293,7 @@ export const CONTRE_TEMOINS_LIMITES: string[] = [
   `le pré-vol lance scripts/gates/gov-pr.ts puis scripts/gates/gov-adr.ts`,
   `la CI épingle pnpm 9.12.0 et node 22.`,
   `le format SEPA reste pain.001.001.09.`,
-  // ── les renvois POINTÉS (GOV-029) ─────────────────────────────────────────
+  // ── les renvois POINTÉS (GOV-025) ─────────────────────────────────────────
   // Ceux-ci ne sont pas décoratifs. Le premier est, mot pour mot, la ligne 696 de
   // `docs/gates.json` sur laquelle GOV-025 faisait rougir la CI : un contre-témoin recopié de la
   // ligne RÉELLE qui a cassé vaut mieux qu'un contre-témoin inventé qui lui ressemble.

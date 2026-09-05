@@ -85,3 +85,28 @@ export function prochainIdentifiantDeLot(
   const seq = Math.max(0, ...numeros) + 1;
   return `${prefixe}${String(seq).padStart(2, '0')}`;
 }
+
+// ── le calcul HÉRITÉ ─────────────────────────────────────────────────────────
+/**
+ * ⚠️ CECI N'EST PAS UN SECOND CALCUL. C'est la FIXTURE du défaut : la dérivation que
+ * `scripts/lot/composer.ts` portait avant GOV-029, conservée mot pour mot — elle ne lit QUE le
+ * dossier. Rien ne la consulte pour nommer un lot ; elle sert aux témoins des tests, qui opposent
+ * sa réponse à celle du calcul unique, et au contre-témoin qui montre qu'elle retombe bien sur
+ * un identifiant DÉJÀ PRIS dès que le dossier est absent — c'est-à-dire dans tout arbre neuf.
+ *
+ * C'est le troisième emploi du même patron dans ce dépôt, après
+ * `MOTIF_NU_AVEUGLE_EN_FIN_DE_PHRASE` (`scripts/gates/gov-identifiants.ts`) et
+ * `lireRegistreHerite` (`scripts/lot/registre-decisions.ts`) : deux occurrences en
+ * faisaient une coïncidence, trois en font une règle (LEC-19). Garder la version CASSÉE dans le
+ * module rend le rejeu PERMANENT au lieu d'être un geste de session — prix : une fonction morte ;
+ * gain : aucune régression ne peut réintroduire la cécité sans faire rougir.
+ */
+export function prochainIdentifiantHerite(phase: number, dossiers: readonly string[]): string {
+  const prefixe = prefixeDePhase(phase);
+  const seq =
+    Math.max(
+      0,
+      ...dossiers.filter((d) => d.startsWith(prefixe)).map((d) => Number(d.slice(prefixe.length)) || 0)
+    ) + 1;
+  return `${prefixe}${String(seq).padStart(2, '0')}`;
+}
