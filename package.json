@@ -11,7 +11,7 @@
   "scripts": {
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
-    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace && pnpm gov:lexique",
+    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace && pnpm gov:lexique && pnpm gov:conventions",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
@@ -75,7 +75,13 @@
     "contracts:hash": "tsx scripts/contracts/export.ts --verifier",
     "gov:tasks:verifie-rendu": "tsx scripts/gates/gov-tasks.ts --verifie-rendu",
     "gov:requirements:render": "tsx scripts/gates/gov-requirements.ts --render",
-    "gov:requirements:verifie-rendu": "tsx scripts/gates/gov-requirements.ts --verifie-rendu"
+    "gov:requirements:verifie-rendu": "tsx scripts/gates/gov-requirements.ts --verifie-rendu",
+    "perf:budgets": "tsx scripts/gates/perf-budgets.ts",
+    "perf:budgets:prove": "tsx scripts/gates/perf-budgets.ts --prove",
+    "perf:budgets:rendre": "tsx scripts/gates/perf-budgets.ts --rendre",
+    "perf:budgets:verifier": "tsx scripts/gates/perf-budgets.ts --verifier",
+    "gov:conventions": "tsx scripts/gates/gov-conventions.ts",
+    "gov:conventions:prove": "tsx scripts/gates/gov-conventions.ts --prove"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

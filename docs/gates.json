@@ -132,6 +132,15 @@
       "preuveRouge": "pnpm gov:agents:prove — 14 familles vues rougir sur leur temoin, 7 contre-temoins verts"
     },
     {
+      "id": "gov:conventions",
+      "phase": -1,
+      "script": "scripts/gates/gov-conventions.ts",
+      "tache": "GOV-014",
+      "verifie": "les six gardes d'axionia RETENUES par docs/GARDES-AXIONIA.md, en huit familles : use_server_export_interdit (un module « use server » n'exporte que des fonctions), use_server_reexport (un re-export y ouvre un point d'entree HTTP sans cookie ni session), use_client_sans_motif (la directive porte sa raison), lint_non_bloquant (aucune etape de CI qui lance un lint ne porte continue-on-error — LE point de REQ-GOV-018), outillage_non_epingle (une etape qui lance un outil de format exige l'outil en devDependencies, son script et sa configuration versionnee), isolation_depot (une tache repo partners ne revendique aucun chemin du depot voisin — la moitie RECIPROQUE de ce que paths-derives.spec.ts gardait deja, et une garde a sens unique est un defaut deja paye ici), garde_ecrite_jamais_appelee (toute gate dont le script est sur le disque est appelee par un workflow), perimetre_vide_sans_motif (un perimetre a zero element porte son MOTIF et nomme la TACHE qui l'ouvrira, et cette tache existe au backlog — c'est la seule chose qui distingue une garde differee d'une garde oubliee). controler() est PURE sur une vue INJECTEE : aucune famille ne depend de l'etat du disque le jour ou le test tourne (RM-11)",
+      "fixtureRouge": "poser dans ci.yml une etape qui lance un lint en portant continue-on-error (temoin lint_non_bloquant) ; ou declarer au registre une gate dont le script existe et qu'aucun workflow n'appelle (temoin garde_ecrite_jamais_appelee)",
+      "preuveRouge": "pnpm gov:conventions:prove — 8 familles rougissent chacune sur son temoin, 12 contre-temoins restent verts dont la vue conforme"
+    },
+    {
       "id": "gov:entite",
       "phase": -1,
       "script": "scripts/gates/gov-entite.ts",
@@ -887,6 +896,15 @@
       "preuveRouge": null
     },
     {
+      "id": "perf:budgets",
+      "phase": -1,
+      "script": "scripts/gates/perf-budgets.ts",
+      "tache": "GOV-019",
+      "verifie": "les budgets de REQ-GOV-028 sont poses et coherents, et aucune route de `src/app/(espace)` ne nait sans son entree de budget. Elle ne MESURE aucun octet — ni size-limit ni lhci ne sont installes, et c'est un arbitrage motive : elle LIT la configuration. Le `limit` n'est pas un champ qu'on remplit, il est DERIVE du texte de REQ-GOV-028 lu dans docs/requirements.json et ecrit par --rendre ; toute valeur qui s'en ecarte rougit DANS LES DEUX SENS (cliquet_sous_le_plafond vers le bas, plafond_relache vers le haut), et un texte d'exigence devenu muet LEVE au lieu de retomber sur un defaut. lighthouserc.json est un RENDU compare caractere a caractere par --verifier. ⚠️ ELLE IMPRIME SON PERIMETRE, et il est VIDE aujourd'hui : `src/app/(espace)` n'existe pas en phase -1, elle balaie 0 route et le DIT — « ce vert ne juge AUCUNE route ». C'est ce qui la distingue d'une garde a perimetre vide qui rendrait un ✅ trompeur. QA-T20 (phase 0) ajoutera le MESUREUR par-dessus cette ossature",
+      "fixtureRouge": "poser `src/app/(espace)/x/page.tsx` sans entree dans perf/budgets.json (temoin route_sans_budget) ; ou aligner un `limit` sur la mesure courante, par exemple 61 KB (temoin cliquet_sous_le_plafond)",
+      "preuveRouge": "pnpm perf:budgets:prove — 12 familles rougissent chacune sur son temoin, 6 contre-temoins restent verts ; les familles sont route_sans_budget, budget_orphelin, entree_incomplete, plafond_relache, cliquet_sous_le_plafond, seuil_divergent, seuil_absent, lhci_non_bloquant, lhci_hors_mobile, lighthouserc_perime, etape_ci_muselee et source_illisible"
+    },
+    {
       "id": "perf:bundle",
       "phase": 0,
       "script": "scripts/gates/bundle-par-route.ts",
@@ -984,7 +1002,7 @@
       "phase": -1,
       "script": "scripts/gates/gov-derivation.ts",
       "tache": "GOV-014",
-      "verifie": "toute valeur presente dans deux endroits est DERIVEE d'une source unique, jamais recopiee : grille, seuils legaux, listes d'etats, libelles d'enum",
+      "verifie": "toute valeur presente a deux endroits est DERIVEE d'une source unique, jamais recopiee : grille, seuils legaux, listes d'etats, libelles d'enum. DIFFEREE par GOV-014 le 2026-09-05 (docs/GARDES-AXIONIA.md §2), et sa tache successeur est DM-03-A : son perimetre n'existe a AUCUN endroit du depot aujourd'hui, et l'ecrire produirait exactement la garde a perimetre vide que ce registre refuse. Les seuils sont deja couverts par GATE-JUR-SEUILS-SSOT et les enumerations par partners:schema:enums ; ce qui reste sans domicile est la GRILLE, et c'est DM-03-A qui la pose. ⚠️ L'ENTREE RESTE ATTRIBUEE A GOV-014, ET C'EST VOULU : tests/unit/gouvernance/gardes-transposees.spec.ts exige qu'une gate que GOV-014 porte sans l'armer soit AU MOINS decidee par ecrit, sinon la tache se ferme en laissant derriere elle une entree que plus personne ne relit. La re-attribuer a DM-03-A rendait ce temoin VIDE — il l'a dit lui-meme, « aucune gate GOV-014 sans script : ce test ne juge rien » — et faisait donc disparaitre la garde qui surveille l'oubli",
       "fixtureRouge": "recopier un taux de commission dans un second fichier",
       "preuveRouge": null
     },

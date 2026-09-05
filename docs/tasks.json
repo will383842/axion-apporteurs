@@ -646,7 +646,13 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-014"
+        ".prettierignore",
+        ".prettierrc.json",
+        "docs/CONVENTIONS.md",
+        "docs/GARDES-AXIONIA.md",
+        "eslint.config.mjs",
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -661,10 +667,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
+      "statut": "en_cours",
+      "owner": "A01",
+      "lot": "L-1-05",
+      "branch": "lot/L-1-INT-b",
       "pr": null,
       "issue": 16,
       "attempts": 0,
@@ -919,7 +925,10 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-019"
+        "lighthouserc.json",
+        "perf/budgets.json",
+        "scripts/gates/perf-budgets.ts",
+        "tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -932,10 +941,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
+      "statut": "en_cours",
+      "owner": "A01",
+      "lot": "L-1-05",
+      "branch": "lot/L-1-INT-b",
       "pr": null,
       "issue": 21,
       "attempts": 0,
@@ -944,7 +953,8 @@
         "REQ-GOV-028": [
           "poids-du-bundle-garde-vraiment.spec.ts"
         ]
-      }
+      },
+      "acceptance": "`perf/budgets.json` (une entree de budget par route) et `lighthouserc.json` existent, et leurs seuils sont DERIVES du texte de REQ-GOV-028 lu dans `docs/requirements.json` : `--rendre` les ecrit, `--verifier` rougit si le disque en differe, et le test RENVERSE la source pour prouver que l'attente se renverse — sans quoi un retour constant passerait pour une derivation. La garde rougit sur une route de `src/app/(espace)` sans entree, dans les DEUX sens du cliquet, et LEVE si le texte de l'exigence ne dit plus le seuil au lieu de retomber sur un defaut. Perimetre vide ASSUME ET DIT : elle imprime le nombre de routes balayees et declare qu'un vert a zero route ne juge aucune route. Aucune dependance ajoutee — le mesureur entre avec QA-T20. L'etape de Gate A qui l'appelle ne porte pas `continue-on-error`, et la famille `etape_ci_muselee` le refuse."
     },
     {
       "id": "GOV-020",
@@ -7526,6 +7536,82 @@
       "tests": {
         "REQ-GOV-033": [
           "tests/unit/gouvernance/lot-identifiant-unique.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-030",
+      "titre": "`gov:check` designe DEUX choses, et aucune ne fait ce que six documents lui pretent",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-check.ts",
+        "tests/unit/gouvernance/termes-interdits.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-013"
+      ],
+      "reqs": [
+        "REQ-DM-003",
+        "REQ-INT-004"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "UN SEUL NOM POUR UNE SEULE CHOSE. Aujourd'hui `gov:check` en designe DEUX. (1) L'entree de docs/gates.json decrit une garde de TERMES INTERDITS dont le script scripts/gates/gov-check.ts N'EXISTE PAS, et aucun autre script ne fait ce travail. (2) package.json declare sous le meme nom une CHAINE de gardes de gouvernance qu'AUCUN workflow n'appelle. Six affirmations du depot s'appuient sur la premiere — docs/GLOSSAIRE.md, docs/CONVENTIONS.md, docs/REGLES-MAISON.md (RM-06), packages/contracts/events.ts, REQ-GOV-001 et la vue docs/GATES.md — et la tache qui les promettait, GOV-000, est FUSIONNEE : son acceptance promet le fichier et l'etape de CI, et ni l'un ni l'autre n'existe. A livrer : (1) scripts/gates/gov-check.ts existe, expose un controler() PUR sur une vue INJECTEE et un mode --prove avec un temoin ROUGE par famille et des contre-temoins VERTS, et couvre ce que le registre annonce — termes d'axionia invalides, noms d'evenements en anglais la ou l'exigence impose le francais, listes litterales d'etats hors de leur exigence, synonymes interdits du glossaire, et tout nom d'evenement litteral hors du paquet de contrats ; (2) un CONTRE-TEMOIN prouve que les documents qui EXPLIQUENT la regle peuvent ecrire son contre-exemple entre accents graves — sans quoi la garde interdirait sa propre documentation, defaut deja rencontre et corrige sur gov:identifiants ; (3) le perimetre est IMPRIME avec son compte, `src/` etant vide en phase -1, et « 0 fichier balaye » ne se lit pas comme « aucun defaut » ; (4) l'etape de Gate A qui l'appelle ne porte pas `continue-on-error` ; (5) l'entree du registre recoit sa preuveRouge et docs/GATES.md est regeneree ; (6) les six affirmations disent l'etat REEL de la garde au jour de la livraison. ⚠️ Le choix entre renommer la chaine de package.json et renommer l'entree du registre engage un identifiant que six documents citent : il se tranche par un ADR, pas dans la PR.",
+      "tests": {
+        "REQ-DM-003": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ],
+        "REQ-INT-004": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-031",
+      "titre": "eslint.config.mjs porte « CE FICHIER N'A JAMAIS ETE EXECUTE », et c'etait vrai",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "eslint.config.mjs",
+        ".prettierrc.json"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-014"
+      ],
+      "reqs": [
+        "REQ-GOV-018"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "GOV-014 a livre eslint.config.mjs, .prettierrc.json et .prettierignore, et son propre en-tete avertissait : « CE FICHIER N'A JAMAIS ETE EXECUTE. » Il l'a ete le 2026-09-05, dans un bac d'essai avec les cinq paquets installes : `eslint .` rend 46 erreurs sur 7 fichiers (no-undef 28, no-console 8, no-explicit-any 6, no-irregular-whitespace 2, no-require-imports 2) et `prettier --check .` rend 105 fichiers non formates. Les causes sont dans la CONFIGURATION, pas dans le code : languageOptions.globals absent, donc les globales de Node sont inconnues des scripts ; aucune derogation pour tests/**, donc no-console y frappe ; et scripts/lot/lot.workflow.js est un langage dedie dont les symboles sont injectes par son moteur, il releve d'un `ignores` et non d'un correctif. Le correctif minimal mesure (globals Node + derogation tests) ramene 46 a 25. C'est pourquoi le lot L-1-07 a cable la variante PRUDENTE : les deux etapes gov:conventions, et NI `lint` NI `format:check` — ni comme scripts, ni comme etapes de CI, ni comme devDependencies. La famille outillage_non_epingle ne s'arme que si une etape de CI lance l'outil ; sans etape, rien ne ment. A livrer : (1) la configuration corrigee, chaque derogation portant son motif ; (2) les 5 devDependencies epinglees et les scripts `lint`, `format:check`, `format` ; (3) les etapes de Gate A, SANS continue-on-error ; (4) `pnpm lint` et `pnpm format:check` verts sur le depot, ou tout ecart restant porte une derogation NOMMEE et motivee — jamais une regle desactivee en bloc. Une CI qu'on rend verte en eteignant la regle mesure la regle eteinte.",
+      "tests": {
+        "REQ-GOV-018": [
+          "tests/unit/gouvernance/gardes-transposees.spec.ts"
         ]
       }
     }

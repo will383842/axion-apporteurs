@@ -43,7 +43,8 @@
       "taches": [
         "DM-02",
         "DM-07",
-        "GOV-006"
+        "GOV-006",
+        "GOV-030"
       ]
     },
     {
@@ -1765,6 +1766,7 @@
       "etape": 9,
       "phase": -1,
       "taches": [
+        "GOV-030",
         "INT-T01a",
         "INT-T05"
       ]
@@ -3891,7 +3893,8 @@
       "etape": null,
       "phase": -1,
       "taches": [
-        "GOV-014"
+        "GOV-014",
+        "GOV-031"
       ]
     },
     {

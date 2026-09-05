@@ -16,7 +16,7 @@
 
 **321 exigences actives · 31 réputées testées · 31 couvertes · 0 orphelines.**
 
-203 tâches, dont 20 livrées · 27 fichiers de test exécutés par `vitest` sur 27 présents.
+205 tâches, dont 20 livrées · 29 fichiers de test exécutés par `vitest` sur 29 présents.
 
 ## Exigences réputées testées
 
@@ -49,7 +49,7 @@
 | `REQ-GOV-030` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-031` | `GOV-000` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-INT-003` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
-| `REQ-INT-004` | `INT-T01a`, `INT-T05` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
+| `REQ-INT-004` | `GOV-030`, `INT-T01a`, `INT-T05` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-029` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-QA-007` | `INT-T01a`, `INT-T01b` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-QA-013` | `QA-T00`, `QA-T01`, `QA-T07`, `QA-T28` | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
@@ -115,7 +115,7 @@
 | `REQ-CPL-029` | 1 | `UX-P1-15` | — |
 | `REQ-DM-001` | 0 | `DM-01`, `DM-02` | — |
 | `REQ-DM-002` | 1 | `DM-07` | — |
-| `REQ-DM-003` | -1 | `DM-02`, `DM-07`, `GOV-006` | `glossaire-enums.spec.ts` |
+| `REQ-DM-003` | -1 | `DM-02`, `DM-07`, `GOV-006`, `GOV-030` | `glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` |
 | `REQ-DM-004` | 1 | `DM-07`, `DM-08`, `DM-13` | — |
 | `REQ-DM-005` | 1 | `DM-07` | — |
 | `REQ-DM-006` | 1 | `DM-08`, `DM-13`, `DM-24` | — |
@@ -187,7 +187,7 @@
 | `REQ-EXT-029` | 2 | `UX-P2-04` | — |
 | `REQ-GOV-016` | -1 | `GOV-006` | `glossaire-enums.spec.ts` |
 | `REQ-GOV-017` | -1 | `GOV-013` | `lexique.spec.ts` |
-| `REQ-GOV-018` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
+| `REQ-GOV-018` | -1 | `GOV-014`, `GOV-031` | `gardes-transposees.spec.ts`, `tests/unit/gouvernance/gardes-transposees.spec.ts` |
 | `REQ-GOV-028` | -1 | `GOV-019` | `poids-du-bundle-garde-vraiment.spec.ts` |
 | `REQ-GOV-029` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
 | `REQ-GOV-032` | -1 | `GOV-024` | `tests/unit/gouvernance/vues-derivees.spec.ts` |
@@ -444,6 +444,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/entite-registre.spec.ts` | oui | `REQ-CPL-001`, `REQ-CPL-002`, `REQ-CPL-003`, `REQ-CPL-004`, `REQ-CPL-017`, `REQ-CPL-018`, `REQ-GOV-031` |
 | `tests/unit/gouvernance/fiches-agents.spec.ts` | oui | `REQ-GOV-010` |
 | `tests/unit/gouvernance/fiches-tiers.spec.ts` | oui | `REQ-CPL-002`, `REQ-GOV-022` |
+| `tests/unit/gouvernance/gardes-transposees.spec.ts` | oui | `REQ-GOV-018`, `REQ-GOV-029` |
 | `tests/unit/gouvernance/gardes.spec.ts` | oui | `REQ-GOV-001`, `REQ-GOV-003`, `REQ-GOV-015`, `REQ-GOV-031` |
 | `tests/unit/gouvernance/glossaire-enums.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-038`, `REQ-GOV-016`, `REQ-JUR-027` |
 | `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | oui | `REQ-GOV-003` |
@@ -453,6 +454,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | oui | `REQ-GOV-033` |
 | `tests/unit/gouvernance/paths-derives.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-025` |
 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | oui | `REQ-GOV-006`, `REQ-GOV-023` |
+| `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts` | oui | `REQ-GOV-028` |
 | `tests/unit/gouvernance/preseance.spec.ts` | oui | `REQ-DM-034`, `REQ-GOV-002`, `REQ-GOV-030` |
 | `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | oui | `REQ-GOV-015`, `REQ-GOV-021` |
 | `tests/unit/gouvernance/regles-maison.spec.ts` | oui | `REQ-GOV-023`, `REQ-GOV-024` |

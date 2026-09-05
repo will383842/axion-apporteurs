@@ -146,6 +146,23 @@ jobs:
         run: pnpm gov:lexique
       - name: La garde du lexique sait rougir, et laisse passer la negation qui protege
         run: pnpm gov:lexique:prove
+      # GOV-019, REQ-GOV-028. Elle ne MESURE aucun octet : elle tient les budgets en place et
+      # refuse qu'une route naisse sans le sien. Elle IMPRIME son perimetre — « 0 route balayee »
+      # n'est pas « aucun defaut », et elle le dit en toutes lettres. Pas de `continue-on-error` :
+      # la famille `etape_ci_muselee` le refuse, et une gate qui ne bloque rien ne garde rien.
+      - name: Budgets de performance derives de REQ-GOV-028
+        run: pnpm perf:budgets
+      - name: La garde des budgets sait rougir
+        run: pnpm perf:budgets:prove
+      - name: Les budgets sur le disque sont le rendu de leur exigence
+        run: pnpm perf:budgets:verifier
+      # GOV-014, REQ-GOV-018 + REQ-GOV-029. Les six gardes d'axionia retenues. Trois de ses cinq
+      # perimetres sont VIDES aujourd'hui, et elle les IMPRIME avec leur motif et la tache qui les
+      # ouvrira — c'est ce qui separe une garde differee d'une garde oubliee.
+      - name: Conventions et gardes transposees d axionia
+        run: pnpm gov:conventions
+      - name: La garde des conventions sait rougir
+        run: pnpm gov:conventions:prove
       - name: Typecheck
         run: pnpm typecheck
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :
