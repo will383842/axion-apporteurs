@@ -490,12 +490,30 @@ export function caracteresNeutralises(): string[] {
 }
 
 /**
- * Un IBAN écrit avec un séparateur donné entre ses groupes de quatre — la forme exacte d'un RIB
- * collé depuis un relevé, un traitement de texte ou un courriel. Ce n'est PAS une valeur : c'est
- * une transformation, et son entrée vient de l'appelant (RM-01).
+ * Un IBAN COMPACT réécrit avec un séparateur entre ses groupes de quatre — la forme exacte d'un
+ * RIB collé depuis un relevé, un traitement de texte ou un courriel. Ce n'est PAS une valeur :
+ * c'est une transformation, et son entrée vient de l'appelant (RM-01).
+ *
+ * 🔴 ELLE A PORTÉ `iban.replace(/s/g, '')` — **la lettre `s`**, pas les blancs ; l'antislash
+ * manquait, et sa docstring annonçait pourtant « collé depuis un relevé ». Mesuré le 2026-09-05 :
+ * une entrée déjà espacée ressortait inchangée puis regroupée n'importe comment, et un IBAN
+ * espagnol ou suisse écrit en minuscules perdait son `s`.
+ *
+ * 🔑 ET LA QUESTION VENAIT AVANT « comment normaliser » : aucun appelant ne lui passe une entrée
+ * espacée. La substitution n'avait aucun témoin parce qu'elle n'avait aucun usage. La réponse
+ * n'est donc pas de réparer la regex, c'est de retirer la réparation — **une fonction qui
+ * « complète » une fixture VÉRIFIE, elle ne fabrique pas** (RM-03).
  */
 export function ibanAvecSeparateur(iban: string, separateur: string): string {
-  return (iban.replace(/s/g, '').match(/.{1,4}/g) ?? []).join(separateur);
+  if (!/^[A-Za-z0-9]+$/.test(iban)) {
+    throw new Error(
+      `ibanAvecSeparateur attend un IBAN COMPACT — lettres et chiffres, aucun séparateur — et ` +
+        `a reçu « ${iban} ». Insérer un séparateur dans une chaîne qui en porte déjà produit une ` +
+        `forme qui n'est plus un IBAN, et une réparation silencieuse ferait passer le défaut pour ` +
+        `un succès : passe la forme compacte (RM-03).`
+    );
+  }
+  return (iban.match(/.{1,4}/g) ?? []).join(separateur);
 }
 
 function normaliserEspaces(t: string): string {
@@ -727,8 +745,15 @@ export function controler(u: Univers): Faute[] {
  *
  * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ SUR LA PR #31, le 2026-09-05. GitHub conserve
  * l'historique d'édition d'un corps de PR (`userContentEdits`, lisible en GraphQL par n'importe
- * qui). Onze révisions. Quatre portent la forme masquée ; TROIS portent un IBAN à clé mod-97
- * VRAIE, toujours lisible aujourd'hui. Masquer le corps courant n'a pas dépublié les précédents.
+ * qui). Le corps y avait été rendu plusieurs fois ; certaines de ces éditions portaient la forme
+ * masquée, et d'autres un IBAN à clé mod-97 VRAIE, toujours lisible aujourd'hui. Masquer le corps
+ * courant n'a pas dépublié les précédents.
+ *
+ * ⚠️ AUCUN TOTAL N'EST ÉCRIT ICI, ET C'EST LA RÈGLE QUE CE FICHIER SERT : le corps est REGÉNÉRÉ à
+ * chaque tour de revue, donc tout total tapé est périmé le jour où on l'écrit — celui-ci l'était.
+ * Le nombre qui a un sens est celui des éditions PORTANT une coordonnée, et il se compte dans
+ * `config/exemptions-corps-publie.json`, sa source unique (RM-01). Le total, lui, s'imprime : la
+ * garde le dit à chaque exécution (« lu : … révision(s) d'édition »).
  *
  * ATTÉNUATION, ET ELLE NE CHANGE RIEN À CE QU'IL FAUT CONSTRUIRE : cette valeur-là était la SONDE
  * d'un relecteur, pas la coordonnée d'AXION — il n'y a rien à révoquer. Ce qui manquait, et que
@@ -755,8 +780,9 @@ export function controler(u: Univers): Faute[] {
  *
  * L'historique d'édition d'un corps de PR est IMMUABLE : GitHub sert `userContentEdits` à
  * quiconque le demande, et aucune édition ultérieure ne dépublie une révision. La PR #31 porte
- * donc, pour toujours, trois révisions avec un IBAN à clé mod-97 vraie. Câbler le mode en ligne
- * en étape bloquante rendait cette PR-là — et toute PR de sa pile — INFUSIONNABLE.
+ * donc, pour toujours, les éditions DÉCLARÉES au registre — leur compte s'y lit, il ne se retape
+ * pas ici. Câbler le mode en ligne en étape bloquante rendait cette PR-là — et toute PR de sa
+ * pile — INFUSIONNABLE.
  *
  * 🔴 LA PREMIÈRE RÉPONSE A ÉTÉ LA MAUVAISE, ET C'EST MOI QUI L'AI PROPOSÉE. Elle consistait à ne
  * câbler que la preuve hors ligne et à laisser le mode en ligne « à lancer avant fusion ». Écrite
@@ -1351,8 +1377,20 @@ function prouverCorpsPublie(): number {
     revisionsLues: revision ? 1 : 0,
     revisionsAnnoncees: revision ? 1 : 0,
   });
-  /** Une exemption BIEN formée pour le témoin donné — construite, jamais recopiée. */
-  const exemptionPour = (valeur: string, sur = HORODATAGE, pr = PR_TEMOIN): Exemption => ({
+  /**
+   * Une exemption BIEN formée pour le témoin donné — construite, jamais recopiée.
+   *
+   * 🔴 ELLE A PORTÉ DES DÉFAUTS — `sur = HORODATAGE, pr = PR_TEMOIN` — et c'est le fait
+   * d'instrument que la lentille `mutation` a rendu le 2026-09-05 : les mutations qui
+   * retirent la clé d'HORODATAGE ou la clé d'EMPREINTE de l'appariement **mouraient dans
+   * `pnpm test` et SURVIVAIENT ici**. Cause : aucun témoin de ce banc ne différait
+   * SEULEMENT par l'horodatage, ni SEULEMENT par l'empreinte. Le témoin « révision NON
+   * exemptée » avait l'air de couvrir le cas ; il discriminait en réalité sur l'empreinte.
+   *
+   * 🔑 **Un témoin qui bouge pour deux raisons ne discrimine rien** (RM-11). Les trois clés
+   * sont donc écrites à chaque appel, et trois témoins ci-dessous n'en changent QU'UNE.
+   */
+  const exemptionPour = (valeur: string, sur: string, pr: number): Exemption => ({
     pr,
     revision: sur,
     empreinte: empreinteDe(valeur),
@@ -1404,7 +1442,7 @@ function prouverCorpsPublie(): number {
       // de sens, c'est-à-dire une autorisation ouverte sur un texte que personne n'a examiné.
       famille: 'exemption_sans_objet',
       lecture: corps('aucune coordonnée dans cette révision', true),
-      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 1,
     },
     {
@@ -1412,7 +1450,7 @@ function prouverCorpsPublie(): number {
       // personne ne la relit — et elle devient permanente sans que quiconque l'ait voulu.
       famille: 'exemption_malformee',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
-      exemptions: [{ ...exemptionPour(IBAN_TEMOIN), motif: '' }],
+      exemptions: [{ ...exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN), motif: '' }],
       attendu: 1,
     },
     {
@@ -1420,7 +1458,7 @@ function prouverCorpsPublie(): number {
       // la ligne absoudrait alors une AUTRE coordonnée que celle qu'on a examinée.
       famille: 'exemption_malformee',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
-      exemptions: [{ ...exemptionPour(IBAN_TEMOIN), empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16) }],
+      exemptions: [{ ...exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN), empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16) }],
       attendu: 1,
     },
     {
@@ -1443,7 +1481,7 @@ function prouverCorpsPublie(): number {
         revisionsLues: 2,
         revisionsAnnoncees: 2,
       },
-      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 1,
     },
     {
@@ -1451,7 +1489,47 @@ function prouverCorpsPublie(): number {
       // Une exemption qui le couvrirait serait une permission de publier.
       famille: 'coordonnee_dans_le_corps_courant',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`),
-      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
+      attendu: 1,
+    },
+    {
+      // LES TROIS CLÉS, UNE PAR UNE — et chacune change SEULE. C'est ce qui manquait : une
+      // exemption qui ne diffère QUE par l'HORODATAGE n'absout pas. Sans ce cas, retirer la clé
+      // d'horodatage de l'appariement laissait ce banc entièrement vert.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [exemptionPour(IBAN_TEMOIN, '2026-01-02T09:09:09Z', PR_TEMOIN)],
+      attendu: 1,
+    },
+    {
+      // … QUE par l'EMPREINTE : même PR, même horodatage, une AUTRE coordonnée déclarée.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [exemptionPour(IBANS_TEMOINS_ETRANGERS.DE!, HORODATAGE, PR_TEMOIN)],
+      attendu: 1,
+    },
+    {
+      // … QUE par la PR. Exempter une révision d'une AUTRE PR n'absout rien ici : sinon une
+      // ligne écrite pour une PR fermée couvrirait tout ce qui reste à écrire.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN + 1)],
+      attendu: 1,
+    },
+    {
+      // UNE EMPREINTE TRONQUÉE N'ABSOUT PAS. Ce qui était gardé, c'est la forme STOCKÉE ; la
+      // forme COMPARÉE ne l'était pas. Une comparaison par préfixe couvrirait la coordonnée tout
+      // en déclarant la ligne malformée — et le verdict resterait 1, donc indiscernable. La
+      // famille exigée ici est `coordonnee_dans_une_revision`, pas `exemption_malformee` : c'est
+      // la moitié qui manquait.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [
+        {
+          ...exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN),
+          empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16),
+        },
+      ],
       attendu: 1,
     },
     { famille: 'lecture_impossible', lecture: { lu: false, motif: 'gh introuvable (témoin)' }, attendu: 2 },
@@ -1461,7 +1539,7 @@ function prouverCorpsPublie(): number {
       // « je n'ai pas pu lire » à « ton registre est faux » — deux diagnostics opposés.
       famille: 'lecture_impossible',
       lecture: { lu: false, motif: 'réseau injoignable (témoin)' },
-      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 2,
     },
     {
@@ -1486,7 +1564,7 @@ function prouverCorpsPublie(): number {
       // elle peut être verte SANS que la garde cesse de bloquer le reste.
       quoi: 'une révision DÉCLARÉE, dont l’exemption s’apparie sur les TROIS clés',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
-      exemptions: [exemptionPour(IBAN_TEMOIN)],
+      exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
     },
     {
       // Une exemption d'une AUTRE PR n'absout rien ici, et ne compte pas non plus comme sans
@@ -1541,6 +1619,32 @@ function prouverCorpsPublie(): number {
       console.error(
         `❌ Faux positif : « ${c.quoi} » a rendu ${v.code} sur « ${v.fautes[0]?.famille} ».\n` +
           `   ${v.fautes[0]?.message ?? ''}`
+      );
+      return 1;
+    }
+  }
+
+  // ── CE QUE LE VERT AFFICHE : `exemptionsServies` apparie sur les TROIS clés ────────────────
+  // 🔴 MUTANT DU 2026-09-05 : la réduire à `exemptions.find((x) => x.pr === lecture.pr)`. Aucun
+  // témoin ne rougissait. C'est le registre en passoire par la porte d'à côté — la liste que ce
+  // vert imprime est celle qu'un humain relit pour savoir sur quoi la dette repose.
+  {
+    const lue = corps(`IBAN : ${IBAN_TEMOIN}`, true);
+    const bonne = exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN);
+    // Deux leurres, chacun ne différant que par UNE clé, et placés AVANT la bonne.
+    const leurres = [
+      exemptionPour(IBANS_TEMOINS_ETRANGERS.DE!, HORODATAGE, PR_TEMOIN),
+      exemptionPour(IBAN_TEMOIN, '2026-01-02T09:09:09Z', PR_TEMOIN),
+    ];
+    const servies = exemptionsServies(lue, [...leurres, bonne]);
+    // Et le TÉMOIN POSITIF : sur la bonne ligne seule, elle la rend. Sans lui, une fonction qui
+    // rendrait toujours `[]` passerait le cas ci-dessus.
+    const seule = exemptionsServies(lue, [bonne]);
+    if (servies.length !== 1 || servies[0] !== bonne || seule.length !== 1) {
+      console.error(
+        `❌ \`exemptionsServies\` n'apparie pas sur les TROIS clés : ${servies.length} ligne(s) ` +
+          `servie(s) parmi trois candidates de la MÊME PR, dont deux qui ne couvrent pas cette ` +
+          `coordonnée-là. Le vert afficherait une dette qui n'est pas celle sur laquelle il repose.`
       );
       return 1;
     }

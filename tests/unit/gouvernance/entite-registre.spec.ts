@@ -74,6 +74,7 @@ import {
   controlerRegistreExemptions,
   empreinteDe,
   exemptionsDuDepot,
+  exemptionsServies,
   jugerCorpsPublie,
   numeroDePrDeLEvenement,
   assemblerLecture,
@@ -744,9 +745,10 @@ describe('REQ-CPL-018 — `normaliserEspaces` : chaque forme qu’elle neutralis
  *   corps-de-pr dans docs/gates.json.. AUCUNE entrée
  *
  * Et le défaut ne vivait pas dans le corps courant : GitHub sert l'HISTORIQUE d'édition d'un corps
- * de PR (`userContentEdits`, GraphQL, lisible par quiconque). Sur la PR #31, onze révisions —
- * quatre portent la forme masquée, TROIS portent un IBAN à clé mod-97 VRAIE. Masquer le corps
- * courant n'a pas dépublié les précédents.
+ * de PR (`userContentEdits`, GraphQL, lisible par quiconque). Sur la PR #31, le corps a été rendu
+ * plusieurs fois ; certaines éditions portent la forme masquée, d'autres un IBAN à clé mod-97
+ * VRAIE. Masquer le corps courant n'a pas dépublié les précédents. Aucun total n'est écrit ici :
+ * il change à chaque tour de revue, et la garde l'imprime à chaque exécution.
  *
  * ATTÉNUATION : cette valeur-là était la SONDE d'un relecteur, pas la coordonnée d'AXION ; il n'y
  * a rien à révoquer. Ce qui bloquait, c'est l'absence de la garde qui empêchera le prochain, en
@@ -759,9 +761,10 @@ describe('REQ-CPL-018 — `normaliserEspaces` : chaque forme qu’elle neutralis
  *
  * ⚠️ LES CAS CI-DESSOUS SONT HORS LIGNE, ET C'EST VOULU (RM-11). Un test qui interroge GitHub
  * verdirait ou rougirait au gré de ce que la forge répond le jour où il tourne. La lecture réelle
- * (`lireCorpsPublie`) est isolée dans sa fonction ; ce qui est jugé ici, c'est `jugerCorpsPublie`,
- * qui est pur. Le mode en ligne, lui, a été joué à la main sur quatre PR réelles : #31 → 1 (les
- * trois révisions ci-dessus, nommées et datées), #28 / #29 / #30 → 0.
+ * (`lireCorpsPublie`) est INJECTÉE, et son sens de défaillance a désormais ses propres témoins.
+ * Ce qui est jugé ici, c'est `jugerCorpsPublie`, qui est pur. Le mode en ligne, lui, a été joué à
+ * la main sur quatre PR réelles : #31 → 1 (les éditions déclarées au registre, nommées et datées),
+ * #28 / #29 / #30 → 0.
  */
 describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonneesDe`', () => {
   /** La forme MASQUÉE que rend le gabarit : construite, jamais recopiée. */
@@ -1115,8 +1118,9 @@ describe('REQ-CPL-018 — les coordonnées NON françaises, et les deux familles
  * ── LES EXEMPTIONS DE RÉVISION — RENDRE L'EXCEPTION EXPLICITE PLUTÔT QUE L'ABSENCE DE GARDE ───
  *
  * 🔴 J'AI D'ABORD PROPOSÉ LA MAUVAISE RÉPONSE, ET ELLE AVAIT L'AIR PRUDENTE. L'historique
- * d'édition d'un corps de PR est IMMUABLE : la PR #31 porte pour toujours trois révisions avec un
- * IBAN à clé mod-97 vraie, donc câbler le mode en ligne en étape bloquante rendait cette PR — et
+ * d'édition d'un corps de PR est IMMUABLE : la PR #31 porte pour toujours les éditions DÉCLARÉES
+ * au registre, avec un IBAN à clé mod-97 vraie ; câbler le mode en ligne en étape bloquante
+ * rendait donc cette PR — et
  * toute sa pile — infusionnable. J'en ai conclu qu'il ne fallait câbler que la preuve hors ligne,
  * et lancer le mode en ligne « à la main avant fusion ».
  *
@@ -1208,6 +1212,46 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
     expect(jugerCorpsPublie(l, [pour(IBAN_TEMOIN, '2026-03-04T05:06:08Z')]).code).toBe(1);
     // mauvaise empreinte — une AUTRE coordonnée
     expect(jugerCorpsPublie(l, [pour(IBANS_TEMOINS_ETRANGERS.DE!)]).code).toBe(1);
+  });
+
+  it('REQ-CPL-018 — une empreinte TRONQUÉE n’ABSOUT rien : la comparaison porte sur les 64 caractères', () => {
+    // 🔴 CE QUE LA LENTILLE `mutation` A MESURÉ le 2026-09-05 : ce qui était gardé, c'est la
+    // forme STOCKÉE (`/^[0-9a-f]{64}$/`, par `controlerRegistreExemptions`) ; la forme COMPARÉE
+    // ne l'était pas. Une comparaison par PRÉFIXE — `empreinte.startsWith(e.empreinte)` — laisse
+    // la ligne ABSOUDRE la coordonnée tout en la déclarant malformée : le verdict reste 1, et les
+    // deux situations deviennent indiscernables. Une affirmation deux fois écrite dans la PR, et
+    // zéro fois gardée.
+    const tronquee: Exemption = {
+      ...pour(IBAN_TEMOIN),
+      empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16),
+    };
+    const v = jugerCorpsPublie(lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]), [tronquee]);
+    expect(v.fautes.map((f) => f.famille)).toContain('exemption_malformee');
+    // LA MOITIÉ QUI MANQUAIT : la coordonnée est TOUJOURS signalée. Seize caractères hexadécimaux
+    // se collisionnent en 2^32 essais — une ligne tronquée absoudrait une AUTRE coordonnée que
+    // celle qu'on a examinée, et c'est l'argument que la PR avance deux fois.
+    expect(v.fautes.map((f) => f.famille)).toContain('coordonnee_dans_une_revision');
+    expect(exemptionsServies(lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]), [tronquee])).toEqual([]);
+  });
+
+  it('REQ-CPL-018 — `exemptionsServies` apparie sur les TROIS clés, pas sur la seule PR', () => {
+    // 🔴 MUTANT DU 2026-09-05 : réduire la sélection à `exemptions.find(x => x.pr === lecture.pr)`.
+    // Aucun cas ne rougissait. C'est le registre en passoire par la porte d'à côté : ce qui est
+    // apparié au moment de JUGER l'était déjà, ce qui est apparié au moment de DIRE sur quoi le
+    // vert repose ne l'était pas — et c'est cette seconde liste qu'un humain relit.
+    const l = lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]);
+    const bonne = pour(IBAN_TEMOIN, HORO, PR);
+    // Deux leurres, chacun ne différant que par UNE clé — et placés AVANT : une sélection sur la
+    // seule PR rendrait le premier venu, donc l'un d'eux.
+    const autreEmpreinte = pour(IBANS_TEMOINS_ETRANGERS.DE!, HORO, PR);
+    const autreHorodatage = pour(IBAN_TEMOIN, '2026-03-04T05:06:08Z', PR);
+    expect(exemptionsServies(l, [autreEmpreinte, autreHorodatage, bonne])).toEqual([bonne]);
+
+    // TÉMOIN POSITIF de la fonction elle-même : sur la bonne ligne SEULE, elle rend cette ligne.
+    // Sans lui, une `exemptionsServies` qui rendrait toujours `[]` passerait le cas ci-dessus.
+    expect(exemptionsServies(l, [bonne])).toEqual([bonne]);
+    // Et le corps COURANT ne sert JAMAIS d'exemption : il s'édite, il n'y a rien à excuser.
+    expect(exemptionsServies(lecture([], `IBAN : ${IBAN_TEMOIN}`), [bonne])).toEqual([]);
   });
 
   it('REQ-CPL-018 — une révision NON déclarée rougit MÊME sur une PR qui a des exemptions', () => {
@@ -1387,7 +1431,7 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
 describe('REQ-CPL-018 — la pagination des révisions : lire CENT n’est pas lire TOUT', () => {
   const PR = 4242;
 
-  /** Un horodatage DISTINCT par révision : deux révisions au même instant ne se distinguent plus. */
+  /** Un horodatage DISTINCT par édition : deux entrées au même instant ne se distinguent plus. */
   const horodatage = (n: number): string =>
     `2026-01-02T03:${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}Z`;
 
@@ -1701,5 +1745,212 @@ describe('REQ-CPL-018 — la LECTURE, et le sens dans lequel elle échoue', () =
     const { code, sortie } = lancer('--corps-publie', '--prove');
     expect(code).toBe(0);
     expect(sortie).toContain('La LECTURE elle-même est éprouvée');
+  });
+});
+
+/**
+ * ── `ibanAvecSeparateur` — UNE SUBSTITUTION QUE RIEN N'EXERÇAIT, DANS LA FAMILLE QU'ON FERME ──
+ *
+ * 🔴 CE QUE LA LENTILLE `exactitude` A MESURÉ le 2026-09-05 : la fonction portait
+ * `iban.replace(/s/g, '')` — **la lettre `s`**, pas les blancs ; l'antislash manquait. Sa
+ * docstring, juste au-dessus, annonçait « la forme exacte d'un RIB collé depuis un relevé ».
+ *
+ *     'FR14 2004 1010 0505 0001 3M02 606'.replace(/s/g, '')  ->  inchangé, les espaces restent
+ *     'es9121000418450200051332'.replace(/s/g, '')           ->  'e9121…', une lettre mangée
+ *
+ * 🔑 ET LA QUESTION VENAIT AVANT « comment normaliser » : **aucun appelant ne lui passe une entrée
+ * espacée.** La substitution n'avait aucun témoin parce qu'elle n'avait aucun usage — un bout de
+ * code écrit pour un cas qui n'arrive pas, et qui aurait tronqué un IBAN espagnol ou suisse écrit
+ * en minuscules le jour où il serait arrivé. La réponse n'est donc pas de réparer la regex, c'est
+ * de retirer la réparation : **une fonction qui « complète » une fixture VÉRIFIE, elle ne fabrique
+ * pas** (RM-03). Elle refuse ce qu'elle ne sait pas grouper.
+ */
+describe('REQ-CPL-018 — `ibanAvecSeparateur` vérifie son entrée au lieu de la réparer', () => {
+  it('REQ-CPL-018 — une entrée DÉJÀ espacée est REFUSÉE, et le refus NOMME la forme attendue', () => {
+    const espace = ibanAvecSeparateur(IBAN_TEMOIN, ' ');
+    // TÉMOIN POSITIF de la fixture elle-même : elle produit bien une forme espacée. Sans lui, le
+    // refus ci-dessous porterait peut-être sur une chaîne qui n'a jamais eu d'espace.
+    expect(espace).toContain(' ');
+    expect(espace).not.toBe(IBAN_TEMOIN);
+    expect(() => ibanAvecSeparateur(espace, ' ')).toThrow(/COMPACT/);
+  });
+
+  it('REQ-CPL-018 — un `s` minuscule SURVIT : c’était la lettre que `/s/g` mangeait', () => {
+    const es = IBANS_TEMOINS_ETRANGERS.ES!;
+    // TÉMOIN POSITIF : le cas est RÉEL, pas une complétude de principe — un IBAN espagnol écrit
+    // en minuscules porte un `s`, et REQ-CPL-004 exige une résidence fiscale, pas un compte
+    // français. C'est exactement l'IBAN qu'un apporteur collera.
+    expect(es.toLowerCase()).toContain('s');
+    const groupe = ibanAvecSeparateur(es.toLowerCase(), ' ');
+    expect(groupe.split(' ').join('')).toBe(es.toLowerCase());
+    expect(groupe.split(' ')[0]).toHaveLength(4);
+  });
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : la forme compacte se groupe toujours par quatre', () => {
+    // Sans lui, la vérification pourrait tout refuser : une fonction qui refuse toujours passe
+    // les deux cas ci-dessus et ne sert plus aucune fixture.
+    for (const [pays, iban] of Object.entries(IBANS_TEMOINS_ETRANGERS)) {
+      const groupe = ibanAvecSeparateur(iban, ' ');
+      expect(groupe.split(' ').join(''), pays).toBe(iban);
+      expect(groupe.split(' ')[0], pays).toHaveLength(4);
+    }
+  });
+});
+
+/**
+ * ── L'ÉTAPE DE CI QUE CETTE TÂCHE LIVRE DOIT RESTER BLOQUANTE ─────────────────────────────────
+ *
+ * 🔴 QUATRIÈME MUTANT DU 2026-09-05 : ajouter `continue-on-error: true` à l'étape
+ * `gov:entite:corps` de `ci.yml`. **130/130 vert.** Une ligne désarme tout ce que cette tâche
+ * défend, et rien ne la voit. Le dépôt voisin en donne la version longue : toutes ses gates de
+ * budget portent ce drapeau, aucune PR qui alourdit le bundle n'a jamais rougi, et pendant des
+ * mois les revues ont écrit « le risque est couvert par la gate ».
+ *
+ * ⚠️ PÉRIMÈTRE : CE TÉMOIN EST ÉTROIT, ET C'EST DÉLIBÉRÉ. La dette `G-SEC-CI-BLOQUANTE` est
+ * déclarée au registre des gardes avec le nom de la spec qui la soldera —
+ * `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, qui n'existe pas — et elle appartient
+ * à **QA-T01, phase 0**. Ce cas-ci ne juge QUE le job `gate-a`, celui qui porte l'étape livrée par
+ * `CPL-T01`. Il ne balaie ni les autres workflows ni les autres jobs : absorber le périmètre d'une
+ * tâche voisine au passage est un défaut que ce dépôt a déjà nommé. Ce qui est corrigé ici, c'est
+ * seulement l'ORDRE — cette PR introduit la première étape bloquante du dépôt, et sa protection
+ * était planifiée pour la phase d'après.
+ */
+describe('REQ-CPL-018 — aucune étape de `gate-a` ne se désarme par `continue-on-error`', () => {
+  const CI = readFileSync('.github/workflows/ci.yml', 'utf8');
+
+  /**
+   * Les étapes du job `gate-a` qui portent `continue-on-error`. Elle LÈVE si le job est
+   * introuvable : un témoin qui ne trouve plus ce qu'il juge rendrait `[]` — c'est-à-dire vert —
+   * et un vert produit par une absence de lecture est le défaut que toute cette tâche combat.
+   */
+  function etapesEnContinueOnError(yaml: string): string[] {
+    const lignes = yaml.split('\n');
+    const debut = lignes.findIndex((l) => /^ {2}gate-a:\s*$/.test(l));
+    if (debut < 0) {
+      throw new Error(
+        'le job `gate-a` est introuvable dans `.github/workflows/ci.yml` : ce témoin ne mesure ' +
+          'plus rien. Renomme-le ici en même temps que là-bas.'
+      );
+    }
+    let fin = lignes.length;
+    for (let i = debut + 1; i < lignes.length; i += 1) {
+      if (/^ {2}\S/.test(lignes[i]!)) {
+        fin = i;
+        break;
+      }
+    }
+    const fautives: string[] = [];
+    let nom = '(étape sans nom)';
+    for (const l of lignes.slice(debut, fin)) {
+      const m = /^\s*-?\s*name:\s*(.+?)\s*$/.exec(l);
+      if (m !== null) nom = m[1]!;
+      if (/^\s*continue-on-error\s*:/.test(l)) fautives.push(nom);
+    }
+    return fautives;
+  }
+
+  it('REQ-CPL-018 — le fichier RÉEL est sain : aucune étape de `gate-a` n’est désarmée', () => {
+    expect(etapesEnContinueOnError(CI)).toEqual([]);
+  });
+
+  it('REQ-CPL-018 — et le témoin SAIT rougir : une seule ligne suffirait à tout désarmer', () => {
+    // Sans cette moitié, le cas ci-dessus serait vrai d'un témoin qui ne regarde rien.
+    const ETAPE = '        run: pnpm gov:entite:corps\n';
+    expect(CI, 'l’étape que cette tâche livre a changé de forme dans `ci.yml`').toContain(ETAPE);
+    const desarme = CI.replace(ETAPE, ETAPE + '        continue-on-error: true\n');
+    expect(desarme).not.toBe(CI);
+    expect(etapesEnContinueOnError(desarme)).toEqual([
+      'Le corps PUBLIE de la PR ne porte aucune coordonnee',
+    ]);
+  });
+
+  it('REQ-CPL-018 — TÉMOIN POSITIF : le job lu est bien celui qui porte l’étape de cette tâche', () => {
+    // Deux zéros indiscernables, encore : « aucune étape désarmée » et « je lis le mauvais bloc »
+    // rendent la même liste vide. On vérifie donc que le bloc extrait contient l'étape jugée.
+    const lignes = CI.split('\n');
+    const debut = lignes.findIndex((l) => /^ {2}gate-a:\s*$/.test(l));
+    let fin = lignes.length;
+    for (let i = debut + 1; i < lignes.length; i += 1) {
+      if (/^ {2}\S/.test(lignes[i]!)) {
+        fin = i;
+        break;
+      }
+    }
+    const bloc = lignes.slice(debut, fin).join('\n');
+    expect(bloc).toContain('pnpm gov:entite:corps');
+    expect(bloc).toContain('pnpm gov:entite:corps:prove');
+  });
+});
+
+/**
+ * ── UN COMPTEUR TAPÉ À LA MAIN SUR UNE RESSOURCE VIVANTE ──────────────────────────────────────
+ *
+ * 🔴 CE QUE LA LENTILLE `exactitude` A MESURÉ le 2026-09-05 : la garde et son banc d'essai
+ * annonçaient un total d'éditions pour la PR #31 qui était FAUX le jour même de son écriture — la
+ * garde en imprimait déjà un de plus, et elle en imprimera un de plus encore au prochain rendu du
+ * corps. Dans les deux fichiers qui existent précisément pour empêcher qu'un compteur tapé survive
+ * à ce qu'il décrit (RM-01).
+ *
+ * CE QUI A UN SENS, ET QUI EST STABLE : le nombre d'éditions PORTANT une coordonnée. Il ne se tape
+ * pas non plus — il se compte dans `config/exemptions-corps-publie.json`, qui en est la source
+ * unique. Le total, lui, n'a aucune source : il change à chaque tour de revue.
+ *
+ * ⚠️ CE QUE CETTE GARDE N'INTERDIT PAS, et c'est ce qui la rend tenable : elle vise la TOURNURE
+ * — un nombre au pluriel qui qualifie « révisions » — jamais le mot. « Une révision », « les
+ * révisions non lues », « aucune révision lue » restent écrivables : ce sont les phrases qui
+ * PORTENT la règle, et une garde qui forcerait à les retirer serait retirée elle-même. Une ligne
+ * qui doit CITER un compteur périmé — les témoins ci-dessous en citent trois — porte le marqueur
+ * `TEMOIN-COMPTEUR`, qui est explicite, greppable, et qu'aucune ligne de prose n'écrit par accident.
+ */
+describe('REQ-CPL-018 — aucun total de révisions ne se tape à la main', () => {
+  const FICHIERS = ['scripts/gates/gov-entite.ts', 'tests/unit/gouvernance/entite-registre.spec.ts'];
+  // La tournure visée, et rien de plus : un nombre AU PLURIEL qui qualifie « révisions ». Viser le
+  // mot seul interdirait « une révision », qui est le vocabulaire même du registre — une garde
+  // lexicale trop large finit par interdire la phrase qui protège, donc par être retirée.
+  const COMPTEUR_TAPE =
+    /\b(deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|treize|quatorze|quinze|\d+)\s+r[ée]visions\b/i;
+
+  /** Le marqueur qui autorise une ligne à CITER un compteur : explicite, et jamais accidentel. */
+  const CITATION = ['TEMOIN', 'COMPTEUR'].join('-');
+
+  it.each(FICHIERS)('REQ-CPL-018 — %s ne porte aucun total de révisions tapé', (chemin: string) => {
+    const lignes = readFileSync(chemin, 'utf8').split('\n');
+    const fautives = lignes
+      .map((l, i) => ({ n: i + 1, l }))
+      .filter(({ l }) => COMPTEUR_TAPE.test(l) && !l.includes(CITATION))
+      .map(({ n, l }) => `${chemin}:${n} — ${l.trim()}`);
+    expect(fautives).toEqual([]);
+  });
+
+  it('REQ-CPL-018 — TÉMOIN POSITIF : la garde LIT les deux fichiers, elle ne mesure pas le vide', () => {
+    // Deux zéros indiscernables : « aucun compteur tapé » et « je n'ai rien lu » rendent la même
+    // liste vide. On vérifie donc que chaque fichier est non vide et parle bien de révisions.
+    for (const chemin of FICHIERS) {
+      const contenu = readFileSync(chemin, 'utf8');
+      expect(contenu.length, chemin).toBeGreaterThan(1000);
+      expect(contenu, chemin).toContain('révision');
+    }
+  });
+
+  it('REQ-CPL-018 — et le témoin SAIT rougir, sans interdire la négation ni le singulier', () => {
+    // La forme qui a été mesurée périmée, et celle qui la remplacerait demain.
+    expect(COMPTEUR_TAPE.test('Onze révisions. Quatre portent la forme masquée ;')).toBe(true); // TEMOIN-COMPTEUR
+    expect(COMPTEUR_TAPE.test('la PR #31 porte donc, pour toujours, trois révisions')).toBe(true); // TEMOIN-COMPTEUR
+    expect(COMPTEUR_TAPE.test('12 révisions servies')).toBe(true); // TEMOIN-COMPTEUR
+    // CONTRE-TÉMOINS : le vocabulaire du registre reste écrivable. Une garde qui interdirait ces
+    // phrases-là forcerait à les retirer, et ce sont elles qui portent la règle.
+    expect(COMPTEUR_TAPE.test('une exemption couvre UNE révision d’UNE PR')).toBe(false);
+    expect(COMPTEUR_TAPE.test('les révisions non lues ne sont pas réputées propres')).toBe(false);
+    expect(COMPTEUR_TAPE.test('aucune révision lue ne porte cette coordonnée')).toBe(false);
+    // ET LA FORME DÉRIVÉE PASSE : un compteur calculé n'est pas un compteur tapé.
+    expect(COMPTEUR_TAPE.test('soit ${PAGES_MAX * EDITIONS_PAR_PAGE} révision(s).')).toBe(false);
+  });
+
+  it('REQ-CPL-018 — le nombre qui a un sens se COMPTE au registre, il ne se tape pas', () => {
+    // Les révisions de la PR #31 qui portent une coordonnée sont exactement les lignes déclarées.
+    // C'est la seule source, et elle est machine-lisible : personne n'a à l'écrire en prose.
+    const declarees = exemptionsDuDepot().filter((e) => e.pr === 31);
+    expect(declarees.length).toBeGreaterThan(0);
+    expect(new Set(declarees.map((e) => e.revision)).size).toBe(declarees.length);
   });
 });
