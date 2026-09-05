@@ -9,7 +9,7 @@
 | --- | --- |
 | Où est `main` ? | `794245c` — 2026-09-04T23:10:40+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #31 (rien) |
-| Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-029 (A01) · GOV-032 (A01) |
+| Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-028 (A01) · GOV-029 (A01) · GOV-032 (A01) |
 | Où en est la phase ? | phase -1 — 20/33 tâches, reste 5.75 j |
 | Le prochain pas | fusionner #31, puis INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 4 question(s) pour Will |
@@ -25,8 +25,8 @@
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 173 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
-| `en_cours` | 9 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-029 (A01) PR#31 · GOV-032 (A01) PR#31 |
+| `a_faire` | 172 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
+| `en_cours` | 10 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-028 (A01) · GOV-029 (A01) PR#31 · GOV-032 (A01) PR#31 |
 | `en_revue` | 0 | — |
 | `fusionnee` | 20 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |
 | `deployee` | 0 | — |
@@ -79,6 +79,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’i
 | GOV-025 — La garde des identifiants nus est aveugle en fin de phrase — dépôt public, c'est une garde de publication | A01 | — | `en_cours` |
 | GOV-026 — Le CLAUDE.md racine, avec sa règle maison d'abord registrée | A01 | — | `en_cours` |
 | GOV-027 — Le composeur lit le registre des décisions autrement que la garde, et écarte des tâches dont la décision est posée | A01 | — | `en_cours` |
+| GOV-028 — Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE | A01 | — | `en_cours` |
 | GOV-029 — L'identifiant d'un lot se derivait d'un dossier que git ignore, et repartait sur un numero deja pris | A01 | — | `en_cours` |
 | GOV-032 — Un instant de reference se fige par rapport a CE QU'IL JUGE | A01 | — | `en_cours` |
 

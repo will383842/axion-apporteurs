@@ -75,7 +75,8 @@
     "contracts:hash": "tsx scripts/contracts/export.ts --verifier",
     "gov:tasks:verifie-rendu": "tsx scripts/gates/gov-tasks.ts --verifie-rendu",
     "gov:requirements:render": "tsx scripts/gates/gov-requirements.ts --render",
-    "gov:requirements:verifie-rendu": "tsx scripts/gates/gov-requirements.ts --verifie-rendu"
+    "gov:requirements:verifie-rendu": "tsx scripts/gates/gov-requirements.ts --verifie-rendu",
+    "gov:identifiants:compter": "tsx scripts/gates/gov-identifiants.ts --compter"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

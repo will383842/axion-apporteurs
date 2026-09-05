@@ -316,7 +316,7 @@ Couvre : `REQ-GOV-015`, `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 
-### GOV-028 — Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE
+### GOV-028 — Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE — **en_cours**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-025`
 
