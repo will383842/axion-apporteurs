@@ -26,7 +26,7 @@
       "empreinte": "2847f6106ab6f0da11e73d5c896edc145fae3f8c1b04458a83bca2fe49a846e8",
       "declaree": "2026-09-05",
       "par": "A05 · developpeur-partners, sur veto de la lentille securite",
-      "motif": "Même valeur fabriquée, première révision où elle apparaît. Les trois révisions antérieures portent la forme d'exemple documentée, dont la clé mod-97 est fausse : la garde ne les signale pas, elles n'ont donc aucune ligne ici.",
+      "motif": "Même valeur fabriquée, première révision où elle apparaît. Les révisions antérieures ne portent aucun jeton de forme IBAN — ni valeur, ni exemple — donc la garde n'en signale aucune et elles n'ont pas de ligne ici. Leur nombre n'est pas écrit : il augmente à chaque rendu du corps, et ce registre existe précisément pour qu'aucun compte ne se tape à la main.",
       "definitive": true
     }
   ]

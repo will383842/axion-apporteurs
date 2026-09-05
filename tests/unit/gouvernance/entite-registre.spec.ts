@@ -777,6 +777,8 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
     corps: [{ origine: 'témoin', horodatage: revision ? HORODATAGE : null, texte, revision }],
     revisionsLues: revision ? 1 : 0,
     revisionsAnnoncees: revision ? 1 : 0,
+    // La forge a rendu la main d'elle-même : ce n'est PAS une lecture interrompue.
+    lectureInachevee: false,
   });
   /** Une exemption BIEN formée, construite depuis la valeur : jamais l'empreinte tapée à la main. */
   const exemptionPour = (valeur: string, sur = HORODATAGE, pr = PR): Exemption => ({
@@ -822,6 +824,7 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
       ],
       revisionsLues: 1,
       revisionsAnnoncees: 1,
+      lectureInachevee: false,
     };
     const v = jugerCorpsPublie(lecture);
     expect(v.code).toBe(1);
@@ -859,6 +862,8 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
       corps: [{ origine: 'corps courant', horodatage: null, texte: 'rien à signaler', revision: false }],
       revisionsLues: 2,
       revisionsAnnoncees: 11,
+      // FAUX à dessein : ce témoin juge l'ÉCART, et lui seul (RM-11).
+      lectureInachevee: false,
     });
     expect(v.code).toBe(2);
     expect(v.fautes.map((f) => f.famille)).toContain('revisions_non_lues');
@@ -1168,6 +1173,7 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
     ],
     revisionsLues: revisions.length,
     revisionsAnnoncees: revisions.length,
+    lectureInachevee: false,
   });
   /** Une exemption bien formée, CONSTRUITE depuis la valeur : jamais une empreinte tapée. */
   const pour = (valeur: string, sur = HORO, pr = PR): Exemption => ({
@@ -1241,11 +1247,21 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
     // vert repose ne l'était pas — et c'est cette seconde liste qu'un humain relit.
     const l = lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]);
     const bonne = pour(IBAN_TEMOIN, HORO, PR);
-    // Deux leurres, chacun ne différant que par UNE clé — et placés AVANT : une sélection sur la
-    // seule PR rendrait le premier venu, donc l'un d'eux.
+    // TROIS leurres, un par clé, chacun ne différant de la bonne QUE par la sienne — et tous
+    // placés AVANT elle, puisque c'est la première ligne appariée qui est rendue.
+    //
+    // 🔴 LE TROISIÈME MANQUAIT, et son absence a laissé survivre un mutant le 2026-09-05 : les
+    // deux leurres d'origine étaient, mot pour mot, « de la MÊME PR ». Retirer la clé `pr` de
+    // l'appariement ne faisait donc rougir aucun cas — deux clés sur trois étaient mesurées, la
+    // troisième n'était que dans le TITRE. C'est la faute du tour précédent, un cran plus bas :
+    // un témoin qui ne fait pas varier ce que son titre annonce.
     const autreEmpreinte = pour(IBANS_TEMOINS_ETRANGERS.DE!, HORO, PR);
     const autreHorodatage = pour(IBAN_TEMOIN, '2026-03-04T05:06:08Z', PR);
-    expect(exemptionsServies(l, [autreEmpreinte, autreHorodatage, bonne])).toEqual([bonne]);
+    const autrePr = pour(IBAN_TEMOIN, HORO, PR + 1);
+    expect(autrePr.pr, 'le leurre doit venir d’une AUTRE PR').not.toBe(l.lu && l.pr);
+    expect(autrePr.revision, 'et ne différer QUE par là').toBe(bonne.revision);
+    expect(autrePr.empreinte).toBe(bonne.empreinte);
+    expect(exemptionsServies(l, [autrePr, autreEmpreinte, autreHorodatage, bonne])).toEqual([bonne]);
 
     // TÉMOIN POSITIF de la fonction elle-même : sur la bonne ligne SEULE, elle rend cette ligne.
     // Sans lui, une `exemptionsServies` qui rendrait toujours `[]` passerait le cas ci-dessus.
@@ -1341,6 +1357,7 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
         corps: [{ origine: 'corps courant', horodatage: null, texte: 'rien', revision: false }],
         revisionsLues: 1,
         revisionsAnnoncees: 9,
+        lectureInachevee: false,
       },
       [pour(IBAN_TEMOIN)]
     );
@@ -1439,17 +1456,39 @@ describe('REQ-CPL-018 — la pagination des révisions : lire CENT n’est pas l
    * UNE FORGE DE PAPIER — elle sert ses révisions par pages, comme GitHub, et elle COMPTE ses
    * appels. Sans ce compteur, « la pagination a marché » et « la première page contenait déjà
    * tout » se lisent exactement pareil : un témoin positif de la sonde, pas seulement du résultat.
+   *
+   * 🔴 CE QU'ELLE NE SAVAIT PAS FAIRE, et qui a laissé passer un mutant sérieux le 2026-09-05 :
+   * elle servait un `totalCount` CONSTANT. Relire ce compte à CHAQUE page au lieu de le prendre
+   * une fois donnait alors exactement le même résultat — 536/536 vert, les deux `--prove` à 0 —
+   * alors que la mutation supprime la SEULE chose qui transforme une lecture partielle en code 2.
+   *
+   * 🔑 Une fixture qui ne fait pas varier une dimension ne prouve rien de cette dimension (RM-11).
+   * Ce que la forge annonce est donc désormais un PARAMÈTRE, sans valeur par défaut — « annonce
+   * stable » et « annonce décroissante » sont deux fixtures, pas une omission — et ce qu'elle
+   * SERT est distinct de ce qu'elle ANNONCE, parce que c'est précisément l'écart qui se juge.
    */
-  function forgeDePapier(textes: string[]) {
+  type ForgeDePapier = {
+    textes: string[];
+    /** Ce que la forge PRÉTEND avoir, vu depuis la page qui commence à `debut`. */
+    annonce: (debut: number, total: number) => number;
+    /** Ce qu'elle SERT réellement : au-delà, elle dit « plus rien », même si elle annonce plus. */
+    servies: number;
+  };
+  /** Le compte de la CONNEXION, celui que GitHub sert : le même à chaque page. */
+  const ANNONCE_STABLE = (_debut: number, total: number): number => total;
+  /** Un compte qui RÉTRÉCIT à mesure qu'on avance — la forme qui discrimine « lu une fois ». */
+  const ANNONCE_DECROISSANTE = (debut: number, total: number): number => total - debut;
+
+  function forgeDePapier(o: ForgeDePapier) {
     const appels: (string | null)[] = [];
     const lirePage = (apres: string | null): PageDEditions => {
       appels.push(apres);
       const debut = apres === null ? 0 : Number(apres);
-      const tranche = textes.slice(debut, debut + EDITIONS_PAR_PAGE);
+      const tranche = o.textes.slice(debut, Math.min(debut + EDITIONS_PAR_PAGE, o.servies));
       const suivant = debut + tranche.length;
-      const reste = suivant < textes.length;
+      const reste = suivant < o.servies;
       return {
-        totalCount: textes.length,
+        totalCount: o.annonce(debut, o.textes.length),
         noeuds: tranche.map((texte, i) => ({ editedAt: horodatage(debut + i), diff: texte })),
         encore: reste,
         curseur: reste ? String(suivant) : null,
@@ -1470,14 +1509,17 @@ describe('REQ-CPL-018 — la pagination des révisions : lire CENT n’est pas l
   it('REQ-CPL-018 — une coordonnée en PAGE 2 : lue, elle rend 1 et se NOMME ; non lue, elle rend 2 sans remède', () => {
     // DEUX forges, une par colonne : un compteur d'appels partage entre les deux mesurerait la
     // somme des deux lectures, et non ce que la pagination a demande.
-    const troncature = forgeDePapier(textes);
-    const { lirePage, appels } = forgeDePapier(textes);
+    const troncature = forgeDePapier({ textes, annonce: ANNONCE_STABLE, servies: TOTAL });
+    const { lirePage, appels } = forgeDePapier({ textes, annonce: ANNONCE_STABLE, servies: TOTAL });
 
     // ── LA COLONNE « AVANT » : UNE SEULE PAGE, ce que la requête demandait. ──────────────────
     const uneSeulePage = troncature.lirePage(null);
     const tronquee = assemblerLecture(String(PR), 'corps courant propre', {
       annoncees: uneSeulePage.totalCount,
       noeuds: uneSeulePage.noeuds,
+      // La forge n'a pas été interrompue : c'est l'appelant qui n'a demandé qu'une page.
+      // L'écart annoncé/lu est donc la seule cause en jeu, et c'est celle qu'on mesure.
+      inacheve: false,
     });
     const avant = jugerCorpsPublie(tronquee);
     expect(avant.code).toBe(2);
@@ -1509,12 +1551,112 @@ describe('REQ-CPL-018 — la pagination des révisions : lire CENT n’est pas l
   it('REQ-CPL-018 — CONTRE-TÉMOIN : une PR d’une seule page ne déclenche pas d’appel de plus', () => {
     // Sans lui, `paginerEditions` pourrait redemander éternellement une page vide : la garde
     // deviendrait lente et bavarde sur le cas ordinaire, donc on la retirerait.
-    const { lirePage, appels } = forgeDePapier(['une seule révision, propre']);
+    const { lirePage, appels } = forgeDePapier({
+      textes: ['une seule révision, propre'],
+      annonce: ANNONCE_STABLE,
+      servies: 1,
+    });
     const r = paginerEditions(lirePage);
     expect(appels).toEqual([null]);
     expect(r.pages).toBe(1);
     expect(r.inacheve).toBe(false);
     expect(jugerCorpsPublie(assemblerLecture(String(PR), 'rien à signaler', r)).code).toBe(0);
+  });
+
+
+  it('REQ-CPL-018 — le compte annoncé est celui de la PREMIÈRE page : il se prend UNE fois', () => {
+    // 🔴 LE MUTANT SÉRIEUX DU 2026-09-05 : relire `totalCount` à CHAQUE page. 536/536 vert, les
+    // deux `--prove` à 0 — parce que les trois forges de papier du dépôt servaient toutes un
+    // compte CONSTANT, incapables par construction de distinguer « lu une fois » de « relu ».
+    //
+    // 🔑 `totalCount` est celui de la CONNEXION, pas de la page. Le relire fait dépendre l'écart
+    // annoncé/lu de la DERNIÈRE réponse — c'est-à-dire de la partie qu'on a justement fini de
+    // lire, donc l'écart s'annule tout seul. C'est le contrôle qui se supprime lui-même.
+    const { lirePage } = forgeDePapier({
+      textes,
+      annonce: ANNONCE_DECROISSANTE,
+      servies: TOTAL,
+    });
+    const r = paginerEditions(lirePage);
+    expect(r.annoncees).toBe(TOTAL);
+    // ET LA MOITIÉ QUI DISCRIMINE : la dernière page en annonçait un AUTRE. Sans cette assertion,
+    // le cas passerait sur une forge dont toutes les pages annoncent la même chose.
+    expect(ANNONCE_DECROISSANTE(EDITIONS_PAR_PAGE, TOTAL)).not.toBe(TOTAL);
+    expect(r.annoncees).not.toBe(ANNONCE_DECROISSANTE(EDITIONS_PAR_PAGE, TOTAL));
+  });
+
+  it('REQ-CPL-018 — une forge qui SERT moins qu’elle n’ANNONCE rend 2, et l’IBAN non lu reste ignoré', () => {
+    // LE CAS RÉEL DERRIÈRE LE MUTANT, joué au niveau du VERDICT. La forge annonce 250 éditions,
+    // n'en sert que 150, et son compte rétrécit à mesure qu'on avance. La coordonnée vit dans la
+    // part JAMAIS SERVIE : la garde ne peut pas la voir, et c'est exactement pourquoi elle doit
+    // refuser de conclure. `inacheve` est FAUX ici — la forge a dit « plus rien », elle n'a pas
+    // été interrompue —, donc l'écart annoncé/lu est la SEULE chose qui reste. C'est lui que le
+    // mutant supprimait.
+    const ANNONCEES = 250;
+    const SERVIES = 150;
+    const RANG_FAUTIF_NON_SERVI = 200;
+    const beaucoup = Array.from({ length: ANNONCEES }, (_, i) =>
+      i === RANG_FAUTIF_NON_SERVI ? `IBAN : ${IBAN_TEMOIN}` : `révision ${i}`
+    );
+    const { lirePage } = forgeDePapier({
+      textes: beaucoup,
+      annonce: ANNONCE_DECROISSANTE,
+      servies: SERVIES,
+    });
+    const r = paginerEditions(lirePage);
+    expect(r.noeuds).toHaveLength(SERVIES);
+    expect(r.inacheve, 'la forge a dit « plus rien » : la lecture n’a PAS été interrompue').toBe(false);
+    expect(r.annoncees).toBe(ANNONCEES);
+
+    const v = jugerCorpsPublie(assemblerLecture(String(PR), 'propre', r));
+    expect(v.code).toBe(2);
+    expect(v.fautes.map((f) => f.famille)).toEqual(['revisions_non_lues']);
+    // TÉMOIN POSITIF de ce que le cas met en jeu : la coordonnée n'a JAMAIS été servie, donc
+    // aucune faute ne la nomme. Un vert ici voudrait dire « rien à signaler » sur un texte que
+    // personne n'a lu — et c'est le défaut que toute cette garde existe pour empêcher.
+    expect(v.fautes.some((f) => f.message.includes(IBAN_TEMOIN))).toBe(false);
+    expect(beaucoup[RANG_FAUTIF_NON_SERVI]).toContain(IBAN_TEMOIN);
+  });
+
+  it('REQ-CPL-018 — `inacheve` est CONSOMMÉ par le verdict, pas seulement retourné', () => {
+    // 🔴 CE QUE LA LENTILLE A NOMMÉ, et qui vaut plus que le mutant : `inacheve` était calculé,
+    // retourné, asserté par TROIS témoins — et jamais lu par `jugerCorpsPublie`. Une valeur
+    // calculée, assertée et jamais consommée est un contrôle qui existe pour le lecteur et pas
+    // pour la machine. L'écart annoncé/lu portait donc SEUL toute la propriété.
+    //
+    // 🔑 ET LES DEUX NE SONT PAS REDONDANTS, c'est ce qui décide. L'écart annoncé/lu dépend d'un
+    // nombre que la FORGE contrôle ; `inacheve` est notre PROPRE observation, tirée de notre
+    // propre flot — la borne atteinte, ou un curseur qui n'avance pas. Faire reposer une
+    // propriété de sécurité sur la seule honnêteté du serveur distant, quand on dispose de sa
+    // propre mesure, est un choix qu'on ne peut pas défendre.
+    const complete = assemblerLecture(String(PR), 'propre', {
+      annoncees: 2,
+      noeuds: [
+        { editedAt: horodatage(1), diff: 'propre' },
+        { editedAt: horodatage(2), diff: 'propre' },
+      ],
+      inacheve: false,
+    });
+    // CONTRE-TÉMOIN D'ABORD : sans écart et sans interruption, c'est VERT. Sinon ce qui suit
+    // passerait sur une garde qui rougit toujours, et une garde toujours rouge finit désarmée.
+    expect(jugerCorpsPublie(complete).code).toBe(0);
+
+    // LA MÊME LECTURE, au même compte — seul `inacheve` change. Aucun écart annoncé/lu ne peut
+    // donc l'expliquer : c'est bien lui qui est jugé (RM-11).
+    const interrompue = assemblerLecture(String(PR), 'propre', {
+      annoncees: 2,
+      noeuds: [
+        { editedAt: horodatage(1), diff: 'propre' },
+        { editedAt: horodatage(2), diff: 'propre' },
+      ],
+      inacheve: true,
+    });
+    expect(interrompue.lu && interrompue.revisionsAnnoncees).toBe(2);
+    expect(interrompue.lu && interrompue.revisionsLues).toBe(2);
+    const v = jugerCorpsPublie(interrompue);
+    expect(v.code).toBe(2);
+    expect(v.fautes.map((f) => f.famille)).toEqual(['revisions_non_lues']);
+    expect(v.fautes[0]!.message).toContain('PAGES_MAX');
   });
 
   it('REQ-CPL-018 — LA BORNE DURE : elle s’arrête, et son message NOMME le remède', () => {
@@ -1541,10 +1683,22 @@ describe('REQ-CPL-018 — la pagination des révisions : lire CENT n’est pas l
     // fermer, réintroduit un cran plus bas : un 2 dont personne ne sait quoi faire se désarme.
     const v = jugerCorpsPublie(assemblerLecture(String(PR), 'propre', r));
     expect(v.code).toBe(2);
-    expect(v.fautes.map((f) => f.famille)).toEqual(['revisions_non_lues']);
-    expect(v.fautes[0]!.message).toContain('PAGES_MAX');
-    expect(v.fautes[0]!.message).toContain('scripts/gates/gov-entite.ts');
-    expect(v.fautes[0]!.message).toContain(String(PAGES_MAX * EDITIONS_PAR_PAGE));
+    expect([...new Set(v.fautes.map((f) => f.famille))]).toEqual(['revisions_non_lues']);
+    // DEUX CAUSES, ET C'EST VOULU. Notre propre flot dit qu'il s'est arrêté, ET le compte annoncé
+    // dépasse le compte lu. Elles ne sont PAS redondantes : la seconde dépend d'un nombre que la
+    // forge contrôle, la première n'en dépend pas. Le verdict les rend toutes les deux — sans
+    // quoi retirer l'une passerait inaperçu tant que l'autre subsiste, ce qui est exactement le
+    // mutant qui a survécu au tour précédent.
+    expect(v.fautes).toHaveLength(2);
+    const arret = v.fautes.find((f) => f.message.includes('ARR') && f.message.includes('avant la fin'));
+    const ecart = v.fautes.find((f) => f.message.includes('La forge annonce'));
+    expect(arret, 'la cause tirée de notre propre flot').toBeDefined();
+    expect(ecart, 'la cause tirée du compte servi par la forge').toBeDefined();
+    for (const f of v.fautes) {
+      expect(f.message).toContain('PAGES_MAX');
+      expect(f.message).toContain('scripts/gates/gov-entite.ts');
+      expect(f.message).toContain(String(PAGES_MAX * EDITIONS_PAR_PAGE));
+    }
   });
 
   it('REQ-CPL-018 — un curseur qui N’AVANCE PAS rend la main : une CI sans fin n’est pas un verdict', () => {
@@ -1903,7 +2057,15 @@ describe('REQ-CPL-018 — aucune étape de `gate-a` ne se désarme par `continue
  * `TEMOIN-COMPTEUR`, qui est explicite, greppable, et qu'aucune ligne de prose n'écrit par accident.
  */
 describe('REQ-CPL-018 — aucun total de révisions ne se tape à la main', () => {
-  const FICHIERS = ['scripts/gates/gov-entite.ts', 'tests/unit/gouvernance/entite-registre.spec.ts'];
+  // 🔴 LE REGISTRE MANQUAIT À CETTE LISTE, et il annonçait un compte de révisions antérieures
+  // qui était faux — la mesure en donne une de plus, et aucune d'elles ne portait le jeton que
+  // la phrase leur prêtait. Un compteur tapé dans le fichier qui existe pour qu'on ne tape rien.
+  // (Le compte lui-même n'est pas repris ici : ce serait le retaper une troisième fois.)
+  const FICHIERS = [
+    'scripts/gates/gov-entite.ts',
+    'tests/unit/gouvernance/entite-registre.spec.ts',
+    'config/exemptions-corps-publie.json',
+  ];
   // La tournure visée, et rien de plus : un nombre AU PLURIEL qui qualifie « révisions ». Viser le
   // mot seul interdirait « une révision », qui est le vocabulaire même du registre — une garde
   // lexicale trop large finit par interdire la phrase qui protège, donc par être retirée.
