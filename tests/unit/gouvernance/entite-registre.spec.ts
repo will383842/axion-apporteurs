@@ -39,7 +39,9 @@
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import {
   SENTINELLE,
@@ -68,7 +70,13 @@ import {
   TVA_TEMOIN_TIERS,
   caracteresNeutralises,
   ibanAvecSeparateur,
+  coordonneesDe,
+  controlerRegistreExemptions,
+  empreinteDe,
+  exemptionsDuDepot,
   jugerCorpsPublie,
+  numeroDePrDeLEvenement,
+  type Exemption,
   type LectureDuCorps,
   UNIVERS_CONFORME,
   controler,
@@ -705,11 +713,26 @@ describe('REQ-CPL-018 — `normaliserEspaces` : chaque forme qu’elle neutralis
 describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonneesDe`', () => {
   /** La forme MASQUÉE que rend le gabarit : construite, jamais recopiée. */
   const MASQUE = 'FR76' + 'X'.repeat(23);
+  const HORODATAGE = '2026-01-02T03:04:05Z';
+  const PR = 4242;
   const propre = (texte: string, revision = false): LectureDuCorps => ({
     lu: true,
-    corps: [{ origine: 'témoin', texte, revision }],
+    pr: PR,
+    corps: [{ origine: 'témoin', horodatage: revision ? HORODATAGE : null, texte, revision }],
     revisionsLues: revision ? 1 : 0,
     revisionsAnnoncees: revision ? 1 : 0,
+  });
+  /** Une exemption BIEN formée, construite depuis la valeur : jamais l'empreinte tapée à la main. */
+  const exemptionPour = (valeur: string, sur = HORODATAGE, pr = PR): Exemption => ({
+    pr,
+    revision: sur,
+    empreinte: empreinteDe(valeur),
+    declaree: '2026-01-02',
+    par: 'banc d’essai',
+    motif:
+      'témoin du banc d’essai : la valeur est construite à chaque exécution, elle n’a jamais été ' +
+      'publiée, et il n’y a donc rien à révoquer.',
+    definitive: true,
   });
 
   it('REQ-CPL-018 — un IBAN dans le corps COURANT rougit', () => {
@@ -729,24 +752,33 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
   });
 
   it('REQ-CPL-018 — LE DÉFAUT MESURÉ : corps courant PROPRE, révision qui porte la valeur', () => {
-    const v = jugerCorpsPublie({
+    const lecture: LectureDuCorps = {
       lu: true,
+      pr: PR,
       corps: [
-        { origine: 'corps courant', texte: `IBAN débiteur : ${MASQUE}`, revision: false },
+        { origine: 'corps courant', horodatage: null, texte: `IBAN débiteur : ${MASQUE}`, revision: false },
         {
           origine: 'révision',
+          horodatage: HORODATAGE,
           texte: `-IBAN débiteur : ${IBAN_TEMOIN}\n+IBAN débiteur : ${MASQUE}`,
           revision: true,
         },
       ],
       revisionsLues: 1,
       revisionsAnnoncees: 1,
-    });
+    };
+    const v = jugerCorpsPublie(lecture);
     expect(v.code).toBe(1);
     expect(v.fautes.map((f) => f.famille)).toContain('coordonnee_dans_une_revision');
     expect(v.fautes.map((f) => f.famille)).not.toContain('coordonnee_dans_le_corps_courant');
     // Le message doit dire que ce rouge-là ne se corrige PAS en éditant : la valeur est divulguée.
     expect(v.fautes[0]!.message).toContain('DIVULGUÉE');
+
+    // ET LA SEULE SORTIE, PUISQUE L'HISTORIQUE EST IMMUABLE : DÉCLARER. Le même verdict, avec la
+    // révision inscrite au registre des exemptions, redevient vert — c'est ce qui permet de
+    // câbler cette garde en étape BLOQUANTE sans la rendre insatisfiable. Sans cette moitié-ci,
+    // le cas ci-dessus prouverait seulement qu'on sait fabriquer une gate qu'on devra sauter.
+    expect(jugerCorpsPublie(lecture, [exemptionPour(IBAN_TEMOIN)]).code).toBe(0);
   });
 
   it('REQ-CPL-018 — un échec de lecture rend INDÉTERMINÉ (2), jamais un succès', () => {
@@ -767,7 +799,8 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
     // propre parce qu'on ne l'a pas lue reviendrait à écrire le bug qu'on corrige.
     const v = jugerCorpsPublie({
       lu: true,
-      corps: [{ origine: 'corps courant', texte: 'rien à signaler', revision: false }],
+      pr: PR,
+      corps: [{ origine: 'corps courant', horodatage: null, texte: 'rien à signaler', revision: false }],
       revisionsLues: 2,
       revisionsAnnoncees: 11,
     });
@@ -950,5 +983,244 @@ describe('REQ-CPL-018 — les coordonnées NON françaises, et les deux familles
       `${Object.keys(IBANS_TEMOINS_ETRANGERS).length} IBAN NON français rougissent aussi`
     );
     for (const pays of Object.keys(IBANS_TEMOINS_ETRANGERS)) expect(sortie).toContain(pays);
+  });
+});
+
+/**
+ * ── LES EXEMPTIONS DE RÉVISION — RENDRE L'EXCEPTION EXPLICITE PLUTÔT QUE L'ABSENCE DE GARDE ───
+ *
+ * 🔴 J'AI D'ABORD PROPOSÉ LA MAUVAISE RÉPONSE, ET ELLE AVAIT L'AIR PRUDENTE. L'historique
+ * d'édition d'un corps de PR est IMMUABLE : la PR #31 porte pour toujours trois révisions avec un
+ * IBAN à clé mod-97 vraie, donc câbler le mode en ligne en étape bloquante rendait cette PR — et
+ * toute sa pile — infusionnable. J'en ai conclu qu'il ne fallait câbler que la preuve hors ligne,
+ * et lancer le mode en ligne « à la main avant fusion ».
+ *
+ * 🔑 ÉCRITE NOIR SUR BLANC, CETTE CONCLUSION SE RECONNAÎT : **une garde qui ne tourne que quand
+ * quelqu'un y pense ne tourne pas.** Le dépôt voisin en donne la version longue — toutes ses gates
+ * de budget portent `continue-on-error: true`, aucune PR qui alourdit le bundle n'a jamais rougi,
+ * et pendant des mois les revues ont écrit « le risque est couvert par la gate ». Une gate qui ne
+ * bloque pas produit une fausse sécurité, qui est pire que pas de gate du tout.
+ *
+ * LA TROISIÈME VOIE : la garde reste BLOQUANTE, et ce qui ne peut pas être corrigé est DÉCLARÉ.
+ * Une dette qu'on ne peut pas rembourser se déclare ; elle ne se contourne pas.
+ *
+ * CE QUE CES CAS TIENNENT, ET C'EST TOUT L'ENJEU — un registre d'exceptions est le mécanisme le
+ * plus facile à transformer en passoire. Trois propriétés, chacune avec son témoin :
+ *   1. une exemption couvre UNE révision d'UNE PR portant UNE coordonnée : les TROIS clés doivent
+ *      concorder, sans quoi elle absoudrait d'avance tout ce qui reste à écrire ;
+ *   2. une révision NON déclarée rougit MÊME sur une PR qui a par ailleurs des révisions
+ *      exemptées — c'est ce qui empêche une ligne de contaminer sa voisine ;
+ *   3. une exemption qui n'absout PLUS rien ROUGIT, elle n'absout pas. C'est le cas qui compte le
+ *      plus : une ligne dont l'empreinte ne correspond plus au contenu de la révision est une
+ *      autorisation ouverte sur un texte que personne n'a examiné.
+ *
+ * ⚠️ ET LE CORPS COURANT N'EST JAMAIS EXEMPTABLE. Il s'édite, donc il n'y a rien à excuser : une
+ * exemption qui le couvrirait ne serait pas une dette déclarée, ce serait une permission de
+ * publier. La distinction entre « irréparable » et « pas encore réparé » est toute la légitimité
+ * de ce registre.
+ */
+describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d’être une passoire', () => {
+  const HORO = '2026-03-04T05:06:07Z';
+  const PR = 777;
+  const lecture = (
+    revisions: { horodatage: string; texte: string }[],
+    corpsCourant = 'rien à signaler'
+  ): LectureDuCorps => ({
+    lu: true,
+    pr: PR,
+    corps: [
+      { origine: 'corps courant', horodatage: null, texte: corpsCourant, revision: false },
+      ...revisions.map((r) => ({
+        origine: `révision du ${r.horodatage}`,
+        horodatage: r.horodatage,
+        texte: r.texte,
+        revision: true,
+      })),
+    ],
+    revisionsLues: revisions.length,
+    revisionsAnnoncees: revisions.length,
+  });
+  /** Une exemption bien formée, CONSTRUITE depuis la valeur : jamais une empreinte tapée. */
+  const pour = (valeur: string, sur = HORO, pr = PR): Exemption => ({
+    pr,
+    revision: sur,
+    empreinte: empreinteDe(valeur),
+    declaree: '2026-03-04',
+    par: 'banc d’essai',
+    motif:
+      'témoin du banc d’essai : la valeur est construite à chaque exécution, elle n’a jamais été ' +
+      'publiée nulle part, et il n’y a donc rien à révoquer.',
+    definitive: true,
+  });
+
+  it('REQ-CPL-018 — TÉMOIN POSITIF de la sonde : `empreinteDe` MESURE, et elle discrimine', () => {
+    // Sans ce cas, une `empreinteDe` qui rendrait une constante ferait passer tous les autres :
+    // toutes les exemptions s'appliqueraient à toutes les coordonnées.
+    const a = empreinteDe(IBAN_TEMOIN);
+    const b = empreinteDe(IBANS_TEMOINS_ETRANGERS.DE!);
+    expect(a).toMatch(/^[0-9a-f]{64}$/);
+    expect(a).not.toBe(b);
+    // Un SHA-256 COMPLET, et pas tronqué : seize caractères se collisionnent en 2^32 essais, ce
+    // qui laisserait absoudre une AUTRE coordonnée que celle qu'on a examinée.
+    expect(a.length).toBe(64);
+  });
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : une révision DÉCLARÉE sur les TROIS clés est verte', () => {
+    // Sans ce cas, la garde serait insatisfiable sur toute PR déjà polluée — et une gate
+    // insatisfiable, on apprend à la sauter.
+    const v = jugerCorpsPublie(lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]), [
+      pour(IBAN_TEMOIN),
+    ]);
+    expect(v.code).toBe(0);
+    expect(v.fautes).toEqual([]);
+  });
+
+  it('REQ-CPL-018 — les TROIS clés sont exigées : changer l’une d’elles n’absout plus', () => {
+    const l = lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]);
+    // mauvaise PR
+    expect(jugerCorpsPublie(l, [pour(IBAN_TEMOIN, HORO, PR + 1)]).code).toBe(1);
+    // mauvais horodatage
+    expect(jugerCorpsPublie(l, [pour(IBAN_TEMOIN, '2026-03-04T05:06:08Z')]).code).toBe(1);
+    // mauvaise empreinte — une AUTRE coordonnée
+    expect(jugerCorpsPublie(l, [pour(IBANS_TEMOINS_ETRANGERS.DE!)]).code).toBe(1);
+  });
+
+  it('REQ-CPL-018 — une révision NON déclarée rougit MÊME sur une PR qui a des exemptions', () => {
+    // Le témoin qui empêche une ligne du registre de contaminer sa voisine. Sans lui, exempter
+    // une révision reviendrait à exempter la PR — donc tout ce qui reste à y écrire.
+    const v = jugerCorpsPublie(
+      lecture([
+        { horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` },
+        { horodatage: '2026-03-04T09:09:09Z', texte: `IBAN : ${IBANS_TEMOINS_ETRANGERS.ES}` },
+      ]),
+      [pour(IBAN_TEMOIN)]
+    );
+    expect(v.code).toBe(1);
+    expect(v.fautes.map((f) => f.famille)).toContain('coordonnee_dans_une_revision');
+    // Et c'est bien la NON déclarée qui est nommée, pas l'autre.
+    expect(v.fautes.some((f) => f.message.includes('2026-03-04T09:09:09Z'))).toBe(true);
+    expect(v.fautes.some((f) => f.message.includes(IBANS_TEMOINS_ETRANGERS.ES!))).toBe(true);
+  });
+
+  it('REQ-CPL-018 — une exemption qui n’absout PLUS rien ROUGIT, elle n’absout pas', () => {
+    // LE CAS QUI COMPTE LE PLUS. Une ligne dont l'empreinte ne correspond plus à ce que la
+    // révision contient est une autorisation ouverte sur un texte que personne n'a examiné.
+    const v = jugerCorpsPublie(
+      lecture([{ horodatage: HORO, texte: 'plus aucune coordonnée dans cette révision' }]),
+      [pour(IBAN_TEMOIN)]
+    );
+    expect(v.code).toBe(1);
+    expect(v.fautes.map((f) => f.famille)).toContain('exemption_sans_objet');
+    // ⚠️ Le message ne doit JAMAIS republier la valeur : l'empreinte est tronquée à l'affichage,
+    // et la valeur n'y figure pas — le registre existe pour ne pas l'écrire.
+    expect(v.fautes.some((f) => f.message.includes(IBAN_TEMOIN))).toBe(false);
+  });
+
+  it('REQ-CPL-018 — le corps COURANT n’est JAMAIS exemptable : il s’édite', () => {
+    // Une exemption qui couvrirait le corps courant ne serait pas une dette déclarée, ce serait
+    // une permission de publier. La distinction « irréparable » / « pas encore réparé » est
+    // toute la légitimité de ce registre.
+    const v = jugerCorpsPublie(lecture([], `IBAN : ${IBAN_TEMOIN}`), [pour(IBAN_TEMOIN)]);
+    expect(v.code).toBe(1);
+    expect(v.fautes.map((f) => f.famille)).toContain('coordonnee_dans_le_corps_courant');
+  });
+
+  it('REQ-CPL-018 — une exemption MAL FORMÉE rougit : elle a l’air d’une décision prise', () => {
+    const base = lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]);
+    const cassees: [string, Exemption][] = [
+      ['motif vide', { ...pour(IBAN_TEMOIN), motif: '' }],
+      ['empreinte TRONQUÉE', { ...pour(IBAN_TEMOIN), empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16) }],
+      ['horodatage qui n’est pas celui d’une révision', { ...pour(IBAN_TEMOIN), revision: '2026-03-04' }],
+      ['aucun propriétaire', { ...pour(IBAN_TEMOIN), par: '   ' }],
+      ['aucune date de déclaration', { ...pour(IBAN_TEMOIN), declaree: 'hier' }],
+    ];
+    for (const [quoi, e] of cassees) {
+      const v = jugerCorpsPublie(base, [e]);
+      expect(v.fautes.map((f) => f.famille), quoi).toContain('exemption_malformee');
+      expect(v.code, quoi).toBe(1);
+    }
+    // Et un DOUBLON : deux lignes pour une exception, on ne saura pas laquelle retirer.
+    expect(
+      controlerRegistreExemptions([pour(IBAN_TEMOIN), pour(IBAN_TEMOIN)]).map((f) => f.famille)
+    ).toContain('exemption_malformee');
+  });
+
+  it('REQ-CPL-018 — une exemption d’une AUTRE PR ne traverse pas, et ne rougit pas ici', () => {
+    // Sans cette borne, le registre entier rougirait à chaque PR — ce qui reviendrait à
+    // interdire d'en tenir un, donc à revenir à l'absence de garde par un autre chemin.
+    const v = jugerCorpsPublie(lecture([{ horodatage: HORO, texte: 'rien' }]), [
+      pour(IBAN_TEMOIN, HORO, PR + 99),
+    ]);
+    expect(v.code).toBe(0);
+  });
+
+  it('REQ-CPL-018 — une LECTURE MANQUÉE ne juge AUCUNE exemption : 2, et rien d’autre', () => {
+    // Sans cette règle, une panne de réseau transformerait toutes les exemptions en dettes
+    // imaginaires : le verdict passerait de « je n'ai pas pu lire » à « ton registre est faux »,
+    // deux diagnostics opposés que rien ne permettrait plus de distinguer.
+    const v = jugerCorpsPublie({ lu: false, motif: 'réseau injoignable (témoin)' }, [pour(IBAN_TEMOIN)]);
+    expect(v.code).toBe(2);
+    expect(v.fautes.map((f) => f.famille)).toEqual(['lecture_impossible']);
+  });
+
+  it('REQ-CPL-018 — une lecture PARTIELLE ne déclare aucune exemption sans objet', () => {
+    // Même raison, appliquée au détail : une exemption peut viser une révision non paginée.
+    const v = jugerCorpsPublie(
+      {
+        lu: true,
+        pr: PR,
+        corps: [{ origine: 'corps courant', horodatage: null, texte: 'rien', revision: false }],
+        revisionsLues: 1,
+        revisionsAnnoncees: 9,
+      },
+      [pour(IBAN_TEMOIN)]
+    );
+    expect(v.code).toBe(2);
+    expect(v.fautes.map((f) => f.famille)).not.toContain('exemption_sans_objet');
+  });
+
+  it('REQ-CPL-018 — le registre RÉEL du dépôt est bien formé, et il n’est pas vide', () => {
+    // TÉMOIN POSITIF sur le réel : un registre VIDE passerait la première assertion sans rien
+    // prouver — zéro ligne contrôlée se lit exactement comme zéro ligne fautive.
+    const reelles = exemptionsDuDepot();
+    expect(reelles.length, 'le registre est vide : le contrôle ci-dessous ne mesure rien').toBeGreaterThan(0);
+    expect(controlerRegistreExemptions(reelles)).toEqual([]);
+    for (const e of reelles) {
+      // L'historique d'édition est immuable : aucune de ces lignes ne se referme. Le déclarer
+      // évite qu'on les relise un jour comme des reports qu'on aurait oublié de solder.
+      expect(e.definitive, `PR #${e.pr} / ${e.revision} doit être déclarée DÉFINITIVE`).toBe(true);
+    }
+    // ⚠️ Et le registre ne porte JAMAIS la valeur : c'est la faute même qu'il documente.
+    const brut = readFileSync('config/exemptions-corps-publie.json', 'utf8');
+    expect(coordonneesDe(brut, false)).toEqual([]);
+  });
+
+  it('REQ-CPL-018 — le numéro de PR se LIT dans l’événement GitHub, il ne se recopie pas', () => {
+    // Sans cette lecture, l'étape de CI devrait recopier `github.event.pull_request.number` dans
+    // une commande — une valeur de plus à tenir à deux endroits (RM-01), et un oubli qui rendrait
+    // la garde muette au lieu de rouge.
+    const dossier = mkdtempSync(join(tmpdir(), 'evt-'));
+    const chemin = join(dossier, 'event.json');
+    const avant = process.env.GITHUB_EVENT_PATH;
+    try {
+      writeFileSync(chemin, JSON.stringify({ pull_request: { number: 31 } }));
+      process.env.GITHUB_EVENT_PATH = chemin;
+      expect(numeroDePrDeLEvenement()).toBe('31');
+
+      // CONTRE-TÉMOIN : un événement SANS PR ne fabrique pas de numéro. Rendre une valeur ici
+      // ferait juger une PR au hasard, et un vert sur la mauvaise PR est pire qu'un refus.
+      writeFileSync(chemin, JSON.stringify({ ref: 'refs/heads/main' }));
+      expect(numeroDePrDeLEvenement()).toBeUndefined();
+
+      writeFileSync(chemin, 'ceci n’est pas du JSON');
+      expect(numeroDePrDeLEvenement()).toBeUndefined();
+
+      process.env.GITHUB_EVENT_PATH = join(dossier, 'absent.json');
+      expect(numeroDePrDeLEvenement()).toBeUndefined();
+    } finally {
+      if (avant === undefined) delete process.env.GITHUB_EVENT_PATH;
+      else process.env.GITHUB_EVENT_PATH = avant;
+      rmSync(dossier, { recursive: true, force: true });
+    }
   });
 });
