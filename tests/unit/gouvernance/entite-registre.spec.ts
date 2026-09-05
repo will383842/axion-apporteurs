@@ -68,6 +68,7 @@ import {
   normaliser,
   estBalaye,
   estExemptDe,
+  cleIbanValide,
   EXEMPTS,
   type Univers,
 } from '../../../scripts/gates/gov-entite';
@@ -403,6 +404,98 @@ describe('REQ-CPL-018 — ce que la garde REGARDE est gardé, pas seulement ce q
 
   it('REQ-CPL-018 — `coordonnee` implique `recopie`, jamais l’inverse', () => {
     expect(estExemptDe('config/entite.json', 'recopie')).toBe(true);
-    expect(estExemptDe('config/entite.json', 'coordonnee')).toBe(true);
+    // ⚠️ Le registre n'est PLUS exempt de `coordonnee` depuis le second tour de la lentille
+    // `securite` : il l'etait, et un IBAN ecrit dans un de ses 17 champs non secrets restait
+    // invisible. Il reste exempt de `recopie` — il porte SES valeurs publiques, il est la source.
+    expect(estExemptDe('config/entite.json', 'coordonnee')).toBe(false);
+  });
+});
+
+
+/**
+ * LES FORMES, ÉPROUVÉES SUR CE QUI LES A FAIT TOMBER — second tour de la lentille `securite`.
+ *
+ * Chaque cas ci-dessous est une sonde qu'un relecteur a jouée et que la garde a LAISSÉE PASSER.
+ * Ils ne sont pas ici pour décorer : ils sont la seule chose qui empêche le prochain correctif
+ * de rouvrir la porte qu'il vient de fermer.
+ */
+/** Un univers CONFORME auquel on ajoute UN fichier : le reste de la fixture ne varie pas,
+ * donc une faute qui apparaît vient du fichier ajouté et de rien d'autre (RM-11). */
+function universAvecFichier(chemin: string, contenu: string): Univers {
+  const u = structuredClone(UNIVERS_CONFORME) as Univers;
+  u.fichiers.push({ chemin, contenu });
+  return u;
+}
+
+describe("REQ-CPL-018 — les formes de coordonnées, éprouvées sur les cas qui les ont fait tomber", () => {
+  const IBAN_REEL = 'FR1420041010050500013M02606'; // clé de contrôle VALIDE
+
+  it("REQ-CPL-018 — la clé de contrôle sépare un IBAN d'une chaîne qui lui ressemble", () => {
+    expect(cleIbanValide(IBAN_REEL)).toBe(true);
+    expect(cleIbanValide('DE89370400440532013000')).toBe(true);
+    // Les trois qui faisaient rougir la garde sur un dépôt PROPRE : des identifiants dont les
+    // deux premières lettres font un code pays (DE = Allemagne, AE = Émirats).
+    expect(cleIbanValide('DE72D8B01D23490C87626583083FF94B')).toBe(false);
+    expect(cleIbanValide('AE77F99D0366D48A')).toBe(false);
+    expect(cleIbanValide('FC294892B7AA455D2398C4B6')).toBe(false);
+  });
+
+  it('REQ-CPL-018 — un IBAN en MINUSCULES est un IBAN', () => {
+    // Signalé au premier tour, non traité au second : la casse avait été tranchée pour le BIC et
+    // jamais reportée à l'IBAN. Un relevé n'impose pas la casse.
+    const fautes = controler(
+      universAvecFichier('docs/note.md', `Le compte est ${IBAN_REEL.toLowerCase()}.`)
+    );
+    expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
+    // La valeur est remontée en MAJUSCULES : un même compte écrit de deux façons est un compte.
+    expect(fautes.some((f) => f.message.includes(IBAN_REEL))).toBe(true);
+  });
+
+  it("REQ-CPL-018 — un IBAN dans un champ NON secret du registre n'est plus invisible", () => {
+    // Le registre était exempt du balayage entier : `banqueReceptrice.espaceDeTest` — le champ où
+    // l'on colle un RIB, trois lignes sous `banqueDebitrice.iban` — ne voyait rien.
+    const u = structuredClone(UNIVERS_CONFORME) as Univers;
+    u.fichiers.push({ chemin: 'config/entite.json', contenu: `{ "espaceDeTest": "${IBAN_REEL}" }` });
+    expect(controler(u).map((f) => f.famille)).toContain('coordonnee_en_clair');
+  });
+
+  it("REQ-CPL-018 — CONTRE-TÉMOIN : le registre garde le droit de porter ses valeurs PUBLIQUES et ses exemples", () => {
+    // Sans ce contre-témoin, la correction précédente reviendrait à interdire au registre d'être
+    // la source — et on l'exempterait de nouveau en bloc, ce qui rouvrirait le veto.
+    const u = structuredClone(UNIVERS_CONFORME) as Univers;
+    u.fichiers.push({
+      chemin: 'config/entite.json',
+      contenu: '{ "siren": "108018631", "exemple": "FR7612345678901234567890123" }',
+    });
+    expect(controler(u).map((f) => f.famille)).not.toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-CPL-018 — un BIC se donne après un DÉLIMITEUR, jamais au milieu de la prose', () => {
+    const rouges = [
+      'export const PARTNERS_BIC_DEBITEUR = "BNPAFRPPXXX";',
+      'BIC :\nBNPAFRPPXXX',
+      'bic=BNPAFRPPXXX',
+    ];
+    for (const texte of rouges) {
+      expect(
+        controler(universAvecFichier('docs/rib.md', texte)).map((f) => f.famille),
+        texte
+      ).toContain('coordonnee_en_clair');
+    }
+  });
+
+  it("REQ-CPL-018 — CONTRE-TÉMOIN : « DOCUSEAL » n'est pas un BIC, et le code pays ne suffisait pas à le dire", () => {
+    // `DOCU` + `SE` + `AL` : `SE` EST la Suède. Le discriminant « code pays », posé pour fermer ce
+    // faux positif précis, ne le fermait pas — il a fallu regarder ce qu'il y a ENTRE l'étiquette
+    // et la valeur. Un discriminant qu'on n'éprouve pas contre son cas ne discrimine rien.
+    for (const texte of [
+      'Le BIC arrive avec DOCUSEAL plus tard.',
+      'Le BIC porte ATTRIBUTION dans son libelle.',
+    ]) {
+      expect(
+        controler(universAvecFichier('docs/note.md', texte)).map((f) => f.famille),
+        texte
+      ).not.toContain('coordonnee_en_clair');
+    }
   });
 });

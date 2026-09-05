@@ -81,7 +81,8 @@
     "perf:budgets:rendre": "tsx scripts/gates/perf-budgets.ts --rendre",
     "perf:budgets:verifier": "tsx scripts/gates/perf-budgets.ts --verifier",
     "gov:conventions": "tsx scripts/gates/gov-conventions.ts",
-    "gov:conventions:prove": "tsx scripts/gates/gov-conventions.ts --prove"
+    "gov:conventions:prove": "tsx scripts/gates/gov-conventions.ts --prove",
+    "gov:identifiants:compter": "tsx scripts/gates/gov-identifiants.ts --compter"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
