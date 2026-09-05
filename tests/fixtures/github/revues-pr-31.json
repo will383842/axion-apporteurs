@@ -1,5 +1,5 @@
 {
-  "Source": "gh api repos/will383842/axion-apporteurs/pulls/31/reviews --paginate, enregistré le 2026-09-05. PROJECTION appliquée à la capture, et elle seule : de chaque revue sont conservés id, user.login, author_association, state, commit_id, submitted_at, et de `body` les DEUX SEULES lignes que le lecteur lit — la première (« A<nn> · <lentille> ») et la ligne « Verdict: … », verbatim, sans ajout. Le reste du corps (≈ 200 Ko de prose) est écarté parce qu aucun lecteur ne le lit. Commande de reproduction dans le commentaire d en-tête de tests/unit/gouvernance/revues-lecteur-unique.spec.ts.",
+  "Source": "gh api repos/will383842/axion-apporteurs/pulls/31/reviews --paginate, enregistré le 2026-09-05. PROJECTION appliquée à la capture, et elle seule : de chaque revue sont conservés id, user.login, author_association, state, commit_id, submitted_at, et de body la PREMIÈRE ligne (« A<nn> · <lentille> ») puis TOUTE ligne portant le mot Verdict, verbatim et dans l ordre — citations comprises. La projection a d abord été plus étroite (la seule ligne « Verdict: … »), et cette étroitesse ÉTAIT le défaut : elle effaçait précisément les citations qui trompaient le lecteur, si bien qu aucun contre-témoin réel ne pouvait les exercer. Elle est SUFFISANTE parce qu une ligne qui ne porte pas le mot Verdict ne peut être ni une décision ni la citation d une décision : le reste du corps (≈ 200 Ko de prose) ne peut pas influencer la lecture. UNE EXCLUSION, DÉRIVÉE et non choisie : les lignes de prose que scripts/gates/gov-identifiants.ts refuse (étiquette de relecteur nue) sont écartées — une seule au 2026-09-05, dans la revue 5121354058. Aucune ligne de DÉCISION n est concernée : elles ne portent que « Verdict: accepte|refuse ». Commande de reproduction dans le commentaire d en-tête de tests/unit/gouvernance/revues-lecteur-unique.spec.ts.",
   "Confronte-a": "docs/tiers/github.md#2-source-officielle — non confrontée (la rubrique 2 de la fiche est vide au 2026-09-05, et la fiche prescrit elle-même cette mention).",
   "endpoint": "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews",
   "pr": 31,
@@ -59,7 +59,7 @@
       "state": "COMMENTED",
       "commit_id": "5bcbe22bb7d7a49d5ab774983813cf18ed27c658",
       "submitted_at": "2026-09-05T10:26:09Z",
-      "body": "A02 · schema\nVerdict: refuse"
+      "body": "A02 · schema\nVerdict: refuse\nLa phrase doit dire ce que le calcul fait vraiment : l'intersection porte sur les chemins **PROPOSÉS**, dérivés de `MANUELS`, de `docs/gates.json`, du champ `tests{}` et du drapeau `schema` — et **`t.paths` de `docs/tasks.json` n'y entre pas**, alors que c'est la seule liste que le composeur lise. Un lecteur qui prend `listeDesTachesIsolees` pour un verdict de disjonction se trompera : `GOV-025` et `GOV-028` y figurent tous deux comme « sans aucune intersection » alors qu'ils déclarent le même `scripts/gates/gov-identifiants.ts`."
     },
     {
       "id": 5120874994,
@@ -81,7 +81,7 @@
       "state": "COMMENTED",
       "commit_id": "5bcbe22bb7d7a49d5ab774983813cf18ed27c658",
       "submitted_at": "2026-09-05T10:29:51Z",
-      "body": "A05 · exactitude\nVerdict: refuse"
+      "body": "A05 · exactitude\nVerdict: refuse\n| 2 | GOV-028 : acceptation réécrite, un seul témoin asserté | ✅ **et rejoué**. Passé par `analyser()`, donc par le pipeline complet — exemptions, filtre d'extension, `neutraliser()` avec CITATIONS et LOCUTIONS_LEGITIMES, `MOTIF_NU` : `export const note = \"conforme a D11 ; rien de plus\";` (29 caractères dans la chaîne) → **0 faute** ; la même instruction, chaîne portée à 147 caractères → **1 faute**. Le verdict dépend bien de la longueur du voisinage. Et laisser les comptes globaux **à établir par la tâche**, en écrivant pourquoi, vaut mieux que trois chiffres que ni vous ni moi n'avions su reproduire. |"
     },
     {
       "id": 5120949867,
@@ -169,7 +169,7 @@
       "state": "COMMENTED",
       "commit_id": "7c3820a33dd28f35b2131a3cf71d71f4d4686ef2",
       "submitted_at": "2026-09-05T12:16:22Z",
-      "body": "A05 · exactitude\nVerdict: refuse"
+      "body": "A05 · exactitude\nSeptième passe. **Tout ce que tu m'as demandé d'éprouver tient**, et je l'ai éprouvé depuis l'API, deux fois, avec des contrôles positifs. Mais je ne juge pas `30f5ee2` : pendant que je mesurais, la branche est passée à **`7c3820a`**, et c'est ce sha-là qui fusionnerait. Mon verdict porte sur lui.\nVerdict: refuse"
     },
     {
       "id": 5121283031,
@@ -180,7 +180,7 @@
       "state": "COMMENTED",
       "commit_id": "19cf87be4403915b4af5bdd93ab42d6f6d8782ca",
       "submitted_at": "2026-09-05T12:27:15Z",
-      "body": "A05 · exactitude\nVerdict: accepte"
+      "body": "A05 · exactitude\nVerdict: accepte\nTa correction sur ton propre `grep` vaut autant. « Un compte de grep n'est pas un verdict » : ton `1` était `FR76XXXXXXXXXXXXXXXXXXXXXXX`, `X` appartenant à `[0-9A-Z]`. J'ai refait le contrôle par ta méthode corrigée — passer chaque valeur trouvée à `cleIbanValide` au lieu de les compter — et je la confirme : **une** valeur de forme IBAN dans le corps publié, `FR76XXXXXXXXXXXXXXXXXXXXXXX`, **deux chiffres** (le « 76 » du format lui-même), clé mod-97 **fausse**. Ni banque, ni guichet, ni compte : le masquage est total, pas partiel — donc il ne tombe pas dans le résidu que ta propre garde assume.\nLa case 3 de la DoD — « Relecteur ≠ auteur » — est encore vide dans le corps publié, et elle fait partie des sept que `gov:pr` exige. Elle devient cochable maintenant, ce verdict étant le dernier des quatre. C'est A04 qui la coche et qui relance `gov:pr`, pas moi."
     },
     {
       "id": 5121340935,
@@ -191,7 +191,7 @@
       "state": "COMMENTED",
       "commit_id": "41bc8140b9ea436be809676538dd65cb2263a5bc",
       "submitted_at": "2026-09-05T12:56:52Z",
-      "body": "A05 · exactitude\nVerdict: accepte"
+      "body": "A05 · exactitude\nVerdict: accepte\n**Peut-elle rendre `[x]` à tort ?** Non, au moment du rendu. J'ai vérifié chaque sortie : `gh` injoignable → `[ ]` ; une lentille sans revue → `manquantes` → `[ ]` ; un dernier verdict `refuse` → `[ ]` ; un `accepte` sur un autre commit → `perimees` → `[ ]`. `[x]` exige les quatre conditions simultanément, ce qui **est** le pas 5. Et la dérivation des lentilles depuis le label est juste : le label `schema` est bien posé sur cette PR, l'ensemble exigé est donc `exactitude, securite, schema, mutation` — `simplicite` correctement exclue. Ta correction sur la liste en dur était nécessaire : sans elle, `schema`, dont le refus est bloquant, aurait été ignorée.\n| « **SEIZE** revues, dont **DOUZE** refus » | 16 revues, **12** `refuse` + **4** `accepte`, 0 sans verdict |"
     },
     {
       "id": 5121345938,
@@ -202,7 +202,7 @@
       "state": "COMMENTED",
       "commit_id": "41bc8140b9ea436be809676538dd65cb2263a5bc",
       "submitted_at": "2026-09-05T12:59:25Z",
-      "body": "A08 · securite\nVerdict: refuse"
+      "body": "A08 · securite\nVerdict: refuse\n(3) un VRAI « Verdict: refuse » de securite sur la\nLa ligne **(3)** est celle qui decide. Un refus authentique de la lentille `securite`, pose sur la tete — c'est-a-dire **le veto que tu me dis valoir seul** — est **efface** par un avis poste apres, par un inconnu, avec deux lignes de texte. La regle du dernier verdict s'applique sans savoir de qui il vient."
     },
     {
       "id": 5121354058,
@@ -213,7 +213,7 @@
       "state": "COMMENTED",
       "commit_id": "41bc8140b9ea436be809676538dd65cb2263a5bc",
       "submitted_at": "2026-09-05T13:03:35Z",
-      "body": "A08 · securite\nVerdict: refuse"
+      "body": "A08 · securite\nAddendum a ma cinquieme passe (`41bc814`), poste separement parce qu'il contient **une correction de ma propre mesure** et **un defaut de plus**, trouve apres l'envoi. Le verdict ne change pas.\nVerdict: refuse"
     },
     {
       "id": 5121354924,
@@ -224,7 +224,7 @@
       "state": "COMMENTED",
       "commit_id": "41bc8140b9ea436be809676538dd65cb2263a5bc",
       "submitted_at": "2026-09-05T13:04:02Z",
-      "body": "A02 · schema\nVerdict: refuse"
+      "body": "A02 · schema\nVerdict: refuse\n**b. La clé du « dernier verdict ».**\n- `scripts/gates/gov-pr.ts:524` — `dernierPar.set(`${l.code}·${l.lentille}`, r)` : dernier verdict par couple **(poste, lentille)**.\n- `scripts/lot/corps-de-pr.ts:146` — `dernier.set(l, …)` : dernier verdict par **lentille** seule."
     }
   ]
 }

@@ -61,6 +61,16 @@ import {
   toucheSchema,
   type RevueBrute,
 } from '../../../scripts/lot/revues';
+/**
+ * ⚠️ L'API NEUVE SE PREND PAR ESPACE DE NOMS, ET C'EST UNE PRÉCAUTION DE MÉTHODE, PAS UN STYLE.
+ *
+ * Un import NOMMÉ d'un export qui n'existe pas encore fait échouer le CHARGEMENT du module : les
+ * quarante témoins déjà verts de ce fichier rougissent d'un coup, et le message d'échec du témoin
+ * neuf n'est plus le sien mais celui du chargeur. On ne verrait alors pas la garde rougir POUR SA
+ * RAISON — RM-02 exige l'inverse. Par l'espace de noms, un export absent est `undefined` : le
+ * témoin neuf rougit seul, et il rougit sur son propre appel.
+ */
+import * as LECTEUR from '../../../scripts/lot/revues';
 import { rendre } from '../../../scripts/lot/corps-de-pr';
 
 const CAPTURE = JSON.parse(readFileSync('tests/fixtures/github/revues-pr-31.json', 'utf8')) as {
@@ -89,6 +99,13 @@ type Retouche = {
   etat?: string;
   association?: string;
   compte?: string;
+  /**
+   * ⚠️ CE CHAMP EST LE TROU QUE LA FABRIQUE AVAIT. Elle ne savait poser QU'UNE ligne `Verdict:`,
+   * si bien qu'aucun témoin ne pouvait exercer un corps qui en porte deux — et le lecteur y était
+   * permissif sans que rien ne le dise. Une fabrique de fixtures qui ne sait produire que la forme
+   * correcte n'exerce jamais la forme fautive.
+   */
+  corps?: string;
 };
 
 function avis(modele: number, r: Retouche): RevueBrute {
@@ -100,9 +117,29 @@ function avis(modele: number, r: Retouche): RevueBrute {
     author_association: r.association ?? base.author_association,
     state: r.etat ?? base.state,
     commit_id: r.commit ?? TETE,
-    body: `${r.poste ?? 'A09'} · ${r.lentille ?? 'exactitude'}
+    body:
+      r.corps ??
+      `${r.poste ?? 'A09'} · ${r.lentille ?? 'exactitude'}
 Verdict: ${r.verdict ?? 'accepte'}`,
   };
+}
+
+/**
+ * UN CORPS D'AVIS À LA FORME RÉELLE. Mesuré le 2026-09-05 sur les 23 revues de la PR 31 : chacune
+ * porte l'en-tête en ligne 0, puis une ligne vide, puis — en ligne 2 ou 4 — la ligne qui tranche,
+ * SEULE sur sa ligne et au ras de la marge, puis la prose. Aucune ne s'écarte de cette forme.
+ * Les témoins ci-dessous glissent la citation DANS la prose, là où un relecteur la met vraiment.
+ */
+function corpsDAvis(poste: string, lentille: string, prose: string, verdict: 'accepte' | 'refuse'): string {
+  return `${poste} · ${lentille}\n\n${prose}\n\nVerdict: ${verdict}\n`;
+}
+
+/** Retire commentaires de bloc et de ligne : une garde de CODE ne juge pas la prose qui l'explique. */
+function lignesDeCode(source: string): string[] {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split(String.fromCharCode(10))
+    .filter((l) => !/^\s*(\/\/|\*)/.test(l));
 }
 
 /** Les quatre avis d'un tour complet et légitime, sur la tête, par des postes ≠ de l'auteur. */
@@ -443,15 +480,8 @@ describe('REQ-GOV-010 — un seul lecteur, importé par la garde ET par le compo
       vue: (l) => l.includes('lentillesExigees:'),
     },
   ];
-  const SAUT = String.fromCharCode(10);
-
-  /** Retire commentaires de bloc et de ligne : une garde de CODE ne juge pas la prose qui l'explique. */
-  function lignesDeCode(source: string): string[] {
-    return source
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .split(SAUT)
-      .filter((l) => !/^\s*(\/\/|\*)/.test(l));
-  }
+  // `lignesDeCode` est déclarée une seule fois, en tête de fichier : le témoin (6) l'emploie aussi,
+  // et deux copies d'un filtre de code divergent comme deux copies de n'importe quoi d'autre (RM-01).
 
   it('REQ-GOV-010 · `scripts/gates/gov-pr.ts` importe le lecteur unique', () => {
     expect(readFileSync('scripts/gates/gov-pr.ts', 'utf8')).toContain(MODULE);
@@ -494,5 +524,263 @@ describe('REQ-GOV-010 — un seul lecteur, importé par la garde ET par le compo
     expect(ETATS_RENDUS.has('COMMENTED')).toBe(true);
     expect(ETATS_RENDUS.has('DISMISSED')).toBe(false);
     expect(ETATS_RENDUS.has('PENDING')).toBe(false);
+  });
+});
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * TÉMOIN (5) — UNE CITATION NE PORTE PAS LA DÉCISION.
+ *
+ * LE DÉFAUT, MESURÉ LE 2026-09-05 SUR `650ea10` PAR LA LENTILLE `securite`.
+ * `scripts/lot/revues.ts:99` et `:285` : `MOTIF_VERDICT.exec(r.corps)` retenait la PREMIÈRE
+ * occurrence de `Verdict:` dans TOUT le corps, en multiligne. Un avis d'un compte habilité qui
+ * relate le tour précédent en clair, puis conclut par un refus, était retenu comme `accepte`.
+ *
+ * ET CE N'EST PAS THÉORIQUE : les 23 revues réelles de la PR 31 CITENT les verdicts précédents —
+ * c'est même ce qu'on demande aux relecteurs. Deux d'entre elles (`5121345938`, `5121354058`)
+ * portent un « Verdict: refuse » de citation EN MILIEU DE LIGNE, une troisième (`5121567035`)
+ * décrit ce défaut-ci en citant la ligne qui le porte. Elles ne se faisaient pas prendre pour une
+ * seule raison : le `^` du motif. La protection reposait donc sur un caractère d'ÉDITION —
+ * l'absence de retour à la ligne avant la citation — que rien ne documentait comme portant une
+ * décision de sécurité.
+ *
+ * CE QUI EST TRANCHÉ ICI, ET POURQUOI (la règle est écrite dans `scripts/lot/revues.ts`) :
+ *
+ *   — une DÉCISION est une ligne qui ne dit QUE la décision, au ras de la marge ;
+ *   — toutes ces lignes sont relevées : une seule valeur, quel qu'en soit le nombre → elle vaut ;
+ *     deux valeurs différentes → l'avis NE COMPTE POUR RIEN et la lecture le dit bruyamment.
+ *
+ * Le sens de l'échec est CONSERVATEUR : un avis qui ne compte pas ne fournit aucun accord, donc la
+ * lentille manque, donc la case reste vide. Un relecteur ambigu reposte ; il n'est pas deviné.
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ */
+describe('REQ-GOV-011 — TÉMOIN (5) : une CITATION de verdict ne porte pas la décision', () => {
+  /** Les trois lentilles autres que `securite`, rendues légitimement sur la tête. */
+  const TROIS_AUTRES = [
+    avis(0, { poste: 'A09', lentille: 'exactitude' }),
+    avis(2, { poste: 'A09', lentille: 'simplicite' }),
+    avis(3, { poste: 'A10', lentille: 'mutation' }),
+  ];
+
+  /** La citation EN CLAIR du tour précédent, telle qu'un relecteur la colle : au ras de la marge. */
+  const CITATION_EN_CLAIR = [
+    'Je rappelle mon avis du tour précédent, verbatim :',
+    '',
+    'A08 · securite',
+    'Verdict: accepte',
+    '',
+    'Ce tour-ci, le point n’est pas fermé.',
+  ].join('\n');
+
+  function citant(prose: string, verdict: 'accepte' | 'refuse' = 'refuse') {
+    return avis(1, { poste: 'A08', lentille: 'securite', corps: corpsDAvis('A08', 'securite', prose, verdict) });
+  }
+
+  it('REQ-GOV-011 · un avis qui CITE `accepte` puis conclut `refuse` ne compte pour rien', () => {
+    const suite = [...TROIS_AUTRES, citant(CITATION_EN_CLAIR)];
+    // Le défaut, verbatim : le lecteur hérité — et le lecteur unique avant ce correctif — lisaient
+    // la PREMIÈRE ligne `Verdict:` du corps, donc la CITATION, donc « accepte ».
+    expect(herite(suite).marque).toBe('[x]');
+    const lecture = lire(suite);
+    expect(lecture.coche).toBe(false);
+    expect(lecture.ecartees.map((e) => e.motif)).toEqual(['verdict_ambigu']);
+    expect(lecture.manquantes).toEqual(['securite']);
+  });
+
+  it('REQ-GOV-011 · et la lecture le dit BRUYAMMENT : la revue nommée, les deux valeurs', () => {
+    const lecture = lire([...TROIS_AUTRES, citant(CITATION_EN_CLAIR)]);
+    const dit = lecture.raisons.join(' · ');
+    expect(dit, 'la raison ne nomme pas la revue ambiguë').toContain('A08 · securite');
+    expect(dit).toContain('accepte');
+    expect(dit).toContain('refuse');
+    // Un avis ambigu se REPOSTE : la lecture ne devine pas laquelle des deux valeurs est la bonne.
+    expect(dit.toLowerCase()).toContain('ambig');
+  });
+
+  it('REQ-GOV-011 · une citation N’EFFACE PAS le veto que le même poste avait posé', () => {
+    // Le cas qui coûte le plus cher : A08 refuse, puis reposte un avis qui cite son accord du tour
+    // d'avant et re-refuse. Le premier lecteur retenait « accepte » — le veto disparaissait.
+    const veto = avis(1, { poste: 'A08', lentille: 'securite', verdict: 'refuse' });
+    const suite = [...TROIS_AUTRES, veto, citant(CITATION_EN_CLAIR)];
+    expect(herite(suite).marque).toBe('[x]');
+    const lecture = lire(suite);
+    expect(lecture.coche).toBe(false);
+    expect(lecture.refusees.map((v) => `${v.code}·${v.lentille}`)).toEqual(['A08·securite']);
+  });
+
+  it('REQ-GOV-011 · une citation dans un BLOC DE CODE ne tranche pas davantage', () => {
+    // Coller la revue précédente entre trois accents graves est la pratique éditoriale la plus
+    // banale du dépôt. Ce lecteur n'analyse PAS le Markdown — un analyseur de Markdown dans un
+    // chemin de décision de sécurité est un risque plus grand que le reposte d'un avis : toute
+    // ligne de décision compte, et le désaccord invalide.
+    const cloture = String.fromCharCode(96, 96, 96);
+    const enBlocDeCode = [cloture, 'A08 · securite', 'Verdict: accepte', cloture, '', 'Je maintiens mon refus.'].join('\n');
+    expect(herite([...TROIS_AUTRES, citant(enBlocDeCode)]).marque).toBe('[x]'); // le défaut, verbatim
+    const lecture = lire([...TROIS_AUTRES, citant(enBlocDeCode)]);
+    expect(lecture.coche).toBe(false);
+    expect(lecture.ecartees.map((e) => e.motif)).toEqual(['verdict_ambigu']);
+  });
+
+  it('REQ-GOV-011 · une ligne de décision NOYÉE DANS SA PROSE n’est pas une décision', () => {
+    // Le trou que le `^` seul laissait ouvert : la citation EST en début de ligne, mais la ligne
+    // continue. Le `\b` du motif suffisait à la faire passer pour un verdict rendu.
+    const noyee = ['A08 · securite', '', 'Verdict: accepte, disait le tour 6 — moi je refuse.', ''].join('\n');
+    const avecLigneNoyee = avis(1, { poste: 'A08', lentille: 'securite', corps: noyee });
+    expect(herite([...TROIS_AUTRES, avecLigneNoyee]).marque).toBe('[x]'); // le défaut, verbatim
+    const lecture = lire([...TROIS_AUTRES, avecLigneNoyee]);
+    expect(lecture.coche).toBe(false);
+    expect(lecture.ecartees.map((e) => e.motif)).toEqual(['sans_verdict']);
+  });
+
+  it('REQ-GOV-011 · CONTRE-TÉMOIN : une citation en BLOCKQUOTE laisse passer le vrai verdict', () => {
+    // Vert AVANT comme APRÈS le correctif — et c'est justement le point de la lentille : avant, sa
+    // verdeur tenait au `>` que rien ne documentait. Elle tient désormais à une règle ÉCRITE (une
+    // décision est seule sur sa ligne, au ras de la marge), dont le `>` n'est qu'un cas.
+    const bq = ['> A08 · securite', '> Verdict: accepte', '', 'Je maintiens mon refus.'].join('\n');
+    const lecture = lire([...TROIS_AUTRES, citant(bq)]);
+    expect(lecture.ecartees).toEqual([]);
+    expect(lecture.verdicts.filter((v) => v.lentille === 'securite').map((v) => v.verdict)).toEqual(['refuse']);
+    expect(lecture.coche).toBe(false);
+  });
+
+  it('REQ-GOV-011 · CONTRE-TÉMOIN : deux lignes de décision IDENTIQUES ne sont pas ambiguës', () => {
+    // Un relecteur qui répète son verdict en tête et en pied ne contredit personne : lui refuser
+    // son avis rendrait la garde capricieuse, et une gate capricieuse s'apprend à se sauter.
+    const repete = ['A09 · securite', '', 'Verdict: accepte', '', 'En résumé.', '', 'Verdict: accepte'].join('\n');
+    const suite = [...TROIS_AUTRES, avis(1, { poste: 'A09', lentille: 'securite', corps: repete })];
+    const lecture = lire(suite);
+    expect(lecture.ecartees).toEqual([]);
+    expect(lecture.coche).toBe(true);
+  });
+
+  it('REQ-GOV-011 · CONTRE-TÉMOIN : les revues RÉELLES rendent chacune UN verdict, sans ambiguïté', () => {
+    // Le contre-témoin qui compte : si la règle neuve invalidait la forme réellement pratiquée, on
+    // aurait remplacé un lecteur permissif par une gate insatisfiable. Les corps sont lus dans la
+    // capture — projection élargie à TOUTE ligne portant `Verdict`, donc à toute ligne qui peut
+    // influencer la décision (une ligne qui n'en porte pas ne peut pas être une ligne de décision).
+    expect(REELLES.length).toBeGreaterThan(0);
+    for (const r of REELLES) {
+      const lu = LECTEUR.verdictDeLaRevue(r.body ?? '');
+      expect(lu, `la revue ne rend aucun verdict : ${JSON.stringify(r.body)}`).not.toHaveProperty('motif');
+      expect((lu as { verdict: string }).verdict).toMatch(/^(accepte|refuse)$/);
+    }
+    // TÉMOIN POSITIF DE LA CAPTURE : elle porte bien des citations, sans quoi ce contre-témoin
+    // n'exercerait rien. Deux revues réelles citent « Verdict: … » ailleurs que sur leur ligne
+    // de décision (`5121345938`, `5121354058`), mesuré le 2026-09-05.
+    const citantes = REELLES.filter((r) => ((r.body ?? '').match(/Verdict/g) ?? []).length > 1);
+    expect(citantes.length, 'la capture ne porte plus aucune citation : elle n’exerce plus rien').toBeGreaterThan(0);
+  });
+
+  it('REQ-GOV-011 · les formes, lues une par une par le lecteur de verdict', () => {
+    const V = LECTEUR.verdictDeLaRevue;
+    expect(V('A08 · securite\n\nVerdict: refuse\n')).toEqual({ verdict: 'refuse', lignes: 1 });
+    expect(V('A08 · securite\n\nVerdict: accepte\n\nVerdict: refuse\n')).toEqual({
+      motif: 'verdict_ambigu',
+      valeurs: ['accepte', 'refuse'],
+    });
+    expect(V('A08 · securite\n\n> Verdict: accepte\n\nVerdict: refuse\n')).toEqual({ verdict: 'refuse', lignes: 1 });
+    expect(V('A08 · securite\n\n… donc Verdict: accepte selon moi …\n')).toEqual({ motif: 'sans_verdict', valeurs: [] });
+    expect(V('A08 · securite\n\nVerdict: refuse\n\nVerdict: refuse\n')).toEqual({ verdict: 'refuse', lignes: 2 });
+    // Les fins de ligne de Windows ne changent pas une décision.
+    expect(V('A08 · securite\r\n\r\nVerdict: refuse\r\n')).toEqual({ verdict: 'refuse', lignes: 1 });
+  });
+});
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ * TÉMOIN (6) — LE LECTEUR EST UNIQUE, SON ENTRÉE NE L'ÉTAIT PAS.
+ *
+ * MESURÉ LE 2026-09-05 SUR LES DONNÉES RÉELLES DE LA PR 31 : les deux appelants du lecteur unique
+ * ne lui donnaient pas le même `tachesSchema`.
+ *
+ *     gov-pr.ts      `depot.taches.find(t => t.id === <la tâche du TITRE>)`   → GOV-024 → false
+ *     corps-de-pr.ts `T.filter(t => t.pr === 31).some(t => t.schema)`         → GOV-006 → true
+ *
+ * Les deux ne concordent sur cette PR-ci que par accident : `prisma/schema.prisma` est au diff ET
+ * le label `schema` est posé, si bien que les deux autres signaux de `toucheSchema()` couvrent
+ * l'écart. Retire l'un des deux, et la garde BLOQUANTE exige moins que le corps n'affiche.
+ *
+ * CE QUI EST TRANCHÉ, ET POURQUOI JE CONTREDIS EN PARTIE LA LENTILLE. Son avis était « toutes les
+ * tâches portant `pr: <n>` ». C'est le bon dénominateur, mais il ne suffit pas : MESURÉ, 179 des
+ * 207 tâches de `docs/tasks.json` portent `pr: null`, dont douze à `schema: true` (`INT-T01b`,
+ * `SEC-17`, `DM-06`…). Une PR ouverte AVANT que `tasks.json` ne porte son numéro aurait donc un
+ * ensemble VIDE, et la garde n'exigerait pas `schema` pour une tâche qui l'est. La dérivation
+ * unique est donc l'UNION : les tâches portant `pr: <n>`, PLUS celle que le titre nomme.
+ *
+ * Et la propriété qui interdit l'inversion redoutée par la lentille est la MONOTONIE : l'ensemble
+ * ne peut que GROSSIR quand on lui donne un renseignement de plus. L'appelant qui en sait le plus
+ * — la garde, qui lit le titre — obtient toujours un sur-ensemble de celui du composeur. « La
+ * garde exige moins que le corps n'affiche » devient donc impossible par construction, et non
+ * plus vrai par coïncidence.
+ * ─────────────────────────────────────────────────────────────────────────────────────────────
+ */
+describe('REQ-GOV-010 — TÉMOIN (6) : une seule dérivation de l’ensemble des tâches d’une PR', () => {
+  type TacheBrute = { id: string; pr?: number | null; schema?: boolean; reqs?: string[] };
+  const TACHES = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: TacheBrute[] }).taches;
+
+  /** Une tâche RÉELLE du backlog, jamais tapée de mémoire (RM-03). */
+  function tache(id: string): TacheBrute {
+    const t = TACHES.find((x) => x.id === id);
+    if (t === undefined) throw new Error(`docs/tasks.json ne porte plus la tâche ${id}`);
+    return t;
+  }
+
+  it('REQ-GOV-010 · la divergence, rejouée : la tâche du TITRE dit `false`, les tâches de la PR `true`', () => {
+    const duTitre = tache('GOV-024'); // « feat(GOV-024): … » — le titre réel de la PR 31
+    const autre = tache('GOV-006'); // une des neuf tâches de la même PR, et c'est elle qui est `schema`
+    const echantillon = [duTitre, autre];
+
+    // Les deux dérivations telles qu'elles étaient ÉCRITES, côte à côte.
+    const parLeTitre = echantillon.find((t) => t.id === 'GOV-024')?.schema === true; // gov-pr.ts
+    const parLaPr = echantillon.filter((t) => t.pr === 31).some((t) => t.schema === true); // corps-de-pr.ts
+    expect(parLeTitre, 'GOV-024 n’est pas une tâche de schéma').toBe(false);
+    expect(parLaPr, 'GOV-006 l’est, et elle est sur la même PR').toBe(true);
+    expect(parLeTitre).not.toBe(parLaPr); // LA DIVERGENCE, MESURÉE
+
+    // La dérivation unique tranche, et elle tranche du côté strict.
+    expect(LECTEUR.tachesSchemaDeLaPr(echantillon, 31, 'GOV-024')).toBe(true);
+    expect(LECTEUR.tachesDeLaPr(echantillon, 31, 'GOV-024').map((t) => t.id).sort()).toEqual(['GOV-006', 'GOV-024']);
+  });
+
+  it('REQ-GOV-010 · l’UNION, parce que la plupart des tâches ne portent pas encore de `pr`', () => {
+    const sansPr = TACHES.filter((t) => t.pr === null || t.pr === undefined);
+    expect(sansPr.length, 'le fait qui justifie l’union a disparu du backlog').toBeGreaterThan(0);
+    const orpheline = sansPr.find((t) => t.schema === true);
+    expect(orpheline, 'aucune tâche `schema: true` sans `pr` : le témoin ne mesure plus rien').toBeDefined();
+
+    // « Toutes les tâches portant `pr: <n>` », seule, rendrait `false` sur une PR pas encore reliée.
+    expect([orpheline!].filter((t) => t.pr === 99).some((t) => t.schema === true)).toBe(false);
+    expect(LECTEUR.tachesSchemaDeLaPr([orpheline!], 99, orpheline!.id)).toBe(true);
+  });
+
+  it('REQ-GOV-010 · MONOTONIE : en savoir plus ne peut que GROSSIR l’ensemble, jamais le rétrécir', () => {
+    // C'est cette propriété — et pas la concordance d'aujourd'hui — qui interdit à la garde
+    // d'exiger moins que le corps n'affiche.
+    const echantillon = [tache('GOV-024'), tache('GOV-006')];
+    const sansTitre = LECTEUR.tachesDeLaPr(echantillon, 31, null).map((t) => t.id);
+    const avecTitre = LECTEUR.tachesDeLaPr(echantillon, 31, 'GOV-024').map((t) => t.id);
+    for (const id of sansTitre) expect(avecTitre, 'l’ensemble a RÉTRÉCI').toContain(id);
+    expect(LECTEUR.tachesSchemaDeLaPr(echantillon, 31, null)).toBe(true);
+    expect(LECTEUR.tachesSchemaDeLaPr(echantillon, 31, 'GOV-024')).toBe(true);
+  });
+
+  it('REQ-GOV-010 · les DEUX appelants consomment cette dérivation, et aucun ne compose la sienne', () => {
+    for (const f of ['scripts/gates/gov-pr.ts', 'scripts/lot/corps-de-pr.ts']) {
+      const code = readFileSync(f, 'utf8');
+      expect(code, `${f} ne consomme pas la dérivation unique`).toContain('tachesDeLaPr');
+      const adHoc = lignesDeCode(code).filter((l) => l.includes('tachesSchema') && l.includes('.schema === true'));
+      expect(adHoc, `${f} compose encore son propre tachesSchema : ${adHoc.join(' | ')}`).toEqual([]);
+    }
+  });
+
+  it('REQ-GOV-010 · CONTRE-TÉMOIN : sur la PR 31 réelle, les deux entrées donnaient déjà le même RÉSULTAT', () => {
+    // Et c'est pour cela qu'il ne prouve rien seul : `prisma/schema.prisma` au diff et le label
+    // `schema` posé couvrent l'écart. C'est le témoin ci-dessus qui discrimine, pas celui-ci.
+    const REEL = { fichiers: ['prisma/schema.prisma', 'scripts/lot/revues.ts'], labels: ['schema'] };
+    expect(toucheSchema({ ...REEL, tachesSchema: false })).toBe(true);
+    expect(toucheSchema({ ...REEL, tachesSchema: true })).toBe(true);
+    // Retire les deux signaux qui couvrent, et l'entrée redevient seule à décider.
+    expect(toucheSchema({ fichiers: [], labels: [], tachesSchema: false })).toBe(false);
+    expect(toucheSchema({ fichiers: [], labels: [], tachesSchema: true })).toBe(true);
   });
 });

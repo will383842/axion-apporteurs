@@ -52,7 +52,7 @@ import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 import { CHAMPS } from '../../src/config/entite';
-import { lireRevues, toucheSchema, type RevueBrute } from './revues';
+import { lireRevues, tachesDeLaPr, tachesSchemaDeLaPr, toucheSchema, type RevueBrute } from './revues';
 
 /**
  * ⚠️ LE CHAMP `schema` MANQUAIT À CE TYPE, ET C'EST CE MANQUE QUI A CHOISI LE SIGNAL FAIBLE.
@@ -139,7 +139,17 @@ function suite(chemin: string | null): { fichiers: string; tests: string } {
  * ce dépôt n'en a qu'un (W13) : toutes les revues viennent du compte de l'auteur, et la propriété
  * n'y est pas mesurable. Le détail publié le NOMME. On ne coche jamais ce qu'on ne mesure pas.
  */
-function caseRevues(pr: number, surLaPr: Tache[], gabarit: string): { marque: string; detail: string } {
+function caseRevues(
+  pr: number,
+  gabarit: string,
+  /**
+   * Le fait « cette PR touche au schéma PAR SES TÂCHES », DÉRIVÉ une seule fois par
+   * `tachesSchemaDeLaPr()` et transmis. Ce module composait ici son propre `some(t => t.schema)`,
+   * pendant que `gov-pr.ts` composait un `find()` sur la seule tâche du titre : deux entrées pour
+   * un lecteur unique, et elles divergeaient (mesuré le 2026-09-05 sur la PR 31).
+   */
+  tachesSchema: boolean
+): { marque: string; detail: string } {
   let tete: string;
   let labels: string[];
   let fichiers: string[];
@@ -179,7 +189,7 @@ function caseRevues(pr: number, surLaPr: Tache[], gabarit: string): { marque: st
     // LE PLUS STRICT DES TROIS SIGNAUX GAGNE : les fichiers de la PR, le champ `schema` des tâches
     // qu'elle porte, le label. Le label seul était la lecture d'avant — la plus faible des trois,
     // et plus faible que celle de la gate que cette case supplée.
-    schema: toucheSchema({ fichiers, labels, tachesSchema: surLaPr.some((t) => t.schema === true) }),
+    schema: toucheSchema({ fichiers, labels, tachesSchema }),
     tete,
     auteurPoste: /^Auteur:\s*(A\d{2})\s*$/m.exec(gabarit)?.[1] ?? null,
     auteurCompte,
@@ -191,9 +201,12 @@ export function valeurs(pr: number, journalTests: string | null, gabarit: string
   const T = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: Tache[] }).taches;
   const G = (JSON.parse(readFileSync('docs/gates.json', 'utf8')) as { gates: { preuveRouge: string | null }[] }).gates;
   const R = (JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as { exigences: unknown[] }).exigences;
-  const surLaPr = T.filter((t) => t.pr === pr);
+  // L'ENSEMBLE des tâches de la PR, par la dérivation UNIQUE. Le composeur passe `null` pour le
+  // titre : il n'en a pas en main, et il décrit ce que la PR DÉCLARE porter. La garde, elle, le
+  // connaît et obtient donc un sur-ensemble — jamais l'inverse (monotonie, voir `tachesDeLaPr`).
+  const surLaPr = tachesDeLaPr(T, pr, null);
   const s = suite(journalTests);
-  const c = caseRevues(pr, surLaPr, gabarit);
+  const c = caseRevues(pr, gabarit, tachesSchemaDeLaPr(T, pr, null));
 
   return {
     TACHES: String(T.length),
@@ -211,9 +224,80 @@ export function valeurs(pr: number, journalTests: string | null, gabarit: string
     CHAMPS_TOTAL: String(CHAMPS.length),
     SUITE_FICHIERS: s.fichiers,
     SUITE_TESTS: s.tests,
+    COUVRE: couvre(surLaPr).join(', '),
     DOD_REVUES: c.marque,
     DOD_REVUES_DETAIL: c.detail,
   };
+}
+
+/**
+ * LES EXIGENCES COUVERTES, DÉRIVÉES DES TÂCHES DE LA PR — ET CE QUE CE CHAMP N'ATTESTE PAS.
+ *
+ * 🔴 LE DÉFAUT, MESURÉ LE 2026-09-05 SUR LA PR 31 : `Couvre:` était le SEUL champ du corps qui ne
+ * se dérivait de rien. Tapé à la main dans `docs/pr/31.tpl.md:5`, il annonçait dix-neuf exigences
+ * là où les neuf tâches de la PR en portent dix-sept — `REQ-GOV-026` et `REQ-GOV-031` en trop.
+ * Et `scripts/gates/gov-entite.ts` désigne nommément `GOV-036` comme le travail NON FAIT pour
+ * `REQ-GOV-031` : le corps annonçait donc couvrir une exigence dont le dépôt écrit ailleurs
+ * qu'elle reste à faire. C'est la quatrième affirmation fausse du même jour, et toutes étaient
+ * dans ce que le script ne rendait pas — « la frontière de la dérivation est devenue la frontière
+ * de la vérité », et ce champ était de l'autre côté.
+ *
+ * ⚠️ CE QUE LE MARQUEUR ATTESTE, ET CE QU'IL N'ATTESTE PAS. La case de DoD dit deux choses :
+ *
+ *     « Les REQ couvertes sont listées dans `Couvre:`, ET le code ne fait rien de plus qu'elles. »
+ *
+ * La PREMIÈRE moitié devient dérivée : la liste est exactement l'union des `reqs` des tâches que
+ * la PR porte, donc elle ne peut plus ni oublier ni inventer une exigence.
+ *
+ * La SECONDE ne l'est pas, et ne peut pas l'être ici : « le code ne fait rien de plus » est un
+ * jugement sur le DIFF, que seule une relecture rend — c'est la lentille `simplicite`, et c'est
+ * pour cela qu'elle existe. Ce marqueur ne la remplace pas, ne la supplée pas, et ne doit pas
+ * laisser croire qu'il la couvre : une valeur VRAIE qui a l'air d'en dire plus qu'elle ne peut est
+ * exactement le piège dont sort ce fichier (règle 3 en tête). Ce que la ligne `Couvre:` affirme
+ * désormais, mot pour mot : « voici les exigences que les tâches de cette PR DÉCLARENT porter » —
+ * et non « voici tout ce que ce diff fait ».
+ *
+ * La liste n'a pas d'autre source que `docs/tasks.json`, la même que `{{LISTE_SUR_LA_PR}}` : deux
+ * champs du même corps tirés de deux ensembles différents divergeraient (RM-01).
+ */
+export function couvre(taches: readonly { reqs?: string[] }[]): string[] {
+  return [...new Set(taches.flatMap((t) => t.reqs ?? []))].sort();
+}
+
+/** La ligne `Couvre:` découpée comme un humain la lit — virgules, accents graves, espaces. */
+function reqsListees(ligne: string): string[] {
+  return ligne
+    .split(',')
+    .map((r) => r.replace(/`/g, '').trim())
+    .filter(Boolean);
+}
+
+/**
+ * LA LIGNE `Couvre:` RENDUE DOIT ÊTRE CELLE QU'ON A DÉRIVÉE. Le contrôle ne se contente pas du
+ * marqueur, parce qu'un marqueur ne protège que ce qu'il remplace : un gabarit qui RE-TAPE la
+ * liste — la forme d'hier, et celle qu'un copier-coller ramène — n'aurait plus aucun marqueur à
+ * résoudre, donc plus aucune garde. L'échec a la même forme que celui d'un marqueur non résolu,
+ * et pour la même raison : un corps publié qui affirme faux est pire qu'un corps qui ne se rend
+ * pas, parce qu'il a l'air fini.
+ */
+export function verifierCouvre(corps: string, attendues: readonly string[]): void {
+  const m = /^Couvre:[ \t]*(.*)$/m.exec(corps);
+  if (!m) {
+    throw new Error(
+      'le corps rendu ne porte aucune ligne `Couvre:` : la case de DoD qui la cite ne peut pas être vérifiée.'
+    );
+  }
+  const listees = reqsListees(m[1] ?? '');
+  const enTrop = listees.filter((r) => !attendues.includes(r));
+  const manquantes = attendues.filter((r) => !listees.includes(r));
+  if (enTrop.length === 0 && manquantes.length === 0) return;
+  throw new Error(
+    '`Couvre:` diverge des exigences que les tâches de la PR déclarent porter — ' +
+      `${listees.length} listée(s), ${attendues.length} dérivée(s) de docs/tasks.json.` +
+      (enTrop.length > 0 ? ` EN TROP (annoncée(s) sans tâche qui la porte) : ${enTrop.join(', ')}.` : '') +
+      (manquantes.length > 0 ? ` MANQUANTE(S) : ${manquantes.join(', ')}.` : '') +
+      ' Remplace la ligne tapée par le marqueur {{COUVRE}} : ce champ ne se tape plus.'
+  );
 }
 
 export function rendre(gabarit: string, v: Record<string, string>): string {
@@ -223,6 +307,7 @@ export function rendre(gabarit: string, v: Record<string, string>): string {
   if (restants.length > 0) {
     throw new Error(`marqueur(s) non résolu(s) : ${[...new Set(restants)].join(', ')}`);
   }
+  if (v['COUVRE'] !== undefined) verifierCouvre(out, reqsListees(v['COUVRE']));
   return out;
 }
 
