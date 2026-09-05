@@ -43,7 +43,24 @@ const SUR_LA_PR = tachesDeLaPr(TACHES, PR, null);
 const DERIVEES = couvre(SUR_LA_PR);
 
 /** Les deux exigences que la ligne tapée annonçait sans qu'aucune tâche de la PR ne les porte. */
-const EN_TROP = ['REQ-GOV-026', 'REQ-GOV-031'];
+/**
+ * DEUX EXIGENCES QUI EXISTENT AU REGISTRE ET QU'AUCUNE TÂCHE DE LA PR NE PORTE — dérivées,
+ * jamais tapées.
+ *
+ * ⚠️ Cette liste valait `['REQ-GOV-026', 'REQ-GOV-031']` en dur. Le 2026-09-05, la lentille
+ * `exactitude` a montré que `CPL-T01` LIVRAIT la garde de `REQ-GOV-031` sans la déclarer ; la
+ * corriger a rendu l'exigence légitime, et ce témoin a rougi — **une liste tapée dans le
+ * fichier même qui existe pour supprimer les listes tapées.** Le témoin mesurait un état du
+ * backlog, pas une propriété du rendu.
+ */
+const EN_TROP = (() => {
+  const ids = (JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as { exigences: { id: string }[] })
+    .exigences.map((e) => e.id)
+    .filter((id) => !DERIVEES.includes(id))
+    .sort();
+  if (ids.length < 2) throw new Error('registre trop pauvre : le témoin ne peut pas discriminer');
+  return [ids[0]!, ids[1]!];
+})();
 
 function gabaritAvec(ligneCouvre: string): string {
   return ['## Identité', '', 'Auteur: A01', ligneCouvre, '', '## Ce que fait cette PR', ''].join('\n');
