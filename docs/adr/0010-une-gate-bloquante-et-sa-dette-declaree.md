@@ -6,7 +6,7 @@
 | **Date** | 2026-09-05 |
 | **Décideur** | `architecte` — cet ADR est `propose` : il consigne un arbitrage pris en autopilote, il n'est pas encore accepté |
 | **Tâche** | CPL-T01 |
-| **Exigences servies** | REQ-GOV-031, REQ-CPL-018 |
+| **Exigences servies** | REQ-GOV-031 |
 | **Décisions du registre citées** | W13 — le dépôt est PUBLIC |
 | **Règle maison appliquée** | RM-01, RM-02 |
 | **Remplace / remplacé par** | — |
