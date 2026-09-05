@@ -332,7 +332,7 @@ export function toucheSchema(entree: {
 }
 
 /** Ce qu'une tâche doit dire pour qu'on sache si elle est de cette PR, et si elle touche au schéma. */
-export type TacheDeLaPr = { id: string; pr?: number | null; schema?: boolean };
+export type TacheDeLaPr = { id: string; pr?: number | null; schema?: boolean; sensible?: readonly string[] };
 
 /**
  * L'ENSEMBLE DES TÂCHES D'UNE PR — UNE SEULE DÉRIVATION, POUR LES DEUX APPELANTS.

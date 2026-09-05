@@ -50,6 +50,7 @@ import {
   tachesSchemaDeLaPr,
   touche,
   toucheSchema,
+  tachesDeLaPr,
   type RevueBrute,
 } from '../lot/revues';
 
@@ -107,7 +108,7 @@ type Pr = {
    */
   apresFusion?: boolean;
 };
-type Tache = { id: string; sensible: string[]; schema: boolean };
+type Tache = { id: string; sensible: string[]; schema: boolean; pr: number | null };
 type Depot = { gabarit: string; codeowners: string; charte: string; fiches: string[]; architecte: string; taches: Tache[] };
 /**
  * LA PHASE COURANTE — la plus petite phase qui porte encore une tâche non livrée.
@@ -448,13 +449,26 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
   }
 
   const zoneSensible = pr.fichiers.some((f) => ZONES_SENSIBLES.some((z) => f.startsWith(z)));
-  const attaqueExigee = zoneSensible || (tache !== undefined && tache.sensible.length > 0);
+  // L'ENSEMBLE des taches de la PR, pas la seule que le titre nomme. Mesure du 2026-09-05 sur la
+  // PR 31 : GOV-024 (titre) porte sensible: [], mais GOV-006 porte ["attribution"] et CPL-T01
+  // ["argent","attribution"] — la section Attaque n'etait donc exigee par PERSONNE sur une PR
+  // qui porte deux taches sensibles. Meme divergence d'entree que tachesSchema, un champ plus
+  // loin : le lecteur etait unique, son entree ne l'etait pas.
+  const tachesSensibles = tachesDeLaPr(depot.taches, pr.numero ?? null, titre ? titre[2]! : null);
+  const attaqueExigee = zoneSensible || tachesSensibles.some((t) => t.sensible.length > 0);
   if (attaqueExigee) {
     const blocAttaque = (bloc(pr.corps, 'attaque') ?? '').trim();
     if (blocAttaque.length === 0 || /sans objet/i.test(blocAttaque)) {
       ajouter(
         'attaque_absente',
-        `Corps de la PR — section « Attaque » exigée (${zoneSensible ? 'zone sensible touchée' : `tâche sensible : ${tache!.sensible.join(', ')}`}) ` +
+        `Corps de la PR — section « Attaque » exigée (${
+          zoneSensible
+            ? 'zone sensible touchée'
+            : `tâche(s) sensible(s) : ${tachesSensibles
+                .filter((t) => t.sensible.length > 0)
+                .map((t) => `${t.id} (${t.sensible.join(', ')})`)
+                .join(' · ')}`
+        }) ` +
           `et laissée vide. REQ-GOV-011 : scénario joué, résultat, qui l'a joué.`
       );
     }
@@ -611,9 +625,20 @@ function lireDepot(): Depot {
   }
   const taches = (
     JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as {
-      taches: { id: string; sensible?: string[]; schema?: boolean }[];
+      taches: { id: string; sensible?: string[]; schema?: boolean; pr?: number | null }[];
     }
-  ).taches.map((t) => ({ id: t.id, sensible: t.sensible ?? [], schema: t.schema === true }));
+  // ⚠️ `pr` FAIT PARTIE DE LA PROJECTION, et son absence a rendu DEUX correctifs inertes.
+  // `tachesDeLaPr()` apparie sur `t.pr === <numero>` OU sur l identifiant du titre. Tant que la
+  // projection laissait `pr` de cote, la moitie `numero` ne pouvait JAMAIS apparier : la
+  // derivation unique se reduisait silencieusement a la seule tache du titre — exactement le
+  // defaut qu elle etait censee fermer. Trouve le 2026-09-05 parce qu un temoin neuf refusait de
+  // rougir : c est le temoin qui a revele que le correctif ne faisait rien, pas la relecture.
+  ).taches.map((t) => ({
+    id: t.id,
+    sensible: t.sensible ?? [],
+    schema: t.schema === true,
+    pr: t.pr ?? null,
+  }));
   return {
     gabarit: readFileSync(CHEMIN_GABARIT, 'utf8'),
     codeowners: readFileSync(CHEMIN_CODEOWNERS, 'utf8'),
@@ -911,6 +936,23 @@ if (process.argv.includes('--prove')) {
     {
       famille: 'attaque_absente',
       defaut: () => [copieDepot(), { ...copiePr(PR_TEMOIN), fichiers: ['auth/session.ts'] }],
+    },
+    {
+      // LA MEME FAMILLE PAR L'AUTRE BRANCHE, et c'est celle qui manquait. Le temoin ci-dessus
+      // passe par `zoneSensible` : il resterait ROUGE meme si la condition sur les TACHES
+      // disparaissait, donc il ne garde pas le durcissement du 2026-09-05. Ici aucun fichier
+      // n'est en zone sensible et la tache du TITRE (GOV-011) ne porte AUCUN `sensible` :
+      // seules des taches PORTEES par la PR en portent. Mesure sur la PR 31 : GOV-024 (titre)
+      // `sensible: []`, GOV-006 `["attribution"]`, CPL-T01 `["argent","attribution"]` — la
+      // section Attaque n'etait donc exigee par PERSONNE sur une PR qui porte deux taches
+      // sensibles.
+      famille: 'attaque_absente',
+      defaut: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.numero = 31;
+        p.corps = remplacerBloc(p.corps, 'attaque', '');
+        return [copieDepot(), p];
+      },
     },
     {
       famille: 'fichier_reserve_sans_label',
