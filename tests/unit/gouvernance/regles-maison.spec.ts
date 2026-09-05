@@ -11,9 +11,19 @@
  * corrigé pour pointer vers l'endroit où il tourne réellement.
  *
  * CE QU'IL TIENT
- *   — REQ-GOV-024 : les douze règles `RM-nn` ont chacune leur section, les NEUF que l'exigence
+ *   — REQ-GOV-024 : les TREIZE règles `RM-nn` ont chacune leur section, les NEUF que l'exigence
  *     énumère sont couvertes, et le gabarit de PR porte la ligne « Règle maison appliquée » entre
  *     ses marqueurs — la ligne que `scripts/gates/gov-pr.ts` LIT ;
+ *   — REQ-GOV-024, ce que la version GOV-018 de ce fichier NE tenait PAS : elle comptait les
+ *     titres `## RM-nn — …` et les lignes du tableau, et rien d'autre. Une section RÉDUITE À SON
+ *     TITRE la laissait verte — or c'est justement ce qui distingue une règle d'un slogan : son
+ *     énoncé, son POURQUOI (ce qui empêche qu'on la retire par commodité six mois plus tard) et la
+ *     garde qui la voit. Les trois rubriques sont désormais exigées, section par section ;
+ *   — REQ-GOV-024, GOV-026 : `CLAUDE.md` — le fichier d'amorçage lu par toute session ouverte dans
+ *     ce dépôt — cite RM-13 PAR SON NUMÉRO (RM-12 : un identifiant nu n'est pas une référence),
+ *     pointe au lieu de dupliquer (aucune ligne recopiée de `docs/PRESEANCE.md`), et ne fige aucun
+ *     état daté : ni numéro de PR, ni date, ni identifiant de lot, ni compteur d'avancement. Le
+ *     `CLAUDE.md` retiré de la PR 30 est mort de l'inverse ;
  *   — REQ-GOV-023, moitié « leçons » : `docs/LECONS.md` porte une date de dernière consolidation
  *     MACHINE-LISIBLE, chaque leçon cite une source vérifiable et la RM qu'elle a produite (ou dit
  *     qu'elle n'en a produit aucune), et `gov:lecons` rougit quand la consolidation a plus de sept
@@ -35,6 +45,10 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const CHEMIN_RM = 'docs/REGLES-MAISON.md';
+const CHEMIN_CLAUDE = 'CLAUDE.md';
+const CHEMIN_PRESEANCE = 'docs/PRESEANCE.md';
+const CHEMIN_REPRISE = 'docs/REPRISE-SESSION.md';
+const CHEMIN_CHARTE = 'docs/CHARTE-AGENTS.md';
 const CHEMIN_LECONS = 'docs/LECONS.md';
 const CHEMIN_GABARIT = '.github/PULL_REQUEST_TEMPLATE.md';
 const GARDE = 'scripts/gates/gov-lecons.ts';
@@ -84,12 +98,15 @@ const ISOLE = ['--regles', 'docs/REGLES-MAISON.md', '--journal', join(tmpdir(), 
 const avecEntrees = (entrees: string[]) => [ENTETE, ...entrees, PIED].join('\n');
 
 describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
-  it('REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 à RM-12, une section par règle', () => {
+  it('REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 à RM-13, une section par règle', () => {
     const texte = readFileSync(CHEMIN_RM, 'utf8');
     const sections = [...texte.matchAll(/^## (RM-\d{2}) — /gm)].map((m) => m[1]!);
+    // La liste est LITTÉRALE et non dérivée, exprès : c'est elle qui rougit quand une règle est
+    // ajoutée — ou RETIRÉE en silence, ce qui est arrivé à celle qui est aujourd'hui RM-13. Une
+    // liste dérivée du fichier qu'elle juge ne peut, par construction, jamais le contredire.
     expect(sections).toEqual([
       'RM-01', 'RM-02', 'RM-03', 'RM-04', 'RM-05', 'RM-06',
-      'RM-07', 'RM-08', 'RM-09', 'RM-10', 'RM-11', 'RM-12',
+      'RM-07', 'RM-08', 'RM-09', 'RM-10', 'RM-11', 'RM-12', 'RM-13',
     ]);
     // Le tableau de tête est une VUE des sections : une ligne sans section, ou l'inverse, et le
     // lecteur qui cite « RM-13 » cite un vide.
@@ -114,6 +131,107 @@ describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
       const section = texte.split(new RegExp(`^## ${rm} — `, 'm'))[1]?.split(/^## /m)[0] ?? '';
       const titre = new RegExp(`^## ${rm} — (.+)$`, 'm').exec(texte)?.[1] ?? '';
       expect(`${titre}\n${section}`, `${rm} ne couvre pas ce que REQ-GOV-024 lui donne`).toMatch(motif);
+    }
+  });
+
+  it('REQ-GOV-024 — chaque section RM porte son énoncé, son POURQUOI et la garde qui la voit', () => {
+    // CE QUE LA VERSION PRÉCÉDENTE DE CE FICHIER NE VOYAIT PAS. Elle comparait la liste des titres
+    // `## RM-nn — …` à une liste littérale, et la liste des lignes du tableau à celle des titres.
+    // Une section réduite à son seul titre — ou dont on aurait retiré le « Pourquoi » — passait au
+    // vert. Or c'est le POURQUOI qui empêche qu'une règle soit retirée par commodité : sans lui,
+    // une règle est un slogan, et un slogan se supprime sans discussion. Les douze règles livrées
+    // par GOV-018 portaient déjà les trois rubriques : la garde ne fait qu'exiger la forme qu'elles
+    // ont toutes, elle n'en invente aucune.
+    const texte = readFileSync(CHEMIN_RM, 'utf8');
+    const sections = [...texte.matchAll(/^## (RM-\d{2}) — /gm)].map((m) => m[1]!);
+    for (const rm of sections) {
+      const corps = texte.split(new RegExp(`^## ${rm} — `, 'm'))[1]!.split(/^## /m)[0]!;
+      const rubriques = corps.split(/^\*\*/m).slice(1);
+      for (const rubrique of ['Énoncé', 'Pourquoi', 'Comment on la voit']) {
+        // Découpe par rubrique : `\Z` n'existe pas en JavaScript — une borne de fin écrite ainsi
+        // serait silencieusement fausse : elle chercherait la lettre Z.
+        const bloc = rubriques.find((r) => r.startsWith(`${rubrique}.**`));
+        expect(bloc, `${rm} n'a pas de rubrique « ${rubrique} » — une règle sans ${rubrique} n'est pas une règle`).toBeDefined();
+        // Une rubrique vide est une rubrique absente qui a appris à passer la garde.
+        const texteDeLaRubrique = bloc!.slice(`${rubrique}.**`.length).trim();
+        expect(texteDeLaRubrique.length, `${rm} — la rubrique « ${rubrique} » est vide`).toBeGreaterThan(40);
+      }
+    }
+    // Le tableau de tête annonce pour chaque règle la gate qui la vérifie : une cellule vide
+    // promettrait une garde qui n'existe pas.
+    for (const [, rm, gate] of texte.matchAll(/^\| (RM-\d{2}) +\|[^|]*\|([^|]*)\|/gm)) {
+      expect(gate!.trim(), `${rm} : la colonne « Gate qui la vérifie » est vide`).not.toBe('');
+    }
+  });
+
+  it("REQ-GOV-024 — RM-13 enregistre la règle que le CLAUDE.md retiré portait seul, avec sa garde", () => {
+    const texte = readFileSync(CHEMIN_RM, 'utf8');
+    const corps = texte.split(/^## RM-13 — /m)[1]!.split(/^## /m)[0]!;
+    // La règle elle-même : composer, et la PR de clôture qui l'interdit.
+    expect(corps).toMatch(/lot:composer/);
+    expect(corps).toMatch(/clôture/);
+    // Elle nomme la garde qui en voit le symptôme, et elle NOMME aussi ce qui n'est pas gardé :
+    // une règle qui laisse croire qu'une gate la tient est pire qu'une règle sans gate.
+    expect(corps).toMatch(/gov:etat/);
+    expect(corps).toMatch(/deux_pr_meme_tache/);
+    expect(corps, "RM-13 doit dire ce qui N'EST PAS gardé").toMatch(/n'est gardée par rien|pas gardé/);
+  });
+
+  it("REQ-GOV-024 — CLAUDE.md cite RM-13 par son NUMÉRO, pointe au lieu de dupliquer, et ne fige aucun état daté", () => {
+    expect(
+      existsSync(CHEMIN_CLAUDE),
+      "CLAUDE.md est le seul fichier qu'une session ouverte ici lit sans qu'on le lui demande"
+    ).toBe(true);
+    const texte = readFileSync(CHEMIN_CLAUDE, 'utf8');
+    const lignes = texte.split('\n');
+
+    // (1) RM-12 : la règle se cite par son numéro, jamais par paraphrase. Toute ligne qui parle de
+    // composer un lot doit porter « RM-13 » dans sa fenêtre de trois lignes.
+    expect(texte, 'CLAUDE.md doit citer RM-13').toContain('RM-13');
+    lignes.forEach((l, i) => {
+      if (!/lot:composer/.test(l)) return;
+      const fenetre = lignes.slice(Math.max(0, i - 2), i + 3).join('\n');
+      expect(
+        fenetre,
+        `CLAUDE.md:${i + 1} parle de composer un lot sans citer RM-13 : une paraphrase ne résout pas`
+      ).toContain('RM-13');
+    });
+
+    // (2) Il POINTE : chaque document nommé l'est par son chemin, et ce chemin existe. Un renvoi
+    // qui ne résout pas coûte plus cher que pas de renvoi du tout.
+    const ENTREES = [CHEMIN_REPRISE, 'docs/PLAN-STATE.md', CHEMIN_PRESEANCE, 'docs/PROTOCOLE-FUSION.md', CHEMIN_RM, CHEMIN_CHARTE];
+    for (const e of ENTREES) expect(texte, `CLAUDE.md ne renvoie pas vers ${e}`).toContain(e);
+    for (const [, chemin] of texte.matchAll(/`([\w./-]+\.(?:md|json|ts|js|yml|yaml))`/g)) {
+      expect(existsSync(chemin!), `CLAUDE.md renvoie vers ${chemin}, qui n'existe pas`).toBe(true);
+    }
+
+    // (3) Il NE DUPLIQUE PAS. Le résumé de `docs/PRESEANCE.md` qu'avait écrit la version retirée
+    // avait déjà divergé de sa source : il omettait deux chemins réservés et affirmait que tout le
+    // reste était une vue générée, ce qui interdisait d'éditer ce que la préséance donne à éditer.
+    // Deux garde-fous : aucune ligne substantielle recopiée d'une source, et aucune attribution de
+    // chemin à un poste — cette table-là est lue par `gov:pr` dans docs/CHARTE-AGENTS.md §7.
+    const sources = [readFileSync(CHEMIN_PRESEANCE, 'utf8'), readFileSync(CHEMIN_REPRISE, 'utf8')].join('\n');
+    for (const l of lignes) {
+      const nue = l.trim();
+      if (nue.length < 60) continue;
+      expect(sources.includes(nue), `CLAUDE.md recopie une ligne de sa source : « ${nue.slice(0, 70)}… »`).toBe(false);
+    }
+    expect(
+      /role:[a-z-]+/.test(texte),
+      "CLAUDE.md ne réattribue pas les chemins réservés : le tableau que gov:pr LIT est docs/CHARTE-AGENTS.md §7"
+    ).toBe(false);
+
+    // (4) Il ne fige AUCUN état daté. Le premier geste change à chaque session ; un fichier qui le
+    // recopie devient faux sans que rien ne le signale. Tout ce qui date se lit dans les vues.
+    const PERISSABLE: [RegExp, string][] = [
+      [/#\d+/, "un numéro de PR — il désigne une PR qui sera fusionnée demain"],
+      [/\b\d{4}-\d{2}-\d{2}\b/, "une date — le premier geste change à chaque session"],
+      [/\bL-?\d+-\d+\b/, "un identifiant de lot — le composeur en produit un nouveau à chaque tour"],
+      [/\b\d+\s*(?:tâches?\b|%)/, "un compteur d'avancement — il se lit dans docs/PLAN-STATE.md"],
+    ];
+    for (const [motif, quoi] of PERISSABLE) {
+      const i = lignes.findIndex((l) => motif.test(l));
+      expect(i, `CLAUDE.md:${i + 1} fige ${quoi} : « ${lignes[i]?.trim().slice(0, 80)} »`).toBe(-1);
     }
   });
 
