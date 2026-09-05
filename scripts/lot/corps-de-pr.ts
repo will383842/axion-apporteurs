@@ -90,12 +90,86 @@ function suite(chemin: string | null): { fichiers: string; tests: string } {
   return { fichiers: `${f[1]}/${f[2]}`, tests: `${n[1]}/${n[2]}` };
 }
 
+/**
+ * LA CASE « RELECTEUR ≠ AUTEUR » SE DÉRIVE DES REVUES, ET C'EST LA SORTIE D'UN PIÈGE.
+ *
+ * 🔴 Le piège, trouvé par le `release-manager` en refusant de fusionner la PR #31. Le gabarit vit
+ * DANS le dépôt. Cocher à la main la case qui dit « les revues sont faites » exigeait donc un
+ * commit — qui déplaçait la tête, et invalidait les revues qu'on venait de déclarer faites. Le
+ * pas 5 du protocole (« le diff approuvé est le diff fusionné ») devenait **insatisfiable en
+ * boucle** : chaque geste pour le satisfaire le brisait.
+ *
+ * La case n'est donc plus un caractère qu'on tape : c'est une ASSERTION DÉRIVÉE du pas 5.
+ * Elle vaut `[x]` si, et seulement si, le dernier verdict de chaque lentille exigée est `accepte`
+ * ET porte sur le `commit_id` de la tête. Sinon `[ ]`, et le corps dit lui-même pourquoi.
+ *
+ * ⚠️ Ce que ça répare au-delà du confort : `gov:pr` sort 0 sans jamais lire un `commit_id` — la
+ * gate est structurellement aveugle au pas 5, et son vert n'est donc PAS une preuve d'alignement.
+ * Quatre lentilles avaient accepté sur quatre commits différents, dont aucun n'était la tête, et
+ * l'avis `mutation` était périmé de neuf commits couvrant plus de trois cents lignes de code de
+ * garde — c'est-à-dire que les gardes livrées après son avis n'avaient JAMAIS été mutées.
+ */
+function caseRevues(pr: number): { marque: string; detail: string } {
+  let tete: string;
+  let lentilles: string[];
+  let revues: { commit_id: string; body: string; state: string }[];
+  try {
+    const meta = JSON.parse(
+      execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}`], { encoding: 'utf8', maxBuffer: 32e6 })
+    );
+    tete = meta.head.sha;
+    // ⚠️ LES LENTILLES EXIGÉES SE DÉRIVENT DU LABEL, elles ne se tapent pas. Une première version
+    // listait `exactitude, securite, mutation` en dur — elle aurait donc coché la case en IGNORANT
+    // `schema`, la lentille que le label `schema` rend obligatoire à la place de `simplicite`, et
+    // dont le refus est bloquant. Une case dérivée d'une liste fausse est pire qu'une case tapée :
+    // elle a l'air d'avoir été vérifiée.
+    const labels: string[] = (meta.labels ?? []).map((l: { name: string }) => l.name);
+    lentilles = [...(labels.includes('schema')
+      ? ['exactitude', 'securite', 'schema']
+      : ['exactitude', 'securite', 'simplicite']), 'mutation'];
+    revues = JSON.parse(
+      execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/reviews`, '--paginate'], {
+        encoding: 'utf8',
+        maxBuffer: 32e6,
+      })
+    );
+  } catch {
+    return { marque: '[ ]', detail: 'revues illisibles (GitHub injoignable) — la case reste vide' };
+  }
+
+  // Le DERNIER verdict par lentille prime (règle du dépôt) ; on retient aussi le commit jugé.
+  const dernier = new Map<string, { verdict: string; commit: string }>();
+  for (const r of revues) {
+    const l = lentilles.find((x) => new RegExp(`^A\\d{2}\\s*·\\s*${x}\\b`, 'im').test(r.body ?? ''));
+    const v = /^Verdict\s*:\s*(accepte|refuse)\b/im.exec(r.body ?? '');
+    if (!l || !v) continue;
+    dernier.set(l, { verdict: v[1]!.toLowerCase(), commit: r.commit_id });
+  }
+
+  const manquantes = lentilles.filter((l) => !dernier.has(l));
+  const refusees = [...dernier.entries()].filter(([, d]) => d.verdict === 'refuse').map(([l]) => l);
+  const perimees = [...dernier.entries()]
+    .filter(([, d]) => d.verdict === 'accepte' && d.commit !== tete)
+    .map(([l, d]) => `${l} (jugé ${d.commit.slice(0, 7)})`);
+
+  if (manquantes.length || refusees.length || perimees.length) {
+    const raisons = [
+      manquantes.length ? `manquante(s) : ${manquantes.join(', ')}` : '',
+      refusees.length ? `en refus : ${refusees.join(', ')}` : '',
+      perimees.length ? `périmée(s) sur une autre tête que ${tete.slice(0, 7)} : ${perimees.join(', ')}` : '',
+    ].filter(Boolean);
+    return { marque: '[ ]', detail: raisons.join(' · ') };
+  }
+  return { marque: '[x]', detail: `les ${lentilles.length} lentilles (${lentilles.join(', ')}) ont accepté sur ${tete.slice(0, 7)}` };
+}
+
 export function valeurs(pr: number, journalTests: string | null): Record<string, string> {
   const T = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: Tache[] }).taches;
   const G = (JSON.parse(readFileSync('docs/gates.json', 'utf8')) as { gates: { preuveRouge: string | null }[] }).gates;
   const R = (JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as { exigences: unknown[] }).exigences;
   const surLaPr = T.filter((t) => t.pr === pr);
   const s = suite(journalTests);
+  const c = caseRevues(pr);
 
   return {
     TACHES: String(T.length),
@@ -113,6 +187,8 @@ export function valeurs(pr: number, journalTests: string | null): Record<string,
     CHAMPS_TOTAL: String(CHAMPS.length),
     SUITE_FICHIERS: s.fichiers,
     SUITE_TESTS: s.tests,
+    DOD_REVUES: c.marque,
+    DOD_REVUES_DETAIL: c.detail,
   };
 }
 
