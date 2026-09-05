@@ -110,7 +110,7 @@ Couvre : `REQ-GOV-003`, `REQ-GOV-015`
 
 **Tests.** `tests/unit/gouvernance/gardes.spec.ts#'gov:hypotheses' > sait rougir : ses 10 familles ont chacune un témoin`
 
-### GOV-006 — Glossaire + gate schéma enum
+### GOV-006 — Glossaire + gate schéma enum — **en_cours**
 
 `0.5 j` · zone `gouvernance` · `schema` · sensible : attribution · depend de `GOV-002`
 
@@ -160,7 +160,7 @@ Couvre : `REQ-GOV-014`
 
 **Tests.** `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts#REQ-GOV-014 — aucun workflow ne pousse sur la branche principale` · `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts#REQ-GOV-014 — les étapes des workflows sont réellement LUES, pas survolées` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#branche_non_protegee — la protection SUPPRIMÉE est un ROUGE, pas un indéterminé` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#protection_non_lisible — protection NON LUE ⇒ verdict INDÉTERMINÉ, pas conforme`
 
-### GOV-013 — Gate lexicale « commercial »
+### GOV-013 — Gate lexicale « commercial » — **en_cours**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-012`
 
@@ -266,7 +266,7 @@ Couvre : `REQ-QA-013`
 
 **Tests.** `tests/unit/gouvernance/tout-check-est-cable.spec.ts#le nom du check requis se lit dans les jobs de ci.yml, il n’est pas tapé` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#check_requis_absent — `gate-a` n’est plus exigé par la protection de `main`` · `tests/unit/gouvernance/tout-check-est-cable.spec.ts#un workflow qui ne se déclenche pas sur `pull_request` ne produit aucun check de PR`
 
-### CPL-T01 — Registre `config/entite.json` à valeur sentinelle, ses lecteurs et la garde `gov:entite`
+### CPL-T01 — Registre `config/entite.json` à valeur sentinelle, ses lecteurs et la garde `gov:entite` — **en_cours**
 
 `0.5 j` · zone `gouvernance` · sensible : argent, attribution · depend de `GOV-005` · decisions `HYP-W2`, `W1`, `W13`, `W3`, `W4`
 
@@ -276,7 +276,7 @@ Couvre : `REQ-CPL-001`, `REQ-CPL-002`, `REQ-CPL-003`, `REQ-CPL-004`, `REQ-CPL-01
 
 **Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
 
-### GOV-024 — Une vue générée qui a dérivé de sa source doit rougir
+### GOV-024 — Une vue générée qui a dérivé de sa source doit rougir — **en_cours**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-017b`
 
@@ -286,7 +286,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-032`
 
 **Tests.** `tests/unit/gouvernance/vues-derivees.spec.ts`
 
-### GOV-025 — La garde des identifiants nus est aveugle en fin de phrase — dépôt public, c'est une garde de publication
+### GOV-025 — La garde des identifiants nus est aveugle en fin de phrase — dépôt public, c'est une garde de publication — **en_cours**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-003`
 
@@ -296,7 +296,7 @@ Couvre : `REQ-GOV-003`
 
 **Tests.** `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts`
 
-### GOV-026 — Le CLAUDE.md racine, avec sa règle maison d'abord registrée
+### GOV-026 — Le CLAUDE.md racine, avec sa règle maison d'abord registrée — **en_cours**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-018`
 
@@ -306,7 +306,7 @@ Couvre : `REQ-GOV-024`
 
 **Tests.** `tests/unit/gouvernance/regles-maison.spec.ts`
 
-### GOV-027 — Le composeur lit le registre des décisions autrement que la garde, et écarte des tâches dont la décision est posée
+### GOV-027 — Le composeur lit le registre des décisions autrement que la garde, et écarte des tâches dont la décision est posée — **en_cours**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-005`
 
@@ -326,7 +326,7 @@ Couvre : `REQ-GOV-003`
 
 **Tests.** `tests/unit/gouvernance/citation-json-vs-prose.spec.ts`
 
-### GOV-029 — L'identifiant d'un lot se derivait d'un dossier que git ignore, et repartait sur un numero deja pris
+### GOV-029 — L'identifiant d'un lot se derivait d'un dossier que git ignore, et repartait sur un numero deja pris — **en_cours**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-027`
 

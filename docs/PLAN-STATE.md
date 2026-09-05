@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `794245c` — 2026-09-04T23:10:40+02:00 |
-| Qu’est-ce qui est en vol ? | aucune PR ouverte |
-| Qui tient quoi ? | aucune tâche revendiquée |
+| Qu’est-ce qui est en vol ? | 1. #31 (un contrôle requis rouge ou une revue manquante) |
+| Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-029 (A01) |
 | Où en est la phase ? | phase -1 — 20/32 tâches, reste 5.50 j |
-| Le prochain pas | GOV-013 — Gate lexicale « commercial » (chemin critique) |
+| Le prochain pas | INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 4 question(s) pour Will |
 | Dernière entrée de journal | PR #31 — 2026-09-05 |
 
-**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
@@ -25,8 +25,8 @@
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 181 | GOV-006, GOV-013, GOV-014, INT-T01b, GOV-019, JUR-T02, CPL-T01, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08 … |
-| `en_cours` | 0 | — |
+| `a_faire` | 173 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
+| `en_cours` | 8 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-029 (A01) PR#31 |
 | `en_revue` | 0 | — |
 | `fusionnee` | 20 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |
 | `deployee` | 0 | — |
@@ -60,13 +60,26 @@ Reste sur ce chemin : **17.75 j**.
 
 ## File de fusion
 
-Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.
+| # | PR | Branche | Ce qui la bloque |
+| --- | --- | --- | --- |
+| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — sept taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | un contrôle requis rouge ou une revue manquante |
+
+Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
 ## Revendications
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
+| Tâche | Revendiquée par | Issue | Statut |
+| --- | --- | --- | --- |
+| GOV-006 — Glossaire + gate schéma enum | A01 | #10 | `en_cours` |
+| GOV-013 — Gate lexicale « commercial » | A01 | #15 | `en_cours` |
+| CPL-T01 — Registre `config/entite.json` à valeur sentinelle, ses lecteurs et la garde `gov:entite` | A01 | — | `en_cours` |
+| GOV-024 — Une vue générée qui a dérivé de sa source doit rougir | A01 | — | `en_cours` |
+| GOV-025 — La garde des identifiants nus est aveugle en fin de phrase — dépôt public, c'est une garde de publication | A01 | — | `en_cours` |
+| GOV-026 — Le CLAUDE.md racine, avec sa règle maison d'abord registrée | A01 | — | `en_cours` |
+| GOV-027 — Le composeur lit le registre des décisions autrement que la garde, et écarte des tâches dont la décision est posée | A01 | — | `en_cours` |
+| GOV-029 — L'identifiant d'un lot se derivait d'un dossier que git ignore, et repartait sur un numero deja pris | A01 | — | `en_cours` |
 
 ⚠️ **15 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -79,7 +92,7 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 
 ## Prochain pas
 
-1. **GOV-013** — Gate lexicale « commercial » (0.25 j, **sur le chemin critique**) : 8 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+1. **INT-T01b** — Contrat d'événements, payloads et fixtures produites par le producteur réel (1 j) : 1 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
