@@ -91,8 +91,51 @@ import {
 
 const SCRIPT = 'scripts/gates/gov-entite.ts';
 
+/**
+ * L'ENVIRONNEMENT QUE CE BANC D'ESSAI DONNE À SES SOUS-PROCESSUS — et pourquoi il est CONSTRUIT
+ * plutôt qu'hérité.
+ *
+ * 🔴 CE QU'UN HÉRITAGE A COÛTÉ, mesuré le 2026-09-05 : `lancer()` transmettait `process.env` tel
+ * quel. `GITHUB_EVENT_PATH` n'existe pas sur un poste de développement et existe TOUJOURS dans un
+ * job Actions — le même cas rendait donc 2 en local (aucun numéro de PR à lire) et 0 en CI (le
+ * numéro lu, la forge interrogée pour de bon). Vert ici, rouge là-bas, pour un fichier identique.
+ *
+ * 🔑 **Un test qui dépend d'une variable d'environnement que le développeur n'a pas et que la CI a
+ * mesure deux choses différentes selon l'endroit.** Un banc d'essai n'hérite pas d'un
+ * environnement : il le construit, et il NOMME ce qu'il en retire.
+ *
+ * CE QUI EST RETIRÉ, ET POURQUOI CHACUNE :
+ *   — `GITHUB_EVENT_PATH` : `numeroDePrDeLEvenement()` la lit, et elle décide à elle seule si le
+ *     mode en ligne juge une PR ou refuse de juger. C'est celle qui a rendu Gate A rouge.
+ *   — `GH_TOKEN`, `GITHUB_TOKEN`, `GH_HOST`, `GH_REPO`, `GH_ENTERPRISE_TOKEN` : elles décident ce
+ *     que `gh` atteint. Aucun cas de ce fichier ne doit pouvoir toucher la forge — un cas qui
+ *     interroge GitHub verdit ou rougit au gré de ce que la forge répond le jour où il tourne.
+ *     Les retirer rend l'impossibilité STRUCTURELLE plutôt que réputée.
+ *
+ * ⚠️ La neutralisation est CIBLÉE. Vider l'environnement retirerait `PATH`, `npx` deviendrait
+ * introuvable, et l'échec ressemblerait à un rouge de garde là où ce serait un rouge d'outillage.
+ */
+const VARIABLES_NEUTRALISEES = [
+  'GITHUB_EVENT_PATH',
+  'GH_TOKEN',
+  'GITHUB_TOKEN',
+  'GH_HOST',
+  'GH_REPO',
+  'GH_ENTERPRISE_TOKEN',
+] as const;
+
+function envDuBancDEssai(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  for (const variable of VARIABLES_NEUTRALISEES) delete env[variable];
+  return env;
+}
+
 function lancer(...args: string[]): { code: number; sortie: string } {
-  const r = spawnSync('npx', ['tsx', SCRIPT, ...args], { encoding: 'utf8', shell: true });
+  const r = spawnSync('npx', ['tsx', SCRIPT, ...args], {
+    encoding: 'utf8',
+    shell: true,
+    env: envDuBancDEssai(),
+  });
   return { code: r.status ?? 1, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
 }
 
@@ -840,6 +883,78 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
     const { code, sortie } = lancer('--corps-publie');
     expect(code).toBe(2);
     expect(sortie).toContain('INDÉTERMINÉ');
+  });
+
+  /**
+   * ── LE BANC D'ESSAI DOIT MESURER LA MÊME CHOSE ICI ET EN CI ────────────────────────────────
+   *
+   * 🔴 CE QUI A ÉTÉ MESURÉ le 2026-09-05, sur `650ea10` : le cas ci-dessus était VERT sur ma
+   * machine et ROUGE en CI (run 33971108053, `AssertionError: expected +0 to be 2`). La cause
+   * n'est pas dans la garde, elle est dans ce fichier : `lancer()` transmettait `process.env` au
+   * sous-processus. En local `GITHUB_EVENT_PATH` n'existe pas — la garde ne trouve aucun numéro
+   * et rend 2. En CI la variable existe TOUJOURS, `numeroDePrDeLEvenement()` y lit `31`, la garde
+   * interroge réellement la forge et rend 0.
+   *
+   * 🔑 LA LEÇON, ET ELLE EST DE MÉTHODE : **un test qui dépend d'une variable d'environnement que
+   * le développeur n'a pas et que la CI a mesure deux choses différentes selon l'endroit.** Le
+   * « 480/480, exit 0 » que j'ai publié était vrai sur ma machine SEULEMENT. Un banc d'essai ne
+   * peut pas hériter d'un environnement : il le CONSTRUIT.
+   *
+   * ⚠️ POURQUOI CE N'EST PAS DE LA TUYAUTERIE. La seule étape bloquante que cette PR introduit
+   * faisait échouer la CI pour une raison SANS RAPPORT avec une coordonnée. C'est le mécanisme
+   * exact par lequel une gate se fait désarmer : quelqu'un finit par la retirer « parce qu'elle
+   * est capricieuse ».
+   *
+   * CE QUE CE CAS TIENT, ET QUI MANQUAIT : il POSE la variable que la CI pose, et exige le MÊME
+   * verdict. Il rougit le jour où quelqu'un retire la neutralisation de `lancer()`.
+   */
+  it('REQ-CPL-018 — `GITHUB_EVENT_PATH` POSÉ ne change pas le verdict : le banc d’essai construit son environnement', () => {
+    const dossier = mkdtempSync(join(tmpdir(), 'evt-ci-'));
+    const chemin = join(dossier, 'event.json');
+    const avant = process.env.GITHUB_EVENT_PATH;
+    try {
+      writeFileSync(chemin, JSON.stringify({ pull_request: { number: PR } }));
+      process.env.GITHUB_EVENT_PATH = chemin;
+
+      // TÉMOIN POSITIF de la variable elle-même. Sans lui, ce cas passerait tout aussi bien sur
+      // un fichier d'événement illisible : on mesurerait « rien à lire », pas la neutralisation.
+      // Dix zéros veulent dire « absent » ou « je ne regarde pas », et rien ne les sépare.
+      expect(numeroDePrDeLEvenement(), 'l’événement posé doit être LU').toBe(String(PR));
+
+      const { code, sortie } = lancer('--corps-publie');
+      expect(code).toBe(2);
+      // ET LE MESSAGE, PAS SEULEMENT LE CODE. Sans la neutralisation, un poste hors ligne
+      // rendrait 2 lui aussi — mais sur `lecture_impossible`, un tout autre diagnostic. Exiger
+      // la phrase du refus « aucun numéro » est ce qui distingue les deux.
+      expect(sortie).toContain('attend un NUMÉRO de PR');
+    } finally {
+      if (avant === undefined) delete process.env.GITHUB_EVENT_PATH;
+      else process.env.GITHUB_EVENT_PATH = avant;
+      rmSync(dossier, { recursive: true, force: true });
+    }
+  });
+
+  it('REQ-CPL-018 — la neutralisation est celle de TOUTES les invocations, pas de celle-ci seulement', () => {
+    // Une règle tirée d'UN cas ne vaut que si elle est vérifiée contre les N. Le balayage de ce
+    // fichier a rendu : six invocations de sous-processus, toutes par `lancer()`, aucune autre
+    // voie ; les appels EN PROCESSUS de `src/config/entite.ts` passent déjà un environnement
+    // explicite (`{}` ou une table construite), et les accesseurs qui n'ont pas de paramètre
+    // `env` n'en lisent aucun. Le point unique est donc `lancer()` — et c'est LUI qu'on garde.
+    expect(VARIABLES_NEUTRALISEES).toContain('GITHUB_EVENT_PATH');
+    const avant = process.env.GITHUB_EVENT_PATH;
+    try {
+      process.env.GITHUB_EVENT_PATH = join(tmpdir(), 'inexistant-mais-pose.json');
+      for (const v of VARIABLES_NEUTRALISEES) {
+        expect(Object.keys(envDuBancDEssai()), `${v} traverse encore vers le sous-processus`).not.toContain(v);
+      }
+      // CONTRE-TÉMOIN : la neutralisation est CIBLÉE, elle ne vide pas l'environnement. Un
+      // sous-processus sans `PATH` ne trouverait plus `npx`, et l'échec ressemblerait à un rouge
+      // de garde alors que ce serait un rouge d'outillage.
+      expect(Object.keys(envDuBancDEssai()).length).toBeGreaterThan(0);
+    } finally {
+      if (avant === undefined) delete process.env.GITHUB_EVENT_PATH;
+      else process.env.GITHUB_EVENT_PATH = avant;
+    }
   });
 });
 
