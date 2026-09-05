@@ -81,6 +81,10 @@ import {
   EDITIONS_PAR_PAGE,
   PAGES_MAX,
   REQUETE_EDITIONS,
+  lireUneFois,
+  lireCorpsPublie,
+  type ExecuteurGh,
+  type NoeudEdition,
   type PageDEditions,
   type Exemption,
   type LectureDuCorps,
@@ -1537,5 +1541,165 @@ describe('REQ-CPL-018 — la pagination des révisions : lire CENT n’est pas l
     expect(code).toBe(0);
     expect(sortie).toContain(`${EDITIONS_PAR_PAGE} par page`);
     expect(sortie).toContain(`${PAGES_MAX} page(s) au plus`);
+  });
+});
+
+/**
+ * ── LE SENS DE DÉFAILLANCE DE LA LECTURE — CE QUE LA GARDE CHOISIT, ET QUE RIEN NE DÉFENDAIT ──
+ *
+ * 🔴 CE QUE LA LENTILLE `mutation` A MESURÉ le 2026-09-05, et c'est le mutant qui interdisait la
+ * fusion à lui seul. Mutation : en cas d'échec, `lireCorpsPublie` rend `{ lu: true, corps: [] }`
+ * au lieu de `{ lu: false, motif }`. Résultat — **93/93 vert, `--corps-publie --prove` exit 0**,
+ * et le mode en ligne imprime sur une PR ILLISIBLE :
+ *
+ *     ✅ gov:entite --corps-publie 999999 — le corps PUBLIÉ et son historique d'édition
+ *        ne portent aucune coordonnée bancaire NON DÉCLARÉE                        exit 0
+ *
+ * Sur la base intacte, la même commande rend 2 et `[lecture_impossible]`. **La garde discrimine ;
+ * rien ne défendait qu'elle discrimine.**
+ *
+ * 🔑 LA FORME EXACTE DU TROU, ET ELLE SE GÉNÉRALISE : `jugerCorpsPublie` est pur et couvert par
+ * une trentaine de cas ; `lireCorpsPublie` est le SEUL endroit où le sens de défaillance est
+ * CHOISI, et il n'était exercé par aucun cas — le seul cas du mode en ligne sortait en 2 AVANT de
+ * l'appeler. Un module bien couvert peut abriter la fonction qui décide de tout, non couverte :
+ * la couverture du pur ne dit rien de l'impur qui l'alimente.
+ *
+ * CE QUI LE FERME : `lireUneFois` et `lireCorpsPublie` prennent leur `gh` en PARAMÈTRE. La preuve
+ * tient alors hors ligne, comme celle de `jugerCorpsPublie` et de `paginerEditions` — sans quoi
+ * elle dépendrait de ce que la forge répond le jour où elle tourne.
+ */
+describe('REQ-CPL-018 — la LECTURE, et le sens dans lequel elle échoue', () => {
+  const PR = '4242';
+  const DEPOT = 'exemple/depot-de-papier';
+
+  /**
+   * UN `gh` DE PAPIER. Il répond aux trois appels de la lecture réelle et peut TOMBER sur celui
+   * qu'on désigne. AUCUN champ n'a de valeur par défaut (RM-11) : « présent » et « absent » sont
+   * deux fixtures, pas une omission — un défaut ici transformerait l'absence en présence, et le
+   * cas passerait sur un code qui ne lit jamais le champ.
+   */
+  type GhDePapier = {
+    corps: unknown;
+    depot: unknown;
+    editions: NoeudEdition[];
+    total: number;
+    pageInfo: { hasNextPage: boolean; endCursor: string | null } | undefined;
+    tombeSur: 'pr' | 'repo' | 'graphql' | null;
+  };
+  function ghDePapier(o: GhDePapier): ExecuteurGh {
+    return (args: string[]): string => {
+      const quoi = args[0] === 'pr' ? 'pr' : args[0] === 'repo' ? 'repo' : 'graphql';
+      if (o.tombeSur === quoi) throw new Error(`gh ${quoi} : panne de papier`);
+      if (quoi === 'pr') return JSON.stringify({ body: o.corps });
+      if (quoi === 'repo') return JSON.stringify({ nameWithOwner: o.depot });
+      return JSON.stringify({
+        data: {
+          repository: {
+            pullRequest: {
+              userContentEdits: { totalCount: o.total, pageInfo: o.pageInfo, nodes: o.editions },
+            },
+          },
+        },
+      });
+    };
+  }
+  const SAIN: GhDePapier = {
+    corps: 'un corps de PR parfaitement propre',
+    depot: DEPOT,
+    editions: [{ editedAt: '2026-01-02T03:04:05Z', diff: 'une révision propre' }],
+    total: 1,
+    pageInfo: { hasNextPage: false, endCursor: null },
+    tombeSur: null,
+  };
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : un `gh` qui répond correctement rend `lu: true` et COMPTE', () => {
+    // LE TÉMOIN POSITIF, ET IL VIENT D'ABORD. Sans lui, les cas ci-dessous passeraient tous sur
+    // un `lireUneFois` qui rendrait TOUJOURS `{ lu: false }` — c'est-à-dire sur une lecture qui
+    // ne lit jamais rien. Dix « je n'ai pas pu » ne prouvent pas qu'on sache lire une fois.
+    const lecture = lireUneFois(PR, ghDePapier(SAIN));
+    expect(lecture.lu).toBe(true);
+    if (!lecture.lu) throw new Error('inatteignable');
+    expect(lecture.pr).toBe(Number(PR));
+    expect(lecture.revisionsLues).toBe(1);
+    expect(lecture.revisionsAnnoncees).toBe(1);
+    expect(lecture.corps.filter((c) => !c.revision)).toHaveLength(1);
+    expect(jugerCorpsPublie(lecture).code).toBe(0);
+  });
+
+  it.each([
+    ['`gh pr view` tombe', { ...SAIN, tombeSur: 'pr' as const }, 'gh pr view'],
+    ['`gh repo view` tombe', { ...SAIN, tombeSur: 'repo' as const }, 'gh repo view'],
+    ['la requête GraphQL tombe', { ...SAIN, tombeSur: 'graphql' as const }, 'userContentEdits'],
+    ['le corps n’est pas textuel', { ...SAIN, corps: undefined }, 'body'],
+    ['le corps est un NOMBRE', { ...SAIN, corps: 12 }, 'body'],
+    ['le dépôt n’est pas textuel', { ...SAIN, depot: undefined }, 'illisible'],
+    ['le dépôt n’a pas de barre', { ...SAIN, depot: 'sans-barre' }, 'illisible'],
+    ['`userContentEdits` manque', { ...SAIN, total: undefined as unknown as number }, 'userContentEdits'],
+  ])(
+    'REQ-CPL-018 — %s : la lecture rend `lu: false`, JAMAIS un corps vide qui passerait pour propre',
+    (_quoi: string, o: GhDePapier, motif: string) => {
+      const lecture = lireUneFois(PR, ghDePapier(o));
+      // LE MUTANT QUE CE CAS TUE : `{ lu: true, corps: [] }`. Il rendrait la garde VERTE sur une
+      // PR qu'elle n'a pas pu lire — exactement le défaut qu'elle existe pour empêcher, promu
+      // d'un cran, là où plus personne ne le regarde.
+      expect(lecture.lu).toBe(false);
+      if (lecture.lu) throw new Error('inatteignable');
+      expect(lecture.motif).toContain(motif);
+      // ET LE VERDICT QUI EN DÉCOULE EST 2, JAMAIS 0. C'est la moitié qui compte pour la CI.
+      expect(jugerCorpsPublie(lecture).code).toBe(2);
+      expect(jugerCorpsPublie(lecture).fautes.map((f) => f.famille)).toEqual(['lecture_impossible']);
+    }
+  );
+
+  it('REQ-CPL-018 — `pageInfo` ABSENT n’est pas « il n’y a plus rien » : c’est un champ non lu', () => {
+    // Le jour où la forge renomme un champ de `pageInfo`, une lecture qui conclurait « pas de
+    // page suivante » réputerait propres toutes les révisions qu'elle n'a pas demandées.
+    const lecture = lireUneFois(PR, ghDePapier({ ...SAIN, pageInfo: undefined, total: 300 }));
+    expect(lecture.lu).toBe(true);
+    if (!lecture.lu) throw new Error('inatteignable');
+    expect(lecture.revisionsAnnoncees).toBeGreaterThan(lecture.revisionsLues);
+    expect(jugerCorpsPublie(lecture).code).toBe(2);
+  });
+
+  it('REQ-CPL-018 — le réessai transforme une INTERMITTENCE en latence, jamais en couleur', () => {
+    // Sans réessai, un incident réseau d'une seconde rendrait rouge une PR qui n'a rien fait, et
+    // une garde capricieuse se fait retirer. Le témoin POSITIF du réessai : deux échecs, puis
+    // une réponse — la lecture aboutit, et l'on compte les tentatives.
+    let tentatives = 0;
+    const capricieux: ExecuteurGh = (args) => {
+      if (args[0] === 'pr') {
+        tentatives += 1;
+        if (tentatives < 3) throw new Error('réseau injoignable (témoin)');
+      }
+      return ghDePapier(SAIN)(args);
+    };
+    const lecture = lireCorpsPublie(PR, 3, capricieux);
+    expect(lecture.lu).toBe(true);
+    expect(tentatives).toBe(3);
+  });
+
+  it('REQ-CPL-018 — une panne STABLE reste `lu: false` après tous les essais, et le DIT', () => {
+    // La distinction que le réessai ne doit PAS effacer : une réponse stable et incomplète n'est
+    // pas une intermittence. Trois lectures d'une panne donnent trois fois la même panne.
+    let appels = 0;
+    const enPanne: ExecuteurGh = (args) => {
+      appels += 1;
+      return ghDePapier({ ...SAIN, tombeSur: 'pr' })(args);
+    };
+    const lecture = lireCorpsPublie(PR, 3, enPanne);
+    expect(lecture.lu).toBe(false);
+    if (lecture.lu) throw new Error('inatteignable');
+    expect(lecture.motif).toContain('3 tentative(s)');
+    expect(appels).toBe(3);
+    expect(jugerCorpsPublie(lecture).code).toBe(2);
+  });
+
+  it('REQ-CPL-018 — `gov:entite:corps:prove` porte le sens de défaillance AUSSI, et le DIT', () => {
+    // Un témoin qui ne tient que `pnpm test` ne garde pas la CI : le mutant est mort ici, il doit
+    // mourir AUSSI dans l'étape de Gate A. C'est le fait d'instrument du tour six — un mutant peut
+    // mourir dans `pnpm test` et survivre dans `--prove`.
+    const { code, sortie } = lancer('--corps-publie', '--prove');
+    expect(code).toBe(0);
+    expect(sortie).toContain('La LECTURE elle-même est éprouvée');
   });
 });

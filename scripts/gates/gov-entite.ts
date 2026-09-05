@@ -1194,10 +1194,35 @@ export function assemblerLecture(
  */
 const ESSAIS_DE_LECTURE = 3;
 
-export function lireCorpsPublie(numero: string, essais = ESSAIS_DE_LECTURE): LectureDuCorps {
+/**
+ * CE QUI EXECUTE `gh`, ET POURQUOI C'EST UN PARAMETRE — 🔴 le mutant qui interdisait la fusion
+ * le 2026-09-05. Mutation : en cas d'echec, rendre `{ lu: true, corps: [] }`. Resultat : banc
+ * d'essai ENTIEREMENT vert, `--prove` a 0, et le mode en ligne imprimant un ✅ sur une PR
+ * ILLISIBLE. `jugerCorpsPublie` etait couvert par une trentaine de cas ; la fonction ou le sens
+ * de defaillance est CHOISI ne l'etait par aucun, parce qu'elle passait par le reseau.
+ *
+ * 🔑 La couverture du PUR ne dit rien de l'IMPUR qui l'alimente. On injecte donc l'appel
+ * exterieur, exactement comme `paginerEditions` injecte sa page : la preuve tient hors ligne.
+ */
+export type ExecuteurGh = (args: string[]) => string;
+
+export const GH_REEL: ExecuteurGh = (args) =>
+  execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+
+/**
+ * AUCUN DEFAUT SUR CE QUE LE TEST FAIT VARIER (RM-11) : ni `essais` ni `gh` n'ont de valeur
+ * par defaut. Un defaut sur `gh` reintroduirait tout le probleme — un cas qui l'omettrait
+ * repartirait sur le reseau sans que rien ne le dise, et redeviendrait vert pour la mauvaise
+ * raison. La ligne de commande, elle, passe `ESSAIS_DE_LECTURE` et `GH_REEL` explicitement.
+ */
+export function lireCorpsPublie(
+  numero: string,
+  essais: number,
+  gh: ExecuteurGh
+): LectureDuCorps {
   let derniere: LectureDuCorps = { lu: false, motif: 'aucune tentative' };
   for (let n = 1; n <= Math.max(1, essais); n += 1) {
-    derniere = lireUneFois(numero);
+    derniere = lireUneFois(numero, gh);
     if (derniere.lu) {
       console.log(`   lecture obtenue à la tentative ${n}/${Math.max(1, essais)}.`);
       return derniere;
@@ -1209,10 +1234,7 @@ export function lireCorpsPublie(numero: string, essais = ESSAIS_DE_LECTURE): Lec
   };
 }
 
-function lireUneFois(numero: string): LectureDuCorps {
-  const gh = (args: string[]): string =>
-    execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-
+export function lireUneFois(numero: string, gh: ExecuteurGh): LectureDuCorps {
   let corpsCourant: string;
   try {
     const brut = gh(['pr', 'view', numero, '--json', 'body']);
@@ -1640,10 +1662,116 @@ function prouverCorpsPublie(): number {
     }
   }
 
+  // ── LE SENS DE DÉFAILLANCE DE LA LECTURE, ÉPROUVÉ HORS LIGNE ────────────────────────────────
+  // 🔴 Le mutant du 2026-09-05 : `lireCorpsPublie` rendant `{ lu: true, corps: [] }` en cas
+  // d'échec. Banc d'essai entièrement vert, `--prove` à 0, et un ✅ imprimé sur une PR ILLISIBLE.
+  // `jugerCorpsPublie` est pur et couvert ; la fonction qui CHOISIT le sens de défaillance ne
+  // l'était pas, parce qu'elle passait par le réseau. Elle prend son `gh` en paramètre, et ces
+  // témoins-ci vivent dans `--prove` : un mutant peut mourir dans `pnpm test` et survivre ici.
+  {
+    const DEPOT = 'exemple/depot-de-papier';
+    const HORO_LECTURE = '2026-01-02T03:04:05Z';
+    type GhDePapier = {
+      corps: unknown;
+      depot: unknown;
+      editions: NoeudEdition[];
+      total: number;
+      pageInfo: { hasNextPage: boolean; endCursor: string | null } | undefined;
+      tombeSur: 'pr' | 'repo' | 'graphql' | null;
+    };
+    const ghDePapier =
+      (o: GhDePapier): ExecuteurGh =>
+      (args: string[]): string => {
+        const quoi = args[0] === 'pr' ? 'pr' : args[0] === 'repo' ? 'repo' : 'graphql';
+        if (o.tombeSur === quoi) throw new Error(`gh ${quoi} : panne de papier`);
+        if (quoi === 'pr') return JSON.stringify({ body: o.corps });
+        if (quoi === 'repo') return JSON.stringify({ nameWithOwner: o.depot });
+        return JSON.stringify({
+          data: {
+            repository: {
+              pullRequest: {
+                userContentEdits: { totalCount: o.total, pageInfo: o.pageInfo, nodes: o.editions },
+              },
+            },
+          },
+        });
+      };
+    // AUCUN DÉFAUT sur ce que ces témoins font varier (RM-11) : chaque champ est écrit.
+    const SAIN: GhDePapier = {
+      corps: 'un corps de PR parfaitement propre',
+      depot: DEPOT,
+      editions: [{ editedAt: HORO_LECTURE, diff: 'une révision propre' }],
+      total: 1,
+      pageInfo: { hasNextPage: false, endCursor: null },
+      tombeSur: null,
+    };
+
+    // LE TÉMOIN POSITIF D'ABORD : sans lui, tout ce qui suit passerait sur une lecture qui ne lit
+    // jamais rien. Dix « je n'ai pas pu » ne prouvent pas qu'on sache lire une fois.
+    const saine = lireUneFois(String(PR_TEMOIN), ghDePapier(SAIN));
+    if (!saine.lu || saine.revisionsLues !== 1 || jugerCorpsPublie(saine).code !== 0) {
+      console.error(
+        `❌ La lecture d'un \`gh\` SAIN n'a pas rendu ce qu'elle devait : lu=${saine.lu}. ` +
+          `Sans ce témoin positif, les témoins de panne ci-dessous ne mesurent rien.`
+      );
+      return 1;
+    }
+
+    const PANNES: { quoi: string; o: GhDePapier }[] = [
+      { quoi: '`gh pr view` tombe', o: { ...SAIN, tombeSur: 'pr' } },
+      { quoi: '`gh repo view` tombe', o: { ...SAIN, tombeSur: 'repo' } },
+      { quoi: 'la requête GraphQL tombe', o: { ...SAIN, tombeSur: 'graphql' } },
+      { quoi: "le corps n'est pas textuel", o: { ...SAIN, corps: undefined } },
+      { quoi: 'le dépôt est illisible', o: { ...SAIN, depot: undefined } },
+      { quoi: '`userContentEdits` manque', o: { ...SAIN, total: undefined as unknown as number } },
+    ];
+    for (const p of PANNES) {
+      const lue = lireUneFois(String(PR_TEMOIN), ghDePapier(p.o));
+      const v = jugerCorpsPublie(lue);
+      if (lue.lu || v.code !== 2) {
+        console.error(
+          `❌ « ${p.quoi} » a rendu lu=${lue.lu}, code ${v.code} (attendu lu=false, code 2). ` +
+            `Une lecture qui échoue et se déclare LUE rend la garde verte sur une PR illisible.`
+        );
+        return 1;
+      }
+    }
+
+    // LE RÉESSAI : une INTERMITTENCE devient de la latence, jamais une couleur — et une panne
+    // STABLE reste `lu: false`. Sans le premier, la garde serait capricieuse et on la retirerait ;
+    // sans le second, le réessai effacerait la distinction qu'il existe pour préserver.
+    let tentatives = 0;
+    const capricieux: ExecuteurGh = (args) => {
+      if (args[0] === 'pr') {
+        tentatives += 1;
+        if (tentatives < ESSAIS_DE_LECTURE) throw new Error('réseau injoignable (témoin)');
+      }
+      return ghDePapier(SAIN)(args);
+    };
+    const reprise = lireCorpsPublie(String(PR_TEMOIN), ESSAIS_DE_LECTURE, capricieux);
+    const stable = lireCorpsPublie(
+      String(PR_TEMOIN),
+      ESSAIS_DE_LECTURE,
+      ghDePapier({ ...SAIN, tombeSur: 'pr' })
+    );
+    if (!reprise.lu || tentatives !== ESSAIS_DE_LECTURE || stable.lu) {
+      console.error(
+        `❌ Le réessai n'a pas rendu ce qu'il devait : reprise lu=${reprise.lu} en ${tentatives} ` +
+          `tentative(s), panne stable lu=${stable.lu} (attendu false).`
+      );
+      return 1;
+    }
+  }
+
   console.log(
     `✅ Les ${FAMILLES_CORPS_PUBLIE.length} familles du corps publié rougissent chacune sur son témoin — preuve faite.`
   );
   console.log(`   ${FAMILLES_CORPS_PUBLIE.map((f) => '• ' + f).join('\n   ')}`);
+  console.log(
+    `   La LECTURE elle-même est éprouvée hors ligne : un \`gh\` de papier qui TOMBE rend ` +
+      `toujours \`lu: false\`, donc 2 — jamais un corps vide qui passerait pour propre. Le ` +
+      `réessai reprend une intermittence ; une panne STABLE reste \`lu: false\`.`
+  );
   console.log(
     `   Les révisions sont PAGINÉES : ${EDITIONS_PAR_PAGE} par page, ${PAGES_MAX} page(s) au plus, ` +
       `soit ${PAGES_MAX * EDITIONS_PAR_PAGE} révision(s). Une coordonnée servie APRÈS la première ` +
@@ -2134,7 +2262,7 @@ if (APPELE_DIRECTEMENT) {
       process.exit(2);
     }
 
-    const lecture = lireCorpsPublie(numero);
+    const lecture = lireCorpsPublie(numero, ESSAIS_DE_LECTURE, GH_REEL);
     const verdict = jugerCorpsPublie(lecture, exemptions);
 
     // TÉMOIN POSITIF, IMPRIMÉ DANS LES TROIS CAS. Un « aucune coordonnée » sans volumétrie est
