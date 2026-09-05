@@ -113,8 +113,19 @@ export const FAMILLES = [
 export type FamilleExemptable = 'recopie' | 'coordonnee';
 
 export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: string }[] = [
-  { motif: /^config\/entite\.json$/, exemptDe: 'coordonnee', raison: 'le registre lui-même : ses champs sont jugés un par un plus haut, et il ne se recopie pas lui-même' },
+  {
+    motif: /^config\/entite\.json$/,
+    exemptDe: 'recopie',
+    raison:
+      "le registre est la SOURCE : il porte legitimement son SIREN, son SIRET et sa TVA, et il ne se recopie pas lui-meme. Il n'est PLUS exempt de coordonnee_en_clair — il l'a ete jusqu'au 2026-09-05, et la raison ecrite alors (« ses champs sont juges un par un plus haut ») etait FAUSSE : les 17 champs non secrets n'etaient confrontes a aucune forme, si bien qu'un IBAN ecrit dans banqueReceptrice.espaceDeTest — le champ ou l'on colle un RIB, trois lignes sous banqueDebitrice.iban — restait invisible. L'exemption en bloc contournait cinq faux positifs legitimes, elle ne decidait rien sur l'IBAN",
+  },
   { motif: /^scripts\/gates\/gov-entite\.ts$/, exemptDe: 'coordonnee', raison: 'la garde porte ses propres témoins, qui doivent avoir la forme de ce qu’elle refuse' },
+  {
+    motif: /^tests\/unit\/gouvernance\/entite-registre\.spec\.ts$/,
+    exemptDe: 'coordonnee',
+    raison:
+      "le banc d'essai de cette garde, au même titre que la garde elle-même : ses témoins DOIVENT avoir la forme de ce qu'elle refuse — un IBAN à clé valide, un BIC, le SIREN du registre. Ajouté le 2026-09-05, quand les témoins du second tour de la lentille securite ont fait rougir la garde sur son propre banc d'essai. C'est le prix, assumé et borné à UN fichier nommé, de la règle « un document qui explique la règle doit pouvoir écrire son contre-exemple » — la même que gov:identifiants a déjà payée",
+  },
   { motif: /^docs\/DECISIONS\.md$/, exemptDe: 'recopie', raison: 'le registre des décisions NOMME la valeur PUBLIQUE qu’il arrête — c’est son travail. Il n’est PAS exempt de `coordonnee_en_clair` : c’est le fichier le plus exposé du dépôt, celui où l’arbitrage de la banque sera écrit' },
   { motif: /^docs\/adr\/0009-valeurs-du-monde-reel\.md$/, exemptDe: 'recopie', raison: 'l’ADR qui fonde cette garde cite les formes d’exemple qu’elle interdit' },
   { motif: /^pnpm-lock\.yaml$/, exemptDe: 'coordonnee', raison: 'empreintes de paquets, aucune prose' },
@@ -251,8 +262,65 @@ export function estExemplePlausible(v: string): boolean {
   return false;
 }
 
-/** Un IBAN : deux lettres, deux chiffres, puis 11 à 30 caractères alphanumériques. */
-const FORME_IBAN = /\b([A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,4})?)\b/g;
+/**
+ * Le code PAYS ISO qui ouvre un IBAN et qui occupe les 5ᵉ et 6ᵉ caractères d'un BIC.
+ * Déclaré AVANT les deux formes qui s'en servent : un `const` référencé plus haut que sa
+ * déclaration lève à l'exécution, et la garde ne serait pas « fausse », elle serait MORTE.
+ */
+const PAYS_ISO =
+  '(?:AD|AE|AT|BE|BG|CH|CY|CZ|DE|DK|EE|ES|FI|FR|GB|GI|GR|HR|HU|IE|IS|IT|LI|LT|LU|LV|MC|MT|NL|NO|PL|PT|RO|SE|SI|SK|SM|VA|US|CA|JP|CN|MA|TN|DZ|SN|CI)';
+
+/**
+ * Un IBAN : un code PAYS, deux chiffres de contrôle, puis 11 à 30 caractères alphanumériques.
+ *
+ * ⚠️ LA CASSE, COMME LES ESPACES. La forme n'acceptait que les MAJUSCULES : `fr7630006000…`
+ * passait partout, `docs/` compris, et `PARTNERS_IBAN_DEBITEUR=<iban minuscule>` dans
+ * `.env.example` aussi. La question de la casse avait été posée et tranchée pour le BIC, jamais
+ * reportée ici — c'est le défaut typique d'une correction qui s'arrête au cas qui l'a motivée.
+ * Un IBAN se copie tel qu'il est affiché, et un relevé n'impose pas la casse.
+ *
+ * ⚠️ ET LE CODE PAYS EST CE QUI REND LA CASSE TENABLE. Sans lui, accepter les minuscules a fait
+ * reconnaître n'importe quel identifiant hexadécimal de 24 caractères —
+ * `FC294892B7AA455D2398C4B6`, dans une fixture suivie depuis la PR #28 — et la garde a rougi sur
+ * un dépôt PROPRE. Un faux positif dans une garde de publication coûte aussi cher qu'un faux
+ * négatif : c'est lui qui la fait désarmer.
+ *
+ * La valeur est remontée en MAJUSCULES avant d'être signalée, pour qu'un même compte écrit de
+ * deux façons ne compte pas deux fois.
+ */
+const FORME_IBAN = new RegExp(
+  `\\b(${PAYS_ISO}\\d{2}(?:[ ]?[A-Za-z0-9]{4}){2,7}(?:[ ]?[A-Za-z0-9]{1,4})?)\\b`,
+  'gi'
+);
+
+/**
+ * LA CLÉ DE CONTRÔLE — ce qui distingue un IBAN d'une chaîne qui lui ressemble.
+ *
+ * Le code pays a fermé `FC29…`, mais pas `DE72D8B01D…` ni `AE77F99D…` : `DE` et `AE` SONT des
+ * codes pays, et ces deux-là sont des identifiants hexadécimaux d'une fixture suivie. Empiler des
+ * heuristiques de forme ne ferme jamais cette classe — il y aura toujours un identifiant dont les
+ * deux premières lettres font un pays.
+ *
+ * La norme, elle, tranche : un IBAN porte deux chiffres de contrôle, et le nombre obtenu en
+ * déplaçant ses quatre premiers caractères à la fin puis en remplaçant chaque lettre par son rang
+ * (A = 10 … Z = 35) vaut 1 modulo 97. Aucune des chaînes qui nous gênaient ne le vérifie ; le
+ * témoin de la garde et les IBAN réels le vérifient tous.
+ *
+ * CE QUE ÇA COÛTE, ET QUI EST ASSUMÉ : un IBAN mal recopié n'est plus vu. C'est acceptable —
+ * un IBAN dont la clé est fausse n'autorise aucun prélèvement, il n'est pas la fuite qu'on
+ * craint. Un IBAN copié depuis un relevé, lui, est toujours valide.
+ */
+export function cleIbanValide(valeur: string): boolean {
+  const s = valeur.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (s.length < 15 || s.length > 34) return false;
+  const reorganise = s.slice(4) + s.slice(0, 4);
+  let reste = 0;
+  for (const c of reorganise) {
+    const chiffres = /[0-9]/.test(c) ? c : (c.charCodeAt(0) - 55).toString();
+    for (const d of chiffres) reste = (reste * 10 + Number(d)) % 97;
+  }
+  return reste === 1;
+}
 /** Un numéro de TVA intracommunautaire français. */
 const FORME_TVA_FR = /\b(FR[0-9A-Z]{2}\d{9})\b/g;
 /**
@@ -267,7 +335,28 @@ const FORME_TVA_FR = /\b(FR[0-9A-Z]{2}\d{9})\b/g;
 // lettres minuscules. Mesuré sur ce dépôt : « confront », « ceptrice », « variante » — de la
 // prose ordinaire, à vingt-quatre caractères d'un « BIC » écrit juste avant. Le mot-clé doit
 // donc tolérer les deux casses SANS que la valeur les tolère, d'où la classe explicite.
-const FORME_BIC = /\b[Bb][Ii][Cc]\b[^\n]{0,24}?\b([A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)\b/g;
+// Le mot-clé se borne sur un NON-ALPHANUMÉRIQUE et non sur `\\b` : `PARTNERS_BIC_DEBITEUR=…`
+// ne correspondait pas, le tiret bas étant un caractère de mot — or c'est le nom que
+// `src/config/entite.ts` donne à la variable, dans un fichier que ce lot vient d'ajouter au
+// balayage. La valeur est cherchée AVANT comme APRÈS le mot-clé, et sur la ligne suivante : un
+// RIB collé met l'étiquette sur une ligne et la valeur sur la suivante.
+// ⚠️ LE CODE PAYS NE SUFFIT PAS, et `DOCUSEAL` le prouve : `DOCU` + `SE` + `AL`, où `SE` EST la
+// Suède. Un discriminant qu'on n'éprouve pas contre le cas qui l'a motivé ne discrimine rien —
+// je l'ai posé pour fermer ce faux positif précis, et il ne le fermait pas.
+// Ce qui sépare « BIC : BNPAFRPPXXX » de « Le BIC arrive avec DOCUSEAL plus tard », ce n'est pas
+// la VALEUR, c'est ce qu'il y a ENTRE : un délimiteur de valeur d'un côté (`=`, `:`, guillemet,
+// fin de ligne), des MOTS de l'autre. Une valeur se donne après un délimiteur ; la prose, non.
+// Le mot-clé tolère `PARTNERS_BIC_DEBITEUR=…` — le tiret bas est un caractère de mot, donc `\b`
+// ne le bornait pas, or c'est le nom que `src/config/entite.ts` donne à la variable.
+// Le séparateur est un GROUPE, pas un caractère : entre l'étiquette et la valeur on trouve en
+// pratique ` = "`, ` :`, `":` ou une fin de ligne. Une première version n'acceptait qu'UN
+// délimiteur, et `PARTNERS_BIC_DEBITEUR = "BNPAFRPPXXX"` lui échappait sur le guillemet — le cas
+// même que ce correctif visait. Un séparateur écrit pour un exemple ne couvre que cet exemple.
+const SEPARATEUR_DE_VALEUR = '(?:[ \\t]*[=:][ \\t\\n]*|[ \\t]*\\n[ \\t]*)["\'`]?[ \\t]*';
+const FORME_BIC = new RegExp(
+  `[Bb][Ii][Cc][A-Za-z0-9_-]{0,24}?${SEPARATEUR_DE_VALEUR}([A-Z]{4}${PAYS_ISO}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)(?![A-Za-z0-9])`,
+  'g'
+);
 
 /** Un SIREN ou un SIRET, reconnu à son mot-clé : neuf chiffres nus sont trop souvent autre chose. */
 const FORME_SIREN = /\bsire[tn]\b[^\n]{0,24}?\b(\d{9,14})\b/gi;
@@ -303,6 +392,21 @@ function estFichierDeTest(chemin: string): boolean {
   return /(^|\/)tests?\//.test(chemin) || /\.(spec|test)\.[cm]?tsx?$/.test(chemin);
 }
 
+/**
+ * LE REGISTRE EST LA SOURCE, ET C'EST TOUT CE QU'IL A LE DROIT DE PORTER.
+ *
+ * Il porte legitimement son SIREN, son SIRET et sa TVA — ce sont SES valeurs, publiques, et c'est
+ * son travail de les arreter. Il porte aussi, dans ses cles de documentation, les formes d'EXEMPLE
+ * qu'il interdit ; les nommer est la seule facon d'expliquer la regle.
+ *
+ * Il n'a en revanche AUCUNE raison de porter une coordonnee bancaire ailleurs que dans ses deux
+ * champs secrets, ou `secret_commite` la juge champ par champ. Un IBAN qui apparait dans un
+ * troisieme champ n'est ni une valeur du registre ni un exemple : c'est une fuite.
+ */
+function coordonneeLegitimeAuRegistre(valeur: string, formeEstIban: boolean): boolean {
+  return !formeEstIban || estExemplePlausible(valeur);
+}
+
 function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = ''): string[] {
   const trouvees: string[] = [];
   const texte = normaliserEspaces(contenu);
@@ -318,6 +422,9 @@ function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = ''): strin
       if (forme === FORME_IBAN) {
         const chiffres = brut.replace(/\D/g, '').length;
         if (brut.length < 15 || brut.length > 34 || chiffres < 10) continue;
+        // La clé de contrôle, et non une heuristique de plus : c'est elle qui sépare un IBAN
+        // d'un identifiant hexadécimal dont les deux premières lettres font un code pays.
+        if (!cleIbanValide(brut)) continue;
       }
       // 🔴 L'EXCUSE « ÇA RESSEMBLE À UN EXEMPLE » NE VAUT QUE DANS UN FICHIER DE TEST.
       // Elle s'appliquait partout, et `estExemplePlausible` rend `true` dès SIX chiffres
@@ -326,7 +433,10 @@ function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = ''): strin
       // la garde les a tous laissés passer. Une heuristique d'indulgence appliquée hors de son
       // domaine ne fait pas taire du bruit, elle ouvre une porte.
       if (tolereUnBouchon && estExemplePlausible(brut)) continue;
-      trouvees.push(brut);
+      // Le registre lui-meme : il porte SES valeurs publiques et les exemples qu'il documente,
+      // jamais une coordonnee bancaire hors de ses deux champs secrets.
+      if (chemin === CHEMIN_REGISTRE && coordonneeLegitimeAuRegistre(brut, forme === FORME_IBAN)) continue;
+      trouvees.push(forme === FORME_IBAN ? brut.toUpperCase() : brut);
     }
   }
   return [...new Set(trouvees)];

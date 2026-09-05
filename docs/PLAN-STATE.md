@@ -62,7 +62,7 @@ Reste sur ce chemin : **17.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — sept taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | rien — fusionnable maintenant |
+| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — huit taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -106,10 +106,10 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — huit taches, le verrou de phase leve, trois regressions fermees
+### PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — neuf taches, le verrou de phase leve, trois regressions fermees
 
-**Fait.** Trois lots entrent en une PR : huit tâches — `GOV-006`, `GOV-013`, `CPL-T01`, `GOV-024`,
-`GOV-025`, `GOV-026`, `GOV-027`, plus `GOV-029` née de la vérification. `CPL-T01` lève le verrou qui gelait 171 tâches : une valeur que seul
+**Fait.** Trois lots entrent en une PR : neuf tâches — `GOV-006`, `GOV-013`, `CPL-T01`, `GOV-024`, `GOV-025`, `GOV-026`, `GOV-027`, `GOV-029`, `GOV-032` —
+les deux dernières nées de la vérification. `CPL-T01` lève le verrou qui gelait 171 tâches : une valeur que seul
 Will connaît est une **configuration à sentinelle**, pas un état de tâche, et `attente_externe`
 n'entrait dans aucun lot — la phase −1 restait donc courante à vie, sans qu'aucune garde ne rougisse.
 `GOV-024` donne enfin un générateur à `docs/REQUIREMENTS.md`, qui n'en avait aucun alors que son
@@ -117,12 +117,12 @@ bandeau affirmait le contraire, et un **vérificateur** aux deux vues : `--verif
 et sort 1 sur un octet d'écart, en nommant l'écart en unités du domaine. `GOV-027` supprime le second
 lecteur du registre des décisions ; le composeur imprime l'effet — **18 tâches** que la lecture
 d'avant écartait « pour une raison de décision » sont éligibles, 1 le reste. Le dépôt passe de 109 à
-110 gardes, de 18 à **21 armées**, de 197 à **203 tâches**, de 353 à **355 exigences**.
+110 gardes, de 18 à **21 armées**, de 197 à **204 tâches**, de 353 à **355 exigences**.
 
 **Reste.** Trois lots fusionnés en une PR au lieu de six : la Gate A juge l'arbre **combiné**, et
 c'est le seul endroit où le conflit annoncé entre `gov:lexique` et `gov:publication` sur la même
 phrase de `partners/ADR-0009` pouvait être tranché — il est **fermé**, mesuré et non simulé. Restent
-en phase −1 : `GOV-014`, `GOV-019` (lot suivant), `GOV-028`, `GOV-030`, `GOV-031`, `GOV-032` et `INT-T01b`, seule tâche du
+en phase −1 : `GOV-014`, `INT-T01b`, `GOV-019`, `GOV-028` — `INT-T01b` étant la seule tâche du
 chantier à vivre dans `axionia`. Trois constats sont renvoyés en tâche plutôt que corrigés au
 passage : la neutralisation des citations aveugle la garde sur toute chaîne courte (`GOV-028`), et
 `pnpm gates:prouvees` compte 8 « preuves non référencées » qui sont des refus de **ponctuation**, pas
