@@ -31,9 +31,11 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 import { chargerRegistre, CHEMIN_REGISTRE, type Registre } from '../lot/registre-decisions';
+import { FAMILLES_ATTESTATION, controlerAttestation, type Attestation } from '../lot/attestation';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
@@ -74,6 +76,8 @@ type Tache = {
   tests?: Record<string, string[]>;
   owner?: string | null;
   branch?: string | null;
+  pr?: number | null;
+  attestation?: Attestation | null;
 };
 
 type Faute = { famille: string; message: string };
@@ -183,6 +187,13 @@ function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
         `${t.id} attend ${t.externe} mais son statut est « ${t.statut} » : le filtre du composeur la laisserait passer.`
       );
     }
+
+    // L'ATTESTATION INTER-DÉPÔT (GOV-038). Quatorze tâches de ce backlog vivent dans `axionia` ;
+    // `INT-T01b` est la première à avoir été livrée, et rien ici ne savait le dire autrement qu'en
+    // écrivant un `pr` qui ne résout pas. Les contrôles vivent dans `scripts/lot/attestation.ts`,
+    // avec la forme du champ, le motif du SHA et la fonction de rendu : une garde qui juge une
+    // valeur et une vue qui l'imprime doivent lire la MÊME définition (RM-01).
+    for (const f of controlerAttestation(t, LIVREE.has(t.statut))) ajouter(f.famille, f.message);
   }
 
   // acyclicité — parcours en profondeur, pile explicite pour nommer le cycle
@@ -215,10 +226,14 @@ function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
   return fautes;
 }
 
+// Les familles d'attestation ne sont pas RETAPÉES ici : elles sont importées de leur module, qui
+// est aussi celui qui les produit. Une liste de familles recopiée à côté du code qui les émet
+// laisse `--prove` réclamer un témoin pour une famille morte, ou en oublier une vivante (RM-01).
 const FAMILLES = [
   'schema', 'id_double', 'dep_inconnue', 'dep_circulaire', 'dep_phase_ulterieure',
   'dep_identifiant_scinde', 'dep_decision_nue', 'hyp_hors_registre', 'paths_vide',
   'estimation_hors_plafond', 'externe_sans_attente', 'dep_non_livree',
+  ...FAMILLES_ATTESTATION,
 ];
 
 // ── chargement ───────────────────────────────────────────────────────────────
@@ -409,6 +424,49 @@ if (process.argv.includes('--prove')) {
   const premiere = (d: { taches: Tache[] }): Tache => d.taches[0]!;
   const derniere = (d: { taches: Tache[] }): Tache => d.taches[d.taches.length - 1]!;
 
+  // ── de quoi éprouver l'attestation inter-dépôt (GOV-038) ────────────────────
+  //
+  // Les témoins partent d'une tâche DÉJÀ livrée dans ce dépôt et n'en changent qu'une chose : le
+  // dépôt, ou l'attestation. Promouvoir une tâche `a_faire` aurait demandé de lui inventer un
+  // `owner`, une `branch`, une `acceptance` et des `tests` — quatre mutations de plus, dont chacune
+  // peut faire rougir une autre famille et brouiller ce que le témoin prouve (RM-11).
+  const choisir = (d: { taches: Tache[] }, ou: (t: Tache) => boolean, quoi: string): Tache => {
+    const t = d.taches.find(ou);
+    if (!t) {
+      console.error(`❌ gov:tasks --prove — aucune tâche ${quoi} : le témoin ne peut plus être choisi.`);
+      process.exit(1);
+    }
+    return t;
+  };
+  const livreeIci = (d: { taches: Tache[] }): Tache =>
+    choisir(d, (t) => LIVREE.has(t.statut) && t.repo === 'partners', 'livrée dans ce dépôt');
+  const aFaireIci = (d: { taches: Tache[] }): Tache =>
+    choisir(d, (t) => t.statut === 'a_faire' && t.repo === 'partners' && t.pr == null, '« a_faire » de ce dépôt sans pr');
+  // Le témoin de `pr_nu_hors_depot` a besoin d'une tâche qui porte VRAIMENT un numéro : la première
+  // tâche livrée du backlog (`GOV-000`) a `pr: null`, et le témoin est resté VERT au premier essai
+  // — il déplaçait dans un autre dépôt une tâche qui n'avait aucun numéro à mal citer.
+  const livreeIciAvecPr = (d: { taches: Tache[] }): Tache =>
+    choisir(d, (t) => LIVREE.has(t.statut) && t.repo === 'partners' && t.pr != null, 'livrée ici AVEC un numéro de PR');
+
+  // Le SHA du témoin est LU dans git, jamais écrit en dur : une constante de 40 hexadécimaux tapée
+  // à la main est exactement la fixture inventée que RM-03 interdit, et elle ne prouverait pas
+  // qu'un vrai SHA passe. La valeur change à chaque commit ; le verdict, non — la garde juge la
+  // FORME, elle ne résout rien (aucun appel à la forge, cf. l'en-tête de `scripts/lot/attestation.ts`).
+  const shaReel = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const attestationValide = (): Attestation => ({
+    pr: 998,
+    sha: shaReel,
+    fusionneeAt: '2026-09-05T11:04:48Z',
+  });
+  /** Une tâche livrée AILLEURS, dans les règles : c'est la forme que GOV-038 introduit. */
+  const livreeAilleurs = (d: { taches: Tache[] }): Tache => {
+    const t = livreeIci(d);
+    t.repo = 'axionia';
+    t.pr = null;
+    t.attestation = attestationValide();
+    return t;
+  };
+
   const TEMOINS: { famille: string; defaut: () => { taches: Tache[] } }[] = [
     { famille: 'schema', defaut: () => { const d = copie(); (premiere(d) as unknown as { phase: number }).phase = 42; return d; } },
     // Second témoin de `schema`, ciblé sur le motif de `branch` (partners/ADR-0007). Le témoin
@@ -434,6 +492,33 @@ if (process.argv.includes('--prove')) {
       dep.statut = 'a_faire'; dep.owner = null; dep.branch = null;
       return d;
     } },
+
+    // ── l'attestation inter-dépôt (GOV-038) ──────────────────────────────────
+    // Le cas réel : INT-T01b livrée par la PR 998 du dépôt axionia, et le backlog muet.
+    { famille: 'attestation_absente', defaut: () => {
+      const d = copie(); const t = livreeIci(d); t.repo = 'axionia'; t.pr = null; return d;
+    } },
+    // Le cas DANGEREUX : le numéro écrit dans `pr`, que les vues rendent `PR#998` sans dépôt.
+    { famille: 'pr_nu_hors_depot', defaut: () => {
+      const d = copie(); const t = livreeIciAvecPr(d); t.repo = 'axionia'; t.attestation = attestationValide(); return d;
+    } },
+    { famille: 'attestation_hors_sujet', defaut: () => {
+      const d = copie(); livreeIci(d).attestation = attestationValide(); return d;
+    } },
+    { famille: 'attestation_sans_livraison', defaut: () => {
+      const d = copie(); const t = aFaireIci(d); t.repo = 'axionia'; t.attestation = attestationValide(); return d;
+    } },
+    // Le numéro de PR mis à la place du SHA : la confusion même que l'attestation doit rendre
+    // impossible. `998` est réattribué dans chaque dépôt ; un SHA de 40 hex ne l'est nulle part.
+    { famille: 'attestation_sha_non_conforme', defaut: () => {
+      const d = copie(); livreeAilleurs(d).attestation = { ...attestationValide(), sha: '998' }; return d;
+    } },
+    { famille: 'attestation_date_non_conforme', defaut: () => {
+      const d = copie(); livreeAilleurs(d).attestation = { ...attestationValide(), fusionneeAt: '05/09/2026 13:04' }; return d;
+    } },
+    { famille: 'livraison_repo_externe', defaut: () => {
+      const d = copie(); const t = livreeIci(d); t.repo = 'externe'; t.pr = null; return d;
+    } },
   ];
 
   /**
@@ -447,6 +532,17 @@ if (process.argv.includes('--prove')) {
       muter: () => { const d = copie(); premiere(d).branch = 'lot/L-9-99-integration'; return d; } },
     { nom: 'une branche de TÂCHE — la forme dérogatoire (partners/ADR-0007)',
       muter: () => { const d = copie(); premiere(d).branch = 't/gov-012'; return d; } },
+
+    // ── attestation : ce que GOV-038 doit LAISSER PASSER ─────────────────────
+    // Sans ces trois-là, les sept familles ci-dessus prouveraient seulement qu'une garde sait
+    // rougir — jamais qu'elle sait se taire. Le troisième est le plus important : c'est la forme
+    // même que la tâche introduit, et une garde qui la refuserait bloquerait `pnpm lot:cloture`.
+    { nom: 'une tâche `partners` livrée normalement, PR de ce dépôt et aucune attestation',
+      muter: () => { const d = copie(); livreeIci(d).pr = 4242; return d; } },
+    { nom: 'une tâche `axionia` encore `a_faire` : rien à attester tant que rien n’est livré',
+      muter: () => { const d = copie(); aFaireIci(d).repo = 'axionia'; return d; } },
+    { nom: 'une tâche `axionia` LIVRÉE avec son attestation et sans `pr` nu — la forme de GOV-038',
+      muter: () => { const d = copie(); livreeAilleurs(d); return d; } },
   ];
 
   for (const c of CONTRE_TEMOINS) {
