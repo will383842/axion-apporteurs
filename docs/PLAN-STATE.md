@@ -62,7 +62,7 @@ Reste sur ce chemin : **17.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — huit taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | rien — fusionnable maintenant |
+| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — neuf taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 

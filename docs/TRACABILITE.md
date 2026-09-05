@@ -27,7 +27,7 @@
 | `REQ-CPL-021` | `GOV-000`, `QA-T04` | `tests/unit/gouvernance/autonomie.spec.ts` | couverte |
 | `REQ-GOV-001` | `GOV-001` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-002` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
-| `REQ-GOV-003` | `GOV-003`, `GOV-005`, `GOV-025`, `GOV-028` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | couverte |
+| `REQ-GOV-003` | `GOV-003`, `GOV-005`, `GOV-025`, `GOV-028`, `GOV-037` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | couverte |
 | `REQ-GOV-004` | `GOV-004` | `tests/unit/gouvernance/affirmations-verifiees.spec.ts` | couverte |
 | `REQ-GOV-006` | `GOV-008`, `GOV-032` | `tests/unit/gouvernance/plan-state-frais.spec.ts` | couverte |
 | `REQ-GOV-007` | `GOV-008` | `tests/unit/gouvernance/une-tache-un-owner.spec.ts` | couverte |
