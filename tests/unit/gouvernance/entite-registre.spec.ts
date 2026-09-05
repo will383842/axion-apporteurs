@@ -76,6 +76,12 @@ import {
   exemptionsDuDepot,
   jugerCorpsPublie,
   numeroDePrDeLEvenement,
+  assemblerLecture,
+  paginerEditions,
+  EDITIONS_PAR_PAGE,
+  PAGES_MAX,
+  REQUETE_EDITIONS,
+  type PageDEditions,
   type Exemption,
   type LectureDuCorps,
   UNIVERS_CONFORME,
@@ -1337,5 +1343,199 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
       else process.env.GITHUB_EVENT_PATH = avant;
       rmSync(dossier, { recursive: true, force: true });
     }
+  });
+});
+
+/**
+ * ── `userContentEdits(first: 100)` — UNE GATE INSATISFIABLE EN GERME ──────────────────────────
+ *
+ * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ le 2026-09-05, et elle apporte le contre-exemple
+ * d'une thèse que j'avais écrite dans ce dépôt : « il n'existe aucun état durable légitime où la
+ * CI d'un dépôt public ne peut pas lire le corps de ses propres PR ». C'est faux, et voici l'état
+ * en question. La requête demandait les CENT PREMIÈRES éditions, alors que `totalCount` les compte
+ * TOUTES. Au-delà de cent, `revisionsAnnoncees > revisionsLues` déclenche `revisions_non_lues`,
+ * donc le code 2, donc l'échec de Gate A — **et il n'y a aucun remède** :
+ *
+ *   — aucune exemption ne couvre cette famille : l'appariement exige une coordonnée DANS une
+ *     révision, et `revisions_non_lues` ne nomme aucune coordonnée ;
+ *   — on ne dé-édite pas un corps de PR : l'historique d'édition est immuable ;
+ *   — le réessai ×3 ne protège de rien : la réponse est STABLE et incomplète, pas intermittente.
+ *     Trois lectures identiques d'une réponse tronquée donnent trois fois la même troncature.
+ *
+ * ET CENT EST À PORTÉE, ce n'est pas une hypothèse de tableau : la PR #31 porte déjà plus d'une
+ * douzaine de révisions en une seule journée, parce que le corps est REGÉNÉRÉ à chaque tour de
+ * revue. Le mécanisme qui produit les révisions est le mécanisme même de la revue.
+ *
+ * 🔑 CE QUE LA PAGINATION CHANGE, ET C'EST LE POINT : elle ne transforme pas un rouge en vert,
+ * elle transforme un verdict SANS REMÈDE en verdict AVEC REMÈDE. Une coordonnée en page 2 rendait
+ * 2 (« je n'ai pas tout lu », rien à faire) ; elle rend maintenant 1, elle est NOMMÉE, datée, et
+ * elle peut être changée ou déclarée. C'est exactement la différence entre une gate qu'on répare
+ * et une gate qu'on apprend à sauter.
+ *
+ * LA BORNE DURE RESTE NÉCESSAIRE, ET ON DIT LAQUELLE. `PAGES_MAX` pages de `EDITIONS_PAR_PAGE`.
+ * Une boucle non bornée contre une API distante ne rend jamais la main quand la forge renvoie un
+ * curseur qui n'avance pas — et une CI qui tourne sans fin est indiscernable d'une CI en panne,
+ * sauf qu'elle coûte un créneau de fusion. La borne est haute (deux mille révisions, deux ordres
+ * de grandeur au-dessus de ce qu'une PR atteint), et surtout elle est REMÉDIABLE : le message la
+ * nomme, nomme son fichier, et dit qu'on la relève. Une borne muette serait le défaut qu'on vient
+ * de fermer, réintroduit un cran plus bas.
+ */
+describe('REQ-CPL-018 — la pagination des révisions : lire CENT n’est pas lire TOUT', () => {
+  const PR = 4242;
+
+  /** Un horodatage DISTINCT par révision : deux révisions au même instant ne se distinguent plus. */
+  const horodatage = (n: number): string =>
+    `2026-01-02T03:${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}Z`;
+
+  /**
+   * UNE FORGE DE PAPIER — elle sert ses révisions par pages, comme GitHub, et elle COMPTE ses
+   * appels. Sans ce compteur, « la pagination a marché » et « la première page contenait déjà
+   * tout » se lisent exactement pareil : un témoin positif de la sonde, pas seulement du résultat.
+   */
+  function forgeDePapier(textes: string[]) {
+    const appels: (string | null)[] = [];
+    const lirePage = (apres: string | null): PageDEditions => {
+      appels.push(apres);
+      const debut = apres === null ? 0 : Number(apres);
+      const tranche = textes.slice(debut, debut + EDITIONS_PAR_PAGE);
+      const suivant = debut + tranche.length;
+      const reste = suivant < textes.length;
+      return {
+        totalCount: textes.length,
+        noeuds: tranche.map((texte, i) => ({ editedAt: horodatage(debut + i), diff: texte })),
+        encore: reste,
+        curseur: reste ? String(suivant) : null,
+      };
+    };
+    return { lirePage, appels };
+  }
+
+  /** Le rang de la révision fautive — au-delà de la PREMIÈRE page, c'est tout l'objet du cas. */
+  const RANG_FAUTIF = EDITIONS_PAR_PAGE + 20;
+  const TOTAL = EDITIONS_PAR_PAGE + 50;
+  const textes = Array.from({ length: TOTAL }, (_, i) =>
+    i === RANG_FAUTIF
+      ? `-IBAN débiteur : ${IBAN_TEMOIN}\n+IBAN débiteur : masqué`
+      : `révision ${i} — rien à signaler`
+  );
+
+  it('REQ-CPL-018 — une coordonnée en PAGE 2 : lue, elle rend 1 et se NOMME ; non lue, elle rend 2 sans remède', () => {
+    // DEUX forges, une par colonne : un compteur d'appels partage entre les deux mesurerait la
+    // somme des deux lectures, et non ce que la pagination a demande.
+    const troncature = forgeDePapier(textes);
+    const { lirePage, appels } = forgeDePapier(textes);
+
+    // ── LA COLONNE « AVANT » : UNE SEULE PAGE, ce que la requête demandait. ──────────────────
+    const uneSeulePage = troncature.lirePage(null);
+    const tronquee = assemblerLecture(String(PR), 'corps courant propre', {
+      annoncees: uneSeulePage.totalCount,
+      noeuds: uneSeulePage.noeuds,
+    });
+    const avant = jugerCorpsPublie(tronquee);
+    expect(avant.code).toBe(2);
+    expect(avant.fautes.map((f) => f.famille)).toEqual(['revisions_non_lues']);
+    // ET C'EST UN 2 SANS REMÈDE : la coordonnée n'est même pas nommée, donc rien à changer ni à
+    // déclarer. Aucune exemption ne peut s'apparier à une famille qui ne porte aucune empreinte.
+    expect(avant.fautes.some((f) => f.message.includes(IBAN_TEMOIN))).toBe(false);
+
+    // ── LA COLONNE « APRÈS » : TOUTES les pages. ────────────────────────────────────────────
+    const complet = paginerEditions(lirePage);
+    expect(complet.annoncees).toBe(TOTAL);
+    expect(complet.noeuds.length).toBe(TOTAL);
+    expect(complet.inacheve).toBe(false);
+    // TÉMOIN POSITIF DE LA SONDE : il a FALLU plusieurs appels, et le second a porté un curseur.
+    // Sans cette assertion, une forge qui rendrait tout en une page verdirait ce cas sans que
+    // rien de ce qu'on prétend mesurer n'ait été exercé.
+    expect(appels).toEqual([null, String(EDITIONS_PAR_PAGE)]);
+
+    const apres = jugerCorpsPublie(assemblerLecture(String(PR), 'corps courant propre', complet));
+    expect(apres.code).toBe(1);
+    expect(apres.fautes.map((f) => f.famille)).toEqual(['coordonnee_dans_une_revision']);
+    // NOMMÉE ET DATÉE : c'est ce qui rend le verdict remédiable — on change la valeur, ou on la
+    // déclare avec ces trois clés-là.
+    expect(apres.fautes[0]!.message).toContain(IBAN_TEMOIN);
+    expect(apres.fautes[0]!.message).toContain(horodatage(RANG_FAUTIF));
+    expect(apres.fautes[0]!.message).toContain(empreinteDe(IBAN_TEMOIN));
+  });
+
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : une PR d’une seule page ne déclenche pas d’appel de plus', () => {
+    // Sans lui, `paginerEditions` pourrait redemander éternellement une page vide : la garde
+    // deviendrait lente et bavarde sur le cas ordinaire, donc on la retirerait.
+    const { lirePage, appels } = forgeDePapier(['une seule révision, propre']);
+    const r = paginerEditions(lirePage);
+    expect(appels).toEqual([null]);
+    expect(r.pages).toBe(1);
+    expect(r.inacheve).toBe(false);
+    expect(jugerCorpsPublie(assemblerLecture(String(PR), 'rien à signaler', r)).code).toBe(0);
+  });
+
+  it('REQ-CPL-018 — LA BORNE DURE : elle s’arrête, et son message NOMME le remède', () => {
+    // Une forge qui annonce toujours une suite — un dépôt pathologique, ou un champ renommé.
+    let rang = 0;
+    const sansFin = (): PageDEditions => {
+      rang += EDITIONS_PAR_PAGE;
+      return {
+        totalCount: Number.MAX_SAFE_INTEGER,
+        noeuds: Array.from({ length: EDITIONS_PAR_PAGE }, (_, i) => ({
+          editedAt: horodatage(rang + i),
+          diff: 'propre',
+        })),
+        encore: true,
+        curseur: String(rang),
+      };
+    };
+    const r = paginerEditions(sansFin);
+    expect(r.pages).toBe(PAGES_MAX);
+    expect(r.inacheve).toBe(true);
+    expect(r.noeuds.length).toBe(PAGES_MAX * EDITIONS_PAR_PAGE);
+
+    // ET LE VERDICT NOMME CE QU'IL FAUT FAIRE. Une borne muette serait le défaut qu'on vient de
+    // fermer, réintroduit un cran plus bas : un 2 dont personne ne sait quoi faire se désarme.
+    const v = jugerCorpsPublie(assemblerLecture(String(PR), 'propre', r));
+    expect(v.code).toBe(2);
+    expect(v.fautes.map((f) => f.famille)).toEqual(['revisions_non_lues']);
+    expect(v.fautes[0]!.message).toContain('PAGES_MAX');
+    expect(v.fautes[0]!.message).toContain('scripts/gates/gov-entite.ts');
+    expect(v.fautes[0]!.message).toContain(String(PAGES_MAX * EDITIONS_PAR_PAGE));
+  });
+
+  it('REQ-CPL-018 — un curseur qui N’AVANCE PAS rend la main : une CI sans fin n’est pas un verdict', () => {
+    // LE CAS QU'AUCUNE BORNE EN NOMBRE DE RÉVISIONS N'ATTRAPERAIT : la forge annonce une suite et
+    // sert le MÊME curseur. Sans cette garde, on relit la même page indéfiniment. Ce cas ne peut
+    // pas « rougir » au sens habituel — une boucle infinie ne rend aucune couleur, elle prend le
+    // créneau et on finit par tuer le job. Le témoin est donc qu'il TERMINE, et qu'il le DIT.
+    const fige = (): PageDEditions => ({
+      totalCount: 400,
+      noeuds: [{ editedAt: horodatage(1), diff: 'propre' }],
+      encore: true,
+      curseur: 'CURSEUR-QUI-NE-BOUGE-PAS',
+    });
+    const r = paginerEditions(fige);
+    expect(r.pages).toBe(2);
+    expect(r.inacheve).toBe(true);
+    expect(r.noeuds.length).toBe(2);
+    expect(jugerCorpsPublie(assemblerLecture(String(PR), 'propre', r)).code).toBe(2);
+  });
+
+  it('REQ-CPL-018 — la REQUÊTE elle-même demande la page suivante, et ses tailles sont DÉRIVÉES', () => {
+    // La lecture réelle passe par le réseau : aucun cas hors ligne ne peut l'exercer. Ce qui est
+    // gardé ici, c'est que la requête envoyée PORTE la pagination — c'est le témoin qui rougit si
+    // quelqu'un revient à `userContentEdits(first: 100)` sans curseur.
+    expect(REQUETE_EDITIONS).toContain('pageInfo');
+    expect(REQUETE_EDITIONS).toContain('hasNextPage');
+    expect(REQUETE_EDITIONS).toContain('endCursor');
+    expect(REQUETE_EDITIONS).toContain('after:$a');
+    // La taille de page n'est pas retapée dans la requête (RM-01) : elle vient de la constante,
+    // sans quoi les deux divergeraient et la boucle compterait autre chose que ce qu'elle demande.
+    expect(REQUETE_EDITIONS).toContain(`first:${EDITIONS_PAR_PAGE}`);
+  });
+
+  it('REQ-CPL-018 — `gov:entite:corps:prove` porte ces témoins-là AUSSI, et les chiffre', () => {
+    // Un témoin qui ne tient que `pnpm test` ne garde pas la CI : l'étape de Gate A, c'est
+    // `gov:entite:corps:prove`.
+    const { code, sortie } = lancer('--corps-publie', '--prove');
+    expect(code).toBe(0);
+    expect(sortie).toContain(`${EDITIONS_PAR_PAGE} par page`);
+    expect(sortie).toContain(`${PAGES_MAX} page(s) au plus`);
   });
 });

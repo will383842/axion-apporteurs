@@ -949,8 +949,14 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
       message:
         `La forge annonce ${lecture.revisionsAnnoncees} révision(s) du corps et ${lecture.revisionsLues} ` +
         `ont été lues. Les révisions non lues ne sont PAS réputées propres : le défaut mesuré sur la ` +
-        `PR #31 vivait dans des révisions, pas dans le corps courant. Pagine la requête, ou traite ce ` +
-        `verdict comme INDÉTERMINÉ (2).`,
+        `PR #31 vivait dans des révisions, pas dans le corps courant. La requête EST paginée ` +
+        `(${EDITIONS_PAR_PAGE} par page, ${PAGES_MAX} pages au plus) ; il reste donc DEUX causes, et ` +
+        `elles n'ont pas le même remède. (a) Une révision servie sans \`diff\` ou sans \`editedAt\` : la ` +
+        `forge n'en donne ni le texte ni l'horodatage, et sans horodatage aucune exemption ne peut ` +
+        `s'y apparier — rien à corriger dans ce dépôt, relance la garde. (b) La borne de ` +
+        `${PAGES_MAX * EDITIONS_PAR_PAGE} révision(s) atteinte, ce que le nombre lu rend visible : relève ` +
+        `\`PAGES_MAX\` dans \`scripts/gates/gov-entite.ts\`. Elle existe pour qu'un curseur qui n'avance ` +
+        `pas ne fasse pas tourner la CI sans fin, pas pour limiter ce qui est examiné.`,
     });
   }
 
@@ -1038,6 +1044,141 @@ export function exemptionsServies(lecture: LectureDuCorps, exemptions: Exemption
 }
 
 /**
+ * ── LA PAGINATION DES RÉVISIONS — ET POURQUOI SON ABSENCE ÉTAIT UNE GATE INSATISFIABLE ────────
+ *
+ * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ le 2026-09-05 : la requête demandait
+ * `userContentEdits(first: 100)` alors que `totalCount` compte TOUTES les éditions. Au-delà de
+ * cent, `revisionsAnnoncees > revisionsLues`, donc `revisions_non_lues`, donc le code 2, donc
+ * l'échec de Gate A — **sans aucun remède** : aucune exemption ne couvre cette famille (leur
+ * appariement exige une coordonnée DANS une révision), et l'historique d'édition ne se dé-publie
+ * pas. Le réessai ×3 ne protège de rien non plus : la réponse est STABLE et incomplète, pas
+ * intermittente.
+ *
+ * ET CENT EST À PORTÉE : le corps d'une PR est REGÉNÉRÉ à chaque tour de revue, si bien que le
+ * mécanisme qui produit les révisions est le mécanisme même de la revue.
+ *
+ * 🔑 CE QUE LA PAGINATION CHANGE : elle ne transforme pas un rouge en vert, elle transforme un
+ * verdict SANS remède en verdict AVEC remède. Une coordonnée en deuxième page rendait 2 (« je
+ * n'ai pas tout lu », rien à faire) ; elle rend maintenant 1, nommée et datée, donc changeable
+ * ou déclarable. C'est la différence entre une gate qu'on répare et une gate qu'on saute.
+ */
+export const EDITIONS_PAR_PAGE = 100;
+
+/**
+ * LA BORNE DURE, ET ELLE RESTE NÉCESSAIRE — on dit laquelle et pourquoi. Une boucle non bornée
+ * contre une API distante ne rend jamais la main le jour où la forge sert un curseur qui n'avance
+ * pas, ou renomme un champ de `pageInfo`. Une CI qui tourne sans fin est indiscernable d'une CI
+ * en panne, sauf qu'elle consomme le créneau de fusion (RM-09) au lieu de rendre une couleur.
+ *
+ * Le nombre est haut À DESSEIN : deux ordres de grandeur au-dessus de ce qu'une PR atteint. Et
+ * il est REMÉDIABLE — le message de `revisions_non_lues` le nomme, nomme son fichier, et dit
+ * qu'on le relève. Une borne muette serait le défaut qu'on vient de fermer, réintroduit un cran
+ * plus bas.
+ */
+export const PAGES_MAX = 20;
+
+/** Un nœud d'édition tel que la forge le sert : rien n'y est réputé présent ni typé. */
+export type NoeudEdition = { editedAt?: unknown; diff?: unknown };
+
+/** UNE page de la connexion `userContentEdits`, ramenée à ce dont la boucle a besoin. */
+export type PageDEditions = {
+  totalCount: number;
+  noeuds: NoeudEdition[];
+  encore: boolean;
+  curseur: string | null;
+};
+
+export type EditionsLues = {
+  annoncees: number;
+  noeuds: NoeudEdition[];
+  pages: number;
+  /** Vrai quand on a CESSÉ de lire avant la fin : borne atteinte, ou curseur qui n'avance pas. */
+  inacheve: boolean;
+};
+
+/**
+ * LA REQUÊTE, ET SES TAILLES SONT DÉRIVÉES (RM-01). Retaper `first: 100` ici ferait compter à la
+ * boucle autre chose que ce que la requête demande, et les deux divergeraient sans bruit.
+ * `$a` est nullable : la première page l'omet, GraphQL lit alors `null`.
+ */
+export const REQUETE_EDITIONS =
+  'query($o:String!,$r:String!,$n:Int!,$a:String){repository(owner:$o,name:$r){pullRequest(number:$n){' +
+  `userContentEdits(first:${EDITIONS_PAR_PAGE},after:$a){totalCount ` +
+  'pageInfo{hasNextPage endCursor} nodes{editedAt diff}}}}}';
+
+/**
+ * LA BOUCLE, PURE ET INJECTÉE (RM-11), pour la même raison que `jugerCorpsPublie` : la lecture
+ * réelle passe par le réseau, et une preuve qui dépend de ce que la forge répond le jour où elle
+ * tourne ne prouve rien. Ce qui est injecté ici, c'est « donne-moi la page qui suit ce curseur ».
+ */
+export function paginerEditions(lirePage: (apres: string | null) => PageDEditions): EditionsLues {
+  const noeuds: NoeudEdition[] = [];
+  let annoncees = 0;
+  let curseur: string | null = null;
+  let pages = 0;
+  let inacheve = false;
+  for (;;) {
+    const page = lirePage(curseur);
+    pages += 1;
+    // `totalCount` est celui de la CONNEXION, pas de la page : on le prend une fois. Le relire à
+    // chaque tour ferait dépendre l'écart annoncé/lu de la dernière page servie.
+    if (pages === 1) annoncees = page.totalCount;
+    noeuds.push(...page.noeuds);
+    if (!page.encore) break;
+    // UN CURSEUR QUI N'AVANCE PAS relit la même page indéfiniment, et aucune borne exprimée en
+    // NOMBRE DE RÉVISIONS ne l'attraperait — on en accumulerait sans fin. On s'arrête, et l'écart
+    // annoncé/lu fait tomber le verdict en INDÉTERMINÉ plutôt qu'en vert.
+    if (page.curseur === null || page.curseur === curseur) {
+      inacheve = true;
+      break;
+    }
+    if (pages >= PAGES_MAX) {
+      inacheve = true;
+      break;
+    }
+    curseur = page.curseur;
+  }
+  return { annoncees, noeuds, pages, inacheve };
+}
+
+/**
+ * CE QUE LA LECTURE DEVIENT — le corps courant, puis une entrée par révision RÉELLEMENT lue.
+ * Extraite de `lireUneFois` pour que le banc d'essai exerce la MÊME mise en forme que la lecture
+ * réelle : deux assemblages divergeraient, et c'est celui du test qui resterait vert (RM-01).
+ */
+export function assemblerLecture(
+  numero: string,
+  corpsCourant: string,
+  editions: { annoncees: number; noeuds: NoeudEdition[] }
+): LectureDuCorps {
+  const corps: CorpsPublie[] = [
+    { origine: `PR #${numero} — corps courant`, horodatage: null, texte: corpsCourant, revision: false },
+  ];
+  let lues = 0;
+  for (const n of editions.noeuds) {
+    // Un `diff` nul n'est pas une révision propre : c'est une révision qu'on n'a PAS lue. Elle
+    // reste comptée dans `annoncees`, et l'écart fait tomber le verdict en INDÉTERMINÉ.
+    // Un horodatage nul aussi : sans lui, aucune exemption ne peut s'apparier à cette révision,
+    // donc on ne peut ni l'absoudre ni prétendre l'avoir examinée.
+    if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue;
+    lues += 1;
+    corps.push({
+      origine: `PR #${numero} — révision du ${n.editedAt}`,
+      horodatage: n.editedAt,
+      texte: n.diff,
+      revision: true,
+    });
+  }
+  return {
+    lu: true,
+    pr: Number(numero),
+    corps,
+    revisionsLues: lues,
+    revisionsAnnoncees: editions.annoncees,
+  };
+}
+
+/**
  * LA LECTURE RÉELLE — deux appels, et ils ne se remplacent pas l'un l'autre.
  *   — `gh pr view <n> --json body` : le corps COURANT, la commande que la revue a nommée ;
  *   — `gh api graphql … userContentEdits` : les RÉVISIONS, seul endroit où vivait le défaut mesuré.
@@ -1106,36 +1247,63 @@ function lireUneFois(numero: string): LectureDuCorps {
     return { lu: false, motif: `dépôt illisible : « ${depot} »` };
   }
 
-  const REQUETE =
-    'query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){' +
-    'userContentEdits(first:100){totalCount nodes{editedAt diff}}}}}';
-
-  let annoncees: number;
-  let noeuds: { editedAt?: unknown; diff?: unknown }[];
-  try {
-    const brut = gh([
+  /**
+   * UNE page, telle que `gh` la rend. Elle LÈVE en cas d'erreur : le `catch` de l'appelant la
+   * transforme en `{ lu: false }`. Aucun repli sur un tableau vide ici — ce serait un vert
+   * produit par une lecture qui n'a pas eu lieu, c'est-à-dire le défaut que cette garde existe
+   * pour empêcher.
+   */
+  const lirePage = (apres: string | null): PageDEditions => {
+    const args = [
       'api',
       'graphql',
       '-f',
-      `query=${REQUETE}`,
+      `query=${REQUETE_EDITIONS}`,
       '-F',
       `o=${proprietaire}`,
       '-F',
       `r=${nom}`,
       '-F',
       `n=${numero}`,
-    ]);
-    const j = JSON.parse(brut) as {
+    ];
+    // `-f` et non `-F` : un curseur est OPAQUE et doit partir en chaîne. `-F` type sa valeur, et
+    // un curseur qui ressemblerait à un nombre partirait en `Int` — la forge refuserait la
+    // requête, et l'échec ressemblerait à une panne d'authentification.
+    if (apres !== null) args.push('-f', `a=${apres}`);
+    const j = JSON.parse(gh(args)) as {
       data?: {
-        repository?: { pullRequest?: { userContentEdits?: { totalCount?: unknown; nodes?: unknown } } };
+        repository?: {
+          pullRequest?: {
+            userContentEdits?: {
+              totalCount?: unknown;
+              pageInfo?: { hasNextPage?: unknown; endCursor?: unknown };
+              nodes?: unknown;
+            };
+          };
+        };
       };
     };
     const edits = j.data?.repository?.pullRequest?.userContentEdits;
     if (edits === undefined || typeof edits.totalCount !== 'number' || !Array.isArray(edits.nodes)) {
-      return { lu: false, motif: "la requête GraphQL n'a pas rendu `userContentEdits`" };
+      throw new Error("la requête GraphQL n'a pas rendu `userContentEdits`");
     }
-    annoncees = edits.totalCount;
-    noeuds = edits.nodes as { editedAt?: unknown; diff?: unknown }[];
+    // `pageInfo` ABSENT n'est PAS « il n'y a plus rien » : c'est un champ qu'on n'a pas lu. On
+    // annonce donc une suite sans curseur, ce que `paginerEditions` compte comme inachevé — et
+    // l'écart annoncé/lu rend INDÉTERMINÉ. Le sens de défaillance est le même partout ici.
+    const info = edits.pageInfo;
+    const encore = info === undefined ? true : info.hasNextPage === true;
+    const curseur = typeof info?.endCursor === 'string' ? info.endCursor : null;
+    return {
+      totalCount: edits.totalCount,
+      noeuds: edits.nodes as NoeudEdition[],
+      encore,
+      curseur: encore ? curseur : null,
+    };
+  };
+
+  let editions: EditionsLues;
+  try {
+    editions = paginerEditions(lirePage);
   } catch (e) {
     return {
       lu: false,
@@ -1143,27 +1311,7 @@ function lireUneFois(numero: string): LectureDuCorps {
     };
   }
 
-  const corps: CorpsPublie[] = [
-    { origine: `PR #${numero} — corps courant`, horodatage: null, texte: corpsCourant, revision: false },
-  ];
-  let lues = 0;
-  for (const n of noeuds) {
-    // Un `diff` nul n'est pas une révision propre : c'est une révision qu'on n'a PAS lue. Elle
-    // reste comptée dans `annoncees`, et l'écart fait tomber le verdict en INDÉTERMINÉ.
-    // Un horodatage nul aussi : sans lui, aucune exemption ne peut s'apparier à cette révision,
-    // donc on ne peut ni l'absoudre ni prétendre l'avoir examinée.
-    if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue;
-    lues += 1;
-    const horodatage = typeof n.editedAt === 'string' ? n.editedAt : null;
-    corps.push({
-      origine: `PR #${numero} — révision du ${horodatage ?? 'date inconnue'}`,
-      horodatage,
-      texte: n.diff,
-      revision: true,
-    });
-  }
-
-  return { lu: true, pr: Number(numero), corps, revisionsLues: lues, revisionsAnnoncees: annoncees };
+  return assemblerLecture(numero, corpsCourant, editions);
 }
 
 /**
@@ -1385,10 +1533,122 @@ function prouverCorpsPublie(): number {
     return 1;
   }
 
+  // ── LA PAGINATION, ÉPROUVÉE HORS LIGNE ──────────────────────────────────────────────────────
+  // Elle vit ICI et pas seulement dans le banc d'essai : c'est `--corps-publie --prove` qui est
+  // l'étape de Gate A, et un témoin qui ne tient que `pnpm test` ne garde pas la CI.
+  {
+    const horodatage = (n: number): string =>
+      `2026-01-02T03:${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}Z`;
+    const RANG_FAUTIF = EDITIONS_PAR_PAGE + 20;
+    const TOTAL = EDITIONS_PAR_PAGE + 50;
+    const textes = Array.from({ length: TOTAL }, (_, i) =>
+      i === RANG_FAUTIF ? `IBAN : ${IBAN_TEMOIN}` : `révision ${i}`
+    );
+    const lirePage = (apres: string | null): PageDEditions => {
+      const debut = apres === null ? 0 : Number(apres);
+      const tranche = textes.slice(debut, debut + EDITIONS_PAR_PAGE);
+      const suivant = debut + tranche.length;
+      const reste = suivant < textes.length;
+      return {
+        totalCount: textes.length,
+        noeuds: tranche.map((texte, i) => ({ editedAt: horodatage(debut + i), diff: texte })),
+        encore: reste,
+        curseur: reste ? String(suivant) : null,
+      };
+    };
+
+    // UNE SEULE PAGE — ce que la requête demandait avant ce correctif : un 2 SANS remède, où la
+    // coordonnée n'est même pas nommée.
+    const page1 = lirePage(null);
+    const tronquee = jugerCorpsPublie(
+      assemblerLecture(String(PR_TEMOIN), 'propre', { annoncees: page1.totalCount, noeuds: page1.noeuds })
+    );
+    if (
+      tronquee.code !== 2 ||
+      !tronquee.fautes.every((f) => f.famille === 'revisions_non_lues') ||
+      tronquee.fautes.some((f) => f.message.includes(IBAN_TEMOIN))
+    ) {
+      console.error(
+        `❌ Le témoin de la lecture TRONQUÉE n'a pas rendu ce qu'il devait : code ${tronquee.code} ` +
+          `(attendu 2), familles [${tronquee.fautes.map((f) => f.famille).join(', ') || '—'}].`
+      );
+      return 1;
+    }
+
+    // TOUTES LES PAGES — la coordonnée est LUE, donc NOMMÉE, donc remédiable.
+    const complet = paginerEditions(lirePage);
+    const juge = jugerCorpsPublie(assemblerLecture(String(PR_TEMOIN), 'propre', complet));
+    if (
+      complet.noeuds.length !== TOTAL ||
+      complet.inacheve ||
+      juge.code !== 1 ||
+      !juge.fautes.some(
+        (f) => f.famille === 'coordonnee_dans_une_revision' && f.message.includes(horodatage(RANG_FAUTIF))
+      )
+    ) {
+      console.error(
+        `❌ La pagination n'a pas rendu ce qu'elle devait : ${complet.noeuds.length}/${TOTAL} ` +
+          `révision(s) lue(s), inachevé=${complet.inacheve}, code ${juge.code} (attendu 1).`
+      );
+      return 1;
+    }
+
+    // LA BORNE DURE — elle s'arrête, et son message NOMME le remède. Une borne muette serait le
+    // défaut qu'on vient de fermer, réintroduit un cran plus bas.
+    let rang = 0;
+    const sansFin = (): PageDEditions => {
+      rang += EDITIONS_PAR_PAGE;
+      return {
+        totalCount: Number.MAX_SAFE_INTEGER,
+        noeuds: Array.from({ length: EDITIONS_PAR_PAGE }, (_, i) => ({
+          editedAt: horodatage(rang + i),
+          diff: 'propre',
+        })),
+        encore: true,
+        curseur: String(rang),
+      };
+    };
+    const borne = paginerEditions(sansFin);
+    const jugeBorne = jugerCorpsPublie(assemblerLecture(String(PR_TEMOIN), 'propre', borne));
+    if (
+      borne.pages !== PAGES_MAX ||
+      !borne.inacheve ||
+      jugeBorne.code !== 2 ||
+      !jugeBorne.fautes.some((f) => f.message.includes('PAGES_MAX'))
+    ) {
+      console.error(
+        `❌ La borne de pagination n'a pas rendu ce qu'elle devait : ${borne.pages} page(s) ` +
+          `(attendu ${PAGES_MAX}), inachevé=${borne.inacheve}, code ${jugeBorne.code} (attendu 2).`
+      );
+      return 1;
+    }
+
+    // UN CURSEUR QUI N'AVANCE PAS — aucune borne exprimée en nombre de révisions ne l'attraperait,
+    // et une boucle qui ne rend jamais la main ne rend aucune couleur : elle prend le créneau.
+    const fige = paginerEditions(() => ({
+      totalCount: 400,
+      noeuds: [{ editedAt: horodatage(1), diff: 'propre' }],
+      encore: true,
+      curseur: 'CURSEUR-QUI-NE-BOUGE-PAS',
+    }));
+    if (fige.pages !== 2 || !fige.inacheve) {
+      console.error(
+        `❌ Un curseur qui n'avance pas n'a pas été reconnu : ${fige.pages} page(s), ` +
+          `inachevé=${fige.inacheve}.`
+      );
+      return 1;
+    }
+  }
+
   console.log(
     `✅ Les ${FAMILLES_CORPS_PUBLIE.length} familles du corps publié rougissent chacune sur son témoin — preuve faite.`
   );
   console.log(`   ${FAMILLES_CORPS_PUBLIE.map((f) => '• ' + f).join('\n   ')}`);
+  console.log(
+    `   Les révisions sont PAGINÉES : ${EDITIONS_PAR_PAGE} par page, ${PAGES_MAX} page(s) au plus, ` +
+      `soit ${PAGES_MAX * EDITIONS_PAR_PAGE} révision(s). Une coordonnée servie APRÈS la première ` +
+      `page est lue, nommée et datée — donc remédiable — au lieu de rendre un INDÉTERMINÉ sans remède.`
+  );
   console.log(
     `   ${CONTRE_TEMOINS.length} contre-témoins restent verts, dont la forme masquée du gabarit.\n` +
       `   ${caracteres.length} forme(s) d'espace ou de tiret sont neutralisées avant toute recherche.\n` +
