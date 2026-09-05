@@ -5216,7 +5216,8 @@
       "etape": 7,
       "phase": -1,
       "taches": [
-        "GOV-000"
+        "GOV-000",
+        "GOV-036"
       ]
     },
     {
@@ -5230,7 +5231,8 @@
       "etape": null,
       "phase": -1,
       "taches": [
-        "GOV-024"
+        "GOV-024",
+        "GOV-035"
       ]
     },
     {

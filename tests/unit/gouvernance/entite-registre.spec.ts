@@ -492,7 +492,12 @@ describe("REQ-CPL-018 — les formes de coordonnées, éprouvées sur les cas qu
       ['JSON', '{"bic": "BNPAFRPPXXX"}'],
       ['JSON serré', '{"bic":"BNPAFRPPXXX"}'],
       ['XML pain.001', '<BICFI>BNPAFRPPXXX</BICFI>'],
-      ['CSV', 'bic,BNPAFRPPXXX'],
+      // ⚠️ PAS de cas CSV ici, et c'est une DÉCISION mesurée par la lentille `securite` :
+      // `bic,BNPAFRPPXXX` sur une seule ligne est une forme DÉGÉNÉRÉE. Un CSV réel nomme ses
+      // colonnes en en-tête et porte ses valeurs sur une autre ligne, donc le mot-clé n'y est
+      // jamais adjacent à sa valeur — et un relevé réel porte de toute façon l'IBAN à côté du
+      // BIC, donc le fichier rougit par l'IBAN. Garder la virgule comme délimiteur ne l'aurait
+      // pas attrapé et faisait rougir « Le BIC, DOCUSEAL et le reste. », du français ordinaire.
     ] as const) {
       expect(
         controler(universAvecFichier('docs/rib.json', texte)).map((f) => f.famille),

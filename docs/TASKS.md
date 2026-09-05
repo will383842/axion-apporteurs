@@ -8,11 +8,11 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**204 taches · 151.75 j estimes.**
+**206 taches · 152.75 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
-| -1 — Gouvernance (prealable bloquant) | 33 | 19.25 | 20 |
+| -1 — Gouvernance (prealable bloquant) | 35 | 20.25 | 20 |
 | 0 — Socle technique | 50 | 37.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
@@ -345,6 +345,26 @@ Couvre : `REQ-GOV-006`
 **Acceptation.** Trois endroits portaient un instant de reference ECRIT EN DUR — `scripts/gates/gov-etat.ts` (la base de son mode --prove et la date de son temoin `journal_date_future`), `tests/unit/gouvernance/plan-state-frais.spec.ts` et `tests/unit/gouvernance/une-tache-un-owner.spec.ts` — sous ce commentaire : « un instant FIXE, jamais new Date() : une garde qui lit l'horloge n'est pas rejouable ». Le raisonnement est JUSTE et porte sur le MAUVAIS SUJET. Il vaut pour un univers INJECTE, ou l'instant fait partie de la fixture ; il ne vaut pas pour un fichier VIVANT. Or ces trois appels confrontent l'instant au JOURNAL REEL, qui avance. Un instant fige au 2026-09-04 confronte a un journal qui grandit est un test A RETARDEMENT : il rougit sur la premiere entree ecrite apres cette date, donc sur toute entree future, pour toujours. Il est tombe le LENDEMAIN. Le meme defaut vivait dans la GARDE : --prove appariait le journal REEL au meme litteral, donc il REFUSAIT de commencer et sortait 1, exactement comme une garde qui aurait trouve un defaut — une preuve qui s'eteint toute seule au bout d'un jour ne prouve rien le second jour, ET RIEN NE LE DIT. Le temoin de `journal_date_future` portait lui aussi une date en dur (2026-12-31) : un temoin dont la date est ecrite a la main cesse d'exercer sa famille le jour ou le present le rattrape, en silence — il devient un contre-temoin. A tenir : les trois instants sont DERIVES ; `controler()` reste PURE et RECOIT son instant, aucune horloge n'entre dans la garde ; la famille `journal_date_future` est rejouee contre une entree datee de DEMAIN et vue rougir ; et le depot tel quel reste vert.
 
 **Tests.** `tests/unit/gouvernance/plan-state-frais.spec.ts`
+
+### GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur
+
+`0.5 j` · zone `gouvernance` · depend de `GOV-024`
+
+Couvre : `REQ-GOV-032`
+
+**Acceptation.** REQ-GOV-032 enumere CINQ vues generees — docs/TASKS.md, docs/REQUIREMENTS.md, docs/TRACABILITE.md, docs/paths-proposes.json et docs/PLAN-STATE.md — et exige de chacune un mode de VERIFICATION qui n'ecrit rien et sort 1 quand le fichier commite differe d'un octet de ce que sa source produirait. GOV-024 en a livre quatre. La cinquieme, PLAN-STATE, n'en a toujours pas : `pnpm plan-state:build` ECRIT, et rien ne compare. ⚠️ CE QUI REND CETTE TACHE URGENTE PLUTOT QU'UTILE : REQ-GOV-032.taches vaut [GOV-024], donc le jour ou GOV-024 passe fusionnee, `gov:requirements` reste VERT avec un tiers de l'exigence sans porteur, et plus AUCUNE commande du depot ne peut rougir dessus. L'exigence ne serait pas violee : elle serait INTROUVABLE. A livrer : (1) `plan-state:build --verifier` qui n'ecrit rien, sort 1 sur un octet d'ecart et NOMME l'ecart en unites du domaine, comme ses quatre soeurs ; (2) le rendu rendu PUR et deterministe — deux appels, le meme octet — sans quoi le verificateur mesurerait la machine ; (3) l'etape de Gate A qui l'appelle, sans continue-on-error ; (4) le temoin qui le voit rougir sur une vue perime d'une ligne, et le contre-temoin vert sur le depot a jour ; (5) tant qu'a ouvrir ce fichier : `scripts/plan-state/build.ts` cite encore `scripts/gates/plan-state-derive.spec.ts`, un chemin MORT que le registre vient d'abandonner — c'est LEC-12 mot pour mot, dans le fichier meme que cette tache touche. NOTE : le TROISIEME objet que la relecture avait rattache a cette tache — le generateur du corps de PR, qui vivait hors du depot — est deja livre par la PR 31 sous `scripts/lot/corps-de-pr.ts`, avec son script `pnpm pr:corps`.
+
+**Tests.** `tests/unit/gouvernance/vues-derivees.spec.ts`
+
+### GOV-036 — Les deux listes qui decident de ce que gov:entite REGARDE sont tapees a la main
+
+`0.5 j` · zone `gouvernance` · sensible : argent · depend de `CPL-T01`
+
+Couvre : `REQ-GOV-031`
+
+**Acceptation.** Trois constats de la lentille securite, tous mesures sur les quatre passes de la PR 31, tous non bloquants parce qu'aucun ne laisse fuir un IBAN AUJOURD'HUI — mais tous portant sur ce que la garde REGARDE, c'est-a-dire sur le seul endroit ou une garde peut devenir aveugle en silence. (1) PAYS_ISO est une liste TAPEE : 47 entrees, dont SEPT qui n'emettent aucun IBAN, et CINQUANTE ET UN pays emetteurs OMIS. Mesure : cinq IBAN etrangers a cle mod-97 valide (TR, IL, RS, AL, LB) ne sont pas vus. Le risque est faible tant que la residence fiscale exigee est francaise, mais la garde est repo-wide et servira aux RIB des apporteurs. C'est RM-01 applique a une constante : la liste se DERIVE, elle ne se tape pas. (2) EXTENSIONS_BALAYEES est une liste d'AUTORISATION sous un commentaire qui dit « un secret ne choisit pas son extension ». Ne sont pas balayes : .sh .py .tf .toml .ini .mdx .html .http .rst .jsonc .log .har .pdf Makefile .gitattributes .sha256 — et `scripts/*.sh` exportant PARTNERS_IBAN_DEBITEUR est le cas plausible. La forme juste est une liste de REFUS (binaires), avec le contre-temoin .png qui s'y transpose tel quel. (3) Le commentaire pres de estBalaye annonce des temoins « --prove, famille filtre_trop_large » : cette famille N'EXISTE PAS, FAMILLES en porte onze et aucune de ce nom. Les temoins sont dans le banc d'essai, ce qui suffit — mais le code annonce une couverture qu'il n'a pas, dans la phrase meme qui repond a un constat de mutation.
+
+**Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
 
 ## Phase 0 — Socle technique
 

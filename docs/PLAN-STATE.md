@@ -10,7 +10,7 @@
 | Où est `main` ? | `794245c` — 2026-09-04T23:10:40+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #31 (rien) |
 | Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-029 (A01) · GOV-032 (A01) |
-| Où en est la phase ? | phase -1 — 20/33 tâches, reste 5.75 j |
+| Où en est la phase ? | phase -1 — 20/35 tâches, reste 6.75 j |
 | Le prochain pas | fusionner #31, puis INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 4 question(s) pour Will |
 | Dernière entrée de journal | PR #31 — 2026-09-05 |
@@ -19,13 +19,13 @@
 
 ## Phase courante : -1
 
-20/33 tâches terminées · reste 5.75 j estimés.
+20/35 tâches terminées · reste 6.75 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 173 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
+| `a_faire` | 175 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
 | `en_cours` | 9 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-029 (A01) PR#31 · GOV-032 (A01) PR#31 |
 | `en_revue` | 0 | — |
 | `fusionnee` | 20 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |
@@ -122,8 +122,8 @@ d'avant écartait « pour une raison de décision » sont éligibles, 1 le reste
 **Reste.** Trois lots fusionnés en une PR au lieu de six : la Gate A juge l'arbre **combiné**, et
 c'est le seul endroit où le conflit annoncé entre `gov:lexique` et `gov:publication` sur la même
 phrase de `partners/ADR-0009` pouvait être tranché — il est **fermé**, mesuré et non simulé. Restent
-en phase −1 : `GOV-014`, `INT-T01b`, `GOV-019`, `GOV-028` — `INT-T01b` étant la seule tâche du
-chantier à vivre dans `axionia`. Trois constats sont renvoyés en tâche plutôt que corrigés au
+en phase −1 : `GOV-014`, `INT-T01b`, `GOV-019`, `GOV-028` — `INT-T01b` étant la seule tâche de la PHASE −1 à vivre dans
+`axionia` — le chantier en compte quatorze au total. Trois constats sont renvoyés en tâche plutôt que corrigés au
 passage : la neutralisation des citations aveugle la garde sur toute chaîne courte (`GOV-028`), et
 `pnpm gates:prouvees` compte 8 « preuves non référencées » qui sont des refus de **ponctuation**, pas
 des gardes non prouvées.

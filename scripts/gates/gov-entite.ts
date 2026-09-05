@@ -110,9 +110,14 @@ export const FAMILLES = [
  *   — `'recopie'` : le fichier peut porter une valeur PUBLIQUE du registre (SIREN, SIRET, TVA)
  *     sans que ce soit une recopie fautive. C'est le régime de `docs/DECISIONS.md` et de l'ADR :
  *     ils nomment ce qu'ils arrêtent, et ils ne sont PAS exempts de `coordonnee_en_clair`.
- *   — `'coordonnee'` : le fichier peut porter une coordonnée. Réservé aux DEUX fichiers qui
- *     doivent contenir les témoins de cette garde — la garde elle-même et son banc d'essai —
- *     parce qu'un document qui explique la règle doit pouvoir écrire son contre-exemple.
+ *   — `'coordonnee'` : le fichier peut porter une coordonnée. TROIS entrées le portent, et il
+ *     faut les nommer toutes les trois — annoncer une surface d'exemption plus ÉTROITE que le
+ *     code est, dans une garde de publication, le sens dangereux de l'erreur :
+ *       · `scripts/gates/gov-entite.ts` et `tests/unit/gouvernance/entite-registre.spec.ts`,
+ *         parce qu'un document qui explique la règle doit pouvoir écrire son contre-exemple ;
+ *       · `pnpm-lock.yaml`, empreintes de paquets, aucune prose — exemption de commodité dont
+ *         la raison écrite parle de faux positifs et non de secrets, et qui est donc la plus
+ *         discutable des trois.
  *
  * Élargir une exemption exige donc d'élargir ce type, ce qui se voit en revue. Et `'coordonnee'`
  * implique `'recopie'` : un fichier autorisé à PORTER la valeur peut a fortiori la répéter.
@@ -157,7 +162,14 @@ const SANS_EXTENSION_BALAYES = /(^|\/)(CODEOWNERS|Dockerfile|Procfile|\.env[^/]*
  * `mutation` l'a mesuré — remplacer `EXTENSIONS_BALAYEES` par un motif qui ne reconnaît rien, ou
  * `EXEMPTS` par un attrape-tout, laissait `gov:entite` ET son `--prove` VERTS tous les deux. Les
  * deux listes qui décident de CE QUI EST REGARDÉ étaient le seul endroit non gardé de la garde.
- * Extraites ici, elles ont des témoins (`--prove`, famille `filtre_trop_large`) et un test.
+ * Extraites ici, elles ont un TEST — `tests/unit/gouvernance/entite-registre.spec.ts`, cinq
+ * témoins et un contre-témoin — et les deux mutations ci-dessus y tombent (7 et 3 échecs).
+ *
+ * ⚠️ Elles n'ont PAS de famille dans `--prove`, et une première rédaction de ce paragraphe en
+ * annonçait une, `filtre_trop_large`, qui n'existe nulle part : `FAMILLES` en porte onze, aucune
+ * de ce nom. La phrase rouvrait donc EN PROSE le trou que l'extraction venait de fermer — annoncer
+ * une preuve qu'on n'a pas est précisément ce qui fait qu'on ne la cherche plus. Le test suffit ;
+ * l'annonce, non.
  */
 export function estBalaye(chemin: string): boolean {
   return EXTENSIONS_BALAYEES.test(chemin) || SANS_EXTENSION_BALAYES.test(chemin);
@@ -313,9 +325,18 @@ const FORME_IBAN = new RegExp(
  * (A = 10 … Z = 35) vaut 1 modulo 97. Aucune des chaînes qui nous gênaient ne le vérifie ; le
  * témoin de la garde et les IBAN réels le vérifient tous.
  *
- * CE QUE ÇA COÛTE, ET QUI EST ASSUMÉ : un IBAN mal recopié n'est plus vu. C'est acceptable —
- * un IBAN dont la clé est fausse n'autorise aucun prélèvement, il n'est pas la fuite qu'on
- * craint. Un IBAN copié depuis un relevé, lui, est toujours valide.
+ * CE QUE ÇA COÛTE, ET QUI EST ASSUMÉ : un IBAN dont la clé est fausse n'est plus vu. Une faute de
+ * frappe n'autorise aucun prélèvement, et un IBAN copié depuis un relevé est toujours valide.
+ *
+ * ⚠️ MAIS LE RÉSIDU RÉEL N'EST PAS LA FAUTE DE FRAPPE, C'EST L'IBAN PARTIELLEMENT MASQUÉ.
+ * `FR76 3000 6000 01•• •••• •••0 189` a une clé fausse, donc il passe — et il divulgue pourtant
+ * encore la banque, le guichet et l'essentiel du numéro de compte. Une personne qui masque quatre
+ * caractères avant de coller un RIB dans un ticket **croira s'être protégée**, et cette garde ne
+ * la contredira pas. C'est une limite ASSUMÉE, pas un oubli : la couvrir demanderait de renoncer
+ * à la clé, donc de rougir sur un dépôt propre — ce qui fait désarmer la garde. Elle est écrite
+ * ici ET dans le `verifie` de la gate, parce que ces deux textes ont deux lecteurs différents :
+ * celui qui voudra « renforcer » la forme dans six mois, et celui qui décidera de ne PAS
+ * re-vérifier en lisant le registre.
  */
 export function cleIbanValide(valeur: string): boolean {
   const s = valeur.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -368,14 +389,37 @@ const FORME_TVA_FR = /\b(FR[0-9A-Z]{2}\d{9})\b/g;
 // Le mot-clé peut donc être suivi de caractères de mot (`BICFI`), d'un guillemet fermant, puis
 // d'un délimiteur pris au sens large : `:`  `=`  `,`  `>` ou une fin de ligne.
 //
-// ⚠️ CE QUI RESTE DEHORS, ET QUI EST ÉCRIT PLUTÔT QUE TU : un BIC en prose SANS délimiteur —
-// « Le BIC est BNPAFRPP. » — n'est pas vu. C'est le prix du contre-témoin `DOCUSEAL` : accepter
-// la prose sans délimiteur fait rougir tout mot de huit lettres proche d'un « BIC », et une garde
-// qui rougit sur du français ordinaire se fait désarmer dans la semaine.
-const SEPARATEUR_DE_VALEUR =
-  '(?:["\'`]?[ \\t]*[=:,>][ \\t\\n]*|[ \\t]*\\n[ \\t]*)["\'`]?[ \\t]*';
+// ⚠️ CE QUI RESTE DEHORS, ET LA PREMIÈRE RÉDACTION DE CE PARAGRAPHE ÉTAIT PLUS ÉTROITE QUE LE RÉEL.
+// J'avais écrit « un BIC en prose SANS délimiteur n'est pas vu ». C'est vrai et insuffisant : la
+// règle exacte est que **le délimiteur doit être ADJACENT au mot-clé**. Restent donc verts, AVEC
+// un délimiteur : « BIC de la banque : X », « Le BIC du bénéficiaire est : X », une cellule de
+// tableau « | BIC | X | », « BIC : BNPA FRPP XXX » (valeur espacée), « SWIFT : X » (l'autre nom
+// du BIC), et la casse minuscule de la valeur.
+// C'est le prix du contre-témoin `DOCUSEAL` : élargir la fenêtre entre le mot-clé et la valeur
+// fait rougir tout mot de huit lettres proche d'un « BIC », et une garde qui rougit sur du
+// français ordinaire se fait désarmer dans la semaine.
+// 🔑 Un résidu écrit plus étroit que le réel est une sur-annonce : il rassure exactement là où il
+// ne protège pas. Le dire large est le seul moyen que le prochain lecteur le mette en doute.
+// ⚠️ TROISIÈME RÉGLAGE DE CETTE FORME, ET LES DEUX PREMIERS ONT COÛTÉ.
+// (1) `[=:]` seul ratait le JSON, où le guillemet fermant de la clé s'intercale.
+// (2) Y ajouter `,` et `>` a fermé le JSON et le XML, et OUVERT des faux positifs sur du français
+//     ordinaire : « Le BIC, DOCUSEAL et le reste. » et « BIC > DOCUSEAL » rougissaient — or
+//     `DOCUSEAL` est l'identifiant d'un point de sortie déclaré, donc une phrase que quelqu'un
+//     écrira. Et le `\b` de gauche manquait : `iambic:` rougissait aussi.
+//     🔑 Le remède d'un rouge injuste est toujours le même : on retire la garde. Un faux positif
+//     dans une garde de publication est donc un défaut de SÉCURITÉ, pas de confort.
+//
+// Le réglage juste sépare les deux mondes au lieu de les mélanger dans une classe de caractères :
+//   — le monde BALISÉ (`<BIC>`, `<BICFI>`) a sa propre alternative, où le `>` est structurel ;
+//   — le monde CLÉ-VALEUR (`=`, `:`) garde le sien, guillemet fermant admis.
+// La virgule est RETIRÉE : un CSV réel nomme ses colonnes en en-tête et porte ses valeurs sur une
+// autre ligne, donc le mot-clé n'y est jamais adjacent à sa valeur — elle n'achetait rien et
+// coûtait la phrase ci-dessus. Un relevé réel porte de toute façon l'IBAN à côté du BIC.
+const BALISE_BIC = '<[A-Za-z]{0,8}[Bb][Ii][Cc][A-Za-z]{0,8}>[ \\t\\n]*';
+const CLE_VALEUR_BIC =
+  '(?<![A-Za-z])[Bb][Ii][Cc][A-Za-z0-9_-]{0,24}?(?:["\'`]?[ \\t]*[=:][ \\t\\n]*|[ \\t]*\\n[ \\t]*)["\'`]?[ \\t]*';
 const FORME_BIC = new RegExp(
-  `[Bb][Ii][Cc][A-Za-z0-9_-]{0,24}?${SEPARATEUR_DE_VALEUR}([A-Z]{4}${PAYS_ISO}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)(?![A-Za-z0-9])`,
+  `(?:${BALISE_BIC}|${CLE_VALEUR_BIC})([A-Z]{4}${PAYS_ISO}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)(?![A-Za-z0-9])`,
   'g'
 );
 

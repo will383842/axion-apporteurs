@@ -7317,7 +7317,8 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/gov-tasks.ts",
-        "scripts/gates/gov-requirements.ts"
+        "scripts/gates/gov-requirements.ts",
+        "scripts/lot/corps-de-pr.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -7561,6 +7562,78 @@
       "tests": {
         "REQ-GOV-006": [
           "tests/unit/gouvernance/plan-state-frais.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-035",
+      "titre": "docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/plan-state/build.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-024"
+      ],
+      "reqs": [
+        "REQ-GOV-032"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "REQ-GOV-032 enumere CINQ vues generees — docs/TASKS.md, docs/REQUIREMENTS.md, docs/TRACABILITE.md, docs/paths-proposes.json et docs/PLAN-STATE.md — et exige de chacune un mode de VERIFICATION qui n'ecrit rien et sort 1 quand le fichier commite differe d'un octet de ce que sa source produirait. GOV-024 en a livre quatre. La cinquieme, PLAN-STATE, n'en a toujours pas : `pnpm plan-state:build` ECRIT, et rien ne compare. ⚠️ CE QUI REND CETTE TACHE URGENTE PLUTOT QU'UTILE : REQ-GOV-032.taches vaut [GOV-024], donc le jour ou GOV-024 passe fusionnee, `gov:requirements` reste VERT avec un tiers de l'exigence sans porteur, et plus AUCUNE commande du depot ne peut rougir dessus. L'exigence ne serait pas violee : elle serait INTROUVABLE. A livrer : (1) `plan-state:build --verifier` qui n'ecrit rien, sort 1 sur un octet d'ecart et NOMME l'ecart en unites du domaine, comme ses quatre soeurs ; (2) le rendu rendu PUR et deterministe — deux appels, le meme octet — sans quoi le verificateur mesurerait la machine ; (3) l'etape de Gate A qui l'appelle, sans continue-on-error ; (4) le temoin qui le voit rougir sur une vue perime d'une ligne, et le contre-temoin vert sur le depot a jour ; (5) tant qu'a ouvrir ce fichier : `scripts/plan-state/build.ts` cite encore `scripts/gates/plan-state-derive.spec.ts`, un chemin MORT que le registre vient d'abandonner — c'est LEC-12 mot pour mot, dans le fichier meme que cette tache touche. NOTE : le TROISIEME objet que la relecture avait rattache a cette tache — le generateur du corps de PR, qui vivait hors du depot — est deja livre par la PR 31 sous `scripts/lot/corps-de-pr.ts`, avec son script `pnpm pr:corps`.",
+      "tests": {
+        "REQ-GOV-032": [
+          "tests/unit/gouvernance/vues-derivees.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-036",
+      "titre": "Les deux listes qui decident de ce que gov:entite REGARDE sont tapees a la main",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-entite.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "CPL-T01"
+      ],
+      "reqs": [
+        "REQ-GOV-031"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "Trois constats de la lentille securite, tous mesures sur les quatre passes de la PR 31, tous non bloquants parce qu'aucun ne laisse fuir un IBAN AUJOURD'HUI — mais tous portant sur ce que la garde REGARDE, c'est-a-dire sur le seul endroit ou une garde peut devenir aveugle en silence. (1) PAYS_ISO est une liste TAPEE : 47 entrees, dont SEPT qui n'emettent aucun IBAN, et CINQUANTE ET UN pays emetteurs OMIS. Mesure : cinq IBAN etrangers a cle mod-97 valide (TR, IL, RS, AL, LB) ne sont pas vus. Le risque est faible tant que la residence fiscale exigee est francaise, mais la garde est repo-wide et servira aux RIB des apporteurs. C'est RM-01 applique a une constante : la liste se DERIVE, elle ne se tape pas. (2) EXTENSIONS_BALAYEES est une liste d'AUTORISATION sous un commentaire qui dit « un secret ne choisit pas son extension ». Ne sont pas balayes : .sh .py .tf .toml .ini .mdx .html .http .rst .jsonc .log .har .pdf Makefile .gitattributes .sha256 — et `scripts/*.sh` exportant PARTNERS_IBAN_DEBITEUR est le cas plausible. La forme juste est une liste de REFUS (binaires), avec le contre-temoin .png qui s'y transpose tel quel. (3) Le commentaire pres de estBalaye annonce des temoins « --prove, famille filtre_trop_large » : cette famille N'EXISTE PAS, FAMILLES en porte onze et aucune de ce nom. Les temoins sont dans le banc d'essai, ce qui suffit — mais le code annonce une couverture qu'il n'a pas, dans la phrase meme qui repond a un constat de mutation.",
+      "tests": {
+        "REQ-GOV-031": [
+          "tests/unit/gouvernance/entite-registre.spec.ts"
         ]
       }
     }
