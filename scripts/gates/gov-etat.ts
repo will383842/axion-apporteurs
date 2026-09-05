@@ -485,7 +485,7 @@ function joursApres(instantIso: string, n: number): string {
  * faire dépendre de l'état réel des PR rendrait la preuve verte ou rouge au gré de la journée, ce
  * qui est exactement le défaut que `--now` corrige ailleurs.
  *
- * ⚠️ L'INSTANT DE LA BASE SE DÉRIVE, IL NE SE TAPE PAS (GOV-029). Il a porté le littéral
+ * ⚠️ L'INSTANT DE LA BASE SE DÉRIVE, IL NE SE TAPE PAS (GOV-032). Il a porté le littéral
  * `'2026-09-04T09:00:00Z'` pendant que `entrees` venait, lui, du journal RÉEL. Les deux moitiés
  * étaient défendables séparément et fausses ensemble : le journal avance, le littéral non. La
  * première entrée écrite après cette date rend la base fautive, et `--prove` REFUSE alors de

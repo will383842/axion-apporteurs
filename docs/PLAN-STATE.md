@@ -8,25 +8,25 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `794245c` — 2026-09-04T23:10:40+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #31 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-029 (A01) |
-| Où en est la phase ? | phase -1 — 20/32 tâches, reste 5.50 j |
-| Le prochain pas | INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
+| Qu’est-ce qui est en vol ? | 1. #31 (rien) |
+| Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-029 (A01) · GOV-032 (A01) |
+| Où en est la phase ? | phase -1 — 20/33 tâches, reste 5.75 j |
+| Le prochain pas | fusionner #31, puis INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 4 question(s) pour Will |
 | Dernière entrée de journal | PR #31 — 2026-09-05 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 31 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
-20/32 tâches terminées · reste 5.50 j estimés.
+20/33 tâches terminées · reste 5.75 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `a_faire` | 173 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
-| `en_cours` | 8 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-029 (A01) PR#31 |
+| `en_cours` | 9 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-029 (A01) PR#31 · GOV-032 (A01) PR#31 |
 | `en_revue` | 0 | — |
 | `fusionnee` | 20 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |
 | `deployee` | 0 | — |
@@ -62,7 +62,7 @@ Reste sur ce chemin : **17.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — sept taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | un contrôle requis rouge ou une revue manquante |
+| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — sept taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -80,6 +80,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’i
 | GOV-026 — Le CLAUDE.md racine, avec sa règle maison d'abord registrée | A01 | — | `en_cours` |
 | GOV-027 — Le composeur lit le registre des décisions autrement que la garde, et écarte des tâches dont la décision est posée | A01 | — | `en_cours` |
 | GOV-029 — L'identifiant d'un lot se derivait d'un dossier que git ignore, et repartait sur un numero deja pris | A01 | — | `en_cours` |
+| GOV-032 — Un instant de reference se fige par rapport a CE QU'IL JUGE | A01 | — | `en_cours` |
 
 ⚠️ **15 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -92,7 +93,8 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 
 ## Prochain pas
 
-1. **INT-T01b** — Contrat d'événements, payloads et fixtures produites par le producteur réel (1 j) : 1 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+1. **Fusionner #31** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+2. **INT-T01b** — Contrat d'événements, payloads et fixtures produites par le producteur réel (1 j) : 1 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
@@ -104,10 +106,10 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — sept taches, le verrou de phase leve, deux regressions fermees
+### PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — huit taches, le verrou de phase leve, trois regressions fermees
 
-**Fait.** Trois lots entrent en une PR : sept tâches — `GOV-006`, `GOV-013`, `CPL-T01`, `GOV-024`,
-`GOV-025`, `GOV-026`, `GOV-027`. `CPL-T01` lève le verrou qui gelait 171 tâches : une valeur que seul
+**Fait.** Trois lots entrent en une PR : huit tâches — `GOV-006`, `GOV-013`, `CPL-T01`, `GOV-024`,
+`GOV-025`, `GOV-026`, `GOV-027`, plus `GOV-029` née de la vérification. `CPL-T01` lève le verrou qui gelait 171 tâches : une valeur que seul
 Will connaît est une **configuration à sentinelle**, pas un état de tâche, et `attente_externe`
 n'entrait dans aucun lot — la phase −1 restait donc courante à vie, sans qu'aucune garde ne rougisse.
 `GOV-024` donne enfin un générateur à `docs/REQUIREMENTS.md`, qui n'en avait aucun alors que son
@@ -115,12 +117,12 @@ bandeau affirmait le contraire, et un **vérificateur** aux deux vues : `--verif
 et sort 1 sur un octet d'écart, en nommant l'écart en unités du domaine. `GOV-027` supprime le second
 lecteur du registre des décisions ; le composeur imprime l'effet — **18 tâches** que la lecture
 d'avant écartait « pour une raison de décision » sont éligibles, 1 le reste. Le dépôt passe de 109 à
-110 gardes, de 18 à **21 armées**, de 197 à **203 tâches**, de 354 à **355 exigences**.
+110 gardes, de 18 à **21 armées**, de 197 à **203 tâches**, de 353 à **355 exigences**.
 
 **Reste.** Trois lots fusionnés en une PR au lieu de six : la Gate A juge l'arbre **combiné**, et
 c'est le seul endroit où le conflit annoncé entre `gov:lexique` et `gov:publication` sur la même
 phrase de `partners/ADR-0009` pouvait être tranché — il est **fermé**, mesuré et non simulé. Restent
-en phase −1 : `GOV-014`, `GOV-019` (lot suivant), `GOV-028`, `GOV-029` et `INT-T01b`, seule tâche du
+en phase −1 : `GOV-014`, `GOV-019` (lot suivant), `GOV-028`, `GOV-030`, `GOV-031`, `GOV-032` et `INT-T01b`, seule tâche du
 chantier à vivre dans `axionia`. Trois constats sont renvoyés en tâche plutôt que corrigés au
 passage : la neutralisation des citations aveugle la garde sur toute chaîne courte (`GOV-028`), et
 `pnpm gates:prouvees` compte 8 « preuves non référencées » qui sont des refus de **ponctuation**, pas
@@ -138,6 +140,16 @@ par sept tâches livrées. Son commentaire nommait pourtant le cas exact, « un 
 n'en avait corrigé que la moitié : le comptage était devenu un maximum, la source était restée le
 répertoire ignoré. **Un commentaire juste qui nomme un défaut ne le corrige pas, et il rassure d'autant
 plus qu'il est juste.**
+
+Et la troisième ne tenait pas dans « deux » : **un instant de référence se fige par rapport à CE
+QU'IL JUGE.** Deux spec et le mode `--prove` d'une garde portaient un instant écrit en dur, sous un
+commentaire exact — « un instant FIXE, jamais `new Date()` » — qui vaut pour un univers INJECTÉ et
+non pour un fichier vivant. Confronté au journal réel, qui avance, il faisait un test à retardement,
+tombé le lendemain sur cette entrée même. Le pire n'est pas la panne : `--prove` sortait **1** en
+refusant de commencer, exactement comme une garde qui aurait trouvé un défaut. Une preuve qui
+s'éteint toute seule ne prouve rien le second jour, **et rien ne le dit**. Son témoin portait lui
+aussi une date en dur : un témoin dont la date est écrite à la main cesse d'exercer sa famille le
+jour où le présent le rattrape — **en silence**, il devient un contre-témoin.
 
 ### PR #30 — 2026-09-04 — chore(GOV-012): cloture du lot L-1-03 — huit taches fusionnee, atterrissage atteste
 

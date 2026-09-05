@@ -2,11 +2,11 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne — la comparaison exacte que fait `scripts/lot/composer.ts` (`pris.has(p)`). Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 203,
-    "pairesEnIntersection": 3826,
-    "cheminsDeclares": 628,
+    "tachesCouvertes": 204,
+    "pairesEnIntersection": 3827,
+    "cheminsDeclares": 629,
     "cheminsDistincts": 368,
-    "cheminsPartages": 93,
+    "cheminsPartages": 94,
     "tachesSansAucuneIntersection": 29,
     "listeDesTachesIsolees": [
       "QA-T08",
@@ -1158,6 +1158,9 @@
     ],
     "GOV-029": [
       "tests/unit/gouvernance/lot-identifiant-unique.spec.ts"
+    ],
+    "GOV-032": [
+      "tests/unit/gouvernance/plan-state-frais.spec.ts"
     ]
   }
 }

@@ -130,6 +130,24 @@ describe('REQ-GOV-032 — docs/TASKS.md est comparée à docs/tasks.json', () =>
     expect(readFileSync(vue, 'utf8')).toBe(perimee);
   });
 
+  it("REQ-GOV-032 · la comparaison est OCTET PAR OCTET, pas par LONGUEUR — vu rougir sur une dérive à longueur CONSTANTE", () => {
+    // 🔴 Trouvé par la lentille `mutation` le 2026-09-05. Remplacer la comparaison de contenu
+    // par une comparaison de LONGUEUR laissait ce fichier entièrement VERT : les cinq témoins de
+    // périmage RETIRENT tous du texte, donc changent tous la longueur, et aucun n'exerçait la
+    // propriété que la garde revendique. Une garde peut être juste et son test aveugle : ce qui
+    // est prouvé n'est pas ce que le code fait, c'est ce que les témoins font VARIER.
+    // Celui-ci ne change QUE des octets, jamais leur nombre.
+    const chemin = rendreDansLeBac(TACHES, 'longueur-constante.md');
+    const rendu = readFileSync(chemin, 'utf8');
+    const perime = rendu.replace('# Taches', '# taches');
+    expect(perime.length, 'le témoin doit garder la MÊME longueur, sinon il ne prouve rien').toBe(rendu.length);
+    expect(perime).not.toBe(rendu);
+    writeFileSync(chemin, perime);
+    const r = lancer(TACHES, '--verifie-rendu', '--out', chemin);
+    expect(r.code, `une dérive à longueur constante DOIT sortir 1`).toBe(1);
+    expect(r.sortie).toContain('vue_perimee');
+  });
+
   it('REQ-GOV-032 · le rendu est DÉTERMINISTE : deux appels produisent le même octet', () => {
     const a = rendreDansLeBac(TACHES, 'det-a.md');
     const b = rendreDansLeBac(TACHES, 'det-b.md');

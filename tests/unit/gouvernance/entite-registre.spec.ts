@@ -66,6 +66,9 @@ import {
   controler,
   ligneSource,
   normaliser,
+  estBalaye,
+  estExemptDe,
+  EXEMPTS,
   type Univers,
 } from '../../../scripts/gates/gov-entite';
 
@@ -339,5 +342,67 @@ describe('gov:entite — la garde, sur le dépôt réel et sur ses témoins', ()
     // d'apparence technique, précisément pour qu'on ne puisse pas la prendre pour une valeur.
     expect(SENTINELLE).toBe('A-RENSEIGNER');
     expect(SENTINELLE).toBe(SENTINELLE.toUpperCase());
+  });
+});
+
+/**
+ * LES DEUX LISTES QUI DÉCIDENT DE CE QUI EST REGARDÉ — le seul endroit non gardé de la garde.
+ *
+ * 🔴 Trouvé par la lentille `mutation` le 2026-09-05, et c'est le défaut le plus instructif du
+ * lot : `--prove` INJECTE son univers et ne passe jamais par la lecture du disque. Les deux
+ * listes qui filtrent les fichiers — `EXTENSIONS_BALAYEES` et `EXEMPTS` — n'étaient donc
+ * exercées par AUCUN témoin. Mesuré : remplacer les extensions par un motif qui ne reconnaît
+ * rien, ou les exemptions par un attrape-tout, laissait `gov:entite` ET son `--prove` VERTS tous
+ * les deux. La moitié « publication » de la garde se désarmait sans qu'une étape de Gate A
+ * rougisse — la seule trace était un compteur de fichiers balayés dans un message de succès que
+ * personne n'assertait.
+ *
+ * Une garde dont on peut couper la vue sans qu'aucun test ne tombe est une garde décorative.
+ * Ces témoins-ci portent sur le FILTRE lui-même, pas sur ce qu'il laisse passer.
+ */
+describe('REQ-CPL-018 — ce que la garde REGARDE est gardé, pas seulement ce qu’elle en dit', () => {
+  it('REQ-CPL-018 — un secret ne choisit pas son extension : les familles à risque sont balayées', () => {
+    for (const chemin of [
+      'prisma/schema.prisma', // introduit par ce lot même, et ignoré jusqu'au 2026-09-05
+      '.env.example', // `.gitignore` le dé-exclut exprès pour qu'il soit suivi
+      'docs/DECISIONS.md',
+      'scripts/lot/composer.ts',
+      'config/entite.json',
+      '.github/CODEOWNERS',
+      'docs/releve.csv',
+      'docs/virement.xml',
+      'notes.txt',
+    ]) {
+      expect(estBalaye(chemin), `${chemin} doit être balayé`).toBe(true);
+    }
+  });
+
+  it('REQ-CPL-018 — un fichier binaire ou d’image n’est pas balayé : le filtre reste un filtre', () => {
+    // Le contre-témoin. Sans lui, « tout est balayé » passerait ce fichier, et la liste
+    // d'extensions pourrait être remplacée par `/.*/ ` sans que rien ne tombe.
+    for (const chemin of ['docs/schema.png', 'assets/logo.svg', 'polices/inter.woff2']) {
+      expect(estBalaye(chemin), `${chemin} ne doit PAS être balayé`).toBe(false);
+    }
+  });
+
+  it('REQ-CPL-018 — AUCUN fichier n’est exempt de la recherche de SECRET, et c’est le veto de 2026-09-05', () => {
+    // `docs/DECISIONS.md` est le fichier où l'arbitrage de la banque sera écrit. Il était exempt
+    // du balayage ENTIER — donc de la recherche d'IBAN — parce qu'il a le droit de nommer le
+    // SIREN qu'il arrête. Les deux ne se déduisent pas l'un de l'autre.
+    expect(estExemptDe('docs/DECISIONS.md', 'recopie')).toBe(true);
+    expect(estExemptDe('docs/DECISIONS.md', 'coordonnee')).toBe(false);
+    expect(estExemptDe('docs/adr/0009-valeurs-du-monde-reel.md', 'coordonnee')).toBe(false);
+  });
+
+  it('REQ-CPL-018 — le type interdit d’élargir une exemption sans que la revue le voie', () => {
+    // Deux valeurs, et deux seulement. Une exemption plus large exigerait d'élargir le type.
+    for (const e of EXEMPTS) expect(['recopie', 'coordonnee']).toContain(e.exemptDe);
+    // Et chacune porte sa raison : une exemption sans motif est une exemption qu'on ne relit pas.
+    for (const e of EXEMPTS) expect(e.raison.length).toBeGreaterThan(30);
+  });
+
+  it('REQ-CPL-018 — `coordonnee` implique `recopie`, jamais l’inverse', () => {
+    expect(estExemptDe('config/entite.json', 'recopie')).toBe(true);
+    expect(estExemptDe('config/entite.json', 'coordonnee')).toBe(true);
   });
 });

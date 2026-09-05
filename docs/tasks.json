@@ -169,7 +169,7 @@
       "issue": 6,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`docs/REGLES-MAISON.md` porte RM-01 a RM-14 — les neuf regles de REQ-GOV-024 plus trois — une section par regle, le tableau de tete etant leur vue ; la ligne « Regle maison appliquee » vit entre ses marqueurs dans le gabarit de PR, et `gov:pr` la LIT. `docs/LECONS.md` porte le journal des lecons : chacune cite son incident mesure, ce qu'on en tire, une source verifiable (SHA, `chemin:ligne` ou message verbatim) et la `RM-nn` qu'elle a produite — ou dit qu'elle n'en a produit aucune. `pnpm gov:lecons --now <date>` (nightly, jamais l'horloge) rougit quand la consolidation depasse sept jours ALORS QUE des « appris » attendent, et reste verte sans dette. 12 familles, 13 temoins, 9 contre-temoins verts.",
+      "acceptance": "`docs/REGLES-MAISON.md` porte RM-01 a RM-14 — les neuf regles de REQ-GOV-024 plus cinq — une section par regle, le tableau de tete etant leur vue ; la ligne « Regle maison appliquee » vit entre ses marqueurs dans le gabarit de PR, et `gov:pr` la LIT. `docs/LECONS.md` porte le journal des lecons : chacune cite son incident mesure, ce qu'on en tire, une source verifiable (SHA, `chemin:ligne` ou message verbatim) et la `RM-nn` qu'elle a produite — ou dit qu'elle n'en a produit aucune. `pnpm gov:lecons --now <date>` (nightly, jamais l'horloge) rougit quand la consolidation depasse sept jours ALORS QUE des « appris » attendent, et reste verte sans dette. 12 familles, 13 temoins, 9 contre-temoins verts.",
       "tests": {
         "REQ-GOV-024": [
           "tests/unit/gouvernance/regles-maison.spec.ts#REQ-GOV-024 — docs/REGLES-MAISON.md porte RM-01 a RM-14, une section par regle",
@@ -7449,7 +7449,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "Deux lecteurs du même registre, et ils ne lisent pas la même chose (RM-04). `scripts/gates/gov-tasks.ts` reconnaît une décision à la PREMIÈRE CELLULE d'une ligne de tableau et accepte les quatre familles d'identifiants du registre ; `scripts/lot/composer.ts` la cherche par une expression régulière qui ne connaît que deux préfixes et n'applique pas les alias de la §0. Trois conséquences MESURÉES le 2026-09-04, toutes silencieuses : (a) seize tâches sont écartées pour « décision sans hypothèse » alors que leur décision est bel et bien déclarée au registre — il suffit que son identifiant soit une décision de Will ou un alias ; (b) trois identifiants cités dans une NOTE en prose sous la §1 — une note qui explique précisément qu'ils ne bloquent PLUS — sont comptés comme bloquants, et écartent cinq tâches de plus ; (c) le composeur ratisse la §1 entière, si bien qu'une décision TRANCHÉE y bloque encore, alors que la §4 du registre prescrit de la faire descendre en §2. À livrer : (1) un lecteur UNIQUE du registre, importé par la garde et par le composeur, alias de la §0 compris ; (2) la frontière §1/§2 lue sur les LIGNES DE TABLEAU et non sur la prose ; (3) une décision tranchée qui ne bloque plus rien ; (4) un témoin par famille et un contre-témoin vert ; (5) le décompte des tâches redevenues éligibles imprimé, pour qu'on voie la différence au lieu de la supposer.",
+      "acceptance": "Deux lecteurs du même registre, et ils ne lisent pas la même chose (RM-04). `scripts/gates/gov-tasks.ts` reconnaît une décision à la PREMIÈRE CELLULE d'une ligne de tableau et accepte les quatre familles d'identifiants du registre ; `scripts/lot/composer.ts` la cherche par une expression régulière qui ne connaît que deux préfixes et n'applique pas les alias de la §0. Trois conséquences MESURÉES le 2026-09-04, toutes silencieuses : (a) des tâches sont écartées pour « décision sans hypothèse » alors que leur décision est bel et bien déclarée au registre — il suffit que son identifiant soit une décision de Will ou un alias ; (b) trois identifiants cités dans une NOTE en prose sous la §1 — une note qui explique précisément qu'ils ne bloquent PLUS — sont comptés comme bloquants, et écartent cinq tâches de plus ; (c) le composeur ratisse la §1 entière, si bien qu'une décision TRANCHÉE y bloque encore, alors que la §4 du registre prescrit de la faire descendre en §2. À livrer : (1) un lecteur UNIQUE du registre, importé par la garde et par le composeur, alias de la §0 compris ; (2) la frontière §1/§2 lue sur les LIGNES DE TABLEAU et non sur la prose ; (3) une décision tranchée qui ne bloque plus rien ; (4) un témoin par famille et un contre-témoin vert ; (5) le décompte des tâches redevenues éligibles imprimé, pour qu'on voie la différence au lieu de la supposer.",
       "tests": {
         "REQ-GOV-015": [
           "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
@@ -7487,7 +7487,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "La constante CITATIONS de scripts/gates/gov-identifiants.ts neutralise TOUTE chaine citee de 120 caracteres ou moins — guillemets francais, guillemets droits ET quotes simples — avant de chercher un identifiant nu. La regle « citer n'est pas se servir » a ete ecrite pour la PROSE et s'applique par accident a la SYNTAXE : dans un .json, un .ts ou un .yml, les guillemets qui entourent une valeur ne citent rien, ils delimitent. Mesure sur ce depot le 2026-09-05 : la meme ligne de docs/gates.json porte 1 faute quand sa valeur fait 166 caracteres et 0 quand elle en fait 62 — le verdict de la garde depend de la LONGUEUR du voisinage, pas de son contenu. Sans neutralisation le depot passe de 1 a 35 identifiants nus sur 28 lignes ; avec la seule regle « dans un fichier de code, la quote est de la syntaxe », il passe de 1 a 3. A livrer : (1) la neutralisation devient CONTEXTUELLE — en prose les trois familles de guillemets citent, dans un fichier de code seuls les guillemets francais et une citation IMBRIQUEE citent ; (2) un temoin par famille de delimiteur montrant qu'un identifiant nu cache dans une chaine courte est desormais VU, et le meme temoin rallonge montrant que l'ancien contournement disparait ; (3) des contre-temoins verts sur les usages legitimes deja connus, soit par exemption nommee soit par un ajustement de la regle, jamais par un retour au silence ; (4) le plafond de 120 caracteres justifie ou supprime — une garde dont le verdict depend de la longueur d'une phrase n'est pas rejouable.",
+      "acceptance": "La constante CITATIONS de scripts/gates/gov-identifiants.ts neutralise TOUTE chaine citee de 120 caracteres ou moins — guillemets francais, guillemets droits ET quotes simples — avant de chercher un identifiant nu. La regle « citer n'est pas se servir » a ete ecrite pour la PROSE et s'applique par accident a la SYNTAXE : dans un .json, un .ts ou un .yml, les guillemets qui entourent une valeur ne citent rien, ils delimitent. TEMOIN REJOUABLE, mesure le 2026-09-05 sur la garde livree : un fichier suivi portant `export const note = \"conforme a D11 ; rien de plus\";` rend ZERO faute ; le MEME identifiant dans la MEME instruction, la chaine rallongee au-dela de 120 caracteres, en rend UNE. Le verdict de la garde depend donc de la LONGUEUR du voisinage et non de son contenu. ⚠️ Les comptes globaux ne sont volontairement PAS asserts ici : ils sont a etablir PAR cette tache, sur un harnais qui rejoue le pipeline complet de la garde (exemptions et locutions legitimes comprises) et non la seule fautesDeLigne — une premiere mesure faite sans ce pipeline a rendu des chiffres invraisemblables, et un compteur qu'on ne sait pas reproduire est exactement ce que cette tache reproche a la garde. A livrer : (1) la neutralisation devient CONTEXTUELLE — en prose les trois familles de guillemets citent, dans un fichier de code seuls les guillemets francais et une citation IMBRIQUEE citent ; (2) un temoin par famille de delimiteur, chacun double par sa version rallongee, montrant que l'ancien contournement disparait ; (3) des contre-temoins verts sur les usages legitimes, soit par exemption nommee soit par un ajustement de la regle, jamais par un retour au silence ; (4) le plafond de 120 caracteres justifie ou supprime — une garde dont le verdict depend de la longueur d'une phrase n'est pas rejouable ; (5) les trois comptes globaux etablis et ecrits ici, avec la commande qui les reproduit.",
       "tests": {
         "REQ-GOV-003": [
           "tests/unit/gouvernance/citation-json-vs-prose.spec.ts"
@@ -7526,6 +7526,41 @@
       "tests": {
         "REQ-GOV-033": [
           "tests/unit/gouvernance/lot-identifiant-unique.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-032",
+      "titre": "Un instant de reference se fige par rapport a CE QU'IL JUGE",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-etat.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-008"
+      ],
+      "reqs": [
+        "REQ-GOV-006"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.25,
+      "statut": "en_cours",
+      "owner": "A01",
+      "lot": "L-1-04",
+      "branch": "lot/L-1-INT-a",
+      "pr": 31,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "Trois endroits portaient un instant de reference ECRIT EN DUR — `scripts/gates/gov-etat.ts` (la base de son mode --prove et la date de son temoin `journal_date_future`), `tests/unit/gouvernance/plan-state-frais.spec.ts` et `tests/unit/gouvernance/une-tache-un-owner.spec.ts` — sous ce commentaire : « un instant FIXE, jamais new Date() : une garde qui lit l'horloge n'est pas rejouable ». Le raisonnement est JUSTE et porte sur le MAUVAIS SUJET. Il vaut pour un univers INJECTE, ou l'instant fait partie de la fixture ; il ne vaut pas pour un fichier VIVANT. Or ces trois appels confrontent l'instant au JOURNAL REEL, qui avance. Un instant fige au 2026-09-04 confronte a un journal qui grandit est un test A RETARDEMENT : il rougit sur la premiere entree ecrite apres cette date, donc sur toute entree future, pour toujours. Il est tombe le LENDEMAIN. Le meme defaut vivait dans la GARDE : --prove appariait le journal REEL au meme litteral, donc il REFUSAIT de commencer et sortait 1, exactement comme une garde qui aurait trouve un defaut — une preuve qui s'eteint toute seule au bout d'un jour ne prouve rien le second jour, ET RIEN NE LE DIT. Le temoin de `journal_date_future` portait lui aussi une date en dur (2026-12-31) : un temoin dont la date est ecrite a la main cesse d'exercer sa famille le jour ou le present le rattrape, en silence — il devient un contre-temoin. A tenir : les trois instants sont DERIVES ; `controler()` reste PURE et RECOIT son instant, aucune horloge n'entre dans la garde ; la famille `journal_date_future` est rejouee contre une entree datee de DEMAIN et vue rougir ; et le depot tel quel reste vert.",
+      "tests": {
+        "REQ-GOV-006": [
+          "tests/unit/gouvernance/plan-state-frais.spec.ts"
         ]
       }
     }
