@@ -35,25 +35,39 @@ claude                                                  #    de rôle ne résolv
 
 ### ⚠️ Le premier geste de la prochaine session n'est PAS de composer un lot
 
-**La PR #30 est ouverte et incomplète — elle se finit avant tout le reste.** Elle porte la clôture
-de `L-1-03`, son corps est écrit, sa Gate A locale rejouée en entier, mais **les quatre lentilles
-n'ont pas rendu leur verdict** : la session du 2026-09-04 avait pour consigne de clôturer et de
-s'arrêter là. La 3ᵉ case de la définition de « terminé » est laissée **vide exprès**, et
-`pnpm gov:pr --pr 30` est ROUGE tant que les revues manquent — c'est l'état voulu, pas un oubli.
+**La PR #31 est ouverte et REFUSÉE par deux lentilles sur sa tête — elle se finit avant tout le
+reste.** Elle porte les lots `L-1-04`, `L-1-05` et `L-1-06` (huit tâches, le verrou de phase levé,
+trois régressions fermées). Son corps est rendu, sa Gate A passe, mais **`securite` et `schema` ont
+refusé sur `41bc814`**, et leurs motifs sont fondés.
+
+> **La leçon la plus chère de la journée est là.** La case de « terminé » qui dit *les revues sont
+> faites* vivait dans un gabarit **commité**. La cocher exigeait un commit — qui déplaçait la tête,
+> et invalidait les revues qu'on venait de déclarer faites. Le pas 5 du protocole
+> (« le diff approuvé est le diff fusionné ») était **insatisfiable en boucle** : chaque geste pour
+> le satisfaire le cassait. La sortie n'est pas de relâcher le pas 5, c'est de **dériver la case** :
+> `caseRevues()` dans `scripts/lot/corps-de-pr.ts` la coche si, et seulement si, le dernier verdict
+> de chaque lentille exigée vaut `accepte` **et porte le `commit_id` de la tête**. Elle se re-rend
+> sans commit.
+>
+> ⚠️ Et son corollaire, relevé par `exactitude` : **la valeur publiée est un instantané.** Elle est
+> juste au rendu, puis jamais recalculée. Ou bien elle se re-rend **au moment de fusionner**, ou
+> bien elle ment. A04 relance `pnpm pr:corps` juste avant la fusion — il ne croit pas le `[x]` affiché.
+
+**Une case qui vit dans le dépôt ne peut pas attester d'un fait postérieur au commit.
+Ou elle se dérive, ou elle ment.**
 
 ```bash
 cd C:\Users\willi\Documents\Projets\axion-apporteurs
-git checkout lot/L-1-03-cloture && git pull
-pnpm gov:pr --pr 30            # lit ce qui manque : lentilles_manquantes + la 3e case
-# → 4 lentilles : exactitude · securite · simplicite · mutation, chacune en commentaire
-#   portant « Verdict: accepte|refuse ». Le DERNIER verdict par couple (poste, lentille) prime.
-# → cocher la 3e case une fois les quatre verdicts postés
-pnpm gov:pr --pr 30            # doit être VERT avant de fusionner
-bash <gate-a>                  # les 37 étapes, chaque $? lu, jamais un tube
-gh pr merge 30 --squash --delete-branch     # état relu et fusion dans le MÊME appel
-# → Pas 7 : origin/main au sha d'écrasement ET le run Gate A du push VERT
-pnpm gov:pr --apres-fusion 30  # coche la 8e case APRÈS avoir lu le run
+gh api repos/will383842/axion-apporteurs/pulls/31/reviews \
+  -q '.[] | [.submitted_at, .state, .commit_id[0:7], (.body|split("\n")[0])] | @tsv' | tail -6
+# → le DERNIER verdict par couple (poste, lentille) prime, et il doit porter le sha de la TETE.
+#   Un accord sur une tete precedente ne compte pas : c'est le pas 5.
+pnpm pr:corps --gabarit docs/pr/31.tpl.md --tests <journal>   # le corps se REND, il ne se tape pas
+gh pr edit 31 --body-file <rendu>                              # puis on verifie l'ARTEFACT publie
+pnpm gov:pr -- --pr 31
 ```
+
+⚠️ **Ne jamais commiter une fois les revues demandées** : chaque commit redémarre le cycle du pas 5.
 
 **Ensuite seulement**, et pas avant, la phrase d'amorçage habituelle — **« Relance l'implémentation
 d'Axion Partners au lot suivant. »** — et le geste qui la sert :
@@ -65,6 +79,41 @@ pnpm lot:composer -- --phase -1 --repo partners --max 8 --now <AAAA-MM-JJ>
 ```
 
 Le composeur sort le lot suivant tout seul. **Il n'y a rien à décider pour redémarrer.**
+
+## L'état au 2026-09-05
+
+**Sur `main` : 20 tâches sur 206 — `794245c`, la clôture de `L-1-03` (#30) est atterrie.**
+Tout le reste vit sur des branches, et **aucun chiffre lu sur une branche n'est un acquis**.
+
+| Branche | Tête | Ce qu'elle porte |
+| --- | --- | --- |
+| `lot/L-1-INT-a` | `41bc814` | **PR #31, OUVERTE** — L-1-04/05/06, 8 tâches. 2 lentilles refusent sur la tête |
+| `lot/L-1-INT-b` | `dc4f060` | GOV-014, GOV-019, GOV-030, GOV-031 + **GOV-028 fusionnée dedans** |
+| `fix/gov-027-lecteur-unique` | *en cours* | le lecteur UNIQUE de revues — refus `securite` (une revue n authentifie personne) et refus `schema` (discriminant plus faible que la gate) |
+| `fix/gov-036-espaces-corps` | *en cours* | témoins de `normaliserEspaces()` + garde sur le corps PUBLIÉ |
+| `lot/gov-038-attestation` | *en cours* | l'attestation inter-dépôt d'`INT-T01b` |
+
+### Ce qui a changé de nature aujourd'hui
+
+- **`INT-T01b` est livrée — la première des 14 tâches `repo: "axionia"` à l'être.** Fusionnée dans
+  `axion-ia/main` par `41d71a7` (PR #998, `2026-09-05T11:04:48Z`), **en production depuis 12:13Z**.
+  Elle révèle un trou de forme : *aucun champ du backlog ne porte une attestation inter-dépôt*, et
+  écrire `pr: 998` publierait « PR#998 » dans `docs/PLAN-STATE.md` — un renvoi qui **404** ici.
+  C'est la famille de `GOV-037` : une attribution qui ne résout pas, qu'aucune garde ne voit parce
+  que `gov:identifiants` juge la **forme** d'un identifiant, jamais sa **résolution**.
+- **Une revue de PR n'authentifie personne.** Le dépôt est public : tout compte peut poser une revue
+  `COMMENT`. Mesuré sur les 16 revues réelles de #31 — quatre avis forgés par un tiers
+  (`author_association: NONE`) **effacent un veto**, et des avis `DISMISSED` comptent encore.
+  Toute dérivation qui lit des verdicts filtre `user.login` / `author_association` / `state`, ou
+  elle est crédule.
+- **Un corps de PR édité est irréversible, comme un commit.** L'historique d'édition est public
+  (`userContentEdits`) : trois révisions du corps de #31 portent encore un IBAN à clé mod-97 valide,
+  masqué depuis dans le corps courant. *La valeur était fabriquée — rien à révoquer.* Mais masquer
+  ne dépublie pas : il faut supprimer et rouvrir.
+- **La suite de tests est non déterministe** — `pnpm test` a rendu 1, puis 0, puis 0 sur le même
+  arbre. Et `vitest.config.ts` l'avait **écrit d'avance** : « si le nombre de fichiers de test double
+  encore, remesurer plutôt que d'augmenter ». Ils sont passés de 19 à 30, et personne n'a remesuré.
+  Une valeur dérivée d'une source non reproductible n'est pas dérivée, elle est **échantillonnée**.
 
 ## L'état au 2026-09-04
 
