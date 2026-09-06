@@ -398,12 +398,18 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       // comme dette n°1 le chemin **FERMÉ**, et restait MUET sur celui qui reste **OUVERT**.
       // *Une dette déclarée sur le mauvais chemin ne protège rien et rassure sur les deux.*
       raison:
-        'Deux chemins de sortie, et ils ne sont pas au même état. ✅ FERMÉ : la sortie terminale du ' +
-        'mode à plat (`gov-entite.ts:2569`) a un témoin d’EFFET par dépôt jetable — mutation reposée, ' +
-        'elle rougit. ⛔ OUVERT : `process.exit(verdict.code)` (`gov-entite.ts:2549`), sortie ' +
-        'terminale de `--corps-publie`, le mode qui garde le corps DÉJÀ PUBLIÉ d’une PR d’un dépôt ' +
-        'PUBLIC. ✅ FERMÉ AUSSI depuis le 16e tour : témoin d’EFFET par PR inexistante. ⚠️ Il a fallu ' +
-        'deux gardes, parce que l’atteignabilité ne ' +
+        'Les DEUX chemins de sortie sont FERMÉS, chacun par un témoin d’EFFET. ✅ `gov-entite.ts:2569`, ' +
+        'sortie terminale du mode à plat : dépôt jetable dans `tmpdir()`. ✅ `gov-entite.ts:2549`, ' +
+        '`process.exit(verdict.code)`, sortie terminale de `--corps-publie` — le mode qui garde le ' +
+        'corps DÉJÀ PUBLIÉ d’une PR d’un dépôt PUBLIC : PR inexistante, `exit 2` exigé. Les deux ' +
+        'mutations ont été reposées et rougissent. ⚠️ Ce champ a porté un ⛔ OUVERT sur le second ' +
+        'APRÈS sa fermeture, démenti trois propositions plus loin par un ✅ : dans ce fichier le ⛔ ' +
+        'est le marqueur qui distingue une dette d’un constat, et un ⛔ qu’on découvre faux apprend ' +
+        'au lecteur qu’il ne veut rien dire. Relevé par `exactitude` au tour de clôture — c’est la ' +
+        'règle écrite cinquante lignes plus haut, appliquée au verdict et pas à sa JUSTIFICATION. ' +
+        '🖪 Le coût de ces deux témoins n’est pas le même : l’atteignabilité rougit vite et HORS ' +
+        'LIGNE, l’effet appelle la forge. Ce n’est pas un argument de couverture — voir plus bas. ' +
+        '⚠️ Il a fallu deux gardes, parce que l’atteignabilité ne ' +
         'suffit pas : la lentille `mutation` a mesuré au 15e tour qu’on neutralise la VALEUR sans ' +
         'toucher à la condition — `(verdict as {code:number}).code = 0` inséré, aucun `if (true)`, ' +
         '577/577 verts — et `--corps-publie` d’une PR INEXISTANTE passe alors de `exit 2 ' +
@@ -412,9 +418,14 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'PR inexistant donne `lecture.lu === false` → code 2, qui traverse le même `if` et tue les ' +
         'trois variantes d’un coup. ✅ C’est fait : le témoin lance le binaire, exige `exit 2` ET ' +
         '`lecture_impossible`, et interdit la phrase « aucune coordonnée bancaire ». Mutant reposé : ' +
-        'ROUGE. 🔑 Il aura fallu DEUX gardes pour un seul chemin — l’atteignabilité tue le ' +
-        '`if (true)`, l’effet tue la neutralisation de la VALEUR. *Une sortie terminale se garde ' +
-        'par sa PORTÉE et par son EFFET ; l’une sans l’autre laisse une moitié ouverte.*',
+        'ROUGE. 🔴 ET LA MAXIME QUE J’AVAIS TIRÉE DE LÀ ÉTAIT FAUSSE : j’écrivais « une sortie ' +
+        'terminale se garde par sa PORTÉE et par son EFFET, l’une sans l’autre laisse une moitié ' +
+        'ouverte ». `schema` et `exactitude` l’ont réfutée SÉPARÉMENT au tour de clôture : sous ' +
+        '`if (true)`, le ✅ s’imprime puis `process.exit(0)`, et le témoin d’EFFET tombe AUSSI — il ' +
+        'tue les DEUX mutants. **L’effet subsume l’atteignabilité ; il n’y a pas de moitié ouverte.** ' +
+        'Ce qui reste vrai est un argument de COÛT (l’un rougit hors ligne, l’autre appelle la ' +
+        'forge), pas de couverture. *Redondance ≠ trou — et une maxime fausse devient une doctrine, ' +
+        'qu’on ne remesure jamais.*',
     },
   };
 
