@@ -28,6 +28,7 @@ import {
   readFileSync,
   existsSync,
   writeFileSync,
+  copyFileSync,
   mkdtempSync,
   mkdirSync,
   rmSync,
@@ -92,160 +93,6 @@ function enumererFichiers(dossier: string): string[] {
   });
 }
 
-/**
- * 🔴 CHAQUE garde qui teste `fautes.length` doit tester une valeur calculée JUSTE AVANT elle,
- * et calculée par un APPEL — c'est la seule façon de ne pas pouvoir la vider sans toucher la
- * condition. Le périmètre est DÉRIVÉ du disque, jamais tapé.
- *
- * ## Les quatre défauts que cette version corrige, tous MESURÉS par les lentilles au 19e tour
- *
- * **1. La version d'avant s'ancrait sur la LIGNE, le langage sépare par le POINT-VIRGULE.**
- * `securite` et `mutation`, indépendamment : `const fautes = controler(…); fautes.splice(0);`
- * sur UNE SEULE ligne satisfaisait `^(?:const|let) <valeur> =`. Le verdict fermé au 18e tour
- * était rouvert **par une espace** — `gov:tasks` sortait en 0 avec sa bannière ✅ sur une
- * `dep_inconnue` réelle, et `docs/REQUIREMENTS.md` était RÉÉCRITE depuis un registre à 3 fautes.
- * *J'avais écrit un contrôle syntaxique en raisonnant sur la typographie.*
- *
- * **2. Elle avait RETIRÉ la provenance que sa propre version parente exigeait.** Le parent
- * `500a53c` demandait `= controler(…);` ; ma « correction » acceptait n'importe quel membre de
- * droite. Mutant `controler(…).filter(() => false)` : **ROUGE sur le parent, VERT sur moi**, et
- * `docs/TASKS.md` réécrite depuis un backlog fautif à exit 0.
- * > **Un correctif se mesure contre son PARENT, pas seulement contre le motif qui l'a fait
- * > écrire.** Je comparais mon patch au défaut qu'il ferme et jamais à la garde qu'il remplace.
- *
- * **3. Le leurre était un COMMENTAIRE.** Le motif de site n'était pas ancré en début de ligne :
- * un `// if (fautes.length === 0) {` comptait comme un site et compensait un site retiré, rendant
- * le compte juste avec la garde vidée. Le motif est désormais ancré par `^\s*if \(`.
- *
- * **4. Elle ne voyait ni la forme MEMBRE ni la moitié des opérateurs.** `rapport.fautes.length`
- * était invisible — `lexique-apporteurs.ts` rendait **0 site** alors qu'il en porte cinq, dont
- * celui que ce fichier épingle par ailleurs. Et `!fautes.length`, `fautes.length` nu,
- * `0 === fautes.length` passaient tous.
- *
- * ## Ce que la règle distingue, et qui n'était pas prévu
- *
- * Cinq sites testent `fautes.length > 25` : ce sont les lignes « … et N autre(s) » de l'affichage.
- * **Ils ne décident rien**, l'adjacence n'y a aucun sens. Ils sont comptés à part plutôt
- * qu'exemptés en silence — *une exception qu'on ne compte pas est une exception qu'on oublie.*
- */
-type SiteDeFautes = { fichier: string; ligne: number; valeur: string; prec?: string; motif?: string };
-
-function provenanceRecevable(expr: string): boolean {
-  const e = expr.trim().replace(/;$/, '').trim();
-  if (/^[A-Za-z_$][\w$.]*\(/.test(e)) {
-    // UN SEUL appel : la parenthèse fermante doit TERMINER l'expression. C'est ce qui refuse
-    // `controler(…).filter(() => false)` — la mutation qui a survécu au 19e tour.
-    let p = 0;
-    for (let i = 0; i < e.length; i++) {
-      if (e[i] === '(') p++;
-      else if (e[i] === ')') {
-        p--;
-        if (p === 0) return i === e.length - 1;
-      }
-    }
-    return false;
-  }
-  // Composition : `[...controler(u), ...verifierVue(u)]` — gov-trace.ts:993.
-  if (e.startsWith('[') && e.endsWith(']')) return /[A-Za-z_$][\w$.]*\(/.test(e);
-  return false;
-}
-
-/**
- * L'instruction précédente. Découpée sur le POINT-VIRGULE, et son DÉBUT trouvé par un balayage
- * ARRIÈRE à profondeur de parenthèses — sinon un argument objet multi-ligne
- * (`controler({ a, b })`) fait croire que l'instruction commence à son accolade.
- * ⚠️ `{` et `}` sont des FRONTIÈRES, pas des délimiteurs à apparier : ma première version les
- * appariait et **traversait la fonction précédente**, rendant 13 griefs dont 9 faux.
- */
-function instructionPrecedente(source: string, index: number): string | null {
-  const avant = source.slice(0, index);
-  const fin = avant.lastIndexOf(';');
-  if (fin < 0) return null;
-  let d = 0;
-  let debut = 0;
-  for (let i = fin - 1; i >= 0; i--) {
-    const c = avant[i]!;
-    if (c === ')' || c === ']') d++;
-    else if (c === '(' || c === '[') d--;
-    else if (d === 0 && (c === ';' || c === '{' || c === '}')) {
-      debut = i + 1;
-      break;
-    }
-  }
-  return avant
-    .slice(debut, fin + 1)
-    .split(/\r?\n/)
-    .map((l) => l.replace(/^\s*\/\/.*$/, '').trim())
-    .filter(Boolean)
-    .join(' ')
-    .trim();
-}
-
-const SITE_DE_FAUTES =
-  /^\s*if \(\s*(?:0\s*(?:===|==|!==|!=)\s*)?(?:!)?\s*([A-Za-z_$][\w$.]*)\.length\s*(?:(===|!==|==|!=|>=|<=|>|<)\s*(\d+))?\s*\)/;
-
-function recenserLesGardesDeFautes(racine = 'scripts'): {
-  gardes: SiteDeFautes[];
-  affichages: SiteDeFautes[];
-  griefs: SiteDeFautes[];
-} {
-  const gardes: SiteDeFautes[] = [];
-  const affichages: SiteDeFautes[] = [];
-  const griefs: SiteDeFautes[] = [];
-  for (const fichier of enumererFichiers(racine)) {
-    const source = readFileSync(fichier, 'utf8');
-    const lignes = source.split(/\r?\n/);
-    let offset = 0;
-    lignes.forEach((l, i) => {
-      const debutLigne = offset;
-      offset += l.length + 1;
-      const m = l.match(SITE_DE_FAUTES);
-      if (!m || !/fautes/i.test(m[1]!)) return;
-      const valeur = m[1]!;
-      const base = valeur.split('.')[0]!;
-      const site: SiteDeFautes = { fichier, ligne: i + 1, valeur };
-      const operateur = m[2];
-      if (m[3] && m[3] !== '0') {
-        affichages.push(site);
-        return;
-      }
-      // 🔴 UNE COMPARAISON QUI NE PEUT PAS DISCRIMINER EST ELLE-MÊME UN DÉFAUT.
-      // Survivant du 19e tour, et c'est la moitié du mutant que je croyais avoir tuée par
-      // l'ancrage : `=== 0` → `>= 0` rend le test TOUJOURS VRAI. L'adjacence est intacte, la
-      // provenance aussi, le compte aussi — et la gate prend systématiquement la branche du
-      // succès. *Une longueur est ≥ 0 par construction : `>= 0` n'est pas une garde faible,
-      // c'est une garde ABSENTE qui a la forme d'une garde.* Symétriquement `< 0` est
-      // impossible. Ni l'un ni l'autre ne peut faire rougir quoi que ce soit.
-      if (m[3] === '0' && (operateur === '>=' || operateur === '<')) {
-        site.motif = `comparaison dégénérée \`${operateur} 0\` — une longueur est toujours ≥ 0 : ce test ne discrimine rien`;
-        gardes.push(site);
-        griefs.push(site);
-        return;
-      }
-      gardes.push(site);
-      const prec = instructionPrecedente(source, debutLigne + l.indexOf('if ('));
-      site.prec = prec ?? '(début de fichier)';
-      let expr: string | null = null;
-      for (const mot of ['const ', 'let ']) {
-        const tete = `${mot}${base} = `;
-        if (prec && prec.startsWith(tete)) {
-          expr = prec.slice(tete.length);
-          break;
-        }
-      }
-      if (expr === null) {
-        site.motif = `la valeur \`${base}\` n’est pas calculée juste avant son test`;
-        griefs.push(site);
-        return;
-      }
-      if (!provenanceRecevable(expr)) {
-        site.motif = `provenance refusée — \`${expr.slice(0, 60)}\` n’est pas un appel qui termine l’expression`;
-        griefs.push(site);
-      }
-    });
-  }
-  return { gardes, affichages, griefs };
-}
 
 
 const TRACE = readFileSync('scripts/gates/gov-trace.ts', 'utf8');
@@ -387,60 +234,13 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
       // > **Une garde écrite pour une famille ne couvre que le membre où on l'a posée.** Ce
       // > témoin s'appelle « les DEUX générateurs frères À LA MÊME STRUCTURE » et il ne vérifiait
       // > pas la même structure : *le nom d'un témoin n'est pas son périmètre.*
-      // ➡️ L’ADJACENCE elle-même est jugée par `recenserLesGardesDeFautes`, qui DÉRIVE du
-      // disque les 31 gardes de `scripts/` — elle n’a pas sa place ici, où la boucle ne voit
-      // que deux fichiers et un seul de leurs deux chemins.
+      // ➡️ L’adjacence n’est plus jugée par du TEXTE : quatre tours l’ont montrée contournable
+      // (la ligne, puis le point-virgule absent, puis le ternaire). La famille se ferme par les
+      // TÉMOINS D’EFFET en fin de fichier — on lance la gate, elle doit REFUSER une faute réelle.
     }
   });
 
 
-  /**
-   * ⚠️ CES QUATRE-LÀ SONT DE VRAIES NON-ADJACENCES, ET JE NE LES « EXEMPTE » PAS.
-   *
-   * Dans ces quatre gates, la valeur est calculée puis d'autres instructions s'intercalent avant
-   * son test. C'est exactement la faiblesse que ce témoin dénonce — elles sont donc des DETTES,
-   * pas des cas particuliers, et le motif le dit. *Un motif d'exemption qui prétendrait que
-   * « c'est légitime » serait faux : la vérité est qu'on ne les a pas corrigées.*
-   *
-   * La liste est un CLIQUET dans les DEUX sens : un cinquième site non adjacent rougit, et une
-   * dette RÉPARÉE rougit aussi (déclaration morte) — sans quoi la liste survivrait à son objet.
-   */
-  const DETTES_DE_NON_ADJACENCE = [
-    'scripts/gates/gov-hypotheses.ts',
-    'scripts/gates/gov-lecons.ts',
-    'scripts/gates/gov-pr.ts',
-    'scripts/gates/lexique-apporteurs.ts',
-  ] as const;
-
-  it('REQ-GOV-032 — TOUTES les gardes `fautes.length` de `scripts/` testent une valeur calculée juste avant', () => {
-    const { gardes, affichages, griefs } = recenserLesGardesDeFautes('scripts');
-
-    // 🔑 TÉMOIN POSITIF, ET IL NOMME CE QU'IL DOIT VOIR. Sans lui, une détection cassée rendrait
-    // « zéro grief » — c'est-à-dire VERT pour n'avoir rien mesuré. Les nombres sont dérivés du
-    // disque puis figés ici : un site AJOUTÉ rougit autant qu'un site RETIRÉ. Un seuil ne dirait
-    // ni l'un ni l'autre. La version d'avant figeait 2/2/4 sur TROIS fichiers tapés à la main :
-    // elle ne pouvait pas voir l'omission d'un FICHIER, et son compte était calibré sur la
-    // cécité de sa propre détection (grief de `schema`, 19e tour).
-    expect(
-      gardes.length,
-      `${gardes.length} garde(s) \`fautes.length\` dans scripts/, 31 attendue(s) — un site ajouté ` +
-        'ou retiré change ce que ce témoin couvre, et doit être arbitré ici'
-    ).toBe(31);
-    expect(
-      affichages.length,
-      `${affichages.length} ligne(s) d’affichage « … et N autre(s) » (\`> 25\`), 5 attendue(s)`
-    ).toBe(5);
-
-    // Les griefs doivent être EXACTEMENT les dettes déclarées : ni plus, ni moins.
-    const fichiersEnGrief = [...new Set(griefs.map((g) => g.fichier))].sort();
-    expect(
-      fichiersEnGrief,
-      `griefs :\n${griefs.map((g) => `   ${g.fichier}:${g.ligne} [${g.valeur}] — ${g.motif}\n      précédente : ${g.prec}`).join('\n')}`
-    ).toEqual([...DETTES_DE_NON_ADJACENCE].sort());
-    expect(griefs.length, 'une dette déclarée porte plus d’un site non adjacent').toBe(
-      DETTES_DE_NON_ADJACENCE.length
-    );
-  });
 
 
 });
@@ -920,4 +720,138 @@ describe('REQ-CPL-018 — `--corps-publie` : le verdict SORT, il ne se contente 
       'un corps JAMAIS LU est déclaré propre — dépôt PUBLIC'
     ).toBe(false);
   }, 120_000);
+});
+
+
+/**
+ * 🔴 LA FAMILLE NE SE FERME PAS PAR DU TEXTE. On lance le programme.
+ *
+ * ## Quatre tours, quatre fois le même défaut d'un cran plus bas
+ *
+ * ```
+ * 18e  « le test suit-il la LIGNE du calcul ? »          battu par : tout sur UNE ligne
+ * 19e  « l'INSTRUCTION precedente est-elle le calcul ? »  battu par : pas de point-virgule (ASI)
+ * 20e  « l'INTERVALLE est-il vide ? »                     aurait ete battu par : le ternaire,
+ *                                                         le recrutement par NOM, la forme
+ *                                                         inline, la branche composition
+ * ```
+ *
+ * À chaque tour j'ai fermé le trou nommé, et le tour suivant a trouvé le même trou une couche
+ * plus bas. Ce n'est pas une convergence : **j'essayais de prouver une propriété SÉMANTIQUE —
+ * « la valeur ne peut pas être vidée entre son calcul et son test » — par un appariement de
+ * TEXTE.** Toute approximation syntaxique a une porte de sortie, et les lentilles trouvaient
+ * chaque fois la suivante.
+ *
+ * > **La seule surface où AUCUN mutant n'a survécu, sur les quatre tours, est la garde d'argent
+ * > — et c'est la seule qui LANCE LE BINAIRE.** Un témoin d'effet ne reconnaît pas la mutation :
+ * > il constate que la gate ne refuse plus. Il est donc indifférent à la façon dont on l'écrit.
+ *
+ * Will a tranché : on bascule sur des témoins d'effet, et on cesse de raffiner le motif.
+ *
+ * ## La forme, et pourquoi elle porte un CONTRÔLE POSITIF
+ *
+ * Chaque témoin fait DEUX mesures dans deux dépôts jetables : le dépôt sain doit sortir en **0**,
+ * le dépôt fauté doit sortir **non nul** ET nommer sa faute. Sans la première, un témoin resterait
+ * vert alors que la gate refuse TOUT — un fichier d'entrée manquant, un `tsx` cassé, un chemin
+ * relatif qui ne résout plus : le rouge serait obtenu pour la mauvaise raison, et c'est
+ * exactement le défaut que ce fichier a déjà commis deux fois.
+ *
+ * ⚠️ Ce que ces témoins NE couvrent PAS, écrit ici plutôt que promis ailleurs : `gov:pr` — la
+ * surface qui AUTORISE, et celle dont la neutralisation laisse passer une PR SANS AUCUNE REVUE.
+ * Ses entrées débordent `docs/` (workflows, CODEOWNERS, gabarits), donc son dépôt jetable demande
+ * un inventaire que je n'ai pas encore mesuré. **C'est la première chose à faire au lot suivant**,
+ * et tant qu'elle n'est pas faite, aucun vert de ce fichier n'affirme quoi que ce soit sur elle.
+ */
+function depotJetableAvec(fichiers: readonly string[]): string {
+  const depot = mkdtempSync(join(tmpdir(), 'temoin-effet-'));
+  for (const f of fichiers) {
+    mkdirSync(join(depot, dirname(f)), { recursive: true });
+    copyFileSync(f, join(depot, f));
+  }
+  return depot;
+}
+
+function lancerLaGate(script: string, cwd: string): { code: number; sortie: string } {
+  try {
+    const stdout = execFileSync('npx', ['tsx', resolve(script)], {
+      cwd,
+      encoding: 'utf8',
+      stdio: 'pipe',
+      shell: true,
+    });
+    return { code: 0, sortie: stdout };
+  } catch (e) {
+    const err = e as { status?: number; stdout?: string; stderr?: string };
+    return { code: err.status ?? -1, sortie: `${err.stdout ?? ''}${err.stderr ?? ''}` };
+  }
+}
+
+/**
+ * Les gates dont la neutralisation a été MESURÉE au 19e et au 20e tour : sain elles refusent,
+ * mutées elles sortent en 0 **en imprimant leur bannière de succès**. C'est ce couple-là que le
+ * témoin d'effet rend impossible à obtenir silencieusement.
+ */
+const GATES_A_TEMOIN_D_EFFET = [
+  {
+    nom: 'gov:tasks',
+    script: 'scripts/gates/gov-tasks.ts',
+    fichiers: [
+      'docs/tasks.json',
+      'docs/TASKS.md',
+      'docs/DECISIONS.md',
+      'scripts/lot/tasks.schema.json',
+    ],
+    // Une dépendance vers une tâche qui n'existe pas : faute RÉELLE, contrôlée par la gate.
+    fauter: (depot: string) => {
+      const p = join(depot, 'docs/tasks.json');
+      const doc = JSON.parse(readFileSync(p, 'utf8')) as { taches: { deps?: string[] }[] };
+      doc.taches[0]!.deps = [...(doc.taches[0]!.deps ?? []), 'XXX-999'];
+      writeFileSync(p, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
+    },
+    motif: 'dep_inconnue',
+  },
+  {
+    nom: 'gov:requirements',
+    script: 'scripts/gates/gov-requirements.ts',
+    fichiers: [
+      'docs/requirements.json',
+      'docs/REQUIREMENTS.md',
+      'docs/tasks.json',
+      'docs/DECISIONS.md',
+      'scripts/lot/requirements.schema.json',
+    ],
+    // Un champ obligatoire retiré : le schéma doit le refuser.
+    fauter: (depot: string) => {
+      const p = join(depot, 'docs/requirements.json');
+      const doc = JSON.parse(readFileSync(p, 'utf8')) as { exigences: Record<string, unknown>[] };
+      delete doc.exigences[0]!.statut;
+      writeFileSync(p, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
+    },
+    motif: 'schema',
+  },
+] as const;
+
+describe('REQ-GOV-032 — TÉMOINS D’EFFET : une gate neutralisée ne peut pas rester verte', () => {
+  for (const { nom, script, fichiers, fauter, motif } of GATES_A_TEMOIN_D_EFFET) {
+    it(`REQ-GOV-032 — \`${nom}\` SORT en échec sur une faute réelle, et 0 sans elle`, () => {
+      // CONTRÔLE POSITIF D'ABORD. Sans lui, une gate qui refuserait TOUT rendrait ce témoin vert
+      // pour la mauvaise raison — le défaut que ce fichier a déjà commis deux fois.
+      const sain = depotJetableAvec(fichiers);
+      const avant = lancerLaGate(script, sain);
+      expect(
+        avant.code,
+        `${nom} refuse un dépôt SAIN (code ${avant.code}) — le témoin ne mesurerait rien :\n${avant.sortie.slice(0, 600)}`
+      ).toBe(0);
+
+      const casse = depotJetableAvec(fichiers);
+      fauter(casse);
+      const apres = lancerLaGate(script, casse);
+      expect(
+        apres.code,
+        `${nom} n’est PAS sortie en échec sur une faute réelle — elle a imprimé :\n${apres.sortie.slice(0, 600)}`
+      ).not.toBe(0);
+      // Et pour LA bonne raison : un refus d'une autre famille ne prouverait rien.
+      expect(apres.sortie, `${nom} refuse, mais pas pour la faute injectée`).toContain(motif);
+    }, 180_000);
+  }
 });
