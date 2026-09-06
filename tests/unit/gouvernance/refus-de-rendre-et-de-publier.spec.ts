@@ -386,7 +386,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     },
     'scripts/gates/gov-entite.ts': {
       total: 6,
-      temoins: 2,
+      temoins: 3,
       // 🔴 CETTE `raison` A AFFIRMÉ AU PRÉSENT UN CONSTAT DEVENU FAUX — lentille `exactitude`,
       // 15e tour, et elle me retourne ma propre règle. J'écrivais cinquante lignes plus haut que
       // « un nombre qui date un constat s'écrit au passé », et j'ai appliqué la règle aux NOMBRES
@@ -402,14 +402,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'mode à plat (`gov-entite.ts:2569`) a un témoin d’EFFET par dépôt jetable — mutation reposée, ' +
         'elle rougit. ⛔ OUVERT : `process.exit(verdict.code)` (`gov-entite.ts:2549`), sortie ' +
         'terminale de `--corps-publie`, le mode qui garde le corps DÉJÀ PUBLIÉ d’une PR d’un dépôt ' +
-        'PUBLIC. Son atteignabilité est épinglée, son EFFET ne l’est pas. ⚠️ Et l’atteignabilité ne ' +
+        'PUBLIC. ✅ FERMÉ AUSSI depuis le 16e tour : témoin d’EFFET par PR inexistante. ⚠️ Il a fallu ' +
+        'deux gardes, parce que l’atteignabilité ne ' +
         'suffit pas : la lentille `mutation` a mesuré au 15e tour qu’on neutralise la VALEUR sans ' +
         'toucher à la condition — `(verdict as {code:number}).code = 0` inséré, aucun `if (true)`, ' +
         '577/577 verts — et `--corps-publie` d’une PR INEXISTANTE passe alors de `exit 2 ' +
         '[lecture_impossible]` à `exit 0 ✅ aucune coordonnée` : UN CORPS JAMAIS LU DÉCLARÉ PROPRE, ' +
         'dans un dépôt public. ✅ REMÈDE DÉJÀ CONNU, et il ne coûte NI IBAN NI RÉSEAU : un numéro de ' +
         'PR inexistant donne `lecture.lu === false` → code 2, qui traverse le même `if` et tue les ' +
-        'trois variantes d’un coup. C’EST LUI LA DETTE, et le remède est écrit avec elle.',
+        'trois variantes d’un coup. ✅ C’est fait : le témoin lance le binaire, exige `exit 2` ET ' +
+        '`lecture_impossible`, et interdit la phrase « aucune coordonnée bancaire ». Mutant reposé : ' +
+        'ROUGE. 🔑 Il aura fallu DEUX gardes pour un seul chemin — l’atteignabilité tue le ' +
+        '`if (true)`, l’effet tue la neutralisation de la VALEUR. *Une sortie terminale se garde ' +
+        'par sa PORTÉE et par son EFFET ; l’une sans l’autre laisse une moitié ouverte.*',
     },
   };
 
@@ -489,7 +494,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // surmonte est pire qu'aucun commentaire : il fait lire ce qui n'est pas écrit.*
     // Le témoin d'EFFET de la garde d'argent (dépôt jetable) ne vit pas dans `REFUS` — il est
     // d'une autre nature. Il est donc ÉNUMÉRÉ, pas compté à la main.
-    const TEMOINS_D_EFFET = ['gov-entite.ts — SORTIE TERMINALE, par dépôt jetable'] as const;
+    const TEMOINS_D_EFFET = [
+      'gov-entite.ts — SORTIE TERMINALE du mode à plat, par dépôt jetable',
+      'gov-entite.ts — SORTIE TERMINALE de --corps-publie, par PR inexistante',
+    ] as const;
     const couverts = REFUS.length + TEMOINS_D_EFFET.length;
     const temoinsDeclares = Object.values(declares).reduce((a, d) => a + d.temoins, 0);
     expect(temoinsDeclares, 'la somme des `temoins` déclarés a divergé du tableau `REFUS`').toBe(
@@ -603,4 +611,71 @@ describe('REQ-CPL-018 — la garde d’ARGENT sort en échec : témoin d’EFFET
 
     rmSync(depot, { recursive: true, force: true }); // on ne supprime que ce qu'on a créé
   }, 180_000);
+});
+
+describe('REQ-CPL-018 — `--corps-publie` : le verdict SORT, il ne se contente pas d’être calculé', () => {
+  /**
+   * 🔴 CE QUI A FAIT ÉCRIRE CE TÉMOIN, ET LA DÉCISION QUI L'A EMPORTÉ.
+   *
+   * La lentille `mutation` a mesuré au 15e tour la variante que l'épinglage d'atteignabilité ne
+   * voit pas : on neutralise la **VALEUR**, sans toucher à la condition ni écrire un `if (true)` —
+   *
+   *     (verdict as { code: number }).code = 0;   // inséré ; 577/577 verts, `tsc` 0
+   *
+   * — et `gov:entite --corps-publie <PR inexistante>` passe de `exit 2 [lecture_impossible]` à
+   * `exit 0 ✅ aucune coordonnée bancaire`. **Un corps JAMAIS LU, déclaré propre, dans un dépôt
+   * PUBLIC.** C'est le mode qui garde le corps *déjà publié* d'une PR.
+   *
+   * ⚖️ LA DÉCISION, ET LES DEUX AVIS QUI LA CADRENT. La lentille `securite` a jugé au 16e tour que
+   * c'était une **dette** et non un trou de substance, et son argument tient : `lu: false → 2` est
+   * épinglé de façon exhaustive côté décision pure, et *la couverture de mutation borne le coût
+   * d'une régression accidentelle future — elle ne fait pas partie de la frontière de confiance
+   * face à un adversaire déjà à l'intérieur*. Mais elle ajoute que le laisser ouvert deux lots de
+   * plus en ferait un défaut à part entière, et que le remède est **priorité 1**.
+   * Will a tranché de son côté : **on ferme avant de fusionner**, parce que le gel visait les
+   * imprécisions de rédaction, pas une garde qui **affirme le contraire de la vérité quand elle
+   * échoue**. Les deux convergent, on ferme une fois.
+   *
+   * 🔑 ET POURQUOI C'EST UN TÉMOIN D'EFFET ET PAS UN ÉPINGLAGE DE PLUS. Mon propre argument
+   * m'a été retourné : *l'ajouter sans témoin d'effet refabriquerait exactement le défaut qu'il
+   * prétend fermer.* Celui-ci lance le binaire pour de vrai. Il ne coûte **ni IBAN ni dépôt
+   * jetable** : un numéro de PR inexistant suffit à rendre `lecture.lu === false`.
+   *
+   * ⚠️ J'AI FAILLI L'ÉCRIRE SUR UNE FAUSSE PRÉMISSE. J'avais lu que `--corps-publie 999999`
+   * sortait en 2 **avant** d'atteindre ce bloc — donc que le témoin n'exercerait rien. Faux : le
+   * refus précoce ne vise qu'un argument MALFORMÉ ; un numéro bien formé mais inexistant traverse
+   * la lecture, échoue, et atteint la sortie visée. *Lire le flux plutôt que de déduire d'un
+   * numéro de ligne* — sans quoi ce témoin aurait été vert pour la mauvaise raison, ce que ce
+   * fichier passe sa vie à dénoncer.
+   */
+  it('REQ-CPL-018 — TÉMOIN D’EFFET : un corps NON LU sort en 2, il n’est jamais déclaré propre', () => {
+    const PR_INEXISTANTE = 999999;
+    let code = -1;
+    let sortie = '';
+    try {
+      execFileSync(
+        'npx',
+        ['tsx', 'scripts/gates/gov-entite.ts', '--corps-publie', String(PR_INEXISTANTE)],
+        { encoding: 'utf8', stdio: 'pipe', shell: true }
+      );
+      code = 0;
+    } catch (e) {
+      const err = e as { status?: number; stdout?: string; stderr?: string };
+      code = err.status ?? -1;
+      sortie = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+    }
+
+    // Le verdict CALCULÉ doit devenir un code de SORTIE. C'est la couture, et c'est elle qu'un
+    // `(verdict).code = 0` neutralise sans toucher à une seule condition.
+    expect(code, 'un corps NON LU est sorti autrement qu’en 2 — le verdict ne sort pas').toBe(2);
+
+    // Et il sort pour LA bonne raison : un 2 d'une autre famille ne prouverait rien.
+    expect(sortie).toContain('lecture_impossible');
+
+    // CONTRE-TÉMOIN : la garde ne doit surtout PAS déclarer propre ce qu'elle n'a pas lu.
+    expect(
+      sortie.includes('aucune coordonnée bancaire'),
+      'un corps JAMAIS LU est déclaré propre — dépôt PUBLIC'
+    ).toBe(false);
+  }, 120_000);
 });
