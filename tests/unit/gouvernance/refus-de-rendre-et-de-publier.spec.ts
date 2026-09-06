@@ -402,9 +402,14 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'mode à plat (`gov-entite.ts:2569`) a un témoin d’EFFET par dépôt jetable — mutation reposée, ' +
         'elle rougit. ⛔ OUVERT : `process.exit(verdict.code)` (`gov-entite.ts:2549`), sortie ' +
         'terminale de `--corps-publie`, le mode qui garde le corps DÉJÀ PUBLIÉ d’une PR d’un dépôt ' +
-        'PUBLIC. Son atteignabilité est épinglée, son EFFET ne l’est pas : les seuls lancements ' +
-        'réels sortent en 2 AVANT de l’atteindre. C’est LUI la dette, et c’est ce chemin-là qu’il ' +
-        'faut reprendre.',
+        'PUBLIC. Son atteignabilité est épinglée, son EFFET ne l’est pas. ⚠️ Et l’atteignabilité ne ' +
+        'suffit pas : la lentille `mutation` a mesuré au 15e tour qu’on neutralise la VALEUR sans ' +
+        'toucher à la condition — `(verdict as {code:number}).code = 0` inséré, aucun `if (true)`, ' +
+        '577/577 verts — et `--corps-publie` d’une PR INEXISTANTE passe alors de `exit 2 ' +
+        '[lecture_impossible]` à `exit 0 ✅ aucune coordonnée` : UN CORPS JAMAIS LU DÉCLARÉ PROPRE, ' +
+        'dans un dépôt public. ✅ REMÈDE DÉJÀ CONNU, et il ne coûte NI IBAN NI RÉSEAU : un numéro de ' +
+        'PR inexistant donne `lecture.lu === false` → code 2, qui traverse le même `if` et tue les ' +
+        'trois variantes d’un coup. C’EST LUI LA DETTE, et le remède est écrit avec elle.',
     },
   };
 
