@@ -7455,6 +7455,7 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
+        "scripts/gates/gov-tasks.ts",
         "scripts/lot/composer.ts",
         "scripts/lot/registre-decisions.ts"
       ],

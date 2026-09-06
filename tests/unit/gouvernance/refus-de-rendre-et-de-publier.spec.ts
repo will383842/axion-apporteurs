@@ -387,11 +387,24 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     'scripts/gates/gov-entite.ts': {
       total: 6,
       temoins: 2,
+      // 🔴 CETTE `raison` A AFFIRMÉ AU PRÉSENT UN CONSTAT DEVENU FAUX — lentille `exactitude`,
+      // 15e tour, et elle me retourne ma propre règle. J'écrivais cinquante lignes plus haut que
+      // « un nombre qui date un constat s'écrit au passé », et j'ai appliqué la règle aux NOMBRES
+      // et pas aux CONSTATS. Elle disait « l'exit terminal n'a AUCUN témoin d'effet » alors que
+      // `TEMOINS_D_EFFET` l'énumère, que `temoins: 2` le compte, et que la réconciliation ne
+      // boucle QUE grâce à lui.
+      //
+      // ⚠️ Et la conséquence était pire que l'inexactitude : le registre des dettes nommait
+      // comme dette n°1 le chemin **FERMÉ**, et restait MUET sur celui qui reste **OUVERT**.
+      // *Une dette déclarée sur le mauvais chemin ne protège rien et rassure sur les deux.*
       raison:
-        '⛔ 🔴 L’EXIT TERMINAL DE LA GARDE D’ARGENT, ET IL N’A AUCUN TÉMOIN D’EFFET. Mesuré par ' +
-        '`mutation` : sans lui, un IBAN réel dans `config/entite.json` d’un dépôt PUBLIC passe à ' +
-        'exit 0 après impression de `[secret_commite]`. C’est la dette la plus chère de cette PR, ' +
-        'elle est écrite ici pour qu’elle soit reprise, pas pour qu’elle soit tolérée.',
+        'Deux chemins de sortie, et ils ne sont pas au même état. ✅ FERMÉ : la sortie terminale du ' +
+        'mode à plat (`gov-entite.ts:2569`) a un témoin d’EFFET par dépôt jetable — mutation reposée, ' +
+        'elle rougit. ⛔ OUVERT : `process.exit(verdict.code)` (`gov-entite.ts:2549`), sortie ' +
+        'terminale de `--corps-publie`, le mode qui garde le corps DÉJÀ PUBLIÉ d’une PR d’un dépôt ' +
+        'PUBLIC. Son atteignabilité est épinglée, son EFFET ne l’est pas : les seuls lancements ' +
+        'réels sortent en 2 AVANT de l’atteindre. C’est LUI la dette, et c’est ce chemin-là qu’il ' +
+        'faut reprendre.',
     },
   };
 
