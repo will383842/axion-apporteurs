@@ -23,7 +23,7 @@
 | Exigence | Tâches porteuses | Tests qui la citent | État |
 | --- | --- | --- | --- |
 | `REQ-CPL-002` | `CPL-T01`, `GOV-015`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
-| `REQ-CPL-018` | `CPL-T01`, `GOV-009` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
+| `REQ-CPL-018` | `CPL-T01`, `GOV-009` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts` | couverte |
 | `REQ-CPL-021` | `GOV-000`, `QA-T04` | `tests/unit/gouvernance/autonomie.spec.ts` | couverte |
 | `REQ-GOV-001` | `GOV-001` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-002` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
@@ -455,7 +455,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/paths-derives.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-025` |
 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | oui | `REQ-GOV-006`, `REQ-GOV-023` |
 | `tests/unit/gouvernance/preseance.spec.ts` | oui | `REQ-DM-034`, `REQ-GOV-002`, `REQ-GOV-030` |
-| `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts` | oui | `REQ-GOV-032` |
+| `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts` | oui | `REQ-CPL-018`, `REQ-GOV-032` |
 | `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | oui | `REQ-GOV-015`, `REQ-GOV-021` |
 | `tests/unit/gouvernance/regles-maison.spec.ts` | oui | `REQ-GOV-023`, `REQ-GOV-024` |
 | `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011` |

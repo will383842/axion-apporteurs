@@ -129,6 +129,28 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
     expect(GARDE).toContain("execFileSync('git', ['rev-parse', 'HEAD']");
   });
 
+  it('REQ-GOV-032 — le câblage de l’ancestralité : `estAncetre` est MESURÉ, jamais affirmé', () => {
+    // 🔴 Lentille `schema`, 13e tour : `estAncetre: true` reste EXPRIMABLE dans l'appelant, et
+    // **aucun témoin d'effet ne peut le tuer** — les cas purs fournissent eux-mêmes le booléen, et
+    // le seul lancement réel vise une PR qui A atterri, donc `true` y serait juste par accident.
+    // Or ce booléen est **la seule attestation mécanique de l'atterrissage** : la 8e case de DoD
+    // ne contrôle que la PRÉSENCE de la coche.
+    //
+    // ⚠️ CE TÉMOIN PORTE DONC SUR LA SOURCE, ET JE L'ÉCRIS PLUTÔT QUE DE LE TAIRE : il tue
+    // l'affirmation en dur, pas une neutralisation plus subtile de `estAncetreDe`. Celle-là est
+    // couverte ailleurs — la fonction a ses propres témoins, dont un contrôle positif.
+    expect(
+      /estAncetre:\s*estAncetreDe\(/.test(GARDE),
+      'l’ancestralité est AFFIRMÉE au lieu d’être mesurée : l’atterrissage n’est plus attesté'
+    ).toBe(true);
+    expect(
+      /estAncetre:\s*(true|false)/.test(GARDE),
+      'un booléen en dur remplace la mesure d’ancestralité'
+    ).toBe(false);
+    // Et les opérandes ne sont nommés qu'UNE fois (RM-01) : deux écritures divergent.
+    expect((GARDE.match(/meta\.mergeCommit\?\.oid/g) ?? []).length, 'le sha de fusion est retapé').toBe(1);
+  });
+
   it('REQ-GOV-032 — la CI ne câble PAS `--pr` : sinon la garde de tête serait insatisfiable', () => {
     // 🔴 Motif de la lentille `schema` au 11e tour. Le commentaire de `gov-pr.ts` affirme que la
     // garde ne peut pas rougir en CI « parce que le workflow lance `pnpm gov:pr` sans argument ».

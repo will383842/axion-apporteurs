@@ -232,7 +232,16 @@ describe('REQ-GOV-016 — la garde tourne sur le dépôt, et elle y est verte', 
  *
  * 🔴 CE QUI A FAIT ÉCRIRE CE BLOC. Le 2026-09-06, la confrontation mécanique de
  * `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` (l'arbitrage RENDU) à `docs/requirements.json` (le texte
- * APPLIQUÉ) a mesuré, sur les 28 fusions, **111 clauses décidées et 14 appliquées**.
+ * APPLIQUÉ) a mesuré, sur les 28 fusions, qu'une **petite minorité** des clauses décidées se
+ * retrouve dans la survivante.
+ *
+ * ⚠️ AUCUN CHIFFRE ICI NON PLUS. J'avais retiré « 111 / 14 » de `schema-enums.ts` — où il est
+ * désormais écrit « AUCUN CHIFFRE ICI, ET C'EST VOULU » — et **re-gravé le même chiffre vingt
+ * lignes plus loin, dans ce fichier-ci, par le MÊME COMMIT**. Deux commentaires contradictoires de
+ * la même tête. Relevé par la lentille `exactitude` au 13e tour.
+ * *Retirer un chiffre d'un endroit n'est pas le retirer : une famille se ferme en cessant de
+ * l'écrire, pas en le déplaçant.* Le compte dépend du découpage d'une clause (bande mesurée
+ * 110-114 / 14-15) ; ce qui est GARDÉ est ci-dessous, et c'est cela qui vaut.
  * `REQ-DM-038` est l'une des divergences, et elle est vivante ici : son texte en vigueur a perdu
  * `status` et `priorite` — ainsi que la clause « une garde lit `schema.prisma` et rougit sur toute
  * colonne `String` ainsi nommée » — alors que `NOMS_DE_VOCABULAIRE` porte bien les dix noms.

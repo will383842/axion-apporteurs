@@ -720,14 +720,24 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
   // une ANCESTRALITÉ (la fusion a atteint la base). Juger le second par une égalité rendait le
   // pas 8 satisfiable pour la SEULE PR la plus récente et faux pour toutes les autres, à jamais.
   // La demande est une union discriminée : le mauvais appariement ne compile plus.
-  const base = meta.baseRefName ?? 'main';
+  // ⚠️ LES DEUX OPÉRANDES SONT NOMMÉS UNE FOIS (RM-01). Ils étaient retapés deux fois chacun —
+  // relevé par la lentille `schema` au 13e tour : `mergeCommit` en deux endroits, la base en deux
+  // autres. Deux écritures de la même valeur finissent par diverger, et ici la divergence
+  // s'appellerait « attester un atterrissage sur la mauvaise référence ».
+  const refBase = `origin/${meta.baseRefName ?? 'main'}`;
+  const shaFusion = meta.mergeCommit?.oid ?? '';
   const demande: DemandeDeConcordance =
     moment === 'apres-fusion'
       ? {
           moment: 'apres-fusion',
-          mergeCommit: meta.mergeCommit?.oid ?? '',
-          base: `origin/${base}`,
-          estAncetre: estAncetreDe(meta.mergeCommit?.oid ?? '', `origin/${base}`),
+          mergeCommit: shaFusion,
+          base: refBase,
+          // 🔴 CE BOOLÉEN EST LA SEULE ATTESTATION MÉCANIQUE DE L'ATTERRISSAGE — même lentille,
+          // même tour. `estAncetre: true` reste EXPRIMABLE ici, et aucun témoin d'effet ne peut le
+          // tuer : le seul lancement réel vise une PR qui A atterri, donc `true` y serait juste.
+          // C'est un témoin de SOURCE qui garde ce câblage (`tete-de-pr-concorde.spec.ts`), et il
+          // est écrit là-bas ce qu'il ne prouve pas.
+          estAncetre: estAncetreDe(shaFusion, refBase),
         }
       : {
           moment: 'avant-fusion',

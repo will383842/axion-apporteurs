@@ -24,9 +24,9 @@
  * Cette dette-là est écrite, elle n'est pas refermée ici.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 /** Le corps d'un bloc `if (…) { … }` repéré par sa première ligne. Naïf mais suffisant : on
@@ -76,6 +76,28 @@ const COMPOSEUR = readFileSync('scripts/lot/corps-de-pr.ts', 'utf8');
 const ENTITE = readFileSync('scripts/gates/gov-entite.ts', 'utf8');
 const ENUMS = readFileSync('scripts/gates/schema-enums.ts', 'utf8');
 const GATE = readFileSync('scripts/gates/gov-pr.ts', 'utf8');
+
+const REFUS = [
+  ['corps-de-pr.ts — `--pr` obligatoire', COMPOSEUR, 'if (prBrut === null'],
+  ['corps-de-pr.ts — concordance des têtes', COMPOSEUR, 'if (!verdictTete.concordent)'],
+  ['gov-pr.ts — concordance des têtes (LA SURFACE QUI AUTORISE)', GATE, 'if (!verdictTete.concordent)'],
+  ['gov-trace.ts — refus de rendre', TRACE, "if (fautesAvantRendu.length > 0)"],
+  ['gov-tasks.ts — refus de rendre', TACHES, 'if (fautes.length > 0)'],
+  ['gov-requirements.ts — refus de rendre', EXIGENCES, 'if (fautes.length > 0)'],
+  // 🔴 LES SORTIES TERMINALES — celles dont le retrait rend la gate ENTIÈRE verte. La lentille
+  // `mutation` en a muté trois au 12e tour, **les trois ont survécu**. La pire :
+  // `gov-entite.ts` privée de la sienne accepte un IBAN réel dans un dépôt PUBLIC à exit 0,
+  // APRÈS avoir imprimé `[secret_commite]` — elle voit la faute et laisse passer.
+  //
+  // ⚠️ CE QUE CES TROIS TÉMOINS NE PROUVENT PAS, écrit plutôt que tu : ils portent sur la
+  // FORME. Un témoin d'effet exigerait de faire tourner la gate sur une faute réelle, donc
+  // d'écrire une coordonnée bancaire dans un fichier suivi d'un dépôt public — ce que cette
+  // garde existe précisément pour empêcher — ou d'ouvrir une trappe d'injection dans la gate,
+  // c'est-à-dire d'élargir la surface qu'on protège. **Aucune des deux ne se défend.** Ce
+  // témoin-ci tue la mutation réelle qui a été posée ; il ne ferme pas la famille.
+  ['gov-entite.ts — SORTIE TERMINALE (garde d’argent, dépôt PUBLIC)', ENTITE, 'if (fautes.length > 0)'],
+  ['schema-enums.ts — SORTIE TERMINALE', ENUMS, 'if (fautes.length > 0)'],
+] as const;
 
 describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sort en échec', () => {
   it('REQ-GOV-032 — `gov:trace --render` appelle `controler` AVANT `writeFileSync`', () => {
@@ -153,27 +175,6 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
 });
 
 describe('REQ-GOV-032 — TOUS les refus de cette PR SORTENT, pas seulement celui qu’on a testé', () => {
-  const REFUS = [
-    ['corps-de-pr.ts — `--pr` obligatoire', COMPOSEUR, 'if (prBrut === null'],
-    ['corps-de-pr.ts — concordance des têtes', COMPOSEUR, 'if (!verdictTete.concordent)'],
-    ['gov-pr.ts — concordance des têtes (LA SURFACE QUI AUTORISE)', GATE, 'if (!verdictTete.concordent)'],
-    ['gov-trace.ts — refus de rendre', TRACE, "if (fautesAvantRendu.length > 0)"],
-    ['gov-tasks.ts — refus de rendre', TACHES, 'if (fautes.length > 0)'],
-    ['gov-requirements.ts — refus de rendre', EXIGENCES, 'if (fautes.length > 0)'],
-    // 🔴 LES SORTIES TERMINALES — celles dont le retrait rend la gate ENTIÈRE verte. La lentille
-    // `mutation` en a muté trois au 12e tour, **les trois ont survécu**. La pire :
-    // `gov-entite.ts` privée de la sienne accepte un IBAN réel dans un dépôt PUBLIC à exit 0,
-    // APRÈS avoir imprimé `[secret_commite]` — elle voit la faute et laisse passer.
-    //
-    // ⚠️ CE QUE CES TROIS TÉMOINS NE PROUVENT PAS, écrit plutôt que tu : ils portent sur la
-    // FORME. Un témoin d'effet exigerait de faire tourner la gate sur une faute réelle, donc
-    // d'écrire une coordonnée bancaire dans un fichier suivi d'un dépôt public — ce que cette
-    // garde existe précisément pour empêcher — ou d'ouvrir une trappe d'injection dans la gate,
-    // c'est-à-dire d'élargir la surface qu'on protège. **Aucune des deux ne se défend.** Ce
-    // témoin-ci tue la mutation réelle qui a été posée ; il ne ferme pas la famille.
-    ['gov-entite.ts — SORTIE TERMINALE (garde d’argent, dépôt PUBLIC)', ENTITE, 'if (fautes.length > 0)'],
-    ['schema-enums.ts — SORTIE TERMINALE', ENUMS, 'if (fautes.length > 0)'],
-  ] as const;
 
   for (const [nom, source, ancre] of REFUS) {
     it(`REQ-GOV-032 — TÉMOIN : le refus « ${nom} » SORT en échec`, () => {
@@ -321,7 +322,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     'scripts/gates/gov-tasks.ts': { total: 2, temoins: 1, raison: 'le refus de rendre a un témoin ; 1 non couvert.' },
     'scripts/gates/gov-requirements.ts': { total: 3, temoins: 1, raison: 'le refus de rendre a un témoin ; 2 non couverts.' },
     'scripts/gates/schema-enums.ts': {
-      total: 4,
+      total: 5,
       temoins: 1,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE, mesurée par `mutation` au 12e tour.',
     },
@@ -331,8 +332,8 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE.',
     },
     'scripts/gates/gov-entite.ts': {
-      total: 1,
-      temoins: 1,
+      total: 6,
+      temoins: 2,
       raison:
         '⛔ 🔴 L’EXIT TERMINAL DE LA GARDE D’ARGENT, ET IL N’A AUCUN TÉMOIN D’EFFET. Mesuré par ' +
         '`mutation` : sans lui, un IBAN réel dans `config/entite.json` d’un dépôt PUBLIC passe à ' +
@@ -349,7 +350,16 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // celui qui écrit la ligne — c'est-à-dire au seul moment où elle sert.
     //
     // On compare donc le fichier TEL QU'IL EST au même fichier à `origin/main`.
-    const compter = (texte: string) => (texte.match(/process\.exit\(1\)/g) ?? []).length;
+    // 🔴 ET ON COMPTE TOUTES LES SORTIES NON NULLES, PAS UNE ORTHOGRAPHE. Motif BLOQUANT de
+    // la lentille `schema` au 13e tour : la version précédente ne cherchait que le littéral
+    // `process.exit(1)` et manquait **six** sorties, dont la plus chère —
+    // `gov-entite.ts` : `process.exit(verdict.code)`, sortie TERMINALE de
+    // `gov:entite --corps-publie`, déclarée BLOQUANTE en Gate A. Mutée en `exit(0)`, la gate
+    // imprime `[coordonnee_en_clair]` sur un IBAN d'un corps publié en dépôt PUBLIC **et sort 0**,
+    // sans qu'aucun compteur ne bouge. *Un compteur qui cherche une orthographe ne compte pas une
+    // famille* — et c'est la deuxième fois que l'EXTENSION de cette garde est trop étroite.
+    const SORTIE_NON_NULLE = /process\.exit\(\s*(?!0\s*\))/g;
+    const compter = (texte: string) => (texte.match(SORTIE_NON_NULLE) ?? []).length;
     const surMain = (f: string) => {
       try {
         return compter(execFileSync('git', ['show', `origin/main:${f}`], { encoding: 'utf8', maxBuffer: 64e6 }));
@@ -387,14 +397,122 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
 
   it('REQ-GOV-032 — la dette est CHIFFRÉE, pas seulement mentionnée', () => {
     const total = Object.values(declares).reduce((a, d) => a + d.total, 0);
-    const couverts = Object.values(declares).reduce((a, d) => a + d.temoins, 0);
+    // 🔴 DÉRIVÉ DE `REFUS`, PAS TAPÉ — lentille `schema`, 13e tour : la version précédente
+    // sommait des `temoins` tapés et les confrontait à un littéral, jamais au tableau `REFUS` qui
+    // est l'AUTRE source du même fait. Retirer une entrée de `REFUS` faisait disparaître un `it()`
+    // **en silence** et laissait la dette annoncée inchangée. *Deux sources du même fait qu'aucune
+    // garde ne confronte finissent par diverger.*
+    const couverts = REFUS.length + 1; // +1 : la sortie terminale de `--corps-publie`, témoin dédié
+    const temoinsDeclares = Object.values(declares).reduce((a, d) => a + d.temoins, 0);
+    expect(temoinsDeclares, 'la somme des `temoins` déclarés a divergé du tableau `REFUS`').toBe(
+      couverts
+    );
     // Le nombre lui-même n'est pas la garde — la garde est le test ci-dessus. Celui-ci existe
     // pour qu'on ne puisse pas faire baisser la dette en retirant des lignes de la déclaration.
-    // ⚠️ 19, pas 20. La lentille `mutation` a compté 20 — c'est le nombre de lignes AJOUTÉES au
-    // diff ; le compte NET (disque moins `origin/main`) en donne 19, un exit ayant aussi été
-    // RETIRÉ de `gov-tasks.ts`. *Un compteur d'ajouts n'est pas un compteur d'existants.*
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(19);
-    expect(couverts).toBe(8);
+    // ⚠️ CE NOMBRE EST UNE SOMME DE DELTAS POSITIFS, PAS UN NET — et c'est la lentille
+    // `exactitude` qui a dû me le dire au 13e tour, après que je l'ai appelé « NET » deux fois.
+    // La boucle ci-dessus filtre `n > 0` : elle ne voit que les fichiers qui en GAGNENT. Sur les
+    // sorties non nulles : deltas positifs **25**, deltas négatifs **−2** (`gov-identifiants.ts`),
+    // donc net réel **23**. Les trois nombres disent des choses différentes, et c'est bien 25 qu'il
+    // faut ici — ce qu'on déclare, ce sont les sorties AJOUTÉES qu'il faut couvrir, pas un solde.
+    // *Nommer un compteur par ce qu'il n'est pas coûte plus cher qu'un compteur faux : celui-ci
+    // était juste, et son NOM le rendait invérifiable.*
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(25);
+    // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
+    // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
+    // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
     expect(couverts).toBeLessThan(total);
   });
+});
+
+describe('REQ-CPL-018 — la garde d’ARGENT sort en échec : témoin d’EFFET, dépôt jetable', () => {
+  /**
+   * 🔴 CE QUI A FAIT ÉCRIRE CE BLOC, ET LA CORRECTION D'UNE AFFIRMATION DE MOI.
+   *
+   * La lentille `mutation` a mesuré au 12e tour que la sortie TERMINALE de `gov-entite.ts` n'avait
+   * aucun témoin : retirée, la garde imprime `[secret_commite]` sur un IBAN réel dans un dépôt
+   * **PUBLIC** et sort **0**. J'ai répondu par un témoin de FORME, en écrivant qu'un témoin d'effet
+   * ne se défendait pas — il aurait fallu, disais-je, soit écrire une coordonnée réelle dans un
+   * fichier suivi de ce dépôt public, soit ouvrir une trappe d'injection dans la gate.
+   *
+   * **C'était faux, et c'est la lentille `securite` qui a donné la troisième voie** (13e tour) :
+   * un **dépôt JETABLE** dans `tmpdir()`. Ni coordonnée réelle, ni trappe. La gate lit
+   * `config/entite.json` par un chemin RELATIF et énumère les fichiers par `git ls-files` : il
+   * suffit de la lancer avec un autre `cwd`.
+   *
+   * > *J'avais déclaré une dette infermable au lieu de chercher une troisième voie. « Aucune des
+   * > deux ne se défend » était vrai des deux voies que j'avais vues, et je l'ai écrit comme s'il
+   * > était vrai de toutes.*
+   *
+   * ⚠️ AUCUN IBAN LITTÉRAL DANS CE FICHIER. La valeur est CONSTRUITE à l'exécution, clé mod-97
+   * calculée : un littéral à clé valide ferait rougir `gov:entite` sur ce dépôt-ci — la garde
+   * attraperait son propre témoin, ce qui est déjà arrivé au 7e tour.
+   */
+
+  /** Clé mod-97 (ISO 13616) d'un BBAN français fabriqué. Aucun compte n'existe derrière. */
+  const ibanFabrique = (bban: string): string => {
+    const corps = `${bban}FR00`;
+    const numerique = [...corps]
+      .map((c) => (/[0-9]/.test(c) ? c : String(c.charCodeAt(0) - 55)))
+      .join('');
+    let reste = 0;
+    for (const chiffre of numerique) reste = (reste * 10 + Number(chiffre)) % 97;
+    const cle = String(98 - reste).padStart(2, '0');
+    return `FR${cle}${bban}`;
+  };
+
+  const lancerLaGarde = (cwd: string) => {
+    try {
+      const stdout = execFileSync('npx', ['tsx', resolve('scripts/gates/gov-entite.ts')], {
+        cwd,
+        encoding: 'utf8',
+        stdio: 'pipe',
+        shell: true,
+      });
+      return { code: 0, sortie: stdout };
+    } catch (e) {
+      const err = e as { status?: number; stdout?: string; stderr?: string };
+      return { code: err.status ?? -1, sortie: `${err.stdout ?? ''}${err.stderr ?? ''}` };
+    }
+  };
+
+  it('REQ-CPL-018 — la garde SORT en échec sur une coordonnée, et 0 sans elle', () => {
+    const depot = mkdtempSync(join(tmpdir(), 'temoin-entite-'));
+    execFileSync('git', ['init', '-q'], { cwd: depot });
+    execFileSync('git', ['config', 'user.email', 't@t'], { cwd: depot });
+    execFileSync('git', ['config', 'user.name', 't'], { cwd: depot });
+
+    // Le registre RÉEL de ce dépôt : il ne porte que la sentinelle, la garde y est verte.
+    // Les trois sources que la garde lit par chemin RELATIF. Elles ne portent que la sentinelle :
+    // la garde est verte dessus ici, elle doit l'être là-bas. ⚠️ La liste a été trouvée par le
+    // CONTRÔLE POSITIF, qui a rougi sur `docs/DECISIONS.md` manquant — c'est exactement ce pour
+    // quoi il existe : sans lui j'aurais lu un non-zéro dû à un fichier absent comme « la garde a
+    // vu la coordonnée ».
+    for (const f of ['config/entite.json', 'docs/DECISIONS.md', 'docs/REQUIREMENTS.md']) {
+      mkdirSync(join(depot, dirname(f)), { recursive: true });
+      writeFileSync(join(depot, f), readFileSync(f, 'utf8'));
+    }
+    execFileSync('git', ['add', '-A'], { cwd: depot });
+
+    // ── CONTRÔLE POSITIF, ET IL EST INDISPENSABLE ────────────────────────────────────────────
+    // Sans lui, un harnais qui échoue pour n'importe quelle raison (chemin, `tsx` absent, registre
+    // incomplet) rendrait un non-zéro que je lirais comme « la garde a vu la coordonnée ».
+    const propre = lancerLaGarde(depot);
+    expect(propre.code, `le dépôt jetable SANS coordonnée ne rend pas 0 :\n${propre.sortie}`).toBe(0);
+
+    // ── LE TÉMOIN ────────────────────────────────────────────────────────────────────────────
+    const iban = ibanFabrique('30006000011234567890189');
+    writeFileSync(join(depot, 'preuve.md'), `Coordonnée fabriquée pour ce témoin : ${iban}\n`);
+    execFileSync('git', ['add', '-A'], { cwd: depot });
+
+    const fautif = lancerLaGarde(depot);
+    expect(
+      fautif.code,
+      `la garde d’ARGENT a vu la coordonnée et n’est PAS sortie en échec — dépôt PUBLIC :\n${fautif.sortie}`
+    ).not.toBe(0);
+    // Et elle sort pour LA bonne raison : un non-zéro d'une autre famille ne prouverait rien.
+    expect(fautif.sortie).toMatch(/coordonnee_en_clair|secret_commite/);
+
+    rmSync(depot, { recursive: true, force: true }); // on ne supprime que ce qu'on a créé
+  }, 180_000);
 });
