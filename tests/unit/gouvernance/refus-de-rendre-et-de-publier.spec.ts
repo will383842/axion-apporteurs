@@ -78,60 +78,175 @@ function exigerQueLeRefusSORTE(nom: string, source: string, ancre: string): void
 }
 
 /**
- * 🔴 CHAQUE test de `fautes.length` doit SUIVRE IMMÉDIATEMENT le calcul de la valeur qu'il teste.
+ * L'énumération du DISQUE, partagée par les deux gardes de ce fichier.
  *
- * MOTIF BLOQUANT de la lentille `mutation` au 18e tour, et c'est la TROISIÈME fois que la même
- * forme revient sous un habit neuf. L'assertion précédente était une expression régulière ancrée
- * sur `if (fautes.length > 0)` — c'est-à-dire le seul chemin `--render`, celui qui AFFICHE. Or
- * chaque frère teste la même valeur une SECONDE fois, en `=== 0`, et c'est là que se prend le
- * **verdict de la gate** — le chemin que `pnpm gov:check` exécute. Mesuré par elle :
- *
- *     gov-tasks.ts:490        sain sur `GOV-000.deps = ["XXX-999"]` : exit 1, ❌ dep_inconnue
- *                             muté : **exit 0, « ✅ gov:tasks — 209 tâches, 154.25 j »**
- *     gov-requirements.ts:429 sain sur `delete exigences[0].statut` : exit 1, ❌ schema (3)
- *                             muté : **exit 0, « ✅ gov:requirements — 355 exigences »**
- *
- * > **La garde était posée sur la surface qui AFFICHE, pas sur celle qui PRONONCE.** C'est mot
- * > pour mot le veto de sécurité du 10e tour, puis le motif du 17e — et le témoin qui prétendait
- * > fermer la famille en portait lui-même la forme.
- *
- * 🔑 DEUX SITES DE PLUS, TROUVÉS EN DÉRIVANT AU LIEU DE RECOPIER LE MOTIF. La lentille en nommait
- * deux ; il y en a **huit**. `gov-trace.ts` en porte quatre (`fautesBase` :862, `fautesAvantRendu`
- * :960, `fautes` :981 et :993), dont deux qu'aucune version de ce témoin n'avait jamais vus.
- * *Un motif reçu se DÉRIVE, il ne se recopie pas : sa portée est celle de qui l'a écrit.*
- *
- * ⚠️ ET IL EST ANCRÉ PAR OCCURRENCE, pas sur le fichier — grief de `securite` ET de `schema` au
- * même tour, tous deux mesurés : `ADJACENTE.test(source)` portait sur le fichier ENTIER, donc une
- * seule paire adjacente n'importe où ailleurs (une fonction leurre, ou l'autre mode) le
- * satisfaisait avec la garde vidée. Ici chaque test est jugé contre SA propre ligne précédente.
- *
- * La reconnaissance est volontairement ÉTROITE : seule `const|let <valeur> =` sur la ligne
- * précédente est acceptée. Le jour où une affectation deviendra multi-ligne, ce témoin rougira —
- * **c'est le bon sens de l'échec** : on étend la garde en connaissance de cause, on ne l'élargit
- * pas d'avance « au cas où ». Vérifié que cette branche seule couvre les 8 sites : la variante
- * permissive que j'avais d'abord écrite était MORTE, et une branche morte dans une garde n'est
- * pas neutre — c'est une porte qu'on ne surveille plus.
+ * Elle était locale à la garde de conservation ; la garde d'adjacence en avait besoin aussi et
+ * s'en est passée, avec une liste de fichiers TAPÉE — motif de la lentille `schema` au 19e tour :
+ * *l'énumérateur du disque existait déjà dans le même fichier, 270 lignes plus bas.*
  */
-function adjacenceDesTestsDeFautes(source: string): { sites: number; griefs: string[] } {
-  const lignes = source.split(/\r?\n/);
-  const griefs: string[] = [];
-  let sites = 0;
-  for (let i = 0; i < lignes.length; i++) {
-    const m = lignes[i]!.match(/if \((\w*[Ff]autes\w*)\.length\s*(?:===|!==|>|<)\s*0\)/);
-    if (!m) continue;
-    sites++;
-    const valeur = m[1]!;
-    let j = i - 1;
-    while (j >= 0 && (lignes[j]!.trim() === '' || /^\s*(?:\/\/|\*|\/\*)/.test(lignes[j]!))) j--;
-    const precedente = (lignes[j] ?? '(début de fichier)').trim();
-    if (!new RegExp('^(?:const|let) ' + valeur + ' =').test(precedente)) {
-      griefs.push(
-        'ligne ' + (i + 1) + ' : « ' + precedente.slice(0, 70) + ' » s’intercale entre le calcul de `' + valeur + '` et son test'
-      );
+function enumererFichiers(dossier: string): string[] {
+  return readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+    const chemin = `${dossier}/${e.name}`;
+    if (e.isDirectory()) return e.name === 'node_modules' ? [] : enumererFichiers(chemin);
+    return /\.(ts|mjs|js)$/.test(e.name) ? [chemin] : [];
+  });
+}
+
+/**
+ * 🔴 CHAQUE garde qui teste `fautes.length` doit tester une valeur calculée JUSTE AVANT elle,
+ * et calculée par un APPEL — c'est la seule façon de ne pas pouvoir la vider sans toucher la
+ * condition. Le périmètre est DÉRIVÉ du disque, jamais tapé.
+ *
+ * ## Les quatre défauts que cette version corrige, tous MESURÉS par les lentilles au 19e tour
+ *
+ * **1. La version d'avant s'ancrait sur la LIGNE, le langage sépare par le POINT-VIRGULE.**
+ * `securite` et `mutation`, indépendamment : `const fautes = controler(…); fautes.splice(0);`
+ * sur UNE SEULE ligne satisfaisait `^(?:const|let) <valeur> =`. Le verdict fermé au 18e tour
+ * était rouvert **par une espace** — `gov:tasks` sortait en 0 avec sa bannière ✅ sur une
+ * `dep_inconnue` réelle, et `docs/REQUIREMENTS.md` était RÉÉCRITE depuis un registre à 3 fautes.
+ * *J'avais écrit un contrôle syntaxique en raisonnant sur la typographie.*
+ *
+ * **2. Elle avait RETIRÉ la provenance que sa propre version parente exigeait.** Le parent
+ * `500a53c` demandait `= controler(…);` ; ma « correction » acceptait n'importe quel membre de
+ * droite. Mutant `controler(…).filter(() => false)` : **ROUGE sur le parent, VERT sur moi**, et
+ * `docs/TASKS.md` réécrite depuis un backlog fautif à exit 0.
+ * > **Un correctif se mesure contre son PARENT, pas seulement contre le motif qui l'a fait
+ * > écrire.** Je comparais mon patch au défaut qu'il ferme et jamais à la garde qu'il remplace.
+ *
+ * **3. Le leurre était un COMMENTAIRE.** Le motif de site n'était pas ancré en début de ligne :
+ * un `// if (fautes.length === 0) {` comptait comme un site et compensait un site retiré, rendant
+ * le compte juste avec la garde vidée. Le motif est désormais ancré par `^\s*if \(`.
+ *
+ * **4. Elle ne voyait ni la forme MEMBRE ni la moitié des opérateurs.** `rapport.fautes.length`
+ * était invisible — `lexique-apporteurs.ts` rendait **0 site** alors qu'il en porte cinq, dont
+ * celui que ce fichier épingle par ailleurs. Et `!fautes.length`, `fautes.length` nu,
+ * `0 === fautes.length` passaient tous.
+ *
+ * ## Ce que la règle distingue, et qui n'était pas prévu
+ *
+ * Cinq sites testent `fautes.length > 25` : ce sont les lignes « … et N autre(s) » de l'affichage.
+ * **Ils ne décident rien**, l'adjacence n'y a aucun sens. Ils sont comptés à part plutôt
+ * qu'exemptés en silence — *une exception qu'on ne compte pas est une exception qu'on oublie.*
+ */
+type SiteDeFautes = { fichier: string; ligne: number; valeur: string; prec?: string; motif?: string };
+
+function provenanceRecevable(expr: string): boolean {
+  const e = expr.trim().replace(/;$/, '').trim();
+  if (/^[A-Za-z_$][\w$.]*\(/.test(e)) {
+    // UN SEUL appel : la parenthèse fermante doit TERMINER l'expression. C'est ce qui refuse
+    // `controler(…).filter(() => false)` — la mutation qui a survécu au 19e tour.
+    let p = 0;
+    for (let i = 0; i < e.length; i++) {
+      if (e[i] === '(') p++;
+      else if (e[i] === ')') {
+        p--;
+        if (p === 0) return i === e.length - 1;
+      }
+    }
+    return false;
+  }
+  // Composition : `[...controler(u), ...verifierVue(u)]` — gov-trace.ts:993.
+  if (e.startsWith('[') && e.endsWith(']')) return /[A-Za-z_$][\w$.]*\(/.test(e);
+  return false;
+}
+
+/**
+ * L'instruction précédente. Découpée sur le POINT-VIRGULE, et son DÉBUT trouvé par un balayage
+ * ARRIÈRE à profondeur de parenthèses — sinon un argument objet multi-ligne
+ * (`controler({ a, b })`) fait croire que l'instruction commence à son accolade.
+ * ⚠️ `{` et `}` sont des FRONTIÈRES, pas des délimiteurs à apparier : ma première version les
+ * appariait et **traversait la fonction précédente**, rendant 13 griefs dont 9 faux.
+ */
+function instructionPrecedente(source: string, index: number): string | null {
+  const avant = source.slice(0, index);
+  const fin = avant.lastIndexOf(';');
+  if (fin < 0) return null;
+  let d = 0;
+  let debut = 0;
+  for (let i = fin - 1; i >= 0; i--) {
+    const c = avant[i]!;
+    if (c === ')' || c === ']') d++;
+    else if (c === '(' || c === '[') d--;
+    else if (d === 0 && (c === ';' || c === '{' || c === '}')) {
+      debut = i + 1;
+      break;
     }
   }
-  return { sites, griefs };
+  return avant
+    .slice(debut, fin + 1)
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^\s*\/\/.*$/, '').trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim();
 }
+
+const SITE_DE_FAUTES =
+  /^\s*if \(\s*(?:0\s*(?:===|==|!==|!=)\s*)?(?:!)?\s*([A-Za-z_$][\w$.]*)\.length\s*(?:(===|!==|==|!=|>=|<=|>|<)\s*(\d+))?\s*\)/;
+
+function recenserLesGardesDeFautes(racine = 'scripts'): {
+  gardes: SiteDeFautes[];
+  affichages: SiteDeFautes[];
+  griefs: SiteDeFautes[];
+} {
+  const gardes: SiteDeFautes[] = [];
+  const affichages: SiteDeFautes[] = [];
+  const griefs: SiteDeFautes[] = [];
+  for (const fichier of enumererFichiers(racine)) {
+    const source = readFileSync(fichier, 'utf8');
+    const lignes = source.split(/\r?\n/);
+    let offset = 0;
+    lignes.forEach((l, i) => {
+      const debutLigne = offset;
+      offset += l.length + 1;
+      const m = l.match(SITE_DE_FAUTES);
+      if (!m || !/fautes/i.test(m[1]!)) return;
+      const valeur = m[1]!;
+      const base = valeur.split('.')[0]!;
+      const site: SiteDeFautes = { fichier, ligne: i + 1, valeur };
+      const operateur = m[2];
+      if (m[3] && m[3] !== '0') {
+        affichages.push(site);
+        return;
+      }
+      // 🔴 UNE COMPARAISON QUI NE PEUT PAS DISCRIMINER EST ELLE-MÊME UN DÉFAUT.
+      // Survivant du 19e tour, et c'est la moitié du mutant que je croyais avoir tuée par
+      // l'ancrage : `=== 0` → `>= 0` rend le test TOUJOURS VRAI. L'adjacence est intacte, la
+      // provenance aussi, le compte aussi — et la gate prend systématiquement la branche du
+      // succès. *Une longueur est ≥ 0 par construction : `>= 0` n'est pas une garde faible,
+      // c'est une garde ABSENTE qui a la forme d'une garde.* Symétriquement `< 0` est
+      // impossible. Ni l'un ni l'autre ne peut faire rougir quoi que ce soit.
+      if (m[3] === '0' && (operateur === '>=' || operateur === '<')) {
+        site.motif = `comparaison dégénérée \`${operateur} 0\` — une longueur est toujours ≥ 0 : ce test ne discrimine rien`;
+        gardes.push(site);
+        griefs.push(site);
+        return;
+      }
+      gardes.push(site);
+      const prec = instructionPrecedente(source, debutLigne + l.indexOf('if ('));
+      site.prec = prec ?? '(début de fichier)';
+      let expr: string | null = null;
+      for (const mot of ['const ', 'let ']) {
+        const tete = `${mot}${base} = `;
+        if (prec && prec.startsWith(tete)) {
+          expr = prec.slice(tete.length);
+          break;
+        }
+      }
+      if (expr === null) {
+        site.motif = `la valeur \`${base}\` n’est pas calculée juste avant son test`;
+        griefs.push(site);
+        return;
+      }
+      if (!provenanceRecevable(expr)) {
+        site.motif = `provenance refusée — \`${expr.slice(0, 60)}\` n’est pas un appel qui termine l’expression`;
+        griefs.push(site);
+      }
+    });
+  }
+  return { gardes, affichages, griefs };
+}
+
 
 const TRACE = readFileSync('scripts/gates/gov-trace.ts', 'utf8');
 const TACHES = readFileSync('scripts/gates/gov-tasks.ts', 'utf8');
@@ -272,36 +387,61 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
       // > **Une garde écrite pour une famille ne couvre que le membre où on l'a posée.** Ce
       // > témoin s'appelle « les DEUX générateurs frères À LA MÊME STRUCTURE » et il ne vérifiait
       // > pas la même structure : *le nom d'un témoin n'est pas son périmètre.*
-      // ➡️ L'ADJACENCE elle-même est jugée par `adjacenceDesTestsDeFautes`, pour les TROIS
-      // frères et leurs HUIT tests, dans le `it` suivant : elle n'a pas sa place ici, où la
-      // boucle ne voit que deux fichiers et un seul de leurs deux chemins.
+      // ➡️ L’ADJACENCE elle-même est jugée par `recenserLesGardesDeFautes`, qui DÉRIVE du
+      // disque les 31 gardes de `scripts/` — elle n’a pas sa place ici, où la boucle ne voit
+      // que deux fichiers et un seul de leurs deux chemins.
     }
   });
 
-  it('REQ-GOV-032 — les HUIT tests de `fautes.length` des TROIS frères suivent leur calcul', () => {
-    // 🔑 UNE SEULE RÈGLE, POUR TOUTE LA FAMILLE, À UN SEUL ENDROIT. La version d'avant vivait en
-    // deux exemplaires à deux régimes (une expression régulière ici, une autre pour `gov-trace.ts`
-    // plus haut) sans facteur commun ni garde d'omission — grief de la lentille `schema` :
-    // *une règle recopiée est une règle qu'on oubliera d'étendre*, et elle l'avait déjà été.
-    //
-    // ⚠️ LE COMPTE EST UN TÉMOIN POSITIF, ET IL NOMME CE QU'IL DOIT VOIR. Sans lui, un témoin qui
-    // ne trouve AUCUN site rendrait « zéro grief » — c'est-à-dire vert, pour n'avoir rien mesuré.
-    // Les nombres sont dérivés du disque puis figés ici : un site RETIRÉ rougit autant qu'un site
-    // AJOUTÉ sans la discipline. Un seuil (`>= 1`) ne dirait ni l'un ni l'autre.
-    for (const [nom, source, attendus] of [
-      ['gov-tasks.ts', TACHES, 2],
-      ['gov-requirements.ts', EXIGENCES, 2],
-      ['gov-trace.ts', TRACE, 4],
-    ] as const) {
-      const { sites, griefs } = adjacenceDesTestsDeFautes(source);
-      expect(
-        sites,
-        `${nom} : ${sites} test(s) de \`fautes.length\` trouvé(s), ${attendus} attendu(s) — ` +
-          'un site ajouté ou retiré change ce que ce témoin couvre, et doit être arbitré ici'
-      ).toBe(attendus);
-      expect(griefs, `${nom} : ${griefs.join(' | ')}`).toEqual([]);
-    }
+
+  /**
+   * ⚠️ CES QUATRE-LÀ SONT DE VRAIES NON-ADJACENCES, ET JE NE LES « EXEMPTE » PAS.
+   *
+   * Dans ces quatre gates, la valeur est calculée puis d'autres instructions s'intercalent avant
+   * son test. C'est exactement la faiblesse que ce témoin dénonce — elles sont donc des DETTES,
+   * pas des cas particuliers, et le motif le dit. *Un motif d'exemption qui prétendrait que
+   * « c'est légitime » serait faux : la vérité est qu'on ne les a pas corrigées.*
+   *
+   * La liste est un CLIQUET dans les DEUX sens : un cinquième site non adjacent rougit, et une
+   * dette RÉPARÉE rougit aussi (déclaration morte) — sans quoi la liste survivrait à son objet.
+   */
+  const DETTES_DE_NON_ADJACENCE = [
+    'scripts/gates/gov-hypotheses.ts',
+    'scripts/gates/gov-lecons.ts',
+    'scripts/gates/gov-pr.ts',
+    'scripts/gates/lexique-apporteurs.ts',
+  ] as const;
+
+  it('REQ-GOV-032 — TOUTES les gardes `fautes.length` de `scripts/` testent une valeur calculée juste avant', () => {
+    const { gardes, affichages, griefs } = recenserLesGardesDeFautes('scripts');
+
+    // 🔑 TÉMOIN POSITIF, ET IL NOMME CE QU'IL DOIT VOIR. Sans lui, une détection cassée rendrait
+    // « zéro grief » — c'est-à-dire VERT pour n'avoir rien mesuré. Les nombres sont dérivés du
+    // disque puis figés ici : un site AJOUTÉ rougit autant qu'un site RETIRÉ. Un seuil ne dirait
+    // ni l'un ni l'autre. La version d'avant figeait 2/2/4 sur TROIS fichiers tapés à la main :
+    // elle ne pouvait pas voir l'omission d'un FICHIER, et son compte était calibré sur la
+    // cécité de sa propre détection (grief de `schema`, 19e tour).
+    expect(
+      gardes.length,
+      `${gardes.length} garde(s) \`fautes.length\` dans scripts/, 31 attendue(s) — un site ajouté ` +
+        'ou retiré change ce que ce témoin couvre, et doit être arbitré ici'
+    ).toBe(31);
+    expect(
+      affichages.length,
+      `${affichages.length} ligne(s) d’affichage « … et N autre(s) » (\`> 25\`), 5 attendue(s)`
+    ).toBe(5);
+
+    // Les griefs doivent être EXACTEMENT les dettes déclarées : ni plus, ni moins.
+    const fichiersEnGrief = [...new Set(griefs.map((g) => g.fichier))].sort();
+    expect(
+      fichiersEnGrief,
+      `griefs :\n${griefs.map((g) => `   ${g.fichier}:${g.ligne} [${g.valeur}] — ${g.motif}\n      précédente : ${g.prec}`).join('\n')}`
+    ).toEqual([...DETTES_DE_NON_ADJACENCE].sort());
+    expect(griefs.length, 'une dette déclarée porte plus d’un site non adjacent').toBe(
+      DETTES_DE_NON_ADJACENCE.length
+    );
   });
+
 
 });
 
@@ -558,12 +698,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // corrigé la LECTURE des fichiers et laissé leur ÉNUMÉRATION dans l'index.* Et le dépôt le
     // disait déjà, dans le fichier même que la mutation neutralisait : « Seuls les fichiers
     // SUIVIS par git sont lus. »
-    const enumerer = (dossier: string): string[] =>
-      readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
-        const chemin = `${dossier}/${e.name}`;
-        if (e.isDirectory()) return e.name === 'node_modules' ? [] : enumerer(chemin);
-        return /\.(ts|mjs|js)$/.test(e.name) ? [chemin] : [];
-      });
+    const enumerer = enumererFichiers;
     const suivis = enumerer('scripts');
 
     const ajoutesParFichier = new Map<string, number>();
