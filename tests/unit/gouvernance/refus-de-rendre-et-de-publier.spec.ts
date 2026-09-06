@@ -205,6 +205,23 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
       expect(iControle, `${nom} : le contrôle vient APRÈS l'écriture — il ne garde rien`).toBeLessThan(
         iEcriture
       );
+
+      // 🔴 ET L'ADJACENCE, QUE CES DEUX-LÀ N'AVAIENT JAMAIS REÇUE. Motif BLOQUANT de la lentille
+      // `mutation` au tour de clôture : l'assertion qui ferme cette famille existait pour
+      // `gov-trace.ts` depuis le 13e tour, et **les deux frères ne l'ont jamais eue**. Le mutant
+      // `fautes.splice(0);` glissé entre la valeur et son test survivait donc ici — 577/577 verts,
+      // `tsc` 0, `--prove` 0 — et sur une faute RÉELLE : le sain sort en 1 sans rien écrire, le
+      // muté sort en **0** en RÉÉCRIVANT `docs/TASKS.md` / `docs/REQUIREMENTS.md`.
+      //
+      // > **Une garde écrite pour une famille ne couvre que le membre où on l'a posée.** Ce
+      // > témoin s'appelle « les DEUX générateurs frères À LA MÊME STRUCTURE » et il ne vérifiait
+      // > pas la même structure : *le nom d'un témoin n'est pas son périmètre.*
+      const ADJACENTE = /const fautes = controler\([^)]*\);\s*if \(fautes\.length > 0\) \{/;
+      expect(
+        ADJACENTE.test(source),
+        `${nom} : une instruction s’intercale entre \`controler(…)\` et son test — la valeur peut ` +
+          'être vidée sans que la condition change'
+      ).toBe(true);
     }
   });
 });
