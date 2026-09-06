@@ -23,7 +23,7 @@
  * et le bloc `if (process.argv[1]?.endsWith(…))` de `corps-de-pr.ts` n'est lancé par aucun test.
  * Cette dette-là est écrite, elle n'est pas refermée ici.
  */
-import { describe, it, expect } from 'vitest';
+import { afterAll, describe, it, expect } from 'vitest';
 import {
   readFileSync,
   existsSync,
@@ -235,9 +235,13 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
       // > témoin s'appelle « les DEUX générateurs frères À LA MÊME STRUCTURE » et il ne vérifiait
       // > pas la même structure : *le nom d'un témoin n'est pas son périmètre.*
       // ➡️ L’adjacence n’est plus jugée par du TEXTE : quatre tours l’ont montrée contournable
-      // TÉMOINS D’EFFET en fin de fichier — pour les DEUX modes : le verdict ET le rendu.
-      // ⚠️ Ma première version n’exerçait que le verdict, et `schema` comme `exactitude` ont
-      // mesuré que le mutant du bloc `--render` redevenait VIVANT : rouge au parent, vert ici.
+      // (la ligne, puis le point-virgule que JavaScript insère seul, puis le ternaire). Elle est
+      // remplacée par les TÉMOINS D’EFFET en fin de fichier, pour les DEUX modes — le verdict ET
+      // le rendu. ⚠️ Ma première version n’exerçait que le verdict : `schema` et `exactitude` ont
+      // mesuré que le mutant du bloc `--render` y redevenait VIVANT. **Il est mort depuis** —
+      // l’état « rouge au parent, vert ici » a été périmé par le commit qui le corrigeait, et
+      // cette phrase-ci l’a été à son tour. *Une prose qui décrit un état se périme avec lui ;
+      // seule celle qui décrit une RÈGLE survit à sa correction.*
     }
   });
 
@@ -757,26 +761,77 @@ describe('REQ-CPL-018 — `--corps-publie` : le verdict SORT, il ne se contente 
  * relatif qui ne résout plus : le rouge serait obtenu pour la mauvaise raison, et c'est
  * exactement le défaut que ce fichier a déjà commis deux fois.
  *
- * ⚠️ Ce que ces témoins NE couvrent PAS, écrit ici plutôt que promis ailleurs : `gov:pr` — la
- * surface qui AUTORISE, et celle dont la neutralisation laisse passer une PR SANS AUCUNE REVUE.
- * 🔴 **Ma première rédaction de cette déclaration était fausse deux fois**, mesuré par
- * `exactitude` au 21e tour : `.github/workflows/` n'est PAS une entrée de `gov:pr` (il n'y a qu'un
- * test de préfixe sur les noms de fichiers modifiés, `gov-pr.ts:91`), et `.claude/agents/`, qui en
- * est une vraie hors `docs/` (`readdirSync`, `gov-pr.ts:650`), était omis.
- * **Et l'obstacle que j'avais nommé n'était pas le bon** : ce n'est pas un inventaire de fichiers.
- * Sous `--pr`, `gov-pr.ts:667`, `:681` et `:744` appellent `gh` et `git` — **un dépôt jetable de
- * fichiers ne la fait pas tourner**. Son témoin d'effet demande de simuler la forge, pas de copier
- * des fichiers. C'est plus cher que je ne l'avais écrit, et c'est la première tâche du lot suivant.
+ * ⚠️ CE QUE CES TÉMOINS NE COUVRENT PAS — mesuré, et non plus supposé.
+ *
+ * 🔴 Ma première rédaction de cette déclaration était **fausse deux fois**, et `exactitude` puis
+ * `schema` l'ont mesuré : `.github/workflows/` n'est PAS une entrée de `gov:pr` (simple test de
+ * préfixe, `gov-pr.ts:91`), `.claude/agents/` en est une et je l'omettais — **et l'obstacle que
+ * j'avais nommé n'était pas le bon.** J'avais aussi déclaré UNE lacune là où il y en avait DEUX.
+ * 🔑 *Déclarer une lacune ne dispense pas de mesurer ce qui la cause : une déclaration fausse est
+ * une dette qu'on ne saura pas payer, et une déclaration incomplète protège moins qu'elle ne
+ * rassure.*
+ *
+ * **`gov:pr`** — la surface qui AUTORISE, celle dont la neutralisation laisse passer une PR SANS
+ * AUCUNE REVUE. Cause réelle : sous `--pr`, `gov-pr.ts:667`, `:681` et `:744` appellent **`gh` et
+ * `git`**. Un dépôt jetable de fichiers ne la fait pas tourner ; son témoin demande de simuler la
+ * forge.
+ *
+ * **`gov:trace`** — tentée au 22e tour sur motif de `schema`, qui avait raison de dire que
+ * l'obstacle de `gov:pr` ne s'y applique pas (`--render` passe `avecPr=false`). Mesurée en trois
+ * passes, entrées ajoutées une par une :
+ * ```
+ * docs/{requirements,tasks}.json + vitest.config.ts   -> ENOENT scripts/lot/tasks.schema.json
+ * + scripts/lot/tasks.schema.json                     -> 96 ruptures (req_sans_test x31)
+ * + l'arbre tests/ entier (39 fichiers)               -> 27 ruptures (titres_non_resolus)
+ * ```
+ * **Elle doit RÉSOUDRE les titres des tests**, ce qui demande le lanceur dans le dépôt cible : à
+ * ce point, le « dépôt jetable » est un clone complet, et ce n'en est plus un.
+ * ⚠️ C'est le **contrôle positif** qui l'a dit — il a refusé un dépôt sain (`code 1`) et m'a évité
+ * de publier quatre témoins qui n'auraient rien mesuré. *Un contrôle positif ne sert pas à
+ * confirmer : il sert à refuser un montage qui ne peut rien établir.*
+ *
+ * **Les familles NON injectées** restent sans témoin d'effet. Elles sont NOMMÉES dans les titres
+ * des tests — pas comptées : `exactitude` a mesuré au 22e tour qu'aucun titre ne portait de
+ * nombre, alors que j'écrivais ici le contraire. L'assertion d'appartenance
+ * (`famillesDeclarees`) interdit d'en inventer une, mais elle ne dit rien de celles qui manquent.
  * *Déclarer une lacune ne dispense pas de mesurer ce qui la cause — une déclaration fausse est une
  * dette qu'on ne saura pas payer.*
  */
+/**
+ * ⚠️ LES DÉPÔTS JETABLES SONT TRACÉS ET NETTOYÉS, MÊME QUAND UN TÉMOIN ÉCHOUE.
+ * `securite` a mesuré au 22e tour **399 dossiers laissés, 222 Mo**, dont **11 portant encore
+ * `preuve.md` et sa coordonnée fabriquée** : le `rmSync` de la garde d’argent n’est pas dans un
+ * `finally`, donc il ne tournait **que quand la garde passait**.
+ * 🔑 *Un nettoyage qui ne s’exécute qu’en cas de SUCCÈS garde les traces précisément quand on
+ * voudrait qu’il les efface.* `afterAll` tourne dans les deux cas.
+ */
+const DEPOTS_JETABLES: string[] = [];
+afterAll(() => {
+  for (const d of DEPOTS_JETABLES) rmSync(d, { recursive: true, force: true });
+});
+
 function depotJetableAvec(fichiers: readonly string[]): string {
   const depot = mkdtempSync(join(tmpdir(), 'temoin-effet-'));
   for (const f of fichiers) {
     mkdirSync(join(depot, dirname(f)), { recursive: true });
     copyFileSync(f, join(depot, f));
   }
+  DEPOTS_JETABLES.push(depot);
   return depot;
+}
+
+/**
+ * Les familles que la gate DÉCLARE, lues dans SA source. Motif de `schema` et `exactitude` au
+ * 22e tour : j’avais écrit `famille: 'id'` — **une famille que la gate n’a pas**, tronquée de
+ * `id_double`. Et l’aiguille faisait DEUX caractères : `toContain('id')` est satisfait par
+ * « inval**id**e », « **id**entifiant », « must be string ».
+ * 🔑 *Un nom de famille inventé rend l’assertion « refuse pour la BONNE raison » presque vide.*
+ */
+function famillesDeclarees(script: string): string[] {
+  const src = readFileSync(script, 'utf8');
+  const m = src.match(/const FAMILLES = \[([\s\S]*?)\]/);
+  if (!m) throw new Error(`${script} : aucune liste \`FAMILLES\` — l’appartenance n’est pas vérifiable`);
+  return [...m[1]!.matchAll(/'([a-z_]+)'/g)].map((x) => x[1]!);
 }
 
 function lancerLaGate(script: string, cwd: string, args: string[] = []): { code: number; sortie: string } {
@@ -832,7 +887,6 @@ const GATES_A_TEMOIN_D_EFFET = [
     script: 'scripts/gates/gov-tasks.ts',
     fichiers: [
       'docs/tasks.json',
-      'docs/TASKS.md',
       'docs/DECISIONS.md',
       'scripts/lot/tasks.schema.json',
     ],
@@ -867,9 +921,7 @@ const GATES_A_TEMOIN_D_EFFET = [
     script: 'scripts/gates/gov-requirements.ts',
     fichiers: [
       'docs/requirements.json',
-      'docs/REQUIREMENTS.md',
       'docs/tasks.json',
-      'docs/DECISIONS.md',
       'scripts/lot/requirements.schema.json',
     ],
     // Un champ obligatoire retiré : le schéma doit le refuser.
@@ -886,7 +938,7 @@ const GATES_A_TEMOIN_D_EFFET = [
       },
       {
         // Famille DIFFÉRENTE : un identifiant dupliqué, que le schéma seul ne voit pas.
-        famille: 'id',
+        famille: 'id_double',
         appliquer: (depot: string) => {
           const p = join(depot, 'docs/requirements.json');
           const doc = JSON.parse(readFileSync(p, 'utf8')) as { exigences: { id: string }[] };
@@ -900,19 +952,19 @@ const GATES_A_TEMOIN_D_EFFET = [
 ] as const;
 
 describe('REQ-GOV-032 — TÉMOINS D’EFFET : une gate neutralisée ne peut pas rester verte', () => {
-  for (const { nom, script, fichiers, fautes } of GATES_A_TEMOIN_D_EFFET) {
+  for (const { nom, script, fichiers, fautes, vue } of GATES_A_TEMOIN_D_EFFET) {
     for (const { famille, appliquer } of fautes) {
       it(`REQ-GOV-032 — \`${nom}\` SORT en échec sur une faute RÉELLE de famille \`${famille}\`, et 0 sans elle`, () => {
         // CONTRÔLE POSITIF D'ABORD. Sans lui, une gate qui refuserait TOUT rendrait ce témoin vert
         // pour la mauvaise raison — un fichier d'entrée manquant, un chemin qui ne résout plus.
-        const sain = depotJetableAvec(fichiers);
+        const sain = depotJetableAvec([...fichiers, vue]);
         const avant = lancerLaGate(script, sain);
         expect(
           avant.code,
           `${nom} refuse un dépôt SAIN (code ${avant.code}) — le témoin ne mesurerait rien :\n${avant.sortie.slice(0, 600)}`
         ).toBe(0);
 
-        const casse = depotJetableAvec(fichiers);
+        const casse = depotJetableAvec([...fichiers, vue]);
         appliquer(casse);
         const apres = lancerLaGate(script, casse);
         expect(
@@ -920,6 +972,12 @@ describe('REQ-GOV-032 — TÉMOINS D’EFFET : une gate neutralisée ne peut pas
           `${nom} n’est PAS sortie en échec sur une faute \`${famille}\` — elle a imprimé :\n${apres.sortie.slice(0, 600)}`
         ).not.toBe(0);
         // Et pour LA bonne raison : un refus d'une AUTRE famille ne prouverait rien de celle-ci.
+        // 🔑 LA FAMILLE DOIT EXISTER DANS LA GATE. Sans ça, `toContain` porte sur un nom
+        // inventé : `'id'` faisait deux caractères et « inval**id**e » le satisfaisait.
+        expect(
+          famillesDeclarees(script),
+          `${nom} : la famille ${famille} du témoin n’existe pas dans les FAMILLES de la gate`
+        ).toContain(famille);
         expect(
           apres.sortie,
           `${nom} refuse, mais pas pour la famille \`${famille}\` injectée`
@@ -973,7 +1031,7 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
         // bouge PAS sur une source fautive **sans avoir jamais prouvé qu'elle bouge sur une source
         // saine** — une gate qui n'écrirait plus rien du tout aurait passé les deux assertions.
         // On vide la vue, on rend, elle doit être RÉÉCRITE.
-        const sain = depotJetableAvec(fichiers);
+        const sain = depotJetableAvec([...fichiers, vue]);
         const cheminSain = join(sain, vue);
         const TEMOIN_DE_VIDE = 'VIDÉE PAR LE TÉMOIN — le rendu doit la réécrire\n';
         writeFileSync(cheminSain, TEMOIN_DE_VIDE, 'utf8');
@@ -987,7 +1045,7 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
           `${nom} --render sort en 0 mais n’ÉCRIT PAS ${vue} — le témoin de non-écriture ne prouverait rien`
         ).not.toBe(TEMOIN_DE_VIDE);
 
-        const casse = depotJetableAvec(fichiers);
+        const casse = depotJetableAvec([...fichiers, vue]);
         appliquer(casse);
         const cheminVue = join(casse, vue);
         const vueAvant = readFileSync(cheminVue, 'utf8');
@@ -1006,6 +1064,39 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
           readFileSync(cheminVue, 'utf8'),
           `${nom} --render a RÉÉCRIT ${vue} depuis une source \`${famille}\` fautive`
         ).toBe(vueAvant);
+      }, 180_000);
+    }
+  }
+});
+
+
+/**
+ * 🔴 CHAQUE ENTRÉE DÉCLARÉE DOIT ÊTRE NÉCESSAIRE.
+ *
+ * Motif de `schema` au 22e tour : `docs/DECISIONS.md` figurait dans les entrées de
+ * `gov:requirements`, qui ne la lit **jamais** — mesuré, dépôt jetable avec les quatre autres
+ * fichiers seulement : « ✅ gov:requirements — 355 exigences », exit 0.
+ *
+ * > **Mon contrôle positif ne rougissait que sur une entrée MANQUANTE, jamais sur une entrée
+ * > SUPERFLUE.** Une liste d'entrées qui contient du mort déclare une couverture qui n'existe pas,
+ * > et rien ne le dit.
+ *
+ * Ce témoin retire les entrées **une par une** et exige qu'au moins un des deux modes tombe.
+ * ⚠️ Il porte sur l'UNION des modes : une entrée que seul `--render` lit paraîtrait superflue au
+ * mode normal, et la retirer serait une régression silencieuse.
+ */
+describe('REQ-GOV-032 — les entrées déclarées des témoins d’effet sont toutes NÉCESSAIRES', () => {
+  for (const { nom, script, fichiers, vue } of GATES_A_TEMOIN_D_EFFET) {
+    for (const absente of fichiers) {
+      it(`REQ-GOV-032 — \`${nom}\` a besoin de \`${absente}\``, () => {
+        const ampute = depotJetableAvec([...fichiers.filter((f) => f !== absente), vue]);
+        const normal = lancerLaGate(script, ampute);
+        const rendu = lancerLaGate(script, ampute, ['--render']);
+        expect(
+          normal.code !== 0 || rendu.code !== 0,
+          `${nom} : \`${absente}\` est déclarée en entrée et ne sert à RIEN — les DEUX modes ` +
+            `sortent en 0 sans elle (normal ${normal.code}, --render ${rendu.code})`
+        ).toBe(true);
       }, 180_000);
     }
   }
