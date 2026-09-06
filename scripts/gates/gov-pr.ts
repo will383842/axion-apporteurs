@@ -51,7 +51,8 @@ import {
   touche,
   toucheSchema,
   tachesDeLaPr,
-  tetesConcordent,
+  jugerLesTetes,
+  type MomentDeLaFusion,
   type RevueBrute,
 } from '../lot/revues';
 
@@ -660,9 +661,9 @@ function lireDepot(): Depot {
  * endpoints différents, c'est exactement la divergence que cette PR retire : une seule source,
  * un seul lecteur.
  */
-function prParGh(numero: string): Pr {
+function prParGh(numero: string, moment: MomentDeLaFusion = 'avant-fusion'): Pr {
   const meta = JSON.parse(
-    execFileSync('gh', ['pr', 'view', numero, '--json', 'title,body,labels,files,headRefOid'], {
+    execFileSync('gh', ['pr', 'view', numero, '--json', 'title,body,labels,files,headRefOid,mergeCommit,baseRefName'], {
       encoding: 'utf8',
       maxBuffer: 32e6,
     })
@@ -670,6 +671,10 @@ function prParGh(numero: string): Pr {
     title: string; body: string; headRefOid: string;
     labels: { name: string }[];
     files: { path: string }[];
+    /** Ne vaut quelque chose qu'une fois la PR fusionnée — d'où le type nullable, qui FORCE
+     *  l'appelant à dire ce qu'il fait de l'absence au lieu de la découvrir à l'exécution. */
+    mergeCommit: { oid: string } | null;
+    baseRefName: string;
   };
   const revues = JSON.parse(
     execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${numero}/reviews`, '--paginate'], {
@@ -695,14 +700,36 @@ function prParGh(numero: string): Pr {
   // satisfaire, et une gate insatisfiable se fait retirer dans la semaine. Avertissement de la
   // lentille `schema` au 10e tour, vérifié : `pnpm gov:pr` sans argument rend 0 et n'imprime
   // aucun message de tête.
-  const teteLocaleGate = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' });
-  if (!tetesConcordent(teteLocaleGate, meta.headRefOid ?? '')) {
-    console.error(
-    `❌ gov:pr — la forge rapporte la tête ${(meta.headRefOid ?? '(aucune)').slice(0, 7)} alors ` +
-      `que l'arbre local est sur ${teteLocaleGate.trim().slice(0, 7)}. Les verdicts de revue seraient ` +
-      `jugés PÉRIMÉS ou COURANTS par rapport à un diff qui n'est pas celui qu'on fusionnera.`
-    );
-    console.error('   Si tu viens de pousser, la forge est en retard : relance. Sinon, pousse d\'abord.');
+  // ⚠️ CE QU'ON COMPARE N'EST PAS LE MÊME OBJET SELON LE MOMENT — motif BLOQUANT de la lentille
+  // `schema` au 11e tour, atteint indépendamment par `securite`. La confrontation vivait ici, dans
+  // `prParGh()`, donc elle s'appliquait AUSSI à `--apres-fusion` : après un `--squash
+  // --delete-branch`, `headRefOid` et la base diffèrent par construction POUR TOUJOURS, et la
+  // branche n'existe plus ni en local ni sur la forge. Le pas 8 était devenu INSATISFIABLE, et son
+  // message prescrivait « pousse d'abord » sur une branche supprimée aux deux bouts.
+  //
+  // Le remède n'est PAS de ne rien contrôler après fusion : le pas 8 atteste un ATTERRISSAGE, donc
+  // on compare la base (`origin/<base>`) au `mergeCommit` que la forge rapporte. La propriété
+  // devient vraie, vérifiable et satisfiable au lieu d'être supprimée.
+  //
+  // Et la décision ENTIÈRE — comparaison, message, sens de défaillance — vit dans
+  // `jugerLesTetes()`, au module PARTAGÉ : ne partager que le prédicat laissait diverger tout le
+  // reste, et c'est précisément ce qui a divergé.
+  const [teteLocaleGate, teteAttendue] =
+    moment === 'apres-fusion'
+      ? [
+          execFileSync('git', ['rev-parse', `origin/${meta.baseRefName ?? 'main'}`], {
+            encoding: 'utf8',
+          }),
+          meta.mergeCommit?.oid ?? '',
+        ]
+      : [
+          execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }),
+          meta.headRefOid ?? '',
+        ];
+
+  const verdictTete = jugerLesTetes(teteLocaleGate, teteAttendue, moment);
+  if (!verdictTete.concordent) {
+    for (const ligne of verdictTete.message) console.error(ligne.replace('❌ ', '❌ gov:pr — '));
     process.exit(1);
   }
 
@@ -1254,7 +1281,7 @@ if (iPr >= 0 || iApres >= 0) {
     process.exit(1);
   }
   try {
-    pr = prParGh(numero);
+    pr = prParGh(numero, iApres >= 0 ? 'apres-fusion' : 'avant-fusion');
   } catch (e) {
     console.error(`❌ gov:pr — \`gh pr view ${numero}\` a échoué : ${(e as Error).message}`);
     console.error('   Les familles de revue ne peuvent pas être contrôlées ; la garde refuse plutôt que de passer.');

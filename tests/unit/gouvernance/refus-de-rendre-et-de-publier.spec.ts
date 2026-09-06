@@ -24,7 +24,7 @@
  * Cette dette-là est écrite, elle n'est pas refermée ici.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -48,10 +48,32 @@ function blocApres(source: string, ancre: string): string {
   throw new Error(`bloc non refermé après : ${ancre}`);
 }
 
+/**
+ * UN REFUS QUI N'A PAS DE `process.exit(1)` IMPRIME PUIS CONTINUE.
+ *
+ * 🔴 LA LEÇON DU 11e TOUR, de la lentille `mutation`, et elle porte au-delà de ce fichier :
+ * **une garde qui vérifie qu'un refus est ÉCRIT ne vérifie pas qu'il SORT.** Elle a posé le même
+ * mutant — « retire le `process.exit(1)`, garde tout le reste » — sur les QUATRE refus que cette
+ * PR introduit. Il mourait sur UN seul : celui pour lequel un témoin avait été écrit à la main.
+ * Les trois autres survivaient, suite verte et `tsc` à 0 — dont celui de la surface qui AUTORISE.
+ *
+ * D'où cette aide : le témoin cesse d'être écrit refus par refus, il est APPLIQUÉ à une liste.
+ * ⚠️ Sa limite, écrite plutôt que taue : ajouter un refus SANS l'inscrire dans la liste reste
+ * possible, et rien ne le dirait.
+ */
+function exigerQueLeRefusSORTE(nom: string, source: string, ancre: string): void {
+  const bloc = blocApres(source, ancre);
+  expect(bloc, `${nom} : le refus imprime mais ne SORT pas — le script continue`).toContain(
+    'process.exit(1)'
+  );
+  expect(bloc.includes('process.exit(0)'), `${nom} : le refus sort en SUCCÈS`).toBe(false);
+}
+
 const TRACE = readFileSync('scripts/gates/gov-trace.ts', 'utf8');
 const TACHES = readFileSync('scripts/gates/gov-tasks.ts', 'utf8');
 const EXIGENCES = readFileSync('scripts/gates/gov-requirements.ts', 'utf8');
 const COMPOSEUR = readFileSync('scripts/lot/corps-de-pr.ts', 'utf8');
+const GATE = readFileSync('scripts/gates/gov-pr.ts', 'utf8');
 
 describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sort en échec', () => {
   it('REQ-GOV-032 — `gov:trace --render` appelle `controler` AVANT `writeFileSync`', () => {
@@ -73,18 +95,65 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
     const bloc = blocApres(TRACE, "if (process.argv.includes('--render'))");
     expect(/if \(fautesAvantRendu\.length > 0\)/.test(bloc), 'la condition du refus a été altérée').toBe(true);
     expect(/if \((?:false|0|null|undefined)\b/.test(bloc), 'le refus est neutralisé par une constante').toBe(false);
+
+    // 🔴 ET LA VALEUR AUSSI, PAS SEULEMENT LA CONDITION — survivant S2 de la lentille
+    // `mutation` au 11e tour : `controler(univers).filter(() => false)` laisse la condition MOT
+    // POUR MOT intacte, donc les deux assertions ci-dessus passent toutes les deux. Mesuré par
+    // elle sur une faute réellement injectée : le sain refuse et n'écrit rien, le mutant écrit
+    // 26 686 octets à exit 0. **Neutraliser ce qu'une condition LIT vaut neutraliser la
+    // condition** — et c'est invisible à un témoin qui ne regarde que la condition.
+    expect(
+      bloc.includes('const fautesAvantRendu = controler(univers);'),
+      'les fautes ne viennent plus DIRECTEMENT de `controler` : la valeur a été filtrée ou remplacée'
+    ).toBe(true);
   });
 
-  it('REQ-GOV-032 — les DEUX générateurs frères portent le même refus', () => {
+  it('REQ-GOV-032 — les DEUX générateurs frères portent le même refus, À LA MÊME STRUCTURE', () => {
     // L'asymétrie entre `gov-requirements.ts` (qui refusait déjà) et `gov-trace.ts` (qui écrivait
     // sans contrôle) est ce qui a permis à la matrice de PROPAGER les fautes pendant des mois.
+    //
+    // 🔴 SA PREMIÈRE VERSION NE VÉRIFIAIT QU'UNE CHAÎNE PRÉSENTE (`toMatch(/Refus de rendre/)`) —
+    // c'est-à-dire exactement la faiblesse que le témoin de `tete-de-pr-concorde.spec.ts` déclare
+    // fermer, rouverte trois tests plus bas dans le fichier qui la dénonce. Relève de la lentille
+    // `schema` au 11e tour. Un message d'erreur qu'on déplace hors de son `if`, ou un
+    // `process.exit(1)` qu'on retire, laissent la chaîne intacte : elle ne prouve RIEN.
+    //
+    // Les frères sont donc tenus à la même structure que `gov-trace.ts` ci-dessus : le contrôle
+    // PRÉCÈDE l'écriture, et le refus SORT en échec.
     for (const [nom, source] of [
       ['gov-tasks.ts', TACHES],
       ['gov-requirements.ts', EXIGENCES],
     ] as const) {
-      expect(source, `${nom} : aucun refus de rendre`).toMatch(/Refus de rendre/);
+      const bloc = blocApres(source, 'if (fautes.length > 0)');
+      expect(bloc, `${nom} : le refus ne nomme pas ce qu'il refuse`).toMatch(/Refus de rendre/);
+      expect(bloc, `${nom} : le refus imprime mais ne sort pas en échec`).toContain('process.exit(1)');
+
+      const iControle = source.indexOf('const fautes = controler(');
+      const iEcriture = source.indexOf('writeFileSync(CHEMIN_VUE');
+      expect(iControle, `${nom} : aucun appel à controler`).toBeGreaterThanOrEqual(0);
+      expect(iEcriture, `${nom} : la vue n'est jamais écrite`).toBeGreaterThanOrEqual(0);
+      expect(iControle, `${nom} : le contrôle vient APRÈS l'écriture — il ne garde rien`).toBeLessThan(
+        iEcriture
+      );
     }
   });
+});
+
+describe('REQ-GOV-032 — TOUS les refus de cette PR SORTENT, pas seulement celui qu’on a testé', () => {
+  const REFUS = [
+    ['corps-de-pr.ts — `--pr` obligatoire', COMPOSEUR, 'if (prBrut === null'],
+    ['corps-de-pr.ts — concordance des têtes', COMPOSEUR, 'if (!verdictTete.concordent)'],
+    ['gov-pr.ts — concordance des têtes (LA SURFACE QUI AUTORISE)', GATE, 'if (!verdictTete.concordent)'],
+    ['gov-trace.ts — refus de rendre', TRACE, "if (fautesAvantRendu.length > 0)"],
+    ['gov-tasks.ts — refus de rendre', TACHES, 'if (fautes.length > 0)'],
+    ['gov-requirements.ts — refus de rendre', EXIGENCES, 'if (fautes.length > 0)'],
+  ] as const;
+
+  for (const [nom, source, ancre] of REFUS) {
+    it(`REQ-GOV-032 — TÉMOIN : le refus « ${nom} » SORT en échec`, () => {
+      exigerQueLeRefusSORTE(nom, source, ancre);
+    });
+  }
 });
 
 describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de le dire', () => {
@@ -92,11 +161,26 @@ describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de l
     // Le mutant de la lentille : retirer cette seule ligne laisse l'appel, les deux messages et
     // toutes les chaînes que le témoin de forme épingle — et le corps est rendu QUAND MÊME,
     // `DOD_REVUES` calculée contre une tête qui n'est pas celle de l'arbre.
-    const bloc = blocApres(COMPOSEUR, 'if (!tetesConcordent(teteLocale, tete))');
+    const bloc = blocApres(COMPOSEUR, 'if (!verdictTete.concordent)');
     expect(bloc, 'le refus imprime mais ne sort pas — le corps serait rendu quand même').toContain(
       'process.exit(1)'
     );
     expect(bloc.includes('process.exit(0)'), 'le refus sort en SUCCÈS').toBe(false);
+
+    // ⚠️ ET LES DEUX APPELANTS CONSOMMENT LA MÊME DÉCISION — pas seulement le même prédicat.
+    // La lentille `schema` au 11e tour : le module partagé ne portait que l'égalité d'une ligne,
+    // si bien que la lecture de la tête, le message et la sortie restaient dupliqués — et le
+    // défaut de la gate insatisfiable n'existait QUE D'UN CÔTÉ. C'est la preuve que ça mord.
+    for (const [nom, source] of [
+      ['corps-de-pr.ts', COMPOSEUR],
+      ['gov-pr.ts', GATE],
+    ] as const) {
+      expect(source, `${nom} : n'appelle pas la décision partagée`).toContain('jugerLesTetes(');
+      expect(
+        /tetesConcordent\s*\(/.test(source),
+        `${nom} : recompare sur place au lieu de consommer le verdict partagé`
+      ).toBe(false);
+    }
   });
 
   it('REQ-GOV-032 — TÉMOIN : `--pr` manquant fait ÉCHOUER le binaire, pour de vrai', () => {
@@ -114,6 +198,25 @@ describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de l
     // On passe donc TOUS les autres arguments — il ne reste qu'une raison de refuser — et on
     // asserte le MOTIF, pas un fragment que la ligne d'usage porte aussi.
     const sortieHorsDepot = join(tmpdir(), `corps-temoin-${process.pid}.md`);
+
+    // 🔴 LE JOURNAL EST UNE ENTRÉE CACHÉE, ET ELLE DÉCIDAIT DE LA COULEUR. Relève de la
+    // lentille `mutation` au 11e tour : la première version passait `docs/journal/2026-09.md`,
+    // un fichier du dépôt dont le `mtime` n'appartient à personne. Le binaire refuse aussi un
+    // journal ANTÉRIEUR au dernier commit — donc, selon l'âge du fichier sur la machine, le
+    // mutant tombait sur CE refus-là et non sur celui de `--pr`. **Le témoin rougissait, pour
+    // la mauvaise raison, et son verdict dépendait d'un `mtime`.**
+    //
+    // On écrit donc un journal FRAIS hors dépôt : sa date est postérieure à HEAD par
+    // construction, et le refus de `--pr` redevient LE SEUL qui reste. C'est la même règle que
+    // pour les arguments : *un témoin d'effet doit rendre la voie qu'il vise la seule ouverte* —
+    // y compris contre les entrées qu'il n'avait pas remarqué fournir.
+    const journalFrais = join(tmpdir(), `journal-temoin-${process.pid}.txt`);
+    writeFileSync(
+      journalFrais,
+      ` Test Files  31 passed (31)
+      Tests  553 passed (553)
+`
+    );
     let code = -1;
     let stderr = '';
     try {
@@ -127,7 +230,7 @@ describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de l
           '--sortie',
           sortieHorsDepot,
           '--tests',
-          'docs/journal/2026-09.md',
+          journalFrais,
         ],
         { encoding: 'utf8', stdio: 'pipe', shell: true }
       );

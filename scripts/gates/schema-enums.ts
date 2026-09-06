@@ -22,8 +22,10 @@
  *   — Aucune LISTE LITTÉRALE d'états occupants ailleurs dans le code : trois de ces sept noms sur
  *     une même ligne suffisent à faire rougir. L'index partiel proposé par les documents d'origine
  *     ne couvrait que deux états sur sept, et rien ne l'a dit pendant des semaines.
- *   — Toute colonne de VOCABULAIRE est un enum (REQ-DM-038 : « toute colonne dont le nom contient
- *     statut, type, motif, resultat, etat, origine, kind ou palier »). Une `String` y rougit.
+ *   — Toute colonne de VOCABULAIRE est un enum. ⚠️ La citation de `REQ-DM-038` — « statut, type,
+ *     motif, resultat, etat, origine, kind ou palier » — est le texte du REGISTRE, qui a perdu
+ *     `status` et `priorite` à la fusion. La liste EXÉCUTÉE (`NOMS_DE_VOCABULAIRE`) porte les dix
+ *     noms de l'arbitrage : voir l'avertissement posé sur elle. Une `String` y rougit.
  *   — Toute VALEUR d'enum figure au glossaire, et tout enum que le glossaire ÉNUMÈRE a exactement
  *     ces valeurs-là — dans les deux sens, sans quoi une valeur retirée du schéma passerait.
  *   — Aucun REPLI qui retombe sur la valeur brute (`LIBELLES[x] ?? x`) : il rend à l'écran un
@@ -61,7 +63,21 @@ const EXTENSIONS_CODE = /\.(ts|tsx|prisma|sql)$/;
  */
 const PORTEURS_LEGITIMES = [CHEMIN_ETATS, 'scripts/gates/schema-enums.ts'];
 
-/** Les noms de colonne qui portent un vocabulaire (REQ-DM-038, REQ-GOV-016). */
+/**
+ * Les noms de colonne qui portent un vocabulaire (REQ-DM-038, REQ-GOV-016).
+ *
+ * ⚠️ CETTE LISTE EST PLUS LONGUE QUE LE TEXTE EN VIGUEUR DE `REQ-DM-038`, ET C'EST VOULU.
+ * Le registre a perdu `status` et `priorite` — ainsi que la clause « une garde lit
+ * `schema.prisma` et rougit sur toute colonne `String` ainsi nommée » — en appliquant la fusion
+ * de `docs/REQUIREMENTS-ANNEXE-FUSIONS.md`, dont le texte DÉCIDÉ porte bien les dix noms.
+ * **C'est le CODE qui est conforme à l'arbitrage, et l'EXIGENCE qui a dérivé.**
+ *
+ * 🔴 NE RÉDUIS PAS CETTE LISTE POUR LA FAIRE COÏNCIDER AVEC LE REGISTRE. C'est le geste que
+ * la divergence PRESCRIT à qui la découvre — et il désarmerait la garde de deux noms. *Un
+ * registre faux ne se contente pas de ne rien protéger : il prescrit le désarmement.*
+ * Le sens de la correction est INVERSE : c'est `REQ-DM-038` qui doit retrouver son texte décidé.
+ * Mesuré le 2026-09-06 sur les 28 fusions de l'annexe — 111 clauses décidées, 14 appliquées.
+ */
 const NOMS_DE_VOCABULAIRE =
   /(statut|status|etat|type|motif|resultat|origine|kind|palier|priorite)/i;
 

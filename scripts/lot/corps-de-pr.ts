@@ -53,7 +53,7 @@ import { execFileSync } from 'node:child_process';
 
 import { CHAMPS } from '../../src/config/entite';
 import { lireRevues, tachesDeLaPr, tachesSchemaDeLaPr, toucheSchema, type RevueBrute,
-  tetesConcordent,
+  jugerLesTetes,
 } from './revues';
 
 /**
@@ -180,16 +180,9 @@ function caseRevues(
     // Le sens de défaillance est FERMÉ — on refuse de rendre plutôt que de rendre un
     // instantané en retard.
     const teteLocale = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-    if (!tetesConcordent(teteLocale, tete)) {
-      console.error(
-        `❌ pr:corps — la forge rapporte la tête ${tete.slice(0, 7)} alors que l'arbre local est ` +
-          `sur ${teteLocale.slice(0, 7)}. Les deux doivent coïncider : sinon les verdicts de revue ` +
-          `seraient jugés PÉRIMÉS ou COURANTS par rapport à un diff qui n'est pas celui qu'on publie.`
-      );
-      console.error(
-        `   Si tu viens de pousser, la forge est simplement en retard : relance dans quelques ` +
-          `secondes. Sinon, pousse d'abord — le corps décrit ce qui sera fusionné, pas ce qui est local.`
-      );
+    const verdictTete = jugerLesTetes(teteLocale, tete, 'avant-fusion');
+    if (!verdictTete.concordent) {
+      for (const ligne of verdictTete.message) console.error(ligne.replace('❌ ', '❌ pr:corps — '));
       process.exit(1);
     }
     auteurCompte = meta.user?.login ?? null;
@@ -209,7 +202,7 @@ function caseRevues(
       })
     ) as RevueBrute[];
   } catch {
-    return { marque: '[ ]', detail: 'revues illisibles (revues illisibles (forge injoignable, jeton absent, ou `git rev-parse` en echec — le sens reste ferme, seul le diagnostic est approximatif)) — la case reste vide' };
+    return { marque: '[ ]', detail: 'revues illisibles (forge injoignable, jeton absent, ou `git rev-parse` en echec — le sens reste ferme, seul le diagnostic est approximatif) — la case reste vide' };
   }
 
   const lecture = lireRevues({

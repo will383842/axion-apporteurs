@@ -7362,8 +7362,9 @@
           "tests/unit/gouvernance/vues-derivees.spec.ts"
         ],
         "REQ-GOV-032": [
-          "tests/unit/gouvernance/vues-derivees.spec.ts",
-          "tests/unit/gouvernance/tete-de-pr-concorde.spec.ts"
+          "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+          "tests/unit/gouvernance/tete-de-pr-concorde.spec.ts",
+          "tests/unit/gouvernance/vues-derivees.spec.ts"
         ],
         "REQ-GOV-010": [
           "tests/unit/gouvernance/revues-lecteur-unique.spec.ts"

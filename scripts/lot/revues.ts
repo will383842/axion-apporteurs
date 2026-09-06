@@ -335,6 +335,93 @@ export function toucheSchema(entree: {
 export type TacheDeLaPr = { id: string; pr?: number | null; schema?: boolean; sensible?: readonly string[] };
 
 /**
+ * Les deux têtes coïncident-elles ? La forge peut rapporter une tête PÉRIMÉE — mesuré le
+ * 2026-09-05, quelques secondes après un `git push` — et l'erreur va dans le sens PERMISSIF :
+ * des accords rendus sur la tête précédente sont alors comptés COURANTS.
+ *
+ * ⚠️ ELLE VIT ICI, dans le module PARTAGÉ, et non chez l'un des deux appelants. La première
+ * version la posait sur le composeur — qui DÉCRIT — et pas sur la garde — qui AUTORISE. Le veto
+ * de la lentille `securite` au 10e tour : c'est la garde qui décide d'une fusion, et c'est elle
+ * qui lisait la tête sans jamais la confronter. Même asymétrie entre deux frères que celle qu'on
+ * venait de fermer entre les deux `--render`, reproduite un cran plus haut le même jour.
+ */
+export function tetesConcordent(locale: string, forge: string): boolean {
+  return locale.trim().length > 0 && locale.trim() === forge.trim();
+}
+
+/** Ce que la confrontation compare, et qui n'est PAS le même objet selon le moment. */
+export type MomentDeLaFusion = 'avant-fusion' | 'apres-fusion';
+
+export interface VerdictDeTete {
+  readonly concordent: boolean;
+  /** Vide si les têtes concordent. Sinon le refus, prêt à imprimer, ligne par ligne. */
+  readonly message: readonly string[];
+}
+
+/**
+ * LA CONFRONTATION DES TÊTES — LA DÉCISION ENTIÈRE, POUR LES DEUX APPELANTS ET LES DEUX MOMENTS.
+ *
+ * 🔴 POURQUOI ELLE NE PEUT PAS SE RÉDUIRE À `tetesConcordent`, et c'est la lentille `schema` au
+ * 11e tour qui l'a démontré : le module partagé ne portait que l'ÉGALITÉ D'UNE LIGNE. La lecture
+ * de la tête, le choix de ce à quoi on la compare, le message et la sortie restaient DUPLIQUÉS
+ * chez les deux appelants. *La preuve que ça mord : le défaut ci-dessous n'existait que d'un
+ * côté.* Partager le prédicat et laisser la décision dupliquée, c'est partager ce qui ne diverge
+ * jamais et garder ce qui diverge.
+ *
+ * 🔴 LE DÉFAUT QU'ELLE FERME — une gate INSATISFIABLE, introduite par le correctif du 10e tour.
+ * La confrontation était câblée dans `prParGh()`, la fonction qui va chercher la PR : elle
+ * s'appliquait donc AUSSI à `--apres-fusion`. Or après un `gh pr merge --squash --delete-branch` :
+ *
+ *     headRefOid  = edc13b8a…   (la dernière tête de la branche, SUPPRIMÉE aux deux bouts)
+ *     mergeCommit = 794245c5…   (= origin/main)
+ *
+ * les deux diffèrent **par construction, pour toujours**, et A04 est sur `main`. Le pas 8 du
+ * protocole devenait impossible à satisfaire, et son message prescrivait « pousse d'abord » sur
+ * une branche qui n'existe plus. **Une gate insatisfiable se fait sauter** — ce dépôt l'a appris
+ * trois fois, et le commentaire qui portait cet avertissement énumérait lui-même les deux modes
+ * avant de ne raisonner que sur le premier.
+ *
+ * ⚠️ LE REMÈDE N'EST PAS DE NE RIEN CONTRÔLER APRÈS FUSION. Le pas 8 atteste un ATTERRISSAGE :
+ * on compare alors la base (`origin/<base>`) au `mergeCommit` que la forge rapporte. La propriété
+ * devient vraie, vérifiable et satisfiable, au lieu d'être supprimée. *Corriger le module sans
+ * corriger l'altitude aurait déplacé le défaut, pas fermé.*
+ */
+export function jugerLesTetes(
+  locale: string,
+  attendue: string,
+  moment: MomentDeLaFusion
+): VerdictDeTete {
+  if (tetesConcordent(locale, attendue)) return { concordent: true, message: [] };
+
+  const l = locale.trim().slice(0, 7) || '(aucune)';
+  const a = attendue.trim().slice(0, 7) || '(aucune)';
+
+  if (moment === 'avant-fusion') {
+    return {
+      concordent: false,
+      message: [
+        `❌ la forge rapporte la tête ${a} alors que l'arbre local est sur ${l}. Les verdicts de ` +
+          `revue seraient jugés PÉRIMÉS ou COURANTS par rapport à un diff qui n'est pas celui ` +
+          `qu'on fusionnera.`,
+        `   Si tu viens de pousser, la forge est simplement en retard : relance dans quelques ` +
+          `secondes. Sinon, pousse d'abord.`,
+      ],
+    };
+  }
+
+  return {
+    concordent: false,
+    message: [
+      `❌ la forge rapporte le commit de fusion ${a}, mais la base locale est sur ${l} : ` +
+        `l'atterrissage n'est pas attesté — le pas 8 porte sur ce qui a ATTERRI, pas sur ce qui a ` +
+        `été fusionné.`,
+      `   Lance \`git fetch origin\` : si l'écart persiste, la fusion n'a pas atteint la base, et ` +
+        `c'est exactement ce que ce pas existe pour dire.`,
+    ],
+  };
+}
+
+/**
  * L'ENSEMBLE DES TÂCHES D'UNE PR — UNE SEULE DÉRIVATION, POUR LES DEUX APPELANTS.
  *
  * 🔴 LE DÉFAUT, MESURÉ LE 2026-09-05 SUR LES DONNÉES RÉELLES DE LA PR 31. Le lecteur des revues
@@ -365,21 +452,6 @@ export type TacheDeLaPr = { id: string; pr?: number | null; schema?: boolean; se
  * construction. Le composeur, lui, passe `null` : il décrit ce que la PR DÉCLARE porter, et c'est
  * exactement ce que `LISTE_SUR_LA_PR` et `COUVRE` doivent dire.
  */
-/**
- * Les deux têtes coïncident-elles ? La forge peut rapporter une tête PÉRIMÉE — mesuré le
- * 2026-09-05, quelques secondes après un `git push` — et l'erreur va dans le sens PERMISSIF :
- * des accords rendus sur la tête précédente sont alors comptés COURANTS.
- *
- * ⚠️ ELLE VIT ICI, dans le module PARTAGÉ, et non chez l'un des deux appelants. La première
- * version la posait sur le composeur — qui DÉCRIT — et pas sur la garde — qui AUTORISE. Le veto
- * de la lentille `securite` au 10e tour : c'est la garde qui décide d'une fusion, et c'est elle
- * qui lisait la tête sans jamais la confronter. Même asymétrie entre deux frères que celle qu'on
- * venait de fermer entre les deux `--render`, reproduite un cran plus haut le même jour.
- */
-export function tetesConcordent(locale: string, forge: string): boolean {
-  return locale.trim().length > 0 && locale.trim() === forge.trim();
-}
-
 export function tachesDeLaPr<T extends TacheDeLaPr>(
   taches: readonly T[],
   pr: number | null,
