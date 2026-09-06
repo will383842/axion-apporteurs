@@ -77,6 +77,62 @@ function exigerQueLeRefusSORTE(nom: string, source: string, ancre: string): void
   expect(bloc.includes('process.exit(0)'), `${nom} : le refus sort en SUCCÈS`).toBe(false);
 }
 
+/**
+ * 🔴 CHAQUE test de `fautes.length` doit SUIVRE IMMÉDIATEMENT le calcul de la valeur qu'il teste.
+ *
+ * MOTIF BLOQUANT de la lentille `mutation` au 18e tour, et c'est la TROISIÈME fois que la même
+ * forme revient sous un habit neuf. L'assertion précédente était une expression régulière ancrée
+ * sur `if (fautes.length > 0)` — c'est-à-dire le seul chemin `--render`, celui qui AFFICHE. Or
+ * chaque frère teste la même valeur une SECONDE fois, en `=== 0`, et c'est là que se prend le
+ * **verdict de la gate** — le chemin que `pnpm gov:check` exécute. Mesuré par elle :
+ *
+ *     gov-tasks.ts:490        sain sur `GOV-000.deps = ["XXX-999"]` : exit 1, ❌ dep_inconnue
+ *                             muté : **exit 0, « ✅ gov:tasks — 209 tâches, 154.25 j »**
+ *     gov-requirements.ts:429 sain sur `delete exigences[0].statut` : exit 1, ❌ schema (3)
+ *                             muté : **exit 0, « ✅ gov:requirements — 355 exigences »**
+ *
+ * > **La garde était posée sur la surface qui AFFICHE, pas sur celle qui PRONONCE.** C'est mot
+ * > pour mot le veto de sécurité du 10e tour, puis le motif du 17e — et le témoin qui prétendait
+ * > fermer la famille en portait lui-même la forme.
+ *
+ * 🔑 DEUX SITES DE PLUS, TROUVÉS EN DÉRIVANT AU LIEU DE RECOPIER LE MOTIF. La lentille en nommait
+ * deux ; il y en a **huit**. `gov-trace.ts` en porte quatre (`fautesBase` :862, `fautesAvantRendu`
+ * :960, `fautes` :981 et :993), dont deux qu'aucune version de ce témoin n'avait jamais vus.
+ * *Un motif reçu se DÉRIVE, il ne se recopie pas : sa portée est celle de qui l'a écrit.*
+ *
+ * ⚠️ ET IL EST ANCRÉ PAR OCCURRENCE, pas sur le fichier — grief de `securite` ET de `schema` au
+ * même tour, tous deux mesurés : `ADJACENTE.test(source)` portait sur le fichier ENTIER, donc une
+ * seule paire adjacente n'importe où ailleurs (une fonction leurre, ou l'autre mode) le
+ * satisfaisait avec la garde vidée. Ici chaque test est jugé contre SA propre ligne précédente.
+ *
+ * La reconnaissance est volontairement ÉTROITE : seule `const|let <valeur> =` sur la ligne
+ * précédente est acceptée. Le jour où une affectation deviendra multi-ligne, ce témoin rougira —
+ * **c'est le bon sens de l'échec** : on étend la garde en connaissance de cause, on ne l'élargit
+ * pas d'avance « au cas où ». Vérifié que cette branche seule couvre les 8 sites : la variante
+ * permissive que j'avais d'abord écrite était MORTE, et une branche morte dans une garde n'est
+ * pas neutre — c'est une porte qu'on ne surveille plus.
+ */
+function adjacenceDesTestsDeFautes(source: string): { sites: number; griefs: string[] } {
+  const lignes = source.split(/\r?\n/);
+  const griefs: string[] = [];
+  let sites = 0;
+  for (let i = 0; i < lignes.length; i++) {
+    const m = lignes[i]!.match(/if \((\w*[Ff]autes\w*)\.length\s*(?:===|!==|>|<)\s*0\)/);
+    if (!m) continue;
+    sites++;
+    const valeur = m[1]!;
+    let j = i - 1;
+    while (j >= 0 && (lignes[j]!.trim() === '' || /^\s*(?:\/\/|\*|\/\*)/.test(lignes[j]!))) j--;
+    const precedente = (lignes[j] ?? '(début de fichier)').trim();
+    if (!new RegExp('^(?:const|let) ' + valeur + ' =').test(precedente)) {
+      griefs.push(
+        'ligne ' + (i + 1) + ' : « ' + precedente.slice(0, 70) + ' » s’intercale entre le calcul de `' + valeur + '` et son test'
+      );
+    }
+  }
+  return { sites, griefs };
+}
+
 const TRACE = readFileSync('scripts/gates/gov-trace.ts', 'utf8');
 const TACHES = readFileSync('scripts/gates/gov-tasks.ts', 'utf8');
 const EXIGENCES = readFileSync('scripts/gates/gov-requirements.ts', 'utf8');
@@ -216,14 +272,37 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
       // > **Une garde écrite pour une famille ne couvre que le membre où on l'a posée.** Ce
       // > témoin s'appelle « les DEUX générateurs frères À LA MÊME STRUCTURE » et il ne vérifiait
       // > pas la même structure : *le nom d'un témoin n'est pas son périmètre.*
-      const ADJACENTE = /const fautes = controler\([^)]*\);\s*if \(fautes\.length > 0\) \{/;
-      expect(
-        ADJACENTE.test(source),
-        `${nom} : une instruction s’intercale entre \`controler(…)\` et son test — la valeur peut ` +
-          'être vidée sans que la condition change'
-      ).toBe(true);
+      // ➡️ L'ADJACENCE elle-même est jugée par `adjacenceDesTestsDeFautes`, pour les TROIS
+      // frères et leurs HUIT tests, dans le `it` suivant : elle n'a pas sa place ici, où la
+      // boucle ne voit que deux fichiers et un seul de leurs deux chemins.
     }
   });
+
+  it('REQ-GOV-032 — les HUIT tests de `fautes.length` des TROIS frères suivent leur calcul', () => {
+    // 🔑 UNE SEULE RÈGLE, POUR TOUTE LA FAMILLE, À UN SEUL ENDROIT. La version d'avant vivait en
+    // deux exemplaires à deux régimes (une expression régulière ici, une autre pour `gov-trace.ts`
+    // plus haut) sans facteur commun ni garde d'omission — grief de la lentille `schema` :
+    // *une règle recopiée est une règle qu'on oubliera d'étendre*, et elle l'avait déjà été.
+    //
+    // ⚠️ LE COMPTE EST UN TÉMOIN POSITIF, ET IL NOMME CE QU'IL DOIT VOIR. Sans lui, un témoin qui
+    // ne trouve AUCUN site rendrait « zéro grief » — c'est-à-dire vert, pour n'avoir rien mesuré.
+    // Les nombres sont dérivés du disque puis figés ici : un site RETIRÉ rougit autant qu'un site
+    // AJOUTÉ sans la discipline. Un seuil (`>= 1`) ne dirait ni l'un ni l'autre.
+    for (const [nom, source, attendus] of [
+      ['gov-tasks.ts', TACHES, 2],
+      ['gov-requirements.ts', EXIGENCES, 2],
+      ['gov-trace.ts', TRACE, 4],
+    ] as const) {
+      const { sites, griefs } = adjacenceDesTestsDeFautes(source);
+      expect(
+        sites,
+        `${nom} : ${sites} test(s) de \`fautes.length\` trouvé(s), ${attendus} attendu(s) — ` +
+          'un site ajouté ou retiré change ce que ce témoin couvre, et doit être arbitré ici'
+      ).toBe(attendus);
+      expect(griefs, `${nom} : ${griefs.join(' | ')}`).toEqual([]);
+    }
+  });
+
 });
 
 describe('REQ-GOV-032 — TOUS les refus de cette PR SORTENT, pas seulement celui qu’on a testé', () => {
