@@ -28,6 +28,7 @@ import {
   readFileSync,
   existsSync,
   writeFileSync,
+  symlinkSync,
   copyFileSync,
   mkdtempSync,
   mkdirSync,
@@ -821,6 +822,39 @@ function depotJetableAvec(fichiers: readonly string[]): string {
 }
 
 /**
+ * 🔴 UN DÉPÔT JETABLE **COMPLET**, pour les gates dont les entrées sont le dépôt lui-même.
+ *
+ * Motif BLOQUANT de `mutation` au 22e tour : `gov-trace.ts:383`,
+ * `return process.argv.includes('--prove') ? fautes : [];` — **586/586 verts, `tsc` 0,
+ * `gov:trace` 0, `--prove` ✅ « les 10 familles rougissent », `--verifier` ✅** — et la vue est
+ * ÉCRITE depuis une source fautive à exit 0. Le refus qu'elle neutralise est **introduit par
+ * cette PR**, et `gov:trace` était le seul des trois générateurs gardé **par du TEXTE seul**.
+ *
+ * ⚠️ **ET J'AVAIS DÉCLARÉ CETTE LACUNE IRRÉDUCTIBLE — À TORT.** J'avais mesuré trois passes
+ * (ENOENT → 96 ruptures → 27 `titres_non_resolus`) et conclu qu'il faudrait « un clone complet,
+ * et ce n'en est plus un ». **C'est un clone complet, et il coûte 0 seconde pour 170 fichiers.**
+ * `git archive HEAD | tar -x` plus une jonction vers `node_modules` : la gate sort en 0.
+ * 🔑 *Ma déclaration était fausse une fois par excès de confiance, puis une fois par excès de
+ * prudence. Une lacune se mesure jusqu'au bout — s'arrêter à la troisième passe m'a fait déclarer
+ * irréductible ce qui tenait en dix lignes.*
+ *
+ * `titresResolus` (`gov-trace.ts:632`) lance `npx vitest list` : il lui faut les specs ET les
+ * sources qu'elles importent ET le lanceur. C'est pour ça que les copies partielles échouaient —
+ * elles ne rendaient pas la gate fautive, elles la rendaient AVEUGLE.
+ */
+function depotCompletJetable(): string {
+  const depot = mkdtempSync(join(tmpdir(), 'temoin-complet-'));
+  DEPOTS_JETABLES.push(depot);
+  const tar = execFileSync('git', ['archive', 'HEAD'], { maxBuffer: 512e6, encoding: 'buffer' });
+  const chemin = join(depot, 'depot.tar');
+  writeFileSync(chemin, tar);
+  execFileSync('tar', ['-x', '-f', 'depot.tar'], { cwd: depot });
+  rmSync(chemin, { force: true });
+  symlinkSync(resolve('node_modules'), join(depot, 'node_modules'), 'junction');
+  return depot;
+}
+
+/**
  * Les familles que la gate DÉCLARE, lues dans SA source. Motif de `schema` et `exactitude` au
  * 22e tour : j’avais écrit `famille: 'id'` — **une famille que la gate n’a pas**, tronquée de
  * `id_double`. Et l’aiguille faisait DEUX caractères : `toContain('id')` est satisfait par
@@ -883,6 +917,7 @@ function lancerLaGate(script: string, cwd: string, args: string[] = []): { code:
 const GATES_A_TEMOIN_D_EFFET = [
   {
     nom: 'gov:tasks',
+    depot: 'partiel' as const,
     vue: 'docs/TASKS.md',
     script: 'scripts/gates/gov-tasks.ts',
     fichiers: [
@@ -917,6 +952,7 @@ const GATES_A_TEMOIN_D_EFFET = [
   },
   {
     nom: 'gov:requirements',
+    depot: 'partiel' as const,
     vue: 'docs/REQUIREMENTS.md',
     script: 'scripts/gates/gov-requirements.ts',
     fichiers: [
@@ -949,22 +985,59 @@ const GATES_A_TEMOIN_D_EFFET = [
       },
     ],
   },
+  {
+    // 🔴 AJOUTÉE au 22e tour, sur motif BLOQUANT de `mutation`. Elle est la seule des trois
+    // générateurs qui était gardée par du TEXTE seul, et le refus que son mutant neutralise est
+    // INTRODUIT par cette PR. Ses entrées sont le dépôt lui-même : `titresResolus` lance
+    // `npx vitest list`, donc il lui faut les specs, leurs sources, et le lanceur.
+    nom: 'gov:trace',
+    script: 'scripts/gates/gov-trace.ts',
+    vue: 'docs/TRACABILITE.md',
+    depot: 'complet' as const,
+    fichiers: [] as readonly string[],
+    fautes: [
+      {
+        famille: 'tache_sans_req',
+        appliquer: (depot: string) => {
+          const p = join(depot, 'docs/tasks.json');
+          const doc = JSON.parse(readFileSync(p, 'utf8')) as { taches: { statut: string; reqs: string[] }[] };
+          const livree = doc.taches.find((t) => t.statut === 'fusionnee' && t.reqs.length > 0)!;
+          livree.reqs = [];
+          writeFileSync(p, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
+        },
+      },
+      {
+        // Famille DIFFÉRENTE : une tâche livrée promet un test qui n'existe pas.
+        famille: 'test_promis_absent',
+        appliquer: (depot: string) => {
+          const p = join(depot, 'docs/tasks.json');
+          const doc = JSON.parse(readFileSync(p, 'utf8')) as {
+            taches: { statut: string; reqs: string[]; tests?: Record<string, string[]> }[];
+          };
+          const livree = doc.taches.find((t) => t.statut === 'fusionnee' && t.tests && Object.keys(t.tests).length > 0)!;
+          const req = Object.keys(livree.tests!)[0]!;
+          livree.tests![req] = ['tests/unit/gouvernance/ce-fichier-n-existe-pas.spec.ts'];
+          writeFileSync(p, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
+        },
+      },
+    ],
+  },
 ] as const;
 
 describe('REQ-GOV-032 — TÉMOINS D’EFFET : une gate neutralisée ne peut pas rester verte', () => {
-  for (const { nom, script, fichiers, fautes, vue } of GATES_A_TEMOIN_D_EFFET) {
+  for (const { nom, script, fichiers, fautes, vue, depot } of GATES_A_TEMOIN_D_EFFET) {
     for (const { famille, appliquer } of fautes) {
       it(`REQ-GOV-032 — \`${nom}\` SORT en échec sur une faute RÉELLE de famille \`${famille}\`, et 0 sans elle`, () => {
         // CONTRÔLE POSITIF D'ABORD. Sans lui, une gate qui refuserait TOUT rendrait ce témoin vert
         // pour la mauvaise raison — un fichier d'entrée manquant, un chemin qui ne résout plus.
-        const sain = depotJetableAvec([...fichiers, vue]);
+        const sain = depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
         const avant = lancerLaGate(script, sain);
         expect(
           avant.code,
           `${nom} refuse un dépôt SAIN (code ${avant.code}) — le témoin ne mesurerait rien :\n${avant.sortie.slice(0, 600)}`
         ).toBe(0);
 
-        const casse = depotJetableAvec([...fichiers, vue]);
+        const casse = depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
         appliquer(casse);
         const apres = lancerLaGate(script, casse);
         expect(
@@ -1023,7 +1096,7 @@ describe('REQ-GOV-032 — TÉMOINS D’EFFET : une gate neutralisée ne peut pas
  * aucune assertion sur le code de sortie ne le verrait.
  */
 describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est PAS rendue depuis une source fautive', () => {
-  for (const { nom, script, fichiers, fautes, vue } of GATES_A_TEMOIN_D_EFFET) {
+  for (const { nom, script, fichiers, fautes, vue, depot } of GATES_A_TEMOIN_D_EFFET) {
     for (const { famille, appliquer } of fautes) {
       it(`REQ-GOV-032 — \`${nom} --render\` REFUSE et n’écrit PAS \`${vue}\` sur une faute \`${famille}\``, () => {
         // 🔑 CONTRÔLE POSITIF, ET IL DOIT PROUVER QUE LE RENDU **ÉCRIT**. Trouvé par moi avant
@@ -1031,7 +1104,7 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
         // bouge PAS sur une source fautive **sans avoir jamais prouvé qu'elle bouge sur une source
         // saine** — une gate qui n'écrirait plus rien du tout aurait passé les deux assertions.
         // On vide la vue, on rend, elle doit être RÉÉCRITE.
-        const sain = depotJetableAvec([...fichiers, vue]);
+        const sain = depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
         const cheminSain = join(sain, vue);
         const TEMOIN_DE_VIDE = 'VIDÉE PAR LE TÉMOIN — le rendu doit la réécrire\n';
         writeFileSync(cheminSain, TEMOIN_DE_VIDE, 'utf8');
@@ -1045,7 +1118,7 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
           `${nom} --render sort en 0 mais n’ÉCRIT PAS ${vue} — le témoin de non-écriture ne prouverait rien`
         ).not.toBe(TEMOIN_DE_VIDE);
 
-        const casse = depotJetableAvec([...fichiers, vue]);
+        const casse = depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
         appliquer(casse);
         const cheminVue = join(casse, vue);
         const vueAvant = readFileSync(cheminVue, 'utf8');
@@ -1086,7 +1159,8 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
  * mode normal, et la retirer serait une régression silencieuse.
  */
 describe('REQ-GOV-032 — les entrées déclarées des témoins d’effet sont toutes NÉCESSAIRES', () => {
-  for (const { nom, script, fichiers, vue } of GATES_A_TEMOIN_D_EFFET) {
+  for (const { nom, script, fichiers, vue, depot } of GATES_A_TEMOIN_D_EFFET) {
+    if (depot === 'complet') continue; // ses entrées sont le dépôt : rien à minimiser
     for (const absente of fichiers) {
       it(`REQ-GOV-032 — \`${nom}\` a besoin de \`${absente}\``, () => {
         const ampute = depotJetableAvec([...fichiers.filter((f) => f !== absente), vue]);
