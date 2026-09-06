@@ -968,13 +968,24 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
   for (const { nom, script, fichiers, fautes, vue } of GATES_A_TEMOIN_D_EFFET) {
     for (const { famille, appliquer } of fautes) {
       it(`REQ-GOV-032 — \`${nom} --render\` REFUSE et n’écrit PAS \`${vue}\` sur une faute \`${famille}\``, () => {
-        // CONTRÔLE POSITIF : sur une source saine, le rendu doit RÉUSSIR.
+        // 🔑 CONTRÔLE POSITIF, ET IL DOIT PROUVER QUE LE RENDU **ÉCRIT**. Trouvé par moi avant
+        // le tour : ma première version n'exigeait qu'un `exit 0`. J'assertais donc qu'une vue ne
+        // bouge PAS sur une source fautive **sans avoir jamais prouvé qu'elle bouge sur une source
+        // saine** — une gate qui n'écrirait plus rien du tout aurait passé les deux assertions.
+        // On vide la vue, on rend, elle doit être RÉÉCRITE.
         const sain = depotJetableAvec(fichiers);
+        const cheminSain = join(sain, vue);
+        const TEMOIN_DE_VIDE = 'VIDÉE PAR LE TÉMOIN — le rendu doit la réécrire\n';
+        writeFileSync(cheminSain, TEMOIN_DE_VIDE, 'utf8');
         const avant = lancerLaGate(script, sain, ['--render']);
         expect(
           avant.code,
           `${nom} --render refuse une source SAINE (code ${avant.code}) :\n${avant.sortie.slice(0, 600)}`
         ).toBe(0);
+        expect(
+          readFileSync(cheminSain, 'utf8'),
+          `${nom} --render sort en 0 mais n’ÉCRIT PAS ${vue} — le témoin de non-écriture ne prouverait rien`
+        ).not.toBe(TEMOIN_DE_VIDE);
 
         const casse = depotJetableAvec(fichiers);
         appliquer(casse);
