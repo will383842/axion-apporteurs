@@ -180,7 +180,11 @@ function caseRevues(
     // Le sens de défaillance est FERMÉ — on refuse de rendre plutôt que de rendre un
     // instantané en retard.
     const teteLocale = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-    const verdictTete = jugerLesTetes(teteLocale, tete, 'avant-fusion');
+    const verdictTete = jugerLesTetes({
+      moment: 'avant-fusion',
+      teteLocale,
+      teteForge: tete,
+    });
     if (!verdictTete.concordent) {
       for (const ligne of verdictTete.message) console.error(ligne.replace('❌ ', '❌ pr:corps — '));
       process.exit(1);

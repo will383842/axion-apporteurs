@@ -76,7 +76,14 @@ const PORTEURS_LEGITIMES = [CHEMIN_ETATS, 'scripts/gates/schema-enums.ts'];
  * la divergence PRESCRIT à qui la découvre — et il désarmerait la garde de deux noms. *Un
  * registre faux ne se contente pas de ne rien protéger : il prescrit le désarmement.*
  * Le sens de la correction est INVERSE : c'est `REQ-DM-038` qui doit retrouver son texte décidé.
- * Mesuré le 2026-09-06 sur les 28 fusions de l'annexe — 111 clauses décidées, 14 appliquées.
+ * ⚠️ AUCUN CHIFFRE ICI, ET C'EST VOULU. Une première rédaction gravait « 111 clauses décidées,
+ * 14 appliquées » dans ce commentaire. La lentille `exactitude` (12e tour) a re-mesuré et obtenu
+ * 114/15, dans une bande de 110-114 / 14-15 selon la normalisation choisie : **le compte dépend
+ * de la façon dont on découpe une clause**, et rien ici ne le dérive. Un nombre gravé dans un
+ * commentaire est un nombre que personne ne recalcule et que rien ne fait rougir — c'est la
+ * famille que cette PR passe sa journée à fermer. Ce qui est GARDÉ, et qui suffit ici, est
+ * ci-dessous : chaque nom décidé par l'annexe fait rougir la garde
+ * (`tests/unit/gouvernance/glossaire-enums.spec.ts`).
  */
 const NOMS_DE_VOCABULAIRE =
   /(statut|status|etat|type|motif|resultat|origine|kind|palier|priorite)/i;

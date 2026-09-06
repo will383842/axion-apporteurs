@@ -23,10 +23,34 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
-/** Une PR RÉELLEMENT fusionnée de ce dépôt, en `--squash --delete-branch`. Son `headRefOid` ne
- *  peut plus JAMAIS égaler une tête locale : c'est tout l'objet du témoin d'effet ci-dessous. */
-const PR_FUSIONNEE = 30;
-import { tetesConcordent } from '../../../scripts/lot/revues';
+/**
+ * UNE PR FUSIONNÉE DÉRIVÉE, ET SURTOUT PAS LA DERNIÈRE.
+ *
+ * 🔴 La version précédente écrivait `= 30`, et la lentille `schema` (12e tour) a mesuré que
+ * c'était **la seule PR pour laquelle le proxy tenait** : `origin/main` ÉTAIT son `mergeCommit`.
+ * Le témoin **expirait à la fusion de cette PR-ci**, et rien ne l'aurait dit — sur la sortie
+ * réelle de `--apres-fusion 29`, ses trois assertions restaient VERTES sur un refus. Il mesurait
+ * « les deux modes émettent des textes différents », pas « le pas 8 est satisfiable ».
+ *
+ * On dérive donc une PR fusionnée dont le `mergeCommit` est **ancêtre de `origin/main` SANS lui
+ * être égal** : c'est exactement le cas que l'égalité déclarait à tort non atterri, et il ne
+ * cesse jamais d'exister — chaque fusion en fabrique un de plus.
+ */
+function prFusionneeQuiNEstPasLaTete(): number {
+  const tete = execFileSync('git', ['rev-parse', 'origin/main'], { encoding: 'utf8' }).trim();
+  const brut = execFileSync(
+    'gh',
+    ['pr', 'list', '--state', 'merged', '--limit', '30', '--json', 'number,mergeCommit'],
+    { encoding: 'utf8', maxBuffer: 32e6 }
+  );
+  const prs = JSON.parse(brut) as { number: number; mergeCommit: { oid: string } | null }[];
+  const candidate = prs.find(
+    (p) => p.mergeCommit && p.mergeCommit.oid !== tete && estAncetreDe(p.mergeCommit.oid, 'origin/main')
+  );
+  if (!candidate) throw new Error('aucune PR fusionnée ANTÉRIEURE à la tête : le témoin ne mesurerait rien');
+  return candidate.number;
+}
+import { tetesConcordent, jugerLesTetes, estAncetreDe } from '../../../scripts/lot/revues';
 
 /** LES DEUX consommateurs, pas un seul : le composeur DÉCRIT, la garde AUTORISE. */
 const COMPOSEUR = readFileSync('scripts/lot/corps-de-pr.ts', 'utf8');
@@ -141,7 +165,7 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
     // ⚠️ LE COUPLE EST LE TÉMOIN, PAS L'UNE DES DEUX MOITIÉS. Une assertion d'ABSENCE seule ne
     // distingue pas « exempté après fusion » de « garde purement supprimée ». Le contre-témoin
     // ci-dessous lance LE MÊME binaire sur LA MÊME PR, et ne change QUE le drapeau.
-    const lancer = (drapeau: string) => {
+    const lancer = (drapeau: string, PR_FUSIONNEE: number) => {
       try {
         execFileSync('npx', ['tsx', 'scripts/gates/gov-pr.ts', drapeau, String(PR_FUSIONNEE)], {
           encoding: 'utf8',
@@ -155,8 +179,9 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
       }
     };
 
-    const apres = lancer('--apres-fusion');
-    const avant = lancer('--pr');
+    const PR_FUSIONNEE = prFusionneeQuiNEstPasLaTete();
+    const apres = lancer('--apres-fusion', PR_FUSIONNEE);
+    const avant = lancer('--pr', PR_FUSIONNEE);
 
     // TÉMOIN : après fusion, la tête de branche n'est plus l'étalon — le pas 8 est satisfiable.
     expect(apres, "`--apres-fusion` compare encore la tête de branche : le pas 8 est insatisfiable")
@@ -178,5 +203,77 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
     // Et chaque appelant se NOMME dans le refus, sans quoi on ne sait pas qui a refusé.
     expect(COMPOSEUR).toContain('pr:corps');
     expect(GARDE).toContain('gov:pr');
+  });
+});
+
+describe('REQ-GOV-032 — après fusion, la propriété est une ANCESTRALITÉ, pas une égalité', () => {
+  /**
+   * 🔴 CE QUI A FAIT ÉCRIRE CE BLOC. La lentille `schema` au 12e tour : la version précédente
+   * jugeait les DEUX moments par une égalité de chaînes. Avant fusion c'est juste. Après fusion,
+   * la propriété que le pas 8 atteste est « la fusion a ATTEINT la base » — une ancestralité, dont
+   * l'égalité n'est que le cas particulier où rien n'a été fusionné depuis. Mesuré :
+   *
+   *     PR #29, mergeCommit ab5caf5 : `git merge-base --is-ancestor ab5caf5 origin/main` -> 0
+   *     la même PR, par la gate     : « l'atterrissage n'est pas attesté »                -> 1
+   *
+   * **La PR #29 avait bel et bien atterri, et la gate disait le contraire.** J'avais rendu le
+   * pas 8 satisfiable pour la SEULE PR la plus récente, et faux pour toutes les autres à jamais :
+   * *la gate insatisfiable n'avait pas disparu, elle avait changé de famille.*
+   *
+   * 🔴 ET LA BRANCHE D'APRÈS-FUSION N'ÉTAIT EXÉCUTÉE PAR AUCUN TEST — même lentille, même tour :
+   * `jugerLesTetes` n'était importée par aucun spec, et le lancement réel passait toujours par la
+   * branche concordante. **Le refus n'avait jamais été vu rougir** (RM-02). C'est pour cela que
+   * la décision est PURE et que l'ancestralité lui est PASSÉE : les deux branches s'exercent ici
+   * sans lancer `git`.
+   */
+
+  it('REQ-GOV-032 — TÉMOIN : une base qui a AVANCÉ depuis la fusion CONCORDE quand même', () => {
+    // C'EST LE CAS QUI ÉTAIT FAUX. Les deux sha diffèrent — sous l'ancienne égalité, refus.
+    const v = jugerLesTetes({
+      moment: 'apres-fusion',
+      mergeCommit: 'ab5caf54150eaf4a731f5be1e2d23378b72b3f44',
+      base: 'origin/main',
+      estAncetre: true,
+    });
+    expect(v.concordent, 'une fusion atterrie est refusée dès que la base a avancé').toBe(true);
+    expect(v.message).toEqual([]);
+  });
+
+  it('REQ-GOV-032 — CONTRE-TÉMOIN : une fusion qui n’a PAS atteint la base refuse', () => {
+    // Sans lui, « concorde toujours » passerait le témoin ci-dessus.
+    const v = jugerLesTetes({
+      moment: 'apres-fusion',
+      mergeCommit: 'ab5caf54150eaf4a731f5be1e2d23378b72b3f44',
+      base: 'origin/main',
+      estAncetre: false,
+    });
+    expect(v.concordent).toBe(false);
+    expect(v.message.join('\n')).toContain("n'est pas dans");
+    // Le message ne doit PAS prescrire un geste impossible : la base peut avoir avancé.
+    expect(v.message.join(String.fromCharCode(10))).toContain("seulement qu'elle le CONTIENNE");
+  });
+
+  it('REQ-GOV-032 — le sens de défaillance est FERMÉ : aucune fusion rapportée ⇒ refus', () => {
+    const v = jugerLesTetes({ moment: 'apres-fusion', mergeCommit: '', base: 'origin/main', estAncetre: true });
+    expect(v.concordent, 'une PR sans commit de fusion est déclarée atterrie').toBe(false);
+    expect(v.message.join('\n')).toContain('AUCUN commit de fusion');
+  });
+
+  it('REQ-GOV-032 — la branche AVANT fusion reste une ÉGALITÉ, elle n’a pas été relâchée', () => {
+    const memes = 'a'.repeat(40);
+    expect(jugerLesTetes({ moment: 'avant-fusion', teteLocale: memes, teteForge: memes }).concordent).toBe(true);
+    const v = jugerLesTetes({ moment: 'avant-fusion', teteLocale: memes, teteForge: 'b'.repeat(40) });
+    expect(v.concordent, 'l’égalité d’avant-fusion a été remplacée par autre chose').toBe(false);
+    expect(v.message.join('\n')).toContain('la forge rapporte la tête');
+  });
+
+  it('REQ-GOV-032 — `estAncetreDe` échoue FERMÉ sur une entrée qui n’est pas un sha', () => {
+    // Une mesure qui rend `true` par erreur déclarerait un atterrissage qui n'a pas eu lieu.
+    expect(estAncetreDe('', 'origin/main')).toBe(false);
+    expect(estAncetreDe('pas-un-sha', 'origin/main')).toBe(false);
+    expect(estAncetreDe('f'.repeat(40), 'origin/main'), 'un sha inconnu est déclaré ancêtre').toBe(false);
+    // CONTRÔLE POSITIF : sans lui, une fonction qui rend TOUJOURS `false` passerait les trois.
+    const tete = execFileSync('git', ['rev-parse', 'origin/main'], { encoding: 'utf8' }).trim();
+    expect(estAncetreDe(tete, 'origin/main'), 'la mesure ne sait rendre que `false`').toBe(true);
   });
 });

@@ -52,7 +52,8 @@ import {
   toucheSchema,
   tachesDeLaPr,
   jugerLesTetes,
-  type MomentDeLaFusion,
+  estAncetreDe,
+  type DemandeDeConcordance,
   type RevueBrute,
 } from '../lot/revues';
 
@@ -661,7 +662,7 @@ function lireDepot(): Depot {
  * endpoints différents, c'est exactement la divergence que cette PR retire : une seule source,
  * un seul lecteur.
  */
-function prParGh(numero: string, moment: MomentDeLaFusion = 'avant-fusion'): Pr {
+function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant-fusion'): Pr {
   const meta = JSON.parse(
     execFileSync('gh', ['pr', 'view', numero, '--json', 'title,body,labels,files,headRefOid,mergeCommit,baseRefName'], {
       encoding: 'utf8',
@@ -714,20 +715,27 @@ function prParGh(numero: string, moment: MomentDeLaFusion = 'avant-fusion'): Pr 
   // Et la décision ENTIÈRE — comparaison, message, sens de défaillance — vit dans
   // `jugerLesTetes()`, au module PARTAGÉ : ne partager que le prédicat laissait diverger tout le
   // reste, et c'est précisément ce qui a divergé.
-  const [teteLocaleGate, teteAttendue] =
+  // ⚠️ CE QU'ON DEMANDE N'EST PAS LA MÊME PROPRIÉTÉ AUX DEUX MOMENTS — lentille `schema`,
+  // 12e tour. Avant fusion : une ÉGALITÉ (le diff approuvé est le diff fusionné). Après fusion :
+  // une ANCESTRALITÉ (la fusion a atteint la base). Juger le second par une égalité rendait le
+  // pas 8 satisfiable pour la SEULE PR la plus récente et faux pour toutes les autres, à jamais.
+  // La demande est une union discriminée : le mauvais appariement ne compile plus.
+  const base = meta.baseRefName ?? 'main';
+  const demande: DemandeDeConcordance =
     moment === 'apres-fusion'
-      ? [
-          execFileSync('git', ['rev-parse', `origin/${meta.baseRefName ?? 'main'}`], {
-            encoding: 'utf8',
-          }),
-          meta.mergeCommit?.oid ?? '',
-        ]
-      : [
-          execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }),
-          meta.headRefOid ?? '',
-        ];
+      ? {
+          moment: 'apres-fusion',
+          mergeCommit: meta.mergeCommit?.oid ?? '',
+          base: `origin/${base}`,
+          estAncetre: estAncetreDe(meta.mergeCommit?.oid ?? '', `origin/${base}`),
+        }
+      : {
+          moment: 'avant-fusion',
+          teteLocale: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }),
+          teteForge: meta.headRefOid ?? '',
+        };
 
-  const verdictTete = jugerLesTetes(teteLocaleGate, teteAttendue, moment);
+  const verdictTete = jugerLesTetes(demande);
   if (!verdictTete.concordent) {
     for (const ligne of verdictTete.message) console.error(ligne.replace('❌ ', '❌ gov:pr — '));
     process.exit(1);
@@ -740,6 +748,12 @@ function prParGh(numero: string, moment: MomentDeLaFusion = 'avant-fusion'): Pr 
     labels: (meta.labels ?? []).map((l) => l.name),
     fichiers: (meta.files ?? []).map((f) => f.path),
     revues,
+    // ⚠️ Après fusion la branche est SUPPRIMéE : `headRefOid` désigne un objet mort, et c'est
+    // pourtant lui dont dérivent `perimees`, `lentille_perimee` et la coche de DoD. La lentille
+    // `schema` (12e tour) : deux notions de « tête » dans un même run. On garde `headRefOid`
+    // parce que c'est bien la tête SUR LAQUELLE LES REVUES ONT ÉTÉ RENDUES — la bonne référence
+    // pour juger leur péremption — et on l'écrit ici pour que personne ne la confonde avec ce que
+    // le pas 8 confronte, qui est le `mergeCommit`.
     tete: meta.headRefOid ?? null,
   };
 }
@@ -1283,8 +1297,24 @@ if (iPr >= 0 || iApres >= 0) {
   try {
     pr = prParGh(numero, iApres >= 0 ? 'apres-fusion' : 'avant-fusion');
   } catch (e) {
-    console.error(`❌ gov:pr — \`gh pr view ${numero}\` a échoué : ${(e as Error).message}`);
-    console.error('   Les familles de revue ne peuvent pas être contrôlées ; la garde refuse plutôt que de passer.');
+    // ⚠️ CE `catch` COUVRE DEUX COMMANDES, ET LEURS REMÈDES N'ONT RIEN À VOIR. Relevé par la
+    // lentille `securite` aux 11e et 12e tours — et le 12e a raison de dire que je l'avais
+    // ÉLARGI : `prParGh()` lance maintenant `gh pr view` ET un `git rev-parse`. Attribuer un
+    // échec de `git` à `gh pr view` envoie le lecteur vérifier son jeton quand le remède est
+    // `git fetch origin`. *Le sens de défaillance reste fermé ; c'est le DIAGNOSTIC qui ment,
+    // et un diagnostic qui ment fait perdre le temps qu'une garde est censée faire gagner.*
+    const message = (e as Error).message;
+    const vientDeGit = /rev-parse|unknown revision|ambiguous argument|not a git repository/i.test(message);
+    console.error(
+      vientDeGit
+        ? `❌ gov:pr — une commande \`git\` a échoué : ${message}`
+        : `❌ gov:pr — \`gh pr view ${numero}\` a échoué : ${message}`
+    );
+    console.error(
+      vientDeGit
+        ? '   Remède probable : `git fetch origin` — la référence de base doit exister EN LOCAL.'
+        : '   Les familles de revue ne peuvent pas être contrôlées ; la garde refuse plutôt que de passer.'
+    );
     process.exit(1);
   }
   if (iApres >= 0 && pr) pr.apresFusion = true;

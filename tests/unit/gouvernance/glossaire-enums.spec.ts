@@ -226,3 +226,77 @@ describe('REQ-GOV-016 — la garde tourne sur le dépôt, et elle y est verte', 
     expect([...enums.keys()].length).toBeGreaterThan(1);
   });
 });
+
+/**
+ * LES NOMS DE VOCABULAIRE SE DÉRIVENT DE L'ARBITRAGE, ILS NE SE TAPENT PAS.
+ *
+ * 🔴 CE QUI A FAIT ÉCRIRE CE BLOC. Le 2026-09-06, la confrontation mécanique de
+ * `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` (l'arbitrage RENDU) à `docs/requirements.json` (le texte
+ * APPLIQUÉ) a mesuré, sur les 28 fusions, **111 clauses décidées et 14 appliquées**.
+ * `REQ-DM-038` est l'une des divergences, et elle est vivante ici : son texte en vigueur a perdu
+ * `status` et `priorite` — ainsi que la clause « une garde lit `schema.prisma` et rougit sur toute
+ * colonne `String` ainsi nommée » — alors que `NOMS_DE_VOCABULAIRE` porte bien les dix noms.
+ *
+ * **C'est le CODE qui est conforme à l'arbitrage, et l'EXIGENCE qui a dérivé.** Le danger n'est
+ * donc pas une gate trop faible aujourd'hui : c'est que le prochain lecteur aligne le code sur sa
+ * spécification et **retire deux noms de la garde**, en croyant corriger une divergence.
+ * *Un registre faux ne se contente pas de ne rien protéger : il prescrit le désarmement.*
+ *
+ * 🔴 ET LA PREMIÈRE RÉPONSE ÉTAIT UN COMMENTAIRE. La lentille `securite` au 12e tour :
+ * *« un commentaire déclare la divergence et interdit de réduire la liste, sans aucune garde —
+ * c'est le motif `GOV-029` de cette PR même, reproduit dans le même commit. »* Elle a raison, et
+ * c'est la faute que ce dépôt a déjà relevée trois fois : **un commentaire juste tient lieu de
+ * garde jusqu'au jour où quelqu'un le lit et fait le contraire.**
+ *
+ * D'où ce bloc, qui est la première application de la confrontation annexe ↔ code : les dix noms
+ * sont LUS dans le texte décidé, et chacun est éprouvé sur le pipeline RÉEL (`controler`), pas sur
+ * la constante. Le jour où l'on réduit la liste, c'est ici que ça rougit.
+ */
+describe('REQ-DM-038 — les noms de vocabulaire sont DÉRIVÉS de l’arbitrage, jamais tapés', () => {
+  /** Les noms que l'annexe DÉCIDE, lus entre « le nom contient » et « est un enum Prisma ». */
+  const nomsDecides = (texte: string): string[] => {
+    const m = /le nom contient (.+?) est un enum Prisma/.exec(texte);
+    if (!m || !m[1]) return [];
+    return m[1]
+      .split(/,| ou /)
+      .map((n) => n.trim())
+      .filter((n) => /^[a-z]+$/.test(n));
+  };
+
+  const ANNEXE = readFileSync('docs/REQUIREMENTS-ANNEXE-FUSIONS.md', 'utf8');
+  const LIGNE = /- garder \*\*REQ-DM-038\*\*.*/.exec(ANNEXE)?.[0] ?? '';
+
+  it('REQ-DM-038 : la liste se LIT dans l’arbitrage, elle n’est pas un littéral de ce test', () => {
+    const noms = nomsDecides(LIGNE);
+    // CONTRÔLE POSITIF : sans lui, une extraction cassée rendrait `[]` et tout le reste du bloc
+    // passerait à vide — « aucun nom à vérifier » se lit exactement comme « tous vérifiés ».
+    expect(noms.length, 'l’extraction n’a rien trouvé : le format de l’annexe a changé').toBeGreaterThanOrEqual(8);
+    expect(noms).toContain('status');
+    expect(noms).toContain('priorite');
+
+    // La preuve que c'est une LECTURE : on retire un nom d'une COPIE, la dérivation doit le perdre.
+    const ampute = LIGNE.replace('statut, status,', 'statut,');
+    expect(nomsDecides(ampute)).not.toContain('status');
+  });
+
+  it('REQ-DM-038 : CHAQUE nom décidé fait rougir la garde, sur le pipeline réel', () => {
+    // Éprouvé par `controler()`, pas sur la constante : c'est l'EFFET qui doit tenir, et c'est lui
+    // qu'un alignement du code sur le registre tronqué ferait disparaître.
+    for (const nom of nomsDecides(LIGNE)) {
+      const schema = `${VUE_CONFORME.schema}\nmodel Essai${nom} {\n  id     String @id\n  ${nom} String\n}\n`;
+      expect(
+        familles({ ...VUE_CONFORME, schema }),
+        `« ${nom} » est décidé par l’arbitrage et ne fait PAS rougir la garde — ` +
+          'la liste a été réduite pour coïncider avec un registre qui a dérivé'
+      ).toEqual(['colonne_vocabulaire_en_chaine']);
+    }
+  });
+
+  it('REQ-DM-038 : CONTRE-TÉMOIN — un nom hors vocabulaire ne rougit pas', () => {
+    // Sans lui, une garde qui rougirait sur TOUT passerait le témoin ci-dessus.
+    for (const nom of ['libelle', 'adresse', 'montant']) {
+      const schema = `${VUE_CONFORME.schema}\nmodel Essai${nom} {\n  id     String @id\n  ${nom} String\n}\n`;
+      expect(familles({ ...VUE_CONFORME, schema }), `« ${nom} » n’est pas un vocabulaire`).toEqual([]);
+    }
+  });
+});

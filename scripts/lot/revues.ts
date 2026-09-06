@@ -66,6 +66,7 @@
  * coût. L'arbitrage de le câbler ou non appartient à `A01` (§8 de la fiche du tiers).
  */
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 export const CHEMIN_AGENTS = 'docs/agents.json';
@@ -349,58 +350,59 @@ export function tetesConcordent(locale: string, forge: string): boolean {
   return locale.trim().length > 0 && locale.trim() === forge.trim();
 }
 
-/** Ce que la confrontation compare, et qui n'est PAS le même objet selon le moment. */
-export type MomentDeLaFusion = 'avant-fusion' | 'apres-fusion';
+/**
+ * CE QU'ON DEMANDE À LA CONFRONTATION, ET POURQUOI CE N'EST PAS LA MÊME QUESTION AUX DEUX MOMENTS.
+ *
+ * 🔴 LA FAUTE QUE CE TYPE FERME, mesurée par la lentille `schema` au 12e tour. La version
+ * précédente jugeait les DEUX moments par une **égalité de chaînes**. Avant fusion c'est juste :
+ * « le diff approuvé est le diff fusionné » EST une égalité. **Après fusion, la propriété que le
+ * pas 8 atteste est une ANCESTRALITÉ** — « la fusion a atteint la base » — et l'égalité n'en est
+ * qu'un cas particulier : celui où rien n'a été fusionné depuis. Mesuré :
+ *
+ *     PR #29, mergeCommit ab5caf5 :  git merge-base --is-ancestor ab5caf5 origin/main  ->  0
+ *     la meme PR, par la gate      :  « l'atterrissage n'est pas atteste »              ->  1
+ *
+ * **La PR #29 a bel et bien atterri, et la gate disait le contraire.** L'égalité n'est vraie que
+ * dans la fenêtre séparant une fusion de la suivante ; hors d'elle, fausse **pour toujours**.
+ * *J'avais corrigé la gate insatisfiable pour la PR la plus récente et l'avais laissée
+ * insatisfiable pour toutes les autres : elle n'avait pas disparu, elle avait changé de famille.*
+ *
+ * ⚠️ Et j'employais la BONNE relation au même moment, ailleurs : l'outil qui écrit
+ * `docs/lots/<lot>/resultat.json` vérifie l'atterrissage par `merge-base --is-ancestor`. *Se
+ * servir de la bonne relation dans un outil et de la mauvaise dans la garde, à une heure
+ * d'intervalle, c'est ce à quoi ressemble une faute de conception : jamais à de l'ignorance.*
+ *
+ * 🔴 POURQUOI C'EST UNE UNION DISCRIMINÉE et non deux paramètres. La lentille `schema`, même tour :
+ * avec `(locale, attendue, moment)`, l'appel `jugerLesTetes(HEAD, mergeCommit, 'avant-fusion')`
+ * reste **exprimable** — le mauvais appariement compile. Le dépôt s'est donné le standard inverse
+ * au 6e tour, sur `lireRevues` : *on ne teste pas ce qui ne se dit pas.* Les champs portent donc
+ * des noms différents par moment, et le mauvais appariement ne compile plus.
+ */
+export type DemandeDeConcordance =
+  | { moment: 'avant-fusion'; teteLocale: string; teteForge: string }
+  | { moment: 'apres-fusion'; mergeCommit: string; base: string; estAncetre: boolean };
 
 export interface VerdictDeTete {
   readonly concordent: boolean;
-  /** Vide si les têtes concordent. Sinon le refus, prêt à imprimer, ligne par ligne. */
+  /** Vide si la propriété tient. Sinon le refus, prêt à imprimer, ligne par ligne. */
   readonly message: readonly string[];
 }
 
 /**
- * LA CONFRONTATION DES TÊTES — LA DÉCISION ENTIÈRE, POUR LES DEUX APPELANTS ET LES DEUX MOMENTS.
- *
- * 🔴 POURQUOI ELLE NE PEUT PAS SE RÉDUIRE À `tetesConcordent`, et c'est la lentille `schema` au
- * 11e tour qui l'a démontré : le module partagé ne portait que l'ÉGALITÉ D'UNE LIGNE. La lecture
- * de la tête, le choix de ce à quoi on la compare, le message et la sortie restaient DUPLIQUÉS
- * chez les deux appelants. *La preuve que ça mord : le défaut ci-dessous n'existait que d'un
- * côté.* Partager le prédicat et laisser la décision dupliquée, c'est partager ce qui ne diverge
- * jamais et garder ce qui diverge.
- *
- * 🔴 LE DÉFAUT QU'ELLE FERME — une gate INSATISFIABLE, introduite par le correctif du 10e tour.
- * La confrontation était câblée dans `prParGh()`, la fonction qui va chercher la PR : elle
- * s'appliquait donc AUSSI à `--apres-fusion`. Or après un `gh pr merge --squash --delete-branch` :
- *
- *     headRefOid  = edc13b8a…   (la dernière tête de la branche, SUPPRIMÉE aux deux bouts)
- *     mergeCommit = 794245c5…   (= origin/main)
- *
- * les deux diffèrent **par construction, pour toujours**, et A04 est sur `main`. Le pas 8 du
- * protocole devenait impossible à satisfaire, et son message prescrivait « pousse d'abord » sur
- * une branche qui n'existe plus. **Une gate insatisfiable se fait sauter** — ce dépôt l'a appris
- * trois fois, et le commentaire qui portait cet avertissement énumérait lui-même les deux modes
- * avant de ne raisonner que sur le premier.
- *
- * ⚠️ LE REMÈDE N'EST PAS DE NE RIEN CONTRÔLER APRÈS FUSION. Le pas 8 atteste un ATTERRISSAGE :
- * on compare alors la base (`origin/<base>`) au `mergeCommit` que la forge rapporte. La propriété
- * devient vraie, vérifiable et satisfiable, au lieu d'être supprimée. *Corriger le module sans
- * corriger l'altitude aurait déplacé le défaut, pas fermé.*
+ * PURE, et exercée sur ses DEUX branches — la lentille `schema` avait mesuré que la branche
+ * d'après-fusion n'était exécutée par AUCUN test : `jugerLesTetes` n'était importée par aucun
+ * spec, et le lancement réel passait toujours par la branche concordante. **Le refus n'avait
+ * jamais été vu rougir** (RM-02).
  */
-export function jugerLesTetes(
-  locale: string,
-  attendue: string,
-  moment: MomentDeLaFusion
-): VerdictDeTete {
-  if (tetesConcordent(locale, attendue)) return { concordent: true, message: [] };
-
-  const l = locale.trim().slice(0, 7) || '(aucune)';
-  const a = attendue.trim().slice(0, 7) || '(aucune)';
-
-  if (moment === 'avant-fusion') {
+export function jugerLesTetes(d: DemandeDeConcordance): VerdictDeTete {
+  if (d.moment === 'avant-fusion') {
+    if (tetesConcordent(d.teteLocale, d.teteForge)) return { concordent: true, message: [] };
+    const l = d.teteLocale.trim().slice(0, 7) || '(aucune)';
+    const f = d.teteForge.trim().slice(0, 7) || '(aucune)';
     return {
       concordent: false,
       message: [
-        `❌ la forge rapporte la tête ${a} alors que l'arbre local est sur ${l}. Les verdicts de ` +
+        `❌ la forge rapporte la tête ${f} alors que l'arbre local est sur ${l}. Les verdicts de ` +
           `revue seraient jugés PÉRIMÉS ou COURANTS par rapport à un diff qui n'est pas celui ` +
           `qu'on fusionnera.`,
         `   Si tu viens de pousser, la forge est simplement en retard : relance dans quelques ` +
@@ -409,16 +411,39 @@ export function jugerLesTetes(
     };
   }
 
+  // Après fusion : ANCESTRALITÉ. Une `mergeCommit` absente refuse — le sens reste FERMÉ.
+  const sha = d.mergeCommit.trim();
+  if (sha.length > 0 && d.estAncetre) return { concordent: true, message: [] };
+
+  const s = sha.slice(0, 7) || '(aucun)';
   return {
     concordent: false,
     message: [
-      `❌ la forge rapporte le commit de fusion ${a}, mais la base locale est sur ${l} : ` +
-        `l'atterrissage n'est pas attesté — le pas 8 porte sur ce qui a ATTERRI, pas sur ce qui a ` +
-        `été fusionné.`,
-      `   Lance \`git fetch origin\` : si l'écart persiste, la fusion n'a pas atteint la base, et ` +
-        `c'est exactement ce que ce pas existe pour dire.`,
+      sha.length === 0
+        ? `❌ la forge ne rapporte AUCUN commit de fusion pour cette PR : elle n'est pas fusionnée, ` +
+          `et le pas 8 n'a rien à attester.`
+        : `❌ le commit de fusion ${s} n'est pas dans \`${d.base}\` : la fusion n'a pas ATTERRI. ` +
+          `Le pas 8 porte sur ce qui est arrivé dans la base, pas sur ce que la forge a accepté.`,
+      `   Lance \`git fetch origin\`, puis vérifie \`git merge-base --is-ancestor ${s} ${d.base}\`. ` +
+        `⚠️ La base peut avoir AVANCÉ depuis : ce pas ne demande pas qu'elle soit ÉGALE au commit ` +
+        `de fusion, seulement qu'elle le CONTIENNE.`,
     ],
   };
+}
+
+/**
+ * LA MESURE, séparée de la DÉCISION — pour que la décision reste pure et testable sur ses deux
+ * branches sans jamais lancer `git`. Elle échoue FERMÉ : toute erreur (ref absente, dépôt absent,
+ * sha inconnu) rend `false`, donc un refus, jamais une permission.
+ */
+export function estAncetreDe(sha: string, ref: string): boolean {
+  if (!/^[0-9a-f]{7,40}$/.test(sha.trim())) return false;
+  try {
+    execFileSync('git', ['merge-base', '--is-ancestor', sha.trim(), ref], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
