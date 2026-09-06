@@ -139,9 +139,12 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
     // ⚠️ CE TÉMOIN PORTE DONC SUR LA SOURCE, ET JE L'ÉCRIS PLUTÔT QUE DE LE TAIRE : il tue
     // l'affirmation en dur, pas une neutralisation plus subtile de `estAncetreDe`. Celle-là est
     // couverte ailleurs — la fonction a ses propres témoins, dont un contrôle positif.
+    // 🔴 L'EXPRESSION ENTIÈRE, RIEN D'APPENDU. Lentille `mutation`, 13e tour :
+    // `estAncetreDe(shaFusion, refBase) || true` laissait le motif précédent intact — 573 verts.
+    // *Chercher un APPEL ne dit pas ce qu'on fait de son résultat.*
     expect(
-      /estAncetre:\s*estAncetreDe\(/.test(GARDE),
-      'l’ancestralité est AFFIRMÉE au lieu d’être mesurée : l’atterrissage n’est plus attesté'
+      /estAncetre: estAncetreDe\(shaFusion, refBase\),/.test(GARDE),
+      'l’ancestralité est AFFIRMÉE, appendue ou altérée : l’atterrissage n’est plus attesté'
     ).toBe(true);
     expect(
       /estAncetre:\s*(true|false)/.test(GARDE),
@@ -187,27 +190,39 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
     // ⚠️ LE COUPLE EST LE TÉMOIN, PAS L'UNE DES DEUX MOITIÉS. Une assertion d'ABSENCE seule ne
     // distingue pas « exempté après fusion » de « garde purement supprimée ». Le contre-témoin
     // ci-dessous lance LE MÊME binaire sur LA MÊME PR, et ne change QUE le drapeau.
-    const lancer = (drapeau: string, PR_FUSIONNEE: number) => {
+    // On rend le CODE autant que la sortie : un témoin qui ne lit que le texte ne voit pas une
+    // sortie posée AVANT le jugement (mutant `process.exit(3)`, lentille `mutation` 13e tour).
+    const lancer = (drapeau: string, PR_FUSIONNEE: number): { code: number; sortie: string } => {
       try {
-        execFileSync('npx', ['tsx', 'scripts/gates/gov-pr.ts', drapeau, String(PR_FUSIONNEE)], {
-          encoding: 'utf8',
-          stdio: 'pipe',
-          shell: true,
-        });
-        return '';
+        const stdout = execFileSync(
+          'npx',
+          ['tsx', 'scripts/gates/gov-pr.ts', drapeau, String(PR_FUSIONNEE)],
+          { encoding: 'utf8', stdio: 'pipe', shell: true }
+        );
+        return { code: 0, sortie: stdout };
       } catch (e) {
-        const err = e as { stdout?: string; stderr?: string };
-        return `${err.stdout ?? ''}${err.stderr ?? ''}`;
+        const err = e as { status?: number; stdout?: string; stderr?: string };
+        return { code: err.status ?? -1, sortie: `${err.stdout ?? ''}${err.stderr ?? ''}` };
       }
     };
 
     const PR_FUSIONNEE = prFusionneeQuiNEstPasLaTete();
-    const apres = lancer('--apres-fusion', PR_FUSIONNEE);
-    const avant = lancer('--pr', PR_FUSIONNEE);
+    const { code: codeApres, sortie: apres } = lancer('--apres-fusion', PR_FUSIONNEE);
+    const { sortie: avant } = lancer('--pr', PR_FUSIONNEE);
 
     // TÉMOIN : après fusion, la tête de branche n'est plus l'étalon — le pas 8 est satisfiable.
     expect(apres, "`--apres-fusion` compare encore la tête de branche : le pas 8 est insatisfiable")
       .not.toContain('la forge rapporte la tête');
+
+    // 🔴 LE CONTRÔLE POSITIF SYMÉTRIQUE — il manquait, et la lentille `mutation` a fait passer
+    // TROIS mutants par ce trou (13e tour). L'assertion ci-dessus n'est que NÉGATIVE : elle tue les
+    // mutations qui CHANGENT le message, et laisse vivre celles qui refusent autrement ou plus tôt.
+    // Mesuré : arguments de `estAncetreDe` inversés → la gate REFUSE une PR qui A atterri, message
+    // différent, témoin vert ; et un `process.exit(3)` posé avant tout jugement → vert aussi.
+    // *Un témoin qui n'interdit qu'un texte ne dit rien de ce qui arrive à la place.*
+    expect(apres, "`--apres-fusion` refuse une PR qui A ATTERRI : l'étalon est faux")
+      .not.toContain("n'est pas dans");
+    expect(codeApres, 'la gate sort par un chemin qui précède le jugement').not.toBe(3);
     // CONTRE-TÉMOIN : avant fusion, elle l'est toujours — la garde n'a pas été retirée.
     expect(avant, 'la garde de tête ne tire plus AVANT fusion : elle a été supprimée, pas cadrée')
       .toContain('la forge rapporte la tête');
@@ -293,6 +308,12 @@ describe('REQ-GOV-032 — après fusion, la propriété est une ANCESTRALITÉ, p
     // Une mesure qui rend `true` par erreur déclarerait un atterrissage qui n'a pas eu lieu.
     expect(estAncetreDe('', 'origin/main')).toBe(false);
     expect(estAncetreDe('pas-un-sha', 'origin/main')).toBe(false);
+    // 🔴 Une RÉFÉRENCE n'est pas un SHA. Lentille `mutation`, 13e tour : la garde de forme
+    // retirée, `estAncetreDe('origin/main', 'origin/main')` passe à **true** — `git` résout la ref
+    // et la déclare son propre ancêtre. La gate attesterait alors un atterrissage « vérifié »
+    // contre rien. *Le cas qui traverse n'est pas celui qui ressemble le moins à un sha.*
+    expect(estAncetreDe('origin/main', 'origin/main'), 'une référence est acceptée comme sha').toBe(false);
+    expect(estAncetreDe('HEAD', 'origin/main')).toBe(false);
     expect(estAncetreDe('f'.repeat(40), 'origin/main'), 'un sha inconnu est déclaré ancêtre').toBe(false);
     // CONTRÔLE POSITIF : sans lui, une fonction qui rend TOUJOURS `false` passerait les trois.
     const tete = execFileSync('git', ['rev-parse', 'origin/main'], { encoding: 'utf8' }).trim();

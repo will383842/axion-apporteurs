@@ -24,7 +24,15 @@
  * Cette dette-là est écrite, elle n'est pas refermée ici.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync, existsSync, writeFileSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import {
+  readFileSync,
+  existsSync,
+  writeFileSync,
+  mkdtempSync,
+  mkdirSync,
+  rmSync,
+  readdirSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -75,6 +83,7 @@ const EXIGENCES = readFileSync('scripts/gates/gov-requirements.ts', 'utf8');
 const COMPOSEUR = readFileSync('scripts/lot/corps-de-pr.ts', 'utf8');
 const ENTITE = readFileSync('scripts/gates/gov-entite.ts', 'utf8');
 const ENUMS = readFileSync('scripts/gates/schema-enums.ts', 'utf8');
+const LEXIQUE = readFileSync('scripts/gates/lexique-apporteurs.ts', 'utf8');
 const GATE = readFileSync('scripts/gates/gov-pr.ts', 'utf8');
 
 const REFUS = [
@@ -97,6 +106,22 @@ const REFUS = [
   // témoin-ci tue la mutation réelle qui a été posée ; il ne ferme pas la famille.
   ['gov-entite.ts — SORTIE TERMINALE (garde d’argent, dépôt PUBLIC)', ENTITE, 'if (fautes.length > 0)'],
   ['schema-enums.ts — SORTIE TERMINALE', ENUMS, 'if (fautes.length > 0)'],
+] as const;
+
+/**
+ * 🔴 UNE SORTIE PEUT ÊTRE PRÉSENTE ET INATTEIGNABLE. Lentille `mutation`, 13e tour : le mutant
+ * ne touche pas au refus — il élargit la branche qui le PRÉCÈDE,
+ * `if (rapport.fautes.length === 0)` → `if (true)`. Le vert du succès avale tout, la sortie
+ * terminale devient inatteignable, **et son texte reste intact** : 573 verts, `tsc` 0.
+ *
+ * > Un témoin qui cherche une sortie ne dit rien de sa PORTÉE.
+ *
+ * ⚠️ Ce qu'il ne prouve PAS : il épingle une condition nommée, pas l'atteignabilité en général.
+ * Une branche insérée ailleurs passerait. La famille se ferme par un témoin d'EFFET par gate —
+ * le dépôt jetable de `gov-entite` en donne le patron, et il reste à le porter aux autres.
+ */
+const BRANCHES_QUI_COMMANDENT = [
+  ['lexique-apporteurs.ts', LEXIQUE, /if \(rapport\.fautes\.length === 0\) \{/],
 ] as const;
 
 describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sort en échec', () => {
@@ -179,6 +204,18 @@ describe('REQ-GOV-032 — TOUS les refus de cette PR SORTENT, pas seulement celu
   for (const [nom, source, ancre] of REFUS) {
     it(`REQ-GOV-032 — TÉMOIN : le refus « ${nom} » SORT en échec`, () => {
       exigerQueLeRefusSORTE(nom, source, ancre);
+    });
+  }
+
+  for (const [nom, source, condition] of BRANCHES_QUI_COMMANDENT) {
+    it(`REQ-GOV-032 — TÉMOIN : la sortie terminale de « ${nom} » reste ATTEIGNABLE`, () => {
+      expect(
+        condition.test(source),
+        `${nom} : la branche de succès a été élargie — la sortie en échec devient inatteignable`
+      ).toBe(true);
+      expect(/if \(true\)/.test(source), `${nom} : une branche constante avale le chemin d'échec`).toBe(
+        false
+      );
     });
   }
 });
@@ -368,9 +405,20 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       }
     };
 
-    const suivis = execFileSync('git', ['ls-files', 'scripts/'], { encoding: 'utf8' })
-      .split(String.fromCharCode(10))
-      .filter((f) => f.endsWith('.ts') || f.endsWith('.mjs') || f.endsWith('.js'));
+    // 🔴 ON ÉNUMÈRE LE DISQUE, PAS L'INDEX. Lentille `mutation`, 13e tour : la version
+    // précédente listait par `git ls-files`, **qui lit l'INDEX**. Un script NEUF et NON SUIVI
+    // portant un `process.exit(1)` était donc invisible — 15/15 verts. *C'est mon propre motif
+    // « une garde qui lit l'historique ne voit pas l'état qu'elle garde », d'un cran : j'avais
+    // corrigé la LECTURE des fichiers et laissé leur ÉNUMÉRATION dans l'index.* Et le dépôt le
+    // disait déjà, dans le fichier même que la mutation neutralisait : « Seuls les fichiers
+    // SUIVIS par git sont lus. »
+    const enumerer = (dossier: string): string[] =>
+      readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
+        const chemin = `${dossier}/${e.name}`;
+        if (e.isDirectory()) return e.name === 'node_modules' ? [] : enumerer(chemin);
+        return /\.(ts|mjs|js)$/.test(e.name) ? [chemin] : [];
+      });
+    const suivis = enumerer('scripts');
 
     const ajoutesParFichier = new Map<string, number>();
     for (const f of suivis) {
