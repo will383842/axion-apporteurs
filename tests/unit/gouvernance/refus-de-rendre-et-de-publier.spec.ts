@@ -122,6 +122,16 @@ const REFUS = [
  */
 const BRANCHES_QUI_COMMANDENT = [
   ['lexique-apporteurs.ts', LEXIQUE, /if \(rapport\.fautes\.length === 0\) \{/],
+  // 🔴 LA MÊME FORME, SUR LE MODE `--corps-publie` DE LA GARDE D'ARGENT. Survivante mesurée par
+  // `mutation` au 14e tour : `if (verdict.code === 0)` → `if (true)` fait passer
+  // `gov:entite --corps-publie` de **2 à 0 en imprimant le ✅**, suite 31/31 verte et `tsc` à 0.
+  // C'est le mode qui garde le corps **déjà publié** d'une PR d'un dépôt public.
+  //
+  // ⚠️ La lentille l'a rendue en TÂCHE, pas en motif — à raison : le gel du périmètre lui interdit
+  // d'exiger une garde neuve. Mais **le gel contraint ce qu'une lentille DEMANDE, pas ce qu'on
+  // CORRIGE** : ceci n'est pas un mécanisme neuf, c'est l'entrée manquante d'une liste déjà
+  // livrée, et elle ferme un trou mesuré dans une garde d'argent.
+  ['gov-entite.ts — mode --corps-publie', ENTITE, /if \(verdict\.code === 0\) \{/],
 ] as const;
 
 describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sort en échec', () => {
@@ -326,7 +336,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    * qu'une dette écrite était une dette tenue. La lentille `mutation` a mesuré ce que cette phrase
    * coûtait déjà :
    *
-   *     la PR ajoute 20 `process.exit(1)` dans ses scripts ; la liste en couvre 6.
+   *     la PR ajoutait 20 `process.exit(1)` dans ses scripts ; la liste en couvrait 6.
+   *
+   * ⚠️ CES DEUX NOMBRES SONT CEUX DU 12e TOUR et ne décrivent plus cette tête — `exactitude` a dû
+   * me le dire au 14e. Ils sont conservés **au passé**, parce qu'ils datent le constat ; les valeurs
+   * COURANTES ne se tapent nulle part ici, elles se dérivent plus bas (`declares` pour les sorties,
+   * `REFUS` pour les témoins). *Un nombre qui date un constat s'écrit au passé ; au présent il
+   * devient une affirmation sur l'état courant, et elle périme au commit suivant.*
    *
    * Les quatorze restants incluent les exits **TERMINAUX** — ceux dont le retrait rend la gate
    * entière verte. Trois ont été mutés, **les trois survivent**. Le plus grave : `gov-entite.ts`
@@ -337,7 +353,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    * > parce qu'on a noté qu'elle ne l'était pas — elle devient une dette qu'on a cessé de voir.
    *
    * CE QUE CE BLOC FAIT, ET CE QU'IL NE FAIT PAS. Il ne prouve pas que chaque refus SORT — ça,
-   * c'est le rôle des témoins ci-dessus, et ils ne couvrent que les six. Il rend l'**omission
+   * c'est le rôle des témoins ci-dessus, et ils n'en couvrent qu'une partie. Il rend l'**omission
    * BRUYANTE** : le nombre d'exits ajoutés par la PR est DÉRIVÉ du diff, et confronté à ce que le
    * fichier déclare. Ajouter un exit sans l'inscrire ici fait rougir en le NOMMANT. C'est le
    * minimum qu'on doive à un défaut qu'on n'a pas le temps de fermer : le rendre impossible à
@@ -450,7 +466,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // est l'AUTRE source du même fait. Retirer une entrée de `REFUS` faisait disparaître un `it()`
     // **en silence** et laissait la dette annoncée inchangée. *Deux sources du même fait qu'aucune
     // garde ne confronte finissent par diverger.*
-    const couverts = REFUS.length + 1; // +1 : la sortie terminale de `--corps-publie`, témoin dédié
+    // ⚠️ Le « + 1 » précédent était un LITTÉRAL, sous un commentaire qui affirmait « aucun
+    // littéral ici ». Relevé par `schema` au 14e tour. *Un commentaire qui dément la ligne qu'il
+    // surmonte est pire qu'aucun commentaire : il fait lire ce qui n'est pas écrit.*
+    // Le témoin d'EFFET de la garde d'argent (dépôt jetable) ne vit pas dans `REFUS` — il est
+    // d'une autre nature. Il est donc ÉNUMÉRÉ, pas compté à la main.
+    const TEMOINS_D_EFFET = ['gov-entite.ts — SORTIE TERMINALE, par dépôt jetable'] as const;
+    const couverts = REFUS.length + TEMOINS_D_EFFET.length;
     const temoinsDeclares = Object.values(declares).reduce((a, d) => a + d.temoins, 0);
     expect(temoinsDeclares, 'la somme des `temoins` déclarés a divergé du tableau `REFUS`').toBe(
       couverts

@@ -1111,8 +1111,9 @@
       "zone": "gouvernance",
       "paths": [
         "config/entite.json",
-        "scripts/gates/gov-entite.ts",
         "config/exemptions-corps-publie.json",
+        "scripts/gates/gov-entite.ts",
+        "src/config/entite.ts",
         "tests/unit/gouvernance/verrou-de-phase.spec.ts"
       ],
       "schema": false,
@@ -7362,6 +7363,7 @@
           "tests/unit/gouvernance/vues-derivees.spec.ts"
         ],
         "REQ-GOV-032": [
+          "tests/unit/gouvernance/corps-de-pr-couvre.spec.ts",
           "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
           "tests/unit/gouvernance/tete-de-pr-concorde.spec.ts",
           "tests/unit/gouvernance/vues-derivees.spec.ts"
@@ -7370,6 +7372,7 @@
           "tests/unit/gouvernance/revues-lecteur-unique.spec.ts"
         ],
         "REQ-GOV-011": [
+          "tests/unit/gouvernance/corps-de-pr-couvre.spec.ts",
           "tests/unit/gouvernance/revues-lecteur-unique.spec.ts"
         ]
       }
@@ -7452,7 +7455,8 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "scripts/lot/composer.ts"
+        "scripts/lot/composer.ts",
+        "scripts/lot/registre-decisions.ts"
       ],
       "schema": false,
       "sensible": [],
