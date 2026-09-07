@@ -35,10 +35,10 @@
 import { execFileSync } from 'node:child_process';
 
 /** Le périmètre n'a pas pu être établi. Ce n'est pas « rien à signaler » : c'est « je n'ai rien lu ». */
-export class PerimetreVide extends Error {
+export class PerimetreIllisible extends Error {
   constructor(motif: string) {
     super(motif);
-    this.name = 'PerimetreVide';
+    this.name = 'PerimetreIllisible';
   }
 }
 
@@ -77,7 +77,7 @@ export function fichiersSuivis(): string[] {
       stdio: ['ignore', 'pipe', 'pipe'],
     }).trim();
   } catch (e) {
-    throw new PerimetreVide(
+    throw new PerimetreIllisible(
       `\`git rev-parse\` a échoué (${(e as Error).message.split('\n')[0]}). ` +
         'Sans dépôt git, le périmètre est INCONNU — pas vide.'
     );
@@ -85,7 +85,7 @@ export function fichiersSuivis(): string[] {
   const ici = normaliser(process.cwd());
   const haut = normaliser(racine);
   if (ici.toLowerCase() !== haut.toLowerCase()) {
-    throw new PerimetreVide(
+    throw new PerimetreIllisible(
       `lancée depuis \`${ici}\`, alors que la racine du dépôt est \`${haut}\`. ` +
         '`git ls-files` ne rend que le sous-arbre courant : la garde balaierait UN BOUT du dépôt ' +
         'et rendrait « ✅ » dessus. Relance-la depuis la racine.'
@@ -96,28 +96,28 @@ export function fichiersSuivis(): string[] {
   try {
     sortie = execFileSync('git', ['ls-files'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   } catch (e) {
-    throw new PerimetreVide(
+    throw new PerimetreIllisible(
       `\`git ls-files\` a échoué (${(e as Error).message.split('\n')[0]}). ` +
         'Sans dépôt git, le périmètre est INCONNU — pas vide.'
     );
   }
   const fichiers = sortie.split('\n').filter(Boolean);
   if (fichiers.length === 0) {
-    throw new PerimetreVide('`git ls-files` n’a rendu AUCUN fichier : le périmètre est vide ou illisible.');
+    throw new PerimetreIllisible('`git ls-files` n’a rendu AUCUN fichier : le périmètre est vide ou illisible.');
   }
   return fichiers;
 }
 
 /**
  * Le même, mais qui REFUSE au lieu de lever : la garde sort en échec en nommant la famille
- * `perimetre_vide`, comme `lexique-apporteurs.ts` le faisait déjà seul (son modèle est repris ici).
+ * `perimetre_illisible`, comme `lexique-apporteurs.ts` le faisait déjà seul (son modèle est repris ici).
  */
 export function fichiersSuivisOuRefus(gate: string): string[] {
   try {
     return fichiersSuivis();
   } catch (e) {
-    if (!(e instanceof PerimetreVide)) throw e;
-    console.error(`❌ ${gate} — [perimetre_vide] ${e.message}`);
+    if (!(e instanceof PerimetreIllisible)) throw e;
+    console.error(`❌ ${gate} — [perimetre_illisible] ${e.message}`);
     console.error(
       '   La garde REFUSE plutôt que de déclarer propre ce qu’elle n’a pas lu. ' +
         'Ce dépôt est PUBLIC : un vert obtenu sur zéro fichier est un vert qui ment.'

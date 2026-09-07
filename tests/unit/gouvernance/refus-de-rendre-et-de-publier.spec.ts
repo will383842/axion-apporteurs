@@ -406,7 +406,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       total: 1,
       temoins: 1,
       raison:
-        'LE refus qui manquait : `perimetre_vide`. Il remplace un `try/catch { return [] }` recopié ' +
+        'LE refus qui manquait : `perimetre_illisible`. Il remplace un `try/catch { return [] }` recopié ' +
         'à l’identique dans CINQ gardes, qui rendait `gov:entite` VERTE sur ZÉRO fichier dans un ' +
         'dépôt sans `.git` — avec un IBAN à clé valide en clair dans les sources, dépôt PUBLIC. ' +
         'Témoin : `le périmètre INCONNU fait REFUSER, et le dépôt réel reste vert`.',
@@ -554,7 +554,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     const TEMOINS_D_EFFET = [
       'gov-entite.ts — SORTIE TERMINALE du mode à plat, par dépôt jetable',
       'gov-entite.ts — SORTIE TERMINALE de --corps-publie, par PR inexistante',
-      'fichiers-suivis.ts — REFUS perimetre_vide : le périmètre INCONNU fait sortir en échec, et le dépôt réel reste vert (contre-témoin)',
+      'fichiers-suivis.ts — REFUS perimetre_illisible : le périmètre INCONNU fait sortir en échec, et le dépôt réel reste vert (contre-témoin)',
     ] as const;
     const couverts = REFUS.length + TEMOINS_D_EFFET.length;
     const temoinsDeclares = Object.values(declares).reduce((a, d) => a + d.temoins, 0);
@@ -572,7 +572,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // *Nommer un compteur par ce qu'il n'est pas coûte plus cher qu'un compteur faux : celui-ci
     // était juste, et son NOM le rendait invérifiable.*
     // 🔧 25 → 26 au 24e tour, ARBITRÉ et non subi : `scripts/lot/fichiers-suivis.ts` ajoute LE
-    // refus qui manquait (`perimetre_vide`). Ce cliquet a rougi pour ça — c'est exactement son
+    // refus qui manquait (`perimetre_illisible`). Ce cliquet a rougi pour ça — c'est exactement son
     // office : le total ne bouge pas sans qu'on l'écrive. La sortie ajoutée est couverte par un
     // témoin d'effet à DEUX faces (périmètre inconnu → refus ; dépôt réel → vert).
     expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(26);
@@ -890,17 +890,65 @@ function depotCompletJetable({ avecGit = true }: { avecGit?: boolean } = {}): st
 }
 
 /**
- * Les familles que la gate DÉCLARE, lues dans SA source. Motif de `schema` et `exactitude` au
- * 22e tour : j’avais écrit `famille: 'id'` — **une famille que la gate n’a pas**, tronquée de
- * `id_double`. Et l’aiguille faisait DEUX caractères : `toContain('id')` est satisfait par
- * « inval**id**e », « **id**entifiant », « must be string ».
- * 🔑 *Un nom de famille inventé rend l’assertion « refuse pour la BONNE raison » presque vide.*
+ * Les familles que la gate DÉCLARE, lues dans SA source. Rend `null` si la gate n'en déclare
+ * AUCUNE — et ce `null` est **prouvé**, pas supposé.
+ *
+ * 🔴 UN EXTRACTEUR QUI PERD EST SÛR SOUS UNE ASSERTION POSITIVE ET DANGEREUX SOUS UNE NÉGATIVE.
+ * Motif de `schema` au 25e tour, et c'est la distinction que je n'avais pas vue :
+ *
+ * ```
+ * sous `toContain(famille)`      une perte -> FAUX ROUGE, visible, on le corrige
+ * sous `not.toContain(famille)`  une perte -> FAUX VERT,  invisible, il rassure
+ * ```
+ *
+ * Mon témoin de distinction, ajouté au tour d'avant pour interdire un cas, était **VERT sur ce cas
+ * même** (`5 passed | 42 skipped`) : son `catch { return }` avalait l'échec d'extraction.
+ * *Un `catch` qui rend « rien » transforme « je n'ai pas su lire » en « il n'y a rien à
+ * signaler » — le même défaut que le `try/catch { return [] }` de `fichiersSuivis`, dans le
+ * fichier qui le ferme.*
+ *
+ * ⚠️ ET LA PREMIÈRE RÉÉCRITURE ÉTAIT ENCORE TROP ÉTROITE : elle exigeait un `\n]` final, donc elle
+ * ne lisait pas `const FAMILLES = ['doctrine', ...CHIFFRES.map(…)]` (une seule ligne, avec spread).
+ * L'appariement se fait maintenant par **équilibrage de crochets**, jamais par une forme de
+ * mise en page.
  */
-function famillesDeclarees(script: string): string[] {
+function famillesDeclarees(script: string): { noms: string[]; calculee: boolean } | null {
   const src = readFileSync(script, 'utf8');
-  const m = src.match(/const FAMILLES = \[([\s\S]*?)\]/);
-  if (!m) throw new Error(`${script} : aucune liste \`FAMILLES\` — l’appartenance n’est pas vérifiable`);
-  return [...m[1]!.matchAll(/'([a-z_]+)'/g)].map((x) => x[1]!);
+  const noms = new Set<string>();
+  let listes = 0;
+  let calculee = false;
+
+  const MARQUE = /const FAMILLES[A-Z_]*(?::[^=]+)? = \[/g;
+  for (const m of [...src.matchAll(MARQUE)]) {
+    listes++;
+    let profondeur = 0;
+    let fin = -1;
+    for (let i = m.index! + m[0].length - 1; i < src.length; i++) {
+      if (src[i] === '[') profondeur++;
+      else if (src[i] === ']') {
+        profondeur--;
+        if (profondeur === 0) { fin = i; break; }
+      }
+    }
+    if (fin < 0) throw new Error(`${script} : liste \`FAMILLES\` non refermée — l’extracteur ne peut pas la lire.`);
+    const corps = src.slice(m.index! + m[0].length, fin);
+    for (const x of corps.matchAll(/nom: '([a-z_]+)'/g)) noms.add(x[1]!);
+    for (const x of corps.matchAll(/'([a-z_]+)'/g)) noms.add(x[1]!);
+    if (corps.includes('...')) calculee = true;
+  }
+
+  // Aucune liste : ce n'est pas un échec de lecture, c'est une ABSENCE — mais on la PROUVE.
+  if (listes === 0) {
+    if (/FAMILLES/.test(src)) {
+      throw new Error(
+        `${script} : le mot \`FAMILLES\` apparaît mais aucune DÉCLARATION n’a été reconnue. ` +
+          'La garde REFUSE plutôt que de conclure à une absence qu’elle n’a pas établie.'
+      );
+    }
+    return null;
+  }
+  if (noms.size === 0) throw new Error(`${script} : liste \`FAMILLES\` trouvée mais AUCUN nom extrait.`);
+  return { noms: [...noms], calculee };
 }
 
 /**
@@ -1144,7 +1192,7 @@ describe('REQ-GOV-032 — TÉMOINS D’EFFET : une gate neutralisée ne peut pas
         // 🔑 LA FAMILLE DOIT EXISTER DANS LA GATE. Sans ça, `toContain` porte sur un nom
         // inventé : `'id'` faisait deux caractères et « inval**id**e » le satisfaisait.
         expect(
-          famillesDeclarees(script),
+          famillesDeclarees(script)?.noms ?? [],
           `${nom} : la famille ${famille} du témoin n’existe pas dans les FAMILLES de la gate`
         ).toContain(famille);
         expect(
@@ -1274,7 +1322,7 @@ describe('REQ-GOV-032 — les entrées déclarées des témoins d’effet sont t
 
 
 /**
- * 🔴 TÉMOIN D'EFFET DU REFUS `perimetre_vide` — le défaut le plus grave trouvé de la session.
+ * 🔴 TÉMOIN D'EFFET DU REFUS `perimetre_illisible` — le défaut le plus grave trouvé de la session.
  *
  * `fichiersSuivis()` portait un `try/catch { return [] }`, **recopié à l'identique dans CINQ
  * gardes**. Dans un dépôt sans `.git` — c'est-à-dire le montage que ce fichier lui-même fabrique —
@@ -1317,7 +1365,7 @@ describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE ref
         aveugle.code,
         `${script} rend un verdict sur un périmètre INCONNU — elle a imprimé :\n${aveugle.sortie.slice(0, 500)}`
       ).not.toBe(0);
-      expect(aveugle.sortie, `${script} refuse, mais pas pour \`perimetre_vide\``).toContain('perimetre_vide');
+      expect(aveugle.sortie, `${script} refuse, mais pas pour \`perimetre_illisible\``).toContain('perimetre_illisible');
 
       // CONTRE-TÉMOIN : sur le dépôt RÉEL elle reste verte. Sans lui, un faux rouge passerait
       // pour une correction.
@@ -1332,7 +1380,7 @@ describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE ref
 
 
 /**
- * 🔑 `perimetre_vide` N'EST PAS UNE FAMILLE DE FAUTE — c'est un REFUS DE PRÉCONDITION.
+ * 🔑 `perimetre_illisible` N'EST PAS UNE FAMILLE DE FAUTE — c'est un REFUS DE PRÉCONDITION.
  *
  * Motif de `schema` au 24e tour : quatre gardes IMPRIMENT ce mot sans le DÉCLARER dans leurs
  * `FAMILLES`, et leur `--prove` affirme « les N familles rougissent chacune sur son témoin » alors
@@ -1340,7 +1388,7 @@ describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE ref
  * essayée d'abord était fausse** — ajouter le mot à `FAMILLES` fait rougir `--prove` :
  *
  * ```
- * ❌ 1 famille(s) sans témoin qui rougit : perimetre_vide.
+ * ❌ 1 famille(s) sans témoin qui rougit : perimetre_illisible.
  * ```
  *
  * Et `--prove` a raison à son tour : une famille de faute est **produite par `controler()`** et
@@ -1351,25 +1399,48 @@ describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE ref
  * > PEUT PAS avoir lieu, l'autre dit ce qu'il a trouvé.** Le `--prove` d'une gate prouve les
  * > secondes ; la première se prouve en LANÇANT la gate hors de ses préconditions.
  *
- * Ce témoin garde donc la DISTINCTION elle-même : si quelqu'un range un jour `perimetre_vide`
+ * Ce témoin garde donc la DISTINCTION elle-même : si quelqu'un range un jour `perimetre_illisible`
  * parmi les familles de faute, il rougit et force l'arbitrage — au lieu de casser `--prove`
  * silencieusement, comme je viens de le faire.
  */
-describe('REQ-CPL-018 — `perimetre_vide` est une PRÉCONDITION, pas une famille de faute', () => {
+describe('REQ-CPL-018 — `perimetre_illisible` est une PRÉCONDITION, pas une famille de faute', () => {
   for (const script of GARDES_QUI_BALAIENT) {
-    it(`REQ-CPL-018 — \`${script}\` ne range pas \`perimetre_vide\` parmi ses familles de faute`, () => {
-      let familles: string[];
-      try {
-        familles = famillesDeclarees(script);
-      } catch {
-        return; // la gate n'a pas de liste `FAMILLES` : rien à confondre.
+    it(`REQ-CPL-018 — \`${script}\` ne range pas \`perimetre_illisible\` parmi ses familles de faute`, () => {
+      // 🔑 AUCUN `catch` ICI. Ma version précédente avalait l'échec d'extraction et rendait VERT —
+      // sur le cas même qu'elle interdit (`schema`, 25e tour : `5 passed | 42 skipped`).
+      // *Sous une assertion NÉGATIVE, « je n'ai pas su lire » devient « rien à signaler ».*
+      // Si l'extracteur ne sait pas lire cette gate, il LÈVE et le test tombe : c'est le bon sens
+      // de l'échec, et ça force à étendre l'extracteur plutôt qu'à le laisser perdre en silence.
+      const declaration = famillesDeclarees(script);
+      // `null` = aucune famille déclarée, établi par l’extracteur (il LÈVE si le mot `FAMILLES`
+      // apparaît sans déclaration reconnue). Rien à confondre.
+      if (declaration === null) return;
+
+      // ⚠️ UNE LISTE CALCULÉE NE SE LIT PAS DANS LA SOURCE. `gov-publication.ts:118` fait
+      // `['doctrine', ...CHIFFRES.map(…)]` : l’extracteur en voit UNE sur sept. Asserter
+      // `not.toContain` sur un septième serait un vert obtenu sur presque rien.
+      // On assert alors ce qui reste VRAI et vérifiable : le jeton n’apparaît nulle part dans
+      // le fichier — donc il ne peut pas non plus sortir du calcul. C’est plus faible, et c’est
+      // DIT. *Une garde qui ne peut pas tout prouver dit ce qu’elle prouve.*
+      if (declaration.calculee) {
+        expect(
+          readFileSync(script, 'utf8'),
+          `${script} : liste CALCULÉE, et le jeton perimetre_illisible apparaît quand même dans la source`
+        ).not.toContain('perimetre_illisible');
+        return;
       }
+
+      // CONTRÔLE POSITIF : une liste d’un seul nom satisferait le `not.toContain` sans rien lire.
       expect(
-        familles,
-        `${script} déclare \`perimetre_vide\` comme famille de FAUTE. C’est un refus de ` +
-          'PRÉCONDITION : il sort avant toute analyse, donc `--prove` ne pourra jamais lui trouver ' +
-          'de témoin, et la gate rougira sans que personne comprenne pourquoi.'
-      ).not.toContain('perimetre_vide');
+        declaration.noms.length,
+        `${script} : ${declaration.noms.length} famille(s) extraite(s) — trop peu pour que l’absence prouve quoi que ce soit`
+      ).toBeGreaterThanOrEqual(2);
+
+      expect(
+        declaration.noms,
+        `${script} déclare perimetre_illisible comme famille de FAUTE. C’est un refus de PRÉCONDITION : ` +
+          'il sort avant toute analyse, donc `--prove` ne pourra jamais lui trouver de témoin.'
+      ).not.toContain('perimetre_illisible');
     });
   }
 });
