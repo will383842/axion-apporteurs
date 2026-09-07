@@ -348,7 +348,14 @@ describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de l
           '--tests',
           journalFrais,
         ],
-        { encoding: 'utf8', stdio: 'pipe', shell: true }
+        // 🔑 IL Y A **QUATRE** LANCEURS DANS CE FICHIER, PAS DEUX NI TROIS.
+        // Mon commit du 24e tour affirmait « les deux sont couverts ». `mutation` en a compté
+        // trois au 25e. En posant le correctif j'ai apparié la PREMIÈRE occurrence d'une chaîne
+        // NON UNIQUE, et il a atterri ici — sur le lanceur de `pr:corps` — au lieu du témoin de
+        // `--corps-publie` que je visais. **C'est cette erreur qui a révélé le quatrième.**
+        // 🔴 *Compter les points d'appel qu'on a corrigés ne dit pas combien il y en a, et
+        // apparier une chaîne qui n'est pas unique corrige un endroit qu'on n'a pas choisi.*
+        { encoding: 'utf8', stdio: 'pipe', shell: true, env: environnementDeProduction() }
       );
       code = 0;
     } catch (e) {
@@ -719,7 +726,12 @@ describe('REQ-CPL-018 — `--corps-publie` : le verdict SORT, il ne se contente 
       execFileSync(
         'npx',
         ['tsx', 'scripts/gates/gov-entite.ts', '--corps-publie', String(PR_INEXISTANTE)],
-        { encoding: 'utf8', stdio: 'pipe', shell: true }
+        // 🔴 LE LANCEUR DE `--corps-publie` — mode déclaré BLOQUANT en CI, fermé sur décision de
+        // Will avant fusion. Il n'avait AUCUNE option `env`. Mutant de `mutation` au 25e tour :
+        // `if (!process.env.VITEST) verdict.code = 0` -> **606/606 VERTS**, et
+        // `pnpm gov:entite --corps-publie 999999` imprime « ✅ … aucune coordonnée bancaire »,
+        // **exit 0, sur un corps JAMAIS LU, dépôt PUBLIC**.
+        { encoding: 'utf8', stdio: 'pipe', shell: true, env: environnementDeProduction() }
       );
       code = 0;
     } catch (e) {
@@ -952,28 +964,36 @@ function famillesDeclarees(script: string): { noms: string[]; calculee: boolean 
 }
 
 /**
- * 🔴 ON N'ÉNUMÈRE PAS CE QU'ON RETIRE — ON ÉNUMÈRE CE QU'ON GARDE.
+ * 🔴 CETTE LISTE **RÉDUIT** L'ENVIRONNEMENT. ELLE NE LE CONSTRUIT PAS À PARTIR DE RIEN.
  *
- * Ma version précédente était une LISTE NOIRE (`VITEST`, `NODE_ENV`, `CI`…). `mutation` l'a battue
- * au 24e tour, avec les chiffres du tour d'avant à l'octet près :
+ * C'est ce que j'avais écrit, et **c'est faux** — mesuré par `mutation` au 25e tour :
+ * `env: {}` **strictement vide** rend quand même onze variables, réinjectées par libuv et
+ * **ineffaçables sous Windows** (`HOMEDRIVE`, `HOMEPATH`, `LOGONSERVER`, `PATH`, `SYSTEMDRIVE`,
+ * `SYSTEMROOT`, `TEMP`, `USERDOMAIN`, `USERNAME`, `USERPROFILE`, `WINDIR`), et `npx` en ajoute
+ * ~22. **L'enfant en reçoit 53, pas 20.** La liste s'applique EN AMONT de ce qui repollue.
+ * 🔑 *Un mutant a d'ailleurs été tué par `process.env.USERNAME` — non pas parce que la liste
+ * l'avait prévu, mais parce que libuv le réinjecte. Une garde qui mord pour une raison qu'on
+ * n'a pas choisie n'est pas la garde qu'on croit tenir.*
+ *
+ * ⚠️ ET SEPT DES VINGT ENTRÉES SONT REDONDANTES : `TEMP`, `USERPROFILE`, `HOMEDRIVE`, `HOMEPATH`…
+ * ne sont pas retirables. Pour elles, la promesse « ça casse bruyamment si ça manque » est
+ * **vide** : on ne peut pas les faire manquer.
+ *
+ * ## Ce que cette liste ferme, et ce qu'elle NE ferme PAS — mesuré, pas supposé
  *
  * ```
- * gov-tasks.ts:215 -> return process.env.TEST ? fautes : []
- *   7/7 temoins VERTS · env propre : --render exit 0, docs/TASKS.md 140137 -> 140139 octets
+ * FERMÉ    process.env.VITEST / TEST / NODE_ENV / CI       (les noms du lanceur de tests)
+ * OUVERT   npm_config_user_agent : `npm/…` au banc, `pnpm/…` en CI (ci.yml lance `pnpm gov:*`)
+ * OUVERT   la TOPOLOGIE git : le jetable n'a pas de remote, le dépôt réel et actions/checkout si
+ * OUVERT   `process.cwd().startsWith(process.env.TEMP)` — INFERMABLE par une liste
+ *          d'environnement, quelle qu'elle soit. Il faut monter le jetable AILLEURS.
  * ```
  *
- * `process.env.TEST` est posé par vitest lui-même, il est `undefined` hors vitest, et il n'était
- * pas dans ma liste. **Le discriminant a été renommé une TROISIÈME fois : `argv` → `VITEST` →
- * `TEST`.** Survivent aussi `NODE_PATH` (qui contient littéralement « vitest »),
- * `NPM_LIFECYCLE_SCRIPT=vitest`, `NODE_OPTIONS` défini-vide.
- *
- * > **Une liste noire ne peut pas gagner : il y aura toujours une variable de plus.** Une liste
- * > BLANCHE se trompe dans l'autre sens — elle casse bruyamment quand il manque quelque chose, au
- * > lieu de laisser passer en silence. *Entre un faux rouge qu'on voit et un faux vert qu'on ne
- * > voit pas, on choisit le premier.*
- *
- * Ce qui suit est donc le strict nécessaire pour que `npx tsx` et `git` tournent sous Windows.
- * Si un témoin casse un jour faute d'une variable, on l'ajoute ICI, en connaissance de cause.
+ * > **La bonne propriété n'est pas « assainir l'environnement », c'est LANCER CE QU'ON LIVRE, DE
+ * > LA FAÇON DONT ON LE LIVRE** — `pnpm <script>`, depuis le cwd de production, sur la copie
+ * > qu'on juge. C'est la formulation de `mutation`, et elle vaut mieux que la mienne : elle
+ * > explique pourquoi « un témoin d'effet par garde » n'aurait tué **aucun** des trois survivants.
+ * > `gov:entite` A son témoin d'effet, il est VERT, et la garde est aveugle en production.
  */
 const VARIABLES_DE_PRODUCTION = [
   'PATH',
