@@ -57,6 +57,7 @@ import {
   valeur,
   type Registre,
 } from '../../src/config/entite';
+import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
 const CHEMIN_REGISTRE = 'config/entite.json';
 const CHEMIN_DECISIONS = 'docs/DECISIONS.md';
@@ -2016,12 +2017,14 @@ function prouverCorpsPublie(): number {
 
 // ── L'univers réel ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * 🔴 Le périmètre vient désormais d’UNE source unique qui REFUSE au lieu de rendre `[]`.
+ * Cette fonction portait un `try/catch { return [] }` — recopié à l’identique dans CINQ gardes —
+ * et rendait la garde d’argent VERTE sur ZÉRO fichier dans un dépôt sans `.git`, dépôt PUBLIC.
+ * La mesure est dans `scripts/lot/fichiers-suivis.ts`.
+ */
 function fichiersSuivis(): string[] {
-  try {
-    return execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean);
-  } catch {
-    return [];
-  }
+  return fichiersSuivisOuRefus('gov:entite');
 }
 
 function lireUnivers(): Univers {

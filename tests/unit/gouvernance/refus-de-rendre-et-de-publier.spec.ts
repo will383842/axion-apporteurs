@@ -402,6 +402,15 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    * ajouter en silence.
    */
   const declares: Record<string, { total: number; temoins: number; raison: string }> = {
+    'scripts/lot/fichiers-suivis.ts': {
+      total: 1,
+      temoins: 1,
+      raison:
+        'LE refus qui manquait : `perimetre_vide`. Il remplace un `try/catch { return [] }` recopié ' +
+        'à l’identique dans CINQ gardes, qui rendait `gov:entite` VERTE sur ZÉRO fichier dans un ' +
+        'dépôt sans `.git` — avec un IBAN à clé valide en clair dans les sources, dépôt PUBLIC. ' +
+        'Témoin : `le périmètre INCONNU fait REFUSER, et le dépôt réel reste vert`.',
+    },
     'scripts/lot/corps-de-pr.ts': {
       total: 4,
       temoins: 2,
@@ -545,6 +554,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     const TEMOINS_D_EFFET = [
       'gov-entite.ts — SORTIE TERMINALE du mode à plat, par dépôt jetable',
       'gov-entite.ts — SORTIE TERMINALE de --corps-publie, par PR inexistante',
+      'fichiers-suivis.ts — REFUS perimetre_vide : le périmètre INCONNU fait sortir en échec, et le dépôt réel reste vert (contre-témoin)',
     ] as const;
     const couverts = REFUS.length + TEMOINS_D_EFFET.length;
     const temoinsDeclares = Object.values(declares).reduce((a, d) => a + d.temoins, 0);
@@ -561,7 +571,11 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // faut ici — ce qu'on déclare, ce sont les sorties AJOUTÉES qu'il faut couvrir, pas un solde.
     // *Nommer un compteur par ce qu'il n'est pas coûte plus cher qu'un compteur faux : celui-ci
     // était juste, et son NOM le rendait invérifiable.*
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(25);
+    // 🔧 25 → 26 au 24e tour, ARBITRÉ et non subi : `scripts/lot/fichiers-suivis.ts` ajoute LE
+    // refus qui manquait (`perimetre_vide`). Ce cliquet a rougi pour ça — c'est exactement son
+    // office : le total ne bouge pas sans qu'on l'écrive. La sortie ajoutée est couverte par un
+    // témoin d'effet à DEUX faces (périmètre inconnu → refus ; dépôt réel → vert).
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(26);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -811,6 +825,24 @@ afterAll(() => {
   for (const d of DEPOTS_JETABLES) rmSync(d, { recursive: true, force: true });
 });
 
+/**
+ * Un dépôt jetable est un VRAI dépôt git : `git ls-files` doit y répondre.
+ * 🔴 Sans ça, les gardes qui balaient le dépôt ne mesurent RIEN — et c’est exactement le défaut
+ * que `schema` a trouvé au 23e tour : `gov:entite` rendait « ✅ aucune coordonnée en clair » après
+ * avoir balayé ZÉRO fichier, avec un IBAN valide en clair dans les sources. L’absence de `.git`
+ * est l’un des quatre discriminants par lesquels l’enfant reconnaît le banc d’essai.
+ */
+function faireDeCeDossierUnDepot(depot: string): void {
+  for (const args of [
+    ['init', '-q'],
+    ['config', 'user.email', 't@t'],
+    ['config', 'user.name', 't'],
+    ['add', '-A'],
+  ]) {
+    execFileSync('git', args, { cwd: depot, stdio: 'ignore' });
+  }
+}
+
 function depotJetableAvec(fichiers: readonly string[]): string {
   const depot = mkdtempSync(join(tmpdir(), 'temoin-effet-'));
   for (const f of fichiers) {
@@ -818,6 +850,7 @@ function depotJetableAvec(fichiers: readonly string[]): string {
     copyFileSync(f, join(depot, f));
   }
   DEPOTS_JETABLES.push(depot);
+  faireDeCeDossierUnDepot(depot);
   return depot;
 }
 
@@ -851,6 +884,7 @@ function depotCompletJetable(): string {
   execFileSync('tar', ['-x', '-f', 'depot.tar'], { cwd: depot });
   rmSync(chemin, { force: true });
   symlinkSync(resolve('node_modules'), join(depot, 'node_modules'), 'junction');
+  faireDeCeDossierUnDepot(depot);
   return depot;
 }
 
@@ -868,12 +902,63 @@ function famillesDeclarees(script: string): string[] {
   return [...m[1]!.matchAll(/'([a-z_]+)'/g)].map((x) => x[1]!);
 }
 
+/**
+ * 🔴 PAR QUOI L'ENFANT PEUT-IL RECONNAÎTRE LE BANC D'ESSAI ?
+ *
+ * Motif de `mutation` au 23e tour, et c'est **le même défaut qu'au 22e, à une variable près** :
+ * `execFileSync` était appelé **sans option `env`**, donc la gate héritait de l'environnement de
+ * vitest. Sonde posée dans l'enfant :
+ *
+ * ```
+ * ENFANT VOIT >>> {"VITEST":"true","VITEST_WORKER_ID":"1","VITEST_POOL_ID":"1","NODE_ENV":"test"}
+ * ```
+ *
+ * Mutant mesuré — `gov-tasks.ts` : `return argv.includes('--prove') || process.env.VITEST ? fautes : []`
+ * → **7 témoins d'effet VERTS**, `gov:tasks` hors vitest **exit 0** sur `dep_inconnue` + `schema`,
+ * et `--render` **exit 0 en RÉÉCRIVANT `docs/TASKS.md`** (140 137 → 140 139 octets).
+ *
+ * > **Mon témoin d'effet n'avait pas supprimé le discriminant du 22e tour : il l'avait RENOMMÉ.**
+ * > `process.argv` → `process.env`.
+ *
+ * 🔑 La bonne formulation est celle de `mutation`, et elle est ÉNUMÉRABLE : *par quoi l'enfant
+ * peut-il reconnaître le banc d'essai ?* — `argv`, `env`, un `cwd` sous `tmpdir()`, l'absence de
+ * `.git`. **Son avertissement compte autant que sa mesure : le refermer une variable à la fois,
+ * c'est le rouvrir au tour suivant.** Les quatre sont donc traitées ici, ensemble :
+ *
+ * | discriminant | fermeture |
+ * |---|---|
+ * | `argv`            | rien à faire : la gate DOIT lire ses drapeaux, et le témoin les lui passe |
+ * | `env`             | **environnement ASSAINI** ci-dessous — c'est ce commit |
+ * | absence de `.git` | `git init` dans le jetable — c'est aussi ce qui rendait la garde d'argent verte sur zéro fichier |
+ * | `cwd` sous tmpdir | ⛔ NON FERMÉ, déclaré : un `tmpdir()` reste reconnaissable. Le fermer demande un dépôt jetable AILLEURS que dans le répertoire temporaire, ce qui n'est pas gratuit sur Windows. |
+ *
+ * ⚠️ La dernière ligne est une lacune DÉCLARÉE, pas un oubli : *ce qu'on n'a pas fermé se nomme,
+ * sinon le vert de ce fichier affirme plus que sa mesure.*
+ */
+const VARIABLES_QUI_TRAHISSENT_LE_BANC = [
+  'VITEST',
+  'VITEST_WORKER_ID',
+  'VITEST_POOL_ID',
+  'VITEST_MODE',
+  'NODE_ENV',
+  'CI',
+  'JEST_WORKER_ID',
+] as const;
+
+/** L'environnement du parent, débarrassé de tout ce qui dit « tu es sous test ». */
+function environnementAssaini(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  for (const v of VARIABLES_QUI_TRAHISSENT_LE_BANC) delete env[v];
+  return env;
+}
+
 function lancerLaGate(script: string, cwd: string, args: string[] = []): { code: number; sortie: string } {
   try {
     const stdout = execFileSync('npx', ['tsx', resolve(script), ...args], {
       cwd,
       encoding: 'utf8',
       stdio: 'pipe',
+      env: environnementAssaini(),
       shell: true,
     });
     return { code: 0, sortie: stdout };
@@ -1173,5 +1258,64 @@ describe('REQ-GOV-032 — les entrées déclarées des témoins d’effet sont t
         ).toBe(true);
       }, 180_000);
     }
+  }
+});
+
+
+/**
+ * 🔴 TÉMOIN D'EFFET DU REFUS `perimetre_vide` — le défaut le plus grave trouvé de la session.
+ *
+ * `fichiersSuivis()` portait un `try/catch { return [] }`, **recopié à l'identique dans CINQ
+ * gardes**. Dans un dépôt sans `.git` — c'est-à-dire le montage que ce fichier lui-même fabrique —
+ * `gov:entite` imprimait :
+ *
+ * ```
+ * ✅ gov:entite — … 0 fichier(s) suivi(s) balayé(s) : aucune coordonnée en clair, …   CODE=0
+ * ```
+ *
+ * **avec un IBAN à clé mod-97 valide posé en clair dans les sources**, dans un dépôt **PUBLIC**.
+ * Mesuré par `schema` au 23e tour, reproduit avant correction.
+ *
+ * > **« Je n'ai rien trouvé » et « je n'ai rien regardé » sont deux phrases différentes, et une
+ * > seule des deux autorise à publier.**
+ *
+ * Ce témoin exige les DEUX faces : le périmètre inconnu fait REFUSER, et le dépôt réel reste VERT.
+ * Sans la seconde, j'aurais pu remplacer un faux vert par un faux rouge sans le voir.
+ */
+describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE refuse', () => {
+  const GARDES_QUI_BALAIENT = [
+    'scripts/gates/gov-entite.ts',
+    'scripts/gates/gov-identifiants.ts',
+    'scripts/gates/gov-preseance.ts',
+    'scripts/gates/gov-publication.ts',
+    'scripts/gates/lexique-apporteurs.ts',
+  ] as const;
+
+  for (const script of GARDES_QUI_BALAIENT) {
+    it(`REQ-CPL-018 — \`${script}\` REFUSE quand \`git ls-files\` ne répond pas`, () => {
+      // Un dossier SANS `.git` : `faireDeCeDossierUnDepot` n'est PAS appelé ici, c'est le sujet.
+      const sansGit = mkdtempSync(join(tmpdir(), 'temoin-sans-git-'));
+      DEPOTS_JETABLES.push(sansGit);
+      execFileSync('git', ['archive', 'HEAD'], { encoding: 'buffer', maxBuffer: 512e6 });
+      const tar = execFileSync('git', ['archive', 'HEAD'], { encoding: 'buffer', maxBuffer: 512e6 });
+      writeFileSync(join(sansGit, 'depot.tar'), tar);
+      execFileSync('tar', ['-x', '-f', 'depot.tar'], { cwd: sansGit });
+      symlinkSync(resolve('node_modules'), join(sansGit, 'node_modules'), 'junction');
+
+      const aveugle = lancerLaGate(script, sansGit);
+      expect(
+        aveugle.code,
+        `${script} rend un verdict sur un périmètre INCONNU — elle a imprimé :\n${aveugle.sortie.slice(0, 500)}`
+      ).not.toBe(0);
+      expect(aveugle.sortie, `${script} refuse, mais pas pour \`perimetre_vide\``).toContain('perimetre_vide');
+
+      // CONTRE-TÉMOIN : sur le dépôt RÉEL elle reste verte. Sans lui, un faux rouge passerait
+      // pour une correction.
+      const reel = lancerLaGate(script, resolve('.'));
+      expect(
+        reel.code,
+        `${script} refuse le dépôt RÉEL — j’aurais remplacé un faux vert par un faux rouge :\n${reel.sortie.slice(0, 500)}`
+      ).toBe(0);
+    }, 180_000);
   }
 });

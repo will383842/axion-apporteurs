@@ -22,8 +22,8 @@
  * toujours — forks, caches et miroirs compris, y compris après un passage en privé.
  */
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
+import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
 /**
  * Un identifiant nu : une lettre de relecteur suivie d'un ou deux chiffres.
@@ -170,12 +170,14 @@ export function fautesDeLigne(ligne: string, fichier: string, i: number, motif: 
   return out;
 }
 
+/**
+ * 🔴 Le périmètre vient désormais d’UNE source unique qui REFUSE au lieu de rendre `[]`.
+ * Cette fonction portait un `try/catch { return [] }` — recopié à l’identique dans CINQ gardes —
+ * et rendait la garde d’argent VERTE sur ZÉRO fichier dans un dépôt sans `.git`, dépôt PUBLIC.
+ * La mesure est dans `scripts/lot/fichiers-suivis.ts`.
+ */
 function fichiersSuivis(): string[] {
-  try {
-    return execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean);
-  } catch {
-    return [];
-  }
+  return fichiersSuivisOuRefus('gov:identifiants');
 }
 
 export function analyser(fichiers: string[]): Faute[] {

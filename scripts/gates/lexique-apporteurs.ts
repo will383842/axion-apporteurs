@@ -76,7 +76,6 @@
  * dépôt contient le jour où elle tourne, et ne dirait plus rien de la garde.
  */
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import {
   LEXIQUE_INTERDIT,
@@ -91,6 +90,7 @@ import {
   type FamilleInterdite,
   type PorteeLexicale,
 } from '../../src/domain/lexique/lexique-interdit';
+import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
 // ── le périmètre (REQ-GOV-017 pour `depot`, REQ-JUR-037 pour `apporteur`) ─────
 
@@ -343,12 +343,14 @@ export function controler(vue: Vue): Rapport {
 
 // ── la vue du dépôt (fichiers SUIVIS par git, et rien d'autre) ────────────────
 
+/**
+ * 🔴 Le périmètre vient désormais d’UNE source unique qui REFUSE au lieu de rendre `[]`.
+ * Cette fonction portait un `try/catch { return [] }` — recopié à l’identique dans CINQ gardes —
+ * et rendait la garde d’argent VERTE sur ZÉRO fichier dans un dépôt sans `.git`, dépôt PUBLIC.
+ * La mesure est dans `scripts/lot/fichiers-suivis.ts`.
+ */
 export function fichiersSuivis(): string[] {
-  try {
-    return execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean);
-  } catch {
-    return [];
-  }
+  return fichiersSuivisOuRefus('gov:lexique');
 }
 
 export function vueDuDepot(): Vue {
