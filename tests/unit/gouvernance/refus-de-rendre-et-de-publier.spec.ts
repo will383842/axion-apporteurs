@@ -624,6 +624,7 @@ describe('REQ-CPL-018 — la garde d’ARGENT sort en échec : témoin d’EFFET
       const stdout = execFileSync('npx', ['tsx', resolve('scripts/gates/gov-entite.ts')], {
         cwd,
         encoding: 'utf8',
+        env: environnementDeProduction(),
         stdio: 'pipe',
         shell: true,
       });
@@ -875,7 +876,7 @@ function depotJetableAvec(fichiers: readonly string[]): string {
  * sources qu'elles importent ET le lanceur. C'est pour ça que les copies partielles échouaient —
  * elles ne rendaient pas la gate fautive, elles la rendaient AVEUGLE.
  */
-function depotCompletJetable(): string {
+function depotCompletJetable({ avecGit = true }: { avecGit?: boolean } = {}): string {
   const depot = mkdtempSync(join(tmpdir(), 'temoin-complet-'));
   DEPOTS_JETABLES.push(depot);
   const tar = execFileSync('git', ['archive', 'HEAD'], { maxBuffer: 512e6, encoding: 'buffer' });
@@ -884,7 +885,7 @@ function depotCompletJetable(): string {
   execFileSync('tar', ['-x', '-f', 'depot.tar'], { cwd: depot });
   rmSync(chemin, { force: true });
   symlinkSync(resolve('node_modules'), join(depot, 'node_modules'), 'junction');
-  faireDeCeDossierUnDepot(depot);
+  if (avecGit) faireDeCeDossierUnDepot(depot);
   return depot;
 }
 
@@ -903,52 +904,62 @@ function famillesDeclarees(script: string): string[] {
 }
 
 /**
- * 🔴 PAR QUOI L'ENFANT PEUT-IL RECONNAÎTRE LE BANC D'ESSAI ?
+ * 🔴 ON N'ÉNUMÈRE PAS CE QU'ON RETIRE — ON ÉNUMÈRE CE QU'ON GARDE.
  *
- * Motif de `mutation` au 23e tour, et c'est **le même défaut qu'au 22e, à une variable près** :
- * `execFileSync` était appelé **sans option `env`**, donc la gate héritait de l'environnement de
- * vitest. Sonde posée dans l'enfant :
+ * Ma version précédente était une LISTE NOIRE (`VITEST`, `NODE_ENV`, `CI`…). `mutation` l'a battue
+ * au 24e tour, avec les chiffres du tour d'avant à l'octet près :
  *
  * ```
- * ENFANT VOIT >>> {"VITEST":"true","VITEST_WORKER_ID":"1","VITEST_POOL_ID":"1","NODE_ENV":"test"}
+ * gov-tasks.ts:215 -> return process.env.TEST ? fautes : []
+ *   7/7 temoins VERTS · env propre : --render exit 0, docs/TASKS.md 140137 -> 140139 octets
  * ```
  *
- * Mutant mesuré — `gov-tasks.ts` : `return argv.includes('--prove') || process.env.VITEST ? fautes : []`
- * → **7 témoins d'effet VERTS**, `gov:tasks` hors vitest **exit 0** sur `dep_inconnue` + `schema`,
- * et `--render` **exit 0 en RÉÉCRIVANT `docs/TASKS.md`** (140 137 → 140 139 octets).
+ * `process.env.TEST` est posé par vitest lui-même, il est `undefined` hors vitest, et il n'était
+ * pas dans ma liste. **Le discriminant a été renommé une TROISIÈME fois : `argv` → `VITEST` →
+ * `TEST`.** Survivent aussi `NODE_PATH` (qui contient littéralement « vitest »),
+ * `NPM_LIFECYCLE_SCRIPT=vitest`, `NODE_OPTIONS` défini-vide.
  *
- * > **Mon témoin d'effet n'avait pas supprimé le discriminant du 22e tour : il l'avait RENOMMÉ.**
- * > `process.argv` → `process.env`.
+ * > **Une liste noire ne peut pas gagner : il y aura toujours une variable de plus.** Une liste
+ * > BLANCHE se trompe dans l'autre sens — elle casse bruyamment quand il manque quelque chose, au
+ * > lieu de laisser passer en silence. *Entre un faux rouge qu'on voit et un faux vert qu'on ne
+ * > voit pas, on choisit le premier.*
  *
- * 🔑 La bonne formulation est celle de `mutation`, et elle est ÉNUMÉRABLE : *par quoi l'enfant
- * peut-il reconnaître le banc d'essai ?* — `argv`, `env`, un `cwd` sous `tmpdir()`, l'absence de
- * `.git`. **Son avertissement compte autant que sa mesure : le refermer une variable à la fois,
- * c'est le rouvrir au tour suivant.** Les quatre sont donc traitées ici, ensemble :
- *
- * | discriminant | fermeture |
- * |---|---|
- * | `argv`            | rien à faire : la gate DOIT lire ses drapeaux, et le témoin les lui passe |
- * | `env`             | **environnement ASSAINI** ci-dessous — c'est ce commit |
- * | absence de `.git` | `git init` dans le jetable — c'est aussi ce qui rendait la garde d'argent verte sur zéro fichier |
- * | `cwd` sous tmpdir | ⛔ NON FERMÉ, déclaré : un `tmpdir()` reste reconnaissable. Le fermer demande un dépôt jetable AILLEURS que dans le répertoire temporaire, ce qui n'est pas gratuit sur Windows. |
- *
- * ⚠️ La dernière ligne est une lacune DÉCLARÉE, pas un oubli : *ce qu'on n'a pas fermé se nomme,
- * sinon le vert de ce fichier affirme plus que sa mesure.*
+ * Ce qui suit est donc le strict nécessaire pour que `npx tsx` et `git` tournent sous Windows.
+ * Si un témoin casse un jour faute d'une variable, on l'ajoute ICI, en connaissance de cause.
  */
-const VARIABLES_QUI_TRAHISSENT_LE_BANC = [
-  'VITEST',
-  'VITEST_WORKER_ID',
-  'VITEST_POOL_ID',
-  'VITEST_MODE',
-  'NODE_ENV',
-  'CI',
-  'JEST_WORKER_ID',
+const VARIABLES_DE_PRODUCTION = [
+  'PATH',
+  'Path',
+  'PATHEXT',
+  'SystemRoot',
+  'SystemDrive',
+  'windir',
+  'TEMP',
+  'TMP',
+  'HOME',
+  'USERPROFILE',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'HOMEDRIVE',
+  'HOMEPATH',
+  'COMSPEC',
+  'PROCESSOR_ARCHITECTURE',
+  'NUMBER_OF_PROCESSORS',
+  'OS',
+  'LANG',
+  'LC_ALL',
 ] as const;
 
-/** L'environnement du parent, débarrassé de tout ce qui dit « tu es sous test ». */
-function environnementAssaini(): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  for (const v of VARIABLES_QUI_TRAHISSENT_LE_BANC) delete env[v];
+/**
+ * L'environnement d'un enfant qui ne doit PAS savoir qu'il est sous test. Construit à partir de
+ * RIEN, jamais copié depuis le parent — c'est toute la différence avec la version battue.
+ */
+function environnementDeProduction(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const v of VARIABLES_DE_PRODUCTION) {
+    const val = process.env[v];
+    if (val !== undefined) env[v] = val;
+  }
   return env;
 }
 
@@ -958,7 +969,7 @@ function lancerLaGate(script: string, cwd: string, args: string[] = []): { code:
       cwd,
       encoding: 'utf8',
       stdio: 'pipe',
-      env: environnementAssaini(),
+      env: environnementDeProduction(),
       shell: true,
     });
     return { code: 0, sortie: stdout };
@@ -1282,25 +1293,24 @@ describe('REQ-GOV-032 — les entrées déclarées des témoins d’effet sont t
  * Ce témoin exige les DEUX faces : le périmètre inconnu fait REFUSER, et le dépôt réel reste VERT.
  * Sans la seconde, j'aurais pu remplacer un faux vert par un faux rouge sans le voir.
  */
+const GARDES_QUI_BALAIENT = [
+  'scripts/gates/gov-entite.ts',
+  'scripts/gates/gov-identifiants.ts',
+  'scripts/gates/gov-preseance.ts',
+  'scripts/gates/gov-publication.ts',
+  'scripts/gates/lexique-apporteurs.ts',
+] as const;
+
 describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE refuse', () => {
-  const GARDES_QUI_BALAIENT = [
-    'scripts/gates/gov-entite.ts',
-    'scripts/gates/gov-identifiants.ts',
-    'scripts/gates/gov-preseance.ts',
-    'scripts/gates/gov-publication.ts',
-    'scripts/gates/lexique-apporteurs.ts',
-  ] as const;
 
   for (const script of GARDES_QUI_BALAIENT) {
     it(`REQ-CPL-018 — \`${script}\` REFUSE quand \`git ls-files\` ne répond pas`, () => {
       // Un dossier SANS `.git` : `faireDeCeDossierUnDepot` n'est PAS appelé ici, c'est le sujet.
-      const sansGit = mkdtempSync(join(tmpdir(), 'temoin-sans-git-'));
-      DEPOTS_JETABLES.push(sansGit);
-      execFileSync('git', ['archive', 'HEAD'], { encoding: 'buffer', maxBuffer: 512e6 });
-      const tar = execFileSync('git', ['archive', 'HEAD'], { encoding: 'buffer', maxBuffer: 512e6 });
-      writeFileSync(join(sansGit, 'depot.tar'), tar);
-      execFileSync('tar', ['-x', '-f', 'depot.tar'], { cwd: sansGit });
-      symlinkSync(resolve('node_modules'), join(sansGit, 'node_modules'), 'junction');
+      // 🔑 AUCUNE RECOPIE : le montage est celui de `depotCompletJetable`, paramétré. Motif de
+      // `schema` au 24e tour — j’avais recopié son corps à la main **dans le commit même qui
+      // ferme un patron recopié cinq fois**, en y perdant au passage le `rmSync` du `.tar` et
+      // en y laissant un `git archive` dont le résultat était jeté.
+      const sansGit = depotCompletJetable({ avecGit: false });
 
       const aveugle = lancerLaGate(script, sansGit);
       expect(
@@ -1317,5 +1327,49 @@ describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE ref
         `${script} refuse le dépôt RÉEL — j’aurais remplacé un faux vert par un faux rouge :\n${reel.sortie.slice(0, 500)}`
       ).toBe(0);
     }, 180_000);
+  }
+});
+
+
+/**
+ * 🔑 `perimetre_vide` N'EST PAS UNE FAMILLE DE FAUTE — c'est un REFUS DE PRÉCONDITION.
+ *
+ * Motif de `schema` au 24e tour : quatre gardes IMPRIMENT ce mot sans le DÉCLARER dans leurs
+ * `FAMILLES`, et leur `--prove` affirme « les N familles rougissent chacune sur son témoin » alors
+ * que la gate peut en émettre N+1. Elle avait raison de le relever ; **la correction que j'ai
+ * essayée d'abord était fausse** — ajouter le mot à `FAMILLES` fait rougir `--prove` :
+ *
+ * ```
+ * ❌ 1 famille(s) sans témoin qui rougit : perimetre_vide.
+ * ```
+ *
+ * Et `--prove` a raison à son tour : une famille de faute est **produite par `controler()`** et
+ * rendue dans une liste ; celle-ci **sort du processus avant toute analyse**. Les deux ne se
+ * prouvent pas de la même manière, et les mélanger rendait la preuve impossible.
+ *
+ * > **Une précondition et une faute ne se déclarent pas ensemble : l'une dit que le contrôle NE
+ * > PEUT PAS avoir lieu, l'autre dit ce qu'il a trouvé.** Le `--prove` d'une gate prouve les
+ * > secondes ; la première se prouve en LANÇANT la gate hors de ses préconditions.
+ *
+ * Ce témoin garde donc la DISTINCTION elle-même : si quelqu'un range un jour `perimetre_vide`
+ * parmi les familles de faute, il rougit et force l'arbitrage — au lieu de casser `--prove`
+ * silencieusement, comme je viens de le faire.
+ */
+describe('REQ-CPL-018 — `perimetre_vide` est une PRÉCONDITION, pas une famille de faute', () => {
+  for (const script of GARDES_QUI_BALAIENT) {
+    it(`REQ-CPL-018 — \`${script}\` ne range pas \`perimetre_vide\` parmi ses familles de faute`, () => {
+      let familles: string[];
+      try {
+        familles = famillesDeclarees(script);
+      } catch {
+        return; // la gate n'a pas de liste `FAMILLES` : rien à confondre.
+      }
+      expect(
+        familles,
+        `${script} déclare \`perimetre_vide\` comme famille de FAUTE. C’est un refus de ` +
+          'PRÉCONDITION : il sort avant toute analyse, donc `--prove` ne pourra jamais lui trouver ' +
+          'de témoin, et la gate rougira sans que personne comprenne pourquoi.'
+      ).not.toContain('perimetre_vide');
+    });
   }
 });

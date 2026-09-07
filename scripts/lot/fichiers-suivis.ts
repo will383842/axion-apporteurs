@@ -48,7 +48,50 @@ export class PerimetreVide extends Error {
  * Le second cas compte autant que le premier : un dépôt réellement vide et un `git` muet sont
  * indiscernables pour l'appelant, et les deux rendraient un « ✅ » sur zéro fichier.
  */
+/** Normalise un chemin pour comparaison : séparateurs uniformes, pas de barre finale. */
+function normaliser(chemin: string): string {
+  const BARRE_INVERSE = String.fromCharCode(92);
+  let p = chemin.split(BARRE_INVERSE).join('/');
+  while (p.endsWith('/')) p = p.slice(0, -1);
+  return p;
+}
+
 export function fichiersSuivis(): string[] {
+  // 🔴 TROISIÈME ÉTAT : « je n'ai regardé qu'UN BOUT ».
+  // Motif de `schema` au 24e tour. `git ls-files` rend les fichiers du RÉPERTOIRE COURANT, pas du
+  // dépôt : lancées depuis `packages/` (5 fichiers suivis sur 171), `gov:identifiants` et
+  // `gov:publication` rendaient **exit 0 avec leur bannière ✅**, un IBAN à clé valide en clair
+  // dans `src/config/`. Ma première version distinguait « rien trouvé » de « rien regardé » et
+  // laissait celui-ci muet — **le seul des trois à rendre 0**.
+  //
+  // ⚠️ Et j'avais écrit reprendre le modèle de `lexique-apporteurs.ts` : **il a DEUX étages**
+  // (périmètre illisible ET motif qui doit avoir des fichiers et n'en a aucun), je n'en avais
+  // repris qu'un. *Dire qu'on reprend un modèle n'en reprend pas la moitié qu'on n'a pas lue.*
+  //
+  // Les gardes lisent toutes leurs entrées par chemin RELATIF (`docs/…`, `scripts/…`) : hors de la
+  // racine elles ne mesurent pas « moins », elles mesurent **autre chose**. On refuse.
+  let racine: string;
+  try {
+    racine = execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  } catch (e) {
+    throw new PerimetreVide(
+      `\`git rev-parse\` a échoué (${(e as Error).message.split('\n')[0]}). ` +
+        'Sans dépôt git, le périmètre est INCONNU — pas vide.'
+    );
+  }
+  const ici = normaliser(process.cwd());
+  const haut = normaliser(racine);
+  if (ici.toLowerCase() !== haut.toLowerCase()) {
+    throw new PerimetreVide(
+      `lancée depuis \`${ici}\`, alors que la racine du dépôt est \`${haut}\`. ` +
+        '`git ls-files` ne rend que le sous-arbre courant : la garde balaierait UN BOUT du dépôt ' +
+        'et rendrait « ✅ » dessus. Relance-la depuis la racine.'
+    );
+  }
+
   let sortie: string;
   try {
     sortie = execFileSync('git', ['ls-files'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
