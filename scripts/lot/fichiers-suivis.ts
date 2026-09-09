@@ -94,14 +94,24 @@ export function fichiersSuivis(): string[] {
 
   let sortie: string;
   try {
-    sortie = execFileSync('git', ['ls-files'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    // 🔴 QUATRIÈME ÉTAT MUET — motif de `securite` au 26e tour, reproduit avant d'être fermé.
+    // Sans `-z`, `git ls-files` CITE et échappe en octal tout chemin non-ASCII
+    // (`"docs/t\303\251moin.md"`), et les cinq appelants le jettent par leur
+    // `if (!existsSync(...)) continue`. Même appât : nom ASCII → la garde MORD ; nom accentué →
+    // `✅` et exit 0. Sur un dépôt PUBLIC et FRANCOPHONE.
+    // `-z` sépare par NUL et n'échappe RIEN — il ferme du même coup les noms à retour de ligne.
+    // `core.quotepath=false` est la ceinture : il vaut même si un jour `-z` saute.
+    sortie = execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-z'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
   } catch (e) {
     throw new PerimetreIllisible(
       `\`git ls-files\` a échoué (${(e as Error).message.split('\n')[0]}). ` +
         'Sans dépôt git, le périmètre est INCONNU — pas vide.'
     );
   }
-  const fichiers = sortie.split('\n').filter(Boolean);
+  const fichiers = sortie.split('\0').filter(Boolean);
   if (fichiers.length === 0) {
     throw new PerimetreIllisible('`git ls-files` n’a rendu AUCUN fichier : le périmètre est vide ou illisible.');
   }

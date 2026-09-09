@@ -1373,6 +1373,85 @@ describe('REQ-GOV-032 — les entrées déclarées des témoins d’effet sont t
  * Ce témoin exige les DEUX faces : le périmètre inconnu fait REFUSER, et le dépôt réel reste VERT.
  * Sans la seconde, j'aurais pu remplacer un faux vert par un faux rouge sans le voir.
  */
+/**
+ * 🔴 QUATRIÈME ÉTAT MUET, et un refus SANS TÉMOIN — motifs de `securite` au 26e tour.
+ *
+ * 1. `fichiers-suivis.ts` appelait `git ls-files` sans `-z` ni `core.quotepath=false`. Tout chemin
+ *    non-ASCII revient alors CITÉ et échappé en octal (`"docs/tÃ©moin.md"`), et les cinq
+ *    appelants le jettent par leur `if (!existsSync(...)) continue`. Même appât : nom ASCII →
+ *    la garde MORD ; nom accentué → **`✅` et exit 0**. Sur un dépôt PUBLIC et FRANCOPHONE.
+ *    🔑 *Mesuré : 0 fichier non-ASCII suivi à ce jour. Le défaut ne cachait donc RIEN encore —
+ *    il attendait le premier fichier accentué. Un défaut latent se ferme au moment où on le
+ *    voit, pas au moment où il mord.*
+ *
+ * 2. Le refus hors racine ajouté par `21765ad` n'avait **aucun témoin d'effet** : la mutation
+ *    `if (false && ici !== haut)` rouvrait entièrement le faux vert et la spec restait verte.
+ *    *Une garde sans témoin n'est pas une garde : c'est une intention (RM-02).*
+ */
+describe('REQ-CPL-018 — le périmètre couvre les noms NON-ASCII, et se refuse hors de la racine', () => {
+  // `MOTIF_NU` de `gov-identifiants.ts:79` : une étiquette nue `[ABCDR]\d{1,2}`.
+  // ⚠️ PAS `A04` : `estCodeDePoste` (`/^A\d{2}$/`) exempte les codes de poste, et mon premier
+  // appât était donc INVISIBLE — le contrôle positif ASCII a rougi et me l'a dit.
+  // *Un témoin dont le contrôle positif échoue ne mesure rien : il ne condamne pas, il ignore.*
+  const APPAT = 'Renvoi D7 : la suite est au registre.';
+
+  for (const { etiquette, nom } of [
+    { etiquette: 'ASCII', nom: 'temoin-perimetre-ascii.md' },
+    { etiquette: 'accentué', nom: 'témoin-périmètre-accentué.md' },
+  ]) {
+    it(`REQ-CPL-018 — la faute est VUE dans un fichier suivi au nom ${etiquette}`, () => {
+      const depot = depotCompletJetable();
+      writeFileSync(join(depot, 'docs', nom), APPAT, 'utf8');
+      execFileSync('git', ['add', '-A'], { cwd: depot, stdio: 'ignore' });
+
+      const r = lancerLaGate('scripts/gates/gov-identifiants.ts', depot);
+      expect(
+        r.code,
+        `gov:identifiants n'a PAS vu l'appât dans « docs/${nom} » (nom ${etiquette}) — ` +
+          `elle a rendu ${r.code} et imprimé :
+${r.sortie.slice(0, 600)}`
+      ).not.toBe(0);
+    });
+  }
+
+  // 🔑 CE QUE CE TÉMOIN PROUVE, ET SUR COMBIEN — mesuré par la mutation `if (false && ici !== haut)`
+  // qui neutralise la garde de racine :
+  //
+  //     gov-identifiants, gov-publication   -> ROUGISSENT   (2/5 : ils PROUVENT la garde)
+  //     gov-entite, gov-preseance, lexique  -> restent VERTS (3/5)
+  //
+  // Les trois derniers lisent une entrée par chemin RELATIF et refusent AVANT d'atteindre la garde
+  // de périmètre : leur vert ne vient donc pas d'elle. *Un témoin vert pour une raison qu'on n'a
+  // pas choisie ne prouve pas ce qu'il annonce.* On les garde — ils tiennent la propriété de
+  // sécurité (aucune bannière de succès sur un BOUT du dépôt) — mais la preuve de la garde de
+  // racine repose sur DEUX d'entre eux, et c'est écrit ici pour que personne ne lise cinq preuves.
+  for (const script of GARDES_QUI_BALAIENT) {
+    it(`REQ-CPL-018 — \`${script}\` REFUSE lancée hors de la racine du dépôt`, () => {
+      const depot = depotCompletJetable();
+      const r = lancerLaGate(script, join(depot, 'packages'));
+      expect(
+        r.code,
+        `${script} a rendu un verdict depuis \`packages/\` — elle n'y voit qu'un BOUT du dépôt :
+${r.sortie.slice(0, 600)}`
+      ).not.toBe(0);
+      // ⚠️ On n'exige PAS `perimetre_illisible` ici, et c'est mesuré : `gov-preseance` lit
+      // `docs/PRESEANCE.md` par chemin RELATIF et refuse AVANT d'atteindre la garde de périmètre.
+      // Son refus est correct, il ne porte simplement pas ce nom-là. La propriété de sécurité
+      // qui compte est la même pour les cinq : **aucune bannière de succès sur un BOUT du dépôt**.
+      // ⚠️ ET PAS `not.toContain('✅')` : le message de refus CITE le caractère pour expliquer
+      // ce qu'il empêche (« la garde balaierait UN BOUT du dépôt et rendrait « ✅ » dessus »).
+      // Une garde lexicale trop large condamne le texte qui décrit la protection — mesuré : les
+      // cinq rougissaient sur leur propre message de refus. On vise la BANNIÈRE, en tête de ligne.
+      const bannieres = r.sortie.split(/\r?\n/).filter((l) => l.trimStart().startsWith('✅'));
+      expect(
+        bannieres,
+        `${script} a imprimé une bannière de SUCCÈS depuis \`packages/\` :
+${r.sortie.slice(0, 600)}`
+      ).toEqual([]);
+    });
+  }
+});
+
 const GARDES_QUI_BALAIENT = [
   'scripts/gates/gov-entite.ts',
   'scripts/gates/gov-identifiants.ts',
