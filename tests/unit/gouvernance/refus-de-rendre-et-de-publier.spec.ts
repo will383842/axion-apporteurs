@@ -410,13 +410,17 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    */
   const declares: Record<string, { total: number; temoins: number; raison: string }> = {
     'scripts/lot/fichiers-suivis.ts': {
-      total: 1,
-      temoins: 1,
+      total: 2,
+      temoins: 2,
       raison:
         'LE refus qui manquait : `perimetre_illisible`. Il remplace un `try/catch { return [] }` recopié ' +
         'à l’identique dans CINQ gardes, qui rendait `gov:entite` VERTE sur ZÉRO fichier dans un ' +
         'dépôt sans `.git` — avec un IBAN à clé valide en clair dans les sources, dépôt PUBLIC. ' +
-        'Témoin : `le périmètre INCONNU fait REFUSER, et le dépôt réel reste vert`.',
+        'Témoin : `le périmètre INCONNU fait REFUSER, et le dépôt réel reste vert`. ' +
+        '🔧 SECOND refus ajouté au 26e tour, motif de `securite` : `perimetre_entame`. Un fichier ' +
+        'SUIVI par git mais absent du disque était sauté par le même `continue` que « hors ' +
+        'périmètre par décision » — et la bannière imprimait le MÊME compte avec 171 et 172 ' +
+        'fichiers suivis. Témoin : `une garde REFUSE si un fichier SUIVI est introuvable`.',
     },
     'scripts/lot/corps-de-pr.ts': {
       total: 4,
@@ -562,6 +566,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       'gov-entite.ts — SORTIE TERMINALE du mode à plat, par dépôt jetable',
       'gov-entite.ts — SORTIE TERMINALE de --corps-publie, par PR inexistante',
       'fichiers-suivis.ts — REFUS perimetre_illisible : le périmètre INCONNU fait sortir en échec, et le dépôt réel reste vert (contre-témoin)',
+      'fichiers-suivis.ts — REFUS perimetre_entame : un fichier SUIVI introuvable sur le disque fait sortir en échec, et le dépôt réel reste vert (contre-témoin)',
     ] as const;
     const couverts = REFUS.length + TEMOINS_D_EFFET.length;
     const temoinsDeclares = Object.values(declares).reduce((a, d) => a + d.temoins, 0);
@@ -582,7 +587,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // refus qui manquait (`perimetre_illisible`). Ce cliquet a rougi pour ça — c'est exactement son
     // office : le total ne bouge pas sans qu'on l'écrive. La sortie ajoutée est couverte par un
     // témoin d'effet à DEUX faces (périmètre inconnu → refus ; dépôt réel → vert).
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(26);
+    // 🔧 26 → 27 au 26e tour, ARBITRÉ et non subi : `fichiers-suivis.ts` ajoute le SECOND refus
+    // qui manquait (`perimetre_entame`). Ce cliquet a rougi pour ça, en NOMMANT le fichier et
+    // l'écart (« 2 exits ajoutés, 1 déclarés ») — c'est exactement son office. La sortie ajoutée
+    // est couverte par un témoin d'effet à deux faces (fichier suivi manquant → refus ; dépôt
+    // réel → vert).
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(27);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -1413,6 +1423,30 @@ ${r.sortie.slice(0, 600)}`
       ).not.toBe(0);
     });
   }
+
+  // 🔴 TROISIÈME MOTIF DE `securite` AU 26e TOUR — la bannière compte les fichiers LUS.
+  //
+  //     « 168 fichier(s) suivi(s) balayé(s) : aucune coordonnée en clair » — imprimé À L'IDENTIQUE
+  //     avec 171 et avec 172 fichiers suivis. Le témoin positif est SOUSTRAIT par la chute même
+  //     qu'il devrait signaler.
+  //
+  // Cause : `if (!estBalaye(chemin) || !existsSync(chemin)) continue;` confond DEUX raisons de
+  // sauter — « hors périmètre par décision » (légitime, l'extension n'est pas balayée) et
+  // « fichier SUIVI introuvable sur le disque » (anormal). La seconde est muette.
+  // *Un compteur qui diminue quand le périmètre s'entame ne peut pas signaler qu'il s'entame.*
+  it('REQ-CPL-018 — une garde REFUSE si un fichier SUIVI est introuvable sur le disque', () => {
+    const depot = depotCompletJetable();
+    // Suivi par `git ls-files` (l'index le porte), absent du disque : le périmètre est ENTAMÉ.
+    rmSync(join(depot, 'docs/CONVENTIONS.md'), { force: true });
+
+    const r = lancerLaGate('scripts/gates/gov-identifiants.ts', depot);
+    expect(
+      r.code,
+      `gov:identifiants a rendu un verdict alors qu'un fichier suivi manquait — elle a imprimé :` +
+        `\n${r.sortie.slice(0, 600)}`
+    ).not.toBe(0);
+    expect(r.sortie, 'le refus ne nomme pas `perimetre_entame`').toContain('perimetre_entame');
+  });
 
   // 🔑 CE QUE CE TÉMOIN PROUVE, ET SUR COMBIEN — mesuré par la mutation `if (false && ici !== haut)`
   // qui neutralise la garde de racine :

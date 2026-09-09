@@ -33,12 +33,24 @@
  * corriger à un endroit aurait laissé le défaut aux quatre autres.
  */
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 
 /** Le périmètre n'a pas pu être établi. Ce n'est pas « rien à signaler » : c'est « je n'ai rien lu ». */
 export class PerimetreIllisible extends Error {
   constructor(motif: string) {
     super(motif);
     this.name = 'PerimetreIllisible';
+  }
+}
+
+/**
+ * Le périmètre est LISIBLE mais INCOMPLET : git déclare des fichiers que le disque ne rend pas.
+ * Distincte de `PerimetreIllisible` — là on ne savait rien, ici on sait qu'il manque quelque chose.
+ */
+export class PerimetreEntame extends Error {
+  constructor(motif: string) {
+    super(motif);
+    this.name = 'PerimetreEntame';
   }
 }
 
@@ -115,6 +127,27 @@ export function fichiersSuivis(): string[] {
   if (fichiers.length === 0) {
     throw new PerimetreIllisible('`git ls-files` n’a rendu AUCUN fichier : le périmètre est vide ou illisible.');
   }
+
+  // 🔴 TROISIÈME MOTIF DE `securite` AU 26e TOUR — le périmètre ENTAMÉ, et il était MUET.
+  //
+  // Les cinq gardes écrivent `if (!estBalaye(chemin) || !existsSync(chemin)) continue;` : deux
+  // raisons de sauter, confondues. « Hors périmètre par décision » est légitime ; « fichier SUIVI
+  // introuvable sur le disque » ne l'est pas — et c'est la seconde qui passait sans un mot. La
+  // bannière imprimait « 168 fichier(s) suivi(s) balayé(s) » À L'IDENTIQUE avec 171 et 172 suivis.
+  //
+  // *Un compteur qui DIMINUE quand le périmètre s'entame ne peut pas signaler qu'il s'entame :
+  // le témoin positif est soustrait par la chute même qu'il devrait dénoncer.*
+  //
+  // Ici, une seule fois, pour les cinq — c'est l'office de ce fichier (RM-01).
+  const introuvables = fichiers.filter((f) => !existsSync(f));
+  if (introuvables.length > 0) {
+    throw new PerimetreEntame(
+      `${introuvables.length} fichier(s) SUIVI(S) par git sont introuvables sur le disque : ` +
+        `${introuvables.slice(0, 5).join(', ')}${introuvables.length > 5 ? ', …' : ''}. ` +
+        'Le périmètre est ENTAMÉ : la garde lirait MOINS que ce qu’elle déclare balayer, et son ' +
+        'compte de fichiers baisserait sans que rien ne le dise.'
+    );
+  }
   return fichiers;
 }
 
@@ -126,6 +159,14 @@ export function fichiersSuivisOuRefus(gate: string): string[] {
   try {
     return fichiersSuivis();
   } catch (e) {
+    if (e instanceof PerimetreEntame) {
+      console.error(`❌ ${gate} — [perimetre_entame] ${e.message}`);
+      console.error(
+        '   La garde REFUSE plutôt que de balayer un périmètre amputé en le déclarant complet. ' +
+          'Ce dépôt est PUBLIC : un vert obtenu sur MOINS que le périmètre est un vert qui ment.'
+      );
+      process.exit(1);
+    }
     if (!(e instanceof PerimetreIllisible)) throw e;
     console.error(`❌ ${gate} — [perimetre_illisible] ${e.message}`);
     console.error(
