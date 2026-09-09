@@ -549,21 +549,40 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // 🔑 *Le dépôt connaissait déjà ce piège — « après fusion, la propriété est une ANCESTRALITÉ ».
     // Une garde qui compare au diff doit dire ce qu'elle devient quand le diff est vide, sinon
     // c'est son propre succès qui la fait rougir.*
-    const dejaAtterri = (() => {
+    // 🔑 LA QUESTION QUE LE CONTRÔLE POSITIF VOULAIT POSER EST « LA BASE EST-ELLE LISIBLE ? »,
+    // pas « le diff est-il non vide ». Les deux coïncidaient tant que le lot n'avait pas atterri.
+    //
+    // Première tentative (27e tour) : une garde d'ancestralité `HEAD ⊆ origin/main`. `mutation`
+    // l'a mise en défaut au 28e — elle n'est vraie que sur `main` LUI-MÊME. Sur la branche
+    // SUIVANTE (`origin/main` = ce lot fusionné, `HEAD` = un commit fille), le diff est vide
+    // aussi et la condition vaut FAUX : le rouge revenait mot pour mot, sur toutes les PR d'après
+    // qui n'ajoutent aucune sortie non nulle — c'est-à-dire la quasi-totalité.
+    // *La maxime était juste et je ne l'avais appliquée qu'à UNE des deux façons de se vider.*
+    const baseLisible = (() => {
       try {
-        execFileSync('git', ['merge-base', '--is-ancestor', 'HEAD', 'origin/main'], { stdio: 'ignore' });
+        execFileSync('git', ['rev-parse', '--verify', 'origin/main'], { stdio: 'ignore' });
         return true;
       } catch {
         return false;
       }
     })();
 
-    if (dejaAtterri) {
-      // Le lot EST dans `origin/main` : il n'y a plus de diff, donc plus rien à dériver. On ne
-      // rend pas la main en silence pour autant — ce serait le « return nu » que `schema` a fait
-      // fermer deux fois. On assert la propriété qui RESTE vraie : chaque fichier déclaré existe
-      // encore et porte AU MOINS ce qu'il déclare. Un registre qu'on viderait après fusion, ou un
-      // fichier supprimé, rougit ici.
+    // LE contrôle positif, dans sa forme exacte : sans base, la dérivation ne mesure rien, et
+    // « rien d'omis » se lirait comme « rien à vérifier ».
+    expect(
+      baseLisible,
+      '`origin/main` est introuvable : la dérivation ne mesure RIEN, et son silence ne prouve rien'
+    ).toBe(true);
+
+    if (ajoutesParFichier.size === 0) {
+      // Base lisible ET diff vide : ce lot n'ajoute plus rien parce qu'il a ATTERRI. On ne rend
+      // pas la main en silence — ce serait la sortie muette que `schema` a fait fermer deux fois.
+      // On assert la propriété qui RESTE vraie, cardinalité comprise : `mutation` a mesuré qu'un
+      // registre VIDÉ passait au vert ici, la boucle n'ayant alors rien à itérer.
+      expect(
+        Object.keys(declares).length,
+        'le registre `declares` est VIDE : on ne peut pas faire baisser la dette en la supprimant'
+      ).toBeGreaterThan(0);
       for (const [f, d] of Object.entries(declares)) {
         expect(existsSync(f), `${f} est déclaré au registre des refus mais n'existe plus`).toBe(true);
         expect(
@@ -573,13 +592,6 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       }
       return;
     }
-
-    // CONTRÔLE POSITIF : sans lui, un diff vide (mauvaise base, `origin/main` absent) rendrait
-    // une map vide, et « rien d’omis » se lirait exactement comme « rien à vérifier ».
-    expect(
-      ajoutesParFichier.size,
-      'aucun `process.exit(1)` ajouté détecté : la dérivation ne mesure rien (base absente ?)'
-    ).toBeGreaterThan(0);
 
     for (const [f, n] of [...ajoutesParFichier].sort()) {
       const d = declares[f];
@@ -1456,19 +1468,44 @@ describe('REQ-CPL-018 — le périmètre couvre les noms NON-ASCII, et se refuse
       execFileSync('git', ['add', '-A'], { cwd: depot, stdio: 'ignore' });
 
       const r = lancerLaGate('scripts/gates/gov-identifiants.ts', depot);
-      // 🔴 PAS `not.toBe(0)` — motif BLOQUANT de `mutation` au 27e tour, et il visait CE test.
-      // Un refus quelconque ne prouve pas que la garde a LU le fichier. Mesuré : en retirant le
-      // seul `-z`, ces deux témoins restaient VERTS, parce que `perimetre_entame` — ajouté par
-      // le commit SUIVANT de la même PR — refusait à sa place, sans que l'appât ait été lu.
-      // *Un commit peut désarmer en silence le témoin du commit précédent, dans la même PR.*
-      // On exige donc que la sortie NOMME le fichier : une garde ne peut nommer que ce qu'elle a lu.
+      // 🔴 NI `not.toBe(0)`, NI `toContain(<nom>)` — DEUX motifs successifs, 27e et 28e tours.
+      //
+      //   `not.toBe(0)`      : `perimetre_entame`, ajouté par le commit SUIVANT, refusait à la
+      //                        place du `-z`. Rouge pour une raison que le témoin n'a pas choisie.
+      //   `toContain(<nom>)` : pire. Sans `-z`, `split(NUL)` rend UN SEUL élément — le blob entier
+      //                        de `git ls-files` — qui n'existe pas comme fichier, donc part dans
+      //                        le message de `PerimetreEntame` (`introuvables.slice(0,5)` tronque
+      //                        le TABLEAU, jamais la chaîne). Le nom du fichier s'y trouve : le
+      //                        témoin était satisfait par un ÉCHO DE L'ÉNUMÉRATION.
+      //                        Mesuré par `securite` au 28e tour, reproduit ici : `2 passed`.
+      //
+      // 🔑 *Et ma mesure « `-z` retiré → ROUGE » était fausse : ma mutation changeait DEUX choses
+      // (le `-z` ET `core.quotepath=false`). Un témoin qui bouge pour deux raisons ne discrimine
+      // rien — y compris quand c'est le témoin d'un témoin.*
+      //
+      // ⚠️ ET LA MAXIME « une garde ne peut nommer que ce qu'elle a lu » EST FAUSSE — réfutée par
+      // le fichier que ce lot vient d'écrire : `fichiers-suivis.ts` fait énumérer à
+      // `perimetre_entame` précisément les chemins qu'il n'a PAS pu lire. Relevé par `schema` au
+      // 28e tour. *Le contre-exemple d'une règle qu'on pose se trouve parfois dans le fichier
+      // qu'on vient d'écrire pour la tenir.*
+      //
+      // Ce que seule une LECTURE DU CONTENU peut produire : le message de faute, SUR LA LIGNE du
+      // fichier. Le nom seul s'écho ; « identifiant nu » ne s'invente pas sans avoir lu l'appât.
+      // Et on exige en plus que le refus ne soit PAS de nature `perimetre_entame` : un refus de
+      // périmètre est correct, mais il ne prouve rien de la LECTURE, qui est l'objet de ce témoin.
+      const ligneFautive = r.sortie
+        .split(/\r?\n/)
+        .find((l) => l.includes(nom) && l.includes('identifiant nu'));
+      expect(
+        ligneFautive,
+        `gov:identifiants n'a pas rendu de LIGNE DE FAUTE pour « docs/${nom} » (nom ${etiquette}) : ` +
+          `elle n'a pas lu son contenu. Code ${r.code}, sortie :\n${r.sortie.slice(0, 600)}`
+      ).toBeDefined();
       expect(
         r.sortie,
-        `gov:identifiants n'a pas NOMMÉ « docs/${nom} » (nom ${etiquette}) : elle ne l'a pas lu. ` +
-          `Code ${r.code}, sortie :
-${r.sortie.slice(0, 600)}`
-      ).toContain(nom);
-      expect(r.code, `gov:identifiants a nommé le fichier fautif mais rendu 0`).not.toBe(0);
+        `gov:identifiants a refusé sur le PÉRIMÈTRE, pas sur la faute : elle n'a pas lu « docs/${nom} »`
+      ).not.toContain('perimetre_entame');
+      expect(r.code, `gov:identifiants a rendu la faute mais sort 0`).not.toBe(0);
     });
   }
 
