@@ -533,6 +533,47 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       if (n > 0) ajoutesParFichier.set(f, n);
     }
 
+    // 🔴 APRÈS LA FUSION, CETTE PROPRIÉTÉ CHANGE DE NATURE — trouvé par la revue de complétude
+    // au 27e tour, et MESURÉ. Ce test compare le DISQUE à `origin/main`. Le jour où ce lot
+    // atterrit, les deux deviennent ÉGAUX : tous les deltas valent 0, la map est vide, et le
+    // contrôle positif ci-dessous — écrit pour détecter une base ABSENTE — se déclencherait sur
+    // une fusion RÉUSSIE :
+    //
+    //     origin/main = 794245c, HEAD = 4304add  ->  ajoutesParFichier.size = 9   (vert)
+    //     origin/main = HEAD                     ->  size = 0, « expected 0 to be greater than 0 »
+    //
+    // `ci.yml` déclenche Gate A sur `push: {branches:[main]}` avec `fetch-depth: 0` : `origin/main`
+    // EST disponible en CI, donc `pnpm test` serait ROUGE dès le push de fusion, et le resterait
+    // pour toutes les PR suivantes. Le fichier est neuf : la régression serait de CE lot.
+    //
+    // 🔑 *Le dépôt connaissait déjà ce piège — « après fusion, la propriété est une ANCESTRALITÉ ».
+    // Une garde qui compare au diff doit dire ce qu'elle devient quand le diff est vide, sinon
+    // c'est son propre succès qui la fait rougir.*
+    const dejaAtterri = (() => {
+      try {
+        execFileSync('git', ['merge-base', '--is-ancestor', 'HEAD', 'origin/main'], { stdio: 'ignore' });
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+
+    if (dejaAtterri) {
+      // Le lot EST dans `origin/main` : il n'y a plus de diff, donc plus rien à dériver. On ne
+      // rend pas la main en silence pour autant — ce serait le « return nu » que `schema` a fait
+      // fermer deux fois. On assert la propriété qui RESTE vraie : chaque fichier déclaré existe
+      // encore et porte AU MOINS ce qu'il déclare. Un registre qu'on viderait après fusion, ou un
+      // fichier supprimé, rougit ici.
+      for (const [f, d] of Object.entries(declares)) {
+        expect(existsSync(f), `${f} est déclaré au registre des refus mais n'existe plus`).toBe(true);
+        expect(
+          compter(readFileSync(f, 'utf8')),
+          `${f} déclare ${d.total} sortie(s) non nulle(s) et n'en porte plus autant`
+        ).toBeGreaterThanOrEqual(d.total);
+      }
+      return;
+    }
+
     // CONTRÔLE POSITIF : sans lui, un diff vide (mauvaise base, `origin/main` absent) rendrait
     // une map vide, et « rien d’omis » se lirait exactement comme « rien à vérifier ».
     expect(
@@ -1415,12 +1456,19 @@ describe('REQ-CPL-018 — le périmètre couvre les noms NON-ASCII, et se refuse
       execFileSync('git', ['add', '-A'], { cwd: depot, stdio: 'ignore' });
 
       const r = lancerLaGate('scripts/gates/gov-identifiants.ts', depot);
+      // 🔴 PAS `not.toBe(0)` — motif BLOQUANT de `mutation` au 27e tour, et il visait CE test.
+      // Un refus quelconque ne prouve pas que la garde a LU le fichier. Mesuré : en retirant le
+      // seul `-z`, ces deux témoins restaient VERTS, parce que `perimetre_entame` — ajouté par
+      // le commit SUIVANT de la même PR — refusait à sa place, sans que l'appât ait été lu.
+      // *Un commit peut désarmer en silence le témoin du commit précédent, dans la même PR.*
+      // On exige donc que la sortie NOMME le fichier : une garde ne peut nommer que ce qu'elle a lu.
       expect(
-        r.code,
-        `gov:identifiants n'a PAS vu l'appât dans « docs/${nom} » (nom ${etiquette}) — ` +
-          `elle a rendu ${r.code} et imprimé :
+        r.sortie,
+        `gov:identifiants n'a pas NOMMÉ « docs/${nom} » (nom ${etiquette}) : elle ne l'a pas lu. ` +
+          `Code ${r.code}, sortie :
 ${r.sortie.slice(0, 600)}`
-      ).not.toBe(0);
+      ).toContain(nom);
+      expect(r.code, `gov:identifiants a nommé le fichier fautif mais rendu 0`).not.toBe(0);
     });
   }
 
