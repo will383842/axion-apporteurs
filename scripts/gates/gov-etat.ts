@@ -469,6 +469,14 @@ function controler(e: Etat): Faute[] {
   return f;
 }
 
+/** Le jour ISO situé `n` jours après un instant. Sert aux témoins qui doivent être dans le futur
+ * de la base sans jamais dépendre d'une date tapée à la main. */
+function joursApres(instantIso: string, n: number): string {
+  const d = new Date(instantIso);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 // ── mode --prove ─────────────────────────────────────────────────────────────
 
 /**
@@ -476,6 +484,19 @@ function controler(e: Etat): Faute[] {
  * une rubrique, le contre-témoin « la base » rougit ici. Le côté GitHub, lui, est synthétique : le
  * faire dépendre de l'état réel des PR rendrait la preuve verte ou rouge au gré de la journée, ce
  * qui est exactement le défaut que `--now` corrige ailleurs.
+ *
+ * ⚠️ L'INSTANT DE LA BASE SE DÉRIVE, IL NE SE TAPE PAS (GOV-032). Il a porté le littéral
+ * `'2026-09-04T09:00:00Z'` pendant que `entrees` venait, lui, du journal RÉEL. Les deux moitiés
+ * étaient défendables séparément et fausses ensemble : le journal avance, le littéral non. La
+ * première entrée écrite après cette date rend la base fautive, et `--prove` REFUSE alors de
+ * commencer — « la preuve part d'un état DÉJÀ fautif ». C'est arrivé le 2026-09-05, sur l'entrée
+ * de PR #31, le lendemain. Une preuve qui s'éteint toute seule au bout d'un jour ne prouve rien
+ * le second jour, et rien ne le dit : elle sort 1, comme une garde qui aurait trouvé un défaut.
+ *
+ * La règle est celle de `--now` : un instant se fige par rapport à CE QU'IL JUGE. Ici il juge le
+ * journal réel, donc il vaut le jour réel. Cela n'introduit aucune lecture d'horloge dans la
+ * GARDE — `controler()` reste pure et reçoit `maintenant` — seulement dans le banc d'essai, qui
+ * doit bien dire contre quel présent il confronte un fichier vivant.
  */
 if (process.argv.includes('--prove')) {
   const planState = readFileSync(CHEMIN_PLAN_STATE, 'utf8');
@@ -502,7 +523,7 @@ if (process.argv.includes('--prove')) {
       [901, ['A01']],
       [902, ['A05']],
     ]),
-    maintenant: '2026-09-04T09:00:00Z',
+    maintenant: `${new Date().toISOString().slice(0, 10)}T12:00:00Z`,
   };
 
   const copie = (m: Partial<Etat>): Etat => ({ ...BASE, ...m });
@@ -543,7 +564,10 @@ if (process.argv.includes('--prove')) {
     {
       famille: 'journal_date_future',
       quoi: 'une entrée datée après l’instant donné',
-      etat: () => copie({ entrees: [{ ...premiere, date: '2026-12-31' }] }),
+      // La date du témoin se DÉRIVE de l'instant de la base, au lieu du littéral `2026-12-31`
+      // qu'elle portait : un témoin dont la date est écrite en dur cesse d'exercer sa famille le
+      // jour où le présent le rattrape, et il le fait en silence — il devient un contre-témoin.
+      etat: () => copie({ entrees: [{ ...premiere, date: joursApres(BASE.maintenant!, 1) }] }),
     },
     {
       famille: 'plan_state_perime',

@@ -7,32 +7,32 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `ab5caf5` — 2026-09-04T07:58:37+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #30 (rien) |
-| Qui tient quoi ? | aucune tâche revendiquée |
-| Où en est la phase ? | phase -1 — 20/26 tâches, reste 3.00 j |
-| Le prochain pas | fusionner #30, puis GOV-013 — Gate lexicale « commercial » (chemin critique) |
-| Ce qui bloque | 3 tâche(s) bloquée(s) ou en attente externe · 9 question(s) pour Will |
-| Dernière entrée de journal | PR #30 — 2026-09-04 |
+| Où est `main` ? | `794245c` — 2026-09-04T23:10:40+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #31 (rien) |
+| Qui tient quoi ? | GOV-006 (A01) · GOV-013 (A01) · CPL-T01 (A01) · GOV-024 (A01) · GOV-025 (A01) · GOV-026 (A01) · GOV-027 (A01) · GOV-029 (A01) · GOV-032 (A01) |
+| Où en est la phase ? | phase -1 — 20/36 tâches, reste 7.25 j |
+| Le prochain pas | fusionner #31, puis INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel |
+| Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 4 question(s) pour Will |
+| Dernière entrée de journal | PR #31 — 2026-09-05 |
 
-**Ce qu’on tape maintenant.** `gh pr view 30 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 31 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
-20/26 tâches terminées · reste 3.00 j estimés.
+20/36 tâches terminées · reste 7.25 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 174 | GOV-006, GOV-013, GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01 … |
-| `en_cours` | 0 | — |
+| `a_faire` | 178 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
+| `en_cours` | 9 | GOV-006 (A01) PR#31 · GOV-013 (A01) PR#31 · CPL-T01 (A01) PR#31 · GOV-024 (A01) PR#31 · GOV-025 (A01) PR#31 · GOV-026 (A01) PR#31 · GOV-027 (A01) PR#31 · GOV-029 (A01) PR#31 · GOV-032 (A01) PR#31 |
 | `en_revue` | 0 | — |
 | `fusionnee` | 20 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-009, GOV-010, GOV-011 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 | `bloquee` | 0 | — |
-| `attente_externe` | 3 | CPL-T01 · JUR-T01b · JUR-T01c |
+| `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 
 ## Chemin critique
 
@@ -44,21 +44,15 @@ Reste sur ce chemin : **17.75 j**.
 
 ## Bloquées
 
-- **CPL-T01** — Décisions sans valeur par défaut à trancher par Will : W1 entité contractante, W9 prolongation de fenêtre si devis en cours · attend will
 - **JUR-T01b** — Contrat v1 arrêté par Will · attend will
 - **JUR-T01c** — Mandat d'autofacturation validé — expert-comptable s'il y en a un, sinon décision de Will avec les défauts du registre · attend expert_comptable
 
 ## Questions ouvertes pour Will
 
 - W1
-- W11
-- W2
+- W13
 - W3
 - W4
-- W5
-- W6
-- W9
-- externe:will
 
 ## Hypothèses par défaut appliquées
 
@@ -68,7 +62,7 @@ Reste sur ce chemin : **17.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #30 — chore(GOV-012): cloture du lot L-1-03 — huit taches fusionnee, atterrissage atteste | `lot/L-1-03-cloture` | rien — fusionnable maintenant |
+| 1 | #31 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — neuf taches, le verrou de phase leve, trois regressions fermees | `lot/L-1-INT-a` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -76,7 +70,17 @@ Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partn
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
+| Tâche | Revendiquée par | Issue | Statut |
+| --- | --- | --- | --- |
+| GOV-006 — Glossaire + gate schéma enum | A01 | #10 | `en_cours` |
+| GOV-013 — Gate lexicale « commercial » | A01 | #15 | `en_cours` |
+| CPL-T01 — Registre `config/entite.json` à valeur sentinelle, ses lecteurs et la garde `gov:entite` | A01 | — | `en_cours` |
+| GOV-024 — Une vue générée qui a dérivé de sa source doit rougir | A01 | — | `en_cours` |
+| GOV-025 — La garde des identifiants nus est aveugle en fin de phrase — dépôt public, c'est une garde de publication | A01 | — | `en_cours` |
+| GOV-026 — Le CLAUDE.md racine, avec sa règle maison d'abord registrée | A01 | — | `en_cours` |
+| GOV-027 — Le composeur lit le registre des décisions autrement que la garde, et écarte des tâches dont la décision est posée | A01 | — | `en_cours` |
+| GOV-029 — L'identifiant d'un lot se derivait d'un dossier que git ignore, et repartait sur un numero deja pris | A01 | — | `en_cours` |
+| GOV-032 — Un instant de reference se fige par rapport a CE QU'IL JUGE | A01 | — | `en_cours` |
 
 ⚠️ **15 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -89,18 +93,69 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-04)
 
 ## Prochain pas
 
-1. **Fusionner #30** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-2. **GOV-013** — Gate lexicale « commercial » (0.25 j, **sur le chemin critique**) : 3 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+1. **Fusionner #31** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+2. **INT-T01b** — Contrat d'événements, payloads et fixtures produites par le producteur réel (1 j) : 1 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `ab5caf5` (2026-09-04T07:58:37+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `794245c` (2026-09-04T23:10:40+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 > Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — neuf taches, le verrou de phase leve, trois regressions fermees
+
+**Fait.** Trois lots entrent en une PR : neuf tâches — `GOV-006`, `GOV-013`, `CPL-T01`, `GOV-024`, `GOV-025`, `GOV-026`, `GOV-027`, `GOV-029`, `GOV-032` —
+les deux dernières nées de la vérification. `CPL-T01` lève le verrou qui gelait 171 tâches : une valeur que seul
+Will connaît est une **configuration à sentinelle**, pas un état de tâche, et `attente_externe`
+n'entrait dans aucun lot — la phase −1 restait donc courante à vie, sans qu'aucune garde ne rougisse.
+`GOV-024` donne enfin un générateur à `docs/REQUIREMENTS.md`, qui n'en avait aucun alors que son
+bandeau affirmait le contraire, et un **vérificateur** aux deux vues : `--verifie-rendu` n'écrit rien
+et sort 1 sur un octet d'écart, en nommant l'écart en unités du domaine. `GOV-027` supprime le second
+lecteur du registre des décisions ; le composeur imprime l'effet — **18 tâches** que la lecture
+d'avant écartait « pour une raison de décision » sont éligibles, 1 le reste. Le dépôt passe de 109 à
+**112 gardes**, de 18 à **23 armées**, de 197 à **209 tâches**, de 353 à **355 exigences**.
+⚠️ Ces quatre nombres ont ete TAPES et ils etaient faux — 110/21/204 le 2026-09-05 au soir, quand la
+mesure et le corps DERIVE de cette PR meme donnaient 112/23/209. Trois facons d'etre faux a la fois :
+contre la mesure, contre l'artefact que la PR publie, et contre le bandeau de ce fichier. La garde des
+compteurs ne les atteint pas : elle ne balaie que trois fichiers et ne vise que la tournure « n
+revisions ». Ils restent tapes ici faute d'un marqueur dans ce fichier — c'est une dette, pas un choix.
+
+**Reste.** Trois lots fusionnés en une PR au lieu de six : la Gate A juge l'arbre **combiné**, et
+c'est le seul endroit où le conflit annoncé entre `gov:lexique` et `gov:publication` sur la même
+phrase de `partners/ADR-0009` pouvait être tranché — il est **fermé**, mesuré et non simulé. Restent
+en phase −1 : `GOV-014`, `INT-T01b`, `GOV-019`, `GOV-028`, `GOV-035`, `GOV-036`, `GOV-037` — les trois
+dernieres etant creees par ce diff meme, ce que la premiere redaction omettait — `INT-T01b` étant la seule tâche de la PHASE −1 à vivre dans
+`axionia` — le chantier en compte quatorze au total. Trois constats sont renvoyés en tâche plutôt que corrigés au
+passage : la neutralisation des citations aveugle la garde sur toute chaîne courte (`GOV-028`), et
+`pnpm gates:prouvees` compte 8 « preuves non référencées » qui sont des refus de **ponctuation**, pas
+des gardes non prouvées.
+
+**Appris.** Deux régressions ont été trouvées en vérifiant, et aucune n'aurait rougi avant d'être en
+production. La première : `GOV-025` a retiré le point de sa lookahead pour attraper l'étiquette collée
+à un point final — c'était juste — mais elle attrapait du même coup les **renvois pointés**, et
+`docs/gates.json` en porte un depuis `main`. Les deux étaient verts **séparément** et rouges
+**ensemble** ; sans l'arbre combiné, Gate A serait tombée sur `main`, sur une ligne que personne n'avait
+touchée. La ligne juste se trace sur ce qui SUIT le point : un chiffre prolonge l'identifiant, autre
+chose termine la phrase. La seconde : le composeur tirait le numéro du prochain lot d'un répertoire
+que `.gitignore` exclut, donc absent de tout arbre neuf — il proposait `L-1-01`, identifiant déjà porté
+par sept tâches livrées. Son commentaire nommait pourtant le cas exact, « un dossier non commité », et
+n'en avait corrigé que la moitié : le comptage était devenu un maximum, la source était restée le
+répertoire ignoré. **Un commentaire juste qui nomme un défaut ne le corrige pas, et il rassure d'autant
+plus qu'il est juste.**
+
+Et la troisième ne tenait pas dans « deux » : **un instant de référence se fige par rapport à CE
+QU'IL JUGE.** Deux spec et le mode `--prove` d'une garde portaient un instant écrit en dur, sous un
+commentaire exact — « un instant FIXE, jamais `new Date()` » — qui vaut pour un univers INJECTÉ et
+non pour un fichier vivant. Confronté au journal réel, qui avance, il faisait un test à retardement,
+tombé le lendemain sur cette entrée même. Le pire n'est pas la panne : `--prove` sortait **1** en
+refusant de commencer, exactement comme une garde qui aurait trouvé un défaut. Une preuve qui
+s'éteint toute seule ne prouve rien le second jour, **et rien ne le dit**. Son témoin portait lui
+aussi une date en dur : un témoin dont la date est écrite à la main cesse d'exercer sa famille le
+jour où le présent le rattrape — **en silence**, il devient un contre-témoin.
 
 ### PR #30 — 2026-09-04 — chore(GOV-012): cloture du lot L-1-03 — huit taches fusionnee, atterrissage atteste
 
@@ -174,31 +229,7 @@ vérifie au moment où c'est encore réparable sans un second aller-retour : la 
 détecteur d'incident, pas un garde-fou. Le coût mesuré de l'oubli est une PR entière, sa Gate A
 complète, et un `main` rouge dans l'intervalle.
 
-### PR #28 — 2026-09-04 — feat(GOV-011): lot L-1-03 — huit taches, six gardes armees, seize ruptures de tracabilite fermees
-
-**Fait.** Les huit tâches du lot `L-1-03` sont intégrées : `GOV-008`, `GOV-010`, `GOV-011`,
-`GOV-012`, `GOV-018`, `GOV-020`, `GOV-023` et `INT-T01a`. Le dépôt passe de 25 à 37 étapes de Gate A,
-de 92 à 217 tests sur 19 fichiers, et de **11** à 18 gardes armées — sept de plus, quand le titre de
-cette PR en annonce six, et le titre d'une PR fusionnée ne se réécrit pas ; les seize ruptures de
-traçabilité que `gov:trace` a trouvées le jour de sa livraison sont fermées. Le contrat d'événements
-est dérivé et tenu par son empreinte (`packages/contracts/contracts.sha256`), et les quinze fiches de
-rôle sont générées depuis `docs/agents.json`.
-
-**Reste.** `glossaire-enums.spec.ts` (`GOV-006`) n'existe pas : tant qu'il manque, `docs/GLOSSAIRE.md`
-est une consigne et non un contrôle, alors que `docs/PRESEANCE.md` §2 lui donne la primauté sur les
-termes. `deploy:verify` (`GOV-012`, `partners/ADR-0006`) manque toujours, et le Pas 7 de
-`docs/PROTOCOLE-FUSION.md` porte donc un repli daté. Six des huit étiquettes de chantier de
-`docs/INVENTAIRE-CHANTIERS.md` n'ont aucun référent dans ce dépôt, et l'écart entre les trois
-comptes d'événements (5, 7, 11) est consigné dans `partners/ADR-0008` plutôt que résolu.
-
-**Appris.** Une garde ne juge pas forcément ce que son propre lot écrit : `gov:trace` écartait les
-tâches non livrées, or les huit du lot étaient `a_faire` — les 33 entrées `tests{}` que le lot
-écrivait n'étaient confrontées au disque par aucune garde, et une promesse inventée est passée dans
-la tâche même qui livre la garde censée l'attraper. Le critère juste n'est pas le statut de la tâche
-mais l'existence du fichier, et il a fallu élargir deux choses : le contrôle, puis la résolution des
-titres — un contrôle élargi dont la source ne l'est pas ne contrôle rien.
-
-… 2 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 3 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

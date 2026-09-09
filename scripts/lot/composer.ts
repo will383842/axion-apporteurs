@@ -3,14 +3,14 @@
  *
  * USAGE   : pnpm lot:composer -- --phase <n> --repo <partners|axionia> --max 8 --now <ISO du jour>
  *           (le `--` de pnpm est OBLIGATOIRE : sans lui, pnpm avale les options)
- * ENTRÉES : docs/tasks.json, docs/DECISIONS.md (identifiants HYP-/DEC- posés en §2),
+ * ENTRÉES : docs/tasks.json, docs/DECISIONS.md (lu par `./registre-decisions`, le lecteur UNIQUE),
  *           docs/maquettes/VALIDATION.md (gate des écrans), `gh issue list`, `git worktree list`
  * SORTIE  : docs/lots/L<phase>-<seq>/lot.json = { id, phase, repo, taches: Tache[], ecartees: [{id, raison}] }
  *
- * INVARIANTS (les mêmes que la gate `gov:tasks`)
+ * INVARIANTS (les mêmes que la gate `gov:tasks` — au sens fort : le MÊME code les lit, GOV-027)
  *   - éligible = statut a_faire ∧ phase == phase courante ∧ repo == repo demandé ∧ externe == null
- *                ∧ toutes les deps ∈ {fusionnee, deployee, verifiee} ∧ chaque hyp a une entrée dans la
- *                §2 de DECISIONS.md ∧ aucune hyp en §1 (décision bloquante non tranchée) ∧ attempts < 2
+ *                ∧ toutes les deps ∈ {fusionnee, deployee, verifiee} ∧ chaque hyp est DÉCLARÉE au
+ *                registre ∧ aucune hyp bloquante (déclarée en §1 et non datée) ∧ attempts < 2
  *   - une tâche d'écran (`UX-P1-*`, `UX-P2-*`, `UX-P3-*`) n'est PAS attribuable tant que sa ligne de
  *     docs/maquettes/VALIDATION.md n'est pas validée par Will (colonne « Validé le » ≠ `—`)
  *   - deux tâches d'un lot n'ont JAMAIS de chemin en commun (sinon deux worktrees se marchent dessus)
@@ -29,6 +29,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { LIVREE } from './avancement';
+import { lireRegistre, tachesRedevenuesEligibles, CHEMIN_REGISTRE } from './registre-decisions';
+import { prochainIdentifiantDeLot, lotsDuBacklog } from './identifiant-de-lot';
 
 // La cinquieme copie de l'ensemble « livree », sous un autre nom — c'est ainsi qu'un doublon
 // echappe a une recherche. Elle se DERIVE desormais du bareme unique de `./avancement`.
@@ -87,19 +89,17 @@ const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { version: nu
 const taches = doc.taches;
 const index = new Map(taches.map((t) => [t.id, t]));
 
-// --- décisions : la FRONTIÈRE §1 / §2 fait foi ----------------------------------------------------
-// Le §4 du registre prescrit au gardien du spec de DÉPLACER une ligne de la §2 vers la §1 quand une
-// décision cesse d'avoir un défaut. Ratisser tout le fichier rend ce déplacement invisible : on
-// composait des lots sur des décisions redevenues bloquantes.
-const decisionsBrut = readFileSync('docs/DECISIONS.md', 'utf8');
-const section = (n: number) =>
-  decisionsBrut.split(new RegExp(`^## ${n}\\.`, 'm'))[1]?.split(new RegExp(`^## ${n + 1}\\.`, 'm'))[0] ?? '';
-const ids = (texte: string) => new Set(texte.match(/\b(HYP|DEC)-[A-Z0-9-]+\b/g) || []);
-
-/** §2 = décisions avec une hypothèse par défaut posée → on peut coder dessus. */
-const decisions = ids(section(2));
-/** §1 = décisions SANS défaut → aucune tâche qui les cite n'est composable. */
-const bloquantes = ids(section(1));
+// --- décisions : UN SEUL lecteur, partagé avec la garde (GOV-027) ---------------------------------
+// Ce bloc portait sa propre lecture du registre : `/\b(HYP|DEC)-[A-Z0-9-]+\b/` appliqué au TEXTE
+// BRUT des sections. Elle ne connaissait que deux préfixes sur quatre, n'appliquait aucun alias de
+// la §0, et ratissait la prose autant que les tableaux. Mesuré le 2026-09-04 : DIX-NEUF tâches
+// écartées pour une raison de décision, dont dix-huit à tort — et la seule décision qui bloque
+// vraiment (`EXT-2a`, préfixe `EXT`) passait au travers. Un lecteur faux ne l'est pas « dans le
+// sens strict » : il l'est dans les deux sens à la fois.
+//
+// La lecture vit désormais dans `./registre-decisions`, importée ici ET par `gov-tasks.ts` (RM-01).
+const decisionsBrut = readFileSync(CHEMIN_REGISTRE, 'utf8');
+const registre = lireRegistre(decisionsBrut);
 
 // --- maquettes : une tâche d'écran n'est pas attribuable sans validation de Will -------------------
 // La gate vivait dans un document que personne ne lisait (`maquettes/VALIDATION.md:3-4`). Elle est ici.
@@ -156,9 +156,15 @@ const eligibles = taches.filter((t) => {
   if (maquettesNonValidees.has(t.id)) { ecartees.push({ id: t.id, raison: 'maquette non validée par Will' }); return false; }
   const depsBloquantes = t.deps.filter((d) => !STATUTS_TERMINES.has(index.get(d)?.statut ?? 'inconnu'));
   if (depsBloquantes.length) { ecartees.push({ id: t.id, raison: `dépend de ${depsBloquantes.join(', ')}` }); return false; }
-  const nonTranchees = t.hyp.filter((h) => bloquantes.has(h));
-  if (nonTranchees.length) { ecartees.push({ id: t.id, raison: `décision bloquante non tranchée (§1 du registre) : ${nonTranchees.join(', ')}` }); return false; }
-  const sansDecision = t.hyp.filter((h) => !decisions.has(h));
+  const nonTranchees = t.hyp.filter((h) => registre.estBloquante(h));
+  if (nonTranchees.length) {
+    // Le canonique est cité À CÔTÉ de l'identifiant écrit dans la tâche : sans lui, la session qui
+    // lit cette raison cherche `DEC-INT-004` dans un registre qui ne le porte qu'en §0.
+    const nommees = nonTranchees.map((h) => (registre.canonique(h) === h ? h : `${h} → ${registre.canonique(h)}`));
+    ecartees.push({ id: t.id, raison: `décision bloquante non tranchée (§1 du registre) : ${nommees.join(', ')}` });
+    return false;
+  }
+  const sansDecision = t.hyp.filter((h) => !registre.estCodable(h));
   if (sansDecision.length) { ecartees.push({ id: t.id, raison: `décision sans hypothèse : ${sansDecision.join(', ')}` }); return false; }
   return true;
 });
@@ -176,16 +182,13 @@ for (const t of eligibles) {
 
 // --- écriture du lot ------------------------------------------------------------------------------
 mkdirSync('docs/lots', { recursive: true });
-const prefixe = `L${phase}-`;
-// Le numéro se DÉDUIT du plus grand déjà posé, jamais d'un COMPTAGE : un dossier supprimé, archivé ou
-// non commité faisait retomber sur un identifiant déjà utilisé, et écrasait le lot.json précédent.
-const seq = Math.max(
-  0,
-  ...readdirSync('docs/lots')
-    .filter((d) => d.startsWith(prefixe))
-    .map((d) => Number(d.slice(prefixe.length)) || 0)
-) + 1;
-const id = `${prefixe}${String(seq).padStart(2, '0')}`;
+// Le numéro se DÉDUIT du plus grand déjà posé, et il le déduit de DEUX sources (GOV-029) :
+// `docs/lots/` pour les lots composés mais pas encore clos, et le champ `lot` de `docs/tasks.json`
+// pour les lots clos. Ce bloc ne lisait que le dossier — or `.gitignore` l. 67 l'EXCLUT du dépôt :
+// dans un arbre neuf il n'existe pas, le maximum d'un ensemble vide vaut 0, et le composeur
+// repartait sur `L-1-01`, déjà porté par sept tâches `fusionnee`. Le commentaire d'avant nommait
+// pourtant le cas — « un dossier non commité » — et n'en avait corrigé que la moitié.
+const id = prochainIdentifiantDeLot(phase, readdirSync('docs/lots'), [...lotsDuBacklog(taches)]);
 const chemin = join('docs/lots', id, 'lot.json');
 if (existsSync(chemin)) {
   throw new Error(`${chemin} existe déjà : refus d'écraser un lot. Archive-le ou renomme-le avant de recomposer.`);
@@ -197,3 +200,31 @@ writeFileSync(chemin, JSON.stringify(lot, null, 2) + '\n');
 console.log(`Lot ${id} : ${retenues.length} tâche(s) — ${retenues.map((t) => t.id).join(', ') || '(aucune)'}`);
 if (reprises.length) console.log(`Reprises après abandon : ${reprises.join(', ')}`);
 if (!retenues.length) console.log(`Aucune tâche éligible. Raisons :\n  ${ecartees.map((e) => `${e.id} — ${e.raison}`).join('\n  ')}`);
+
+// --- ce que le lecteur unique a changé, IMPRIMÉ ---------------------------------------------------
+// Point 5 de l'acceptation de GOV-027 : « le décompte des tâches redevenues éligibles imprimé, pour
+// qu'on voie la différence au lieu de la supposer ». Un correctif dont l'effet n'est pas mesuré est
+// un correctif dont on discute — et celui-ci corrige un défaut que personne n'avait vu pendant des
+// semaines, précisément parce que le composeur imprimait une raison plausible.
+const bloquantesDuRegistre = [...registre.parId.values()].filter((d) => d.section === 1 && d.trancheeLe === null);
+console.log(
+  `\nRegistre des décisions : ${registre.declarees.size} identifiant(s) déclaré(s) ` +
+    `(${registre.parId.size} ligne(s) de tableau + ${registre.alias.size} alias §0) · ` +
+    `${bloquantesDuRegistre.length} bloquante(s) : ${bloquantesDuRegistre.map((d) => d.id).join(', ') || 'aucune'}.`
+);
+const redevenues = tachesRedevenuesEligibles(taches, decisionsBrut);
+const ecarteesPourDecision = taches.filter((t) => t.hyp.some((h) => !registre.estCodable(h)));
+console.log(
+  `Lecteur unique (GOV-027) : ${redevenues.length} tâche(s) que la lecture d'avant écartait pour une ` +
+    `raison de décision sont éligibles ; ${ecarteesPourDecision.length} le restent, toutes phases confondues.`
+);
+if (redevenues.length > 0) {
+  console.log(`  ${redevenues.map((e) => `${e.id} (${e.motifHerite} : ${e.decisions.join(', ')})`).join('\n  ')}`);
+}
+if (ecarteesPourDecision.length > 0) {
+  console.log(
+    `  encore écartée(s) : ${ecarteesPourDecision
+      .map((t) => `${t.id} (${t.hyp.filter((h) => !registre.estCodable(h)).join(', ')})`)
+      .join(', ')}`
+  );
+}

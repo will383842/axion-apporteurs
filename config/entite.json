@@ -1,0 +1,42 @@
+{
+  "_ceQueCEst": "Le registre UNIQUE des valeurs du monde réel de l'entité qui signe et qui paie. Une seule source (RM-01) : le contrat DocuSeal, le mandat d'autofacturation, le fichier SEPA pain.001, l'export DAS2 et les mentions légales LISENT ici. Aucun autre fichier ne retape ces valeurs — c'est ce qui garantit que le SIREN du contrat, celui du mandat et celui du virement sont le même octet (REQ-CPL-001).",
+  "_sentinelle": "A-RENSEIGNER",
+  "_ceQueLaGardeEnFait": "`pnpm gov:entite` juge ce fichier dans LES DEUX SENS. (1) Elle refuse la MISE EN SERVICE tant qu'un champ vaut la sentinelle, aux quatre points de sortie déclarés par `src/config/entite.ts` ; elle n'empêche ni le build, ni les tests, ni le développement — les phases 0 à 3 se codent contre la sentinelle. (2) Elle refuse SYMÉTRIQUEMENT qu'une coordonnée bancaire réelle soit commitée : ce dépôt est PUBLIC (REQ-GOV-031, décision W13), un IBAN poussé y reste lisible pour toujours, forks et caches compris. Dans le dépôt, `banqueDebitrice` ne prend QUE la sentinelle ; la valeur réelle arrive par les variables d'environnement nommées dans `src/config/entite.ts`.",
+  "_commentRemplir": "Remplacer la sentinelle par la valeur, JAMAIS par une chaîne vide, JAMAIS par `null`, JAMAIS par un exemple plausible : ni `FR7612345678901234567890123`, ni `FR12123456789`, ni `123456789`. Un numéro d'exemple oublié dans un document signé ne se distingue pas d'une vraie valeur (`partners/ADR-0009`). La garde refuse les trois formes.",
+  "_dOuViennentLesValeurs": "Chaque champ arrêté est ATTESTÉ par la ligne de sa source, et la garde le vérifie : `entite.*` et `domaines.servi` par les lignes W1 et W3 de `docs/DECISIONS.md`, `perimetre.modeleTetesDeReseau` par la ligne W4, `banqueReceptrice.versionPain001` et `.modeDeRemise` par la ligne HYP-W2, `perimetre.residenceFiscaleExigee` et `perimetre.tenance` par REQ-CPL-004 et REQ-CPL-018 dans `docs/REQUIREMENTS.md`. Rouvrir une décision (retirer sa marque de clôture) rend la sentinelle obligatoire pour ses champs : le régime est DÉRIVÉ, jamais tapé ici.",
+  "version": 1,
+
+  "entite": {
+    "denomination": "AXION IA SAS",
+    "formeJuridique": "SAS",
+    "siren": "108018631",
+    "siret": "10801863100011",
+    "tvaIntracommunautaire": "FR51108018631",
+    "siege": "11 Avenue Paul Verlaine, ELITE BUREAUX boîte 53, 38100 Grenoble"
+  },
+
+  "domaines": {
+    "servi": "apporteurs.axion-ia.com",
+    "envoi": "A-RENSEIGNER"
+  },
+
+  "perimetre": {
+    "modeleTetesDeReseau": "Un apporteur = une personne",
+    "residenceFiscaleExigee": "française",
+    "tenance": "mono-tenant"
+  },
+
+  "banqueDebitrice": {
+    "iban": "A-RENSEIGNER",
+    "bic": "A-RENSEIGNER"
+  },
+
+  "banqueReceptrice": {
+    "versionPain001": "pain.001.001.03",
+    "modeDeRemise": "saisie manuelle avec EndToEndId",
+    "bic": "A-RENSEIGNER",
+    "jeuDeCaracteres": "A-RENSEIGNER",
+    "espaceDeTest": "A-RENSEIGNER",
+    "formatReleveCsv": "A-RENSEIGNER"
+  }
+}

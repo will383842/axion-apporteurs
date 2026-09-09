@@ -1,8 +1,11 @@
 /**
  * gov-tasks.ts — la garde du backlog (GOV-017a, REQ-GOV-026).
  *
- * USAGE : pnpm gov:tasks           (échoue si `docs/tasks.json` est invalide ou incohérent)
- *         pnpm gov:tasks --prove   (injecte un défaut PAR FAMILLE et vérifie que chacun rougit)
+ * USAGE : pnpm gov:tasks                 (échoue si `docs/tasks.json` est invalide ou incohérent)
+ *         pnpm gov:tasks --prove         (injecte un défaut PAR FAMILLE et vérifie que chacun rougit)
+ *         pnpm gov:tasks --render        (écrit `docs/TASKS.md`, la VUE du backlog)
+ *         pnpm gov:tasks --verifie-rendu (n'écrit rien ; sort 1 si la vue commitée a dérivé)
+ *         …--out <chemin>                travaille sur une autre vue (bancs d'essai des tests)
  *
  * `docs/tasks.json` est la SOURCE du backlog ; `TASKS.md` en est une vue. Tout ce que le composeur
  * de lot suppose sans le vérifier se vérifie ici, une fois pour toutes :
@@ -21,15 +24,29 @@
  *
  * POURQUOI UNE GARDE ET PAS UN TEST : ces invariants portent sur un fichier de DONNÉES que plusieurs
  * sessions écrivent en parallèle (`pnpm lot:cloture`). Un test unitaire ne le relit pas ; la CI, si.
+ *
+ * LE REGISTRE DES DÉCISIONS N'EST PLUS LU ICI (GOV-027). Sa lecture vivait en double — une version
+ * ici, une autre dans `scripts/lot/composer.ts` — et les deux ne disaient pas la même chose. Elle
+ * est passée dans `scripts/lot/registre-decisions.ts`, importé des deux côtés (RM-01, RM-04).
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
+import { chargerRegistre, CHEMIN_REGISTRE, type Registre } from '../lot/registre-decisions';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
-const CHEMIN_DECISIONS = 'docs/DECISIONS.md';
+const CHEMIN_DECISIONS = CHEMIN_REGISTRE;
+const CHEMIN_VUE_PAR_DEFAUT = 'docs/TASKS.md';
+
+/**
+ * `--out <chemin>` : rendre ou vérifier une AUTRE vue que celle du dépôt. C'est ce qui permet aux
+ * témoins de `tests/unit/gouvernance/vues-derivees.spec.ts` de périmer une vue sans toucher à
+ * `docs/TASKS.md` — un test qui périme la vraie vue emporte le travail non commité de la session.
+ */
+const iOut = process.argv.indexOf('--out');
+const CHEMIN_VUE = iOut >= 0 ? (process.argv[iOut + 1] ?? CHEMIN_VUE_PAR_DEFAUT) : CHEMIN_VUE_PAR_DEFAUT;
 
 /** Identifiants découpés le 2026-09-03. Les citer en dépendance est une erreur, pas un raccourci. */
 const SCINDES: Record<string, string> = {
@@ -80,25 +97,8 @@ const LIVREE = LIVREE_DERIVEE;
   }
 }
 
-// ── le registre des décisions ────────────────────────────────────────────────
-/**
- * Une décision est DÉCLARÉE si son identifiant est la première cellule d'une ligne de tableau.
- * Une mention en prose ne suffit pas : elle ne porte ni hypothèse, ni réversibilité, ni propriétaire.
- */
-function decisionsDeclarees(texte: string): Set<string> {
-  const out = new Set<string>();
-  for (const ligne of texte.split('\n')) {
-    if (!ligne.trimStart().startsWith('|')) continue;
-    const premiere = ligne.split('|')[1];
-    if (premiere === undefined) continue;
-    const m = premiere.replace(/[*`]/g, '').trim().match(/^((?:HYP|DEC|W|EXT)-?[A-Z0-9][A-Za-z0-9-]*)/);
-    if (m && m[1]) out.add(m[1]);
-  }
-  return out;
-}
-
 // ── les contrôles ────────────────────────────────────────────────────────────
-function controler(doc: unknown, schema: object, registre: Set<string>): Faute[] {
+function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
 
@@ -160,7 +160,7 @@ function controler(doc: unknown, schema: object, registre: Set<string>): Faute[]
     }
 
     for (const h of t.hyp) {
-      if (!registre.has(h)) {
+      if (!registre.estDeclaree(h)) {
         ajouter(
           'hyp_hors_registre',
           `${t.id} repose sur ${h}, qui n'a pas de ligne dans ${CHEMIN_DECISIONS}. ` +
@@ -229,28 +229,35 @@ for (const f of [CHEMIN_TACHES, CHEMIN_SCHEMA, CHEMIN_DECISIONS]) {
   }
 }
 const schema = JSON.parse(readFileSync(CHEMIN_SCHEMA, 'utf8')) as object;
-const registre = decisionsDeclarees(readFileSync(CHEMIN_DECISIONS, 'utf8'));
+const registre = chargerRegistre(CHEMIN_DECISIONS);
 const doc = JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] };
 
-// ── mode --render : docs/TASKS.md est une VUE de ce fichier ───────────────────
+// ── la vue : docs/TASKS.md est une VUE de docs/tasks.json ─────────────────────
 // `TASKS.md` a longtemps ete la source, tenue a la main : trois comptages differents y
 // circulaient, tous faux, et un correctif ecrit dans un constat ne rejoignait jamais le texte
 // de la tache. La source est desormais `docs/tasks.json` ; ce rendu produit la vue, et rien
 // d'autre ne doit ecrire dans `docs/TASKS.md`.
-if (process.argv.includes('--render')) {
-  const fautes = controler(doc, schema, registre);
-  if (fautes.length > 0) {
-    console.error(`❌ Refus de rendre une vue d'un backlog fautif (${fautes.length}). Lance \`pnpm gov:tasks\`.`);
-    process.exit(1);
-  }
+//
+// LE RENDU EST UNE FONCTION PURE, et ce n'est pas un rangement. Tant qu'il ecrivait le fichier
+// depuis un bloc en ligne, PERSONNE ne pouvait comparer la vue a ce que sa source produirait :
+// la derive etait silencieuse. Elle est arrivee. La PR #30 a fait passer vingt taches a
+// `fusionnee` dans `docs/tasks.json` sans regenerer `docs/TASKS.md`, qui a continue d'en
+// annoncer CINQ — quinze taches d'ecart, sur le fichier qu'on ouvre justement pour savoir ou en
+// est le chantier. Aucune gate ne l'a vu ; trois relecteurs l'ont vu, a la lecture.
+//
+// Deux appels sur le meme backlog rendent le meme octet : rien ici ne lit l'horloge, ni un
+// `Object.keys`, ni le systeme de fichiers. Sans ce determinisme, `--verifie-rendu` mesurerait
+// la machine au lieu de mesurer la derive.
 
-  const PHASES: Record<number, string> = {
-    [-1]: 'Gouvernance (prealable bloquant)',
-    0: 'Socle technique',
-    1: 'Operationnel',
-    2: 'Argent',
-    3: 'Pilotage et conformite',
-  };
+const PHASES: Record<number, string> = {
+  [-1]: 'Gouvernance (prealable bloquant)',
+  0: 'Socle technique',
+  1: 'Operationnel',
+  2: 'Argent',
+  3: 'Pilotage et conformite',
+};
+
+export function rendreVue(doc: { taches: Tache[] }): string {
   const l: string[] = [];
   const total = doc.taches.reduce((a, t) => a + t.estimateDays, 0);
 
@@ -260,6 +267,7 @@ if (process.argv.includes('--render')) {
   l.push('> Regenere par `pnpm gov:tasks --render`, jamais edite a la main : une correction tapee ici');
   l.push('> disparait au rendu suivant. Trois comptages differents ont circule dans la version tenue');
   l.push('> a la main, tous faux — les nombres ci-dessous sont comptes a la generation.');
+  l.push('> `pnpm gov:tasks --verifie-rendu` rougit si ce fichier a derive de sa source (REQ-GOV-032).');
   l.push('>');
   l.push('> Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.');
   l.push('');
@@ -308,8 +316,83 @@ if (process.argv.includes('--render')) {
     }
   }
 
-  writeFileSync('docs/TASKS.md', l.join('\n') + '\n');
-  console.log(`✅ docs/TASKS.md rendu depuis ${CHEMIN_TACHES} — ${doc.taches.length} taches, ${total.toFixed(2)} j.`);
+  return l.join('\n') + '\n';
+}
+
+/**
+ * Le nombre de taches LIVREES qu'un texte de vue ANNONCE. C'est l'unite du domaine (REQ-GOV-032) :
+ * « les deux fichiers different » n'apprend rien a qui lit un journal de CI, et c'est precisement
+ * cet ecart-la — cinq annoncees pour vingt reelles — que personne n'a vu pendant une PR entiere.
+ * La marque est lue sur la ligne de TITRE d'une tache, jamais n'importe ou dans le fichier : un
+ * texte d'acceptation qui contiendrait la meme suite de caracteres fausserait le compte.
+ */
+export function livreesAnnoncees(vue: string): number {
+  return (vue.match(/^### .+ ✅ \*\*[a-z_]+\*\*$/gm) ?? []).length;
+}
+
+/**
+ * Fins de ligne NORMALISEES avant comparaison. `.gitattributes` impose `eol=lf`, mais un poste dont
+ * `core.autocrlf` est arme malgre tout relirait des `\r\n` la ou le rendu ecrit des `\n` : la garde
+ * serait verte en CI et rouge chez tout le monde — elle mesurerait la configuration de git.
+ */
+function normaliserFins(t: string): string {
+  return t.replace(/\r\n/g, '\n');
+}
+
+if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu')) {
+  const fautes = controler(doc, schema, registre);
+  if (fautes.length > 0) {
+    console.error(`❌ Refus de rendre une vue d'un backlog fautif (${fautes.length}). Lance \`pnpm gov:tasks\`.`);
+    process.exit(1);
+  }
+
+  const rendu = rendreVue(doc);
+  const total = doc.taches.reduce((a, t) => a + t.estimateDays, 0);
+
+  // ── mode --verifie-rendu : il COMPARE, il n'écrit rien ──────────────────────
+  // Une garde qui répare ce qu'elle contrôle est toujours verte, et ne garde donc rien.
+  //
+  // ⚠️ LA VUE S'ÉCRIT SANS ACCENTS, LA CONSOLE AVEC. Ce n'est pas une inattention : le corps de
+  // `docs/TASKS.md` est rendu sans accents depuis son premier jour, et les 1 445 lignes du fichier
+  // le sont ; les messages de cette garde, eux, sont du français ordinaire (`docs/CONVENTIONS.md`
+  // §1). Aligner l'un sur l'autre reécrirait la vue entière pour une raison de cosmétique.
+  if (process.argv.includes('--verifie-rendu')) {
+    if (!existsSync(CHEMIN_VUE)) {
+      console.error(
+        `❌ gov:tasks — vue_absente : ${CHEMIN_VUE} n'existe pas, alors que ${CHEMIN_TACHES} porte ` +
+          `${doc.taches.length} tâche(s). Lance \`pnpm gov:tasks --render\` et commite le résultat.`
+      );
+      process.exit(1);
+    }
+    const surDisque = normaliserFins(readFileSync(CHEMIN_VUE, 'utf8'));
+    if (surDisque !== normaliserFins(rendu)) {
+      const vues = livreesAnnoncees(surDisque);
+      const reelles = livreesAnnoncees(rendu);
+      const ecart =
+        vues === reelles
+          ? `Le compte de tâches livrées est le même (${reelles}) : la dérive porte sur autre chose — ` +
+            `un titre, une acceptation, une dépendance, un statut non livré.`
+          : `La vue annonce ${vues} tâche(s) livrée(s), la source en porte ${reelles} — ` +
+            `${Math.abs(reelles - vues)} d'écart.`;
+      console.error(
+        `❌ gov:tasks — vue_perimee : ${CHEMIN_VUE} n'est plus ce que ${CHEMIN_TACHES} produit.\n` +
+          `   ${ecart}\n` +
+          `   La vue ne se corrige pas à la main : lance \`pnpm gov:tasks --render\` et commite le résultat.`
+      );
+      process.exit(1);
+    }
+    console.log(
+      `✅ gov:tasks — ${CHEMIN_VUE} est égal à ce que ${CHEMIN_TACHES} produit : ` +
+        `${doc.taches.length} tâches, ${livreesAnnoncees(rendu)} livrée(s), ${total.toFixed(2)} j.`
+    );
+    process.exit(0);
+  }
+
+  writeFileSync(CHEMIN_VUE, rendu);
+  console.log(
+    `✅ ${CHEMIN_VUE} rendu depuis ${CHEMIN_TACHES} — ${doc.taches.length} tâches, ` +
+      `${livreesAnnoncees(rendu)} livrée(s), ${total.toFixed(2)} j.`
+  );
   process.exit(0);
 }
 
@@ -410,7 +493,11 @@ if (fautes.length === 0) {
     const l = doc.taches.filter((t) => t.phase === p);
     return `${p} : ${l.length} / ${l.reduce((s, t) => s + t.estimateDays, 0).toFixed(2)} j`;
   });
-  console.log(`✅ gov:tasks — ${doc.taches.length} tâches, ${j.toFixed(2)} j, ${registre.size} décisions au registre.`);
+  const bloquantes = [...registre.parId.values()].filter((d) => d.section === 1 && d.trancheeLe === null);
+  console.log(
+    `✅ gov:tasks — ${doc.taches.length} tâches, ${j.toFixed(2)} j, ${registre.declarees.size} décisions au registre ` +
+      `(${bloquantes.length} bloquante(s) : ${bloquantes.map((d) => d.id).join(', ') || 'aucune'}).`
+  );
   console.log(`   ${parPhase.join('  ·  ')}`);
   process.exit(0);
 }

@@ -1,0 +1,33 @@
+{
+  "_commentaire": "LE REGISTRE DES RÉVISIONS EXEMPTÉES — une dette qu'on ne peut pas rembourser se déclare.,,Lu par `scripts/gates/gov-entite.ts --corps-publie`, jugé par `controlerRegistreExemptions`.,L'historique d'édition d'un corps de PR est IMMUABLE : GitHub sert `userContentEdits` à,quiconque le demande, et aucune édition ultérieure ne dépublie une révision. Sans ce registre,,la garde serait INSATISFIABLE sur toute PR déjà polluée — et une gate insatisfiable, on apprend,à la sauter. La troisième voie est de rendre l'EXCEPTION explicite plutôt que l'ABSENCE de garde.,,CE QU'UNE LIGNE COUVRE, ET RIEN DE PLUS : UNE révision précise d'UNE PR précise, portant UNE,coordonnée précise. Les trois clés — `pr`, `revision`, `empreinte` — doivent concorder. Exempter,« la PR #31 » aurait absous d'avance toute révision future, c'est-à-dire tout ce qui reste à écrire.,,CE QU'UNE LIGNE NE COUVRE JAMAIS :,  — le corps COURANT d'une PR : il s'édite, il n'y a rien à excuser ;,  — une coordonnée RÉELLE. Une valeur réellement publiée est DIVULGUÉE, et le remède est de la,    CHANGER, pas de l'inscrire ici. Le seul motif recevable est qu'il n'y ait rien à révoquer.,,L'EMPREINTE, ET JAMAIS LA VALEUR : ce fichier est suivi dans un dépôt PUBLIC. On y écrit un,SHA-256 COMPLET de la coordonnée normalisée, telle que la garde la remonte. Complet, et non,tronqué : seize caractères hexadécimaux se collisionnent en 2^32 essais, ce qui laisserait,absoudre une AUTRE coordonnée que celle qu'on a examinée. La garde imprime l'empreinte dans son,message d'échec, précisément pour qu'on n'ait jamais à écrire la valeur pour déclarer une ligne.,,ET CE QUI EMPÊCHE CE FICHIER D'ÊTRE UNE PASSOIRE : une ligne qui n'absout plus rien ROUGIT,(famille `exemption_sans_objet`). Une exemption dont l'empreinte ne correspond plus à ce que la,révision contient est une autorisation ouverte sur un texte que personne n'a examiné. — CE QUE CE REGISTRE NE PEUT PAS VERIFIER : rien de mecanique ne distingue une valeur FABRIQUEE d une valeur reelle qu on n aurait pas voulu changer. L empreinte ne se confronte a rien, puisque la valeur reelle ne vit JAMAIS ici — c est la propriete qu on veut, pas une lacune. Le seul controle est la relecture du motif par un tiers, et c est pour cela que le champ motif est obligatoire et que le champ par signe la ligne.",
+  "version": 1,
+  "exemptions": [
+    {
+      "pr": 31,
+      "revision": "2026-09-05T11:39:51Z",
+      "empreinte": "2847f6106ab6f0da11e73d5c896edc145fae3f8c1b04458a83bca2fe49a846e8",
+      "declaree": "2026-09-05",
+      "par": "A05 · developpeur-partners, sur veto de la lentille securite",
+      "motif": "Valeur FABRIQUÉE par la sonde d'un relecteur pendant la revue de la PR #31 : ce n'est pas une coordonnée d'AXION, aucun compte n'existe derrière, il n'y a donc rien à révoquer. L'historique d'édition étant immuable, cette ligne ne se referme jamais.",
+      "definitive": true
+    },
+    {
+      "pr": 31,
+      "revision": "2026-09-05T11:12:57Z",
+      "empreinte": "2847f6106ab6f0da11e73d5c896edc145fae3f8c1b04458a83bca2fe49a846e8",
+      "declaree": "2026-09-05",
+      "par": "A05 · developpeur-partners, sur veto de la lentille securite",
+      "motif": "Même valeur fabriquée, révision précédente du même corps de PR. Chaque révision est déclarée séparément : une exemption qui couvrirait « toutes les révisions de la PR #31 » absoudrait aussi celles qui restent à écrire.",
+      "definitive": true
+    },
+    {
+      "pr": 31,
+      "revision": "2026-09-05T10:16:52Z",
+      "empreinte": "2847f6106ab6f0da11e73d5c896edc145fae3f8c1b04458a83bca2fe49a846e8",
+      "declaree": "2026-09-05",
+      "par": "A05 · developpeur-partners, sur veto de la lentille securite",
+      "motif": "Même valeur fabriquée, première révision où elle apparaît. Les révisions antérieures n'ont AUCUNE ligne ici parce que la garde n'y signale aucune coordonnée — c'est tout ce que le vert de la garde établit, et c'est tout ce qui est affirmé. ⚠️ NE PAS ÉCRIRE ICI CE QUE LES AUTRES RÉVISIONS CONTIENNENT : deux rédactions successives l'ont tenté et se sont trompées, l'une en comptant, l'autre en niant. Et la seconde était PIRE : retirer un compteur en le remplaçant par une négation universelle rend la phrase plus forte, donc plus facilement fausse — la version d'avant disait juste sur ce point précis. Une ligne de ce registre décrit ce qu'ELLE exempte, rien d'autre.",
+      "definitive": true
+    }
+  ]
+}

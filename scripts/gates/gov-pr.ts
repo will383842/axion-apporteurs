@@ -4,7 +4,7 @@
  *
  * USAGE : pnpm gov:pr                 structure du gabarit, de CODEOWNERS et de la charte ;
  *                                     plus la PR elle-même si GitHub Actions en fournit une
- *         pnpm gov:pr --pr <numero>   tout ce qui précède, REVUES COMPRISES (`gh pr view`) —
+ *         pnpm gov:pr --pr <numero>   tout ce qui précède, REVUES COMPRISES (`GET /pulls/n/reviews`) —
  *                                     c'est la commande que A04 lance AVANT de fusionner
  *         pnpm gov:pr --apres-fusion <n>  la 8ᵉ case en plus : l'atterrissage attesté (après fusion)
  *         pnpm gov:pr --prove         un témoin par famille de règle, des contre-témoins verts
@@ -41,6 +41,21 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
+import {
+  ETAT_APPROUVE,
+  ETAT_COMMENTE,
+  cheminsSchema,
+  lentillesExigees,
+  lireRevues,
+  tachesSchemaDeLaPr,
+  touche,
+  toucheSchema,
+  tachesDeLaPr,
+  jugerLesTetes,
+  estAncetreDe,
+  type DemandeDeConcordance,
+  type RevueBrute,
+} from '../lot/revues';
 
 const CHEMIN_GABARIT = '.github/PULL_REQUEST_TEMPLATE.md';
 const CHEMIN_CODEOWNERS = '.github/CODEOWNERS';
@@ -61,31 +76,42 @@ const MARQUEURS = [
 const CHAMPS = ['Auteur:', 'Relecteur:', 'Couvre:', 'Rouge constaté par:', 'Règle maison appliquée:'];
 
 const NB_CASES = 8;
+/** Les avis qui ne comptent pour rien, et POURQUOI — dits en sortie, jamais comptés en fautes. */
+const AVIS_ECARTES: string[] = [];
 /** Le saut de ligne, nomme : les fixtures decoupent des corps de PR. */
 const SAUT = String.fromCharCode(10);
 const TYPES_DE_TITRE = ['feat', 'fix', 'test', 'docs', 'chore', 'refactor', 'ci', 'perf'];
 const ORDINAUX = ['première', 'deuxième', 'troisième', 'quatrième', 'cinquième'];
-const CHEMINS_SCHEMA = ['prisma/', 'packages/contracts/'];
+// Les chemins qui exigent la lentille de schéma ne sont plus RECOPIÉS ici : ils se dérivent du §7
+// de la charte, par le lecteur unique — la même source que celle qui fait exiger le label (RM-01).
 /** Les zones que REQ-GOV-011 place sous revue adversariale documentée. */
 const ZONES_SENSIBLES = ['commissions/', 'attributions/', 'auth/', 'espace/'];
 /** Ce dont l'introduction impose le bloc ROUGE/VERT (REQ-GOV-012) : un test, une garde, un workflow. */
 const INTRODUIT_UNE_GARDE = (f: string) =>
   /\.spec\.ts$/.test(f) || f.startsWith('scripts/gates/') || f.startsWith('.github/workflows/');
 
-type Revue = { auteur: string; etat: string; corps: string };
 type Pr = {
+  /**
+   * Le numéro de la PR, quand on le connaît. Il n'est PAS décoratif : c'est lui qui permet de
+   * dériver l'ENSEMBLE des tâches de la PR au lieu de la seule tâche que le titre nomme — la
+   * divergence d'entrée mesurée le 2026-09-05 (voir `tachesDeLaPr` dans `scripts/lot/revues.ts`).
+   */
+  numero?: number | null;
   titre: string;
   corps: string;
   labels: string[];
   fichiers: string[];
-  revues: Revue[] | null;
+  /** La réponse de `GET /repos/{owner}/{repo}/pulls/{n}/reviews`, telle que GitHub la sert. */
+  revues: RevueBrute[] | null;
+  /** Le sha de tête, sous `--pr <n>` seulement : le diff approuvé doit être le diff fusionné. */
+  tete?: string | null;
   /**
    * Vrai seulement sous `--apres-fusion <n>`, la commande qu'A04 lance APRES l'atterrissage.
    * C'est le seul moment ou la huitieme case peut etre vraie : elle atteste la fusion.
    */
   apresFusion?: boolean;
 };
-type Tache = { id: string; sensible: string[] };
+type Tache = { id: string; sensible: string[]; schema: boolean; pr: number | null };
 type Depot = { gabarit: string; codeowners: string; charte: string; fiches: string[]; architecte: string; taches: Tache[] };
 /**
  * LA PHASE COURANTE — la plus petite phase qui porte encore une tâche non livrée.
@@ -140,6 +166,7 @@ const FAMILLES = [
   // la PR — évaluées seulement avec les revues (`--pr <numero>`)
   'lentilles_manquantes',
   'lentille_en_refus',
+  'lentille_perimee',
   'dod_atterrissage_non_atteste',
   'phase_gelee',
   'schema_sans_approbation',
@@ -208,22 +235,18 @@ function ordinalDeLaLentille(texte: string): string | null {
   return m ? m[1]!.toLowerCase() : null;
 }
 
-function touche(chemin: string, fichiers: string[]): boolean {
-  const c = chemin.replace(/\/$/, '');
-  return fichiers.some((f) => f === chemin || f === c || f.startsWith(c.endsWith('/') ? c : c + '/'));
-}
-
-function lentilleDeLaRevue(r: Revue): { code: string; lentille: string } | null {
-  const premiere = r.corps.split('\n')[0] ?? '';
-  const m = /^\s*(A\d{2})\s*[·\-–]\s*([a-zA-Zéè]+)/.exec(premiere);
-  return m ? { code: m[1]!, lentille: m[2]!.toLowerCase() } : null;
-}
+// `touche()` et la lecture de l'en-tête d'une revue vivent dans le lecteur unique
+// (`scripts/lot/revues.ts`), importé aussi par `scripts/lot/corps-de-pr.ts`. Les réécrire ici
+// ferait revenir la seconde lecture que cette PR retire.
 
 // ── le contrôle ──────────────────────────────────────────────────────────────
 
 function controler(depot: Depot, pr: Pr | null): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
+  // La §7 de la charte est la source ; ces chemins n'existent plus en dur dans ce fichier (RM-01).
+  const CHEMINS_SCHEMA = cheminsSchema(depot.charte);
+  AVIS_ECARTES.length = 0;
 
   // ---- structure du gabarit -------------------------------------------------
   for (const marqueur of MARQUEURS) {
@@ -429,13 +452,26 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
   }
 
   const zoneSensible = pr.fichiers.some((f) => ZONES_SENSIBLES.some((z) => f.startsWith(z)));
-  const attaqueExigee = zoneSensible || (tache !== undefined && tache.sensible.length > 0);
+  // L'ENSEMBLE des taches de la PR, pas la seule que le titre nomme. Mesure du 2026-09-05 sur la
+  // PR 31 : GOV-024 (titre) porte sensible: [], mais GOV-006 porte ["attribution"] et CPL-T01
+  // ["argent","attribution"] — la section Attaque n'etait donc exigee par PERSONNE sur une PR
+  // qui porte deux taches sensibles. Meme divergence d'entree que tachesSchema, un champ plus
+  // loin : le lecteur etait unique, son entree ne l'etait pas.
+  const tachesSensibles = tachesDeLaPr(depot.taches, pr.numero ?? null, titre ? titre[2]! : null);
+  const attaqueExigee = zoneSensible || tachesSensibles.some((t) => t.sensible.length > 0);
   if (attaqueExigee) {
     const blocAttaque = (bloc(pr.corps, 'attaque') ?? '').trim();
     if (blocAttaque.length === 0 || /sans objet/i.test(blocAttaque)) {
       ajouter(
         'attaque_absente',
-        `Corps de la PR — section « Attaque » exigée (${zoneSensible ? 'zone sensible touchée' : `tâche sensible : ${tache!.sensible.join(', ')}`}) ` +
+        `Corps de la PR — section « Attaque » exigée (${
+          zoneSensible
+            ? 'zone sensible touchée'
+            : `tâche(s) sensible(s) : ${tachesSensibles
+                .filter((t) => t.sensible.length > 0)
+                .map((t) => `${t.id} (${t.sensible.join(', ')})`)
+                .join(' · ')}`
+        }) ` +
           `et laissée vide. REQ-GOV-011 : scénario joué, résultat, qui l'a joué.`
       );
     }
@@ -452,8 +488,19 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
     }
   }
 
-  const toucheSchema = CHEMINS_SCHEMA.some((c) => touche(c, pr.fichiers));
-  if (toucheSchema && !pr.labels.includes('schema')) {
+  // TROIS SIGNAUX, LE PLUS STRICT GAGNE — et c'est le lecteur unique qui les pèse, pour que la
+  // garde et le composeur du corps de PR ne puissent plus diverger. Le label seul est le plus
+  // faible des trois : il se pose à la main, donc il s'oublie à la main.
+  const fichiersDeSchema = CHEMINS_SCHEMA.some((c) => touche(c, pr.fichiers));
+  const schemaExige = toucheSchema({
+    fichiers: pr.fichiers,
+    labels: pr.labels,
+    // L'ENSEMBLE des tâches de la PR, pas la seule que le titre nomme. Voir `tachesDeLaPr` :
+    // les deux appelants du lecteur unique composaient chacun le sien, et ils divergeaient.
+    tachesSchema: tachesSchemaDeLaPr(depot.taches, pr.numero ?? null, titre ? titre[2]! : null),
+    charte: depot.charte,
+  });
+  if (fichiersDeSchema && !pr.labels.includes('schema')) {
     ajouter(
       'schema_sans_label',
       `La PR touche ${CHEMINS_SCHEMA.filter((c) => touche(c, pr.fichiers)).join(', ')} sans le label ` +
@@ -485,58 +532,41 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
 
   // ---- les revues (seulement sous `--pr <numero>`) ---------------------------
   /**
-   * CE QUI COMPTE COMME UNE REVUE. `APPROVED` serait le bon état — c'est celui que GitHub
-   * protège. Mais ce dépôt n'a QU'UN compte (W13, `docs/lots/REPRISE-NOTES.md`), et GitHub
-   * refuse une approbation venant de l'auteur de la PR : « Can not approve your own pull
-   * request ». Exiger `APPROVED` rendait donc `gov:pr --pr` INSATISFIABLE. Ce n'est pas une
-   * hypothèse : la PR 26 a été fusionnée avec zéro revue, et la garde n'a jamais tourné verte.
-   * Une gate que personne ne peut satisfaire n'est pas une gate — c'est une étape qu'on
-   * apprend à sauter, et le jour où elle aurait servi elle est déjà hors du geste.
-   *
-   * On accepte donc `APPROVED` ET `COMMENTED`, et on exige EN ÉCHANGE ce qu'un état GitHub ne
-   * dit pas : une ligne `Verdict: accepte` ou `Verdict: refuse`. Un commentaire qui ne tranche
-   * pas ne compte pour aucune lentille — c'est ce qui empêche une remarque de passer pour une
-   * revue. Et un `refuse` n'est pas une lentille manquante : c'est un refus, famille à part.
+   * LA LECTURE DES REVUES N'EST PLUS ÉCRITE ICI. Elle est dans `scripts/lot/revues.ts`, importée
+   * aussi par `scripts/lot/corps-de-pr.ts` — qui COCHE la case de DoD « Relecteur ≠ auteur » du
+   * corps publié. Les deux lectures divergeaient sur quatre points, tous dans le sens permissif :
+   * aucune authentification de l'auteur de la revue, un numéro de poste confronté à rien, un
+   * discriminant `schema` tiré du seul label, et une clé de « dernier verdict » différente.
+   * Le module documente chacun ; ce fichier ne fait plus que lui poser la question.
    */
-  const VERDICT = /^Verdict\s*:\s*(accepte|refuse)\b/im;
-  const RENDUES = ['APPROVED', 'COMMENTED'];
-  const toutes = pr.revues.filter((r) => RENDUES.includes(r.etat.toUpperCase()) && VERDICT.test(r.corps));
-  const verdictDe = (r: Revue): string => (VERDICT.exec(r.corps)![1] ?? '').toLowerCase();
-
-  /**
-   * LE DERNIER VERDICT D'UNE LENTILLE PRIME, et sans cette règle la garde redeviendrait
-   * INSATISFIABLE — le piège exact corrigé sur la PR 27, où elle exigeait un `APPROVED` que
-   * GitHub refuse à l'auteur de sa propre PR.
-   *
-   * Un refus est un ÉTAT DE LA REVUE, pas une marque indélébile sur la PR. Le cycle réel est :
-   * la lentille refuse, l'auteur corrige, la lentille relit et tranche à nouveau. Sans cette
-   * règle, une PR refusée une fois ne pourrait plus JAMAIS être fusionnée quoi qu'on corrige, et
-   * la seule issue serait d'ouvrir une PR neuve pour effacer l'ardoise — c'est-à-dire de perdre la
-   * trace du refus au moment précis où elle a le plus de valeur.
-   *
-   * Les revues arrivent dans l'ordre chronologique (`gh pr view --json reviews`) : on garde la
-   * DERNIÈRE par couple (poste, lentille). Les refus antérieurs restent visibles sur la PR — ils
-   * ne sont pas effacés, ils sont datés.
-   */
-  const dernierPar = new Map<string, Revue>();
-  for (const r of toutes) {
-    const l = lentilleDeLaRevue(r);
-    dernierPar.set(l ? `${l.code}·${l.lentille}` : `sans-lentille-${dernierPar.size}`, r);
-  }
-  const rendues = [...dernierPar.values()];
-  const refusees = rendues.filter((r) => verdictDe(r) === 'refuse');
-  const approuvees = rendues.filter((r) => verdictDe(r) === 'accepte');
-  for (const r of refusees) {
-    const l = lentilleDeLaRevue(r);
+  const lecture = lireRevues({
+    revues: pr.revues,
+    schema: schemaExige,
+    tete: pr.tete ?? null,
+    auteurPoste: auteur ? auteur[1]! : null,
+  });
+  const lues = lecture.verdicts.filter((v) => v.verdict === 'accepte');
+  const exigees = [...lentillesExigees(schemaExige).trois];
+  const manquantes = lecture.manquantes.filter((l) => l !== 'mutation');
+  for (const v of lecture.refusees) {
     ajouter(
       'lentille_en_refus',
-      `Revues — ${l ? `${l.code} · ${l.lentille}` : 'une revue'} rend « Verdict: refuse », et c'est son DERNIER mot. ` +
-        `A04 ne fusionne pas sur un refus${l && l.lentille === 'securite' ? ' — et un refus de la lentille securite vaut veto (REQ-GOV-011)' : ''}.`
+      `Revues — ${v.code} · ${v.lentille} rend « Verdict: refuse », et c'est son DERNIER mot. ` +
+        `A04 ne fusionne pas sur un refus${v.lentille === 'securite' ? ' — et un refus de la lentille securite vaut veto (REQ-GOV-011)' : ''}.`
     );
   }
-  const lues = approuvees.map(lentilleDeLaRevue).filter((x): x is { code: string; lentille: string } => x !== null);
-  const exigees = toucheSchema ? ['exactitude', 'securite', 'schema'] : ['exactitude', 'securite', 'simplicite'];
-  const manquantes = exigees.filter((l) => !lues.some((x) => x.lentille === l));
+  // LES AVIS ÉCARTÉS SONT DITS, PAS COMPTÉS COMME FAUTES — et cette retenue est délibérée. Le
+  // dépôt est PUBLIC : n'importe qui peut poser un commentaire. En faire une faute rendrait la
+  // gate rouge pour un geste qui n'appartient pas au projet, sans aucun moyen de l'effacer — une
+  // gate insatisfiable est une gate qu'on apprend à sauter. La propriété qui protège n'est pas
+  // « un avis étranger rougit », c'est « un avis étranger ne COMPTE pour rien », et elle est
+  // tenue par le lecteur. La sortie les nomme pour qu'A04 les voie (`--pr <n>`).
+  for (const e of lecture.ecartees) {
+    AVIS_ECARTES.push(
+      `${e.motif} — compte « ${e.revue.compte || '?'} », association « ${e.revue.association || '?'} », ` +
+        `état « ${e.revue.etat || '?'} »`
+    );
+  }
   if (manquantes.length > 0) {
     ajouter(
       'lentilles_manquantes',
@@ -544,17 +574,25 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
         `« A<nn> · <lentille> » (docs/CHARTE-AGENTS.md §3). Vues : ${lues.map((x) => `${x.code} ${x.lentille}`).join(' / ') || '(aucune)'}.`
     );
   }
-  if (!lues.some((x) => x.lentille === 'mutation')) {
+  for (const v of lecture.perimees) {
+    ajouter(
+      'lentille_perimee',
+      `Revues — ${v.code} · ${v.lentille} a accepté sur ${v.commit.slice(0, 7)}, qui n'est pas la tête ` +
+        `${(pr.tete ?? '').slice(0, 7)} : le diff approuvé n'est pas le diff qui sera fusionné (pas 5 du ` +
+        `protocole de fusion). On retourne au pas 2.`
+    );
+  }
+  if (lecture.manquantes.includes('mutation')) {
     ajouter(
       'lentilles_manquantes',
       `Revues — aucun avis « mutation » : A10 n'a pas dit que les gardes introduites avaient été vues ` +
         `rougir sur une mutation réelle (RM-02).`
     );
   }
-  if (auteur && lues.some((x) => x.code === auteur[1])) {
+  for (const v of lecture.auteurSeRelit) {
     ajouter(
       'relecteur_est_auteur',
-      `Revues — l'auteur ${auteur[1]} a approuvé sa propre PR (REQ-GOV-011).`
+      `Revues — l'auteur ${v.code} rend lui-même la lentille ${v.lentille} sur sa propre PR (REQ-GOV-011).`
     );
   }
   if (lentillesDeclarees.length > 0 && manquantes.length === 0) {
@@ -565,7 +603,7 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
       }
     }
   }
-  if (toucheSchema) {
+  if (schemaExige) {
     const suppleants = auteur && auteur[1] === 'A02' ? ['A12', 'A14'] : ['A02'];
     if (!lues.some((x) => x.lentille === 'schema' && suppleants.includes(x.code))) {
       ajouter(
@@ -588,9 +626,22 @@ function lireDepot(): Depot {
       process.exit(1);
     }
   }
-  const taches = (JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: { id: string; sensible?: string[] }[] }).taches.map(
-    (t) => ({ id: t.id, sensible: t.sensible ?? [] })
-  );
+  const taches = (
+    JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as {
+      taches: { id: string; sensible?: string[]; schema?: boolean; pr?: number | null }[];
+    }
+  // ⚠️ `pr` FAIT PARTIE DE LA PROJECTION, et son absence a rendu DEUX correctifs inertes.
+  // `tachesDeLaPr()` apparie sur `t.pr === <numero>` OU sur l identifiant du titre. Tant que la
+  // projection laissait `pr` de cote, la moitie `numero` ne pouvait JAMAIS apparier : la
+  // derivation unique se reduisait silencieusement a la seule tache du titre — exactement le
+  // defaut qu elle etait censee fermer. Trouve le 2026-09-05 parce qu un temoin neuf refusait de
+  // rougir : c est le temoin qui a revele que le correctif ne faisait rien, pas la relecture.
+  ).taches.map((t) => ({
+    id: t.id,
+    sensible: t.sensible ?? [],
+    schema: t.schema === true,
+    pr: t.pr ?? null,
+  }));
   return {
     gabarit: readFileSync(CHEMIN_GABARIT, 'utf8'),
     codeowners: readFileSync(CHEMIN_CODEOWNERS, 'utf8'),
@@ -601,25 +652,119 @@ function lireDepot(): Depot {
   };
 }
 
-/** `gh pr view <n> --json …` — la forme des champs vient de la commande, pas d'une invention. */
-function prParGh(numero: string): Pr {
-  const brut = execFileSync(
-    'gh',
-    ['pr', 'view', numero, '--json', 'title,body,labels,files,reviews,author'],
-    { encoding: 'utf8' }
-  );
-  const j = JSON.parse(brut) as {
-    title: string; body: string;
+/**
+ * La PR, lue chez GitHub. La forme des champs vient des commandes, pas d'une invention.
+ *
+ * ⚠️ LES REVUES SE LISENT SUR L'INTERFACE REST, PAS SUR `gh pr view --json reviews`. Deux raisons,
+ * toutes deux mesurées : la vue de l'outil ne sert PAS `commit_id` — sans lui le pas 5 du
+ * protocole (« le diff approuvé est le diff fusionné ») n'est pas vérifiable — et
+ * `scripts/lot/corps-de-pr.ts` lit déjà `GET /pulls/{n}/reviews`. Deux lectures de deux
+ * endpoints différents, c'est exactement la divergence que cette PR retire : une seule source,
+ * un seul lecteur.
+ */
+function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant-fusion'): Pr {
+  const meta = JSON.parse(
+    execFileSync('gh', ['pr', 'view', numero, '--json', 'title,body,labels,files,headRefOid,mergeCommit,baseRefName'], {
+      encoding: 'utf8',
+      maxBuffer: 32e6,
+    })
+  ) as {
+    title: string; body: string; headRefOid: string;
     labels: { name: string }[];
     files: { path: string }[];
-    reviews: { author: { login: string }; state: string; body: string }[];
+    /** Ne vaut quelque chose qu'une fois la PR fusionnée — d'où le type nullable, qui FORCE
+     *  l'appelant à dire ce qu'il fait de l'absence au lieu de la découvrir à l'exécution. */
+    mergeCommit: { oid: string } | null;
+    baseRefName: string;
   };
+  const revues = JSON.parse(
+    execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${numero}/reviews`, '--paginate'], {
+      encoding: 'utf8',
+      maxBuffer: 32e6,
+    })
+  ) as RevueBrute[];
+  // ⚠️ LA TÊTE QUE LA FORGE RAPPORTE PEUT ÊTRE PÉRIMÉE, ET C'EST ICI QUE ÇA COMPTE LE PLUS.
+  //
+  // Cette valeur alimente `entree.tete`, dont `scripts/lot/revues.ts` dérive `perimees` puis
+  // `coche`. Une tête en retard fait donc compter COURANTS des accords rendus sur le diff
+  // PRÉCÉDENT — sur la gate que `docs/CHARTE-AGENTS.md` appelle « le seul moment où les revues
+  // existent ». Veto de la lentille `securite` au 10e tour, et il visait juste : la garde avait
+  // été posée sur le COMPOSEUR, qui décrit, et pas sur la GATE, qui autorise.
+  //
+  // On refuse plutôt que de juger un diff qui n'est pas celui qu'on fusionnera.
+  //
+  // ⚠️ ET POURQUOI CETTE GARDE NE PEUT PAS ROUGIR EN CI, ce qui la rendrait INSATISFIABLE :
+  // `prParGh()` n'est appelé que sous `--pr` ou `--apres-fusion`, et le workflow lance
+  // `pnpm gov:pr` SANS argument — les familles de revue ne sont donc évaluées qu'à la main,
+  // juste avant de fusionner. En CI l'arbre est sur `refs/pull/N/merge`, dont le sha ne peut
+  // PAS coïncider avec `headRefOid` : y câbler `--pr` rendrait cette garde impossible à
+  // satisfaire, et une gate insatisfiable se fait retirer dans la semaine. Avertissement de la
+  // lentille `schema` au 10e tour, vérifié : `pnpm gov:pr` sans argument rend 0 et n'imprime
+  // aucun message de tête.
+  // ⚠️ CE QU'ON COMPARE N'EST PAS LE MÊME OBJET SELON LE MOMENT — motif BLOQUANT de la lentille
+  // `schema` au 11e tour, atteint indépendamment par `securite`. La confrontation vivait ici, dans
+  // `prParGh()`, donc elle s'appliquait AUSSI à `--apres-fusion` : après un `--squash
+  // --delete-branch`, `headRefOid` et la base diffèrent par construction POUR TOUJOURS, et la
+  // branche n'existe plus ni en local ni sur la forge. Le pas 8 était devenu INSATISFIABLE, et son
+  // message prescrivait « pousse d'abord » sur une branche supprimée aux deux bouts.
+  //
+  // Le remède n'est PAS de ne rien contrôler après fusion : le pas 8 atteste un ATTERRISSAGE, donc
+  // on compare la base (`origin/<base>`) au `mergeCommit` que la forge rapporte. La propriété
+  // devient vraie, vérifiable et satisfiable au lieu d'être supprimée.
+  //
+  // Et la décision ENTIÈRE — comparaison, message, sens de défaillance — vit dans
+  // `jugerLesTetes()`, au module PARTAGÉ : ne partager que le prédicat laissait diverger tout le
+  // reste, et c'est précisément ce qui a divergé.
+  // ⚠️ CE QU'ON DEMANDE N'EST PAS LA MÊME PROPRIÉTÉ AUX DEUX MOMENTS — lentille `schema`,
+  // 12e tour. Avant fusion : une ÉGALITÉ (le diff approuvé est le diff fusionné). Après fusion :
+  // une ANCESTRALITÉ (la fusion a atteint la base). Juger le second par une égalité rendait le
+  // pas 8 satisfiable pour la SEULE PR la plus récente et faux pour toutes les autres, à jamais.
+  // La demande est une union discriminée : le mauvais appariement ne compile plus.
+  // ⚠️ LES DEUX OPÉRANDES SONT NOMMÉS UNE FOIS (RM-01). Ils étaient retapés deux fois chacun —
+  // relevé par la lentille `schema` au 13e tour : `mergeCommit` en deux endroits, la base en deux
+  // autres. Deux écritures de la même valeur finissent par diverger, et ici la divergence
+  // s'appellerait « attester un atterrissage sur la mauvaise référence ».
+  const refBase = `origin/${meta.baseRefName ?? 'main'}`;
+  const shaFusion = meta.mergeCommit?.oid ?? '';
+  const demande: DemandeDeConcordance =
+    moment === 'apres-fusion'
+      ? {
+          moment: 'apres-fusion',
+          mergeCommit: shaFusion,
+          base: refBase,
+          // 🔴 CE BOOLÉEN EST LA SEULE ATTESTATION MÉCANIQUE DE L'ATTERRISSAGE — même lentille,
+          // même tour. `estAncetre: true` reste EXPRIMABLE ici, et aucun témoin d'effet ne peut le
+          // tuer : le seul lancement réel vise une PR qui A atterri, donc `true` y serait juste.
+          // C'est un témoin de SOURCE qui garde ce câblage (`tete-de-pr-concorde.spec.ts`), et il
+          // est écrit là-bas ce qu'il ne prouve pas.
+          estAncetre: estAncetreDe(shaFusion, refBase),
+        }
+      : {
+          moment: 'avant-fusion',
+          teteLocale: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }),
+          teteForge: meta.headRefOid ?? '',
+        };
+
+  const verdictTete = jugerLesTetes(demande);
+  if (!verdictTete.concordent) {
+    for (const ligne of verdictTete.message) console.error(ligne.replace('❌ ', '❌ gov:pr — '));
+    process.exit(1);
+  }
+
   return {
-    titre: j.title,
-    corps: j.body ?? '',
-    labels: (j.labels ?? []).map((l) => l.name),
-    fichiers: (j.files ?? []).map((f) => f.path),
-    revues: (j.reviews ?? []).map((r) => ({ auteur: r.author?.login ?? '', etat: r.state, corps: r.body ?? '' })),
+    numero: Number(numero),
+    titre: meta.title,
+    corps: meta.body ?? '',
+    labels: (meta.labels ?? []).map((l) => l.name),
+    fichiers: (meta.files ?? []).map((f) => f.path),
+    revues,
+    // ⚠️ Après fusion la branche est SUPPRIMéE : `headRefOid` désigne un objet mort, et c'est
+    // pourtant lui dont dérivent `perimees`, `lentille_perimee` et la coche de DoD. La lentille
+    // `schema` (12e tour) : deux notions de « tête » dans un même run. On garde `headRefOid`
+    // parce que c'est bien la tête SUR LAQUELLE LES REVUES ONT ÉTÉ RENDUES — la bonne référence
+    // pour juger leur péremption — et on l'écrit ici pour que personne ne la confonde avec ce que
+    // le pas 8 confronte, qui est le `mergeCommit`.
+    tete: meta.headRefOid ?? null,
   };
 }
 
@@ -628,7 +773,7 @@ function prParEvenement(): Pr | null {
   const chemin = process.env['GITHUB_EVENT_PATH'];
   if (!chemin || !existsSync(chemin)) return null;
   const ev = JSON.parse(readFileSync(chemin, 'utf8')) as {
-    pull_request?: { title: string; body: string | null; labels: { name: string }[]; base: { sha: string }; head: { sha: string } };
+    pull_request?: { number?: number; title: string; body: string | null; labels: { name: string }[]; base: { sha: string }; head: { sha: string } };
   };
   if (!ev.pull_request) return null;
   let fichiers: string[] = [];
@@ -646,6 +791,7 @@ function prParEvenement(): Pr | null {
     process.exit(1);
   }
   return {
+    numero: ev.pull_request.number ?? null,
     titre: ev.pull_request.title,
     corps: ev.pull_request.body ?? '',
     labels: ev.pull_request.labels.map((l) => l.name),
@@ -714,17 +860,45 @@ if (process.argv.includes('--prove')) {
   }
 
   const CORPS = corpsRempli(depot.gabarit);
+
+  /**
+   * LA FORME D'UNE REVUE DE FIXTURE EST CELLE DU PRODUCTEUR (RM-03). Elle portait auparavant
+   * trois champs inventés — `{ auteur, etat, corps }` — qu'aucune interface ne sert, et c'est
+   * précisément parce que la fixture était plus PAUVRE que la réponse réelle que trois des quatre
+   * champs qui authentifient une revue n'ont jamais été mis à l'épreuve. Source de la forme :
+   * `GET /repos/{owner}/{repo}/pulls/{n}/reviews`, capturée dans
+   * `tests/fixtures/github/revues-pr-31.json` le 2026-09-05.
+   */
+  const TETE_TEMOIN = '41bc8140b9ea436be809676538dd65cb2263a5bc';
+  const revue = (corps: string, retouche: Partial<RevueBrute> = {}): RevueBrute => ({
+    user: { login: 'will383842' },
+    author_association: 'OWNER',
+    state: ETAT_APPROUVE,
+    commit_id: TETE_TEMOIN,
+    body: corps,
+    ...retouche,
+  });
+  /** Le premier mot d'un corps de revue — ce qui la désigne dans un témoin. */
+  const ouvrePar = (r: RevueBrute, entete: string): boolean => (r.body ?? '').startsWith(entete);
+
   const PR_TEMOIN: Pr = {
-    titre: 'feat(GOV-007): charte des agents, gabarit de PR et garde gov:pr',
+    // ⚠️ LE TITRE NOMME UNE TÂCHE QUI N'EST PAS `schema`, ET C'EST DÉLIBÉRÉ. Depuis que le
+    // discriminant lit AUSSI le champ `schema` de la tâche portée par la PR, une fixture
+    // intitulée `feat(GOV-007)` réclamerait la lentille bloquante de l'architecte — GOV-007
+    // déclare `prisma/schema.prisma` dans ses `paths`. La PR témoin « ordinaire » doit être
+    // ordinaire jusque dans sa tâche : c'est `PR_SCHEMA` qui porte GOV-007, et elle a le label,
+    // le fichier et l'avis d'A02. Une fixture qui se contredit prouve la garde par accident.
+    titre: 'feat(GOV-011): matrice de traçabilité dérivée',
     corps: CORPS,
     labels: [],
     fichiers: ['docs/CHARTE-AGENTS.md', '.github/PULL_REQUEST_TEMPLATE.md', 'scripts/gates/gov-pr.ts', 'tests/gov/charte-pr.spec.ts'],
     revues: [
-      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · exactitude\nVerdict: accepte\nles quatre REQ sont couvertes' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · securite\nVerdict: accepte\nrien à signaler' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · simplicite\nVerdict: accepte\nle §7 est lu, pas recopié' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A10 · mutation\nVerdict: accepte\nmarqueur dupliqué : la garde rougit' },
+      revue('A09 · exactitude\nVerdict: accepte\nles quatre REQ sont couvertes'),
+      revue('A09 · securite\nVerdict: accepte\nrien à signaler'),
+      revue('A09 · simplicite\nVerdict: accepte\nle §7 est lu, pas recopié'),
+      revue('A10 · mutation\nVerdict: accepte\nmarqueur dupliqué : la garde rougit'),
     ],
+    tete: TETE_TEMOIN,
   };
   const copiePr = (p: Pr): Pr => JSON.parse(JSON.stringify(p)) as Pr;
   /** Vide la DERNIÈRE case cochée du corps — la huitième, celle qui atteste l'atterrissage. */
@@ -747,10 +921,10 @@ if (process.argv.includes('--prove')) {
     labels: ['schema'],
     fichiers: ['prisma/schema.prisma'],
     revues: [
-      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · exactitude\nVerdict: accepte\nok' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A09 · securite\nVerdict: accepte\nok' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A02 · schema\nVerdict: accepte\nmigration additive, aucune perte' },
-      { auteur: 'w', etat: 'APPROVED', corps: 'A10 · mutation\nVerdict: accepte\nvue rougir' },
+      revue('A09 · exactitude\nVerdict: accepte\nok'),
+      revue('A09 · securite\nVerdict: accepte\nok'),
+      revue('A02 · schema\nVerdict: accepte\nmigration additive, aucune perte'),
+      revue('A10 · mutation\nVerdict: accepte\nvue rougir'),
     ],
   };
   PR_SCHEMA.corps = remplacer(
@@ -768,7 +942,7 @@ if (process.argv.includes('--prove')) {
 
   const PR_RESERVE: Pr = {
     ...copiePr(PR_TEMOIN),
-    titre: 'chore(GOV-007): compose le lot',
+    titre: 'chore(GOV-011): compose le lot',
     labels: ['role:gardien-spec'],
     fichiers: ['docs/tasks.json'],
   };
@@ -845,6 +1019,23 @@ if (process.argv.includes('--prove')) {
       defaut: () => [copieDepot(), { ...copiePr(PR_TEMOIN), fichiers: ['auth/session.ts'] }],
     },
     {
+      // LA MEME FAMILLE PAR L'AUTRE BRANCHE, et c'est celle qui manquait. Le temoin ci-dessus
+      // passe par `zoneSensible` : il resterait ROUGE meme si la condition sur les TACHES
+      // disparaissait, donc il ne garde pas le durcissement du 2026-09-05. Ici aucun fichier
+      // n'est en zone sensible et la tache du TITRE (GOV-011) ne porte AUCUN `sensible` :
+      // seules des taches PORTEES par la PR en portent. Mesure sur la PR 31 : GOV-024 (titre)
+      // `sensible: []`, GOV-006 `["attribution"]`, CPL-T01 `["argent","attribution"]` — la
+      // section Attaque n'etait donc exigee par PERSONNE sur une PR qui porte deux taches
+      // sensibles.
+      famille: 'attaque_absente',
+      defaut: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.numero = 31;
+        p.corps = remplacerBloc(p.corps, 'attaque', '');
+        return [copieDepot(), p];
+      },
+    },
+    {
       famille: 'fichier_reserve_sans_label',
       defaut: () => [copieDepot(), { ...copiePr(PR_RESERVE), labels: [] }],
     },
@@ -880,7 +1071,7 @@ if (process.argv.includes('--prove')) {
       defaut: () => {
         const p = copiePr(PR_TEMOIN);
         p.revues = p.revues!.map((r) =>
-          r.corps.startsWith('A09 · securite') ? { ...r, corps: 'A09 · securite\nVerdict: refuse\nIDOR non couvert' } : r
+          ouvrePar(r, 'A09 · securite') ? { ...r, body: 'A09 · securite\nVerdict: refuse\nIDOR non couvert' } : r
         );
         return [copieDepot(), p];
       },
@@ -896,10 +1087,74 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
+      // ── LES QUATRE FAIBLESSES FERMÉES PAR LE LECTEUR UNIQUE ──────────────────────────────
+      // Chacune était PERMISSIVE : elle laissait compter un avis qui ne devait pas compter.
+      // (1) l'auteur d'une revue n'était pas authentifié : dépôt PUBLIC, avis forgé.
+      famille: 'lentilles_manquantes',
+      defaut: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.revues = p.revues!.map((r) => ({ ...r, author_association: 'NONE', user: { login: 'un-tiers' } }));
+        return [copieDepot(), p];
+      },
+    },
+    {
+      // (1c) un avis RETIRÉ (`DISMISSED`) n'est pas un avis.
+      famille: 'lentilles_manquantes',
+      defaut: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.revues = p.revues!.map((r) => ({ ...r, state: 'DISMISSED' }));
+        return [copieDepot(), p];
+      },
+    },
+    {
+      // (2) le numéro de poste n'était confronté à rien : `A99` tenait une lentille.
+      famille: 'lentilles_manquantes',
+      defaut: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.revues = p.revues!.map((r) => ({ ...r, body: (r.body ?? '').replace(/^A\d\d/, 'A99') }));
+        return [copieDepot(), p];
+      },
+    },
+    {
+      // (4) la clé du dernier verdict : un refus d'A02 sur `schema` que l'accord d'un AUTRE
+      // poste sur la même lentille effaçait.
+      famille: 'lentille_en_refus',
+      defaut: () => {
+        const p = copiePr(PR_SCHEMA);
+        p.revues = [
+          ...p.revues!.map((r) =>
+            ouvrePar(r, 'A02 · schema') ? { ...r, body: 'A02 · schema\nVerdict: refuse\nla migration perd une colonne' } : r
+          ),
+          revue('A12 · schema\nVerdict: accepte\nvu de mon côté'),
+        ];
+        return [copieDepot(), p];
+      },
+    },
+    {
+      // Le pas 5 du protocole : un accord rendu sur une AUTRE tête que celle qui sera fusionnée.
+      // `gov:pr` en était STRUCTURELLEMENT aveugle — il ne lisait aucun `commit_id`.
+      famille: 'lentille_perimee',
+      defaut: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.revues = p.revues!.map((r) => ({ ...r, commit_id: '0000000000000000000000000000000000000000' }));
+        return [copieDepot(), p];
+      },
+    },
+    {
+      // Le discriminant `schema` lu sur les FICHIERS : une PR qui touche prisma sans le label
+      // publiait « les lentilles ont accepté » alors que la revue bloquante n'a jamais eu lieu.
+      famille: 'schema_sans_approbation',
+      defaut: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.fichiers = ['prisma/schema.prisma', 'tests/gov/charte-pr.spec.ts'];
+        return [copieDepot(), p];
+      },
+    },
+    {
       famille: 'schema_sans_approbation',
       defaut: () => {
         const p = copiePr(PR_SCHEMA);
-        p.revues = p.revues!.map((r) => (r.corps.startsWith('A02') ? { ...r, corps: 'A09 · schema\nVerdict: accepte\nok' } : r));
+        p.revues = p.revues!.map((r) => (ouvrePar(r, 'A02') ? { ...r, body: 'A09 · schema\nVerdict: accepte\nok' } : r));
         return [copieDepot(), p];
       },
     },
@@ -947,14 +1202,34 @@ if (process.argv.includes('--prove')) {
       quoi: "une lentille qui a refuse, puis relu et accepte : son DERNIER mot compte",
       cas: () => {
         const p = copiePr(PR_TEMOIN);
-        const securite = p.revues!.find((r) => r.corps.startsWith('A09 · securite'))!;
+        const securite = p.revues!.find((r) => ouvrePar(r, 'A09 · securite'))!;
         p.revues = [
           ...p.revues!.filter((r) => r !== securite),
-          { ...securite, corps: 'A09 · securite\nVerdict: refuse\nIDOR non couvert' },
-          { ...securite, corps: 'A09 · securite\nVerdict: accepte\nleve : la garde est posee' },
+          { ...securite, body: 'A09 · securite\nVerdict: refuse\nIDOR non couvert' },
+          { ...securite, body: 'A09 · securite\nVerdict: accepte\nleve : la garde est posee' },
         ];
         return [depot, p];
       },
+    },
+    {
+      // CONTRE-TÉMOIN DU FILTRE D'IDENTITÉ : `MEMBER` et `COLLABORATOR` jugent aussi. Calé sur
+      // le seul `OWNER`, le filtre refuserait EN SILENCE le premier second contributeur.
+      quoi: 'une PR relue par un membre et par un collaborateur, et non par le seul propriétaire',
+      cas: () => {
+        const p = copiePr(PR_TEMOIN);
+        p.revues = p.revues!.map((r, i) => ({
+          ...r,
+          author_association: i % 2 === 0 ? 'MEMBER' : 'COLLABORATOR',
+          user: { login: i % 2 === 0 ? 'un-membre' : 'un-collaborateur' },
+        }));
+        return [depot, p];
+      },
+    },
+    {
+      // CONTRE-TÉMOIN DU DISCRIMINANT `schema` : sans fichier de schéma, sans label et sans
+      // tâche `schema`, c'est `simplicite` qui est exigée — et la PR témoin la porte.
+      quoi: 'une PR sans fichier de schéma, sans label de schéma et sans tâche de schéma',
+      cas: () => [depot, copiePr(PR_TEMOIN)],
     },
     {
       // Les quatre lentilles rendues en `COMMENTED` : c'est le seul état que ce dépôt à un
@@ -962,7 +1237,7 @@ if (process.argv.includes('--prove')) {
       quoi: 'une PR dont les quatre revues sont des commentaires portant `Verdict: accepte`',
       cas: () => {
         const p = copiePr(PR_TEMOIN);
-        p.revues = p.revues!.map((r) => ({ ...r, etat: 'COMMENTED' }));
+        p.revues = p.revues!.map((r) => ({ ...r, state: ETAT_COMMENTE }));
         return [depot, p];
       },
     },
@@ -996,6 +1271,17 @@ if (process.argv.includes('--prove')) {
     console.error(`❌ Famille(s) de contrôle sans témoin : ${sansTemoin.join(', ')}.`);
     process.exit(1);
   }
+  // LE SENS INVERSE, ET IL MANQUAIT. Une famille qu'un témoin fait rougir sans qu'elle soit
+  // DÉCLARÉE passait sous le compte : la sortie annonçait « les N familles » en lisant
+  // `FAMILLES`, pas ce qui avait réellement été prouvé. `lentille_perimee` est arrivée par là.
+  const nonDeclarees = [...prouvees].filter((f) => !FAMILLES.includes(f));
+  if (nonDeclarees.length > 0) {
+    console.error(
+      `❌ Famille(s) prouvée(s) mais NON déclarée(s) dans FAMILLES : ${nonDeclarees.join(', ')}. ` +
+        `Le compte annoncé ne serait pas celui des familles réellement contrôlées.`
+    );
+    process.exit(1);
+  }
 
   console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
@@ -1019,10 +1305,26 @@ if (iPr >= 0 || iApres >= 0) {
     process.exit(1);
   }
   try {
-    pr = prParGh(numero);
+    pr = prParGh(numero, iApres >= 0 ? 'apres-fusion' : 'avant-fusion');
   } catch (e) {
-    console.error(`❌ gov:pr — \`gh pr view ${numero}\` a échoué : ${(e as Error).message}`);
-    console.error('   Les familles de revue ne peuvent pas être contrôlées ; la garde refuse plutôt que de passer.');
+    // ⚠️ CE `catch` COUVRE DEUX COMMANDES, ET LEURS REMÈDES N'ONT RIEN À VOIR. Relevé par la
+    // lentille `securite` aux 11e et 12e tours — et le 12e a raison de dire que je l'avais
+    // ÉLARGI : `prParGh()` lance maintenant `gh pr view` ET un `git rev-parse`. Attribuer un
+    // échec de `git` à `gh pr view` envoie le lecteur vérifier son jeton quand le remède est
+    // `git fetch origin`. *Le sens de défaillance reste fermé ; c'est le DIAGNOSTIC qui ment,
+    // et un diagnostic qui ment fait perdre le temps qu'une garde est censée faire gagner.*
+    const message = (e as Error).message;
+    const vientDeGit = /rev-parse|unknown revision|ambiguous argument|not a git repository/i.test(message);
+    console.error(
+      vientDeGit
+        ? `❌ gov:pr — une commande \`git\` a échoué : ${message}`
+        : `❌ gov:pr — \`gh pr view ${numero}\` a échoué : ${message}`
+    );
+    console.error(
+      vientDeGit
+        ? '   Remède probable : `git fetch origin` — la référence de base doit exister EN LOCAL.'
+        : '   Les familles de revue ne peuvent pas être contrôlées ; la garde refuse plutôt que de passer.'
+    );
     process.exit(1);
   }
   if (iApres >= 0 && pr) pr.apresFusion = true;
@@ -1033,6 +1335,10 @@ if (iPr >= 0 || iApres >= 0) {
 }
 
 const fautes = controler(depot, pr);
+if (AVIS_ECARTES.length > 0) {
+  console.log(`ℹ️  gov:pr — ${AVIS_ECARTES.length} avis ÉCARTÉ(S), qui ne comptent pour aucune lentille :`);
+  AVIS_ECARTES.forEach((e) => console.log(`      ${e}`));
+}
 if (fautes.length === 0) {
   console.log(`✅ gov:pr — ${portee}.`);
   if (pr === null) {

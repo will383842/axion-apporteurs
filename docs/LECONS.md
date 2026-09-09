@@ -1,6 +1,6 @@
 # Leçons — Axion Partners
 
-<!-- consolidation: 2026-09-03 -->
+<!-- consolidation: 2026-09-05 -->
 
 > Livré par **GOV-018** (REQ-GOV-023, moitié « leçons »). Tenu par le `documentaliste` (A03), qui
 > ÉCRIT ce qui a été appris et par quoi c'est prouvé — il ne tranche pas.
@@ -17,7 +17,7 @@
 >
 > **Le lien avec les règles maison.** Chaque leçon dit la ou les `RM-nn` de `docs/REGLES-MAISON.md`
 > qu'elle a produites — ou dit qu'elle n'en a produit aucune. Une leçon qui se répète devient une
-> règle `RM-13+` **par ADR**, jamais par édition directe : c'est ce qu'écrit la section « Leçons »
+> règle `RM-15+` **par ADR**, jamais par édition directe : c'est ce qu'écrit la section « Leçons »
 > de `docs/REGLES-MAISON.md`.
 
 ## Leçons consolidées
@@ -113,6 +113,83 @@
 - **Où c'est prouvé.** `.github/workflows/nightly.yml:8` (« ⚠️ CE WORKFLOW EST ROUGE TANT QUE LA PHASE -1 N'EST PAS SORTIE, et c'est ce qu'on lui demande ») ; l'arbitrage jumeau sur le contrôle d'avant-envoi est dans `25a96de`.
 - **Règle maison.** RM-02.
 
+### LEC-14 — Une garde ne juge pas forcément ce que son propre lot écrit
+
+- **Ce qui s'est passé.** `gov:trace` ne confrontait au disque que les promesses `tests{}` des tâches LIVRÉES. Les huit tâches du lot `L-1-03` étaient encore `a_faire` au moment où elles écrivaient les leurs : les trente-trois entrées `tests{}` que le lot posait n'étaient relues par aucune garde, et une promesse de test inventée est passée dans la tâche même qui livrait la garde censée l'attraper.
+- **Ce qu'on en tire.** Le critère juste n'est pas le STATUT de la tâche mais l'EXISTENCE du fichier. Et il a fallu élargir deux choses, pas une : le contrôle, puis la résolution des titres de test — un contrôle élargi dont la source ne l'est pas ne contrôle rien. Une garde livrée dans un lot doit être passée sur ce lot-là avant d'être réputée armée.
+- **Où c'est prouvé.** `9597865` ; `docs/journal/2026-09.md`, entrée « PR #28 », bloc `**Appris.**` : « une promesse inventée est passée dans la tâche même qui livre la garde censée l'attraper ».
+- **Règle maison.** Aucune à ce jour ; elle sert RM-02 — une garde qui ne regarde pas ce que son lot écrit n'a jamais pu rougir dessus.
+
+### LEC-15 — Une obligation qui s'évalue APRÈS la fusion est un détecteur d'incident, pas un garde-fou
+
+- **Ce qui s'est passé.** `gov:etat` ne voit la famille `pr_fusionnee_sans_journal` que lorsque la PR est fusionnée — donc sur `main`, donc trop tard pour refuser quoi que ce soit. La PR #28 est passée sans son entrée de journal ; le run `Gate A` du `push` sur `main` est resté rouge jusqu'à ce que la PR #29 l'écrive. Coût mesuré de l'oubli : une PR entière, sa Gate A complète, et un `main` rouge dans l'intervalle.
+- **Ce qu'on en tire.** Le protocole demande l'entrée sur la branche de la PR, mais rien ne le vérifie au moment où c'est encore réparable sans un second aller-retour. Une règle et le MOMENT où elle s'évalue se conçoivent ensemble : décalée d'un cran après la fusion, la même règle change de nature — elle nomme l'incident au lieu de l'empêcher, et sa seule victime possible devient la branche par défaut.
+- **Où c'est prouvé.** `ab5caf5` ; `docs/journal/2026-09.md`, entrée « PR #29 » : « sa seule victime possible est la branche par défaut ».
+- **Règle maison.** Aucune à ce jour ; même famille que LEC-05 — le contrôle et son déclencheur se conçoivent ensemble.
+
+### LEC-16 — Le motif du PREMIER échec de clôture n'est écrit nulle part
+
+- **Ce qui s'est passé.** `scripts/lot/cloture.ts:106` calcule le motif d'un refus de clôture — « fusion non atterrie : motif absent » — puis, à la première tentative, `scripts/lot/cloture.ts:118` remet `t.motif` à `null`, parce qu'une tâche qui repart doit repartir propre. Le motif n'est persisté qu'à la DEUXIÈME tentative, quand la tâche bascule `bloquee` (`scripts/lot/cloture.ts:112`). Entre les deux, il n'existe que dans la sortie console du run.
+- **Ce qu'on en tire.** Une session qui n'a pas lu cette sortie-là ne retrouvera jamais la raison du premier refus : le registre dira `a_faire`, `attempts: 1`, `motif: null`. Le même run a montré l'autre moitié, rassurante : l'invariant se juge TÂCHE PAR TÂCHE — avec `atterri: false` sur la seule `GOV-010`, les sept autres passent `fusionnee` et elle seule retombe `a_faire`. Un rendu partiellement faux ne contamine pas les lignes saines, et ne les protège pas non plus.
+- **Où c'est prouvé.** `794245c` ; `scripts/lot/cloture.ts:118` ; `docs/journal/2026-09.md`, entrée « PR #30 ».
+- **Règle maison.** Aucune à ce jour.
+
+### LEC-17 — Une preuve organisée par FAMILLE ne dit rien des POSITIONS
+
+- **Ce qui s'est passé.** `gov:identifiants` avait ses trois familles prouvées et ses dix contre-témoins verts. Sa lookahead négative incluait le point : une étiquette de relecteur collée à un point final n'était pas vue, la même suivie d'une espace l'était. Ses propres témoins évitaient tous cette position. Le fait décisif : la lookahead remise dans son état cassé, la preuve affichait TOUJOURS « 3 témoins rougissent, 10 contre-témoins restent verts — preuve faite » et la garde rendait 0 sur le dépôt. La cécité était totale et silencieuse.
+- **Ce qu'on en tire.** Deux axes, pas un. La FAMILLE dit ce qui est refusé ; la POSITION dit où la garde regarde. Une preuve organisée par familles seules peut rester verte sur le texte qu'elle condamne. Le correctif est mesuré et non deviné — trois variantes de la lookahead confrontées aux fichiers suivis, une seule change le verdict — et dix positions limites sont désormais déclarées, chacune avec son témoin, la fin de phrase et la fin de ligne comprises.
+- **Où c'est prouvé.** `fee4617` ; `scripts/gates/gov-identifiants.ts:176` (« la famille dit CE QUI est refusé, la position dit OÙ la garde regarde ») ; `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts`.
+- **Règle maison.** RM-02.
+
+### LEC-18 — Un drapeau « ce témoin exerce le défaut » se vérifie DANS LES DEUX SENS
+
+- **Ce qui s'est passé.** Chaque témoin de position porte un drapeau `manqueParLAncienne`. La preuve ne le croit pas : elle rejoue le témoin contre la lookahead d'avant et refuse DEUX fois. Un témoin annoncé aveugle que l'ancienne voyait déjà n'exerce pas le défaut — c'est précisément le témoin qui verdit sur le texte qu'il condamne (`scripts/gates/gov-identifiants.ts:346`). Un témoin annoncé vu que l'ancienne manquait signale une cécité PLUS LARGE que documentée (`scripts/gates/gov-identifiants.ts:354`).
+- **Ce qu'on en tire.** Vérifié d'un seul côté, un tel drapeau décrit l'INTENTION de l'auteur, pas le code. Sur les dix témoins, cinq sont annoncés aveugles et le sont, cinq sont annoncés vus et le sont : c'est le double refus qui rend le compte crédible, pas le commentaire qui l'accompagne.
+- **Où c'est prouvé.** `scripts/gates/gov-identifiants.ts:198` — le contrat du drapeau ; la sortie du 2026-09-05 : « 10 témoins de position rougissent, dont 5 que l'ancienne lookahead MANQUAIT ».
+- **Règle maison.** RM-02.
+
+### LEC-19 — La version CASSÉE gardée DANS le module rend le rejeu permanent
+
+- **Ce qui s'est passé.** Rejouer une garde contre son état d'avant est d'ordinaire un geste de session : on remet la ligne, on regarde, on l'enlève — et la démonstration meurt avec la session. Deux tâches du même lot ont fait l'inverse. `gov:identifiants` conserve l'ancienne lookahead sous `MOTIF_NU_AVEUGLE_EN_FIN_DE_PHRASE`, que rien n'appelle pour juger (`scripts/gates/gov-identifiants.ts:68`). `scripts/lot/registre-decisions.ts:195` conserve `lireRegistreHerite`, le lecteur que le composeur portait avant, mot pour mot : rien ne le consulte pour juger, il sert aux témoins des tests et au décompte que le composeur IMPRIME.
+- **Ce qu'on en tire.** Le prix est une constante morte et un peu de bruit à la lecture. Le gain est double : aucune régression ne peut réintroduire le défaut sans faire rougir, et l'effet du remède se MESURE au lieu de se supposer — dix-huit tâches que la lecture d'avant écartait pour une raison de décision redeviennent éligibles, une le reste. Deux occurrences le même jour, dans deux tâches qui ne se parlaient pas : c'est un patron, pas une trouvaille.
+- **Où c'est prouvé.** `fee4617` et `88fa798` ; `scripts/lot/registre-decisions.ts:178` (« CECI N'EST PAS UN SECOND LECTEUR. C'est la FIXTURE du défaut »).
+- **Règle maison.** RM-02.
+
+### LEC-20 — Le compteur d'une preuve est un contrat lu ailleurs
+
+- **Ce qui s'est passé.** La ligne « 3 témoins rougissent, 10 contre-témoins restent verts » n'est pas un message décoratif : `tests/unit/gouvernance/gardes.spec.ts:108` l'asserte mot pour mot, `docs/gates.json:48` la recopie comme preuve rouge, et `docs/GATES.md:43` la porte dans sa vue dérivée. Enrichir la preuve en GONFLANT ces compteurs aurait rougi trois fichiers d'un coup, dont un registre et une vue réservés à d'autres postes.
+- **Ce qu'on en tire.** Une preuve s'enrichit par AJOUT — une SECONDE ligne, « 10 témoins de position … 24 contre-témoins de position » — jamais en modifiant la première. Avant de toucher au compteur d'une garde, chercher qui le lit ; la réponse est rarement « personne ». Corollaire pour qui écrit une garde neuve : un compteur placé dans un message de succès devient un contrat dès qu'un test l'asserte.
+- **Où c'est prouvé.** `tests/unit/gouvernance/gardes.spec.ts:108` ; `docs/gates.json:48` ; `docs/GATES.md:43`.
+- **Règle maison.** RM-01 — trois copies d'une même valeur ; on n'en corrige aucune, on ajoute à côté.
+
+### LEC-21 — Un test peut ne pas vérifier ce que son en-tête annonce
+
+- **Ce qui s'est passé.** L'en-tête de `tests/unit/gouvernance/regles-maison.spec.ts` annonçait « chaque RM a une section ». Le test comparait deux listes de TITRES : celle des `## RM-nn — …` et celle des lignes du tableau de tête. Une section réduite à son seul titre, ou privée de son « Pourquoi », restait VERTE. Le défaut n'a pas été trouvé par une gate : il a été trouvé en relisant l'en-tête à côté du code.
+- **Ce qu'on en tire.** L'en-tête d'un test n'est pas une assertion, et la distance entre les deux ne rougit jamais. Ce qui manquait ici est exactement ce qui empêche qu'on retire une règle par commodité six mois plus tard : son POURQUOI. Les trois rubriques — énoncé, pourquoi, garde qui la voit — sont désormais exigées section par section, une rubrique vide comptant pour absente, et la règle a été rejouée contre la version cassée avant d'être posée.
+- **Où c'est prouvé.** `d84d073` ; `tests/unit/gouvernance/regles-maison.spec.ts:138` : « Elle comparait la liste des titres … Une section réduite à son seul titre … passait au vert ».
+- **Règle maison.** RM-02.
+
+### LEC-22 — C'est le CODE qui a corrigé le DOCUMENT
+
+- **Ce qui s'est passé.** `docs/adr/0009-valeurs-du-monde-reel.md` déclare quatre points de sortie — les endroits où une valeur quitte le dépôt — et affirmait que la garde les refusait tous les quatre. `gov:entite` dérive le régime de chaque champ de sa LIGNE DE DÉCISION : `W1`, `W3` et `W4` étant tranchées le 2026-09-03, deux points acceptent déjà (`contrat-docuseal`, `export-das2`) et deux seulement refusent (`mandat-autofacturation`, `sepa-pain001`), l'un et l'autre sur les coordonnées bancaires débitrices. La première version du test affirmait les quatre sur la foi de l'ADR, et elle est tombée.
+- **Ce qu'on en tire.** Une liste écrite à la main fige l'état d'un jour ; dérivée du registre, elle changera d'elle-même quand une décision changera. Conséquence lue par un humain : ce qui reste à trancher n'est pas « quatre valeurs » mais UNE. Et l'ordre de correction est celui-ci — quand un document et le code se contredisent, c'est le document qu'on corrige, en gardant trace de ce qu'il disait ; l'ADR porte désormais la correction et la raison de sa chute.
+- **Où c'est prouvé.** `4b152e6` ; `docs/adr/0009-valeurs-du-monde-reel.md:135` ; `tests/unit/gouvernance/entite-registre.spec.ts:261`. Revérifié le 2026-09-05 : `pnpm gov:entite` rend 0 et compte « 12 arrêté(s) et attesté(s) par leur ligne de décision, 5 à la sentinelle ».
+- **Règle maison.** RM-01.
+
+### LEC-23 — Une vue générée sans vérificateur dérive en silence
+
+- **Ce qui s'est passé.** Deux vues, deux trous distincts. `docs/REQUIREMENTS.md` n'avait AUCUN générateur alors que son bandeau affirmait que `pnpm gov:requirements` en tenait la cohérence : elle annonçait 353 exigences quand le registre en portait 354. `docs/TASKS.md` avait un générateur mais aucun vérificateur : dans la PR #30, `lot:cloture` a fait passer vingt tâches à `fusionnee` dans `docs/tasks.json` sans que la vue soit régénérée — elle est restée à cinq. Quinze d'écart sur le fichier qu'on ouvre justement pour savoir où en est le chantier.
+- **Ce qu'on en tire.** Un générateur n'est pas un vérificateur. Sans un mode qui COMPARE et sort 1 sans rien écrire, une vue dérive et rien ne rougit — une garde qui répare ce qu'elle contrôle est toujours verte, donc ne garde rien. Deux précisions payées comptant : le message NOMME l'écart en unités du domaine (« la vue annonce 353 exigence(s), le registre en porte 354 ») plutôt que « les deux fichiers diffèrent », et les fins de ligne sont normalisées avant comparaison, sans quoi la garde mesurerait `core.autocrlf` (LEC-03). Enfin, aucune gate n'a vu l'écart : des relecteurs l'ont vu à la lecture, trois fois indépendamment, dans la PR même qui le créait — et il y a été corrigé.
+- **Où c'est prouvé.** `88fa798` ; l'état d'avant se relit dans `794245c`, dont le diff de `docs/TASKS.md` porte la seule ligne « Terminees » passant de 5 à 20.
+- **Règle maison.** RM-01.
+
+### LEC-24 — Un fichier neuf hors de l'index est invisible pour les gardes
+
+- **Ce qui s'est passé.** Cinq gardes au moins balaient `git ls-files`, pas le disque (`scripts/gates/gov-identifiants.ts:154`, `scripts/gates/gov-publication.ts:149`, `scripts/gates/gov-entite.ts:386`, `scripts/gates/gov-preseance.ts:272`, `scripts/gates/lexique-apporteurs.ts:346`). Mesuré sur cet arbre le 2026-09-05 : un document neuf portant une étiquette de relecteur non qualifiée, laissé hors index, `pnpm gov:identifiants` ne le voit pas ; le MÊME fichier rendu visible par `git add -N`, la MÊME commande le relève et nomme sa ligne. Rien n'avait changé que sa visibilité à l'index. Le corollaire s'est vu à la PR #30 dans l'autre sens : faire entrer `docs/REPRISE-SESSION.md` dans le dépôt a rendu la CI rouge sur six étiquettes qui y dormaient depuis des sessions, aucune introduite ce jour-là.
+- **Ce qu'on en tire.** Un « vert » obtenu sur un fichier hors index n'est pas un verdict, et rien ne le distingue d'un vert légitime — l'absence ne s'imprime pas. L'intégration du lot rapporte deux rencontres du même piège le MÊME JOUR par deux agents qui ne se parlaient pas (`GOV-026` et `CPL-T01`) : c'est ce qui a fait passer ce constat de leçon à règle. Elle est enregistrée sous RM-14 ; la régularisation par ADR que demande la section « Leçons » de `docs/REGLES-MAISON.md` reste à faire.
+- **Où c'est prouvé.** `docs/journal/2026-09.md`, entrée « PR #30 » : « un fichier que git ne suit pas n'est lu par aucune garde » ; `scripts/gates/gov-identifiants.ts:154` ; mesure du 2026-09-05 rejouée dans `docs/REGLES-MAISON.md`, section RM-14.
+- **Règle maison.** RM-14.
+
 ## À consolider
 
 > **`gov:lecons` lit DEUX sources d'« appris », et les nomme à chaque exécution.**
@@ -142,6 +219,6 @@
 
 <!-- a-consolider:debut -->
 
-_(rien à consolider — les treize leçons ci-dessus l'ont été le 2026-09-03.)_
+_(rien à consolider — vingt-quatre leçons au journal. Consolidation du 2026-09-05 par le `documentaliste` (A03) : les « appris » des PR #28, #29 et #30 sont devenus LEC-14 à LEC-16, et le lot `L-1-INT-a` a fourni LEC-17 à LEC-24. Une seule a fait règle — RM-14.)_
 
 <!-- a-consolider:fin -->

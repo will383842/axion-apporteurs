@@ -20,6 +20,14 @@ on:
 jobs:
   gate-a:
     runs-on: ubuntu-latest
+    # EXPLICITES, et ce n'est pas de la ceinture-bretelles. `gov:entite:corps` est BLOQUANTE et
+    # rend 2 (donc echoue) quand elle ne peut pas lire. Le defaut de `GITHUB_TOKEN` se configure
+    # au niveau du depot ou de l'organisation : le jour ou quelqu'un le passe en restreint, la
+    # garde deviendrait INSATISFIABLE — exactement ce qu'on apprend a sauter. Nommer le droit
+    # ici, c'est le soustraire a un reglage qu'on ne relit jamais.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -40,10 +48,19 @@ jobs:
         run: pnpm gov:tasks
       - name: La garde du backlog sait rougir
         run: pnpm gov:tasks:prove
+      # GOV-024, REQ-GOV-032. La vue n'est pas seulement REGENERABLE, elle est COMPAREE.
+      # `docs/TASKS.md` avait un generateur et aucun verificateur : la derive etait silencieuse.
+      # Le mode n'ecrit rien — une garde qui repare ce qu'elle controle est toujours verte.
+      - name: La vue du backlog est egale a sa source
+        run: pnpm gov:tasks:verifie-rendu
       - name: Registre des exigences
         run: pnpm gov:requirements
       - name: La garde du registre sait rougir
         run: pnpm gov:requirements:prove
+      # GOV-024, REQ-GOV-032. `docs/REQUIREMENTS.md` n'avait AUCUN generateur, alors que son
+      # bandeau affirmait le contraire — et il avait derive : 353 exigences annoncees pour 354.
+      - name: La vue des exigences est egale a sa source
+        run: pnpm gov:requirements:verifie-rendu
       - name: Registre des decisions
         run: pnpm gov:hypotheses
       - name: La garde des decisions sait rougir
@@ -76,6 +93,29 @@ jobs:
         run: pnpm gov:agents:prove
       - name: Les fiches sur le disque sont egales a leur source
         run: pnpm gov:agents:verifier
+      # Registre d entite : deux sens en une garde. Elle refuse la mise en service tant qu un
+      # champ vaut la sentinelle, et elle refuse tout autant qu une coordonnee bancaire reelle
+      # soit commitee — le depot est PUBLIC, ce qui y entre reste lisible pour toujours. Elle
+      # n empeche ni le build ni les tests : les phases 0 a 3 se codent contre la sentinelle.
+      - name: Registre d entite — sentinelle tenue dans les deux sens
+        run: pnpm gov:entite
+      - name: La garde du registre d entite sait rougir
+        run: pnpm gov:entite:prove
+
+      # BLOQUANTE, et le 2 fait ECHOUER. Un vert produit par une lecture qui n'a pas eu lieu est
+      # le defaut meme que cette garde empeche ; « laisser passer en signalant » n'a aucun
+      # mecanisme et redevient continue-on-error. `lireCorpsPublie` reessaie 3 fois : une
+      # intermittence devient de la latence, jamais une couleur. Le numero de PR est LU dans
+      # l'evenement, il ne se recopie pas. Les revisions irreparables sont DECLAREES dans
+      # config/exemptions-corps-publie.json, et le vert les affiche une par une.
+      - name: Le corps PUBLIE de la PR ne porte aucune coordonnee
+        if: github.event_name == 'pull_request'
+        run: pnpm gov:entite:corps
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: La garde du corps publie sait rougir
+        run: pnpm gov:entite:corps:prove
       # Seule la PREUVE entre ici : le mode en ligne rend 2 sous le jeton d Actions, qui ne
       # lit pas la protection de branche. Le mode en ligne tourne en nightly.
       - name: La garde du depot sait rougir
@@ -113,6 +153,22 @@ jobs:
         run: pnpm gates:prouvees:prove
       - name: Les paths derives sont a jour
         run: pnpm lot:paths:check
+      # GOV-006 : le glossaire etait une consigne, pas un controle. Ces deux etapes sont ce qui
+      # le rend opposable — la constante ETATS_OCCUPANTS confrontee a REQ-DM-003, chaque valeur
+      # d enum confrontee au glossaire.
+      - name: Vocabulaire — enums, glossaire et etats occupants
+        run: pnpm partners:schema:enums
+      - name: La garde du vocabulaire sait rougir
+        run: pnpm partners:schema:enums:prove
+      # GOV-013 : le lexique interdit (REQ-GOV-017, durci par REQ-JUR-037). La garde vise la
+      # TOURNURE et non le mot — « aucun objectif, aucun quota » est la phrase qui protege du
+      # la charte relationnelle, et une garde qui la ferait rougir forcerait a la RETIRER. La preuve
+      # suit tient les deux sens : un temoin par famille, huit positions limites, et des
+      # contre-temoins verts, dont la phrase de l'ADR « valeurs du monde réel » verbatim.
+      - name: Lexique interdit — aucun usage prescriptif dans le perimetre de REQ-GOV-017
+        run: pnpm gov:lexique
+      - name: La garde du lexique sait rougir, et laisse passer la negation qui protege
+        run: pnpm gov:lexique:prove
       - name: Typecheck
         run: pnpm typecheck
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :

@@ -1,10 +1,22 @@
 /**
  * gov-requirements.ts — la garde du registre d'exigences (GOV-001, REQ-GOV-001 / REQ-GOV-026).
  *
- * USAGE : pnpm gov:requirements           (échoue si le registre est invalide ou incohérent)
- *         pnpm gov:requirements --prove   (injecte un défaut PAR FAMILLE et vérifie que chacun rougit)
+ * USAGE : pnpm gov:requirements                 (échoue si le registre est invalide ou incohérent)
+ *         pnpm gov:requirements --prove         (un défaut PAR FAMILLE, chacun vu rougir)
+ *         pnpm gov:requirements --render        (écrit `docs/REQUIREMENTS.md`, la VUE du registre)
+ *         pnpm gov:requirements --verifie-rendu (n'écrit rien ; sort 1 si la vue a dérivé)
+ *         …--out <chemin>                       travaille sur une autre vue (bancs d'essai)
  *
  * `docs/requirements.json` est la SOURCE ; `docs/REQUIREMENTS.md` en est une vue générée.
+ *
+ * ⚠️ ELLE NE L'A PAS TOUJOURS ÉTÉ. Jusqu'à GOV-024, `docs/REQUIREMENTS.md` n'avait AUCUN
+ * générateur : son bandeau affirmait « la cohérence des deux est tenue par `pnpm gov:requirements` »
+ * alors qu'aucun contrôle ne comparait la vue à sa source, et le point 5 de `docs/PRESEANCE.md` §5
+ * le constatait sans que personne ne puisse le refermer. Le fichier avait effectivement dérivé :
+ * il annonçait **353** exigences quand le registre en portait **354**, `REQ-GOV-032` manquant.
+ * Le bandeau est désormais ÉMIS PAR CE FICHIER — il ne peut plus mentir sans que `--verifie-rendu`
+ * rougisse (`docs/PRESEANCE.md` §4.1 : bandeau émis par le générateur, jamais collé).
+ *
  * Ce que la garde tient, et que rien d'autre ne tenait :
  *
  *   — le schéma (`scripts/lot/requirements.schema.json`), `remplaceePar` compris ;
@@ -18,22 +30,77 @@
  *     jamais codée, et personne ne s'en apercevra — c'était le cas de six d'entre elles, dont
  *     `REQ-DM-041`, qui fondait une garde restée sans propriétaire ;
  *   — la réciproque : aucune tâche ne cite une exigence qui n'existe pas ;
- *   — la `phase` : elle est DÉRIVÉE de la plus précoce des tâches porteuses, jamais saisie.
+ *   — la `phase` : elle est DÉRIVÉE de la plus précoce des tâches porteuses, jamais saisie ;
+ *   — l'ÉGALITÉ de la vue et de sa source, à l'octet près (`--verifie-rendu`, REQ-GOV-032).
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import Ajv2020 from 'ajv/dist/2020.js';
 
 const CHEMIN_REGISTRE = 'docs/requirements.json';
 const CHEMIN_SCHEMA = 'scripts/lot/requirements.schema.json';
 const CHEMIN_TACHES = 'docs/tasks.json';
+const CHEMIN_VUE_PAR_DEFAUT = 'docs/REQUIREMENTS.md';
+
+/** `--out <chemin>` : rendre ou vérifier une AUTRE vue que celle du dépôt (bancs d'essai des tests). */
+const iOut = process.argv.indexOf('--out');
+const CHEMIN_VUE = iOut >= 0 ? (process.argv[iOut + 1] ?? CHEMIN_VUE_PAR_DEFAUT) : CHEMIN_VUE_PAR_DEFAUT;
 
 /** Les 21 modules et les 12 étapes de l'audit du 2026-09-03. Le compte est l'invariant. */
 const NB_MODULES = 21;
 const NB_ETAPES = 12;
 
+/**
+ * LES LIBELLÉS DES MODULES ET DES ÉTAPES N'ONT PAS D'AUTRE SOURCE QUE CE FICHIER — et c'est un
+ * manque, pas un choix. `docs/requirements.json` ne porte que des NUMÉROS (`module`, `etape`) ;
+ * les noms ne vivaient jusqu'ici que dans la vue elle-même, c'est-à-dire dans le fichier généré,
+ * c'est-à-dire nulle part. Les mettre ici en fait une source unique et versionnée (RM-01) au lieu
+ * d'une donnée que la régénération aurait effacée. Les COMPTES, eux, restent dérivés.
+ * Toute correction d'un libellé se fait ICI, puis `pnpm gov:requirements --render`.
+ */
+const MODULES: readonly string[] = [
+  'Recrutement & candidature',
+  'Scoring & priorisation',
+  'Entretien / webinaire',
+  'KYC & conformité',
+  'Contrat & signature électronique',
+  'Onboarding automatique',
+  'Enablement',
+  'Espace apporteur',
+  'Dépôt de contact',
+  "Vérification d'entreprise",
+  'Pipeline & statuts',
+  'Qualification structurée',
+  'Moteur de commissions',
+  'Parrainage',
+  'Relevés, approbation, paiement',
+  'Autofacturation & fiscal',
+  'Console de pilotage',
+  "Suivi d'activité par apporteur",
+  'Animation & ré-engagement',
+  'Support & messagerie',
+  'Suspension, résiliation, offboarding',
+];
+
+const ETAPES: readonly string[] = [
+  'Sourcing',
+  'Candidature',
+  'Entretien / webinaire',
+  'KYC',
+  'Contrat',
+  'Onboarding',
+  'Activité',
+  'Qualification',
+  'Vente',
+  'Commission',
+  'Relevé & paiement',
+  'Fin de collaboration',
+];
+
 type Exigence = {
   id: string;
+  domaine: string;
+  texte: string;
   source: string;
   statut: 'active' | 'absorbee' | 'retiree';
   remplaceePar: string | null;
@@ -149,6 +216,162 @@ for (const f of [CHEMIN_REGISTRE, CHEMIN_SCHEMA, CHEMIN_TACHES]) {
 const schema = JSON.parse(readFileSync(CHEMIN_SCHEMA, 'utf8')) as object;
 const taches = (JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] }).taches;
 const doc = JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as { exigences: Exigence[] };
+
+// ── la vue ───────────────────────────────────────────────────────────────────
+/**
+ * Le rendu de `docs/REQUIREMENTS.md`. Fonction PURE et DÉTERMINISTE : deux appels sur le même
+ * registre rendent le même octet — aucune horloge, aucun `Object.keys`, aucune lecture de disque.
+ * Sans cela, `--verifie-rendu` mesurerait la machine au lieu de mesurer la dérive.
+ *
+ * L'ORDRE EST CELUI DU REGISTRE, jamais un tri : les exigences sortent dans l'ordre du fichier
+ * source, et les sections de domaine dans l'ordre de leur première apparition. Un tri appliqué
+ * ici ferait diverger la vue d'un simple ajout en fin de registre, et le rouge ne dirait plus rien.
+ */
+export function rendreVue(exigences: Exigence[]): string {
+  const l: string[] = [];
+  const n = (s: string): number => exigences.filter((e) => e.statut === s).length;
+  const avecTaches = exigences.filter((e) => e.taches.length > 0).length;
+
+  l.push('# Registre des exigences — Axion Apporteurs');
+  l.push('');
+  l.push('> ⚠️ **Ce fichier est une VUE. La source est `docs/requirements.json`.**');
+  l.push('> Regénéré par `pnpm gov:requirements --render`, jamais édité à la main : une correction');
+  l.push('> tapée ici disparaît à la régénération suivante.');
+  l.push('> `pnpm gov:requirements --verifie-rendu` rougit si ce fichier a dérivé de sa source, et');
+  l.push('> NOMME l’écart en nombre d’exigences (REQ-GOV-032). Jusqu’au 2026-09-05, aucune garde ne');
+  l.push('> comparait les deux : la vue annonçait 353 exigences pour 354 au registre.');
+  l.push('>');
+  l.push('> **Aucun total n\'est écrit à la main.** Trois comptages différents ont circulé dans les documents');
+  l.push('> sources, tous faux. Ceux qui suivent sont comptés à la génération.');
+  l.push('>');
+  l.push('> **Dépôt public** — les renvois à la note d\'analyse interne apparaissent sous la forme');
+  l.push('> « note interne (hors dépôt) », et les seuils comme les montants du réseau vivent en');
+  l.push('> configuration (`REQ-GOV-031`, garde `pnpm gov:publication`).');
+  l.push('');
+  l.push('## Ce que porte le registre');
+  l.push('');
+  l.push('| | Nombre |');
+  l.push('| --- | ---: |');
+  l.push(`| Exigences | **${exigences.length}** |`);
+  l.push(`| — dont actives | ${n('active')} |`);
+  l.push(`| — dont absorbées par une autre (l'identifiant résout encore) | ${n('absorbee')} |`);
+  l.push(`| — dont retirées | ${n('retiree')} |`);
+  l.push(`| Exigences couvertes par au moins une tâche | ${avecTaches} |`);
+  l.push(`| Exigences sans porteur | ${exigences.length - avecTaches} |`);
+  l.push('');
+
+  const compter = (cle: 'module' | 'etape', valeur: number): number =>
+    exigences.filter((e) => e[cle] === valeur).length;
+
+  l.push(`## Couverture des ${NB_MODULES} modules de l'audit de bout en bout`);
+  l.push('');
+  l.push('| # | Module | Exigences |');
+  l.push('| ---: | --- | ---: |');
+  MODULES.forEach((nom, i) => l.push(`| ${i + 1} | ${nom} | ${compter('module', i + 1)} |`));
+  l.push('');
+
+  l.push(`## Couverture des ${NB_ETAPES} étapes du parcours`);
+  l.push('');
+  l.push('| # | Étape | Exigences |');
+  l.push('| ---: | --- | ---: |');
+  ETAPES.forEach((nom, i) => l.push(`| ${i + 1} | ${nom} | ${compter('etape', i + 1)} |`));
+  l.push('');
+
+  l.push('## Exigences');
+  l.push('');
+  l.push(`Chaque entrée porte son **module** (1-${NB_MODULES}), son **étape** (1-${NB_ETAPES}), la **phase** où elle est`);
+  l.push('livrée — la plus précoce de ses tâches porteuses — et **les tâches qui la prouvent**.');
+  l.push("Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomme.");
+  l.push('');
+
+  const domaines: string[] = [];
+  for (const e of exigences) if (!domaines.includes(e.domaine)) domaines.push(e.domaine);
+
+  for (const domaine of domaines) {
+    l.push(`### ${domaine}`);
+    l.push('');
+    for (const e of exigences.filter((x) => x.domaine === domaine)) {
+      const absorbee = e.statut === 'absorbee' ? ` → **absorbée par ${e.remplaceePar}**` : '';
+      l.push(`- **${e.id}**${absorbee} — ${e.texte}`);
+
+      const reperes: string[] = [];
+      if (e.module !== null) reperes.push(`module ${e.module}`);
+      if (e.etape !== null) reperes.push(`étape ${e.etape}`);
+      reperes.push(`phase ${e.phase === null ? '—' : e.phase}`);
+      reperes.push(
+        `tâches : ${e.taches.length > 0 ? e.taches.map((t) => `\`${t}\``).join(', ') : '**aucune**'}`
+      );
+      l.push(`  <br>_${reperes.join(' · ')}_ · _source : ${e.source}_`);
+    }
+    l.push('');
+  }
+
+  // La dernière section laisse une ligne vide de trop : on la retire, et le fichier se termine
+  // par exactement un saut de ligne.
+  while (l[l.length - 1] === '') l.pop();
+  return l.join('\n') + '\n';
+}
+
+/** Fins de ligne normalisées avant comparaison : sans cela la garde mesurerait `core.autocrlf`. */
+function normaliserFins(t: string): string {
+  return t.replace(/\r\n/g, '\n');
+}
+
+/** Le nombre d'exigences qu'un texte de vue ANNONCE — l'unité du domaine (REQ-GOV-032). */
+export function exigencesAnnoncees(vue: string): number {
+  return (vue.match(/^- \*\*REQ-[A-Z]+-\d+\*\*/gm) ?? []).length;
+}
+
+if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu')) {
+  const fautes = controler(doc, schema, taches);
+  if (fautes.length > 0) {
+    console.error(
+      `❌ Refus de rendre une vue d'un registre fautif (${fautes.length}). Lance \`pnpm gov:requirements\`.`
+    );
+    process.exit(1);
+  }
+
+  const rendu = rendreVue(doc.exigences);
+
+  if (process.argv.includes('--verifie-rendu')) {
+    if (!existsSync(CHEMIN_VUE)) {
+      console.error(
+        `❌ gov:requirements — vue_absente : ${CHEMIN_VUE} n'existe pas, alors que ${CHEMIN_REGISTRE} ` +
+          `porte ${doc.exigences.length} exigence(s). Lance \`pnpm gov:requirements --render\` et commite.`
+      );
+      process.exit(1);
+    }
+    const surDisque = normaliserFins(readFileSync(CHEMIN_VUE, 'utf8'));
+    if (surDisque !== normaliserFins(rendu)) {
+      const vues = exigencesAnnoncees(surDisque);
+      const reelles = exigencesAnnoncees(rendu);
+      const ecart =
+        vues === reelles
+          ? `Le compte d'exigences est le même (${reelles}) : la dérive porte sur autre chose — ` +
+            `un texte, une source, une phase, une tâche porteuse.`
+          : `La vue annonce ${vues} exigence(s), le registre en porte ${reelles} — ` +
+            `${Math.abs(reelles - vues)} d'écart.`;
+      console.error(
+        `❌ gov:requirements — vue_perimee : ${CHEMIN_VUE} n'est plus ce que ${CHEMIN_REGISTRE} produit.\n` +
+          `   ${ecart}\n` +
+          `   La vue ne se corrige pas à la main : lance \`pnpm gov:requirements --render\` et commite.`
+      );
+      process.exit(1);
+    }
+    console.log(
+      `✅ gov:requirements — ${CHEMIN_VUE} est égal à ce que ${CHEMIN_REGISTRE} produit : ` +
+        `${doc.exigences.length} exigences.`
+    );
+    process.exit(0);
+  }
+
+  writeFileSync(CHEMIN_VUE, rendu);
+  console.log(
+    `✅ ${CHEMIN_VUE} rendu depuis ${CHEMIN_REGISTRE} — ${doc.exigences.length} exigences, ` +
+      `${MODULES.length} modules, ${ETAPES.length} étapes.`
+  );
+  process.exit(0);
+}
 
 // ── mode --prove ─────────────────────────────────────────────────────────────
 if (process.argv.includes('--prove')) {
