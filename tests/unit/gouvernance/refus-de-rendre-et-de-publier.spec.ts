@@ -975,9 +975,14 @@ function famillesDeclarees(script: string): { noms: string[]; calculee: boolean 
  * l'avait prévu, mais parce que libuv le réinjecte. Une garde qui mord pour une raison qu'on
  * n'a pas choisie n'est pas la garde qu'on croit tenir.*
  *
- * ⚠️ ET SEPT DES VINGT ENTRÉES SONT REDONDANTES : `TEMP`, `USERPROFILE`, `HOMEDRIVE`, `HOMEPATH`…
- * ne sont pas retirables. Pour elles, la promesse « ça casse bruyamment si ça manque » est
- * **vide** : on ne peut pas les faire manquer.
+ * ⚠️ ET DIX DES VINGT ENTRÉES N'ONT AUCUNE PROMESSE VIVANTE — recompté à l'exécution au 26e
+ * tour, sur le motif d'`exactitude` : j'avais écrit « sept », la mesure en rend **neuf**
+ * redondantes (`PATH`, `Path`, `SystemRoot`, `SystemDrive`, `windir`, `TEMP`, `USERPROFILE`,
+ * `HOMEDRIVE`, `HOMEPATH` — toutes réinjectées par libuv, donc non retirables), plus `LC_ALL`
+ * **absente du parent**, donc jamais transmise. Pour ces dix, la promesse « ça casse bruyamment
+ * si ça manque » est **vide** : on ne peut pas les faire manquer.
+ * 🔑 *Un chiffre écrit sous un titre « mesuré, pas supposé » se recompte à chaque tour, sinon
+ * c'est le titre qui devient faux avant le chiffre.*
  *
  * ## Ce que cette liste ferme, et ce qu'elle NE ferme PAS — mesuré, pas supposé
  *
@@ -1019,8 +1024,15 @@ const VARIABLES_DE_PRODUCTION = [
 ] as const;
 
 /**
- * L'environnement d'un enfant qui ne doit PAS savoir qu'il est sous test. Construit à partir de
- * RIEN, jamais copié depuis le parent — c'est toute la différence avec la version battue.
+ * L'environnement d'un enfant qui ne doit PAS savoir qu'il est sous test.
+ *
+ * ⚠️ Il **RÉDUIT** l'environnement du parent — il ne le construit pas à partir de rien. Le corps
+ * ci-dessous fait `env[v] = process.env[v]` : c'est une COPIE filtrée. La formule « construit à
+ * partir de RIEN, jamais copié depuis le parent » a figuré ici et elle est **fausse deux fois** :
+ * par ce corps, et parce que libuv réinjecte onze variables dans tout enfant même sous `env: {}`.
+ * 🔑 *Elle avait été rectifiée dans le docstring du haut et laissée intacte ici — la même erreur
+ * qu'un `findIndex` sur une chaîne non unique, rejouée sur la prose : une chose à deux endroits,
+ * un seul apparié.*
  */
 function environnementDeProduction(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {};
@@ -1434,7 +1446,6 @@ describe('REQ-CPL-018 — `perimetre_illisible` est une PRÉCONDITION, pas une f
       const declaration = famillesDeclarees(script);
       // `null` = aucune famille déclarée, établi par l’extracteur (il LÈVE si le mot `FAMILLES`
       // apparaît sans déclaration reconnue). Rien à confondre.
-      if (declaration === null) return;
 
       // ⚠️ UNE LISTE CALCULÉE NE SE LIT PAS DANS LA SOURCE. `gov-publication.ts:118` fait
       // `['doctrine', ...CHIFFRES.map(…)]` : l’extracteur en voit UNE sur sept. Asserter
@@ -1442,10 +1453,18 @@ describe('REQ-CPL-018 — `perimetre_illisible` est une PRÉCONDITION, pas une f
       // On assert alors ce qui reste VRAI et vérifiable : le jeton n’apparaît nulle part dans
       // le fichier — donc il ne peut pas non plus sortir du calcul. C’est plus faible, et c’est
       // DIT. *Une garde qui ne peut pas tout prouver dit ce qu’elle prouve.*
-      if (declaration.calculee) {
+      // 🔑 `null` (aucune liste de familles) et « liste calculée » sont le MÊME cas pour une
+      // assertion NÉGATIVE : dans les deux, l'absence dans la liste ne prouve rien. Rendre la
+      // main ici — ce que faisait `if (declaration === null) return;` — c'était le défaut du
+      // 25e tour DÉPLACÉ, pas fermé : le test affichait `✓` sous le nom de la garde sans rien
+      // asserter (`schema`, 26e tour : mutation additive `famille: 'perimetre_illisible'` dans
+      // `gov-identifiants.ts` → `5 passed`, identique au banc sain). On retombe donc sur le
+      // balayage de la SOURCE ENTIÈRE : plus faible, et DIT.
+      if (declaration === null || declaration.calculee) {
         expect(
           readFileSync(script, 'utf8'),
-          `${script} : liste CALCULÉE, et le jeton perimetre_illisible apparaît quand même dans la source`
+          `${script} : aucune liste de familles lisible (null ou calculée), et le jeton ` +
+            `perimetre_illisible apparaît quand même dans la source`
         ).not.toContain('perimetre_illisible');
         return;
       }
