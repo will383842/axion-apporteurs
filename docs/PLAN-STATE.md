@@ -13,7 +13,7 @@
 | Où en est la phase ? | phase -1 — 29/36 tâches, reste 4.00 j |
 | Le prochain pas | GOV-014 — Conventions + sélection des gardes d'axionia (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #31 — 2026-09-05 |
+| Dernière entrée de journal | PR #32 — 2026-09-10 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -91,6 +91,60 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-09)
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #32 — 2026-09-10 — chore(GOV-012): cloture du lot L-1-04 — neuf taches fusionnee, le verrou de phase leve
+
+**Fait.** Le lot `L-1-04` est clos : ses neuf tâches passent `fusionnee` dans `docs/tasks.json`, et
+le dépôt passe de 20 à 29 tâches livrées sur 209, de 13,50 à 16,75 j sur 154,25 — soit 9,6 % à 13,9 % des tâches et 8,8 % à 10,9 % de l'effort,
+deux taux qu'il ne faut pas confondre,
+phase −1 à 29 sur 36. L'invariant `fusion.atterri === true` a été **mesuré** avant l'écriture, non
+affirmé : `git merge-base --is-ancestor` a rendu vrai pour `e0dacf3`, `git diff --stat` entre la
+tête du lot et `origin/main` est **vide**, et le run `Gate A` du `push` sur `main` est vert sur
+`e0dacf3`. Les échecs visibles sur `794245c` sont le *Nightly*, rouge par construction jusqu'à la
+sortie de phase −1 — pas `Gate A` ; les confondre ferait lire une panne là où il y a une dette
+déclarée.
+
+**Le verrou de phase n'était pas où le journal le disait.** Depuis le 2026-09-04, chaque reprise
+recopiait que `CPL-T01` était en attente externe, donc jamais livrée, donc que la phase −1 ne se
+fermerait jamais et que 171 tâches — 91 % du plan — étaient gelées. Le registre dit autre chose :
+`CPL-T01` est `fusionnee`, levée par le lot que cette PR clôt ; et les deux tâches qu'on lui
+associait sont en **phase 1**, donc sans effet sur la fermeture de la phase −1. Des trois gestes
+réputés appartenir à Will, un a été fait par du code et les deux autres ne sont pas dans la phase
+qu'ils étaient censés tenir fermée. *Un verrou se vérifie sur le registre, pas sur la note qui le
+décrit* — celle-ci a traversé cinq jours et plusieurs sessions sans que le champ `phase` soit relu.
+Ce qui ferme réellement la phase −1 : sept tâches, quatre jours, aucun arbitrage externe — et
+**quatre d'entre elles sont déjà écrites** sur `lot/gov-038-attestation`, jamais fusionnée. La
+réconciliation de cette branche cesse donc d'être un rangement : c'est le chemin le plus court vers
+l'ouverture de la phase 0.
+
+**Reste.** La première tête de cette PR a fait rougir `Gate A` — et pour la récidive exacte de
+LEC-23, née de la PR #30 : `lot:cloture` écrit la source et n'ajoute qu'elle, laissant `TASKS.md`
+derrière lui. La vue annonçait 20 tâches livrées quand sa source en portait 29. Deux vues étaient
+en fait périmées, pas une : `docs/TRACABILITE.md` aussi. La lentille `simplicite` l'a relevé sur la
+gate, pas sur son impression — et la garde qui l'attrape appartient à `GOV-024`, l'une des neuf
+tâches que cette PR déclare livrées : le lot a reproduit l'incident qu'il avait été écrit pour
+empêcher. Rendu ici par les six générateurs, non à la main. Deux dettes restent ouvertes et
+deviennent des tâches plutôt que des correctifs glissés dans le lot en cours
+(`docs/CHARTE-AGENTS.md`, A11) : `lot:cloture` devrait ajouter ses vues ou refuser de commiter sans
+elles, et `docs/PLAN-STATE.md` demeure la seule vue sans vérificateur — ce que `GOV-035`, ajoutée
+par le lot précédent, a précisément pour objet.
+
+**Appris.** Trois choses, toutes payées d'un rouge. D'abord, **un verrou se vérifie sur le
+registre, pas sur la note qui le décrit** : l'avertissement « la phase −1 ne se fermera jamais,
+171 tâches gelées » a traversé cinq jours et plusieurs sessions, chacune le recopiant, aucune ne
+relisant le champ `phase` des deux tâches qu'il incriminait — elles sont en phase 1, et la
+troisième était déjà livrée. Une note de reprise vieillit comme un cache : elle a une date, pas une
+validité. Ensuite, **un outil qui écrit une source doit ajouter ses vues, ou refuser de commiter
+sans elles** : `lot:cloture` n'ajoute que `docs/tasks.json`, et la vue restée en arrière a fait
+rougir `Gate A` — récidive exacte d'un incident né de la clôture précédente, attrapée par une garde
+qui appartient à l'une des neuf tâches que cette PR déclare livrées. Un lot peut reproduire
+l'incident qu'il a été écrit pour empêcher, et c'est précisément quand il le prévient ailleurs
+qu'on cesse de le surveiller chez soi. Enfin, **j'ai cité le vert de la base sans regarder le rouge
+de ma propre tête** : le corps de cette PR affirmait l'atterrissage de la précédente, run à
+l'appui, pendant que `gate-a` échouait sur le commit qu'il décrivait — la même erreur, d'un cran,
+que de conclure d'un compteur qu'on n'a pas mesuré. Et une part de tâches n'est pas une part d'effort :
+l'une compte les lignes du registre, l'autre les jours, et elles diffèrent de trois points ;
+écrire « soit » entre les deux les rend fausses toutes les deux.
 
 ### PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06 — neuf taches, le verrou de phase leve, trois regressions fermees
 
@@ -195,27 +249,7 @@ Le remède est en tâche, avec des témoins aux positions limites — fin de phr
 une virgule, avant une parenthèse fermante — et un contre-témoin qui prouve qu'un usage légitime
 passe toujours.
 
-### PR #29 — 2026-09-04 — chore(GOV-008): entree de journal de la PR 28 — main etait rouge sans elle
-
-**Fait.** L'entrée de journal de la PR #28 est écrite, et `docs/PLAN-STATE.md` régénéré. La PR #28
-était la première au-dessus du plancher du journal (« PR de numéro > 27 ») et elle a été fusionnée
-sans la sienne : le run `Gate A` du `push` sur `main` (33836891472, sha `9597865`) est resté ROUGE
-sur la famille `pr_fusionnee_sans_journal` jusqu'à cette PR.
-
-**Reste.** La clôture de `L-1-03` elle-même — `pnpm lot:cloture -- --lot L-1-03 --owner A01`, qui
-écrit les huit statuts `fusionnee` dans `docs/tasks.json` — n'est pas dans cette PR : son invariant
-exige `fusion.atterri === true`, et l'atterrissage de la PR #28 n'est vérifié qu'une fois `main`
-redevenu vert, c'est-à-dire après celle-ci. Elle vient donc dans la PR suivante.
-
-**Appris.** Une obligation qui s'évalue APRÈS la fusion ne peut pas être gardée AVANT elle par la
-même garde : `gov:etat` ne voit `pr_fusionnee_sans_journal` que lorsque la PR est fusionnée, donc
-sur `main`, donc trop tard pour refuser quoi que ce soit — sa seule victime possible est la branche
-par défaut. Le protocole compense en demandant l'entrée sur la branche de la PR, mais rien ne le
-vérifie au moment où c'est encore réparable sans un second aller-retour : la garde qui existe est un
-détecteur d'incident, pas un garde-fou. Le coût mesuré de l'oubli est une PR entière, sa Gate A
-complète, et un `main` rouge dans l'intervalle.
-
-… 3 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 4 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
