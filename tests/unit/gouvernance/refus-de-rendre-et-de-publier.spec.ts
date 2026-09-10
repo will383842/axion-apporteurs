@@ -409,6 +409,40 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    * ajouter en silence.
    */
   const declares: Record<string, { total: number; temoins: number; raison: string }> = {
+    // ── RÉCONCILIATION `gov-038` : QUATRE fichiers apportent DIX sorties non nulles ──────────
+    // Le cliquet a rougi en NOMMANT le premier (`gov-attestation.ts ajoute 3 … et n'est PAS
+    // déclaré ici`) : c'est exactement son office. Les trois gestes sont faits pour chacun —
+    // déclarer le refus, dire pourquoi, assumer le total. Les témoins sont déclarés à ZÉRO :
+    // c'est une DETTE ÉCRITE, pas une preuve. *Un compteur de témoins qu'on gonfle pour se donner
+    // raison vaut moins qu'un zéro assumé.*
+    'scripts/gates/gov-attestation.ts': {
+      total: 3,
+      temoins: 0,
+      raison:
+        'GOV-038 — atteste une livraison faite dans un AUTRE dépôt. Les trois sorties sont des ' +
+        "refus d'usage : `--en-ligne` absent, appel `gh` en échec, PR non résolue. Aucune ne " +
+        "garde un invariant de sécurité de CE dépôt ; leur témoin viendra avec la tâche qui " +
+        'câblera la gate en CI.',
+    },
+    'scripts/gates/perf-budgets.ts': {
+      total: 4,
+      temoins: 0,
+      raison:
+        'GOV-019 — budgets de performance. Quatre refus : registre illisible, budget dépassé, ' +
+        'mode inconnu, vue divergente. ⚠️ `fichiersDeSrc()` y rend `[]` si `src/` manque — la ' +
+        "variante affaiblie du patron que ce lot ferme ailleurs. Déclarée ici pour qu'elle soit " +
+        'VUE, et versée en tâche plutôt que corrigée dans un lot de réconciliation (A11).',
+    },
+    'scripts/gates/gov-conventions.ts': {
+      total: 2,
+      temoins: 0,
+      raison:
+        'GOV-014 — conventions et sélection des gardes. Ce fichier est arrivé de `gov-038` avec ' +
+        'le `try/catch { return [] }` que la PR #31 avait fermé pour les cinq autres gardes, ' +
+        "SANS entrer en conflit. Converti à `fichiersSuivisOuRefus`. Ses deux sorties sont " +
+        'désormais couvertes par les trois témoins de `REQ-CPL-018`, qui le voient parce que ' +
+        '`GARDES_QUI_BALAIENT` est DÉRIVÉE DU DISQUE — non parce que quelqu’un y a pensé.',
+    },
     'scripts/lot/fichiers-suivis.ts': {
       total: 2,
       temoins: 2,
@@ -434,7 +468,15 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       raison: 'la concordance des têtes a un témoin ; le second est le `catch` d’appel à la forge.',
     },
     'scripts/gates/gov-trace.ts': { total: 1, temoins: 1, raison: 'le refus de rendre, témoin + adjacence.' },
-    'scripts/gates/gov-tasks.ts': { total: 2, temoins: 1, raison: 'le refus de rendre a un témoin ; 1 non couvert.' },
+    'scripts/gates/gov-tasks.ts': {
+      total: 1,
+      temoins: 1,
+      raison:
+        'le refus de rendre a un témoin. 🔧 2 → 1 à la réconciliation : le delta se mesure contre '
+        + '`origin/main`, et `main` a absorbé une des deux sorties en fusionnant la PR #31. '
+        + '*Un delta n’est pas une propriété du fichier : c’est une propriété de la DISTANCE '
+        + 'entre lui et sa base, et la base bouge.* GOV-038 y ajoute `pr_nu_hors_depot`.',
+    },
     'scripts/gates/gov-requirements.ts': { total: 3, temoins: 1, raison: 'le refus de rendre a un témoin ; 2 non couverts.' },
     'scripts/gates/schema-enums.ts': {
       total: 5,
@@ -598,8 +640,21 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       expect(d, `${f} ajoute ${n} \`process.exit(1)\` et n’est PAS déclaré ici`).toBeDefined();
       expect(d!.total, `${f} : ${n} exits ajoutés, ${d!.total} déclarés`).toBe(n);
     }
-    for (const f of Object.keys(declares)) {
-      expect(ajoutesParFichier.has(f), `${f} est déclaré ici mais n’ajoute plus aucun exit`).toBe(true);
+    // 🔴 UN FICHIER DÉCLARÉ QUI N'AJOUTE PLUS RIEN A ATTERRI — ce n'est pas une omission.
+    // Mesuré à la réconciliation de `gov-038` : `main` ayant absorbé les PR #31 et #32, les NEUF
+    // entrées qu'elles avaient déclarées sont passées à un delta de ZÉRO d'un coup. Les faire
+    // rougir obligerait à VIDER le registre à chaque atterrissage — c'est-à-dire à détruire, tous
+    // les deux lots, le dispositif que vingt-six tours de revue ont construit.
+    // *Le registre des refus n'est pas un journal du diff courant : c'est la dette du dépôt.*
+    // Ce qui reste vrai, et qu'on assert : le fichier EXISTE encore, et il porte AU MOINS ce
+    // qu'il déclare. Un refus retiré en douce, ou un fichier supprimé, rougit toujours ici.
+    for (const [f, d] of Object.entries(declares)) {
+      if (ajoutesParFichier.has(f)) continue; // déjà confronté au diff, ci-dessus
+      expect(existsSync(f), `${f} est déclaré au registre des refus mais n’existe plus`).toBe(true);
+      expect(
+        compter(readFileSync(f, 'utf8')),
+        `${f} déclare ${d.total} sortie(s) non nulle(s) et n’en porte plus autant`
+      ).toBeGreaterThanOrEqual(d.total);
     }
   });
 
@@ -645,7 +700,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // l'écart (« 2 exits ajoutés, 1 déclarés ») — c'est exactement son office. La sortie ajoutée
     // est couverte par un témoin d'effet à deux faces (fichier suivi manquant → refus ; dépôt
     // réel → vert).
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(27);
+    // 🔧 27 → 35 à la RÉCONCILIATION de `gov-038`, ARBITRÉ et non subi. Dix sorties entrent avec
+    // quatre fichiers (`gov-attestation` +3, `perf-budgets` +4, `gov-conventions` +2,
+    // `gov-tasks` +1). Le cliquet a rougi en nommant le premier — il n'a pas été contourné, il a
+    // été LU. ⚠️ Le seuil est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une
+    // branche. Mesuré sur l'arbre réconcilié : 179 sorties non nulles sous `scripts/`.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(35);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
