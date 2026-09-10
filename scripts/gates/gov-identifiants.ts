@@ -222,6 +222,15 @@ const EXEMPTS = [
   /^docs\/TASKS\.md$/,
   /^docs\/tasks\.json$/,
   /^pnpm-lock\.yaml$/,
+  // 🔴 Les fixtures de revue sont des corps PUBLIÉS, archivés tels quels pour que les gardes qui
+  // les lisent soient éprouvées sur la matière réelle. Les réécrire pour satisfaire une garde de
+  // rédaction les rendrait FAUX : ce ne serait plus ce qui a été dit.
+  // ⚠️ Exempté par CHEMIN, ancré sur un seul fichier — et non par un `motif` d'exemption nommée.
+  // Une première rédaction y avait mis `/[A-DR]\d{1,2}/` : `neutraliser()` applique les motifs à
+  // TOUTE ligne sans regarder le champ `fichier`, et cette exemption a désarmé la garde ENTIÈRE —
+  // 50 tests rouges, dont les témoins de GOV-028 eux-mêmes.
+  // *Le champ `fichier` d'une exemption nommée DOCUMENTE, il ne BORNE pas.*
+  /^tests\/fixtures\/github\/revues-pr-31\.json$/,
 ];
 
 export type Faute = { famille: string; message: string };
@@ -293,20 +302,6 @@ export const EXEMPTIONS_NOMMEES: ExemptionNommee[] = [
     motif: /const APPAT = 'Renvoi [A-Z]\d{1,2}/g,
     contreExemple: `const autre = 'Renvoi D7';`,
     fichierDuContreExemple: 'tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts',
-  },
-  {
-    nom: 'corps_de_revue_archive',
-    pourquoi:
-      "Les fixtures de `tests/fixtures/github/` sont des corps de revue REELS, archives tels " +
-      "qu'ils ont ete publies, pour que les gardes qui les lisent soient eprouvees sur la " +
-      "matiere reelle et non sur une paraphrase. Les reecrire pour satisfaire une garde de " +
-      "redaction les rendrait faux : ce ne serait plus ce qui a ete dit. L'exemption porte sur " +
-      "le champ `body` de ces fixtures, jamais sur du texte que le depot publie.",
-    fichier: 'tests/fixtures/github/revues-pr-31.json',
-    reperage: /"body":/,
-    motif: /[A-DR]\d{1,2}/g,
-    contreExemple: `{ "titre": "D11 revu" }`,
-    fichierDuContreExemple: 'tests/fixtures/github/revues-pr-31.json',
   },
 ];
 
