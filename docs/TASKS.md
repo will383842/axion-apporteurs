@@ -8,11 +8,11 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**209 taches · 154.25 j estimes.**
+**212 taches · 157.25 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
-| -1 — Gouvernance (prealable bloquant) | 36 | 20.75 | 29 |
+| -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 30 |
 | 0 — Socle technique | 52 | 38.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
@@ -170,7 +170,7 @@ Couvre : `REQ-GOV-017`
 
 **Tests.** `lexique.spec.ts`
 
-### GOV-014 — Conventions + sélection des gardes d'axionia
+### GOV-014 — Conventions + sélection des gardes d'axionia — **en_cours**
 
 `1 j` · zone `gouvernance` · depend de `GOV-012`, `GOV-013`
 
@@ -200,13 +200,15 @@ Couvre : `REQ-GOV-020`, `REQ-INT-003`, `REQ-INT-004`, `REQ-INT-029`, `REQ-QA-007
 
 **Tests.** `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — l'enveloppe porte les neuf champs du registre, dans la casse du registre` · `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-003 — un evenement hors schema est REFUSE : c’est ce refus qui vaut le 422` · `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-004 — la liste des types est FERMEE sur les sept que le registre enumere` · `tests/unit/integration/contrat-hash.spec.ts#REQ-INT-029 — aucun champ interdit ne franchit la frontiere, et le detecteur sait rougir` · `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — le JSON Schema publie est DERIVE : regenere, il est identique au fichier commite` · `tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — contracts.sha256 est l'empreinte du schema publie, et un champ renomme la change` · `tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)`
 
-### INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel
+### INT-T01b — Contrat d'événements, payloads et fixtures produites par le producteur réel ✅ **fusionnee**
 
 `1 j` · zone `integration` · `axionia` · `schema` · depend de `INT-T01a`
 
-Couvre : `REQ-ARG-002`, `REQ-ARG-005`, `REQ-ARG-006`, `REQ-ARG-030`, `REQ-CPL-015`, `REQ-DM-018`, `REQ-DM-036`, `REQ-DM-039`, `REQ-DM-040`, `REQ-INT-005`, `REQ-INT-006`, `REQ-INT-032`, `REQ-QA-008`, `REQ-QA-007`
+Couvre : `REQ-ARG-002`, `REQ-ARG-005`, `REQ-ARG-006`, `REQ-ARG-030`, `REQ-CPL-015`, `REQ-DM-018`, `REQ-DM-039`, `REQ-DM-040`, `REQ-INT-005`, `REQ-INT-006`, `REQ-INT-032`, `REQ-QA-008`, `REQ-QA-007`
 
 **Acceptation.** payloads (REQ-INT-005/006/032, REQ-DM-039/040, K-18 payers[], `client.fusionne`, `candidature.recue`), dérivation HT, deux formes de remboursement ; `pnpm partners:fixtures` (dans axionia, `scripts/partners/fixtures.ts`, base de dev port 5434, pseudonymisation, sortie commitée dans Partners avec `Source:`) — **aucune fixture écrite à la main, aucun helper qui « complète » un champ manquant**.
+
+**Tests.** `axionia/src/server/partners/__tests__/enveloppe.spec.ts` · `axionia/src/server/partners/__tests__/payloads.spec.ts` · `axionia/src/server/partners/__tests__/commission.spec.ts` · `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts` · `axionia/src/server/partners/__tests__/derivation-ht.spec.ts` · `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts`
 
 ### GOV-017a — Backlog converti en `docs/tasks.json` : champs déjà écrits, acyclique ✅ **fusionnee**
 
@@ -228,11 +230,13 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-025`, `REQ-GOV-027`
 
 **Tests.** `tests/unit/gouvernance/paths-derives.spec.ts#la vue commitee est a jour : `--check` est vert sur le depot` · `tests/unit/gouvernance/paths-derives.spec.ts#REQ-GOV-025 — aucune tache `repo: axionia` ne pretend ecrire un fichier de ce depot` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la famille `phase_gelee` est prouvee, temoin et contre-temoin` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la phase courante se lit dans le backlog, pas dans la vue PLAN-STATE`
 
-### GOV-019 — Budgets de performance après première mesure
+### GOV-019 — Budgets de performance après première mesure — **en_cours**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-014`
 
 Couvre : `REQ-GOV-028`
+
+**Acceptation.** `perf/budgets.json` (une entree de budget par route) et `lighthouserc.json` existent, et leurs seuils sont DERIVES du texte de REQ-GOV-028 lu dans `docs/requirements.json` : `--rendre` les ecrit, `--verifier` rougit si le disque en differe, et le test RENVERSE la source pour prouver que l'attente se renverse — sans quoi un retour constant passerait pour une derivation. La garde rougit sur une route de `src/app/(espace)` sans entree, dans les DEUX sens du cliquet, et LEVE si le texte de l'exigence ne dit plus le seuil au lieu de retomber sur un defaut. Perimetre vide ASSUME ET DIT : elle imprime le nombre de routes balayees et declare qu'un vert a zero route ne juge aucune route. Aucune dependance ajoutee — le mesureur entre avec QA-T20. L'etape de Gate A qui l'appelle ne porte pas `continue-on-error`, et la famille `etape_ci_muselee` le refuse.
 
 **Tests.** `poids-du-bundle-garde-vraiment.spec.ts`
 
@@ -316,7 +320,7 @@ Couvre : `REQ-GOV-015`, `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 
-### GOV-028 — Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE
+### GOV-028 — Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE — **en_cours**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-025`
 
@@ -375,6 +379,36 @@ Couvre : `REQ-GOV-003`, `REQ-GOV-021`
 **Acceptation.** Observation de cloture de la lentille exactitude apres CINQ passes sur la PR 31 : « les nombres se derivent maintenant, les ATTRIBUTIONS non ». Un nom de tache ecrit dans l'en-tete d'un fichier, ou dans le champ tache de docs/gates.json, n'est confronte a RIEN — ni aux paths du backlog, ni a l'existence de la tache. LES occurrences mesurees dans la seule journee du 2026-09-05 — toutes trouvees a la LECTURE, aucune par une garde. Elles sont enumerees ci-dessous et il n'y a volontairement PAS de compte en tete : c'est la troisieme fois dans cette PR qu'un compte ecrit dans une acceptance ne tient pas — « les neuf regles plus trois » de GOV-018 ne suivait pas une addition faite en queue, « seize taches ecartees » de GOV-027 etait une mesure simplement fausse, et celui-ci decrivait la liste placee juste a cote de lui. Les trois causes different ; ce qu'elles ont en commun est qu'un compte tape doit etre tenu a jour et qu'une liste se lit : un correctif de lookahead etiquete GOV-029 alors qu'il corrige GOV-025 ; la derivation d'un instant etiquetee GOV-029 alors qu'elle n'a pas de tache (devenue GOV-032) ; une entree de registre citant GOV-029 pour une lacune que GOV-029 ne porte pas ; l'en-tete de scripts/lot/corps-de-pr.ts nommant GOV-035 alors que le fichier est dans les paths de GOV-024, et que l'acceptance de GOV-035 ecrit elle-meme qu'elle ne le porte pas ; et une CINQUIEME, trouvee le 2026-09-05 en verifiant le refus de la lentille schema sur la tete 41bc814 : la revue elle-meme s'appuie sur GOV-033 pour porter un arbitrage, or GOV-033 n'existe dans AUCUNE branche du depot. C'est la premiere occurrence qui vit dans une REVUE plutot que dans du code, donc hors de portee de toute garde de depot — ce qui borne honnetement ce que cette tache peut fermer. ⚠️ ET ELLE PORTE UNE DISTINCTION QUE LES QUATRE PREMIERES CACHAIENT : on ne peut pas trancher si le relecteur CITE une tache qu'il croit exister ou s'il RESERVE le prochain identifiant libre (GOV-033 et GOV-034 le sont tous les deux). Les deux lectures sont egalement plausibles et rien dans le depot ne les distingue. La garde livree doit donc dire ce qu'elle fait d'un identifiant BIEN FORME QUI NE RESOUT PAS — le refuser, ou exiger une forme explicite de reservation — plutot que de supposer qu'un tel identifiant est forcement une faute. ⚠️ CE QUI REND CETTE FAMILLE COUTEUSE : une attribution fausse envoie le lecteur suivant chercher dans un fichier que personne n'a touche, et gov:identifiants ne peut pas la voir — il juge la FORME d'un identifiant, jamais sa RESOLUTION, et GOV-029 a exactement la bonne forme. A livrer : (1) une garde qui, pour tout fichier suivi de scripts/ et tests/ portant un identifiant de tache dans ses vingt premieres lignes, verifie que cette tache EXISTE au backlog ET que le fichier figure dans ses paths — ou que la tache est explicitement citee comme contexte et non comme proprietaire ; (2) le meme controle sur TOUTE chaine d'une entree de docs/gates.json — pas seulement le champ tache : la lentille schema a mesure que sur gov:plan-state le champ tache vaut GOV-008 et n'a JAMAIS bouge, pendant que toute la valse GOV-029 -> GOV-032 -> GOV-035 se jouait dans la prose du champ verifie. Un controle limite au champ tache aurait rendu VERT sur deux des cinq occurrences qui motivent cette tache, et le livrable (4) aurait ete insatisfiable ; (3) un temoin par famille, vu rougir, et des contre-temoins verts sur les citations legitimes — un fichier a le droit de NOMMER une tache voisine sans etre a elle, et une garde qui l'interdirait serait retiree dans la semaine ; (4) CHACUNE des occurrences enumerees ci-dessus, y compris celle du point (5), rejouee contre la garde livree, chacune vue rougir avant sa correction ; (5) ⚠️ LA GARDE CONFRONTE LE NOM A L'ETAT COURANT DU BACKLOG, ELLE NE VERIFIE PAS UNE FOIS. La cinquieme occurrence le prouve : `docs/gates.json` citait GOV-032 pour la lacune PLAN-STATE, et c'etait DEFENDABLE au moment ou la phrase a ete ecrite — aucune tache ne portait alors cette lacune. Elle est devenue fausse quand GOV-035 a ete creee. Une attribution ne se corrompt donc pas seulement quand l'auteur se trompe : elle se corrompt quand le BACKLOG bouge, et une garde qui ne s'executerait qu'a l'ecriture ne verrait jamais cette moitie-la. ⚠️ TEMOIN DE CLASSE, ET EXPLICITEMENT HORS LIVRAISON DE CETTE TACHE : tests/unit/gouvernance/entite-registre.spec.ts porte 88 titres etiquetes REQ-CPL-018, qui dit « ADR mono-tenant en V1, aucune colonne tenant », alors qu ils parlent d IBAN, de BIC, de SIREN et de corps de PR (la 89e, ligne 267, la teste legitimement). La lentille schema a tranche que cette famille N ENTRE PAS dans le perimetre livrable de GOV-037 : ses confrontations a elle sont MECANISABLES (un nom de tache existe-t-il, le fichier est-il dans ses paths), alors que « ce it() teste un IBAN » contre « REQ-CPL-018 dit mono-tenant » ne l est par aucune garde — l y verser rendrait GOV-037 INFERMABLE, qui est precisement le defaut que cette tache decrit. Elle est donc consignee ici comme OBSERVATION, pour que la garde livree sache dire ce qu elle NE PEUT PAS voir ; la correction des 88 titres est une tache distincte, GOV-039. ⚠️ CINQUIEME LIVRABLE, ajoute au tour 9 et MECANISABLE, lui : confronter le fichier QU UNE TACHE PROMET DE TESTER (son champ tests{}) a ceux qu elle DECLARE TOUCHER (son champ paths). Mesure du 2026-09-05 : ni gov:tasks ni gov:trace ne rougissent quand les deux divergent. ⚠️ CORRECTION DU 10e TOUR, ET ELLE CHANGE LA CIBLE : j'avais decrit cela comme une negligence a corriger tache par tache. Mesure — 9 taches sur 9 de la PR 31 promettent dans tests{} un fichier absent de leurs paths, ET CETTE TACHE-CI AUSSI (3e recursion, relevee par la lentille exactitude). Ce n'est donc pas une negligence : c'est LA CONVENTION — paths porte les fichiers de SOURCE, tests{} porte les SPECIFICATIONS, et les deux sont deliberement disjoints dans tout le backlog. LE VRAI DEFAUT EST DANS LE COMPOSEUR, pas dans les taches : scripts/lot/composer.ts detecte les collisions de lot en comparant t.paths SEUL, si bien que deux lots touchant la meme specification ne se verraient pas. A livrer : que la detection de collision lise AUSSI tests{}, avec un temoin sur deux lots partageant une spec — et NON une reecriture des neuf listes de chemins. ⚠️ Noter au passage que j'ai introduit une INCOHERENCE en ajoutant des specs aux paths de CPL-T01 et GOV-024 : deux taches suivent desormais une convention que les autres ne suivent pas, et c'est a normaliser ici. Le trou par lequel verrou-de-phase.spec.ts est devenu orphelin — dans les paths d aucune tache, dans aucun tests, couvert par sa seule annotation @req — et par lequel GOV-040 a ete ecrite avec le meme defaut le jour ou on le fermait ailleurs. scripts/lot/composer.ts compare t.paths pour detecter les collisions de lot : un fichier promis et non declare lui est invisible. Un temoin vu rougir sur GOV-040 telle qu elle a ete redigee, et un contre-temoin vert sur une tache dont les deux champs concordent. ⚠️ CHIFFRE CORRIGE AU 10e TOUR : j'avais mesure 9 taches sur 9 pour la seule PR 31 ; la lentille schema a mesure 38 TACHES SUR 209 pour le depot entier. Le 5e livrable doit donc dire CE QU'ON FAIT DES 38 — les normaliser, ou declarer la convention et corriger le composeur seul — sinon il est INFERMABLE, ce qui est precisement le defaut que cette tache decrit. ⚠️ SIXIEME LIVRABLE, meme lentille : DIX fichiers sous scripts/, src/ et tests/ sont modifies par la PR 31 et ne figurent dans les paths d'AUCUNE tache — dont scripts/gates/gov-pr.ts lui-meme, et tests/unit/gouvernance/vues-derivees.spec.ts, promis par DEUX tests{}. Une garde qui confronte les fichiers TOUCHES par une PR aux paths declares par ses taches, avec un temoin vu rougir sur ces dix-la.
 
 **Tests.** `tests/unit/gouvernance/attributions-resolvent.spec.ts`
+
+### GOV-030 — `gov:check` designe DEUX choses, et aucune ne fait ce que six documents lui pretent
+
+`1 j` · zone `gouvernance` · depend de `GOV-013`
+
+Couvre : `REQ-DM-003`, `REQ-INT-004`
+
+**Acceptation.** UN SEUL NOM POUR UNE SEULE CHOSE. Aujourd'hui `gov:check` en designe DEUX. (1) L'entree de docs/gates.json decrit une garde de TERMES INTERDITS dont le script scripts/gates/gov-check.ts N'EXISTE PAS, et aucun autre script ne fait ce travail. (2) package.json declare sous le meme nom une CHAINE de gardes de gouvernance qu'AUCUN workflow n'appelle. Six affirmations du depot s'appuient sur la premiere — docs/GLOSSAIRE.md, docs/CONVENTIONS.md, docs/REGLES-MAISON.md (RM-06), packages/contracts/events.ts, REQ-GOV-001 et la vue docs/GATES.md — et la tache qui les promettait, GOV-000, est FUSIONNEE : son acceptance promet le fichier et l'etape de CI, et ni l'un ni l'autre n'existe. A livrer : (1) scripts/gates/gov-check.ts existe, expose un controler() PUR sur une vue INJECTEE et un mode --prove avec un temoin ROUGE par famille et des contre-temoins VERTS, et couvre ce que le registre annonce — termes d'axionia invalides, noms d'evenements en anglais la ou l'exigence impose le francais, listes litterales d'etats hors de leur exigence, synonymes interdits du glossaire, et tout nom d'evenement litteral hors du paquet de contrats ; (2) un CONTRE-TEMOIN prouve que les documents qui EXPLIQUENT la regle peuvent ecrire son contre-exemple entre accents graves — sans quoi la garde interdirait sa propre documentation, defaut deja rencontre et corrige sur gov:identifiants ; (3) le perimetre est IMPRIME avec son compte, `src/` etant vide en phase -1, et « 0 fichier balaye » ne se lit pas comme « aucun defaut » ; (4) l'etape de Gate A qui l'appelle ne porte pas `continue-on-error` ; (5) l'entree du registre recoit sa preuveRouge et docs/GATES.md est regeneree ; (6) les six affirmations disent l'etat REEL de la garde au jour de la livraison. ⚠️ Le choix entre renommer la chaine de package.json et renommer l'entree du registre engage un identifiant que six documents citent : il se tranche par un ADR, pas dans la PR.
+
+**Tests.** `tests/unit/gouvernance/termes-interdits.spec.ts`
+
+### GOV-031 — eslint.config.mjs porte « CE FICHIER N'A JAMAIS ETE EXECUTE », et c'etait vrai
+
+`1 j` · zone `gouvernance` · depend de `GOV-014`
+
+Couvre : `REQ-GOV-018`
+
+**Acceptation.** GOV-014 a livre eslint.config.mjs, .prettierrc.json et .prettierignore, et son propre en-tete avertissait : « CE FICHIER N'A JAMAIS ETE EXECUTE. » Il l'a ete le 2026-09-05, dans un bac d'essai avec les cinq paquets installes : `eslint .` rend 46 erreurs sur 7 fichiers (no-undef 28, no-console 8, no-explicit-any 6, no-irregular-whitespace 2, no-require-imports 2) et `prettier --check .` rend 105 fichiers non formates. Les causes sont dans la CONFIGURATION, pas dans le code : languageOptions.globals absent, donc les globales de Node sont inconnues des scripts ; aucune derogation pour tests/**, donc no-console y frappe ; et scripts/lot/lot.workflow.js est un langage dedie dont les symboles sont injectes par son moteur, il releve d'un `ignores` et non d'un correctif. Le correctif minimal mesure (globals Node + derogation tests) ramene 46 a 25. C'est pourquoi le lot L-1-07 a cable la variante PRUDENTE : les deux etapes gov:conventions, et NI `lint` NI `format:check` — ni comme scripts, ni comme etapes de CI, ni comme devDependencies. La famille outillage_non_epingle ne s'arme que si une etape de CI lance l'outil ; sans etape, rien ne ment. A livrer : (1) la configuration corrigee, chaque derogation portant son motif ; (2) les 5 devDependencies epinglees et les scripts `lint`, `format:check`, `format` ; (3) les etapes de Gate A, SANS continue-on-error ; (4) `pnpm lint` et `pnpm format:check` verts sur le depot, ou tout ecart restant porte une derogation NOMMEE et motivee — jamais une regle desactivee en bloc. Une CI qu'on rend verte en eteignant la regle mesure la regle eteinte.
+
+**Tests.** `tests/unit/gouvernance/gardes-transposees.spec.ts`
+
+### GOV-038 — Attester une livraison faite dans un autre depot, et qualifier toute reference de PR — **en_cours**
+
+`1 j` · zone `gouvernance` · depend de `GOV-017a`, `GOV-020`
+
+Couvre : `REQ-GOV-008`, `REQ-GOV-025`, `REQ-GOV-026`
+
+**Acceptation.** Un champ attestation { pr, sha entier de 40 hex, fusionneeAt UTC } porte la livraison d une tache dont le repo n est pas partners ; le depot n y est PAS recopie, il se derive de repo par DEPOTS (RM-01). gov:tasks porte sept familles nouvelles, chacune vue rougir, trois contre-temoins verts. Toute reference de PR de tache passe par referencePr() : PR#31 ici, will383842/axion-ia#998 (41d71a7) ailleurs, JAMAIS PR#998 — un numero nu est lu comme une PR de CE depot-ci partout ou il est rendu, et repos/will383842/axion-apporteurs/pulls/998 ne resout pas. gov:inventaire accepte l attestation comme troisieme forme de preuve. gov:trace ne confronte plus au disque local les tests d une tache livree ailleurs et le DIT dans son resume. La resolution EN LIGNE du SHA est dans un mode separe, gov:attestation --en-ligne, hors de pnpm test et de gov:check, et ce mode REFUSE de tourner sans son drapeau : sans ce refus quelqu un le cablerait un jour pour etre complet, et une garde qui lance gh rend la suite non deterministe. AFFAIBLISSEMENT ASSUME ET NOMME : un SHA de 40 hex qui ne designe rien passe gov:tasks — mesure, 0000...0000 passe la forme et --en-ligne le rejette en HTTP 422.
+
+**Tests.** `tests/unit/gouvernance/attestation-inter-depot.spec.ts`
 
 ## Phase 0 — Socle technique
 
@@ -566,7 +600,7 @@ Couvre : `REQ-CPL-015`, `REQ-DM-035`, `REQ-INT-032`, `REQ-QA-035`
 
 `1 j` · zone `securite` · depend de `INT-T01a`, `INT-T01b`, `QA-T02`, `SEC-01`
 
-Couvre : `REQ-ARG-002`, `REQ-ARG-003`, `REQ-INT-010`, `REQ-INT-011`, `REQ-QA-008`, `REQ-QA-009`, `REQ-SEC-010`, `REQ-SEC-011`
+Couvre : `REQ-ARG-002`, `REQ-ARG-003`, `REQ-DM-036`, `REQ-INT-010`, `REQ-INT-011`, `REQ-QA-008`, `REQ-QA-009`, `REQ-SEC-010`, `REQ-SEC-011`
 
 ### SEC-07 — API entrantes pour axionia : jeton dédié/HMAC, allowlist, réponse minimale, journal
 

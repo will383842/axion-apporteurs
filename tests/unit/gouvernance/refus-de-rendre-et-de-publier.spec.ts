@@ -1571,13 +1571,35 @@ ${r.sortie.slice(0, 600)}`
   }
 });
 
-const GARDES_QUI_BALAIENT = [
-  'scripts/gates/gov-entite.ts',
-  'scripts/gates/gov-identifiants.ts',
-  'scripts/gates/gov-preseance.ts',
-  'scripts/gates/gov-publication.ts',
-  'scripts/gates/lexique-apporteurs.ts',
-] as const;
+/**
+ * 🔴 DÉRIVÉE DU DISQUE, PLUS TAPÉE — et c'est la réconciliation `gov-038` qui l'a exigé.
+ *
+ * Cette liste portait CINQ noms écrits à la main. `gov-038` a fait entrer une SIXIÈME garde,
+ * `gov-conventions.ts`, avec le `try/catch { return [] }` que la PR #31 avait fermé pour les cinq
+ * autres — **sans entrer en conflit**, un fichier ajouté d'un seul côté ne se confrontant à rien.
+ * Les trois `describe` de ce bloc seraient restés VERTS sur 5 gardes sur 6, et `gov:check` appelle
+ * pourtant `gov:conventions` dans sa chaîne bloquante.
+ *
+ * 🔑 *Un périmètre écrit à la main ne protège que ce dont on se souvient. La source de vérité est
+ * l'ensemble des gardes qui importent la primitive : on la LIT, on ne la retape pas.*
+ * Une garde qui importera `fichiersSuivisOuRefus` demain entrera d'office dans les trois témoins ;
+ * si elle n'en porte plus aucune, le contrôle positif ci-dessous LÈVE au lieu de verdir.
+ */
+const GARDES_QUI_BALAIENT = readdirSync('scripts/gates')
+  .filter((f) => f.endsWith('.ts'))
+  .map((f) => `scripts/gates/${f}`)
+  .filter((chemin) => readFileSync(chemin, 'utf8').includes('fichiersSuivisOuRefus'))
+  .sort();
+
+// CONTRÔLE POSITIF : une liste dérivée peut se vider sans bruit — un import renommé, un dossier
+// déplacé — et « aucune garde à éprouver » se lirait comme « toutes les gardes passent ».
+if (GARDES_QUI_BALAIENT.length < 5) {
+  throw new Error(
+    `GARDES_QUI_BALAIENT n'a trouvé que ${GARDES_QUI_BALAIENT.length} garde(s) important ` +
+      '`fichiersSuivisOuRefus` : le périmètre est INCONNU, pas vide. Les témoins ci-dessous ne ' +
+      'prouveraient rien.'
+  );
+}
 
 describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE refuse', () => {
 

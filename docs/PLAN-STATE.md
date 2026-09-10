@@ -7,28 +7,28 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `e0dacf3` — 2026-09-09T23:59:31+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #32 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | aucune tâche revendiquée |
-| Où en est la phase ? | phase -1 — 29/36 tâches, reste 4.00 j |
-| Le prochain pas | GOV-014 — Conventions + sélection des gardes d'axionia (chemin critique) |
+| Où est `main` ? | `8e9113f` — 2026-09-10T06:52:19+02:00 |
+| Qu’est-ce qui est en vol ? | aucune PR ouverte |
+| Qui tient quoi ? | GOV-014 (A01) · GOV-019 (A01) · GOV-028 (A01) · GOV-038 (A05) |
+| Où en est la phase ? | phase -1 — 30/39 tâches, reste 6.00 j |
+| Le prochain pas | GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #32 — 2026-09-10 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
-29/36 tâches terminées · reste 4.00 j estimés.
+30/39 tâches terminées · reste 6.00 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 178 | GOV-014, INT-T01b, GOV-019, JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02 … |
-| `en_cours` | 0 | — |
+| `a_faire` | 176 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
+| `en_cours` | 4 | GOV-014 (A01) · GOV-019 (A01) · GOV-028 (A01) · GOV-038 (A05) |
 | `en_revue` | 0 | — |
-| `fusionnee` | 29 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
+| `fusionnee` | 30 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 | `bloquee` | 0 | — |
@@ -57,34 +57,32 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 
 ## File de fusion
 
-| # | PR | Branche | Ce qui la bloque |
-| --- | --- | --- | --- |
-| 1 | #32 — chore(GOV-012): cloture du lot L-1-04 — neuf taches fusionnee, le verrou de phase leve | `lot/L-1-04-cloture` | un contrôle requis rouge ou une revue manquante |
-
-Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
+Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.
 
 ## Revendications
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
+| Tâche | Revendiquée par | Issue | Statut |
+| --- | --- | --- | --- |
+| GOV-014 — Conventions + sélection des gardes d'axionia | A01 | #16 | `en_cours` |
+| GOV-019 — Budgets de performance après première mesure | A01 | #21 | `en_cours` |
+| GOV-028 — Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE | A01 | — | `en_cours` |
+| GOV-038 — Attester une livraison faite dans un autre depot, et qualifier toute reference de PR | A05 | — | `en_cours` |
 
 ⚠️ **15 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-- partners/ADR-0009 — Une valeur que seul Will connaît est une CONFIGURATION, pas un blocage de plan — `docs/adr/0009-valeurs-du-monde-reel.md`
-- partners/ADR-0010 — Une gate bloquante dont l'exception s'écrit, plutôt qu'une gate qu'on n'exécute pas — `docs/adr/0010-une-gate-bloquante-et-sa-dette-declaree.md`
-
-Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-09). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
+Aucun ADR daté du 2026-09-10 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
 
 ## Prochain pas
 
-1. **GOV-014** — Conventions + sélection des gardes d'axionia (1 j, **sur le chemin critique**) : 6 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+1. **GOV-035** — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur (0.5 j) : 4 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `e0dacf3` (2026-09-09T23:59:31+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `8e9113f` (2026-09-10T06:52:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 > Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 

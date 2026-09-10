@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 209,
-    "pairesEnIntersection": 3831,
-    "cheminsDeclares": 639,
-    "cheminsDistincts": 375,
-    "cheminsPartages": 96,
-    "tachesSansAucuneIntersection": 30,
+    "tachesCouvertes": 212,
+    "pairesEnIntersection": 3908,
+    "cheminsDeclares": 652,
+    "cheminsDistincts": 386,
+    "cheminsPartages": 97,
+    "tachesSansAucuneIntersection": 32,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T06",
@@ -38,12 +38,14 @@
       "GOV-028",
       "GOV-029",
       "GOV-037",
-      "GOV-039"
+      "GOV-039",
+      "GOV-030",
+      "GOV-038"
     ],
     "cheminsLesPlusPartages": [
       {
         "chemin": "docs/gates.json",
-        "taches": 77
+        "taches": 78
       },
       {
         "chemin": "prisma/schema.prisma",
@@ -73,7 +75,6 @@
       "GOV-006 — glossaire-enums.spec.ts",
       "GOV-009 — adr-index-derive.spec.ts",
       "GOV-013 — lexique.spec.ts",
-      "GOV-014 — gardes-transposees.spec.ts",
       "GOV-015 — fiches-tiers.spec.ts",
       "GOV-019 — poids-du-bundle-garde-vraiment.spec.ts",
       "QA-T03 — req-check.spec.ts",
@@ -245,7 +246,9 @@
       ".prettierrc",
       "package.json",
       "scripts/gates/gov-derivation.ts",
-      "docs/gates.json"
+      "scripts/gates/gov-conventions.ts",
+      "docs/gates.json",
+      "tests/unit/gouvernance/gardes-transposees.spec.ts"
     ],
     "GOV-015": [
       "docs/tiers/recherche-entreprises.md",
@@ -272,6 +275,12 @@
     "INT-T01b": [
       "axionia/scripts/partners/fixtures.ts",
       "axionia/src/server/partners-sync/contracts/",
+      "axionia/src/server/partners/__tests__/enveloppe.spec.ts",
+      "axionia/src/server/partners/__tests__/payloads.spec.ts",
+      "axionia/src/server/partners/__tests__/commission.spec.ts",
+      "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts",
+      "axionia/src/server/partners/__tests__/derivation-ht.spec.ts",
+      "axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts",
       "axionia/prisma/schema.prisma"
     ],
     "GOV-017a": [
@@ -292,7 +301,9 @@
       "tests/gov/charte-pr.spec.ts"
     ],
     "GOV-019": [
-      "scripts/gates/bundle-par-route.ts"
+      "scripts/gates/bundle-par-route.ts",
+      "scripts/gates/perf-budgets.ts",
+      "docs/gates.json"
     ],
     "GOV-020": [
       "docs/INVENTAIRE-CHANTIERS.md",
@@ -1182,6 +1193,15 @@
     ],
     "GOV-040": [
       "tests/unit/gouvernance/entite-registre.spec.ts"
+    ],
+    "GOV-030": [
+      "tests/unit/gouvernance/termes-interdits.spec.ts"
+    ],
+    "GOV-031": [
+      "tests/unit/gouvernance/gardes-transposees.spec.ts"
+    ],
+    "GOV-038": [
+      "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
     ]
   }
 }

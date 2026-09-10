@@ -43,7 +43,8 @@
       "taches": [
         "DM-02",
         "DM-07",
-        "GOV-006"
+        "GOV-006",
+        "GOV-030"
       ]
     },
     {
@@ -532,9 +533,9 @@
       "remplaceePar": null,
       "module": 5,
       "etape": 5,
-      "phase": -1,
+      "phase": 0,
       "taches": [
-        "INT-T01b"
+        "SEC-06"
       ]
     },
     {
@@ -1765,6 +1766,7 @@
       "etape": 9,
       "phase": -1,
       "taches": [
+        "GOV-030",
         "INT-T01a",
         "INT-T05"
       ]
@@ -3747,7 +3749,8 @@
       "etape": 7,
       "phase": -1,
       "taches": [
-        "GOV-009"
+        "GOV-009",
+        "GOV-038"
       ]
     },
     {
@@ -3896,7 +3899,8 @@
       "etape": null,
       "phase": -1,
       "taches": [
-        "GOV-014"
+        "GOV-014",
+        "GOV-031"
       ]
     },
     {
@@ -4001,7 +4005,8 @@
       "phase": -1,
       "taches": [
         "GOV-017a",
-        "GOV-017b"
+        "GOV-017b",
+        "GOV-038"
       ]
     },
     {
@@ -4016,7 +4021,8 @@
       "phase": -1,
       "taches": [
         "GOV-001",
-        "GOV-020"
+        "GOV-020",
+        "GOV-038"
       ]
     },
     {

@@ -32,8 +32,16 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
+import { DEPOT_LOCAL, MOTIF_SHA, depotDeLaTache, type Attestation } from '../lot/attestation';
 
-const CHEMIN_TACHES = 'docs/tasks.json';
+/**
+ * `--taches <chemin>` : juger un AUTRE backlog que celui du dépôt (GOV-038). Même motif que le
+ * `--out` des générateurs de vues : `docs/tasks.json` est RÉSERVÉ, un développeur ne l'écrit pas,
+ * et sans cette option une mutation PROPOSÉE ne peut être ni appliquée ni mesurée — seulement
+ * supposée bonne. Deux ruptures de traçabilité ont été trouvées ainsi, avant d'être écrites.
+ */
+const iTaches = process.argv.indexOf('--taches');
+const CHEMIN_TACHES = iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
 const CHEMIN_PATHS = 'docs/paths-proposes.json';
 const CHEMIN_INVENTAIRE = 'docs/INVENTAIRE-CHANTIERS.md';
@@ -66,7 +74,7 @@ const PLANCHER: Record<string, Avancement | null> = {
 };
 
 // ── types ────────────────────────────────────────────────────────────────────
-type Tache = { id: string; statut: string; paths: string[] };
+type Tache = { id: string; statut: string; paths: string[]; repo: string; attestation?: Attestation | null };
 type LigneChantier = {
   etiquette: string;
   referentResolu: boolean;
@@ -145,10 +153,29 @@ function shasParPortee(): Record<string, string[]> {
   return out;
 }
 
+/**
+ * LA PREUVE D'UNE LIVRAISON FAITE AILLEURS (GOV-038). Les deux preuves ci-dessus supposent toutes
+ * deux que le code est ICI : un chemin sur ce disque, un commit dans cet historique. Quatorze
+ * tâches de ce backlog vivent dans un autre dépôt, et `INT-T01b` est la première à avoir été
+ * livrée — son commit de fusion n'est dans aucun `git log` de ce clone, et son chemin
+ * (`axionia/INT-T01b`) est un marque-place qui n'existe sur aucun disque. Sans cette troisième
+ * preuve, la passer `fusionnee` ferait rougir `tache_preuve_manquante` sur une livraison bien
+ * réelle, et la garde apprendrait à se faire contourner.
+ *
+ * ELLE EST JUGÉE SUR SA FORME, PAS RÉSOLUE. Résoudre demanderait d'interroger la forge, ce qui
+ * rendrait la garde non déterministe (mesuré : `pnpm test` 1, puis 0, puis 0 sur le même arbre).
+ * C'est un affaiblissement ASSUMÉ et nommé : un SHA de 40 hexadécimaux qui ne désignerait aucun
+ * commit passerait ici. Le contrôle qui le résout existe, et il est hors de la suite —
+ * `pnpm gov:attestation --en-ligne`.
+ */
 function preuvesDeLaTache(t: Tache, e: Etat): string[] {
   const chemins = [...new Set([...t.paths, ...(e.cheminsProposes[t.id] ?? [])])].filter(cheminExiste);
   const shas = (e.shasParTache[t.id] ?? []).filter(shaResout);
-  return [...chemins.map((c) => `chemin:${c}`), ...shas.map((s) => `sha:${s}`)];
+  const attestations =
+    t.repo !== DEPOT_LOCAL && t.attestation && MOTIF_SHA.test(t.attestation.sha)
+      ? [`attestation:${depotDeLaTache(t) ?? t.repo}#${t.attestation.pr}@${t.attestation.sha.slice(0, 8)}`]
+      : [];
+  return [...chemins.map((c) => `chemin:${c}`), ...shas.map((s) => `sha:${s}`), ...attestations];
 }
 
 // ── lecture de l'inventaire ──────────────────────────────────────────────────
@@ -313,7 +340,9 @@ const schema = lire(CHEMIN_SCHEMA) as {
 const docPaths = lire(CHEMIN_PATHS) as { paths?: Record<string, string[]> };
 
 const etatDuDepot: Etat = {
-  taches: docTaches.taches.map((t) => ({ id: t.id, statut: t.statut, paths: [...t.paths] })),
+  taches: docTaches.taches.map((t) => ({
+    id: t.id, statut: t.statut, paths: [...t.paths], repo: t.repo, attestation: t.attestation ?? null,
+  })),
   cheminsProposes: docPaths.paths ?? {},
   statutsDuSchema: schema.$defs?.tache?.properties?.statut?.enum ?? [],
   chantiers: lireInventaire(readFileSync(CHEMIN_INVENTAIRE, 'utf8')),
@@ -322,7 +351,7 @@ const etatDuDepot: Etat = {
 };
 
 const copier = (e: Etat): Etat => ({
-  taches: e.taches.map((t) => ({ ...t, paths: [...t.paths] })),
+  taches: e.taches.map((t) => ({ ...t, paths: [...t.paths], attestation: t.attestation ? { ...t.attestation } : null })),
   cheminsProposes: JSON.parse(JSON.stringify(e.cheminsProposes)) as Record<string, string[]>,
   statutsDuSchema: [...e.statutsDuSchema],
   chantiers: e.chantiers.map((c) => ({ ...c, preuves: [...c.preuves] })),
@@ -474,6 +503,25 @@ if (process.argv.includes('--prove')) {
       muter: () => {
         const e = copier(etatDuDepot);
         sansPreuve(e).statut = 'en_cours';
+        return e;
+      },
+    },
+    {
+      // GOV-038. Sans la troisième forme de preuve, ce cas-ci rougirait sur une livraison RÉELLE :
+      // `INT-T01b` est en production depuis le 2026-09-05, et ni son commit ni son chemin ne sont
+      // dans ce dépôt. Le SHA est LU dans git plutôt qu'écrit en dur : quarante hexadécimaux tapés
+      // à la main sont une fixture inventée (RM-03), et la garde juge la forme, pas la résolution.
+      nom: "une tâche livrée dans un AUTRE dépôt, attestée par { pr, sha entier, fusionneeAt }",
+      muter: () => {
+        const e = copier(etatDuDepot);
+        const t = sansPreuve(e);
+        t.statut = 'fusionnee';
+        t.repo = 'axionia';
+        t.attestation = {
+          pr: 998,
+          sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+          fusionneeAt: '2026-09-05T11:04:48Z',
+        };
         return e;
       },
     },
