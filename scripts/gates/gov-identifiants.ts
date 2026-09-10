@@ -440,7 +440,6 @@ export function fautesDeLigneAveugleALaSyntaxe(
   return fautesSurLigneNeutralisee(propre, fichier, i, motif);
 }
 
-/** ⚠️ Les gardes de ce dépôt balaient `git ls-files`, jamais le disque (RM-14). */
 /**
  * 🔴 RECONCILIATION `gov-038` x `main` : le perimetre vient d'UNE source unique qui REFUSE au
  * lieu de rendre `[]`. La branche `gov-038` portait encore le `try/catch { return [] }` que la

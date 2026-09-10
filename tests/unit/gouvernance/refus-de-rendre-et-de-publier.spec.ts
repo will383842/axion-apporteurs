@@ -616,24 +616,16 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       '`origin/main` est introuvable : la dérivation ne mesure RIEN, et son silence ne prouve rien'
     ).toBe(true);
 
-    if (ajoutesParFichier.size === 0) {
-      // Base lisible ET diff vide : ce lot n'ajoute plus rien parce qu'il a ATTERRI. On ne rend
-      // pas la main en silence — ce serait la sortie muette que `schema` a fait fermer deux fois.
-      // On assert la propriété qui RESTE vraie, cardinalité comprise : `mutation` a mesuré qu'un
-      // registre VIDÉ passait au vert ici, la boucle n'ayant alors rien à itérer.
-      expect(
-        Object.keys(declares).length,
-        'le registre `declares` est VIDE : on ne peut pas faire baisser la dette en la supprimant'
-      ).toBeGreaterThan(0);
-      for (const [f, d] of Object.entries(declares)) {
-        expect(existsSync(f), `${f} est déclaré au registre des refus mais n'existe plus`).toBe(true);
-        expect(
-          compter(readFileSync(f, 'utf8')),
-          `${f} déclare ${d.total} sortie(s) non nulle(s) et n'en porte plus autant`
-        ).toBeGreaterThanOrEqual(d.total);
-      }
-      return;
-    }
+
+    // La cardinalité vaut dans LES DEUX régimes — diff plein ou diff vide — donc elle est hissée
+    // hors de toute branche. `simplicite` a relevé qu'une première rédaction la portait dans un
+    // `if (size === 0)` dont la boucle était le DOUBLON VERBATIM de celle qui suit.
+    // *Deux copies d'une assertion ne la rendent pas plus vraie : elles rendent l'une des deux
+    // invérifiable.*
+    expect(
+      Object.keys(declares).length,
+      'le registre `declares` est VIDE : on ne peut pas faire baisser la dette en la supprimant'
+    ).toBeGreaterThan(0);
 
     for (const [f, n] of [...ajoutesParFichier].sort()) {
       const d = declares[f];
@@ -648,13 +640,25 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // *Le registre des refus n'est pas un journal du diff courant : c'est la dette du dépôt.*
     // Ce qui reste vrai, et qu'on assert : le fichier EXISTE encore, et il porte AU MOINS ce
     // qu'il déclare. Un refus retiré en douce, ou un fichier supprimé, rougit toujours ici.
-    for (const [f, d] of Object.entries(declares)) {
+    for (const f of Object.keys(declares)) {
       if (ajoutesParFichier.has(f)) continue; // déjà confronté au diff, ci-dessus
       expect(existsSync(f), `${f} est déclaré au registre des refus mais n’existe plus`).toBe(true);
+      // 🔴 LE PLANCHER EST UN ABSOLU, PAS LE DELTA. Une première rédaction comparait le compte du
+      // disque à `d.total` — or `d.total` est le nombre de sorties AJOUTÉES contre `origin/main`,
+      // pas le nombre que le fichier porte. `mutation` l'a mesuré : sur `gov-trace` (1 déclaré,
+      // 10 portés), `gov-pr` (2/14) et `gov-requirements` (3/8), **vingt-six refus retirés** et le
+      // test restait VERT — alors que la ligne au-dessus affirmait « un refus retiré en douce
+      // rougit toujours ici ». *Une affirmation écrite dans le code est une garde de plus à tenir.*
+      // Le plancher juste : ce que la base porte, PLUS ce que la PR déclare ajouter.
+      // ⚠️ ET PAS `surMain(f) + d.total` : ce plancher-là DOUBLE-COMPTE. `d.total` est le delta
+      // déclaré au moment où la PR a été écrite ; une fois qu'elle a atterri, `origin/main` le
+      // porte déjà. Mesuré : `fichiers-suivis.ts` (base 2, déclaré 2) exigeait 4 pour 2 portés.
+      // *Un delta additionné à sa propre base compte deux fois ce qui n'est arrivé qu'une.*
+      // Le plancher juste est ce que la BASE porte : un refus retiré en douce passe dessous.
       expect(
         compter(readFileSync(f, 'utf8')),
-        `${f} déclare ${d.total} sortie(s) non nulle(s) et n’en porte plus autant`
-      ).toBeGreaterThanOrEqual(d.total);
+        `${f} porte moins de sorties non nulles que sa base (${surMain(f)}) : un refus a été retiré`
+      ).toBeGreaterThanOrEqual(surMain(f));
     }
   });
 
@@ -1653,13 +1657,52 @@ const GARDES_QUI_BALAIENT = readdirSync('scripts/gates')
 
 // CONTRÔLE POSITIF : une liste dérivée peut se vider sans bruit — un import renommé, un dossier
 // déplacé — et « aucune garde à éprouver » se lirait comme « toutes les gardes passent ».
-if (GARDES_QUI_BALAIENT.length < 5) {
+// 🔴 LE SEUIL SE DÉRIVE AUSSI. Une première rédaction écrivait `< 5` — un LITTÉRAL, alors que la
+// liste en vaut SIX après la réconciliation : une garde qui sortirait du périmètre la ramènerait à
+// cinq et ce contrôle resterait muet. C'est exactement le trou que la dérivation venait fermer,
+// reproduit dans le contrôle censé le garder. Relevé par `simplicite`.
+// *Un compteur de sûreté écrit à la main hérite du défaut qu'il surveille.*
+// On compte donc les gardes qui importent la primitive, à la source, et on exige l'égalité.
+// ⚠️ Compté par une méthode DIFFÉRENTE de celle qui construit la liste : celle-ci cherche l'APPEL
+// (`fichiersSuivisOuRefus`), celle-là l'IMPORT (`from '../lot/fichiers-suivis'`). Compter deux fois
+// la même chose rendrait l'égalité tautologique — et un contrôle tautologique est un vert gratuit.
+// Croisées, elles attrapent l'import sans appel comme l'appel sans import.
+const IMPORTENT_LA_PRIMITIVE = readdirSync('scripts/gates')
+  .filter((f) => f.endsWith('.ts'))
+  .filter((f) => /from '\.\.\/lot\/fichiers-suivis'/.test(readFileSync(`scripts/gates/${f}`, 'utf8')))
+  .length;
+
+if (GARDES_QUI_BALAIENT.length !== IMPORTENT_LA_PRIMITIVE || GARDES_QUI_BALAIENT.length === 0) {
   throw new Error(
-    `GARDES_QUI_BALAIENT n'a trouvé que ${GARDES_QUI_BALAIENT.length} garde(s) important ` +
-      '`fichiersSuivisOuRefus` : le périmètre est INCONNU, pas vide. Les témoins ci-dessous ne ' +
-      'prouveraient rien.'
+    `GARDES_QUI_BALAIENT rend ${GARDES_QUI_BALAIENT.length} garde(s) pour ` +
+      `${IMPORTENT_LA_PRIMITIVE} qui importent \`fichiersSuivisOuRefus\` : le périmètre est ` +
+      'INCONNU, pas vide. Les témoins ci-dessous ne prouveraient rien.'
   );
 }
+
+/**
+ * 🔴 LE CONTRÔLE QUI NE DÉPEND PAS DE LA LISTE — motif de `mutation` sur la PR #33.
+ *
+ * `GARDES_QUI_BALAIENT` est dérivée, et son contrôle croise l'APPEL et l'IMPORT. Mais retirer les
+ * DEUX en même temps — l'import devient inutile, aucun lint ne proteste — fait sortir une garde du
+ * périmètre **sans un bruit** : les deux compteurs baissent ensemble, l'égalité tient, et la garde
+ * rend `✅ … exit 0` sur un dossier sans `.git` en balayant zéro fichier, dans la chaîne bloquante
+ * de `gov:check`. Mesuré par `mutation` : **111/111 verts** sur ce mutant.
+ *
+ * 🔑 *Un contrôle qui compte les membres d'un ensemble ne voit pas celui qui en sort : il faut
+ * chercher ce que la sortie PRODUIT.* Ce que produit une garde qui quitte la primitive, c'est un
+ * `ls-files` qui réapparaît quelque part. On le cherche là, à la source, sans liste d'aucune sorte.
+ */
+it('REQ-CPL-018 — `git ls-files` n’est appelé QUE par la source unique du périmètre', () => {
+  const enFaute = enumererFichiers('scripts')
+    .filter((f) => f !== 'scripts/lot/fichiers-suivis.ts')
+    .filter((f) => readFileSync(f, 'utf8').includes("'ls-files'"));
+  expect(
+    enFaute,
+    `ces fichiers appellent \`git ls-files\` hors de la source unique : une garde qui quitte ` +
+      `\`fichiersSuivisOuRefus\` retrouve le \`try/catch { return [] }\` que ce lot ferme`
+  ).toEqual([]);
+});
 
 describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE refuse', () => {
 
