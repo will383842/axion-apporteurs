@@ -1708,7 +1708,21 @@ it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉC
 it('REQ-CPL-018 — `git ls-files` n’est appelé QUE par la source unique du périmètre', () => {
   const enFaute = enumererFichiers('scripts')
     .filter((f) => f !== 'scripts/lot/fichiers-suivis.ts')
-    .filter((f) => readFileSync(f, 'utf8').includes("'ls-files'"));
+    // ⚠️ `ls-files` NU, pas `'ls-files'` : `securite` a mesuré que la forme shell
+    // `execSync('git ls-files', …)` échappait au jeton entre quotes — 779/779 verts, trois témoins
+    // DISPARUS, et la gate à `exit 0` sur zéro garde. *Une garde qui cherche une orthographe ne
+    // couvre pas une famille.* La forme historique du défaut dans ce dépôt est `execFileSync`,
+    // mais l'étroitesse se ferme pour rien ici.
+    // 🔑 On vise l'APPEL, pas la MENTION. Élargi au jeton nu, ce témoin condamnait deux fichiers
+    // qui ne font que PARLER de `git ls-files` en commentaire — dont celui qui décrit la
+    // protection elle-même. *Une garde lexicale trop large condamne le texte qui la documente.*
+    // Une LIGNE qui porte `exec…` ET `ls-files` est un appel ; les deux formes (`execFileSync`
+    // avec un tableau, `execSync` en shell — le contournement mesuré par `securite`) y passent.
+    .filter((f) =>
+      readFileSync(f, 'utf8')
+        .split(/\r?\n/)
+        .some((ligne) => /exec\w*Sync/.test(ligne) && ligne.includes('ls-files'))
+    );
   expect(
     enFaute,
     `ces fichiers appellent \`git ls-files\` hors de la source unique : une garde qui quitte ` +
