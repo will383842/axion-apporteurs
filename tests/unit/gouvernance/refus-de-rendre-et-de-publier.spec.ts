@@ -408,7 +408,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    * minimum qu'on doive à un défaut qu'on n'a pas le temps de fermer : le rendre impossible à
    * ajouter en silence.
    */
-  const declares: Record<string, { total: number; temoins: number; raison: string }> = {
+  const declares: Record<string, { total: number; porte: number; temoins: number; raison: string }> = {
     // ── RÉCONCILIATION `gov-038` : QUATRE fichiers apportent DIX sorties non nulles ──────────
     // Le cliquet a rougi en NOMMANT le premier (`gov-attestation.ts ajoute 3 … et n'est PAS
     // déclaré ici`) : c'est exactement son office. Les trois gestes sont faits pour chacun —
@@ -417,6 +417,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // raison vaut moins qu'un zéro assumé.*
     'scripts/gates/gov-attestation.ts': {
       total: 3,
+      porte: 3,
       temoins: 0,
       raison:
         'GOV-038 — atteste une livraison faite dans un AUTRE dépôt. Les trois sorties sont des ' +
@@ -426,6 +427,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     },
     'scripts/gates/perf-budgets.ts': {
       total: 4,
+      porte: 4,
       temoins: 0,
       raison:
         'GOV-019 — budgets de performance. Quatre refus : registre illisible, budget dépassé, ' +
@@ -435,6 +437,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     },
     'scripts/gates/gov-conventions.ts': {
       total: 2,
+      porte: 2,
       temoins: 0,
       raison:
         'GOV-014 — conventions et sélection des gardes. Ce fichier est arrivé de `gov-038` avec ' +
@@ -445,6 +448,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     },
     'scripts/lot/fichiers-suivis.ts': {
       total: 2,
+      porte: 2,
       temoins: 2,
       raison:
         'LE refus qui manquait : `perimetre_illisible`. Il remplace un `try/catch { return [] }` recopié ' +
@@ -458,18 +462,22 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     },
     'scripts/lot/corps-de-pr.ts': {
       total: 4,
+      porte: 4,
       temoins: 2,
       raison: '`--pr` obligatoire et concordance des têtes ont un témoin ; les deux autres sont ' +
         'des refus d’usage (arguments manquants), sans effet de sécurité.',
     },
     'scripts/gates/gov-pr.ts': {
       total: 2,
+      porte: 14,
       temoins: 1,
       raison: 'la concordance des têtes a un témoin ; le second est le `catch` d’appel à la forge.',
     },
-    'scripts/gates/gov-trace.ts': { total: 1, temoins: 1, raison: 'le refus de rendre, témoin + adjacence.' },
+    'scripts/gates/gov-trace.ts': { total: 1,
+      porte: 10, temoins: 1, raison: 'le refus de rendre, témoin + adjacence.' },
     'scripts/gates/gov-tasks.ts': {
       total: 1,
+      porte: 11,
       temoins: 1,
       raison:
         'le refus de rendre a un témoin. 🔧 2 → 1 à la réconciliation : le delta se mesure contre '
@@ -477,19 +485,23 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         + '*Un delta n’est pas une propriété du fichier : c’est une propriété de la DISTANCE '
         + 'entre lui et sa base, et la base bouge.* GOV-038 y ajoute `pr_nu_hors_depot`.',
     },
-    'scripts/gates/gov-requirements.ts': { total: 3, temoins: 1, raison: 'le refus de rendre a un témoin ; 2 non couverts.' },
+    'scripts/gates/gov-requirements.ts': { total: 3,
+      porte: 8, temoins: 1, raison: 'le refus de rendre a un témoin ; 2 non couverts.' },
     'scripts/gates/schema-enums.ts': {
       total: 5,
+      porte: 5,
       temoins: 1,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE, mesurée par `mutation` au 12e tour.',
     },
     'scripts/gates/lexique-apporteurs.ts': {
       total: 2,
+      porte: 2,
       temoins: 0,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE.',
     },
     'scripts/gates/gov-entite.ts': {
       total: 6,
+      porte: 6,
       temoins: 3,
       // 🔴 CETTE `raison` A AFFIRMÉ AU PRÉSENT UN CONSTAT DEVENU FAUX — lentille `exactitude`,
       // 15e tour, et elle me retourne ma propre règle. J'écrivais cinquante lignes plus haut que
@@ -655,10 +667,17 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       // porte déjà. Mesuré : `fichiers-suivis.ts` (base 2, déclaré 2) exigeait 4 pour 2 portés.
       // *Un delta additionné à sa propre base compte deux fois ce qui n'est arrivé qu'une.*
       // Le plancher juste est ce que la BASE porte : un refus retiré en douce passe dessous.
+      // 🔴 LE PLANCHER EST L'ABSOLU DÉCLARÉ, PAS LA BASE. `mutation` a montré que `>= surMain(f)`
+      // rend **0** pour un fichier NEUF — et trois des quatre fichiers de cette PR le sont. En
+      // neutralisant les DIX sorties que la PR déclare ajouter, les deux tests restaient VERTS :
+      // le delta tombait à zéro, le fichier sortait de l'égalité stricte, et il atterrissait sur
+      // un plancher `0 >= 0`. *Retirer 1 des 3 rougissait ; retirer les 3 passait.*
+      // 🔑 **Un plancher calé sur la base ne peut pas, par construction, garder ce que la PR ajoute.**
+      // `porte` est donc le compte ABSOLU, mesuré et déclaré, que le fichier doit encore porter.
       expect(
-        compter(readFileSync(f, 'utf8')),
-        `${f} porte moins de sorties non nulles que sa base (${surMain(f)}) : un refus a été retiré`
-      ).toBeGreaterThanOrEqual(surMain(f));
+        compter(readFileSync(declares[f] ? f : f, 'utf8')),
+        `${f} porte moins de ${declares[f]!.porte} sortie(s) non nulle(s) : un refus a été retiré`
+      ).toBeGreaterThanOrEqual(declares[f]!.porte);
     }
   });
 
@@ -1636,49 +1655,42 @@ ${r.sortie.slice(0, 600)}`
 });
 
 /**
- * 🔴 DÉRIVÉE DU DISQUE, PLUS TAPÉE — et c'est la réconciliation `gov-038` qui l'a exigé.
+ * 🔴 DÉCLARÉE, ET NON DÉRIVÉE — et c'est le RENVERSEMENT de ma première rédaction.
  *
- * Cette liste portait CINQ noms écrits à la main. `gov-038` a fait entrer une SIXIÈME garde,
- * `gov-conventions.ts`, avec le `try/catch { return [] }` que la PR #31 avait fermé pour les cinq
- * autres — **sans entrer en conflit**, un fichier ajouté d'un seul côté ne se confrontant à rien.
- * Les trois `describe` de ce bloc seraient restés VERTS sur 5 gardes sur 6, et `gov:check` appelle
- * pourtant `gov:conventions` dans sa chaîne bloquante.
+ * J'avais dérivé cette liste du disque : les gardes de `scripts/gates/` qui importent
+ * `fichiersSuivisOuRefus`. `mutation` l'a mise en défaut DEUX FOIS, et la seconde est décisive :
+ * en remplaçant la primitive par une marche `readdirSync` avec `catch { return [] }` — sans jamais
+ * réintroduire `'ls-files'` — la garde **s'évapore des trois `describe`**, 21/21 verts, le total
+ * collecté passant de 59 à 56 sans un bruit.
  *
- * 🔑 *Un périmètre écrit à la main ne protège que ce dont on se souvient. La source de vérité est
- * l'ensemble des gardes qui importent la primitive : on la LIT, on ne la retape pas.*
- * Une garde qui importera `fichiersSuivisOuRefus` demain entrera d'office dans les trois témoins ;
- * si elle n'en porte plus aucune, le contrôle positif ci-dessous LÈVE au lieu de verdir.
+ * 🔑 **Une population DÉRIVÉE DE LA PRÉSENCE DU CORRECTIF ne verra jamais celui qui le PERD.**
+ * C'est exactement la garde qu'on veut : éprouver des fichiers qui POURRAIENT perdre le correctif.
+ * Les y chercher par le correctif rend l'épreuve vide au moment précis où elle compterait.
+ *
+ * La liste est donc TAPÉE — une déclaration, que seul un humain retire — et la réciproque
+ * ci-dessous attrape l'oubli inverse : toute garde qui importe la primitive doit y figurer.
  */
-const GARDES_QUI_BALAIENT = readdirSync('scripts/gates')
-  .filter((f) => f.endsWith('.ts'))
-  .map((f) => `scripts/gates/${f}`)
-  .filter((chemin) => readFileSync(chemin, 'utf8').includes('fichiersSuivisOuRefus'))
-  .sort();
+const GARDES_QUI_BALAIENT = [
+  'scripts/gates/gov-conventions.ts',
+  'scripts/gates/gov-entite.ts',
+  'scripts/gates/gov-identifiants.ts',
+  'scripts/gates/gov-preseance.ts',
+  'scripts/gates/gov-publication.ts',
+  'scripts/gates/lexique-apporteurs.ts',
+] as const;
 
-// CONTRÔLE POSITIF : une liste dérivée peut se vider sans bruit — un import renommé, un dossier
-// déplacé — et « aucune garde à éprouver » se lirait comme « toutes les gardes passent ».
-// 🔴 LE SEUIL SE DÉRIVE AUSSI. Une première rédaction écrivait `< 5` — un LITTÉRAL, alors que la
-// liste en vaut SIX après la réconciliation : une garde qui sortirait du périmètre la ramènerait à
-// cinq et ce contrôle resterait muet. C'est exactement le trou que la dérivation venait fermer,
-// reproduit dans le contrôle censé le garder. Relevé par `simplicite`.
-// *Un compteur de sûreté écrit à la main hérite du défaut qu'il surveille.*
-// On compte donc les gardes qui importent la primitive, à la source, et on exige l'égalité.
-// ⚠️ Compté par une méthode DIFFÉRENTE de celle qui construit la liste : celle-ci cherche l'APPEL
-// (`fichiersSuivisOuRefus`), celle-là l'IMPORT (`from '../lot/fichiers-suivis'`). Compter deux fois
-// la même chose rendrait l'égalité tautologique — et un contrôle tautologique est un vert gratuit.
-// Croisées, elles attrapent l'import sans appel comme l'appel sans import.
-const IMPORTENT_LA_PRIMITIVE = readdirSync('scripts/gates')
-  .filter((f) => f.endsWith('.ts'))
-  .filter((f) => /from '\.\.\/lot\/fichiers-suivis'/.test(readFileSync(`scripts/gates/${f}`, 'utf8')))
-  .length;
-
-if (GARDES_QUI_BALAIENT.length !== IMPORTENT_LA_PRIMITIVE || GARDES_QUI_BALAIENT.length === 0) {
-  throw new Error(
-    `GARDES_QUI_BALAIENT rend ${GARDES_QUI_BALAIENT.length} garde(s) pour ` +
-      `${IMPORTENT_LA_PRIMITIVE} qui importent \`fichiersSuivisOuRefus\` : le périmètre est ` +
-      'INCONNU, pas vide. Les témoins ci-dessous ne prouveraient rien.'
+it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {
+  // La réciproque de la déclaration : elle attrape la garde AJOUTÉE qu'on aurait oublié d'inscrire.
+  // L'autre sens — la garde qui PERD le correctif — est tenu par la déclaration elle-même : elle
+  // reste dans la liste, donc dans les témoins, donc elle rougit.
+  const importent = enumererFichiers('scripts/gates').filter((f) =>
+    readFileSync(f, 'utf8').includes('fichiersSuivisOuRefus')
   );
-}
+  expect(
+    importent.filter((f) => !GARDES_QUI_BALAIENT.includes(f as (typeof GARDES_QUI_BALAIENT)[number])),
+    'ces gardes importent `fichiersSuivisOuRefus` sans être déclarées dans GARDES_QUI_BALAIENT'
+  ).toEqual([]);
+});
 
 /**
  * 🔴 LE CONTRÔLE QUI NE DÉPEND PAS DE LA LISTE — motif de `mutation` sur la PR #33.
