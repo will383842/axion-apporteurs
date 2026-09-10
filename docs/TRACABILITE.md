@@ -14,17 +14,22 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**321 exigences actives · 31 réputées testées · 31 couvertes · 0 orphelines.**
+**321 exigences actives · 40 réputées testées · 40 couvertes · 0 orphelines.**
 
-209 tâches, dont 20 livrées · 31 fichiers de test exécutés par `vitest` sur 31 présents.
+209 tâches, dont 29 livrées · 31 fichiers de test exécutés par `vitest` sur 31 présents.
 
 ## Exigences réputées testées
 
 | Exigence | Tâches porteuses | Tests qui la citent | État |
 | --- | --- | --- | --- |
+| `REQ-CPL-001` | `CPL-T01`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-002` | `CPL-T01`, `GOV-015`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
+| `REQ-CPL-003` | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
+| `REQ-CPL-004` | `CPL-T01`, `DM-11` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
+| `REQ-CPL-017` | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-018` | `CPL-T01`, `GOV-009` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts` | couverte |
 | `REQ-CPL-021` | `GOV-000`, `QA-T04` | `tests/unit/gouvernance/autonomie.spec.ts` | couverte |
+| `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006` | `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
 | `REQ-GOV-001` | `GOV-001` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-002` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-003` | `GOV-003`, `GOV-005`, `GOV-025`, `GOV-028`, `GOV-037` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | couverte |
@@ -39,6 +44,8 @@
 | `REQ-GOV-013` | `GOV-007` | `tests/gov/charte-pr.spec.ts` | couverte |
 | `REQ-GOV-014` | `GOV-000`, `GOV-012` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
 | `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
+| `REQ-GOV-016` | `GOV-006` | `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
+| `REQ-GOV-017` | `GOV-013` | `tests/unit/gouvernance/lexique.spec.ts` | couverte |
 | `REQ-GOV-021` | `GOV-017a`, `GOV-017b`, `GOV-024`, `GOV-027`, `GOV-037` | `tests/unit/gouvernance/paths-derives.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-022` | `GOV-015` | `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-GOV-023` | `GOV-008`, `GOV-018` | `tests/unit/gouvernance/plan-state-frais.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts` | couverte |
@@ -48,6 +55,8 @@
 | `REQ-GOV-027` | `CPL-T01`, `CPL-T23`, `GOV-017a`, `GOV-017b`, `GOV-022` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` | couverte |
 | `REQ-GOV-030` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
+| `REQ-GOV-032` | `GOV-024`, `GOV-035` | `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
+| `REQ-GOV-033` | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | couverte |
 | `REQ-INT-003` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-004` | `INT-T01a`, `INT-T05` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-029` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
@@ -87,9 +96,6 @@
 | `REQ-ARG-033` | 2 | `T-ARG-010`, `T-ARG-016` | — |
 | `REQ-ARG-034` | 2 | `JUR-T16`, `T-ARG-015`, `T-ARG-039` | — |
 | `REQ-ARG-035` | 2 | `T-ARG-016`, `T-ARG-033`, `T-ARG-038`, `UX-P2-04` | — |
-| `REQ-CPL-001` | -1 | `CPL-T01`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` |
-| `REQ-CPL-003` | -1 | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` |
-| `REQ-CPL-004` | -1 | `CPL-T01`, `DM-11` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` |
 | `REQ-CPL-005` | 0 | `DM-06`, `DM-11` | — |
 | `REQ-CPL-006` | 1 | `CPL-T06` | — |
 | `REQ-CPL-007` | 2 | `INT-T23`, `UX-P2-05` | — |
@@ -102,7 +108,6 @@
 | `REQ-CPL-014` | 2 | `CPL-T14-A`, `CPL-T14-P` | — |
 | `REQ-CPL-015` | -1 | `CPL-T15`, `INT-T01b`, `INT-T22` | — |
 | `REQ-CPL-016` | 1 | `INT-T21-P` | — |
-| `REQ-CPL-017` | -1 | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` |
 | `REQ-CPL-019` | 1 | `UX-P1-09` | — |
 | `REQ-CPL-020` | 0 | `DM-06`, `T-ARG-015` | — |
 | `REQ-CPL-022` | 0 | `CPL-T22` | — |
@@ -115,7 +120,6 @@
 | `REQ-CPL-029` | 1 | `UX-P1-15` | — |
 | `REQ-DM-001` | 0 | `DM-01`, `DM-02` | — |
 | `REQ-DM-002` | 1 | `DM-07` | — |
-| `REQ-DM-003` | -1 | `DM-02`, `DM-07`, `GOV-006` | `glossaire-enums.spec.ts` |
 | `REQ-DM-004` | 1 | `DM-07`, `DM-08`, `DM-13` | — |
 | `REQ-DM-005` | 1 | `DM-07` | — |
 | `REQ-DM-006` | 1 | `DM-08`, `DM-13`, `DM-24` | — |
@@ -185,13 +189,9 @@
 | `REQ-EXT-027` | 1 | `DM-23`, `UX-P1-14` | — |
 | `REQ-EXT-028` | 0 | `JUR-T02` | — |
 | `REQ-EXT-029` | 2 | `UX-P2-04` | — |
-| `REQ-GOV-016` | -1 | `GOV-006` | `glossaire-enums.spec.ts` |
-| `REQ-GOV-017` | -1 | `GOV-013` | `lexique.spec.ts` |
 | `REQ-GOV-018` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
 | `REQ-GOV-028` | -1 | `GOV-019` | `poids-du-bundle-garde-vraiment.spec.ts` |
 | `REQ-GOV-029` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
-| `REQ-GOV-032` | -1 | `GOV-024`, `GOV-035` | `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` |
-| `REQ-GOV-033` | -1 | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` |
 | `REQ-INT-001` | 0 | `INT-T02` | `outbox-produit-des-evenements-valides.spec.ts` |
 | `REQ-INT-005` | -1 | `INT-T01b`, `INT-T05` | — |
 | `REQ-INT-006` | -1 | `INT-T01b`, `INT-T04` | — |
@@ -397,19 +397,19 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 1 | 13 | 1 |
 | 2 | 3 | 0 |
 | 3 | 1 | 0 |
-| 4 | 15 | 0 |
+| 4 | 15 | 1 |
 | 5 | 15 | 1 |
-| 6 | 1 | 0 |
+| 6 | 1 | 1 |
 | 7 | 1 | 0 |
 | 8 | 13 | 0 |
-| 9 | 36 | 4 |
+| 9 | 36 | 6 |
 | 10 | 6 | 0 |
-| 11 | 5 | 0 |
+| 11 | 5 | 1 |
 | 12 | 13 | 0 |
 | 13 | 32 | 1 |
 | 14 | 13 | 0 |
 | 15 | 23 | 2 |
-| 16 | 8 | 0 |
+| 16 | 8 | 1 |
 | 17 | 15 | 1 |
 | 18 | 3 | 0 |
 | 19 | 1 | 0 |
@@ -421,14 +421,14 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 1 | 3 | 0 |
 | 2 | 12 | 0 |
 | 3 | 1 | 0 |
-| 4 | 16 | 0 |
+| 4 | 16 | 1 |
 | 5 | 17 | 1 |
-| 6 | 2 | 0 |
-| 7 | 52 | 3 |
+| 6 | 2 | 1 |
+| 7 | 52 | 4 |
 | 8 | 12 | 0 |
-| 9 | 23 | 4 |
-| 10 | 63 | 4 |
-| 11 | 30 | 2 |
+| 9 | 23 | 5 |
+| 10 | 63 | 5 |
+| 11 | 30 | 3 |
 | 12 | 14 | 0 |
 
 ## Fichiers de test

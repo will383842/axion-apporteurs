@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `e0dacf3` — 2026-09-09T23:59:31+02:00 |
-| Qu’est-ce qui est en vol ? | aucune PR ouverte |
+| Qu’est-ce qui est en vol ? | 1. #32 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase -1 — 29/36 tâches, reste 4.00 j |
 | Le prochain pas | GOV-014 — Conventions + sélection des gardes d'axionia (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #31 — 2026-09-05 |
 
-**Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
@@ -57,7 +57,11 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 
 ## File de fusion
 
-Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.
+| # | PR | Branche | Ce qui la bloque |
+| --- | --- | --- | --- |
+| 1 | #32 — chore(GOV-012): cloture du lot L-1-04 — neuf taches fusionnee, le verrou de phase leve | `lot/L-1-04-cloture` | un contrôle requis rouge ou une revue manquante |
+
+Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
 ## Revendications
 
