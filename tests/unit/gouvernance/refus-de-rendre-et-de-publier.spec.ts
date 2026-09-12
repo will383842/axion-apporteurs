@@ -444,7 +444,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'le `try/catch { return [] }` que la PR #31 avait fermé pour les cinq autres gardes, ' +
         "SANS entrer en conflit. Converti à `fichiersSuivisOuRefus`. Ses deux sorties sont " +
         'désormais couvertes par les trois témoins de `REQ-CPL-018`, qui le voient parce que ' +
-        '`GARDES_QUI_BALAIENT` est DÉRIVÉE DU DISQUE — non parce que quelqu’un y a pensé.',
+        '`GARDES_QUI_BALAIENT` le DÉCLARE — et une réciproque attrape la garde qu’on oublierait d’y inscrire.',
     },
     'scripts/lot/fichiers-suivis.ts': {
       total: 2,
@@ -667,15 +667,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       // porte déjà. Mesuré : `fichiers-suivis.ts` (base 2, déclaré 2) exigeait 4 pour 2 portés.
       // *Un delta additionné à sa propre base compte deux fois ce qui n'est arrivé qu'une.*
       // Le plancher juste est ce que la BASE porte : un refus retiré en douce passe dessous.
-      // 🔴 LE PLANCHER EST L'ABSOLU DÉCLARÉ, PAS LA BASE. `mutation` a montré que `>= surMain(f)`
-      // rend **0** pour un fichier NEUF — et trois des quatre fichiers de cette PR le sont. En
-      // neutralisant les DIX sorties que la PR déclare ajouter, les deux tests restaient VERTS :
-      // le delta tombait à zéro, le fichier sortait de l'égalité stricte, et il atterrissait sur
-      // un plancher `0 >= 0`. *Retirer 1 des 3 rougissait ; retirer les 3 passait.*
-      // 🔑 **Un plancher calé sur la base ne peut pas, par construction, garder ce que la PR ajoute.**
-      // `porte` est donc le compte ABSOLU, mesuré et déclaré, que le fichier doit encore porter.
+      // Le plancher est le compte ABSOLU déclaré (`porte`), pas un delta ni la base : un delta ne
+      // garde rien une fois la PR atterrie, et une base rend ZÉRO pour un fichier neuf — or trois
+      // des quatre fichiers de cette PR le sont. Mesuré par `mutation` : les dix sorties que la PR
+      // déclare ajouter, neutralisées, laissaient les deux tests VERTS.
+      // 🔑 *Un plancher calé sur la base ne peut pas, par construction, garder ce que la PR ajoute.*
       expect(
-        compter(readFileSync(declares[f] ? f : f, 'utf8')),
+        compter(readFileSync(f, 'utf8')),
         `${f} porte moins de ${declares[f]!.porte} sortie(s) non nulle(s) : un refus a été retiré`
       ).toBeGreaterThanOrEqual(declares[f]!.porte);
     }
