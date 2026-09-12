@@ -16,7 +16,7 @@
 
 **321 exigences actives · 40 réputées testées · 40 couvertes · 0 orphelines.**
 
-212 tâches, dont 30 livrées · 35 fichiers de test exécutés par `vitest` sur 35 présents.
+212 tâches, dont 30 livrées · 36 fichiers de test exécutés par `vitest` sur 36 présents.
 
 ## Exigences réputées testées
 
@@ -29,7 +29,7 @@
 | `REQ-CPL-017` | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-018` | `CPL-T01`, `GOV-009` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts` | couverte |
 | `REQ-CPL-021` | `GOV-000`, `QA-T04` | `tests/unit/gouvernance/autonomie.spec.ts` | couverte |
-| `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006`, `GOV-030` | `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
+| `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006`, `GOV-030` | `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
 | `REQ-GOV-001` | `GOV-001` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-002` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-003` | `GOV-003`, `GOV-005`, `GOV-025`, `GOV-028`, `GOV-037` | `tests/unit/gouvernance/citation-json-vs-prose.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | couverte |
@@ -58,7 +58,7 @@
 | `REQ-GOV-032` | `GOV-024`, `GOV-035` | `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-033` | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | couverte |
 | `REQ-INT-003` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
-| `REQ-INT-004` | `GOV-030`, `INT-T01a`, `INT-T05` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
+| `REQ-INT-004` | `GOV-030`, `INT-T01a`, `INT-T05` | `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-029` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-QA-007` | `INT-T01a`, `INT-T01b` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-QA-013` | `QA-T00`, `QA-T01`, `QA-T07`, `QA-T28` | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
@@ -463,6 +463,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | oui | `REQ-GOV-015`, `REQ-GOV-021` |
 | `tests/unit/gouvernance/regles-maison.spec.ts` | oui | `REQ-GOV-023`, `REQ-GOV-024` |
 | `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011` |
+| `tests/unit/gouvernance/termes-interdits.spec.ts` | oui | `REQ-DM-003`, `REQ-INT-004` |
 | `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts` | oui | `REQ-GOV-032` |
 | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | oui | `REQ-GOV-014`, `REQ-QA-013` |
 | `tests/unit/gouvernance/tracabilite.spec.ts` | oui | `REQ-GOV-005`, `REQ-QA-014` |

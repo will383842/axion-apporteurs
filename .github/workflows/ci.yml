@@ -160,6 +160,22 @@ jobs:
         run: pnpm partners:schema:enums
       - name: La garde du vocabulaire sait rougir
         run: pnpm partners:schema:enums:prove
+      # GOV-030 : la garde des TERMES INTERDITS que six documents invoquaient sans qu'elle existe
+      # (`docs/GLOSSAIRE.md`, `docs/CONVENTIONS.md` §2, RM-01 et RM-06, `packages/contracts/events.ts`,
+      # REQ-GOV-001, `docs/GATES.md`). BLOQUANTE : pas de `continue-on-error` — la famille
+      # `lint_non_bloquant` de `gov:conventions` le refuse, et une gate qui ne bloque rien ne garde rien.
+      #
+      # ⚠️ APPELEE PAR SON CHEMIN, ET NON PAR `pnpm gov:check` — ce n'est pas une coquetterie.
+      # Le nom `gov:check` designe DEUX choses dans ce depot : l'entree de `docs/gates.json` (cette
+      # garde-ci) et une CHAINE de seize gardes declaree dans `package.json`. Ecrire `pnpm gov:check`
+      # ici lancerait la chaine, PAS la garde — et satisferait quand meme la famille
+      # `garde_ecrite_jamais_appelee`, qui cherche l'identifiant OU le chemin. Le chemin est donc la
+      # seule invocation qui dise la verite tant que l'homonymie n'est pas tranchee par un ADR
+      # (acceptation de GOV-030 : « le choix … se tranche par un ADR, pas dans la PR »).
+      - name: Termes interdits — nomenclature, modeles d axionia, etats occupants et synonymes
+        run: npx tsx scripts/gates/gov-check.ts
+      - name: La garde des termes interdits sait rougir
+        run: npx tsx scripts/gates/gov-check.ts --prove
       # GOV-013 : le lexique interdit (REQ-GOV-017, durci par REQ-JUR-037). La garde vise la
       # TOURNURE et non le mot — « aucun objectif, aucun quota » est la phrase qui protege du
       # la charte relationnelle, et une garde qui la ferait rougir forcerait a la RETIRER. La preuve
