@@ -28,6 +28,7 @@ import {
   typesEvenementDeLaReq,
   modelesRefusesDAxionia,
   synonymesDuGlossaire,
+  racinesDuGlossaire,
   FAMILLES,
   VUE_CONFORME,
   vueDuDepot,
@@ -77,7 +78,7 @@ describe('REQ-INT-004 — la nomenclature des événements est LUE, jamais recop
 
   it('REQ-INT-004 : `payment.received` dans un fichier de docs fait rougir la garde', () => {
     // C'est la `fixtureRouge` que `docs/gates.json` déclare pour cette entrée, mot pour mot.
-    const vue = avecFichier('docs/note.md', 'le producteur emet payment.received a la signature');
+    const vue = avecFichier('docs/adr/0011-temoin.md', 'le producteur emet payment.received a la signature');
     expect(familles(vue)).toContain('evenement_hors_nomenclature');
   });
 
@@ -93,7 +94,7 @@ describe('REQ-INT-004 — la nomenclature des événements est LUE, jamais recop
 
   it('REQ-INT-004 : un nom en anglais et un nom valide ne rougissent pas la même famille', () => {
     // Un témoin qui bouge pour DEUX raisons ne discrimine rien : les deux familles sont exclusives.
-    const anglais = familles(avecFichier('docs/note.md', 'devis.signed'));
+    const anglais = familles(avecFichier('docs/adr/0011-temoin.md', 'devis.signed'));
     expect(anglais).toContain('evenement_hors_nomenclature');
     expect(anglais).not.toContain('evenement_litteral_hors_contrat');
   });
@@ -102,7 +103,7 @@ describe('REQ-INT-004 — la nomenclature des événements est LUE, jamais recop
 describe('REQ-DM-003 — aucune liste littérale d’états hors de son exigence (RM-06)', () => {
   it('REQ-DM-003 : l’index à deux états que le registre nomme fait rougir la garde', () => {
     const vue = avecFichier(
-      'docs/migration.md',
+      'prisma/migrations/0001_index/migration.sql',
       "CREATE INDEX sur attributions WHERE statut IN ('provisoire','active')"
     );
     expect(familles(vue)).toContain('liste_litterale_d_etats');
@@ -114,7 +115,10 @@ describe('REQ-DM-003 — aucune liste littérale d’états hors de son exigence
       reqDm003: VUE_CONFORME.reqDm003.replace(', figee_resiliation}', '}'),
       fichiers: [
         ...VUE_CONFORME.fichiers,
-        { chemin: 'docs/note.md', contenu: "statut IN ('figee_resiliation','perdue')" },
+        {
+          chemin: 'prisma/migrations/0002/migration.sql',
+          contenu: "statut IN ('figee_resiliation','perdue')",
+        },
       ],
     };
     expect(familles(sansFigee)).not.toContain('liste_litterale_d_etats');
@@ -140,14 +144,14 @@ describe('GOV-030 — la garde ne peut pas interdire sa propre documentation', (
       'le rôle est `qualifieur` ; `qualificateur` est un synonyme interdit',
       'la liste fermée est `client.cree`, `devis.signe`, `paiement.recu`',
     ].join('\n');
-    expect(controler(avecFichier('docs/REGLES-MAISON.md', documentation))).toEqual([]);
+    expect(controler(avecFichier('docs/adr/0008-contrat-evenements.md', documentation))).toEqual([]);
   });
 
   it('CONTRE-TÉMOIN : hors des accents graves, le même document rougit', () => {
     // Sans cette assertion, l'exemption ci-dessus pourrait être une garde éteinte plutôt qu'une
     // exemption : un témoin qui ne rougit jamais ne prouve pas qu'il sait distinguer.
     const usage = 'le producteur emet payment.received puis invoice.issued';
-    expect(familles(avecFichier('docs/REGLES-MAISON.md', usage))).toContain(
+    expect(familles(avecFichier('docs/adr/0008-contrat-evenements.md', usage))).toContain(
       'evenement_hors_nomenclature'
     );
   });
@@ -172,7 +176,9 @@ describe('GOV-030 — synonymes interdits du glossaire', () => {
   it('REQ-INT-004 : les synonymes se LISENT dans le glossaire — amputé, il n’en garde plus', () => {
     const sansQualificateur: Vue = {
       ...VUE_CONFORME,
-      glossaire: VUE_CONFORME.glossaire.replace('`qualificateur`, ', ''),
+      // On remplace le terme DANS LA SOURCE : si la garde le lisait ailleurs — ou le portait en
+      // dur — le fichier témoin ci-dessous rougirait quand même.
+      glossaire: VUE_CONFORME.glossaire.replace('`qualificateur`', '`un_autre_terme`'),
       fichiers: [
         ...VUE_CONFORME.fichiers,
         { chemin: 'src/roles.ts', contenu: "const r = 'qualificateur';" },
@@ -214,6 +220,47 @@ describe('GOV-030 — la garde refuse de conclure sans périmètre ni source', (
     expect([...TYPES_EVENEMENT].sort()).toEqual(
       typesEvenementDeLaReq(vueDuDepot().reqInt004).sort()
     );
+  });
+
+  it('REQ-DM-003 : les fixtures de la preuve lisent comme les SOURCES RÉELLES du dépôt', () => {
+    // ⚠️ SANS CE TEST, LA PREUVE POURRAIT ÊTRE VERTE SUR UNE GRAMMAIRE QUI N'EXISTE PLUS.
+    // `--prove` n'a pas le droit de lire le dépôt (RM-11), donc ses fixtures REPRODUISENT les
+    // tournures des sources. Le jour où le glossaire réécrit sa clause, la garde cesserait de
+    // rien dériver et resterait verte des deux côtés : ici on confronte les deux lectures.
+    const reel = vueDuDepot();
+    expect(racinesDuGlossaire(reel.glossaire)).toEqual(racinesDuGlossaire(VUE_CONFORME.glossaire));
+    expect(modelesRefusesDAxionia(reel.reqInt004, reel.glossaire)).toEqual(
+      expect.arrayContaining(['Invoice', 'Refund', 'PaymentScheduleProfile'])
+    );
+    const reels = synonymesDuGlossaire(reel.glossaire);
+    // Les deux termes que `docs/gates.json` nomme, et que la garde doit donc savoir lire.
+    expect(reels.filter((s) => s.exerce).map((s) => s.terme)).toEqual(
+      expect.arrayContaining(['qualificateur', 'payment.received'])
+    );
+  });
+
+  it('REQ-DM-003 : le périmètre est LU dans l’en-tête du glossaire — quatre racines', () => {
+    expect(racinesDuGlossaire(vueDuDepot().glossaire)).toEqual([
+      'prisma/',
+      'src/',
+      'messages/',
+      'docs/adr/',
+    ]);
+
+    // Renversement : la clause réécrite déplace le périmètre. Sans cette assertion, une liste
+    // tapée en dur passerait — et c'est précisément la faute que RM-01 nomme.
+    const ampute = vueDuDepot().glossaire.replace(', `docs/adr/**`', '');
+    expect(racinesDuGlossaire(ampute)).not.toContain('docs/adr/');
+  });
+
+  it('REQ-DM-003 : hors du périmètre, la garde ne juge pas — et elle le DIT', () => {
+    // Un contre-témoin qui vaut aveu : `docs/REQUIREMENTS.md` porte aujourd'hui des termes que le
+    // glossaire refuse (`WebhookRecu`, `eventId`), et la garde ne les voit pas parce que l'en-tête
+    // du glossaire arrête son périmètre à quatre racines. Ce n'est pas « rien à signaler » : la
+    // sortie imprime le nombre de fichiers laissés dehors.
+    const dehors = avecFichier('docs/REQUIREMENTS.md', 'WebhookRecu {source, eventId, …}');
+    expect(controler(dehors)).toEqual([]);
+    expect(lancer().sortie).toMatch(/Hors périmètre : \d+ fichier\(s\)/);
   });
 });
 
