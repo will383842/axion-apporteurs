@@ -658,22 +658,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     for (const f of Object.keys(declares)) {
       if (ajoutesParFichier.has(f)) continue; // déjà confronté au diff, ci-dessus
       expect(existsSync(f), `${f} est déclaré au registre des refus mais n’existe plus`).toBe(true);
-      // 🔴 LE PLANCHER EST UN ABSOLU, PAS LE DELTA. Une première rédaction comparait le compte du
-      // disque à `d.total` — or `d.total` est le nombre de sorties AJOUTÉES contre `origin/main`,
-      // pas le nombre que le fichier porte. `mutation` l'a mesuré : sur `gov-trace` (1 déclaré,
-      // 10 portés), `gov-pr` (2/14) et `gov-requirements` (3/8), **vingt-six refus retirés** et le
-      // test restait VERT — alors que la ligne au-dessus affirmait « un refus retiré en douce
-      // rougit toujours ici ». *Une affirmation écrite dans le code est une garde de plus à tenir.*
-      // Le plancher juste : ce que la base porte, PLUS ce que la PR déclare ajouter.
-      // ⚠️ ET PAS `surMain(f) + d.total` : ce plancher-là DOUBLE-COMPTE. `d.total` est le delta
-      // déclaré au moment où la PR a été écrite ; une fois qu'elle a atterri, `origin/main` le
-      // porte déjà. Mesuré : `fichiers-suivis.ts` (base 2, déclaré 2) exigeait 4 pour 2 portés.
-      // *Un delta additionné à sa propre base compte deux fois ce qui n'est arrivé qu'une.*
-      // Le plancher juste est ce que la BASE porte : un refus retiré en douce passe dessous.
-      // Le plancher est le compte ABSOLU déclaré (`porte`), pas un delta ni la base : un delta ne
-      // garde rien une fois la PR atterrie, et une base rend ZÉRO pour un fichier neuf — or trois
-      // des quatre fichiers de cette PR le sont. Mesuré par `mutation` : les dix sorties que la PR
-      // déclare ajouter, neutralisées, laissaient les deux tests VERTS.
+      // Le plancher est le compte ABSOLU déclaré (`porte`). Ni un delta — il ne garde rien une fois
+      // la PR atterrie — ni la base : elle rend ZÉRO pour un fichier neuf, et trois des quatre
+      // fichiers de ce lot le sont. Mesuré : les dix sorties que la PR déclare ajouter,
+      // neutralisées, laissaient les deux tests VERTS.
       // 🔑 *Un plancher calé sur la base ne peut pas, par construction, garder ce que la PR ajoute.*
       expect(
         compter(readFileSync(f, 'utf8')),
