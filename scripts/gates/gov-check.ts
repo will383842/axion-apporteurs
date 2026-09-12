@@ -46,18 +46,33 @@
  * ⚠️ LE PARTAGE AVEC `partners:schema:enums`, ET POURQUOI IL N'EST PAS UN DOUBLON.
  * `scripts/gates/schema-enums.ts` porte déjà une famille `liste_litterale_d_etats`. Elle balaie
  * le CODE (`src`, `prisma`, `scripts` en `.ts/.prisma/.sql`) et exige TROIS états sur une ligne.
- * Le registre demande ici « partout (code, docs, registre) » et nomme `('provisoire','active')`
- * — un index à DEUX états, que le seuil de trois ne voit pas. Les deux gardes se complètent donc
- * sur le périmètre et sur le seuil ; ce qu'elles ne dupliquent PAS, c'est la liste des sept
+ * Ici le seuil est DEUX, parce que `('provisoire','active')` — l'index à deux états que le
+ * registre nomme, et celui qui a réellement été écrit — passe sous un seuil de trois. Les deux
+ * gardes se complètent donc sur le seuil ; ce qu'elles ne dupliquent PAS, c'est la liste des sept
  * états : elle est importée de `schema-enums.ts`, qui la lit dans REQ-DM-003.
+ *
+ * ── LE PÉRIMÈTRE, ET POURQUOI IL N'EST PAS « PARTOUT » ──────────────────────────────────────
+ *
+ * Les racines balayées sont LUES dans l'en-tête de `docs/GLOSSAIRE.md` — `prisma/**`, `src/**`,
+ * `messages/**`, `docs/adr/**` —, plus `packages/contracts/**` (le motif est sur `RACINE_CONTRATS`).
+ * C'est la seule source du dépôt qui donne un périmètre à cette garde, et `docs/PRESEANCE.md` §2
+ * lui donne la primauté sur « un terme et ses synonymes interdits ».
+ *
+ * Le champ `verifie` de `docs/gates.json` écrit « partout (code, docs, registre) ». Pris au mot,
+ * il fait rougir 78 fois — mesuré avant d'être écarté — et PAS UNE dans ces racines : les 78 sont
+ * dans les registres (`docs/REQUIREMENTS.md`, `docs/REQUIREMENTS-ANNEXE-FUSIONS.md`), là où ils
+ * CONSIGNENT l'arbitrage qui a écarté le mauvais terme. Ce n'est pas une tolérance silencieuse :
+ * le compte des fichiers laissés dehors est imprimé à chaque exécution, et l'écart entre les deux
+ * lectures du périmètre est remonté au `gardien-spec`, à qui l'élargissement appartient.
  *
  * ── L'EXEMPTION QUI PROTÈGE LA DOCUMENTATION DE LA RÈGLE ────────────────────────────────────
  *
  * CITER N'EST PAS SE SERVIR. Les documents qui EXPLIQUENT l'interdit doivent pouvoir écrire son
- * contre-exemple : `docs/GLOSSAIRE.md` énumère les seize synonymes refusés, `docs/REGLES-MAISON.md`
- * cite `('provisoire','active')`, `docs/gates.json` décrit ce que la garde refuse. Une garde qui
- * rougirait là-dessus obligerait à RETIRER le texte qui la porte — défaut déjà rencontré et
- * corrigé sur `gov:identifiants`, qui rougissait sur cinq occurrences de sa propre documentation.
+ * contre-exemple : `docs/GLOSSAIRE.md` énumère les synonymes refusés, `docs/REGLES-MAISON.md`
+ * cite `('provisoire','active')`, et les ADR de `docs/adr/**` — qui sont DANS le périmètre —
+ * écrivent les noms anglais pour dire qu'ils sont écartés. Une garde qui rougirait là-dessus
+ * obligerait à RETIRER le texte qui la porte — défaut déjà rencontré et corrigé sur
+ * `gov:identifiants`, qui rougissait sur cinq occurrences de sa propre documentation.
  *
  * La ligne se trace sur le RÔLE DE L'ACCENT GRAVE dans le fichier, pas sur le dossier :
  *   — en `.md`, `.json`, `.yml`, `.sql`, `.prisma`, l'accent grave n'est le délimiteur d'AUCUNE
@@ -70,17 +85,20 @@
  * ⚠️ UN SPAN D'ACCENTS GRAVES PEUT TRAVERSER UNE FIN DE LIGNE, et `docs/GLOSSAIRE.md` en porte
  * un : la description de `EvenementRecu` cite `{source …, eventId …, eventType, …}` sur deux
  * lignes. Une exemption calculée ligne à ligne aurait rougi sur la seconde moitié d'une citation.
- * `zonesCiteesDuDocument` reporte donc le span ouvert sur la ligne suivante avant d'appeler
- * `zonesCitees`.
+ * `zonesCiteesDuDocument` apparie donc les accents graves À TRAVERS les fins de ligne, et le
+ * contre-témoin homonyme de `--prove` tient ce cas.
  *
  * ── INVARIANT DE LA PREUVE (RM-11) ──────────────────────────────────────────────────────────
  * `--prove` n'écrit rien et ne LIT rien du dépôt : la vue est injectée. Une preuve qui lirait les
  * fichiers réels verdirait ou rougirait au gré de ce que le dépôt contient le jour où elle
- * tourne, et ne dirait plus rien de la garde.
+ * tourne, et ne dirait plus rien de la garde. En contrepartie, une fixture peut décrire une
+ * grammaire que la source n'a plus : `termes-interdits.spec.ts` confronte donc, sur le dépôt
+ * réel, ce que la fixture dérive et ce que les sources dérivent.
  *
  * ── INVARIANT DU PÉRIMÈTRE ──────────────────────────────────────────────────────────────────
- * « 0 fichier balayé » n'est pas « aucun défaut ». `src/` est VIDE en phase −1 : la garde imprime
- * le compte de chaque racine, zéros compris, et REFUSE de conclure sur un périmètre vide.
+ * « 0 fichier balayé » n'est pas « aucun défaut ». En phase −1, `messages/` est VIDE et `src/`
+ * ne porte que trois fichiers : la garde imprime le compte de CHAQUE racine, zéros compris,
+ * nomme celles qui sont vides, et REFUSE de conclure quand le périmètre entier est vide.
  */
 
 import { readFileSync } from 'node:fs';
@@ -328,7 +346,7 @@ export function synonymesDuGlossaire(glossaire: string): SynonymeInterdit[] {
         terme: jeton[1]!,
         exerce,
         motif: exerce
-          ? `interdit sec, ${'docs/GLOSSAIRE.md'}:${i + 1}`
+          ? `interdit sec, docs/GLOSSAIRE.md:${i + 1}`
           : `interdit SOUS CONDITION («${suite.split(/[,;.\n]/)[0]!.trim()}»), ` +
             `docs/GLOSSAIRE.md:${i + 1} — la garde ne l'exerce pas`,
       });
