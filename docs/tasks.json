@@ -646,7 +646,13 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-014"
+        ".prettierignore",
+        ".prettierrc.json",
+        "docs/CONVENTIONS.md",
+        "docs/GARDES-AXIONIA.md",
+        "eslint.config.mjs",
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -661,10 +667,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
+      "statut": "en_cours",
+      "owner": "A01",
+      "lot": "L-1-05",
+      "branch": "lot/L-1-INT-b",
       "pr": null,
       "issue": 16,
       "attempts": 0,
@@ -800,7 +806,6 @@
         "REQ-ARG-030",
         "REQ-CPL-015",
         "REQ-DM-018",
-        "REQ-DM-036",
         "REQ-DM-039",
         "REQ-DM-040",
         "REQ-INT-005",
@@ -812,15 +817,70 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A08",
       "lot": null,
-      "branch": null,
+      "branch": "lot/int-t01b-contrat-evenements",
       "pr": null,
       "issue": 19,
       "attempts": 0,
       "motif": null,
-      "acceptance": "payloads (REQ-INT-005/006/032, REQ-DM-039/040, K-18 payers[], `client.fusionne`, `candidature.recue`), dérivation HT, deux formes de remboursement ; `pnpm partners:fixtures` (dans axionia, `scripts/partners/fixtures.ts`, base de dev port 5434, pseudonymisation, sortie commitée dans Partners avec `Source:`) — **aucune fixture écrite à la main, aucun helper qui « complète » un champ manquant**."
+      "acceptance": "payloads (REQ-INT-005/006/032, REQ-DM-039/040, K-18 payers[], `client.fusionne`, `candidature.recue`), dérivation HT, deux formes de remboursement ; `pnpm partners:fixtures` (dans axionia, `scripts/partners/fixtures.ts`, base de dev port 5434, pseudonymisation, sortie commitée dans Partners avec `Source:`) — **aucune fixture écrite à la main, aucun helper qui « complète » un champ manquant**.",
+      "attestation": {
+        "pr": 998,
+        "sha": "41d71a79392bc6aa1a3f60e7853fa5715e076b79",
+        "fusionneeAt": "2026-09-05T11:04:48Z"
+      },
+      "tests": {
+        "REQ-ARG-002": [
+          "axionia/src/server/partners/__tests__/enveloppe.spec.ts"
+        ],
+        "REQ-ARG-005": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts"
+        ],
+        "REQ-ARG-006": [
+          "axionia/src/server/partners/__tests__/commission.spec.ts"
+        ],
+        "REQ-ARG-030": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts"
+        ],
+        "REQ-CPL-015": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts"
+        ],
+        "REQ-DM-018": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/derivation-ht.spec.ts"
+        ],
+        "REQ-DM-039": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts"
+        ],
+        "REQ-DM-040": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/commission.spec.ts"
+        ],
+        "REQ-INT-005": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/derivation-ht.spec.ts",
+          "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts"
+        ],
+        "REQ-INT-006": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/commission.spec.ts",
+          "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts"
+        ],
+        "REQ-INT-032": [
+          "axionia/src/server/partners/__tests__/payloads.spec.ts",
+          "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts"
+        ],
+        "REQ-QA-008": [
+          "axionia/src/server/partners/__tests__/enveloppe.spec.ts"
+        ],
+        "REQ-QA-007": [
+          "axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts",
+          "axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts"
+        ]
+      }
     },
     {
       "id": "GOV-017a",
@@ -919,7 +979,10 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "docs/gouvernance/GOV-019"
+        "lighthouserc.json",
+        "perf/budgets.json",
+        "scripts/gates/perf-budgets.ts",
+        "tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -932,10 +995,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
+      "statut": "en_cours",
+      "owner": "A01",
+      "lot": "L-1-05",
+      "branch": "lot/L-1-INT-b",
       "pr": null,
       "issue": 21,
       "attempts": 0,
@@ -944,7 +1007,8 @@
         "REQ-GOV-028": [
           "poids-du-bundle-garde-vraiment.spec.ts"
         ]
-      }
+      },
+      "acceptance": "`perf/budgets.json` (une entree de budget par route) et `lighthouserc.json` existent, et leurs seuils sont DERIVES du texte de REQ-GOV-028 lu dans `docs/requirements.json` : `--rendre` les ecrit, `--verifier` rougit si le disque en differe, et le test RENVERSE la source pour prouver que l'attente se renverse — sans quoi un retour constant passerait pour une derivation. La garde rougit sur une route de `src/app/(espace)` sans entree, dans les DEUX sens du cliquet, et LEVE si le texte de l'exigence ne dit plus le seuil au lieu de retomber sur un defaut. Perimetre vide ASSUME ET DIT : elle imprime le nombre de routes balayees et declare qu'un vert a zero route ne juge aucune route. Aucune dependance ajoutee — le mesureur entre avec QA-T20. L'etape de Gate A qui l'appelle ne porte pas `continue-on-error`, et la famille `etape_ci_muselee` le refuse."
     },
     {
       "id": "GOV-020",
@@ -2112,6 +2176,7 @@
       "reqs": [
         "REQ-ARG-002",
         "REQ-ARG-003",
+        "REQ-DM-036",
         "REQ-INT-010",
         "REQ-INT-011",
         "REQ-QA-008",
@@ -7496,7 +7561,8 @@
       "repo": "partners",
       "zone": "gouvernance",
       "paths": [
-        "scripts/gates/gov-identifiants.ts"
+        "scripts/gates/gov-identifiants.ts",
+        "tests/unit/gouvernance/citation-json-vs-prose.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -7509,10 +7575,10 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.25,
-      "statut": "a_faire",
-      "owner": null,
-      "lot": null,
-      "branch": null,
+      "statut": "en_cours",
+      "owner": "A01",
+      "lot": "L-1-05",
+      "branch": "lot/L-1-INT-b",
       "pr": null,
       "issue": null,
       "attempts": 0,
@@ -7771,6 +7837,136 @@
       "tests": {
         "REQ-GOV-031": [
           "tests/unit/gouvernance/entite-registre.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-030",
+      "titre": "`gov:check` designe DEUX choses, et aucune ne fait ce que six documents lui pretent",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-check.ts",
+        "tests/unit/gouvernance/termes-interdits.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-013"
+      ],
+      "reqs": [
+        "REQ-DM-003",
+        "REQ-INT-004"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "UN SEUL NOM POUR UNE SEULE CHOSE. Aujourd'hui `gov:check` en designe DEUX. (1) L'entree de docs/gates.json decrit une garde de TERMES INTERDITS dont le script scripts/gates/gov-check.ts N'EXISTE PAS, et aucun autre script ne fait ce travail. (2) package.json declare sous le meme nom une CHAINE de gardes de gouvernance qu'AUCUN workflow n'appelle. Six affirmations du depot s'appuient sur la premiere — docs/GLOSSAIRE.md, docs/CONVENTIONS.md, docs/REGLES-MAISON.md (RM-06), packages/contracts/events.ts, REQ-GOV-001 et la vue docs/GATES.md — et la tache qui les promettait, GOV-000, est FUSIONNEE : son acceptance promet le fichier et l'etape de CI, et ni l'un ni l'autre n'existe. A livrer : (1) scripts/gates/gov-check.ts existe, expose un controler() PUR sur une vue INJECTEE et un mode --prove avec un temoin ROUGE par famille et des contre-temoins VERTS, et couvre ce que le registre annonce — termes d'axionia invalides, noms d'evenements en anglais la ou l'exigence impose le francais, listes litterales d'etats hors de leur exigence, synonymes interdits du glossaire, et tout nom d'evenement litteral hors du paquet de contrats ; (2) un CONTRE-TEMOIN prouve que les documents qui EXPLIQUENT la regle peuvent ecrire son contre-exemple entre accents graves — sans quoi la garde interdirait sa propre documentation, defaut deja rencontre et corrige sur gov:identifiants ; (3) le perimetre est IMPRIME avec son compte, `src/` etant vide en phase -1, et « 0 fichier balaye » ne se lit pas comme « aucun defaut » ; (4) l'etape de Gate A qui l'appelle ne porte pas `continue-on-error` ; (5) l'entree du registre recoit sa preuveRouge et docs/GATES.md est regeneree ; (6) les six affirmations disent l'etat REEL de la garde au jour de la livraison. ⚠️ Le choix entre renommer la chaine de package.json et renommer l'entree du registre engage un identifiant que six documents citent : il se tranche par un ADR, pas dans la PR.",
+      "tests": {
+        "REQ-DM-003": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ],
+        "REQ-INT-004": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-031",
+      "titre": "eslint.config.mjs porte « CE FICHIER N'A JAMAIS ETE EXECUTE », et c'etait vrai",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "eslint.config.mjs",
+        ".prettierrc.json"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-014"
+      ],
+      "reqs": [
+        "REQ-GOV-018"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "owner": null,
+      "lot": null,
+      "branch": null,
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "GOV-014 a livre eslint.config.mjs, .prettierrc.json et .prettierignore, et son propre en-tete avertissait : « CE FICHIER N'A JAMAIS ETE EXECUTE. » Il l'a ete le 2026-09-05, dans un bac d'essai avec les cinq paquets installes : `eslint .` rend 46 erreurs sur 7 fichiers (no-undef 28, no-console 8, no-explicit-any 6, no-irregular-whitespace 2, no-require-imports 2) et `prettier --check .` rend 105 fichiers non formates. Les causes sont dans la CONFIGURATION, pas dans le code : languageOptions.globals absent, donc les globales de Node sont inconnues des scripts ; aucune derogation pour tests/**, donc no-console y frappe ; et scripts/lot/lot.workflow.js est un langage dedie dont les symboles sont injectes par son moteur, il releve d'un `ignores` et non d'un correctif. Le correctif minimal mesure (globals Node + derogation tests) ramene 46 a 25. C'est pourquoi le lot L-1-07 a cable la variante PRUDENTE : les deux etapes gov:conventions, et NI `lint` NI `format:check` — ni comme scripts, ni comme etapes de CI, ni comme devDependencies. La famille outillage_non_epingle ne s'arme que si une etape de CI lance l'outil ; sans etape, rien ne ment. A livrer : (1) la configuration corrigee, chaque derogation portant son motif ; (2) les 5 devDependencies epinglees et les scripts `lint`, `format:check`, `format` ; (3) les etapes de Gate A, SANS continue-on-error ; (4) `pnpm lint` et `pnpm format:check` verts sur le depot, ou tout ecart restant porte une derogation NOMMEE et motivee — jamais une regle desactivee en bloc. Une CI qu'on rend verte en eteignant la regle mesure la regle eteinte.",
+      "tests": {
+        "REQ-GOV-018": [
+          "tests/unit/gouvernance/gardes-transposees.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-038",
+      "titre": "Attester une livraison faite dans un autre depot, et qualifier toute reference de PR",
+      "phase": -1,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/attestation.ts",
+        "scripts/gates/gov-attestation.ts",
+        "scripts/lot/tasks.schema.json",
+        "scripts/lot/cloture.ts",
+        "scripts/lot/lot.workflow.js",
+        "scripts/gates/gov-tasks.ts",
+        "scripts/gates/gov-inventaire.ts",
+        "scripts/gates/gov-trace.ts",
+        "scripts/plan-state/build.ts",
+        "scripts/reprise.ts",
+        "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "GOV-017a",
+        "GOV-020"
+      ],
+      "reqs": [
+        "REQ-GOV-008",
+        "REQ-GOV-025",
+        "REQ-GOV-026"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "en_cours",
+      "owner": "A05",
+      "lot": null,
+      "branch": "lot/gov-038-attestation",
+      "pr": null,
+      "issue": null,
+      "attempts": 0,
+      "motif": null,
+      "acceptance": "Un champ attestation { pr, sha entier de 40 hex, fusionneeAt UTC } porte la livraison d une tache dont le repo n est pas partners ; le depot n y est PAS recopie, il se derive de repo par DEPOTS (RM-01). gov:tasks porte sept familles nouvelles, chacune vue rougir, trois contre-temoins verts. Toute reference de PR de tache passe par referencePr() : PR#31 ici, will383842/axion-ia#998 (41d71a7) ailleurs, JAMAIS PR#998 — un numero nu est lu comme une PR de CE depot-ci partout ou il est rendu, et repos/will383842/axion-apporteurs/pulls/998 ne resout pas. gov:inventaire accepte l attestation comme troisieme forme de preuve. gov:trace ne confronte plus au disque local les tests d une tache livree ailleurs et le DIT dans son resume. La resolution EN LIGNE du SHA est dans un mode separe, gov:attestation --en-ligne, hors de pnpm test et de gov:check, et ce mode REFUSE de tourner sans son drapeau : sans ce refus quelqu un le cablerait un jour pour etre complet, et une garde qui lance gh rend la suite non deterministe. AFFAIBLISSEMENT ASSUME ET NOMME : un SHA de 40 hex qui ne designe rien passe gov:tasks — mesure, 0000...0000 passe la forme et --en-ligne le rejette en HTTP 422.",
+      "tests": {
+        "REQ-GOV-008": [
+          "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
+        ],
+        "REQ-GOV-025": [
+          "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
+        ],
+        "REQ-GOV-026": [
+          "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
         ]
       }
     }
