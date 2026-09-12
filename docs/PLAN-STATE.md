@@ -7,28 +7,28 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `8e9113f` — 2026-09-10T06:52:19+02:00 |
+| Où est `main` ? | `d864ca8` — 2026-09-12T10:27:50+02:00 |
 | Qu’est-ce qui est en vol ? | aucune PR ouverte |
-| Qui tient quoi ? | GOV-014 (A01) · GOV-019 (A01) · GOV-028 (A01) · GOV-038 (A05) |
-| Où en est la phase ? | phase -1 — 30/39 tâches, reste 6.00 j |
+| Qui tient quoi ? | aucune tâche revendiquée |
+| Où en est la phase ? | phase -1 — 34/39 tâches, reste 3.50 j |
 | Le prochain pas | GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #32 — 2026-09-10 |
+| Dernière entrée de journal | PR #33 — 2026-09-12 |
 
 **Ce qu’on tape maintenant.** `pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
-30/39 tâches terminées · reste 6.00 j estimés.
+34/39 tâches terminées · reste 3.50 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `a_faire` | 176 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
-| `en_cours` | 4 | GOV-014 (A01) · GOV-019 (A01) · GOV-028 (A01) · GOV-038 (A05) |
+| `en_cours` | 0 | — |
 | `en_revue` | 0 | — |
-| `fusionnee` | 30 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
+| `fusionnee` | 34 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 | `bloquee` | 0 | — |
@@ -38,9 +38,9 @@
 
 **19.75 j** sur 22 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → GOV-014 (1 j, ph -1) → QA-T01 (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (0.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → QA-T01 (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (0.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **17.50 j**.
+Reste sur ce chemin : **16.50 j**.
 
 ## Bloquées
 
@@ -63,32 +63,67 @@ Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant
 
 Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-| Tâche | Revendiquée par | Issue | Statut |
-| --- | --- | --- | --- |
-| GOV-014 — Conventions + sélection des gardes d'axionia | A01 | #16 | `en_cours` |
-| GOV-019 — Budgets de performance après première mesure | A01 | #21 | `en_cours` |
-| GOV-028 — Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE | A01 | — | `en_cours` |
-| GOV-038 — Attester une livraison faite dans un autre depot, et qualifier toute reference de PR | A05 | — | `en_cours` |
+Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
 
 ⚠️ **15 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-10 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
+Aucun ADR daté du 2026-09-12 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
 
 ## Prochain pas
 
-1. **GOV-035** — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur (0.5 j) : 4 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+1. **GOV-035** — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur (0.5 j) : 5 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `8e9113f` (2026-09-10T06:52:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `d864ca8` (2026-09-12T10:27:50+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 > Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #33 — 2026-09-12 — chore(GOV-014): reconcilie gov-038 — quatre taches de phase -1, et le faux vert qui n'entrait en conflit avec rien
+
+**Fait.** `lot/gov-038-attestation`, orpheline depuis le 2026-09-05, est réconciliée avec `main` par
+un merge à deux parents (`8e9113f` + `f856704`). Elle apporte `GOV-014`, `INT-T01b`, `GOV-019`,
+`GOV-028` et `GOV-038` elle-même. **22 conflits, ~128 blocs** : 7 vues régénérées jamais résolues,
+2 registres fusionnés **par identifiant** avec un outil hors dépôt qui REFUSE et NOMME toute entrée
+touchée des deux côtés (4 dans `gates.json`, 10 dans `tasks.json` — aucune résolue par une règle),
+et 5 gardes tranchées au sur-ensemble, mesuré export par export. Le dépôt passe de 29 à 30 tâches
+livrées sur 212, de 16,75 à 17,75 j sur 157,25.
+
+**Le faux vert est arrivé sans aucun conflit.** `scripts/gates/gov-conventions.ts` est un fichier
+NEUF de `gov-038` : il portait le `try/catch { return [] }` que la PR #31 avait fermé pour les cinq
+autres gardes, et `package.json` le faisait déjà entrer dans la chaîne bloquante `gov:check`. Un
+fichier ajouté d'un seul côté ne se confronte à rien — aucun conflit ne l'a signalé. Converti :
+**six** gardes passent désormais par la source unique.
+
+**Reste.** Onze tours de revue, vingt-deux motifs rendus par les quatre lentilles — et **aucun** ne
+portait sur la résolution des conflits : tous visaient le code ajouté hors résolution, ou le récit.
+`GARDES_QUI_BALAIENT` a dû être **renversée** — dérivée du disque, puis DÉCLARÉE — parce qu'une
+population dérivée de la présence du correctif ne voit pas celui qui le perd. Le plancher du cliquet
+a demandé quatre rédactions avant de tenir. Restent versés en tâches, non corrigés ici (A11) : le
+cliquet garde un COMPTE et non une IDENTITÉ (25 sorties échangeables sur les 8 entrées à delta nul,
+et le registre ne couvre que 12 fichiers sur 33) ; `perf-budgets.ts:472` porte un
+`if (!existsSync(racine)) return []` qu'aucune tâche ne porte ; et `gov-attestation.ts` est le seul
+des 24 scripts de garde absent de `docs/gates.json`, ce qui l'exempte de la famille
+`garde_ecrite_jamais_appelee` que ce lot livre — la forme exacte du défaut qu'il vient de renverser
+ailleurs, réintroduite le même jour.
+
+**Appris.** Trois choses, chacune payée d'un rouge. D'abord, **le merge ne protège que ce que les
+DEUX branches ont touché** : un correctif qu'une branche n'a pas vu passer rentre par la porte
+qu'aucune garde ne surveille, et le devis d'une réconciliation ne vieillit que dans un sens — 8
+conflits mesurés contre une tête, 22 contre `main` deux fusions plus tard. Ensuite, **une garde qui
+cherche ses sujets par le correctif qu'ils portent ne verra jamais celui qui le perd** ; la liste
+doit être une déclaration, que seul un humain retire, et la réciproque n'attrape que l'oubli
+inverse. Enfin, **corriger aux numéros de ligne d'un relecteur n'est pas corriger le défaut** :
+deux fois dans cette PR j'ai fermé l'occurrence citée en laissant les autres, et c'est la lentille
+qui a dû revenir. Un relecteur qui cite une ligne donne un exemple, jamais l'inventaire. Corollaire
+mesuré le même jour : un commentaire qui survit à son code ne décrit plus rien, il désinforme — le
+fichier affirmait à trois endroits l'inverse du design livré.
 
 ### PR #32 — 2026-09-10 — chore(GOV-012): cloture du lot L-1-04 — neuf taches fusionnee, le verrou de phase leve
 
@@ -195,59 +230,7 @@ s'éteint toute seule ne prouve rien le second jour, **et rien ne le dit**. Son 
 aussi une date en dur : un témoin dont la date est écrite à la main cesse d'exercer sa famille le
 jour où le présent le rattrape — **en silence**, il devient un contre-témoin.
 
-### PR #30 — 2026-09-04 — chore(GOV-012): cloture du lot L-1-03 — huit taches fusionnee, atterrissage atteste
-
-**Fait.** Le lot `L-1-03` est clos : ses huit tâches passent `fusionnee` dans `docs/tasks.json`, et
-le dépôt passe de 12 à 20 tâches livrées sur 197, de 9,50 à 13,50 j sur 149 — 6,4 % à 9,1 %, phase
-−1 à 20 sur 26. L'invariant `fusion.atterri === true` a été satisfait avant l'écriture et non
-affirmé : le run `Gate A` du `push` sur `main` a été lu vert (`33842493472`, `ab5caf5`), puis la
-8ᵉ case de #28 et #29 cochée, puis `lot:cloture` lancé. `docs/TRACABILITE.md` passe de 22 à 31
-exigences réputées testées — non par ajout de tests, mais parce que la clôture rend enfin visibles
-les promesses `tests{}` de huit tâches jusque-là non livrées.
-
-**Reste.** Les quatre lentilles ont rendu : `securite` et `mutation` acceptent, `exactitude` et
-`simplicite` ont **refusé**, et leurs six motifs sont corrigés dans cette PR — vue `docs/TASKS.md`
-non régénérée (relevée trois fois indépendamment), « sept » revendications périmées pour quinze, et
-un `CLAUDE.md` racine hors périmètre, retiré. Deux constats sont renvoyés en tâche plutôt que
-corrigés ici, parce qu'un manque devient une tâche arbitrée et non un correctif glissé dans le lot
-en cours (`docs/CHARTE-AGENTS.md`, A11) : `gov:tasks` n'a pas de mode qui compare sa vue à sa source
-— rien ne rougit quand `docs/TASKS.md` dérive —, et `gov:identifiants` est **aveugle en fin de
-phrase**, sa lookahead `(?![A-Za-z0-9_.-])` incluant le point : une étiquette de relecteur placée
-juste avant un point final n'est pas vue, alors que la même suivie d'un espace l'est. Ses propres
-témoins `--prove` évitent tous cette position, de sorte que l'auto-preuve ne l'exerce jamais — la
-garde reste verte sur le texte qu'elle condamne. La rédaction de cette entrée l'a vérifié malgré
-elle : des deux occurrences écrites pour l'illustrer, la garde n'en a relevé qu'une, celle qui
-n'était pas collée au point. Les **quinze** revendications périmées ne sont pas effacées — `lot:cloture` écrit le
-backlog, pas les labels d'issue ; `pnpm gov:etat` les compte, et c'est lui qu'il faut relire plutôt
-que ce chiffre, qui est daté du jour de la clôture — et `deploy:verify` (`GOV-012`, `partners/ADR-0006`) manque toujours, de sorte
-que l'atterrissage se vérifie encore par le repli daté du Pas 7 de `docs/PROTOCOLE-FUSION.md`.
-
-**Appris.** Le motif du **premier** échec de clôture d'une tâche n'est écrit nulle part : `cloture.ts`
-le calcule, l'imprime — `fusion non atterrie : motif absent` — puis remet `t.motif` à `null`, parce
-qu'une tâche qui repart doit repartir propre ; il n'est persisté qu'à la deuxième tentative, quand
-la tâche bascule `bloquee`. Une session qui n'a pas lu la sortie console de ce run-là ne retrouvera
-jamais la raison. L'attaque a aussi montré que l'invariant se juge **tâche par tâche** et non en
-bloc : avec `atterri: false` sur la seule `GOV-010`, les sept autres passent `fusionnee` et elle
-seule retombe `a_faire` avec `attempts: 1` — un rendu partiellement faux ne contamine pas les lignes
-saines, et ne les protège pas non plus. Enfin, un fichier que git ne suit pas n'est lu par **aucune**
-garde : `gov:identifiants` conclut par « aucun identifiant nu **dans les fichiers suivis** », et le
-commit qui a fait entrer `docs/REPRISE-SESSION.md` dans le dépôt a rendu la CI rouge sur six
-identifiants nus qui y dormaient depuis des sessions, aucun introduit ce jour-là — « vert » ne dit
-rien de ce qu'aucune garde ne regarde.
-
-La même garde en a fourni un second exemple, plus retors : `gov:identifiants` est **aveugle en fin
-de phrase**. Sa lookahead `(?![A-Za-z0-9_.-])` inclut le point, de sorte qu'une étiquette de
-relecteur collée à un point final n'est pas vue, alors que la même suivie d'un espace l'est. Ses
-propres témoins `--prove` évitent tous cette position : l'auto-preuve ne l'exerce jamais, et la
-garde reste **verte sur le texte qu'elle condamne**. La rédaction de cette entrée l'a vérifié
-malgré elle — des deux occurrences écrites pour l'illustrer, une seule a été relevée. Ce n'est donc
-pas « une garde manque » mais « une garde existe et ne couvre pas la position la plus fréquente
-dans de la prose ». Un témoin qui n'éprouve que le milieu d'une phrase mesure la moitié du domaine.
-Le remède est en tâche, avec des témoins aux positions limites — fin de phrase, fin de ligne, avant
-une virgule, avant une parenthèse fermante — et un contre-témoin qui prouve qu'un usage légitime
-passe toujours.
-
-… 4 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 5 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

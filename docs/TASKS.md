@@ -12,7 +12,7 @@
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
-| -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 30 |
+| -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 34 |
 | 0 — Socle technique | 52 | 38.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
@@ -170,7 +170,7 @@ Couvre : `REQ-GOV-017`
 
 **Tests.** `lexique.spec.ts`
 
-### GOV-014 — Conventions + sélection des gardes d'axionia — **en_cours**
+### GOV-014 — Conventions + sélection des gardes d'axionia ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · depend de `GOV-012`, `GOV-013`
 
@@ -230,7 +230,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-025`, `REQ-GOV-027`
 
 **Tests.** `tests/unit/gouvernance/paths-derives.spec.ts#la vue commitee est a jour : `--check` est vert sur le depot` · `tests/unit/gouvernance/paths-derives.spec.ts#REQ-GOV-025 — aucune tache `repo: axionia` ne pretend ecrire un fichier de ce depot` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la famille `phase_gelee` est prouvee, temoin et contre-temoin` · `tests/gov/charte-pr.spec.ts#REQ-GOV-027 : la phase courante se lit dans le backlog, pas dans la vue PLAN-STATE`
 
-### GOV-019 — Budgets de performance après première mesure — **en_cours**
+### GOV-019 — Budgets de performance après première mesure ✅ **fusionnee**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-014`
 
@@ -320,7 +320,7 @@ Couvre : `REQ-GOV-015`, `REQ-GOV-021`
 
 **Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 
-### GOV-028 — Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE — **en_cours**
+### GOV-028 — Citer n'est pas se servir — mais dans un fichier de code, la quote est de la SYNTAXE ✅ **fusionnee**
 
 `0.25 j` · zone `gouvernance` · depend de `GOV-025`
 
@@ -400,7 +400,7 @@ Couvre : `REQ-GOV-018`
 
 **Tests.** `tests/unit/gouvernance/gardes-transposees.spec.ts`
 
-### GOV-038 — Attester une livraison faite dans un autre depot, et qualifier toute reference de PR — **en_cours**
+### GOV-038 — Attester une livraison faite dans un autre depot, et qualifier toute reference de PR ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · depend de `GOV-017a`, `GOV-020`
 

@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**321 exigences actives · 40 réputées testées · 40 couvertes · 0 orphelines.**
+**321 exigences actives · 43 réputées testées · 43 couvertes · 0 orphelines.**
 
-212 tâches, dont 30 livrées · 35 fichiers de test exécutés par `vitest` sur 35 présents.
+212 tâches, dont 34 livrées · 35 fichiers de test exécutés par `vitest` sur 35 présents.
 
 ## Exigences réputées testées
 
@@ -46,6 +46,7 @@
 | `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-016` | `GOV-006` | `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
 | `REQ-GOV-017` | `GOV-013` | `tests/unit/gouvernance/lexique.spec.ts` | couverte |
+| `REQ-GOV-018` | `GOV-014`, `GOV-031` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |
 | `REQ-GOV-021` | `GOV-017a`, `GOV-017b`, `GOV-024`, `GOV-027`, `GOV-037` | `tests/unit/gouvernance/paths-derives.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-022` | `GOV-015` | `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-GOV-023` | `GOV-008`, `GOV-018` | `tests/unit/gouvernance/plan-state-frais.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts` | couverte |
@@ -53,6 +54,8 @@
 | `REQ-GOV-025` | `GOV-017a`, `GOV-017b`, `GOV-038` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/paths-derives.spec.ts` | couverte |
 | `REQ-GOV-026` | `GOV-001`, `GOV-020`, `GOV-038` | `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/inventaire-prouve.spec.ts` | couverte |
 | `REQ-GOV-027` | `CPL-T01`, `CPL-T23`, `GOV-017a`, `GOV-017b`, `GOV-022` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/verrou-de-phase.spec.ts` | couverte |
+| `REQ-GOV-028` | `GOV-019` | `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts` | couverte |
+| `REQ-GOV-029` | `GOV-014` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |
 | `REQ-GOV-030` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-032` | `GOV-024`, `GOV-035` | `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
@@ -189,9 +192,6 @@
 | `REQ-EXT-027` | 1 | `DM-23`, `UX-P1-14` | — |
 | `REQ-EXT-028` | 0 | `JUR-T02` | — |
 | `REQ-EXT-029` | 2 | `UX-P2-04` | — |
-| `REQ-GOV-018` | -1 | `GOV-014`, `GOV-031` | `gardes-transposees.spec.ts`, `tests/unit/gouvernance/gardes-transposees.spec.ts` |
-| `REQ-GOV-028` | -1 | `GOV-019` | `poids-du-bundle-garde-vraiment.spec.ts` |
-| `REQ-GOV-029` | -1 | `GOV-014` | `gardes-transposees.spec.ts` |
 | `REQ-INT-001` | 0 | `INT-T02` | `outbox-produit-des-evenements-valides.spec.ts` |
 | `REQ-INT-005` | -1 | `INT-T01b`, `INT-T05` | `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts` |
 | `REQ-INT-006` | -1 | `INT-T01b`, `INT-T04` | `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts` |
@@ -401,7 +401,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 5 | 15 | 1 |
 | 6 | 1 | 1 |
 | 7 | 1 | 0 |
-| 8 | 13 | 0 |
+| 8 | 13 | 1 |
 | 9 | 36 | 6 |
 | 10 | 6 | 0 |
 | 11 | 5 | 1 |
@@ -424,7 +424,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 4 | 16 | 1 |
 | 5 | 17 | 1 |
 | 6 | 2 | 1 |
-| 7 | 52 | 4 |
+| 7 | 52 | 5 |
 | 8 | 12 | 0 |
 | 9 | 23 | 5 |
 | 10 | 63 | 5 |
