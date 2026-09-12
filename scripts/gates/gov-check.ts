@@ -618,10 +618,15 @@ export function controler(vue: Vue): Faute[] {
  * exercé par la preuve au lieu d'être invisible.
  */
 export function vueDuDepot(): Vue {
-  const glossaire = readFileSync('docs/GLOSSAIRE.md', 'utf8');
+  // ⚠️ LE PÉRIMÈTRE D'ABORD, ET DANS CET ORDRE. Lancée depuis `packages/`, la garde doit REFUSER
+  // en NOMMANT `perimetre_illisible`. Si les lectures de sources venaient avant, elle mourrait
+  // sur un `ENOENT` de `docs/GLOSSAIRE.md` — un refus correct, mais anonyme, et pour une raison
+  // qu'on n'a pas choisie. `refus-de-rendre-et-de-publier.spec.ts` mesure exactement cela sur les
+  // gardes qui balaient, et n'en trouve que deux qui refusent pour la bonne raison.
   const fichiers = fichiersSuivisOuRefus('gov:check')
     .filter((chemin) => EXTENSIONS.test(chemin))
     .map((chemin) => ({ chemin, contenu: readFileSync(chemin, 'utf8') }));
+  const glossaire = readFileSync('docs/GLOSSAIRE.md', 'utf8');
   return {
     reqInt004: texteDeLaReq('REQ-INT-004'),
     reqDm003: texteDeLaReq('REQ-DM-003'),

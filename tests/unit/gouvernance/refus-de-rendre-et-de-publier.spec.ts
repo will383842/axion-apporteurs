@@ -409,6 +409,26 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    * ajouter en silence.
    */
   const declares: Record<string, { total: number; porte: number; temoins: number; raison: string }> = {
+    'scripts/gates/gov-check.ts': {
+      total: 4,
+      porte: 4,
+      // ZÉRO, et c'est exact : le compteur `temoins` de ce registre est confronté au tableau
+      // `REFUS` de CE fichier. Les témoins de ces quatre refus vivent ailleurs — les compter ici
+      // gonflerait une somme qui doit rester égale à sa source. *Un zéro assumé vaut mieux qu'un
+      // compteur qu'on gonfle pour se donner raison.*
+      temoins: 0,
+      raison:
+        'GOV-030 — la garde des termes interdits, que six documents invoquaient sans qu’elle ' +
+        'existe. Quatre refus : (1) un témoin de `--prove` qui ne rougit plus, (2) un ' +
+        'contre-témoin devenu faux positif, (3) une famille déclarée sans témoin, (4) le verdict ' +
+        'sur le dépôt. Les trois premiers sont éprouvés par MUTATION dans ' +
+        '`termes-interdits.spec.ts` — seuil de la liste d’états porté de 2 à 3, exemption de ' +
+        'citation désarmée, périmètre tapé au lieu d’être lu : chacune fait tomber le test qui ' +
+        'la nomme (`termes-interdits.spec.ts`). Le quatrième est le refus de la gate elle-même, tenu '+
+        'par le contrôle qui la ' +
+        'lance sur le dépôt réel. Le REFUS DE PÉRIMÈTRE, lui, n’est pas compté ici : il vient de ' +
+        '`fichiersSuivisOuRefus`, et `GARDES_QUI_BALAIENT` le déclare plus bas.',
+    },
     // ── RÉCONCILIATION `gov-038` : QUATRE fichiers apportent DIX sorties non nulles ──────────
     // Le cliquet a rougi en NOMMANT le premier (`gov-attestation.ts ajoute 3 … et n'est PAS
     // déclaré ici`) : c'est exactement son office. Les trois gestes sont faits pour chacun —
@@ -717,7 +737,14 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // `gov-tasks` +1). Le cliquet a rougi en nommant le premier — il n'a pas été contourné, il a
     // été LU. ⚠️ Le seuil est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une
     // branche. Mesuré sur l'arbre réconcilié : 179 sorties non nulles sous `scripts/`.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(35);
+    // 🔧 35 → 39 par GOV-030, ARBITRÉ et non subi. `scripts/gates/gov-check.ts` naît avec quatre
+    // sorties — la garde des termes interdits que `docs/gates.json` déclarait depuis GOV-000 sans
+    // qu'aucun script n'existe. Le cliquet a rougi en la nommant (« ajoute 4 `process.exit(1)` et
+    // n'est PAS déclaré ici »), puis une seconde fois sur le compte des témoins : les deux fois il
+    // a été LU, pas contourné. Trois de ces refus sont éprouvés par MUTATION dans
+    // `termes-interdits.spec.ts` ; le quatrième — le verdict sur le dépôt — par le contrôle qui
+    // lance la gate sur l'arbre réel.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(39);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -1660,6 +1687,9 @@ ${r.sortie.slice(0, 600)}`
  * ci-dessous attrape l'oubli inverse : toute garde qui importe la primitive doit y figurer.
  */
 const GARDES_QUI_BALAIENT = [
+  // GOV-030 — `gov-check` établit son périmètre AVANT de lire ses sources, précisément pour que
+  // son refus depuis `packages/` porte le nom `perimetre_illisible` au lieu d'un `ENOENT` muet.
+  'scripts/gates/gov-check.ts',
   'scripts/gates/gov-conventions.ts',
   'scripts/gates/gov-entite.ts',
   'scripts/gates/gov-identifiants.ts',
