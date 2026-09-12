@@ -484,3 +484,180 @@ describe('REQ-GOV-029 — le périmètre est DIT, jamais tu', () => {
     expect(puces.length).toBe(FAMILLES.length);
   });
 });
+
+// ── GOV-031 · REQ-GOV-018 — la configuration ESLint a-t-elle jamais tourné ? ──────────────────
+//
+// GOV-014 a livré `eslint.config.mjs` avec, en tête et en majuscules, « CE FICHIER N'A JAMAIS ÉTÉ
+// EXÉCUTÉ ». Une configuration qui n'a jamais tourné est une DÉCLARATION D'INTENTION, pas une
+// garde : elle a l'air d'un contrôle et ne mesure rien. GOV-031 la fait tourner, et ce bloc tient
+// ce que l'exécution a appris.
+//
+// CE QUE CE BLOC PROUVE, ET CE QU'IL NE PROUVE PAS. Il ne lance PAS ESLint : les paquets ne sont
+// pas dans `package.json`, qui est un fichier PARTAGÉ que le développeur n'écrit pas (LEC-13).
+// Un test qui importerait `eslint` rougirait en CI pour un manque qu'aucune PR n'a créé. Ce qu'il
+// tient, c'est le CONTRAT de la configuration : plus aucune affirmation périmée en tête, aucune
+// règle éteinte hors d'un périmètre nommé, et chaque dérogation motivée. L'exécution réelle
+// (`eslint .` vert, et rouge sur une violation fabriquée) est reportée verbatim dans le corps de
+// la PR de GOV-031, et devient bloquante le jour où A01 applique les étapes de Gate A.
+//
+// ET IL PORTE SON PROPRE CONTRE-TÉMOIN. « Zéro dérogation non motivée » veut dire « la
+// configuration est propre » OU « le détecteur ne regarde rien ». Les deux rendent le même vert.
+// `derogationsDe` est donc exercée sur des textes FABRIQUÉS, et le compte réel est exigé NON NUL.
+
+const ESLINT = 'eslint.config.mjs';
+const PRETTIER = '.prettierrc.json';
+
+/** Une règle éteinte ou rétrogradée dans une configuration ESLint plate. */
+interface Derogation {
+  readonly ligne: number;
+  readonly regle: string;
+  readonly niveau: 'off' | 'warn';
+  /** Un commentaire `//` d'au moins 60 caractères dans les 12 lignes qui précèdent. */
+  readonly motive: boolean;
+  /** Le bloc qui la porte déclare un `files:` — donc un périmètre nommé, pas tout le dépôt. */
+  readonly perimetreNomme: boolean;
+}
+
+const MOTIF_MINIMAL_ESLINT = 60;
+const FENETRE_MOTIF = 12;
+
+/**
+ * Fonction PURE d'un texte injecté (RM-11) : elle ne lit pas le disque, donc ses témoins ne
+ * dépendent pas de l'état du dépôt le jour où ils tournent.
+ */
+function derogationsDe(source: string): Derogation[] {
+  const lignes = source.split('\n');
+  const out: Derogation[] = [];
+  for (let i = 0; i < lignes.length; i += 1) {
+    const ligne = lignes[i] ?? '';
+    if (ligne.trim().startsWith('//') || ligne.trim().startsWith('*')) continue;
+    for (const m of ligne.matchAll(/'([a-z@][^']*)'\s*:\s*(?:'(off|warn)'|\[\s*'(off|warn)')/g)) {
+      let motive = false;
+      let perimetreNomme = false;
+      for (let j = i - 1; j >= 0 && i - j <= FENETRE_MOTIF; j -= 1) {
+        const p = (lignes[j] ?? '').trim();
+        if (p.startsWith('//') && p.length >= MOTIF_MINIMAL_ESLINT) motive = true;
+      }
+      // Remonte jusqu'à l'ouverture du bloc de premier niveau (deux espaces d'indentation).
+      for (let j = i; j >= 0; j -= 1) {
+        const p = lignes[j] ?? '';
+        if (/^\s*files:\s*\[/.test(p)) perimetreNomme = true;
+        if (/^ {2}\{\s*$/.test(p)) break;
+      }
+      out.push({
+        ligne: i + 1,
+        regle: m[1] ?? '?',
+        niveau: (m[2] ?? m[3]) as 'off' | 'warn',
+        motive,
+        perimetreNomme,
+      });
+    }
+  }
+  return out;
+}
+
+describe('REQ-GOV-018 — `eslint.config.mjs` a été exécutée, et son en-tête ne dit plus le contraire', () => {
+  const config = readFileSync(ESLINT, 'utf8');
+
+  it('l’en-tête n’affirme plus « CE FICHIER N’A JAMAIS ÉTÉ EXÉCUTÉ »', () => {
+    // Un commentaire qui survit à son code désinforme, et celui-ci le faisait EN MAJUSCULES :
+    // il disait à chaque lecteur que la garde était une intention. Elle a tourné le 2026-09-12.
+    expect(config).not.toContain("N'A JAMAIS ÉTÉ EXÉCUTÉ");
+    expect(config).not.toContain('N’A JAMAIS ÉTÉ EXÉCUTÉ');
+  });
+
+  it('l’en-tête porte la DATE et le RÉSULTAT de l’exécution, pas une promesse', () => {
+    // Ce qui remplace l'avertissement n'est pas « elle tourne maintenant » : c'est une mesure
+    // datée, refaisable. Sans le nombre, la ligne suivante serait encore une déclaration.
+    expect(config).toMatch(/2026-09-12/);
+    expect(config).toMatch(/`eslint \.`/);
+  });
+
+  it('les globales de Node sont DÉRIVÉES du paquet `globals`, jamais retapées (RM-01)', () => {
+    // 28 des 60 erreurs du premier passage étaient des `no-undef` sur `process`, `module` et
+    // `require` dans les quatre scripts `.js` : la cause est dans la CONFIGURATION, qui ne
+    // déclarait aucun environnement. Recopier la liste des globales de Node ici la ferait
+    // diverger de Node à la première version ; on importe la liste, on ne la retape pas.
+    expect(config).toMatch(/languageOptions/);
+    expect(config).toMatch(/globals\.node/);
+    expect(config).not.toMatch(/\bprocess:\s*'(readonly|writable)'/);
+  });
+
+  it('`scripts/lot/lot.workflow.js` est IGNORÉ, et le fichier dit pourquoi', () => {
+    // Ce n'est pas du JavaScript à corriger : c'est un langage dédié dont `args`, `agent`,
+    // `phase`, `log`, `pipeline` et `parallel` sont injectés par le moteur qui l'exécute.
+    // 15 `no-undef` qu'aucun correctif de code ne peut faire disparaître : c'est un `ignores`.
+    const lignes = config.split('\n');
+    const i = lignes.findIndex((l) => /^\s*'scripts\/lot\/lot\.workflow\.js',\s*$/.test(l));
+    expect(i, "`scripts/lot/lot.workflow.js` n'est pas une entrée de `ignores`").toBeGreaterThan(0);
+    // Le motif se lit AU-DESSUS de l'entrée, pas ailleurs dans le fichier : un `ignores` dont
+    // la justification vit trois écrans plus haut est un `ignores` sans justification.
+    expect(lignes.slice(Math.max(0, i - 8), i).join('\n')).toMatch(/langage dédié|symboles/i);
+  });
+
+  it('aucune règle n’est éteinte EN BLOC : chaque dérogation vit dans un périmètre nommé', () => {
+    // « Une CI qu'on rend verte en éteignant la règle mesure la règle éteinte » (acceptation de
+    // GOV-031). Une dérogation hors de tout `files:` s'applique au dépôt entier : c'est
+    // exactement l'extinction en bloc que l'acceptation refuse.
+    const sansPerimetre = derogationsDe(config).filter((d) => !d.perimetreNomme);
+    expect(sansPerimetre.map((d) => `${d.regle} (ligne ${d.ligne})`)).toEqual([]);
+  });
+
+  it('chaque dérogation porte son motif — et il y en a au moins une (témoin positif non nul)', () => {
+    // Le compte NON NUL est la moitié qui manque d'habitude : « zéro dérogation non motivée »
+    // se dit aussi bien d'une configuration propre que d'un détecteur qui ne lit rien.
+    const vues = derogationsDe(config);
+    expect(vues.length).toBeGreaterThanOrEqual(4);
+    expect(vues.filter((d) => !d.motive).map((d) => `${d.regle} (ligne ${d.ligne})`)).toEqual([]);
+  });
+
+  it('`derogationsDe` SAIT rougir : une règle éteinte sans motif est vue', () => {
+    // RM-02. Sans ce témoin fabriqué, les deux `it` ci-dessus seraient verts sur une fonction
+    // qui ne trouve jamais rien.
+    const nu = [
+      'export default [',
+      '  {',
+      "    files: ['tests/**'],",
+      '    rules: {',
+      "      'no-console': 'off',",
+      '    },',
+      '  },',
+      '];',
+    ].join('\n');
+    const vues = derogationsDe(nu);
+    expect(vues.length).toBe(1);
+    expect(vues[0]!.regle).toBe('no-console');
+    expect(vues[0]!.niveau).toBe('off');
+    expect(vues[0]!.motive).toBe(false);
+    expect(vues[0]!.perimetreNomme).toBe(true);
+
+    // Le même texte avec un motif collé au-dessus : la fonction discrimine, elle ne dit pas
+    // « non motivé » à tout le monde.
+    const motive = nu.replace(
+      '    rules: {',
+      "    // Les tests IMPRIMENT leur verdict : c'est leur interface, et une suite muette ne\n    // rapporte rien de ce qu'elle a balayé.\n    rules: {"
+    );
+    expect(derogationsDe(motive)[0]!.motive).toBe(true);
+
+    // Et une dérogation POSÉE HORS de tout `files:` est vue comme telle : c'est l'extinction en
+    // bloc. Sans ce troisième cas, `perimetreNomme` serait vrai partout et ne mesurerait rien.
+    const enBloc = [
+      'export default [',
+      '  {',
+      '    rules: {',
+      "      'no-console': 'off',",
+      '    },',
+      '  },',
+      '];',
+    ].join('\n');
+    expect(derogationsDe(enBloc)[0]!.perimetreNomme).toBe(false);
+  });
+
+  it('`.prettierrc.json` reste un JSON valide et fixe la fin de ligne', () => {
+    // `core.autocrlf` a déjà fait rougir ce dépôt pour la mauvaise cause : `endOfLine` n'est pas
+    // un détail de goût, c'est ce qui empêche `format:check` de dépendre du poste qui l'exécute.
+    const p = JSON.parse(readFileSync(PRETTIER, 'utf8')) as Record<string, unknown>;
+    expect(p.endOfLine).toBe('lf');
+    expect(typeof p.printWidth).toBe('number');
+  });
+});
