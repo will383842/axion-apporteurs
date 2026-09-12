@@ -4,6 +4,7 @@
 // @req REQ-CPL-004
 // @req REQ-CPL-017
 // @req REQ-CPL-018
+// @req REQ-GOV-031
 /**
  * Le registre d'entité `config/entite.json`, son lecteur unique et la garde `gov:entite`.
  * (CPL-T01, `partners/ADR-0009`, REQ-GOV-031)
@@ -60,6 +61,8 @@ import {
   valeur,
   type Registre,
 } from '../../../src/config/entite';
+
+import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
 
 import {
   FAMILLES,
@@ -2116,3 +2119,154 @@ describe('REQ-CPL-018 — aucun total de révisions ne se tape à la main', () =
     expect(new Set(declarees.map((e) => e.revision)).size).toBe(declarees.length);
   });
 });
+
+/**
+ * ── GOV-036 — LES DEUX POPULATIONS QUE LA GARDE REGARDE ÉTAIENT TAPÉES À LA MAIN ──────────────
+ *
+ * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ SUR LES QUATRE PASSES DE LA PR #31, et qu'aucun test
+ * ne voyait : `gov:entite` ne juge que ce que DEUX listes tapées veulent bien lui montrer.
+ *
+ *   (1) `PAYS_ISO` — 47 entrées écrites à la main, dont SEPT qui n'émettent aucun IBAN, et
+ *       CINQUANTE ET UN pays émetteurs OMIS. Cinq IBAN étrangers à clé mod-97 VALIDE (TR, IL,
+ *       RS, AL, LB) traversaient la garde sans un mot, dans un dépôt PUBLIC.
+ *   (2) `EXTENSIONS_BALAYEES` — une liste d'AUTORISATION, sous un commentaire qui dit pourtant
+ *       « un secret ne choisit pas son extension ». Ni `.sh`, ni `.py`, ni `.toml`, ni `Makefile`,
+ *       ni `.gitattributes` n'étaient lus — et QUATRE fichiers suivis du dépôt étaient déjà dans
+ *       ce cas au moment où ces lignes sont écrites.
+ *
+ * 🔑 LA LEÇON EST LA MÊME DANS LES DEUX CAS, ET ELLE EST DÉJÀ ÉCRITE AILLEURS DANS CE DÉPÔT :
+ * **une population tapée à la main ne voit que ce qu'on y a mis, donc jamais le cas qu'on a
+ * oublié d'y écrire.** Une garde peut être verte, prouvée, éprouvée par mutation et complètement
+ * aveugle : rien de tout cela ne mesure son PÉRIMÈTRE. Les témoins ci-dessous portent sur le
+ * périmètre lui-même, et deux d'entre eux le DÉRIVENT du disque plutôt que de le redéclarer — un
+ * témoin qui redéclarerait la liste tapée aurait exactement le même angle mort qu'elle.
+ */
+describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape pas', () => {
+  /** Le fichier est-il du TEXTE ? Mesuré sur ses octets, jamais déduit de son extension. */
+  function estDuTexte(chemin: string): boolean {
+    const octets = readFileSync(chemin);
+    if (octets.includes(0)) return false; // un octet NUL : ce n'est pas du texte
+    return Buffer.from(octets.toString('utf8'), 'utf8').equals(octets); // décodable sans perte
+  }
+
+  it('REQ-GOV-031 — la population balayée est celle du DISQUE : aucun fichier de TEXTE suivi n’y échappe', () => {
+    // ⚠️ LE TÉMOIN QUI COMPTE. Il ne récite aucune liste : il DEMANDE AU DÉPÔT ses fichiers suivis
+    // (`fichiersSuivis` lève plutôt que de rendre `[]`, donc un périmètre absent est un rouge et
+    // jamais un vert), il mesure lesquels sont du texte, et il exige que la garde les regarde
+    // TOUS. Un fichier d'une famille jamais tapée dans la liste tombe donc ici, et lui seul.
+    const suivis = fichiersSuivis();
+    const textes = suivis.filter(estDuTexte);
+    expect(textes.length, 'périmètre vide : la mesure ne prouverait rien').toBeGreaterThan(50);
+    const aveugles = textes.filter((f) => !estBalaye(f));
+    expect(
+      aveugles,
+      `${suivis.length} fichier(s) suivi(s), ${textes.length} de TEXTE, ${aveugles.length} que la ` +
+        `garde ne lit pas : ${aveugles.join(', ')}. Dépôt PUBLIC — un secret ne choisit pas son extension.`
+    ).toEqual([]);
+  });
+
+  it('REQ-GOV-031 — les familles qu’une liste d’AUTORISATION oubliait sont balayées', () => {
+    // Les extensions nommées par le constat de GOV-036, plus celles que le dépôt porte déjà. Ce
+    // n'est pas la source du filtre — la source est la liste de REFUS — c'est le CONTRAT qu'on
+    // exige d'elle : ces familles-là portent du texte, donc elles peuvent porter un secret.
+    for (const chemin of [
+      'scripts/deploiement.sh', // le cas plausible : `export PARTNERS_IBAN_DEBITEUR=…`
+      'outils/export.py',
+      'infra/main.tf',
+      'pyproject.toml',
+      'setup.ini',
+      'docs/guide.mdx',
+      'public/page.html',
+      'requetes/api.http',
+      'docs/notice.rst',
+      'config/tsconfig.jsonc',
+      'journal/execution.log',
+      'captures/session.har',
+      'Makefile',
+      '.gitattributes',
+      '.gitignore',
+      '.prettierignore',
+      'packages/contracts.sha256',
+      'LICENSE',
+      'docs/inconnu.xyzzy', // une extension que PERSONNE n'a prévue : elle est lue quand même
+    ]) {
+      expect(estBalaye(chemin), `${chemin} doit être balayé`).toBe(true);
+    }
+  });
+
+  it('REQ-GOV-031 — un script shell qui exporte l’IBAN débiteur rougit — le cas plausible, de bout en bout', () => {
+    // Le chaînage complet : le filtre le laisse entrer ET le contrôle le voit. Les deux moitiés
+    // comptent — un fichier balayé qu'aucune famille ne juge serait aussi muet qu'un fichier écarté.
+    const chemin = 'scripts/deploiement.sh';
+    expect(estBalaye(chemin)).toBe(true);
+    expect(
+      controler(universAvecFichier(chemin, `export PARTNERS_IBAN_DEBITEUR=${IBAN_TEMOIN}\n`)).map(
+        (f) => f.famille
+      )
+    ).toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-GOV-031 — CONTRE-TÉMOIN : le filtre reste un FILTRE, les familles binaires sont refusées', () => {
+    // Sans lui, « tout est balayé » passerait, la garde lirait des images en UTF-8 et rendrait un
+    // vert sur du bruit qu'elle ne sait pas décoder. Le contre-témoin de la liste d'autorisation
+    // se transpose tel quel à la liste de refus : c'est la même frontière, prise par l'autre bout.
+    for (const chemin of ['docs/schema.png', 'assets/logo.svg', 'polices/inter.woff2', 'archive.zip']) {
+      expect(estBalaye(chemin), `${chemin} ne doit PAS être balayé`).toBe(false);
+    }
+  });
+
+  it('REQ-GOV-031 — les codes pays sont DÉRIVÉS d’une source, et la dérivation REFUSE une source infirme', async () => {
+    // L'import est dynamique et le type est lâche EXPRÈS : tant que la dérivation n'existe pas,
+    // ce cas-ci rougit seul, sans emporter le fichier entier dans une erreur de chargement.
+    const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
+      codesPaysIso?: (lire?: (code: string) => string) => string[];
+      PLANCHER_ISO_3166?: number;
+    };
+    expect(typeof gate.codesPaysIso, '`codesPaysIso` doit exister : la liste se dérive').toBe('function');
+    const codes = gate.codesPaysIso!();
+    expect(codes.length).toBeGreaterThanOrEqual(gate.PLANCHER_ISO_3166!);
+
+    // ⚠️ ET ELLE REFUSE PLUTÔT QUE DE RÉTRÉCIR. Une source qui ne connaît rien rendrait une liste
+    // VIDE, donc une forme d'IBAN qui ne reconnaît plus RIEN, donc un vert sur un dépôt fuyant.
+    // C'est le défaut trouvé sept fois dans ce dépôt : « je n'ai rien vu » n'est pas « je n'ai
+    // rien lu ».
+    expect(() => gate.codesPaysIso!((code) => code)).toThrow();
+    expect(() => gate.codesPaysIso!((code) => (code === 'FR' ? 'France' : code))).toThrow();
+
+    // CONTRE-TÉMOIN : la dérivation reste un FILTRE. Elle ne rend pas les 676 paires de lettres,
+    // et un code qui n'est attribué à aucune région n'en fait pas partie.
+    expect(codes.length).toBeLessThan(676);
+    expect(codes).not.toContain('ZQ');
+  });
+
+  it('REQ-GOV-031 — CONTRE-TÉMOIN : un code qui n’est aucune région ne fabrique pas d’IBAN, clé valide comprise', () => {
+    // La clé mod-97 seule ne suffit pas à faire un IBAN : sans code pays, `PAYS_ISO` deviendrait
+    // `[A-Za-z]{2}` et la garde rougirait sur des identifiants ordinaires — donc on la retirerait.
+    // La clé du témoin est CALCULÉE ici (RM-01, RM-11) : aucune valeur n'est tapée.
+    const faux = ibanSynthetique('ZQ', '00112233445566');
+    expect(cleIbanValide(faux), 'le contre-témoin doit avoir une clé VALIDE').toBe(true);
+    expect(
+      controler(universAvecFichier('docs/note-de-travail.md', `Référence ${faux}.`)).map((f) => f.famille)
+    ).not.toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-GOV-031 — la garde DIT ce qu’elle a lu : balayés, écartés, codes pays dérivés', () => {
+    // Une garde muette ne prouve rien. Le compte de fichiers balayés existait ; ce qu'il ne disait
+    // pas, c'est ce qu'il ne regardait PAS — et c'est précisément ce chiffre-là qui aurait montré
+    // les quatre fichiers aveugles sans qu'on ait à les chercher.
+    const { code, sortie } = lancer();
+    expect(code, sortie).toBe(0);
+    expect(sortie).toMatch(/\d+ fichier\(s\) suivi\(s\) balayé\(s\)/);
+    expect(sortie).toMatch(/\d+ écarté\(s\)/);
+    expect(sortie).toMatch(/\d+ codes? pays/);
+  });
+});
+
+/** Un IBAN de forme valide dont la clé mod-97 est CALCULÉE — jamais recopiée (RM-01). */
+function ibanSynthetique(pays: string, corps: string): string {
+  for (let cle = 0; cle < 100; cle++) {
+    const candidat = `${pays}${String(cle).padStart(2, '0')}${corps}`;
+    if (cleIbanValide(candidat)) return candidat;
+  }
+  throw new Error(`aucune clé mod-97 valide pour ${pays}…${corps} : le témoin ne mesurerait rien`);
+}

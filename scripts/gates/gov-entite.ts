@@ -2085,6 +2085,18 @@ export const IBANS_TEMOINS_ETRANGERS: Record<string, string> = {
   NL: 'NL91ABNA0417164300',
   PT: 'PT50000201231234567890154',
   CH: 'CH9300762011623852957',
+  // ── LES CINQ QUE LA LISTE TAPÉE NE VOYAIT PAS (GOV-036) ────────────────────────────────────
+  // Ils ne sont pas là pour allonger la fixture : ils sont la MESURE du défaut que GOV-036 ferme.
+  // Les cinq ont une clé mod-97 VALIDE — donc rien d'autre que le code pays ne les écartait — et
+  // les cinq pays émettent des IBAN depuis des années. Ils étaient invisibles parce qu'ils
+  // n'avaient pas été TAPÉS dans `PAYS_ISO`, et une population tapée ne voit jamais ce qu'on a
+  // oublié d'y écrire. Ils restent les témoins de la dérivation : si quelqu'un rétablit une liste
+  // littérale, ce sont eux qui rougissent.
+  TR: 'TR330006100519786457841326',
+  IL: 'IL620108000000099999999',
+  RS: 'RS35260005601001611379',
+  AL: 'AL47212110090000000235698741',
+  LB: 'LB62099900000001001901229114',
 };
 
 /**
