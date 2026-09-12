@@ -131,6 +131,15 @@ jobs:
         run: pnpm gov:trace:prove
       - name: La vue de tracabilite est derivee de ses sources
         run: pnpm gov:trace:verifier
+      # GOV-037, REQ-GOV-021 et REQ-GOV-003. Le depot derivait ses NOMBRES et aucune de ses
+      # ATTRIBUTIONS : quelle tache porte quelle exigence, quelle tache porte quelle garde, quel
+      # poste porte quelle tache, quel lot porte quelle tache. Chacune de ces relations est ecrite
+      # DEUX FOIS, dans deux fichiers, et rien ne les comparait. `gov:identifiants` ne pouvait pas
+      # les voir : elle juge la FORME d'un identifiant, jamais sa RESOLUTION.
+      - name: Attributions — exigence, garde, poste et lot confrontes a leurs sources
+        run: pnpm gov:attributions
+      - name: La garde des attributions sait rougir, et laisse passer la citation legitime
+        run: pnpm gov:attributions:prove
       # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,
       # elle ECHOUE en nommant les cinq familles non evaluees — et c est voulu : une gate verte
       # parce qu elle n a pas pu lire est pire que pas de gate. Constate en CI le 2026-09-04,
