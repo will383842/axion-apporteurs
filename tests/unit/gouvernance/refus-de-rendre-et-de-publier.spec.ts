@@ -432,8 +432,11 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       raison:
         'GOV-019 — budgets de performance. Quatre refus : registre illisible, budget dépassé, ' +
         'mode inconnu, vue divergente. ⚠️ `fichiersDeSrc()` y rend `[]` si `src/` manque — la ' +
-        "variante affaiblie du patron que ce lot ferme ailleurs. Déclarée ici pour qu'elle soit " +
-        'VUE, et versée en tâche plutôt que corrigée dans un lot de réconciliation (A11).',
+        "variante affaiblie du patron que ce lot ferme ailleurs — invisible à la réciproque, au " +
+        "témoin `ls-files` et aux trois `describe`, car elle ne balaie pas `git ls-files`. " +
+        '⚠️ AUCUNE tâche du backlog ne porte cette dette : `GOV-019` LIVRE `perf-budgets`, elle ne ' +
+        "corrige pas son `if (!existsSync(racine)) return []`. Relevé par `mutation` — une dette " +
+        'déclarée en prose sans porteur est une dette que personne ne reprendra.',
     },
     'scripts/gates/gov-conventions.ts': {
       total: 2,
