@@ -211,3 +211,199 @@ describe('REQ-GOV-021 — les deux modes ne dégradent pas les gardes existantes
     expect(statSync('docs/REQUIREMENTS.md').size).toBeGreaterThan(0);
   });
 });
+
+/**
+ * ── LA CINQUIÈME VUE (GOV-035) ───────────────────────────────────────────────
+ *
+ * REQ-GOV-032 énumère CINQ vues générées. GOV-024 en a outillé quatre ; `docs/PLAN-STATE.md`
+ * était la seule à n'avoir qu'un GÉNÉRATEUR — `pnpm plan-state:build` écrit, et rien ne comparait.
+ *
+ * CE QUI L'A FAIT ÉCRIRE, MESURÉ. Une lentille a falsifié quinze lignes de la vue en gardant
+ * toutes ses ancres — « 29/36 » → « 36/36 », « reste 4.00 j » → « 0.00 », « 2 tâche(s)
+ * bloquée(s) » → « 0 » — donc sans toucher un seul titre de rubrique ni une seule barre de
+ * tableau. **Huit vérificateurs de Gate A sont restés verts**, et `plan-state-frais.spec.ts`
+ * 25/25 : il vérifie que les rubriques SONT LÀ, jamais ce qu'elles disent. La famille
+ * `plan_state_perime` de `gov:etat`, elle, compare une DATE DE COMMIT — un fichier falsifié puis
+ * recommité est plus « frais » que le vrai.
+ *
+ * CE QUE LE VÉRIFICATEUR COMPARE, ET CE QU'IL NE PEUT PAS COMPARER. Cette vue-ci n'a pas que des
+ * sources suivies par git : elle porte aussi le SHA d'`origin/main`, la file des PR ouvertes et
+ * les labels `owner:` des issues. Comparer le fichier ENTIER mesurerait la disponibilité de `gh`
+ * et l'âge de `main` — la garde serait rouge après chaque fusion, chez tout le monde, et on
+ * apprendrait à la sauter (RM-02 ; le motif est déjà écrit dans `gov-trace.ts` : « si son contenu
+ * dépendait d'un appel réseau, `--verifier` mesurerait la disponibilité de `gh` »). Le périmètre
+ * comparé est donc celui des rubriques DÉRIVÉES DE FICHIERS SUIVIS ; il est DÉCLARÉ dans le
+ * script, la sortie verte le NOMME, et une rubrique qui n'appartiendrait à aucune des deux listes
+ * fait ROUGIR — sans quoi la couverture se périmerait en silence à la première rubrique ajoutée.
+ */
+describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-035)', () => {
+  const PLAN = 'scripts/plan-state/build.ts';
+
+  /** Rend la vue dans le bac à sable. Le `docs/PLAN-STATE.md` du dépôt n'est JAMAIS écrit. */
+  function rendrePlanState(nom: string): string {
+    const chemin = join(bac, nom);
+    const { code, sortie } = lancer(PLAN, '--out', chemin);
+    expect(code, `le rendu de ${PLAN} a échoué : ${sortie}`).toBe(0);
+    expect(existsSync(chemin), `\`--out\` n'a pas écrit dans le bac : ${sortie}`).toBe(true);
+    return chemin;
+  }
+
+  /**
+   * LA FALSIFICATION MESURÉE PAR LA LENTILLE, rejouée : les COMPTEURS changent, les ANCRES
+   * restent. Aucun titre, aucune barre de tableau, aucune puce n'est touchée.
+   */
+  function falsifierLesCompteurs(texte: string): { faux: string; appliquees: number } {
+    // Chaque règle INCRÉMENTE le compteur qu'elle vise plutôt que d'y écrire une valeur choisie :
+    // « 36/36 » ne falsifie plus rien le jour où la phase est terminée, et « 0 bloquée » ne
+    // falsifie rien s'il n'y en a aucune. Un témoin dont la mutation dépend de l'état du dépôt
+    // devient vert tout seul, un jour, sans que rien ne le dise.
+    const regles: [RegExp, (...g: string[]) => string][] = [
+      [
+        /^(\d+)\/(\d+) tâches terminées · reste ([\d.]+) j estimés\.$/m,
+        (_m, a, b, j) => `${Number(a) + 1}/${b} tâches terminées · reste ${(Number(j) + 1).toFixed(2)} j estimés.`,
+      ],
+      [
+        /^(\| Où en est la phase \? \| phase -?\d+ — )(\d+)(\/\d+ tâches, reste )([\d.]+)( j \|)$/m,
+        (_m, tete, a, milieu, j, queue) => `${tete}${Number(a) + 1}${milieu}${(Number(j) + 1).toFixed(2)}${queue}`,
+      ],
+      [
+        /^(\| Ce qui bloque \| )(\d+)( tâche\(s\) bloquée\(s\))/m,
+        (_m, tete, n, queue) => `${tete}${Number(n) + 1}${queue}`,
+      ],
+    ];
+    let faux = texte;
+    let appliquees = 0;
+    for (const [re, par] of regles) {
+      const suivant = faux.replace(re, par as never);
+      if (suivant !== faux) appliquees++;
+      faux = suivant;
+    }
+    return { faux, appliquees };
+  }
+
+  it('REQ-GOV-032 · CONTRE-TÉMOIN : une vue FRAÎCHEMENT rendue est déclarée égale à ses sources', () => {
+    const vue = rendrePlanState('PLAN-STATE-frais.md');
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(sortie).toContain('✅');
+    expect(code, `une vue rendue à l'instant est jugée périmée : ${sortie}`).toBe(0);
+  });
+
+  it('REQ-GOV-032 · CONTRE-TÉMOIN : la vue COMMITÉE du dépôt est égale à ce que ses sources produisent', () => {
+    const { code, sortie } = lancer(PLAN, '--verifier');
+    expect(sortie).toContain('✅');
+    expect(code, `docs/PLAN-STATE.md a dérivé de ses sources : ${sortie}`).toBe(0);
+  });
+
+  it('REQ-GOV-032 · TÉMOIN : les compteurs falsifiés, TOUTES ANCRES CONSERVÉES, sortent 1', () => {
+    const vue = rendrePlanState('PLAN-STATE-faux-compteurs.md');
+    const rendu = readFileSync(vue, 'utf8');
+    const { faux, appliquees } = falsifierLesCompteurs(rendu);
+    expect(
+      appliquees,
+      'une des trois falsifications n’a pas mordu : le témoin exerce moins que ce qu’il annonce'
+    ).toBe(3);
+    expect(faux, 'le témoin n’a rien falsifié : il ne prouve rien').not.toBe(rendu);
+    // L'ANCRE EST INTACTE — c'est toute la propriété : les huit vérificateurs de Gate A qui
+    // regardent les titres sont restés verts sur exactement cette mutation.
+    const titres = (t: string) => t.split('\n').filter((l) => l.startsWith('## '));
+    expect(titres(faux), 'le témoin a bougé une ancre : il n’exerce plus la cécité mesurée').toEqual(titres(rendu));
+    writeFileSync(vue, faux);
+
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `une vue falsifiée est déclarée conforme : ${sortie}`).toBe(1);
+
+    // Le message NOMME l'écart en unités du domaine (REQ-GOV-032) : des TÂCHES, des JOURS.
+    expect(sortie, `l'écart n'est pas nommé en tâches : ${sortie}`).toMatch(/tâche/);
+    expect(sortie, '« les deux fichiers diffèrent » n’apprend rien à qui lit un journal de CI').not.toMatch(
+      /les deux fichiers diff/i
+    );
+    // Et il dit quoi taper : une garde qui constate sans dire quoi faire devient un avertissement.
+    expect(sortie).toContain('plan-state:build');
+
+    // Les DEUX comptes sont cités — celui du disque et celui de la source.
+    const trouve = /^(\d+)\/(\d+) tâches terminées/m.exec(rendu);
+    expect(trouve, 'la vue rendue ne porte pas le compte de phase attendu').not.toBeNull();
+    const n = nombresCites(sortie);
+    expect(n, `le message ne cite pas le compte de la SOURCE (${trouve![1]}) : ${sortie}`).toContain(
+      Number(trouve![1])
+    );
+    expect(
+      n,
+      `le message ne cite pas le compte FALSIFIÉ du disque (${Number(trouve![1]) + 1}) : ${sortie}`
+    ).toContain(Number(trouve![1]) + 1);
+  });
+
+  it('REQ-GOV-032 · TÉMOIN : UNE SEULE ligne falsifiée — le compte des tâches bloquées — suffit', () => {
+    const vue = rendrePlanState('PLAN-STATE-une-ligne.md');
+    const rendu = readFileSync(vue, 'utf8');
+    const faux = rendu.replace(
+      /^(\| Ce qui bloque \| )(\d+)( tâche\(s\) bloquée\(s\))/m,
+      (_m, tete: string, n: string, queue: string) => `${tete}${Number(n) + 1}${queue}`
+    );
+    expect(faux, 'aucune ligne « Ce qui bloque » dans la vue : le témoin ne falsifie rien').not.toBe(rendu);
+    writeFileSync(vue, faux);
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `une ligne falsifiée passe : ${sortie}`).toBe(1);
+    expect(sortie, `l'écart n'est pas nommé en tâches bloquées : ${sortie}`).toMatch(/bloqu/i);
+  });
+
+  it('REQ-GOV-032 · la comparaison est OCTET PAR OCTET, pas par LONGUEUR', () => {
+    const vue = rendrePlanState('PLAN-STATE-longueur-constante.md');
+    const rendu = readFileSync(vue, 'utf8');
+    const faux = rendu.replace('## Chemin critique', '## chemin critique');
+    expect(faux.length, 'le témoin doit garder la MÊME longueur, sinon il ne prouve rien').toBe(rendu.length);
+    expect(faux).not.toBe(rendu);
+    writeFileSync(vue, faux);
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `une dérive à longueur constante DOIT sortir 1 : ${sortie}`).toBe(1);
+  });
+
+  it('REQ-GOV-032 · une rubrique INCONNUE du périmètre fait rougir — la couverture ne se périme pas en silence', () => {
+    // Sans ceci, ajouter une rubrique au générateur la placerait hors de tout contrôle, et la
+    // garde resterait verte sur une vue dont une part entière n'est plus comparée à rien.
+    const vue = rendrePlanState('PLAN-STATE-rubrique-inconnue.md');
+    writeFileSync(vue, readFileSync(vue, 'utf8') + '\n## Rubrique inventée à la main\n\nrien.\n');
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `une rubrique hors périmètre passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/Rubrique inventée à la main/);
+  });
+
+  it('REQ-GOV-032 · une vue ABSENTE est un rouge qui le dit, jamais un vert par défaut', () => {
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', join(bac, 'jamais-rendue.md'));
+    expect(code).toBe(1);
+    expect(sortie).toMatch(/absent/i);
+  });
+
+  it('REQ-GOV-032 · `--verifier` N’ÉCRIT PAS ce qu’il contrôle', () => {
+    const vue = rendrePlanState('PLAN-STATE-non-ecrit.md');
+    const { faux, appliquees } = falsifierLesCompteurs(readFileSync(vue, 'utf8'));
+    expect(appliquees, 'rien n’a été falsifié : le témoin ne contrôle aucune réparation').toBe(3);
+    writeFileSync(vue, faux);
+    lancer(PLAN, '--verifier', '--out', vue);
+    expect(readFileSync(vue, 'utf8'), 'le vérificateur a RÉPARÉ ce qu’il contrôle').toBe(faux);
+  });
+
+  it('REQ-GOV-032 · le VERT nomme ce qu’il n’a PAS comparé — un vert muet promet plus qu’il ne tient', () => {
+    const vue = rendrePlanState('PLAN-STATE-perimetre.md');
+    const { sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(sortie).toContain('✅');
+    // Les rubriques qui dépendent de `gh` et d'`origin/main` ne sont pas comparables ; le vert
+    // le DIT, plutôt que de laisser croire qu'elles le sont.
+    expect(sortie, 'le vert ne nomme pas les rubriques non comparées').toMatch(/File de fusion/);
+    expect(sortie).toMatch(/Dernier atterrissage/);
+  });
+
+  it('REQ-GOV-032 · le rendu des rubriques COMPARÉES est déterministe : deux appels, les mêmes octets', () => {
+    // Sans quoi le vérificateur mesurerait l'ordre d'un `Object.keys`, l'heure ou le fuseau.
+    const rubriques = (t: string) =>
+      t
+        .split(/^## /m)
+        .filter((s) =>
+          /^(Phase courante|Tâches|Chemin critique|Bloquées|Questions ouvertes|Hypothèses|Journal|Dette déclarée)/.test(s)
+        );
+    const a = rubriques(readFileSync(rendrePlanState('det-plan-a.md'), 'utf8'));
+    const b = rubriques(readFileSync(rendrePlanState('det-plan-b.md'), 'utf8'));
+    expect(a.length, 'aucune rubrique déterministe trouvée : le témoin ne compare rien').toBeGreaterThan(4);
+    expect(a).toEqual(b);
+  });
+});

@@ -1,7 +1,9 @@
 /**
  * build.ts — régénère docs/PLAN-STATE.md. Le fichier est DÉRIVÉ, jamais écrit à la main.
  *
- * USAGE   : pnpm plan-state:build
+ * USAGE   : pnpm plan-state:build            rend la vue et l'ÉCRIT
+ *           pnpm plan-state:verifier         n'écrit rien ; sort 1 si la vue sur le disque a dérivé
+ *           …--out <chemin>                  travaille sur une autre vue (bancs d'essai des tests)
  * ENTRÉES : docs/tasks.json · docs/DECISIONS.md · docs/journal/ · docs/adr/ · `gh pr list` ·
  *           `gh issue list` · git
  *
@@ -20,7 +22,13 @@
  *
  * POURQUOI : trois textes du plan donnaient trois écrivains différents à ce fichier. Un état partagé
  * entre 40 agents ne peut avoir qu'une source ; ici la source est GitHub, et ce script en est la vue.
- * Le test `plan-state-derive.spec.ts` relance ce script et exige que le fichier commité soit identique.
+ * CE FICHIER A CITÉ UN TEST QUI N'EXISTE PAS — « le test `plan-state-derive.spec.ts` relance ce
+ * script et exige que le fichier commité soit identique ». Aucun fichier de ce nom n'a jamais été
+ * écrit ; l'assertion qu'il promettait n'existait nulle part, et c'est précisément ce qui a permis à
+ * une lentille de falsifier quinze lignes de la vue sans faire rougir quoi que ce soit. C'est LEC-12
+ * mot pour mot — « une citation n'est pas une existence » — dans le fichier même qu'elle décrit.
+ * La promesse est désormais TENUE, par `--verifier` ci-dessous et par le témoin qui le voit rougir :
+ * `tests/unit/gouvernance/vues-derivees.spec.ts` (GOV-035, REQ-GOV-032).
  *
  * INVARIANT : ce script ne DÉCIDE rien. S'il faut changer un statut, on change l'issue, pas le fichier.
  */
@@ -30,6 +38,17 @@ import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const PLAFOND_QUESTIONS = 10;
+
+/**
+ * Les deux arguments. `--verifier` ne fait que LIRE ; `--out` déplace la vue, et n'existe que pour
+ * que les témoins travaillent en bac à sable : un test qui périmerait `docs/PLAN-STATE.md` pour de
+ * vrai emporterait le travail non commité de la session qui l'exécute.
+ */
+const MODE_VERIFIER = process.argv.includes('--verifier');
+const CHEMIN_VUE = (() => {
+  const i = process.argv.indexOf('--out');
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1]! : 'docs/PLAN-STATE.md';
+})();
 
 interface Tache {
   id: string; titre: string; phase: number; repo: string; statut: string;
@@ -466,6 +485,242 @@ lignes.push('');
   lignes.splice(iBlocReprise, 0, ...bloc);
 }
 
-writeFileSync('docs/PLAN-STATE.md', lignes.join('\n') + '\n');
-console.log(`PLAN-STATE régénéré — phase ${phaseCourante}, ${enCours.length} en cours, ${questions.length} question(s) ouverte(s).`);
-if (questions.length > PLAFOND_QUESTIONS) process.exitCode = 1;
+// ════════════════════════════════════════════════════════════════════════════
+// LE VÉRIFICATEUR (GOV-035, REQ-GOV-032)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// `docs/PLAN-STATE.md` était la CINQUIÈME vue de REQ-GOV-032 et la seule sans vérificateur : ce
+// script ÉCRIVAIT, et rien ne comparait. Mesuré par une lentille le 2026-09-12 — quinze lignes
+// falsifiées dans la vue, toutes ancres conservées (« 29/36 » → « 36/36 », « reste 4.00 j » →
+// « 0.00 », « 2 tâche(s) bloquée(s) » → « 0 ») : HUIT vérificateurs de Gate A sont restés verts,
+// et `plan-state-frais.spec.ts` 25/25, parce qu'il juge que les rubriques SONT LÀ, jamais ce
+// qu'elles disent. La famille `plan_state_perime` de `gov:etat` compare une DATE DE COMMIT : un
+// fichier falsifié puis recommité est plus « frais » que le vrai.
+//
+// ── CE QUI EST COMPARÉ, ET POURQUOI PAS TOUT ────────────────────────────────
+//
+// Les quatre vues sœurs se dérivent de fichiers SUIVIS par git : leur vérificateur compare le
+// fichier entier, octet par octet. Celle-ci ne le peut pas, et il faut le dire plutôt que le
+// laisser croire : elle porte AUSSI le SHA d'`origin/main`, la file des PR ouvertes et les labels
+// `owner:` des issues. Un vérificateur qui comparerait tout mesurerait la disponibilité de `gh` et
+// l'âge de `main` — rouge après chaque fusion, chez tout le monde, sur une vue parfaitement juste.
+// On apprendrait à le sauter, et une garde qu'on saute ne garde plus rien (RM-02). Le motif est
+// déjà écrit dans `gov-trace.ts` : « si son contenu dépendait d'un appel réseau, `--verifier`
+// mesurerait la disponibilité de `gh`, pas la dérivation de la vue ». MESURE du 2026-09-12 : sur
+// un arbre à jour, les seules différences entre le fichier commité et un rendu neuf étaient le
+// SHA de `main`, la file de fusion, « Décisions du jour » (dérivée du JOUR du dernier
+// atterrissage) et « Prochain pas » — toutes volatiles, aucune fautive.
+//
+// Le périmètre comparé est donc celui des rubriques dérivées de fichiers SUIVIS. Il est DÉCLARÉ
+// ci-dessous, la sortie verte le NOMME — un vert muet promet plus qu'il ne tient — et une
+// rubrique qui n'appartient à AUCUNE des deux listes fait rougir : sans quoi la couverture se
+// périmerait en silence dès la première rubrique ajoutée au générateur.
+//
+// ⚠️ CE QUE CE VÉRIFICATEUR NE VOIT PAS, écrit plutôt que tu : une falsification portée
+// uniquement sur une rubrique volatile (réécrire le SHA de `main`, retirer une PR de la file)
+// passe. Fermer ce trou demanderait de figer la forge dans une fixture, ce que cette vue ne fait
+// pas. Ce qui est fermé, c'est tout ce qui se dérive d'un fichier du dépôt — c'est-à-dire les
+// quinze lignes que la lentille a falsifiées.
+
+/** Les rubriques COMPARÉES, octet par octet. Toutes se dérivent de fichiers suivis par git. */
+const RUBRIQUES_COMPAREES = [
+  '(en-tête)',
+  'Phase courante',
+  'Tâches',
+  'Chemin critique',
+  'Bloquées',
+  'Questions ouvertes pour Will',
+  'Hypothèses par défaut appliquées',
+  'Journal',
+  'Dette déclarée',
+];
+
+/** Les rubriques NON comparables, chacune avec la source vivante qui l'en empêche. */
+const RUBRIQUES_VOLATILES: [string, string][] = [
+  ['File de fusion', '`gh pr list` — change à chaque ouverture ou fusion de PR'],
+  ['Revendications', '`gh issue list` — labels `owner:` posés hors du dépôt'],
+  ['Décisions du jour', 'dérivée du JOUR du dernier atterrissage, donc de `origin/main`'],
+  ['Prochain pas', 'dépend de la tête de la file de fusion'],
+  ['Dernier atterrissage', 'SHA et date d’`origin/main`'],
+];
+
+/**
+ * Le bloc de reprise MÉLANGE les deux : il résume à la fois `docs/tasks.json` et la forge. On y
+ * compare donc LIGNE À LIGNE, par la question posée en première colonne — et une question
+ * inconnue rougit, pour la même raison que les rubriques.
+ */
+const BLOC_DE_REPRISE = 'REPRENDRE EN 30 SECONDES';
+const LIGNES_DE_REPRISE_COMPAREES = ['Où en est la phase ?', 'Ce qui bloque', 'Dernière entrée de journal'];
+const LIGNES_DE_REPRISE_VOLATILES = ['Question', '---', 'Où est `main` ?', 'Qu’est-ce qui est en vol ?', 'Qui tient quoi ?', 'Le prochain pas'];
+
+interface Rubrique { titre: string; corps: string }
+
+/** Découpe une vue en rubriques `## `. Le texte d'avant la première porte le nom `(en-tête)`. */
+function decouper(texte: string): Rubrique[] {
+  const out: Rubrique[] = [];
+  let titre = '(en-tête)';
+  let corps: string[] = [];
+  for (const l of texte.split('\n')) {
+    if (l.startsWith('## ')) {
+      out.push({ titre, corps: corps.join('\n') });
+      titre = l.slice(3).trim();
+      corps = [];
+    } else corps.push(l);
+  }
+  out.push({ titre, corps: corps.join('\n') });
+  return out;
+}
+
+const classer = (titre: string): 'comparee' | 'volatile' | 'reprise' | 'inconnue' => {
+  if (titre === BLOC_DE_REPRISE) return 'reprise';
+  if (RUBRIQUES_COMPAREES.some((r) => titre === r || titre.startsWith(r + ' '))) return 'comparee';
+  if (RUBRIQUES_VOLATILES.some(([r]) => titre === r || titre.startsWith(r + ' '))) return 'volatile';
+  return 'inconnue';
+};
+
+/**
+ * LES MESURES DU DOMAINE. REQ-GOV-032 exige que l'écart soit nommé « en unités du domaine —
+ * nombre de tâches livrées, nombre d'exigences — et non "les deux fichiers diffèrent" ». Elles
+ * sont LUES dans les deux textes et confrontées deux à deux ; aucune n'est écrite en dur.
+ */
+function mesures(texte: string): Map<string, string> {
+  const m = new Map<string, string>();
+  const lire = (re: RegExp, ...noms: string[]) => {
+    const r = re.exec(texte);
+    if (r) noms.forEach((n, i) => { if (r[i + 1] !== undefined) m.set(n, r[i + 1]!); });
+  };
+  lire(/^(\d+)\/(\d+) tâches terminées · reste ([\d.]+) j estimés\.$/m,
+    'tâches terminées en phase courante', 'tâches de la phase courante', 'jours restants en phase courante');
+  lire(/^\| Où en est la phase \? \| phase (-?\d+) — (\d+)\/(\d+) tâches, reste ([\d.]+) j \|$/m,
+    'phase courante (bloc de reprise)', 'tâches terminées (bloc de reprise)', 'tâches de la phase (bloc de reprise)', 'jours restants (bloc de reprise)');
+  lire(/^\| Ce qui bloque \| (\d+) tâche\(s\) bloquée\(s\) ou en attente externe · (\d+) question\(s\) pour Will \|$/m,
+    'tâches bloquées ou en attente (bloc de reprise)', 'questions ouvertes pour Will (bloc de reprise)');
+  lire(/^\*\*([\d.]+) j\*\* sur (\d+) taches enchainees/m, 'jours du chemin critique', 'tâches du chemin critique');
+  lire(/^Reste sur ce chemin : \*\*([\d.]+) j\*\*\.$/m, 'jours restants sur le chemin critique');
+  lire(/^(\d+) décisions portent une hypothèse datée/m, 'décisions à hypothèse posée');
+  for (const s of ['a_faire', 'en_cours', 'en_revue', 'fusionnee', 'deployee', 'verifiee', 'bloquee', 'attente_externe']) {
+    lire(new RegExp(`^\\| \`${s}\` \\| (\\d+) \\|`, 'm'), `tâches \`${s}\``);
+  }
+  m.set('tâches nommées sous « Bloquées »', String((texte.match(/^- \*\*[A-Z]+-[A-Za-z0-9-]+\*\* — /gm) ?? []).length));
+  m.set('entrées de journal rendues', String((texte.match(/^### PR #\d+ — /gm) ?? []).length));
+  return m;
+}
+
+interface Ecart { famille: string; message: string }
+
+/** La première ligne qui diffère entre deux corps, rendue lisible. */
+function premiereDifference(attendu: string, trouve: string): string {
+  const a = attendu.split('\n');
+  const t = trouve.split('\n');
+  for (let i = 0; i < Math.max(a.length, t.length); i++) {
+    if (a[i] !== t[i]) {
+      const court = (s: string | undefined) => (s === undefined ? '(ligne absente)' : `« ${s.slice(0, 160)} »`);
+      return `ligne ${i + 1} — la vue dit ${court(t[i])}, ses sources produisent ${court(a[i])}`;
+    }
+  }
+  return 'les corps diffèrent sans qu’aucune ligne ne diffère (fin de fichier)';
+}
+
+/** Le verdict : ce que le disque porte, confronté à ce que les sources produisent À L'INSTANT. */
+function comparer(attendu: string, surDisque: string): Ecart[] {
+  const ecarts: Ecart[] = [];
+
+  // 1. LES MESURES DU DOMAINE d'abord : ce sont elles qui apprennent quelque chose.
+  const mA = mesures(attendu);
+  const mD = mesures(surDisque);
+  for (const [nom, valeur] of mA) {
+    const vu = mD.get(nom);
+    if (vu === undefined) ecarts.push({ famille: 'mesure_absente', message: `${nom} : introuvable dans la vue sur le disque, ses sources en produisent ${valeur}` });
+    else if (vu !== valeur) ecarts.push({ famille: 'vue_perimee', message: `${nom} : la vue sur le disque dit ${vu}, ses sources produisent ${valeur}` });
+  }
+
+  // 2. LA STRUCTURE : toute rubrique doit être classée, des deux côtés.
+  const rA = decouper(attendu);
+  const rD = decouper(surDisque);
+  for (const [ou, liste] of [['la vue sur le disque', rD], ['ses sources', rA]] as const) {
+    for (const r of liste) {
+      if (classer(r.titre) === 'inconnue') {
+        ecarts.push({
+          famille: 'rubrique_non_classee',
+          message: `rubrique « ${r.titre} » dans ${ou} : elle n’est ni déclarée comparable ni déclarée volatile dans ${
+            'scripts/plan-state/build.ts'
+          } — classe-la, sinon elle n’est comparée à rien`,
+        });
+      }
+    }
+  }
+  const titresA = rA.map((r) => r.titre);
+  const titresD = rD.map((r) => r.titre);
+  for (const t of titresA) if (!titresD.includes(t)) ecarts.push({ famille: 'rubrique_manquante', message: `rubrique « ${t} » : absente de la vue sur le disque, produite par ses sources` });
+  for (const t of titresD) if (!titresA.includes(t)) ecarts.push({ famille: 'rubrique_en_trop', message: `rubrique « ${t} » : présente dans la vue sur le disque, produite par aucune source` });
+
+  // 3. LE CORPS des rubriques comparables, OCTET PAR OCTET.
+  for (const r of rA) {
+    if (classer(r.titre) !== 'comparee') continue;
+    const surPlace = rD.find((x) => x.titre === r.titre);
+    if (!surPlace || surPlace.corps === r.corps) continue;
+    ecarts.push({ famille: 'vue_perimee', message: `rubrique « ${r.titre} » : ${premiereDifference(r.corps, surPlace.corps)}` });
+  }
+
+  // 4. LE BLOC DE REPRISE, ligne à ligne : il mélange les tâches et la forge.
+  const blocA = rA.find((r) => r.titre === BLOC_DE_REPRISE);
+  const blocD = rD.find((r) => r.titre === BLOC_DE_REPRISE);
+  if (blocA && blocD) {
+    const question = (l: string) => (l.startsWith('|') ? (l.split('|')[1] ?? '').trim() : null);
+    const lignesD = new Map(blocD.corps.split('\n').map((l) => [question(l), l] as const));
+    for (const l of blocA.corps.split('\n')) {
+      const q = question(l);
+      if (q === null) continue;
+      if (LIGNES_DE_REPRISE_VOLATILES.includes(q)) continue;
+      if (!LIGNES_DE_REPRISE_COMPAREES.includes(q)) {
+        ecarts.push({ famille: 'ligne_de_reprise_non_classee', message: `bloc de reprise, ligne « ${q} » : ni comparable ni volatile — classe-la dans scripts/plan-state/build.ts` });
+        continue;
+      }
+      const vue = lignesD.get(q);
+      if (vue === undefined) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise : la ligne « ${q} » est absente de la vue sur le disque` });
+      else if (vue !== l) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise, ligne « ${q} » : la vue sur le disque dit « ${vue.slice(0, 160)} », ses sources produisent « ${l.slice(0, 160)} »` });
+    }
+  }
+
+  // Un même écart nommé deux fois (mesure ET corps de rubrique) n'apprend rien de plus.
+  const vus = new Set<string>();
+  return ecarts.filter((e) => (vus.has(e.message) ? false : (vus.add(e.message), true)));
+}
+
+// ── les deux modes ───────────────────────────────────────────────────────────
+const rendu = lignes.join('\n') + '\n';
+
+if (MODE_VERIFIER) {
+  // Ce mode N'ÉCRIT RIEN : une garde qui répare ce qu'elle contrôle est toujours verte.
+  if (!existsSync(CHEMIN_VUE)) {
+    console.error(`❌ plan-state:verifier — ${CHEMIN_VUE} est ABSENT : il n’y a rien à comparer. Tape \`pnpm plan-state:build\`.`);
+    process.exitCode = 1;
+  } else {
+    const ecarts = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'));
+    if (ecarts.length > 0) {
+      console.error(`❌ plan-state:verifier — ${CHEMIN_VUE} a DÉRIVÉ de ses sources : ${ecarts.length} écart(s).`);
+      for (const e of ecarts.slice(0, 20)) console.error(`   [${e.famille}] ${e.message}`);
+      if (ecarts.length > 20) console.error(`   … et ${ecarts.length - 20} autre(s).`);
+      console.error(
+        '   Cette vue est DÉRIVÉE : tape `pnpm plan-state:build` pour la régénérer. Si le chiffre te ' +
+          'surprend, c’est la SOURCE qu’il faut corriger (`docs/tasks.json` par `pnpm lot:cloture`, ' +
+          '`docs/DECISIONS.md`, `docs/journal/`) — jamais la vue à la main.'
+      );
+      process.exitCode = 1;
+    } else {
+      const comparees = decouper(rendu).filter((r) => classer(r.titre) === 'comparee');
+      console.log(
+        `✅ plan-state:verifier — ${CHEMIN_VUE} est égal à ce que ses sources produisent : ` +
+          `${comparees.length} rubrique(s) comparée(s) octet par octet, ${LIGNES_DE_REPRISE_COMPAREES.length} ligne(s) du bloc de reprise, ` +
+          `${mesures(rendu).size} mesure(s) du domaine.`
+      );
+      console.log(
+        `   NON COMPARÉ, et dit plutôt que tu : ${RUBRIQUES_VOLATILES.map(([r, motif]) => `« ${r} » (${motif})`).join(' · ')}.`
+      );
+    }
+  }
+} else {
+  writeFileSync(CHEMIN_VUE, rendu);
+  console.log(`PLAN-STATE régénéré — phase ${phaseCourante}, ${enCours.length} en cours, ${questions.length} question(s) ouverte(s).`);
+  if (questions.length > PLAFOND_QUESTIONS) process.exitCode = 1;
+}

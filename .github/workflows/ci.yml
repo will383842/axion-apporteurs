@@ -131,6 +131,19 @@ jobs:
         run: pnpm gov:trace:prove
       - name: La vue de tracabilite est derivee de ses sources
         run: pnpm gov:trace:verifier
+      # GOV-035, REQ-GOV-032. LA CINQUIEME VUE, et la derniere sans verificateur : le script
+      # ECRIVAIT et rien ne comparait. Mesure : quinze lignes falsifiees dans PLAN-STATE, toutes
+      # ancres conservees (29/36 -> 36/36, reste 4.00 j -> 0.00, 2 bloquees -> 0), et les HUIT
+      # verificateurs ci-dessus sont restes verts. Elle ne compare que les rubriques derivees de
+      # fichiers SUIVIS : comparer le SHA de main ou la file des PR mesurerait la forge, pas la
+      # derivation, et une gate rouge apres chaque fusion s'apprend a etre sautee (RM-02, LEC-13).
+      # Le vert IMPRIME ce qu'il n'a pas compare, une par une. Pas de continue-on-error.
+      # AUCUN GH_TOKEN ici, et ce n est pas un oubli : le perimetre compare ne depend d aucun
+      # appel a la forge. Mesure du 2026-09-12, GH_CONFIG_DIR vide et GH_TOKEN vide : gh refuse,
+      # et la garde rend le MEME verdict — 9 rubriques comparees, exit 0. Sans jeton, seules les
+      # rubriques deja NON comparees changent.
+      - name: La vue de l etat vivant est egale a sa source
+        run: pnpm plan-state:verifier
       # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,
       # elle ECHOUE en nommant les cinq familles non evaluees — et c est voulu : une gate verte
       # parce qu elle n a pas pu lire est pire que pas de gate. Constate en CI le 2026-09-04,

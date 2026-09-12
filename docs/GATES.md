@@ -19,12 +19,12 @@
 
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
-| -1 | Socle de gouvernance | 34 | 22 | 12 |
+| -1 | Socle de gouvernance | 35 | 23 | 12 |
 | 0 | Fondations, sécurité, charte | 43 | 1 | 42 |
 | 1 | Parcours, attribution, intégrations | 21 | 0 | 21 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **112** | **23** | **89** |
+| **Total** | | **113** | **24** | **89** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -35,7 +35,7 @@ avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune s
 Ce sont les seules dont on a la trace d'un échec provoqué. La colonne « Preuve rouge » est le
 champ `preuveRouge` du registre, recopié verbatim par le rendu.
 
-### Phase -1 — armées (22)
+### Phase -1 — armées (23)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
@@ -46,6 +46,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:pr` | GOV-007 | `scripts/gates/gov-pr.ts` | — | pnpm gov:pr:prove — 20 familles, un temoin chacune, 12 contre-temoins verts ; dont lentille_perimee (un accord rendu sur une autre tete que celle qui sera fusionnee), quatre temoins d'avis qui ne comptent pas (compte tiers, avis DISMISSED, poste A99, refus d'A02 efface par un autre poste) et deux contre-temoins d'identite (MEMBER et COLLABORATOR jugent aussi). ⚠️ La valeur precedente annoncait « 16 familles, 6 contre-temoins » : elle etait FAUSSE avant ce tour et personne ne l'avait vue, la garde n'ayant aucun moyen de confronter ce qu'un registre DECLARE a ce que la preuve MESURE |
 | `gov:depot-visibilite` | GOV-012 | `scripts/gates/gov-depot.ts` | — | pnpm gov:depot-visibilite:prove — 9 familles, chacune vue rougir sur son propre defaut injecte, 5 etapes de workflow legitimes en contre-temoins |
 | `gov:autonomie` | GOV-000 | `scripts/gates/gov-autonomie.ts` | — | pnpm gov:autonomie:prove — 4 familles (deny_manquant, hook_non_declare, hook_sans_analyse, commande_laissee_passer), un temoin chacune, 17 commandes dangereuses refusees et 12 legitimes acceptees en contre-temoins — dont `gh api -X DELETE .../branches/main/protection` et `gh issue edit --remove-label owner:A01`, les deux trous trouves le 2026-09-04 |
+| `plan-state:verifier` | GOV-035 | `scripts/plan-state/build.ts` | — | tests/unit/gouvernance/vues-derivees.spec.ts, 10 temoins verts le 2026-09-12 dont 2 contre-temoins (vue fraichement rendue, vue commitee du depot) ; ROUGE mesure AVANT le code : « expected 'PLAN-STATE regenere — phase -1, 0 en ...' to contain '✅' » — `--verifier` etait ignore et le script REECRIVAIT le fichier qu'on lui demandait d'inspecter. Rejoue apres le code sur la vue falsifiee : exit 1, 8 ecarts nommes en taches et en jours |
 | `gov:sonde` | GOV-004 | `scripts/gates/gov-sonde.ts` | — | 11 familles, un temoin chacune, 5 contre-temoins verts (pnpm gov:sonde --prove) |
 | `gov:hypotheses` | GOV-005 | `scripts/gates/gov-hypotheses.ts` | `HYP-*` | pnpm gov:hypotheses:prove — 10 familles vues rougir sur une fixture minimale |
 | `gov:agents` | GOV-023 | `scripts/gates/gov-agents.ts` | — | pnpm gov:agents:prove — 14 familles vues rougir sur leur temoin, 7 contre-temoins verts |

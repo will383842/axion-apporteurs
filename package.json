@@ -23,6 +23,7 @@
     "gov:hypotheses:prove": "tsx scripts/gates/gov-hypotheses.ts --prove",
     "gov:hypotheses:avant-docuseal": "tsx scripts/gates/gov-hypotheses.ts --avant-docuseal",
     "plan-state:build": "tsx scripts/plan-state/build.ts",
+    "plan-state:verifier": "tsx scripts/plan-state/build.ts --verifier",
     "gov:tasks:render": "tsx scripts/gates/gov-tasks.ts --render",
     "gov:identifiants": "tsx scripts/gates/gov-identifiants.ts",
     "gov:identifiants:prove": "tsx scripts/gates/gov-identifiants.ts --prove",

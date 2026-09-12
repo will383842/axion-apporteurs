@@ -97,9 +97,18 @@
       "phase": -1,
       "script": "tests/unit/gouvernance/plan-state-frais.spec.ts",
       "tache": "GOV-008",
-      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : PLAN-STATE porte les 7 rubriques de REQ-GOV-006, le bloc de reprise en tete avec le SHA de main, et le journal fait/reste/appris est RENDU depuis docs/journal/, jamais tape dans la vue. NON COUVERT a ce jour, et aucune autre gate ne le couvre : que plan-state:build regenere un fichier identique au fichier commite. Tant que cette assertion n'est pas ecrite, PLAN-STATE peut avoir ete edite a la main sans que rien ne rougisse. La tache qui porte cette lacune est GOV-035",
+      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : PLAN-STATE porte les 7 rubriques de REQ-GOV-006, le bloc de reprise en tete avec le SHA de main, et le journal fait/reste/appris est RENDU depuis docs/journal/, jamais tape dans la vue. Ce qu'il ne juge PAS : ce que les rubriques DISENT — mesure du 2026-09-12, quinze lignes de compteurs falsifiees, ancres conservees, 25/25 verts. Cette moitie-la est desormais tenue par la gate `plan-state:verifier` (GOV-035), qui compare la vue a ses sources et entre en Gate A",
       "fixtureRouge": "editer PLAN-STATE.md a la main",
       "preuveRouge": null
+    },
+    {
+      "id": "plan-state:verifier",
+      "phase": -1,
+      "script": "scripts/plan-state/build.ts",
+      "tache": "GOV-035",
+      "verifie": "docs/PLAN-STATE.md est la CINQUIEME vue de REQ-GOV-032, et la derniere a n'avoir eu qu'un generateur : `pnpm plan-state:build` ECRIVAIT, rien ne comparait. `--verifier` n'ecrit rien, re-rend la vue en memoire et la confronte au disque, et NOMME l'ecart en unites du domaine (taches terminees, jours restants, taches bloquees, entrees de journal). PERIMETRE EXACT, dit plutot que suppose : seules les rubriques derivees de fichiers SUIVIS sont comparees (en-tete, Phase courante, Taches, Chemin critique, Bloquees, Questions ouvertes, Hypotheses, Journal, Dette declaree) plus trois lignes du bloc de reprise. Les cinq rubriques qui dependent de la forge ou de origin/main (File de fusion, Revendications, Decisions du jour, Prochain pas, Dernier atterrissage) sont HORS perimetre — les comparer mesurerait la disponibilite de gh et l'age de main, donc rouge apres chaque fusion — et le vert les IMPRIME une par une. Une rubrique qui n'appartient a aucune des deux listes fait rougir, sinon la couverture se perimerait en silence a la premiere rubrique ajoutee au generateur",
+      "fixtureRouge": "falsifier les compteurs de la vue en gardant toutes ses ancres : 29/36 -> 36/36, reste 4.00 j -> 0.00, 2 tache(s) bloquee(s) -> 0",
+      "preuveRouge": "tests/unit/gouvernance/vues-derivees.spec.ts, 10 temoins verts le 2026-09-12 dont 2 contre-temoins (vue fraichement rendue, vue commitee du depot) ; ROUGE mesure AVANT le code : « expected 'PLAN-STATE regenere — phase -1, 0 en ...' to contain '✅' » — `--verifier` etait ignore et le script REECRIVAIT le fichier qu'on lui demandait d'inspecter. Rejoue apres le code sur la vue falsifiee : exit 1, 8 ecarts nommes en taches et en jours"
     },
     {
       "id": "gov:sonde",
