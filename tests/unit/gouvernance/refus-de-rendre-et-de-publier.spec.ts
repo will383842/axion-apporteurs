@@ -1693,7 +1693,7 @@ it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉC
 /**
  * 🔴 LE CONTRÔLE QUI NE DÉPEND PAS DE LA LISTE — motif de `mutation` sur la PR #33.
  *
- * `GARDES_QUI_BALAIENT` est dérivée, et son contrôle croise l'APPEL et l'IMPORT. Mais retirer les
+ * `GARDES_QUI_BALAIENT` est DÉCLARÉE. Une rédaction antérieure la dérivait du disque : retirer les
  * DEUX en même temps — l'import devient inutile, aucun lint ne proteste — fait sortir une garde du
  * périmètre **sans un bruit** : les deux compteurs baissent ensemble, l'égalité tient, et la garde
  * rend `✅ … exit 0` sur un dossier sans `.git` en balayant zéro fichier, dans la chaîne bloquante
