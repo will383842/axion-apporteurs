@@ -1,0 +1,30 @@
+# Ce que Prettier ne reformate PAS — et pourquoi (REQ-GOV-018, GOV-014).
+#
+# ⚠️ Prettier n'est pas encore installé dans ce dépôt : `package.json` est un fichier PARTAGÉ, la
+# dépendance et le script `format:check` sont rendus en texte dans la PR de GOV-014. Ce fichier est
+# donc une DÉCLARATION tant que A01 ne les a pas appliqués — `gov:conventions` l'imprime à chaque
+# exécution plutôt que de laisser croire qu'un format tourne.
+
+node_modules/
+.next/
+coverage/
+dist/
+pnpm-lock.yaml
+
+# ── LES VUES DÉRIVÉES NE SE REFORMATENT PAS ─────────────────────────────────────────────────────
+#
+# Ces fichiers ne sont pas écrits à la main : ils sont RENDUS par un script, et une garde compare
+# le disque au texte que ce script produit (`pnpm gov:gates-derivees`, `pnpm adr:index --verifier`,
+# `pnpm lot:paths --check`, `pnpm gov:trace --verifier`, `pnpm gov:agents --verifier`). Laisser
+# Prettier les réécrire ferait rougir ces gardes sans qu'aucun humain n'ait touché à rien — et le
+# rouge désignerait la mauvaise cause, comme le fait déjà `core.autocrlf` sur ce dépôt.
+docs/GATES.md
+docs/TASKS.md
+docs/PLAN-STATE.md
+docs/TRACABILITE.md
+docs/paths-proposes.json
+docs/adr/INDEX.md
+
+# Les fiches de rôle sont rendues depuis `docs/agents.json` par `pnpm gov:agents:rendre` : leur
+# bloc généré est comparé caractère à caractère par `pnpm gov:agents:verifier`.
+.claude/agents/

@@ -34,6 +34,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { FAMILLES_ATTESTATION } from '../../../scripts/lot/attestation';
 
 function lancer(script: string, ...args: string[]): { code: number; sortie: string } {
   const r = spawnSync('npx', ['tsx', script, ...args], { encoding: 'utf8', shell: true });
@@ -42,7 +43,12 @@ function lancer(script: string, ...args: string[]): { code: number; sortie: stri
 
 const GARDES = [
   { nom: 'gov:publication', script: 'scripts/gates/gov-publication.ts', familles: 7 },
-  { nom: 'gov:tasks', script: 'scripts/gates/gov-tasks.ts', familles: 12 },
+  // Les 12 familles d'origine de `gov:tasks`, plus celles de l'attestation inter-dépôt (GOV-038).
+  // La seconde moitié est DÉRIVÉE de son module : recopier « 19 » ici aurait fait de ce fichier la
+  // deuxième source d'un même compte, et c'est le compte qui sert justement à détecter la perte
+  // silencieuse d'une famille. Le 12 reste écrit — il n'a pas de source importable, la liste vivant
+  // dans un script à effets de bord au chargement.
+  { nom: 'gov:tasks', script: 'scripts/gates/gov-tasks.ts', familles: 12 + FAMILLES_ATTESTATION.length },
   { nom: 'gov:requirements', script: 'scripts/gates/gov-requirements.ts', familles: 11 },
   { nom: 'gov:hypotheses', script: 'scripts/gates/gov-hypotheses.ts', familles: 10 },
 ];
