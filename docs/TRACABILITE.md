@@ -16,7 +16,7 @@
 
 **321 exigences actives · 43 réputées testées · 43 couvertes · 0 orphelines.**
 
-226 tâches, dont 34 livrées · 35 fichiers de test exécutés par `vitest` sur 35 présents.
+227 tâches, dont 34 livrées · 35 fichiers de test exécutés par `vitest` sur 35 présents.
 
 ## Exigences réputées testées
 
@@ -58,7 +58,7 @@
 | `REQ-GOV-029` | `GOV-014`, `GOV-051` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |
 | `REQ-GOV-030` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
-| `REQ-GOV-032` | `GOV-024`, `GOV-035`, `GOV-053` | `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
+| `REQ-GOV-032` | `GOV-024`, `GOV-035`, `GOV-053`, `GOV-055` | `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-033` | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | couverte |
 | `REQ-INT-003` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-004` | `GOV-030`, `INT-T01a`, `INT-T05` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |

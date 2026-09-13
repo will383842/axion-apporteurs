@@ -8381,6 +8381,34 @@
           "tests/unit/gouvernance/cliquet-sorties-differees.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-055",
+      "titre": "Comparer un generateur a lui-meme ne voit jamais ce qu'il a CESSE de produire",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/plan-state/build.ts",
+        "docs/requirements.json",
+        "tests/unit/gouvernance/couverture-attendue.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-032"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "TROIS MESURES QUI OUVRENT LA TACHE, jouees par A10 mutation et A09 exactitude au 2e tour de la PR 36, a refaire avant d'ecrire une ligne. Toutes rendent EXIT 0 :\n  (1) neutraliser `lignes.push('## Bloquees')` dans le generateur, puis `plan-state:build`, puis `plan-state:verifier` -> « ✅ 8 rubrique(s) comparee(s) ». La couverture tombe de 9 a 8 EN SILENCE.\n  (2) renommer `## Bloquees` en `## Dernier atterrissage` — un nom EXACTEMENT volatile — puis regenerer : la rubrique bascule du cote exempte, meme chute silencieuse. Le prefixe est ferme, le nom exact non.\n  (3) supprimer du generateur la ligne comparee « Derniere entree de journal » : « ✅ 2 ligne(s) CONFRONTEES » au lieu de 3.\n\nPOURQUOI CE N'EST PAS REPARABLE DANS LA PR 36. Le verificateur compare ce que le generateur PRODUIT a ce qui est sur le DISQUE. Si le generateur cesse de produire un element, les deux cotes le perdent ensemble et l'ecart n'existe pas. Un temoin qui derive son attendu du rendu ne peut pas voir ce que le rendu a perdu — c'est exactement le defaut du temoin de couverture ecrit dans la PR 36, qui PRETENDAIT fermer (1) et ne le fermait pas. La correction faite : ce temoin dit desormais ce qu'il garde vraiment, et renvoie ici.\n\nIL FAUT UNE SOURCE EXTERIEURE, et elle n'existe pas encore. REQ-GOV-006 enumere six elements de PLAN-STATE — SHA de main, PR en vol et file de fusion, tache revendiquee, decisions du jour, prochain pas, bloc REPRENDRE EN 30 SECONDES — toutes VOLATILES. Aucune source ne nomme les rubriques COMPAREES dues (Taches, Chemin critique, Bloquees, Questions ouvertes, Hypotheses, Journal, Dette declaree).\n\nACCEPTATION — ELLE EST LA GARDE.\n  (a) La liste des elements DUS est declaree UNE fois, dans une source du domaine (candidat : etendre REQ-GOV-006, qui en nomme deja six), jamais dans le script qui la verifie — sinon le script se compare encore a lui-meme.\n  (b) ROUGE : chacune des trois mesures ci-dessus sort 1 et NOMME l'element disparu. Fabriquer les trois pannes, jamais les constater (RM-02).\n  (c) VERT : le contre-temoin, un rendu complet, reste vert et ANNONCE le compte attendu a cote du compte observe.\n  (d) La famille neuve entre dans la population du temoin `RM-02 · CHAQUE famille que la gate sait emettre a ete VUE ROUGE` — sinon ce temoin la denoncera, ce qui est son office.\n\nDEUX RESIDUS DE LA MEME FAMILLE, a traiter ici ou a verser a part :\n  - la couche des mesures du domaine peut etre desarmee SELECTIVEMENT (`if (nom !== '<la seule mesure observee>') continue;`) : 22 mesures sur 23 meurent sans que le temoin exclusif rougisse. Le temoin observe UNE mesure, pas la population.\n  - l'exemption de la prose « Ce qu'on tape maintenant » est plus LARGE que sa justification : seule sa premiere clause depend de la file de fusion, sa queue est une constante du generateur. La reecrire passe.",
+      "tests": {
+        "REQ-GOV-032": [
+          "tests/unit/gouvernance/couverture-attendue.spec.ts"
+        ]
+      }
     }
   ]
 }

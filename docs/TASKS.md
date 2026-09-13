@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**226 taches · 165.25 j estimes.**
+**227 taches · 165.75 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 34 |
-| 0 — Socle technique | 66 | 46.75 | 0 |
+| 0 — Socle technique | 67 | 47.25 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -954,6 +954,33 @@ ACCEPTATION — ELLE EST LA GARDE.
 ATTENTION AU SEUIL. Il est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une branche. Recompter APRES avoir lu le rouge, jamais declarer d'avance — « le total ne bouge pas sans qu'on l'ecrive » est ecrit dans le fichier meme.
 
 **Tests.** `tests/unit/gouvernance/cliquet-sorties-differees.spec.ts`
+
+### GOV-055 — Comparer un generateur a lui-meme ne voit jamais ce qu'il a CESSE de produire
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-032`
+
+**Acceptation.** TROIS MESURES QUI OUVRENT LA TACHE, jouees par A10 mutation et A09 exactitude au 2e tour de la PR 36, a refaire avant d'ecrire une ligne. Toutes rendent EXIT 0 :
+  (1) neutraliser `lignes.push('## Bloquees')` dans le generateur, puis `plan-state:build`, puis `plan-state:verifier` -> « ✅ 8 rubrique(s) comparee(s) ». La couverture tombe de 9 a 8 EN SILENCE.
+  (2) renommer `## Bloquees` en `## Dernier atterrissage` — un nom EXACTEMENT volatile — puis regenerer : la rubrique bascule du cote exempte, meme chute silencieuse. Le prefixe est ferme, le nom exact non.
+  (3) supprimer du generateur la ligne comparee « Derniere entree de journal » : « ✅ 2 ligne(s) CONFRONTEES » au lieu de 3.
+
+POURQUOI CE N'EST PAS REPARABLE DANS LA PR 36. Le verificateur compare ce que le generateur PRODUIT a ce qui est sur le DISQUE. Si le generateur cesse de produire un element, les deux cotes le perdent ensemble et l'ecart n'existe pas. Un temoin qui derive son attendu du rendu ne peut pas voir ce que le rendu a perdu — c'est exactement le defaut du temoin de couverture ecrit dans la PR 36, qui PRETENDAIT fermer (1) et ne le fermait pas. La correction faite : ce temoin dit desormais ce qu'il garde vraiment, et renvoie ici.
+
+IL FAUT UNE SOURCE EXTERIEURE, et elle n'existe pas encore. REQ-GOV-006 enumere six elements de PLAN-STATE — SHA de main, PR en vol et file de fusion, tache revendiquee, decisions du jour, prochain pas, bloc REPRENDRE EN 30 SECONDES — toutes VOLATILES. Aucune source ne nomme les rubriques COMPAREES dues (Taches, Chemin critique, Bloquees, Questions ouvertes, Hypotheses, Journal, Dette declaree).
+
+ACCEPTATION — ELLE EST LA GARDE.
+  (a) La liste des elements DUS est declaree UNE fois, dans une source du domaine (candidat : etendre REQ-GOV-006, qui en nomme deja six), jamais dans le script qui la verifie — sinon le script se compare encore a lui-meme.
+  (b) ROUGE : chacune des trois mesures ci-dessus sort 1 et NOMME l'element disparu. Fabriquer les trois pannes, jamais les constater (RM-02).
+  (c) VERT : le contre-temoin, un rendu complet, reste vert et ANNONCE le compte attendu a cote du compte observe.
+  (d) La famille neuve entre dans la population du temoin `RM-02 · CHAQUE famille que la gate sait emettre a ete VUE ROUGE` — sinon ce temoin la denoncera, ce qui est son office.
+
+DEUX RESIDUS DE LA MEME FAMILLE, a traiter ici ou a verser a part :
+  - la couche des mesures du domaine peut etre desarmee SELECTIVEMENT (`if (nom !== '<la seule mesure observee>') continue;`) : 22 mesures sur 23 meurent sans que le temoin exclusif rougisse. Le temoin observe UNE mesure, pas la population.
+  - l'exemption de la prose « Ce qu'on tape maintenant » est plus LARGE que sa justification : seule sa premiere clause depend de la file de fusion, sa queue est une constante du generateur. La reecrire passe.
+
+**Tests.** `tests/unit/gouvernance/couverture-attendue.spec.ts`
 
 ## Phase 1 — Operationnel
 

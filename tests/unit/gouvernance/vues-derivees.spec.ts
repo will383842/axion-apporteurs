@@ -43,9 +43,25 @@ import { join } from 'node:path';
 const TACHES = 'scripts/gates/gov-tasks.ts';
 const EXIGENCES = 'scripts/gates/gov-requirements.ts';
 
+/**
+ * 🔴 LES FAMILLES VUES SE COMPTENT, ELLES NE SE SUPPOSENT PAS.
+ *
+ * A10 · mutation, 2e tour de la PR #36 : trois familles nées de ses propres trouvailles n'avaient
+ * AUCUN témoin — désarmer chacune laissait la suite verte. « Elles rougissent aujourd'hui, rien ne
+ * les empêche de redevenir muettes. » C'est RM-02 au niveau de la POPULATION : une garde jamais vue
+ * rouge n'existe pas, et une famille sans témoin est une garde jamais vue rouge.
+ *
+ * `lancer` note donc toute famille qui traverse une sortie, et le dernier témoin du fichier
+ * confronte cet ensemble à la population DÉRIVÉE du source. Une famille ajoutée au code entre dans
+ * la population toute seule, et sort « jamais vue » tant qu'aucun cas ne la tire.
+ */
+const famillesVues = new Set<string>();
+
 function lancer(script: string, ...args: string[]): { code: number; sortie: string } {
   const r = spawnSync('npx', ['tsx', script, ...args], { encoding: 'utf8', shell: true });
-  return { code: r.status ?? 1, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
+  const sortie = (r.stdout ?? '') + (r.stderr ?? '');
+  for (const m of sortie.matchAll(/\[([a-z_]+)\]/g)) famillesVues.add(m[1]!);
+  return { code: r.status ?? 1, sortie };
 }
 
 let bac = '';
@@ -415,21 +431,144 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(sortie, "l'écart doit être nommé en TÂCHES, pas « les deux fichiers diffèrent »")
       .toMatch(new RegExp(`tâches terminées[^\n]*dit ${m![2]}[^\n]*produisent ${m![1]}`));
   });
-  it('REQ-GOV-032 · la COUVERTURE est dérivée : le vert compte les rubriques, il ne les déclare pas', () => {
-    // 🔴 A10 · mutation, PR #36 : retirer une rubrique du générateur faisait tomber la couverture
-    // de 9 à 8 EN SILENCE, la garde annonçant « 8 rubrique(s) comparée(s) » sans que rien ne dise
-    // qu'il en manquait une. La liste tapée est supprimée ; ce témoin fige le fait que le compte
-    // est DÉRIVÉ du rendu — et il rougirait si quelqu'un le retapait.
+  it('REQ-GOV-032 · le compte des rubriques est DÉRIVÉ du rendu, jamais retapé (il ne voit PAS une rubrique disparue — GOV-055)', () => {
+    // ⚠️ CE QUE CE TÉMOIN NE GARDE PAS, ET IL FAUT LE LIRE AVANT DE S'Y FIER.
+    //
+    // Sa première rédaction prétendait fermer l'échappée d'A10 — « retirer une rubrique du
+    // générateur fait tomber la couverture de 9 à 8 en silence ». **Elle ne la ferme pas**, et
+    // A09 · exactitude l'a mesuré : neutraliser la poussée de `## Bloquées` puis régénérer rend
+    // « ✅ 8 rubrique(s) comparée(s) », EXIT 0, et ce témoin reste VERT — parce qu'il dérive son
+    // attendu du MÊME rendu amputé. **Un témoin qui tire sa référence de son sujet ne peut pas
+    // voir ce que le sujet a perdu.**
+    //
+    // 🔑 Et ce n'est pas réparable ici : comparer un générateur à lui-même ne détectera jamais une
+    // rubrique qu'il a cessé de produire. Il y faut une source EXTÉRIEURE qui énumère les rubriques
+    // dues — REQ-GOV-006 n'en nomme que six, toutes volatiles. C'est un contrat qui manque, pas un
+    // test à corriger : versé en **GOV-055**, jamais maquillé.
+    //
+    // CE QU'IL GARDE VRAIMENT, et c'est déjà utile : que le compte annoncé soit DÉRIVÉ du rendu et
+    // non retapé. Il rougirait si quelqu'un remettait une liste.
     const vue = rendrePlanState('PLAN-STATE-couverture.md');
     const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
     expect(code, `la vue fraîche doit être verte : ${sortie}`).toBe(0);
     const m = /(\d+) rubrique\(s\) comparée\(s\)/.exec(sortie);
     expect(m, `le vert doit annoncer un compte de rubriques : ${sortie}`).not.toBeNull();
     const titres = readFileSync(vue, 'utf8').split('\n').filter((l) => l.startsWith('## '));
-    const volatiles = ['File de fusion', 'Revendications', 'Décisions du jour', 'Prochain pas', 'Dernier atterrissage', 'REPRENDRE EN 30 SECONDES'];
+    // 🔴 CETTE LISTE ÉTAIT RETAPÉE ICI — la copie que la suppression de `RUBRIQUES_COMPAREES` avait
+    // laissée derrière elle (A09 · exactitude, pour A09 · simplicite). Elle se dérive de la source :
+    // le module exporte ses exemptions, le témoin les lit. Une exemption ajoutée au code entre donc
+    // dans ce témoin toute seule.
+    // La liste se dérive de ce que le VERT annonce ne pas avoir comparé — la seule source qui soit
+    // à la fois lisible d'ici et garantie à jour, puisque c'est la gate elle-même qui l'imprime.
+    const volatiles = [
+      ...[...sortie.matchAll(/«\s([^»]+?)\s»\s\(/g)].map((m) => m[1]!),
+      'REPRENDRE EN 30 SECONDES',
+    ];
     // +1 : la rubrique `(en-tête)`, le texte d'avant le premier `## `, qui est comparée aussi.
     const attendu = titres.filter((t) => !volatiles.includes(t.slice(3).trim())).length + 1;
     expect(Number(m![1]), 'le compte annoncé doit être celui des rubriques RÉELLEMENT comparées').toBe(attendu);
+  });
+
+  /**
+   * LES QUATRE TÉMOINS CI-DESSOUS SONT NÉS DU TÉMOIN DE POPULATION, pas d'une intuition.
+   * Posé, il a immédiatement nommé quatre familles que la gate savait émettre et qu'aucun cas ne
+   * tirait : `rubrique_dupliquee`, `rubrique_manquante`, `mesure_absente`,
+   * `ligne_de_reprise_dupliquee`. C'est exactement ce qu'A10 · mutation reprochait au tour 2 —
+   * « elles rougissent aujourd'hui, rien ne les empêche de redevenir muettes » — sauf que la
+   * prochaine famille sans témoin se dénoncera toute seule.
+   */
+  it('RM-02 · famille rubrique_dupliquee — la MÊME rubrique deux fois, la seconde mentant', () => {
+    const vue = rendrePlanState('PLAN-STATE-rubrique-dupliquee.md');
+    const t = readFileSync(vue, 'utf8');
+    // AU MILIEU, jamais en fin de fichier : A09 · securite s'est fait avoir au tour 1 par un
+    // témoin qui rougissait sur un décalage de lignes vides, pas sur le doublon.
+    writeFileSync(vue, t.replace('## Chemin critique', '## Bloquées\n\nmensonge.\n\n## Chemin critique'));
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `une rubrique dupliquée passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/rubrique_dupliquee/);
+  });
+
+  it('RM-02 · famille rubrique_manquante — une rubrique produite par les sources, absente du disque', () => {
+    const vue = rendrePlanState('PLAN-STATE-rubrique-manquante.md');
+    const t = readFileSync(vue, 'utf8');
+    const debut = t.indexOf('## Bloquées');
+    const suite = t.indexOf('\n## ', debut + 1);
+    expect(debut, 'la rubrique doit exister pour qu’on puisse la retirer').toBeGreaterThan(-1);
+    writeFileSync(vue, t.slice(0, debut) + t.slice(suite + 1));
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `une rubrique absente du disque passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/rubrique_manquante/);
+  });
+
+  it('RM-02 · famille mesure_absente — une mesure du domaine introuvable dans la vue', () => {
+    const vue = rendrePlanState('PLAN-STATE-mesure-absente.md');
+    const t = readFileSync(vue, 'utf8');
+    // On retire la LIGNE qui porte la mesure, pas seulement son chiffre : la mesure devient
+    // introuvable au lieu d'être fausse, et c'est l'autre famille.
+    const sansLigne = t.split('\n').filter((l) => !/^\| Ce qui bloque \|/.test(l)).join('\n');
+    expect(sansLigne, 'le témoin doit vraiment retirer une ligne').not.toBe(t);
+    writeFileSync(vue, sansLigne);
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `une mesure absente passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/mesure_absente|vue_perimee/);
+  });
+
+  it('RM-02 · famille prose_dupliquee — deux proses portant le préfixe exempté', () => {
+    // 🔴 A10 · mutation : une prose SUPPLÉMENTAIRE commençant par le préfixe béni était invisible,
+    // `find()` rendant la première. Le doublon est un refus aux trois étages, pas à deux.
+    const vue = rendrePlanState('PLAN-STATE-prose-dupliquee.md');
+    const t = readFileSync(vue, 'utf8');
+    const p = '**Ce qu’on tape maintenant.**';
+    expect(t, 'la prose exemptée doit exister pour qu’on puisse la doubler').toContain(p);
+    writeFileSync(vue, t.replace(p, `${p} NE FUSIONNEZ PLUS RIEN.\n\n${p}`));
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `deux proses de même préfixe passent : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/prose_dupliquee/);
+  });
+
+  it('REQ-GOV-032 · un préfixe d’exemption trop court LÈVE au chargement — il exempterait tout', () => {
+    // 🔴 A10 · mutation : remplacer le préfixe déclaré par la chaîne vide exempte TOUTE prose,
+    // puisque `startsWith('')` est toujours vrai — et rien ne le disait.
+    //
+    // ⚠️ LE MUTANT VIT DANS LE DOSSIER DU SCRIPT, ET C'EST LA PREMIÈRE RÉDACTION QUI L'A APPRIS :
+    // posé dans le bac à sable, il échouait par `ERR_MODULE_NOT_FOUND` sur l'import relatif
+    // `../lot/attestation`. Le test passait — sur un code de sortie obtenu pour une TOUT AUTRE
+    // raison. C'est le faux témoin que ce fichier passe son temps à fermer ; il ne sera pas
+    // reproduit ici. On exige donc le MESSAGE, jamais le seul code.
+    const original = readFileSync(PLAN, 'utf8');
+    const mutant = join('scripts', 'plan-state', 'build.__essai-prefixe-vide__.ts');
+    const remplace = original.replace("['**Ce qu’on tape maintenant.**',", "['',");
+    expect(remplace, 'la mutation doit vraiment vider le préfixe').not.toBe(original);
+    writeFileSync(mutant, remplace);
+    try {
+      const { code, sortie } = lancer(mutant, '--verifier');
+      expect(sortie, `le refus doit NOMMER le défaut, pas seulement sortir 1 : ${sortie.slice(0, 300)}`)
+        .toMatch(/moins de 4 caractères|exempterait/);
+      expect(code, 'un préfixe vide doit faire échouer le chargement').not.toBe(0);
+    } finally {
+      rmSync(mutant, { force: true });
+    }
+  });
+
+  it('RM-02 · famille ligne_de_reprise_dupliquee — la même question deux fois dans le bloc', () => {
+    const vue = rendrePlanState('PLAN-STATE-ligne-dupliquee.md');
+    const t = readFileSync(vue, 'utf8');
+    writeFileSync(vue, t.replace('| Ce qui bloque', '| Ce qui bloque | mensonge |\n| Ce qui bloque'));
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `une question dupliquée passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/ligne_de_reprise_dupliquee/);
+  });
+  /**
+   * LE DERNIER TÉMOIN DU FICHIER, et il ne mesure pas la gate : il mesure LES AUTRES TÉMOINS.
+   * Il doit rester en dernier — Vitest exécute dans l'ordre, et `famillesVues` se remplit au fur
+   * et à mesure.
+   */
+  it('RM-02 · CHAQUE famille que la gate sait émettre a été VUE ROUGE par un témoin de ce fichier', () => {
+    const source = readFileSync('scripts/plan-state/build.ts', 'utf8');
+    const population = [...new Set([...source.matchAll(/famille: '([a-z_]+)'/g)].map((m) => m[1]!))].sort();
+    expect(population.length, 'la population dérivée ne peut pas être vide : sinon ce témoin dit toujours oui').toBeGreaterThan(3);
+    const muettes = population.filter((f) => !famillesVues.has(f));
+    expect(muettes, `famille(s) que la gate sait émettre et qu'AUCUN témoin n'a vue rougir : ${muettes.join(', ')}`).toEqual([]);
   });
 
   it('REQ-GOV-032 · une vue ABSENTE est un rouge qui le dit, jamais un vert par défaut', () => {
