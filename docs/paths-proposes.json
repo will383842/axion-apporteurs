@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 212,
-    "pairesEnIntersection": 3908,
-    "cheminsDeclares": 652,
-    "cheminsDistincts": 386,
+    "tachesCouvertes": 223,
+    "pairesEnIntersection": 4034,
+    "cheminsDeclares": 666,
+    "cheminsDistincts": 397,
     "cheminsPartages": 97,
-    "tachesSansAucuneIntersection": 32,
+    "tachesSansAucuneIntersection": 40,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T06",
@@ -40,7 +40,15 @@
       "GOV-037",
       "GOV-039",
       "GOV-030",
-      "GOV-038"
+      "GOV-038",
+      "GOV-041",
+      "GOV-043",
+      "GOV-044",
+      "GOV-045",
+      "GOV-046",
+      "GOV-047",
+      "GOV-048",
+      "GOV-051"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -49,7 +57,7 @@
       },
       {
         "chemin": "prisma/schema.prisma",
-        "taches": 41
+        "taches": 44
       },
       {
         "chemin": ".github/workflows/ci.yml",
@@ -1202,6 +1210,42 @@
     ],
     "GOV-038": [
       "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
+    ],
+    "GOV-041": [
+      "tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts"
+    ],
+    "GOV-042": [
+      "tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "GOV-043": [
+      "tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts"
+    ],
+    "GOV-044": [
+      "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts"
+    ],
+    "GOV-045": [
+      "tests/unit/gouvernance/cliquet-nomme-chaque-refus.spec.ts"
+    ],
+    "GOV-046": [
+      "tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts"
+    ],
+    "GOV-047": [
+      "tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts"
+    ],
+    "GOV-048": [
+      "tests/unit/gouvernance/sonde-distingue-les-deux-depots.spec.ts"
+    ],
+    "GOV-049": [
+      "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "GOV-050": [
+      "tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "GOV-051": [
+      "tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts"
     ]
   }
 }
