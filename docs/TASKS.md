@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**223 taches · 163.75 j estimes.**
+**224 taches · 164.25 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 34 |
-| 0 — Socle technique | 63 | 45.25 | 0 |
+| 0 — Socle technique | 64 | 45.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -887,6 +887,29 @@ Couvre : `REQ-GOV-029`
 **Acceptation.** CE QUE CINQ REDACTIONS D'UN CONTROLE DE FORME ONT ENSEIGNE, et c'est une lentille qui l'a nomme : « la propriete protegee n'est pas une propriete du CHEMIN, c'est une propriete de la COMPARAISON ». Elle ajoutait, sur elle-meme : « j'ai passe deux tours a apporter un codepoint de plus au mauvais endroit. » LE FAIT MESURE le 2026-09-12 : `scripts/gates/gov-conventions.ts` decide si un chemin appartient au depot voisin par `p.startsWith('axionia/')` — une comparaison BRUTE, par prefixe, sensible a la casse, non normalisee. CINQ FAMILLES la defont, toutes jouees de bout en bout, chacune amenant `pnpm gov:check` de exit 1 a exit 0 sur une tache qui revendique un fichier du depot voisin : (1) un caractere de la classe Unicode C en tete ; (2) un caractere SANS GLYPHE hors de cette classe — remplisseur hangul, braille vide, marque non espacante ; (3) un HOMOGLYPHE, un `a` cyrillique par exemple, qui est une lettre ordinaire ; (4) la CASSE, `AXIONIA/` ; (5) une forme NON CANONIQUE, `./axionia/` ou `axionia//`. ⚠️ PRECISION MESUREE par la lentille mutation : depuis que l'ecrivain exige la forme canonique, la famille (5) n'amene plus `gov:check` a exit 0 PAR CET ECRIVAIN-LA. Elle reste entiere pour la propriete de comparaison, qui est le sujet de cette tache : une garde qui compare des chaines brutes reste defaite par deux orthographes du meme chemin, quel que soit l'ecrivain qui les a produites. AUCUNE CLAUSE DE FORME NE FERMERA CETTE FAMILLE, et c'est le coeur de la tache : GOV-050 ferme (1) et (5) au schema, et deux lentilles ont REFUSE d'exiger la fermeture de (2) et (3) en mesurant que ce serait « demander l'article suivant d'un inventaire », c'est-a-dire reproduire le defaut quatre fois constate. Le remede est ailleurs. LA TACHE : toute garde qui compare un chemin NORMALISE avant de comparer — forme canonique, normalisation Unicode, casse tranchee explicitement — et la comparaison passe par une primitive UNIQUE (RM-01), jamais par un `startsWith` recopie. Le temoin negatif porte LES CINQ FAMILLES, chacune vue rougir, et le contre-temoin verifie que les chemins legitimes du depot restent verts. A NOMMER DANS LA LIVRAISON : les autres gardes qui comparent des chemins par egalite ou par prefixe — `scripts/lot/composer.ts` detecte les collisions PAR EGALITE DE CHAINE — et si elles ne sont pas toutes converties, la liste de celles qui restent, comptee, jamais tue. CE QUE LA TACHE NE PRETEND PAS : elle ne rend pas la comparaison infaillible. Elle deplace la defense de la FORME de la donnee vers la LECTURE qu'on en fait, ce qui est le seul endroit ou un homoglyphe peut etre vu.
 
 **Tests.** `tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts`
+
+### GOV-052 — L'entree de journal d'une PR n'est exigee qu'APRES sa fusion : la seule victime possible est main
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-023`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, refaite avant d'ecrire une ligne : pour chaque commit de fusion de main, `git show <commit>:docs/journal/2026-09.md | grep -qE "^## PR #<n> "`. Au 2026-09-13 : #28, #33 et #34 ROUGES a leur fusion ; #29, #30, #31, #32 vertes. La regle a donc tenu QUATRE fusions d'affilee puis s'est perdue, sans que rien le voie. Ne PAS recopier ces nombres dans le code ni dans un test : les rejouer.
+
+CE QUI EST DEJA ECRIT, ET QUI N'A PAS SUFFI. La regle existe a trois endroits en prose : `docs/journal/README.md` section « Quand elle s'ecrit » (« Avant la fusion, jamais apres … Le numero de PR existe des son ouverture »), `docs/REPRISE-SESSION.md`, et `docs/LECONS.md` LEC-15 qui en tire deja la lecon et porte « Regle maison. Aucune a ce jour ». Une quatrieme redaction en prose est REFUSEE d'avance : c'est le defaut, pas le remede.
+
+ACCEPTATION — ELLE EST LA GARDE, ET RIEN D'AUTRE. La tache n'est PAS acceptee sur « RM-15 est ecrite ». Elle est acceptee sur un temoin qui rougit et son contre-temoin qui verdit :
+  (a) ROUGE : `pnpm gov:pr --pr <n>` sort 1 et NOMME le numero, sur une branche de PR dont `docs/journal/` ne porte pas d'entree citant ce numero. Fabriquer la panne (retirer l'entree), jamais la constater (RM-02).
+  (b) VERT : la meme commande sort 0 des que l'entree est posee sur la branche.
+  (c) Le moment est le sujet (LEC-15) : la famille s'evalue AVANT la fusion, la ou c'est encore reparable. `pr_fusionnee_sans_journal` de `gov:etat` reste en place — elle nomme l'incident sur main ; celle-ci l'empeche. Les deux coexistent, aucune ne remplace l'autre.
+
+SOURCE UNIQUE (RM-01). La regle est declaree UNE fois, comme RM-15 dans `docs/REGLES-MAISON.md`. La garde CITE `RM-15` et n'en retape pas l'obligation ; le champ « Regle maison » de LEC-15 dans `docs/LECONS.md` recoit l'IDENTIFIANT, il ne duplique pas la phrase. Une seule frappe de l'obligation dans tout le depot.
+
+LA GARDE S'ADRESSE A UN FICHIER, PAS A UN LECTEUR — c'est pour cela que les trois endroits actuels ont echoue. Elle ne relit aucune prose pour en tirer son comportement. Le precedent a suivre est dans le depot : `scripts/gates/gov-etat.ts` DERIVE le plancher du journal de `docs/journal/README.md` (voir le commentaire « Le plancher est DERIVE … le deplacer se fait a un seul endroit ») au lieu de le recopier. Meme altitude ici.
+
+TROU RECIPROQUE, mesure par A09 securite sur la PR 35 et a fermer dans la meme tache : une entree `## PR #99` pour une PR QUI N'EXISTE PAS passe les neuf familles, exit 0. Le journal d'un depot PUBLIC peut donc affirmer un atterrissage qui n'a jamais eu lieu. Temoin attendu : une entree citant un numero inexistant ou non fusionne rougit en le nommant.
+
+**Tests.** `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`
 
 ## Phase 1 — Operationnel
 

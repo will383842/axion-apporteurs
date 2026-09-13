@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `6505119` — 2026-09-13T08:19:22+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #35 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #35 (rien) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase -1 — 34/39 tâches, reste 3.50 j |
-| Le prochain pas | GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
+| Le prochain pas | fusionner #35, puis GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #35 — 2026-09-13 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 35 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
@@ -25,7 +25,7 @@
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 187 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
+| `a_faire` | 188 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
 | `en_cours` | 0 | — |
 | `en_revue` | 0 | — |
 | `fusionnee` | 34 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
@@ -59,7 +59,7 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #35 — docs(GOV-023): entree de journal de la PR 34, et la boucle qui la produit | `lot/journal-pr34` | un contrôle requis rouge ou une revue manquante |
+| 1 | #35 — docs(GOV-023): entree de journal de la PR 34, et la boucle qui la produit | `lot/journal-pr34` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -77,7 +77,8 @@ Aucun ADR daté du 2026-09-13 (jour du dernier atterrissage). Les décisions de 
 
 ## Prochain pas
 
-1. **GOV-035** — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur (0.5 j) : 5 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+1. **Fusionner #35** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+2. **GOV-035** — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur (0.5 j) : 5 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
@@ -91,27 +92,39 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 ### PR #35 — 2026-09-13 — docs(GOV-023): entree de journal de la PR 34, et la boucle qui la produit
 
-**Fait.** `main` etait rouge sur Gate A depuis la fusion de la PR #34 — `pr_fusionnee_sans_journal`,
-REQ-GOV-023. Cette PR ecrit l'entree qui manquait, et **casse la boucle qui la produit** : elle
-porte AUSSI la sienne, celle que vous lisez.
+**Fait.** `main` était rouge sur Gate A depuis la fusion de la PR #34 —
+`pr_fusionnee_sans_journal`, REQ-GOV-023. Cette PR écrit l'entrée qui manquait et porte **aussi la
+sienne**, celle que vous lisez. Elle régénère `docs/PLAN-STATE.md` : cette régénération n'est pas
+cosmétique — sans elle la boucle se referme par l'autre bout, `plan_state_perime` (mesuré par A10 ·
+mutation, et corroboré par la CI réelle : Gate A est `failure` sur `758d318`, le commit qui pose
+l'entrée sans régénérer la vue).
 
-**Reste.** Rien de cette PR. Les cinq taches de phase −1 attendent leurs PR, dans un ordre contraint
-par `ci.yml` que trois d'entre elles ecrivent.
+**Reste.** **GOV-052** — l'obligation ne s'évalue qu'APRÈS la fusion, donc sur `main`, donc trop
+tard pour refuser quoi que ce soit. La tâche porte la garde pré-fusion et sa règle `RM-15` ; elle
+n'est acceptée que sur un témoin vu rouge, jamais sur « la règle est écrite ». Elle ferme aussi le
+trou réciproque mesuré ici : une entrée `## PR #99` pour une PR **inexistante** passe les neuf
+familles, exit 0 — un journal public peut affirmer un atterrissage qui n'a pas eu lieu.
 
-**Appris.** Une dette qui roule ne se voit pas depuis l'interieur d'un tour. Depuis six PR au moins,
-chaque fusion laissait `main` rouge jusqu'a la suivante : la #29 s'intitule deja « entree de journal
-de la PR 28 — **main etait rouge sans elle** », et la #34 a regle le cas de la #33 en reprenant la
-dette a son compte. Personne ne l'avait nommee parce que chaque tour la voyait comme un incident,
-jamais comme un motif — c'est le release manager qui l'a nommee, **en refusant de declarer
-l'atterrissage** d'une fusion pourtant propre : « chaque PR journalise la precedente sans se
-journaliser elle-meme ».
+**Appris.** *Une règle écrite pour un lecteur n'a pas de témoin, et une pratique sans témoin se perd
+sans que sa perte fasse de bruit.* Le compte se rejoue, il ne se retape pas :
 
-Et la contrainte qui la rendait inevitable n'existait pas. REQ-GOV-023 exige qu'une entree CITE LE
-NUMERO de la PR — pas son sha de fusion. Le numero est connu des l'ouverture. Rien n'obligeait a
-attendre la fusion suivante : **c'etait une habitude, pas une regle**, et six PR l'ont prise pour
-une contrainte. Le contre-temoin de cette PR est donc structurel et differe : elle doit rester verte
-APRES sa propre fusion. Si `main` rougit quand meme, la boucle n'est pas cassee et il faudra le dire
-plutot que de recommencer.
+```
+for n in 28..34 ; git show <commit de fusion #n>:docs/journal/2026-09.md | grep -qE "^## PR #$n "
+```
+
+→ **#28, #33, #34 rouges** à leur fusion ; **#29, #30, #31, #32 vertes**. La règle a donc **tenu
+quatre fusions d'affilée, puis s'est perdue** — et rien ne l'a vu. `ab5caf5` (#29) ajoute *les deux*
+en-têtes, `#29` et `#28`, dans le même commit : c'est le **précédent** exact de ce que cette PR
+fait, pas sa découverte. La règle n'était pas absente non plus — `docs/journal/README.md` la donne
+mot pour mot, `docs/REPRISE-SESSION.md` la répète, et `docs/LECONS.md` LEC-15 en tire déjà la leçon
+en concluant « Règle maison. **Aucune à ce jour** ». Trois rédactions et une leçon n'ont pas suffi ;
+une quatrième n'aurait pas suffi davantage. **Une leçon qui ne devient pas une garde se réapprend.**
+
+⚠️ Et c'est la seconde fois de suite que ce lot **retape un total plutôt que de le dériver** : la
+PR #34 avait déjà payé quatre fois le motif « le nombre est retapé et faux », et son remède — retirer
+le nombre, mettre la commande qui le rend — était écrit. Le premier jet de cette entrée annonçait
+« six PR » là où la mesure en donne trois. Le remède connu n'a pas été appliqué parce qu'il vivait
+dans une entrée de journal, c'est-à-dire, encore, dans de la prose.
 
 ### PR #34 — 2026-09-13 — chore(GOV-038): clot le lot L-1-05 et verse dix manques mesures en taches
 
