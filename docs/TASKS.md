@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**224 taches · 164.25 j estimes.**
+**226 taches · 165.25 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 34 |
-| 0 — Socle technique | 64 | 45.75 | 0 |
+| 0 — Socle technique | 66 | 46.75 | 0 |
 | 1 — Operationnel | 60 | 47.25 | 0 |
 | 2 — Argent | 40 | 29.75 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -910,6 +910,50 @@ LA GARDE S'ADRESSE A UN FICHIER, PAS A UN LECTEUR — c'est pour cela que les tr
 TROU RECIPROQUE, mesure par A09 securite sur la PR 35 et a fermer dans la meme tache : une entree `## PR #99` pour une PR QUI N'EXISTE PAS passe les neuf familles, exit 0. Le journal d'un depot PUBLIC peut donc affirmer un atterrissage qui n'a jamais eu lieu. Temoin attendu : une entree citant un numero inexistant ou non fusionne rougit en le nommant.
 
 **Tests.** `tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts`
+
+### GOV-053 — Le classement des vues est par RUBRIQUE, la volatilite est par LIGNE
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-032`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, jouee par A10 mutation au tour de revue de la PR 36, a refaire avant d'ecrire une ligne : reecrire la rubrique « Prochain pas » de docs/PLAN-STATE.md en « la phase -1 est TERMINEE, 39/39 taches, plus aucune tache eligible », puis `pnpm plan-state:verifier` -> EXIT 0. Le mensonge passe.
+
+POURQUOI. `plan-state:verifier` classe les rubriques en `comparee` ou `volatile`, et « Prochain pas » est declaree volatile parce qu'elle depend de la tete de la file de fusion. Mais sa DEUXIEME ligne se derive de `docs/tasks.json` SEUL — `statut === 'a_faire' && phase === phaseCourante && externe === null && deps.every(livrees)` — sans le moindre appel a la forge. Une rubrique qui mele une source vivante et une source du depot est donc declaree volatile EN ENTIER, et sa part derivable sort du controle avec le reste.
+
+LA LECON, et elle deborde ce fichier : le classement est par RUBRIQUE, la volatilite est par LIGNE. Le bloc de reprise est deja traite ligne a ligne — c'est la bonne granularite, elle n'a simplement pas ete appliquee aux rubriques.
+
+CE QUI N'A PAS ETE FAIT DANS LA PR 36, ET POURQUOI. Decouper « Prochain pas » demande de separer sa ligne derivable de sa ligne vivante DANS LE GENERATEUR, donc de changer ce que la vue AFFICHE. C'est un arbitrage de rendu, pas une correction de garde : verse plutot que glisse (charte A11).
+
+ACCEPTATION — ELLE EST LA GARDE.
+  (a) ROUGE : falsifier la part DERIVABLE d'une rubrique par ailleurs volatile fait sortir 1, et l'ecart est nomme en unites du domaine. Fabriquer la panne, jamais la constater (RM-02).
+  (b) VERT : falsifier la part VIVANTE de la meme rubrique reste vert, et le message le DIT — un vert muet promet plus qu'il ne tient.
+  (c) Le vert final annonce le compte des lignes REELLEMENT confrontees, jamais la longueur d'une liste declaree. C'est le defaut que la PR 36 a corrige au niveau des rubriques ; il ne doit pas revenir au niveau des lignes.
+
+CE QUI EST DEJA FERME, et qu'il ne faut pas refaire : les cinq rubriques volatiles sont declarees avec, chacune, la source vivante qui l'en empeche ; le bloc de reprise est compare dans les DEUX sens ; une question dupliquee est un refus ; une prose non declaree est un refus. Cette tache ne porte QUE la granularite des rubriques.
+
+**Tests.** `tests/unit/gouvernance/volatilite-par-ligne.spec.ts`
+
+### GOV-054 — Le cliquet ne voit pas `process.exitCode = 1`, et deux refus neufs sont passes dessous
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-012`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, trouvee par A10 mutation au tour de revue de la PR 36 : le cliquet compte `/process\.exit\(\s*(?!0\s*\))/g` sous `scripts/`. La PR 36 ajoute DEUX refus a `scripts/plan-state/build.ts`, tous deux ecrits `process.exitCode = 1` — une forme que ce motif ne voit pas. Le compte reste donc a 179 et le cliquet ne bouge pas.
+
+CE QUI EST GRAVE N'EST PAS LE CHIFFRE. « 179 -> 179 » etait EXACT, et exact pour une raison que la PR ne disait pas. Le cliquet est cense compter les sorties non nulles AJOUTEES pour qu'aucune n'entre sans etre declaree et couverte par un temoin d'effet. Deux sorties sont entrees sans passer devant lui.
+
+LES DEUX FORMES SONT LEGITIMES et ne doivent PAS etre unifiees a l'aveugle : `process.exit(n)` sort immediatement, `process.exitCode = n` laisse le processus finir — c'est la bonne forme quand il reste des lignes a imprimer. Le defaut est que le cliquet n'en voit qu'une.
+
+ACCEPTATION — ELLE EST LA GARDE.
+  (a) ROUGE : ajouter un `process.exitCode = 1` non declare sous `scripts/` fait rougir le cliquet, en NOMMANT le fichier et l'ecart, exactement comme il le fait deja pour `process.exit(1)`. Fabriquer la panne (RM-02).
+  (b) VERT : le contre-temoin, un `process.exitCode = 0`, ne compte pas.
+  (c) Le total declare est recalcule UNE fois, ARBITRE et non subi, et le commentaire dit d'ou vient l'ecart — le fichier porte deja cette discipline pour les trois arbitrages precedents (25 -> 26 -> 27 -> 35).
+
+ATTENTION AU SEUIL. Il est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une branche. Recompter APRES avoir lu le rouge, jamais declarer d'avance — « le total ne bouge pas sans qu'on l'ecrive » est ecrit dans le fichier meme.
+
+**Tests.** `tests/unit/gouvernance/cliquet-sorties-differees.spec.ts`
 
 ## Phase 1 — Operationnel
 

@@ -529,21 +529,20 @@ lignes.push('');
 // ⚠️ CE QUE CE VÉRIFICATEUR NE VOIT PAS, écrit plutôt que tu : une falsification portée
 // uniquement sur une rubrique volatile (réécrire le SHA de `main`, retirer une PR de la file)
 // passe. Fermer ce trou demanderait de figer la forge dans une fixture, ce que cette vue ne fait
-// pas. Ce qui est fermé, c'est tout ce qui se dérive d'un fichier du dépôt — c'est-à-dire les
-// quinze lignes que la lentille a falsifiées.
-
-/** Les rubriques COMPARÉES, octet par octet. Toutes se dérivent de fichiers suivis par git. */
-const RUBRIQUES_COMPAREES = [
-  '(en-tête)',
-  'Phase courante',
-  'Tâches',
-  'Chemin critique',
-  'Bloquées',
-  'Questions ouvertes pour Will',
-  'Hypothèses par défaut appliquées',
-  'Journal',
-  'Dette déclarée',
-];
+// 🔴 CETTE PHRASE DISAIT : « ce qui est fermé, c'est tout ce qui se dérive d'un fichier du
+// dépôt ». **C'est FAUX**, et A10 · mutation l'a joué sur la PR #36 : la deuxième ligne de
+// « Prochain pas » se dérive de `docs/tasks.json` SEUL — `statut === 'a_faire' && phase ===
+// phaseCourante && externe === null && deps.every(livrées)` — sans le moindre appel à la forge.
+// La réécrire en « la phase -1 est TERMINÉE, 39/39 tâches » passe : exit 0.
+//
+// 🔑 La leçon exacte : **le classement est par RUBRIQUE, la volatilité est par LIGNE.** Une
+// rubrique qui mêle une source vivante et une source du dépôt est déclarée volatile EN ENTIER,
+// donc sa part dérivable sort du contrôle avec le reste. Le bloc de reprise, lui, est traité
+// ligne à ligne : c'est la bonne granularité, et elle n'a pas été appliquée aux rubriques.
+//
+// Ce n'est PAS fermé ici. Découper « Prochain pas » demanderait de séparer sa ligne dérivable de
+// sa ligne vivante DANS LE GÉNÉRATEUR, donc de changer ce que la vue affiche : un arbitrage de
+// rendu, pas une correction de garde. Versé plutôt que glissé dans ce lot (charte A11).
 
 /** Les rubriques NON comparables, chacune avec la source vivante qui l'en empêche. */
 const RUBRIQUES_VOLATILES: [string, string][] = [
@@ -561,7 +560,31 @@ const RUBRIQUES_VOLATILES: [string, string][] = [
  */
 const BLOC_DE_REPRISE = 'REPRENDRE EN 30 SECONDES';
 const LIGNES_DE_REPRISE_COMPAREES = ['Où en est la phase ?', 'Ce qui bloque', 'Dernière entrée de journal'];
-const LIGNES_DE_REPRISE_VOLATILES = ['Question', '---', 'Où est `main` ?', 'Qu’est-ce qui est en vol ?', 'Qui tient quoi ?', 'Le prochain pas'];
+/**
+ * ⚠️ « Question » et « --- » sont l'EN-TÊTE et le SÉPARATEUR du tableau — pas des sources vivantes.
+ * Les ranger parmi les volatiles mettait deux sens du mot dans la même liste, et laissait deux
+ * lignes hors comparaison sans motif alors que la liste des rubriques en exige un pour chacune
+ * (A09 · simplicite, PR #36). Elles ont leur propre nom.
+ */
+const LIGNES_DE_STRUCTURE = ['Question', '---'];
+
+/** Les lignes NON comparables du bloc, chacune avec la source vivante qui l'en empêche. */
+const LIGNES_DE_REPRISE_VOLATILES: [string, string][] = [
+  ['Où est `main` ?', 'SHA et date d’`origin/main`'],
+  ['Qu’est-ce qui est en vol ?', '`gh pr list` — la file de fusion'],
+  ['Qui tient quoi ?', '`gh issue list` — labels `owner:` posés hors du dépôt'],
+  ['Le prochain pas', 'dépend de la tête de la file de fusion'],
+];
+
+/**
+ * La PROSE du bloc, déclarée par son début. Elle n'était classée NULLE PART : `question()` rendait
+ * `null` pour toute ligne sans « | », le `continue` la jetait, et le bloc étant classé `reprise`
+ * elle échappait aussi à la comparaison octet par octet. **Toute la prose du bloc était hors
+ * contrôle** (A09 · securite, PR #36). Une prose non déclarée est désormais un refus.
+ */
+const PROSES_DE_REPRISE: [string, string][] = [
+  ['**Ce qu’on tape maintenant.**', 'dérivée de la tête de la file de fusion'],
+];
 
 interface Rubrique { titre: string; corps: string }
 
@@ -581,11 +604,30 @@ function decouper(texte: string): Rubrique[] {
   return out;
 }
 
-const classer = (titre: string): 'comparee' | 'volatile' | 'reprise' | 'inconnue' => {
+/**
+ * 🔴 IL N'Y A PLUS DE LISTE DES RUBRIQUES COMPARÉES, ET C'EST LA CORRECTION.
+ *
+ * Elle en retapait neuf, qui existent déjà dans ce fichier là où le générateur les écrit. Trois
+ * défauts en sortaient, tous mesurés sur la PR #36 :
+ *   — A09 · simplicite : la même liste était tapée QUATRE fois dans le dépôt (ici, dans le spec,
+ *     dans `docs/gates.json`, dans `ci.yml`) et déjà divergente — le spec n'en couvrait que huit.
+ *   — A10 · mutation : retirer une rubrique du générateur faisait tomber la couverture de 9 à 8
+ *     **en silence**, la gate annonçant fièrement « 8 rubrique(s) comparée(s) ».
+ *   — A10 · mutation : renommer `Bloquées` en `Prochain pas bloqué` la faisait capturer par la
+ *     règle de PRÉFIXE des volatiles, et la sortait du contrôle.
+ *
+ * `comparee` se DÉRIVE désormais : **tout ce qui n'est ni volatile ni le bloc de reprise**. Une
+ * rubrique neuve est donc COMPARÉE, et non plus simplement signalée — strictement plus fort, et
+ * une liste en moins. C'est le renversement inclusion→exclusion déjà appliqué au gel des outils.
+ *
+ * ⚠️ Et le PRÉFIXE ne vaut plus que pour les rubriques comparées. Les cinq volatiles se
+ * reconnaissent EXACTEMENT : sans quoi une rubrique renommée avec le bon préfixe s'exempte
+ * elle-même, ce que `mutation` a joué.
+ */
+const classer = (titre: string): 'comparee' | 'volatile' | 'reprise' => {
   if (titre === BLOC_DE_REPRISE) return 'reprise';
-  if (RUBRIQUES_COMPAREES.some((r) => titre === r || titre.startsWith(r + ' '))) return 'comparee';
-  if (RUBRIQUES_VOLATILES.some(([r]) => titre === r || titre.startsWith(r + ' '))) return 'volatile';
-  return 'inconnue';
+  if (RUBRIQUES_VOLATILES.some(([r]) => titre === r)) return 'volatile';
+  return 'comparee';
 };
 
 /**
@@ -632,7 +674,12 @@ function premiereDifference(attendu: string, trouve: string): string {
 }
 
 /** Le verdict : ce que le disque porte, confronté à ce que les sources produisent À L'INSTANT. */
-function comparer(attendu: string, surDisque: string): Ecart[] {
+function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignesComparees: number } {
+  // 🔴 CE COMPTEUR EST MESURÉ, PAS DÉCLARÉ. La première rédaction affichait
+  // `LIGNES_DE_REPRISE_COMPAREES.length` — une constante. A09 · securite : « le même défaut que
+  // celui que la PR vient corriger, déplacé d'un cran : un chiffre qui a l'air d'une mesure et qui
+  // est une déclaration. »
+  let lignesComparees = 0;
   const ecarts: Ecart[] = [];
 
   // 1. LES MESURES DU DOMAINE d'abord : ce sont elles qui apprennent quelque chose.
@@ -644,21 +691,15 @@ function comparer(attendu: string, surDisque: string): Ecart[] {
     else if (vu !== valeur) ecarts.push({ famille: 'vue_perimee', message: `${nom} : la vue sur le disque dit ${vu}, ses sources produisent ${valeur}` });
   }
 
-  // 2. LA STRUCTURE : toute rubrique doit être classée, des deux côtés.
+  // 2. LA STRUCTURE : la même rubrique des deux côtés.
+  //
+  // 🔴 LA FAMILLE `rubrique_non_classee` A DISPARU, ET C'EST VOULU. Elle ne pouvait plus tirer :
+  // depuis que `comparee` se DÉRIVE (« ni volatile, ni le bloc de reprise »), aucune rubrique
+  // n'est « inconnue » — une rubrique neuve est COMPARÉE, ce qui est strictement plus fort que
+  // signalée. La garder aurait été du code mort affirmant une couverture qu'il n'a pas, le défaut
+  // même que A09 · simplicite a relevé sur le dédoublonnage de cette fonction.
   const rA = decouper(attendu);
   const rD = decouper(surDisque);
-  for (const [ou, liste] of [['la vue sur le disque', rD], ['ses sources', rA]] as const) {
-    for (const r of liste) {
-      if (classer(r.titre) === 'inconnue') {
-        ecarts.push({
-          famille: 'rubrique_non_classee',
-          message: `rubrique « ${r.titre} » dans ${ou} : elle n’est ni déclarée comparable ni déclarée volatile dans ${
-            'scripts/plan-state/build.ts'
-          } — classe-la, sinon elle n’est comparée à rien`,
-        });
-      }
-    }
-  }
   const titresA = rA.map((r) => r.titre);
   const titresD = rD.map((r) => r.titre);
   for (const t of titresA) if (!titresD.includes(t)) ecarts.push({ famille: 'rubrique_manquante', message: `rubrique « ${t} » : absente de la vue sur le disque, produite par ses sources` });
@@ -673,28 +714,76 @@ function comparer(attendu: string, surDisque: string): Ecart[] {
   }
 
   // 4. LE BLOC DE REPRISE, ligne à ligne : il mélange les tâches et la forge.
+  /**
+   * 🔴 LA COMPARAISON ÉTAIT ASYMÉTRIQUE, ET C'EST LE DÉFAUT PRINCIPAL DE LA PREMIÈRE RÉDACTION.
+   *
+   * Elle ne parcourait que le rendu (`blocA`). Une ligne présente UNIQUEMENT sur le disque n'était
+   * ni classée, ni comparée, ni signalée. A10 · mutation l'a joué : `| Combien de sous ? |
+   * beaucoup |` inséré dans le tableau des trente secondes → **exit 0**. A09 · securite l'avait
+   * trouvé par la lecture, en notant que le niveau des RUBRIQUES, lui, fait bien les deux sens
+   * (`:662-665`) : l'asymétrie était le défaut, pas l'oubli.
+   *
+   * On parcourt désormais l'UNION des deux côtés, et chaque ligne du bloc doit être classée :
+   * structure, volatile déclarée, prose déclarée, ou comparée. Rien ne tombe en silence.
+   */
   const blocA = rA.find((r) => r.titre === BLOC_DE_REPRISE);
   const blocD = rD.find((r) => r.titre === BLOC_DE_REPRISE);
   if (blocA && blocD) {
     const question = (l: string) => (l.startsWith('|') ? (l.split('|')[1] ?? '').trim() : null);
-    const lignesD = new Map(blocD.corps.split('\n').map((l) => [question(l), l] as const));
-    for (const l of blocA.corps.split('\n')) {
-      const q = question(l);
-      if (q === null) continue;
-      if (LIGNES_DE_REPRISE_VOLATILES.includes(q)) continue;
+    /**
+     * 🔴 `new Map(...)` GARDAIT LA DERNIÈRE OCCURRENCE d'une question dupliquée, quand `mesures()`
+     * prend la PREMIÈRE et qu'un lecteur humain lit la première. Cette divergence n'était écrite
+     * nulle part et décidait seule si une falsification passait (A09 · securite, PR #36).
+     * On ne choisit plus : un doublon est un REFUS, et l'ambiguïté disparaît avec lui.
+     */
+    const indexer = (corps: string, ou: string) => {
+      const m = new Map<string, string>();
+      for (const l of corps.split('\n')) {
+        const q = question(l);
+        if (q === null) continue;
+        if (m.has(q)) {
+          ecarts.push({ famille: 'ligne_de_reprise_dupliquee', message: `bloc de reprise, ${ou} : la question « ${q} » apparaît deux fois — laquelle fait foi ? Aucune : corrige la source.` });
+          continue;
+        }
+        m.set(q, l);
+      }
+      return m;
+    };
+    const qA = indexer(blocA.corps, 'dans ce que produisent les sources');
+    const qD = indexer(blocD.corps, 'dans la vue sur le disque');
+
+    for (const q of new Set([...qA.keys(), ...qD.keys()])) {
+      if (LIGNES_DE_STRUCTURE.includes(q)) continue;
+      if (LIGNES_DE_REPRISE_VOLATILES.some(([r]) => r === q)) continue;
       if (!LIGNES_DE_REPRISE_COMPAREES.includes(q)) {
-        ecarts.push({ famille: 'ligne_de_reprise_non_classee', message: `bloc de reprise, ligne « ${q} » : ni comparable ni volatile — classe-la dans scripts/plan-state/build.ts` });
+        ecarts.push({ famille: 'ligne_de_reprise_non_classee', message: `bloc de reprise, ligne « ${q} » : ni comparable, ni volatile, ni structure — classe-la dans scripts/plan-state/build.ts` });
         continue;
       }
-      const vue = lignesD.get(q);
-      if (vue === undefined) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise : la ligne « ${q} » est absente de la vue sur le disque` });
-      else if (vue !== l) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise, ligne « ${q} » : la vue sur le disque dit « ${vue.slice(0, 160)} », ses sources produisent « ${l.slice(0, 160)} »` });
+      const attendu = qA.get(q);
+      const vue = qD.get(q);
+      lignesComparees += 1;
+      if (attendu === undefined) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise : la ligne « ${q} » est sur le disque et n'est produite par aucune source` });
+      else if (vue === undefined) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise : la ligne « ${q} » est absente de la vue sur le disque` });
+      else if (vue !== attendu) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise, ligne « ${q} » : la vue sur le disque dit « ${vue.slice(0, 160)} », ses sources produisent « ${attendu.slice(0, 160)} »` });
+    }
+
+    /** LA PROSE, des deux côtés. Non déclarée = refus. */
+    const proses = (corps: string) => corps.split('\n').filter((l) => l.trim() !== '' && question(l) === null);
+    for (const [cote, lignes] of [['ce que produisent les sources', proses(blocA.corps)], ['la vue sur le disque', proses(blocD.corps)]] as [string, string[]][]) {
+      for (const l of lignes) {
+        if (PROSES_DE_REPRISE.some(([d]) => l.trimStart().startsWith(d))) continue;
+        ecarts.push({ famille: 'prose_de_reprise_non_classee', message: `bloc de reprise, ${cote} : la prose « ${l.trim().slice(0, 80)} » n'est déclarée nulle part — classe-la dans scripts/plan-state/build.ts` });
+      }
     }
   }
 
   // Un même écart nommé deux fois (mesure ET corps de rubrique) n'apprend rien de plus.
-  const vus = new Set<string>();
-  return ecarts.filter((e) => (vus.has(e.message) ? false : (vus.add(e.message), true)));
+  // 🔴 LE DÉDOUBLONNAGE ÉTAIT DU CODE MORT dont le commentaire affirmait une propriété qu'il
+  // n'avait pas : il comparait `e.message`, alors qu'un même écart produit toujours DEUX messages
+  // DISTINCTS (la mesure du domaine et la ligne). Mesuré par A09 · simplicite : un chiffre
+  // falsifié rend « 2 écart(s) », exactement le cas que le commentaire prétendait fermer.
+  // On le retire plutôt que de le laisser rassurer.
+  return { ecarts, lignesComparees };
 }
 
 // ── les deux modes ───────────────────────────────────────────────────────────
@@ -706,7 +795,7 @@ if (MODE_VERIFIER) {
     console.error(`❌ plan-state:verifier — ${CHEMIN_VUE} est ABSENT : il n’y a rien à comparer. Tape \`pnpm plan-state:build\`.`);
     process.exitCode = 1;
   } else {
-    const ecarts = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'));
+    const { ecarts, lignesComparees } = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'));
     if (ecarts.length > 0) {
       console.error(`❌ plan-state:verifier — ${CHEMIN_VUE} a DÉRIVÉ de ses sources : ${ecarts.length} écart(s).`);
       for (const e of ecarts.slice(0, 20)) console.error(`   [${e.famille}] ${e.message}`);
@@ -721,7 +810,7 @@ if (MODE_VERIFIER) {
       const comparees = decouper(rendu).filter((r) => classer(r.titre) === 'comparee');
       console.log(
         `✅ plan-state:verifier — ${CHEMIN_VUE} est égal à ce que ses sources produisent : ` +
-          `${comparees.length} rubrique(s) comparée(s) octet par octet, ${LIGNES_DE_REPRISE_COMPAREES.length} ligne(s) du bloc de reprise, ` +
+          `${comparees.length} rubrique(s) comparée(s) octet par octet, ${lignesComparees} ligne(s) du bloc de reprise CONFRONTÉES, ` +
           `${mesures(rendu).size} mesure(s) du domaine.`
       );
       console.log(

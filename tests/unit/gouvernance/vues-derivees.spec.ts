@@ -348,24 +348,88 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
   });
 
   it('REQ-GOV-032 · la comparaison est OCTET PAR OCTET, pas par LONGUEUR', () => {
+    // 🔴 CE TÉMOIN MUTAIT UN TITRE, et rougissait donc par `rubrique_manquante` — jamais par la
+    // comparaison d'octets qu'il prétend éprouver. A10 · mutation l'a prouvé sur la PR #36 :
+    // remplacer `surPlace.corps === r.corps` par une comparaison de LONGUEURS laissait les dix cas
+    // VERTS. Un témoin qui rougit par une AUTRE famille que la sienne ne garde rien.
+    // Il mute désormais le CORPS d'une rubrique comparée, à longueur constante, et il exige la
+    // famille `vue_perimee` en plus du code de sortie.
     const vue = rendrePlanState('PLAN-STATE-longueur-constante.md');
     const rendu = readFileSync(vue, 'utf8');
-    const faux = rendu.replace('## Chemin critique', '## chemin critique');
+    // La mutation vit DANS le corps d'une rubrique comparée — `## Tâches` — et nulle part ailleurs :
+    // une bascule de casse sur une seule lettre, donc longueur strictement constante.
+    const debut = rendu.indexOf('## Tâches');
+    expect(debut, 'la rubrique `## Tâches` doit exister pour que ce témoin ait un sujet').toBeGreaterThan(-1);
+    const suite = rendu.indexOf('\n## ', debut + 1);
+    const corpsRubrique = rendu.slice(debut + 12, suite);
+    const lettre = /[a-zé]/.exec(corpsRubrique);
+    expect(lettre, 'il faut une lettre à basculer dans le corps de la rubrique').not.toBeNull();
+    const pos = debut + 12 + lettre!.index;
+    const faux = rendu.slice(0, pos) + rendu[pos]!.toUpperCase() + rendu.slice(pos + 1);
     expect(faux.length, 'le témoin doit garder la MÊME longueur, sinon il ne prouve rien').toBe(rendu.length);
-    expect(faux).not.toBe(rendu);
+    expect(faux, 'le témoin doit vraiment différer').not.toBe(rendu);
+    // Aucun titre ne bouge : la structure est intacte des deux côtés.
+    const titres = (t: string) => t.split('\n').filter((l) => l.startsWith('## ')).join('|');
+    expect(titres(faux), 'le témoin ne doit PAS toucher aux titres, sinon il rougit par la structure').toBe(titres(rendu));
     writeFileSync(vue, faux);
     const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
     expect(code, `une dérive à longueur constante DOIT sortir 1 : ${sortie}`).toBe(1);
+    expect(sortie, "c'est la comparaison d'OCTETS qui doit tirer, pas la structure").toMatch(/vue_perimee/);
+    expect(sortie, 'aucune rubrique ne manque ni n’est en trop dans ce témoin').not.toMatch(/rubrique_(manquante|en_trop)/);
   });
 
-  it('REQ-GOV-032 · une rubrique INCONNUE du périmètre fait rougir — la couverture ne se périme pas en silence', () => {
-    // Sans ceci, ajouter une rubrique au générateur la placerait hors de tout contrôle, et la
-    // garde resterait verte sur une vue dont une part entière n'est plus comparée à rien.
+  it('REQ-GOV-032 · une rubrique que le générateur ne produit PAS fait rougir, et elle est NOMMÉE', () => {
+    // 🔴 CE TÉMOIN S'APPELAIT « rubrique INCONNUE du périmètre ». La famille `rubrique_non_classee`
+    // n'existe plus : depuis que `comparee` se DÉRIVE (« ni volatile, ni le bloc de reprise »),
+    // aucune rubrique n'est inconnue — une rubrique neuve est COMPARÉE. A10 · mutation avait montré
+    // que ce témoin tirait de toute façon par `rubrique_en_trop`, quel que soit le classement :
+    // il ne mesurait donc pas ce que son nom annonçait. Il dit maintenant ce qu'il fait.
     const vue = rendrePlanState('PLAN-STATE-rubrique-inconnue.md');
     writeFileSync(vue, readFileSync(vue, 'utf8') + '\n## Rubrique inventée à la main\n\nrien.\n');
     const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
     expect(code, `une rubrique hors périmètre passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/rubrique_en_trop/);
     expect(sortie).toMatch(/Rubrique inventée à la main/);
+  });
+
+  it('REQ-GOV-032 · l’écart est nommé EN UNITÉS DU DOMAINE — le témoin exclusif de cette couche', () => {
+    // 🔴 A10 · mutation, PR #36 : désarmer TOUTE la couche des mesures du domaine
+    // (`else if (vu !== valeur)` → `else if (false)`) laissait les dix cas VERTS. C'est pourtant
+    // l'exigence CENTRALE de REQ-GOV-032 : « l'écart est nommé en unités du domaine — nombre de
+    // tâches livrées, nombre d'exigences — et non "les deux fichiers diffèrent" ».
+    //
+    // Le piège est qu'un chiffre falsifié fait AUSSI rougir la comparaison ligne à ligne : le code
+    // de sortie ne discrimine donc rien. Ce témoin n'assert pas `code === 1` — il exige le MESSAGE
+    // que seule cette couche sait produire. C'est la leçon « un témoin qui bouge pour deux raisons
+    // ne discrimine rien », appliquée au témoin lui-même.
+    const vue = rendrePlanState('PLAN-STATE-unites-du-domaine.md');
+    const rendu = readFileSync(vue, 'utf8');
+    const m = /(\d+)\/(\d+) tâches/.exec(rendu);
+    expect(m, `la vue doit porter un compte de tâches : ${rendu.slice(0, 200)}`).not.toBeNull();
+    const faux = rendu.replace(`${m![1]}/${m![2]} tâches`, `${m![2]}/${m![2]} tâches`);
+    expect(faux, 'le témoin doit vraiment falsifier').not.toBe(rendu);
+    writeFileSync(vue, faux);
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `un compteur falsifié DOIT sortir 1 : ${sortie}`).toBe(1);
+    // L'ASSERTION QUI COMPTE : le nom du domaine, les deux valeurs, et la forme « dit X, produisent Y ».
+    expect(sortie, "l'écart doit être nommé en TÂCHES, pas « les deux fichiers diffèrent »")
+      .toMatch(new RegExp(`tâches terminées[^\n]*dit ${m![2]}[^\n]*produisent ${m![1]}`));
+  });
+  it('REQ-GOV-032 · la COUVERTURE est dérivée : le vert compte les rubriques, il ne les déclare pas', () => {
+    // 🔴 A10 · mutation, PR #36 : retirer une rubrique du générateur faisait tomber la couverture
+    // de 9 à 8 EN SILENCE, la garde annonçant « 8 rubrique(s) comparée(s) » sans que rien ne dise
+    // qu'il en manquait une. La liste tapée est supprimée ; ce témoin fige le fait que le compte
+    // est DÉRIVÉ du rendu — et il rougirait si quelqu'un le retapait.
+    const vue = rendrePlanState('PLAN-STATE-couverture.md');
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `la vue fraîche doit être verte : ${sortie}`).toBe(0);
+    const m = /(\d+) rubrique\(s\) comparée\(s\)/.exec(sortie);
+    expect(m, `le vert doit annoncer un compte de rubriques : ${sortie}`).not.toBeNull();
+    const titres = readFileSync(vue, 'utf8').split('\n').filter((l) => l.startsWith('## '));
+    const volatiles = ['File de fusion', 'Revendications', 'Décisions du jour', 'Prochain pas', 'Dernier atterrissage', 'REPRENDRE EN 30 SECONDES'];
+    // +1 : la rubrique `(en-tête)`, le texte d'avant le premier `## `, qui est comparée aussi.
+    const attendu = titres.filter((t) => !volatiles.includes(t.slice(3).trim())).length + 1;
+    expect(Number(m![1]), 'le compte annoncé doit être celui des rubriques RÉELLEMENT comparées').toBe(attendu);
   });
 
   it('REQ-GOV-032 · une vue ABSENTE est un rouge qui le dit, jamais un vert par défaut', () => {

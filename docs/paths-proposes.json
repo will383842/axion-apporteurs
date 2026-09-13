@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 224,
+    "tachesCouvertes": 226,
     "pairesEnIntersection": 4112,
-    "cheminsDeclares": 669,
-    "cheminsDistincts": 398,
+    "cheminsDeclares": 671,
+    "cheminsDistincts": 400,
     "cheminsPartages": 97,
-    "tachesSansAucuneIntersection": 41,
+    "tachesSansAucuneIntersection": 43,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T06",
@@ -49,7 +49,9 @@
       "GOV-047",
       "GOV-048",
       "GOV-051",
-      "GOV-052"
+      "GOV-052",
+      "GOV-053",
+      "GOV-054"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -1252,6 +1254,12 @@
     ],
     "GOV-052": [
       "tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts"
+    ],
+    "GOV-053": [
+      "tests/unit/gouvernance/volatilite-par-ligne.spec.ts"
+    ],
+    "GOV-054": [
+      "tests/unit/gouvernance/cliquet-sorties-differees.spec.ts"
     ]
   }
 }
