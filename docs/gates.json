@@ -93,13 +93,13 @@
       "preuveRouge": "pnpm gov:autonomie:prove — 4 familles (deny_manquant, hook_non_declare, hook_sans_analyse, commande_laissee_passer), un temoin chacune, 17 commandes dangereuses refusees et 12 legitimes acceptees en contre-temoins — dont `gh api -X DELETE .../branches/main/protection` et `gh issue edit --remove-label owner:A01`, les deux trous trouves le 2026-09-04"
     },
     {
-      "id": "gov:plan-state",
+      "id": "plan-state:verifier",
       "phase": -1,
-      "script": "tests/unit/gouvernance/plan-state-frais.spec.ts",
-      "tache": "GOV-008",
-      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : PLAN-STATE porte les 7 rubriques de REQ-GOV-006, le bloc de reprise en tete avec le SHA de main, et le journal fait/reste/appris est RENDU depuis docs/journal/, jamais tape dans la vue. NON COUVERT a ce jour, et aucune autre gate ne le couvre : que plan-state:build regenere un fichier identique au fichier commite. Tant que cette assertion n'est pas ecrite, PLAN-STATE peut avoir ete edite a la main sans que rien ne rougisse (GOV-032)",
-      "fixtureRouge": "editer PLAN-STATE.md a la main",
-      "preuveRouge": null
+      "script": "scripts/plan-state/build.ts",
+      "tache": "GOV-035",
+      "verifie": "docs/PLAN-STATE.md est la CINQUIEME vue de REQ-GOV-032, et la derniere a n'avoir eu qu'un generateur : `pnpm plan-state:build` ECRIVAIT, rien ne comparait. `--verifier` n'ecrit rien, re-rend la vue en memoire et la confronte au disque, et NOMME l'ecart en unites du domaine (taches terminees, jours restants, taches bloquees, entrees de journal). PERIMETRE EXACT, dit plutot que suppose : seules les rubriques derivees de fichiers SUIVIS sont comparees (en-tete, Phase courante, Taches, Chemin critique, Bloquees, Questions ouvertes, Hypotheses, Journal, Dette declaree) plus trois lignes du bloc de reprise. Les cinq rubriques qui dependent de la forge ou de origin/main (File de fusion, Revendications, Decisions du jour, Prochain pas, Dernier atterrissage) sont HORS perimetre — les comparer mesurerait la disponibilite de gh et l'age de main, donc rouge apres chaque fusion — et le vert les IMPRIME une par une. Une rubrique qui n'appartient a aucune des deux listes fait rougir, sinon la couverture se perimerait en silence a la premiere rubrique ajoutee au generateur",
+      "fixtureRouge": "falsifier les compteurs de la vue en gardant toutes ses ancres : 29/36 -> 36/36, reste 4.00 j -> 0.00, 2 tache(s) bloquee(s) -> 0",
+      "preuveRouge": "tests/unit/gouvernance/vues-derivees.spec.ts, 10 temoins verts le 2026-09-12 dont 2 contre-temoins (vue fraichement rendue, vue commitee du depot) ; ROUGE mesure AVANT le code : « expected 'PLAN-STATE regenere — phase -1, 0 en ...' to contain '✅' » — `--verifier` etait ignore et le script REECRIVAIT le fichier qu'on lui demandait d'inspecter. Rejoue apres le code sur la vue falsifiee : exit 1, 8 ecarts nommes en taches et en jours"
     },
     {
       "id": "gov:sonde",
@@ -1095,6 +1095,15 @@
       "verifie": "les budgets de REQ-GOV-028 sont poses et coherents, et aucune route de `src/app/(espace)` ne nait sans son entree de budget. Elle ne MESURE aucun octet — ni size-limit ni lhci ne sont installes, et c'est un arbitrage motive : elle LIT la configuration. Le `limit` n'est pas un champ qu'on remplit, il est DERIVE du texte de REQ-GOV-028 lu dans docs/requirements.json et ecrit par --rendre ; toute valeur qui s'en ecarte rougit DANS LES DEUX SENS (cliquet_sous_le_plafond vers le bas, plafond_relache vers le haut), et un texte d'exigence devenu muet LEVE au lieu de retomber sur un defaut. lighthouserc.json est un RENDU compare caractere a caractere par --verifier. ⚠️ ELLE IMPRIME SON PERIMETRE, et il est VIDE aujourd'hui : `src/app/(espace)` n'existe pas en phase -1, elle balaie 0 route et le DIT — « ce vert ne juge AUCUNE route ». C'est ce qui la distingue d'une garde a perimetre vide qui rendrait un ✅ trompeur. QA-T20 (phase 0) ajoutera le MESUREUR par-dessus cette ossature",
       "fixtureRouge": "poser `src/app/(espace)/x/page.tsx` sans entree dans perf/budgets.json (temoin route_sans_budget) ; ou aligner un `limit` sur la mesure courante, par exemple 61 KB (temoin cliquet_sous_le_plafond)",
       "preuveRouge": "pnpm perf:budgets:prove — 12 familles rougissent chacune sur son temoin, 6 contre-temoins restent verts ; les familles sont route_sans_budget, budget_orphelin, entree_incomplete, plafond_relache, cliquet_sous_le_plafond, seuil_divergent, seuil_absent, lhci_non_bloquant, lhci_hors_mobile, lighthouserc_perime, etape_ci_muselee et source_illisible"
+    },
+    {
+      "id": "gov:plan-state",
+      "phase": -1,
+      "script": "tests/unit/gouvernance/plan-state-frais.spec.ts",
+      "tache": "GOV-008",
+      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : PLAN-STATE porte les 7 rubriques de REQ-GOV-006, le bloc de reprise en tete avec le SHA de main, et le journal fait/reste/appris est RENDU depuis docs/journal/, jamais tape dans la vue. Ce qu'il ne juge PAS : ce que les rubriques DISENT — mesure du 2026-09-12, quinze lignes de compteurs falsifiees, ancres conservees, 25/25 verts. Cette moitie-la est desormais tenue par la gate `plan-state:verifier` (GOV-035), qui compare la vue a ses sources et entre en Gate A",
+      "fixtureRouge": "editer PLAN-STATE.md a la main",
+      "preuveRouge": null
     }
   ]
 }

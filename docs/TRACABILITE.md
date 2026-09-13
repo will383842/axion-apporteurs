@@ -16,7 +16,7 @@
 
 **321 exigences actives · 43 réputées testées · 43 couvertes · 0 orphelines.**
 
-224 tâches, dont 34 livrées · 35 fichiers de test exécutés par `vitest` sur 35 présents.
+227 tâches, dont 34 livrées · 35 fichiers de test exécutés par `vitest` sur 35 présents.
 
 ## Exigences réputées testées
 
@@ -40,7 +40,7 @@
 | `REQ-GOV-009` | `GOV-010`, `GOV-022` | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | couverte |
 | `REQ-GOV-010` | `GOV-007`, `GOV-023`, `GOV-024` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/fiches-agents.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-011` | `GOV-007`, `GOV-021`, `GOV-024` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
-| `REQ-GOV-012` | `GOV-007`, `GOV-044`, `GOV-045`, `GOV-046` | `tests/gov/charte-pr.spec.ts` | couverte |
+| `REQ-GOV-012` | `GOV-007`, `GOV-044`, `GOV-045`, `GOV-046`, `GOV-054` | `tests/gov/charte-pr.spec.ts` | couverte |
 | `REQ-GOV-013` | `GOV-007`, `GOV-047` | `tests/gov/charte-pr.spec.ts` | couverte |
 | `REQ-GOV-014` | `GOV-000`, `GOV-012` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
 | `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
@@ -58,7 +58,7 @@
 | `REQ-GOV-029` | `GOV-014`, `GOV-051` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |
 | `REQ-GOV-030` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
-| `REQ-GOV-032` | `GOV-024`, `GOV-035` | `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
+| `REQ-GOV-032` | `GOV-024`, `GOV-035`, `GOV-053`, `GOV-055` | `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-033` | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | couverte |
 | `REQ-INT-003` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-004` | `GOV-030`, `INT-T01a`, `INT-T05` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
