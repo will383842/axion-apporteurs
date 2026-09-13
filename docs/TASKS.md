@@ -961,24 +961,28 @@ ATTENTION AU SEUIL. Il est GLOBAL : il somme tout ce qui atterrit, jamais le som
 
 Couvre : `REQ-GOV-032`
 
-**Acceptation.** TROIS MESURES QUI OUVRENT LA TACHE, jouees par A10 mutation et A09 exactitude au 2e tour de la PR 36, a refaire avant d'ecrire une ligne. Toutes rendent EXIT 0 :
-  (1) neutraliser `lignes.push('## Bloquees')` dans le generateur, puis `plan-state:build`, puis `plan-state:verifier` -> « ✅ 8 rubrique(s) comparee(s) ». La couverture tombe de 9 a 8 EN SILENCE.
-  (2) renommer `## Bloquees` en `## Dernier atterrissage` — un nom EXACTEMENT volatile — puis regenerer : la rubrique bascule du cote exempte, meme chute silencieuse. Le prefixe est ferme, le nom exact non.
-  (3) supprimer du generateur la ligne comparee « Derniere entree de journal » : « ✅ 2 ligne(s) CONFRONTEES » au lieu de 3.
+**Acceptation.** ⚠️ CETTE ACCEPTANCE A ETE ECRITE FAUSSE UNE FOIS, ET LA CORRECTION FAIT PARTIE DE LA LECON. Sa premiere redaction annoncait trois mesures a EXIT 0 ; A09 exactitude les a rejouees et DEUX etaient fausses — elles avaient ete ecrites contre l'arbre du tour precedent et jamais rejouees. C'etait exactement le defaut que la meme lentille avait refuse au tour d'avant : un attendu derive d'un etat perime, transplante dans le backlog. Les trois mesures ci-dessous ont ete REJOUEES sur l'arbre final.
 
-POURQUOI CE N'EST PAS REPARABLE DANS LA PR 36. Le verificateur compare ce que le generateur PRODUIT a ce qui est sur le DISQUE. Si le generateur cesse de produire un element, les deux cotes le perdent ensemble et l'ecart n'existe pas. Un temoin qui derive son attendu du rendu ne peut pas voir ce que le rendu a perdu — c'est exactement le defaut du temoin de couverture ecrit dans la PR 36, qui PRETENDAIT fermer (1) et ne le fermait pas. La correction faite : ce temoin dit desormais ce qu'il garde vraiment, et renvoie ici.
+LA MESURE QUI OUVRE LA TACHE, une seule, et elle suffit :
+  Neutraliser `lignes.push('## Bloquees')` dans le generateur, puis `pnpm plan-state:build`, puis `pnpm plan-state:verifier` :
+      ✅ plan-state:verifier — 8 rubrique(s) comparee(s) octet par octet   EXIT 0
+  La couverture tombe de 9 a 8 EN SILENCE. Le vert ne ment pas — il compte ce qu'il a compare — mais rien ne dit qu'il en manque une.
 
-IL FAUT UNE SOURCE EXTERIEURE, et elle n'existe pas encore. REQ-GOV-006 enumere six elements de PLAN-STATE — SHA de main, PR en vol et file de fusion, tache revendiquee, decisions du jour, prochain pas, bloc REPRENDRE EN 30 SECONDES — toutes VOLATILES. Aucune source ne nomme les rubriques COMPAREES dues (Taches, Chemin critique, Bloquees, Questions ouvertes, Hypotheses, Journal, Dette declaree).
+DEUX MESURES VOISINES, REJOUEES ET FERMEES — ne pas les reprendre, elles sont ici pour eviter qu'on les cherche :
+  - renommer `## Bloquees` en `## Dernier atterrissage` (un nom EXACTEMENT volatile) : EXIT 1, famille `rubrique_dupliquee`. Les cinq noms volatiles sont pousses inconditionnellement par le generateur, donc tout renommage vers l'un d'eux cree un doublon — et le doublon est un refus depuis la PR 36.
+  - supprimer une ligne comparee du bloc de reprise : le vert annonce « 4 ligne(s) CONFRONTEES » au lieu de 5. Meme famille que la mesure principale, meme cause.
+
+POURQUOI CE N'EST PAS REPARABLE PAR UN TEST DE PLUS. Le verificateur compare ce que le generateur PRODUIT a ce qui est sur le DISQUE. Si le generateur cesse de produire un element, les deux cotes le perdent ENSEMBLE et l'ecart n'existe pas. Un temoin qui derive son attendu du rendu ne peut pas voir ce que le rendu a perdu. La PR 36 l'a appris deux fois : d'abord sur le temoin de couverture des rubriques, puis sur celui de la population des mesures. A10 mutation a nomme la forme generale : « la population et l'observation viennent de la meme source, la soustraction reste vide PAR CONSTRUCTION ».
+
+IL FAUT UNE SOURCE EXTERIEURE, et elle n'existe pas encore. REQ-GOV-006 enumere six elements de PLAN-STATE — SHA de main, PR en vol et file de fusion, tache revendiquee, decisions du jour, prochain pas, bloc REPRENDRE EN 30 SECONDES — toutes VOLATILES. Aucune source ne nomme les rubriques COMPAREES dues.
 
 ACCEPTATION — ELLE EST LA GARDE.
   (a) La liste des elements DUS est declaree UNE fois, dans une source du domaine (candidat : etendre REQ-GOV-006, qui en nomme deja six), jamais dans le script qui la verifie — sinon le script se compare encore a lui-meme.
-  (b) ROUGE : chacune des trois mesures ci-dessus sort 1 et NOMME l'element disparu. Fabriquer les trois pannes, jamais les constater (RM-02).
-  (c) VERT : le contre-temoin, un rendu complet, reste vert et ANNONCE le compte attendu a cote du compte observe.
-  (d) La famille neuve entre dans la population du temoin `RM-02 · CHAQUE famille que la gate sait emettre a ete VUE ROUGE` — sinon ce temoin la denoncera, ce qui est son office.
+  (b) ROUGE : retirer un element du generateur sort 1 et NOMME l'element disparu. Fabriquer la panne (RM-02).
+  (c) VERT : le contre-temoin, un rendu complet, reste vert et annonce le compte ATTENDU a cote du compte observe.
+  (d) La famille neuve entre dans `FAMILLES` (`scripts/plan-state/build.ts`) — sinon le temoin de population la denoncera, ce qui est son office.
 
-DEUX RESIDUS DE LA MEME FAMILLE, a traiter ici ou a verser a part :
-  - la couche des mesures du domaine peut etre desarmee SELECTIVEMENT (`if (nom !== '<la seule mesure observee>') continue;`) : 22 mesures sur 23 meurent sans que le temoin exclusif rougisse. Le temoin observe UNE mesure, pas la population.
-  - l'exemption de la prose « Ce qu'on tape maintenant » est plus LARGE que sa justification : seule sa premiere clause depend de la file de fusion, sa queue est une constante du generateur. La reecrire passe.
+LE MEME MUR, A LA QUATRIEME POPULATION. `MESURES_ATTENDUES` derive de `LECTURES`, donc retirer une lecture fait tomber l'attendu ET l'observe ensemble : le temoin `X/Y` reste vert. Il attrape en revanche le mode de panne REEL — une regex qui cesse de correspondre parce que la vue a change de forme — verifie dans les deux sens. La meme source exterieure fermerait les deux.
 
 **Tests.** `tests/unit/gouvernance/couverture-attendue.spec.ts`
 

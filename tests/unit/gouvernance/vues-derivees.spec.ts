@@ -38,6 +38,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { FAMILLES, type Famille } from '../../../scripts/plan-state/build';
 import { join } from 'node:path';
 
 const TACHES = 'scripts/gates/gov-tasks.ts';
@@ -55,12 +56,21 @@ const EXIGENCES = 'scripts/gates/gov-requirements.ts';
  * confronte cet ensemble à la population DÉRIVÉE du source. Une famille ajoutée au code entre dans
  * la population toute seule, et sort « jamais vue » tant qu'aucun cas ne la tire.
  */
+/**
+ * 🔴 L'ACCUMULATEUR RAMASSAIT LES FAMILLES DE TOUTES LES GATES. A09 · simplicite et A10 · mutation,
+ * 3e tour : `gov-tasks.ts` et `gov-requirements.ts` impriment aussi leurs familles entre crochets,
+ * et `vue_perimee` est un nom que les trois partagent. Une collision certifiait « vue rouge » une
+ * famille qu'aucun témoin de plan-state n'avait tirée. **Échoue ouvert, sur la garde qui garde les
+ * gardes.** On n'observe donc QUE les sorties du script jugé.
+ */
 const famillesVues = new Set<string>();
 
 function lancer(script: string, ...args: string[]): { code: number; sortie: string } {
   const r = spawnSync('npx', ['tsx', script, ...args], { encoding: 'utf8', shell: true });
   const sortie = (r.stdout ?? '') + (r.stderr ?? '');
-  for (const m of sortie.matchAll(/\[([a-z_]+)\]/g)) famillesVues.add(m[1]!);
+  if (script.includes('plan-state')) {
+    for (const m of sortie.matchAll(/\[([a-z_]+)\]/g)) famillesVues.add(m[1]!);
+  }
   return { code: r.status ?? 1, sortie };
 }
 
@@ -477,6 +487,29 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
    * « elles rougissent aujourd'hui, rien ne les empêche de redevenir muettes » — sauf que la
    * prochaine famille sans témoin se dénoncera toute seule.
    */
+  it('RM-02 · famille rubrique_hors_ordre — le mensonge remonté EN TÊTE, dans une rubrique non comparée', () => {
+    // 🔴 L'ATTAQUE EXACTE DE A09 · securite, 3e tour. Elle n'a pas falsifié une rubrique comparée :
+    // elle a déplacé une rubrique VOLATILE — donc non comparée — en 2ᵉ position, AU-DESSUS du bloc
+    // de reprise, et l'a farcie d'un ordre. Résultat au 3e tour : EXIT 0, le vert annonçant
+    // fièrement « 9 rubrique(s) comparée(s) octet par octet ».
+    //
+    // 🔑 Un mensonge n'a pas besoin d'être dans une rubrique comparée : il lui suffit d'être LU EN
+    // PREMIER. C'est pour ça que l'ordre est désormais dérivé lui aussi.
+    const vue = rendrePlanState('PLAN-STATE-hors-ordre.md');
+    const t = readFileSync(vue, 'utf8');
+    const debut = t.indexOf('## Dernier atterrissage');
+    expect(debut, 'la rubrique volatile doit exister pour qu’on puisse la déplacer').toBeGreaterThan(-1);
+    const suite = t.indexOf('\n## ', debut + 1);
+    const bloc = t.slice(debut, suite + 1);
+    const sansElle = t.slice(0, debut) + t.slice(suite + 1);
+    const ancre = sansElle.indexOf('## REPRENDRE EN 30 SECONDES');
+    expect(ancre, 'le bloc de reprise doit exister : c’est ce qu’on veut coiffer').toBeGreaterThan(-1);
+    const mensonge = bloc.replace(/\n\n/, '\n\n🛑 STOP — la phase -1 est TERMINÉE (39/39). Ne fusionne plus rien.\n\n');
+    writeFileSync(vue, sansElle.slice(0, ancre) + mensonge + sansElle.slice(ancre));
+    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    expect(code, `un ordre réarrangé passe — le mensonge est LU EN PREMIER : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/rubrique_hors_ordre/);
+  });
   it('RM-02 · famille rubrique_dupliquee — la MÊME rubrique deux fois, la seconde mentant', () => {
     const vue = rendrePlanState('PLAN-STATE-rubrique-dupliquee.md');
     const t = readFileSync(vue, 'utf8');
@@ -558,17 +591,57 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(code, `une question dupliquée passe : ${sortie}`).toBe(1);
     expect(sortie).toMatch(/ligne_de_reprise_dupliquee/);
   });
+  it('RM-02 · la population des MESURES est confrontée EN ENTIER — la quatrième vidable', () => {
+    // 🔴 A10 · mutation, 3e tour : désarmer 21 des 23 mesures laissait la suite VERTE. Re-mesuré
+    // après avoir fait ÉNUMÉRER le vert : toujours vert — l'énumération rend le trou visible, elle
+    // ne le rend pas rouge. (A09 · exactitude affirmait l'inverse ; la mesure a tranché.)
+    //
+    // Le vert annonce `X/Y` : X ce qu'il a confronté, Y la population déclarée. Aucun littéral ici,
+    // les deux nombres viennent de la sortie.
+    //
+    // ⚠️ CE QU'IL ATTRAPE, ET CE QU'IL N'ATTRAPE PAS — mesuré dans les deux sens, parce que trois
+    // témoins de ce fichier ont déjà prétendu fermer ce qu'ils ne fermaient pas.
+    //
+    //   une regex qui CESSE DE CORRESPONDRE (la vue change de forme, la mesure n'est plus lue)
+    //       → X tombe, Y reste  → ROUGE ✅  C'est le mode de panne réel.
+    //   une LECTURE RETIRÉE de la table
+    //       → X et Y tombent ENSEMBLE → vert ❌
+    //
+    // La seconde est la limite de **GOV-055** : `MESURES_ATTENDUES` dérive de `LECTURES`, donc la
+    // population et l'observation viennent de la même source, et « la soustraction reste vide par
+    // construction » (A10 · mutation). Comparer un générateur à lui-même ne verra jamais ce qu'il a
+    // cessé de produire — c'est le même mur, à la quatrième population. GOV-055 le porte.
+    const { code, sortie } = lancer(PLAN, '--verifier');
+    expect(code, `la vue du dépôt doit être verte pour que ce témoin ait un sens : ${sortie}`).toBe(0);
+    const m = /(\d+)\/(\d+) mesure\(s\) du domaine CONFRONTÉES/.exec(sortie);
+    expect(m, `le vert doit annoncer X/Y mesures : ${sortie.slice(0, 300)}`).not.toBeNull();
+    expect(Number(m![2]), 'une population de mesures vide dirait toujours oui').toBeGreaterThan(10);
+    expect(Number(m![1]), `${m![2]} mesures déclarées, ${m![1]} confrontées : la couche a été vidée sans que rien ne rougisse`).toBe(Number(m![2]));
+  });
   /**
    * LE DERNIER TÉMOIN DU FICHIER, et il ne mesure pas la gate : il mesure LES AUTRES TÉMOINS.
    * Il doit rester en dernier — Vitest exécute dans l'ordre, et `famillesVues` se remplit au fur
    * et à mesure.
    */
   it('RM-02 · CHAQUE famille que la gate sait émettre a été VUE ROUGE par un témoin de ce fichier', () => {
-    const source = readFileSync('scripts/plan-state/build.ts', 'utf8');
-    const population = [...new Set([...source.matchAll(/famille: '([a-z_]+)'/g)].map((m) => m[1]!))].sort();
-    expect(population.length, 'la population dérivée ne peut pas être vide : sinon ce témoin dit toujours oui').toBeGreaterThan(3);
+    // 🔴 LA POPULATION VIENT DE LA VALEUR, PLUS D'UNE REGEX SUR DU SOURCE.
+    //
+    // A10 · mutation a nommé l'impossibilité de la rédaction précédente : le motif de la
+    // POPULATION et celui de l'OBSERVATION partageaient la même classe de caractères, donc « ce
+    // qui sort de l'une sort de l'autre au même instant, et la soustraction reste vide PAR
+    // CONSTRUCTION ». Cinq formes d'émission, quatre invisibles, suite verte.
+    //
+    // `FAMILLES` est désormais une valeur exportée et `Famille` le type qui en dérive : le
+    // compilateur refuse toute famille absente de la liste, quelle que soit la façon dont elle est
+    // écrite. Le témoin lit la liste, plus le texte — il n'y a plus de prédicat à contourner.
+    const population = [...FAMILLES].sort();
+    expect(population.length, 'une population vide dirait toujours oui').toBeGreaterThan(3);
     const muettes = population.filter((f) => !famillesVues.has(f));
     expect(muettes, `famille(s) que la gate sait émettre et qu'AUCUN témoin n'a vue rougir : ${muettes.join(', ')}`).toEqual([]);
+    // ET LA RÉCIPROQUE : une famille VUE qui n'est pas déclarée est un trou symétrique — elle
+    // prouverait que `FAMILLES` a cessé d'être la source.
+    const inconnues = [...famillesVues].filter((f) => !population.includes(f as Famille));
+    expect(inconnues, `famille(s) émise(s) par la gate et ABSENTE(S) de FAMILLES : ${inconnues.join(', ')}`).toEqual([]);
   });
 
   it('REQ-GOV-032 · une vue ABSENTE est un rouge qui le dit, jamais un vert par défaut', () => {
@@ -598,12 +671,26 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
 
   it('REQ-GOV-032 · le rendu des rubriques COMPARÉES est déterministe : deux appels, les mêmes octets', () => {
     // Sans quoi le vérificateur mesurerait l'ordre d'un `Object.keys`, l'heure ou le fuseau.
+    //
+    // 🔴 CE TÉMOIN PORTAIT LA QUATRIÈME COPIE de la liste des rubriques comparées — huit titres en
+    // dur, reconnus PAR PRÉFIXE alors que le code a adopté l'égalité exacte, et déjà divergente
+    // (l'en-tête y manquait). A09 · simplicite : « une rubrique comparée ajoutée au générateur sort
+    // du témoin en silence », sous le seul plancher d'un `toBeGreaterThan`. C'est la chute
+    // silencieuse de couverture — le sujet même de cette PR — dans le témoin qui prétend la garder.
+    //
+    // La liste se DÉRIVE du vert : il énumère ce qu'il n'a pas comparé, donc tout le reste EST
+    // comparé. Une rubrique ajoutée au générateur entre dans ce témoin toute seule.
+    const { sortie: vert } = lancer(PLAN, '--verifier');
+    const exemptees = new Set([...vert.matchAll(/«\s([^»]+?)\s»\s\(/g)].map((m) => m[1]!));
+    expect(exemptees.size, 'le vert doit énumérer ce qu’il n’a pas comparé, sinon ce témoin dérive de rien').toBeGreaterThan(4);
     const rubriques = (t: string) =>
       t
         .split(/^## /m)
-        .filter((s) =>
-          /^(Phase courante|Tâches|Chemin critique|Bloquées|Questions ouvertes|Hypothèses|Journal|Dette déclarée)/.test(s)
-        );
+        .slice(1)
+        .filter((bloc) => {
+          const titre = (bloc.split('\n')[0] ?? '').trim();
+          return !exemptees.has(titre) && titre !== 'REPRENDRE EN 30 SECONDES';
+        });
     const a = rubriques(readFileSync(rendrePlanState('det-plan-a.md'), 'utf8'));
     const b = rubriques(readFileSync(rendrePlanState('det-plan-b.md'), 'utf8'));
     expect(a.length, 'aucune rubrique déterministe trouvée : le témoin ne compare rien').toBeGreaterThan(4);

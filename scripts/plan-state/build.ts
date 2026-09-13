@@ -521,10 +521,19 @@ lignes.push('');
 // SHA de `main`, la file de fusion, « Décisions du jour » (dérivée du JOUR du dernier
 // atterrissage) et « Prochain pas » — toutes volatiles, aucune fautive.
 //
-// Le périmètre comparé est donc celui des rubriques dérivées de fichiers SUIVIS. Il est DÉCLARÉ
-// ci-dessous, la sortie verte le NOMME — un vert muet promet plus qu'il ne tient — et une
-// rubrique qui n'appartient à AUCUNE des deux listes fait rougir : sans quoi la couverture se
-// périmerait en silence dès la première rubrique ajoutée au générateur.
+// 🔴 CE PARAGRAPHE DÉCRIVAIT LE MONDE À DEUX LISTES QUE CETTE PR ABOLIT, et il affirmait fermé
+// ce que GOV-055 déclare ouvert : « une rubrique qui n'appartient à AUCUNE des deux listes fait
+// rougir : sans quoi la couverture se périmerait en silence ». A09 · simplicite l'a relevé en
+// tête du fichier qui arbitre la doctrine — l'endroit qu'on lit EN PREMIER.
+//
+// Le monde actuel : **tout est comparé par défaut**, seules les EXEMPTIONS sont déclarées, avec
+// leur source vivante, et le vert les imprime aux quatre étages. La liste des éléments comparés
+// n'est écrite nulle part : elle se dérive.
+//
+// Et la couverture SE PÉRIME en silence, mais pas pour la raison qu'on croyait : pas parce qu'une
+// rubrique neuve échapperait au classement — elle est comparée — mais parce qu'un élément que le
+// GÉNÉRATEUR CESSE DE PRODUIRE disparaît des deux côtés à la fois. C'est GOV-055, et il faut une
+// source extérieure pour le fermer.
 //
 // ⚠️ CE QUE CE VÉRIFICATEUR NE VOIT PAS, écrit plutôt que tu : une falsification portée
 // uniquement sur une rubrique volatile (réécrire le SHA de `main`, retirer une PR de la file)
@@ -675,30 +684,118 @@ const classer = (titre: string): 'comparee' | 'volatile' | 'reprise' => {
  * nombre de tâches livrées, nombre d'exigences — et non "les deux fichiers diffèrent" ». Elles
  * sont LUES dans les deux textes et confrontées deux à deux ; aucune n'est écrite en dur.
  */
+/**
+ * 🔴 LA QUATRIÈME POPULATION, ET LA DERNIÈRE QU'ON POUVAIT VIDER EN SILENCE.
+ *
+ * A10 · mutation, 3e tour : désarmer 21 des 23 mesures laissait la suite VERTE. Mesuré à nouveau
+ * après avoir fait énumérer le vert : toujours 33/33 vert — l'énumération rend le trou VISIBLE,
+ * elle ne le rend pas ROUGE. (A09 · exactitude affirmait l'inverse ; la mesure a tranché pour
+ * `mutation`, et je le dis parce qu'une contradiction entre lentilles se règle par une mesure, pas
+ * par la plus récente.)
+ *
+ * Les noms des mesures étaient des littéraux éparpillés dans les appels. Ils sont maintenant une
+ * TABLE — donc une valeur — et `MESURES_ATTENDUES` en dérive. Le vert annonce `X/Y`, et un témoin
+ * exige l'égalité : retirer une lecture fait tomber X sans toucher Y, et ça rougit.
+ *
+ * C'est le même renversement que pour les familles, les rubriques, les lignes et la prose. La
+ * cinquième fois qu'il est appliqué dans ce fichier, et la leçon vaut plus que le correctif :
+ * *une population qu'on ne déclare pas est une population qu'on peut vider.*
+ */
+const LECTURES: readonly (readonly [RegExp, ...string[]])[] = [
+  [/^(\d+)\/(\d+) tâches terminées · reste ([\d.]+) j estimés\.$/m,
+    'tâches terminées en phase courante', 'tâches de la phase courante', 'jours restants en phase courante'],
+  [/^\| Où en est la phase \? \| phase (-?\d+) — (\d+)\/(\d+) tâches, reste ([\d.]+) j \|$/m,
+    'phase courante (bloc de reprise)', 'tâches terminées (bloc de reprise)', 'tâches de la phase (bloc de reprise)', 'jours restants (bloc de reprise)'],
+  [/^\| Ce qui bloque \| (\d+) tâche\(s\) bloquée\(s\) ou en attente externe · (\d+) question\(s\) pour Will \|$/m,
+    'tâches bloquées ou en attente (bloc de reprise)', 'questions ouvertes pour Will (bloc de reprise)'],
+  [/^\*\*([\d.]+) j\*\* sur (\d+) taches enchainees/m, 'jours du chemin critique', 'tâches du chemin critique'],
+  [/^Reste sur ce chemin : \*\*([\d.]+) j\*\*\.$/m, 'jours restants sur le chemin critique'],
+  [/^(\d+) décisions portent une hypothèse datée/m, 'décisions à hypothèse posée'],
+];
+
+const STATUTS_COMPTES = ['a_faire', 'en_cours', 'en_revue', 'fusionnee', 'deployee', 'verifiee', 'bloquee', 'attente_externe'] as const;
+
+/** Les mesures COMPTÉES sans regex : elles n'ont pas de capture, seulement un dénombrement. */
+const DENOMBREMENTS: readonly (readonly [string, RegExp])[] = [
+  ['tâches nommées sous « Bloquées »', /^- \*\*[A-Z]+-[A-Za-z0-9-]+\*\* — /gm],
+  ['entrées de journal rendues', /^### PR #\d+ — /gm],
+];
+
+/** LA POPULATION, dérivée de la table — jamais retapée. */
+export const MESURES_ATTENDUES: readonly string[] = [
+  ...LECTURES.flatMap(([, ...noms]) => noms),
+  ...STATUTS_COMPTES.map((x) => `tâches \`${x}\``),
+  ...DENOMBREMENTS.map(([nom]) => nom),
+];
+
+/**
+ * LES MESURES DU DOMAINE. REQ-GOV-032 exige que l'écart soit nommé « en unités du domaine —
+ * nombre de tâches livrées, nombre d'exigences — et non "les deux fichiers diffèrent" ». Elles
+ * sont LUES dans les deux textes et confrontées deux à deux ; aucune n'est écrite en dur.
+ */
 function mesures(texte: string): Map<string, string> {
   const m = new Map<string, string>();
-  const lire = (re: RegExp, ...noms: string[]) => {
+  for (const [re, ...noms] of LECTURES) {
     const r = re.exec(texte);
-    if (r) noms.forEach((n, i) => { if (r[i + 1] !== undefined) m.set(n, r[i + 1]!); });
-  };
-  lire(/^(\d+)\/(\d+) tâches terminées · reste ([\d.]+) j estimés\.$/m,
-    'tâches terminées en phase courante', 'tâches de la phase courante', 'jours restants en phase courante');
-  lire(/^\| Où en est la phase \? \| phase (-?\d+) — (\d+)\/(\d+) tâches, reste ([\d.]+) j \|$/m,
-    'phase courante (bloc de reprise)', 'tâches terminées (bloc de reprise)', 'tâches de la phase (bloc de reprise)', 'jours restants (bloc de reprise)');
-  lire(/^\| Ce qui bloque \| (\d+) tâche\(s\) bloquée\(s\) ou en attente externe · (\d+) question\(s\) pour Will \|$/m,
-    'tâches bloquées ou en attente (bloc de reprise)', 'questions ouvertes pour Will (bloc de reprise)');
-  lire(/^\*\*([\d.]+) j\*\* sur (\d+) taches enchainees/m, 'jours du chemin critique', 'tâches du chemin critique');
-  lire(/^Reste sur ce chemin : \*\*([\d.]+) j\*\*\.$/m, 'jours restants sur le chemin critique');
-  lire(/^(\d+) décisions portent une hypothèse datée/m, 'décisions à hypothèse posée');
-  for (const s of ['a_faire', 'en_cours', 'en_revue', 'fusionnee', 'deployee', 'verifiee', 'bloquee', 'attente_externe']) {
-    lire(new RegExp(`^\\| \`${s}\` \\| (\\d+) \\|`, 'm'), `tâches \`${s}\``);
+    if (r) noms.forEach((n, k) => { if (r[k + 1] !== undefined) m.set(n, r[k + 1]!); });
   }
-  m.set('tâches nommées sous « Bloquées »', String((texte.match(/^- \*\*[A-Z]+-[A-Za-z0-9-]+\*\* — /gm) ?? []).length));
-  m.set('entrées de journal rendues', String((texte.match(/^### PR #\d+ — /gm) ?? []).length));
+  for (const st of STATUTS_COMPTES) {
+    const r = new RegExp(`^\\| \`${st}\` \\| (\\d+) \\|`, 'm').exec(texte);
+    if (r) m.set(`tâches \`${st}\``, r[1]!);
+  }
+  for (const [nom, re] of DENOMBREMENTS) m.set(nom, String((texte.match(re) ?? []).length));
   return m;
 }
 
-interface Ecart { famille: string; message: string }
+/**
+ * 🔴 LES FAMILLES SONT UNE VALEUR, PLUS UNE REGEX SUR DU SOURCE — ET C'EST LA CORRECTION DE FOND.
+ *
+ * Le témoin de population du tour précédent grattait le source avec `/famille: '([a-z_]+)'/`, et
+ * observait les sorties avec `/\[([a-z_]+)\]/`. A10 · mutation a nommé la faute, qui n'est pas une
+ * regex trop étroite mais une impossibilité :
+ *
+ *   « Les deux motifs partagent LA MÊME CLASSE DE CARACTÈRES. Ce qui sort de l'une sort de l'autre
+ *     au même instant, et la soustraction reste vide PAR CONSTRUCTION. »
+ *
+ * Mesuré : cinq formes d'émission, quatre invisibles, suite 32/32 verte. A09 · securite l'a
+ * retrouvé par un autre chemin (guillemets doubles, nom construit, gabarit) et a désigné la
+ * récidive : c'est le prédicat ouvert que `empreinte-des-outils.mjs` venait d'abandonner LE MÊME
+ * JOUR, avec l'argument « sous-inclure est le défaut ».
+ *
+ * 🔑 Une population ne se GRATTE pas, elle se DÉCLARE. `FAMILLES` est la liste, `Famille` le type
+ * qui en dérive : le compilateur refuse désormais toute famille absente de la liste, quelle que
+ * soit la façon dont elle est écrite — littéral, constante, gabarit, concaténation. Le témoin lit
+ * la VALEUR, plus le texte. C'est le renversement « une raison devient un identifiant déclaré »,
+ * appliqué là où il manquait.
+ *
+ * ⚠️ CE QUE ÇA FERME, MESURÉ — et ce que ça ne ferme pas, dit plutôt que tu. Les quatre formes
+ * qui échappaient au grattage ont été rejouées contre le compilateur :
+ *
+ *     guillemets doubles          → REFUSÉ à la compilation
+ *     gabarit                     → REFUSÉ
+ *     sans espace après le « : »  → REFUSÉ
+ *     nom construit + `as never`  → **ACCEPTÉ**
+ *
+ * La dernière porte reste, et elle exige un TRANSTYPAGE EXPLICITE. Ce n'est plus un oubli
+ * possible, c'est un acte délibéré, et il est VISIBLE dans le diff — la relecture est la garde à
+ * cet endroit-là, et le contrôle réciproque du témoin (« une famille émise et absente de
+ * `FAMILLES` ») l'attrape dès qu'elle est jouée une fois. Prétendre « impossible » serait la
+ * quatrième fois que ce fichier revendiquerait une fermeture qu'il n'a pas.
+ */
+export const FAMILLES = [
+  'vue_perimee',
+  'mesure_absente',
+  'rubrique_manquante',
+  'rubrique_en_trop',
+  'rubrique_dupliquee',
+  'rubrique_hors_ordre',
+  'ligne_de_reprise_dupliquee',
+  'prose_dupliquee',
+] as const;
+
+export type Famille = (typeof FAMILLES)[number];
+
+interface Ecart { famille: Famille; message: string }
 
 /** La première ligne qui diffère entre deux corps, rendue lisible. */
 function premiereDifference(attendu: string, trouve: string): string {
@@ -714,7 +811,7 @@ function premiereDifference(attendu: string, trouve: string): string {
 }
 
 /** Le verdict : ce que le disque porte, confronté à ce que les sources produisent À L'INSTANT. */
-function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignesComparees: number; lignesExemptees: [string, string][]; prosesExemptees: [string, string][] } {
+function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignesComparees: number; lignesExemptees: [string, string][]; prosesExemptees: [string, string][]; mesuresConfrontees: string[] } {
   // 🔴 CE COMPTEUR EST MESURÉ, PAS DÉCLARÉ. La première rédaction affichait
   // `LIGNES_DE_REPRISE_COMPAREES.length` — une constante. A09 · securite : « le même défaut que
   // celui que la PR vient corriger, déplacé d'un cran : un chiffre qui a l'air d'une mesure et qui
@@ -727,11 +824,19 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignes
   // population dit toujours qu'elle est couverte. »
   const lignesExemptees: [string, string][] = [];
   const prosesExemptees: [string, string][] = [];
+  const mesuresConfrontees: string[] = [];
   const ecarts: Ecart[] = [];
 
   // 1. LES MESURES DU DOMAINE d'abord : ce sont elles qui apprennent quelque chose.
   const mA = mesures(attendu);
   const mD = mesures(surDisque);
+  /**
+   * 🔴 LA SEULE DES QUATRE POPULATIONS QU'ON POUVAIT VIDER EN SILENCE (A10 · mutation, 3e tour).
+   * Les rubriques, les lignes et la prose sont ÉNUMÉRÉES par le vert ; les mesures n'étaient que
+   * COMPTÉES. Désarmer 21 des 23 laissait le vert imprimer « 2 mesure(s) du domaine » et la suite
+   * verte — un compteur qui n'énumère pas sa population dit toujours qu'elle est couverte.
+   */
+  for (const [nom] of mA) mesuresConfrontees.push(nom);
   for (const [nom, valeur] of mA) {
     const vu = mD.get(nom);
     if (vu === undefined) ecarts.push({ famille: 'mesure_absente', message: `${nom} : introuvable dans la vue sur le disque, ses sources en produisent ${valeur}` });
@@ -769,6 +874,29 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignes
   const titresD = rD.map((r) => r.titre);
   for (const t of titresA) if (!titresD.includes(t)) ecarts.push({ famille: 'rubrique_manquante', message: `rubrique « ${t} » : absente de la vue sur le disque, produite par ses sources` });
   for (const t of titresD) if (!titresA.includes(t)) ecarts.push({ famille: 'rubrique_en_trop', message: `rubrique « ${t} » : présente dans la vue sur le disque, produite par aucune source` });
+
+  /**
+   * 🔴 L'ORDRE DES RUBRIQUES N'ÉTAIT COMPARÉ PAR RIEN, et A09 · securite en a fait une arme :
+   * `## Dernier atterrissage` — rubrique VOLATILE, donc non comparée — remontée en 2ᵉ position et
+   * farcie de « 🛑 STOP — la phase -1 est TERMINÉE (39/39). Ne fusionne plus rien », **au-dessus du
+   * bloc de reprise**, rendait EXIT 0, le vert annonçant « 9 rubrique(s) comparée(s) octet par
+   * octet ».
+   *
+   * 🔑 Un mensonge n'a pas besoin d'être dans une rubrique comparée : il lui suffit d'être LU EN
+   * PREMIER. Comparer les contenus sans comparer leur ORDRE laisse la mise en page libre, et la
+   * mise en page est ce qu'un lecteur pressé prend pour le résumé.
+   */
+  if (titresA.length === titresD.length) {
+    for (let k = 0; k < titresA.length; k += 1) {
+      if (titresA[k] !== titresD[k]) {
+        ecarts.push({
+          famille: 'rubrique_hors_ordre',
+          message: `rubrique n°${k + 1} : la vue sur le disque porte « ${titresD[k]} », ses sources produisent « ${titresA[k]} » — l'ORDRE des rubriques est dérivé, il ne se réarrange pas à la main`,
+        });
+        break;
+      }
+    }
+  }
 
   // 3. LE CORPS des rubriques comparables, OCTET PAR OCTET.
   for (const r of rA) {
@@ -860,7 +988,7 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignes
     }
   }
 
-  return { ecarts, lignesComparees, lignesExemptees, prosesExemptees };
+  return { ecarts, lignesComparees, lignesExemptees, prosesExemptees, mesuresConfrontees };
 }
 
 // ── les deux modes ───────────────────────────────────────────────────────────
@@ -872,7 +1000,7 @@ if (MODE_VERIFIER) {
     console.error(`❌ plan-state:verifier — ${CHEMIN_VUE} est ABSENT : il n’y a rien à comparer. Tape \`pnpm plan-state:build\`.`);
     process.exitCode = 1;
   } else {
-    const { ecarts, lignesComparees, lignesExemptees, prosesExemptees } = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'));
+    const { ecarts, lignesComparees, lignesExemptees, prosesExemptees, mesuresConfrontees } = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'));
     if (ecarts.length > 0) {
       console.error(`❌ plan-state:verifier — ${CHEMIN_VUE} a DÉRIVÉ de ses sources : ${ecarts.length} écart(s).`);
       for (const e of ecarts.slice(0, 20)) console.error(`   [${e.famille}] ${e.message}`);
@@ -900,10 +1028,13 @@ if (MODE_VERIFIER) {
       console.log(
         `✅ plan-state:verifier — ${CHEMIN_VUE} est égal à ce que ses sources produisent : ` +
           `${comparees.length} rubrique(s) comparée(s) octet par octet, ${lignesComparees} ligne(s) du bloc de reprise CONFRONTÉES, ` +
-          `${mesures(rendu).size} mesure(s) du domaine.`
+          `${mesuresConfrontees.length}/${MESURES_ATTENDUES.length} mesure(s) du domaine CONFRONTÉES.`
       );
       const rendreExemptions = (quoi: string, l: [string, string][]) =>
         l.length ? `   NON COMPARÉ — ${quoi} : ${l.map(([r, motif]) => `« ${r} » (${motif})`).join(' · ')}.` : null;
+      // Les mesures sont NOMMÉES, comme les trois autres populations — sinon c'est la seule
+      // qu'on peut vider sans que la forme de la sortie change.
+      console.log(`   CONFRONTÉ — mesures du domaine : ${mesuresConfrontees.join(' · ')}.`);
       for (const ligne of [
         rendreExemptions('rubriques', volatilesVues),
         rendreExemptions('lignes du bloc de reprise', lignesExemptees),
