@@ -213,9 +213,18 @@ lignes.push('');
 
 lignes.push('## Tâches');
 lignes.push('');
+/**
+ * LES STATUTS DU TABLEAU « Tâches », déclarés UNE fois et lus par le générateur ET par les mesures.
+ * L'ordre est celui du cycle de vie, il porte du sens dans la vue : il ne se trie pas.
+ * ⚠️ `avancement.ts` porte le vocabulaire arbitré et sa machine d'exhaustivité
+ * (`verifierExhaustivite()` le confronte à `tasks.schema.json`) ; le témoin ci-dessous confronte
+ * CETTE liste à celle des tâches réelles, pour qu'un statut neuf ne puisse pas rester invisible.
+ */
+const STATUTS_DU_TABLEAU = ['a_faire', 'en_cours', 'en_revue', 'fusionnee', 'deployee', 'verifiee', 'bloquee', 'attente_externe'] as const;
+
 lignes.push('| Statut | Nombre | Détail |');
 lignes.push('| --- | --- | --- |');
-for (const s of ['a_faire', 'en_cours', 'en_revue', 'fusionnee', 'deployee', 'verifiee', 'bloquee', 'attente_externe']) {
+for (const s of STATUTS_DU_TABLEAU) {
   const l = par(s);
   const detail = ['en_cours', 'en_revue', 'bloquee', 'attente_externe'].includes(s)
     ? l.map((t) => {
@@ -583,7 +592,7 @@ const RUBRIQUES_VOLATILES: [string, string][] = [
  * premier changement de la forge — est rendu par le vert qui **énumère sa population** : ajouter
  * une ligne au générateur change la sortie du vert dans le diff même qui l'ajoute.
  *
- * Il reste donc, à chaque niveau, EXACTEMENT UNE liste tapée : les exemptions, chacune avec la
+ * Il reste donc, à chaque niveau, une seule liste tapée POUR LES POPULATIONS : les exemptions, chacune avec la
  * source vivante qui la justifie, chacune IMPRIMÉE par le vert.
  */
 const BLOC_DE_REPRISE = 'REPRENDRE EN 30 SECONDES';
@@ -713,7 +722,24 @@ const LECTURES: readonly (readonly [RegExp, ...string[]])[] = [
   [/^(\d+) décisions portent une hypothèse datée/m, 'décisions à hypothèse posée'],
 ];
 
-const STATUTS_COMPTES = ['a_faire', 'en_cours', 'en_revue', 'fusionnee', 'deployee', 'verifiee', 'bloquee', 'attente_externe'] as const;
+/**
+ * 🔴 CE VOCABULAIRE ÉTAIT RECOPIÉ, ET C'EST UNE AUTRE RÈGLE QUE CELLE QUE CETTE PR APPLIQUE.
+ *
+ * A09 · simplicite, 4e tour, et la distinction est la sienne : *« tu as compté les POPULATIONS que
+ * tu as créées, jamais les VOCABULAIRES que tu as recopiés — deux règles différentes »*. Les cinq
+ * renversements de cette PR ferment des populations (familles, rubriques, lignes, prose, mesures).
+ * Celui-ci est un vocabulaire du domaine, arbitré ailleurs, avec sa propre machine d'exhaustivité :
+ * `scripts/lot/avancement.ts` le déclare, et `verifierExhaustivite()` le confronte à
+ * `scripts/lot/tasks.schema.json`. RM-01 et RM-04, arbitrées en PR 28.
+ *
+ * Conséquence mesurable, et c'est exactement le mode de panne que cette PR referme cinq fois
+ * ailleurs : un statut ajouté au générateur n'entrerait ni dans `mesures()` ni dans
+ * `MESURES_ATTENDUES` — X/Y resterait égal, le témoin resterait vert, et l'écart cesserait d'être
+ * nommé en unités du domaine. REQ-GOV-032 reculerait sans un rouge.
+ *
+ * Une seule frappe, donc, et c'est celle du générateur : les deux endroits lisent la même.
+ */
+const STATUTS_COMPTES = STATUTS_DU_TABLEAU;
 
 /** Les mesures COMPTÉES sans regex : elles n'ont pas de capture, seulement un dénombrement. */
 const DENOMBREMENTS: readonly (readonly [string, RegExp])[] = [
