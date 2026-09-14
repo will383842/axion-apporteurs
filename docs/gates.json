@@ -22,8 +22,8 @@
       "phase": -1,
       "script": "scripts/gates/gov-check.ts",
       "tache": "GOV-000",
-      "verifie": "termes interdits partout (code, docs, registre) : Invoice, Refund, refund.issued, payment.received, invoice.issued, devis.signed, ('provisoire','active'), 'prenom, nom', qualificateur ; aucun nom d'evenement litteral hors packages/contracts",
-      "fixtureRouge": "ajouter 'payment.received' dans un fichier de docs/",
+      "verifie": "termes interdits dans les racines que l'en-tete de docs/GLOSSAIRE.md nomme (prisma/, src/, messages/, docs/adr/) plus packages/contracts/ : Invoice, Refund, PaymentScheduleProfile, refund.issued, payment.received, invoice.issued, devis.signed, qualificateur ; aucun nom d'evenement litteral hors packages/contracts. Les listes litterales d'etats occupants ne sont PAS ici : partners:schema:enums (GOV-006) en est la SEULE implementation depuis partners/ADR-0011, et elle balaie src, prisma et scripts. Cette entree est aussi la POPULATION de --prove : la preuve ne declare pas elle-meme ce qu'elle doit prouver. familles : source_illisible, perimetre_vide, terme_axionia_invalide, evenement_hors_nomenclature, evenement_litteral_hors_contrat, synonyme_interdit_du_glossaire ; refus de conclure : req_int_004_muette, contrat_sans_evenement, contrat_et_exigence_divergents, glossaire_sans_synonyme, racines_illisibles",
+      "fixtureRouge": "ajouter 'payment.received' dans un fichier de docs/adr/ — la racine que l'en-tete du glossaire nomme. ATTENTION : docs/ tout court est HORS perimetre et sort en 0 ; la fixture precedente disait « un fichier de docs/ » et, appliquee a la lettre, elle ne rougissait pas.",
       "preuveRouge": null
     },
     {

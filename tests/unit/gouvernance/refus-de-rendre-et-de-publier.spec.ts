@@ -419,13 +419,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       temoins: 0,
       raison:
         'GOV-030 — la garde des termes interdits, que six documents invoquaient sans qu’elle ' +
-        'existe. Quatre refus : (1) un témoin de `--prove` qui ne rougit plus, (2) un ' +
-        'contre-témoin devenu faux positif, (3) une famille déclarée sans témoin, (4) le verdict ' +
-        'sur le dépôt. Les trois premiers sont éprouvés par MUTATION dans ' +
-        '`termes-interdits.spec.ts` — seuil de la liste d’états porté de 2 à 3, exemption de ' +
-        'citation désarmée, périmètre tapé au lieu d’être lu : chacune fait tomber le test qui ' +
-        'la nomme (`termes-interdits.spec.ts`). Le quatrième est le refus de la gate elle-même, tenu '+
-        'par le contrôle qui la ' +
+        'existe. Quatre refus : (1) un témoin de `--prove` qui ne mord plus, (2) un ' +
+        'contre-témoin devenu faux positif, (3) la population de `docs/gates.json` illisible, ' +
+        'divergente du code ou non couverte, (4) le verdict sur le dépôt. Les trois premiers sont ' +
+        'VUS ROUGIR par mutation de `gov-check.ts` — JSON rendu citable (1), guillemets français ' +
+        'privés de citation (2), témoin de `perimetre_vide` supprimé (3) : chacun fait sortir ' +
+        '`--prove` en 1, étape bloquante de Gate A que `termes-interdits.spec.ts` lance aussi. ' +
+        'Le quatrième est tenu par le contrôle qui la ' +
         'lance sur le dépôt réel. Le REFUS DE PÉRIMÈTRE, lui, n’est pas compté ici : il vient de ' +
         '`fichiersSuivisOuRefus`, et `GARDES_QUI_BALAIENT` le déclare plus bas.',
     },
@@ -741,9 +741,9 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // sorties — la garde des termes interdits que `docs/gates.json` déclarait depuis GOV-000 sans
     // qu'aucun script n'existe. Le cliquet a rougi en la nommant (« ajoute 4 `process.exit(1)` et
     // n'est PAS déclaré ici »), puis une seconde fois sur le compte des témoins : les deux fois il
-    // a été LU, pas contourné. Trois de ces refus sont éprouvés par MUTATION dans
-    // `termes-interdits.spec.ts` ; le quatrième — le verdict sur le dépôt — par le contrôle qui
-    // lance la gate sur l'arbre réel.
+    // a été LU, pas contourné. Trois de ces refus sont vus rougir par MUTATION de `gov-check.ts`
+    // (la `raison` de son entrée les nomme) ; le quatrième — le verdict sur le dépôt — par le
+    // contrôle qui lance la gate sur l'arbre réel.
     expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(39);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
