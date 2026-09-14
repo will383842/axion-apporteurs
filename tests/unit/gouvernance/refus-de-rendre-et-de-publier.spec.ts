@@ -417,16 +417,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    */
   const declares: Record<string, { total: number; porte: number; temoins: number; raison: string }> = {
     // ── GOV-037 : UNE sortie, à code VARIABLE ───────────────────────────────────────────────
-    // Le cliquet a rougi en la nommant — « scripts/gates/gov-attributions.ts ajoute 1
-    // `process.exit(1)` et n'est PAS déclaré ici » — et le nombre a été LU là, pas anticipé.
     // 🔑 CE QUE LE CLIQUET NE PEUT PAS SAVOIR, ET QUI CHANGE LE TÉMOIN QU'IL FAUT. Le motif
     // `process.exit(\s*(?!0\s*\))` compte cette sortie comme non nulle : il lit une EXPRESSION,
     // pas une valeur. Or `verdict.code` vaut **0** quand la garde passe — c'est la sortie
-    // terminale, celle par laquelle `gov:check` rend la main. Un témoin d'une seule face en
-    // laisserait donc une moitié dehors, et les deux moitiés se neutralisent par un littéral :
-    // `exit(1)` satisfait la face rouge et rend `gov:check` rouge à vie ; `exit(0)` satisfait la
-    // face verte et déclare propre ce que la garde vient d'imprimer comme faute. Les deux mutants
-    // ont été POSÉS et rougissent, chacun sur SA face.
+    // terminale, celle par laquelle `gov:check` rend la main. Le témoin d'effet exige donc les
+    // issues rouges ET l'issue verte du même binaire : un `exit(1)` littéral rendrait `gov:check`
+    // rouge à vie, un `exit(0)` littéral déclarerait propre ce que la garde vient de refuser.
     'scripts/gates/gov-attributions.ts': {
       total: 1,
       porte: 1,
@@ -434,11 +430,11 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       raison:
         'GOV-037 — les attributions se confrontent à leurs sources. `process.exit(verdict.code)` : ' +
         'sortie TERMINALE, à code variable, comptée non nulle par le motif et valant 0 quand la ' +
-        'garde passe. Témoin d’EFFET à DEUX faces (attribution rompue injectée dans un dépôt ' +
-        'jetable → sortie non nulle nommant `req_tache_non_reciproque` ; dépôt réel → 0 avec sa ' +
-        'bannière). Les familles, elles, sont couvertes par `--prove` et par ' +
-        'attributions-resolvent.spec.ts — un témoin d’effet prouve la famille qu’il injecte, ' +
-        'jamais la gate.',
+        'garde passe. Témoin d’EFFET sur le binaire : attribution rompue injectée dans un dépôt ' +
+        'jetable, puis registre tronqué → sortie non nulle nommant sa famille ; dépôt réel → 0, ' +
+        'chaque exemption imprimée sous la rubrique de sa nature. Les familles, elles, sont ' +
+        'couvertes par `--prove` et par attributions-resolvent.spec.ts — un témoin d’effet prouve ' +
+        'la famille qu’il injecte, jamais la gate.',
     },
     // ── RÉCONCILIATION `gov-038` : QUATRE fichiers apportent DIX sorties non nulles ──────────
     // Le cliquet a rougi en NOMMANT le premier (`gov-attestation.ts ajoute 3 … et n'est PAS
@@ -716,7 +712,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     const TEMOINS_D_EFFET = [
       'gov-entite.ts — SORTIE TERMINALE du mode à plat, par dépôt jetable',
       'gov-entite.ts — SORTIE TERMINALE de --corps-publie, par PR inexistante',
-      'gov-attributions.ts — SORTIE TERMINALE à code VARIABLE, témoin à DEUX faces : attribution rompue injectée → sortie non nulle ; dépôt réel → 0',
+      'gov-attributions.ts — SORTIE TERMINALE à code VARIABLE : attribution rompue ou registre tronqué → sortie non nulle nommée ; dépôt réel → 0',
       'fichiers-suivis.ts — REFUS perimetre_illisible : le périmètre INCONNU fait sortir en échec, et le dépôt réel reste vert (contre-témoin)',
       'fichiers-suivis.ts — REFUS perimetre_entame : un fichier SUIVI introuvable sur le disque fait sortir en échec, et le dépôt réel reste vert (contre-témoin)',
     ] as const;
@@ -1872,44 +1868,34 @@ describe('REQ-CPL-018 — `perimetre_illisible` est une PRÉCONDITION, pas une f
 });
 
 /**
- * 🔴 LA SORTIE TERMINALE DE `gov:attributions` — TÉMOIN D'EFFET À **DEUX FACES** (GOV-037).
+ * 🔴 LA SORTIE TERMINALE DE `gov:attributions` — TÉMOIN D'EFFET (GOV-037).
  *
  * La sortie que GOV-037 ajoute est `process.exit(verdict.code)` : un code **VARIABLE**. Le cliquet
- * le compte comme une sortie non nulle — à juste titre, il ne peut pas savoir ce que vaut
- * `verdict.code` —, mais ce même code vaut **0** quand la garde passe. Un témoin d'une seule face
- * laisserait donc la moitié du dispositif non mesurée, et c'est la moitié qui coûte :
+ * le compte comme une sortie non nulle — il ne peut pas savoir ce que vaut `verdict.code` —, mais
+ * ce même code vaut **0** quand la garde passe. Le témoin lance donc le même binaire sur chacune
+ * de ses issues, dans le même `it()` :
  *
- *     face ROUGE seule  -> un `process.exit(1)` inconditionnel la satisfait, et la gate ne rend
- *                          plus JAMAIS la main : `gov:check` est rouge à vie, donc désarmé.
- *     face VERTE seule  -> un `process.exit(0)` inconditionnel la satisfait, et la gate déclare
- *                          propre tout ce qu'elle vient de refuser — elle IMPRIME ses fautes,
- *                          puis sort 0. C'est le mutant qui a coûté le plus cher à ce fichier.
+ *     attribution rompue  -> sortie non nulle nommant `req_tache_non_reciproque`, aucune bannière ;
+ *     registre tronqué    -> sortie non nulle nommant `source_illisible`, aucune bannière ;
+ *     dépôt réel          -> 0, et la sortie lue comme une STRUCTURE : le total en nombre entier,
+ *                            une rubrique par nature avec son compte, chaque exemption (tâche et
+ *                            site) sous la rubrique de SA nature, chaque déclaration avec sa raison ;
+ *     hors de la racine   -> le refus nommé du périmètre, jamais une trace de pile.
  *
- * Les deux faces sont donc dans le MÊME `it()`, sur le même binaire, à la suite. La faute injectée
- * est RÉELLE et DÉRIVÉE — une exigence du registre se met à citer une tâche qui ne la cite pas en
- * retour —, jamais une trappe ouverte dans la gate.
+ * Un `process.exit(1)` littéral satisfait les issues rouges et rend `gov:check` rouge à vie ; un
+ * `process.exit(0)` littéral satisfait l'issue verte et déclare propre ce que la garde vient de
+ * refuser. Les fautes injectées sont RÉELLES et DÉRIVÉES du registre, jamais une trappe dans la gate.
  *
- * ⚠️ CE QU'IL PROUVE, ET SUR QUOI. Il prouve la famille qu'il injecte, jamais la gate entière
- * (`gov:attributions --prove` couvre toutes ses familles, dans le même processus, donc il ne
- * remplace pas celui-ci). Le dépôt le sait déjà : « un témoin d'effet prouve la famille qu'il
- * injecte ». C'est dit plutôt que sous-entendu.
- *
- * 🔴 LA FACE VERTE N'EXIGEAIT QU'UNE LIGNE `✅` — motif de `mutation` sur `73512d7`. Les lignes qui
- * impriment les dettes retirées, ou un compte forcé à zéro, laissaient ce témoin vert : la promesse
- * « chaque exemption est imprimée » n'était gardée par rien. Elle exige maintenant que la sortie
- * NOMME chaque exemption que l'analyse rend, chaque entrée des deux registres avec sa raison, et
- * que le compte imprimé ÉGALE celui de l'analyse.
- *
- * 🔴 ET UNE TROISIÈME FACE — motif de `securite` : lancée depuis un sous-dossier, la garde lisait
- * ses sources AVANT d'établir son périmètre, et sortait sur une trace de pile au lieu du refus nommé
- * que la primitive de périmètre existe pour rendre.
+ * ⚠️ CE QU'IL PROUVE : les familles qu'il injecte, jamais la gate entière — `--prove` couvre les
+ * familles, dans le même processus, et ne remplace pas ce témoin.
  */
-describe('REQ-CPL-018 — `gov:attributions` SORT en échec, et rend 0 sur le dépôt réel', () => {
-  it('REQ-CPL-018 — TÉMOIN D’EFFET à deux faces : faute injectée → sortie non nulle ; dépôt réel → 0', () => {
+describe('REQ-GOV-021 — `gov:attributions` SORT en échec en se nommant, et rend 0 sur le dépôt réel', () => {
+  it('REQ-GOV-021 — TÉMOIN D’EFFET : attribution rompue ou registre tronqué → sortie non nulle nommée ; hors racine → refus du périmètre ; dépôt réel → 0, chaque exemption sous sa rubrique', () => {
     const GARDE = 'scripts/gates/gov-attributions.ts';
     const depot = depotCompletJetable();
+    const sansBanniere = (sortie: string) => sortie.split(/\r?\n/).filter((l) => l.trimStart().startsWith('✅'));
 
-    // ── FACE ROUGE. La faute est DÉRIVÉE du registre, pas tapée : on prend la première exigence
+    // ── ATTRIBUTION ROMPUE. La faute est DÉRIVÉE du registre, pas tapée : on prend la première exigence
     // que la tâche porteuse de cette garde ne cite PAS, et on lui fait citer cette tâche. La
     // réciprocité est alors rompue d'un seul côté — le défaut réel que la garde existe pour voir.
     const backlog = JSON.parse(readFileSync(join(depot, 'docs/tasks.json'), 'utf8')) as {
@@ -1940,33 +1926,68 @@ describe('REQ-CPL-018 — `gov:attributions` SORT en échec, et rend 0 sur le d�
       cible!.id
     );
     // Et aucune bannière de succès : elle imprimerait « ✅ » au-dessus de ses propres fautes.
-    expect(
-      rouge.sortie.split(/\r?\n/).filter((l) => l.trimStart().startsWith('✅')),
-      'la garde a imprimé une bannière de SUCCÈS en refusant'
-    ).toEqual([]);
+    expect(sansBanniere(rouge.sortie), 'la garde a imprimé une bannière de SUCCÈS en refusant').toEqual([]);
 
-    // ── FACE VERTE. Sans elle, un `process.exit(1)` inconditionnel passerait pour une correction.
+    // ── REGISTRE TRONQUÉ. Le refus est éprouvé sur le BINAIRE, pas seulement sur la fonction qui lève :
+    // un `catch` qui imprime « ❌ » puis rend 0 passerait tous les tests de `chargerSources`.
+    const taches = readFileSync(join(depot, 'docs/tasks.json'), 'utf8');
+    writeFileSync(join(depot, 'docs/tasks.json'), taches.slice(0, Math.floor(taches.length / 2)));
+    const illisible = lancerLaGate(GARDE, depot);
+    expect(illisible.code, `la garde a jugé un registre tronqué :\n${illisible.sortie.slice(0, 600)}`).not.toBe(0);
+    expect(illisible.sortie, 'le refus ne nomme pas `source_illisible`').toContain('[source_illisible]');
+    expect(illisible.sortie, 'le refus ne nomme pas la source tronquée').toContain('docs/tasks.json');
+    expect(sansBanniere(illisible.sortie), 'la garde a imprimé une bannière de SUCCÈS en refusant').toEqual([]);
+
+    // ── DÉPÔT RÉEL. Sans cette issue, un `process.exit(1)` inconditionnel passerait pour une correction.
     const vert = lancerLaGate(GARDE, resolve('.'));
     expect(
       vert.code,
       `la garde refuse le dépôt RÉEL — j’aurais remplacé un faux vert par un faux rouge :\n${vert.sortie.slice(0, 800)}`
     ).toBe(0);
-    expect(
-      vert.sortie.split(/\r?\n/).filter((l) => l.trimStart().startsWith('✅')).length,
-      'la garde rend 0 sans rien déclarer : un succès muet ne se distingue pas d’un no-op'
-    ).toBeGreaterThan(0);
-    // Le compte et les noms DÉRIVÉS de l'analyse, faite ici sur le même dépôt, pas lus dans la sortie.
+    // L'attendu vient de l'analyse, faite ici sur le même dépôt ; la sortie est LUE, jamais cherchée
+    // par sous-chaîne : « 1213 exemption(s) » contient « 213 exemption(s) ».
     const attendu = analyserAttributions(chargerSourcesAttributions(fichiersSuivis()));
     expect(attendu.exemptions.length, 'l’analyse du dépôt réel ne rend aucune exemption : rien à confronter').toBeGreaterThan(0);
-    expect(vert.sortie, 'le compte d’exemptions imprimé n’est pas celui de l’analyse').toContain(
-      `${attendu.exemptions.length} exemption(s)`
-    );
-    const tues = attendu.exemptions.filter((e) => !vert.sortie.includes(e.site));
-    expect(tues.map((e) => `${e.nature} ${e.site}`), 'des exemptions ne sont pas NOMMÉES dans la sortie verte').toEqual([]);
+    const lignes = vert.sortie.split(/\r?\n/);
+    const bannieres = sansBanniere(vert.sortie);
+    expect(bannieres.length, 'la garde rend 0 sans UNE bannière : un succès muet ne se distingue pas d’un no-op').toBe(1);
+    const total = /(?:^|\D)(\d+) exemption\(s\)/.exec(bannieres[0] as string);
+    expect(Number(total?.[1]), 'le total imprimé n’est pas, en nombre entier, celui de l’analyse').toBe(attendu.exemptions.length);
+
+    // Une rubrique : « <marqueur> <nature> (<compte>) — <sens> », puis ses exemptions, une par ligne, plus indentées.
+    const RUBRIQUE = /^ {3}\S+ ([a-z_]+) \((\d+)\) — /;
+    const rubriques = new Map<string, { compte: number; lignes: string[] }>();
+    let courante: string[] | null = null;
+    for (const ligne of lignes) {
+      const m = RUBRIQUE.exec(ligne);
+      if (m) {
+        expect(rubriques.has(m[1] as string), `la rubrique « ${m[1]} » est imprimée deux fois`).toBe(false);
+        courante = [];
+        rubriques.set(m[1] as string, { compte: Number(m[2]), lignes: courante });
+      } else if (courante && ligne.startsWith(' '.repeat(6))) {
+        courante.push(ligne.trim());
+      }
+    }
+    const natures = [...new Set(attendu.exemptions.map((e) => e.nature))].sort();
+    expect([...rubriques.keys()].sort(), 'les rubriques imprimées ne sont pas les natures rendues').toEqual(natures);
+    for (const nature of natures) {
+      const siennes = attendu.exemptions.filter((e) => e.nature === nature);
+      const rubrique = rubriques.get(nature) as { compte: number; lignes: string[] };
+      expect(rubrique.compte, `le compte imprimé de « ${nature} » n’est pas celui de l’analyse`).toBe(siennes.length);
+      expect(rubrique.lignes.length, `« ${nature} » n’imprime pas une ligne par exemption`).toBe(siennes.length);
+      const restantes = [...rubrique.lignes];
+      const tues = siennes.filter((e) => {
+        const i = restantes.findIndex((l) => l.startsWith(`${e.tache} — `) && l.includes(e.site));
+        if (i === -1) return true;
+        restantes.splice(i, 1);
+        return false;
+      });
+      expect(tues.map((e) => `${e.tache} @ ${e.site}`), `des exemptions « ${nature} » manquent sous leur rubrique`).toEqual([]);
+    }
     const registres = [...DETTE_GATE_NON_RECIPROQUE, ...CITATIONS_DECLAREES].filter((d) => !vert.sortie.includes(d.raison));
     expect(registres, 'des entrées de registre ne sont pas imprimées avec leur raison').toEqual([]);
 
-    // ── TROISIÈME FACE. Hors de la racine, le refus NOMMÉ du périmètre — jamais une trace de pile.
+    // ── HORS DE LA RACINE. Le refus NOMMÉ du périmètre — jamais une trace de pile.
     const dessous = lancerLaGate(GARDE, resolve('scripts'));
     expect(dessous.code, `la garde a jugé depuis un sous-dossier :\n${dessous.sortie.slice(0, 600)}`).not.toBe(0);
     expect(dessous.sortie, 'lancée hors de la racine, la garde ne rend pas le refus nommé du périmètre').toContain(

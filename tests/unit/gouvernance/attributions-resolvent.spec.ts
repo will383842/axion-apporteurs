@@ -3,15 +3,15 @@
 /**
  * LES ATTRIBUTIONS SE CONFRONTENT À LEURS SOURCES (GOV-037).
  *
- * CE QUE CE FICHIER PROUVE, ET IL NE RETAPE AUCUN CAS. Les témoins et les contre-témoins vivent dans
- * la garde (`TEMOINS`, `CONTRE_TEMOINS`) et sont jugés par les fonctions que `--prove` appelle : une
- * seconde copie des mêmes cas divergerait au premier ajout. Ce fichier tient ce que `--prove` ne peut
- * pas tenir, parce qu'il faut le dépôt réel pour le mesurer :
+ * Les témoins et les contre-témoins vivent dans la garde (`TEMOINS`, `CONTRE_TEMOINS`), jugés par
+ * `prouver()` : le premier test l'appelle pour que `vitest` voie la même preuve que Gate A, sans
+ * seconde copie des cas. Le reste exige le dépôt RÉEL, que `--prove` ne lit pas :
  *
  *   — la garde lit ses sources EN ENTIER : chaque registre, chaque fichier suivi de `scripts/` et
- *     `tests/`, chaque entrée du journal — en ÉGALITÉ avec un compte fait ici, jamais un plancher `> 0` ;
- *   — elle ne lit QUE des fichiers suivis, et refuse en se NOMMANT une source absente, tronquée ou renommée ;
- *   — elle est verte sur le dépôt réel, et câblée en Gate A.
+ *     `tests/`, chaque entrée du journal, chaque chaîne de `docs/gates.json` à toute profondeur ;
+ *   — toute tâche qui porte un lot est jugée ou exemptée, aucune n'est sautée ;
+ *   — elle ne lit QUE des fichiers suivis, et refuse en se NOMMANT une source absente, tronquée,
+ *     mal formée ou qui n'est pas du texte UTF-8.
  *
  * Ce qu'elle ne voit pas est écrit une seule fois, dans l'en-tête de la garde.
  */
@@ -27,9 +27,10 @@ import {
 } from '../../../scripts/gates/gov-attributions';
 
 const lireReel = (chemin: string) => readFileSync(chemin, 'utf8');
+const echapper = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 describe('REQ-GOV-021 et REQ-GOV-003 — chaque famille rougit sur son témoin, chaque exemption a son contre-témoin', () => {
-  it('`--prove` rend 0 : aucune famille sans témoin, aucune nature d’exemption qu’aucun contre-témoin ne rende', () => {
+  it('`--prove` rend 0 : juges éprouvés, aucune famille sans témoin, aucune nature d’exemption qu’aucun contre-témoin ne rende', () => {
     const p = prouver();
     expect(p.code, p.lignes.join('\n')).toBe(0);
   });
@@ -80,18 +81,75 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const { fautes } = analyser(chargerSources(fichiersSuivis()));
     expect(fautes.map((f) => `[${f.famille}] ${f.message}`)).toEqual([]);
   });
+
+  it('toute tâche qui porte un lot est attestée par l’entrée de sa PR, ou EXEMPTÉE sous son lot — aucune n’est sautée', () => {
+    const s = chargerSources(fichiersSuivis());
+    const { exemptions } = analyser(s);
+    const entrees = entreesDeJournal(s.journal);
+    const avecLot = s.taches.filter((t) => t.lot);
+    expect(avecLot.length, 'aucune tâche ne porte de lot : rien ne serait confronté').toBeGreaterThan(0);
+    const sautees = avecLot
+      .filter((t) => !(t.pr != null && (entrees.get(String(t.pr)) ?? '').includes(t.lot as string)))
+      .filter((t) => !exemptions.some((e) => e.tache === t.id && e.site.includes(`« ${t.lot} »`)));
+    expect(
+      sautees.map((t) => `${t.id} (lot ${t.lot}, pr ${t.pr})`),
+      'une attribution de lot écrite n’est ni attestée, ni exemptée : elle est tue'
+    ).toEqual([]);
+  });
+
+  it('toute CHAÎNE d’une entrée de docs/gates.json est lue, à toute profondeur — chaque champ, sous chaque forme que le registre réel lui donne', () => {
+    const s = chargerSources(fichiersSuivis());
+    const ids = new Set(s.taches.map((t) => t.id));
+    // Un identifiant de la FORME d'une tâche réelle, qui ne résout pas : dérivé, jamais tapé.
+    let inconnu = (s.taches.find((t) => /[0-9]/.test(t.id)) as { id: string }).id.replace(/[0-9]+/, '9');
+    while (ids.has(inconnu)) inconnu = inconnu.replace('9', '99');
+
+    // Les couples (champ, forme) tels que le registre RÉEL les porte : un champ ajouté demain y entre seul.
+    const formes = new Map<string, { gate: (typeof s.gates)[number]; champ: string }>();
+    for (const gate of s.gates) {
+      for (const [champ, valeur] of Object.entries(gate)) {
+        const forme = Array.isArray(valeur) ? 'tableau' : valeur === null ? 'nul' : typeof valeur;
+        if (!formes.has(`${champ}|${forme}`)) formes.set(`${champ}|${forme}`, { gate, champ });
+      }
+    }
+    const injecter = (valeur: unknown): unknown =>
+      typeof valeur === 'string'
+        ? `${valeur} ${inconnu}`
+        : Array.isArray(valeur)
+          ? [...valeur, inconnu]
+          : valeur !== null && typeof valeur === 'object'
+            ? { ...valeur, sonde: inconnu }
+            : undefined;
+    const portees = [...formes].filter(([, { gate, champ }]) => injecter(gate[champ]) !== undefined);
+    expect(portees.length, 'aucun champ de docs/gates.json ne porte de chaîne : rien ne serait éprouvé').toBeGreaterThan(0);
+
+    const aveugles: string[] = [];
+    for (const [cle, { gate, champ }] of portees) {
+      const sonde = { ...gate, [champ]: injecter(gate[champ]) };
+      const { fautes } = analyser({ ...s, gates: [sonde] });
+      const vue = fautes.some(
+        (f) =>
+          f.message.includes(inconnu) &&
+          (f.famille === 'mention_non_resolue'
+            ? f.message.includes(`docs/gates.json:${sonde.id}.${champ}`)
+            : champ === 'tache' && f.famille === 'gate_tache_inconnue')
+      );
+      if (!vue) aveugles.push(cle);
+    }
+    expect(aveugles, `« ${inconnu} » posé dans ces champs n’a fait rougir personne`).toEqual([]);
+  });
 });
 
 describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en se NOMMANT', () => {
-  // 🔴 Motif de `securite` : le journal était lu sur le DISQUE. Journaux suivis vidés et un fichier
-  // non suivi posé à côté, la garde rendait 0 avec sa bannière. Ici la liste des fichiers suivis est
-  // amputée du journal alors que le disque le porte toujours : une lecture du disque le retrouverait.
+  const octets = (chemin: string) => readFileSync(chemin);
+
   it('un journal présent sur le disque mais absent des fichiers SUIVIS ne compte pas : refus nommé', () => {
+    // La liste des fichiers suivis est amputée du journal alors que le disque le porte toujours :
+    // une lecture du disque le retrouverait.
     const sansJournal = fichiersSuivis().filter((f) => !f.startsWith('docs/journal/') || f === 'docs/journal/README.md');
     expect(() => chargerSources(sansJournal)).toThrow(SourceIllisible);
-    // ⚠️ LE REFUS DE LA LISTE, PAS CELUI DE LA LECTURE. Mesuré par mutation : une liste relue sur le
-    // disque, dont chaque fichier passerait encore par le contrôle « suivi », refuse aussi — mais sur
-    // « n'est pas un fichier SUIVI ». Exiger ce message-ci rend chacune des deux couches visible seule.
+    // Le refus de la LISTE, pas celui de la lecture : une liste relue sur le disque dont chaque fichier
+    // passerait par le contrôle « suivi » refuserait aussi, mais sur « n'est pas un fichier SUIVI ».
     expect(() => chargerSources(sansJournal)).toThrow(/aucun fichier de journal SUIVI/);
   });
 
@@ -102,19 +160,52 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
   });
 
   it('un registre TRONQUÉ est refusé en le nommant, pas sur une trace de pile', () => {
-    const lire = (c: string) => (c === 'docs/tasks.json' ? lireReel(c).slice(0, 3940) : lireReel(c));
+    const lire = (c: string) => (c === 'docs/tasks.json' ? Buffer.from(lireReel(c).slice(0, 3940)) : octets(c));
     expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(SourceIllisible);
     expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(/docs\/tasks\.json/);
   });
 
   it('un registre dont la clé est RENOMMÉE n’est pas un registre vide : refus nommé', () => {
-    const lire = (c: string) => (c === 'docs/agents.json' ? JSON.stringify({ poste: [] }) : lireReel(c));
+    const lire = (c: string) => (c === 'docs/agents.json' ? Buffer.from(JSON.stringify({ poste: [] })) : octets(c));
     expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(/docs\/agents\.json.*postes/);
   });
 
   it('un README de journal sans plancher est refusé : la frontière ne se devine pas', () => {
-    const lire = (c: string) => (c === 'docs/journal/README.md' ? '# Le journal\n' : lireReel(c));
+    const lire = (c: string) => (c === 'docs/journal/README.md' ? Buffer.from('# Le journal\n') : octets(c));
     expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(/plancher/);
+  });
+
+  it('une entrée de registre MAL FORMÉE est refusée en nommant l’entrée et le champ, jamais sur une trace de pile', () => {
+    const lire = (c: string) => (c === 'docs/tasks.json' ? Buffer.from(JSON.stringify({ taches: [{}] })) : octets(c));
+    expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(SourceIllisible);
+    expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(/docs\/tasks\.json.*taches\[0\]\.id/);
+  });
+
+  it('une gate SANS script est refusée en se nommant : son attribution n’aurait aucun fichier à confronter', () => {
+    const lire = (c: string) => {
+      if (c !== 'docs/gates.json') return octets(c);
+      const doc = JSON.parse(lireReel(c)) as { gates: Record<string, unknown>[] };
+      delete doc.gates[0]!.script;
+      return Buffer.from(JSON.stringify(doc));
+    };
+    expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(SourceIllisible);
+    expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(/docs\/gates\.json.*gates\[0\]\.script/);
+  });
+
+  it('un fichier suivi en UTF-16 (avec ou sans BOM) est refusé en se nommant : lu en UTF-8, aucun identifiant n’y serait vu', () => {
+    const suivis = fichiersSuivis();
+    const cible = suivis.find((f) => f.startsWith('tests/')) as string;
+    for (const contenu of ['\ufeff// GOV-999\n', '// GOV-999\n']) {
+      const lire = (c: string) => (c === cible ? Buffer.from(contenu, 'utf16le') : octets(c));
+      expect(() => chargerSources(suivis, lire)).toThrow(SourceIllisible);
+      expect(() => chargerSources(suivis, lire)).toThrow(new RegExp(echapper(cible)));
+    }
+  });
+
+  it('un chemin suivi qui est un RÉPERTOIRE (sous-module) est refusé en se nommant, pas sur une erreur brute', () => {
+    const suivis = [...fichiersSuivis(), 'tests/unit'];
+    expect(() => chargerSources(suivis)).toThrow(SourceIllisible);
+    expect(() => chargerSources(suivis)).toThrow(/tests\/unit/);
   });
 });
 
