@@ -2183,12 +2183,30 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
   it('REQ-GOV-031 — ANCRAGE : la dérivation ne couvre jamais MOINS que la liste qu’elle remplace', async () => {
     // Import dynamique et type lâche, comme le témoin voisin : tant que la dérivation n'existe
     // pas, ce cas rougit SEUL au lieu d'emporter le fichier dans une erreur de chargement.
+    // 🔴 CET ANCRAGE TESTAIT LE PRODUCTEUR PENDANT QUE LA GARDE CONSOMME LE PRODUIT.
+    //
+    // A10 · mutation, 2e tour : il assertait sur `codesPaysIso()`, la FONCTION ; mais `PAYS_ISO`
+    // — la forme qui reconnaît un IBAN — est construite depuis `CODES_PAYS`, la CONSTANTE
+    // (`gov-entite.ts:444-446`). Filtrer la constante retirait QUATORZE des cinquante-trois codes
+    // ancrés, **dont les six ajoutés ce tour-ci pour eux**, et restait VERT.
+    //
+    // Son verdict, que je reprends parce qu'il est exact : « sur la seule régression qu'il existe
+    // pour attraper, il ne contribue à rien » — la mutation « liste tapée de 47 » rendait bien 8
+    // échecs, mais AUCUN ne venait de cet ancrage.
+    //
+    // 🔑 Un témoin doit tenir la valeur que son SUJET consomme, pas celle qui la produit. Entre les
+    // deux, il y a toujours place pour une ligne.
     const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
-      codesPaysIso?: () => string[];
+      CODES_PAYS?: readonly string[];
     };
-    expect(typeof gate.codesPaysIso, '`codesPaysIso` doit exister : la liste se dérive').toBe('function');
-    const codes = gate.codesPaysIso!();
-    const perdus = ANCRAGE_NON_REGRESSION.filter((c) => !codes.includes(c));
+    const codes = gate.CODES_PAYS;
+    expect(Array.isArray(codes), '`CODES_PAYS` doit exister : c’est CE que la garde consomme').toBe(true);
+    // ⚠️ CONTRÔLE POSITIF. `[].filter(…)` rend `[]`, et `expect([]).toEqual([])` PASSE : un ancrage
+    // vidé se déclarait donc satisfait (A10 · mutation, sa quatrième mutation du second tour). Le remède était déjà écrit dix lignes
+    // plus bas, dans le témoin dérivé du disque — je ne l'avais pas transposé.
+    expect(ANCRAGE_NON_REGRESSION.length, 'ancrage vidé : il dirait toujours oui').toBeGreaterThan(40);
+    expect(codes!.length, 'dérivation vide : la comparaison ne prouverait rien').toBeGreaterThan(200);
+    const perdus = ANCRAGE_NON_REGRESSION.filter((c) => !codes!.includes(c));
     expect(
       perdus,
       `${perdus.length} pays émetteur(s) sorti(s) de la dérivation : ${perdus.join(', ')} — ` +
@@ -2207,15 +2225,71 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     // pas de sa longueur — et les huit qui restent portent SEULES la survivante qu'il ferme.
     'deploy.ps1', 'setup.bash', 'tache.rb', 'main.go', 'index.php', 'run.bat',
     'donnees.csv', 'cle.pem',
+    // 🔴 `svg` ET `env`, AJOUTÉS APRÈS QUE A09 · securite A MONTRÉ QUE LE TROU SE ROUVRAIT.
+    //
+    // Le veto du 1er tour portait sur un IBAN en clair dans un `.svg`. Je l'ai fermé en RETIRANT
+    // les deux témoins qui récitaient `.svg` comme binaire — au lieu de les RETOURNER. Résultat
+    // mesuré au 2e tour : remettre `svgz?` à la place de `svgz` remet `.svg` au refus et rend
+    // **145/145 VERT**. `grep -c svg` sur ce fichier valait **0** : j'avais supprimé la seule trace
+    // du trou en croyant supprimer le trou.
+    //
+    // 🔑 *Retirer un témoin qui dit le contraire de ce qu'on veut n'est pas la même chose que le
+    // retourner.* Le premier laisse un silence, le second laisse une garde.
+    //
+    // Et `.env` : A09 · securite a mesuré qu'un `secrets.env` suivi portant
+    // `PARTNERS_IBAN_DEBITEUR=FR76…` sortait EXIT 0. C'est la famille que le commentaire du
+    // 2026-09-05 nomme LUI-MÊME comme le cas plausible.
+    'assets/logo.svg', 'secrets.env', 'requete.sql', 'serveur.crt', 'cle.asc', 'trousseau.gpg',
+    'app.conf', 'infra.hcl', 'terraform.tfvars', 'build.properties', 'correctif.patch',
   ];
 
   it('REQ-GOV-031 — ANCRAGE : aucune famille de TEXTE ne peut entrer dans la liste de REFUS', () => {
+    // ⚠️ CONTRÔLE POSITIF, même raison qu'au-dessus : un ancrage vidé passait.
+    expect(ANCRAGE_FAMILLES_DE_TEXTE.length, 'ancrage vidé : il dirait toujours oui').toBeGreaterThan(15);
     const aveugles = ANCRAGE_FAMILLES_DE_TEXTE.filter((f) => !estBalaye(f));
     expect(
       aveugles,
       `${aveugles.length} famille(s) de texte écartée(s) du balayage : ${aveugles.join(', ')} — ` +
         'un secret ne choisit pas son extension, et le témoin dérivé du disque ne verrait ces ' +
         'familles que le jour où le dépôt en suit une.'
+    ).toEqual([]);
+  });
+
+  /**
+   * 🔴 LA FERMETURE STRUCTURELLE, ET C'EST A10 · mutation QUI EN A REFUSÉ LA VERSION PARESSEUSE.
+   *
+   * Elle a mesuré que seize familles de texte NON ancrées restaient ajoutables au refus — sept sont
+   * des emplacements canoniques de secret (`.tfvars`, `.properties`, `.npmrc`, `.netrc`, `.pgpass`,
+   * `.conf`, `.cfg`). Et elle a **délibérément refusé de demander une liste plus longue** : « ça
+   * garantit un troisième tour sur la même classe ».
+   *
+   * Sa fermeture : **retourner la garde sur la liste de refus elle-même**, et exiger que CHAQUE
+   * entrée soit une famille binaire déclarée. Le même renversement autorisation → refus que cette
+   * PR vient de réussir, un étage plus haut. Une extension de texte ne peut alors plus y entrer,
+   * qu'on ait pensé à l'ancrer ou non.
+   */
+  const FAMILLES_BINAIRES_DECLAREES = new Set([
+    'png', 'jpe?g', 'gif', 'bmp', 'tiff?', 'webp', 'avif', 'ico', 'icns', 'svgz', 'eps', 'psd',
+    'ai', 'xcf', 'heic', 'heif', 'woff2?', 'ttf', 'otf', 'eot', 'zip', 'gz', 'tgz', 'bz2', 'xz',
+    'zst', '7z', 'rar', 'tar', 'jar', 'war', 'mp[34]', 'm4[av]', 'mov', 'avi', 'mkv', 'webm',
+    'wav', 'ogg', 'og[av]', 'flac', 'aac', 'wm[av]', 'pdf', 'docx?', 'xlsx?', 'pptx?', 'odt',
+    'ods', 'odp', 'exe', 'dll', 'so', 'dylib', 'bin', 'wasm', 'class', 'node', 'pyc', 'pyo',
+    'obj', 'lib', 'sqlite3?', 'db', 'mdb', 'p12', 'pfx', 'jks', 'der',
+  ]);
+
+  it('REQ-GOV-031 — ANCRAGE : la liste de REFUS ne contient QUE des familles binaires déclarées', async () => {
+    const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
+      EXTENSIONS_REFUSEES?: RegExp;
+    };
+    expect(gate.EXTENSIONS_REFUSEES, '`EXTENSIONS_REFUSEES` doit exister').toBeInstanceOf(RegExp);
+    const dedans = gate.EXTENSIONS_REFUSEES!.source.replace(/^.*?\(/, '').replace(/\).*$/, '').split('|');
+    expect(dedans.length, 'liste de refus vide : le contrôle ne prouverait rien').toBeGreaterThan(40);
+    expect(FAMILLES_BINAIRES_DECLAREES.size, 'déclaration vide : elle dirait toujours oui').toBeGreaterThan(40);
+    const intrus = dedans.filter((f) => !FAMILLES_BINAIRES_DECLAREES.has(f));
+    expect(
+      intrus,
+      `${intrus.length} famille(s) NON déclarée(s) binaire(s) dans la liste de refus : ${intrus.join(', ')} — ` +
+        'une famille de TEXTE qui y entre aveugle la garde, qu’on ait pensé à l’ancrer ou non.'
     ).toEqual([]);
   });
 
