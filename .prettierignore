@@ -8,9 +8,10 @@
 #   — le motif d'une entrée est le bloc de commentaire COLLÉ au-dessus d'elle, sans ligne vide ni
 #     autre entrée entre les deux : un motif ne sert qu'une entrée, et il se compte en LETTRES —
 #     une ligne de tirets n'est pas une phrase ;
-#   — les fichiers que Prettier ignore sont confrontés à une liste DÉCLARÉE dans cette spec. Une
-#     entrée qui déborde de sa mesure (un `src/`, un `*.ts`, un `**/*`, un fichier de code neuf
-#     sous une racine dérogée) y rougit.
+#   — les fichiers suivis que `prettier --check .` ne lit pas sont confrontés à une liste DÉCLARÉE
+#     dans cette spec. Une entrée qui déborde de sa mesure (un `src/`, un `*.ts`, un `**/*`) y
+#     rougit. Ce qu'une entrée couvre n'est pas formaté, et rien ne rougit dessus : un fichier de
+#     code neuf posé sous `packages/contracts/` est dérogé comme le reste du dossier.
 # Les répertoires produits (`node_modules/`, `dist/`, `coverage/`, `.next/`) ne sont pas répétés
 # ici : Prettier 3 lit `.gitignore`, qui les porte déjà.
 

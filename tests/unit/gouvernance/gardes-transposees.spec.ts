@@ -24,6 +24,7 @@
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
+import { join, posix } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { ESLint, type Linter } from 'eslint';
 import { getFileInfo, resolveConfig } from 'prettier';
@@ -34,7 +35,6 @@ import prettierEslint from 'eslint-config-prettier';
 import {
   controler,
   perimetresDe,
-  etapesDeLint,
   FAMILLES,
   VUE_CONFORME,
   CI_CONFORME,
@@ -602,16 +602,14 @@ describe('REQ-GOV-018 — `eslint.config.mjs` a été exécutée, et son en-têt
     expect(config).not.toMatch(/\bprocess:\s*'(readonly|writable)'/);
   });
 
-  it('`scripts/lot/lot.workflow.js` est IGNORÉ, et le fichier dit pourquoi', () => {
-    // Ce n'est pas du JavaScript à corriger : c'est un langage dédié dont `args`, `agent`,
-    // `phase`, `log`, `pipeline` et `parallel` sont injectés par le moteur qui l'exécute.
-    // 15 `no-undef` qu'aucun correctif de code ne peut faire disparaître : c'est un `ignores`.
+  it('chaque fichier déclaré ignoré a son motif COLLÉ à son entrée d’`ignores`', () => {
+    // Même règle que pour une règle éteinte : le motif est le bloc de commentaire collé au-dessus de
+    // l'entrée. Que l'entrée IGNORE bien le fichier, c'est ESLint qui le dit, au dernier bloc.
     const lignes = config.split('\n');
-    const i = lignes.findIndex((l) => /^\s*'scripts\/lot\/lot\.workflow\.js',\s*$/.test(l));
-    expect(i, "`scripts/lot/lot.workflow.js` n'est pas une entrée de `ignores`").toBeGreaterThan(0);
-    // Le motif se lit AU-DESSUS de l'entrée, pas ailleurs dans le fichier : un `ignores` dont
-    // la justification vit trois écrans plus haut est un `ignores` sans justification.
-    expect(lignes.slice(Math.max(0, i - 8), i).join('\n')).toMatch(/langage dédié|symboles/i);
+    for (const f of IGNORES_DECLARES) {
+      const i = lignes.findIndex((l) => l.trim() === `'${f}',`);
+      expect(estUnMotif(blocColle(lignes, i, '//')), `${f} (ligne ${i + 1})`).toBe(true);
+    }
   });
 
   it('aucune règle n’est éteinte EN BLOC : chaque dérogation vit dans un périmètre nommé', () => {
@@ -854,9 +852,11 @@ const SCRIPTS_EXACTS: Readonly<Record<string, string>> = {
 };
 
 /**
- * Les clés qu'ADMETTENT le workflow de Gate A et son job. Toute autre — `if`, `continue-on-error`,
+ * Les clés du workflow de Gate A et de son job, EXACTEMENT. Toute autre — `if`, `continue-on-error`,
  * `defaults`, `env`, `container`… — peut changer ce que font les étapes sans toucher leur texte :
- * elle est refusée où qu'elle soit écrite. Liste tapée EXPRÈS : sa divergence est le signal.
+ * elle est refusée où qu'elle soit écrite. Et une clé déclarée ici doit être PRÉSENTE : élargir la
+ * liste sans écrire la clé dans le workflow rougit aussi. Liste tapée EXPRÈS : sa divergence est le
+ * signal, dans les deux sens.
  */
 const CLES_DU_WORKFLOW = ['name', 'on', 'jobs'];
 const CLES_DE_GATE_A = ['runs-on', 'permissions', 'steps'];
@@ -870,14 +870,14 @@ const CLES_DE_GATE_A = ['runs-on', 'permissions', 'steps'];
 function fautesDActe(ci: unknown): string[] {
   if (!estObjet(ci)) return ['workflow illisible'];
   const fautes: string[] = [];
-  const horsListe = (lieu: string, objet: Record<string, unknown>, admises: readonly string[]) => {
-    for (const cle of Object.keys(objet))
-      if (!admises.includes(cle)) fautes.push(`${lieu} ⏎ ${cle}`);
+  const clesExactes = (lieu: string, objet: Record<string, unknown>, cles: readonly string[]) => {
+    for (const cle of Object.keys(objet)) if (!cles.includes(cle)) fautes.push(`${lieu} ⏎ ${cle}`);
+    for (const cle of cles) if (!Object.hasOwn(objet, cle)) fautes.push(`${lieu} ⏎ ${cle} absente`);
   };
-  horsListe('workflow', ci, CLES_DU_WORKFLOW);
+  clesExactes('workflow', ci, CLES_DU_WORKFLOW);
   const job = estObjet(ci.jobs) ? ci.jobs['gate-a'] : undefined;
   if (!estObjet(job) || !Array.isArray(job.steps)) return [...fautes, 'job `gate-a` introuvable'];
-  horsListe('gate-a', job, CLES_DE_GATE_A);
+  clesExactes('gate-a', job, CLES_DE_GATE_A);
   const lances = new Map<string, number>();
   for (const etape of job.steps) {
     if (!estObjet(etape)) {
@@ -910,25 +910,52 @@ function fautesDActe(ci: unknown): string[] {
 const INSTALLATION_FIGEE = 'pnpm install --frozen-lockfile';
 
 /**
+ * Les seules valeurs CALCULÉES qu'une commande admet, À LA LETTRE, chacune précédée d'une espace.
+ * Toute autre substitution — de commande, de processus, une expression de la forge, qui s'évalue
+ * AVANT le shell — est refusée où qu'elle soit. Liste tapée EXPRÈS : une entrée que plus aucun
+ * workflow n'écrit rougit, et une substitution neuve demande deux écritures, dont celle-ci.
+ */
+const ARGUMENTS_CALCULES = [
+  '"$(date -u +%Y-%m-%dT%H:%M:%SZ)"',
+  '$(date -u +%F)',
+  "${{ inputs.phase || '-1' }}",
+];
+
+/**
+ * UNE ligne : `pnpm <script>`, puis des mots faits de caractères sans effet pour le shell. Aucun
+ * opérateur, aucune redirection, aucun guillemet, aucun saut de ligne : ce qui n'est pas dans la
+ * classe est refusé sans avoir à être nommé.
+ */
+const COMMANDE_ADMISE = /^pnpm ([a-z][\w:-]*)((?: [\w.:=@/+%-]+)*)$/;
+
+/**
  * Chaque commande de chaque YAML suivi sous `.github/` — workflows ET actions composites — est
- * l'installation FIGÉE ou un script du `package.json`. Rien d'autre ne s'exécute avec le droit de
- * réécrire `node_modules` ou le verrou : ni `pnpm update`, ni une installation sans verrou, ni un
- * autre gestionnaire. Les scripts sont LUS dans `package.json` (RM-01) : aucune liste des verbes de
- * pnpm n'est retapée. Seule substitution admise : `$(date …)`, qui date un appel. Fonction PURE (RM-11).
+ * l'installation FIGÉE ou un script du `package.json`, sous une forme FERMÉE. Rien d'autre ne
+ * s'exécute avec le droit de réécrire `node_modules` ou le verrou : ni `pnpm update`, ni une
+ * installation sans verrou, ni un autre gestionnaire, ni une commande logée dans une commande admise.
+ * Les scripts sont LUS dans `package.json` (RM-01). Une action locale ne s'appelle que depuis
+ * `.github/`, où son YAML est lu ; un `shell` n'est jamais autre chose que `bash`. Fonction PURE (RM-11).
  */
 function fautesDeCommandes(
   yamls: readonly unknown[],
   scripts: Readonly<Record<string, string>>
 ): { installations: number; fautes: string[] } {
   const fautes: string[] = [];
+  const ecrits = new Set<string>();
   let installations = 0;
   const visiter = (v: unknown): void => {
     if (Array.isArray(v)) return v.forEach(visiter);
     if (!estObjet(v)) return;
     for (const [cle, valeur] of Object.entries(v)) {
-      // `run_install` fait installer `pnpm/action-setup` hors de toute commande ; un `run` qui
-      // n'est pas une chaîne est un `defaults.run`, qui change le shell de toutes les commandes.
-      if (cle === 'run_install' || (cle === 'run' && typeof valeur !== 'string')) {
+      // `run_install` fait installer `pnpm/action-setup` hors de toute commande.
+      const horsForme =
+        cle === 'run_install' ||
+        (cle === 'shell' && valeur !== 'bash') ||
+        (cle === 'uses' &&
+          typeof valeur === 'string' &&
+          valeur.startsWith('.') &&
+          !posix.normalize(valeur).startsWith('.github/'));
+      if (horsForme) {
         fautes.push(`${cle} : ${JSON.stringify(valeur)}`);
         continue;
       }
@@ -936,43 +963,44 @@ function fautesDeCommandes(
         visiter(valeur);
         continue;
       }
-      const texte = valeur.replace(/\$\{\{[^}]*\}\}/g, 'X').replace(/\$\(date [^$()`;&|]*\)/g, 'X');
-      if (/\$\(|`/.test(texte)) {
-        fautes.push(`run : ${valeur.trim()}`);
+      let c = valeur.trim();
+      for (const a of ARGUMENTS_CALCULES) {
+        if (c.includes(` ${a}`)) ecrits.add(a);
+        c = c.split(` ${a}`).join(' X');
+      }
+      if (c === INSTALLATION_FIGEE) {
+        installations += 1;
         continue;
       }
-      for (const commande of texte.split(/\n|&&|\|\||;|\|/)) {
-        const c = commande.trim();
-        if (c === '') continue;
-        if (c === INSTALLATION_FIGEE) {
-          installations += 1;
-          continue;
-        }
-        const verbe = /^pnpm\s+(\S+)/.exec(c)?.[1];
-        if (verbe === undefined || verbe === 'install' || !Object.hasOwn(scripts, verbe)) {
-          fautes.push(`run : ${c}`);
-        }
+      const script = COMMANDE_ADMISE.exec(c)?.[1];
+      if (script === undefined || script === 'install' || !Object.hasOwn(scripts, script)) {
+        fautes.push(`run : ${valeur.trim()}`);
       }
     }
   };
   yamls.forEach(visiter);
+  for (const a of ARGUMENTS_CALCULES) {
+    if (!ecrits.has(a)) fautes.push(`argument calculé déclaré, écrit nulle part : ${a}`);
+  }
   return { installations, fautes };
 }
 
 /**
  * « Épinglé » : une version, et une seule. `^3.9.6` en est une ; `3 || *`, `*`, `latest` et
- * `>=3` n'en sont pas. Ce qui fige RÉELLEMENT la version installée reste le verrou lu avec
- * `--frozen-lockfile`, et c'est pourquoi les deux sont exigés.
+ * `>=3` n'en sont pas. Le verrou lu avec `--frozen-lockfile` fige la version installée ET tout
+ * correctif que le gestionnaire de paquets lui applique : il ne dit rien de ce que le binaire FAIT.
+ * Ce que le binaire installé fait de son échec est mesuré plus bas, en le lançant.
  */
 const VERSION_EPINGLEE = /^[\^~]?\d+\.\d+\.\d+$/;
 
 /**
- * Les dérogations de format DÉCLARÉES. Liste tapée ici EXPRÈS : c'est sa DIVERGENCE avec
- * `.prettierignore` qui est le signal. Une entrée qui déborde de sa mesure — `src/`, `*.ts`,
- * `**\/*`, un `packages/` élargi, un fichier de code posé sous une racine dérogée — fait ignorer
- * un fichier que cette liste ne couvre pas ; une entrée retirée fait formater un fichier qu'elle
- * couvre. Les deux rougissent. Ajouter une dérogation demande donc DEUX écritures, dont celle-ci,
- * relue comme un test.
+ * Les dérogations de format DÉCLARÉES. Liste tapée ici EXPRÈS : c'est sa DIVERGENCE avec ce que
+ * `prettier --check .` lit réellement qui est le signal. Une entrée de `.prettierignore` qui déborde
+ * de sa mesure — `src/`, `*.ts`, `**\/*`, un `packages/` élargi — fait sauter un fichier suivi que
+ * cette liste ne couvre pas ; une entrée retirée fait lire un fichier qu'elle couvre. Les deux
+ * rougissent. Ce qu'une déclaration couvre n'est PAS formaté, et rien ne rougit dessus : un fichier
+ * de code neuf posé sous `packages/contracts/` est dérogé comme le reste du dossier. Ajouter une
+ * dérogation demande donc DEUX écritures, dont celle-ci, relue comme un test.
  */
 const HORS_FORMAT_DECLARE: readonly (readonly [string, (f: string) => boolean])[] = [
   ['pnpm-lock.yaml', (f) => f === 'pnpm-lock.yaml'],
@@ -985,6 +1013,103 @@ const HORS_FORMAT_DECLARE: readonly (readonly [string, (f: string) => boolean])[
 function fichiersSuivis(...racines: string[]): string[] {
   const r = spawnSync('git', ['ls-files', '-z', '--', ...racines], { encoding: 'utf8' });
   return (r.stdout ?? '').split('\0').filter((f) => f !== '');
+}
+
+/** Le binaire qu'un script lance, et ses arguments : le script À LA LETTRE, découpé. */
+function binaireDuScript(script: string): [string, string[]] {
+  const [nom = '', ...args] = (SCRIPTS_EXACTS[script] ?? '').split(' ');
+  return [nom, args];
+}
+
+/**
+ * Lance le binaire INSTALLÉ d'un outil — le fichier que nomme le champ `bin` de son paquet sous
+ * `node_modules`, celui que `pnpm <script>` exécute —, sans lui transmettre l'environnement du test :
+ * aucun jeton ne sort d'ici.
+ */
+function lancerBinaire(
+  nom: string,
+  args: readonly string[],
+  entree?: string
+): { code: number | null; sortie: string } {
+  const paquet = join('node_modules', nom);
+  const { bin } = JSON.parse(readFileSync(join(paquet, PACKAGE), 'utf8')) as {
+    bin: string | Record<string, string>;
+  };
+  const chemin = join(paquet, typeof bin === 'string' ? bin : (bin[nom] ?? ''));
+  const r = spawnSync(process.execPath, [chemin, ...args], {
+    input: entree,
+    encoding: 'utf8',
+    env: {},
+  });
+  return { code: r.status, sortie: `${r.stdout ?? ''}${r.stderr ?? ''}` };
+}
+
+/** Ce que Prettier fait d'un fichier suivi : tout ce que le jugement lit, et rien d'autre. */
+interface MesurePrettier {
+  readonly fichier: string;
+  /** Prettier a un analyseur pour ce fichier — sans lire aucun fichier d'ignore, ni aucun défaut. */
+  readonly sait: boolean;
+  /** `prettier --check .` l'a LU : le binaire installé l'a nommé dans sa sortie. */
+  readonly lu: boolean;
+  /** Les options qu'il reçoit, et celles que `.prettierrc.json` SEUL lui donnerait. */
+  readonly options: unknown;
+  readonly optionsRacine: unknown;
+}
+
+/**
+ * UN lancement du binaire installé : le script à la lettre, plus `--end-of-line cr`. Sous cette
+ * option, tout fichier non vide qu'il lit diffère de sa sortie : la liste de ce qu'il signale EST la
+ * liste de ce qu'il lit — exclusions par défaut de l'outil, `.gitignore`, `.prettierignore` et pragma
+ * exigé compris. Son code de sortie dit s'il propage l'échec.
+ */
+async function mesurerPrettier(
+  suivis: readonly string[]
+): Promise<{ mesures: MesurePrettier[]; code: number | null }> {
+  const [nom, args] = binaireDuScript('format:check');
+  const { code, sortie } = lancerBinaire(nom, [...args, '--no-color', '--end-of-line', 'cr']);
+  const lus = new Set(sortie.split('\n').map((l) => /^\[warn\] (.+)$/.exec(l.trim())?.[1]));
+  const mesures: MesurePrettier[] = [];
+  for (const fichier of suivis) {
+    const info = await getFileInfo(fichier, { withNodeModules: true, ignorePath: [] });
+    mesures.push({
+      fichier,
+      sait: info.inferredParser !== null,
+      lu: lus.has(fichier),
+      options: await resolveConfig(fichier, { editorconfig: true }),
+      optionsRacine: await resolveConfig(fichier, { editorconfig: true, config: PRETTIER }),
+    });
+  }
+  return { mesures, code };
+}
+
+/** Le jugement, séparé de la mesure : fonction PURE (RM-11), pour que ses témoins soient fabriqués. */
+function fautesPrettier(
+  mesures: readonly MesurePrettier[],
+  suivis: readonly string[],
+  code: number | null
+): string[] {
+  const fautes: string[] = [];
+  const mesures_ = new Set(mesures.map((m) => m.fichier));
+  for (const f of suivis) if (!mesures_.has(f)) fautes.push(`${f} : non mesuré`);
+  for (const m of mesures) {
+    const declare = HORS_FORMAT_DECLARE.some(([, couvre]) => couvre(m.fichier));
+    if (m.sait && !declare && !m.lu)
+      fautes.push(`${m.fichier} : \`prettier --check .\` ne le lit pas`);
+    if (m.lu && declare) fautes.push(`${m.fichier} : déclaré hors format, et lu`);
+    if (m.sait && !isDeepStrictEqual(m.options, m.optionsRacine)) {
+      fautes.push(`${m.fichier} : options autres que celles de ${PRETTIER}`);
+    }
+  }
+  for (const [nom, couvre] of HORS_FORMAT_DECLARE) {
+    if (!mesures.some((m) => m.sait && couvre(m.fichier))) {
+      fautes.push(`${nom} : dérogation qui ne couvre aucun fichier suivi`);
+    }
+  }
+  const signales = mesures.filter((m) => m.lu).length;
+  if (signales === 0 || code !== 1) {
+    fautes.push(`\`prettier --check .\` sort en ${code} en signalant ${signales} fichier(s)`);
+  }
+  return fautes;
 }
 
 describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANTS en Gate A', () => {
@@ -1044,50 +1169,65 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     expect(paquetsRequis(faux, {}, ['lint'])).toEqual(['@eslint/js', 'eslint-plugin-inconnu']);
   });
 
-  it('toute commande des YAML suivis sous `.github/` est un script du dépôt ou l’installation FIGÉE', async () => {
-    // C'est le verrou, lu sans droit de le réécrire, qui fige la version installée : sans
-    // `--frozen-lockfile`, `^3.9.6` redevient « la dernière 3.x du jour » ; et une commande qui
-    // réécrit `node_modules` APRÈS l'installation défait ce que le verrou a figé.
-    const yamls = await Promise.all(
-      fichiersSuivis('.github')
-        .filter((f) => /\.ya?ml$/.test(f))
-        .map((f) => lireYaml(readFileSync(f, 'utf8')))
-    );
+  it('toute commande des YAML suivis sous `.github/` est un script du dépôt ou l’installation FIGÉE, sous une forme fermée', async () => {
+    // Le verrou fige ce qui s'installe. Une commande qui réécrit `node_modules` APRÈS l'installation
+    // défait ce qu'il a figé, et une commande logée DANS une commande admise s'exécute tout autant.
+    const chemins = fichiersSuivis('.github').filter((f) => /\.ya?ml$/.test(f));
+    const yamls = await Promise.all(chemins.map((f) => lireYaml(readFileSync(f, 'utf8'))));
     const scripts = pkg.scripts ?? {};
     const { installations, fautes } = fautesDeCommandes(yamls, scripts);
     expect(installations).toBeGreaterThan(0);
     expect(fautes).toEqual([]);
-    // RM-02 : chaque forme dérivée de l'arbre RÉEL par UNE substitution (RM-11), plus une action
-    // composite fabriquée, rend UNE faute.
+    // RM-02 : chaque forme dérivée de `ci.yml` RÉEL par UNE substitution (RM-11), jugée avec les
+    // autres YAML réels, rend UNE faute.
+    const avecCi = (texte: string) =>
+      Promise.all(chemins.map((f, i) => (f === CI ? lireYaml(texte) : yamls[i])));
     const INSTALL = `      - run: ${INSTALLATION_FIGEE}\n`;
+    const apres = (etape: string) => ci.replace(INSTALL, `${INSTALL}      - ${etape}\n`);
     expect(ci).toContain(INSTALL);
     const variantes = [
       ci.replace(INSTALL, '      - run: pnpm install\n'),
       ci.replace(INSTALL, `      - run: ${INSTALLATION_FIGEE}=false\n`),
-      ci.replace(INSTALL, `${INSTALL}      - run: pnpm update --latest\n`),
-      ci.replace(INSTALL, `${INSTALL}      - run: pnpm lint $(npm install eslint)\n`),
-      ci.replace(INSTALL, `${INSTALL}      - run: npm install\n`),
+      apres('run: pnpm update --latest'),
+      apres('run: pnpm lint $(npm install eslint)'),
+      apres('run: npm install'),
+      // Une commande admise qui en porte une autre : arrière-plan, substitution de processus, seconde
+      // ligne dans la substitution datée admise, expression de la forge.
+      apres('run: pnpm lint & pnpm update'),
+      apres('run: pnpm lint <(pnpm update)'),
+      apres(
+        'run: |\n          pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ\n          pnpm update)"'
+      ),
+      apres('run: pnpm lint ${{ github.head_ref }}'),
       ci.replace(
         '      - uses: pnpm/action-setup@v4\n',
         '      - uses: pnpm/action-setup@v4\n        with: { run_install: true }\n'
       ),
-      `${ci}defaults:\n  run:\n    shell: bash\n`,
-      'runs:\n  using: composite\n  steps:\n    - run: pnpm install\n      shell: bash\n',
+      // Une action locale hors de `.github/`, dont aucun YAML n'est lu ; un shell qui n'est pas `bash`.
+      apres('uses: ./outils/action'),
+      `${ci}defaults:\n  run:\n    shell: sh\n`,
     ];
     for (const texte of variantes) {
       expect(texte).not.toBe(ci);
-      expect(fautesDeCommandes([await lireYaml(texte)], scripts).fautes, texte).toHaveLength(1);
+      expect(fautesDeCommandes(await avecCi(texte), scripts).fautes, texte).toHaveLength(1);
     }
+    // Une action composite fabriquée sous `.github/` est lue comme un workflow.
+    const composite =
+      'runs:\n  using: composite\n  steps:\n    - run: pnpm install\n      shell: bash\n';
+    expect(fautesDeCommandes([...yamls, await lireYaml(composite)], scripts).fautes).toHaveLength(
+      1
+    );
     // Un script nommé `install` ne rend pas légitime une installation qui ne fige pas le verrou.
-    const sansVerrou = await lireYaml(ci.replace(INSTALL, '      - run: pnpm install\n'));
-    expect(fautesDeCommandes([sansVerrou], { ...scripts, install: 'true' }).fautes).toHaveLength(1);
-  });
-
-  it('Gate A lance `pnpm lint` ET `pnpm format:check`', () => {
-    // La cohérence que `gov:conventions` vérifie ne s'arme qu'en PRÉSENCE de l'étape. C'est ici,
-    // et nulle part ailleurs, que la présence est exigée — sinon la garde reste une intention.
-    const etapes = etapesDeLint({ ...VUE_CONFORME, workflows: [{ chemin: CI, source: ci }] });
-    expect([...new Set(etapes.map((e) => e.outil))].sort()).toEqual(['eslint', 'prettier']);
+    const sansVerrou = await avecCi(ci.replace(INSTALL, '      - run: pnpm install\n'));
+    expect(fautesDeCommandes(sansVerrou, { ...scripts, install: 'true' }).fautes).toHaveLength(1);
+    // Et un argument calculé déclaré qu'aucun workflow n'écrit plus est une déclaration morte.
+    const ciSeul = fautesDeCommandes([await lireYaml(ci)], scripts).fautes;
+    expect(ciSeul).toEqual(
+      ARGUMENTS_CALCULES.filter((a) => !ci.includes(` ${a}`)).map(
+        (a) => `argument calculé déclaré, écrit nulle part : ${a}`
+      )
+    );
+    expect(ciSeul.length).toBeGreaterThan(0);
   });
 
   it('l’ACTE des deux étapes est exact — ni `if:`, ni `||`, ni shell, ni clé de job qui les désarme', async () => {
@@ -1117,6 +1257,8 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
         '        run: pnpm gov:conventions\n        shell: true {0}\n'
       ),
       `${ci}defaults:\n  run:\n    shell: true {0}\n`,
+      // Une clé déclarée qui manque au job : la liste et le workflow divergent.
+      ci.replace('    permissions:\n      contents: read\n      pull-requests: read\n', ''),
     ];
     for (const d of desarmes) {
       expect(d).not.toBe(ci);
@@ -1164,32 +1306,44 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     expect(exclusionsDe(`# ${'─'.repeat(70)}\n# ${'─'.repeat(70)}\ndocs/`)[0]?.motive).toBe(false);
   });
 
-  it('Prettier ignore EXACTEMENT ce que les dérogations déclarées couvrent, et applique partout les options racine', async () => {
-    // La forme d'une exclusion ne dit pas sa LARGEUR : `**/*` sous un motif valable éteint le
-    // format du dépôt entier. On demande donc à Prettier lui-même ce qu'il ignore, avec les
-    // deux fichiers d'ignore que sa CLI lit par défaut, et on le confronte à la liste déclarée.
-    // Et une configuration posée dans un sous-dossier (`requirePragma`, par exemple) fait sortir
-    // `prettier --check .` en 0 sur un fichier non formaté : chaque fichier doit recevoir les
-    // options que `.prettierrc.json` lui donne, et elles seules.
-    const ignores: string[] = [];
-    const attendus: string[] = [];
-    const autresOptions: string[] = [];
-    for (const f of fichiersSuivis()) {
-      // Un fichier que Prettier ne sait pas formater n'est ni dérogé ni formaté.
-      if ((await getFileInfo(f)).inferredParser === null) continue;
-      const vu = await getFileInfo(f, { ignorePath: ['.gitignore', IGNORE_PRETTIER] });
-      if (vu.ignored) ignores.push(f);
-      if (HORS_FORMAT_DECLARE.some(([, couvre]) => couvre(f))) attendus.push(f);
-      const options = await resolveConfig(f, { editorconfig: true });
-      const optionsRacine = await resolveConfig(f, { editorconfig: true, config: PRETTIER });
-      if (!isDeepStrictEqual(options, optionsRacine)) {
-        autresOptions.push(`${f} : ${JSON.stringify(options)}`);
-      }
+  it('`prettier --check .` lit EXACTEMENT les fichiers suivis hors dérogations, avec les options racine, et propage son échec', async () => {
+    // La forme d'une exclusion ne dit pas sa LARGEUR : `**/*` sous un motif valable éteint le format
+    // du dépôt entier, et l'outil saute aussi des dossiers PAR DÉFAUT. On demande donc au binaire
+    // installé ce qu'il lit, et on le confronte aux fichiers suivis et à la liste déclarée. Une
+    // configuration posée dans un sous-dossier change les options d'un fichier sans toucher la racine.
+    const suivis = fichiersSuivis();
+    const { mesures, code } = await mesurerPrettier(suivis);
+    expect(fautesPrettier(mesures, suivis, code)).toEqual([]);
+    // RM-02 : chaque désarmement, dérivé des mesures RÉELLES par une variation (RM-11).
+    const lu = mesures.find((m) => m.lu)!;
+    const deroge = mesures.find((m) => m.sait && !m.lu)!;
+    const avec = (cible: MesurePrettier, variation: Partial<MesurePrettier>) =>
+      mesures.map((m) => (m === cible ? { ...m, ...variation } : m));
+    const temoins: [MesurePrettier[], number | null, string][] = [
+      [avec(lu, { lu: false }), code, `${lu.fichier} : \`prettier --check .\` ne le lit pas`],
+      [avec(deroge, { lu: true }), code, `${deroge.fichier} : déclaré hors format, et lu`],
+      [
+        avec(lu, { options: { requirePragma: true } }),
+        code,
+        `${lu.fichier} : options autres que celles de ${PRETTIER}`,
+      ],
+      [mesures.slice(1), code, `${suivis[0]} : non mesuré`],
+      [
+        mesures.map((m) =>
+          m.fichier.startsWith('packages/contracts/') ? { ...m, sait: false } : m
+        ),
+        code,
+        'packages/contracts/ : dérogation qui ne couvre aucun fichier suivi',
+      ],
+      [
+        mesures,
+        0,
+        `\`prettier --check .\` sort en 0 en signalant ${mesures.filter((m) => m.lu).length} fichier(s)`,
+      ],
+    ];
+    for (const [variante, sortie, attendue] of temoins) {
+      expect(fautesPrettier(variante, suivis, sortie)).toEqual([attendue]);
     }
-    // Témoin non nul : une liste vide des deux côtés serait un accord parfait sur rien.
-    expect(attendus.length).toBeGreaterThan(0);
-    expect(ignores).toEqual(attendus);
-    expect(autresOptions).toEqual([]);
   }, 600_000);
 });
 
@@ -1197,11 +1351,12 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
 //
 // Le texte d'une configuration ne dit pas ce qu'elle fait : `'no-console': 0` vaut `'off'`, un bloc
 // sans `files:` s'applique partout, ESLint lit une configuration posée dans un sous-dossier pour les
-// fichiers de ce dossier, une entrée d'`ignores` retire un dossier, et `linterOptions` se rouvre par
-// bloc. On demande donc à ESLint ce qu'il applique à CHAQUE fichier suivi qu'il sait lire — UN calcul,
-// sans échantillon —, et on le juge : la configuration racine seule, le socle importé des mêmes
-// paquets que `eslint.config.mjs` (RM-01), `noInlineConfig`, et les interdits du produit vus ROUGIR
-// sur une faute posée au chemin même du fichier.
+// fichiers de ce dossier, une entrée d'`ignores` — ou une exclusion PAR DÉFAUT de l'outil — retire un
+// dossier, et `linterOptions` se rouvre par bloc. On demande donc à ESLint ce qu'il applique à CHAQUE
+// fichier suivi — UN calcul, sans échantillon —, et on le juge : tout fichier de code est lu, avec la
+// configuration racine seule, le socle importé des mêmes paquets que `eslint.config.mjs` (RM-01) et
+// `noInlineConfig` ; les interdits du produit ROUGISSENT sur une faute posée au chemin même du fichier
+// là où ils s'appliquent, et nulle part ailleurs ; et le binaire installé propage son échec.
 
 type ConfigEffective = {
   rules?: Record<string, unknown>;
@@ -1217,38 +1372,54 @@ function gravite(entree: unknown): number {
 }
 
 /**
- * Les interdits qui protègent le produit, et où ils s'appliquent. Chacun est jugé par son EFFET : sa
- * faute, posée au chemin du fichier, doit rendre une ERREUR de sa règle. Une sévérité rétrogradée,
- * une option qui l'élargit ou un sélecteur vidé rendent tous le même silence.
+ * Les fichiers de CODE de ce dépôt : la famille JavaScript et TypeScript. Tapée EXPRÈS, et confrontée
+ * dans les deux sens à ce que le socle ESLint lit : un fichier de code qu'il ne lit pas — posé sous une
+ * exclusion par défaut de l'outil, ou d'une extension qu'il ne connaît pas — rougit, et un fichier lu
+ * hors de cette famille aussi.
+ */
+const FICHIER_DE_CODE = /\.[cm]?[jt]sx?$/;
+
+/** Chaque méthode de `console`, DÉRIVÉE du runtime : la méthode employée est indifférente à la fuite. */
+const METHODES_DE_CONSOLE = Object.entries(console)
+  .filter(([, v]) => typeof v === 'function')
+  .map(([k]) => k);
+
+/**
+ * Les interdits qui protègent le produit, et où ils s'appliquent. Oracle tapé de la politique qu'écrit
+ * `eslint.config.mjs`, jugé par l'EFFET dans les deux sens : là où l'interdit s'applique, CHAQUE ligne
+ * de sa faute, posée au chemin du fichier, rend une ERREUR de sa règle ; ailleurs, aucune ne rend de
+ * message. Une sévérité rétrogradée, une option qui l'élargit ou un sélecteur vidé rendent tous le même
+ * silence ; un périmètre décrit ici plus étroit ou plus large que l'effet rougit.
  */
 const INTERDITS: readonly {
   readonly regle: string;
-  readonly faute: string;
+  readonly lignes: readonly string[];
   readonly couvre: (f: string) => boolean;
 }[] = [
-  // REQ-DM-041 : un `console.log` oublié dans du code de produit est une fuite de données
-  // personnelles. `scripts/` et `tests/` IMPRIMENT leur verdict : dérogation de `eslint.config.mjs`.
+  // REQ-DM-041 : un `console.*` oublié dans du code de produit est une fuite de données personnelles.
+  // `scripts/` et `tests/` IMPRIMENT leur verdict : dérogation de `eslint.config.mjs`.
   {
     regle: 'no-console',
-    faute: "console.log('courriel');\n",
+    lignes: METHODES_DE_CONSOLE.map((k) => `console.${k}('courriel');`),
     couvre: (f) => !/^(?:scripts|tests)\//.test(f),
   },
   // `docs/gates.json` : « imports interdits sous src/domain, new Date() interdit dans le domaine ».
   {
     regle: 'no-restricted-syntax',
-    faute: 'export const maintenant = new Date();\n',
+    lignes: ['export const maintenant = new Date();'],
     couvre: (f) => f.startsWith('src/domain/'),
   },
   {
     regle: 'no-restricted-imports',
-    faute: "import 'node:fs';\n",
+    lignes: ["import 'node:fs';"],
     couvre: (f) => f.startsWith('src/domain/'),
   },
 ];
 
 /**
- * Les règles du socle ÉTEINTES, et où ; les fichiers suivis qu'ESLint ne lit pas. Listes tapées
- * EXPRÈS : leur divergence avec `eslint.config.mjs` est le signal, dans les deux sens.
+ * Les règles du socle ÉTEINTES, et où ; les fichiers suivis qu'ESLint ignore. Listes tapées EXPRÈS :
+ * leur divergence avec l'effet de `eslint.config.mjs` est le signal, dans les deux sens — une extinction
+ * hors de son chemin déclaré rougit, une règle armée sur son chemin déclaré aussi.
  */
 const SOCLE_ETEINT_DECLARE: readonly (readonly [string, (f: string) => boolean])[] = [
   ['@typescript-eslint/no-require-imports', (f) => /^scripts\/.*\.js$/.test(f)],
@@ -1264,21 +1435,19 @@ const IGNORES_DECLARES = ['scripts/lot/lot.workflow.js'];
 /** Ce qu'ESLint fait d'un fichier suivi : tout ce que le jugement lit, et rien d'autre. */
 interface MesureEslint {
   readonly fichier: string;
+  /** Le socle recommandé, importé des paquets de la configuration ; `undefined` s'il ne lit pas ce fichier. */
+  readonly socle: ConfigEffective | undefined;
   /** Ce que `eslint .` applique ; `undefined` si le fichier est ignoré. */
   readonly config: ConfigEffective | undefined;
   /** Ce que la configuration racine SEULE appliquerait : un écart est une configuration imbriquée. */
   readonly racine: ConfigEffective | undefined;
-  /** Le socle recommandé, importé des paquets de la configuration. */
-  readonly socle: ConfigEffective;
   /** Les règles qui rendent un message sur le fichier tel qu'il est. */
   readonly rendues: readonly string[];
-  /** Les interdits qui s'appliquent à ce chemin. */
-  readonly interdits: readonly string[];
-  /** Les interdits dont la faute, posée à ce chemin, rend une ERREUR — qu'ils s'y appliquent ou non. */
-  readonly rougis: readonly string[];
+  /** Pour chaque interdit, la gravité que rend chaque ligne de sa faute posée à ce chemin (0 : aucune). */
+  readonly gravites: Readonly<Record<string, readonly number[]>>;
 }
 
-async function mesurerEslint(): Promise<MesureEslint[]> {
+async function mesurerEslint(suivis: readonly string[]): Promise<MesureEslint[]> {
   const eslint = new ESLint();
   const racine = new ESLint({ overrideConfigFile: ESLINT });
   const socle = new ESLint({
@@ -1296,38 +1465,69 @@ async function mesurerEslint(): Promise<MesureEslint[]> {
     return c === undefined ? undefined : (JSON.parse(JSON.stringify(c)) as ConfigEffective);
   };
   const mesures: MesureEslint[] = [];
-  for (const fichier of fichiersSuivis()) {
+  for (const fichier of suivis) {
     const reference = await plate(socle, fichier);
-    if (reference === undefined) continue; // ESLint ne lit pas ce type de fichier.
-    const config = await plate(eslint, fichier);
+    const config = reference === undefined ? undefined : await plate(eslint, fichier);
     const enWarn = Object.values(config?.rules ?? {}).some((v) => gravite(v) === 1);
     const rendues = enWarn
       ? ((await eslint.lintFiles([fichier]))[0]?.messages ?? []).map((m) => m.ruleId ?? '')
       : [];
-    const interdits = config === undefined ? [] : INTERDITS.filter((i) => i.couvre(fichier));
-    const rougis: string[] = [];
-    for (const i of config === undefined ? [] : INTERDITS) {
-      const [r] = await eslint.lintText(i.faute, { filePath: fichier });
-      if (r?.messages.some((m) => m.ruleId === i.regle && m.severity === 2)) rougis.push(i.regle);
-    }
     mesures.push({
       fichier,
-      config,
-      racine: await plate(racine, fichier),
       socle: reference,
+      config,
+      racine: reference === undefined ? undefined : await plate(racine, fichier),
       rendues,
-      interdits: interdits.map((i) => i.regle),
-      rougis,
+      gravites: config === undefined ? {} : await gravitesDe(eslint, fichier),
     });
   }
   return mesures;
 }
 
+/** Pour chaque interdit, la gravité que rend chaque ligne de sa faute, posée au chemin du fichier. */
+async function gravitesDe(eslint: ESLint, fichier: string): Promise<Record<string, number[]>> {
+  const gravites: Record<string, number[]> = {};
+  for (const { regle, lignes } of INTERDITS) {
+    const [r] = await eslint.lintText(`${lignes.join('\n')}\n`, { filePath: fichier });
+    const messages = (r?.messages ?? []).filter((m) => m.ruleId === regle);
+    gravites[regle] = lignes.map((_, n) =>
+      Math.max(0, ...messages.filter((m) => m.line === n + 1).map((m) => m.severity))
+    );
+  }
+  return gravites;
+}
+
+/**
+ * Le binaire INSTALLÉ que `pnpm lint` lance, sur la faute de `no-console` passée par l'entrée standard
+ * au chemin d'un fichier de produit, avec la configuration du dépôt : son code de sortie. Le verrou fige
+ * un binaire ET ses correctifs ; seul son lancement dit s'il propage l'échec.
+ */
+function effetEslint(mesures: readonly MesureEslint[]): number | null {
+  const fuite = INTERDITS.find((i) => i.regle === 'no-console');
+  const cible = mesures.find((m) => m.config !== undefined && fuite?.couvre(m.fichier));
+  if (fuite === undefined || cible === undefined) return null;
+  const [nom] = binaireDuScript('lint');
+  const args = ['--stdin', '--stdin-filename', cible.fichier];
+  return lancerBinaire(nom, args, `${fuite.lignes.join('\n')}\n`).code;
+}
+
 /** Le jugement, séparé de la mesure : fonction PURE (RM-11), pour que ses témoins soient fabriqués. */
-function fautesEslint(mesures: readonly MesureEslint[]): string[] {
+function fautesEslint(
+  mesures: readonly MesureEslint[],
+  suivis: readonly string[],
+  code: number | null
+): string[] {
   const fautes: string[] = [];
+  const mesures_ = new Set(mesures.map((m) => m.fichier));
+  for (const f of suivis) if (!mesures_.has(f)) fautes.push(`${f} : non mesuré`);
   for (const m of mesures) {
     const f = m.fichier;
+    if (FICHIER_DE_CODE.test(f) !== (m.socle !== undefined)) {
+      const cause =
+        m.socle === undefined ? 'code que le socle ESLint ne lit pas' : 'lu hors du code';
+      fautes.push(`${f} : ${cause}`);
+    }
+    if (m.socle === undefined) continue;
     if ((m.config === undefined) !== IGNORES_DECLARES.includes(f)) {
       fautes.push(`${f} : ${m.config === undefined ? 'ignoré' : 'déclaré ignoré, et lu'}`);
     }
@@ -1349,99 +1549,171 @@ function fautesEslint(mesures: readonly MesureEslint[]): string[] {
         fautes.push(`${f} : ${regle} éteinte`);
       }
     }
-    for (const r of m.interdits) {
-      if (!m.rougis.includes(r)) fautes.push(`${f} : ${r} ne rougit pas sur sa faute`);
+    for (const [regle, couvre] of SOCLE_ETEINT_DECLARE) {
+      if (couvre(f) && gravite(m.config.rules?.[regle]) > 0) {
+        fautes.push(`${f} : ${regle} déclarée éteinte, et armée`);
+      }
+    }
+    for (const { regle, lignes, couvre } of INTERDITS) {
+      const attendue = couvre(f) ? 2 : 0;
+      if (lignes.some((_, n) => (m.gravites[regle]?.[n] ?? -1) !== attendue)) {
+        const ecart =
+          attendue === 2 ? 'ne rougit pas sur toute sa faute' : 'rougit hors de son périmètre';
+        fautes.push(`${f} : ${regle} ${ecart}`);
+      }
     }
   }
-  // Témoins non nuls : chaque déclaration sert, et chaque interdit s'applique quelque part.
+  // Chaque déclaration désigne ce qu'elle déclare, et chaque interdit s'applique quelque part.
+  const lus = mesures.filter((m) => m.config !== undefined);
+  for (const d of IGNORES_DECLARES) {
+    if (!mesures.some((m) => m.fichier === d && m.socle !== undefined)) {
+      fautes.push(`${d} : ignore déclaré qui ne désigne aucun fichier lisible`);
+    }
+  }
   for (const [regle, couvre] of SOCLE_ETEINT_DECLARE) {
-    const eteinte = mesures.some(
-      (m) => couvre(m.fichier) && m.config !== undefined && gravite(m.config.rules?.[regle]) === 0
-    );
-    if (!eteinte) fautes.push(`${regle} : extinction déclarée qui n'éteint rien`);
+    if (!lus.some((m) => couvre(m.fichier)))
+      fautes.push(`${regle} : extinction qui ne couvre rien`);
   }
-  for (const { regle } of INTERDITS) {
-    if (!mesures.some((m) => m.interdits.includes(regle))) {
-      fautes.push(`${regle} : ne s'applique à aucun fichier suivi`);
-    }
+  for (const { regle, couvre } of INTERDITS) {
+    if (!lus.some((m) => couvre(m.fichier)))
+      fautes.push(`${regle} : ne s'applique à aucun fichier`);
   }
+  if (code !== 1) fautes.push(`\`pnpm lint\` : le binaire installé sort en ${code} sur une faute`);
   return fautes;
 }
 
 describe('REQ-GOV-018 — ce que la configuration ESLint FAIT, sur chaque fichier suivi', () => {
-  let mesures: Promise<MesureEslint[]> | undefined;
-  const mesurer = (): Promise<MesureEslint[]> => (mesures ??= mesurerEslint());
+  type Releve = { suivis: string[]; mesures: MesureEslint[]; code: number | null };
+  let releve: Promise<Releve> | undefined;
+  const mesurer = (): Promise<Releve> =>
+    (releve ??= (async () => {
+      const suivis = fichiersSuivis();
+      const mesures = await mesurerEslint(suivis);
+      return { suivis, mesures, code: effetEslint(mesures) };
+    })());
 
-  it('chaque fichier suivi reçoit la configuration racine seule, le socle, `noInlineConfig`, et ses interdits ROUGISSENT', async () => {
-    const vues = await mesurer();
-    expect(vues.length).toBeGreaterThan(0);
-    expect(fautesEslint(vues)).toEqual([]);
-    // Contre-témoin de la MESURE : là où `eslint.config.mjs` déroge à `no-console` (`scripts/`,
-    // `tests/`), sa faute ne rend pas d'erreur. Sans lui, une mesure qui déclarerait tout « rougi »
-    // rendrait le même vert qu'une mesure juste.
-    const derogees = vues.filter(
-      (m) => m.config !== undefined && !m.interdits.includes('no-console')
-    );
-    expect(derogees.length).toBeGreaterThan(0);
-    expect(derogees.filter((m) => m.rougis.includes('no-console')).map((m) => m.fichier)).toEqual(
-      []
-    );
+  it('tout fichier de code suivi est lu avec la configuration racine seule, le socle et `noInlineConfig`, ses interdits ROUGISSENT là et seulement là, et `eslint` propage son échec', async () => {
+    const { suivis, mesures, code } = await mesurer();
+    expect(mesures.filter((m) => m.config !== undefined).length).toBeGreaterThan(0);
+    expect(fautesEslint(mesures, suivis, code)).toEqual([]);
   }, 600_000);
 
   it('`fautesEslint` SAIT rougir : chaque désarmement, dérivé des mesures RÉELLES par une variation', async () => {
-    // RM-02, sur les mesures du dépôt et non sur une vue inventée (RM-11) : une seule mesure change,
-    // et le jugement doit nommer exactement la faute qu'elle porte.
-    const vues = await mesurer();
-    const cible = vues.find((m) => m.interdits.includes('no-restricted-imports'));
-    expect(cible, 'aucun fichier suivi sous src/domain/').toBeDefined();
+    // RM-02, sur les mesures du dépôt et non sur une vue inventée (RM-11) : une mesure change, et le
+    // jugement doit nommer exactement la faute qu'elle porte.
+    const { suivis, mesures, code } = await mesurer();
+    const cible = mesures.find(
+      (m) => m.config !== undefined && m.fichier.startsWith('src/domain/')
+    );
+    const voisin = mesures.find(
+      (m) => m.config !== undefined && /^scripts\/.*\.js$/.test(m.fichier)
+    );
+    const ignore = mesures.find((m) => m.fichier === IGNORES_DECLARES[0]);
+    expect([cible, voisin, ignore].includes(undefined), 'mesure de référence absente').toBe(false);
     const c = cible!.config!;
     const f = cible!.fichier;
-    const regleDuSocle = Object.keys(cible!.socle.rules ?? {}).find(
-      (r) => gravite(cible!.socle.rules?.[r]) > 0
+    const regleDuSocle = Object.keys(cible!.socle?.rules ?? {}).find(
+      (r) => gravite(cible!.socle?.rules?.[r]) > 0
     )!;
-    const avec = (variation: Partial<MesureEslint>) =>
-      vues.map((m) => (m === cible ? { ...m, ...variation } : m));
-    const regles = (rules: Record<string, unknown>) => {
-      const config = { ...c, rules: { ...c.rules, ...rules } };
-      return { config, racine: config };
+    type Temoin = [MesureEslint[], string[], number | null, string[]];
+    const avec = (m0: MesureEslint, variation: Partial<MesureEslint>): Temoin => [
+      mesures.map((m) => (m === m0 ? { ...m, ...variation } : m)),
+      suivis,
+      code,
+      [],
+    ];
+    const regles = (m0: MesureEslint, rules: Record<string, unknown>) => {
+      const config = { ...m0.config, rules: { ...m0.config?.rules, ...rules } };
+      return avec(m0, { config, racine: config });
     };
-    const temoins: [MesureEslint[], string][] = [
-      [avec({ config: undefined }), `${f} : ignoré`],
-      [avec({ racine: { ...c, rules: {} } }), `${f} : configuration imbriquée`],
-      [
-        avec({ config: { ...c, linterOptions: {} }, racine: { ...c, linterOptions: {} } }),
-        `${f} : noInlineConfig`,
-      ],
-      [avec(regles({ [regleDuSocle]: 'off' })), `${f} : ${regleDuSocle} éteinte`],
-      [
-        avec(regles({ [regleDuSocle]: 'warn' })),
-        `${f} : ${regleDuSocle} tolérée en warn sans avertissement`,
-      ],
-      [
-        avec({ rougis: cible!.rougis.filter((r) => r !== 'no-restricted-imports') }),
-        `${f} : no-restricted-imports ne rougit pas sur sa faute`,
-      ],
-      [
-        vues.map((m) => ({
-          ...m,
-          interdits: m.interdits.filter((r) => r !== 'no-restricted-imports'),
-        })),
-        "no-restricted-imports : ne s'applique à aucun fichier suivi",
-      ],
+    const sans = (garde: (x: string) => boolean): Temoin => [
+      mesures.filter((m) => garde(m.fichier)),
+      suivis.filter(garde),
+      code,
+      [],
+    ];
+    const attendre = ([m, s, k]: Temoin, ...attendues: string[]): Temoin => [m, s, k, attendues];
+    // La MESURE aussi est éprouvée : `no-console` rétrogradé en `warn`, ou élargi à une méthode de
+    // `console`, est mesuré par ESLint lui-même au chemin du fichier réel, puis jugé.
+    const surcharge = (entree: Linter.RuleEntry) =>
+      gravitesDe(new ESLint({ overrideConfig: { rules: { 'no-console': entree } } }), f);
+    const fuiteNonRougie = `${f} : no-console ne rougit pas sur toute sa faute`;
+    const temoins: Temoin[] = [
+      attendre(avec(cible!, { gravites: await surcharge('warn') }), fuiteNonRougie),
+      attendre(
+        avec(cible!, { gravites: await surcharge(['error', { allow: ['error'] }]) }),
+        fuiteNonRougie
+      ),
+      attendre(avec(cible!, { config: undefined }), `${f} : ignoré`),
+      attendre(
+        avec(cible!, { socle: undefined, config: undefined }),
+        `${f} : code que le socle ESLint ne lit pas`
+      ),
+      attendre([mesures.filter((m) => m !== cible), suivis, code, []], `${f} : non mesuré`),
+      attendre(avec(cible!, { racine: { ...c, rules: {} } }), `${f} : configuration imbriquée`),
+      attendre(
+        avec(cible!, { config: { ...c, linterOptions: {} }, racine: { ...c, linterOptions: {} } }),
+        `${f} : noInlineConfig`
+      ),
+      attendre(regles(cible!, { [regleDuSocle]: 'off' }), `${f} : ${regleDuSocle} éteinte`),
+      attendre(
+        regles(cible!, { [regleDuSocle]: 'warn' }),
+        `${f} : ${regleDuSocle} tolérée en warn sans avertissement`
+      ),
+      attendre(
+        avec(voisin!, { gravites: { ...voisin!.gravites, 'no-restricted-syntax': [2] } }),
+        `${voisin!.fichier} : no-restricted-syntax rougit hors de son périmètre`
+      ),
+      attendre(
+        avec(ignore!, {
+          config: voisin!.config,
+          racine: voisin!.racine,
+          rendues: voisin!.rendues,
+          gravites: voisin!.gravites,
+        }),
+        `${ignore!.fichier} : déclaré ignoré, et lu`
+      ),
+      attendre(
+        sans((x) => x !== ignore!.fichier),
+        `${ignore!.fichier} : ignore déclaré qui ne désigne aucun fichier lisible`
+      ),
+      attendre(
+        sans((x) => !x.startsWith('src/domain/')),
+        "no-restricted-syntax : ne s'applique à aucun fichier",
+        "no-restricted-imports : ne s'applique à aucun fichier"
+      ),
+      attendre(
+        [mesures, suivis, 0, []],
+        '`pnpm lint` : le binaire installé sort en 0 sur une faute'
+      ),
     ];
     for (const [regle, couvre] of SOCLE_ETEINT_DECLARE) {
-      const rallumee = vues.map((m) => {
-        if (!couvre(m.fichier) || m.config === undefined) return m;
-        const config = { ...m.config, rules: { ...m.config.rules, [regle]: 'error' } };
-        return { ...m, config, racine: config };
-      });
-      temoins.push([rallumee, `${regle} : extinction déclarée qui n'éteint rien`]);
+      // Éteinte hors de son chemin déclaré ; armée sur son chemin déclaré.
+      temoins.push(attendre(regles(cible!, { [regle]: 'off' }), `${f} : ${regle} éteinte`));
+      const couvert = mesures.find((m) => m.config !== undefined && couvre(m.fichier))!;
+      temoins.push(
+        attendre(
+          regles(couvert, { [regle]: 'error' }),
+          `${couvert.fichier} : ${regle} déclarée éteinte, et armée`
+        )
+      );
     }
-    // Le jugement doit AJOUTER exactement la faute de la variation : le témoin ne dépend pas de ce
+    // Une extinction qui ne couvre plus aucun fichier lu (choisie hors des fichiers ignorés).
+    const [morte, couvreMorte] = SOCLE_ETEINT_DECLARE.find(([, p]) => !IGNORES_DECLARES.some(p))!;
+    temoins.push(
+      attendre(
+        sans((x) => !couvreMorte(x)),
+        `${morte} : extinction qui ne couvre rien`
+      )
+    );
+    // Le jugement doit AJOUTER exactement les fautes de la variation : le témoin ne dépend pas de ce
     // que l'arbre porte déjà, et c'est le test précédent qui dit si l'arbre est sain.
-    const deja = new Set(fautesEslint(vues));
-    for (const [variante, attendue] of temoins) {
-      expect(fautesEslint(variante).filter((faute) => !deja.has(faute))).toEqual([attendue]);
+    const deja = new Set(fautesEslint(mesures, suivis, code));
+    for (const [variante, suivisVariante, codeVariante, attendues] of temoins) {
+      const neuves = fautesEslint(variante, suivisVariante, codeVariante).filter(
+        (x) => !deja.has(x)
+      );
+      expect(neuves).toEqual(attendues);
     }
   }, 600_000);
 });

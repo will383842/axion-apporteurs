@@ -29,20 +29,21 @@
 //
 // Après ce correctif, `eslint .` sort en 0 sur le dépôt, avec des AVERTISSEMENTS comptés — leur
 // nombre se lit dans la sortie de `pnpm lint`, il n'est pas recopié ici. Ils sont posés en `warn`
-// et non éteints, et SEULEMENT dans les fichiers nommés par l'avant-dernier bloc : un fichier
-// neuf reçoit les deux règles en `error`. Les corriger sort du périmètre de GOV-031 (charte A11 :
-// un manque devient une tâche, jamais un correctif glissé dans le lot en cours) — la tâche qui
-// les remonte en `error` reste à ouvrir par A01.
+// et non éteints, et SEULEMENT dans les fichiers nommés par les deux blocs de dette, un par règle,
+// posés juste avant `prettier` : un fichier neuf reçoit les deux règles en `error`. Les corriger
+// sort du périmètre de GOV-031 (charte A11 : un manque devient une tâche, jamais un correctif glissé
+// dans le lot en cours) — la tâche qui les remonte en `error` reste à ouvrir par A01.
 //
-// UNE DÉROGATION VIT ICI, ET NULLE PART AILLEURS. Chacune est une entrée d'un bloc `files:`, et son
-// motif est le commentaire COLLÉ au-dessus d'elle. `tests/unit/gouvernance/gardes-transposees.spec.ts`
-// demande à ESLint ce qu'il applique à chaque fichier suivi : une configuration posée dans un
-// sous-dossier, une exclusion ou un réglage du linter rouvert par bloc y rougissent.
+// UNE DÉROGATION VIT ICI, ET NULLE PART AILLEURS. Une règle éteinte est une entrée d'un bloc
+// `files:`, un fichier ignoré une entrée d'`ignores`, et le motif de chacune est le commentaire
+// COLLÉ au-dessus d'elle. `tests/unit/gouvernance/gardes-transposees.spec.ts` demande à ESLint ce
+// qu'il applique à chaque fichier suivi : un fichier de code non lu, une configuration posée dans
+// un sous-dossier, une exclusion ou un réglage du linter rouvert par bloc y rougissent.
 //
 // LES TROIS RÈGLES DE FOND SONT DÉRIVÉES, PAS INVENTÉES. `docs/gates.json` décrit déjà ce que le
 // job `gate-a` doit faire tourner : « ESLint (no-console, imports interdits sous src/domain,
-// new Date() interdit dans le domaine) ». Elles sont écrites ici sous cette forme, et nulle part
-// ailleurs (RM-01).
+// new Date() interdit dans le domaine) ». Elles s'appliquent ici. Le spec les retape dans
+// `INTERDITS` comme ORACLE, confronté à leur effet : c'est la divergence des deux qui rougit.
 
 import js from '@eslint/js';
 import globals from 'globals';
