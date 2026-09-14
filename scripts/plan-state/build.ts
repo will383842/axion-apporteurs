@@ -22,13 +22,8 @@
  *
  * POURQUOI : trois textes du plan donnaient trois écrivains différents à ce fichier. Un état partagé
  * entre 40 agents ne peut avoir qu'une source ; ici la source est GitHub, et ce script en est la vue.
- * CE FICHIER A CITÉ UN TEST QUI N'EXISTE PAS — « le test `plan-state-derive.spec.ts` relance ce
- * script et exige que le fichier commité soit identique ». Aucun fichier de ce nom n'a jamais été
- * écrit ; l'assertion qu'il promettait n'existait nulle part, et c'est précisément ce qui a permis à
- * une lentille de falsifier quinze lignes de la vue sans faire rougir quoi que ce soit. C'est LEC-12
- * mot pour mot — « une citation n'est pas une existence » — dans le fichier même qu'elle décrit.
- * La promesse est désormais TENUE, par `--verifier` ci-dessous et par le témoin qui le voit rougir :
- * `tests/unit/gouvernance/vues-derivees.spec.ts` (GOV-035, REQ-GOV-032).
+ * L'égalité de la vue commitée et de ses sources est tenue par `--verifier` ci-dessous, et par les
+ * témoins qui le voient rougir : `tests/unit/gouvernance/vues-derivees.spec.ts` (GOV-035, REQ-GOV-032).
  *
  * INVARIANT : ce script ne DÉCIDE rien. S'il faut changer un statut, on change l'issue, pas le fichier.
  */
@@ -111,23 +106,26 @@ const questions = [
 interface PrOuverte { number: number; headRefName: string; mergeStateStatus: string; isDraft: boolean; title: string }
 
 /**
- * 🔴 LA PROVENANCE EST ÉMISE PAR LE GÉNÉRATEUR — IL N'Y A PLUS DE LISTE D'EXEMPTIONS.
+ * LA PROVENANCE EST ÉMISE PAR LE GÉNÉRATEUR — IL N'Y A PAS DE LISTE D'EXEMPTIONS.
  *
- * Le vérificateur exemptait ce que TROIS listes tapées lui disaient d'exempter (rubriques, lignes,
- * prose). A10 · mutation, revue de la PR #36 sur `0d00658` : élargir l'une d'elles aux neuf questions du bloc
- * rendait « 0 ligne(s) CONFRONTÉES », exit 0 ; y ajouter `['Bloquées', '']`, SANS MOTIF, sortait une
- * rubrique falsifiée du contrôle, exit 0. Une exemption déclarée à côté de ce qu'elle exempte se
- * déclare aussi pour ce qui n'en a pas besoin.
- *
+ * Une exemption déclarée à côté de ce qu'elle exempte se déclare aussi pour ce qui n'en a pas besoin.
  * Le générateur, lui, SAIT ce qu'il a lu hors du dépôt au moment où il écrit. Les trois sources
  * vivantes ne se lisent donc qu'à travers `forge`, et chaque lecture est NOTÉE contre la rubrique —
  * ou la ligne du bloc de reprise — en cours d'écriture. Est exempté ce qui a lu la forge, et le motif
  * imprimé EST la source lue : il ne peut être ni vide ni inventé. Une lecture hors de toute rubrique
  * LÈVE : sa provenance ne s'attribuerait à rien.
  *
- * ⚠️ Ce que ça ne ferme pas seul : une lecture GRATUITE de la forge dans une rubrique qui n'en a
- * pas besoin l'exempterait. C'est le témoin « exemption portante » qui la voit rougir — il rend la vue
- * sous deux forges différentes et exige que tout élément exempté CHANGE de l'une à l'autre.
+ * ⚠️ Ce que ça ne ferme pas seul :
+ *   — une lecture GRATUITE de la forge, dont le texte ne change pas d'une forge à l'autre, exempterait
+ *     sa zone. Le témoin « exemption portante » la voit rougir : il rend la vue sous deux forges et
+ *     exige que tout élément exempté CHANGE de l'une à l'autre ;
+ *   — une modification du générateur qui AFFICHE réellement une valeur de la forge dans une rubrique
+ *     l'exempte : c'est la définition même de l'exemption. Elle se voit au diff et au rendu ; elle ne
+ *     se voit pas ici, y compris quand la valeur affichée est rendue peu visible.
+ *
+ * `git log` sur `docs/adr/` (« Décisions du jour ») ne passe pas par `forge` : il lit l'historique de
+ * HEAD, comme les fichiers suivis, pas l'état de GitHub ni `origin/main`. Cette rubrique est exemptée
+ * parce qu'elle lit AUSSI `forge.dateMain()`, pas à cause de cet historique.
  */
 const SOURCE_PR = '`gh pr list`';
 const SOURCE_ISSUES = '`gh issue list`, labels `owner:`';
@@ -244,18 +242,33 @@ if (existsSync(CHEMIN_JOURNAL)) {
 entrees.sort((a, b) => b.pr - a.pr);
 
 const lignes: string[] = [];
+/** Où commence chaque rubrique dans `lignes` : la neutralisation des zones exemptées en a besoin. */
+const debutsDesRubriques: [string, number][] = [];
 
 /** Ouvre une rubrique : les lectures de la forge qui suivent lui sont attribuées, jusqu'à la suivante. */
 function titre(t: string): void {
   rubriqueCourante = t;
   if (!sourcesDesRubriques.has(t)) sourcesDesRubriques.set(t, new Set());
+  debutsDesRubriques.push([t, lignes.length]);
   lignes.push(`## ${t}`);
 }
+
+/**
+ * CE QUI EST ÉCRIT DANS UNE ZONE EXEMPTÉE NE PORTE AUCUN `<`.
+ *
+ * Le vérificateur refuse tout `<` dans une zone exemptée (`horsDeSaZone`) : au rendu, c'est du HTML,
+ * en bloc comme en ligne, et un élément laissé ouvert replie ce qui le suit. Une valeur de la forge
+ * (titre de PR, branche, label) ou un titre de tâche peut en porter un : il devient `&lt;`, qui
+ * s'affiche `<` en texte courant (et `&lt;` littéral dans du code en ligne). Sans cette
+ * neutralisation, la forge fabriquerait un rouge sur une vue juste.
+ */
+const neutraliser = (l: string): string => l.replaceAll('<', '&lt;');
 
 /** Écrit UNE ligne du bloc de reprise : ses lectures de la forge sont attribuées à elle seule. */
 function ligneDeReprise(ecrire: () => string): string {
   ligneCourante = new Set();
-  const l = ecrire();
+  const brute = ecrire();
+  const l = ligneCourante.size > 0 ? neutraliser(brute) : brute;
   sourcesDesLignes.set(l, ligneCourante);
   ligneCourante = null;
   return l;
@@ -283,13 +296,11 @@ lignes.push('');
 /**
  * LES STATUTS DU TABLEAU « Tâches », lus par le générateur ET par les mesures du domaine.
  *
- * 🔴 ILS ÉTAIENT RETAPÉS, HUIT SUR NEUF (A09 · simplicite, revue sur `0d00658`). `scripts/lot/avancement.ts`
- * porte déjà le vocabulaire arbitré (`PLANCHER`), et `verifierExhaustivite()` le confronte à l'enum
- * de `scripts/lot/tasks.schema.json` dans quatre gates. Un statut ajouté à l'enum et au barème
- * laissait cette copie muette : le tableau cessait de compter ses tâches et le vert annonçait
- * toujours `X/X`. Il se DÉRIVE désormais du barème — un statut neuf entre dans la vue et dans les
- * mesures ; un statut ajouté à l'enum SANS barème fait rougir ces quatre gates.
- * L'ordre est celui de `PLANCHER`, du plancher le plus faible au plus fort.
+ * Ils se DÉRIVENT du barème : `scripts/lot/avancement.ts` porte le vocabulaire arbitré (`PLANCHER`),
+ * et `verifierExhaustivite()` le confronte à l'enum de `scripts/lot/tasks.schema.json` dans quatre
+ * gates. Un statut neuf du barème entre dans la vue et dans les mesures ; un statut ajouté à l'enum
+ * SANS barème fait rougir ces quatre gates. L'ordre est celui de `PLANCHER`, du plancher le plus
+ * faible au plus fort.
  */
 const STATUTS_DU_TABLEAU: readonly string[] = Object.keys(PLANCHER);
 
@@ -424,10 +435,10 @@ lignes.push('');
 // ── Revendications (REQ-GOV-007) ────────────────────────────────────────────
 titre('Revendications');
 lignes.push('');
-lignes.push('Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.');
+lignes.push('Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.');
 lignes.push('');
 if (!forge.githubLu()) {
-  lignes.push('> ⚠️ **Lecture GitHub indisponible** : les revendications en vol n’ont PAS pu être lues. Ce qui suit ne vient que de `docs/tasks.json` — l’absence d’une ligne ne veut donc pas dire que personne ne tient la tâche.');
+  lignes.push('⚠️ **Lecture GitHub indisponible** : les revendications en vol n’ont PAS pu être lues. Ce qui suit ne vient que de `docs/tasks.json` — l’absence d’une ligne ne veut donc pas dire que personne ne tient la tâche.');
   lignes.push('');
 }
 {
@@ -483,7 +494,8 @@ lignes.push('');
   if (!decisionsDuJour.length) {
     lignes.push(`Aucun ADR daté du ${jourMain || '?'} (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre \`docs/DECISIONS.md\`, tranchées ou tenues par une hypothèse datée.`);
   } else {
-    for (const a of decisionsDuJour) lignes.push(`- ${a.titre} — \`docs/adr/${a.fichier}\``);
+    // Une seule ligne, sans puce : une zone exemptée n'ouvre ni liste ni citation (`horsDeSaZone`).
+    lignes.push(decisionsDuJour.map((a) => `\`docs/adr/${a.fichier}\` — ${a.titre}`).join(' · '));
     lignes.push('');
     lignes.push(`Dérivé de \`git log\` sur \`docs/adr/\`, jour du dernier atterrissage (${jourMain}). Une décision de Will n’est pas un ADR : elle vit au registre \`docs/DECISIONS.md\`.`);
   }
@@ -501,12 +513,15 @@ lignes.push('');
   const surLeChemin = new Set(cheminCritique);
   const suivante = eligibles.find((t) => surLeChemin.has(t.id)) ?? eligibles[0] ?? null;
   const prete = forge.file().find((p) => p.rang === 1);
+  // Deux paragraphes, sans numéro : une zone exemptée n'ouvre pas de liste (`horsDeSaZone`), et la
+  // ligne de la tâche ne porte plus un rang qui dépendait de la forge.
   if (prete) {
-    lignes.push(`1. **Fusionner #${prete.number}** — elle est en tête de file et ne bloque sur rien. Lire \`mergeStateStatus\` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.`);
+    lignes.push(`**Fusionner #${prete.number}** — elle est en tête de file et ne bloque sur rien. Lire \`mergeStateStatus\` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.`);
   }
   if (suivante) {
+    if (prete) lignes.push('');
     lignes.push(
-      `${prete ? '2' : '1'}. **${suivante.id}** — ${suivante.titre} (${suivante.estimateDays} j` +
+      `**${suivante.id}** — ${suivante.titre} (${suivante.estimateDays} j` +
         `${surLeChemin.has(suivante.id) ? ', **sur le chemin critique**' : ''}) : ${eligibles.length} tâche(s) éligible(s) en tout. \`pnpm lot:composer\` compose le lot.`
     );
   } else if (!prete) {
@@ -524,7 +539,7 @@ lignes.push('');
 // par le SHA écrit dedans — et c'est pourquoi la phrase le dit, plutôt que de laisser croire.
 lignes.push(`\`origin/main\` = \`${forge.shaMain() || '?'}\` (${forge.dateMain() || '?'}). Vérifier \`x-partners-build-sha\` avant toute nouvelle fusion.`);
 lignes.push('');
-lignes.push('> Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.');
+lignes.push('Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.');
 lignes.push('');
 
 // ── Journal (REQ-GOV-023) ───────────────────────────────────────────────────
@@ -554,6 +569,12 @@ lignes.push(dette.length ? dette.map((t) => `- ${t.id} — ${t.titre}`).join('\n
 lignes.push('');
 // Fin des rubriques : une lecture de la forge au-delà n'appartient plus à aucune, et LÈVE.
 rubriqueCourante = null;
+// Le corps de chaque rubrique qui a lu la forge est neutralisé (`neutraliser`) ; son titre ne l'est pas.
+debutsDesRubriques.forEach(([t, debut], k) => {
+  if ((sourcesDesRubriques.get(t)?.size ?? 0) === 0) return;
+  const fin = debutsDesRubriques[k + 1]?.[1] ?? lignes.length;
+  for (let i = debut + 1; i < fin; i += 1) lignes[i] = neutraliser(lignes[i]!);
+});
 
 // ── REPRENDRE EN 30 SECONDES (REQ-GOV-006) ──────────────────────────────────
 // Écrit comme si on ouvrait le dépôt demain sans mémoire : où est `main`, qu'est-ce qui est en vol
@@ -612,13 +633,10 @@ rubriqueCourante = null;
 // LE VÉRIFICATEUR (GOV-035, REQ-GOV-032)
 // ════════════════════════════════════════════════════════════════════════════
 //
-// `docs/PLAN-STATE.md` était la CINQUIÈME vue de REQ-GOV-032 et la seule sans vérificateur : ce
-// script ÉCRIVAIT, et rien ne comparait. Mesuré par une lentille le 2026-09-12 — quinze lignes
-// falsifiées dans la vue, toutes ancres conservées (« 29/36 » → « 36/36 », « reste 4.00 j » →
-// « 0.00 », « 2 tâche(s) bloquée(s) » → « 0 ») : HUIT vérificateurs de Gate A sont restés verts,
-// et `plan-state-frais.spec.ts` 25/25, parce qu'il juge que les rubriques SONT LÀ, jamais ce
-// qu'elles disent. La famille `plan_state_perime` de `gov:etat` compare une DATE DE COMMIT : un
-// fichier falsifié puis recommité est plus « frais » que le vrai.
+// `docs/PLAN-STATE.md` est la CINQUIÈME vue de REQ-GOV-032. `plan-state-frais.spec.ts` juge que ses
+// rubriques SONT LÀ, jamais ce qu'elles disent ; la famille `plan_state_perime` de `gov:etat` compare
+// une DATE DE COMMIT, et un fichier falsifié puis recommité est plus « frais » que le vrai. Ce mode
+// compare ce que la vue DIT à ce que ses sources produisent.
 //
 // ── CE QUI EST COMPARÉ, ET POURQUOI PAS TOUT ────────────────────────────────
 //
@@ -634,18 +652,18 @@ rubriqueCourante = null;
 // LA RÈGLE : **tout est comparé, sauf ce que le générateur a LU HORS DU DÉPÔT pour l'écrire**
 // (`forge`, plus haut). L'exemption est une provenance émise au moment de l'écriture ; il n'existe
 // aucune liste d'exemptions, et le motif que le vert imprime est la source lue. Une exemption ne
-// libère que le CONTENU de sa zone, jamais sa STRUCTURE (`structureDeBloc`).
+// libère que le CONTENU de sa zone, jamais ce qui l'entoure au rendu (`horsDeSaZone`).
 //
 // ⚠️ CE QUE CE VÉRIFICATEUR NE VOIT PAS, écrit plutôt que tu :
 //   (1) une falsification portée sur un élément exempté, et qui reste dans sa zone, passe —
 //       la comparer mesurerait la forge ;
 //   (2) le classement est par RUBRIQUE : « Prochain pas » lit la forge et sort du contrôle EN
-//       ENTIER, alors que sa deuxième ligne se dérive de `docs/tasks.json` seul (A10 · mutation).
-//       Le bloc de reprise est jugé ligne à ligne ; les rubriques pas encore. C'est GOV-053 ;
+//       ENTIER, alors que sa ligne de tâche se dérive de `docs/tasks.json` seul. Le bloc de reprise
+//       est jugé ligne à ligne ; les rubriques pas encore. C'est GOV-053 ;
 //   (3) un élément que le générateur CESSE de produire disparaît des deux côtés à la fois. C'est
 //       GOV-055, et il faut une source extérieure pour le fermer.
 
-const BLOC_DE_REPRISE = 'REPRENDRE EN 30 SECONDES';
+export const BLOC_DE_REPRISE = 'REPRENDRE EN 30 SECONDES';
 
 /** Les sources vivantes lues pour écrire un élément, en clair — `null` s'il n'en a lu aucune. */
 const exemption = (sources: Set<string> | undefined): string | null =>
@@ -654,23 +672,22 @@ const exemption = (sources: Set<string> | undefined): string | null =>
 interface Rubrique { titre: string; corps: string }
 
 /**
- * 🔴 UNE RUBRIQUE EST UNE GRAMMAIRE, PAS UNE ORTHOGRAPHE (A09 · securite, revue de la PR #36 sur `0d00658`).
+ * UNE RUBRIQUE EST UNE GRAMMAIRE, PAS UNE ORTHOGRAPHE — et c'est la SEULE définition du dépôt :
+ * `vues-derivees.spec.ts` importe `decouper` au lieu de reconnaître `## ` à sa façon.
  *
- * Le découpage reconnaissait `startsWith('## ')`. Un titre « Bloquées » précédé d'une espace reste
- * un titre pour CommonMark et n'en était pas un pour la garde : posé dans une rubrique exemptée, il
- * affichait deux « Bloquées » et rendait EXIT 0, pendant que `rubrique_dupliquee` prétendait refuser
- * le doublon. Le motif est désormais celui de CommonMark §4.2 (titre ATX de niveau 2) : jusqu'à TROIS
- * espaces, `##`, puis un blanc ou la fin de ligne ; une séquence fermante de `#` ne fait pas partie
- * du titre.
+ * Le motif est celui de CommonMark §4.2 (titre ATX de niveau 2) : jusqu'à TROIS espaces, `##`, puis
+ * un blanc ou la fin de ligne ; une séquence fermante de `#` ne fait pas partie du titre. Un titre
+ * indenté posé dans une rubrique exemptée ouvre donc une rubrique ici comme au rendu, et le doublon
+ * rougit (`rubrique_dupliquee`).
  *
- * Les autres écritures d'un titre — Setext, titre dans une citation ou un élément de liste —
- * n'ouvrent pas de rubrique ici : dans une zone comparée elles sont comparées octet par octet, et
- * dans une zone exemptée `structureDeBloc` les refuse.
+ * Les autres écritures d'un titre — Setext, titre dans une citation ou un élément de liste, titre
+ * indenté de quatre colonnes ou plus — n'ouvrent pas de rubrique ici : dans une zone comparée elles
+ * sont comparées octet par octet, et dans une zone exemptée `horsDeSaZone` les refuse.
  */
 const TITRE_DE_RUBRIQUE = /^ {0,3}##(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/;
 
 /** Découpe une vue en rubriques de niveau 2. Le texte d'avant la première porte le nom `(en-tête)`. */
-function decouper(texte: string): Rubrique[] {
+export function decouper(texte: string): Rubrique[] {
   const out: Rubrique[] = [];
   let nom = '(en-tête)';
   let corps: string[] = [];
@@ -687,35 +704,42 @@ function decouper(texte: string): Rubrique[] {
 }
 
 /**
- * 🔴 UNE ZONE EXEMPTÉE NE DOIT RIEN POUVOIR FAIRE AUX ZONES COMPARÉES (A09 · securite, revue sur `0d00658`).
+ * UNE ZONE EXEMPTÉE NE DOIT RIEN POUVOIR FAIRE AU RENDU DE CE QUI L'ENTOURE.
  *
- * Exemptée veut dire « son CONTENU n'est pas comparé », jamais « sa STRUCTURE est libre ». Mesuré à
- * `0d00658` : un bloc HTML jamais refermé dans le corps de « File de fusion » faisait disparaître à
- * l'écran « Journal » et « Dette déclarée », deux rubriques comparées, EXIT 0. La bannière certifiait
- * des rubriques qu'un lecteur ne voyait plus.
+ * Exemptée veut dire « son CONTENU n'est pas comparé », jamais « elle peut atteindre ce qui l'est ».
+ * Ce qui atteint le reste du document au rendu ne se reconnaît PAS en énumérant les ouvertures de la
+ * grammaire : un élément HTML laissé ouvert au milieu d'un paragraphe n'est rien pour CommonMark, et
+ * GitHub replie pourtant tout ce qui le suit ; une ouverture de bloc se cache derrière une pile de
+ * conteneurs dont les indentations se composent. La règle est donc une AUTORISATION, par caractère :
  *
- * La règle vient de la grammaire où la vue est LUE. Dans CommonMark (§4, §5), les constructions de
- * bloc qui CRÉENT un titre ou qui AVALENT les lignes suivantes jusqu'à un marqueur de fin sont : le
- * titre ATX, le soulignement Setext, la clôture de bloc de code, et le bloc HTML — dont les sept
- * formes commencent toutes par `<`. Toutes peuvent s'ouvrir derrière une pile de conteneurs (citation
- * `>`, élément de liste), qu'on pèle d'abord. La règle SUR-INCLUT exprès — une tabulation compte
- * comme une espace, `<` refuse les sept formes d'un coup : le générateur n'écrit aucune de ces
- * constructions dans une zone exemptée, et c'est le contre-témoin de la vue rendue sous deux forges
- * qui garde qu'elle ne coûte aucun faux rouge.
+ *   — `<` est refusé PARTOUT dans la ligne : c'est le seul caractère qui ouvre du HTML, en bloc comme
+ *     en ligne, quelle que soit sa colonne ;
+ *   — la ligne est vide, ou COMMENCE, en colonne 0, par l'un des débuts de `DEBUT_PERMIS` : `|` (ligne
+ *     de tableau), une lettre, un pictogramme, `**`, ou un ou deux accents graves (du code en ligne,
+ *     jamais une clôture). Tout le reste est refusé sans être nommé : indentation, `#`, `=`, `-`,
+ *     `+`, `*` seul, chiffre, `>`, `[`, `~`, trois accents graves, `$`… Aucun de ces débuts n'est donc
+ *     une alternative à charger une à une ; un début permis qui cesserait de l'être fait rougir le
+ *     contre-témoin, parce que le générateur l'écrit ;
+ *   — un retour chariot est refusé partout, dans toute la vue (`fin_de_ligne_non_lf`).
+ *
+ * Aucun de ces débuts permis n'ouvre, en CommonMark ni en GFM, une construction qui dépasse son
+ * paragraphe, sa ligne de tableau ou sa cellule. Le générateur n'écrit rien d'autre dans une zone
+ * exemptée, et il neutralise `<` à la source (`neutraliser`) : les deux contre-témoins (vue commitée,
+ * vue rendue sous deux forges dont l'une porte des valeurs hostiles) gardent que la règle ne coûte
+ * aucun faux rouge.
  */
-const CONTENEUR = /^ {0,3}(?:>[ \t]?|(?:[-+*]|\d{1,9}[.)])(?:[ \t]+|$))/;
-const OUVERTURES: readonly (readonly [RegExp, string])[] = [
-  [/^[ \t]{0,3}#{1,6}(?:[ \t]|$)/, 'un titre ATX'],
-  [/^[ \t]{0,3}(?:=+|-+)[ \t]*$/, 'un soulignement de titre Setext'],
-  [/^[ \t]{0,3}(?:`{3,}|~{3,})/, 'une clôture de bloc de code'],
-  [/^[ \t]{0,3}</, 'un bloc HTML'],
-];
+const DEBUT_PERMIS = /^(?:$|[|\p{L}\p{Extended_Pictographic}]|\*\*|`{1,2}(?!`))/u;
 
-function structureDeBloc(ligne: string): string | null {
-  let reste = ligne;
-  for (let m = CONTENEUR.exec(reste); m !== null && m[0] !== ''; m = CONTENEUR.exec(reste)) reste = reste.slice(m[0].length);
-  return OUVERTURES.find(([re]) => re.test(reste))?.[1] ?? null;
+function horsDeSaZone(ligne: string): string | null {
+  if (ligne.includes('<')) return 'porte `<` — du HTML au rendu, qui peut replier ce qui suit';
+  if (!DEBUT_PERMIS.test(ligne)) return `commence par ${JSON.stringify(ligne.slice(0, 3))}, hors des débuts permis — au rendu, une construction qui peut sortir de sa zone`;
+  return null;
 }
+
+/** La question d'une ligne du bloc de reprise (sa première cellule), ou `null` si la ligne est une prose. */
+export const question = (l: string): string | null => (l.startsWith('|') ? (l.split('|')[1] ?? '').trim() : null);
+/** Les proses du bloc de reprise, dans l'ordre : toute ligne non vide qui n'est pas une question. */
+export const proses = (corps: string): string[] => corps.split('\n').filter((l) => l.trim() !== '' && question(l) === null);
 
 /**
  * LES MESURES DU DOMAINE. REQ-GOV-032 exige que l'écart soit nommé « en unités du domaine — nombre
@@ -773,20 +797,15 @@ function mesures(texte: string): Map<string, string> {
 }
 
 /**
- * LES FAMILLES, une VALEUR — et `Famille` le type qui en dérive.
+ * LES FAMILLES, une VALEUR — et `Famille` le type qui en dérive. `refuser`, la seule fonction qui
+ * imprime une ligne `[famille]`, n'accepte qu'un membre du type.
  *
- * Le témoin de population grattait le source avec une regex et observait les sorties avec une autre
- * de même classe : « ce qui sort de l'une sort de l'autre au même instant, et la soustraction reste
- * vide PAR CONSTRUCTION » (A10 · mutation). La liste est donc déclarée ici, et `refuser` — la seule
- * fonction qui imprime une ligne `[famille]` — n'accepte qu'un membre du type.
- *
- * 🔴 CE QUE LE TYPE NE FERME PAS, ET POURQUOI LE TÉMOIN LIT LA SORTIE. Un transtypage (`as never`, un
- * alias de type, les chevrons) ou un second canal qui écrit `[x]` lui-même passent le compilateur.
- * La garde TEXTUELLE posée par `0d00658` reconnaissait une orthographe sur trois (A10 · mutation,
- * revue sur `0d00658`) : elle est supprimée, pas allongée. Le témoin de `vues-derivees.spec.ts` confronte
- * `FAMILLES` à ce qui sort RÉELLEMENT du processus, dans les deux sens, et exige qu'une sortie verte
- * ne porte aucune ligne `[famille]`. Une évasion qui écrit sous un témoin se voit. Ce qui reste
- * ouvert, et c'est dit : une évasion dont AUCUN témoin ne tire la condition.
+ * CE QUE LE TYPE NE FERME PAS, ET POURQUOI LE TÉMOIN LIT LA SORTIE. Un transtypage ou un second canal
+ * qui écrit `[x]` lui-même passent le compilateur, et une garde qui lirait le source reconnaîtrait
+ * une orthographe, pas un acte. Le témoin de `vues-derivees.spec.ts` confronte donc `FAMILLES` à ce
+ * qui sort RÉELLEMENT du processus — toute ligne qui commence par `[…]`, quel que soit son contenu —
+ * dans les deux sens, et exige qu'une sortie verte n'en porte aucune. Ce qui reste ouvert, et c'est
+ * dit : une évasion dont AUCUN témoin ne tire la condition.
  */
 export const FAMILLES = [
   'vue_perimee',
@@ -832,19 +851,19 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; rubriq
   const reprise: Etage = { comparees: 0, exemptees: [] };
   const mesuresConfrontees: string[] = [];
 
-  /** Une zone exemptée garde son contenu libre, jamais sa structure. */
+  /** Une zone exemptée garde son contenu libre, jamais le droit d'atteindre ce qui l'entoure au rendu. */
   const contenir = (zone: string, texte: string) => {
     texte.split('\n').forEach((l, k) => {
-      const s = structureDeBloc(l);
+      const s = horsDeSaZone(l);
       if (s !== null) {
-        ecarts.push({ famille: 'structure_dans_une_exemption', message: `${zone}, ligne ${k + 1} de la vue sur le disque : « ${l.slice(0, 80)} » ouvre ${s}. Son CONTENU n'est pas comparé, sa STRUCTURE l'est : au rendu, elle atteindrait ce qui est comparé.` });
+        ecarts.push({ famille: 'structure_dans_une_exemption', message: `${zone}, ligne ${k + 1} de la vue sur le disque : « ${l.slice(0, 80)} » ${s}. Son CONTENU n'est pas comparé ; ce qu'elle fait au reste du document l'est.` });
       }
     });
   };
 
-  // 0. LA FIN DE LIGNE. Tout ce qui suit découpe sur LF ; CommonMark coupe AUSSI sur CR (A09 ·
-  // securite, revue sur `0d00658` : une prose exemptée prolongée par un CR masquait au rendu trois rubriques
-  // comparées, EXIT 0). Le générateur n'en écrit aucun : le refuser partout ne coûte rien.
+  // 0. LA FIN DE LIGNE. Tout ce qui suit découpe sur LF ; CommonMark coupe AUSSI sur CR, et une ligne
+  // exemptée prolongée par un CR en deviendrait deux au rendu. Le générateur n'en écrit aucun : le
+  // refuser partout ne coûte rien.
   for (const [ou, texte] of [['ce que produisent les sources', attendu], ['la vue sur le disque', surDisque]] as [string, string][]) {
     const i = texte.indexOf('\r');
     if (i >= 0) {
@@ -865,7 +884,7 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; rubriq
   // 2. LA STRUCTURE : les mêmes rubriques, une fois chacune, dans le même ordre.
   const rA = decouper(attendu);
   const rD = decouper(surDisque);
-  // Une rubrique dupliquée n'était ni comparée ni signalée — `find()` rend la PREMIÈRE (A09 · securite).
+  // Une rubrique dupliquée ne serait ni comparée ni signalée — `find()` rend la PREMIÈRE.
   for (const [ou, liste] of [['ce que produisent les sources', rA], ['la vue sur le disque', rD]] as [string, Rubrique[]][]) {
     const vus = new Set<string>();
     for (const r of liste) {
@@ -881,7 +900,7 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; rubriq
   for (const t of titresA) if (!titresD.includes(t)) ecarts.push({ famille: 'rubrique_manquante', message: `rubrique « ${t} » : absente de la vue sur le disque, produite par ses sources` });
   for (const t of titresD) if (!titresA.includes(t)) ecarts.push({ famille: 'rubrique_en_trop', message: `rubrique « ${t} » : présente dans la vue sur le disque, produite par aucune source` });
   // L'ORDRE : un mensonge n'a pas besoin d'être dans une rubrique comparée, il lui suffit d'être LU
-  // EN PREMIER (A09 · securite, 3e tour : une rubrique exemptée remontée au-dessus du bloc de reprise).
+  // EN PREMIER (une rubrique exemptée remontée au-dessus du bloc de reprise).
   if (titresA.length === titresD.length) {
     for (let k = 0; k < titresA.length; k += 1) {
       if (titresA[k] !== titresD[k]) {
@@ -913,8 +932,6 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; rubriq
   const blocA = rA.find((r) => r.titre === BLOC_DE_REPRISE);
   const blocD = rD.find((r) => r.titre === BLOC_DE_REPRISE);
   if (blocA && blocD) {
-    const question = (l: string) => (l.startsWith('|') ? (l.split('|')[1] ?? '').trim() : null);
-
     // LA FORME d'abord : l'ordre des lignes, les lignes vides, la nature de chacune. Une ligne
     // exemptée est libre de CONTENU, pas de PLACE — remontée au-dessus de l'en-tête du tableau, elle
     // en casserait le rendu, lignes comparées comprises.
@@ -958,8 +975,11 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; rubriq
         continue;
       }
       const motif = exemption(sourcesDesLignes.get(attendue));
-      // Une question commence par `|` : elle n'ouvre aucune structure de bloc, il n'y a rien à contenir.
-      if (motif !== null) { reprise.exemptees.push([q, motif]); continue; }
+      if (motif !== null) {
+        reprise.exemptees.push([q, motif]);
+        contenir(`bloc de reprise, ligne « ${q} »`, vue);
+        continue;
+      }
       reprise.comparees += 1;
       if (vue !== attendue) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise, ligne « ${q} » : la vue sur le disque dit « ${vue.slice(0, 160)} », ses sources produisent « ${attendue.slice(0, 160)} »` });
     }
@@ -967,7 +987,6 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; rubriq
     // Les PROSES, par leur RANG : la forme vient d'être confrontée, la n-ième prose du disque est donc
     // celle que les sources ont écrite n-ième. Il n'y a plus de préfixe à déclarer, donc plus de
     // préfixe vide qui exempterait tout.
-    const proses = (corps: string) => corps.split('\n').filter((l) => l.trim() !== '' && question(l) === null);
     const pA = proses(blocA.corps);
     const pD = proses(blocD.corps);
     for (let k = 0; k < Math.max(pA.length, pD.length); k += 1) {
@@ -993,11 +1012,11 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; rubriq
 const rendu = lignes.join('\n') + '\n';
 
 /**
- * 🔴 IMPORTER CE MODULE RÉÉCRIVAIT `docs/PLAN-STATE.md`. `vues-derivees.spec.ts` l'importe pour lire
- * `FAMILLES` ; sans `--verifier` dans les arguments de Vitest, le module tombait dans la branche qui
- * ÉCRIT — et le contre-témoin « la vue COMMITÉE est égale à ses sources » jugeait ensuite un fichier
- * que l'import venait de régénérer : vert par construction, et la vue du dépôt écrasée pendant les
- * tests. Les deux modes ne tournent donc que lorsque ce fichier est LE script lancé.
+ * IMPORTER CE MODULE N'ÉCRIT ET NE JUGE RIEN. `vues-derivees.spec.ts` l'importe (`FAMILLES`,
+ * `decouper`) ; si l'import tombait dans la branche qui ÉCRIT, le contre-témoin « la vue COMMITÉE est
+ * égale à ses sources » jugerait un fichier que l'import vient de régénérer — vert par construction.
+ * Les deux modes ne tournent donc que lorsque ce fichier est LE script lancé, et le témoin « importer
+ * le module » le voit rougir s'il écrit.
  */
 const LANCE_EN_SCRIPT = /[\\/]plan-state[\\/]build\.ts$/.test(process.argv[1] ?? '');
 

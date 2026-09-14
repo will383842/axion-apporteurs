@@ -131,10 +131,8 @@ jobs:
         run: pnpm gov:trace:prove
       - name: La vue de tracabilite est derivee de ses sources
         run: pnpm gov:trace:verifier
-      # GOV-035, REQ-GOV-032. LA CINQUIEME VUE, et la derniere sans verificateur : le script
-      # ECRIVAIT et rien ne comparait. Mesure : quinze lignes falsifiees dans PLAN-STATE, toutes
-      # ancres conservees (29/36 -> 36/36, reste 4.00 j -> 0.00, 2 bloquees -> 0), et les HUIT
-      # verificateurs ci-dessus sont restes verts. Elle compare tout, sauf ce que le generateur a LU
+      # GOV-035, REQ-GOV-032. LA CINQUIEME VUE : des compteurs falsifies, ancres conservees, ne font
+      # rougir aucun des verificateurs ci-dessus. Elle compare tout, sauf ce que le generateur a LU
       # hors du depot pour l'ecrire : comparer le SHA de main ou la file des PR mesurerait la forge,
       # pas la derivation, et une gate rouge apres chaque fusion s'apprend a etre sautee (RM-02,
       # LEC-13). Le vert imprime chaque exemption avec la source lue. Pas de continue-on-error.
@@ -144,9 +142,8 @@ jobs:
       # le temoin « exemption PORTANTE » rougit, parce que son texte ne change pas d'une forge a
       # l'autre).
       # AUCUN GH_TOKEN ici, et ce n est pas un oubli : le perimetre compare ne depend d aucun
-      # appel a la forge. Mesure du 2026-09-12, GH_CONFIG_DIR vide et GH_TOKEN vide : gh refuse,
-      # et la garde rend le MEME verdict — 9 rubriques comparees, exit 0. Sans jeton, seules les
-      # rubriques deja NON comparees changent.
+      # appel a la forge. Mesure : GH_CONFIG_DIR vide et GH_TOKEN vide, gh refuse, et la garde rend
+      # le MEME verdict, exit 0. Sans jeton, seules les rubriques deja NON comparees changent.
       - name: La vue de l etat vivant est egale a sa source
         run: pnpm plan-state:verifier
       # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,
