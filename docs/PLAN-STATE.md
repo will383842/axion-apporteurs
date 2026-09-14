@@ -8,8 +8,8 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `6237f96` — 2026-09-13T10:31:35+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #36 (rien) · 2. #39 (rien) · 3. #41 (rien) |
-| Qui tient quoi ? | GOV-037 (A01) |
+| Qu’est-ce qui est en vol ? | 1. #36 (rien) · 2. #39 (rien) · 3. #41 (rien) · 4. #44 (un contrôle requis rouge ou une revue manquante) · 5. #45 (un contrôle requis rouge ou une revue manquante) |
+| Qui tient quoi ? | GOV-035 (A01) · GOV-036 (A01) · GOV-037 (A01) · GOV-030 (A01) · GOV-031 (A01) |
 | Où en est la phase ? | phase -1 — 34/39 tâches, reste 3.50 j |
 | Le prochain pas | fusionner #36, puis GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
@@ -62,6 +62,8 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 | 1 | #36 — feat(GOV-035): docs/PLAN-STATE.md avait un generateur et aucun verificateur | `t/gov-035` | rien — fusionnable maintenant |
 | 2 | #39 — feat(GOV-036): les deux listes qui decident de ce que gov:entite REGARDE | `t/gov-036` | rien — fusionnable maintenant |
 | 3 | #41 — feat(GOV-030): la garde des termes interdits que six documents invoquaient sans quelle existe | `t/gov-030` | rien — fusionnable maintenant |
+| 4 | #44 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A | `t/gov-031` | un contrôle requis rouge ou une revue manquante |
+| 5 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -71,7 +73,11 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’i
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
+| GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur | A01 | #37 | `a_faire` |
+| GOV-036 — Les deux listes qui decident de ce que gov:entite REGARDE sont tapees a la main | A01 | #38 | `a_faire` |
 | GOV-037 — Les nombres se derivent, les ATTRIBUTIONS non : rien ne confronte un nom de tache a ses paths | A01 | #43 | `a_faire` |
+| GOV-030 — `gov:check` designe DEUX choses, et aucune ne fait ce que six documents lui pretent | A01 | #40 | `a_faire` |
+| GOV-031 — eslint.config.mjs porte « CE FICHIER N'A JAMAIS ETE EXECUTE », et c'etait vrai | A01 | #42 | `a_faire` |
 
 ⚠️ **15 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
