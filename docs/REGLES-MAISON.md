@@ -19,7 +19,7 @@
 | RM-03 | Fixtures depuis le producteur réel                      | `fixtures:source` (`Source:` obligatoire)               |
 | RM-04 | Une colonne de vocabulaire est un enum                  | `schema:enums`, `glossaire-enums.spec.ts`               |
 | RM-05 | Masquage qui échoue ouvert · droit par rôle, défaut = refus | `idor:check`, `requireRole` en garde AST             |
-| RM-06 | Index unique partiel dérivé de la constante d'états     | `pg_indexes` test, `gov:check` (liste littérale interdite) |
+| RM-06 | Index unique partiel dérivé de la constante d'états     | `pg_indexes` test, `partners:schema:enums` (liste littérale interdite, `partners/ADR-0011`) |
 | RM-07 | Chercher les appelants avant d'extraire                 | revue lentille « simplicité & dérivation »              |
 | RM-08 | Une valeur qu'un tiers doit accepter se confronte à sa doc | `fixtures:source` vers `docs/tiers/<nom>.md`         |
 | RM-09 | Une fusion à la fois, l'atterrissage vérifié            | `deploy:verify`, `aucun-workflow-ne-pousse-sur-main`    |
@@ -43,7 +43,8 @@ plan, `TASKS.md`, `PLAN-STATE.md`, `TRACEABILITY.md` : **générés**.
 directeur lui-même a porté trois totaux différents pour le même backlog.
 
 **Comment on la voit.** Un `diff` entre la source et la copie régénérée est vide ; un hash embarqué = hash recalculé ;
-`gov:check` refuse toute liste littérale d'états hors REQ-DM-003.
+`partners:schema:enums` refuse, dans `src`, `prisma` et `scripts`, une ligne qui nomme deux états occupants ou plus hors
+de leur source unique (`partners/ADR-0011`).
 
 ## RM-02 — Une garde ne vaut que si on l'a vue rougir
 
@@ -103,7 +104,8 @@ test lit `pg_indexes` et compare.
 **Pourquoi.** L'index proposé par les documents couvrait 2 états sur 7 ; deux attributions vivantes sur un même SIREN
 étaient possibles, et Prisma ne sait ni déclarer ni détecter la dérive d'un index partiel.
 
-**Comment on la voit.** `gov:check` refuse `('provisoire','active')` et toute liste littérale ; `pg_indexes.spec.ts`
+**Comment on la voit.** `partners:schema:enums` refuse `('provisoire','active')` — la clause `IN` comme la comparaison
+booléenne, dès deux états sur une ligne (`partners/ADR-0011`) ; `pg_indexes.spec.ts`
 compare la définition en base à la constante.
 
 ## RM-07 — Chercher les appelants avant d'extraire

@@ -410,24 +410,20 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    */
   const declares: Record<string, { total: number; porte: number; temoins: number; raison: string }> = {
     'scripts/gates/gov-check.ts': {
-      total: 4,
-      porte: 4,
-      // ZÉRO, et c'est exact : le compteur `temoins` de ce registre est confronté au tableau
-      // `REFUS` de CE fichier. Les témoins de ces quatre refus vivent ailleurs — les compter ici
-      // gonflerait une somme qui doit rester égale à sa source. *Un zéro assumé vaut mieux qu'un
-      // compteur qu'on gonfle pour se donner raison.*
+      total: 1,
+      porte: 1,
+      // ZÉRO : le compteur `temoins` de ce registre est confronté au tableau `REFUS` de CE fichier,
+      // et les témoins de cette sortie vivent dans `termes-interdits.spec.ts`.
       temoins: 0,
       raison:
         'GOV-030 — la garde des termes interdits, que six documents invoquaient sans qu’elle ' +
-        'existe. Quatre refus : (1) un témoin de `--prove` qui ne mord plus, (2) un ' +
-        'contre-témoin devenu faux positif, (3) la population de `docs/gates.json` illisible, ' +
-        'divergente du code ou non couverte, (4) le verdict sur le dépôt. Les trois premiers sont ' +
-        'VUS ROUGIR par mutation de `gov-check.ts` — JSON rendu citable (1), guillemets français ' +
-        'privés de citation (2), témoin de `perimetre_vide` supprimé (3) : chacun fait sortir ' +
-        '`--prove` en 1, étape bloquante de Gate A que `termes-interdits.spec.ts` lance aussi. ' +
-        'Le quatrième est tenu par le contrôle qui la ' +
-        'lance sur le dépôt réel. Le REFUS DE PÉRIMÈTRE, lui, n’est pas compté ici : il vient de ' +
-        '`fichiersSuivisOuRefus`, et `GARDES_QUI_BALAIENT` le déclare plus bas.',
+        'existe. UNE sortie, `process.exit(decision.code)`, commune aux deux modes : le code vient ' +
+        'de `decisionDeLaPreuve` (témoin sans morsure, faux positif, population du registre ' +
+        'illisible, divergente ou non couverte) ou de `decisionDeLaGarde` (une faute sur le dépôt). ' +
+        'Les deux sont des fonctions PURES que `termes-interdits.spec.ts` voit rendre 1 entrée par ' +
+        'entrée, et la sortie elle-même est vue en 1 sur un dépôt jetable fautif. Le REFUS DE ' +
+        'PÉRIMÈTRE n’est pas compté ici : il vient de `fichiersSuivisOuRefus`, et ' +
+        '`GARDES_QUI_BALAIENT` le déclare plus bas.',
     },
     // ── RÉCONCILIATION `gov-038` : QUATRE fichiers apportent DIX sorties non nulles ──────────
     // Le cliquet a rougi en NOMMANT le premier (`gov-attestation.ts ajoute 3 … et n'est PAS
@@ -737,14 +733,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // `gov-tasks` +1). Le cliquet a rougi en nommant le premier — il n'a pas été contourné, il a
     // été LU. ⚠️ Le seuil est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une
     // branche. Mesuré sur l'arbre réconcilié : 179 sorties non nulles sous `scripts/`.
-    // 🔧 35 → 39 par GOV-030, ARBITRÉ et non subi. `scripts/gates/gov-check.ts` naît avec quatre
-    // sorties — la garde des termes interdits que `docs/gates.json` déclarait depuis GOV-000 sans
-    // qu'aucun script n'existe. Le cliquet a rougi en la nommant (« ajoute 4 `process.exit(1)` et
-    // n'est PAS déclaré ici »), puis une seconde fois sur le compte des témoins : les deux fois il
-    // a été LU, pas contourné. Trois de ces refus sont vus rougir par MUTATION de `gov-check.ts`
-    // (la `raison` de son entrée les nomme) ; le quatrième — le verdict sur le dépôt — par le
-    // contrôle qui lance la gate sur l'arbre réel.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(39);
+    // 🔧 35 → 36 par GOV-030, ARBITRÉ et non subi. `scripts/gates/gov-check.ts` naît avec UNE
+    // sortie non nulle, `process.exit(decision.code)` : la décision est une fonction pure, vue
+    // rendre 1 par `termes-interdits.spec.ts`, et la sortie est vue en 1 sur un dépôt jetable.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(36);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.

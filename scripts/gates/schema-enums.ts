@@ -24,12 +24,9 @@
  *     syntaxe — une clause `IN (…)` et une comparaison booléenne `x === a || x === b` rougissent
  *     pareil. L'index partiel proposé par les documents d'origine ne couvrait que deux états sur
  *     sept, et rien ne l'a dit pendant des semaines.
- *     ⚠️ CETTE GARDE EST LA SEULE IMPLÉMENTATION DE LA FAMILLE (`partners/ADR-0011`). GOV-030 en
- *     avait livré une seconde dans `gov-check.ts`, au seuil DEUX, qui tournait dans le même job
- *     `gate-a` à quatre étapes d'écart et rendait le verdict OPPOSÉ sur la même entrée. Ce qui
- *     reste hors de portée est dit à voix haute par `gov-check.ts` à chaque exécution :
- *     `messages/**`, `docs/adr/**` et `packages/contracts/**` ne sont gardés par personne sur
- *     cette famille-là, parce que `RACINES_CODE` ne les contient pas.
+ *     Cette garde est la SEULE implémentation de la famille (`partners/ADR-0011`). Sa portée
+ *     (`RACINES_CODE`, `EXTENSIONS_CODE`) est exportée : `gov-check.ts` en DÉRIVE, à chaque
+ *     exécution, les racines que cette famille ne couvre pas.
  *   — Toute colonne de VOCABULAIRE est un enum. ⚠️ La citation de `REQ-DM-038` — « statut, type,
  *     motif, resultat, etat, origine, kind ou palier » — est le texte du REGISTRE, qui a perdu
  *     `status` et `priorite` à la fusion. La liste EXÉCUTÉE (`NOMS_DE_VOCABULAIRE`) porte les dix
@@ -61,31 +58,16 @@ const CHEMIN_EXIGENCES = 'docs/requirements.json';
 const CHEMIN_ETATS = 'src/domain/attribution/etats.ts';
 
 /** Les racines où une liste d'états ou un repli muet ne doivent pas apparaître. */
-const RACINES_CODE = ['src', 'prisma', 'scripts'];
-const EXTENSIONS_CODE = /\.(ts|tsx|prisma|sql)$/;
+export const RACINES_CODE = ['src', 'prisma', 'scripts'] as const;
+/** Les extensions lues sous ces racines. `gov-check.ts` imprime cette portée : elle ne se retape pas. */
+export const EXTENSIONS_CODE = ['ts', 'tsx', 'prisma', 'sql'] as const;
+const MOTIF_EXTENSIONS_CODE = new RegExp(`\\.(${EXTENSIONS_CODE.join('|')})$`);
 
 /**
  * Les fichiers qui ont le DROIT de porter la liste. CHACUN PORTE SON MOTIF : exempter sans motif,
- * c'est ouvrir un trou que personne ne relira.
- *
- * ⚠️ CETTE LISTE A ÉTÉ REBÂTIE ENTRÉE PAR ENTRÉE CONTRE LE PÉRIMÈTRE D'ARRIVÉE, jamais recopiée.
- * `partners/ADR-0011` fait de cette garde la SEULE implémentation de `liste_litterale_d_etats` ;
- * `gov-check.ts` en portait une liste jumelle dont DEUX des trois entrées étaient mortes sous SON
- * périmètre. *Une entrée morte sous l'ancien périmètre devient un trou vivant sous le nouveau* :
- * la recopier aurait exempté des chemins sans que personne vérifie s'ils en ont encore besoin.
- * Mesure faite, au seuil DEUX, sur `src`, `prisma` et `scripts` :
- *   — `src/domain/attribution/etats.ts` : la SOURCE UNIQUE. Elle écrit la liste un état par
- *     ligne, donc elle ne déclenche rien aujourd'hui — mais son contre-témoin, lui, est
- *     ATTEIGNABLE (il vit sous `src/`), et c'est le seul critère qui vaut : une exemption dont le
- *     contre-témoin est hors périmètre est verte parce qu'on ne l'atteint jamais ;
- *   — `scripts/gates/schema-enums.ts` : cette garde. Sa fixture PORTE les sept états (RM-11 : une
- *     preuve qui lit le dépôt ne prouve plus rien de la garde), et ses témoins portent des
- *     sous-ensembles. Quatre lignes réelles, mesurées ;
- *   — `scripts/gates/gov-check.ts` : PAS ICI, et c'est une mesure, pas un oubli. Il portait sept
- *     lignes à deux états avant cette révision ; elles ont été RETIRÉES avec la famille. Mesuré
- *     après coup : zéro. Une exemption y serait du code mort qui a l'air de protéger ;
- *   — `tests/**` : PAS ICI non plus — `RACINES_CODE` ne contient pas `tests`, donc aucune
- *     exemption n'y serait jamais atteinte.
+ * c'est ouvrir un trou que personne ne relira. L'exemption vaut pour le CHEMIN EXACT, et chaque
+ * entrée a un contre-témoin atteignable (sous une racine de `RACINES_CODE`) ; un voisin de la
+ * source unique, dans le même dossier, a son témoin qui rougit.
  */
 const PORTEURS_LEGITIMES: { chemin: string; motif: string }[] = [
   { chemin: CHEMIN_ETATS, motif: 'la source unique — interdire ici, c’est interdire la solution' },
@@ -332,27 +314,9 @@ export function controler(vue: Vue): Faute[] {
     });
   }
 
-  // ── RM-06, ET LE DISCRIMINANT EST LA COUVERTURE ─────────────────────────────────────────────
-  //
-  // ⚠️ LE SEUIL EST PASSÉ DE TROIS À DEUX, et c'est un REVIREMENT — `partners/ADR-0011`. Deux
-  // choses l'ont imposé :
-  //   1. `gov-check.ts` portait une SECONDE implémentation de cette famille, au seuil DEUX. Les
-  //      deux tournaient dans le même job, à quatre étapes d'écart, et rendaient des verdicts
-  //      OPPOSÉS sur la même entrée. Une seule pouvait rester ;
-  //   2. la propriété que RM-06 protège n'est pas un NOMBRE de noms, c'est une COUVERTURE : deux
-  //      états sur sept, c'est deux attributions vivantes sur un même SIREN. L'index à deux états
-  //      que les documents d'origine proposaient passait DONC sous un seuil de trois — le défaut
-  //      exact que cette garde existe pour voir.
-  //
-  // 🔴 CE QUI A ÉTÉ ÉCARTÉ, pour que personne ne le repropose : « comparaison booléenne légitime,
-  // énumération littérale interdite ». Un verdict qui bascule sur l'OPÉRATEUR est un oracle — il
-  // suffirait de réécrire la clause `IN (…)` en `x === 'a' || x === 'b'` pour verdir la garde, et
-  // la forme booléenne porte exactement la même propriété. Le discriminant est donc l'ENSEMBLE des
-  // états nommés sur la ligne, jamais la syntaxe qui les nomme.
-  //
-  // Le prédicat métier qui demande vraiment « l'un de ces deux états ? », sans rapport avec
-  // l'occupation du SIREN, passe par `PORTEURS_LEGITIMES` : une exemption NOMMÉE, qui porte son
-  // motif et qu'une relecture peut contredire. Pas par un silence de seuil.
+  // RM-06 : le discriminant est la COUVERTURE — deux états occupants nommés sur une ligne, quel
+  // que soit l'opérateur qui les relie. Seuil, alternatives écartées et retour arrière :
+  // `partners/ADR-0011`. Un prédicat légitime passe par `PORTEURS_LEGITIMES`, jamais par un seuil.
   const quotes = new RegExp(`['"\`](${attendus.join('|')})['"\`]`, 'g');
   for (const f of vue.code) {
     if (PORTEURS_LEGITIMES.some((p) => p.chemin === f.chemin)) continue;
@@ -429,7 +393,7 @@ function lister(racine: string): string[] {
   for (const entree of readdirSync(racine)) {
     const chemin = join(racine, entree).replace(/\\/g, '/');
     if (statSync(chemin).isDirectory()) sortie.push(...lister(chemin));
-    else if (EXTENSIONS_CODE.test(chemin)) sortie.push(chemin);
+    else if (MOTIF_EXTENSIONS_CODE.test(chemin)) sortie.push(chemin);
   }
   return sortie;
 }
@@ -543,19 +507,7 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
       ],
     }),
   },
-  /**
-   * ⚠️ CE TÉMOIN ÉTAIT UN CONTRE-TÉMOIN, ET IL S'EST RETOURNÉ — `partners/ADR-0011`.
-   *
-   * Il assérait, en exécutable, que « deux états seulement sur une ligne : une requête peut nommer
-   * un couple sans le recopier » devait rester VERT. L'arbitrage dit l'inverse : la propriété que
-   * RM-06 protège est la COUVERTURE, et deux états sur sept, c'est deux attributions vivantes sur
-   * un même SIREN. L'assertion est donc devenue FAUSSE — on ne l'habille pas d'une exemption, on
-   * la déplace ici, où elle dit maintenant ce qui est vrai.
-   *
-   * La famille a désormais DEUX témoins : une énumération (au-dessus) et une comparaison
-   * booléenne (ici). C'est la couverture, écrite en exécutable — et la démonstration que le
-   * verdict ne bascule PAS sur l'opérateur.
-   */
+  // La comparaison booléenne à deux états : le verdict ne bascule pas sur l'opérateur (`partners/ADR-0011`).
   {
     famille: 'liste_litterale_d_etats',
     vue: () => ({
@@ -564,6 +516,19 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
         {
           chemin: 'src/server/x.ts',
           contenu: "if (s === 'provisoire' || s === 'active') return;",
+        },
+      ],
+    }),
+  },
+  // Le VOISIN de la source unique, dans son dossier : l'exemption vaut pour un chemin, pas un dossier.
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [
+        {
+          chemin: 'src/domain/attribution/requete.ts',
+          contenu: "const vivantes = ['provisoire', 'active'];",
         },
       ],
     }),
@@ -617,11 +582,6 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
       code: [{ chemin: 'scripts/gates/schema-enums.ts', contenu: "code: ['provisoire', 'active']" }],
     }),
   },
-  // ⚠️ ICI VIVAIT « deux états seulement sur une ligne : une requête peut nommer un couple sans le
-  // recopier ». Ce n'était pas une exemption, c'était une ASSERTION EXÉCUTABLE — « la garde ne doit
-  // PAS rougir là-dessus ». `partners/ADR-0011` l'a rendue fausse : elle a rejoint `TEMOINS`.
-  // La famille garde un contre-témoin légitime, juste au-dessus (la source unique porte la liste),
-  // et c'est ce qui empêche le nouveau seuil de rougir sur tout.
   {
     quoi: 'un repli vers une valeur EXPLICITE, qui ne déguise rien',
     vue: () => ({

@@ -2,180 +2,64 @@
  * gov-check.ts — la garde des TERMES INTERDITS (GOV-030 ; REQ-DM-003, REQ-INT-004).
  *
  * USAGE : npx tsx scripts/gates/gov-check.ts           (juge le dépôt réel ; sort 1 sur faute)
- *         npx tsx scripts/gates/gov-check.ts --prove   (un témoin ROUGE par famille et par refus,
- *                                                       des contre-témoins VERTS, sur une FIXTURE)
+ *         npx tsx scripts/gates/gov-check.ts --prove   (chaque témoin ROUGE, chaque contre-témoin
+ *                                                       VERT, sur une FIXTURE)
  *
- * ── POURQUOI CE FICHIER EXISTE ──────────────────────────────────────────────────────────────
+ * `docs/gates.json` déclarait depuis GOV-000 une entrée `gov:check` dont ce script n'existait pas,
+ * pendant que six documents (sept références) disaient « `gov:check` rougit sur … ». Le même nom
+ * désigne aussi, dans `package.json`, une CHAÎNE de seize gardes : ce fichier livre la garde que le
+ * registre décrit, et laisse l'homonymie à un ADR (acceptation de GOV-030).
  *
- * `docs/gates.json` déclare depuis GOV-000 une entrée `gov:check` dont le script — ce fichier —
- * N'EXISTAIT PAS, et aucun autre script ne faisait ce travail. SIX DOCUMENTS du dépôt s'appuyaient
- * dessus, par sept références : `docs/GLOSSAIRE.md`, `docs/CONVENTIONS.md` §2,
- * `docs/REGLES-MAISON.md` (RM-01 et RM-06 — deux affirmations, un seul document),
- * `packages/contracts/events.ts`, REQ-GOV-001 et la vue `docs/GATES.md`. Toutes disaient
- * « `gov:check` rougit sur … » d'une garde qui n'avait jamais tourné.
+ * ── CE QU'ELLE TIENT, ET D'OÙ CHAQUE VALEUR EST LUE (RM-01) ─────────────────────────────────
  *
- * ⚠️ « six DOCUMENTS », et non « six affirmations » : la liste en produit SEPT. La lentille
- * `exactitude` a relevé l'écart — le compte était juste, le nom du compté ne l'était pas.
+ *   • `terme_axionia_invalide` — les modèles qu'axionia n'a pas (AFF-01 à AFF-03), LUS dans
+ *     REQ-INT-004 (« aucun événement ne référence … ») et dans le glossaire (« des modèles
+ *     supprimés d'axionia »).
+ *   • `evenement_hors_nomenclature` — un nom d'événement refusé par le glossaire, là où
+ *     REQ-INT-004 impose le français.
+ *   • `evenement_litteral_hors_contrat` — un nom VALIDE (LU dans REQ-INT-004) écrit à la main hors
+ *     de `packages/contracts`.
+ *   • `synonyme_interdit_du_glossaire` — LU dans `docs/GLOSSAIRE.md` (`docs/PRESEANCE.md` §2).
+ *   • `source_illisible` (cinq refus nommés, `REFUS_DE_CONCLURE`) et `perimetre_vide` — le refus de
+ *     rendre un verdict qu'on n'a pas mesuré.
  *
- * ⚠️ LE NOM DÉSIGNE ENCORE DEUX CHOSES, ET CE FICHIER N'EN TRANCHE QU'UNE.
- * `package.json` déclare sous le même nom `gov:check` une CHAÎNE de seize gardes de gouvernance
- * qu'aucun workflow n'appelle. Le choix entre renommer la chaîne et renommer l'entrée du registre
- * engage un identifiant que six documents citent : l'acceptation de GOV-030 le renvoie
- * explicitement à un ADR, pas à une PR. Ce fichier livre donc la GARDE que le registre décrit.
+ * Les listes littérales d'états occupants ne sont PAS ici : `partners/ADR-0011` en fait la seule
+ * implémentation de `partners:schema:enums`. La sortie imprime, DÉRIVÉ de la portée exportée par
+ * `schema-enums.ts`, ce que cette famille ne couvre pas.
  *
- * ── CE QU'ELLE TIENT, FAMILLE PAR FAMILLE, ET D'OÙ CHAQUE VALEUR EST LUE (RM-01) ────────────
+ * ── LE PÉRIMÈTRE : UNE DÉFINITION, `perimetreDeLaVue` ───────────────────────────────────────
  *
- * Aucune des listes ci-dessous n'est tapée ici. Chacune se LIT dans sa source unique, et le
- * refus de conclure quand la source est muette est une famille à part entière :
+ * La vue porte TOUS les fichiers suivis. Les racines sont LUES dans l'en-tête de
+ * `docs/GLOSSAIRE.md`, plus `packages/contracts/` (seul endroit où un nom d'événement s'écrit :
+ * sans cette racine, son exemption n'aurait aucun contre-témoin atteignable). Tout fichier suivi
+ * sous une racine est LU, quelle que soit son extension ; le reste est « hors périmètre ». Le
+ * contrôle et les comptes imprimés viennent de cette seule partition : lus + hors = suivis.
  *
- *   • `terme_axionia_invalide` — `Invoice`, `Refund`, `PaymentScheduleProfile` : des modèles que
- *     le dossier de spécification prête à axionia et qui n'y existent pas (`docs/AFFIRMATIONS-
- *     AXIONIA.md`, repères AFF-01 à AFF-03). LUS dans la clause « aucun événement ne référence …»
- *     de REQ-INT-004 et dans la clause « des modèles supprimés d'axionia » du glossaire.
- *   • `evenement_hors_nomenclature` — un nom d'événement que REQ-INT-004 ne nomme pas, là où
- *     l'exigence impose le français (`payment.received`, `invoice.issued`, `devis.signed`…).
- *     LUS : les sept types valides dans REQ-INT-004, les préfixes d'entité dans ces mêmes types
- *     et dans les synonymes interdits du glossaire.
- *   • `evenement_litteral_hors_contrat` — un nom VALIDE, mais écrit à la main hors de
- *     `packages/contracts`. C'est la clause « aucun nom d'événement littéral hors
- *     packages/contracts » du registre, et `packages/contracts/events.ts` la revendique.
- *   • `synonyme_interdit_du_glossaire` — LUS dans `docs/GLOSSAIRE.md`, dont `docs/PRESEANCE.md`
- *     §2 fait la source primaire sur « un terme et ses synonymes interdits ».
- *   • `source_illisible` / `perimetre_vide` — le refus de rendre un verdict qu'on n'a pas mesuré.
- *     ⚠️ `source_illisible` couvre CINQ refus distincts. La lentille `mutation` en a neutralisé
- *     six, un par un (le sixième — la liste d'états vide — est parti avec sa famille) : QUATRE
- *     sont restés verts, dont TROIS des cinq qui restent ici. Une famille pour cinq refus, c'est
- *     une population plus grossière que ce qu'elle prétend garder. Les refus sont donc DÉCLARÉS
- *     (`REFUS_DE_CONCLURE`), chaque faute nomme le sien, et `--prove` exige un témoin PAR REFUS.
- *     Le NOM de la famille reste `source_illisible` : quatre autres gardes l'emploient
- *     (`gov-depot.ts`, `gov-entite.ts`, `perf-budgets.ts`, `schema-enums.ts`), et une garde qui
- *     renomme pour elle seule un mot de vocabulaire partagé fait diverger ce qu'elle tient.
+ * ── L'EXEMPTION DE CITATION SE LIT SUR LA GRAMMAIRE ET LA POSITION ───────────────────────────
  *
- * ── ⚠️ LA FAMILLE `liste_litterale_d_etats` N'EST PAS ICI, ET C'EST DÉLIBÉRÉ ─────────────────
+ * CITER N'EST PAS SE SERVIR : un ADR doit pouvoir écrire le contre-exemple qu'il écarte. Seules
+ * trois extensions accordent une exemption, et chacune a un témoin de CHAQUE côté de sa frontière :
+ *   — `.md` (prose) : un span d'accents graves fermé sur SA ligne ou la SUIVANTE, un bloc à trois
+ *     accents graves REFERMÉ, des guillemets français. Le guillemet droit ne cite pas ;
+ *   — `.sql` : les spans d'accents graves DANS un commentaire (deux tirets, bloc barre-étoile) ;
+ *   — `.prisma` : les spans d'accents graves DANS un commentaire (double ou triple barre).
+ * Toute autre extension — code, JSON, YAML, et toute extension non nommée — n'exempte RIEN.
  *
- * Elle a existé dans ce fichier, au seuil DEUX, pendant que `scripts/gates/schema-enums.ts`
- * (GOV-006) la portait au seuil TROIS — deux implémentations du même nom de famille, dans le même
- * job `gate-a`, à quatre étapes d'écart, rendant des VERDICTS OPPOSÉS sur la même entrée. La
- * lentille `simplicite` l'a mesuré ; `partners/ADR-0011` tranche : UNE SEULE implémentation,
- * chez GOV-006, au discriminant de COUVERTURE (une ligne qui énumère un sous-ensemble des états
- * occupants, hors de sa source, est rouge — la clause SQL comme la comparaison booléenne).
+ * ── LA PREUVE : SA POPULATION VIENT DU REGISTRE, SA DÉCISION EST UNE FONCTION PURE ───────────
  *
- * CE QUE LE DÉPLACEMENT COÛTE, DIT À VOIX HAUTE — parce qu'une fusion qui perd une racine en
- * silence est exactement le défaut qu'on vient de fermer. `partners:schema:enums` balaie
- * `src`, `prisma` et `scripts` en `.ts/.tsx/.prisma/.sql`. Les trois racines que cette garde-ci
- * balayait et que l'autre ne balaie PAS sont donc, pour cette famille seulement :
- * `messages/**`, `docs/adr/**` et `packages/contracts/**`. En contrepartie, GOV-006 garde la
- * racine `scripts/`, que cette garde n'a jamais lue et où vivaient les sept seules occurrences du
- * dépôt. Aucune des deux n'est un sur-ensemble de l'autre : l'arbitrage est écrit dans l'ADR, pas
- * déduit ici, et la sortie de cette garde le RÉPÈTE à chaque exécution.
- *
- * ── LE PÉRIMÈTRE, ET POURQUOI IL N'EST PAS « PARTOUT » ──────────────────────────────────────
- *
- * Les racines balayées sont LUES dans l'en-tête de `docs/GLOSSAIRE.md` — `prisma/**`, `src/**`,
- * `messages/**`, `docs/adr/**` —, plus `packages/contracts/**` (le motif est sur `RACINE_CONTRATS`).
- * C'est la seule source du dépôt qui donne un périmètre à cette garde, et `docs/PRESEANCE.md` §2
- * lui donne la primauté sur « un terme et ses synonymes interdits ».
- *
- * Le champ `verifie` de `docs/gates.json` écrivait « partout (code, docs, registre) ». Pris au
- * mot, il fait rougir 78 fois — mesuré avant d'être écarté — et PAS UNE dans ces racines.
- * ⚠️ LA VENTILATION RÉELLE DE CES 78, parce que la première rédaction les disait toutes « dans
- * les registres » et que c'est cette phrase qui porte l'argument du périmètre restreint :
- *   — 44 dans les deux registres : `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` 25, `docs/REQUIREMENTS.md` 19 ;
- *   — 34 AILLEURS : `scripts/gates/gov-sonde.ts` 16,
- *     `tests/unit/gouvernance/affirmations-verifiees.spec.ts` 10, `docs/TASKS.md` 3,
- *     `tests/unit/integration/contrat-hash.spec.ts` 3, `scripts/gates/gov-autonomie.ts` 1,
- *     `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` 1.
- * Les 34 ne CONSIGNENT aucun arbitrage : élargir le périmètre coûterait un vrai correctif, pas
- * une exemption de registre — et l'un d'eux est dans un `.ts`, où aucune exemption de citation ne
- * joue. L'écart est remonté au `gardien-spec`, à qui l'élargissement appartient, et le compte des
- * fichiers laissés dehors est imprimé à chaque exécution.
- *
- * ── L'EXEMPTION DE CITATION SE DÉFINIT PAR LA GRAMMAIRE DU FICHIER ───────────────────────────
- *
- * CITER N'EST PAS SE SERVIR. Les documents qui EXPLIQUENT l'interdit doivent pouvoir écrire son
- * contre-exemple : `docs/GLOSSAIRE.md` énumère les synonymes refusés, et les ADR de `docs/adr/**`
- * — qui sont DANS le périmètre — écrivent les noms anglais pour dire qu'ils sont écartés. Une
- * garde qui rougirait là-dessus obligerait à RETIRER le texte qui la porte — défaut déjà rencontré
- * et corrigé sur `gov:identifiants`, qui rougissait sur cinq occurrences de sa documentation.
- *
- * ⚠️ CE QUI A ÉTÉ CORRIGÉ ICI, ET POURQUOI L'AXE N'EST PAS L'EXTENSION. La première rédaction
- * appliquait `zonesCitees` — une heuristique de PROSE, écrite pour `lexique-apporteurs.ts` — à
- * tout fichier non-`.ts`. Trois évasions mesurées, toutes en sortie zéro sur du contenu interdit :
- *   1. le guillemet DROIT y vaut citation. Or c'est le seul délimiteur de chaîne de JSON :
- *      `messages/**`, une racine que cette garde DÉCLARE balayer, y était aveugle à 100 % PAR
- *      CONSTRUCTION — le compte de fichiers bougeait, et la garde ne lisait rien ;
- *   2. deux accents graves éloignés d'un `.md` blanchissaient TOUT l'intervalle : quatre fautes
- *      effacées par une simple coquille dans un ADR ;
- *   3. en `.sql` et en `.prisma`, tout accent grave exemptait, commentaire ou pas.
- *
- * L'exemption se lit donc désormais sur la GRAMMAIRE du fichier, et sur la POSITION dans le
- * fichier — jamais sur son extension seule :
- *   — `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs` : l'accent grave OUVRE un gabarit de chaîne.
- *     AUCUNE exemption ; un terme y est une valeur, pas une citation ;
- *   — `.json` : tout y est une valeur, et le guillemet droit est le délimiteur. AUCUNE exemption ;
- *   — `.md` : de la prose. Les blocs à trois accents graves sont cités en entier S'ILS SE
- *     REFERMENT — une clôture impaire n'ouvre rien, sans quoi une coquille amnistierait toute la
- *     fin du document ; un span
- *     d'accents graves est cité s'il se ferme sur SA ligne ou sur la SUIVANTE — pas au-delà ;
- *     les guillemets français citent aussi. Le guillemet droit, lui, ne cite pas : en Markdown il
- *     n'a aucun rôle syntaxique, et l'admettre rouvre l'évasion n°1 ;
- *   — `.yml`, `.yaml` et toute extension non nommée : AUCUNE exemption. Aucun fichier YAML ne vit
- *     dans les racines, donc une exemption YAML n'aurait AUCUN contre-témoin atteignable — et une
- *     exemption qu'on n'atteint jamais est du code mort qui a l'air de protéger ;
- *   — `.sql`, `.prisma` : l'accent grave n'y délimite rien (Postgres cite ses
- *     identifiants par guillemets doubles, Prisma par rien), donc il CITE — mais SEULEMENT DANS
- *     UN COMMENTAIRE (les deux tirets et le bloc barre-étoile en SQL, la double ou triple barre
- *     en Prisma). Hors
- *     commentaire, aucune raison d'exempter. Mesuré sur le dépôt réel : les
- *     onze lignes à accent grave de `prisma/schema.prisma` sont TOUTES des commentaires triple
- *     barre, dont `:49` qui écrit noir sur blanc que `qualificateur` est un synonyme interdit. Un
- *     discriminant par EXTENSION aurait rougi sur ce commentaire-là, c'est-à-dire sur le texte qui
- *     porte la règle ; le discriminant par POSITION est vert dessus et fermé sur l'appât. Le
- *     contre-témoin `.prisma` de `--prove` tient ce cas, et il est ATTEIGNABLE.
- *
- * ⚠️ POURQUOI LE SPAN D'ACCENTS GRAVES TRAVERSE UNE LIGNE, ET UNE SEULE. `docs/GLOSSAIRE.md` en
- * porte un : la description de `EvenementRecu` cite `{source …, eventId …, eventType, …}` sur deux
- * lignes. Une exemption calculée ligne à ligne aurait rougi sur la seconde moitié d'une citation.
- * Mais un appariement SANS BORNE fait d'une coquille une amnistie générale : la borne est d'UNE
- * continuation. Au-delà, l'accent grave pendant est abandonné et le suivant rouvre un span.
- *
- * ── LA POPULATION DE LA PREUVE VIENT DU REGISTRE, PAS DE CE FICHIER ─────────────────────────
- *
- * `--prove` ne peut pas être sa propre population. La lentille `mutation` a mesuré trois façons de
- * rendre « chaque famille rougit sur son témoin » FAUSSE sans qu'une étape bouge : retirer une
- * entrée de `FAMILLES` (le compte attendu et le compte imprimé bougeaient ENSEMBLE), supprimer un
- * témoin (l'ensemble couvert était nourri par TOUTES les fautes de TOUS les témoins, donc une
- * faute incidente tenait la famille d'un autre), et rendre la boucle inatteignable.
- *
- * Les trois sont fermées ici, et la logique vit dans deux fonctions PURES et exportées
- * (`eprouver`, `ecartsDePopulation`) pour que le contrôle en exerce chaque branche :
- *   — la population attendue est LUE dans le champ `verifie` de l'entrée `gov:check` de
- *     `docs/gates.json`. Elle ne vient plus du module jugé. Un registre muet est un REFUS ;
- *   — `FAMILLES` et `REFUS_DE_CONCLURE` sont CONFRONTÉS à cette population DANS LES DEUX SENS :
- *     retirer une entrée du code seul fait rougir, et retirer une entrée du registre seul rend
- *     ses témoins ORPHELINS, ce qui rougit aussi ;
- *   — l'ensemble couvert n'est nourri QUE par la faute qui porte la famille ET le refus du témoin.
- *     Une faute incidente ne couvre plus rien, et supprimer un témoin découvre SA clé.
- *
- * ⚠️ RM-11, ET CE QU'IL INTERDIT EXACTEMENT. `--prove` ne juge que des vues INJECTÉES : le
- * VERDICT ne dépend d'aucun fichier du dépôt, et c'est cela que RM-11 protège. Ce qu'il lit du
- * dépôt, c'est la DÉCLARATION de ce qu'il doit prouver — le registre —, jamais la matière jugée.
- * Le chemin du registre est résolu depuis ce fichier, pas depuis le répertoire courant, pour que
- * la preuve ne dépende pas non plus d'où on la lance. En contrepartie, une fixture peut décrire
- * une grammaire que la source n'a plus : `termes-interdits.spec.ts` confronte donc, sur le dépôt
- * réel, ce que la fixture dérive et ce que les sources dérivent.
- *
- * ── INVARIANT DU PÉRIMÈTRE ──────────────────────────────────────────────────────────────────
- * « 0 fichier balayé » n'est pas « aucun défaut ». En phase −1, `messages/` est VIDE et `src/`
- * ne porte que trois fichiers : la garde imprime le compte de CHAQUE racine, zéros compris,
- * nomme celles qui sont vides, et REFUSE de conclure quand le périmètre entier est vide.
+ * Le champ `verifie` de l'entrée `gov:check` énumère les familles, les refus et l'identifiant de
+ * CHAQUE témoin. `decisionDeLaPreuve` confronte le code à cette population dans les deux sens,
+ * n'accorde une clé qu'au témoin qui MORD (sa famille et son refus), et rend le code de sortie ;
+ * `decisionDeLaGarde` fait de même pour le dépôt. La ligne de commande n'imprime que ce qu'elles
+ * rendent. RM-11 : `--prove` ne juge que des vues INJECTÉES ; il ne lit du dépôt que la
+ * déclaration de ce qu'il doit prouver.
  */
 
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
-import { texteDeLaReq } from './schema-enums';
+import { texteDeLaReq, RACINES_CODE, EXTENSIONS_CODE } from './schema-enums';
 import { TYPES_EVENEMENT, TYPES_HORS_CONTRAT_V1 } from '../../packages/contracts/events';
 
 // ── le vocabulaire de la garde ───────────────────────────────────────────────
@@ -193,7 +77,7 @@ export type Vue = {
   typesDuContrat: readonly string[];
   /** Les racines jugées, LUES dans l'en-tête du glossaire. Vide = source illisible, pas « tout ». */
   racines: string[];
-  /** Les fichiers balayés. Une liste vide est un REFUS, jamais un « rien à signaler ». */
+  /** TOUS les fichiers suivis. Le périmètre en est une partition (`perimetreDeLaVue`). */
   fichiers: FichierVu[];
 };
 
@@ -231,9 +115,8 @@ export const FAMILLES: { nom: string; explication: string }[] = [
 ];
 
 /**
- * Les CINQ refus de conclure de `source_illisible`, DÉCLARÉS comme `FAMILLES` l'est, et confrontés
- * au registre de la même façon. Le type interdit d'émettre un sixième refus sans l'inscrire ici —
- * et l'inscrire ici l'expose à la confrontation : un refus que le registre n'énumère pas rougit.
+ * Les CINQ refus de conclure de `source_illisible`, confrontés au registre comme `FAMILLES`. Le type
+ * interdit d'émettre un refus sans l'inscrire ici — et l'inscrire ici l'expose à la confrontation.
  */
 export const REFUS_DE_CONCLURE = [
   'req_int_004_muette',
@@ -244,28 +127,8 @@ export const REFUS_DE_CONCLURE = [
 ] as const;
 export type RefusDeConclure = (typeof REFUS_DE_CONCLURE)[number];
 
-/**
- * Le paquet de contrats — seul endroit où un nom d'événement s'écrit littéralement.
- *
- * Il est AJOUTÉ aux racines que le glossaire nomme, et ce n'est pas une extension de confort :
- * `packages/contracts/events.ts` déclare lui-même que « la garde `gov:check` refuse tout nom
- * d'événement littéral hors `packages/contracts` », et REQ-INT-004 exige qu'« aucun événement ne
- * référence `Invoice` ni `Refund` ». Une exception qui n'est jamais atteinte n'est pas une
- * exception, c'est du code mort qui a l'air de protéger : sans cette racine, le contre-témoin
- * « le paquet de contrats a le droit d'écrire un nom d'événement » serait vert parce qu'il est
- * HORS PÉRIMÈTRE, pas parce que l'exemption fonctionne — un témoin qui bouge pour deux raisons.
- *
- * ⚠️ CETTE RÈGLE A COÛTÉ VINGT-DEUX LIGNES À CE FICHIER. Une liste `PORTEURS` exemptait trois
- * chemins de `scripts/` et `tests/` — c'est-à-dire trois chemins qu'AUCUNE racine ne contient.
- * Mesuré : neutralisée, elle ne changeait rien (même verdict, même compte de fichiers, même
- * `--prove`). Elle a été retirée, et `PORTEURS_DES_ETATS` avec elle. Le critère qui l'aurait tuée
- * avant la revue : TOUTE EXEMPTION DOIT AVOIR UN CONTRE-TÉMOIN ATTEIGNABLE DANS LE PÉRIMÈTRE. Il
- * est appliqué ci-dessous aux trois exemptions qui restent — le contrat, la citation, le synonyme
- * conditionnel — et chacune a le sien dans `CONTRE_TEMOINS`.
- */
+/** Le paquet de contrats — seul endroit où un nom d'événement s'écrit littéralement. */
 const RACINE_CONTRATS = 'packages/contracts/';
-
-const EXTENSIONS = /\.(ts|tsx|js|jsx|mjs|cjs|md|json|yml|yaml|sql|prisma)$/;
 
 /** L'entrée de registre qui déclare la population que `--prove` doit couvrir. */
 const CHEMIN_REGISTRE = join(
@@ -288,34 +151,17 @@ const FORME_EVENEMENT = /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/;
 const FORME_MODELE = /^[A-Z][A-Za-z0-9]*$/;
 const FORME_IDENTIFIANT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
-/**
- * Les types d'événements valides, LUS dans REQ-INT-004. Un tableau vide n'est pas « rien à
- * dire » : c'est une source illisible, et la famille `source_illisible` le dit.
- */
+/** Les types d'événements valides, LUS dans REQ-INT-004. Vide = source illisible. */
 export function typesEvenementDeLaReq(texte: string): string[] {
   return [...new Set(jetonsCites(texte).filter((j) => FORME_EVENEMENT.test(j)))];
 }
 
 /**
- * LES RACINES QUE LA GARDE JUGE, lues dans l'en-tête de `docs/GLOSSAIRE.md` :
- *
- *     « tout synonyme interdit trouvé dans `prisma/**`, `src/**`, `messages/**`, `docs/adr/**`
- *       → rouge (`gov:check`) »
- *
- * ⚠️ C'EST LA SEULE SOURCE DU DÉPÔT QUI DONNE UN PÉRIMÈTRE À CETTE GARDE, et `docs/PRESEANCE.md`
- * §2 donne au glossaire la primauté « sur un terme et ses synonymes interdits », en précisant
- * qu'il n'est dérivé de personne sur ce point. Le champ `verifie` de `docs/gates.json` est une
- * DESCRIPTION d'entrée de registre, pas une source de périmètre : la ventilation des 78 fautes que
- * « partout » produirait est en tête de fichier, avec ce qu'elle coûterait réellement.
- *
- * Ce que le périmètre laisse dehors est IMPRIMÉ à chaque exécution : une garde qui rétrécit sans
- * le dire est une garde qu'on croit plus large qu'elle n'est.
+ * LES RACINES QUE LA GARDE JUGE, lues dans l'en-tête de `docs/GLOSSAIRE.md` : « tout synonyme
+ * interdit trouvé dans `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` → rouge (`gov:check`) ».
+ * Les séparateurs admettent `>` et les fins de ligne : la clause est écrite en citation Markdown.
  */
 export function racinesDuGlossaire(glossaire: string): string[] {
-  // ⚠️ Les séparateurs admettent `>` et les fins de ligne : dans le glossaire réel, la clause est
-  // écrite en CITATION Markdown et la liste des racines commence à la ligne suivante, derrière un
-  // `>`. Un `\s+` seul s'arrêtait au chevron, ne lisait que deux racines sur quatre, et la garde
-  // rendait un vert sur un périmètre amputé de moitié — mesuré ici, corrigé ici.
   const clause = /synonyme interdit trouv[ée]\s+dans[\s>]+((?:`[^`\n]+`[,\s>]*)+)/.exec(glossaire);
   if (!clause) return [];
   return jetonsCites(clause[1]!).map((r) => r.replace(/\*+$/, ''));
@@ -325,7 +171,6 @@ export function racinesDuGlossaire(glossaire: string): string[] {
  * Les modèles d'axionia que rien ne doit référencer. Deux sources, réunies :
  *   — REQ-INT-004, clause « aucun événement ne référence `Invoice` ni `Refund` » ;
  *   — `docs/GLOSSAIRE.md`, clause « … — des modèles supprimés d'axionia ».
- * La seconde en nomme un troisième (`PaymentScheduleProfile`, AFF-03) que l'exigence tait.
  */
 export function modelesRefusesDAxionia(reqInt004: string, glossaire: string): string[] {
   const trouves: string[] = [];
@@ -350,24 +195,11 @@ const MARQUEUR_SYNONYMES = /synonymes?\s+interdits?\s*(?:\*\*)?\s*:/i;
 /**
  * Les synonymes interdits, LUS dans `docs/GLOSSAIRE.md`.
  *
- * ── CE QUE « EXERCÉ » VEUT DIRE, ET POURQUOI LA DISTINCTION EXISTE ──────────────────────────
- * Le glossaire écrit deux choses différentes sous le même marqueur :
- *
- *     Synonymes interdits : `inactif`, `churn`, `isActive`.        ← inconditionnel
- *     Synonymes interdits : `actif` en colonne, `en_attente` pour une ligne (réservé à …)
- *                                                                  ← conditionnel
- *
- * Le second interdit un CONTEXTE (« en colonne », « pour une ligne »), pas un mot : `actif` est
- * par ailleurs un état dérivé canonique de l'apporteur, et une garde qui rougirait sur toute
- * occurrence d'`actif` interdirait le glossaire lui-même. Le discriminant est ce qui SUIT le
- * jeton dans la liste : un délimiteur (`,` `;` `.` `)` `|`) ou la fin du bloc = l'interdit vaut
- * tel quel ; de la prose = il porte une condition, et la garde ne l'exerce pas — mais elle le
- * DIT, au lieu de laisser croire qu'elle le garde.
- *
- * Les parenthèses sont des NOTES, pas des conditions : `` `qualificateur` (encore présent dans
- * REQ-SEC-023) `` reste un interdit sec. Ce qu'une note introduit par `→` désigne, en revanche,
- * est le terme CANONIQUE de remplacement : il est retiré de la liste, sans quoi la garde
- * refuserait la solution qu'elle prescrit.
+ * Le glossaire écrit sous le même marqueur un interdit SEC (`inactif`, `churn`) et un interdit
+ * SOUS CONDITION (`actif` en colonne) : ce qui SUIT le jeton tranche. Un délimiteur (`,` `;` `.`
+ * `)` `|`) ou la fin du bloc = interdit sec ; de la prose = condition, que la garde n'exerce pas
+ * et qu'elle IMPRIME. Les parenthèses sont des notes ; un terme introduit par `→` est le canonique
+ * de remplacement, retiré de la liste.
  */
 export function synonymesDuGlossaire(glossaire: string): SynonymeInterdit[] {
   const lignes = glossaire.split('\n');
@@ -379,9 +211,8 @@ export function synonymesDuGlossaire(glossaire: string): SynonymeInterdit[] {
     const m = MARQUEUR_SYNONYMES.exec(ligne);
     if (!m) continue;
 
-    // Le bloc : la suite de la ligne, puis les lignes suivantes tant qu'on reste dans le même
-    // paragraphe. Une cellule de tableau s'arrête à sa barre : la colonne voisine n'est pas la
-    // suite de la phrase.
+    // Le bloc : la suite de la ligne, puis le même paragraphe. Une cellule de tableau s'arrête à
+    // sa barre.
     let bloc = ligne.slice(m.index + m[0].length);
     if (ligne.trim().startsWith('|')) {
       bloc = bloc.split('|')[0]!;
@@ -392,16 +223,12 @@ export function synonymesDuGlossaire(glossaire: string): SynonymeInterdit[] {
         bloc += '\n' + suivante;
       }
     }
-    // Une phrase nouvelle n'est plus la liste : « … `EventLog` pour cette table. Ne pas
-    // confondre avec `evenements` … » — le second jeton n'est pas un interdit.
+    // Une phrase nouvelle n'est plus la liste.
     const finDePhrase = /\.\s+[A-ZÀ-Þ]/.exec(bloc);
     if (finDePhrase) bloc = bloc.slice(0, finDePhrase.index);
 
     for (const cible of bloc.matchAll(/→\s*`([^`\n]+)`/g)) canoniques.add(cible[1]!);
 
-    // Les notes entre parenthèses sont neutralisées AVANT de juger ce qui suit chaque jeton :
-    // c'est ce qui distingue une note (`qualificateur` (encore présent …)) d'une condition
-    // (`actif` en colonne).
     const sansNotes = bloc.replace(/\([^)]*\)/g, '');
     for (const jeton of sansNotes.matchAll(/`([^`\n]+)`/g)) {
       const suite = sansNotes.slice(jeton.index + jeton[0].length);
@@ -417,43 +244,29 @@ export function synonymesDuGlossaire(glossaire: string): SynonymeInterdit[] {
     }
   }
 
-  // Le terme canonique de remplacement n'est jamais un interdit, où qu'il ait été lu.
   return out.filter((s) => !canoniques.has(s.terme));
 }
 
 // ── l'exemption de citation, par la GRAMMAIRE du fichier ─────────────────────
 
-/**
- * La grammaire d'un fichier, du point de vue de la seule question qui nous occupe : est-ce que
- * quelque chose, ici, peut CITER au lieu de SE SERVIR ?
- *
- *   `code`         — l'accent grave ouvre un gabarit de chaîne. Rien ne cite.
- *   `valeurs`      — JSON : tout est une valeur, le guillemet droit est le délimiteur. Rien ne cite.
- *   `prose`        — Markdown : accents graves, blocs à trois accents, guillemets français.
- *   `commentaire…` — SQL / Prisma : l'accent grave cite, mais seulement DANS un commentaire.
- *
- * Le défaut par défaut est `valeurs`, c'est-à-dire AUCUNE exemption : une extension inconnue ne
- * gagne pas une exemption par omission. C'est le sens qui échoue FERMÉ — et c'est celui du YAML :
- * aucun fichier YAML ne vit dans les racines, donc aucune exemption YAML n'aurait de contre-témoin
- * atteignable.
- */
-export type Grammaire = 'code' | 'valeurs' | 'prose' | 'commentaire_sql' | 'commentaire_slash';
+type Grammaire = 'sans_exemption' | 'prose' | 'commentaire_sql' | 'commentaire_slash';
 
-export function grammaireDuFichier(chemin: string): Grammaire {
-  if (/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(chemin)) return 'code';
-  if (/\.(md|markdown)$/.test(chemin)) return 'prose';
-  if (/\.sql$/.test(chemin)) return 'commentaire_sql';
-  if (/\.prisma$/.test(chemin)) return 'commentaire_slash';
-  return 'valeurs';
+/** Les SEULES extensions qui accordent une exemption. Toute autre n'exempte rien. */
+const GRAMMAIRES_QUI_CITENT = new Map<string, Grammaire>([
+  ['md', 'prose'],
+  ['sql', 'commentaire_sql'],
+  ['prisma', 'commentaire_slash'],
+]);
+
+function grammaireDuFichier(chemin: string): Grammaire {
+  const extension = /\.([^./]+)$/.exec(chemin)?.[1];
+  return (extension !== undefined && GRAMMAIRES_QUI_CITENT.get(extension)) || 'sans_exemption';
 }
 
 const OUVRE_BLOC_SQL = '/' + '*';
 const FERME_BLOC_SQL = '*' + '/';
 
-/**
- * Les intervalles COMMENTÉS d'une ligne, selon la grammaire. L'objet `etat` porte, d'une ligne à
- * l'autre, le fait qu'un commentaire de bloc SQL est resté ouvert.
- */
+/** Les intervalles COMMENTÉS d'une ligne. `etat` porte un bloc SQL resté ouvert d'une ligne à l'autre. */
 function zonesCommentees(
   ligne: string,
   grammaire: Grammaire,
@@ -465,7 +278,6 @@ function zonesCommentees(
     if (i >= 0) zones.push([i, ligne.length]);
     return zones;
   }
-  // SQL : deux tirets jusqu'en fin de ligne, et un bloc qui peut traverser des lignes.
   let c = 0;
   let debutDuBloc = etat.dansUnBloc ? 0 : -1;
   while (c < ligne.length) {
@@ -492,7 +304,6 @@ function zonesCommentees(
     }
     c++;
   }
-  if (etat.dansUnBloc && debutDuBloc >= 0) zones.push([debutDuBloc, ligne.length]);
   return zones;
 }
 
@@ -508,18 +319,11 @@ function spansDansZones(ligne: string, zones: [number, number][]): [number, numb
   return out;
 }
 
-/**
- * LES ZONES EXEMPTÉES, LIGNE PAR LIGNE.
- *
- * Elle remplace l'appel à `zonesCitees` de `lexique-apporteurs.ts` : cette fonction-là est une
- * heuristique de PROSE (elle tient les guillemets français, le guillemet droit et les accents
- * graves), et l'appliquer à du JSON ou à du SQL rendait la garde aveugle par construction. Les
- * trois évasions qu'elle laissait sont décrites en tête de fichier ; les trois ont un témoin.
- */
-export function zonesExemptees(chemin: string, contenu: string): [number, number][][] {
+/** LES ZONES EXEMPTÉES, ligne par ligne, selon la grammaire du fichier. */
+function zonesExemptees(chemin: string, contenu: string): [number, number][][] {
   const lignes = contenu.split('\n');
   const grammaire = grammaireDuFichier(chemin);
-  if (grammaire === 'code' || grammaire === 'valeurs') return lignes.map(() => []);
+  if (grammaire === 'sans_exemption') return lignes.map(() => []);
   if (grammaire === 'prose') return zonesDeProse(lignes);
 
   const etat = { dansUnBloc: false };
@@ -527,21 +331,10 @@ export function zonesExemptees(chemin: string, contenu: string): [number, number
 }
 
 /**
- * Les zones citées d'un document en PROSE.
- *
- * Les blocs délimités par trois accents graves sont cités EN ENTIER : dans de la prose, un bloc
- * d'exemple est une citation. Ils sont traités à part, sans quoi leurs accents fausseraient
- * l'appariement de tout ce qui suit.
- *
- * ⚠️ LA BORNE D'UNE CONTINUATION. Un accent grave ouvert se ferme sur SA ligne ou sur la SUIVANTE.
- * Au-delà, il est ABANDONNÉ et l'accent rencontré rouvre un span. Sans cette borne, deux accents
- * graves distants de huit lignes blanchissaient tout l'intervalle — mesuré, quatre fautes effacées
- * par une coquille. Avec elle, la citation à cheval du glossaire (deux lignes) reste exemptée.
- *
- * ⚠️ UNE CLÔTURE JAMAIS REFERMÉE N'OUVRE RIEN. CommonMark prolonge un bloc non refermé jusqu'à la
- * fin du document ; le suivre ici ferait d'une coquille l'amnistie de TOUT ce qui suit — la même
- * évasion que les deux accents graves éloignés, en plus large. Les clôtures sont donc appariées
- * d'avance, et la dernière d'un nombre impair est ignorée.
+ * Les zones citées d'un document en PROSE : blocs à trois accents graves REFERMÉS (une clôture
+ * impaire n'ouvre rien), guillemets français, et spans d'accents graves fermés sur leur ligne ou
+ * la suivante — au-delà, l'accent pendant est abandonné et le suivant rouvre un span. Un accent
+ * jamais refermé n'exempte rien.
  */
 function zonesDeProse(lignes: string[]): [number, number][][] {
   const out: [number, number][][] = lignes.map(() => []);
@@ -568,7 +361,6 @@ function zonesDeProse(lignes: string[]): [number, number][][] {
     }
     for (let c = 0; c < ligne.length; c++) {
       if (ligne[c] !== '`') continue;
-      // La borne : un accent grave pendant depuis plus d'une ligne est ABANDONNÉ.
       if (ouvertureLigne !== -1 && i - ouvertureLigne > 1) ouvertureLigne = -1;
       if (ouvertureLigne === -1) {
         ouvertureLigne = i;
@@ -584,22 +376,36 @@ function zonesDeProse(lignes: string[]): [number, number][][] {
       ouvertureLigne = -1;
     }
   }
-  // Un accent grave ouvert et jamais refermé n'exempte RIEN : on ne devine pas une citation.
   return out;
+}
+
+// ── le périmètre ─────────────────────────────────────────────────────────────
+
+export type Perimetre = {
+  /** Les racines du glossaire, plus le paquet de contrats. */
+  racines: string[];
+  /** Chaque fichier lu est rangé sous la PREMIÈRE racine qui le contient : c'est une partition. */
+  parRacine: { racine: string; lus: FichierVu[] }[];
+  lus: FichierVu[];
+  horsPerimetre: FichierVu[];
+};
+
+/** LA définition du périmètre. Le contrôle et la sortie imprimée en dérivent tous les deux. */
+export function perimetreDeLaVue(vue: Vue): Perimetre {
+  const racines = [...vue.racines, RACINE_CONTRATS];
+  const parRacine = racines.map((racine) => ({ racine, lus: [] as FichierVu[] }));
+  const horsPerimetre: FichierVu[] = [];
+  for (const fichier of vue.fichiers) {
+    const rang = parRacine.find((r) => fichier.chemin.startsWith(r.racine));
+    if (rang) rang.lus.push(fichier);
+    else horsPerimetre.push(fichier);
+  }
+  return { racines, parRacine, lus: parRacine.flatMap((r) => r.lus), horsPerimetre };
 }
 
 // ── le contrôle ──────────────────────────────────────────────────────────────
 
-/**
- * Un motif de mot entier.
- *
- * ⚠️ LE POINT N'EST PLUS DANS LES BORNES. Il y était, et `prisma.Invoice`, `db.Refund`,
- * `axionia.Invoice` échappaient tous à `terme_axionia_invalide` — c'est-à-dire la forme la PLUS
- * probable sous laquelle un modèle supprimé d'axionia apparaîtrait réellement dans `src/**` : un
- * appel de client Prisma. Mesuré par la lentille `mutation` : `prisma.Invoice.findMany()` ne
- * rendait RIEN, quand le même nom seul rougissait. Les bornes sont donc alphanumériques, et la
- * qualification pointée ne protège plus rien.
- */
+/** Un motif de mot entier, à bornes alphanumériques : le point n'est pas une borne. */
 function motifDuTerme(terme: string): RegExp {
   const echappe = terme.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`(?<![A-Za-z0-9_])${echappe}(?![A-Za-z0-9_])`, 'g');
@@ -625,9 +431,7 @@ function reglesDeLaVue(vue: Vue): { regles: Regle[]; typesValides: string[] } {
     });
   }
 
-  // Les noms d'événements REFUSÉS : ceux que le glossaire nomme, plus tout `entite.verbe` bâti
-  // sur une entité du contrat sans être un type valide. Les préfixes se lisent dans les deux
-  // sources — jamais tapés ici.
+  // Les noms d'événements REFUSÉS par le glossaire.
   const refusesDuGlossaire = synonymes.filter((s) => s.exerce && FORME_EVENEMENT.test(s.terme));
   for (const s of refusesDuGlossaire) {
     regles.push({
@@ -673,9 +477,6 @@ export function controler(vue: Vue): Faute[] {
   const { regles, typesValides } = reglesDeLaVue(vue);
 
   // ── les sources, d'abord : une garde qui ne sait plus à quoi comparer ne conclut pas ──
-  // Chaque refus porte son NOM, pris dans `REFUS_DE_CONCLURE` : `--prove` en exige un témoin,
-  // refus par refus. Trois de ces cinq n'en avaient AUCUN — mesuré par la lentille `mutation`,
-  // qui les a neutralisés un à un sans qu'une étape bouge.
   if (typesValides.length === 0) {
     fautes.push({
       famille: 'source_illisible',
@@ -724,10 +525,8 @@ export function controler(vue: Vue): Faute[] {
   }
 
   // ── le périmètre ──────────────────────────────────────────────────────────
-  const racines = [...vue.racines, RACINE_CONTRATS];
-  const dansLePerimetre = (chemin: string): boolean => racines.some((r) => chemin.startsWith(r));
-  const balayes = vue.fichiers.filter((f) => EXTENSIONS.test(f.chemin) && dansLePerimetre(f.chemin));
-  if (balayes.length === 0) {
+  const { racines, lus } = perimetreDeLaVue(vue);
+  if (lus.length === 0) {
     fautes.push({
       famille: 'perimetre_vide',
       message:
@@ -737,7 +536,7 @@ export function controler(vue: Vue): Faute[] {
     return fautes;
   }
 
-  for (const fichier of balayes) {
+  for (const fichier of lus) {
     const zones = zonesExemptees(fichier.chemin, fichier.contenu);
     const dansLeContrat = fichier.chemin.startsWith(RACINE_CONTRATS);
 
@@ -766,21 +565,15 @@ export function controler(vue: Vue): Faute[] {
 // ── la vue du dépôt ──────────────────────────────────────────────────────────
 
 /**
- * La vue du dépôt. Le périmètre vient de `fichiersSuivisOuRefus`, qui REFUSE au lieu de rendre
- * `[]` quand git est muet (une garde d'argent verte sur zéro fichier, dans un dépôt public, est
- * ce qui a fait naître ce fichier partagé). Les fichiers hors des racines du glossaire sont
- * conservés dans la vue : c'est `controler` qui les écarte, pour que le tri soit lui aussi
- * exercé par la preuve au lieu d'être invisible.
+ * La vue du dépôt : TOUS les fichiers suivis, sans filtre. Le périmètre d'abord, et dans cet ordre :
+ * lancée hors de la racine, la garde refuse en NOMMANT `perimetre_illisible` au lieu de mourir sur
+ * un `ENOENT` de `docs/GLOSSAIRE.md`.
  */
 export function vueDuDepot(): Vue {
-  // ⚠️ LE PÉRIMÈTRE D'ABORD, ET DANS CET ORDRE. Lancée depuis `packages/`, la garde doit REFUSER
-  // en NOMMANT `perimetre_illisible`. Si les lectures de sources venaient avant, elle mourrait
-  // sur un `ENOENT` de `docs/GLOSSAIRE.md` — un refus correct, mais anonyme, et pour une raison
-  // qu'on n'a pas choisie. `refus-de-rendre-et-de-publier.spec.ts` mesure exactement cela sur les
-  // gardes qui balaient, et n'en trouve que deux qui refusent pour la bonne raison.
-  const fichiers = fichiersSuivisOuRefus('gov:check')
-    .filter((chemin) => EXTENSIONS.test(chemin))
-    .map((chemin) => ({ chemin, contenu: readFileSync(chemin, 'utf8') }));
+  const fichiers = fichiersSuivisOuRefus('gov:check').map((chemin) => ({
+    chemin,
+    contenu: readFileSync(chemin, 'utf8'),
+  }));
   const glossaire = readFileSync('docs/GLOSSAIRE.md', 'utf8');
   return {
     reqInt004: texteDeLaReq('REQ-INT-004'),
@@ -793,17 +586,11 @@ export function vueDuDepot(): Vue {
 
 // ── la population de la preuve, LUE dans le registre ─────────────────────────
 
-export type Population = { familles: string[]; refus: string[] };
+export type Population = { familles: string[]; refus: string[]; temoins: string[] };
 
 /**
- * La population que `--prove` doit couvrir, LUE dans le champ `verifie` de l'entrée `gov:check`.
- *
- * Elle ne vient PAS de ce module : une preuve qui déclare elle-même ce qu'elle doit prouver ne
- * prouve que sa propre cohérence. Retirer une entrée de `FAMILLES` déplaçait autrefois le compte
- * ATTENDU en même temps que le compte IMPRIMÉ, et la soustraction restait vide par construction.
- *
- * Un registre qui ne nomme rien est un REFUS, jamais une population vide : c'est le sens qui
- * échoue fermé.
+ * La population que `--prove` doit couvrir, LUE dans le champ `verifie` de l'entrée `gov:check` :
+ * familles, refus de conclure, et l'identifiant de chaque témoin. Une liste muette est un REFUS.
  */
 export function populationDuRegistre(texte: string): Population {
   const registre = JSON.parse(texte) as { gates?: { id: string; verifie?: string }[] };
@@ -831,32 +618,26 @@ export function populationDuRegistre(texte: string): Population {
   return {
     familles: liste(/familles\s*:\s*([a-z0-9_,\s]+?)\s*(?:;|$)/, 'famille'),
     refus: liste(/refus de conclure\s*:\s*([a-z0-9_,\s]+?)\s*(?:;|$)/, 'refus de conclure'),
+    temoins: liste(/temoins\s*:\s*([a-z0-9_,\s]+?)\s*(?:;|$)/, 'témoin'),
   };
 }
 
-/** La clé de couverture d'un témoin : la famille, ou le refus nommé quand il y en a un. */
+/** La clé de couverture d'un refus : la famille, ou `famille/refus` quand un refus est nommé. */
 export function cleDeCouverture(famille: string, refus?: string): string {
   return refus === undefined ? famille : `${famille}/${refus}`;
 }
 
-// ── ligne de commande ────────────────────────────────────────────────────────
-// GARDÉE : ce module est IMPORTÉ par son test. Sans ce test d'entrée, l'import déclencherait le
-// contrôle et son `process.exit`, et la suite mourrait au chargement — vu sur `perf-budgets.ts`
-// le 2026-09-05 (« Error: process.exit unexpectedly called with "0" », zéro test exécuté), et vu
-// à nouveau ici pendant l'écriture de cette garde.
-const APPELE_DIRECTEMENT = /gov-check\.ts$/.test(process.argv[1] ?? '');
-
 // ── la fixture de la preuve (RM-11 : le VERDICT ne lit rien du dépôt) ────────
 
+/** Même liste de types que REQ-INT-004 : `termes-interdits.spec.ts` l'assère par ÉGALITÉ. */
 const REQ_INT_004_FIXTURE =
   "Les types d'événements sont : `client.cree`, `client.mis_a_jour`, `devis.signe`, " +
   '`facture.emise`, `avoir.emis`, `paiement.recu`, `paiement.rembourse` — nommés sur les modèles ' +
   'réels (Client, Devis, FactureFormation, Payment) ; aucun événement ne référence `Invoice` ni `Refund`.';
 
 /**
- * Source des fixtures : la FORME des textes réels — `docs/requirements.json` (REQ-INT-004) et
- * `docs/GLOSSAIRE.md` §1, §2, §5 et §7 — reproduite au plus court. Les valeurs sont celles des
- * sources ; ce qui est fixé ici, c'est la TOURNURE que la garde doit savoir lire.
+ * Les TOURNURES de `docs/GLOSSAIRE.md` que la garde doit savoir lire, au plus court. Ses racines et
+ * ses modèles refusés sont assérés ÉGAUX à ceux du glossaire réel par `termes-interdits.spec.ts`.
  */
 const GLOSSAIRE_FIXTURE = [
   '# Glossaire — Axion Partners',
@@ -880,8 +661,8 @@ const GLOSSAIRE_FIXTURE = [
   '',
   'Synonymes interdits : `eventId`, `eventType`, `schemaVersion` — la forme camelCase des champs',
   "d'enveloppe ; `payment.received`, `refund.issued`, `invoice.issued`, `devis.signed`,",
-  '`client.created` ; `Invoice`, `Refund`, `PaymentScheduleProfile` — des modèles supprimés',
-  "d'axionia qu'aucun événement ne référence.",
+  "`client.created` ; `Invoice`, `Refund`, `PaymentScheduleProfile` — des modèles supprimés d'axionia",
+  "qu'aucun événement ne référence.",
   '',
   '## 7. Rôles console',
   '',
@@ -893,11 +674,8 @@ const GLOSSAIRE_FIXTURE = [
 export const VUE_CONFORME: Vue = {
   reqInt004: REQ_INT_004_FIXTURE,
   glossaire: GLOSSAIRE_FIXTURE,
-  // ⚠️ TAPÉE là où `racines` est DÉRIVÉE, et la dissymétrie est juste : dériver cette liste de
-  // `REQ_INT_004_FIXTURE` rendrait `manquants` vide PAR CONSTRUCTION, et le refus
-  // `contrat_et_exigence_divergents` ne serait plus jamais exerçable. Un prédicat ouvert échoue
-  // ouvert. C'est un ANCRAGE : sa divergence est le signal, et `termes-interdits.spec.ts` la
-  // confronte aux sources réelles.
+  // TAPÉE, et non dérivée de la fixture : dérivée, `contrat_et_exigence_divergents` ne serait plus
+  // jamais exerçable. Assérée ÉGALE à `TYPES_EVENEMENT` par `termes-interdits.spec.ts`.
   typesDuContrat: [
     'client.cree',
     'client.mis_a_jour',
@@ -907,8 +685,6 @@ export const VUE_CONFORME: Vue = {
     'paiement.recu',
     'paiement.rembourse',
   ],
-  // DÉRIVÉE de la fixture, jamais tapée : si la lecture de l'en-tête casse, la vue conforme perd
-  // son périmètre et `source_illisible` rougit — la preuve tient donc aussi la dérivation.
   racines: racinesDuGlossaire(GLOSSAIRE_FIXTURE),
   fichiers: [{ chemin: 'src/config/fixture.ts', contenu: 'export const rien = true;\n' }],
 };
@@ -921,33 +697,40 @@ const avec = (chemin: string, contenu: string): Vue => ({
 /** L'accent grave, posé par son code : l'écrire dans un littéral de ce fichier le fermerait. */
 const AG = String.fromCharCode(96);
 
-export type Temoin = { famille: string; refus?: RefusDeConclure; quoi: string; vue: () => Vue };
+export type Temoin = {
+  /** L'identifiant que `docs/gates.json` énumère : supprimer ce témoin découvre SA clé. */
+  id: string;
+  famille: string;
+  refus?: RefusDeConclure;
+  quoi: string;
+  vue: () => Vue;
+};
 
-/**
- * Un témoin par famille ET par refus. Les quatre témoins d'évasion sont ceux que la lentille
- * `mutation` a fabriqués : sans eux, la fermeture de l'exemption de citation serait une
- * affirmation, pas une garde (RM-02).
- */
+/** Un témoin par famille, par refus, et par frontière d'exemption, côté où elle NE vaut PAS. */
 export const TEMOINS: Temoin[] = [
   {
+    id: 'req_int_004_muette',
     famille: 'source_illisible',
     refus: 'req_int_004_muette',
     quoi: "REQ-INT-004 ne nomme plus aucun type d'événement",
     vue: () => ({ ...VUE_CONFORME, reqInt004: "Les types d'événements sont nommés ailleurs." }),
   },
   {
+    id: 'contrat_sans_evenement',
     famille: 'source_illisible',
     refus: 'contrat_sans_evenement',
     quoi: 'le paquet de contrats ne publie plus aucun nom',
     vue: () => ({ ...VUE_CONFORME, typesDuContrat: [] }),
   },
   {
+    id: 'contrat_et_exigence_divergents',
     famille: 'source_illisible',
     refus: 'contrat_et_exigence_divergents',
     quoi: "le contrat a perdu six des sept noms que l'exigence nomme",
     vue: () => ({ ...VUE_CONFORME, typesDuContrat: ['client.cree'] }),
   },
   {
+    id: 'glossaire_sans_synonyme',
     famille: 'source_illisible',
     refus: 'glossaire_sans_synonyme',
     quoi: 'le glossaire ne porte plus le marqueur des synonymes interdits',
@@ -957,58 +740,95 @@ export const TEMOINS: Temoin[] = [
     }),
   },
   {
+    id: 'racines_illisibles',
     famille: 'source_illisible',
     refus: 'racines_illisibles',
     quoi: "l'en-tête du glossaire ne donne plus les racines à balayer",
     vue: () => ({ ...VUE_CONFORME, racines: [] }),
   },
   {
+    id: 'perimetre_vide',
     famille: 'perimetre_vide',
     quoi: 'aucun fichier à balayer',
     vue: () => ({ ...VUE_CONFORME, fichiers: [] }),
   },
   {
+    id: 'modele_dans_le_code',
     famille: 'terme_axionia_invalide',
-    quoi: 'un modèle `Invoice` référencé dans du code',
+    quoi: 'un modèle refusé référencé dans du code',
     vue: () => avec('src/server/facture.ts', 'const f: Invoice = await lire(id);'),
   },
   {
+    id: 'modele_en_qualification_pointee',
     famille: 'terme_axionia_invalide',
-    quoi: 'le même modèle sous sa forme la plus probable : une QUALIFICATION POINTÉE',
+    quoi: 'le même modèle derrière un point : le point ne borne pas le mot',
     vue: () => avec('src/server/lecture.ts', 'const f = await prisma.Invoice.findMany();'),
   },
   {
+    id: 'modele_dans_le_paquet_de_contrats',
+    famille: 'terme_axionia_invalide',
+    quoi: "le paquet de contrats est LU, et son exemption ne vaut que pour les noms d'événements",
+    vue: () => avec('packages/contracts/facture.ts', 'export type Source = Invoice;'),
+  },
+  {
+    id: 'anglais_dans_un_adr',
     famille: 'evenement_hors_nomenclature',
-    quoi: 'la fixture rouge du registre : un nom anglais dans un ADR',
+    quoi: 'la fixture rouge du registre : un nom anglais hors citation dans un ADR',
     vue: () => avec('docs/adr/0011-temoin.md', 'le producteur emet payment.received a la signature'),
   },
   {
+    id: 'json_guillemet_droit',
     famille: 'evenement_hors_nomenclature',
-    quoi: 'du JSON de `messages/`, où le guillemet droit est le SEUL délimiteur de chaîne',
+    quoi: 'du JSON de `messages/` : le guillemet droit y délimite une valeur',
     vue: () => avec('messages/fr.json', '{ "journal": { "titre": "payment.received" } }'),
   },
   {
+    id: 'prose_guillemet_droit',
     famille: 'evenement_hors_nomenclature',
-    quoi: "un ADR où deux accents graves ÉLOIGNÉS n'amnistient plus l'intervalle",
+    quoi: 'en prose, le guillemet droit ne cite pas',
+    vue: () => avec('docs/adr/9996-guillemets.md', 'le producteur emet "payment.received" a la signature'),
+  },
+  {
+    id: 'prose_accent_grave_pendant',
+    famille: 'evenement_hors_nomenclature',
+    quoi: "en prose, un accent grave refermé trois lignes plus bas ne cite pas la fin de sa ligne",
     vue: () =>
       avec(
         'docs/adr/9998-span.md',
         [
-          `une coquille ouvre un accent grave ${AG}ici et ne le referme jamais`,
-          '',
-          'le producteur emet payment.received a la signature',
-          '',
-          'huit lignes plus bas, un autre accent grave apparait',
+          `une coquille ouvre un accent grave ${AG}ici, puis le producteur emet payment.received`,
           '',
           '',
-          '',
-          `le voici ${AG} enfin`,
+          `et un autre accent grave ${AG} apparait`,
         ].join('\n')
       ),
   },
   {
+    id: 'prose_cloture_impaire',
+    famille: 'terme_axionia_invalide',
+    quoi: "en prose, une clôture de bloc jamais refermée n'amnistie pas la suite",
+    vue: () =>
+      avec(
+        'docs/adr/9997-cloture.md',
+        [`${AG.repeat(3)}ts`, 'const f: Invoice = lire();', '', 'la suite du document'].join('\n')
+      ),
+  },
+  {
+    id: 'gabarit_de_chaine',
     famille: 'evenement_hors_nomenclature',
-    quoi: "en `.sql`, l'accent grave HORS COMMENTAIRE ne cite rien — même juste après un bloc refermé",
+    quoi: 'en code, les accents graves délimitent un gabarit de chaîne et ne citent rien',
+    vue: () => avec('src/server/emetteur.ts', `const sujet = ${AG}payment.received${AG};`),
+  },
+  {
+    id: 'extension_sans_grammaire',
+    famille: 'evenement_hors_nomenclature',
+    quoi: "une extension sans grammaire nommée, sous une racine, est LUE et n'exempte rien",
+    vue: () => avec('src/content/page.mdx', `le producteur emet ${AG}payment.received${AG}`),
+  },
+  {
+    id: 'sql_accent_grave_hors_commentaire',
+    famille: 'evenement_hors_nomenclature',
+    quoi: "en `.sql`, l'accent grave hors commentaire ne cite rien — même juste après un bloc refermé",
     vue: () =>
       avec(
         'prisma/migrations/0003_appat/migration.sql',
@@ -1018,17 +838,19 @@ export const TEMOINS: Temoin[] = [
       ),
   },
   {
-    famille: 'terme_axionia_invalide',
-    quoi: "un ADR où une clôture de bloc JAMAIS refermée n'amnistie plus la suite du document",
+    id: 'sql_terme_nu_en_commentaire',
+    famille: 'evenement_hors_nomenclature',
+    quoi: "en `.sql`, un commentaire n'exempte que ses accents graves, pas un terme nu",
     vue: () =>
       avec(
-        'docs/adr/9997-cloture.md',
-        [`${AG.repeat(3)}ts`, 'const f: Invoice = lire();', '', 'la suite du document'].join('\n')
+        'prisma/migrations/0004_note/migration.sql',
+        '-- le producteur emet payment.received\nALTER TABLE evenements ADD COLUMN type text;'
       ),
   },
   {
+    id: 'prisma_accent_grave_hors_commentaire',
     famille: 'terme_axionia_invalide',
-    quoi: "en `.prisma`, l'accent grave HORS COMMENTAIRE ne cite rien",
+    quoi: "en `.prisma`, l'accent grave hors commentaire ne cite rien",
     vue: () =>
       avec(
         'prisma/appat.prisma',
@@ -1040,26 +862,32 @@ export const TEMOINS: Temoin[] = [
       ),
   },
   {
+    id: 'prisma_terme_nu_en_commentaire',
+    famille: 'terme_axionia_invalide',
+    quoi: "en `.prisma`, un commentaire n'exempte que ses accents graves, pas un terme nu",
+    vue: () => avec('prisma/appat-nu.prisma', '/// le modele Invoice\nmodel Facture {\n  id String @id\n}\n'),
+  },
+  {
+    id: 'litteral_hors_contrat',
     famille: 'evenement_litteral_hors_contrat',
     quoi: 'un nom VALIDE recopié hors du paquet de contrats',
     vue: () => avec('src/server/journal.ts', "if (type === 'paiement.recu') return;"),
   },
   {
+    id: 'synonyme_exerce',
     famille: 'synonyme_interdit_du_glossaire',
     quoi: '`qualificateur` employé comme un rôle',
     vue: () => avec('src/server/roles.ts', "const role = 'qualificateur';"),
   },
 ];
 
+export type ContreTemoin = { quoi: string; vue: () => Vue };
+
 /**
- * Ce que la garde ne doit PAS faire rougir. Une garde qui rougit sur tout ne dit rien de plus
- * qu'une garde qui ne rougit jamais — et celle-ci interdirait sa propre documentation.
- *
- * ⚠️ CHAQUE EXEMPTION A ICI UN CONTRE-TÉMOIN ATTEIGNABLE DANS LE PÉRIMÈTRE. C'est le critère qui
- * aurait tué `PORTEURS` avant la revue : une exemption dont le contre-témoin est hors périmètre
- * est verte parce qu'elle n'est jamais atteinte, pas parce qu'elle fonctionne.
+ * Ce que la garde ne doit PAS faire rougir : le côté de chaque frontière d'exemption où elle VAUT,
+ * chacun atteignable dans le périmètre.
  */
-export const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
+export const CONTRE_TEMOINS: ContreTemoin[] = [
   {
     quoi: 'la vue conforme, sans témoin ajouté',
     vue: () => VUE_CONFORME,
@@ -1130,19 +958,16 @@ export const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
   },
 ];
 
+// ── la preuve et le verdict : des FONCTIONS PURES ────────────────────────────
+
 export type RapportDePreuve = {
-  /** Les clés effectivement couvertes — nourries par la faute qui MATCHE, jamais par une autre. */
+  /** Les clés couvertes — nourries par le témoin qui MORD, jamais par une faute incidente. */
   couvertes: Set<string>;
   /** Les témoins qui ne mordent plus : le témoin est faux, ou la règle ne couvre plus son cas. */
   sansMorsure: Temoin[];
 };
 
-/**
- * Le banc d'essai, PUR et exporté — pour que `termes-interdits.spec.ts` puisse exercer
- * l'assertion RÉCIPROQUE : retirer un témoin doit DÉCOUVRIR sa clé. C'est ce qui manquait, et
- * c'est ce qui rendait `--prove` vert quand on lui supprimait un témoin : l'ensemble couvert
- * était alimenté par TOUTES les fautes de TOUS les témoins.
- */
+/** Un témoin MORD s'il produit une faute de SA famille et, s'il en nomme un, de SON refus. */
 export function eprouver(temoins: readonly Temoin[]): RapportDePreuve {
   const couvertes = new Set<string>();
   const sansMorsure: Temoin[] = [];
@@ -1152,53 +977,50 @@ export function eprouver(temoins: readonly Temoin[]): RapportDePreuve {
       (f) => f.famille === t.famille && (t.refus === undefined || f.refus === t.refus)
     );
     if (mord) {
-      // Les DEUX clés : la famille, et le refus nommé. Un refus couvert couvre sa famille, mais
-      // une famille couverte ne couvre AUCUN de ses autres refus — c'est là qu'était le trou.
       couvertes.add(t.famille);
       couvertes.add(cleDeCouverture(t.famille, t.refus));
+      couvertes.add(t.id);
     } else sansMorsure.push(t);
   }
   return { couvertes, sansMorsure };
 }
 
+export type Declares = {
+  familles: readonly string[];
+  refus: readonly string[];
+  temoins: readonly string[];
+};
+
 export type Ecarts = {
   /** Ce que le code DÉCLARE et ce que le registre ÉNUMÈRE ne sont pas le même ensemble. */
   divergences: string[];
-  /** Les témoins dont la clé n'est pas au registre : le registre a rétréci sans le code. */
+  /** Les témoins dont la famille ou le refus n'est pas au registre. */
   orphelins: string[];
   /** Les clés du registre qu'aucun témoin QUI MORD ne couvre. */
   manque: string[];
 };
 
-/**
- * LES ÉCARTS ENTRE LA POPULATION DU REGISTRE ET CE QUE LE CODE DÉCLARE ET PROUVE — dans les DEUX
- * sens. PUR et exporté : toute la logique de population vit ici, pour que chacune de ses branches
- * soit exercée par le contrôle au lieu de n'exister que dans la ligne de commande.
- *
- *   — ce que le code déclare (`FAMILLES`, `REFUS_DE_CONCLURE`) égale ce que le registre énumère,
- *     dans les deux sens, et l'écart NOMME ce qui manque de chaque côté ;
- *   — tout témoin porte une clé que le registre énumère : sans cette réciproque, retirer une
- *     entrée du REGISTRE rétrécissait la population en silence, et le témoin restait vert ;
- *   — toute clé du registre est couverte par un témoin qui MORD (`eprouver`), jamais par une
- *     faute incidente d'un autre témoin.
- */
+/** LES ÉCARTS ENTRE LA POPULATION DU REGISTRE ET CE QUE LE CODE DÉCLARE ET PROUVE, dans les deux sens. */
 export function ecartsDePopulation(
   population: Population,
-  declares: { familles: readonly string[]; refus: readonly string[] },
+  declares: Declares,
   temoins: readonly Temoin[]
 ): Ecarts {
   const divergences: string[] = [];
   const confronter = (quoi: string, code: readonly string[], registre: readonly string[]): void => {
     const codeSeul = code.filter((n) => !registre.includes(n));
     const registreSeul = registre.filter((n) => !code.includes(n));
-    if (codeSeul.length + registreSeul.length === 0) return;
+    const doubles = code.filter((n, i) => code.indexOf(n) !== i);
+    if (codeSeul.length + registreSeul.length + doubles.length === 0) return;
     divergences.push(
       `${quoi} : le code et docs/gates.json ont divergé — dans le code seulement : ` +
-        `${codeSeul.join(', ') || 'rien'} ; au registre seulement : ${registreSeul.join(', ') || 'rien'}.`
+        `${codeSeul.join(', ') || 'rien'} ; au registre seulement : ${registreSeul.join(', ') || 'rien'}` +
+        `${doubles.length > 0 ? ` ; en double dans le code : ${doubles.join(', ')}` : ''}.`
     );
   };
   confronter('familles', declares.familles, population.familles);
   confronter('refus de conclure', declares.refus, population.refus);
+  confronter('témoins', declares.temoins, population.temoins);
 
   const orphelins = temoins
     .filter(
@@ -1212,165 +1034,177 @@ export function ecartsDePopulation(
   const manque = [
     ...population.familles,
     ...population.refus.map((r) => cleDeCouverture('source_illisible', r)),
+    ...population.temoins,
   ].filter((cle) => !couvertes.has(cle));
 
   return { divergences, orphelins, manque };
 }
 
-// ── mode --prove ─────────────────────────────────────────────────────────────
+export type Decision = { code: 0 | 1; lignes: string[] };
 
-if (APPELE_DIRECTEMENT && process.argv.includes('--prove')) {
-  const rapport = eprouver(TEMOINS);
-  if (rapport.sansMorsure.length > 0) {
-    for (const t of rapport.sansMorsure) {
-      console.error(
-        `❌ Le témoin « ${t.quoi} » n'a PAS fait rougir « ${cleDeCouverture(t.famille, t.refus)} ». ` +
-          "Le témoin est faux, ou la règle ne couvre pas ce qu'elle prétend couvrir."
-      );
-    }
-    process.exit(1);
+/** LA DÉCISION DE `--prove`. La ligne de commande n'en fait qu'imprimer les lignes et sortir du code. */
+export function decisionDeLaPreuve(entrees: {
+  temoins: readonly Temoin[];
+  contreTemoins: readonly ContreTemoin[];
+  /** Le texte de `docs/gates.json`, ou l'erreur de sa lecture. */
+  registre: string | Error;
+  familles: readonly string[];
+  refus: readonly string[];
+}): Decision {
+  const refus: string[] = [];
+
+  for (const t of eprouver(entrees.temoins).sansMorsure) {
+    refus.push(
+      `Le témoin « ${t.quoi} » (${t.id}) n'a PAS fait rougir « ${cleDeCouverture(t.famille, t.refus)} ». ` +
+        "Le témoin est faux, ou la règle ne couvre pas ce qu'elle prétend couvrir."
+    );
   }
-
-  for (const c of CONTRE_TEMOINS) {
+  for (const c of entrees.contreTemoins) {
     const fautes = controler(c.vue());
     if (fautes.length > 0) {
-      console.error(
-        `❌ Faux positif : « ${c.quoi} » a fait rougir « ${fautes[0]!.famille} ».\n` +
-          `   ${fautes[0]!.message}\n` +
-          "   C'est un usage légitime — la règle est trop large, et une garde qui condamne le cas " +
-          "normal n'est pas un progrès."
+      refus.push(
+        `Faux positif : « ${c.quoi} » a fait rougir « ${fautes[0]!.famille} ».\n   ${fautes[0]!.message}`
       );
-      process.exit(1);
     }
   }
 
-  // ── LA POPULATION VIENT DU REGISTRE, ET ELLE EST CONFRONTÉE AU CODE ────────
-  const refusDeLaPreuve: string[] = [];
-  let population: Population = { familles: [], refus: [] };
+  let population: Population | undefined;
   try {
-    population = populationDuRegistre(readFileSync(CHEMIN_REGISTRE, 'utf8'));
+    if (entrees.registre instanceof Error) throw entrees.registre;
+    population = populationDuRegistre(entrees.registre);
   } catch (e) {
-    refusDeLaPreuve.push(
-      `la population attendue est ILLISIBLE dans docs/gates.json : ${(e as Error).message}`
-    );
+    refus.push(`la population attendue est ILLISIBLE dans docs/gates.json : ${(e as Error).message}`);
   }
-
-  // Un registre illisible a déjà parlé : confronter une population vide ne ferait qu'ajouter du
-  // bruit — tous les témoins y seraient « orphelins ».
-  if (refusDeLaPreuve.length === 0) {
+  if (population !== undefined) {
     const ecarts = ecartsDePopulation(
       population,
-      { familles: FAMILLES.map((f) => f.nom), refus: REFUS_DE_CONCLURE },
-      TEMOINS
+      { familles: entrees.familles, refus: entrees.refus, temoins: entrees.temoins.map((t) => t.id) },
+      entrees.temoins
     );
-    refusDeLaPreuve.push(...ecarts.divergences);
+    refus.push(...ecarts.divergences);
     if (ecarts.orphelins.length > 0) {
-      refusDeLaPreuve.push(
-        `${ecarts.orphelins.length} témoin(s) dont la clé n'est pas au registre : ` +
-          `${ecarts.orphelins.join(', ')}.\n      Le registre a rétréci sans que le code suive.`
+      refus.push(
+        `${ecarts.orphelins.length} témoin(s) dont la famille ou le refus n'est pas au registre : ` +
+          `${ecarts.orphelins.join(', ')}.`
       );
     }
     if (ecarts.manque.length > 0) {
-      refusDeLaPreuve.push(
+      refus.push(
         `${ecarts.manque.length} entrée(s) de la population du registre sans témoin qui rougit : ` +
-          `${ecarts.manque.join(', ')}.\n      Une règle jamais vue rougir ne garde rien.`
+          `${ecarts.manque.join(', ')}. Une règle jamais vue rougir ne garde rien.`
       );
     }
   }
 
-  if (refusDeLaPreuve.length > 0) {
-    refusDeLaPreuve.forEach((r) => console.error(`❌ ${r}`));
-    process.exit(1);
+  if (refus.length > 0 || population === undefined) {
+    return { code: 1, lignes: refus.map((r) => `❌ ${r}`) };
   }
-
-  console.log(
-    `✅ gov:check — les ${population.familles.length} familles et les ${population.refus.length} ` +
-      `refus que docs/gates.json énumère rougissent chacun sur son témoin (${TEMOINS.length} ` +
-      `témoins), et les ${CONTRE_TEMOINS.length} contre-témoins restent verts.`
-  );
-  console.log(FAMILLES.map((f) => `   • ${f.nom} — ${f.explication}`).join('\n'));
-  process.exit(0);
+  return {
+    code: 0,
+    lignes: [
+      `✅ gov:check — les ${population.familles.length} familles, les ${population.refus.length} refus ` +
+        `et les ${population.temoins.length} témoins que docs/gates.json énumère rougissent chacun, ` +
+        `et les ${entrees.contreTemoins.length} contre-témoins restent verts.`,
+      ...FAMILLES.map((f) => `   • ${f.nom} — ${f.explication}`),
+    ],
+  };
 }
 
-// ── mode normal ──────────────────────────────────────────────────────────────
+/** La portée de `partners:schema:enums`, telle que `schema-enums.ts` l'exporte. */
+export type PorteeDesEtats = { racines: readonly string[]; extensions: readonly string[] };
 
-if (APPELE_DIRECTEMENT && !process.argv.includes('--prove')) {
-  const vue = vueDuDepot();
+/** Les racines de cette garde que la famille des listes d'états ne couvre pas. */
+export function racinesHorsDeLaFamille(racines: readonly string[], portee: PorteeDesEtats): string[] {
+  return racines.filter((r) => !portee.racines.some((c) => r.startsWith(`${c}/`)));
+}
+
+/** LE VERDICT SUR UNE VUE, et tout ce qui s'imprime avec lui — dérivé de `perimetreDeLaVue`. */
+export function decisionDeLaGarde(vue: Vue, portee: PorteeDesEtats): Decision {
   const fautes = controler(vue);
-
-  const racines = [...vue.racines, RACINE_CONTRATS];
-  const parRacine = racines.map((r) => ({
-    racine: r,
-    nombre: vue.fichiers.filter((f) => f.chemin.startsWith(r)).length,
-  }));
-  const balayes = parRacine.reduce((n, p) => n + p.nombre, 0);
-  const horsPerimetre = vue.fichiers.filter((f) => !racines.some((r) => f.chemin.startsWith(r)));
+  const perimetre = perimetreDeLaVue(vue);
+  const vides = perimetre.parRacine.filter((r) => r.lus.length === 0).map((r) => r.racine);
   const synonymes = synonymesDuGlossaire(vue.glossaire);
   const exerces = synonymes.filter((s) => s.exerce);
   const conditionnels = synonymes.filter((s) => !s.exerce);
   const modeles = modelesRefusesDAxionia(vue.reqInt004, vue.glossaire);
   const gardesAilleurs = conditionnels.filter((s) => modeles.includes(s.terme));
+  const horsFamille = racinesHorsDeLaFamille(perimetre.racines, portee);
 
-  const perimetre = [
-    `   Périmètre : ${balayes} fichier(s) balayé(s) — ` +
-      parRacine.map((p) => `${p.racine} ${p.nombre}`).join(', ') +
-      '.',
-    // « 0 fichier » ne se lit pas comme « aucun défaut » : les racines vides sont NOMMÉES.
-    ...(parRacine.some((p) => p.nombre === 0)
-      ? [
-          `   ⚠️ Racine(s) VIDE(S) : ${parRacine
-            .filter((p) => p.nombre === 0)
-            .map((p) => p.racine)
-            .join(', ')} — rien n'y a été lu. En phase −1, \`src/\` et \`messages/\` sont vides ou ` +
-            'presque par construction ; le jour où elles se remplissent sans que ce compte bouge, ' +
-            "c'est la garde qui est débranchée.",
-        ]
-      : []),
-    // Ce que la garde NE lit PAS, dit à voix haute : les racines viennent de l'en-tête du
-    // glossaire, et le reste des fichiers suivis demeure dehors. Une garde qui tait son angle
-    // mort se fait lire comme si elle n'en avait pas.
-    `   Hors périmètre : ${horsPerimetre.length} fichier(s) suivi(s) — les racines sont LUES dans ` +
-      "l'en-tête de `docs/GLOSSAIRE.md`, à qui `docs/PRESEANCE.md` §2 donne la primauté sur un " +
-      'terme et ses synonymes interdits. Élargir ce périmètre est un arbitrage du `gardien-spec`, ' +
-      'pas une option de cette garde.',
-    // ⚠️ CE QUE CETTE GARDE NE TIENT PLUS. Dit à chaque exécution, parce qu'une famille déplacée
-    // en silence est une racine perdue en silence (partners/ADR-0011).
+  const lignes: string[] =
+    fautes.length === 0
+      ? ['✅ gov:check — aucun terme interdit dans les fichiers lus.']
+      : [
+          `❌ gov:check — ${fautes.length} terme(s) interdit(s) :`,
+          '',
+          ...fautes.slice(0, 30).map((f) => `   [${f.famille}] ${f.message}`),
+          ...(fautes.length > 30 ? [`   … et ${fautes.length - 30} autre(s).`] : []),
+          '',
+        ];
+
+  lignes.push(
+    `   Périmètre : ${perimetre.lus.length} fichier(s) lu(s) sur ${vue.fichiers.length} suivi(s) — ` +
+      perimetre.parRacine.map((r) => `${r.racine} ${r.lus.length}`).join(', ') +
+      '. Toute extension est lue ; seules .md, .sql et .prisma accordent une exemption de citation.'
+  );
+  if (vides.length > 0) {
+    lignes.push(
+      `   ⚠️ Racine(s) VIDE(S) : ${vides.join(', ')} — rien n'y a été lu. Le jour où elles se ` +
+        "remplissent sans que ce compte bouge, c'est la garde qui est débranchée."
+    );
+  }
+  lignes.push(
+    `   Hors périmètre : ${perimetre.horsPerimetre.length} fichier(s) suivi(s) — les racines sont LUES ` +
+      "dans l'en-tête de `docs/GLOSSAIRE.md` ; les élargir est un arbitrage du `gardien-spec`.",
     '   Hors famille : les listes littérales d’états occupants relèvent de `partners:schema:enums` ' +
-      '(GOV-006), SEULE implémentation depuis `partners/ADR-0011`. Elle balaie `src`, `prisma` et ' +
-      '`scripts` en .ts/.tsx/.prisma/.sql : `messages/`, `docs/adr/` et `packages/contracts/` ne ' +
-      'sont donc gardées par PERSONNE sur cette famille-là, et le dire vaut mieux que le taire.',
+      `(\`partners/ADR-0011\`), qui lit ${portee.racines.map((r) => `${r}/`).join(', ')} en ` +
+      `.${portee.extensions.join(', .')}. Racine(s) de cette garde hors de cette portée : ` +
+      `${horsFamille.join(', ') || 'aucune'} — aucune garde n'y tient cette famille.`,
     `   Sources : ${typesEvenementDeLaReq(vue.reqInt004).length} type(s) d'événement (REQ-INT-004), ` +
       `${modeles.length} modèle(s) refusé(s) d'axionia, ` +
-      `${exerces.length} synonyme(s) interdit(s) exercé(s) (docs/GLOSSAIRE.md).`,
-    ...(conditionnels.length > 0
-      ? [
-          `   ⚠️ ${conditionnels.length} synonyme(s) NON exercé(s) comme synonyme, parce que le ` +
-            `glossaire les assortit d'une condition que la garde ne sait pas juger : ${conditionnels
-              .map((s) => s.terme)
-              .join(', ')}.` +
-            // ⚠️ « ils ne sont gardés par rien » était FAUX, et le même run le démentait :
-            // `PaymentScheduleProfile` est gardé par `terme_axionia_invalide`. Une sortie de CI
-            // qui sous-déclare sa garde est l'inverse de l'aveu qu'elle veut être.
-            (gardesAilleurs.length > 0
-              ? ` ⚠️ ${gardesAilleurs
-                  .map((s) => s.terme)
-                  .join(', ')} reste(nt) gardé(s) par \`terme_axionia_invalide\` — le glossaire ` +
-                'le nomme aussi comme modèle supprimé.'
-              : '') +
-            ' Les autres ne sont gardés par rien — le dire vaut mieux que le laisser croire.',
-        ]
-      : []),
-  ].join('\n');
-
-  if (fautes.length === 0) {
-    console.log('✅ gov:check — aucun terme interdit dans les fichiers suivis.');
-    console.log(perimetre);
-    process.exit(0);
+      `${exerces.length} synonyme(s) interdit(s) exercé(s) (docs/GLOSSAIRE.md).`
+  );
+  if (conditionnels.length > 0) {
+    lignes.push(
+      `   ⚠️ ${conditionnels.length} synonyme(s) NON exercé(s) comme synonyme, parce que le glossaire ` +
+        `les assortit d'une condition que la garde ne sait pas juger : ${conditionnels.map((s) => s.terme).join(', ')}.` +
+        (gardesAilleurs.length > 0
+          ? ` ${gardesAilleurs.map((s) => s.terme).join(', ')} reste(nt) gardé(s) par ` +
+            '`terme_axionia_invalide`, le glossaire le nommant aussi comme modèle supprimé.'
+          : '') +
+        ' Les autres ne sont gardés par rien.'
+    );
   }
-  console.error(`❌ gov:check — ${fautes.length} terme(s) interdit(s) :\n`);
-  fautes.slice(0, 30).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
-  if (fautes.length > 30) console.error(`   … et ${fautes.length - 30} autre(s).`);
-  console.error('');
-  console.error(perimetre);
-  process.exit(1);
+
+  return { code: fautes.length === 0 ? 0 : 1, lignes };
+}
+
+// ── ligne de commande ────────────────────────────────────────────────────────
+// GARDÉE : ce module est IMPORTÉ par son test, et l'import ne doit ni juger ni sortir. Le chemin
+// invoqué est comparé à CE module, extension comprise ou non.
+
+const sansExtension = (chemin: string): string => chemin.replace(/\.ts$/, '').toLowerCase();
+const APPELE_DIRECTEMENT =
+  process.argv[1] !== undefined &&
+  sansExtension(resolve(process.argv[1])) === sansExtension(fileURLToPath(import.meta.url));
+
+function lireLeRegistre(): string | Error {
+  try {
+    return readFileSync(CHEMIN_REGISTRE, 'utf8');
+  } catch (e) {
+    return e as Error;
+  }
+}
+
+if (APPELE_DIRECTEMENT) {
+  const decision = process.argv.includes('--prove')
+    ? decisionDeLaPreuve({
+        temoins: TEMOINS,
+        contreTemoins: CONTRE_TEMOINS,
+        registre: lireLeRegistre(),
+        familles: FAMILLES.map((f) => f.nom),
+        refus: REFUS_DE_CONCLURE,
+      })
+    : decisionDeLaGarde(vueDuDepot(), { racines: RACINES_CODE, extensions: EXTENSIONS_CODE });
+  (decision.code === 0 ? console.log : console.error)(decision.lignes.join('\n'));
+  process.exit(decision.code);
 }

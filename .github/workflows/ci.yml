@@ -172,7 +172,7 @@ jobs:
       # `garde_ecrite_jamais_appelee`, qui cherche l'identifiant OU le chemin. Le chemin est donc la
       # seule invocation qui dise la verite tant que l'homonymie n'est pas tranchee par un ADR
       # (acceptation de GOV-030 : « le choix … se tranche par un ADR, pas dans la PR »).
-      - name: Termes interdits — nomenclature, modeles d axionia, etats occupants et synonymes
+      - name: Termes interdits — nomenclature, modeles d axionia et synonymes
         run: npx tsx scripts/gates/gov-check.ts
       - name: La garde des termes interdits sait rougir
         run: npx tsx scripts/gates/gov-check.ts --prove
