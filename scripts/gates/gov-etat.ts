@@ -66,8 +66,8 @@ const LIVREES = LIVREE_DERIVEE;
 {
   const ecarts = verifierExhaustivite();
   if (ecarts.length > 0) {
-    console.error("❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :");
-    ecarts.forEach((e) => console.error("   " + e));
+    console.error('❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :');
+    ecarts.forEach((e) => console.error('   ' + e));
     process.exit(1);
   }
 }
@@ -90,7 +90,11 @@ const RUBRIQUES = [
 type Faute = { famille: string; message: string };
 
 /** Les trois familles qui ne lisent que le disque : toujours évaluées. */
-const FAMILLES_LOCALES = ['plan_state_incomplet', 'journal_entree_incomplete', 'journal_doublon_pr'];
+const FAMILLES_LOCALES = [
+  'plan_state_incomplet',
+  'journal_entree_incomplete',
+  'journal_doublon_pr',
+];
 /** La famille qui a besoin d'un instant : évaluée seulement sous `--now <ISO>`. */
 const FAMILLES_INSTANT = ['journal_date_future'];
 /** Les cinq familles qui lisent GitHub : évaluées sauf `--hors-ligne`, et alors NOMMÉES. */
@@ -104,7 +108,13 @@ const FAMILLES_GITHUB = [
 const FAMILLES = [...FAMILLES_LOCALES, ...FAMILLES_INSTANT, ...FAMILLES_GITHUB];
 
 type Entree = { pr: number; date: string; titre: string; corps: string; fichier: string };
-type Tache = { id: string; titre: string; statut: string; owner: string | null; issue: number | null };
+type Tache = {
+  id: string;
+  titre: string;
+  statut: string;
+  owner: string | null;
+  issue: number | null;
+};
 type PrOuverte = { numero: number; titre: string };
 type PrFusionnee = { numero: number; titre: string; dateCommitIso: string };
 
@@ -137,12 +147,20 @@ function lireJournal(): Entree[] {
     process.exit(1);
   }
   const out: Entree[] = [];
-  for (const nom of readdirSync(CHEMIN_JOURNAL).filter((n) => n.endsWith('.md')).sort()) {
+  for (const nom of readdirSync(CHEMIN_JOURNAL)
+    .filter((n) => n.endsWith('.md'))
+    .sort()) {
     const texte = readFileSync(join(CHEMIN_JOURNAL, nom), 'utf8');
     for (const bloc of texte.split(/^## /m).slice(1)) {
       const m = /^PR #(\d+) — (\d{4}-\d{2}-\d{2}) — (.*)$/m.exec(bloc);
       if (!m || !m[1] || !m[2]) continue;
-      out.push({ pr: Number(m[1]), date: m[2], titre: (m[3] ?? '').trim(), corps: bloc, fichier: nom });
+      out.push({
+        pr: Number(m[1]),
+        date: m[2],
+        titre: (m[3] ?? '').trim(),
+        corps: bloc,
+        fichier: nom,
+      });
     }
   }
   return out;
@@ -155,7 +173,9 @@ function lireJournal(): Entree[] {
  */
 function lirePlancher(): number {
   if (!existsSync(CHEMIN_README_JOURNAL)) {
-    console.error(`❌ gov:etat — \`${CHEMIN_README_JOURNAL}\` est absent : le plancher du journal n'a pas de source.`);
+    console.error(
+      `❌ gov:etat — \`${CHEMIN_README_JOURNAL}\` est absent : le plancher du journal n'a pas de source.`
+    );
     process.exit(1);
   }
   const m = /Plancher\s*:\s*le journal couvre les PR de numéro \*\*> (\d+)\*\*/.exec(
@@ -172,14 +192,18 @@ function lirePlancher(): number {
 }
 
 function lireTaches(): Tache[] {
-  const doc = JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Record<string, unknown>[] };
+  const doc = JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as {
+    taches: Record<string, unknown>[];
+  };
   return doc.taches.map((t, i) => {
     // La garde lit trois champs de `docs/tasks.json` ; s'ils disparaissaient, elle jugerait sur du
     // vide sans le dire. On refuse plutôt que de compléter (RM-03 : une fonction qui « complète »
     // une fixture VÉRIFIE, elle ne fabrique pas).
     for (const champ of ['id', 'statut']) {
       if (typeof t[champ] !== 'string') {
-        console.error(`❌ gov:etat — \`${CHEMIN_TACHES}\` : la tâche #${i} n'a pas de \`${champ}\` lisible.`);
+        console.error(
+          `❌ gov:etat — \`${CHEMIN_TACHES}\` : la tâche #${i} n'a pas de \`${champ}\` lisible.`
+        );
         process.exit(1);
       }
     }
@@ -195,7 +219,10 @@ function lireTaches(): Tache[] {
 
 function git(args: string[]): string | null {
   try {
-    return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || null;
+    return (
+      execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() ||
+      null
+    );
   } catch {
     return null;
   }
@@ -215,13 +242,20 @@ const BINAIRE_GH = COMMANDE_GH[0] ?? 'gh';
 const PREFIXE_GH = COMMANDE_GH.slice(1);
 
 function gh(args: string[]): string {
-  return execFileSync(BINAIRE_GH, [...PREFIXE_GH, ...args], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  return execFileSync(BINAIRE_GH, [...PREFIXE_GH, ...args], {
+    encoding: 'utf8',
+    maxBuffer: 32 * 1024 * 1024,
+  });
 }
 
 /** Sort en ÉCHEC en nommant ce qui n'a pas pu être évalué. Jamais un vert silencieux. */
 function abandonGithub(commande: string, e: unknown): never {
-  console.error(`❌ gov:etat — [github_illisible] \`${commande}\` a échoué : ${(e as Error).message}`);
-  console.error(`   Les ${FAMILLES_GITHUB.length} familles qui lisent GitHub n'ont PAS été évaluées :`);
+  console.error(
+    `❌ gov:etat — [github_illisible] \`${commande}\` a échoué : ${(e as Error).message}`
+  );
+  console.error(
+    `   Les ${FAMILLES_GITHUB.length} familles qui lisent GitHub n'ont PAS été évaluées :`
+  );
   console.error(`   ${FAMILLES_GITHUB.map((f) => '• ' + f).join('\n   ')}`);
   console.error(
     '   Une gate qui passe parce qu’elle n’a rien pu lire est pire que pas de gate. Si l’absence de\n' +
@@ -237,10 +271,14 @@ function lireGithub(): {
 } {
   let prOuvertes: PrOuverte[];
   try {
-    prOuvertes = (JSON.parse(gh(['pr', 'list', '--state', 'open', '--json', 'number,title', '--limit', '100'])) as {
-      number: number;
-      title: string;
-    }[]).map((p) => ({ numero: p.number, titre: p.title ?? '' }));
+    prOuvertes = (
+      JSON.parse(
+        gh(['pr', 'list', '--state', 'open', '--json', 'number,title', '--limit', '100'])
+      ) as {
+        number: number;
+        title: string;
+      }[]
+    ).map((p) => ({ numero: p.number, titre: p.title ?? '' }));
   } catch (e) {
     abandonGithub('gh pr list --state open', e);
   }
@@ -248,7 +286,16 @@ function lireGithub(): {
   let brutFusionnees: { number: number; title: string; mergeCommit: { oid: string } | null }[];
   try {
     brutFusionnees = JSON.parse(
-      gh(['pr', 'list', '--state', 'merged', '--json', 'number,title,mergeCommit', '--limit', '100'])
+      gh([
+        'pr',
+        'list',
+        '--state',
+        'merged',
+        '--json',
+        'number,title,mergeCommit',
+        '--limit',
+        '100',
+      ])
     ) as typeof brutFusionnees;
   } catch (e) {
     abandonGithub('gh pr list --state merged', e);
@@ -279,7 +326,9 @@ function lireGithub(): {
 
   let issues: { number: number; labels: { name: string }[] }[];
   try {
-    issues = JSON.parse(gh(['issue', 'list', '--state', 'open', '--json', 'number,labels', '--limit', '200'])) as typeof issues;
+    issues = JSON.parse(
+      gh(['issue', 'list', '--state', 'open', '--json', 'number,labels', '--limit', '200'])
+    ) as typeof issues;
   } catch (e) {
     abandonGithub('gh issue list --state open', e);
   }
@@ -329,7 +378,8 @@ function controler(e: Etat): Faute[] {
   if (iReprise >= 0 && iPhase >= 0 && iReprise > iPhase) {
     f.push({
       famille: 'plan_state_incomplet',
-      message: 'le bloc « REPRENDRE EN 30 SECONDES » est APRÈS « Phase courante » : il doit ouvrir le fichier.',
+      message:
+        'le bloc « REPRENDRE EN 30 SECONDES » est APRÈS « Phase courante » : il doit ouvrir le fichier.',
     });
   }
   if (iReprise >= 0) {
@@ -541,7 +591,9 @@ if (process.argv.includes('--prove')) {
   });
   const premiere = entrees[0];
   if (!premiere) {
-    console.error('❌ gov:etat --prove — le journal est vide : deux témoins ne peuvent pas en être dérivés (RM-03).');
+    console.error(
+      '❌ gov:etat --prove — le journal est vide : deux témoins ne peuvent pas en être dérivés (RM-03).'
+    );
     process.exit(1);
   }
 
@@ -549,7 +601,8 @@ if (process.argv.includes('--prove')) {
     {
       famille: 'plan_state_incomplet',
       quoi: 'PLAN-STATE sans son bloc de reprise',
-      etat: () => copie({ planState: planState.split('## REPRENDRE EN 30 SECONDES').join('## Autre chose') }),
+      etat: () =>
+        copie({ planState: planState.split('## REPRENDRE EN 30 SECONDES').join('## Autre chose') }),
     },
     {
       famille: 'journal_entree_incomplete',
@@ -600,7 +653,13 @@ if (process.argv.includes('--prove')) {
       quoi: 'une PR fusionnée au-dessus du plancher, qu’aucune entrée ne cite',
       etat: () =>
         copie({
-          prFusionnees: [{ numero: plancherPr + 72, titre: 'fusionnée sans journal', dateCommitIso: DATE_FUSION }],
+          prFusionnees: [
+            {
+              numero: plancherPr + 72,
+              titre: 'fusionnée sans journal',
+              dateCommitIso: DATE_FUSION,
+            },
+          ],
         }),
     },
   ];
@@ -611,13 +670,20 @@ if (process.argv.includes('--prove')) {
       // LE contre-témoin du plancher : sans lui, la famille exigerait une entrée pour les sept PR
       // fusionnées avant que le journal n'existe, et rétro-journaliser aurait fabriqué de la mémoire.
       quoi: 'une PR fusionnée SOUS le plancher, sans entrée de journal',
-      etat: () => copie({ prFusionnees: [{ numero: plancherPr, titre: 'avant le journal', dateCommitIso: DATE_FUSION }] }),
+      etat: () =>
+        copie({
+          prFusionnees: [
+            { numero: plancherPr, titre: 'avant le journal', dateCommitIso: DATE_FUSION },
+          ],
+        }),
     },
     {
       quoi: 'une PR fusionnée AU-DESSUS du plancher, avec son entrée',
       etat: () =>
         copie({
-          prFusionnees: [{ numero: premiere.pr, titre: premiere.titre, dateCommitIso: DATE_FUSION }],
+          prFusionnees: [
+            { numero: premiere.pr, titre: premiere.titre, dateCommitIso: DATE_FUSION },
+          ],
           plancherPr: premiere.pr - 1,
         }),
     },
@@ -641,7 +707,8 @@ if (process.argv.includes('--prove')) {
       // Ne fait varier QUE la revendication de la tâche livrée (issue 900) : les deux autres restent
       // telles quelles. Muter la carte entière retirait aussi la revendication de la tâche en vol,
       // et le contre-témoin rougissait pour une raison qui n'était pas la sienne (RM-11).
-      etat: () => copie({ revendications: new Map([...BASE.revendications!, [900, ['A05', 'A09']]]) }),
+      etat: () =>
+        copie({ revendications: new Map([...BASE.revendications!, [900, ['A05', 'A09']]]) }),
     },
     {
       quoi: 'PLAN-STATE régénéré APRÈS la dernière fusion',
@@ -655,7 +722,8 @@ if (process.argv.includes('--prove')) {
     },
     {
       quoi: 'une PR ouverte dont le titre ne suit pas la convention (c’est `gov:pr` qui la refuse)',
-      etat: () => copie({ prOuvertes: [{ numero: 28, titre: 'un titre sans identifiant de tâche' }] }),
+      etat: () =>
+        copie({ prOuvertes: [{ numero: 28, titre: 'un titre sans identifiant de tâche' }] }),
     },
   ];
 
@@ -686,7 +754,9 @@ if (process.argv.includes('--prove')) {
     process.exit(1);
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${FAMILLES.map((x) => '• ' + x).join('\n   ')}`);
   console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts.`);
   process.exit(0);
@@ -732,11 +802,15 @@ const evaluees = [
 ];
 
 if (horsLigne) {
-  console.log(`⚠️ HORS PÉRIMÈTRE — ${FAMILLES_GITHUB.length} familles NON ÉVALUÉES, faute de lecture GitHub (\`--hors-ligne\`) :`);
+  console.log(
+    `⚠️ HORS PÉRIMÈTRE — ${FAMILLES_GITHUB.length} familles NON ÉVALUÉES, faute de lecture GitHub (\`--hors-ligne\`) :`
+  );
   console.log(`   ${FAMILLES_GITHUB.map((x) => '• ' + x).join('\n   ')}`);
 }
 if (maintenant === null) {
-  console.log(`⚠️ NON ÉVALUÉE — ${FAMILLES_INSTANT.length} famille a besoin d'un instant, et \`--now <ISO>\` n'a pas été donné :`);
+  console.log(
+    `⚠️ NON ÉVALUÉE — ${FAMILLES_INSTANT.length} famille a besoin d'un instant, et \`--now <ISO>\` n'a pas été donné :`
+  );
   console.log(`   ${FAMILLES_INSTANT.map((x) => '• ' + x).join('\n   ')}`);
 }
 
@@ -756,7 +830,9 @@ if (fautes.length === 0) {
 
 const parFamille = new Map<string, Faute[]>();
 for (const x of fautes) parFamille.set(x.famille, [...(parFamille.get(x.famille) ?? []), x]);
-console.error(`❌ gov:etat — ${fautes.length} défaut(s) sur ${evaluees.length} familles évaluées :\n`);
+console.error(
+  `❌ gov:etat — ${fautes.length} défaut(s) sur ${evaluees.length} familles évaluées :\n`
+);
 for (const [famille, liste] of parFamille) {
   console.error(`   ── ${famille} (${liste.length})`);
   liste.slice(0, 12).forEach((x) => console.error(`      ${x.message}`));

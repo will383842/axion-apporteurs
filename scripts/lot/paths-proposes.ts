@@ -66,11 +66,35 @@ type Gate = { script: string; tache: string };
  * Tout ce qui EST dérivable est ajouté plus bas — ne le recopie pas ici.
  */
 const MANUELS: Record<string, string[]> = {
-  'GOV-000': ['package.json', 'README.md', '.github/workflows/ci.yml', '.claude/settings.json', '.claude/agents/', '.claude/skills/lot/SKILL.md', 'scripts/lot/composer.ts', 'scripts/lot/cloture.ts', 'scripts/lot/lot.workflow.js', 'scripts/lot/tasks.schema.json', 'scripts/plan-state/build.ts', 'scripts/gates/gov-check.ts', 'scripts/gates/hook-env.js', 'docs/tasks.json'],
+  'GOV-000': [
+    'package.json',
+    'README.md',
+    '.github/workflows/ci.yml',
+    '.claude/settings.json',
+    '.claude/agents/',
+    '.claude/skills/lot/SKILL.md',
+    'scripts/lot/composer.ts',
+    'scripts/lot/cloture.ts',
+    'scripts/lot/lot.workflow.js',
+    'scripts/lot/tasks.schema.json',
+    'scripts/plan-state/build.ts',
+    'scripts/gates/gov-check.ts',
+    'scripts/gates/hook-env.js',
+    'docs/tasks.json',
+  ],
   'GOV-007': ['docs/CHARTE-AGENTS.md', '.github/PULL_REQUEST_TEMPLATE.md', '.github/CODEOWNERS'],
-  'GOV-001': ['docs/REQUIREMENTS.md', 'docs/requirements.json', 'docs/REQUIREMENTS-ANNEXE-FUSIONS.md'],
-  'GOV-018': ['docs/REGLES-MAISON.md', 'docs/LECONS.md', '.github/PULL_REQUEST_TEMPLATE.md',
-              'scripts/gates/gov-lecons.ts', 'tests/unit/gouvernance/regles-maison.spec.ts'],
+  'GOV-001': [
+    'docs/REQUIREMENTS.md',
+    'docs/requirements.json',
+    'docs/REQUIREMENTS-ANNEXE-FUSIONS.md',
+  ],
+  'GOV-018': [
+    'docs/REGLES-MAISON.md',
+    'docs/LECONS.md',
+    '.github/PULL_REQUEST_TEMPLATE.md',
+    'scripts/gates/gov-lecons.ts',
+    'tests/unit/gouvernance/regles-maison.spec.ts',
+  ],
   'GOV-008': ['docs/PLAN-STATE.md', 'scripts/plan-state/build.ts', '.claude/skills/lot/SKILL.md'],
   'GOV-002': ['docs/PRESEANCE.md', 'docs/contrat/CONTRAT-APPORTEUR-V1.md'],
   'GOV-003': ['scripts/gates/gov-identifiants.ts', 'docs/gates.json'],
@@ -79,19 +103,48 @@ const MANUELS: Record<string, string[]> = {
   'GOV-006': ['docs/GLOSSAIRE.md', 'scripts/gates/schema-enums.ts'],
   'GOV-009': ['docs/adr/'],
   'GOV-010': ['scripts/gates/gov-adr.ts'],
-  'GOV-011': ['docs/TRACABILITE.md', 'scripts/gates/gov-trace.ts',
-              'tests/unit/gouvernance/tracabilite.spec.ts'],
+  'GOV-011': [
+    'docs/TRACABILITE.md',
+    'scripts/gates/gov-trace.ts',
+    'tests/unit/gouvernance/tracabilite.spec.ts',
+  ],
   'GOV-012': ['docs/runbooks/fusion-partners.md', '.github/workflows/ci.yml', 'docs/gates.json'],
   'GOV-013': ['docs/gates.json'],
   'GOV-014': ['docs/CONVENTIONS.md', 'eslint.config.mjs', '.prettierrc', 'package.json'],
-  'GOV-015': ['docs/tiers/recherche-entreprises.md', 'docs/tiers/docuseal.md', 'docs/tiers/zeptomail.md', 'docs/tiers/telegram.md', 'docs/tiers/sepa-pain001.md', 'docs/tiers/urssaf.md', 'docs/tiers/tiime.md'],
-  'INT-T01a': ['packages/contracts/events.ts', 'packages/contracts/enveloppe.ts', 'scripts/contracts/export.ts', 'package.json', 'tests/fixtures/axionia/'],
-  'INT-T01b': ['axionia/scripts/partners/fixtures.ts', 'axionia/src/server/partners-sync/contracts/'],
+  'GOV-015': [
+    'docs/tiers/recherche-entreprises.md',
+    'docs/tiers/docuseal.md',
+    'docs/tiers/zeptomail.md',
+    'docs/tiers/telegram.md',
+    'docs/tiers/sepa-pain001.md',
+    'docs/tiers/urssaf.md',
+    'docs/tiers/tiime.md',
+  ],
+  'INT-T01a': [
+    'packages/contracts/events.ts',
+    'packages/contracts/enveloppe.ts',
+    'scripts/contracts/export.ts',
+    'package.json',
+    'tests/fixtures/axionia/',
+  ],
+  'INT-T01b': [
+    'axionia/scripts/partners/fixtures.ts',
+    'axionia/src/server/partners-sync/contracts/',
+  ],
   'GOV-017a': ['docs/tasks.json', 'scripts/lot/tasks.schema.json', 'scripts/gates/gov-tasks.ts'],
-  'GOV-017b': ['docs/tasks.json', 'scripts/lot/tasks.schema.json', 'scripts/gates/gov-tasks.ts', 'docs/paths-proposes.json', 'scripts/lot/paths-proposes.ts'],
+  'GOV-017b': [
+    'docs/tasks.json',
+    'scripts/lot/tasks.schema.json',
+    'scripts/gates/gov-tasks.ts',
+    'docs/paths-proposes.json',
+    'scripts/lot/paths-proposes.ts',
+  ],
   'GOV-019': ['scripts/gates/bundle-par-route.ts'],
-  'GOV-020': ['docs/INVENTAIRE-CHANTIERS.md', 'scripts/gates/gov-inventaire.ts',
-              'tests/unit/gouvernance/inventaire-prouve.spec.ts'],
+  'GOV-020': [
+    'docs/INVENTAIRE-CHANTIERS.md',
+    'scripts/gates/gov-inventaire.ts',
+    'tests/unit/gouvernance/inventaire-prouve.spec.ts',
+  ],
   'GOV-023': ['docs/agents.json', '.claude/agents/', 'package.json'],
   'QA-T00': ['scripts/gates/prove.sh', 'docs/gates.json', '.github/workflows/nightly.yml'],
   'JUR-T02': ['src/domain/seuils/ssot.ts', 'docs/gates.json'],
@@ -104,7 +157,13 @@ const MANUELS: Record<string, string[]> = {
   'DM-01': ['prisma/schema.prisma', 'prisma/migrations/', 'src/domain/evenement/journal.ts'],
   'DM-02': ['scripts/gates/schema-enums.ts', 'docs/gates.json'],
   'QA-T02': ['tests/integration/harnais.ts', 'vitest.config.ts'],
-  'QA-T04': ['src/lib/env.ts', 'src/app/api/livez/route.ts', 'src/app/api/readyz/route.ts', 'Dockerfile', 'docker-entrypoint.sh'],
+  'QA-T04': [
+    'src/lib/env.ts',
+    'src/app/api/livez/route.ts',
+    'src/app/api/readyz/route.ts',
+    'Dockerfile',
+    'docker-entrypoint.sh',
+  ],
   'QA-T03': ['scripts/gates/req-check.ts', 'docs/requirements.json', '.github/workflows/ci.yml'],
   'QA-T07': ['.semgrep.yml', '.github/workflows/ci.yml', 'docs/gates.json'],
   'QA-T30': ['stryker.config.json', '.github/workflows/nightly.yml'],
@@ -114,29 +173,83 @@ const MANUELS: Record<string, string[]> = {
   'QA-T11': ['.github/workflows/ci.yml', 'docs/gates.json'],
   'QA-T06': ['.github/workflows/preview.yml', 'prisma/seed.ts'],
   'QA-T12': ['.github/workflows/backup.yml', 'docs/runbooks/sauvegarde.md'],
-  'QA-T13': ['.github/workflows/rollback.yml', 'docs/runbooks/rollback.md', 'docs/runbooks/socle.md'],
-  'DM-03-A': ['axionia/src/content/pricing.ts', 'axionia/src/server/partners-sync/grille/export.ts'],
-  'DM-03-P': ['src/server/grille/import.ts', 'src/domain/commission/grille.ts', 'prisma/schema.prisma'],
+  'QA-T13': [
+    '.github/workflows/rollback.yml',
+    'docs/runbooks/rollback.md',
+    'docs/runbooks/socle.md',
+  ],
+  'DM-03-A': [
+    'axionia/src/content/pricing.ts',
+    'axionia/src/server/partners-sync/grille/export.ts',
+  ],
+  'DM-03-P': [
+    'src/server/grille/import.ts',
+    'src/domain/commission/grille.ts',
+    'prisma/schema.prisma',
+  ],
   'DM-04': ['src/domain/commission/calcul.ts'],
   'INT-T02': ['axionia/src/server/partners-sync/outbox.ts', 'axionia/prisma/schema.prisma'],
-  'INT-T03': ['axionia/src/server/partners-sync/producteurs/client.ts', 'axionia/prisma/schema.prisma'],
+  'INT-T03': [
+    'axionia/src/server/partners-sync/producteurs/client.ts',
+    'axionia/prisma/schema.prisma',
+  ],
   'INT-T04': ['axionia/src/server/partners-sync/producteurs/devis.ts'],
-  'INT-T05': ['axionia/src/server/partners-sync/producteurs/facturation.ts', 'axionia/prisma/schema.prisma'],
+  'INT-T05': [
+    'axionia/src/server/partners-sync/producteurs/facturation.ts',
+    'axionia/prisma/schema.prisma',
+  ],
   'INT-T22': ['axionia/src/server/partners-sync/producteurs/candidature.ts'],
-  'SEC-06': ['src/app/api/webhooks/axionia/route.ts', 'src/server/integrations/axionia/reception.ts', 'src/server/queue/workers/evenement-recu.ts', 'prisma/schema.prisma'],
-  'SEC-07': ['src/server/integrations/axionia/api-entrante.ts', 'src/app/api/integrations/axionia/'],
-  'SEC-03': ['src/server/auth/lien-magique.ts', 'src/app/(espace)/connexion/', 'prisma/schema.prisma'],
+  'SEC-06': [
+    'src/app/api/webhooks/axionia/route.ts',
+    'src/server/integrations/axionia/reception.ts',
+    'src/server/queue/workers/evenement-recu.ts',
+    'prisma/schema.prisma',
+  ],
+  'SEC-07': [
+    'src/server/integrations/axionia/api-entrante.ts',
+    'src/app/api/integrations/axionia/',
+  ],
+  'SEC-03': [
+    'src/server/auth/lien-magique.ts',
+    'src/app/(espace)/connexion/',
+    'prisma/schema.prisma',
+  ],
   'SEC-04': ['src/server/auth/session.ts', 'prisma/schema.prisma'],
   'SEC-05': ['src/server/acces/for-apporteur.ts', 'docs/gates.json'],
-  'SEC-17': ['src/server/roles/matrice.ts', 'src/server/roles/require-role.ts', 'prisma/schema.prisma'],
-  'INT-T09': ['src/server/integrations/recherche-entreprises/', 'docs/tiers/recherche-entreprises.md', 'tests/fixtures/recherche-entreprises/'],
-  'INT-T10': ['src/server/integrations/zeptomail/', 'docs/tiers/zeptomail.md', 'src/app/api/webhooks/zeptomail/route.ts'],
+  'SEC-17': [
+    'src/server/roles/matrice.ts',
+    'src/server/roles/require-role.ts',
+    'prisma/schema.prisma',
+  ],
+  'INT-T09': [
+    'src/server/integrations/recherche-entreprises/',
+    'docs/tiers/recherche-entreprises.md',
+    'tests/fixtures/recherche-entreprises/',
+  ],
+  'INT-T10': [
+    'src/server/integrations/zeptomail/',
+    'docs/tiers/zeptomail.md',
+    'src/app/api/webhooks/zeptomail/route.ts',
+  ],
   'INT-T11': ['src/server/mcp/'],
   'INT-T14': ['src/server/integrations/telegram/', 'docs/tiers/telegram.md'],
-  'DM-06': ['prisma/schema.prisma', 'src/domain/apporteur/statut.ts', 'src/domain/apporteur/matrice.ts'],
-  'JUR-T01': ['docs/contrat/CONTRAT-APPORTEUR-V1.md', 'docs/contrat/ANNEXE-2-MANDAT.md', 'docs/DECISIONS.md', 'scripts/gates/lexique-apporteurs.ts'],
+  'DM-06': [
+    'prisma/schema.prisma',
+    'src/domain/apporteur/statut.ts',
+    'src/domain/apporteur/matrice.ts',
+  ],
+  'JUR-T01': [
+    'docs/contrat/CONTRAT-APPORTEUR-V1.md',
+    'docs/contrat/ANNEXE-2-MANDAT.md',
+    'docs/DECISIONS.md',
+    'scripts/gates/lexique-apporteurs.ts',
+  ],
   'JUR-T03': ['axionia/src/content/commercial-offer.ts'],
-  'JUR-T04': ['docs/rgpd/registre-article-30.md', 'docs/rgpd/aipd.md', 'src/app/(espace)/confidentialite/page.tsx'],
+  'JUR-T04': [
+    'docs/rgpd/registre-article-30.md',
+    'docs/rgpd/aipd.md',
+    'src/app/(espace)/confidentialite/page.tsx',
+  ],
   'UX-P0-01': ['messages/fr.json', 'src/content/micro-copy/'],
   'UX-P0-02': ['docs/maquettes/', 'docs/ESPACE-ROUTES.md'],
   'UX-P0-03': ['tests/a11y/', 'playwright.config.ts'],
@@ -148,53 +261,100 @@ const MANUELS: Record<string, string[]> = {
   'DM-07': ['prisma/schema.prisma', 'prisma/migrations/', 'src/domain/attribution/etats.ts'],
   'DM-08': ['src/domain/attribution/machine.ts', 'src/domain/attribution/etats.ts'],
   'DM-24': ['src/server/crons/confirmation-tacite.ts', 'src/domain/attribution/machine.ts'],
-  'DM-25': ['src/server/crons/anteriorite-retroactive.ts', 'src/domain/entreprise-connue/anteriorite.ts'],
-  'INT-T07-P': ['src/app/api/integrations/axionia/', 'src/server/integrations/axionia/attributions-dto.ts'],
+  'DM-25': [
+    'src/server/crons/anteriorite-retroactive.ts',
+    'src/domain/entreprise-connue/anteriorite.ts',
+  ],
+  'INT-T07-P': [
+    'src/app/api/integrations/axionia/',
+    'src/server/integrations/axionia/attributions-dto.ts',
+  ],
   'INT-T07-A': ['axionia/src/server/partners-sync/client-attributions.ts'],
   'INT-T08-A': ['axionia/src/app/api/partners/relecture/route.ts'],
   'INT-T08-P': ['src/server/crons/reconciliation.ts'],
   'SEC-11': ['src/server/auth/jeton-depot.ts', 'prisma/schema.prisma'],
   'SEC-12': ['src/server/depot/controles.ts', 'src/domain/attribution/depot.ts'],
   'DM-09': ['prisma/schema.prisma', 'src/domain/qualification/'],
-  'DM-10-P': ['prisma/schema.prisma', 'src/domain/entreprise-connue/anteriorite.ts', 'src/domain/seuils/ssot.ts'],
+  'DM-10-P': [
+    'prisma/schema.prisma',
+    'src/domain/entreprise-connue/anteriorite.ts',
+    'src/domain/seuils/ssot.ts',
+  ],
   'DM-11': ['prisma/schema.prisma', 'src/domain/kyc/pieces.ts'],
   'DM-12': ['prisma/schema.prisma', 'src/domain/anomalie/'],
   'DM-13': ['src/server/crons/attribution.ts', 'src/domain/attribution/machine.ts'],
   'SEC-14': ['src/domain/anomalie/', 'src/server/anomalie/evaluation.ts'],
   'SEC-15': ['prisma/schema.prisma', 'src/domain/apporteur/suspension.ts'],
-  'SEC-28': ['src/server/crons/levee-gel.ts', 'src/domain/apporteur/suspension.ts', 'tests/security/cliquet-gel.spec.ts'],
+  'SEC-28': [
+    'src/server/crons/levee-gel.ts',
+    'src/domain/apporteur/suspension.ts',
+    'tests/security/cliquet-gel.spec.ts',
+  ],
   'SEC-16': ['src/server/verification/dto.ts', 'src/domain/verification/etats.ts'],
   'SEC-18': ['src/server/parrainage/anti-auto.ts', 'prisma/schema.prisma'],
-  'SEC-19': ['src/domain/apporteur/resiliation.ts', 'src/server/auth/session.ts', 'prisma/schema.prisma'],
-  'INT-T12': ['src/server/integrations/docuseal/', 'docs/tiers/docuseal.md', 'src/app/api/webhooks/docuseal/route.ts', 'prisma/schema.prisma'],
+  'SEC-19': [
+    'src/domain/apporteur/resiliation.ts',
+    'src/server/auth/session.ts',
+    'prisma/schema.prisma',
+  ],
+  'INT-T12': [
+    'src/server/integrations/docuseal/',
+    'docs/tiers/docuseal.md',
+    'src/app/api/webhooks/docuseal/route.ts',
+    'prisma/schema.prisma',
+  ],
   'INT-T13': ['src/server/mcp/'],
   'INT-T21-A': ['axionia/src/app/api/partners/relecture/route.ts'],
   'INT-T21-P': ['scripts/backfill/axionia.ts'],
   'SEC-21': ['src/server/parrainage/code.ts', 'prisma/schema.prisma'],
   'JUR-T09': ['emails/prospect/information-article-14.tsx', 'src/content/script-qualification.ts'],
-  'JUR-T13': ['emails/apporteur/', 'src/content/micro-copy/', 'src/app/(espace)/', 'scripts/gates/lexique-apporteurs.ts'],
+  'JUR-T13': [
+    'emails/apporteur/',
+    'src/content/micro-copy/',
+    'src/app/(espace)/',
+    'scripts/gates/lexique-apporteurs.ts',
+  ],
   'CPL-T06': ['prisma/schema.prisma', 'src/domain/candidature/decision.ts'],
   'UX-P1-04': ['src/app/(espace)/connexion/'],
-  'UX-P1-01': ['src/app/(espace)/entreprise/page.tsx', 'src/app/(espace)/page.tsx', 'docs/ESPACE-ROUTES.md'],
+  'UX-P1-01': [
+    'src/app/(espace)/entreprise/page.tsx',
+    'src/app/(espace)/page.tsx',
+    'docs/ESPACE-ROUTES.md',
+  ],
   'UX-P1-02': ['src/app/(espace)/deposer/page.tsx', 'src/components/depot/formulaire.tsx'],
   'UX-P1-03': ['src/app/(espace)/d/[jeton]/page.tsx', 'src/components/depot/formulaire.tsx'],
   'UX-P1-05': ['src/app/(espace)/mes-entreprises/page.tsx'],
   'UX-P1-06': ['src/app/(console)/qualification/[id]/page.tsx'],
-  'UX-P1-07': ['src/app/(console)/qualification/page.tsx', 'src/app/(console)/qualification/[id]/page.tsx'],
+  'UX-P1-07': [
+    'src/app/(console)/qualification/page.tsx',
+    'src/app/(console)/qualification/[id]/page.tsx',
+  ],
   'UX-P1-08': ['src/app/(espace)/page.tsx', 'src/app/(espace)/layout.tsx'],
   'QA-T20b': ['.github/workflows/ci.yml'],
   'UX-P1-09': ['src/app/(espace)/conformite/page.tsx', 'src/app/(espace)/profil/page.tsx'],
-  'UX-P1-15': ['src/app/(espace)/profil/page.tsx', 'src/components/depot/formulaire.tsx', 'prisma/schema.prisma'],
+  'UX-P1-15': [
+    'src/app/(espace)/profil/page.tsx',
+    'src/components/depot/formulaire.tsx',
+    'prisma/schema.prisma',
+  ],
   'UX-P1-10': ['src/server/notifications/table-ssot.ts', 'emails/apporteur/'],
   'UX-P1-11': ['src/server/queue/workers/onboarding.ts', 'emails/apporteur/'],
-  'UX-P1-12': ['src/app/(console)/apporteurs/page.tsx', 'src/app/(console)/apporteurs/[id]/page.tsx', 'prisma/schema.prisma'],
+  'UX-P1-12': [
+    'src/app/(console)/apporteurs/page.tsx',
+    'src/app/(console)/apporteurs/[id]/page.tsx',
+    'prisma/schema.prisma',
+  ],
   'UX-P1-13': ['src/app/(console)/attributions/page.tsx', 'src/app/(console)/contrats/page.tsx'],
   'DM-23': ['prisma/schema.prisma', 'src/domain/commission/grille.ts'],
   'UX-P1-14': ['src/app/(console)/grille/page.tsx', 'src/domain/commission/grille.ts'],
   'INT-T24': ['src/server/integrations/docuseal/', 'src/app/(console)/contrats/page.tsx'],
   'GOV-021': ['.github/PULL_REQUEST_TEMPLATE.md', '.claude/agents/'],
   'QA-T16': ['tests/e2e/', 'playwright.config.ts'],
-  'QA-T19': ['src/server/observabilite/metriques.ts', 'src/server/integrations/telegram/', '.github/workflows/nightly.yml'],
+  'QA-T19': [
+    'src/server/observabilite/metriques.ts',
+    'src/server/integrations/telegram/',
+    '.github/workflows/nightly.yml',
+  ],
   'JUR-T16': ['src/domain/versement/controles.ts', 'docs/gates.json'],
   'T-ARG-010': ['prisma/schema.prisma', 'src/domain/commission/ligne.ts'],
   'T-ARG-034': ['prisma/migrations/', 'prisma/schema.prisma'],
@@ -205,7 +365,11 @@ const MANUELS: Record<string, string[]> = {
   'T-ARG-016': ['src/server/argent/autofacture.ts', 'src/server/pdf/autofacture.tsx'],
   'SEC-22': ['src/server/securite/iban.ts', 'src/server/securite/pii.ts'],
   'T-ARG-017': ['src/app/(console)/lots/page.tsx', 'src/server/argent/lot.ts'],
-  'T-ARG-018': ['src/server/argent/pain001.ts', 'docs/tiers/sepa-pain001.md', 'schemas/pain.001.001.03.xsd'],
+  'T-ARG-018': [
+    'src/server/argent/pain001.ts',
+    'docs/tiers/sepa-pain001.md',
+    'schemas/pain.001.001.03.xsd',
+  ],
   'T-ARG-019': ['src/server/argent/rapprochement.ts', 'src/app/(console)/lots/page.tsx'],
   'DM-19': ['prisma/migrations/', 'src/server/argent/cumuls.ts'],
   'T-ARG-032': ['prisma/schema.prisma', 'src/domain/kyc/pieces.ts', 'docs/tiers/urssaf.md'],
@@ -215,15 +379,25 @@ const MANUELS: Record<string, string[]> = {
   'T-ARG-036': ['tests/argent/scenarios/', 'docs/gates.json'],
   'T-ARG-037': ['src/domain/commission/calcul.ts'],
   'UX-P2-07': ['src/app/(console)/grille/page.tsx'],
-  'INT-T17': ['src/app/api/integrations/axionia/', 'src/server/integrations/axionia/releve-signe.ts'],
+  'INT-T17': [
+    'src/app/api/integrations/axionia/',
+    'src/server/integrations/axionia/releve-signe.ts',
+  ],
   'UX-P2-01': ['src/app/(espace)/mes-commissions/page.tsx'],
   'UX-P2-02': ['src/app/(espace)/page.tsx'],
-  'UX-P2-04': ['src/app/(espace)/documents/page.tsx', 'src/app/(espace)/filleuls/page.tsx', 'src/app/(espace)/plus/page.tsx'],
+  'UX-P2-04': [
+    'src/app/(espace)/documents/page.tsx',
+    'src/app/(espace)/filleuls/page.tsx',
+    'src/app/(espace)/plus/page.tsx',
+  ],
   'UX-P2-05': ['src/app/(console)/parametres/page.tsx'],
   'UX-P2-06': ['tests/security/idor.spec.ts', 'tests/security/cloisonnement-documents.spec.ts'],
   'CPL-T12': ['src/domain/contestation/', 'src/domain/seuils/ssot.ts'],
   'CPL-T14-A': ['axionia/src/server/partners-sync/producteurs/client.ts'],
-  'CPL-T14-P': ['src/server/integrations/axionia/fusion-client.ts', 'src/domain/commission/resolution.ts'],
+  'CPL-T14-P': [
+    'src/server/integrations/axionia/fusion-client.ts',
+    'src/domain/commission/resolution.ts',
+  ],
   'INT-T23': ['src/server/integrations/docuseal/'],
   'T-ARG-035': ['src/app/(console)/commissions/page.tsx'],
   'T-ARG-038': ['src/server/argent/mandat.ts', 'src/server/argent/releve-mensuel.ts'],
@@ -233,7 +407,11 @@ const MANUELS: Record<string, string[]> = {
   'CPL-T11': ['src/lib/env.ts', 'prisma/schema.prisma'],
   'CPL-T23': ['docs/runbooks/pilote.md'],
   'T-ARG-030': ['src/server/argent/export-comptable.ts', 'docs/tiers/tiime.md'],
-  'T-ARG-033': ['src/server/argent/mandat.ts', 'src/domain/apporteur/resiliation.ts', 'prisma/schema.prisma'],
+  'T-ARG-033': [
+    'src/server/argent/mandat.ts',
+    'src/domain/apporteur/resiliation.ts',
+    'prisma/schema.prisma',
+  ],
   'DM-20': ['src/server/rgpd/', 'src/server/crons/purge.ts', 'src/domain/seuils/retention.ts'],
   'DM-21': ['prisma/schema.prisma', 'prisma/migrations/'],
   'CPL-T15': ['prisma/schema.prisma', 'src/server/pilotage/indicateurs.ts'],
@@ -248,22 +426,52 @@ const MANUELS: Record<string, string[]> = {
   'QA-T27': ['docs/runbooks/resilience.md', '.github/workflows/nightly.yml'],
   'QA-T28': ['docs/runbooks/audit-securite.md', '.github/workflows/nightly.yml'],
   'GOV-022': ['docs/TRACEABILITE.md', 'scripts/plan-state/traceabilite.ts'],
-  'EXT-T08': ['prisma/schema.prisma', 'src/domain/geo/lambert93.ts', 'src/server/depot/controles.ts'],
+  'EXT-T08': [
+    'prisma/schema.prisma',
+    'src/domain/geo/lambert93.ts',
+    'src/server/depot/controles.ts',
+  ],
   'EXT-T01': ['src/app/(espace)/mes-entreprises/[id]/page.tsx', 'prisma/schema.prisma'],
-  'EXT-T02a': ['src/app/(console)/attributions/[id]/page.tsx', 'src/app/(console)/qualification/[id]/page.tsx'],
+  'EXT-T02a': [
+    'src/app/(console)/attributions/[id]/page.tsx',
+    'src/app/(console)/qualification/[id]/page.tsx',
+  ],
   'EXT-T03': ['prisma/schema.prisma', 'src/domain/candidature/origine.ts'],
   'EXT-T04': ['src/app/(console)/candidatures/page.tsx', 'src/server/stockage/piece-jointe.ts'],
   'EXT-T06': ['src/domain/verification/etats.ts', 'src/server/anomalie/evaluation.ts'],
-  'EXT-T02b': ['src/app/(espace)/mes-commissions/page.tsx', 'src/app/(espace)/mes-entreprises/[id]/page.tsx'],
+  'EXT-T02b': [
+    'src/app/(espace)/mes-commissions/page.tsx',
+    'src/app/(espace)/mes-entreprises/[id]/page.tsx',
+  ],
   'EXT-T07': ['src/domain/attribution/machine.ts', 'src/server/crons/attribution.ts'],
-  'EXT-T09': ['src/app/(console)/pilotage/carte/page.tsx', 'src/components/carte/departements.tsx', 'scripts/build/carte-svg.ts'],
+  'EXT-T09': [
+    'src/app/(console)/pilotage/carte/page.tsx',
+    'src/components/carte/departements.tsx',
+    'scripts/build/carte-svg.ts',
+  ],
   'EXT-T10': ['src/app/(espace)/mes-entreprises/page.tsx', 'src/components/carte/departements.tsx'],
   'EXT-T05': ['src/app/(console)/candidatures/page.tsx', 'src/server/candidature/import-csv.ts'],
   'EXT-T11': ['src/app/(console)/candidatures/page.tsx', 'src/server/candidature/extraction-cv.ts'],
   'JUR-T26': ['.github/CODEOWNERS', 'docs/gates.json'],
-  'JUR-T24': ['src/domain/apporteur/suspension.ts', 'src/content/micro-copy/', 'src/domain/apporteur/resiliation.ts', 'src/domain/apporteur/activite.ts', 'emails/apporteur/'],
-  'JUR-T30': ['scripts/gates/jur-aucune-instruction.ts', 'docs/gates.json', 'scripts/gates/lexique-apporteurs.ts', 'scripts/gates/jur-date-contact-inerte.ts', 'scripts/gates/jur-supports-de-presentation.ts'],
-  'JUR-T25': ['src/server/notifications/lettre-reseau.ts', 'emails/apporteur/', 'src/domain/apporteur/activite.ts'],
+  'JUR-T24': [
+    'src/domain/apporteur/suspension.ts',
+    'src/content/micro-copy/',
+    'src/domain/apporteur/resiliation.ts',
+    'src/domain/apporteur/activite.ts',
+    'emails/apporteur/',
+  ],
+  'JUR-T30': [
+    'scripts/gates/jur-aucune-instruction.ts',
+    'docs/gates.json',
+    'scripts/gates/lexique-apporteurs.ts',
+    'scripts/gates/jur-date-contact-inerte.ts',
+    'scripts/gates/jur-supports-de-presentation.ts',
+  ],
+  'JUR-T25': [
+    'src/server/notifications/lettre-reseau.ts',
+    'emails/apporteur/',
+    'src/domain/apporteur/activite.ts',
+  ],
   'JUR-T27': ['docs/contrat/CONTRAT-APPORTEUR-V1.md'],
   'JUR-T28': ['docs/contrat/CONTRAT-APPORTEUR-V1.md', 'src/domain/apporteur/resiliation.ts'],
 };
@@ -304,7 +512,10 @@ function construire() {
   const gardesDe = new Map<string, string[]>();
   for (const g of gates) {
     const t = parTache.get(g.tache);
-    if (!t) throw new Error(`${CHEMIN_GATES} : la gate ${g.script} est attribuée à ${g.tache}, qui n'est pas une tâche.`);
+    if (!t)
+      throw new Error(
+        `${CHEMIN_GATES} : la gate ${g.script} est attribuée à ${g.tache}, qui n'est pas une tâche.`
+      );
     const liste = gardesDe.get(g.tache) ?? [];
     liste.push(prefixe(t.repo, sansJob(g.script)));
     gardesDe.set(g.tache, liste);
@@ -319,7 +530,8 @@ function construire() {
     if (!parBase.has(b)) parBase.set(b, chemin);
   };
   for (const g of gates) noter(sansJob(g.script));
-  for (const t of taches) for (const l of Object.values(t.tests ?? {})) for (const v of l) noter(sansIt(v));
+  for (const t of taches)
+    for (const l of Object.values(t.tests ?? {})) for (const v of l) noter(sansIt(v));
 
   const paths: Record<string, string[]> = {};
   const testsSansRepertoire: string[] = [];
@@ -349,9 +561,15 @@ function construire() {
     for (const liste of Object.values(t.tests ?? {})) {
       for (const v of liste) {
         const fichier = sansIt(v);
-        if (fichier.includes('/')) { ajouter(fichier); continue; }
+        if (fichier.includes('/')) {
+          ajouter(fichier);
+          continue;
+        }
         const resolu = parBase.get(fichier);
-        if (resolu) { ajouter(resolu); continue; }
+        if (resolu) {
+          ajouter(resolu);
+          continue;
+        }
         const ligne = `${t.id} — ${fichier}`;
         if (!testsSansRepertoire.includes(ligne)) testsSansRepertoire.push(ligne);
       }
@@ -373,14 +591,18 @@ function construire() {
     // [depot] — vérifié, pas supposé.
     if (t.repo === 'axionia') {
       const intrus = liste.filter((p) => !p.startsWith('axionia/'));
-      if (intrus.length) throw new Error(`${t.id} porte repo axionia et le chemin partners ${intrus.join(', ')}.`);
+      if (intrus.length)
+        throw new Error(`${t.id} porte repo axionia et le chemin partners ${intrus.join(', ')}.`);
     }
     for (const d of DERIVES_INTERDITS) {
       if (liste.includes(d) && t.id !== PORTEUR_DU_PLAN) {
         throw new Error(`${t.id} déclare ${d}, qui est une vue générée : déclare son générateur.`);
       }
     }
-    if (!liste.length) throw new Error(`${t.id} n'a aucun chemin : le contrôle de disjonction ne peut rien en faire.`);
+    if (!liste.length)
+      throw new Error(
+        `${t.id} n'a aucun chemin : le contrôle de disjonction ne peut rien en faire.`
+      );
 
     paths[t.id] = liste;
   }
@@ -389,7 +611,8 @@ function construire() {
   const ids = Object.keys(paths);
   const ensembles = new Map<string, Set<string>>(ids.map((id) => [id, new Set(paths[id] ?? [])]));
   const occurrences = new Map<string, number>();
-  for (const id of ids) for (const p of ensembles.get(id) ?? []) occurrences.set(p, (occurrences.get(p) ?? 0) + 1);
+  for (const id of ids)
+    for (const p of ensembles.get(id) ?? []) occurrences.set(p, (occurrences.get(p) ?? 0) + 1);
 
   let pairesEnIntersection = 0;
   const croise = new Set<string>();
@@ -400,7 +623,11 @@ function construire() {
       const a = ensembles.get(idA) ?? new Set<string>();
       const b = ensembles.get(idB) ?? new Set<string>();
       let commun = false;
-      for (const p of a) if (b.has(p)) { commun = true; break; }
+      for (const p of a)
+        if (b.has(p)) {
+          commun = true;
+          break;
+        }
       if (!commun) continue;
       pairesEnIntersection++;
       croise.add(idA);
@@ -431,7 +658,7 @@ function construire() {
       .map(([chemin, taches]) => ({ chemin, taches })),
     _consequence:
       "ce que ces totaux imposent au composeur, et qui n'est pas un choix de ce fichier mais une " +
-      "lecture des deux registres : `docs/gates.json` est écrit par toute tâche qui pose une garde " +
+      'lecture des deux registres : `docs/gates.json` est écrit par toute tâche qui pose une garde ' +
       "(son en-tête le dit : « `preuveRouge` = l'URL du run CI rouge archivé, remplie par la PR qui " +
       'pose la gate »), et `prisma/schema.prisma` par toute tâche `schema: true`. Deux tâches de ces ' +
       "familles ne peuvent donc plus entrer dans le MÊME lot — c'est exactement le conflit d'édition " +

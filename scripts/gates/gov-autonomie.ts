@@ -46,7 +46,12 @@ const CHEMIN_ANALYSE_GH = 'scripts/gates/gh-sur.js';
 
 type Faute = { famille: string; message: string };
 
-const FAMILLES = ['deny_manquant', 'hook_non_declare', 'hook_sans_analyse', 'commande_laissee_passer'];
+const FAMILLES = [
+  'deny_manquant',
+  'hook_non_declare',
+  'hook_sans_analyse',
+  'commande_laissee_passer',
+];
 
 /**
  * Les règles `deny` que la matrice DOIT porter. Recopiées ? Non : c'est `docs/gates.json`, entrée
@@ -101,7 +106,7 @@ const DANGEREUSES = [
   'gh issue edit 12 --remove-label "prio:haute,owner:A01"',
   'gh api -XDELETE repos/o/r/branches/main/protection',
   'gh api -H "Accept: x" --method PUT repos/o/r/hooks/9',
-]
+];
 
 /**
  * Les commandes LÉGITIMES. Une garde qui refuse tout est prouvée par n'importe quel témoin :
@@ -129,7 +134,7 @@ const LEGITIMES = [
   'gh api -H "Accept: application/vnd.github+json" repos/o/r/branches/main/protection',
   'gh issue edit 7 --remove-label "prio:haute,bug"',
   'gh pr view 28 --json body -q .body',
-]
+];
 
 type Verdict = { refuse: boolean; motif: string | null };
 /**
@@ -150,7 +155,10 @@ function controler(vue: { matrice: string; hook: string; analyse: Analyse | null
   try {
     regles = JSON.parse(vue.matrice) as typeof regles;
   } catch (e) {
-    ajouter('deny_manquant', `${CHEMIN_MATRICE} n'est pas un JSON lisible : ${(e as Error).message}`);
+    ajouter(
+      'deny_manquant',
+      `${CHEMIN_MATRICE} n'est pas un JSON lisible : ${(e as Error).message}`
+    );
     return fautes;
   }
 
@@ -166,7 +174,10 @@ function controler(vue: { matrice: string; hook: string; analyse: Analyse | null
     }
   }
 
-  const pre = (regles.hooks?.['PreToolUse'] ?? []) as { matcher?: string; hooks?: { command?: string }[] }[];
+  const pre = (regles.hooks?.['PreToolUse'] ?? []) as {
+    matcher?: string;
+    hooks?: { command?: string }[];
+  }[];
   const surBash = pre.filter((h) => h.matcher === 'Bash');
   const commandes = surBash.flatMap((h) => (h.hooks ?? []).map((x) => x.command ?? ''));
   if (!commandes.some((c) => c.includes('hook-env.js'))) {
@@ -222,7 +233,9 @@ function composer(git: Analyse, gh: { jugerGh: (l: string) => Verdict }): Analys
 function lireVue(): { matrice: string; hook: string; analyse: Analyse | null } {
   for (const c of [CHEMIN_MATRICE, CHEMIN_HOOK, CHEMIN_ANALYSE, CHEMIN_ANALYSE_GH]) {
     if (!existsSync(c)) {
-      console.error(`❌ gov:autonomie — ${c} est introuvable. La matrice ne peut pas être contrôlée.`);
+      console.error(
+        `❌ gov:autonomie — ${c} est introuvable. La matrice ne peut pas être contrôlée.`
+      );
       process.exit(1);
     }
   }
@@ -264,7 +277,10 @@ if (process.argv.includes('--prove')) {
     },
     {
       famille: 'hook_non_declare',
-      defaut: () => ({ ...vue, matrice: vue.matrice.replace('scripts/gates/hook-env.js', 'scripts/gates/rien.js') }),
+      defaut: () => ({
+        ...vue,
+        matrice: vue.matrice.replace('scripts/gates/hook-env.js', 'scripts/gates/rien.js'),
+      }),
     },
     {
       famille: 'hook_sans_analyse',
@@ -297,7 +313,9 @@ if (process.argv.includes('--prove')) {
     process.exit(1);
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   console.log(`   ${LEGITIMES.length} commandes légitimes restent acceptées.`);
   process.exit(0);

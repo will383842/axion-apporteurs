@@ -33,22 +33,26 @@
 // GOV-031 (charte A11 : un manque devient une tâche, jamais un correctif glissé dans le lot en
 // cours) — la tâche qui les remonte en `error` reste à ouvrir par A01.
 //
-// `prettier --check .` rend 136 fichiers non formatés (docs 48, scripts 45, tests 33, autres 10)
-// et n'est PAS vert : le rendre vert reformate le dépôt, ce qui n'est pas le périmètre de cette
-// tâche. Tant que ce n'est pas fait, `format:check` n'a pas sa place en Gate A — la famille
-// `lint_non_bloquant` de `gov:conventions` refuserait qu'on l'y mette avec `continue-on-error`,
-// et elle a raison.
+// ⚠️ LE PARAGRAPHE QUI SUIVAIT ÉTAIT VRAI LE 2026-09-12 ET NE L'EST PLUS. Il disait :
+// « `prettier --check .` rend 136 fichiers non formatés et n'est PAS vert ; le rendre vert
+// reformate le dépôt, ce qui n'est pas le périmètre de cette tâche ; tant que ce n'est pas fait,
+// `format:check` n'a pas sa place en Gate A ». C'était le raisonnement qui laissait GOV-031
+// verte en ne livrant qu'un item sur quatre. Le 2026-09-14, le dépôt A ÉTÉ reformaté : 88
+// fichiers de code, et `pnpm format:check` sort en 0. Les 48 fichiers de `docs/**`, les 4 de
+// `packages/**` et `scripts/gates/gov-pr.ts` restent en dehors — trois dérogations NOMMÉES,
+// chacune avec sa mesure, dans `.prettierignore`. Aucune règle n'a été éteinte pour y arriver.
 //
 // ── CE QUE `gov:conventions` EXIGE LE JOUR OÙ L'ÉTAPE ARRIVE ────────────────────────────────
 //
-// `package.json` et `.github/workflows/ci.yml` sont des fichiers PARTAGÉS qu'un développeur
-// n'écrit pas (LEC-13) : les six dépendances épinglées, les scripts `lint`, `format:check` et
-// `format`, et les étapes de Gate A sont rendus en texte dans la PR de GOV-031 pour application
-// en une passe par A01. La famille `outillage_non_epingle` refusera une étape `pnpm lint` sans
-// `eslint` épinglé, sans script `lint`, ou sans cette configuration versionnée ; la famille
-// `lint_non_bloquant` refusera la même étape si elle porte `continue-on-error` — c'est LE point
-// de l'exigence, pas un détail de câblage. Les deux ne s'arment qu'en présence de l'étape :
-// sans étape, rien ne ment.
+// L'ÉTAPE EST ARRIVÉE. Les six dépendances sont épinglées dans `package.json` — `@eslint/js`,
+// `globals`, `typescript-eslint`, `eslint-config-prettier`, plus les deux binaires `eslint` et
+// `prettier` —, les scripts `lint`, `format:check` et `format` existent, et `.github/workflows/
+// ci.yml` porte les deux étapes SANS `continue-on-error`. La famille `outillage_non_epingle`
+// refuse une étape `pnpm lint` sans `eslint` épinglé, sans script `lint`, ou sans cette
+// configuration versionnée ; la famille `lint_non_bloquant` refuse la même étape si elle porte
+// `continue-on-error` — c'est LE point de l'exigence, pas un détail de câblage. Les deux ne
+// s'arment qu'en présence de l'étape, et c'est exactement pourquoi son absence ne pouvait pas
+// durer : « sans étape, rien ne ment », et rien ne garde non plus.
 //
 // LES TROIS RÈGLES DE FOND SONT DÉRIVÉES, PAS INVENTÉES. `docs/gates.json` décrit déjà ce que le
 // job `gate-a` doit faire tourner : « ESLint (no-console, imports interdits sous src/domain,

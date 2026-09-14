@@ -81,7 +81,10 @@ function jugerPush(ligne) {
     // pas mieux — elle apprend à être contournée.
     const PREFIXES = new Set(['sudo', 'env', 'command', 'exec', 'nohup', 'time']);
     let iGit = 0;
-    while (iGit < t.length && (PREFIXES.has(t[iGit]) || /^[A-Za-z_][A-Za-z0-9_]*=/.test(t[iGit] || ""))) {
+    while (
+      iGit < t.length &&
+      (PREFIXES.has(t[iGit]) || /^[A-Za-z_][A-Za-z0-9_]*=/.test(t[iGit] || ''))
+    ) {
       iGit++;
     }
     const verbe = t[iGit];
@@ -104,7 +107,10 @@ function jugerPush(ligne) {
       }
       // `--force=…` et compagnie : le drapeau collé à sa valeur.
       if (/^--force(-with-lease|-if-includes)?=/.test(a)) {
-        return { refuse: true, motif: `\`${a}\` sur un \`git push\` : écrasement de l'historique distant (RM-09).` };
+        return {
+          refuse: true,
+          motif: `\`${a}\` sur un \`git push\` : écrasement de l'historique distant (RM-09).`,
+        };
       }
     }
 
@@ -116,9 +122,9 @@ function jugerPush(ligne) {
       return {
         refuse: true,
         motif:
-          "`git push` sans refspec explicite : ce qui part depend de `push.default` et de la " +
-          "branche courante, que ce hook ne peut pas lire. Ecris la destination — " +
-          '`git push -u origin lot/<id>` — pour que la commande dise ce qu\'elle fait.',
+          '`git push` sans refspec explicite : ce qui part depend de `push.default` et de la ' +
+          'branche courante, que ce hook ne peut pas lire. Ecris la destination — ' +
+          "`git push -u origin lot/<id>` — pour que la commande dise ce qu'elle fait.",
       };
     }
 

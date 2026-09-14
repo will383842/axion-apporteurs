@@ -93,7 +93,12 @@ const PIED = ['<!-- a-consolider:fin -->', ''].join('\n');
  * dépôt, et rougissaient pour une raison qui n'était pas celle qu'ils testaient (RM-11 : aucun
  * défaut sur la dimension que le test fait varier). Constaté, pas supposé.
  */
-const ISOLE = ['--regles', 'docs/REGLES-MAISON.md', '--journal', join(tmpdir(), 'journal-absent-gov-018')];
+const ISOLE = [
+  '--regles',
+  'docs/REGLES-MAISON.md',
+  '--journal',
+  join(tmpdir(), 'journal-absent-gov-018'),
+];
 
 const avecEntrees = (entrees: string[]) => [ENTETE, ...entrees, PIED].join('\n');
 
@@ -107,8 +112,20 @@ describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
     // RM-14 y est entrée le 2026-09-05 : elle a fait rougir CETTE assertion et elle seule, ce qui
     // est le comportement voulu — une règle neuve se déclare ici, elle ne s'y glisse pas.
     expect(sections).toEqual([
-      'RM-01', 'RM-02', 'RM-03', 'RM-04', 'RM-05', 'RM-06',
-      'RM-07', 'RM-08', 'RM-09', 'RM-10', 'RM-11', 'RM-12', 'RM-13', 'RM-14',
+      'RM-01',
+      'RM-02',
+      'RM-03',
+      'RM-04',
+      'RM-05',
+      'RM-06',
+      'RM-07',
+      'RM-08',
+      'RM-09',
+      'RM-10',
+      'RM-11',
+      'RM-12',
+      'RM-13',
+      'RM-14',
     ]);
     // Le tableau de tête est une VUE des sections : une ligne sans section, ou l'inverse, et le
     // lecteur qui cite « RM-13 » cite un vide.
@@ -132,7 +149,9 @@ describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
     for (const [rm, motif] of attendues) {
       const section = texte.split(new RegExp(`^## ${rm} — `, 'm'))[1]?.split(/^## /m)[0] ?? '';
       const titre = new RegExp(`^## ${rm} — (.+)$`, 'm').exec(texte)?.[1] ?? '';
-      expect(`${titre}\n${section}`, `${rm} ne couvre pas ce que REQ-GOV-024 lui donne`).toMatch(motif);
+      expect(`${titre}\n${section}`, `${rm} ne couvre pas ce que REQ-GOV-024 lui donne`).toMatch(
+        motif
+      );
     }
   });
 
@@ -153,10 +172,16 @@ describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
         // Découpe par rubrique : `\Z` n'existe pas en JavaScript — une borne de fin écrite ainsi
         // serait silencieusement fausse : elle chercherait la lettre Z.
         const bloc = rubriques.find((r) => r.startsWith(`${rubrique}.**`));
-        expect(bloc, `${rm} n'a pas de rubrique « ${rubrique} » — une règle sans ${rubrique} n'est pas une règle`).toBeDefined();
+        expect(
+          bloc,
+          `${rm} n'a pas de rubrique « ${rubrique} » — une règle sans ${rubrique} n'est pas une règle`
+        ).toBeDefined();
         // Une rubrique vide est une rubrique absente qui a appris à passer la garde.
         const texteDeLaRubrique = bloc!.slice(`${rubrique}.**`.length).trim();
-        expect(texteDeLaRubrique.length, `${rm} — la rubrique « ${rubrique} » est vide`).toBeGreaterThan(40);
+        expect(
+          texteDeLaRubrique.length,
+          `${rm} — la rubrique « ${rubrique} » est vide`
+        ).toBeGreaterThan(40);
       }
     }
     // Le tableau de tête annonce pour chaque règle la gate qui la vérifie : une cellule vide
@@ -166,7 +191,7 @@ describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
     }
   });
 
-  it("REQ-GOV-024 — RM-13 enregistre la règle que le CLAUDE.md retiré portait seul, avec sa garde", () => {
+  it('REQ-GOV-024 — RM-13 enregistre la règle que le CLAUDE.md retiré portait seul, avec sa garde', () => {
     const texte = readFileSync(CHEMIN_RM, 'utf8');
     const corps = texte.split(/^## RM-13 — /m)[1]!.split(/^## /m)[0]!;
     // La règle elle-même : composer, et la PR de clôture qui l'interdit.
@@ -176,10 +201,12 @@ describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
     // une règle qui laisse croire qu'une gate la tient est pire qu'une règle sans gate.
     expect(corps).toMatch(/gov:etat/);
     expect(corps).toMatch(/deux_pr_meme_tache/);
-    expect(corps, "RM-13 doit dire ce qui N'EST PAS gardé").toMatch(/n'est gardée par rien|pas gardé/);
+    expect(corps, "RM-13 doit dire ce qui N'EST PAS gardé").toMatch(
+      /n'est gardée par rien|pas gardé/
+    );
   });
 
-  it("REQ-GOV-024 — CLAUDE.md cite RM-13 par son NUMÉRO, pointe au lieu de dupliquer, et ne fige aucun état daté", () => {
+  it('REQ-GOV-024 — CLAUDE.md cite RM-13 par son NUMÉRO, pointe au lieu de dupliquer, et ne fige aucun état daté', () => {
     expect(
       existsSync(CHEMIN_CLAUDE),
       "CLAUDE.md est le seul fichier qu'une session ouverte ici lit sans qu'on le lui demande"
@@ -201,7 +228,14 @@ describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
 
     // (2) Il POINTE : chaque document nommé l'est par son chemin, et ce chemin existe. Un renvoi
     // qui ne résout pas coûte plus cher que pas de renvoi du tout.
-    const ENTREES = [CHEMIN_REPRISE, 'docs/PLAN-STATE.md', CHEMIN_PRESEANCE, 'docs/PROTOCOLE-FUSION.md', CHEMIN_RM, CHEMIN_CHARTE];
+    const ENTREES = [
+      CHEMIN_REPRISE,
+      'docs/PLAN-STATE.md',
+      CHEMIN_PRESEANCE,
+      'docs/PROTOCOLE-FUSION.md',
+      CHEMIN_RM,
+      CHEMIN_CHARTE,
+    ];
     for (const e of ENTREES) expect(texte, `CLAUDE.md ne renvoie pas vers ${e}`).toContain(e);
     for (const [, chemin] of texte.matchAll(/`([\w./-]+\.(?:md|json|ts|js|yml|yaml))`/g)) {
       expect(existsSync(chemin!), `CLAUDE.md renvoie vers ${chemin}, qui n'existe pas`).toBe(true);
@@ -212,23 +246,32 @@ describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
     // reste était une vue générée, ce qui interdisait d'éditer ce que la préséance donne à éditer.
     // Deux garde-fous : aucune ligne substantielle recopiée d'une source, et aucune attribution de
     // chemin à un poste — cette table-là est lue par `gov:pr` dans docs/CHARTE-AGENTS.md §7.
-    const sources = [readFileSync(CHEMIN_PRESEANCE, 'utf8'), readFileSync(CHEMIN_REPRISE, 'utf8')].join('\n');
+    const sources = [
+      readFileSync(CHEMIN_PRESEANCE, 'utf8'),
+      readFileSync(CHEMIN_REPRISE, 'utf8'),
+    ].join('\n');
     for (const l of lignes) {
       const nue = l.trim();
       if (nue.length < 60) continue;
-      expect(sources.includes(nue), `CLAUDE.md recopie une ligne de sa source : « ${nue.slice(0, 70)}… »`).toBe(false);
+      expect(
+        sources.includes(nue),
+        `CLAUDE.md recopie une ligne de sa source : « ${nue.slice(0, 70)}… »`
+      ).toBe(false);
     }
     expect(
       /role:[a-z-]+/.test(texte),
-      "CLAUDE.md ne réattribue pas les chemins réservés : le tableau que gov:pr LIT est docs/CHARTE-AGENTS.md §7"
+      'CLAUDE.md ne réattribue pas les chemins réservés : le tableau que gov:pr LIT est docs/CHARTE-AGENTS.md §7'
     ).toBe(false);
 
     // (4) Il ne fige AUCUN état daté. Le premier geste change à chaque session ; un fichier qui le
     // recopie devient faux sans que rien ne le signale. Tout ce qui date se lit dans les vues.
     const PERISSABLE: [RegExp, string][] = [
-      [/#\d+/, "un numéro de PR — il désigne une PR qui sera fusionnée demain"],
-      [/\b\d{4}-\d{2}-\d{2}\b/, "une date — le premier geste change à chaque session"],
-      [/\bL-?\d+-\d+\b/, "un identifiant de lot — le composeur en produit un nouveau à chaque tour"],
+      [/#\d+/, 'un numéro de PR — il désigne une PR qui sera fusionnée demain'],
+      [/\b\d{4}-\d{2}-\d{2}\b/, 'une date — le premier geste change à chaque session'],
+      [
+        /\bL-?\d+-\d+\b/,
+        'un identifiant de lot — le composeur en produit un nouveau à chaque tour',
+      ],
       [/\b\d+\s*(?:tâches?\b|%)/, "un compteur d'avancement — il se lit dans docs/PLAN-STATE.md"],
     ];
     for (const [motif, quoi] of PERISSABLE) {
@@ -239,8 +282,13 @@ describe('REQ-GOV-024 — les règles maison vivent dans le dépôt', () => {
 
   it('REQ-GOV-024 — le gabarit de PR porte la ligne « Règle maison appliquée » entre ses marqueurs', () => {
     const gabarit = readFileSync(CHEMIN_GABARIT, 'utf8');
-    const bloc = gabarit.split('<!-- regle-maison:debut -->')[1]?.split('<!-- regle-maison:fin -->')[0];
-    expect(bloc, 'les marqueurs regle-maison:debut / regle-maison:fin encadrent la ligne').toBeDefined();
+    const bloc = gabarit
+      .split('<!-- regle-maison:debut -->')[1]
+      ?.split('<!-- regle-maison:fin -->')[0];
+    expect(
+      bloc,
+      'les marqueurs regle-maison:debut / regle-maison:fin encadrent la ligne'
+    ).toBeDefined();
     expect(bloc!).toMatch(/Règle maison appliquée/);
     // La garde qui la LIT : sans elle, la ligne est décorative.
     expect(readFileSync('scripts/gates/gov-pr.ts', 'utf8')).toMatch(/regle-maison:debut/);
@@ -258,9 +306,13 @@ describe('REQ-GOV-023 — le journal des leçons et sa gate de fraîcheur', () =
 
   it("REQ-GOV-023 — chaque leçon cite sa source vérifiable et la RM qu'elle a produite, ou dit qu'elle n'en a produit aucune", () => {
     const texte = readFileSync(CHEMIN_LECONS, 'utf8');
-    const rmConnues = [...readFileSync(CHEMIN_RM, 'utf8').matchAll(/^## (RM-\d{2}) — /gm)].map((x) => x[1]!);
+    const rmConnues = [...readFileSync(CHEMIN_RM, 'utf8').matchAll(/^## (RM-\d{2}) — /gm)].map(
+      (x) => x[1]!
+    );
     const blocs = texte.split(/^### (?=LEC-\d{2} — )/m).slice(1);
-    expect(blocs.length, 'un journal des leçons sans leçon est une fiction').toBeGreaterThanOrEqual(6);
+    expect(blocs.length, 'un journal des leçons sans leçon est une fiction').toBeGreaterThanOrEqual(
+      6
+    );
     for (const b of blocs) {
       const id = /^(LEC-\d{2})/.exec(b)![1]!;
       const preuve = /^- \*\*Où c'est prouvé\.\*\*(.+)$/m.exec(b)?.[1] ?? '';
@@ -279,7 +331,9 @@ describe('REQ-GOV-023 — le journal des leçons et sa gate de fraîcheur', () =
   });
 
   it('REQ-GOV-023 — gov:lecons est VERT sur le dépôt, à la date de consolidation du fichier', () => {
-    const date = /<!--\s*consolidation:\s*(\d{4}-\d{2}-\d{2})\s*-->/.exec(readFileSync(CHEMIN_LECONS, 'utf8'))![1]!;
+    const date = /<!--\s*consolidation:\s*(\d{4}-\d{2}-\d{2})\s*-->/.exec(
+      readFileSync(CHEMIN_LECONS, 'utf8')
+    )![1]!;
     const r = lancer('--now', date);
     expect(r.sortie).toContain('gov:lecons');
     expect(r.code, r.sortie).toBe(0);
@@ -316,7 +370,7 @@ describe('REQ-GOV-023 — le journal des leçons et sa gate de fraîcheur', () =
     }
   });
 
-  it("REQ-GOV-023 — ROUGE : un « appris » du JOURNAL DE SESSION que docs/LECONS.md ne cite pas", () => {
+  it('REQ-GOV-023 — ROUGE : un « appris » du JOURNAL DE SESSION que docs/LECONS.md ne cite pas', () => {
     // La source que REQ-GOV-023 nomme vraiment : `docs/journal/` (GOV-008, même lot). Une entrée
     // est consolidée quand ce fichier cite le numéro de sa PR — pas quand quelqu'un l'affirme.
     const dossier = mkdtempSync(join(tmpdir(), 'journal-'));
@@ -335,7 +389,7 @@ describe('REQ-GOV-023 — le journal des leçons et sa gate de fraîcheur', () =
     }
   });
 
-  it("REQ-GOV-023 — CONTRE-TÉMOIN : l’absence de journal de session ne rougit pas, mais elle se DIT", () => {
+  it('REQ-GOV-023 — CONTRE-TÉMOIN : l’absence de journal de session ne rougit pas, mais elle se DIT', () => {
     const absent = join(tmpdir(), 'journal-qui-n-existe-pas-gov-018');
     const r = lancer('--now', '2026-12-31', '--journal', absent);
     expect(r.code, r.sortie).toBe(0);

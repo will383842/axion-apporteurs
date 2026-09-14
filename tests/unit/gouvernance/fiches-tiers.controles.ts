@@ -65,7 +65,10 @@ function tableau(readme: string): Ligne[] {
   const out: Ligne[] = [];
   for (const l of bloc(readme, 'tableau-tiers')) {
     if (!l.startsWith('|')) continue;
-    const cellules = l.split('|').slice(1, -1).map((c) => c.trim());
+    const cellules = l
+      .split('|')
+      .slice(1, -1)
+      .map((c) => c.trim());
     if (cellules.length === 0) continue;
     if (cellules.every((c) => /^:?-{2,}:?$/.test(c))) continue;
     const nom = /`([a-z0-9-]+\.md)`/.exec(cellules[0] ?? '');
@@ -223,7 +226,10 @@ export function controler(e: Entree): Faute[] {
     // 4. La rubrique 2 porte ses quatre lignes nommées — présentes même vides.
     const r2 = rubrique(texte, '## 2. Source officielle');
     if (r2 === null) {
-      ajouter('rubrique2_structure', `docs/tiers/${nom} — la rubrique « ## 2. Source officielle » est absente.`);
+      ajouter(
+        'rubrique2_structure',
+        `docs/tiers/${nom} — la rubrique « ## 2. Source officielle » est absente.`
+      );
     } else {
       for (const element of elementsSource) {
         const presente = r2
@@ -305,7 +311,9 @@ export function controler(e: Entree): Faute[] {
       .some((l) => formules.some((f) => l.toLowerCase().includes(f)));
     const brancheConnue = !attentesRestantes;
     const brancheRepli =
-      banque.includes('HYP-W2') && banque.includes('EndToEndId') && banque.includes('saisie manuelle');
+      banque.includes('HYP-W2') &&
+      banque.includes('EndToEndId') &&
+      banque.includes('saisie manuelle');
     if (!brancheConnue && !brancheRepli) {
       ajouter(
         'disjonction_cpl_002',
@@ -325,9 +333,15 @@ export function controler(e: Entree): Faute[] {
       continue;
     }
     for (const element of elementsSource) {
-      const l = r2.split('\n').find((x) => x.startsWith('|') && (x.split('|')[1] ?? '').trim() === element);
+      const l = r2
+        .split('\n')
+        .find((x) => x.startsWith('|') && (x.split('|')[1] ?? '').trim() === element);
       const valeur = (l ?? '').split('|')[2]?.trim() ?? '';
-      if (valeur === '' || valeur === '—' || formules.some((f) => valeur.toLowerCase().includes(f))) {
+      if (
+        valeur === '' ||
+        valeur === '—' ||
+        formules.some((f) => valeur.toLowerCase().includes(f))
+      ) {
         derivees.add(nom);
       }
     }
@@ -423,7 +437,7 @@ export const TEMOINS: { famille: string; defaut: (e: Entree) => Entree }[] = [
     defaut: (e) => {
       const d = copie(e);
       d.fiches['coolify.md'] = (d.fiches['coolify.md'] ?? '').replace(
-        '## 5. Mode dégradé — s\'il tombe',
+        "## 5. Mode dégradé — s'il tombe",
         '## Ce qui se passe en panne'
       );
       return d;
@@ -452,7 +466,10 @@ export const TEMOINS: { famille: string; defaut: (e: Entree) => Entree }[] = [
     famille: 'disjonction_cpl_002',
     defaut: (e) => {
       const d = copie(e);
-      d.fiches['banque.md'] = (d.fiches['banque.md'] ?? '').replace(/HYP-W2/g, 'la ligne du registre');
+      d.fiches['banque.md'] = (d.fiches['banque.md'] ?? '').replace(
+        /HYP-W2/g,
+        'la ligne du registre'
+      );
       return d;
     },
   },
@@ -491,23 +508,33 @@ export const CONTRE_TEMOINS: { nom: string; legitime: (e: Entree) => Entree }[] 
     nom: 'une fiche porte une section EN PLUS des neuf rubriques',
     legitime: (e) => {
       const d = copie(e);
-      d.fiches['coolify.md'] = `${d.fiches['coolify.md'] ?? ''}\n## Annexe — historique des offres examinées\n\nRien à ce jour.\n`;
+      d.fiches['coolify.md'] =
+        `${d.fiches['coolify.md'] ?? ''}\n## Annexe — historique des offres examinées\n\nRien à ce jour.\n`;
       return d;
     },
   },
   {
     nom: 'une attente nommément confiée à Will',
-    legitime: (e) => injecter(e, 'urssaf.md', '| Localisation du service | **à confirmer** par Will |'),
+    legitime: (e) =>
+      injecter(e, 'urssaf.md', '| Localisation du service | **à confirmer** par Will |'),
   },
   {
     nom: 'une attente confiée à l’expert-comptable, à défaut Will',
     legitime: (e) =>
-      injecter(e, 'tiime.md', '| Voie d’import | **à confirmer** par l’expert-comptable, à défaut Will |'),
+      injecter(
+        e,
+        'tiime.md',
+        '| Voie d’import | **à confirmer** par l’expert-comptable, à défaut Will |'
+      ),
   },
   {
     nom: 'une lecture répartie par un code de poste',
     legitime: (e) =>
-      injecter(e, 'github.md', '| Débit de l’interface | **à relever** par le lecteur désigné par `A01` |'),
+      injecter(
+        e,
+        'github.md',
+        '| Débit de l’interface | **à relever** par le lecteur désigné par `A01` |'
+      ),
   },
   {
     nom: 'un nom de domaine n’est pas une adresse électronique',
@@ -516,15 +543,25 @@ export const CONTRE_TEMOINS: { nom: string; legitime: (e: Entree) => Entree }[] 
   },
   {
     nom: 'un article du code du travail n’est pas un identifiant bancaire',
-    legitime: (e) => injecter(e, 'urssaf.md', 'Le seuil est celui de l’article D.8222-5 du code du travail.'),
+    legitime: (e) =>
+      injecter(e, 'urssaf.md', 'Le seuil est celui de l’article D.8222-5 du code du travail.'),
   },
   {
     nom: 'un horodatage n’est pas un numéro de téléphone',
-    legitime: (e) => injecter(e, 'telegram.md', 'La tolérance de signature est de 300 secondes, mesurée le 2026-09-03.'),
+    legitime: (e) =>
+      injecter(
+        e,
+        'telegram.md',
+        'La tolérance de signature est de 300 secondes, mesurée le 2026-09-03.'
+      ),
   },
 ];
 
-export type Preuve = { ok: boolean; rouges: { famille: string; message: string }[]; erreurs: string[] };
+export type Preuve = {
+  ok: boolean;
+  rouges: { famille: string; message: string }[];
+  erreurs: string[];
+};
 
 export function prouver(base: Entree): Preuve {
   const erreurs: string[] = [];
@@ -534,7 +571,10 @@ export function prouver(base: Entree): Preuve {
   if (depart.length > 0) {
     erreurs.push(
       `La preuve part d'un dossier DÉJÀ fautif (${depart.length}) — corrige d'abord : ` +
-        depart.slice(0, 3).map((f) => `[${f.famille}] ${f.message}`).join(' | ')
+        depart
+          .slice(0, 3)
+          .map((f) => `[${f.famille}] ${f.message}`)
+          .join(' | ')
     );
     return { ok: false, rouges, erreurs };
   }
@@ -555,7 +595,9 @@ export function prouver(base: Entree): Preuve {
   for (const c of CONTRE_TEMOINS) {
     const f = controler(c.legitime(base));
     if (f.length > 0) {
-      erreurs.push(`Faux positif : « ${c.nom} » a fait rougir « ${f[0]!.famille} » — ${f[0]!.message}`);
+      erreurs.push(
+        `Faux positif : « ${c.nom} » a fait rougir « ${f[0]!.famille} » — ${f[0]!.message}`
+      );
     }
   }
 
@@ -577,7 +619,9 @@ if (executeDirectement) {
   const iExigences = process.argv.indexOf('--exigences');
   const racine = iRacine === -1 ? 'docs/tiers' : (process.argv[iRacine + 1] ?? 'docs/tiers');
   const exigences =
-    iExigences === -1 ? 'docs/requirements.json' : (process.argv[iExigences + 1] ?? 'docs/requirements.json');
+    iExigences === -1
+      ? 'docs/requirements.json'
+      : (process.argv[iExigences + 1] ?? 'docs/requirements.json');
   const base = charger(racine, exigences);
 
   if (process.argv.includes('--prove')) {
@@ -585,7 +629,9 @@ if (executeDirectement) {
     for (const r of p.rouges) console.log(`ROUGE [${r.famille}] ${r.message}`);
     for (const err of p.erreurs) console.error(`❌ ${err}`);
     if (!p.ok) process.exit(1);
-    console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+    console.log(
+      `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+    );
     console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
     console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts.`);
     process.exit(0);

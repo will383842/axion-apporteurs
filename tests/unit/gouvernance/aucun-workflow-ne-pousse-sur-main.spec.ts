@@ -80,7 +80,9 @@ describe('REQ-GOV-014 — les témoins : ces workflows-là doivent rougir', () =
     },
     {
       nom: 'push nu, dont la destination dépend de `push.default`',
-      etape: ['      - run: |', '          git config user.name ci', '          git push'].join('\n'),
+      etape: ['      - run: |', '          git config user.name ci', '          git push'].join(
+        '\n'
+      ),
     },
     {
       nom: 'destination portée par une expression, donc illisible',
@@ -88,7 +90,10 @@ describe('REQ-GOV-014 — les témoins : ces workflows-là doivent rougir', () =
     },
     {
       nom: 'action tierce qui pousse à la place du runner',
-      etape: ['      - uses: ad-m/github-push-action@master', '        with: { branch: main }'].join('\n'),
+      etape: [
+        '      - uses: ad-m/github-push-action@master',
+        '        with: { branch: main }',
+      ].join('\n'),
     },
   ];
 
@@ -105,9 +110,18 @@ describe('REQ-GOV-014 — les contre-témoins : une garde qui refuse tout ne gar
     { nom: 'une installation', etape: '      - run: pnpm install --frozen-lockfile' },
     // Le hook `git-push-sur.js` porte la trace d'un refus « n'importe où dans la ligne » qui
     // interdisait un `git commit` dont le MESSAGE parlait de la commande gardée.
-    { nom: 'une commande qui NOMME le push sans le faire', etape: '      - run: echo "git push origin main"' },
-    { nom: 'un push sur une branche de lot', etape: '      - run: git push -u origin lot/L-1-03-integration' },
-    { nom: 'une fusion de PR par la forge', etape: '      - run: gh pr merge 27 --squash --delete-branch' },
+    {
+      nom: 'une commande qui NOMME le push sans le faire',
+      etape: '      - run: echo "git push origin main"',
+    },
+    {
+      nom: 'un push sur une branche de lot',
+      etape: '      - run: git push -u origin lot/L-1-03-integration',
+    },
+    {
+      nom: 'une fusion de PR par la forge',
+      etape: '      - run: gh pr merge 27 --squash --delete-branch',
+    },
     // `on: push: branches: [main]` est un DÉCLENCHEUR, pas un push. `ci.yml` en porte un.
     {
       nom: 'un déclencheur sur main',

@@ -104,10 +104,28 @@ export type Motif = {
 };
 
 export const MOTIFS: readonly Motif[] = [
-  { nom: 'prisma/**', reg: /^prisma\/.+\.(prisma|sql|ts)$/, portee: 'depot', attendu: true, req: 'REQ-GOV-017' },
+  {
+    nom: 'prisma/**',
+    reg: /^prisma\/.+\.(prisma|sql|ts)$/,
+    portee: 'depot',
+    attendu: true,
+    req: 'REQ-GOV-017',
+  },
   // La micro-copy est lue par l'apporteur : elle relève de la portée la plus stricte.
-  { nom: 'messages/**', reg: /^messages\/.+\.json$/, portee: 'apporteur', attendu: false, req: 'REQ-GOV-017' },
-  { nom: 'src/**/*.tsx', reg: /^src\/.+\.tsx$/, portee: 'depot', attendu: false, req: 'REQ-GOV-017' },
+  {
+    nom: 'messages/**',
+    reg: /^messages\/.+\.json$/,
+    portee: 'apporteur',
+    attendu: false,
+    req: 'REQ-GOV-017',
+  },
+  {
+    nom: 'src/**/*.tsx',
+    reg: /^src\/.+\.tsx$/,
+    portee: 'depot',
+    attendu: false,
+    req: 'REQ-GOV-017',
+  },
   {
     nom: 'src/app/(espace)/**',
     reg: /^src\/app\/\(espace\)\/.+\.(tsx|ts)$/,
@@ -122,8 +140,20 @@ export const MOTIFS: readonly Motif[] = [
     attendu: false,
     req: 'REQ-GOV-017',
   },
-  { nom: 'micro-copy/**', reg: /^micro-copy\/.+$/, portee: 'apporteur', attendu: false, req: 'REQ-JUR-037' },
-  { nom: 'docs/adr/**', reg: /^docs\/adr\/.+\.md$/, portee: 'depot', attendu: true, req: 'REQ-GOV-017' },
+  {
+    nom: 'micro-copy/**',
+    reg: /^micro-copy\/.+$/,
+    portee: 'apporteur',
+    attendu: false,
+    req: 'REQ-JUR-037',
+  },
+  {
+    nom: 'docs/adr/**',
+    reg: /^docs\/adr\/.+\.md$/,
+    portee: 'depot',
+    attendu: true,
+    req: 'REQ-GOV-017',
+  },
 ];
 
 /**
@@ -210,7 +240,7 @@ export const FAMILLES_STRUCTURELLES = [
   {
     nom: 'exception_sans_justification',
     explication:
-      "une exception posée sans justification, sans référence, sans date, ou sur une forme inconnue.",
+      'une exception posée sans justification, sans référence, sans date, ou sur une forme inconnue.',
   },
 ] as const;
 
@@ -307,7 +337,8 @@ export function controler(vue: Vue): Rapport {
     if (e.justification.trim().length < 20) manques.push('une justification en une phrase');
     if (e.reference.trim() === '') manques.push('une référence qualifiée (RM-12)');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(e.poseeLe)) manques.push('une date AAAA-MM-JJ');
-    if (!FORMES_CONNUES.has(e.forme)) manques.push(`une forme connue de la SSOT (« ${e.forme} » ne l'est pas)`);
+    if (!FORMES_CONNUES.has(e.forme))
+      manques.push(`une forme connue de la SSOT (« ${e.forme} » ne l'est pas)`);
     if (manques.length > 0) {
       fautes.push({
         famille: 'exception_sans_justification',
@@ -356,7 +387,9 @@ export function fichiersSuivis(): string[] {
 export function vueDuDepot(): Vue {
   const suivis = fichiersSuivis();
   const retenus = suivis.filter(
-    (c) => (porteeDuFichier(c) !== null || (PORTEURS_DU_LEXIQUE as readonly string[]).includes(c)) && existsSync(c)
+    (c) =>
+      (porteeDuFichier(c) !== null || (PORTEURS_DU_LEXIQUE as readonly string[]).includes(c)) &&
+      existsSync(c)
   );
   return {
     fichiers: retenus.map((chemin) => ({ chemin, contenu: readFileSync(chemin, 'utf8') })),
@@ -383,16 +416,28 @@ const COMPTES_CONFORMES: CompteMotif[] = MOTIFS.map((m) => ({
  * `tests/unit/gouvernance/lexique.spec.ts` en a besoin, et qu'un test qui reconstruirait la vue
  * à sa façon jugerait autre chose que la gate (RM-01).
  */
-export function vueDeFixture(fichiers: FichierVu[], exceptions: readonly ExceptionLexicale[] = []): Vue {
+export function vueDeFixture(
+  fichiers: FichierVu[],
+  exceptions: readonly ExceptionLexicale[] = []
+): Vue {
   return { fichiers, comptes: COMPTES_CONFORMES, exceptions };
 }
 
 const vue = vueDeFixture;
 
 export const ADR = (contenu: string): FichierVu => ({ chemin: 'docs/adr/9999-temoin.md', contenu });
-export const ESPACE = (contenu: string): FichierVu => ({ chemin: 'src/app/(espace)/tableau.tsx', contenu });
-export const MICRO = (contenu: string): FichierVu => ({ chemin: 'micro-copy/espace.json', contenu });
-export const COURRIEL = (contenu: string): FichierVu => ({ chemin: 'emails/apporteur/message.tsx', contenu });
+export const ESPACE = (contenu: string): FichierVu => ({
+  chemin: 'src/app/(espace)/tableau.tsx',
+  contenu,
+});
+export const MICRO = (contenu: string): FichierVu => ({
+  chemin: 'micro-copy/espace.json',
+  contenu,
+});
+export const COURRIEL = (contenu: string): FichierVu => ({
+  chemin: 'emails/apporteur/message.tsx',
+  contenu,
+});
 
 /**
  * La phrase de l'ADR « valeurs du monde réel », VERBATIM. C'est le contre-témoin le plus
@@ -484,7 +529,18 @@ const TEMOINS: { famille: string; quoi: string; vue: () => Vue }[] = [
     famille: 'exception_sans_justification',
     quoi: 'une exception posée sans phrase, sans référence et sans date',
     vue: () =>
-      vue([], [{ chemin: 'docs/adr/9999-temoin.md', forme: 'objectif', justification: 'ok', reference: '', poseeLe: 'hier' }]),
+      vue(
+        [],
+        [
+          {
+            chemin: 'docs/adr/9999-temoin.md',
+            forme: 'objectif',
+            justification: 'ok',
+            reference: '',
+            poseeLe: 'hier',
+          },
+        ]
+      ),
   },
 ];
 
@@ -497,7 +553,10 @@ export const TEMOINS_POSITIONS: { position: string; ligne: string }[] = [
   { position: 'début de ligne', ligne: 'objectif du mois : cinq dossiers' },
   { position: 'fin de phrase, collé au point', ligne: 'Le tableau affiche votre objectif.' },
   { position: 'avant une virgule', ligne: 'Le tableau affiche votre objectif, puis le solde' },
-  { position: 'avant une parenthèse fermante', ligne: 'Le tableau affiche le solde (et votre objectif)' },
+  {
+    position: 'avant une parenthèse fermante',
+    ligne: 'Le tableau affiche le solde (et votre objectif)',
+  },
   { position: 'en gras', ligne: 'Le tableau affiche **objectif du mois** en tête' },
   { position: 'cellule de tableau Markdown', ligne: '| Colonne | objectif du mois | 12 |' },
   { position: 'tête de liste', ligne: '- objectif du mois' },
@@ -513,7 +572,7 @@ const CONTROLES_POSITIFS: { quoi: string; vue: () => Vue }[] = [
   {
     quoi:
       "la phrase de l'ADR « valeurs du monde réel » privée de ses négations — le même texte, " +
-      "sans ce qui protège",
+      'sans ce qui protège',
     vue: () =>
       vue([
         ADR(
@@ -555,7 +614,7 @@ const CONTRE_TEMOINS: {
   },
   {
     quoi: 'une négation « ni … ni … »',
-    vue: () => vue([ADR("Le contrat ne connaît ni quota ni classement ni objectif.")]),
+    vue: () => vue([ADR('Le contrat ne connaît ni quota ni classement ni objectif.')]),
     genre: 'denegation',
     minimumExemptions: 3,
   },
@@ -591,7 +650,8 @@ const CONTRE_TEMOINS: {
   },
   {
     quoi: "l'espace qui dénie tout palmarès : « aucun classement, aucun rang, aucun niveau »",
-    vue: () => vue([ESPACE("<p>L'espace n'affiche aucun classement, aucun rang, aucun niveau.</p>")]),
+    vue: () =>
+      vue([ESPACE("<p>L'espace n'affiche aucun classement, aucun rang, aucun niveau.</p>")]),
     genre: 'denegation',
     minimumExemptions: 3,
   },
@@ -615,7 +675,8 @@ const CONTRE_TEMOINS: {
           {
             chemin: 'docs/adr/9999-temoin.md',
             forme: 'classement',
-            justification: "citation littérale du document d'origine, conservée pour la traçabilité",
+            justification:
+              "citation littérale du document d'origine, conservée pour la traçabilité",
             reference: 'REQ-GOV-017',
             poseeLe: '2026-09-05',
           },
@@ -632,16 +693,19 @@ const CONTRE_TEMOINS: {
  */
 const CONTRE_TEMOINS_MUETS: { quoi: string; vue: () => Vue }[] = [
   {
-    quoi: "des mots qui contiennent une forme sans en être une (topologie, brutale, primeur)",
-    vue: () => vue([ESPACE('<p>La topologie du réseau, une rupture brutale, un primeur imprimé.</p>')]),
+    quoi: 'des mots qui contiennent une forme sans en être une (topologie, brutale, primeur)',
+    vue: () =>
+      vue([ESPACE('<p>La topologie du réseau, une rupture brutale, un primeur imprimé.</p>')]),
   },
   {
     quoi: 'un fichier hors périmètre : le registre des exigences ÉCRIT les mots interdits',
     vue: () =>
-      vue([{ chemin: 'docs/REQUIREMENTS.md', contenu: 'objectif du mois, quota de vente, classement' }]),
+      vue([
+        { chemin: 'docs/REQUIREMENTS.md', contenu: 'objectif du mois, quota de vente, classement' },
+      ]),
   },
   {
-    quoi: "un ADR interne qui emploie « niveau » — mot courant, refusé seulement côté apporteur",
+    quoi: 'un ADR interne qui emploie « niveau » — mot courant, refusé seulement côté apporteur',
     vue: () => vue([ADR('Le stub est décidé au niveau du singleton, pas au niveau de la page.')]),
   },
 ];
@@ -663,7 +727,9 @@ function echouer(message: string): never {
 
 if (APPELE_DIRECTEMENT) {
   if (process.argv.includes('--prove')) {
-    const sansTemoin = FAMILLES.map((f) => f.nom).filter((n) => !TEMOINS.some((t) => t.famille === n));
+    const sansTemoin = FAMILLES.map((f) => f.nom).filter(
+      (n) => !TEMOINS.some((t) => t.famille === n)
+    );
     if (sansTemoin.length > 0) {
       echouer(
         `❌ Famille(s) sans témoin : ${sansTemoin.join(', ')}. Une famille sans témoin n'est pas prouvée.`
@@ -742,7 +808,8 @@ if (APPELE_DIRECTEMENT) {
     .join(' · ');
 
   if (rapport.fautes.length === 0) {
-    const parGenre = (g: GenreExemption): number => rapport.exemptions.filter((e) => e.genre === g).length;
+    const parGenre = (g: GenreExemption): number =>
+      rapport.exemptions.filter((e) => e.genre === g).length;
     console.log(
       `✅ gov:lexique — ${vueReelle.fichiers.length} fichier(s) balayé(s) sur ${MOTIFS.length} motifs ` +
         `[${detail}] ; ${LEXIQUE_INTERDIT.length} familles et ${FORMES_CONNUES.size} formes appliquées ; ` +

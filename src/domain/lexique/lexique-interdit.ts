@@ -79,7 +79,14 @@ export const LEXIQUE_INTERDIT = [
     pourquoi:
       "nommer « commercial » celui qui n'est pas salarié désigne une fonction de l'entreprise, " +
       'et le mot survit à toutes les clauses qui disent le contraire',
-    formes: ['commercial', 'commerciale', 'commerciaux', 'commerciales', 'force de vente', 'forces de vente'],
+    formes: [
+      'commercial',
+      'commerciale',
+      'commerciaux',
+      'commerciales',
+      'force de vente',
+      'forces de vente',
+    ],
     aDireALaPlace: "apporteur d'affaires",
   },
   {
@@ -96,7 +103,8 @@ export const LEXIQUE_INTERDIT = [
     nom: 'quota',
     portee: 'depot',
     reqs: ['REQ-GOV-017', 'REQ-JUR-037'],
-    pourquoi: "un quota est un objectif chiffré, et la mesure de son atteinte est le deuxième pouvoir",
+    pourquoi:
+      'un quota est un objectif chiffré, et la mesure de son atteinte est le deuxième pouvoir',
     formes: ['quota', 'quotas'],
     aDireALaPlace: null,
   },
@@ -104,7 +112,8 @@ export const LEXIQUE_INTERDIT = [
     nom: 'classement',
     portee: 'depot',
     reqs: ['REQ-GOV-017', 'REQ-JUR-037'],
-    pourquoi: "classer les apporteurs entre eux les met en concurrence sous l'autorité de celui qui classe",
+    pourquoi:
+      "classer les apporteurs entre eux les met en concurrence sous l'autorité de celui qui classe",
     formes: ['classement', 'classements'],
     aDireALaPlace: null,
   },
@@ -112,15 +121,26 @@ export const LEXIQUE_INTERDIT = [
     nom: 'palmares',
     portee: 'apporteur',
     reqs: ['REQ-JUR-037'],
-    pourquoi: "un rang, un niveau ou un « top » est un classement qui ne dit pas son nom",
-    formes: ['top', 'meilleur', 'meilleure', 'meilleurs', 'meilleures', 'rang', 'rangs', 'niveau', 'niveaux'],
+    pourquoi: 'un rang, un niveau ou un « top » est un classement qui ne dit pas son nom',
+    formes: [
+      'top',
+      'meilleur',
+      'meilleure',
+      'meilleurs',
+      'meilleures',
+      'rang',
+      'rangs',
+      'niveau',
+      'niveaux',
+    ],
     aDireALaPlace: null,
   },
   {
     nom: 'mesure_de_performance',
     portee: 'apporteur',
     reqs: ['REQ-JUR-037'],
-    pourquoi: "restituer une performance à celui qu'on mesure est la mesure de la production (REQ-JUR-039)",
+    pourquoi:
+      "restituer une performance à celui qu'on mesure est la mesure de la production (REQ-JUR-039)",
     formes: [
       'performance',
       'performances',
@@ -327,7 +347,9 @@ export const EXCEPTIONS_DECLAREES: readonly ExceptionLexicale[] = [];
 
 /** Les familles applicables selon la portée d'un fichier : `apporteur` est le sur-ensemble. */
 export function famillesPourPortee(portee: PorteeLexicale): readonly FamilleInterdite[] {
-  return portee === 'apporteur' ? LEXIQUE_INTERDIT : LEXIQUE_INTERDIT.filter((f) => f.portee === 'depot');
+  return portee === 'apporteur'
+    ? LEXIQUE_INTERDIT
+    : LEXIQUE_INTERDIT.filter((f) => f.portee === 'depot');
 }
 
 /** Toutes les formes de toutes les familles — utile aux décomptes, jamais au contrôle. */

@@ -68,13 +68,19 @@ lot. Les décider ici aurait créé deux vérités concurrentes sur la même gar
 chaque exécution avec son motif et la tâche qui l'ouvrira — c'est la seule chose qui empêche une transposition
 prématurée de se déguiser en couverture.
 
-| Famille | Origine | Périmètre au 2026-09-05 |
+| Famille | Origine | Périmètre au 2026-09-14 |
 | --- | --- | --- |
 | `use_server_export_interdit` | `use-server exports`, adaptée | 0 module — le dépôt n'a pas de `src/` |
 | `use_server_reexport` | `surface Server Actions`, adaptée | 0 module — idem |
 | `use_client_sans_motif` | `use-client`, transposée | 0 composant — idem |
-| `lint_non_bloquant` | REQ-GOV-018, écrite | 0 étape — `ci.yml` est un fichier partagé, l'étape est rendue en texte |
-| `outillage_non_epingle` | REQ-GOV-018, écrite | 0 étape — idem |
-| `isolation_depot` | `isolation`, adaptée | 197 tâches relues |
-| `garde_ecrite_jamais_appelee` | `gardes-isolation-sont-appelees`, adaptée | 19 gardes du socle relues |
-| `perimetre_vide_sans_motif` | la doctrine elle-même | 5 périmètres déclarés, 3 vides et motivés |
+| `lint_non_bloquant` | REQ-GOV-018, écrite | **2 étapes** — `pnpm lint` et `pnpm format:check`, sans `continue-on-error` (GOV-031) |
+| `outillage_non_epingle` | REQ-GOV-018, écrite | **2 étapes** — six paquets épinglés, trois scripts, configuration versionnée |
+| `isolation_depot` | `isolation`, adaptée | 224 tâches relues |
+| `garde_ecrite_jamais_appelee` | `gardes-isolation-sont-appelees`, adaptée | 24 gardes du socle relues |
+| `perimetre_vide_sans_motif` | la doctrine elle-même | 5 périmètres déclarés, 2 vides et motivés |
+
+> ⚠️ **Les deux lignes `REQ-GOV-018` disaient « 0 étape — `ci.yml` est un fichier partagé, l'étape
+> est rendue en texte » jusqu'au 2026-09-14.** C'était vrai, et c'était surtout le mécanisme par
+> lequel les deux familles ne mesuraient rien : elles ne s'arment qu'en PRÉSENCE d'une étape qui
+> lance l'outil. GOV-031 a écrit les étapes. Le compte de cette colonne se relit par
+> `pnpm gov:conventions`, qui l'imprime ; il ne se recopie pas.

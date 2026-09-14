@@ -265,7 +265,7 @@ export const EXEMPTIONS_NOMMEES: ExemptionNommee[] = [
     pourquoi:
       "`gov:agents` prouve sa famille `source_code_invalide` avec la fixture d'un code de poste " +
       "à UN chiffre, que `tasks.schema.json` refuse. C'est la fixture du défaut (LEC-19) : la " +
-      "retirer désarmerait la seule preuve que `gov:agents` sait rougir sur un code mal formé. " +
+      'retirer désarmerait la seule preuve que `gov:agents` sait rougir sur un code mal formé. ' +
       "L'exemption porte sur l'APPEL du constructeur de fixture, pas sur la valeur : la même " +
       'étiquette écrite ailleurs reste vue.',
     fichier: 'scripts/gates/gov-agents.ts',
@@ -277,11 +277,11 @@ export const EXEMPTIONS_NOMMEES: ExemptionNommee[] = [
   {
     nom: 'libelle_d_affirmation_invalidee',
     pourquoi:
-      "`affirmations-verifiees.spec.ts` cite les cinq affirmations que le registre invalide, sous " +
-      'leur libellé D\'ORIGINE — celui des sept documents, étiquette de relecteur comprise. Citer ' +
+      '`affirmations-verifiees.spec.ts` cite les cinq affirmations que le registre invalide, sous ' +
+      "leur libellé D'ORIGINE — celui des sept documents, étiquette de relecteur comprise. Citer " +
       "l'affirmation fausse est le travail même de ce test. Et elle n'est pas nue : son identifiant " +
       "qualifié figure sur la MÊME ligne, en `repere`. C'est cette co-présence qui est exemptée, " +
-      "pas le libellé : le même libellé sans son repère qualifié reste rouge.",
+      'pas le libellé : le même libellé sans son repère qualifié reste rouge.',
     fichier: 'tests/unit/gouvernance/affirmations-verifiees.spec.ts',
     reperage: /libelle:\s*'[^']*'.*\brepere:\s*'AFF-\d+'/,
     motif: /libelle:\s*'[^']*'(?=.*\brepere:\s*'AFF-\d+')/g,
@@ -291,12 +291,12 @@ export const EXEMPTIONS_NOMMEES: ExemptionNommee[] = [
   {
     nom: 'appat_du_temoin_de_perimetre',
     pourquoi:
-      "Le temoin REQ-CPL-018 pose un appat dans un fichier au nom accentue pour prouver que la " +
+      'Le temoin REQ-CPL-018 pose un appat dans un fichier au nom accentue pour prouver que la ' +
       "garde LIT les chemins non-ASCII. L'appat DOIT etre un identifiant nu : c'est ce que " +
-      "`gov:identifiants` doit mordre, et le premier appat choisi (un code de POSTE) etait " +
+      '`gov:identifiants` doit mordre, et le premier appat choisi (un code de POSTE) etait ' +
       "invisible parce qu'exempte. Le retirer desarmerait le temoin. L'exemption porte sur la " +
-      "CONSTANTE `APPAT` de ce fichier, pas sur la valeur : la meme etiquette ecrite ailleurs " +
-      "reste vue.",
+      'CONSTANTE `APPAT` de ce fichier, pas sur la valeur : la meme etiquette ecrite ailleurs ' +
+      'reste vue.',
     fichier: 'tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts',
     reperage: /const APPAT = 'Renvoi [A-Z]\d/,
     motif: /const APPAT = 'Renvoi [A-Z]\d{1,2}/g,
@@ -837,7 +837,9 @@ function prouverSyntaxe(): number {
       return 1;
     }
     if (contenuCite(long).length <= PLAFOND_HISTORIQUE) {
-      console.error(`❌ ${oj} : la version rallongée n'atteint pas le plafond de l'ancienne règle.`);
+      console.error(
+        `❌ ${oj} : la version rallongée n'atteint pas le plafond de l'ancienne règle.`
+      );
       return 1;
     }
 
@@ -882,11 +884,15 @@ function prouverSyntaxe(): number {
     // Le même texte EN PROSE : la règle d'origine doit y survivre intacte.
     const enProse = fautesDeLigne(court, 'docs/exemple.md', i, MOTIF_NU).length > 0;
     if (t.citeEnProse && enProse) {
-      console.error(`❌ ${oj} : annoncé citant en prose, or il y rougit. « Citer n'est pas se servir » a été perdu.`);
+      console.error(
+        `❌ ${oj} : annoncé citant en prose, or il y rougit. « Citer n'est pas se servir » a été perdu.`
+      );
       return 1;
     }
     if (!t.citeEnProse && !enProse) {
-      console.error(`❌ ${oj} : annoncé non citant en prose, or il y est vert. Corriger l'étiquette.`);
+      console.error(
+        `❌ ${oj} : annoncé non citant en prose, or il y est vert. Corriger l'étiquette.`
+      );
       return 1;
     }
   }
@@ -942,9 +948,7 @@ function prouverSyntaxe(): number {
       );
       return 1;
     }
-    const rouge = reelles.find(
-      (l) => fautesDeLigne(l, e.fichier, i, MOTIF_NU).length > 0
-    );
+    const rouge = reelles.find((l) => fautesDeLigne(l, e.fichier, i, MOTIF_NU).length > 0);
     if (rouge !== undefined) {
       console.error(
         `❌ Exemption « ${e.nom} » : une ligne réelle rougit malgré elle.\n   ` +
@@ -1016,7 +1020,9 @@ export function prouver(): number {
   for (const [i, c] of CONTRE_TEMOINS.entries()) {
     const f = fautesDeLigne(c, 'docs/contre-temoin.md', i, MOTIF_NU);
     if (f.length > 0) {
-      console.error(`❌ Faux positif : « ${c} » a rougi. La garde est trop large.\n   ${f[0]!.message}`);
+      console.error(
+        `❌ Faux positif : « ${c} » a rougi. La garde est trop large.\n   ${f[0]!.message}`
+      );
       return 1;
     }
   }
@@ -1025,18 +1031,23 @@ export function prouver(): number {
   );
 
   // ── GOV-025 : la preuve PAR POSITION, et le rejeu contre la version CASSÉE ──────────────────
-  const sansTemoin = POSITIONS_LIMITES.filter((p) => !TEMOINS_LIMITES.some((t) => t.position === p));
+  const sansTemoin = POSITIONS_LIMITES.filter(
+    (p) => !TEMOINS_LIMITES.some((t) => t.position === p)
+  );
   if (sansTemoin.length > 0) {
     console.error(`❌ Position(s) limite sans témoin : ${sansTemoin.join(', ')}.`);
     return 1;
   }
   for (const [i, t] of TEMOINS_LIMITES.entries()) {
     if (fautesDeLigne(t.texte, `docs/temoin-${t.position}.md`, i, MOTIF_NU).length === 0) {
-      console.error(`❌ Position « ${t.position} » : le témoin « ${t.texte} » n'a PAS fait rougir la garde.`);
+      console.error(
+        `❌ Position « ${t.position} » : le témoin « ${t.texte} » n'a PAS fait rougir la garde.`
+      );
       return 1;
     }
     const vuParLAncienne =
-      fautesDeLigne(t.texte, `docs/temoin-${t.position}.md`, i, MOTIF_NU_AVEUGLE_EN_FIN_DE_PHRASE).length > 0;
+      fautesDeLigne(t.texte, `docs/temoin-${t.position}.md`, i, MOTIF_NU_AVEUGLE_EN_FIN_DE_PHRASE)
+        .length > 0;
     if (t.manqueParLAncienne && vuParLAncienne) {
       console.error(
         `❌ Position « ${t.position} » : témoin annoncé aveugle avant GOV-025, mais l'ancienne lookahead ` +
@@ -1072,7 +1083,9 @@ export function prouver(): number {
   for (const [i, c] of contres.entries()) {
     const f = fautesDeLigne(c, 'docs/contre-temoin-position.md', i, MOTIF_NU);
     if (f.length > 0) {
-      console.error(`❌ Faux positif à une position limite : « ${c} » a rougi.\n   ${f[0]!.message}`);
+      console.error(
+        `❌ Faux positif à une position limite : « ${c} » a rougi.\n   ${f[0]!.message}`
+      );
       return 1;
     }
   }
@@ -1111,11 +1124,15 @@ function compter(): number {
   const fichiers = fichiersSuivis();
   const tous = EXEMPTIONS_NOMMEES.map((e) => e.nom);
   const A = analyserAvec(fichiers, (l, f, i) => fautesDeLigneAveugleALaSyntaxe(l, f, i, MOTIF_NU));
-  const B = analyserAvec(fichiers, (l, f, i) => fautesDeLigneSansExemptions(tous, l, f, i, MOTIF_NU));
+  const B = analyserAvec(fichiers, (l, f, i) =>
+    fautesDeLigneSansExemptions(tous, l, f, i, MOTIF_NU)
+  );
   const C = analyserAvec(fichiers, (l, f, i) => fautesDeLigne(l, f, i, MOTIF_NU));
 
   console.log(`gov:identifiants --compter — ${fichiers.length} fichiers suivis balayés.`);
-  console.log(`   A = ${A.length}  règle d'AVANT GOV-028 (trois familles partout, plafond de ${PLAFOND_HISTORIQUE})`);
+  console.log(
+    `   A = ${A.length}  règle d'AVANT GOV-028 (trois familles partout, plafond de ${PLAFOND_HISTORIQUE})`
+  );
   console.log(`   B = ${B.length}  règle contextuelle, exemptions nommées RETIRÉES`);
   console.log(`   C = ${C.length}  règle LIVRÉE`);
   for (const f of B) console.log(`   B> ${f.message.split(' Cite la forme')[0]}`);

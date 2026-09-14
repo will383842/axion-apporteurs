@@ -64,7 +64,11 @@ import {
  */
 const SHA_REEL = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 
-const attestation = (): Attestation => ({ pr: 998, sha: SHA_REEL, fusionneeAt: '2026-09-05T11:04:48Z' });
+const attestation = (): Attestation => ({
+  pr: 998,
+  sha: SHA_REEL,
+  fusionneeAt: '2026-09-05T11:04:48Z',
+});
 
 /**
  * Aucun défaut sur ce que les cas font varier (RM-11) : `repo`, `statut`, `pr` et `attestation`
@@ -91,7 +95,13 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
 
   it('pr_nu_hors_depot : le numéro écrit dans `pr`, celui que les vues rendraient `PR#998`', () => {
     const f = controlerAttestation(
-      tache({ id: 'INT-T01b', repo: 'axionia', statut: 'fusionnee', pr: 998, attestation: attestation() }),
+      tache({
+        id: 'INT-T01b',
+        repo: 'axionia',
+        statut: 'fusionnee',
+        pr: 998,
+        attestation: attestation(),
+      }),
       true
     );
     expect(f.map((x) => x.famille)).toEqual(['pr_nu_hors_depot']);
@@ -101,26 +111,56 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
 
   it('attestation_hors_sujet : une tâche de CE dépôt n’a rien à attester, sa PR y résout', () => {
     expect(
-      familles(tache({ id: 'GOV-024', repo: 'partners', statut: 'fusionnee', pr: 31, attestation: attestation() }), true)
+      familles(
+        tache({
+          id: 'GOV-024',
+          repo: 'partners',
+          statut: 'fusionnee',
+          pr: 31,
+          attestation: attestation(),
+        }),
+        true
+      )
     ).toEqual(['attestation_hors_sujet']);
   });
 
   it('attestation_hors_sujet : `repo: "externe"` ne désigne aucun dépôt de code', () => {
     expect(
-      familles(tache({ id: 'JUR-T01b', repo: 'externe', statut: 'a_faire', pr: null, attestation: attestation() }), false)
+      familles(
+        tache({
+          id: 'JUR-T01b',
+          repo: 'externe',
+          statut: 'a_faire',
+          pr: null,
+          attestation: attestation(),
+        }),
+        false
+      )
     ).toContain('attestation_hors_sujet');
   });
 
   it('attestation_sans_livraison : attestée mais non déclarée — le composeur la referait', () => {
     expect(
-      familles(tache({ id: 'INT-T02', repo: 'axionia', statut: 'a_faire', pr: null, attestation: attestation() }), false)
+      familles(
+        tache({
+          id: 'INT-T02',
+          repo: 'axionia',
+          statut: 'a_faire',
+          pr: null,
+          attestation: attestation(),
+        }),
+        false
+      )
     ).toEqual(['attestation_sans_livraison']);
   });
 
   it('attestation_sha_non_conforme : le NUMÉRO DE PR mis à la place du SHA', () => {
     const f = controlerAttestation(
       tache({
-        id: 'INT-T01b', repo: 'axionia', statut: 'fusionnee', pr: null,
+        id: 'INT-T01b',
+        repo: 'axionia',
+        statut: 'fusionnee',
+        pr: null,
         attestation: { ...attestation(), sha: '998' },
       }),
       true
@@ -132,7 +172,10 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
     expect(
       familles(
         tache({
-          id: 'INT-T01b', repo: 'axionia', statut: 'fusionnee', pr: null,
+          id: 'INT-T01b',
+          repo: 'axionia',
+          statut: 'fusionnee',
+          pr: null,
           attestation: { ...attestation(), sha: SHA_REEL.slice(0, 7) },
         }),
         true
@@ -144,7 +187,10 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
     expect(
       familles(
         tache({
-          id: 'INT-T01b', repo: 'axionia', statut: 'fusionnee', pr: null,
+          id: 'INT-T01b',
+          repo: 'axionia',
+          statut: 'fusionnee',
+          pr: null,
           attestation: { ...attestation(), fusionneeAt: '05/09/2026 13:04' },
         }),
         true
@@ -154,7 +200,16 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
 
   it('livraison_repo_externe : une réponse de tiers ne se « livre » pas, rien ne peut l’attester', () => {
     expect(
-      familles(tache({ id: 'JUR-T01b', repo: 'externe', statut: 'fusionnee', pr: null, attestation: null }), true)
+      familles(
+        tache({
+          id: 'JUR-T01b',
+          repo: 'externe',
+          statut: 'fusionnee',
+          pr: null,
+          attestation: null,
+        }),
+        true
+      )
     ).toEqual(['livraison_repo_externe']);
   });
 
@@ -164,11 +219,38 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
     const vues = new Set<string>();
     const cas: [TacheAttestable, boolean][] = [
       [{ id: 'a', repo: 'axionia', statut: 'fusionnee', pr: null, attestation: null }, true],
-      [{ id: 'b', repo: 'axionia', statut: 'fusionnee', pr: 998, attestation: attestation() }, true],
-      [{ id: 'c', repo: 'partners', statut: 'fusionnee', pr: 31, attestation: attestation() }, true],
-      [{ id: 'd', repo: 'axionia', statut: 'a_faire', pr: null, attestation: attestation() }, false],
-      [{ id: 'e', repo: 'axionia', statut: 'fusionnee', pr: null, attestation: { ...attestation(), sha: '998' } }, true],
-      [{ id: 'f', repo: 'axionia', statut: 'fusionnee', pr: null, attestation: { ...attestation(), fusionneeAt: 'hier' } }, true],
+      [
+        { id: 'b', repo: 'axionia', statut: 'fusionnee', pr: 998, attestation: attestation() },
+        true,
+      ],
+      [
+        { id: 'c', repo: 'partners', statut: 'fusionnee', pr: 31, attestation: attestation() },
+        true,
+      ],
+      [
+        { id: 'd', repo: 'axionia', statut: 'a_faire', pr: null, attestation: attestation() },
+        false,
+      ],
+      [
+        {
+          id: 'e',
+          repo: 'axionia',
+          statut: 'fusionnee',
+          pr: null,
+          attestation: { ...attestation(), sha: '998' },
+        },
+        true,
+      ],
+      [
+        {
+          id: 'f',
+          repo: 'axionia',
+          statut: 'fusionnee',
+          pr: null,
+          attestation: { ...attestation(), fusionneeAt: 'hier' },
+        },
+        true,
+      ],
       [{ id: 'g', repo: 'externe', statut: 'fusionnee', pr: null, attestation: null }, true],
     ];
     for (const [t, livree] of cas) for (const x of familles(t, livree)) vues.add(x);
@@ -179,39 +261,71 @@ describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GO
 describe('GOV-038 — les contre-témoins : ce que la garde doit LAISSER PASSER (RM-02)', () => {
   it('une tâche `partners` livrée normalement : `pr` nu, aucune attestation', () => {
     expect(
-      familles(tache({ id: 'GOV-024', repo: 'partners', statut: 'fusionnee', pr: 31, attestation: null }), true)
+      familles(
+        tache({ id: 'GOV-024', repo: 'partners', statut: 'fusionnee', pr: 31, attestation: null }),
+        true
+      )
     ).toEqual([]);
   });
 
   it('une tâche `partners` livrée SANS numéro de PR (le cas de GOV-000) reste verte', () => {
     expect(
-      familles(tache({ id: 'GOV-000', repo: 'partners', statut: 'fusionnee', pr: null, attestation: null }), true)
+      familles(
+        tache({
+          id: 'GOV-000',
+          repo: 'partners',
+          statut: 'fusionnee',
+          pr: null,
+          attestation: null,
+        }),
+        true
+      )
     ).toEqual([]);
   });
 
   it('une tâche `axionia` encore `a_faire` : rien à attester tant que rien n’est livré', () => {
     expect(
-      familles(tache({ id: 'INT-T02', repo: 'axionia', statut: 'a_faire', pr: null, attestation: null }), false)
+      familles(
+        tache({ id: 'INT-T02', repo: 'axionia', statut: 'a_faire', pr: null, attestation: null }),
+        false
+      )
     ).toEqual([]);
   });
 
   it('une tâche `axionia` LIVRÉE avec son attestation et sans `pr` nu — la forme que GOV-038 pose', () => {
     expect(
-      familles(tache({ id: 'INT-T01b', repo: 'axionia', statut: 'fusionnee', pr: null, attestation: attestation() }), true)
+      familles(
+        tache({
+          id: 'INT-T01b',
+          repo: 'axionia',
+          statut: 'fusionnee',
+          pr: null,
+          attestation: attestation(),
+        }),
+        true
+      )
     ).toEqual([]);
   });
 });
 
 describe('GOV-038 — le rendu est qualifié par dépôt (REQ-GOV-008)', () => {
   it('une PR de CE dépôt se cite sans qualifier : elle y résout', () => {
-    expect(referencePr(tache({ id: 'GOV-024', repo: 'partners', statut: 'en_cours', pr: 31, attestation: null }))).toBe(
-      'PR#31'
-    );
+    expect(
+      referencePr(
+        tache({ id: 'GOV-024', repo: 'partners', statut: 'en_cours', pr: 31, attestation: null })
+      )
+    ).toBe('PR#31');
   });
 
   it('une PR d’AILLEURS se lit `will383842/axion-ia#998 (…)`, jamais `PR#998`', () => {
     const rendu = referencePr(
-      tache({ id: 'INT-T01b', repo: 'axionia', statut: 'fusionnee', pr: null, attestation: attestation() })
+      tache({
+        id: 'INT-T01b',
+        repo: 'axionia',
+        statut: 'fusionnee',
+        pr: null,
+        attestation: attestation(),
+      })
     );
     expect(rendu).toContain('will383842/axion-ia#998');
     expect(rendu).not.toMatch(/(^|[^-\w])PR ?#998/);
@@ -220,8 +334,16 @@ describe('GOV-038 — le rendu est qualifié par dépôt (REQ-GOV-008)', () => {
   });
 
   it('une tâche sans PR ni attestation ne rend rien — jamais une référence inventée', () => {
-    expect(referencePr(tache({ id: 'DM-07', repo: 'partners', statut: 'a_faire', pr: null, attestation: null }))).toBeNull();
-    expect(referencePr(tache({ id: 'INT-T02', repo: 'axionia', statut: 'a_faire', pr: null, attestation: null }))).toBeNull();
+    expect(
+      referencePr(
+        tache({ id: 'DM-07', repo: 'partners', statut: 'a_faire', pr: null, attestation: null })
+      )
+    ).toBeNull();
+    expect(
+      referencePr(
+        tache({ id: 'INT-T02', repo: 'axionia', statut: 'a_faire', pr: null, attestation: null })
+      )
+    ).toBeNull();
   });
 
   it('le cas dégradé est DIT, pas maquillé : un `pr` nu hors dépôt ne se rend pas `PR#998`', () => {
@@ -262,7 +384,9 @@ describe('GOV-038 — aucun appelant ne recompose une référence de PR à la ma
    * garde lexicale trop large force à retirer la bonne écriture pour obtenir le vert.
    */
   const composeUneReferenceNue = (ligne: string): boolean =>
-    INTERPOLE_PR.test(ligne) && INTERPOLE_ID.test(ligne) && (FORME_NUE.test(ligne) || !QUALIFIE.test(ligne));
+    INTERPOLE_PR.test(ligne) &&
+    INTERPOLE_ID.test(ligne) &&
+    (FORME_NUE.test(ligne) || !QUALIFIE.test(ligne));
 
   it('le périmètre n’est pas vide — sans quoi ce test serait vert en ne mesurant rien', () => {
     // Témoin positif. « 0 faute » et « 0 fichier scanné » sont indiscernables dans un journal.
@@ -289,15 +413,24 @@ describe('GOV-038 — aucun appelant ne recompose une référence de PR à la ma
   it('aucune ligne ne compose une référence de PR de tâche sans nommer son dépôt', () => {
     const fautes: string[] = [];
     for (const f of scripts) {
-      readFileSync(f, 'utf8').split('\n').forEach((ligne, i) => {
-        if (composeUneReferenceNue(ligne)) fautes.push(`${f}:${i + 1} — ${ligne.trim()}`);
-      });
+      readFileSync(f, 'utf8')
+        .split('\n')
+        .forEach((ligne, i) => {
+          if (composeUneReferenceNue(ligne)) fautes.push(`${f}:${i + 1} — ${ligne.trim()}`);
+        });
     }
-    expect(fautes, 'ces lignes composent une référence de PR de tâche à la main : appelle referencePr()').toEqual([]);
+    expect(
+      fautes,
+      'ces lignes composent une référence de PR de tâche à la main : appelle referencePr()'
+    ).toEqual([]);
   });
 
   it('les trois points de rendu d’une PR de tâche passent par `referencePr`', () => {
-    for (const f of ['scripts/plan-state/build.ts', 'scripts/reprise.ts', 'scripts/lot/cloture.ts']) {
+    for (const f of [
+      'scripts/plan-state/build.ts',
+      'scripts/reprise.ts',
+      'scripts/lot/cloture.ts',
+    ]) {
       expect(readFileSync(f, 'utf8'), `${f} doit importer referencePr`).toContain('referencePr');
     }
   });
@@ -320,8 +453,12 @@ describe('GOV-038 — aucun appelant ne recompose une référence de PR à la ma
   it('le fichier de la gate en ligne existe et n’est appelé ni par `pnpm test` ni par `gov:check`', () => {
     // Une vérification qui interroge la forge ne doit JAMAIS entrer dans la suite : elle rendrait
     // le verdict dépendant du réseau, d'un jeton et d'un quota (mesuré le 2026-09-05).
-    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as { scripts: Record<string, string> };
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      scripts: Record<string, string>;
+    };
     expect(pkg.scripts['gov:check'] ?? '').not.toContain('attestation');
-    expect(readFileSync(join('scripts', 'gates', 'gov-attestation.ts'), 'utf8')).toContain('--en-ligne');
+    expect(readFileSync(join('scripts', 'gates', 'gov-attestation.ts'), 'utf8')).toContain(
+      '--en-ligne'
+    );
   });
 });

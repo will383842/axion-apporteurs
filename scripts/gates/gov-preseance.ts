@@ -286,7 +286,9 @@ function lireSource(): Source {
       process.exit(1);
     }
   }
-  const registre = JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as { exigences: { id: string }[] };
+  const registre = JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as {
+    exigences: { id: string }[];
+  };
   const registreGardes = JSON.parse(readFileSync(CHEMIN_GARDES, 'utf8')) as {
     gates: { id: string; preuveRouge: string | null }[];
   };
@@ -313,7 +315,9 @@ if (process.argv.includes('--prove')) {
   const base = lireSource();
   const dejaFautif = controler(base);
   if (dejaFautif.length > 0) {
-    console.error(`❌ La preuve part d'un dépôt DÉJÀ fautif (${dejaFautif.length}) — corrige d'abord :`);
+    console.error(
+      `❌ La preuve part d'un dépôt DÉJÀ fautif (${dejaFautif.length}) — corrige d'abord :`
+    );
     dejaFautif.slice(0, 8).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
     process.exit(1);
   }
@@ -326,7 +330,8 @@ if (process.argv.includes('--prove')) {
   });
 
   /** L'identifiant d'une garde du registre qui n'a jamais été vue rougir. */
-  const gardeSansPreuve = [...base.gardes.entries()].find(([, p]) => p === null)?.[0] ?? 'gov:check';
+  const gardeSansPreuve =
+    [...base.gardes.entries()].find(([, p]) => p === null)?.[0] ?? 'gov:check';
 
   const TEMOINS: { famille: string; defaut: () => Source }[] = [
     {
@@ -335,7 +340,8 @@ if (process.argv.includes('--prove')) {
         const s = copie();
         s.scannes.push({
           chemin: 'docs/TEMOIN.md',
-          contenu: 'Le principe de zéro arbitrage vaut pour toute résolution.\nligne suivante muette.\n',
+          contenu:
+            'Le principe de zéro arbitrage vaut pour toute résolution.\nligne suivante muette.\n',
         });
         return s;
       },
@@ -424,7 +430,8 @@ if (process.argv.includes('--prove')) {
 
   // Contre-témoins : ce que la garde ne doit PAS faire rougir. Une garde qui rougit sur tout ne
   // dit rien de plus qu'une garde qui ne rougit jamais.
-  const gardePreuve = [...base.gardes.entries()].find(([, p]) => p !== null)?.[0] ?? 'gov:publication';
+  const gardePreuve =
+    [...base.gardes.entries()].find(([, p]) => p !== null)?.[0] ?? 'gov:publication';
   /** Un identifiant de garde sans preuve qui est aussi un mot français ordinaire. */
   const motFrancais =
     [...base.gardes.entries()].find(([id, p]) => p === null && /^[a-z]{5,}$/.test(id))?.[0] ??
@@ -447,7 +454,8 @@ if (process.argv.includes('--prove')) {
         const s = copie();
         s.scannes.push({
           chemin: 'docs/CT-B.md',
-          contenu: 'Aucun encaissement ne s\'arbitre au jugé — zéro arbitrage,\nà l\'exception de REQ-DM-034.\n',
+          contenu:
+            "Aucun encaissement ne s'arbitre au jugé — zéro arbitrage,\nà l'exception de REQ-DM-034.\n",
         });
         return s;
       },
@@ -486,7 +494,7 @@ if (process.argv.includes('--prove')) {
       // Le registre des gardes porte des identifiants qui sont des mots français ordinaires
       // (`inertie`, `mutation`, `frontiere`, `sante`). Une garde qui les cherche en prose rougit
       // sur des phrases qui ne citent aucune gate — et une garde qui rougit sur tout ne dit rien.
-      quoi: "un identifiant de garde qui est aussi un mot français, employé en prose",
+      quoi: 'un identifiant de garde qui est aussi un mot français, employé en prose',
       source: () => {
         const s = copie();
         s.preseance += `\n\nLe registre ne tranche rien par ${motFrancais} : il tranche par écrit.\n`;
@@ -521,7 +529,9 @@ if (process.argv.includes('--prove')) {
     }
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts.`);
   process.exit(0);

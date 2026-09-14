@@ -37,7 +37,8 @@ import { execFileSync } from 'node:child_process';
 import { DEPOT_LOCAL, MOTIF_SHA, depotDeLaTache, type Attestation } from '../lot/attestation';
 
 const iTaches = process.argv.indexOf('--taches');
-const CHEMIN_TACHES = iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
+const CHEMIN_TACHES =
+  iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
 
 type Tache = { id: string; repo: string; statut: string; attestation?: Attestation | null };
 
@@ -61,15 +62,22 @@ const attestees = doc.taches.filter((t) => t.repo !== DEPOT_LOCAL && t.attestati
 
 // TÉMOIN POSITIF. « 0 échec » et « 0 attestation lue » sont indiscernables dans un journal de CI,
 // et le second est le mode d'échec le plus probable d'un contrôle qui filtre sur deux champs.
-console.log(`gov:attestation — ${attestees.length} attestation(s) à résoudre sur ${doc.taches.length} tâches.`);
+console.log(
+  `gov:attestation — ${attestees.length} attestation(s) à résoudre sur ${doc.taches.length} tâches.`
+);
 if (attestees.length === 0) {
-  console.log('   Aucune tâche livrée hors de ce dépôt : rien à résoudre. Ce n’est pas un vert de contrôle.');
+  console.log(
+    '   Aucune tâche livrée hors de ce dépôt : rien à résoudre. Ce n’est pas un vert de contrôle.'
+  );
   process.exit(0);
 }
 
 const gh = (chemin: string): { ok: true; corps: unknown } | { ok: false; erreur: string } => {
   try {
-    return { ok: true, corps: JSON.parse(execFileSync('gh', ['api', chemin], { encoding: 'utf8' })) as unknown };
+    return {
+      ok: true,
+      corps: JSON.parse(execFileSync('gh', ['api', chemin], { encoding: 'utf8' })) as unknown,
+    };
   } catch (e) {
     return { ok: false, erreur: (e as Error).message.split('\n')[0] ?? 'sans message' };
   }
@@ -85,7 +93,9 @@ for (const t of attestees) {
     continue;
   }
   if (!MOTIF_SHA.test(a.sha)) {
-    fautes.push(`${t.id} — « ${a.sha} » n'a pas la forme d'un SHA ; \`pnpm gov:tasks\` le dit déjà.`);
+    fautes.push(
+      `${t.id} — « ${a.sha} » n'a pas la forme d'un SHA ; \`pnpm gov:tasks\` le dit déjà.`
+    );
     continue;
   }
 
@@ -109,10 +119,14 @@ for (const t of attestees) {
     continue;
   }
   if (!p.merged_at) {
-    fautes.push(`${t.id} — ${depot}#${a.pr} n'est PAS fusionnée, alors que la tâche est « ${t.statut} ».`);
+    fautes.push(
+      `${t.id} — ${depot}#${a.pr} n'est PAS fusionnée, alors que la tâche est « ${t.statut} ».`
+    );
     continue;
   }
-  console.log(`   ✓ ${t.id} — ${depot}#${a.pr} fusionnée par ${a.sha.slice(0, 7)} le ${p.merged_at}`);
+  console.log(
+    `   ✓ ${t.id} — ${depot}#${a.pr} fusionnée par ${a.sha.slice(0, 7)} le ${p.merged_at}`
+  );
 }
 
 if (fautes.length > 0) {
@@ -121,5 +135,7 @@ if (fautes.length > 0) {
   process.exit(1);
 }
 
-console.log(`\n✅ gov:attestation — les ${attestees.length} attestation(s) résolvent dans leur dépôt.`);
+console.log(
+  `\n✅ gov:attestation — les ${attestees.length} attestation(s) résolvent dans leur dépôt.`
+);
 process.exit(0);

@@ -108,7 +108,9 @@ describe('REQ-GOV-015 — la frontière §1/§2 se lit sur les LIGNES DE TABLEAU
     // questions ont toutes un défaut dans le registre (`HYP-D9`, `HYP-E1-30`, `HYP-D7`) ». Les y
     // lire comme bloquants, c'est faire dire à une note l'exact contraire de ce qu'elle écrit.
     for (const id of ['HYP-D9', 'HYP-E1-30', 'HYP-D7']) {
-      expect(registre.estBloquante(id), `${id} est cité en PROSE, pas en ligne de tableau`).toBe(false);
+      expect(registre.estBloquante(id), `${id} est cité en PROSE, pas en ligne de tableau`).toBe(
+        false
+      );
       expect(registre.estCodable(id)).toBe(true);
       expect(herite.estBloquante(id), `le lecteur hérité tenait ${id} pour bloquant`).toBe(true);
     }
@@ -193,8 +195,10 @@ describe('REQ-GOV-021 — un seul lecteur, importé par la garde ET par le compo
     // corrige. Une garde lexicale trop large interdit l'explication qui protège — et pousse à
     // retirer l'explication plutôt que le défaut. Les commentaires sont donc retirés avant.
     for (const f of ['scripts/gates/gov-tasks.ts', 'scripts/lot/composer.ts']) {
-      expect(sansCommentaires(readFileSync(f, 'utf8')), `${f} relit encore le registre pour son compte`)
-        .not.toMatch(LECTURE_AD_HOC);
+      expect(
+        sansCommentaires(readFileSync(f, 'utf8')),
+        `${f} relit encore le registre pour son compte`
+      ).not.toMatch(LECTURE_AD_HOC);
     }
   });
 
@@ -202,22 +206,25 @@ describe('REQ-GOV-021 — un seul lecteur, importé par la garde ET par le compo
     // Sans ce cas, « aucun des deux ne porte la forme » serait indiscernable de « la garde ne
     // regarde rien ». On lui donne le code d'avant, et elle doit le voir.
     const codeDavant = [
-      "const section = (n: number) =>",
+      'const section = (n: number) =>',
       "  brut.split(new RegExp(`^## ${n}\\\\.`, 'm'))[1] ?? '';",
-      "const ids = (t: string) => new Set(t.match(/\\b(HYP|DEC)-[A-Z0-9-]+\\b/g) || []);",
+      'const ids = (t: string) => new Set(t.match(/\\b(HYP|DEC)-[A-Z0-9-]+\\b/g) || []);',
     ].join('\n');
     expect(sansCommentaires(codeDavant)).toMatch(LECTURE_AD_HOC);
   });
 
   it('REQ-GOV-021 · CONTRE-TÉMOIN : la même forme EN COMMENTAIRE reste permise', () => {
-    const explication = '// la forme d’avant : /\\b(HYP|DEC)-[A-Z0-9-]+\\b/ sur le texte brut.\nconst x = 1;';
+    const explication =
+      '// la forme d’avant : /\\b(HYP|DEC)-[A-Z0-9-]+\\b/ sur le texte brut.\nconst x = 1;';
     expect(sansCommentaires(explication)).not.toMatch(LECTURE_AD_HOC);
   });
 
   it('REQ-GOV-021 · toute `hyp` du backlog est déclarée au registre — dans les deux sens', () => {
     // C'est l'invariant que `gov:tasks` tient (famille `hyp_hors_registre`) : le lecteur unique
     // doit le préserver, sans quoi le remède aurait cassé la garde qu'il devait unifier.
-    const inconnues = [...new Set(taches.flatMap((t) => t.hyp))].filter((h) => !registre.estDeclaree(h));
+    const inconnues = [...new Set(taches.flatMap((t) => t.hyp))].filter(
+      (h) => !registre.estDeclaree(h)
+    );
     expect(inconnues).toEqual([]);
   });
 });
@@ -246,7 +253,10 @@ describe('REQ-GOV-021 — le décompte des tâches redevenues éligibles est MES
     expect(concernees('HYP-D9')[0]?.motifHerite).toBe('decision_bloquante_non_tranchee');
 
     // (c) un ALIAS de la §0 qui résout vers une décision TRANCHÉE de la §1.
-    expect(concernees('DEC-INT-002').length, 'famille (c) — alias vers une tranchée').toBeGreaterThan(0);
+    expect(
+      concernees('DEC-INT-002').length,
+      'famille (c) — alias vers une tranchée'
+    ).toBeGreaterThan(0);
     expect(concernees('DEC-INT-002')[0]?.motifHerite).toBe('decision_bloquante_non_tranchee');
     expect(registre.canonique('DEC-INT-002')).toBe('W3');
     expect(registre.decision('W3')?.trancheeLe).toBe('2026-09-03');

@@ -50,7 +50,10 @@ const CHEMIN_JOURNAL = 'docs/journal';
  */
 const MAINTENANT = `${new Date().toISOString().slice(0, 10)}T12:00:00Z`;
 
-function lancer(args: string[], env: Record<string, string> = {}): { code: number; sortie: string } {
+function lancer(
+  args: string[],
+  env: Record<string, string> = {}
+): { code: number; sortie: string } {
   const r = spawnSync('npx', ['tsx', SCRIPT, ...args], {
     encoding: 'utf8',
     shell: true,
@@ -122,7 +125,9 @@ describe('REQ-GOV-006 — un seul état vivant, et il dit le présent', () => {
     // Le seul point d'entrée vers GitHub est nommé par `GOV_ETAT_GH` : le pointer sur une commande
     // qui n'existe pas reproduit exactement « pas de `gh`, pas de réseau ». C'est le scénario qui
     // rend une gate décorative : elle ne lit rien, ne trouve rien, et se déclare verte.
-    const { code, sortie } = lancer(['--now', MAINTENANT], { GOV_ETAT_GH: 'gh-qui-nexiste-pas-axion' });
+    const { code, sortie } = lancer(['--now', MAINTENANT], {
+      GOV_ETAT_GH: 'gh-qui-nexiste-pas-axion',
+    });
     expect(code).not.toBe(0);
     expect(sortie).toContain('github_illisible');
   });

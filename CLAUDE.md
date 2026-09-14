@@ -15,21 +15,21 @@ lui-même — ce fichier en est la porte d'entrée, pas un raccourci.
 
 ## Par où commencer
 
-| La question qu'on se pose | Le document qui répond |
-| --- | --- |
-| Que s'est-il passé à la session précédente ? Qu'est-ce qui coûterait une demi-journée à réapprendre ? | `docs/REPRISE-SESSION.md` — note de passation ; elle ne décide rien et ses chiffres périment |
-| Où en est le chantier **maintenant** ? | `docs/PLAN-STATE.md` — vue **dérivée**, rendue par `pnpm plan-state:build`, jamais éditée à la main |
-| Deux documents se contredisent : lequel fait foi ? | `docs/PRESEANCE.md` — la table d'arbitrage, document par document. À lire à la source |
-| Quelles règles ont déjà coûté cher, et laquelle s'applique à mon patch ? | `docs/REGLES-MAISON.md` — des règles numérotées, citées **par numéro** dans les ADR et le gabarit de PR |
-| Qui écrit quoi ? Quel label une PR doit-elle porter ? Quels chemins sont réservés ? | `docs/CHARTE-AGENTS.md`, section 7 — **ce tableau est LU par `pnpm gov:pr`**, il n'a pas de copie |
-| Comment fusionne-t-on, et comment sait-on qu'une fusion a atterri ? | `docs/PROTOCOLE-FUSION.md` |
-| Qu'a-t-on décidé, qui l'a tranché, est-ce réversible ? | `docs/DECISIONS.md` |
-| Quel terme employer, et lequel est interdit ? | `docs/GLOSSAIRE.md` |
-| Cette garde existe-t-elle vraiment, l'a-t-on vue rougir ? | `docs/gates.json` — une garde sans preuve rouge n'existe pas |
-| Qu'a-t-on fait, appris, et que reste-t-il, PR par PR ? | `docs/journal/` puis `docs/LECONS.md` |
-| Quelle décision d'architecture est en vigueur ? | `docs/adr/INDEX.md` — index **dérivé**, rendu par `pnpm adr:index` |
-| Comment nomme-t-on branches, worktrees, commits ? | `docs/CONVENTIONS.md` |
-| Que doit contenir une PR pour être recevable ? | `.github/PULL_REQUEST_TEMPLATE.md` — huit cases, un bloc ROUGE/VERT verbatim |
+| La question qu'on se pose                                                                             | Le document qui répond                                                                                  |
+| ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Que s'est-il passé à la session précédente ? Qu'est-ce qui coûterait une demi-journée à réapprendre ? | `docs/REPRISE-SESSION.md` — note de passation ; elle ne décide rien et ses chiffres périment            |
+| Où en est le chantier **maintenant** ?                                                                | `docs/PLAN-STATE.md` — vue **dérivée**, rendue par `pnpm plan-state:build`, jamais éditée à la main     |
+| Deux documents se contredisent : lequel fait foi ?                                                    | `docs/PRESEANCE.md` — la table d'arbitrage, document par document. À lire à la source                   |
+| Quelles règles ont déjà coûté cher, et laquelle s'applique à mon patch ?                              | `docs/REGLES-MAISON.md` — des règles numérotées, citées **par numéro** dans les ADR et le gabarit de PR |
+| Qui écrit quoi ? Quel label une PR doit-elle porter ? Quels chemins sont réservés ?                   | `docs/CHARTE-AGENTS.md`, section 7 — **ce tableau est LU par `pnpm gov:pr`**, il n'a pas de copie       |
+| Comment fusionne-t-on, et comment sait-on qu'une fusion a atterri ?                                   | `docs/PROTOCOLE-FUSION.md`                                                                              |
+| Qu'a-t-on décidé, qui l'a tranché, est-ce réversible ?                                                | `docs/DECISIONS.md`                                                                                     |
+| Quel terme employer, et lequel est interdit ?                                                         | `docs/GLOSSAIRE.md`                                                                                     |
+| Cette garde existe-t-elle vraiment, l'a-t-on vue rougir ?                                             | `docs/gates.json` — une garde sans preuve rouge n'existe pas                                            |
+| Qu'a-t-on fait, appris, et que reste-t-il, PR par PR ?                                                | `docs/journal/` puis `docs/LECONS.md`                                                                   |
+| Quelle décision d'architecture est en vigueur ?                                                       | `docs/adr/INDEX.md` — index **dérivé**, rendu par `pnpm adr:index`                                      |
+| Comment nomme-t-on branches, worktrees, commits ?                                                     | `docs/CONVENTIONS.md`                                                                                   |
+| Que doit contenir une PR pour être recevable ?                                                        | `.github/PULL_REQUEST_TEMPLATE.md` — huit cases, un bloc ROUGE/VERT verbatim                            |
 
 Ordre de lecture d'une session d'agent : `docs/PLAN-STATE.md`, puis `docs/REGLES-MAISON.md`, puis sa
 fiche de rôle sous `.claude/agents/`, puis sa tâche dans `docs/tasks.json` et les exigences qu'elle

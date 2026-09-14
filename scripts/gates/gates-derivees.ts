@@ -69,7 +69,8 @@ const LIBELLE_PHASE: Record<string, string> = {
   '3': 'Clôture et obligations annuelles',
 };
 const libelle = (p: number): string => LIBELLE_PHASE[String(p)] ?? `Phase ${p}`;
-const armee = (g: Gate): boolean => typeof g.preuveRouge === 'string' && g.preuveRouge.trim() !== '';
+const armee = (g: Gate): boolean =>
+  typeof g.preuveRouge === 'string' && g.preuveRouge.trim() !== '';
 
 // ── rendu ────────────────────────────────────────────────────────────────────
 
@@ -87,24 +88,36 @@ function rendre(gates: Gate[]): string {
   l.push('');
   l.push('> ⚠️ **Ce fichier est une VUE. La source est `docs/gates.json`.**');
   l.push('> Livré par **QA-T00** (REQ-QA-013, règle maison RM-02), régénéré par');
-  l.push('> `pnpm gov:gates-derivees --render` — tableaux ET totaux comptés à la génération, jamais tapés.');
-  l.push('> Une correction écrite ici à la main disparaît au rendu suivant : elle se fait dans le registre');
+  l.push(
+    '> `pnpm gov:gates-derivees --render` — tableaux ET totaux comptés à la génération, jamais tapés.'
+  );
+  l.push(
+    '> Une correction écrite ici à la main disparaît au rendu suivant : elle se fait dans le registre'
+  );
   l.push('> pour les données, dans `scripts/gates/gates-derivees.ts` pour la prose.');
   l.push('>');
-  l.push('> `gov:gates-derivees` apparie les deux sens : une ligne sans entrée de même `id` → rouge, une');
-  l.push('> entrée sans ligne → rouge. La colonne « Alias » cite les autres noms sous lesquels la même gate');
+  l.push(
+    '> `gov:gates-derivees` apparie les deux sens : une ligne sans entrée de même `id` → rouge, une'
+  );
+  l.push(
+    '> entrée sans ligne → rouge. La colonne « Alias » cite les autres noms sous lesquels la même gate'
+  );
   l.push('> est appelée ; un alias ne crée **jamais** une seconde ligne.');
   l.push('>');
-  l.push('> La garde qui compte l\'armement : `pnpm gates:prouvees --phase <n>`');
-  l.push('> (`scripts/gates/gates-prouvees.ts`). Elle refuse toute gate de phase au plus n qui n\'a pas un');
-  l.push('> `id`, un `script` présent sur le disque **et lancé par un workflow**, une `fixtureRouge`, une');
+  l.push("> La garde qui compte l'armement : `pnpm gates:prouvees --phase <n>`");
+  l.push(
+    "> (`scripts/gates/gates-prouvees.ts`). Elle refuse toute gate de phase au plus n qui n'a pas un"
+  );
+  l.push(
+    '> `id`, un `script` présent sur le disque **et lancé par un workflow**, une `fixtureRouge`, une'
+  );
   l.push('> `phase` entière et une `preuveRouge` qui référence un run.');
   l.push('');
 
   // §1 — les totaux
   l.push('## 1. Le compte par phase');
   l.push('');
-  l.push('| Phase | Ce qu\'elle est | Gates | Prouvées | Restent à prouver |');
+  l.push("| Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |");
   l.push('| ----- | -------------- | ----: | -------: | ----------------: |');
   for (const p of phases) {
     const liste = gates.filter((g) => g.phase === p);
@@ -112,17 +125,23 @@ function rendre(gates: Gate[]): string {
     l.push(`| ${p} | ${cellule(libelle(p))} | ${liste.length} | ${n} | ${liste.length - n} |`);
   }
   const prouvees = gates.filter(armee).length;
-  l.push(`| **Total** | | **${gates.length}** | **${prouvees}** | **${gates.length - prouvees}** |`);
+  l.push(
+    `| **Total** | | **${gates.length}** | **${prouvees}** | **${gates.length - prouvees}** |`
+  );
   l.push('');
-  l.push("La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et");
-  l.push('avoir rougi. Une gate sans phase entière n\'entre dans le périmètre d\'aucune sortie :');
+  l.push(
+    "La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et"
+  );
+  l.push("avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :");
   l.push('`gates:prouvees` la refuse quel que soit `--phase`.');
   l.push('');
 
   // §2 — les gates armées
   l.push('## 2. Les gates armées');
   l.push('');
-  l.push("Ce sont les seules dont on a la trace d'un échec provoqué. La colonne « Preuve rouge » est le");
+  l.push(
+    "Ce sont les seules dont on a la trace d'un échec provoqué. La colonne « Preuve rouge » est le"
+  );
   l.push('champ `preuveRouge` du registre, recopié verbatim par le rendu.');
   l.push('');
   for (const p of phases) {
@@ -145,18 +164,38 @@ function rendre(gates: Gate[]): string {
   const reste = gates.filter((g) => !armee(g));
   l.push('## 3. Ce qui reste à prouver');
   l.push('');
-  l.push(`Aucune de ces **${reste.length}** entrées ne porte de \`preuveRouge\` : personne ne les a vues rougir.`);
-  l.push("Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les");
-  l.push('gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques');
-  l.push("n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à");
-  l.push('chaque script écrit — un nombre recopié serait faux le lendemain. Ce qui, en revanche, ne bouge pas :');
-  l.push('les quatre familles du script — `script_manquant`, `script_introuvable`, `ancre_introuvable`,');
+  l.push(
+    `Aucune de ces **${reste.length}** entrées ne porte de \`preuveRouge\` : personne ne les a vues rougir.`
+  );
+  l.push(
+    "Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les"
+  );
+  l.push(
+    'gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques'
+  );
+  l.push(
+    "n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à"
+  );
+  l.push(
+    'chaque script écrit — un nombre recopié serait faux le lendemain. Ce qui, en revanche, ne bouge pas :'
+  );
+  l.push(
+    'les quatre familles du script — `script_manquant`, `script_introuvable`, `ancre_introuvable`,'
+  );
   l.push("`script_non_cable` — s'excluent l'une l'autre, et `preuve_rouge_absente` exclut");
-  l.push('`preuve_rouge_non_referencee`. Sur le seul ARMEMENT, une gate ne peut donc être nommée que dans');
+  l.push(
+    '`preuve_rouge_non_referencee`. Sur le seul ARMEMENT, une gate ne peut donc être nommée que dans'
+  );
   l.push('trois familles : une du script, `fixture_rouge_vide`, et une de la preuve. Les familles');
-  l.push("d'identité — `id_manquant`, `id_double` — s'y AJOUTENT : elles sont jugées sur tout le registre,");
-  l.push('dans une passe séparée, et se cumulent avec les précédentes. Une même gate peut donc être nommée');
-  l.push('dans quatre familles au plus. Ce paragraphe décrit le code ; aucune garde ne l’apparie — la');
+  l.push(
+    "d'identité — `id_manquant`, `id_double` — s'y AJOUTENT : elles sont jugées sur tout le registre,"
+  );
+  l.push(
+    'dans une passe séparée, et se cumulent avec les précédentes. Une même gate peut donc être nommée'
+  );
+  l.push(
+    'dans quatre familles au plus. Ce paragraphe décrit le code ; aucune garde ne l’apparie — la'
+  );
   l.push('sortie de la commande, elle, fait foi.');
   l.push('');
   for (const p of phases) {
@@ -167,7 +206,9 @@ function rendre(gates: Gate[]): string {
     l.push('| Gate | Tâche | Script | Alias |');
     l.push('| ---- | ----- | ------ | ----- |');
     for (const g of liste) {
-      l.push(`| ${enCode(g.id)} | ${cellule(g.tache)} | ${enCode(g.script)} | ${aliasCellule(g)} |`);
+      l.push(
+        `| ${enCode(g.id)} | ${cellule(g.tache)} | ${enCode(g.script)} | ${aliasCellule(g)} |`
+      );
     }
     l.push('');
   }
@@ -177,37 +218,73 @@ function rendre(gates: Gate[]): string {
   l.push('');
   l.push('Trois gestes, dans cet ordre, et le dernier ne se saute pas :');
   l.push('');
-  l.push('1. **Écrire le script** au chemin exact que porte le registre, **et le câbler dans un workflow**.');
-  l.push('   Un chemin qui ne résout pas est un manque (`script_introuvable`) ; un script que rien ne lance');
-  l.push('   en est un autre (`script_non_cable`) ; `fichier#job` exige en plus que le job existe.');
-  l.push('2. **Injecter la `fixtureRouge`** du registre et faire tourner la gate. Si elle reste verte, elle ne');
+  l.push(
+    '1. **Écrire le script** au chemin exact que porte le registre, **et le câbler dans un workflow**.'
+  );
+  l.push(
+    '   Un chemin qui ne résout pas est un manque (`script_introuvable`) ; un script que rien ne lance'
+  );
+  l.push(
+    '   en est un autre (`script_non_cable`) ; `fichier#job` exige en plus que le job existe.'
+  );
+  l.push(
+    '2. **Injecter la `fixtureRouge`** du registre et faire tourner la gate. Si elle reste verte, elle ne'
+  );
   l.push('   mesure pas sa cible : on corrige la gate, pas la fixture.');
-  l.push('3. **Archiver le rouge** — message verbatim dans le bloc ROUGE/VERT de la PR (REQ-GOV-013), puis la');
-  l.push('   référence dans le champ `preuveRouge` de `docs/gates.json` : l\'URL du run, ou');
+  l.push(
+    '3. **Archiver le rouge** — message verbatim dans le bloc ROUGE/VERT de la PR (REQ-GOV-013), puis la'
+  );
+  l.push("   référence dans le champ `preuveRouge` de `docs/gates.json` : l'URL du run, ou");
   l.push('   `pnpm <garde>:prove — <ce qui a été vu rougir>`. Un « TODO » y est refusé. Enfin,');
   l.push('   `pnpm gov:gates-derivees --render` pour que cette vue suive.');
   l.push('');
-  l.push('Une garde livrée avec un mode `--prove` cite ce mode comme preuve : c\'est le patron des gates du');
-  l.push('§2, où chaque famille de contrôle a son témoin vu rougir et ses contre-témoins vus rester verts.');
+  l.push(
+    "Une garde livrée avec un mode `--prove` cite ce mode comme preuve : c'est le patron des gates du"
+  );
+  l.push(
+    '§2, où chaque famille de contrôle a son témoin vu rougir et ses contre-témoins vus rester verts.'
+  );
   l.push('');
 
   // §5 — les limites
   l.push('## 5. Ce que cette vue ne dit pas');
   l.push('');
-  l.push('- **Si une gate est verte aujourd\'hui.** Elle dit qu\'une gate est armée, pas qu\'elle passe : c\'est');
+  l.push(
+    "- **Si une gate est verte aujourd'hui.** Elle dit qu'une gate est armée, pas qu'elle passe : c'est"
+  );
   l.push('  la CI qui le dit.');
-  l.push('- **Si le check est bloquant.** `gates:prouvees` voit qu\'un workflow lance le script ; elle ne voit');
-  l.push('  ni les checks requis de la branche, ni un `continue-on-error` qui neutraliserait le job. C\'est');
-  l.push('  `G-SEC-CI-BLOQUANTE` (QA-T01) qui refuse le second, et `tout-check-est-cable` (GOV-012) qui tient');
+  l.push(
+    "- **Si le check est bloquant.** `gates:prouvees` voit qu'un workflow lance le script ; elle ne voit"
+  );
+  l.push(
+    "  ni les checks requis de la branche, ni un `continue-on-error` qui neutraliserait le job. C'est"
+  );
+  l.push(
+    '  `G-SEC-CI-BLOQUANTE` (QA-T01) qui refuse le second, et `tout-check-est-cable` (GOV-012) qui tient'
+  );
   l.push('  le premier.');
-  l.push('- **Si la `fixtureRouge` rougit ENCORE.** Le registre décrit « une fixtureRouge qui rougit encore,');
-  l.push('  rejouée en nightly par `prove.sh` ». Cette vue et `gates:prouvees` vérifient qu\'une fixture est');
-  l.push('  **nommée**, jamais qu\'elle rougit toujours : une gate dont la cible a dérivé reste ici « armée ».');
-  l.push('  Le rejeu — injecter la fixture, attendre un rouge, en nightly — n\'est PAS livré par QA-T00. Il est');
-  l.push('  nommé dans l\'en-tête de `.github/workflows/nightly.yml`, avec les huit autres contrôles que le');
-  l.push('  registre attribue à `gate-nightly` et qui n\'existent pas encore : c\'est là qu\'il a une adresse,');
+  l.push(
+    '- **Si la `fixtureRouge` rougit ENCORE.** Le registre décrit « une fixtureRouge qui rougit encore,'
+  );
+  l.push(
+    "  rejouée en nightly par `prove.sh` ». Cette vue et `gates:prouvees` vérifient qu'une fixture est"
+  );
+  l.push(
+    "  **nommée**, jamais qu'elle rougit toujours : une gate dont la cible a dérivé reste ici « armée »."
+  );
+  l.push(
+    "  Le rejeu — injecter la fixture, attendre un rouge, en nightly — n'est PAS livré par QA-T00. Il est"
+  );
+  l.push(
+    "  nommé dans l'en-tête de `.github/workflows/nightly.yml`, avec les huit autres contrôles que le"
+  );
+  l.push(
+    "  registre attribue à `gate-nightly` et qui n'existent pas encore : c'est là qu'il a une adresse,"
+  );
   l.push('  au lieu de disparaître entre le titre de la tâche et le livrable.');
-  l.push('- **La prose de ce fichier.** Les tableaux sont appariés au registre ; les paragraphes, non. Ils');
+  l.push(
+    '- **La prose de ce fichier.** Les tableaux sont appariés au registre ; les paragraphes, non. Ils'
+  );
   l.push('  vivent dans `scripts/gates/gates-derivees.ts` et se corrigent là.');
   l.push('');
 
@@ -216,7 +293,15 @@ function rendre(gates: Gate[]): string {
 
 // ── lecture de la vue ────────────────────────────────────────────────────────
 
-type Ligne = { id: string; tache: string; script: string; alias: string[]; preuve: string | null; phase: number | null; section: string };
+type Ligne = {
+  id: string;
+  tache: string;
+  script: string;
+  alias: string[];
+  preuve: string | null;
+  phase: number | null;
+  section: string;
+};
 
 /** Découpe une ligne de tableau markdown en cellules, en respectant les barres échappées `\|`. */
 function cellules(ligne: string): string[] {
@@ -245,11 +330,21 @@ function cellules(ligne: string): string[] {
 const estSeparateur = (ligne: string): boolean => /^\|[\s:|-]+\|\s*$/.test(ligne.trim());
 const sansCode = (v: string): string => v.replace(/`/g, '').trim();
 const listeAlias = (v: string): string[] =>
-  v.trim() === '—' || v.trim() === '' ? [] : v.split(',').map(sansCode).filter((x) => x !== '');
+  v.trim() === '—' || v.trim() === ''
+    ? []
+    : v
+        .split(',')
+        .map(sansCode)
+        .filter((x) => x !== '');
 
 type Totaux = { cle: string; gates: number; prouvees: number; reste: number };
 
-function lireVue(vue: string): { lignes: Ligne[]; totaux: Totaux[]; comptes: Map<string, number>; fautes: Faute[] } {
+function lireVue(vue: string): {
+  lignes: Ligne[];
+  totaux: Totaux[];
+  comptes: Map<string, number>;
+  fautes: Faute[];
+} {
   const fautes: Faute[] = [];
   const lignes: Ligne[] = [];
   const totaux: Totaux[] = [];
@@ -280,8 +375,15 @@ function lireVue(vue: string): { lignes: Ligne[]; totaux: Totaux[]; comptes: Map
 
     // Le tableau des totaux : première cellule = une phase ou « Total », jamais un id entre accents graves.
     if (entetes[0] === 'Phase' && entetes.includes('Gates')) {
-      const cle = sansCode(cel[0] ?? '').replace(/\*/g, '').trim();
-      const n = (j: number): number => Number(sansCode(cel[j] ?? '').replace(/\*/g, '').trim());
+      const cle = sansCode(cel[0] ?? '')
+        .replace(/\*/g, '')
+        .trim();
+      const n = (j: number): number =>
+        Number(
+          sansCode(cel[j] ?? '')
+            .replace(/\*/g, '')
+            .trim()
+        );
       totaux.push({
         cle,
         gates: n(entetes.indexOf('Gates')),
@@ -325,7 +427,8 @@ function lireVue(vue: string): { lignes: Ligne[]; totaux: Totaux[]; comptes: Map
 function controler(gates: Gate[], vue: string): Faute[] {
   const lu = lireVue(vue);
   const fautes: Faute[] = [...lu.fautes];
-  const ajouter = (famille: string, message: string): void => void fautes.push({ famille, message });
+  const ajouter = (famille: string, message: string): void =>
+    void fautes.push({ famille, message });
 
   const parId = new Map<string, Gate>();
   for (const g of gates) parId.set(g.id, g);
@@ -333,7 +436,10 @@ function controler(gates: Gate[], vue: string): Faute[] {
 
   for (const ligne of lu.lignes) {
     if (vues.has(ligne.id)) {
-      ajouter('id_double_dans_la_vue', `« ${ligne.id} » a deux lignes dans la vue ; le registre n'en porte qu'une.`);
+      ajouter(
+        'id_double_dans_la_vue',
+        `« ${ligne.id} » a deux lignes dans la vue ; le registre n'en porte qu'une.`
+      );
       continue;
     }
     vues.set(ligne.id, ligne);
@@ -353,13 +459,22 @@ function controler(gates: Gate[], vue: string): Faute[] {
           `la ligne échappe alors à toute comparaison de phase.`
       );
     } else if (ligne.phase !== g.phase) {
-      ajouter('phase_divergente', `« ${ligne.id} » est rangée en phase ${ligne.phase} ; le registre dit ${g.phase}.`);
+      ajouter(
+        'phase_divergente',
+        `« ${ligne.id} » est rangée en phase ${ligne.phase} ; le registre dit ${g.phase}.`
+      );
     }
     if (ligne.tache !== g.tache) {
-      ajouter('tache_divergente', `« ${ligne.id} » est attribuée à ${ligne.tache} ; le registre dit ${g.tache}.`);
+      ajouter(
+        'tache_divergente',
+        `« ${ligne.id} » est attribuée à ${ligne.tache} ; le registre dit ${g.tache}.`
+      );
     }
     if (ligne.script !== g.script) {
-      ajouter('script_divergent', `« ${ligne.id} » cite ${ligne.script} ; le registre dit ${g.script}.`);
+      ajouter(
+        'script_divergent',
+        `« ${ligne.id} » cite ${ligne.script} ; le registre dit ${g.script}.`
+      );
     }
     const attendus = [...(g.alias ?? [])].sort().join(', ');
     if (ligne.alias.slice().sort().join(', ') !== attendus) {
@@ -378,8 +493,14 @@ function controler(gates: Gate[], vue: string): Faute[] {
         'preuve_divergente',
         `« ${ligne.id} » est listée parmi les gates armées alors que sa preuveRouge est vide.`
       );
-    } else if (ligne.preuve !== null && ligne.preuve !== String(g.preuveRouge).replace(/\|/g, '|')) {
-      ajouter('preuve_divergente', `« ${ligne.id} » : la preuve affichée n'est pas celle du registre.`);
+    } else if (
+      ligne.preuve !== null &&
+      ligne.preuve !== String(g.preuveRouge).replace(/\|/g, '|')
+    ) {
+      ajouter(
+        'preuve_divergente',
+        `« ${ligne.id} » : la preuve affichée n'est pas celle du registre.`
+      );
     }
   }
 
@@ -420,14 +541,27 @@ function controler(gates: Gate[], vue: string): Faute[] {
   for (const p of [...new Set(gates.map((g) => g.phase))]) {
     const liste = gates.filter((g) => g.phase === p);
     const n = liste.filter(armee).length;
-    attendu.set(String(p), { cle: String(p), gates: liste.length, prouvees: n, reste: liste.length - n });
+    attendu.set(String(p), {
+      cle: String(p),
+      gates: liste.length,
+      prouvees: n,
+      reste: liste.length - n,
+    });
   }
   const tousArmes = gates.filter(armee).length;
-  attendu.set('Total', { cle: 'Total', gates: gates.length, prouvees: tousArmes, reste: gates.length - tousArmes });
+  attendu.set('Total', {
+    cle: 'Total',
+    gates: gates.length,
+    prouvees: tousArmes,
+    reste: gates.length - tousArmes,
+  });
   for (const t of lu.totaux) {
     const a = attendu.get(t.cle);
     if (a === undefined) {
-      ajouter('total_faux', `Le tableau des totaux porte une ligne « ${t.cle} » que le registre ne connaît pas.`);
+      ajouter(
+        'total_faux',
+        `Le tableau des totaux porte une ligne « ${t.cle} » que le registre ne connaît pas.`
+      );
       continue;
     }
     if (t.gates !== a.gates || t.prouvees !== a.prouvees || t.reste !== a.reste) {
@@ -485,7 +619,9 @@ if (process.argv.includes('--prove')) {
 
   const base = controler(copie(), VUE_SAINE);
   if (base.length > 0) {
-    console.error(`❌ La preuve part d'une fixture DÉJÀ fautive (${base.length}) — corrige-la d'abord :`);
+    console.error(
+      `❌ La preuve part d'une fixture DÉJÀ fautive (${base.length}) — corrige-la d'abord :`
+    );
     base.slice(0, 5).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
     process.exit(1);
   }
@@ -493,7 +629,9 @@ if (process.argv.includes('--prove')) {
   /** Remplace une occurrence et vérifie qu'elle existait : un `replace` muet fabriquerait un faux témoin. */
   const remplacer = (texte: string, avant: string, apres: string): string => {
     if (!texte.includes(avant)) {
-      console.error(`❌ La preuve ne trouve pas « ${avant} » dans la vue rendue : le témoin ne mute rien.`);
+      console.error(
+        `❌ La preuve ne trouve pas « ${avant} » dans la vue rendue : le témoin ne mute rien.`
+      );
       process.exit(1);
     }
     return texte.replace(avant, apres);
@@ -503,7 +641,10 @@ if (process.argv.includes('--prove')) {
     {
       famille: 'entete_incomplete',
       quoi: 'un tableau de gates dont la colonne « Alias » a été retirée',
-      defaut: () => [copie(), remplacer(VUE_SAINE, '| Gate | Tâche | Script | Alias |', '| Gate | Tâche | Script |')],
+      defaut: () => [
+        copie(),
+        remplacer(VUE_SAINE, '| Gate | Tâche | Script | Alias |', '| Gate | Tâche | Script |'),
+      ],
     },
     {
       famille: 'ligne_hors_phase',
@@ -523,7 +664,14 @@ if (process.argv.includes('--prove')) {
       quoi: 'une ligne ajoutée à la vue sans entrée au registre',
       defaut: () => {
         const ligne = VUE_SAINE.split('\n').find((l) => l.startsWith('| `exemple:a-prouver`'))!;
-        return [copie(), remplacer(VUE_SAINE, ligne, `${ligne}\n| \`exemple:inventee\` | GOV-000 | \`scripts/gates/inventee.ts\` | — |`)];
+        return [
+          copie(),
+          remplacer(
+            VUE_SAINE,
+            ligne,
+            `${ligne}\n| \`exemple:inventee\` | GOV-000 | \`scripts/gates/inventee.ts\` | — |`
+          ),
+        ];
       },
     },
     {
@@ -537,27 +685,59 @@ if (process.argv.includes('--prove')) {
     {
       famille: 'phase_divergente',
       quoi: 'une gate rangée sous la mauvaise phase',
-      defaut: () => { const r = copie(); r[1]!.phase = 1; return [r, VUE_SAINE]; },
+      defaut: () => {
+        const r = copie();
+        r[1]!.phase = 1;
+        return [r, VUE_SAINE];
+      },
     },
     {
       famille: 'tache_divergente',
       quoi: 'une tâche qui n’est pas celle du registre',
-      defaut: () => [copie(), remplacer(VUE_SAINE, '| GOV-000 | `scripts/gates/exemple-a-prouver.ts`', '| GOV-999 | `scripts/gates/exemple-a-prouver.ts`')],
+      defaut: () => [
+        copie(),
+        remplacer(
+          VUE_SAINE,
+          '| GOV-000 | `scripts/gates/exemple-a-prouver.ts`',
+          '| GOV-999 | `scripts/gates/exemple-a-prouver.ts`'
+        ),
+      ],
     },
     {
       famille: 'script_divergent',
       quoi: 'un chemin de script retouché dans la vue',
-      defaut: () => [copie(), remplacer(VUE_SAINE, '`scripts/gates/exemple-a-prouver.ts`', '`scripts/gates/autre-chemin.ts`')],
+      defaut: () => [
+        copie(),
+        remplacer(
+          VUE_SAINE,
+          '`scripts/gates/exemple-a-prouver.ts`',
+          '`scripts/gates/autre-chemin.ts`'
+        ),
+      ],
     },
     {
       famille: 'preuve_divergente',
       quoi: 'une preuve rouge affichée qui n’est pas celle du registre',
-      defaut: () => [copie(), remplacer(VUE_SAINE, 'pnpm exemple:armee:prove — deux familles vues rougir', 'run rouge de la semaine derniere')],
+      defaut: () => [
+        copie(),
+        remplacer(
+          VUE_SAINE,
+          'pnpm exemple:armee:prove — deux familles vues rougir',
+          'run rouge de la semaine derniere'
+        ),
+      ],
     },
     {
       famille: 'alias_divergent',
       quoi: 'un alias cité dans la vue et absent du registre',
-      defaut: () => [copie(), remplacer(VUE_SAINE, '| `exemple:autre-nom` |', '| `exemple:autre-nom`, `exemple:nom-invente` |')],
+      defaut: () => [
+        copie(),
+        remplacer(
+          VUE_SAINE,
+          '| `exemple:autre-nom` |',
+          '| `exemple:autre-nom`, `exemple:nom-invente` |'
+        ),
+      ],
     },
     {
       famille: 'alias_divergent',
@@ -570,8 +750,21 @@ if (process.argv.includes('--prove')) {
       defaut: () => {
         const ligne = VUE_SAINE.split('\n').find((l) => l.startsWith('| `exemple:a-prouver`'))!;
         const r = copie();
-        r.push({ id: 'exemple:autre-nom', phase: -1, script: 'scripts/gates/exemple-armee.ts', tache: 'QA-T00', preuveRouge: null });
-        return [r, remplacer(VUE_SAINE, ligne, `${ligne}\n| \`exemple:autre-nom\` | QA-T00 | \`scripts/gates/exemple-armee.ts\` | — |`)];
+        r.push({
+          id: 'exemple:autre-nom',
+          phase: -1,
+          script: 'scripts/gates/exemple-armee.ts',
+          tache: 'QA-T00',
+          preuveRouge: null,
+        });
+        return [
+          r,
+          remplacer(
+            VUE_SAINE,
+            ligne,
+            `${ligne}\n| \`exemple:autre-nom\` | QA-T00 | \`scripts/gates/exemple-armee.ts\` | — |`
+          ),
+        ];
       },
     },
     {
@@ -582,7 +775,10 @@ if (process.argv.includes('--prove')) {
     {
       famille: 'total_faux',
       quoi: 'un total tapé à la main qui a cessé de suivre le registre',
-      defaut: () => [copie(), remplacer(VUE_SAINE, '| **Total** | | **3** |', '| **Total** | | **4** |')],
+      defaut: () => [
+        copie(),
+        remplacer(VUE_SAINE, '| **Total** | | **3** |', '| **Total** | | **4** |'),
+      ],
     },
   ];
 
@@ -590,19 +786,36 @@ if (process.argv.includes('--prove')) {
     { quoi: 'la vue rendue depuis la fixture', cas: () => [copie(), VUE_SAINE] },
     {
       quoi: 'un paragraphe de prose réécrit : la vue n’est appariée que sur ses tableaux',
-      cas: () => [copie(), `${VUE_SAINE}\n\nUne phrase ajoutée à la main, qui ne dit rien de faux.\n`],
+      cas: () => [
+        copie(),
+        `${VUE_SAINE}\n\nUne phrase ajoutée à la main, qui ne dit rien de faux.\n`,
+      ],
     },
     {
       quoi: 'les alias listés dans un autre ordre : c’est un ensemble, pas une suite',
       cas: () => {
         const r = copie();
         r[0]!.alias = ['exemple:autre-nom', 'exemple:un-troisieme'];
-        return [r, remplacer(VUE_SAINE, '| `exemple:autre-nom` |', '| `exemple:un-troisieme`, `exemple:autre-nom` |')];
+        return [
+          r,
+          remplacer(
+            VUE_SAINE,
+            '| `exemple:autre-nom` |',
+            '| `exemple:un-troisieme`, `exemple:autre-nom` |'
+          ),
+        ];
       },
     },
     {
       quoi: 'un titre de niveau supérieur qui parle de phase sans en nommer une',
-      cas: () => [copie(), remplacer(VUE_SAINE, '## 1. Le compte par phase', '## 1. Le compte par phase (toutes phases)')],
+      cas: () => [
+        copie(),
+        remplacer(
+          VUE_SAINE,
+          '## 1. Le compte par phase',
+          '## 1. Le compte par phase (toutes phases)'
+        ),
+      ],
     },
   ];
 
@@ -647,7 +860,9 @@ if (process.argv.includes('--prove')) {
 
 // ── chargement ───────────────────────────────────────────────────────────────
 if (!existsSync(CHEMIN_REGISTRE)) {
-  console.error(`❌ gov:gates-derivees — ${CHEMIN_REGISTRE} est introuvable : le registre des gates est la source.`);
+  console.error(
+    `❌ gov:gates-derivees — ${CHEMIN_REGISTRE} est introuvable : le registre des gates est la source.`
+  );
   process.exit(1);
 }
 const doc = JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as { gates?: unknown };
@@ -662,7 +877,9 @@ if (process.argv.includes('--render')) {
   const rendu = rendre(gatesDuRegistre);
   const fautes = controler(gatesDuRegistre, rendu);
   if (fautes.length > 0) {
-    console.error(`❌ Le rendu ne passe pas son propre contrôle (${fautes.length}) — la garde et le rendu ont divergé :`);
+    console.error(
+      `❌ Le rendu ne passe pas son propre contrôle (${fautes.length}) — la garde et le rendu ont divergé :`
+    );
     fautes.slice(0, 8).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
     process.exit(1);
   }
@@ -677,7 +894,9 @@ if (process.argv.includes('--render')) {
 
 // ── mode normal ──────────────────────────────────────────────────────────────
 if (!existsSync(CHEMIN_VUE)) {
-  console.error(`❌ gov:gates-derivees — ${CHEMIN_VUE} est introuvable. Lance \`pnpm gov:gates-derivees --render\`.`);
+  console.error(
+    `❌ gov:gates-derivees — ${CHEMIN_VUE} est introuvable. Lance \`pnpm gov:gates-derivees --render\`.`
+  );
   process.exit(1);
 }
 const fautesReelles = controler(gatesDuRegistre, readFileSync(CHEMIN_VUE, 'utf8'));
@@ -691,7 +910,9 @@ if (fautesReelles.length === 0) {
 }
 const parFamille = new Map<string, Faute[]>();
 for (const f of fautesReelles) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
-console.error(`❌ gov:gates-derivees — ${fautesReelles.length} divergence(s) entre ${CHEMIN_VUE} et ${CHEMIN_REGISTRE} :\n`);
+console.error(
+  `❌ gov:gates-derivees — ${fautesReelles.length} divergence(s) entre ${CHEMIN_VUE} et ${CHEMIN_REGISTRE} :\n`
+);
 for (const famille of FAMILLES) {
   const liste = parFamille.get(famille);
   if (liste === undefined) continue;
@@ -699,5 +920,7 @@ for (const famille of FAMILLES) {
   liste.slice(0, 12).forEach((f) => console.error(`      ${f.message}`));
   if (liste.length > 12) console.error(`      … et ${liste.length - 12} autre(s).`);
 }
-console.error(`\n   La vue se régénère : \`pnpm gov:gates-derivees --render\`. La source ne se corrige jamais depuis la vue.`);
+console.error(
+  `\n   La vue se régénère : \`pnpm gov:gates-derivees --render\`. La source ne se corrige jamais depuis la vue.`
+);
 process.exit(1);

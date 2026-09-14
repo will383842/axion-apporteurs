@@ -38,13 +38,29 @@ const STATUTS_TERMINES = LIVREE;
 const HEURES_AVANT_REPRISE = 6;
 
 interface Tache {
-  id: string; titre: string; phase: number; repo: string; zone: string; paths: string[];
-  schema: boolean; sensible: string[]; deps: string[]; reqs: string[]; hyp: string[];
-  externe: string | null; estimateDays: number;
+  id: string;
+  titre: string;
+  phase: number;
+  repo: string;
+  zone: string;
+  paths: string[];
+  schema: boolean;
+  sensible: string[];
+  deps: string[];
+  reqs: string[];
+  hyp: string[];
+  externe: string | null;
+  estimateDays: number;
   // Facultatifs tant que la tâche n'est pas attribuée (cf. le bloc `allOf` de tasks.schema.json).
-  acceptance?: string; tests?: Record<string, string[]>;
-  statut: string; owner?: string | null; lot?: string | null; branch?: string | null;
-  pr?: number | null; attempts?: number; motif?: string | null;
+  acceptance?: string;
+  tests?: Record<string, string[]>;
+  statut: string;
+  owner?: string | null;
+  lot?: string | null;
+  branch?: string | null;
+  pr?: number | null;
+  attempts?: number;
+  motif?: string | null;
   /** Numéro de l'issue GitHub de la tâche, écrit par `pnpm gov:issues --sync` (GOV-017).
    *  Sans lui, la revendication (`gh issue edit <n>`) n'a aucun `<n>` à citer. */
   issue?: number | null;
@@ -62,14 +78,25 @@ function arg(nom: string, defaut?: string): string {
 }
 
 function gh(args: string[]): string {
-  try { return execFileSync('gh', args, { encoding: 'utf8' }); } catch { return ''; }
+  try {
+    return execFileSync('gh', args, { encoding: 'utf8' });
+  } catch {
+    return '';
+  }
 }
 
 /** Longueur de la plus longue chaîne de dépendances partant de cette tâche (mémoïsée). */
-function profondeur(id: string, index: Map<string, Tache>, cache = new Map<string, number>()): number {
+function profondeur(
+  id: string,
+  index: Map<string, Tache>,
+  cache = new Map<string, number>()
+): number {
   if (cache.has(id)) return cache.get(id)!;
   const t = index.get(id);
-  if (!t || t.deps.length === 0) { cache.set(id, 0); return 0; }
+  if (!t || t.deps.length === 0) {
+    cache.set(id, 0);
+    return 0;
+  }
   cache.set(id, 0); // coupe les cycles éventuels ; la gate `gov:tasks` les refuse par ailleurs
   const d = 1 + Math.max(...t.deps.map((x) => profondeur(x, index, cache)));
   cache.set(id, d);
@@ -85,7 +112,10 @@ if (!Number.isInteger(phase)) {
 const repo = arg('repo', 'partners');
 const max = Number(arg('max', '8'));
 
-const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { version: number; taches: Tache[] };
+const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
+  version: number;
+  taches: Tache[];
+};
 const taches = doc.taches;
 const index = new Map(taches.map((t) => [t.id, t]));
 
@@ -120,23 +150,30 @@ execFileSync('git', ['worktree', 'prune'], { stdio: 'ignore' });
 // L'heure vient de l'appelant : un script rejouable ne lit pas l'horloge (invariant en tête de fichier).
 const maintenant = Date.parse(arg('now'));
 if (Number.isNaN(maintenant)) {
-  throw new Error('--now <ISO> requis (le composeur ne lit pas l\'horloge)');
+  throw new Error("--now <ISO> requis (le composeur ne lit pas l'horloge)");
 }
 const reprises: string[] = [];
 for (const t of taches) {
   if (t.statut !== 'en_cours') continue;
   // Le numéro d'issue est PORTÉ par la tâche (`gov:issues --sync`) : la recherche plein texte n'est
   // qu'un repli, et elle rend le mauvais résultat dès que deux identifiants se contiennent (DM-01/DM-011).
-  const issue = t.issue != null
-    ? gh(['issue', 'view', String(t.issue), '--json', 'number,updatedAt'])
-    : gh(['issue', 'list', '--search', t.id, '--json', 'number,updatedAt', '--limit', '1']);
+  const issue =
+    t.issue != null
+      ? gh(['issue', 'view', String(t.issue), '--json', 'number,updatedAt'])
+      : gh(['issue', 'list', '--search', t.id, '--json', 'number,updatedAt', '--limit', '1']);
   const brut = issue ? JSON.parse(issue) : null;
   const maj = (Array.isArray(brut) ? brut[0]?.updatedAt : brut?.updatedAt) ?? null;
   const ageH = maj ? (maintenant - Date.parse(maj)) / 3_600_000 : Infinity;
   if (ageH > HEURES_AVANT_REPRISE && !t.pr) {
     t.attempts = (t.attempts ?? 0) + 1;
-    if (t.attempts >= 2) { t.statut = 'bloquee'; t.motif = 'deux tentatives sans livrable — revue humaine requise'; }
-    else { t.statut = 'a_faire'; t.owner = null; t.branch = null; }
+    if (t.attempts >= 2) {
+      t.statut = 'bloquee';
+      t.motif = 'deux tentatives sans livrable — revue humaine requise';
+    } else {
+      t.statut = 'a_faire';
+      t.owner = null;
+      t.branch = null;
+    }
     reprises.push(t.id);
   }
 }
@@ -148,34 +185,67 @@ const eligibles = taches.filter((t) => {
   if (t.phase !== phase || t.repo !== repo) return false;
   // Les deux statuts d'attente sont imprimés AVEC leur raison : c'est la seule chose que la session
   // a à remonter à Will quand aucun lot n'est composable. Ils doivent passer AVANT le filtre général.
-  if (t.statut === 'attente_externe') { ecartees.push({ id: t.id, raison: `attend ${t.externe ?? 'externe'}` }); return false; }
-  if (t.statut === 'bloquee') { ecartees.push({ id: t.id, raison: t.motif ?? 'bloquée' }); return false; }
+  if (t.statut === 'attente_externe') {
+    ecartees.push({ id: t.id, raison: `attend ${t.externe ?? 'externe'}` });
+    return false;
+  }
+  if (t.statut === 'bloquee') {
+    ecartees.push({ id: t.id, raison: t.motif ?? 'bloquée' });
+    return false;
+  }
   if (t.statut !== 'a_faire') return false;
-  if ((t.attempts ?? 0) >= 2) { ecartees.push({ id: t.id, raison: 'deux tentatives échouées' }); return false; }
-  if (t.externe) { ecartees.push({ id: t.id, raison: `attend ${t.externe}` }); return false; }
-  if (maquettesNonValidees.has(t.id)) { ecartees.push({ id: t.id, raison: 'maquette non validée par Will' }); return false; }
-  const depsBloquantes = t.deps.filter((d) => !STATUTS_TERMINES.has(index.get(d)?.statut ?? 'inconnu'));
-  if (depsBloquantes.length) { ecartees.push({ id: t.id, raison: `dépend de ${depsBloquantes.join(', ')}` }); return false; }
+  if ((t.attempts ?? 0) >= 2) {
+    ecartees.push({ id: t.id, raison: 'deux tentatives échouées' });
+    return false;
+  }
+  if (t.externe) {
+    ecartees.push({ id: t.id, raison: `attend ${t.externe}` });
+    return false;
+  }
+  if (maquettesNonValidees.has(t.id)) {
+    ecartees.push({ id: t.id, raison: 'maquette non validée par Will' });
+    return false;
+  }
+  const depsBloquantes = t.deps.filter(
+    (d) => !STATUTS_TERMINES.has(index.get(d)?.statut ?? 'inconnu')
+  );
+  if (depsBloquantes.length) {
+    ecartees.push({ id: t.id, raison: `dépend de ${depsBloquantes.join(', ')}` });
+    return false;
+  }
   const nonTranchees = t.hyp.filter((h) => registre.estBloquante(h));
   if (nonTranchees.length) {
     // Le canonique est cité À CÔTÉ de l'identifiant écrit dans la tâche : sans lui, la session qui
     // lit cette raison cherche `DEC-INT-004` dans un registre qui ne le porte qu'en §0.
-    const nommees = nonTranchees.map((h) => (registre.canonique(h) === h ? h : `${h} → ${registre.canonique(h)}`));
-    ecartees.push({ id: t.id, raison: `décision bloquante non tranchée (§1 du registre) : ${nommees.join(', ')}` });
+    const nommees = nonTranchees.map((h) =>
+      registre.canonique(h) === h ? h : `${h} → ${registre.canonique(h)}`
+    );
+    ecartees.push({
+      id: t.id,
+      raison: `décision bloquante non tranchée (§1 du registre) : ${nommees.join(', ')}`,
+    });
     return false;
   }
   const sansDecision = t.hyp.filter((h) => !registre.estCodable(h));
-  if (sansDecision.length) { ecartees.push({ id: t.id, raison: `décision sans hypothèse : ${sansDecision.join(', ')}` }); return false; }
+  if (sansDecision.length) {
+    ecartees.push({ id: t.id, raison: `décision sans hypothèse : ${sansDecision.join(', ')}` });
+    return false;
+  }
   return true;
 });
 
 // --- sélection gloutonne, chemins disjoints -------------------------------------------------------
-eligibles.sort((a, b) => profondeur(b.id, index) - profondeur(a.id, index) || a.id.localeCompare(b.id));
+eligibles.sort(
+  (a, b) => profondeur(b.id, index) - profondeur(a.id, index) || a.id.localeCompare(b.id)
+);
 const retenues: Tache[] = [];
 const pris = new Set<string>();
 for (const t of eligibles) {
   if (retenues.length >= max) break;
-  if (t.paths.some((p) => pris.has(p))) { ecartees.push({ id: t.id, raison: 'chemin déjà pris dans ce lot' }); continue; }
+  if (t.paths.some((p) => pris.has(p))) {
+    ecartees.push({ id: t.id, raison: 'chemin déjà pris dans ce lot' });
+    continue;
+  }
   t.paths.forEach((p) => pris.add(p));
   retenues.push(t);
 }
@@ -191,22 +261,31 @@ mkdirSync('docs/lots', { recursive: true });
 const id = prochainIdentifiantDeLot(phase, readdirSync('docs/lots'), [...lotsDuBacklog(taches)]);
 const chemin = join('docs/lots', id, 'lot.json');
 if (existsSync(chemin)) {
-  throw new Error(`${chemin} existe déjà : refus d'écraser un lot. Archive-le ou renomme-le avant de recomposer.`);
+  throw new Error(
+    `${chemin} existe déjà : refus d'écraser un lot. Archive-le ou renomme-le avant de recomposer.`
+  );
 }
 mkdirSync(join('docs/lots', id), { recursive: true });
 const lot = { id, phase, repo, taches: retenues, ecartees };
 writeFileSync(chemin, JSON.stringify(lot, null, 2) + '\n');
 
-console.log(`Lot ${id} : ${retenues.length} tâche(s) — ${retenues.map((t) => t.id).join(', ') || '(aucune)'}`);
+console.log(
+  `Lot ${id} : ${retenues.length} tâche(s) — ${retenues.map((t) => t.id).join(', ') || '(aucune)'}`
+);
 if (reprises.length) console.log(`Reprises après abandon : ${reprises.join(', ')}`);
-if (!retenues.length) console.log(`Aucune tâche éligible. Raisons :\n  ${ecartees.map((e) => `${e.id} — ${e.raison}`).join('\n  ')}`);
+if (!retenues.length)
+  console.log(
+    `Aucune tâche éligible. Raisons :\n  ${ecartees.map((e) => `${e.id} — ${e.raison}`).join('\n  ')}`
+  );
 
 // --- ce que le lecteur unique a changé, IMPRIMÉ ---------------------------------------------------
 // Point 5 de l'acceptation de GOV-027 : « le décompte des tâches redevenues éligibles imprimé, pour
 // qu'on voie la différence au lieu de la supposer ». Un correctif dont l'effet n'est pas mesuré est
 // un correctif dont on discute — et celui-ci corrige un défaut que personne n'avait vu pendant des
 // semaines, précisément parce que le composeur imprimait une raison plausible.
-const bloquantesDuRegistre = [...registre.parId.values()].filter((d) => d.section === 1 && d.trancheeLe === null);
+const bloquantesDuRegistre = [...registre.parId.values()].filter(
+  (d) => d.section === 1 && d.trancheeLe === null
+);
 console.log(
   `\nRegistre des décisions : ${registre.declarees.size} identifiant(s) déclaré(s) ` +
     `(${registre.parId.size} ligne(s) de tableau + ${registre.alias.size} alias §0) · ` +
@@ -219,7 +298,9 @@ console.log(
     `raison de décision sont éligibles ; ${ecarteesPourDecision.length} le restent, toutes phases confondues.`
 );
 if (redevenues.length > 0) {
-  console.log(`  ${redevenues.map((e) => `${e.id} (${e.motifHerite} : ${e.decisions.join(', ')})`).join('\n  ')}`);
+  console.log(
+    `  ${redevenues.map((e) => `${e.id} (${e.motifHerite} : ${e.decisions.join(', ')})`).join('\n  ')}`
+  );
 }
 if (ecarteesPourDecision.length > 0) {
   console.log(

@@ -1,10 +1,17 @@
-# Ce que Prettier ne reformate PAS — et pourquoi (REQ-GOV-018, GOV-014).
+# Ce que Prettier ne reformate PAS — et pourquoi (REQ-GOV-018, GOV-014, étendu par GOV-031).
 #
-# ⚠️ Prettier n'est pas encore installé dans ce dépôt : `package.json` est un fichier PARTAGÉ, la
-# dépendance et le script `format:check` sont rendus en texte dans la PR de GOV-014. Ce fichier est
-# donc une DÉCLARATION tant que A01 ne les a pas appliqués — `gov:conventions` l'imprime à chaque
-# exécution plutôt que de laisser croire qu'un format tourne.
+# ⚠️ Ce fichier n'est plus une DÉCLARATION. Jusqu'au 2026-09-14, son en-tête avertissait que
+# « Prettier n'est pas encore installé dans ce dépôt » : il l'est, épinglé dans `package.json`, et
+# `pnpm format:check` est une étape BLOQUANTE de Gate A. Chaque ligne ci-dessous est donc un écart
+# réel, et l'acceptation de GOV-031 fixe le régime qui s'y applique : « tout écart restant porte
+# une dérogation NOMMÉE et motivée — jamais une règle désactivée en bloc ». Une exclusion sans
+# phrase au-dessus fait rougir `tests/unit/gouvernance/gardes-transposees.spec.ts`.
 
+# ── CE QUI N'EST PAS DU SOURCE ──────────────────────────────────────────────────────────────────
+#
+# Répertoires produits par un outil, et le fichier de verrouillage écrit par pnpm. Les reformater
+# n'aurait aucun lecteur, et un `pnpm-lock.yaml` reformaté ne serait plus le fichier que
+# `pnpm install --frozen-lockfile` compare à `package.json`.
 node_modules/
 .next/
 coverage/
@@ -28,3 +35,50 @@ docs/adr/INDEX.md
 # Les fiches de rôle sont rendues depuis `docs/agents.json` par `pnpm gov:agents:rendre` : leur
 # bloc généré est comparé caractère à caractère par `pnpm gov:agents:verifier`.
 .claude/agents/
+
+# ── LES TROIS DÉROGATIONS DE GOV-031, MESURÉES PLUTÔT QUE SUPPOSÉES ─────────────────────────────
+#
+# ⛔ `docs/**` — 48 fichiers non formatés, et ils le restent. Ce n'est pas un renoncement de
+# confort : `prettier --write .` a été lancé sur l'arbre entier le 2026-09-14, puis la suite
+# complète relancée. Résultat mesuré : 14 tests rouges, tous causés par la réécriture de `docs/**`,
+# et presque tous du même mécanisme — les modes `--prove` de plusieurs gardes injectent leur faute
+# témoin par SUBSTITUTION DE CHAÎNE EXACTE dans ces documents. Prettier déplace la chaîne, l'ancre
+# ne se retrouve plus, et la garde cesse de savoir rougir :
+#   `gov:preseance --prove` (3), `gov:pr --prove` (3), `gov:sonde --prove` (2),
+#   `fiches-tiers --prove` (1), `glossaire-enums` (1), `contrat-hash` (3 — voir plus bas),
+#   et `vues-derivees` (1), parce que `docs/REQUIREMENTS.md` est comparé caractère à caractère au
+#   rendu de `docs/requirements.json`.
+# S'y ajoute une raison qui ne se mesure pas et qui suffirait seule : `docs/tasks.json` et
+# `docs/gates.json` sont en `deny` dans `.claude/settings.json`, et `docs/REQUIREMENTS.md`,
+# `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` appartiennent au `gardien-spec`,
+# `docs/adr/**` à l'`architecte` (`docs/CONVENTIONS.md` §8). Un développeur ne les reformate pas.
+# ⛔ La tâche qui refermera cet écart n'existe pas encore, et c'est écrit plutôt que tu : elle
+# appartient à A01, et son acceptation tient en une ligne — les ancres des modes `--prove`
+# DÉRIVÉES plutôt que littérales, puis cette exclusion supprimée et `pnpm format:check` vert.
+docs/
+
+# ⛔ `packages/**` — 4 fichiers, dont `packages/contracts/contracts.v1.json`, le JSON Schema
+# PUBLIÉ. Mesuré le même jour : le reformater change son empreinte, et `pnpm contracts:hash`
+# rougit sur les trois tests de `tests/unit/integration/contrat-hash.spec.ts` — cette empreinte
+# est précisément ce qui tient les deux dépôts d'accord (REQ-QA-007, RM-01). Et la règle est plus
+# large que la mesure : `packages/contracts/**` ne change que dans une PR portant le label
+# `schema`, avec l'approbation BLOQUANTE de l'`architecte` (`docs/CONVENTIONS.md` §5 et §8).
+# GOV-031 est `schema: false` : elle n'a pas le droit d'y écrire, fût-ce une espace.
+packages/
+
+# ⛔ `scripts/gates/gov-pr.ts` — UN SEUL FICHIER, nommé un par un, et pour une raison qui n'est
+# ni du goût ni de la dette : **Prettier 3.9.6 n'est pas IDEMPOTENT dessus**. Mesuré le
+# 2026-09-14, hors du dépôt, sur une copie propre : `prettier --write` deux fois de suite rend
+# deux textes DIFFÉRENTS — il permute deux lignes de commentaire à chaque passe et n'atteint
+# jamais de point fixe. `--write` puis `--check` laisse donc le fichier signalé pour toujours, et
+# une étape bloquante posée là-dessus serait rouge sans qu'aucun geste ne puisse la rendre verte.
+# Pire : la passe colle les commentaires derrière le `)` de la ligne 629 et détruit la lisibilité
+# d'un avertissement (« `pr` FAIT PARTIE DE LA PROJECTION ») qui a coûté deux correctifs inertes.
+# La cause est un bloc `//` placé ENTRE la parenthèse fermante d'une expression parenthésée et le
+# `.taches` qui la suit — un cas d'attachement de commentaire connu pour être instable.
+# ⛔ La sortie n'est pas d'éteindre la règle mais de retirer la cause : déplacer ce commentaire
+# au-dessus du `const taches = (` le rendrait formatable. C'est une modification de garde, donc
+# une tâche à part (charte A11 : un manque devient une tâche, jamais un correctif glissé dans le
+# lot en cours), et elle appartient à A01. Tant qu'elle n'est pas faite, cette ligne est le seul
+# endroit du dépôt où l'écart est écrit.
+scripts/gates/gov-pr.ts

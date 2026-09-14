@@ -21,8 +21,20 @@
         "et 184 sur 184 pas de `tests`."
       ],
       "required": [
-        "id", "titre", "phase", "repo", "zone", "paths", "schema", "sensible",
-        "deps", "reqs", "hyp", "externe", "estimateDays", "statut"
+        "id",
+        "titre",
+        "phase",
+        "repo",
+        "zone",
+        "paths",
+        "schema",
+        "sensible",
+        "deps",
+        "reqs",
+        "hyp",
+        "externe",
+        "estimateDays",
+        "statut"
       ],
       "properties": {
         "id": {
@@ -37,7 +49,18 @@
           "description": "Une seule étiquette. Les tâches `axionia` sont écrites par le poste A08 et fusionnées via docs/runbooks/fusion-axionia.md."
         },
         "zone": {
-          "enum": ["gouvernance", "domaine", "securite", "argent", "integration", "juridique", "espace", "console", "qualite", "devops"],
+          "enum": [
+            "gouvernance",
+            "domaine",
+            "securite",
+            "argent",
+            "integration",
+            "juridique",
+            "espace",
+            "console",
+            "qualite",
+            "devops"
+          ],
           "description": "Deux tâches d'un même lot peuvent partager une zone, mais jamais un chemin."
         },
         "paths": {
@@ -81,12 +104,26 @@
           "type": "object",
           "description": "REQ couverte → tests qui la prouvent, au format fichier#nom-du-it. Lu par `req:check`.",
           "patternProperties": {
-            "^REQ-[A-Z]+-[0-9]{3}$": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+            "^REQ-[A-Z]+-[0-9]{3}$": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string" }
+            }
           },
           "additionalProperties": false
         },
         "statut": {
-          "enum": ["a_faire", "en_cours", "en_revue", "fusionnee", "deployee", "verifiee", "bloquee", "attente_externe", "proposee"]
+          "enum": [
+            "a_faire",
+            "en_cours",
+            "en_revue",
+            "fusionnee",
+            "deployee",
+            "verifiee",
+            "bloquee",
+            "attente_externe",
+            "proposee"
+          ]
         },
         "issue": {
           "type": ["integer", "null"],
@@ -99,9 +136,15 @@
           "pattern": "^(t/[a-z0-9][a-z0-9._-]*|lot/[A-Za-z0-9][A-Za-z0-9._/-]*)$",
           "description": "Deux formes, et deux seulement (partners/ADR-0007) : `lot/<id>-<suffixe>` — la forme normale, un lot une branche une PR, un commit par tache ; `t/<slug>` — la forme derogatoire, pour une tache livree seule. Le motif reste ferme : sans prefixe reconnu, la garde gov:tasks rougit. Avant l ADR le motif n acceptait que `t/`, et `pnpm lot:cloture` — seul ecrivain du statut — produisait donc un document que le schema refusait."
         },
-        "pr": { "type": ["integer", "null"], "description": "Numéro de PR DANS CE DÉPÔT. Une tâche dont le `repo` n'est pas `partners` ne le porte JAMAIS : il y serait un numéro nu, rendu `PR#998` par les vues alors qu'il ne résout pas ici. Elle porte `attestation` à la place (GOV-038)." },
+        "pr": {
+          "type": ["integer", "null"],
+          "description": "Numéro de PR DANS CE DÉPÔT. Une tâche dont le `repo` n'est pas `partners` ne le porte JAMAIS : il y serait un numéro nu, rendu `PR#998` par les vues alors qu'il ne résout pas ici. Elle porte `attestation` à la place (GOV-038)."
+        },
         "attempts": { "type": "integer", "minimum": 0, "maximum": 3 },
-        "motif": { "type": ["string", "null"], "description": "Pourquoi la tâche est bloquée. Obligatoire si statut = bloquee." },
+        "motif": {
+          "type": ["string", "null"],
+          "description": "Pourquoi la tâche est bloquée. Obligatoire si statut = bloquee."
+        },
         "attestation": {
           "type": ["object", "null"],
           "additionalProperties": false,
@@ -120,20 +163,37 @@
             "QUI L'ÉCRIT : pnpm lot:cloture, seul écrivain du statut (docs/PRESEANCE.md §1)."
           ],
           "properties": {
-            "pr": { "type": "integer", "minimum": 1, "description": "Numéro de la PR DANS le dépôt de la tâche." },
-            "sha": { "type": "string", "description": "SHA ENTIER du commit de fusion. La forme est jugée par gov:tasks." },
-            "fusionneeAt": { "type": "string", "description": "Instant de fusion, ISO 8601 UTC. La forme est jugée par gov:tasks." }
+            "pr": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Numéro de la PR DANS le dépôt de la tâche."
+            },
+            "sha": {
+              "type": "string",
+              "description": "SHA ENTIER du commit de fusion. La forme est jugée par gov:tasks."
+            },
+            "fusionneeAt": {
+              "type": "string",
+              "description": "Instant de fusion, ISO 8601 UTC. La forme est jugée par gov:tasks."
+            }
           }
         }
       },
       "allOf": [
         {
           "if": { "properties": { "statut": { "enum": ["en_cours", "en_revue", "fusionnee"] } } },
-          "then": { "required": ["owner", "branch"], "properties": { "owner": { "type": "string" }, "branch": { "type": "string" } } }
+          "then": {
+            "required": ["owner", "branch"],
+            "properties": { "owner": { "type": "string" }, "branch": { "type": "string" } }
+          }
         },
         {
           "_commentaire": "Une tâche ATTRIBUÉE doit porter son critère d'acceptation et ses tests : c'est ce qui rend la revue et `req:check` possibles. Avant l'attribution, les deux champs sont facultatifs.",
-          "if": { "properties": { "statut": { "enum": ["en_cours", "en_revue", "fusionnee", "deployee", "verifiee"] } } },
+          "if": {
+            "properties": {
+              "statut": { "enum": ["en_cours", "en_revue", "fusionnee", "deployee", "verifiee"] }
+            }
+          },
           "then": { "required": ["acceptance", "tests"] }
         },
         {
@@ -143,7 +203,10 @@
         },
         {
           "if": { "properties": { "statut": { "const": "bloquee" } } },
-          "then": { "required": ["motif"], "properties": { "motif": { "type": "string", "minLength": 10 } } }
+          "then": {
+            "required": ["motif"],
+            "properties": { "motif": { "type": "string", "minLength": 10 } }
+          }
         }
       ]
     }

@@ -279,7 +279,10 @@ describe('REQ-DM-038 — les noms de vocabulaire sont DÉRIVÉS de l’arbitrage
     const noms = nomsDecides(LIGNE);
     // CONTRÔLE POSITIF : sans lui, une extraction cassée rendrait `[]` et tout le reste du bloc
     // passerait à vide — « aucun nom à vérifier » se lit exactement comme « tous vérifiés ».
-    expect(noms.length, 'l’extraction n’a rien trouvé : le format de l’annexe a changé').toBeGreaterThanOrEqual(8);
+    expect(
+      noms.length,
+      'l’extraction n’a rien trouvé : le format de l’annexe a changé'
+    ).toBeGreaterThanOrEqual(8);
     expect(noms).toContain('status');
     expect(noms).toContain('priorite');
 
@@ -305,7 +308,9 @@ describe('REQ-DM-038 — les noms de vocabulaire sont DÉRIVÉS de l’arbitrage
     // Sans lui, une garde qui rougirait sur TOUT passerait le témoin ci-dessus.
     for (const nom of ['libelle', 'adresse', 'montant']) {
       const schema = `${VUE_CONFORME.schema}\nmodel Essai${nom} {\n  id     String @id\n  ${nom} String\n}\n`;
-      expect(familles({ ...VUE_CONFORME, schema }), `« ${nom} » n’est pas un vocabulaire`).toEqual([]);
+      expect(familles({ ...VUE_CONFORME, schema }), `« ${nom} » n’est pas un vocabulaire`).toEqual(
+        []
+      );
     }
   });
 });

@@ -814,8 +814,7 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     // dans la prose qui explique pourquoi il n'y en a pas. Ce test a d'abord rougi là-dessus.
     // Une garde qui rougit sur sa propre explication force à effacer l'explication — c'est
     // la faute que `gov:identifiants` a déjà payée cinq fois.
-    const lignesNues = ci.split('
-').filter((l) => !l.trim().startsWith('#'));
+    const lignesNues = ci.split('\n').filter((l) => !l.trim().startsWith('#'));
     expect(lignesNues.filter((l) => l.includes('continue-on-error'))).toEqual([]);
   });
 

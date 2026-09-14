@@ -113,7 +113,12 @@ describe('REQ-GOV-032 — docs/TASKS.md est comparée à docs/tasks.json', () =>
   });
 
   it('REQ-GOV-032 · une vue ABSENTE est un rouge qui le dit, jamais un vert par défaut', () => {
-    const { code, sortie } = lancer(TACHES, '--verifie-rendu', '--out', join(bac, 'jamais-rendue.md'));
+    const { code, sortie } = lancer(
+      TACHES,
+      '--verifie-rendu',
+      '--out',
+      join(bac, 'jamais-rendue.md')
+    );
     expect(code).toBe(1);
     expect(sortie).toMatch(/absent/i);
   });
@@ -130,7 +135,7 @@ describe('REQ-GOV-032 — docs/TASKS.md est comparée à docs/tasks.json', () =>
     expect(readFileSync(vue, 'utf8')).toBe(perimee);
   });
 
-  it("REQ-GOV-032 · la comparaison est OCTET PAR OCTET, pas par LONGUEUR — vu rougir sur une dérive à longueur CONSTANTE", () => {
+  it('REQ-GOV-032 · la comparaison est OCTET PAR OCTET, pas par LONGUEUR — vu rougir sur une dérive à longueur CONSTANTE', () => {
     // 🔴 Trouvé par la lentille `mutation` le 2026-09-05. Remplacer la comparaison de contenu
     // par une comparaison de LONGUEUR laissait ce fichier entièrement VERT : les cinq témoins de
     // périmage RETIRENT tous du texte, donc changent tous la longueur, et aucun n'exerçait la
@@ -140,7 +145,9 @@ describe('REQ-GOV-032 — docs/TASKS.md est comparée à docs/tasks.json', () =>
     const chemin = rendreDansLeBac(TACHES, 'longueur-constante.md');
     const rendu = readFileSync(chemin, 'utf8');
     const perime = rendu.replace('# Taches', '# taches');
-    expect(perime.length, 'le témoin doit garder la MÊME longueur, sinon il ne prouve rien').toBe(rendu.length);
+    expect(perime.length, 'le témoin doit garder la MÊME longueur, sinon il ne prouve rien').toBe(
+      rendu.length
+    );
     expect(perime).not.toBe(rendu);
     writeFileSync(chemin, perime);
     const r = lancer(TACHES, '--verifie-rendu', '--out', chemin);

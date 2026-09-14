@@ -113,15 +113,15 @@ export const FAMILLES: { nom: string; explication: string }[] = [
   {
     nom: 'source_illisible',
     explication:
-      "le texte de REQ-DM-003 ne donne plus la liste des états occupants : la garde ne sait plus à quoi comparer.",
+      'le texte de REQ-DM-003 ne donne plus la liste des états occupants : la garde ne sait plus à quoi comparer.',
   },
   {
     nom: 'etats_occupants_divergents',
-    explication: "la constante ETATS_OCCUPANTS ne dit plus ce que REQ-DM-003 dit.",
+    explication: 'la constante ETATS_OCCUPANTS ne dit plus ce que REQ-DM-003 dit.',
   },
   {
     nom: 'glossaire_divergent',
-    explication: "la colonne « Occupant ? » du glossaire ne rend pas les états de REQ-DM-003.",
+    explication: 'la colonne « Occupant ? » du glossaire ne rend pas les états de REQ-DM-003.',
   },
   {
     nom: 'liste_litterale_d_etats',
@@ -129,7 +129,8 @@ export const FAMILLES: { nom: string; explication: string }[] = [
   },
   {
     nom: 'colonne_vocabulaire_en_chaine',
-    explication: "une colonne de vocabulaire déclarée en String : le type n'attrape plus rien (RM-04).",
+    explication:
+      "une colonne de vocabulaire déclarée en String : le type n'attrape plus rien (RM-04).",
   },
   {
     nom: 'valeur_hors_glossaire',
@@ -141,7 +142,7 @@ export const FAMILLES: { nom: string; explication: string }[] = [
   },
   {
     nom: 'repli_muet',
-    explication: "un repli qui retombe sur la valeur brute déguise la faute au lieu de la montrer.",
+    explication: 'un repli qui retombe sur la valeur brute déguise la faute au lieu de la montrer.',
   },
 ];
 const NOMS_FAMILLES = FAMILLES.map((f) => f.nom);
@@ -271,7 +272,7 @@ export function controler(vue: Vue): Faute[] {
       {
         famille: 'source_illisible',
         message:
-          "REQ-DM-003 ne porte plus « ETATS_OCCUPANTS = {…} » : la garde ne sait plus à quoi " +
+          'REQ-DM-003 ne porte plus « ETATS_OCCUPANTS = {…} » : la garde ne sait plus à quoi ' +
           'comparer la constante ni le glossaire. Rétablis la liste dans le registre des ' +
           "exigences — ce n'est pas ici qu'elle se décide.",
       },
@@ -445,7 +446,8 @@ const SCHEMA_FIXTURE = [
  * pourquoi ce fichier figure dans `PORTEURS_LEGITIMES` : sans elle, la preuve devrait lire le
  * dépôt, et une preuve qui lit le dépôt ne prouve plus rien de la garde (RM-11).
  */
-const ETATS_FIXTURE = "['provisoire', 'active', 'rdv_pris', 'proposition', 'signee', 'convertie', 'figee_resiliation']";
+const ETATS_FIXTURE =
+  "['provisoire', 'active', 'rdv_pris', 'proposition', 'signee', 'convertie', 'figee_resiliation']";
 
 export const VUE_CONFORME: Vue = {
   reqDm003:
@@ -475,7 +477,10 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
     famille: 'glossaire_divergent',
     vue: () => ({
       ...VUE_CONFORME,
-      glossaire: VUE_CONFORME.glossaire.replace('| `annulee` | retirée | non |', '| `annulee` | retirée | **oui** |'),
+      glossaire: VUE_CONFORME.glossaire.replace(
+        '| `annulee` | retirée | non |',
+        '| `annulee` | retirée | **oui** |'
+      ),
     }),
   },
   {
@@ -494,7 +499,8 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
     famille: 'colonne_vocabulaire_en_chaine',
     vue: () => ({
       ...VUE_CONFORME,
-      schema: VUE_CONFORME.schema + '\nmodel Attribution {\n  id     String @id\n  statut String\n}\n',
+      schema:
+        VUE_CONFORME.schema + '\nmodel Attribution {\n  id     String @id\n  statut String\n}\n',
     }),
   },
   {
@@ -534,7 +540,9 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
     quoi: 'deux états seulement sur une ligne : une requête peut nommer un couple sans le recopier',
     vue: () => ({
       ...VUE_CONFORME,
-      code: [{ chemin: 'src/server/x.ts', contenu: "if (s === 'provisoire' || s === 'active') return;" }],
+      code: [
+        { chemin: 'src/server/x.ts', contenu: "if (s === 'provisoire' || s === 'active') return;" },
+      ],
     }),
   },
   {
@@ -548,14 +556,17 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
     quoi: 'une colonne de vocabulaire déclarée en enum',
     vue: () => ({
       ...VUE_CONFORME,
-      schema: VUE_CONFORME.schema + '\nmodel Attribution {\n  id     String @id\n  statut EtatAttribution\n}\n',
+      schema:
+        VUE_CONFORME.schema +
+        '\nmodel Attribution {\n  id     String @id\n  statut EtatAttribution\n}\n',
     }),
   },
   {
     quoi: 'une colonne libre qui ne porte aucun vocabulaire',
     vue: () => ({
       ...VUE_CONFORME,
-      schema: VUE_CONFORME.schema + '\nmodel Attribution {\n  id    String @id\n  siren String\n}\n',
+      schema:
+        VUE_CONFORME.schema + '\nmodel Attribution {\n  id    String @id\n  siren String\n}\n',
     }),
   },
 ];
@@ -574,30 +585,40 @@ if (APPELE_DIRECTEMENT) {
   if (process.argv.includes('--prove')) {
     const sansTemoin = NOMS_FAMILLES.filter((f) => !TEMOINS.some((t) => t.famille === f));
     if (sansTemoin.length > 0) {
-      console.error(`❌ Famille(s) sans témoin : ${sansTemoin.join(', ')}. Une famille sans témoin n'est pas prouvée.`);
+      console.error(
+        `❌ Famille(s) sans témoin : ${sansTemoin.join(', ')}. Une famille sans témoin n'est pas prouvée.`
+      );
       process.exit(1);
     }
     for (const t of TEMOINS) {
       const rougies = controler(t.vue()).map((f) => f.famille);
       if (!rougies.includes(t.famille)) {
-        console.error(`❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille (rougies : ${rougies.join(', ') || 'aucune'}).`);
+        console.error(
+          `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille (rougies : ${rougies.join(', ') || 'aucune'}).`
+        );
         process.exit(1);
       }
     }
     for (const c of CONTRE_TEMOINS) {
       const fautes = controler(c.vue());
       if (fautes.length > 0) {
-        console.error(`❌ Faux positif sur « ${c.quoi} » : ${fautes[0]!.famille}. La garde est trop large.\n   ${fautes[0]!.message}`);
+        console.error(
+          `❌ Faux positif sur « ${c.quoi} » : ${fautes[0]!.famille}. La garde est trop large.\n   ${fautes[0]!.message}`
+        );
         process.exit(1);
       }
     }
-    console.log(`✅ partners:schema:enums — Les ${FAMILLES.length} familles rougissent, ${CONTRE_TEMOINS.length} contre-témoins restent verts :`);
+    console.log(
+      `✅ partners:schema:enums — Les ${FAMILLES.length} familles rougissent, ${CONTRE_TEMOINS.length} contre-témoins restent verts :`
+    );
     for (const f of FAMILLES) console.log(`   • ${f.nom} — ${f.explication}`);
     process.exit(0);
   }
 
   if (!existsSync(CHEMIN_SCHEMA)) {
-    console.error(`❌ partners:schema:enums — ${CHEMIN_SCHEMA} est introuvable : la garde n'a rien lu, et ne prétend pas juger.`);
+    console.error(
+      `❌ partners:schema:enums — ${CHEMIN_SCHEMA} est introuvable : la garde n'a rien lu, et ne prétend pas juger.`
+    );
     process.exit(2);
   }
 
