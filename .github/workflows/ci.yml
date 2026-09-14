@@ -186,6 +186,27 @@ jobs:
         run: pnpm gov:conventions
       - name: La garde des conventions sait rougir
         run: pnpm gov:conventions:prove
+      # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
+      # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
+      # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le
+      # dit en toutes lettres : « sans etape, rien ne ment ». Rien ne mentait, et rien ne
+      # gardait : `eslint.config.mjs` et `.prettierrc.json` etaient commites depuis GOV-014 et
+      # n'avaient jamais tourne en CI. C'est ici que la configuration cesse d'etre une intention.
+      #
+      # PAS DE `continue-on-error`, ET C'EST LE POINT DE L'EXIGENCE, pas un detail de cablage.
+      # Cote axionia, TOUTES les gates PR de budget portent ce drapeau : aucune PR qui alourdit
+      # le bundle n'y rougit, et la documentation du depot a affirme le contraire pendant des
+      # mois. Une gate qui ne bloque rien ne garde rien.
+      #
+      # CE QUE CHACUNE MESURE, AU 2026-09-14 : `pnpm lint` sort en 0 avec 13 AVERTISSEMENTS
+      # comptes (6 `no-explicit-any`, 7 `no-useless-assignment`), poses en `warn` et non
+      # eteints — les remonter en `error` touche cinq fichiers hors du perimetre de GOV-031 et
+      # revient a une tache que A01 ouvre. `pnpm format:check` balaie tout sauf `docs/**` et
+      # `packages/**`, dont `.prettierignore` porte les deux derogations nommees et leur motif.
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
       - name: Typecheck
         run: pnpm typecheck
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :
