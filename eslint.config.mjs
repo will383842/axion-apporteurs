@@ -34,25 +34,10 @@
 // un manque devient une tâche, jamais un correctif glissé dans le lot en cours) — la tâche qui
 // les remonte en `error` reste à ouvrir par A01.
 //
-// ⚠️ LE PARAGRAPHE QUI SUIVAIT ÉTAIT VRAI LE 2026-09-12 ET NE L'EST PLUS. Il disait :
-// « `prettier --check .` rend 136 fichiers non formatés et n'est PAS vert ; le rendre vert
-// reformate le dépôt, ce qui n'est pas le périmètre de cette tâche ; tant que ce n'est pas fait,
-// `format:check` n'a pas sa place en Gate A ». C'était le raisonnement qui laissait GOV-031
-// verte en ne livrant qu'un item sur quatre. Le 2026-09-14, le code du dépôt A ÉTÉ reformaté, et
-// `pnpm format:check` sort en 0. Ce qui reste hors du format est écrit, entrée par entrée et avec
-// sa mesure, dans `.prettierignore` — la liste n'est pas recopiée ici.
-//
-// ── CE QUE `gov:conventions` EXIGE LE JOUR OÙ L'ÉTAPE ARRIVE ────────────────────────────────
-//
-// L'ÉTAPE EST ARRIVÉE. Les six dépendances sont épinglées dans `package.json` — `@eslint/js`,
-// `globals`, `typescript-eslint`, `eslint-config-prettier`, plus les deux binaires `eslint` et
-// `prettier` —, les scripts `lint`, `format:check` et `format` existent, et `.github/workflows/
-// ci.yml` porte les deux étapes SANS `continue-on-error`. La famille `outillage_non_epingle`
-// refuse une étape `pnpm lint` sans `eslint` épinglé, sans script `lint`, ou sans cette
-// configuration versionnée ; la famille `lint_non_bloquant` refuse la même étape si elle porte
-// `continue-on-error` — c'est LE point de l'exigence, pas un détail de câblage. Les deux ne
-// s'arment qu'en présence de l'étape, et c'est exactement pourquoi son absence ne pouvait pas
-// durer : « sans étape, rien ne ment », et rien ne garde non plus.
+// UNE DÉROGATION VIT ICI, ET NULLE PART AILLEURS. Chacune est une entrée d'un bloc `files:`, et son
+// motif est le commentaire COLLÉ au-dessus d'elle. `tests/unit/gouvernance/gardes-transposees.spec.ts`
+// demande à ESLint ce qu'il applique à chaque fichier suivi : une configuration posée dans un
+// sous-dossier, une exclusion ou un réglage du linter rouvert par bloc y rougissent.
 //
 // LES TROIS RÈGLES DE FOND SONT DÉRIVÉES, PAS INVENTÉES. `docs/gates.json` décrit déjà ce que le
 // job `gate-a` doit faire tourner : « ESLint (no-console, imports interdits sous src/domain,
@@ -148,63 +133,80 @@ export default tseslint.config(
     // Les quatre scripts `.js` du dépôt (`gh-sur`, `git-push-sur`, `hook-env`, et le workflow
     // ignoré ci-dessus) sont exécutés par node DIRECTEMENT, hors de la chaîne TypeScript :
     // `hook-env.js` est appelé en `PreToolUse` par l'agent, `gh-sur.js` et `git-push-sur.js`
-    // sont requis par lui. Ce sont des modules CommonJS, et `require` y est le SEUL mécanisme
-    // d'import disponible : `no-require-imports` y interdirait la seule forme qui fonctionne.
-    // La liste des globales de Node est IMPORTÉE du paquet `globals`, jamais retapée (RM-01) :
-    // une copie locale divergerait de node à la première version, en silence.
+    // sont requis par lui. La liste des globales de Node est IMPORTÉE du paquet `globals`, jamais
+    // retapée (RM-01) : une copie locale divergerait de node à la première version, en silence.
     files: ['scripts/**/*.js'],
     languageOptions: { sourceType: 'commonjs', globals: globals.node },
-    rules: { '@typescript-eslint/no-require-imports': 'off' },
+    rules: {
+      // Ce sont des modules CommonJS, et `require` y est le SEUL mécanisme d'import disponible :
+      // `no-require-imports` y interdirait la seule forme qui fonctionne.
+      '@typescript-eslint/no-require-imports': 'off',
+    },
   },
 
   {
-    // Les gardes IMPRIMENT leur verdict : c'est leur interface. Une garde muette ne garde rien.
     files: ['scripts/**/*.{ts,js,mjs}'],
-    rules: { 'no-console': 'off' },
+    rules: {
+      // Les gardes IMPRIMENT leur verdict : c'est leur interface. Une garde muette ne garde rien.
+      'no-console': 'off',
+    },
   },
 
   {
-    // Même motif que les gardes, et c'est la deuxième cause du premier passage : les 8
-    // `no-console` de `tests/unit/gouvernance/fiches-tiers.controles.ts` sont le RAPPORT que ce
-    // contrôle rend à qui le lance. Une suite qui ne dit pas ce qu'elle a balayé laisse « 0
-    // fichier vérifié » et « tout est conforme » rendre exactement le même vert.
     files: ['tests/**/*.ts'],
-    rules: { 'no-console': 'off' },
+    rules: {
+      // Même motif que les gardes : les 8 `no-console` de `tests/unit/gouvernance/
+      // fiches-tiers.controles.ts` sont le RAPPORT que ce contrôle rend à qui le lance. Une suite
+      // qui ne dit pas ce qu'elle a balayé laisse « 0 fichier vérifié » et « tout est conforme »
+      // rendre exactement le même vert.
+      'no-console': 'off',
+    },
   },
 
   {
-    // Deux fichiers, nommés un par un, et pas une famille : leurs expressions régulières RETIRENT
-    // les séquences d'échappement ANSI (`\x1b[…m`) et les retours arrière (`\x08`) de la sortie
-    // d'un outil avant de la lire. Le caractère de contrôle est ce qu'on cherche à supprimer ;
-    // `no-control-regex` y interdirait le nettoyage lui-même. Si l'un de ces fichiers est
-    // renommé, la dérogation cesse de s'appliquer et le lint rougit — c'est le bon sens de panne.
+    // Deux fichiers, nommés un par un, et pas une famille. Si l'un d'eux est renommé, la dérogation
+    // cesse de s'appliquer et le lint rougit — c'est le bon sens de panne.
     files: ['scripts/lot/corps-de-pr.ts', 'tests/unit/gouvernance/tete-de-pr-concorde.spec.ts'],
-    rules: { 'no-control-regex': 'off' },
+    rules: {
+      // Leurs expressions régulières RETIRENT les séquences d'échappement ANSI (`\x1b[…m`) et les
+      // retours arrière (`\x08`) de la sortie d'un outil avant de la lire. Le caractère de contrôle
+      // est ce qu'on cherche à supprimer : `no-control-regex` y interdirait le nettoyage lui-même.
+      'no-control-regex': 'off',
+    },
   },
 
   {
     // ── LA DETTE, COMPTÉE ET VISIBLE, JAMAIS ÉTEINTE ────────────────────────────────────────
-    // `no-explicit-any` et `no-useless-assignment` rendent de vraies remarques dans les fichiers
-    // nommés ci-dessous, ET DANS EUX SEULS : la liste est celle que `eslint . -f json` rendait le
-    // 2026-09-14, et le compte se lit dans `pnpm lint`, jamais ici. Les corriger sort du
-    // périmètre de GOV-031 (charte A11 : un manque constaté devient une TÂCHE). `warn` les COMPTE
-    // à chaque exécution ; `off` les ferait disparaître. Nommer les fichiers un par un, et pas
-    // `scripts/**`, c'est ce qui garde le rouge pour tout code NEUF : un `any` posé dans un script
-    // qui n'est pas dans cette liste fait échouer le lint. `gardes-transposees.spec.ts` exige que
-    // chaque fichier listé porte encore au moins un avertissement : un fichier corrigé qui reste
-    // ici fait rougir la suite, et la liste ne peut que rétrécir. La tâche qui les remonte en
-    // `error` est à ouvrir par A01 : ce bloc supprimé, `eslint .` toujours en 0.
+    // Les listes sont celles que `eslint . -f json` rendait le 2026-09-14, UNE PAR RÈGLE, et le
+    // compte se lit dans `pnpm lint`, jamais ici. Nommer les fichiers un par un, et pas `scripts/**`,
+    // c'est ce qui garde le rouge pour tout code NEUF : un `any` posé dans un fichier qui n'est pas
+    // dans la liste de sa règle fait échouer le lint. `gardes-transposees.spec.ts` exige qu'une
+    // règle tolérée en `warn` rende ENCORE un avertissement dans chaque fichier où elle l'est : un
+    // fichier corrigé qui reste ici fait rougir la suite, et les listes ne peuvent que rétrécir. La
+    // tâche qui les remonte en `error` est à ouvrir par A01 (charte A11 : un manque constaté
+    // devient une TÂCHE).
+    files: [
+      'scripts/gates/perf-budgets.ts',
+      'tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts',
+    ],
+    rules: {
+      // Des `any` réels dans ces fichiers : `warn` les COMPTE à chaque exécution, `off` les ferait
+      // disparaître de la sortie de `pnpm lint`.
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  },
+
+  {
     files: [
       'scripts/gates/gov-inventaire.ts',
       'scripts/gates/gov-sonde.ts',
-      'scripts/gates/perf-budgets.ts',
       'scripts/plan-state/build.ts',
       'tests/unit/gouvernance/corps-de-pr-couvre.spec.ts',
-      'tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts',
       'tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts',
     ],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
+      // Des affectations inutiles réelles dans ces fichiers, que le socle d'eslint 10 a ajoutées :
+      // même régime que les `any`, comptées à chaque exécution et jamais éteintes.
       'no-useless-assignment': 'warn',
     },
   },

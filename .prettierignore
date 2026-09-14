@@ -6,7 +6,8 @@
 #
 # DEUX RÈGLES DE FORME, tenues par `tests/unit/gouvernance/gardes-transposees.spec.ts` :
 #   — le motif d'une entrée est le bloc de commentaire COLLÉ au-dessus d'elle, sans ligne vide ni
-#     autre entrée entre les deux : un motif ne sert qu'une entrée ;
+#     autre entrée entre les deux : un motif ne sert qu'une entrée, et il se compte en LETTRES —
+#     une ligne de tirets n'est pas une phrase ;
 #   — les fichiers que Prettier ignore sont confrontés à une liste DÉCLARÉE dans cette spec. Une
 #     entrée qui déborde de sa mesure (un `src/`, un `*.ts`, un `**/*`, un fichier de code neuf
 #     sous une racine dérogée) y rougit.
@@ -26,9 +27,10 @@ pnpm-lock.yaml
 #     --verifie-rendu`, `adr:index --verifier`, `gov:trace --verifier`) ;
 #   — et, plus grave, rend AVEUGLES trois gardes, dont le rouge disparaît au moment où l'auteur
 #     lance `pnpm format` pour satisfaire l'étape bloquante : l'anti-duplication de `CLAUDE.md`
-#     (`regles-maison.spec.ts`), qui compare une ligne de tableau rembourrée à sa source qui ne
-#     l'est pas ; `gov:lexique` et `gov:identifiants`, pour qui `_` est une lettre, si bien que
-#     `*objectif*` rougit et `_objectif_` passe.
+#     (`regles-maison.spec.ts`), qui cherche une ligne de tableau mot pour mot dans sa source —
+#     or Prettier rembourre CHAQUE tableau à ses propres largeurs de colonnes, si bien que
+#     formater les deux côtés ne rend pas le rouge ; `gov:lexique` et `gov:identifiants`, pour qui
+#     `_` est une lettre, si bien que `*objectif*` rougit et `_objectif_` passe.
 # Une garde qui rougit se voit ; une garde qu'on a fait taire ne se voit pas. Et `docs/**`
 # appartient pour une large part au `gardien-spec` et à l'`architecte` (`docs/CONVENTIONS.md`
 # §8) : un développeur ne les reformate pas.
