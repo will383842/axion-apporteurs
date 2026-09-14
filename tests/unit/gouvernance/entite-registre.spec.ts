@@ -2201,8 +2201,12 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     // Des familles dont les octets SONT du texte et qui peuvent porter un secret. Aucune ne doit
     // pouvoir entrer dans la liste de REFUS — le témoin dérivé du disque ne les verrait que le jour
     // où le dépôt en suit une, c'est-à-dire trop tard.
-    'deploy.ps1', 'setup.bash', 'script.sh', 'tache.rb', 'main.go', 'index.php', 'run.bat',
-    'app.py', 'Makefile', 'config.toml', 'notes.rst', 'requete.http', 'donnees.csv', 'cle.pem',
+    // ⚠️ SIX FAMILLES ONT ÉTÉ RETIRÉES DE CETTE LISTE (`.sh`, `.py`, `.toml`, `.rst`, `.http`,
+    // `Makefile`) : elles étaient déjà exigées par le cas voisin, dans le même `describe` et sous
+    // le même prédicat (A09 · simplicite, PR #39). Un ancrage tire sa valeur de son extériorité,
+    // pas de sa longueur — et les huit qui restent portent SEULES la survivante qu'il ferme.
+    'deploy.ps1', 'setup.bash', 'tache.rb', 'main.go', 'index.php', 'run.bat',
+    'donnees.csv', 'cle.pem',
   ];
 
   it('REQ-GOV-031 — ANCRAGE : aucune famille de TEXTE ne peut entrer dans la liste de REFUS', () => {

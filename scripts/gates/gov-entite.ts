@@ -218,7 +218,7 @@ export const EXTENSIONS_REFUSEES =
  * seule cette relecture-ci pouvait le dire — un constat se vérifie avant de se corriger.)
  *
  * MESURE PAR MUTATION (RM-02), refaite sur la forme de refus — `npx vitest run` du banc d'essai
- * de la garde, 143 cas :
+ * de la garde (`npx vitest run tests/unit/gouvernance/entite-registre.spec.ts` en rend le compte) :
  *   — `EXTENSIONS_REFUSEES` remplacée par un attrape-tout `/.*$/` (plus rien n'est lu) → **4
  *     échecs**, dont le témoin dérivé du disque et le cas `.sh` de bout en bout. Les deux
  *     contre-témoins binaires restent VERTS, et c'est normal : ils gardent l'autre sens.
@@ -367,7 +367,15 @@ export function estExemplePlausible(v: string): boolean {
  * trouvé » et « je n'ai rien regardé » sont deux phrases différentes, et une seule autorise à
  * publier. `codesPaysIso` LÈVE sous le plancher, au chargement du module, avant tout verdict.
  *
- * MESURE PAR MUTATION (RM-02), `npx vitest run` du banc d'essai de la garde, 143 cas :
+ * MESURE PAR MUTATION (RM-02), sur le banc d'essai de la garde. Le nombre de cas N'EST PAS ÉCRIT
+ * ici, et c'est délibéré : il l'a été deux fois, il a été faux deux fois. Écrit à 143, il est passé
+ * à 148 quand une PR a ajouté cinq témoins, puis à 145 quand ils ont été retirés — le retrait a
+ * DÉPLACÉ le compte au lieu de le rattraper (A09 · simplicite, PR #39). Deux copies d'un total,
+ * aucun comparateur : c'est la faute que ce dépôt a déjà payée quatre fois, et son remède est
+ * connu — retirer le nombre, laisser la commande qui le rend :
+ *
+ *     npx vitest run tests/unit/gouvernance/entite-registre.spec.ts
+ *
  *   — `CODES_PAYS` remis à la liste TAPÉE de 47 entrées d'avant GOV-036 → **8 échecs** : les cinq
  *     IBAN étrangers (TR, IL, RS, AL, LB), les deux cas qui exigent que `--prove` les NOMME, et le
  *     témoin des onze familles. C'est la mesure du constat (1), reproduite en sens inverse.
