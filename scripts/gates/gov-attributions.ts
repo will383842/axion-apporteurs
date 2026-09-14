@@ -5,15 +5,15 @@
  *           pnpm gov:attributions --prove  (les juges refusent leurs cas faussés ; chaque famille rougit sur
  *                                           son témoin ; chaque contre-témoin rend exactement ses exemptions)
  *
- * POURQUOI : ce dépôt dérive et vérifie ses NOMBRES. Il ne confrontait AUCUNE de ses ATTRIBUTIONS,
- * or chacune s'écrit DEUX FOIS : `requirements.json[].taches` et `tasks.json[].reqs` ; `gates.json[].tache`
- * et les `paths` de la tâche ; `tasks.json[].owner` et `agents.json` ; `tasks.json[].lot` et `docs/journal/`.
+ * POURQUOI : ce dépôt dérive et vérifie ses NOMBRES. Ses ATTRIBUTIONS s'écrivent DEUX FOIS : `gates.json[].tache`
+ * et les `paths` de la tâche ; `tasks.json[].owner` et `agents.json` ; `tasks.json[].lot` et `docs/journal/` ;
+ * un identifiant de tâche nommé dans un en-tête ou dans `docs/gates.json`, et le backlog. La relation
+ * exigence <-> tâche n'est pas jugée ici : `gov:requirements` la tient déjà, dans les deux sens.
  *
- * 🔑 CE QUE LA SORTIE VERTE AFFIRME. Aucune attribution lue n'est ROMPUE, et chaque attribution lue
- * qu'elle n'a pas pu trancher est une EXEMPTION, imprimée sous la rubrique de sa nature et comptée.
- * Aucune attribution écrite ne sort de l'analyse sans être jugée ou exemptée ; ce que la garde ne sait
- * pas lire (source absente, tronquée, mal formée, non texte) la fait REFUSER en se nommant. Le compte
- * est celui des exemptions rendues, jamais la longueur d'un registre. *Une exemption tue ment.*
+ * 🔑 CE QUE LA SORTIE VERTE AFFIRME. Aucune attribution LUE n'est ROMPUE, et chaque attribution lue qu'elle
+ * n'a pas pu trancher est une EXEMPTION, imprimée sous la rubrique de sa nature et comptée. Ce qu'elle ne
+ * lit pas est écrit plus bas (LIMITES CONNUES) ; ce qu'elle ne sait pas lire (source absente, tronquée, mal
+ * formée, à clé dupliquée, porteuse d'un octet NUL) la fait REFUSER en se nommant. *Une exemption tue ment.*
  */
 
 import { readFileSync } from 'node:fs';
@@ -23,6 +23,8 @@ import { referencePr, DEPOTS, DEPOT_LOCAL, type Attestation } from '../lot/attes
 /*
  * LIMITES CONNUES — ce que cette garde ne voit pas, écrit plutôt que supposé :
  *   — un identifiant écrit au-delà de la vingtième ligne d'un fichier (le périmètre que l'acceptance fixe) ;
+ *   — un identifiant écrit en minuscules, ou dont le tiret n'est pas le tiret ASCII (trait d'union
+ *     insécable) : la forme d'une mention se dérive des identifiants réels, tels qu'ils s'écrivent ;
  *   — une attribution qui vit dans une REVUE plutôt que dans un fichier du dépôt ;
  *   — qu'un `it()` soit étiqueté par l'exigence qu'il teste vraiment : « ce titre teste un IBAN »
  *     contre « l'exigence dit mono-tenant » n'est mécanisable par aucune garde ;
@@ -31,7 +33,10 @@ import { referencePr, DEPOTS, DEPOT_LOCAL, type Attestation } from '../lot/attes
  *     le `tests{}` de GOV-032 porte `plan-state-frais.spec.ts`, le script de cette gate ; son `tests{}`
  *     vidé, la même mention rougit en `mention_hors_paths`. La garde juge la propriété d'un fichier, pas
  *     le sens d'une phrase ;
- *   — aucun cliquet ne borne les exemptions : une mention neuve d'une tâche aux paths non résolus fait
+ *   — une déclaration se range par SITE et identifiant (un fichier, ou une chaîne de `docs/gates.json`),
+ *     pas par occurrence : une mention NEUVE du même identifiant au même site est absoute par la
+ *     déclaration existante — le compte monte, et la raison imprimée est celle écrite pour l'autre ;
+ *   — aucun cliquet ne borne les exemptions : une mention neuve d'une tâche aux paths gabarit fait
  *     monter le compte, sous sa rubrique, et la sortie reste verte ;
  *   — un fichier suivi de `scripts/` ou `tests/` qui porte un octet NUL (UTF-16, binaire) n'est pas lu :
  *     il fait REFUSER la garde, et aucune déclaration ne l'en exempte. Le dépôt n'en porte aucun ;
@@ -53,7 +58,6 @@ export type Tache = {
   id: string;
   paths?: string[];
   tests?: Record<string, string[]>;
-  reqs?: string[];
   owner?: string | null;
   lot?: string | null;
   pr?: number | null;
@@ -63,8 +67,7 @@ export type Tache = {
   repo?: string;
   attestation?: Attestation | null;
 };
-export type Exigence = { id: string; taches?: string[] };
-/** Une entrée du registre des gates : toute autre valeur qu'elle porte est lue pour ses chaînes. */
+/** Une entrée du registre des gates : chacune de ses chaînes et chacun de ses noms de clé sont lus, à toute profondeur. */
 export type Gate = { id: string; script: string; tache?: string; [champ: string]: unknown };
 export type Poste = { code: string };
 export type Entete = { fichier: string; lignes: string[] };
@@ -98,7 +101,6 @@ export type DetteGate = { gate: string; tache: string; script: string; raison: s
 
 export type Sources = {
   taches: Tache[];
-  exigences: Exigence[];
   gates: Gate[];
   postes: Poste[];
   journal: string;
@@ -111,10 +113,10 @@ export type Sources = {
 
 /**
  * Toutes les familles de FAUTE. `--prove` exige qu'un témoin DÉCLARÉ pour chacune la fasse rougir,
- * elle et pas une autre. Ajouter une famille sans témoin fait rougir la preuve, donc Gate A.
+ * elle et pas une autre, et que le verdict RENDU sorte en échec. Ajouter une famille sans témoin fait
+ * rougir la preuve, donc Gate A.
  */
 export const FAMILLES = [
-  'req_tache_non_reciproque',
   'gate_tache_inconnue',
   'gate_non_reciproque',
   'owner_hors_registre',
@@ -140,7 +142,9 @@ const NATURES = [
   'dette_gate',
   'dette',
   'gate_paths_non_resolus',
+  'gate_paths_en_partie_gabarit',
   'mention_paths_non_resolus',
+  'mention_paths_en_partie_gabarit',
   'lot_sans_pr',
   'lot_sous_plancher',
   'autre_depot',
@@ -155,8 +159,14 @@ export type Verdict = { fautes: Faute[]; exemptions: Exemption[] };
 const SENS: Record<Nature, string> = {
   dette_gate: 'non-réciprocité garde <-> tâche déclarée, que cette tâche ne peut pas réparer',
   dette: 'identifiant qui ne résout pas, déclaré comme attribution FAUSSE hors des paths de cette tâche',
-  gate_paths_non_resolus: 'garde attribuée à une tâche sans paths réels (vides ou gabarit) : réciprocité ni vraie ni fausse',
-  mention_paths_non_resolus: 'tâche nommée hors de ses paths alors qu’elle n’en a pas de réels : propriété ni vraie ni fausse',
+  gate_paths_non_resolus:
+    'garde attribuée à une tâche dont CHAQUE path est un gabarit (« pas encore connu ») : réciprocité ni vraie ni fausse',
+  gate_paths_en_partie_gabarit:
+    'garde attribuée à une tâche dont aucun path RÉEL ne porte le script, et qui garde un gabarit (« le reste n’est pas encore connu ») : réciprocité ni vraie ni fausse',
+  mention_paths_non_resolus:
+    'tâche nommée hors de ses paths, dont CHAQUE path est un gabarit : propriété ni vraie ni fausse',
+  mention_paths_en_partie_gabarit:
+    'tâche nommée dans un fichier qu’aucun de ses paths RÉELS ne porte, et qui garde un gabarit : propriété ni vraie ni fausse',
   lot_sans_pr: 'lot écrit sans PR : docs/journal/ indexe ses entrées par PR, rien ne peut l’attester',
   lot_sous_plancher: 'lot sans entrée de journal, PR sous le plancher de docs/journal/README.md',
   autre_depot: 'lot d’une tâche d’un autre dépôt : docs/journal/ n’indexe que les PR d’ici',
@@ -188,22 +198,29 @@ function sansAncre(valeur: string): string {
  * chemins réels ne sont pas encore connus (`docs/gouvernance/GOV-003`, `src/domaine/DM-02`).
  *
  * 🔑 IL DIT « ON NE SAIT PAS ENCORE », PAS « CE N'EST PAS À MOI ». Une garde qui condamnerait ces
- * tâches serait rouge de naissance, donc désarmée dans la semaine (RM-02). Leur réciprocité n'est
- * déclarée ni vraie ni fausse — et chaque cas est IMPRIMÉ et COMPTÉ, sous la nature de son site.
+ * tâches serait rouge de naissance, donc désarmée dans la semaine (RM-02). Une tâche est d'abord jugée
+ * sur ses paths RÉELS ; si aucun ne porte le fichier et qu'elle garde un gabarit, la réciprocité n'est
+ * déclarée ni vraie ni fausse — et chaque cas est IMPRIMÉ et COMPTÉ, sous une nature qui dit si la
+ * tâche a, ou non, des paths réels. Des paths VIDES ne disent rien de tel : la tâche est jugée.
  */
 function estGabarit(t: Tache, chemin: string): boolean {
   return chemin.slice(chemin.lastIndexOf('/') + 1) === t.id;
 }
 
-/** Les `paths` de la tâche sont RENSEIGNÉS : aucun gabarit, et la liste n'est pas vide. */
-function pathsResolus(t: Tache): boolean {
-  const p = t.paths ?? [];
-  return p.length > 0 && !p.some((x) => estGabarit(t, x));
+/** Les paths RÉELS d'une tâche : ceux qui ne sont pas un gabarit. */
+function pathsReels(t: Tache): string[] {
+  return (t.paths ?? []).filter((x) => !estGabarit(t, x));
 }
 
-/** Le motif d'une exemption pour paths non résolus : les paths eux-mêmes, que le lecteur peut vérifier. */
+/** La tâche garde au moins un path gabarit : une part de ce qu'elle touche n'est pas encore connue. */
+function aUnGabarit(t: Tache): boolean {
+  return (t.paths ?? []).some((x) => estGabarit(t, x));
+}
+
+/** Le motif d'une exemption pour paths gabarit : les paths eux-mêmes, réels et gabarit, que le lecteur peut vérifier. */
 function pathsDe(t: Tache): string {
-  return `paths : ${(t.paths ?? []).join(', ') || '(aucun)'}`;
+  const gabarits = (t.paths ?? []).filter((x) => estGabarit(t, x));
+  return `paths réels : ${pathsReels(t).join(', ') || '(aucun)'} · gabarit : ${gabarits.join(', ')}`;
 }
 
 /** La surface qu'une tâche DÉCLARE toucher : ses `paths` et les fichiers de son `tests{}`. */
@@ -279,17 +296,22 @@ export function entreesDeJournal(journal: string): Map<string, string> {
 }
 
 /**
- * Chaque CHAÎNE d'une valeur, à toute profondeur, avec son chemin (`.verifie`, `.alias[1]`,
- * `.preuveRouge.sortie`). Un nombre, un booléen ou `null` ne portent aucune chaîne où un identifiant
- * pourrait vivre : ils ne rendent rien.
+ * Chaque CHAÎNE d'une valeur et chaque NOM DE CLÉ, à toute profondeur, avec son chemin (`.verifie`,
+ * `.alias[1]`, `.exemples[0].sortie`, `.GOV-033 (nom de clé)`). Un nombre, un booléen ou `null` ne portent
+ * aucune chaîne. Itératif et dans l'ordre du texte : aucune profondeur d'imbrication ne le fait tomber.
  */
 function chainesDe(valeur: unknown, chemin: string): [string, string][] {
-  if (typeof valeur === 'string') return [[chemin, valeur]];
-  if (Array.isArray(valeur)) return valeur.flatMap((v, i) => chainesDe(v, `${chemin}[${i}]`));
-  if (valeur !== null && typeof valeur === 'object') {
-    return Object.entries(valeur).flatMap(([cle, v]) => chainesDe(v, `${chemin}.${cle}`));
+  const rendues: [string, string][] = [];
+  const pile: [unknown, string][] = [[valeur, chemin]];
+  while (pile.length > 0) {
+    const [v, ou] = pile.pop() as [unknown, string];
+    if (typeof v === 'string') rendues.push([ou, v]);
+    else if (Array.isArray(v)) for (let i = v.length - 1; i >= 0; i--) pile.push([v[i], `${ou}[${i}]`]);
+    else if (v !== null && typeof v === 'object') {
+      for (const [cle, x] of Object.entries(v).reverse()) pile.push([x, `${ou}.${cle}`], [cle, `${ou}.${cle} (nom de clé)`]);
+    }
   }
-  return [];
+  return rendues;
 }
 
 // ── l'analyse ─────────────────────────────────────────────────────────────────
@@ -303,48 +325,8 @@ export function analyser(s: Sources): Verdict {
     exemptions.push({ nature, tache, site, motif });
 
   const parId = new Map(s.taches.map((t) => [t.id, t]));
-  const exigenceParId = new Map(s.exigences.map((e) => [e.id, e]));
 
-  // ── (1) exigence <-> tâche : les DEUX sens ──────────────────────────────────
-  for (const e of s.exigences) {
-    for (const idTache of e.taches ?? []) {
-      const t = parId.get(idTache);
-      if (!t) {
-        dire(
-          'req_tache_non_reciproque',
-          `docs/requirements.json — ${e.id}.taches cite « ${idTache} », qui n'est pas une tâche de docs/tasks.json.`
-        );
-        continue;
-      }
-      if (!(t.reqs ?? []).includes(e.id)) {
-        dire(
-          'req_tache_non_reciproque',
-          `docs/requirements.json — ${e.id}.taches cite « ${idTache} », et ${idTache}.reqs ne cite pas ${e.id} en retour. ` +
-            `L'attribution n'existe que d'un côté : celui qu'on lit n'est jamais celui qui a été corrigé.`
-        );
-      }
-    }
-  }
-  for (const t of s.taches) {
-    for (const idReq of t.reqs ?? []) {
-      const e = exigenceParId.get(idReq);
-      if (!e) {
-        dire(
-          'req_tache_non_reciproque',
-          `docs/tasks.json — ${t.id}.reqs cite « ${idReq} », qui n'est pas une exigence de docs/requirements.json.`
-        );
-        continue;
-      }
-      if (!(e.taches ?? []).includes(t.id)) {
-        dire(
-          'req_tache_non_reciproque',
-          `docs/tasks.json — ${t.id}.reqs cite « ${idReq} », et ${idReq}.taches ne cite pas ${t.id} en retour.`
-        );
-      }
-    }
-  }
-
-  // ── (2) garde <-> tâche ─────────────────────────────────────────────────────
+  // ── (1) garde <-> tâche ─────────────────────────────────────────────────────
   //
   // ⚠️ CE SENS-LÀ SEULEMENT. La réciproque « une tâche qui déclare un script de garde en est la
   // porteuse » est fausse sur cet arbre, et légitimement : une garde est CRÉÉE par une tâche puis
@@ -371,8 +353,8 @@ export function analyser(s: Sources): Verdict {
       exempter('dette_gate', t.id, site, dette.raison);
       continue;
     }
-    if (!pathsResolus(t)) {
-      exempter('gate_paths_non_resolus', t.id, site, pathsDe(t));
+    if (aUnGabarit(t)) {
+      exempter(pathsReels(t).length === 0 ? 'gate_paths_non_resolus' : 'gate_paths_en_partie_gabarit', t.id, site, pathsDe(t));
       continue;
     }
     dire(
@@ -392,7 +374,7 @@ export function analyser(s: Sources): Verdict {
     );
   }
 
-  // ── (3) poste <-> tâche ─────────────────────────────────────────────────────
+  // ── (2) poste <-> tâche ─────────────────────────────────────────────────────
   const codes = new Set(s.postes.map((p) => p.code));
   for (const t of s.taches) {
     if (!t.owner) continue; // pas d'owner : une absence, pas une attribution
@@ -403,7 +385,7 @@ export function analyser(s: Sources): Verdict {
     );
   }
 
-  // ── (4) lot <-> tâche, attesté par le journal ───────────────────────────────
+  // ── (3) lot <-> tâche, attesté par le journal ───────────────────────────────
   //
   // 🔑 POURQUOI LE JOURNAL, ET PAS `docs/lots/`. `pnpm lot:cloture` écrit `t.lot = lotId` sur toute
   // tâche présente dans le rendu du workflow, SANS vérifier qu'elle appartenait au lot. La
@@ -445,7 +427,7 @@ export function analyser(s: Sources): Verdict {
     );
   }
 
-  // ── (5) tout identifiant de tâche NOMMÉ doit RÉSOUDRE, et désigner une tâche à qui le fichier appartient ──
+  // ── (4) tout identifiant de tâche NOMMÉ doit RÉSOUDRE, et désigner une tâche à qui le fichier appartient ──
   const motif = motifIdentifiant(s.taches);
   const citationsVues = new Set<Citation>();
   const declaree = (ou: string, id: string, admises: readonly NatureDeclaree[]) =>
@@ -454,7 +436,7 @@ export function analyser(s: Sources): Verdict {
   /**
    * @param ou           la clé sous laquelle une déclaration se range (fichier, ou chaîne de gates.json)
    * @param fichier      le fichier dont la tâche nommée doit être propriétaire
-   * @param proprietaire la tâche déjà confrontée à ce fichier par la relation (2), qui ne se juge pas deux fois
+   * @param proprietaire la tâche déjà confrontée à ce fichier par la relation (1), qui ne se juge pas deux fois
    */
   const examiner = (ou: string, fichier: string, texte: string, situer: string, proprietaire?: string) => {
     for (const m of texte.match(motif) ?? []) {
@@ -482,8 +464,8 @@ export function analyser(s: Sources): Verdict {
         exempter('contexte', m, situer, c.raison);
         continue;
       }
-      if (!pathsResolus(t)) {
-        exempter('mention_paths_non_resolus', m, situer, pathsDe(t));
+      if (aUnGabarit(t)) {
+        exempter(pathsReels(t).length === 0 ? 'mention_paths_non_resolus' : 'mention_paths_en_partie_gabarit', m, situer, pathsDe(t));
         continue;
       }
       dire(
@@ -498,8 +480,9 @@ export function analyser(s: Sources): Verdict {
   for (const e of s.entetes) {
     e.lignes.forEach((ligne, i) => examiner(e.fichier, e.fichier, ligne, `${e.fichier}:${i + 1}`));
   }
-  // TOUTE chaîne d'une entrée, à toute profondeur, PAS le seul champ `tache` : sur `gov:plan-state` le
-  // champ `tache` n'a jamais bougé pendant que les identifiants changeaient dans la prose de `verifie`.
+  // Chaque chaîne ET chaque nom de clé d'une entrée, à toute profondeur, PAS le seul champ `tache` : sur
+  // `gov:plan-state` le champ `tache` n'a jamais bougé pendant que les identifiants changeaient dans la
+  // prose de `verifie`. Le texte a été lu sans clé dupliquée (`cleDupliquee`) : ce qui est jugé est ce qui est écrit.
   for (const g of s.gates) {
     for (const [ou, texte] of chainesDe(g, `docs/gates.json:${g.id}`)) {
       examiner(ou, sansAncre(g.script), texte, ou, g.tache);
@@ -521,7 +504,7 @@ export function analyser(s: Sources): Verdict {
     );
   }
 
-  // ── (6) une déclaration dit POURQUOI ────────────────────────────────────────
+  // ── (5) une déclaration dit POURQUOI ────────────────────────────────────────
   for (const c of s.citations) {
     if (c.raison.trim().length >= RAISON_MINIMALE) continue;
     dire(
@@ -730,9 +713,37 @@ const README_JOURNAL = 'docs/journal/README.md';
 /**
  * La ligne du plancher, sous la forme que `gov-etat.ts` lit aussi. Ce module ne l'exporte pas (il
  * sort du processus quand il s'exécute) : si la ligne change de forme, les DEUX refusent en se
- * nommant, et aucun ne devine.
+ * nommant, et aucun ne devine. Écrite plus d'une fois — dans un commentaire invisible au rendu, par
+ * exemple — elle fait refuser cette garde : elle ne choisit pas laquelle fait foi.
  */
-const MOTIF_PLANCHER = /Plancher\s*:\s*le journal couvre les PR de numéro \*\*> (\d+)\*\*/;
+const MOTIF_PLANCHER = /Plancher\s*:\s*le journal couvre les PR de numéro \*\*> (\d+)\*\*/g;
+
+/**
+ * La première clé DUPLIQUÉE d'un texte JSON valide, lue sur le TEXTE. `JSON.parse` garde la dernière
+ * occurrence et jette les autres sans erreur, alors que le lecteur du fichier ou du diff lit la première —
+ * et une résolution de conflit de fusion qui garde les deux côtés produit exactement ce texte. Les clés
+ * se comparent DÉCODÉES : `"id"` et sa forme échappée sont la même clé. Itératif : aucune profondeur
+ * d'imbrication ne le fait tomber.
+ */
+function cleDupliquee(texte: string): { cle: string; ligne: number } | null {
+  const objets: (Set<string> | null)[] = [];
+  const DEUX_POINTS = /\s*:/y;
+  for (const m of texte.matchAll(/"(?:[^"\\]|\\.)*"|[{}[\]]/g)) {
+    const jeton = m[0];
+    if (jeton === '{') objets.push(new Set());
+    else if (jeton === '[') objets.push(null);
+    else if (jeton === '}' || jeton === ']') objets.pop();
+    else {
+      const cles = objets[objets.length - 1];
+      DEUX_POINTS.lastIndex = (m.index as number) + jeton.length;
+      if (!cles || !DEUX_POINTS.test(texte)) continue; // une valeur, pas une clé
+      const cle = JSON.parse(jeton) as string;
+      if (cles.has(cle)) return { cle, ligne: texte.slice(0, m.index).split('\n').length };
+      cles.add(cle);
+    }
+  }
+  return null;
+}
 
 /**
  * LA FORME DE CHAQUE ENTRÉE, pour chaque champ que l'analyse lit. Une entrée qui ne la respecte pas
@@ -755,7 +766,6 @@ const FORMES = {
     id: CHAINE,
     paths: facultatif(CHAINES),
     tests: facultatif(DICTIONNAIRE),
-    reqs: facultatif(CHAINES),
     owner: facultatif(CHAINE, true),
     lot: facultatif(CHAINE, true),
     pr: facultatif(ENTIER, true),
@@ -763,7 +773,6 @@ const FORMES = {
     repo: facultatif(CHAINE),
     attestation: facultatif(OBJET, true),
   } satisfies Record<keyof Tache, Forme>,
-  exigences: { id: CHAINE, taches: facultatif(CHAINES) } satisfies Record<keyof Exigence, Forme>,
   gates: { id: CHAINE, script: CHAINE, tache: facultatif(CHAINE) },
   postes: { code: CHAINE } satisfies Record<keyof Poste, Forme>,
 };
@@ -795,20 +804,27 @@ export function chargerSources(
       );
     }
     // Un identifiant ASCII écrit en UTF-16 (avec ou sans BOM) ou en UTF-32 porte des octets NUL : lu en
-    // UTF-8, il ne serait jamais vu. Un octet NUL fait donc refuser. Sans NUL, les octets non UTF-8 sont
-    // remplacés au décodage et les identifiants ASCII restent lisibles.
+    // UTF-8, il ne serait jamais vu. Un octet NUL, où qu'il soit, fait donc refuser. Sans NUL, les octets
+    // non UTF-8 sont remplacés au décodage et les identifiants ASCII restent lisibles.
     if (octets.includes(0)) {
       throw new SourceIllisible(`${chemin} porte un octet NUL : ce n'est pas du texte UTF-8 (UTF-16, binaire), aucun identifiant n'y serait vu.`);
     }
     return DECODEUR_UTF8.decode(octets);
   };
   const tableau = <T>(chemin: string, cle: keyof typeof FORMES): T[] => {
+    const lu = texte(chemin);
     let doc: unknown;
     try {
-      doc = JSON.parse(texte(chemin));
+      doc = JSON.parse(lu);
     } catch (e) {
-      if (e instanceof SourceIllisible) throw e;
       throw new SourceIllisible(`${chemin} n'est pas du JSON lisible (${(e as Error).message}).`);
+    }
+    const double = cleDupliquee(lu);
+    if (double) {
+      throw new SourceIllisible(
+        `${chemin}:${double.ligne} — la clé « ${double.cle} » est écrite deux fois dans le même objet : JSON.parse ` +
+          `garderait la dernière, le lecteur du fichier ou du diff lit la première. La garde ne choisit pas.`
+      );
     }
     const valeur = doc !== null && typeof doc === 'object' ? (doc as Record<string, unknown>)[cle] : undefined;
     if (!Array.isArray(valeur)) {
@@ -832,20 +848,22 @@ export function chargerSources(
   if (journaux.length === 0) {
     throw new SourceIllisible(`aucun fichier de journal SUIVI sous docs/journal/ : l'attestation des lots n'aurait aucune source.`);
   }
-  const plancher = MOTIF_PLANCHER.exec(texte(README_JOURNAL));
-  if (!plancher) {
+  const planchers = [...texte(README_JOURNAL).matchAll(MOTIF_PLANCHER)];
+  if (planchers.length !== 1) {
     throw new SourceIllisible(
-      `le plancher du journal est introuvable dans ${README_JOURNAL} (forme attendue : « Plancher : le journal couvre les PR de numéro **> <n>** »).`
+      planchers.length === 0
+        ? `le plancher du journal est introuvable dans ${README_JOURNAL} (forme attendue : « Plancher : le journal couvre les PR de numéro **> <n>** »).`
+        : `le plancher du journal est écrit ${planchers.length} fois dans ${README_JOURNAL} (${planchers.map((p) => `> ${p[1]}`).join(', ')}) : ` +
+            `la garde ne choisit pas laquelle fait foi, et une ligne invisible au rendu en fait partie peut-être.`
     );
   }
 
   return {
     taches: tableau<Tache>('docs/tasks.json', 'taches'),
-    exigences: tableau<Exigence>('docs/requirements.json', 'exigences'),
     gates: tableau<Gate>('docs/gates.json', 'gates'),
     postes: tableau<Poste>('docs/agents.json', 'postes'),
     journal: journaux.map(texte).join('\n'),
-    plancherJournal: Number(plancher[1]),
+    plancherJournal: Number((planchers[0] as RegExpExecArray)[1]),
     // TOUT fichier suivi de `scripts/` et `tests/`, quelle que soit son extension : l'acceptance dit
     // « tout fichier suivi », et un filtre d'extension est un périmètre qui s'ampute en silence.
     entetes: suivis
@@ -856,12 +874,42 @@ export function chargerSources(
   };
 }
 
+// ── le verdict RENDU : une seule fonction, pour la garde et pour la preuve ────
+
+function rendreVert(exemptions: Exemption[]): string[] {
+  const lignes = [
+    `✅ gov:attributions — aucune attribution rompue (${FAMILLES.length} familles). ` +
+      `${exemptions.length} exemption(s), chacune imprimée sous la rubrique de sa nature : une exemption tue serait un vert qui ment.`,
+  ];
+  for (const nature of NATURES) {
+    const siennes = exemptions.filter((e) => e.nature === nature);
+    if (siennes.length === 0) continue;
+    lignes.push(`   ${nature.startsWith('dette') ? '⛔' : '·'} ${nature} (${siennes.length}) — ${SENS[nature]}`);
+    siennes.forEach((e) => lignes.push(`      ${e.tache} — ${e.site} : ${e.motif}`));
+  }
+  return lignes;
+}
+
+/**
+ * Le code de sortie et les lignes d'un verdict. `principal` n'en a pas d'autre, et `--prove` le juge sur
+ * CHAQUE cas : un témoin dont le verdict rendu sort 0, ou qui imprime une bannière de succès, fait
+ * rougir la preuve — quelle que soit sa famille.
+ */
+function rendre({ fautes, exemptions }: Verdict): { code: number; lignes: string[] } {
+  if (fautes.length === 0) return { code: 0, lignes: rendreVert(exemptions) };
+  const lignes = [`❌ gov:attributions — ${fautes.length} attribution(s) rompue(s) (REQ-GOV-021, REQ-GOV-003) :\n`];
+  fautes.forEach((f) => lignes.push(`   [${f.famille}] ${f.message}`));
+  lignes.push(`\nUne attribution fausse envoie le lecteur suivant chercher dans un fichier que personne n'a touché.`);
+  return { code: 1, lignes };
+}
+
 // ── la preuve : un témoin par famille, un contre-témoin par nature d'exemption ─
 //
-// INVARIANT, repris de `gov:publication` : `--prove` n'accepte AUCUN décompte. Il exige que ses juges
-// refusent les cas déclarés une fois faussés, qu'un témoin DÉCLARÉ pour chaque famille la fasse rougir
-// en NOMMANT ce qu'il annonce, qu'aucun contre-témoin ne fasse rougir aucune famille, et que chaque
-// contre-témoin rende EXACTEMENT les exemptions qu'il annonce, occurrence par occurrence.
+// INVARIANT, repris de `gov:publication` : `--prove` n'accepte AUCUN décompte. Il exige qu'un témoin
+// DÉCLARÉ pour chaque famille la fasse rougir en NOMMANT ce qu'il annonce et que son verdict rendu sorte
+// en échec, qu'aucun contre-témoin ne fasse rougir aucune famille, que chaque contre-témoin rende
+// EXACTEMENT les exemptions qu'il annonce, occurrence par occurrence — puis que ses juges refusent les
+// cas déclarés une fois faussés.
 
 export type Temoin = { famille: Famille; quoi: string; sources: Partial<Sources>; nomme: string[] };
 export type ContreTemoin = { quoi: string; sources: Partial<Sources>; exemptions?: Nature[] };
@@ -870,7 +918,6 @@ export type ContreTemoin = { quoi: string; sources: Partial<Sources>; exemptions
 function completer(p: Partial<Sources>): Sources {
   return {
     taches: p.taches ?? [],
-    exigences: p.exigences ?? [],
     gates: p.gates ?? [],
     postes: p.postes ?? [],
     journal: p.journal ?? '',
@@ -885,7 +932,6 @@ const T_RESOLUE: Tache = {
   id: 'GOV-100',
   paths: ['scripts/gates/porte.ts'],
   tests: {},
-  reqs: [],
   owner: null,
   lot: null,
   pr: null,
@@ -896,6 +942,8 @@ const T_VOISINE: Tache = { ...T_RESOLUE, id: 'GOV-101', paths: ['scripts/gates/a
 /** Des tâches aux paths GABARIT. */
 const T_GABARIT: Tache = { ...T_RESOLUE, id: 'GOV-003', paths: ['docs/gouvernance/GOV-003'] };
 const T_GABARIT_BIS: Tache = { ...T_RESOLUE, id: 'GOV-004', paths: ['docs/gouvernance/GOV-004'] };
+/** Une tâche aux paths MIXTES : un path réel qui ne porte pas le fichier jugé, et un gabarit. */
+const T_MIXTE: Tache = { ...T_RESOLUE, id: 'GOV-007', paths: ['docs/gouvernance/GOV-007', 'prisma/schema.prisma'] };
 const JOURNAL = '## PR #31 — 2026-09-10 — feat(GOV-024): lot L-1-04\n\n**Fait.** Neuf tâches.\n';
 const RAISON = 'une raison qui dit pourquoi, relisible par la session suivante';
 const DEPOT_ETRANGER = Object.keys(DEPOTS).find((r) => r !== DEPOT_LOCAL && DEPOTS[r] !== null) as string;
@@ -903,32 +951,7 @@ const entete = (lignes: string[], fichier = 'scripts/gates/porte.ts'): Entete[] 
 const PII = { id: 'detectPii', script: 'scripts/gates/detect-pii.ts', tache: 'GOV-100' };
 
 const TEMOINS: Temoin[] = [
-  // ── (1) exigence <-> tâche ──
-  {
-    famille: 'req_tache_non_reciproque',
-    quoi: 'une exigence cite une tâche qui ne la cite pas en retour',
-    sources: { taches: [T_RESOLUE], exigences: [{ id: 'REQ-GOV-900', taches: ['GOV-100'] }] },
-    nomme: ['REQ-GOV-900', 'GOV-100'],
-  },
-  {
-    famille: 'req_tache_non_reciproque',
-    quoi: 'une tâche cite une exigence qui ne la cite pas en retour',
-    sources: { taches: [{ ...T_RESOLUE, reqs: ['REQ-GOV-900'] }], exigences: [{ id: 'REQ-GOV-900', taches: [] }] },
-    nomme: ['REQ-GOV-900', 'GOV-100'],
-  },
-  {
-    famille: 'req_tache_non_reciproque',
-    quoi: 'une exigence cite une tâche INEXISTANTE',
-    sources: { exigences: [{ id: 'REQ-GOV-900', taches: ['GOV-999'] }] },
-    nomme: ['GOV-999'],
-  },
-  {
-    famille: 'req_tache_non_reciproque',
-    quoi: 'une tâche cite une exigence INEXISTANTE',
-    sources: { taches: [{ ...T_RESOLUE, reqs: ['REQ-GOV-999'] }] },
-    nomme: ['REQ-GOV-999'],
-  },
-  // ── (2) garde <-> tâche ──
+  // ── (1) garde <-> tâche ──
   {
     famille: 'gate_tache_inconnue',
     quoi: 'une gate est attribuée à une tâche qui n’existe pas',
@@ -940,6 +963,12 @@ const TEMOINS: Temoin[] = [
     quoi: 'une gate déclare un porteur que la tâche ne déclare pas en retour',
     sources: { taches: [T_RESOLUE], gates: [PII] },
     nomme: ['detectPii', 'scripts/gates/detect-pii.ts', 'GOV-100'],
+  },
+  {
+    famille: 'gate_non_reciproque',
+    quoi: 'une tâche aux paths VIDES n’est pas exemptée : elle ne déclare pas le script en retour',
+    sources: { taches: [{ ...T_RESOLUE, paths: [] }], gates: [PII] },
+    nomme: ['detectPii'],
   },
   {
     famille: 'gate_non_reciproque',
@@ -957,14 +986,14 @@ const TEMOINS: Temoin[] = [
     },
     nomme: ['nouvelle'],
   },
-  // ── (3) poste <-> tâche ──
+  // ── (2) poste <-> tâche ──
   {
     famille: 'owner_hors_registre',
     quoi: 'un owner absent du registre des agents',
     sources: { taches: [{ ...T_RESOLUE, owner: 'A99' }], postes: [{ code: 'A01' }] },
     nomme: ['GOV-100', 'A99'],
   },
-  // ── (4) lot <-> tâche ──
+  // ── (3) lot <-> tâche ──
   {
     famille: 'lot_non_atteste',
     quoi: 'une tâche étrangère au lot : l’entrée de sa PR ne nomme pas son lot — le message cite l’ANCRE et la RÉFÉRENCE',
@@ -997,7 +1026,7 @@ const TEMOINS: Temoin[] = [
     },
     nomme: ['L-9-99', ancreDeJournal(27)],
   },
-  // ── (5) mentions ──
+  // ── (4) mentions ──
   {
     famille: 'mention_non_resolue',
     quoi: 'un en-tête nomme un identifiant bien formé qui ne résout pas',
@@ -1030,6 +1059,33 @@ const TEMOINS: Temoin[] = [
       gates: [{ id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', preuveRouge: { sortie: 'la lacune de GOV-033' } }],
     },
     nomme: ['docs/gates.json:g.preuveRouge.sortie', 'GOV-033'],
+  },
+  {
+    famille: 'mention_non_resolue',
+    quoi: 'une chaîne d’un OBJET posé DANS un TABLEAU est lue',
+    sources: {
+      taches: [T_RESOLUE],
+      gates: [{ id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', exemples: [{ sortie: 'la lacune de GOV-033' }] }],
+    },
+    nomme: ['docs/gates.json:g.exemples[0].sortie', 'GOV-033'],
+  },
+  {
+    famille: 'mention_non_resolue',
+    quoi: 'un élément d’un TABLEAU posé DANS un OBJET est lu',
+    sources: {
+      taches: [T_RESOLUE],
+      gates: [{ id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', preuveRouge: { lignes: ['rien', 'GOV-033'] } }],
+    },
+    nomme: ['docs/gates.json:g.preuveRouge.lignes[1]', 'GOV-033'],
+  },
+  {
+    famille: 'mention_non_resolue',
+    quoi: 'un identifiant écrit comme NOM DE CLÉ d’une entrée de docs/gates.json est lu',
+    sources: {
+      taches: [T_RESOLUE],
+      gates: [{ id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', 'GOV-033': 'porté ici' }],
+    },
+    nomme: ['docs/gates.json:g.GOV-033 (nom de clé)'],
   },
   {
     famille: 'mention_non_resolue',
@@ -1118,7 +1174,7 @@ const TEMOINS: Temoin[] = [
     },
     nomme: ['detectPii'],
   },
-  // ── (6) raisons ──
+  // ── (5) raisons ──
   {
     famille: 'declaration_sans_raison',
     quoi: 'une raison faite de blancs est vide',
@@ -1177,10 +1233,6 @@ const TEMOINS: Temoin[] = [
  */
 const CONTRE_TEMOINS: ContreTemoin[] = [
   {
-    quoi: 'une attribution exigence <-> tâche réciproque des deux côtés',
-    sources: { taches: [{ ...T_RESOLUE, reqs: ['REQ-GOV-900'] }], exigences: [{ id: 'REQ-GOV-900', taches: ['GOV-100'] }] },
-  },
-  {
     quoi: 'une gate déclarée dans les paths de sa tâche',
     sources: { taches: [{ ...T_RESOLUE, paths: ['scripts/gates/detect-pii.ts'] }], gates: [PII] },
   },
@@ -1210,9 +1262,30 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
     exemptions: ['gate_paths_non_resolus'],
   },
   {
+    quoi: 'une gate d’une tâche aux paths MIXTES, dont le path réel ne porte pas le script : exemptée sous sa propre nature',
+    sources: {
+      taches: [T_MIXTE],
+      gates: [{ id: 'gov:pr', script: 'scripts/gates/gov-pr.ts', tache: 'GOV-007' }],
+    },
+    exemptions: ['gate_paths_en_partie_gabarit'],
+  },
+  {
     quoi: 'un en-tête nomme une tâche aux paths GABARIT : ni vraie ni fausse, et exemptée en le disant',
     sources: { taches: [T_RESOLUE, T_GABARIT], entetes: entete(['// étendue par GOV-003']) },
     exemptions: ['mention_paths_non_resolus'],
+  },
+  {
+    quoi: 'un en-tête nomme une tâche aux paths MIXTES qu’aucun path réel ne relie au fichier : exemptée sous sa propre nature',
+    sources: { taches: [T_RESOLUE, T_MIXTE], entetes: entete(['// portée par GOV-007']) },
+    exemptions: ['mention_paths_en_partie_gabarit'],
+  },
+  {
+    quoi: 'une tâche aux paths MIXTES dont le path RÉEL porte le fichier : jugée, et rien d’exempté',
+    sources: {
+      taches: [{ ...T_MIXTE, paths: ['docs/gouvernance/GOV-007', 'scripts/gates/porte.ts'] }],
+      entetes: entete(['// portée par GOV-007']),
+      gates: [{ id: 'porte', script: 'scripts/gates/porte.ts', tache: 'GOV-007' }],
+    },
   },
   {
     quoi: 'CHAQUE occurrence est une exemption : deux tâches sur un site, la même tâche deux fois sur une ligne, puis sur une autre',
@@ -1334,12 +1407,15 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
   },
 ];
 
-/** `null` si le témoin rougit sur SA famille en nommant ce qu'il annonce ; sinon, pourquoi. */
-function jugerTemoin(t: Temoin): string | null {
-  const { fautes } = analyser(completer(t.sources));
-  const siennes = fautes.filter((f) => f.famille === t.famille);
+/** Ce qui rend un verdict : `rendre` pour la garde ; un rendu faussé, pour éprouver les juges. */
+type Rendu = (v: Verdict) => { code: number; lignes: string[] };
+
+/** `null` si le témoin rougit sur SA famille en nommant ce qu'il annonce, et que son verdict RENDU sort en échec ; sinon, pourquoi. */
+function jugerTemoin(t: Temoin, rendu: Rendu = rendre): string | null {
+  const verdict = analyser(completer(t.sources));
+  const siennes = verdict.fautes.filter((f) => f.famille === t.famille);
   if (siennes.length === 0) {
-    const autres = [...new Set(fautes.map((f) => f.famille))];
+    const autres = [...new Set(verdict.fautes.map((f) => f.famille))];
     return (
       `❌ Le témoin « ${t.quoi} » n'a PAS fait rougir « ${t.famille} »` +
       (autres.length > 0 ? ` — il a rougi par ${autres.join(', ')}, qui n'est pas sa famille.` : '.')
@@ -1347,12 +1423,17 @@ function jugerTemoin(t: Temoin): string | null {
   }
   const muets = t.nomme.filter((n) => !siennes.some((f) => f.message.includes(n)));
   if (muets.length > 0) return `❌ Le témoin « ${t.quoi} » rougit sans NOMMER : ${muets.join(', ')}.`;
+  const rendus = rendu(verdict);
+  if (rendus.code === 0 || rendus.lignes.some((l) => l.startsWith('✅'))) {
+    return `❌ Le témoin « ${t.quoi} » rougit sur « ${t.famille} », et le verdict RENDU sort ${rendus.code} ou imprime une bannière de succès : la garde imprimerait sa faute et rendrait la main en succès.`;
+  }
   return null;
 }
 
-/** `null` si le contre-témoin reste vert ET rend exactement ses exemptions, occurrence par occurrence ; sinon, pourquoi. */
-function jugerContreTemoin(c: ContreTemoin): string | null {
-  const { fautes, exemptions } = analyser(completer(c.sources));
+/** `null` si le contre-témoin reste vert, rend exactement ses exemptions, occurrence par occurrence, et que son verdict RENDU sort 0 ; sinon, pourquoi. */
+function jugerContreTemoin(c: ContreTemoin, rendu: Rendu = rendre): string | null {
+  const verdict = analyser(completer(c.sources));
+  const { fautes, exemptions } = verdict;
   if (fautes.length > 0) {
     return (
       `❌ Faux positif : « ${c.quoi} » a fait rougir « ${fautes[0]?.famille} ».\n   ${fautes[0]?.message}\n` +
@@ -1367,23 +1448,31 @@ function jugerContreTemoin(c: ContreTemoin): string | null {
       `Une exemption ajoutée ou tue change ce que la bannière verte affirme.`
     );
   }
+  if (rendu(verdict).code !== 0) return `❌ « ${c.quoi} » ne rougit sur aucune famille, et le verdict RENDU sort en échec.`;
   return null;
 }
 
 /**
- * LES JUGES SE PROUVENT AVANT DE JUGER. Un juge qui accepte tout rend `--prove` vert sur n'importe quels
- * cas : chaque cas DÉCLARÉ lui est donc aussi présenté FAUSSÉ, et il doit le refuser —
+ * LES JUGES SONT ÉPROUVÉS APRÈS LES CAS. Un juge qui accepte tout rend `--prove` vert sur n'importe quels
+ * cas : chaque cas DÉCLARÉ, une fois jugé, lui est présenté FAUSSÉ, et il doit le refuser —
  *   — un témoin rattaché à une famille qu'il ne fait pas rougir ;
- *   — un témoin qui annonce un nom qu'aucun de ses messages ne porte ;
+ *   — un témoin qui annonce un nom qu'aucun de ses messages ne porte, ou que seul le message d'une AUTRE famille porte ;
+ *   — un témoin dont le verdict rendu sort 0, ou imprime une bannière de succès ;
  *   — un témoin présenté comme contre-témoin (il rougit) ;
- *   — un contre-témoin qui annonce une exemption de PLUS, ou de MOINS, que ce qu'il rend.
+ *   — un contre-témoin dont le verdict rendu sort en échec ;
+ *   — un contre-témoin qui annonce une exemption de PLUS, ou de MOINS, que ce qu'il rend ;
+ *   — un contre-témoin qui annonce le MÊME nombre d'exemptions, dont une d'une AUTRE nature.
  * Rend la liste des cas faussés qu'un juge a ACCEPTÉS.
  */
 function jugesComplaisants(): string[] {
   const acceptes: string[] = [];
   const ABSENT = 'NOM-QU-AUCUN-MESSAGE-NE-PORTE';
+  const muet: Rendu = (v) => ({ ...rendre(v), code: 0 });
+  const triomphant: Rendu = (v) => ({ ...rendre(v), lignes: ['✅ gov:attributions — succès', ...rendre(v).lignes] });
+  const bruyant: Rendu = (v) => ({ ...rendre(v), code: 1 });
   for (const t of TEMOINS) {
-    const produites = new Set(analyser(completer(t.sources)).fautes.map((f) => f.famille));
+    const { fautes } = analyser(completer(t.sources));
+    const produites = new Set(fautes.map((f) => f.famille));
     const etrangere = FAMILLES.find((f) => !produites.has(f));
     if (etrangere && jugerTemoin({ ...t, famille: etrangere }) === null) {
       acceptes.push(`jugerTemoin accepte « ${t.quoi} » rattaché à « ${etrangere} », qu'il ne fait pas rougir`);
@@ -1391,17 +1480,35 @@ function jugesComplaisants(): string[] {
     if (jugerTemoin({ ...t, nomme: [...t.nomme, ABSENT] }) === null) {
       acceptes.push(`jugerTemoin accepte « ${t.quoi} » annonçant un nom qu'aucun message ne porte`);
     }
-    if (jugerContreTemoin({ quoi: t.quoi, sources: t.sources }) === null) {
-      acceptes.push(`jugerContreTemoin accepte le témoin « ${t.quoi} », qui rougit`);
+    // Un nom que seul le message d'une AUTRE famille porte : présent quand le témoin fait rougir plusieurs familles.
+    const siens = fautes.filter((f) => f.famille === t.famille).map((f) => f.message);
+    const emprunte = fautes
+      .filter((f) => f.famille !== t.famille)
+      .flatMap((f) => f.message.split(/\s+/))
+      .find((mot) => mot.length > 3 && !siens.some((m) => m.includes(mot)));
+    if (emprunte && jugerTemoin({ ...t, nomme: [...t.nomme, emprunte] }) === null) {
+      acceptes.push(`jugerTemoin accepte « ${t.quoi} » annonçant « ${emprunte} », que seul le message d'une autre famille porte`);
+    }
+    if (jugerTemoin(t, muet) === null) acceptes.push(`jugerTemoin accepte « ${t.quoi} » dont le verdict rendu sort 0`);
+    if (jugerTemoin(t, triomphant) === null) acceptes.push(`jugerTemoin accepte « ${t.quoi} » dont le verdict rendu imprime une bannière de succès`);
+    // Rendu MUET : le faux positif doit être vu par le juge lui-même, pas seulement par le code de sortie.
+    if (jugerContreTemoin({ quoi: t.quoi, sources: t.sources }, muet) === null) {
+      acceptes.push(`jugerContreTemoin accepte le témoin « ${t.quoi} », qui rougit, dès que son verdict rendu sort 0`);
     }
   }
   for (const c of CONTRE_TEMOINS) {
     const annoncees = c.exemptions ?? [];
+    if (jugerContreTemoin(c, bruyant) === null) acceptes.push(`jugerContreTemoin accepte « ${c.quoi} » dont le verdict rendu sort en échec`);
     if (jugerContreTemoin({ ...c, exemptions: [...annoncees, NATURES[0]] }) === null) {
       acceptes.push(`jugerContreTemoin accepte « ${c.quoi} » annonçant une exemption de PLUS`);
     }
-    if (annoncees.length > 0 && jugerContreTemoin({ ...c, exemptions: annoncees.slice(1) }) === null) {
+    if (annoncees.length === 0) continue;
+    if (jugerContreTemoin({ ...c, exemptions: annoncees.slice(1) }) === null) {
       acceptes.push(`jugerContreTemoin accepte « ${c.quoi} » annonçant une exemption de MOINS`);
+    }
+    const autre = NATURES.find((n) => n !== annoncees[0]) as Nature;
+    if (jugerContreTemoin({ ...c, exemptions: [autre, ...annoncees.slice(1)] }) === null) {
+      acceptes.push(`jugerContreTemoin accepte « ${c.quoi} » annonçant autant d’exemptions, dont une « ${autre} » qu’il ne rend pas`);
     }
   }
   return acceptes;
@@ -1459,22 +1566,6 @@ export function prouver(): { code: number; lignes: string[] } {
   };
 }
 
-// ── la sortie verte : chaque exemption sous la rubrique de sa nature ──────────
-
-function rendreVert(exemptions: Exemption[]): string[] {
-  const lignes = [
-    `✅ gov:attributions — aucune attribution rompue (${FAMILLES.length} familles). ` +
-      `${exemptions.length} exemption(s), chacune imprimée sous la rubrique de sa nature : une exemption tue serait un vert qui ment.`,
-  ];
-  for (const nature of NATURES) {
-    const siennes = exemptions.filter((e) => e.nature === nature);
-    if (siennes.length === 0) continue;
-    lignes.push(`   ${nature.startsWith('dette') ? '⛔' : '·'} ${nature} (${siennes.length}) — ${SENS[nature]}`);
-    siennes.forEach((e) => lignes.push(`      ${e.tache} — ${e.site} : ${e.motif}`));
-  }
-  return lignes;
-}
-
 // ── point d'entrée ────────────────────────────────────────────────────────────
 //
 // UNE SEULE SORTIE, ET ELLE EST TERMINALE. Le verdict est CALCULÉ, puis rendu par un unique appel
@@ -1500,13 +1591,7 @@ function principal(): { code: number; lignes: string[] } {
       ],
     };
   }
-
-  const { fautes, exemptions } = analyser(sources);
-  if (fautes.length === 0) return { code: 0, lignes: rendreVert(exemptions) };
-  const lignes = [`❌ gov:attributions — ${fautes.length} attribution(s) rompue(s) (REQ-GOV-021, REQ-GOV-003) :\n`];
-  fautes.forEach((f) => lignes.push(`   [${f.famille}] ${f.message}`));
-  lignes.push(`\nUne attribution fausse envoie le lecteur suivant chercher dans un fichier que personne n'a touché.`);
-  return { code: 1, lignes };
+  return rendre(analyser(sources));
 }
 
 if (process.argv[1] !== undefined && /gov-attributions[.](ts|js)$/.test(process.argv[1])) {
