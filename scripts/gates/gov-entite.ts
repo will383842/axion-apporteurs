@@ -190,8 +190,50 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
  *     donc un balayage UTF-8 y rendrait un vert qui ne prouve rien. Le jour où un PDF signé sera
  *     suivi par ce dépôt, c'est son TEXTE EXTRAIT qu'il faudra juger — une tâche, pas une ligne.
  */
-export const EXTENSIONS_REFUSEES =
-  /\.(png|jpe?g|gif|bmp|tiff?|webp|avif|ico|icns|svgz|eps|psd|ai|xcf|heic|heif|woff2?|ttf|otf|eot|zip|gz|tgz|bz2|xz|zst|7z|rar|tar|jar|war|mp[34]|m4[av]|mov|avi|mkv|webm|wav|ogg|og[av]|flac|aac|wm[av]|pdf|docx?|xlsx?|pptx?|odt|ods|odp|exe|dll|so|dylib|bin|wasm|class|node|pyc|pyo|obj|lib|sqlite3?|db|mdb|p12|pfx|jks|der)$/i;
+/**
+ * LES FAMILLES BINAIRES, EN DONNÉE — et c'est A10 · mutation qui l'a exigé (PR #39, 3e tour).
+ *
+ * 🔴 CE QU'UN LITTÉRAL DE REGEXP LAISSAIT PASSER. Tant que la liste de refus n'existait que sous
+ * forme de MOTIF, le témoin qui la garde ne pouvait que RE-ANALYSER son texte — et il ne lisait
+ * qu'entre la première `(` et la première `)`. Une alternation posée HORS du groupe,
+ * `…|der)$|[.](netrc|npmrc|pgpass|cfg)$/i`, sortait quatre emplacements canoniques de secret du
+ * balayage d'un dépôt PUBLIC, suite ENTIÈREMENT VERTE, le témoin annonçant toujours « 69 familles,
+ * 0 intrus ». `.netrc`, `.npmrc`, `.pgpass`, `.cfg` : rien ne les lisait plus, rien ne le disait.
+ *
+ * 🔑 *Un témoin qui re-analyse une ÉCRITURE garde l'écriture, pas la PROPRIÉTÉ.* La liste est donc
+ * la donnée, et le motif en est DÉRIVÉ : il n'y a plus de groupe à écrire à la main, donc plus de
+ * « hors du groupe ». Le témoin confronte deux LISTES et ne découpe plus aucune chaîne.
+ *
+ * ⚠️ Les entrées sont des FRAGMENTS de motif, pas des extensions : `jpe?g`, `mp[34]`, `docx?`
+ * couvrent chacune plusieurs familles. C'est délibéré — l'alternative serait de les énumérer, donc
+ * de rallonger une liste, ce que la lentille `mutation` a explicitement refusé.
+ */
+export const FAMILLES_BINAIRES: readonly string[] = [
+  'png', 'jpe?g', 'gif', 'bmp', 'tiff?', 'webp',
+  'avif', 'ico', 'icns', 'svgz', 'eps', 'psd',
+  'ai', 'xcf', 'heic', 'heif', 'woff2?', 'ttf',
+  'otf', 'eot', 'zip', 'gz', 'tgz', 'bz2',
+  'xz', 'zst', '7z', 'rar', 'tar', 'jar',
+  'war', 'mp[34]', 'm4[av]', 'mov', 'avi', 'mkv',
+  'webm', 'wav', 'ogg', 'og[av]', 'flac', 'aac',
+  'wm[av]', 'pdf', 'docx?', 'xlsx?', 'pptx?', 'odt',
+  'ods', 'odp', 'exe', 'dll', 'so', 'dylib',
+  'bin', 'wasm', 'class', 'node', 'pyc', 'pyo',
+  'obj', 'lib', 'sqlite3?', 'db', 'mdb', 'p12',
+  'pfx', 'jks', 'der',
+];
+
+/**
+ * Le motif de refus, CONSTRUIT depuis la donnée. Exporté pour que le témoin puisse le reconstruire
+ * et exiger l'IDENTITÉ — c'est ce qui interdit de réécrire `EXTENSIONS_REFUSEES` à la main.
+ */
+export function motifDeRefus(familles: readonly string[]): RegExp {
+  // `[.]` plutot que la sequence d'echappement : elle traverse deux couches (source TS, puis
+  // moteur de regexp) et s'y perd — mesure faite, elle a rendu un point METACARACTERE.
+  return new RegExp('[.](' + familles.join('|') + ')$', 'i');
+}
+
+export const EXTENSIONS_REFUSEES = motifDeRefus(FAMILLES_BINAIRES);
 
 /**
  * CE FICHIER EST-IL REGARDÉ ? Fonction PURE et EXPORTÉE, et ce n'est pas un rangement.
@@ -217,14 +259,31 @@ export const EXTENSIONS_REFUSEES =
  * l'annonce, non. (Constat (3) de GOV-036 : il était déjà fermé par la 4ᵉ passe de la PR #31, et
  * seule cette relecture-ci pouvait le dire — un constat se vérifie avant de se corriger.)
  *
- * MESURE PAR MUTATION (RM-02), refaite sur la forme de refus — `npx vitest run` du banc d'essai
- * de la garde (`npx vitest run tests/unit/gouvernance/entite-registre.spec.ts` en rend le compte) :
- *   — `EXTENSIONS_REFUSEES` remplacée par un attrape-tout `/.*$/` (plus rien n'est lu) → **4
- *     échecs**, dont le témoin dérivé du disque et le cas `.sh` de bout en bout. Les deux
- *     contre-témoins binaires restent VERTS, et c'est normal : ils gardent l'autre sens.
- *   — remplacée par `/$^/`, qui ne refuse rien (le filtre n'est plus un filtre) → **2 échecs**,
- *     exactement les deux contre-témoins binaires.
- * Aucune des deux mutations ne survit, et aucune n'est tuée par le même témoin.
+ * MESURE PAR MUTATION (RM-02), refaite sur la forme de refus. AUCUN NOMBRE D'ÉCHECS N'EST ÉCRIT
+ * ICI, et c'est le même remède qu'au bloc `CODES_PAYS` vingt lignes plus bas : deux comptes y ont
+ * été tapés (« 4 échecs », « 2 échecs »), tous deux périmés par le commit qui a ajouté l'ancrage du
+ * renversement, aucun comparateur pour le dire. On garde QUI rougit — la seule chose qu'un compte
+ * ne dit pas — et la commande qui rend le reste :
+ *
+ *     npx vitest run tests/unit/gouvernance/entite-registre.spec.ts
+ *
+ *   — `EXTENSIONS_REFUSEES` remplacée par un attrape-tout `/.*$/` (plus rien n'est lu) : rougissent
+ *     `un secret ne choisit pas son extension`, `ANCRAGE : aucune famille de TEXTE ne peut entrer
+ *     dans la liste de REFUS`, `ANCRAGE : le motif de refus est DÉRIVÉ de la donnée`, `la
+ *     population balayée est celle du DISQUE`, `les familles qu'une liste d'AUTORISATION oubliait`
+ *     et `un script shell qui exporte l'IBAN débiteur`. Les deux contre-témoins binaires restent
+ *     VERTS, et c'est normal : ils gardent l'autre sens.
+ *   — remplacée par `/$^/`, qui ne refuse rien (le filtre n'est plus un filtre) : rougissent les
+ *     deux contre-témoins binaires (`un fichier binaire ou d'image n'est pas balayé`, `CONTRE-
+ *     TÉMOIN : le filtre reste un FILTRE`) et, à nouveau, `ANCRAGE : le motif de refus est DÉRIVÉ
+ *     de la donnée`.
+ *
+ * ⚠️ ET LES DEUX MUTATIONS SONT TUÉES PAR UN TÉMOIN COMMUN — celui de la dérivation, puisque toutes
+ * deux réécrivent le motif à la main. Une rédaction antérieure affirmait « aucune n'est tuée par le
+ * même témoin » : c'était déjà faux avant ce commit (l'ancrage des familles déclarées tombait sur
+ * les deux), et c'est cette phrase qui servait à justifier de garder les deux mutations au dossier.
+ * Elles s'y gardent, mais pour la bonne raison : leurs AUTRES témoins sont disjoints, et chacune
+ * éprouve un sens de l'erreur que l'autre ne touche pas.
  */
 export function estBalaye(chemin: string): boolean {
   // Le sens du refus est le seul qui se trompe du bon côté : une famille inconnue est LUE.
@@ -376,12 +435,19 @@ export function estExemplePlausible(v: string): boolean {
  *
  *     npx vitest run tests/unit/gouvernance/entite-registre.spec.ts
  *
- *   — `CODES_PAYS` remis à la liste TAPÉE de 47 entrées d'avant GOV-036 → **8 échecs** : les cinq
- *     IBAN étrangers (TR, IL, RS, AL, LB), les deux cas qui exigent que `--prove` les NOMME, et le
- *     témoin des onze familles. C'est la mesure du constat (1), reproduite en sens inverse.
- *   — le plancher neutralisé (`codes.length < 0`), la dérivation rétrécit alors en silence →
- *     **1 échec**, le témoin du refus. Sans lui, une ICU amputée rendrait un `✅` sur une forme
- *     d'IBAN qui ne reconnaît plus rien, et rien dans la CI ne changerait de couleur.
+ *   — `CODES_PAYS` remis à la liste TAPÉE de 47 entrées d'avant GOV-036 : rougissent les cinq IBAN
+ *     étrangers (TR, IL, RS, AL, LB), les deux cas qui exigent que `--prove` les NOMME, le témoin
+ *     des onze familles, et les deux ancrages du bloc pays — celui de non-régression et celui de
+ *     l'IDENTITÉ producteur/consommateur. C'est la mesure du constat (1), en sens inverse. Le
+ *     compte a été écrit ici (« 8 échecs ») et il s'est périmé au commit MÊME qui l'écrivait,
+ *     lequel recâblait l'ancrage sur `CODES_PAYS` : c'est pourquoi il n'y en a plus.
+ *   — le plancher neutralisé (`codes.length < 0`), la dérivation rétrécit alors en silence :
+ *     rougit le témoin du refus, et lui seul. Sans lui, une ICU amputée rendrait un `✅` sur une
+ *     forme d'IBAN qui ne reconnaît plus rien, et rien dans la CI ne changerait de couleur.
+ *   — `CODES_PAYS` filtré, AU POINT DE CONSOMMATION, de codes que l'ancrage ne nomme pas (la
+ *     survivante S1 de A10 · mutation, trois tours durant) : rougit `ANCRAGE : ce que la garde
+ *     CONSOMME est identiquement ce que la source PRODUIT`, et lui seul. C'est le témoin qui
+ *     remplace un COMPTE par une IDENTITÉ — un plancher ne dit jamais LESQUELS.
  */
 
 /** Sous ce nombre de régions, la source n'est pas « pauvre » : elle est illisible. */

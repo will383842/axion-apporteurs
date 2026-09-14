@@ -2150,12 +2150,14 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
   }
 
   /**
-   * 🔴 DEUX SURVIVANTES DE A10 · mutation, PR #39 — et ce sont la classe MÊME que cette PR ferme.
+   * 🔴 LES SURVIVANTES DE A10 · mutation, PR #39 — et ce sont la classe MÊME que cette PR ferme.
+   * Aucun total n'est écrit ici : ils l'ont été, ils se sont périmés sans rien casser. La commande
+   * qui les rend est `npx vitest run tests/unit/gouvernance/entite-registre.spec.ts`.
    *
-   *   S1 : 58 pays émetteurs réels retirés de la dérivation (279 → 221, PLANCHER SATISFAIT)
-   *        → 148/148 VERT. Et `SN`, `CI`, `TN` étaient dans la liste TAPÉE d'avant GOV-036 : la
-   *        mutation est une régression **sous l'état pré-PR**, en silence. 79 codes de marge.
-   *   S2 : seize familles de scripts ajoutées au refus (`ps1|bash|rb|go|php|bat`) → 148/148 VERT.
+   *   S1 : des pays émetteurs réels retirés de la dérivation, PLANCHER SATISFAIT → suite VERTE.
+   *        `SN`, `CI`, `TN` étaient dans la liste TAPÉE d'avant GOV-036 : la mutation est une
+   *        régression **sous l'état pré-PR**, en silence.
+   *   S2 : des familles de scripts (`ps1|bash|rb|go|php|bat`) ajoutées au refus → suite VERTE.
    *        Le « cas plausible » que la tâche cite elle-même — un `export PARTNERS_IBAN_DEBITEUR=…`
    *        dans un script — redevient invisible dès qu'il s'écrit en PowerShell.
    *
@@ -2163,9 +2165,18 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
    * COUVERTURE**, et le témoin dérivé du disque ne voit que ce qui est suivi AUJOURD'HUI. Une
    * dérivation comparée à elle-même ne verra jamais ce qu'elle a cessé de produire.
    *
-   * Il y faut donc un ANCRAGE : une liste qui vit HORS de la chose qu'elle garde. Les deux
-   * ci-dessous en sont, et elles sont tapées À DESSEIN — c'est leur extériorité qui les rend
-   * utiles, pas leur forme.
+   * 🔴 ET L'ANCRAGE SEUL N'A PAS SUFFI — S1 A SURVÉCU UN TOUR DE PLUS. L'ancrage ci-dessous tient
+   * cinquante-trois codes ; l'ICU en rend près de trois cents. Retirer, AU POINT DE CONSOMMATION,
+   * des codes que l'ancrage ne nomme pas laissait passer des IBAN d'Azerbaïdjan, de Bosnie, du
+   * Brésil et d'Égypte à clé mod-97 valide, suite entièrement verte. *Un ancrage est une
+   * COUVERTURE PARTIELLE : il ne dit rien des codes qu'il ne nomme pas, et les rallonger garantit
+   * un tour de plus sur la même classe.*
+   *
+   * 🔑 La fermeture n'est donc pas une liste plus longue, c'est une IDENTITÉ : `CODES_PAYS` doit
+   * être exactement ce que `codesPaysIso()` produit (le témoin qui suit l'ancrage). Toute
+   * transformation glissée entre le producteur et le consommateur rougit alors, quelle qu'elle
+   * soit et quel que soit le nombre de codes qu'elle retire. L'ancrage garde l'autre bout : un
+   * appauvrissement de l'ICU elle-même, que l'identité ne verrait pas.
    */
   const ANCRAGE_NON_REGRESSION = [
     // Les 47 codes de la liste TAPÉE d'avant GOV-036 : la dérivation ne doit jamais couvrir MOINS
@@ -2191,8 +2202,9 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     // ancrés, **dont les six ajoutés ce tour-ci pour eux**, et restait VERT.
     //
     // Son verdict, que je reprends parce qu'il est exact : « sur la seule régression qu'il existe
-    // pour attraper, il ne contribue à rien » — la mutation « liste tapée de 47 » rendait bien 8
-    // échecs, mais AUCUN ne venait de cet ancrage.
+    // pour attraper, il ne contribue à rien » — la mutation « liste tapée de 47 » rougissait bien,
+    // mais AUCUN de ses échecs ne venait de cet ancrage. (Le compte est retiré à dessein : il a été
+    // écrit « 8 », il vaut autre chose au commit suivant, et rien ne l'aurait dit.)
     //
     // 🔑 Un témoin doit tenir la valeur que son SUJET consomme, pas celle qui la produit. Entre les
     // deux, il y a toujours place pour une ligne.
@@ -2215,6 +2227,32 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     ).toEqual([]);
   });
 
+  it('REQ-GOV-031 — ANCRAGE : ce que la garde CONSOMME est identiquement ce que la source PRODUIT', async () => {
+    // 🔑 LA FERMETURE DE S1, ET ELLE TIENT EN UNE LIGNE. L'ancrage du dessus couvre cinquante-trois
+    // codes sur près de trois cents : il ne dit RIEN des autres, et A10 · mutation a mesuré qu'on
+    // pouvait en retirer cinquante-huit non ancrés au POINT DE CONSOMMATION, plancher satisfait,
+    // suite verte, quatre IBAN étrangers à clé valide passant en clair sur un dépôt PUBLIC.
+    //
+    // Un COMPTE ne dit jamais LESQUELS, et une liste tapée ne dit jamais rien de ce qu'elle omet.
+    // L'identité, elle, ne laisse aucun interstice : entre `codesPaysIso()` et `CODES_PAYS`, il n'y
+    // a plus de place pour une ligne.
+    const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
+      CODES_PAYS?: readonly string[];
+      codesPaysIso?: () => string[];
+    };
+    expect(typeof gate.codesPaysIso, '`codesPaysIso` doit exister : c’est la SOURCE').toBe('function');
+    const produits = gate.codesPaysIso!();
+    // ⚠️ CONTRÔLE POSITIF : deux listes vides sont `toEqual`, donc une source muette se déclarerait
+    // satisfaite. Le plancher de `codesPaysIso` lève déjà, mais un témoin ne délègue pas sa preuve.
+    expect(produits.length, 'source vide : l’identité ne prouverait rien').toBeGreaterThan(200);
+    expect(
+      gate.CODES_PAYS,
+      'ce que la garde CONSOMME diffère de ce que la source PRODUIT : une transformation a été ' +
+        'glissée entre les deux. Le plancher compte, l’ancrage nomme cinquante-trois codes — seule ' +
+        'l’identité tient les autres.'
+    ).toEqual(produits);
+  });
+
   const ANCRAGE_FAMILLES_DE_TEXTE = [
     // Des familles dont les octets SONT du texte et qui peuvent porter un secret. Aucune ne doit
     // pouvoir entrer dans la liste de REFUS — le témoin dérivé du disque ne les verrait que le jour
@@ -2222,7 +2260,10 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     // ⚠️ SIX FAMILLES ONT ÉTÉ RETIRÉES DE CETTE LISTE (`.sh`, `.py`, `.toml`, `.rst`, `.http`,
     // `Makefile`) : elles étaient déjà exigées par le cas voisin, dans le même `describe` et sous
     // le même prédicat (A09 · simplicite, PR #39). Un ancrage tire sa valeur de son extériorité,
-    // pas de sa longueur — et les huit qui restent portent SEULES la survivante qu'il ferme.
+    // pas de sa longueur — et celles qui restent portent SEULES la survivante qu'il ferme.
+    // ⚠️ AUCUN COMPTE N'EST ÉCRIT ICI. Il l'a été — « les huit qui restent » — trois lignes
+    // au-dessus de onze entrées ajoutées par le MÊME commit. Un nombre qui décrit la liste
+    // qui le suit se périme au premier ajout, et personne ne le voit : `.length` est en dessous.
     'deploy.ps1', 'setup.bash', 'tache.rb', 'main.go', 'index.php', 'run.bat',
     'donnees.csv', 'cle.pem',
     // 🔴 `svg` ET `env`, AJOUTÉS APRÈS QUE A09 · securite A MONTRÉ QUE LE TROU SE ROUVRAIT.
@@ -2230,8 +2271,8 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     // Le veto du 1er tour portait sur un IBAN en clair dans un `.svg`. Je l'ai fermé en RETIRANT
     // les deux témoins qui récitaient `.svg` comme binaire — au lieu de les RETOURNER. Résultat
     // mesuré au 2e tour : remettre `svgz?` à la place de `svgz` remet `.svg` au refus et rend
-    // **145/145 VERT**. `grep -c svg` sur ce fichier valait **0** : j'avais supprimé la seule trace
-    // du trou en croyant supprimer le trou.
+    // la suite ENTIÈREMENT VERTE. `grep -c svg` sur ce fichier valait **0** : j'avais supprimé la
+    // seule trace du trou en croyant supprimer le trou.
     //
     // 🔑 *Retirer un témoin qui dit le contraire de ce qu'on veut n'est pas la même chose que le
     // retourner.* Le premier laisse un silence, le second laisse une garde.
@@ -2265,8 +2306,20 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
    *
    * Sa fermeture : **retourner la garde sur la liste de refus elle-même**, et exiger que CHAQUE
    * entrée soit une famille binaire déclarée. Le même renversement autorisation → refus que cette
-   * PR vient de réussir, un étage plus haut. Une extension de texte ne peut alors plus y entrer,
-   * qu'on ait pensé à l'ancrer ou non.
+   * PR vient de réussir, un étage plus haut.
+   *
+   * 🔴 ET LA PREMIÈRE RÉDACTION DE CE TÉMOIN A SURVÉCU À SA PROPRE CLASSE. Elle re-analysait le
+   * TEXTE du motif — `.source.replace(/^.*?\(/, '').replace(/\).*$/, '')` — donc elle ne voyait
+   * qu'entre la première `(` et la première `)`. Une alternation posée hors du groupe,
+   * `…|der)$|[.](netrc|npmrc|pgpass|cfg)$/i`, sortait `.netrc`, `.npmrc`, `.pgpass` et `.cfg` du
+   * balayage d'un dépôt PUBLIC, suite ENTIÈREMENT VERTE, ce témoin annonçant toujours soixante-neuf
+   * familles et zéro intrus. Il gardait une ÉCRITURE de la liste, pas la PROPRIÉTÉ de la liste.
+   *
+   * 🔑 La fermeture n'est pas un troisième découpage : c'est que la liste de refus a cessé d'être
+   * un littéral de regexp. `gov-entite.ts` la porte en DONNÉE (`FAMILLES_BINAIRES`) et en DÉRIVE le
+   * motif (`motifDeRefus`). Ce témoin confronte donc deux LISTES, et le témoin qui le suit exige
+   * que le motif réellement consommé soit celui que la donnée produit — sans quoi on rouvrirait le
+   * trou d'un cran plus haut, en réécrivant `EXTENSIONS_REFUSEES` à la main.
    */
   const FAMILLES_BINAIRES_DECLAREES = new Set([
     'png', 'jpe?g', 'gif', 'bmp', 'tiff?', 'webp', 'avif', 'ico', 'icns', 'svgz', 'eps', 'psd',
@@ -2279,18 +2332,49 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
 
   it('REQ-GOV-031 — ANCRAGE : la liste de REFUS ne contient QUE des familles binaires déclarées', async () => {
     const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
-      EXTENSIONS_REFUSEES?: RegExp;
+      FAMILLES_BINAIRES?: readonly string[];
     };
-    expect(gate.EXTENSIONS_REFUSEES, '`EXTENSIONS_REFUSEES` doit exister').toBeInstanceOf(RegExp);
-    const dedans = gate.EXTENSIONS_REFUSEES!.source.replace(/^.*?\(/, '').replace(/\).*$/, '').split('|');
-    expect(dedans.length, 'liste de refus vide : le contrôle ne prouverait rien').toBeGreaterThan(40);
+    const dedans = gate.FAMILLES_BINAIRES;
+    expect(
+      Array.isArray(dedans),
+      '`FAMILLES_BINAIRES` doit exister : la liste de refus est une DONNÉE, pas un motif à re-lire'
+    ).toBe(true);
+    expect(dedans!.length, 'liste de refus vide : le contrôle ne prouverait rien').toBeGreaterThan(40);
     expect(FAMILLES_BINAIRES_DECLAREES.size, 'déclaration vide : elle dirait toujours oui').toBeGreaterThan(40);
-    const intrus = dedans.filter((f) => !FAMILLES_BINAIRES_DECLAREES.has(f));
+    const intrus = dedans!.filter((f) => !FAMILLES_BINAIRES_DECLAREES.has(f));
     expect(
       intrus,
       `${intrus.length} famille(s) NON déclarée(s) binaire(s) dans la liste de refus : ${intrus.join(', ')} — ` +
         'une famille de TEXTE qui y entre aveugle la garde, qu’on ait pensé à l’ancrer ou non.'
     ).toEqual([]);
+  });
+
+  it('REQ-GOV-031 — ANCRAGE : le motif de refus est DÉRIVÉ de la donnée, jamais réécrit à la main', async () => {
+    // 🔑 SANS CE TÉMOIN, LA DONNÉE NE SERAIT QU'UN DÉCOR. Le témoin du dessus tient
+    // `FAMILLES_BINAIRES` ; rien ne garantirait que c'est bien ELLE que la garde consomme. Celui-ci
+    // ferme l'interstice, exactement comme l'identité `CODES_PAYS` / `codesPaysIso()` plus haut :
+    // entre une donnée gardée et le motif qui décide, il ne doit rester aucune place pour une ligne.
+    const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
+      FAMILLES_BINAIRES?: readonly string[];
+      EXTENSIONS_REFUSEES?: RegExp;
+      motifDeRefus?: (familles: readonly string[]) => RegExp;
+    };
+    expect(typeof gate.motifDeRefus, '`motifDeRefus` doit exister : le motif se CONSTRUIT').toBe('function');
+    // 1. Le constructeur fait ce qu'il dit, sur une entrée contrôlée — sinon l'identité du 2. serait
+    //    satisfaite par n'importe quoi, y compris par un constructeur qui ajoute sa propre alternation.
+    expect(gate.motifDeRefus!(['zzz']).source, 'le constructeur n’écrit pas le motif annoncé').toBe('[.](zzz)$');
+    expect(gate.motifDeRefus!(['zzz']).flags, 'la casse doit rester indifférente').toBe('i');
+    expect(gate.motifDeRefus!(['zzz']).test('a.ZZZ'), 'le motif construit doit REFUSER sa famille').toBe(true);
+    expect(gate.motifDeRefus!(['zzz']).test('a.md'), 'le motif construit doit rester un FILTRE').toBe(false);
+    // 2. Et le motif RÉELLEMENT consommé est celui que la donnée gardée produit. Toute alternation
+    //    posée hors du groupe — la survivante de A10 · mutation — diffère ici, quel qu'en soit le lieu.
+    const attendu = gate.motifDeRefus!(gate.FAMILLES_BINAIRES!);
+    expect(
+      gate.EXTENSIONS_REFUSEES!.source,
+      '`EXTENSIONS_REFUSEES` n’est plus ce que `FAMILLES_BINAIRES` produit : une alternation a été ' +
+        'écrite à la main, et le témoin des familles déclarées ne la voit pas.'
+    ).toBe(attendu.source);
+    expect(gate.EXTENSIONS_REFUSEES!.flags, 'les drapeaux du motif consommé ont divergé').toBe(attendu.flags);
   });
 
   it('REQ-GOV-031 — la population balayée est celle du DISQUE : aucun fichier de TEXTE suivi n’y échappe', () => {
