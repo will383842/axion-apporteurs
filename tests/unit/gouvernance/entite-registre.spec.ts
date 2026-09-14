@@ -39,10 +39,10 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 import {
   SENTINELLE,
@@ -96,7 +96,9 @@ import {
   controler,
   ligneSource,
   normaliser,
-  estBalaye,
+  lireFichiers,
+  codesDeRegion,
+  SourcePaysIllisible,
   estExemptDe,
   cleIbanValide,
   EXEMPTS,
@@ -435,28 +437,43 @@ describe('gov:entite — la garde, sur le dépôt réel et sur ses témoins', ()
  * Ces témoins-ci portent sur le FILTRE lui-même, pas sur ce qu'il laisse passer.
  */
 describe('REQ-CPL-018 — ce que la garde REGARDE est gardé, pas seulement ce qu’elle en dit', () => {
-  it('REQ-CPL-018 — un secret ne choisit pas son extension : les familles à risque sont balayées', () => {
-    for (const chemin of [
-      'prisma/schema.prisma', // introduit par ce lot même, et ignoré jusqu'au 2026-09-05
-      '.env.example', // `.gitignore` le dé-exclut exprès pour qu'il soit suivi
-      'docs/DECISIONS.md',
-      'scripts/lot/composer.ts',
-      'config/entite.json',
-      '.github/CODEOWNERS',
-      'docs/releve.csv',
-      'docs/virement.xml',
-      'notes.txt',
-    ]) {
-      expect(estBalaye(chemin), `${chemin} doit être balayé`).toBe(true);
-    }
+  it('REQ-CPL-018 — un secret ne choisit pas son extension : tout fichier suivi est LU, sur une population GÉNÉRÉE', () => {
+    // Aucune liste d'extensions n'est récitée ici : la population est ENGENDRÉE — toutes les
+    // extensions d'une à trois lettres, plus un fichier sans extension et un fichier caché. Une
+    // branche qui écarterait une famille par son nom y tombe, quelle que soit la famille.
+    const lettres = 'abcdefghijklmnopqrstuvwxyz';
+    const extensions = [...lettres];
+    for (const a of lettres) for (const b of lettres) extensions.push(a + b);
+    for (const a of lettres) for (const b of lettres) for (const c of lettres) extensions.push(a + b + c);
+    const chemins = [...extensions.map((e) => `d/f.${e}`), 'd/sans-extension', 'd/.cache'];
+    const { fichiers, nonTexte } = lireFichiers(chemins, (chemin) => Buffer.from(`${chemin}\n`));
+    expect(fichiers.map((f) => f.chemin), 'un fichier suivi n’a pas été lu').toEqual(chemins);
+    expect(fichiers.every((f) => f.contenu === `${f.chemin}\n`), 'un contenu a été altéré').toBe(true);
+    expect(nonTexte, 'du texte ASCII a été déclaré non-texte').toEqual([]);
   });
 
-  it('REQ-CPL-018 — un fichier binaire ou d’image n’est pas balayé : le filtre reste un filtre', () => {
-    // Le contre-témoin. Sans lui, « tout est balayé » passerait ce fichier, et la liste
-    // d'extensions pourrait être remplacée par `/.*/ ` sans que rien ne tombe.
-    for (const chemin of ['docs/schema.png', 'polices/inter.woff2']) {
-      expect(estBalaye(chemin), `${chemin} ne doit PAS être balayé`).toBe(false);
-    }
+  it('REQ-CPL-018 — un fichier NON-TEXTE est lu pour ses suites ASCII, NOMMÉ, et ne fabrique pas de faux positif', () => {
+    // L'ancien contre-témoin exigeait qu'une image ne soit PAS lue. Il se retourne : elle est lue,
+    // elle est nommée — et ses octets ne font rougir aucune famille (le filtre n'est plus un nom
+    // de fichier, c'est la clé mod-97).
+    const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
+    const contenus: Record<string, Buffer> = {
+      // Un texte UTF-8 accentué de plus de dix kilo-octets : sa TAILLE ne le rend pas non-texte.
+      'a/long.md': Buffer.from(`Un texte accentué — é à ç. ${'x'.repeat(10_000)}\n`),
+      'a/nul.bin': Buffer.concat([Buffer.from([0, 1, 2]), Buffer.from(` ${iban} `)]),
+      'a/sequence-invalide.dat': Buffer.concat([Buffer.from([0xc3, 0x28]), Buffer.from(` ${iban} `)]),
+      // Signature et en-tête PNG : NUL et octets hauts, aucune coordonnée.
+      'a/image.png': Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52, 0xff]),
+    };
+    const { fichiers, nonTexte } = lireFichiers(Object.keys(contenus), (chemin) => contenus[chemin]!);
+    expect(nonTexte).toEqual(['a/nul.bin', 'a/sequence-invalide.dat', 'a/image.png']);
+    const trouvees = Object.fromEntries(fichiers.map((f) => [f.chemin, coordonneesDe(f.contenu, false, f.chemin)]));
+    expect(trouvees).toEqual({
+      'a/long.md': [],
+      'a/nul.bin': [iban],
+      'a/sequence-invalide.dat': [iban],
+      'a/image.png': [],
+    });
   });
 
   it('REQ-CPL-018 — AUCUN fichier n’est exempt de la recherche de SECRET, et c’est le veto de 2026-09-05', () => {
@@ -2121,372 +2138,161 @@ describe('REQ-CPL-018 — aucun total de révisions ne se tape à la main', () =
 });
 
 /**
- * ── GOV-036 — LES DEUX POPULATIONS QUE LA GARDE REGARDE ÉTAIENT TAPÉES À LA MAIN ──────────────
+ * ── GOV-036 — CE QUE `gov:entite` REGARDE ÉTAIT DÉCIDÉ PAR DEUX LISTES TAPÉES ────────────────────
  *
- * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ SUR LES QUATRE PASSES DE LA PR #31, et qu'aucun test
- * ne voyait : `gov:entite` ne juge que ce que DEUX listes tapées veulent bien lui montrer.
- *
+ * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ SUR LES QUATRE PASSES DE LA PR #31 :
  *   (1) `PAYS_ISO` — 47 entrées écrites à la main, dont SEPT qui n'émettent aucun IBAN, et
  *       CINQUANTE ET UN pays émetteurs OMIS. Cinq IBAN étrangers à clé mod-97 VALIDE (TR, IL,
- *       RS, AL, LB) traversaient la garde sans un mot, dans un dépôt PUBLIC.
- *   (2) `EXTENSIONS_BALAYEES` — une liste d'AUTORISATION, sous un commentaire qui dit pourtant
- *       « un secret ne choisit pas son extension ». Ni `.sh`, ni `.py`, ni `.toml`, ni `Makefile`,
- *       ni `.gitattributes` n'étaient lus — et QUATRE fichiers suivis du dépôt étaient déjà dans
- *       ce cas au moment où ces lignes sont écrites.
+ *       RS, AL, LB) traversaient la garde sans un mot.
+ *   (2) `EXTENSIONS_BALAYEES` — une liste d'AUTORISATION. Sa première correction, une liste de
+ *       REFUS de familles « binaires », aveuglait à son tour la garde sur des octets LISIBLES
+ *       (veto de `securite`, PR #39) : elle a été retirée, et la garde lit tout fichier suivi.
  *
- * 🔑 LA LEÇON EST LA MÊME DANS LES DEUX CAS, ET ELLE EST DÉJÀ ÉCRITE AILLEURS DANS CE DÉPÔT :
- * **une population tapée à la main ne voit que ce qu'on y a mis, donc jamais le cas qu'on a
- * oublié d'y écrire.** Une garde peut être verte, prouvée, éprouvée par mutation et complètement
- * aveugle : rien de tout cela ne mesure son PÉRIMÈTRE. Les témoins ci-dessous portent sur le
- * périmètre lui-même, et deux d'entre eux le DÉRIVENT du disque plutôt que de le redéclarer — un
- * témoin qui redéclarerait la liste tapée aurait exactement le même angle mort qu'elle.
+ * 🔑 Une population tapée ne voit que ce qu'on y a mis. Les témoins ci-dessous interrogent donc
+ * la SOURCE — l'ICU du runtime, le disque, les octets — DANS LE TEST, au lieu de réciter une liste,
+ * et ils portent sur ce que la garde CONSOMME, pas sur la valeur intermédiaire qui le produit.
  */
 describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape pas', () => {
-  /** Le fichier est-il du TEXTE ? Mesuré sur ses octets, jamais déduit de son extension. */
-  function estDuTexte(chemin: string): boolean {
-    const octets = readFileSync(chemin);
-    if (octets.includes(0)) return false; // un octet NUL : ce n'est pas du texte
-    return Buffer.from(octets.toString('utf8'), 'utf8').equals(octets); // décodable sans perte
+  /** Les régions que l'ICU du runtime connaît, interrogée ICI — sans passer par `codesDeRegion`. */
+  function regionsDeLIcu(): { noms: Intl.DisplayNames; regions: string[]; paires: string[] } {
+    const noms = new Intl.DisplayNames(['fr'], { type: 'region' });
+    const lettres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const paires = [...lettres].flatMap((a) => [...lettres].map((b) => a + b));
+    return { noms, paires, regions: paires.filter((code) => noms.of(code) !== code) };
   }
 
-  /**
-   * 🔴 LES SURVIVANTES DE A10 · mutation, PR #39 — et ce sont la classe MÊME que cette PR ferme.
-   * Aucun total n'est écrit ici : ils l'ont été, ils se sont périmés sans rien casser. La commande
-   * qui les rend est `npx vitest run tests/unit/gouvernance/entite-registre.spec.ts`.
-   *
-   *   S1 : des pays émetteurs réels retirés de la dérivation, PLANCHER SATISFAIT → suite VERTE.
-   *        `SN`, `CI`, `TN` étaient dans la liste TAPÉE d'avant GOV-036 : la mutation est une
-   *        régression **sous l'état pré-PR**, en silence.
-   *   S2 : des familles de scripts (`ps1|bash|rb|go|php|bat`) ajoutées au refus → suite VERTE.
-   *        Le « cas plausible » que la tâche cite elle-même — un `export PARTNERS_IBAN_DEBITEUR=…`
-   *        dans un script — redevient invisible dès qu'il s'écrit en PowerShell.
-   *
-   * 🔑 LES DEUX ONT LA MÊME CAUSE, et c'est celle de GOV-055 : **un plancher est un COMPTE, pas une
-   * COUVERTURE**, et le témoin dérivé du disque ne voit que ce qui est suivi AUJOURD'HUI. Une
-   * dérivation comparée à elle-même ne verra jamais ce qu'elle a cessé de produire.
-   *
-   * 🔴 ET L'ANCRAGE SEUL N'A PAS SUFFI — S1 A SURVÉCU UN TOUR DE PLUS. L'ancrage ci-dessous tient
-   * cinquante-trois codes ; l'ICU en rend près de trois cents. Retirer, AU POINT DE CONSOMMATION,
-   * des codes que l'ancrage ne nomme pas laissait passer des IBAN d'Azerbaïdjan, de Bosnie, du
-   * Brésil et d'Égypte à clé mod-97 valide, suite entièrement verte. *Un ancrage est une
-   * COUVERTURE PARTIELLE : il ne dit rien des codes qu'il ne nomme pas, et les rallonger garantit
-   * un tour de plus sur la même classe.*
-   *
-   * 🔑 La fermeture n'est donc pas une liste plus longue, c'est une IDENTITÉ : `CODES_PAYS` doit
-   * être exactement ce que `codesPaysIso()` produit (le témoin qui suit l'ancrage). Toute
-   * transformation glissée entre le producteur et le consommateur rougit alors, quelle qu'elle
-   * soit et quel que soit le nombre de codes qu'elle retire. L'ancrage garde l'autre bout : un
-   * appauvrissement de l'ICU elle-même, que l'identité ne verrait pas.
-   */
+  /** Les codes dont un IBAN et un BIC synthétiques SONT VUS par la forme que la garde consomme. */
+  function codesVusParLesFormes(codes: readonly string[]): { iban: string[]; bic: string[] } {
+    const vus = { iban: [] as string[], bic: [] as string[] };
+    for (const code of codes) {
+      const iban = ibanSynthetique(code, '00112233445566');
+      const bic = `ABCD${code}2A`;
+      const trouvees = coordonneesDe(`Virement ${iban}.\nBIC: ${bic}\n`, false, 'docs/note.md');
+      if (trouvees.includes(iban)) vus.iban.push(code);
+      if (trouvees.includes(bic)) vus.bic.push(code);
+    }
+    return vus;
+  }
+
+  it('REQ-GOV-031 — les formes IBAN et BIC reconnaissent EXACTEMENT les régions de l’ICU, sur les 676 paires', () => {
+    // A10 · mutation, PR #39 : l'identité `CODES_PAYS` / dérivation se prenait UN CRAN AVANT ce que
+    // les formes consomment — un filtre glissé dans `PAYS_ISO` la laissait verte, et un producteur
+    // amaigri se comparait à lui-même. L'oracle est donc le RUNTIME interrogé ici, et la mesure est
+    // ce que la garde VOIT : chaque région fabrique un IBAN et un BIC reconnus, aucune autre paire.
+    const { paires, regions } = regionsDeLIcu();
+    // ⚠️ CONTRÔLE POSITIF : deux listes vides sont égales.
+    expect(regions.length, 'ICU sans régions : la comparaison ne prouverait rien').toBeGreaterThan(200);
+    const vus = codesVusParLesFormes(paires);
+    expect(vus.iban, 'la forme IBAN ne reconnaît pas exactement les régions de l’ICU').toEqual(regions);
+    expect(vus.bic, 'la forme BIC ne reconnaît pas exactement les régions de l’ICU').toEqual(regions);
+  });
+
   const ANCRAGE_NON_REGRESSION = [
     // Les 47 codes de la liste TAPÉE d'avant GOV-036 : la dérivation ne doit jamais couvrir MOINS
-    // que ce qu'elle remplace. C'est le plancher de COUVERTURE que le plancher de COMPTE ne tient pas.
+    // que ce qu'elle remplace, et une ICU appauvrie amaigrirait l'oracle du témoin précédent AU
+    // MÊME PAS que la garde — seul un ancrage extérieur à l'ICU le voit.
     'AD', 'AE', 'AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GI',
     'GR', 'HR', 'HU', 'IE', 'IS', 'IT', 'LI', 'LT', 'LU', 'LV', 'MC', 'MT', 'NL', 'NO', 'PL', 'PT',
     'RO', 'SE', 'SI', 'SK', 'SM', 'VA', 'US', 'CA', 'JP', 'CN', 'MA', 'TN', 'DZ', 'SN', 'CI',
-    // Les cinq que GOV-036 ferme, plus XK : le Kosovo émet des IBAN (registre ISO 13616) et son
-    // code est *user-assigned* dans CLDR, donc il peut disparaître d'une version d'ICU à l'autre
-    // sans que le compte bouge. C'est A09 · securite qui l'a nommé : « les cinq témoins épinglent
-    // les pays qui manquaient hier, aucun celui qui peut manquer demain ».
+    // Les cinq que GOV-036 ferme, plus XK : le Kosovo émet des IBAN et son code est attribué par
+    // l'utilisateur dans CLDR, donc il peut disparaître d'une version d'ICU à l'autre.
     'TR', 'IL', 'RS', 'AL', 'LB', 'XK',
   ];
 
-  it('REQ-GOV-031 — ANCRAGE : la dérivation ne couvre jamais MOINS que la liste qu’elle remplace', async () => {
-    // Import dynamique et type lâche, comme le témoin voisin : tant que la dérivation n'existe
-    // pas, ce cas rougit SEUL au lieu d'emporter le fichier dans une erreur de chargement.
-    // 🔴 CET ANCRAGE TESTAIT LE PRODUCTEUR PENDANT QUE LA GARDE CONSOMME LE PRODUIT.
-    //
-    // A10 · mutation, 2e tour : il assertait sur `codesPaysIso()`, la FONCTION ; mais `PAYS_ISO`
-    // — la forme qui reconnaît un IBAN — est construite depuis `CODES_PAYS`, la CONSTANTE
-    // (`gov-entite.ts:444-446`). Filtrer la constante retirait QUATORZE des cinquante-trois codes
-    // ancrés, **dont les six ajoutés ce tour-ci pour eux**, et restait VERT.
-    //
-    // Son verdict, que je reprends parce qu'il est exact : « sur la seule régression qu'il existe
-    // pour attraper, il ne contribue à rien » — la mutation « liste tapée de 47 » rougissait bien,
-    // mais AUCUN de ses échecs ne venait de cet ancrage. (Le compte est retiré à dessein : il a été
-    // écrit « 8 », il vaut autre chose au commit suivant, et rien ne l'aurait dit.)
-    //
-    // 🔑 Un témoin doit tenir la valeur que son SUJET consomme, pas celle qui la produit. Entre les
-    // deux, il y a toujours place pour une ligne.
-    const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
-      CODES_PAYS?: readonly string[];
-    };
-    const codes = gate.CODES_PAYS;
-    expect(Array.isArray(codes), '`CODES_PAYS` doit exister : c’est CE que la garde consomme').toBe(true);
-    // ⚠️ CONTRÔLE POSITIF. `[].filter(…)` rend `[]`, et `expect([]).toEqual([])` PASSE : un ancrage
-    // vidé se déclarait donc satisfait (A10 · mutation, sa quatrième mutation du second tour). Le remède était déjà écrit dix lignes
-    // plus bas, dans le témoin dérivé du disque — je ne l'avais pas transposé.
-    expect(ANCRAGE_NON_REGRESSION.length, 'ancrage vidé : il dirait toujours oui').toBeGreaterThan(40);
-    expect(codes!.length, 'dérivation vide : la comparaison ne prouverait rien').toBeGreaterThan(200);
-    const perdus = ANCRAGE_NON_REGRESSION.filter((c) => !codes!.includes(c));
+  it('REQ-GOV-031 — ANCRAGE : les formes voient toujours les pays de la liste qu’elles remplacent', () => {
+    const vus = codesVusParLesFormes(ANCRAGE_NON_REGRESSION);
     expect(
-      perdus,
-      `${perdus.length} pays émetteur(s) sorti(s) de la dérivation : ${perdus.join(', ')} — ` +
-        'le plancher compte les codes, il ne dit rien de LESQUELS. Une dérivation qui perd des ' +
-        'pays au-dessus du plancher est une régression silencieuse.'
+      ANCRAGE_NON_REGRESSION.filter((c) => !vus.iban.includes(c)),
+      'pays émetteur(s) que la forme IBAN ne voit plus — le plancher compte les codes, il ne dit ' +
+        'rien de LESQUELS'
     ).toEqual([]);
   });
 
-  it('REQ-GOV-031 — ANCRAGE : ce que la garde CONSOMME est identiquement ce que la source PRODUIT', async () => {
-    // 🔑 LA FERMETURE DE S1, ET ELLE TIENT EN UNE LIGNE. L'ancrage du dessus couvre cinquante-trois
-    // codes sur près de trois cents : il ne dit RIEN des autres, et A10 · mutation a mesuré qu'on
-    // pouvait en retirer cinquante-huit non ancrés au POINT DE CONSOMMATION, plancher satisfait,
-    // suite verte, quatre IBAN étrangers à clé valide passant en clair sur un dépôt PUBLIC.
-    //
-    // Un COMPTE ne dit jamais LESQUELS, et une liste tapée ne dit jamais rien de ce qu'elle omet.
-    // L'identité, elle, ne laisse aucun interstice : entre `codesPaysIso()` et `CODES_PAYS`, il n'y
-    // a plus de place pour une ligne.
-    const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
-      CODES_PAYS?: readonly string[];
-      codesPaysIso?: () => string[];
+  it('REQ-GOV-031 — la dérivation LÈVE juste sous son plancher, et pas au plancher', () => {
+    // A10 · mutation, PR #39 : le refus n'était éprouvé qu'à 0 et 1 région, donc un plancher
+    // abaissé à 2 passait. Les deux bornes sont ÉCRITES ici, jamais lues de la garde (RM-11).
+    const { noms, regions } = regionsDeLIcu();
+    const lecteurQuiConnait = (n: number) => {
+      const connues = new Set(regions.slice(0, n));
+      return (code: string) => (connues.has(code) ? noms.of(code) : code);
     };
-    expect(typeof gate.codesPaysIso, '`codesPaysIso` doit exister : c’est la SOURCE').toBe('function');
-    const produits = gate.codesPaysIso!();
-    // ⚠️ CONTRÔLE POSITIF : deux listes vides sont `toEqual`, donc une source muette se déclarerait
-    // satisfaite. Le plancher de `codesPaysIso` lève déjà, mais un témoin ne délègue pas sa preuve.
-    expect(produits.length, 'source vide : l’identité ne prouverait rien').toBeGreaterThan(200);
-    expect(
-      gate.CODES_PAYS,
-      'ce que la garde CONSOMME diffère de ce que la source PRODUIT : une transformation a été ' +
-        'glissée entre les deux. Le plancher compte, l’ancrage nomme cinquante-trois codes — seule ' +
-        'l’identité tient les autres.'
-    ).toEqual(produits);
-  });
-
-  const ANCRAGE_FAMILLES_DE_TEXTE = [
-    // Des familles dont les octets SONT du texte et qui peuvent porter un secret. Aucune ne doit
-    // pouvoir entrer dans la liste de REFUS — le témoin dérivé du disque ne les verrait que le jour
-    // où le dépôt en suit une, c'est-à-dire trop tard.
-    // ⚠️ SIX FAMILLES ONT ÉTÉ RETIRÉES DE CETTE LISTE (`.sh`, `.py`, `.toml`, `.rst`, `.http`,
-    // `Makefile`) : elles étaient déjà exigées par le cas voisin, dans le même `describe` et sous
-    // le même prédicat (A09 · simplicite, PR #39). Un ancrage tire sa valeur de son extériorité,
-    // pas de sa longueur — et celles qui restent portent SEULES la survivante qu'il ferme.
-    // ⚠️ AUCUN COMPTE N'EST ÉCRIT ICI. Il l'a été — « les huit qui restent » — trois lignes
-    // au-dessus de onze entrées ajoutées par le MÊME commit. Un nombre qui décrit la liste
-    // qui le suit se périme au premier ajout, et personne ne le voit : `.length` est en dessous.
-    'deploy.ps1', 'setup.bash', 'tache.rb', 'main.go', 'index.php', 'run.bat',
-    'donnees.csv', 'cle.pem',
-    // 🔴 `svg` ET `env`, AJOUTÉS APRÈS QUE A09 · securite A MONTRÉ QUE LE TROU SE ROUVRAIT.
-    //
-    // Le veto du 1er tour portait sur un IBAN en clair dans un `.svg`. Je l'ai fermé en RETIRANT
-    // les deux témoins qui récitaient `.svg` comme binaire — au lieu de les RETOURNER. Résultat
-    // mesuré au 2e tour : remettre `svgz?` à la place de `svgz` remet `.svg` au refus et rend
-    // la suite ENTIÈREMENT VERTE. `grep -c svg` sur ce fichier valait **0** : j'avais supprimé la
-    // seule trace du trou en croyant supprimer le trou.
-    //
-    // 🔑 *Retirer un témoin qui dit le contraire de ce qu'on veut n'est pas la même chose que le
-    // retourner.* Le premier laisse un silence, le second laisse une garde.
-    //
-    // Et `.env` : A09 · securite a mesuré qu'un `secrets.env` suivi portant
-    // `PARTNERS_IBAN_DEBITEUR=FR76…` sortait EXIT 0. C'est la famille que le commentaire du
-    // 2026-09-05 nomme LUI-MÊME comme le cas plausible.
-    'assets/logo.svg', 'secrets.env', 'requete.sql', 'serveur.crt', 'cle.asc', 'trousseau.gpg',
-    'app.conf', 'infra.hcl', 'terraform.tfvars', 'build.properties', 'correctif.patch',
-  ];
-
-  it('REQ-GOV-031 — ANCRAGE : aucune famille de TEXTE ne peut entrer dans la liste de REFUS', () => {
-    // ⚠️ CONTRÔLE POSITIF, même raison qu'au-dessus : un ancrage vidé passait.
-    expect(ANCRAGE_FAMILLES_DE_TEXTE.length, 'ancrage vidé : il dirait toujours oui').toBeGreaterThan(15);
-    const aveugles = ANCRAGE_FAMILLES_DE_TEXTE.filter((f) => !estBalaye(f));
-    expect(
-      aveugles,
-      `${aveugles.length} famille(s) de texte écartée(s) du balayage : ${aveugles.join(', ')} — ` +
-        'un secret ne choisit pas son extension, et le témoin dérivé du disque ne verrait ces ' +
-        'familles que le jour où le dépôt en suit une.'
-    ).toEqual([]);
-  });
-
-  /**
-   * 🔴 LA FERMETURE STRUCTURELLE, ET C'EST A10 · mutation QUI EN A REFUSÉ LA VERSION PARESSEUSE.
-   *
-   * Elle a mesuré que seize familles de texte NON ancrées restaient ajoutables au refus — sept sont
-   * des emplacements canoniques de secret (`.tfvars`, `.properties`, `.npmrc`, `.netrc`, `.pgpass`,
-   * `.conf`, `.cfg`). Et elle a **délibérément refusé de demander une liste plus longue** : « ça
-   * garantit un troisième tour sur la même classe ».
-   *
-   * Sa fermeture : **retourner la garde sur la liste de refus elle-même**, et exiger que CHAQUE
-   * entrée soit une famille binaire déclarée. Le même renversement autorisation → refus que cette
-   * PR vient de réussir, un étage plus haut.
-   *
-   * 🔴 ET LA PREMIÈRE RÉDACTION DE CE TÉMOIN A SURVÉCU À SA PROPRE CLASSE. Elle re-analysait le
-   * TEXTE du motif — `.source.replace(/^.*?\(/, '').replace(/\).*$/, '')` — donc elle ne voyait
-   * qu'entre la première `(` et la première `)`. Une alternation posée hors du groupe,
-   * `…|der)$|[.](netrc|npmrc|pgpass|cfg)$/i`, sortait `.netrc`, `.npmrc`, `.pgpass` et `.cfg` du
-   * balayage d'un dépôt PUBLIC, suite ENTIÈREMENT VERTE, ce témoin annonçant toujours soixante-neuf
-   * familles et zéro intrus. Il gardait une ÉCRITURE de la liste, pas la PROPRIÉTÉ de la liste.
-   *
-   * 🔑 La fermeture n'est pas un troisième découpage : c'est que la liste de refus a cessé d'être
-   * un littéral de regexp. `gov-entite.ts` la porte en DONNÉE (`FAMILLES_BINAIRES`) et en DÉRIVE le
-   * motif (`motifDeRefus`). Ce témoin confronte donc deux LISTES, et le témoin qui le suit exige
-   * que le motif réellement consommé soit celui que la donnée produit — sans quoi on rouvrirait le
-   * trou d'un cran plus haut, en réécrivant `EXTENSIONS_REFUSEES` à la main.
-   */
-  const FAMILLES_BINAIRES_DECLAREES = new Set([
-    'png', 'jpe?g', 'gif', 'bmp', 'tiff?', 'webp', 'avif', 'ico', 'icns', 'svgz', 'eps', 'psd',
-    'ai', 'xcf', 'heic', 'heif', 'woff2?', 'ttf', 'otf', 'eot', 'zip', 'gz', 'tgz', 'bz2', 'xz',
-    'zst', '7z', 'rar', 'tar', 'jar', 'war', 'mp[34]', 'm4[av]', 'mov', 'avi', 'mkv', 'webm',
-    'wav', 'ogg', 'og[av]', 'flac', 'aac', 'wm[av]', 'pdf', 'docx?', 'xlsx?', 'pptx?', 'odt',
-    'ods', 'odp', 'exe', 'dll', 'so', 'dylib', 'bin', 'wasm', 'class', 'node', 'pyc', 'pyo',
-    'obj', 'lib', 'sqlite3?', 'db', 'mdb', 'p12', 'pfx', 'jks', 'der',
-  ]);
-
-  it('REQ-GOV-031 — ANCRAGE : la liste de REFUS ne contient QUE des familles binaires déclarées', async () => {
-    const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
-      FAMILLES_BINAIRES?: readonly string[];
-    };
-    const dedans = gate.FAMILLES_BINAIRES;
-    expect(
-      Array.isArray(dedans),
-      '`FAMILLES_BINAIRES` doit exister : la liste de refus est une DONNÉE, pas un motif à re-lire'
-    ).toBe(true);
-    expect(dedans!.length, 'liste de refus vide : le contrôle ne prouverait rien').toBeGreaterThan(40);
-    expect(FAMILLES_BINAIRES_DECLAREES.size, 'déclaration vide : elle dirait toujours oui').toBeGreaterThan(40);
-    const intrus = dedans!.filter((f) => !FAMILLES_BINAIRES_DECLAREES.has(f));
-    expect(
-      intrus,
-      `${intrus.length} famille(s) NON déclarée(s) binaire(s) dans la liste de refus : ${intrus.join(', ')} — ` +
-        'une famille de TEXTE qui y entre aveugle la garde, qu’on ait pensé à l’ancrer ou non.'
-    ).toEqual([]);
-  });
-
-  it('REQ-GOV-031 — ANCRAGE : le motif de refus est DÉRIVÉ de la donnée, jamais réécrit à la main', async () => {
-    // 🔑 SANS CE TÉMOIN, LA DONNÉE NE SERAIT QU'UN DÉCOR. Le témoin du dessus tient
-    // `FAMILLES_BINAIRES` ; rien ne garantirait que c'est bien ELLE que la garde consomme. Celui-ci
-    // ferme l'interstice, exactement comme l'identité `CODES_PAYS` / `codesPaysIso()` plus haut :
-    // entre une donnée gardée et le motif qui décide, il ne doit rester aucune place pour une ligne.
-    const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
-      FAMILLES_BINAIRES?: readonly string[];
-      EXTENSIONS_REFUSEES?: RegExp;
-      motifDeRefus?: (familles: readonly string[]) => RegExp;
-    };
-    expect(typeof gate.motifDeRefus, '`motifDeRefus` doit exister : le motif se CONSTRUIT').toBe('function');
-    // 1. Le constructeur fait ce qu'il dit, sur une entrée contrôlée — sinon l'identité du 2. serait
-    //    satisfaite par n'importe quoi, y compris par un constructeur qui ajoute sa propre alternation.
-    expect(gate.motifDeRefus!(['zzz']).source, 'le constructeur n’écrit pas le motif annoncé').toBe('[.](zzz)$');
-    expect(gate.motifDeRefus!(['zzz']).flags, 'la casse doit rester indifférente').toBe('i');
-    expect(gate.motifDeRefus!(['zzz']).test('a.ZZZ'), 'le motif construit doit REFUSER sa famille').toBe(true);
-    expect(gate.motifDeRefus!(['zzz']).test('a.md'), 'le motif construit doit rester un FILTRE').toBe(false);
-    // 2. Et le motif RÉELLEMENT consommé est celui que la donnée gardée produit. Toute alternation
-    //    posée hors du groupe — la survivante de A10 · mutation — diffère ici, quel qu'en soit le lieu.
-    const attendu = gate.motifDeRefus!(gate.FAMILLES_BINAIRES!);
-    expect(
-      gate.EXTENSIONS_REFUSEES!.source,
-      '`EXTENSIONS_REFUSEES` n’est plus ce que `FAMILLES_BINAIRES` produit : une alternation a été ' +
-        'écrite à la main, et le témoin des familles déclarées ne la voit pas.'
-    ).toBe(attendu.source);
-    expect(gate.EXTENSIONS_REFUSEES!.flags, 'les drapeaux du motif consommé ont divergé').toBe(attendu.flags);
-  });
-
-  it('REQ-GOV-031 — la population balayée est celle du DISQUE : aucun fichier de TEXTE suivi n’y échappe', () => {
-    // ⚠️ LE TÉMOIN QUI COMPTE. Il ne récite aucune liste : il DEMANDE AU DÉPÔT ses fichiers suivis
-    // (`fichiersSuivis` lève plutôt que de rendre `[]`, donc un périmètre absent est un rouge et
-    // jamais un vert), il mesure lesquels sont du texte, et il exige que la garde les regarde
-    // TOUS. Un fichier d'une famille jamais tapée dans la liste tombe donc ici, et lui seul.
-    const suivis = fichiersSuivis();
-    const textes = suivis.filter(estDuTexte);
-    expect(textes.length, 'périmètre vide : la mesure ne prouverait rien').toBeGreaterThan(50);
-    const aveugles = textes.filter((f) => !estBalaye(f));
-    expect(
-      aveugles,
-      `${suivis.length} fichier(s) suivi(s), ${textes.length} de TEXTE, ${aveugles.length} que la ` +
-        `garde ne lit pas : ${aveugles.join(', ')}. Dépôt PUBLIC — un secret ne choisit pas son extension.`
-    ).toEqual([]);
-  });
-
-  it('REQ-GOV-031 — les familles qu’une liste d’AUTORISATION oubliait sont balayées', () => {
-    // Les extensions nommées par le constat de GOV-036, plus celles que le dépôt porte déjà. Ce
-    // n'est pas la source du filtre — la source est la liste de REFUS — c'est le CONTRAT qu'on
-    // exige d'elle : ces familles-là portent du texte, donc elles peuvent porter un secret.
-    for (const chemin of [
-      'scripts/deploiement.sh', // le cas plausible : `export PARTNERS_IBAN_DEBITEUR=…`
-      'outils/export.py',
-      'infra/main.tf',
-      'pyproject.toml',
-      'setup.ini',
-      'docs/guide.mdx',
-      'public/page.html',
-      'requetes/api.http',
-      'docs/notice.rst',
-      'config/tsconfig.jsonc',
-      'journal/execution.log',
-      'captures/session.har',
-      'Makefile',
-      '.gitattributes',
-      '.gitignore',
-      '.prettierignore',
-      'packages/contracts.sha256',
-      'LICENSE',
-      'docs/inconnu.xyzzy', // une extension que PERSONNE n'a prévue : elle est lue quand même
-    ]) {
-      expect(estBalaye(chemin), `${chemin} doit être balayé`).toBe(true);
-    }
+    expect(() => codesDeRegion(lecteurQuiConnait(199))).toThrow(SourcePaysIllisible);
+    expect(codesDeRegion(lecteurQuiConnait(200))).toHaveLength(200);
   });
 
   it('REQ-GOV-031 — un script shell qui exporte l’IBAN débiteur rougit — le cas plausible, de bout en bout', () => {
-    // Le chaînage complet : le filtre le laisse entrer ET le contrôle le voit. Les deux moitiés
-    // comptent — un fichier balayé qu'aucune famille ne juge serait aussi muet qu'un fichier écarté.
     const chemin = 'scripts/deploiement.sh';
-    expect(estBalaye(chemin)).toBe(true);
-    expect(
-      controler(universAvecFichier(chemin, `export PARTNERS_IBAN_DEBITEUR=${IBAN_TEMOIN}\n`)).map(
-        (f) => f.famille
-      )
-    ).toContain('coordonnee_en_clair');
+    const { fichiers } = lireFichiers([chemin], () => Buffer.from(`export PARTNERS_IBAN_DEBITEUR=${IBAN_TEMOIN}\n`));
+    expect(controler(universAvecFichier(chemin, fichiers[0]!.contenu)).map((f) => f.famille)).toContain(
+      'coordonnee_en_clair'
+    );
   });
 
-  it('REQ-GOV-031 — CONTRE-TÉMOIN : le filtre reste un FILTRE, les familles binaires sont refusées', () => {
-    // Sans lui, « tout est balayé » passerait, la garde lirait des images en UTF-8 et rendrait un
-    // vert sur du bruit qu'elle ne sait pas décoder. Le contre-témoin de la liste d'autorisation
-    // se transpose tel quel à la liste de refus : c'est la même frontière, prise par l'autre bout.
-    for (const chemin of ['docs/schema.png', 'polices/inter.woff2', 'archive.zip']) {
-      expect(estBalaye(chemin), `${chemin} ne doit PAS être balayé`).toBe(false);
-    }
-  });
-
-  it('REQ-GOV-031 — les codes pays sont DÉRIVÉS d’une source, et la dérivation REFUSE une source infirme', async () => {
-    // L'import est dynamique et le type est lâche EXPRÈS : tant que la dérivation n'existe pas,
-    // ce cas-ci rougit seul, sans emporter le fichier entier dans une erreur de chargement.
-    const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
-      codesPaysIso?: (lire?: (code: string) => string) => string[];
-      PLANCHER_ISO_3166?: number;
-    };
-    expect(typeof gate.codesPaysIso, '`codesPaysIso` doit exister : la liste se dérive').toBe('function');
-    const codes = gate.codesPaysIso!();
-    expect(codes.length).toBeGreaterThanOrEqual(gate.PLANCHER_ISO_3166!);
-
-    // ⚠️ ET ELLE REFUSE PLUTÔT QUE DE RÉTRÉCIR. Une source qui ne connaît rien rendrait une liste
-    // VIDE, donc une forme d'IBAN qui ne reconnaît plus RIEN, donc un vert sur un dépôt fuyant.
-    // C'est le défaut trouvé sept fois dans ce dépôt : « je n'ai rien vu » n'est pas « je n'ai
-    // rien lu ».
-    expect(() => gate.codesPaysIso!((code) => code)).toThrow();
-    expect(() => gate.codesPaysIso!((code) => (code === 'FR' ? 'France' : code))).toThrow();
-
-    // CONTRE-TÉMOIN : la dérivation reste un FILTRE. Elle ne rend pas les 676 paires de lettres,
-    // et un code qui n'est attribué à aucune région n'en fait pas partie.
-    expect(codes.length).toBeLessThan(676);
-    expect(codes).not.toContain('ZQ');
-  });
-
-  it('REQ-GOV-031 — CONTRE-TÉMOIN : un code qui n’est aucune région ne fabrique pas d’IBAN, clé valide comprise', () => {
-    // La clé mod-97 seule ne suffit pas à faire un IBAN : sans code pays, `PAYS_ISO` deviendrait
-    // `[A-Za-z]{2}` et la garde rougirait sur des identifiants ordinaires — donc on la retirerait.
-    // La clé du témoin est CALCULÉE ici (RM-01, RM-11) : aucune valeur n'est tapée.
-    const faux = ibanSynthetique('ZQ', '00112233445566');
-    expect(cleIbanValide(faux), 'le contre-témoin doit avoir une clé VALIDE').toBe(true);
-    expect(
-      controler(universAvecFichier('docs/note-de-travail.md', `Référence ${faux}.`)).map((f) => f.famille)
-    ).not.toContain('coordonnee_en_clair');
-  });
-
-  it('REQ-GOV-031 — la garde DIT ce qu’elle a lu : balayés, écartés, codes pays dérivés', () => {
-    // Une garde muette ne prouve rien. Le compte de fichiers balayés existait ; ce qu'il ne disait
-    // pas, c'est ce qu'il ne regardait PAS — et c'est précisément ce chiffre-là qui aurait montré
-    // les quatre fichiers aveugles sans qu'on ait à les chercher.
+  it('REQ-GOV-031 — la population balayée est celle du DISQUE : la garde lit TOUS les fichiers suivis, et le DIT', () => {
+    // Le témoin sur le dépôt réel. Aucun prédicat de « texte », aucun plancher tapé : le compte
+    // imprimé par la garde doit être celui que git rend, des deux côtés de « sur ».
+    const suivis = fichiersSuivis().length;
     const { code, sortie } = lancer();
     expect(code, sortie).toBe(0);
-    expect(sortie).toMatch(/\d+ fichier\(s\) suivi\(s\) balayé\(s\)/);
-    expect(sortie).toMatch(/\d+ écarté\(s\)/);
-    expect(sortie).toMatch(/\d+ codes? pays/);
+    const lu = /(\d+) fichier\(s\) suivi\(s\) balayé\(s\) sur (\d+), dont \d+ non-texte/.exec(sortie);
+    expect(lu, `la garde ne dit pas ce qu'elle a lu :\n${sortie}`).not.toBeNull();
+    expect([Number(lu![1]), Number(lu![2])], sortie).toEqual([suivis, suivis]);
+    expect(sortie).toMatch(/\d+ codes de région/);
+  });
+
+  it('REQ-GOV-031 — VETO de securite : un IBAN lisible dans un format « binaire » suivi fait ROUGIR la garde', () => {
+    // A09 · securite, PR #39 (tour 4) : une archive `.tar` non compressée, un `.eps` à aperçu
+    // binaire, un `.ai` au format PDF et un `.pdf` à flux non compressé portaient un IBAN à clé
+    // valide, tous suivis — la garde sortait 0 et la bannière disait « Aucune coordonnée en
+    // clair ». Un décodage UTF-8 garde les suites ASCII : ces octets se LISENT.
+    // L'IBAN est CALCULÉ, et manifestement fictif : banque 00000, compte TEMOIN (RM-01, RM-11).
+    const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
+    const depot = mkdtempSync(join(tmpdir(), 'gov036-veto-'));
+    try {
+      const octets = (...parts: (string | number[])[]) =>
+        Buffer.concat(parts.map((p) => (typeof p === 'string' ? Buffer.from(p, 'latin1') : Buffer.from(p))));
+      const nul = (n: number) => new Array<number>(n).fill(0);
+      const avecIban: Record<string, Buffer> = {
+        // En-tête tar de 512 octets bourré de NUL, puis le fichier archivé.
+        'assets/archive.tar': octets('config/.env', nul(501), `PARTNERS_IBAN_DEBITEUR=${iban}\n`, nul(1024)),
+        // En-tête EPS « DOS binaire » (signature à octets hauts, décalages), PostScript, puis aperçu TIFF.
+        'assets/entete.eps': octets([0xc5, 0xd0, 0xd3, 0xc6, 30, 0, 0, 0], `%!PS-Adobe-3.0 EPSF-3.0\n(IBAN ${iban}) show\n`, [0x49, 0x49, 0x2a, 0, 0xff, 0xfe]),
+        // Un `.ai` est un PDF : marqueur binaire en deuxième ligne.
+        'assets/logo.ai': octets('%PDF-1.5\n%', [0xe2, 0xe3, 0xcf, 0xd3], `\nstream\nBT (${iban}) Tj ET\nendstream\n`, [0, 0x9c, 0xff]),
+        'docs/facture.pdf': octets('%PDF-1.4\n%', [0xe2, 0xe3, 0xcf, 0xd3], `\n1 0 obj << /Length 40 >> stream\nBT (RIB ${iban}) Tj ET\nendstream\n`),
+      };
+      // CONTRE-TÉMOIN dans le MÊME dépôt : un binaire sans coordonnée est lu et nommé, jamais signalé.
+      const propre = { 'assets/propre.png': octets([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], nul(4), 'IHDR', [0xff, 0xd8]) };
+      for (const [chemin, contenu] of Object.entries({ ...avecIban, ...propre })) {
+        mkdirSync(join(depot, dirname(chemin)), { recursive: true });
+        writeFileSync(join(depot, chemin), contenu);
+      }
+      for (const source of ['config/entite.json', 'docs/DECISIONS.md', 'docs/REQUIREMENTS.md']) {
+        mkdirSync(join(depot, dirname(source)), { recursive: true });
+        copyFileSync(source, join(depot, source));
+      }
+      for (const args of [['init', '-q'], ['add', '-A']]) execFileSync('git', args, { cwd: depot, stdio: 'ignore' });
+
+      const r = spawnSync(process.execPath, [resolve('node_modules/tsx/dist/cli.mjs'), resolve(SCRIPT)], {
+        cwd: depot,
+        encoding: 'utf8',
+        env: envDuBancDEssai(),
+      });
+      const sortie = (r.stdout ?? '') + (r.stderr ?? '');
+      expect(r.status, `la garde sort ${r.status} sur quatre IBAN lisibles :\n${sortie}`).toBe(1);
+      const lignes = sortie.split('\n');
+      const signales = Object.keys({ ...avecIban, ...propre }).filter((chemin) =>
+        lignes.some((l) => l.includes('[coordonnee_en_clair]') && l.includes(chemin))
+      );
+      expect(signales, sortie).toEqual(Object.keys(avecIban));
+      const perimetre = lignes.find((l) => l.includes('Périmètre :')) ?? '';
+      expect(
+        Object.keys({ ...avecIban, ...propre }).filter((chemin) => !perimetre.includes(chemin)),
+        `le périmètre imprimé ne NOMME pas chaque fichier non-texte :\n${sortie}`
+      ).toEqual([]);
+    } finally {
+      rmSync(depot, { recursive: true, force: true });
+    }
   });
 });
 

@@ -146,148 +146,48 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
 ];
 
 /**
- * CE QUE LA GARDE REFUSE DE LIRE — et le sens de cette liste a été RETOURNÉ par GOV-036.
+ * CE QUE LA GARDE LIT : TOUT FICHIER SUIVI, PAR SES OCTETS. Il n'y a plus de liste (GOV-036).
  *
- * 🔴 CE QU'ELLE ÉTAIT, ET CE QUE ÇA COÛTAIT. C'était une liste d'AUTORISATION de quinze
- * extensions, sous un commentaire qui disait pourtant « un secret ne choisit pas son extension ».
- * Une population tapée à la main ne voit que ce qu'on y a mis : n'étaient donc PAS lus `.sh`,
- * `.py`, `.tf`, `.toml`, `.ini`, `.mdx`, `.html`, `.http`, `.rst`, `.jsonc`, `.log`, `.har`,
- * `Makefile`, `.gitattributes`, `.sha256` — et le cas plausible n'a rien d'exotique : un
- * `scripts/*.sh` qui exporte `PARTNERS_IBAN_DEBITEUR`. Au moment où GOV-036 est livrée, QUATRE
- * fichiers réellement suivis par ce dépôt étaient déjà dans cet angle mort
- * (`.gitattributes`, `.gitignore`, `.prettierignore`, `packages/contracts/contracts.sha256`) : le
- * défaut n'était pas théorique, il était sur le disque, et le compteur du message de succès
- * disait « 181 fichier(s) balayé(s) » sans jamais dire qu'il y en avait 185.
+ * 🔴 DEUX FORMES ONT ÉTÉ ESSAYÉES, ET TOUTES DEUX DÉCIDAIENT PAR LE NOM CE QUE SEULS LES OCTETS DISENT.
+ *   — Une liste d'AUTORISATION de quinze extensions, sous un commentaire qui disait pourtant « un
+ *     secret ne choisit pas son extension » : `.sh`, `.py`, `.toml`, `Makefile`, `.gitattributes`
+ *     n'étaient pas lus, et quatre fichiers suivis de ce dépôt étaient déjà dans l'angle mort quand
+ *     GOV-036 a été ouverte.
+ *   — Une liste de REFUS de familles « binaires », au motif qu'un binaire lu en UTF-8 ne rendrait
+ *     qu'un vert sur du bruit. C'était FAUX, et A09 · securite l'a mesuré sous veto (PR #39) : un
+ *     décodage UTF-8 remplace les octets invalides et GARDE les suites ASCII. Une archive `.tar` non
+ *     compressée, un `.eps` à aperçu binaire, un `.ai` au format PDF et un `.pdf` à flux non
+ *     compressé portaient chacun un IBAN LISIBLE ; la garde les écartait et sortait 0. Les mêmes
+ *     octets sous une extension que la liste ne nommait pas faisaient sortir 1.
  *
- * 🔑 LES DEUX FORMES NE SE TROMPENT PAS DANS LE MÊME SENS. Une liste d'autorisation oubliée
- * rend la garde AVEUGLE en silence ; une liste de refus oubliée la rend BAVARDE — elle lit un
- * fichier de trop et, au pire, produit un faux positif qu'un humain voit. Dans une garde de
- * publication, sur un dépôt PUBLIC, seule la seconde erreur est rattrapable.
+ * 🔑 LE CRITÈRE EST LA LISIBILITÉ DES OCTETS, PAS LE MOT « BINAIRE » — et une extension ne dit rien
+ * des octets. La garde lit donc chaque fichier suivi, sans branche sur son chemin, et
+ * `coordonneesDe` juge ce qu'un décodage UTF-8 en rend. Un fichier de texte est lu en entier ; un
+ * fichier qui ne l'est pas est lu pour ses suites ASCII, et il est NOMMÉ dans le périmètre imprimé.
  *
- * CE QUI RESTE REFUSÉ, ET POURQUOI SEULEMENT CELA : les familles dont les octets ne sont pas du
- * texte. Les lire en UTF-8 ne produirait pas une lecture, mais un vert sur du bruit indéchiffrable
- * — c'est-à-dire exactement le « je n'ai rien vu » qu'on prend pour « je n'ai rien lu ».
- *
- * ⚠️ DEUX RÉSIDUS ASSUMÉS, ÉCRITS PLUTÔT QUE TUS.
- *   — 🔴 `.svg` ÉTAIT REFUSÉ, ET C'ÉTAIT UN TROU. A09 · securite l'a mesuré sur la PR #39 :
- *     `assets/logo.svg` portant un IBAN en clair sortait **EXIT 0** — « 1 écarté(s), familles
- *     binaires » — quand les MÊMES OCTETS dans un `.md` sortaient 1. Un SVG est du TEXTE, et ce
- *     dépôt est PUBLIC.
- *
- *     Le résidu était déclaré, et promis « en tâche, pas en correctif glissé (A11) ». Deux choses
- *     l'ont fait basculer : aucune tâche n'a jamais été versée — la promesse valait absolution —
- *     et le sujet de GOV-036 est LITTÉRALEMENT « les deux listes qui décident de ce que la garde
- *     REGARDE ». Ce n'est donc pas un correctif glissé : c'est le périmètre.
- *
- *     La raison invoquée — « le contre-témoin exige qu'une image ne soit pas lue » — ne tenait
- *     pas : le contre-témoin porte sur `.png` et `.woff2`, dont les octets ne sont PAS du texte.
- *     `svgz` reste refusé, lui : il est gzippé, donc illisible en UTF-8.
- *
- *     🔑 Et le témoin dérivé du disque (`entite-registre.spec.ts`) le disait déjà sans qu'on
- *     l'écoute : il exige que TOUT fichier de texte suivi soit balayé. Deux témoins se
- *     contredisaient dans le même banc, et c'est celui qui récitait une liste qui avait tort.
- *   — `.pdf` est refusé pour la même raison que les autres binaires : ses flux sont compressés,
- *     donc un balayage UTF-8 y rendrait un vert qui ne prouve rien. Le jour où un PDF signé sera
- *     suivi par ce dépôt, c'est son TEXTE EXTRAIT qu'il faudra juger — une tâche, pas une ligne.
+ * ⚠️ CE QUE CETTE LECTURE NE VOIT PAS, ÉCRIT PLUTÔT QUE TU :
+ *   (1) un contenu COMPRESSÉ — archive `zip` ou `gz`, flux PDF comprimé, bureautique `docx`,
+ *       image — n'est pas décompressé : la garde lit les octets, pas le texte qu'ils codent. C'est
+ *       pour cela que chaque fichier non-texte est nommé à chaque passage, dans le vert comme dans
+ *       le rouge : un verdict qui repose sur des octets opaques le DIT ;
+ *   (2) un texte UTF-16 : un octet NUL s'intercale entre deux caractères et casse la forme ;
+ *   (3) une valeur accolée à un octet d'enregistrement alphanumérique (une base SQLite) : la
+ *       frontière de mot de la forme ne tient plus.
  */
-/**
- * LES FAMILLES BINAIRES, EN DONNÉE — et c'est A10 · mutation qui l'a exigé (PR #39, 3e tour).
- *
- * 🔴 CE QU'UN LITTÉRAL DE REGEXP LAISSAIT PASSER. Tant que la liste de refus n'existait que sous
- * forme de MOTIF, le témoin qui la garde ne pouvait que RE-ANALYSER son texte — et il ne lisait
- * qu'entre la première `(` et la première `)`. Une alternation posée HORS du groupe,
- * `…|der)$|[.](netrc|npmrc|pgpass|cfg)$/i`, sortait quatre emplacements canoniques de secret du
- * balayage d'un dépôt PUBLIC, suite ENTIÈREMENT VERTE, le témoin annonçant toujours « 69 familles,
- * 0 intrus ». `.netrc`, `.npmrc`, `.pgpass`, `.cfg` : rien ne les lisait plus, rien ne le disait.
- *
- * 🔑 *Un témoin qui re-analyse une ÉCRITURE garde l'écriture, pas la PROPRIÉTÉ.* La liste est donc
- * la donnée, et le motif en est DÉRIVÉ : il n'y a plus de groupe à écrire à la main, donc plus de
- * « hors du groupe ». Le témoin confronte deux LISTES et ne découpe plus aucune chaîne.
- *
- * ⚠️ Les entrées sont des FRAGMENTS de motif, pas des extensions : `jpe?g`, `mp[34]`, `docx?`
- * couvrent chacune plusieurs familles. C'est délibéré — l'alternative serait de les énumérer, donc
- * de rallonger une liste, ce que la lentille `mutation` a explicitement refusé.
- */
-export const FAMILLES_BINAIRES: readonly string[] = [
-  'png', 'jpe?g', 'gif', 'bmp', 'tiff?', 'webp',
-  'avif', 'ico', 'icns', 'svgz', 'eps', 'psd',
-  'ai', 'xcf', 'heic', 'heif', 'woff2?', 'ttf',
-  'otf', 'eot', 'zip', 'gz', 'tgz', 'bz2',
-  'xz', 'zst', '7z', 'rar', 'tar', 'jar',
-  'war', 'mp[34]', 'm4[av]', 'mov', 'avi', 'mkv',
-  'webm', 'wav', 'ogg', 'og[av]', 'flac', 'aac',
-  'wm[av]', 'pdf', 'docx?', 'xlsx?', 'pptx?', 'odt',
-  'ods', 'odp', 'exe', 'dll', 'so', 'dylib',
-  'bin', 'wasm', 'class', 'node', 'pyc', 'pyo',
-  'obj', 'lib', 'sqlite3?', 'db', 'mdb', 'p12',
-  'pfx', 'jks', 'der',
-];
-
-/**
- * Le motif de refus, CONSTRUIT depuis la donnée. Exporté pour que le témoin puisse le reconstruire
- * et exiger l'IDENTITÉ — c'est ce qui interdit de réécrire `EXTENSIONS_REFUSEES` à la main.
- */
-export function motifDeRefus(familles: readonly string[]): RegExp {
-  // `[.]` plutot que la sequence d'echappement : elle traverse deux couches (source TS, puis
-  // moteur de regexp) et s'y perd — mesure faite, elle a rendu un point METACARACTERE.
-  return new RegExp('[.](' + familles.join('|') + ')$', 'i');
-}
-
-export const EXTENSIONS_REFUSEES = motifDeRefus(FAMILLES_BINAIRES);
-
-/**
- * CE FICHIER EST-IL REGARDÉ ? Fonction PURE et EXPORTÉE, et ce n'est pas un rangement.
- *
- * 🔴 Tant que cette décision vivait en ligne dans `lireUnivers()`, elle n'était exercée par AUCUN
- * témoin : `--prove` INJECTE son univers et ne passe jamais par la lecture du disque. La lentille
- * `mutation` l'a mesuré — remplacer la liste d'extensions par un motif qui ne reconnaît rien, ou
- * `EXEMPTS` par un attrape-tout, laissait `gov:entite` ET son `--prove` VERTS tous les deux. Les
- * deux listes qui décident de CE QUI EST REGARDÉ étaient le seul endroit non gardé de la garde.
- * Extraite ici, la décision a un TEST — `tests/unit/gouvernance/entite-registre.spec.ts`.
- *
- * 🔑 ET LE TEST QUI COMPTE NE RÉCITE AUCUNE LISTE (GOV-036). Un témoin qui redéclarerait les
- * familles à lire aurait exactement le même angle mort que la liste qu'il garde : il ne verrait
- * que les cas qu'on aurait pensé à y écrire. Celui qui garde vraiment ce filtre DÉRIVE sa
- * population du DISQUE — il demande à git ses fichiers suivis, mesure lesquels sont du texte
- * (octet NUL, décodage UTF-8 sans perte) et exige que la garde les regarde TOUS. Une famille de
- * fichiers que personne n'a prévue y tombe le jour où elle apparaît, sans qu'une ligne bouge.
- *
- * ⚠️ Cette décision n'a PAS de famille dans `--prove`, et une première rédaction de ce paragraphe
- * en annonçait une, `filtre_trop_large`, qui n'existe nulle part : `FAMILLES` en porte onze, aucune
- * de ce nom. La phrase rouvrait donc EN PROSE le trou que l'extraction venait de fermer — annoncer
- * une preuve qu'on n'a pas est précisément ce qui fait qu'on ne la cherche plus. Le test suffit ;
- * l'annonce, non. (Constat (3) de GOV-036 : il était déjà fermé par la 4ᵉ passe de la PR #31, et
- * seule cette relecture-ci pouvait le dire — un constat se vérifie avant de se corriger.)
- *
- * MESURE PAR MUTATION (RM-02), refaite sur la forme de refus. AUCUN NOMBRE D'ÉCHECS N'EST ÉCRIT
- * ICI, et c'est le même remède qu'au bloc `CODES_PAYS` vingt lignes plus bas : deux comptes y ont
- * été tapés (« 4 échecs », « 2 échecs »), tous deux périmés par le commit qui a ajouté l'ancrage du
- * renversement, aucun comparateur pour le dire. On garde QUI rougit — la seule chose qu'un compte
- * ne dit pas — et la commande qui rend le reste :
- *
- *     npx vitest run tests/unit/gouvernance/entite-registre.spec.ts
- *
- *   — `EXTENSIONS_REFUSEES` remplacée par un attrape-tout `/.*$/` (plus rien n'est lu) : rougissent
- *     `un secret ne choisit pas son extension`, `ANCRAGE : aucune famille de TEXTE ne peut entrer
- *     dans la liste de REFUS`, `ANCRAGE : le motif de refus est DÉRIVÉ de la donnée`, `la
- *     population balayée est celle du DISQUE`, `les familles qu'une liste d'AUTORISATION oubliait`
- *     et `un script shell qui exporte l'IBAN débiteur`. Les deux contre-témoins binaires restent
- *     VERTS, et c'est normal : ils gardent l'autre sens.
- *   — remplacée par `/$^/`, qui ne refuse rien (le filtre n'est plus un filtre) : rougissent les
- *     deux contre-témoins binaires (`un fichier binaire ou d'image n'est pas balayé`, `CONTRE-
- *     TÉMOIN : le filtre reste un FILTRE`) et, à nouveau, `ANCRAGE : le motif de refus est DÉRIVÉ
- *     de la donnée`.
- *
- * ⚠️ ET LES DEUX MUTATIONS SONT TUÉES PAR UN TÉMOIN COMMUN — celui de la dérivation, puisque toutes
- * deux réécrivent le motif à la main. Une rédaction antérieure affirmait « aucune n'est tuée par le
- * même témoin » : c'était déjà faux avant ce commit (l'ancrage des familles déclarées tombait sur
- * les deux), et c'est cette phrase qui servait à justifier de garder les deux mutations au dossier.
- * Elles s'y gardent, mais pour la bonne raison : leurs AUTRES témoins sont disjoints, et chacune
- * éprouve un sens de l'erreur que l'autre ne touche pas.
- */
-export function estBalaye(chemin: string): boolean {
-  // Le sens du refus est le seul qui se trompe du bon côté : une famille inconnue est LUE.
-  return !EXTENSIONS_REFUSEES.test(chemin);
+export function lireFichiers(
+  suivis: readonly string[],
+  lire: (chemin: string) => Buffer
+): { fichiers: Fichier[]; nonTexte: string[] } {
+  const fichiers: Fichier[] = [];
+  const nonTexte: string[] = [];
+  for (const chemin of suivis) {
+    const octets = lire(chemin);
+    const contenu = octets.toString('utf8');
+    // Du texte : aucun octet NUL, et un décodage qui se ré-encode à l'identique.
+    if (octets.includes(0) || !Buffer.from(contenu, 'utf8').equals(octets)) nonTexte.push(chemin);
+    fichiers.push({ chemin, contenu });
+  }
+  return { fichiers, nonTexte };
 }
 
 /** Ce fichier est-il exempt de CETTE famille ? Aucun fichier n'est exempt d'un SECRET. */
@@ -397,61 +297,42 @@ export function estExemplePlausible(v: string): boolean {
 }
 
 /**
- * Le code PAYS ISO qui ouvre un IBAN et qui occupe les 5ᵉ et 6ᵉ caractères d'un BIC.
+ * Le code PAYS qui ouvre un IBAN et qui occupe les 5ᵉ et 6ᵉ caractères d'un BIC.
  * Déclaré AVANT les deux formes qui s'en servent : un `const` référencé plus haut que sa
  * déclaration lève à l'exécution, et la garde ne serait pas « fausse », elle serait MORTE.
  *
- * 🔴 CE QUE C'ÉTAIT, ET CE QUE ÇA LAISSAIT PASSER (constat (1) de GOV-036, lentille `securite`
- * sur les quatre passes de la PR #31). Une liste TAPÉE de 47 entrées, dont sept qui n'émettent
- * aucun IBAN, et CINQUANTE ET UN pays émetteurs OMIS. Mesure, pas hypothèse : cinq IBAN étrangers
- * à clé mod-97 VALIDE — TR, IL, RS, AL, LB — traversaient la garde sans un mot. Rien ne les
- * écartait que leur absence de la liste.
+ * 🔴 CE QUE C'ÉTAIT (constat (1) de GOV-036, lentille `securite` sur les quatre passes de la PR #31).
+ * Une liste TAPÉE de 47 entrées, dont sept qui n'émettent aucun IBAN, et CINQUANTE ET UN pays
+ * émetteurs OMIS. Cinq IBAN étrangers à clé mod-97 VALIDE — TR, IL, RS, AL, LB — traversaient la
+ * garde sans un mot : rien ne les écartait que leur absence de la liste.
  *
- * 🔑 C'EST RM-01 APPLIQUÉ À UNE CONSTANTE : la liste se DÉRIVE, elle ne se tape pas. La source
- * est le registre des régions ISO 3166-1 de l'ICU du runtime — la même donnée que celle qui sert
- * à afficher un nom de pays, versionnée avec Node, jamais recopiée ici. Un pays qui se met à
- * émettre des IBAN demain est couvert sans qu'une ligne bouge, parce que personne n'a eu à y
- * penser : c'est très exactement ce qu'une liste tapée ne sait pas faire.
+ * 🔑 RM-01 APPLIQUÉ À UNE CONSTANTE : la liste se DÉRIVE. La source est la table des RÉGIONS de
+ * l'ICU du runtime (CLDR) — la donnée qui sert à afficher un nom de pays, versionnée avec Node,
+ * jamais recopiée ici.
  *
- * CE QUE LA DÉRIVATION COÛTE, ET POURQUOI C'EST LE BON CÔTÉ DE L'ERREUR. Elle rend un SUR-ENSEMBLE
- * des pays émetteurs (les régions ISO, ~279 codes) : quelques codes qui n'ouvrent aucun IBAN sont
- * donc admis par la FORME. Ce n'est pas la forme qui décide, c'est `cleIbanValide` — la clé mod-97
- * reste le discriminant, et les trois chaînes qui avaient fait rougir la garde sur un dépôt propre
- * (`FC29…`, `DE72D8B01D…`, `AE77F99D…`) restent vertes, leur contre-témoin le tient. Le code pays
- * garde son rôle : il empêche `[A-Za-z]{2}` d'ouvrir la forme à n'importe quel identifiant.
+ * ⚠️ CE QUE LA DÉRIVATION REND, EXACTEMENT : les codes de région CLDR à deux lettres. C'est un
+ * SUR-ENSEMBLE des codes ISO 3166-1 attribués — y entrent aussi des macro-régions (`EU`, `UN`),
+ * des codes réservés ou retirés (`AC`, `TA`, `SU`, `YU`), des pseudo-régions (`XA`, `XB`, `ZZ`) et
+ * un code attribué par l'utilisateur (`XK`, le Kosovo, qui émet des IBAN). Les codes en trop ne
+ * sont pas un danger : ce n'est pas la forme qui décide, c'est `cleIbanValide`. Le code pays garde
+ * son rôle — il empêche `[A-Za-z]{2}` d'ouvrir la forme à n'importe quel identifiant.
  *
  * ⚠️ ET ELLE REFUSE PLUTÔT QUE DE RÉTRÉCIR. Une source infirme — ICU réduit, `Intl.DisplayNames`
- * absent — rendrait une liste VIDE, donc une forme d'IBAN qui ne reconnaît plus RIEN, donc un
- * `✅` sur un dépôt qui fuit. C'est le défaut trouvé sept fois dans ce dépôt : « je n'ai rien
- * trouvé » et « je n'ai rien regardé » sont deux phrases différentes, et une seule autorise à
- * publier. `codesPaysIso` LÈVE sous le plancher, au chargement du module, avant tout verdict.
+ * absent — rendrait une liste courte ou vide, donc une forme d'IBAN qui ne reconnaît plus rien, donc
+ * un `✅` sur un dépôt qui fuit. « Je n'ai rien trouvé » et « je n'ai rien regardé » sont deux
+ * phrases différentes, et une seule autorise à publier. `codesDeRegion` LÈVE sous le plancher, au
+ * chargement du module, avant tout verdict.
  *
- * MESURE PAR MUTATION (RM-02), sur le banc d'essai de la garde. Le nombre de cas N'EST PAS ÉCRIT
- * ici, et c'est délibéré : il l'a été deux fois, il a été faux deux fois. Écrit à 143, il est passé
- * à 148 quand une PR a ajouté cinq témoins, puis à 145 quand ils ont été retirés — le retrait a
- * DÉPLACÉ le compte au lieu de le rattraper (A09 · simplicite, PR #39). Deux copies d'un total,
- * aucun comparateur : c'est la faute que ce dépôt a déjà payée quatre fois, et son remède est
- * connu — retirer le nombre, laisser la commande qui le rend :
- *
- *     npx vitest run tests/unit/gouvernance/entite-registre.spec.ts
- *
- *   — `CODES_PAYS` remis à la liste TAPÉE de 47 entrées d'avant GOV-036 : rougissent les cinq IBAN
- *     étrangers (TR, IL, RS, AL, LB), les deux cas qui exigent que `--prove` les NOMME, le témoin
- *     des onze familles, et les deux ancrages du bloc pays — celui de non-régression et celui de
- *     l'IDENTITÉ producteur/consommateur. C'est la mesure du constat (1), en sens inverse. Le
- *     compte a été écrit ici (« 8 échecs ») et il s'est périmé au commit MÊME qui l'écrivait,
- *     lequel recâblait l'ancrage sur `CODES_PAYS` : c'est pourquoi il n'y en a plus.
- *   — le plancher neutralisé (`codes.length < 0`), la dérivation rétrécit alors en silence :
- *     rougit le témoin du refus, et lui seul. Sans lui, une ICU amputée rendrait un `✅` sur une
- *     forme d'IBAN qui ne reconnaît plus rien, et rien dans la CI ne changerait de couleur.
- *   — `CODES_PAYS` filtré, AU POINT DE CONSOMMATION, de codes que l'ancrage ne nomme pas (la
- *     survivante S1 de A10 · mutation, trois tours durant) : rougit `ANCRAGE : ce que la garde
- *     CONSOMME est identiquement ce que la source PRODUIT`, et lui seul. C'est le témoin qui
- *     remplace un COMPTE par une IDENTITÉ — un plancher ne dit jamais LESQUELS.
+ * LES TÉMOINS vivent dans `tests/unit/gouvernance/entite-registre.spec.ts`, sous REQ-GOV-031. Ils
+ * interrogent l'ICU DANS LE TEST, sans passer par `codesDeRegion` : chaque paire de lettres qu'elle
+ * connaît doit fabriquer un IBAN et un BIC que la garde voit, et aucune autre paire ne doit en
+ * fabriquer — donc une transformation glissée entre la source et les formes rougit, quel que soit
+ * l'endroit. Un lecteur de 199 régions doit lever, un lecteur de 200 non. Et un ancrage tapé tient
+ * l'appauvrissement de l'ICU elle-même, que ni l'un ni l'autre ne verrait.
  */
 
 /** Sous ce nombre de régions, la source n'est pas « pauvre » : elle est illisible. */
-export const PLANCHER_ISO_3166 = 200;
+export const PLANCHER_DE_REGIONS = 200;
 
 /** La source des codes pays n'a pas pu être établie. Ce n'est pas une liste courte : c'est rien. */
 export class SourcePaysIllisible extends Error {
@@ -461,32 +342,28 @@ export class SourcePaysIllisible extends Error {
   }
 }
 
-/** Rend le nom d'une région, ou le code lui-même quand la source ne la connaît pas. */
-export type LecteurDeRegion = (code: string) => string;
+/** Le nom d'une région ; une paire de lettres que la source ne connaît pas se rend elle-même. */
+type LecteurDeRegion = (code: string) => string | undefined;
 
-/** Le lecteur RÉEL : le registre des régions ISO 3166-1 embarqué dans l'ICU du runtime. */
-export function lecteurDeRegionDuRuntime(): LecteurDeRegion {
+function lecteurDeRegionDuRuntime(): LecteurDeRegion {
   if (typeof Intl.DisplayNames !== 'function') {
     throw new SourcePaysIllisible(
-      "`Intl.DisplayNames` est absent de ce runtime : le registre des régions ISO 3166-1 est " +
-        'INTROUVABLE. La garde refuse de dériver une liste vide, qui ferait reconnaître ZÉRO IBAN.'
+      '`Intl.DisplayNames` est absent de ce runtime : la table des régions est INTROUVABLE. ' +
+        'La garde refuse de dériver une liste vide, qui ferait reconnaître ZÉRO IBAN.'
     );
   }
   const noms = new Intl.DisplayNames(['fr'], { type: 'region' });
-  return (code) => {
-    try {
-      return noms.of(code) ?? code;
-    } catch {
-      return code;
-    }
-  };
+  // UN SEUL chemin pour « pas une région » : `of()` rend le code lui-même. Le `catch` qui rendait
+  // aussi le code n'était atteint par aucune des 676 paires (A09 · simplicite, PR #39) : il ne
+  // pouvait que retirer des pays en silence.
+  return (code) => noms.of(code);
 }
 
 /**
- * Les codes pays ISO 3166-1 alpha-2, DÉRIVÉS de la source et jamais tapés. Le lecteur est
- * injectable pour que la REFUS soit éprouvable : une source qui ne connaît rien doit LEVER.
+ * Les codes de région à deux lettres, DÉRIVÉS de la source et jamais tapés. Le lecteur est
+ * injectable pour que le REFUS soit éprouvable : une source qui ne connaît rien doit LEVER.
  */
-export function codesPaysIso(lire: LecteurDeRegion = lecteurDeRegionDuRuntime()): string[] {
+export function codesDeRegion(lire: LecteurDeRegion = lecteurDeRegionDuRuntime()): string[] {
   const A = 'A'.charCodeAt(0);
   const codes: string[] = [];
   for (let i = 0; i < 26; i++) {
@@ -496,18 +373,18 @@ export function codesPaysIso(lire: LecteurDeRegion = lecteurDeRegionDuRuntime())
       if (lire(code) !== code) codes.push(code);
     }
   }
-  if (codes.length < PLANCHER_ISO_3166) {
+  if (codes.length < PLANCHER_DE_REGIONS) {
     throw new SourcePaysIllisible(
       `la source ne connaît que ${codes.length} région(s), sous le plancher de ` +
-        `${PLANCHER_ISO_3166}. Une liste de codes pays amputée n'est pas une garde plus étroite : ` +
+        `${PLANCHER_DE_REGIONS}. Une liste de codes pays amputée n'est pas une garde plus étroite : ` +
         "c'est une forme d'IBAN qui ne reconnaît plus rien, donc un vert sur un dépôt PUBLIC."
     );
   }
   return codes;
 }
 
-/** Le nombre de codes réellement dérivés — imprimé par la garde : elle DIT ce qu'elle a lu. */
-export const CODES_PAYS = codesPaysIso();
+/** Les codes réellement dérivés — leur nombre est imprimé : la garde DIT ce qu'elle a lu. */
+export const CODES_PAYS = codesDeRegion();
 
 const PAYS_ISO = `(?:${CODES_PAYS.join('|')})`;
 
@@ -2246,28 +2123,14 @@ function fichiersSuivis(): string[] {
 }
 
 /**
- * L'univers RÉEL, et ce qui en a été ÉCARTÉ — les deux se rendent ensemble (GOV-036).
+ * L'univers RÉEL. Chaque fichier suivi y entre : aucune branche ne dépend de son chemin (GOV-036).
  *
- * 🔑 Un compteur de fichiers lus ne dit rien de ce qui n'a pas été lu : « 181 balayés » se lisait
- * à l'identique que le dépôt en suive 181 ou 185. Le nombre qui aurait montré l'angle mort est
- * celui des ÉCARTÉS, et il n'était imprimé nulle part.
+ * Un fichier suivi absent du disque n'est pas sauté ici : `fichiersSuivisOuRefus` a déjà refusé
+ * (`perimetre_entame`), et une lecture qui lève est un rouge, jamais un vert.
  */
-function lireUnivers(): { univers: Univers; suivis: number; ecartes: string[] } {
-  const fichiers: Fichier[] = [];
-  const ecartes: string[] = [];
+function lireUnivers(): { univers: Univers; suivis: number; nonTexte: string[] } {
   const suivis = fichiersSuivis();
-  for (const chemin of suivis) {
-    // Le fichier n'est PLUS écarté ici : il entre dans l'univers, et c'est `controler()` qui
-    // décide famille par famille. Un `continue` à cet endroit rendait le fichier invisible à
-    // TOUTES les familles, `coordonnee_en_clair` comprise — c'est ce que la lentille `securite`
-    // a mis en veto le 2026-09-05.
-    if (!estBalaye(chemin)) {
-      ecartes.push(chemin);
-      continue;
-    }
-    if (!existsSync(chemin)) continue;
-    fichiers.push({ chemin, contenu: readFileSync(chemin, 'utf8') });
-  }
+  const { fichiers, nonTexte } = lireFichiers(suivis, (chemin) => readFileSync(chemin));
   return {
     univers: {
       registre: registreDuDepot(),
@@ -2276,7 +2139,7 @@ function lireUnivers(): { univers: Univers; suivis: number; ecartes: string[] } 
       fichiers,
     },
     suivis: suivis.length,
-    ecartes,
+    nonTexte,
   };
 }
 
@@ -2307,10 +2170,8 @@ export const IBAN_TEMOIN = 'FR1420041010050500013M02606';
  * et c'est exactement la classe de valeurs que la garde ne voyait pas.
  *
  * CE QUE CES CONSTANTES NE SONT PAS. Elles ne DÉRIVENT PAS `PAYS_ISO` et ne prétendent pas la
- * couvrir : la liste est tapée à la main, 47 entrées dont 7 qui n'émettent aucun IBAN et 51 pays
- * émetteurs omis, et c'est l'objet de la tâche GOV-036. Ce qui est livré ici, c'est le TÉMOIN QUI
- * ROUGIT QUAND LA LISTE RÉTRÉCIT — ce qui manquait pour que GOV-036 soit gardée plutôt que promise.
- * Ce sont des IBAN de documentation bancaire, à clé mod-97 valide, jamais un compte réel.
+ * couvrir : elles sont le TÉMOIN QUI ROUGIT QUAND LA LISTE RÉTRÉCIT. Ce sont des IBAN de
+ * documentation bancaire, à clé mod-97 valide, jamais un compte réel.
  */
 export const IBANS_TEMOINS_ETRANGERS: Record<string, string> = {
   DE: 'DE89370400440532013000',
@@ -2653,9 +2514,10 @@ function prouver(): number {
       `avant toute recherche, et chacune a son témoin : un IBAN collé depuis un RIB rougit.`
   );
   console.log(
-    `   ${CODES_PAYS.length} codes pays ISO 3166-1 DÉRIVÉS de l'ICU du runtime : la liste des pays ` +
-      `émetteurs ne se tape plus, et la dérivation LÈVE sous ${PLANCHER_ISO_3166} régions plutôt ` +
-      `que de rétrécir en silence la forme qui reconnaît un IBAN.`
+    `   ${CODES_PAYS.length} codes de région à deux lettres DÉRIVÉS de l'ICU du runtime (CLDR, un ` +
+      `sur-ensemble des codes ISO 3166-1 attribués) : la liste des pays émetteurs ne se tape plus, ` +
+      `et la dérivation LÈVE sous ${PLANCHER_DE_REGIONS} régions plutôt que de rétrécir en silence ` +
+      `la forme qui reconnaît un IBAN.`
   );
   console.log(
     `   ${Object.keys(IBANS_TEMOINS_ETRANGERS).length} IBAN NON français rougissent aussi ` +
@@ -2811,12 +2673,19 @@ if (APPELE_DIRECTEMENT) {
   if (process.argv.includes('--prove')) {
     process.exit(prouver());
   } else {
-    const { univers, suivis, ecartes } = lireUnivers();
+    const { univers, suivis, nonTexte } = lireUnivers();
+    // LE PÉRIMÈTRE EST IMPRIMÉ DANS LES DEUX ISSUES. Un fichier non-texte n'est lu que pour ses
+    // suites ASCII : un vert — ou un rouge — qui repose sur des octets opaques doit le DIRE.
+    const perimetreLu =
+      `${univers.fichiers.length} fichier(s) suivi(s) balayé(s) sur ${suivis}, dont ` +
+      `${nonTexte.length} non-texte lu(s) par leurs seuls octets — un contenu COMPRESSÉ n'y est pas vu` +
+      (nonTexte.length > 0 ? ` : ${nonTexte.join(', ')}` : '');
     const fautes = controler(univers);
     if (fautes.length > 0) {
       console.error(`❌ gov:entite — ${fautes.length} défaut(s) du registre d'entité :\n`);
       fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
       if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
+      console.error(`\n   Périmètre : ${perimetreLu}.`);
       console.error(
         `\nCe dépôt est PUBLIC : une coordonnée bancaire poussée une fois y reste lisible pour ` +
           `toujours. La sentinelle \`${SENTINELLE}\` est la seule valeur que ces champs y prennent.`
@@ -2833,9 +2702,7 @@ if (APPELE_DIRECTEMENT) {
       `✅ gov:entite — \`${CHEMIN_REGISTRE}\` conforme : ${CHAMPS.length} champs, ` +
         `${arretes} arrêté(s) et attesté(s) par leur ligne de décision, ${attente.length} à la ` +
         `sentinelle, ${secrets.length} secret(s) qui ne prennent jamais d'autre valeur ici. ` +
-        `${univers.fichiers.length} fichier(s) suivi(s) balayé(s) sur ${suivis}, ` +
-        `${ecartes.length} écarté(s) — familles binaires${ecartes.length > 0 ? ' : ' + ecartes.slice(0, 5).join(', ') : ''} — ` +
-        `et ${CODES_PAYS.length} codes pays ISO 3166-1 dérivés de l'ICU du runtime. ` +
+        `${perimetreLu}. ${CODES_PAYS.length} codes de région dérivés de l'ICU du runtime. ` +
         `Aucune coordonnée en clair, aucune valeur recopiée, aucun point de sortie sans refus.`
     );
     console.log(

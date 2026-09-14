@@ -81,6 +81,13 @@ function exigerQueLeRefusSORTE(nom: string, source: string, ancre: string): void
 }
 
 /**
+ * Les extensions que le compilateur connaît (`ts.Extension`), DÉRIVÉES et jamais tapées — données
+ * `.json` comprises, le sens bavard de l'erreur. `ts|mjs|js`, écrit à la main, laissait un `.mts`
+ * hors de toute énumération alors que `tsx` l'exécute (A10 · mutation, PR #39).
+ */
+const EXTENSIONS_DE_CODE: string[] = Object.values(ts.Extension);
+
+/**
  * L'énumération du DISQUE, partagée par les deux gardes de ce fichier.
  *
  * Elle était locale à la garde de conservation ; la garde d'adjacence en avait besoin aussi et
@@ -91,7 +98,7 @@ function enumererFichiers(dossier: string): string[] {
   return readdirSync(dossier, { withFileTypes: true }).flatMap((e) => {
     const chemin = `${dossier}/${e.name}`;
     if (e.isDirectory()) return e.name === 'node_modules' ? [] : enumererFichiers(chemin);
-    return /\.(ts|mjs|js)$/.test(e.name) ? [chemin] : [];
+    return EXTENSIONS_DE_CODE.some((x) => e.name.endsWith(x)) ? [chemin] : [];
   });
 }
 
@@ -1683,32 +1690,90 @@ it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉC
 });
 
 /**
- * LES CHAÎNES QU'UN FICHIER CONSTRUIT RÉELLEMENT — pliées, jamais grattées.
+ * LES CHAÎNES QU'UN SOURCE CONSTRUIT — pliées sur l'arbre syntaxique, jamais grattées dans le texte.
  *
- * On ne lit que des LITTÉRAUX de chaîne de l'arbre syntaxique : un commentaire n'en est pas, donc le
- * texte qui DÉCRIT la protection ne peut plus la déclencher. Et on PLIE les concaténations de
- * littéraux, parce que `'ls-' + 'files'` est le même appel que `'ls-files'`.
+ * Un commentaire n'est pas un littéral : le texte qui DÉCRIT la protection ne la déclenche pas. Sont
+ * PLIÉS : la concaténation de chaînes pliables, le gabarit dont chaque interpolation se plie, le
+ * `.join()` d'un tableau littéral de chaînes pliables, et un identifiant lié par `const` à une valeur
+ * pliable dans le MÊME fichier. La portée n'est pas résolue : un homonyme se plie comme la première
+ * déclaration rencontrée — le sens bavard de l'erreur.
  */
-function chainesConstruites(chemin: string): string[] {
-  const arbre = ts.createSourceFile(chemin, readFileSync(chemin, 'utf8'), ts.ScriptTarget.Latest, true);
-  const trouvees: string[] = [];
-  const plier = (n: ts.Node): string | null => {
+function chainesConstruites(source: string, nom: string): string[] {
+  const arbre = ts.createSourceFile(nom, source, ts.ScriptTarget.Latest, true);
+  const constantes = new Map<string, ts.Expression>();
+  const recenser = (n: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(n) &&
+      ts.isIdentifier(n.name) &&
+      n.initializer !== undefined &&
+      (ts.getCombinedNodeFlags(n) & ts.NodeFlags.Const) !== 0 &&
+      !constantes.has(n.name.text)
+    ) {
+      constantes.set(n.name.text, n.initializer);
+    }
+    ts.forEachChild(n, recenser);
+  };
+  recenser(arbre);
+  const plier = (n: ts.Node, suivis: ReadonlySet<string>): string | null => {
     if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) return n.text;
-    if (ts.isParenthesizedExpression(n)) return plier(n.expression);
+    if (ts.isParenthesizedExpression(n)) return plier(n.expression, suivis);
     if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.PlusToken) {
-      const g = plier(n.left);
-      const d = plier(n.right);
+      const g = plier(n.left, suivis);
+      const d = plier(n.right, suivis);
       return g === null || d === null ? null : g + d;
+    }
+    if (ts.isTemplateExpression(n)) {
+      let texte = n.head.text;
+      for (const morceau of n.templateSpans) {
+        const v = plier(morceau.expression, suivis);
+        if (v === null) return null;
+        texte += v + morceau.literal.text;
+      }
+      return texte;
+    }
+    if (ts.isIdentifier(n) && constantes.has(n.text) && !suivis.has(n.text)) {
+      return plier(constantes.get(n.text)!, new Set([...suivis, n.text]));
+    }
+    if (
+      ts.isCallExpression(n) &&
+      ts.isPropertyAccessExpression(n.expression) &&
+      n.expression.name.text === 'join' &&
+      ts.isArrayLiteralExpression(n.expression.expression) &&
+      n.arguments.length <= 1
+    ) {
+      const elements = n.expression.expression.elements.map((e) => plier(e, suivis));
+      const separateur = n.arguments.length === 0 ? ',' : plier(n.arguments[0]!, suivis);
+      if (separateur === null || elements.some((e) => e === null)) return null;
+      return elements.join(separateur);
     }
     return null;
   };
+  const trouvees: string[] = [];
   const marcher = (n: ts.Node): void => {
-    const valeur = plier(n);
+    const valeur = plier(n, new Set());
     if (valeur !== null) trouvees.push(valeur);
     ts.forEachChild(n, marcher);
   };
   ts.forEachChild(arbre, marcher);
   return trouvees;
+}
+
+/**
+ * L'ACTE visé : ÉNUMÉRER L'ARBRE DE GIT hors de la source unique. Soit un jeton d'`argv` qui est une
+ * sous-commande d'énumération, soit une commande shell dont le programme est `git` suivi de cette
+ * sous-commande — préfixe d'environnement et options globales à argument admis. La commande est
+ * ancrée en tête : une phrase qui CITE la commande au fil d'un message ne la déclenche pas.
+ */
+const SOUS_COMMANDE_D_ENUMERATION = String.raw`ls-(?:files|tree)`;
+const JETON_D_ENUMERATION = new RegExp(String.raw`^${SOUS_COMMANDE_D_ENUMERATION}$`);
+const COMMANDE_D_ENUMERATION = new RegExp(
+  String.raw`(?:^|[;&|]\s*)(?:\w+=\S*\s+)*git\s+(?:-[Cc]\s+\S+\s+|--?[\w.-]+(?:=\S+)?\s+)*${SOUS_COMMANDE_D_ENUMERATION}\b`
+);
+
+function appelleLEnumeration(source: string, nom: string): boolean {
+  return chainesConstruites(source, nom).some(
+    (c) => JETON_D_ENUMERATION.test(c.trim()) || COMMANDE_D_ENUMERATION.test(c.trim())
+  );
 }
 
 /**
@@ -1721,53 +1786,72 @@ function chainesConstruites(chemin: string): string[] {
  * de `gov:check`. Mesuré par `mutation` : **111/111 verts** sur ce mutant.
  *
  * 🔑 *Un contrôle qui compte les membres d'un ensemble ne voit pas celui qui en sort : il faut
- * chercher ce que la sortie PRODUIT.* Ce que produit une garde qui quitte la primitive, c'est un
- * `ls-files` qui réapparaît quelque part. On le cherche là, à la source, sans liste d'aucune sorte.
+ * chercher ce que la sortie PRODUIT.* Ce que produit une garde qui quitte la primitive, c'est une
+ * énumération de l'arbre de git qui réapparaît quelque part. On la cherche là, à la source.
  *
- * 🔴 ET IL A CHERCHÉ UNE ORTHOGRAPHE PENDANT TROIS TOURS. La rédaction précédente lisait le fichier
- * LIGNE PAR LIGNE et exigeait `exec\w*Sync` ET `ls-files` sur la MÊME ligne. A10 · mutation a mesuré
- * TROIS évasions qui font exactement le même appel, toutes vertes :
- *   1. l'argument passé à la ligne suivante — `execFileSync('git', [` puis `'ls-files',` ;
- *   2. `spawnSync`, qui ne porte pas `exec` ;
- *   3. `'ls-' + 'files'`.
- * Et la conséquence complète : une garde NEUVE sous `scripts/gates/`, qui se fabrique son périmètre
- * par `spawnSync` et avale l'erreur par `catch { return [] }`, entrait dans `gov:check` sans qu'un
- * seul témoin bouge. *Une garde qui cherche une orthographe ne couvre pas une famille* — c'est écrit
- * DANS ce fichier, et il a pourtant été re-corrigé à l'orthographe deux fois.
+ * 🔴 CE TÉMOIN A CHERCHÉ UNE ORTHOGRAPHE, PUIS UNE SOUS-FAMILLE. Il lisait des LIGNES
+ * (`exec\w*Sync` et `ls-files` sur la même) ; il lit l'ARBRE SYNTAXIQUE depuis la PR #39. Au tour
+ * suivant, A10 · mutation a fait passer sous l'arbre six autres formes du MÊME acte, et montré que
+ * le pliage pouvait disparaître sans qu'aucun test tombe : ses évasions ne vivaient dans aucune
+ * fixture. Toutes les formes mesurées sont maintenant des FIXTURES du témoin suivant, chacune tenue
+ * rouge, à côté de contre-témoins qui doivent rester verts.
  *
- * 🔑 LA FERMETURE EST STRUCTURELLE : on ne lit plus des LIGNES, on lit l'ARBRE SYNTAXIQUE. Une ligne
- * n'existe pas pour un analyseur syntaxique (1), le nom de la fonction appelée n'entre plus dans le
- * prédicat (2), et les concaténations de littéraux sont PLIÉES (3). Ce qu'on cherche est ce que
- * l'appel PRODUIT sur son `argv` : le jeton `ls-files`, ou une commande shell qui COMMENCE par
- * `git … ls-files`.
+ * ⚠️ CE QUE CE TÉMOIN NE FERME PAS : L'ACTE LUI-MÊME. Un analyseur statique ne connaît que les
+ * valeurs écrites dans le fichier qu'il lit. Lui échappent, par classe : une chaîne dont la valeur
+ * n'existe qu'à l'exécution (retour de fonction, lecture, environnement, identifiant d'une autre
+ * portée ou d'un autre module) ; les autres sous-commandes de git qui rendent des chemins ; tout
+ * fichier hors de `scripts/`.
  *
- * ⚠️ POURQUOI PAS `no-restricted-imports` SUR `scripts/gates/**`, QUE A10 · mutation PROPOSAIT.
- * Deux mesures s'y opposent, chacune vérifiable en une commande. (a) `eslint` n'est PAS une
- * dépendance de ce dépôt et aucun script `lint` n'existe (`grep -c eslint package.json` → 0) :
- * `eslint.config.mjs` le dit lui-même en tête, « CE FICHIER N'A JAMAIS ÉTÉ EXÉCUTÉ ». Une règle qui
- * ne tourne pas ne peut pas être VUE ROUGE, et RM-02 l'exige. (b) HUIT gardes de `scripts/gates/`
- * importent déjà `node:child_process` pour des appels sans rapport avec le périmètre — `gh api`,
- * `git rev-parse`, `git log`, `vitest list` (`grep -rln child_process scripts/gates`). La règle
- * proposée les condamnerait toutes le jour où GOV-014 pose `pnpm lint` : on livrerait une étape de
- * CI rouge à l'arrivée, ou huit dérogations en commentaire — c'est-à-dire l'orthographe à nouveau.
- * Le témoin ci-dessous vise la même FAMILLE et, lui, tourne dans `pnpm test`, étape BLOQUANTE de
- * Gate A. La règle de lint reste versable le jour où le lint existera ; elle serait alors un
- * doublon de cette garde, pas sa fermeture.
+ * ⚠️ ET UNE RÈGLE `no-restricted-imports` NE LE FERMERAIT PAS NON PLUS. Elle couvrirait STRICTEMENT
+ * PLUS que ce témoin — chacune des formes mesurées importe `node:child_process` — mais (a) `eslint`
+ * n'est pas une dépendance de cette branche (`grep -c eslint package.json` → 0) : la tâche qui pose
+ * `pnpm lint` est GOV-031, dont la PR n'a pas atterri, et une règle qui ne tourne pas ne se voit pas
+ * rougir (RM-02) ; (b) huit fichiers de `scripts/gates/` importent déjà `node:child_process` pour
+ * `gh`, `git rev-parse`, `git log` ou `vitest list` (`grep -rln child_process scripts/gates`) : ils
+ * porteraient une dérogation, et une garde dérogée peut toujours énumérer. La règle est un
+ * COMPLÉMENT, à poser quand le lint tournera ; elle n'est ni un doublon de ce témoin, ni la fermeture.
  */
+it('REQ-CPL-018 — le témoin d’énumération voit l’ACTE sous ses formes mesurées, et reste muet sur la prose', () => {
+  const FORMES: [string, string][] = [
+    ['argument à la ligne suivante', "execFileSync('git', [\n  'ls-files',\n  '-z',\n]);"],
+    ['appel par spawnSync', "spawnSync('git', ['ls-files', '-z']);"],
+    ['concaténation de littéraux', "execFileSync('git', ['ls-' + 'files', '-z']);"],
+    ['join d’un tableau littéral', "execFileSync('git', [['ls', 'files'].join('-'), '-z']);"],
+    ['gabarit interpolé', "const f = 'files';\nexecFileSync('git', [`ls-${f}`, '-z']);"],
+    ['option globale à argument', "execSync('git -C . ls-files');"],
+    ['préfixe d’environnement', "execSync('GIT_LITERAL_PATHSPECS=1 git ls-files');"],
+    ['sous-commande ls-tree', "spawnSync('git', ['ls-tree', '-r', '--name-only', 'HEAD']);"],
+  ];
+  const CONTRE_TEMOINS: [string, string][] = [
+    ['commentaire', "// on n'appelle jamais git ls-files ici\nexport const x = 1;"],
+    ['prose d’un message', "throw new Error('une garde qui quitte la source retrouve git ls-files');"],
+    ['autre commande git', "execFileSync('git', ['rev-parse', '--show-toplevel']);"],
+  ];
+  expect(FORMES.filter(([, s]) => !appelleLEnumeration(s, 'forme.ts')).map(([q]) => q), 'forme non vue').toEqual([]);
+  expect(
+    CONTRE_TEMOINS.filter(([, s]) => appelleLEnumeration(s, 'prose.ts')).map(([q]) => q),
+    'faux positif : le témoin condamnerait le texte qui le documente'
+  ).toEqual([]);
+
+  // L'énumération des sources lit ce que le compilateur reconnaît comme du code — un `.mts` compris.
+  const dossier = mkdtempSync(join(tmpdir(), 'enumeration-'));
+  try {
+    writeFileSync(join(dossier, 'garde.mts'), FORMES[1]![1]);
+    writeFileSync(join(dossier, 'notes.md'), FORMES[1]![1]);
+    expect(enumererFichiers(dossier).map((f) => f.slice(dossier.length + 1))).toEqual(['garde.mts']);
+  } finally {
+    rmSync(dossier, { recursive: true, force: true });
+  }
+});
+
 it('REQ-CPL-018 — `git ls-files` n’est appelé QUE par la source unique du périmètre', () => {
-  // La forme shell (`execSync('git ls-files …')`) : ancrée en tête de commande, donc une phrase qui
-  // CITE « git ls-files » au fil d'un message ne la déclenche pas.
-  const commandeShell = /(?:^|[;&|]\s*)git\s+(?:-\S+\s+)*ls-files\b/;
   const fichiers = enumererFichiers('scripts').filter((f) => f !== 'scripts/lot/fichiers-suivis.ts');
   // ⚠️ CONTRÔLE POSITIF : un périmètre vide rendrait `[]`, et `expect([]).toEqual([])` PASSE.
   expect(fichiers.length, 'périmètre vide : le témoin dirait toujours oui').toBeGreaterThan(20);
-  const enFaute = fichiers.filter((f) =>
-    // Le jeton NU d'un `argv` — jamais de la prose.
-    chainesConstruites(f).some((c) => c.trim() === 'ls-files' || commandeShell.test(c))
-  );
+  const enFaute = fichiers.filter((f) => appelleLEnumeration(readFileSync(f, 'utf8'), f));
   expect(
     enFaute,
-    `ces fichiers appellent \`git ls-files\` hors de la source unique : une garde qui quitte ` +
+    `ces fichiers énumèrent l'arbre de git hors de la source unique : une garde qui quitte ` +
       `\`fichiersSuivisOuRefus\` retrouve le \`try/catch { return [] }\` que ce lot ferme`
   ).toEqual([]);
 });
