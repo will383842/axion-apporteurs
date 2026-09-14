@@ -38,6 +38,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import ts from 'typescript';
 
 /** Le corps d'un bloc `if (…) { … }` repéré par sa première ligne. Naïf mais suffisant : on
  *  compte les accolades, et on refuse plutôt que de rendre un bloc tronqué. */
@@ -1682,6 +1683,35 @@ it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉC
 });
 
 /**
+ * LES CHAÎNES QU'UN FICHIER CONSTRUIT RÉELLEMENT — pliées, jamais grattées.
+ *
+ * On ne lit que des LITTÉRAUX de chaîne de l'arbre syntaxique : un commentaire n'en est pas, donc le
+ * texte qui DÉCRIT la protection ne peut plus la déclencher. Et on PLIE les concaténations de
+ * littéraux, parce que `'ls-' + 'files'` est le même appel que `'ls-files'`.
+ */
+function chainesConstruites(chemin: string): string[] {
+  const arbre = ts.createSourceFile(chemin, readFileSync(chemin, 'utf8'), ts.ScriptTarget.Latest, true);
+  const trouvees: string[] = [];
+  const plier = (n: ts.Node): string | null => {
+    if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) return n.text;
+    if (ts.isParenthesizedExpression(n)) return plier(n.expression);
+    if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+      const g = plier(n.left);
+      const d = plier(n.right);
+      return g === null || d === null ? null : g + d;
+    }
+    return null;
+  };
+  const marcher = (n: ts.Node): void => {
+    const valeur = plier(n);
+    if (valeur !== null) trouvees.push(valeur);
+    ts.forEachChild(n, marcher);
+  };
+  ts.forEachChild(arbre, marcher);
+  return trouvees;
+}
+
+/**
  * 🔴 LE CONTRÔLE QUI NE DÉPEND PAS DE LA LISTE — motif de `mutation` sur la PR #33.
  *
  * `GARDES_QUI_BALAIENT` est DÉCLARÉE. Une rédaction antérieure la dérivait du disque : retirer les
@@ -1693,25 +1723,48 @@ it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉC
  * 🔑 *Un contrôle qui compte les membres d'un ensemble ne voit pas celui qui en sort : il faut
  * chercher ce que la sortie PRODUIT.* Ce que produit une garde qui quitte la primitive, c'est un
  * `ls-files` qui réapparaît quelque part. On le cherche là, à la source, sans liste d'aucune sorte.
+ *
+ * 🔴 ET IL A CHERCHÉ UNE ORTHOGRAPHE PENDANT TROIS TOURS. La rédaction précédente lisait le fichier
+ * LIGNE PAR LIGNE et exigeait `exec\w*Sync` ET `ls-files` sur la MÊME ligne. A10 · mutation a mesuré
+ * TROIS évasions qui font exactement le même appel, toutes vertes :
+ *   1. l'argument passé à la ligne suivante — `execFileSync('git', [` puis `'ls-files',` ;
+ *   2. `spawnSync`, qui ne porte pas `exec` ;
+ *   3. `'ls-' + 'files'`.
+ * Et la conséquence complète : une garde NEUVE sous `scripts/gates/`, qui se fabrique son périmètre
+ * par `spawnSync` et avale l'erreur par `catch { return [] }`, entrait dans `gov:check` sans qu'un
+ * seul témoin bouge. *Une garde qui cherche une orthographe ne couvre pas une famille* — c'est écrit
+ * DANS ce fichier, et il a pourtant été re-corrigé à l'orthographe deux fois.
+ *
+ * 🔑 LA FERMETURE EST STRUCTURELLE : on ne lit plus des LIGNES, on lit l'ARBRE SYNTAXIQUE. Une ligne
+ * n'existe pas pour un analyseur syntaxique (1), le nom de la fonction appelée n'entre plus dans le
+ * prédicat (2), et les concaténations de littéraux sont PLIÉES (3). Ce qu'on cherche est ce que
+ * l'appel PRODUIT sur son `argv` : le jeton `ls-files`, ou une commande shell qui COMMENCE par
+ * `git … ls-files`.
+ *
+ * ⚠️ POURQUOI PAS `no-restricted-imports` SUR `scripts/gates/**`, QUE A10 · mutation PROPOSAIT.
+ * Deux mesures s'y opposent, chacune vérifiable en une commande. (a) `eslint` n'est PAS une
+ * dépendance de ce dépôt et aucun script `lint` n'existe (`grep -c eslint package.json` → 0) :
+ * `eslint.config.mjs` le dit lui-même en tête, « CE FICHIER N'A JAMAIS ÉTÉ EXÉCUTÉ ». Une règle qui
+ * ne tourne pas ne peut pas être VUE ROUGE, et RM-02 l'exige. (b) HUIT gardes de `scripts/gates/`
+ * importent déjà `node:child_process` pour des appels sans rapport avec le périmètre — `gh api`,
+ * `git rev-parse`, `git log`, `vitest list` (`grep -rln child_process scripts/gates`). La règle
+ * proposée les condamnerait toutes le jour où GOV-014 pose `pnpm lint` : on livrerait une étape de
+ * CI rouge à l'arrivée, ou huit dérogations en commentaire — c'est-à-dire l'orthographe à nouveau.
+ * Le témoin ci-dessous vise la même FAMILLE et, lui, tourne dans `pnpm test`, étape BLOQUANTE de
+ * Gate A. La règle de lint reste versable le jour où le lint existera ; elle serait alors un
+ * doublon de cette garde, pas sa fermeture.
  */
 it('REQ-CPL-018 — `git ls-files` n’est appelé QUE par la source unique du périmètre', () => {
-  const enFaute = enumererFichiers('scripts')
-    .filter((f) => f !== 'scripts/lot/fichiers-suivis.ts')
-    // ⚠️ `ls-files` NU, pas `'ls-files'` : `securite` a mesuré que la forme shell
-    // `execSync('git ls-files', …)` échappait au jeton entre quotes — 779/779 verts, trois témoins
-    // DISPARUS, et la gate à `exit 0` sur zéro garde. *Une garde qui cherche une orthographe ne
-    // couvre pas une famille.* La forme historique du défaut dans ce dépôt est `execFileSync`,
-    // mais l'étroitesse se ferme pour rien ici.
-    // 🔑 On vise l'APPEL, pas la MENTION. Élargi au jeton nu, ce témoin condamnait deux fichiers
-    // qui ne font que PARLER de `git ls-files` en commentaire — dont celui qui décrit la
-    // protection elle-même. *Une garde lexicale trop large condamne le texte qui la documente.*
-    // Une LIGNE qui porte `exec…` ET `ls-files` est un appel ; les deux formes (`execFileSync`
-    // avec un tableau, `execSync` en shell — le contournement mesuré par `securite`) y passent.
-    .filter((f) =>
-      readFileSync(f, 'utf8')
-        .split(/\r?\n/)
-        .some((ligne) => /exec\w*Sync/.test(ligne) && ligne.includes('ls-files'))
-    );
+  // La forme shell (`execSync('git ls-files …')`) : ancrée en tête de commande, donc une phrase qui
+  // CITE « git ls-files » au fil d'un message ne la déclenche pas.
+  const commandeShell = /(?:^|[;&|]\s*)git\s+(?:-\S+\s+)*ls-files\b/;
+  const fichiers = enumererFichiers('scripts').filter((f) => f !== 'scripts/lot/fichiers-suivis.ts');
+  // ⚠️ CONTRÔLE POSITIF : un périmètre vide rendrait `[]`, et `expect([]).toEqual([])` PASSE.
+  expect(fichiers.length, 'périmètre vide : le témoin dirait toujours oui').toBeGreaterThan(20);
+  const enFaute = fichiers.filter((f) =>
+    // Le jeton NU d'un `argv` — jamais de la prose.
+    chainesConstruites(f).some((c) => c.trim() === 'ls-files' || commandeShell.test(c))
+  );
   expect(
     enFaute,
     `ces fichiers appellent \`git ls-files\` hors de la source unique : une garde qui quitte ` +
