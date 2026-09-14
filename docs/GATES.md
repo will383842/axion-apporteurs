@@ -19,12 +19,12 @@
 
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
-| -1 | Socle de gouvernance | 34 | 22 | 12 |
+| -1 | Socle de gouvernance | 36 | 24 | 12 |
 | 0 | Fondations, sécurité, charte | 43 | 1 | 42 |
 | 1 | Parcours, attribution, intégrations | 21 | 0 | 21 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **112** | **23** | **89** |
+| **Total** | | **114** | **25** | **89** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -35,14 +35,14 @@ avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune s
 Ce sont les seules dont on a la trace d'un échec provoqué. La colonne « Preuve rouge » est le
 champ `preuveRouge` du registre, recopié verbatim par le rendu.
 
-### Phase -1 — armées (22)
+### Phase -1 — armées (24)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
-| `req:check` | GOV-011 | `scripts/gates/gov-trace.ts` | `gov:trace` | pnpm gov:trace --prove — 10 familles, un temoin chacune, 8 contre-temoins verts ; et `pnpm gov:trace` sur la branche lot/L-1-03-integration le 2026-09-04, 16 ruptures nommees (7 req_sans_test, 3 test_promis_absent, 6 req_non_citee_par_son_test) |
-| `gov:identifiants` | GOV-003 | `scripts/gates/gov-identifiants.ts` | — | pnpm gov:identifiants:prove — 3 temoins rouges, 10 contre-temoins verts ; et, depuis GOV-025, 10 temoins de POSITION rougissent — dont 5 que l'ancienne lookahead MANQUAIT — pendant que 27 contre-temoins de position restent verts, les 13 lignes de la §0 du registre des decisions comprises, et les renvois POINTES que GOV-025 a du rendre a nouveau verts |
+| `req:check` | GOV-011 | `scripts/gates/gov-trace.ts` | `gov:trace` | pnpm gov:trace --prove — 10 familles, un temoin chacune, 10 contre-temoins verts ; et `pnpm gov:trace` sur la branche lot/L-1-03-integration le 2026-09-04, 16 ruptures nommees (7 req_sans_test, 3 test_promis_absent, 6 req_non_citee_par_son_test) |
+| `gov:identifiants` | GOV-003 | `scripts/gates/gov-identifiants.ts` | — | pnpm gov:identifiants:prove — 3 temoins rouges, 10 contre-temoins verts ; et, depuis GOV-025, 10 temoins de POSITION rougissent — dont 5 que l'ancienne lookahead MANQUAIT — pendant que 27 contre-temoins de position restent verts, les 13 lignes de la §0 du registre des decisions comprises, et les renvois POINTES que GOV-025 a du rendre a nouveau verts ; et, depuis GOV-028, 9 temoins de DELIMITEUR rougissent — dont ceux que la neutralisation d'avant CACHAIT sous 120 caracteres et voyait au-dela, ce qui faisait dependre le verdict de la LONGUEUR du voisinage — pendant que 8 contre-temoins de syntaxe restent verts, que 2 temoins d'apostrophe que la fausse paire de quotes cachait a l'inverse rougissent, et que 2 exemptions nommees sont exercees DES DEUX COTES ; `pnpm gov:identifiants:compter` rejoue les trois comptes globaux |
 | `gov:adr` | GOV-009 | `scripts/gates/gov-adr.ts` | — | 16 familles, un temoin chacune, 11 contre-temoins verts (pnpm gov:adr --prove) |
-| `gov:tasks` | GOV-017a | `scripts/gates/gov-tasks.ts` | — | pnpm gov:tasks:prove — 12 familles, chacune vue rougir sur son propre defaut injecte, 2 contre-temoins verts sur les deux formes de branche (partners/ADR-0007) ; et, depuis GOV-024, le mode --verifie-rendu vu rougir en famille vue_perimee sur une vue perime d'une seule tache livree, vu rougir en vue_absente sur une vue manquante, et vu rester vert sur le depot a jour |
+| `gov:tasks` | GOV-017a | `scripts/gates/gov-tasks.ts` | — | pnpm gov:tasks:prove — 19 familles, chacune vue rougir sur son propre defaut injecte, 5 contre-temoins verts sur les deux formes de branche (partners/ADR-0007) ; et, depuis GOV-024, le mode --verifie-rendu vu rougir en famille vue_perimee sur une vue perime d'une seule tache livree, vu rougir en vue_absente sur une vue manquante, et vu rester vert sur le depot a jour |
 | `gov:pr` | GOV-007 | `scripts/gates/gov-pr.ts` | — | pnpm gov:pr:prove — 20 familles, un temoin chacune, 12 contre-temoins verts ; dont lentille_perimee (un accord rendu sur une autre tete que celle qui sera fusionnee), quatre temoins d'avis qui ne comptent pas (compte tiers, avis DISMISSED, poste A99, refus d'A02 efface par un autre poste) et deux contre-temoins d'identite (MEMBER et COLLABORATOR jugent aussi). ⚠️ La valeur precedente annoncait « 16 familles, 6 contre-temoins » : elle etait FAUSSE avant ce tour et personne ne l'avait vue, la garde n'ayant aucun moyen de confronter ce qu'un registre DECLARE a ce que la preuve MESURE |
 | `gov:depot-visibilite` | GOV-012 | `scripts/gates/gov-depot.ts` | — | pnpm gov:depot-visibilite:prove — 9 familles, chacune vue rougir sur son propre defaut injecte, 5 etapes de workflow legitimes en contre-temoins |
 | `gov:autonomie` | GOV-000 | `scripts/gates/gov-autonomie.ts` | — | pnpm gov:autonomie:prove — 4 familles (deny_manquant, hook_non_declare, hook_sans_analyse, commande_laissee_passer), un temoin chacune, 17 commandes dangereuses refusees et 12 legitimes acceptees en contre-temoins — dont `gh api -X DELETE .../branches/main/protection` et `gh issue edit --remove-label owner:A01`, les deux trous trouves le 2026-09-04 |
@@ -61,6 +61,8 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:inventaire` | GOV-020 | `scripts/gates/gov-inventaire.ts` | — | pnpm gov:inventaire:prove — 7 familles, chacune vue rougir sur son propre defaut injecte, 6 contre-temoins verts. Rouge reel constate sur le fichier : « docs/INVENTAIRE-CHANTIERS.md:79 — le chantier « C5 » porte l'etat « code » alors que ce depot ne dit pas ce que l'etiquette DESIGNE » |
 | `gov:lecons` | GOV-018 | `scripts/gates/gov-lecons.ts` | — | pnpm gov:lecons --prove — 12 familles, 13 temoins (consolidation_perimee en a deux, un par source), 9 contre-temoins verts |
 | `gov:etat` | GOV-008 | `scripts/gates/gov-etat.ts` | — | pnpm gov:etat:prove — 9 familles, un temoin chacune, 8 contre-temoins verts ; plus 6 scenarios joues contre la garde reelle via un gh compromis |
+| `gov:conventions` | GOV-014 | `scripts/gates/gov-conventions.ts` | — | pnpm gov:conventions:prove — 8 familles rougissent chacune sur son temoin, 12 contre-temoins restent verts dont la vue conforme |
+| `perf:budgets` | GOV-019 | `scripts/gates/perf-budgets.ts` | — | pnpm perf:budgets:prove — 12 familles rougissent chacune sur son temoin, 6 contre-temoins restent verts ; les familles sont route_sans_budget, budget_orphelin, entree_incomplete, plafond_relache, cliquet_sous_le_plafond, seuil_divergent, seuil_absent, lhci_non_bloquant, lhci_hors_mobile, lighthouserc_perime, etape_ci_muselee et source_illisible |
 
 ### Phase 0 — armées (1)
 

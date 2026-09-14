@@ -136,8 +136,21 @@ describe('REQ-GOV-010 — droits exclusifs, chemins réservés, label du rôle',
     // inventer un sans dire d'où il vient. Le §7 a été livré tronqué au premier tour — c'est
     // exactement ce que ce test attrape.
     const source = section(conventions, '## 8. Fichiers réservés', '');
-    const cheminsSource = [...source.matchAll(/`([^`]+)`/g)]
-      .map((m) => m[1]!)
+    // ⚠️ CITER N'EST PAS DÉCLARER — et ce test l'a appris à ses dépens (GOV-029).
+    // Il ratissait TOUT accent grave du §8, prose comprise. GOV-014 y a ajouté une note qui cite
+    // `partners/ADR-0007` et trois autres documents pour dire d'où vient une numérotation : le
+    // test a aussitôt exigé que la charte « réserve » ces quatre-là, et il est devenu rouge sur
+    // sa propre branche. Un chemin RÉSERVÉ se déclare dans la première cellule d'une LIGNE DE
+    // TABLEAU — c'est là qu'il porte son écrivain. Une mention en prose ne porte rien.
+    // C'est la troisième fois que ce dépôt paie la même confusion, après `gov:identifiants` et
+    // `registre-decisions.ts` : la règle vaut pour la prose, elle ne vaut pas pour la structure.
+    const cheminsSource = source
+      .split('\n')
+      .filter((l) => l.trimStart().startsWith('|'))
+      .flatMap((l) => {
+        const premiere = l.split('|')[1] ?? '';
+        return [...premiere.matchAll(/`([^`]+)`/g)].map((m) => m[1]!);
+      })
       .filter((c) => c.includes('/') || c.endsWith('.md') || c.endsWith('.json'))
       .filter((c) => !c.startsWith('pnpm ') && !c.startsWith('gardien-spec') && !c.startsWith('architecte'));
     const cible = section(charte, '## 7.', '## 8.');

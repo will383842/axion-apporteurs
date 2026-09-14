@@ -28,6 +28,7 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
+import { referencePr, type Attestation } from '../lot/attestation';
 
 const PLAFOND_QUESTIONS = 10;
 
@@ -35,7 +36,7 @@ interface Tache {
   id: string; titre: string; phase: number; repo: string; statut: string;
   deps: string[]; reqs: string[]; hyp: string[]; externe: string | null;
   estimateDays: number; owner?: string | null; branch?: string | null; pr?: number | null;
-  attempts?: number; motif?: string | null;
+  attempts?: number; motif?: string | null; attestation?: Attestation | null;
 }
 
 const sh = (cmd: string, args: string[]) => {
@@ -198,7 +199,16 @@ lignes.push('| --- | --- | --- |');
 for (const s of ['a_faire', 'en_cours', 'en_revue', 'fusionnee', 'deployee', 'verifiee', 'bloquee', 'attente_externe']) {
   const l = par(s);
   const detail = ['en_cours', 'en_revue', 'bloquee', 'attente_externe'].includes(s)
-    ? l.map((t) => `${t.id}${t.owner ? ` (${t.owner})` : ''}${t.pr ? ` PR#${t.pr}` : ''}${t.motif ? ` — ${t.motif}` : ''}`).join(' · ')
+    ? l.map((t) => {
+        // LA RÉFÉRENCE EST QUALIFIÉE PAR DÉPÔT (GOV-038). Cette ligne rendait `PR#<n>` sans dire de
+        // quel dépôt : quatorze tâches de ce backlog vivent ailleurs, et la vue publique aurait
+        // porté « INT-T01b (A01) PR#998 » pour une PR que la forge de CE dépôt ne connaît pas —
+        // 404. La composition vit désormais dans `scripts/lot/attestation.ts`, avec la garde qui
+        // la juge : une vue et une garde qui parlent d'un même objet lisent la même définition
+        // (RM-01, RM-12).
+        const ref = referencePr(t);
+        return `${t.id}${t.owner ? ` (${t.owner})` : ''}${ref ? ` ${ref}` : ''}${t.motif ? ` — ${t.motif}` : ''}`;
+      }).join(' · ')
     : l.length > 12 ? `${l.slice(0, 12).map((t) => t.id).join(', ')} …` : l.map((t) => t.id).join(', ');
   lignes.push(`| \`${s}\` | ${l.length} | ${detail || '—'} |`);
 }

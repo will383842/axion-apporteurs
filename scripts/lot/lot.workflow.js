@@ -64,10 +64,16 @@ const LEAD = { type: 'object', properties: {
   accepte: { type: 'boolean' }, motif: { type: 'string' },
 }, required: ['accepte', 'motif'] }
 
+// `fusionneeAt` : l'instant de la fusion, en UTC. Il est REQUIS — nullable quand rien n'a fusionné —
+// parce que `pnpm lot:cloture` en a besoin pour attester une livraison faite dans un AUTRE dépôt
+// (GOV-038) : là-bas, ni la PR ni le commit ne sont retrouvables depuis ce dépôt-ci, et une
+// attestation sans date ne dit pas QUAND le monde a changé. Optionnel, il aurait été omis par le
+// premier release manager pressé, et la clôture aurait échoué au moment le plus coûteux.
 const FUSION = { type: 'object', properties: {
   pr: { type: ['integer', 'null'] }, sha: { type: ['string', 'null'] },
+  fusionneeAt: { type: ['string', 'null'] },
   atterri: { type: 'boolean' }, motif: { type: 'string' },
-}, required: ['pr', 'sha', 'atterri', 'motif'] }
+}, required: ['pr', 'sha', 'fusionneeAt', 'atterri', 'motif'] }
 
 const A40 = { type: 'object', properties: {
   manques: { type: 'array', items: { type: 'object', properties: {
@@ -203,6 +209,7 @@ Tu es le release manager. Fusionne la PR #${revue.dev.pr}, UNE SEULE à la fois 
 2. \`gh pr checks ${revue.dev.pr} --watch\` : toutes vertes, sinon rends \`atterri: false\` avec le motif.
 3. Relis l'état ET fusionne dans le MÊME appel (une PR verte peut passer BEHIND entre les deux) : \`gh pr merge ${revue.dev.pr} --squash --delete-branch\`.
 4. Vérifie l'atterrissage : \`pnpm deploy:verify <sha>\` (en-tête \`x-partners-build-sha\`). Tant que ce n'est pas vérifié, la PR suivante n'est pas fusionnée.
+5. Rends \`sha\` (le SHA **ENTIER** du commit de fusion, 40 hexadécimaux) et \`fusionneeAt\` (l'instant de fusion en UTC, \`AAAA-MM-JJTHH:MM:SSZ\`) — \`gh pr view ${revue.dev.pr} --json mergeCommit,mergedAt\`. Ce n'est pas de la décoration : si la tâche vit dans un AUTRE dépôt, ces deux valeurs sont la SEULE trace de sa livraison que ce dépôt-ci pourra porter (GOV-038), et \`pnpm lot:cloture\` refusera de clore sans elles. Un SHA abrégé ne convient pas.
 Tu ne fusionnes jamais une PR dont tu es l'auteur.`,
       { label: `fusion:${t.id}`, phase: 'Fusion', schema: FUSION, agentType: 'release-manager' }
     )).then((fusion) => ({ ...revue, fusion }))

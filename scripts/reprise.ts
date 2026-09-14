@@ -20,6 +20,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
+import { referencePr, DEPOT_LOCAL, type Attestation } from './lot/attestation';
 
 const SORTIE = 'docs/lots/REPRISE.md';
 const NOTES = 'docs/lots/REPRISE-NOTES.md';
@@ -28,6 +29,11 @@ const LIVREE = new Set(['fusionnee', 'deployee', 'verifiee']);
 type Tache = {
   id: string; titre: string; phase: number; statut: string; estimateDays: number;
   deps: string[]; issue: number | null; externe: string | null; owner?: string | null; pr?: number | null;
+  // `repo` était absent de ce type alors qu'il est requis sur les 206 tâches : la vue de reprise
+  // rendait donc toute PR comme une PR de CE dépôt, y compris celles des quatorze tâches qui
+  // vivent ailleurs (GOV-038). Le défaut `DEPOT_LOCAL` n'est pas une tolérance : il n'existe que
+  // pour un backlog antérieur au champ, et il fait rendre la forme la plus prudente.
+  repo?: string; attestation?: Attestation | null;
 };
 
 function sh(cmd: string, args: string[]): string {
@@ -135,7 +141,10 @@ if (enCours.length > 0) {
   w('⚠️ **Des tâches sont déclarées en cours.** Une revendication expire sans commit ni PR depuis 6 h ;');
   w('le composeur les remet alors à `a_faire`. Vérifier avant de recomposer :');
   w();
-  for (const t of enCours) w(`- \`${t.id}\` — ${t.statut}${t.owner ? ` (${t.owner})` : ''}${t.pr ? `, PR #${t.pr}` : ''}`);
+  for (const t of enCours) {
+    const ref = referencePr({ ...t, repo: t.repo ?? DEPOT_LOCAL });
+    w(`- \`${t.id}\` — ${t.statut}${t.owner ? ` (${t.owner})` : ''}${ref ? `, ${ref}` : ''}`);
+  }
   w();
 }
 if (lots.length > 0) {

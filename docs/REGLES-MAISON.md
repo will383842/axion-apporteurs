@@ -225,10 +225,19 @@ naisse d'un ADR plutôt que d'une édition directe : cette régularisation appar
 n'est pas faite. Elle est écrite ici plutôt que tue, parce qu'une règle non numérotée n'est citée par aucun ADR ni
 par le champ « Règle maison appliquée » du gabarit de PR — c'est exactement ce qui a coûté RM-13 une fois déjà._
 
-**Énoncé.** Les gardes de ce dépôt balaient `git ls-files`, jamais le disque. Un fichier neuf, écrit mais
-jamais ajouté à l'index, n'est lu par aucune d'elles ; le vert qu'elles rendent ne dit rien de lui. Tout agent qui
-livre un fichier neuf le rend visible à l'index — `git add -N <chemin>` suffit, et n'engage aucun contenu — **avant**
-de lancer ses gardes et avant de conclure. Un « vert » obtenu sur un fichier hors index n'est pas un verdict.
+**Énoncé.** La plupart des gardes de ce dépôt balaient `git ls-files`. Un fichier neuf, écrit mais jamais ajouté
+à l'index, n'est lu par aucune d'elles ; le vert qu'elles rendent ne dit rien de lui. Tout agent qui livre un
+fichier neuf le rend visible à l'index — `git add -N <chemin>` suffit, et n'engage aucun contenu — **avant** de
+lancer ses gardes et avant de conclure. Un « vert » obtenu sur un fichier hors index n'est pas un verdict.
+
+> ⚠️ **CORRECTION DU 2026-09-05, mesurée en livrant `GOV-028`.** La première rédaction de cet énoncé disait
+> « balaient `git ls-files`, **jamais le disque** ». C'est faux, et une règle maison qui généralise trop est pire
+> qu'une règle absente : elle fait tenir pour acquis un geste de diagnostic qui ne suffit pas. **`gov:trace`
+> parcourt le DISQUE** (`readdirSync`, `scripts/gates/gov-trace.ts`) : mesuré, après `git rm --cached` d'un
+> fichier de test neuf, elle continuait de le voir — il a fallu le sortir de l'arbre pour qu'il disparaisse.
+> Le risque s'y **inverse** donc : un fichier présent sur le disque et absent de l'index y est déjà jugé, et
+> `git status --short` ne le dit pas. La règle vaut pour les gardes qui lisent l'index ; devant un vert
+> surprenant, lire COMMENT la garde énumère ses fichiers reste le seul geste sûr.
 
 **Pourquoi.** L'absence ne s'imprime pas : rien ne distingue ce vert-là d'un vert légitime. Mesuré sur cet arbre
 le 2026-09-05, un document neuf portant une étiquette de relecteur non qualifiée — laissé hors index,

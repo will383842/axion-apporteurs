@@ -1,0 +1,26 @@
+{
+  "//": [
+    "BUDGETS DE PERFORMANCE DE L'ESPACE APPORTEUR — source des entrees `size-limit`, une par route.",
+    "Pose par GOV-019 (REQ-GOV-028). Garde : `pnpm perf:budgets` — `scripts/gates/perf-budgets.ts`.",
+    "",
+    "ETAT AU JOUR DE LA POSE : `sizeLimit` est VIDE, et ce n'est pas un oubli. Partners n'a aucune",
+    "route, aucun composant, aucune application : il n'y a rien a mesurer. La garde balaye",
+    "`src/app/(espace)/**/page.tsx`, annonce le nombre de routes balayees, et rougit des qu'une",
+    "route apparait sans son entree ici.",
+    "",
+    "CE QU'ON ECRIT A LA MAIN : `name` (la route, chemin Next) et `path` (les paquets de cette",
+    "route, un glob PAR ROUTE — jamais un glob qui ratisse toutes les routes, `size-limit` en",
+    "ferait une somme et le budget par route serait perdu ; c'est ce que dit deja l'entree",
+    "`perf:bundle` de docs/gates.json).",
+    "",
+    "CE QU'ON N'ECRIT PAS : `limit`. Le plafond est DERIVE du texte de REQ-GOV-028 dans",
+    "docs/requirements.json et ECRIT par `pnpm perf:budgets --rendre`. C'est ainsi qu'aucun cliquet",
+    "ne peut etre pose sous la mesure courante : le champ n'est pas a remplir, il est a regenerer,",
+    "et toute valeur qui s'ecarte du plafond derive fait rougir la garde (`cliquet_sous_le_plafond`",
+    "vers le bas, `plafond_relache` vers le haut).",
+    "",
+    "`lighthouserc.json` (racine) est RENDU par la meme commande, depuis le meme texte d'exigence.",
+    "Ne jamais l'editer a la main : la garde compare le disque au rendu et rougit sur l'ecart."
+  ],
+  "sizeLimit": []
+}

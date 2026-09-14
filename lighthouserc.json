@@ -1,0 +1,49 @@
+{
+  "//": [
+    "FICHIER RENDU — ne pas editer a la main. Source : REQ-GOV-028 (docs/requirements.json).",
+    "Regenerer : `pnpm perf:budgets --rendre`. Verifier : `pnpm perf:budgets` (famille lighthouserc_perime).",
+    "Les trois assertions sont en `error` : une assertion en `warn` ne refuse rien, et un budget",
+    "qui ne refuse rien est une garde morte — sur le depot voisin, le gate mobile est reste rouge",
+    "en permanence pour une autre raison (lhci mourait avant d asserter), ce qui revenait au meme.",
+    "`aggregationMethod: median` est LEGAL ici parce que la configuration porte `assertions` et",
+    "non `assertMatrix` : lhci refuse la combinaison des deux (@lhci/utils/src/assertions.js).",
+    "COLLECT INCOMPLET, ET C EST DIT : ni `url` ni `startServerCommand`. Aucune route n existe",
+    "encore. QA-T20 (phase 0) les pose avec la premiere route, et rend l INP mesurable — en",
+    "navigation, Lighthouse ne mesure pas `interaction-to-next-paint` sans interaction."
+  ],
+  "ci": {
+    "collect": {
+      "numberOfRuns": 3,
+      "settings": {
+        "formFactor": "mobile",
+        "screenEmulation": {
+          "mobile": true,
+          "disabled": false
+        }
+      }
+    },
+    "assert": {
+      "aggregationMethod": "median",
+      "assertions": {
+        "largest-contentful-paint": [
+          "error",
+          {
+            "maxNumericValue": 1800
+          }
+        ],
+        "cumulative-layout-shift": [
+          "error",
+          {
+            "maxNumericValue": 0
+          }
+        ],
+        "interaction-to-next-paint": [
+          "error",
+          {
+            "maxNumericValue": 100
+          }
+        ]
+      }
+    }
+  }
+}

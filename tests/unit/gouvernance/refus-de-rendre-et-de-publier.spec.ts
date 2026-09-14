@@ -408,9 +408,50 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    * minimum qu'on doive à un défaut qu'on n'a pas le temps de fermer : le rendre impossible à
    * ajouter en silence.
    */
-  const declares: Record<string, { total: number; temoins: number; raison: string }> = {
+  const declares: Record<string, { total: number; porte: number; temoins: number; raison: string }> = {
+    // ── RÉCONCILIATION `gov-038` : QUATRE fichiers apportent DIX sorties non nulles ──────────
+    // Le cliquet a rougi en NOMMANT le premier (`gov-attestation.ts ajoute 3 … et n'est PAS
+    // déclaré ici`) : c'est exactement son office. Les trois gestes sont faits pour chacun —
+    // déclarer le refus, dire pourquoi, assumer le total. Les témoins sont déclarés à ZÉRO :
+    // c'est une DETTE ÉCRITE, pas une preuve. *Un compteur de témoins qu'on gonfle pour se donner
+    // raison vaut moins qu'un zéro assumé.*
+    'scripts/gates/gov-attestation.ts': {
+      total: 3,
+      porte: 3,
+      temoins: 0,
+      raison:
+        'GOV-038 — atteste une livraison faite dans un AUTRE dépôt. Les trois sorties sont des ' +
+        "refus d'usage : `--en-ligne` absent, appel `gh` en échec, PR non résolue. Aucune ne " +
+        "garde un invariant de sécurité de CE dépôt ; leur témoin viendra avec la tâche qui " +
+        'câblera la gate en CI.',
+    },
+    'scripts/gates/perf-budgets.ts': {
+      total: 4,
+      porte: 4,
+      temoins: 0,
+      raison:
+        'GOV-019 — budgets de performance. Quatre refus : registre illisible, budget dépassé, ' +
+        'mode inconnu, vue divergente. ⚠️ `fichiersDeSrc()` y rend `[]` si `src/` manque — la ' +
+        "variante affaiblie du patron que ce lot ferme ailleurs — invisible à la réciproque, au " +
+        "témoin `ls-files` et aux trois `describe`, car elle ne balaie pas `git ls-files`. " +
+        '⚠️ AUCUNE tâche du backlog ne porte cette dette : `GOV-019` LIVRE `perf-budgets`, elle ne ' +
+        "corrige pas son `if (!existsSync(racine)) return []`. Relevé par `mutation` — une dette " +
+        'déclarée en prose sans porteur est une dette que personne ne reprendra.',
+    },
+    'scripts/gates/gov-conventions.ts': {
+      total: 2,
+      porte: 2,
+      temoins: 0,
+      raison:
+        'GOV-014 — conventions et sélection des gardes. Ce fichier est arrivé de `gov-038` avec ' +
+        'le `try/catch { return [] }` que la PR #31 avait fermé pour les cinq autres gardes, ' +
+        "SANS entrer en conflit. Converti à `fichiersSuivisOuRefus`. Ses deux sorties sont " +
+        'désormais couvertes par les trois témoins de `REQ-CPL-018`, qui le voient parce que ' +
+        '`GARDES_QUI_BALAIENT` le DÉCLARE — et une réciproque attrape la garde qu’on oublierait d’y inscrire.',
+    },
     'scripts/lot/fichiers-suivis.ts': {
       total: 2,
+      porte: 2,
       temoins: 2,
       raison:
         'LE refus qui manquait : `perimetre_illisible`. Il remplace un `try/catch { return [] }` recopié ' +
@@ -424,30 +465,46 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     },
     'scripts/lot/corps-de-pr.ts': {
       total: 4,
+      porte: 4,
       temoins: 2,
       raison: '`--pr` obligatoire et concordance des têtes ont un témoin ; les deux autres sont ' +
         'des refus d’usage (arguments manquants), sans effet de sécurité.',
     },
     'scripts/gates/gov-pr.ts': {
       total: 2,
+      porte: 14,
       temoins: 1,
       raison: 'la concordance des têtes a un témoin ; le second est le `catch` d’appel à la forge.',
     },
-    'scripts/gates/gov-trace.ts': { total: 1, temoins: 1, raison: 'le refus de rendre, témoin + adjacence.' },
-    'scripts/gates/gov-tasks.ts': { total: 2, temoins: 1, raison: 'le refus de rendre a un témoin ; 1 non couvert.' },
-    'scripts/gates/gov-requirements.ts': { total: 3, temoins: 1, raison: 'le refus de rendre a un témoin ; 2 non couverts.' },
+    'scripts/gates/gov-trace.ts': { total: 1,
+      porte: 10, temoins: 1, raison: 'le refus de rendre, témoin + adjacence.' },
+    'scripts/gates/gov-tasks.ts': {
+      total: 1,
+      porte: 11,
+      temoins: 1,
+      raison:
+        'le refus de rendre a un témoin. 🔧 2 → 1 à la réconciliation : le delta se mesure contre '
+        + '`origin/main`, et `main` a absorbé une des deux sorties en fusionnant la PR #31. '
+        + '*Un delta n’est pas une propriété du fichier : c’est une propriété de la DISTANCE '
+        + 'entre lui et sa base, et la base bouge.* GOV-038 y ajoute `pr_nu_hors_depot`.',
+    },
+    'scripts/gates/gov-requirements.ts': { total: 3,
+      porte: 8, temoins: 1, raison: 'le refus de rendre a un témoin ; 2 non couverts.' },
     'scripts/gates/schema-enums.ts': {
       total: 5,
+      porte: 5,
       temoins: 1,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE, mesurée par `mutation` au 12e tour.',
     },
     'scripts/gates/lexique-apporteurs.ts': {
       total: 2,
+      porte: 2,
       temoins: 0,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE.',
     },
     'scripts/gates/gov-entite.ts': {
       total: 6,
+      porte: 6,
       temoins: 3,
       // 🔴 CETTE `raison` A AFFIRMÉ AU PRÉSENT UN CONSTAT DEVENU FAUX — lentille `exactitude`,
       // 15e tour, et elle me retourne ma propre règle. J'écrivais cinquante lignes plus haut que
@@ -574,32 +631,42 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       '`origin/main` est introuvable : la dérivation ne mesure RIEN, et son silence ne prouve rien'
     ).toBe(true);
 
-    if (ajoutesParFichier.size === 0) {
-      // Base lisible ET diff vide : ce lot n'ajoute plus rien parce qu'il a ATTERRI. On ne rend
-      // pas la main en silence — ce serait la sortie muette que `schema` a fait fermer deux fois.
-      // On assert la propriété qui RESTE vraie, cardinalité comprise : `mutation` a mesuré qu'un
-      // registre VIDÉ passait au vert ici, la boucle n'ayant alors rien à itérer.
-      expect(
-        Object.keys(declares).length,
-        'le registre `declares` est VIDE : on ne peut pas faire baisser la dette en la supprimant'
-      ).toBeGreaterThan(0);
-      for (const [f, d] of Object.entries(declares)) {
-        expect(existsSync(f), `${f} est déclaré au registre des refus mais n'existe plus`).toBe(true);
-        expect(
-          compter(readFileSync(f, 'utf8')),
-          `${f} déclare ${d.total} sortie(s) non nulle(s) et n'en porte plus autant`
-        ).toBeGreaterThanOrEqual(d.total);
-      }
-      return;
-    }
+
+    // La cardinalité vaut dans LES DEUX régimes — diff plein ou diff vide — donc elle est hissée
+    // hors de toute branche. `simplicite` a relevé qu'une première rédaction la portait dans un
+    // `if (size === 0)` dont la boucle était le DOUBLON VERBATIM de celle qui suit.
+    // *Deux copies d'une assertion ne la rendent pas plus vraie : elles rendent l'une des deux
+    // invérifiable.*
+    expect(
+      Object.keys(declares).length,
+      'le registre `declares` est VIDE : on ne peut pas faire baisser la dette en la supprimant'
+    ).toBeGreaterThan(0);
 
     for (const [f, n] of [...ajoutesParFichier].sort()) {
       const d = declares[f];
       expect(d, `${f} ajoute ${n} \`process.exit(1)\` et n’est PAS déclaré ici`).toBeDefined();
       expect(d!.total, `${f} : ${n} exits ajoutés, ${d!.total} déclarés`).toBe(n);
     }
+    // 🔴 UN FICHIER DÉCLARÉ QUI N'AJOUTE PLUS RIEN A ATTERRI — ce n'est pas une omission.
+    // Mesuré à la réconciliation de `gov-038` : `main` ayant absorbé les PR #31 et #32, les NEUF
+    // entrées qu'elles avaient déclarées sont passées à un delta de ZÉRO d'un coup. Les faire
+    // rougir obligerait à VIDER le registre à chaque atterrissage — c'est-à-dire à détruire, tous
+    // les deux lots, le dispositif que vingt-six tours de revue ont construit.
+    // *Le registre des refus n'est pas un journal du diff courant : c'est la dette du dépôt.*
+    // Ce qui reste vrai, et qu'on assert : le fichier EXISTE encore, et il porte AU MOINS ce
+    // qu'il déclare. Un refus retiré en douce, ou un fichier supprimé, rougit toujours ici.
     for (const f of Object.keys(declares)) {
-      expect(ajoutesParFichier.has(f), `${f} est déclaré ici mais n’ajoute plus aucun exit`).toBe(true);
+      if (ajoutesParFichier.has(f)) continue; // déjà confronté au diff, ci-dessus
+      expect(existsSync(f), `${f} est déclaré au registre des refus mais n’existe plus`).toBe(true);
+      // Le plancher est le compte ABSOLU déclaré (`porte`). Ni un delta — il ne garde rien une fois
+      // la PR atterrie — ni la base : elle rend ZÉRO pour un fichier neuf, et trois des quatre
+      // fichiers de ce lot le sont. Mesuré : les dix sorties que la PR déclare ajouter,
+      // neutralisées, laissaient les deux tests VERTS.
+      // 🔑 *Un plancher calé sur la base ne peut pas, par construction, garder ce que la PR ajoute.*
+      expect(
+        compter(readFileSync(f, 'utf8')),
+        `${f} porte moins de ${declares[f]!.porte} sortie(s) non nulle(s) : un refus a été retiré`
+      ).toBeGreaterThanOrEqual(declares[f]!.porte);
     }
   });
 
@@ -645,7 +712,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // l'écart (« 2 exits ajoutés, 1 déclarés ») — c'est exactement son office. La sortie ajoutée
     // est couverte par un témoin d'effet à deux faces (fichier suivi manquant → refus ; dépôt
     // réel → vert).
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(27);
+    // 🔧 27 → 35 à la RÉCONCILIATION de `gov-038`, ARBITRÉ et non subi. Dix sorties entrent avec
+    // quatre fichiers (`gov-attestation` +3, `perf-budgets` +4, `gov-conventions` +2,
+    // `gov-tasks` +1). Le cliquet a rougi en nommant le premier — il n'a pas été contourné, il a
+    // été LU. ⚠️ Le seuil est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une
+    // branche. Mesuré sur l'arbre réconcilié : 179 sorties non nulles sous `scripts/`.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(35);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -1571,13 +1643,81 @@ ${r.sortie.slice(0, 600)}`
   }
 });
 
+/**
+ * 🔴 DÉCLARÉE, ET NON DÉRIVÉE — et c'est le RENVERSEMENT de ma première rédaction.
+ *
+ * J'avais dérivé cette liste du disque : les gardes de `scripts/gates/` qui importent
+ * `fichiersSuivisOuRefus`. `mutation` l'a mise en défaut DEUX FOIS, et la seconde est décisive :
+ * en remplaçant la primitive par une marche `readdirSync` avec `catch { return [] }` — sans jamais
+ * réintroduire `'ls-files'` — la garde **s'évapore des trois `describe`**, 21/21 verts, le total
+ * collecté passant de 59 à 56 sans un bruit.
+ *
+ * 🔑 **Une population DÉRIVÉE DE LA PRÉSENCE DU CORRECTIF ne verra jamais celui qui le PERD.**
+ * C'est exactement la garde qu'on veut : éprouver des fichiers qui POURRAIENT perdre le correctif.
+ * Les y chercher par le correctif rend l'épreuve vide au moment précis où elle compterait.
+ *
+ * La liste est donc TAPÉE — une déclaration, que seul un humain retire — et la réciproque
+ * ci-dessous attrape l'oubli inverse : toute garde qui importe la primitive doit y figurer.
+ */
 const GARDES_QUI_BALAIENT = [
+  'scripts/gates/gov-conventions.ts',
   'scripts/gates/gov-entite.ts',
   'scripts/gates/gov-identifiants.ts',
   'scripts/gates/gov-preseance.ts',
   'scripts/gates/gov-publication.ts',
   'scripts/gates/lexique-apporteurs.ts',
 ] as const;
+
+it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {
+  // La réciproque de la déclaration : elle attrape la garde AJOUTÉE qu'on aurait oublié d'inscrire.
+  // L'autre sens — la garde qui PERD le correctif — est tenu par la déclaration elle-même : elle
+  // reste dans la liste, donc dans les témoins, donc elle rougit.
+  const importent = enumererFichiers('scripts/gates').filter((f) =>
+    readFileSync(f, 'utf8').includes('fichiersSuivisOuRefus')
+  );
+  expect(
+    importent.filter((f) => !GARDES_QUI_BALAIENT.includes(f as (typeof GARDES_QUI_BALAIENT)[number])),
+    'ces gardes importent `fichiersSuivisOuRefus` sans être déclarées dans GARDES_QUI_BALAIENT'
+  ).toEqual([]);
+});
+
+/**
+ * 🔴 LE CONTRÔLE QUI NE DÉPEND PAS DE LA LISTE — motif de `mutation` sur la PR #33.
+ *
+ * `GARDES_QUI_BALAIENT` est DÉCLARÉE. Une rédaction antérieure la dérivait du disque : retirer les
+ * DEUX en même temps — l'import devient inutile, aucun lint ne proteste — fait sortir une garde du
+ * périmètre **sans un bruit** : les deux compteurs baissent ensemble, l'égalité tient, et la garde
+ * rend `✅ … exit 0` sur un dossier sans `.git` en balayant zéro fichier, dans la chaîne bloquante
+ * de `gov:check`. Mesuré par `mutation` : **111/111 verts** sur ce mutant.
+ *
+ * 🔑 *Un contrôle qui compte les membres d'un ensemble ne voit pas celui qui en sort : il faut
+ * chercher ce que la sortie PRODUIT.* Ce que produit une garde qui quitte la primitive, c'est un
+ * `ls-files` qui réapparaît quelque part. On le cherche là, à la source, sans liste d'aucune sorte.
+ */
+it('REQ-CPL-018 — `git ls-files` n’est appelé QUE par la source unique du périmètre', () => {
+  const enFaute = enumererFichiers('scripts')
+    .filter((f) => f !== 'scripts/lot/fichiers-suivis.ts')
+    // ⚠️ `ls-files` NU, pas `'ls-files'` : `securite` a mesuré que la forme shell
+    // `execSync('git ls-files', …)` échappait au jeton entre quotes — 779/779 verts, trois témoins
+    // DISPARUS, et la gate à `exit 0` sur zéro garde. *Une garde qui cherche une orthographe ne
+    // couvre pas une famille.* La forme historique du défaut dans ce dépôt est `execFileSync`,
+    // mais l'étroitesse se ferme pour rien ici.
+    // 🔑 On vise l'APPEL, pas la MENTION. Élargi au jeton nu, ce témoin condamnait deux fichiers
+    // qui ne font que PARLER de `git ls-files` en commentaire — dont celui qui décrit la
+    // protection elle-même. *Une garde lexicale trop large condamne le texte qui la documente.*
+    // Une LIGNE qui porte `exec…` ET `ls-files` est un appel ; les deux formes (`execFileSync`
+    // avec un tableau, `execSync` en shell — le contournement mesuré par `securite`) y passent.
+    .filter((f) =>
+      readFileSync(f, 'utf8')
+        .split(/\r?\n/)
+        .some((ligne) => /exec\w*Sync/.test(ligne) && ligne.includes('ls-files'))
+    );
+  expect(
+    enFaute,
+    `ces fichiers appellent \`git ls-files\` hors de la source unique : une garde qui quitte ` +
+      `\`fichiersSuivisOuRefus\` retrouve le \`try/catch { return [] }\` que ce lot ferme`
+  ).toEqual([]);
+});
 
 describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE refuse', () => {
 
