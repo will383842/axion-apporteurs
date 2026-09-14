@@ -15,11 +15,15 @@
  *     `docs/REQUIREMENTS.md` : recopier les sept noms ici aurait fait exactement la faute que
  *     RM-01 interdit, et aurait laissé le registre se désaligner de son exigence en silence.
  *
- * CE QUE CE FICHIER NE FAIT PAS. Il ne juge pas `.github/workflows/ci.yml` ni `package.json` :
- * ce sont des fichiers PARTAGÉS, que le développeur n'écrit pas. Les étapes de lint et de format
- * et les dépendances épinglées sont rendues en texte dans la PR. Ce qui est vérifié ici, c'est
- * que la garde SAIT les juger le jour où elles arrivent — sur des vues INJECTÉES (RM-11), donc
- * sans dépendre de l'état du dépôt le jour où le test tourne (LEC-13).
+ * ⚠️ CE PARAGRAPHE A ÉTÉ RETIRÉ LE 2026-09-14, PAR GOV-031. Il disait : « ce fichier ne juge pas
+ * `.github/workflows/ci.yml` ni `package.json` : ce sont des fichiers PARTAGÉS, que le
+ * développeur n'écrit pas ; les étapes de lint et de format et les dépendances épinglées sont
+ * rendues en texte dans la PR ». La prudence était juste tant que rien ne les touchait — et elle
+ * est devenue le mécanisme par lequel GOV-031 restait VERTE en ne livrant qu'un item sur quatre.
+ * Les étapes et les dépendances ne sont plus « rendues en texte » : elles sont ÉCRITES, et le
+ * dernier bloc de ce fichier les juge sur le disque. Ce qui reste vrai de la phrase d'origine,
+ * c'est que la COHÉRENCE (bloquantes, épinglées) se prouve sur des vues INJECTÉES (RM-11) ; ce
+ * qui était faux, c'est que la PRÉSENCE pouvait attendre indéfiniment sans que rien ne le dise.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -28,6 +32,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import {
   controler,
   perimetresDe,
+  etapesDeLint,
   FAMILLES,
   VUE_CONFORME,
   CI_CONFORME,
@@ -659,5 +664,189 @@ describe('REQ-GOV-018 — `eslint.config.mjs` a été exécutée, et son en-têt
     const p = JSON.parse(readFileSync(PRETTIER, 'utf8')) as Record<string, unknown>;
     expect(p.endOfLine).toBe('lf');
     expect(typeof p.printWidth).toBe('number');
+  });
+});
+
+// ── GOV-031 · REQ-GOV-018 — l'outillage ÉPINGLÉ, ses scripts, et les deux étapes de Gate A ────
+//
+// CE BLOC CONTREDIT L'EN-TÊTE QUE CE FICHIER PORTAIT, ET C'EST LE POINT. GOV-014 y a écrit :
+// « il ne juge pas `.github/workflows/ci.yml` ni `package.json` : ce sont des fichiers PARTAGÉS,
+// que le développeur n'écrit pas ». La prudence était juste tant que rien ne les touchait. Elle
+// est devenue le mécanisme par lequel GOV-031 restait VERTE en ne livrant qu'un item sur quatre :
+// la famille `outillage_non_epingle` ne s'arme QUE si une étape de CI lance l'outil, et
+// l'acceptation le dit elle-même — « sans étape, rien ne ment ». Rien ne ment, et rien ne garde.
+// Une branche qui n'ajoute rien qui puisse rougir n'est pas verte, elle est vide.
+//
+// ⚖️ L'ARBITRAGE, ÉCRIT PLUTÔT QUE TU. L'acceptation de GOV-031 dit « les 5 devDependencies »
+// SANS LES NOMMER. Il en faut SIX, et ce n'est pas un avis : `eslint.config.mjs` importe
+// `@eslint/js`, `globals`, `typescript-eslint` et `eslint-config-prettier` — quatre — et les
+// scripts `lint` et `format:check` lancent deux BINAIRES de plus, `eslint` et `prettier`, dont
+// aucun n'est la dépendance directe des quatre premiers. Le « 5 » est un flou de l'acceptation.
+// Ce test ne le tranche pas par un chiffre écrit à la main : il DÉRIVE la liste de ses deux
+// sources (RM-01), si bien qu'ajouter un plugin à la configuration ajoute son exigence tout seul.
+
+const PACKAGE = 'package.json';
+const CI = '.github/workflows/ci.yml';
+const IGNORE_PRETTIER = '.prettierignore';
+
+interface Pkg {
+  readonly scripts?: Record<string, string>;
+  readonly devDependencies?: Record<string, string>;
+}
+
+/**
+ * Les scripts exigés — LUS dans l'acceptation de GOV-031, jamais retapés ici (RM-01) : si
+ * l'acceptation en nomme un quatrième, ce test l'exige sans qu'on ait à y toucher.
+ */
+function scriptsExigesParGov031(acceptance: string): string[] {
+  const m = /les scripts ((?:`[a-z:]+`(?:, | et )?)+)/.exec(acceptance);
+  return [...(m?.[1] ?? '').matchAll(/`([a-z:]+)`/g)].map((x) => x[1] ?? '');
+}
+
+/**
+ * Les paquets que ce dépôt doit épingler, DÉRIVÉS de leurs deux sources : les `import … from`
+ * de la configuration ESLint, et le premier mot de chaque script d'outillage — le binaire qu'il
+ * lance. Fonction PURE de textes injectés (RM-11).
+ */
+function paquetsRequis(
+  configEslint: string,
+  scripts: Record<string, string>,
+  nomsDeScripts: readonly string[]
+): string[] {
+  const imports = [...configEslint.matchAll(/^import\s[^;]*?from\s+'([^']+)';/gm)].map(
+    (m) => m[1] ?? ''
+  );
+  const binaires = nomsDeScripts
+    .map((n) => (scripts[n] ?? '').trim().split(/\s+/)[0] ?? '')
+    .filter((b) => b !== '' && !b.startsWith('pnpm'));
+  return [...new Set([...imports, ...binaires])].filter((p) => p !== '').sort();
+}
+
+/** Une entrée de `.prettierignore`, et le motif qui la porte — ou son absence. */
+interface Exclusion {
+  readonly ligne: number;
+  readonly motif: string;
+  /** Un commentaire `#` d'au moins 60 caractères dans les 12 lignes qui précèdent. */
+  readonly motive: boolean;
+}
+
+function exclusionsDe(source: string): Exclusion[] {
+  const lignes = source.split('\n');
+  const out: Exclusion[] = [];
+  for (let i = 0; i < lignes.length; i += 1) {
+    const entree = (lignes[i] ?? '').trim();
+    if (entree === '' || entree.startsWith('#')) continue;
+    let motive = false;
+    for (let j = i - 1; j >= 0 && i - j <= FENETRE_MOTIF; j -= 1) {
+      const p = (lignes[j] ?? '').trim();
+      if (p.startsWith('#') && p.length >= MOTIF_MINIMAL_ESLINT) motive = true;
+    }
+    out.push({ ligne: i + 1, motif: entree, motive });
+  }
+  return out;
+}
+
+describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANTS en Gate A', () => {
+  const pkg = JSON.parse(readFileSync(PACKAGE, 'utf8')) as Pkg;
+  const config = readFileSync(ESLINT, 'utf8');
+  const ci = readFileSync(CI, 'utf8');
+  const acceptance =
+    (
+      JSON.parse(readFileSync(TACHES, 'utf8')) as {
+        taches: { id: string; acceptance: string }[];
+      }
+    ).taches.find((t) => t.id === 'GOV-031')?.acceptance ?? '';
+
+  it('les scripts que l’acceptation de GOV-031 nomme existent dans `package.json`', () => {
+    // Le témoin POSITIF d'abord : si l'extraction ne trouvait rien, « aucun script manquant » se
+    // dirait aussi bien d'un package.json complet que d'une regex qui ne lit plus l'acceptation.
+    const exiges = scriptsExigesParGov031(acceptance);
+    expect(exiges.length).toBeGreaterThanOrEqual(3);
+    expect(exiges.filter((s) => !pkg.scripts?.[s])).toEqual([]);
+  });
+
+  it('chaque paquet DÉRIVÉ de la configuration et des scripts est épinglé en devDependencies', () => {
+    // Six, pas cinq — et le compte n'est pas écrit ici : il tombe de la dérivation. Les deux
+    // binaires sont exigés NOMMÉMENT en plus, parce qu'une dérivation qui perdrait la moitié de
+    // sa source rendrait exactement le même vert qu'une dérivation complète.
+    const exiges = scriptsExigesParGov031(acceptance);
+    const requis = paquetsRequis(config, pkg.scripts ?? {}, exiges);
+    expect(requis).toContain('eslint');
+    expect(requis).toContain('prettier');
+    expect(requis.length).toBeGreaterThanOrEqual(6);
+    expect(requis.filter((p) => !pkg.devDependencies?.[p])).toEqual([]);
+    // Épinglé veut dire une version, pas `*` ni `latest` : « un outil non épinglé rend un
+    // verdict différent selon le poste » (docs/CONVENTIONS.md §10).
+    expect(requis.filter((p) => !/^[\^~]?\d/.test(pkg.devDependencies?.[p] ?? ''))).toEqual([]);
+  });
+
+  it('`paquetsRequis` SAIT rougir : un plugin importé et non épinglé est vu', () => {
+    // RM-02. Sans ce témoin fabriqué, les deux `it` ci-dessus seraient verts sur une fonction
+    // qui ne dérive rien : « aucun paquet manquant » est le verdict d'une liste vide.
+    const faux = ["import x from '@eslint/js';", "import y from 'eslint-plugin-inconnu';"].join(
+      '\n'
+    );
+    const requis = paquetsRequis(faux, { lint: 'eslint .', 'format:check': 'prettier --check .' }, [
+      'lint',
+      'format:check',
+    ]);
+    expect(requis).toEqual(['@eslint/js', 'eslint', 'eslint-plugin-inconnu', 'prettier']);
+    // Et le binaire se dérive bien du SCRIPT : sans script, aucun binaire n'est exigé.
+    expect(paquetsRequis(faux, {}, ['lint'])).toEqual(['@eslint/js', 'eslint-plugin-inconnu']);
+  });
+
+  it('Gate A lance `pnpm lint` ET `pnpm format:check`', () => {
+    // La cohérence que `gov:conventions` vérifie ne s'arme qu'en PRÉSENCE de l'étape. C'est ici,
+    // et nulle part ailleurs, que la présence est exigée — sinon la garde reste une intention.
+    const etapes = etapesDeLint({ ...VUE_CONFORME, workflows: [{ chemin: CI, source: ci }] });
+    expect([...new Set(etapes.map((e) => e.outil))].sort()).toEqual(['eslint', 'prettier']);
+  });
+
+  it('aucune des deux étapes ne porte `continue-on-error` — ni elle, ni son job', () => {
+    // LE point de REQ-GOV-018. Côté axionia, TOUTES les gates PR de budget portent ce drapeau :
+    // aucune PR qui alourdit le bundle n'y rougit, et la documentation a affirmé le contraire
+    // pendant des mois. Une gate qui ne bloque rien ne garde rien.
+    const etapes = etapesDeLint({ ...VUE_CONFORME, workflows: [{ chemin: CI, source: ci }] });
+    expect(
+      etapes.filter((e) => /continue-on-error:\s*true/.test(e.bloc) || e.jobNonBloquant)
+    ).toEqual([]);
+    // Hors COMMENTAIRES, et la nuance est MESURÉE : `ci.yml` parle de `continue-on-error`
+    // dans la prose qui explique pourquoi il n'y en a pas. Ce test a d'abord rougi là-dessus.
+    // Une garde qui rougit sur sa propre explication force à effacer l'explication — c'est
+    // la faute que `gov:identifiants` a déjà payée cinq fois.
+    const lignesNues = ci.split('
+').filter((l) => !l.trim().startsWith('#'));
+    expect(lignesNues.filter((l) => l.includes('continue-on-error'))).toEqual([]);
+  });
+
+  it('sur l’arbre RÉEL, ni `outillage_non_epingle` ni `lint_non_bloquant` ne rougissent', () => {
+    // Les deux familles jugées sur les fichiers du disque, et pas seulement sur la vue de
+    // référence : c'est la seule forme qui aurait attrapé l'état d'hier — des étapes absentes et
+    // des paquets absents s'accordaient parfaitement, et cet accord-là EST le faux vert.
+    const vue = variante({
+      workflows: [{ chemin: CI, source: ci }],
+      packageJson: readFileSync(PACKAGE, 'utf8'),
+    });
+    expect(familles(vue)).toEqual([]);
+  });
+
+  it('chaque exclusion de `.prettierignore` porte un motif — et il y en a au moins une', () => {
+    // « Tout écart restant porte une dérogation NOMMÉE et motivée — jamais une règle désactivée
+    // en bloc » (acceptation de GOV-031). Une ligne d'ignore sans phrase au-dessus est une règle
+    // éteinte dont plus personne ne saura pourquoi.
+    const vues = exclusionsDe(readFileSync(IGNORE_PRETTIER, 'utf8'));
+    expect(vues.length).toBeGreaterThanOrEqual(6);
+    expect(vues.filter((e) => !e.motive).map((e) => `${e.motif} (ligne ${e.ligne})`)).toEqual([]);
+  });
+
+  it('`exclusionsDe` SAIT rougir : une exclusion nue est vue comme telle', () => {
+    const nu = ['# court', 'docs/'].join('\n');
+    expect(exclusionsDe(nu)).toEqual([{ ligne: 2, motif: 'docs/', motive: false }]);
+    const motive = [
+      '# Les vues dérivées ne se reformatent pas : une garde compare le disque au texte que leur',
+      '# script produit, et Prettier ferait rougir la comparaison sans qu’aucun humain n’ait agi.',
+      'docs/',
+    ].join('\n');
+    expect(exclusionsDe(motive)[0]?.motive).toBe(true);
   });
 });
