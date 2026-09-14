@@ -20,6 +20,7 @@
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import { referencePr, DEPOT_LOCAL, type Attestation } from '../lot/attestation';
 
 /*
  * LIMITES CONNUES, ET ELLES BORNENT HONNÊTEMENT CE QUE CETTE GARDE FERME :
@@ -42,6 +43,10 @@ export type Tache = {
   lot?: string | null;
   pr?: number | null;
   statut?: string;
+  /** Le depot de forge. Absent = celui-ci : c'est le cas de 208 taches sur 224, et le defaut evite
+   *  d'obliger chaque fixture a le repeter. Un `repo` etranger CHANGE ce que `pr` designe. */
+  repo?: string;
+  attestation?: Attestation | null;
 };
 export type Exigence = { id: string; taches?: string[] };
 export type Gate = { id: string; script?: string; tache?: string; [champ: string]: unknown };
@@ -157,12 +162,38 @@ export function motifIdentifiant(taches: Tache[]): RegExp {
   return new RegExp('(?<![A-Za-z0-9-])(?:' + formes.join('|') + ')(?![A-Za-z0-9]|-[A-Za-z0-9])', 'g');
 }
 
+/**
+ * L'ANCRE d'une entrée de journal, écrite UNE seule fois (RM-01).
+ *
+ * 🔑 CE N'EST PAS UNE RÉFÉRENCE DE PR, C'EST UN TITRE DE SECTION — et la distinction décide de la
+ * forme. `docs/journal/` indexe ses entrées par un titre `## PR #<n>` ; un message qui dit au
+ * lecteur « l'entrée « … » du journal ne nomme pas ce lot » doit citer LA CHAÎNE QUI EST DANS LE
+ * FICHIER, sans quoi il l'envoie chercher ce qui n'y figure pas — c'est-à-dire exactement le défaut
+ * que cette garde existe pour fermer. La référence de la PR d'une TÂCHE, elle, ne se compose jamais
+ * à la main : `referencePr()` en est le seul auteur. Les deux cohabitent dans le même message et ce
+ * ne sont pas les mêmes objets ; les confondre casserait l'un ou l'autre.
+ *
+ * Le parseur et les messages DÉRIVENT tous deux d'ici : renommer l'ancre la déplace des deux côtés
+ * à la fois, ou d'aucun.
+ */
+export const ANCRE_JOURNAL = '## PR #';
+
+/** L'ancre de l'entrée d'UNE PR, telle qu'elle est écrite dans `docs/journal/`. */
+export function ancreDeJournal(pr: number | string): string {
+  return `${ANCRE_JOURNAL}${pr}`;
+}
+
+/** Le motif de titre, DÉRIVÉ de l'ancre : espaces souples, numéro capturé. Rien n'est retapé. */
+const MOTIF_ANCRE = new RegExp(
+  '^' + ANCRE_JOURNAL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+') + '(\\d+)'
+);
+
 /** Les entrées du journal, indexées par numéro de PR. Le TITRE fait partie de l'entrée. */
 export function entreesDeJournal(journal: string): Map<string, string> {
   const par = new Map<string, string[]>();
   let courant: string | null = null;
   for (const ligne of journal.split('\n')) {
-    const m = /^##\s+PR\s+#(\d+)/.exec(ligne);
+    const m = MOTIF_ANCRE.exec(ligne);
     if (m) {
       courant = m[1] as string;
       par.set(courant, [ligne]);
@@ -286,23 +317,43 @@ export function analyser(s: Sources): Faute[] {
   // tâche présente dans le rendu du workflow, SANS vérifier qu'elle appartenait au lot. La
   // composition qui aurait pu le démentir vit dans `docs/lots/<id>/lot.json`, que `.gitignore`
   // exclut : elle ne survit ni à un `clone` ni à un changement de machine. La seule seconde source
-  // qui reste au dépôt est `docs/journal/`, où chaque clôture nomme son lot sous `## PR #<n>`.
+  // qui reste au dépôt est `docs/journal/`, où chaque clôture nomme son lot sous cette ancre.
+  //
+  // 🔑 ET SEULEMENT POUR LES TÂCHES DE **CE** DÉPÔT. `docs/journal/` indexe les PR d'ici, et rien
+  // d'autre. Confronter le `pr` d'une tâche livrée dans `axionia` à ces titres-là est une erreur de
+  // catégorie : le nombre n'y désigne rien, et le message enverrait le lecteur chercher une entrée
+  // qui ne peut pas exister. C'est le défaut exact que `referencePr()` a été écrit pour fermer
+  // (GOV-038) — un numéro de PR nu ne dit pas de quel dépôt on parle. Aucune tâche étrangère ne
+  // porte de `lot` aujourd'hui (mesuré : 16 tâches hors `partners`, zéro avec `lot` ou `pr`) : ce
+  // filtre ne retire donc AUCUNE mesure courante, il ferme une catégorie. Le contre-témoin qui
+  // l'exerce vit dans `attributions-resolvent.spec.ts`.
   const entrees = entreesDeJournal(s.journal);
   const dettesLotVues = new Set<string>();
   for (const t of s.taches) {
     if (!t.lot || t.pr === null || t.pr === undefined) continue;
+    if ((t.repo ?? DEPOT_LOCAL) !== DEPOT_LOCAL) continue;
     const entree = entrees.get(String(t.pr));
     if (entree !== undefined && entree.includes(t.lot)) continue;
     if (s.dettesLot.includes(t.id)) {
       dettesLotVues.add(t.id);
       continue;
     }
+    // La PR de la TÂCHE se compose par son seul auteur ; l'ANCRE du journal se dérive de sa source.
+    // Deux objets, deux dérivations, dans la même phrase.
+    const ref = referencePr({
+      id: t.id,
+      repo: t.repo ?? DEPOT_LOCAL,
+      statut: t.statut ?? 'a_faire',
+      pr: t.pr,
+      attestation: t.attestation ?? null,
+    });
+    const ancre = ancreDeJournal(t.pr);
     dire(
       'lot_non_atteste',
       entree === undefined
-        ? `docs/tasks.json — ${t.id} porte lot « ${t.lot} » et pr ${t.pr}, et docs/journal/ n'a aucune entrée « ## PR #${t.pr} ». ` +
+        ? `docs/tasks.json — ${t.id} porte lot « ${t.lot} » et ${ref}, et docs/journal/ n'a aucune entrée « ${ancre} ». ` +
             `Rien n'atteste que cette tâche appartenait au lot : lot:cloture écrit le lot sans le vérifier.`
-        : `docs/tasks.json — ${t.id} porte lot « ${t.lot} » et pr ${t.pr}, et l'entrée « ## PR #${t.pr} » du journal ne nomme pas « ${t.lot} ». ` +
+        : `docs/tasks.json — ${t.id} porte lot « ${t.lot} » et ${ref}, et l'entrée « ${ancre} » du journal ne nomme pas « ${t.lot} ». ` +
             `Une tâche étrangère au lot, présente dans le rendu, passe fusionnee avec ce lot écrit dans un fichier versionné.`
     );
   }
@@ -377,9 +428,19 @@ export function analyser(s: Sources): Faute[] {
 // compte se dérive de la longueur de ces listes.
 
 /**
- * LES TROIS NON-RÉCIPROCITÉS RÉELLES, MESURÉES SUR L'ARBRE OÙ CETTE GARDE EST NÉE, et que GOV-037
- * ne peut pas réparer : `docs/gates.json` et `docs/tasks.json` sont en écriture réservée
- * (`docs/PRESEANCE.md`), et `lot:cloture` est le seul écrivain des champs de suivi.
+ * LES NON-RÉCIPROCITÉS RÉELLES, MESURÉES, et que GOV-037 ne peut pas réparer : `docs/gates.json` et
+ * `docs/tasks.json` sont en écriture réservée (`docs/PRESEANCE.md`), et `lot:cloture` est le seul
+ * écrivain des champs de suivi. Le compte ne s'écrit pas ici — `dette_perimee` le tient : toute
+ * entrée qui cesse d'être MESURÉE rougit en demandant qu'on la retire.
+ *
+ * 🔧 UNE QUATRIÈME ENTRÉE À LA RÉCONCILIATION AVEC `main` (PR #33 → #35), ARBITRÉE ET NON SUBIE.
+ * La garde a rougi en nommant `gov:derivation` ; je l'ai lue avant de déclarer. C'est le cas le
+ * plus intéressant du registre, parce que la non-réciprocité y est **VOULUE et écrite** : la gate
+ * est DIFFÉRÉE (`docs/GARDES-AXIONIA.md` §2), son script n'existe pas, sa tâche successeur est
+ * `DM-03-A` — et `docs/gates.json` dit lui-même pourquoi l'entrée reste attribuée à GOV-014 : la
+ * ré-attribuer viderait le témoin de `gardes-transposees.spec.ts`, qui surveille précisément la
+ * gate qu'une tâche porte sans l'armer. *Une attribution délibérément non réciproque reste une
+ * attribution non réciproque : on la DÉCLARE, on ne la corrige pas en cassant ce qui la surveille.*
  */
 export const DETTE_GATE_NON_RECIPROQUE: DetteGate[] = [
   {
@@ -401,6 +462,16 @@ export const DETTE_GATE_NON_RECIPROQUE: DetteGate[] = [
     tache: 'INT-T01a',
     script: 'scripts/gates/fixtures-source.ts',
     raison: 'même cas : la gate déclare un porteur que la tâche ne déclare pas en retour.',
+  },
+  {
+    gate: 'gov:derivation',
+    tache: 'GOV-014',
+    script: 'scripts/gates/gov-derivation.ts',
+    raison:
+      'gate DIFFÉRÉE, et son attribution est VOULUE : le script n’existe pas, GOV-014 ne peut donc ' +
+      'pas le déclarer, et le registre écrit noir sur blanc que la ré-attribuer à DM-03-A viderait ' +
+      'le témoin de gardes-transposees.spec.ts. Déclarée pour rester BRUYANTE : le jour où DM-03-A ' +
+      'arme la garde, `dette_perimee` réclamera cette ligne.',
   },
 ];
 

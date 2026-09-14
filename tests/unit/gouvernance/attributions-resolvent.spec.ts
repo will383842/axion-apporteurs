@@ -40,10 +40,12 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   analyser,
+  ancreDeJournal,
   chargerSources,
   FAMILLES,
   type Sources,
 } from '../../../scripts/gates/gov-attributions';
+import { DEPOTS, DEPOT_LOCAL, referencePr } from '../../../scripts/lot/attestation';
 
 // ── fabrique de sources : AUCUN défaut sur la dimension que le test fait varier (RM-11) ───────
 //
@@ -278,6 +280,93 @@ describe('REQ-GOV-021 — l’attribution lot ↔ tâche est ATTESTÉE par une s
       })
     );
     expect(f).toEqual([]);
+  });
+
+  /**
+   * 🔑 LE MESSAGE PORTE **DEUX** OBJETS QUI SE RESSEMBLENT, ET C'EST L'ARBITRAGE DE GOV-038.
+   *
+   * `## PR #31` est le TITRE d'une section de `docs/journal/` : le lecteur doit pouvoir chercher
+   * CETTE chaîne-là dans le fichier. `PR#31` est la RÉFÉRENCE de la PR de la tâche, composée par
+   * `referencePr()` — le seul auteur autorisé, parce qu'un numéro nu ne dit pas de quel dépôt on
+   * parle. Les deux vivent dans la même phrase. Remplacer l'ancre par la référence rendrait le
+   * message VERT au regard de `attestation-inter-depot.spec.ts` et FAUX au regard du lecteur : il
+   * chercherait « PR#31 » dans un fichier qui n'écrit que « ## PR #31 ». Ce témoin verrouille les
+   * deux sens, faute de quoi la prochaine session « corrigerait » l'un en cassant l'autre.
+   */
+  it('TÉMOIN : le message cite l’ANCRE du journal ET la référence de PR, qui ne sont pas le même objet', () => {
+    const f = analyser(
+      sources({
+        taches: [{ id: 'GOV-100', paths: ['scripts/a.ts'], tests: {}, reqs: [], owner: null, lot: 'L-9-99', pr: 31, statut: 'fusionnee' }],
+        journal,
+      })
+    );
+    expect(familles(f)).toContain('lot_non_atteste');
+    // L'ancre, telle qu'elle est écrite dans `docs/journal/` — dérivée, jamais retapée.
+    expect(texte(f), 'le message n’envoie pas le lecteur vers un titre qui existe').toContain(
+      ancreDeJournal(31)
+    );
+    // La référence de la PR de la tâche, composée par son seul auteur.
+    expect(texte(f), 'la référence de PR n’est pas celle que `referencePr` compose').toContain(
+      referencePr({ id: 'GOV-100', repo: DEPOT_LOCAL, statut: 'fusionnee', pr: 31, attestation: null })!
+    );
+  });
+
+  /**
+   * 🔑 UNE ERREUR DE CATÉGORIE, PAS UNE ATTRIBUTION FAUSSE. `docs/journal/` indexe les PR de CE
+   * dépôt et d'aucun autre. Confronter le `pr` d'une tâche livrée dans `axionia` à ses titres
+   * reviendrait à exiger qu'une entrée « ## PR #998 » existe ici — elle ne peut pas. C'est le
+   * défaut que `referencePr()` ferme ailleurs (GOV-038) : un numéro nu ne désigne rien tant qu'on
+   * n'a pas dit DE QUEL dépôt on parle.
+   *
+   * ⚠️ CE CONTRE-TÉMOIN NE MESURE RIEN SUR LE DÉPÔT RÉEL, ET C'EST DIT : zéro des 16 tâches hors
+   * `partners` ne porte aujourd'hui de `lot` ni de `pr` (mesuré le 2026-09-14). Il garde la
+   * CATÉGORIE, pas une occurrence — et il rougit si quelqu'un retire le filtre.
+   */
+  it('CONTRE-TÉMOIN : une tâche livrée dans un AUTRE dépôt ne se confronte pas au journal d’ICI', () => {
+    const etranger = Object.keys(DEPOTS).find((r) => r !== DEPOT_LOCAL && DEPOTS[r] !== null)!;
+    const f = analyser(
+      sources({
+        taches: [
+          {
+            id: 'GOV-100',
+            paths: ['scripts/a.ts'],
+            tests: {},
+            reqs: [],
+            owner: null,
+            lot: 'L-9-99',
+            pr: 998,
+            statut: 'fusionnee',
+            repo: etranger,
+          },
+        ],
+        journal,
+      })
+    );
+    expect(f, `une tâche de « ${etranger} » a été confrontée au journal de « ${DEPOT_LOCAL} »`).toEqual([]);
+  });
+
+  it('CONTRE-TÉMOIN DU CONTRE-TÉMOIN : la MÊME tâche, dans CE dépôt, rougit toujours', () => {
+    // Sans lui, un filtre qui absoudrait TOUT laisserait le contre-témoin ci-dessus vert.
+    // *Un contre-témoin vert pour une raison qu'on n'a pas choisie ne prouve rien.*
+    const f = analyser(
+      sources({
+        taches: [
+          {
+            id: 'GOV-100',
+            paths: ['scripts/a.ts'],
+            tests: {},
+            reqs: [],
+            owner: null,
+            lot: 'L-9-99',
+            pr: 998,
+            statut: 'fusionnee',
+            repo: DEPOT_LOCAL,
+          },
+        ],
+        journal,
+      })
+    );
+    expect(familles(f)).toContain('lot_non_atteste');
   });
 });
 
