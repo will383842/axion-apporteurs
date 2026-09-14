@@ -142,8 +142,12 @@ jobs:
       # le temoin « exemption PORTANTE » rougit, parce que son texte ne change pas d'une forge a
       # l'autre).
       # AUCUN GH_TOKEN ici, et ce n est pas un oubli : le perimetre compare ne depend d aucun
-      # appel a la forge. Mesure : GH_CONFIG_DIR vide et GH_TOKEN vide, gh refuse, et la garde rend
-      # le MEME verdict, exit 0. Sans jeton, seules les rubriques deja NON comparees changent.
+      # appel a la forge. Sans jeton, seules les zones deja NON comparees changent de contenu. Le
+      # verdict n en depend pas non plus, parce que le generateur ramene tout ce qu il ecrit dans une
+      # zone qui a lu la forge a UNE ligne sans `<` : une valeur de la forge n ouvre ni ligne, ni
+      # rubrique, ni HTML. Ce n est pas cette etape qui le prouve : c est le temoin « exemption
+      # PORTANTE » de `pnpm test`, qui juge une vue sous une forge LISIBLE aux valeurs hostiles sur
+      # plusieurs lignes, puis la meme vue fautive sous cette forge et sous une forge illisible.
       - name: La vue de l etat vivant est egale a sa source
         run: pnpm plan-state:verifier
       # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,

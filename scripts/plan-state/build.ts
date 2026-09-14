@@ -82,9 +82,8 @@ const bloquantes = ids(section(1));
 // Phase courante = la plus petite phase qui porte encore une tâche non terminée.
 // Le vocabulaire « livrée » vient de `scripts/lot/avancement.ts`, qui le dérive du barème et le
 // confronte à `tasks.schema.json` : il ne se retape pas ici (RM-01, RM-04).
-const TERMINES = LIVREE;
 const phases = [...new Set(taches.map((t) => t.phase))].sort((a, b) => a - b);
-const phaseCourante = phases.find((p) => taches.some((t) => t.phase === p && !TERMINES.has(t.statut))) ?? phases.at(-1)!;
+const phaseCourante = phases.find((p) => taches.some((t) => t.phase === p && !LIVREE.has(t.statut))) ?? phases.at(-1)!;
 
 const par = (s: string) => taches.filter((t) => t.statut === s);
 const enCours = par('en_cours');
@@ -95,7 +94,7 @@ const attente = par('attente_externe');
 const questions = [
   ...new Set(
     taches
-      .filter((t) => t.phase === phaseCourante && !TERMINES.has(t.statut))
+      .filter((t) => t.phase === phaseCourante && !LIVREE.has(t.statut))
       .flatMap((t) => [
         ...t.hyp.filter((h) => !posees.has(h)).map((h) => (bloquantes.has(h) ? `${h} — **bloquante (§1 du registre)**` : h)),
         ...(t.externe ? [`externe:${t.externe}`] : []),
@@ -254,15 +253,20 @@ function titre(t: string): void {
 }
 
 /**
- * CE QUI EST ÉCRIT DANS UNE ZONE EXEMPTÉE NE PORTE AUCUN `<`.
+ * CE QUI EST ÉCRIT DANS UNE ZONE QUI A LU LA FORGE TIENT SUR UNE LIGNE ET NE PORTE AUCUN `<`.
  *
- * Le vérificateur refuse tout `<` dans une zone exemptée (`horsDeSaZone`) : au rendu, c'est du HTML,
- * en bloc comme en ligne, et un élément laissé ouvert replie ce qui le suit. Une valeur de la forge
- * (titre de PR, branche, label) ou un titre de tâche peut en porter un : il devient `&lt;`, qui
- * s'affiche `<` en texte courant (et `&lt;` littéral dans du code en ligne). Sans cette
- * neutralisation, la forge fabriquerait un rouge sur une vue juste.
+ * Toute valeur de la forge est lue par `lire`, donc DANS la rubrique ou la ligne du bloc qui
+ * l'affiche, et tout ce que cette zone écrit passe ici. Deux choses en sortent :
+ *   — un retour chariot ou un saut de ligne devient une espace. Une valeur de la forge (un titre de
+ *     PR garde ses sauts de ligne, et n'importe qui ouvre une PR sur un dépôt public) ouvrirait
+ *     sinon une ligne à elle, puis une rubrique qu'aucun `titre()` n'a déclarée : sans provenance,
+ *     donc ni exemptée ni contenue, et comparée à elle-même ;
+ *   — `<` devient `&lt;`, qui s'affiche `<` en texte courant (et `&lt;` littéral dans du code en
+ *     ligne). Le vérificateur refuse tout `<` dans une zone exemptée (`horsDeSaZone`) : sans cette
+ *     neutralisation, la forge fabriquerait un rouge sur une vue juste.
+ * Un titre de tâche écrit dans la même zone suit la même règle.
  */
-const neutraliser = (l: string): string => l.replaceAll('<', '&lt;');
+const neutraliser = (l: string): string => l.replaceAll('<', '&lt;').replace(/[\r\n]/g, ' ');
 
 /** Écrit UNE ligne du bloc de reprise : ses lectures de la forge sont attribuées à elle seule. */
 function ligneDeReprise(ecrire: () => string): string {
@@ -286,8 +290,8 @@ lignes.push('');
 const iBlocReprise = lignes.length;
 titre(`Phase courante : ${phaseCourante}`);
 lignes.push('');
-const restant = taches.filter((t) => t.phase === phaseCourante && !TERMINES.has(t.statut));
-const faitPhase = taches.filter((t) => t.phase === phaseCourante && TERMINES.has(t.statut));
+const restant = taches.filter((t) => t.phase === phaseCourante && !LIVREE.has(t.statut));
+const faitPhase = taches.filter((t) => t.phase === phaseCourante && LIVREE.has(t.statut));
 lignes.push(`${faitPhase.length}/${faitPhase.length + restant.length} tâches terminées · reste ${restant.reduce((s, t) => s + t.estimateDays, 0).toFixed(2)} j estimés.`);
 lignes.push('');
 
@@ -371,7 +375,7 @@ let cheminCritique: string[] = [];
     sommet.suite
       .map((id) => {
         const t = parId.get(id)!;
-        const fait = TERMINES.has(t.statut);
+        const fait = LIVREE.has(t.statut);
         return `${fait ? '~~' : ''}${id}${fait ? '~~' : ''} (${t.estimateDays} j, ph ${t.phase})`;
       })
       .join(' → ')
@@ -379,7 +383,7 @@ let cheminCritique: string[] = [];
   lignes.push('');
   const restantCritique = sommet.suite
     .map((id) => parId.get(id)!)
-    .filter((t) => !TERMINES.has(t.statut))
+    .filter((t) => !LIVREE.has(t.statut))
     .reduce((a, t) => a + t.estimateDays, 0);
   lignes.push(`Reste sur ce chemin : **${restantCritique.toFixed(2)} j**.`);
   lignes.push('');
@@ -442,7 +446,7 @@ if (!forge.githubLu()) {
   lignes.push('');
 }
 {
-  const enVol = taches.filter((t) => !TERMINES.has(t.statut) && revendiqueursDe(t).length > 0);
+  const enVol = taches.filter((t) => !LIVREE.has(t.statut) && revendiqueursDe(t).length > 0);
   if (!enVol.length) {
     lignes.push('Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.');
   } else {
@@ -457,10 +461,10 @@ if (!forge.githubLu()) {
   // Le défaut est NOMMÉ ici plutôt que gardé par `gov:etat` : `lot:cloture` écrit `docs/tasks.json`
   // mais ne retire pas les labels de l'issue. Armer une gate dessus la rendrait rouge en permanence
   // sur un défaut qui appartient à GOV-012, et une gate toujours rouge ne garde plus rien.
-  const perimees = taches.filter((t) => TERMINES.has(t.statut) && revendiqueursDe(t).length > 0 && !t.owner);
+  const perimees = taches.filter((t) => LIVREE.has(t.statut) && revendiqueursDe(t).length > 0 && !t.owner);
   const perimeesLabel = taches.filter((t) => {
     const issue = (t as unknown as { issue?: number | null }).issue ?? null;
-    return TERMINES.has(t.statut) && issue !== null && forge.revendications().has(issue);
+    return LIVREE.has(t.statut) && issue !== null && forge.revendications().has(issue);
   });
   if (forge.githubLu() && perimeesLabel.length > 0) {
     lignes.push(`⚠️ **${perimeesLabel.length} revendication(s) périmée(s)** — ${perimeesLabel.map((t) => t.id).join(', ')} : leur issue porte encore un label \`owner:\` alors que la tâche est livrée. \`pnpm lot:cloture\` écrit \`docs/tasks.json\` mais n’efface pas les labels ; la dette appartient à GOV-012.`);
@@ -506,7 +510,7 @@ lignes.push('');
 titre('Prochain pas');
 lignes.push('');
 {
-  const livrees = new Set(taches.filter((t) => TERMINES.has(t.statut)).map((t) => t.id));
+  const livrees = new Set(taches.filter((t) => LIVREE.has(t.statut)).map((t) => t.id));
   const eligibles = taches.filter(
     (t) => t.statut === 'a_faire' && t.phase === phaseCourante && t.externe === null && t.deps.every((d) => livrees.has(d))
   );
@@ -581,7 +585,7 @@ debutsDesRubriques.forEach(([t, debut], k) => {
 // et dans quel ordre, qui tient quoi, ce qu'on tape maintenant. Chaque ligne est DÉRIVÉE d'une
 // rubrique plus bas ; aucune n'est saisie. Un résumé tenu à la main ment au premier oubli.
 {
-  const livrees = new Set(taches.filter((t) => TERMINES.has(t.statut)).map((t) => t.id));
+  const livrees = new Set(taches.filter((t) => LIVREE.has(t.statut)).map((t) => t.id));
   const eligibles = taches.filter(
     (t) => t.statut === 'a_faire' && t.phase === phaseCourante && t.externe === null && t.deps.every((d) => livrees.has(d))
   );
@@ -602,7 +606,7 @@ debutsDesRubriques.forEach(([t, debut], k) => {
       return `| Qu’est-ce qui est en vol ? | ${file.length === 0 ? 'aucune PR ouverte' : file.map((p, i) => `${i + 1}. #${p.number} (${p.bloque.split(' — ')[0]})`).join(' · ')} |`;
     }),
     ligneDeReprise(() => {
-      const enVol = taches.filter((t) => !TERMINES.has(t.statut) && revendiqueursDe(t).length > 0);
+      const enVol = taches.filter((t) => !LIVREE.has(t.statut) && revendiqueursDe(t).length > 0);
       return `| Qui tient quoi ? | ${forge.githubLu() ? (enVol.length === 0 ? 'aucune tâche revendiquée' : enVol.map((t) => `${t.id} (${revendiqueursDe(t).join(', ')})`).join(' · ')) : '**lecture GitHub indisponible** — ne pas conclure « personne »'} |`;
     }),
     ligneDeReprise(() => `| Où en est la phase ? | phase ${phaseCourante} — ${faitPhase.length}/${faitPhase.length + restant.length} tâches, reste ${restant.reduce((s, t) => s + t.estimateDays, 0).toFixed(2)} j |`),
@@ -715,20 +719,21 @@ export function decouper(texte: string): Rubrique[] {
  *   — `<` est refusé PARTOUT dans la ligne : c'est le seul caractère qui ouvre du HTML, en bloc comme
  *     en ligne, quelle que soit sa colonne ;
  *   — la ligne est vide, ou COMMENCE, en colonne 0, par l'un des débuts de `DEBUT_PERMIS` : `|` (ligne
- *     de tableau), une lettre, un pictogramme, `**`, ou un ou deux accents graves (du code en ligne,
- *     jamais une clôture). Tout le reste est refusé sans être nommé : indentation, `#`, `=`, `-`,
- *     `+`, `*` seul, chiffre, `>`, `[`, `~`, trois accents graves, `$`… Aucun de ces débuts n'est donc
- *     une alternative à charger une à une ; un début permis qui cesserait de l'être fait rougir le
- *     contre-témoin, parce que le générateur l'écrit ;
+ *     de tableau), une lettre, un pictogramme, `**`, ou un accent grave seul (du code en ligne,
+ *     jamais une clôture). Ce sont les débuts que le générateur écrit, et rien de plus. Tout le reste
+ *     est refusé sans être nommé : indentation, `#`, `=`, `-`, `+`, `*` seul, chiffre, `>`, `[`, `~`,
+ *     plusieurs accents graves, `$`… Un début retiré fait rougir les contre-témoins, qui jugent ce
+ *     que le générateur écrit ; un début ajouté fait rougir le témoin de structure, qui porte le
+ *     complément de cette liste ;
  *   — un retour chariot est refusé partout, dans toute la vue (`fin_de_ligne_non_lf`).
  *
  * Aucun de ces débuts permis n'ouvre, en CommonMark ni en GFM, une construction qui dépasse son
  * paragraphe, sa ligne de tableau ou sa cellule. Le générateur n'écrit rien d'autre dans une zone
- * exemptée, et il neutralise `<` à la source (`neutraliser`) : les deux contre-témoins (vue commitée,
- * vue rendue sous deux forges dont l'une porte des valeurs hostiles) gardent que la règle ne coûte
- * aucun faux rouge.
+ * exemptée, et il y ramène tout à une ligne sans `<` (`neutraliser`) : les contre-témoins (vue
+ * commitée, vue rendue sous deux forges dont l'une, lisible, porte des valeurs hostiles sur plusieurs
+ * lignes) gardent que la règle ne coûte aucun faux rouge.
  */
-const DEBUT_PERMIS = /^(?:$|[|\p{L}\p{Extended_Pictographic}]|\*\*|`{1,2}(?!`))/u;
+const DEBUT_PERMIS = /^(?:$|[|\p{L}\p{Extended_Pictographic}]|\*\*|`(?!`))/u;
 
 function horsDeSaZone(ligne: string): string | null {
   if (ligne.includes('<')) return 'porte `<` — du HTML au rendu, qui peut replier ce qui suit';
@@ -776,7 +781,7 @@ const DENOMBREMENTS: readonly (readonly [string, RegExp])[] = [
 ];
 
 /** LA POPULATION, dérivée de la table et du barème — jamais retapée. */
-export const MESURES_ATTENDUES: readonly string[] = [
+const MESURES_ATTENDUES: readonly string[] = [
   ...LECTURES.flatMap(([, ...noms]) => noms),
   ...STATUTS_DU_TABLEAU.map((x) => `tâches \`${x}\``),
   ...DENOMBREMENTS.map(([nom]) => nom),

@@ -36,7 +36,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync, statSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { FAMILLES, BLOC_DE_REPRISE, decouper, question, proses, type Famille } from '../../../scripts/plan-state/build';
 import { PLANCHER } from '../../../scripts/lot/avancement';
@@ -275,7 +275,7 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
   }
 
   /**
-   * LA FALSIFICATION MESURÉE PAR LA LENTILLE, rejouée : les COMPTEURS changent, les ANCRES
+   * LA FALSIFICATION QU'UNE GARDE DE STRUCTURE NE VOIT PAS : les COMPTEURS changent, les ANCRES
    * restent. Aucun titre, aucune barre de tableau, aucune puce n'est touchée.
    */
   function falsifierLesCompteurs(texte: string): { faux: string; appliquees: number } {
@@ -428,26 +428,43 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
       .toMatch(new RegExp(`tâches terminées[^\n]*dit ${m![2]}[^\n]*produisent ${m![1]}`));
   });
 
-  it('REQ-GOV-032 · le compte des rubriques est DÉRIVÉ du rendu, jamais retapé (il ne voit PAS une rubrique disparue — GOV-055)', () => {
-    // ⚠️ CE QUE CE TÉMOIN NE GARDE PAS, ET IL FAUT LE LIRE AVANT DE S'Y FIER.
+  it('REQ-GOV-032 · CHAQUE rubrique annoncée comparée l’est vraiment, en-tête et dernière comprises — comptées SANS `decouper` (une rubrique disparue reste invisible : GOV-055)', () => {
+    // L'ORACLE NE PASSE PAS PAR `decouper`. Un témoin qui importe la découpe perd, avec elle, ce
+    // qu'elle cesse de rendre : une rubrique que `decouper` oublierait disparaîtrait du vérificateur
+    // ET de l'attendu. Les titres se lisent donc ici dans ce que le générateur ÉCRIT — `titre()` pose
+    // `## ` en colonne 0 — et le texte d'avant le premier titre est `(en-tête)`.
     //
-    // Neutraliser l'émission de `## Bloquées` puis régénérer rend « 8 rubrique(s) comparée(s) »,
-    // EXIT 0, et ce témoin reste VERT — parce qu'il dérive son attendu du MÊME rendu amputé.
-    // **Un témoin qui tire sa référence de son sujet ne peut pas voir ce que le sujet a perdu.** Il y
-    // faut une source EXTÉRIEURE qui énumère les rubriques dues : versé en **GOV-055**.
-    //
-    // CE QU'IL GARDE VRAIMENT : que le compte annoncé soit DÉRIVÉ du rendu et non retapé.
+    // ⚠️ Ce témoin ne voit PAS une rubrique que le générateur cesse d'écrire : l'oracle lit le même
+    // rendu. Il y faut une source extérieure qui énumère les rubriques dues (GOV-055).
     const vue = rendrePlanState('PLAN-STATE-couverture.md');
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `la vue fraîche doit être verte : ${sortie}`).toBe(0);
-    const m = /(\d+) rubrique\(s\) comparée\(s\)/.exec(sortie);
-    expect(m, `le vert doit annoncer un compte de rubriques : ${sortie}`).not.toBeNull();
-    // La liste se dérive de ce que le VERT annonce ne pas avoir comparé — la seule source qui soit
-    // à la fois lisible d'ici et garantie à jour, puisque c'est la gate elle-même qui l'imprime.
-    // `(en-tête)`, le texte d'avant la première rubrique, est comparée aussi, et `decouper` la rend.
-    const volatiles = [...exemptes(sortie, 'rubriques'), BLOC_DE_REPRISE];
-    const attendu = decouper(readFileSync(vue, 'utf8')).filter((r) => !volatiles.includes(r.titre)).length;
-    expect(Number(m![1]), 'le compte annoncé doit être celui des rubriques RÉELLEMENT comparées').toBe(attendu);
+    const m = /(\d+) rubrique\(s\) comparée\(s\) octet par octet sur (\d+)/.exec(sortie);
+    expect(m, `le vert doit annoncer X rubriques comparées sur Y : ${sortie}`).not.toBeNull();
+    const t = readFileSync(vue, 'utf8');
+    const titres = ['(en-tête)', ...[...t.matchAll(/^## (.+)$/gm)].map((x) => x[1]!)].filter((x) => x !== BLOC_DE_REPRISE);
+    expect(Number(m![2]), 'le vert ne compte pas toutes les rubriques que le générateur écrit').toBe(titres.length);
+    const exemptees = exemptes(sortie, 'rubriques');
+    const comparees = titres.filter((x) => !exemptees.includes(x));
+    expect(Number(m![1]), 'le compte annoncé doit être celui des rubriques RÉELLEMENT comparées').toBe(comparees.length);
+
+    // CHAQUE rubrique annoncée comparée est falsifiée d'une ligne, à la fin de son corps : chacune
+    // doit être NOMMÉE par un écart. La position se lit dans le texte, pas dans `decouper`.
+    const lignes = t.split('\n');
+    const faux: string[] = [];
+    let courante = '(en-tête)';
+    const falsifier = () => { if (comparees.includes(courante)) faux.push(`falsification de ${courante}`); };
+    for (const l of lignes.slice(0, -1)) {
+      const h = /^## (.+)$/.exec(l);
+      if (h) { falsifier(); courante = h[1]!; }
+      faux.push(l);
+    }
+    falsifier();
+    writeFileSync(vue, `${faux.join('\n')}\n`);
+    const r = lancerPlan('--verifier', '--out', vue);
+    expect(r.code, `des rubriques comparées falsifiées passent : ${r.sortie}`).toBe(1);
+    const nommees = [...r.sortie.matchAll(/^\s*\[vue_perimee\] rubrique « (.+?) » :/gm)].map((x) => x[1]!);
+    expect(nommees.sort(), 'rubrique(s) annoncée(s) comparée(s) dont la falsification n’est pas vue').toEqual([...comparees].sort());
   });
 
   it('RM-02 · famille rubrique_hors_ordre — le mensonge remonté EN TÊTE, dans une rubrique non comparée', () => {
@@ -480,8 +497,8 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(sortie).toMatch(/rubrique_dupliquee/);
   });
 
-  it('RM-02 · un titre INDENTÉ d’une à trois espaces, ou fermé par des #, est un titre — posé dans une rubrique exemptée, il fait un doublon qui rougit', () => {
-    // Pour CommonMark, ces quatre lignes sont le titre « Tâches » : deux « Tâches » à l'écran. Chacune
+  it('RM-02 · un titre INDENTÉ de trois espaces, ou fermé par des #, est un titre — posé dans une rubrique exemptée, il fait un doublon qui rougit', () => {
+    // Pour CommonMark, ces deux lignes sont le titre « Tâches » : deux « Tâches » à l'écran. Chacune
     // doit tirer `rubrique_dupliquee` — pas une autre famille : un titre que `decouper` cesserait de
     // reconnaître tomberait dans la zone exemptée et rougirait par `structure_dans_une_exemption`,
     // ce qui cacherait qu'une rubrique n'est plus reconnue comme au rendu.
@@ -492,7 +509,7 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const t = readFileSync(vue, 'utf8');
     expect(t, 'la rubrique comparée `Tâches` doit exister pour qu’on la double').toContain('\n## Tâches\n');
     const echappees: string[] = [];
-    for (const [k, titre] of [' ## Tâches', '  ## Tâches', '   ## Tâches', '## Tâches ##'].entries()) {
+    for (const [k, titre] of ['   ## Tâches', '## Tâches ##'].entries()) {
       const chemin = join(bac, `PLAN-STATE-titre-indente-${k}.md`);
       writeFileSync(chemin, t.replace(`\n## ${zone}\n\n`, `\n## ${zone}\n\n${titre}\n\n| \`a_faire\` | 0 | mensonge |\n\n`));
       const { code, sortie } = lancerPlan('--verifier', '--out', chemin);
@@ -503,12 +520,9 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
 
   it('RM-02 · famille structure_dans_une_exemption — une zone exemptée n’atteint rien au rendu, dans aucune de ses trois formes', () => {
     // La règle est une AUTORISATION (`horsDeSaZone`) : `<` refusé partout, et tout début de ligne hors
-    // d'une courte liste refusé. Les charges ne sont donc pas « une par ouverture reconnue » : ce sont
-    // des écritures qui, au rendu GitHub, atteignent ou doublent ce qui suit — HTML en ligne laissé
-    // ouvert, bloc HTML sous l'indentation de continuation d'une liste, titres derrière un conteneur,
-    // soulignements Setext, clôtures de code, titre indenté de quatre colonnes, définition de lien,
-    // bloc de maths — posées dans les TROIS formes de zone exemptée : le corps d'une rubrique, une
-    // ligne-question du bloc de reprise, la prose du bloc de reprise. Chacune doit tirer CETTE famille.
+    // d'une courte liste refusé. Ce témoin ne recopie pas la liste : il porte ce qu'elle REFUSE, dans
+    // les TROIS formes de zone exemptée — le corps d'une rubrique, une ligne-question du bloc de
+    // reprise, la prose du bloc de reprise.
     const vue = rendrePlanState('PLAN-STATE-structure.md');
     const { sortie: vert } = lancerPlan('--verifier', '--out', vue);
     const zone = exemptes(vert, 'rubriques')[0];
@@ -521,47 +535,42 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(t, 'la prose du bloc doit exister pour qu’on la prolonge').toContain(p);
     const ligneQuestion = t.split('\n').find((l) => question(l) === questionExemptee);
     expect(ligneQuestion, `la ligne « ${questionExemptee} » doit exister pour qu’on la charge`).toBeDefined();
-    const dansLaZone = (charge: string) => t.replace(`\n## ${zone}\n\n`, `\n## ${zone}\n\n${charge}\n`);
     const OUVRE = ' <details><summary>Détails</summary>';
 
-    const cas: [string, string][] = [
-      ...[
-        `Texte courant${OUVRE}`,
-        '<!--',
-        ' <!--',
-        '10. Texte\n    <!--',
-        '- ## Bloquées',
-        '* ## Bloquées',
-        '1) ## Bloquées',
-        '> ## Bloquées',
-        'Bloquées\n---',
-        'Bloquées\n===',
-        '```',
-        '~~~',
-        '    ## Bloquées',
-        '[x]: https://exemple.invalid/',
-        '$$',
-      ].map((charge): [string, string] => [`${JSON.stringify(charge)} dans « ${zone} »`, dansLaZone(charge)]),
-      [`${JSON.stringify(OUVRE)} en fin de la prose exemptée du bloc de reprise`, t.replace(p, `${p}${OUVRE}`)],
-      [`${JSON.stringify(OUVRE)} dans la cellule exemptée « ${questionExemptee} »`, t.replace(ligneQuestion!, ligneQuestion!.replace(/ \|$/, `${OUVRE} |`))],
+    // (a) LE COMPLÉMENT DE L'AUTORISATION, EXHAUSTIVEMENT, dans le corps d'une rubrique exemptée. Les
+    // débuts PERMIS sont gardés par les contre-témoins, qui lisent ce que le générateur écrit : un
+    // début retiré les fait rougir. Un début AJOUTÉ ne se voit qu'ici : une ligne par caractère ASCII
+    // imprimable qui n'est ni une lettre ni `|` (l'accent grave sous sa forme de clôture), une par
+    // catégorie générale Unicode hors lettres, chacune suivie de ce qu'elle tenterait au rendu ; puis
+    // `<` en milieu de ligne, devant une lettre, `!`, `/`, `?` et un blanc. Le compte d'écarts exigé est
+    // le nombre de charges : une charge acceptée le fait tomber.
+    const ascii = Array.from({ length: 95 }, (_, k) => String.fromCharCode(0x20 + k)).filter((c) => !/[A-Za-z|]/.test(c));
+    const unicode = [
+      0x0301, 0x0903, 0x20dd, 0x0663, 0x2160, 0x00b2, 0x203f, 0x2014, 0x2045, 0x2046, 0x00ab, 0x00bb, 0xff03, 0x2212, 0x20ac, 0x00b4,
+      0x00b0, 0x00a0, 0x2003, 0x3000, 0x2028, 0x2029, 0x0009, 0x000b, 0x000c, 0x0085, 0x200b, 0x202e, 0xfeff, 0x00ad, 0xe000, 0x0378,
+    ].map((c) => String.fromCodePoint(c));
+    const charges = [
+      ...[...ascii, ...unicode].map((c) => (c === '`' ? '```' : `${c}   ## Bloquées`)),
+      ...[OUVRE, ' <!-- x', ' </p>', ' <?x', ' < x'].map((s) => `Texte courant${s}`),
     ];
-    const echappees: string[] = [];
-    for (const [k, [nom, texte]] of cas.entries()) {
-      expect(texte, `le cas ${nom} n'a rien injecté`).not.toBe(t);
-      const chemin = join(bac, `PLAN-STATE-structure-${k}.md`);
-      writeFileSync(chemin, texte);
-      const { code, sortie } = lancerPlan('--verifier', '--out', chemin);
-      if (code !== 1 || !/structure_dans_une_exemption/.test(sortie)) echappees.push(`${nom} → code ${code}`);
-    }
-    expect(echappees, 'écriture(s) acceptée(s) dans une zone exemptée').toEqual([]);
+    const cheminDebuts = join(bac, 'PLAN-STATE-structure-debuts.md');
+    writeFileSync(cheminDebuts, t.replace(`\n## ${zone}\n\n`, `\n## ${zone}\n\n${charges.join('\n')}\n`));
+    const debuts = lancerPlan('--verifier', '--out', cheminDebuts);
+    expect(debuts.code, `des débuts refusés passent : ${debuts.sortie.slice(0, 2000)}`).toBe(1);
+    expect(famillesDe(debuts.sortie).filter((f) => f !== 'structure_dans_une_exemption'), 'une charge tire une autre famille').toEqual([]);
+    const ecarts = Number(/: (\d+) écart\(s\)\./.exec(debuts.sortie)?.[1]);
+    expect(ecarts, `${charges.length} charges dans « ${zone} », ${ecarts} refusée(s) : une charge au moins est acceptée`).toBe(charges.length);
 
-    // LE CONTRE-TÉMOIN : chaque début PERMIS, écrit dans la zone, reste vert — sans quoi la règle
-    // refuserait ce que le générateur écrit, et une garde qui rougit sur le juste s'apprend à sauter.
-    const permis = dansLaZone(['Texte `code` **gras** · 42', '| cellule | libre |', '⚠️ alerte', '**Gras** en tête', '`code` en tête', '`` code `` en tête', ''].join('\n'));
-    const cheminPermis = join(bac, 'PLAN-STATE-structure-permis.md');
-    writeFileSync(cheminPermis, permis);
-    const r = lancerPlan('--verifier', '--out', cheminPermis);
-    expect(r.code, `un début de ligne permis est refusé : ${r.sortie}`).toBe(0);
+    // (b) LES DEUX AUTRES FORMES DE ZONE : la prose et une cellule exemptées du bloc de reprise, où la
+    // ligne commence par un début permis et où seul `<` peut atteindre le reste.
+    const cheminBloc = join(bac, 'PLAN-STATE-structure-bloc.md');
+    const bloc = t.replace(p, `${p}${OUVRE}`).replace(ligneQuestion!, ligneQuestion!.replace(/ \|$/, `${OUVRE} |`));
+    writeFileSync(cheminBloc, bloc);
+    const r = lancerPlan('--verifier', '--out', cheminBloc);
+    expect(r.code, `du HTML dans le bloc de reprise passe : ${r.sortie}`).toBe(1);
+    expect(famillesDe(r.sortie), r.sortie).toEqual(['structure_dans_une_exemption', 'structure_dans_une_exemption']);
+    expect(r.sortie, 'la cellule exemptée n’est pas contenue').toContain(`bloc de reprise, ligne « ${questionExemptee} »`);
+    expect(r.sortie, 'la prose exemptée n’est pas contenue').toMatch(/bloc de reprise, prose n°\d+/);
   });
 
   it('RM-02 · famille fin_de_ligne_non_lf — un retour chariot dans une prose exemptée ne découpe rien en silence', () => {
@@ -671,20 +680,50 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     //       et une date qui ouvrent du HTML) : sans `neutraliser`, la vue A porterait `<` dans ses zones
     //       exemptées et rougirait ici aussi ;
     //   (2) chaque élément que ce vert exempte DIFFÈRE entre A et B — une lecture GRATUITE de la
-    //       forge, posée pour sortir une rubrique du contrôle, laisse son texte identique et rougit ici.
+    //       forge, posée pour sortir une rubrique du contrôle, laisse son texte identique et rougit ici ;
+    //   (3) la forge A est LISIBLE, au format de `gh`, et chaque valeur texte qu'elle porte — titre,
+    //       branche et état de PR, label `owner:` d'issue, SHA et date de `main` — commence par une
+    //       indentation et porte `<`, un retour chariot, des sauts de ligne suivis d'un titre et
+    //       d'ouvertures de bloc. Une valeur de la forge ne produit JAMAIS plus d'une ligne : sa marque
+    //       de début et sa marque de fin sont sur la même. La vue A est verte sous A, et une vue fautive
+    //       rend les MÊMES refus sous A et sous B : le verdict ne dépend pas de la forge.
     const forgeA = join(bac, 'forge-a.json');
     const forgeB = join(bac, 'forge-b.json');
+    const hostile = (k: string) =>
+      `    ## Suite MARQUE-DEBUT-${k} <details><summary>replie</summary>\r\n## Suite\n    <!--\n- ## Bloquées\n\`\`\`\nMARQUE-FIN-${k}`;
+    // « Décisions du jour » n'est rendue non vide que le jour d'un ADR : la date de `main` le prend.
+    const adr = readdirSync('docs/adr').filter((f) => /^\d{4}-.*\.md$/.test(f)).sort().at(-1)!;
+    const jourAdr = spawnSync('git', ['log', '-1', '--format=%cI', '--', `docs/adr/${adr}`], { encoding: 'utf8' }).stdout.trim().slice(0, 10);
+    const issues = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: { issue?: number | null }[] }).taches
+      .map((x) => x.issue)
+      .filter((n): n is number => typeof n === 'number')
+      .map((number) => ({ number, labels: [{ id: 'LA_temoin', name: `owner:A01${hostile('label')}`, description: '', color: 'ededed' }] }));
     writeFileSync(forgeA, JSON.stringify({
-      prs: [{ number: 9001, headRefName: 't/temoin-a', mergeStateStatus: 'CLEAN', isDraft: false, title: 'forge A <details><summary>replie</summary>' }],
-      issues: '[]',
-      main: { sha: 'aaaaaaa', date: '2026-01-01T00:00:00+00:00 <!--' },
+      prs: [
+        { number: 9001, headRefName: `t/temoin-a${hostile('branche')}`, mergeStateStatus: 'CLEAN', isDraft: false, title: `forge A${hostile('titre')}` },
+        { number: 9002, headRefName: 't/temoin-b', mergeStateStatus: hostile('etat'), isDraft: false, title: 'forge A, seconde' },
+      ],
+      issues: JSON.stringify(issues),
+      main: { sha: `aaaaaaa${hostile('sha')}`, date: `${jourAdr}T00:00:00+00:00${hostile('date')}` },
     }));
     writeFileSync(forgeB, JSON.stringify({ prs: [], issues: '', main: { sha: 'bbbbbbb', date: '2026-02-02T00:00:00+00:00' } }));
     const a = rendrePlanState('PLAN-STATE-forge-a.md', '--forge', forgeA);
     const b = rendrePlanState('PLAN-STATE-forge-b.md', '--forge', forgeB);
 
+    const lignesA = readFileSync(a, 'utf8').split('\n');
+    const coupees = ['titre', 'branche', 'etat', 'label', 'sha', 'date'].filter((k) => {
+      const debut = lignesA.filter((l) => l.includes(`MARQUE-DEBUT-${k}`));
+      const fin = lignesA.filter((l) => l.includes(`MARQUE-FIN-${k}`));
+      return debut.length === 0 || debut.join('\n') !== fin.join('\n');
+    });
+    expect(coupees, '(3) valeur(s) de la forge absente(s) de la vue, ou écrite(s) sur plus d’une ligne').toEqual([]);
+    expect(lignesA.join('\n'), '(3) la branche non vide de « Décisions du jour » n’est pas exercée').toContain(`docs/adr/${adr}`);
+
     const bSousB = lancerPlan('--verifier', '--out', b, '--forge', forgeB);
     expect(bSousB.code, `(0) la vue écrite sans GitHub lisible est refusée par sa propre règle : ${bSousB.sortie}`).toBe(0);
+
+    const aSousA = lancerPlan('--verifier', '--out', a, '--forge', forgeA);
+    expect(aSousA.code, `(3) la vue écrite sous une forge LISIBLE est refusée sous cette même forge : ${aSousA.sortie}`).toBe(0);
 
     const { code, sortie } = lancerPlan('--verifier', '--out', a, '--forge', forgeB);
     expect(code, `(1) un élément COMPARÉ dépend de la forge, ou la forge a écrit hors de sa zone : ${sortie}`).toBe(0);
@@ -706,6 +745,17 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
       ...lignesDuBloc.filter((q) => ligneDuBloc(tA, q) === ligneDuBloc(tB, q)).map((q) => `ligne « ${q} »`),
     ];
     expect(inertes, '(2) exemption(s) dont le texte ne dépend PAS de la forge').toEqual([]);
+
+    // (3) LE MÊME VERDICT, ROUGE COMPRIS : compteurs falsifiés et une ouverture de liste dans une
+    // rubrique exemptée, jugés sous la forge qui a écrit la vue puis sous une forge illisible.
+    const fautive = join(bac, 'PLAN-STATE-forge-a-fautive.md');
+    writeFileSync(fautive, falsifierLesCompteurs(tA).faux.replace(`\n## ${rubriques[0]}\n\n`, `\n## ${rubriques[0]}\n\n- ## Bloquées\n`));
+    const refus = (s: string) => s.split('\n').filter((l) => /^\s*\[/.test(l));
+    const sousA = lancerPlan('--verifier', '--out', fautive, '--forge', forgeA);
+    const sousB = lancerPlan('--verifier', '--out', fautive, '--forge', forgeB);
+    expect(sousA.code, `(3) la vue fautive passe sous la forge lisible : ${sousA.sortie}`).toBe(1);
+    expect(refus(sousA.sortie), '(3) le verdict d’une vue fautive dépend de la forge').toEqual(refus(sousB.sortie));
+    expect(refus(sousA.sortie).some((l) => l.includes('[structure_dans_une_exemption]')), sousA.sortie).toBe(true);
   });
 
   it('REQ-GOV-032 · une vue ABSENTE est un rouge qui le dit, jamais un vert par défaut', () => {
@@ -748,15 +798,33 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
   });
 
   it('REQ-GOV-032 · IMPORTER le module n’écrit ni ne juge rien — sinon le contre-témoin de la vue commitée jugerait ce que l’import vient d’écrire', () => {
-    // Un processus qui ne fait QU'IMPORTER `build.ts`, avec `--out` vers le bac : s'il écrit, c'est
-    // là, et le fichier du dépôt n'est jamais en jeu.
-    const cible = join(bac, 'PLAN-STATE-import.md');
-    const importeur = join(bac, 'importe-le-module.ts');
-    writeFileSync(importeur, `import(${JSON.stringify(pathToFileURL(resolve(PLAN)).href)}).catch((e) => { console.error(e); process.exit(1); });\n`);
-    const { code, sortie } = lancer(importeur, '--out', cible);
-    expect(code, `importer le module a échoué : ${sortie}`).toBe(0);
-    expect(existsSync(cible), `importer le module a ÉCRIT une vue : ${sortie}`).toBe(false);
-    expect(sortie, 'importer le module a rendu ou jugé une vue').not.toMatch(/régénéré|plan-state:verifier/);
+    // Un processus qui ne fait QU'IMPORTER `build.ts`, lancé dans un répertoire à lui : ses sources y
+    // sont copiées, `docs/PLAN-STATE.md` y porte une sentinelle, et aucun `--out` n'est passé — une
+    // écriture vers le chemin par défaut, ou vers un chemin tapé, tombe donc sur la sentinelle. On
+    // compare les OCTETS de tout le répertoire avant et après, et ceux de la vue du dépôt. Ce n'est
+    // pas l'import de CETTE spec qu'on juge : lui s'exécute avant tout témoin, dans le dépôt.
+    const ici = mkdtempSync(join(tmpdir(), 'plan-import-'));
+    try {
+      mkdirSync(join(ici, 'docs'));
+      for (const f of ['docs/tasks.json', 'docs/DECISIONS.md']) copyFileSync(f, join(ici, f));
+      writeFileSync(join(ici, 'docs/PLAN-STATE.md'), 'sentinelle : importer le module ne doit pas réécrire ce fichier\n');
+      writeFileSync(join(ici, 'forge.json'), JSON.stringify({ prs: [], issues: '', main: { sha: 'ccccccc', date: '2026-03-03T00:00:00+00:00' } }));
+      writeFileSync(join(ici, 'importe.ts'), `import(${JSON.stringify(pathToFileURL(resolve(PLAN)).href)}).catch((e) => { console.error(e); process.exit(1); });\n`);
+      const octets = () => readdirSync(ici, { recursive: true, withFileTypes: true })
+        .filter((e) => e.isFile())
+        .map((e) => `${join(e.parentPath, e.name)} ${readFileSync(join(e.parentPath, e.name)).toString('base64')}`)
+        .sort();
+      const avant = octets();
+      const depot = readFileSync('docs/PLAN-STATE.md');
+      const r = spawnSync(process.execPath, [resolve('node_modules/tsx/dist/cli.mjs'), 'importe.ts', '--forge', 'forge.json'], { cwd: ici, encoding: 'utf8' });
+      const sortie = (r.stdout ?? '') + (r.stderr ?? '');
+      expect(r.status, `importer le module a échoué : ${sortie}`).toBe(0);
+      expect(octets(), `importer le module a ÉCRIT dans son répertoire : ${sortie}`).toEqual(avant);
+      expect(readFileSync('docs/PLAN-STATE.md').equals(depot), 'importer le module a réécrit la vue du dépôt').toBe(true);
+      expect(sortie, 'importer le module a rendu ou jugé une vue').not.toMatch(/régénéré|plan-state:verifier/);
+    } finally {
+      rmSync(ici, { recursive: true, force: true });
+    }
   });
 
   /**
