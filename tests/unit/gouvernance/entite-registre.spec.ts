@@ -2250,6 +2250,37 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     ).not.toContain('coordonnee_en_clair');
   });
 
+  /**
+   * 🔴 LES CINQ IBAN QUE L'ACCEPTATION NOMME N'AVAIENT AUCUN TÉMOIN.
+   *
+   * `GOV-036` ouvre sur une mesure précise : « cinq IBAN étrangers à clé mod-97 valide (TR, IL, RS,
+   * AL, LB) ne sont pas vus » — parce que `PAYS_ISO` était une liste TAPÉE de 47 entrées quand il
+   * en manquait cinquante et une. La liste est désormais DÉRIVÉE de l'ICU (279 codes, plancher
+   * `PLANCHER_ISO_3166`, elle lève sur une source infirme).
+   *
+   * Mais `ibanSynthetique` n'était appelé QU'UNE FOIS dans tout le banc, avec `'ZQ'` — le
+   * contre-témoin. **Le défaut nommé par l'acceptation était fermé EN FAIT, et rien ne prouvait
+   * qu'il le resterait.** Réduire la dérivation à ses 47 codes d'origine serait passé vert.
+   *
+   * Les cinq pays sont ceux de la mesure d'ouverture, et la clé est CALCULÉE (RM-01, RM-11) :
+   * aucune valeur n'est tapée.
+   */
+  const PAYS_MESURES_AVEUGLES = ['TR', 'IL', 'RS', 'AL', 'LB'];
+
+  it.each(PAYS_MESURES_AVEUGLES)(
+    'REQ-GOV-031 — TÉMOIN : un IBAN %s à clé valide est VU (les cinq de la mesure d’ouverture)',
+    (pays) => {
+      const iban = ibanSynthetique(pays, '00112233445566');
+      expect(cleIbanValide(iban), `le témoin ${pays} doit avoir une clé mod-97 VALIDE`).toBe(true);
+      const familles = controler(
+        universAvecFichier('docs/note-de-travail.md', `Virement vers ${iban}.`)
+      ).map((f) => f.famille);
+      expect(familles, `un IBAN ${pays} à clé valide passe : la dérivation de PAYS_ISO a régressé`).toContain(
+        'coordonnee_en_clair'
+      );
+    }
+  );
+
   it('REQ-GOV-031 — la garde DIT ce qu’elle a lu : balayés, écartés, codes pays dérivés', () => {
     // Une garde muette ne prouve rien. Le compte de fichiers balayés existait ; ce qu'il ne disait
     // pas, c'est ce qu'il ne regardait PAS — et c'est précisément ce chiffre-là qui aurait montré
