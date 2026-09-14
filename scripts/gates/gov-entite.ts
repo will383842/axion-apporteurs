@@ -63,7 +63,8 @@ const CHEMIN_REGISTRE = 'config/entite.json';
 const CHEMIN_DECISIONS = 'docs/DECISIONS.md';
 const CHEMIN_EXIGENCES = 'docs/REQUIREMENTS.md';
 
-export type Fichier = { chemin: string; contenu: string };
+/** Un fichier suivi ; `filtre` porte la valeur de son attribut git `filter`, quand il en a un. */
+export type Fichier = { chemin: string; contenu: string; filtre?: string };
 
 export type Univers = {
   registre: Registre;
@@ -89,6 +90,7 @@ export const FAMILLES = [
   'valeur_recopiee',
   'coordonnee_en_clair',
   'contenu_illisible',
+  'contenu_publie_non_lu',
   'point_de_sortie_sans_refus',
 ];
 
@@ -147,15 +149,33 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
 ];
 
 /**
- * CE QUE LA FORME NE RECONSTITUE PAS dans un texte que la garde lit en entier. Imprimé dans le vert :
- * « aucune coordonnée » sans ses limites se lirait comme une absence prouvée.
+ * CE QUE LA FORME NE RECONNAÎT PAS dans un texte que la garde lit en entier — la SOURCE UNIQUE de
+ * cette limite : imprimée dans chaque vert, citée sans recopie par le `verifie` de `docs/gates.json`,
+ * et son texte attendu est écrit dans le banc d'essai. « Aucune coordonnée » sans ses limites se
+ * lirait comme une absence prouvée.
  *
- * Ce que la garde ne sait pas lire en entier n'est pas une limite : c'est un REFUS
- * (`contenu_illisible`, dans `controler`).
+ * Elle dit d'abord ce que la forme RECONNAÎT — la seule description exhaustive possible — puis des
+ * exemples de ce qui passe, et que leur liste n'est pas close.
+ *
+ * Ce que la garde ne sait pas lire en entier, ou ce que le dépôt ne publie pas tel qu'elle le lit,
+ * n'est pas une limite : c'est un REFUS (`contenu_illisible`, `contenu_publie_non_lu`).
  */
 export const LIMITE_DE_LA_FORME =
-  "Limite déclarée : dans un texte lisible, une valeur ENCODÉE (base64, entité HTML) ou COUPÉE " +
-  "entre ses groupes (saut de ligne, tabulation) n'est pas reconstituée.";
+  "Limite déclarée : ce que la forme ne reconnaît pas passe sans être vu. Elle reconnaît un IBAN écrit d'un seul " +
+  'tenant — code de région, deux chiffres, groupes de quatre caractères séparés au plus par une espace (ASCII ou ' +
+  'typographique) ou un tiret (ASCII ou insécable), 15 à 34 caractères, clé mod-97 valide, rien de collé devant ni ' +
+  "derrière — et un BIC en majuscules dont le mot-clé touche un délimiteur ou une balise. Passent donc, entre autres : " +
+  'une valeur masquée ou à clé fausse ; encodée (base64, hexadécimal, entité HTML, pourcentage, quoted-printable, ' +
+  "échappement JSON, flux de PDF ou contenu compressé qui forment de l'UTF-8 valide) ; coupée ou espacée autrement " +
+  "(saut de ligne, tabulation, deux espaces, point, caractère invisible, groupes d'une autre longueur) ; écrite en " +
+  "pleine chasse ou en homoglyphes ; portée par le NOM d'un fichier. Cette liste n'est pas close.";
+
+/**
+ * La première ligne d'un POINTEUR Git LFS, sous les trois en-têtes que Git LFS accepte. Ancrée au
+ * début du fichier : une documentation qui CITE cette ligne plus bas reste un texte lu.
+ */
+const POINTEUR_LFS =
+  /^version (?:https:\/\/git-lfs\.github\.com\/spec\/v1|https:\/\/hawser\.github\.com\/spec\/v1|http:\/\/git-media\.io\/v\/2)\r?\n/;
 
 /** Ce fichier est-il exempt de CETTE famille ? Aucun fichier n'est exempt d'un SECRET. */
 export function estExemptDe(chemin: string, famille: FamilleExemptable): boolean {
@@ -285,12 +305,7 @@ export function estExemplePlausible(v: string): boolean {
  * phrases différentes, et une seule autorise à publier. `codesDeRegion` LÈVE sous le plancher, au
  * chargement du module, avant tout verdict.
  *
- * LES TÉMOINS vivent dans `tests/unit/gouvernance/entite-registre.spec.ts`, sous REQ-GOV-031. Ils
- * interrogent l'ICU DANS LE TEST, sans passer par `codesDeRegion` : chaque paire de lettres qu'elle
- * connaît doit fabriquer un IBAN et un BIC que la garde voit, et aucune autre paire ne doit en
- * fabriquer — donc une transformation glissée entre la source et les formes rougit, quel que soit
- * l'endroit. Un lecteur de 199 régions doit lever, un lecteur de 200 non. Et un ancrage tapé tient
- * l'appauvrissement de l'ICU elle-même, que ni l'un ni l'autre ne verrait.
+ * LES TÉMOINS vivent dans `tests/unit/gouvernance/entite-registre.spec.ts`, sous REQ-GOV-031.
  */
 
 /** Sous ce nombre de régions, la source n'est pas « pauvre » : elle est illisible. */
@@ -392,10 +407,9 @@ const FORME_IBAN = new RegExp(
  * encore la banque, le guichet et l'essentiel du numéro de compte. Une personne qui masque quatre
  * caractères avant de coller un RIB dans un ticket **croira s'être protégée**, et cette garde ne
  * la contredira pas. C'est une limite ASSUMÉE, pas un oubli : la couvrir demanderait de renoncer
- * à la clé, donc de rougir sur un dépôt propre — ce qui fait désarmer la garde. Elle est écrite
- * ici ET dans le `verifie` de la gate, parce que ces deux textes ont deux lecteurs différents :
- * celui qui voudra « renforcer » la forme dans six mois, et celui qui décidera de ne PAS
- * re-vérifier en lisant le registre.
+ * à la clé, donc de rougir sur un dépôt propre — ce qui fait désarmer la garde. Elle est EXPLIQUÉE
+ * ici, pour celui qui voudra « renforcer » la forme dans six mois ; elle est DITE dans
+ * `LIMITE_DE_LA_FORME`, imprimée dans chaque vert, pour celui qui décidera de ne pas re-vérifier.
  */
 export function cleIbanValide(valeur: string): boolean {
   const s = valeur.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -760,6 +774,26 @@ export function controler(u: Univers): Faute[] {
           `Texte UTF-16, contenu compressé, archive, image ou base de données : une coordonnée y ` +
           `échapperait à toute forme, dans un dépôt PUBLIC (REQ-GOV-031). Convertis-le en texte ` +
           `UTF-8, ou retire-le du suivi.`
+      );
+    }
+
+    // Ce que la garde a lu n'est pas ce que le dépôt PUBLIE quand git confie le fichier à un filtre
+    // (attribut `filter`, Git LFS le premier) ou quand l'arbre de travail n'en porte que le pointeur :
+    // `actions/checkout` sans `lfs` n'extrait que le pointeur, et la forge sert le vrai contenu.
+    // Un REFUS, sans exemption, pour la même raison que le précédent.
+    const nonPublie =
+      fichier.filtre !== undefined
+        ? `l'attribut git \`filter=${fichier.filtre}\` le confie à un filtre`
+        : POINTEUR_LFS.test(fichier.contenu)
+          ? 'son contenu est un POINTEUR Git LFS'
+          : null;
+    if (nonPublie !== null) {
+      ajouter(
+        'contenu_publie_non_lu',
+        `${fichier.chemin} — le dépôt ne publie pas ce que la garde a lu : ${nonPublie}. La forge sert ` +
+          `le contenu réel à qui le demande, et une CI qui n'extrait pas LFS n'en lit que le pointeur : ` +
+          `une coordonnée y échapperait à toute forme, dans un dépôt PUBLIC (REQ-GOV-031). Suis le ` +
+          `fichier en clair, sans filtre, ou retire-le du suivi.`
       );
     }
 
@@ -2101,14 +2135,54 @@ function fichiersSuivis(): string[] {
 }
 
 /**
- * L'univers RÉEL : chaque fichier suivi, décodé en UTF-8, sans branche sur son chemin (GOV-036).
+ * L'attribut git `filter` de chaque fichier suivi, demandé à git (`check-attr`, qui applique
+ * `.gitattributes` comme git l'applique). Aucun `catch` : un git qui ne répond pas fait tomber la
+ * garde, jamais un « aucun filtre ». Et git doit répondre pour CHAQUE chemin demandé.
+ */
+function filtresDe(chemins: string[]): Map<string, string> {
+  const sortie = execFileSync('git', ['check-attr', '-z', '--stdin', 'filter'], {
+    input: chemins.map((c) => `${c}\0`).join(''),
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    maxBuffer: 256 * 2 ** 20,
+  });
+  return filtresDepuisSortie(chemins, sortie);
+}
+
+/** La sortie `-z` de `git check-attr filter`, lue : pure, pour que son refus d'une réponse amputée s'éprouve. */
+export function filtresDepuisSortie(chemins: string[], sortie: string): Map<string, string> {
+  const champs = sortie.split('\0');
+  // Trois champs par chemin — chemin, attribut, valeur — puis le vide qui suit le dernier NUL.
+  if (champs.length !== 3 * chemins.length + 1) {
+    throw new Error(
+      `git check-attr a rendu ${champs.length} champ(s) pour ${chemins.length} chemin(s) : la lecture ` +
+        'des attributs est amputée, la garde ne sait pas quels fichiers le dépôt publie autrement.'
+    );
+  }
+  const filtres = new Map<string, string>();
+  for (let i = 0; i < chemins.length; i += 1) {
+    const valeur = champs[3 * i + 2]!;
+    if (valeur !== 'unspecified' && valeur !== 'unset') filtres.set(champs[3 * i]!, valeur);
+  }
+  return filtres;
+}
+
+/**
+ * L'univers RÉEL : chaque fichier suivi, décodé en UTF-8, sans branche sur son chemin (GOV-036), avec
+ * son attribut `filter` quand il en a un.
  *
  * Le décodage ne juge rien. Ce qu'il ne sait pas rendre en entier y laisse un octet NUL ou un
- * U+FFFD, et c'est `controler` qui le refuse (`contenu_illisible`). Un fichier suivi absent du
- * disque a déjà été refusé par `fichiersSuivisOuRefus` (`perimetre_entame`).
+ * U+FFFD, et c'est `controler` qui le refuse (`contenu_illisible`), comme le fichier filtré
+ * (`contenu_publie_non_lu`). Un fichier suivi absent du disque a déjà été refusé par
+ * `fichiersSuivisOuRefus` (`perimetre_entame`).
  */
 export function lireUnivers(): Univers {
-  const fichiers = fichiersSuivis().map((chemin) => ({ chemin, contenu: readFileSync(chemin, 'utf8') }));
+  const chemins = fichiersSuivis();
+  const filtres = filtresDe(chemins);
+  const fichiers = chemins.map((chemin): Fichier => {
+    const filtre = filtres.get(chemin);
+    return { chemin, contenu: readFileSync(chemin, 'utf8'), ...(filtre === undefined ? {} : { filtre }) };
+  });
   return {
     registre: registreDuDepot(),
     decisions: readFileSync(CHEMIN_DECISIONS, 'utf8'),
@@ -2327,6 +2401,24 @@ function prouver(): number {
         u.fichiers.push({ chemin: 'notes/releve.txt', contenu: octets.toString('utf8') });
       }),
     },
+    // Un témoin par cause du refus de ce que le dépôt ne publie pas tel que la garde le lit.
+    {
+      // Le POINTEUR que la CI extrait quand elle n'extrait pas LFS : la forge sert le vrai contenu.
+      famille: 'contenu_publie_non_lu',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'exports/rib.pdf',
+          contenu: `version https://git-lfs.github.com/spec/v1\noid sha256:${'0'.repeat(64)}\nsize 1024\n`,
+        });
+      }),
+    },
+    {
+      // Le fichier qu'un poste a extrait : un texte propre ne l'absout pas, l'attribut suffit.
+      famille: 'contenu_publie_non_lu',
+      univers: muter((u) => {
+        u.fichiers.push({ chemin: 'notes/extrait.txt', contenu: 'Relevé du trimestre.\n', filtre: 'lfs' });
+      }),
+    },
   ];
 
   // ── UN TÉMOIN PAR FORME QUE `normaliserEspaces` NEUTRALISE ─────────────────────────────────
@@ -2458,6 +2550,12 @@ function prouver(): number {
       univers: muter((u) => { u.registre.domaines.envoi = SENTINELLE; }),
     },
     {
+      quoi: 'une documentation qui CITE la première ligne d’un pointeur Git LFS — lue, pas refusée',
+      univers: muter((u) => {
+        u.fichiers.push({ chemin: 'docs/lfs.md', contenu: '# Git LFS\n\nversion https://git-lfs.github.com/spec/v1\n' });
+      }),
+    },
+    {
       quoi: 'un texte UTF-8 à marque d’ordre, accents et idéogrammes — lu, pas refusé',
       univers: muter((u) => {
         u.fichiers.push({ chemin: 'docs/propre.md', contenu: '\uFEFFRelevé — ç à ü, 中文.\n' });
@@ -2485,6 +2583,13 @@ function prouver(): number {
       );
       return 1;
     }
+  }
+
+  // La réciproque : un témoin dont la famille n'est pas DÉCLARÉE prouve une règle que la garde ne dit pas avoir.
+  const nonDeclarees = [...new Set(TEMOINS.map((t) => t.famille))].filter((f) => !FAMILLES.includes(f));
+  if (nonDeclarees.length > 0) {
+    console.error(`❌ ${nonDeclarees.length} famille(s) rougie(s) par un témoin mais absente(s) de FAMILLES : ${nonDeclarees.join(', ')}.`);
+    return 1;
   }
 
   const sansTemoin = FAMILLES.filter((f) => !TEMOINS.some((t) => t.famille === f));
@@ -2666,9 +2771,9 @@ if (APPELE_DIRECTEMENT) {
     const univers = lireUnivers();
     const fautes = controler(univers);
     if (fautes.length > 0) {
+      // TOUTES les fautes : une liste tronquée tairait le nom d'un fichier refusé.
       console.error(`❌ gov:entite — ${fautes.length} défaut(s) du registre d'entité :\n`);
-      fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
-      if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
+      fautes.forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
       console.error(
         `\nCe dépôt est PUBLIC : une coordonnée bancaire poussée une fois y reste lisible pour ` +
           `toujours. La sentinelle \`${SENTINELLE}\` est la seule valeur que ces champs y prennent.`

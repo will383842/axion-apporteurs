@@ -1698,26 +1698,27 @@ const LANCEURS: ReadonlySet<string> = new Set(
 /**
  * LES CHAÎNES QU'UN SOURCE PASSE À UN LANCEUR — lues sur l'arbre syntaxique, jamais grattées dans le texte.
  *
- * Un lancement est un appel dont la fonction est un LANCEUR, nommé seul ou atteint par une propriété
- * (`cp.execSync`, `require(…).execSync`). De ses arguments sont recueillies les chaînes PLIÉES — la
- * concaténation, le gabarit, le `.join()` d'un tableau littéral, l'identifiant lié par `const` dans
- * le même fichier — et, quand une chaîne ne se plie pas, chacun de ses FRAGMENTS littéraux. Un
- * commentaire, ou une phrase passée à une fonction qui ne lance rien, n'est pas un lancement. La
- * portée n'est pas résolue : un homonyme se plie comme la première déclaration rencontrée — le sens
- * bavard de l'erreur.
+ * Un lancement est un appel dont la fonction est un LANCEUR : nommé seul, atteint par une propriété
+ * (`cp.execSync`, `require(…).execSync`) ou par un accès entre crochets dont la clé se plie, et
+ * dégagé de ce qui l'enveloppe sans la changer — parenthèses, assertion non nulle, transtypage,
+ * virgule. De ses arguments sont recueillies les chaînes PLIÉES — la concaténation, le gabarit, le
+ * `.join()` d'un tableau littéral, l'identifiant lié par `const` dans le même fichier — et, quand une
+ * chaîne ne se plie pas, chacun de ses FRAGMENTS littéraux. Un commentaire, ou une phrase passée à une
+ * fonction qui ne lance rien, n'est pas un lancement. La portée n'est pas résolue : un identifiant que
+ * plusieurs `const` homonymes lient ne se plie pas, et les valeurs de TOUTES ces déclarations sont
+ * recueillies — le sens bavard de l'erreur.
  */
 function chainesLancees(source: string, nom: string): string[] {
   const arbre = ts.createSourceFile(nom, source, ts.ScriptTarget.Latest, true);
-  const constantes = new Map<string, ts.Expression>();
+  const constantes = new Map<string, ts.Expression[]>();
   const recenser = (n: ts.Node): void => {
     if (
       ts.isVariableDeclaration(n) &&
       ts.isIdentifier(n.name) &&
       n.initializer !== undefined &&
-      (ts.getCombinedNodeFlags(n) & ts.NodeFlags.Const) !== 0 &&
-      !constantes.has(n.name.text)
+      (ts.getCombinedNodeFlags(n) & ts.NodeFlags.Const) !== 0
     ) {
-      constantes.set(n.name.text, n.initializer);
+      constantes.set(n.name.text, [...(constantes.get(n.name.text) ?? []), n.initializer]);
     }
     ts.forEachChild(n, recenser);
   };
@@ -1739,8 +1740,8 @@ function chainesLancees(source: string, nom: string): string[] {
       }
       return texte;
     }
-    if (ts.isIdentifier(n) && constantes.has(n.text) && !suivis.has(n.text)) {
-      return plier(constantes.get(n.text)!, new Set([...suivis, n.text]));
+    if (ts.isIdentifier(n) && constantes.get(n.text)?.length === 1 && !suivis.has(n.text)) {
+      return plier(constantes.get(n.text)![0]!, new Set([...suivis, n.text]));
     }
     if (
       ts.isCallExpression(n) &&
@@ -1762,17 +1763,33 @@ function chainesLancees(source: string, nom: string): string[] {
     if (valeur !== null) {
       trouvees.push(valeur);
     } else if (ts.isIdentifier(n) && constantes.has(n.text) && !suivis.has(n.text)) {
-      recueillir(constantes.get(n.text)!, new Set([...suivis, n.text]));
+      for (const valeurLiee of constantes.get(n.text)!) recueillir(valeurLiee, new Set([...suivis, n.text]));
     } else {
       if (ts.isTemplateHead(n) || ts.isTemplateMiddle(n) || ts.isTemplateTail(n)) trouvees.push(n.text);
       ts.forEachChild(n, (enfant) => recueillir(enfant, suivis));
     }
   };
+  /** Le nom de la fonction appelée, dégagée de ce qui l'enveloppe sans la changer. */
+  const appelee = (f: ts.Expression): string | null => {
+    if (
+      ts.isParenthesizedExpression(f) ||
+      ts.isNonNullExpression(f) ||
+      ts.isAsExpression(f) ||
+      ts.isSatisfiesExpression(f) ||
+      ts.isTypeAssertionExpression(f)
+    ) {
+      return appelee(f.expression);
+    }
+    if (ts.isBinaryExpression(f) && f.operatorToken.kind === ts.SyntaxKind.CommaToken) return appelee(f.right);
+    if (ts.isIdentifier(f)) return f.text;
+    if (ts.isPropertyAccessExpression(f)) return f.name.text;
+    if (ts.isElementAccessExpression(f)) return plier(f.argumentExpression, new Set());
+    return null;
+  };
   const marcher = (n: ts.Node): void => {
     if (ts.isCallExpression(n)) {
-      const f = n.expression;
-      const appelee = ts.isIdentifier(f) ? f.text : ts.isPropertyAccessExpression(f) ? f.name.text : null;
-      if (appelee !== null && LANCEURS.has(appelee)) for (const a of n.arguments) recueillir(a, new Set());
+      const nomAppele = appelee(n.expression);
+      if (nomAppele !== null && LANCEURS.has(nomAppele)) for (const a of n.arguments) recueillir(a, new Set());
     }
     ts.forEachChild(n, marcher);
   };
@@ -1808,12 +1825,16 @@ function appelleLEnumeration(source: string, nom: string): boolean {
  * contre-témoins qui doivent rester verts.
  *
  * ⚠️ CE QUE CE TÉMOIN NE FERME PAS : L'ACTE LUI-MÊME. Il ne connaît que les valeurs écrites dans le
- * fichier qu'il lit, et que les lancements qu'il reconnaît. Lui échappent, par classe :
+ * fichier qu'il lit, et que les lancements qu'il reconnaît. Les classes ci-dessous sont celles qui
+ * ont été MESURÉES ; rien ne prouve qu'elles soient les seules. Lui échappent :
  *   (1) une valeur qui n'existe qu'à l'exécution et qui porte la sous-commande — retour de fonction,
- *       lecture, environnement, identifiant non `const` ou importé d'un autre module — ou un
- *       fragment dynamique qui COUPE la sous-commande elle-même ;
- *   (2) un lancement INDIRECT — une fonction du module rangée sous un autre nom, appelée par
- *       `.call`, `.apply` ou `Reflect.apply`, ou par un intermédiaire (fonction locale, autre module) ;
+ *       lecture, environnement, identifiant non `const`, déstructuré ou importé d'un autre module,
+ *       clé d'accès entre crochets qui ne se plie pas — ou un fragment dynamique qui COUPE la
+ *       sous-commande elle-même ;
+ *   (2) un lancement INDIRECT — une fonction du module rangée sous un autre nom (import renommé,
+ *       déstructuration renommée, affectation), appelée par `.call`, `.apply`, `Reflect.apply` ou
+ *       après `.bind`, appelée par ce que rend une autre expression (ternaire, `??`, élément de
+ *       tableau), ou par un intermédiaire (fonction locale, autre module) ;
  *   (3) une énumération qui ne passe pas par ces deux sous-commandes — une autre sous-commande de
  *       git ou un autre programme qui rend des chemins, la lecture directe de l'index ;
  *   (4) un fichier hors de `scripts/`, ou d'une extension que le compilateur ne reconnaît pas.
@@ -1847,6 +1868,27 @@ it('REQ-CPL-018 — le témoin d’énumération voit l’ACTE sous ses formes m
     ['module chargé par require', "require('node:child_process').execFileSync('git', ['ls-files']);"],
     ['module chargé par import()', "(await import('node:child_process')).spawnSync('git', ['ls-files']);"],
     ['sous-commande ls-tree', "spawnSync('git', ['ls-tree', '-r', '--name-only', 'HEAD']);"],
+    ['fonction atteinte par un accès entre crochets', "cp['execFileSync']('git', ['ls-files']);"],
+    ['accès entre crochets par une clé liée par const', "const F = 'execSync';\ncp[F]('git ls-files');"],
+    ['fonction entre parenthèses', "(execFileSync)('git', ['ls-files']);"],
+    ['fonction suivie d’une assertion non nulle', "execFileSync!('git', ['ls-files']);"],
+    ['fonction transtypée par as', "(execSync as typeof execSync)('git ls-files');"],
+    ['fonction transtypée par satisfies', "(execSync satisfies unknown as typeof execSync)('git ls-files');"],
+    ['fonction transtypée par chevrons', "(<typeof execSync>execSync)('git ls-files');"],
+    ['fonction derrière une virgule', "(0, execSync)('git ls-files');"],
+    [
+      'tableau d’un homonyme const redéclaré en portée interne',
+      "const ARGS = ['status'];\nfunction f() {\n  const ARGS = ['ls-files'];\n  execFileSync('git', ARGS);\n}",
+    ],
+    [
+      'gabarit d’un homonyme const redéclaré en portée interne',
+      "const SOUS = 'status';\nfunction f() {\n  const SOUS = 'ls-files';\n  execSync(`git ${SOUS}`);\n}",
+    ],
+    // Une forme par fonction du module, générée depuis `node:child_process` lui-même : une liste de
+    // lanceurs amputée d'une fonction la perd ici.
+    ...Object.entries(processusFils)
+      .filter(([, valeur]) => typeof valeur === 'function')
+      .map(([nom]): [string, string] => [`lancé par ${nom}`, `${nom}('git', ['ls-files']);`]),
   ];
   const CONTRE_TEMOINS: [string, string][] = [
     ['commentaire', "// on n'appelle jamais git ls-files ici\nexport const x = 1;"],
