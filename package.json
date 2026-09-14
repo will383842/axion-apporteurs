@@ -87,13 +87,22 @@
     "gov:conventions:prove": "tsx scripts/gates/gov-conventions.ts --prove",
     "gov:identifiants:compter": "tsx scripts/gates/gov-identifiants.ts --compter",
     "gov:attestation": "tsx scripts/gates/gov-attestation.ts",
-    "gov:attestation:en-ligne": "tsx scripts/gates/gov-attestation.ts --en-ligne"
+    "gov:attestation:en-ligne": "tsx scripts/gates/gov-attestation.ts --en-ligne",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "format": "prettier --write ."
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.10.2",
     "ajv": "^8.17.1",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.6",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
+    "typescript-eslint": "^8.70.0",
     "vitest": "^2.1.8"
   }
 }
