@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `6237f96` — 2026-09-13T10:31:35+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #36 (rien) · 2. #39 (rien) · 3. #41 (rien) · 4. #44 (un contrôle requis rouge ou une revue manquante) · 5. #45 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #36 (rien) · 2. #39 (rien) · 3. #41 (rien) · 4. #44 (rien) · 5. #45 (rien) |
 | Qui tient quoi ? | GOV-035 (A01) · GOV-036 (A01) · GOV-037 (A01) · GOV-030 (A01) · GOV-031 (A01) |
 | Où en est la phase ? | phase -1 — 34/39 tâches, reste 3.50 j |
 | Le prochain pas | fusionner #36, puis GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
@@ -62,8 +62,8 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 | 1 | #36 — feat(GOV-035): docs/PLAN-STATE.md avait un generateur et aucun verificateur | `t/gov-035` | rien — fusionnable maintenant |
 | 2 | #39 — feat(GOV-036): les deux listes qui decident de ce que gov:entite REGARDE | `t/gov-036` | rien — fusionnable maintenant |
 | 3 | #41 — feat(GOV-030): la garde des termes interdits que six documents invoquaient sans quelle existe | `t/gov-030` | rien — fusionnable maintenant |
-| 4 | #44 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A | `t/gov-031` | un contrôle requis rouge ou une revue manquante |
-| 5 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | un contrôle requis rouge ou une revue manquante |
+| 4 | #44 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A | `t/gov-031` | rien — fusionnable maintenant |
+| 5 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -198,8 +198,8 @@ la mesure.
 **Fait.** `lot/gov-038-attestation`, orpheline depuis le 2026-09-05, est réconciliée avec `main` par
 un merge à deux parents (`8e9113f` + `f856704`). Elle apporte `GOV-014`, `INT-T01b`, `GOV-019`,
 `GOV-028` et `GOV-038` elle-même — soit, pour les quatre tâches de CE dépôt, le lot **`L-1-05`**
-composé par la PR #31 et jamais clos depuis (`docs/tasks.json` leur écrit ce lot ; cette entrée est
-la seule seconde source qui l'atteste). **22 conflits, ~128 blocs** : 7 vues régénérées jamais résolues,
+composé par la PR #31, que cette PR fait atterrir et que l'entrée de la PR #34 clôt.
+**22 conflits, ~128 blocs** : 7 vues régénérées jamais résolues,
 2 registres fusionnés **par identifiant** avec un outil hors dépôt qui REFUSE et NOMME toute entrée
 touchée des deux côtés (4 dans `gates.json`, 10 dans `tasks.json` — aucune résolue par une règle),
 et 5 gardes tranchées au sur-ensemble, mesuré export par export. Le dépôt passe de 29 à 30 tâches

@@ -38,6 +38,13 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
+import {
+  analyser as analyserAttributions,
+  chargerSources as chargerSourcesAttributions,
+  CITATIONS_DECLAREES,
+  DETTE_GATE_NON_RECIPROQUE,
+} from '../../../scripts/gates/gov-attributions';
 
 /** Le corps d'un bloc `if (…) { … }` repéré par sa première ligne. Naïf mais suffisant : on
  *  compte les accolades, et on refuse plutôt que de rendre un bloc tronqué. */
@@ -429,7 +436,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'sortie TERMINALE, à code variable, comptée non nulle par le motif et valant 0 quand la ' +
         'garde passe. Témoin d’EFFET à DEUX faces (attribution rompue injectée dans un dépôt ' +
         'jetable → sortie non nulle nommant `req_tache_non_reciproque` ; dépôt réel → 0 avec sa ' +
-        'bannière). Les huit familles, elles, sont couvertes par `--prove` et par ' +
+        'bannière). Les familles, elles, sont couvertes par `--prove` et par ' +
         'attributions-resolvent.spec.ts — un témoin d’effet prouve la famille qu’il injecte, ' +
         'jamais la gate.',
     },
@@ -1883,9 +1890,19 @@ describe('REQ-CPL-018 — `perimetre_illisible` est une PRÉCONDITION, pas une f
  * retour —, jamais une trappe ouverte dans la gate.
  *
  * ⚠️ CE QU'IL PROUVE, ET SUR QUOI. Il prouve la famille qu'il injecte, jamais la gate entière
- * (`gov:attributions --prove` couvre les huit familles, dans le même processus, donc il ne
+ * (`gov:attributions --prove` couvre toutes ses familles, dans le même processus, donc il ne
  * remplace pas celui-ci). Le dépôt le sait déjà : « un témoin d'effet prouve la famille qu'il
  * injecte ». C'est dit plutôt que sous-entendu.
+ *
+ * 🔴 LA FACE VERTE N'EXIGEAIT QU'UNE LIGNE `✅` — motif de `mutation` sur `73512d7`. Les lignes qui
+ * impriment les dettes retirées, ou un compte forcé à zéro, laissaient ce témoin vert : la promesse
+ * « chaque exemption est imprimée » n'était gardée par rien. Elle exige maintenant que la sortie
+ * NOMME chaque exemption que l'analyse rend, chaque entrée des deux registres avec sa raison, et
+ * que le compte imprimé ÉGALE celui de l'analyse.
+ *
+ * 🔴 ET UNE TROISIÈME FACE — motif de `securite` : lancée depuis un sous-dossier, la garde lisait
+ * ses sources AVANT d'établir son périmètre, et sortait sur une trace de pile au lieu du refus nommé
+ * que la primitive de périmètre existe pour rendre.
  */
 describe('REQ-CPL-018 — `gov:attributions` SORT en échec, et rend 0 sur le dépôt réel', () => {
   it('REQ-CPL-018 — TÉMOIN D’EFFET à deux faces : faute injectée → sortie non nulle ; dépôt réel → 0', () => {
@@ -1938,5 +1955,22 @@ describe('REQ-CPL-018 — `gov:attributions` SORT en échec, et rend 0 sur le d�
       vert.sortie.split(/\r?\n/).filter((l) => l.trimStart().startsWith('✅')).length,
       'la garde rend 0 sans rien déclarer : un succès muet ne se distingue pas d’un no-op'
     ).toBeGreaterThan(0);
+    // Le compte et les noms DÉRIVÉS de l'analyse, faite ici sur le même dépôt, pas lus dans la sortie.
+    const attendu = analyserAttributions(chargerSourcesAttributions(fichiersSuivis()));
+    expect(attendu.exemptions.length, 'l’analyse du dépôt réel ne rend aucune exemption : rien à confronter').toBeGreaterThan(0);
+    expect(vert.sortie, 'le compte d’exemptions imprimé n’est pas celui de l’analyse').toContain(
+      `${attendu.exemptions.length} exemption(s)`
+    );
+    const tues = attendu.exemptions.filter((e) => !vert.sortie.includes(e.site));
+    expect(tues.map((e) => `${e.nature} ${e.site}`), 'des exemptions ne sont pas NOMMÉES dans la sortie verte').toEqual([]);
+    const registres = [...DETTE_GATE_NON_RECIPROQUE, ...CITATIONS_DECLAREES].filter((d) => !vert.sortie.includes(d.raison));
+    expect(registres, 'des entrées de registre ne sont pas imprimées avec leur raison').toEqual([]);
+
+    // ── TROISIÈME FACE. Hors de la racine, le refus NOMMÉ du périmètre — jamais une trace de pile.
+    const dessous = lancerLaGate(GARDE, resolve('scripts'));
+    expect(dessous.code, `la garde a jugé depuis un sous-dossier :\n${dessous.sortie.slice(0, 600)}`).not.toBe(0);
+    expect(dessous.sortie, 'lancée hors de la racine, la garde ne rend pas le refus nommé du périmètre').toContain(
+      'perimetre_illisible'
+    );
   }, 180_000);
 });
