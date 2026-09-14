@@ -43,8 +43,8 @@ plan, `TASKS.md`, `PLAN-STATE.md`, `TRACEABILITY.md` : **générés**.
 directeur lui-même a porté trois totaux différents pour le même backlog.
 
 **Comment on la voit.** Un `diff` entre la source et la copie régénérée est vide ; un hash embarqué = hash recalculé ;
-`partners:schema:enums` refuse, dans `src`, `prisma` et `scripts`, une ligne qui nomme deux états occupants ou plus hors
-de leur source unique (`partners/ADR-0011`).
+`partners:schema:enums` refuse, dans tout fichier suivi sous `src`, `prisma` et `scripts` — quelle que soit son
+extension —, une ligne qui nomme deux états occupants ou plus hors de leur source unique (`partners/ADR-0011`).
 
 ## RM-02 — Une garde ne vaut que si on l'a vue rougir
 

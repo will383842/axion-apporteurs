@@ -416,7 +416,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       // et les témoins de cette sortie vivent dans `termes-interdits.spec.ts`.
       temoins: 0,
       raison:
-        'GOV-030 — la garde des termes interdits, que six documents invoquaient sans qu’elle ' +
+        'GOV-030 — la garde des termes interdits, que des documents invoquaient sans qu’elle ' +
         'existe. UNE sortie, `process.exit(decision.code)`, commune aux deux modes : le code vient ' +
         'de `decisionDeLaPreuve` (témoin sans morsure, faux positif, population du registre ' +
         'illisible, divergente ou non couverte) ou de `decisionDeLaGarde` (une faute sur le dépôt). ' +
@@ -1688,6 +1688,9 @@ const GARDES_QUI_BALAIENT = [
   'scripts/gates/gov-preseance.ts',
   'scripts/gates/gov-publication.ts',
   'scripts/gates/lexique-apporteurs.ts',
+  // GOV-030 (`partners/ADR-0011`) — `partners:schema:enums` lit sa portée dans les fichiers SUIVIS :
+  // sa marche du disque par liste d'extensions laissait les `.js` et `.json` de `scripts/` hors lecture.
+  'scripts/gates/schema-enums.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {

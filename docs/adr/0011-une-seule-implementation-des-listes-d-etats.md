@@ -13,20 +13,17 @@
 
 ## Contexte
 
-### Deux implémentations, deux verdicts opposés
+### Deux implémentations possibles, deux verdicts opposés
 
-Deux gardes portaient la famille `liste_litterale_d_etats`, sous le même nom et avec la même liste
-dérivée de REQ-DM-003 :
+Sur `main`, `scripts/gates/schema-enums.ts` (GOV-006, `partners:schema:enums`) porte la famille
+`liste_litterale_d_etats` au seuil de TROIS noms d'états sur une ligne, et un contre-témoin exécutable y
+déclare légitime la comparaison booléenne à deux états.
 
-- `scripts/gates/schema-enums.ts` (GOV-006, `partners:schema:enums`), au seuil de TROIS noms d'états
-  sur une ligne ;
-- `scripts/gates/gov-check.ts`, dans la première rédaction de GOV-030, au seuil de DEUX.
-
-Elles tournaient dans le même job `gate-a` de la CI, et rendaient des verdicts **opposés** sur la
-même entrée : la comparaison booléenne à deux états que GOV-006 déclarait légitime — par un
-contre-témoin exécutable — était exactement celle que GOV-030 condamnait. Les deux restaient vertes
-parce que `src/` ne porte que trois fichiers : la divergence était **silencieuse**. C'est la lentille
-`simplicite` qui l'a mesurée.
+Le registre prêtait la même famille à `gov:check`, que GOV-030 écrit. L'y écrire au seuil de DEUX
+donnait deux gardes, dans le même job `gate-a`, aux verdicts **opposés** sur la même entrée : la
+comparaison que GOV-006 déclare légitime est exactement celle que GOV-030 condamnait. Toutes deux
+restaient vertes tant que le code ne porte aucune comparaison de ce genre : la divergence était
+**silencieuse**.
 
 ### La propriété protégée n'est pas un nombre de noms
 
@@ -58,13 +55,11 @@ formes portent la même propriété.
 
 ## Conséquences
 
-- `partners:schema:enums` balaie `src`, `prisma` et `scripts`, en `.ts`, `.tsx`, `.prisma` et `.sql`.
-  Les trois racines que `gov-check.ts` lisait et qu'elle ne lit pas — `messages/`, `docs/adr/`,
-  `packages/contracts/` — ne sont gardées par **aucune** garde sur cette famille. `gov-check.ts`
-  l'imprime à chaque exécution, sous « Hors famille ».
-- En contrepartie, la racine `scripts/` est gardée. Mesuré pendant la relecture : au seuil DEUX, les
-  sept lignes fautives du dépôt vivaient toutes dans `gov-check.ts` lui-même ; elles sont parties avec
-  la famille, et le seuil DEUX est vert sur le dépôt.
+- `partners:schema:enums` lit tout fichier SUIVI sous `src`, `prisma` et `scripts`, quelle que soit son
+  extension : une liste d'extensions échoue ouvert sur celle qu'elle oublie, et les `.js` et `.json`
+  suivis sous `scripts/` n'étaient pas lus. La portée tient dans `dansLaPorteeDesEtats` ; la lecture en
+  dérive, et `gov-check.ts` en dérive, à chaque exécution, celles de ses racines que la famille ne couvre
+  pas (« Hors famille »). Aucune garde n'y tient cette famille. Au seuil DEUX, le dépôt est vert.
 - `schema-enums.ts` s'exempte lui-même : sa fixture et ses témoins sont des listes d'états. Cette
   exemption a son contre-témoin dans `--prove`.
 - Retour arrière : remonter le seuil à trois referait passer l'index à deux états, et ferait tomber le
@@ -86,6 +81,9 @@ formes portent la même propriété.
   `it('REQ-DM-003 : gov:check ne porte PLUS la famille des listes d’états — ni dans FAMILLES, ni au verdict')` :
   réintroduire la famille dans `gov-check.ts` fait rougir ce contrôle.
 - **Assertion** — `tests/unit/gouvernance/termes-interdits.spec.ts` ·
+  `it('REQ-DM-003 : sa portée est une racine, jamais une extension — et tout fichier de la portée est jugé')` :
+  remettre un filtre d'extension dans la portée fait rougir ce contrôle.
+- **Assertion** — `tests/unit/gouvernance/termes-interdits.spec.ts` ·
   `it('REQ-DM-003 : sur la même entrée, la seule implémentation rougit — la clause IN comme la forme booléenne')` :
   remonter le seuil, ou faire basculer le verdict sur l'opérateur, fait rougir ce contrôle.
 - **Assertion** — `tests/unit/gouvernance/glossaire-enums.spec.ts` ·
@@ -94,7 +92,8 @@ formes portent la même propriété.
 
 ## Reste à faire
 
-- Les trois racines que cette famille ne garde pas (`messages/`, `docs/adr/`, `packages/contracts/`) :
-  les ajouter à `RACINES_CODE`, ou arbitrer qu'elles n'en ont pas besoin, appartient au
-  `gardien-spec`.
+- Les racines de `gov-check.ts` que cette famille ne garde pas (`messages/`, `docs/adr/`,
+  `packages/contracts/` à la date de cet ADR) : les ajouter à `RACINES_CODE`, ou arbitrer qu'elles n'en
+  ont pas besoin, appartient au `gardien-spec`. Ajoutée, une racine est lue quelle que soit
+  l'extension — le JSON de `messages/` compris.
 - Le passage à `accepte` appartient à l'`architecte`.

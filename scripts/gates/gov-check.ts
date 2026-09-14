@@ -6,9 +6,9 @@
  *                                                       VERT, sur une FIXTURE)
  *
  * `docs/gates.json` déclarait depuis GOV-000 une entrée `gov:check` dont ce script n'existait pas,
- * pendant que six documents (sept références) disaient « `gov:check` rougit sur … ». Le même nom
- * désigne aussi, dans `package.json`, une CHAÎNE de seize gardes : ce fichier livre la garde que le
- * registre décrit, et laisse l'homonymie à un ADR (acceptation de GOV-030).
+ * pendant que des documents disaient « `gov:check` rougit sur … ». Le même nom désigne aussi, dans
+ * `package.json`, une CHAÎNE de gardes : ce fichier livre la garde que le registre décrit, et laisse
+ * l'homonymie à un ADR (acceptation de GOV-030).
  *
  * ── CE QU'ELLE TIENT, ET D'OÙ CHAQUE VALEUR EST LUE (RM-01) ─────────────────────────────────
  *
@@ -20,25 +20,29 @@
  *   • `evenement_litteral_hors_contrat` — un nom VALIDE (LU dans REQ-INT-004) écrit à la main hors
  *     de `packages/contracts`.
  *   • `synonyme_interdit_du_glossaire` — LU dans `docs/GLOSSAIRE.md` (`docs/PRESEANCE.md` §2).
- *   • `source_illisible` (cinq refus nommés, `REFUS_DE_CONCLURE`) et `perimetre_vide` — le refus de
+ *   • `contenu_illisible` — un fichier sous une racine que la garde ne lit pas EN ENTIER (octet
+ *     NUL, UTF-8 invalide, octets refusés par le disque) : « non lu » n'est pas « propre ».
+ *   • `source_illisible` (refus nommés, `REFUS_DE_CONCLURE`) et `perimetre_vide` — le refus de
  *     rendre un verdict qu'on n'a pas mesuré.
  *
  * Les listes littérales d'états occupants ne sont PAS ici : `partners/ADR-0011` en fait la seule
- * implémentation de `partners:schema:enums`. La sortie imprime, DÉRIVÉ de la portée exportée par
- * `schema-enums.ts`, ce que cette famille ne couvre pas.
+ * implémentation de `partners:schema:enums`. La sortie imprime les racines de cette garde que la
+ * portée de cette famille ne couvre pas, DÉRIVÉES de `dansLaPorteeDesEtats` (`schema-enums.ts`).
  *
- * ── LE PÉRIMÈTRE : UNE DÉFINITION, `perimetreDeLaVue` ───────────────────────────────────────
+ * ── LE PÉRIMÈTRE, ET CE QUI EST RÉELLEMENT EXAMINÉ ──────────────────────────────────────────
  *
- * La vue porte TOUS les fichiers suivis. Les racines sont LUES dans l'en-tête de
+ * La vue porte TOUS les fichiers suivis, EN OCTETS. Les racines sont LUES dans l'en-tête de
  * `docs/GLOSSAIRE.md`, plus `packages/contracts/` (seul endroit où un nom d'événement s'écrit :
- * sans cette racine, son exemption n'aurait aucun contre-témoin atteignable). Tout fichier suivi
- * sous une racine est LU, quelle que soit son extension ; le reste est « hors périmètre ». Le
- * contrôle et les comptes imprimés viennent de cette seule partition : lus + hors = suivis.
+ * sans cette racine, son exemption n'aurait aucun contre-témoin atteignable). `perimetreDeLaVue`
+ * range chaque suivi sous une racine ou « hors périmètre ». `examiner` décode chaque fichier rangé,
+ * quelle que soit son extension, et rend ce qu'il a RÉELLEMENT parcouru : chemin, racine, et octets
+ * recomptés ligne par ligne. Les comptes imprimés viennent de là, pas de la partition.
  *
  * ── L'EXEMPTION DE CITATION SE LIT SUR LA GRAMMAIRE ET LA POSITION ───────────────────────────
  *
- * CITER N'EST PAS SE SERVIR : un ADR doit pouvoir écrire le contre-exemple qu'il écarte. Seules
- * trois extensions accordent une exemption, et chacune a un témoin de CHAQUE côté de sa frontière :
+ * CITER N'EST PAS SE SERVIR : un ADR doit pouvoir écrire le contre-exemple qu'il écarte. Seules les
+ * extensions de `GRAMMAIRES_QUI_CITENT` accordent une exemption — le registre les énumère, la preuve
+ * confronte les deux — et chacune a un témoin de CHAQUE côté de sa frontière :
  *   — `.md` (prose) : un span d'accents graves fermé sur SA ligne ou la SUIVANTE, un bloc à trois
  *     accents graves REFERMÉ, des guillemets français. Le guillemet droit ne cite pas ;
  *   — `.sql` : les spans d'accents graves DANS un commentaire (deux tirets, bloc barre-étoile) ;
@@ -47,26 +51,29 @@
  *
  * ── LA PREUVE : SA POPULATION VIENT DU REGISTRE, SA DÉCISION EST UNE FONCTION PURE ───────────
  *
- * Le champ `verifie` de l'entrée `gov:check` énumère les familles, les refus et l'identifiant de
- * CHAQUE témoin. `decisionDeLaPreuve` confronte le code à cette population dans les deux sens,
- * n'accorde une clé qu'au témoin qui MORD (sa famille et son refus), et rend le code de sortie ;
- * `decisionDeLaGarde` fait de même pour le dépôt. La ligne de commande n'imprime que ce qu'elles
- * rendent. RM-11 : `--prove` ne juge que des vues INJECTÉES ; il ne lit du dépôt que la
- * déclaration de ce qu'il doit prouver.
+ * Le champ `verifie` de l'entrée `gov:check` énumère les familles, les refus, les extensions qui
+ * citent et l'identifiant de CHAQUE témoin. `decisionDeLaPreuve` confronte le code à cette
+ * population dans les deux sens, n'accorde une clé qu'au témoin qui MORD (sa famille et son refus),
+ * et rend le code de sortie ; `decisionDeLaGarde` fait de même pour le dépôt. La ligne de commande
+ * n'imprime que ce qu'elles rendent. RM-11 : `--prove` ne juge que des vues INJECTÉES ; il ne lit du
+ * dépôt que la déclaration de ce qu'il doit prouver.
  */
 
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
-import { texteDeLaReq, RACINES_CODE, EXTENSIONS_CODE } from './schema-enums';
+import { texteDeLaReq, RACINES_CODE, dansLaPorteeDesEtats } from './schema-enums';
 import { TYPES_EVENEMENT, TYPES_HORS_CONTRAT_V1 } from '../../packages/contracts/events';
 
 // ── le vocabulaire de la garde ───────────────────────────────────────────────
 
-export type FichierVu = { chemin: string; contenu: string };
-/** `refus` ne vaut que pour `source_illisible` : il NOMME lequel des cinq refus a parlé. */
-export type Faute = { famille: string; message: string; refus?: RefusDeConclure };
+/** Un fichier suivi, EN OCTETS ; `erreur` quand le disque refuse de les rendre (dossier, sous-module). */
+type FichierVu = { chemin: string; octets: Uint8Array } | { chemin: string; erreur: string };
+/** `refus` ne vaut que pour `source_illisible` : il NOMME lequel des refus a parlé. */
+type Faute = { famille: string; message: string; refus?: RefusDeConclure };
+/** Ce que `examiner` a RÉELLEMENT parcouru : la racine qui l'a rangé, les octets recomptés ligne par ligne. */
+type Examine = { chemin: string; racine: string; octets: number };
 
 export type Vue = {
   /** Le texte de REQ-INT-004 — source des sept types valides et des modèles refusés. */
@@ -86,12 +93,18 @@ export const FAMILLES: { nom: string; explication: string }[] = [
     nom: 'source_illisible',
     explication:
       'une des sources (REQ-INT-004, le glossaire, le paquet de contrats) ne rend plus ce que la ' +
-      'garde compare : elle ne sait plus à quoi confronter le dépôt. CINQ refus nommés.',
+      'garde compare : elle ne sait plus à quoi confronter le dépôt. Chaque refus est nommé.',
   },
   {
     nom: 'perimetre_vide',
     explication:
       "aucun fichier à balayer : « 0 fichier » n'est pas « aucun défaut », c'est « je n'ai rien lu ».",
+  },
+  {
+    nom: 'contenu_illisible',
+    explication:
+      'un fichier sous une racine que la garde ne lit pas en entier (octet NUL, UTF-8 invalide, ' +
+      "octets refusés par le disque) : « non lu » n'est pas « propre ».",
   },
   {
     nom: 'terme_axionia_invalide',
@@ -115,7 +128,7 @@ export const FAMILLES: { nom: string; explication: string }[] = [
 ];
 
 /**
- * Les CINQ refus de conclure de `source_illisible`, confrontés au registre comme `FAMILLES`. Le type
+ * Les refus de conclure de `source_illisible`, confrontés au registre comme `FAMILLES`. Le type
  * interdit d'émettre un refus sans l'inscrire ici — et l'inscrire ici l'expose à la confrontation.
  */
 export const REFUS_DE_CONCLURE = [
@@ -125,7 +138,7 @@ export const REFUS_DE_CONCLURE = [
   'glossaire_sans_synonyme',
   'racines_illisibles',
 ] as const;
-export type RefusDeConclure = (typeof REFUS_DE_CONCLURE)[number];
+type RefusDeConclure = (typeof REFUS_DE_CONCLURE)[number];
 
 /** Le paquet de contrats — seul endroit où un nom d'événement s'écrit littéralement. */
 const RACINE_CONTRATS = 'packages/contracts/';
@@ -139,6 +152,11 @@ const CHEMIN_REGISTRE = join(
   'gates.json'
 );
 const ID_REGISTRE = 'gov:check';
+
+/** Un fichier suivi dont le contenu est ce texte, encodé en UTF-8 — la forme des fixtures. */
+export function fichierTexte(chemin: string, texte: string): FichierVu {
+  return { chemin, octets: new TextEncoder().encode(texte) };
+}
 
 // ── lectures pures : chaque liste vient de sa source ─────────────────────────
 
@@ -183,7 +201,7 @@ export function modelesRefusesDAxionia(reqInt004: string, glossaire: string): st
   return [...new Set(trouves.filter((j) => FORME_MODELE.test(j)))];
 }
 
-export type SynonymeInterdit = {
+type SynonymeInterdit = {
   terme: string;
   /** Faux quand le glossaire assortit l'interdit d'une CONDITION que la garde ne sait pas juger. */
   exerce: boolean;
@@ -257,6 +275,9 @@ const GRAMMAIRES_QUI_CITENT = new Map<string, Grammaire>([
   ['sql', 'commentaire_sql'],
   ['prisma', 'commentaire_slash'],
 ]);
+
+/** Les extensions qui citent, telles que la table les porte : le registre les énumère, la sortie les imprime. */
+export const EXTENSIONS_QUI_CITENT: readonly string[] = [...GRAMMAIRES_QUI_CITENT.keys()];
 
 function grammaireDuFichier(chemin: string): Grammaire {
   const extension = /\.([^./]+)$/.exec(chemin)?.[1];
@@ -381,16 +402,16 @@ function zonesDeProse(lignes: string[]): [number, number][][] {
 
 // ── le périmètre ─────────────────────────────────────────────────────────────
 
-export type Perimetre = {
+type Perimetre = {
   /** Les racines du glossaire, plus le paquet de contrats. */
   racines: string[];
-  /** Chaque fichier lu est rangé sous la PREMIÈRE racine qui le contient : c'est une partition. */
+  /** Chaque fichier est rangé sous la PREMIÈRE racine qui le contient : c'est une partition. */
   parRacine: { racine: string; lus: FichierVu[] }[];
   lus: FichierVu[];
   horsPerimetre: FichierVu[];
 };
 
-/** LA définition du périmètre. Le contrôle et la sortie imprimée en dérivent tous les deux. */
+/** LA définition du périmètre : ce qu'`examiner` doit parcourir, et ce qui est hors périmètre. */
 export function perimetreDeLaVue(vue: Vue): Perimetre {
   const racines = [...vue.racines, RACINE_CONTRATS];
   const parRacine = racines.map((racine) => ({ racine, lus: [] as FichierVu[] }));
@@ -401,6 +422,22 @@ export function perimetreDeLaVue(vue: Vue): Perimetre {
     else horsPerimetre.push(fichier);
   }
   return { racines, parRacine, lus: parRacine.flatMap((r) => r.lus), horsPerimetre };
+}
+
+// ── la lecture EN ENTIER ─────────────────────────────────────────────────────
+
+/** `ignoreBOM` : la marque d'ordre est GARDÉE dans le texte, pour que ses octets soient recomptés. */
+const DECODEUR = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
+
+/** Le texte d'un fichier lu EN ENTIER, ou la raison pour laquelle il ne l'est pas. */
+function lireEnEntier(fichier: FichierVu): { texte: string } | { raison: string } {
+  if ('erreur' in fichier) return { raison: `le disque refuse d'en rendre les octets (${fichier.erreur})` };
+  if (fichier.octets.includes(0)) return { raison: 'octet NUL — UTF-16 ou binaire' };
+  try {
+    return { texte: DECODEUR.decode(fichier.octets) };
+  } catch {
+    return { raison: 'UTF-8 invalide' };
+  }
 }
 
 // ── le contrôle ──────────────────────────────────────────────────────────────
@@ -471,9 +508,14 @@ function reglesDeLaVue(vue: Vue): { regles: Regle[]; typesValides: string[] } {
   return { regles, typesValides };
 }
 
-/** Le contrôle. PUR : il ne lit rien, il ne juge que la vue qu'on lui donne. */
-export function controler(vue: Vue): Faute[] {
+/**
+ * Le contrôle, et ce qu'il a RÉELLEMENT examiné. PUR : il ne lit rien, il ne juge que la vue qu'on
+ * lui donne. Un fichier examiné l'a été EN ENTIER : ses octets sont recomptés sur les lignes
+ * parcourues, et c'est ce compte que la sortie imprime.
+ */
+export function examiner(vue: Vue): { fautes: Faute[]; examines: Examine[] } {
   const fautes: Faute[] = [];
+  const examines: Examine[] = [];
   const { regles, typesValides } = reglesDeLaVue(vue);
 
   // ── les sources, d'abord : une garde qui ne sait plus à quoi comparer ne conclut pas ──
@@ -525,7 +567,7 @@ export function controler(vue: Vue): Faute[] {
   }
 
   // ── le périmètre ──────────────────────────────────────────────────────────
-  const { racines, lus } = perimetreDeLaVue(vue);
+  const { racines, parRacine, lus } = perimetreDeLaVue(vue);
   if (lus.length === 0) {
     fautes.push({
       famille: 'perimetre_vide',
@@ -533,47 +575,72 @@ export function controler(vue: Vue): Faute[] {
         `aucun fichier à balayer dans ${racines.join(', ')}. « 0 fichier » et « aucun défaut » ` +
         'sont deux phrases différentes, et une seule autorise à conclure.',
     });
-    return fautes;
+    return { fautes, examines };
   }
 
-  for (const fichier of lus) {
-    const zones = zonesExemptees(fichier.chemin, fichier.contenu);
-    const dansLeContrat = fichier.chemin.startsWith(RACINE_CONTRATS);
-
-    fichier.contenu.split('\n').forEach((ligne, i) => {
-      const citees = zones[i] ?? [];
-      const cite = (index: number): boolean => citees.some(([a, b]) => index >= a && index < b);
-
-      for (const regle of regles) {
-        if (regle.famille === 'evenement_litteral_hors_contrat' && dansLeContrat) continue;
-        regle.motif.lastIndex = 0;
-        let m: RegExpExecArray | null;
-        while ((m = regle.motif.exec(ligne)) !== null) {
-          if (cite(m.index)) continue;
-          fautes.push({
-            famille: regle.famille,
-            message: `${fichier.chemin}:${i + 1} — « ${regle.terme} ». ${regle.conseil}`,
-          });
-        }
+  for (const { racine, lus: fichiers } of parRacine) {
+    for (const fichier of fichiers) {
+      const lecture = lireEnEntier(fichier);
+      if ('raison' in lecture) {
+        fautes.push({
+          famille: 'contenu_illisible',
+          message:
+            `${fichier.chemin} — ${lecture.raison}. La garde ne l'a pas lu en entier, et « non lu » ` +
+            "n'est pas « propre » : réencode-le en UTF-8, ou sors-le des racines (arbitrage du `gardien-spec`).",
+        });
+        continue;
       }
-    });
+      const lignes = lecture.texte.split('\n');
+      const zones = zonesExemptees(fichier.chemin, lecture.texte);
+      const dansLeContrat = fichier.chemin.startsWith(RACINE_CONTRATS);
+      let octets = lignes.length - 1;
+
+      lignes.forEach((ligne, i) => {
+        octets += Buffer.byteLength(ligne, 'utf8');
+        const citees = zones[i] ?? [];
+        const cite = (index: number): boolean => citees.some(([a, b]) => index >= a && index < b);
+
+        for (const regle of regles) {
+          if (regle.famille === 'evenement_litteral_hors_contrat' && dansLeContrat) continue;
+          regle.motif.lastIndex = 0;
+          let m: RegExpExecArray | null;
+          while ((m = regle.motif.exec(ligne)) !== null) {
+            if (cite(m.index)) continue;
+            fautes.push({
+              famille: regle.famille,
+              message: `${fichier.chemin}:${i + 1} — « ${regle.terme} ». ${regle.conseil}`,
+            });
+          }
+        }
+      });
+      examines.push({ chemin: fichier.chemin, racine, octets });
+    }
   }
 
-  return fautes;
+  return { fautes, examines };
+}
+
+/** Les fautes seules — ce que `--prove` juge. */
+export function controler(vue: Vue): Faute[] {
+  return examiner(vue).fautes;
 }
 
 // ── la vue du dépôt ──────────────────────────────────────────────────────────
 
 /**
- * La vue du dépôt : TOUS les fichiers suivis, sans filtre. Le périmètre d'abord, et dans cet ordre :
- * lancée hors de la racine, la garde refuse en NOMMANT `perimetre_illisible` au lieu de mourir sur
- * un `ENOENT` de `docs/GLOSSAIRE.md`.
+ * La vue du dépôt : TOUS les fichiers suivis, en octets, sans filtre. Le périmètre d'abord, et dans
+ * cet ordre : lancée hors de la racine, la garde refuse en NOMMANT `perimetre_illisible` au lieu de
+ * mourir sur un `ENOENT` de `docs/GLOSSAIRE.md`. Un suivi dont le disque refuse les octets (un
+ * sous-module est un dossier) garde son erreur : sous une racine, `examiner` le refuse en le nommant.
  */
 export function vueDuDepot(): Vue {
-  const fichiers = fichiersSuivisOuRefus('gov:check').map((chemin) => ({
-    chemin,
-    contenu: readFileSync(chemin, 'utf8'),
-  }));
+  const fichiers = fichiersSuivisOuRefus('gov:check').map((chemin): FichierVu => {
+    try {
+      return { chemin, octets: readFileSync(chemin) };
+    } catch (e) {
+      return { chemin, erreur: (e as NodeJS.ErrnoException).code ?? (e as Error).message };
+    }
+  });
   const glossaire = readFileSync('docs/GLOSSAIRE.md', 'utf8');
   return {
     reqInt004: texteDeLaReq('REQ-INT-004'),
@@ -586,11 +653,12 @@ export function vueDuDepot(): Vue {
 
 // ── la population de la preuve, LUE dans le registre ─────────────────────────
 
-export type Population = { familles: string[]; refus: string[]; temoins: string[] };
+type Population = { familles: string[]; refus: string[]; citent: string[]; temoins: string[] };
 
 /**
  * La population que `--prove` doit couvrir, LUE dans le champ `verifie` de l'entrée `gov:check` :
- * familles, refus de conclure, et l'identifiant de chaque témoin. Une liste muette est un REFUS.
+ * familles, refus de conclure, extensions qui citent, et l'identifiant de chaque témoin. Une liste
+ * muette est un REFUS.
  */
 export function populationDuRegistre(texte: string): Population {
   const registre = JSON.parse(texte) as { gates?: { id: string; verifie?: string }[] };
@@ -618,6 +686,7 @@ export function populationDuRegistre(texte: string): Population {
   return {
     familles: liste(/familles\s*:\s*([a-z0-9_,\s]+?)\s*(?:;|$)/, 'famille'),
     refus: liste(/refus de conclure\s*:\s*([a-z0-9_,\s]+?)\s*(?:;|$)/, 'refus de conclure'),
+    citent: liste(/extensions qui citent\s*:\s*([a-z0-9_,\s]+?)\s*(?:;|$)/, 'extension qui cite'),
     temoins: liste(/temoins\s*:\s*([a-z0-9_,\s]+?)\s*(?:;|$)/, 'témoin'),
   };
 }
@@ -686,13 +755,14 @@ export const VUE_CONFORME: Vue = {
     'paiement.rembourse',
   ],
   racines: racinesDuGlossaire(GLOSSAIRE_FIXTURE),
-  fichiers: [{ chemin: 'src/config/fixture.ts', contenu: 'export const rien = true;\n' }],
+  fichiers: [fichierTexte('src/config/fixture.ts', 'export const rien = true;\n')],
 };
 
-const avec = (chemin: string, contenu: string): Vue => ({
+const avecFichierVu = (fichier: FichierVu): Vue => ({
   ...VUE_CONFORME,
-  fichiers: [...VUE_CONFORME.fichiers, { chemin, contenu }],
+  fichiers: [...VUE_CONFORME.fichiers, fichier],
 });
+const avec = (chemin: string, contenu: string): Vue => avecFichierVu(fichierTexte(chemin, contenu));
 
 /** L'accent grave, posé par son code : l'écrire dans un littéral de ce fichier le fermerait. */
 const AG = String.fromCharCode(96);
@@ -751,6 +821,29 @@ export const TEMOINS: Temoin[] = [
     famille: 'perimetre_vide',
     quoi: 'aucun fichier à balayer',
     vue: () => ({ ...VUE_CONFORME, fichiers: [] }),
+  },
+  {
+    id: 'contenu_octet_nul',
+    famille: 'contenu_illisible',
+    quoi: 'un texte UTF-16 sans marque d’ordre sous une racine : ses octets NUL sont de l’UTF-8 valide',
+    vue: () =>
+      avecFichierVu({
+        chemin: 'src/content/page.txt',
+        octets: Uint8Array.from([...'le producteur emet payment.received'].flatMap((c) => [c.charCodeAt(0), 0])),
+      }),
+  },
+  {
+    id: 'contenu_utf8_invalide',
+    famille: 'contenu_illisible',
+    quoi: 'un octet hors UTF-8, sans octet NUL, sous une racine',
+    vue: () =>
+      avecFichierVu({ chemin: 'docs/adr/9995-latin1.md', octets: Uint8Array.of(0x72, 0xe9, 0x73, 0x75, 0x6d, 0xe9) }),
+  },
+  {
+    id: 'contenu_refuse_par_le_disque',
+    famille: 'contenu_illisible',
+    quoi: 'un suivi dont le disque refuse les octets — un sous-module est un dossier',
+    vue: () => avecFichierVu({ chemin: 'src/sous-module', erreur: 'EISDIR' }),
   },
   {
     id: 'modele_dans_le_code',
@@ -881,7 +974,7 @@ export const TEMOINS: Temoin[] = [
   },
 ];
 
-export type ContreTemoin = { quoi: string; vue: () => Vue };
+type ContreTemoin = { quoi: string; vue: () => Vue };
 
 /**
  * Ce que la garde ne doit PAS faire rougir : le côté de chaque frontière d'exemption où elle VAUT,
@@ -945,6 +1038,18 @@ export const CONTRE_TEMOINS: ContreTemoin[] = [
     vue: () => avec('docs/REQUIREMENTS.md', 'REQ-DM-036 — WebhookRecu {source, eventId, …}'),
   },
   {
+    quoi: 'un binaire HORS des racines : la garde ne le juge pas, le compte « hors périmètre » le porte',
+    vue: () => avecFichierVu({ chemin: 'public/logo.png', octets: Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x00, 0x00) }),
+  },
+  {
+    quoi: 'un fichier UTF-8 AVEC marque d’ordre sous une racine : c’est du texte, lu en entier',
+    vue: () =>
+      avecFichierVu({
+        chemin: 'src/avec-bom.ts',
+        octets: Uint8Array.from([0xef, 0xbb, 0xbf, ...new TextEncoder().encode('export const rien = true;\n')]),
+      }),
+  },
+  {
     quoi: 'le paquet de contrats, seul endroit où un nom d’événement s’écrit',
     vue: () => avec('packages/contracts/events.ts', "export const T = ['paiement.recu'] as const;"),
   },
@@ -960,7 +1065,7 @@ export const CONTRE_TEMOINS: ContreTemoin[] = [
 
 // ── la preuve et le verdict : des FONCTIONS PURES ────────────────────────────
 
-export type RapportDePreuve = {
+type RapportDePreuve = {
   /** Les clés couvertes — nourries par le témoin qui MORD, jamais par une faute incidente. */
   couvertes: Set<string>;
   /** Les témoins qui ne mordent plus : le témoin est faux, ou la règle ne couvre plus son cas. */
@@ -985,13 +1090,33 @@ export function eprouver(temoins: readonly Temoin[]): RapportDePreuve {
   return { couvertes, sansMorsure };
 }
 
-export type Declares = {
+/** Ce que le CODE déclare et prouve : confronté, liste par liste, à la population du registre. */
+type CodeDeLaPreuve = {
   familles: readonly string[];
   refus: readonly string[];
-  temoins: readonly string[];
+  citent: readonly string[];
+  temoins: readonly Temoin[];
 };
 
-export type Ecarts = {
+type EntreesDeLaPreuve = CodeDeLaPreuve & {
+  contreTemoins: readonly ContreTemoin[];
+  /** Le texte de `docs/gates.json`, ou l'erreur de sa lecture. */
+  registre: string | Error;
+};
+
+/** Les entrées de `--prove`, UNE fois : la ligne de commande et la spec passent par ici. */
+export function entreesDeLaPreuve(registre: string | Error): EntreesDeLaPreuve {
+  return {
+    temoins: TEMOINS,
+    contreTemoins: CONTRE_TEMOINS,
+    registre,
+    familles: FAMILLES.map((f) => f.nom),
+    refus: REFUS_DE_CONCLURE,
+    citent: EXTENSIONS_QUI_CITENT,
+  };
+}
+
+type Ecarts = {
   /** Ce que le code DÉCLARE et ce que le registre ÉNUMÈRE ne sont pas le même ensemble. */
   divergences: string[];
   /** Les témoins dont la famille ou le refus n'est pas au registre. */
@@ -1001,16 +1126,12 @@ export type Ecarts = {
 };
 
 /** LES ÉCARTS ENTRE LA POPULATION DU REGISTRE ET CE QUE LE CODE DÉCLARE ET PROUVE, dans les deux sens. */
-export function ecartsDePopulation(
-  population: Population,
-  declares: Declares,
-  temoins: readonly Temoin[]
-): Ecarts {
+export function ecartsDePopulation(population: Population, code: CodeDeLaPreuve): Ecarts {
   const divergences: string[] = [];
-  const confronter = (quoi: string, code: readonly string[], registre: readonly string[]): void => {
-    const codeSeul = code.filter((n) => !registre.includes(n));
-    const registreSeul = registre.filter((n) => !code.includes(n));
-    const doubles = code.filter((n, i) => code.indexOf(n) !== i);
+  const confronter = (quoi: string, duCode: readonly string[], registre: readonly string[]): void => {
+    const codeSeul = duCode.filter((n) => !registre.includes(n));
+    const registreSeul = registre.filter((n) => !duCode.includes(n));
+    const doubles = duCode.filter((n, i) => duCode.indexOf(n) !== i);
     if (codeSeul.length + registreSeul.length + doubles.length === 0) return;
     divergences.push(
       `${quoi} : le code et docs/gates.json ont divergé — dans le code seulement : ` +
@@ -1018,11 +1139,12 @@ export function ecartsDePopulation(
         `${doubles.length > 0 ? ` ; en double dans le code : ${doubles.join(', ')}` : ''}.`
     );
   };
-  confronter('familles', declares.familles, population.familles);
-  confronter('refus de conclure', declares.refus, population.refus);
-  confronter('témoins', declares.temoins, population.temoins);
+  confronter('familles', code.familles, population.familles);
+  confronter('refus de conclure', code.refus, population.refus);
+  confronter('extensions qui citent', code.citent, population.citent);
+  confronter('témoins', code.temoins.map((t) => t.id), population.temoins);
 
-  const orphelins = temoins
+  const orphelins = code.temoins
     .filter(
       (t) =>
         !population.familles.includes(t.famille) ||
@@ -1030,7 +1152,7 @@ export function ecartsDePopulation(
     )
     .map((t) => `« ${t.quoi} » (${cleDeCouverture(t.famille, t.refus)})`);
 
-  const { couvertes } = eprouver(temoins);
+  const { couvertes } = eprouver(code.temoins);
   const manque = [
     ...population.familles,
     ...population.refus.map((r) => cleDeCouverture('source_illisible', r)),
@@ -1040,17 +1162,10 @@ export function ecartsDePopulation(
   return { divergences, orphelins, manque };
 }
 
-export type Decision = { code: 0 | 1; lignes: string[] };
+type Decision = { code: 0 | 1; lignes: string[] };
 
 /** LA DÉCISION DE `--prove`. La ligne de commande n'en fait qu'imprimer les lignes et sortir du code. */
-export function decisionDeLaPreuve(entrees: {
-  temoins: readonly Temoin[];
-  contreTemoins: readonly ContreTemoin[];
-  /** Le texte de `docs/gates.json`, ou l'erreur de sa lecture. */
-  registre: string | Error;
-  familles: readonly string[];
-  refus: readonly string[];
-}): Decision {
+export function decisionDeLaPreuve(entrees: EntreesDeLaPreuve): Decision {
   const refus: string[] = [];
 
   for (const t of eprouver(entrees.temoins).sansMorsure) {
@@ -1076,11 +1191,7 @@ export function decisionDeLaPreuve(entrees: {
     refus.push(`la population attendue est ILLISIBLE dans docs/gates.json : ${(e as Error).message}`);
   }
   if (population !== undefined) {
-    const ecarts = ecartsDePopulation(
-      population,
-      { familles: entrees.familles, refus: entrees.refus, temoins: entrees.temoins.map((t) => t.id) },
-      entrees.temoins
-    );
+    const ecarts = ecartsDePopulation(population, entrees);
     refus.push(...ecarts.divergences);
     if (ecarts.orphelins.length > 0) {
       refus.push(
@@ -1103,38 +1214,36 @@ export function decisionDeLaPreuve(entrees: {
     code: 0,
     lignes: [
       `✅ gov:check — les ${population.familles.length} familles, les ${population.refus.length} refus ` +
-        `et les ${population.temoins.length} témoins que docs/gates.json énumère rougissent chacun, ` +
-        `et les ${entrees.contreTemoins.length} contre-témoins restent verts.`,
+        `et les ${population.temoins.length} témoins que docs/gates.json énumère rougissent chacun ; ` +
+        `ses ${population.citent.length} extensions qui citent sont celles de la table ; ` +
+        `les ${entrees.contreTemoins.length} contre-témoins restent verts.`,
       ...FAMILLES.map((f) => `   • ${f.nom} — ${f.explication}`),
     ],
   };
 }
 
-/** La portée de `partners:schema:enums`, telle que `schema-enums.ts` l'exporte. */
-export type PorteeDesEtats = { racines: readonly string[]; extensions: readonly string[] };
-
-/** Les racines de cette garde que la famille des listes d'états ne couvre pas. */
-export function racinesHorsDeLaFamille(racines: readonly string[], portee: PorteeDesEtats): string[] {
-  return racines.filter((r) => !portee.racines.some((c) => r.startsWith(`${c}/`)));
-}
-
-/** LE VERDICT SUR UNE VUE, et tout ce qui s'imprime avec lui — dérivé de `perimetreDeLaVue`. */
-export function decisionDeLaGarde(vue: Vue, portee: PorteeDesEtats): Decision {
-  const fautes = controler(vue);
+/** LE VERDICT SUR UNE VUE, et tout ce qui s'imprime avec lui — les comptes viennent de ce qui a été EXAMINÉ. */
+export function decisionDeLaGarde(vue: Vue): Decision {
+  const { fautes, examines } = examiner(vue);
   const perimetre = perimetreDeLaVue(vue);
-  const vides = perimetre.parRacine.filter((r) => r.lus.length === 0).map((r) => r.racine);
+  const parRacine = perimetre.racines.map((racine) => {
+    const lus = examines.filter((e) => e.racine === racine);
+    return { racine, n: lus.length, octets: lus.reduce((somme, e) => somme + e.octets, 0) };
+  });
+  const vides = parRacine.filter((r) => r.n === 0).map((r) => r.racine);
+  const illisibles = fautes.filter((f) => f.famille === 'contenu_illisible').length;
   const synonymes = synonymesDuGlossaire(vue.glossaire);
   const exerces = synonymes.filter((s) => s.exerce);
   const conditionnels = synonymes.filter((s) => !s.exerce);
   const modeles = modelesRefusesDAxionia(vue.reqInt004, vue.glossaire);
   const gardesAilleurs = conditionnels.filter((s) => modeles.includes(s.terme));
-  const horsFamille = racinesHorsDeLaFamille(perimetre.racines, portee);
+  const horsFamille = perimetre.racines.filter((r) => !dansLaPorteeDesEtats(r));
 
   const lignes: string[] =
     fautes.length === 0
       ? ['✅ gov:check — aucun terme interdit dans les fichiers lus.']
       : [
-          `❌ gov:check — ${fautes.length} terme(s) interdit(s) :`,
+          `❌ gov:check — ${fautes.length} faute(s) :`,
           '',
           ...fautes.slice(0, 30).map((f) => `   [${f.famille}] ${f.message}`),
           ...(fautes.length > 30 ? [`   … et ${fautes.length - 30} autre(s).`] : []),
@@ -1142,9 +1251,11 @@ export function decisionDeLaGarde(vue: Vue, portee: PorteeDesEtats): Decision {
         ];
 
   lignes.push(
-    `   Périmètre : ${perimetre.lus.length} fichier(s) lu(s) sur ${vue.fichiers.length} suivi(s) — ` +
-      perimetre.parRacine.map((r) => `${r.racine} ${r.lus.length}`).join(', ') +
-      '. Toute extension est lue ; seules .md, .sql et .prisma accordent une exemption de citation.'
+    `   Périmètre : ${examines.length} fichier(s) lu(s) en entier sur ${vue.fichiers.length} suivi(s) — ` +
+      parRacine.map((r) => `${r.racine} ${r.n} (${r.octets} octets)`).join(', ') +
+      (illisibles > 0 ? ` ; ${illisibles} refusé(s) faute d'être lisible(s) en entier` : '') +
+      `. Toute extension est lue ; seules ${EXTENSIONS_QUI_CITENT.map((e) => `.${e}`).join(', ')} ` +
+      'accordent une exemption de citation.'
   );
   if (vides.length > 0) {
     lignes.push(
@@ -1156,9 +1267,9 @@ export function decisionDeLaGarde(vue: Vue, portee: PorteeDesEtats): Decision {
     `   Hors périmètre : ${perimetre.horsPerimetre.length} fichier(s) suivi(s) — les racines sont LUES ` +
       "dans l'en-tête de `docs/GLOSSAIRE.md` ; les élargir est un arbitrage du `gardien-spec`.",
     '   Hors famille : les listes littérales d’états occupants relèvent de `partners:schema:enums` ' +
-      `(\`partners/ADR-0011\`), qui lit ${portee.racines.map((r) => `${r}/`).join(', ')} en ` +
-      `.${portee.extensions.join(', .')}. Racine(s) de cette garde hors de cette portée : ` +
-      `${horsFamille.join(', ') || 'aucune'} — aucune garde n'y tient cette famille.`,
+      `(\`partners/ADR-0011\`), qui lit tout fichier suivi sous ${RACINES_CODE.map((r) => `${r}/`).join(', ')}. ` +
+      `Racine(s) de cette garde hors de cette portée : ${horsFamille.join(', ') || 'aucune'} — ` +
+      "aucune garde n'y tient cette famille.",
     `   Sources : ${typesEvenementDeLaReq(vue.reqInt004).length} type(s) d'événement (REQ-INT-004), ` +
       `${modeles.length} modèle(s) refusé(s) d'axionia, ` +
       `${exerces.length} synonyme(s) interdit(s) exercé(s) (docs/GLOSSAIRE.md).`
@@ -1197,14 +1308,8 @@ function lireLeRegistre(): string | Error {
 
 if (APPELE_DIRECTEMENT) {
   const decision = process.argv.includes('--prove')
-    ? decisionDeLaPreuve({
-        temoins: TEMOINS,
-        contreTemoins: CONTRE_TEMOINS,
-        registre: lireLeRegistre(),
-        familles: FAMILLES.map((f) => f.nom),
-        refus: REFUS_DE_CONCLURE,
-      })
-    : decisionDeLaGarde(vueDuDepot(), { racines: RACINES_CODE, extensions: EXTENSIONS_CODE });
+    ? decisionDeLaPreuve(entreesDeLaPreuve(lireLeRegistre()))
+    : decisionDeLaGarde(vueDuDepot());
   (decision.code === 0 ? console.log : console.error)(decision.lignes.join('\n'));
   process.exit(decision.code);
 }

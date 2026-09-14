@@ -24,9 +24,10 @@
  *     syntaxe — une clause `IN (…)` et une comparaison booléenne `x === a || x === b` rougissent
  *     pareil. L'index partiel proposé par les documents d'origine ne couvrait que deux états sur
  *     sept, et rien ne l'a dit pendant des semaines.
- *     Cette garde est la SEULE implémentation de la famille (`partners/ADR-0011`). Sa portée
- *     (`RACINES_CODE`, `EXTENSIONS_CODE`) est exportée : `gov-check.ts` en DÉRIVE, à chaque
- *     exécution, les racines que cette famille ne couvre pas.
+ *     Cette garde est la SEULE implémentation de la famille (`partners/ADR-0011`). Sa portée —
+ *     tout fichier SUIVI sous `RACINES_CODE`, quelle que soit son extension — tient dans
+ *     `dansLaPorteeDesEtats` : la lecture du dépôt en dérive, et `gov-check.ts` en dérive, à chaque
+ *     exécution, ses racines que cette famille ne couvre pas.
  *   — Toute colonne de VOCABULAIRE est un enum. ⚠️ La citation de `REQ-DM-038` — « statut, type,
  *     motif, resultat, etat, origine, kind ou palier » — est le texte du REGISTRE, qui a perdu
  *     `status` et `priorite` à la fusion. La liste EXÉCUTÉE (`NOMS_DE_VOCABULAIRE`) porte les dix
@@ -49,8 +50,8 @@
  * `liste_litterale_d_etats`, comme `gov-identifiants.ts` l'est de la sienne.
  */
 
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
 const CHEMIN_SCHEMA = 'prisma/schema.prisma';
 const CHEMIN_GLOSSAIRE = 'docs/GLOSSAIRE.md';
@@ -59,9 +60,16 @@ const CHEMIN_ETATS = 'src/domain/attribution/etats.ts';
 
 /** Les racines où une liste d'états ou un repli muet ne doivent pas apparaître. */
 export const RACINES_CODE = ['src', 'prisma', 'scripts'] as const;
-/** Les extensions lues sous ces racines. `gov-check.ts` imprime cette portée : elle ne se retape pas. */
-export const EXTENSIONS_CODE = ['ts', 'tsx', 'prisma', 'sql'] as const;
-const MOTIF_EXTENSIONS_CODE = new RegExp(`\\.(${EXTENSIONS_CODE.join('|')})$`);
+
+/**
+ * LA PORTÉE de la famille des listes d'états : tout fichier suivi sous une racine de `RACINES_CODE`,
+ * QUELLE QUE SOIT SON EXTENSION — une liste d'extensions échoue ouvert sur celle qu'elle oublie.
+ * La lecture du dépôt en dérive, et `gov-check.ts` aussi : une racine est dans la portée quand tout
+ * chemin qui commence par elle l'est.
+ */
+export function dansLaPorteeDesEtats(chemin: string): boolean {
+  return RACINES_CODE.some((racine) => chemin.startsWith(`${racine}/`));
+}
 
 /**
  * Les fichiers qui ont le DROIT de porter la liste. CHACUN PORTE SON MOTIF : exempter sans motif,
@@ -387,27 +395,21 @@ export function controler(vue: Vue): Faute[] {
 
 // ── la vue du dépôt ──────────────────────────────────────────────────────────
 
-function lister(racine: string): string[] {
-  if (!existsSync(racine)) return [];
-  const sortie: string[] = [];
-  for (const entree of readdirSync(racine)) {
-    const chemin = join(racine, entree).replace(/\\/g, '/');
-    if (statSync(chemin).isDirectory()) sortie.push(...lister(chemin));
-    else if (MOTIF_EXTENSIONS_CODE.test(chemin)) sortie.push(chemin);
-  }
-  return sortie;
-}
-
 const lireOuVide = (chemin: string): string =>
   existsSync(chemin) ? readFileSync(chemin, 'utf8') : '';
 
+/**
+ * La vue du dépôt. Le code est l'ensemble des fichiers SUIVIS de la portée, lus par la source unique
+ * du périmètre : sans dépôt git, ou lancée hors de sa racine, la garde refuse en le nommant.
+ */
 export function vueDuDepot(): Vue {
+  const suivis = fichiersSuivisOuRefus('partners:schema:enums');
   return {
     reqDm003: texteDeLaReq('REQ-DM-003'),
     glossaire: lireOuVide(CHEMIN_GLOSSAIRE),
     schema: lireOuVide(CHEMIN_SCHEMA),
     etatsSource: lireOuVide(CHEMIN_ETATS),
-    code: RACINES_CODE.flatMap(lister).map((chemin) => ({
+    code: suivis.filter(dansLaPorteeDesEtats).map((chemin) => ({
       chemin,
       contenu: readFileSync(chemin, 'utf8'),
     })),
@@ -646,13 +648,15 @@ if (APPELE_DIRECTEMENT) {
     process.exit(2);
   }
 
-  const fautes = controler(vueDuDepot());
+  const vue = vueDuDepot();
+  const fautes = controler(vue);
   if (fautes.length === 0) {
     const enums = enumsDuSchema(lireOuVide(CHEMIN_SCHEMA));
     const valeurs = [...enums.values()].reduce((n, v) => n + v.length, 0);
     console.log(
       `✅ partners:schema:enums — ${enums.size} enum(s), ${valeurs} valeur(s) confrontées au glossaire ; ` +
-        `ETATS_OCCUPANTS égale REQ-DM-003 ; aucune liste littérale d'états dans ${RACINES_CODE.join(', ')}.`
+        `ETATS_OCCUPANTS égale REQ-DM-003 ; aucune liste littérale d'états dans les ${vue.code.length} ` +
+        `fichier(s) suivi(s) sous ${RACINES_CODE.map((r) => `${r}/`).join(', ')}, toute extension comprise.`
     );
     process.exit(0);
   }

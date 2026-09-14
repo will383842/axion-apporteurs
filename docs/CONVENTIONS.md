@@ -29,7 +29,8 @@
 - `ETATS_OCCUPANTS = {provisoire, active, rdv_pris, proposition, signee, convertie, figee_resiliation}` — constante
   **dérivée de REQ-DM-003**, définie une fois dans `src/domain/attribution/etats.ts`, projetée en SQL par le script de
   migration ; **jamais recopiée** (aucune liste littérale d'états ailleurs : `partners:schema:enums` rougit dès deux
-  états sur une ligne, `partners/ADR-0011`).
+  états sur une ligne, dans tout fichier suivi sous `src`, `prisma` et `scripts` quelle que soit son extension,
+  `partners/ADR-0011`).
 - Machines à états typées : matrice `from × événement → to` ; transition absente = erreur typée, rien n'est écrit.
 - Fonctions d'affichage exhaustives (`switch … never`), jamais de `default` muet.
 
