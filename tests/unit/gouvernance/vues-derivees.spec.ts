@@ -618,6 +618,32 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(Number(m![2]), 'une population de mesures vide dirait toujours oui').toBeGreaterThan(10);
     expect(Number(m![1]), `${m![2]} mesures déclarées, ${m![1]} confrontées : la couche a été vidée sans que rien ne rougisse`).toBe(Number(m![2]));
   });
+  it('RM-02 · aucune famille ne s’échappe par TRANSTYPAGE — la porte que le type laisse ouverte', () => {
+    // 🔴 LA CINQUIÈME FORME, ET CE N'EST PAS UNE CESSATION MAIS UNE ÉVASION DE LA DÉCLARATION.
+    //
+    // `FAMILLES` + le type `Famille` refusent les guillemets doubles, le gabarit, l'espace manquant
+    // — mesuré. Seul un transtypage EXPLICITE passe. La réciproque du témoin de population
+    // l'attrape dès qu'un témoin la tire une fois ; le résidu est la famille transtypée ET jamais
+    // tirée : invisible des deux côtés, donc invisible en production aussi.
+    //
+    // 🔑 A09 · simplicite, 4e tour : « une porte qui exige un transtypage explicite se ferme par une
+    // règle TEXTUELLE, pas par un contrat de domaine ». Ni GOV-055 ni source extérieure : une ligne.
+    const source = readFileSync('scripts/plan-state/build.ts', 'utf8');
+    // ⚠️ CE MOTIF S'EST ECRIT `[ TAB]` PENDANT UN TOUR, et il marchait PAR ACCIDENT :
+    // l'echappement a traverse deux couches, `\t` est devenu le TEXTE « TAB », la classe valait
+    // donc {espace, T, A, B} — et le quantificateur `*` autorise zero occurrence, donc
+    // `famille:` passait quand meme. Une expression qui marche pour une raison qui n'est pas la
+    // sienne cesse de marcher au premier espace insere.
+    const CHAMP = /famille[ \t]*:/;
+    const EVASION = /\bas\s+(never|Famille|any|unknown|string)\b/;
+    const evasions = source
+      .split('\n')
+      .map((l, n) => [n + 1, l] as [number, string])
+      .filter(([, l]) => CHAMP.test(l) && EVASION.test(l))
+      .map(([n, l]) => `${n}: ${l.trim()}`);
+    expect(evasions, 'un transtypage sur le champ `famille` contourne la déclaration').toEqual([]);
+  });
+
   /**
    * LE DERNIER TÉMOIN DU FICHIER, et il ne mesure pas la gate : il mesure LES AUTRES TÉMOINS.
    * Il doit rester en dernier — Vitest exécute dans l'ordre, et `famillesVues` se remplit au fur
