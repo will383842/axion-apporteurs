@@ -39,39 +39,15 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { FAMILLES, type Famille } from '../../../scripts/plan-state/build';
+import { PLANCHER } from '../../../scripts/lot/avancement';
 import { join } from 'node:path';
 
 const TACHES = 'scripts/gates/gov-tasks.ts';
 const EXIGENCES = 'scripts/gates/gov-requirements.ts';
 
-/**
- * 🔴 LES FAMILLES VUES SE COMPTENT, ELLES NE SE SUPPOSENT PAS.
- *
- * A10 · mutation, 2e tour de la PR #36 : trois familles nées de ses propres trouvailles n'avaient
- * AUCUN témoin — désarmer chacune laissait la suite verte. « Elles rougissent aujourd'hui, rien ne
- * les empêche de redevenir muettes. » C'est RM-02 au niveau de la POPULATION : une garde jamais vue
- * rouge n'existe pas, et une famille sans témoin est une garde jamais vue rouge.
- *
- * `lancer` note donc toute famille qui traverse une sortie, et le dernier témoin du fichier
- * confronte cet ensemble à la population DÉRIVÉE du source. Une famille ajoutée au code entre dans
- * la population toute seule, et sort « jamais vue » tant qu'aucun cas ne la tire.
- */
-/**
- * 🔴 L'ACCUMULATEUR RAMASSAIT LES FAMILLES DE TOUTES LES GATES. A09 · simplicite et A10 · mutation,
- * 3e tour : `gov-tasks.ts` et `gov-requirements.ts` impriment aussi leurs familles entre crochets,
- * et `vue_perimee` est un nom que les trois partagent. Une collision certifiait « vue rouge » une
- * famille qu'aucun témoin de plan-state n'avait tirée. **Échoue ouvert, sur la garde qui garde les
- * gardes.** On n'observe donc QUE les sorties du script jugé.
- */
-const famillesVues = new Set<string>();
-
 function lancer(script: string, ...args: string[]): { code: number; sortie: string } {
   const r = spawnSync('npx', ['tsx', script, ...args], { encoding: 'utf8', shell: true });
-  const sortie = (r.stdout ?? '') + (r.stderr ?? '');
-  if (script.includes('plan-state')) {
-    for (const m of sortie.matchAll(/\[([a-z_]+)\]/g)) famillesVues.add(m[1]!);
-  }
-  return { code: r.status ?? 1, sortie };
+  return { code: r.status ?? 1, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
 }
 
 let bac = '';
@@ -252,26 +228,60 @@ describe('REQ-GOV-021 — les deux modes ne dégradent pas les gardes existantes
  * `plan_state_perime` de `gov:etat`, elle, compare une DATE DE COMMIT — un fichier falsifié puis
  * recommité est plus « frais » que le vrai.
  *
- * CE QUE LE VÉRIFICATEUR COMPARE, ET CE QU'IL NE PEUT PAS COMPARER. Cette vue-ci n'a pas que des
- * sources suivies par git : elle porte aussi le SHA d'`origin/main`, la file des PR ouvertes et
- * les labels `owner:` des issues. Comparer le fichier ENTIER mesurerait la disponibilité de `gh`
- * et l'âge de `main` — la garde serait rouge après chaque fusion, chez tout le monde, et on
- * apprendrait à la sauter (RM-02 ; le motif est déjà écrit dans `gov-trace.ts` : « si son contenu
- * dépendait d'un appel réseau, `--verifier` mesurerait la disponibilité de `gh` »). Le périmètre
- * comparé est donc celui des rubriques DÉRIVÉES DE FICHIERS SUIVIS ; il est DÉCLARÉ dans le
- * script, la sortie verte le NOMME, et une rubrique qui n'appartiendrait à aucune des deux listes
- * fait ROUGIR — sans quoi la couverture se périmerait en silence à la première rubrique ajoutée.
+ * CE QUE LE VÉRIFICATEUR COMPARE. Tout, sauf ce que le générateur a LU HORS DU DÉPÔT pour l'écrire
+ * — le SHA d'`origin/main`, la file des PR, les labels `owner:`. Comparer ces éléments mesurerait la
+ * disponibilité de `gh` et l'âge de `main` : rouge après chaque fusion, et on apprendrait à sauter la
+ * garde (RM-02). L'exemption est une PROVENANCE émise par le générateur, pas une liste tapée ; le
+ * témoin « exemption portante » rend la vue sous deux forges et exige que tout ce qui change soit
+ * exempté, et que tout ce qui est exempté change. Une exemption libère le CONTENU de sa zone, jamais
+ * sa STRUCTURE.
  */
 describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-035)', () => {
   const PLAN = 'scripts/plan-state/build.ts';
 
+  /**
+   * 🔴 LES FAMILLES VUES SE LISENT DANS LA SORTIE DU PROCESSUS, PAS DANS LE SOURCE.
+   *
+   * A10 · mutation, 2e tour : trois familles n'avaient aucun témoin — « elles rougissent aujourd'hui,
+   * rien ne les empêche de redevenir muettes ». Le DERNIER témoin de ce bloc confronte donc `FAMILLES`
+   * à ce que ce lanceur a vu sortir, dans les deux sens.
+   *
+   * POURQUOI PAS LE `--prove` DES AUTRES GARDES — A09 · simplicite a nommé la duplication sur `0d00658`,
+   * et elle a raison sur le constat. Ce que `--prove` ne donne pas ici : il compte les familles DANS
+   * le processus qui les produit. Un second canal qui écrit `[x]` sans passer par ce compte, ou une
+   * famille transtypée, lui échappe par construction — c'est la cinquième forme d'évasion qu'A10 ·
+   * mutation a jouée (`tsc` 0 erreur, suite verte). Seule l'observation de la SORTIE du vrai processus
+   * la voit : une ligne `[x]` que `FAMILLES` ne déclare pas, ou une ligne `[famille]` dans une sortie
+   * VERTE. C'est la fermeture qu'A10 · mutation exige ; les deux lentilles ne demandent pas la même
+   * chose, et la divergence est déclarée dans la PR.
+   *
+   * Il ne lance QUE ce script : `vue_perimee` est un nom que trois gates partagent, et un
+   * accumulateur commun certifiait « vue rouge » une famille qu'aucun témoin de plan-state n'avait
+   * tirée (A09 · simplicite et A10 · mutation, 3e tour).
+   */
+  const famillesVues = new Set<string>();
+  const vertsQuiRefusent: string[] = [];
+  function lancerPlan(...args: string[]): { code: number; sortie: string } {
+    const r = lancer(PLAN, ...args);
+    const vues = [...r.sortie.matchAll(/\[([a-z_]+)\]/g)].map((m) => m[1]!);
+    for (const f of vues) famillesVues.add(f);
+    if (r.code === 0 && vues.length > 0) vertsQuiRefusent.push(`${args.join(' ')} → [${vues.join('], [')}]`);
+    return r;
+  }
+
   /** Rend la vue dans le bac à sable. Le `docs/PLAN-STATE.md` du dépôt n'est JAMAIS écrit. */
-  function rendrePlanState(nom: string): string {
+  function rendrePlanState(nom: string, ...args: string[]): string {
     const chemin = join(bac, nom);
-    const { code, sortie } = lancer(PLAN, '--out', chemin);
+    const { code, sortie } = lancerPlan('--out', chemin, ...args);
     expect(code, `le rendu de ${PLAN} a échoué : ${sortie}`).toBe(0);
     expect(existsSync(chemin), `\`--out\` n'a pas écrit dans le bac : ${sortie}`).toBe(true);
     return chemin;
+  }
+
+  /** Les éléments qu'un vert déclare NON COMPARÉS, à un étage donné, lus dans sa sortie. */
+  function exemptes(sortie: string, etage: 'rubriques' | 'lignes du bloc de reprise'): string[] {
+    const ligne = new RegExp(`NON COMPARÉ — ${etage} : (.*)$`, 'm').exec(sortie)?.[1] ?? '';
+    return [...ligne.matchAll(/«\s([^»]+?)\s»\s\(/g)].map((m) => m[1]!);
   }
 
   /**
@@ -309,13 +319,13 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
 
   it('REQ-GOV-032 · CONTRE-TÉMOIN : une vue FRAÎCHEMENT rendue est déclarée égale à ses sources', () => {
     const vue = rendrePlanState('PLAN-STATE-frais.md');
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(sortie).toContain('✅');
     expect(code, `une vue rendue à l'instant est jugée périmée : ${sortie}`).toBe(0);
   });
 
   it('REQ-GOV-032 · CONTRE-TÉMOIN : la vue COMMITÉE du dépôt est égale à ce que ses sources produisent', () => {
-    const { code, sortie } = lancer(PLAN, '--verifier');
+    const { code, sortie } = lancerPlan('--verifier');
     expect(sortie).toContain('✅');
     expect(code, `docs/PLAN-STATE.md a dérivé de ses sources : ${sortie}`).toBe(0);
   });
@@ -335,7 +345,7 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(titres(faux), 'le témoin a bougé une ancre : il n’exerce plus la cécité mesurée').toEqual(titres(rendu));
     writeFileSync(vue, faux);
 
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une vue falsifiée est déclarée conforme : ${sortie}`).toBe(1);
 
     // Le message NOMME l'écart en unités du domaine (REQ-GOV-032) : des TÂCHES, des JOURS.
@@ -368,7 +378,7 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     );
     expect(faux, 'aucune ligne « Ce qui bloque » dans la vue : le témoin ne falsifie rien').not.toBe(rendu);
     writeFileSync(vue, faux);
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une ligne falsifiée passe : ${sortie}`).toBe(1);
     expect(sortie, `l'écart n'est pas nommé en tâches bloquées : ${sortie}`).toMatch(/bloqu/i);
   });
@@ -398,21 +408,18 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const titres = (t: string) => t.split('\n').filter((l) => l.startsWith('## ')).join('|');
     expect(titres(faux), 'le témoin ne doit PAS toucher aux titres, sinon il rougit par la structure').toBe(titres(rendu));
     writeFileSync(vue, faux);
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une dérive à longueur constante DOIT sortir 1 : ${sortie}`).toBe(1);
     expect(sortie, "c'est la comparaison d'OCTETS qui doit tirer, pas la structure").toMatch(/vue_perimee/);
     expect(sortie, 'aucune rubrique ne manque ni n’est en trop dans ce témoin').not.toMatch(/rubrique_(manquante|en_trop)/);
   });
 
   it('REQ-GOV-032 · une rubrique que le générateur ne produit PAS fait rougir, et elle est NOMMÉE', () => {
-    // 🔴 CE TÉMOIN S'APPELAIT « rubrique INCONNUE du périmètre ». La famille `rubrique_non_classee`
-    // n'existe plus : depuis que `comparee` se DÉRIVE (« ni volatile, ni le bloc de reprise »),
-    // aucune rubrique n'est inconnue — une rubrique neuve est COMPARÉE. A10 · mutation avait montré
-    // que ce témoin tirait de toute façon par `rubrique_en_trop`, quel que soit le classement :
-    // il ne mesurait donc pas ce que son nom annonçait. Il dit maintenant ce qu'il fait.
+    // Depuis que `comparee` se DÉRIVE, aucune rubrique n'est « inconnue » : une rubrique neuve est
+    // COMPARÉE. Ce témoin tire donc par `rubrique_en_trop`, et il le dit.
     const vue = rendrePlanState('PLAN-STATE-rubrique-inconnue.md');
     writeFileSync(vue, readFileSync(vue, 'utf8') + '\n## Rubrique inventée à la main\n\nrien.\n');
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une rubrique hors périmètre passe : ${sortie}`).toBe(1);
     expect(sortie).toMatch(/rubrique_en_trop/);
     expect(sortie).toMatch(/Rubrique inventée à la main/);
@@ -421,13 +428,10 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
   it('REQ-GOV-032 · l’écart est nommé EN UNITÉS DU DOMAINE — le témoin exclusif de cette couche', () => {
     // 🔴 A10 · mutation, PR #36 : désarmer TOUTE la couche des mesures du domaine
     // (`else if (vu !== valeur)` → `else if (false)`) laissait les dix cas VERTS. C'est pourtant
-    // l'exigence CENTRALE de REQ-GOV-032 : « l'écart est nommé en unités du domaine — nombre de
-    // tâches livrées, nombre d'exigences — et non "les deux fichiers diffèrent" ».
+    // l'exigence CENTRALE de REQ-GOV-032.
     //
-    // Le piège est qu'un chiffre falsifié fait AUSSI rougir la comparaison ligne à ligne : le code
-    // de sortie ne discrimine donc rien. Ce témoin n'assert pas `code === 1` — il exige le MESSAGE
-    // que seule cette couche sait produire. C'est la leçon « un témoin qui bouge pour deux raisons
-    // ne discrimine rien », appliquée au témoin lui-même.
+    // Un chiffre falsifié fait AUSSI rougir la comparaison ligne à ligne : le code de sortie ne
+    // discrimine donc rien. Ce témoin exige le MESSAGE que seule cette couche sait produire.
     const vue = rendrePlanState('PLAN-STATE-unites-du-domaine.md');
     const rendu = readFileSync(vue, 'utf8');
     const m = /(\d+)\/(\d+) tâches/.exec(rendu);
@@ -435,66 +439,40 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const faux = rendu.replace(`${m![1]}/${m![2]} tâches`, `${m![2]}/${m![2]} tâches`);
     expect(faux, 'le témoin doit vraiment falsifier').not.toBe(rendu);
     writeFileSync(vue, faux);
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `un compteur falsifié DOIT sortir 1 : ${sortie}`).toBe(1);
-    // L'ASSERTION QUI COMPTE : le nom du domaine, les deux valeurs, et la forme « dit X, produisent Y ».
     expect(sortie, "l'écart doit être nommé en TÂCHES, pas « les deux fichiers diffèrent »")
       .toMatch(new RegExp(`tâches terminées[^\n]*dit ${m![2]}[^\n]*produisent ${m![1]}`));
   });
+
   it('REQ-GOV-032 · le compte des rubriques est DÉRIVÉ du rendu, jamais retapé (il ne voit PAS une rubrique disparue — GOV-055)', () => {
     // ⚠️ CE QUE CE TÉMOIN NE GARDE PAS, ET IL FAUT LE LIRE AVANT DE S'Y FIER.
     //
-    // Sa première rédaction prétendait fermer l'échappée d'A10 — « retirer une rubrique du
-    // générateur fait tomber la couverture de 9 à 8 en silence ». **Elle ne la ferme pas**, et
-    // A09 · exactitude l'a mesuré : neutraliser la poussée de `## Bloquées` puis régénérer rend
-    // « ✅ 8 rubrique(s) comparée(s) », EXIT 0, et ce témoin reste VERT — parce qu'il dérive son
-    // attendu du MÊME rendu amputé. **Un témoin qui tire sa référence de son sujet ne peut pas
-    // voir ce que le sujet a perdu.**
+    // Neutraliser l'émission de `## Bloquées` puis régénérer rend « 8 rubrique(s) comparée(s) »,
+    // EXIT 0, et ce témoin reste VERT — parce qu'il dérive son attendu du MÊME rendu amputé
+    // (A09 · exactitude). **Un témoin qui tire sa référence de son sujet ne peut pas voir ce que le
+    // sujet a perdu.** Il y faut une source EXTÉRIEURE qui énumère les rubriques dues : versé en
+    // **GOV-055**, jamais maquillé.
     //
-    // 🔑 Et ce n'est pas réparable ici : comparer un générateur à lui-même ne détectera jamais une
-    // rubrique qu'il a cessé de produire. Il y faut une source EXTÉRIEURE qui énumère les rubriques
-    // dues — REQ-GOV-006 n'en nomme que six, toutes volatiles. C'est un contrat qui manque, pas un
-    // test à corriger : versé en **GOV-055**, jamais maquillé.
-    //
-    // CE QU'IL GARDE VRAIMENT, et c'est déjà utile : que le compte annoncé soit DÉRIVÉ du rendu et
-    // non retapé. Il rougirait si quelqu'un remettait une liste.
+    // CE QU'IL GARDE VRAIMENT : que le compte annoncé soit DÉRIVÉ du rendu et non retapé.
     const vue = rendrePlanState('PLAN-STATE-couverture.md');
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `la vue fraîche doit être verte : ${sortie}`).toBe(0);
     const m = /(\d+) rubrique\(s\) comparée\(s\)/.exec(sortie);
     expect(m, `le vert doit annoncer un compte de rubriques : ${sortie}`).not.toBeNull();
     const titres = readFileSync(vue, 'utf8').split('\n').filter((l) => l.startsWith('## '));
-    // 🔴 CETTE LISTE ÉTAIT RETAPÉE ICI — la copie que la suppression de `RUBRIQUES_COMPAREES` avait
-    // laissée derrière elle (A09 · exactitude, pour A09 · simplicite). Elle se dérive de la source :
-    // le module exporte ses exemptions, le témoin les lit. Une exemption ajoutée au code entre donc
-    // dans ce témoin toute seule.
     // La liste se dérive de ce que le VERT annonce ne pas avoir comparé — la seule source qui soit
     // à la fois lisible d'ici et garantie à jour, puisque c'est la gate elle-même qui l'imprime.
-    const volatiles = [
-      ...[...sortie.matchAll(/«\s([^»]+?)\s»\s\(/g)].map((m) => m[1]!),
-      'REPRENDRE EN 30 SECONDES',
-    ];
+    const volatiles = [...exemptes(sortie, 'rubriques'), 'REPRENDRE EN 30 SECONDES'];
     // +1 : la rubrique `(en-tête)`, le texte d'avant le premier `## `, qui est comparée aussi.
     const attendu = titres.filter((t) => !volatiles.includes(t.slice(3).trim())).length + 1;
     expect(Number(m![1]), 'le compte annoncé doit être celui des rubriques RÉELLEMENT comparées').toBe(attendu);
   });
 
-  /**
-   * LES QUATRE TÉMOINS CI-DESSOUS SONT NÉS DU TÉMOIN DE POPULATION, pas d'une intuition.
-   * Posé, il a immédiatement nommé quatre familles que la gate savait émettre et qu'aucun cas ne
-   * tirait : `rubrique_dupliquee`, `rubrique_manquante`, `mesure_absente`,
-   * `ligne_de_reprise_dupliquee`. C'est exactement ce qu'A10 · mutation reprochait au tour 2 —
-   * « elles rougissent aujourd'hui, rien ne les empêche de redevenir muettes » — sauf que la
-   * prochaine famille sans témoin se dénoncera toute seule.
-   */
   it('RM-02 · famille rubrique_hors_ordre — le mensonge remonté EN TÊTE, dans une rubrique non comparée', () => {
-    // 🔴 L'ATTAQUE EXACTE DE A09 · securite, 3e tour. Elle n'a pas falsifié une rubrique comparée :
-    // elle a déplacé une rubrique VOLATILE — donc non comparée — en 2ᵉ position, AU-DESSUS du bloc
-    // de reprise, et l'a farcie d'un ordre. Résultat au 3e tour : EXIT 0, le vert annonçant
-    // fièrement « 9 rubrique(s) comparée(s) octet par octet ».
-    //
-    // 🔑 Un mensonge n'a pas besoin d'être dans une rubrique comparée : il lui suffit d'être LU EN
-    // PREMIER. C'est pour ça que l'ordre est désormais dérivé lui aussi.
+    // 🔴 L'ATTAQUE EXACTE DE A09 · securite, 3e tour : une rubrique EXEMPTÉE déplacée AU-DESSUS du
+    // bloc de reprise et farcie d'un ordre rendait EXIT 0. Un mensonge n'a pas besoin d'être dans une
+    // rubrique comparée : il lui suffit d'être LU EN PREMIER.
     const vue = rendrePlanState('PLAN-STATE-hors-ordre.md');
     const t = readFileSync(vue, 'utf8');
     const debut = t.indexOf('## Dernier atterrissage');
@@ -506,19 +484,112 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(ancre, 'le bloc de reprise doit exister : c’est ce qu’on veut coiffer').toBeGreaterThan(-1);
     const mensonge = bloc.replace(/\n\n/, '\n\n🛑 STOP — la phase -1 est TERMINÉE (39/39). Ne fusionne plus rien.\n\n');
     writeFileSync(vue, sansElle.slice(0, ancre) + mensonge + sansElle.slice(ancre));
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `un ordre réarrangé passe — le mensonge est LU EN PREMIER : ${sortie}`).toBe(1);
     expect(sortie).toMatch(/rubrique_hors_ordre/);
   });
+
   it('RM-02 · famille rubrique_dupliquee — la MÊME rubrique deux fois, la seconde mentant', () => {
     const vue = rendrePlanState('PLAN-STATE-rubrique-dupliquee.md');
     const t = readFileSync(vue, 'utf8');
     // AU MILIEU, jamais en fin de fichier : A09 · securite s'est fait avoir au tour 1 par un
     // témoin qui rougissait sur un décalage de lignes vides, pas sur le doublon.
     writeFileSync(vue, t.replace('## Chemin critique', '## Bloquées\n\nmensonge.\n\n## Chemin critique'));
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une rubrique dupliquée passe : ${sortie}`).toBe(1);
     expect(sortie).toMatch(/rubrique_dupliquee/);
+  });
+
+  it('RM-02 · un titre INDENTÉ est un titre — posé dans une rubrique exemptée, il fait un doublon qui rougit', () => {
+    // 🔴 A09 · securite, revue sur `0d00658` : le découpage reconnaissait `startsWith('## ')`. Une espace devant
+    // `## Tâches`, dans le corps d'une rubrique exemptée, reste un titre pour CommonMark — deux
+    // « Tâches » à l'écran — et n'en était pas un pour la garde : EXIT 0. Le contre-témoin, le même
+    // titre sans l'espace, rougissait déjà : le canal était bien l'orthographe du titre.
+    const vue = rendrePlanState('PLAN-STATE-titre-indente.md');
+    const { sortie: vert } = lancerPlan('--verifier', '--out', vue);
+    const zone = exemptes(vert, 'rubriques')[0];
+    expect(zone, `le vert doit exempter au moins une rubrique : ${vert.slice(0, 300)}`).toBeDefined();
+    const t = readFileSync(vue, 'utf8');
+    expect(t, 'la rubrique comparée `Tâches` doit exister pour qu’on la double').toContain('\n## Tâches\n');
+    writeFileSync(vue, t.replace(`\n## ${zone}\n\n`, `\n## ${zone}\n\n ## Tâches\n\n| \`a_faire\` | 0 | mensonge |\n\n`));
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
+    expect(code, `un titre indenté dans « ${zone} » passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/rubrique_dupliquee/);
+  });
+
+  it('RM-02 · famille structure_dans_une_exemption — une zone exemptée ne masque ni ne double rien au rendu', () => {
+    // 🔴 A09 · securite, revue sur `0d00658` : un bloc HTML jamais refermé dans le corps de « File de fusion »
+    // effaçait à l'écran « Journal » et « Dette déclarée », deux rubriques COMPARÉES, EXIT 0. Les quatre
+    // premières formes sont les quatre ouvertures que la garde déclare — un bloc HTML, un titre derrière
+    // un conteneur, un titre Setext, une clôture de code — posées dans une rubrique exemptée ; la
+    // cinquième est un bloc HTML en tête de la PROSE exemptée du bloc de reprise, l'autre zone contenue.
+    // Chacune doit tirer CETTE famille : retirer une ouverture ou une zone de la garde en fait sortir une.
+    const vue = rendrePlanState('PLAN-STATE-structure.md');
+    const { sortie: vert } = lancerPlan('--verifier', '--out', vue);
+    const zone = exemptes(vert, 'rubriques')[0];
+    expect(zone, `le vert doit exempter au moins une rubrique : ${vert.slice(0, 300)}`).toBeDefined();
+    const t = readFileSync(vue, 'utf8');
+    expect(t).toContain(`\n## ${zone}\n\n`);
+    const p = '**Ce qu’on tape maintenant.**';
+    expect(t, 'la prose du bloc doit exister pour qu’on la préfixe').toContain(p);
+    const cas: [string, string][] = [
+      ...['<!--', '> ## Bloquées', 'Bloquées\n---', '```'].map(
+        (charge): [string, string] => [`${JSON.stringify(charge)} dans « ${zone} »`, t.replace(`\n## ${zone}\n\n`, `\n## ${zone}\n\n${charge}\n`)]
+      ),
+      ['"<!--" en tête de la prose exemptée du bloc de reprise', t.replace(p, `<!-- ${p}`)],
+    ];
+    const echappees: string[] = [];
+    for (const [k, [nom, texte]] of cas.entries()) {
+      expect(texte, `le cas ${nom} n'a rien injecté`).not.toBe(t);
+      const chemin = join(bac, `PLAN-STATE-structure-${k}.md`);
+      writeFileSync(chemin, texte);
+      const { code, sortie } = lancerPlan('--verifier', '--out', chemin);
+      if (code !== 1 || !/structure_dans_une_exemption/.test(sortie)) echappees.push(`${nom} → code ${code}`);
+    }
+    expect(echappees, 'structure(s) de bloc acceptée(s) dans une zone exemptée').toEqual([]);
+  });
+
+  it('RM-02 · famille fin_de_ligne_non_lf — un retour chariot dans une prose exemptée ne découpe rien en silence', () => {
+    // 🔴 A09 · securite, revue sur `0d00658` : la garde découpait sur LF seul, CommonMark coupe aussi sur CR. La
+    // prose exemptée prolongée par un CR puis `<!--` restait UNE ligne pour la garde et en devenait
+    // deux au rendu — le bloc HTML avalait « Tâches », « Chemin critique » et « Journal », EXIT 0.
+    const vue = rendrePlanState('PLAN-STATE-retour-chariot.md');
+    const t = readFileSync(vue, 'utf8');
+    const p = '**Ce qu’on tape maintenant.**';
+    expect(t, 'la prose du bloc doit exister pour qu’on la prolonge').toContain(p);
+    writeFileSync(vue, t.replace(p, `${p} suite.\r<!--`));
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
+    expect(code, `un CR dans une zone exemptée passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/fin_de_ligne_non_lf/);
+  });
+
+  it('REQ-GOV-032 · la FORME du bloc de reprise est dérivée — une ligne exemptée ne change pas de place', () => {
+    // Une ligne exemptée est libre de CONTENU, pas de PLACE : remontée au-dessus de l'en-tête du
+    // tableau, elle en casse le rendu, lignes comparées comprises. Chaque question reste présente
+    // des deux côtés — seule la forme peut tirer ici.
+    const vue = rendrePlanState('PLAN-STATE-forme-du-bloc.md');
+    const t = readFileSync(vue, 'utf8');
+    const ligne = t.split('\n').find((l) => l.startsWith('| Où est `main` ?'));
+    expect(ligne, 'la ligne « Où est `main` ? » doit exister pour qu’on la déplace').toBeDefined();
+    writeFileSync(vue, t.replace(`${ligne}\n`, '').replace('| Question | Réponse |', `${ligne}\n| Question | Réponse |`));
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
+    expect(code, `une ligne déplacée dans le bloc passe : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/FORME du bloc/);
+  });
+
+  it('RM-02 · une prose SUPPLÉMENTAIRE dans le bloc rougit — le rang d’une prose est dérivé', () => {
+    // 🔴 A10 · mutation, 2e tour : une prose supplémentaire portant le préfixe exempté était
+    // invisible. Il n'y a plus de préfixe : les proses se confrontent par RANG, et une prose de
+    // trop est un écart nommé.
+    const vue = rendrePlanState('PLAN-STATE-prose-en-trop.md');
+    const t = readFileSync(vue, 'utf8');
+    const p = '**Ce qu’on tape maintenant.**';
+    expect(t, 'la prose du bloc doit exister pour qu’on la double').toContain(p);
+    writeFileSync(vue, t.replace(p, `${p} NE FUSIONNEZ PLUS RIEN.\n\n${p}`));
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
+    expect(code, `deux proses passent : ${sortie}`).toBe(1);
+    expect(sortie).toMatch(/vue_perimee/);
+    expect(sortie).toMatch(/prose n°2/);
   });
 
   it('RM-02 · famille rubrique_manquante — une rubrique produite par les sources, absente du disque', () => {
@@ -528,7 +599,7 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const suite = t.indexOf('\n## ', debut + 1);
     expect(debut, 'la rubrique doit exister pour qu’on puisse la retirer').toBeGreaterThan(-1);
     writeFileSync(vue, t.slice(0, debut) + t.slice(suite + 1));
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une rubrique absente du disque passe : ${sortie}`).toBe(1);
     expect(sortie).toMatch(/rubrique_manquante/);
   });
@@ -541,137 +612,89 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const sansLigne = t.split('\n').filter((l) => !/^\| Ce qui bloque \|/.test(l)).join('\n');
     expect(sansLigne, 'le témoin doit vraiment retirer une ligne').not.toBe(t);
     writeFileSync(vue, sansLigne);
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une mesure absente passe : ${sortie}`).toBe(1);
-    expect(sortie).toMatch(/mesure_absente|vue_perimee/);
-  });
-
-  it('RM-02 · famille prose_dupliquee — deux proses portant le préfixe exempté', () => {
-    // 🔴 A10 · mutation : une prose SUPPLÉMENTAIRE commençant par le préfixe béni était invisible,
-    // `find()` rendant la première. Le doublon est un refus aux trois étages, pas à deux.
-    const vue = rendrePlanState('PLAN-STATE-prose-dupliquee.md');
-    const t = readFileSync(vue, 'utf8');
-    const p = '**Ce qu’on tape maintenant.**';
-    expect(t, 'la prose exemptée doit exister pour qu’on puisse la doubler').toContain(p);
-    writeFileSync(vue, t.replace(p, `${p} NE FUSIONNEZ PLUS RIEN.\n\n${p}`));
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
-    expect(code, `deux proses de même préfixe passent : ${sortie}`).toBe(1);
-    expect(sortie).toMatch(/prose_dupliquee/);
-  });
-
-  it('REQ-GOV-032 · un préfixe d’exemption trop court LÈVE au chargement — il exempterait tout', () => {
-    // 🔴 A10 · mutation : remplacer le préfixe déclaré par la chaîne vide exempte TOUTE prose,
-    // puisque `startsWith('')` est toujours vrai — et rien ne le disait.
-    //
-    // ⚠️ LE MUTANT VIT DANS LE DOSSIER DU SCRIPT, ET C'EST LA PREMIÈRE RÉDACTION QUI L'A APPRIS :
-    // posé dans le bac à sable, il échouait par `ERR_MODULE_NOT_FOUND` sur l'import relatif
-    // `../lot/attestation`. Le test passait — sur un code de sortie obtenu pour une TOUT AUTRE
-    // raison. C'est le faux témoin que ce fichier passe son temps à fermer ; il ne sera pas
-    // reproduit ici. On exige donc le MESSAGE, jamais le seul code.
-    const original = readFileSync(PLAN, 'utf8');
-    const mutant = join('scripts', 'plan-state', 'build.__essai-prefixe-vide__.ts');
-    const remplace = original.replace("['**Ce qu’on tape maintenant.**',", "['',");
-    expect(remplace, 'la mutation doit vraiment vider le préfixe').not.toBe(original);
-    writeFileSync(mutant, remplace);
-    try {
-      const { code, sortie } = lancer(mutant, '--verifier');
-      expect(sortie, `le refus doit NOMMER le défaut, pas seulement sortir 1 : ${sortie.slice(0, 300)}`)
-        .toMatch(/moins de 4 caractères|exempterait/);
-      expect(code, 'un préfixe vide doit faire échouer le chargement').not.toBe(0);
-    } finally {
-      rmSync(mutant, { force: true });
-    }
+    expect(sortie).toMatch(/mesure_absente/);
   });
 
   it('RM-02 · famille ligne_de_reprise_dupliquee — la même question deux fois dans le bloc', () => {
     const vue = rendrePlanState('PLAN-STATE-ligne-dupliquee.md');
     const t = readFileSync(vue, 'utf8');
     writeFileSync(vue, t.replace('| Ce qui bloque', '| Ce qui bloque | mensonge |\n| Ce qui bloque'));
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une question dupliquée passe : ${sortie}`).toBe(1);
     expect(sortie).toMatch(/ligne_de_reprise_dupliquee/);
   });
-  it('RM-02 · la population des MESURES est confrontée EN ENTIER — la quatrième vidable', () => {
-    // 🔴 A10 · mutation, 3e tour : désarmer 21 des 23 mesures laissait la suite VERTE. Re-mesuré
-    // après avoir fait ÉNUMÉRER le vert : toujours vert — l'énumération rend le trou visible, elle
-    // ne le rend pas rouge. (A09 · exactitude affirmait l'inverse ; la mesure a tranché.)
-    //
-    // Le vert annonce `X/Y` : X ce qu'il a confronté, Y la population déclarée. Aucun littéral ici,
+
+  it('RM-02 · la population des MESURES est confrontée EN ENTIER, et elle porte chaque statut du barème', () => {
+    // Le vert annonce `X/Y` : X les mesures lues dans le rendu, Y la population. Aucun littéral ici,
     // les deux nombres viennent de la sortie.
     //
-    // ⚠️ CE QU'IL ATTRAPE, ET CE QU'IL N'ATTRAPE PAS — mesuré dans les deux sens, parce que trois
-    // témoins de ce fichier ont déjà prétendu fermer ce qu'ils ne fermaient pas.
+    // ⚠️ CE QU'IL ATTRAPE, ET CE QU'IL N'ATTRAPE PAS — mesuré dans les deux sens :
+    //   une regex qui CESSE DE CORRESPONDRE (la vue change de forme) → X tombe, Y reste → ROUGE ici ;
+    //   une LECTURE RETIRÉE de la table → X et Y tombent ENSEMBLE → VERT ici. La valeur retirée reste
+    //       comparée octet par octet dans sa rubrique ; seul son nom de domaine se perd. Comparer un
+    //       générateur à lui-même ne voit pas ce qu'il a cessé de lire : c'est GOV-055.
     //
-    //   une regex qui CESSE DE CORRESPONDRE (la vue change de forme, la mesure n'est plus lue)
-    //       → X tombe, Y reste  → ROUGE ✅  C'est le mode de panne réel.
-    //   une LECTURE RETIRÉE de la table
-    //       → X et Y tombent ENSEMBLE → vert ❌
-    //
-    // La seconde est la limite de **GOV-055** : `MESURES_ATTENDUES` dérive de `LECTURES`, donc la
-    // population et l'observation viennent de la même source, et « la soustraction reste vide par
-    // construction » (A10 · mutation). Comparer un générateur à lui-même ne verra jamais ce qu'il a
-    // cessé de produire — c'est le même mur, à la quatrième population. GOV-055 le porte.
-    const { code, sortie } = lancer(PLAN, '--verifier');
-    expect(code, `la vue du dépôt doit être verte pour que ce témoin ait un sens : ${sortie}`).toBe(0);
+    // 🔴 LE PLANCHER `toBeGreaterThan(10)` A DISPARU (A10 · mutation, revue sur `0d00658`) : un seuil tapé sur la
+    // population que le témoin surveille est un COMPTE, pas une COUVERTURE — la moitié de la couche
+    // tenait dessous. À sa place, la seule part de la population qui a une source HORS de `build.ts` :
+    // une mesure par statut de `PLANCHER`, lue dans la sortie.
+    const { code, sortie } = lancerPlan('--verifier', '--out', rendrePlanState('PLAN-STATE-mesures.md'));
+    expect(code, `la vue fraîche doit être verte pour que ce témoin ait un sens : ${sortie}`).toBe(0);
     const m = /(\d+)\/(\d+) mesure\(s\) du domaine CONFRONTÉES/.exec(sortie);
     expect(m, `le vert doit annoncer X/Y mesures : ${sortie.slice(0, 300)}`).not.toBeNull();
-    expect(Number(m![2]), 'une population de mesures vide dirait toujours oui').toBeGreaterThan(10);
-    expect(Number(m![1]), `${m![2]} mesures déclarées, ${m![1]} confrontées : la couche a été vidée sans que rien ne rougisse`).toBe(Number(m![2]));
-  });
-  it('RM-02 · aucune famille ne s’échappe par TRANSTYPAGE — la porte que le type laisse ouverte', () => {
-    // 🔴 LA CINQUIÈME FORME, ET CE N'EST PAS UNE CESSATION MAIS UNE ÉVASION DE LA DÉCLARATION.
-    //
-    // `FAMILLES` + le type `Famille` refusent les guillemets doubles, le gabarit, l'espace manquant
-    // — mesuré. Seul un transtypage EXPLICITE passe. La réciproque du témoin de population
-    // l'attrape dès qu'un témoin la tire une fois ; le résidu est la famille transtypée ET jamais
-    // tirée : invisible des deux côtés, donc invisible en production aussi.
-    //
-    // 🔑 A09 · simplicite, 4e tour : « une porte qui exige un transtypage explicite se ferme par une
-    // règle TEXTUELLE, pas par un contrat de domaine ». Ni GOV-055 ni source extérieure : une ligne.
-    const source = readFileSync('scripts/plan-state/build.ts', 'utf8');
-    // ⚠️ CE MOTIF S'EST ECRIT `[ TAB]` PENDANT UN TOUR, et il marchait PAR ACCIDENT :
-    // l'echappement a traverse deux couches, `\t` est devenu le TEXTE « TAB », la classe valait
-    // donc {espace, T, A, B} — et le quantificateur `*` autorise zero occurrence, donc
-    // `famille:` passait quand meme. Une expression qui marche pour une raison qui n'est pas la
-    // sienne cesse de marcher au premier espace insere.
-    const CHAMP = /famille[ \t]*:/;
-    const EVASION = /\bas\s+(never|Famille|any|unknown|string)\b/;
-    const evasions = source
-      .split('\n')
-      .map((l, n) => [n + 1, l] as [number, string])
-      .filter(([, l]) => CHAMP.test(l) && EVASION.test(l))
-      .map(([n, l]) => `${n}: ${l.trim()}`);
-    expect(evasions, 'un transtypage sur le champ `famille` contourne la déclaration').toEqual([]);
+    expect(Number(m![1]), `${m![2]} mesures déclarées, ${m![1]} confrontées : une lecture ne correspond plus à la vue`).toBe(Number(m![2]));
+    const confrontees = (/CONFRONTÉ — mesures du domaine : (.*)\.$/m.exec(sortie)?.[1] ?? '').split(' · ');
+    const statutsSansMesure = Object.keys(PLANCHER).filter((s) => !confrontees.includes(`tâches \`${s}\``));
+    expect(statutsSansMesure, 'statut(s) du barème qui ne sont plus une mesure du domaine').toEqual([]);
   });
 
-  /**
-   * LE DERNIER TÉMOIN DU FICHIER, et il ne mesure pas la gate : il mesure LES AUTRES TÉMOINS.
-   * Il doit rester en dernier — Vitest exécute dans l'ordre, et `famillesVues` se remplit au fur
-   * et à mesure.
-   */
-  it('RM-02 · CHAQUE famille que la gate sait émettre a été VUE ROUGE par un témoin de ce fichier', () => {
-    // 🔴 LA POPULATION VIENT DE LA VALEUR, PLUS D'UNE REGEX SUR DU SOURCE.
-    //
-    // A10 · mutation a nommé l'impossibilité de la rédaction précédente : le motif de la
-    // POPULATION et celui de l'OBSERVATION partageaient la même classe de caractères, donc « ce
-    // qui sort de l'une sort de l'autre au même instant, et la soustraction reste vide PAR
-    // CONSTRUCTION ». Cinq formes d'émission, quatre invisibles, suite verte.
-    //
-    // `FAMILLES` est désormais une valeur exportée et `Famille` le type qui en dérive : le
-    // compilateur refuse toute famille absente de la liste, quelle que soit la façon dont elle est
-    // écrite. Le témoin lit la liste, plus le texte — il n'y a plus de prédicat à contourner.
-    const population = [...FAMILLES].sort();
-    expect(population.length, 'une population vide dirait toujours oui').toBeGreaterThan(3);
-    const muettes = population.filter((f) => !famillesVues.has(f));
-    expect(muettes, `famille(s) que la gate sait émettre et qu'AUCUN témoin n'a vue rougir : ${muettes.join(', ')}`).toEqual([]);
-    // ET LA RÉCIPROQUE : une famille VUE qui n'est pas déclarée est un trou symétrique — elle
-    // prouverait que `FAMILLES` a cessé d'être la source.
-    const inconnues = [...famillesVues].filter((f) => !population.includes(f as Famille));
-    expect(inconnues, `famille(s) émise(s) par la gate et ABSENTE(S) de FAMILLES : ${inconnues.join(', ')}`).toEqual([]);
+  it('REQ-GOV-032 · une exemption est PORTANTE : sous une autre forge, tout ce qui change est exempté, et tout ce qui est exempté change', () => {
+    // 🔴 A10 · mutation, revue sur `0d00658` : les exemptions étaient trois listes tapées — élargies aux neuf
+    // questions, « 0 ligne(s) CONFRONTÉES », EXIT 0 ; `['Bloquées', '']` sans motif sortait une
+    // rubrique falsifiée du contrôle, EXIT 0. Elles sont désormais la PROVENANCE que le générateur émet
+    // en lisant la forge. Ce témoin garde les deux faces de cette provenance :
+    //   (1) la vue rendue sous la forge A, jugée sous la forge B, est VERTE — un élément comparé qui
+    //       dépendrait de la forge rougirait ici : c'est l'argument « comparer tout mesurerait `gh` »,
+    //       enfin mesuré au lieu d'être affirmé ;
+    //   (2) chaque élément que ce vert exempte DIFFÈRE entre A et B — une lecture GRATUITE de la
+    //       forge, posée pour sortir une rubrique du contrôle, laisse son texte identique et rougit ici.
+    const forgeA = join(bac, 'forge-a.json');
+    const forgeB = join(bac, 'forge-b.json');
+    writeFileSync(forgeA, JSON.stringify({
+      prs: [{ number: 9001, headRefName: 't/temoin-a', mergeStateStatus: 'CLEAN', isDraft: false, title: 'forge A' }],
+      issues: '[]',
+      main: { sha: 'aaaaaaa', date: '2026-01-01T00:00:00+00:00' },
+    }));
+    writeFileSync(forgeB, JSON.stringify({ prs: [], issues: '', main: { sha: 'bbbbbbb', date: '2026-02-02T00:00:00+00:00' } }));
+    const a = rendrePlanState('PLAN-STATE-forge-a.md', '--forge', forgeA);
+    const b = rendrePlanState('PLAN-STATE-forge-b.md', '--forge', forgeB);
+
+    const { code, sortie } = lancerPlan('--verifier', '--out', a, '--forge', forgeB);
+    expect(code, `(1) un élément COMPARÉ dépend de la forge : ${sortie}`).toBe(0);
+
+    const rubriques = exemptes(sortie, 'rubriques');
+    const lignesDuBloc = exemptes(sortie, 'lignes du bloc de reprise');
+    expect(rubriques.length + lignesDuBloc.length, `le vert n'exempte rien : ce témoin ne prouve rien — ${sortie.slice(0, 300)}`).toBeGreaterThan(0);
+    const tA = readFileSync(a, 'utf8');
+    const tB = readFileSync(b, 'utf8');
+    const corps = (t: string, titre: string) => t.split(/^## /m).find((bl) => (bl.split('\n')[0] ?? '').trim() === titre);
+    const ligneDuBloc = (t: string, nom: string) => {
+      const lignes = (corps(t, 'REPRENDRE EN 30 SECONDES') ?? '').split('\n').slice(1);
+      const rang = /^prose n°(\d+)$/.exec(nom);
+      if (rang) return lignes.filter((l) => l.trim() !== '' && !l.startsWith('|'))[Number(rang[1]) - 1];
+      return lignes.find((l) => l.startsWith('|') && (l.split('|')[1] ?? '').trim() === nom);
+    };
+    const inertes = [
+      ...rubriques.filter((r) => corps(tA, r) === corps(tB, r)).map((r) => `rubrique « ${r} »`),
+      ...lignesDuBloc.filter((q) => ligneDuBloc(tA, q) === ligneDuBloc(tB, q)).map((q) => `ligne « ${q} »`),
+    ];
+    expect(inertes, '(2) exemption(s) dont le texte ne dépend PAS de la forge').toEqual([]);
   });
 
   it('REQ-GOV-032 · une vue ABSENTE est un rouge qui le dit, jamais un vert par défaut', () => {
-    const { code, sortie } = lancer(PLAN, '--verifier', '--out', join(bac, 'jamais-rendue.md'));
+    const { code, sortie } = lancerPlan('--verifier', '--out', join(bac, 'jamais-rendue.md'));
     expect(code).toBe(1);
     expect(sortie).toMatch(/absent/i);
   });
@@ -681,34 +704,27 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const { faux, appliquees } = falsifierLesCompteurs(readFileSync(vue, 'utf8'));
     expect(appliquees, 'rien n’a été falsifié : le témoin ne contrôle aucune réparation').toBe(3);
     writeFileSync(vue, faux);
-    lancer(PLAN, '--verifier', '--out', vue);
+    lancerPlan('--verifier', '--out', vue);
     expect(readFileSync(vue, 'utf8'), 'le vérificateur a RÉPARÉ ce qu’il contrôle').toBe(faux);
   });
 
   it('REQ-GOV-032 · le VERT nomme ce qu’il n’a PAS comparé — un vert muet promet plus qu’il ne tient', () => {
     const vue = rendrePlanState('PLAN-STATE-perimetre.md');
-    const { sortie } = lancer(PLAN, '--verifier', '--out', vue);
+    const { sortie } = lancerPlan('--verifier', '--out', vue);
     expect(sortie).toContain('✅');
     // Les rubriques qui dépendent de `gh` et d'`origin/main` ne sont pas comparables ; le vert
-    // le DIT, plutôt que de laisser croire qu'elles le sont.
-    expect(sortie, 'le vert ne nomme pas les rubriques non comparées').toMatch(/File de fusion/);
-    expect(sortie).toMatch(/Dernier atterrissage/);
+    // le DIT, avec la source lue, plutôt que de laisser croire qu'elles le sont.
+    expect(sortie, 'le vert ne nomme pas les rubriques non comparées').toMatch(/« File de fusion » \(lu dans `gh pr list`\)/);
+    expect(sortie).toMatch(/« Dernier atterrissage » \(lu dans /);
   });
 
   it('REQ-GOV-032 · le rendu des rubriques COMPARÉES est déterministe : deux appels, les mêmes octets', () => {
     // Sans quoi le vérificateur mesurerait l'ordre d'un `Object.keys`, l'heure ou le fuseau.
-    //
-    // 🔴 CE TÉMOIN PORTAIT LA QUATRIÈME COPIE de la liste des rubriques comparées — huit titres en
-    // dur, reconnus PAR PRÉFIXE alors que le code a adopté l'égalité exacte, et déjà divergente
-    // (l'en-tête y manquait). A09 · simplicite : « une rubrique comparée ajoutée au générateur sort
-    // du témoin en silence », sous le seul plancher d'un `toBeGreaterThan`. C'est la chute
-    // silencieuse de couverture — le sujet même de cette PR — dans le témoin qui prétend la garder.
-    //
-    // La liste se DÉRIVE du vert : il énumère ce qu'il n'a pas comparé, donc tout le reste EST
-    // comparé. Une rubrique ajoutée au générateur entre dans ce témoin toute seule.
-    const { sortie: vert } = lancer(PLAN, '--verifier');
-    const exemptees = new Set([...vert.matchAll(/«\s([^»]+?)\s»\s\(/g)].map((m) => m[1]!));
-    expect(exemptees.size, 'le vert doit énumérer ce qu’il n’a pas comparé, sinon ce témoin dérive de rien').toBeGreaterThan(4);
+    // La liste des rubriques comparées se DÉRIVE du vert : il énumère ce qu'il n'a pas comparé, donc
+    // tout le reste EST comparé.
+    const { sortie: vert } = lancerPlan('--verifier');
+    const exemptees = new Set(exemptes(vert, 'rubriques'));
+    expect(exemptees.size, 'le vert doit énumérer ce qu’il n’a pas comparé, sinon ce témoin dérive de rien').toBeGreaterThan(0);
     const rubriques = (t: string) =>
       t
         .split(/^## /m)
@@ -719,7 +735,25 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
         });
     const a = rubriques(readFileSync(rendrePlanState('det-plan-a.md'), 'utf8'));
     const b = rubriques(readFileSync(rendrePlanState('det-plan-b.md'), 'utf8'));
-    expect(a.length, 'aucune rubrique déterministe trouvée : le témoin ne compare rien').toBeGreaterThan(4);
+    expect(a.length, 'aucune rubrique déterministe trouvée : le témoin ne compare rien').toBeGreaterThan(0);
     expect(a).toEqual(b);
+  });
+
+  /**
+   * LE DERNIER TÉMOIN DU BLOC — rien ne le suit, et c'est voulu : Vitest exécute dans l'ordre et
+   * `famillesVues` se remplit au fur et à mesure. Il ne mesure pas la gate : il mesure LES AUTRES
+   * TÉMOINS, sur ce qu'ils ont vu SORTIR.
+   */
+  it('RM-02 · CHAQUE famille déclarée a été VUE ROUGE dans une sortie, aucune sortie n’en porte d’autre, et aucun VERT n’en porte', () => {
+    const population = [...FAMILLES].sort();
+    expect(population.length, 'une population vide dirait toujours oui').toBeGreaterThan(0);
+    const muettes = population.filter((f) => !famillesVues.has(f));
+    expect(muettes, `famille(s) déclarées qu'AUCUN témoin n'a vues sortir : ${muettes.join(', ')}`).toEqual([]);
+    // LA RÉCIPROQUE : une famille VUE et non déclarée est un transtypage ou un second canal qui a écrit.
+    const inconnues = [...famillesVues].filter((f) => !population.includes(f as Famille));
+    expect(inconnues, `famille(s) sorties du processus et ABSENTES de FAMILLES : ${inconnues.join(', ')}`).toEqual([]);
+    // ET UN VERT N'EN PORTE AUCUNE : un canal qui écrit un refus pendant que la gate sort 0 est la
+    // cinquième forme d'évasion d'A10 · mutation (14 lignes `[x]`, puis ✅, EXIT 0).
+    expect(vertsQuiRefusent, 'sortie(s) VERTES portant une ligne de refus').toEqual([]);
   });
 });

@@ -919,7 +919,7 @@ Couvre : `REQ-GOV-032`
 
 **Acceptation.** MESURE QUI OUVRE LA TACHE, jouee par A10 mutation au tour de revue de la PR 36, a refaire avant d'ecrire une ligne : reecrire la rubrique « Prochain pas » de docs/PLAN-STATE.md en « la phase -1 est TERMINEE, 39/39 taches, plus aucune tache eligible », puis `pnpm plan-state:verifier` -> EXIT 0. Le mensonge passe.
 
-POURQUOI. `plan-state:verifier` classe les rubriques en `comparee` ou `volatile`, et « Prochain pas » est declaree volatile parce qu'elle depend de la tete de la file de fusion. Mais sa DEUXIEME ligne se derive de `docs/tasks.json` SEUL — `statut === 'a_faire' && phase === phaseCourante && externe === null && deps.every(livrees)` — sans le moindre appel a la forge. Une rubrique qui mele une source vivante et une source du depot est donc declaree volatile EN ENTIER, et sa part derivable sort du controle avec le reste.
+POURQUOI. `plan-state:verifier` exempte EN ENTIER toute rubrique dont le generateur a lu la forge pour l'ecrire — la provenance est notee au moment de l'ecriture, il n'y a plus de liste — et « Prochain pas » lit `gh pr list` pour la tete de la file de fusion. Mais sa DEUXIEME ligne se derive de `docs/tasks.json` SEUL — `statut === 'a_faire' && phase === phaseCourante && externe === null && deps.every(livrees)` — sans le moindre appel a la forge. Une rubrique qui mele une source vivante et une source du depot est donc declaree volatile EN ENTIER, et sa part derivable sort du controle avec le reste.
 
 LA LECON, et elle deborde ce fichier : le classement est par RUBRIQUE, la volatilite est par LIGNE. Le bloc de reprise est deja traite ligne a ligne — c'est la bonne granularite, elle n'a simplement pas ete appliquee aux rubriques.
 
@@ -930,7 +930,7 @@ ACCEPTATION — ELLE EST LA GARDE.
   (b) VERT : falsifier la part VIVANTE de la meme rubrique reste vert, et le message le DIT — un vert muet promet plus qu'il ne tient.
   (c) Le vert final annonce le compte des lignes REELLEMENT confrontees, jamais la longueur d'une liste declaree. C'est le defaut que la PR 36 a corrige au niveau des rubriques ; il ne doit pas revenir au niveau des lignes.
 
-CE QUI EST DEJA FERME, et qu'il ne faut pas refaire : les cinq rubriques volatiles sont declarees avec, chacune, la source vivante qui l'en empeche ; le bloc de reprise est compare dans les DEUX sens ; une question dupliquee est un refus ; une prose non declaree est un refus. Cette tache ne porte QUE la granularite des rubriques.
+CE QUI EST DEJA FERME, et qu'il ne faut pas refaire : chaque rubrique exemptee est imprimee avec la source vivante que le generateur a lue pour l'ecrire ; le bloc de reprise est compare dans les DEUX sens, ligne a ligne et par sa forme ; une question dupliquee est un refus ; une prose de trop est un refus. La granularite de la LIGNE existe donc deja dans le generateur (`ligneDeReprise`) : c'est elle qu'il faut etendre aux rubriques. Cette tache ne porte QUE la granularite des rubriques.
 
 **Tests.** `tests/unit/gouvernance/volatilite-par-ligne.spec.ts`
 
@@ -964,7 +964,7 @@ Couvre : `REQ-GOV-032`
 **Acceptation.** ⚠️ CETTE ACCEPTANCE A ETE ECRITE FAUSSE UNE FOIS, ET LA CORRECTION FAIT PARTIE DE LA LECON. Sa premiere redaction annoncait trois mesures a EXIT 0 ; A09 exactitude les a rejouees et DEUX etaient fausses — elles avaient ete ecrites contre l'arbre du tour precedent et jamais rejouees. C'etait exactement le defaut que la meme lentille avait refuse au tour d'avant : un attendu derive d'un etat perime, transplante dans le backlog. Les trois mesures ci-dessous ont ete REJOUEES sur l'arbre final.
 
 LA MESURE QUI OUVRE LA TACHE, une seule, et elle suffit :
-  Neutraliser `lignes.push('## Bloquees')` dans le generateur, puis `pnpm plan-state:build`, puis `pnpm plan-state:verifier` :
+  Neutraliser la rubrique `titre('Bloquées')` (et ses lignes) dans le generateur, puis `pnpm plan-state:build`, puis `pnpm plan-state:verifier` :
       ✅ plan-state:verifier — 8 rubrique(s) comparee(s) octet par octet   EXIT 0
   La couverture tombe de 9 a 8 EN SILENCE. Le vert ne ment pas — il compte ce qu'il a compare — mais rien ne dit qu'il en manque une.
 

@@ -134,10 +134,15 @@ jobs:
       # GOV-035, REQ-GOV-032. LA CINQUIEME VUE, et la derniere sans verificateur : le script
       # ECRIVAIT et rien ne comparait. Mesure : quinze lignes falsifiees dans PLAN-STATE, toutes
       # ancres conservees (29/36 -> 36/36, reste 4.00 j -> 0.00, 2 bloquees -> 0), et les HUIT
-      # verificateurs ci-dessus sont restes verts. Elle ne compare que les rubriques derivees de
-      # fichiers SUIVIS : comparer le SHA de main ou la file des PR mesurerait la forge, pas la
-      # derivation, et une gate rouge apres chaque fusion s'apprend a etre sautee (RM-02, LEC-13).
-      # Le vert IMPRIME ce qu'il n'a pas compare, une par une. Pas de continue-on-error.
+      # verificateurs ci-dessus sont restes verts. Elle compare tout, sauf ce que le generateur a LU
+      # hors du depot pour l'ecrire : comparer le SHA de main ou la file des PR mesurerait la forge,
+      # pas la derivation, et une gate rouge apres chaque fusion s'apprend a etre sautee (RM-02,
+      # LEC-13). Le vert imprime chaque exemption avec la source lue. Pas de continue-on-error.
+      # Ce que CETTE etape ne rougit pas, et qui rougit plus bas dans `pnpm test` : une mesure du
+      # domaine devenue illisible (le vert imprime X/Y avec X < Y et sort 0) ; une lecture GRATUITE
+      # de la forge ajoutee au generateur pour sortir un element du controle (le vert l'exempte ;
+      # le temoin « exemption PORTANTE » rougit, parce que son texte ne change pas d'une forge a
+      # l'autre).
       # AUCUN GH_TOKEN ici, et ce n est pas un oubli : le perimetre compare ne depend d aucun
       # appel a la forge. Mesure du 2026-09-12, GH_CONFIG_DIR vide et GH_TOKEN vide : gh refuse,
       # et la garde rend le MEME verdict — 9 rubriques comparees, exit 0. Sans jeton, seules les

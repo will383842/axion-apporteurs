@@ -37,6 +37,7 @@ import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { referencePr, type Attestation } from '../lot/attestation';
+import { LIVREE, PLANCHER } from '../lot/avancement';
 
 const PLAFOND_QUESTIONS = 10;
 
@@ -46,10 +47,18 @@ const PLAFOND_QUESTIONS = 10;
  * vrai emporterait le travail non commité de la session qui l'exécute.
  */
 const MODE_VERIFIER = process.argv.includes('--verifier');
-const CHEMIN_VUE = (() => {
-  const i = process.argv.indexOf('--out');
-  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1]! : 'docs/PLAN-STATE.md';
-})();
+const argument = (nom: string): string | null => {
+  const i = process.argv.indexOf(nom);
+  return i >= 0 && process.argv[i + 1] ? process.argv[i + 1]! : null;
+};
+const CHEMIN_VUE = argument('--out') ?? 'docs/PLAN-STATE.md';
+/**
+ * `--forge <fichier.json>` remplace les TROIS lectures hors du dépôt (`gh pr list`, `gh issue list`,
+ * `origin/main`) par un état figé. Il n'existe que pour le témoin qui rend la vue sous deux forges
+ * différentes : c'est lui qui prouve qu'une exemption dépend VRAIMENT de la forge, et qu'un élément
+ * comparé n'en dépend pas. La Gate A ne le passe jamais.
+ */
+const CHEMIN_FORGE = argument('--forge');
 
 interface Tache {
   id: string; titre: string; phase: number; repo: string; statut: string;
@@ -76,7 +85,9 @@ const posees = ids(section(2));
 const bloquantes = ids(section(1));
 
 // Phase courante = la plus petite phase qui porte encore une tâche non terminée.
-const TERMINES = new Set(['fusionnee', 'deployee', 'verifiee']);
+// Le vocabulaire « livrée » vient de `scripts/lot/avancement.ts`, qui le dérive du barème et le
+// confronte à `tasks.schema.json` : il ne se retape pas ici (RM-01, RM-04).
+const TERMINES = LIVREE;
 const phases = [...new Set(taches.map((t) => t.phase))].sort((a, b) => a - b);
 const phaseCourante = phases.find((p) => taches.some((t) => t.phase === p && !TERMINES.has(t.statut))) ?? phases.at(-1)!;
 
@@ -99,10 +110,42 @@ const questions = [
 
 interface PrOuverte { number: number; headRefName: string; mergeStateStatus: string; isDraft: boolean; title: string }
 
-const prs: PrOuverte[] = (() => {
-  const brut = sh('gh', ['pr', 'list', '--json', 'number,headRefName,mergeStateStatus,isDraft,title', '--limit', '50']);
-  try { return JSON.parse(brut || '[]') as PrOuverte[]; } catch { return []; }
-})();
+/**
+ * 🔴 LA PROVENANCE EST ÉMISE PAR LE GÉNÉRATEUR — IL N'Y A PLUS DE LISTE D'EXEMPTIONS.
+ *
+ * Le vérificateur exemptait ce que TROIS listes tapées lui disaient d'exempter (rubriques, lignes,
+ * prose). A10 · mutation, revue de la PR #36 sur `0d00658` : élargir l'une d'elles aux neuf questions du bloc
+ * rendait « 0 ligne(s) CONFRONTÉES », exit 0 ; y ajouter `['Bloquées', '']`, SANS MOTIF, sortait une
+ * rubrique falsifiée du contrôle, exit 0. Une exemption déclarée à côté de ce qu'elle exempte se
+ * déclare aussi pour ce qui n'en a pas besoin.
+ *
+ * Le générateur, lui, SAIT ce qu'il a lu hors du dépôt au moment où il écrit. Les trois sources
+ * vivantes ne se lisent donc qu'à travers `forge`, et chaque lecture est NOTÉE contre la rubrique —
+ * ou la ligne du bloc de reprise — en cours d'écriture. Est exempté ce qui a lu la forge, et le motif
+ * imprimé EST la source lue : il ne peut être ni vide ni inventé. Une lecture hors de toute rubrique
+ * LÈVE : sa provenance ne s'attribuerait à rien.
+ *
+ * ⚠️ Ce que ça ne ferme pas seul : une lecture GRATUITE de la forge dans une rubrique qui n'en a
+ * pas besoin l'exempterait. C'est le témoin « exemption portante » qui la voit rougir — il rend la vue
+ * sous deux forges différentes et exige que tout élément exempté CHANGE de l'une à l'autre.
+ */
+const SOURCE_PR = '`gh pr list`';
+const SOURCE_ISSUES = '`gh issue list`, labels `owner:`';
+const SOURCE_MAIN = '`git` sur `origin/main`';
+
+const sourcesDesRubriques = new Map<string, Set<string>>();
+const sourcesDesLignes = new Map<string, Set<string>>();
+let rubriqueCourante: string | null = null;
+let ligneCourante: Set<string> | null = null;
+
+function lire<T>(source: string, valeur: T): T {
+  const cible = ligneCourante ?? (rubriqueCourante === null ? undefined : sourcesDesRubriques.get(rubriqueCourante));
+  if (cible === undefined) {
+    throw new Error(`plan-state : ${source} est lue hors de toute rubrique — sa provenance ne s'attribue à rien. Lis-la DANS la rubrique ou la ligne qui l'affiche.`);
+  }
+  cible.add(source);
+  return valeur;
+}
 
 /**
  * L'ORDRE de la file de fusion, dérivé de l'état de fusionnabilité que rend GitHub.
@@ -130,32 +173,58 @@ const rangDe = (p: PrOuverte): { rang: number; bloque: string } => {
   const r = RANGS.find((x) => x.etat === p.mergeStateStatus);
   return r ? { rang: r.rang, bloque: r.bloque } : { rang: 6, bloque: `état \`${p.mergeStateStatus}\` — à qualifier à la main` };
 };
-const file = [...prs]
-  .map((p) => ({ ...p, ...rangDe(p) }))
-  .sort((a, b) => (a.rang !== b.rang ? a.rang - b.rang : a.number - b.number));
-
 /**
- * Les REVENDICATIONS en vol : les labels `owner:<Axx>` des issues ouvertes.
- * `sh` rend la chaîne vide quand la commande échoue — et `gh issue list --json` rend `[]`, jamais
- * du vide, quand elle réussit sans résultat. La chaîne vide distingue donc « pas lu » de « aucune
- * revendication », et la vue DIT lequel des deux : afficher « personne » sur une lecture qui a
- * échoué serait le pire des deux mensonges.
+ * LES TROIS LECTURES HORS DU DÉPÔT, et le seul chemin pour les atteindre. Les valeurs brutes ne
+ * sortent pas de cette fermeture : les lire sans passer par `lire` est impossible, pas seulement
+ * déconseillé.
  */
-const brutIssues = sh('gh', ['issue', 'list', '--state', 'open', '--json', 'number,labels', '--limit', '200']);
-const githubLu = brutIssues !== '';
-const revendications = new Map<number, string[]>();
-if (githubLu) {
-  try {
-    for (const i of JSON.parse(brutIssues) as { number: number; labels: { name: string }[] }[]) {
-      const owners = (i.labels ?? []).map((l) => l.name).filter((n) => n.startsWith('owner:')).map((n) => n.slice(6));
-      if (owners.length > 0) revendications.set(i.number, owners);
-    }
-  } catch { /* réponse illisible : traitée comme une lecture vide, et dite comme telle plus bas */ }
-}
+const forge = (() => {
+  const figee = CHEMIN_FORGE === null
+    ? null
+    : (JSON.parse(readFileSync(CHEMIN_FORGE, 'utf8')) as { prs: PrOuverte[]; issues: string; main: { sha: string; date: string } });
+  const prs: PrOuverte[] = figee ? figee.prs : (() => {
+    const brut = sh('gh', ['pr', 'list', '--json', 'number,headRefName,mergeStateStatus,isDraft,title', '--limit', '50']);
+    try { return JSON.parse(brut || '[]') as PrOuverte[]; } catch { return []; }
+  })();
+  const file = [...prs]
+    .map((p) => ({ ...p, ...rangDe(p) }))
+    .sort((a, b) => (a.rang !== b.rang ? a.rang - b.rang : a.number - b.number));
+
+  /**
+   * Les REVENDICATIONS en vol : les labels `owner:<Axx>` des issues ouvertes.
+   * `sh` rend la chaîne vide quand la commande échoue — et `gh issue list --json` rend `[]`, jamais
+   * du vide, quand elle réussit sans résultat. La chaîne vide distingue donc « pas lu » de « aucune
+   * revendication », et la vue DIT lequel des deux : afficher « personne » sur une lecture qui a
+   * échoué serait le pire des deux mensonges.
+   */
+  const brutIssues = figee ? figee.issues : sh('gh', ['issue', 'list', '--state', 'open', '--json', 'number,labels', '--limit', '200']);
+  const githubLu = brutIssues !== '';
+  const revendications = new Map<number, string[]>();
+  if (githubLu) {
+    try {
+      for (const i of JSON.parse(brutIssues) as { number: number; labels: { name: string }[] }[]) {
+        const owners = (i.labels ?? []).map((l) => l.name).filter((n) => n.startsWith('owner:')).map((n) => n.slice(6));
+        if (owners.length > 0) revendications.set(i.number, owners);
+      }
+    } catch { /* réponse illisible : traitée comme une lecture vide, et dite comme telle plus bas */ }
+  }
+
+  const shaMain = figee ? figee.main.sha : sh('git', ['rev-parse', '--short', 'origin/main']);
+  const dateMain = figee ? figee.main.date : sh('git', ['log', '-1', '--format=%cI', 'origin/main']);
+
+  return {
+    file: () => lire(SOURCE_PR, file),
+    githubLu: () => lire(SOURCE_ISSUES, githubLu),
+    revendications: () => lire(SOURCE_ISSUES, revendications),
+    shaMain: () => lire(SOURCE_MAIN, shaMain),
+    dateMain: () => lire(SOURCE_MAIN, dateMain),
+  };
+})();
+
 const revendiqueursDe = (t: Tache): string[] => {
   const vus = new Set<string>();
   const issue = (t as unknown as { issue?: number | null }).issue ?? null;
-  if (issue !== null) for (const o of revendications.get(issue) ?? []) vus.add(o);
+  if (issue !== null) for (const o of forge.revendications().get(issue) ?? []) vus.add(o);
   if (t.owner) vus.add(t.owner);
   return [...vus];
 };
@@ -174,25 +243,23 @@ if (existsSync(CHEMIN_JOURNAL)) {
 }
 entrees.sort((a, b) => b.pr - a.pr);
 
-const shaMain = sh('git', ['rev-parse', '--short', 'origin/main']);
-const dateMain = sh('git', ['log', '-1', '--format=%cI', 'origin/main']);
-
-/**
- * Les DÉCISIONS DU JOUR : les ADR dont le dernier commit tombe le même jour que la dernière fusion.
- * Dérivées de `git`, jamais tenues à la main — un « décidé aujourd'hui » écrit à la main reste vrai
- * pour l'éternité.
- */
-const jourMain = dateMain.slice(0, 10);
-const decisionsDuJour = (existsSync('docs/adr') ? readdirSync('docs/adr') : [])
-  .filter((f) => /^\d{4}-/.test(f) && f !== '0000-gabarit.md')
-  .map((f) => ({
-    fichier: f,
-    jour: sh('git', ['log', '-1', '--format=%cI', '--', join('docs/adr', f)]).slice(0, 10),
-    titre: (readFileSync(join('docs/adr', f), 'utf8').split('\n')[0] ?? '').replace(/^#\s*/, '').trim(),
-  }))
-  .filter((a) => a.jour !== '' && a.jour === jourMain)
-  .sort((a, b) => a.fichier.localeCompare(b.fichier));
 const lignes: string[] = [];
+
+/** Ouvre une rubrique : les lectures de la forge qui suivent lui sont attribuées, jusqu'à la suivante. */
+function titre(t: string): void {
+  rubriqueCourante = t;
+  if (!sourcesDesRubriques.has(t)) sourcesDesRubriques.set(t, new Set());
+  lignes.push(`## ${t}`);
+}
+
+/** Écrit UNE ligne du bloc de reprise : ses lectures de la forge sont attribuées à elle seule. */
+function ligneDeReprise(ecrire: () => string): string {
+  ligneCourante = new Set();
+  const l = ecrire();
+  sourcesDesLignes.set(l, ligneCourante);
+  ligneCourante = null;
+  return l;
+}
 
 lignes.push('# PLAN-STATE — état vivant d\'Axion Partners');
 lignes.push('');
@@ -204,23 +271,27 @@ lignes.push('');
 // premier, et c'est tout son intérêt : un agent qui ouvre le dépôt demain sans mémoire ne doit pas
 // avoir à descendre chercher le SHA, la file et le prochain pas dans trois rubriques différentes.
 const iBlocReprise = lignes.length;
-lignes.push(`## Phase courante : ${phaseCourante}`);
+titre(`Phase courante : ${phaseCourante}`);
 lignes.push('');
 const restant = taches.filter((t) => t.phase === phaseCourante && !TERMINES.has(t.statut));
 const faitPhase = taches.filter((t) => t.phase === phaseCourante && TERMINES.has(t.statut));
 lignes.push(`${faitPhase.length}/${faitPhase.length + restant.length} tâches terminées · reste ${restant.reduce((s, t) => s + t.estimateDays, 0).toFixed(2)} j estimés.`);
 lignes.push('');
 
-lignes.push('## Tâches');
+titre('Tâches');
 lignes.push('');
 /**
- * LES STATUTS DU TABLEAU « Tâches », déclarés UNE fois et lus par le générateur ET par les mesures.
- * L'ordre est celui du cycle de vie, il porte du sens dans la vue : il ne se trie pas.
- * ⚠️ `avancement.ts` porte le vocabulaire arbitré et sa machine d'exhaustivité
- * (`verifierExhaustivite()` le confronte à `tasks.schema.json`) ; le témoin ci-dessous confronte
- * CETTE liste à celle des tâches réelles, pour qu'un statut neuf ne puisse pas rester invisible.
+ * LES STATUTS DU TABLEAU « Tâches », lus par le générateur ET par les mesures du domaine.
+ *
+ * 🔴 ILS ÉTAIENT RETAPÉS, HUIT SUR NEUF (A09 · simplicite, revue sur `0d00658`). `scripts/lot/avancement.ts`
+ * porte déjà le vocabulaire arbitré (`PLANCHER`), et `verifierExhaustivite()` le confronte à l'enum
+ * de `scripts/lot/tasks.schema.json` dans quatre gates. Un statut ajouté à l'enum et au barème
+ * laissait cette copie muette : le tableau cessait de compter ses tâches et le vert annonçait
+ * toujours `X/X`. Il se DÉRIVE désormais du barème — un statut neuf entre dans la vue et dans les
+ * mesures ; un statut ajouté à l'enum SANS barème fait rougir ces quatre gates.
+ * L'ordre est celui de `PLANCHER`, du plancher le plus faible au plus fort.
  */
-const STATUTS_DU_TABLEAU = ['a_faire', 'en_cours', 'en_revue', 'fusionnee', 'deployee', 'verifiee', 'bloquee', 'attente_externe'] as const;
+const STATUTS_DU_TABLEAU: readonly string[] = Object.keys(PLANCHER);
 
 lignes.push('| Statut | Nombre | Détail |');
 lignes.push('| --- | --- | --- |');
@@ -278,7 +349,7 @@ let cheminCritique: string[] = [];
 
   cheminCritique = sommet.suite;
 
-  lignes.push('## Chemin critique');
+  titre('Chemin critique');
   lignes.push('');
   lignes.push(
     `**${sommet.poids.toFixed(2)} j** sur ${sommet.suite.length} taches enchainees — duree PLANCHER du projet. ` +
@@ -304,7 +375,7 @@ let cheminCritique: string[] = [];
 }
 
 if (bloquees.length || attente.length) {
-  lignes.push('## Bloquées');
+  titre('Bloquées');
   lignes.push('');
   for (const t of [...bloquees, ...attente]) {
     lignes.push(`- **${t.id}** — ${t.titre} · ${t.motif ?? `attend ${t.externe}`}${(t.attempts ?? 0) > 0 ? ` · ${t.attempts} tentative(s)` : ''}`);
@@ -312,7 +383,7 @@ if (bloquees.length || attente.length) {
   lignes.push('');
 }
 
-lignes.push('## Questions ouvertes pour Will');
+titre('Questions ouvertes pour Will');
 lignes.push('');
 if (!questions.length) {
   lignes.push('Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse posée dans `docs/DECISIONS.md`.');
@@ -325,7 +396,7 @@ if (!questions.length) {
 }
 lignes.push('');
 
-lignes.push('## Hypothèses par défaut appliquées');
+titre('Hypothèses par défaut appliquées');
 lignes.push('');
 lignes.push(`${posees.size} décisions portent une hypothèse datée dans \`docs/DECISIONS.md\` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.`);
 lignes.push('');
@@ -334,8 +405,9 @@ lignes.push('');
 // Elle porte les mêmes PR, dans l'ORDRE et avec ce qui les bloque (REQ-GOV-006, `partners/ADR-0006` §5). Deux
 // rubriques listant les mêmes PR auraient été exactement la duplication que RM-01 interdit : celle
 // qu'on lit n'est jamais celle qu'on a corrigée.
-lignes.push('## File de fusion');
+titre('File de fusion');
 lignes.push('');
+const file = forge.file();
 if (!file.length) {
   lignes.push('Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.');
 } else {
@@ -350,11 +422,11 @@ if (!file.length) {
 lignes.push('');
 
 // ── Revendications (REQ-GOV-007) ────────────────────────────────────────────
-lignes.push('## Revendications');
+titre('Revendications');
 lignes.push('');
 lignes.push('Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.');
 lignes.push('');
-if (!githubLu) {
+if (!forge.githubLu()) {
   lignes.push('> ⚠️ **Lecture GitHub indisponible** : les revendications en vol n’ont PAS pu être lues. Ce qui suit ne vient que de `docs/tasks.json` — l’absence d’une ligne ne veut donc pas dire que personne ne tient la tâche.');
   lignes.push('');
 }
@@ -377,9 +449,9 @@ if (!githubLu) {
   const perimees = taches.filter((t) => TERMINES.has(t.statut) && revendiqueursDe(t).length > 0 && !t.owner);
   const perimeesLabel = taches.filter((t) => {
     const issue = (t as unknown as { issue?: number | null }).issue ?? null;
-    return TERMINES.has(t.statut) && issue !== null && revendications.has(issue);
+    return TERMINES.has(t.statut) && issue !== null && forge.revendications().has(issue);
   });
-  if (githubLu && perimeesLabel.length > 0) {
+  if (forge.githubLu() && perimeesLabel.length > 0) {
     lignes.push(`⚠️ **${perimeesLabel.length} revendication(s) périmée(s)** — ${perimeesLabel.map((t) => t.id).join(', ')} : leur issue porte encore un label \`owner:\` alors que la tâche est livrée. \`pnpm lot:cloture\` écrit \`docs/tasks.json\` mais n’efface pas les labels ; la dette appartient à GOV-012.`);
     lignes.push('');
   }
@@ -390,19 +462,36 @@ if (!githubLu) {
 }
 
 // ── Décisions du jour (REQ-GOV-006) ─────────────────────────────────────────
-lignes.push('## Décisions du jour');
+titre('Décisions du jour');
 lignes.push('');
-if (!decisionsDuJour.length) {
-  lignes.push(`Aucun ADR daté du ${jourMain || '?'} (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre \`docs/DECISIONS.md\`, tranchées ou tenues par une hypothèse datée.`);
-} else {
-  for (const a of decisionsDuJour) lignes.push(`- ${a.titre} — \`docs/adr/${a.fichier}\``);
-  lignes.push('');
-  lignes.push(`Dérivé de \`git log\` sur \`docs/adr/\`, jour du dernier atterrissage (${jourMain}). Une décision de Will n’est pas un ADR : elle vit au registre \`docs/DECISIONS.md\`.`);
+{
+  /**
+   * Les DÉCISIONS DU JOUR : les ADR dont le dernier commit tombe le même jour que la dernière fusion.
+   * Dérivées de `git`, jamais tenues à la main — un « décidé aujourd'hui » écrit à la main reste vrai
+   * pour l'éternité.
+   */
+  const jourMain = forge.dateMain().slice(0, 10);
+  const decisionsDuJour = (existsSync('docs/adr') ? readdirSync('docs/adr') : [])
+    .filter((f) => /^\d{4}-/.test(f) && f !== '0000-gabarit.md')
+    .map((f) => ({
+      fichier: f,
+      jour: sh('git', ['log', '-1', '--format=%cI', '--', join('docs/adr', f)]).slice(0, 10),
+      titre: (readFileSync(join('docs/adr', f), 'utf8').split('\n')[0] ?? '').replace(/^#\s*/, '').trim(),
+    }))
+    .filter((a) => a.jour !== '' && a.jour === jourMain)
+    .sort((a, b) => a.fichier.localeCompare(b.fichier));
+  if (!decisionsDuJour.length) {
+    lignes.push(`Aucun ADR daté du ${jourMain || '?'} (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre \`docs/DECISIONS.md\`, tranchées ou tenues par une hypothèse datée.`);
+  } else {
+    for (const a of decisionsDuJour) lignes.push(`- ${a.titre} — \`docs/adr/${a.fichier}\``);
+    lignes.push('');
+    lignes.push(`Dérivé de \`git log\` sur \`docs/adr/\`, jour du dernier atterrissage (${jourMain}). Une décision de Will n’est pas un ADR : elle vit au registre \`docs/DECISIONS.md\`.`);
+  }
 }
 lignes.push('');
 
 // ── Prochain pas (REQ-GOV-006) ──────────────────────────────────────────────
-lignes.push('## Prochain pas');
+titre('Prochain pas');
 lignes.push('');
 {
   const livrees = new Set(taches.filter((t) => TERMINES.has(t.statut)).map((t) => t.id));
@@ -411,7 +500,7 @@ lignes.push('');
   );
   const surLeChemin = new Set(cheminCritique);
   const suivante = eligibles.find((t) => surLeChemin.has(t.id)) ?? eligibles[0] ?? null;
-  const prete = file.find((p) => p.rang === 1);
+  const prete = forge.file().find((p) => p.rang === 1);
   if (prete) {
     lignes.push(`1. **Fusionner #${prete.number}** — elle est en tête de file et ne bloque sur rien. Lire \`mergeStateStatus\` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.`);
   }
@@ -426,20 +515,20 @@ lignes.push('');
 }
 lignes.push('');
 
-lignes.push('## Dernier atterrissage');
+titre('Dernier atterrissage');
 lignes.push('');
 // MESURE du 2026-09-03 : le fichier commité par la PR #27 nommait `9272c04` — le commit de la
 // fusion PRÉCÉDENTE — alors que `main` était à `ff3ef54`. Ce n'est pas un oubli, c'est structurel :
 // ce fichier est généré AVANT la fusion qui le porte, donc son SHA a toujours un atterrissage de
 // retard. C'est pourquoi `gov:etat` garde la fraîcheur par la DATE du commit de PLAN-STATE, jamais
 // par le SHA écrit dedans — et c'est pourquoi la phrase le dit, plutôt que de laisser croire.
-lignes.push(`\`origin/main\` = \`${shaMain || '?'}\` (${dateMain || '?'}). Vérifier \`x-partners-build-sha\` avant toute nouvelle fusion.`);
+lignes.push(`\`origin/main\` = \`${forge.shaMain() || '?'}\` (${forge.dateMain() || '?'}). Vérifier \`x-partners-build-sha\` avant toute nouvelle fusion.`);
 lignes.push('');
 lignes.push('> Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.');
 lignes.push('');
 
 // ── Journal (REQ-GOV-023) ───────────────────────────────────────────────────
-lignes.push('## Journal');
+titre('Journal');
 lignes.push('');
 lignes.push('Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.');
 lignes.push('');
@@ -458,47 +547,62 @@ if (!entrees.length) {
 // ligne vide en double, que le prochain `diff` du fichier dérivé ferait passer pour un changement.
 if (lignes[lignes.length - 1] !== '') lignes.push('');
 
-lignes.push('## Dette déclarée');
+titre('Dette déclarée');
 lignes.push('');
 const dette = taches.filter((t) => t.statut === 'proposee');
 lignes.push(dette.length ? dette.map((t) => `- ${t.id} — ${t.titre}`).join('\n') : 'Aucune tâche `proposee` en attente d\'arbitrage.');
 lignes.push('');
+// Fin des rubriques : une lecture de la forge au-delà n'appartient plus à aucune, et LÈVE.
+rubriqueCourante = null;
 
 // ── REPRENDRE EN 30 SECONDES (REQ-GOV-006) ──────────────────────────────────
 // Écrit comme si on ouvrait le dépôt demain sans mémoire : où est `main`, qu'est-ce qui est en vol
 // et dans quel ordre, qui tient quoi, ce qu'on tape maintenant. Chaque ligne est DÉRIVÉE d'une
 // rubrique plus bas ; aucune n'est saisie. Un résumé tenu à la main ment au premier oubli.
 {
-  const enVol = taches.filter((t) => !TERMINES.has(t.statut) && revendiqueursDe(t).length > 0);
   const livrees = new Set(taches.filter((t) => TERMINES.has(t.statut)).map((t) => t.id));
   const eligibles = taches.filter(
     (t) => t.statut === 'a_faire' && t.phase === phaseCourante && t.externe === null && t.deps.every((d) => livrees.has(d))
   );
   const surLeChemin = new Set(cheminCritique);
   const suivante = eligibles.find((t) => surLeChemin.has(t.id)) ?? eligibles[0] ?? null;
-  const prete = file.find((p) => p.rang === 1);
   const derniere = entrees[0];
 
+  // Chaque ligne non vide passe par `ligneDeReprise` : ce qu'elle lit de la forge lui est attribué,
+  // et ce qu'elle ne lit pas la laisse COMPARÉE. Aucune ligne n'est classée à la main.
   const bloc = [
     '## REPRENDRE EN 30 SECONDES',
     '',
-    '| Question | Réponse |',
-    '| --- | --- |',
-    `| Où est \`main\` ? | \`${shaMain || '?'}\` — ${dateMain || '?'} |`,
-    `| Qu’est-ce qui est en vol ? | ${file.length === 0 ? 'aucune PR ouverte' : file.map((p, i) => `${i + 1}. #${p.number} (${p.bloque.split(' — ')[0]})`).join(' · ')} |`,
-    `| Qui tient quoi ? | ${githubLu ? (enVol.length === 0 ? 'aucune tâche revendiquée' : enVol.map((t) => `${t.id} (${revendiqueursDe(t).join(', ')})`).join(' · ')) : '**lecture GitHub indisponible** — ne pas conclure « personne »'} |`,
-    `| Où en est la phase ? | phase ${phaseCourante} — ${faitPhase.length}/${faitPhase.length + restant.length} tâches, reste ${restant.reduce((s, t) => s + t.estimateDays, 0).toFixed(2)} j |`,
-    `| Le prochain pas | ${prete ? `fusionner #${prete.number}, puis ` : ''}${suivante ? `${suivante.id} — ${suivante.titre}${surLeChemin.has(suivante.id) ? ' (chemin critique)' : ''}` : 'aucune tâche éligible'} |`,
-    `| Ce qui bloque | ${bloquees.length + attente.length} tâche(s) bloquée(s) ou en attente externe · ${questions.length} question(s) pour Will |`,
-    `| Dernière entrée de journal | ${derniere ? `PR #${derniere.pr} — ${derniere.date}` : 'aucune'} |`,
+    ligneDeReprise(() => '| Question | Réponse |'),
+    ligneDeReprise(() => '| --- | --- |'),
+    ligneDeReprise(() => `| Où est \`main\` ? | \`${forge.shaMain() || '?'}\` — ${forge.dateMain() || '?'} |`),
+    ligneDeReprise(() => {
+      const file = forge.file();
+      return `| Qu’est-ce qui est en vol ? | ${file.length === 0 ? 'aucune PR ouverte' : file.map((p, i) => `${i + 1}. #${p.number} (${p.bloque.split(' — ')[0]})`).join(' · ')} |`;
+    }),
+    ligneDeReprise(() => {
+      const enVol = taches.filter((t) => !TERMINES.has(t.statut) && revendiqueursDe(t).length > 0);
+      return `| Qui tient quoi ? | ${forge.githubLu() ? (enVol.length === 0 ? 'aucune tâche revendiquée' : enVol.map((t) => `${t.id} (${revendiqueursDe(t).join(', ')})`).join(' · ')) : '**lecture GitHub indisponible** — ne pas conclure « personne »'} |`;
+    }),
+    ligneDeReprise(() => `| Où en est la phase ? | phase ${phaseCourante} — ${faitPhase.length}/${faitPhase.length + restant.length} tâches, reste ${restant.reduce((s, t) => s + t.estimateDays, 0).toFixed(2)} j |`),
+    ligneDeReprise(() => {
+      const prete = forge.file().find((p) => p.rang === 1);
+      return `| Le prochain pas | ${prete ? `fusionner #${prete.number}, puis ` : ''}${suivante ? `${suivante.id} — ${suivante.titre}${surLeChemin.has(suivante.id) ? ' (chemin critique)' : ''}` : 'aucune tâche éligible'} |`;
+    }),
+    ligneDeReprise(() => `| Ce qui bloque | ${bloquees.length + attente.length} tâche(s) bloquée(s) ou en attente externe · ${questions.length} question(s) pour Will |`),
+    ligneDeReprise(() => `| Dernière entrée de journal | ${derniere ? `PR #${derniere.pr} — ${derniere.date}` : 'aucune'} |`),
     '',
-    `**Ce qu’on tape maintenant.** ${
-      prete
-        ? `\`gh pr view ${prete.number} --json mergeStateStatus\` puis la fusion dans le MÊME appel (RM-09).`
-        : file.length > 0
-          ? 'débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état.'
-          : '`pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`.'
-    } Avant d’écrire une ligne : \`docs/REGLES-MAISON.md\`, la fiche de rôle, la tâche, ses REQ.`,
+    ligneDeReprise(() => {
+      const file = forge.file();
+      const prete = file.find((p) => p.rang === 1);
+      return `**Ce qu’on tape maintenant.** ${
+        prete
+          ? `\`gh pr view ${prete.number} --json mergeStateStatus\` puis la fusion dans le MÊME appel (RM-09).`
+          : file.length > 0
+            ? 'débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état.'
+            : '`pnpm lot:composer` pour composer le lot suivant, puis revendiquer ses tâches par `gh issue edit`.'
+      } Avant d’écrire une ligne : \`docs/REGLES-MAISON.md\`, la fiche de rôle, la tâche, ses REQ.`;
+    }),
     '',
   ];
   lignes.splice(iBlocReprise, 0, ...bloc);
@@ -525,190 +629,109 @@ lignes.push('');
 // l'âge de `main` — rouge après chaque fusion, chez tout le monde, sur une vue parfaitement juste.
 // On apprendrait à le sauter, et une garde qu'on saute ne garde plus rien (RM-02). Le motif est
 // déjà écrit dans `gov-trace.ts` : « si son contenu dépendait d'un appel réseau, `--verifier`
-// mesurerait la disponibilité de `gh`, pas la dérivation de la vue ». MESURE du 2026-09-12 : sur
-// un arbre à jour, les seules différences entre le fichier commité et un rendu neuf étaient le
-// SHA de `main`, la file de fusion, « Décisions du jour » (dérivée du JOUR du dernier
-// atterrissage) et « Prochain pas » — toutes volatiles, aucune fautive.
+// mesurerait la disponibilité de `gh`, pas la dérivation de la vue ».
 //
-// 🔴 CE PARAGRAPHE DÉCRIVAIT LE MONDE À DEUX LISTES QUE CETTE PR ABOLIT, et il affirmait fermé
-// ce que GOV-055 déclare ouvert : « une rubrique qui n'appartient à AUCUNE des deux listes fait
-// rougir : sans quoi la couverture se périmerait en silence ». A09 · simplicite l'a relevé en
-// tête du fichier qui arbitre la doctrine — l'endroit qu'on lit EN PREMIER.
+// LA RÈGLE : **tout est comparé, sauf ce que le générateur a LU HORS DU DÉPÔT pour l'écrire**
+// (`forge`, plus haut). L'exemption est une provenance émise au moment de l'écriture ; il n'existe
+// aucune liste d'exemptions, et le motif que le vert imprime est la source lue. Une exemption ne
+// libère que le CONTENU de sa zone, jamais sa STRUCTURE (`structureDeBloc`).
 //
-// Le monde actuel : **tout est comparé par défaut**, seules les EXEMPTIONS sont déclarées, avec
-// leur source vivante, et le vert les imprime aux quatre étages. La liste des éléments comparés
-// n'est écrite nulle part : elle se dérive.
-//
-// Et la couverture SE PÉRIME en silence, mais pas pour la raison qu'on croyait : pas parce qu'une
-// rubrique neuve échapperait au classement — elle est comparée — mais parce qu'un élément que le
-// GÉNÉRATEUR CESSE DE PRODUIRE disparaît des deux côtés à la fois. C'est GOV-055, et il faut une
-// source extérieure pour le fermer.
-//
-// ⚠️ CE QUE CE VÉRIFICATEUR NE VOIT PAS, écrit plutôt que tu : une falsification portée
-// uniquement sur une rubrique volatile (réécrire le SHA de `main`, retirer une PR de la file)
-// passe. Fermer ce trou demanderait de figer la forge dans une fixture, ce que cette vue ne fait
-// 🔴 CETTE PHRASE DISAIT : « ce qui est fermé, c'est tout ce qui se dérive d'un fichier du
-// dépôt ». **C'est FAUX**, et A10 · mutation l'a joué sur la PR #36 : la deuxième ligne de
-// « Prochain pas » se dérive de `docs/tasks.json` SEUL — `statut === 'a_faire' && phase ===
-// phaseCourante && externe === null && deps.every(livrées)` — sans le moindre appel à la forge.
-// La réécrire en « la phase -1 est TERMINÉE, 39/39 tâches » passe : exit 0.
-//
-// 🔑 La leçon exacte : **le classement est par RUBRIQUE, la volatilité est par LIGNE.** Une
-// rubrique qui mêle une source vivante et une source du dépôt est déclarée volatile EN ENTIER,
-// donc sa part dérivable sort du contrôle avec le reste. Le bloc de reprise, lui, est traité
-// ligne à ligne : c'est la bonne granularité, et elle n'a pas été appliquée aux rubriques.
-//
-// Ce n'est PAS fermé ici. Découper « Prochain pas » demanderait de séparer sa ligne dérivable de
-// sa ligne vivante DANS LE GÉNÉRATEUR, donc de changer ce que la vue affiche : un arbitrage de
-// rendu, pas une correction de garde. Versé plutôt que glissé dans ce lot (charte A11).
+// ⚠️ CE QUE CE VÉRIFICATEUR NE VOIT PAS, écrit plutôt que tu :
+//   (1) une falsification portée sur un élément exempté, et qui reste dans sa zone, passe —
+//       la comparer mesurerait la forge ;
+//   (2) le classement est par RUBRIQUE : « Prochain pas » lit la forge et sort du contrôle EN
+//       ENTIER, alors que sa deuxième ligne se dérive de `docs/tasks.json` seul (A10 · mutation).
+//       Le bloc de reprise est jugé ligne à ligne ; les rubriques pas encore. C'est GOV-053 ;
+//   (3) un élément que le générateur CESSE de produire disparaît des deux côtés à la fois. C'est
+//       GOV-055, et il faut une source extérieure pour le fermer.
 
-/** Les rubriques NON comparables, chacune avec la source vivante qui l'en empêche. */
-const RUBRIQUES_VOLATILES: [string, string][] = [
-  ['File de fusion', '`gh pr list` — change à chaque ouverture ou fusion de PR'],
-  ['Revendications', '`gh issue list` — labels `owner:` posés hors du dépôt'],
-  ['Décisions du jour', 'dérivée du JOUR du dernier atterrissage, donc de `origin/main`'],
-  ['Prochain pas', 'dépend de la tête de la file de fusion'],
-  ['Dernier atterrissage', 'SHA et date d’`origin/main`'],
-];
-
-/**
- * 🔴 QUATRE LISTES TAPÉES SONT DEVENUES UNE, ET LA DOCTRINE EST LA MÊME AUX DEUX ÉTAGES.
- *
- * La rédaction précédente portait deux règles OPPOSÉES dans la même fonction, sans qu'aucune phrase
- * ne l'explique : au niveau des rubriques, *non déclaré ⇒ COMPARÉE* ; au niveau des lignes,
- * *non déclaré ⇒ REFUS*. A09 · simplicite l'a relevé, et a démoli la raison que j'en donnais —
- * « une ligne inconnue n'a pas de contrepartie » n'est pas une propriété des lignes, **c'est une
- * propriété de l'ordre des tests** : les deux messages de contrepartie existaient déjà, ils étaient
- * seulement inatteignables parce que le classement tirait avant la provenance.
- *
- * 🔑 L'ARGUMENT QUI TRANCHE, et il porte sur ce que chaque règle ENSEIGNE. Sous « comparée par
- * défaut », la seule déclaration qu'un humain puisse écrire est une **exemption, et elle coûte un
- * motif**. Sous « refus par défaut », il peut aussi écrire « comparée » : une déclaration qui ne
- * coûte rien, qui a l'air d'une mise en conformité — et c'était exactement la porte que le message
- * de refus désignait du doigt (« classe-la dans scripts/plan-state/build.ts »). *L'échappatoire
- * bon marché est celle qu'on prend.*
- *
- * Ce que le refus donnait — un signal DÉTERMINISTE à l'introduction, plutôt qu'un rouge différé au
- * premier changement de la forge — est rendu par le vert qui **énumère sa population** : ajouter
- * une ligne au générateur change la sortie du vert dans le diff même qui l'ajoute.
- *
- * Il reste donc, à chaque niveau, une seule liste tapée POUR LES POPULATIONS : les exemptions, chacune avec la
- * source vivante qui la justifie, chacune IMPRIMÉE par le vert.
- */
 const BLOC_DE_REPRISE = 'REPRENDRE EN 30 SECONDES';
 
-/**
- * Les LIGNES exemptées du bloc, chacune avec la source vivante qui l'en empêche.
- *
- * ⚠️ `LIGNES_DE_REPRISE_COMPAREES` et `LIGNES_DE_STRUCTURE` ont disparu. La première était la
- * liste d'inclusion que la dérivation remplace. La seconde exemptait l'en-tête et le séparateur du
- * tableau : A09 · securite a mesuré qu'elle les exemptait **par leur question seule, le contenu
- * restant libre** — réécrire `| Question | n'importe quoi |` passait, exit 0. Ce sont des
- * constantes du générateur : les comparer octet par octet est gratuit et correct.
- */
-const LIGNES_EXEMPTEES: [string, string][] = [
-  ['Où est `main` ?', 'SHA et date d’`origin/main`'],
-  ['Qu’est-ce qui est en vol ?', '`gh pr list` — la file de fusion'],
-  ['Qui tient quoi ?', '`gh issue list` — labels `owner:` posés hors du dépôt'],
-  ['Le prochain pas', 'dépend de la tête de la file de fusion'],
-];
-
-/**
- * Les PROSES exemptées du bloc, déclarées par leur début.
- *
- * ⚠️ RÉSERVE ÉCRITE ICI PARCE QUE PERSONNE NE LA RAMASSERAIT AILLEURS (A09 · securite) : de cette
- * prose, seule la PREMIÈRE clause dépend de la file de fusion — sa queue est une constante du
- * générateur, et la réécrire passe. L'exemption est donc plus large que sa justification. C'est le
- * même défaut que GOV-053 nomme pour les rubriques, **à la granularité de la clause** : l'acceptance
- * de GOV-053 le dit maintenant explicitement.
- */
-const PROSES_EXEMPTEES: [string, string][] = [
-  ['**Ce qu’on tape maintenant.**', 'sa première clause dépend de la tête de la file de fusion'],
-];
-
-/**
- * 🔴 UN PRÉFIXE VIDE DÉSARMAIT TOUTE LA FAMILLE. A10 · mutation, 2e tour de la PR #36 : remplacer
- * le préfixe déclaré par la chaîne vide exempte TOUTE prose, puisque `startsWith('')` est toujours
- * vrai — et rien ne le disait. Une exemption qui s'élargit en silence est pire qu'une exemption
- * large : celle-ci a l'air étroite.
- *
- * Le contrôle est ici, au chargement du module, et il LÈVE : un plantage au démarrage est le seul
- * refus qu'on ne peut pas manquer.
- */
-for (const [prefixe, motif] of PROSES_EXEMPTEES) {
-  if (prefixe.trim().length < 4) {
-    throw new Error(`plan-state : un préfixe d'exemption de prose fait moins de 4 caractères (« ${prefixe} ») — il exempterait bien plus que ce qu'il nomme.`);
-  }
-  if (motif.trim().length < 10) {
-    throw new Error(`plan-state : l'exemption de prose « ${prefixe} » n'a pas de motif lisible — une exemption sans motif est un oubli qui a l'air d'une décision.`);
-  }
-}
+/** Les sources vivantes lues pour écrire un élément, en clair — `null` s'il n'en a lu aucune. */
+const exemption = (sources: Set<string> | undefined): string | null =>
+  sources !== undefined && sources.size > 0 ? `lu dans ${[...sources].sort().join(' et ')}` : null;
 
 interface Rubrique { titre: string; corps: string }
 
-/** Découpe une vue en rubriques `## `. Le texte d'avant la première porte le nom `(en-tête)`. */
+/**
+ * 🔴 UNE RUBRIQUE EST UNE GRAMMAIRE, PAS UNE ORTHOGRAPHE (A09 · securite, revue de la PR #36 sur `0d00658`).
+ *
+ * Le découpage reconnaissait `startsWith('## ')`. Un titre « Bloquées » précédé d'une espace reste
+ * un titre pour CommonMark et n'en était pas un pour la garde : posé dans une rubrique exemptée, il
+ * affichait deux « Bloquées » et rendait EXIT 0, pendant que `rubrique_dupliquee` prétendait refuser
+ * le doublon. Le motif est désormais celui de CommonMark §4.2 (titre ATX de niveau 2) : jusqu'à TROIS
+ * espaces, `##`, puis un blanc ou la fin de ligne ; une séquence fermante de `#` ne fait pas partie
+ * du titre.
+ *
+ * Les autres écritures d'un titre — Setext, titre dans une citation ou un élément de liste —
+ * n'ouvrent pas de rubrique ici : dans une zone comparée elles sont comparées octet par octet, et
+ * dans une zone exemptée `structureDeBloc` les refuse.
+ */
+const TITRE_DE_RUBRIQUE = /^ {0,3}##(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/;
+
+/** Découpe une vue en rubriques de niveau 2. Le texte d'avant la première porte le nom `(en-tête)`. */
 function decouper(texte: string): Rubrique[] {
   const out: Rubrique[] = [];
-  let titre = '(en-tête)';
+  let nom = '(en-tête)';
   let corps: string[] = [];
   for (const l of texte.split('\n')) {
-    if (l.startsWith('## ')) {
-      out.push({ titre, corps: corps.join('\n') });
-      titre = l.slice(3).trim();
+    const m = TITRE_DE_RUBRIQUE.exec(l);
+    if (m) {
+      out.push({ titre: nom, corps: corps.join('\n') });
+      nom = (m[1] ?? '').trim();
       corps = [];
     } else corps.push(l);
   }
-  out.push({ titre, corps: corps.join('\n') });
+  out.push({ titre: nom, corps: corps.join('\n') });
   return out;
 }
 
 /**
- * 🔴 IL N'Y A PLUS DE LISTE DES RUBRIQUES COMPARÉES, ET C'EST LA CORRECTION.
+ * 🔴 UNE ZONE EXEMPTÉE NE DOIT RIEN POUVOIR FAIRE AUX ZONES COMPARÉES (A09 · securite, revue sur `0d00658`).
  *
- * Elle en retapait neuf, qui existent déjà dans ce fichier là où le générateur les écrit. Trois
- * défauts en sortaient, tous mesurés sur la PR #36 :
- *   — A09 · simplicite : la même liste était tapée QUATRE fois dans le dépôt (ici, dans le spec,
- *     dans `docs/gates.json`, dans `ci.yml`) et déjà divergente — le spec n'en couvrait que huit.
- *   — A10 · mutation : retirer une rubrique du générateur faisait tomber la couverture de 9 à 8
- *     **en silence**, la gate annonçant fièrement « 8 rubrique(s) comparée(s) ».
- *   — A10 · mutation : renommer `Bloquées` en `Prochain pas bloqué` la faisait capturer par la
- *     règle de PRÉFIXE des volatiles, et la sortait du contrôle.
+ * Exemptée veut dire « son CONTENU n'est pas comparé », jamais « sa STRUCTURE est libre ». Mesuré à
+ * `0d00658` : un bloc HTML jamais refermé dans le corps de « File de fusion » faisait disparaître à
+ * l'écran « Journal » et « Dette déclarée », deux rubriques comparées, EXIT 0. La bannière certifiait
+ * des rubriques qu'un lecteur ne voyait plus.
  *
- * `comparee` se DÉRIVE désormais : **tout ce qui n'est ni volatile ni le bloc de reprise**. Une
- * rubrique neuve est donc COMPARÉE, et non plus simplement signalée — strictement plus fort, et
- * une liste en moins. C'est le renversement inclusion→exclusion déjà appliqué au gel des outils.
- *
- * ⚠️ Et le PRÉFIXE ne vaut plus que pour les rubriques comparées. Les cinq volatiles se
- * reconnaissent EXACTEMENT : sans quoi une rubrique renommée avec le bon préfixe s'exempte
- * elle-même, ce que `mutation` a joué.
+ * La règle vient de la grammaire où la vue est LUE. Dans CommonMark (§4, §5), les constructions de
+ * bloc qui CRÉENT un titre ou qui AVALENT les lignes suivantes jusqu'à un marqueur de fin sont : le
+ * titre ATX, le soulignement Setext, la clôture de bloc de code, et le bloc HTML — dont les sept
+ * formes commencent toutes par `<`. Toutes peuvent s'ouvrir derrière une pile de conteneurs (citation
+ * `>`, élément de liste), qu'on pèle d'abord. La règle SUR-INCLUT exprès — une tabulation compte
+ * comme une espace, `<` refuse les sept formes d'un coup : le générateur n'écrit aucune de ces
+ * constructions dans une zone exemptée, et c'est le contre-témoin de la vue rendue sous deux forges
+ * qui garde qu'elle ne coûte aucun faux rouge.
  */
-const classer = (titre: string): 'comparee' | 'volatile' | 'reprise' => {
-  if (titre === BLOC_DE_REPRISE) return 'reprise';
-  if (RUBRIQUES_VOLATILES.some(([r]) => titre === r)) return 'volatile';
-  return 'comparee';
-};
+const CONTENEUR = /^ {0,3}(?:>[ \t]?|(?:[-+*]|\d{1,9}[.)])(?:[ \t]+|$))/;
+const OUVERTURES: readonly (readonly [RegExp, string])[] = [
+  [/^[ \t]{0,3}#{1,6}(?:[ \t]|$)/, 'un titre ATX'],
+  [/^[ \t]{0,3}(?:=+|-+)[ \t]*$/, 'un soulignement de titre Setext'],
+  [/^[ \t]{0,3}(?:`{3,}|~{3,})/, 'une clôture de bloc de code'],
+  [/^[ \t]{0,3}</, 'un bloc HTML'],
+];
+
+function structureDeBloc(ligne: string): string | null {
+  let reste = ligne;
+  for (let m = CONTENEUR.exec(reste); m !== null && m[0] !== ''; m = CONTENEUR.exec(reste)) reste = reste.slice(m[0].length);
+  return OUVERTURES.find(([re]) => re.test(reste))?.[1] ?? null;
+}
 
 /**
- * LES MESURES DU DOMAINE. REQ-GOV-032 exige que l'écart soit nommé « en unités du domaine —
- * nombre de tâches livrées, nombre d'exigences — et non "les deux fichiers diffèrent" ». Elles
- * sont LUES dans les deux textes et confrontées deux à deux ; aucune n'est écrite en dur.
- */
-/**
- * 🔴 LA QUATRIÈME POPULATION, ET LA DERNIÈRE QU'ON POUVAIT VIDER EN SILENCE.
+ * LES MESURES DU DOMAINE. REQ-GOV-032 exige que l'écart soit nommé « en unités du domaine — nombre
+ * de tâches livrées, nombre d'exigences — et non "les deux fichiers diffèrent" ». Elles sont LUES
+ * dans les deux textes et confrontées deux à deux ; aucune valeur n'est écrite en dur.
  *
- * A10 · mutation, 3e tour : désarmer 21 des 23 mesures laissait la suite VERTE. Mesuré à nouveau
- * après avoir fait énumérer le vert : toujours 33/33 vert — l'énumération rend le trou VISIBLE,
- * elle ne le rend pas ROUGE. (A09 · exactitude affirmait l'inverse ; la mesure a tranché pour
- * `mutation`, et je le dis parce qu'une contradiction entre lentilles se règle par une mesure, pas
- * par la plus récente.)
- *
- * Les noms des mesures étaient des littéraux éparpillés dans les appels. Ils sont maintenant une
- * TABLE — donc une valeur — et `MESURES_ATTENDUES` en dérive. Le vert annonce `X/Y`, et un témoin
- * exige l'égalité : retirer une lecture fait tomber X sans toucher Y, et ça rougit.
- *
- * C'est le même renversement que pour les familles, les rubriques, les lignes et la prose. La
- * cinquième fois qu'il est appliqué dans ce fichier, et la leçon vaut plus que le correctif :
- * *une population qu'on ne déclare pas est une population qu'on peut vider.*
+ * Leurs NOMS sont une table, et `MESURES_ATTENDUES` en dérive : le vert annonce `X/Y` — X les mesures
+ * lues dans le rendu, Y la population. CE QUE CE COUPLE ATTRAPE, ET CE QU'IL N'ATTRAPE PAS :
+ *   — une regex qui CESSE DE CORRESPONDRE (la vue a changé de forme) : X tombe, Y reste. Cette gate
+ *     l'imprime et sort 0 ; c'est le témoin de `vues-derivees.spec.ts`, dans `pnpm test`, qui
+ *     rougit sur l'inégalité ;
+ *   — une LECTURE RETIRÉE de la table : X et Y tombent ENSEMBLE, EXIT 0, et aucun témoin ne rougit
+ *     sur la population. La valeur retirée reste comparée octet par octet dans sa rubrique — seul son
+ *     nom de domaine se perd. Comparer un générateur à lui-même ne voit pas ce qu'il a cessé de lire :
+ *     c'est GOV-055.
+ * Les mesures par statut, elles, viennent de `PLANCHER`, hors de ce fichier.
  */
 const LECTURES: readonly (readonly [RegExp, ...string[]])[] = [
   [/^(\d+)\/(\d+) tâches terminées · reste ([\d.]+) j estimés\.$/m,
@@ -722,50 +745,26 @@ const LECTURES: readonly (readonly [RegExp, ...string[]])[] = [
   [/^(\d+) décisions portent une hypothèse datée/m, 'décisions à hypothèse posée'],
 ];
 
-/**
- * 🔴 CE VOCABULAIRE ÉTAIT RECOPIÉ, ET C'EST UNE AUTRE RÈGLE QUE CELLE QUE CETTE PR APPLIQUE.
- *
- * A09 · simplicite, 4e tour, et la distinction est la sienne : *« tu as compté les POPULATIONS que
- * tu as créées, jamais les VOCABULAIRES que tu as recopiés — deux règles différentes »*. Les cinq
- * renversements de cette PR ferment des populations (familles, rubriques, lignes, prose, mesures).
- * Celui-ci est un vocabulaire du domaine, arbitré ailleurs, avec sa propre machine d'exhaustivité :
- * `scripts/lot/avancement.ts` le déclare, et `verifierExhaustivite()` le confronte à
- * `scripts/lot/tasks.schema.json`. RM-01 et RM-04, arbitrées en PR 28.
- *
- * Conséquence mesurable, et c'est exactement le mode de panne que cette PR referme cinq fois
- * ailleurs : un statut ajouté au générateur n'entrerait ni dans `mesures()` ni dans
- * `MESURES_ATTENDUES` — X/Y resterait égal, le témoin resterait vert, et l'écart cesserait d'être
- * nommé en unités du domaine. REQ-GOV-032 reculerait sans un rouge.
- *
- * Une seule frappe, donc, et c'est celle du générateur : les deux endroits lisent la même.
- */
-const STATUTS_COMPTES = STATUTS_DU_TABLEAU;
-
 /** Les mesures COMPTÉES sans regex : elles n'ont pas de capture, seulement un dénombrement. */
 const DENOMBREMENTS: readonly (readonly [string, RegExp])[] = [
   ['tâches nommées sous « Bloquées »', /^- \*\*[A-Z]+-[A-Za-z0-9-]+\*\* — /gm],
   ['entrées de journal rendues', /^### PR #\d+ — /gm],
 ];
 
-/** LA POPULATION, dérivée de la table — jamais retapée. */
+/** LA POPULATION, dérivée de la table et du barème — jamais retapée. */
 export const MESURES_ATTENDUES: readonly string[] = [
   ...LECTURES.flatMap(([, ...noms]) => noms),
-  ...STATUTS_COMPTES.map((x) => `tâches \`${x}\``),
+  ...STATUTS_DU_TABLEAU.map((x) => `tâches \`${x}\``),
   ...DENOMBREMENTS.map(([nom]) => nom),
 ];
 
-/**
- * LES MESURES DU DOMAINE. REQ-GOV-032 exige que l'écart soit nommé « en unités du domaine —
- * nombre de tâches livrées, nombre d'exigences — et non "les deux fichiers diffèrent" ». Elles
- * sont LUES dans les deux textes et confrontées deux à deux ; aucune n'est écrite en dur.
- */
 function mesures(texte: string): Map<string, string> {
   const m = new Map<string, string>();
   for (const [re, ...noms] of LECTURES) {
     const r = re.exec(texte);
     if (r) noms.forEach((n, k) => { if (r[k + 1] !== undefined) m.set(n, r[k + 1]!); });
   }
-  for (const st of STATUTS_COMPTES) {
+  for (const st of STATUTS_DU_TABLEAU) {
     const r = new RegExp(`^\\| \`${st}\` \\| (\\d+) \\|`, 'm').exec(texte);
     if (r) m.set(`tâches \`${st}\``, r[1]!);
   }
@@ -774,39 +773,20 @@ function mesures(texte: string): Map<string, string> {
 }
 
 /**
- * 🔴 LES FAMILLES SONT UNE VALEUR, PLUS UNE REGEX SUR DU SOURCE — ET C'EST LA CORRECTION DE FOND.
+ * LES FAMILLES, une VALEUR — et `Famille` le type qui en dérive.
  *
- * Le témoin de population du tour précédent grattait le source avec `/famille: '([a-z_]+)'/`, et
- * observait les sorties avec `/\[([a-z_]+)\]/`. A10 · mutation a nommé la faute, qui n'est pas une
- * regex trop étroite mais une impossibilité :
+ * Le témoin de population grattait le source avec une regex et observait les sorties avec une autre
+ * de même classe : « ce qui sort de l'une sort de l'autre au même instant, et la soustraction reste
+ * vide PAR CONSTRUCTION » (A10 · mutation). La liste est donc déclarée ici, et `refuser` — la seule
+ * fonction qui imprime une ligne `[famille]` — n'accepte qu'un membre du type.
  *
- *   « Les deux motifs partagent LA MÊME CLASSE DE CARACTÈRES. Ce qui sort de l'une sort de l'autre
- *     au même instant, et la soustraction reste vide PAR CONSTRUCTION. »
- *
- * Mesuré : cinq formes d'émission, quatre invisibles, suite 32/32 verte. A09 · securite l'a
- * retrouvé par un autre chemin (guillemets doubles, nom construit, gabarit) et a désigné la
- * récidive : c'est le prédicat ouvert que `empreinte-des-outils.mjs` venait d'abandonner LE MÊME
- * JOUR, avec l'argument « sous-inclure est le défaut ».
- *
- * 🔑 Une population ne se GRATTE pas, elle se DÉCLARE. `FAMILLES` est la liste, `Famille` le type
- * qui en dérive : le compilateur refuse désormais toute famille absente de la liste, quelle que
- * soit la façon dont elle est écrite — littéral, constante, gabarit, concaténation. Le témoin lit
- * la VALEUR, plus le texte. C'est le renversement « une raison devient un identifiant déclaré »,
- * appliqué là où il manquait.
- *
- * ⚠️ CE QUE ÇA FERME, MESURÉ — et ce que ça ne ferme pas, dit plutôt que tu. Les quatre formes
- * qui échappaient au grattage ont été rejouées contre le compilateur :
- *
- *     guillemets doubles          → REFUSÉ à la compilation
- *     gabarit                     → REFUSÉ
- *     sans espace après le « : »  → REFUSÉ
- *     nom construit + `as never`  → **ACCEPTÉ**
- *
- * La dernière porte reste, et elle exige un TRANSTYPAGE EXPLICITE. Ce n'est plus un oubli
- * possible, c'est un acte délibéré, et il est VISIBLE dans le diff — la relecture est la garde à
- * cet endroit-là, et le contrôle réciproque du témoin (« une famille émise et absente de
- * `FAMILLES` ») l'attrape dès qu'elle est jouée une fois. Prétendre « impossible » serait la
- * quatrième fois que ce fichier revendiquerait une fermeture qu'il n'a pas.
+ * 🔴 CE QUE LE TYPE NE FERME PAS, ET POURQUOI LE TÉMOIN LIT LA SORTIE. Un transtypage (`as never`, un
+ * alias de type, les chevrons) ou un second canal qui écrit `[x]` lui-même passent le compilateur.
+ * La garde TEXTUELLE posée par `0d00658` reconnaissait une orthographe sur trois (A10 · mutation,
+ * revue sur `0d00658`) : elle est supprimée, pas allongée. Le témoin de `vues-derivees.spec.ts` confronte
+ * `FAMILLES` à ce qui sort RÉELLEMENT du processus, dans les deux sens, et exige qu'une sortie verte
+ * ne porte aucune ligne `[famille]`. Une évasion qui écrit sous un témoin se voit. Ce qui reste
+ * ouvert, et c'est dit : une évasion dont AUCUN témoin ne tire la condition.
  */
 export const FAMILLES = [
   'vue_perimee',
@@ -816,12 +796,18 @@ export const FAMILLES = [
   'rubrique_dupliquee',
   'rubrique_hors_ordre',
   'ligne_de_reprise_dupliquee',
-  'prose_dupliquee',
+  'fin_de_ligne_non_lf',
+  'structure_dans_une_exemption',
 ] as const;
 
 export type Famille = (typeof FAMILLES)[number];
 
 interface Ecart { famille: Famille; message: string }
+
+/** LA SEULE fonction du module qui écrit une ligne `[famille]`. */
+function refuser(famille: Famille, message: string): void {
+  console.error(`   [${famille}] ${message}`);
+}
 
 /** La première ligne qui diffère entre deux corps, rendue lisible. */
 function premiereDifference(attendu: string, trouve: string): string {
@@ -836,32 +822,39 @@ function premiereDifference(attendu: string, trouve: string): string {
   return 'les corps diffèrent sans qu’aucune ligne ne diffère (fin de fichier)';
 }
 
-/** Le verdict : ce que le disque porte, confronté à ce que les sources produisent À L'INSTANT. */
-function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignesComparees: number; lignesExemptees: [string, string][]; prosesExemptees: [string, string][]; mesuresConfrontees: string[] } {
-  // 🔴 CE COMPTEUR EST MESURÉ, PAS DÉCLARÉ. La première rédaction affichait
-  // `LIGNES_DE_REPRISE_COMPAREES.length` — une constante. A09 · securite : « le même défaut que
-  // celui que la PR vient corriger, déplacé d'un cran : un chiffre qui a l'air d'une mesure et qui
-  // est une déclaration. »
-  let lignesComparees = 0;
-  // 🔴 LE VERT DOIT ÉNUMÉRER SA POPULATION, PAS SEULEMENT LA COMPTER. Il nommait les cinq
-  // rubriques exemptées et TAISAIT les lignes et la prose — dont deux listes nées au tour
-  // précédent — tout en annonçant « 3 lignes CONFRONTÉES » sur un bloc qui en porte neuf
-  // (A09 · simplicite et A09 · securite, indépendamment). « Un compteur qui n'énumère pas sa
-  // population dit toujours qu'elle est couverte. »
-  const lignesExemptees: [string, string][] = [];
-  const prosesExemptees: [string, string][] = [];
-  const mesuresConfrontees: string[] = [];
-  const ecarts: Ecart[] = [];
+/** Ce qu'un étage a comparé, et ce qu'il a exempté avec la source lue — pour que le vert l'ÉNUMÈRE. */
+interface Etage { comparees: number; exemptees: [string, string][] }
 
-  // 1. LES MESURES DU DOMAINE d'abord : ce sont elles qui apprennent quelque chose.
+/** Le verdict : ce que le disque porte, confronté à ce que les sources produisent À L'INSTANT. */
+function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; rubriques: Etage; reprise: Etage; mesuresConfrontees: string[] } {
+  const ecarts: Ecart[] = [];
+  const rubriques: Etage = { comparees: 0, exemptees: [] };
+  const reprise: Etage = { comparees: 0, exemptees: [] };
+  const mesuresConfrontees: string[] = [];
+
+  /** Une zone exemptée garde son contenu libre, jamais sa structure. */
+  const contenir = (zone: string, texte: string) => {
+    texte.split('\n').forEach((l, k) => {
+      const s = structureDeBloc(l);
+      if (s !== null) {
+        ecarts.push({ famille: 'structure_dans_une_exemption', message: `${zone}, ligne ${k + 1} de la vue sur le disque : « ${l.slice(0, 80)} » ouvre ${s}. Son CONTENU n'est pas comparé, sa STRUCTURE l'est : au rendu, elle atteindrait ce qui est comparé.` });
+      }
+    });
+  };
+
+  // 0. LA FIN DE LIGNE. Tout ce qui suit découpe sur LF ; CommonMark coupe AUSSI sur CR (A09 ·
+  // securite, revue sur `0d00658` : une prose exemptée prolongée par un CR masquait au rendu trois rubriques
+  // comparées, EXIT 0). Le générateur n'en écrit aucun : le refuser partout ne coûte rien.
+  for (const [ou, texte] of [['ce que produisent les sources', attendu], ['la vue sur le disque', surDisque]] as [string, string][]) {
+    const i = texte.indexOf('\r');
+    if (i >= 0) {
+      ecarts.push({ famille: 'fin_de_ligne_non_lf', message: `${ou} : ${texte.split('\r').length - 1} retour(s) chariot, le premier ligne ${texte.slice(0, i).split('\n').length} — un lecteur Markdown y voit une fin de ligne, le découpage de cette garde n'en voit pas. Seul LF sépare les lignes d'une vue dérivée.` });
+    }
+  }
+
+  // 1. LES MESURES DU DOMAINE : ce sont elles qui apprennent quelque chose.
   const mA = mesures(attendu);
   const mD = mesures(surDisque);
-  /**
-   * 🔴 LA SEULE DES QUATRE POPULATIONS QU'ON POUVAIT VIDER EN SILENCE (A10 · mutation, 3e tour).
-   * Les rubriques, les lignes et la prose sont ÉNUMÉRÉES par le vert ; les mesures n'étaient que
-   * COMPTÉES. Désarmer 21 des 23 laissait le vert imprimer « 2 mesure(s) du domaine » et la suite
-   * verte — un compteur qui n'énumère pas sa population dit toujours qu'elle est couverte.
-   */
   for (const [nom] of mA) mesuresConfrontees.push(nom);
   for (const [nom, valeur] of mA) {
     const vu = mD.get(nom);
@@ -869,23 +862,10 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignes
     else if (vu !== valeur) ecarts.push({ famille: 'vue_perimee', message: `${nom} : la vue sur le disque dit ${vu}, ses sources produisent ${valeur}` });
   }
 
-  // 2. LA STRUCTURE : la même rubrique des deux côtés.
-  //
-  // 🔴 LA FAMILLE `rubrique_non_classee` A DISPARU, ET C'EST VOULU. Elle ne pouvait plus tirer :
-  // depuis que `comparee` se DÉRIVE (« ni volatile, ni le bloc de reprise »), aucune rubrique
-  // n'est « inconnue » — une rubrique neuve est COMPARÉE, ce qui est strictement plus fort que
-  // signalée. La garder aurait été du code mort affirmant une couverture qu'il n'a pas, le défaut
-  // même que A09 · simplicite a relevé sur le dédoublonnage de cette fonction.
+  // 2. LA STRUCTURE : les mêmes rubriques, une fois chacune, dans le même ordre.
   const rA = decouper(attendu);
   const rD = decouper(surDisque);
-  /**
-   * 🔴 UNE RUBRIQUE DUPLIQUÉE N'ÉTAIT NI COMPARÉE NI SIGNALÉE. `includes()` teste une appartenance
-   * et `find()` rend la PREMIÈRE occurrence : une seconde rubrique « Bloquées » disant l'inverse de
-   * la première passait, exit 0 (A09 · securite, trois variantes mesurées).
-   *
-   * Cette PR venait pourtant d'établir que le doublon est un refus — trente lignes plus bas, au
-   * niveau des LIGNES seulement. La règle vaut aux deux étages, comme le reste de la doctrine.
-   */
+  // Une rubrique dupliquée n'était ni comparée ni signalée — `find()` rend la PREMIÈRE (A09 · securite).
   for (const [ou, liste] of [['ce que produisent les sources', rA], ['la vue sur le disque', rD]] as [string, Rubrique[]][]) {
     const vus = new Set<string>();
     for (const r of liste) {
@@ -900,18 +880,8 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignes
   const titresD = rD.map((r) => r.titre);
   for (const t of titresA) if (!titresD.includes(t)) ecarts.push({ famille: 'rubrique_manquante', message: `rubrique « ${t} » : absente de la vue sur le disque, produite par ses sources` });
   for (const t of titresD) if (!titresA.includes(t)) ecarts.push({ famille: 'rubrique_en_trop', message: `rubrique « ${t} » : présente dans la vue sur le disque, produite par aucune source` });
-
-  /**
-   * 🔴 L'ORDRE DES RUBRIQUES N'ÉTAIT COMPARÉ PAR RIEN, et A09 · securite en a fait une arme :
-   * `## Dernier atterrissage` — rubrique VOLATILE, donc non comparée — remontée en 2ᵉ position et
-   * farcie de « 🛑 STOP — la phase -1 est TERMINÉE (39/39). Ne fusionne plus rien », **au-dessus du
-   * bloc de reprise**, rendait EXIT 0, le vert annonçant « 9 rubrique(s) comparée(s) octet par
-   * octet ».
-   *
-   * 🔑 Un mensonge n'a pas besoin d'être dans une rubrique comparée : il lui suffit d'être LU EN
-   * PREMIER. Comparer les contenus sans comparer leur ORDRE laisse la mise en page libre, et la
-   * mise en page est ce qu'un lecteur pressé prend pour le résumé.
-   */
+  // L'ORDRE : un mensonge n'a pas besoin d'être dans une rubrique comparée, il lui suffit d'être LU
+  // EN PREMIER (A09 · securite, 3e tour : une rubrique exemptée remontée au-dessus du bloc de reprise).
   if (titresA.length === titresD.length) {
     for (let k = 0; k < titresA.length; k += 1) {
       if (titresA[k] !== titresD[k]) {
@@ -924,25 +894,43 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignes
     }
   }
 
-  // 3. LE CORPS des rubriques comparables, OCTET PAR OCTET.
+  // 3. LE CORPS des rubriques, OCTET PAR OCTET — sauf celles dont le générateur a lu la forge.
   for (const r of rA) {
-    if (classer(r.titre) !== 'comparee') continue;
+    if (r.titre === BLOC_DE_REPRISE) continue;
     const surPlace = rD.find((x) => x.titre === r.titre);
+    const motif = exemption(sourcesDesRubriques.get(r.titre));
+    if (motif !== null) {
+      rubriques.exemptees.push([r.titre, motif]);
+      if (surPlace) contenir(`rubrique « ${r.titre} »`, surPlace.corps);
+      continue;
+    }
+    rubriques.comparees += 1;
     if (!surPlace || surPlace.corps === r.corps) continue;
     ecarts.push({ famille: 'vue_perimee', message: `rubrique « ${r.titre} » : ${premiereDifference(r.corps, surPlace.corps)}` });
   }
 
-  // 4. LE BLOC DE REPRISE, ligne à ligne : il mélange les tâches et la forge.
-  //
-  // Non déclaré ⇒ COMPARÉ, comme au niveau des rubriques. La provenance se teste AVANT le
-  // classement : une ligne présente d'un seul côté est nommée par sa PROVENANCE, jamais renvoyée
-  // à la liste blanche de la garde. Le message précédent disait « classe-la dans
-  // scripts/plan-state/build.ts » à une ligne insérée à la main — il enseignait le contournement
-  // (A09 · simplicite).
+  // 4. LE BLOC DE REPRISE, ligne à ligne : il mêle les tâches et la forge.
   const blocA = rA.find((r) => r.titre === BLOC_DE_REPRISE);
   const blocD = rD.find((r) => r.titre === BLOC_DE_REPRISE);
   if (blocA && blocD) {
     const question = (l: string) => (l.startsWith('|') ? (l.split('|')[1] ?? '').trim() : null);
+
+    // LA FORME d'abord : l'ordre des lignes, les lignes vides, la nature de chacune. Une ligne
+    // exemptée est libre de CONTENU, pas de PLACE — remontée au-dessus de l'en-tête du tableau, elle
+    // en casserait le rendu, lignes comparées comprises.
+    const forme = (corps: string) =>
+      corps.split('\n').map((l) => (l === '' ? '(ligne vide)' : question(l) !== null ? `la question « ${question(l)} »` : 'une prose'));
+    const fA = forme(blocA.corps);
+    const fD = forme(blocD.corps);
+    for (let k = 0; k < Math.max(fA.length, fD.length); k += 1) {
+      if (fA[k] !== fD[k]) {
+        ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise, ligne ${k + 1} : la vue sur le disque porte ${fD[k] ?? '(rien)'}, ses sources produisent ${fA[k] ?? '(rien)'} — la FORME du bloc est dérivée, elle ne se réarrange pas à la main` });
+        break;
+      }
+    }
+
+    // Les QUESTIONS, par leur libellé. La provenance se teste avant l'exemption : une ligne présente
+    // d'un seul côté est un écart, quel que soit ce qu'elle a lu.
     const indexer = (corps: string, ou: string) => {
       const m = new Map<string, string>();
       for (const l of corps.split('\n')) {
@@ -958,13 +946,10 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignes
     };
     const qA = indexer(blocA.corps, 'dans ce que produisent les sources');
     const qD = indexer(blocD.corps, 'dans la vue sur le disque');
-
     for (const q of new Set([...qA.keys(), ...qD.keys()])) {
-      const attendu = qA.get(q);
+      const attendue = qA.get(q);
       const vue = qD.get(q);
-      // LA PROVENANCE D'ABORD. Une ligne qui n'existe que d'un côté est un écart, quel que soit
-      // son classement — et le dire ainsi évite d'inviter l'auteur à l'exempter.
-      if (attendu === undefined) {
+      if (attendue === undefined) {
         ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise : la ligne « ${q} » est sur le disque et n'est produite par AUCUNE source` });
         continue;
       }
@@ -972,99 +957,87 @@ function comparer(attendu: string, surDisque: string): { ecarts: Ecart[]; lignes
         ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise : la ligne « ${q} » est produite par les sources et ABSENTE de la vue sur le disque` });
         continue;
       }
-      const exemptee = LIGNES_EXEMPTEES.find(([r]) => r === q);
-      if (exemptee) { lignesExemptees.push(exemptee); continue; }
-      lignesComparees += 1;
-      if (vue !== attendu) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise, ligne « ${q} » : la vue sur le disque dit « ${vue.slice(0, 160)} », ses sources produisent « ${attendu.slice(0, 160)} »` });
+      const motif = exemption(sourcesDesLignes.get(attendue));
+      // Une question commence par `|` : elle n'ouvre aucune structure de bloc, il n'y a rien à contenir.
+      if (motif !== null) { reprise.exemptees.push([q, motif]); continue; }
+      reprise.comparees += 1;
+      if (vue !== attendue) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise, ligne « ${q} » : la vue sur le disque dit « ${vue.slice(0, 160)} », ses sources produisent « ${attendue.slice(0, 160)} »` });
     }
 
-    // LA PROSE, des deux côtés, PRÉSENCE COMPRISE.
-    // 🔴 La rédaction précédente vérifiait qu'une prose était DÉCLARÉE, jamais qu'elle était
-    // PRÉSENTE : supprimer entièrement la ligne du disque passait, exit 0 (A09 · securite).
+    // Les PROSES, par leur RANG : la forme vient d'être confrontée, la n-ième prose du disque est donc
+    // celle que les sources ont écrite n-ième. Il n'y a plus de préfixe à déclarer, donc plus de
+    // préfixe vide qui exempterait tout.
     const proses = (corps: string) => corps.split('\n').filter((l) => l.trim() !== '' && question(l) === null);
     const pA = proses(blocA.corps);
     const pD = proses(blocD.corps);
-    const cle = (l: string) => {
-      const d = PROSES_EXEMPTEES.find(([x]) => l.trimStart().startsWith(x));
-      return d ? d[0] : l.trim();
-    };
-    /**
-     * 🔴 UNE PROSE SUPPLÉMENTAIRE PORTANT LE PRÉFIXE BÉNI ÉTAIT INVISIBLE (A10 · mutation) : deux
-     * proses de même clé, `find()` rend la première, la seconde n'est jamais confrontée. C'est le
-     * doublon, à l'étage de la prose — et cette PR a déjà établi deux fois que le doublon est un
-     * refus. La règle vaut aux trois étages.
-     */
-    for (const [ou, liste] of [['ce que produisent les sources', pA], ['la vue sur le disque', pD]] as [string, string[]][]) {
-      const vues = new Set<string>();
-      for (const l of liste) {
-        const c = cle(l);
-        if (vues.has(c)) ecarts.push({ famille: 'prose_dupliquee', message: `bloc de reprise, ${ou} : deux proses commencent par « ${c.slice(0, 50)} » — laquelle fait foi ? Aucune : corrige la source.` });
-        vues.add(c);
+    for (let k = 0; k < Math.max(pA.length, pD.length); k += 1) {
+      const a = pA[k];
+      const d = pD[k];
+      if (a === undefined) { ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise : la prose n°${k + 1} « ${d!.slice(0, 60)} » est sur le disque et n'est produite par AUCUNE source` }); continue; }
+      if (d === undefined) { ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise : la prose n°${k + 1} « ${a.slice(0, 60)} » est produite par les sources et ABSENTE de la vue sur le disque` }); continue; }
+      const motif = exemption(sourcesDesLignes.get(a));
+      if (motif !== null) {
+        reprise.exemptees.push([`prose n°${k + 1}`, motif]);
+        contenir(`bloc de reprise, prose n°${k + 1}`, d);
+        continue;
       }
-    }
-    for (const c of new Set([...pA.map(cle), ...pD.map(cle)])) {
-      const a = pA.find((l) => cle(l) === c);
-      const d = pD.find((l) => cle(l) === c);
-      if (a === undefined) { ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise : la prose « ${c.slice(0, 60)} » est sur le disque et n'est produite par AUCUNE source` }); continue; }
-      if (d === undefined) { ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise : la prose « ${c.slice(0, 60)} » est produite par les sources et ABSENTE de la vue sur le disque` }); continue; }
-      const exemptee = PROSES_EXEMPTEES.find(([x]) => x === c);
-      if (exemptee) { prosesExemptees.push(exemptee); continue; }
-      lignesComparees += 1;
-      if (a !== d) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise, prose « ${c.slice(0, 60)} » : la vue sur le disque et ses sources diffèrent` });
+      reprise.comparees += 1;
+      if (a !== d) ecarts.push({ famille: 'vue_perimee', message: `bloc de reprise, prose n°${k + 1} « ${a.slice(0, 60)} » : la vue sur le disque et ses sources diffèrent` });
     }
   }
 
-  return { ecarts, lignesComparees, lignesExemptees, prosesExemptees, mesuresConfrontees };
+  return { ecarts, rubriques, reprise, mesuresConfrontees };
 }
 
 // ── les deux modes ───────────────────────────────────────────────────────────
 const rendu = lignes.join('\n') + '\n';
 
-if (MODE_VERIFIER) {
+/**
+ * 🔴 IMPORTER CE MODULE RÉÉCRIVAIT `docs/PLAN-STATE.md`. `vues-derivees.spec.ts` l'importe pour lire
+ * `FAMILLES` ; sans `--verifier` dans les arguments de Vitest, le module tombait dans la branche qui
+ * ÉCRIT — et le contre-témoin « la vue COMMITÉE est égale à ses sources » jugeait ensuite un fichier
+ * que l'import venait de régénérer : vert par construction, et la vue du dépôt écrasée pendant les
+ * tests. Les deux modes ne tournent donc que lorsque ce fichier est LE script lancé.
+ */
+const LANCE_EN_SCRIPT = /[\\/]plan-state[\\/]build\.ts$/.test(process.argv[1] ?? '');
+
+if (!LANCE_EN_SCRIPT) {
+  // Importé : rien n'est écrit, rien n'est jugé.
+} else if (MODE_VERIFIER) {
   // Ce mode N'ÉCRIT RIEN : une garde qui répare ce qu'elle contrôle est toujours verte.
   if (!existsSync(CHEMIN_VUE)) {
     console.error(`❌ plan-state:verifier — ${CHEMIN_VUE} est ABSENT : il n’y a rien à comparer. Tape \`pnpm plan-state:build\`.`);
     process.exitCode = 1;
   } else {
-    const { ecarts, lignesComparees, lignesExemptees, prosesExemptees, mesuresConfrontees } = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'));
+    const { ecarts, rubriques, reprise, mesuresConfrontees } = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'));
     if (ecarts.length > 0) {
       console.error(`❌ plan-state:verifier — ${CHEMIN_VUE} a DÉRIVÉ de ses sources : ${ecarts.length} écart(s).`);
-      for (const e of ecarts.slice(0, 20)) console.error(`   [${e.famille}] ${e.message}`);
+      for (const e of ecarts.slice(0, 20)) refuser(e.famille, e.message);
       if (ecarts.length > 20) console.error(`   … et ${ecarts.length - 20} autre(s).`);
       console.error(
         '   Cette vue est DÉRIVÉE : tape `pnpm plan-state:build` pour la régénérer. Si le chiffre te ' +
           'surprend, c’est la SOURCE qu’il faut corriger (`docs/tasks.json` par `pnpm lot:cloture`, ' +
           '`docs/DECISIONS.md`, `docs/journal/`) — jamais la vue à la main.\n' +
-          '   ⚠️ SECONDE ISSUE, si l’élément est RÉELLEMENT volatile — dérivé d’une source vivante ' +
-          'que le dépôt ne fige pas : déclare-le dans `scripts/plan-state/build.ts` AVEC SON MOTIF ' +
-          '(`RUBRIQUES_VOLATILES`, `LIGNES_EXEMPTEES` ou `PROSES_EXEMPTEES`). Le vert l’imprimera. ' +
-          'Sans cette issue, un rouge que régénérer ne calme pas est un rouge qu’on apprend à sauter.'
+          '   ⚠️ Si l’élément est RÉELLEMENT volatile, c’est que le générateur le lit hors du dépôt : cette ' +
+          'lecture passe par `forge` dans `scripts/plan-state/build.ts`, qui l’exempte et imprime la source ' +
+          'lue. Il n’y a pas de liste à allonger.'
       );
       process.exitCode = 1;
     } else {
-      const decoupe = decouper(rendu);
-      const comparees = decoupe.filter((r) => classer(r.titre) === 'comparee');
-      // 🔴 LE COMPTE ÉTAIT MESURÉ, LES NOMS RESTAIENT LA LISTE DÉCLARÉE. Depuis que `classer`
-      // exige l'égalité EXACTE, renommer une rubrique volatile la bascule du côté comparé : la
-      // gate rougirait à chaque changement de forge pendant que le vert continuerait de la citer
-      // comme non comparée (A09 · simplicite). Les noms se dérivent donc du RENDU, comme le compte.
-      const volatilesVues = decoupe
-        .filter((r) => classer(r.titre) === 'volatile')
-        .map((r) => [r.titre, RUBRIQUES_VOLATILES.find(([x]) => x === r.titre)?.[1] ?? '(motif absent)'] as [string, string]);
       console.log(
         `✅ plan-state:verifier — ${CHEMIN_VUE} est égal à ce que ses sources produisent : ` +
-          `${comparees.length} rubrique(s) comparée(s) octet par octet, ${lignesComparees} ligne(s) du bloc de reprise CONFRONTÉES, ` +
+          `${rubriques.comparees} rubrique(s) comparée(s) octet par octet sur ${rubriques.comparees + rubriques.exemptees.length}, ` +
+          `${reprise.comparees} ligne(s) du bloc de reprise CONFRONTÉES sur ${reprise.comparees + reprise.exemptees.length}, ` +
           `${mesuresConfrontees.length}/${MESURES_ATTENDUES.length} mesure(s) du domaine CONFRONTÉES.`
       );
       const rendreExemptions = (quoi: string, l: [string, string][]) =>
         l.length ? `   NON COMPARÉ — ${quoi} : ${l.map(([r, motif]) => `« ${r} » (${motif})`).join(' · ')}.` : null;
-      // Les mesures sont NOMMÉES, comme les trois autres populations — sinon c'est la seule
-      // qu'on peut vider sans que la forme de la sortie change.
+      // Les mesures sont NOMMÉES, comme les autres étages — sinon c'est la seule population qu'on
+      // pourrait vider sans que la forme de la sortie change.
       console.log(`   CONFRONTÉ — mesures du domaine : ${mesuresConfrontees.join(' · ')}.`);
       for (const ligne of [
-        rendreExemptions('rubriques', volatilesVues),
-        rendreExemptions('lignes du bloc de reprise', lignesExemptees),
-        rendreExemptions('prose du bloc de reprise', prosesExemptees),
+        rendreExemptions('rubriques', rubriques.exemptees),
+        rendreExemptions('lignes du bloc de reprise', reprise.exemptees),
       ]) if (ligne) console.log(ligne);
     }
   }
