@@ -12,7 +12,7 @@ description: Exécute un lot de tâches d'Axion Partners de bout en bout — com
 
 Tout le reste de cette compétence lit `docs/tasks.json`. Ce fichier n'existe qu'après **GOV-017**, qui
 dépend de GOV-001 / GOV-005 / GOV-011, eux-mêmes après **GOV-000** — et le dépôt, la CI, le
-`package.json` et cette compétence _sont_ GOV-000. La toute première session mourrait sur
+`package.json` et cette compétence *sont* GOV-000. La toute première session mourrait sur
 `ENOENT: docs/tasks.json` avant d'avoir rien fait.
 
 Si `docs/tasks.json` est absent : **ne pas appeler le composeur**. Exécuter à la main, dans cet ordre,
@@ -122,14 +122,14 @@ clôture de phase).
 Ne pas contourner. Envoyer à Will, par `PushNotification`, la liste des `stops` avec leur motif.
 La liste est **fermée** — le schéma du workflow refuse tout autre motif :
 
-| Motif                                      | Ce que ça veut dire                                                                 |
-| ------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `decision_sans_hypothese`                  | Une décision **W1/W3/W4/W6/W9/W11** (ou marquée « avenant ») est devenue nécessaire |
-| `req_non_testable`                         | L'exigence doit revenir en spécification, elle ne se prouve pas                     |
-| `dependance_externe_sans_repli`            | DocuSeal, API gouv, banque, Coolify indisponible sans mode dégradé                  |
-| `constat_critique`                         | Un audit a trouvé un défaut critique                                                |
-| `gate_phase_x2`                            | Une gate de phase a échoué deux fois                                                |
-| `readyz_503_prod` / `ecart_reconciliation` | Production : **accusé humain avant tout retour arrière**                            |
+| Motif | Ce que ça veut dire |
+|---|---|
+| `decision_sans_hypothese` | Une décision **W1/W3/W4/W6/W9/W11** (ou marquée « avenant ») est devenue nécessaire |
+| `req_non_testable` | L'exigence doit revenir en spécification, elle ne se prouve pas |
+| `dependance_externe_sans_repli` | DocuSeal, API gouv, banque, Coolify indisponible sans mode dégradé |
+| `constat_critique` | Un audit a trouvé un défaut critique |
+| `gate_phase_x2` | Une gate de phase a échoué deux fois |
+| `readyz_503_prod` / `ecart_reconciliation` | Production : **accusé humain avant tout retour arrière** |
 
 ## Ce que cette compétence ne fait jamais
 

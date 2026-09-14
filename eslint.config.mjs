@@ -27,20 +27,20 @@
 //
 // ── CE QU'IL RESTE, ET SOUS QUEL RÉGIME ─────────────────────────────────────────────────────
 //
-// Après ce correctif, `eslint .` sort en 0 sur le dépôt, avec 13 AVERTISSEMENTS comptés (voir le
-// dernier bloc). Ils sont posés en `warn` et non éteints : une CI qu'on rend verte en éteignant
-// la règle mesure la règle éteinte. Les corriger touche cinq fichiers hors du périmètre de
-// GOV-031 (charte A11 : un manque devient une tâche, jamais un correctif glissé dans le lot en
-// cours) — la tâche qui les remonte en `error` reste à ouvrir par A01.
+// Après ce correctif, `eslint .` sort en 0 sur le dépôt, avec des AVERTISSEMENTS comptés — leur
+// nombre se lit dans la sortie de `pnpm lint`, il n'est pas recopié ici. Ils sont posés en `warn`
+// et non éteints, et SEULEMENT dans les fichiers nommés par l'avant-dernier bloc : un fichier
+// neuf reçoit les deux règles en `error`. Les corriger sort du périmètre de GOV-031 (charte A11 :
+// un manque devient une tâche, jamais un correctif glissé dans le lot en cours) — la tâche qui
+// les remonte en `error` reste à ouvrir par A01.
 //
 // ⚠️ LE PARAGRAPHE QUI SUIVAIT ÉTAIT VRAI LE 2026-09-12 ET NE L'EST PLUS. Il disait :
 // « `prettier --check .` rend 136 fichiers non formatés et n'est PAS vert ; le rendre vert
 // reformate le dépôt, ce qui n'est pas le périmètre de cette tâche ; tant que ce n'est pas fait,
 // `format:check` n'a pas sa place en Gate A ». C'était le raisonnement qui laissait GOV-031
-// verte en ne livrant qu'un item sur quatre. Le 2026-09-14, le dépôt A ÉTÉ reformaté : 88
-// fichiers de code, et `pnpm format:check` sort en 0. Les 48 fichiers de `docs/**`, les 4 de
-// `packages/**` et `scripts/gates/gov-pr.ts` restent en dehors — trois dérogations NOMMÉES,
-// chacune avec sa mesure, dans `.prettierignore`. Aucune règle n'a été éteinte pour y arriver.
+// verte en ne livrant qu'un item sur quatre. Le 2026-09-14, le code du dépôt A ÉTÉ reformaté, et
+// `pnpm format:check` sort en 0. Ce qui reste hors du format est écrit, entrée par entrée et avec
+// sa mesure, dans `.prettierignore` — la liste n'est pas recopiée ici.
 //
 // ── CE QUE `gov:conventions` EXIGE LE JOUR OÙ L'ÉTAPE ARRIVE ────────────────────────────────
 //
@@ -84,6 +84,12 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
 
   {
+    // AUCUN COMMENTAIRE NE DÉSARME UNE RÈGLE. Sans ce réglage, `// eslint-disable-next-line
+    // no-console` posé au-dessus d'une fuite la fait passer, sans motif et sans que rien ne le
+    // voie. Une dérogation vit ICI, dans un bloc `files:` qui porte sa phrase, ou nulle part —
+    // c'est la seule forme que l'acceptation de GOV-031 admet (« NOMMÉE et motivée »). Au
+    // 2026-09-14, aucun fichier suivi ne porte de directive en ligne : le réglage ne coûte rien.
+    linterOptions: { noInlineConfig: true },
     rules: {
       // Un `console.log` oublié dans du code de produit est une fuite en puissance : les payloads
       // de ce dépôt portent des données personnelles (REQ-DM-041).
@@ -154,7 +160,6 @@ export default tseslint.config(
   {
     // Les gardes IMPRIMENT leur verdict : c'est leur interface. Une garde muette ne garde rien.
     files: ['scripts/**/*.{ts,js,mjs}'],
-    languageOptions: { globals: globals.node },
     rules: { 'no-console': 'off' },
   },
 
@@ -164,7 +169,6 @@ export default tseslint.config(
     // contrôle rend à qui le lance. Une suite qui ne dit pas ce qu'elle a balayé laisse « 0
     // fichier vérifié » et « tout est conforme » rendre exactement le même vert.
     files: ['tests/**/*.ts'],
-    languageOptions: { globals: globals.node },
     rules: { 'no-console': 'off' },
   },
 
@@ -180,17 +184,25 @@ export default tseslint.config(
 
   {
     // ── LA DETTE, COMPTÉE ET VISIBLE, JAMAIS ÉTEINTE ────────────────────────────────────────
-    // 13 occurrences au 2026-09-12 : 6 `no-explicit-any` (4 dans `scripts/gates/perf-budgets.ts`,
-    // 2 dans `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts`) et 7
-    // `no-useless-assignment` (`gov-inventaire.ts` 2, `gov-sonde.ts` 1, `plan-state/build.ts` 1,
-    // et 3 dans deux suites). Ce sont de vraies remarques, pas du bruit de configuration : les
-    // corriger touche cinq fichiers hors du périmètre de GOV-031, et la charte A11 dit qu'un
-    // manque constaté devient une TÂCHE, jamais un correctif glissé dans le lot en cours.
-    // `warn` les COMPTE à chaque exécution ; `off` les ferait disparaître. La tâche qui les
-    // remonte en `error` est à ouvrir par A01, et son acceptation tient en une ligne : ce bloc
-    // supprimé, `eslint .` toujours en 0. Le périmètre s'arrête à `scripts/**` et `tests/**` :
-    // sous `src/**` et `packages/**`, le code du produit, les deux règles restent BLOQUANTES.
-    files: ['scripts/**/*.ts', 'tests/**/*.ts'],
+    // `no-explicit-any` et `no-useless-assignment` rendent de vraies remarques dans les fichiers
+    // nommés ci-dessous, ET DANS EUX SEULS : la liste est celle que `eslint . -f json` rendait le
+    // 2026-09-14, et le compte se lit dans `pnpm lint`, jamais ici. Les corriger sort du
+    // périmètre de GOV-031 (charte A11 : un manque constaté devient une TÂCHE). `warn` les COMPTE
+    // à chaque exécution ; `off` les ferait disparaître. Nommer les fichiers un par un, et pas
+    // `scripts/**`, c'est ce qui garde le rouge pour tout code NEUF : un `any` posé dans un script
+    // qui n'est pas dans cette liste fait échouer le lint. `gardes-transposees.spec.ts` exige que
+    // chaque fichier listé porte encore au moins un avertissement : un fichier corrigé qui reste
+    // ici fait rougir la suite, et la liste ne peut que rétrécir. La tâche qui les remonte en
+    // `error` est à ouvrir par A01 : ce bloc supprimé, `eslint .` toujours en 0.
+    files: [
+      'scripts/gates/gov-inventaire.ts',
+      'scripts/gates/gov-sonde.ts',
+      'scripts/gates/perf-budgets.ts',
+      'scripts/plan-state/build.ts',
+      'tests/unit/gouvernance/corps-de-pr-couvre.spec.ts',
+      'tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts',
+      'tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts',
+    ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-useless-assignment': 'warn',

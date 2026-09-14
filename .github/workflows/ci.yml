@@ -198,11 +198,11 @@ jobs:
       # le bundle n'y rougit, et la documentation du depot a affirme le contraire pendant des
       # mois. Une gate qui ne bloque rien ne garde rien.
       #
-      # CE QUE CHACUNE MESURE, AU 2026-09-14 : `pnpm lint` sort en 0 avec 13 AVERTISSEMENTS
-      # comptes (6 `no-explicit-any`, 7 `no-useless-assignment`), poses en `warn` et non
-      # eteints — les remonter en `error` touche cinq fichiers hors du perimetre de GOV-031 et
-      # revient a une tache que A01 ouvre. `pnpm format:check` balaie tout sauf `docs/**` et
-      # `packages/**`, dont `.prettierignore` porte les deux derogations nommees et leur motif.
+      # CE QUE CHACUNE NE MESURE PAS n'est pas recopie ici : les avertissements toleres et les
+      # fichiers qui les portent sont nommes dans `eslint.config.mjs`, les fichiers hors format
+      # dans `.prettierignore`, chacun avec son motif. Et chaque etape reste EXACTEMENT
+      # `run: pnpm lint` / `run: pnpm format:check`, sans `if:` ni `||` :
+      # `gardes-transposees.spec.ts` juge l'acte de l'etape, pas l'absence d'un mot.
       - name: Lint
         run: pnpm lint
       - name: Format

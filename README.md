@@ -8,7 +8,7 @@ jusqu'au versement de ses commissions.
 Trois catégories de contenu **n'y entrent jamais** — la garde `pnpm gov:publication` les refuse et la
 CI échoue dessus :
 
-1. **les notes d'analyse juridique** et tout commentaire expliquant le _pourquoi_ d'une règle relationnelle ;
+1. **les notes d'analyse juridique** et tout commentaire expliquant le *pourquoi* d'une règle relationnelle ;
 2. **les seuils de détection d'abus** — signaux, quotas, fenêtres : publiés, ils indiquent comment rester en dessous ;
 3. **les montants de la grille de commissions** et l'économie du réseau.
 
@@ -24,15 +24,15 @@ pnpm lot:composer --phase -1 --repo partners --max 8
 # puis le workflow scripts/lot/lot.workflow.js
 ```
 
-| Document                | Ce qu'il contient                                                                  |
-| ----------------------- | ---------------------------------------------------------------------------------- |
-| `docs/PLAN-STATE.md`    | L'état vivant — **dérivé**, jamais édité à la main                                 |
-| `docs/DECISIONS.md`     | Chaque décision : tranchée, ou hypothèse par défaut datée avec sa réversibilité    |
-| `docs/CONVENTIONS.md`   | Nommage, argent en centimes, branches, worktrees, pré-vol                          |
-| `docs/REGLES-MAISON.md` | Les règles qui ont déjà coûté cher                                                 |
-| `docs/GLOSSAIRE.md`     | Un terme canonique par concept                                                     |
-| `docs/gates.json`       | Le registre des gates : chacune porte son cas d'échec et la preuve qu'elle a rougi |
-| `.claude/agents/`       | Les fiches de rôle des agents                                                      |
+| Document | Ce qu'il contient |
+| --- | --- |
+| `docs/PLAN-STATE.md` | L'état vivant — **dérivé**, jamais édité à la main |
+| `docs/DECISIONS.md` | Chaque décision : tranchée, ou hypothèse par défaut datée avec sa réversibilité |
+| `docs/CONVENTIONS.md` | Nommage, argent en centimes, branches, worktrees, pré-vol |
+| `docs/REGLES-MAISON.md` | Les règles qui ont déjà coûté cher |
+| `docs/GLOSSAIRE.md` | Un terme canonique par concept |
+| `docs/gates.json` | Le registre des gates : chacune porte son cas d'échec et la preuve qu'elle a rougi |
+| `.claude/agents/` | Les fiches de rôle des agents |
 
 ## La règle qui gouverne tout le reste
 

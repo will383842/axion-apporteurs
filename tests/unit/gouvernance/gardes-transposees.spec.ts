@@ -28,7 +28,14 @@
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, mkdtempSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
+import { join, delimiter, relative, sep } from 'node:path';
+import { tmpdir } from 'node:os';
+import { ESLint, type Linter } from 'eslint';
+import { getFileInfo } from 'prettier';
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import prettierEslint from 'eslint-config-prettier';
 import {
   controler,
   perimetresDe,
@@ -497,13 +504,10 @@ describe('REQ-GOV-029 — le périmètre est DIT, jamais tu', () => {
 // garde : elle a l'air d'un contrôle et ne mesure rien. GOV-031 la fait tourner, et ce bloc tient
 // ce que l'exécution a appris.
 //
-// CE QUE CE BLOC PROUVE, ET CE QU'IL NE PROUVE PAS. Il ne lance PAS ESLint : les paquets ne sont
-// pas dans `package.json`, qui est un fichier PARTAGÉ que le développeur n'écrit pas (LEC-13).
-// Un test qui importerait `eslint` rougirait en CI pour un manque qu'aucune PR n'a créé. Ce qu'il
-// tient, c'est le CONTRAT de la configuration : plus aucune affirmation périmée en tête, aucune
-// règle éteinte hors d'un périmètre nommé, et chaque dérogation motivée. L'exécution réelle
-// (`eslint .` vert, et rouge sur une violation fabriquée) est reportée verbatim dans le corps de
-// la PR de GOV-031, et devient bloquante le jour où A01 applique les étapes de Gate A.
+// CE QUE CE BLOC PROUVE. Il lit le TEXTE de la configuration : plus aucune affirmation périmée en
+// tête, aucune règle éteinte hors d'un périmètre nommé, et chaque dérogation motivée. Ce que la
+// configuration FAIT — la sévérité effective d'une règle sur un fichier, et l'échec réel de
+// `pnpm lint` sur une faute — est jugé par le dernier bloc de ce fichier, qui charge ESLint.
 //
 // ET IL PORTE SON PROPRE CONTRE-TÉMOIN. « Zéro dérogation non motivée » veut dire « la
 // configuration est propre » OU « le détecteur ne regarde rien ». Les deux rendent le même vert.
@@ -536,7 +540,11 @@ function derogationsDe(source: string): Derogation[] {
   for (let i = 0; i < lignes.length; i += 1) {
     const ligne = lignes[i] ?? '';
     if (ligne.trim().startsWith('//') || ligne.trim().startsWith('*')) continue;
-    for (const m of ligne.matchAll(/'([a-z@][^']*)'\s*:\s*(?:'(off|warn)'|\[\s*'(off|warn)')/g)) {
+    // Les QUATRE écritures d'une sévérité rétrogradée, et pas seulement la chaîne : `0` et `1`
+    // valent `'off'` et `'warn'` pour ESLint. Ne lire que `'off'` laissait `'no-console': 0`
+    // passer au vert (survivante S4 de la revue de mutation du 2026-09-14).
+    const retrogradee = /['"]([a-z@][^'"]*)['"]\s*:\s*\[?\s*(?:['"](off|warn)['"]|([01])\b)/g;
+    for (const m of ligne.matchAll(retrogradee)) {
       let motive = false;
       let perimetreNomme = false;
       for (let j = i - 1; j >= 0 && i - j <= FENETRE_MOTIF; j -= 1) {
@@ -552,7 +560,7 @@ function derogationsDe(source: string): Derogation[] {
       out.push({
         ligne: i + 1,
         regle: m[1] ?? '?',
-        niveau: (m[2] ?? m[3]) as 'off' | 'warn',
+        niveau: m[2] === 'warn' || m[3] === '1' ? 'warn' : 'off',
         motive,
         perimetreNomme,
       });
@@ -656,6 +664,21 @@ describe('REQ-GOV-018 — `eslint.config.mjs` a été exécutée, et son en-têt
       '];',
     ].join('\n');
     expect(derogationsDe(enBloc)[0]!.perimetreNomme).toBe(false);
+
+    // Et les écritures NUMÉRIQUES sont des dérogations comme les autres : `0`, `[1]`, `"off"`.
+    for (const ecriture of ['0', '[0]', '1', '[1, {}]', '"off"', '["warn"]']) {
+      const vue = derogationsDe(enBloc.replace("'off'", ecriture));
+      expect(
+        vue.map((d) => d.regle),
+        `écriture ${ecriture}`
+      ).toEqual(['no-console']);
+      expect(vue[0]!.niveau).toBe(
+        ecriture.includes('1') || ecriture.includes('warn') ? 'warn' : 'off'
+      );
+    }
+    // Contre-témoin : une règle en `error` (ou `2`) n'est pas une dérogation.
+    expect(derogationsDe(enBloc.replace("'off'", '2'))).toEqual([]);
+    expect(derogationsDe(enBloc.replace("'off'", "'error'"))).toEqual([]);
   });
 
   it('`.prettierrc.json` reste un JSON valide et fixe la fin de ligne', () => {
@@ -726,24 +749,111 @@ function paquetsRequis(
 interface Exclusion {
   readonly ligne: number;
   readonly motif: string;
-  /** Un commentaire `#` d'au moins 60 caractères dans les 12 lignes qui précèdent. */
+  /** Le bloc `#` COLLÉ au-dessus de l'entrée porte au moins 60 caractères de texte. */
   readonly motive: boolean;
 }
 
+/**
+ * Le motif d'une entrée est le bloc de commentaire COLLÉ au-dessus d'elle : il s'arrête à la
+ * première ligne vide et à la première autre entrée. La version précédente acceptait tout
+ * commentaire long dans les douze lignes au-dessus — un seul paragraphe « motivait » alors
+ * plusieurs entrées, y compris une entrée nue posée dessous (survivante S2 de la revue de
+ * mutation du 2026-09-14). Fonction PURE d'un texte injecté (RM-11).
+ */
 function exclusionsDe(source: string): Exclusion[] {
   const lignes = source.split('\n');
   const out: Exclusion[] = [];
-  for (let i = 0; i < lignes.length; i += 1) {
-    const entree = (lignes[i] ?? '').trim();
-    if (entree === '' || entree.startsWith('#')) continue;
-    let motive = false;
-    for (let j = i - 1; j >= 0 && i - j <= FENETRE_MOTIF; j -= 1) {
-      const p = (lignes[j] ?? '').trim();
-      if (p.startsWith('#') && p.length >= MOTIF_MINIMAL_ESLINT) motive = true;
+  lignes.forEach((brute, i) => {
+    const entree = brute.trim();
+    if (entree === '' || entree.startsWith('#')) return;
+    const bloc: string[] = [];
+    for (let j = i - 1; j >= 0 && (lignes[j] ?? '').trim().startsWith('#'); j -= 1) {
+      bloc.push((lignes[j] ?? '').trim().replace(/^#+\s*/, ''));
     }
+    const motive = bloc.join(' ').trim().length >= MOTIF_MINIMAL_ESLINT;
     out.push({ ligne: i + 1, motif: entree, motive });
-  }
+  });
   return out;
+}
+
+/**
+ * Ce que FAIT chaque étape de lint, et pas l'absence d'un mot. Une étape se désarme sans écrire
+ * `continue-on-error: true` : `run: pnpm lint || true`, un `if: false`, un
+ * `continue-on-error: ${{ true }}` (survivante S1 de la revue de mutation du 2026-09-14). La seule
+ * forme admise est donc la forme EXACTE — `- name: …`, puis `run: pnpm lint` ou
+ * `run: pnpm format:check`, et rien d'autre —, dans un job `gate-a` sans `if:` ni
+ * `continue-on-error:`. Le prédicat de `gov-conventions.ts` n'est pas recopié : il est dépassé.
+ */
+function fautesDActe(ci: string): string[] {
+  const fautes: string[] = [];
+  for (const e of etapesDeLint({ ...VUE_CONFORME, workflows: [{ chemin: CI, source: ci }] })) {
+    const lignes = e.bloc
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l !== '' && !l.startsWith('#'));
+    const [nom, run, ...reste] = lignes;
+    const exacte =
+      /^- name: \S/.test(nom ?? '') &&
+      (run === 'run: pnpm lint' || run === 'run: pnpm format:check') &&
+      reste.length === 0;
+    if (!exacte) fautes.push(lignes.join(' ⏎ '));
+  }
+  const entete = /^ {2}gate-a:\n([\s\S]*?)^ {4}steps:/m.exec(ci);
+  if (entete === null) fautes.push('job `gate-a` introuvable');
+  for (const l of (entete?.[1] ?? '').split('\n')) {
+    if (/^ {4}(?:if|continue-on-error)\s*:/.test(l)) fautes.push(`gate-a ⏎ ${l.trim()}`);
+  }
+  return fautes;
+}
+
+/** Les lignes de workflow qui INSTALLENT sans figer le verrou. Fonction PURE (RM-11). */
+function installationsNonFigees(textes: readonly string[]): {
+  installations: number;
+  fautives: string[];
+} {
+  const lignes = textes
+    .flatMap((t) => t.split('\n'))
+    .filter((l) => !l.trim().startsWith('#') && /\bpnpm\s+(?:install|i|add)\b/.test(l));
+  return {
+    installations: lignes.length,
+    fautives: lignes.filter((l) => !/\s--frozen-lockfile\b/.test(l)).map((l) => l.trim()),
+  };
+}
+
+/**
+ * « Épinglé » : une version, et une seule. `^3.9.6` en est une ; `3 || *`, `*`, `latest` et
+ * `>=3` n'en sont pas (survivante S5). Ce qui fige RÉELLEMENT la version installée reste le
+ * verrou lu avec `--frozen-lockfile`, et c'est pourquoi les deux sont exigés.
+ */
+const VERSION_EPINGLEE = /^[\^~]?\d+\.\d+\.\d+$/;
+
+/**
+ * Les dérogations de format DÉCLARÉES. Liste tapée ici EXPRÈS : c'est sa DIVERGENCE avec
+ * `.prettierignore` qui est le signal. Une entrée qui déborde de sa mesure — `src/`, `*.ts`,
+ * `**\/*`, un `packages/` élargi, un fichier de code posé sous une racine dérogée — fait ignorer
+ * un fichier que cette liste ne couvre pas ; une entrée retirée fait formater un fichier qu'elle
+ * couvre. Les deux rougissent (survivantes S2 et S6 de la revue de mutation du 2026-09-14). Ajouter
+ * une dérogation demande donc DEUX écritures, dont celle-ci, relue comme un test.
+ */
+const HORS_FORMAT_DECLARE: readonly (readonly [string, (f: string) => boolean])[] = [
+  ['pnpm-lock.yaml', (f) => f === 'pnpm-lock.yaml'],
+  ['*.md', (f) => f.endsWith('.md')],
+  ['docs/*.json', (f) => /^docs\/[^/]+\.json$/.test(f)],
+  ['packages/contracts/', (f) => f.startsWith('packages/contracts/')],
+];
+
+/** Les fichiers suivis par git — la seule source du « dépôt » que la CI voit. */
+function fichiersSuivis(...racines: string[]): string[] {
+  const r = spawnSync('git', ['ls-files', '-z', '--', ...racines], { encoding: 'utf8' });
+  return (r.stdout ?? '').split('\0').filter((f) => f !== '');
+}
+
+/** L'environnement que `pnpm run` donne à un script : les binaires du dépôt en tête du PATH. */
+function envAvecLesBinairesDuDepot(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  const cle = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') ?? 'PATH';
+  env[cle] = join(process.cwd(), 'node_modules', '.bin') + delimiter + (env[cle] ?? '');
+  return env;
 }
 
 describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANTS en Gate A', () => {
@@ -777,7 +887,32 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     expect(requis.filter((p) => !pkg.devDependencies?.[p])).toEqual([]);
     // Épinglé veut dire une version, pas `*` ni `latest` : « un outil non épinglé rend un
     // verdict différent selon le poste » (docs/CONVENTIONS.md §10).
-    expect(requis.filter((p) => !/^[\^~]?\d/.test(pkg.devDependencies?.[p] ?? ''))).toEqual([]);
+    expect(requis.filter((p) => !VERSION_EPINGLEE.test(pkg.devDependencies?.[p] ?? ''))).toEqual(
+      []
+    );
+    // RM-02 : les plages que l'ancienne expression laissait passer sont refusées.
+    expect(['3 || *', '*', 'latest', '>=3', '10'].filter((v) => VERSION_EPINGLEE.test(v))).toEqual(
+      []
+    );
+  });
+
+  it('chaque `pnpm install` des workflows fige le verrou (`--frozen-lockfile`)', () => {
+    // C'est le verrou, lu sans droit de le réécrire, qui fige la version installée : sans le
+    // drapeau, `^3.9.6` redevient « la dernière 3.x du jour » (survivante S5). Tous les workflows,
+    // pas seulement Gate A : la nightly installe aussi.
+    const dossier = '.github/workflows';
+    const textes = readdirSync(dossier)
+      .filter((f) => /\.ya?ml$/.test(f))
+      .map((f) => readFileSync(join(dossier, f), 'utf8'));
+    const { installations, fautives } = installationsNonFigees(textes);
+    expect(installations).toBeGreaterThan(0);
+    expect(fautives).toEqual([]);
+    // RM-02, sur une ligne fabriquée et sur son contre-témoin.
+    expect(installationsNonFigees(['      - run: pnpm install\n']).fautives.length).toBe(1);
+    expect(installationsNonFigees(['# pnpm install, en prose\n']).installations).toBe(0);
+    expect(
+      installationsNonFigees(['      - run: pnpm install --frozen-lockfile\n']).fautives
+    ).toEqual([]);
   });
 
   it('`paquetsRequis` SAIT rougir : un plugin importé et non épinglé est vu', () => {
@@ -802,21 +937,81 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     expect([...new Set(etapes.map((e) => e.outil))].sort()).toEqual(['eslint', 'prettier']);
   });
 
-  it('aucune des deux étapes ne porte `continue-on-error` — ni elle, ni son job', () => {
-    // LE point de REQ-GOV-018. Côté axionia, TOUTES les gates PR de budget portent ce drapeau :
-    // aucune PR qui alourdit le bundle n'y rougit, et la documentation a affirmé le contraire
-    // pendant des mois. Une gate qui ne bloque rien ne garde rien.
-    const etapes = etapesDeLint({ ...VUE_CONFORME, workflows: [{ chemin: CI, source: ci }] });
-    expect(
-      etapes.filter((e) => /continue-on-error:\s*true/.test(e.bloc) || e.jobNonBloquant)
-    ).toEqual([]);
-    // Hors COMMENTAIRES, et la nuance est MESURÉE : `ci.yml` parle de `continue-on-error`
-    // dans la prose qui explique pourquoi il n'y en a pas. Ce test a d'abord rougi là-dessus.
-    // Une garde qui rougit sur sa propre explication force à effacer l'explication — c'est
-    // la faute que `gov:identifiants` a déjà payée cinq fois.
-    const lignesNues = ci.split('\n').filter((l) => !l.trim().startsWith('#'));
-    expect(lignesNues.filter((l) => l.includes('continue-on-error'))).toEqual([]);
+  it('l’ACTE des deux étapes est exact — ni `if:`, ni `||`, ni drapeau, ni job qui les désarme', () => {
+    // LE point de REQ-GOV-018 : une gate qui ne bloque rien ne garde rien. Chercher le mot
+    // `continue-on-error` ne suffisait pas — la revue de mutation a désarmé les deux étapes
+    // de quatre façons sans l'écrire.
+    expect(fautesDActe(ci)).toEqual([]);
+    // RM-02 : chacun de ces désarmements, dérivé de l'arbre RÉEL par UNE substitution (RM-11).
+    const LINT = '        run: pnpm lint\n';
+    expect(ci).toContain(LINT);
+    const desarmes = [
+      ci.replace(LINT, '        run: pnpm lint || true\n'),
+      ci.replace(LINT, '        if: false\n' + LINT),
+      ci.replace(LINT, LINT + '        continue-on-error: ${{ true }}\n'),
+      ci.replace('  gate-a:\n', '  gate-a:\n    if: false\n'),
+    ];
+    for (const d of desarmes) {
+      expect(d).not.toBe(ci);
+      expect(fautesDActe(d).length).toBe(1);
+    }
   });
+
+  it('`pnpm lint` et `pnpm format:check` ÉCHOUENT sur une faute : l’effet du script, pas son texte', () => {
+    // `"lint": "eslint . || exit 0"` laisse l'étape exacte et le binaire dérivable, et ne
+    // bloque plus rien (survivante S1). Seul un témoin d'EFFET le voit : le script du
+    // `package.json` RÉEL est lancé par `pnpm run` dans un banc jetable, propre puis fautif.
+    // Le banc porte sa propre configuration minimale : ce qui est jugé, c'est que le script
+    // PROPAGE l'échec de l'outil — la configuration du dépôt est jugée plus bas.
+    const bancs = [
+      {
+        script: 'lint',
+        decor: { 'eslint.config.mjs': "export default [{ rules: { 'no-debugger': 'error' } }];\n" },
+        propre: ['propre.js', 'export const x = 1;\n'],
+        faute: ['faute.js', 'debugger;\n'],
+      },
+      {
+        script: 'format:check',
+        decor: { '.prettierrc.json': '{}\n', '.editorconfig': 'root = true\n' },
+        propre: ['propre.ts', 'export const x = 1;\n'],
+        faute: ['faute.ts', 'export   const x =1\n'],
+      },
+    ] as const;
+    for (const b of bancs) {
+      const dossier = mkdtempSync(join(tmpdir(), 'gov031-effet-'));
+      try {
+        const commande = pkg.scripts?.[b.script] ?? '';
+        expect(commande, `script « ${b.script} » absent`).not.toBe('');
+        const banc = { name: 'banc', private: true, scripts: { [b.script]: commande } };
+        writeFileSync(join(dossier, 'package.json'), JSON.stringify(banc, null, 2) + '\n');
+        for (const [nom, texte] of Object.entries(b.decor)) {
+          writeFileSync(join(dossier, nom), texte);
+        }
+        writeFileSync(join(dossier, b.propre[0]), b.propre[1]);
+        const lancerLeScript = () =>
+          spawnSync(`pnpm run ${b.script}`, {
+            cwd: dossier,
+            shell: true,
+            encoding: 'utf8',
+            env: envAvecLesBinairesDuDepot(),
+          });
+        // Contre-témoin d'abord : sans lui, un script qui échoue TOUJOURS passerait ce test.
+        const propre = lancerLeScript();
+        expect(
+          propre.status,
+          `${b.script} sur un banc propre :\n${propre.stdout}${propre.stderr}`
+        ).toBe(0);
+        writeFileSync(join(dossier, b.faute[0]), b.faute[1]);
+        const fautif = lancerLeScript();
+        expect(
+          fautif.status,
+          `${b.script} sur une faute :\n${fautif.stdout}${fautif.stderr}`
+        ).not.toBe(0);
+      } finally {
+        rmSync(dossier, { recursive: true, force: true });
+      }
+    }
+  }, 600_000);
 
   it('sur l’arbre RÉEL, ni `outillage_non_epingle` ni `lint_non_bloquant` ne rougissent', () => {
     // Les deux familles jugées sur les fichiers du disque, et pas seulement sur la vue de
@@ -834,11 +1029,11 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     // en bloc » (acceptation de GOV-031). Une ligne d'ignore sans phrase au-dessus est une règle
     // éteinte dont plus personne ne saura pourquoi.
     const vues = exclusionsDe(readFileSync(IGNORE_PRETTIER, 'utf8'));
-    expect(vues.length).toBeGreaterThanOrEqual(6);
+    expect(vues.length).toBeGreaterThan(0);
     expect(vues.filter((e) => !e.motive).map((e) => `${e.motif} (ligne ${e.ligne})`)).toEqual([]);
   });
 
-  it('`exclusionsDe` SAIT rougir : une exclusion nue est vue comme telle', () => {
+  it('`exclusionsDe` SAIT rougir : une exclusion nue, ou qui emprunte le motif d’une autre', () => {
     const nu = ['# court', 'docs/'].join('\n');
     expect(exclusionsDe(nu)).toEqual([{ ligne: 2, motif: 'docs/', motive: false }]);
     const motive = [
@@ -847,5 +1042,115 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
       'docs/',
     ].join('\n');
     expect(exclusionsDe(motive)[0]?.motive).toBe(true);
+    // Deux entrées, un seul motif : la seconde n'en a pas.
+    expect(exclusionsDe(`${motive}\n**/*`).map((e) => e.motive)).toEqual([true, false]);
+    // Une ligne vide détache le motif de son entrée.
+    expect(exclusionsDe(motive.replace('\ndocs/', '\n\ndocs/'))[0]?.motive).toBe(false);
   });
+
+  it('Prettier ignore EXACTEMENT ce que les dérogations déclarées couvrent — ni plus, ni moins', async () => {
+    // La forme d'une exclusion ne dit pas sa LARGEUR : `**/*` sous un motif valable éteint le
+    // format du dépôt entier. On demande donc à Prettier lui-même ce qu'il ignore, avec les
+    // deux fichiers d'ignore que sa CLI lit par défaut, et on le confronte à la liste déclarée.
+    const ignores: string[] = [];
+    const attendus: string[] = [];
+    for (const f of fichiersSuivis()) {
+      // Un fichier que Prettier ne sait pas formater n'est ni dérogé ni formaté.
+      if ((await getFileInfo(f)).inferredParser === null) continue;
+      const vu = await getFileInfo(f, { ignorePath: ['.gitignore', IGNORE_PRETTIER] });
+      if (vu.ignored) ignores.push(f);
+      if (HORS_FORMAT_DECLARE.some(([, couvre]) => couvre(f))) attendus.push(f);
+    }
+    // Témoin non nul : une liste vide des deux côtés serait un accord parfait sur rien.
+    expect(attendus.length).toBeGreaterThan(0);
+    expect(ignores).toEqual(attendus);
+  }, 600_000);
+});
+
+// ── GOV-031 · REQ-GOV-018 — ce que la configuration ESLint FAIT, fichier par fichier ────────────
+//
+// Le texte d'une configuration ne dit pas sa sévérité : `'no-console': 0` vaut `'off'`, un bloc
+// sans `files:` s'applique partout, et un `// eslint-disable-next-line` désarme une ligne sans
+// toucher la configuration (survivante S4 de la revue de mutation du 2026-09-14). On demande donc à
+// ESLint la configuration EFFECTIVE qu'il applique, et on la compare au socle recommandé que
+// `eslint.config.mjs` importe — les mêmes paquets, pas une liste de règles retapée (RM-01).
+
+type ConfigEffective = {
+  rules?: Record<string, unknown>;
+  linterOptions?: { noInlineConfig?: boolean };
+};
+
+const GRAVITES: Record<string, number> = { off: 0, warn: 1, error: 2 };
+
+/** La gravité numérique d'une entrée de règle, quelle que soit son écriture. */
+function gravite(entree: unknown): number {
+  const g: unknown = Array.isArray(entree) ? entree[0] : entree;
+  return typeof g === 'number' ? g : (GRAVITES[String(g)] ?? 0);
+}
+
+describe('REQ-GOV-018 — la sévérité EFFECTIVE, lue dans ESLint et non dans le texte', () => {
+  const eslint = new ESLint();
+  const socle = new ESLint({
+    overrideConfigFile: true,
+    overrideConfig: tseslint.config(
+      js.configs.recommended,
+      ...tseslint.configs.recommended,
+      prettierEslint
+    ) as Linter.Config[],
+  });
+
+  it('un fichier NEUF, dans chaque racine de code, reçoit tout le socle, et aucun commentaire ne le désarme', async () => {
+    // Un fichier qui n'existe pas encore : c'est lui qu'une dérogation élargie attrape — un
+    // `warn` étendu à `scripts/**`, une sévérité `0` posée hors de tout `files:`.
+    const neufs = [
+      'src/zz-temoin-neuf.ts',
+      'packages/zz-temoin-neuf/index.ts',
+      'scripts/gates/zz-temoin-neuf.ts',
+      'tests/unit/zz-temoin-neuf.spec.ts',
+    ];
+    const fautes: string[] = [];
+    let reglesDuSocle = 0;
+    for (const f of neufs) {
+      const reel = (await eslint.calculateConfigForFile(f)) as ConfigEffective;
+      const ref = (await socle.calculateConfigForFile(f)) as ConfigEffective;
+      for (const [regle, valeur] of Object.entries(ref.rules ?? {})) {
+        if (gravite(valeur) === 0) continue;
+        reglesDuSocle += 1;
+        const g = gravite(reel.rules?.[regle]);
+        if (g < gravite(valeur)) fautes.push(`${f} : ${regle} ${g} < ${gravite(valeur)}`);
+      }
+      if (reel.linterOptions?.noInlineConfig !== true) fautes.push(`${f} : noInlineConfig`);
+      // `no-console` n'est pas dans le socle : c'est la règle qui porte le motif PII
+      // (REQ-DM-041), exigée nommément sur le code du produit.
+      if (/^(?:src|packages)\//.test(f) && gravite(reel.rules?.['no-console']) !== 2) {
+        fautes.push(`${f} : no-console ${gravite(reel.rules?.['no-console'])} ≠ 2`);
+      }
+    }
+    expect(reglesDuSocle).toBeGreaterThan(0);
+    expect(fautes).toEqual([]);
+  }, 600_000);
+
+  it('une règle tolérée en `warn` ne l’est que dans un fichier où elle rend ENCORE un avertissement', async () => {
+    // La dette nommée fichier par fichier ne peut que rétrécir : un fichier corrigé qui reste
+    // dans la liste est une dérogation plus large que sa mesure, et elle rougit ici.
+    const tolerees = new Map<string, string[]>();
+    for (const f of fichiersSuivis('scripts', 'tests', 'src', 'packages')) {
+      if (!/\.(?:ts|js|mjs|cjs)$/.test(f)) continue;
+      const c = (await eslint.calculateConfigForFile(f)) as ConfigEffective | undefined;
+      const enWarn = Object.entries(c?.rules ?? {})
+        .filter(([, v]) => gravite(v) === 1)
+        .map(([r]) => r);
+      if (enWarn.length > 0) tolerees.set(f, enWarn);
+    }
+    expect(tolerees.size).toBeGreaterThan(0);
+    const muettes: string[] = [];
+    for (const r of await eslint.lintFiles([...tolerees.keys()])) {
+      const f = relative(process.cwd(), r.filePath).split(sep).join('/');
+      const regles = tolerees.get(f) ?? [];
+      if (!r.messages.some((m) => m.ruleId !== null && regles.includes(m.ruleId))) {
+        muettes.push(`${f} : ${regles.join(', ')}`);
+      }
+    }
+    expect(muettes).toEqual([]);
+  }, 600_000);
 });
