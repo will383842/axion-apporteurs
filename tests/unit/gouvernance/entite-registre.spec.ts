@@ -454,7 +454,7 @@ describe('REQ-CPL-018 — ce que la garde REGARDE est gardé, pas seulement ce q
   it('REQ-CPL-018 — un fichier binaire ou d’image n’est pas balayé : le filtre reste un filtre', () => {
     // Le contre-témoin. Sans lui, « tout est balayé » passerait ce fichier, et la liste
     // d'extensions pourrait être remplacée par `/.*/ ` sans que rien ne tombe.
-    for (const chemin of ['docs/schema.png', 'assets/logo.svg', 'polices/inter.woff2']) {
+    for (const chemin of ['docs/schema.png', 'polices/inter.woff2']) {
       expect(estBalaye(chemin), `${chemin} ne doit PAS être balayé`).toBe(false);
     }
   });
@@ -2149,6 +2149,72 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     return Buffer.from(octets.toString('utf8'), 'utf8').equals(octets); // décodable sans perte
   }
 
+  /**
+   * 🔴 DEUX SURVIVANTES DE A10 · mutation, PR #39 — et ce sont la classe MÊME que cette PR ferme.
+   *
+   *   S1 : 58 pays émetteurs réels retirés de la dérivation (279 → 221, PLANCHER SATISFAIT)
+   *        → 148/148 VERT. Et `SN`, `CI`, `TN` étaient dans la liste TAPÉE d'avant GOV-036 : la
+   *        mutation est une régression **sous l'état pré-PR**, en silence. 79 codes de marge.
+   *   S2 : seize familles de scripts ajoutées au refus (`ps1|bash|rb|go|php|bat`) → 148/148 VERT.
+   *        Le « cas plausible » que la tâche cite elle-même — un `export PARTNERS_IBAN_DEBITEUR=…`
+   *        dans un script — redevient invisible dès qu'il s'écrit en PowerShell.
+   *
+   * 🔑 LES DEUX ONT LA MÊME CAUSE, et c'est celle de GOV-055 : **un plancher est un COMPTE, pas une
+   * COUVERTURE**, et le témoin dérivé du disque ne voit que ce qui est suivi AUJOURD'HUI. Une
+   * dérivation comparée à elle-même ne verra jamais ce qu'elle a cessé de produire.
+   *
+   * Il y faut donc un ANCRAGE : une liste qui vit HORS de la chose qu'elle garde. Les deux
+   * ci-dessous en sont, et elles sont tapées À DESSEIN — c'est leur extériorité qui les rend
+   * utiles, pas leur forme.
+   */
+  const ANCRAGE_NON_REGRESSION = [
+    // Les 47 codes de la liste TAPÉE d'avant GOV-036 : la dérivation ne doit jamais couvrir MOINS
+    // que ce qu'elle remplace. C'est le plancher de COUVERTURE que le plancher de COMPTE ne tient pas.
+    'AD', 'AE', 'AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GI',
+    'GR', 'HR', 'HU', 'IE', 'IS', 'IT', 'LI', 'LT', 'LU', 'LV', 'MC', 'MT', 'NL', 'NO', 'PL', 'PT',
+    'RO', 'SE', 'SI', 'SK', 'SM', 'VA', 'US', 'CA', 'JP', 'CN', 'MA', 'TN', 'DZ', 'SN', 'CI',
+    // Les cinq que GOV-036 ferme, plus XK : le Kosovo émet des IBAN (registre ISO 13616) et son
+    // code est *user-assigned* dans CLDR, donc il peut disparaître d'une version d'ICU à l'autre
+    // sans que le compte bouge. C'est A09 · securite qui l'a nommé : « les cinq témoins épinglent
+    // les pays qui manquaient hier, aucun celui qui peut manquer demain ».
+    'TR', 'IL', 'RS', 'AL', 'LB', 'XK',
+  ];
+
+  it('REQ-GOV-031 — ANCRAGE : la dérivation ne couvre jamais MOINS que la liste qu’elle remplace', async () => {
+    // Import dynamique et type lâche, comme le témoin voisin : tant que la dérivation n'existe
+    // pas, ce cas rougit SEUL au lieu d'emporter le fichier dans une erreur de chargement.
+    const gate = (await import('../../../scripts/gates/gov-entite')) as unknown as {
+      codesPaysIso?: () => string[];
+    };
+    expect(typeof gate.codesPaysIso, '`codesPaysIso` doit exister : la liste se dérive').toBe('function');
+    const codes = gate.codesPaysIso!();
+    const perdus = ANCRAGE_NON_REGRESSION.filter((c) => !codes.includes(c));
+    expect(
+      perdus,
+      `${perdus.length} pays émetteur(s) sorti(s) de la dérivation : ${perdus.join(', ')} — ` +
+        'le plancher compte les codes, il ne dit rien de LESQUELS. Une dérivation qui perd des ' +
+        'pays au-dessus du plancher est une régression silencieuse.'
+    ).toEqual([]);
+  });
+
+  const ANCRAGE_FAMILLES_DE_TEXTE = [
+    // Des familles dont les octets SONT du texte et qui peuvent porter un secret. Aucune ne doit
+    // pouvoir entrer dans la liste de REFUS — le témoin dérivé du disque ne les verrait que le jour
+    // où le dépôt en suit une, c'est-à-dire trop tard.
+    'deploy.ps1', 'setup.bash', 'script.sh', 'tache.rb', 'main.go', 'index.php', 'run.bat',
+    'app.py', 'Makefile', 'config.toml', 'notes.rst', 'requete.http', 'donnees.csv', 'cle.pem',
+  ];
+
+  it('REQ-GOV-031 — ANCRAGE : aucune famille de TEXTE ne peut entrer dans la liste de REFUS', () => {
+    const aveugles = ANCRAGE_FAMILLES_DE_TEXTE.filter((f) => !estBalaye(f));
+    expect(
+      aveugles,
+      `${aveugles.length} famille(s) de texte écartée(s) du balayage : ${aveugles.join(', ')} — ` +
+        'un secret ne choisit pas son extension, et le témoin dérivé du disque ne verrait ces ' +
+        'familles que le jour où le dépôt en suit une.'
+    ).toEqual([]);
+  });
+
   it('REQ-GOV-031 — la population balayée est celle du DISQUE : aucun fichier de TEXTE suivi n’y échappe', () => {
     // ⚠️ LE TÉMOIN QUI COMPTE. Il ne récite aucune liste : il DEMANDE AU DÉPÔT ses fichiers suivis
     // (`fichiersSuivis` lève plutôt que de rendre `[]`, donc un périmètre absent est un rouge et
@@ -2210,7 +2276,7 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     // Sans lui, « tout est balayé » passerait, la garde lirait des images en UTF-8 et rendrait un
     // vert sur du bruit qu'elle ne sait pas décoder. Le contre-témoin de la liste d'autorisation
     // se transpose tel quel à la liste de refus : c'est la même frontière, prise par l'autre bout.
-    for (const chemin of ['docs/schema.png', 'assets/logo.svg', 'polices/inter.woff2', 'archive.zip']) {
+    for (const chemin of ['docs/schema.png', 'polices/inter.woff2', 'archive.zip']) {
       expect(estBalaye(chemin), `${chemin} ne doit PAS être balayé`).toBe(false);
     }
   });

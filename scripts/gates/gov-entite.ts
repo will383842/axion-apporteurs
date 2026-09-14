@@ -169,15 +169,29 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
  * — c'est-à-dire exactement le « je n'ai rien vu » qu'on prend pour « je n'ai rien lu ».
  *
  * ⚠️ DEUX RÉSIDUS ASSUMÉS, ÉCRITS PLUTÔT QUE TUS.
- *   — `.svg` est du TEXTE et pourrait porter un secret. Il reste refusé parce que le
- *     contre-témoin du filtre exige qu'une image ne soit pas lue ; c'est le prix d'une frontière
- *     simple, et il se rouvre en tâche, pas en correctif glissé ici (charte A11).
+ *   — 🔴 `.svg` ÉTAIT REFUSÉ, ET C'ÉTAIT UN TROU. A09 · securite l'a mesuré sur la PR #39 :
+ *     `assets/logo.svg` portant un IBAN en clair sortait **EXIT 0** — « 1 écarté(s), familles
+ *     binaires » — quand les MÊMES OCTETS dans un `.md` sortaient 1. Un SVG est du TEXTE, et ce
+ *     dépôt est PUBLIC.
+ *
+ *     Le résidu était déclaré, et promis « en tâche, pas en correctif glissé (A11) ». Deux choses
+ *     l'ont fait basculer : aucune tâche n'a jamais été versée — la promesse valait absolution —
+ *     et le sujet de GOV-036 est LITTÉRALEMENT « les deux listes qui décident de ce que la garde
+ *     REGARDE ». Ce n'est donc pas un correctif glissé : c'est le périmètre.
+ *
+ *     La raison invoquée — « le contre-témoin exige qu'une image ne soit pas lue » — ne tenait
+ *     pas : le contre-témoin porte sur `.png` et `.woff2`, dont les octets ne sont PAS du texte.
+ *     `svgz` reste refusé, lui : il est gzippé, donc illisible en UTF-8.
+ *
+ *     🔑 Et le témoin dérivé du disque (`entite-registre.spec.ts`) le disait déjà sans qu'on
+ *     l'écoute : il exige que TOUT fichier de texte suivi soit balayé. Deux témoins se
+ *     contredisaient dans le même banc, et c'est celui qui récitait une liste qui avait tort.
  *   — `.pdf` est refusé pour la même raison que les autres binaires : ses flux sont compressés,
  *     donc un balayage UTF-8 y rendrait un vert qui ne prouve rien. Le jour où un PDF signé sera
  *     suivi par ce dépôt, c'est son TEXTE EXTRAIT qu'il faudra juger — une tâche, pas une ligne.
  */
 export const EXTENSIONS_REFUSEES =
-  /\.(png|jpe?g|gif|bmp|tiff?|webp|avif|ico|icns|svgz?|eps|psd|ai|xcf|heic|heif|woff2?|ttf|otf|eot|zip|gz|tgz|bz2|xz|zst|7z|rar|tar|jar|war|mp[34]|m4[av]|mov|avi|mkv|webm|wav|ogg|og[av]|flac|aac|wm[av]|pdf|docx?|xlsx?|pptx?|odt|ods|odp|exe|dll|so|dylib|bin|wasm|class|node|pyc|pyo|obj|lib|sqlite3?|db|mdb|p12|pfx|jks|der)$/i;
+  /\.(png|jpe?g|gif|bmp|tiff?|webp|avif|ico|icns|svgz|eps|psd|ai|xcf|heic|heif|woff2?|ttf|otf|eot|zip|gz|tgz|bz2|xz|zst|7z|rar|tar|jar|war|mp[34]|m4[av]|mov|avi|mkv|webm|wav|ogg|og[av]|flac|aac|wm[av]|pdf|docx?|xlsx?|pptx?|odt|ods|odp|exe|dll|so|dylib|bin|wasm|class|node|pyc|pyo|obj|lib|sqlite3?|db|mdb|p12|pfx|jks|der)$/i;
 
 /**
  * CE FICHIER EST-IL REGARDÉ ? Fonction PURE et EXPORTÉE, et ce n'est pas un rangement.
