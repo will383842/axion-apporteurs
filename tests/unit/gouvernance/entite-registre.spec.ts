@@ -40,9 +40,10 @@
 
 import { describe, it, expect } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { deflateRawSync, deflateSync, gzipSync } from 'node:zlib';
 
 import {
   SENTINELLE,
@@ -61,8 +62,6 @@ import {
   valeur,
   type Registre,
 } from '../../../src/config/entite';
-
-import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
 
 import {
   FAMILLES,
@@ -96,7 +95,8 @@ import {
   controler,
   ligneSource,
   normaliser,
-  lireFichiers,
+  lireUnivers,
+  LIMITE_DE_LA_FORME,
   codesDeRegion,
   SourcePaysIllisible,
   estExemptDe,
@@ -422,58 +422,30 @@ describe('gov:entite — la garde, sur le dépôt réel et sur ses témoins', ()
 });
 
 /**
- * LES DEUX LISTES QUI DÉCIDENT DE CE QUI EST REGARDÉ — le seul endroit non gardé de la garde.
+ * CE QUE LA GARDE REGARDE : ses exemptions, et son refus de juger ce qu'elle ne lit pas en entier.
  *
- * 🔴 Trouvé par la lentille `mutation` le 2026-09-05, et c'est le défaut le plus instructif du
- * lot : `--prove` INJECTE son univers et ne passe jamais par la lecture du disque. Les deux
- * listes qui filtrent les fichiers — `EXTENSIONS_BALAYEES` et `EXEMPTS` — n'étaient donc
- * exercées par AUCUN témoin. Mesuré : remplacer les extensions par un motif qui ne reconnaît
- * rien, ou les exemptions par un attrape-tout, laissait `gov:entite` ET son `--prove` VERTS tous
- * les deux. La moitié « publication » de la garde se désarmait sans qu'une étape de Gate A
- * rougisse — la seule trace était un compteur de fichiers balayés dans un message de succès que
- * personne n'assertait.
- *
- * Une garde dont on peut couper la vue sans qu'aucun test ne tombe est une garde décorative.
- * Ces témoins-ci portent sur le FILTRE lui-même, pas sur ce qu'il laisse passer.
+ * `--prove` injecte son univers et ne passe jamais par la lecture du disque : ce qui décide de ce
+ * que la garde regarde a donc ses propres témoins. Ceux-ci portent sur le contrôle ; la lecture du
+ * disque est éprouvée plus bas, sur le dépôt réel et sur des dépôts jetables (REQ-GOV-031).
  */
 describe('REQ-CPL-018 — ce que la garde REGARDE est gardé, pas seulement ce qu’elle en dit', () => {
-  it('REQ-CPL-018 — un secret ne choisit pas son extension : tout fichier suivi est LU, sur une population GÉNÉRÉE', () => {
-    // Aucune liste d'extensions n'est récitée ici : la population est ENGENDRÉE — toutes les
-    // extensions d'une à trois lettres, plus un fichier sans extension et un fichier caché. Une
-    // branche qui écarterait une famille par son nom y tombe, quelle que soit la famille.
-    const lettres = 'abcdefghijklmnopqrstuvwxyz';
-    const extensions = [...lettres];
-    for (const a of lettres) for (const b of lettres) extensions.push(a + b);
-    for (const a of lettres) for (const b of lettres) for (const c of lettres) extensions.push(a + b + c);
-    const chemins = [...extensions.map((e) => `d/f.${e}`), 'd/sans-extension', 'd/.cache'];
-    const { fichiers, nonTexte } = lireFichiers(chemins, (chemin) => Buffer.from(`${chemin}\n`));
-    expect(fichiers.map((f) => f.chemin), 'un fichier suivi n’a pas été lu').toEqual(chemins);
-    expect(fichiers.every((f) => f.contenu === `${f.chemin}\n`), 'un contenu a été altéré').toBe(true);
-    expect(nonTexte, 'du texte ASCII a été déclaré non-texte').toEqual([]);
+  it('REQ-GOV-031 — un fichier que la garde ne sait pas lire EN ENTIER est REFUSÉ, pour chacune des deux causes', () => {
+    // Les octets viennent de leur vrai producteur (l'encodeur de Node), jamais tapés un par un.
+    const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
+    const causes: Record<string, Buffer> = {
+      'octet NUL — UTF-16 sans marque d’ordre': Buffer.from(`Virement ${iban}\n`, 'utf16le'),
+      'séquence UTF-8 invalide, sans aucun NUL — Latin-1': Buffer.from('Relevé du trimestre\n', 'latin1'),
+    };
+    for (const [cause, octets] of Object.entries(causes)) {
+      expect(familles(universAvecFichier('notes/releve.txt', octets.toString('utf8'))), cause).toContain(
+        'contenu_illisible'
+      );
+    }
   });
 
-  it('REQ-CPL-018 — un fichier NON-TEXTE est lu pour ses suites ASCII, NOMMÉ, et ne fabrique pas de faux positif', () => {
-    // L'ancien contre-témoin exigeait qu'une image ne soit PAS lue. Il se retourne : elle est lue,
-    // elle est nommée — et ses octets ne font rougir aucune famille (le filtre n'est plus un nom
-    // de fichier, c'est la clé mod-97).
-    const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
-    const contenus: Record<string, Buffer> = {
-      // Un texte UTF-8 accentué de plus de dix kilo-octets : sa TAILLE ne le rend pas non-texte.
-      'a/long.md': Buffer.from(`Un texte accentué — é à ç. ${'x'.repeat(10_000)}\n`),
-      'a/nul.bin': Buffer.concat([Buffer.from([0, 1, 2]), Buffer.from(` ${iban} `)]),
-      'a/sequence-invalide.dat': Buffer.concat([Buffer.from([0xc3, 0x28]), Buffer.from(` ${iban} `)]),
-      // Signature et en-tête PNG : NUL et octets hauts, aucune coordonnée.
-      'a/image.png': Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d, 0x49, 0x48, 0x44, 0x52, 0xff]),
-    };
-    const { fichiers, nonTexte } = lireFichiers(Object.keys(contenus), (chemin) => contenus[chemin]!);
-    expect(nonTexte).toEqual(['a/nul.bin', 'a/sequence-invalide.dat', 'a/image.png']);
-    const trouvees = Object.fromEntries(fichiers.map((f) => [f.chemin, coordonneesDe(f.contenu, false, f.chemin)]));
-    expect(trouvees).toEqual({
-      'a/long.md': [],
-      'a/nul.bin': [iban],
-      'a/sequence-invalide.dat': [iban],
-      'a/image.png': [],
-    });
+  it('REQ-GOV-031 — CONTRE-TÉMOIN : un texte UTF-8 à marque d’ordre, accents, idéogrammes et emoji est LU, pas refusé', () => {
+    const texte = `\uFEFFRelevé — ç à ü, 中文, \u{1F4B6}. ${'é'.repeat(5_000)}\n`;
+    expect(familles(universAvecFichier('docs/propre.md', Buffer.from(texte, 'utf8').toString('utf8')))).toEqual([]);
   });
 
   it('REQ-CPL-018 — AUCUN fichier n’est exempt de la recherche de SECRET, et c’est le veto de 2026-09-05', () => {
@@ -1025,10 +997,9 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
  * être allemand, espagnol ou belge : c'est exactement la classe que la garde ne voyait pas.
  *
  * ⚠️ CE QUE CES TÉMOINS NE FONT PAS. Ils ne DÉRIVENT PAS `PAYS_ISO` et ne prétendent pas la
- * couvrir — la liste est tapée à la main, et c'est l'objet de la tâche GOV-036. Ce qui est livré
- * ici, c'est le témoin qui ROUGIT QUAND LA LISTE RÉTRÉCIT, ce qui manquait pour que GOV-036 soit
- * gardée plutôt que promise. Les valeurs viennent de la garde (RM-01) : aucun IBAN littéral,
- * aucune TVA, aucun SIREN n'est retapé dans ce fichier.
+ * couvrir : ils rougissent quand la liste RÉTRÉCIT, et la dérivation a ses propres témoins
+ * (REQ-GOV-031, plus bas). Les valeurs viennent de la garde (RM-01) : aucun IBAN littéral, aucune
+ * TVA, aucun SIREN n'est retapé dans ce fichier.
  */
 describe('REQ-CPL-018 — les coordonnées NON françaises, et les deux familles sans témoin', () => {
   it.each(Object.entries(IBANS_TEMOINS_ETRANGERS).map(([pays, iban]) => ({ pays, iban })))(
@@ -2138,19 +2109,11 @@ describe('REQ-CPL-018 — aucun total de révisions ne se tape à la main', () =
 });
 
 /**
- * ── GOV-036 — CE QUE `gov:entite` REGARDE ÉTAIT DÉCIDÉ PAR DEUX LISTES TAPÉES ────────────────────
+ * ── REQ-GOV-031 — CE QUE `gov:entite` REGARDE SE DÉRIVE DE LA SOURCE ─────────────────────────────
  *
- * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ SUR LES QUATRE PASSES DE LA PR #31 :
- *   (1) `PAYS_ISO` — 47 entrées écrites à la main, dont SEPT qui n'émettent aucun IBAN, et
- *       CINQUANTE ET UN pays émetteurs OMIS. Cinq IBAN étrangers à clé mod-97 VALIDE (TR, IL,
- *       RS, AL, LB) traversaient la garde sans un mot.
- *   (2) `EXTENSIONS_BALAYEES` — une liste d'AUTORISATION. Sa première correction, une liste de
- *       REFUS de familles « binaires », aveuglait à son tour la garde sur des octets LISIBLES
- *       (veto de `securite`, PR #39) : elle a été retirée, et la garde lit tout fichier suivi.
- *
- * 🔑 Une population tapée ne voit que ce qu'on y a mis. Les témoins ci-dessous interrogent donc
- * la SOURCE — l'ICU du runtime, le disque, les octets — DANS LE TEST, au lieu de réciter une liste,
- * et ils portent sur ce que la garde CONSOMME, pas sur la valeur intermédiaire qui le produit.
+ * Deux populations décident de ce que la garde voit : les codes pays qui ouvrent la forme d'IBAN,
+ * et les fichiers qu'elle lit. Les témoins ci-dessous interrogent la SOURCE DANS LE TEST — l'ICU du runtime, git, des octets
+ * écrits par leur vrai producteur — et portent sur ce que la garde CONSOMME.
  */
 describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape pas', () => {
   /** Les régions que l'ICU du runtime connaît, interrogée ICI — sans passer par `codesDeRegion`. */
@@ -2175,10 +2138,8 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
   }
 
   it('REQ-GOV-031 — les formes IBAN et BIC reconnaissent EXACTEMENT les régions de l’ICU, sur les 676 paires', () => {
-    // A10 · mutation, PR #39 : l'identité `CODES_PAYS` / dérivation se prenait UN CRAN AVANT ce que
-    // les formes consomment — un filtre glissé dans `PAYS_ISO` la laissait verte, et un producteur
-    // amaigri se comparait à lui-même. L'oracle est donc le RUNTIME interrogé ici, et la mesure est
-    // ce que la garde VOIT : chaque région fabrique un IBAN et un BIC reconnus, aucune autre paire.
+    // L'oracle est le RUNTIME interrogé ici, et la mesure est ce que la garde VOIT : chaque région
+    // fabrique un IBAN et un BIC reconnus, aucune autre paire.
     const { paires, regions } = regionsDeLIcu();
     // ⚠️ CONTRÔLE POSITIF : deux listes vides sont égales.
     expect(regions.length, 'ICU sans régions : la comparaison ne prouverait rien').toBeGreaterThan(200);
@@ -2209,8 +2170,7 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
   });
 
   it('REQ-GOV-031 — la dérivation LÈVE juste sous son plancher, et pas au plancher', () => {
-    // A10 · mutation, PR #39 : le refus n'était éprouvé qu'à 0 et 1 région, donc un plancher
-    // abaissé à 2 passait. Les deux bornes sont ÉCRITES ici, jamais lues de la garde (RM-11).
+    // Les deux bornes sont ÉCRITES ici, jamais lues de la garde (RM-11).
     const { noms, regions } = regionsDeLIcu();
     const lecteurQuiConnait = (n: number) => {
       const connues = new Set(regions.slice(0, n));
@@ -2220,81 +2180,118 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     expect(codesDeRegion(lecteurQuiConnait(200))).toHaveLength(200);
   });
 
-  it('REQ-GOV-031 — un script shell qui exporte l’IBAN débiteur rougit — le cas plausible, de bout en bout', () => {
-    const chemin = 'scripts/deploiement.sh';
-    const { fichiers } = lireFichiers([chemin], () => Buffer.from(`export PARTNERS_IBAN_DEBITEUR=${IBAN_TEMOIN}\n`));
-    expect(controler(universAvecFichier(chemin, fichiers[0]!.contenu)).map((f) => f.famille)).toContain(
-      'coordonnee_en_clair'
-    );
+  it('REQ-GOV-031 — sur le dépôt réel, la garde lit EXACTEMENT les fichiers que git suit, et chacun EN ENTIER', () => {
+    // L'oracle est git, APPELÉ ICI — pas la source que la garde partage (`fichiers-suivis.ts`) —
+    // et la comparaison porte sur les NOMS et sur les CONTENUS, jamais sur un compte imprimé.
+    const suivis = suivisParGit(process.cwd());
+    expect(suivis.length, 'git ne rend aucun fichier : la comparaison ne prouverait rien').toBeGreaterThan(0);
+    const { fichiers } = lireUnivers();
+    expect(fichiers.map((f) => f.chemin), 'la garde ne lit pas les fichiers que git suit').toEqual(suivis);
+    expect(
+      fichiers.filter((f) => f.contenu !== readFileSync(f.chemin, 'utf8')).map((f) => f.chemin),
+      'contenu lu par la garde différent du disque'
+    ).toEqual([]);
   });
 
-  it('REQ-GOV-031 — la population balayée est celle du DISQUE : la garde lit TOUS les fichiers suivis, et le DIT', () => {
-    // Le témoin sur le dépôt réel. Aucun prédicat de « texte », aucun plancher tapé : le compte
-    // imprimé par la garde doit être celui que git rend, des deux côtés de « sur ».
-    const suivis = fichiersSuivis().length;
-    const { code, sortie } = lancer();
-    expect(code, sortie).toBe(0);
-    const lu = /(\d+) fichier\(s\) suivi\(s\) balayé\(s\) sur (\d+), dont \d+ non-texte/.exec(sortie);
-    expect(lu, `la garde ne dit pas ce qu'elle a lu :\n${sortie}`).not.toBeNull();
-    expect([Number(lu![1]), Number(lu![2])], sortie).toEqual([suivis, suivis]);
-    expect(sortie).toMatch(/\d+ codes de région/);
-  });
-
-  it('REQ-GOV-031 — VETO de securite : un IBAN lisible dans un format « binaire » suivi fait ROUGIR la garde', () => {
-    // A09 · securite, PR #39 (tour 4) : une archive `.tar` non compressée, un `.eps` à aperçu
-    // binaire, un `.ai` au format PDF et un `.pdf` à flux non compressé portaient un IBAN à clé
-    // valide, tous suivis — la garde sortait 0 et la bannière disait « Aucune coordonnée en
-    // clair ». Un décodage UTF-8 garde les suites ASCII : ces octets se LISENT.
-    // L'IBAN est CALCULÉ, et manifestement fictif : banque 00000, compte TEMOIN (RM-01, RM-11).
+  it('REQ-GOV-031 — VETO de securite : un fichier suivi que la garde ne sait pas lire en entier fait ROUGIR, NOMMÉ', () => {
+    // Dépôt git jetable, lancé par le vrai chemin de la gate. Chaque IBAN est CALCULÉ et
+    // manifestement fictif : banque 00000, compte TEMOIN (RM-01, RM-11).
     const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
-    const depot = mkdtempSync(join(tmpdir(), 'gov036-veto-'));
+    const texte = `Virement vers ${iban}.\n`;
+    // Aucune coordonnée n'y est LISIBLE : seul le refus peut les faire rougir.
+    const illisibles: Record<string, Buffer> = {
+      // Ce qu'écrit Windows PowerShell 5.1 sur une redirection `>` : marque d'ordre, puis UTF-16LE.
+      'notes/rib-utf16.txt': Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(texte, 'utf16le')]),
+      'exports/rib-comprime.pdf': Buffer.concat([
+        Buffer.from('%PDF-1.4\n1 0 obj << /Filter /FlateDecode >> stream\n', 'latin1'),
+        deflateSync(Buffer.from(`BT (${iban}) Tj ET`)),
+        Buffer.from('\nendstream\n', 'latin1'),
+      ]),
+      'exports/apporteurs.xlsx': Buffer.concat([
+        Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+        deflateRawSync(Buffer.from(`<sst><si><t>${iban}</t></si></sst>`)),
+      ]),
+      'config/sauvegarde.env.gz': gzipSync(Buffer.from(`PARTNERS_IBAN_DEBITEUR=${iban}\n`)),
+      'notes/releve-latin1.txt': Buffer.from('Relevé du trimestre\n', 'latin1'),
+    };
+    // Du texte lisible qui porte la coordonnée : une extension quelconque, un script shell, et un
+    // texte dont la coordonnée est au-delà du 6 000ᵉ octet, derrière des caractères de deux octets.
+    const avecCoordonnee: Record<string, Buffer> = {
+      'config/app.cfg': Buffer.from(`[banque]\niban = ${iban}\n`),
+      'scripts/deploiement.sh': Buffer.from(`export PARTNERS_IBAN_DEBITEUR=${iban}\n`),
+      'docs/gros.md': Buffer.from(`${'é'.repeat(3_000)}\n${texte}`),
+    };
+    const propres: Record<string, Buffer> = {
+      'docs/propre.md': Buffer.from(`\uFEFFRelevé — ç à ü, 中文. ${'é'.repeat(5_000)}\n`),
+    };
+    const tous = { ...illisibles, ...avecCoordonnee, ...propres };
+    const depot = depotJetable(tous);
     try {
-      const octets = (...parts: (string | number[])[]) =>
-        Buffer.concat(parts.map((p) => (typeof p === 'string' ? Buffer.from(p, 'latin1') : Buffer.from(p))));
-      const nul = (n: number) => new Array<number>(n).fill(0);
-      const avecIban: Record<string, Buffer> = {
-        // En-tête tar de 512 octets bourré de NUL, puis le fichier archivé.
-        'assets/archive.tar': octets('config/.env', nul(501), `PARTNERS_IBAN_DEBITEUR=${iban}\n`, nul(1024)),
-        // En-tête EPS « DOS binaire » (signature à octets hauts, décalages), PostScript, puis aperçu TIFF.
-        'assets/entete.eps': octets([0xc5, 0xd0, 0xd3, 0xc6, 30, 0, 0, 0], `%!PS-Adobe-3.0 EPSF-3.0\n(IBAN ${iban}) show\n`, [0x49, 0x49, 0x2a, 0, 0xff, 0xfe]),
-        // Un `.ai` est un PDF : marqueur binaire en deuxième ligne.
-        'assets/logo.ai': octets('%PDF-1.5\n%', [0xe2, 0xe3, 0xcf, 0xd3], `\nstream\nBT (${iban}) Tj ET\nendstream\n`, [0, 0x9c, 0xff]),
-        'docs/facture.pdf': octets('%PDF-1.4\n%', [0xe2, 0xe3, 0xcf, 0xd3], `\n1 0 obj << /Length 40 >> stream\nBT (RIB ${iban}) Tj ET\nendstream\n`),
-      };
-      // CONTRE-TÉMOIN dans le MÊME dépôt : un binaire sans coordonnée est lu et nommé, jamais signalé.
-      const propre = { 'assets/propre.png': octets([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], nul(4), 'IHDR', [0xff, 0xd8]) };
-      for (const [chemin, contenu] of Object.entries({ ...avecIban, ...propre })) {
-        mkdirSync(join(depot, dirname(chemin)), { recursive: true });
-        writeFileSync(join(depot, chemin), contenu);
-      }
-      for (const source of ['config/entite.json', 'docs/DECISIONS.md', 'docs/REQUIREMENTS.md']) {
-        mkdirSync(join(depot, dirname(source)), { recursive: true });
-        copyFileSync(source, join(depot, source));
-      }
-      for (const args of [['init', '-q'], ['add', '-A']]) execFileSync('git', args, { cwd: depot, stdio: 'ignore' });
-
-      const r = spawnSync(process.execPath, [resolve('node_modules/tsx/dist/cli.mjs'), resolve(SCRIPT)], {
-        cwd: depot,
-        encoding: 'utf8',
-        env: envDuBancDEssai(),
-      });
-      const sortie = (r.stdout ?? '') + (r.stderr ?? '');
-      expect(r.status, `la garde sort ${r.status} sur quatre IBAN lisibles :\n${sortie}`).toBe(1);
+      const { code, sortie } = lancerDans(depot);
+      expect(code, `la garde sort ${code} sur des fichiers suivis qu'elle ne sait pas lire en entier :\n${sortie}`).toBe(1);
       const lignes = sortie.split('\n');
-      const signales = Object.keys({ ...avecIban, ...propre }).filter((chemin) =>
-        lignes.some((l) => l.includes('[coordonnee_en_clair]') && l.includes(chemin))
-      );
-      expect(signales, sortie).toEqual(Object.keys(avecIban));
-      const perimetre = lignes.find((l) => l.includes('Périmètre :')) ?? '';
-      expect(
-        Object.keys({ ...avecIban, ...propre }).filter((chemin) => !perimetre.includes(chemin)),
-        `le périmètre imprimé ne NOMME pas chaque fichier non-texte :\n${sortie}`
-      ).toEqual([]);
+      const nommes = (famille: string) =>
+        Object.keys(tous).filter((chemin) => lignes.some((l) => l.includes(`[${famille}]`) && l.includes(chemin)));
+      expect(nommes('contenu_illisible'), sortie).toEqual(Object.keys(illisibles));
+      expect(nommes('coordonnee_en_clair'), sortie).toEqual(Object.keys(avecCoordonnee));
+    } finally {
+      rmSync(depot, { recursive: true, force: true });
+    }
+  });
+
+  it('REQ-GOV-031 — l’issue VERTE : une population GÉNÉRÉE est lue en entier, comptée comme git la compte, et la limite est dite', () => {
+    // Toutes les extensions d'une et deux lettres, un fichier sans extension et un fichier caché :
+    // une branche qui écarterait une famille de fichiers par son nom fait baisser le compte.
+    const lettres = 'abcdefghijklmnopqrstuvwxyz';
+    const extensions = [...lettres, ...[...lettres].flatMap((a) => [...lettres].map((b) => a + b))];
+    const chemins = [...extensions.map((e) => `p/f.${e}`), 'p/sans-extension', 'p/.cache'];
+    const depot = depotJetable(Object.fromEntries(chemins.map((c) => [c, Buffer.from(`${c}\n`)])));
+    try {
+      const suivis = suivisParGit(depot);
+      expect(suivis.length).toBe(chemins.length + 3);
+      const { code, sortie } = lancerDans(depot);
+      expect(code, sortie).toBe(0);
+      const lu = /(\d+) fichier\(s\) suivi\(s\) lu\(s\) en entier/.exec(sortie);
+      expect(lu, `la garde ne dit pas ce qu'elle a lu :\n${sortie}`).not.toBeNull();
+      expect(Number(lu![1]), sortie).toBe(suivis.length);
+      expect(sortie).toContain(LIMITE_DE_LA_FORME);
     } finally {
       rmSync(depot, { recursive: true, force: true });
     }
   });
 });
+
+/** Les fichiers que git suit dans `depot`, demandés à git lui-même. */
+function suivisParGit(depot: string): string[] {
+  return execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-z'], { cwd: depot, encoding: 'utf8' })
+    .split('\0')
+    .filter(Boolean);
+}
+
+/** Un dépôt git jetable : les trois sources de la garde et les fichiers donnés, tous SUIVIS. */
+function depotJetable(fichiers: Record<string, Buffer>): string {
+  const depot = mkdtempSync(join(tmpdir(), 'g36-'));
+  const ecrire = (chemin: string, contenu: Buffer) => {
+    mkdirSync(join(depot, dirname(chemin)), { recursive: true });
+    writeFileSync(join(depot, chemin), contenu);
+  };
+  for (const [chemin, contenu] of Object.entries(fichiers)) ecrire(chemin, contenu);
+  for (const source of ['config/entite.json', 'docs/DECISIONS.md', 'docs/REQUIREMENTS.md']) {
+    ecrire(source, readFileSync(source));
+  }
+  for (const args of [['init', '-q'], ['add', '-A']]) execFileSync('git', args, { cwd: depot, stdio: 'ignore' });
+  return depot;
+}
+
+/** La gate, lancée par `tsx` depuis la racine d'un dépôt jetable. */
+function lancerDans(depot: string): { code: number | null; sortie: string } {
+  const r = spawnSync(process.execPath, [resolve('node_modules/tsx/dist/cli.mjs'), resolve(SCRIPT)], {
+    cwd: depot,
+    encoding: 'utf8',
+    env: envDuBancDEssai(),
+  });
+  return { code: r.status, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
+}
 
 /** Un IBAN de forme valide dont la clé mod-97 est CALCULÉE — jamais recopiée (RM-01). */
 function ibanSynthetique(pays: string, corps: string): string {

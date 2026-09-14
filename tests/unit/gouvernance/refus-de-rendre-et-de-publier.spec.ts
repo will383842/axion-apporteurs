@@ -38,6 +38,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import * as processusFils from 'node:child_process';
 import ts from 'typescript';
 
 /** Le corps d'un bloc `if (…) { … }` repéré par sa première ligne. Naïf mais suffisant : on
@@ -82,8 +83,7 @@ function exigerQueLeRefusSORTE(nom: string, source: string, ancre: string): void
 
 /**
  * Les extensions que le compilateur connaît (`ts.Extension`), DÉRIVÉES et jamais tapées — données
- * `.json` comprises, le sens bavard de l'erreur. `ts|mjs|js`, écrit à la main, laissait un `.mts`
- * hors de toute énumération alors que `tsx` l'exécute (A10 · mutation, PR #39).
+ * `.json` comprises, le sens bavard de l'erreur.
  */
 const EXTENSIONS_DE_CODE: string[] = Object.values(ts.Extension);
 
@@ -1595,9 +1595,8 @@ describe('REQ-CPL-018 — le périmètre couvre les noms NON-ASCII, et se refuse
   //     avec 171 et avec 172 fichiers suivis. Le témoin positif est SOUSTRAIT par la chute même
   //     qu'il devrait signaler.
   //
-  // Cause : `if (!estBalaye(chemin) || !existsSync(chemin)) continue;` confond DEUX raisons de
-  // sauter — « hors périmètre par décision » (légitime, l'extension n'est pas balayée) et
-  // « fichier SUIVI introuvable sur le disque » (anormal). La seconde est muette.
+  // Cause : la boucle de lecture sautait un fichier pour DEUX raisons confondues — « hors
+  // périmètre par décision » et « fichier SUIVI introuvable sur le disque ». La seconde était muette.
   // *Un compteur qui diminue quand le périmètre s'entame ne peut pas signaler qu'il s'entame.*
   it('REQ-CPL-018 — une garde REFUSE si un fichier SUIVI est introuvable sur le disque', () => {
     const depot = depotCompletJetable();
@@ -1689,16 +1688,25 @@ it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉC
   ).toEqual([]);
 });
 
+/** Les fonctions qui lancent un processus : celles de `node:child_process`, DÉRIVÉES du module. */
+const LANCEURS: ReadonlySet<string> = new Set(
+  Object.entries(processusFils)
+    .filter(([, valeur]) => typeof valeur === 'function')
+    .map(([nom]) => nom)
+);
+
 /**
- * LES CHAÎNES QU'UN SOURCE CONSTRUIT — pliées sur l'arbre syntaxique, jamais grattées dans le texte.
+ * LES CHAÎNES QU'UN SOURCE PASSE À UN LANCEUR — lues sur l'arbre syntaxique, jamais grattées dans le texte.
  *
- * Un commentaire n'est pas un littéral : le texte qui DÉCRIT la protection ne la déclenche pas. Sont
- * PLIÉS : la concaténation de chaînes pliables, le gabarit dont chaque interpolation se plie, le
- * `.join()` d'un tableau littéral de chaînes pliables, et un identifiant lié par `const` à une valeur
- * pliable dans le MÊME fichier. La portée n'est pas résolue : un homonyme se plie comme la première
- * déclaration rencontrée — le sens bavard de l'erreur.
+ * Un lancement est un appel dont la fonction est un LANCEUR, nommé seul ou atteint par une propriété
+ * (`cp.execSync`, `require(…).execSync`). De ses arguments sont recueillies les chaînes PLIÉES — la
+ * concaténation, le gabarit, le `.join()` d'un tableau littéral, l'identifiant lié par `const` dans
+ * le même fichier — et, quand une chaîne ne se plie pas, chacun de ses FRAGMENTS littéraux. Un
+ * commentaire, ou une phrase passée à une fonction qui ne lance rien, n'est pas un lancement. La
+ * portée n'est pas résolue : un homonyme se plie comme la première déclaration rencontrée — le sens
+ * bavard de l'erreur.
  */
-function chainesConstruites(source: string, nom: string): string[] {
+function chainesLancees(source: string, nom: string): string[] {
   const arbre = ts.createSourceFile(nom, source, ts.ScriptTarget.Latest, true);
   const constantes = new Map<string, ts.Expression>();
   const recenser = (n: ts.Node): void => {
@@ -1749,31 +1757,38 @@ function chainesConstruites(source: string, nom: string): string[] {
     return null;
   };
   const trouvees: string[] = [];
+  const recueillir = (n: ts.Node, suivis: ReadonlySet<string>): void => {
+    const valeur = plier(n, suivis);
+    if (valeur !== null) {
+      trouvees.push(valeur);
+    } else if (ts.isIdentifier(n) && constantes.has(n.text) && !suivis.has(n.text)) {
+      recueillir(constantes.get(n.text)!, new Set([...suivis, n.text]));
+    } else {
+      if (ts.isTemplateHead(n) || ts.isTemplateMiddle(n) || ts.isTemplateTail(n)) trouvees.push(n.text);
+      ts.forEachChild(n, (enfant) => recueillir(enfant, suivis));
+    }
+  };
   const marcher = (n: ts.Node): void => {
-    const valeur = plier(n, new Set());
-    if (valeur !== null) trouvees.push(valeur);
+    if (ts.isCallExpression(n)) {
+      const f = n.expression;
+      const appelee = ts.isIdentifier(f) ? f.text : ts.isPropertyAccessExpression(f) ? f.name.text : null;
+      if (appelee !== null && LANCEURS.has(appelee)) for (const a of n.arguments) recueillir(a, new Set());
+    }
     ts.forEachChild(n, marcher);
   };
-  ts.forEachChild(arbre, marcher);
+  marcher(arbre);
   return trouvees;
 }
 
 /**
- * L'ACTE visé : ÉNUMÉRER L'ARBRE DE GIT hors de la source unique. Soit un jeton d'`argv` qui est une
- * sous-commande d'énumération, soit une commande shell dont le programme est `git` suivi de cette
- * sous-commande — préfixe d'environnement et options globales à argument admis. La commande est
- * ancrée en tête : une phrase qui CITE la commande au fil d'un message ne la déclenche pas.
+ * L'ACTE visé : ÉNUMÉRER L'ARBRE DE GIT hors de la source unique — une sous-commande d'énumération,
+ * mot entier d'une chaîne passée à un lanceur. Aucune grammaire de la ligne de commande : ni le
+ * programme, ni ses options, ni le shell qui l'enveloppe ne décident.
  */
-const SOUS_COMMANDE_D_ENUMERATION = String.raw`ls-(?:files|tree)`;
-const JETON_D_ENUMERATION = new RegExp(String.raw`^${SOUS_COMMANDE_D_ENUMERATION}$`);
-const COMMANDE_D_ENUMERATION = new RegExp(
-  String.raw`(?:^|[;&|]\s*)(?:\w+=\S*\s+)*git\s+(?:-[Cc]\s+\S+\s+|--?[\w.-]+(?:=\S+)?\s+)*${SOUS_COMMANDE_D_ENUMERATION}\b`
-);
+const SOUS_COMMANDE_D_ENUMERATION = /(?<![\w-])ls-(?:files|tree)(?![\w-])/;
 
 function appelleLEnumeration(source: string, nom: string): boolean {
-  return chainesConstruites(source, nom).some(
-    (c) => JETON_D_ENUMERATION.test(c.trim()) || COMMANDE_D_ENUMERATION.test(c.trim())
-  );
+  return chainesLancees(source, nom).some((c) => SOUS_COMMANDE_D_ENUMERATION.test(c));
 }
 
 /**
@@ -1789,43 +1804,57 @@ function appelleLEnumeration(source: string, nom: string): boolean {
  * chercher ce que la sortie PRODUIT.* Ce que produit une garde qui quitte la primitive, c'est une
  * énumération de l'arbre de git qui réapparaît quelque part. On la cherche là, à la source.
  *
- * 🔴 CE TÉMOIN A CHERCHÉ UNE ORTHOGRAPHE, PUIS UNE SOUS-FAMILLE. Il lisait des LIGNES
- * (`exec\w*Sync` et `ls-files` sur la même) ; il lit l'ARBRE SYNTAXIQUE depuis la PR #39. Au tour
- * suivant, A10 · mutation a fait passer sous l'arbre six autres formes du MÊME acte, et montré que
- * le pliage pouvait disparaître sans qu'aucun test tombe : ses évasions ne vivaient dans aucune
- * fixture. Toutes les formes mesurées sont maintenant des FIXTURES du témoin suivant, chacune tenue
- * rouge, à côté de contre-témoins qui doivent rester verts.
+ * Chaque forme mesurée du même acte est une FIXTURE du témoin suivant, tenue rouge, à côté de
+ * contre-témoins qui doivent rester verts.
  *
- * ⚠️ CE QUE CE TÉMOIN NE FERME PAS : L'ACTE LUI-MÊME. Un analyseur statique ne connaît que les
- * valeurs écrites dans le fichier qu'il lit. Lui échappent, par classe : une chaîne dont la valeur
- * n'existe qu'à l'exécution (retour de fonction, lecture, environnement, identifiant d'une autre
- * portée ou d'un autre module) ; les autres sous-commandes de git qui rendent des chemins ; tout
- * fichier hors de `scripts/`.
- *
- * ⚠️ ET UNE RÈGLE `no-restricted-imports` NE LE FERMERAIT PAS NON PLUS. Elle couvrirait STRICTEMENT
- * PLUS que ce témoin — chacune des formes mesurées importe `node:child_process` — mais (a) `eslint`
- * n'est pas une dépendance de cette branche (`grep -c eslint package.json` → 0) : la tâche qui pose
- * `pnpm lint` est GOV-031, dont la PR n'a pas atterri, et une règle qui ne tourne pas ne se voit pas
- * rougir (RM-02) ; (b) huit fichiers de `scripts/gates/` importent déjà `node:child_process` pour
- * `gh`, `git rev-parse`, `git log` ou `vitest list` (`grep -rln child_process scripts/gates`) : ils
- * porteraient une dérogation, et une garde dérogée peut toujours énumérer. La règle est un
- * COMPLÉMENT, à poser quand le lint tournera ; elle n'est ni un doublon de ce témoin, ni la fermeture.
+ * ⚠️ CE QUE CE TÉMOIN NE FERME PAS : L'ACTE LUI-MÊME. Il ne connaît que les valeurs écrites dans le
+ * fichier qu'il lit, et que les lancements qu'il reconnaît. Lui échappent, par classe :
+ *   (1) une valeur qui n'existe qu'à l'exécution et qui porte la sous-commande — retour de fonction,
+ *       lecture, environnement, identifiant non `const` ou importé d'un autre module — ou un
+ *       fragment dynamique qui COUPE la sous-commande elle-même ;
+ *   (2) un lancement INDIRECT — une fonction du module rangée sous un autre nom, appelée par
+ *       `.call`, `.apply` ou `Reflect.apply`, ou par un intermédiaire (fonction locale, autre module) ;
+ *   (3) une énumération qui ne passe pas par ces deux sous-commandes — une autre sous-commande de
+ *       git ou un autre programme qui rend des chemins, la lecture directe de l'index ;
+ *   (4) un fichier hors de `scripts/`, ou d'une extension que le compilateur ne reconnaît pas.
  */
 it('REQ-CPL-018 — le témoin d’énumération voit l’ACTE sous ses formes mesurées, et reste muet sur la prose', () => {
+  // Une fixture par forme MESURÉE et par alternative du prédicat : lancement nommé ou atteint par
+  // une propriété, argument littéral, plié, ou fragment d'une chaîne qui ne se plie pas.
   const FORMES: [string, string][] = [
     ['argument à la ligne suivante', "execFileSync('git', [\n  'ls-files',\n  '-z',\n]);"],
     ['appel par spawnSync', "spawnSync('git', ['ls-files', '-z']);"],
     ['concaténation de littéraux', "execFileSync('git', ['ls-' + 'files', '-z']);"],
     ['join d’un tableau littéral', "execFileSync('git', [['ls', 'files'].join('-'), '-z']);"],
     ['gabarit interpolé', "const f = 'files';\nexecFileSync('git', [`ls-${f}`, '-z']);"],
-    ['option globale à argument', "execSync('git -C . ls-files');"],
+    ['tableau d’arguments lié par const', "const ARGS = ['ls-files', '-z'];\nexecFileSync('git', ARGS);"],
+    ['option globale -C', "execSync('git -C . ls-files');"],
+    ['option globale -C à argument quoté', 'execSync(\'git -C "a b" ls-files\');'],
+    ['option globale -c clé=valeur', "execSync('git -c core.quotepath=off ls-files');"],
+    ['option globale --git-dir à argument séparé', "execSync('git --git-dir .git ls-files');"],
+    ['option globale --work-tree à argument séparé', "execSync('git --work-tree . ls-files');"],
     ['préfixe d’environnement', "execSync('GIT_LITERAL_PATHSPECS=1 git ls-files');"],
+    ['programme par chemin absolu', "execSync('/usr/bin/git ls-files');"],
+    ['programme git.exe', "execSync('git.exe ls-files');"],
+    ['sous-shell sh -c', 'execSync(\'sh -c "git ls-files"\');'],
+    ['sous-shell entre parenthèses', "execSync('(git ls-files)');"],
+    ['après le séparateur ;', "execSync('cd . ; git ls-files');"],
+    ['après le séparateur &&', "execSync('cd . && git ls-files');"],
+    ['après le séparateur |', "execSync('true | git ls-files');"],
+    ['fragment d’un gabarit dont une valeur est inconnue', 'execSync(`git ${process.env.X} ls-files`);'],
+    ['fragment d’une concaténation dont une valeur est inconnue', "execSync('git ' + dossier() + ' ls-files');"],
+    ['fonction du module atteinte par une propriété', "cp.execFileSync('git', ['ls-files']);"],
+    ['module chargé par require', "require('node:child_process').execFileSync('git', ['ls-files']);"],
+    ['module chargé par import()', "(await import('node:child_process')).spawnSync('git', ['ls-files']);"],
     ['sous-commande ls-tree', "spawnSync('git', ['ls-tree', '-r', '--name-only', 'HEAD']);"],
   ];
   const CONTRE_TEMOINS: [string, string][] = [
     ['commentaire', "// on n'appelle jamais git ls-files ici\nexport const x = 1;"],
     ['prose d’un message', "throw new Error('une garde qui quitte la source retrouve git ls-files');"],
+    ['prose passée à une fonction qui ne lance rien', "console.error('git ls-files a échoué');"],
     ['autre commande git', "execFileSync('git', ['rev-parse', '--show-toplevel']);"],
+    ['mot qui prolonge la sous-commande', "execFileSync('git', ['log', '--grep=ls-filesystem']);"],
+    ['mot qui précède la sous-commande', "execFileSync('npm', ['run', 'tools-files']);"],
   ];
   expect(FORMES.filter(([, s]) => !appelleLEnumeration(s, 'forme.ts')).map(([q]) => q), 'forme non vue').toEqual([]);
   expect(
@@ -1833,12 +1862,13 @@ it('REQ-CPL-018 — le témoin d’énumération voit l’ACTE sous ses formes m
     'faux positif : le témoin condamnerait le texte qui le documente'
   ).toEqual([]);
 
-  // L'énumération des sources lit ce que le compilateur reconnaît comme du code — un `.mts` compris.
-  const dossier = mkdtempSync(join(tmpdir(), 'enumeration-'));
+  // L'énumération des sources lit TOUTE extension que le compilateur reconnaît : l'oracle est
+  // `ts.Extension`, interrogé ici, une fixture par extension.
+  const dossier = mkdtempSync(join(tmpdir(), 'enum-'));
   try {
-    writeFileSync(join(dossier, 'garde.mts'), FORMES[1]![1]);
-    writeFileSync(join(dossier, 'notes.md'), FORMES[1]![1]);
-    expect(enumererFichiers(dossier).map((f) => f.slice(dossier.length + 1))).toEqual(['garde.mts']);
+    const attendus = Object.values(ts.Extension).map((x) => `garde${x}`);
+    for (const nom of [...attendus, 'notes.md']) writeFileSync(join(dossier, nom), '');
+    expect(enumererFichiers(dossier).map((f) => f.slice(dossier.length + 1)).sort()).toEqual(attendus.sort());
   } finally {
     rmSync(dossier, { recursive: true, force: true });
   }

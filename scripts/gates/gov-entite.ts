@@ -71,7 +71,7 @@ export type Univers = {
   decisions: string;
   /** Le texte de `docs/REQUIREMENTS.md` — la garde y relit REQ-CPL-004 et REQ-CPL-018. */
   exigences: string;
-  /** Les fichiers suivis par git, hors exemptions : c'est là qu'une valeur peut fuir. */
+  /** Tous les fichiers suivis par git, décodés en UTF-8 : c'est là qu'une valeur peut fuir. */
   fichiers: Fichier[];
 };
 
@@ -88,6 +88,7 @@ export const FAMILLES = [
   'source_illisible',
   'valeur_recopiee',
   'coordonnee_en_clair',
+  'contenu_illisible',
   'point_de_sortie_sans_refus',
 ];
 
@@ -146,49 +147,15 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
 ];
 
 /**
- * CE QUE LA GARDE LIT : TOUT FICHIER SUIVI, PAR SES OCTETS. Il n'y a plus de liste (GOV-036).
+ * CE QUE LA FORME NE RECONSTITUE PAS dans un texte que la garde lit en entier. Imprimé dans le vert :
+ * « aucune coordonnée » sans ses limites se lirait comme une absence prouvée.
  *
- * 🔴 DEUX FORMES ONT ÉTÉ ESSAYÉES, ET TOUTES DEUX DÉCIDAIENT PAR LE NOM CE QUE SEULS LES OCTETS DISENT.
- *   — Une liste d'AUTORISATION de quinze extensions, sous un commentaire qui disait pourtant « un
- *     secret ne choisit pas son extension » : `.sh`, `.py`, `.toml`, `Makefile`, `.gitattributes`
- *     n'étaient pas lus, et quatre fichiers suivis de ce dépôt étaient déjà dans l'angle mort quand
- *     GOV-036 a été ouverte.
- *   — Une liste de REFUS de familles « binaires », au motif qu'un binaire lu en UTF-8 ne rendrait
- *     qu'un vert sur du bruit. C'était FAUX, et A09 · securite l'a mesuré sous veto (PR #39) : un
- *     décodage UTF-8 remplace les octets invalides et GARDE les suites ASCII. Une archive `.tar` non
- *     compressée, un `.eps` à aperçu binaire, un `.ai` au format PDF et un `.pdf` à flux non
- *     compressé portaient chacun un IBAN LISIBLE ; la garde les écartait et sortait 0. Les mêmes
- *     octets sous une extension que la liste ne nommait pas faisaient sortir 1.
- *
- * 🔑 LE CRITÈRE EST LA LISIBILITÉ DES OCTETS, PAS LE MOT « BINAIRE » — et une extension ne dit rien
- * des octets. La garde lit donc chaque fichier suivi, sans branche sur son chemin, et
- * `coordonneesDe` juge ce qu'un décodage UTF-8 en rend. Un fichier de texte est lu en entier ; un
- * fichier qui ne l'est pas est lu pour ses suites ASCII, et il est NOMMÉ dans le périmètre imprimé.
- *
- * ⚠️ CE QUE CETTE LECTURE NE VOIT PAS, ÉCRIT PLUTÔT QUE TU :
- *   (1) un contenu COMPRESSÉ — archive `zip` ou `gz`, flux PDF comprimé, bureautique `docx`,
- *       image — n'est pas décompressé : la garde lit les octets, pas le texte qu'ils codent. C'est
- *       pour cela que chaque fichier non-texte est nommé à chaque passage, dans le vert comme dans
- *       le rouge : un verdict qui repose sur des octets opaques le DIT ;
- *   (2) un texte UTF-16 : un octet NUL s'intercale entre deux caractères et casse la forme ;
- *   (3) une valeur accolée à un octet d'enregistrement alphanumérique (une base SQLite) : la
- *       frontière de mot de la forme ne tient plus.
+ * Ce que la garde ne sait pas lire en entier n'est pas une limite : c'est un REFUS
+ * (`contenu_illisible`, dans `controler`).
  */
-export function lireFichiers(
-  suivis: readonly string[],
-  lire: (chemin: string) => Buffer
-): { fichiers: Fichier[]; nonTexte: string[] } {
-  const fichiers: Fichier[] = [];
-  const nonTexte: string[] = [];
-  for (const chemin of suivis) {
-    const octets = lire(chemin);
-    const contenu = octets.toString('utf8');
-    // Du texte : aucun octet NUL, et un décodage qui se ré-encode à l'identique.
-    if (octets.includes(0) || !Buffer.from(contenu, 'utf8').equals(octets)) nonTexte.push(chemin);
-    fichiers.push({ chemin, contenu });
-  }
-  return { fichiers, nonTexte };
-}
+export const LIMITE_DE_LA_FORME =
+  "Limite déclarée : dans un texte lisible, une valeur ENCODÉE (base64, entité HTML) ou COUPÉE " +
+  "entre ses groupes (saut de ligne, tabulation) n'est pas reconstituée.";
 
 /** Ce fichier est-il exempt de CETTE famille ? Aucun fichier n'est exempt d'un SECRET. */
 export function estExemptDe(chemin: string, famille: FamilleExemptable): boolean {
@@ -301,11 +268,6 @@ export function estExemplePlausible(v: string): boolean {
  * Déclaré AVANT les deux formes qui s'en servent : un `const` référencé plus haut que sa
  * déclaration lève à l'exécution, et la garde ne serait pas « fausse », elle serait MORTE.
  *
- * 🔴 CE QUE C'ÉTAIT (constat (1) de GOV-036, lentille `securite` sur les quatre passes de la PR #31).
- * Une liste TAPÉE de 47 entrées, dont sept qui n'émettent aucun IBAN, et CINQUANTE ET UN pays
- * émetteurs OMIS. Cinq IBAN étrangers à clé mod-97 VALIDE — TR, IL, RS, AL, LB — traversaient la
- * garde sans un mot : rien ne les écartait que leur absence de la liste.
- *
  * 🔑 RM-01 APPLIQUÉ À UNE CONSTANTE : la liste se DÉRIVE. La source est la table des RÉGIONS de
  * l'ICU du runtime (CLDR) — la donnée qui sert à afficher un nom de pays, versionnée avec Node,
  * jamais recopiée ici.
@@ -332,7 +294,7 @@ export function estExemplePlausible(v: string): boolean {
  */
 
 /** Sous ce nombre de régions, la source n'est pas « pauvre » : elle est illisible. */
-export const PLANCHER_DE_REGIONS = 200;
+const PLANCHER_DE_REGIONS = 200;
 
 /** La source des codes pays n'a pas pu être établie. Ce n'est pas une liste courte : c'est rien. */
 export class SourcePaysIllisible extends Error {
@@ -353,9 +315,7 @@ function lecteurDeRegionDuRuntime(): LecteurDeRegion {
     );
   }
   const noms = new Intl.DisplayNames(['fr'], { type: 'region' });
-  // UN SEUL chemin pour « pas une région » : `of()` rend le code lui-même. Le `catch` qui rendait
-  // aussi le code n'était atteint par aucune des 676 paires (A09 · simplicite, PR #39) : il ne
-  // pouvait que retirer des pays en silence.
+  // Un seul chemin pour « pas une région » : `of()` rend le code lui-même.
   return (code) => noms.of(code);
 }
 
@@ -384,7 +344,7 @@ export function codesDeRegion(lire: LecteurDeRegion = lecteurDeRegionDuRuntime()
 }
 
 /** Les codes réellement dérivés — leur nombre est imprimé : la garde DIT ce qu'elle a lu. */
-export const CODES_PAYS = codesDeRegion();
+const CODES_PAYS = codesDeRegion();
 
 const PAYS_ISO = `(?:${CODES_PAYS.join('|')})`;
 
@@ -785,6 +745,24 @@ export function controler(u: Univers): Faute[] {
     .filter((x) => !estSentinelle(x.v) && x.v.length >= 6);
 
   for (const fichier of u.fichiers) {
+    // Ce que la garde ne sait pas lire EN ENTIER, elle ne le juge pas sur ses seules suites ASCII :
+    // le décodage UTF-8 garde un octet NUL et rend toute séquence invalide en U+FFFD. Un REFUS,
+    // sans exemption : il n'existe pas de fichier qu'on ait le droit de ne pas lire.
+    const illisible = fichier.contenu.includes('\u0000')
+      ? 'un octet NUL'
+      : fichier.contenu.includes('\uFFFD')
+        ? 'une séquence UTF-8 invalide, ou le caractère de remplacement U+FFFD'
+        : null;
+    if (illisible !== null) {
+      ajouter(
+        'contenu_illisible',
+        `${fichier.chemin} — la garde ne sait pas lire ce fichier EN ENTIER : il porte ${illisible}. ` +
+          `Texte UTF-16, contenu compressé, archive, image ou base de données : une coordonnée y ` +
+          `échapperait à toute forme, dans un dépôt PUBLIC (REQ-GOV-031). Convertis-le en texte ` +
+          `UTF-8, ou retire-le du suivi.`
+      );
+    }
+
     const code = estCode(fichier.chemin);
     // L'exemption ne porte QUE sur la recopie d'une valeur PUBLIQUE. Elle ne dispense d'aucune
     // recherche de secret : c'est la correction du veto de la lentille `securite` (2026-09-05).
@@ -2123,23 +2101,19 @@ function fichiersSuivis(): string[] {
 }
 
 /**
- * L'univers RÉEL. Chaque fichier suivi y entre : aucune branche ne dépend de son chemin (GOV-036).
+ * L'univers RÉEL : chaque fichier suivi, décodé en UTF-8, sans branche sur son chemin (GOV-036).
  *
- * Un fichier suivi absent du disque n'est pas sauté ici : `fichiersSuivisOuRefus` a déjà refusé
- * (`perimetre_entame`), et une lecture qui lève est un rouge, jamais un vert.
+ * Le décodage ne juge rien. Ce qu'il ne sait pas rendre en entier y laisse un octet NUL ou un
+ * U+FFFD, et c'est `controler` qui le refuse (`contenu_illisible`). Un fichier suivi absent du
+ * disque a déjà été refusé par `fichiersSuivisOuRefus` (`perimetre_entame`).
  */
-function lireUnivers(): { univers: Univers; suivis: number; nonTexte: string[] } {
-  const suivis = fichiersSuivis();
-  const { fichiers, nonTexte } = lireFichiers(suivis, (chemin) => readFileSync(chemin));
+export function lireUnivers(): Univers {
+  const fichiers = fichiersSuivis().map((chemin) => ({ chemin, contenu: readFileSync(chemin, 'utf8') }));
   return {
-    univers: {
-      registre: registreDuDepot(),
-      decisions: readFileSync(CHEMIN_DECISIONS, 'utf8'),
-      exigences: readFileSync(CHEMIN_EXIGENCES, 'utf8'),
-      fichiers,
-    },
-    suivis: suivis.length,
-    nonTexte,
+    registre: registreDuDepot(),
+    decisions: readFileSync(CHEMIN_DECISIONS, 'utf8'),
+    exigences: readFileSync(CHEMIN_EXIGENCES, 'utf8'),
+    fichiers,
   };
 }
 
@@ -2181,13 +2155,6 @@ export const IBANS_TEMOINS_ETRANGERS: Record<string, string> = {
   NL: 'NL91ABNA0417164300',
   PT: 'PT50000201231234567890154',
   CH: 'CH9300762011623852957',
-  // ── LES CINQ QUE LA LISTE TAPÉE NE VOYAIT PAS (GOV-036) ────────────────────────────────────
-  // Ils ne sont pas là pour allonger la fixture : ils sont la MESURE du défaut que GOV-036 ferme.
-  // Les cinq ont une clé mod-97 VALIDE — donc rien d'autre que le code pays ne les écartait — et
-  // les cinq pays émettent des IBAN depuis des années. Ils étaient invisibles parce qu'ils
-  // n'avaient pas été TAPÉS dans `PAYS_ISO`, et une population tapée ne voit jamais ce qu'on a
-  // oublié d'y écrire. Ils restent les témoins de la dérivation : si quelqu'un rétablit une liste
-  // littérale, ce sont eux qui rougissent.
   TR: 'TR330006100519786457841326',
   IL: 'IL620108000000099999999',
   RS: 'RS35260005601001611379',
@@ -2343,6 +2310,23 @@ function prouver(): number {
         });
       }),
     },
+    // Un témoin par cause du refus, et les octets viennent de l'encodeur de Node.
+    {
+      // Un texte UTF-16 : un octet NUL entre deux caractères, et la forme ne voit plus l'IBAN.
+      famille: 'contenu_illisible',
+      univers: muter((u) => {
+        const octets = Buffer.from(`Virement depuis ${IBAN_TEMOIN}.\n`, 'utf16le');
+        u.fichiers.push({ chemin: 'notes/rib.txt', contenu: octets.toString('utf8') });
+      }),
+    },
+    {
+      // Un texte Latin-1 : aucun octet NUL, une séquence UTF-8 invalide.
+      famille: 'contenu_illisible',
+      univers: muter((u) => {
+        const octets = Buffer.from('Relevé du trimestre\n', 'latin1');
+        u.fichiers.push({ chemin: 'notes/releve.txt', contenu: octets.toString('utf8') });
+      }),
+    },
   ];
 
   // ── UN TÉMOIN PAR FORME QUE `normaliserEspaces` NEUTRALISE ─────────────────────────────────
@@ -2472,6 +2456,12 @@ function prouver(): number {
     {
       quoi: 'le sous-domaine d’envoi, encore à la sentinelle, ne bloque rien',
       univers: muter((u) => { u.registre.domaines.envoi = SENTINELLE; }),
+    },
+    {
+      quoi: 'un texte UTF-8 à marque d’ordre, accents et idéogrammes — lu, pas refusé',
+      univers: muter((u) => {
+        u.fichiers.push({ chemin: 'docs/propre.md', contenu: '\uFEFFRelevé — ç à ü, 中文.\n' });
+      }),
     },
   ];
 
@@ -2673,19 +2663,12 @@ if (APPELE_DIRECTEMENT) {
   if (process.argv.includes('--prove')) {
     process.exit(prouver());
   } else {
-    const { univers, suivis, nonTexte } = lireUnivers();
-    // LE PÉRIMÈTRE EST IMPRIMÉ DANS LES DEUX ISSUES. Un fichier non-texte n'est lu que pour ses
-    // suites ASCII : un vert — ou un rouge — qui repose sur des octets opaques doit le DIRE.
-    const perimetreLu =
-      `${univers.fichiers.length} fichier(s) suivi(s) balayé(s) sur ${suivis}, dont ` +
-      `${nonTexte.length} non-texte lu(s) par leurs seuls octets — un contenu COMPRESSÉ n'y est pas vu` +
-      (nonTexte.length > 0 ? ` : ${nonTexte.join(', ')}` : '');
+    const univers = lireUnivers();
     const fautes = controler(univers);
     if (fautes.length > 0) {
       console.error(`❌ gov:entite — ${fautes.length} défaut(s) du registre d'entité :\n`);
       fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
       if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
-      console.error(`\n   Périmètre : ${perimetreLu}.`);
       console.error(
         `\nCe dépôt est PUBLIC : une coordonnée bancaire poussée une fois y reste lisible pour ` +
           `toujours. La sentinelle \`${SENTINELLE}\` est la seule valeur que ces champs y prennent.`
@@ -2702,8 +2685,9 @@ if (APPELE_DIRECTEMENT) {
       `✅ gov:entite — \`${CHEMIN_REGISTRE}\` conforme : ${CHAMPS.length} champs, ` +
         `${arretes} arrêté(s) et attesté(s) par leur ligne de décision, ${attente.length} à la ` +
         `sentinelle, ${secrets.length} secret(s) qui ne prennent jamais d'autre valeur ici. ` +
-        `${perimetreLu}. ${CODES_PAYS.length} codes de région dérivés de l'ICU du runtime. ` +
-        `Aucune coordonnée en clair, aucune valeur recopiée, aucun point de sortie sans refus.`
+        `${univers.fichiers.length} fichier(s) suivi(s) lu(s) en entier, ${CODES_PAYS.length} codes ` +
+        `de région dérivés de l'ICU du runtime : aucune coordonnée reconnue par la forme, aucune ` +
+        `valeur recopiée, aucun point de sortie sans refus.\n   ⚠️ ${LIMITE_DE_LA_FORME}`
     );
     console.log(
       `   ⚠️ Cette garde n'AUTORISE pas la mise en service pour autant : ` +
