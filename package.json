@@ -11,6 +11,8 @@
   "scripts": {
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
+    "gov:termes-interdits": "tsx scripts/gates/gov-check.ts",
+    "gov:termes-interdits:prove": "tsx scripts/gates/gov-check.ts --prove",
     "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace && pnpm gov:lexique && pnpm gov:conventions",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
