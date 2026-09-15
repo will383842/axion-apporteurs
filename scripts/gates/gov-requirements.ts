@@ -44,7 +44,8 @@ const CHEMIN_VUE_PAR_DEFAUT = 'docs/REQUIREMENTS.md';
 
 /** `--out <chemin>` : rendre ou vérifier une AUTRE vue que celle du dépôt (bancs d'essai des tests). */
 const iOut = process.argv.indexOf('--out');
-const CHEMIN_VUE = iOut >= 0 ? (process.argv[iOut + 1] ?? CHEMIN_VUE_PAR_DEFAUT) : CHEMIN_VUE_PAR_DEFAUT;
+const CHEMIN_VUE =
+  iOut >= 0 ? (process.argv[iOut + 1] ?? CHEMIN_VUE_PAR_DEFAUT) : CHEMIN_VUE_PAR_DEFAUT;
 
 /** Les 21 modules et les 12 étapes de l'audit du 2026-09-03. Le compte est l'invariant. */
 const NB_MODULES = 21;
@@ -112,7 +113,10 @@ type Exigence = {
 type Tache = { id: string; phase: number; reqs: string[] };
 type Faute = { famille: string; message: string };
 
-type Validateur = { validate: (s: object, d: unknown) => boolean; errors?: { instancePath?: string; message?: string }[] };
+type Validateur = {
+  validate: (s: object, d: unknown) => boolean;
+  errors?: { instancePath?: string; message?: string }[];
+};
 const CtorAjv = Ajv2020 as unknown as { new (o: object): Validateur };
 
 function controler(doc: unknown, schema: object, taches: Tache[]): Faute[] {
@@ -121,7 +125,8 @@ function controler(doc: unknown, schema: object, taches: Tache[]): Faute[] {
 
   const ajv = new CtorAjv({ allErrors: true, strict: false });
   if (!ajv.validate(schema, doc)) {
-    for (const e of ajv.errors ?? []) ajouter('schema', `${e.instancePath || '(racine)'} ${e.message ?? 'invalide'}`);
+    for (const e of ajv.errors ?? [])
+      ajouter('schema', `${e.instancePath || '(racine)'} ${e.message ?? 'invalide'}`);
   }
 
   const exigences = ((doc as { exigences?: Exigence[] }).exigences ?? []) as Exigence[];
@@ -131,7 +136,10 @@ function controler(doc: unknown, schema: object, taches: Tache[]): Faute[] {
     if (parId.has(e.id)) ajouter('id_double', `${e.id} apparaît plus d'une fois.`);
     parId.set(e.id, e);
     if (!e.source || e.source.trim().length < 5) {
-      ajouter('source_vide', `${e.id} n'a pas de source : elle ne peut être ni datée ni contestée.`);
+      ajouter(
+        'source_vide',
+        `${e.id} n'a pas de source : elle ne peut être ni datée ni contestée.`
+      );
     }
   }
 
@@ -140,7 +148,10 @@ function controler(doc: unknown, schema: object, taches: Tache[]): Faute[] {
     if (e.statut !== 'absorbee') continue;
     const cible = e.remplaceePar ? parId.get(e.remplaceePar) : undefined;
     if (!cible) {
-      ajouter('remplacante_inconnue', `${e.id} renvoie à ${e.remplaceePar ?? '(rien)'}, qui n'est pas au registre.`);
+      ajouter(
+        'remplacante_inconnue',
+        `${e.id} renvoie à ${e.remplaceePar ?? '(rien)'}, qui n'est pas au registre.`
+      );
       continue;
     }
     if (cible.statut !== 'active') {
@@ -161,7 +172,8 @@ function controler(doc: unknown, schema: object, taches: Tache[]): Faute[] {
     }
   }
   for (let s = 1; s <= NB_ETAPES; s++) {
-    if (!etapes.has(s)) ajouter('etape_sans_exigence', `L'étape ${s} du parcours ne porte aucune exigence.`);
+    if (!etapes.has(s))
+      ajouter('etape_sans_exigence', `L'étape ${s} du parcours ne porte aucune exigence.`);
   }
 
   // porteurs — dans les deux sens
@@ -173,7 +185,10 @@ function controler(doc: unknown, schema: object, taches: Tache[]): Faute[] {
     if (!parId.has(r)) {
       ajouter(
         'exigence_citee_non_definie',
-        `${porteurs.get(r)!.map((t) => t.id).join(', ')} cite ${r}, qui n'est pas au registre.`
+        `${porteurs
+          .get(r)!
+          .map((t) => t.id)
+          .join(', ')} cite ${r}, qui n'est pas au registre.`
       );
     }
   }
@@ -193,8 +208,17 @@ function controler(doc: unknown, schema: object, taches: Tache[]): Faute[] {
           `La phase se DÉRIVE, elle ne se saisit pas.`
       );
     }
-    if (e.taches.join('|') !== p.map((t) => t.id).sort().join('|')) {
-      ajouter('taches_non_derivees', `${e.id} liste des tâches qui ne sont pas celles qui la citent.`);
+    if (
+      e.taches.join('|') !==
+      p
+        .map((t) => t.id)
+        .sort()
+        .join('|')
+    ) {
+      ajouter(
+        'taches_non_derivees',
+        `${e.id} liste des tâches qui ne sont pas celles qui la citent.`
+      );
     }
   }
 
@@ -202,9 +226,17 @@ function controler(doc: unknown, schema: object, taches: Tache[]): Faute[] {
 }
 
 const FAMILLES = [
-  'schema', 'id_double', 'source_vide', 'remplacante_inconnue', 'absorption_en_chaine',
-  'module_sans_exigence', 'etape_sans_exigence', 'exigence_citee_non_definie',
-  'exigence_sans_porteur', 'phase_non_derivee', 'taches_non_derivees',
+  'schema',
+  'id_double',
+  'source_vide',
+  'remplacante_inconnue',
+  'absorption_en_chaine',
+  'module_sans_exigence',
+  'etape_sans_exigence',
+  'exigence_citee_non_definie',
+  'exigence_sans_porteur',
+  'phase_non_derivee',
+  'taches_non_derivees',
 ];
 
 for (const f of [CHEMIN_REGISTRE, CHEMIN_SCHEMA, CHEMIN_TACHES]) {
@@ -235,16 +267,24 @@ export function rendreVue(exigences: Exigence[]): string {
   l.push('# Registre des exigences — Axion Apporteurs');
   l.push('');
   l.push('> ⚠️ **Ce fichier est une VUE. La source est `docs/requirements.json`.**');
-  l.push('> Regénéré par `pnpm gov:requirements --render`, jamais édité à la main : une correction');
+  l.push(
+    '> Regénéré par `pnpm gov:requirements --render`, jamais édité à la main : une correction'
+  );
   l.push('> tapée ici disparaît à la régénération suivante.');
-  l.push('> `pnpm gov:requirements --verifie-rendu` rougit si ce fichier a dérivé de sa source, et');
-  l.push('> NOMME l’écart en nombre d’exigences (REQ-GOV-032). Jusqu’au 2026-09-05, aucune garde ne');
+  l.push(
+    '> `pnpm gov:requirements --verifie-rendu` rougit si ce fichier a dérivé de sa source, et'
+  );
+  l.push(
+    '> NOMME l’écart en nombre d’exigences (REQ-GOV-032). Jusqu’au 2026-09-05, aucune garde ne'
+  );
   l.push('> comparait les deux : la vue annonçait 353 exigences pour 354 au registre.');
   l.push('>');
-  l.push('> **Aucun total n\'est écrit à la main.** Trois comptages différents ont circulé dans les documents');
+  l.push(
+    "> **Aucun total n'est écrit à la main.** Trois comptages différents ont circulé dans les documents"
+  );
   l.push('> sources, tous faux. Ceux qui suivent sont comptés à la génération.');
   l.push('>');
-  l.push('> **Dépôt public** — les renvois à la note d\'analyse interne apparaissent sous la forme');
+  l.push("> **Dépôt public** — les renvois à la note d'analyse interne apparaissent sous la forme");
   l.push('> « note interne (hors dépôt) », et les seuils comme les montants du réseau vivent en');
   l.push('> configuration (`REQ-GOV-031`, garde `pnpm gov:publication`).');
   l.push('');
@@ -279,7 +319,9 @@ export function rendreVue(exigences: Exigence[]): string {
 
   l.push('## Exigences');
   l.push('');
-  l.push(`Chaque entrée porte son **module** (1-${NB_MODULES}), son **étape** (1-${NB_ETAPES}), la **phase** où elle est`);
+  l.push(
+    `Chaque entrée porte son **module** (1-${NB_MODULES}), son **étape** (1-${NB_ETAPES}), la **phase** où elle est`
+  );
   l.push('livrée — la plus précoce de ses tâches porteuses — et **les tâches qui la prouvent**.');
   l.push("Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomme.");
   l.push('');
@@ -377,27 +419,117 @@ if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu'
 if (process.argv.includes('--prove')) {
   const base = controler(doc, schema, taches);
   if (base.length > 0) {
-    console.error(`❌ La preuve part d'un registre DÉJÀ fautif (${base.length}) — corrige d'abord :`);
+    console.error(
+      `❌ La preuve part d'un registre DÉJÀ fautif (${base.length}) — corrige d'abord :`
+    );
     base.slice(0, 5).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
     process.exit(1);
   }
 
-  const copie = (): { exigences: Exigence[] } => JSON.parse(JSON.stringify(doc)) as { exigences: Exigence[] };
-  const active = (d: { exigences: Exigence[] }): Exigence => d.exigences.find((e) => e.statut === 'active')!;
-  const absorbee = (d: { exigences: Exigence[] }): Exigence => d.exigences.find((e) => e.statut === 'absorbee')!;
+  const copie = (): { exigences: Exigence[] } =>
+    JSON.parse(JSON.stringify(doc)) as { exigences: Exigence[] };
+  const active = (d: { exigences: Exigence[] }): Exigence =>
+    d.exigences.find((e) => e.statut === 'active')!;
+  const absorbee = (d: { exigences: Exigence[] }): Exigence =>
+    d.exigences.find((e) => e.statut === 'absorbee')!;
 
   const TEMOINS: { famille: string; defaut: () => [{ exigences: Exigence[] }, Tache[]] }[] = [
-    { famille: 'schema', defaut: () => { const d = copie(); (active(d) as unknown as { module: number }).module = 99; return [d, taches]; } },
-    { famille: 'id_double', defaut: () => { const d = copie(); d.exigences.push(JSON.parse(JSON.stringify(active(d))) as Exigence); return [d, taches]; } },
-    { famille: 'source_vide', defaut: () => { const d = copie(); active(d).source = ''; return [d, taches]; } },
-    { famille: 'remplacante_inconnue', defaut: () => { const d = copie(); absorbee(d).remplaceePar = 'REQ-ZZZ-999'; return [d, taches]; } },
-    { famille: 'absorption_en_chaine', defaut: () => { const d = copie(); const a = absorbee(d); const b = d.exigences.find((e) => e.statut === 'absorbee' && e.id !== a.id)!; a.remplaceePar = b.id; return [d, taches]; } },
-    { famille: 'module_sans_exigence', defaut: () => { const d = copie(); for (const e of d.exigences) if (e.module === 6) e.module = null; return [d, taches]; } },
-    { famille: 'etape_sans_exigence', defaut: () => { const d = copie(); for (const e of d.exigences) if (e.etape === 3) e.etape = null; return [d, taches]; } },
-    { famille: 'exigence_citee_non_definie', defaut: () => { const t = JSON.parse(JSON.stringify(taches)) as Tache[]; t[0]!.reqs = [...t[0]!.reqs, 'REQ-ZZZ-998']; return [copie(), t]; } },
-    { famille: 'exigence_sans_porteur', defaut: () => { const d = copie(); const e = active(d); const t = (JSON.parse(JSON.stringify(taches)) as Tache[]).map((x) => ({ ...x, reqs: x.reqs.filter((r) => r !== e.id) })); e.taches = []; e.phase = null; return [d, t]; } },
-    { famille: 'phase_non_derivee', defaut: () => { const d = copie(); active(d).phase = 3; return [d, taches]; } },
-    { famille: 'taches_non_derivees', defaut: () => { const d = copie(); active(d).taches = ['GOV-000']; return [d, taches]; } },
+    {
+      famille: 'schema',
+      defaut: () => {
+        const d = copie();
+        (active(d) as unknown as { module: number }).module = 99;
+        return [d, taches];
+      },
+    },
+    {
+      famille: 'id_double',
+      defaut: () => {
+        const d = copie();
+        d.exigences.push(JSON.parse(JSON.stringify(active(d))) as Exigence);
+        return [d, taches];
+      },
+    },
+    {
+      famille: 'source_vide',
+      defaut: () => {
+        const d = copie();
+        active(d).source = '';
+        return [d, taches];
+      },
+    },
+    {
+      famille: 'remplacante_inconnue',
+      defaut: () => {
+        const d = copie();
+        absorbee(d).remplaceePar = 'REQ-ZZZ-999';
+        return [d, taches];
+      },
+    },
+    {
+      famille: 'absorption_en_chaine',
+      defaut: () => {
+        const d = copie();
+        const a = absorbee(d);
+        const b = d.exigences.find((e) => e.statut === 'absorbee' && e.id !== a.id)!;
+        a.remplaceePar = b.id;
+        return [d, taches];
+      },
+    },
+    {
+      famille: 'module_sans_exigence',
+      defaut: () => {
+        const d = copie();
+        for (const e of d.exigences) if (e.module === 6) e.module = null;
+        return [d, taches];
+      },
+    },
+    {
+      famille: 'etape_sans_exigence',
+      defaut: () => {
+        const d = copie();
+        for (const e of d.exigences) if (e.etape === 3) e.etape = null;
+        return [d, taches];
+      },
+    },
+    {
+      famille: 'exigence_citee_non_definie',
+      defaut: () => {
+        const t = JSON.parse(JSON.stringify(taches)) as Tache[];
+        t[0]!.reqs = [...t[0]!.reqs, 'REQ-ZZZ-998'];
+        return [copie(), t];
+      },
+    },
+    {
+      famille: 'exigence_sans_porteur',
+      defaut: () => {
+        const d = copie();
+        const e = active(d);
+        const t = (JSON.parse(JSON.stringify(taches)) as Tache[]).map((x) => ({
+          ...x,
+          reqs: x.reqs.filter((r) => r !== e.id),
+        }));
+        e.taches = [];
+        e.phase = null;
+        return [d, t];
+      },
+    },
+    {
+      famille: 'phase_non_derivee',
+      defaut: () => {
+        const d = copie();
+        active(d).phase = 3;
+        return [d, taches];
+      },
+    },
+    {
+      famille: 'taches_non_derivees',
+      defaut: () => {
+        const d = copie();
+        active(d).taches = ['GOV-000'];
+        return [d, taches];
+      },
+    },
   ];
 
   const prouvees = new Set<string>();
@@ -419,7 +551,9 @@ if (process.argv.includes('--prove')) {
     process.exit(1);
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   process.exit(0);
 }
@@ -431,8 +565,12 @@ if (fautes.length === 0) {
   const n = (s: string) => e.filter((x) => x.statut === s).length;
   const mods = new Set(e.map((x) => x.module).filter((m) => m !== null)).size;
   const etps = new Set(e.map((x) => x.etape).filter((s) => s !== null)).size;
-  console.log(`✅ gov:requirements — ${e.length} exigences (${n('active')} actives, ${n('absorbee')} absorbées, ${n('retiree')} retirée).`);
-  console.log(`   ${mods}/${NB_MODULES} modules et ${etps}/${NB_ETAPES} étapes couverts · ${e.filter((x) => x.taches.length > 0).length} exigences portées par une tâche.`);
+  console.log(
+    `✅ gov:requirements — ${e.length} exigences (${n('active')} actives, ${n('absorbee')} absorbées, ${n('retiree')} retirée).`
+  );
+  console.log(
+    `   ${mods}/${NB_MODULES} modules et ${etps}/${NB_ETAPES} étapes couverts · ${e.filter((x) => x.taches.length > 0).length} exigences portées par une tâche.`
+  );
   process.exit(0);
 }
 

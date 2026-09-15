@@ -65,7 +65,7 @@ const INCIDENTS = [
     commande: 'gh api -X DELETE repos/will383842/axion-apporteurs/branches/main/protection',
   },
   {
-    quoi: "le vol de revendication, indétectable côté forge sur un dépôt à un compte (GOV-008)",
+    quoi: 'le vol de revendication, indétectable côté forge sur un dépôt à un compte (GOV-008)',
     commande: 'gh issue edit 7 --remove-label owner:A01',
   },
 ];
@@ -129,7 +129,9 @@ describe('REQ-CPL-021 — la matrice d’autonomie refuse ce qu’elle prétend 
     expect(jugerGh('gh api --method PUT repos/o/r/branches/main/protection').refuse).toBe(true);
     expect(jugerGh('gh api repos/o/r/branches/main/protection').refuse).toBe(false);
     // `-f` pose un corps : `gh` bascule alors en POST tout seul, sans qu'aucun `-X` n'apparaisse.
-    expect(jugerGh('gh api repos/o/r/branches/main/protection -f enforce_admins=false').refuse).toBe(true);
+    expect(
+      jugerGh('gh api repos/o/r/branches/main/protection -f enforce_admins=false').refuse
+    ).toBe(true);
   });
 
   it('REQ-CPL-021 — `pnpm gov:autonomie` et sa preuve sont vertes sur l’état du dépôt', () => {

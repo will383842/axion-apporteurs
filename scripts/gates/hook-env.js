@@ -60,7 +60,9 @@ process.stdin.on('end', () => {
     refuser(
       "l'entree du hook n'est pas un JSON analysable, donc la commande n'a pas pu etre lue. " +
         "Le defaut est le refus : une garde qui laisse passer ce qu'elle n'a pas su lire ne " +
-        "garde rien. (charge utile de " + brut.length + " octet(s))"
+        'garde rien. (charge utile de ' +
+        brut.length +
+        ' octet(s))'
     );
   }
 
@@ -68,7 +70,11 @@ process.stdin.on('end', () => {
   //    Un test sur « n'importe où dans la ligne » refusait `grep -rn "NOTIFY_SINK=true" .env.example`
   //    et `git commit -m "chore(env): NOTIFY_SINK=true en dev"` avec un message parlant de surcharge :
   //    l'agent ne comprenait pas, réessayait, et consommait ses deux tentatives.
-  if (/(^|[;&|]\s*|\benv\s+)(DATABASE_URL|REDIS_URL|NOTIFY_SINK|SEPA_EXPORT_ENABLED)\s*=/.test(commande)) {
+  if (
+    /(^|[;&|]\s*|\benv\s+)(DATABASE_URL|REDIS_URL|NOTIFY_SINK|SEPA_EXPORT_ENABLED)\s*=/.test(
+      commande
+    )
+  ) {
     refuser(
       "une variable d'environnement gardée est fixée en tête de commande. " +
         'Ces valeurs viennent de `.env.local` ou de `.claude/settings.json`, jamais de la ligne de commande. ' +
@@ -96,7 +102,7 @@ process.stdin.on('end', () => {
   if (!prod && process.env.NOTIFY_SINK !== 'true') {
     refuser(
       'NOTIFY_SINK doit valoir "true" hors production. ' +
-        "Sans lui, un test peut envoyer un e-mail, un SMS ou une enveloppe DocuSeal à une vraie personne."
+        'Sans lui, un test peut envoyer un e-mail, un SMS ou une enveloppe DocuSeal à une vraie personne.'
     );
   }
 

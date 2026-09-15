@@ -25,13 +25,13 @@ name: Nightly
 on:
   schedule:
     # 03:17 UTC — hors des heures de fusion, et décalé de l'heure ronde où tout le monde planifie.
-    - cron: '17 3 * * *'
+    - cron: "17 3 * * *"
   workflow_dispatch:
     inputs:
       phase:
         description: "Niveau de phase à juger (-1 = socle). C'est la phase à la SORTIE de laquelle les gates doivent être armées."
         required: false
-        default: '-1'
+        default: "-1"
 jobs:
   gates-prouvees:
     name: Sortie de phase — les gates sont-elles armées

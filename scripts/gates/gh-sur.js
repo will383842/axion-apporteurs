@@ -58,9 +58,26 @@ const CHEMINS_INTERDITS_EN_ECRITURE = [
  * /rulesets passait le hook ET les `deny`.
  */
 const DRAPEAUX_A_VALEUR = new Set([
-  '-X', '--method', '-H', '--header', '-f', '--field', '-F', '--raw-field',
-  '--input', '-q', '--jq', '-t', '--template', '--cache', '--hostname', '-R', '--repo',
-  '-p', '--preview', '--slurp',
+  '-X',
+  '--method',
+  '-H',
+  '--header',
+  '-f',
+  '--field',
+  '-F',
+  '--raw-field',
+  '--input',
+  '-q',
+  '--jq',
+  '-t',
+  '--template',
+  '--cache',
+  '--hostname',
+  '-R',
+  '--repo',
+  '-p',
+  '--preview',
+  '--slurp',
 ]);
 
 /** Découpe une ligne de shell en segments. Grossier à dessein : ne rater aucun `gh` caché. */
@@ -180,7 +197,11 @@ function jugerGh(ligne) {
             `\`gov:depot-visibilite\` verifie que la protection est en place.`,
         };
       }
-      if (ecrit && /\/(repos|orgs)\//.test(cible) && /\/(visibility|topics|transfer)\b/.test(cible)) {
+      if (
+        ecrit &&
+        /\/(repos|orgs)\//.test(cible) &&
+        /\/(visibility|topics|transfer)\b/.test(cible)
+      ) {
         return {
           refuse: true,
           motif: `\`gh api ${methode} ${cible}\` — la visibilite du depot est tranchee par W13, pas par un agent.`,
@@ -201,7 +222,10 @@ function jugerGh(ligne) {
           // `^owner:` ne voyait que le premier element. JOUÉ sur la PR 28 :
           //     gh issue edit 12 --remove-label "prio:haute,owner:A01"
           // passait le hook ET les `deny`. On juge chaque element.
-          const etiquettes = valeur.split(',').map((x) => x.trim()).filter((x) => x !== '');
+          const etiquettes = valeur
+            .split(',')
+            .map((x) => x.trim())
+            .filter((x) => x !== '');
           if (estRetrait && etiquettes.some((e) => /^(owner:|en_cours\b)/.test(e))) {
             const volee = etiquettes.find((e) => /^(owner:|en_cours\b)/.test(e)) ?? valeur;
             return {

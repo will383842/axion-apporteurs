@@ -19,7 +19,15 @@
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, existsSync, readdirSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import {
+  readFileSync,
+  existsSync,
+  readdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+  mkdirSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
@@ -54,7 +62,9 @@ describe('docs/agents.json — la source unique des quinze fiches de rôle', () 
     expect(postes.length).toBe(15);
     const codes = postes.map((p) => p.code);
     expect(new Set(codes).size).toBe(codes.length);
-    expect([...codes].sort()).toEqual(Array.from({ length: 15 }, (_, i) => `A${String(i + 1).padStart(2, '0')}`));
+    expect([...codes].sort()).toEqual(
+      Array.from({ length: 15 }, (_, i) => `A${String(i + 1).padStart(2, '0')}`)
+    );
     const roles = postes.map((p) => p.role);
     expect(new Set(roles).size).toBe(roles.length);
   });
@@ -73,7 +83,9 @@ describe('docs/agents.json — la source unique des quinze fiches de rôle', () 
   it('REQ-GOV-010 — tout chemin de documents[] existe sur le disque', () => {
     // Une fiche qui envoie lire `docs/spec/` — dossier que ce dépôt n'a pas — envoie l'agent
     // chercher un texte qui n'existe pas, et il invente. C'est la famille `document_absent`.
-    const absents = postes.flatMap((p) => p.documents.filter((d) => !existsSync(d.chemin)).map((d) => `${p.role} → ${d.chemin}`));
+    const absents = postes.flatMap((p) =>
+      p.documents.filter((d) => !existsSync(d.chemin)).map((d) => `${p.role} → ${d.chemin}`)
+    );
     expect(absents).toEqual([]);
   });
 });
@@ -89,7 +101,9 @@ describe('les fiches sont une VUE de la source', () => {
   });
 
   it('REQ-GOV-010 — aucune fiche orpheline : un fichier de `.claude/agents/` sans poste ne résout pas', () => {
-    const surDisque = readdirSync(CHEMIN_FICHES).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3));
+    const surDisque = readdirSync(CHEMIN_FICHES)
+      .filter((f) => f.endsWith('.md'))
+      .map((f) => f.slice(0, -3));
     expect([...surDisque].sort()).toEqual([...postes.map((p) => p.role)].sort());
   });
 
@@ -146,9 +160,16 @@ describe('la charte est CONFRONTÉE à la source (elle n’est plus un second te
   });
 
   it('REQ-GOV-010 — chaque chemin réservé du §7 nomme un poste de la source (gate de l’exigence)', () => {
-    const lignes = sectionCharte('## 7.', '## 8.').split('\n').filter((l) => l.startsWith('|'));
+    const lignes = sectionCharte('## 7.', '## 8.')
+      .split('\n')
+      .filter((l) => l.startsWith('|'));
     const labels = lignes
-      .map((l) => l.split('|').slice(1, -1).map((c) => c.trim()))
+      .map((l) =>
+        l
+          .split('|')
+          .slice(1, -1)
+          .map((c) => c.trim())
+      )
       .filter((c) => c.length >= 4)
       .map((c) => c[2]!.replace(/`/g, '').trim())
       .filter((l) => l.startsWith('role:'))
@@ -160,7 +181,9 @@ describe('la charte est CONFRONTÉE à la source (elle n’est plus un second te
 
   it('REQ-GOV-010 — tout `agentType` du workflow de lot désigne une fiche existante', () => {
     const workflow = readFileSync(WORKFLOW, 'utf8');
-    const types = new Set([...workflow.matchAll(/agentType:\s*([^,}\n]+)/g)].map((m) => m[1]!.trim()));
+    const types = new Set(
+      [...workflow.matchAll(/agentType:\s*([^,}\n]+)/g)].map((m) => m[1]!.trim())
+    );
     expect(types.size).toBeGreaterThan(0);
     const connus = new Set(postes.map((p) => p.role));
     for (const expr of types) {
@@ -225,15 +248,35 @@ describe('gov:agents — la garde des fiches de rôle', () => {
         )
       );
 
-      expect(lancer('scripts/agents/generer.ts', '--source', `"${source}"`, '--racine', `"${fiches}"`).code).toBe(0);
       expect(
-        lancer('scripts/agents/generer.ts', '--source', `"${source}"`, '--racine', `"${fiches}"`, '--verifier').code
+        lancer('scripts/agents/generer.ts', '--source', `"${source}"`, '--racine', `"${fiches}"`)
+          .code
+      ).toBe(0);
+      expect(
+        lancer(
+          'scripts/agents/generer.ts',
+          '--source',
+          `"${source}"`,
+          '--racine',
+          `"${fiches}"`,
+          '--verifier'
+        ).code
       ).toBe(0);
 
       const fiche = join(fiches, 'temoin.md');
-      writeFileSync(fiche, readFileSync(fiche, 'utf8').replace('### Interdits', '### Ce qui est interdit'));
+      writeFileSync(
+        fiche,
+        readFileSync(fiche, 'utf8').replace('### Interdits', '### Ce qui est interdit')
+      );
 
-      const apres = lancer('scripts/agents/generer.ts', '--source', `"${source}"`, '--racine', `"${fiches}"`, '--verifier');
+      const apres = lancer(
+        'scripts/agents/generer.ts',
+        '--source',
+        `"${source}"`,
+        '--racine',
+        `"${fiches}"`,
+        '--verifier'
+      );
       expect(apres.code).toBe(1);
       expect(apres.sortie).toContain('diffère');
     } finally {

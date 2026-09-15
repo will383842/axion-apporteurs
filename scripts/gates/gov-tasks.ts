@@ -48,7 +48,8 @@ const CHEMIN_VUE_PAR_DEFAUT = 'docs/TASKS.md';
  * `docs/TASKS.md` — un test qui périme la vraie vue emporte le travail non commité de la session.
  */
 const iOut = process.argv.indexOf('--out');
-const CHEMIN_VUE = iOut >= 0 ? (process.argv[iOut + 1] ?? CHEMIN_VUE_PAR_DEFAUT) : CHEMIN_VUE_PAR_DEFAUT;
+const CHEMIN_VUE =
+  iOut >= 0 ? (process.argv[iOut + 1] ?? CHEMIN_VUE_PAR_DEFAUT) : CHEMIN_VUE_PAR_DEFAUT;
 
 /** Identifiants découpés le 2026-09-03. Les citer en dépendance est une erreur, pas un raccourci. */
 const SCINDES: Record<string, string> = {
@@ -95,8 +96,8 @@ const LIVREE = LIVREE_DERIVEE;
 {
   const ecarts = verifierExhaustivite();
   if (ecarts.length > 0) {
-    console.error("❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :");
-    ecarts.forEach((e) => console.error("   " + e));
+    console.error('❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :');
+    ecarts.forEach((e) => console.error('   ' + e));
     process.exit(1);
   }
 }
@@ -106,7 +107,14 @@ function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
 
-  const ajv = new (Ajv2020 as unknown as { new (o: object): { validate: (s: object, d: unknown) => boolean; errors?: { instancePath?: string; message?: string }[] } })({
+  const ajv = new (
+    Ajv2020 as unknown as {
+      new (o: object): {
+        validate: (s: object, d: unknown) => boolean;
+        errors?: { instancePath?: string; message?: string }[];
+      };
+    }
+  )({
     allErrors: true,
     strict: false,
   });
@@ -130,7 +138,10 @@ function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
   for (const t of taches) {
     for (const d of t.deps) {
       if (SCINDES[d]) {
-        ajouter('dep_identifiant_scinde', `${t.id} dépend de ${d}, qui a été découpé : ${SCINDES[d]}.`);
+        ajouter(
+          'dep_identifiant_scinde',
+          `${t.id} dépend de ${d}, qui a été découpé : ${SCINDES[d]}.`
+        );
         continue;
       }
       if (/^(HYP|DEC)-|^W\d{1,2}$/.test(d)) {
@@ -179,7 +190,10 @@ function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
 
     // Une tâche de DÉCISION coûte 0 j ; une tâche de code est plafonnée à 1,5 j (une PR).
     if (t.repo !== 'externe' && t.estimateDays > 1.5) {
-      ajouter('estimation_hors_plafond', `${t.id} est estimée ${t.estimateDays} j : au-delà d'une PR (1,5 j).`);
+      ajouter(
+        'estimation_hors_plafond',
+        `${t.id} est estimée ${t.estimateDays} j : au-delà d'une PR (1,5 j).`
+      );
     }
     if (t.externe !== null && t.statut !== 'attente_externe') {
       ajouter(
@@ -197,7 +211,9 @@ function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
   }
 
   // acyclicité — parcours en profondeur, pile explicite pour nommer le cycle
-  const BLANC = 0, GRIS = 1, NOIR = 2;
+  const BLANC = 0,
+    GRIS = 1,
+    NOIR = 2;
   const couleur = new Map<string, number>(taches.map((t) => [t.id, BLANC]));
   const pile: string[] = [];
   const signales = new Set<string>();
@@ -230,9 +246,18 @@ function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
 // est aussi celui qui les produit. Une liste de familles recopiée à côté du code qui les émet
 // laisse `--prove` réclamer un témoin pour une famille morte, ou en oublier une vivante (RM-01).
 const FAMILLES = [
-  'schema', 'id_double', 'dep_inconnue', 'dep_circulaire', 'dep_phase_ulterieure',
-  'dep_identifiant_scinde', 'dep_decision_nue', 'hyp_hors_registre', 'paths_vide',
-  'estimation_hors_plafond', 'externe_sans_attente', 'dep_non_livree',
+  'schema',
+  'id_double',
+  'dep_inconnue',
+  'dep_circulaire',
+  'dep_phase_ulterieure',
+  'dep_identifiant_scinde',
+  'dep_decision_nue',
+  'hyp_hors_registre',
+  'paths_vide',
+  'estimation_hors_plafond',
+  'externe_sans_attente',
+  'dep_non_livree',
   ...FAMILLES_ATTESTATION,
 ];
 
@@ -279,10 +304,16 @@ export function rendreVue(doc: { taches: Tache[] }): string {
   l.push('# Taches par phase — Axion Apporteurs');
   l.push('');
   l.push('> ⚠️ **Ce fichier est une VUE. La source est `docs/tasks.json`.**');
-  l.push('> Regenere par `pnpm gov:tasks --render`, jamais edite a la main : une correction tapee ici');
-  l.push('> disparait au rendu suivant. Trois comptages differents ont circule dans la version tenue');
+  l.push(
+    '> Regenere par `pnpm gov:tasks --render`, jamais edite a la main : une correction tapee ici'
+  );
+  l.push(
+    '> disparait au rendu suivant. Trois comptages differents ont circule dans la version tenue'
+  );
   l.push('> a la main, tous faux — les nombres ci-dessous sont comptes a la generation.');
-  l.push('> `pnpm gov:tasks --verifie-rendu` rougit si ce fichier a derive de sa source (REQ-GOV-032).');
+  l.push(
+    '> `pnpm gov:tasks --verifie-rendu` rougit si ce fichier a derive de sa source (REQ-GOV-032).'
+  );
   l.push('>');
   l.push('> Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.');
   l.push('');
@@ -293,7 +324,9 @@ export function rendreVue(doc: { taches: Tache[] }): string {
   for (const p of [-1, 0, 1, 2, 3]) {
     const liste = doc.taches.filter((t) => t.phase === p);
     const faites = liste.filter((t) => LIVREE.has(t.statut)).length;
-    l.push(`| ${p} — ${PHASES[p]} | ${liste.length} | ${liste.reduce((a, t) => a + t.estimateDays, 0).toFixed(2)} | ${faites} |`);
+    l.push(
+      `| ${p} — ${PHASES[p]} | ${liste.length} | ${liste.reduce((a, t) => a + t.estimateDays, 0).toFixed(2)} | ${faites} |`
+    );
   }
   l.push('');
 
@@ -307,13 +340,19 @@ export function rendreVue(doc: { taches: Tache[] }): string {
       if (t.repo !== 'partners') marques.push(`\`${t.repo}\``);
       if (t.schema) marques.push('`schema`');
       if (t.sensible.length > 0) marques.push(`sensible : ${t.sensible.join(', ')}`);
-      const etat = LIVREE.has(t.statut) ? ` ✅ **${t.statut}**` : t.statut === 'a_faire' ? '' : ` — **${t.statut}**`;
+      const etat = LIVREE.has(t.statut)
+        ? ` ✅ **${t.statut}**`
+        : t.statut === 'a_faire'
+          ? ''
+          : ` — **${t.statut}**`;
       l.push(`### ${t.id} — ${t.titre}${etat}`);
       l.push('');
       l.push(
         `\`${t.estimateDays} j\` · zone \`${t.zone}\`` +
           (marques.length ? ` · ${marques.join(' · ')}` : '') +
-          (t.deps.length ? ` · depend de ${t.deps.map((d) => `\`${d}\``).join(', ')}` : ' · aucune dependance') +
+          (t.deps.length
+            ? ` · depend de ${t.deps.map((d) => `\`${d}\``).join(', ')}`
+            : ' · aucune dependance') +
           (t.hyp.length ? ` · decisions ${t.hyp.map((h) => `\`${h}\``).join(', ')}` : '')
       );
       l.push('');
@@ -357,7 +396,9 @@ function normaliserFins(t: string): string {
 if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu')) {
   const fautes = controler(doc, schema, registre);
   if (fautes.length > 0) {
-    console.error(`❌ Refus de rendre une vue d'un backlog fautif (${fautes.length}). Lance \`pnpm gov:tasks\`.`);
+    console.error(
+      `❌ Refus de rendre une vue d'un backlog fautif (${fautes.length}). Lance \`pnpm gov:tasks\`.`
+    );
     process.exit(1);
   }
 
@@ -415,7 +456,9 @@ if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu'
 if (process.argv.includes('--prove')) {
   const base = controler(doc, schema, registre);
   if (base.length > 0) {
-    console.error(`❌ La preuve part d'un document DÉJÀ fautif (${base.length}) — corrige d'abord :`);
+    console.error(
+      `❌ La preuve part d'un document DÉJÀ fautif (${base.length}) — corrige d'abord :`
+    );
     base.slice(0, 5).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
     process.exit(1);
   }
@@ -433,7 +476,9 @@ if (process.argv.includes('--prove')) {
   const choisir = (d: { taches: Tache[] }, ou: (t: Tache) => boolean, quoi: string): Tache => {
     const t = d.taches.find(ou);
     if (!t) {
-      console.error(`❌ gov:tasks --prove — aucune tâche ${quoi} : le témoin ne peut plus être choisi.`);
+      console.error(
+        `❌ gov:tasks --prove — aucune tâche ${quoi} : le témoin ne peut plus être choisi.`
+      );
       process.exit(1);
     }
     return t;
@@ -441,12 +486,20 @@ if (process.argv.includes('--prove')) {
   const livreeIci = (d: { taches: Tache[] }): Tache =>
     choisir(d, (t) => LIVREE.has(t.statut) && t.repo === 'partners', 'livrée dans ce dépôt');
   const aFaireIci = (d: { taches: Tache[] }): Tache =>
-    choisir(d, (t) => t.statut === 'a_faire' && t.repo === 'partners' && t.pr == null, '« a_faire » de ce dépôt sans pr');
+    choisir(
+      d,
+      (t) => t.statut === 'a_faire' && t.repo === 'partners' && t.pr == null,
+      '« a_faire » de ce dépôt sans pr'
+    );
   // Le témoin de `pr_nu_hors_depot` a besoin d'une tâche qui porte VRAIMENT un numéro : la première
   // tâche livrée du backlog (`GOV-000`) a `pr: null`, et le témoin est resté VERT au premier essai
   // — il déplaçait dans un autre dépôt une tâche qui n'avait aucun numéro à mal citer.
   const livreeIciAvecPr = (d: { taches: Tache[] }): Tache =>
-    choisir(d, (t) => LIVREE.has(t.statut) && t.repo === 'partners' && t.pr != null, 'livrée ici AVEC un numéro de PR');
+    choisir(
+      d,
+      (t) => LIVREE.has(t.statut) && t.repo === 'partners' && t.pr != null,
+      'livrée ici AVEC un numéro de PR'
+    );
 
   // Le SHA du témoin est LU dans git, jamais écrit en dur : une constante de 40 hexadécimaux tapée
   // à la main est exactement la fixture inventée que RM-03 interdit, et elle ne prouverait pas
@@ -468,57 +521,194 @@ if (process.argv.includes('--prove')) {
   };
 
   const TEMOINS: { famille: string; defaut: () => { taches: Tache[] } }[] = [
-    { famille: 'schema', defaut: () => { const d = copie(); (premiere(d) as unknown as { phase: number }).phase = 42; return d; } },
+    {
+      famille: 'schema',
+      defaut: () => {
+        const d = copie();
+        (premiere(d) as unknown as { phase: number }).phase = 42;
+        return d;
+      },
+    },
     // Second témoin de `schema`, ciblé sur le motif de `branch` (partners/ADR-0007). Le témoin
     // `phase = 42` ci-dessus prouve que la famille rougit ; il ne prouve rien du champ `branch`,
     // dont le motif a été élargi. Une branche sans préfixe reconnu doit rester refusée.
-    { famille: 'schema', defaut: () => { const d = copie(); premiere(d).branch = 'feature/ce-prefixe-nexiste-pas'; return d; } },
-    { famille: 'id_double', defaut: () => { const d = copie(); d.taches.push(JSON.parse(JSON.stringify(premiere(d))) as Tache); return d; } },
-    { famille: 'dep_inconnue', defaut: () => { const d = copie(); premiere(d).deps.push('NEXISTE-PAS-01'); return d; } },
-    { famille: 'dep_circulaire', defaut: () => { const d = copie(); const [a, b] = [d.taches[0]!, d.taches[1]!]; a.deps = [b.id]; b.deps = [a.id]; return d; } },
-    { famille: 'dep_phase_ulterieure', defaut: () => { const d = copie(); const tard = d.taches.find((t) => t.phase === 3)!; const tot = d.taches.find((t) => t.phase === -1)!; tot.deps = [tard.id]; return d; } },
-    { famille: 'dep_identifiant_scinde', defaut: () => { const d = copie(); premiere(d).deps.push('INT-T01'); return d; } },
-    { famille: 'dep_decision_nue', defaut: () => { const d = copie(); premiere(d).deps.push('W6'); return d; } },
-    { famille: 'hyp_hors_registre', defaut: () => { const d = copie(); premiere(d).hyp.push('HYP-JAMAIS-ECRITE'); return d; } },
-    { famille: 'paths_vide', defaut: () => { const d = copie(); premiere(d).paths = []; return d; } },
-    { famille: 'estimation_hors_plafond', defaut: () => { const d = copie(); derniere(d).estimateDays = 3; return d; } },
-    { famille: 'externe_sans_attente', defaut: () => { const d = copie(); const e = d.taches.find((t) => t.externe !== null)!; e.statut = 'a_faire'; return d; } },
+    {
+      famille: 'schema',
+      defaut: () => {
+        const d = copie();
+        premiere(d).branch = 'feature/ce-prefixe-nexiste-pas';
+        return d;
+      },
+    },
+    {
+      famille: 'id_double',
+      defaut: () => {
+        const d = copie();
+        d.taches.push(JSON.parse(JSON.stringify(premiere(d))) as Tache);
+        return d;
+      },
+    },
+    {
+      famille: 'dep_inconnue',
+      defaut: () => {
+        const d = copie();
+        premiere(d).deps.push('NEXISTE-PAS-01');
+        return d;
+      },
+    },
+    {
+      famille: 'dep_circulaire',
+      defaut: () => {
+        const d = copie();
+        const [a, b] = [d.taches[0]!, d.taches[1]!];
+        a.deps = [b.id];
+        b.deps = [a.id];
+        return d;
+      },
+    },
+    {
+      famille: 'dep_phase_ulterieure',
+      defaut: () => {
+        const d = copie();
+        const tard = d.taches.find((t) => t.phase === 3)!;
+        const tot = d.taches.find((t) => t.phase === -1)!;
+        tot.deps = [tard.id];
+        return d;
+      },
+    },
+    {
+      famille: 'dep_identifiant_scinde',
+      defaut: () => {
+        const d = copie();
+        premiere(d).deps.push('INT-T01');
+        return d;
+      },
+    },
+    {
+      famille: 'dep_decision_nue',
+      defaut: () => {
+        const d = copie();
+        premiere(d).deps.push('W6');
+        return d;
+      },
+    },
+    {
+      famille: 'hyp_hors_registre',
+      defaut: () => {
+        const d = copie();
+        premiere(d).hyp.push('HYP-JAMAIS-ECRITE');
+        return d;
+      },
+    },
+    {
+      famille: 'paths_vide',
+      defaut: () => {
+        const d = copie();
+        premiere(d).paths = [];
+        return d;
+      },
+    },
+    {
+      famille: 'estimation_hors_plafond',
+      defaut: () => {
+        const d = copie();
+        derniere(d).estimateDays = 3;
+        return d;
+      },
+    },
+    {
+      famille: 'externe_sans_attente',
+      defaut: () => {
+        const d = copie();
+        const e = d.taches.find((t) => t.externe !== null)!;
+        e.statut = 'a_faire';
+        return d;
+      },
+    },
     // Une tâche livrée dont la dépendance ne l'est pas : le témoin prend une tâche `fusionnee`
     // et remet sa dépendance à `a_faire`.
-    { famille: 'dep_non_livree', defaut: () => {
-      const d = copie();
-      const livree = d.taches.find((t) => LIVREE.has(t.statut) && t.deps.length > 0)!;
-      const dep = d.taches.find((t) => t.id === livree.deps[0])!;
-      dep.statut = 'a_faire'; dep.owner = null; dep.branch = null;
-      return d;
-    } },
+    {
+      famille: 'dep_non_livree',
+      defaut: () => {
+        const d = copie();
+        const livree = d.taches.find((t) => LIVREE.has(t.statut) && t.deps.length > 0)!;
+        const dep = d.taches.find((t) => t.id === livree.deps[0])!;
+        dep.statut = 'a_faire';
+        dep.owner = null;
+        dep.branch = null;
+        return d;
+      },
+    },
 
     // ── l'attestation inter-dépôt (GOV-038) ──────────────────────────────────
     // Le cas réel : INT-T01b livrée par la PR 998 du dépôt axionia, et le backlog muet.
-    { famille: 'attestation_absente', defaut: () => {
-      const d = copie(); const t = livreeIci(d); t.repo = 'axionia'; t.pr = null; return d;
-    } },
+    {
+      famille: 'attestation_absente',
+      defaut: () => {
+        const d = copie();
+        const t = livreeIci(d);
+        t.repo = 'axionia';
+        t.pr = null;
+        return d;
+      },
+    },
     // Le cas DANGEREUX : le numéro écrit dans `pr`, que les vues rendent `PR#998` sans dépôt.
-    { famille: 'pr_nu_hors_depot', defaut: () => {
-      const d = copie(); const t = livreeIciAvecPr(d); t.repo = 'axionia'; t.attestation = attestationValide(); return d;
-    } },
-    { famille: 'attestation_hors_sujet', defaut: () => {
-      const d = copie(); livreeIci(d).attestation = attestationValide(); return d;
-    } },
-    { famille: 'attestation_sans_livraison', defaut: () => {
-      const d = copie(); const t = aFaireIci(d); t.repo = 'axionia'; t.attestation = attestationValide(); return d;
-    } },
+    {
+      famille: 'pr_nu_hors_depot',
+      defaut: () => {
+        const d = copie();
+        const t = livreeIciAvecPr(d);
+        t.repo = 'axionia';
+        t.attestation = attestationValide();
+        return d;
+      },
+    },
+    {
+      famille: 'attestation_hors_sujet',
+      defaut: () => {
+        const d = copie();
+        livreeIci(d).attestation = attestationValide();
+        return d;
+      },
+    },
+    {
+      famille: 'attestation_sans_livraison',
+      defaut: () => {
+        const d = copie();
+        const t = aFaireIci(d);
+        t.repo = 'axionia';
+        t.attestation = attestationValide();
+        return d;
+      },
+    },
     // Le numéro de PR mis à la place du SHA : la confusion même que l'attestation doit rendre
     // impossible. `998` est réattribué dans chaque dépôt ; un SHA de 40 hex ne l'est nulle part.
-    { famille: 'attestation_sha_non_conforme', defaut: () => {
-      const d = copie(); livreeAilleurs(d).attestation = { ...attestationValide(), sha: '998' }; return d;
-    } },
-    { famille: 'attestation_date_non_conforme', defaut: () => {
-      const d = copie(); livreeAilleurs(d).attestation = { ...attestationValide(), fusionneeAt: '05/09/2026 13:04' }; return d;
-    } },
-    { famille: 'livraison_repo_externe', defaut: () => {
-      const d = copie(); const t = livreeIci(d); t.repo = 'externe'; t.pr = null; return d;
-    } },
+    {
+      famille: 'attestation_sha_non_conforme',
+      defaut: () => {
+        const d = copie();
+        livreeAilleurs(d).attestation = { ...attestationValide(), sha: '998' };
+        return d;
+      },
+    },
+    {
+      famille: 'attestation_date_non_conforme',
+      defaut: () => {
+        const d = copie();
+        livreeAilleurs(d).attestation = { ...attestationValide(), fusionneeAt: '05/09/2026 13:04' };
+        return d;
+      },
+    },
+    {
+      famille: 'livraison_repo_externe',
+      defaut: () => {
+        const d = copie();
+        const t = livreeIci(d);
+        t.repo = 'externe';
+        t.pr = null;
+        return d;
+      },
+    },
   ];
 
   /**
@@ -528,21 +718,51 @@ if (process.argv.includes('--prove')) {
    * `pnpm lot:cloture`, seul écrivain du statut — c'est ce qui est arrivé au lot L-1-01.
    */
   const CONTRE_TEMOINS: { nom: string; muter: () => { taches: Tache[] } }[] = [
-    { nom: 'une branche de LOT — la forme normale (partners/ADR-0007)',
-      muter: () => { const d = copie(); premiere(d).branch = 'lot/L-9-99-integration'; return d; } },
-    { nom: 'une branche de TÂCHE — la forme dérogatoire (partners/ADR-0007)',
-      muter: () => { const d = copie(); premiere(d).branch = 't/gov-012'; return d; } },
+    {
+      nom: 'une branche de LOT — la forme normale (partners/ADR-0007)',
+      muter: () => {
+        const d = copie();
+        premiere(d).branch = 'lot/L-9-99-integration';
+        return d;
+      },
+    },
+    {
+      nom: 'une branche de TÂCHE — la forme dérogatoire (partners/ADR-0007)',
+      muter: () => {
+        const d = copie();
+        premiere(d).branch = 't/gov-012';
+        return d;
+      },
+    },
 
     // ── attestation : ce que GOV-038 doit LAISSER PASSER ─────────────────────
     // Sans ces trois-là, les sept familles ci-dessus prouveraient seulement qu'une garde sait
     // rougir — jamais qu'elle sait se taire. Le troisième est le plus important : c'est la forme
     // même que la tâche introduit, et une garde qui la refuserait bloquerait `pnpm lot:cloture`.
-    { nom: 'une tâche `partners` livrée normalement, PR de ce dépôt et aucune attestation',
-      muter: () => { const d = copie(); livreeIci(d).pr = 4242; return d; } },
-    { nom: 'une tâche `axionia` encore `a_faire` : rien à attester tant que rien n’est livré',
-      muter: () => { const d = copie(); aFaireIci(d).repo = 'axionia'; return d; } },
-    { nom: 'une tâche `axionia` LIVRÉE avec son attestation et sans `pr` nu — la forme de GOV-038',
-      muter: () => { const d = copie(); livreeAilleurs(d); return d; } },
+    {
+      nom: 'une tâche `partners` livrée normalement, PR de ce dépôt et aucune attestation',
+      muter: () => {
+        const d = copie();
+        livreeIci(d).pr = 4242;
+        return d;
+      },
+    },
+    {
+      nom: 'une tâche `axionia` encore `a_faire` : rien à attester tant que rien n’est livré',
+      muter: () => {
+        const d = copie();
+        aFaireIci(d).repo = 'axionia';
+        return d;
+      },
+    },
+    {
+      nom: 'une tâche `axionia` LIVRÉE avec son attestation et sans `pr` nu — la forme de GOV-038',
+      muter: () => {
+        const d = copie();
+        livreeAilleurs(d);
+        return d;
+      },
+    },
   ];
 
   for (const c of CONTRE_TEMOINS) {
@@ -575,7 +795,9 @@ if (process.argv.includes('--prove')) {
     process.exit(1);
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${CONTRE_TEMOINS.length} contre-t\u00e9moin(s) restent verts.`);
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   process.exit(0);
@@ -589,7 +811,9 @@ if (fautes.length === 0) {
     const l = doc.taches.filter((t) => t.phase === p);
     return `${p} : ${l.length} / ${l.reduce((s, t) => s + t.estimateDays, 0).toFixed(2)} j`;
   });
-  const bloquantes = [...registre.parId.values()].filter((d) => d.section === 1 && d.trancheeLe === null);
+  const bloquantes = [...registre.parId.values()].filter(
+    (d) => d.section === 1 && d.trancheeLe === null
+  );
   console.log(
     `✅ gov:tasks — ${doc.taches.length} tâches, ${j.toFixed(2)} j, ${registre.declarees.size} décisions au registre ` +
       `(${bloquantes.length} bloquante(s) : ${bloquantes.map((d) => d.id).join(', ') || 'aucune'}).`

@@ -136,7 +136,9 @@ export function aConsolider(texte: string): string[] {
 export function apprisDuJournal(dossier = DOSSIER_JOURNAL): ApprisJournal[] {
   if (!existsSync(dossier)) return [];
   const out: ApprisJournal[] = [];
-  for (const f of readdirSync(dossier).filter((n) => n.endsWith('.md') && n !== 'README.md').sort()) {
+  for (const f of readdirSync(dossier)
+    .filter((n) => n.endsWith('.md') && n !== 'README.md')
+    .sort()) {
     const texte = readFileSync(join(dossier, f), 'utf8');
     for (const entree of texte.split(/^## (?=PR #\d+)/m).slice(1)) {
       const pr = Number(/^PR #(\d+)/.exec(entree)![1]);
@@ -175,7 +177,11 @@ function porteUnePreuve(ligne: string): boolean {
  * détail, et l'entrée finit consolidée en devinette.
  */
 function porteUneOrigine(ligne: string): boolean {
-  return /\b[A-Z]{2,4}-[A-Z0-9]{1,4}[0-9a-zA-Z-]*\b/.test(ligne) || /#\d+/.test(ligne) || /\bL-\d+-\d+\b/.test(ligne);
+  return (
+    /\b[A-Z]{2,4}-[A-Z0-9]{1,4}[0-9a-zA-Z-]*\b/.test(ligne) ||
+    /#\d+/.test(ligne) ||
+    /\bL-\d+-\d+\b/.test(ligne)
+  );
 }
 
 // ── les contrôles ────────────────────────────────────────────────────────────
@@ -385,7 +391,12 @@ function journalTemoin(o: Options = {}): string {
 const RM_TEMOIN = ['RM-01', 'RM-02'];
 
 function corpusValide(o: Options = {}): Corpus {
-  return { texte: journalTemoin(o), rmConnues: RM_TEMOIN, now: '2026-09-03', journal: o.journal ?? [] };
+  return {
+    texte: journalTemoin(o),
+    rmConnues: RM_TEMOIN,
+    now: '2026-09-03',
+    journal: o.journal ?? [],
+  };
 }
 
 /** Un « appris » de journal, tel que GOV-008 l'écrit. */
@@ -394,7 +405,9 @@ const APPRIS = (pr: number): ApprisJournal => ({ pr, extrait: 'Un fait appris su
 if (process.argv.includes('--prove')) {
   const base = controler(corpusValide());
   if (base.length > 0) {
-    console.error(`❌ La preuve part d'un journal DÉJÀ fautif (${base.length}) — corrige d'abord :`);
+    console.error(
+      `❌ La preuve part d'un journal DÉJÀ fautif (${base.length}) — corrige d'abord :`
+    );
     base.slice(0, 5).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
     process.exit(1);
   }
@@ -408,14 +421,23 @@ if (process.argv.includes('--prove')) {
     { famille: 'fichier_absent', defaut: () => ({ ...corpusValide(), texte: null }) },
     {
       famille: 'journal_vide',
-      defaut: () => ({ ...corpusValide(), texte: journalTemoin().replace(/### LEC-\d{2} — [\s\S]*?(?=## À consolider)/g, '') }),
+      defaut: () => ({
+        ...corpusValide(),
+        texte: journalTemoin().replace(/### LEC-\d{2} — [\s\S]*?(?=## À consolider)/g, ''),
+      }),
     },
-    { famille: 'date_absente', defaut: () => remplacer('<!-- consolidation: 2026-09-03 -->', 'Consolidé le 3 septembre.') },
+    {
+      famille: 'date_absente',
+      defaut: () => remplacer('<!-- consolidation: 2026-09-03 -->', 'Consolidé le 3 septembre.'),
+    },
     { famille: 'date_non_iso', defaut: () => corpusValide({ date: '03/09/2026' }) },
     { famille: 'date_future', defaut: () => corpusValide({ date: '2026-10-01' }) },
     {
       famille: 'consolidation_perimee',
-      defaut: () => ({ ...corpusValide({ attente: ['- GOV-018 — un appris qui attend.'] }), now: '2026-09-11' }),
+      defaut: () => ({
+        ...corpusValide({ attente: ['- GOV-018 — un appris qui attend.'] }),
+        now: '2026-09-11',
+      }),
     },
     {
       // La MÊME famille par l'AUTRE source : un « appris » du journal de session que le fichier ne
@@ -424,14 +446,30 @@ if (process.argv.includes('--prove')) {
       defaut: () => ({ ...corpusValide({ journal: [APPRIS(26)] }), now: '2026-09-11' }),
     },
     { famille: 'section_a_consolider_absente', defaut: () => corpusValide({ sections: false }) },
-    { famille: 'entree_a_consolider_sans_origine', defaut: () => corpusValide({ attente: ['- on a appris quelque chose.'] }) },
+    {
+      famille: 'entree_a_consolider_sans_origine',
+      defaut: () => corpusValide({ attente: ['- on a appris quelque chose.'] }),
+    },
     {
       famille: 'lecon_sans_source',
-      defaut: () => remplacer("- **Où c'est prouvé.** `ff3ef54` — `docs/lots/REPRISE-NOTES.md:30`.", "- **Où c'est prouvé.** de mémoire."),
+      defaut: () =>
+        remplacer(
+          "- **Où c'est prouvé.** `ff3ef54` — `docs/lots/REPRISE-NOTES.md:30`.",
+          "- **Où c'est prouvé.** de mémoire."
+        ),
     },
-    { famille: 'lecon_sans_regle_maison', defaut: () => remplacer('- **Règle maison.** RM-01.', '- **Règle maison.**') },
-    { famille: 'rm_inexistante', defaut: () => remplacer('- **Règle maison.** RM-01.', '- **Règle maison.** RM-42.') },
-    { famille: 'numero_non_consecutif', defaut: () => corpusValide({ lecons: ['LEC-01', 'LEC-03'] }) },
+    {
+      famille: 'lecon_sans_regle_maison',
+      defaut: () => remplacer('- **Règle maison.** RM-01.', '- **Règle maison.**'),
+    },
+    {
+      famille: 'rm_inexistante',
+      defaut: () => remplacer('- **Règle maison.** RM-01.', '- **Règle maison.** RM-42.'),
+    },
+    {
+      famille: 'numero_non_consecutif',
+      defaut: () => corpusValide({ lecons: ['LEC-01', 'LEC-03'] }),
+    },
   ];
 
   /**
@@ -445,11 +483,20 @@ if (process.argv.includes('--prove')) {
     },
     {
       quoi: 'sept jours PILE avec des « appris » en attente (la borne)',
-      corpus: () => ({ ...corpusValide({ attente: ['- GOV-018 — un appris qui attend.'] }), now: '2026-09-10' }),
+      corpus: () => ({
+        ...corpusValide({ attente: ['- GOV-018 — un appris qui attend.'] }),
+        now: '2026-09-10',
+      }),
     },
     {
       quoi: 'une leçon qui n’a produit AUCUNE règle maison et le dit',
-      corpus: () => ({ ...corpusValide(), texte: journalTemoin().replace(/- \*\*Règle maison\.\*\* RM-01\./g, '- **Règle maison.** aucune à ce jour — elle attend un second cas.') }),
+      corpus: () => ({
+        ...corpusValide(),
+        texte: journalTemoin().replace(
+          /- \*\*Règle maison\.\*\* RM-01\./g,
+          '- **Règle maison.** aucune à ce jour — elle attend un second cas.'
+        ),
+      }),
     },
     {
       quoi: 'une preuve qui est un message verbatim, sans SHA ni chemin',
@@ -463,19 +510,31 @@ if (process.argv.includes('--prove')) {
     },
     {
       quoi: 'un « appris » qui cite une PR au lieu d’une tâche',
-      corpus: () => corpusValide({ attente: ['- #27 — la lentille sécurité a refusé une allow-list élargie.'] }),
+      corpus: () =>
+        corpusValide({
+          attente: ['- #27 — la lentille sécurité a refusé une allow-list élargie.'],
+        }),
     },
     {
       quoi: 'un « appris » qui cite un lot',
-      corpus: () => corpusValide({ attente: ['- lot L-1-01 — trois lentilles ont trouvé le même fichier partagé.'] }),
+      corpus: () =>
+        corpusValide({
+          attente: ['- lot L-1-01 — trois lentilles ont trouvé le même fichier partagé.'],
+        }),
     },
     {
       quoi: 'un « appris » du journal DÉJÀ consolidé (sa PR est citée), même très en retard',
-      corpus: () => ({ ...corpusValide({ journal: [APPRIS(26)], citations: [26] }), now: '2026-12-31' }),
+      corpus: () => ({
+        ...corpusValide({ journal: [APPRIS(26)], citations: [26] }),
+        now: '2026-12-31',
+      }),
     },
     {
       quoi: 'DEUX « appris » du journal fondus dans UNE seule leçon (aucune bijection exigée)',
-      corpus: () => ({ ...corpusValide({ journal: [APPRIS(26), APPRIS(27)], citations: [26, 27] }), now: '2026-12-31' }),
+      corpus: () => ({
+        ...corpusValide({ journal: [APPRIS(26), APPRIS(27)], citations: [26, 27] }),
+        now: '2026-12-31',
+      }),
     },
     {
       quoi: "l'absence totale de journal (GOV-008 pas encore atterri) ne rougit pas",
@@ -504,7 +563,9 @@ if (process.argv.includes('--prove')) {
   for (const c of CONTRE_TEMOINS) {
     const f = controler(c.corpus());
     if (f.length > 0) {
-      console.error(`❌ Faux positif : ${c.quoi} a rougi. La garde est trop large.\n   [${f[0]!.famille}] ${f[0]!.message}`);
+      console.error(
+        `❌ Faux positif : ${c.quoi} a rougi. La garde est trop large.\n   [${f[0]!.famille}] ${f[0]!.message}`
+      );
       process.exit(1);
     }
   }
@@ -553,7 +614,9 @@ if (fautes.length === 0) {
   const citees = new Set([...texte.matchAll(/#(\d+)/g)].map((m) => Number(m[1])));
   const attente = [
     ...aConsolider(texte),
-    ...journal.filter((a) => !citees.has(a.pr)).map((a) => `PR #${a.pr} — ${a.extrait.slice(0, 90)}`),
+    ...journal
+      .filter((a) => !citees.has(a.pr))
+      .map((a) => `PR #${a.pr} — ${a.extrait.slice(0, 90)}`),
   ];
   const date = /<!--\s*consolidation:\s*(\d{4}-\d{2}-\d{2})\s*-->/.exec(texte)?.[1] ?? '?';
   const nb = (texte.match(/^### LEC-\d{2} — /gm) ?? []).length;
@@ -564,7 +627,9 @@ if (fautes.length === 0) {
   console.log(`   ${etatJournal}.`);
   if (attente.length > 0) {
     console.log(
-      `   ⏳ à consolider avant le ${new Date(Date.parse(date) + JOURS_AVANT_PEREMPTION * 86_400_000)
+      `   ⏳ à consolider avant le ${new Date(
+        Date.parse(date) + JOURS_AVANT_PEREMPTION * 86_400_000
+      )
         .toISOString()
         .slice(0, 10)} :`
     );
@@ -575,7 +640,9 @@ if (fautes.length === 0) {
 
 const parFamille = new Map<string, Faute[]>();
 for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
-console.error(`❌ gov:lecons — ${fautes.length} faute(s) dans ${chemin} (REQ-GOV-023) — ${etatJournal} :\n`);
+console.error(
+  `❌ gov:lecons — ${fautes.length} faute(s) dans ${chemin} (REQ-GOV-023) — ${etatJournal} :\n`
+);
 for (const [famille, liste] of parFamille) {
   console.error(`   ── ${famille} (${liste.length})`);
   liste.slice(0, 12).forEach((f) => console.error(`      ${f.message}`));

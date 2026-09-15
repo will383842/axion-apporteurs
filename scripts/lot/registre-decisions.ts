@@ -143,7 +143,8 @@ export function lireRegistre(texte: string): Registre {
     //   — §2 : la colonne `Tranchée`, dernière du tableau.
     const marqueurPremiere = /tranch/i.test(premiere) ? MOTIF_DATE.exec(premiere) : null;
     const derniere = nu(cs[cs.length - 1] ?? '');
-    const marqueurDerniere = cs.length > 1 && /^\d{4}-\d{2}-\d{2}$/.test(derniere) ? [derniere, derniere] : null;
+    const marqueurDerniere =
+      cs.length > 1 && /^\d{4}-\d{2}-\d{2}$/.test(derniere) ? [derniere, derniere] : null;
     const trancheeLe = marqueurPremiere?.[1] ?? marqueurDerniere?.[1] ?? null;
 
     parId.set(id, { id, section: section as 1 | 2, trancheeLe, ligne: i + 1 });
@@ -158,14 +159,25 @@ export function lireRegistre(texte: string): Registre {
     const d = decision(id);
     return d !== null && d.section === 1 && d.trancheeLe === null;
   };
-  const estCodable = (id: string): boolean => estDeclaree(id) && decision(id) !== null && !estBloquante(id);
+  const estCodable = (id: string): boolean =>
+    estDeclaree(id) && decision(id) !== null && !estBloquante(id);
   const motif = (id: string): Motif | null => {
     if (estBloquante(id)) return 'decision_bloquante_non_tranchee';
     if (!estCodable(id)) return 'decision_sans_hypothese';
     return null;
   };
 
-  return { alias, parId, declarees, canonique, decision, estDeclaree, estBloquante, estCodable, motif };
+  return {
+    alias,
+    parId,
+    declarees,
+    canonique,
+    decision,
+    estDeclaree,
+    estBloquante,
+    estCodable,
+    motif,
+  };
 }
 
 /** Lit le registre sur le disque. Le chemin est un paramètre pour que les bancs d'essai l'écartent. */
@@ -194,7 +206,8 @@ export interface RegistreHerite {
 
 export function lireRegistreHerite(texte: string): RegistreHerite {
   const section = (n: number): string =>
-    texte.split(new RegExp(`^## ${n}\\.`, 'm'))[1]?.split(new RegExp(`^## ${n + 1}\\.`, 'm'))[0] ?? '';
+    texte.split(new RegExp(`^## ${n}\\.`, 'm'))[1]?.split(new RegExp(`^## ${n + 1}\\.`, 'm'))[0] ??
+    '';
   const ids = (t: string): Set<string> => new Set(t.match(/\b(HYP|DEC)-[A-Z0-9-]+\b/g) || []);
 
   const decisions = ids(section(2));
@@ -206,7 +219,12 @@ export function lireRegistreHerite(texte: string): RegistreHerite {
     estDeclaree: (id) => decisions.has(id) || bloquantes.has(id),
     estBloquante,
     estCodable,
-    motif: (id) => (estBloquante(id) ? 'decision_bloquante_non_tranchee' : estCodable(id) ? null : 'decision_sans_hypothese'),
+    motif: (id) =>
+      estBloquante(id)
+        ? 'decision_bloquante_non_tranchee'
+        : estCodable(id)
+          ? null
+          : 'decision_sans_hypothese',
   };
 }
 
@@ -236,7 +254,9 @@ export function tachesRedevenuesEligibles(
     if (t.hyp.length === 0) continue;
 
     const bloquantesHeritees = t.hyp.filter((h) => herite.estBloquante(h));
-    const sansHypotheseHeritees = t.hyp.filter((h) => !herite.estBloquante(h) && !herite.estCodable(h));
+    const sansHypotheseHeritees = t.hyp.filter(
+      (h) => !herite.estBloquante(h) && !herite.estCodable(h)
+    );
     if (bloquantesHeritees.length === 0 && sansHypotheseHeritees.length === 0) continue;
 
     // Toujours écartée par le lecteur unique ? Alors elle n'est pas « redevenue » éligible.
@@ -244,7 +264,10 @@ export function tachesRedevenuesEligibles(
 
     ecarts.push({
       id: t.id,
-      motifHerite: bloquantesHeritees.length > 0 ? 'decision_bloquante_non_tranchee' : 'decision_sans_hypothese',
+      motifHerite:
+        bloquantesHeritees.length > 0
+          ? 'decision_bloquante_non_tranchee'
+          : 'decision_sans_hypothese',
       decisions: [...bloquantesHeritees, ...sansHypotheseHeritees],
     });
   }

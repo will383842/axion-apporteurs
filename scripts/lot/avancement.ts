@@ -27,7 +27,15 @@
 import { readFileSync } from 'node:fs';
 
 /** L'échelle ordonnée de REQ-GOV-026, du plus faible au plus fort. */
-export const AVANCEMENT = ['specifie', 'code', 'teste', 'revu', 'fusionne', 'deploye', 'verifie_en_prod'] as const;
+export const AVANCEMENT = [
+  'specifie',
+  'code',
+  'teste',
+  'revu',
+  'fusionne',
+  'deploye',
+  'verifie_en_prod',
+] as const;
 export type Avancement = (typeof AVANCEMENT)[number];
 
 /**
@@ -96,7 +104,9 @@ export function verifierExhaustivite(chemin = 'scripts/lot/tasks.schema.json'): 
   }
   for (const s of Object.keys(PLANCHER)) {
     if (!declares.includes(s)) {
-      fautes.push(`le rang « ${s} » ne correspond à aucun statut de ${chemin} : le barème a dérivé de sa source.`);
+      fautes.push(
+        `le rang « ${s} » ne correspond à aucun statut de ${chemin} : le barème a dérivé de sa source.`
+      );
     }
   }
   return fautes;

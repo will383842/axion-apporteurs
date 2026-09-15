@@ -95,11 +95,17 @@ function nu(cellule: string): string {
  * c'est-a-dire de recopier un artefact de lecture au lieu du chemin reel.
  */
 function nuChemin(cellule: string): string {
-  return cellule.replace(/`/g, '').replace(/\(.*?\)/g, '').trim();
+  return cellule
+    .replace(/`/g, '')
+    .replace(/\(.*?\)/g, '')
+    .trim();
 }
 
 function cellules(ligne: string): string[] {
-  return ligne.split('|').slice(1, -1).map((c) => c.trim());
+  return ligne
+    .split('|')
+    .slice(1, -1)
+    .map((c) => c.trim());
 }
 
 type LignePoste = { code: string; role: string; libelle: string; tools: string; ecrit: string };
@@ -110,7 +116,13 @@ function postesDeLaCharte(charte: string): LignePoste[] {
   for (const ligne of section(charte, '## 2.', '## 3.').split('\n')) {
     const c = cellules(ligne);
     if (c.length < 5 || !CODE_POSTE.test(nu(c[0]!))) continue;
-    out.push({ code: nu(c[0]!), role: nu(c[1]!), libelle: nu(c[2]!), tools: nu(c[3]!), ecrit: nu(c[4]!) });
+    out.push({
+      code: nu(c[0]!),
+      role: nu(c[1]!),
+      libelle: nu(c[2]!),
+      tools: nu(c[3]!),
+      ecrit: nu(c[4]!),
+    });
   }
   return out;
 }
@@ -186,10 +198,14 @@ function controler(c: Corpus): Faute[] {
           `que \`gov:identifiants\` refuse (RM-12).`
       );
     }
-    if (vus.has(p.code)) ajouter('source_code_double', `${CHEMIN_SOURCE} — le code ${p.code} est donné deux fois.`);
+    if (vus.has(p.code))
+      ajouter('source_code_double', `${CHEMIN_SOURCE} — le code ${p.code} est donné deux fois.`);
     vus.add(p.code);
     if (roles.has(p.role)) {
-      ajouter('source_role_double', `${CHEMIN_SOURCE} — le rôle « ${p.role} » est donné deux fois : deux postes pour une seule fiche.`);
+      ajouter(
+        'source_role_double',
+        `${CHEMIN_SOURCE} — le rôle « ${p.role} » est donné deux fois : deux postes pour une seule fiche.`
+      );
     }
     roles.add(p.role);
 
@@ -225,7 +241,10 @@ function controler(c: Corpus): Faute[] {
   for (const p of c.postes) {
     const texte = surDisque.get(p.role);
     if (texte === undefined) {
-      ajouter('fiche_manquante', `${join(CHEMIN_FICHES, `${p.role}.md`)} est absente alors que ${CHEMIN_SOURCE} déclare ${p.code}.`);
+      ajouter(
+        'fiche_manquante',
+        `${join(CHEMIN_FICHES, `${p.role}.md`)} est absente alors que ${CHEMIN_SOURCE} déclare ${p.code}.`
+      );
       continue;
     }
     if (normaliser(texte) !== normaliser(rendreFiche(p, proseDe(texte)))) {
@@ -270,7 +289,8 @@ function controler(c: Corpus): Faute[] {
     const ecarts: string[] = [];
     if (p.role !== l.role) ecarts.push(`fiche « ${l.role} » ≠ « ${p.role} »`);
     if (p.libelle !== l.libelle) ecarts.push(`libellé « ${l.libelle} » ≠ « ${p.libelle} »`);
-    if (p.tools.join(', ') !== l.tools) ecarts.push(`outils « ${l.tools} » ≠ « ${p.tools.join(', ')} »`);
+    if (p.tools.join(', ') !== l.tools)
+      ecarts.push(`outils « ${l.tools} » ≠ « ${p.tools.join(', ')} »`);
     if (p.ecrit !== l.ecrit) ecarts.push(`droit d'écriture « ${l.ecrit} » ≠ « ${p.ecrit} »`);
     if (ecarts.length > 0) {
       ajouter(
@@ -410,7 +430,10 @@ function corpusValide(): Corpus {
   ];
   return {
     postes,
-    fiches: postes.map((p) => ({ role: p.role, texte: rendreFiche(p, 'Une prose tenue à la main.') })),
+    fiches: postes.map((p) => ({
+      role: p.role,
+      texte: rendreFiche(p, 'Une prose tenue à la main.'),
+    })),
     charte: charteTemoin(postes, ['| `docs/CONVENTIONS.md` | A01 | `role:alpha` | témoin |']),
     workflow: WORKFLOW_TEMOIN,
     existe: (chemin) => EXISTANTS.has(chemin),
@@ -419,11 +442,17 @@ function corpusValide(): Corpus {
 
 /** Reconstruit les fiches et la charte APRÈS un changement de la source : sans cela, un témoin de */
 /** famille ferait rougir toutes les autres, et on ne saurait pas laquelle on a prouvée.           */
-function recoudre(postes: Poste[], lignes7: string[] = ['| `docs/CONVENTIONS.md` | A01 | `role:alpha` | témoin |']): Corpus {
+function recoudre(
+  postes: Poste[],
+  lignes7: string[] = ['| `docs/CONVENTIONS.md` | A01 | `role:alpha` | témoin |']
+): Corpus {
   return {
     ...corpusValide(),
     postes,
-    fiches: postes.map((p) => ({ role: p.role, texte: rendreFiche(p, 'Une prose tenue à la main.') })),
+    fiches: postes.map((p) => ({
+      role: p.role,
+      texte: rendreFiche(p, 'Une prose tenue à la main.'),
+    })),
     charte: charteTemoin(postes, lignes7),
   };
 }
@@ -439,20 +468,35 @@ if (process.argv.includes('--prove')) {
   const TEMOINS: { famille: string; defaut: () => Corpus }[] = [
     {
       famille: 'source_code_invalide',
-      defaut: () => recoudre([posteTemoin('A1', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md'] }), posteTemoin('A02', 'beta')]),
+      defaut: () =>
+        recoudre([
+          posteTemoin('A1', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md'] }),
+          posteTemoin('A02', 'beta'),
+        ]),
     },
     {
       famille: 'source_code_double',
-      defaut: () => recoudre([posteTemoin('A01', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md'] }), posteTemoin('A01', 'beta')]),
+      defaut: () =>
+        recoudre([
+          posteTemoin('A01', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md'] }),
+          posteTemoin('A01', 'beta'),
+        ]),
     },
     {
       famille: 'source_role_double',
-      defaut: () => recoudre([posteTemoin('A01', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md'] }), posteTemoin('A02', 'alpha')]),
+      defaut: () =>
+        recoudre([
+          posteTemoin('A01', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md'] }),
+          posteTemoin('A02', 'alpha'),
+        ]),
     },
     {
       famille: 'source_champ_manquant',
       defaut: () =>
-        recoudre([posteTemoin('A01', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md'], interdits: [] }), posteTemoin('A02', 'beta')]),
+        recoudre([
+          posteTemoin('A01', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md'], interdits: [] }),
+          posteTemoin('A02', 'beta'),
+        ]),
     },
     {
       famille: 'document_absent',
@@ -460,20 +504,31 @@ if (process.argv.includes('--prove')) {
         recoudre([
           posteTemoin('A01', 'alpha', {
             cheminsReserves: ['docs/CONVENTIONS.md'],
-            documents: [{ chemin: 'docs/spec/plan-directeur.md', pourquoi: 'un dossier que ce dépôt n’a pas' }],
+            documents: [
+              {
+                chemin: 'docs/spec/plan-directeur.md',
+                pourquoi: 'un dossier que ce dépôt n’a pas',
+              },
+            ],
           }),
           posteTemoin('A02', 'beta'),
         ]),
     },
     {
       famille: 'fiche_manquante',
-      defaut: () => ({ ...corpusValide(), fiches: corpusValide().fiches.filter((f) => f.role !== 'beta') }),
+      defaut: () => ({
+        ...corpusValide(),
+        fiches: corpusValide().fiches.filter((f) => f.role !== 'beta'),
+      }),
     },
     {
       famille: 'fiche_orpheline',
       defaut: () => ({
         ...corpusValide(),
-        fiches: [...corpusValide().fiches, { role: 'gamma', texte: '# Une fiche que personne ne déclare' }],
+        fiches: [
+          ...corpusValide().fiches,
+          { role: 'gamma', texte: '# Une fiche que personne ne déclare' },
+        ],
       }),
     },
     {
@@ -483,7 +538,12 @@ if (process.argv.includes('--prove')) {
         return {
           ...c,
           fiches: c.fiches.map((f) =>
-            f.role === 'alpha' ? { ...f, texte: f.texte.replace('tools: Read, Grep', 'tools: Read, Write, Edit, Bash') } : f
+            f.role === 'alpha'
+              ? {
+                  ...f,
+                  texte: f.texte.replace('tools: Read, Grep', 'tools: Read, Write, Edit, Bash'),
+                }
+              : f
           ),
         };
       },
@@ -495,32 +555,59 @@ if (process.argv.includes('--prove')) {
         const c = corpusValide();
         return {
           ...c,
-          fiches: c.fiches.map((f) => (f.role === 'alpha' ? { ...f, texte: f.texte.replace('### Interdits', '### Ce qui est interdit') } : f)),
+          fiches: c.fiches.map((f) =>
+            f.role === 'alpha'
+              ? { ...f, texte: f.texte.replace('### Interdits', '### Ce qui est interdit') }
+              : f
+          ),
         };
       },
     },
     {
       famille: 'charte_poste_absent',
-      defaut: () => ({ ...corpusValide(), charte: charteTemoin([corpusValide().postes[0]!], ['| `docs/CONVENTIONS.md` | A01 | `role:alpha` | témoin |']) }),
+      defaut: () => ({
+        ...corpusValide(),
+        charte: charteTemoin(
+          [corpusValide().postes[0]!],
+          ['| `docs/CONVENTIONS.md` | A01 | `role:alpha` | témoin |']
+        ),
+      }),
     },
     {
       famille: 'charte_poste_divergent',
       defaut: () => {
         const c = corpusValide();
-        return { ...c, charte: c.charte.replace('| A02 | `beta` | Poste beta | Read, Grep | non |', '| A02 | `beta` | Poste beta | Read, Write, Edit, Bash | oui |') };
+        return {
+          ...c,
+          charte: c.charte.replace(
+            '| A02 | `beta` | Poste beta | Read, Grep | non |',
+            '| A02 | `beta` | Poste beta | Read, Write, Edit, Bash | oui |'
+          ),
+        };
       },
     },
     {
       famille: 'charte_chemin_reserve_divergent',
-      defaut: () => ({ ...corpusValide(), charte: charteTemoin(corpusValide().postes, ['| `docs/CONVENTIONS.md`, `CHANGELOG.md` | A01 | `role:alpha` | témoin |']) }),
+      defaut: () => ({
+        ...corpusValide(),
+        charte: charteTemoin(corpusValide().postes, [
+          '| `docs/CONVENTIONS.md`, `CHANGELOG.md` | A01 | `role:alpha` | témoin |',
+        ]),
+      }),
     },
     {
       famille: 'agent_type_sans_fiche',
-      defaut: () => ({ ...corpusValide(), workflow: `${WORKFLOW_TEMOIN}\nagent(p, { label: 'x', agentType: 'orchestrateur' })` }),
+      defaut: () => ({
+        ...corpusValide(),
+        workflow: `${WORKFLOW_TEMOIN}\nagent(p, { label: 'x', agentType: 'orchestrateur' })`,
+      }),
     },
     {
       famille: 'agent_type_non_resoluble',
-      defaut: () => ({ ...corpusValide(), workflow: `${WORKFLOW_TEMOIN}\nagent(p, { label: 'x', agentType: choisi })` }),
+      defaut: () => ({
+        ...corpusValide(),
+        workflow: `${WORKFLOW_TEMOIN}\nagent(p, { label: 'x', agentType: choisi })`,
+      }),
     },
   ];
 
@@ -535,18 +622,31 @@ if (process.argv.includes('--prove')) {
       quoi: 'une cellule « Écrit ? » en gras markdown',
       corpus: () => {
         const c = corpusValide();
-        return { ...c, charte: c.charte.replace('| Read, Grep | non |', '| Read, Grep | **non** |') };
+        return {
+          ...c,
+          charte: c.charte.replace('| Read, Grep | non |', '| Read, Grep | **non** |'),
+        };
       },
     },
     {
       quoi: 'un chemin du §7 suivi d’une parenthèse en gras',
-      corpus: () => ({ ...corpusValide(), charte: charteTemoin(corpusValide().postes, ['| `docs/CONVENTIONS.md` (**dérivé**) | A01 | `role:alpha` | témoin |']) }),
+      corpus: () => ({
+        ...corpusValide(),
+        charte: charteTemoin(corpusValide().postes, [
+          '| `docs/CONVENTIONS.md` (**dérivé**) | A01 | `role:alpha` | témoin |',
+        ]),
+      }),
     },
     {
       quoi: 'deux chemins réservés sur une même ligne, séparés par une virgule',
       corpus: () => {
-        const postes = [posteTemoin('A01', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md', 'docs/tiers'] }), posteTemoin('A02', 'beta')];
-        return recoudre(postes, ['| `docs/CONVENTIONS.md`, `docs/tiers` | A01 | `role:alpha` | témoin |']);
+        const postes = [
+          posteTemoin('A01', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md', 'docs/tiers'] }),
+          posteTemoin('A02', 'beta'),
+        ];
+        return recoudre(postes, [
+          '| `docs/CONVENTIONS.md`, `docs/tiers` | A01 | `role:alpha` | témoin |',
+        ]);
       },
     },
     {
@@ -555,13 +655,19 @@ if (process.argv.includes('--prove')) {
     },
     {
       quoi: 'un `agentType` avec repli (`l.agentType ?? "beta"`)',
-      corpus: () => ({ ...corpusValide(), workflow: `${WORKFLOW_TEMOIN}\nagent(p, { label: 'x', agentType: l.agentType ?? 'beta' })` }),
+      corpus: () => ({
+        ...corpusValide(),
+        workflow: `${WORKFLOW_TEMOIN}\nagent(p, { label: 'x', agentType: l.agentType ?? 'beta' })`,
+      }),
     },
     {
       quoi: 'un document qui pointe vers un DOSSIER existant',
       corpus: () => {
         const postes = [
-          posteTemoin('A01', 'alpha', { cheminsReserves: ['docs/CONVENTIONS.md'], documents: [{ chemin: 'docs/tiers', pourquoi: 'les fiches de tiers' }] }),
+          posteTemoin('A01', 'alpha', {
+            cheminsReserves: ['docs/CONVENTIONS.md'],
+            documents: [{ chemin: 'docs/tiers', pourquoi: 'les fiches de tiers' }],
+          }),
           posteTemoin('A02', 'beta'),
         ];
         return recoudre(postes);
@@ -600,7 +706,9 @@ if (process.argv.includes('--prove')) {
   for (const ct of CONTRE_TEMOINS) {
     const f = controler(ct.corpus());
     if (f.length > 0) {
-      console.error(`❌ Faux positif : ${ct.quoi} a rougi. La garde est trop large.\n   [${f[0]!.famille}] ${f[0]!.message}`);
+      console.error(
+        `❌ Faux positif : ${ct.quoi} a rougi. La garde est trop large.\n   [${f[0]!.famille}] ${f[0]!.message}`
+      );
       process.exit(1);
     }
   }

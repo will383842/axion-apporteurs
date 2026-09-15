@@ -14,7 +14,18 @@
     "exigence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "domaine", "texte", "source", "statut", "remplaceePar", "module", "etape", "phase", "taches"],
+      "required": [
+        "id",
+        "domaine",
+        "texte",
+        "source",
+        "statut",
+        "remplaceePar",
+        "module",
+        "etape",
+        "phase",
+        "taches"
+      ],
       "properties": {
         "id": {
           "type": "string",

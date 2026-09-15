@@ -131,6 +131,25 @@ jobs:
         run: pnpm gov:trace:prove
       - name: La vue de tracabilite est derivee de ses sources
         run: pnpm gov:trace:verifier
+      # GOV-035, REQ-GOV-032. LA CINQUIEME VUE : des compteurs falsifies, ancres conservees, ne font
+      # rougir aucun des verificateurs ci-dessus. Elle compare tout, sauf ce que le generateur a LU
+      # hors du depot pour l'ecrire : comparer le SHA de main ou la file des PR mesurerait la forge,
+      # pas la derivation, et une gate rouge apres chaque fusion s'apprend a etre sautee (RM-02,
+      # LEC-13). Le vert imprime chaque exemption avec la source lue. Pas de continue-on-error.
+      # Ce que CETTE etape ne rougit pas, et qui rougit plus bas dans `pnpm test` : une mesure du
+      # domaine devenue illisible (le vert imprime X/Y avec X < Y et sort 0) ; une lecture GRATUITE
+      # de la forge ajoutee au generateur pour sortir un element du controle (le vert l'exempte ;
+      # le temoin « exemption PORTANTE » rougit, parce que son texte ne change pas d'une forge a
+      # l'autre).
+      # AUCUN GH_TOKEN ici, et ce n est pas un oubli : le perimetre compare ne depend d aucun
+      # appel a la forge. Sans jeton, seules les zones deja NON comparees changent de contenu. Le
+      # verdict n en depend pas non plus, parce que le generateur ramene tout ce qu il ecrit dans une
+      # zone qui a lu la forge a UNE ligne sans `<` : une valeur de la forge n ouvre ni ligne, ni
+      # rubrique, ni HTML. Ce n est pas cette etape qui le prouve : c est le temoin « exemption
+      # PORTANTE » de `pnpm test`, qui juge une vue sous une forge LISIBLE aux valeurs hostiles sur
+      # plusieurs lignes, puis la meme vue fautive sous cette forge et sous une forge illisible.
+      - name: La vue de l etat vivant est egale a sa source
+        run: pnpm plan-state:verifier
       # GOV-037, REQ-GOV-021 et REQ-GOV-003. Le depot derivait ses NOMBRES, pas ses ATTRIBUTIONS :
       # quelle tache porte quelle garde, quel poste porte quelle tache, quel lot porte quelle tache,
       # et a qui appartient le fichier ou la prose qui nomme une tache. Chacune est ecrite DEUX FOIS,
@@ -169,6 +188,25 @@ jobs:
         run: pnpm partners:schema:enums
       - name: La garde du vocabulaire sait rougir
         run: pnpm partners:schema:enums:prove
+      # GOV-030 : la garde des TERMES INTERDITS que des documents invoquaient sans qu'elle existe
+      # (`docs/GLOSSAIRE.md`, `docs/CONVENTIONS.md` §2, RM-01 et RM-06, `packages/contracts/events.ts`,
+      # REQ-GOV-001, `docs/GATES.md`). BLOQUANTE : pas de `continue-on-error` — la famille
+      # `lint_non_bloquant` de `gov:conventions` le refuse, et une gate qui ne bloque rien ne garde rien.
+      #
+      # ⚠️ APPELEE PAR UN NOM NEUTRE, ET NON PAR `pnpm gov:check` — ce n'est pas une coquetterie.
+      # Le nom `gov:check` designe DEUX choses dans ce depot : l'entree de `docs/gates.json` (cette
+      # garde-ci) et une CHAINE de gardes declaree dans `package.json`. Ecrire `pnpm gov:check`
+      # ici lancerait la chaine, PAS la garde — et satisferait quand meme la famille
+      # `garde_ecrite_jamais_appelee`, qui cherche l'identifiant OU le chemin.
+      # Le script `gov:termes-interdits` lance la garde elle-meme (`package.json`) : la commande
+      # reste sous la forme FERMEE `pnpm <script>` que GOV-031 exige de tout YAML suivi — `npx`
+      # peut resoudre un paquet hors du verrou. Et ce nom NEUF ne touche pas `gov:check` : il
+      # evite de trancher l'homonymie, que l'acceptation de GOV-030 renvoie a un ADR (« le choix
+      # … se tranche par un ADR, pas dans la PR »).
+      - name: Termes interdits — nomenclature, modeles d axionia et synonymes
+        run: pnpm gov:termes-interdits
+      - name: La garde des termes interdits sait rougir
+        run: pnpm gov:termes-interdits:prove
       # GOV-013 : le lexique interdit (REQ-GOV-017, durci par REQ-JUR-037). La garde vise la
       # TOURNURE et non le mot — « aucun objectif, aucun quota » est la phrase qui protege du
       # la charte relationnelle, et une garde qui la ferait rougir forcerait a la RETIRER. La preuve
@@ -195,6 +233,27 @@ jobs:
         run: pnpm gov:conventions
       - name: La garde des conventions sait rougir
         run: pnpm gov:conventions:prove
+      # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
+      # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
+      # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le
+      # dit en toutes lettres : « sans etape, rien ne ment ». Rien ne mentait, et rien ne
+      # gardait : `eslint.config.mjs` et `.prettierrc.json` etaient commites depuis GOV-014 et
+      # n'avaient jamais tourne en CI. C'est ici que la configuration cesse d'etre une intention.
+      #
+      # PAS DE `continue-on-error`, ET C'EST LE POINT DE L'EXIGENCE, pas un detail de cablage.
+      # Cote axionia, TOUTES les gates PR de budget portent ce drapeau : aucune PR qui alourdit
+      # le bundle n'y rougit, et la documentation du depot a affirme le contraire pendant des
+      # mois. Une gate qui ne bloque rien ne garde rien.
+      #
+      # CE QUE CHACUNE NE MESURE PAS n'est pas recopie ici : les avertissements toleres et les
+      # fichiers qui les portent sont nommes dans `eslint.config.mjs`, les fichiers hors format
+      # dans `.prettierignore`, chacun avec son motif. Et chaque etape reste EXACTEMENT
+      # `run: pnpm lint` / `run: pnpm format:check`, sans `if:` ni `||` :
+      # `gardes-transposees.spec.ts` juge l'acte de l'etape, pas l'absence d'un mot.
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
       - name: Typecheck
         run: pnpm typecheck
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :

@@ -118,7 +118,11 @@ export const ETATS_RENDUS: ReadonlySet<string> = new Set([ETAT_APPROUVE, ETAT_CO
  * Tout le reste — `NONE`, `CONTRIBUTOR`, `FIRST_TIME_CONTRIBUTOR`, `MANNEQUIN` — écrit sans
  * décider, et c'est ce que ce filtre attrape réellement : un compte SANS AUCUN LIEN avec le dépôt.
  */
-export const ASSOCIATIONS_HABILITEES: ReadonlySet<string> = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+export const ASSOCIATIONS_HABILITEES: ReadonlySet<string> = new Set([
+  'OWNER',
+  'MEMBER',
+  'COLLABORATOR',
+]);
 
 /** Les lentilles, nommées une fois (docs/CHARTE-AGENTS.md §6). */
 export const LENTILLE_SIMPLICITE = 'simplicite';
@@ -295,12 +299,21 @@ export function cheminsSchema(charte: string = readFileSync(CHEMIN_CHARTE, 'utf8
   const section = debut < 0 ? '' : charte.slice(debut, fin < 0 ? undefined : fin);
   for (const ligne of section.split('\n')) {
     if (!ligne.startsWith('|')) continue;
-    const cellules = ligne.split('|').slice(1, -1).map((c) => c.trim());
+    const cellules = ligne
+      .split('|')
+      .slice(1, -1)
+      .map((c) => c.trim());
     if (cellules.length < 4) continue;
     if (cellules[2]!.replace(/`/g, '').trim() !== LENTILLE_SCHEMA) continue;
     const chemins = cellules[0]!
       .split(',')
-      .map((c) => c.replace(/`/g, '').replace(/\(.*\)/g, '').replace(/\*\*/g, '').trim())
+      .map((c) =>
+        c
+          .replace(/`/g, '')
+          .replace(/\(.*\)/g, '')
+          .replace(/\*\*/g, '')
+          .trim()
+      )
       .filter(Boolean);
     if (chemins.length > 0) return chemins;
   }
@@ -333,7 +346,12 @@ export function toucheSchema(entree: {
 }
 
 /** Ce qu'une tâche doit dire pour qu'on sache si elle est de cette PR, et si elle touche au schéma. */
-export type TacheDeLaPr = { id: string; pr?: number | null; schema?: boolean; sensible?: readonly string[] };
+export type TacheDeLaPr = {
+  id: string;
+  pr?: number | null;
+  schema?: boolean;
+  sensible?: readonly string[];
+};
 
 /**
  * Les deux têtes coïncident-elles ? La forge peut rapporter une tête PÉRIMÉE — mesuré le
@@ -500,7 +518,10 @@ export function tachesSchemaDeLaPr<T extends TacheDeLaPr>(
  * Les lentilles exigées. Sur une PR `schema`, A02 REMPLACE la troisième (`simplicite`) : le compte
  * ne change pas, l'une d'elles change de titulaire (charte §6, `docs/CONVENTIONS.md` §5).
  */
-export function lentillesExigees(schema: boolean): { trois: readonly string[]; toutes: readonly string[] } {
+export function lentillesExigees(schema: boolean): {
+  trois: readonly string[];
+  toutes: readonly string[];
+} {
   const trois = [...DEUX_PREMIERES, schema ? LENTILLE_SCHEMA : LENTILLE_SIMPLICITE];
   return { trois, toutes: [...trois, LENTILLE_MUTATION] };
 }
@@ -576,7 +597,8 @@ export function lireRevues(entree: Entree): Lecture {
     entree.tete === null || entree.tete === ''
       ? []
       : accords.filter((x) => exigees.includes(x.lentille) && x.commit !== entree.tete);
-  const auteurSeRelit = entree.auteurPoste === null ? [] : accords.filter((x) => x.code === entree.auteurPoste);
+  const auteurSeRelit =
+    entree.auteurPoste === null ? [] : accords.filter((x) => x.code === entree.auteurPoste);
   const comptesDistinctsDeLAuteur =
     entree.auteurCompte === null || entree.auteurCompte === undefined
       ? false
@@ -612,7 +634,8 @@ export function lireRevues(entree: Entree): Lecture {
    * qui se contredisent, et elle dit le geste : reposter.
    */
   for (const a of ambigus) {
-    const entete = (a.revue.corps.split('\n')[0] ?? '').trim() || `(sans en-tête, ${a.revue.compte})`;
+    const entete =
+      (a.revue.corps.split('\n')[0] ?? '').trim() || `(sans en-tête, ${a.revue.compte})`;
     raisons.push(
       `avis AMBIGU, qui ne compte pour rien : « ${entete} » porte des lignes « Verdict: » qui ne ` +
         `disent pas la même chose (${a.valeurs.join(', ')}). Une citation ne porte pas la décision : ` +
@@ -685,7 +708,9 @@ export function lireRevuesHerite(entree: {
   ];
   const dernier = new Map<string, { verdict: string; commit: string }>();
   for (const r of entree.revues) {
-    const l = lentilles.find((x) => new RegExp(`^A\\d{2}\\s*·\\s*${x}\\b`, 'im').test(r.body ?? ''));
+    const l = lentilles.find((x) =>
+      new RegExp(`^A\\d{2}\\s*·\\s*${x}\\b`, 'im').test(r.body ?? '')
+    );
     const v = /^Verdict\s*:\s*(accepte|refuse)\b/im.exec(r.body ?? '');
     if (!l || !v) continue;
     dernier.set(l, { verdict: v[1]!.toLowerCase(), commit: r.commit_id ?? '' });

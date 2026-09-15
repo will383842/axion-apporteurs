@@ -40,7 +40,12 @@ describe('lot:integrer — « partagé » est DÉRIVÉ du backlog, jamais tapé 
 
   it('les fichiers réservés en propre sont partagés même si une seule tâche les déclare', () => {
     const partages = cheminsPartages(vue);
-    for (const reserve of ['docs/tasks.json', 'docs/gates.json', 'docs/PLAN-STATE.md', '.claude/settings.json']) {
+    for (const reserve of [
+      'docs/tasks.json',
+      'docs/gates.json',
+      'docs/PLAN-STATE.md',
+      '.claude/settings.json',
+    ]) {
       expect(partages).toContain(reserve);
     }
   });

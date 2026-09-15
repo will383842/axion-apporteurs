@@ -61,7 +61,9 @@ const TESTS_DU_DEPOT = [...fichiersDeTest('tests'), ...fichiersDeTest('src')];
 function titresLitteraux(chemin: string): string[] {
   const source = readFileSync(chemin, 'utf8');
   const titres: string[] = [];
-  for (const m of source.matchAll(/\b(?:it|test)(?:\.\w+)*\s*\(\s*(['"])((?:\\.|(?!\1)[^\\])*)\1/g)) {
+  for (const m of source.matchAll(
+    /\b(?:it|test)(?:\.\w+)*\s*\(\s*(['"])((?:\\.|(?!\1)[^\\])*)\1/g
+  )) {
     titres.push(aplatir(m[2]!.replace(/\\(['"\\])/g, '$1')));
   }
   return titres;
@@ -94,7 +96,9 @@ describe('une assertion citée par un ADR « accepte » existe vraiment', () => 
       const bloc = aplatir(rubriqueVerification(adr.texte));
 
       const cites = [...bloc.matchAll(/[\w./-]+\.(?:spec|test)\.tsx?/g)].map((m) => m[0]!);
-      const titres = [...bloc.matchAll(/\b(?:it|test)\(\s*(['"])([\s\S]*?)\1\s*\)/g)].map((m) => aplatir(m[2]!));
+      const titres = [...bloc.matchAll(/\b(?:it|test)\(\s*(['"])([\s\S]*?)\1\s*\)/g)].map((m) =>
+        aplatir(m[2]!)
+      );
 
       // Un ADR peut être `hors-code` : REQ-GOV-009 lui laisse cette porte, et c'est la garde qui
       // juge le motif. Ici, on ne juge que ceux qui ont choisi l'assertion.
@@ -102,12 +106,15 @@ describe('une assertion citée par un ADR « accepte » existe vraiment', () => 
 
       expect(
         titres.length,
-        `partners/ADR-${numero} « accepte » ne cite aucune assertion (REQ-GOV-009).`,
+        `partners/ADR-${numero} « accepte » ne cite aucune assertion (REQ-GOV-009).`
       ).toBeGreaterThan(0);
 
       const resolus = cites.map((c) => {
         const cible = TESTS_DU_DEPOT.filter((f) => f === c || f.endsWith('/' + c));
-        expect(cible.length, `partners/ADR-${numero} cite ${c} — aucun fichier de test de ce nom.`).toBe(1);
+        expect(
+          cible.length,
+          `partners/ADR-${numero} cite ${c} — aucun fichier de test de ce nom.`
+        ).toBe(1);
         return cible[0]!;
       });
 
@@ -122,7 +129,7 @@ describe('une assertion citée par un ADR « accepte » existe vraiment', () => 
         expect(
           trouve,
           `partners/ADR-${numero} « accepte » cite it(${titre}) — aucun des fichiers cités ne ` +
-            `contient ce titre littéral.`,
+            `contient ce titre littéral.`
         ).toBe(true);
       }
     }

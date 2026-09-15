@@ -133,16 +133,33 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
     raison:
       "le registre est la SOURCE : il porte legitimement son SIREN, son SIRET et sa TVA, et il ne se recopie pas lui-meme. Il n'est PLUS exempt de coordonnee_en_clair — il l'a ete jusqu'au 2026-09-05, et la raison ecrite alors (« ses champs sont juges un par un plus haut ») etait FAUSSE : les 17 champs non secrets n'etaient confrontes a aucune forme, si bien qu'un IBAN ecrit dans banqueReceptrice.espaceDeTest — le champ ou l'on colle un RIB, dans le meme bloc bancaire que banqueDebitrice.iban — restait invisible. L'exemption en bloc contournait QUATRE faux positifs legitimes, elle ne decidait rien sur l'IBAN",
   },
-  { motif: /^scripts\/gates\/gov-entite\.ts$/, exemptDe: 'coordonnee', raison: 'la garde porte ses propres témoins, qui doivent avoir la forme de ce qu’elle refuse' },
+  {
+    motif: /^scripts\/gates\/gov-entite\.ts$/,
+    exemptDe: 'coordonnee',
+    raison: 'la garde porte ses propres témoins, qui doivent avoir la forme de ce qu’elle refuse',
+  },
   {
     motif: /^tests\/unit\/gouvernance\/entite-registre\.spec\.ts$/,
     exemptDe: 'coordonnee',
     raison:
       "le banc d'essai de cette garde, au même titre que la garde elle-même : ses témoins DOIVENT avoir la forme de ce qu'elle refuse — un IBAN à clé valide, un BIC, le SIREN du registre. Ajouté le 2026-09-05, quand les témoins du second tour de la lentille securite ont fait rougir la garde sur son propre banc d'essai. C'est le prix, assumé et borné à UN fichier nommé, de la règle « un document qui explique la règle doit pouvoir écrire son contre-exemple » — la même que gov:identifiants a déjà payée",
   },
-  { motif: /^docs\/DECISIONS\.md$/, exemptDe: 'recopie', raison: 'le registre des décisions NOMME la valeur PUBLIQUE qu’il arrête — c’est son travail. Il n’est PAS exempt de `coordonnee_en_clair` : c’est le fichier le plus exposé du dépôt, celui où l’arbitrage de la banque sera écrit' },
-  { motif: /^docs\/adr\/0009-valeurs-du-monde-reel\.md$/, exemptDe: 'recopie', raison: 'l’ADR qui fonde cette garde cite les formes d’exemple qu’elle interdit' },
-  { motif: /^pnpm-lock\.yaml$/, exemptDe: 'coordonnee', raison: 'empreintes de paquets, aucune prose' },
+  {
+    motif: /^docs\/DECISIONS\.md$/,
+    exemptDe: 'recopie',
+    raison:
+      'le registre des décisions NOMME la valeur PUBLIQUE qu’il arrête — c’est son travail. Il n’est PAS exempt de `coordonnee_en_clair` : c’est le fichier le plus exposé du dépôt, celui où l’arbitrage de la banque sera écrit',
+  },
+  {
+    motif: /^docs\/adr\/0009-valeurs-du-monde-reel\.md$/,
+    exemptDe: 'recopie',
+    raison: 'l’ADR qui fonde cette garde cite les formes d’exemple qu’elle interdit',
+  },
+  {
+    motif: /^pnpm-lock\.yaml$/,
+    exemptDe: 'coordonnee',
+    raison: 'empreintes de paquets, aucune prose',
+  },
 ];
 
 /**
@@ -151,7 +168,8 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
  * `.env.example` — que `.gitignore` dé-exclut exprès pour qu'il soit suivi — passaient tous
  * deux au travers. Un secret ne choisit pas son extension.
  */
-const EXTENSIONS_BALAYEES = /\.(ts|tsx|js|mjs|cjs|json|md|ya?ml|sql|prisma|example|txt|csv|xml|env)$/;
+const EXTENSIONS_BALAYEES =
+  /\.(ts|tsx|js|mjs|cjs|json|md|ya?ml|sql|prisma|example|txt|csv|xml|env)$/;
 
 /** Les fichiers suivis SANS extension qu'il faut lire quand même (`CODEOWNERS`, `Dockerfile`…). */
 const SANS_EXTENSION_BALAYES = /(^|\/)(CODEOWNERS|Dockerfile|Procfile|\.env[^/]*)$/;
@@ -583,7 +601,8 @@ export function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = '')
       if (tolereUnBouchon && estExemplePlausible(brut)) continue;
       // Le registre lui-meme : il porte SES valeurs publiques et les exemples qu'il documente,
       // jamais une coordonnee bancaire hors de ses deux champs secrets.
-      if (chemin === CHEMIN_REGISTRE && coordonneeLegitimeAuRegistre(brut, forme === FORME_IBAN)) continue;
+      if (chemin === CHEMIN_REGISTRE && coordonneeLegitimeAuRegistre(brut, forme === FORME_IBAN))
+        continue;
       trouvees.push(forme === FORME_IBAN ? brut.toUpperCase() : brut);
     }
   }
@@ -709,7 +728,9 @@ export function controler(u: Univers): Faute[] {
     }
 
     const exemptDeCoordonnee = estExemptDe(fichier.chemin, 'coordonnee');
-    for (const coordonnee of exemptDeCoordonnee ? [] : coordonneesDe(fichier.contenu, code, fichier.chemin)) {
+    for (const coordonnee of exemptDeCoordonnee
+      ? []
+      : coordonneesDe(fichier.contenu, code, fichier.chemin)) {
       ajouter(
         'coordonnee_en_clair',
         `${fichier.chemin} — coordonnée en clair « ${coordonnee} ». Ces valeurs vivent dans ` +
@@ -857,20 +878,27 @@ export function controlerRegistreExemptions(exemptions: Exemption[]): Faute[] {
     const ou = `\`${CHEMIN_EXEMPTIONS}\` #${i + 1}`;
     const manques: string[] = [];
     if (!Number.isInteger(e.pr) || e.pr <= 0) manques.push('`pr` doit être un numéro de PR');
-    if (typeof e.revision !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(e.revision)) {
+    if (
+      typeof e.revision !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(e.revision)
+    ) {
       manques.push("`revision` doit être l'horodatage ISO EXACT rendu par `userContentEdits`");
     }
     if (typeof e.empreinte !== 'string' || !/^[0-9a-f]{64}$/.test(e.empreinte)) {
-      manques.push('`empreinte` doit être un SHA-256 COMPLET en minuscules — tronquée, elle se collisionne');
+      manques.push(
+        '`empreinte` doit être un SHA-256 COMPLET en minuscules — tronquée, elle se collisionne'
+      );
     }
     if (typeof e.declaree !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(e.declaree)) {
       manques.push('`declaree` doit porter la date de déclaration');
     }
-    if (typeof e.par !== 'string' || e.par.trim() === '') manques.push('`par` doit nommer qui déclare');
+    if (typeof e.par !== 'string' || e.par.trim() === '')
+      manques.push('`par` doit nommer qui déclare');
     if (typeof e.motif !== 'string' || e.motif.trim().length < 40) {
       manques.push('`motif` doit dire POURQUOI il n’y a rien à révoquer — une ligne, pas un mot');
     }
-    if (typeof e.definitive !== 'boolean') manques.push('`definitive` doit dire si l’exemption se refermera');
+    if (typeof e.definitive !== 'boolean')
+      manques.push('`definitive` doit dire si l’exemption se refermera');
     if (manques.length > 0) {
       fautes.push({
         famille: 'exemption_malformee',
@@ -908,7 +936,12 @@ export function exemptionsDuDepot(): Exemption[] {
  * message est rédigé. Le jour où quelqu'un reformule « révision du … », toutes les exemptions
  * cesseraient de s'apparier — et le verdict serait rouge, pas vert, mais pour la mauvaise raison.
  */
-export type CorpsPublie = { origine: string; horodatage: string | null; texte: string; revision: boolean };
+export type CorpsPublie = {
+  origine: string;
+  horodatage: string | null;
+  texte: string;
+  revision: boolean;
+};
 
 /**
  * CE QUE LA LECTURE A RENDU — et le refus, explicite, de confondre « rien trouvé » avec « rien lu ».
@@ -1097,7 +1130,9 @@ export function exemptionsServies(lecture: LectureDuCorps, exemptions: Exemption
     for (const coordonnee of coordonneesDe(c.texte, false)) {
       const e = exemptions.find(
         (x) =>
-          x.pr === lecture.pr && x.revision === c.horodatage && x.empreinte === empreinteDe(coordonnee)
+          x.pr === lecture.pr &&
+          x.revision === c.horodatage &&
+          x.empreinte === empreinteDe(coordonnee)
       );
       if (e !== undefined && !servies.includes(e)) servies.push(e);
     }
@@ -1214,7 +1249,12 @@ export function assemblerLecture(
   editions: { annoncees: number; noeuds: NoeudEdition[]; inacheve: boolean }
 ): LectureDuCorps {
   const corps: CorpsPublie[] = [
-    { origine: `PR #${numero} — corps courant`, horodatage: null, texte: corpsCourant, revision: false },
+    {
+      origine: `PR #${numero} — corps courant`,
+      horodatage: null,
+      texte: corpsCourant,
+      revision: false,
+    },
   ];
   let lues = 0;
   for (const n of editions.noeuds) {
@@ -1278,11 +1318,7 @@ export const GH_REEL: ExecuteurGh = (args) =>
  * repartirait sur le reseau sans que rien ne le dise, et redeviendrait vert pour la mauvaise
  * raison. La ligne de commande, elle, passe `ESSAIS_DE_LECTURE` et `GH_REEL` explicitement.
  */
-export function lireCorpsPublie(
-  numero: string,
-  essais: number,
-  gh: ExecuteurGh
-): LectureDuCorps {
+export function lireCorpsPublie(numero: string, essais: number, gh: ExecuteurGh): LectureDuCorps {
   let derniere: LectureDuCorps = { lu: false, motif: 'aucune tentative' };
   for (let n = 1; n <= Math.max(1, essais); n += 1) {
     derniere = lireUneFois(numero, gh);
@@ -1318,7 +1354,9 @@ export function lireUneFois(numero: string, gh: ExecuteurGh): LectureDuCorps {
 
   let depot: string;
   try {
-    const j = JSON.parse(gh(['repo', 'view', '--json', 'nameWithOwner'])) as { nameWithOwner?: unknown };
+    const j = JSON.parse(gh(['repo', 'view', '--json', 'nameWithOwner'])) as {
+      nameWithOwner?: unknown;
+    };
     if (typeof j.nameWithOwner !== 'string') return { lu: false, motif: 'dépôt illisible' };
     depot = j.nameWithOwner;
   } catch (e) {
@@ -1369,7 +1407,11 @@ export function lireUneFois(numero: string, gh: ExecuteurGh): LectureDuCorps {
       };
     };
     const edits = j.data?.repository?.pullRequest?.userContentEdits;
-    if (edits === undefined || typeof edits.totalCount !== 'number' || !Array.isArray(edits.nodes)) {
+    if (
+      edits === undefined ||
+      typeof edits.totalCount !== 'number' ||
+      !Array.isArray(edits.nodes)
+    ) {
       throw new Error("la requête GraphQL n'a pas rendu `userContentEdits`");
     }
     // `pageInfo` ABSENT n'est PAS « il n'y a plus rien » : c'est un champ qu'on n'a pas lu. On
@@ -1446,8 +1488,17 @@ function prouverCorpsPublie(): number {
   // fausse par construction. C'est le contre-témoin qui empêche la garde d'être intenable.
   const MASQUE = 'FR76' + 'X'.repeat(23);
 
-  const TEMOINS: { famille: string; lecture: LectureDuCorps; exemptions?: Exemption[]; attendu: 1 | 2 }[] = [
-    { famille: 'coordonnee_dans_le_corps_courant', lecture: corps(`IBAN : ${IBAN_TEMOIN}`), attendu: 1 },
+  const TEMOINS: {
+    famille: string;
+    lecture: LectureDuCorps;
+    exemptions?: Exemption[];
+    attendu: 1 | 2;
+  }[] = [
+    {
+      famille: 'coordonnee_dans_le_corps_courant',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`),
+      attendu: 1,
+    },
     {
       // Le geste par défaut de qui colle un RIB : les espaces d'un traitement de texte. Le même
       // caractère que le banc d'essai de `normaliserEspaces` — UNE seule normalisation pour les
@@ -1463,7 +1514,12 @@ function prouverCorpsPublie(): number {
         lu: true,
         pr: PR_TEMOIN,
         corps: [
-          { origine: 'témoin — corps courant', horodatage: null, texte: `IBAN : ${MASQUE}`, revision: false },
+          {
+            origine: 'témoin — corps courant',
+            horodatage: null,
+            texte: `IBAN : ${MASQUE}`,
+            revision: false,
+          },
           {
             origine: 'témoin — révision',
             horodatage: HORODATAGE,
@@ -1499,7 +1555,12 @@ function prouverCorpsPublie(): number {
       // la ligne absoudrait alors une AUTRE coordonnée que celle qu'on a examinée.
       famille: 'exemption_malformee',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
-      exemptions: [{ ...exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN), empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16) }],
+      exemptions: [
+        {
+          ...exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN),
+          empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16),
+        },
+      ],
       attendu: 1,
     },
     {
@@ -1510,8 +1571,18 @@ function prouverCorpsPublie(): number {
         lu: true,
         pr: PR_TEMOIN,
         corps: [
-          { origine: 'témoin — corps courant', horodatage: null, texte: `IBAN : ${MASQUE}`, revision: false },
-          { origine: 'témoin — révision exemptée', horodatage: HORODATAGE, texte: `IBAN : ${IBAN_TEMOIN}`, revision: true },
+          {
+            origine: 'témoin — corps courant',
+            horodatage: null,
+            texte: `IBAN : ${MASQUE}`,
+            revision: false,
+          },
+          {
+            origine: 'témoin — révision exemptée',
+            horodatage: HORODATAGE,
+            texte: `IBAN : ${IBAN_TEMOIN}`,
+            revision: true,
+          },
           {
             origine: 'témoin — révision NON exemptée',
             horodatage: '2026-01-02T09:09:09Z',
@@ -1574,7 +1645,11 @@ function prouverCorpsPublie(): number {
       ],
       attendu: 1,
     },
-    { famille: 'lecture_impossible', lecture: { lu: false, motif: 'gh introuvable (témoin)' }, attendu: 2 },
+    {
+      famille: 'lecture_impossible',
+      lecture: { lu: false, motif: 'gh introuvable (témoin)' },
+      attendu: 2,
+    },
     {
       // UNE LECTURE MANQUÉE NE JUGE AUCUNE EXEMPTION. Sans cette règle, une panne de réseau
       // transformerait toutes les exemptions en dettes imaginaires, et le verdict passerait de
@@ -1589,7 +1664,9 @@ function prouverCorpsPublie(): number {
       lecture: {
         lu: true,
         pr: PR_TEMOIN,
-        corps: [{ origine: 'témoin', horodatage: null, texte: 'aucune coordonnée ici', revision: false }],
+        corps: [
+          { origine: 'témoin', horodatage: null, texte: 'aucune coordonnée ici', revision: false },
+        ],
         revisionsLues: 1,
         revisionsAnnoncees: 4,
         // FAUX à dessein : ce témoin doit rougir sur l'ÉCART, pas sur l'interruption.
@@ -1642,7 +1719,7 @@ function prouverCorpsPublie(): number {
   if (caracteres.length === 0) {
     console.error(
       '❌ `SEPARATEURS_NEUTRALISES` ne reconnaît AUCUN caractère : les témoins qui en dépendent ' +
-        "exécuteraient zéro cas, et zéro cas exécuté se lit exactement comme zéro cas en échec."
+        'exécuteraient zéro cas, et zéro cas exécuté se lit exactement comme zéro cas en échec.'
     );
     return 1;
   }
@@ -1775,7 +1852,9 @@ function prouverCorpsPublie(): number {
       complet.inacheve ||
       juge.code !== 1 ||
       !juge.fautes.some(
-        (f) => f.famille === 'coordonnee_dans_une_revision' && f.message.includes(horodatage(RANG_FAUTIF))
+        (f) =>
+          f.famille === 'coordonnee_dans_une_revision' &&
+          f.message.includes(horodatage(RANG_FAUTIF))
       )
     ) {
       console.error(
@@ -2163,8 +2242,14 @@ export const UNIVERS_CONFORME: Univers = {
   decisions: DECISIONS_TEMOIN,
   exigences: EXIGENCES_TEMOIN,
   fichiers: [
-    { chemin: 'src/apporteur/profil.ts', contenu: "import { entiteContractante } from '../config/entite';\n" },
-    { chemin: 'docs/spec/note.md', contenu: 'La société est immatriculée sous le SIREN 204070311.\n' },
+    {
+      chemin: 'src/apporteur/profil.ts',
+      contenu: "import { entiteContractante } from '../config/entite';\n",
+    },
+    {
+      chemin: 'docs/spec/note.md',
+      contenu: 'La société est immatriculée sous le SIREN 204070311.\n',
+    },
   ],
 };
 
@@ -2182,25 +2267,43 @@ function prouver(): number {
         delete (u.registre.entite as Partial<Registre['entite']>).siren;
       }),
     },
-    { famille: 'champ_vide', univers: muter((u) => { u.registre.entite.siren = '   '; }) },
+    {
+      famille: 'champ_vide',
+      univers: muter((u) => {
+        u.registre.entite.siren = '   ';
+      }),
+    },
     {
       // Le témoin qui compte : le dépôt est public, et c'est ce cas-là qui est irréversible.
       famille: 'secret_commite',
-      univers: muter((u) => { u.registre.banqueDebitrice.iban = IBAN_TEMOIN; }),
+      univers: muter((u) => {
+        u.registre.banqueDebitrice.iban = IBAN_TEMOIN;
+      }),
     },
-    { famille: 'exemple_plausible', univers: muter((u) => { u.registre.entite.siren = '123456789'; }) },
+    {
+      famille: 'exemple_plausible',
+      univers: muter((u) => {
+        u.registre.entite.siren = '123456789';
+      }),
+    },
     {
       famille: 'sentinelle_sur_decision_arretee',
-      univers: muter((u) => { u.registre.entite.siren = SENTINELLE; }),
+      univers: muter((u) => {
+        u.registre.entite.siren = SENTINELLE;
+      }),
     },
     {
       // Une décision ROUVERTE : le régime est dérivé, donc la sentinelle redevient obligatoire.
       famille: 'valeur_sans_decision',
-      univers: muter((u) => { u.decisions = u.decisions.split('✅').join('⏳'); }),
+      univers: muter((u) => {
+        u.decisions = u.decisions.split('✅').join('⏳');
+      }),
     },
     {
       famille: 'divergence_avec_la_source',
-      univers: muter((u) => { u.registre.entite.siren = '204070312'; }),
+      univers: muter((u) => {
+        u.registre.entite.siren = '204070312';
+      }),
     },
     {
       famille: 'source_illisible',
@@ -2223,7 +2326,10 @@ function prouver(): number {
     {
       famille: 'coordonnee_en_clair',
       univers: muter((u) => {
-        u.fichiers.push({ chemin: 'docs/note-de-travail.md', contenu: `Virement depuis ${IBAN_TEMOIN}.\n` });
+        u.fichiers.push({
+          chemin: 'docs/note-de-travail.md',
+          contenu: `Virement depuis ${IBAN_TEMOIN}.\n`,
+        });
       }),
     },
     {
@@ -2295,7 +2401,7 @@ function prouver(): number {
   if (FORMES_NEUTRALISEES.length === 0) {
     console.error(
       '❌ `SEPARATEURS_NEUTRALISES` ne reconnaît AUCUN caractère : la boucle ci-dessous ' +
-        "exécuterait zéro témoin, et zéro témoin exécuté se lit exactement comme zéro échec."
+        'exécuterait zéro témoin, et zéro témoin exécuté se lit exactement comme zéro échec.'
     );
     return 1;
   }
@@ -2336,7 +2442,10 @@ function prouver(): number {
     {
       quoi: 'un bouchon de test d’apparence évidente d’exemple',
       univers: muter((u) => {
-        u.fichiers.push({ chemin: 'tests/unit/x.spec.ts', contenu: "const siren = '000000000';\n" });
+        u.fichiers.push({
+          chemin: 'tests/unit/x.spec.ts',
+          contenu: "const siren = '000000000';\n",
+        });
       }),
     },
     {
@@ -2359,11 +2468,15 @@ function prouver(): number {
     },
     {
       quoi: 'un champ sans ancre, rempli le jour où la banque répond',
-      univers: muter((u) => { u.registre.banqueReceptrice.bic = 'CMCIFR2A'; }),
+      univers: muter((u) => {
+        u.registre.banqueReceptrice.bic = 'CMCIFR2A';
+      }),
     },
     {
       quoi: 'le sous-domaine d’envoi, encore à la sentinelle, ne bloque rien',
-      univers: muter((u) => { u.registre.domaines.envoi = SENTINELLE; }),
+      univers: muter((u) => {
+        u.registre.domaines.envoi = SENTINELLE;
+      }),
     },
   ];
 
@@ -2398,7 +2511,9 @@ function prouver(): number {
     return 1;
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts, dont l'univers conforme.`);
   console.log(
@@ -2546,9 +2661,12 @@ if (APPELE_DIRECTEMENT) {
       process.exit(0);
     }
     const gravite = verdict.code === 1 ? 'défaut CONSTATÉ' : 'INDÉTERMINÉ';
-    console.error(`❌ gov:entite --corps-publie ${numero} — ${gravite} (${verdict.fautes.length}) :\n`);
+    console.error(
+      `❌ gov:entite --corps-publie ${numero} — ${gravite} (${verdict.fautes.length}) :\n`
+    );
     verdict.fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
-    if (verdict.fautes.length > 25) console.error(`   … et ${verdict.fautes.length - 25} autre(s).`);
+    if (verdict.fautes.length > 25)
+      console.error(`   … et ${verdict.fautes.length - 25} autre(s).`);
     process.exit(verdict.code);
   }
 

@@ -48,7 +48,11 @@ const GARDES = [
   // deuxième source d'un même compte, et c'est le compte qui sert justement à détecter la perte
   // silencieuse d'une famille. Le 12 reste écrit — il n'a pas de source importable, la liste vivant
   // dans un script à effets de bord au chargement.
-  { nom: 'gov:tasks', script: 'scripts/gates/gov-tasks.ts', familles: 12 + FAMILLES_ATTESTATION.length },
+  {
+    nom: 'gov:tasks',
+    script: 'scripts/gates/gov-tasks.ts',
+    familles: 12 + FAMILLES_ATTESTATION.length,
+  },
   { nom: 'gov:requirements', script: 'scripts/gates/gov-requirements.ts', familles: 11 },
   { nom: 'gov:hypotheses', script: 'scripts/gates/gov-hypotheses.ts', familles: 10 },
 ];

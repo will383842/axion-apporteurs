@@ -87,7 +87,10 @@ describe('REQ-GOV-007 — au plus un owner à la fois', () => {
 
   it('REQ-GOV-007 — PLAN-STATE rend la revendication : la tâche ET son revendiqueur, avec la source lue', () => {
     const vue = readFileSync('docs/PLAN-STATE.md', 'utf8');
-    const section = vue.slice(vue.indexOf('## Revendications'), vue.indexOf('## Décisions du jour'));
+    const section = vue.slice(
+      vue.indexOf('## Revendications'),
+      vue.indexOf('## Décisions du jour')
+    );
     expect(section.length).toBeGreaterThan(0);
     // La section nomme ses deux sources : sans cela, un lecteur ne sait pas où corriger une
     // revendication fausse — et il la corrigerait dans la vue, qui l'effacerait.

@@ -71,9 +71,11 @@ describe('REQ-GOV-021 / REQ-GOV-025 — les paths du backlog sont DÉRIVÉS, et 
   }, 60_000);
 
   it('REQ-GOV-025 — aucune tâche `repo: axionia` ne prétend écrire un fichier de ce dépôt', () => {
-    const taches = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
-      taches: { id: string; repo: string }[];
-    }).taches;
+    const taches = (
+      JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
+        taches: { id: string; repo: string }[];
+      }
+    ).taches;
     const vue = JSON.parse(readFileSync(VUE, 'utf8')) as { paths: Record<string, string[]> };
 
     const fautives = taches

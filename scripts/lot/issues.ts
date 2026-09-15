@@ -113,11 +113,15 @@ for (const t of candidates) {
   const corps = [
     `**Phase ${t.phase}** · zone \`${t.zone}\` · \`${t.estimateDays} j\` · dépôt \`${t.repo}\``,
     '',
-    t.deps.length ? `**Dépend de** ${t.deps.map((d) => `\`${d}\``).join(', ')}` : '**Aucune dépendance.**',
+    t.deps.length
+      ? `**Dépend de** ${t.deps.map((d) => `\`${d}\``).join(', ')}`
+      : '**Aucune dépendance.**',
     '',
     `**Couvre** ${t.reqs.map((r) => `\`${r}\``).join(', ')}`,
     '',
-    t.acceptance ? `## Acceptation\n\n${t.acceptance}` : '_Critère d’acceptation à écrire à l’attribution._',
+    t.acceptance
+      ? `## Acceptation\n\n${t.acceptance}`
+      : '_Critère d’acceptation à écrire à l’attribution._',
     '',
     '---',
     '',
@@ -137,16 +141,28 @@ for (const t of candidates) {
   // Les labels doivent exister avant d'être posés ; `--label` échoue sinon.
   for (const l of labels) {
     try {
-      gh(['label', 'create', l, '--force', '--color', 'BFD4F2', '--description', `dérivé de docs/tasks.json`]);
+      gh([
+        'label',
+        'create',
+        l,
+        '--force',
+        '--color',
+        'BFD4F2',
+        '--description',
+        `dérivé de docs/tasks.json`,
+      ]);
     } catch {
       /* le label existe déjà : rien à faire */
     }
   }
 
   const url = gh([
-    'issue', 'create',
-    '--title', `${t.id} — ${t.titre}`,
-    '--body', corps,
+    'issue',
+    'create',
+    '--title',
+    `${t.id} — ${t.titre}`,
+    '--body',
+    corps,
     ...labels.flatMap((l) => ['--label', l]),
   ]);
   const m = /\/(\d+)\s*$/.exec(url);
@@ -172,6 +188,8 @@ for (const l of journal) console.log(`   ${l}`);
 
 const sans = candidates.filter((t) => t.issue === null);
 if (sans.length > 0 && !sec2) {
-  console.error(`\n❌ ${sans.length} tâche(s) restent sans issue : ${sans.map((t) => t.id).join(', ')}`);
+  console.error(
+    `\n❌ ${sans.length} tâche(s) restent sans issue : ${sans.map((t) => t.id).join(', ')}`
+  );
   process.exit(1);
 }

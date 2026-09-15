@@ -41,19 +41,27 @@ const DOCTRINE = [
 ];
 
 /** Le gabarit de contrat est remis à chaque apporteur : il peut citer L.134-1 sans dommage. */
-const EXEMPTS = [/^docs\/contrat\//, /^docs\/CONTRAT-/, /^\.gitignore$/, /^scripts\/gates\/gov-publication\.ts$/];
+const EXEMPTS = [
+  /^docs\/contrat\//,
+  /^docs\/CONTRAT-/,
+  /^\.gitignore$/,
+  /^scripts\/gates\/gov-publication\.ts$/,
+];
 
 /** Vocabulaire de la prose, assemblé dans les deux sens de lecture. */
-const DETECTION = '(?:anomalie|détect|signal|score|sincérité|fraude|squat|rafale|nocturne|suspicion|ramassage|abus)';
+const DETECTION =
+  '(?:anomalie|détect|signal|score|sincérité|fraude|squat|rafale|nocturne|suspicion|ramassage|abus)';
 const NOMBRE = '(?:\\d{1,3}\\s*%|au-delà de\\s+\\d|plus de\\s+\\d|≥\\s*\\d|>\\s*\\d)';
 // Deux vocabulaires, parce que les deux unités ne se valent pas.
 // L'EURO est sans ambiguïté : partout où il touche l'argent du réseau, il n'a rien à faire ici.
-const ARGENT = '(?:commission|parrainage|filleul|bonus|palier|forfait|rémunération|barème|grille|plafond|taux|seuil|versement|relevé|solde|report)';
+const ARGENT =
+  '(?:commission|parrainage|filleul|bonus|palier|forfait|rémunération|barème|grille|plafond|taux|seuil|versement|relevé|solde|report)';
 // Le POURCENTAGE, lui, sert aussi à mesurer la QUALITÉ (« seuil de mutation ≥ 80 % », « 100 % des
 // cellules testées »). Écrit avec le vocabulaire large, il rougissait sur Stryker et sur la
 // couverture des machines à états — deux endroits où il n'avait rien à dire. D'où une liste étroite,
 // qui ne retient que les mots par lesquels on désigne une RÉMUNÉRATION.
-const TAUX_REMUNERATION = '(?:commission|parrainage|filleul|bonus|palier|forfait|rémunération|barème|grille|taux)';
+const TAUX_REMUNERATION =
+  '(?:commission|parrainage|filleul|bonus|palier|forfait|rémunération|barème|grille|taux)';
 // Le pourcentage s'arrête à 99 : « 100 % » n'est jamais un taux de rémunération, c'est un taux de
 // COUVERTURE (« 100 % des cellules testées »). Écrite en `\d{1,3}`, la règle rougissait sur
 // `docs/gates.json`, où elle n'avait rien à dire.
@@ -81,8 +89,15 @@ function neutraliserMontantsLegaux(ligne: string): string {
 const CHIFFRES: { motif: RegExp; quoi: string }[] = [
   // Cible les seuils de DÉTECTION D'ABUS, pas les constantes de gouvernance : un plafond de
   // questions ouvertes ou une taille de lot n'ont rien de sensible. D'où les préfixes explicites.
-  { motif: /\b(RAFALE|NOCTURNE|SQUAT|ANOMALIE|DETECTION|FRAUDE|VERIF_PRIORITAIRE|QUOTA_DEPOT)\w*\s*[:=]\s*\d+/gi, quoi: 'seuil de détection' },
-  { motif: /\b(flatEur|montantCents|tauxBps|commission)\w*\s*[:=]\s*\d{2,}/g, quoi: 'montant de grille' },
+  {
+    motif:
+      /\b(RAFALE|NOCTURNE|SQUAT|ANOMALIE|DETECTION|FRAUDE|VERIF_PRIORITAIRE|QUOTA_DEPOT)\w*\s*[:=]\s*\d+/gi,
+    quoi: 'seuil de détection',
+  },
+  {
+    motif: /\b(flatEur|montantCents|tauxBps|commission)\w*\s*[:=]\s*\d{2,}/g,
+    quoi: 'montant de grille',
+  },
   { motif: /\bDETECTEUR\w*\s*[:=]/g, quoi: 'table de détecteurs' },
   // Un seuil écrit en PROSE échappe aux formes de code ci-dessus. `docs/tasks.json` en portait un
   // — « signal d'anomalie au-delà de 70 % de dépôts sur des entreprises déjà travaillées » — que
@@ -102,7 +117,10 @@ const CHIFFRES: { motif: RegExp; quoi: string }[] = [
   // (c) Économie du réseau écrite en prose. Les seuils FIXÉS PAR LA LOI sont publics par nature et
   // neutralisés en amont ; tout le reste est une valeur que le dépôt public n'a pas à porter.
   {
-    motif: new RegExp(`(?:${ARGENT}[^.;\\n]{0,120}?${EUROS}|${EUROS}[^.;\\n]{0,120}?${ARGENT})`, 'gi'),
+    motif: new RegExp(
+      `(?:${ARGENT}[^.;\\n]{0,120}?${EUROS}|${EUROS}[^.;\\n]{0,120}?${ARGENT})`,
+      'gi'
+    ),
     quoi: 'montant du réseau en toutes lettres',
   },
   {
@@ -187,8 +205,14 @@ if (process.argv.includes('--prove')) {
       ligne: `au-delà de 70 % de dépôts sur des entreprises déjà travaillées, signal d'anomalie`,
       famille: 'seuil de détection en toutes lettres',
     },
-    { ligne: `bonus de parrainage : 100 € à la première ligne acquise du filleul`, famille: 'montant du réseau en toutes lettres' },
-    { ligne: `Taux de parrainage **10 %** versionné, appliqué aux lignes commission`, famille: 'taux de rémunération en toutes lettres' },
+    {
+      ligne: `bonus de parrainage : 100 € à la première ligne acquise du filleul`,
+      famille: 'montant du réseau en toutes lettres',
+    },
+    {
+      ligne: `Taux de parrainage **10 %** versionné, appliqué aux lignes commission`,
+      famille: 'taux de rémunération en toutes lettres',
+    },
   ];
 
   // Contre-témoins : ce que la garde ne doit PAS faire rougir. Une garde qui rougit sur tout
@@ -236,7 +260,9 @@ if (process.argv.includes('--prove')) {
     process.exit(1);
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   process.exit(0);
 }
@@ -247,7 +273,9 @@ if (fautes.length === 0) {
   console.log('✅ gov:publication — aucun contenu non publiable dans les fichiers suivis.');
   process.exit(0);
 }
-console.error(`❌ gov:publication — ${fautes.length} violation(s) de la règle de publication (REQ-GOV-031) :\n`);
+console.error(
+  `❌ gov:publication — ${fautes.length} violation(s) de la règle de publication (REQ-GOV-031) :\n`
+);
 fautes.forEach((f) => console.error('   ' + f.message));
 console.error(`\nCe dépôt est PUBLIC. Rien de ce qui est poussé ne peut être repris.`);
 process.exit(1);
