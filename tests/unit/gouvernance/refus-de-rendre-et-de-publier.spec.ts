@@ -1688,8 +1688,8 @@ const GARDES_QUI_BALAIENT = [
   'scripts/gates/gov-preseance.ts',
   'scripts/gates/gov-publication.ts',
   'scripts/gates/lexique-apporteurs.ts',
-  // GOV-030 (`partners/ADR-0011`) — `partners:schema:enums` lit sa portée dans les fichiers SUIVIS :
-  // sa marche du disque par liste d'extensions laissait les `.js` et `.json` de `scripts/` hors lecture.
+  // GOV-030 (`partners/ADR-0011`) — `partners:schema:enums` lit sa portée dans les fichiers SUIVIS,
+  // quelle que soit leur extension.
   'scripts/gates/schema-enums.ts',
 ] as const;
 

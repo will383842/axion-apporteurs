@@ -44,7 +44,8 @@ directeur lui-même a porté trois totaux différents pour le même backlog.
 
 **Comment on la voit.** Un `diff` entre la source et la copie régénérée est vide ; un hash embarqué = hash recalculé ;
 `partners:schema:enums` refuse, dans tout fichier suivi sous `src`, `prisma` et `scripts` — quelle que soit son
-extension —, une ligne qui nomme deux états occupants ou plus hors de leur source unique (`partners/ADR-0011`).
+extension —, une ligne qui nomme, entre délimiteurs de chaîne, deux états occupants ou plus, hors de leur source
+unique et de la garde elle-même (`partners/ADR-0011`, qui en écrit aussi les limites de lecture).
 
 ## RM-02 — Une garde ne vaut que si on l'a vue rougir
 
@@ -105,7 +106,7 @@ test lit `pg_indexes` et compare.
 étaient possibles, et Prisma ne sait ni déclarer ni détecter la dérive d'un index partiel.
 
 **Comment on la voit.** `partners:schema:enums` refuse `('provisoire','active')` — la clause `IN` comme la comparaison
-booléenne, dès deux états sur une ligne (`partners/ADR-0011`) ; `pg_indexes.spec.ts`
+booléenne, dès deux états entre délimiteurs de chaîne sur une ligne (`partners/ADR-0011`) ; `pg_indexes.spec.ts`
 compare la définition en base à la constante.
 
 ## RM-07 — Chercher les appelants avant d'extraire

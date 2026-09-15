@@ -62,6 +62,12 @@ formes portent la même propriété.
   pas (« Hors famille »). Aucune garde n'y tient cette famille. Au seuil DEUX, le dépôt est vert.
 - `schema-enums.ts` s'exempte lui-même : sa fixture et ses témoins sont des listes d'états. Cette
   exemption a son contre-témoin dans `--prove`.
+- Une ligne est ce que LF termine, CRLF compris. Un texte lu qui porte une autre fin de ligne qu'un
+  consommateur coupe (CR seul, U+2028, U+2029) est refusé par `fin_de_ligne_non_lf`, règle
+  `finDeLigneEtrangere` que `gov-check.ts` importe.
+- Limites de lecture : la garde lit chaque fichier en UTF-8 sans refuser ce qu'elle ne sait pas décoder
+  (un fichier UTF-16 sous `scripts/` sort en 0), et un sous-module sous ses racines la fait échouer sur
+  une erreur brute, non nommée.
 - Retour arrière : remonter le seuil à trois referait passer l'index à deux états, et ferait tomber le
   témoin booléen de `partners:schema:enums --prove`.
 

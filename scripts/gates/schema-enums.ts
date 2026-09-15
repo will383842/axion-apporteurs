@@ -28,6 +28,9 @@
  *     tout fichier SUIVI sous `RACINES_CODE`, quelle que soit son extension — tient dans
  *     `dansLaPorteeDesEtats` : la lecture du dépôt en dérive, et `gov-check.ts` en dérive, à chaque
  *     exécution, ses racines que cette famille ne couvre pas.
+ *   — Une LIGNE est ce que LF termine, CRLF compris. Un texte lu qui porte une autre fin de ligne
+ *     qu'un consommateur coupe est refusé (`fin_de_ligne_non_lf`) : découpé sur LF, un champ du
+ *     schéma s'y collerait au précédent. `finDeLigneEtrangere` est la règle, et `gov-check.ts` l'importe.
  *   — Toute colonne de VOCABULAIRE est un enum. ⚠️ La citation de `REQ-DM-038` — « statut, type,
  *     motif, resultat, etat, origine, kind ou palier » — est le texte du REGISTRE, qui a perdu
  *     `status` et `priorite` à la fusion. La liste EXÉCUTÉE (`NOMS_DE_VOCABULAIRE`) porte les dix
@@ -69,6 +72,28 @@ export const RACINES_CODE = ['src', 'prisma', 'scripts'] as const;
  */
 export function dansLaPorteeDesEtats(chemin: string): boolean {
   return RACINES_CODE.some((racine) => chemin.startsWith(`${racine}/`));
+}
+
+/** Posés par leur code : écrits dans ce fichier, ils le couperaient lui-même. */
+const CR = String.fromCharCode(13);
+const LF = String.fromCharCode(10);
+const FIN_DE_LIGNE_ETRANGERE = new RegExp(`${CR}(?!${LF})|[${String.fromCharCode(0x2028, 0x2029)}]`);
+
+/**
+ * LA FIN DE LIGNE des gardes qui découpent un texte en lignes — celle-ci et `gov-check.ts` : LF, et
+ * CRLF, dont le CR reste en fin de ligne. Rend la PREMIÈRE autre fin de ligne qu'un consommateur du
+ * dépôt coupe — CR seul (Prisma, PostgreSQL, CommonMark), U+2028 ou U+2029 (ECMAScript) —, avec son
+ * numéro de ligne au sens de LF. Un tel texte serait jugé sur d'autres lignes que celles de son
+ * consommateur : un commentaire couvrirait l'instruction suivante, un champ se collerait au précédent.
+ * Les deux gardes le REFUSENT (`fin_de_ligne_non_lf`) au lieu de le juger.
+ */
+export function finDeLigneEtrangere(texte: string): { ligne: number; code: string } | undefined {
+  const m = FIN_DE_LIGNE_ETRANGERE.exec(texte);
+  if (!m) return undefined;
+  return {
+    ligne: texte.slice(0, m.index).split(LF).length,
+    code: `U+${m[0].charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}`,
+  };
 }
 
 /**
@@ -136,6 +161,11 @@ export const FAMILLES: { nom: string; explication: string }[] = [
     nom: 'source_illisible',
     explication:
       "le texte de REQ-DM-003 ne donne plus la liste des états occupants : la garde ne sait plus à quoi comparer.",
+  },
+  {
+    nom: 'fin_de_ligne_non_lf',
+    explication:
+      "un texte lu porte une fin de ligne autre que LF ou CRLF qu'un consommateur coupe : la garde le jugerait sur d'autres lignes que les siennes.",
   },
   {
     nom: 'etats_occupants_divergents',
@@ -298,6 +328,26 @@ export function controler(vue: Vue): Faute[] {
           "exigences — ce n'est pas ici qu'elle se décide.",
       },
     ];
+  }
+
+  // Chaque texte lu, UNE fois par chemin (le schéma et la source des états sont aussi dans `code`).
+  const textes = new Map<string, string>([
+    ['REQ-DM-003', vue.reqDm003],
+    [CHEMIN_GLOSSAIRE, vue.glossaire],
+    [CHEMIN_SCHEMA, vue.schema],
+    [CHEMIN_ETATS, vue.etatsSource],
+    ...vue.code.map((f): [string, string] => [f.chemin, f.contenu]),
+  ]);
+  for (const [chemin, texte] of textes) {
+    const fin = finDeLigneEtrangere(texte);
+    if (fin === undefined) continue;
+    fautes.push({
+      famille: 'fin_de_ligne_non_lf',
+      message:
+        `${chemin}:${fin.ligne} — fin de ligne ${fin.code}, que cette garde ne coupe pas et que Prisma, ` +
+        "CommonMark ou ECMAScript coupent : un champ, une valeur d'enum ou une liste y serait jugé sur la " +
+        "ligne d'à côté. Écris LF (ou CRLF).",
+    });
   }
 
   const constante = constanteEtatsOccupants(vue.etatsSource);
@@ -483,6 +533,14 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
     famille: 'source_illisible',
     vue: () => ({ ...VUE_CONFORME, reqDm003: 'Au plus une attribution occupante par SIREN.' }),
   },
+  // Un CR seul, que Prisma coupe : découpé sur LF, `statut String` se colle au champ précédent et disparaît.
+  {
+    famille: 'fin_de_ligne_non_lf',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema: VUE_CONFORME.schema + ['model Attribution {', '  id     String @id', '  statut String', '}', ''].join(CR),
+    }),
+  },
   {
     famille: 'etats_occupants_divergents',
     vue: () => ({
@@ -568,6 +626,10 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
  */
 const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
   { quoi: 'la vue conforme', vue: () => VUE_CONFORME },
+  {
+    quoi: 'un schéma en CRLF : CRLF est une fin de ligne, la garde le lit et ne le refuse pas',
+    vue: () => ({ ...VUE_CONFORME, schema: VUE_CONFORME.schema.split(LF).join(CR + LF) }),
+  },
   {
     quoi: 'la source unique porte la liste — sinon la garde interdirait sa propre solution',
     vue: () => ({

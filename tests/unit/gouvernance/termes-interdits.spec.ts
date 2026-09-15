@@ -9,17 +9,21 @@
  *   2. la famille `liste_litterale_d_etats` (REQ-DM-003, `partners/ADR-0011`) : une seule
  *      implémentation, une portée qui est une RACINE et jamais une extension, une lecture confrontée
  *      à git, et la conclusion « hors famille » de `gov:check` dérivée du même prédicat ;
- *   3. ce que la garde a RÉELLEMENT EXAMINÉ — chemin et octets — confronté à une lecture
- *      indépendante (`git ls-files`, taille rendue par `stat`), sur une population générée, sur le dépôt
- *      réel et sur un dépôt jetable ; les comptes imprimés en viennent ;
- *   4. les DÉCISIONS de `--prove` et de la garde, fonctions pures : la population (familles, refus,
+ *   3. ce que les deux gardes ont RÉELLEMENT LU — chemin, et contenu PAR EMPREINTE — confronté à une
+ *      lecture indépendante (`git ls-files`, octets relus sur le disque dans le test), sur une population
+ *      générée, sur le dépôt réel et sur des dépôts jetables, jusqu'à la DERNIÈRE ligne d'un fichier de
+ *      plus d'un mébioctet ; les comptes imprimés en viennent ;
+ *   4. la LIGNE : LF la termine, et toute autre fin de ligne qu'un consommateur coupe est refusée ;
+ *      l'exemption de citation se lit sur la DERNIÈRE extension du nom ;
+ *   5. les DÉCISIONS de `--prove` et de la garde, fonctions pures : la population (familles, refus,
  *      extensions qui citent, témoins) vient du SEUL registre, et chaque retrait y est nommé.
  * Les cas que `TEMOINS` et `CONTRE_TEMOINS` portent ne sont pas restatés : `decisionDeLaPreuve` les
  * juge, et elle est exercée ici.
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync, execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import {
@@ -53,6 +57,7 @@ import {
   VUE_CONFORME as VUE_VOCABULAIRE,
   RACINES_CODE,
   dansLaPorteeDesEtats,
+  finDeLigneEtrangere,
 } from '../../../scripts/gates/schema-enums';
 import { TYPES_EVENEMENT } from '../../../packages/contracts/events';
 
@@ -86,12 +91,12 @@ function avecFichier(chemin: string, contenu: string): Vue {
 const temoin = (id: string): Temoin => TEMOINS.find((t) => t.id === id)!;
 
 /**
- * LA LECTURE INDÉPENDANTE : les fichiers que git suit, et la taille que le DISQUE en donne (`stat`),
- * obtenus dans le test, jamais par la garde. La taille est celle du disque et non celle du blob : la
- * garde lit le disque, et un fichier modifié non commité les fait diverger légitimement. Les entrées
- * de sous-module (mode 160000) ne sont pas des fichiers.
+ * LA LECTURE INDÉPENDANTE : les fichiers que git suit, et les OCTETS que le disque en rend, relus dans
+ * le test, jamais par la garde. Le disque et non le blob : la garde lit le disque, et un fichier modifié
+ * non commité les fait diverger légitimement. Les entrées de sous-module (mode 160000) ne sont pas des
+ * fichiers. Le contenu se confronte par EMPREINTE : une taille égale ne dit rien d'octets remplacés.
  */
-function suivisEtTailles(cwd: string): Map<string, number> {
+function suivisEtOctets(cwd: string): Map<string, Buffer> {
   const chemins = execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-s', '-z'], {
     cwd,
     encoding: 'utf8',
@@ -101,24 +106,27 @@ function suivisEtTailles(cwd: string): Map<string, number> {
     .map((e) => e.split('\t') as [string, string])
     .filter(([meta]) => !meta.startsWith('160000 '))
     .map(([, chemin]) => chemin);
-  return new Map(chemins.map((chemin) => [chemin, statSync(join(cwd, chemin)).size]));
+  return new Map(chemins.map((chemin) => [chemin, readFileSync(join(cwd, chemin))]));
 }
 
+/** L'empreinte d'un contenu : l'oracle de « lu en entier », là où une taille égale laisserait passer des octets remplacés. */
+const sha256 = (contenu: Uint8Array | string): string => createHash('sha256').update(contenu).digest('hex');
+
 /** Les comptes qu'une garde qui lit tout sous ses racines DOIT imprimer, calculés depuis git et le disque. */
-function perimetreAttendu(tailles: Map<string, number>, racines: readonly string[]) {
+function perimetreAttendu(fichiers: Map<string, Uint8Array>, racines: readonly string[]) {
   const parRacine = racines.map((racine) => ({ racine, n: 0, octets: 0 }));
   let hors = 0;
-  for (const [chemin, taille] of tailles) {
+  for (const [chemin, octets] of fichiers) {
     const rang = parRacine.find((r) => chemin.startsWith(r.racine));
     if (rang) {
       rang.n++;
-      rang.octets += taille;
+      rang.octets += octets.length;
     } else hors++;
   }
   const lus = parRacine.reduce((s, r) => s + r.n, 0);
   return {
     perimetre:
-      `Périmètre : ${lus} fichier(s) lu(s) en entier sur ${tailles.size} suivi(s) — ` +
+      `Périmètre : ${lus} fichier(s) lu(s) en entier sur ${fichiers.size} suivi(s) — ` +
       parRacine.map((r) => `${r.racine} ${r.n} (${r.octets} octets)`).join(', '),
     hors: `Hors périmètre : ${hors} fichier(s) suivi(s)`,
   };
@@ -139,8 +147,63 @@ function extensionsDeLaPopulation(): string[] {
   const absentes = ['tsx', 'mts', 'cts', 'mjs', 'cjs', 'js', 'json', 'jsonc', 'html', 'mdx', 'txt', 'yaml', 'extensionlongue', ''];
   return [...new Set([...suivies, ...absentes])];
 }
-const cheminSonde = (racine: string, extension: string): string =>
-  `${racine}sonde/fichier${extension === '' ? '' : `.${extension}`}`;
+/**
+ * Les chemins d'une extension : le nom simple, un nom COMPOSÉ dont l'avant-dernière extension dirait
+ * l'inverse, et un DOSSIER à point. L'exemption se lit sur la dernière extension du nom : ni
+ * l'avant-dernière, ni celle d'un dossier ne la donnent.
+ */
+function cheminsSondes(racine: string, extension: string): string[] {
+  if (extension === '') return [`${racine}sonde/fichier`, `${racine}v1.md/fichier`];
+  const inverse = EXTENSIONS_QUI_CITENT.includes(extension) ? 'ts' : 'md';
+  return [
+    `${racine}sonde/fichier.${extension}`,
+    `${racine}sonde/fichier.${inverse}.${extension}`,
+    `${racine}v1.${inverse}/fichier.${extension}`,
+  ];
+}
+
+/** Oracle du test : la portée de la famille des listes d'états, écrite une fois ici. */
+const dansLesRacinesCode = (chemin: string): boolean => RACINES_CODE.some((r) => chemin.startsWith(`${r}/`));
+
+/** Posés par leur code : un retour chariot ou un séparateur écrit dans ce fichier le couperait lui-même. */
+const CR = String.fromCharCode(13);
+const LF = String.fromCharCode(10);
+const AG = String.fromCharCode(96);
+
+/** Le nombre de lignes neutres d'un GROS fichier : sa dernière ligne est la 20 001ᵉ. */
+const LIGNES_DU_GROS = 20_000;
+
+/** Plus d'un mébioctet et vingt mille lignes, puis `derniere` : au-delà de toute fenêtre qu'on écrirait. */
+function gros(derniere: string): string {
+  const texte = `ligne neutre é, assez longue pour que vingt mille lignes dépassent un mébioctet.${LF}`.repeat(LIGNES_DU_GROS) + derniere;
+  expect(Buffer.byteLength(texte, 'utf8')).toBeGreaterThanOrEqual(1024 * 1024);
+  return texte;
+}
+
+/**
+ * F6' — lancé depuis la racine d'un dépôt : la vue de `gov:check`, le texte que la garde a PARCOURU
+ * et la lecture de `partners:schema:enums` sont confrontés, fichier par fichier et PAR EMPREINTE, aux
+ * octets que le disque rend à ce test.
+ */
+function confronterAuDisque(): void {
+  const disque = suivisEtOctets('.');
+  const empreinte = (chemin: string): string => sha256(disque.get(chemin)!);
+  const racines = racinesDeLaGarde(readFileSync('docs/GLOSSAIRE.md', 'utf8'));
+
+  const vue = vueDuDepot();
+  expect(vue.fichiers.map((f) => f.chemin).sort()).toEqual([...disque.keys()].sort());
+  for (const f of vue.fichiers) expect('octets' in f ? sha256(f.octets) : f.erreur, f.chemin).toBe(empreinte(f.chemin));
+
+  const { examines } = examiner(vue);
+  expect(examines.map((x) => x.chemin).sort()).toEqual(
+    [...disque.keys()].filter((c) => racines.some((r) => c.startsWith(r))).sort()
+  );
+  for (const x of examines) expect(x.empreinte, x.chemin).toBe(empreinte(x.chemin));
+
+  const lus = vueDuVocabulaire().code;
+  expect(lus.map((f) => f.chemin).sort()).toEqual([...disque.keys()].filter(dansLesRacinesCode).sort());
+  for (const f of lus) expect(sha256(f.contenu), f.chemin).toBe(empreinte(f.chemin));
+}
 
 function depotJetable(prefixe: string, fichiers: Record<string, string | Uint8Array>): string {
   const depot = mkdtempSync(join(tmpdir(), prefixe));
@@ -230,41 +293,55 @@ describe('REQ-DM-003 — la famille des listes d’états a UNE SEULE implément
     const racines = [...RACINES_CODE.map((r) => `${r}/`), 'docs/', 'messages/', 'srcx/', RACINE_CONTRATS];
     for (const racine of racines) {
       for (const extension of extensionsDeLaPopulation()) {
-        const chemin = cheminSonde(racine, extension);
-        const attendu = RACINES_CODE.some((r) => chemin.startsWith(`${r}/`));
-        expect(dansLaPorteeDesEtats(chemin), chemin).toBe(attendu);
-        if (!attendu) continue;
-        const code = [{ chemin, contenu: "const vivantes = ['provisoire', 'active'];" }];
-        expect(controlerVocabulaire({ ...VUE_VOCABULAIRE, code }).map((f) => f.famille), chemin).toEqual([
-          'liste_litterale_d_etats',
-        ]);
+        for (const chemin of cheminsSondes(racine, extension)) {
+          const attendu = dansLesRacinesCode(chemin);
+          expect(dansLaPorteeDesEtats(chemin), chemin).toBe(attendu);
+          if (!attendu) continue;
+          const code = [{ chemin, contenu: "const vivantes = ['provisoire', 'active'];" }];
+          expect(controlerVocabulaire({ ...VUE_VOCABULAIRE, code }).map((f) => f.famille), chemin).toEqual([
+            'liste_litterale_d_etats',
+          ]);
+        }
       }
     }
   });
 
-  it('REQ-DM-003 : la lecture de partners:schema:enums est l’ensemble des suivis de sa portée, octet pour octet', () => {
-    const tailles = suivisEtTailles('.');
-    const attendus = [...tailles.keys()].filter((c) => RACINES_CODE.some((r) => c.startsWith(`${r}/`))).sort();
-    const lus = vueDuVocabulaire().code;
-    expect(lus.map((f) => f.chemin).sort()).toEqual(attendus);
-    for (const f of lus) expect(Buffer.byteLength(f.contenu, 'utf8'), f.chemin).toBe(tailles.get(f.chemin));
+  it('REQ-DM-003 : la lecture de partners:schema:enums est l’ensemble des suivis de sa portée, chaque contenu à l’empreinte du disque', () => {
+    confronterAuDisque();
   });
 
-  it('REQ-DM-003 : dépôt jetable — une liste d’états en .js, .json ou .mts sous la portée rougit', () => {
+  it('REQ-DM-003 : partners:schema:enums juge la DERNIÈRE ligne d’un fichier de plus d’un mébioctet', () => {
+    const chemin = 'scripts/lot/gros.js';
+    const code = [{ chemin, contenu: gros("const vivantes = ['provisoire', 'active'];") }];
+    expect(controlerVocabulaire({ ...VUE_VOCABULAIRE, code }).map((f) => f.message).join(LF)).toContain(
+      `${chemin}:${LIGNES_DU_GROS + 1} — liste littérale d'états occupants`
+    );
+    const coupe = [{ chemin, contenu: gros(`const a = 1;${CR}const b = 2;`) }];
+    expect(controlerVocabulaire({ ...VUE_VOCABULAIRE, code: coupe }).map((f) => f.famille)).toEqual(['fin_de_ligne_non_lf']);
+  });
+
+  it('REQ-DM-003 : dépôt jetable — une liste d’états en .js, .json, .mts ou en dernière ligne d’un gros fichier rougit, et un CR seul est refusé', () => {
     const depot = depotJetable('g30-enums-', {
       'prisma/schema.prisma': readFileSync('prisma/schema.prisma'),
       'src/domain/attribution/etats.ts': readFileSync('src/domain/attribution/etats.ts'),
+      'scripts/lot/neutre.js': gros('// fin'),
     });
     try {
       const propre = lancerDans(depot, resolve(SCRIPT_VOCABULAIRE));
       expect(propre.code, propre.sortie).toBe(0);
 
-      const liste = "const vivantes = ['provisoire', 'active'];\n";
+      const liste = `const vivantes = ['provisoire', 'active'];${LF}`;
       const appats = ['scripts/lot/requete.js', 'scripts/lot/requete.json', 'src/server/requete.mts'];
-      poser(depot, Object.fromEntries(appats.map((c) => [c, liste])));
+      poser(depot, {
+        ...Object.fromEntries(appats.map((c) => [c, liste])),
+        'scripts/lot/gros.js': gros(liste),
+        'scripts/lot/coupe.ts': `const a = 1;${CR}const b = 2;${LF}`,
+      });
       const fautif = lancerDans(depot, resolve(SCRIPT_VOCABULAIRE));
       expect(fautif.code, fautif.sortie).toBe(1);
       for (const c of appats) expect(fautif.sortie).toContain(`[liste_litterale_d_etats] ${c}:1`);
+      expect(fautif.sortie).toContain(`[liste_litterale_d_etats] scripts/lot/gros.js:${LIGNES_DU_GROS + 1}`);
+      expect(fautif.sortie).toContain('[fin_de_ligne_non_lf] scripts/lot/coupe.ts:1');
     } finally {
       rmSync(depot, { recursive: true, force: true });
     }
@@ -278,7 +355,7 @@ describe('REQ-DM-003 — la famille des listes d’états a UNE SEULE implément
       racines: [...RACINES_CODE.map((r) => `${r}/`), `${RACINES_CODE[0]}/sous/`, 'docs/', 'srcx/'],
     };
     for (const vue of [vueDuDepot(), synthetique]) {
-      const hors = perimetreDeLaVue(vue).racines.filter((r) => !RACINES_CODE.some((c) => r.startsWith(`${c}/`)));
+      const hors = perimetreDeLaVue(vue).racines.filter((r) => !dansLesRacinesCode(r));
       expect(decisionDeLaGarde(vue).lignes.join('\n')).toContain(
         `qui lit tout fichier suivi sous ${RACINES_CODE.map((r) => `${r}/`).join(', ')}. ` +
           `Racine(s) de cette garde hors de cette portée : ${hors.join(', ') || 'aucune'} —`
@@ -342,49 +419,71 @@ describe('GOV-030 — les sources, et les fixtures ÉGALES aux sources réelles'
 });
 
 describe('GOV-030 — ce que la garde a EXAMINÉ, confronté à une lecture indépendante', () => {
-  it('REQ-INT-004 : la vue du dépôt porte TOUS les fichiers suivis, avec les octets que le disque en rend', () => {
-    const tailles = suivisEtTailles('.');
-    const vue = vueDuDepot();
-    expect(vue.fichiers.map((f) => f.chemin).sort()).toEqual([...tailles.keys()].sort());
-    for (const f of vue.fichiers) {
-      expect('octets' in f ? f.octets.length : -1, f.chemin).toBe(tailles.get(f.chemin));
-    }
+  it('REQ-INT-004 : la vue du dépôt porte TOUS les fichiers suivis, et elle comme le texte parcouru ont l’empreinte du disque', () => {
+    confronterAuDisque();
   });
 
   it('REQ-INT-004 : population générée — tout fichier sous une racine est EXAMINÉ en entier, quelle que soit son extension', () => {
     const racines = racinesDeLaGarde(VUE_CONFORME.glossaire);
     const population = [...racines, 'docs/', 'scripts/', 'messagesx/'].flatMap((racine, r) =>
-      extensionsDeLaPopulation().map((extension, e) =>
-        // Des tailles au-delà de 4 Kio, et des caractères sur plusieurs octets.
-        fichierTexte(cheminSonde(racine, extension), 'ligne neutre é\n'.repeat(1 + ((r + e) % 3) * 200))
+      extensionsDeLaPopulation().flatMap((extension, e) =>
+        cheminsSondes(racine, extension).map((chemin) =>
+          // Des tailles au-delà de 4 Kio, et des caractères sur plusieurs octets.
+          fichierTexte(chemin, `ligne neutre é${LF}`.repeat(1 + ((r + e) % 3) * 200))
+        )
       )
     );
     const vue: Vue = { ...VUE_CONFORME, fichiers: population };
-    const attendus = population
-      .filter((f) => racines.some((r) => f.chemin.startsWith(r)))
-      .map((f) => ({ chemin: f.chemin, octets: 'octets' in f ? f.octets.length : -1 }))
+    const octets = new Map(population.map((f) => [f.chemin, 'octets' in f ? f.octets : new Uint8Array()]));
+    const attendus = [...octets]
+      .filter(([chemin]) => racines.some((r) => chemin.startsWith(r)))
+      .map(([chemin, o]) => ({ chemin, octets: o.length, empreinte: sha256(o) }))
       .sort((a, b) => a.chemin.localeCompare(b.chemin));
     const { fautes, examines } = examiner(vue);
     expect(fautes).toEqual([]);
     expect(
-      examines.map((x) => ({ chemin: x.chemin, octets: x.octets })).sort((a, b) => a.chemin.localeCompare(b.chemin))
+      examines
+        .map((x) => ({ chemin: x.chemin, octets: x.octets, empreinte: x.empreinte }))
+        .sort((a, b) => a.chemin.localeCompare(b.chemin))
     ).toEqual(attendus);
 
-    const tailles = new Map(population.map((f) => [f.chemin, 'octets' in f ? f.octets.length : -1]));
-    const attendu = perimetreAttendu(tailles, racines);
-    const sortie = decisionDeLaGarde(vue).lignes.join('\n');
+    const attendu = perimetreAttendu(octets, racines);
+    const sortie = decisionDeLaGarde(vue).lignes.join(LF);
     expect(sortie).toContain(attendu.perimetre);
     expect(sortie).toContain(attendu.hors);
   });
 
-  it('REQ-INT-004 : en code, toute extension qui ne cite pas laisse rougir un terme entre accents graves ou guillemets', () => {
-    const cite = String.fromCharCode(96);
+  it('REQ-INT-004 : un fichier de plus d’un mébioctet est lu jusqu’à sa DERNIÈRE ligne sous chaque racine — un terme y rougit, un NUL ou un CR y est refusé', () => {
+    for (const racine of racinesDeLaGarde(VUE_CONFORME.glossaire)) {
+      const chemin = `${racine}sonde/gros.txt`;
+      const texte = gros('le producteur emet payment.received');
+      const { fautes, examines } = examiner(avecFichier(chemin, texte));
+      expect(fautes.map((f) => f.message).join(LF), chemin).toContain(`${chemin}:${LIGNES_DU_GROS + 1} — « payment.received »`);
+      expect(examines.find((x) => x.chemin === chemin)?.empreinte, chemin).toBe(sha256(texte));
+    }
+    const chemin = 'docs/adr/9989-gros.md';
+    expect(familles(avecFichier(chemin, gros(String.fromCharCode(0))))).toEqual(['contenu_illisible']);
+    expect(familles(avecFichier(chemin, gros(`a${CR}b`)))).toEqual(['fin_de_ligne_non_lf']);
+  });
+
+  it('REQ-INT-004 : en code, toute extension qui ne cite pas laisse rougir un terme entre accents graves ou guillemets — nom composé et dossier à point compris', () => {
     for (const extension of extensionsDeLaPopulation().filter((e) => !EXTENSIONS_QUI_CITENT.includes(e))) {
-      const chemin = cheminSonde('src/', extension);
-      for (const contenu of [`${cite}payment.received${cite}`, '« payment.received »']) {
-        expect(familles(avecFichier(chemin, contenu)), `${chemin} : ${contenu}`).toContain(
-          'evenement_hors_nomenclature'
-        );
+      for (const chemin of cheminsSondes('src/', extension)) {
+        for (const contenu of [`${AG}payment.received${AG}`, '« payment.received »']) {
+          expect(familles(avecFichier(chemin, contenu)), `${chemin} : ${contenu}`).toContain(
+            'evenement_hors_nomenclature'
+          );
+        }
+      }
+    }
+  });
+
+  it('REQ-INT-004 : une extension qui cite exempte sa citation quand elle est la DERNIÈRE du nom, composé ou non', () => {
+    // La même ligne cite dans les trois grammaires : span en prose, commentaire SQL, commentaire à barres.
+    const citation = `-- // ${AG}payment.received${AG}`;
+    for (const extension of EXTENSIONS_QUI_CITENT) {
+      for (const chemin of cheminsSondes('prisma/', extension)) {
+        expect(familles(avecFichier(chemin, citation)), chemin).toEqual([]);
       }
     }
   });
@@ -393,6 +492,85 @@ describe('GOV-030 — ce que la garde a EXAMINÉ, confronté à une lecture ind�
     expect(decisionDeLaGarde(VUE_CONFORME).lignes.join('\n')).toContain(
       'Racine(s) VIDE(S) : prisma/, messages/, docs/adr/, packages/contracts/'
     );
+  });
+});
+
+describe('GOV-030 — une ligne est ce que LF termine : toute autre fin de ligne qu’un consommateur coupe est REFUSÉE', () => {
+  /**
+   * Les trois formes où une fin de ligne que la garde ne coupait pas faisait couvrir, par un commentaire
+   * ou une citation, une instruction, une déclaration ou un paragraphe : PostgreSQL, Prisma et
+   * CommonMark coupent au CR seul. `ligne` est celle du terme quand LF sépare.
+   */
+  const COUVERTURES = [
+    {
+      chemin: 'prisma/migrations/0005_cr/migration.sql',
+      lignes: [`-- ouvre ${AG}`, "UPDATE evenements SET type = 'payment.received';", `-- ferme ${AG}`],
+      famille: 'evenement_hors_nomenclature',
+      ligne: 2,
+    },
+    {
+      chemin: 'prisma/cr.prisma',
+      lignes: [`/// ouvre ${AG}`, 'model Invoice {', '  id String @id', '}', `/// ferme ${AG}`],
+      famille: 'terme_axionia_invalide',
+      ligne: 2,
+    },
+    {
+      chemin: 'docs/adr/9990-cr.md',
+      lignes: [`un paragraphe ouvre ${AG}`, '', 'le producteur emet payment.received', '', `et un autre referme ${AG}`],
+      famille: 'evenement_hors_nomenclature',
+      ligne: 3,
+    },
+  ];
+
+  it('REQ-INT-004 : la règle — LF et CRLF sont des fins de ligne ; CR seul, U+2028 et U+2029 sont nommés avec leur ligne', () => {
+    expect(finDeLigneEtrangere(`a${CR}${LF}b${LF}c`)).toBeUndefined();
+    expect(finDeLigneEtrangere(`a${String.fromCharCode(0x85)}b`)).toBeUndefined();
+    expect(finDeLigneEtrangere(`a${LF}b${CR}c`)).toEqual({ ligne: 2, code: 'U+000D' });
+    expect(finDeLigneEtrangere(`a${LF}${LF}b${String.fromCharCode(0x2028)}`)).toEqual({ ligne: 3, code: 'U+2028' });
+    expect(finDeLigneEtrangere(`${String.fromCharCode(0x2029)}`)).toEqual({ ligne: 1, code: 'U+2029' });
+    expect(finDeLigneEtrangere(`a${CR}`)).toEqual({ ligne: 1, code: 'U+000D' });
+  });
+
+  it('REQ-INT-004 : les trois couvertures rougissent en LF et en CRLF sur le terme, et sont REFUSÉES au CR seul', () => {
+    for (const c of COUVERTURES) {
+      for (const separateur of [LF, `${CR}${LF}`]) {
+        const fautes = controler(avecFichier(c.chemin, c.lignes.join(separateur)));
+        expect(fautes.map((f) => f.famille), c.chemin).toEqual([c.famille]);
+        expect(fautes[0]!.message).toContain(`${c.chemin}:${c.ligne} —`);
+      }
+      const coupe = controler(avecFichier(c.chemin, c.lignes.join(CR)));
+      expect(coupe.map((f) => f.famille), c.chemin).toEqual(['fin_de_ligne_non_lf']);
+      expect(coupe[0]!.message).toContain(`${c.chemin}:1 — `);
+    }
+  });
+
+  it('REQ-INT-004 : un séparateur Unicode dans le code, et une fin de ligne étrangère dans une SOURCE, sont refusés en les nommant', () => {
+    for (const code of [0x2028, 0x2029]) {
+      const fautes = controler(avecFichier('src/server/separateur.ts', `// note${String.fromCharCode(code)}export const x = 1;`));
+      expect(fautes.map((f) => f.famille)).toEqual(['fin_de_ligne_non_lf']);
+      expect(fautes[0]!.message).toContain(`U+${code.toString(16).toUpperCase()}`);
+    }
+    for (const [source, vue] of [
+      ['REQ-INT-004', { ...VUE_CONFORME, reqInt004: `${VUE_CONFORME.reqInt004}${CR}suite` }],
+      ['docs/GLOSSAIRE.md', { ...VUE_CONFORME, glossaire: `${VUE_CONFORME.glossaire}${CR}suite` }],
+    ] as const) {
+      const fautes = controler(vue).filter((f) => f.famille === 'fin_de_ligne_non_lf');
+      expect(fautes.map((f) => f.message).join(LF), source).toContain(`${source}:`);
+    }
+  });
+
+  it('REQ-DM-003 : partners:schema:enums applique la MÊME règle — un CR seul dans le schéma y cacherait une colonne en chaîne', () => {
+    const modele = ['model Attribution {', '  id     String @id', '  statut String', '}', ''];
+    for (const separateur of [LF, `${CR}${LF}`]) {
+      const schema = VUE_VOCABULAIRE.schema + modele.join(separateur);
+      expect(controlerVocabulaire({ ...VUE_VOCABULAIRE, schema }).map((f) => f.famille)).toEqual(['colonne_vocabulaire_en_chaine']);
+    }
+    const coupe = VUE_VOCABULAIRE.schema + modele.join(CR);
+    expect(controlerVocabulaire({ ...VUE_VOCABULAIRE, schema: coupe }).map((f) => f.famille)).toEqual(['fin_de_ligne_non_lf']);
+    for (const champ of ['reqDm003', 'glossaire', 'etatsSource'] as const) {
+      const vue = { ...VUE_VOCABULAIRE, [champ]: `${VUE_VOCABULAIRE[champ]}${CR}suite` };
+      expect(controlerVocabulaire(vue).map((f) => f.famille), champ).toContain('fin_de_ligne_non_lf');
+    }
   });
 });
 
@@ -541,7 +719,7 @@ describe('GOV-030 — la garde : décision PURE, et sortie vue sur de vrais dép
     const { code, sortie } = lancer();
     expect(code).toBe(0);
     expect(sortie).toContain(reel.lignes[0]);
-    const attendu = perimetreAttendu(suivisEtTailles('.'), racinesDeLaGarde(readFileSync('docs/GLOSSAIRE.md', 'utf8')));
+    const attendu = perimetreAttendu(suivisEtOctets('.'), racinesDeLaGarde(readFileSync('docs/GLOSSAIRE.md', 'utf8')));
     expect(sortie).toContain(attendu.perimetre);
     expect(sortie).toContain(attendu.hors);
   });
@@ -555,22 +733,22 @@ describe('GOV-030 — la garde : décision PURE, et sortie vue sur de vrais dép
       'src/LISEZMOI': neutre,
       'src/avec-bom.ts': Uint8Array.from([0xef, 0xbb, 0xbf, ...Buffer.from(neutre)]),
       'messages/fr.json': '{ "titre": "Bienvenue" }\n',
-      'docs/adr/0099-long.md': neutre.repeat(400),
+      'docs/adr/0099-gros.md': gros('la fin du document'),
       'scripts/hors.js': neutre,
     });
     try {
       const propre = lancerDans(depot, resolve(SCRIPT));
       expect(propre.code, propre.sortie).toBe(0);
-      const attendu = perimetreAttendu(suivisEtTailles(depot), racinesDeLaGarde(readFileSync('docs/GLOSSAIRE.md', 'utf8')));
+      const attendu = perimetreAttendu(suivisEtOctets(depot), racinesDeLaGarde(readFileSync('docs/GLOSSAIRE.md', 'utf8')));
       expect(propre.sortie).toContain(attendu.perimetre);
       expect(propre.sortie).toContain(attendu.hors);
 
-      // Le terme au-delà de 4 Kio : une lecture tronquée ne le verrait pas.
-      poser(depot, { 'docs/adr/0100-appat.md': `${neutre.repeat(400)}le producteur emet payment.received\n` });
+      // Le terme en DERNIÈRE ligne d'un fichier de plus d'un mébioctet : aucune fenêtre ne le verrait.
+      poser(depot, { 'docs/adr/0100-appat.md': gros(`le producteur emet payment.received${LF}`) });
       for (const script of [resolve(SCRIPT), resolve(SCRIPT).replace(/\.ts$/, '')]) {
         const fautif = lancerDans(depot, script);
         expect(fautif.code, `${script}\n${fautif.sortie}`).toBe(1);
-        expect(fautif.sortie).toContain('[evenement_hors_nomenclature] docs/adr/0100-appat.md:401');
+        expect(fautif.sortie).toContain(`[evenement_hors_nomenclature] docs/adr/0100-appat.md:${LIGNES_DU_GROS + 1}`);
       }
     } finally {
       rmSync(depot, { recursive: true, force: true });
@@ -587,6 +765,7 @@ describe('GOV-030 — la garde : décision PURE, et sortie vue sur de vrais dép
       poser(depot, {
         'src/content/page.txt': utf16,
         'docs/adr/0101-latin1.md': Uint8Array.from([0x72, 0xe9, 0x73, 0x75, 0x6d, 0xe9, 0x0a]),
+        'prisma/migrations/0002_cr/migration.sql': `-- ouvre ${AG}${CR}UPDATE evenements SET type = 'payment.received';${CR}-- ferme ${AG}${LF}`,
       });
       const sousModule = join(depot, 'src/sous-module');
       mkdirSync(sousModule, { recursive: true });
@@ -606,7 +785,35 @@ describe('GOV-030 — la garde : décision PURE, et sortie vue sur de vrais dép
       for (const chemin of ['src/content/page.txt', 'docs/adr/0101-latin1.md', 'src/sous-module']) {
         expect(fautif.sortie, fautif.sortie).toContain(`[contenu_illisible] ${chemin}`);
       }
+      expect(fautif.sortie).toContain('[fin_de_ligne_non_lf] prisma/migrations/0002_cr/migration.sql:1');
+      // Trois illisibles et un coupé : le compte imprimé est celui des fichiers refusés sans être jugés.
+      expect(fautif.sortie).toContain('; 4 refusé(s) sans être jugé(s)');
     } finally {
+      rmSync(depot, { recursive: true, force: true });
+    }
+  }, 180_000);
+
+  it('REQ-INT-004 : dépôt jetable lu dans CE processus — vue, texte parcouru et lecture de partners:schema:enums ont l’empreinte du disque, fichier par fichier', () => {
+    const racines = racinesDeLaGarde(readFileSync('docs/GLOSSAIRE.md', 'utf8'));
+    const fichiers: Record<string, string | Uint8Array> = {
+      'prisma/schema.prisma': readFileSync('prisma/schema.prisma'),
+      'src/domain/attribution/etats.ts': readFileSync('src/domain/attribution/etats.ts'),
+      'docs/adr/0098-gros.md': gros('la fin du document'),
+      'scripts/lot/gros.js': gros('// la fin du script'),
+    };
+    for (const racine of [...racines, 'scripts/', 'docs/']) {
+      for (const extension of extensionsDeLaPopulation()) {
+        for (const chemin of cheminsSondes(racine, extension)) fichiers[chemin] = `ligne neutre é${LF}`.repeat(2);
+      }
+    }
+    const depot = depotJetable('g30-ep-', fichiers);
+    const ici = process.cwd();
+    try {
+      process.chdir(depot);
+      confronterAuDisque();
+      expect(examiner(vueDuDepot()).fautes).toEqual([]);
+    } finally {
+      process.chdir(ici);
       rmSync(depot, { recursive: true, force: true });
     }
   }, 180_000);

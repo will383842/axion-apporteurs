@@ -22,6 +22,8 @@
  *   • `synonyme_interdit_du_glossaire` — LU dans `docs/GLOSSAIRE.md` (`docs/PRESEANCE.md` §2).
  *   • `contenu_illisible` — un fichier sous une racine que la garde ne lit pas EN ENTIER (octet
  *     NUL, UTF-8 invalide, octets refusés par le disque) : « non lu » n'est pas « propre ».
+ *   • `fin_de_ligne_non_lf` — un fichier sous une racine, ou une source, qu'un consommateur couperait
+ *     sur d'autres lignes que la garde (voir l'exemption de citation, plus bas).
  *   • `source_illisible` (refus nommés, `REFUS_DE_CONCLURE`) et `perimetre_vide` — le refus de
  *     rendre un verdict qu'on n'a pas mesuré.
  *
@@ -35,19 +37,31 @@
  * `docs/GLOSSAIRE.md`, plus `packages/contracts/` (seul endroit où un nom d'événement s'écrit :
  * sans cette racine, son exemption n'aurait aucun contre-témoin atteignable). `perimetreDeLaVue`
  * range chaque suivi sous une racine ou « hors périmètre ». `examiner` décode chaque fichier rangé,
- * quelle que soit son extension, et rend ce qu'il a RÉELLEMENT parcouru : chemin, racine, et octets
- * recomptés ligne par ligne. Les comptes imprimés viennent de là, pas de la partition.
+ * quelle que soit son extension, et rend ce qu'il a RÉELLEMENT parcouru : chemin, racine, et, calculés
+ * sur les lignes parcourues, octets et empreinte du texte. Les comptes imprimés viennent de là, pas de
+ * la partition.
  *
  * ── L'EXEMPTION DE CITATION SE LIT SUR LA GRAMMAIRE ET LA POSITION ───────────────────────────
  *
- * CITER N'EST PAS SE SERVIR : un ADR doit pouvoir écrire le contre-exemple qu'il écarte. Seules les
- * extensions de `GRAMMAIRES_QUI_CITENT` accordent une exemption — le registre les énumère, la preuve
- * confronte les deux — et chacune a un témoin de CHAQUE côté de sa frontière :
+ * CITER N'EST PAS SE SERVIR : un ADR doit pouvoir écrire le contre-exemple qu'il écarte.
+ *
+ * La POSITION se juge ligne par ligne, et une ligne est ce que LF termine (CRLF compris : son CR reste
+ * en fin de ligne). Un consommateur qui coupe AILLEURS — CR seul pour PostgreSQL, Prisma et CommonMark,
+ * U+2028 et U+2029 pour ECMAScript — verrait un commentaire ou une citation s'arrêter là où la garde
+ * les prolonge : ce texte est REFUSÉ (`fin_de_ligne_non_lf`, règle `finDeLigneEtrangere` de
+ * `schema-enums.ts`) avant tout calcul d'exemption. Le texte est découpé UNE fois, et les zones se
+ * calculent sur ces lignes-là.
+ *
+ * La GRAMMAIRE est lue sur la DERNIÈRE extension du nom — ni l'avant-dernière, ni celle d'un dossier.
+ * Seules les extensions de `GRAMMAIRES_QUI_CITENT` accordent une exemption — le registre les énumère,
+ * la preuve confronte les deux — et chacune a un témoin de CHAQUE côté de sa frontière :
  *   — `.md` (prose) : un span d'accents graves fermé sur SA ligne ou la SUIVANTE, un bloc à trois
  *     accents graves REFERMÉ, des guillemets français. Le guillemet droit ne cite pas ;
  *   — `.sql` : les spans d'accents graves DANS un commentaire (deux tirets, bloc barre-étoile) ;
  *   — `.prisma` : les spans d'accents graves DANS un commentaire (double ou triple barre).
  * Toute autre extension — code, JSON, YAML, et toute extension non nommée — n'exempte RIEN.
+ * LIMITE : ces grammaires ne connaissent pas les littéraux de chaîne. Un marqueur de commentaire écrit
+ * DANS une chaîne `.sql` ou `.prisma` y ouvre une zone jusqu'à la fin de sa ligne.
  *
  * ── LA PREUVE : SA POPULATION VIENT DU REGISTRE, SA DÉCISION EST UNE FONCTION PURE ───────────
  *
@@ -59,11 +73,12 @@
  * dépôt que la déclaration de ce qu'il doit prouver.
  */
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
-import { texteDeLaReq, RACINES_CODE, dansLaPorteeDesEtats } from './schema-enums';
+import { texteDeLaReq, RACINES_CODE, dansLaPorteeDesEtats, finDeLigneEtrangere } from './schema-enums';
 import { TYPES_EVENEMENT, TYPES_HORS_CONTRAT_V1 } from '../../packages/contracts/events';
 
 // ── le vocabulaire de la garde ───────────────────────────────────────────────
@@ -72,8 +87,11 @@ import { TYPES_EVENEMENT, TYPES_HORS_CONTRAT_V1 } from '../../packages/contracts
 type FichierVu = { chemin: string; octets: Uint8Array } | { chemin: string; erreur: string };
 /** `refus` ne vaut que pour `source_illisible` : il NOMME lequel des refus a parlé. */
 type Faute = { famille: string; message: string; refus?: RefusDeConclure };
-/** Ce que `examiner` a RÉELLEMENT parcouru : la racine qui l'a rangé, les octets recomptés ligne par ligne. */
-type Examine = { chemin: string; racine: string; octets: number };
+/**
+ * Ce que `examiner` a RÉELLEMENT parcouru : la racine qui l'a rangé, et, calculés sur les lignes
+ * parcourues, les octets et l'EMPREINTE sha256 du texte — une taille égale ne dit rien d'octets remplacés.
+ */
+type Examine = { chemin: string; racine: string; octets: number; empreinte: string };
 
 export type Vue = {
   /** Le texte de REQ-INT-004 — source des sept types valides et des modèles refusés. */
@@ -107,6 +125,12 @@ export const FAMILLES: { nom: string; explication: string }[] = [
       "octets refusés par le disque) : « non lu » n'est pas « propre ».",
   },
   {
+    nom: 'fin_de_ligne_non_lf',
+    explication:
+      "un fichier sous une racine, ou une source, porte une fin de ligne autre que LF ou CRLF qu'un " +
+      'consommateur coupe (CR seul, U+2028, U+2029) : un commentaire ou une citation y couvrirait la ligne suivante.',
+  },
+  {
     nom: 'terme_axionia_invalide',
     explication:
       "un modèle que le dossier de spécification prête à axionia et qui n'y existe pas (AFF-01 à AFF-03).",
@@ -131,7 +155,7 @@ export const FAMILLES: { nom: string; explication: string }[] = [
  * Les refus de conclure de `source_illisible`, confrontés au registre comme `FAMILLES`. Le type
  * interdit d'émettre un refus sans l'inscrire ici — et l'inscrire ici l'expose à la confrontation.
  */
-export const REFUS_DE_CONCLURE = [
+const REFUS_DE_CONCLURE = [
   'req_int_004_muette',
   'contrat_sans_evenement',
   'contrat_et_exigence_divergents',
@@ -340,9 +364,11 @@ function spansDansZones(ligne: string, zones: [number, number][]): [number, numb
   return out;
 }
 
-/** LES ZONES EXEMPTÉES, ligne par ligne, selon la grammaire du fichier. */
-function zonesExemptees(chemin: string, contenu: string): [number, number][][] {
-  const lignes = contenu.split('\n');
+/**
+ * LES ZONES EXEMPTÉES, ligne par ligne, selon la grammaire du fichier — sur les lignes MÊMES
+ * qu'`examiner` parcourt : la découpe n'est écrite qu'une fois.
+ */
+function zonesExemptees(chemin: string, lignes: string[]): [number, number][][] {
   const grammaire = grammaireDuFichier(chemin);
   if (grammaire === 'sans_exemption') return lignes.map(() => []);
   if (grammaire === 'prose') return zonesDeProse(lignes);
@@ -424,7 +450,21 @@ export function perimetreDeLaVue(vue: Vue): Perimetre {
   return { racines, parRacine, lus: parRacine.flatMap((r) => r.lus), horsPerimetre };
 }
 
-// ── la lecture EN ENTIER ─────────────────────────────────────────────────────
+// ── la lecture EN ENTIER, et sur les lignes du consommateur ──────────────────
+
+/** Posés par leur code : écrits dans ce fichier, ils le couperaient lui-même. */
+const CR = String.fromCharCode(13);
+const LF = String.fromCharCode(10);
+
+/** Le refus d'un texte que la garde découperait sur d'autres lignes que son consommateur (`finDeLigneEtrangere`). */
+function refusDeFinDeLigne(ou: string, fin: { ligne: number; code: string }): Faute {
+  return {
+    famille: 'fin_de_ligne_non_lf',
+    message:
+      `${ou}:${fin.ligne} — fin de ligne ${fin.code}, que cette garde ne coupe pas et qu'un consommateur coupe : ` +
+      "un commentaire ou une citation y couvrirait la ligne suivante, et l'exemption mentirait. Écris LF (ou CRLF).",
+  };
+}
 
 /** `ignoreBOM` : la marque d'ordre est GARDÉE dans le texte, pour que ses octets soient recomptés. */
 const DECODEUR = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
@@ -566,6 +606,14 @@ export function examiner(vue: Vue): { fautes: Faute[]; examines: Examine[] } {
     });
   }
 
+  for (const [source, texte] of [
+    ['REQ-INT-004', vue.reqInt004],
+    ['docs/GLOSSAIRE.md', vue.glossaire],
+  ] as const) {
+    const fin = finDeLigneEtrangere(texte);
+    if (fin !== undefined) fautes.push(refusDeFinDeLigne(source, fin));
+  }
+
   // ── le périmètre ──────────────────────────────────────────────────────────
   const { racines, parRacine, lus } = perimetreDeLaVue(vue);
   if (lus.length === 0) {
@@ -590,13 +638,24 @@ export function examiner(vue: Vue): { fautes: Faute[]; examines: Examine[] } {
         });
         continue;
       }
-      const lignes = lecture.texte.split('\n');
-      const zones = zonesExemptees(fichier.chemin, lecture.texte);
+      const fin = finDeLigneEtrangere(lecture.texte);
+      if (fin !== undefined) {
+        fautes.push(refusDeFinDeLigne(fichier.chemin, fin));
+        continue;
+      }
+      const lignes = lecture.texte.split(LF);
+      const zones = zonesExemptees(fichier.chemin, lignes);
       const dansLeContrat = fichier.chemin.startsWith(RACINE_CONTRATS);
-      let octets = lignes.length - 1;
+      let octets = 0;
+      const empreinte = createHash('sha256');
 
       lignes.forEach((ligne, i) => {
+        if (i > 0) {
+          octets += 1;
+          empreinte.update(LF);
+        }
         octets += Buffer.byteLength(ligne, 'utf8');
+        empreinte.update(ligne);
         const citees = zones[i] ?? [];
         const cite = (index: number): boolean => citees.some(([a, b]) => index >= a && index < b);
 
@@ -613,7 +672,7 @@ export function examiner(vue: Vue): { fautes: Faute[]; examines: Examine[] } {
           }
         }
       });
-      examines.push({ chemin: fichier.chemin, racine, octets });
+      examines.push({ chemin: fichier.chemin, racine, octets, empreinte: empreinte.digest('hex') });
     }
   }
 
@@ -846,6 +905,28 @@ export const TEMOINS: Temoin[] = [
     vue: () => avecFichierVu({ chemin: 'src/sous-module', erreur: 'EISDIR' }),
   },
   {
+    id: 'fin_de_ligne_cr_seul',
+    famille: 'fin_de_ligne_non_lf',
+    quoi: "en `.sql`, un CR seul : PostgreSQL y termine le commentaire, et l'instruction qui suit serait couverte",
+    vue: () =>
+      avec(
+        'prisma/migrations/0005_cr/migration.sql',
+        [`-- ouvre ${AG}`, "UPDATE evenements SET type = 'payment.received';", `-- ferme ${AG}`].join(CR)
+      ),
+  },
+  {
+    id: 'fin_de_ligne_separateur_unicode',
+    famille: 'fin_de_ligne_non_lf',
+    quoi: 'un séparateur de ligne Unicode, qu’ECMAScript coupe',
+    vue: () => avec('src/server/separateur.ts', `// note${String.fromCharCode(0x2028)}export const rien = true;`),
+  },
+  {
+    id: 'fin_de_ligne_dans_une_source',
+    famille: 'fin_de_ligne_non_lf',
+    quoi: 'le glossaire, source des synonymes et des racines, porte un CR seul',
+    vue: () => ({ ...VUE_CONFORME, glossaire: `${GLOSSAIRE_FIXTURE}${CR}suite` }),
+  },
+  {
     id: 'modele_dans_le_code',
     famille: 'terme_axionia_invalide',
     quoi: 'un modèle refusé référencé dans du code',
@@ -917,6 +998,18 @@ export const TEMOINS: Temoin[] = [
     famille: 'evenement_hors_nomenclature',
     quoi: "une extension sans grammaire nommée, sous une racine, est LUE et n'exempte rien",
     vue: () => avec('src/content/page.mdx', `le producteur emet ${AG}payment.received${AG}`),
+  },
+  {
+    id: 'extension_composee',
+    famille: 'evenement_hors_nomenclature',
+    quoi: "l'exemption se lit sur la DERNIÈRE extension du nom : `.md.ts` est du code",
+    vue: () => avec('src/modeles/modele.md.ts', `const sujet = ${AG}payment.received${AG};`),
+  },
+  {
+    id: 'dossier_a_point',
+    famille: 'evenement_hors_nomenclature',
+    quoi: "le point d'un DOSSIER n'est pas une extension : sous `v1.md/`, un `.ts` reste du code",
+    vue: () => avec('src/v1.md/emetteur.ts', `const sujet = ${AG}payment.received${AG};`),
   },
   {
     id: 'sql_accent_grave_hors_commentaire',
@@ -1011,7 +1104,19 @@ export const CONTRE_TEMOINS: ContreTemoin[] = [
       ),
   },
   {
-    quoi: "un commentaire de schéma Prisma qui NOMME l'interdit — la forme de `prisma/schema.prisma:49`",
+    quoi: 'CRLF est une fin de ligne : un ADR écrit ainsi est lu, et ses citations restent exemptées',
+    vue: () =>
+      avec(
+        'docs/adr/0012-crlf.md',
+        ['les noms `invoice.issued` et `devis.signed` sont refusés', 'le modèle `Invoice` a disparu', ''].join(CR + LF)
+      ),
+  },
+  {
+    quoi: 'une extension qui cite, DERNIÈRE du nom composé, exempte sa citation : `.ts.md` est de la prose',
+    vue: () => avec('docs/adr/9993-note.ts.md', `le producteur emettait ${AG}payment.received${AG}`),
+  },
+  {
+    quoi: "un commentaire de schéma Prisma qui NOMME l'interdit — la forme de `prisma/schema.prisma`",
     vue: () =>
       avec(
         'prisma/schema.prisma',
@@ -1231,7 +1336,7 @@ export function decisionDeLaGarde(vue: Vue): Decision {
     return { racine, n: lus.length, octets: lus.reduce((somme, e) => somme + e.octets, 0) };
   });
   const vides = parRacine.filter((r) => r.n === 0).map((r) => r.racine);
-  const illisibles = fautes.filter((f) => f.famille === 'contenu_illisible').length;
+  const refuses = perimetre.lus.length - examines.length;
   const synonymes = synonymesDuGlossaire(vue.glossaire);
   const exerces = synonymes.filter((s) => s.exerce);
   const conditionnels = synonymes.filter((s) => !s.exerce);
@@ -1253,9 +1358,9 @@ export function decisionDeLaGarde(vue: Vue): Decision {
   lignes.push(
     `   Périmètre : ${examines.length} fichier(s) lu(s) en entier sur ${vue.fichiers.length} suivi(s) — ` +
       parRacine.map((r) => `${r.racine} ${r.n} (${r.octets} octets)`).join(', ') +
-      (illisibles > 0 ? ` ; ${illisibles} refusé(s) faute d'être lisible(s) en entier` : '') +
+      (refuses > 0 ? ` ; ${refuses} refusé(s) sans être jugé(s)` : '') +
       `. Toute extension est lue ; seules ${EXTENSIONS_QUI_CITENT.map((e) => `.${e}`).join(', ')} ` +
-      'accordent une exemption de citation.'
+      'accordent une exemption de citation, lue sur la dernière extension du nom.'
   );
   if (vides.length > 0) {
     lignes.push(
