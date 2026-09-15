@@ -1847,9 +1847,11 @@ function chainesLancees(source: string, nom: string): string[] {
     if (valeur !== null) {
       trouvees.push(valeur);
     } else if (ts.isIdentifier(n) && constantes.has(n.text) && !suivis.has(n.text)) {
-      for (const valeurLiee of constantes.get(n.text)!) recueillir(valeurLiee, new Set([...suivis, n.text]));
+      for (const valeurLiee of constantes.get(n.text)!)
+        recueillir(valeurLiee, new Set([...suivis, n.text]));
     } else {
-      if (ts.isTemplateHead(n) || ts.isTemplateMiddle(n) || ts.isTemplateTail(n)) trouvees.push(n.text);
+      if (ts.isTemplateHead(n) || ts.isTemplateMiddle(n) || ts.isTemplateTail(n))
+        trouvees.push(n.text);
       ts.forEachChild(n, (enfant) => recueillir(enfant, suivis));
     }
   };
@@ -1864,7 +1866,8 @@ function chainesLancees(source: string, nom: string): string[] {
     ) {
       return appelee(f.expression);
     }
-    if (ts.isBinaryExpression(f) && f.operatorToken.kind === ts.SyntaxKind.CommaToken) return appelee(f.right);
+    if (ts.isBinaryExpression(f) && f.operatorToken.kind === ts.SyntaxKind.CommaToken)
+      return appelee(f.right);
     if (ts.isIdentifier(f)) return f.text;
     if (ts.isPropertyAccessExpression(f)) return f.name.text;
     if (ts.isElementAccessExpression(f)) return plier(f.argumentExpression, new Set());
@@ -1873,7 +1876,8 @@ function chainesLancees(source: string, nom: string): string[] {
   const marcher = (n: ts.Node): void => {
     if (ts.isCallExpression(n)) {
       const nomAppele = appelee(n.expression);
-      if (nomAppele !== null && LANCEURS.has(nomAppele)) for (const a of n.arguments) recueillir(a, new Set());
+      if (nomAppele !== null && LANCEURS.has(nomAppele))
+        for (const a of n.arguments) recueillir(a, new Set());
     }
     ts.forEachChild(n, marcher);
   };
@@ -1932,7 +1936,10 @@ it('REQ-CPL-018 — le témoin d’énumération voit l’ACTE sous ses formes m
     ['concaténation de littéraux', "execFileSync('git', ['ls-' + 'files', '-z']);"],
     ['join d’un tableau littéral', "execFileSync('git', [['ls', 'files'].join('-'), '-z']);"],
     ['gabarit interpolé', "const f = 'files';\nexecFileSync('git', [`ls-${f}`, '-z']);"],
-    ['tableau d’arguments lié par const', "const ARGS = ['ls-files', '-z'];\nexecFileSync('git', ARGS);"],
+    [
+      'tableau d’arguments lié par const',
+      "const ARGS = ['ls-files', '-z'];\nexecFileSync('git', ARGS);",
+    ],
     ['option globale -C', "execSync('git -C . ls-files');"],
     ['option globale -C à argument quoté', 'execSync(\'git -C "a b" ls-files\');'],
     ['option globale -c clé=valeur', "execSync('git -c core.quotepath=off ls-files');"],
@@ -1946,18 +1953,36 @@ it('REQ-CPL-018 — le témoin d’énumération voit l’ACTE sous ses formes m
     ['après le séparateur ;', "execSync('cd . ; git ls-files');"],
     ['après le séparateur &&', "execSync('cd . && git ls-files');"],
     ['après le séparateur |', "execSync('true | git ls-files');"],
-    ['fragment d’un gabarit dont une valeur est inconnue', 'execSync(`git ${process.env.X} ls-files`);'],
-    ['fragment d’une concaténation dont une valeur est inconnue', "execSync('git ' + dossier() + ' ls-files');"],
+    [
+      'fragment d’un gabarit dont une valeur est inconnue',
+      'execSync(`git ${process.env.X} ls-files`);',
+    ],
+    [
+      'fragment d’une concaténation dont une valeur est inconnue',
+      "execSync('git ' + dossier() + ' ls-files');",
+    ],
     ['fonction du module atteinte par une propriété', "cp.execFileSync('git', ['ls-files']);"],
-    ['module chargé par require', "require('node:child_process').execFileSync('git', ['ls-files']);"],
-    ['module chargé par import()', "(await import('node:child_process')).spawnSync('git', ['ls-files']);"],
+    [
+      'module chargé par require',
+      "require('node:child_process').execFileSync('git', ['ls-files']);",
+    ],
+    [
+      'module chargé par import()',
+      "(await import('node:child_process')).spawnSync('git', ['ls-files']);",
+    ],
     ['sous-commande ls-tree', "spawnSync('git', ['ls-tree', '-r', '--name-only', 'HEAD']);"],
     ['fonction atteinte par un accès entre crochets', "cp['execFileSync']('git', ['ls-files']);"],
-    ['accès entre crochets par une clé liée par const', "const F = 'execSync';\ncp[F]('git ls-files');"],
+    [
+      'accès entre crochets par une clé liée par const',
+      "const F = 'execSync';\ncp[F]('git ls-files');",
+    ],
     ['fonction entre parenthèses', "(execFileSync)('git', ['ls-files']);"],
     ['fonction suivie d’une assertion non nulle', "execFileSync!('git', ['ls-files']);"],
     ['fonction transtypée par as', "(execSync as typeof execSync)('git ls-files');"],
-    ['fonction transtypée par satisfies', "(execSync satisfies unknown as typeof execSync)('git ls-files');"],
+    [
+      'fonction transtypée par satisfies',
+      "(execSync satisfies unknown as typeof execSync)('git ls-files');",
+    ],
     ['fonction transtypée par chevrons', "(<typeof execSync>execSync)('git ls-files');"],
     ['fonction derrière une virgule', "(0, execSync)('git ls-files');"],
     [
@@ -1976,13 +2001,19 @@ it('REQ-CPL-018 — le témoin d’énumération voit l’ACTE sous ses formes m
   ];
   const CONTRE_TEMOINS: [string, string][] = [
     ['commentaire', "// on n'appelle jamais git ls-files ici\nexport const x = 1;"],
-    ['prose d’un message', "throw new Error('une garde qui quitte la source retrouve git ls-files');"],
+    [
+      'prose d’un message',
+      "throw new Error('une garde qui quitte la source retrouve git ls-files');",
+    ],
     ['prose passée à une fonction qui ne lance rien', "console.error('git ls-files a échoué');"],
     ['autre commande git', "execFileSync('git', ['rev-parse', '--show-toplevel']);"],
     ['mot qui prolonge la sous-commande', "execFileSync('git', ['log', '--grep=ls-filesystem']);"],
     ['mot qui précède la sous-commande', "execFileSync('npm', ['run', 'tools-files']);"],
   ];
-  expect(FORMES.filter(([, s]) => !appelleLEnumeration(s, 'forme.ts')).map(([q]) => q), 'forme non vue').toEqual([]);
+  expect(
+    FORMES.filter(([, s]) => !appelleLEnumeration(s, 'forme.ts')).map(([q]) => q),
+    'forme non vue'
+  ).toEqual([]);
   expect(
     CONTRE_TEMOINS.filter(([, s]) => appelleLEnumeration(s, 'prose.ts')).map(([q]) => q),
     'faux positif : le témoin condamnerait le texte qui le documente'
@@ -1994,14 +2025,20 @@ it('REQ-CPL-018 — le témoin d’énumération voit l’ACTE sous ses formes m
   try {
     const attendus = Object.values(ts.Extension).map((x) => `garde${x}`);
     for (const nom of [...attendus, 'notes.md']) writeFileSync(join(dossier, nom), '');
-    expect(enumererFichiers(dossier).map((f) => f.slice(dossier.length + 1)).sort()).toEqual(attendus.sort());
+    expect(
+      enumererFichiers(dossier)
+        .map((f) => f.slice(dossier.length + 1))
+        .sort()
+    ).toEqual(attendus.sort());
   } finally {
     rmSync(dossier, { recursive: true, force: true });
   }
 });
 
 it('REQ-CPL-018 — `git ls-files` n’est appelé QUE par la source unique du périmètre', () => {
-  const fichiers = enumererFichiers('scripts').filter((f) => f !== 'scripts/lot/fichiers-suivis.ts');
+  const fichiers = enumererFichiers('scripts').filter(
+    (f) => f !== 'scripts/lot/fichiers-suivis.ts'
+  );
   // ⚠️ CONTRÔLE POSITIF : un périmètre vide rendrait `[]`, et `expect([]).toEqual([])` PASSE.
   expect(fichiers.length, 'périmètre vide : le témoin dirait toujours oui').toBeGreaterThan(20);
   const enFaute = fichiers.filter((f) => appelleLEnumeration(readFileSync(f, 'utf8'), f));

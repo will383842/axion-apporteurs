@@ -155,7 +155,10 @@ export function entreesSuivies(): EntreeSuivie[] {
     .filter(Boolean)
     .map((ligne): EntreeSuivie => {
       const m = ENTREE_D_INDEX.exec(ligne);
-      if (!m) throw new PerimetreIllisible(`\`git ls-files -s\` a rendu une entrée illisible : « ${ligne} ».`);
+      if (!m)
+        throw new PerimetreIllisible(
+          `\`git ls-files -s\` a rendu une entrée illisible : « ${ligne} ».`
+        );
       return { mode: m[1]!, empreinte: m[2]!, etage: m[3]!, chemin: m[4]! };
     });
   const fichiers = entrees.map((e) => e.chemin);

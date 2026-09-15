@@ -184,7 +184,7 @@ export const LIMITE_DE_LA_FORME =
   "Limite déclarée : ce que la forme ne reconnaît pas passe sans être vu. Elle reconnaît un IBAN écrit d'un seul " +
   'tenant — code de région, deux chiffres, groupes de quatre caractères séparés au plus par une espace (ASCII ou ' +
   'typographique) ou un tiret (ASCII ou insécable), 15 à 34 caractères, clé mod-97 valide, rien de collé devant ni ' +
-  "derrière — et un BIC en majuscules dont le mot-clé touche un délimiteur ou une balise. Passent donc, entre autres : " +
+  'derrière — et un BIC en majuscules dont le mot-clé touche un délimiteur ou une balise. Passent donc, entre autres : ' +
   'une valeur masquée ou à clé fausse ; encodée (base64, hexadécimal, entité HTML, pourcentage, quoted-printable, ' +
   "échappement JSON, flux de PDF ou contenu compressé qui forment de l'UTF-8 valide) ; coupée ou espacée autrement " +
   "(saut de ligne, tabulation, deux espaces, point, caractère invisible, groupes d'une autre longueur) ; écrite en " +
@@ -2264,7 +2264,10 @@ export function filtresDepuisSortie(chemins: string[], sortie: string): Map<stri
  * (sous-module) ou absent, ou une réponse qui ne se relit pas au mot près font tomber la garde,
  * jamais un contenu vide. Exportée pour être éprouvée sur des noms que Git pour Windows refuse.
  */
-export function blobsDe(entrees: readonly EntreeSuivie[], cwd: string = process.cwd()): Map<string, Buffer> {
+export function blobsDe(
+  entrees: readonly EntreeSuivie[],
+  cwd: string = process.cwd()
+): Map<string, Buffer> {
   const enConflit = entrees.filter((e) => e.etage !== '0');
   if (enConflit.length > 0) {
     throw new Error(
@@ -2286,7 +2289,12 @@ export function blobsDe(entrees: readonly EntreeSuivie[], cwd: string = process.
     const [oid, type, taille] = entete.split(' ');
     const debut = fin + 1;
     const suite = debut + Number(taille);
-    if (oid !== empreinte || type !== 'blob' || !/^\d+$/.test(taille ?? '') || sortie[suite] !== 0x0a) {
+    if (
+      oid !== empreinte ||
+      type !== 'blob' ||
+      !/^\d+$/.test(taille ?? '') ||
+      sortie[suite] !== 0x0a
+    ) {
       throw new Error(
         `git cat-file --batch a rendu « ${entete} » pour ${chemin} (empreinte d'index ${empreinte}) : la lecture du blob est amputée.`
       );
@@ -2294,7 +2302,8 @@ export function blobsDe(entrees: readonly EntreeSuivie[], cwd: string = process.
     blobs.set(chemin, sortie.subarray(debut, suite));
     i = suite + 1;
   }
-  if (i !== sortie.length) throw new Error('git cat-file --batch a rendu plus que les blobs demandés.');
+  if (i !== sortie.length)
+    throw new Error('git cat-file --batch a rendu plus que les blobs demandés.');
   return blobs;
 }
 
@@ -2317,7 +2326,11 @@ export function lireUnivers(): Univers {
   const blobs = blobsDe(entrees);
   const fichiers = chemins.map((chemin): Fichier => {
     const filtre = filtres.get(chemin);
-    return { chemin, contenu: blobs.get(chemin)!.toString('utf8'), ...(filtre === undefined ? {} : { filtre }) };
+    return {
+      chemin,
+      contenu: blobs.get(chemin)!.toString('utf8'),
+      ...(filtre === undefined ? {} : { filtre }),
+    };
   });
   return {
     registre: registreDuDepot(),
@@ -2579,7 +2592,11 @@ function prouver(): number {
       // Le fichier qu'un poste a extrait : un texte propre ne l'absout pas, l'attribut suffit.
       famille: 'contenu_publie_non_lu',
       univers: muter((u) => {
-        u.fichiers.push({ chemin: 'notes/extrait.txt', contenu: 'Relevé du trimestre.\n', filtre: 'lfs' });
+        u.fichiers.push({
+          chemin: 'notes/extrait.txt',
+          contenu: 'Relevé du trimestre.\n',
+          filtre: 'lfs',
+        });
       }),
     },
   ];
@@ -2722,7 +2739,10 @@ function prouver(): number {
     {
       quoi: 'une documentation qui CITE la première ligne d’un pointeur Git LFS — lue, pas refusée',
       univers: muter((u) => {
-        u.fichiers.push({ chemin: 'docs/lfs.md', contenu: '# Git LFS\n\nversion https://git-lfs.github.com/spec/v1\n' });
+        u.fichiers.push({
+          chemin: 'docs/lfs.md',
+          contenu: '# Git LFS\n\nversion https://git-lfs.github.com/spec/v1\n',
+        });
       }),
     },
     {
@@ -2756,9 +2776,13 @@ function prouver(): number {
   }
 
   // La réciproque : un témoin dont la famille n'est pas DÉCLARÉE prouve une règle que la garde ne dit pas avoir.
-  const nonDeclarees = [...new Set(TEMOINS.map((t) => t.famille))].filter((f) => !FAMILLES.includes(f));
+  const nonDeclarees = [...new Set(TEMOINS.map((t) => t.famille))].filter(
+    (f) => !FAMILLES.includes(f)
+  );
   if (nonDeclarees.length > 0) {
-    console.error(`❌ ${nonDeclarees.length} famille(s) rougie(s) par un témoin mais absente(s) de FAMILLES : ${nonDeclarees.join(', ')}.`);
+    console.error(
+      `❌ ${nonDeclarees.length} famille(s) rougie(s) par un témoin mais absente(s) de FAMILLES : ${nonDeclarees.join(', ')}.`
+    );
     return 1;
   }
 
