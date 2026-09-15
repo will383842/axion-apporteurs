@@ -57,7 +57,7 @@ import {
   valeur,
   type Registre,
 } from '../../src/config/entite';
-import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import { entreesSuiviesOuRefus, type EntreeSuivie } from '../lot/fichiers-suivis';
 
 const CHEMIN_REGISTRE = 'config/entite.json';
 const CHEMIN_DECISIONS = 'docs/DECISIONS.md';
@@ -157,7 +157,8 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
  * Elle dit d'abord ce que la forme RECONNAÎT — la seule description exhaustive possible — puis des
  * exemples de ce qui passe, et que leur liste n'est pas close.
  *
- * Ce que la garde lit est le BLOB que l'index publie, jamais l'arbre de travail : un attribut qui
+ * Ce que la garde lit est le BLOB que l'index associe à chaque chemin, demandé par son empreinte et
+ * jamais par un nom que git interprète, et jamais l'arbre de travail : un attribut qui
  * réécrit l'arbre à l'extraction ne lui soustrait rien. Ce qu'elle ne sait pas lire en entier, et un
  * blob dont le contenu servi est ailleurs (pointeur Git LFS, attribut `filter`), ne sont pas des
  * limites : ce sont des REFUS (`contenu_illisible`, `contenu_publie_non_lu`).
@@ -2129,10 +2130,12 @@ function prouverCorpsPublie(): number {
  * 🔴 Le périmètre vient désormais d’UNE source unique qui REFUSE au lieu de rendre `[]`.
  * Cette fonction portait un `try/catch { return [] }` — recopié à l’identique dans CINQ gardes —
  * et rendait la garde d’argent VERTE sur ZÉRO fichier dans un dépôt sans `.git`, dépôt PUBLIC.
- * La mesure est dans `scripts/lot/fichiers-suivis.ts`.
+ * La mesure est dans `scripts/lot/fichiers-suivis.ts`. La garde en prend les ENTRÉES
+ * (`entreesSuiviesOuRefus`, dont `fichiersSuivisOuRefus` dérive) : chaque chemin avec l'empreinte
+ * que l'index lui associe, sur la même énumération.
  */
-function fichiersSuivis(): string[] {
-  return fichiersSuivisOuRefus('gov:entite');
+function entreesSuivies(): EntreeSuivie[] {
+  return entreesSuiviesOuRefus('gov:entite');
 }
 
 /**
@@ -2169,29 +2172,46 @@ export function filtresDepuisSortie(chemins: string[], sortie: string): Map<stri
 }
 
 /**
- * Les octets du BLOB que l'index de git porte pour chaque chemin — ce que le dépôt publie, et jamais
+ * Les octets du BLOB que l'index de git associe à chaque chemin — ce que le dépôt publie, et jamais
  * l'arbre de travail, que git réécrit à l'extraction selon des attributs qu'on n'a pas à énumérer
- * (`ident`, `working-tree-encoding`, `eol`, `filter`, macros). Le blob est demandé PAR CHEMIN
- * (`:<chemin>`, l'étage 0 de l'index) : aucune seconde énumération, la liste vient de la source
- * unique. Aucun `catch` : un chemin sans blob à l'étage 0 (sous-module, conflit, objet absent) ou une
- * réponse qui ne se relit pas au mot près font tomber la garde, jamais un contenu vide.
+ * (`ident`, `working-tree-encoding`, `eol`, `filter`, macros).
+ *
+ * 🔴 L'objet est demandé PAR L'EMPREINTE que l'entrée d'index porte pour CE chemin, jamais par un
+ * nom que git interprète. La passe précédente demandait `:<chemin>` : git y lit la grammaire des
+ * révisions (`0:notes/rib.txt` = étage 0 de `notes/rib.txt`) et retire un retour chariot final, et
+ * un fichier porteur d'IBAN voisin d'un leurre propre sortait EXIT=0 sous Linux. L'empreinte rendue
+ * est en plus comparée à celle demandée.
+ *
+ * Aucun `catch` : une entrée à un étage autre que 0 (conflit), un objet qui n'est pas un blob
+ * (sous-module) ou absent, ou une réponse qui ne se relit pas au mot près font tomber la garde,
+ * jamais un contenu vide. Exportée pour être éprouvée sur des noms que Git pour Windows refuse.
  */
-function blobsDe(chemins: string[]): Map<string, Buffer> {
+export function blobsDe(entrees: readonly EntreeSuivie[], cwd: string = process.cwd()): Map<string, Buffer> {
+  const enConflit = entrees.filter((e) => e.etage !== '0');
+  if (enConflit.length > 0) {
+    throw new Error(
+      `l'index porte ${enConflit.length} entrée(s) à un étage autre que 0 (conflit) : ` +
+        `${enConflit.map((e) => `${e.chemin} (étage ${e.etage})`).join(', ')}. La garde ne sait pas quel blob sera publié.`
+    );
+  }
   const sortie = execFileSync('git', ['cat-file', '--batch'], {
-    input: chemins.map((c) => `:${c}\n`).join(''),
+    cwd,
+    input: entrees.map((e) => `${e.empreinte}\n`).join(''),
     stdio: ['pipe', 'pipe', 'pipe'],
     maxBuffer: 2 ** 30,
   });
   const blobs = new Map<string, Buffer>();
   let i = 0;
-  for (const chemin of chemins) {
+  for (const { chemin, empreinte } of entrees) {
     const fin = sortie.indexOf(0x0a, i);
     const entete = fin < 0 ? '' : sortie.subarray(i, fin).toString('utf8');
     const [oid, type, taille] = entete.split(' ');
     const debut = fin + 1;
     const suite = debut + Number(taille);
-    if (!/^[0-9a-f]{40,64}$/.test(oid ?? '') || type !== 'blob' || !/^\d+$/.test(taille ?? '') || sortie[suite] !== 0x0a) {
-      throw new Error(`git cat-file --batch a rendu « ${entete} » pour ${chemin} : la lecture du blob est amputée.`);
+    if (oid !== empreinte || type !== 'blob' || !/^\d+$/.test(taille ?? '') || sortie[suite] !== 0x0a) {
+      throw new Error(
+        `git cat-file --batch a rendu « ${entete} » pour ${chemin} (empreinte d'index ${empreinte}) : la lecture du blob est amputée.`
+      );
     }
     blobs.set(chemin, sortie.subarray(debut, suite));
     i = suite + 1;
@@ -2201,7 +2221,8 @@ function blobsDe(chemins: string[]): Map<string, Buffer> {
 }
 
 /**
- * L'univers RÉEL : chaque fichier suivi, lu dans le BLOB que l'index publie et décodé en UTF-8, sans
+ * L'univers RÉEL : chaque fichier suivi, lu dans le BLOB que l'index associe à son chemin (par
+ * l'empreinte de l'entrée d'index) et décodé en UTF-8, sans
  * branche sur son chemin (GOV-036), avec son attribut `filter` quand il en a un.
  *
  * Le décodage ne juge rien. Ce qu'il ne sait pas rendre en entier y laisse un octet NUL ou un
@@ -2212,9 +2233,10 @@ function blobsDe(chemins: string[]): Map<string, Buffer> {
  * (`perimetre_entame`).
  */
 export function lireUnivers(): Univers {
-  const chemins = fichiersSuivis();
+  const entrees = entreesSuivies();
+  const chemins = entrees.map((e) => e.chemin);
   const filtres = filtresDe(chemins);
-  const blobs = blobsDe(chemins);
+  const blobs = blobsDe(entrees);
   const fichiers = chemins.map((chemin): Fichier => {
     const filtre = filtres.get(chemin);
     return { chemin, contenu: blobs.get(chemin)!.toString('utf8'), ...(filtre === undefined ? {} : { filtre }) };

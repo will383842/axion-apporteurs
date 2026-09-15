@@ -68,7 +68,33 @@ function normaliser(chemin: string): string {
   return p;
 }
 
+/**
+ * Une entrée de l'INDEX, telle que `git ls-files -s -z` la rend : le chemin, et l'objet que l'index
+ * associe à CE chemin — mode, empreinte, étage.
+ *
+ * 🔴 L'EMPREINTE N'EST PAS UN ORNEMENT. Une garde qui relit le contenu publié en redemandant l'objet
+ * PAR SON NOM (`:<chemin>` à `git cat-file`) confie ce nom à la grammaire des révisions :
+ * `0:notes/rib.txt` s'y lit « étage 0 de `notes/rib.txt` », et un retour chariot final est retiré par
+ * la lecture ligne à ligne. Mesuré sous Linux sur la PR #39 : un fichier suivi porteur d'IBAN, voisin
+ * d'un leurre propre, sortait EXIT=0 « lu(s) en entier ». L'objet d'un chemin se demande par
+ * l'empreinte que l'index lui associe ICI — la même énumération, jamais une seconde.
+ */
+export interface EntreeSuivie {
+  chemin: string;
+  mode: string;
+  empreinte: string;
+  etage: string;
+}
+
+/** Une entrée de `git ls-files -s -z` : `<mode> <empreinte> <étage>`, tabulation, puis le chemin — tout le reste. */
+const ENTREE_D_INDEX = /^([0-7]{6}) ([0-9a-f]{40,64}) ([0-3])\t([\s\S]+)$/;
+
 export function fichiersSuivis(): string[] {
+  return entreesSuivies().map((e) => e.chemin);
+}
+
+/** Les ENTRÉES de l'index. **Lève** si git échoue, ne rend rien, ou rend une entrée illisible — jamais un tableau vide. */
+export function entreesSuivies(): EntreeSuivie[] {
   // 🔴 TROISIÈME ÉTAT : « je n'ai regardé qu'UN BOUT ».
   // Motif de `schema` au 24e tour. `git ls-files` rend les fichiers du RÉPERTOIRE COURANT, pas du
   // dépôt : lancées depuis `packages/` (5 fichiers suivis sur 171), `gov:identifiants` et
@@ -113,7 +139,8 @@ export function fichiersSuivis(): string[] {
     // `✅` et exit 0. Sur un dépôt PUBLIC et FRANCOPHONE.
     // `-z` sépare par NUL et n'échappe RIEN — il ferme du même coup les noms à retour de ligne.
     // `core.quotepath=false` est la ceinture : il vaut même si un jour `-z` saute.
-    sortie = execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-z'], {
+    // `-s` rend, dans la MÊME énumération, l'objet que l'index associe à chaque chemin.
+    sortie = execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-s', '-z'], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -123,7 +150,15 @@ export function fichiersSuivis(): string[] {
         'Sans dépôt git, le périmètre est INCONNU — pas vide.'
     );
   }
-  const fichiers = sortie.split('\0').filter(Boolean);
+  const entrees = sortie
+    .split('\0')
+    .filter(Boolean)
+    .map((ligne): EntreeSuivie => {
+      const m = ENTREE_D_INDEX.exec(ligne);
+      if (!m) throw new PerimetreIllisible(`\`git ls-files -s\` a rendu une entrée illisible : « ${ligne} ».`);
+      return { mode: m[1]!, empreinte: m[2]!, etage: m[3]!, chemin: m[4]! };
+    });
+  const fichiers = entrees.map((e) => e.chemin);
   if (fichiers.length === 0) {
     throw new PerimetreIllisible('`git ls-files` n’a rendu AUCUN fichier : le périmètre est vide ou illisible.');
   }
@@ -148,7 +183,7 @@ export function fichiersSuivis(): string[] {
         'compte de fichiers baisserait sans que rien ne le dise.'
     );
   }
-  return fichiers;
+  return entrees;
 }
 
 /**
@@ -156,8 +191,13 @@ export function fichiersSuivis(): string[] {
  * `perimetre_illisible`, comme `lexique-apporteurs.ts` le faisait déjà seul (son modèle est repris ici).
  */
 export function fichiersSuivisOuRefus(gate: string): string[] {
+  return entreesSuiviesOuRefus(gate).map((e) => e.chemin);
+}
+
+/** Les entrées de l'index, avec les MÊMES refus : `fichiersSuivisOuRefus` en dérive. */
+export function entreesSuiviesOuRefus(gate: string): EntreeSuivie[] {
   try {
-    return fichiersSuivis();
+    return entreesSuivies();
   } catch (e) {
     if (e instanceof PerimetreEntame) {
       console.error(`❌ ${gate} — [perimetre_entame] ${e.message}`);

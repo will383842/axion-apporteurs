@@ -98,6 +98,7 @@ import {
   normaliser,
   lireUnivers,
   filtresDepuisSortie,
+  blobsDe,
   codesDeRegion,
   SourcePaysIllisible,
   estExemptDe,
@@ -105,6 +106,7 @@ import {
   EXEMPTS,
   type Univers,
 } from '../../../scripts/gates/gov-entite';
+import type { EntreeSuivie } from '../../../scripts/lot/fichiers-suivis';
 
 const SCRIPT = 'scripts/gates/gov-entite.ts';
 
@@ -2217,7 +2219,7 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
   it('REQ-GOV-031 — sur le dépôt réel, la garde lit EXACTEMENT les fichiers que git suit, et chacun EN ENTIER, dans le blob publié', () => {
     // L'oracle est git, APPELÉ ICI — pas la source que la garde partage (`fichiers-suivis.ts`) —
     // et la comparaison porte sur les NOMS et sur les CONTENUS, jamais sur un compte imprimé. Le
-    // contenu attendu est le BLOB de l'index, demandé par chemin : pas l'arbre de travail, que git
+    // contenu attendu est le BLOB de l'index, demandé par son empreinte : pas l'arbre de travail, que git
     // réécrit à l'extraction.
     const suivis = suivisParGit(process.cwd());
     expect(suivis.length, 'git ne rend aucun fichier : la comparaison ne prouverait rien').toBeGreaterThan(0);
@@ -2273,6 +2275,76 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
       rmSync(depot, { recursive: true, force: true });
     }
   });
+
+  // Un chemin que git lirait comme une RÉVISION si on lui demandait l'objet par son nom : `:0:<x>` est
+  // l'étage 0 de `<x>`, et `cat-file --batch` retire le retour chariot final d'une ligne. Mesuré sous
+  // Linux sur la passe t8 : porteur sous l'un de ces noms, voisin propre `<x>`, EXIT=0 « lu(s) en entier ».
+  const NOMS_QUE_GIT_INTERPRETE = ['0:notes/rib.txt', 'notes/rib.txt\r'] as const;
+
+  it('REQ-GOV-031 — VETO nom : chaque chemin est jugé sur le blob que l’index lui associe, même quand git lirait son nom comme une révision (`0:<x>`, `<x>` suivi d’un retour chariot)', () => {
+    // Sans extraction : Git pour Windows refuse ces noms sur le disque. L'objet est écrit, puis l'entrée
+    // `<x>\r` est posée dans l'INDEX et relue par `ls-files -s`. `0:<x>` est refusé même dans l'index
+    // sous Windows : son entrée est écrite telle que `ls-files -s` la rend sous Linux, sur le même objet.
+    const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
+    const depot = mkdtempSync(join(tmpdir(), 'g36-nom-'));
+    const git = (args: string[], input?: string) =>
+      execFileSync('git', ['-c', 'core.protectNTFS=false', ...args], { cwd: depot, input, encoding: 'utf8', stdio: 'pipe' });
+    try {
+      git(['init', '-q']);
+      const propre = git(['hash-object', '-w', '--stdin'], 'Rien a signaler.\n').trim();
+      const porteur = git(['hash-object', '-w', '--stdin'], `Virement vers ${iban}.\n`).trim();
+      git(['update-index', '--add', '--cacheinfo', `100644,${propre},notes/rib.txt`]);
+      git(['update-index', '--add', '--cacheinfo', `100644,${porteur},${NOMS_QUE_GIT_INTERPRETE[1]}`]);
+      const index = git(['ls-files', '-s', '-z'])
+        .split('\0')
+        .filter(Boolean)
+        .map((l): EntreeSuivie => {
+          const [mode, empreinte, etage] = l.slice(0, l.indexOf('\t')).split(' ');
+          return { mode: mode!, empreinte: empreinte!, etage: etage!, chemin: l.slice(l.indexOf('\t') + 1) };
+        });
+      expect(index.map((e) => e.chemin), 'l’index ne porte pas les deux entrées').toEqual(['notes/rib.txt', NOMS_QUE_GIT_INTERPRETE[1]]);
+      const entrees = [...index, { mode: '100644', empreinte: porteur, etage: '0', chemin: NOMS_QUE_GIT_INTERPRETE[0] }];
+
+      // CONTRÔLE POSITIF : demandé par NOM, git sert le leurre propre pour les trois entrées.
+      const parNom = git(['cat-file', '--batch-check'], entrees.map((e) => `:${e.chemin}\n`).join(''));
+      expect(parNom.split('\n').filter(Boolean).map((l) => l.split(' ')[0]), parNom).toEqual([propre, propre, propre]);
+
+      const blobs = blobsDe(entrees, depot);
+      const porteurs = entrees
+        .filter((e) => coordonneesDe(blobs.get(e.chemin)!.toString('utf8'), false, e.chemin).length > 0)
+        .map((e) => e.chemin);
+      expect([...porteurs].sort(), 'la garde a lu le blob d’un AUTRE chemin').toEqual([...NOMS_QUE_GIT_INTERPRETE].sort());
+
+      // Une entrée en conflit (étage ≠ 0) fait tomber la lecture, NOMMÉE : jamais un blob choisi au hasard.
+      expect(() => blobsDe([{ ...entrees[0]!, etage: '2' }], depot)).toThrow(/notes\/rib\.txt \(étage 2\)/);
+    } finally {
+      rmSync(depot, { recursive: true, force: true });
+    }
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'REQ-GOV-031 — VETO nom, par le vrai chemin de la gate dans un clone (Linux, comme la CI ; Git pour Windows refuse ces noms) : le porteur nommé `0:<x>` ou `<x>` suivi d’un retour chariot, voisin d’un `<x>` propre, est NOMMÉ',
+    () => {
+      const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
+      const depot = depotJetable({
+        'notes/rib.txt': Buffer.from('Rien a signaler.\n'),
+        ...Object.fromEntries(NOMS_QUE_GIT_INTERPRETE.map((c) => [c, Buffer.from(`Virement vers ${iban}.\n`)])),
+      });
+      const clone = `${depot}-clone`;
+      try {
+        execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'noms'], { cwd: depot, stdio: 'pipe' });
+        execFileSync('git', ['clone', '-q', depot, clone], { stdio: 'pipe' });
+        const { code, sortie } = lancerDans(clone);
+        expect(code, sortie).toBe(1);
+        const nommes = sortie.split('\n').flatMap((l) => /\[coordonnee_en_clair\] ([^]+?) — coordonnée en clair «/.exec(l)?.[1] ?? []);
+        expect([...nommes].sort(), sortie).toEqual([...NOMS_QUE_GIT_INTERPRETE].sort());
+      } finally {
+        rmSync(depot, { recursive: true, force: true });
+        rmSync(clone, { recursive: true, force: true });
+      }
+    },
+    180_000
+  );
 
   it('REQ-GOV-031 — VETO de securite : un fichier suivi que la garde ne sait pas lire en entier fait ROUGIR, NOMMÉ', () => {
     // Dépôt git jetable, lancé par le vrai chemin de la gate. Chaque IBAN est CALCULÉ et
@@ -2448,8 +2520,8 @@ function suivisParGit(depot: string): string[] {
 
 /**
  * Le blob que l'INDEX de `depot` porte pour chaque chemin, décodé en UTF-8 : ce que la forge publie,
- * pas l'arbre de travail. Par l'AUTRE route que la garde : l'empreinte lue dans `git ls-files -s`,
- * puis l'objet demandé par cette empreinte — la garde, elle, demande le blob par chemin.
+ * pas l'arbre de travail. Par un AUTRE appel que la garde : l'empreinte lue ici dans `git ls-files -s`,
+ * puis l'objet demandé par cette empreinte — la garde prend la sienne dans `fichiers-suivis.ts`.
  */
 function blobsParGit(depot: string, chemins: string[]): Map<string, string> {
   const empreintes = new Map(
