@@ -41,7 +41,8 @@ import { LIVREE } from '../lot/avancement';
  *     fait monter le compte, sous sa rubrique, et la sortie reste verte. Pour une tâche LIVRÉE, le
  *     registre `DETTE_GABARIT_LIVREE` fige chaque site ET son nombre d'occurrences : une de plus rougit ;
  *   — le journal n'a pas de grain plus fin que la PR : une tâche ÉTRANGÈRE au lot, livrée par une PR
- *     dont le TITRE ne nomme que ce lot, reste attestée. Seul le titre atteste ; le corps ne compte pas ;
+ *     dont le TITRE ne nomme que ce lot, reste attestée. Seul le titre VISIBLE atteste : le corps ne compte pas,
+ *     un titre dans un commentaire HTML non plus ;
  *   — un fichier suivi de `scripts/` ou `tests/` qui porte un octet NUL (UTF-16, binaire) n'est pas lu :
  *     il fait REFUSER la garde, et aucune déclaration ne l'en exempte. Le dépôt n'en porte aucun ;
  *   — un fichier non UTF-8 SANS octet NUL (Latin-1) est lu avec remplacement : ses identifiants ASCII
@@ -105,13 +106,21 @@ export type DetteGate = { gate: string; tache: string; script: string; raison: s
 
 /**
  * Un site où une tâche LIVRÉE qui garde un path gabarit est nommée (ou porte une gate) sans que ses paths
- * portent le fichier, FIGÉ avec son nombre d'occurrences. `ou` : le fichier, la chaîne de `docs/gates.json`
- * (`docs/gates.json:<gate>.<champ>`) pour une mention, `docs/gates.json:<gate>` pour la relation garde <-> tâche.
+ * portent le fichier, FIGÉ avec son nombre d'occurrences.
+ *
+ * 🔑 `ou` PORTE TOUT CE QUE LE SITE JUGÉ PORTE, Y COMPRIS LE FICHIER JUGÉ. Pour un en-tête : le fichier. Pour
+ * `docs/gates.json`, le site tel que `siteDansGates` le compose et que l'exemption l'imprime —
+ * `docs/gates.json:<gate> (<script>)` pour la relation garde <-> tâche, `docs/gates.json:<gate>.<champ> (<script>)`
+ * pour une mention. Repointer le script d'une gate figée change le site : la dette ne s'applique plus.
  */
 export type DetteGabaritLivree = { tache: string; lieu: 'gate' | 'mention'; ou: string; n: number };
 
-/** Une tâche dont le TITRE de l'entrée de journal de sa PR n'atteste pas le lot, figée avec ce lot et cette PR. */
-export type DetteLot = { tache: string; lot: string; pr: number };
+/**
+ * Une tâche dont le TITRE de l'entrée de journal de sa PR n'atteste pas le lot, figée avec ce lot, cette PR
+ * et les lots que ce titre nommait À LA MESURE (`lotsDuTitre`, dans l'ordre du titre). Un titre réécrit qui
+ * nomme d'autres lots n'est plus la prémisse figée : la dette ne s'applique plus.
+ */
+export type DetteLot = { tache: string; lot: string; pr: number; lotsDuTitre: string[] };
 
 export type Sources = {
   taches: Tache[];
@@ -187,11 +196,11 @@ const SENS: Record<Nature, string> = {
   mention_paths_en_partie_gabarit:
     'tâche NON LIVRÉE nommée dans un fichier qu’aucun de ses paths RÉELS ne porte, et qui garde un gabarit : propriété ni vraie ni fausse',
   dette_gabarit_livree_gate:
-    'garde attribuée à une tâche LIVRÉE qui garde un path gabarit et dont les paths ne portent pas le script : « pas encore connu » n’est plus vrai — dette de docs/tasks.json FIGÉE site par site (DETTE_GABARIT_LIVREE), tout site neuf rougit',
+    'garde attribuée à une tâche LIVRÉE qui garde un path gabarit et dont les paths ne portent pas le script : « pas encore connu » n’est plus vrai — dette de docs/tasks.json FIGÉE site par site, script de la gate compris (DETTE_GABARIT_LIVREE), tout site neuf rougit',
   dette_gabarit_livree_mention:
-    'tâche LIVRÉE à path gabarit nommée dans un fichier que ses paths ne portent pas : « pas encore connu » n’est plus vrai — dette FIGÉE site et occurrences (DETTE_GABARIT_LIVREE), toute occurrence neuve rougit',
+    'tâche LIVRÉE à path gabarit nommée dans un fichier que ses paths ne portent pas : « pas encore connu » n’est plus vrai — dette FIGÉE site — fichier jugé compris — et occurrences (DETTE_GABARIT_LIVREE), toute occurrence neuve rougit',
   dette_lot_journal:
-    'lot que le TITRE de l’entrée de journal de sa PR n’atteste pas (titre sans lot, ou qui en nomme plusieurs) — dette FIGÉE tâche par tâche (DETTE_LOT_JOURNAL), toute tâche neuve rougit',
+    'lot que le TITRE de l’entrée de journal de sa PR n’atteste pas (titre sans lot, ou qui en nomme plusieurs) — dette FIGÉE tâche par tâche avec les lots du titre mesuré (DETTE_LOT_JOURNAL), toute tâche neuve ou tout titre qui nomme d’autres lots rougit',
   lot_sans_pr: 'lot écrit sans PR : docs/journal/ indexe ses entrées par PR, rien ne peut l’attester',
   lot_sous_plancher: 'lot sans entrée de journal, PR sous le plancher de docs/journal/README.md',
   autre_depot: 'lot d’une tâche d’un autre dépôt : docs/journal/ n’indexe que les PR d’ici',
@@ -271,6 +280,15 @@ function surface(t: Tache): string[] {
   return [...(t.paths ?? []), ...Object.values(t.tests ?? {}).flat().map(sansAncre)];
 }
 
+/**
+ * Le SITE d'une attribution lue dans `docs/gates.json` : le lieu (`docs/gates.json:<gate>`, ou une chaîne
+ * `docs/gates.json:<gate>.<champ>`) ET le fichier contre lequel elle est jugée, le script de la gate. Écrit
+ * une fois : l'exemption l'imprime, et la dette figée s'apparie sur lui (`DETTE_GABARIT_LIVREE`).
+ */
+function siteDansGates(ou: string, script: string): string {
+  return `${ou} (${script})`;
+}
+
 /** Un chemin est couvert par une entrée exacte, ou par un préfixe de RÉPERTOIRE déclaré (barre finale). */
 function couvre(t: Tache, chemin: string): boolean {
   return surface(t).some((x) => x === chemin || (x.endsWith('/') && chemin.startsWith(x)));
@@ -322,15 +340,30 @@ function ancreDeJournal(pr: number | string): string {
 /** Le motif de titre, DÉRIVÉ de l'ancre : espaces souples, numéro capturé. Rien n'est retapé. */
 const MOTIF_ANCRE = new RegExp('^' + echapper(ANCRE_JOURNAL).replace(/ /g, '\\s+') + '(\\d+)');
 
-/** Les entrées du journal, indexées par numéro de PR. Le TITRE fait partie de l'entrée. */
+/**
+ * Un texte de journal SANS ses commentaires HTML — fermés, ou ouverts jusqu'à la fin du texte —, chacun
+ * remplacé par une espace, qui ne peut pas ouvrir un titre : un titre que le lecteur du rendu ne voit pas
+ * n'atteste rien. Appliqué à chaque fichier AVANT l'assemblage (un commentaire ouvert ne déborde pas sur le
+ * fichier suivant), puis au texte assemblé ; deux passes rendent le même texte qu'une.
+ */
+function sansCommentairesHtml(texte: string): string {
+  return texte.replace(/<!--[\s\S]*?(?:-->|$)/g, ' ');
+}
+
+/**
+ * Les entrées du journal, indexées par numéro de PR. Le TITRE fait partie de l'entrée. Deux titres de la même
+ * PR ne se remplacent pas : ils forment UN titre, où les lots de chacun comptent.
+ */
 export function entreesDeJournal(journal: string): Map<string, string> {
   const par = new Map<string, string[]>();
   let courant: string | null = null;
-  for (const ligne of journal.split('\n')) {
+  for (const ligne of sansCommentairesHtml(journal).split('\n')) {
     const m = MOTIF_ANCRE.exec(ligne);
     if (m) {
       courant = m[1] as string;
-      par.set(courant, [ligne]);
+      const deja = par.get(courant);
+      if (deja) deja[0] = `${deja[0]} ${ligne}`;
+      else par.set(courant, [ligne]);
       continue;
     }
     if (courant) (par.get(courant) as string[]).push(ligne);
@@ -399,7 +432,7 @@ export function analyser(s: Sources): Verdict {
     }
     const chemin = sansAncre(g.script);
     if (couvre(t, chemin)) continue;
-    const site = `docs/gates.json:${g.id} (${chemin})`;
+    const site = siteDansGates(`docs/gates.json:${g.id}`, chemin);
     const dette = s.dettesGate.find((d) => d.gate === g.id && d.tache === g.tache && d.script === chemin);
     if (dette) {
       dettesGateVues.add(dette);
@@ -410,7 +443,7 @@ export function analyser(s: Sources): Verdict {
       exempter(pathsReels(t).length === 0 ? 'gate_paths_non_resolus' : 'gate_paths_en_partie_gabarit', t.id, site, pathsDe(t));
       continue;
     }
-    if (aUnGabarit(t) && figee('gate', t.id, `docs/gates.json:${g.id}`)) {
+    if (aUnGabarit(t) && figee('gate', t.id, site)) {
       exempter('dette_gabarit_livree_gate', t.id, site, `statut ${t.statut} · ${pathsDe(t)}`);
       continue;
     }
@@ -484,7 +517,13 @@ export function analyser(s: Sources): Verdict {
       exempter('lot_sous_plancher', t.id, `lot « ${t.lot} », ${ref}`, `plancher du journal : > ${s.plancherJournal}`);
       continue;
     }
-    const dette = entree === undefined ? undefined : s.dettesLot.find((d) => d.tache === t.id && d.lot === t.lot && d.pr === t.pr);
+    // La dette ne vaut que pour le titre MESURÉ au gel : les mêmes lots, dans le même ordre.
+    const dette =
+      entree === undefined
+        ? undefined
+        : s.dettesLot.find(
+            (d) => d.tache === t.id && d.lot === t.lot && d.pr === t.pr && d.lotsDuTitre.join('\n') === lotsDuTitre.join('\n')
+          );
     if (dette) {
       dettesLotVues.add(dette);
       exempter('dette_lot_journal', t.id, `lot « ${t.lot} », ${ref}`, `lots du titre de « ${ancre} » : ${lotsDuTitre.join(', ') || '(aucun)'}`);
@@ -506,8 +545,9 @@ export function analyser(s: Sources): Verdict {
     if (dettesLotVues.has(d)) continue;
     dire(
       'dette_perimee',
-      `DETTE_LOT_JOURNAL déclare « ${d.tache} » -> lot « ${d.lot} », PR ${d.pr}, qui n'est PLUS mesurée : la tâche a changé de lot ou de PR, ` +
-        `ou le titre de l'entrée l'atteste maintenant. Retire l'entrée.`
+      `DETTE_LOT_JOURNAL déclare « ${d.tache} » -> lot « ${d.lot} », PR ${d.pr}, lots du titre figés : ${d.lotsDuTitre.join(', ') || '(aucun)'}, ` +
+        `qui n'est PLUS mesurée : la tâche a changé de lot ou de PR, le titre de l'entrée nomme d'autres lots, ` +
+        `ou il l'atteste maintenant. Retire ou corrige l'entrée.`
     );
   }
 
@@ -519,10 +559,11 @@ export function analyser(s: Sources): Verdict {
 
   /**
    * @param ou           la clé sous laquelle une déclaration se range (fichier, ou chaîne de gates.json)
+   * @param figeeSous    la clé d'une dette `DETTE_GABARIT_LIVREE` : le site, fichier jugé compris
    * @param fichier      le fichier dont la tâche nommée doit être propriétaire
    * @param proprietaire la tâche déjà confrontée à ce fichier par la relation (1), qui ne se juge pas deux fois
    */
-  const examiner = (ou: string, fichier: string, texte: string, situer: string, proprietaire?: string) => {
+  const examiner = (ou: string, figeeSous: string, fichier: string, texte: string, situer: string, proprietaire?: string) => {
     for (const m of texte.match(motif) ?? []) {
       const t = parId.get(m);
       if (!t) {
@@ -552,7 +593,7 @@ export function analyser(s: Sources): Verdict {
         exempter(pathsReels(t).length === 0 ? 'mention_paths_non_resolus' : 'mention_paths_en_partie_gabarit', m, situer, pathsDe(t));
         continue;
       }
-      if (aUnGabarit(t) && figee('mention', m, ou)) {
+      if (aUnGabarit(t) && figee('mention', m, figeeSous)) {
         exempter('dette_gabarit_livree_mention', m, situer, `statut ${t.statut} · ${pathsDe(t)}`);
         continue;
       }
@@ -567,14 +608,16 @@ export function analyser(s: Sources): Verdict {
   };
 
   for (const e of s.entetes) {
-    e.lignes.forEach((ligne, i) => examiner(e.fichier, e.fichier, ligne, `${e.fichier}:${i + 1}`));
+    e.lignes.forEach((ligne, i) => examiner(e.fichier, e.fichier, e.fichier, ligne, `${e.fichier}:${i + 1}`));
   }
   // Chaque chaîne ET chaque nom de clé d'une entrée, à toute profondeur, PAS le seul champ `tache` : sur
   // `gov:plan-state` le champ `tache` n'a jamais bougé pendant que les identifiants changeaient dans la
   // prose de `verifie`. Le texte a été lu sans clé dupliquée (`cleDupliquee`) : ce qui est jugé est ce qui est écrit.
   for (const g of s.gates) {
+    const script = sansAncre(g.script);
     for (const [ou, texte] of chainesDe(g, `docs/gates.json:${g.id}`)) {
-      examiner(ou, sansAncre(g.script), texte, ou, g.tache);
+      const site = siteDansGates(ou, script);
+      examiner(ou, site, script, texte, site, g.tache);
     }
   }
 
@@ -803,30 +846,31 @@ export const CITATIONS_DECLAREES: Citation[] = [
  * INT-T01b, QA-T00) ont gardé le path d'amorçage `<dossier>/<id>` : leurs paths n'ont jamais été renseignés.
  * Pour elles « pas encore connu » est faux, et leurs 54 attributions mesurées au 2026-09-15 ne sont ni
  * prouvées ni réfutées. Réparer, c'est écrire leurs paths dans `docs/tasks.json`, en écriture réservée :
- * elles sont donc FIGÉES ici, site par site, avec leur nombre d'occurrences, imprimées et comptées sous
- * `dette_gabarit_livree_*`. Toute attribution NEUVE à l'une d'elles rougit ; une entrée qui ne mesure plus
+ * elles sont donc FIGÉES ici, site par site — le site porte le fichier jugé : le script de la gate pour
+ * `docs/gates.json` —, avec leur nombre d'occurrences, imprimées et comptées sous `dette_gabarit_livree_*`.
+ * Toute attribution NEUVE à l'une d'elles rougit, y compris une gate figée repointée vers un autre script ; une entrée qui ne mesure plus
  * ses occurrences rougit en `dette_perimee`. **On ne l'étend pas pour faire passer un site neuf** : c'est
  * exactement la faute que ce registre existe pour refuser.
  */
 export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gate-a', n: 1 },
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gate-deploiement', n: 1 },
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:autonomie', n: 1 },
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:check', n: 1 },
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:publication', n: 1 },
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:notify-sink-hors-prod', n: 1 },
-  { tache: 'GOV-001', lieu: 'gate', ou: 'docs/gates.json:gov:requirements', n: 1 },
-  { tache: 'GOV-002', lieu: 'gate', ou: 'docs/gates.json:gov:preseance', n: 1 },
-  { tache: 'GOV-003', lieu: 'gate', ou: 'docs/gates.json:gov:identifiants', n: 1 },
-  { tache: 'GOV-004', lieu: 'gate', ou: 'docs/gates.json:gov:sonde', n: 1 },
-  { tache: 'GOV-005', lieu: 'gate', ou: 'docs/gates.json:gov:hypotheses', n: 1 },
-  { tache: 'GOV-007', lieu: 'gate', ou: 'docs/gates.json:gov:pr', n: 1 },
-  { tache: 'GOV-009', lieu: 'gate', ou: 'docs/gates.json:gov:adr', n: 1 },
-  { tache: 'GOV-017a', lieu: 'gate', ou: 'docs/gates.json:gov:tasks', n: 1 },
-  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gate-nightly', n: 1 },
-  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gates:prouvees', n: 1 },
-  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gov:gates-derivees', n: 1 },
-  { tache: 'GOV-000', lieu: 'mention', ou: 'docs/gates.json:gov:inventaire.verifie', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gate-a (.github/workflows/ci.yml)', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gate-deploiement (scripts/gates/deploy-verify.ts)', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:autonomie (scripts/gates/gov-autonomie.ts)', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:check (scripts/gates/gov-check.ts)', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:publication (scripts/gates/gov-publication.ts)', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:notify-sink-hors-prod (scripts/gates/hook-env.js)', n: 1 },
+  { tache: 'GOV-001', lieu: 'gate', ou: 'docs/gates.json:gov:requirements (scripts/gates/gov-requirements.ts)', n: 1 },
+  { tache: 'GOV-002', lieu: 'gate', ou: 'docs/gates.json:gov:preseance (scripts/gates/gov-preseance.ts)', n: 1 },
+  { tache: 'GOV-003', lieu: 'gate', ou: 'docs/gates.json:gov:identifiants (scripts/gates/gov-identifiants.ts)', n: 1 },
+  { tache: 'GOV-004', lieu: 'gate', ou: 'docs/gates.json:gov:sonde (scripts/gates/gov-sonde.ts)', n: 1 },
+  { tache: 'GOV-005', lieu: 'gate', ou: 'docs/gates.json:gov:hypotheses (scripts/gates/gov-hypotheses.ts)', n: 1 },
+  { tache: 'GOV-007', lieu: 'gate', ou: 'docs/gates.json:gov:pr (scripts/gates/gov-pr.ts)', n: 1 },
+  { tache: 'GOV-009', lieu: 'gate', ou: 'docs/gates.json:gov:adr (scripts/gates/gov-adr.ts)', n: 1 },
+  { tache: 'GOV-017a', lieu: 'gate', ou: 'docs/gates.json:gov:tasks (scripts/gates/gov-tasks.ts)', n: 1 },
+  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gate-nightly (.github/workflows/nightly.yml)', n: 1 },
+  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gates:prouvees (scripts/gates/gates-prouvees.ts)', n: 1 },
+  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gov:gates-derivees (scripts/gates/gates-derivees.ts)', n: 1 },
+  { tache: 'GOV-000', lieu: 'mention', ou: 'docs/gates.json:gov:inventaire.verifie (scripts/gates/gov-inventaire.ts)', n: 1 },
   { tache: 'GOV-000', lieu: 'mention', ou: 'scripts/gates/gov-autonomie.ts', n: 1 },
   { tache: 'GOV-001', lieu: 'mention', ou: 'scripts/gates/gov-requirements.ts', n: 1 },
   { tache: 'GOV-001', lieu: 'mention', ou: 'tests/unit/gouvernance/glossaire-enums.spec.ts', n: 1 },
@@ -848,7 +892,7 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   { tache: 'GOV-015', lieu: 'mention', ou: 'tests/unit/gouvernance/fiches-tiers.spec.ts', n: 1 },
   { tache: 'GOV-017a', lieu: 'mention', ou: 'scripts/gates/gov-tasks.ts', n: 1 },
   { tache: 'GOV-017a', lieu: 'mention', ou: 'scripts/lot/tasks.schema.json', n: 1 },
-  { tache: 'GOV-017b', lieu: 'mention', ou: 'docs/gates.json:gov:tasks.verifie', n: 1 },
+  { tache: 'GOV-017b', lieu: 'mention', ou: 'docs/gates.json:gov:tasks.verifie (scripts/gates/gov-tasks.ts)', n: 1 },
   { tache: 'GOV-017b', lieu: 'mention', ou: 'scripts/lot/paths-proposes.ts', n: 1 },
   { tache: 'GOV-017b', lieu: 'mention', ou: 'tests/unit/gouvernance/regles-maison.spec.ts', n: 1 },
   { tache: 'INT-T01b', lieu: 'mention', ou: 'scripts/lot/attestation.ts', n: 2 },
@@ -863,11 +907,17 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
  *   — PR #31 : le titre nomme TROIS lots (`L-1-04`, `L-1-05`, `L-1-06`) ; ses neuf tâches portent `L-1-04`,
  *     et rien dans le titre ne dit lequel est le leur ;
  *   — PR #33 : le titre ne nomme AUCUN lot ; ses quatre tâches portent `L-1-05`, que seul le corps cite.
- * Réécrire le journal ou le registre n'appartient pas à cette tâche. Une tâche NEUVE dans ce cas rougit.
+ * Réécrire le journal ou le registre n'appartient pas à cette tâche. Une tâche NEUVE dans ce cas rougit, et
+ * un titre réécrit pour nommer d'autres lots aussi : chaque entrée fige les lots que le titre nommait.
  */
 export const DETTE_LOT_JOURNAL: DetteLot[] = [
-  ...['GOV-006', 'GOV-013', 'CPL-T01', 'GOV-024', 'GOV-025', 'GOV-026', 'GOV-027', 'GOV-029', 'GOV-032'].map((tache) => ({ tache, lot: 'L-1-04', pr: 31 })),
-  ...['GOV-014', 'GOV-019', 'GOV-028', 'GOV-038'].map((tache) => ({ tache, lot: 'L-1-05', pr: 33 })),
+  ...['GOV-006', 'GOV-013', 'CPL-T01', 'GOV-024', 'GOV-025', 'GOV-026', 'GOV-027', 'GOV-029', 'GOV-032'].map((tache) => ({
+    tache,
+    lot: 'L-1-04',
+    pr: 31,
+    lotsDuTitre: ['L-1-04', 'L-1-05', 'L-1-06'],
+  })),
+  ...['GOV-014', 'GOV-019', 'GOV-028', 'GOV-038'].map((tache) => ({ tache, lot: 'L-1-05', pr: 33, lotsDuTitre: [] })),
 ];
 
 // ── chargement des sources réelles ────────────────────────────────────────────
@@ -1034,7 +1084,7 @@ export function chargerSources(
     taches: tableau<Tache>('docs/tasks.json', 'taches'),
     gates: tableau<Gate>('docs/gates.json', 'gates'),
     postes: tableau<Poste>('docs/agents.json', 'postes'),
-    journal: journaux.map(texte).join('\n'),
+    journal: journaux.map((f) => sansCommentairesHtml(texte(f))).join('\n'),
     plancherJournal: Number((planchers[0] as RegExpExecArray)[1]),
     // TOUT fichier suivi de `scripts/` et `tests/`, quelle que soit son extension : l'acceptance dit
     // « tout fichier suivi », et un filtre d'extension est un périmètre qui s'ampute en silence.
@@ -1126,6 +1176,13 @@ const T_LIVREE_MIXTE: Tache = { ...T_MIXTE, statut: 'fusionnee' };
 const JOURNAL = '## PR #31 — 2026-09-10 — feat(GOV-024): lot L-1-04\n\n**Fait.** Neuf tâches.\n';
 const JOURNAL_MULTI = '## PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06\n\n**Fait.** Neuf tâches.\n';
 const GATE_GABARIT = { id: 'gov:identifiants', script: 'scripts/gates/gov-identifiants.ts', tache: 'GOV-003' };
+/** Le site de `GATE_GABARIT` tel que l'analyse le compose : la clé sous laquelle sa dette se fige. */
+const SITE_GATE_GABARIT = siteDansGates(`docs/gates.json:${GATE_GABARIT.id}`, GATE_GABARIT.script);
+/** Une gate de GOV-101 (réciproque) dont la prose nomme GOV-003, et le site de cette mention, script compris. */
+const GATE_PROSE = { id: 'g', script: 'scripts/gates/autre.ts', tache: 'GOV-101', verifie: 'étendue par GOV-003' };
+const SITE_PROSE = siteDansGates(`docs/gates.json:${GATE_PROSE.id}.verifie`, GATE_PROSE.script);
+/** Les lots que nomme le titre de `JOURNAL_MULTI`, figés comme la dette de lot les fige. */
+const LOTS_MULTI = ['L-1-04', 'L-1-05', 'L-1-06'];
 const RAISON = 'une raison qui dit pourquoi, relisible par la session suivante';
 const DEPOT_ETRANGER = Object.keys(DEPOTS).find((r) => r !== DEPOT_LOCAL && DEPOTS[r] !== null) as string;
 const entete = (lignes: string[], fichier = 'scripts/gates/porte.ts'): Entete[] => [{ fichier, lignes }];
@@ -1225,14 +1282,49 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [{ ...T_RESOLUE, lot: 'L-1-06', pr: 31 }],
       journal: JOURNAL_MULTI,
-      dettesLot: [{ tache: 'GOV-100', lot: 'L-1-04', pr: 31 }],
+      dettesLot: [{ tache: 'GOV-100', lot: 'L-1-04', pr: 31, lotsDuTitre: LOTS_MULTI }],
     },
     nomme: ['L-1-06'],
   },
   {
+    famille: 'lot_non_atteste',
+    quoi: 'une dette de lot figée sur les lots d’un titre n’absout plus quand le titre, réécrit, nomme un AUTRE lot',
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-1-04', pr: 31 }],
+      journal: JOURNAL_MULTI.replace('lots L-1-04, L-1-05 et L-1-06', 'lot L-1-06'),
+      dettesLot: [{ tache: 'GOV-100', lot: 'L-1-04', pr: 31, lotsDuTitre: LOTS_MULTI }],
+    },
+    nomme: ['L-1-04', ancreDeJournal(31), 'ne nomme pas'],
+  },
+  {
+    famille: 'lot_non_atteste',
+    quoi: 'un titre caché dans un COMMENTAIRE HTML fermé — sur ses lignes, ou collé derrière lui — n’est pas une entrée',
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 32 }],
+      journal: `${JOURNAL}<!--\n## PR #32 — lot L-9-99\n-->\n<!-- fin -->## PR #32 — lot L-9-99\n`,
+    },
+    nomme: ['L-9-99', ancreDeJournal(32), 'aucune entrée'],
+  },
+  {
+    famille: 'lot_non_atteste',
+    quoi: 'un titre caché dans un COMMENTAIRE HTML jamais fermé n’est pas une entrée',
+    sources: { taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 32 }], journal: `${JOURNAL}<!--\n## PR #32 — lot L-9-99\n` },
+    nomme: ['L-9-99', ancreDeJournal(32), 'aucune entrée'],
+  },
+  {
+    famille: 'lot_non_atteste',
+    quoi: 'un SECOND titre visible de la même PR ne remplace pas le premier : leurs lots comptent ensemble',
+    sources: { taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 31 }], journal: `${JOURNAL}\n## PR #31 — lot L-9-99\n` },
+    nomme: ['L-9-99', 'plusieurs lots'],
+  },
+  {
     famille: 'dette_perimee',
     quoi: 'une dette de lot figée qui ne mesure plus rien (le titre atteste maintenant le lot)',
-    sources: { taches: [{ ...T_RESOLUE, lot: 'L-1-04', pr: 31 }], journal: JOURNAL, dettesLot: [{ tache: 'GOV-100', lot: 'L-1-04', pr: 31 }] },
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-1-04', pr: 31 }],
+      journal: JOURNAL,
+      dettesLot: [{ tache: 'GOV-100', lot: 'L-1-04', pr: 31, lotsDuTitre: LOTS_MULTI }],
+    },
     nomme: ['DETTE_LOT_JOURNAL', 'GOV-100'],
   },
   // ── (1) et (4) : une tâche LIVRÉE qui garde un gabarit est jugée ──
@@ -1254,9 +1346,29 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [T_LIVREE_GABARIT],
       gates: [GATE_GABARIT],
-      dettesGabarit: [{ tache: 'GOV-003', lieu: 'mention', ou: 'docs/gates.json:gov:identifiants', n: 1 }],
+      dettesGabarit: [{ tache: 'GOV-003', lieu: 'mention', ou: SITE_GATE_GABARIT, n: 1 }],
     },
     nomme: ['gov:identifiants'],
+  },
+  {
+    famille: 'gate_non_reciproque',
+    quoi: 'une dette de gate figée n’absout pas la MÊME gate repointée vers un AUTRE script : le site porte le script',
+    sources: {
+      taches: [T_LIVREE_GABARIT],
+      gates: [{ ...GATE_GABARIT, script: 'scripts/gates/gov-pr.ts' }],
+      dettesGabarit: [{ tache: 'GOV-003', lieu: 'gate', ou: SITE_GATE_GABARIT, n: 1 }],
+    },
+    nomme: ['gov:identifiants', 'scripts/gates/gov-pr.ts', 'DETTE_GABARIT_LIVREE'],
+  },
+  {
+    famille: 'mention_hors_paths',
+    quoi: 'une dette figée sur une chaîne de docs/gates.json n’absout pas la même mention quand la gate est repointée vers un AUTRE script',
+    sources: {
+      taches: [{ ...T_VOISINE, paths: ['scripts/gates/autre.ts', 'scripts/gates/porte.ts'] }, T_LIVREE_GABARIT],
+      gates: [{ ...GATE_PROSE, script: 'scripts/gates/porte.ts' }],
+      dettesGabarit: [{ tache: 'GOV-003', lieu: 'mention', ou: SITE_PROSE, n: 1 }],
+    },
+    nomme: ['docs/gates.json:g.verifie', 'scripts/gates/porte.ts', 'GOV-003', 'DETTE_GABARIT_LIVREE'],
   },
   {
     famille: 'mention_hors_paths',
@@ -1543,9 +1655,18 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
     sources: {
       taches: [T_LIVREE_GABARIT],
       gates: [GATE_GABARIT],
-      dettesGabarit: [{ tache: 'GOV-003', lieu: 'gate', ou: 'docs/gates.json:gov:identifiants', n: 1 }],
+      dettesGabarit: [{ tache: 'GOV-003', lieu: 'gate', ou: SITE_GATE_GABARIT, n: 1 }],
     },
     exemptions: ['dette_gabarit_livree_gate'],
+  },
+  {
+    quoi: 'une chaîne de docs/gates.json nomme une tâche LIVRÉE aux paths gabarit, figée sous son site, script de la gate compris',
+    sources: {
+      taches: [T_VOISINE, T_LIVREE_GABARIT],
+      gates: [GATE_PROSE],
+      dettesGabarit: [{ tache: 'GOV-003', lieu: 'mention', ou: SITE_PROSE, n: 1 }],
+    },
+    exemptions: ['dette_gabarit_livree_mention'],
   },
   {
     quoi: 'un en-tête nomme DEUX fois une tâche LIVRÉE aux paths gabarit, sur un site figé à deux occurrences',
@@ -1561,7 +1682,7 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
     sources: {
       taches: [{ ...T_RESOLUE, lot: 'L-1-04', pr: 31 }],
       journal: JOURNAL_MULTI,
-      dettesLot: [{ tache: 'GOV-100', lot: 'L-1-04', pr: 31 }],
+      dettesLot: [{ tache: 'GOV-100', lot: 'L-1-04', pr: 31, lotsDuTitre: LOTS_MULTI }],
     },
     exemptions: ['dette_lot_journal'],
   },
