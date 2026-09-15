@@ -23,8 +23,19 @@
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, existsSync } from 'node:fs';
-import { join, posix } from 'node:path';
+import {
+  readFileSync,
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  symlinkSync,
+  realpathSync,
+  rmSync,
+  unlinkSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join, posix } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { ESLint, type Linter } from 'eslint';
 import { getFileInfo, resolveConfig } from 'prettier';
@@ -930,15 +941,19 @@ const COMMANDE_ADMISE = /^pnpm ([a-z][\w:-]*)((?: [\w.:=@/+%-]+)*)$/;
 
 /**
  * Chaque commande de chaque YAML suivi sous `.github/` — workflows ET actions composites — est
- * l'installation FIGÉE ou un script du `package.json`, sous une forme FERMÉE. Rien d'autre ne
- * s'exécute avec le droit de réécrire `node_modules` ou le verrou : ni `pnpm update`, ni une
- * installation sans verrou, ni un autre gestionnaire, ni une commande logée dans une commande admise.
- * Les scripts sont LUS dans `package.json` (RM-01). Une action locale ne s'appelle que depuis
- * `.github/`, où son YAML est lu ; un `shell` n'est jamais autre chose que `bash`. Fonction PURE (RM-11).
+ * l'installation FIGÉE ou un script du `package.json`, sous une forme FERMÉE : ni `pnpm update`, ni
+ * une installation sans verrou, ni un autre gestionnaire, ni une commande logée dans une commande
+ * admise. Les scripts sont LUS dans `package.json` (RM-01). Une action locale n'est admise que si son
+ * YAML est parmi les YAML lus (`lus`) — un dossier qui ne porte qu'un `Dockerfile` n'en a pas —, et
+ * toute action lue est `composite` : ses étapes sont des commandes jugées ici, alors qu'une action
+ * JavaScript ou Docker exécuterait un code que rien ne lit. Un `shell` n'est jamais autre chose que
+ * `bash`. Ce que ce jugement ne voit pas : le code d'une action TIERCE, et ce qu'exécute un script
+ * admis. Fonction PURE (RM-11).
  */
 function fautesDeCommandes(
   yamls: readonly unknown[],
-  scripts: Readonly<Record<string, string>>
+  scripts: Readonly<Record<string, string>>,
+  lus: readonly string[]
 ): { installations: number; fautes: string[] } {
   const fautes: string[] = [];
   const ecrits = new Set<string>();
@@ -951,10 +966,13 @@ function fautesDeCommandes(
       const horsForme =
         cle === 'run_install' ||
         (cle === 'shell' && valeur !== 'bash') ||
+        (cle === 'runs' && (!estObjet(valeur) || valeur.using !== 'composite')) ||
         (cle === 'uses' &&
           typeof valeur === 'string' &&
           valeur.startsWith('.') &&
-          !posix.normalize(valeur).startsWith('.github/'));
+          !['', '/action.yml', '/action.yaml'].some((s) =>
+            lus.includes(`${posix.normalize(valeur).replace(/\/$/, '')}${s}`)
+          ));
       if (horsForme) {
         fautes.push(`${cle} : ${JSON.stringify(valeur)}`);
         continue;
@@ -989,7 +1007,7 @@ function fautesDeCommandes(
  * « Épinglé » : une version, et une seule. `^3.9.6` en est une ; `3 || *`, `*`, `latest` et
  * `>=3` n'en sont pas. Le verrou lu avec `--frozen-lockfile` fige la version installée ET tout
  * correctif que le gestionnaire de paquets lui applique : il ne dit rien de ce que le binaire FAIT.
- * Ce que le binaire installé fait de son échec est mesuré plus bas, en le lançant.
+ * Ce que l'acte de Gate A fait d'une faute est mesuré plus bas, en le lançant sur un arbre fautif.
  */
 const VERSION_EPINGLEE = /^[\^~]?\d+\.\d+\.\d+$/;
 
@@ -1023,25 +1041,17 @@ function binaireDuScript(script: string): [string, string[]] {
 
 /**
  * Lance le binaire INSTALLÉ d'un outil — le fichier que nomme le champ `bin` de son paquet sous
- * `node_modules`, celui que `pnpm <script>` exécute —, sans lui transmettre l'environnement du test :
- * aucun jeton ne sort d'ici.
+ * `node_modules` —, sans lui transmettre l'environnement du test, et rend sa sortie. Sert à RELEVER
+ * ce qu'il lit ; ce que l'acte de Gate A fait d'une faute est mesuré par `lancerActe`.
  */
-function lancerBinaire(
-  nom: string,
-  args: readonly string[],
-  entree?: string
-): { code: number | null; sortie: string } {
+function lancerBinaire(nom: string, args: readonly string[]): string {
   const paquet = join('node_modules', nom);
   const { bin } = JSON.parse(readFileSync(join(paquet, PACKAGE), 'utf8')) as {
     bin: string | Record<string, string>;
   };
   const chemin = join(paquet, typeof bin === 'string' ? bin : (bin[nom] ?? ''));
-  const r = spawnSync(process.execPath, [chemin, ...args], {
-    input: entree,
-    encoding: 'utf8',
-    env: {},
-  });
-  return { code: r.status, sortie: `${r.stdout ?? ''}${r.stderr ?? ''}` };
+  const r = spawnSync(process.execPath, [chemin, ...args], { encoding: 'utf8', env: {} });
+  return `${r.stdout ?? ''}${r.stderr ?? ''}`;
 }
 
 /** Ce que Prettier fait d'un fichier suivi : tout ce que le jugement lit, et rien d'autre. */
@@ -1060,13 +1070,11 @@ interface MesurePrettier {
  * UN lancement du binaire installé : le script à la lettre, plus `--end-of-line cr`. Sous cette
  * option, tout fichier non vide qu'il lit diffère de sa sortie : la liste de ce qu'il signale EST la
  * liste de ce qu'il lit — exclusions par défaut de l'outil, `.gitignore`, `.prettierignore` et pragma
- * exigé compris. Son code de sortie dit s'il propage l'échec.
+ * exigé compris. C'est un RELEVÉ : son code de sortie n'est pas lu.
  */
-async function mesurerPrettier(
-  suivis: readonly string[]
-): Promise<{ mesures: MesurePrettier[]; code: number | null }> {
+async function mesurerPrettier(suivis: readonly string[]): Promise<MesurePrettier[]> {
   const [nom, args] = binaireDuScript('format:check');
-  const { code, sortie } = lancerBinaire(nom, [...args, '--no-color', '--end-of-line', 'cr']);
+  const sortie = lancerBinaire(nom, [...args, '--no-color', '--end-of-line', 'cr']);
   const lus = new Set(sortie.split('\n').map((l) => /^\[warn\] (.+)$/.exec(l.trim())?.[1]));
   const mesures: MesurePrettier[] = [];
   for (const fichier of suivis) {
@@ -1079,15 +1087,11 @@ async function mesurerPrettier(
       optionsRacine: await resolveConfig(fichier, { editorconfig: true, config: PRETTIER }),
     });
   }
-  return { mesures, code };
+  return mesures;
 }
 
 /** Le jugement, séparé de la mesure : fonction PURE (RM-11), pour que ses témoins soient fabriqués. */
-function fautesPrettier(
-  mesures: readonly MesurePrettier[],
-  suivis: readonly string[],
-  code: number | null
-): string[] {
+function fautesPrettier(mesures: readonly MesurePrettier[], suivis: readonly string[]): string[] {
   const fautes: string[] = [];
   const mesures_ = new Set(mesures.map((m) => m.fichier));
   for (const f of suivis) if (!mesures_.has(f)) fautes.push(`${f} : non mesuré`);
@@ -1105,11 +1109,52 @@ function fautesPrettier(
       fautes.push(`${nom} : dérogation qui ne couvre aucun fichier suivi`);
     }
   }
-  const signales = mesures.filter((m) => m.lu).length;
-  if (signales === 0 || code !== 1) {
-    fautes.push(`\`prettier --check .\` sort en ${code} en signalant ${signales} fichier(s)`);
-  }
   return fautes;
+}
+
+/**
+ * La faute plantée : une fuite de `console` (REQ-DM-041) mal formatée, dans le code de produit. Elle
+ * doit faire échouer l'une ET l'autre étape.
+ */
+const FAUTE_PLANTEE = { fichier: 'src/faute-plantee.ts', texte: "console.log( 'courriel' )\n" };
+
+/**
+ * Un arbre JETABLE hors du dépôt : chaque fichier suivi copié, puis les fichiers `plantes`, et, si
+ * `installe`, un lien vers le `node_modules` que l'installation figée a posé. C'est la seule façon de
+ * lancer l'acte de Gate A sur une faute sans écrire dans le dépôt.
+ */
+function arbreJetable(
+  suivis: readonly string[],
+  plantes: Readonly<Record<string, string>>,
+  installe: boolean
+): string {
+  const racine = mkdtempSync(join(tmpdir(), 'g31-'));
+  const ecrire = (f: string, contenu: string | Buffer) => {
+    mkdirSync(dirname(join(racine, f)), { recursive: true });
+    writeFileSync(join(racine, f), contenu, { mode: 0o755 });
+  };
+  for (const f of suivis) ecrire(f, readFileSync(f));
+  for (const [f, contenu] of Object.entries(plantes)) ecrire(f, contenu);
+  if (installe) symlinkSync(realpathSync('node_modules'), join(racine, 'node_modules'), 'junction');
+  return racine;
+}
+
+/**
+ * L'ACTE d'une étape de Gate A, À LA LETTRE : `pnpm <script>` — la commande que `fautesDActe` exige
+ * de `ci.yml` —, lancée par un shell dans `racine`, sous l'environnement du test. C'est `pnpm` qui
+ * trouve le binaire et lui passe les arguments du `package.json`, comme en CI.
+ */
+function lancerActe(racine: string, script: string): { code: number | null; sortie: string } {
+  const r = spawnSync(`pnpm ${script}`, { cwd: racine, shell: true, encoding: 'utf8' });
+  return { code: r.status, sortie: `${r.stdout ?? ''}${r.stderr ?? ''}`.split('\\').join('/') };
+}
+
+/** Le jugement de l'acte : sortir en 1 en NOMMANT la faute. Fonction PURE (RM-11). */
+function fautesDeLActe(script: string, code: number | null, sortie: string): string[] {
+  const { fichier } = FAUTE_PLANTEE;
+  if (code === 1 && sortie.includes(fichier)) return [];
+  const nommee = sortie.includes(fichier) ? '' : ' sans la nommer';
+  return [`\`pnpm ${script}\` sort en ${code} sur ${fichier}${nommee}`];
 }
 
 describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANTS en Gate A', () => {
@@ -1175,7 +1220,7 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     const chemins = fichiersSuivis('.github').filter((f) => /\.ya?ml$/.test(f));
     const yamls = await Promise.all(chemins.map((f) => lireYaml(readFileSync(f, 'utf8'))));
     const scripts = pkg.scripts ?? {};
-    const { installations, fautes } = fautesDeCommandes(yamls, scripts);
+    const { installations, fautes } = fautesDeCommandes(yamls, scripts, chemins);
     expect(installations).toBeGreaterThan(0);
     expect(fautes).toEqual([]);
     // RM-02 : chaque forme dérivée de `ci.yml` RÉEL par UNE substitution (RM-11), jugée avec les
@@ -1209,19 +1254,41 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     ];
     for (const texte of variantes) {
       expect(texte).not.toBe(ci);
-      expect(fautesDeCommandes(await avecCi(texte), scripts).fautes, texte).toHaveLength(1);
+      expect(fautesDeCommandes(await avecCi(texte), scripts, chemins).fautes, texte).toHaveLength(
+        1
+      );
     }
     // Une action composite fabriquée sous `.github/` est lue comme un workflow.
     const composite =
       'runs:\n  using: composite\n  steps:\n    - run: pnpm install\n      shell: bash\n';
-    expect(fautesDeCommandes([...yamls, await lireYaml(composite)], scripts).fautes).toHaveLength(
-      1
-    );
+    expect(
+      fautesDeCommandes([...yamls, await lireYaml(composite)], scripts, chemins).fautes
+    ).toHaveLength(1);
+    // Une action locale appelée depuis `gate-a` avant `Lint` exécute avant lui ce que dit son YAML.
+    // Sans YAML lu — un `Dockerfile` seul —, ou avec un `runs` qui n'est pas une suite de commandes
+    // — JavaScript, Docker —, rien de ce qu'elle lance n'est jugé : elle est refusée NOMMÉMENT.
+    const action = '.github/actions/maj';
+    const appel = await avecCi(apres(`uses: ./${action}`));
+    expect(fautesDeCommandes(appel, scripts, chemins).fautes).toEqual([`uses : "./${action}"`]);
+    const lus = [...chemins, `${action}/action.yml`];
+    const admise = await lireYaml(composite.replace('pnpm install', 'pnpm lint'));
+    expect(fautesDeCommandes([...appel, admise], scripts, lus).fautes).toEqual([]);
+    for (const runs of [
+      '{ using: node20, main: index.mjs }',
+      '{ using: docker, image: Dockerfile }',
+    ]) {
+      const lue = await lireYaml(`runs: ${runs}\n`);
+      expect(fautesDeCommandes([...appel, lue], scripts, lus).fautes).toEqual([
+        `runs : ${JSON.stringify((lue as { runs: unknown }).runs)}`,
+      ]);
+    }
     // Un script nommé `install` ne rend pas légitime une installation qui ne fige pas le verrou.
     const sansVerrou = await avecCi(ci.replace(INSTALL, '      - run: pnpm install\n'));
-    expect(fautesDeCommandes(sansVerrou, { ...scripts, install: 'true' }).fautes).toHaveLength(1);
+    expect(
+      fautesDeCommandes(sansVerrou, { ...scripts, install: 'true' }, chemins).fautes
+    ).toHaveLength(1);
     // Et un argument calculé déclaré qu'aucun workflow n'écrit plus est une déclaration morte.
-    const ciSeul = fautesDeCommandes([await lireYaml(ci)], scripts).fautes;
+    const ciSeul = fautesDeCommandes([await lireYaml(ci)], scripts, [CI]).fautes;
     expect(ciSeul).toEqual(
       ARGUMENTS_CALCULES.filter((a) => !ci.includes(` ${a}`)).map(
         (a) => `argument calculé déclaré, écrit nulle part : ${a}`
@@ -1306,44 +1373,80 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     expect(exclusionsDe(`# ${'─'.repeat(70)}\n# ${'─'.repeat(70)}\ndocs/`)[0]?.motive).toBe(false);
   });
 
-  it('`prettier --check .` lit EXACTEMENT les fichiers suivis hors dérogations, avec les options racine, et propage son échec', async () => {
+  it('`prettier --check .` lit EXACTEMENT les fichiers suivis hors dérogations, avec les options racine', async () => {
     // La forme d'une exclusion ne dit pas sa LARGEUR : `**/*` sous un motif valable éteint le format
     // du dépôt entier, et l'outil saute aussi des dossiers PAR DÉFAUT. On demande donc au binaire
     // installé ce qu'il lit, et on le confronte aux fichiers suivis et à la liste déclarée. Une
     // configuration posée dans un sous-dossier change les options d'un fichier sans toucher la racine.
     const suivis = fichiersSuivis();
-    const { mesures, code } = await mesurerPrettier(suivis);
-    expect(fautesPrettier(mesures, suivis, code)).toEqual([]);
+    const mesures = await mesurerPrettier(suivis);
+    expect(fautesPrettier(mesures, suivis)).toEqual([]);
     // RM-02 : chaque désarmement, dérivé des mesures RÉELLES par une variation (RM-11).
     const lu = mesures.find((m) => m.lu)!;
     const deroge = mesures.find((m) => m.sait && !m.lu)!;
     const avec = (cible: MesurePrettier, variation: Partial<MesurePrettier>) =>
       mesures.map((m) => (m === cible ? { ...m, ...variation } : m));
-    const temoins: [MesurePrettier[], number | null, string][] = [
-      [avec(lu, { lu: false }), code, `${lu.fichier} : \`prettier --check .\` ne le lit pas`],
-      [avec(deroge, { lu: true }), code, `${deroge.fichier} : déclaré hors format, et lu`],
+    const temoins: [MesurePrettier[], string][] = [
+      [avec(lu, { lu: false }), `${lu.fichier} : \`prettier --check .\` ne le lit pas`],
+      [avec(deroge, { lu: true }), `${deroge.fichier} : déclaré hors format, et lu`],
       [
         avec(lu, { options: { requirePragma: true } }),
-        code,
         `${lu.fichier} : options autres que celles de ${PRETTIER}`,
       ],
-      [mesures.slice(1), code, `${suivis[0]} : non mesuré`],
+      [mesures.slice(1), `${suivis[0]} : non mesuré`],
       [
         mesures.map((m) =>
           m.fichier.startsWith('packages/contracts/') ? { ...m, sait: false } : m
         ),
-        code,
         'packages/contracts/ : dérogation qui ne couvre aucun fichier suivi',
       ],
-      [
-        mesures,
-        0,
-        `\`prettier --check .\` sort en 0 en signalant ${mesures.filter((m) => m.lu).length} fichier(s)`,
-      ],
     ];
-    for (const [variante, sortie, attendue] of temoins) {
-      expect(fautesPrettier(variante, suivis, sortie)).toEqual([attendue]);
+    for (const [variante, attendue] of temoins) {
+      expect(fautesPrettier(variante, suivis)).toEqual([attendue]);
     }
+  }, 600_000);
+
+  it('l’ACTE de Gate A, lancé sur un arbre porteur d’une faute, sort en 1 en la nommant — et sa mesure SAIT rendre 0', () => {
+    // Le verrou fige un binaire ET ses correctifs ; il ne dit pas ce que l'étape FAIT d'une faute. On
+    // lance donc `pnpm lint` et `pnpm format:check` eux-mêmes, sur les fichiers suivis plus une faute.
+    const suivis = fichiersSuivis();
+    const scripts = Object.keys(SCRIPTS_EXACTS);
+    const mesurer = (plantes: Readonly<Record<string, string>>, installe: boolean) => {
+      const racine = arbreJetable(
+        suivis,
+        { [FAUTE_PLANTEE.fichier]: FAUTE_PLANTEE.texte, ...plantes },
+        installe
+      );
+      try {
+        return scripts.flatMap((s) => {
+          const { code, sortie } = lancerActe(racine, s);
+          return fautesDeLActe(s, code, sortie);
+        });
+      } finally {
+        // Le lien d'abord, seul : effacer l'arbre ne doit jamais descendre dans le `node_modules` réel.
+        if (installe) unlinkSync(join(racine, 'node_modules'));
+        rmSync(racine, { recursive: true, force: true });
+      }
+    };
+    expect(mesurer({}, true)).toEqual([]);
+    // RM-02 sur la MESURE : les binaires que `pnpm` trouve sont remplacés par des factices qui sortent
+    // en 0 — la mesure doit le rendre, pour chacune des deux étapes.
+    const factices = Object.fromEntries(
+      scripts.flatMap((s) => {
+        const [nom] = binaireDuScript(s);
+        return [
+          [`node_modules/.bin/${nom}`, '#!/bin/sh\nexit 0\n'],
+          [`node_modules/.bin/${nom}.cmd`, '@exit /b 0\r\n'],
+        ];
+      })
+    );
+    expect(mesurer(factices, false)).toEqual(
+      scripts.map((s) => `\`pnpm ${s}\` sort en 0 sur ${FAUTE_PLANTEE.fichier} sans la nommer`)
+    );
+    // Et le jugement refuse un échec qui ne nomme pas la faute.
+    expect(fautesDeLActe('lint', 1, '')).toEqual([
+      `\`pnpm lint\` sort en 1 sur ${FAUTE_PLANTEE.fichier} sans la nommer`,
+    ]);
   }, 600_000);
 });
 
@@ -1356,7 +1459,8 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
 // fichier suivi — UN calcul, sans échantillon —, et on le juge : tout fichier de code est lu, avec la
 // configuration racine seule, le socle importé des mêmes paquets que `eslint.config.mjs` (RM-01) et
 // `noInlineConfig` ; les interdits du produit ROUGISSENT sur une faute posée au chemin même du fichier
-// là où ils s'appliquent, et nulle part ailleurs ; et le binaire installé propage son échec.
+// là où ils s'appliquent, et nulle part ailleurs. Ce que `pnpm lint` fait de ces erreurs est jugé par
+// le témoin d'acte du bloc précédent.
 
 type ConfigEffective = {
   rules?: Record<string, unknown>;
@@ -1497,26 +1601,8 @@ async function gravitesDe(eslint: ESLint, fichier: string): Promise<Record<strin
   return gravites;
 }
 
-/**
- * Le binaire INSTALLÉ que `pnpm lint` lance, sur la faute de `no-console` passée par l'entrée standard
- * au chemin d'un fichier de produit, avec la configuration du dépôt : son code de sortie. Le verrou fige
- * un binaire ET ses correctifs ; seul son lancement dit s'il propage l'échec.
- */
-function effetEslint(mesures: readonly MesureEslint[]): number | null {
-  const fuite = INTERDITS.find((i) => i.regle === 'no-console');
-  const cible = mesures.find((m) => m.config !== undefined && fuite?.couvre(m.fichier));
-  if (fuite === undefined || cible === undefined) return null;
-  const [nom] = binaireDuScript('lint');
-  const args = ['--stdin', '--stdin-filename', cible.fichier];
-  return lancerBinaire(nom, args, `${fuite.lignes.join('\n')}\n`).code;
-}
-
 /** Le jugement, séparé de la mesure : fonction PURE (RM-11), pour que ses témoins soient fabriqués. */
-function fautesEslint(
-  mesures: readonly MesureEslint[],
-  suivis: readonly string[],
-  code: number | null
-): string[] {
+function fautesEslint(mesures: readonly MesureEslint[], suivis: readonly string[]): string[] {
   const fautes: string[] = [];
   const mesures_ = new Set(mesures.map((m) => m.fichier));
   for (const f of suivis) if (!mesures_.has(f)) fautes.push(`${f} : non mesuré`);
@@ -1578,30 +1664,28 @@ function fautesEslint(
     if (!lus.some((m) => couvre(m.fichier)))
       fautes.push(`${regle} : ne s'applique à aucun fichier`);
   }
-  if (code !== 1) fautes.push(`\`pnpm lint\` : le binaire installé sort en ${code} sur une faute`);
   return fautes;
 }
 
 describe('REQ-GOV-018 — ce que la configuration ESLint FAIT, sur chaque fichier suivi', () => {
-  type Releve = { suivis: string[]; mesures: MesureEslint[]; code: number | null };
+  type Releve = { suivis: string[]; mesures: MesureEslint[] };
   let releve: Promise<Releve> | undefined;
   const mesurer = (): Promise<Releve> =>
     (releve ??= (async () => {
       const suivis = fichiersSuivis();
-      const mesures = await mesurerEslint(suivis);
-      return { suivis, mesures, code: effetEslint(mesures) };
+      return { suivis, mesures: await mesurerEslint(suivis) };
     })());
 
-  it('tout fichier de code suivi est lu avec la configuration racine seule, le socle et `noInlineConfig`, ses interdits ROUGISSENT là et seulement là, et `eslint` propage son échec', async () => {
-    const { suivis, mesures, code } = await mesurer();
+  it('tout fichier de code suivi est lu avec la configuration racine seule, le socle et `noInlineConfig`, ses interdits ROUGISSENT là et seulement là', async () => {
+    const { suivis, mesures } = await mesurer();
     expect(mesures.filter((m) => m.config !== undefined).length).toBeGreaterThan(0);
-    expect(fautesEslint(mesures, suivis, code)).toEqual([]);
+    expect(fautesEslint(mesures, suivis)).toEqual([]);
   }, 600_000);
 
   it('`fautesEslint` SAIT rougir : chaque désarmement, dérivé des mesures RÉELLES par une variation', async () => {
     // RM-02, sur les mesures du dépôt et non sur une vue inventée (RM-11) : une mesure change, et le
     // jugement doit nommer exactement la faute qu'elle porte.
-    const { suivis, mesures, code } = await mesurer();
+    const { suivis, mesures } = await mesurer();
     const cible = mesures.find(
       (m) => m.config !== undefined && m.fichier.startsWith('src/domain/')
     );
@@ -1615,11 +1699,10 @@ describe('REQ-GOV-018 — ce que la configuration ESLint FAIT, sur chaque fichie
     const regleDuSocle = Object.keys(cible!.socle?.rules ?? {}).find(
       (r) => gravite(cible!.socle?.rules?.[r]) > 0
     )!;
-    type Temoin = [MesureEslint[], string[], number | null, string[]];
+    type Temoin = [MesureEslint[], string[], string[]];
     const avec = (m0: MesureEslint, variation: Partial<MesureEslint>): Temoin => [
       mesures.map((m) => (m === m0 ? { ...m, ...variation } : m)),
       suivis,
-      code,
       [],
     ];
     const regles = (m0: MesureEslint, rules: Record<string, unknown>) => {
@@ -1629,10 +1712,9 @@ describe('REQ-GOV-018 — ce que la configuration ESLint FAIT, sur chaque fichie
     const sans = (garde: (x: string) => boolean): Temoin => [
       mesures.filter((m) => garde(m.fichier)),
       suivis.filter(garde),
-      code,
       [],
     ];
-    const attendre = ([m, s, k]: Temoin, ...attendues: string[]): Temoin => [m, s, k, attendues];
+    const attendre = ([m, s]: Temoin, ...attendues: string[]): Temoin => [m, s, attendues];
     // La MESURE aussi est éprouvée : `no-console` rétrogradé en `warn`, ou élargi à une méthode de
     // `console`, est mesuré par ESLint lui-même au chemin du fichier réel, puis jugé.
     const surcharge = (entree: Linter.RuleEntry) =>
@@ -1649,7 +1731,7 @@ describe('REQ-GOV-018 — ce que la configuration ESLint FAIT, sur chaque fichie
         avec(cible!, { socle: undefined, config: undefined }),
         `${f} : code que le socle ESLint ne lit pas`
       ),
-      attendre([mesures.filter((m) => m !== cible), suivis, code, []], `${f} : non mesuré`),
+      attendre([mesures.filter((m) => m !== cible), suivis, []], `${f} : non mesuré`),
       attendre(avec(cible!, { racine: { ...c, rules: {} } }), `${f} : configuration imbriquée`),
       attendre(
         avec(cible!, { config: { ...c, linterOptions: {} }, racine: { ...c, linterOptions: {} } }),
@@ -1682,10 +1764,6 @@ describe('REQ-GOV-018 — ce que la configuration ESLint FAIT, sur chaque fichie
         "no-restricted-syntax : ne s'applique à aucun fichier",
         "no-restricted-imports : ne s'applique à aucun fichier"
       ),
-      attendre(
-        [mesures, suivis, 0, []],
-        '`pnpm lint` : le binaire installé sort en 0 sur une faute'
-      ),
     ];
     for (const [regle, couvre] of SOCLE_ETEINT_DECLARE) {
       // Éteinte hors de son chemin déclaré ; armée sur son chemin déclaré.
@@ -1708,11 +1786,9 @@ describe('REQ-GOV-018 — ce que la configuration ESLint FAIT, sur chaque fichie
     );
     // Le jugement doit AJOUTER exactement les fautes de la variation : le témoin ne dépend pas de ce
     // que l'arbre porte déjà, et c'est le test précédent qui dit si l'arbre est sain.
-    const deja = new Set(fautesEslint(mesures, suivis, code));
-    for (const [variante, suivisVariante, codeVariante, attendues] of temoins) {
-      const neuves = fautesEslint(variante, suivisVariante, codeVariante).filter(
-        (x) => !deja.has(x)
-      );
+    const deja = new Set(fautesEslint(mesures, suivis));
+    for (const [variante, suivisVariante, attendues] of temoins) {
+      const neuves = fautesEslint(variante, suivisVariante).filter((x) => !deja.has(x));
       expect(neuves).toEqual(attendues);
     }
   }, 600_000);
