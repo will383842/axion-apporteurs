@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `d084b0b` — 2026-09-15T10:38:06+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #39 (un conflit avec `main`) · 2. #44 (un conflit avec `main`) · 3. #45 (un conflit avec `main`) |
+| Où est `main` ? | `ae56ce4` — 2026-09-15T14:36:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #39 (rien) · 2. #45 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-035 (A01) · GOV-036 (A01) · GOV-037 (A01) · GOV-030 (A01) · GOV-031 (A01) |
 | Où en est la phase ? | phase -1 — 34/39 tâches, reste 3.50 j |
-| Le prochain pas | GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
+| Le prochain pas | fusionner #39, puis GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #44 — 2026-09-15 |
+| Dernière entrée de journal | PR #45 — 2026-09-15 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 39 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
@@ -60,9 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #39 — feat(GOV-036): les deux listes qui decident de ce que gov:entite REGARDE | `t/gov-036` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #44 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A | `t/gov-031` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #39 — feat(GOV-036): les deux listes qui decident de ce que gov:entite REGARDE | `t/gov-036` | rien — fusionnable maintenant |
+| 2 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -88,17 +87,52 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-15)
 
 ## Prochain pas
 
+**Fusionner #39** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+
 **GOV-035** — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur (0.5 j) : 5 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `d084b0b` (2026-09-15T10:38:06+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `ae56ce4` (2026-09-15T14:36:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #45 — 2026-09-15 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36
+
+**Fait.** La garde `gov:attributions` (`scripts/gates/gov-attributions.ts`) confronte à sa seconde
+source toute attribution écrite deux fois : gate ↔ tâche, owner ↔ poste, lot ↔ titre de l'entrée de
+journal de sa PR, et tout identifiant de tâche nommé dans l'en-tête d'un fichier suivi de `scripts/`
+ou de `tests/`, ou dans une chaîne de `docs/gates.json`. Ce qu'elle ne peut pas juger est exempté,
+imprimé et compté sous la rubrique de sa nature. Une dette figée (`DETTE_GABARIT_LIVREE`,
+`DETTE_LOT_JOURNAL`) porte tout ce que le site jugé porte, et une entrée qui ne mesure plus rien
+rougit en `dette_perimee`. Elle est appelée par Gate A (`pnpm gov:attributions`, puis son `--prove`)
+et par `pnpm gov:check`. La branche a ensuite fusionné `main` après les PR #36, #41 et #44 : cinq
+conflits. `ci.yml` et `package.json` gardent toutes les étapes et tous les scripts des deux côtés ;
+`docs/PLAN-STATE.md` et `docs/TRACABILITE.md` sont régénérés. Le cliquet des sorties non nulles a
+rougi sur la fusion, `expected 37 to be 36` : la PR #41 avait pris le 36 avec `gov-check.ts`, et il
+est déclaré à 37. La garde a rougi trois fois sur le contenu fusionné, en `mention_hors_paths`, sur
+trois textes arrivés par `main`. Deux sont des champs `verifie` de `docs/gates.json`, réécrits par
+l'outil hors dépôt sans exemption : `gov:plan-state` ne nomme plus GOV-035, `gov:check` ne nomme plus
+GOV-006. Le troisième, l'en-tête de `scripts/gates/gov-check.ts`, dit un fait vrai sur GOV-000 : il
+est déclaré en `contexte`. Prettier est appliqué aux trois fichiers de cette PR que `format:check`
+refusait, avec un arbre syntaxique identique.
+
+**Reste.** Les livrables (5) et (6) de l'acceptance ne sont pas livrés, et la décision appartient au
+gardien de la spécification ou à Will. Les dettes déclarées au corps de la PR restent ouvertes,
+lentille par lentille, dont le mutant survivant du retrait des commentaires HTML fichier par fichier.
+Le titre de la PR dit encore « cliquet a 36 ». La déclaration `contexte` de l'en-tête de
+`gov-check.ts` est un choix d'intégration : la phrase pourrait aussi être réécrite dans le fichier de
+GOV-030. La PR #39 atterrira probablement avant celle-ci, et une seconde fusion de `main` suivra.
+
+**Appris.** Une mesure d'interaction entre PR vaut pour la base où elle a été faite. Rejouée après la
+seule PR #36 (`git merge-tree`), la garde nommait un texte fautif ; sur la fusion réelle, après la
+PR #41, elle en nomme trois. Et une mention hors paths ne se ferme pas en ajoutant le path :
+`plan-state-frais.spec.ts` n'a été touché ni par la PR #36 ni par GOV-035, et le déclarer à cette
+tâche aurait écrit une seconde attribution fausse pour taire la première.
 
 ### PR #44 — 2026-09-15 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A
 
@@ -178,41 +212,7 @@ pannes connues. PostgreSQL, Prisma et CommonMark coupent au CR seul, ECMAScript 
 nommément coûte 0 sur les 188 fichiers suivis. Découper comme chaque consommateur aurait demandé une
 grammaire par consommateur.
 
-### PR #36 — 2026-09-15 — feat(GOV-035): docs/PLAN-STATE.md avait un generateur et aucun verificateur
-
-**Fait.** `docs/PLAN-STATE.md` était la seule des cinq vues de REQ-GOV-032 sans vérificateur : quinze
-lignes falsifiées, ancres conservées, laissaient les huit vérificateurs de Gate A verts.
-`pnpm plan-state:verifier` compare désormais la vue commitée à ce que ses sources produisent. Tout ce
-qui n'est pas déclaré est comparé ; ce qui vient de la forge (PR ouvertes, labels `owner:`,
-`origin/main`) est exempté par provenance. La comparaison vaut aux trois étages (rubrique, ligne du
-bloc de reprise, prose), dans l'ordre, plus les mesures du domaine. Un témoin de population exige que
-chaque famille émise ait été vue rouge. Gate `plan-state:verifier` armée, 112 → 113 gates. Fusionnée
-en `c9b2919` (écrasement) sur quatre accords sur `b34283b` — `securite` `5202723725`, `simplicite`
-`5205392956`, `mutation` `5205521841`, `exactitude` `5205878925`. Ce dernier rejuge sous la règle
-d'arrêt de Will du 15/09 : un refus ne bloque que sur un échec **ouvert**, fabriqué et vu ; le reste
-est une dette.
-
-⚠️ **`main` a été rouge sans cette entrée.** La PR #36 avait été branchée avant la PR #35, celle qui
-impose à chaque PR de porter sa propre entrée. Le push de `c9b2919` sur `main` a rougi Gate A (run
-`34940893579`, `pr_fusionnee_sans_journal`), et les étapes suivantes sont sorties `skipped`. L'entrée
-arrive par la PR #41.
-
-**Reste.** La dette U+2028 / U+2029. Les regex multilignes de `build.ts` (`LECTURES`, `DENOMBREMENTS`)
-coupent sur ces séparateurs, et trois textes affirment à tort que le verdict ne dépend pas de la forge :
-`ci.yml:145-148`, `docs/gates.json`, `build.ts:256`. `exactitude` l'a mesuré comme un échec **fermé** :
-un faux rouge, ou le nom de domaine d'un écart perdu, jamais un vert. Sa correction existe hors dépôt,
-en patch, **non poussée** pour ne pas faire tomber les accords de #36, et reste à verser en tâche.
-Versés : **GOV-053** (l'exemption est par rubrique, la volatilité par ligne), **GOV-054** (le cliquet
-ne voit pas `process.exitCode = 1`), **GOV-055** (comparer un générateur à lui-même ne voit pas ce
-qu'il a cessé de produire ; M17 survit).
-
-**Appris.** Une règle qui s'applique « à partir de maintenant » ne rattrape pas les branches ouvertes
-avant elle. La PR #35 a cassé la dette qui roule pour les PR **à venir**, mais la #36 était déjà en
-vol : toute branche antérieure à une nouvelle obligation doit être relue contre elle **avant** sa
-fusion. Sinon `main` rougit à l'atterrissage, et c'est la PR suivante qui paie. Un témoin
-qui tire son attendu de son sujet ne voit pas ce que le sujet a perdu (GOV-055).
-
-… 10 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 11 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
