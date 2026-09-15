@@ -1101,7 +1101,7 @@
       "phase": -1,
       "script": "tests/unit/gouvernance/plan-state-frais.spec.ts",
       "tache": "GOV-008",
-      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : PLAN-STATE porte les 7 rubriques de REQ-GOV-006, le bloc de reprise en tete avec le SHA de main, et le journal fait/reste/appris est RENDU depuis docs/journal/, jamais tape dans la vue. Ce qu'il ne juge PAS : ce que les rubriques DISENT — des compteurs falsifies, ancres conservees, le laissent vert. Cette moitie-la est tenue par la gate `plan-state:verifier` (GOV-035), qui compare la vue a ses sources et entre en Gate A",
+      "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : PLAN-STATE porte les 7 rubriques de REQ-GOV-006, le bloc de reprise en tete avec le SHA de main, et le journal fait/reste/appris est RENDU depuis docs/journal/, jamais tape dans la vue. Ce qu'il ne juge PAS : ce que les rubriques DISENT — des compteurs falsifies, ancres conservees, le laissent vert. Cette moitie-la est tenue par la gate `plan-state:verifier`, qui compare la vue a ses sources et entre en Gate A",
       "fixtureRouge": "editer PLAN-STATE.md a la main",
       "preuveRouge": null
     }
