@@ -13,7 +13,7 @@
 | Où en est la phase ? | phase -1 — 34/39 tâches, reste 3.50 j |
 | Le prochain pas | GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #35 — 2026-09-13 |
+| Dernière entrée de journal | PR #41 — 2026-09-15 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -101,6 +101,69 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #41 — 2026-09-15 — feat(GOV-030): la garde des termes interdits que six documents invoquaient sans quelle existe
+
+**Fait.** La garde des termes interdits existe : `scripts/gates/gov-check.ts`, câblée en Gate A
+bloquante par son chemin. `docs/GLOSSAIRE.md`, `docs/CONVENTIONS.md` §2, `docs/REGLES-MAISON.md`
+(RM-01, RM-06), `packages/contracts/events.ts`, REQ-GOV-001 et `docs/GATES.md` l'invoquaient ; l'entrée
+de `docs/gates.json` n'avait aucun script derrière elle. Les deux gardes, `gov-check` et
+`partners:schema:enums`, appliquent une même règle de fin de ligne (`finDeLigneEtrangere`, famille
+`fin_de_ligne_non_lf`) : une ligne est ce que LF termine, CRLF compris ; CR seul, U+2028 et U+2029 sont
+refusés en les nommant, avant tout calcul d'exemption. Ce qui est lu se prouve par empreinte sha256
+confrontée au disque, jusqu'à la dernière ligne d'un fichier de plus d'un mébioctet. Quatre accords sur
+`96fcf03` — `securite` `5205615135`, `exactitude` `5205892198`, `simplicite` `5205916802`, `mutation`
+`5206064111`. La branche a ensuite fusionné `main` après la PR #36 : nouvelle tête, nouveau tour de
+relecture. Cette PR porte sa propre entrée, et celle de la #36.
+
+**Reste.** L'homonymie de `gov:check` (le nom appartient à un ADR) ; `preuveRouge` de l'entrée
+`gov:check` reste `null` ; `schema-enums.ts` ne voit ni l'énumération répartie sur plusieurs lignes ni
+les membres d'enum sans délimiteur, et ne refuse pas un contenu illisible (UTF-16 sous `scripts/` sort
+en 0) — à verser en tâche avec `sensible` renseigné par Will. `partners/ADR-0011` reste `propose` :
+`gov-adr` ne juge son texte qu'à `accepte`, et la mutation qui y ampute la portée survit. L'acceptation (3) de GOV-030 dit « `src/` étant vide en phase -1 », ce
+qui est faux (3 fichiers) ; le texte vit dans `docs/tasks.json`. #39 porte une troisième règle
+`contenu_illisible` : la PR qui atterrit en second devra converger.
+
+**Appris.** Un fichier marqué inchangé dans l'index (blob fautif, disque propre, `git status` vide)
+fait sortir `gov-check` en 0 en local et en 1 en CI, qui extrait le blob : **un vert local ne certifie
+pas ce qui est publié.** Et une règle de fin de ligne s'écrit pour les consommateurs, pas pour les
+pannes connues. PostgreSQL, Prisma et CommonMark coupent au CR seul, ECMAScript à U+2028. Refuser
+nommément coûte 0 sur les 188 fichiers suivis. Découper comme chaque consommateur aurait demandé une
+grammaire par consommateur.
+
+### PR #36 — 2026-09-15 — feat(GOV-035): docs/PLAN-STATE.md avait un generateur et aucun verificateur
+
+**Fait.** `docs/PLAN-STATE.md` était la seule des cinq vues de REQ-GOV-032 sans vérificateur : quinze
+lignes falsifiées, ancres conservées, laissaient les huit vérificateurs de Gate A verts.
+`pnpm plan-state:verifier` compare désormais la vue commitée à ce que ses sources produisent. Tout ce
+qui n'est pas déclaré est comparé ; ce qui vient de la forge (PR ouvertes, labels `owner:`,
+`origin/main`) est exempté par provenance. La comparaison vaut aux trois étages (rubrique, ligne du
+bloc de reprise, prose), dans l'ordre, plus les mesures du domaine. Un témoin de population exige que
+chaque famille émise ait été vue rouge. Gate `plan-state:verifier` armée, 112 → 113 gates. Fusionnée
+en `c9b2919` (écrasement) sur quatre accords sur `b34283b` — `securite` `5202723725`, `simplicite`
+`5205392956`, `mutation` `5205521841`, `exactitude` `5205878925`. Ce dernier rejuge sous la règle
+d'arrêt de Will du 15/09 : un refus ne bloque que sur un échec **ouvert**, fabriqué et vu ; le reste
+est une dette.
+
+⚠️ **`main` a été rouge sans cette entrée.** La PR #36 avait été branchée avant la PR #35, celle qui
+impose à chaque PR de porter sa propre entrée. Le push de `c9b2919` sur `main` a rougi Gate A (run
+`34940893579`, `pr_fusionnee_sans_journal`), et les étapes suivantes sont sorties `skipped`. L'entrée
+arrive par la PR #41.
+
+**Reste.** La dette U+2028 / U+2029. Les regex multilignes de `build.ts` (`LECTURES`, `DENOMBREMENTS`)
+coupent sur ces séparateurs, et trois textes affirment à tort que le verdict ne dépend pas de la forge :
+`ci.yml:145-148`, `docs/gates.json`, `build.ts:256`. `exactitude` l'a mesuré comme un échec **fermé** :
+un faux rouge, ou le nom de domaine d'un écart perdu, jamais un vert. Sa correction existe hors dépôt,
+en patch, **non poussée** pour ne pas faire tomber les accords de #36, et reste à verser en tâche.
+Versés : **GOV-053** (l'exemption est par rubrique, la volatilité par ligne), **GOV-054** (le cliquet
+ne voit pas `process.exitCode = 1`), **GOV-055** (comparer un générateur à lui-même ne voit pas ce
+qu'il a cessé de produire ; M17 survit).
+
+**Appris.** Une règle qui s'applique « à partir de maintenant » ne rattrape pas les branches ouvertes
+avant elle. La PR #35 a cassé la dette qui roule pour les PR **à venir**, mais la #36 était déjà en
+vol : toute branche antérieure à une nouvelle obligation doit être relue contre elle **avant** sa
+fusion. Sinon `main` rougit à l'atterrissage, et c'est la PR suivante qui paie. Un témoin
+qui tire son attendu de son sujet ne voit pas ce que le sujet a perdu (GOV-055).
+
 ### PR #35 — 2026-09-13 — docs(GOV-023): entree de journal de la PR 34, et la boucle qui la produit
 
 **Fait.** `main` était rouge sur Gate A depuis la fusion de la PR #34 —
@@ -137,104 +200,7 @@ le nombre, mettre la commande qui le rend — était écrit. Le premier jet de c
 « six PR » là où la mesure en donne trois. Le remède connu n'a pas été appliqué parce qu'il vivait
 dans une entrée de journal, c'est-à-dire, encore, dans de la prose.
 
-### PR #34 — 2026-09-13 — chore(GOV-038): clot le lot L-1-05 et verse dix manques mesures en taches
-
-**Fait.** Le lot `L-1-05` est clos — `GOV-014`, `GOV-019`, `GOV-028` et `GOV-038` passent
-`fusionnee`, la phase −1 va de 30/39 à 34/39, et Gate A, rouge depuis la fusion de #33, se referme.
-Onze manques mesurés entrent au backlog (`GOV-041`→`GOV-051`) : six ouverts le 2026-09-09 qui ne
-vivaient que dans un document **hors dépôt**, un trouvé par une garde sur moi, un rencontré en
-faisant le travail, trois trouvés par les lentilles de cette PR. 212 → 223 tâches, 157,25 → 163,75 j.
-
-⚠️ **`GOV-038` portait `lot: null`.** La liste des tâches d'une clôture se dérive du champ `lot`
-parce que `docs/lots/` est hors git : aucune clôture ne l'aurait jamais vue, et elle serait restée
-`en_cours` pour toujours. Mesuré par mutation, refait par exactitude : l'état d'avant reconstitué,
-quatre vues régénérées, `gov:check` **16/16 exit 0** — rien ne rougit. Versé en `GOV-049`.
-
-**Reste.** Cinq tâches de phase −1, 3,50 j, **toutes écrites et poussées** : `GOV-030`, `GOV-031`,
-`GOV-035`, `GOV-036`, `GOV-037`. Trois d'entre elles écrivent dans `.github/workflows/ci.yml` et ne
-peuvent donc pas partager un lot — elles atterriront une par une. `GOV-037` introduit un
-`process.exit(1)` à déclarer au cliquet **au moment de sa fusion**, le seuil étant global. Et
-`INT-T01a` reste `fusionnee` sans livrable : le repasser `a_faire` fait baisser le pourcentage,
-c'est un arbitrage de Will. Restent aussi cinq **succédanés** énumérés dans
-`outils/DETTE-DES-SUCCEDANES.md`, avec le geste unique qui les ferme.
-
-**Appris.** Onze tours, huit têtes, quarante-cinq verdicts, **zéro faux vert dans le livrable** —
-et onze défauts réels dans les OUTILS qui l'écrivent. Trois choses, chacune payée d'un rouge.
-
-D'abord, **le nom ne fait pas la chose**. J'ai appelé « forme normale » un inventaire de menaces,
-pendant quatre rédactions, sans jamais appeler la normalisation ; « batterie permanente » un
-dossier temporaire ; « quatre clauses » un code qui en appliquait trois ; et j'ai intitulé un commit
-d'après un correctif qu'il ne portait pas. Le contrôle de chemin a échoué QUATRE fois, en sens
-opposés : une liste blanche de caractères refusait 51 des 665 chemins réels — elle interdisait du
-légitime, en silence ; puis une liste de menaces qu'une seule espace en tête défaisait ; puis la
-même, qu'un caractère invisible défaisait encore ; puis une clause restée inventaire, que `./x`
-défaisait. Chaque fois, le dégât dépassait l'écrivain : `gov-conventions.ts` teste
-`p.startsWith('axionia/')`, et un `<U+200B>` devant un chemin du dépôt voisin amenait
-`pnpm gov:check` de exit 1 à **16/16 exit 0**, sur un caractère invisible dans un diff.
-
-Ensuite, et c'est la formulation d'une lentille qui explique les quatre d'un coup : **l'instrument
-mesurait un succédané au lieu de la chose**. Un code de sortie tenu pour un refus — une trace de
-pile comptée « conforme » ; une espèce tenue pour la branche — un compteur INFALSIFIABLE affichant
-zéro depuis huit tours ; le texte source tenu pour la population — une branche de huit caractères
-hors du seuil ; les octets du disque tenus pour le contenu — trois valeurs d'empreinte pour un même
-sha. *Une seule décision de conception payée quatre fois : le témoin est à l'extérieur de son sujet,
-donc il re-dérive du dehors ce que le sujet pourrait exposer.* Corollaire, d'une autre lentille sur
-elle-même : **falsifiable n'est pas exhaustif** — un témoin vu rougir prouve qu'il PEUT parler,
-jamais qu'il parle de TOUT son sujet.
-
-Enfin, **le pas 5 ne protégeait que la tête du dépôt**. Les outils qui écrivent `docs/tasks.json`
-n'étaient versionnés nulle part : deux lentilles ont accepté sur une version dont il ne restait
-aucune trace, et un correctif écrit à 07:02 a disparu à 07:05 sans laisser d'absence mesurable.
-Pire, mesuré : **onze empreintes distinctes sur douze courses** de la batterie — le fichier jugé
-était réécrit pendant sa lecture, et des refus fermés depuis cinq tours en ressortaient VERTS. Cela
-a refermé un mystère qu'une lentille avait eu l'honnêteté de ne pas retenir deux tours plus tôt :
-un chemin hostile accepté qu'elle ne savait pas reproduire n'était pas un trou de l'écrivain,
-**c'était une lecture en plein milieu d'une écriture**. Le dossier est désormais un dépôt git sans
-remote, un verdict nomme le COUPLE (sha du dépôt, sha des outils), les outils sont GELÉS pendant un
-tour, et un changement d'ÉCRIVAIN périme le livrable quand un changement d'INSTRUMENT ne périme que
-la mesure.
-
-### PR #33 — 2026-09-12 — chore(GOV-014): reconcilie gov-038 — quatre taches de phase -1, et le faux vert qui n'entrait en conflit avec rien
-
-**Fait.** `lot/gov-038-attestation`, orpheline depuis le 2026-09-05, est réconciliée avec `main` par
-un merge à deux parents (`8e9113f` + `f856704`). Elle apporte `GOV-014`, `INT-T01b`, `GOV-019`,
-`GOV-028` et `GOV-038` elle-même. **22 conflits, ~128 blocs** : 7 vues régénérées jamais résolues,
-2 registres fusionnés **par identifiant** avec un outil hors dépôt qui REFUSE et NOMME toute entrée
-touchée des deux côtés (4 dans `gates.json`, 10 dans `tasks.json` — aucune résolue par une règle),
-et 5 gardes tranchées au sur-ensemble, mesuré export par export. Le dépôt passe de 29 à 30 tâches
-livrées sur 212, de 16,75 à 17,75 j sur 157,25.
-
-**Le faux vert est arrivé sans aucun conflit.** `scripts/gates/gov-conventions.ts` est un fichier
-NEUF de `gov-038` : il portait le `try/catch { return [] }` que la PR #31 avait fermé pour les cinq
-autres gardes, et `package.json` le faisait déjà entrer dans la chaîne bloquante `gov:check`. Un
-fichier ajouté d'un seul côté ne se confronte à rien — aucun conflit ne l'a signalé. Converti :
-**six** gardes passent désormais par la source unique.
-
-**Reste.** Onze tours de revue, vingt-deux motifs rendus par les quatre lentilles — et **aucun** ne
-portait sur la résolution des conflits : tous visaient le code ajouté hors résolution, ou le récit.
-`GARDES_QUI_BALAIENT` a dû être **renversée** — dérivée du disque, puis DÉCLARÉE — parce qu'une
-population dérivée de la présence du correctif ne voit pas celui qui le perd. Le plancher du cliquet
-a demandé quatre rédactions avant de tenir. Restent versés en tâches, non corrigés ici (A11) : le
-cliquet garde un COMPTE et non une IDENTITÉ (25 sorties échangeables sur les 8 entrées à delta nul,
-et le registre ne couvre que 12 fichiers sur 33) ; `perf-budgets.ts:472` porte un
-`if (!existsSync(racine)) return []` qu'aucune tâche ne porte ; et `gov-attestation.ts` est le seul
-des 24 scripts de garde absent de `docs/gates.json`, ce qui l'exempte de la famille
-`garde_ecrite_jamais_appelee` que ce lot livre — la forme exacte du défaut qu'il vient de renverser
-ailleurs, réintroduite le même jour.
-
-**Appris.** Trois choses, chacune payée d'un rouge. D'abord, **le merge ne protège que ce que les
-DEUX branches ont touché** : un correctif qu'une branche n'a pas vu passer rentre par la porte
-qu'aucune garde ne surveille, et le devis d'une réconciliation ne vieillit que dans un sens — 8
-conflits mesurés contre une tête, 22 contre `main` deux fusions plus tard. Ensuite, **une garde qui
-cherche ses sujets par le correctif qu'ils portent ne verra jamais celui qui le perd** ; la liste
-doit être une déclaration, que seul un humain retire, et la réciproque n'attrape que l'oubli
-inverse. Enfin, **corriger aux numéros de ligne d'un relecteur n'est pas corriger le défaut** :
-deux fois dans cette PR j'ai fermé l'occurrence citée en laissant les autres, et c'est la lentille
-qui a dû revenir. Un relecteur qui cite une ligne donne un exemple, jamais l'inventaire. Corollaire
-mesuré le même jour : un commentaire qui survit à son code ne décrit plus rien, il désinforme — le
-fichier affirmait à trois endroits l'inverse du design livré.
-
-… 7 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 9 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
