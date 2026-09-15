@@ -1,30 +1,52 @@
-# Ce que Prettier ne reformate PAS — et pourquoi (REQ-GOV-018, GOV-014).
+# Ce que Prettier ne reformate PAS — et pourquoi (REQ-GOV-018, GOV-014, étendu par GOV-031).
 #
-# ⚠️ Prettier n'est pas encore installé dans ce dépôt : `package.json` est un fichier PARTAGÉ, la
-# dépendance et le script `format:check` sont rendus en texte dans la PR de GOV-014. Ce fichier est
-# donc une DÉCLARATION tant que A01 ne les a pas appliqués — `gov:conventions` l'imprime à chaque
-# exécution plutôt que de laisser croire qu'un format tourne.
+# `pnpm format:check` est une étape BLOQUANTE de Gate A : chaque entrée ci-dessous est un écart
+# réel au format, et l'acceptation de GOV-031 fixe le régime qui s'y applique — « tout écart restant
+# porte une dérogation NOMMÉE et motivée, jamais une règle désactivée en bloc ».
+#
+# DEUX RÈGLES DE FORME, tenues par `tests/unit/gouvernance/gardes-transposees.spec.ts` :
+#   — le motif d'une entrée est le bloc de commentaire COLLÉ au-dessus d'elle, sans ligne vide ni
+#     autre entrée entre les deux : un motif ne sert qu'une entrée, et il se compte en LETTRES —
+#     une ligne de tirets n'est pas une phrase ;
+#   — les fichiers suivis que `prettier --check .` ne lit pas sont confrontés à une liste DÉCLARÉE
+#     dans cette spec. Une entrée qui déborde de sa mesure (un `src/`, un `*.ts`, un `**/*`) y
+#     rougit. Ce qu'une entrée couvre n'est pas formaté, et rien ne rougit dessus : un fichier de
+#     code neuf posé sous `packages/contracts/` est dérogé comme le reste du dossier.
+# Les répertoires produits (`node_modules/`, `dist/`, `coverage/`, `.next/`) ne sont pas répétés
+# ici : Prettier 3 lit `.gitignore`, qui les porte déjà.
 
-node_modules/
-.next/
-coverage/
-dist/
+# Le fichier de verrouillage est ÉCRIT par pnpm, et `pnpm install --frozen-lockfile` le compare
+# octet par octet à `package.json` : reformaté, il ne serait plus le fichier que pnpm a produit.
 pnpm-lock.yaml
 
-# ── LES VUES DÉRIVÉES NE SE REFORMATENT PAS ─────────────────────────────────────────────────────
-#
-# Ces fichiers ne sont pas écrits à la main : ils sont RENDUS par un script, et une garde compare
-# le disque au texte que ce script produit (`pnpm gov:gates-derivees`, `pnpm adr:index --verifier`,
-# `pnpm lot:paths --check`, `pnpm gov:trace --verifier`, `pnpm gov:agents --verifier`). Laisser
-# Prettier les réécrire ferait rougir ces gardes sans qu'aucun humain n'ait touché à rien — et le
-# rouge désignerait la mauvaise cause, comme le fait déjà `core.autocrlf` sur ce dépôt.
-docs/GATES.md
-docs/TASKS.md
-docs/PLAN-STATE.md
-docs/TRACABILITE.md
-docs/paths-proposes.json
-docs/adr/INDEX.md
+# ⛔ LE MARKDOWN, PARTOUT. Dans ce dépôt, la prose n'est pas de la présentation : c'est la MATIÈRE
+# que des gardes lisent, et Prettier la réécrit — il rembourre les tableaux et change l'italique
+# `*x*` en `_x_`. Mesuré le 2026-09-14, reformater le Markdown :
+#   — fait ROUGIR les gardes qui retrouvent leurs témoins par chaîne exacte (`gov:preseance
+#     --prove`, `gov:pr --prove`, `gov:sonde --prove`, `fiches-tiers`, `glossaire-enums`) ou qui
+#     comparent une vue à sa source (`gov:tasks --verifie-rendu`, `gov:requirements
+#     --verifie-rendu`, `adr:index --verifier`, `gov:trace --verifier`) ;
+#   — et, plus grave, rend AVEUGLES trois gardes, dont le rouge disparaît au moment où l'auteur
+#     lance `pnpm format` pour satisfaire l'étape bloquante : l'anti-duplication de `CLAUDE.md`
+#     (`regles-maison.spec.ts`), qui cherche une ligne de tableau mot pour mot dans sa source —
+#     or Prettier rembourre CHAQUE tableau à ses propres largeurs de colonnes, si bien que
+#     formater les deux côtés ne rend pas le rouge ; `gov:lexique` et `gov:identifiants`, pour qui
+#     `_` est une lettre, si bien que `*objectif*` rougit et `_objectif_` passe.
+# Une garde qui rougit se voit ; une garde qu'on a fait taire ne se voit pas. Et `docs/**`
+# appartient pour une large part au `gardien-spec` et à l'`architecte` (`docs/CONVENTIONS.md`
+# §8) : un développeur ne les reformate pas.
+*.md
 
-# Les fiches de rôle sont rendues depuis `docs/agents.json` par `pnpm gov:agents:rendre` : leur
-# bloc généré est comparé caractère à caractère par `pnpm gov:agents:verifier`.
-.claude/agents/
+# Les registres JSON de `docs/` sont ÉCRITS par leurs générateurs et par les outils de réécriture
+# (`docs/tasks.json` et `docs/gates.json` sont en `deny` dans `.claude/settings.json`). Mesuré le
+# 2026-09-14 : Prettier réécrit chacun d'eux, donc le prochain passage d'un générateur rendrait
+# `pnpm format:check` rouge sans qu'aucun humain ait touché au format ; et `pnpm lot:paths:check`,
+# qui compare `docs/paths-proposes.json` à ce que son générateur produit, rougit aussitôt.
+docs/*.json
+
+# ⛔ `packages/contracts/` — le contrat PUBLIÉ entre les deux dépôts. Reformater ses sources change
+# l'empreinte que `pnpm contracts:hash` vérifie (`tests/unit/integration/contrat-hash.spec.ts`), et
+# ce dossier ne change que dans une PR portant le label `schema` (`docs/CONVENTIONS.md` §5 et §8).
+# GOV-031 est `schema: false` : elle n'a pas le droit d'y écrire, fût-ce une espace. Borné à ce
+# dossier : un autre paquet posé sous `packages/` est formaté comme le reste.
+packages/contracts/

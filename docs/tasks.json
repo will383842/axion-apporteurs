@@ -8327,6 +8327,88 @@
           "tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-053",
+      "titre": "Le classement des vues est par RUBRIQUE, la volatilite est par LIGNE",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/plan-state/build.ts",
+        "tests/unit/gouvernance/volatilite-par-ligne.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-032"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, jouee par A10 mutation au tour de revue de la PR 36, a refaire avant d'ecrire une ligne : reecrire la rubrique « Prochain pas » de docs/PLAN-STATE.md en « la phase -1 est TERMINEE, 39/39 taches, plus aucune tache eligible », puis `pnpm plan-state:verifier` -> EXIT 0. Le mensonge passe.\n\nPOURQUOI. `plan-state:verifier` exempte EN ENTIER toute rubrique dont le generateur a lu la forge pour l'ecrire — la provenance est notee au moment de l'ecriture, il n'y a plus de liste — et « Prochain pas » lit `gh pr list` pour la tete de la file de fusion. Mais sa DEUXIEME ligne se derive de `docs/tasks.json` SEUL — `statut === 'a_faire' && phase === phaseCourante && externe === null && deps.every(livrees)` — sans le moindre appel a la forge. Une rubrique qui mele une source vivante et une source du depot est donc declaree volatile EN ENTIER, et sa part derivable sort du controle avec le reste.\n\nLA LECON, et elle deborde ce fichier : le classement est par RUBRIQUE, la volatilite est par LIGNE. Le bloc de reprise est deja traite ligne a ligne — c'est la bonne granularite, elle n'a simplement pas ete appliquee aux rubriques.\n\nCE QUI N'A PAS ETE FAIT DANS LA PR 36, ET POURQUOI. Decouper « Prochain pas » demande de separer sa ligne derivable de sa ligne vivante DANS LE GENERATEUR, donc de changer ce que la vue AFFICHE. C'est un arbitrage de rendu, pas une correction de garde : verse plutot que glisse (charte A11).\n\nACCEPTATION — ELLE EST LA GARDE.\n  (a) ROUGE : falsifier la part DERIVABLE d'une rubrique par ailleurs volatile fait sortir 1, et l'ecart est nomme en unites du domaine. Fabriquer la panne, jamais la constater (RM-02).\n  (b) VERT : falsifier la part VIVANTE de la meme rubrique reste vert, et le message le DIT — un vert muet promet plus qu'il ne tient.\n  (c) Le vert final annonce le compte des lignes REELLEMENT confrontees, jamais la longueur d'une liste declaree. C'est le defaut que la PR 36 a corrige au niveau des rubriques ; il ne doit pas revenir au niveau des lignes.\n\nCE QUI EST DEJA FERME, et qu'il ne faut pas refaire : chaque rubrique exemptee est imprimee avec la source vivante que le generateur a lue pour l'ecrire ; le bloc de reprise est compare dans les DEUX sens, ligne a ligne et par sa forme ; une question dupliquee est un refus ; une prose de trop est un refus. La granularite de la LIGNE existe donc deja dans le generateur (`ligneDeReprise`) : c'est elle qu'il faut etendre aux rubriques. Cette tache ne porte QUE la granularite des rubriques.",
+      "tests": {
+        "REQ-GOV-032": [
+          "tests/unit/gouvernance/volatilite-par-ligne.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-054",
+      "titre": "Le cliquet ne voit pas `process.exitCode = 1`, et deux refus neufs sont passes dessous",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/unit/gouvernance/cliquet-sorties-differees.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, trouvee par A10 mutation au tour de revue de la PR 36 : le cliquet compte `/process\\.exit\\(\\s*(?!0\\s*\\))/g` sous `scripts/`. La PR 36 ajoute DEUX refus a `scripts/plan-state/build.ts`, tous deux ecrits `process.exitCode = 1` — une forme que ce motif ne voit pas. Le compte reste donc a 179 et le cliquet ne bouge pas.\n\nCE QUI EST GRAVE N'EST PAS LE CHIFFRE. « 179 -> 179 » etait EXACT, et exact pour une raison que la PR ne disait pas. Le cliquet est cense compter les sorties non nulles AJOUTEES pour qu'aucune n'entre sans etre declaree et couverte par un temoin d'effet. Deux sorties sont entrees sans passer devant lui.\n\nLES DEUX FORMES SONT LEGITIMES et ne doivent PAS etre unifiees a l'aveugle : `process.exit(n)` sort immediatement, `process.exitCode = n` laisse le processus finir — c'est la bonne forme quand il reste des lignes a imprimer. Le defaut est que le cliquet n'en voit qu'une.\n\nACCEPTATION — ELLE EST LA GARDE.\n  (a) ROUGE : ajouter un `process.exitCode = 1` non declare sous `scripts/` fait rougir le cliquet, en NOMMANT le fichier et l'ecart, exactement comme il le fait deja pour `process.exit(1)`. Fabriquer la panne (RM-02).\n  (b) VERT : le contre-temoin, un `process.exitCode = 0`, ne compte pas.\n  (c) Le total declare est recalcule UNE fois, ARBITRE et non subi, et le commentaire dit d'ou vient l'ecart — le fichier porte deja cette discipline pour les trois arbitrages precedents (25 -> 26 -> 27 -> 35).\n\nATTENTION AU SEUIL. Il est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une branche. Recompter APRES avoir lu le rouge, jamais declarer d'avance — « le total ne bouge pas sans qu'on l'ecrive » est ecrit dans le fichier meme.",
+      "tests": {
+        "REQ-GOV-012": [
+          "tests/unit/gouvernance/cliquet-sorties-differees.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-055",
+      "titre": "Comparer un generateur a lui-meme ne voit jamais ce qu'il a CESSE de produire",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/plan-state/build.ts",
+        "docs/requirements.json",
+        "tests/unit/gouvernance/couverture-attendue.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-032"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "tests": {
+        "REQ-GOV-032": [
+          "tests/unit/gouvernance/couverture-attendue.spec.ts"
+        ]
+      },
+      "acceptance": "⚠️ CETTE ACCEPTANCE A ETE ECRITE FAUSSE UNE FOIS, ET LA CORRECTION FAIT PARTIE DE LA LECON. Sa premiere redaction annoncait trois mesures a EXIT 0 ; A09 exactitude les a rejouees et DEUX etaient fausses — elles avaient ete ecrites contre l'arbre du tour precedent et jamais rejouees. C'etait exactement le defaut que la meme lentille avait refuse au tour d'avant : un attendu derive d'un etat perime, transplante dans le backlog. Les trois mesures ci-dessous ont ete REJOUEES sur l'arbre final.\n\nLA MESURE QUI OUVRE LA TACHE, une seule, et elle suffit :\n  Neutraliser la rubrique `titre('Bloquées')` (et ses lignes) dans le generateur, puis `pnpm plan-state:build`, puis `pnpm plan-state:verifier` :\n      ✅ plan-state:verifier — 8 rubrique(s) comparee(s) octet par octet   EXIT 0\n  La couverture tombe de 9 a 8 EN SILENCE. Le vert ne ment pas — il compte ce qu'il a compare — mais rien ne dit qu'il en manque une.\n\nDEUX MESURES VOISINES, REJOUEES ET FERMEES — ne pas les reprendre, elles sont ici pour eviter qu'on les cherche :\n  - renommer `## Bloquees` en `## Dernier atterrissage` (un nom EXACTEMENT volatile) : EXIT 1, famille `rubrique_dupliquee`. Les cinq noms volatiles sont pousses inconditionnellement par le generateur, donc tout renommage vers l'un d'eux cree un doublon — et le doublon est un refus depuis la PR 36.\n  - supprimer une ligne comparee du bloc de reprise : le vert annonce « 4 ligne(s) CONFRONTEES » au lieu de 5. Meme famille que la mesure principale, meme cause.\n\nPOURQUOI CE N'EST PAS REPARABLE PAR UN TEST DE PLUS. Le verificateur compare ce que le generateur PRODUIT a ce qui est sur le DISQUE. Si le generateur cesse de produire un element, les deux cotes le perdent ENSEMBLE et l'ecart n'existe pas. Un temoin qui derive son attendu du rendu ne peut pas voir ce que le rendu a perdu. La PR 36 l'a appris deux fois : d'abord sur le temoin de couverture des rubriques, puis sur celui de la population des mesures. A10 mutation a nomme la forme generale : « la population et l'observation viennent de la meme source, la soustraction reste vide PAR CONSTRUCTION ».\n\nIL FAUT UNE SOURCE EXTERIEURE, et elle n'existe pas encore. REQ-GOV-006 enumere six elements de PLAN-STATE — SHA de main, PR en vol et file de fusion, tache revendiquee, decisions du jour, prochain pas, bloc REPRENDRE EN 30 SECONDES — toutes VOLATILES. Aucune source ne nomme les rubriques COMPAREES dues.\n\nACCEPTATION — ELLE EST LA GARDE.\n  (a) La liste des elements DUS est declaree UNE fois, dans une source du domaine (candidat : etendre REQ-GOV-006, qui en nomme deja six), jamais dans le script qui la verifie — sinon le script se compare encore a lui-meme.\n  (b) ROUGE : retirer un element du generateur sort 1 et NOMME l'element disparu. Fabriquer la panne (RM-02).\n  (c) VERT : le contre-temoin, un rendu complet, reste vert et annonce le compte ATTENDU a cote du compte observe.\n  (d) La famille neuve entre dans `FAMILLES` (`scripts/plan-state/build.ts`) — sinon le temoin de population la denoncera, ce qui est son office.\n\nLE MEME MUR, A LA QUATRIEME POPULATION. `MESURES_ATTENDUES` derive de `LECTURES`, donc retirer une lecture fait tomber l'attendu ET l'observe ensemble : le temoin `X/Y` reste vert. Il attrape en revanche le mode de panne REEL — une regex qui cesse de correspondre parce que la vue a change de forme — verifie dans les deux sens. La meme source exterieure fermerait les deux."
     }
   ]
 }

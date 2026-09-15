@@ -60,7 +60,9 @@ import {
 // ── le registre, qui fait foi ────────────────────────────────────────────────
 
 type Exigence = { id: string; texte: string; statut: string };
-const REGISTRE = JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as { exigences: Exigence[] };
+const REGISTRE = JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as {
+  exigences: Exigence[];
+};
 
 function exigence(id: string): Exigence {
   const trouvee = REGISTRE.exigences.find((e) => e.id === id);
@@ -79,7 +81,10 @@ function typesSelonLExigence(): string[] {
 /** Les neuf champs de l'enveloppe, LUS dans le texte de REQ-INT-003 — jamais recopiés (RM-01). */
 function champsSelonLExigence(): string[] {
   const bloc = /`\{([^}]+)\}`/.exec(exigence('REQ-INT-003').texte);
-  if (!bloc) throw new Error("REQ-INT-003 ne porte plus d'accolade d'enveloppe : le contrat n'a plus de source.");
+  if (!bloc)
+    throw new Error(
+      "REQ-INT-003 ne porte plus d'accolade d'enveloppe : le contrat n'a plus de source."
+    );
   return bloc[1]!
     .split(',')
     .map((c) => c.trim().replace(/\s*\(.*\)$/, ''))
@@ -96,7 +101,7 @@ const lire = (chemin: string): string => readFileSync(chemin, 'utf8').replace(/\
 
 type Fixture = { Source: string; schemaVersion: number; evenements: Record<string, unknown>[] };
 const FIXTURES = JSON.parse(
-  readFileSync('tests/fixtures/axionia/enveloppes-provisoires.json', 'utf8'),
+  readFileSync('tests/fixtures/axionia/enveloppes-provisoires.json', 'utf8')
 ) as Fixture;
 
 // ── ajv ──────────────────────────────────────────────────────────────────────
@@ -109,9 +114,11 @@ const FIXTURES = JSON.parse(
  */
 function valideur(): (donnee: unknown) => boolean {
   const Constructeur = ((Ajv2020 as unknown as { default?: unknown }).default ?? Ajv2020) as new (
-    options: Record<string, unknown>,
+    options: Record<string, unknown>
   ) => { compile: (schema: unknown) => (donnee: unknown) => boolean };
-  return new Constructeur({ strict: true, validateFormats: false, allErrors: true }).compile(contratJsonSchema());
+  return new Constructeur({ strict: true, validateFormats: false, allErrors: true }).compile(
+    contratJsonSchema()
+  );
 }
 
 /** Une enveloppe conforme, prise dans les fixtures — jamais tapée ici (RM-03). */
@@ -162,7 +169,10 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     const typeInconnu = { ...enveloppeDeReference(), event_type: 'facture.annulee' };
     expect(valide(typeInconnu)).toBe(false);
 
-    const identifiantNonV4 = { ...enveloppeDeReference(), event_id: '00000000-0000-0000-0000-000000000000' };
+    const identifiantNonV4 = {
+      ...enveloppeDeReference(),
+      event_id: '00000000-0000-0000-0000-000000000000',
+    };
     expect(valide(identifiantNonV4)).toBe(false);
 
     const versionAutre = { ...enveloppeDeReference(), schema_version: SCHEMA_VERSION + 1 };
@@ -222,9 +232,16 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
       { payload: { contact: { email: 'x' } }, famille: 'coordonnees_du_contact' },
     ];
     for (const mutant of mutants) {
-      const evenement = { ...enveloppeDeReference(), event_type: 'client.cree', payload: mutant.payload };
+      const evenement = {
+        ...enveloppeDeReference(),
+        event_type: 'client.cree',
+        payload: mutant.payload,
+      };
       const trouves = champsInterdits(evenement);
-      expect(trouves.map((t) => t.famille), JSON.stringify(mutant.payload)).toContain(mutant.famille);
+      expect(
+        trouves.map((t) => t.famille),
+        JSON.stringify(mutant.payload)
+      ).toContain(mutant.famille);
     }
 
     // `subject_ref` est la seule valeur du contrat dont la forme n'est pas arrêtée : une chaîne

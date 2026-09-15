@@ -88,8 +88,10 @@ describe("REQ-GOV-033 — l'identifiant de lot ne se dérive pas d'un dossier ig
     expect(prochainIdentifiantDeLot(-1, ['L0-09'], ['L1-42'])).toBe('L-1-01');
   });
 
-  it("REQ-GOV-033 — CONTRE-TÉMOIN : un nom de lot hors nomenclature (`gov-amorcage`) est ignoré sans faire tomber le calcul", () => {
-    expect(prochainIdentifiantDeLot(-1, ['archives', 'L-1-02'], ['gov-amorcage', 'gov-amorcage-2'])).toBe('L-1-03');
+  it('REQ-GOV-033 — CONTRE-TÉMOIN : un nom de lot hors nomenclature (`gov-amorcage`) est ignoré sans faire tomber le calcul', () => {
+    expect(
+      prochainIdentifiantDeLot(-1, ['archives', 'L-1-02'], ['gov-amorcage', 'gov-amorcage-2'])
+    ).toBe('L-1-03');
   });
 
   // ── Le septième mutant survivant du tour 5 de la PR #31 ────────────────────
@@ -114,7 +116,7 @@ describe("REQ-GOV-033 — l'identifiant de lot ne se dérive pas d'un dossier ig
     expect(prochainIdentifiantDeLot(1, ['L1-abc'], ['L1-02'])).toBe('L1-03');
   });
 
-  it("REQ-GOV-033 — TÉMOIN : un préfixe SEUL (`L-1-`) ne compte pas pour zéro", () => {
+  it('REQ-GOV-033 — TÉMOIN : un préfixe SEUL (`L-1-`) ne compte pas pour zéro', () => {
     // `''` n'est pas une suite de chiffres : `/^\d+$/` le refuse, et c'est voulu — `Number('')`
     // vaut 0, ce qui aurait été silencieusement inoffensif ici et faux ailleurs.
     expect(prochainIdentifiantDeLot(-1, ['L-1-'], ['L-1-07'])).toBe('L-1-08');
@@ -139,10 +141,14 @@ describe("REQ-GOV-033 — l'identifiant de lot ne se dérive pas d'un dossier ig
     // Le contrôle qui compte. Il ne juge pas une fixture, il juge l'état du dépôt du jour.
     const taches = backlog();
     const dossiers = existsSync('docs/lots') ? readdirSync('docs/lots') : [];
-    const deja = new Set(taches.map((t) => t.lot).filter((l): l is string => typeof l === 'string'));
+    const deja = new Set(
+      taches.map((t) => t.lot).filter((l): l is string => typeof l === 'string')
+    );
     for (const phase of [-1, 0, 1, 2, 3]) {
       const id = prochainIdentifiantDeLot(phase, dossiers, [...deja]);
-      expect(deja, `phase ${phase} : ${id} est déjà porté par une tâche du backlog`).not.toContain(id);
+      expect(deja, `phase ${phase} : ${id} est déjà porté par une tâche du backlog`).not.toContain(
+        id
+      );
     }
   });
 });

@@ -104,8 +104,12 @@ export function rendreBloc(p: Poste): string {
   const l: string[] = [];
   l.push(MARQUEUR_DEBUT);
   l.push('<!--');
-  l.push('  BLOC GÉNÉRÉ depuis `docs/agents.json` (GOV-023, REQ-GOV-010, RM-01) — ne l’édite pas :');
-  l.push('  `npx tsx scripts/agents/generer.ts --verifier` rougit si le disque diffère de la source.');
+  l.push(
+    '  BLOC GÉNÉRÉ depuis `docs/agents.json` (GOV-023, REQ-GOV-010, RM-01) — ne l’édite pas :'
+  );
+  l.push(
+    '  `npx tsx scripts/agents/generer.ts --verifier` rougit si le disque diffère de la source.'
+  );
   l.push('  La prose au-dessus, elle, est écrite à la main : c’est le prompt du poste.');
   l.push('-->');
   l.push('');
@@ -225,7 +229,9 @@ if (LANCE_DIRECTEMENT) {
     // Une fiche sans poste ne résout pas comme `agentType` : l'autopilote meurt au premier agent.
     for (const role of fichesSurDisque(racine)) {
       if (!postes.some((p) => p.role === role)) {
-        ecarts.push(`${join(racine, `${role}.md`)} n'a aucun poste dans ${source} : cette fiche ne résout pas.`);
+        ecarts.push(
+          `${join(racine, `${role}.md`)} n'a aucun poste dans ${source} : cette fiche ne résout pas.`
+        );
       }
     }
     if (ecarts.length > 0) {
@@ -233,7 +239,9 @@ if (LANCE_DIRECTEMENT) {
       ecarts.forEach((e) => console.error(`   ${e}`));
       process.exit(1);
     }
-    console.log(`✅ gov:agents — les ${postes.length} fiches de ${racine} sont égales au rendu de ${source}.`);
+    console.log(
+      `✅ gov:agents — les ${postes.length} fiches de ${racine} sont égales au rendu de ${source}.`
+    );
     process.exit(0);
   }
 

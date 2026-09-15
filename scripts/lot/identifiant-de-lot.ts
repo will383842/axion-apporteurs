@@ -106,7 +106,9 @@ export function prochainIdentifiantHerite(phase: number, dossiers: readonly stri
   const seq =
     Math.max(
       0,
-      ...dossiers.filter((d) => d.startsWith(prefixe)).map((d) => Number(d.slice(prefixe.length)) || 0)
+      ...dossiers
+        .filter((d) => d.startsWith(prefixe))
+        .map((d) => Number(d.slice(prefixe.length)) || 0)
     ) + 1;
   return `${prefixe}${String(seq).padStart(2, '0')}`;
 }

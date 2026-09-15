@@ -72,16 +72,43 @@ type Faute = { famille: string; gate: string; phase: number | null; message: str
 
 /** Les familles de contrôle. `--prove` en exige une preuve chacune, et refuse d'en laisser une sans témoin. */
 const FAMILLES: { nom: string; explication: string }[] = [
-  { nom: 'id_manquant', explication: "sans id, une gate ne se cite ni dans une PR ni dans un run." },
-  { nom: 'id_double', explication: "deux entrées pour un seul nom : on ne saura pas laquelle a rougi." },
-  { nom: 'script_manquant', explication: "aucun script : on ne sait pas quoi lancer." },
-  { nom: 'script_introuvable', explication: "le script est annoncé au registre, il n'est pas écrit sur le disque." },
-  { nom: 'ancre_introuvable', explication: "le fichier de workflow existe, le job nommé n'y est pas." },
-  { nom: 'script_non_cable', explication: "le script existe, aucun workflow ne le lance : rien ne l'exécute jamais." },
-  { nom: 'fixture_rouge_vide', explication: "aucun cas d'échec nommé : personne ne saura refaire rougir la gate." },
-  { nom: 'phase_non_entiere', explication: "gate non situable : elle n'entre dans le périmètre d'aucune phase." },
-  { nom: 'preuve_rouge_absente', explication: "gate jamais vue rougir : elle est une intention, pas une garde (RM-02)." },
-  { nom: 'preuve_rouge_non_referencee', explication: "la preuve ne référence rien : un mot de remplissage n'est pas un run rouge." },
+  {
+    nom: 'id_manquant',
+    explication: 'sans id, une gate ne se cite ni dans une PR ni dans un run.',
+  },
+  {
+    nom: 'id_double',
+    explication: 'deux entrées pour un seul nom : on ne saura pas laquelle a rougi.',
+  },
+  { nom: 'script_manquant', explication: 'aucun script : on ne sait pas quoi lancer.' },
+  {
+    nom: 'script_introuvable',
+    explication: "le script est annoncé au registre, il n'est pas écrit sur le disque.",
+  },
+  {
+    nom: 'ancre_introuvable',
+    explication: "le fichier de workflow existe, le job nommé n'y est pas.",
+  },
+  {
+    nom: 'script_non_cable',
+    explication: "le script existe, aucun workflow ne le lance : rien ne l'exécute jamais.",
+  },
+  {
+    nom: 'fixture_rouge_vide',
+    explication: "aucun cas d'échec nommé : personne ne saura refaire rougir la gate.",
+  },
+  {
+    nom: 'phase_non_entiere',
+    explication: "gate non situable : elle n'entre dans le périmètre d'aucune phase.",
+  },
+  {
+    nom: 'preuve_rouge_absente',
+    explication: 'gate jamais vue rougir : elle est une intention, pas une garde (RM-02).',
+  },
+  {
+    nom: 'preuve_rouge_non_referencee',
+    explication: "la preuve ne référence rien : un mot de remplissage n'est pas un run rouge.",
+  },
 ];
 const NOMS_FAMILLES = FAMILLES.map((f) => f.nom);
 
@@ -172,7 +199,9 @@ class Cablage {
   private static prefixes(config: string, cle: string): string[] {
     const bloc = new RegExp(`${cle}\\s*:\\s*\\[([\\s\\S]*?)\\]`).exec(config);
     if (bloc === null) return [];
-    return [...bloc[1]!.matchAll(/['"]([^'"]+)['"]/g)].map((m) => m[1]!.split('*')[0]!).filter((p) => p !== '');
+    return [...bloc[1]!.matchAll(/['"]([^'"]+)['"]/g)]
+      .map((m) => m[1]!.split('*')[0]!)
+      .filter((p) => p !== '');
   }
 
   private static nomsPnpm(commande: string): string[] {
@@ -202,7 +231,8 @@ class Cablage {
       if (Cablage.nomsPnpm(t).some((n) => this.mene(n, chemin, new Set()))) return true;
     }
     const ramasseParVitest =
-      this.inclus.some((p) => chemin.startsWith(p)) && !this.exclus.some((p) => chemin.startsWith(p));
+      this.inclus.some((p) => chemin.startsWith(p)) &&
+      !this.exclus.some((p) => chemin.startsWith(p));
     return ramasseParVitest && this.lanceurDeTests();
   }
 }
@@ -220,7 +250,12 @@ function controler(gates: Gate[], phaseMax: number, disque: Disque): Faute[] {
   for (const [i, g] of gates.entries()) {
     const id = texte(g.id);
     if (id === '') {
-      ajouter('id_manquant', g, i, "pas d'id : elle ne peut être ni citée dans une PR ni retrouvée dans un run.");
+      ajouter(
+        'id_manquant',
+        g,
+        i,
+        "pas d'id : elle ne peut être ni citée dans une PR ni retrouvée dans un run."
+      );
       continue;
     }
     const premiere = parId.get(id);
@@ -266,13 +301,23 @@ function controler(gates: Gate[], phaseMax: number, disque: Disque): Faute[] {
 
     const script = texte(g.script);
     if (script === '') {
-      ajouter('script_manquant', g, i, "aucun script : on ne sait pas quoi lancer pour la faire rougir.");
+      ajouter(
+        'script_manquant',
+        g,
+        i,
+        'aucun script : on ne sait pas quoi lancer pour la faire rougir.'
+      );
     } else {
       const coupure = script.indexOf('#');
       const chemin = coupure === -1 ? script : script.slice(0, coupure);
       const ancre = coupure === -1 ? '' : script.slice(coupure + 1);
       if (!disque.fichierExiste(chemin)) {
-        ajouter('script_introuvable', g, i, `« ${chemin} » n'existe pas : la gate est annoncée, pas écrite.`);
+        ajouter(
+          'script_introuvable',
+          g,
+          i,
+          `« ${chemin} » n'existe pas : la gate est annoncée, pas écrite.`
+        );
       } else if (ancre !== '' && !ancreDansLeTexte(disque.lire(chemin) ?? '', ancre)) {
         ajouter('ancre_introuvable', g, i, `« ${chemin} » ne porte pas le job « ${ancre} ».`);
       } else if (!cablage.couvre(chemin)) {
@@ -286,11 +331,21 @@ function controler(gates: Gate[], phaseMax: number, disque: Disque): Faute[] {
     }
 
     if (texte(g.fixtureRouge) === '') {
-      ajouter('fixture_rouge_vide', g, i, "fixtureRouge vide : aucun cas d'échec nommé, donc rien à rejouer.");
+      ajouter(
+        'fixture_rouge_vide',
+        g,
+        i,
+        "fixtureRouge vide : aucun cas d'échec nommé, donc rien à rejouer."
+      );
     }
     const preuve = texte(g.preuveRouge);
     if (preuve === '') {
-      ajouter('preuve_rouge_absente', g, i, "preuveRouge absente : cette gate n'a jamais été vue rougir.");
+      ajouter(
+        'preuve_rouge_absente',
+        g,
+        i,
+        "preuveRouge absente : cette gate n'a jamais été vue rougir."
+      );
     } else if (!preuveReference(preuve)) {
       ajouter(
         'preuve_rouge_non_referencee',
@@ -358,7 +413,8 @@ if (process.argv.includes('--prove')) {
     scripts: { 'exemple:socle': 'tsx scripts/gates/exemple-socle.ts', test: 'vitest run' },
   });
 
-  const VITEST_FEINT = "include: ['tests/unit/**/*.spec.ts'], exclude: ['node_modules', 'tests/integration/**'],";
+  const VITEST_FEINT =
+    "include: ['tests/unit/**/*.spec.ts'], exclude: ['node_modules', 'tests/integration/**'],";
 
   const FICHIERS_FEINTS: Record<string, string> = {
     'scripts/gates/exemple-socle.ts': '// une garde',
@@ -382,7 +438,9 @@ if (process.argv.includes('--prove')) {
 
   const base = controler(copie(), PHASE_DE_PREUVE, DISQUE_FEINT);
   if (base.length > 0) {
-    console.error(`❌ La preuve part d'une fixture DÉJÀ fautive (${base.length}) — corrige-la d'abord :`);
+    console.error(
+      `❌ La preuve part d'une fixture DÉJÀ fautive (${base.length}) — corrige-la d'abord :`
+    );
     base.slice(0, 5).forEach((f) => console.error(`   [${f.famille}] ${f.gate} : ${f.message}`));
     process.exit(1);
   }
@@ -391,67 +449,119 @@ if (process.argv.includes('--prove')) {
     {
       famille: 'id_manquant',
       quoi: 'une entrée sans id',
-      defaut: () => { const r = copie(); r[0]!.id = ''; return r; },
+      defaut: () => {
+        const r = copie();
+        r[0]!.id = '';
+        return r;
+      },
     },
     {
       famille: 'id_double',
       quoi: 'deux entrées pour un seul nom',
-      defaut: () => { const r = copie(); r.push(JSON.parse(JSON.stringify(r[0]!)) as Gate); return r; },
+      defaut: () => {
+        const r = copie();
+        r.push(JSON.parse(JSON.stringify(r[0]!)) as Gate);
+        return r;
+      },
     },
     {
       famille: 'id_double',
       quoi: "un alias qui recouvre l'id d'une autre entrée",
-      defaut: () => { const r = copie(); r[1]!.alias = ['exemple:socle']; return r; },
+      defaut: () => {
+        const r = copie();
+        r[1]!.alias = ['exemple:socle'];
+        return r;
+      },
     },
     {
       famille: 'script_manquant',
       quoi: 'une gate du périmètre sans script',
-      defaut: () => { const r = copie(); r[0]!.script = ''; return r; },
+      defaut: () => {
+        const r = copie();
+        r[0]!.script = '';
+        return r;
+      },
     },
     {
       famille: 'script_introuvable',
       quoi: 'un script annoncé mais jamais écrit',
-      defaut: () => { const r = copie(); r[0]!.script = 'scripts/gates/jamais-ecrit.ts'; return r; },
+      defaut: () => {
+        const r = copie();
+        r[0]!.script = 'scripts/gates/jamais-ecrit.ts';
+        return r;
+      },
     },
     {
       famille: 'ancre_introuvable',
       quoi: 'un job absent du fichier de workflow',
-      defaut: () => { const r = copie(); r[1]!.script = '.github/workflows/ci.yml#job-absent'; return r; },
+      defaut: () => {
+        const r = copie();
+        r[1]!.script = '.github/workflows/ci.yml#job-absent';
+        return r;
+      },
     },
     {
       famille: 'script_non_cable',
       quoi: "un script écrit qu'aucun workflow ne lance",
-      defaut: () => { const r = copie(); r[0]!.script = 'scripts/gates/exemple-jamais-lance.ts'; return r; },
+      defaut: () => {
+        const r = copie();
+        r[0]!.script = 'scripts/gates/exemple-jamais-lance.ts';
+        return r;
+      },
     },
     {
       famille: 'script_non_cable',
       quoi: "un test écrit que l'`include` du lanceur ne ramasse pas",
-      defaut: () => { const r = copie(); r[0]!.script = 'tests/integration/exemple/hors-lanceur.spec.ts'; return r; },
+      defaut: () => {
+        const r = copie();
+        r[0]!.script = 'tests/integration/exemple/hors-lanceur.spec.ts';
+        return r;
+      },
     },
     {
       famille: 'fixture_rouge_vide',
       quoi: 'une fixture rouge réduite à des espaces',
-      defaut: () => { const r = copie(); r[1]!.fixtureRouge = '   '; return r; },
+      defaut: () => {
+        const r = copie();
+        r[1]!.fixtureRouge = '   ';
+        return r;
+      },
     },
     {
       famille: 'phase_non_entiere',
       quoi: 'une phase écrite en texte — jugée même hors périmètre',
-      defaut: () => { const r = copie(); r[2]!.phase = '2'; return r; },
+      defaut: () => {
+        const r = copie();
+        r[2]!.phase = '2';
+        return r;
+      },
     },
     {
       famille: 'preuve_rouge_absente',
       quoi: 'une gate du périmètre jamais vue rougir',
-      defaut: () => { const r = copie(); r[1]!.preuveRouge = null; return r; },
+      defaut: () => {
+        const r = copie();
+        r[1]!.preuveRouge = null;
+        return r;
+      },
     },
     {
       famille: 'preuve_rouge_non_referencee',
-      quoi: "une preuve remplie avec « TODO »",
-      defaut: () => { const r = copie(); r[1]!.preuveRouge = 'TODO'; return r; },
+      quoi: 'une preuve remplie avec « TODO »',
+      defaut: () => {
+        const r = copie();
+        r[1]!.preuveRouge = 'TODO';
+        return r;
+      },
     },
     {
       famille: 'preuve_rouge_non_referencee',
       quoi: 'une preuve réduite à un tiret',
-      defaut: () => { const r = copie(); r[0]!.preuveRouge = '—'; return r; },
+      defaut: () => {
+        const r = copie();
+        r[0]!.preuveRouge = '—';
+        return r;
+      },
     },
   ];
 
@@ -459,32 +569,64 @@ if (process.argv.includes('--prove')) {
   const CONTRE_TEMOINS: { quoi: string; cas: () => Gate[] }[] = [
     { quoi: 'la fixture saine elle-même', cas: () => copie() },
     {
-      quoi: "une gate de phase ultérieure sans preuveRouge : hors périmètre, elle attend son tour",
-      cas: () => { const r = copie(); r[2]!.phase = 3; r[2]!.preuveRouge = null; return r; },
+      quoi: 'une gate de phase ultérieure sans preuveRouge : hors périmètre, elle attend son tour',
+      cas: () => {
+        const r = copie();
+        r[2]!.phase = 3;
+        r[2]!.preuveRouge = null;
+        return r;
+      },
     },
     {
       quoi: 'plusieurs alias sur une même gate : un autre nom ne crée pas une seconde entrée',
-      cas: () => { const r = copie(); r[0]!.alias = ['exemple:socle-bis', 'exemple:encore-un-nom']; return r; },
+      cas: () => {
+        const r = copie();
+        r[0]!.alias = ['exemple:socle-bis', 'exemple:encore-un-nom'];
+        return r;
+      },
     },
     {
       quoi: "un job de workflow dont l'ancre existe bien dans le fichier",
-      cas: () => { const r = copie(); r[0]!.script = '.github/workflows/ci.yml#exemple-job'; return r; },
+      cas: () => {
+        const r = copie();
+        r[0]!.script = '.github/workflows/ci.yml#exemple-job';
+        return r;
+      },
     },
     {
       quoi: 'une phase négative : le socle est un entier comme un autre',
-      cas: () => { const r = copie(); r[2]!.phase = -1; r[2]!.preuveRouge = 'https://github.com/exemple/depot/actions/runs/2'; return r; },
+      cas: () => {
+        const r = copie();
+        r[2]!.phase = -1;
+        r[2]!.preuveRouge = 'https://github.com/exemple/depot/actions/runs/2';
+        return r;
+      },
     },
     {
-      quoi: "un test du périmètre : le lanceur de tests le ramasse, il est câblé",
-      cas: () => { const r = copie(); r[2]!.phase = -1; r[2]!.preuveRouge = 'pnpm exemple:test:prove — une famille vue rougir'; return r; },
+      quoi: 'un test du périmètre : le lanceur de tests le ramasse, il est câblé',
+      cas: () => {
+        const r = copie();
+        r[2]!.phase = -1;
+        r[2]!.preuveRouge = 'pnpm exemple:test:prove — une famille vue rougir';
+        return r;
+      },
     },
     {
       quoi: 'une preuve sous forme d’URL de run archivé',
-      cas: () => { const r = copie(); r[0]!.preuveRouge = 'https://github.com/exemple/depot/actions/runs/3'; return r; },
+      cas: () => {
+        const r = copie();
+        r[0]!.preuveRouge = 'https://github.com/exemple/depot/actions/runs/3';
+        return r;
+      },
     },
     {
       quoi: 'une preuve sous la forme verbatim des gardes déjà armées',
-      cas: () => { const r = copie(); r[0]!.preuveRouge = 'pnpm gov:publication:prove — 7 familles vues rougir, 5 contre-temoins vus rester verts'; return r; },
+      cas: () => {
+        const r = copie();
+        r[0]!.preuveRouge =
+          'pnpm gov:publication:prove — 7 familles vues rougir, 5 contre-temoins vus rester verts';
+        return r;
+      },
     },
   ];
 
@@ -502,11 +644,31 @@ if (process.argv.includes('--prove')) {
     '',
   ].join('\n');
   const FORMES: { quoi: string; obtenu: boolean; attendu: boolean }[] = [
-    { quoi: 'le job nommé est une clé sous `jobs:`', obtenu: ancreDansLeTexte(YAML_TEMOIN, 'gate-a'), attendu: true },
-    { quoi: 'un job absent du fichier', obtenu: ancreDansLeTexte(YAML_TEMOIN, 'gate-b'), attendu: false },
-    { quoi: 'le nom en COMMENTAIRE ne fait pas un job', obtenu: ancreDansLeTexte(YAML_TEMOIN, 'gate-sec'), attendu: false },
-    { quoi: 'une ancre vide ne vaut jamais vrai', obtenu: ancreDansLeTexte(YAML_TEMOIN, ''), attendu: false },
-    { quoi: 'un point n’est pas un joker de regex', obtenu: ancreDansLeTexte('  gateXa:\n', 'gate.a'), attendu: false },
+    {
+      quoi: 'le job nommé est une clé sous `jobs:`',
+      obtenu: ancreDansLeTexte(YAML_TEMOIN, 'gate-a'),
+      attendu: true,
+    },
+    {
+      quoi: 'un job absent du fichier',
+      obtenu: ancreDansLeTexte(YAML_TEMOIN, 'gate-b'),
+      attendu: false,
+    },
+    {
+      quoi: 'le nom en COMMENTAIRE ne fait pas un job',
+      obtenu: ancreDansLeTexte(YAML_TEMOIN, 'gate-sec'),
+      attendu: false,
+    },
+    {
+      quoi: 'une ancre vide ne vaut jamais vrai',
+      obtenu: ancreDansLeTexte(YAML_TEMOIN, ''),
+      attendu: false,
+    },
+    {
+      quoi: 'un point n’est pas un joker de regex',
+      obtenu: ancreDansLeTexte('  gateXa:\n', 'gate.a'),
+      attendu: false,
+    },
   ];
 
   for (const f of FORMES) {
@@ -560,16 +722,22 @@ if (process.argv.includes('--prove')) {
 function lirePhase(argv: string[]): { valeur: number } | { erreur: string } {
   const colle = argv.find((a) => a.startsWith('--phase='));
   const separe = argv.indexOf('--phase');
-  const brut = colle !== undefined ? colle.slice('--phase='.length) : separe !== -1 ? argv[separe + 1] : undefined;
+  const brut =
+    colle !== undefined
+      ? colle.slice('--phase='.length)
+      : separe !== -1
+        ? argv[separe + 1]
+        : undefined;
   if (brut === undefined || brut.trim() === '') {
     return {
       erreur:
-        "il manque le niveau de phase. USAGE : pnpm gates:prouvees --phase <n> (n entier, -1 pour le socle). " +
+        'il manque le niveau de phase. USAGE : pnpm gates:prouvees --phase <n> (n entier, -1 pour le socle). ' +
         "La phase ne se devine pas : c'est elle qui dit quelles gates doivent DÉJÀ être armées.",
     };
   }
   const valeur = Number(brut);
-  if (!Number.isInteger(valeur)) return { erreur: `« ${brut} » n'est pas un niveau de phase entier.` };
+  if (!Number.isInteger(valeur))
+    return { erreur: `« ${brut} » n'est pas un niveau de phase entier.` };
   return { valeur };
 }
 
@@ -581,7 +749,9 @@ if ('erreur' in phaseLue) {
 const phaseMax = phaseLue.valeur;
 
 if (!existsSync(CHEMIN_REGISTRE)) {
-  console.error(`❌ gates:prouvees — ${CHEMIN_REGISTRE} est introuvable : le registre des gates est la source.`);
+  console.error(
+    `❌ gates:prouvees — ${CHEMIN_REGISTRE} est introuvable : le registre des gates est la source.`
+  );
   process.exit(1);
 }
 const doc = JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as { gates?: unknown };

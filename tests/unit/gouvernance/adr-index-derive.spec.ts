@@ -89,7 +89,10 @@ describe("l'index des ADR est dérivé du système de fichiers", () => {
       expect(lancer('scripts/adr/index.ts', '--racine', `"${dossier}"`, '--verifier').code).toBe(0);
 
       const index = join(dossier, 'INDEX.md');
-      writeFileSync(index, readFileSync(index, 'utf8').replace(/\| \[`partners\/ADR-0001`\][^\n]*\n/, ''));
+      writeFileSync(
+        index,
+        readFileSync(index, 'utf8').replace(/\| \[`partners\/ADR-0001`\][^\n]*\n/, '')
+      );
 
       const apres = lancer('scripts/adr/index.ts', '--racine', `"${dossier}"`, '--verifier');
       expect(apres.code).toBe(1);
@@ -131,7 +134,9 @@ describe('gov:adr — la garde du dossier des ADR', () => {
 describe('le mono-tenant est consigné par un ADR', () => {
   it('REQ-CPL-018 — un ADR consigne le mono-tenant, cite HYP-TENANT et refuse la colonne de locataire', () => {
     const fichiers = readdirSync(RACINE).filter((f) => NOM_ADR.test(f) && f !== GABARIT);
-    const porteurs = fichiers.filter((f) => readFileSync(join(RACINE, f), 'utf8').includes('REQ-CPL-018'));
+    const porteurs = fichiers.filter((f) =>
+      readFileSync(join(RACINE, f), 'utf8').includes('REQ-CPL-018')
+    );
 
     expect(porteurs.length).toBe(1);
 

@@ -201,7 +201,11 @@ describe('REQ-CPL-001 — une seule source pour le SIREN et l’IBAN débiteur',
 
     const renverse = structuredClone(registre);
     renverse.entite.siren = '000000000';
-    const renversees = [fixtureContrat(renverse), fixtureMandat(renverse), fixturePain001(renverse)];
+    const renversees = [
+      fixtureContrat(renverse),
+      fixtureMandat(renverse),
+      fixturePain001(renverse),
+    ];
     expect(renversees.map((f) => f.siren)).toEqual(['000000000', '000000000', '000000000']);
     expect(renversees[0]!.siren).not.toBe(trois[0]!.siren);
   });
@@ -299,7 +303,10 @@ describe('la fonction qui REFUSE — celle que les quatre points de sortie appel
     for (const p of POINTS_DE_SORTIE) {
       expect(p.cles.length, `${p.id} n’exige aucun champ`).toBeGreaterThan(0);
       for (const cle of p.cles) {
-        expect(CHAMPS.map((c) => c.cle), `${p.id} exige un champ inconnu du registre`).toContain(cle);
+        expect(
+          CHAMPS.map((c) => c.cle),
+          `${p.id} exige un champ inconnu du registre`
+        ).toContain(cle);
       }
     }
   });
@@ -509,7 +516,6 @@ describe('REQ-CPL-018 — ce que la garde REGARDE est gardé, pas seulement ce q
   });
 });
 
-
 /**
  * LES FORMES, ÉPROUVÉES SUR CE QUI LES A FAIT TOMBER — second tour de la lentille `securite`.
  *
@@ -525,7 +531,7 @@ function universAvecFichier(chemin: string, contenu: string): Univers {
   return u;
 }
 
-describe("REQ-CPL-018 — les formes de coordonnées, éprouvées sur les cas qui les ont fait tomber", () => {
+describe('REQ-CPL-018 — les formes de coordonnées, éprouvées sur les cas qui les ont fait tomber', () => {
   const IBAN_REEL = 'FR1420041010050500013M02606'; // clé de contrôle VALIDE
 
   it("REQ-CPL-018 — la clé de contrôle sépare un IBAN d'une chaîne qui lui ressemble", () => {
@@ -553,11 +559,14 @@ describe("REQ-CPL-018 — les formes de coordonnées, éprouvées sur les cas qu
     // Le registre était exempt du balayage entier : `banqueReceptrice.espaceDeTest` — le champ où
     // l'on colle un RIB, trois lignes sous `banqueDebitrice.iban` — ne voyait rien.
     const u = structuredClone(UNIVERS_CONFORME) as Univers;
-    u.fichiers.push({ chemin: 'config/entite.json', contenu: `{ "espaceDeTest": "${IBAN_REEL}" }` });
+    u.fichiers.push({
+      chemin: 'config/entite.json',
+      contenu: `{ "espaceDeTest": "${IBAN_REEL}" }`,
+    });
     expect(controler(u).map((f) => f.famille)).toContain('coordonnee_en_clair');
   });
 
-  it("REQ-CPL-018 — CONTRE-TÉMOIN : le registre garde le droit de porter ses valeurs PUBLIQUES et ses exemples", () => {
+  it('REQ-CPL-018 — CONTRE-TÉMOIN : le registre garde le droit de porter ses valeurs PUBLIQUES et ses exemples', () => {
     // Sans ce contre-témoin, la correction précédente reviendrait à interdire au registre d'être
     // la source — et on l'exempterait de nouveau en bloc, ce qui rouvrirait le veto.
     const u = structuredClone(UNIVERS_CONFORME) as Univers;
@@ -575,7 +584,10 @@ describe("REQ-CPL-018 — les formes de coordonnées, éprouvées sur les cas qu
     // que le MÊME rougissait dans `docs/DECISIONS.md`. Et la clause ne protégeait rien : les deux
     // exemples que le registre documente ont une clé FAUSSE, donc `cleIbanValide` les écarte déjà.
     const zeroPade = 'FR0030004000030000000000019'; // clé valide, compte zéro-padé
-    expect(cleIbanValide(zeroPade), 'le témoin doit avoir une clé VALIDE, sinon il ne prouve rien').toBe(true);
+    expect(
+      cleIbanValide(zeroPade),
+      'le témoin doit avoir une clé VALIDE, sinon il ne prouve rien'
+    ).toBe(true);
     const u = structuredClone(UNIVERS_CONFORME) as Univers;
     u.fichiers.push({ chemin: 'config/entite.json', contenu: `{ "espaceDeTest": "${zeroPade}" }` });
     expect(controler(u).map((f) => f.famille)).toContain('coordonnee_en_clair');
@@ -678,19 +690,32 @@ describe('REQ-CPL-018 — `normaliserEspaces` : chaque forme qu’elle neutralis
 
   it('REQ-CPL-018 — TÉMOIN POSITIF de la sonde : la liste des formes MESURE quelque chose', () => {
     // Sans cet `it`, une classe vide ferait passer TOUS les cas ci-dessous sans en exécuter un.
-    expect(FORMES.length, 'aucune forme neutralisée : la boucle qui suit serait vide').toBeGreaterThan(0);
+    expect(
+      FORMES.length,
+      'aucune forme neutralisée : la boucle qui suit serait vide'
+    ).toBeGreaterThan(0);
 
     // Ce qu'elle DOIT contenir. L'espace insécable est la forme du copier-coller de RIB : c'est
     // la seule de la liste dont l'absence est, à elle seule, le défaut mesuré par la revue.
     expect(FORMES, 'U+00A0 — espace insécable, la forme d’un RIB collé').toContain(CAR(0x00a0));
-    expect(FORMES, 'U+202F — espace fine insécable, celle des milliers en français').toContain(CAR(0x202f));
+    expect(FORMES, 'U+202F — espace fine insécable, celle des milliers en français').toContain(
+      CAR(0x202f)
+    );
     expect(FORMES, 'U+2011 — tiret insécable').toContain(CAR(0x2011));
-    expect(FORMES, 'U+002D — tiret ASCII, le séparateur d’IBAN le plus courant après l’espace').toContain(CAR(0x002d));
+    expect(
+      FORMES,
+      'U+002D — tiret ASCII, le séparateur d’IBAN le plus courant après l’espace'
+    ).toContain(CAR(0x002d));
 
     // CONTRE-TÉMOIN DE LA SONDE. Sans lui, `/[\s\S]/` passerait ce test : une classe attrape-tout
     // « neutraliserait » tout le texte en espaces et la garde ne verrait plus rien du tout.
-    expect(FORMES, 'l’espace ASCII n’a rien à normaliser vers elle-même').not.toContain(CAR(0x0020));
-    expect(FORMES, 'U+2014 — le tiret cadratin est de la PONCTUATION, pas un séparateur').not.toContain(CAR(0x2014));
+    expect(FORMES, 'l’espace ASCII n’a rien à normaliser vers elle-même').not.toContain(
+      CAR(0x0020)
+    );
+    expect(
+      FORMES,
+      'U+2014 — le tiret cadratin est de la PONCTUATION, pas un séparateur'
+    ).not.toContain(CAR(0x2014));
     expect(FORMES, 'une lettre n’est pas un séparateur').not.toContain('A');
   });
 
@@ -698,7 +723,10 @@ describe('REQ-CPL-018 — `normaliserEspaces` : chaque forme qu’elle neutralis
     // Le « témoin + » de la mesure du relecteur : le seul des trois qui rougissait DÉJÀ sur le
     // mutant. Il est ici pour que les cas suivants se lisent par différence avec lui.
     const fautes = controler(
-      universAvecFichier('docs/rib-colle.md', `Virement depuis ${ibanAvecSeparateur(IBAN_TEMOIN, CAR(0x0020))}.`)
+      universAvecFichier(
+        'docs/rib-colle.md',
+        `Virement depuis ${ibanAvecSeparateur(IBAN_TEMOIN, CAR(0x0020))}.`
+      )
     );
     expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
   });
@@ -710,11 +738,19 @@ describe('REQ-CPL-018 — `normaliserEspaces` : chaque forme qu’elle neutralis
       // Le témoin doit VRAIMENT porter le séparateur, sinon il testerait la forme ASCII déguisée.
       expect(colle, `${nom(forme)} n’a pas été inséré`).toContain(forme);
       expect(colle).not.toBe(IBAN_TEMOIN);
-      const fautes = controler(universAvecFichier('docs/rib-colle.md', `Virement depuis ${colle}.`));
-      expect(fautes.map((f) => f.famille), `${nom(forme)} — l’IBAN passe`).toContain('coordonnee_en_clair');
+      const fautes = controler(
+        universAvecFichier('docs/rib-colle.md', `Virement depuis ${colle}.`)
+      );
+      expect(
+        fautes.map((f) => f.famille),
+        `${nom(forme)} — l’IBAN passe`
+      ).toContain('coordonnee_en_clair');
       // La valeur est remontée SANS ses séparateurs : un même compte collé de deux façons est un
       // seul compte, et c'est ce qui permet de le reconnaître d'une révision à l'autre.
-      expect(fautes.some((f) => f.message.includes(IBAN_TEMOIN)), `${nom(forme)} — valeur non normalisée`).toBe(true);
+      expect(
+        fautes.some((f) => f.message.includes(IBAN_TEMOIN)),
+        `${nom(forme)} — valeur non normalisée`
+      ).toBe(true);
     }
   );
 
@@ -842,7 +878,12 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
       lu: true,
       pr: PR,
       corps: [
-        { origine: 'corps courant', horodatage: null, texte: `IBAN débiteur : ${MASQUE}`, revision: false },
+        {
+          origine: 'corps courant',
+          horodatage: null,
+          texte: `IBAN débiteur : ${MASQUE}`,
+          revision: false,
+        },
         {
           origine: 'révision',
           horodatage: HORODATAGE,
@@ -887,7 +928,9 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
     const v = jugerCorpsPublie({
       lu: true,
       pr: PR,
-      corps: [{ origine: 'corps courant', horodatage: null, texte: 'rien à signaler', revision: false }],
+      corps: [
+        { origine: 'corps courant', horodatage: null, texte: 'rien à signaler', revision: false },
+      ],
       revisionsLues: 2,
       revisionsAnnoncees: 11,
       // FAUX à dessein : ce témoin juge l'ÉCART, et lui seul (RM-11).
@@ -920,7 +963,9 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
   it(`REQ-CPL-018 — la garde du corps publié sait rougir : ses ${FAMILLES_CORPS_PUBLIE.length} familles ont un témoin`, () => {
     const { code, sortie } = lancer('--corps-publie', '--prove');
     expect(code).toBe(0);
-    expect(sortie).toContain(`Les ${FAMILLES_CORPS_PUBLIE.length} familles du corps publié rougissent`);
+    expect(sortie).toContain(
+      `Les ${FAMILLES_CORPS_PUBLIE.length} familles du corps publié rougissent`
+    );
     const puces = sortie.split('\n').filter((l) => l.trim().startsWith('•'));
     expect(puces.length).toBe(FAMILLES_CORPS_PUBLIE.length);
   });
@@ -991,7 +1036,10 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
     try {
       process.env.GITHUB_EVENT_PATH = join(tmpdir(), 'inexistant-mais-pose.json');
       for (const v of VARIABLES_NEUTRALISEES) {
-        expect(Object.keys(envDuBancDEssai()), `${v} traverse encore vers le sous-processus`).not.toContain(v);
+        expect(
+          Object.keys(envDuBancDEssai()),
+          `${v} traverse encore vers le sous-processus`
+        ).not.toContain(v);
       }
       // CONTRE-TÉMOIN : la neutralisation est CIBLÉE, elle ne vide pas l'environnement. Un
       // sous-processus sans `PATH` ne trouverait plus `npx`, et l'échec ressemblerait à un rouge
@@ -1046,9 +1094,9 @@ describe('REQ-CPL-018 — les coordonnées NON françaises, et les deux familles
       expect(cleIbanValide(iban), `${pays} — la clé du témoin doit être valide`).toBe(true);
       expect(iban.startsWith('FR'), `${pays} — le témoin doit être NON français`).toBe(false);
       expect(
-        controler(universAvecFichier('docs/rib-porteur.md', `Le compte du porteur est ${iban}.`)).map(
-          (f) => f.famille
-        ),
+        controler(
+          universAvecFichier('docs/rib-porteur.md', `Le compte du porteur est ${iban}.`)
+        ).map((f) => f.famille),
         `${pays} — l’IBAN passe`
       ).toContain('coordonnee_en_clair');
     }
@@ -1084,7 +1132,10 @@ describe('REQ-CPL-018 — les coordonnées NON françaises, et les deux familles
 
   it('REQ-CPL-018 — une TVA de TIERS dans du CODE rougit : elle se LIT, elle ne se porte pas', () => {
     const fautes = controler(
-      universAvecFichier('src/facturation/fournisseur.ts', `export const TVA = '${TVA_TEMOIN_TIERS}';`)
+      universAvecFichier(
+        'src/facturation/fournisseur.ts',
+        `export const TVA = '${TVA_TEMOIN_TIERS}';`
+      )
     );
     expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
     expect(fautes.some((f) => f.message.includes(TVA_TEMOIN_TIERS))).toBe(true);
@@ -1092,7 +1143,10 @@ describe('REQ-CPL-018 — les coordonnées NON françaises, et les deux familles
 
   it('REQ-CPL-018 — un SIREN de TIERS dans du CODE rougit, et le mot-clé est ce qui l’identifie', () => {
     const fautes = controler(
-      universAvecFichier('src/apporteur/structure.ts', `export const s = { siren: '${SIREN_TEMOIN_TIERS}' };`)
+      universAvecFichier(
+        'src/apporteur/structure.ts',
+        `export const s = { siren: '${SIREN_TEMOIN_TIERS}' };`
+      )
     );
     expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
 
@@ -1100,9 +1154,9 @@ describe('REQ-CPL-018 — les coordonnées NON françaises, et les deux familles
     // autre chose — un horodatage, un identifiant, un montant en centimes. Une forme nue
     // produirait le bruit qui fait désarmer une garde. C'est une limite ASSUMÉE, donc écrite.
     expect(
-      controler(universAvecFichier('src/lot/compteur.ts', `export const n = ${SIREN_TEMOIN_TIERS};`)).map(
-        (f) => f.famille
-      )
+      controler(
+        universAvecFichier('src/lot/compteur.ts', `export const n = ${SIREN_TEMOIN_TIERS};`)
+      ).map((f) => f.famille)
     ).not.toContain('coordonnee_en_clair');
   });
 
@@ -1130,7 +1184,9 @@ describe('REQ-CPL-018 — les coordonnées NON françaises, et les deux familles
     const faux = 'DE00370400440532013000';
     expect(cleIbanValide(faux), 'le contre-témoin doit avoir une clé FAUSSE').toBe(false);
     expect(
-      controler(universAvecFichier('docs/note-de-travail.md', `Référence ${faux}.`)).map((f) => f.famille)
+      controler(universAvecFichier('docs/note-de-travail.md', `Référence ${faux}.`)).map(
+        (f) => f.famille
+      )
     ).not.toContain('coordonnee_en_clair');
   });
 
@@ -1258,13 +1314,17 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
       ...pour(IBAN_TEMOIN),
       empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16),
     };
-    const v = jugerCorpsPublie(lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]), [tronquee]);
+    const v = jugerCorpsPublie(lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]), [
+      tronquee,
+    ]);
     expect(v.fautes.map((f) => f.famille)).toContain('exemption_malformee');
     // LA MOITIÉ QUI MANQUAIT : la coordonnée est TOUJOURS signalée. Seize caractères hexadécimaux
     // se collisionnent en 2^32 essais — une ligne tronquée absoudrait une AUTRE coordonnée que
     // celle qu'on a examinée, et c'est l'argument que la PR avance deux fois.
     expect(v.fautes.map((f) => f.famille)).toContain('coordonnee_dans_une_revision');
-    expect(exemptionsServies(lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]), [tronquee])).toEqual([]);
+    expect(
+      exemptionsServies(lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]), [tronquee])
+    ).toEqual([]);
   });
 
   it('REQ-CPL-018 — `exemptionsServies` apparie sur les TROIS clés, pas sur la seule PR', () => {
@@ -1288,7 +1348,9 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
     expect(autrePr.pr, 'le leurre doit venir d’une AUTRE PR').not.toBe(l.lu && l.pr);
     expect(autrePr.revision, 'et ne différer QUE par là').toBe(bonne.revision);
     expect(autrePr.empreinte).toBe(bonne.empreinte);
-    expect(exemptionsServies(l, [autrePr, autreEmpreinte, autreHorodatage, bonne])).toEqual([bonne]);
+    expect(exemptionsServies(l, [autrePr, autreEmpreinte, autreHorodatage, bonne])).toEqual([
+      bonne,
+    ]);
 
     // TÉMOIN POSITIF de la fonction elle-même : sur la bonne ligne SEULE, elle rend cette ligne.
     // Sans lui, une `exemptionsServies` qui rendrait toujours `[]` passerait le cas ci-dessus.
@@ -1341,14 +1403,23 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
     const base = lecture([{ horodatage: HORO, texte: `IBAN : ${IBAN_TEMOIN}` }]);
     const cassees: [string, Exemption][] = [
       ['motif vide', { ...pour(IBAN_TEMOIN), motif: '' }],
-      ['empreinte TRONQUÉE', { ...pour(IBAN_TEMOIN), empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16) }],
-      ['horodatage qui n’est pas celui d’une révision', { ...pour(IBAN_TEMOIN), revision: '2026-03-04' }],
+      [
+        'empreinte TRONQUÉE',
+        { ...pour(IBAN_TEMOIN), empreinte: empreinteDe(IBAN_TEMOIN).slice(0, 16) },
+      ],
+      [
+        'horodatage qui n’est pas celui d’une révision',
+        { ...pour(IBAN_TEMOIN), revision: '2026-03-04' },
+      ],
       ['aucun propriétaire', { ...pour(IBAN_TEMOIN), par: '   ' }],
       ['aucune date de déclaration', { ...pour(IBAN_TEMOIN), declaree: 'hier' }],
     ];
     for (const [quoi, e] of cassees) {
       const v = jugerCorpsPublie(base, [e]);
-      expect(v.fautes.map((f) => f.famille), quoi).toContain('exemption_malformee');
+      expect(
+        v.fautes.map((f) => f.famille),
+        quoi
+      ).toContain('exemption_malformee');
       expect(v.code, quoi).toBe(1);
     }
     // Et un DOUBLON : deux lignes pour une exception, on ne saura pas laquelle retirer.
@@ -1370,7 +1441,9 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
     // Sans cette règle, une panne de réseau transformerait toutes les exemptions en dettes
     // imaginaires : le verdict passerait de « je n'ai pas pu lire » à « ton registre est faux »,
     // deux diagnostics opposés que rien ne permettrait plus de distinguer.
-    const v = jugerCorpsPublie({ lu: false, motif: 'réseau injoignable (témoin)' }, [pour(IBAN_TEMOIN)]);
+    const v = jugerCorpsPublie({ lu: false, motif: 'réseau injoignable (témoin)' }, [
+      pour(IBAN_TEMOIN),
+    ]);
     expect(v.code).toBe(2);
     expect(v.fautes.map((f) => f.famille)).toEqual(['lecture_impossible']);
   });
@@ -1396,7 +1469,10 @@ describe('REQ-CPL-018 — les exemptions de révision, et ce qui les empêche d�
     // TÉMOIN POSITIF sur le réel : un registre VIDE passerait la première assertion sans rien
     // prouver — zéro ligne contrôlée se lit exactement comme zéro ligne fautive.
     const reelles = exemptionsDuDepot();
-    expect(reelles.length, 'le registre est vide : le contrôle ci-dessous ne mesure rien').toBeGreaterThan(0);
+    expect(
+      reelles.length,
+      'le registre est vide : le contrôle ci-dessous ne mesure rien'
+    ).toBeGreaterThan(0);
     expect(controlerRegistreExemptions(reelles)).toEqual([]);
     for (const e of reelles) {
       // L'historique d'édition est immuable : aucune de ces lignes ne se referme. Le déclarer
@@ -1590,7 +1666,6 @@ describe('REQ-CPL-018 — la pagination des révisions : lire CENT n’est pas l
     expect(jugerCorpsPublie(assemblerLecture(String(PR), 'rien à signaler', r)).code).toBe(0);
   });
 
-
   it('REQ-CPL-018 — le compte annoncé est celui de la PREMIÈRE page : il se prend UNE fois', () => {
     // 🔴 LE MUTANT SÉRIEUX DU 2026-09-05 : relire `totalCount` à CHAQUE page. 536/536 vert, les
     // deux `--prove` à 0 — parce que les trois forges de papier du dépôt servaient toutes un
@@ -1632,7 +1707,9 @@ describe('REQ-CPL-018 — la pagination des révisions : lire CENT n’est pas l
     });
     const r = paginerEditions(lirePage);
     expect(r.noeuds).toHaveLength(SERVIES);
-    expect(r.inacheve, 'la forge a dit « plus rien » : la lecture n’a PAS été interrompue').toBe(false);
+    expect(r.inacheve, 'la forge a dit « plus rien » : la lecture n’a PAS été interrompue').toBe(
+      false
+    );
     expect(r.annoncees).toBe(ANNONCEES);
 
     const v = jugerCorpsPublie(assemblerLecture(String(PR), 'propre', r));
@@ -1717,7 +1794,9 @@ describe('REQ-CPL-018 — la pagination des révisions : lire CENT n’est pas l
     // quoi retirer l'une passerait inaperçu tant que l'autre subsiste, ce qui est exactement le
     // mutant qui a survécu au tour précédent.
     expect(v.fautes).toHaveLength(2);
-    const arret = v.fautes.find((f) => f.message.includes('ARR') && f.message.includes('avant la fin'));
+    const arret = v.fautes.find(
+      (f) => f.message.includes('ARR') && f.message.includes('avant la fin')
+    );
     const ecart = v.fautes.find((f) => f.message.includes('La forge annonce'));
     expect(arret, 'la cause tirée de notre propre flot').toBeDefined();
     expect(ecart, 'la cause tirée du compte servi par la forge').toBeDefined();
@@ -1859,7 +1938,11 @@ describe('REQ-CPL-018 — la LECTURE, et le sens dans lequel elle échoue', () =
     ['le corps est un NOMBRE', { ...SAIN, corps: 12 }, 'body'],
     ['le dépôt n’est pas textuel', { ...SAIN, depot: undefined }, 'illisible'],
     ['le dépôt n’a pas de barre', { ...SAIN, depot: 'sans-barre' }, 'illisible'],
-    ['`userContentEdits` manque', { ...SAIN, total: undefined as unknown as number }, 'userContentEdits'],
+    [
+      '`userContentEdits` manque',
+      { ...SAIN, total: undefined as unknown as number },
+      'userContentEdits',
+    ],
   ])(
     'REQ-CPL-018 — %s : la lecture rend `lu: false`, JAMAIS un corps vide qui passerait pour propre',
     (_quoi: string, o: GhDePapier, motif: string) => {
@@ -1872,7 +1955,9 @@ describe('REQ-CPL-018 — la LECTURE, et le sens dans lequel elle échoue', () =
       expect(lecture.motif).toContain(motif);
       // ET LE VERDICT QUI EN DÉCOULE EST 2, JAMAIS 0. C'est la moitié qui compte pour la CI.
       expect(jugerCorpsPublie(lecture).code).toBe(2);
-      expect(jugerCorpsPublie(lecture).fautes.map((f) => f.famille)).toEqual(['lecture_impossible']);
+      expect(jugerCorpsPublie(lecture).fautes.map((f) => f.famille)).toEqual([
+        'lecture_impossible',
+      ]);
     }
   );
 

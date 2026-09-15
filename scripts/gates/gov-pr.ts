@@ -66,14 +66,24 @@ const CHEMIN_TACHES = 'docs/tasks.json';
 
 /** Les marqueurs d'ancrage du gabarit. Chacun EXACTEMENT une fois. */
 const MARQUEURS = [
-  'dod:debut', 'dod:fin',
-  'rouge-vert:debut', 'rouge-vert:fin',
-  'attaque:debut', 'attaque:fin',
-  'regle-maison:debut', 'regle-maison:fin',
+  'dod:debut',
+  'dod:fin',
+  'rouge-vert:debut',
+  'rouge-vert:fin',
+  'attaque:debut',
+  'attaque:fin',
+  'regle-maison:debut',
+  'regle-maison:fin',
 ];
 
 /** Les champs que le corps d'une PR doit porter, remplis. */
-const CHAMPS = ['Auteur:', 'Relecteur:', 'Couvre:', 'Rouge constaté par:', 'Règle maison appliquée:'];
+const CHAMPS = [
+  'Auteur:',
+  'Relecteur:',
+  'Couvre:',
+  'Rouge constaté par:',
+  'Règle maison appliquée:',
+];
 
 const NB_CASES = 8;
 /** Les avis qui ne comptent pour rien, et POURQUOI — dits en sortie, jamais comptés en fautes. */
@@ -112,7 +122,14 @@ type Pr = {
   apresFusion?: boolean;
 };
 type Tache = { id: string; sensible: string[]; schema: boolean; pr: number | null };
-type Depot = { gabarit: string; codeowners: string; charte: string; fiches: string[]; architecte: string; taches: Tache[] };
+type Depot = {
+  gabarit: string;
+  codeowners: string;
+  charte: string;
+  fiches: string[];
+  architecte: string;
+  taches: Tache[];
+};
 /**
  * LA PHASE COURANTE — la plus petite phase qui porte encore une tâche non livrée.
  *
@@ -132,8 +149,8 @@ const LIVREES = LIVREE_DERIVEE;
 {
   const ecarts = verifierExhaustivite();
   if (ecarts.length > 0) {
-    console.error("❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :");
-    ecarts.forEach((e) => console.error("   " + e));
+    console.error('❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :');
+    ecarts.forEach((e) => console.error('   ' + e));
     process.exit(1);
   }
 }
@@ -142,7 +159,9 @@ function phaseCourante(): number {
     taches: { phase: number; statut: string }[];
   };
   const restantes = doc.taches.filter((t) => !LIVREES.has(t.statut)).map((t) => t.phase);
-  return restantes.length === 0 ? Math.max(...doc.taches.map((t) => t.phase)) : Math.min(...restantes);
+  return restantes.length === 0
+    ? Math.max(...doc.taches.map((t) => t.phase))
+    : Math.min(...restantes);
 }
 
 type Faute = { famille: string; message: string };
@@ -216,14 +235,23 @@ function cheminsReserves(charte: string): { chemins: string[]; label: string }[]
   const out: { chemins: string[]; label: string }[] = [];
   for (const ligne of section(charte, '## 7.', '## 8.').split('\n')) {
     if (!ligne.startsWith('|')) continue;
-    const cellules = ligne.split('|').slice(1, -1).map((c) => c.trim());
+    const cellules = ligne
+      .split('|')
+      .slice(1, -1)
+      .map((c) => c.trim());
     if (cellules.length < 4) continue;
     const label = cellules[2]!.replace(/`/g, '').trim();
     if (!/^(role:[a-z-]+|schema)$/.test(label)) continue;
     if (label === 'schema') continue;
     const chemins = cellules[0]!
       .split(',')
-      .map((c) => c.replace(/`/g, '').replace(/\(.*\)/g, '').replace(/\*\*/g, '').trim())
+      .map((c) =>
+        c
+          .replace(/`/g, '')
+          .replace(/\(.*\)/g, '')
+          .replace(/\*\*/g, '')
+          .trim()
+      )
       .filter(Boolean);
     if (chemins.length > 0) out.push({ chemins, label });
   }
@@ -279,7 +307,10 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
 
   for (const champ of CHAMPS) {
     if (!depot.gabarit.includes(champ)) {
-      ajouter('champ_gabarit_absent', `${CHEMIN_GABARIT} — le champ « ${champ} » a disparu du gabarit.`);
+      ajouter(
+        'champ_gabarit_absent',
+        `${CHEMIN_GABARIT} — le champ « ${champ} » a disparu du gabarit.`
+      );
     }
   }
 
@@ -304,7 +335,10 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
       }
     }
     if (r.proprietaires.length === 0) {
-      ajouter('codeowners_non_resolvable', `${CHEMIN_CODEOWNERS} — ${r.chemin} n'a aucun propriétaire.`);
+      ajouter(
+        'codeowners_non_resolvable',
+        `${CHEMIN_CODEOWNERS} — ${r.chemin} n'a aucun propriétaire.`
+      );
     }
   }
   for (const exige of CHEMINS_SCHEMA) {
@@ -320,10 +354,14 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
   const postes = postesDeLaCharte(depot.charte);
   const codes = new Set<string>();
   for (const p of postes) {
-    if (codes.has(p.code)) ajouter('charte_poste_manquant', `${CHEMIN_CHARTE} — le code ${p.code} est donné deux fois.`);
+    if (codes.has(p.code))
+      ajouter('charte_poste_manquant', `${CHEMIN_CHARTE} — le code ${p.code} est donné deux fois.`);
     codes.add(p.code);
     if (!depot.fiches.includes(p.fiche)) {
-      ajouter('charte_poste_manquant', `${CHEMIN_CHARTE} — la ligne « ${p.fiche} » ne correspond à aucune fiche de ${CHEMIN_FICHES}/.`);
+      ajouter(
+        'charte_poste_manquant',
+        `${CHEMIN_CHARTE} — la ligne « ${p.fiche} » ne correspond à aucune fiche de ${CHEMIN_FICHES}/.`
+      );
     }
   }
   for (const fiche of depot.fiches) {
@@ -338,7 +376,10 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
 
   const attendu = ordinalDeLaLentille(depot.architecte);
   if (attendu === null) {
-    ajouter('charte_lentille_non_derivee', `${CHEMIN_FICHE_ARCHITECTE} ne dit plus quelle lentille l'architecte tient : la charte ne peut plus en dériver.`);
+    ajouter(
+      'charte_lentille_non_derivee',
+      `${CHEMIN_FICHE_ARCHITECTE} ne dit plus quelle lentille l'architecte tient : la charte ne peut plus en dériver.`
+    );
   } else {
     const motif = new RegExp(`\\b(${ORDINAUX.join('|')})\\s+lentille`, 'gi');
     let m: RegExpExecArray | null;
@@ -366,15 +407,23 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
         `${TYPES_DE_TITRE.join(', ')} (docs/CONVENTIONS.md §5).`
     );
   } else if (!tache) {
-    ajouter('titre_non_conforme', `Titre « ${pr.titre} » — ${titre[2]} n'est pas une tâche de ${CHEMIN_TACHES}.`);
+    ajouter(
+      'titre_non_conforme',
+      `Titre « ${pr.titre} » — ${titre[2]} n'est pas une tâche de ${CHEMIN_TACHES}.`
+    );
   }
 
   const auteur = /^Auteur:\s*(A\d{2})\s*$/m.exec(pr.corps);
   const ligneRelecteur = /^Relecteur:\s*(.+)$/m.exec(pr.corps);
   const couvre = /^Couvre:\s*(REQ-[A-Z]+-\d+.*)$/m.exec(pr.corps);
-  if (!auteur) ajouter('champ_gabarit_absent', 'Corps de la PR — `Auteur:` absent ou non rempli (attendu : un code `A` suivi de deux chiffres).');
+  if (!auteur)
+    ajouter(
+      'champ_gabarit_absent',
+      'Corps de la PR — `Auteur:` absent ou non rempli (attendu : un code `A` suivi de deux chiffres).'
+    );
   if (!ligneRelecteur) ajouter('champ_gabarit_absent', 'Corps de la PR — `Relecteur:` absent.');
-  if (!couvre) ajouter('champ_gabarit_absent', 'Corps de la PR — `Couvre:` ne cite aucune exigence.');
+  if (!couvre)
+    ajouter('champ_gabarit_absent', 'Corps de la PR — `Couvre:` ne cite aucune exigence.');
 
   const lentillesDeclarees: string[] = ligneRelecteur
     ? (ligneRelecteur[1]!.match(/exactitude|securite|simplicite|schema|mutation/g) ?? [])
@@ -409,7 +458,7 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
     //
     // Les sept premières se jugent avant la fusion ; la huitième sous `--apres-fusion <n>`.
     // On lit les cases DANS L'ORDRE : un compte de sept ne dit pas LESQUELLES sont cochées.
-    const cases = (blocDodPr.match(/^- \[[ x]\]/gm) ?? []);
+    const cases = blocDodPr.match(/^- \[[ x]\]/gm) ?? [];
     const avantFusion = cases.slice(0, NB_CASES - 1);
     const videsAvant = avantFusion.filter((c) => c === '- [ ]').length;
     if (videsAvant > 0) {
@@ -433,7 +482,8 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
   const blocRouge = bloc(pr.corps, 'rouge-vert');
   if (pr.fichiers.some(INTRODUIT_UNE_GARDE)) {
     const rouge = blocRouge === null ? null : /^ROUGE\s*:\s*(.+)$/m.exec(blocRouge);
-    const constate = blocRouge === null ? null : /^Rouge constaté par:\s*(A\d{2})\s*$/m.exec(blocRouge);
+    const constate =
+      blocRouge === null ? null : /^Rouge constaté par:\s*(A\d{2})\s*$/m.exec(blocRouge);
     if (!rouge || rouge[1]!.trim().length < 20 || rouge[1]!.trim().startsWith('(')) {
       ajouter(
         'rouge_vert_absent',
@@ -471,8 +521,7 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
                 .filter((t) => t.sensible.length > 0)
                 .map((t) => `${t.id} (${t.sensible.join(', ')})`)
                 .join(' · ')}`
-        }) ` +
-          `et laissée vide. REQ-GOV-011 : scénario joué, résultat, qui l'a joué.`
+        }) ` + `et laissée vide. REQ-GOV-011 : scénario joué, résultat, qui l'a joué.`
       );
     }
   }
@@ -599,7 +648,10 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
     // la ligne `Relecteur:` et les revues doivent parler des mêmes lentilles
     for (const l of exigees) {
       if (!lentillesDeclarees.includes(l)) {
-        ajouter('lentilles_manquantes', `Corps de la PR — \`Relecteur:\` ne déclare pas la lentille ${l}, que les revues portent.`);
+        ajouter(
+          'lentilles_manquantes',
+          `Corps de la PR — \`Relecteur:\` ne déclare pas la lentille ${l}, que les revues portent.`
+        );
       }
     }
   }
@@ -620,22 +672,28 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
 // ── lecture du dépôt ─────────────────────────────────────────────────────────
 
 function lireDepot(): Depot {
-  for (const f of [CHEMIN_GABARIT, CHEMIN_CODEOWNERS, CHEMIN_CHARTE, CHEMIN_FICHE_ARCHITECTE, CHEMIN_TACHES]) {
+  for (const f of [
+    CHEMIN_GABARIT,
+    CHEMIN_CODEOWNERS,
+    CHEMIN_CHARTE,
+    CHEMIN_FICHE_ARCHITECTE,
+    CHEMIN_TACHES,
+  ]) {
     if (!existsSync(f)) {
       console.error(`❌ gov:pr — ${f} est introuvable.`);
       process.exit(1);
     }
   }
-  const taches = (
-    JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as {
-      taches: { id: string; sensible?: string[]; schema?: boolean; pr?: number | null }[];
-    }
   // ⚠️ `pr` FAIT PARTIE DE LA PROJECTION, et son absence a rendu DEUX correctifs inertes.
   // `tachesDeLaPr()` apparie sur `t.pr === <numero>` OU sur l identifiant du titre. Tant que la
   // projection laissait `pr` de cote, la moitie `numero` ne pouvait JAMAIS apparier : la
   // derivation unique se reduisait silencieusement a la seule tache du titre — exactement le
   // defaut qu elle etait censee fermer. Trouve le 2026-09-05 parce qu un temoin neuf refusait de
   // rougir : c est le temoin qui a revele que le correctif ne faisait rien, pas la relecture.
+  const taches = (
+    JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as {
+      taches: { id: string; sensible?: string[]; schema?: boolean; pr?: number | null }[];
+    }
   ).taches.map((t) => ({
     id: t.id,
     sensible: t.sensible ?? [],
@@ -647,7 +705,9 @@ function lireDepot(): Depot {
     codeowners: readFileSync(CHEMIN_CODEOWNERS, 'utf8'),
     charte: readFileSync(CHEMIN_CHARTE, 'utf8'),
     architecte: readFileSync(CHEMIN_FICHE_ARCHITECTE, 'utf8'),
-    fiches: readdirSync(CHEMIN_FICHES).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3)),
+    fiches: readdirSync(CHEMIN_FICHES)
+      .filter((f) => f.endsWith('.md'))
+      .map((f) => f.slice(0, -3)),
     taches,
   };
 }
@@ -664,12 +724,24 @@ function lireDepot(): Depot {
  */
 function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant-fusion'): Pr {
   const meta = JSON.parse(
-    execFileSync('gh', ['pr', 'view', numero, '--json', 'title,body,labels,files,headRefOid,mergeCommit,baseRefName'], {
-      encoding: 'utf8',
-      maxBuffer: 32e6,
-    })
+    execFileSync(
+      'gh',
+      [
+        'pr',
+        'view',
+        numero,
+        '--json',
+        'title,body,labels,files,headRefOid,mergeCommit,baseRefName',
+      ],
+      {
+        encoding: 'utf8',
+        maxBuffer: 32e6,
+      }
+    )
   ) as {
-    title: string; body: string; headRefOid: string;
+    title: string;
+    body: string;
+    headRefOid: string;
     labels: { name: string }[];
     files: { path: string }[];
     /** Ne vaut quelque chose qu'une fois la PR fusionnée — d'où le type nullable, qui FORCE
@@ -773,14 +845,25 @@ function prParEvenement(): Pr | null {
   const chemin = process.env['GITHUB_EVENT_PATH'];
   if (!chemin || !existsSync(chemin)) return null;
   const ev = JSON.parse(readFileSync(chemin, 'utf8')) as {
-    pull_request?: { number?: number; title: string; body: string | null; labels: { name: string }[]; base: { sha: string }; head: { sha: string } };
+    pull_request?: {
+      number?: number;
+      title: string;
+      body: string | null;
+      labels: { name: string }[];
+      base: { sha: string };
+      head: { sha: string };
+    };
   };
   if (!ev.pull_request) return null;
   let fichiers: string[] = [];
   try {
-    fichiers = execFileSync('git', ['diff', '--name-only', `${ev.pull_request.base.sha}...${ev.pull_request.head.sha}`], {
-      encoding: 'utf8',
-    })
+    fichiers = execFileSync(
+      'git',
+      ['diff', '--name-only', `${ev.pull_request.base.sha}...${ev.pull_request.head.sha}`],
+      {
+        encoding: 'utf8',
+      }
+    )
       .split('\n')
       .filter(Boolean);
   } catch {
@@ -811,7 +894,9 @@ function prParEvenement(): Pr | null {
  */
 function remplacer(texte: string, cible: string, valeur: string): string {
   if (!texte.includes(cible)) {
-    console.error(`❌ gov:pr --prove — le gabarit ne contient plus « ${cible} » : la fixture ne peut pas en être dérivée.`);
+    console.error(
+      `❌ gov:pr --prove — le gabarit ne contient plus « ${cible} » : la fixture ne peut pas en être dérivée.`
+    );
     process.exit(1);
   }
   return texte.split(cible).join(valeur);
@@ -891,7 +976,12 @@ if (process.argv.includes('--prove')) {
     titre: 'feat(GOV-011): matrice de traçabilité dérivée',
     corps: CORPS,
     labels: [],
-    fichiers: ['docs/CHARTE-AGENTS.md', '.github/PULL_REQUEST_TEMPLATE.md', 'scripts/gates/gov-pr.ts', 'tests/gov/charte-pr.spec.ts'],
+    fichiers: [
+      'docs/CHARTE-AGENTS.md',
+      '.github/PULL_REQUEST_TEMPLATE.md',
+      'scripts/gates/gov-pr.ts',
+      'tests/gov/charte-pr.spec.ts',
+    ],
     revues: [
       revue('A09 · exactitude\nVerdict: accepte\nles quatre REQ sont couvertes'),
       revue('A09 · securite\nVerdict: accepte\nrien à signaler'),
@@ -933,7 +1023,10 @@ if (process.argv.includes('--prove')) {
     'Relecteur: A09 exactitude · A09 securite · A02 schema · A10 mutation'
   );
 
-  const PR_SENSIBLE: Pr = { ...copiePr(PR_TEMOIN), fichiers: ['auth/session.ts', 'tests/gov/charte-pr.spec.ts'] };
+  const PR_SENSIBLE: Pr = {
+    ...copiePr(PR_TEMOIN),
+    fichiers: ['auth/session.ts', 'tests/gov/charte-pr.spec.ts'],
+  };
   PR_SENSIBLE.corps = remplacerBloc(
     PR_SENSIBLE.corps,
     'attaque',
@@ -958,17 +1051,26 @@ if (process.argv.includes('--prove')) {
     },
     {
       famille: 'dod_hors_bloc',
-      defaut: () => [{ ...copieDepot(), gabarit: depot.gabarit + '\n- [ ] Règle maison appliquée\n' }, null],
+      defaut: () => [
+        { ...copieDepot(), gabarit: depot.gabarit + '\n- [ ] Règle maison appliquée\n' },
+        null,
+      ],
     },
     {
       famille: 'champ_gabarit_absent',
       // `split/join` et non `replace` : le gabarit cite « Couvre: » DEUX fois (le champ et la
       // première case), et n'en retirer qu'une laissait la famille verte — le témoin ne prouvait rien.
-      defaut: () => [{ ...copieDepot(), gabarit: depot.gabarit.split('Couvre:').join('Concerne:') }, null],
+      defaut: () => [
+        { ...copieDepot(), gabarit: depot.gabarit.split('Couvre:').join('Concerne:') },
+        null,
+      ],
     },
     {
       famille: 'codeowners_non_resolvable',
-      defaut: () => [{ ...copieDepot(), codeowners: depot.codeowners.replace(/@will383842/g, '@A02') }, null],
+      defaut: () => [
+        { ...copieDepot(), codeowners: depot.codeowners.replace(/@will383842/g, '@A02') },
+        null,
+      ],
     },
     {
       famille: 'charte_poste_manquant',
@@ -976,7 +1078,13 @@ if (process.argv.includes('--prove')) {
     },
     {
       famille: 'charte_lentille_non_derivee',
-      defaut: () => [{ ...copieDepot(), charte: depot.charte.replace(/troisième lentille/g, 'quatrième lentille') }, null],
+      defaut: () => [
+        {
+          ...copieDepot(),
+          charte: depot.charte.replace(/troisième lentille/g, 'quatrième lentille'),
+        },
+        null,
+      ],
     },
     // ---- la PR, sans les revues
     {
@@ -1071,7 +1179,9 @@ if (process.argv.includes('--prove')) {
       defaut: () => {
         const p = copiePr(PR_TEMOIN);
         p.revues = p.revues!.map((r) =>
-          ouvrePar(r, 'A09 · securite') ? { ...r, body: 'A09 · securite\nVerdict: refuse\nIDOR non couvert' } : r
+          ouvrePar(r, 'A09 · securite')
+            ? { ...r, body: 'A09 · securite\nVerdict: refuse\nIDOR non couvert' }
+            : r
         );
         return [copieDepot(), p];
       },
@@ -1093,7 +1203,11 @@ if (process.argv.includes('--prove')) {
       famille: 'lentilles_manquantes',
       defaut: () => {
         const p = copiePr(PR_TEMOIN);
-        p.revues = p.revues!.map((r) => ({ ...r, author_association: 'NONE', user: { login: 'un-tiers' } }));
+        p.revues = p.revues!.map((r) => ({
+          ...r,
+          author_association: 'NONE',
+          user: { login: 'un-tiers' },
+        }));
         return [copieDepot(), p];
       },
     },
@@ -1123,7 +1237,9 @@ if (process.argv.includes('--prove')) {
         const p = copiePr(PR_SCHEMA);
         p.revues = [
           ...p.revues!.map((r) =>
-            ouvrePar(r, 'A02 · schema') ? { ...r, body: 'A02 · schema\nVerdict: refuse\nla migration perd une colonne' } : r
+            ouvrePar(r, 'A02 · schema')
+              ? { ...r, body: 'A02 · schema\nVerdict: refuse\nla migration perd une colonne' }
+              : r
           ),
           revue('A12 · schema\nVerdict: accepte\nvu de mon côté'),
         ];
@@ -1136,7 +1252,10 @@ if (process.argv.includes('--prove')) {
       famille: 'lentille_perimee',
       defaut: () => {
         const p = copiePr(PR_TEMOIN);
-        p.revues = p.revues!.map((r) => ({ ...r, commit_id: '0000000000000000000000000000000000000000' }));
+        p.revues = p.revues!.map((r) => ({
+          ...r,
+          commit_id: '0000000000000000000000000000000000000000',
+        }));
         return [copieDepot(), p];
       },
     },
@@ -1154,7 +1273,9 @@ if (process.argv.includes('--prove')) {
       famille: 'schema_sans_approbation',
       defaut: () => {
         const p = copiePr(PR_SCHEMA);
-        p.revues = p.revues!.map((r) => (ouvrePar(r, 'A02') ? { ...r, body: 'A09 · schema\nVerdict: accepte\nok' } : r));
+        p.revues = p.revues!.map((r) =>
+          ouvrePar(r, 'A02') ? { ...r, body: 'A09 · schema\nVerdict: accepte\nok' } : r
+        );
         return [copieDepot(), p];
       },
     },
@@ -1163,14 +1284,20 @@ if (process.argv.includes('--prove')) {
   const CONTRE_TEMOINS: { quoi: string; cas: () => [Depot, Pr | null] }[] = [
     { quoi: "le dépôt tel qu'il est, sans PR", cas: () => [depot, null] },
     { quoi: 'une PR conforme, revues comprises', cas: () => [depot, PR_TEMOIN] },
-    { quoi: 'une PR `schema` avec son label et l’approbation de A02', cas: () => [depot, PR_SCHEMA] },
-    { quoi: 'une PR sur une zone sensible avec sa section Attaque remplie', cas: () => [depot, PR_SENSIBLE] },
+    {
+      quoi: 'une PR `schema` avec son label et l’approbation de A02',
+      cas: () => [depot, PR_SCHEMA],
+    },
+    {
+      quoi: 'une PR sur une zone sensible avec sa section Attaque remplie',
+      cas: () => [depot, PR_SENSIBLE],
+    },
     { quoi: 'une PR sur un chemin réservé avec le label du rôle', cas: () => [depot, PR_RESERVE] },
     {
       // LE contre-témoin de la scission : la huitième case atteste la fusion et l'atterrissage,
       // elle ne peut pas être cochée à l'événement `pull_request`. En CI (revues absentes) cette
       // PR doit rester VERTE ; sous `--pr <numero>` le témoin de `dod_non_cochee` la fait rougir.
-      quoi: "une PR dont la seule case vide est la huitième, jugée en CI (revues absentes)",
+      quoi: 'une PR dont la seule case vide est la huitième, jugée en CI (revues absentes)',
       cas: () => {
         const p = copiePr(PR_TEMOIN);
         p.revues = null;
@@ -1182,7 +1309,7 @@ if (process.argv.includes('--prove')) {
       // LE contre-témoin qui manquait, et sans lequel la correction ne vaut rien : la même PR,
       // huitième case vide, jugée AVEC ses revues — c'est-à-dire sous `--pr <n>`, la commande
       // d'avant-fusion. Elle doit rester VERTE : la case atteste une fusion qui n'a pas eu lieu.
-      quoi: "une PR dont la seule case vide est la huitième, jugée AVANT la fusion (--pr)",
+      quoi: 'une PR dont la seule case vide est la huitième, jugée AVANT la fusion (--pr)',
       cas: () => {
         const p = copiePr(PR_TEMOIN);
         p.corps = videLaDerniereCase(p.corps);
@@ -1199,7 +1326,7 @@ if (process.argv.includes('--prove')) {
       // LE CONTRE-TEMOIN DE LA REGLE DU DERNIER MOT : une lentille qui REFUSE, puis relit et
       // ACCEPTE. La PR doit passer. Sans lui, la regle du dernier verdict serait une intention
       // ecrite en commentaire ; avec lui, un refus fige a nouveau la PR des que la regle saute.
-      quoi: "une lentille qui a refuse, puis relu et accepte : son DERNIER mot compte",
+      quoi: 'une lentille qui a refuse, puis relu et accepte : son DERNIER mot compte',
       cas: () => {
         const p = copiePr(PR_TEMOIN);
         const securite = p.revues!.find((r) => ouvrePar(r, 'A09 · securite'))!;
@@ -1283,7 +1410,9 @@ if (process.argv.includes('--prove')) {
     process.exit(1);
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts.`);
   process.exit(0);
@@ -1314,7 +1443,9 @@ if (iPr >= 0 || iApres >= 0) {
     // `git fetch origin`. *Le sens de défaillance reste fermé ; c'est le DIAGNOSTIC qui ment,
     // et un diagnostic qui ment fait perdre le temps qu'une garde est censée faire gagner.*
     const message = (e as Error).message;
-    const vientDeGit = /rev-parse|unknown revision|ambiguous argument|not a git repository/i.test(message);
+    const vientDeGit = /rev-parse|unknown revision|ambiguous argument|not a git repository/i.test(
+      message
+    );
     console.error(
       vientDeGit
         ? `❌ gov:pr — une commande \`git\` a échoué : ${message}`
@@ -1328,15 +1459,20 @@ if (iPr >= 0 || iApres >= 0) {
     process.exit(1);
   }
   if (iApres >= 0 && pr) pr.apresFusion = true;
-  portee += `, puis la PR #${numero}, REVUES COMPRISES` + (iApres >= 0 ? ", APRÈS FUSION (la 8ᵉ case est exigée)" : '');
+  portee +=
+    `, puis la PR #${numero}, REVUES COMPRISES` +
+    (iApres >= 0 ? ', APRÈS FUSION (la 8ᵉ case est exigée)' : '');
 } else {
   pr = prParEvenement();
-  if (pr) portee += ', puis la PR de l’événement GitHub — SANS les revues, qui n’existent pas encore';
+  if (pr)
+    portee += ', puis la PR de l’événement GitHub — SANS les revues, qui n’existent pas encore';
 }
 
 const fautes = controler(depot, pr);
 if (AVIS_ECARTES.length > 0) {
-  console.log(`ℹ️  gov:pr — ${AVIS_ECARTES.length} avis ÉCARTÉ(S), qui ne comptent pour aucune lentille :`);
+  console.log(
+    `ℹ️  gov:pr — ${AVIS_ECARTES.length} avis ÉCARTÉ(S), qui ne comptent pour aucune lentille :`
+  );
   AVIS_ECARTES.forEach((e) => console.log(`      ${e}`));
 }
 if (fautes.length === 0) {

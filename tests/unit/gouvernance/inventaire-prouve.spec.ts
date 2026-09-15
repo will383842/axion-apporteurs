@@ -30,7 +30,12 @@ type Rapport = {
   statutsDuSchema: string[];
   statutsSansRang: string[];
   taches: { id: string; statut: string; avancement: string | null; preuves: string[] }[];
-  chantiers: { etiquette: string; referentResolu: boolean; etat: string | null; preuves: string[] }[];
+  chantiers: {
+    etiquette: string;
+    referentResolu: boolean;
+    etat: string | null;
+    preuves: string[];
+  }[];
   etiquettesDeLaReq: string[];
 };
 
@@ -48,8 +53,11 @@ function rapport(): Rapport {
   // dans le sens ou l'on relance au lieu de lire.
   const debut = sortie.indexOf('{');
   const fin = sortie.lastIndexOf('}');
-  expect(debut, `aucun JSON dans la sortie :
-${sortie}`).toBeGreaterThanOrEqual(0);
+  expect(
+    debut,
+    `aucun JSON dans la sortie :
+${sortie}`
+  ).toBeGreaterThanOrEqual(0);
   return JSON.parse(sortie.slice(debut, fin + 1)) as Rapport;
 }
 
@@ -97,9 +105,13 @@ describe('REQ-GOV-026 — un seul vocabulaire : la légende est DÉRIVÉE des st
 describe('REQ-GOV-026 — la preuve des tâches déjà livrées', () => {
   it('REQ-GOV-026 — toute tâche en état ≥ « codé » porte au moins une preuve qui résout (chemin présent ou SHA retrouvé)', () => {
     const r = rapport();
-    const avancees = r.taches.filter((t) => t.avancement !== null && r.legende.indexOf(t.avancement) >= r.legende.indexOf('code'));
+    const avancees = r.taches.filter(
+      (t) => t.avancement !== null && r.legende.indexOf(t.avancement) >= r.legende.indexOf('code')
+    );
     expect(avancees.length).toBeGreaterThanOrEqual(12);
-    const sansPreuve = avancees.filter((t) => t.preuves.length === 0).map((t) => `${t.id} (${t.statut})`);
+    const sansPreuve = avancees
+      .filter((t) => t.preuves.length === 0)
+      .map((t) => `${t.id} (${t.statut})`);
     expect(sansPreuve).toEqual([]);
   });
 
@@ -132,7 +144,9 @@ describe('REQ-GOV-026 — l’inventaire des huit chantiers', () => {
 
   it('REQ-GOV-026 — tout chantier en état ≥ « codé » porte une preuve qui résout', () => {
     const r = rapport();
-    const avances = r.chantiers.filter((c) => c.etat !== null && r.legende.indexOf(c.etat) >= r.legende.indexOf('code'));
+    const avances = r.chantiers.filter(
+      (c) => c.etat !== null && r.legende.indexOf(c.etat) >= r.legende.indexOf('code')
+    );
     expect(avances.length).toBeGreaterThan(0);
     expect(avances.filter((c) => c.preuves.length === 0).map((c) => c.etiquette)).toEqual([]);
   });

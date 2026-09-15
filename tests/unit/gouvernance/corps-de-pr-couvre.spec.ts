@@ -37,7 +37,8 @@ import { tachesDeLaPr } from '../../../scripts/lot/revues';
 
 type TacheBrute = { id: string; pr?: number | null; reqs?: string[] };
 
-const TACHES = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: TacheBrute[] }).taches;
+const TACHES = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: TacheBrute[] })
+  .taches;
 const PR = 31;
 const SUR_LA_PR = tachesDeLaPr(TACHES, PR, null);
 const DERIVEES = couvre(SUR_LA_PR);
@@ -54,8 +55,10 @@ const DERIVEES = couvre(SUR_LA_PR);
  * backlog, pas une propriété du rendu.
  */
 const EN_TROP = (() => {
-  const ids = (JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as { exigences: { id: string }[] })
-    .exigences.map((e) => e.id)
+  const ids = (
+    JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as { exigences: { id: string }[] }
+  ).exigences
+    .map((e) => e.id)
     .filter((id) => !DERIVEES.includes(id))
     .sort();
   if (ids.length < 2) throw new Error('registre trop pauvre : le témoin ne peut pas discriminer');
@@ -63,12 +66,17 @@ const EN_TROP = (() => {
 })();
 
 function gabaritAvec(ligneCouvre: string): string {
-  return ['## Identité', '', 'Auteur: A01', ligneCouvre, '', '## Ce que fait cette PR', ''].join('\n');
+  return ['## Identité', '', 'Auteur: A01', ligneCouvre, '', '## Ce que fait cette PR', ''].join(
+    '\n'
+  );
 }
 
 describe('REQ-GOV-032 — le champ `Couvre:` est DÉRIVÉ des tâches de la PR', () => {
   it('REQ-GOV-032 · la dérivation est l’union des `reqs`, dédoublonnée et triée', () => {
-    expect(SUR_LA_PR.length, 'aucune tâche ne porte `pr: 31` : le témoin ne mesure plus rien').toBeGreaterThan(0);
+    expect(
+      SUR_LA_PR.length,
+      'aucune tâche ne porte `pr: 31` : le témoin ne mesure plus rien'
+    ).toBeGreaterThan(0);
     const brut = SUR_LA_PR.flatMap((t) => t.reqs ?? []);
     expect(brut.length).toBeGreaterThan(0);
     expect(DERIVEES).toEqual([...new Set(brut)].sort());
@@ -102,7 +110,9 @@ describe('REQ-GOV-032 — le champ `Couvre:` est DÉRIVÉ des tâches de la PR',
 
   it('REQ-GOV-032 · CONTRE-TÉMOIN : le rendu PASSE quand la ligne tapée concorde', () => {
     // Sans ce cas, une garde qui refuserait toujours passerait les deux témoins ci-dessus.
-    const rendu = rendre(gabaritAvec(`Couvre: ${DERIVEES.join(', ')}`), { COUVRE: DERIVEES.join(', ') });
+    const rendu = rendre(gabaritAvec(`Couvre: ${DERIVEES.join(', ')}`), {
+      COUVRE: DERIVEES.join(', '),
+    });
     expect(rendu).toContain(`Couvre: ${DERIVEES.join(', ')}`);
   });
 
@@ -115,14 +125,18 @@ describe('REQ-GOV-032 — le champ `Couvre:` est DÉRIVÉ des tâches de la PR',
   it('REQ-GOV-032 · CONTRE-TÉMOIN : les accents graves de la forme du gabarit ne comptent pas pour une divergence', () => {
     // `docs/pr/*.tpl.md` cite parfois les identifiants entre accents graves. Une garde qui
     // rougirait là-dessus ferait retirer les accents, pas les fautes.
-    expect(() => verifierCouvre(`Couvre: ${DERIVEES.map((r) => '`' + r + '`').join(', ')}`, DERIVEES)).not.toThrow();
+    expect(() =>
+      verifierCouvre(`Couvre: ${DERIVEES.map((r) => '`' + r + '`').join(', ')}`, DERIVEES)
+    ).not.toThrow();
   });
 
   it('REQ-GOV-032 · CONTRE-TÉMOIN : un gabarit SANS ligne `Couvre:` n’est jugé que s’il en a une', () => {
     // `rendre()` est appelé par d'autres témoins sur des gabarits minuscules : le contrôle ne
     // s'arme que lorsque la valeur `COUVRE` est fournie ET qu'une ligne existe.
     expect(rendre('a {{X}} b', { X: 'vu' })).toBe('a vu b');
-    expect(() => rendre('rien à couvrir ici', { COUVRE: DERIVEES.join(', ') })).toThrow(/aucune ligne/);
+    expect(() => rendre('rien à couvrir ici', { COUVRE: DERIVEES.join(', ') })).toThrow(
+      /aucune ligne/
+    );
   });
 
   it('REQ-GOV-032 · `docs/pr/31.tpl.md` ne TAPE plus ses exigences : il porte le marqueur', () => {

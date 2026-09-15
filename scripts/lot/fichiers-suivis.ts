@@ -160,7 +160,9 @@ export function entreesSuivies(): EntreeSuivie[] {
     });
   const fichiers = entrees.map((e) => e.chemin);
   if (fichiers.length === 0) {
-    throw new PerimetreIllisible('`git ls-files` n’a rendu AUCUN fichier : le périmètre est vide ou illisible.');
+    throw new PerimetreIllisible(
+      '`git ls-files` n’a rendu AUCUN fichier : le périmètre est vide ou illisible.'
+    );
   }
 
   // 🔴 TROISIÈME MOTIF DE `securite` AU 26e TOUR — le périmètre ENTAMÉ, et il était MUET.

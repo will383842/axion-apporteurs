@@ -123,13 +123,18 @@ describe('REQ-GOV-014 — chaque famille rougit sur son témoin', () => {
 
   it('workflow_pousse_sur_main — une étape de workflow atteint la branche principale', () => {
     const workflows = [
-      { chemin: '.github/workflows/temoin.yml', contenu: 'jobs:\n  x:\n    steps:\n      - run: git push origin HEAD:main\n' },
+      {
+        chemin: '.github/workflows/temoin.yml',
+        contenu: 'jobs:\n  x:\n    steps:\n      - run: git push origin HEAD:main\n',
+      },
     ];
     expect(familles({ ...VUE_CONFORME, workflows })).toEqual(['workflow_pousse_sur_main']);
   });
 
   it('source_illisible — la ligne W13 a disparu : la garde ne sait plus ce qu’elle attend', () => {
-    expect(familles({ ...VUE_CONFORME, decisions: '| Id | Décision |\n' })).toEqual(['source_illisible']);
+    expect(familles({ ...VUE_CONFORME, decisions: '| Id | Décision |\n' })).toEqual([
+      'source_illisible',
+    ]);
   });
 });
 

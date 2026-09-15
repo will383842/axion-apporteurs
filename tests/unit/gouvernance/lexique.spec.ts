@@ -164,25 +164,33 @@ describe('la négation qui PROTÈGE passe, la prescription rougit (REQ-GOV-017)'
     // Le vert ne suffit pas : il faut qu'il vienne de la TOURNURE. Deux termes interdits sont
     // dans cette phrase — « objectif » et « quota » —, la garde les a VUS et les a exemptés.
     expect(rapport.occurrences).toBeGreaterThanOrEqual(2);
-    expect(rapport.exemptions.filter((e) => e.genre === 'denegation').length).toBeGreaterThanOrEqual(2);
+    expect(
+      rapport.exemptions.filter((e) => e.genre === 'denegation').length
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it('la MÊME phrase privée de ses négations rougit — la sonde mesure bien', () => {
-    const sansNegation = PHRASE_VALEURS_DU_MONDE_REEL.replace("n'institue aucun mandat, aucun", 'institue un mandat, un').replace(
-      'aucun quota',
-      'un quota'
-    );
+    const sansNegation = PHRASE_VALEURS_DU_MONDE_REEL.replace(
+      "n'institue aucun mandat, aucun",
+      'institue un mandat, un'
+    ).replace('aucun quota', 'un quota');
     expect(familles([ADR(sansNegation)])).toEqual(expect.arrayContaining(['objectif', 'quota']));
   });
 
   it('« ni … ni … », « ne fixe aucun », « ce n’est pas un » : trois dénégations vertes', () => {
-    expect(familles([ADR('Le contrat ne connaît ni quota ni classement ni objectif.')])).toEqual([]);
-    expect(familles([ADR('La Société ne fixe aucun objectif et ne mesure aucun quota.')])).toEqual([]);
+    expect(familles([ADR('Le contrat ne connaît ni quota ni classement ni objectif.')])).toEqual(
+      []
+    );
+    expect(familles([ADR('La Société ne fixe aucun objectif et ne mesure aucun quota.')])).toEqual(
+      []
+    );
     expect(familles([ADR("Le seuil de versement n'est pas un objectif.")])).toEqual([]);
   });
 
   it('une CITATION en prose est verte, mais les guillemets ne sauvent pas la micro-copy', () => {
-    expect(familles([ADR('Le mot « classement » figure au registre du vocabulaire fermé.')])).toEqual([]);
+    expect(
+      familles([ADR('Le mot « classement » figure au registre du vocabulaire fermé.')])
+    ).toEqual([]);
     // La `fixtureRouge` du registre, à la lettre : un libellé factice en micro-copy.
     expect(familles([MICRO('{ "entete": "« objectif du mois »" }')])).toContain('objectif');
   });
@@ -194,7 +202,9 @@ describe('la négation qui PROTÈGE passe, la prescription rougit (REQ-GOV-017)'
     expect(porteur.exemptions.every((e) => e.genre === 'porteur')).toBe(true);
     expect(porteur.exemptions.length).toBeGreaterThanOrEqual(4);
     // Le même texte ailleurs rougit : le vert ci-dessus n'était pas un vert de cécité.
-    expect(familles([{ chemin: 'docs/adr/9998-copie.md', contenu: texte }]).length).toBeGreaterThan(0);
+    expect(familles([{ chemin: 'docs/adr/9998-copie.md', contenu: texte }]).length).toBeGreaterThan(
+      0
+    );
   });
 
   it('la dénégation ne franchit ni la ponctuation forte ni la cellule de tableau', () => {
@@ -206,7 +216,9 @@ describe('la négation qui PROTÈGE passe, la prescription rougit (REQ-GOV-017)'
   });
 
   it('un mot qui CONTIENT une forme n’est pas cette forme', () => {
-    expect(familles([ESPACE('<p>La topologie du réseau, une rupture brutale, un primeur imprimé.</p>')])).toEqual([]);
+    expect(
+      familles([ESPACE('<p>La topologie du réseau, une rupture brutale, un primeur imprimé.</p>')])
+    ).toEqual([]);
   });
 });
 
@@ -231,7 +243,9 @@ describe('la garde voit le terme à TOUTES les positions (REQ-GOV-017)', () => {
 describe('le périmètre est celui de REQ-GOV-017, et un périmètre vide est une faute', () => {
   it('les cinq lieux nommés par l’exigence sont des motifs de la gate', () => {
     const noms = MOTIFS.map((m) => m.nom);
-    expect(noms).toEqual(expect.arrayContaining(['prisma/**', 'messages/**', 'src/**/*.tsx', 'docs/adr/**']));
+    expect(noms).toEqual(
+      expect.arrayContaining(['prisma/**', 'messages/**', 'src/**/*.tsx', 'docs/adr/**'])
+    );
     expect(noms.some((n) => /e-mail/.test(n))).toBe(true);
   });
 
@@ -254,9 +268,15 @@ describe('le périmètre est celui de REQ-GOV-017, et un périmètre vide est un
   });
 
   it('un e-mail qui emprunte le vocabulaire de la paie rougit, le relevé de commissions non', () => {
-    expect(familles([COURRIEL('<h1>Votre bulletin de commission du mois de mars</h1>')])).toContain('droit_social');
+    expect(familles([COURRIEL('<h1>Votre bulletin de commission du mois de mars</h1>')])).toContain(
+      'droit_social'
+    );
     expect(
-      familles([COURRIEL("Le relevé de commissions n'est pas un bulletin de paie : il ne porte ni brut, ni net à payer.")])
+      familles([
+        COURRIEL(
+          "Le relevé de commissions n'est pas un bulletin de paie : il ne porte ni brut, ni net à payer."
+        ),
+      ])
     ).toEqual([]);
   });
 
@@ -264,7 +284,15 @@ describe('le périmètre est celui de REQ-GOV-017, et un périmètre vide est un
     const molle = controler({
       fichiers: [],
       comptes: MOTIFS.map((m) => ({ motif: m.nom, nombre: m.attendu ? 1 : 0, attendu: m.attendu })),
-      exceptions: [{ chemin: 'docs/adr/9999-temoin.md', forme: 'objectif', justification: 'ok', reference: '', poseeLe: 'hier' }],
+      exceptions: [
+        {
+          chemin: 'docs/adr/9999-temoin.md',
+          forme: 'objectif',
+          justification: 'ok',
+          reference: '',
+          poseeLe: 'hier',
+        },
+      ],
     });
     expect(molle.fautes.map((f) => f.famille)).toEqual(['exception_sans_justification']);
 
@@ -275,7 +303,8 @@ describe('le périmètre est celui de REQ-GOV-017, et un périmètre vide est un
           {
             chemin: 'docs/adr/9999-temoin.md',
             forme: 'classement',
-            justification: "citation littérale du document d'origine, conservée pour la traçabilité",
+            justification:
+              "citation littérale du document d'origine, conservée pour la traçabilité",
             reference: 'REQ-GOV-017',
             poseeLe: '2026-09-05',
           },
@@ -312,8 +341,11 @@ describe('acceptation de GOV-013 — les deux modes de la gate (REQ-GOV-017)', (
   });
 
   it('la vue du dépôt ne lit que des fichiers suivis par git', () => {
-    const suivis = new Set(execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean));
-    for (const f of vueDuDepot().fichiers) expect([f.chemin, suivis.has(f.chemin)]).toEqual([f.chemin, true]);
+    const suivis = new Set(
+      execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split('\n').filter(Boolean)
+    );
+    for (const f of vueDuDepot().fichiers)
+      expect([f.chemin, suivis.has(f.chemin)]).toEqual([f.chemin, true]);
   });
 
   it('les neuf familles du lexique portent chacune une exigence et une raison', () => {

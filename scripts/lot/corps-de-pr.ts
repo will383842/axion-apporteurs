@@ -52,7 +52,12 @@ import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 import { CHAMPS } from '../../src/config/entite';
-import { lireRevues, tachesDeLaPr, tachesSchemaDeLaPr, toucheSchema, type RevueBrute,
+import {
+  lireRevues,
+  tachesDeLaPr,
+  tachesSchemaDeLaPr,
+  toucheSchema,
+  type RevueBrute,
   jugerLesTetes,
 } from './revues';
 
@@ -75,8 +80,18 @@ type Tache = {
 
 const LIVREE = new Set(['fusionnee', 'deployee', 'verifiee']);
 const MOTS: Record<number, string> = {
-  1: 'une', 2: 'deux', 3: 'trois', 4: 'quatre', 5: 'cinq', 6: 'six',
-  7: 'sept', 8: 'huit', 9: 'neuf', 10: 'dix', 11: 'onze', 12: 'douze',
+  1: 'une',
+  2: 'deux',
+  3: 'trois',
+  4: 'quatre',
+  5: 'cinq',
+  6: 'six',
+  7: 'sept',
+  8: 'huit',
+  9: 'neuf',
+  10: 'dix',
+  11: 'onze',
+  12: 'douze',
 };
 
 function arg(nom: string): string | null {
@@ -91,10 +106,14 @@ function arg(nom: string): string | null {
  * fausse sur l'état du code, pas une approximation.
  */
 function suite(chemin: string | null): { fichiers: string; tests: string } {
-  if (!chemin) throw new Error('`--tests <journal>` est obligatoire : sans lui le corps annoncerait des tests qu’il n’a pas lus.');
+  if (!chemin)
+    throw new Error(
+      '`--tests <journal>` est obligatoire : sans lui le corps annoncerait des tests qu’il n’a pas lus.'
+    );
   if (!existsSync(chemin)) throw new Error(`journal de tests introuvable : ${chemin}`);
   const dateJournal = statSync(chemin).mtimeMs;
-  const dateHead = Number(execFileSync('git', ['log', '-1', '--format=%ct'], { encoding: 'utf8' }).trim()) * 1000;
+  const dateHead =
+    Number(execFileSync('git', ['log', '-1', '--format=%ct'], { encoding: 'utf8' }).trim()) * 1000;
   if (dateJournal < dateHead) {
     throw new Error(
       `le journal de tests (${new Date(dateJournal).toISOString()}) est ANTÉRIEUR au dernier commit ` +
@@ -104,7 +123,10 @@ function suite(chemin: string | null): { fichiers: string; tests: string } {
   const t = readFileSync(chemin, 'utf8').replace(/\[[0-9;]*m/g, '');
   const f = /Test Files\s+(\d+) passed \((\d+)\)/.exec(t);
   const n = /Tests\s+(\d+) passed \((\d+)\)/.exec(t);
-  if (!f || !n) throw new Error(`journal de tests illisible : ni « Test Files … passed » ni « Tests … passed » dans ${chemin}`);
+  if (!f || !n)
+    throw new Error(
+      `journal de tests illisible : ni « Test Files … passed » ni « Tests … passed » dans ${chemin}`
+    );
   return { fichiers: `${f[1]}/${f[2]}`, tests: `${n[1]}/${n[2]}` };
 }
 
@@ -160,7 +182,10 @@ function caseRevues(
   let auteurCompte: string | null;
   try {
     const meta = JSON.parse(
-      execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}`], { encoding: 'utf8', maxBuffer: 32e6 })
+      execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}`], {
+        encoding: 'utf8',
+        maxBuffer: 32e6,
+      })
     ) as {
       head: { sha: string };
       user?: { login?: string };
@@ -186,7 +211,8 @@ function caseRevues(
       teteForge: tete,
     });
     if (!verdictTete.concordent) {
-      for (const ligne of verdictTete.message) console.error(ligne.replace('❌ ', '❌ pr:corps — '));
+      for (const ligne of verdictTete.message)
+        console.error(ligne.replace('❌ ', '❌ pr:corps — '));
       process.exit(1);
     }
     auteurCompte = meta.user?.login ?? null;
@@ -206,7 +232,11 @@ function caseRevues(
       })
     ) as RevueBrute[];
   } catch {
-    return { marque: '[ ]', detail: 'revues illisibles (forge injoignable, jeton absent, ou `git rev-parse` en echec — le sens reste ferme, seul le diagnostic est approximatif) — la case reste vide' };
+    return {
+      marque: '[ ]',
+      detail:
+        'revues illisibles (forge injoignable, jeton absent, ou `git rev-parse` en echec — le sens reste ferme, seul le diagnostic est approximatif) — la case reste vide',
+    };
   }
 
   const lecture = lireRevues({
@@ -222,10 +252,19 @@ function caseRevues(
   return { marque: lecture.coche ? '[x]' : '[ ]', detail: lecture.detail };
 }
 
-export function valeurs(pr: number, journalTests: string | null, gabarit: string): Record<string, string> {
+export function valeurs(
+  pr: number,
+  journalTests: string | null,
+  gabarit: string
+): Record<string, string> {
   const T = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: Tache[] }).taches;
-  const G = (JSON.parse(readFileSync('docs/gates.json', 'utf8')) as { gates: { preuveRouge: string | null }[] }).gates;
-  const R = (JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as { exigences: unknown[] }).exigences;
+  const G = (
+    JSON.parse(readFileSync('docs/gates.json', 'utf8')) as {
+      gates: { preuveRouge: string | null }[];
+    }
+  ).gates;
+  const R = (JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as { exigences: unknown[] })
+    .exigences;
   // L'ENSEMBLE des tâches de la PR, par la dérivation UNIQUE. Le composeur passe `null` pour le
   // titre : il n'en a pas en main, et il décrit ce que la PR DÉCLARE porter. La garde, elle, le
   // connaît et obtient donc un sur-ensemble — jamais l'inverse (monotonie, voir `tachesDeLaPr`).
@@ -319,7 +358,9 @@ export function verifierCouvre(corps: string, attendues: readonly string[]): voi
   throw new Error(
     '`Couvre:` diverge des exigences que les tâches de la PR déclarent porter — ' +
       `${listees.length} listée(s), ${attendues.length} dérivée(s) de docs/tasks.json.` +
-      (enTrop.length > 0 ? ` EN TROP (annoncée(s) sans tâche qui la porte) : ${enTrop.join(', ')}.` : '') +
+      (enTrop.length > 0
+        ? ` EN TROP (annoncée(s) sans tâche qui la porte) : ${enTrop.join(', ')}.`
+        : '') +
       (manquantes.length > 0 ? ` MANQUANTE(S) : ${manquantes.join(', ')}.` : '') +
       ' Remplace la ligne tapée par le marqueur {{COUVRE}} : ce champ ne se tape plus.'
   );
@@ -348,13 +389,19 @@ if (process.argv[1]?.endsWith('corps-de-pr.ts')) {
   // `arg()` rend `string | null`, jamais `undefined` : tester la mauvaise absence laissait
   // `tsc` refuser l'appel suivant. Attrapé par le typecheck, pas par la relecture.
   if (prBrut === null || !/^\d+$/.test(prBrut)) {
-    console.error('❌ pr:corps — `--pr <numéro>` est OBLIGATOIRE : sans lui, les marqueurs dérivés');
-    console.error('   des tâches de la PR seraient calculés sur une AUTRE PR, sans que rien ne le dise.');
+    console.error(
+      '❌ pr:corps — `--pr <numéro>` est OBLIGATOIRE : sans lui, les marqueurs dérivés'
+    );
+    console.error(
+      '   des tâches de la PR seraient calculés sur une AUTRE PR, sans que rien ne le dise.'
+    );
     process.exit(1);
   }
   const pr = Number(prBrut);
   if (!gabarit || !sortie) {
-    console.error('usage: pnpm pr:corps -- --gabarit <x.tpl.md> --sortie <x.md> --tests <journal> [--pr <n>]');
+    console.error(
+      'usage: pnpm pr:corps -- --gabarit <x.tpl.md> --sortie <x.md> --tests <journal> [--pr <n>]'
+    );
     process.exit(1);
   }
   try {

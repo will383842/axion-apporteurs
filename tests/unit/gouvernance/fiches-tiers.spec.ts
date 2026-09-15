@@ -16,7 +16,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { controler, charger, prouver, FAMILLES, TEMOINS, CONTRE_TEMOINS } from './fiches-tiers.controles';
+import {
+  controler,
+  charger,
+  prouver,
+  FAMILLES,
+  TEMOINS,
+  CONTRE_TEMOINS,
+} from './fiches-tiers.controles';
 
 const RACINE = 'docs/tiers';
 const EXIGENCES = 'docs/requirements.json';
