@@ -425,9 +425,9 @@ describe('gov:entite — la garde, sur le dépôt réel et sur ses témoins', ()
 /**
  * CE QUE LA GARDE REGARDE : ses exemptions, et son refus de juger ce qu'elle ne lit pas en entier.
  *
- * `--prove` injecte son univers et ne passe jamais par la lecture du disque : ce qui décide de ce
- * que la garde regarde a donc ses propres témoins. Ceux-ci portent sur le contrôle ; la lecture du
- * disque est éprouvée plus bas, sur le dépôt réel et sur des dépôts jetables (REQ-GOV-031).
+ * `--prove` injecte son univers et ne passe jamais par la lecture des blobs : ce qui décide de ce
+ * que la garde regarde a donc ses propres témoins. Ceux-ci portent sur le contrôle ; la lecture des
+ * blobs est éprouvée plus bas, sur le dépôt réel et sur des dépôts jetables (REQ-GOV-031).
  */
 describe('REQ-CPL-018 — ce que la garde REGARDE est gardé, pas seulement ce qu’elle en dit', () => {
   it('REQ-GOV-031 — les refus de LECTURE n’ont AUCUNE exemption : chaque chemin qu’EXEMPTS vise, illisible ou non publié, est refusé', () => {
@@ -2214,17 +2214,64 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     expect(codesDeRegion(lecteurQuiConnait(200))).toHaveLength(200);
   });
 
-  it('REQ-GOV-031 — sur le dépôt réel, la garde lit EXACTEMENT les fichiers que git suit, et chacun EN ENTIER', () => {
+  it('REQ-GOV-031 — sur le dépôt réel, la garde lit EXACTEMENT les fichiers que git suit, et chacun EN ENTIER, dans le blob publié', () => {
     // L'oracle est git, APPELÉ ICI — pas la source que la garde partage (`fichiers-suivis.ts`) —
-    // et la comparaison porte sur les NOMS et sur les CONTENUS, jamais sur un compte imprimé.
+    // et la comparaison porte sur les NOMS et sur les CONTENUS, jamais sur un compte imprimé. Le
+    // contenu attendu est le BLOB de l'index, demandé par chemin : pas l'arbre de travail, que git
+    // réécrit à l'extraction.
     const suivis = suivisParGit(process.cwd());
     expect(suivis.length, 'git ne rend aucun fichier : la comparaison ne prouverait rien').toBeGreaterThan(0);
     const { fichiers } = lireUnivers();
     expect(fichiers.map((f) => f.chemin), 'la garde ne lit pas les fichiers que git suit').toEqual(suivis);
+    const blobs = blobsParGit(process.cwd(), suivis);
     expect(
-      fichiers.filter((f) => f.contenu !== readFileSync(f.chemin, 'utf8')).map((f) => f.chemin),
-      'contenu lu par la garde différent du disque'
+      fichiers.filter((f) => f.contenu !== blobs.get(f.chemin)).map((f) => f.chemin),
+      'contenu lu par la garde différent du blob publié'
     ).toEqual([]);
+  });
+
+  it('REQ-GOV-031 — VETO blob : un attribut qui RÉÉCRIT l’arbre à l’extraction (`ident`, `working-tree-encoding`) ne soustrait rien, la coordonnée du blob est NOMMÉE', () => {
+    // Dépôt COMMITÉ, puis fichiers ré-extraits sous un `.gitattributes` suivi : l'arbre de travail
+    // ne porte plus la valeur, le blob — ce que la forge sert — la porte. IBAN calculé, fictif.
+    const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
+    const groupes = iban.match(/.{1,4}/g)!;
+    const reecrits: Record<string, Buffer> = {
+      // `ident` remplace à l'extraction ce qui suit `$Id:` par l'empreinte du blob.
+      'notes/ident.txt': Buffer.from(`Virement vers $Id: ${iban} $.\n`),
+      // UTF-7 rend l'espace insécable en `+AKA-` : des octets ASCII, sans NUL ni U+FFFD.
+      'notes/utf7.txt': Buffer.from(`Virement vers ${groupes.join(' ')}.\n`),
+    };
+    // Contre-témoin : les mêmes octets, sans attribut.
+    const temoins: Record<string, Buffer> = { 'notes/sans-attribut.txt': reecrits['notes/utf7.txt']! };
+    const depot = depotJetable({ ...reecrits, ...temoins });
+    const git = (...args: string[]) =>
+      execFileSync('git', ['-c', 'core.autocrlf=false', '-c', 'user.email=t@t', '-c', 'user.name=t', ...args], {
+        cwd: depot,
+        stdio: 'pipe',
+      });
+    try {
+      git('commit', '-q', '-m', 'blobs');
+      writeFileSync(join(depot, '.gitattributes'), 'notes/ident.txt ident\nnotes/utf7.txt working-tree-encoding=UTF-7\n');
+      git('add', '.gitattributes');
+      git('commit', '-q', '-m', 'attributs');
+      for (const chemin of Object.keys(reecrits)) rmSync(join(depot, chemin));
+      git('checkout', '--', ...Object.keys(reecrits));
+      // CONTRÔLE POSITIF : l'extraction a bien retiré la valeur de l'arbre, et le blob la porte.
+      const blobs = blobsParGit(depot, Object.keys(reecrits));
+      for (const chemin of Object.keys(reecrits)) {
+        expect(coordonneesDe(readFileSync(join(depot, chemin), 'utf8'), false, chemin), `${chemin} : arbre non réécrit`).toEqual([]);
+        expect(coordonneesDe(blobs.get(chemin)!, false, chemin), `${chemin} : blob sans la valeur`).toHaveLength(1);
+      }
+      const { code, sortie } = lancerDans(depot);
+      expect(code, sortie).toBe(1);
+      const lignes = sortie.split('\n');
+      const nommes = [...Object.keys(reecrits), ...Object.keys(temoins)].filter((c) =>
+        lignes.some((l) => l.includes('[coordonnee_en_clair]') && l.includes(c))
+      );
+      expect(nommes, sortie).toEqual([...Object.keys(reecrits), ...Object.keys(temoins)]);
+    } finally {
+      rmSync(depot, { recursive: true, force: true });
+    }
   });
 
   it('REQ-GOV-031 — VETO de securite : un fichier suivi que la garde ne sait pas lire en entier fait ROUGIR, NOMMÉ', () => {
@@ -2283,9 +2330,9 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     }
   });
 
-  it('REQ-GOV-031 — VETO LFS : un fichier suivi que le dépôt ne publie pas tel que la garde le lit est REFUSÉ, NOMMÉ, par le vrai chemin de la gate', () => {
-    // Ce que voit la CI : `actions/checkout` sans `lfs` n'extrait que le POINTEUR, alors que la forge
-    // sert le vrai contenu. Ce que voit un poste où LFS a extrait le fichier : l'attribut seul.
+  it('REQ-GOV-031 — VETO LFS : un fichier suivi dont le blob est un pointeur Git LFS, ou que l’attribut `filter` confie à un filtre, est REFUSÉ, NOMMÉ, par le vrai chemin de la gate', () => {
+    // Le blob d'un fichier LFS n'est que le POINTEUR, alors que la forge sert le vrai contenu. Et un
+    // attribut `filter` suffit au refus, quel que soit le contenu indexé.
     const pointeur = pointeurLfs('https://git-lfs.github.com/spec/v1', '\n');
     const nonPublies: Record<string, Buffer> = {
       'exports/rib.pdf': Buffer.from(pointeur),
@@ -2376,6 +2423,8 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
       expect([...nommes].sort(), 'fichier(s) porteur(s) non nommé(s) par la gate').toEqual([...chemins].sort());
 
       for (const c of chemins) writeFileSync(join(depot, c), `${c}\n`);
+      // La garde juge ce que l'index PUBLIE : la population propre doit y être indexée.
+      execFileSync('git', ['add', '-A'], { cwd: depot, stdio: 'ignore' });
       const { code, sortie } = lancerDans(depot);
       expect(code, sortie).toBe(0);
       const lu = /(\d+) fichier\(s\) suivi\(s\) lu\(s\) en entier/.exec(sortie);
@@ -2395,6 +2444,37 @@ function suivisParGit(depot: string): string[] {
   return execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-z'], { cwd: depot, encoding: 'utf8' })
     .split('\0')
     .filter(Boolean);
+}
+
+/**
+ * Le blob que l'INDEX de `depot` porte pour chaque chemin, décodé en UTF-8 : ce que la forge publie,
+ * pas l'arbre de travail. Par l'AUTRE route que la garde : l'empreinte lue dans `git ls-files -s`,
+ * puis l'objet demandé par cette empreinte — la garde, elle, demande le blob par chemin.
+ */
+function blobsParGit(depot: string, chemins: string[]): Map<string, string> {
+  const empreintes = new Map(
+    execFileSync('git', ['ls-files', '-s', '-z'], { cwd: depot, encoding: 'utf8', maxBuffer: 256 * 2 ** 20 })
+      .split('\0')
+      .filter(Boolean)
+      .map((e) => [e.slice(e.indexOf('\t') + 1), e.split(' ')[1]!] as const)
+  );
+  const sortie = execFileSync('git', ['cat-file', '--batch'], {
+    cwd: depot,
+    input: chemins.map((c) => `${empreintes.get(c)}\n`).join(''),
+    maxBuffer: 2 ** 30,
+  });
+  const blobs = new Map<string, string>();
+  let i = 0;
+  for (const chemin of chemins) {
+    const fin = sortie.indexOf(0x0a, i);
+    const [oid, type, taille] = sortie.subarray(i, fin).toString('utf8').split(' ');
+    if (type !== 'blob' || oid !== empreintes.get(chemin)) {
+      throw new Error(`git cat-file ${chemin} → ${sortie.subarray(i, fin).toString('utf8')}`);
+    }
+    blobs.set(chemin, sortie.subarray(fin + 1, fin + 1 + Number(taille)).toString('utf8'));
+    i = fin + 1 + Number(taille) + 1;
+  }
+  return blobs;
 }
 
 /** Un dépôt git jetable : les trois sources de la garde et les fichiers donnés, tous SUIVIS. */

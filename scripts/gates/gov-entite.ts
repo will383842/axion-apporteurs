@@ -72,7 +72,7 @@ export type Univers = {
   decisions: string;
   /** Le texte de `docs/REQUIREMENTS.md` — la garde y relit REQ-CPL-004 et REQ-CPL-018. */
   exigences: string;
-  /** Tous les fichiers suivis par git, décodés en UTF-8 : c'est là qu'une valeur peut fuir. */
+  /** Tous les fichiers suivis par git, lus dans leur blob et décodés en UTF-8 : c'est là qu'une valeur peut fuir. */
   fichiers: Fichier[];
 };
 
@@ -157,8 +157,10 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
  * Elle dit d'abord ce que la forme RECONNAÎT — la seule description exhaustive possible — puis des
  * exemples de ce qui passe, et que leur liste n'est pas close.
  *
- * Ce que la garde ne sait pas lire en entier, ou ce que le dépôt ne publie pas tel qu'elle le lit,
- * n'est pas une limite : c'est un REFUS (`contenu_illisible`, `contenu_publie_non_lu`).
+ * Ce que la garde lit est le BLOB que l'index publie, jamais l'arbre de travail : un attribut qui
+ * réécrit l'arbre à l'extraction ne lui soustrait rien. Ce qu'elle ne sait pas lire en entier, et un
+ * blob dont le contenu servi est ailleurs (pointeur Git LFS, attribut `filter`), ne sont pas des
+ * limites : ce sont des REFUS (`contenu_illisible`, `contenu_publie_non_lu`).
  */
 export const LIMITE_DE_LA_FORME =
   "Limite déclarée : ce que la forme ne reconnaît pas passe sans être vu. Elle reconnaît un IBAN écrit d'un seul " +
@@ -777,10 +779,9 @@ export function controler(u: Univers): Faute[] {
       );
     }
 
-    // Ce que la garde a lu n'est pas ce que le dépôt PUBLIE quand git confie le fichier à un filtre
-    // (attribut `filter`, Git LFS le premier) ou quand l'arbre de travail n'en porte que le pointeur :
-    // `actions/checkout` sans `lfs` n'extrait que le pointeur, et la forge sert le vrai contenu.
-    // Un REFUS, sans exemption, pour la même raison que le précédent.
+    // Le blob lu n'est pas ce que la forge SERT quand il n'est qu'un pointeur Git LFS, ou quand git
+    // confie le fichier à un filtre (attribut `filter`, Git LFS le premier) : le contenu servi est
+    // stocké hors du blob. Un REFUS, sans exemption, pour la même raison que le précédent.
     const nonPublie =
       fichier.filtre !== undefined
         ? `l'attribut git \`filter=${fichier.filtre}\` le confie à un filtre`
@@ -791,7 +792,7 @@ export function controler(u: Univers): Faute[] {
       ajouter(
         'contenu_publie_non_lu',
         `${fichier.chemin} — le dépôt ne publie pas ce que la garde a lu : ${nonPublie}. La forge sert ` +
-          `le contenu réel à qui le demande, et une CI qui n'extrait pas LFS n'en lit que le pointeur : ` +
+          `le contenu réel à qui le demande, et le blob que la garde lit n'en porte que le pointeur : ` +
           `une coordonnée y échapperait à toute forme, dans un dépôt PUBLIC (REQ-GOV-031). Suis le ` +
           `fichier en clair, sans filtre, ou retire-le du suivi.`
       );
@@ -2168,20 +2169,55 @@ export function filtresDepuisSortie(chemins: string[], sortie: string): Map<stri
 }
 
 /**
- * L'univers RÉEL : chaque fichier suivi, décodé en UTF-8, sans branche sur son chemin (GOV-036), avec
- * son attribut `filter` quand il en a un.
+ * Les octets du BLOB que l'index de git porte pour chaque chemin — ce que le dépôt publie, et jamais
+ * l'arbre de travail, que git réécrit à l'extraction selon des attributs qu'on n'a pas à énumérer
+ * (`ident`, `working-tree-encoding`, `eol`, `filter`, macros). Le blob est demandé PAR CHEMIN
+ * (`:<chemin>`, l'étage 0 de l'index) : aucune seconde énumération, la liste vient de la source
+ * unique. Aucun `catch` : un chemin sans blob à l'étage 0 (sous-module, conflit, objet absent) ou une
+ * réponse qui ne se relit pas au mot près font tomber la garde, jamais un contenu vide.
+ */
+function blobsDe(chemins: string[]): Map<string, Buffer> {
+  const sortie = execFileSync('git', ['cat-file', '--batch'], {
+    input: chemins.map((c) => `:${c}\n`).join(''),
+    stdio: ['pipe', 'pipe', 'pipe'],
+    maxBuffer: 2 ** 30,
+  });
+  const blobs = new Map<string, Buffer>();
+  let i = 0;
+  for (const chemin of chemins) {
+    const fin = sortie.indexOf(0x0a, i);
+    const entete = fin < 0 ? '' : sortie.subarray(i, fin).toString('utf8');
+    const [oid, type, taille] = entete.split(' ');
+    const debut = fin + 1;
+    const suite = debut + Number(taille);
+    if (!/^[0-9a-f]{40,64}$/.test(oid ?? '') || type !== 'blob' || !/^\d+$/.test(taille ?? '') || sortie[suite] !== 0x0a) {
+      throw new Error(`git cat-file --batch a rendu « ${entete} » pour ${chemin} : la lecture du blob est amputée.`);
+    }
+    blobs.set(chemin, sortie.subarray(debut, suite));
+    i = suite + 1;
+  }
+  if (i !== sortie.length) throw new Error('git cat-file --batch a rendu plus que les blobs demandés.');
+  return blobs;
+}
+
+/**
+ * L'univers RÉEL : chaque fichier suivi, lu dans le BLOB que l'index publie et décodé en UTF-8, sans
+ * branche sur son chemin (GOV-036), avec son attribut `filter` quand il en a un.
  *
  * Le décodage ne juge rien. Ce qu'il ne sait pas rendre en entier y laisse un octet NUL ou un
- * U+FFFD, et c'est `controler` qui le refuse (`contenu_illisible`), comme le fichier filtré
- * (`contenu_publie_non_lu`). Un fichier suivi absent du disque a déjà été refusé par
- * `fichiersSuivisOuRefus` (`perimetre_entame`).
+ * U+FFFD, et c'est `controler` qui le refuse (`contenu_illisible`), comme le pointeur Git LFS et le
+ * fichier filtré (`contenu_publie_non_lu`). Ce qui est jugé est l'INDEX : dans un clone de CI, c'est
+ * le commit extrait ; sur un poste, une modification non indexée n'est pas jugée tant qu'elle n'est
+ * pas indexée. Un fichier suivi absent du disque a déjà été refusé par `fichiersSuivisOuRefus`
+ * (`perimetre_entame`).
  */
 export function lireUnivers(): Univers {
   const chemins = fichiersSuivis();
   const filtres = filtresDe(chemins);
+  const blobs = blobsDe(chemins);
   const fichiers = chemins.map((chemin): Fichier => {
     const filtre = filtres.get(chemin);
-    return { chemin, contenu: readFileSync(chemin, 'utf8'), ...(filtre === undefined ? {} : { filtre }) };
+    return { chemin, contenu: blobs.get(chemin)!.toString('utf8'), ...(filtre === undefined ? {} : { filtre }) };
   });
   return {
     registre: registreDuDepot(),
