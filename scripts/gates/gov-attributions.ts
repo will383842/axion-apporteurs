@@ -838,6 +838,14 @@ export const CITATIONS_DECLAREES: Citation[] = [
     nature: 'contexte',
     raison: 'la prose date les seuils de la première mesure faite par cette tâche ; la gate est à une autre.',
   },
+  {
+    ou: 'scripts/gates/gov-check.ts',
+    id: 'GOV-000',
+    nature: 'contexte',
+    raison:
+      'historique : l’en-tête raconte que la tâche d’amorçage déclarait l’entrée gov:check du registre ' +
+      'sans que son script existe ; le fichier appartient à la tâche qui l’a livré.',
+  },
 ];
 
 /**
