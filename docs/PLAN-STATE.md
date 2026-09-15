@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `d084b0b` — 2026-09-15T10:38:06+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #39 (un conflit avec `main`) · 2. #44 (un conflit avec `main`) · 3. #45 (un conflit avec `main`) |
+| Où est `main` ? | `ae56ce4` — 2026-09-15T14:36:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #39 (un conflit avec `main`) · 2. #45 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-035 (A01) · GOV-036 (A01) · GOV-037 (A01) · GOV-030 (A01) · GOV-031 (A01) |
 | Où en est la phase ? | phase -1 — 34/39 tâches, reste 3.50 j |
 | Le prochain pas | GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
@@ -61,8 +61,7 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #39 — feat(GOV-036): les deux listes qui decident de ce que gov:entite REGARDE | `t/gov-036` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #44 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A | `t/gov-031` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -92,7 +91,7 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-15)
 
 ## Dernier atterrissage
 
-`origin/main` = `d084b0b` (2026-09-15T10:38:06+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `ae56ce4` (2026-09-15T14:36:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -178,41 +177,43 @@ pannes connues. PostgreSQL, Prisma et CommonMark coupent au CR seul, ECMAScript 
 nommément coûte 0 sur les 188 fichiers suivis. Découper comme chaque consommateur aurait demandé une
 grammaire par consommateur.
 
-### PR #36 — 2026-09-15 — feat(GOV-035): docs/PLAN-STATE.md avait un generateur et aucun verificateur
+### PR #39 — 2026-09-15 — feat(GOV-036): les deux listes qui decident de ce que gov:entite REGARDE
 
-**Fait.** `docs/PLAN-STATE.md` était la seule des cinq vues de REQ-GOV-032 sans vérificateur : quinze
-lignes falsifiées, ancres conservées, laissaient les huit vérificateurs de Gate A verts.
-`pnpm plan-state:verifier` compare désormais la vue commitée à ce que ses sources produisent. Tout ce
-qui n'est pas déclaré est comparé ; ce qui vient de la forge (PR ouvertes, labels `owner:`,
-`origin/main`) est exempté par provenance. La comparaison vaut aux trois étages (rubrique, ligne du
-bloc de reprise, prose), dans l'ordre, plus les mesures du domaine. Un témoin de population exige que
-chaque famille émise ait été vue rouge. Gate `plan-state:verifier` armée, 112 → 113 gates. Fusionnée
-en `c9b2919` (écrasement) sur quatre accords sur `b34283b` — `securite` `5202723725`, `simplicite`
-`5205392956`, `mutation` `5205521841`, `exactitude` `5205878925`. Ce dernier rejuge sous la règle
-d'arrêt de Will du 15/09 : un refus ne bloque que sur un échec **ouvert**, fabriqué et vu ; le reste
-est une dette.
+**Fait.** `gov:entite` ne tient plus aucune des deux listes tapées qui décidaient de ce qu'elle
+regarde. Les codes pays se dérivent de l'ICU du runtime (`codesDeRegion`, qui lève sous 200 régions),
+et `EXTENSIONS_BALAYEES` a disparu : la garde lit tout fichier suivi. Un fichier qu'elle ne lit pas en
+entier sort `contenu_illisible` ; un pointeur Git LFS ou un attribut `filter` sort
+`contenu_publie_non_lu`, sans exemption. La passe t8 juge le blob de l'index et non l'arbre de travail :
+les attributs `ident` et `working-tree-encoding`, qui vidaient l'arbre d'une coordonnée que le blob
+publie, ne soustraient plus rien. La passe t9 demande chaque blob par l'empreinte de son entrée d'index,
+que `scripts/lot/fichiers-suivis.ts` rend désormais (`ls-files -s -z`), et confronte l'empreinte rendue.
+Les noms `0:<x>` et `<x>` suivi d'un retour chariot, que git lisait comme une révision, sont fermés :
+sous Linux, sur un dépôt cloné et un IBAN fictif masqué, les sept pannes rejouées sortent 1 et nomment
+le porteur. `fichiers-suivis.ts` est hors des `paths` de GOV-036 : divergence déclarée dans le corps,
+pas tranchée. La branche a ensuite fusionné `main` après les PR #36, #41 et #44. Deux conflits : dans
+`gov-entite.ts`, `main` reformatait les deux listes que cette PR supprime, et la suppression est gardée ;
+`docs/PLAN-STATE.md` est régénéré. Les quatre fichiers de la PR passent ensuite sous Prettier 3.9.6 dans
+un commit séparé, arbre syntaxique et commentaires identiques. `pnpm lint` y rend 0 erreur. Aucun tour
+de relecture n'a eu lieu sur `114b6e8` : les accords restent à rendre sur la tête mise à jour.
 
-⚠️ **`main` a été rouge sans cette entrée.** La PR #36 avait été branchée avant la PR #35, celle qui
-impose à chaque PR de porter sa propre entrée. Le push de `c9b2919` sur `main` a rougi Gate A (run
-`34940893579`, `pr_fusionnee_sans_journal`), et les étapes suivantes sont sorties `skipped`. L'entrée
-arrive par la PR #41.
+**Reste.** Les dettes déclarées dans le corps, lentille par lentille. Pour `mutation` (`5206676385`) :
+les clauses du contrôle d'en-tête de `cat-file` qui survivent seules, la réponse en trop, le sous-module
+toléré. Pour `securite` (`5206480876`) : l'historique et `export-subst`, non lus, et `POINTEUR_LFS` ancré
+au premier octet. Pour `exactitude` (`5206470775`) : `--corps-publie` qui tronque encore à 25 fautes.
+Pour `simplicite` (`5206460010`) : `config/entite.json` lu deux fois, le découpage de `cat-file` écrit
+deux fois, et le commentaire périmé de `fichiers-suivis.ts` qui cite encore `estBalaye`. Deux arbitrages
+ne sont pas de cette PR. Le contre-témoin `.png` de l'acceptance revient à `gardien-spec` ; `paths`, au
+propriétaire de `docs/tasks.json`. Enfin, la convergence des règles `contenu_illisible` que l'entrée de
+la PR #41 renvoyait à la seconde PR n'est pas faite ici : elle reste à verser en tâche.
 
-**Reste.** La dette U+2028 / U+2029. Les regex multilignes de `build.ts` (`LECTURES`, `DENOMBREMENTS`)
-coupent sur ces séparateurs, et trois textes affirment à tort que le verdict ne dépend pas de la forge :
-`ci.yml:145-148`, `docs/gates.json`, `build.ts:256`. `exactitude` l'a mesuré comme un échec **fermé** :
-un faux rouge, ou le nom de domaine d'un écart perdu, jamais un vert. Sa correction existe hors dépôt,
-en patch, **non poussée** pour ne pas faire tomber les accords de #36, et reste à verser en tâche.
-Versés : **GOV-053** (l'exemption est par rubrique, la volatilité par ligne), **GOV-054** (le cliquet
-ne voit pas `process.exitCode = 1`), **GOV-055** (comparer un générateur à lui-même ne voit pas ce
-qu'il a cessé de produire ; M17 survit).
+**Appris.** Demander un objet à `git cat-file --batch` par `:<chemin>` ne lit pas un chemin littéral.
+Git y applique sa syntaxe de révision : `:0:<x>` désigne l'étage 0 de `<x>`, et la lecture ligne à ligne
+retire le retour chariot final. Un fichier suivi sous l'un de ces noms, voisin d'un leurre propre, se
+faisait donc juger sur le blob du leurre. Contrôler la forme de l'en-tête rendu ne le voit pas ; seule
+l'empreinte, prise dans la même énumération que le chemin et comparée à celle rendue, lie l'objet lu au
+chemin jugé.
 
-**Appris.** Une règle qui s'applique « à partir de maintenant » ne rattrape pas les branches ouvertes
-avant elle. La PR #35 a cassé la dette qui roule pour les PR **à venir**, mais la #36 était déjà en
-vol : toute branche antérieure à une nouvelle obligation doit être relue contre elle **avant** sa
-fusion. Sinon `main` rougit à l'atterrissage, et c'est la PR suivante qui paie. Un témoin
-qui tire son attendu de son sujet ne voit pas ce que le sujet a perdu (GOV-055).
-
-… 10 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 11 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
