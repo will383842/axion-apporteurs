@@ -57,13 +57,14 @@ import {
   valeur,
   type Registre,
 } from '../../src/config/entite';
-import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import { entreesSuiviesOuRefus, type EntreeSuivie } from '../lot/fichiers-suivis';
 
 const CHEMIN_REGISTRE = 'config/entite.json';
 const CHEMIN_DECISIONS = 'docs/DECISIONS.md';
 const CHEMIN_EXIGENCES = 'docs/REQUIREMENTS.md';
 
-export type Fichier = { chemin: string; contenu: string };
+/** Un fichier suivi ; `filtre` porte la valeur de son attribut git `filter`, quand il en a un. */
+export type Fichier = { chemin: string; contenu: string; filtre?: string };
 
 export type Univers = {
   registre: Registre;
@@ -71,7 +72,7 @@ export type Univers = {
   decisions: string;
   /** Le texte de `docs/REQUIREMENTS.md` — la garde y relit REQ-CPL-004 et REQ-CPL-018. */
   exigences: string;
-  /** Les fichiers suivis par git, hors exemptions : c'est là qu'une valeur peut fuir. */
+  /** Tous les fichiers suivis par git, lus dans leur blob et décodés en UTF-8 : c'est là qu'une valeur peut fuir. */
   fichiers: Fichier[];
 };
 
@@ -88,6 +89,8 @@ export const FAMILLES = [
   'source_illisible',
   'valeur_recopiee',
   'coordonnee_en_clair',
+  'contenu_illisible',
+  'contenu_publie_non_lu',
   'point_de_sortie_sans_refus',
 ];
 
@@ -163,39 +166,36 @@ export const EXEMPTS: { motif: RegExp; exemptDe: FamilleExemptable; raison: stri
 ];
 
 /**
- * Les extensions balayées. `prisma` et `example` ont été ajoutées le 2026-09-05 : la lentille
- * `securite` a relevé que `prisma/schema.prisma` — introduit par ce lot même — et
- * `.env.example` — que `.gitignore` dé-exclut exprès pour qu'il soit suivi — passaient tous
- * deux au travers. Un secret ne choisit pas son extension.
+ * CE QUE LA FORME NE RECONNAÎT PAS dans un texte que la garde lit en entier — la SOURCE UNIQUE de
+ * cette limite : imprimée dans chaque vert, citée sans recopie par le `verifie` de `docs/gates.json`,
+ * et son texte attendu est écrit dans le banc d'essai. « Aucune coordonnée » sans ses limites se
+ * lirait comme une absence prouvée.
+ *
+ * Elle dit d'abord ce que la forme RECONNAÎT — la seule description exhaustive possible — puis des
+ * exemples de ce qui passe, et que leur liste n'est pas close.
+ *
+ * Ce que la garde lit est le BLOB que l'index associe à chaque chemin, demandé par son empreinte et
+ * jamais par un nom que git interprète, et jamais l'arbre de travail : un attribut qui
+ * réécrit l'arbre à l'extraction ne lui soustrait rien. Ce qu'elle ne sait pas lire en entier, et un
+ * blob dont le contenu servi est ailleurs (pointeur Git LFS, attribut `filter`), ne sont pas des
+ * limites : ce sont des REFUS (`contenu_illisible`, `contenu_publie_non_lu`).
  */
-const EXTENSIONS_BALAYEES =
-  /\.(ts|tsx|js|mjs|cjs|json|md|ya?ml|sql|prisma|example|txt|csv|xml|env)$/;
-
-/** Les fichiers suivis SANS extension qu'il faut lire quand même (`CODEOWNERS`, `Dockerfile`…). */
-const SANS_EXTENSION_BALAYES = /(^|\/)(CODEOWNERS|Dockerfile|Procfile|\.env[^/]*)$/;
+export const LIMITE_DE_LA_FORME =
+  "Limite déclarée : ce que la forme ne reconnaît pas passe sans être vu. Elle reconnaît un IBAN écrit d'un seul " +
+  'tenant — code de région, deux chiffres, groupes de quatre caractères séparés au plus par une espace (ASCII ou ' +
+  'typographique) ou un tiret (ASCII ou insécable), 15 à 34 caractères, clé mod-97 valide, rien de collé devant ni ' +
+  'derrière — et un BIC en majuscules dont le mot-clé touche un délimiteur ou une balise. Passent donc, entre autres : ' +
+  'une valeur masquée ou à clé fausse ; encodée (base64, hexadécimal, entité HTML, pourcentage, quoted-printable, ' +
+  "échappement JSON, flux de PDF ou contenu compressé qui forment de l'UTF-8 valide) ; coupée ou espacée autrement " +
+  "(saut de ligne, tabulation, deux espaces, point, caractère invisible, groupes d'une autre longueur) ; écrite en " +
+  "pleine chasse ou en homoglyphes ; portée par le NOM d'un fichier. Cette liste n'est pas close.";
 
 /**
- * CE FICHIER EST-IL REGARDÉ ? Fonction PURE et EXPORTÉE, et ce n'est pas un rangement.
- *
- * 🔴 Tant que cette décision vivait en ligne dans `lireUnivers()`, elle n'était exercée par AUCUN
- * témoin : `--prove` INJECTE son univers et ne passe jamais par la lecture du disque. La lentille
- * `mutation` l'a mesuré — remplacer `EXTENSIONS_BALAYEES` par un motif qui ne reconnaît rien, ou
- * `EXEMPTS` par un attrape-tout, laissait `gov:entite` ET son `--prove` VERTS tous les deux. Les
- * deux listes qui décident de CE QUI EST REGARDÉ étaient le seul endroit non gardé de la garde.
- * Extraites ici, elles ont un TEST — `tests/unit/gouvernance/entite-registre.spec.ts`, cinq
- * CINQ CAS, dont un CONTRE-TÉMOIN — « un fichier binaire ou d'image n'est pas balayé », sans
- * lequel la liste d'extensions pourrait être remplacée par un attrape-tout sans qu'un test tombe.
- * Les deux mutations ci-dessus y tombent (7 et 3 échecs).
- *
- * ⚠️ Elles n'ont PAS de famille dans `--prove`, et une première rédaction de ce paragraphe en
- * annonçait une, `filtre_trop_large`, qui n'existe nulle part : `FAMILLES` en porte onze, aucune
- * de ce nom. La phrase rouvrait donc EN PROSE le trou que l'extraction venait de fermer — annoncer
- * une preuve qu'on n'a pas est précisément ce qui fait qu'on ne la cherche plus. Le test suffit ;
- * l'annonce, non.
+ * La première ligne d'un POINTEUR Git LFS, sous les trois en-têtes que Git LFS accepte. Ancrée au
+ * début du fichier : une documentation qui CITE cette ligne plus bas reste un texte lu.
  */
-export function estBalaye(chemin: string): boolean {
-  return EXTENSIONS_BALAYEES.test(chemin) || SANS_EXTENSION_BALAYES.test(chemin);
-}
+const POINTEUR_LFS =
+  /^version (?:https:\/\/git-lfs\.github\.com\/spec\/v1|https:\/\/hawser\.github\.com\/spec\/v1|http:\/\/git-media\.io\/v\/2)\r?\n/;
 
 /** Ce fichier est-il exempt de CETTE famille ? Aucun fichier n'est exempt d'un SECRET. */
 export function estExemptDe(chemin: string, famille: FamilleExemptable): boolean {
@@ -304,12 +304,84 @@ export function estExemplePlausible(v: string): boolean {
 }
 
 /**
- * Le code PAYS ISO qui ouvre un IBAN et qui occupe les 5ᵉ et 6ᵉ caractères d'un BIC.
+ * Le code PAYS qui ouvre un IBAN et qui occupe les 5ᵉ et 6ᵉ caractères d'un BIC.
  * Déclaré AVANT les deux formes qui s'en servent : un `const` référencé plus haut que sa
  * déclaration lève à l'exécution, et la garde ne serait pas « fausse », elle serait MORTE.
+ *
+ * 🔑 RM-01 APPLIQUÉ À UNE CONSTANTE : la liste se DÉRIVE. La source est la table des RÉGIONS de
+ * l'ICU du runtime (CLDR) — la donnée qui sert à afficher un nom de pays, versionnée avec Node,
+ * jamais recopiée ici.
+ *
+ * ⚠️ CE QUE LA DÉRIVATION REND, EXACTEMENT : les codes de région CLDR à deux lettres. C'est un
+ * SUR-ENSEMBLE des codes ISO 3166-1 attribués — y entrent aussi des macro-régions (`EU`, `UN`),
+ * des codes réservés ou retirés (`AC`, `TA`, `SU`, `YU`), des pseudo-régions (`XA`, `XB`, `ZZ`) et
+ * un code attribué par l'utilisateur (`XK`, le Kosovo, qui émet des IBAN). Les codes en trop ne
+ * sont pas un danger : ce n'est pas la forme qui décide, c'est `cleIbanValide`. Le code pays garde
+ * son rôle — il empêche `[A-Za-z]{2}` d'ouvrir la forme à n'importe quel identifiant.
+ *
+ * ⚠️ ET ELLE REFUSE PLUTÔT QUE DE RÉTRÉCIR. Une source infirme — ICU réduit, `Intl.DisplayNames`
+ * absent — rendrait une liste courte ou vide, donc une forme d'IBAN qui ne reconnaît plus rien, donc
+ * un `✅` sur un dépôt qui fuit. « Je n'ai rien trouvé » et « je n'ai rien regardé » sont deux
+ * phrases différentes, et une seule autorise à publier. `codesDeRegion` LÈVE sous le plancher, au
+ * chargement du module, avant tout verdict.
+ *
+ * LES TÉMOINS vivent dans `tests/unit/gouvernance/entite-registre.spec.ts`, sous REQ-GOV-031.
  */
-const PAYS_ISO =
-  '(?:AD|AE|AT|BE|BG|CH|CY|CZ|DE|DK|EE|ES|FI|FR|GB|GI|GR|HR|HU|IE|IS|IT|LI|LT|LU|LV|MC|MT|NL|NO|PL|PT|RO|SE|SI|SK|SM|VA|US|CA|JP|CN|MA|TN|DZ|SN|CI)';
+
+/** Sous ce nombre de régions, la source n'est pas « pauvre » : elle est illisible. */
+const PLANCHER_DE_REGIONS = 200;
+
+/** La source des codes pays n'a pas pu être établie. Ce n'est pas une liste courte : c'est rien. */
+export class SourcePaysIllisible extends Error {
+  constructor(motif: string) {
+    super(motif);
+    this.name = 'SourcePaysIllisible';
+  }
+}
+
+/** Le nom d'une région ; une paire de lettres que la source ne connaît pas se rend elle-même. */
+type LecteurDeRegion = (code: string) => string | undefined;
+
+function lecteurDeRegionDuRuntime(): LecteurDeRegion {
+  if (typeof Intl.DisplayNames !== 'function') {
+    throw new SourcePaysIllisible(
+      '`Intl.DisplayNames` est absent de ce runtime : la table des régions est INTROUVABLE. ' +
+        'La garde refuse de dériver une liste vide, qui ferait reconnaître ZÉRO IBAN.'
+    );
+  }
+  const noms = new Intl.DisplayNames(['fr'], { type: 'region' });
+  // Un seul chemin pour « pas une région » : `of()` rend le code lui-même.
+  return (code) => noms.of(code);
+}
+
+/**
+ * Les codes de région à deux lettres, DÉRIVÉS de la source et jamais tapés. Le lecteur est
+ * injectable pour que le REFUS soit éprouvable : une source qui ne connaît rien doit LEVER.
+ */
+export function codesDeRegion(lire: LecteurDeRegion = lecteurDeRegionDuRuntime()): string[] {
+  const A = 'A'.charCodeAt(0);
+  const codes: string[] = [];
+  for (let i = 0; i < 26; i++) {
+    for (let j = 0; j < 26; j++) {
+      const code = String.fromCharCode(A + i, A + j);
+      // Une région connue porte un NOM ; une paire de lettres non attribuée se rend elle-même.
+      if (lire(code) !== code) codes.push(code);
+    }
+  }
+  if (codes.length < PLANCHER_DE_REGIONS) {
+    throw new SourcePaysIllisible(
+      `la source ne connaît que ${codes.length} région(s), sous le plancher de ` +
+        `${PLANCHER_DE_REGIONS}. Une liste de codes pays amputée n'est pas une garde plus étroite : ` +
+        "c'est une forme d'IBAN qui ne reconnaît plus rien, donc un vert sur un dépôt PUBLIC."
+    );
+  }
+  return codes;
+}
+
+/** Les codes réellement dérivés — leur nombre est imprimé : la garde DIT ce qu'elle a lu. */
+const CODES_PAYS = codesDeRegion();
+
+const PAYS_ISO = `(?:${CODES_PAYS.join('|')})`;
 
 /**
  * Un IBAN : un code PAYS, deux chiffres de contrôle, puis 11 à 30 caractères alphanumériques.
@@ -355,10 +427,9 @@ const FORME_IBAN = new RegExp(
  * encore la banque, le guichet et l'essentiel du numéro de compte. Une personne qui masque quatre
  * caractères avant de coller un RIB dans un ticket **croira s'être protégée**, et cette garde ne
  * la contredira pas. C'est une limite ASSUMÉE, pas un oubli : la couvrir demanderait de renoncer
- * à la clé, donc de rougir sur un dépôt propre — ce qui fait désarmer la garde. Elle est écrite
- * ici ET dans le `verifie` de la gate, parce que ces deux textes ont deux lecteurs différents :
- * celui qui voudra « renforcer » la forme dans six mois, et celui qui décidera de ne PAS
- * re-vérifier en lisant le registre.
+ * à la clé, donc de rougir sur un dépôt propre — ce qui fait désarmer la garde. Elle est EXPLIQUÉE
+ * ici, pour celui qui voudra « renforcer » la forme dans six mois ; elle est DITE dans
+ * `LIMITE_DE_LA_FORME`, imprimée dans chaque vert, pour celui qui décidera de ne pas re-vérifier.
  */
 export function cleIbanValide(valeur: string): boolean {
   const s = valeur.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -709,6 +780,43 @@ export function controler(u: Univers): Faute[] {
     .filter((x) => !estSentinelle(x.v) && x.v.length >= 6);
 
   for (const fichier of u.fichiers) {
+    // Ce que la garde ne sait pas lire EN ENTIER, elle ne le juge pas sur ses seules suites ASCII :
+    // le décodage UTF-8 garde un octet NUL et rend toute séquence invalide en U+FFFD. Un REFUS,
+    // sans exemption : il n'existe pas de fichier qu'on ait le droit de ne pas lire.
+    const illisible = fichier.contenu.includes('\u0000')
+      ? 'un octet NUL'
+      : fichier.contenu.includes('\uFFFD')
+        ? 'une séquence UTF-8 invalide, ou le caractère de remplacement U+FFFD'
+        : null;
+    if (illisible !== null) {
+      ajouter(
+        'contenu_illisible',
+        `${fichier.chemin} — la garde ne sait pas lire ce fichier EN ENTIER : il porte ${illisible}. ` +
+          `Texte UTF-16, contenu compressé, archive, image ou base de données : une coordonnée y ` +
+          `échapperait à toute forme, dans un dépôt PUBLIC (REQ-GOV-031). Convertis-le en texte ` +
+          `UTF-8, ou retire-le du suivi.`
+      );
+    }
+
+    // Le blob lu n'est pas ce que la forge SERT quand il n'est qu'un pointeur Git LFS, ou quand git
+    // confie le fichier à un filtre (attribut `filter`, Git LFS le premier) : le contenu servi est
+    // stocké hors du blob. Un REFUS, sans exemption, pour la même raison que le précédent.
+    const nonPublie =
+      fichier.filtre !== undefined
+        ? `l'attribut git \`filter=${fichier.filtre}\` le confie à un filtre`
+        : POINTEUR_LFS.test(fichier.contenu)
+          ? 'son contenu est un POINTEUR Git LFS'
+          : null;
+    if (nonPublie !== null) {
+      ajouter(
+        'contenu_publie_non_lu',
+        `${fichier.chemin} — le dépôt ne publie pas ce que la garde a lu : ${nonPublie}. La forge sert ` +
+          `le contenu réel à qui le demande, et le blob que la garde lit n'en porte que le pointeur : ` +
+          `une coordonnée y échapperait à toute forme, dans un dépôt PUBLIC (REQ-GOV-031). Suis le ` +
+          `fichier en clair, sans filtre, ou retire-le du suivi.`
+      );
+    }
+
     const code = estCode(fichier.chemin);
     // L'exemption ne porte QUE sur la recopie d'une valeur PUBLIQUE. Elle ne dispense d'aucune
     // recherche de secret : c'est la correction du veto de la lentille `securite` (2026-09-05).
@@ -2100,22 +2208,130 @@ function prouverCorpsPublie(): number {
  * 🔴 Le périmètre vient désormais d’UNE source unique qui REFUSE au lieu de rendre `[]`.
  * Cette fonction portait un `try/catch { return [] }` — recopié à l’identique dans CINQ gardes —
  * et rendait la garde d’argent VERTE sur ZÉRO fichier dans un dépôt sans `.git`, dépôt PUBLIC.
- * La mesure est dans `scripts/lot/fichiers-suivis.ts`.
+ * La mesure est dans `scripts/lot/fichiers-suivis.ts`. La garde en prend les ENTRÉES
+ * (`entreesSuiviesOuRefus`, dont `fichiersSuivisOuRefus` dérive) : chaque chemin avec l'empreinte
+ * que l'index lui associe, sur la même énumération.
  */
-function fichiersSuivis(): string[] {
-  return fichiersSuivisOuRefus('gov:entite');
+function entreesSuivies(): EntreeSuivie[] {
+  return entreesSuiviesOuRefus('gov:entite');
 }
 
-function lireUnivers(): Univers {
-  const fichiers: Fichier[] = [];
-  for (const chemin of fichiersSuivis()) {
-    // Le fichier n'est PLUS écarté ici : il entre dans l'univers, et c'est `controler()` qui
-    // décide famille par famille. Un `continue` à cet endroit rendait le fichier invisible à
-    // TOUTES les familles, `coordonnee_en_clair` comprise — c'est ce que la lentille `securite`
-    // a mis en veto le 2026-09-05.
-    if (!estBalaye(chemin) || !existsSync(chemin)) continue;
-    fichiers.push({ chemin, contenu: readFileSync(chemin, 'utf8') });
+/**
+ * L'attribut git `filter` de chaque fichier suivi, demandé à git (`check-attr`, qui applique
+ * `.gitattributes` comme git l'applique). Aucun `catch` : un git qui ne répond pas fait tomber la
+ * garde, jamais un « aucun filtre ». Et git doit répondre pour CHAQUE chemin demandé.
+ */
+function filtresDe(chemins: string[]): Map<string, string> {
+  const sortie = execFileSync('git', ['check-attr', '-z', '--stdin', 'filter'], {
+    input: chemins.map((c) => `${c}\0`).join(''),
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+    maxBuffer: 256 * 2 ** 20,
+  });
+  return filtresDepuisSortie(chemins, sortie);
+}
+
+/** La sortie `-z` de `git check-attr filter`, lue : pure, pour que son refus d'une réponse amputée s'éprouve. */
+export function filtresDepuisSortie(chemins: string[], sortie: string): Map<string, string> {
+  const champs = sortie.split('\0');
+  // Trois champs par chemin — chemin, attribut, valeur — puis le vide qui suit le dernier NUL.
+  if (champs.length !== 3 * chemins.length + 1) {
+    throw new Error(
+      `git check-attr a rendu ${champs.length} champ(s) pour ${chemins.length} chemin(s) : la lecture ` +
+        'des attributs est amputée, la garde ne sait pas quels fichiers le dépôt publie autrement.'
+    );
   }
+  const filtres = new Map<string, string>();
+  for (let i = 0; i < chemins.length; i += 1) {
+    const valeur = champs[3 * i + 2]!;
+    if (valeur !== 'unspecified' && valeur !== 'unset') filtres.set(champs[3 * i]!, valeur);
+  }
+  return filtres;
+}
+
+/**
+ * Les octets du BLOB que l'index de git associe à chaque chemin — ce que le dépôt publie, et jamais
+ * l'arbre de travail, que git réécrit à l'extraction selon des attributs qu'on n'a pas à énumérer
+ * (`ident`, `working-tree-encoding`, `eol`, `filter`, macros).
+ *
+ * 🔴 L'objet est demandé PAR L'EMPREINTE que l'entrée d'index porte pour CE chemin, jamais par un
+ * nom que git interprète. La passe précédente demandait `:<chemin>` : git y lit la grammaire des
+ * révisions (`0:notes/rib.txt` = étage 0 de `notes/rib.txt`) et retire un retour chariot final, et
+ * un fichier porteur d'IBAN voisin d'un leurre propre sortait EXIT=0 sous Linux. L'empreinte rendue
+ * est en plus comparée à celle demandée.
+ *
+ * Aucun `catch` : une entrée à un étage autre que 0 (conflit), un objet qui n'est pas un blob
+ * (sous-module) ou absent, ou une réponse qui ne se relit pas au mot près font tomber la garde,
+ * jamais un contenu vide. Exportée pour être éprouvée sur des noms que Git pour Windows refuse.
+ */
+export function blobsDe(
+  entrees: readonly EntreeSuivie[],
+  cwd: string = process.cwd()
+): Map<string, Buffer> {
+  const enConflit = entrees.filter((e) => e.etage !== '0');
+  if (enConflit.length > 0) {
+    throw new Error(
+      `l'index porte ${enConflit.length} entrée(s) à un étage autre que 0 (conflit) : ` +
+        `${enConflit.map((e) => `${e.chemin} (étage ${e.etage})`).join(', ')}. La garde ne sait pas quel blob sera publié.`
+    );
+  }
+  const sortie = execFileSync('git', ['cat-file', '--batch'], {
+    cwd,
+    input: entrees.map((e) => `${e.empreinte}\n`).join(''),
+    stdio: ['pipe', 'pipe', 'pipe'],
+    maxBuffer: 2 ** 30,
+  });
+  const blobs = new Map<string, Buffer>();
+  let i = 0;
+  for (const { chemin, empreinte } of entrees) {
+    const fin = sortie.indexOf(0x0a, i);
+    const entete = fin < 0 ? '' : sortie.subarray(i, fin).toString('utf8');
+    const [oid, type, taille] = entete.split(' ');
+    const debut = fin + 1;
+    const suite = debut + Number(taille);
+    if (
+      oid !== empreinte ||
+      type !== 'blob' ||
+      !/^\d+$/.test(taille ?? '') ||
+      sortie[suite] !== 0x0a
+    ) {
+      throw new Error(
+        `git cat-file --batch a rendu « ${entete} » pour ${chemin} (empreinte d'index ${empreinte}) : la lecture du blob est amputée.`
+      );
+    }
+    blobs.set(chemin, sortie.subarray(debut, suite));
+    i = suite + 1;
+  }
+  if (i !== sortie.length)
+    throw new Error('git cat-file --batch a rendu plus que les blobs demandés.');
+  return blobs;
+}
+
+/**
+ * L'univers RÉEL : chaque fichier suivi, lu dans le BLOB que l'index associe à son chemin (par
+ * l'empreinte de l'entrée d'index) et décodé en UTF-8, sans
+ * branche sur son chemin (GOV-036), avec son attribut `filter` quand il en a un.
+ *
+ * Le décodage ne juge rien. Ce qu'il ne sait pas rendre en entier y laisse un octet NUL ou un
+ * U+FFFD, et c'est `controler` qui le refuse (`contenu_illisible`), comme le pointeur Git LFS et le
+ * fichier filtré (`contenu_publie_non_lu`). Ce qui est jugé est l'INDEX : dans un clone de CI, c'est
+ * le commit extrait ; sur un poste, une modification non indexée n'est pas jugée tant qu'elle n'est
+ * pas indexée. Un fichier suivi absent du disque a déjà été refusé par `fichiersSuivisOuRefus`
+ * (`perimetre_entame`).
+ */
+export function lireUnivers(): Univers {
+  const entrees = entreesSuivies();
+  const chemins = entrees.map((e) => e.chemin);
+  const filtres = filtresDe(chemins);
+  const blobs = blobsDe(entrees);
+  const fichiers = chemins.map((chemin): Fichier => {
+    const filtre = filtres.get(chemin);
+    return {
+      chemin,
+      contenu: blobs.get(chemin)!.toString('utf8'),
+      ...(filtre === undefined ? {} : { filtre }),
+    };
+  });
   return {
     registre: registreDuDepot(),
     decisions: readFileSync(CHEMIN_DECISIONS, 'utf8'),
@@ -2151,10 +2367,8 @@ export const IBAN_TEMOIN = 'FR1420041010050500013M02606';
  * et c'est exactement la classe de valeurs que la garde ne voyait pas.
  *
  * CE QUE CES CONSTANTES NE SONT PAS. Elles ne DÉRIVENT PAS `PAYS_ISO` et ne prétendent pas la
- * couvrir : la liste est tapée à la main, 47 entrées dont 7 qui n'émettent aucun IBAN et 51 pays
- * émetteurs omis, et c'est l'objet de la tâche GOV-036. Ce qui est livré ici, c'est le TÉMOIN QUI
- * ROUGIT QUAND LA LISTE RÉTRÉCIT — ce qui manquait pour que GOV-036 soit gardée plutôt que promise.
- * Ce sont des IBAN de documentation bancaire, à clé mod-97 valide, jamais un compte réel.
+ * couvrir : elles sont le TÉMOIN QUI ROUGIT QUAND LA LISTE RÉTRÉCIT. Ce sont des IBAN de
+ * documentation bancaire, à clé mod-97 valide, jamais un compte réel.
  */
 export const IBANS_TEMOINS_ETRANGERS: Record<string, string> = {
   DE: 'DE89370400440532013000',
@@ -2164,6 +2378,11 @@ export const IBANS_TEMOINS_ETRANGERS: Record<string, string> = {
   NL: 'NL91ABNA0417164300',
   PT: 'PT50000201231234567890154',
   CH: 'CH9300762011623852957',
+  TR: 'TR330006100519786457841326',
+  IL: 'IL620108000000099999999',
+  RS: 'RS35260005601001611379',
+  AL: 'AL47212110090000000235698741',
+  LB: 'LB62099900000001001901229114',
 };
 
 /**
@@ -2341,6 +2560,45 @@ function prouver(): number {
         });
       }),
     },
+    // Un témoin par cause du refus, et les octets viennent de l'encodeur de Node.
+    {
+      // Un texte UTF-16 : un octet NUL entre deux caractères, et la forme ne voit plus l'IBAN.
+      famille: 'contenu_illisible',
+      univers: muter((u) => {
+        const octets = Buffer.from(`Virement depuis ${IBAN_TEMOIN}.\n`, 'utf16le');
+        u.fichiers.push({ chemin: 'notes/rib.txt', contenu: octets.toString('utf8') });
+      }),
+    },
+    {
+      // Un texte Latin-1 : aucun octet NUL, une séquence UTF-8 invalide.
+      famille: 'contenu_illisible',
+      univers: muter((u) => {
+        const octets = Buffer.from('Relevé du trimestre\n', 'latin1');
+        u.fichiers.push({ chemin: 'notes/releve.txt', contenu: octets.toString('utf8') });
+      }),
+    },
+    // Un témoin par cause du refus de ce que le dépôt ne publie pas tel que la garde le lit.
+    {
+      // Le POINTEUR que la CI extrait quand elle n'extrait pas LFS : la forge sert le vrai contenu.
+      famille: 'contenu_publie_non_lu',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'exports/rib.pdf',
+          contenu: `version https://git-lfs.github.com/spec/v1\noid sha256:${'0'.repeat(64)}\nsize 1024\n`,
+        });
+      }),
+    },
+    {
+      // Le fichier qu'un poste a extrait : un texte propre ne l'absout pas, l'attribut suffit.
+      famille: 'contenu_publie_non_lu',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'notes/extrait.txt',
+          contenu: 'Relevé du trimestre.\n',
+          filtre: 'lfs',
+        });
+      }),
+    },
   ];
 
   // ── UN TÉMOIN PAR FORME QUE `normaliserEspaces` NEUTRALISE ─────────────────────────────────
@@ -2478,6 +2736,21 @@ function prouver(): number {
         u.registre.domaines.envoi = SENTINELLE;
       }),
     },
+    {
+      quoi: 'une documentation qui CITE la première ligne d’un pointeur Git LFS — lue, pas refusée',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'docs/lfs.md',
+          contenu: '# Git LFS\n\nversion https://git-lfs.github.com/spec/v1\n',
+        });
+      }),
+    },
+    {
+      quoi: 'un texte UTF-8 à marque d’ordre, accents et idéogrammes — lu, pas refusé',
+      univers: muter((u) => {
+        u.fichiers.push({ chemin: 'docs/propre.md', contenu: '\uFEFFRelevé — ç à ü, 中文.\n' });
+      }),
+    },
   ];
 
   for (const t of TEMOINS) {
@@ -2502,6 +2775,17 @@ function prouver(): number {
     }
   }
 
+  // La réciproque : un témoin dont la famille n'est pas DÉCLARÉE prouve une règle que la garde ne dit pas avoir.
+  const nonDeclarees = [...new Set(TEMOINS.map((t) => t.famille))].filter(
+    (f) => !FAMILLES.includes(f)
+  );
+  if (nonDeclarees.length > 0) {
+    console.error(
+      `❌ ${nonDeclarees.length} famille(s) rougie(s) par un témoin mais absente(s) de FAMILLES : ${nonDeclarees.join(', ')}.`
+    );
+    return 1;
+  }
+
   const sansTemoin = FAMILLES.filter((f) => !TEMOINS.some((t) => t.famille === f));
   if (sansTemoin.length > 0) {
     console.error(
@@ -2519,6 +2803,12 @@ function prouver(): number {
   console.log(
     `   ${FORMES_NEUTRALISEES.length} forme(s) d'espace ou de tiret sont ramenées à une espace ASCII ` +
       `avant toute recherche, et chacune a son témoin : un IBAN collé depuis un RIB rougit.`
+  );
+  console.log(
+    `   ${CODES_PAYS.length} codes de région à deux lettres DÉRIVÉS de l'ICU du runtime (CLDR, un ` +
+      `sur-ensemble des codes ISO 3166-1 attribués) : la liste des pays émetteurs ne se tape plus, ` +
+      `et la dérivation LÈVE sous ${PLANCHER_DE_REGIONS} régions plutôt que de rétrécir en silence ` +
+      `la forme qui reconnaît un IBAN.`
   );
   console.log(
     `   ${Object.keys(IBANS_TEMOINS_ETRANGERS).length} IBAN NON français rougissent aussi ` +
@@ -2680,9 +2970,9 @@ if (APPELE_DIRECTEMENT) {
     const univers = lireUnivers();
     const fautes = controler(univers);
     if (fautes.length > 0) {
+      // TOUTES les fautes : une liste tronquée tairait le nom d'un fichier refusé.
       console.error(`❌ gov:entite — ${fautes.length} défaut(s) du registre d'entité :\n`);
-      fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
-      if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
+      fautes.forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
       console.error(
         `\nCe dépôt est PUBLIC : une coordonnée bancaire poussée une fois y reste lisible pour ` +
           `toujours. La sentinelle \`${SENTINELLE}\` est la seule valeur que ces champs y prennent.`
@@ -2699,8 +2989,9 @@ if (APPELE_DIRECTEMENT) {
       `✅ gov:entite — \`${CHEMIN_REGISTRE}\` conforme : ${CHAMPS.length} champs, ` +
         `${arretes} arrêté(s) et attesté(s) par leur ligne de décision, ${attente.length} à la ` +
         `sentinelle, ${secrets.length} secret(s) qui ne prennent jamais d'autre valeur ici. ` +
-        `${univers.fichiers.length} fichier(s) suivi(s) balayé(s) : aucune coordonnée en clair, ` +
-        `aucune valeur recopiée, aucun point de sortie sans refus.`
+        `${univers.fichiers.length} fichier(s) suivi(s) lu(s) en entier, ${CODES_PAYS.length} codes ` +
+        `de région dérivés de l'ICU du runtime : aucune coordonnée reconnue par la forme, aucune ` +
+        `valeur recopiée, aucun point de sortie sans refus.\n   ⚠️ ${LIMITE_DE_LA_FORME}`
     );
     console.log(
       `   ⚠️ Cette garde n'AUTORISE pas la mise en service pour autant : ` +

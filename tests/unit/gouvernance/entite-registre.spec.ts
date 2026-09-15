@@ -4,6 +4,7 @@
 // @req REQ-CPL-004
 // @req REQ-CPL-017
 // @req REQ-CPL-018
+// @req REQ-GOV-031
 /**
  * Le registre d'entité `config/entite.json`, son lecteur unique et la garde `gov:entite`.
  * (CPL-T01, `partners/ADR-0009`, REQ-GOV-031)
@@ -38,10 +39,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { deflateRawSync, deflateSync, gzipSync } from 'node:zlib';
 
 import {
   SENTINELLE,
@@ -93,12 +96,17 @@ import {
   controler,
   ligneSource,
   normaliser,
-  estBalaye,
+  lireUnivers,
+  filtresDepuisSortie,
+  blobsDe,
+  codesDeRegion,
+  SourcePaysIllisible,
   estExemptDe,
   cleIbanValide,
   EXEMPTS,
   type Univers,
 } from '../../../scripts/gates/gov-entite';
+import type { EntreeSuivie } from '../../../scripts/lot/fichiers-suivis';
 
 const SCRIPT = 'scripts/gates/gov-entite.ts';
 
@@ -424,43 +432,73 @@ describe('gov:entite — la garde, sur le dépôt réel et sur ses témoins', ()
 });
 
 /**
- * LES DEUX LISTES QUI DÉCIDENT DE CE QUI EST REGARDÉ — le seul endroit non gardé de la garde.
+ * CE QUE LA GARDE REGARDE : ses exemptions, et son refus de juger ce qu'elle ne lit pas en entier.
  *
- * 🔴 Trouvé par la lentille `mutation` le 2026-09-05, et c'est le défaut le plus instructif du
- * lot : `--prove` INJECTE son univers et ne passe jamais par la lecture du disque. Les deux
- * listes qui filtrent les fichiers — `EXTENSIONS_BALAYEES` et `EXEMPTS` — n'étaient donc
- * exercées par AUCUN témoin. Mesuré : remplacer les extensions par un motif qui ne reconnaît
- * rien, ou les exemptions par un attrape-tout, laissait `gov:entite` ET son `--prove` VERTS tous
- * les deux. La moitié « publication » de la garde se désarmait sans qu'une étape de Gate A
- * rougisse — la seule trace était un compteur de fichiers balayés dans un message de succès que
- * personne n'assertait.
- *
- * Une garde dont on peut couper la vue sans qu'aucun test ne tombe est une garde décorative.
- * Ces témoins-ci portent sur le FILTRE lui-même, pas sur ce qu'il laisse passer.
+ * `--prove` injecte son univers et ne passe jamais par la lecture des blobs : ce qui décide de ce
+ * que la garde regarde a donc ses propres témoins. Ceux-ci portent sur le contrôle ; la lecture des
+ * blobs est éprouvée plus bas, sur le dépôt réel et sur des dépôts jetables (REQ-GOV-031).
  */
 describe('REQ-CPL-018 — ce que la garde REGARDE est gardé, pas seulement ce qu’elle en dit', () => {
-  it('REQ-CPL-018 — un secret ne choisit pas son extension : les familles à risque sont balayées', () => {
-    for (const chemin of [
-      'prisma/schema.prisma', // introduit par ce lot même, et ignoré jusqu'au 2026-09-05
-      '.env.example', // `.gitignore` le dé-exclut exprès pour qu'il soit suivi
-      'docs/DECISIONS.md',
-      'scripts/lot/composer.ts',
-      'config/entite.json',
-      '.github/CODEOWNERS',
-      'docs/releve.csv',
-      'docs/virement.xml',
-      'notes.txt',
-    ]) {
-      expect(estBalaye(chemin), `${chemin} doit être balayé`).toBe(true);
+  it('REQ-GOV-031 — les refus de LECTURE n’ont AUCUNE exemption : chaque chemin qu’EXEMPTS vise, illisible ou non publié, est refusé', () => {
+    // Le chemin que vise chaque motif est DÉRIVÉ de son texte, et le contrôle positif exige que le
+    // motif le reconnaisse : un motif qui cesserait d'être un chemin littéral rougit ici.
+    expect(EXEMPTS.length, 'aucune exemption : le témoin ne croiserait rien').toBeGreaterThan(0);
+    const utf16 = Buffer.from('Relevé du trimestre\n', 'utf16le').toString('utf8');
+    for (const e of EXEMPTS) {
+      const chemin = e.motif.source.replace(/^\^/, '').replace(/\$$/, '').replace(/\\(.)/g, '$1');
+      expect(e.motif.test(chemin), `chemin dérivé de ${e.motif} non reconnu par son motif`).toBe(
+        true
+      );
+      const cas: [string, Univers['fichiers'][number]][] = [
+        ['contenu_illisible', { chemin, contenu: utf16 }],
+        [
+          'contenu_publie_non_lu',
+          { chemin, contenu: pointeurLfs('https://git-lfs.github.com/spec/v1', '\n') },
+        ],
+        ['contenu_publie_non_lu', { chemin, contenu: 'Relevé du trimestre\n', filtre: 'lfs' }],
+      ];
+      for (const [famille, fichier] of cas) {
+        const u = structuredClone(UNIVERS_CONFORME) as Univers;
+        u.fichiers.push(fichier);
+        expect(familles(u), `${chemin} (${e.exemptDe}) échappe à ${famille}`).toContain(famille);
+      }
     }
   });
 
-  it('REQ-CPL-018 — un fichier binaire ou d’image n’est pas balayé : le filtre reste un filtre', () => {
-    // Le contre-témoin. Sans lui, « tout est balayé » passerait ce fichier, et la liste
-    // d'extensions pourrait être remplacée par `/.*/ ` sans que rien ne tombe.
-    for (const chemin of ['docs/schema.png', 'assets/logo.svg', 'polices/inter.woff2']) {
-      expect(estBalaye(chemin), `${chemin} ne doit PAS être balayé`).toBe(false);
+  it('REQ-GOV-031 — un POINTEUR Git LFS est refusé sous ses trois en-têtes et deux fins de ligne ; une documentation qui en CITE la ligne est lue', () => {
+    // Les trois en-têtes que Git LFS accepte, écrits ici (RM-11).
+    for (const entete of [
+      'https://git-lfs.github.com/spec/v1',
+      'https://hawser.github.com/spec/v1',
+      'http://git-media.io/v/2',
+    ]) {
+      for (const fin of ['\n', '\r\n']) {
+        expect(
+          familles(universAvecFichier('exports/rib.pdf', pointeurLfs(entete, fin))),
+          JSON.stringify([entete, fin])
+        ).toEqual(['contenu_publie_non_lu']);
+      }
     }
+    const doc = `# Git LFS\n\nUn pointeur commence par :\n\n${pointeurLfs('https://git-lfs.github.com/spec/v1', '\n')}`;
+    expect(familles(universAvecFichier('docs/lfs.md', doc))).toEqual([]);
+  });
+
+  it('REQ-GOV-031 — la réponse de `git check-attr` est lue pour CHAQUE chemin : un filtre posé est rendu, `unspecified` et `unset` non, une réponse amputée LÈVE', () => {
+    const chemins = ['a.pdf', 'b.txt', 'c.md', 'd.bin', 'e.txt'];
+    const sortie = [
+      ...['a.pdf', 'filter', 'lfs'],
+      ...['b.txt', 'filter', 'unspecified'],
+      ...['c.md', 'filter', 'unset'],
+      ...['d.bin', 'filter', 'set'],
+      ...['e.txt', 'filter', 'git-crypt'],
+      '',
+    ].join('\0');
+    expect([...filtresDepuisSortie(chemins, sortie)]).toEqual([
+      ['a.pdf', 'lfs'],
+      ['d.bin', 'set'],
+      ['e.txt', 'git-crypt'],
+    ]);
+    expect(() => filtresDepuisSortie([...chemins, 'f.txt'], sortie)).toThrow(/amputée/);
   });
 
   it('REQ-CPL-018 — AUCUN fichier n’est exempt de la recherche de SECRET, et c’est le veto de 2026-09-05', () => {
@@ -1053,10 +1091,9 @@ describe('REQ-CPL-018 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
  * être allemand, espagnol ou belge : c'est exactement la classe que la garde ne voyait pas.
  *
  * ⚠️ CE QUE CES TÉMOINS NE FONT PAS. Ils ne DÉRIVENT PAS `PAYS_ISO` et ne prétendent pas la
- * couvrir — la liste est tapée à la main, et c'est l'objet de la tâche GOV-036. Ce qui est livré
- * ici, c'est le témoin qui ROUGIT QUAND LA LISTE RÉTRÉCIT, ce qui manquait pour que GOV-036 soit
- * gardée plutôt que promise. Les valeurs viennent de la garde (RM-01) : aucun IBAN littéral,
- * aucune TVA, aucun SIREN n'est retapé dans ce fichier.
+ * couvrir : ils rougissent quand la liste RÉTRÉCIT, et la dérivation a ses propres témoins
+ * (REQ-GOV-031, plus bas). Les valeurs viennent de la garde (RM-01) : aucun IBAN littéral, aucune
+ * TVA, aucun SIREN n'est retapé dans ce fichier.
  */
 describe('REQ-CPL-018 — les coordonnées NON françaises, et les deux familles sans témoin', () => {
   it.each(Object.entries(IBANS_TEMOINS_ETRANGERS).map(([pays, iban]) => ({ pays, iban })))(
@@ -2201,3 +2238,627 @@ describe('REQ-CPL-018 — aucun total de révisions ne se tape à la main', () =
     expect(new Set(declarees.map((e) => e.revision)).size).toBe(declarees.length);
   });
 });
+
+/**
+ * ── REQ-GOV-031 — CE QUE `gov:entite` REGARDE SE DÉRIVE DE LA SOURCE ─────────────────────────────
+ *
+ * Deux populations décident de ce que la garde voit : les codes pays qui ouvrent la forme d'IBAN,
+ * et les fichiers qu'elle lit. Les témoins ci-dessous interrogent la SOURCE DANS LE TEST — l'ICU du runtime, git, des octets
+ * écrits par leur vrai producteur — et portent sur ce que la garde CONSOMME.
+ */
+describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape pas', () => {
+  /** Les régions que l'ICU du runtime connaît, interrogée ICI — sans passer par `codesDeRegion`. */
+  function regionsDeLIcu(): { noms: Intl.DisplayNames; regions: string[]; paires: string[] } {
+    const noms = new Intl.DisplayNames(['fr'], { type: 'region' });
+    const lettres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const paires = [...lettres].flatMap((a) => [...lettres].map((b) => a + b));
+    return { noms, paires, regions: paires.filter((code) => noms.of(code) !== code) };
+  }
+
+  /** Les codes dont un IBAN et un BIC synthétiques SONT VUS par la forme que la garde consomme. */
+  function codesVusParLesFormes(codes: readonly string[]): { iban: string[]; bic: string[] } {
+    const vus = { iban: [] as string[], bic: [] as string[] };
+    for (const code of codes) {
+      const iban = ibanSynthetique(code, '00112233445566');
+      const bic = `ABCD${code}2A`;
+      const trouvees = coordonneesDe(`Virement ${iban}.\nBIC: ${bic}\n`, false, 'docs/note.md');
+      if (trouvees.includes(iban)) vus.iban.push(code);
+      if (trouvees.includes(bic)) vus.bic.push(code);
+    }
+    return vus;
+  }
+
+  it('REQ-GOV-031 — les formes IBAN et BIC reconnaissent EXACTEMENT les régions de l’ICU, sur les 676 paires', () => {
+    // L'oracle est le RUNTIME interrogé ici, et la mesure est ce que la garde VOIT : chaque région
+    // fabrique un IBAN et un BIC reconnus, aucune autre paire.
+    const { paires, regions } = regionsDeLIcu();
+    // ⚠️ CONTRÔLE POSITIF : deux listes vides sont égales.
+    expect(regions.length, 'ICU sans régions : la comparaison ne prouverait rien').toBeGreaterThan(
+      200
+    );
+    const vus = codesVusParLesFormes(paires);
+    expect(vus.iban, 'la forme IBAN ne reconnaît pas exactement les régions de l’ICU').toEqual(
+      regions
+    );
+    expect(vus.bic, 'la forme BIC ne reconnaît pas exactement les régions de l’ICU').toEqual(
+      regions
+    );
+  });
+
+  const ANCRAGE_NON_REGRESSION = [
+    // Les 47 codes de la liste TAPÉE d'avant GOV-036 : la dérivation ne doit jamais couvrir MOINS
+    // que ce qu'elle remplace, et une ICU appauvrie amaigrirait l'oracle du témoin précédent AU
+    // MÊME PAS que la garde — seul un ancrage extérieur à l'ICU le voit.
+    'AD',
+    'AE',
+    'AT',
+    'BE',
+    'BG',
+    'CH',
+    'CY',
+    'CZ',
+    'DE',
+    'DK',
+    'EE',
+    'ES',
+    'FI',
+    'FR',
+    'GB',
+    'GI',
+    'GR',
+    'HR',
+    'HU',
+    'IE',
+    'IS',
+    'IT',
+    'LI',
+    'LT',
+    'LU',
+    'LV',
+    'MC',
+    'MT',
+    'NL',
+    'NO',
+    'PL',
+    'PT',
+    'RO',
+    'SE',
+    'SI',
+    'SK',
+    'SM',
+    'VA',
+    'US',
+    'CA',
+    'JP',
+    'CN',
+    'MA',
+    'TN',
+    'DZ',
+    'SN',
+    'CI',
+    // Les cinq que GOV-036 ferme, plus XK : le Kosovo émet des IBAN et son code est attribué par
+    // l'utilisateur dans CLDR, donc il peut disparaître d'une version d'ICU à l'autre.
+    'TR',
+    'IL',
+    'RS',
+    'AL',
+    'LB',
+    'XK',
+  ];
+
+  it('REQ-GOV-031 — ANCRAGE : les formes voient toujours les pays de la liste qu’elles remplacent', () => {
+    const vus = codesVusParLesFormes(ANCRAGE_NON_REGRESSION);
+    expect(
+      ANCRAGE_NON_REGRESSION.filter((c) => !vus.iban.includes(c)),
+      'pays émetteur(s) que la forme IBAN ne voit plus — le plancher compte les codes, il ne dit ' +
+        'rien de LESQUELS'
+    ).toEqual([]);
+  });
+
+  it('REQ-GOV-031 — la dérivation LÈVE juste sous son plancher, et pas au plancher', () => {
+    // Les deux bornes sont ÉCRITES ici, jamais lues de la garde (RM-11).
+    const { noms, regions } = regionsDeLIcu();
+    const lecteurQuiConnait = (n: number) => {
+      const connues = new Set(regions.slice(0, n));
+      return (code: string) => (connues.has(code) ? noms.of(code) : code);
+    };
+    expect(() => codesDeRegion(lecteurQuiConnait(199))).toThrow(SourcePaysIllisible);
+    expect(codesDeRegion(lecteurQuiConnait(200))).toHaveLength(200);
+  });
+
+  it('REQ-GOV-031 — sur le dépôt réel, la garde lit EXACTEMENT les fichiers que git suit, et chacun EN ENTIER, dans le blob publié', () => {
+    // L'oracle est git, APPELÉ ICI — pas la source que la garde partage (`fichiers-suivis.ts`) —
+    // et la comparaison porte sur les NOMS et sur les CONTENUS, jamais sur un compte imprimé. Le
+    // contenu attendu est le BLOB de l'index, demandé par son empreinte : pas l'arbre de travail, que git
+    // réécrit à l'extraction.
+    const suivis = suivisParGit(process.cwd());
+    expect(
+      suivis.length,
+      'git ne rend aucun fichier : la comparaison ne prouverait rien'
+    ).toBeGreaterThan(0);
+    const { fichiers } = lireUnivers();
+    expect(
+      fichiers.map((f) => f.chemin),
+      'la garde ne lit pas les fichiers que git suit'
+    ).toEqual(suivis);
+    const blobs = blobsParGit(process.cwd(), suivis);
+    expect(
+      fichiers.filter((f) => f.contenu !== blobs.get(f.chemin)).map((f) => f.chemin),
+      'contenu lu par la garde différent du blob publié'
+    ).toEqual([]);
+  });
+
+  it('REQ-GOV-031 — VETO blob : un attribut qui RÉÉCRIT l’arbre à l’extraction (`ident`, `working-tree-encoding`) ne soustrait rien, la coordonnée du blob est NOMMÉE', () => {
+    // Dépôt COMMITÉ, puis fichiers ré-extraits sous un `.gitattributes` suivi : l'arbre de travail
+    // ne porte plus la valeur, le blob — ce que la forge sert — la porte. IBAN calculé, fictif.
+    const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
+    const groupes = iban.match(/.{1,4}/g)!;
+    const reecrits: Record<string, Buffer> = {
+      // `ident` remplace à l'extraction ce qui suit `$Id:` par l'empreinte du blob.
+      'notes/ident.txt': Buffer.from(`Virement vers $Id: ${iban} $.\n`),
+      // UTF-7 rend l'espace insécable en `+AKA-` : des octets ASCII, sans NUL ni U+FFFD.
+      'notes/utf7.txt': Buffer.from(`Virement vers ${groupes.join(' ')}.\n`),
+    };
+    // Contre-témoin : les mêmes octets, sans attribut.
+    const temoins: Record<string, Buffer> = {
+      'notes/sans-attribut.txt': reecrits['notes/utf7.txt']!,
+    };
+    const depot = depotJetable({ ...reecrits, ...temoins });
+    const git = (...args: string[]) =>
+      execFileSync(
+        'git',
+        ['-c', 'core.autocrlf=false', '-c', 'user.email=t@t', '-c', 'user.name=t', ...args],
+        {
+          cwd: depot,
+          stdio: 'pipe',
+        }
+      );
+    try {
+      git('commit', '-q', '-m', 'blobs');
+      writeFileSync(
+        join(depot, '.gitattributes'),
+        'notes/ident.txt ident\nnotes/utf7.txt working-tree-encoding=UTF-7\n'
+      );
+      git('add', '.gitattributes');
+      git('commit', '-q', '-m', 'attributs');
+      for (const chemin of Object.keys(reecrits)) rmSync(join(depot, chemin));
+      git('checkout', '--', ...Object.keys(reecrits));
+      // CONTRÔLE POSITIF : l'extraction a bien retiré la valeur de l'arbre, et le blob la porte.
+      const blobs = blobsParGit(depot, Object.keys(reecrits));
+      for (const chemin of Object.keys(reecrits)) {
+        expect(
+          coordonneesDe(readFileSync(join(depot, chemin), 'utf8'), false, chemin),
+          `${chemin} : arbre non réécrit`
+        ).toEqual([]);
+        expect(
+          coordonneesDe(blobs.get(chemin)!, false, chemin),
+          `${chemin} : blob sans la valeur`
+        ).toHaveLength(1);
+      }
+      const { code, sortie } = lancerDans(depot);
+      expect(code, sortie).toBe(1);
+      const lignes = sortie.split('\n');
+      const nommes = [...Object.keys(reecrits), ...Object.keys(temoins)].filter((c) =>
+        lignes.some((l) => l.includes('[coordonnee_en_clair]') && l.includes(c))
+      );
+      expect(nommes, sortie).toEqual([...Object.keys(reecrits), ...Object.keys(temoins)]);
+    } finally {
+      rmSync(depot, { recursive: true, force: true });
+    }
+  });
+
+  // Un chemin que git lirait comme une RÉVISION si on lui demandait l'objet par son nom : `:0:<x>` est
+  // l'étage 0 de `<x>`, et `cat-file --batch` retire le retour chariot final d'une ligne. Mesuré sous
+  // Linux sur la passe t8 : porteur sous l'un de ces noms, voisin propre `<x>`, EXIT=0 « lu(s) en entier ».
+  const NOMS_QUE_GIT_INTERPRETE = ['0:notes/rib.txt', 'notes/rib.txt\r'] as const;
+
+  it('REQ-GOV-031 — VETO nom : chaque chemin est jugé sur le blob que l’index lui associe, même quand git lirait son nom comme une révision (`0:<x>`, `<x>` suivi d’un retour chariot)', () => {
+    // Sans extraction : Git pour Windows refuse ces noms sur le disque. L'objet est écrit, puis l'entrée
+    // `<x>\r` est posée dans l'INDEX et relue par `ls-files -s`. `0:<x>` est refusé même dans l'index
+    // sous Windows : son entrée est écrite telle que `ls-files -s` la rend sous Linux, sur le même objet.
+    const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
+    const depot = mkdtempSync(join(tmpdir(), 'g36-nom-'));
+    const git = (args: string[], input?: string) =>
+      execFileSync('git', ['-c', 'core.protectNTFS=false', ...args], {
+        cwd: depot,
+        input,
+        encoding: 'utf8',
+        stdio: 'pipe',
+      });
+    try {
+      git(['init', '-q']);
+      const propre = git(['hash-object', '-w', '--stdin'], 'Rien a signaler.\n').trim();
+      const porteur = git(['hash-object', '-w', '--stdin'], `Virement vers ${iban}.\n`).trim();
+      git(['update-index', '--add', '--cacheinfo', `100644,${propre},notes/rib.txt`]);
+      git([
+        'update-index',
+        '--add',
+        '--cacheinfo',
+        `100644,${porteur},${NOMS_QUE_GIT_INTERPRETE[1]}`,
+      ]);
+      const index = git(['ls-files', '-s', '-z'])
+        .split('\0')
+        .filter(Boolean)
+        .map((l): EntreeSuivie => {
+          const [mode, empreinte, etage] = l.slice(0, l.indexOf('\t')).split(' ');
+          return {
+            mode: mode!,
+            empreinte: empreinte!,
+            etage: etage!,
+            chemin: l.slice(l.indexOf('\t') + 1),
+          };
+        });
+      expect(
+        index.map((e) => e.chemin),
+        'l’index ne porte pas les deux entrées'
+      ).toEqual(['notes/rib.txt', NOMS_QUE_GIT_INTERPRETE[1]]);
+      const entrees = [
+        ...index,
+        { mode: '100644', empreinte: porteur, etage: '0', chemin: NOMS_QUE_GIT_INTERPRETE[0] },
+      ];
+
+      // CONTRÔLE POSITIF : demandé par NOM, git sert le leurre propre pour les trois entrées.
+      const parNom = git(
+        ['cat-file', '--batch-check'],
+        entrees.map((e) => `:${e.chemin}\n`).join('')
+      );
+      expect(
+        parNom
+          .split('\n')
+          .filter(Boolean)
+          .map((l) => l.split(' ')[0]),
+        parNom
+      ).toEqual([propre, propre, propre]);
+
+      const blobs = blobsDe(entrees, depot);
+      const porteurs = entrees
+        .filter(
+          (e) => coordonneesDe(blobs.get(e.chemin)!.toString('utf8'), false, e.chemin).length > 0
+        )
+        .map((e) => e.chemin);
+      expect([...porteurs].sort(), 'la garde a lu le blob d’un AUTRE chemin').toEqual(
+        [...NOMS_QUE_GIT_INTERPRETE].sort()
+      );
+
+      // Une entrée en conflit (étage ≠ 0) fait tomber la lecture, NOMMÉE : jamais un blob choisi au hasard.
+      expect(() => blobsDe([{ ...entrees[0]!, etage: '2' }], depot)).toThrow(
+        /notes\/rib\.txt \(étage 2\)/
+      );
+    } finally {
+      rmSync(depot, { recursive: true, force: true });
+    }
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'REQ-GOV-031 — VETO nom, par le vrai chemin de la gate dans un clone (Linux, comme la CI ; Git pour Windows refuse ces noms) : le porteur nommé `0:<x>` ou `<x>` suivi d’un retour chariot, voisin d’un `<x>` propre, est NOMMÉ',
+    () => {
+      const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
+      const depot = depotJetable({
+        'notes/rib.txt': Buffer.from('Rien a signaler.\n'),
+        ...Object.fromEntries(
+          NOMS_QUE_GIT_INTERPRETE.map((c) => [c, Buffer.from(`Virement vers ${iban}.\n`)])
+        ),
+      });
+      const clone = `${depot}-clone`;
+      try {
+        execFileSync(
+          'git',
+          ['-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'noms'],
+          { cwd: depot, stdio: 'pipe' }
+        );
+        execFileSync('git', ['clone', '-q', depot, clone], { stdio: 'pipe' });
+        const { code, sortie } = lancerDans(clone);
+        expect(code, sortie).toBe(1);
+        const nommes = sortie
+          .split('\n')
+          .flatMap(
+            (l) => /\[coordonnee_en_clair\] ([^]+?) — coordonnée en clair «/.exec(l)?.[1] ?? []
+          );
+        expect([...nommes].sort(), sortie).toEqual([...NOMS_QUE_GIT_INTERPRETE].sort());
+      } finally {
+        rmSync(depot, { recursive: true, force: true });
+        rmSync(clone, { recursive: true, force: true });
+      }
+    },
+    180_000
+  );
+
+  it('REQ-GOV-031 — VETO de securite : un fichier suivi que la garde ne sait pas lire en entier fait ROUGIR, NOMMÉ', () => {
+    // Dépôt git jetable, lancé par le vrai chemin de la gate. Chaque IBAN est CALCULÉ et
+    // manifestement fictif : banque 00000, compte TEMOIN (RM-01, RM-11).
+    const iban = ibanSynthetique('FR', '0000000000TEMOIN0000000');
+    const texte = `Virement vers ${iban}.\n`;
+    // « En entier » éprouvé AU-DELÀ du plus gros fichier suivi, et d'au moins 8 Mio : un seuil de
+    // lecture tapé sous cette taille rougit ici, pas sur le dépôt réel qui n'y arrive pas.
+    const plusGros = Math.max(...suivisParGit(process.cwd()).map((f) => statSync(f).size));
+    const long = 'Ligne de relevé sans coordonnée.\n'.repeat(
+      Math.ceil(Math.max(8 * 2 ** 20, 16 * plusGros) / 33)
+    );
+    // Aucune coordonnée n'y est LISIBLE : seul le refus peut les faire rougir.
+    const illisibles: Record<string, Buffer> = {
+      // La seule partie illisible est à la FIN d'un texte de plusieurs Mio.
+      'notes/long-puis-utf16.txt': Buffer.concat([
+        Buffer.from(long),
+        Buffer.from(texte, 'utf16le'),
+      ]),
+      // … et la même chose sans aucun octet NUL : une séquence UTF-8 invalide en dernière ligne.
+      'notes/long-puis-latin1.txt': Buffer.concat([
+        Buffer.from(long),
+        Buffer.from('Relevé du trimestre\n', 'latin1'),
+      ]),
+      // Ce qu'écrit Windows PowerShell 5.1 sur une redirection `>` : marque d'ordre, puis UTF-16LE.
+      'notes/rib-utf16.txt': Buffer.concat([
+        Buffer.from([0xff, 0xfe]),
+        Buffer.from(texte, 'utf16le'),
+      ]),
+      'exports/rib-comprime.pdf': Buffer.concat([
+        Buffer.from('%PDF-1.4\n1 0 obj << /Filter /FlateDecode >> stream\n', 'latin1'),
+        deflateSync(Buffer.from(`BT (${iban}) Tj ET`)),
+        Buffer.from('\nendstream\n', 'latin1'),
+      ]),
+      'exports/apporteurs.xlsx': Buffer.concat([
+        Buffer.from([0x50, 0x4b, 0x03, 0x04]),
+        deflateRawSync(Buffer.from(`<sst><si><t>${iban}</t></si></sst>`)),
+      ]),
+      'config/sauvegarde.env.gz': gzipSync(Buffer.from(`PARTNERS_IBAN_DEBITEUR=${iban}\n`)),
+      'notes/releve-latin1.txt': Buffer.from('Relevé du trimestre\n', 'latin1'),
+    };
+    // Du texte lisible qui porte la coordonnée : une extension quelconque, un script shell, et un
+    // texte dont la coordonnée est au-delà du 6 000ᵉ octet, derrière des caractères de deux octets.
+    const avecCoordonnee: Record<string, Buffer> = {
+      'config/app.cfg': Buffer.from(`[banque]\niban = ${iban}\n`),
+      'scripts/deploiement.sh': Buffer.from(`export PARTNERS_IBAN_DEBITEUR=${iban}\n`),
+      'docs/gros.md': Buffer.from(`${'é'.repeat(3_000)}\n${texte}`),
+      // La coordonnée en DERNIÈRE ligne d'un texte de plusieurs Mio.
+      'docs/export.csv': Buffer.from(`${long}${texte}`),
+    };
+    const propres: Record<string, Buffer> = {
+      'docs/propre.md': Buffer.from(`\uFEFFRelevé — ç à ü, 中文. ${'é'.repeat(5_000)}\n`),
+    };
+    const tous = { ...illisibles, ...avecCoordonnee, ...propres };
+    const depot = depotJetable(tous);
+    try {
+      const { code, sortie } = lancerDans(depot);
+      expect(
+        code,
+        `la garde sort ${code} sur des fichiers suivis qu'elle ne sait pas lire en entier :\n${sortie}`
+      ).toBe(1);
+      const lignes = sortie.split('\n');
+      const nommes = (famille: string) =>
+        Object.keys(tous).filter((chemin) =>
+          lignes.some((l) => l.includes(`[${famille}]`) && l.includes(chemin))
+        );
+      expect(nommes('contenu_illisible'), sortie).toEqual(Object.keys(illisibles));
+      expect(nommes('coordonnee_en_clair'), sortie).toEqual(Object.keys(avecCoordonnee));
+    } finally {
+      rmSync(depot, { recursive: true, force: true });
+    }
+  });
+
+  it('REQ-GOV-031 — VETO LFS : un fichier suivi dont le blob est un pointeur Git LFS, ou que l’attribut `filter` confie à un filtre, est REFUSÉ, NOMMÉ, par le vrai chemin de la gate', () => {
+    // Le blob d'un fichier LFS n'est que le POINTEUR, alors que la forge sert le vrai contenu. Et un
+    // attribut `filter` suffit au refus, quel que soit le contenu indexé.
+    const pointeur = pointeurLfs('https://git-lfs.github.com/spec/v1', '\n');
+    const nonPublies: Record<string, Buffer> = {
+      'exports/rib.pdf': Buffer.from(pointeur),
+      'notes/extrait.txt': Buffer.from('Relevé du trimestre, extrait par LFS.\n'),
+      'notes/chiffre.txt': Buffer.from('Relevé du trimestre, déchiffré sur le poste.\n'),
+      'docs/orphelin.bin': Buffer.from(pointeur),
+    };
+    // `-filter` RETIRE l'attribut : le fichier est publié tel qu'il est lu.
+    const lus: Record<string, Buffer> = {
+      '.gitattributes': Buffer.from(
+        'exports/*.pdf filter=lfs diff=lfs merge=lfs -text\nnotes/extrait.txt filter=lfs diff=lfs merge=lfs -text\n' +
+          'notes/chiffre.txt filter=git-crypt diff=git-crypt\n*.md filter=lfs\ndocs/*.md -filter\n'
+      ),
+      'docs/lfs.md': Buffer.from(`# Git LFS\n\nUn pointeur commence par :\n\n${pointeur}`),
+    };
+    const tous = { ...nonPublies, ...lus };
+    const depot = depotJetable(tous);
+    try {
+      const { code, sortie } = lancerDans(depot);
+      expect(code, sortie).toBe(1);
+      const lignes = sortie.split('\n');
+      const nommes = Object.keys(tous).filter((c) =>
+        lignes.some((l) => l.includes('[contenu_publie_non_lu]') && l.includes(c))
+      );
+      expect(nommes, sortie).toEqual(Object.keys(nonPublies));
+    } finally {
+      rmSync(depot, { recursive: true, force: true });
+    }
+  });
+
+  it('REQ-GOV-031 — sans table des régions, la GATE refuse : zéro code de région n’est pas une forme plus étroite', () => {
+    // Le refus est éprouvé sur la gate lancée, pas sur la fonction : un `try/catch` glissé autour de
+    // la dérivation rendrait « 0 codes de région » et un vert.
+    const dossier = mkdtempSync(join(tmpdir(), 'g36-icu-'));
+    try {
+      const pannes: Record<string, string> = {
+        'Intl.DisplayNames absent': 'delete Intl.DisplayNames;\n',
+        'une table qui ne connaît aucune région':
+          'Intl.DisplayNames = class { of(code) { return code; } };\n',
+      };
+      for (const [i, [panne, source]] of Object.entries(pannes).entries()) {
+        const prechargement = join(dossier, `panne-${i}.mjs`);
+        writeFileSync(prechargement, source);
+        const options =
+          `${process.env.NODE_OPTIONS ?? ''} --import=${pathToFileURL(prechargement).href}`.trim();
+        const { code, sortie } = lancerDans(process.cwd(), { NODE_OPTIONS: options });
+        expect(code, `${panne} :\n${sortie.slice(0, 2_000)}`).toBe(1);
+        expect(sortie, panne).toContain('SourcePaysIllisible');
+        expect(sortie, panne).not.toContain('✅');
+      }
+    } finally {
+      rmSync(dossier, { recursive: true, force: true });
+    }
+  });
+
+  /** La limite que le vert doit imprimer, ÉCRITE ici et jamais importée de la garde (RM-11). */
+  const LIMITE_ECRITE =
+    "Limite déclarée : ce que la forme ne reconnaît pas passe sans être vu. Elle reconnaît un IBAN écrit d'un seul " +
+    'tenant — code de région, deux chiffres, groupes de quatre caractères séparés au plus par une espace (ASCII ou ' +
+    'typographique) ou un tiret (ASCII ou insécable), 15 à 34 caractères, clé mod-97 valide, rien de collé devant ni ' +
+    'derrière — et un BIC en majuscules dont le mot-clé touche un délimiteur ou une balise. Passent donc, entre autres : ' +
+    'une valeur masquée ou à clé fausse ; encodée (base64, hexadécimal, entité HTML, pourcentage, quoted-printable, ' +
+    "échappement JSON, flux de PDF ou contenu compressé qui forment de l'UTF-8 valide) ; coupée ou espacée autrement " +
+    "(saut de ligne, tabulation, deux espaces, point, caractère invisible, groupes d'une autre longueur) ; écrite en " +
+    "pleine chasse ou en homoglyphes ; portée par le NOM d'un fichier. Cette liste n'est pas close.";
+
+  it('REQ-GOV-031 — une population GÉNÉRÉE : chaque fichier porteur est NOMMÉ, puis la même population propre sort VERTE, comptée comme git, limite écrite', () => {
+    // Toutes les extensions d'une et deux lettres ; au-delà, un ÉCHANTILLON — une branche qui écarte
+    // un nom absent d'ici ET du dépôt réel n'est pas vue, et c'est déclaré ; des noms sans extension,
+    // cachés, non ASCII, à espace, profonds. Une coordonnée fictive dans CHAQUE fichier : vider,
+    // écarter ou sauter une famille de fichiers, à la lecture comme au contrôle, retire un nom.
+    const lettres = 'abcdefghijklmnopqrstuvwxyz';
+    const extensions = [
+      ...lettres,
+      ...[...lettres].flatMap((a) => [...lettres].map((b) => a + b)),
+      ...['cfg', 'xyz', 'toml', 'jsonc', 'sha256', 'markdown'],
+    ];
+    const chemins = [
+      ...extensions.map((e) => `p/f.${e}`),
+      ...[
+        'p/sans-extension',
+        'p/.cache',
+        'p/double.env.example',
+        'p/relevé des comptes.md',
+        'données/été/報告.txt',
+        'a/b/c/d/e/f/g/profond.x',
+      ],
+    ];
+    const iban = ibanSynthetique('FR', '30004TEMOIN58201739465');
+    const depot = depotJetable(
+      Object.fromEntries(chemins.map((c) => [c, Buffer.from(`Virement vers ${iban}.\n`)]))
+    );
+    try {
+      const suivis = suivisParGit(depot);
+      expect(suivis.length).toBe(chemins.length + SOURCES_DE_LA_GARDE.length);
+      const porteurs = lancerDans(depot);
+      expect(porteurs.code, porteurs.sortie.slice(0, 2_000)).toBe(1);
+      const nommes = porteurs.sortie
+        .split('\n')
+        .flatMap((l) => /\[coordonnee_en_clair\] (.+?) — coordonnée en clair «/.exec(l)?.[1] ?? []);
+      expect([...nommes].sort(), 'fichier(s) porteur(s) non nommé(s) par la gate').toEqual(
+        [...chemins].sort()
+      );
+
+      for (const c of chemins) writeFileSync(join(depot, c), `${c}\n`);
+      // La garde juge ce que l'index PUBLIE : la population propre doit y être indexée.
+      execFileSync('git', ['add', '-A'], { cwd: depot, stdio: 'ignore' });
+      const { code, sortie } = lancerDans(depot);
+      expect(code, sortie).toBe(0);
+      const lu = /(\d+) fichier\(s\) suivi\(s\) lu\(s\) en entier/.exec(sortie);
+      expect(lu, `la garde ne dit pas ce qu'elle a lu :\n${sortie}`).not.toBeNull();
+      expect(Number(lu![1]), sortie).toBe(suivis.length);
+      // À l'ÉGALITÉ, la ligne entière : une limite allongée ou rognée par un bout rougit aussi.
+      const limite = sortie.split('\n').filter((l) => l.includes('Limite déclarée'));
+      expect(
+        limite.map((l) => l.trim()),
+        sortie
+      ).toEqual([`⚠️ ${LIMITE_ECRITE}`]);
+    } finally {
+      rmSync(depot, { recursive: true, force: true });
+    }
+  });
+});
+
+/** Les fichiers que git suit dans `depot`, demandés à git lui-même. */
+function suivisParGit(depot: string): string[] {
+  return execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-z'], {
+    cwd: depot,
+    encoding: 'utf8',
+  })
+    .split('\0')
+    .filter(Boolean);
+}
+
+/**
+ * Le blob que l'INDEX de `depot` porte pour chaque chemin, décodé en UTF-8 : ce que la forge publie,
+ * pas l'arbre de travail. Par un AUTRE appel que la garde : l'empreinte lue ici dans `git ls-files -s`,
+ * puis l'objet demandé par cette empreinte — la garde prend la sienne dans `fichiers-suivis.ts`.
+ */
+function blobsParGit(depot: string, chemins: string[]): Map<string, string> {
+  const empreintes = new Map(
+    execFileSync('git', ['ls-files', '-s', '-z'], {
+      cwd: depot,
+      encoding: 'utf8',
+      maxBuffer: 256 * 2 ** 20,
+    })
+      .split('\0')
+      .filter(Boolean)
+      .map((e) => [e.slice(e.indexOf('\t') + 1), e.split(' ')[1]!] as const)
+  );
+  const sortie = execFileSync('git', ['cat-file', '--batch'], {
+    cwd: depot,
+    input: chemins.map((c) => `${empreintes.get(c)}\n`).join(''),
+    maxBuffer: 2 ** 30,
+  });
+  const blobs = new Map<string, string>();
+  let i = 0;
+  for (const chemin of chemins) {
+    const fin = sortie.indexOf(0x0a, i);
+    const [oid, type, taille] = sortie.subarray(i, fin).toString('utf8').split(' ');
+    if (type !== 'blob' || oid !== empreintes.get(chemin)) {
+      throw new Error(`git cat-file ${chemin} → ${sortie.subarray(i, fin).toString('utf8')}`);
+    }
+    blobs.set(chemin, sortie.subarray(fin + 1, fin + 1 + Number(taille)).toString('utf8'));
+    i = fin + 1 + Number(taille) + 1;
+  }
+  return blobs;
+}
+
+/** Un dépôt git jetable : les trois sources de la garde et les fichiers donnés, tous SUIVIS. */
+function depotJetable(fichiers: Record<string, Buffer>): string {
+  const depot = mkdtempSync(join(tmpdir(), 'g36-'));
+  const ecrire = (chemin: string, contenu: Buffer) => {
+    mkdirSync(join(depot, dirname(chemin)), { recursive: true });
+    writeFileSync(join(depot, chemin), contenu);
+  };
+  for (const [chemin, contenu] of Object.entries(fichiers)) ecrire(chemin, contenu);
+  for (const source of SOURCES_DE_LA_GARDE) ecrire(source, readFileSync(source));
+  for (const args of [
+    ['init', '-q'],
+    ['add', '-A'],
+  ])
+    execFileSync('git', args, { cwd: depot, stdio: 'ignore' });
+  return depot;
+}
+
+/** Les sources que la garde lit en plus des fichiers suivis, copiées dans chaque dépôt jetable. */
+const SOURCES_DE_LA_GARDE = [
+  'config/entite.json',
+  'docs/DECISIONS.md',
+  'docs/REQUIREMENTS.md',
+] as const;
+
+/** La gate, lancée par `tsx` depuis la racine d'un dépôt, avec des variables en plus. */
+function lancerDans(
+  depot: string,
+  variables: NodeJS.ProcessEnv = {}
+): { code: number | null; sortie: string } {
+  const r = spawnSync(
+    process.execPath,
+    [resolve('node_modules/tsx/dist/cli.mjs'), resolve(SCRIPT)],
+    {
+      cwd: depot,
+      encoding: 'utf8',
+      env: { ...envDuBancDEssai(), ...variables },
+      maxBuffer: 64 * 2 ** 20,
+    }
+  );
+  return { code: r.status, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
+}
+
+/** Un pointeur Git LFS, tel que l'arbre de travail le porte quand LFS n'a pas extrait le fichier. */
+function pointeurLfs(entete: string, fin: string): string {
+  return [`version ${entete}`, `oid sha256:${'0'.repeat(64)}`, 'size 1024', ''].join(fin);
+}
+
+/** Un IBAN de forme valide dont la clé mod-97 est CALCULÉE — jamais recopiée (RM-01). */
+function ibanSynthetique(pays: string, corps: string): string {
+  for (let cle = 0; cle < 100; cle++) {
+    const candidat = `${pays}${String(cle).padStart(2, '0')}${corps}`;
+    if (cleIbanValide(candidat)) return candidat;
+  }
+  throw new Error(`aucune clé mod-97 valide pour ${pays}…${corps} : le témoin ne mesurerait rien`);
+}
