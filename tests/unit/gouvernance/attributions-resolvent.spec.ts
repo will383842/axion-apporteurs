@@ -25,10 +25,14 @@ import { LIVREE } from '../../../scripts/lot/avancement';
 import {
   analyser,
   ANCRE_JOURNAL,
+  caractereAdmis,
   chargerSources,
+  COUPE_ETAT,
   entreesDeJournal,
+  HORS_ASCII_ADMIS,
   prouver,
   SourceIllisible,
+  TITRE_ETAT,
   CITATIONS_DECLAREES,
   DETTE_GATE_NON_RECIPROQUE,
 } from '../../../scripts/gates/gov-attributions';
@@ -218,7 +222,7 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     ).toBe(1);
   });
 
-  it('F2 — le journal ne porte rien que le rendu et la garde liraient autrement : chaque forme, rejouée sur le dépôt réel, fait REFUSER en nommant le fichier et la ligne', () => {
+  it('F2/F3 — une panne de journal que le RENDU affiche autrement que la garde ne la lit, rejouée sur le dépôt réel, fait REFUSER en nommant le fichier et la ligne', () => {
     const suivis = fichiersSuivis();
     const s = chargerSources(suivis);
     const { t, faux, titre } = tacheAttestee(s);
@@ -229,120 +233,363 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
         lireReel(f).split('\n').includes(titre)
     ) as string;
     expect(fichier, `aucun fichier de journal suivi ne porte « ${titre} »`).toBeDefined();
-    // Toutes les tâches de la PR passent au lot faux : la panne e8v3 de la revue sécurité sur 1c5dc5f.
+    // Toutes les tâches de la PR passent au lot faux : les pannes des revues sur 1c5dc5f et 8fb190e.
     const doc = JSON.parse(lireReel('docs/tasks.json')) as { taches: typeof s.taches };
     for (const x of doc.taches) if (x.pr === t.pr && x.lot === t.lot) x.lot = faux;
     const tachesFaussees = Buffer.from(JSON.stringify(doc, null, 2));
     const neuve = Math.max(...[...entreesDeJournal(s.journal).keys()].map(Number)) + 1;
-    const faussee = `${ANCRE_JOURNAL}${t.pr} — 2026-09-04 — lot ${faux} (rectificatif)`;
-    const deuxEspaces = (l: string) => l.replace(' ', '  ');
+    const ancre = `${ANCRE_JOURNAL}${t.pr}`;
+    const suite = titre.slice(ancre.length);
+    const faussee = `${ancre} — 2026-09-04 — lot ${faux} (rectificatif)`;
+    const [NBSP, ZWSP, RC, SELECTEUR] = [0xa0, 0x200b, 0x0d, 0xfe0f].map((cp) =>
+      String.fromCodePoint(cp)
+    );
     const corps = ['', '**Fait.** Les tâches sont rattachées à leur lot.', ''];
-    type Cas = { quoi: string; taches: boolean; lignes: (l: string[], i: number) => string[] };
+    const details = ['', '<details>', faussee, '</details>'];
+    const echappee = `${ancre.replace('PR #', 'PR \\#')}${suite}`;
+    // `pose` remplace la ligne du titre réel ; `refusee` est l'indice, DANS `pose`, de la ligne que le refus
+    // doit nommer — connu par construction, jamais recalculé par un prédicat retapé de la garde.
+    type Cas = { quoi: string; taches: boolean; pose: string[]; refusee: number };
     const cas: Cas[] = [
       {
-        quoi: 'la panne e8v3 : titre ajouté à DEUX espaces, titre réel encadré par `<!--` et `-->` entre accents graves',
+        quoi: 'e8v3 : titre ajouté à DEUX espaces, titre réel encadré par `<!--` et `-->` entre accents graves',
         taches: true,
-        lignes: (l, i) => [
-          ...l.slice(0, i),
-          deuxEspaces(faussee),
+        pose: [
+          faussee.replace(' ', '  '),
           ...corps,
-          'Le source d’un commentaire HTML s’ouvre par `<!--`.',
+          "Le source d'un commentaire HTML s'ouvre par `<!--`.",
           '',
           titre,
           '',
           'Et il se ferme par `-->`.',
-          ...l.slice(i + 1),
         ],
+        refusee: 0,
       },
       {
-        quoi: 'le jumeau sans accents graves : le titre ajouté à DEUX espaces, seul',
+        quoi: 'le jumeau de e8v3 : le titre ajouté à DEUX espaces, seul',
         taches: true,
-        lignes: (l, i) => [...l.slice(0, i), deuxEspaces(faussee), ...corps, ...l.slice(i)],
+        pose: [faussee.replace(' ', '  '), ...corps, titre],
+        refusee: 0,
       },
       {
-        quoi: 'un `<!--` entre accents graves, seul, au-dessus du titre réel',
-        taches: false,
-        lignes: (l, i) => [...l.slice(0, i), 'Il s’ouvre par `<!--`.', '', ...l.slice(i)],
-      },
-      {
-        quoi: 'le titre RÉEL réécrit à deux espaces, sous un titre faussé à une espace',
+        quoi: 'exactitude : le titre réel en `<h2>`, un faux titre replié sous `<details>`',
         taches: true,
-        lignes: (l, i) => [
-          ...l.slice(0, i),
-          faussee,
-          ...corps,
-          deuxEspaces(titre),
-          ...l.slice(i + 1),
+        pose: [`<h2>${titre.slice(3)}</h2>`, ...details],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite : « ## PR \\# », un faux titre replié sous `<details>`',
+        taches: true,
+        pose: [echappee, ...details],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite : « ## PR \\# », un faux titre dans un bloc de code clôturé',
+        taches: true,
+        pose: [echappee, '', '```text', faussee, '```'],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite : « ## **PR** # », un faux titre replié',
+        taches: true,
+        pose: [`${ancre.replace('PR', '**PR**')}${suite}`, ...details],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite : une espace de largeur nulle dans « PR », un faux titre replié',
+        taches: true,
+        pose: [`${ancre.replace('PR', `P${ZWSP}R`)}${suite}`, ...details],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite : « PR&#32;# », un faux titre replié',
+        taches: true,
+        pose: [`${ancre.replace('PR #', 'PR&#32;#')}${suite}`, ...details],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite : le titre réel dans une citation, un faux titre replié',
+        taches: true,
+        pose: [`> ${titre}`, ...details],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite : le titre réel dans un élément de liste, un faux titre replié',
+        taches: true,
+        pose: [`- ${titre}`, ...details],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite (c) : un faux titre non daté replié, puis `<span></span>`, un retour chariot NU et le titre réel',
+        taches: true,
+        pose: [
+          '<details>',
+          `${ancre} lot ${faux} (rectificatif)`,
+          '</details>',
+          '',
+          `<span></span>${RC}${titre}`,
         ],
+        refusee: 0,
       },
       {
-        quoi: 'le titre RÉEL réécrit en titre souligné, sous un titre faussé à une espace',
+        quoi: 'un retour chariot NU seul, entre du texte et le titre réel, sous un faux titre exact',
         taches: true,
-        lignes: (l, i) => [
-          ...l.slice(0, i),
-          faussee,
-          ...corps,
-          titre.slice(titre.indexOf(' ') + 1),
-          '---',
-          ...l.slice(i + 1),
-        ],
+        pose: [faussee, ...corps, `Texte.${RC}${titre}`],
+        refusee: 4,
+      },
+      {
+        quoi: 'mutation : le titre réel en citation, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, `> ${titre}`],
+        refusee: 4,
+      },
+      {
+        quoi: 'mutation : le titre réel en citation soulignée, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, `> ${titre.slice(3)}`, '> ---'],
+        refusee: 4,
+      },
+      {
+        quoi: 'mutation : le titre réel en `<h2>`, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, `<h2>${titre.slice(3)}</h2>`],
+        refusee: 4,
+      },
+      {
+        quoi: 'une espace INSÉCABLE entre « PR » et « # », un faux titre replié',
+        taches: true,
+        pose: [`${ancre.replace('R #', `R${NBSP}#`)}${suite}`, ...details],
+        refusee: 0,
+      },
+      {
+        quoi: 'un sélecteur emoji invisible dans « PR », un faux titre replié',
+        taches: true,
+        pose: [`${ancre.replace('PR', `P${SELECTEUR}R`)}${suite}`, ...details],
+        refusee: 0,
+      },
+      {
+        quoi: 'le titre réel dans un élément de liste ORDONNÉE, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, `1. ${titre}`],
+        refusee: 4,
+      },
+      {
+        quoi: 'le titre réel dans une note de bas de page, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, 'Voir la note[^1].', '', `[^1]: ${titre}`],
+        refusee: 4,
+      },
+      {
+        quoi: 'un faux titre dans un bloc `~~~`, le titre réel échappé',
+        taches: true,
+        pose: ['~~~', faussee, '~~~', '', echappee],
+        refusee: 0,
+      },
+      {
+        quoi: 'le titre réel suivi d’une séquence fermante, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, `${titre} ##`],
+        refusee: 4,
+      },
+      {
+        quoi: 'un lien vide qui cache le lot faux dans le titre réel',
+        taches: true,
+        pose: [titre.replace(t.lot as string, `[](${faux})`)],
+        refusee: 0,
+      },
+      {
+        quoi: 'une emphase collée au lot faux : le titre s’affiche avec un autre lot',
+        taches: true,
+        pose: [titre.replace(t.lot as string, `${faux}**3**`)],
+        refusee: 0,
+      },
+      {
+        quoi: 'un span de code collé au lot faux : le titre s’affiche avec un autre lot',
+        taches: true,
+        pose: [titre.replace(t.lot as string, `${faux}\`3\``)],
+        refusee: 0,
+      },
+      {
+        quoi: 'simplicite : le titre réel rétrogradé en ligne « PR #<n> — date — » sous un titre qui nomme le lot faux',
+        taches: true,
+        pose: [`${ancre} — lot ${faux}`, titre.slice(3)],
+        refusee: 0,
+      },
+      {
+        quoi: 'une ligne « PR #<n> — date — » sous un titre de section, que gov:etat prend pour une entrée',
+        taches: true,
+        pose: [titre, '', '## Rectificatif', '', faussee.slice(3)],
+        refusee: 4,
+      },
+      {
+        quoi: 'le titre réel précédé d’une espace, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, ` ${titre}`],
+        refusee: 4,
+      },
+      {
+        quoi: 'le titre réel en minuscules, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, titre.replace('PR', 'pr')],
+        refusee: 4,
+      },
+      {
+        quoi: 'le titre réel collé (« PR#<n> »), sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, titre.replace('PR #', 'PR#')],
+        refusee: 4,
+      },
+      {
+        quoi: 'le texte du titre réel souligné, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, suite.slice(3), '---'],
+        refusee: 5,
       },
       {
         quoi: 'passe précédente : un titre caché dans un commentaire HTML fermé',
         taches: false,
-        lignes: (l) => [...l, '<!--', titre.replace(/#\d+/, `#${neuve}`), '-->'],
+        pose: [titre, '', '<!--', titre.replace(/#\d+/, `#${neuve}`), '-->'],
+        refusee: 2,
       },
       {
         quoi: 'passe précédente : un titre caché dans un commentaire HTML jamais fermé',
         taches: false,
-        lignes: (l) => [...l, '<!--', titre.replace(/#\d+/, `#${neuve}`)],
+        pose: [titre, '', '<!--', titre.replace(/#\d+/, `#${neuve}`)],
+        refusee: 2,
       },
     ];
-    const acceptes: string[] = [];
-    for (const c of cas) {
-      const reel = lireReel(fichier).split('\n');
-      const lignes = c.lignes(reel, reel.indexOf(titre));
-      // La ligne que le refus doit nommer : la première du texte qui porte la forme refusée.
-      const n =
-        lignes.findIndex(
-          (x, k) =>
-            x.includes('<!--') ||
-            x.includes('-->') ||
-            x.startsWith(ANCRE_JOURNAL.replace(' ', '  ')) ||
-            (x === '---' && (lignes[k - 1] ?? '') !== '')
-        ) + 1;
+    const reel = lireReel(fichier).split('\n');
+    const i = reel.indexOf(titre);
+    const juger = (quoi: string, lignes: string[], n: number, taches: boolean, autres = suivis) => {
       const lire = (f: string) =>
         f === fichier
           ? Buffer.from(lignes.join('\n'))
-          : f === 'docs/tasks.json' && c.taches
+          : f === 'docs/tasks.json' && taches
             ? tachesFaussees
-            : octets(f);
-      const refus = refusDe(() => chargerSources(suivis, lire));
-      if (
-        n === 0 ||
-        !(refus instanceof SourceIllisible) ||
-        !refus.message.includes(`${fichier}:${n}`)
-      ) {
-        const verdict = refus ? refus.message : analyser(chargerSources(suivis, lire)).fautes;
-        acceptes.push(`${c.quoi} (${fichier}:${n}) : ${JSON.stringify(verdict).slice(0, 200)}`);
-      }
-    }
+            : f.startsWith('docs/journal/2026-10')
+              ? Buffer.from(`# Journal — octobre 2026\n\n- ${titre}\n`)
+              : octets(f);
+      const refus = refusDe(() => chargerSources(autres, lire));
+      const attendu = autres === suivis ? `${fichier}:${n}` : 'docs/journal/2026-10.md:3';
+      if (refus instanceof SourceIllisible && refus.message.includes(attendu)) return null;
+      const verdict = refus ? refus.message : analyser(chargerSources(autres, lire)).fautes;
+      return `${quoi} (${attendu}) : ${JSON.stringify(verdict).slice(0, 220)}`;
+    };
+    const acceptes = cas.flatMap((c) => {
+      const lignes = [...reel.slice(0, i), ...c.pose, ...reel.slice(i + 1)];
+      return juger(c.quoi, lignes, i + c.refusee + 1, c.taches) ?? [];
+    });
+    // Un SECOND fichier suivi du journal, porteur de la panne « titre en liste ».
+    const second = juger('un second fichier de journal', reel, 0, false, [
+      ...suivis,
+      'docs/journal/2026-10.md',
+    ]);
+    // Une panne dans une entrée SOUS le plancher : le refus ne dépend pas du plancher.
+    const sous = [...entreesDeJournal(s.journal).entries()].find(
+      ([pr]) => Number(pr) <= s.plancherJournal
+    );
+    expect(sous, 'aucune entrée sous le plancher : le témoin ne porterait sur rien').toBeDefined();
+    const titreSous = sous![1].split('\n')[0] as string;
+    const k = reel.indexOf(titreSous);
+    const sousPlancher =
+      k < 0
+        ? `l’entrée ${sous![0]} n’est pas dans ${fichier}`
+        : juger(
+            'une citation dans une entrée sous le plancher',
+            [...reel.slice(0, k), `> ${titreSous}`, ...reel.slice(k + 1)],
+            k + 1,
+            false
+          );
     expect(
-      acceptes,
-      'une forme de journal que le rendu lit autrement n’a pas fait refuser'
+      [...acceptes, second ?? [], sousPlancher ?? []].flat(),
+      'une forme de journal que le rendu lit autrement n’a pas fait refuser en nommant sa ligne'
     ).toEqual([]);
+
+    // Contre-témoin : un `<!--` ENTRE accents graves s'affiche tel quel — le journal est LU, ses entrées inchangées.
+    const lu = [
+      ...reel.slice(0, i),
+      "Il s'ouvre par `<!--` et se ferme par `-->`.",
+      '',
+      ...reel.slice(i),
+    ];
+    const charge = chargerSources(suivis, (f) =>
+      f === fichier ? Buffer.from(lu.join('\n')) : octets(f)
+    );
+    expect([...entreesDeJournal(charge.journal).keys()]).toEqual([
+      ...entreesDeJournal(s.journal).keys(),
+    ]);
   });
 
-  it('F2 — le titre d’entrée est celui que gov:etat lit : même coupe, même ancre, UNE espace entre chaque jeton', () => {
-    const etat = lireReel('scripts/gates/gov-etat.ts');
-    const coupe = /\.split\(\/\^([^/]+)\/m\)/.exec(etat);
-    const titre = /\/\^([^(/]+)\(\\d\+\) — /.exec(etat);
-    expect(coupe, 'gov-etat.ts ne coupe plus le journal sur une ancre lisible ici').not.toBeNull();
-    expect(titre, 'gov-etat.ts ne lit plus « PR #<n> » en tête de bloc').not.toBeNull();
-    expect(`${coupe![1]}${titre![1]}`).toBe(ANCRE_JOURNAL);
-    // Ce que gov:etat ne lit pas comme un titre, la garde ne le lit pas non plus.
-    const ecarte = `${ANCRE_JOURNAL.replace(' ', '  ')}28 — 2026-09-04 — lot L-1-02\n`;
-    expect([...entreesDeJournal(ecarte).keys()]).toEqual([]);
+  it('F2/F3 — gov:etat et plan-state lisent le journal par les MÊMES expressions que la garde, source ET drapeaux, et leur lecture rejouée rend les MÊMES titres', () => {
+    const LITTERAL = String.raw`\/((?:[^/\\\n]|\\.)+)\/([dgimsuvy]*)`;
+    const journaux = fichiersSuivis().filter(
+      (f) => f.startsWith('docs/journal/') && f.endsWith('.md') && f !== 'docs/journal/README.md'
+    );
+    const parGarde = [...entreesDeJournal(chargerSources(fichiersSuivis()).journal).values()]
+      .map((e) => e.split('\n')[0] as string)
+      .sort();
+    expect(
+      parGarde.length,
+      'aucune entrée de journal : l’égalité ne prouverait rien'
+    ).toBeGreaterThan(0);
+    for (const lecteur of ['scripts/gates/gov-etat.ts', 'scripts/plan-state/build.ts']) {
+      const code = lireReel(lecteur);
+      const coupe = new RegExp(String.raw`\.split\(` + LITTERAL + String.raw`\)\.slice\(1\)`).exec(
+        code
+      );
+      const titre = new RegExp(LITTERAL + String.raw`\.exec\(bloc\)`).exec(code);
+      expect(
+        coupe,
+        `${lecteur} ne coupe plus le journal par une expression lisible ici`
+      ).not.toBeNull();
+      expect(
+        titre,
+        `${lecteur} ne lit plus le titre d’un bloc par une expression lisible ici`
+      ).not.toBeNull();
+      expect([coupe![1], coupe![2]], `${lecteur} : la coupe`).toEqual([
+        COUPE_ETAT.source,
+        COUPE_ETAT.flags,
+      ]);
+      expect([titre![1], titre![2]], `${lecteur} : le titre`).toEqual([
+        TITRE_ETAT.source,
+        TITRE_ETAT.flags,
+      ]);
+      // Sa lecture, REJOUÉE avec ses propres expressions, fichier par fichier : les mêmes titres, dans les deux sens.
+      const sienneCoupe = new RegExp(coupe![1] as string, coupe![2]);
+      const sienTitre = new RegExp(titre![1] as string, titre![2]);
+      const parLui = journaux
+        .flatMap((f) =>
+          lireReel(f)
+            .split(sienneCoupe)
+            .slice(1)
+            .flatMap((bloc) => {
+              const m = sienTitre.exec(bloc);
+              return m ? [`${ANCRE_JOURNAL}${m[1]} — ${m[2]} — ${m[3]}`] : [];
+            })
+        )
+        .sort();
+      expect(parLui, `${lecteur} et la garde ne lisent pas les mêmes titres d’entrée`).toEqual(
+        parGarde
+      );
+    }
+  });
+
+  it('la LISTE D’AUTORISATION du journal n’est pas élargie en silence : la règle de caractère admet EXACTEMENT l’ASCII imprimable et ces caractères-là', () => {
+    const FIGEE = 'àâäæçéèêëîïôöùûüÿœÀÂÄÆÇÉÈÊËÎÏÔÖÙÛÜŸŒᵉ«»—−→↔§·⚠';
+    expect(
+      HORS_ASCII_ADMIS,
+      'la liste d’autorisation a changé : l’élargir se décide ici, dans le même diff'
+    ).toBe(FIGEE);
+    const attendus = new Set([
+      ...Array.from({ length: 0x7e - 0x20 + 1 }, (_, n) => 0x20 + n),
+      ...[...FIGEE].map((c) => c.codePointAt(0) as number),
+    ]);
+    const ecarts: string[] = [];
+    for (let cp = 0; cp <= 0x10ffff; cp++) {
+      if (caractereAdmis(String.fromCodePoint(cp)) !== attendus.has(cp))
+        ecarts.push(`U+${cp.toString(16)}`);
+    }
+    expect(ecarts.slice(0, 20), 'la règle admet autre chose que la liste figée').toEqual([]);
   });
 
   it('une dette de lot FIGÉE ne vaut que pour le titre mesuré : un titre multi-lots réécrit pour ne nommer qu’un AUTRE lot fait rougir chaque tâche figée', () => {
@@ -362,7 +609,7 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const autre = lotsDe(titre).find((l) => l !== d!.lot) as string;
     const journal = s.journal.replace(
       titre,
-      `${(/^\S+\s+\S+\s+#\d+/.exec(titre) as RegExpExecArray)[0]} — lot ${autre}`
+      `${(/^\S+\s+\S+\s+#\d+ — \S+/.exec(titre) as RegExpExecArray)[0]} — lot ${autre}`
     );
     const { fautes } = analyser({ ...s, journal });
     const figees = s.dettesLot
