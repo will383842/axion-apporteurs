@@ -40,7 +40,10 @@ const sousScriptsOuTests = (f: string) => f.startsWith('scripts/') || f.startsWi
 /** Un identifiant de la FORME d'une tâche réelle, qui ne résout pas : dérivé, jamais tapé. */
 function identifiantInconnu(taches: readonly { id: string }[]): string {
   const ids = new Set(taches.map((t) => t.id));
-  let inconnu = (taches.find((t) => /[0-9]/.test(t.id)) as { id: string }).id.replace(/[0-9]+/, '9');
+  let inconnu = (taches.find((t) => /[0-9]/.test(t.id)) as { id: string }).id.replace(
+    /[0-9]+/,
+    '9'
+  );
   while (ids.has(inconnu)) inconnu = inconnu.replace('9', '99');
   return inconnu;
 }
@@ -48,7 +51,10 @@ function identifiantInconnu(taches: readonly { id: string }[]): string {
 /** La position juste après l'accolade ouvrante de la PREMIÈRE entrée du tableau `cle` d'un registre. */
 function dansLaPremiereEntree(texte: string, cle: string): number {
   const m = new RegExp(`"${cle}"\\s*:\\s*\\[\\s*\\{`).exec(texte);
-  expect(m, `le tableau « ${cle} » est introuvable : la sonde ne sait plus où écrire`).not.toBeNull();
+  expect(
+    m,
+    `le tableau « ${cle} » est introuvable : la sonde ne sait plus où écrire`
+  ).not.toBeNull();
   return m!.index + m![0].length;
 }
 
@@ -75,10 +81,19 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
 
   it('chaque registre est lu en entier — ÉGALITÉ avec le fichier relu ici, pas un plancher', () => {
     const s = chargerSources(fichiersSuivis());
-    expect(s.taches.length, 'des tâches ont été perdues au chargement').toBe(brut('docs/tasks.json', 'taches'));
-    expect(s.gates.length, 'des gates ont été perdues au chargement').toBe(brut('docs/gates.json', 'gates'));
-    expect(s.postes.length, 'des postes ont été perdus au chargement').toBe(brut('docs/agents.json', 'postes'));
-    expect(s.taches.length, 'le registre des tâches est vide : l’égalité ne prouverait rien').toBeGreaterThan(0);
+    expect(s.taches.length, 'des tâches ont été perdues au chargement').toBe(
+      brut('docs/tasks.json', 'taches')
+    );
+    expect(s.gates.length, 'des gates ont été perdues au chargement').toBe(
+      brut('docs/gates.json', 'gates')
+    );
+    expect(s.postes.length, 'des postes ont été perdus au chargement').toBe(
+      brut('docs/agents.json', 'postes')
+    );
+    expect(
+      s.taches.length,
+      'le registre des tâches est vide : l’égalité ne prouverait rien'
+    ).toBeGreaterThan(0);
   });
 
   it('les en-têtes : TOUT fichier suivi de scripts/ et tests/, chacun sur ses vingt premières lignes', () => {
@@ -87,7 +102,10 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     // L'acceptance dit « tout fichier suivi de scripts/ et tests/ » et « ses vingt premières lignes » :
     // ce sont ses termes, pas une recopie de la garde.
     const attendus = suivis.filter(sousScriptsOuTests);
-    expect(attendus.length, 'aucun fichier suivi sous scripts/ ni tests/ : l’égalité ne prouverait rien').toBeGreaterThan(0);
+    expect(
+      attendus.length,
+      'aucun fichier suivi sous scripts/ ni tests/ : l’égalité ne prouverait rien'
+    ).toBeGreaterThan(0);
     expect(s.entetes.map((e) => e.fichier)).toEqual(attendus);
     for (const e of s.entetes) {
       expect(e.lignes, `${e.fichier} n'est pas lu sur ses vingt premières lignes`).toEqual(
@@ -100,9 +118,16 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const suivis = fichiersSuivis();
     const s = chargerSources(suivis);
     const titres = suivis
-      .filter((f) => f.startsWith('docs/journal/') && f.endsWith('.md') && f !== 'docs/journal/README.md')
-      .flatMap((f) => (lireReel(f).match(/^## PR #\d+/gm) ?? []).map((t) => t.slice(t.lastIndexOf('#') + 1)));
-    expect(titres.length, 'aucune entrée de journal : l’égalité ne prouverait rien').toBeGreaterThan(0);
+      .filter(
+        (f) => f.startsWith('docs/journal/') && f.endsWith('.md') && f !== 'docs/journal/README.md'
+      )
+      .flatMap((f) =>
+        (lireReel(f).match(/^## PR #\d+/gm) ?? []).map((t) => t.slice(t.lastIndexOf('#') + 1))
+      );
+    expect(
+      titres.length,
+      'aucune entrée de journal : l’égalité ne prouverait rien'
+    ).toBeGreaterThan(0);
     expect([...entreesDeJournal(s.journal).keys()].sort()).toEqual([...new Set(titres)].sort());
     const plancher = /\*\*> (\d+)\*\*/.exec(lireReel('docs/journal/README.md'));
     expect(plancher, 'le README du journal ne porte plus son plancher').not.toBeNull();
@@ -119,10 +144,15 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const { exemptions } = analyser(s);
     const entrees = entreesDeJournal(s.journal);
     const avecLot = s.taches.filter((t) => t.lot);
-    expect(avecLot.length, 'aucune tâche ne porte de lot : rien ne serait confronté').toBeGreaterThan(0);
+    expect(
+      avecLot.length,
+      'aucune tâche ne porte de lot : rien ne serait confronté'
+    ).toBeGreaterThan(0);
     // Le TITRE seul (première ligne de l'entrée), découpé en jetons : ni le corps, ni une sous-chaîne.
     const titreNomme = (pr: number, lot: string) =>
-      ((entrees.get(String(pr)) ?? '').split('\n')[0] as string).split(/[^A-Za-z0-9-]+/).includes(lot);
+      ((entrees.get(String(pr)) ?? '').split('\n')[0] as string)
+        .split(/[^A-Za-z0-9-]+/)
+        .includes(lot);
     const sautees = avecLot
       .filter((t) => !(t.pr != null && titreNomme(t.pr, t.lot as string)))
       .filter((t) => !exemptions.some((e) => e.tache === t.id && e.site.includes(`« ${t.lot} »`)));
@@ -136,9 +166,17 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
   function tacheAttestee(s: ReturnType<typeof chargerSources>) {
     const entrees = entreesDeJournal(s.journal);
     const t = s.taches.find(
-      (x) => x.lot && x.pr != null && ((entrees.get(String(x.pr)) ?? '').split('\n')[0] as string).split(/[^A-Za-z0-9-]+/).includes(x.lot)
+      (x) =>
+        x.lot &&
+        x.pr != null &&
+        ((entrees.get(String(x.pr)) ?? '').split('\n')[0] as string)
+          .split(/[^A-Za-z0-9-]+/)
+          .includes(x.lot)
     );
-    expect(t, 'aucune tâche dont le titre de l’entrée de journal nomme le lot : le témoin ne saurait quoi fausser').toBeDefined();
+    expect(
+      t,
+      'aucune tâche dont le titre de l’entrée de journal nomme le lot : le témoin ne saurait quoi fausser'
+    ).toBeDefined();
     const lots = new Set(s.taches.map((x) => x.lot));
     let faux = (t!.lot as string).replace(/[0-9]+$/, '99');
     while (lots.has(faux)) faux += '9';
@@ -149,11 +187,17 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
   it('F-LOT — un lot FAUX cité seulement dans le CORPS de l’entrée de sa PR n’est pas attesté : faute nommée', () => {
     const s = chargerSources(fichiersSuivis());
     const { t, faux, titre } = tacheAttestee(s);
-    const journal = s.journal.replace(titre, `${titre}\n\nLe corps cite aussi \`${faux}\`, un autre lot.`);
+    const journal = s.journal.replace(
+      titre,
+      `${titre}\n\nLe corps cite aussi \`${faux}\`, un autre lot.`
+    );
     const taches = s.taches.map((x) => (x === t ? { ...x, lot: faux } : x));
     const { fautes } = analyser({ ...s, journal, taches });
     expect(
-      fautes.filter((f) => f.famille === 'lot_non_atteste' && f.message.includes(t.id) && f.message.includes(faux)).length,
+      fautes.filter(
+        (f) =>
+          f.famille === 'lot_non_atteste' && f.message.includes(t.id) && f.message.includes(faux)
+      ).length,
       `${t.id} porte le lot « ${faux} », que seul le corps de l’entrée cite, et rien n’a rougi`
     ).toBe(1);
   });
@@ -165,7 +209,10 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const taches = s.taches.map((x) => (x === t ? { ...x, lot: faux } : x));
     const { fautes } = analyser({ ...s, journal, taches });
     expect(
-      fautes.filter((f) => f.famille === 'lot_non_atteste' && f.message.includes(t.id) && f.message.includes(faux)).length,
+      fautes.filter(
+        (f) =>
+          f.famille === 'lot_non_atteste' && f.message.includes(t.id) && f.message.includes(faux)
+      ).length,
       `${t.id} porte le lot « ${faux} », l’un des lots d’un titre multi-lots, et rien n’a rougi`
     ).toBe(1);
   });
@@ -179,7 +226,12 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const taches = s.taches.map((x) => (x === t ? { ...x, pr: neuve } : x));
     const { fautes } = analyser({ ...s, journal, taches });
     expect(
-      fautes.filter((f) => f.famille === 'lot_non_atteste' && f.message.includes(t.id) && f.message.includes(`#${neuve}`)).length,
+      fautes.filter(
+        (f) =>
+          f.famille === 'lot_non_atteste' &&
+          f.message.includes(t.id) &&
+          f.message.includes(`#${neuve}`)
+      ).length,
       `${t.id} passe à la PR ${neuve}, dont le seul titre est invisible au rendu, et rien n’a rougi`
     ).toBe(1);
   });
@@ -188,25 +240,44 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const s = chargerSources(fichiersSuivis());
     const entrees = entreesDeJournal(s.journal);
     const lots = new Set(s.taches.flatMap((x) => (x.lot ? [x.lot] : [])));
-    const titreDe = (pr: number) => ((entrees.get(String(pr)) ?? '').split('\n')[0] as string);
-    const lotsDe = (titre: string) => [...new Set(titre.split(/[^A-Za-z0-9-]+/).filter((j) => lots.has(j)))];
+    const titreDe = (pr: number) => (entrees.get(String(pr)) ?? '').split('\n')[0] as string;
+    const lotsDe = (titre: string) => [
+      ...new Set(titre.split(/[^A-Za-z0-9-]+/).filter((j) => lots.has(j))),
+    ];
     const d = s.dettesLot.find((x) => lotsDe(titreDe(x.pr)).length > 1);
-    expect(d, 'aucune dette de lot sur un titre multi-lots : le témoin ne saurait quoi réécrire').toBeDefined();
+    expect(
+      d,
+      'aucune dette de lot sur un titre multi-lots : le témoin ne saurait quoi réécrire'
+    ).toBeDefined();
     const titre = titreDe(d!.pr);
     const autre = lotsDe(titre).find((l) => l !== d!.lot) as string;
-    const journal = s.journal.replace(titre, `${(/^\S+\s+\S+\s+#\d+/.exec(titre) as RegExpExecArray)[0]} — lot ${autre}`);
-    const { fautes } = analyser({ ...s, journal });
-    const figees = s.dettesLot.filter((x) => x.pr === d!.pr && x.lot === d!.lot).map((x) => x.tache);
-    const muettes = figees.filter(
-      (id) => !fautes.some((f) => f.famille === 'lot_non_atteste' && f.message.includes(`${id} porte lot « ${d!.lot} »`))
+    const journal = s.journal.replace(
+      titre,
+      `${(/^\S+\s+\S+\s+#\d+/.exec(titre) as RegExpExecArray)[0]} — lot ${autre}`
     );
-    expect(muettes, `le titre de la PR ${d!.pr} ne nomme plus que « ${autre} », et ces tâches figées sous « ${d!.lot} » restent absoutes`).toEqual([]);
+    const { fautes } = analyser({ ...s, journal });
+    const figees = s.dettesLot
+      .filter((x) => x.pr === d!.pr && x.lot === d!.lot)
+      .map((x) => x.tache);
+    const muettes = figees.filter(
+      (id) =>
+        !fautes.some(
+          (f) =>
+            f.famille === 'lot_non_atteste' && f.message.includes(`${id} porte lot « ${d!.lot} »`)
+        )
+    );
+    expect(
+      muettes,
+      `le titre de la PR ${d!.pr} ne nomme plus que « ${autre} », et ces tâches figées sous « ${d!.lot} » restent absoutes`
+    ).toEqual([]);
   });
 
   it('une attribution à une tâche LIVRÉE qui garde un path gabarit n’est JAMAIS exemptée comme « pas encore connu »', () => {
     const s = chargerSources(fichiersSuivis());
     const statut = new Map(s.taches.map((t) => [t.id, t.statut ?? '']));
-    const menteuses = analyser(s).exemptions.filter((e) => /_paths_/.test(e.nature) && LIVREE.has(statut.get(e.tache) as string));
+    const menteuses = analyser(s).exemptions.filter(
+      (e) => /_paths_/.test(e.nature) && LIVREE.has(statut.get(e.tache) as string)
+    );
     expect(
       menteuses.map((e) => `${e.nature} ${e.tache} @ ${e.site}`),
       'des tâches TERMINÉES sont exemptées sous un sens qui dit « pas encore connu »'
@@ -224,22 +295,42 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
       );
     const pure = livreeGabarit(false);
     const mixte = livreeGabarit(true);
-    expect(pure && mixte, 'aucune tâche livrée à path gabarit, pure ou mixte : le témoin ne distinguerait rien').toBeTruthy();
+    expect(
+      pure && mixte,
+      'aucune tâche livrée à path gabarit, pure ou mixte : le témoin ne distinguerait rien'
+    ).toBeTruthy();
     const NEUF = 'scripts/gates/sonde-neuve.ts';
     // Une occurrence DE PLUS sur un site dont l'exemption existe déjà : un en-tête réel qui nomme une
     // tâche livrée à gabarit. L'identifiant est AJOUTÉ au bout de la ligne qui le porte : rien n'est retiré.
     const parId = new Map(s.taches.map((t) => [t.id, t]));
     const aGabarit = (id: string) => {
       const t = parId.get(id);
-      return t !== undefined && LIVREE.has(t.statut ?? '') && (t.paths ?? []).some((p) => posix.basename(p) === t.id);
+      return (
+        t !== undefined &&
+        LIVREE.has(t.statut ?? '') &&
+        (t.paths ?? []).some((p) => posix.basename(p) === t.id)
+      );
     };
-    const existante = analyser(s).exemptions.find((e) => aGabarit(e.tache) && e.nature !== 'contexte' && /^(scripts|tests)\/.*:\d+$/.test(e.site));
-    expect(existante, 'aucune exemption d’en-tête sur une tâche livrée à gabarit : le témoin « occurrence de plus » ne porterait sur rien').toBeDefined();
+    const existante = analyser(s).exemptions.find(
+      (e) =>
+        aGabarit(e.tache) && e.nature !== 'contexte' && /^(scripts|tests)\/.*:\d+$/.test(e.site)
+    );
+    expect(
+      existante,
+      'aucune exemption d’en-tête sur une tâche livrée à gabarit : le témoin « occurrence de plus » ne porterait sur rien'
+    ).toBeDefined();
     const fichierExistant = existante!.site.replace(/:\d+$/, '');
     const ligneExistante = Number(existante!.site.slice(fichierExistant.length + 1)) - 1;
     const entetes = [
       ...s.entetes.map((e) =>
-        e.fichier === fichierExistant ? { ...e, lignes: e.lignes.map((l, i) => (i === ligneExistante ? `${l} ${existante!.tache}` : l)) } : e
+        e.fichier === fichierExistant
+          ? {
+              ...e,
+              lignes: e.lignes.map((l, i) =>
+                i === ligneExistante ? `${l} ${existante!.tache}` : l
+              ),
+            }
+          : e
       ),
       { fichier: NEUF, lignes: [`// portée par ${pure!.id}`, `// étendue par ${mixte!.id}`] },
     ];
@@ -248,17 +339,28 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const exemptions = analyser(s).exemptions;
     const scriptDe = (g: (typeof s.gates)[number]) => g.script.split('#')[0] as string;
     const gateFigee = exemptions.find((e) => e.nature === 'dette_gabarit_livree_gate');
-    const proseFigee = exemptions.find((e) => e.nature === 'dette_gabarit_livree_mention' && e.site.startsWith('docs/gates.json:'));
-    const gA = s.gates.find((g) => gateFigee !== undefined && gateFigee.site === `docs/gates.json:${g.id} (${scriptDe(g)})`);
-    const gP = s.gates.find((g) => proseFigee !== undefined && proseFigee.site.startsWith(`docs/gates.json:${g.id}.`));
-    expect(gA && gP, 'aucune gate figée, ou aucune chaîne figée de docs/gates.json : le témoin « même lieu, autre script » ne porterait sur rien').toBeTruthy();
+    const proseFigee = exemptions.find(
+      (e) => e.nature === 'dette_gabarit_livree_mention' && e.site.startsWith('docs/gates.json:')
+    );
+    const gA = s.gates.find(
+      (g) =>
+        gateFigee !== undefined && gateFigee.site === `docs/gates.json:${g.id} (${scriptDe(g)})`
+    );
+    const gP = s.gates.find(
+      (g) => proseFigee !== undefined && proseFigee.site.startsWith(`docs/gates.json:${g.id}.`)
+    );
+    expect(
+      gA && gP,
+      'aucune gate figée, ou aucune chaîne figée de docs/gates.json : le témoin « même lieu, autre script » ne porterait sur rien'
+    ).toBeTruthy();
     const gates = [
       ...s.gates.map((g) => (g === gA || g === gP ? { ...g, script: NEUF } : g)),
       { id: 'sonde-neuve-pure', script: NEUF, tache: pure!.id },
       { id: 'sonde-neuve-mixte', script: NEUF, tache: mixte!.id },
     ];
     const { fautes } = analyser({ ...s, entetes, gates });
-    const vue = (famille: string, ...noms: string[]) => fautes.some((f) => f.famille === famille && noms.every((n) => f.message.includes(n)));
+    const vue = (famille: string, ...noms: string[]) =>
+      fautes.some((f) => f.famille === famille && noms.every((n) => f.message.includes(n)));
     const aveugles = [
       ['mention_hors_paths', `${NEUF}:1`, pure!.id],
       ['mention_hors_paths', `${NEUF}:2`, mixte!.id],
@@ -266,9 +368,17 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
       ['gate_non_reciproque', 'sonde-neuve-mixte', mixte!.id],
       ['mention_hors_paths', `${fichierExistant}:`, existante!.tache],
       ['gate_non_reciproque', `« ${gA!.id} »`, gateFigee!.tache, NEUF],
-      ['mention_hors_paths', `docs/gates.json:${gP!.id}.`, proseFigee!.tache, `et ${NEUF} n'est ni`],
+      [
+        'mention_hors_paths',
+        `docs/gates.json:${gP!.id}.`,
+        proseFigee!.tache,
+        `et ${NEUF} n'est ni`,
+      ],
     ].filter(([famille, ...noms]) => !vue(famille as string, ...noms));
-    expect(aveugles, 'ces attributions NEUVES à une tâche livrée à path gabarit n’ont fait rougir personne').toEqual([]);
+    expect(
+      aveugles,
+      'ces attributions NEUVES à une tâche livrée à path gabarit n’ont fait rougir personne'
+    ).toEqual([]);
   });
 
   /**
@@ -281,15 +391,19 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const { exemptions } = analyser(chargerSources(fichiersSuivis()));
     type T = { id: string; paths?: string[]; tests?: Record<string, string[]>; statut?: string };
     const taches = (JSON.parse(lireReel('docs/tasks.json')) as { taches: T[] }).taches;
-    const gates = (JSON.parse(lireReel('docs/gates.json')) as { gates: Record<string, unknown>[] }).gates;
+    const gates = (JSON.parse(lireReel('docs/gates.json')) as { gates: Record<string, unknown>[] })
+      .gates;
     const parId = new Map(taches.map((t) => [t.id, t]));
     // Un path GABARIT se termine par l'identifiant de la tâche elle-même.
     const gabarits = (t: T) => (t.paths ?? []).filter((p) => posix.basename(p) === t.id);
     const reels = (t: T) => (t.paths ?? []).filter((p) => posix.basename(p) !== t.id);
     const declareToucher = (t: T, fichier: string) =>
-      [...(t.paths ?? []), ...Object.values(t.tests ?? {}).flat().map((x) => x.split('#')[0] as string)].some(
-        (x) => x === fichier || (x.endsWith('/') && fichier.startsWith(x))
-      );
+      [
+        ...(t.paths ?? []),
+        ...Object.values(t.tests ?? {})
+          .flat()
+          .map((x) => x.split('#')[0] as string),
+      ].some((x) => x === fichier || (x.endsWith('/') && fichier.startsWith(x)));
     const enContexte = (ou: string, id: string) =>
       CITATIONS_DECLAREES.some((c) => c.ou === ou && c.id === id && c.nature === 'contexte');
     // Une tâche LIVRÉE (ou sans statut) ne relève plus de « pas encore connu » : le dépôt vert la range sous sa dette figée.
@@ -306,14 +420,20 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
       const t = parId.get(g.tache as string);
       const script = (g.script as string).split('#')[0] as string;
       if (!t || gabarits(t).length === 0 || declareToucher(t, script)) continue;
-      if (DETTE_GATE_NON_RECIPROQUE.some((d) => d.gate === g.id && d.tache === t.id && d.script === script)) continue;
+      if (
+        DETTE_GATE_NON_RECIPROQUE.some(
+          (d) => d.gate === g.id && d.tache === t.id && d.script === script
+        )
+      )
+        continue;
       attendues.push(`${nature('gate', t)} ${t.id} @ docs/gates.json:${g.id} (${script})`);
     }
     for (const fichier of fichiersSuivis().filter(sousScriptsOuTests)) {
       for (const ligne of lireReel(fichier).split('\n').slice(0, 20)) {
         for (const id of mentions(ligne)) {
           const t = parId.get(id) as T;
-          if (gabarits(t).length === 0 || declareToucher(t, fichier) || enContexte(fichier, id)) continue;
+          if (gabarits(t).length === 0 || declareToucher(t, fichier) || enContexte(fichier, id))
+            continue;
           attendues.push(`${nature('mention', t)} ${id} @ ${fichier}`);
         }
       }
@@ -325,11 +445,18 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
         const [v, ou] = pile.pop() as [unknown, string];
         if (Array.isArray(v)) v.forEach((x, i) => pile.push([x, `${ou}[${i}]`]));
         else if (v !== null && typeof v === 'object') {
-          for (const [cle, x] of Object.entries(v)) pile.push([x, `${ou}.${cle}`], [cle, `${ou}.${cle} (nom de clé)`]);
+          for (const [cle, x] of Object.entries(v))
+            pile.push([x, `${ou}.${cle}`], [cle, `${ou}.${cle} (nom de clé)`]);
         } else if (typeof v === 'string') {
           for (const id of mentions(v)) {
             const t = parId.get(id) as T;
-            if (id === g.tache || gabarits(t).length === 0 || declareToucher(t, script) || enContexte(ou, id)) continue;
+            if (
+              id === g.tache ||
+              gabarits(t).length === 0 ||
+              declareToucher(t, script) ||
+              enContexte(ou, id)
+            )
+              continue;
             attendues.push(`${nature('mention', t)} ${id} @ ${ou} (${script})`);
           }
         }
@@ -337,14 +464,23 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     }
 
     // Un site de docs/gates.json est comparé ENTIER (lieu, champ et script) ; un en-tête, par fichier.
-    const lieu = (site: string) => (site.startsWith('docs/gates.json:') ? site : site.replace(/:\d+$/, ''));
+    const lieu = (site: string) =>
+      site.startsWith('docs/gates.json:') ? site : site.replace(/:\d+$/, '');
     const rendues = exemptions
-      .filter((e) => /^(gate|mention)_paths_(non_resolus|en_partie_gabarit)$|^dette_gabarit_livree_(gate|mention)$/.test(e.nature))
+      .filter((e) =>
+        /^(gate|mention)_paths_(non_resolus|en_partie_gabarit)$|^dette_gabarit_livree_(gate|mention)$/.test(
+          e.nature
+        )
+      )
       .map((e) => `${e.nature} ${e.tache} @ ${lieu(e.site)}`);
-    expect(attendues.length, 'le recompte ne trouve aucune attribution à paths gabarit : il ne prouverait rien').toBeGreaterThan(0);
-    expect(rendues.sort(), 'les exemptions « paths gabarit » rendues ne sont pas celles que le recompte indépendant trouve').toEqual(
-      attendues.sort()
-    );
+    expect(
+      attendues.length,
+      'le recompte ne trouve aucune attribution à paths gabarit : il ne prouverait rien'
+    ).toBeGreaterThan(0);
+    expect(
+      rendues.sort(),
+      'les exemptions « paths gabarit » rendues ne sont pas celles que le recompte indépendant trouve'
+    ).toEqual(attendues.sort());
   });
 
   it('toute CHAÎNE et tout NOM DE CLÉ d’une entrée de docs/gates.json sont lus, à toute profondeur — chaque champ, sous chaque forme que le registre réel lui donne', () => {
@@ -367,8 +503,13 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
           : valeur !== null && typeof valeur === 'object'
             ? { ...valeur, sonde: inconnu }
             : undefined;
-    const portees = [...formes].filter(([, { gate, champ }]) => injecter(gate[champ]) !== undefined);
-    expect(portees.length, 'aucun champ de docs/gates.json ne porte de chaîne : rien ne serait éprouvé').toBeGreaterThan(0);
+    const portees = [...formes].filter(
+      ([, { gate, champ }]) => injecter(gate[champ]) !== undefined
+    );
+    expect(
+      portees.length,
+      'aucun champ de docs/gates.json ne porte de chaîne : rien ne serait éprouvé'
+    ).toBeGreaterThan(0);
 
     const aveugles: string[] = [];
     for (const [cle, { gate, champ }] of portees) {
@@ -387,7 +528,10 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
 
     // Un identifiant écrit comme NOM de clé : sur l'entrée elle-même, puis dans un objet posé DANS un tableau.
     const premiere = s.gates[0] as (typeof s.gates)[number];
-    for (const sonde of [{ ...premiere, [inconnu]: 'x' }, { ...premiere, sonde: [{ [inconnu]: 1 }] }]) {
+    for (const sonde of [
+      { ...premiere, [inconnu]: 'x' },
+      { ...premiere, sonde: [{ [inconnu]: 1 }] },
+    ]) {
       const { fautes } = analyser({ ...s, gates: [sonde] });
       expect(
         fautes.some((f) => f.famille === 'mention_non_resolue' && f.message.includes(inconnu)),
@@ -405,7 +549,10 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const texte = gates.slice(0, i) + `"profond": ${profond},` + gates.slice(i);
     const lire = (c: string) => (c === 'docs/gates.json' ? Buffer.from(texte) : octets(c));
     const { fautes } = analyser(chargerSources(suivis, lire));
-    expect(fautes.filter((f) => f.famille === 'mention_non_resolue' && f.message.includes(inconnu)).length).toBe(1);
+    expect(
+      fautes.filter((f) => f.famille === 'mention_non_resolue' && f.message.includes(inconnu))
+        .length
+    ).toBe(1);
   });
 });
 
@@ -413,7 +560,9 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
   it('un journal présent sur le disque mais absent des fichiers SUIVIS ne compte pas : refus nommé', () => {
     // La liste des fichiers suivis est amputée du journal alors que le disque le porte toujours :
     // une lecture du disque le retrouverait.
-    const sansJournal = fichiersSuivis().filter((f) => !f.startsWith('docs/journal/') || f === 'docs/journal/README.md');
+    const sansJournal = fichiersSuivis().filter(
+      (f) => !f.startsWith('docs/journal/') || f === 'docs/journal/README.md'
+    );
     expect(() => chargerSources(sansJournal)).toThrow(SourceIllisible);
     // Le refus de la LISTE, pas celui de la lecture : une liste relue sur le disque dont chaque fichier
     // passerait par le contrôle « suivi » refuserait aussi, mais sur « n'est pas un fichier SUIVI ».
@@ -427,13 +576,15 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
   });
 
   it('un registre TRONQUÉ est refusé en le nommant, pas sur une trace de pile', () => {
-    const lire = (c: string) => (c === 'docs/tasks.json' ? Buffer.from(lireReel(c).slice(0, 3940)) : octets(c));
+    const lire = (c: string) =>
+      c === 'docs/tasks.json' ? Buffer.from(lireReel(c).slice(0, 3940)) : octets(c);
     expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(SourceIllisible);
     expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(/docs\/tasks\.json/);
   });
 
   it('un registre dont la clé est RENOMMÉE n’est pas un registre vide : refus nommé', () => {
-    const lire = (c: string) => (c === 'docs/agents.json' ? Buffer.from(JSON.stringify({ poste: [] })) : octets(c));
+    const lire = (c: string) =>
+      c === 'docs/agents.json' ? Buffer.from(JSON.stringify({ poste: [] })) : octets(c);
     expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(/docs\/agents\.json.*postes/);
   });
 
@@ -457,22 +608,37 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
       ['docs/tasks.json', racine(taches, 'taches'), 'taches'],
       ['docs/tasks.json', entree(taches, 'taches', `"reqs": ["${inconnu}"],`), 'reqs'],
       ['docs/gates.json', racine(gates, 'gates'), 'gates'],
-      ['docs/gates.json', entree(gates, 'gates', `"verifie": "la lacune de ${inconnu}",`), 'verifie'],
+      [
+        'docs/gates.json',
+        entree(gates, 'gates', `"verifie": "la lacune de ${inconnu}",`),
+        'verifie',
+      ],
       ['docs/gates.json', entree(gates, 'gates', `"${I_ECHAPPE}d": "${inconnu}",`), 'id'],
       ['docs/agents.json', racine(postes, 'postes'), 'postes'],
       ['docs/agents.json', entree(postes, 'postes', `"code": "${inconnu}",`), 'code'],
     ];
     for (const [chemin, texte, cle] of cas) {
-      expect(() => JSON.parse(texte), `${chemin} : la sonde « ${cle} » n'est plus du JSON`).not.toThrow();
-      const refus = refusDe(() => chargerSources(suivis, (c) => (c === chemin ? Buffer.from(texte) : octets(c))));
-      expect(refus, `${chemin} : la clé « ${cle} » écrite deux fois n’a pas fait refuser`).toBeInstanceOf(SourceIllisible);
+      expect(
+        () => JSON.parse(texte),
+        `${chemin} : la sonde « ${cle} » n'est plus du JSON`
+      ).not.toThrow();
+      const refus = refusDe(() =>
+        chargerSources(suivis, (c) => (c === chemin ? Buffer.from(texte) : octets(c)))
+      );
+      expect(
+        refus,
+        `${chemin} : la clé « ${cle} » écrite deux fois n’a pas fait refuser`
+      ).toBeInstanceOf(SourceIllisible);
       expect(refus!.message, `${chemin} : le refus ne nomme pas la source`).toContain(chemin);
-      expect(refus!.message, `${chemin} : le refus ne nomme pas la clé dupliquée`).toContain(`« ${cle} »`);
+      expect(refus!.message, `${chemin} : le refus ne nomme pas la clé dupliquée`).toContain(
+        `« ${cle} »`
+      );
     }
   });
 
   it('un README de journal sans plancher est refusé : la frontière ne se devine pas', () => {
-    const lire = (c: string) => (c === 'docs/journal/README.md' ? Buffer.from('# Le journal\n') : octets(c));
+    const lire = (c: string) =>
+      c === 'docs/journal/README.md' ? Buffer.from('# Le journal\n') : octets(c);
     expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(/plancher/);
   });
 
@@ -481,16 +647,23 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
     const ligne = (/^.*\*\*> \d+\*\*.*$/m.exec(reel) as RegExpExecArray)[0];
     const texte = `<!-- ${ligne.replace(/\d+/, '999')} -->\n${reel}`;
     const refus = refusDe(() =>
-      chargerSources(fichiersSuivis(), (c) => (c === 'docs/journal/README.md' ? Buffer.from(texte) : octets(c)))
+      chargerSources(fichiersSuivis(), (c) =>
+        c === 'docs/journal/README.md' ? Buffer.from(texte) : octets(c)
+      )
     );
-    expect(refus, 'un plancher écrit deux fois n’a pas fait refuser').toBeInstanceOf(SourceIllisible);
+    expect(refus, 'un plancher écrit deux fois n’a pas fait refuser').toBeInstanceOf(
+      SourceIllisible
+    );
     expect(refus!.message).toMatch(/plancher/);
   });
 
   it('une entrée de registre MAL FORMÉE est refusée en nommant l’entrée et le champ, jamais sur une trace de pile', () => {
-    const lire = (c: string) => (c === 'docs/tasks.json' ? Buffer.from(JSON.stringify({ taches: [{}] })) : octets(c));
+    const lire = (c: string) =>
+      c === 'docs/tasks.json' ? Buffer.from(JSON.stringify({ taches: [{}] })) : octets(c);
     expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(SourceIllisible);
-    expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(/docs\/tasks\.json.*taches\[0\]\.id/);
+    expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(
+      /docs\/tasks\.json.*taches\[0\]\.id/
+    );
   });
 
   it('une gate SANS script est refusée en se nommant : son attribution n’aurait aucun fichier à confronter', () => {
@@ -501,7 +674,9 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
       return Buffer.from(JSON.stringify(doc));
     };
     expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(SourceIllisible);
-    expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(/docs\/gates\.json.*gates\[0\]\.script/);
+    expect(() => chargerSources(fichiersSuivis(), lire)).toThrow(
+      /docs\/gates\.json.*gates\[0\]\.script/
+    );
   });
 
   it('une chaîne VIDE là où la garde lit un identifiant ou un script est refusée en se nommant', () => {
@@ -519,7 +694,9 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
         return Buffer.from(JSON.stringify(doc));
       };
       const refus = refusDe(() => chargerSources(fichiersSuivis(), lire));
-      expect(refus, `${chemin} — ${cle}[0].${champ} vide n’a pas fait refuser`).toBeInstanceOf(SourceIllisible);
+      expect(refus, `${chemin} — ${cle}[0].${champ} vide n’a pas fait refuser`).toBeInstanceOf(
+        SourceIllisible
+      );
       expect(refus!.message).toMatch(new RegExp(`${echapper(chemin)}.*${cle}\\[0\\]\\.${champ}`));
     }
   });
@@ -536,20 +713,36 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
     const sansExtension = parExtension.get('') ?? SONDE;
     const perimetre = suivis.includes(sansExtension) ? suivis : [...suivis, sansExtension];
     const cibles = [...new Set([...parExtension.values(), sansExtension])];
-    expect(cibles.length, 'moins de deux formes de fichier : le témoin ne distinguerait rien').toBeGreaterThan(2);
+    expect(
+      cibles.length,
+      'moins de deux formes de fichier : le témoin ne distinguerait rien'
+    ).toBeGreaterThan(2);
 
     const GOV_999_UTF16 = Buffer.from('// GOV-999\n', 'utf16le');
-    const contenus = [GOV_999_UTF16, Buffer.concat([Buffer.from(`${'x'.repeat(64_000)}\n`), GOV_999_UTF16])];
+    const contenus = [
+      GOV_999_UTF16,
+      Buffer.concat([Buffer.from(`${'x'.repeat(64_000)}\n`), GOV_999_UTF16]),
+    ];
     const acceptes: string[] = [];
     for (const cible of cibles) {
       for (const [n, contenu] of contenus.entries()) {
-        const lire = (c: string) => (c === cible ? contenu : c === SONDE ? Buffer.from('rien\n') : octets(c));
+        const lire = (c: string) =>
+          c === cible ? contenu : c === SONDE ? Buffer.from('rien\n') : octets(c);
         const refus = refusDe(() => chargerSources(perimetre, lire));
-        const nomme = refus instanceof SourceIllisible && refus.message.includes(cible) && refus.message.includes('NUL');
-        if (!nomme) acceptes.push(`${cible} (${n === 0 ? 'UTF-16' : 'NUL après 64 000 octets'}) : ${refus?.message ?? 'aucun refus'}`);
+        const nomme =
+          refus instanceof SourceIllisible &&
+          refus.message.includes(cible) &&
+          refus.message.includes('NUL');
+        if (!nomme)
+          acceptes.push(
+            `${cible} (${n === 0 ? 'UTF-16' : 'NUL après 64 000 octets'}) : ${refus?.message ?? 'aucun refus'}`
+          );
       }
     }
-    expect(acceptes, 'un fichier suivi porteur d’un octet NUL n’a pas fait refuser en se nommant').toEqual([]);
+    expect(
+      acceptes,
+      'un fichier suivi porteur d’un octet NUL n’a pas fait refuser en se nommant'
+    ).toEqual([]);
   });
 
   it('un chemin suivi qui est un RÉPERTOIRE (sous-module) est refusé en se nommant, pas sur une erreur brute', () => {
@@ -563,12 +756,15 @@ describe('REQ-GOV-021 — la garde est CÂBLÉE', () => {
   it('`gov:attributions` et sa preuve existent, sont dans la chaîne `gov:check` et dans la CI', () => {
     const pkg = JSON.parse(lireReel('package.json')) as { scripts: Record<string, string> };
     expect(pkg.scripts['gov:attributions']).toBe('tsx scripts/gates/gov-attributions.ts');
-    expect(pkg.scripts['gov:attributions:prove']).toBe('tsx scripts/gates/gov-attributions.ts --prove');
+    expect(pkg.scripts['gov:attributions:prove']).toBe(
+      'tsx scripts/gates/gov-attributions.ts --prove'
+    );
     expect(pkg.scripts['gov:check']).toContain('pnpm gov:attributions');
     const ci = lireReel('.github/workflows/ci.yml');
     expect(ci, 'la garde n’est pas câblée en Gate A').toContain('pnpm gov:attributions');
-    expect(ci, 'la PREUVE n’est pas câblée : une garde dont on ne vérifie pas qu’elle sait rougir cesse un jour de garder').toContain(
-      'pnpm gov:attributions:prove'
-    );
+    expect(
+      ci,
+      'la PREUVE n’est pas câblée : une garde dont on ne vérifie pas qu’elle sait rougir cesse un jour de garder'
+    ).toContain('pnpm gov:attributions:prove');
   });
 });

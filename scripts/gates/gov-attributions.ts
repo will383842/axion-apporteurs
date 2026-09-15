@@ -186,7 +186,8 @@ export type Verdict = { fautes: Faute[]; exemptions: Exemption[] };
 
 const SENS: Record<Nature, string> = {
   dette_gate: 'non-réciprocité garde <-> tâche déclarée, que cette tâche ne peut pas réparer',
-  dette: 'identifiant qui ne résout pas, déclaré comme attribution FAUSSE hors des paths de cette tâche',
+  dette:
+    'identifiant qui ne résout pas, déclaré comme attribution FAUSSE hors des paths de cette tâche',
   gate_paths_non_resolus:
     'garde attribuée à une tâche NON LIVRÉE dont CHAQUE path est un gabarit (« pas encore connu ») : réciprocité ni vraie ni fausse',
   gate_paths_en_partie_gabarit:
@@ -201,7 +202,8 @@ const SENS: Record<Nature, string> = {
     'tâche LIVRÉE à path gabarit nommée dans un fichier que ses paths ne portent pas : « pas encore connu » n’est plus vrai — dette FIGÉE site — fichier jugé compris — et occurrences (DETTE_GABARIT_LIVREE), toute occurrence neuve rougit',
   dette_lot_journal:
     'lot que le TITRE de l’entrée de journal de sa PR n’atteste pas (titre sans lot, ou qui en nomme plusieurs) — dette FIGÉE tâche par tâche avec les lots du titre mesuré (DETTE_LOT_JOURNAL), toute tâche neuve ou tout titre qui nomme d’autres lots rougit',
-  lot_sans_pr: 'lot écrit sans PR : docs/journal/ indexe ses entrées par PR, rien ne peut l’attester',
+  lot_sans_pr:
+    'lot écrit sans PR : docs/journal/ indexe ses entrées par PR, rien ne peut l’attester',
   lot_sous_plancher: 'lot sans entrée de journal, PR sous le plancher de docs/journal/README.md',
   autre_depot: 'lot d’une tâche d’un autre dépôt : docs/journal/ n’indexe que les PR d’ici',
   contexte: 'tâche nommée comme voisine, hors de ses paths, et déclarée comme telle',
@@ -277,7 +279,12 @@ function pathsDe(t: Tache): string {
 
 /** La surface qu'une tâche DÉCLARE toucher : ses `paths` et les fichiers de son `tests{}`. */
 function surface(t: Tache): string[] {
-  return [...(t.paths ?? []), ...Object.values(t.tests ?? {}).flat().map(sansAncre)];
+  return [
+    ...(t.paths ?? []),
+    ...Object.values(t.tests ?? {})
+      .flat()
+      .map(sansAncre),
+  ];
 }
 
 /**
@@ -382,9 +389,11 @@ function chainesDe(valeur: unknown, chemin: string): [string, string][] {
   while (pile.length > 0) {
     const [v, ou] = pile.pop() as [unknown, string];
     if (typeof v === 'string') rendues.push([ou, v]);
-    else if (Array.isArray(v)) for (let i = v.length - 1; i >= 0; i--) pile.push([v[i], `${ou}[${i}]`]);
+    else if (Array.isArray(v))
+      for (let i = v.length - 1; i >= 0; i--) pile.push([v[i], `${ou}[${i}]`]);
     else if (v !== null && typeof v === 'object') {
-      for (const [cle, x] of Object.entries(v).reverse()) pile.push([x, `${ou}.${cle}`], [cle, `${ou}.${cle} (nom de clé)`]);
+      for (const [cle, x] of Object.entries(v).reverse())
+        pile.push([x, `${ou}.${cle}`], [cle, `${ou}.${cle} (nom de clé)`]);
     }
   }
   return rendues;
@@ -433,14 +442,21 @@ export function analyser(s: Sources): Verdict {
     const chemin = sansAncre(g.script);
     if (couvre(t, chemin)) continue;
     const site = siteDansGates(`docs/gates.json:${g.id}`, chemin);
-    const dette = s.dettesGate.find((d) => d.gate === g.id && d.tache === g.tache && d.script === chemin);
+    const dette = s.dettesGate.find(
+      (d) => d.gate === g.id && d.tache === g.tache && d.script === chemin
+    );
     if (dette) {
       dettesGateVues.add(dette);
       exempter('dette_gate', t.id, site, dette.raison);
       continue;
     }
     if (aUnGabarit(t) && pasEncoreLivree(t)) {
-      exempter(pathsReels(t).length === 0 ? 'gate_paths_non_resolus' : 'gate_paths_en_partie_gabarit', t.id, site, pathsDe(t));
+      exempter(
+        pathsReels(t).length === 0 ? 'gate_paths_non_resolus' : 'gate_paths_en_partie_gabarit',
+        t.id,
+        site,
+        pathsDe(t)
+      );
       continue;
     }
     if (aUnGabarit(t) && figee('gate', t.id, site)) {
@@ -498,12 +514,23 @@ export function analyser(s: Sources): Verdict {
   for (const t of s.taches) {
     if (!t.lot) continue; // aucun lot écrit : aucune attribution de lot
     if (t.pr === null || t.pr === undefined) {
-      exempter('lot_sans_pr', t.id, `lot « ${t.lot} »`, 'aucune PR écrite : aucune entrée de journal ne peut l’attester');
+      exempter(
+        'lot_sans_pr',
+        t.id,
+        `lot « ${t.lot} »`,
+        'aucune PR écrite : aucune entrée de journal ne peut l’attester'
+      );
       continue;
     }
     const repo = t.repo ?? DEPOT_LOCAL;
     // La PR de la TÂCHE se compose par son seul auteur ; l'ANCRE du journal se dérive de sa source.
-    const ref = referencePr({ id: t.id, repo, statut: t.statut ?? 'a_faire', pr: t.pr, attestation: t.attestation ?? null });
+    const ref = referencePr({
+      id: t.id,
+      repo,
+      statut: t.statut ?? 'a_faire',
+      pr: t.pr,
+      attestation: t.attestation ?? null,
+    });
     const ancre = ancreDeJournal(t.pr);
     if (repo !== DEPOT_LOCAL) {
       exempter('autre_depot', t.id, `lot « ${t.lot} », ${ref}`, `repo « ${repo} »`);
@@ -514,7 +541,12 @@ export function analyser(s: Sources): Verdict {
     const lotsDuTitre = [...new Set(titre.match(motifLot) ?? [])];
     if (entree !== undefined && nommeLeLot(titre, t.lot) && lotsDuTitre.length === 1) continue;
     if (entree === undefined && t.pr <= s.plancherJournal) {
-      exempter('lot_sous_plancher', t.id, `lot « ${t.lot} », ${ref}`, `plancher du journal : > ${s.plancherJournal}`);
+      exempter(
+        'lot_sous_plancher',
+        t.id,
+        `lot « ${t.lot} », ${ref}`,
+        `plancher du journal : > ${s.plancherJournal}`
+      );
       continue;
     }
     // La dette ne vaut que pour le titre MESURÉ au gel : les mêmes lots, dans le même ordre.
@@ -522,11 +554,20 @@ export function analyser(s: Sources): Verdict {
       entree === undefined
         ? undefined
         : s.dettesLot.find(
-            (d) => d.tache === t.id && d.lot === t.lot && d.pr === t.pr && d.lotsDuTitre.join('\n') === lotsDuTitre.join('\n')
+            (d) =>
+              d.tache === t.id &&
+              d.lot === t.lot &&
+              d.pr === t.pr &&
+              d.lotsDuTitre.join('\n') === lotsDuTitre.join('\n')
           );
     if (dette) {
       dettesLotVues.add(dette);
-      exempter('dette_lot_journal', t.id, `lot « ${t.lot} », ${ref}`, `lots du titre de « ${ancre} » : ${lotsDuTitre.join(', ') || '(aucun)'}`);
+      exempter(
+        'dette_lot_journal',
+        t.id,
+        `lot « ${t.lot} », ${ref}`,
+        `lots du titre de « ${ancre} » : ${lotsDuTitre.join(', ') || '(aucun)'}`
+      );
       continue;
     }
     dire(
@@ -536,9 +577,9 @@ export function analyser(s: Sources): Verdict {
             `au-dessus du plancher (> ${s.plancherJournal}). Rien n'atteste que cette tâche appartenait au lot : lot:cloture écrit le lot sans le vérifier.`
         : nommeLeLot(titre, t.lot)
           ? `docs/tasks.json — ${t.id} porte lot « ${t.lot} » et ${ref}, et le TITRE de l'entrée « ${ancre} » du journal nomme plusieurs lots ` +
-              `(${lotsDuTitre.join(', ')}) : il n'atteste aucun d'eux, rien ne dit lequel est celui de ${t.id}.`
+            `(${lotsDuTitre.join(', ')}) : il n'atteste aucun d'eux, rien ne dit lequel est celui de ${t.id}.`
           : `docs/tasks.json — ${t.id} porte lot « ${t.lot} » et ${ref}, et le TITRE de l'entrée « ${ancre} » du journal ne nomme pas « ${t.lot} » comme un jeton entier ` +
-              `(le corps de l'entrée ne compte pas). Une tâche étrangère au lot, présente dans le rendu, passe fusionnee avec ce lot écrit dans un fichier versionné.`
+            `(le corps de l'entrée ne compte pas). Une tâche étrangère au lot, présente dans le rendu, passe fusionnee avec ce lot écrit dans un fichier versionné.`
     );
   }
   for (const d of s.dettesLot) {
@@ -563,7 +604,14 @@ export function analyser(s: Sources): Verdict {
    * @param fichier      le fichier dont la tâche nommée doit être propriétaire
    * @param proprietaire la tâche déjà confrontée à ce fichier par la relation (1), qui ne se juge pas deux fois
    */
-  const examiner = (ou: string, figeeSous: string, fichier: string, texte: string, situer: string, proprietaire?: string) => {
+  const examiner = (
+    ou: string,
+    figeeSous: string,
+    fichier: string,
+    texte: string,
+    situer: string,
+    proprietaire?: string
+  ) => {
     for (const m of texte.match(motif) ?? []) {
       const t = parId.get(m);
       if (!t) {
@@ -590,7 +638,14 @@ export function analyser(s: Sources): Verdict {
         continue;
       }
       if (aUnGabarit(t) && pasEncoreLivree(t)) {
-        exempter(pathsReels(t).length === 0 ? 'mention_paths_non_resolus' : 'mention_paths_en_partie_gabarit', m, situer, pathsDe(t));
+        exempter(
+          pathsReels(t).length === 0
+            ? 'mention_paths_non_resolus'
+            : 'mention_paths_en_partie_gabarit',
+          m,
+          situer,
+          pathsDe(t)
+        );
         continue;
       }
       if (aUnGabarit(t) && figee('mention', m, figeeSous)) {
@@ -608,7 +663,9 @@ export function analyser(s: Sources): Verdict {
   };
 
   for (const e of s.entetes) {
-    e.lignes.forEach((ligne, i) => examiner(e.fichier, e.fichier, e.fichier, ligne, `${e.fichier}:${i + 1}`));
+    e.lignes.forEach((ligne, i) =>
+      examiner(e.fichier, e.fichier, e.fichier, ligne, `${e.fichier}:${i + 1}`)
+    );
   }
   // Chaque chaîne ET chaque nom de clé d'une entrée, à toute profondeur, PAS le seul champ `tache` : sur
   // `gov:plan-state` le champ `tache` n'a jamais bougé pendant que les identifiants changeaient dans la
@@ -723,19 +780,22 @@ export const CITATIONS_DECLAREES: Citation[] = [
     ou: 'scripts/gates/gov-tasks.ts',
     id: 'INT-T01',
     nature: 'citation',
-    raison: 'la garde NOMME la forme scindée qu’elle interdit ; les vraies tâches sont INT-T01a et INT-T01b.',
+    raison:
+      'la garde NOMME la forme scindée qu’elle interdit ; les vraies tâches sont INT-T01a et INT-T01b.',
   },
   {
     ou: 'scripts/gates/gov-tasks.ts',
     id: 'GOV-017',
     nature: 'citation',
-    raison: 'la garde NOMME la forme scindée qu’elle interdit ; les vraies tâches sont GOV-017a et GOV-017b.',
+    raison:
+      'la garde NOMME la forme scindée qu’elle interdit ; les vraies tâches sont GOV-017a et GOV-017b.',
   },
   {
     ou: 'scripts/gates/gov-tasks.ts',
     id: 'EXT-T02',
     nature: 'citation',
-    raison: 'la garde NOMME la forme scindée qu’elle interdit ; EXT-T02a et EXT-T02b existent, EXT-T02 non.',
+    raison:
+      'la garde NOMME la forme scindée qu’elle interdit ; EXT-T02a et EXT-T02b existent, EXT-T02 non.',
   },
   {
     ou: 'docs/gates.json:gov:tasks.verifie',
@@ -747,13 +807,15 @@ export const CITATIONS_DECLAREES: Citation[] = [
     ou: 'docs/gates.json:gov:tasks.verifie',
     id: 'GOV-017',
     nature: 'citation',
-    raison: 'le registre décrit la forme scindée que gov:tasks interdit ; GOV-017a et GOV-017b existent.',
+    raison:
+      'le registre décrit la forme scindée que gov:tasks interdit ; GOV-017a et GOV-017b existent.',
   },
   {
     ou: 'docs/gates.json:gov:tasks.verifie',
     id: 'EXT-T02',
     nature: 'citation',
-    raison: 'le registre décrit la forme scindée que gov:tasks interdit ; EXT-T02a et EXT-T02b existent.',
+    raison:
+      'le registre décrit la forme scindée que gov:tasks interdit ; EXT-T02a et EXT-T02b existent.',
   },
   // ── des attributions FAUSSES, dans des fichiers hors des paths de GOV-037 ──
   {
@@ -786,7 +848,8 @@ export const CITATIONS_DECLAREES: Citation[] = [
     ou: 'scripts/gates/gh-sur.js',
     id: 'GOV-012',
     nature: 'contexte',
-    raison: 'historique : la tâche qui a TROUVÉ le défaut que ce fichier ferme, pas celle qui le porte.',
+    raison:
+      'historique : la tâche qui a TROUVÉ le défaut que ce fichier ferme, pas celle qui le porte.',
   },
   {
     ou: 'scripts/gates/gh-sur.js',
@@ -812,19 +875,22 @@ export const CITATIONS_DECLAREES: Citation[] = [
     ou: 'tests/unit/gouvernance/autonomie.spec.ts',
     id: 'GOV-011',
     nature: 'contexte',
-    raison: 'historique : la garde de traçabilité de cette tâche a trouvé le défaut que ce test tient.',
+    raison:
+      'historique : la garde de traçabilité de cette tâche a trouvé le défaut que ce test tient.',
   },
   {
     ou: 'tests/unit/gouvernance/autonomie.spec.ts',
     id: 'GOV-012',
     nature: 'contexte',
-    raison: 'renvoie à la tâche qui porte la protection de branche dont ce test décrit le contournement.',
+    raison:
+      'renvoie à la tâche qui porte la protection de branche dont ce test décrit le contournement.',
   },
   {
     ou: 'tests/unit/gouvernance/corps-de-pr-couvre.spec.ts',
     id: 'GOV-036',
     nature: 'contexte',
-    raison: 'exemple cité : gov-entite.ts désigne cette tâche, et c’est le cas que le test illustre.',
+    raison:
+      'exemple cité : gov-entite.ts désigne cette tâche, et c’est le cas que le test illustre.',
   },
   {
     ou: 'tests/unit/gouvernance/tout-check-est-cable.spec.ts',
@@ -836,7 +902,8 @@ export const CITATIONS_DECLAREES: Citation[] = [
     ou: 'docs/gates.json:perf:bundle.verifie',
     id: 'GOV-019',
     nature: 'contexte',
-    raison: 'la prose date les seuils de la première mesure faite par cette tâche ; la gate est à une autre.',
+    raison:
+      'la prose date les seuils de la première mesure faite par cette tâche ; la gate est à une autre.',
   },
   {
     ou: 'scripts/gates/gov-check.ts',
@@ -862,23 +929,103 @@ export const CITATIONS_DECLAREES: Citation[] = [
  */
 export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gate-a (.github/workflows/ci.yml)', n: 1 },
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gate-deploiement (scripts/gates/deploy-verify.ts)', n: 1 },
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:autonomie (scripts/gates/gov-autonomie.ts)', n: 1 },
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:check (scripts/gates/gov-check.ts)', n: 1 },
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:publication (scripts/gates/gov-publication.ts)', n: 1 },
-  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:notify-sink-hors-prod (scripts/gates/hook-env.js)', n: 1 },
-  { tache: 'GOV-001', lieu: 'gate', ou: 'docs/gates.json:gov:requirements (scripts/gates/gov-requirements.ts)', n: 1 },
-  { tache: 'GOV-002', lieu: 'gate', ou: 'docs/gates.json:gov:preseance (scripts/gates/gov-preseance.ts)', n: 1 },
-  { tache: 'GOV-003', lieu: 'gate', ou: 'docs/gates.json:gov:identifiants (scripts/gates/gov-identifiants.ts)', n: 1 },
-  { tache: 'GOV-004', lieu: 'gate', ou: 'docs/gates.json:gov:sonde (scripts/gates/gov-sonde.ts)', n: 1 },
-  { tache: 'GOV-005', lieu: 'gate', ou: 'docs/gates.json:gov:hypotheses (scripts/gates/gov-hypotheses.ts)', n: 1 },
+  {
+    tache: 'GOV-000',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gate-deploiement (scripts/gates/deploy-verify.ts)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-000',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:autonomie (scripts/gates/gov-autonomie.ts)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-000',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:check (scripts/gates/gov-check.ts)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-000',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:publication (scripts/gates/gov-publication.ts)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-000',
+    lieu: 'gate',
+    ou: 'docs/gates.json:notify-sink-hors-prod (scripts/gates/hook-env.js)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-001',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:requirements (scripts/gates/gov-requirements.ts)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-002',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:preseance (scripts/gates/gov-preseance.ts)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-003',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:identifiants (scripts/gates/gov-identifiants.ts)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-004',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:sonde (scripts/gates/gov-sonde.ts)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-005',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:hypotheses (scripts/gates/gov-hypotheses.ts)',
+    n: 1,
+  },
   { tache: 'GOV-007', lieu: 'gate', ou: 'docs/gates.json:gov:pr (scripts/gates/gov-pr.ts)', n: 1 },
-  { tache: 'GOV-009', lieu: 'gate', ou: 'docs/gates.json:gov:adr (scripts/gates/gov-adr.ts)', n: 1 },
-  { tache: 'GOV-017a', lieu: 'gate', ou: 'docs/gates.json:gov:tasks (scripts/gates/gov-tasks.ts)', n: 1 },
-  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gate-nightly (.github/workflows/nightly.yml)', n: 1 },
-  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gates:prouvees (scripts/gates/gates-prouvees.ts)', n: 1 },
-  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gov:gates-derivees (scripts/gates/gates-derivees.ts)', n: 1 },
-  { tache: 'GOV-000', lieu: 'mention', ou: 'docs/gates.json:gov:inventaire.verifie (scripts/gates/gov-inventaire.ts)', n: 1 },
+  {
+    tache: 'GOV-009',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:adr (scripts/gates/gov-adr.ts)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-017a',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:tasks (scripts/gates/gov-tasks.ts)',
+    n: 1,
+  },
+  {
+    tache: 'QA-T00',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gate-nightly (.github/workflows/nightly.yml)',
+    n: 1,
+  },
+  {
+    tache: 'QA-T00',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gates:prouvees (scripts/gates/gates-prouvees.ts)',
+    n: 1,
+  },
+  {
+    tache: 'QA-T00',
+    lieu: 'gate',
+    ou: 'docs/gates.json:gov:gates-derivees (scripts/gates/gates-derivees.ts)',
+    n: 1,
+  },
+  {
+    tache: 'GOV-000',
+    lieu: 'mention',
+    ou: 'docs/gates.json:gov:inventaire.verifie (scripts/gates/gov-inventaire.ts)',
+    n: 1,
+  },
   { tache: 'GOV-000', lieu: 'mention', ou: 'scripts/gates/gov-autonomie.ts', n: 1 },
   { tache: 'GOV-001', lieu: 'mention', ou: 'scripts/gates/gov-requirements.ts', n: 1 },
   { tache: 'GOV-001', lieu: 'mention', ou: 'tests/unit/gouvernance/glossaire-enums.spec.ts', n: 1 },
@@ -888,24 +1035,64 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   { tache: 'GOV-003', lieu: 'mention', ou: 'scripts/gates/gov-tasks.ts', n: 1 },
   { tache: 'GOV-004', lieu: 'mention', ou: 'scripts/gates/gov-inventaire.ts', n: 1 },
   { tache: 'GOV-004', lieu: 'mention', ou: 'scripts/gates/gov-sonde.ts', n: 2 },
-  { tache: 'GOV-004', lieu: 'mention', ou: 'tests/unit/gouvernance/affirmations-verifiees.spec.ts', n: 1 },
-  { tache: 'GOV-004', lieu: 'mention', ou: 'tests/unit/gouvernance/inventaire-prouve.spec.ts', n: 1 },
+  {
+    tache: 'GOV-004',
+    lieu: 'mention',
+    ou: 'tests/unit/gouvernance/affirmations-verifiees.spec.ts',
+    n: 1,
+  },
+  {
+    tache: 'GOV-004',
+    lieu: 'mention',
+    ou: 'tests/unit/gouvernance/inventaire-prouve.spec.ts',
+    n: 1,
+  },
   { tache: 'GOV-005', lieu: 'mention', ou: 'scripts/gates/gov-hypotheses.ts', n: 1 },
   { tache: 'GOV-007', lieu: 'mention', ou: 'scripts/gates/gov-pr.ts', n: 1 },
   { tache: 'GOV-009', lieu: 'mention', ou: 'scripts/adr/index.ts', n: 1 },
   { tache: 'GOV-009', lieu: 'mention', ou: 'scripts/gates/gov-adr.ts', n: 1 },
-  { tache: 'GOV-009', lieu: 'mention', ou: 'tests/unit/gouvernance/adr-assertion-existe.spec.ts', n: 2 },
-  { tache: 'GOV-009', lieu: 'mention', ou: 'tests/unit/gouvernance/adr-index-derive.spec.ts', n: 1 },
-  { tache: 'GOV-015', lieu: 'mention', ou: 'tests/unit/gouvernance/fiches-tiers.controles.ts', n: 1 },
+  {
+    tache: 'GOV-009',
+    lieu: 'mention',
+    ou: 'tests/unit/gouvernance/adr-assertion-existe.spec.ts',
+    n: 2,
+  },
+  {
+    tache: 'GOV-009',
+    lieu: 'mention',
+    ou: 'tests/unit/gouvernance/adr-index-derive.spec.ts',
+    n: 1,
+  },
+  {
+    tache: 'GOV-015',
+    lieu: 'mention',
+    ou: 'tests/unit/gouvernance/fiches-tiers.controles.ts',
+    n: 1,
+  },
   { tache: 'GOV-015', lieu: 'mention', ou: 'tests/unit/gouvernance/fiches-tiers.spec.ts', n: 1 },
   { tache: 'GOV-017a', lieu: 'mention', ou: 'scripts/gates/gov-tasks.ts', n: 1 },
   { tache: 'GOV-017a', lieu: 'mention', ou: 'scripts/lot/tasks.schema.json', n: 1 },
-  { tache: 'GOV-017b', lieu: 'mention', ou: 'docs/gates.json:gov:tasks.verifie (scripts/gates/gov-tasks.ts)', n: 1 },
+  {
+    tache: 'GOV-017b',
+    lieu: 'mention',
+    ou: 'docs/gates.json:gov:tasks.verifie (scripts/gates/gov-tasks.ts)',
+    n: 1,
+  },
   { tache: 'GOV-017b', lieu: 'mention', ou: 'scripts/lot/paths-proposes.ts', n: 1 },
   { tache: 'GOV-017b', lieu: 'mention', ou: 'tests/unit/gouvernance/regles-maison.spec.ts', n: 1 },
   { tache: 'INT-T01b', lieu: 'mention', ou: 'scripts/lot/attestation.ts', n: 2 },
-  { tache: 'INT-T01b', lieu: 'mention', ou: 'tests/fixtures/axionia/enveloppes-provisoires.json', n: 2 },
-  { tache: 'INT-T01b', lieu: 'mention', ou: 'tests/unit/gouvernance/attestation-inter-depot.spec.ts', n: 2 },
+  {
+    tache: 'INT-T01b',
+    lieu: 'mention',
+    ou: 'tests/fixtures/axionia/enveloppes-provisoires.json',
+    n: 2,
+  },
+  {
+    tache: 'INT-T01b',
+    lieu: 'mention',
+    ou: 'tests/unit/gouvernance/attestation-inter-depot.spec.ts',
+    n: 2,
+  },
   { tache: 'QA-T00', lieu: 'mention', ou: 'scripts/gates/gates-derivees.ts', n: 1 },
   { tache: 'QA-T00', lieu: 'mention', ou: 'scripts/gates/gates-prouvees.ts', n: 1 },
 ];
@@ -919,13 +1106,28 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
  * un titre réécrit pour nommer d'autres lots aussi : chaque entrée fige les lots que le titre nommait.
  */
 export const DETTE_LOT_JOURNAL: DetteLot[] = [
-  ...['GOV-006', 'GOV-013', 'CPL-T01', 'GOV-024', 'GOV-025', 'GOV-026', 'GOV-027', 'GOV-029', 'GOV-032'].map((tache) => ({
+  ...[
+    'GOV-006',
+    'GOV-013',
+    'CPL-T01',
+    'GOV-024',
+    'GOV-025',
+    'GOV-026',
+    'GOV-027',
+    'GOV-029',
+    'GOV-032',
+  ].map((tache) => ({
     tache,
     lot: 'L-1-04',
     pr: 31,
     lotsDuTitre: ['L-1-04', 'L-1-05', 'L-1-06'],
   })),
-  ...['GOV-014', 'GOV-019', 'GOV-028', 'GOV-038'].map((tache) => ({ tache, lot: 'L-1-05', pr: 33, lotsDuTitre: [] })),
+  ...['GOV-014', 'GOV-019', 'GOV-028', 'GOV-038'].map((tache) => ({
+    tache,
+    lot: 'L-1-05',
+    pr: 33,
+    lotsDuTitre: [],
+  })),
 ];
 
 // ── chargement des sources réelles ────────────────────────────────────────────
@@ -982,11 +1184,23 @@ function cleDupliquee(texte: string): { cle: string; ligne: number } | null {
  * égales à celles du type : un champ ajouté au type sans sa forme ne compile pas.
  */
 type Forme = { ok: (v: unknown) => boolean; attendu: string };
-const CHAINE: Forme = { ok: (v) => typeof v === 'string' && v.length > 0, attendu: 'une chaîne non vide' };
-const CHAINES: Forme = { ok: (v) => Array.isArray(v) && v.every((x) => typeof x === 'string'), attendu: 'un tableau de chaînes' };
+const CHAINE: Forme = {
+  ok: (v) => typeof v === 'string' && v.length > 0,
+  attendu: 'une chaîne non vide',
+};
+const CHAINES: Forme = {
+  ok: (v) => Array.isArray(v) && v.every((x) => typeof x === 'string'),
+  attendu: 'un tableau de chaînes',
+};
 const ENTIER: Forme = { ok: (v) => Number.isInteger(v), attendu: 'un entier' };
-const OBJET: Forme = { ok: (v) => v !== null && typeof v === 'object' && !Array.isArray(v), attendu: 'un objet' };
-const DICTIONNAIRE: Forme = { ok: (v) => OBJET.ok(v) && Object.values(v as object).every(CHAINES.ok), attendu: 'un objet de tableaux de chaînes' };
+const OBJET: Forme = {
+  ok: (v) => v !== null && typeof v === 'object' && !Array.isArray(v),
+  attendu: 'un objet',
+};
+const DICTIONNAIRE: Forme = {
+  ok: (v) => OBJET.ok(v) && Object.values(v as object).every(CHAINES.ok),
+  attendu: 'un objet de tableaux de chaînes',
+};
 const facultatif = (f: Forme, nul = false): Forme => ({
   ok: (v) => v === undefined || (nul && v === null) || f.ok(v),
   attendu: `${f.attendu}${nul ? ', null' : ''} ou rien`,
@@ -1023,7 +1237,9 @@ export function chargerSources(
   const suivi = new Set(suivis);
   const texte = (chemin: string): string => {
     if (!suivi.has(chemin)) {
-      throw new SourceIllisible(`${chemin} n'est pas un fichier SUIVI par git : la garde ne lit pas ce que le dépôt ne porte pas.`);
+      throw new SourceIllisible(
+        `${chemin} n'est pas un fichier SUIVI par git : la garde ne lit pas ce que le dépôt ne porte pas.`
+      );
     }
     let octets: Uint8Array;
     try {
@@ -1037,7 +1253,9 @@ export function chargerSources(
     // UTF-8, il ne serait jamais vu. Un octet NUL, où qu'il soit, fait donc refuser. Sans NUL, les octets
     // non UTF-8 sont remplacés au décodage et les identifiants ASCII restent lisibles.
     if (octets.includes(0)) {
-      throw new SourceIllisible(`${chemin} porte un octet NUL : ce n'est pas du texte UTF-8 (UTF-16, binaire), aucun identifiant n'y serait vu.`);
+      throw new SourceIllisible(
+        `${chemin} porte un octet NUL : ce n'est pas du texte UTF-8 (UTF-16, binaire), aucun identifiant n'y serait vu.`
+      );
     }
     return DECODEUR_UTF8.decode(octets);
   };
@@ -1056,12 +1274,16 @@ export function chargerSources(
           `garderait la dernière, le lecteur du fichier ou du diff lit la première. La garde ne choisit pas.`
       );
     }
-    const valeur = doc !== null && typeof doc === 'object' ? (doc as Record<string, unknown>)[cle] : undefined;
+    const valeur =
+      doc !== null && typeof doc === 'object' ? (doc as Record<string, unknown>)[cle] : undefined;
     if (!Array.isArray(valeur)) {
-      throw new SourceIllisible(`${chemin} ne porte pas de tableau « ${cle} » : un registre renommé n'est pas un registre vide.`);
+      throw new SourceIllisible(
+        `${chemin} ne porte pas de tableau « ${cle} » : un registre renommé n'est pas un registre vide.`
+      );
     }
     valeur.forEach((entree, i) => {
-      if (!OBJET.ok(entree)) throw new SourceIllisible(`${chemin} — ${cle}[${i}] n'est pas un objet.`);
+      if (!OBJET.ok(entree))
+        throw new SourceIllisible(`${chemin} — ${cle}[${i}] n'est pas un objet.`);
       for (const [champ, forme] of Object.entries(FORMES[cle] as Record<string, Forme>)) {
         const v = (entree as Record<string, unknown>)[champ];
         if (forme.ok(v)) continue;
@@ -1074,9 +1296,13 @@ export function chargerSources(
     return valeur as T[];
   };
 
-  const journaux = suivis.filter((f) => f.startsWith('docs/journal/') && f.endsWith('.md') && f !== README_JOURNAL);
+  const journaux = suivis.filter(
+    (f) => f.startsWith('docs/journal/') && f.endsWith('.md') && f !== README_JOURNAL
+  );
   if (journaux.length === 0) {
-    throw new SourceIllisible(`aucun fichier de journal SUIVI sous docs/journal/ : l'attestation des lots n'aurait aucune source.`);
+    throw new SourceIllisible(
+      `aucun fichier de journal SUIVI sous docs/journal/ : l'attestation des lots n'aurait aucune source.`
+    );
   }
   const planchers = [...texte(README_JOURNAL).matchAll(MOTIF_PLANCHER)];
   if (planchers.length !== 1) {
@@ -1116,7 +1342,9 @@ function rendreVert(exemptions: Exemption[]): string[] {
   for (const nature of NATURES) {
     const siennes = exemptions.filter((e) => e.nature === nature);
     if (siennes.length === 0) continue;
-    lignes.push(`   ${nature.startsWith('dette') ? '⛔' : '·'} ${nature} (${siennes.length}) — ${SENS[nature]}`);
+    lignes.push(
+      `   ${nature.startsWith('dette') ? '⛔' : '·'} ${nature} (${siennes.length}) — ${SENS[nature]}`
+    );
     siennes.forEach((e) => lignes.push(`      ${e.tache} — ${e.site} : ${e.motif}`));
   }
   return lignes;
@@ -1129,9 +1357,13 @@ function rendreVert(exemptions: Exemption[]): string[] {
  */
 function rendre({ fautes, exemptions }: Verdict): { code: number; lignes: string[] } {
   if (fautes.length === 0) return { code: 0, lignes: rendreVert(exemptions) };
-  const lignes = [`❌ gov:attributions — ${fautes.length} attribution(s) rompue(s) (REQ-GOV-021, REQ-GOV-003) :\n`];
+  const lignes = [
+    `❌ gov:attributions — ${fautes.length} attribution(s) rompue(s) (REQ-GOV-021, REQ-GOV-003) :\n`,
+  ];
   fautes.forEach((f) => lignes.push(`   [${f.famille}] ${f.message}`));
-  lignes.push(`\nUne attribution fausse envoie le lecteur suivant chercher dans un fichier que personne n'a touché.`);
+  lignes.push(
+    `\nUne attribution fausse envoie le lecteur suivant chercher dans un fichier que personne n'a touché.`
+  );
   return { code: 1, lignes };
 }
 
@@ -1174,26 +1406,49 @@ const T_RESOLUE: Tache = {
 /** Une voisine RÉSOLUE, propriétaire d'un AUTRE fichier. */
 const T_VOISINE: Tache = { ...T_RESOLUE, id: 'GOV-101', paths: ['scripts/gates/autre.ts'] };
 /** Des tâches NON LIVRÉES aux paths GABARIT : « pas encore connu » y est vrai. */
-const T_GABARIT: Tache = { ...T_RESOLUE, id: 'GOV-003', paths: ['docs/gouvernance/GOV-003'], statut: 'a_faire' };
+const T_GABARIT: Tache = {
+  ...T_RESOLUE,
+  id: 'GOV-003',
+  paths: ['docs/gouvernance/GOV-003'],
+  statut: 'a_faire',
+};
 const T_GABARIT_BIS: Tache = { ...T_GABARIT, id: 'GOV-004', paths: ['docs/gouvernance/GOV-004'] };
 /** Une tâche NON LIVRÉE aux paths MIXTES : un path réel qui ne porte pas le fichier jugé, et un gabarit. */
-const T_MIXTE: Tache = { ...T_GABARIT, id: 'GOV-007', paths: ['docs/gouvernance/GOV-007', 'prisma/schema.prisma'] };
+const T_MIXTE: Tache = {
+  ...T_GABARIT,
+  id: 'GOV-007',
+  paths: ['docs/gouvernance/GOV-007', 'prisma/schema.prisma'],
+};
 /** Les mêmes, LIVRÉES : « pas encore connu » est faux, leur attribution est jugée. */
 const T_LIVREE_GABARIT: Tache = { ...T_GABARIT, statut: 'fusionnee' };
 const T_LIVREE_MIXTE: Tache = { ...T_MIXTE, statut: 'fusionnee' };
 const JOURNAL = '## PR #31 — 2026-09-10 — feat(GOV-024): lot L-1-04\n\n**Fait.** Neuf tâches.\n';
-const JOURNAL_MULTI = '## PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06\n\n**Fait.** Neuf tâches.\n';
-const GATE_GABARIT = { id: 'gov:identifiants', script: 'scripts/gates/gov-identifiants.ts', tache: 'GOV-003' };
+const JOURNAL_MULTI =
+  '## PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06\n\n**Fait.** Neuf tâches.\n';
+const GATE_GABARIT = {
+  id: 'gov:identifiants',
+  script: 'scripts/gates/gov-identifiants.ts',
+  tache: 'GOV-003',
+};
 /** Le site de `GATE_GABARIT` tel que l'analyse le compose : la clé sous laquelle sa dette se fige. */
 const SITE_GATE_GABARIT = siteDansGates(`docs/gates.json:${GATE_GABARIT.id}`, GATE_GABARIT.script);
 /** Une gate de GOV-101 (réciproque) dont la prose nomme GOV-003, et le site de cette mention, script compris. */
-const GATE_PROSE = { id: 'g', script: 'scripts/gates/autre.ts', tache: 'GOV-101', verifie: 'étendue par GOV-003' };
+const GATE_PROSE = {
+  id: 'g',
+  script: 'scripts/gates/autre.ts',
+  tache: 'GOV-101',
+  verifie: 'étendue par GOV-003',
+};
 const SITE_PROSE = siteDansGates(`docs/gates.json:${GATE_PROSE.id}.verifie`, GATE_PROSE.script);
 /** Les lots que nomme le titre de `JOURNAL_MULTI`, figés comme la dette de lot les fige. */
 const LOTS_MULTI = ['L-1-04', 'L-1-05', 'L-1-06'];
 const RAISON = 'une raison qui dit pourquoi, relisible par la session suivante';
-const DEPOT_ETRANGER = Object.keys(DEPOTS).find((r) => r !== DEPOT_LOCAL && DEPOTS[r] !== null) as string;
-const entete = (lignes: string[], fichier = 'scripts/gates/porte.ts'): Entete[] => [{ fichier, lignes }];
+const DEPOT_ETRANGER = Object.keys(DEPOTS).find(
+  (r) => r !== DEPOT_LOCAL && DEPOTS[r] !== null
+) as string;
+const entete = (lignes: string[], fichier = 'scripts/gates/porte.ts'): Entete[] => [
+  { fichier, lignes },
+];
 const PII = { id: 'detectPii', script: 'scripts/gates/detect-pii.ts', tache: 'GOV-100' };
 
 const TEMOINS: Temoin[] = [
@@ -1219,7 +1474,10 @@ const TEMOINS: Temoin[] = [
   {
     famille: 'gate_non_reciproque',
     quoi: 'un path SANS barre finale ne couvre pas le fichier qui le prolonge (`porte.ts` ne couvre pas `porte.tsx`)',
-    sources: { taches: [T_RESOLUE], gates: [{ id: 'porte', script: 'scripts/gates/porte.tsx', tache: 'GOV-100' }] },
+    sources: {
+      taches: [T_RESOLUE],
+      gates: [{ id: 'porte', script: 'scripts/gates/porte.tsx', tache: 'GOV-100' }],
+    },
     nomme: ['scripts/gates/porte.tsx'],
   },
   {
@@ -1228,7 +1486,14 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [{ ...T_RESOLUE, paths: ['packages/contracts/'] }],
       gates: [PII, { id: 'nouvelle', script: 'scripts/gates/nouvelle.ts', tache: 'GOV-100' }],
-      dettesGate: [{ gate: 'detectPii', tache: 'GOV-100', script: 'scripts/gates/detect-pii.ts', raison: RAISON }],
+      dettesGate: [
+        {
+          gate: 'detectPii',
+          tache: 'GOV-100',
+          script: 'scripts/gates/detect-pii.ts',
+          raison: RAISON,
+        },
+      ],
     },
     nomme: ['nouvelle'],
   },
@@ -1247,7 +1512,13 @@ const TEMOINS: Temoin[] = [
     nomme: [
       'L-9-99',
       ancreDeJournal(31),
-      referencePr({ id: 'GOV-100', repo: DEPOT_LOCAL, statut: 'fusionnee', pr: 31, attestation: null }) as string,
+      referencePr({
+        id: 'GOV-100',
+        repo: DEPOT_LOCAL,
+        statut: 'fusionnee',
+        pr: 31,
+        attestation: null,
+      }) as string,
     ],
   },
   {
@@ -1259,7 +1530,11 @@ const TEMOINS: Temoin[] = [
   {
     famille: 'lot_non_atteste',
     quoi: 'une PR sans entrée, UN numéro au-dessus du plancher',
-    sources: { taches: [{ ...T_RESOLUE, lot: 'L-1-04', pr: 28 }], journal: JOURNAL, plancherJournal: 27 },
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-1-04', pr: 28 }],
+      journal: JOURNAL,
+      plancherJournal: 27,
+    },
     nomme: [ancreDeJournal(28)],
   },
   {
@@ -1275,7 +1550,10 @@ const TEMOINS: Temoin[] = [
   {
     famille: 'lot_non_atteste',
     quoi: 'F-LOT : un lot FAUX cité seulement dans le CORPS de l’entrée n’est pas attesté — seul le titre atteste',
-    sources: { taches: [{ ...T_RESOLUE, lot: 'L-9-98', pr: 31 }], journal: `${JOURNAL}Le corps cite aussi L-9-98.\n` },
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-9-98', pr: 31 }],
+      journal: `${JOURNAL}Le corps cite aussi L-9-98.\n`,
+    },
     nomme: ['L-9-98', 'TITRE', 'le corps de l'],
   },
   {
@@ -1316,13 +1594,19 @@ const TEMOINS: Temoin[] = [
   {
     famille: 'lot_non_atteste',
     quoi: 'un titre caché dans un COMMENTAIRE HTML jamais fermé n’est pas une entrée',
-    sources: { taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 32 }], journal: `${JOURNAL}<!--\n## PR #32 — lot L-9-99\n` },
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 32 }],
+      journal: `${JOURNAL}<!--\n## PR #32 — lot L-9-99\n`,
+    },
     nomme: ['L-9-99', ancreDeJournal(32), 'aucune entrée'],
   },
   {
     famille: 'lot_non_atteste',
     quoi: 'un SECOND titre visible de la même PR ne remplace pas le premier : leurs lots comptent ensemble',
-    sources: { taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 31 }], journal: `${JOURNAL}\n## PR #31 — lot L-9-99\n` },
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 31 }],
+      journal: `${JOURNAL}\n## PR #31 — lot L-9-99\n`,
+    },
     nomme: ['L-9-99', 'plusieurs lots'],
   },
   {
@@ -1345,7 +1629,10 @@ const TEMOINS: Temoin[] = [
   {
     famille: 'gate_non_reciproque',
     quoi: 'une gate NEUVE attribuée à une tâche LIVRÉE aux paths MIXTES',
-    sources: { taches: [T_LIVREE_MIXTE], gates: [{ id: 'gov:pr', script: 'scripts/gates/gov-pr.ts', tache: 'GOV-007' }] },
+    sources: {
+      taches: [T_LIVREE_MIXTE],
+      gates: [{ id: 'gov:pr', script: 'scripts/gates/gov-pr.ts', tache: 'GOV-007' }],
+    },
     nomme: ['gov:pr', 'GOV-007', 'DETTE_GABARIT_LIVREE'],
   },
   {
@@ -1372,11 +1659,19 @@ const TEMOINS: Temoin[] = [
     famille: 'mention_hors_paths',
     quoi: 'une dette figée sur une chaîne de docs/gates.json n’absout pas la même mention quand la gate est repointée vers un AUTRE script',
     sources: {
-      taches: [{ ...T_VOISINE, paths: ['scripts/gates/autre.ts', 'scripts/gates/porte.ts'] }, T_LIVREE_GABARIT],
+      taches: [
+        { ...T_VOISINE, paths: ['scripts/gates/autre.ts', 'scripts/gates/porte.ts'] },
+        T_LIVREE_GABARIT,
+      ],
       gates: [{ ...GATE_PROSE, script: 'scripts/gates/porte.ts' }],
       dettesGabarit: [{ tache: 'GOV-003', lieu: 'mention', ou: SITE_PROSE, n: 1 }],
     },
-    nomme: ['docs/gates.json:g.verifie', 'scripts/gates/porte.ts', 'GOV-003', 'DETTE_GABARIT_LIVREE'],
+    nomme: [
+      'docs/gates.json:g.verifie',
+      'scripts/gates/porte.ts',
+      'GOV-003',
+      'DETTE_GABARIT_LIVREE',
+    ],
   },
   {
     famille: 'mention_hors_paths',
@@ -1423,7 +1718,10 @@ const TEMOINS: Temoin[] = [
   {
     famille: 'mention_hors_paths',
     quoi: 'un statut ABSENT n’exempte pas un gabarit : le prédicat « pas encore connu » est fermé',
-    sources: { taches: [T_RESOLUE, { ...T_GABARIT, statut: undefined }], entetes: entete(['// étendue par GOV-003']) },
+    sources: {
+      taches: [T_RESOLUE, { ...T_GABARIT, statut: undefined }],
+      entetes: entete(['// étendue par GOV-003']),
+    },
     nomme: ['GOV-003', 'statut absent'],
   },
   // ── (4) mentions ──
@@ -1438,7 +1736,14 @@ const TEMOINS: Temoin[] = [
     quoi: 'la PROSE d’une entrée de docs/gates.json est lue, pas seulement son champ tache',
     sources: {
       taches: [T_RESOLUE],
-      gates: [{ id: 'gov:plan-state', script: 'scripts/gates/porte.ts', tache: 'GOV-100', verifie: 'la lacune que GOV-033 porte' }],
+      gates: [
+        {
+          id: 'gov:plan-state',
+          script: 'scripts/gates/porte.ts',
+          tache: 'GOV-100',
+          verifie: 'la lacune que GOV-033 porte',
+        },
+      ],
     },
     nomme: ['docs/gates.json:gov:plan-state.verifie', 'GOV-033'],
   },
@@ -1447,7 +1752,14 @@ const TEMOINS: Temoin[] = [
     quoi: 'un élément d’un TABLEAU d’une entrée de docs/gates.json est lu (`alias`)',
     sources: {
       taches: [T_RESOLUE],
-      gates: [{ id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', alias: ['gov:g', 'GOV-033'] }],
+      gates: [
+        {
+          id: 'g',
+          script: 'scripts/gates/porte.ts',
+          tache: 'GOV-100',
+          alias: ['gov:g', 'GOV-033'],
+        },
+      ],
     },
     nomme: ['docs/gates.json:g.alias[1]', 'GOV-033'],
   },
@@ -1456,7 +1768,14 @@ const TEMOINS: Temoin[] = [
     quoi: 'une chaîne d’un OBJET imbriqué dans une entrée de docs/gates.json est lue',
     sources: {
       taches: [T_RESOLUE],
-      gates: [{ id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', preuveRouge: { sortie: 'la lacune de GOV-033' } }],
+      gates: [
+        {
+          id: 'g',
+          script: 'scripts/gates/porte.ts',
+          tache: 'GOV-100',
+          preuveRouge: { sortie: 'la lacune de GOV-033' },
+        },
+      ],
     },
     nomme: ['docs/gates.json:g.preuveRouge.sortie', 'GOV-033'],
   },
@@ -1465,7 +1784,14 @@ const TEMOINS: Temoin[] = [
     quoi: 'une chaîne d’un OBJET posé DANS un TABLEAU est lue',
     sources: {
       taches: [T_RESOLUE],
-      gates: [{ id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', exemples: [{ sortie: 'la lacune de GOV-033' }] }],
+      gates: [
+        {
+          id: 'g',
+          script: 'scripts/gates/porte.ts',
+          tache: 'GOV-100',
+          exemples: [{ sortie: 'la lacune de GOV-033' }],
+        },
+      ],
     },
     nomme: ['docs/gates.json:g.exemples[0].sortie', 'GOV-033'],
   },
@@ -1474,7 +1800,14 @@ const TEMOINS: Temoin[] = [
     quoi: 'un élément d’un TABLEAU posé DANS un OBJET est lu',
     sources: {
       taches: [T_RESOLUE],
-      gates: [{ id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', preuveRouge: { lignes: ['rien', 'GOV-033'] } }],
+      gates: [
+        {
+          id: 'g',
+          script: 'scripts/gates/porte.ts',
+          tache: 'GOV-100',
+          preuveRouge: { lignes: ['rien', 'GOV-033'] },
+        },
+      ],
     },
     nomme: ['docs/gates.json:g.preuveRouge.lignes[1]', 'GOV-033'],
   },
@@ -1483,7 +1816,9 @@ const TEMOINS: Temoin[] = [
     quoi: 'un identifiant écrit comme NOM DE CLÉ d’une entrée de docs/gates.json est lu',
     sources: {
       taches: [T_RESOLUE],
-      gates: [{ id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', 'GOV-033': 'porté ici' }],
+      gates: [
+        { id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', 'GOV-033': 'porté ici' },
+      ],
     },
     nomme: ['docs/gates.json:g.GOV-033 (nom de clé)'],
   },
@@ -1493,7 +1828,9 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-017']),
-      citations: [{ ou: 'scripts/gates/gov-tasks.ts', id: 'GOV-017', nature: 'citation', raison: RAISON }],
+      citations: [
+        { ou: 'scripts/gates/gov-tasks.ts', id: 'GOV-017', nature: 'citation', raison: RAISON },
+      ],
     },
     nomme: ['scripts/gates/porte.ts:1', 'GOV-017'],
   },
@@ -1503,7 +1840,9 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-017 et GOV-033']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'citation', raison: RAISON }],
+      citations: [
+        { ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'citation', raison: RAISON },
+      ],
     },
     nomme: ['GOV-033'],
   },
@@ -1513,14 +1852,19 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-033']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-033', nature: 'contexte', raison: RAISON }],
+      citations: [
+        { ou: 'scripts/gates/porte.ts', id: 'GOV-033', nature: 'contexte', raison: RAISON },
+      ],
     },
     nomme: ['GOV-033'],
   },
   {
     famille: 'mention_hors_paths',
     quoi: 'un en-tête nomme une tâche qui EXISTE et à qui le fichier n’appartient pas',
-    sources: { taches: [T_RESOLUE, T_VOISINE], entetes: entete(['// arbitrage porté par GOV-101']) },
+    sources: {
+      taches: [T_RESOLUE, T_VOISINE],
+      entetes: entete(['// arbitrage porté par GOV-101']),
+    },
     nomme: ['scripts/gates/porte.ts:1', 'GOV-101'],
   },
   {
@@ -1528,30 +1872,37 @@ const TEMOINS: Temoin[] = [
     quoi: 'la prose d’une gate nomme une tâche qui existe et à qui le script n’appartient pas',
     sources: {
       taches: [T_RESOLUE, T_VOISINE],
-      gates: [{ id: 'g', script: 'scripts/gates/porte.ts', tache: 'GOV-100', verifie: 'portée par GOV-101' }],
+      gates: [
+        {
+          id: 'g',
+          script: 'scripts/gates/porte.ts',
+          tache: 'GOV-100',
+          verifie: 'portée par GOV-101',
+        },
+      ],
     },
     nomme: ['docs/gates.json:g.verifie', 'GOV-101'],
   },
   // Une déclaration qui vise un identifiant QUI NE RÉSOUT PAS n'absout pas une tâche résolue hors de ses paths.
-  ...(['citation', 'reservation', 'dette'] as const).map(
-    (nature): Temoin => ({
-      famille: 'mention_hors_paths',
-      quoi: `une déclaration « ${nature} » n’absout pas une tâche RÉSOLUE nommée hors de ses paths`,
-      sources: {
-        taches: [T_RESOLUE, T_VOISINE],
-        entetes: entete(['// GOV-101']),
-        citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-101', nature, raison: RAISON }],
-      },
-      nomme: ['GOV-101'],
-    })
-  ),
+  ...(['citation', 'reservation', 'dette'] as const).map((nature): Temoin => ({
+    famille: 'mention_hors_paths',
+    quoi: `une déclaration « ${nature} » n’absout pas une tâche RÉSOLUE nommée hors de ses paths`,
+    sources: {
+      taches: [T_RESOLUE, T_VOISINE],
+      entetes: entete(['// GOV-101']),
+      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-101', nature, raison: RAISON }],
+    },
+    nomme: ['GOV-101'],
+  })),
   {
     famille: 'citation_perimee',
     quoi: 'une citation déclarée dont l’identifiant s’est mis à résoudre — le backlog a bougé',
     sources: {
       taches: [T_RESOLUE, { ...T_RESOLUE, id: 'GOV-033' }],
       entetes: entete(['// GOV-033']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-033', nature: 'reservation', raison: RAISON }],
+      citations: [
+        { ou: 'scripts/gates/porte.ts', id: 'GOV-033', nature: 'reservation', raison: RAISON },
+      ],
     },
     nomme: ['GOV-033', 'RÉSOUT maintenant'],
   },
@@ -1560,7 +1911,9 @@ const TEMOINS: Temoin[] = [
     quoi: 'une citation déclarée dont le site ne porte plus l’identifiant',
     sources: {
       entetes: entete(['// plus rien ici']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-033', nature: 'citation', raison: RAISON }],
+      citations: [
+        { ou: 'scripts/gates/porte.ts', id: 'GOV-033', nature: 'citation', raison: RAISON },
+      ],
     },
     nomme: ['GOV-033'],
   },
@@ -1570,7 +1923,14 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [{ ...T_RESOLUE, paths: ['scripts/gates/detect-pii.ts'] }],
       gates: [PII],
-      dettesGate: [{ gate: 'detectPii', tache: 'GOV-100', script: 'scripts/gates/detect-pii.ts', raison: RAISON }],
+      dettesGate: [
+        {
+          gate: 'detectPii',
+          tache: 'GOV-100',
+          script: 'scripts/gates/detect-pii.ts',
+          raison: RAISON,
+        },
+      ],
     },
     nomme: ['detectPii'],
   },
@@ -1581,7 +1941,9 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-017']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'citation', raison: ' '.repeat(25) }],
+      citations: [
+        { ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'citation', raison: ' '.repeat(25) },
+      ],
     },
     nomme: ['GOV-017'],
   },
@@ -1591,7 +1953,9 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-017']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'citation', raison: 'idem.' }],
+      citations: [
+        { ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'citation', raison: 'idem.' },
+      ],
     },
     nomme: ['GOV-017'],
   },
@@ -1601,7 +1965,14 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-017']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-017', nature: 'citation', raison: 'r'.repeat(RAISON_MINIMALE - 1) }],
+      citations: [
+        {
+          ou: 'scripts/gates/porte.ts',
+          id: 'GOV-017',
+          nature: 'citation',
+          raison: 'r'.repeat(RAISON_MINIMALE - 1),
+        },
+      ],
     },
     nomme: ['GOV-017'],
   },
@@ -1611,7 +1982,9 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [{ ...T_RESOLUE, paths: ['packages/contracts/'] }],
       gates: [PII],
-      dettesGate: [{ gate: 'detectPii', tache: 'GOV-100', script: 'scripts/gates/detect-pii.ts', raison: '' }],
+      dettesGate: [
+        { gate: 'detectPii', tache: 'GOV-100', script: 'scripts/gates/detect-pii.ts', raison: '' },
+      ],
     },
     nomme: ['detectPii'],
   },
@@ -1621,7 +1994,14 @@ const TEMOINS: Temoin[] = [
     sources: {
       taches: [{ ...T_RESOLUE, paths: ['packages/contracts/'] }],
       gates: [PII],
-      dettesGate: [{ gate: 'detectPii', tache: 'GOV-100', script: 'scripts/gates/detect-pii.ts', raison: ' '.repeat(25) }],
+      dettesGate: [
+        {
+          gate: 'detectPii',
+          tache: 'GOV-100',
+          script: 'scripts/gates/detect-pii.ts',
+          raison: ' '.repeat(25),
+        },
+      ],
     },
     nomme: ['detectPii'],
   },
@@ -1639,7 +2019,12 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
   {
     quoi: 'une gate déclarée dans le tests{} de sa tâche',
     sources: {
-      taches: [{ ...T_RESOLUE, tests: { 'REQ-GOV-900': ['tests/integration/index-partiel.spec.ts#un cas'] } }],
+      taches: [
+        {
+          ...T_RESOLUE,
+          tests: { 'REQ-GOV-900': ['tests/integration/index-partiel.spec.ts#un cas'] },
+        },
+      ],
       gates: [{ id: 'idx', script: 'tests/integration/index-partiel.spec.ts', tache: 'GOV-100' }],
     },
   },
@@ -1726,7 +2111,12 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
       taches: [T_RESOLUE, T_GABARIT, T_GABARIT_BIS],
       entetes: entete(['// GOV-003 et GOV-004, puis GOV-003', '// GOV-003']),
     },
-    exemptions: ['mention_paths_non_resolus', 'mention_paths_non_resolus', 'mention_paths_non_resolus', 'mention_paths_non_resolus'],
+    exemptions: [
+      'mention_paths_non_resolus',
+      'mention_paths_non_resolus',
+      'mention_paths_non_resolus',
+      'mention_paths_non_resolus',
+    ],
   },
   {
     quoi: 'une tâche VOISINE déclare la même garde sans en être porteuse',
@@ -1735,7 +2125,9 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
         { ...T_RESOLUE, id: 'GOV-003', paths: ['scripts/gates/gov-identifiants.ts'] },
         { ...T_RESOLUE, id: 'GOV-025', paths: ['scripts/gates/gov-identifiants.ts'] },
       ],
-      gates: [{ id: 'gov:identifiants', script: 'scripts/gates/gov-identifiants.ts', tache: 'GOV-003' }],
+      gates: [
+        { id: 'gov:identifiants', script: 'scripts/gates/gov-identifiants.ts', tache: 'GOV-003' },
+      ],
     },
   },
   {
@@ -1753,12 +2145,19 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
   },
   {
     quoi: 'une PR sans entrée, AU plancher du journal : exemptée en le disant',
-    sources: { taches: [{ ...T_RESOLUE, lot: 'L-1-04', pr: 27 }], journal: JOURNAL, plancherJournal: 27 },
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-1-04', pr: 27 }],
+      journal: JOURNAL,
+      plancherJournal: 27,
+    },
     exemptions: ['lot_sous_plancher'],
   },
   {
     quoi: 'une tâche livrée dans un AUTRE dépôt ne se confronte pas au journal d’ici — exemptée en le disant',
-    sources: { taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 998, repo: DEPOT_ETRANGER }], journal: JOURNAL },
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 998, repo: DEPOT_ETRANGER }],
+      journal: JOURNAL,
+    },
     exemptions: ['autre_depot'],
   },
   {
@@ -1766,7 +2165,14 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
     sources: {
       taches: [T_RESOLUE],
       entetes: entete(['// aucun identifiant scindé (`GOV-017`)'], 'scripts/gates/gov-tasks.ts'),
-      citations: [{ ou: 'scripts/gates/gov-tasks.ts', id: 'GOV-017', nature: 'citation', raison: 'r'.repeat(RAISON_MINIMALE) }],
+      citations: [
+        {
+          ou: 'scripts/gates/gov-tasks.ts',
+          id: 'GOV-017',
+          nature: 'citation',
+          raison: 'r'.repeat(RAISON_MINIMALE),
+        },
+      ],
     },
     exemptions: ['citation'],
   },
@@ -1775,7 +2181,9 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
     sources: {
       taches: [T_RESOLUE],
       entetes: entete(['// GOV-034 : réservé']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-034', nature: 'reservation', raison: RAISON }],
+      citations: [
+        { ou: 'scripts/gates/porte.ts', id: 'GOV-034', nature: 'reservation', raison: RAISON },
+      ],
     },
     exemptions: ['reservation'],
   },
@@ -1793,7 +2201,9 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
     sources: {
       taches: [T_RESOLUE, T_VOISINE],
       entetes: entete(['// défaut trouvé par GOV-101']),
-      citations: [{ ou: 'scripts/gates/porte.ts', id: 'GOV-101', nature: 'contexte', raison: RAISON }],
+      citations: [
+        { ou: 'scripts/gates/porte.ts', id: 'GOV-101', nature: 'contexte', raison: RAISON },
+      ],
     },
     exemptions: ['contexte'],
   },
@@ -1803,7 +2213,10 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
   },
   {
     quoi: 'un identifiant d’EXIGENCE n’est pas un identifiant de tâche (REQ-GOV-003, REQ-DM-003)',
-    sources: { taches: [{ ...T_RESOLUE, id: 'DM-01' }], entetes: entete(['// porte REQ-GOV-003 et REQ-DM-003']) },
+    sources: {
+      taches: [{ ...T_RESOLUE, id: 'DM-01' }],
+      entetes: entete(['// porte REQ-GOV-003 et REQ-DM-003']),
+    },
   },
   {
     quoi: 'un identifiant de GATE n’est pas un identifiant de tâche (G-SEC-ROLES, GATE-JUR-PURGE)',
@@ -1827,14 +2240,24 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
   },
   {
     quoi: 'un suffixe INCONNU ne fait pas une mention de son préfixe (DM-03-Z, sans aucune tâche DM-03-…)',
-    sources: { taches: [T_RESOLUE, { ...T_RESOLUE, id: 'DM-01' }], entetes: entete(['// DM-03-Z']) },
+    sources: {
+      taches: [T_RESOLUE, { ...T_RESOLUE, id: 'DM-01' }],
+      entetes: entete(['// DM-03-Z']),
+    },
   },
   {
     quoi: 'une dette déclarée et toujours mesurée, dont la prose nomme son porteur : une seule exemption',
     sources: {
       taches: [{ ...T_RESOLUE, paths: ['packages/contracts/'] }],
       gates: [{ ...PII, verifie: 'porté par GOV-100' }],
-      dettesGate: [{ gate: 'detectPii', tache: 'GOV-100', script: 'scripts/gates/detect-pii.ts', raison: RAISON }],
+      dettesGate: [
+        {
+          gate: 'detectPii',
+          tache: 'GOV-100',
+          script: 'scripts/gates/detect-pii.ts',
+          raison: RAISON,
+        },
+      ],
     },
     exemptions: ['dette_gate'],
   },
@@ -1851,11 +2274,14 @@ function jugerTemoin(t: Temoin, rendu: Rendu = rendre): string | null {
     const autres = [...new Set(verdict.fautes.map((f) => f.famille))];
     return (
       `❌ Le témoin « ${t.quoi} » n'a PAS fait rougir « ${t.famille} »` +
-      (autres.length > 0 ? ` — il a rougi par ${autres.join(', ')}, qui n'est pas sa famille.` : '.')
+      (autres.length > 0
+        ? ` — il a rougi par ${autres.join(', ')}, qui n'est pas sa famille.`
+        : '.')
     );
   }
   const muets = t.nomme.filter((n) => !siennes.some((f) => f.message.includes(n)));
-  if (muets.length > 0) return `❌ Le témoin « ${t.quoi} » rougit sans NOMMER : ${muets.join(', ')}.`;
+  if (muets.length > 0)
+    return `❌ Le témoin « ${t.quoi} » rougit sans NOMMER : ${muets.join(', ')}.`;
   const rendus = rendu(verdict);
   if (rendus.code === 0 || rendus.lignes.some((l) => l.startsWith('✅'))) {
     return `❌ Le témoin « ${t.quoi} » rougit sur « ${t.famille} », et le verdict RENDU sort ${rendus.code} ou imprime une bannière de succès : la garde imprimerait sa faute et rendrait la main en succès.`;
@@ -1881,7 +2307,8 @@ function jugerContreTemoin(c: ContreTemoin, rendu: Rendu = rendre): string | nul
       `Une exemption ajoutée ou tue change ce que la bannière verte affirme.`
     );
   }
-  if (rendu(verdict).code !== 0) return `❌ « ${c.quoi} » ne rougit sur aucune famille, et le verdict RENDU sort en échec.`;
+  if (rendu(verdict).code !== 0)
+    return `❌ « ${c.quoi} » ne rougit sur aucune famille, et le verdict RENDU sort en échec.`;
   return null;
 }
 
@@ -1901,14 +2328,19 @@ function jugesComplaisants(): string[] {
   const acceptes: string[] = [];
   const ABSENT = 'NOM-QU-AUCUN-MESSAGE-NE-PORTE';
   const muet: Rendu = (v) => ({ ...rendre(v), code: 0 });
-  const triomphant: Rendu = (v) => ({ ...rendre(v), lignes: ['✅ gov:attributions — succès', ...rendre(v).lignes] });
+  const triomphant: Rendu = (v) => ({
+    ...rendre(v),
+    lignes: ['✅ gov:attributions — succès', ...rendre(v).lignes],
+  });
   const bruyant: Rendu = (v) => ({ ...rendre(v), code: 1 });
   for (const t of TEMOINS) {
     const { fautes } = analyser(completer(t.sources));
     const produites = new Set(fautes.map((f) => f.famille));
     const etrangere = FAMILLES.find((f) => !produites.has(f));
     if (etrangere && jugerTemoin({ ...t, famille: etrangere }) === null) {
-      acceptes.push(`jugerTemoin accepte « ${t.quoi} » rattaché à « ${etrangere} », qu'il ne fait pas rougir`);
+      acceptes.push(
+        `jugerTemoin accepte « ${t.quoi} » rattaché à « ${etrangere} », qu'il ne fait pas rougir`
+      );
     }
     if (jugerTemoin({ ...t, nomme: [...t.nomme, ABSENT] }) === null) {
       acceptes.push(`jugerTemoin accepte « ${t.quoi} » annonçant un nom qu'aucun message ne porte`);
@@ -1920,18 +2352,27 @@ function jugesComplaisants(): string[] {
       .flatMap((f) => f.message.split(/\s+/))
       .find((mot) => mot.length > 3 && !siens.some((m) => m.includes(mot)));
     if (emprunte && jugerTemoin({ ...t, nomme: [...t.nomme, emprunte] }) === null) {
-      acceptes.push(`jugerTemoin accepte « ${t.quoi} » annonçant « ${emprunte} », que seul le message d'une autre famille porte`);
+      acceptes.push(
+        `jugerTemoin accepte « ${t.quoi} » annonçant « ${emprunte} », que seul le message d'une autre famille porte`
+      );
     }
-    if (jugerTemoin(t, muet) === null) acceptes.push(`jugerTemoin accepte « ${t.quoi} » dont le verdict rendu sort 0`);
-    if (jugerTemoin(t, triomphant) === null) acceptes.push(`jugerTemoin accepte « ${t.quoi} » dont le verdict rendu imprime une bannière de succès`);
+    if (jugerTemoin(t, muet) === null)
+      acceptes.push(`jugerTemoin accepte « ${t.quoi} » dont le verdict rendu sort 0`);
+    if (jugerTemoin(t, triomphant) === null)
+      acceptes.push(
+        `jugerTemoin accepte « ${t.quoi} » dont le verdict rendu imprime une bannière de succès`
+      );
     // Rendu MUET : le faux positif doit être vu par le juge lui-même, pas seulement par le code de sortie.
     if (jugerContreTemoin({ quoi: t.quoi, sources: t.sources }, muet) === null) {
-      acceptes.push(`jugerContreTemoin accepte le témoin « ${t.quoi} », qui rougit, dès que son verdict rendu sort 0`);
+      acceptes.push(
+        `jugerContreTemoin accepte le témoin « ${t.quoi} », qui rougit, dès que son verdict rendu sort 0`
+      );
     }
   }
   for (const c of CONTRE_TEMOINS) {
     const annoncees = c.exemptions ?? [];
-    if (jugerContreTemoin(c, bruyant) === null) acceptes.push(`jugerContreTemoin accepte « ${c.quoi} » dont le verdict rendu sort en échec`);
+    if (jugerContreTemoin(c, bruyant) === null)
+      acceptes.push(`jugerContreTemoin accepte « ${c.quoi} » dont le verdict rendu sort en échec`);
     if (jugerContreTemoin({ ...c, exemptions: [...annoncees, NATURES[0]] }) === null) {
       acceptes.push(`jugerContreTemoin accepte « ${c.quoi} » annonçant une exemption de PLUS`);
     }
@@ -1941,7 +2382,9 @@ function jugesComplaisants(): string[] {
     }
     const autre = NATURES.find((n) => n !== annoncees[0]) as Nature;
     if (jugerContreTemoin({ ...c, exemptions: [autre, ...annoncees.slice(1)] }) === null) {
-      acceptes.push(`jugerContreTemoin accepte « ${c.quoi} » annonçant autant d’exemptions, dont une « ${autre} » qu’il ne rend pas`);
+      acceptes.push(
+        `jugerContreTemoin accepte « ${c.quoi} » annonçant autant d’exemptions, dont une « ${autre} » qu’il ne rend pas`
+      );
     }
   }
   return acceptes;
@@ -1950,7 +2393,11 @@ function jugesComplaisants(): string[] {
 export function prouver(): { code: number; lignes: string[] } {
   for (const t of TEMOINS) {
     const r = jugerTemoin(t);
-    if (r) return { code: 1, lignes: [r, '   Le témoin est faux, ou la règle ne couvre pas ce qu’elle prétend couvrir.'] };
+    if (r)
+      return {
+        code: 1,
+        lignes: [r, '   Le témoin est faux, ou la règle ne couvre pas ce qu’elle prétend couvrir.'],
+      };
   }
   for (const c of CONTRE_TEMOINS) {
     const r = jugerContreTemoin(c);
@@ -1978,7 +2425,9 @@ export function prouver(): { code: number; lignes: string[] } {
       ],
     };
   }
-  const sansContre = NATURES.filter((n) => !CONTRE_TEMOINS.some((c) => (c.exemptions ?? []).includes(n)));
+  const sansContre = NATURES.filter(
+    (n) => !CONTRE_TEMOINS.some((c) => (c.exemptions ?? []).includes(n))
+  );
   if (sansContre.length > 0) {
     return {
       code: 1,

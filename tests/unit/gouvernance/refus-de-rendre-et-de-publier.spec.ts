@@ -1981,16 +1981,25 @@ describe('REQ-GOV-021 — `gov:attributions` SORT en échec en se nommant, et re
   it('REQ-GOV-021 — TÉMOIN D’EFFET : owner hors registre, gate à tâche inconnue ou registre tronqué → sortie non nulle nommée ; hors racine → refus du périmètre ; dépôt réel → 0, chaque exemption lue sous sa rubrique', () => {
     const GARDE = 'scripts/gates/gov-attributions.ts';
     const depot = depotCompletJetable();
-    const sansBanniere = (sortie: string) => sortie.split(/\r?\n/).filter((l) => l.trimStart().startsWith('✅'));
+    const sansBanniere = (sortie: string) =>
+      sortie.split(/\r?\n/).filter((l) => l.trimStart().startsWith('✅'));
 
     // ── ATTRIBUTIONS ROMPUES, une famille à la fois, chacune DÉRIVÉE des registres et retirée avant la suivante.
-    const lireRegistre = <T>(chemin: string) => JSON.parse(readFileSync(join(depot, chemin), 'utf8')) as T;
+    const lireRegistre = <T>(chemin: string) =>
+      JSON.parse(readFileSync(join(depot, chemin), 'utf8')) as T;
     const TACHES = readFileSync(join(depot, 'docs/tasks.json'), 'utf8');
     const GATES = readFileSync(join(depot, 'docs/gates.json'), 'utf8');
-    const backlog = lireRegistre<{ taches: { id: string; owner?: string | null }[] }>('docs/tasks.json');
-    const postes = new Set(lireRegistre<{ postes: { code: string }[] }>('docs/agents.json').postes.map((p) => p.code));
+    const backlog = lireRegistre<{ taches: { id: string; owner?: string | null }[] }>(
+      'docs/tasks.json'
+    );
+    const postes = new Set(
+      lireRegistre<{ postes: { code: string }[] }>('docs/agents.json').postes.map((p) => p.code)
+    );
     const porteuse = backlog.taches.find((t) => t.id === 'GOV-037');
-    expect(porteuse, '`GOV-037` a disparu du backlog : le témoin ne saurait plus quoi injecter').toBeDefined();
+    expect(
+      porteuse,
+      '`GOV-037` a disparu du backlog : le témoin ne saurait plus quoi injecter'
+    ).toBeDefined();
     // Un code de poste de la forme des vrais, absent du registre ; un identifiant de tâche de la forme des vrais, absent du backlog.
     let codeAbsent = [...postes][0]!.replace(/[0-9]+/, '99');
     while (postes.has(codeAbsent)) codeAbsent += '9';
@@ -2003,7 +2012,9 @@ describe('REQ-GOV-021 — `gov:attributions` SORT en échec en se nommant, et re
     const owner = lancerLaGate(GARDE, depot);
     writeFileSync(join(depot, 'docs/tasks.json'), TACHES);
 
-    const registreDesGates = lireRegistre<{ gates: { id: string; tache?: string }[] }>('docs/gates.json');
+    const registreDesGates = lireRegistre<{ gates: { id: string; tache?: string }[] }>(
+      'docs/gates.json'
+    );
     const gate = registreDesGates.gates[0]!;
     gate.tache = tacheAbsente;
     writeFileSync(join(depot, 'docs/gates.json'), JSON.stringify(registreDesGates, null, 2));
@@ -2014,14 +2025,20 @@ describe('REQ-GOV-021 — `gov:attributions` SORT en échec en se nommant, et re
       ['owner_hors_registre', owner, codeAbsent],
       ['gate_tache_inconnue', inconnue, gate.id],
     ] as const) {
-      expect(issue.code, `la garde a rendu un verdict de succès sur « ${famille} » :\n${issue.sortie.slice(0, 600)}`).not.toBe(0);
+      expect(
+        issue.code,
+        `la garde a rendu un verdict de succès sur « ${famille} » :\n${issue.sortie.slice(0, 600)}`
+      ).not.toBe(0);
       // ⚠️ ON EXIGE LA FAMILLE, PAS SEULEMENT UN CODE. Un refus pour une AUTRE raison (registre
       // illisible, périmètre entamé) rendrait le même code et ne garderait rien — c'est le défaut
       // « un témoin qui rougit par une autre famille que la sienne » (RM-02).
       expect(issue.sortie, `le refus ne nomme pas « ${famille} »`).toContain(`[${famille}]`);
       expect(issue.sortie, `le refus « ${famille} » ne NOMME pas ce qu’il refuse`).toContain(nomme);
       // Et aucune bannière de succès : elle imprimerait « ✅ » au-dessus de ses propres fautes.
-      expect(sansBanniere(issue.sortie), `la garde a imprimé une bannière de SUCCÈS en refusant « ${famille} »`).toEqual([]);
+      expect(
+        sansBanniere(issue.sortie),
+        `la garde a imprimé une bannière de SUCCÈS en refusant « ${famille} »`
+      ).toEqual([]);
     }
 
     // ── REGISTRE TRONQUÉ. Le refus est éprouvé sur le BINAIRE, pas seulement sur la fonction qui lève :
@@ -2029,10 +2046,20 @@ describe('REQ-GOV-021 — `gov:attributions` SORT en échec en se nommant, et re
     const taches = readFileSync(join(depot, 'docs/tasks.json'), 'utf8');
     writeFileSync(join(depot, 'docs/tasks.json'), taches.slice(0, Math.floor(taches.length / 2)));
     const illisible = lancerLaGate(GARDE, depot);
-    expect(illisible.code, `la garde a jugé un registre tronqué :\n${illisible.sortie.slice(0, 600)}`).not.toBe(0);
-    expect(illisible.sortie, 'le refus ne nomme pas `source_illisible`').toContain('[source_illisible]');
-    expect(illisible.sortie, 'le refus ne nomme pas la source tronquée').toContain('docs/tasks.json');
-    expect(sansBanniere(illisible.sortie), 'la garde a imprimé une bannière de SUCCÈS en refusant').toEqual([]);
+    expect(
+      illisible.code,
+      `la garde a jugé un registre tronqué :\n${illisible.sortie.slice(0, 600)}`
+    ).not.toBe(0);
+    expect(illisible.sortie, 'le refus ne nomme pas `source_illisible`').toContain(
+      '[source_illisible]'
+    );
+    expect(illisible.sortie, 'le refus ne nomme pas la source tronquée').toContain(
+      'docs/tasks.json'
+    );
+    expect(
+      sansBanniere(illisible.sortie),
+      'la garde a imprimé une bannière de SUCCÈS en refusant'
+    ).toEqual([]);
 
     // ── DÉPÔT RÉEL. Sans cette issue, un `process.exit(1)` inconditionnel passerait pour une correction.
     const vert = lancerLaGate(GARDE, resolve('.'));
@@ -2044,12 +2071,21 @@ describe('REQ-GOV-021 — `gov:attributions` SORT en échec en se nommant, et re
     // par sous-chaîne : « 1213 exemption(s) » contient « 213 exemption(s) », et un site prolongé d'un
     // caractère contient encore le site vrai.
     const attendu = analyserAttributions(chargerSourcesAttributions(fichiersSuivis()));
-    expect(attendu.exemptions.length, 'l’analyse du dépôt réel ne rend aucune exemption : rien à confronter').toBeGreaterThan(0);
+    expect(
+      attendu.exemptions.length,
+      'l’analyse du dépôt réel ne rend aucune exemption : rien à confronter'
+    ).toBeGreaterThan(0);
     const lignes = vert.sortie.split(/\r?\n/);
     const bannieres = sansBanniere(vert.sortie);
-    expect(bannieres.length, 'la garde rend 0 sans UNE bannière : un succès muet ne se distingue pas d’un no-op').toBe(1);
+    expect(
+      bannieres.length,
+      'la garde rend 0 sans UNE bannière : un succès muet ne se distingue pas d’un no-op'
+    ).toBe(1);
     const total = /(?:^|\D)(\d+) exemption\(s\)/.exec(bannieres[0] as string);
-    expect(Number(total?.[1]), 'le total imprimé n’est pas, en nombre entier, celui de l’analyse').toBe(attendu.exemptions.length);
+    expect(
+      Number(total?.[1]),
+      'le total imprimé n’est pas, en nombre entier, celui de l’analyse'
+    ).toBe(attendu.exemptions.length);
 
     // Une rubrique : « <marqueur> <nature> (<compte>) — <sens> », puis ses exemptions, une par ligne, plus indentées.
     const RUBRIQUE = /^ {3}\S+ ([a-z_]+) \((\d+)\) — /;
@@ -2058,7 +2094,10 @@ describe('REQ-GOV-021 — `gov:attributions` SORT en échec en se nommant, et re
     for (const ligne of lignes) {
       const m = RUBRIQUE.exec(ligne);
       if (m) {
-        expect(rubriques.has(m[1] as string), `la rubrique « ${m[1]} » est imprimée deux fois`).toBe(false);
+        expect(
+          rubriques.has(m[1] as string),
+          `la rubrique « ${m[1]} » est imprimée deux fois`
+        ).toBe(false);
         courante = [];
         rubriques.set(m[1] as string, { compte: Number(m[2]), lignes: courante });
       } else if (courante && ligne.startsWith(' '.repeat(6))) {
@@ -2066,12 +2105,20 @@ describe('REQ-GOV-021 — `gov:attributions` SORT en échec en se nommant, et re
       }
     }
     const natures = [...new Set(attendu.exemptions.map((e) => e.nature))].sort();
-    expect([...rubriques.keys()].sort(), 'les rubriques imprimées ne sont pas les natures rendues').toEqual(natures);
+    expect(
+      [...rubriques.keys()].sort(),
+      'les rubriques imprimées ne sont pas les natures rendues'
+    ).toEqual(natures);
     for (const nature of natures) {
       const siennes = attendu.exemptions.filter((e) => e.nature === nature);
       const rubrique = rubriques.get(nature) as { compte: number; lignes: string[] };
-      expect(rubrique.compte, `le compte imprimé de « ${nature} » n’est pas celui de l’analyse`).toBe(siennes.length);
-      expect(rubrique.lignes.length, `« ${nature} » n’imprime pas une ligne par exemption`).toBe(siennes.length);
+      expect(
+        rubrique.compte,
+        `le compte imprimé de « ${nature} » n’est pas celui de l’analyse`
+      ).toBe(siennes.length);
+      expect(rubrique.lignes.length, `« ${nature} » n’imprime pas une ligne par exemption`).toBe(
+        siennes.length
+      );
       const restantes = [...rubrique.lignes];
       // Chaque exemption est UNE ligne, lue par ÉGALITÉ : tâche, site ET motif — la raison d'une
       // déclaration, les paths d'une tâche, le plancher, le dépôt.
@@ -2081,14 +2128,21 @@ describe('REQ-GOV-021 — `gov:attributions` SORT en échec en se nommant, et re
         restantes.splice(i, 1);
         return false;
       });
-      expect(tues.map((e) => `${e.tache} — ${e.site} : ${e.motif}`), `des exemptions « ${nature} » manquent sous leur rubrique, ou y sont imprimées autrement`).toEqual([]);
+      expect(
+        tues.map((e) => `${e.tache} — ${e.site} : ${e.motif}`),
+        `des exemptions « ${nature} » manquent sous leur rubrique, ou y sont imprimées autrement`
+      ).toEqual([]);
     }
 
     // ── HORS DE LA RACINE. Le refus NOMMÉ du périmètre — jamais une trace de pile.
     const dessous = lancerLaGate(GARDE, resolve('scripts'));
-    expect(dessous.code, `la garde a jugé depuis un sous-dossier :\n${dessous.sortie.slice(0, 600)}`).not.toBe(0);
-    expect(dessous.sortie, 'lancée hors de la racine, la garde ne rend pas le refus nommé du périmètre').toContain(
-      'perimetre_illisible'
-    );
+    expect(
+      dessous.code,
+      `la garde a jugé depuis un sous-dossier :\n${dessous.sortie.slice(0, 600)}`
+    ).not.toBe(0);
+    expect(
+      dessous.sortie,
+      'lancée hors de la racine, la garde ne rend pas le refus nommé du périmètre'
+    ).toContain('perimetre_illisible');
   }, 300_000);
 });
