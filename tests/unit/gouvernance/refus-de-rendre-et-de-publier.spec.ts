@@ -789,20 +789,26 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // 🔧 35 → 36 par GOV-030, ARBITRÉ et non subi. `scripts/gates/gov-check.ts` naît avec UNE
     // sortie non nulle, `process.exit(decision.code)` : la décision est une fonction pure, vue
     // rendre 1 par `termes-interdits.spec.ts`, et la sortie est vue en 1 sur un dépôt jetable.
-    // 🔧 35 → 36 par GOV-037, ARBITRÉ et non subi, et le rouge se lit dans les DEUX tests de ce
-    // bloc — d'abord l'identité, puis le compte :
+    // 🔧 36 → 37 par GOV-037, ARBITRÉ et non subi. Sur sa première base (`6237f96`, PR #35), la
+    // branche avait lu 35 → 36, et le rouge s'y lisait dans les DEUX tests de ce bloc — d'abord
+    // l'identité, puis le compte :
     //
     //     scripts/gates/gov-attributions.ts ajoute 1 `process.exit(1)` et n'est PAS déclaré ici
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 36 to be 35
     //
+    // GOV-030 (PR #41) a atterri d'abord avec sa propre sortie et a pris le 36. Sur la fusion de
+    // `origin/main` = `ae56ce4`, les deux déclarations présentes, l'identité passe et le COMPTE
+    // rougit — relu, pas deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 37 to be 36
+    //
     // ⚠️ **CE NOMBRE DÉPEND DE L'ORDRE DE FUSION, et rien ici ne peut le deviner.** Le seuil est
-    // GLOBAL : il somme tout ce qui a atterri. 36 est la valeur MESURÉE sur `origin/main` =
-    // `6237f96` (PR #35), la seule base que cette branche ait. Une branche sœur qui atterrirait
-    // d'abord changerait ce nombre — et c'est alors la branche SUIVANTE qui lira son propre rouge et
-    // l'arbitrera. Déclarer un nombre « au cas où » donnerait le nombre sans la lecture, c'est-à-dire
-    // exactement ce que ce cliquet interdit :
+    // GLOBAL : il somme tout ce qui a atterri. Une branche sœur qui atterrirait d'abord changerait
+    // ce nombre — et c'est alors la branche SUIVANTE qui lira son propre rouge et l'arbitrera.
+    // Déclarer un nombre « au cas où » donnerait le nombre sans la lecture, c'est-à-dire exactement
+    // ce que ce cliquet interdit :
     // *le total ne bouge pas sans qu'on l'écrive, et on ne l'écrit pas sans l'avoir lu.*
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(36);
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(37);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -1773,7 +1779,7 @@ ${r.sortie.slice(0, 600)}`
  * ci-dessous attrape l'oubli inverse : toute garde qui importe la primitive doit y figurer.
  */
 const GARDES_QUI_BALAIENT = [
-  // 🔧 SEPTIÈME, déclarée par GOV-037 : `gov-attributions.ts` balaie les VINGT premières lignes de
+  // 🔧 SEPTIÈME sur la première base de GOV-037 (`6237f96`), qui l'a déclarée : `gov-attributions.ts` balaie les VINGT premières lignes de
   // tout fichier suivi de `scripts/` et `tests/` pour y confronter les identifiants de tâche. La
   // réciproque ci-dessous a rougi en la nommant — elle n'a pas été devinée.
   'scripts/gates/gov-attributions.ts',
