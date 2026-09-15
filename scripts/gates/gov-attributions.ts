@@ -41,8 +41,10 @@ import { LIVREE } from '../lot/avancement';
  *     fait monter le compte, sous sa rubrique, et la sortie reste verte. Pour une tâche LIVRÉE, le
  *     registre `DETTE_GABARIT_LIVREE` fige chaque site ET son nombre d'occurrences : une de plus rougit ;
  *   — le journal n'a pas de grain plus fin que la PR : une tâche ÉTRANGÈRE au lot, livrée par une PR
- *     dont le TITRE ne nomme que ce lot, reste attestée. Seul le titre VISIBLE atteste : le corps ne compte pas,
- *     un titre dans un commentaire HTML non plus ;
+ *     dont le TITRE ne nomme que ce lot, reste attestée. Seul le titre atteste, écrit « ## PR #<n> » comme
+ *     `gov:etat` le lit ; un délimiteur de commentaire HTML, un titre de PR d'une autre forme ou un titre
+ *     souligné, où qu'ils soient, font REFUSER. Un titre « ## PR #<n> » que le rendu n'affiche pas comme
+ *     titre (dans un bloc de code, sous du HTML brut comme `<details>`) est LU quand même : il compte ;
  *   — un fichier suivi de `scripts/` ou `tests/` qui porte un octet NUL (UTF-16, binaire) n'est pas lu :
  *     il fait REFUSER la garde, et aucune déclaration ne l'en exempte. Le dépôt n'en porte aucun ;
  *   — un fichier non UTF-8 SANS octet NUL (Latin-1) est lu avec remplacement : ses identifiants ASCII
@@ -337,25 +339,50 @@ function nommeLeLot(entree: string, lot: string): boolean {
  * La référence de la PR d'une TÂCHE, elle, ne se compose jamais à la main : `referencePr()` en est
  * le seul auteur. Les deux cohabitent dans le même message et ce ne sont pas les mêmes objets.
  */
-const ANCRE_JOURNAL = '## PR #';
+export const ANCRE_JOURNAL = '## PR #';
 
 /** L'ancre de l'entrée d'UNE PR, telle qu'elle est écrite dans `docs/journal/`. */
 function ancreDeJournal(pr: number | string): string {
   return `${ANCRE_JOURNAL}${pr}`;
 }
 
-/** Le motif de titre, DÉRIVÉ de l'ancre : espaces souples, numéro capturé. Rien n'est retapé. */
-const MOTIF_ANCRE = new RegExp('^' + echapper(ANCRE_JOURNAL).replace(/ /g, '\\s+') + '(\\d+)');
+/**
+ * Le motif de titre, DÉRIVÉ de l'ancre, et LU COMME `gov-etat.ts` LE LIT : il coupe le journal sur `^## `
+ * et lit `PR #<n>` en tête de bloc — UNE espace entre les jetons, pas « des espaces ». Ce module-là ne
+ * s'importe pas (il sort du processus) : `attributions-resolvent.spec.ts` confronte les deux formes.
+ */
+const MOTIF_ANCRE = new RegExp('^' + echapper(ANCRE_JOURNAL) + '(\\d+)');
 
 /**
- * Un texte de journal SANS ses commentaires HTML — fermés, ou ouverts jusqu'à la fin du texte —, chacun
- * remplacé par une espace, qui ne peut pas ouvrir un titre : un titre que le lecteur du rendu ne voit pas
- * n'atteste rien. Appliqué à chaque fichier AVANT l'assemblage (un commentaire ouvert ne déborde pas sur le
- * fichier suivant), puis au texte assemblé ; deux passes rendent le même texte qu'une.
+ * 🔑 CE QUE LE JOURNAL NE PORTE PAS : ce que le RENDU et la GARDE liraient autrement. La garde ne reconnaît
+ * pas la grammaire du Markdown à la main — un `<!--` entre accents graves s'affiche, hors d'eux il cache
+ * ce qui le suit — : elle REFUSE, en nommant le fichier et la ligne. Mesuré sur `docs/journal/` le
+ * 2026-09-15 : aucune de ces formes n'y est écrite.
  */
-function sansCommentairesHtml(texte: string): string {
-  return texte.replace(/<!--[\s\S]*?(?:-->|$)/g, ' ');
-}
+const JOURNAL_REFUSE: readonly {
+  quoi: string;
+  porte: (ligne: string, avant: string) => boolean;
+}[] = [
+  {
+    quoi: 'un délimiteur de commentaire HTML (`<!--` ou `-->`) : hors accents graves il cache au rendu ce qu’il encadre, entre eux il s’affiche',
+    porte: (l) => l.includes('<!--') || l.includes('-->'),
+  },
+  {
+    quoi: `un titre de PR qui n’est pas écrit « ${ANCRE_JOURNAL}<n> », une espace entre les jetons : gov:etat ne le lit pas comme une entrée`,
+    porte: (l) =>
+      new RegExp(
+        '^\\s*' +
+          ANCRE_JOURNAL.split(' ')
+            .map((j) => (/^#+$/.test(j) ? '#+' : echapper(j)))
+            .join('\\s*'),
+        'i'
+      ).test(l) && !MOTIF_ANCRE.test(l),
+  },
+  {
+    quoi: 'un soulignement de titre (`===` ou `---` sous une ligne de texte) : la ligne du dessus est un titre au rendu, que ni gov:etat ni la garde ne lisent',
+    porte: (l, avant) => /^ {0,3}(?:=+|-+)\s*$/.test(l) && avant.trim() !== '',
+  },
+];
 
 /**
  * Les entrées du journal, indexées par numéro de PR. Le TITRE fait partie de l'entrée. Deux titres de la même
@@ -364,7 +391,7 @@ function sansCommentairesHtml(texte: string): string {
 export function entreesDeJournal(journal: string): Map<string, string> {
   const par = new Map<string, string[]>();
   let courant: string | null = null;
-  for (const ligne of sansCommentairesHtml(journal).split('\n')) {
+  for (const ligne of journal.split('\n')) {
     const m = MOTIF_ANCRE.exec(ligne);
     if (m) {
       courant = m[1] as string;
@@ -1313,12 +1340,25 @@ export function chargerSources(
             `la garde ne choisit pas laquelle fait foi, et une ligne invisible au rendu en fait partie peut-être.`
     );
   }
+  const textesDeJournal = journaux.map((f) => {
+    const lignes = texte(f).split('\n');
+    lignes.forEach((ligne, i) => {
+      const refus = JOURNAL_REFUSE.find((r) => r.porte(ligne, lignes[i - 1] ?? ''));
+      if (refus) {
+        throw new SourceIllisible(
+          `${f}:${i + 1} porte ${refus.quoi} — « ${ligne.trim().slice(0, 80)} ». ` +
+            `La garde refuse plutôt que de deviner lequel, du rendu ou d'elle, lit juste.`
+        );
+      }
+    });
+    return lignes.join('\n');
+  });
 
   return {
     taches: tableau<Tache>('docs/tasks.json', 'taches'),
     gates: tableau<Gate>('docs/gates.json', 'gates'),
     postes: tableau<Poste>('docs/agents.json', 'postes'),
-    journal: journaux.map((f) => sansCommentairesHtml(texte(f))).join('\n'),
+    journal: textesDeJournal.join('\n'),
     plancherJournal: Number((planchers[0] as RegExpExecArray)[1]),
     // TOUT fichier suivi de `scripts/` et `tests/`, quelle que soit son extension : l'acceptance dit
     // « tout fichier suivi », et un filtre d'extension est un périmètre qui s'ampute en silence.
@@ -1584,19 +1624,10 @@ const TEMOINS: Temoin[] = [
   },
   {
     famille: 'lot_non_atteste',
-    quoi: 'un titre caché dans un COMMENTAIRE HTML fermé — sur ses lignes, ou collé derrière lui — n’est pas une entrée',
+    quoi: 'un titre à DEUX espaces n’est pas une entrée — `gov:etat` ne le lit pas non plus',
     sources: {
       taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 32 }],
-      journal: `${JOURNAL}<!--\n## PR #32 — lot L-9-99\n-->\n<!-- fin -->## PR #32 — lot L-9-99\n`,
-    },
-    nomme: ['L-9-99', ancreDeJournal(32), 'aucune entrée'],
-  },
-  {
-    famille: 'lot_non_atteste',
-    quoi: 'un titre caché dans un COMMENTAIRE HTML jamais fermé n’est pas une entrée',
-    sources: {
-      taches: [{ ...T_RESOLUE, lot: 'L-9-99', pr: 32 }],
-      journal: `${JOURNAL}<!--\n## PR #32 — lot L-9-99\n`,
+      journal: `${JOURNAL}${ancreDeJournal(32).replace(' ', '  ')} — lot L-9-99\n`,
     },
     nomme: ['L-9-99', ancreDeJournal(32), 'aucune entrée'],
   },
@@ -2263,6 +2294,106 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
   },
 ];
 
+// ── la preuve du CHARGEMENT : un journal que le rendu et la garde liraient autrement est refusé ─
+//
+// `analyser` ne voit jamais ces journaux : `chargerSources` les refuse avant. Chaque cas est chargé sur
+// des registres vides, par le lecteur injecté ; `nomme` est ce que le refus doit porter, `[]` : il est LU.
+
+type CasDeJournal = { quoi: string; journal: string; nomme: string[] };
+const JOURNAL_DE_PREUVE = 'docs/journal/2026-09.md';
+const JOURNAUX_REFUSES: CasDeJournal[] = [
+  {
+    quoi: 'F2 (e8v3) : un titre ajouté à deux espaces, le titre réel encadré par `<!--` et `-->` entre accents graves',
+    journal: `${ancreDeJournal(31).replace(' ', '  ')} — lot L-9-99\n\nIl s’ouvre par \`<!--\`.\n\n${JOURNAL}\nIl se ferme par \`-->\`.\n`,
+    nomme: [`${JOURNAL_DE_PREUVE}:1`, 'titre de PR'],
+  },
+  {
+    quoi: 'F2 : un `<!--` entre accents graves, seul',
+    journal: `${JOURNAL}Il s’ouvre par \`<!--\`.\n`,
+    nomme: [`${JOURNAL_DE_PREUVE}:4`, 'commentaire HTML'],
+  },
+  {
+    quoi: 'F2 : un `-->` entre accents graves, seul',
+    journal: `${JOURNAL}Il se ferme par \`-->\`.\n`,
+    nomme: [`${JOURNAL_DE_PREUVE}:4`, 'commentaire HTML'],
+  },
+  {
+    quoi: 'passe précédente : un titre caché dans un commentaire HTML fermé',
+    journal: `${JOURNAL}<!--\n${ancreDeJournal(32)} — lot L-9-99\n-->\n`,
+    nomme: [`${JOURNAL_DE_PREUVE}:4`, 'commentaire HTML'],
+  },
+  {
+    quoi: 'passe précédente : un titre caché dans un commentaire HTML jamais fermé',
+    journal: `${JOURNAL}<!--\n${ancreDeJournal(32)} — lot L-9-99\n`,
+    nomme: [`${JOURNAL_DE_PREUVE}:4`, 'commentaire HTML'],
+  },
+  {
+    quoi: 'F2 : le titre réel réécrit à deux espaces, sous un titre à une espace',
+    journal: `${ancreDeJournal(31)} — lot L-9-99\n\n${JOURNAL.replace(' ', '  ')}`,
+    nomme: [`${JOURNAL_DE_PREUVE}:3`, 'titre de PR'],
+  },
+  {
+    quoi: 'F2 : un titre de PR à deux espaces entre « PR » et « # »',
+    journal: `${JOURNAL}\n${ancreDeJournal(32).replace('R #', 'R  #')}\n`,
+    nomme: [`${JOURNAL_DE_PREUVE}:5`, 'titre de PR'],
+  },
+  {
+    quoi: 'F2 : un titre de PR à trois dièses',
+    journal: `${JOURNAL}\n#${ancreDeJournal(32)}\n`,
+    nomme: [`${JOURNAL_DE_PREUVE}:5`, 'titre de PR'],
+  },
+  {
+    quoi: 'F2 : un titre de PR précédé d’une espace',
+    journal: `${JOURNAL}\n ${ancreDeJournal(32)}\n`,
+    nomme: [`${JOURNAL_DE_PREUVE}:5`, 'titre de PR'],
+  },
+  {
+    quoi: 'F2 : le titre réel réécrit en titre souligné, sous un titre à une espace',
+    journal: `${ancreDeJournal(31)} — lot L-9-99\n\n${JOURNAL.slice(JOURNAL.indexOf(' ') + 1).replace('\n', '\n---\n')}`,
+    nomme: [`${JOURNAL_DE_PREUVE}:4`, 'soulignement'],
+  },
+];
+const JOURNAUX_LUS: CasDeJournal[] = [
+  {
+    quoi: 'un journal réel : chevrons entre accents graves, ligne de corps qui COMMENCE par « PR # », filet `---` après une ligne vide, flèche `->`, titre de section',
+    journal: `${JOURNAL}\nUn nom \`<x>\` et \`:<chemin>\`, a -> b.\nPR #41, elle en nomme trois.\n\n---\n\n## Autre section\n`,
+    nomme: [],
+  },
+];
+
+/** Le refus que lève `chargerSources` sur un journal posé seul, à côté de registres vides ; `null` s'il est lu. */
+function chargerJournal(journal: string): Error | null {
+  const fichiers: Record<string, string> = {
+    'docs/tasks.json': '{ "taches": [] }',
+    'docs/gates.json': '{ "gates": [] }',
+    'docs/agents.json': '{ "postes": [] }',
+    [README_JOURNAL]: 'Plancher : le journal couvre les PR de numéro **> 0**\n',
+    [JOURNAL_DE_PREUVE]: journal,
+  };
+  try {
+    chargerSources(Object.keys(fichiers), (c) => new TextEncoder().encode(fichiers[c] ?? ''));
+    return null;
+  } catch (e) {
+    return e as Error;
+  }
+}
+
+/** `null` si le journal est refusé en NOMMANT ce qu'il annonce (`nomme` non vide), ou LU (`nomme` vide) ; sinon, pourquoi. */
+function jugerJournal(c: CasDeJournal): string | null {
+  const refus = chargerJournal(c.journal);
+  if (c.nomme.length === 0) {
+    return refus === null
+      ? null
+      : `❌ Faux positif : le journal « ${c.quoi} » fait refuser la garde.\n   ${refus.message}`;
+  }
+  if (!(refus instanceof SourceIllisible))
+    return `❌ Le journal « ${c.quoi} » n'a PAS fait refuser la garde${refus ? ` (${refus.name})` : ''}.`;
+  const muets = c.nomme.filter((n) => !refus.message.includes(n));
+  return muets.length === 0
+    ? null
+    : `❌ Le journal « ${c.quoi} » fait refuser sans NOMMER : ${muets.join(', ')}.\n   ${refus.message}`;
+}
+
 /** Ce qui rend un verdict : `rendre` pour la garde ; un rendu faussé, pour éprouver les juges. */
 type Rendu = (v: Verdict) => { code: number; lignes: string[] };
 
@@ -2387,6 +2518,20 @@ function jugesComplaisants(): string[] {
       );
     }
   }
+  // Un journal refusé présenté comme LU, un journal refusé annonçant un nom que son refus ne porte pas,
+  // un journal lu présenté comme REFUSÉ : le juge du chargement doit refuser les trois.
+  for (const c of JOURNAUX_REFUSES) {
+    if (jugerJournal({ ...c, nomme: [] }) === null)
+      acceptes.push(`jugerJournal accepte comme LU le journal refusé « ${c.quoi} »`);
+    if (jugerJournal({ ...c, nomme: [...c.nomme, ABSENT] }) === null)
+      acceptes.push(
+        `jugerJournal accepte « ${c.quoi} » annonçant un nom que le refus ne porte pas`
+      );
+  }
+  for (const c of JOURNAUX_LUS) {
+    if (jugerJournal({ ...c, nomme: [JOURNAL_DE_PREUVE] }) === null)
+      acceptes.push(`jugerJournal accepte comme REFUSÉ le journal lu « ${c.quoi} »`);
+  }
   return acceptes;
 }
 
@@ -2401,6 +2546,10 @@ export function prouver(): { code: number; lignes: string[] } {
   }
   for (const c of CONTRE_TEMOINS) {
     const r = jugerContreTemoin(c);
+    if (r) return { code: 1, lignes: [r] };
+  }
+  for (const c of [...JOURNAUX_REFUSES, ...JOURNAUX_LUS]) {
+    const r = jugerJournal(c);
     if (r) return { code: 1, lignes: [r] };
   }
   // Les cas déclarés passent : leurs versions faussées doivent maintenant être REFUSÉES.
@@ -2442,7 +2591,8 @@ export function prouver(): { code: number; lignes: string[] } {
     lignes: [
       `✅ gov:attributions — les juges refusent chacun de leurs cas faussés ; les ${FAMILLES.length} familles rougissent ` +
         `chacune sur ses témoins (${TEMOINS.length}) ; les ${CONTRE_TEMOINS.length} contre-témoins restent verts et rendent ` +
-        `exactement leurs exemptions (les ${NATURES.length} natures sont chacune rendues).`,
+        `exactement leurs exemptions (les ${NATURES.length} natures sont chacune rendues) ; les ${JOURNAUX_REFUSES.length} journaux ` +
+        `que le rendu lirait autrement sont refusés en se nommant, et ${JOURNAUX_LUS.length} contre-témoin(s) de journal sont lus.`,
       ...FAMILLES.map((f) => `   • ${f}`),
     ],
   };

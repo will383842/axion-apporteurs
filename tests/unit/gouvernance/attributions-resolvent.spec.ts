@@ -24,6 +24,7 @@ import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
 import { LIVREE } from '../../../scripts/lot/avancement';
 import {
   analyser,
+  ANCRE_JOURNAL,
   chargerSources,
   entreesDeJournal,
   prouver,
@@ -217,23 +218,131 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     ).toBe(1);
   });
 
-  it('F-LOT — un titre caché dans un COMMENTAIRE HTML n’est pas une entrée : la tâche portée par une PR sans entrée visible est une faute nommée', () => {
-    const s = chargerSources(fichiersSuivis());
-    const { t, titre } = tacheAttestee(s);
-    // Une PR qu'aucune entrée ne porte, au-dessus de toutes : son seul titre est dans le commentaire.
+  it('F2 — le journal ne porte rien que le rendu et la garde liraient autrement : chaque forme, rejouée sur le dépôt réel, fait REFUSER en nommant le fichier et la ligne', () => {
+    const suivis = fichiersSuivis();
+    const s = chargerSources(suivis);
+    const { t, faux, titre } = tacheAttestee(s);
+    const fichier = suivis.find(
+      (f) =>
+        f.startsWith('docs/journal/') &&
+        f !== 'docs/journal/README.md' &&
+        lireReel(f).split('\n').includes(titre)
+    ) as string;
+    expect(fichier, `aucun fichier de journal suivi ne porte « ${titre} »`).toBeDefined();
+    // Toutes les tâches de la PR passent au lot faux : la panne e8v3 de la revue sécurité sur 1c5dc5f.
+    const doc = JSON.parse(lireReel('docs/tasks.json')) as { taches: typeof s.taches };
+    for (const x of doc.taches) if (x.pr === t.pr && x.lot === t.lot) x.lot = faux;
+    const tachesFaussees = Buffer.from(JSON.stringify(doc, null, 2));
     const neuve = Math.max(...[...entreesDeJournal(s.journal).keys()].map(Number)) + 1;
-    const journal = `${s.journal}\n<!--\n${titre.replace(/#\d+/, `#${neuve}`)}\n-->\n`;
-    const taches = s.taches.map((x) => (x === t ? { ...x, pr: neuve } : x));
-    const { fautes } = analyser({ ...s, journal, taches });
+    const faussee = `${ANCRE_JOURNAL}${t.pr} — 2026-09-04 — lot ${faux} (rectificatif)`;
+    const deuxEspaces = (l: string) => l.replace(' ', '  ');
+    const corps = ['', '**Fait.** Les tâches sont rattachées à leur lot.', ''];
+    type Cas = { quoi: string; taches: boolean; lignes: (l: string[], i: number) => string[] };
+    const cas: Cas[] = [
+      {
+        quoi: 'la panne e8v3 : titre ajouté à DEUX espaces, titre réel encadré par `<!--` et `-->` entre accents graves',
+        taches: true,
+        lignes: (l, i) => [
+          ...l.slice(0, i),
+          deuxEspaces(faussee),
+          ...corps,
+          'Le source d’un commentaire HTML s’ouvre par `<!--`.',
+          '',
+          titre,
+          '',
+          'Et il se ferme par `-->`.',
+          ...l.slice(i + 1),
+        ],
+      },
+      {
+        quoi: 'le jumeau sans accents graves : le titre ajouté à DEUX espaces, seul',
+        taches: true,
+        lignes: (l, i) => [...l.slice(0, i), deuxEspaces(faussee), ...corps, ...l.slice(i)],
+      },
+      {
+        quoi: 'un `<!--` entre accents graves, seul, au-dessus du titre réel',
+        taches: false,
+        lignes: (l, i) => [...l.slice(0, i), 'Il s’ouvre par `<!--`.', '', ...l.slice(i)],
+      },
+      {
+        quoi: 'le titre RÉEL réécrit à deux espaces, sous un titre faussé à une espace',
+        taches: true,
+        lignes: (l, i) => [
+          ...l.slice(0, i),
+          faussee,
+          ...corps,
+          deuxEspaces(titre),
+          ...l.slice(i + 1),
+        ],
+      },
+      {
+        quoi: 'le titre RÉEL réécrit en titre souligné, sous un titre faussé à une espace',
+        taches: true,
+        lignes: (l, i) => [
+          ...l.slice(0, i),
+          faussee,
+          ...corps,
+          titre.slice(titre.indexOf(' ') + 1),
+          '---',
+          ...l.slice(i + 1),
+        ],
+      },
+      {
+        quoi: 'passe précédente : un titre caché dans un commentaire HTML fermé',
+        taches: false,
+        lignes: (l) => [...l, '<!--', titre.replace(/#\d+/, `#${neuve}`), '-->'],
+      },
+      {
+        quoi: 'passe précédente : un titre caché dans un commentaire HTML jamais fermé',
+        taches: false,
+        lignes: (l) => [...l, '<!--', titre.replace(/#\d+/, `#${neuve}`)],
+      },
+    ];
+    const acceptes: string[] = [];
+    for (const c of cas) {
+      const reel = lireReel(fichier).split('\n');
+      const lignes = c.lignes(reel, reel.indexOf(titre));
+      // La ligne que le refus doit nommer : la première du texte qui porte la forme refusée.
+      const n =
+        lignes.findIndex(
+          (x, k) =>
+            x.includes('<!--') ||
+            x.includes('-->') ||
+            x.startsWith(ANCRE_JOURNAL.replace(' ', '  ')) ||
+            (x === '---' && (lignes[k - 1] ?? '') !== '')
+        ) + 1;
+      const lire = (f: string) =>
+        f === fichier
+          ? Buffer.from(lignes.join('\n'))
+          : f === 'docs/tasks.json' && c.taches
+            ? tachesFaussees
+            : octets(f);
+      const refus = refusDe(() => chargerSources(suivis, lire));
+      if (
+        n === 0 ||
+        !(refus instanceof SourceIllisible) ||
+        !refus.message.includes(`${fichier}:${n}`)
+      ) {
+        const verdict = refus ? refus.message : analyser(chargerSources(suivis, lire)).fautes;
+        acceptes.push(`${c.quoi} (${fichier}:${n}) : ${JSON.stringify(verdict).slice(0, 200)}`);
+      }
+    }
     expect(
-      fautes.filter(
-        (f) =>
-          f.famille === 'lot_non_atteste' &&
-          f.message.includes(t.id) &&
-          f.message.includes(`#${neuve}`)
-      ).length,
-      `${t.id} passe à la PR ${neuve}, dont le seul titre est invisible au rendu, et rien n’a rougi`
-    ).toBe(1);
+      acceptes,
+      'une forme de journal que le rendu lit autrement n’a pas fait refuser'
+    ).toEqual([]);
+  });
+
+  it('F2 — le titre d’entrée est celui que gov:etat lit : même coupe, même ancre, UNE espace entre chaque jeton', () => {
+    const etat = lireReel('scripts/gates/gov-etat.ts');
+    const coupe = /\.split\(\/\^([^/]+)\/m\)/.exec(etat);
+    const titre = /\/\^([^(/]+)\(\\d\+\) — /.exec(etat);
+    expect(coupe, 'gov-etat.ts ne coupe plus le journal sur une ancre lisible ici').not.toBeNull();
+    expect(titre, 'gov-etat.ts ne lit plus « PR #<n> » en tête de bloc').not.toBeNull();
+    expect(`${coupe![1]}${titre![1]}`).toBe(ANCRE_JOURNAL);
+    // Ce que gov:etat ne lit pas comme un titre, la garde ne le lit pas non plus.
+    const ecarte = `${ANCRE_JOURNAL.replace(' ', '  ')}28 — 2026-09-04 — lot L-1-02\n`;
+    expect([...entreesDeJournal(ecarte).keys()]).toEqual([]);
   });
 
   it('une dette de lot FIGÉE ne vaut que pour le titre mesuré : un titre multi-lots réécrit pour ne nommer qu’un AUTRE lot fait rougir chaque tâche figée', () => {
