@@ -78,7 +78,12 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
-import { texteDeLaReq, RACINES_CODE, dansLaPorteeDesEtats, finDeLigneEtrangere } from './schema-enums';
+import {
+  texteDeLaReq,
+  RACINES_CODE,
+  dansLaPorteeDesEtats,
+  finDeLigneEtrangere,
+} from './schema-enums';
 import { TYPES_EVENEMENT, TYPES_HORS_CONTRAT_V1 } from '../../packages/contracts/events';
 
 // ── le vocabulaire de la garde ───────────────────────────────────────────────
@@ -147,7 +152,7 @@ export const FAMILLES: { nom: string; explication: string }[] = [
   },
   {
     nom: 'synonyme_interdit_du_glossaire',
-    explication: "un terme que `docs/GLOSSAIRE.md` déclare interdit sans condition (REQ-GOV-016).",
+    explication: 'un terme que `docs/GLOSSAIRE.md` déclare interdit sans condition (REQ-GOV-016).',
   },
 ];
 
@@ -218,9 +223,8 @@ export function modelesRefusesDAxionia(reqInt004: string, glossaire: string): st
   const trouves: string[] = [];
   const clauseReq = /ne\s+r[ée]f[ée]rence\s+((?:`[^`]+`(?:\s*(?:,|ni|et)\s*)?)+)/i.exec(reqInt004);
   if (clauseReq) trouves.push(...jetonsCites(clauseReq[1]!));
-  const clauseGlossaire = /((?:`[^`\n]+`[,\s]*)+)[—–-]\s*des mod[èe]les supprim[ée]s d'axionia/.exec(
-    glossaire
-  );
+  const clauseGlossaire =
+    /((?:`[^`\n]+`[,\s]*)+)[—–-]\s*des mod[èe]les supprim[ée]s d'axionia/.exec(glossaire);
   if (clauseGlossaire) trouves.push(...jetonsCites(clauseGlossaire[1]!));
   return [...new Set(trouves.filter((j) => FORME_MODELE.test(j)))];
 }
@@ -471,7 +475,8 @@ const DECODEUR = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 /** Le texte d'un fichier lu EN ENTIER, ou la raison pour laquelle il ne l'est pas. */
 function lireEnEntier(fichier: FichierVu): { texte: string } | { raison: string } {
-  if ('erreur' in fichier) return { raison: `le disque refuse d'en rendre les octets (${fichier.erreur})` };
+  if ('erreur' in fichier)
+    return { raison: `le disque refuse d'en rendre les octets (${fichier.erreur})` };
   if (fichier.octets.includes(0)) return { raison: 'octet NUL — UTF-16 ou binaire' };
   try {
     return { texte: DECODEUR.decode(fichier.octets) };
@@ -775,7 +780,7 @@ const GLOSSAIRE_FIXTURE = [
   '',
   '## 1. Attribution',
   '',
-  "`ON attributions(siren) WHERE statut IN (…)`. Synonymes interdits : `ETATS_ACTIFS`, une",
+  '`ON attributions(siren) WHERE statut IN (…)`. Synonymes interdits : `ETATS_ACTIFS`, une',
   '« attribution vivante » sans renvoi à la constante.',
   '',
   '## 2. Apporteur',
@@ -888,7 +893,9 @@ export const TEMOINS: Temoin[] = [
     vue: () =>
       avecFichierVu({
         chemin: 'src/content/page.txt',
-        octets: Uint8Array.from([...'le producteur emet payment.received'].flatMap((c) => [c.charCodeAt(0), 0])),
+        octets: Uint8Array.from(
+          [...'le producteur emet payment.received'].flatMap((c) => [c.charCodeAt(0), 0])
+        ),
       }),
   },
   {
@@ -896,7 +903,10 @@ export const TEMOINS: Temoin[] = [
     famille: 'contenu_illisible',
     quoi: 'un octet hors UTF-8, sans octet NUL, sous une racine',
     vue: () =>
-      avecFichierVu({ chemin: 'docs/adr/9995-latin1.md', octets: Uint8Array.of(0x72, 0xe9, 0x73, 0x75, 0x6d, 0xe9) }),
+      avecFichierVu({
+        chemin: 'docs/adr/9995-latin1.md',
+        octets: Uint8Array.of(0x72, 0xe9, 0x73, 0x75, 0x6d, 0xe9),
+      }),
   },
   {
     id: 'contenu_refuse_par_le_disque',
@@ -911,14 +921,22 @@ export const TEMOINS: Temoin[] = [
     vue: () =>
       avec(
         'prisma/migrations/0005_cr/migration.sql',
-        [`-- ouvre ${AG}`, "UPDATE evenements SET type = 'payment.received';", `-- ferme ${AG}`].join(CR)
+        [
+          `-- ouvre ${AG}`,
+          "UPDATE evenements SET type = 'payment.received';",
+          `-- ferme ${AG}`,
+        ].join(CR)
       ),
   },
   {
     id: 'fin_de_ligne_separateur_unicode',
     famille: 'fin_de_ligne_non_lf',
     quoi: 'un séparateur de ligne Unicode, qu’ECMAScript coupe',
-    vue: () => avec('src/server/separateur.ts', `// note${String.fromCharCode(0x2028)}export const rien = true;`),
+    vue: () =>
+      avec(
+        'src/server/separateur.ts',
+        `// note${String.fromCharCode(0x2028)}export const rien = true;`
+      ),
   },
   {
     id: 'fin_de_ligne_dans_une_source',
@@ -948,7 +966,8 @@ export const TEMOINS: Temoin[] = [
     id: 'anglais_dans_un_adr',
     famille: 'evenement_hors_nomenclature',
     quoi: 'la fixture rouge du registre : un nom anglais hors citation dans un ADR',
-    vue: () => avec('docs/adr/0011-temoin.md', 'le producteur emet payment.received a la signature'),
+    vue: () =>
+      avec('docs/adr/0011-temoin.md', 'le producteur emet payment.received a la signature'),
   },
   {
     id: 'json_guillemet_droit',
@@ -960,12 +979,13 @@ export const TEMOINS: Temoin[] = [
     id: 'prose_guillemet_droit',
     famille: 'evenement_hors_nomenclature',
     quoi: 'en prose, le guillemet droit ne cite pas',
-    vue: () => avec('docs/adr/9996-guillemets.md', 'le producteur emet "payment.received" a la signature'),
+    vue: () =>
+      avec('docs/adr/9996-guillemets.md', 'le producteur emet "payment.received" a la signature'),
   },
   {
     id: 'prose_accent_grave_pendant',
     famille: 'evenement_hors_nomenclature',
-    quoi: "en prose, un accent grave refermé trois lignes plus bas ne cite pas la fin de sa ligne",
+    quoi: 'en prose, un accent grave refermé trois lignes plus bas ne cite pas la fin de sa ligne',
     vue: () =>
       avec(
         'docs/adr/9998-span.md',
@@ -1051,7 +1071,11 @@ export const TEMOINS: Temoin[] = [
     id: 'prisma_terme_nu_en_commentaire',
     famille: 'terme_axionia_invalide',
     quoi: "en `.prisma`, un commentaire n'exempte que ses accents graves, pas un terme nu",
-    vue: () => avec('prisma/appat-nu.prisma', '/// le modele Invoice\nmodel Facture {\n  id String @id\n}\n'),
+    vue: () =>
+      avec(
+        'prisma/appat-nu.prisma',
+        '/// le modele Invoice\nmodel Facture {\n  id String @id\n}\n'
+      ),
   },
   {
     id: 'litteral_hors_contrat',
@@ -1108,12 +1132,17 @@ export const CONTRE_TEMOINS: ContreTemoin[] = [
     vue: () =>
       avec(
         'docs/adr/0012-crlf.md',
-        ['les noms `invoice.issued` et `devis.signed` sont refusés', 'le modèle `Invoice` a disparu', ''].join(CR + LF)
+        [
+          'les noms `invoice.issued` et `devis.signed` sont refusés',
+          'le modèle `Invoice` a disparu',
+          '',
+        ].join(CR + LF)
       ),
   },
   {
     quoi: 'une extension qui cite, DERNIÈRE du nom composé, exempte sa citation : `.ts.md` est de la prose',
-    vue: () => avec('docs/adr/9993-note.ts.md', `le producteur emettait ${AG}payment.received${AG}`),
+    vue: () =>
+      avec('docs/adr/9993-note.ts.md', `le producteur emettait ${AG}payment.received${AG}`),
   },
   {
     quoi: "un commentaire de schéma Prisma qui NOMME l'interdit — la forme de `prisma/schema.prisma`",
@@ -1144,14 +1173,23 @@ export const CONTRE_TEMOINS: ContreTemoin[] = [
   },
   {
     quoi: 'un binaire HORS des racines : la garde ne le juge pas, le compte « hors périmètre » le porte',
-    vue: () => avecFichierVu({ chemin: 'public/logo.png', octets: Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x00, 0x00) }),
+    vue: () =>
+      avecFichierVu({
+        chemin: 'public/logo.png',
+        octets: Uint8Array.of(0x89, 0x50, 0x4e, 0x47, 0x00, 0x00),
+      }),
   },
   {
     quoi: 'un fichier UTF-8 AVEC marque d’ordre sous une racine : c’est du texte, lu en entier',
     vue: () =>
       avecFichierVu({
         chemin: 'src/avec-bom.ts',
-        octets: Uint8Array.from([0xef, 0xbb, 0xbf, ...new TextEncoder().encode('export const rien = true;\n')]),
+        octets: Uint8Array.from([
+          0xef,
+          0xbb,
+          0xbf,
+          ...new TextEncoder().encode('export const rien = true;\n'),
+        ]),
       }),
   },
   {
@@ -1233,7 +1271,11 @@ type Ecarts = {
 /** LES ÉCARTS ENTRE LA POPULATION DU REGISTRE ET CE QUE LE CODE DÉCLARE ET PROUVE, dans les deux sens. */
 export function ecartsDePopulation(population: Population, code: CodeDeLaPreuve): Ecarts {
   const divergences: string[] = [];
-  const confronter = (quoi: string, duCode: readonly string[], registre: readonly string[]): void => {
+  const confronter = (
+    quoi: string,
+    duCode: readonly string[],
+    registre: readonly string[]
+  ): void => {
     const codeSeul = duCode.filter((n) => !registre.includes(n));
     const registreSeul = registre.filter((n) => !duCode.includes(n));
     const doubles = duCode.filter((n, i) => duCode.indexOf(n) !== i);
@@ -1247,7 +1289,11 @@ export function ecartsDePopulation(population: Population, code: CodeDeLaPreuve)
   confronter('familles', code.familles, population.familles);
   confronter('refus de conclure', code.refus, population.refus);
   confronter('extensions qui citent', code.citent, population.citent);
-  confronter('témoins', code.temoins.map((t) => t.id), population.temoins);
+  confronter(
+    'témoins',
+    code.temoins.map((t) => t.id),
+    population.temoins
+  );
 
   const orphelins = code.temoins
     .filter(
@@ -1293,7 +1339,9 @@ export function decisionDeLaPreuve(entrees: EntreesDeLaPreuve): Decision {
     if (entrees.registre instanceof Error) throw entrees.registre;
     population = populationDuRegistre(entrees.registre);
   } catch (e) {
-    refus.push(`la population attendue est ILLISIBLE dans docs/gates.json : ${(e as Error).message}`);
+    refus.push(
+      `la population attendue est ILLISIBLE dans docs/gates.json : ${(e as Error).message}`
+    );
   }
   if (population !== undefined) {
     const ecarts = ecartsDePopulation(population, entrees);

@@ -45,9 +45,11 @@ function prFusionneeQuiNEstPasLaTete(): number {
   );
   const prs = JSON.parse(brut) as { number: number; mergeCommit: { oid: string } | null }[];
   const candidate = prs.find(
-    (p) => p.mergeCommit && p.mergeCommit.oid !== tete && estAncetreDe(p.mergeCommit.oid, 'origin/main')
+    (p) =>
+      p.mergeCommit && p.mergeCommit.oid !== tete && estAncetreDe(p.mergeCommit.oid, 'origin/main')
   );
-  if (!candidate) throw new Error('aucune PR fusionnée ANTÉRIEURE à la tête : le témoin ne mesurerait rien');
+  if (!candidate)
+    throw new Error('aucune PR fusionnée ANTÉRIEURE à la tête : le témoin ne mesurerait rien');
   return candidate.number;
 }
 import { tetesConcordent, jugerLesTetes, estAncetreDe } from '../../../scripts/lot/revues';
@@ -107,9 +109,13 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
     const CONDITION_GARDE = /if \(!verdictTete\.concordent\) \{/;
     const CONDITION_COMPOSEUR = /if \(!verdictTete\.concordent\) \{/;
     expect(CONDITION_GARDE.test(GARDE), 'la condition de la GARDE a été altérée').toBe(true);
-    expect(CONDITION_COMPOSEUR.test(COMPOSEUR), 'la condition du COMPOSEUR a été altérée').toBe(true);
+    expect(CONDITION_COMPOSEUR.test(COMPOSEUR), 'la condition du COMPOSEUR a été altérée').toBe(
+      true
+    );
     expect(GARDE, 'la GARDE ne consomme pas la décision partagée').toContain('jugerLesTetes(');
-    expect(COMPOSEUR, 'le COMPOSEUR ne consomme pas la décision partagée').toContain('jugerLesTetes(');
+    expect(COMPOSEUR, 'le COMPOSEUR ne consomme pas la décision partagée').toContain(
+      'jugerLesTetes('
+    );
     // Aucun des deux ne recompare sur place : ni par l'opérateur, ni en ré-appelant le prédicat.
     expect(COMPOSEUR.includes('teteLocale !== tete')).toBe(false);
     expect(GARDE.includes('teteLocaleGate !== ')).toBe(false);
@@ -151,7 +157,10 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
       'un booléen en dur remplace la mesure d’ancestralité'
     ).toBe(false);
     // Et les opérandes ne sont nommés qu'UNE fois (RM-01) : deux écritures divergent.
-    expect((GARDE.match(/meta\.mergeCommit\?\.oid/g) ?? []).length, 'le sha de fusion est retapé').toBe(1);
+    expect(
+      (GARDE.match(/meta\.mergeCommit\?\.oid/g) ?? []).length,
+      'le sha de fusion est retapé'
+    ).toBe(1);
   });
 
   it('REQ-GOV-032 — la CI ne câble PAS `--pr` : sinon la garde de tête serait insatisfiable', () => {
@@ -166,11 +175,15 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
 
     // ⚠️ CONTRÔLE POSITIF D'ABORD : sans lui, ce témoin serait vert le jour où `gov:pr`
     // disparaîtrait de la CI — « aucun `--pr` » et « aucune gate » sont indiscernables.
-    expect(CI, '`gov:pr` n’est plus lancé en CI : le témoin ci-dessous ne mesurerait plus rien')
-      .toMatch(/run:\s*pnpm gov:pr\s*$/m);
+    expect(
+      CI,
+      '`gov:pr` n’est plus lancé en CI : le témoin ci-dessous ne mesurerait plus rien'
+    ).toMatch(/run:\s*pnpm gov:pr\s*$/m);
 
-    expect(/pnpm gov:pr\s+--pr/.test(CI), 'la CI câble `--pr` : la garde de tête devient insatisfiable')
-      .toBe(false);
+    expect(
+      /pnpm gov:pr\s+--pr/.test(CI),
+      'la CI câble `--pr` : la garde de tête devient insatisfiable'
+    ).toBe(false);
     expect(
       /pnpm gov:pr\s+--apres-fusion/.test(CI),
       'la CI câble `--apres-fusion` : elle jugerait un atterrissage qui n’a pas eu lieu'
@@ -211,8 +224,10 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
     const { sortie: avant } = lancer('--pr', PR_FUSIONNEE);
 
     // TÉMOIN : après fusion, la tête de branche n'est plus l'étalon — le pas 8 est satisfiable.
-    expect(apres, "`--apres-fusion` compare encore la tête de branche : le pas 8 est insatisfiable")
-      .not.toContain('la forge rapporte la tête');
+    expect(
+      apres,
+      '`--apres-fusion` compare encore la tête de branche : le pas 8 est insatisfiable'
+    ).not.toContain('la forge rapporte la tête');
 
     // 🔴 LE CONTRÔLE POSITIF SYMÉTRIQUE — il manquait, et la lentille `mutation` a fait passer
     // TROIS mutants par ce trou (13e tour). L'assertion ci-dessus n'est que NÉGATIVE : elle tue les
@@ -220,15 +235,20 @@ describe('REQ-GOV-032 — la tête rapportée par la forge est confrontée à la
     // Mesuré : arguments de `estAncetreDe` inversés → la gate REFUSE une PR qui A atterri, message
     // différent, témoin vert ; et un `process.exit(3)` posé avant tout jugement → vert aussi.
     // *Un témoin qui n'interdit qu'un texte ne dit rien de ce qui arrive à la place.*
-    expect(apres, "`--apres-fusion` refuse une PR qui A ATTERRI : l'étalon est faux")
-      .not.toContain("n'est pas dans");
+    expect(apres, "`--apres-fusion` refuse une PR qui A ATTERRI : l'étalon est faux").not.toContain(
+      "n'est pas dans"
+    );
     expect(codeApres, 'la gate sort par un chemin qui précède le jugement').not.toBe(3);
     // CONTRE-TÉMOIN : avant fusion, elle l'est toujours — la garde n'a pas été retirée.
-    expect(avant, 'la garde de tête ne tire plus AVANT fusion : elle a été supprimée, pas cadrée')
-      .toContain('la forge rapporte la tête');
+    expect(
+      avant,
+      'la garde de tête ne tire plus AVANT fusion : elle a été supprimée, pas cadrée'
+    ).toContain('la forge rapporte la tête');
     // Et les deux sorties diffèrent : sans cela, on ne mesurerait qu'un binaire muet.
-    expect(apres === avant, 'les deux modes rendent la MÊME sortie : le drapeau n’a aucun effet')
-      .toBe(false);
+    expect(
+      apres === avant,
+      'les deux modes rendent la MÊME sortie : le drapeau n’a aucun effet'
+    ).toBe(false);
   }, 120_000);
 
   it('REQ-GOV-032 — les deux refus NOMMENT les deux têtes', () => {
@@ -291,15 +311,26 @@ describe('REQ-GOV-032 — après fusion, la propriété est une ANCESTRALITÉ, p
   });
 
   it('REQ-GOV-032 — le sens de défaillance est FERMÉ : aucune fusion rapportée ⇒ refus', () => {
-    const v = jugerLesTetes({ moment: 'apres-fusion', mergeCommit: '', base: 'origin/main', estAncetre: true });
+    const v = jugerLesTetes({
+      moment: 'apres-fusion',
+      mergeCommit: '',
+      base: 'origin/main',
+      estAncetre: true,
+    });
     expect(v.concordent, 'une PR sans commit de fusion est déclarée atterrie').toBe(false);
     expect(v.message.join('\n')).toContain('AUCUN commit de fusion');
   });
 
   it('REQ-GOV-032 — la branche AVANT fusion reste une ÉGALITÉ, elle n’a pas été relâchée', () => {
     const memes = 'a'.repeat(40);
-    expect(jugerLesTetes({ moment: 'avant-fusion', teteLocale: memes, teteForge: memes }).concordent).toBe(true);
-    const v = jugerLesTetes({ moment: 'avant-fusion', teteLocale: memes, teteForge: 'b'.repeat(40) });
+    expect(
+      jugerLesTetes({ moment: 'avant-fusion', teteLocale: memes, teteForge: memes }).concordent
+    ).toBe(true);
+    const v = jugerLesTetes({
+      moment: 'avant-fusion',
+      teteLocale: memes,
+      teteForge: 'b'.repeat(40),
+    });
     expect(v.concordent, 'l’égalité d’avant-fusion a été remplacée par autre chose').toBe(false);
     expect(v.message.join('\n')).toContain('la forge rapporte la tête');
   });
@@ -312,9 +343,13 @@ describe('REQ-GOV-032 — après fusion, la propriété est une ANCESTRALITÉ, p
     // retirée, `estAncetreDe('origin/main', 'origin/main')` passe à **true** — `git` résout la ref
     // et la déclare son propre ancêtre. La gate attesterait alors un atterrissage « vérifié »
     // contre rien. *Le cas qui traverse n'est pas celui qui ressemble le moins à un sha.*
-    expect(estAncetreDe('origin/main', 'origin/main'), 'une référence est acceptée comme sha').toBe(false);
+    expect(estAncetreDe('origin/main', 'origin/main'), 'une référence est acceptée comme sha').toBe(
+      false
+    );
     expect(estAncetreDe('HEAD', 'origin/main')).toBe(false);
-    expect(estAncetreDe('f'.repeat(40), 'origin/main'), 'un sha inconnu est déclaré ancêtre').toBe(false);
+    expect(estAncetreDe('f'.repeat(40), 'origin/main'), 'un sha inconnu est déclaré ancêtre').toBe(
+      false
+    );
     // CONTRÔLE POSITIF : sans lui, une fonction qui rend TOUJOURS `false` passerait les trois.
     const tete = execFileSync('git', ['rev-parse', 'origin/main'], { encoding: 'utf8' }).trim();
     expect(estAncetreDe(tete, 'origin/main'), 'la mesure ne sait rendre que `false`').toBe(true);

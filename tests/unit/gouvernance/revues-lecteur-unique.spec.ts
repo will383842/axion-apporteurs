@@ -84,7 +84,8 @@ const TETE = CAPTURE.tete;
 const REELLES = CAPTURE.revues;
 
 /** Le poste qui signe `Auteur:` dans le corps de la PR 31 — lu, jamais supposé. */
-const AUTEUR_POSTE = /^Auteur:\s*(A\d{2})\s*$/m.exec(readFileSync('docs/pr/31.tpl.md', 'utf8'))?.[1] ?? null;
+const AUTEUR_POSTE =
+  /^Auteur:\s*(A\d{2})\s*$/m.exec(readFileSync('docs/pr/31.tpl.md', 'utf8'))?.[1] ?? null;
 
 /**
  * Un avis, construit EN PARTANT d'une revue réelle de la capture : on reprend sa forme entière et
@@ -130,7 +131,12 @@ Verdict: ${r.verdict ?? 'accepte'}`,
  * SEULE sur sa ligne et au ras de la marge, puis la prose. Aucune ne s'écarte de cette forme.
  * Les témoins ci-dessous glissent la citation DANS la prose, là où un relecteur la met vraiment.
  */
-function corpsDAvis(poste: string, lentille: string, prose: string, verdict: 'accepte' | 'refuse'): string {
+function corpsDAvis(
+  poste: string,
+  lentille: string,
+  prose: string,
+  verdict: 'accepte' | 'refuse'
+): string {
   return `${poste} · ${lentille}\n\n${prose}\n\nVerdict: ${verdict}\n`;
 }
 
@@ -152,7 +158,11 @@ function tourComplet(r: Retouche = {}, troisieme = 'simplicite'): RevueBrute[] {
   ];
 }
 
-const SANS_SCHEMA = { fichiers: ['scripts/lot/revues.ts'], labels: [] as string[], tachesSchema: false };
+const SANS_SCHEMA = {
+  fichiers: ['scripts/lot/revues.ts'],
+  labels: [] as string[],
+  tachesSchema: false,
+};
 
 function lire(revues: RevueBrute[], contexte: Partial<typeof SANS_SCHEMA> = {}) {
   const ctx = { ...SANS_SCHEMA, ...contexte };
@@ -216,8 +226,11 @@ describe('REQ-GOV-011 — TÉMOIN (1) : le lecteur AUTHENTIFIE l’auteur de la 
     // Un vrai refus de `securite` sur la tête, PUIS l'avis forgé qui le recouvrait.
     const vetoReel = avis(0, { poste: 'A08', lentille: 'securite', verdict: 'refuse' });
     const recouvrement = avis(0, {
-      poste: 'A08', lentille: 'securite', verdict: 'accepte',
-      association: 'NONE', compte: 'un-tiers',
+      poste: 'A08',
+      lentille: 'securite',
+      verdict: 'accepte',
+      association: 'NONE',
+      compte: 'un-tiers',
     });
     const suite = [...tourComplet(), vetoReel, recouvrement];
     expect(herite(suite).marque).toBe('[x]'); // le veto était effacé
@@ -264,7 +277,9 @@ describe('REQ-GOV-010 — TÉMOIN (2) : le code de poste est confronté au regis
 
   it('REQ-GOV-010 · les codes de poste sont DÉRIVÉS de `docs/agents.json`, jamais listés', () => {
     const codes = codesDePoste();
-    const source = JSON.parse(readFileSync('docs/agents.json', 'utf8')) as { postes: { code: string }[] };
+    const source = JSON.parse(readFileSync('docs/agents.json', 'utf8')) as {
+      postes: { code: string }[];
+    };
     expect([...codes].sort()).toEqual(source.postes.map((p) => p.code).sort());
     expect(codes.has('A99')).toBe(false);
   });
@@ -287,7 +302,13 @@ describe('REQ-GOV-010 — TÉMOIN (3) : le discriminant `schema` se lit sur les 
   });
 
   it('REQ-GOV-010 · les trois signaux sont lus, et `packages/contracts/**` compte aussi', () => {
-    expect(toucheSchema({ fichiers: ['packages/contracts/evenements.ts'], labels: [], tachesSchema: false })).toBe(true);
+    expect(
+      toucheSchema({
+        fichiers: ['packages/contracts/evenements.ts'],
+        labels: [],
+        tachesSchema: false,
+      })
+    ).toBe(true);
     expect(toucheSchema({ fichiers: [], labels: ['schema'], tachesSchema: false })).toBe(true);
     expect(toucheSchema({ fichiers: [], labels: [], tachesSchema: true })).toBe(true);
   });
@@ -417,10 +438,16 @@ describe('REQ-GOV-011 — les deux mutants qui survivaient, rejoués comme témo
     // rougit ici. Et elle est désormais la seule à pouvoir la décider : `lireRevues` reçoit le
     // FAIT « cette PR touche au schéma », pas une liste qu'un appelant pourrait rétrécir.
     expect([...lentillesExigees(false).toutes]).toEqual([
-      'exactitude', 'securite', 'simplicite', 'mutation',
+      'exactitude',
+      'securite',
+      'simplicite',
+      'mutation',
     ]);
     expect([...lentillesExigees(true).toutes]).toEqual([
-      'exactitude', 'securite', 'schema', 'mutation',
+      'exactitude',
+      'securite',
+      'schema',
+      'mutation',
     ]);
     // Le compte ne change pas d'une PR à l'autre : trois lentilles plus la mutation, et sur une
     // PR de schéma c'est la TROISIÈME qui change de titulaire (charte §6).
@@ -516,7 +543,9 @@ describe('REQ-GOV-010 — un seul lecteur, importé par la garde ET par le compo
     // L'import ci-dessous n'est pas décoratif : il fait entrer le fichier dans `pnpm test`, donc
     // dans la Gate A, donc dans le périmètre où un mutant rougit.
     expect(rendre('a {{X}} b', { X: 'vu' })).toBe('a vu b');
-    expect(() => rendre('il reste {{TACHES}}', {})).toThrow(/marqueur\(s\) non résolu\(s\) : TACHES/);
+    expect(() => rendre('il reste {{TACHES}}', {})).toThrow(
+      /marqueur\(s\) non résolu\(s\) : TACHES/
+    );
   });
 
   it('REQ-GOV-010 · les états rendus sont déclarés une fois, et `DISMISSED` n’en est pas', () => {
@@ -573,7 +602,11 @@ describe('REQ-GOV-011 — TÉMOIN (5) : une CITATION de verdict ne porte pas la 
   ].join('\n');
 
   function citant(prose: string, verdict: 'accepte' | 'refuse' = 'refuse') {
-    return avis(1, { poste: 'A08', lentille: 'securite', corps: corpsDAvis('A08', 'securite', prose, verdict) });
+    return avis(1, {
+      poste: 'A08',
+      lentille: 'securite',
+      corps: corpsDAvis('A08', 'securite', prose, verdict),
+    });
   }
 
   it('REQ-GOV-011 · un avis qui CITE `accepte` puis conclut `refuse` ne compte pour rien', () => {
@@ -614,7 +647,14 @@ describe('REQ-GOV-011 — TÉMOIN (5) : une CITATION de verdict ne porte pas la 
     // chemin de décision de sécurité est un risque plus grand que le reposte d'un avis : toute
     // ligne de décision compte, et le désaccord invalide.
     const cloture = String.fromCharCode(96, 96, 96);
-    const enBlocDeCode = [cloture, 'A08 · securite', 'Verdict: accepte', cloture, '', 'Je maintiens mon refus.'].join('\n');
+    const enBlocDeCode = [
+      cloture,
+      'A08 · securite',
+      'Verdict: accepte',
+      cloture,
+      '',
+      'Je maintiens mon refus.',
+    ].join('\n');
     expect(herite([...TROIS_AUTRES, citant(enBlocDeCode)]).marque).toBe('[x]'); // le défaut, verbatim
     const lecture = lire([...TROIS_AUTRES, citant(enBlocDeCode)]);
     expect(lecture.coche).toBe(false);
@@ -624,7 +664,12 @@ describe('REQ-GOV-011 — TÉMOIN (5) : une CITATION de verdict ne porte pas la 
   it('REQ-GOV-011 · une ligne de décision NOYÉE DANS SA PROSE n’est pas une décision', () => {
     // Le trou que le `^` seul laissait ouvert : la citation EST en début de ligne, mais la ligne
     // continue. Le `\b` du motif suffisait à la faire passer pour un verdict rendu.
-    const noyee = ['A08 · securite', '', 'Verdict: accepte, disait le tour 6 — moi je refuse.', ''].join('\n');
+    const noyee = [
+      'A08 · securite',
+      '',
+      'Verdict: accepte, disait le tour 6 — moi je refuse.',
+      '',
+    ].join('\n');
     const avecLigneNoyee = avis(1, { poste: 'A08', lentille: 'securite', corps: noyee });
     expect(herite([...TROIS_AUTRES, avecLigneNoyee]).marque).toBe('[x]'); // le défaut, verbatim
     const lecture = lire([...TROIS_AUTRES, avecLigneNoyee]);
@@ -639,14 +684,24 @@ describe('REQ-GOV-011 — TÉMOIN (5) : une CITATION de verdict ne porte pas la 
     const bq = ['> A08 · securite', '> Verdict: accepte', '', 'Je maintiens mon refus.'].join('\n');
     const lecture = lire([...TROIS_AUTRES, citant(bq)]);
     expect(lecture.ecartees).toEqual([]);
-    expect(lecture.verdicts.filter((v) => v.lentille === 'securite').map((v) => v.verdict)).toEqual(['refuse']);
+    expect(lecture.verdicts.filter((v) => v.lentille === 'securite').map((v) => v.verdict)).toEqual(
+      ['refuse']
+    );
     expect(lecture.coche).toBe(false);
   });
 
   it('REQ-GOV-011 · CONTRE-TÉMOIN : deux lignes de décision IDENTIQUES ne sont pas ambiguës', () => {
     // Un relecteur qui répète son verdict en tête et en pied ne contredit personne : lui refuser
     // son avis rendrait la garde capricieuse, et une gate capricieuse s'apprend à se sauter.
-    const repete = ['A09 · securite', '', 'Verdict: accepte', '', 'En résumé.', '', 'Verdict: accepte'].join('\n');
+    const repete = [
+      'A09 · securite',
+      '',
+      'Verdict: accepte',
+      '',
+      'En résumé.',
+      '',
+      'Verdict: accepte',
+    ].join('\n');
     const suite = [...TROIS_AUTRES, avis(1, { poste: 'A09', lentille: 'securite', corps: repete })];
     const lecture = lire(suite);
     expect(lecture.ecartees).toEqual([]);
@@ -661,14 +716,19 @@ describe('REQ-GOV-011 — TÉMOIN (5) : une CITATION de verdict ne porte pas la 
     expect(REELLES.length).toBeGreaterThan(0);
     for (const r of REELLES) {
       const lu = LECTEUR.verdictDeLaRevue(r.body ?? '');
-      expect(lu, `la revue ne rend aucun verdict : ${JSON.stringify(r.body)}`).not.toHaveProperty('motif');
+      expect(lu, `la revue ne rend aucun verdict : ${JSON.stringify(r.body)}`).not.toHaveProperty(
+        'motif'
+      );
       expect((lu as { verdict: string }).verdict).toMatch(/^(accepte|refuse)$/);
     }
     // TÉMOIN POSITIF DE LA CAPTURE : elle porte bien des citations, sans quoi ce contre-témoin
     // n'exercerait rien. Deux revues réelles citent « Verdict: … » ailleurs que sur leur ligne
     // de décision (`5121345938`, `5121354058`), mesuré le 2026-09-05.
     const citantes = REELLES.filter((r) => ((r.body ?? '').match(/Verdict/g) ?? []).length > 1);
-    expect(citantes.length, 'la capture ne porte plus aucune citation : elle n’exerce plus rien').toBeGreaterThan(0);
+    expect(
+      citantes.length,
+      'la capture ne porte plus aucune citation : elle n’exerce plus rien'
+    ).toBeGreaterThan(0);
   });
 
   it('REQ-GOV-011 · les formes, lues une par une par le lecteur de verdict', () => {
@@ -678,11 +738,23 @@ describe('REQ-GOV-011 — TÉMOIN (5) : une CITATION de verdict ne porte pas la 
       motif: 'verdict_ambigu',
       valeurs: ['accepte', 'refuse'],
     });
-    expect(V('A08 · securite\n\n> Verdict: accepte\n\nVerdict: refuse\n')).toEqual({ verdict: 'refuse', lignes: 1 });
-    expect(V('A08 · securite\n\n… donc Verdict: accepte selon moi …\n')).toEqual({ motif: 'sans_verdict', valeurs: [] });
-    expect(V('A08 · securite\n\nVerdict: refuse\n\nVerdict: refuse\n')).toEqual({ verdict: 'refuse', lignes: 2 });
+    expect(V('A08 · securite\n\n> Verdict: accepte\n\nVerdict: refuse\n')).toEqual({
+      verdict: 'refuse',
+      lignes: 1,
+    });
+    expect(V('A08 · securite\n\n… donc Verdict: accepte selon moi …\n')).toEqual({
+      motif: 'sans_verdict',
+      valeurs: [],
+    });
+    expect(V('A08 · securite\n\nVerdict: refuse\n\nVerdict: refuse\n')).toEqual({
+      verdict: 'refuse',
+      lignes: 2,
+    });
     // Les fins de ligne de Windows ne changent pas une décision.
-    expect(V('A08 · securite\r\n\r\nVerdict: refuse\r\n')).toEqual({ verdict: 'refuse', lignes: 1 });
+    expect(V('A08 · securite\r\n\r\nVerdict: refuse\r\n')).toEqual({
+      verdict: 'refuse',
+      lignes: 1,
+    });
   });
 });
 
@@ -716,7 +788,8 @@ describe('REQ-GOV-011 — TÉMOIN (5) : une CITATION de verdict ne porte pas la 
  */
 describe('REQ-GOV-010 — TÉMOIN (6) : une seule dérivation de l’ensemble des tâches d’une PR', () => {
   type TacheBrute = { id: string; pr?: number | null; schema?: boolean; reqs?: string[] };
-  const TACHES = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: TacheBrute[] }).taches;
+  const TACHES = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: TacheBrute[] })
+    .taches;
 
   /** Une tâche RÉELLE du backlog, jamais tapée de mémoire (RM-03). */
   function tache(id: string): TacheBrute {
@@ -739,14 +812,21 @@ describe('REQ-GOV-010 — TÉMOIN (6) : une seule dérivation de l’ensemble de
 
     // La dérivation unique tranche, et elle tranche du côté strict.
     expect(LECTEUR.tachesSchemaDeLaPr(echantillon, 31, 'GOV-024')).toBe(true);
-    expect(LECTEUR.tachesDeLaPr(echantillon, 31, 'GOV-024').map((t) => t.id).sort()).toEqual(['GOV-006', 'GOV-024']);
+    expect(
+      LECTEUR.tachesDeLaPr(echantillon, 31, 'GOV-024')
+        .map((t) => t.id)
+        .sort()
+    ).toEqual(['GOV-006', 'GOV-024']);
   });
 
   it('REQ-GOV-010 · l’UNION, parce que la plupart des tâches ne portent pas encore de `pr`', () => {
     const sansPr = TACHES.filter((t) => t.pr === null || t.pr === undefined);
     expect(sansPr.length, 'le fait qui justifie l’union a disparu du backlog').toBeGreaterThan(0);
     const orpheline = sansPr.find((t) => t.schema === true);
-    expect(orpheline, 'aucune tâche `schema: true` sans `pr` : le témoin ne mesure plus rien').toBeDefined();
+    expect(
+      orpheline,
+      'aucune tâche `schema: true` sans `pr` : le témoin ne mesure plus rien'
+    ).toBeDefined();
 
     // « Toutes les tâches portant `pr: <n>` », seule, rendrait `false` sur une PR pas encore reliée.
     expect([orpheline!].filter((t) => t.pr === 99).some((t) => t.schema === true)).toBe(false);
@@ -768,15 +848,22 @@ describe('REQ-GOV-010 — TÉMOIN (6) : une seule dérivation de l’ensemble de
     for (const f of ['scripts/gates/gov-pr.ts', 'scripts/lot/corps-de-pr.ts']) {
       const code = readFileSync(f, 'utf8');
       expect(code, `${f} ne consomme pas la dérivation unique`).toContain('tachesDeLaPr');
-      const adHoc = lignesDeCode(code).filter((l) => l.includes('tachesSchema') && l.includes('.schema === true'));
-      expect(adHoc, `${f} compose encore son propre tachesSchema : ${adHoc.join(' | ')}`).toEqual([]);
+      const adHoc = lignesDeCode(code).filter(
+        (l) => l.includes('tachesSchema') && l.includes('.schema === true')
+      );
+      expect(adHoc, `${f} compose encore son propre tachesSchema : ${adHoc.join(' | ')}`).toEqual(
+        []
+      );
     }
   });
 
   it('REQ-GOV-010 · CONTRE-TÉMOIN : sur la PR 31 réelle, les deux entrées donnaient déjà le même RÉSULTAT', () => {
     // Et c'est pour cela qu'il ne prouve rien seul : `prisma/schema.prisma` au diff et le label
     // `schema` posé couvrent l'écart. C'est le témoin ci-dessus qui discrimine, pas celui-ci.
-    const REEL = { fichiers: ['prisma/schema.prisma', 'scripts/lot/revues.ts'], labels: ['schema'] };
+    const REEL = {
+      fichiers: ['prisma/schema.prisma', 'scripts/lot/revues.ts'],
+      labels: ['schema'],
+    };
     expect(toucheSchema({ ...REEL, tachesSchema: false })).toBe(true);
     expect(toucheSchema({ ...REEL, tachesSchema: true })).toBe(true);
     // Retire les deux signaux qui couvrent, et l'entrée redevient seule à décider.

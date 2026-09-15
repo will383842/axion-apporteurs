@@ -90,17 +90,34 @@ describe('REQ-GOV-002 — la table arbitre ce qu’elle annonce', () => {
     const titres = readFileSync(PRESEANCE, 'utf8')
       .split('\n')
       .filter((l) => l.startsWith('### '))
-      .map((l) => l.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
-    const cles = ['quota', 'collision', 'cycle de vie', 'bareme', 'naissance', 'peremption', 'zero arbitrage'];
+      .map((l) =>
+        l
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+      );
+    const cles = [
+      'quota',
+      'collision',
+      'cycle de vie',
+      'bareme',
+      'naissance',
+      'peremption',
+      'zero arbitrage',
+    ];
     for (const cle of cles) {
-      expect(titres.some((t) => t.includes(cle)), `clé « ${cle} » sans sous-section`).toBe(true);
+      expect(
+        titres.some((t) => t.includes(cle)),
+        `clé « ${cle} » sans sous-section`
+      ).toBe(true);
     }
   });
 
   it('arbitre au moins sept couples de documents en section 2', () => {
-    const deuxieme = readFileSync(PRESEANCE, 'utf8')
-      .split(/^## /m)
-      .find((s) => s.startsWith('2.')) ?? '';
+    const deuxieme =
+      readFileSync(PRESEANCE, 'utf8')
+        .split(/^## /m)
+        .find((s) => s.startsWith('2.')) ?? '';
     const lignes = deuxieme
       .split('\n')
       .filter((l) => l.trim().startsWith('|') && !/^\|[\s:|-]+\|$/.test(l.trim()));
@@ -116,7 +133,9 @@ describe('REQ-GOV-030 — l’expression arbitrée cite toujours son porteur', (
     lignes.forEach((ligne, i) => {
       if (!/z[ée]ro\s+arbitrage/i.test(ligne)) return;
       const voisinage = ligne + '\n' + (lignes[i + 1] ?? '');
-      expect(voisinage, `${PRESEANCE}:${i + 1} énonce la règle sans son porteur`).toContain('REQ-DM-034');
+      expect(voisinage, `${PRESEANCE}:${i + 1} énonce la règle sans son porteur`).toContain(
+        'REQ-DM-034'
+      );
     });
   });
 });

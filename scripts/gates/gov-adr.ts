@@ -75,7 +75,15 @@
 
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { NOM_ADR, GABARIT, NOM_INDEX, RACINE_ADR, rendreIndex, entreeDepuisTexte, normaliser } from '../adr/index';
+import {
+  NOM_ADR,
+  GABARIT,
+  NOM_INDEX,
+  RACINE_ADR,
+  rendreIndex,
+  entreeDepuisTexte,
+  normaliser,
+} from '../adr/index';
 
 type Adr = { fichier: string; texte: string };
 type Reference = { fichier: string; ligne: number; contenu: string };
@@ -99,7 +107,14 @@ type Corpus = {
 type Faute = { famille: string; message: string };
 
 const DEPOTS = ['partners', 'axionia', 'ops'];
-const RUBRIQUES = ['Contexte', 'Décision', 'Conséquences', 'Alternatives écartées', 'Ce qui le vérifie', 'Reste à faire'];
+const RUBRIQUES = [
+  'Contexte',
+  'Décision',
+  'Conséquences',
+  'Alternatives écartées',
+  'Ce qui le vérifie',
+  'Reste à faire',
+];
 const STATUTS = ['propose', 'accepte', 'remplace'];
 
 /** Un renvoi d'ADR, qualifié ou non. Le dépôt est capturé quand il est écrit. */
@@ -157,7 +172,11 @@ function neutraliser(ligne: string): string {
 const aplatir = (s: string): string => s.replace(/\s+/g, ' ').trim();
 
 /** Deux titres qui ne diffèrent que par l'apostrophe ou la casse sont visuellement identiques. */
-const plier = (s: string): string => s.replace(/[\u2018\u2019\u201b]/g, "'").replace(/\u00a0/g, ' ').toLowerCase();
+const plier = (s: string): string =>
+  s
+    .replace(/[\u2018\u2019\u201b]/g, "'")
+    .replace(/\u00a0/g, ' ')
+    .toLowerCase();
 
 /**
  * La rubrique « Ce qui le vérifie », COUPÉE au titre suivant. Le `split` d'origine emportait tout
@@ -195,8 +214,10 @@ function puces(bloc: string): string[] {
 /** Les assertions citées par une puce, dans l'ordre : chaque titre prend le dernier fichier cité avant lui. */
 function citations(puce: string): Citation[] {
   const jetons: { fichier?: string; titre?: string; position: number }[] = [];
-  for (const m of puce.matchAll(CITATION_FICHIER)) jetons.push({ fichier: m[0]!, position: m.index! });
-  for (const m of puce.matchAll(CITATION_IT)) jetons.push({ titre: aplatir(m[2]!), position: m.index! });
+  for (const m of puce.matchAll(CITATION_FICHIER))
+    jetons.push({ fichier: m[0]!, position: m.index! });
+  for (const m of puce.matchAll(CITATION_IT))
+    jetons.push({ titre: aplatir(m[2]!), position: m.index! });
   jetons.sort((a, b) => a.position - b.position);
 
   const trouvees: Citation[] = [];
@@ -216,7 +237,9 @@ function resoudreSpec(specs: Spec[], cite: string): Spec[] {
 
 /** Un gabarit de chaîne reconnaît un titre si ses parties fixes l'encadrent dans l'ordre. */
 function gabaritReconnait(gabarit: string, titre: string): boolean {
-  const parties = gabarit.split(/\$\{[^}]*\}/g).map((p) => aplatir(p).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const parties = gabarit
+    .split(/\$\{[^}]*\}/g)
+    .map((p) => aplatir(p).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   return new RegExp(`^${parties.join('.+')}$`).test(titre);
 }
 
@@ -226,7 +249,11 @@ function gabaritReconnait(gabarit: string, titre: string): boolean {
  * REQ-GOV-009, sur un ADR `accepte` SEULEMENT : l'assertion citée doit exister. Un ADR `propose`
  * annonce librement ce qu'il attend — c'est même à cela que sert le statut.
  */
-function controlerAssertions(a: Adr, c: Corpus, ajouter: (famille: string, message: string) => void): void {
+function controlerAssertions(
+  a: Adr,
+  c: Corpus,
+  ajouter: (famille: string, message: string) => void
+): void {
   const bloc = rubriqueVerification(a.texte);
   const lesPuces = puces(bloc);
   const citees = lesPuces.flatMap(citations);
@@ -297,7 +324,9 @@ function controlerAssertions(a: Adr, c: Corpus, ajouter: (famille: string, messa
     const nu = cite.titre.split(' > ').pop()!;
     if (spec.titres.includes(cite.titre) || spec.titres.includes(nu)) continue;
 
-    const gabarit = spec.gabarits.find((g) => gabaritReconnait(g, cite.titre) || gabaritReconnait(g, nu));
+    const gabarit = spec.gabarits.find(
+      (g) => gabaritReconnait(g, cite.titre) || gabaritReconnait(g, nu)
+    );
     if (gabarit !== undefined) {
       ajouter(
         'assertion_titre_calcule',
@@ -364,7 +393,10 @@ function controler(c: Corpus): Faute[] {
     const numero = NOM_ADR.exec(a.fichier)?.[1] ?? '';
     const e = entreeDepuisTexte(a.fichier, a.texte);
     const titre = /^#[ \t]+(.+)$/m.exec(a.texte)?.[1] ?? '';
-    if (!titre.startsWith(`partners/ADR-${numero} `) && !titre.startsWith(`partners/ADR-${numero} —`)) {
+    if (
+      !titre.startsWith(`partners/ADR-${numero} `) &&
+      !titre.startsWith(`partners/ADR-${numero} —`)
+    ) {
       ajouter(
         'titre_non_qualifie',
         `${a.fichier} — le titre devrait commencer par « partners/ADR-${numero} — » ; il commence par ` +
@@ -380,14 +412,20 @@ function controler(c: Corpus): Faute[] {
     }
     for (const r of RUBRIQUES) {
       if (!new RegExp(`^##[ \\t]+${r}[ \\t]*$`, 'm').test(a.texte)) {
-        ajouter('rubrique_manquante', `${a.fichier} — rubrique « ${r} » absente. Une rubrique vide se voit ; une rubrique absente ne se voit pas.`);
+        ajouter(
+          'rubrique_manquante',
+          `${a.fichier} — rubrique « ${r} » absente. Une rubrique vide se voit ; une rubrique absente ne se voit pas.`
+        );
       }
     }
     if (e.statut === 'accepte') controlerAssertions(a, c, ajouter);
   }
 
   if (c.index === null) {
-    ajouter('index_absent', `${join(RACINE_ADR, NOM_INDEX)} est absent : l'index est exigé par REQ-GOV-008. Lance \`pnpm adr:index\`.`);
+    ajouter(
+      'index_absent',
+      `${join(RACINE_ADR, NOM_INDEX)} est absent : l'index est exigé par REQ-GOV-008. Lance \`pnpm adr:index\`.`
+    );
   } else {
     const attendu = rendreIndex(c.adrs.map((a) => entreeDepuisTexte(a.fichier, a.texte)));
     if (normaliser(c.index) !== normaliser(attendu)) {
@@ -428,11 +466,23 @@ function controler(c: Corpus): Faute[] {
 }
 
 const FAMILLES = [
-  'dossier_double', 'nom_non_conforme', 'numero_double', 'numero_non_consecutif',
-  'titre_non_qualifie', 'statut_hors_vocabulaire', 'rubrique_manquante', 'assertion_manquante',
-  'index_absent', 'index_non_derive', 'reference_non_qualifiee', 'reference_sans_cible',
+  'dossier_double',
+  'nom_non_conforme',
+  'numero_double',
+  'numero_non_consecutif',
+  'titre_non_qualifie',
+  'statut_hors_vocabulaire',
+  'rubrique_manquante',
+  'assertion_manquante',
+  'index_absent',
+  'index_non_derive',
+  'reference_non_qualifiee',
+  'reference_sans_cible',
   // GOV-010, REQ-GOV-009 : l'assertion citée existe VRAIMENT.
-  'assertion_fichier_absent', 'assertion_titre_absent', 'assertion_titre_calcule', 'hors_code_sans_motif',
+  'assertion_fichier_absent',
+  'assertion_titre_absent',
+  'assertion_titre_calcule',
+  'hors_code_sans_motif',
 ];
 
 // ── lecture du dépôt ─────────────────────────────────────────────────────────
@@ -520,7 +570,14 @@ function lireCorpus(strict: boolean): { corpus: Corpus; reservees: Reference[] }
   }
 
   return {
-    corpus: { dossiersAdr: dossiersDAdr(), fichiersDuDossier, adrs, index, references, specs: lireSpecs() },
+    corpus: {
+      dossiersAdr: dossiersDAdr(),
+      fichiersDuDossier,
+      adrs,
+      index,
+      references,
+      specs: lireSpecs(),
+    },
     reservees,
   };
 }
@@ -544,7 +601,11 @@ function adrTemoin(numero: string, statut = 'propose', options: OptionsTemoin = 
   for (const r of rubriques) {
     l.push(`## ${r}`, '');
     if (r === 'Ce qui le vérifie') {
-      l.push(options.verifie ?? '- **hors-code** — le moule d’un document ne se vérifie pas par une assertion de test.', '');
+      l.push(
+        options.verifie ??
+          '- **hors-code** — le moule d’un document ne se vérifie pas par une assertion de test.',
+        ''
+      );
     } else if (r === 'Reste à faire' && options.reste !== undefined) {
       l.push(options.reste, '');
     } else {
@@ -575,7 +636,13 @@ function corpusValide(): Corpus {
     fichiersDuDossier: [...adrs.map((a) => a.fichier), NOM_INDEX, GABARIT],
     adrs,
     index: rendreIndex(adrs.map((a) => entreeDepuisTexte(a.fichier, a.texte))),
-    references: [{ fichier: 'docs/temoin.md', ligne: 1, contenu: 'voir partners/ADR-0001 et axionia/ADR-0014' }],
+    references: [
+      {
+        fichier: 'docs/temoin.md',
+        ligne: 1,
+        contenu: 'voir partners/ADR-0001 et axionia/ADR-0014',
+      },
+    ],
     specs: SPECS_TEMOIN,
   };
 }
@@ -604,8 +671,17 @@ if (process.argv.includes('--prove')) {
   }
 
   const TEMOINS: { famille: string; defaut: () => Corpus }[] = [
-    { famille: 'dossier_double', defaut: () => ({ ...corpusValide(), dossiersAdr: [RACINE_ADR, 'docs/adrs'] }) },
-    { famille: 'nom_non_conforme', defaut: () => ({ ...corpusValide(), fichiersDuDossier: [...corpusValide().fichiersDuDossier, 'ADR-Sept.md'] }) },
+    {
+      famille: 'dossier_double',
+      defaut: () => ({ ...corpusValide(), dossiersAdr: [RACINE_ADR, 'docs/adrs'] }),
+    },
+    {
+      famille: 'nom_non_conforme',
+      defaut: () => ({
+        ...corpusValide(),
+        fichiersDuDossier: [...corpusValide().fichiersDuDossier, 'ADR-Sept.md'],
+      }),
+    },
     {
       famille: 'numero_double',
       defaut: () => {
@@ -625,7 +701,10 @@ if (process.argv.includes('--prove')) {
       famille: 'titre_non_qualifie',
       defaut: () => {
         const c = corpusValide();
-        return reindexe({ ...c, adrs: [adrTemoin('0001', 'propose', { titre: '# ADR-0001 — Un témoin' }), c.adrs[1]!] });
+        return reindexe({
+          ...c,
+          adrs: [adrTemoin('0001', 'propose', { titre: '# ADR-0001 — Un témoin' }), c.adrs[1]!],
+        });
       },
     },
     {
@@ -639,7 +718,9 @@ if (process.argv.includes('--prove')) {
       famille: 'rubrique_manquante',
       defaut: () => {
         const c = corpusValide();
-        const ampute = adrTemoin('0001', 'propose', { rubriques: RUBRIQUES.filter((r) => r !== 'Ce qui le vérifie') });
+        const ampute = adrTemoin('0001', 'propose', {
+          rubriques: RUBRIQUES.filter((r) => r !== 'Ce qui le vérifie'),
+        });
         return reindexe({ ...c, adrs: [ampute, c.adrs[1]!] });
       },
     },
@@ -653,28 +734,54 @@ if (process.argv.includes('--prove')) {
       },
     },
     { famille: 'index_absent', defaut: () => ({ ...corpusValide(), index: null }) },
-    { famille: 'index_non_derive', defaut: () => ({ ...corpusValide(), index: corpusValide().index!.replace(/\n\|.*ADR-0002.*\n/, '\n') }) },
+    {
+      famille: 'index_non_derive',
+      defaut: () => ({
+        ...corpusValide(),
+        index: corpusValide().index!.replace(/\n\|.*ADR-0002.*\n/, '\n'),
+      }),
+    },
     {
       famille: 'reference_non_qualifiee',
-      defaut: () => ({ ...corpusValide(), references: [{ fichier: 'docs/temoin.md', ligne: 3, contenu: 'conforme à ADR-0001, voir plus haut' }] }),
+      defaut: () => ({
+        ...corpusValide(),
+        references: [
+          { fichier: 'docs/temoin.md', ligne: 3, contenu: 'conforme à ADR-0001, voir plus haut' },
+        ],
+      }),
     },
     {
       famille: 'reference_sans_cible',
-      defaut: () => ({ ...corpusValide(), references: [{ fichier: 'docs/temoin.md', ligne: 4, contenu: 'référence partners/ADR-9999 dans cette PR' }] }),
+      defaut: () => ({
+        ...corpusValide(),
+        references: [
+          {
+            fichier: 'docs/temoin.md',
+            ligne: 4,
+            contenu: 'référence partners/ADR-9999 dans cette PR',
+          },
+        ],
+      }),
     },
     // ── GOV-010 : l'assertion citée existe vraiment (REQ-GOV-009) ──
     {
       famille: 'assertion_fichier_absent',
       defaut: () =>
         avecPremierAdr(
-          adrQuiVerifie('accepte', "- **Assertion** — `tests/qui/nexiste-pas.spec.ts` · `it('un titre littéral qui existe')`.")
+          adrQuiVerifie(
+            'accepte',
+            "- **Assertion** — `tests/qui/nexiste-pas.spec.ts` · `it('un titre littéral qui existe')`."
+          )
         ),
     },
     {
       famille: 'assertion_titre_absent',
       defaut: () =>
         avecPremierAdr(
-          adrQuiVerifie('accepte', "- **Assertion** — `tests/unit/gouvernance/temoin.spec.ts` · `it('un titre inventé')`.")
+          adrQuiVerifie(
+            'accepte',
+            "- **Assertion** — `tests/unit/gouvernance/temoin.spec.ts` · `it('un titre inventé')`."
+          )
         ),
     },
     {
@@ -683,7 +790,7 @@ if (process.argv.includes('--prove')) {
         avecPremierAdr(
           adrQuiVerifie(
             'accepte',
-            "- **Assertion** — `tests/unit/gouvernance/temoin.spec.ts` · " +
+            '- **Assertion** — `tests/unit/gouvernance/temoin.spec.ts` · ' +
               "`it('sait rougir : ses 12 familles ont chacune un témoin')`."
           )
         ),
@@ -701,10 +808,22 @@ if (process.argv.includes('--prove')) {
    */
   const CONTRE_TEMOINS: { quoi: string; contenu: string }[] = [
     { quoi: 'une référence qualifiée qui résout', contenu: 'voir partners/ADR-0001 pour la pile' },
-    { quoi: 'une citation entre guillemets français', contenu: 'jamais « conforme à ADR-0007 » sans dépôt' },
-    { quoi: 'une fixture rouge déclarée entre guillemets doubles', contenu: '"fixtureRouge": "referencer ADR-9999 dans une PR"' },
-    { quoi: 'un ADR d’un autre dépôt, qualifié', contenu: 'transposé de axionia/ADR-0026 et de ops/ADR-0050' },
-    { quoi: 'la forme sans tiret des registres voisins', contenu: 'AGENTS.md ADR 0026 · audit §10' },
+    {
+      quoi: 'une citation entre guillemets français',
+      contenu: 'jamais « conforme à ADR-0007 » sans dépôt',
+    },
+    {
+      quoi: 'une fixture rouge déclarée entre guillemets doubles',
+      contenu: '"fixtureRouge": "referencer ADR-9999 dans une PR"',
+    },
+    {
+      quoi: 'un ADR d’un autre dépôt, qualifié',
+      contenu: 'transposé de axionia/ADR-0026 et de ops/ADR-0050',
+    },
+    {
+      quoi: 'la forme sans tiret des registres voisins',
+      contenu: 'AGENTS.md ADR 0026 · audit §10',
+    },
   ];
 
   /**
@@ -718,14 +837,20 @@ if (process.argv.includes('--prove')) {
       quoi: 'un ADR « propose » qui annonce une assertion pas encore écrite',
       corpus: () =>
         avecPremierAdr(
-          adrQuiVerifie('propose', "- **Assertion à poser** — `tests/pas/encore.spec.ts` · `it('un titre à venir')`.")
+          adrQuiVerifie(
+            'propose',
+            "- **Assertion à poser** — `tests/pas/encore.spec.ts` · `it('un titre à venir')`."
+          )
         ),
     },
     {
       quoi: 'un ADR « accepte » dont l’assertion résout',
       corpus: () =>
         avecPremierAdr(
-          adrQuiVerifie('accepte', "- **Assertion** — `tests/unit/gouvernance/temoin.spec.ts` · `it('un titre littéral qui existe')`.")
+          adrQuiVerifie(
+            'accepte',
+            "- **Assertion** — `tests/unit/gouvernance/temoin.spec.ts` · `it('un titre littéral qui existe')`."
+          )
         ),
     },
     {
@@ -742,7 +867,12 @@ if (process.argv.includes('--prove')) {
     {
       quoi: 'un fichier cité par son seul nom, sans son chemin',
       corpus: () =>
-        avecPremierAdr(adrQuiVerifie('accepte', "- **Assertion** — `temoin.spec.ts` · `it('un titre littéral qui existe')`.")),
+        avecPremierAdr(
+          adrQuiVerifie(
+            'accepte',
+            "- **Assertion** — `temoin.spec.ts` · `it('un titre littéral qui existe')`."
+          )
+        ),
     },
     {
       quoi: 'un `hors-code` réellement motivé',
@@ -786,9 +916,14 @@ if (process.argv.includes('--prove')) {
   }
 
   for (const c of CONTRE_TEMOINS) {
-    const f = controler({ ...corpusValide(), references: [{ fichier: 'contre-témoin', ligne: 1, contenu: c.contenu }] });
+    const f = controler({
+      ...corpusValide(),
+      references: [{ fichier: 'contre-témoin', ligne: 1, contenu: c.contenu }],
+    });
     if (f.length > 0) {
-      console.error(`❌ Faux positif : ${c.quoi} a rougi. La garde est trop large.\n   ${f[0]!.message}`);
+      console.error(
+        `❌ Faux positif : ${c.quoi} a rougi. La garde est trop large.\n   ${f[0]!.message}`
+      );
       process.exit(1);
     }
   }
@@ -796,7 +931,9 @@ if (process.argv.includes('--prove')) {
   for (const c of CONTRE_TEMOINS_ADR) {
     const f = controler(c.corpus());
     if (f.length > 0) {
-      console.error(`❌ Faux positif : ${c.quoi} a rougi. La garde est trop large.\n   ${f[0]!.message}`);
+      console.error(
+        `❌ Faux positif : ${c.quoi} a rougi. La garde est trop large.\n   ${f[0]!.message}`
+      );
       process.exit(1);
     }
   }
@@ -819,8 +956,12 @@ if (fautes.length === 0) {
   // Le décompte des assertions est CALCULÉ sur le même corpus que le contrôle : une ligne « tout va
   // bien » qui ne dit pas combien elle a vérifié est indiscernable d'une garde qui n'a rien trouvé
   // à vérifier.
-  const acceptes = corpus.adrs.filter((a) => entreeDepuisTexte(a.fichier, a.texte).statut === 'accepte');
-  const assertions = acceptes.flatMap((a) => puces(rubriqueVerification(a.texte)).flatMap(citations));
+  const acceptes = corpus.adrs.filter(
+    (a) => entreeDepuisTexte(a.fichier, a.texte).statut === 'accepte'
+  );
+  const assertions = acceptes.flatMap((a) =>
+    puces(rubriqueVerification(a.texte)).flatMap(citations)
+  );
   console.log(
     `✅ gov:adr — ${corpus.adrs.length} ADR dans ${RACINE_ADR}, numéros consécutifs, ` +
       `index égal au listage, références qualifiées et résolues ; ${acceptes.length} ADR « accepte », ` +
@@ -829,7 +970,9 @@ if (fautes.length === 0) {
   // La dette est CALCULÉE, pas comptée sur la présence d'un motif : sur les renvois des fichiers
   // réservés, beaucoup sont des citations parfaitement correctes. On ne nomme que ceux qui
   // rougiraient — sans quoi le rappel devient un bruit qu'on apprend à ne plus lire.
-  const dettes = controler({ ...corpus, references: reservees }).filter((f) => f.famille.startsWith('reference_'));
+  const dettes = controler({ ...corpus, references: reservees }).filter((f) =>
+    f.famille.startsWith('reference_')
+  );
   if (dettes.length > 0) {
     console.log(
       `   ⚠️ ${dettes.length} renvoi(s) d'ADR à qualifier dans des fichiers RÉSERVÉS à un autre ` +

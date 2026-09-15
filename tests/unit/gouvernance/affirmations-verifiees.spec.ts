@@ -149,13 +149,16 @@ describe('REQ-GOV-004 — les cinq affirmations invalidées figurent au registre
     expect(ligne).toBeDefined();
   });
 
-  it.each(CINQ_INVALIDEES)('« $libelle » renvoie à son repère $repere du tableau §2', ({ motif, repere }) => {
-    // Le registre DÉRIVE du tableau : il ne recopie pas la preuve, il pointe la ligne qui la
-    // porte. Sans ce renvoi, une réalité constatée vieillit au registre sans date ni SHA.
-    const ligne = lignesRegistre.find((l) => motif.test(l) && l.includes('FAUSSE'));
-    expect(ligne).toContain(repere);
-    expect(lignesTableau.some((t) => (t.cellules[0] ?? '') === repere)).toBe(true);
-  });
+  it.each(CINQ_INVALIDEES)(
+    '« $libelle » renvoie à son repère $repere du tableau §2',
+    ({ motif, repere }) => {
+      // Le registre DÉRIVE du tableau : il ne recopie pas la preuve, il pointe la ligne qui la
+      // porte. Sans ce renvoi, une réalité constatée vieillit au registre sans date ni SHA.
+      const ligne = lignesRegistre.find((l) => motif.test(l) && l.includes('FAUSSE'));
+      expect(ligne).toContain(repere);
+      expect(lignesTableau.some((t) => (t.cellules[0] ?? '') === repere)).toBe(true);
+    }
+  );
 
   it('les cinq sont bien cinq — ni quatre par fusion, ni six par ajout silencieux', () => {
     const trouvees = CINQ_INVALIDEES.filter(({ motif }) =>
@@ -185,7 +188,9 @@ describe('REQ-GOV-004 — la colonne « vérifié le »', () => {
   });
 
   it('chaque ligne a exactement cinq colonnes : une barre nue en fabriquerait une sixième', () => {
-    const malDecoupees = lignesTableau.filter((l) => l.cellules.length !== 5).map((l) => l.cellules[0]);
+    const malDecoupees = lignesTableau
+      .filter((l) => l.cellules.length !== 5)
+      .map((l) => l.cellules[0]);
     expect(malDecoupees).toEqual([]);
   });
 
@@ -215,7 +220,7 @@ const HUIT_POINTS: { point: string; motif: RegExp }[] = [
   { point: 'score sans version de barème', motif: /SCORE_POIDS/ },
 ];
 
-describe("acceptation de GOV-004 — les huit points ont chacun leur ligne", () => {
+describe('acceptation de GOV-004 — les huit points ont chacun leur ligne', () => {
   const tableau = lignesTableau.map((l) => l.brute).join('\n');
 
   it.each(HUIT_POINTS)('« $point » a une ligne au tableau §2', ({ motif }) => {
@@ -231,10 +236,12 @@ describe("acceptation de GOV-004 — les huit points ont chacun leur ligne", () 
  */
 const bacs: string[] = [];
 
-function bacDeSable(modifier: (fichiers: { affirmations: string; decisions: string }) => {
-  affirmations?: string;
-  decisions?: string;
-}): string {
+function bacDeSable(
+  modifier: (fichiers: { affirmations: string; decisions: string }) => {
+    affirmations?: string;
+    decisions?: string;
+  }
+): string {
   const racine = mkdtempSync(join(tmpdir(), 'gov-sonde-spec-'));
   bacs.push(racine);
   mkdirSync(join(racine, 'docs'), { recursive: true });
@@ -253,7 +260,10 @@ afterAll(() => {
 
 describe('la garde rougit — vu, pas supposé', () => {
   it('elle est verte sur le dépôt fictif intact : le bac de sable ne triche pas', () => {
-    const { code, sortie } = lancer([], bacDeSable(() => ({})));
+    const { code, sortie } = lancer(
+      [],
+      bacDeSable(() => ({}))
+    );
     expect(sortie).toContain('✅');
     expect(code).toBe(0);
   });
@@ -275,7 +285,9 @@ describe('la garde rougit — vu, pas supposé', () => {
     const racine = bacDeSable(({ affirmations }) => ({
       affirmations: affirmations
         .split('\n')
-        .map((l) => (l.trimStart().startsWith('| AFF-01 ') ? l.replace('2026-09-03 @ ad53f14a', '') : l))
+        .map((l) =>
+          l.trimStart().startsWith('| AFF-01 ') ? l.replace('2026-09-03 @ ad53f14a', '') : l
+        )
         .join('\n'),
     }));
     const { code, sortie } = lancer([], racine);
@@ -287,7 +299,11 @@ describe('la garde rougit — vu, pas supposé', () => {
     const racine = bacDeSable(({ affirmations }) => ({
       affirmations: affirmations
         .split('\n')
-        .map((l) => (l.trimStart().startsWith('| AFF-02 ') ? l.replace('2026-09-03 @ ad53f14a', '2026-09-03') : l))
+        .map((l) =>
+          l.trimStart().startsWith('| AFF-02 ')
+            ? l.replace('2026-09-03 @ ad53f14a', '2026-09-03')
+            : l
+        )
         .join('\n'),
     }));
     const { code, sortie } = lancer([], racine);
@@ -298,7 +314,10 @@ describe('la garde rougit — vu, pas supposé', () => {
   it("VERTE si l'on n'abîme rien : les mutations ci-dessus sont bien la cause du rouge", () => {
     // Contre-témoin de l'ensemble : sans lui, un rouge permanent pour une autre raison ferait
     // passer les trois cas précédents pour des preuves.
-    const { code } = lancer([], bacDeSable(() => ({})));
+    const { code } = lancer(
+      [],
+      bacDeSable(() => ({}))
+    );
     expect(code).toBe(0);
   });
 });

@@ -41,7 +41,8 @@ import { DEPOT_LOCAL, MOTIF_SHA, depotDeLaTache, type Attestation } from '../lot
  * supposée bonne. Deux ruptures de traçabilité ont été trouvées ainsi, avant d'être écrites.
  */
 const iTaches = process.argv.indexOf('--taches');
-const CHEMIN_TACHES = iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
+const CHEMIN_TACHES =
+  iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
 const CHEMIN_PATHS = 'docs/paths-proposes.json';
 const CHEMIN_INVENTAIRE = 'docs/INVENTAIRE-CHANTIERS.md';
@@ -50,7 +51,15 @@ const EXIGENCE = 'REQ-GOV-026';
 
 // ── la légende de REQ-GOV-026, ordonnée ──────────────────────────────────────
 /** Sans accent, comme tous les enums du dépôt (`docs/CONVENTIONS.md` §2). L'ordre EST le rang. */
-const LEGENDE = ['specifie', 'code', 'teste', 'revu', 'fusionne', 'deploye', 'verifie_en_prod'] as const;
+const LEGENDE = [
+  'specifie',
+  'code',
+  'teste',
+  'revu',
+  'fusionne',
+  'deploye',
+  'verifie_en_prod',
+] as const;
 type Avancement = (typeof LEGENDE)[number];
 
 const rang = (a: Avancement): number => LEGENDE.indexOf(a) + 1;
@@ -74,7 +83,13 @@ const PLANCHER: Record<string, Avancement | null> = {
 };
 
 // ── types ────────────────────────────────────────────────────────────────────
-type Tache = { id: string; statut: string; paths: string[]; repo: string; attestation?: Attestation | null };
+type Tache = {
+  id: string;
+  statut: string;
+  paths: string[];
+  repo: string;
+  attestation?: Attestation | null;
+};
 type LigneChantier = {
   etiquette: string;
   referentResolu: boolean;
@@ -113,7 +128,9 @@ function shaResout(jeton: string): boolean {
   if (memo !== undefined) return memo;
   let ok = false;
   try {
-    execFileSync('git', ['rev-parse', '--verify', '--quiet', `${jeton}^{commit}`], { stdio: 'pipe' });
+    execFileSync('git', ['rev-parse', '--verify', '--quiet', `${jeton}^{commit}`], {
+      stdio: 'pipe',
+    });
     ok = true;
   } catch {
     ok = false;
@@ -169,11 +186,15 @@ function shasParPortee(): Record<string, string[]> {
  * `pnpm gov:attestation --en-ligne`.
  */
 function preuvesDeLaTache(t: Tache, e: Etat): string[] {
-  const chemins = [...new Set([...t.paths, ...(e.cheminsProposes[t.id] ?? [])])].filter(cheminExiste);
+  const chemins = [...new Set([...t.paths, ...(e.cheminsProposes[t.id] ?? [])])].filter(
+    cheminExiste
+  );
   const shas = (e.shasParTache[t.id] ?? []).filter(shaResout);
   const attestations =
     t.repo !== DEPOT_LOCAL && t.attestation && MOTIF_SHA.test(t.attestation.sha)
-      ? [`attestation:${depotDeLaTache(t) ?? t.repo}#${t.attestation.pr}@${t.attestation.sha.slice(0, 8)}`]
+      ? [
+          `attestation:${depotDeLaTache(t) ?? t.repo}#${t.attestation.pr}@${t.attestation.sha.slice(0, 8)}`,
+        ]
       : [];
   return [...chemins.map((c) => `chemin:${c}`), ...shas.map((s) => `sha:${s}`), ...attestations];
 }
@@ -187,7 +208,10 @@ function lireInventaire(texte: string): LigneChantier[] {
   const out: LigneChantier[] = [];
   texte.split('\n').forEach((ligne, i) => {
     if (!ligne.trimStart().startsWith('|')) return;
-    const cellules = ligne.split('|').slice(1, -1).map((c) => c.trim());
+    const cellules = ligne
+      .split('|')
+      .slice(1, -1)
+      .map((c) => c.trim());
     if (cellules.length < 4) return;
     const etiquette = nu(cellules[0] ?? '');
     if (!ETIQUETTE.test(etiquette)) return;
@@ -203,7 +227,12 @@ function lireInventaire(texte: string): LigneChantier[] {
       // en laisse passer un (RM-05).
       referentResolu: referent.startsWith('oui'),
       etat: VIDE.test(brutEtat) ? null : brutEtat,
-      preuves: VIDE.test(brutPreuve) ? [] : brutPreuve.split(/[\s,;]+/).map(nu).filter(Boolean),
+      preuves: VIDE.test(brutPreuve)
+        ? []
+        : brutPreuve
+            .split(/[\s,;]+/)
+            .map(nu)
+            .filter(Boolean),
       ligne: i + 1,
     });
   });
@@ -215,7 +244,10 @@ function lireInventaire(texte: string): LigneChantier[] {
  * `docs/requirements.json` (RM-01). Si l'exigence est reformulée, l'inventaire doit suivre.
  */
 function etiquettesDeLaReq(exigences: unknown): string[] {
-  const liste = (exigences as { exigences?: { id: string; texte: string }[]; requirements?: { id: string; texte: string }[] });
+  const liste = exigences as {
+    exigences?: { id: string; texte: string }[];
+    requirements?: { id: string; texte: string }[];
+  };
   const toutes = liste.exigences ?? liste.requirements ?? [];
   const req = toutes.find((r) => r.id === EXIGENCE);
   if (!req) return [];
@@ -341,7 +373,11 @@ const docPaths = lire(CHEMIN_PATHS) as { paths?: Record<string, string[]> };
 
 const etatDuDepot: Etat = {
   taches: docTaches.taches.map((t) => ({
-    id: t.id, statut: t.statut, paths: [...t.paths], repo: t.repo, attestation: t.attestation ?? null,
+    id: t.id,
+    statut: t.statut,
+    paths: [...t.paths],
+    repo: t.repo,
+    attestation: t.attestation ?? null,
   })),
   cheminsProposes: docPaths.paths ?? {},
   statutsDuSchema: schema.$defs?.tache?.properties?.statut?.enum ?? [],
@@ -351,7 +387,11 @@ const etatDuDepot: Etat = {
 };
 
 const copier = (e: Etat): Etat => ({
-  taches: e.taches.map((t) => ({ ...t, paths: [...t.paths], attestation: t.attestation ? { ...t.attestation } : null })),
+  taches: e.taches.map((t) => ({
+    ...t,
+    paths: [...t.paths],
+    attestation: t.attestation ? { ...t.attestation } : null,
+  })),
   cheminsProposes: JSON.parse(JSON.stringify(e.cheminsProposes)) as Record<string, string[]>,
   statutsDuSchema: [...e.statutsDuSchema],
   chantiers: e.chantiers.map((c) => ({ ...c, preuves: [...c.preuves] })),
@@ -376,7 +416,9 @@ function sansPreuve(e: Etat): Tache {
 function resolue(e: Etat): LigneChantier {
   const c = e.chantiers.find((x) => x.referentResolu);
   if (!c) {
-    console.error(`❌ gov:inventaire --prove — aucun chantier au référent résolu dans ${CHEMIN_INVENTAIRE}.`);
+    console.error(
+      `❌ gov:inventaire --prove — aucun chantier au référent résolu dans ${CHEMIN_INVENTAIRE}.`
+    );
     process.exit(1);
   }
   return c;
@@ -425,7 +467,9 @@ if (process.argv.includes('--prove')) {
 
   // Le contre-témoin du SHA a besoin d'un SHA qui résout VRAIMENT : on prend celui de `HEAD`,
   // jamais une constante — un SHA écrit en dur cesse de résoudre au premier clone superficiel.
-  const unSha = execFileSync('git', ['rev-parse', '--short=8', 'HEAD'], { encoding: 'utf8' }).trim();
+  const unSha = execFileSync('git', ['rev-parse', '--short=8', 'HEAD'], {
+    encoding: 'utf8',
+  }).trim();
 
   const TEMOINS: { famille: string; defaut: () => Etat }[] = [
     {
@@ -511,7 +555,7 @@ if (process.argv.includes('--prove')) {
       // `INT-T01b` est en production depuis le 2026-09-05, et ni son commit ni son chemin ne sont
       // dans ce dépôt. Le SHA est LU dans git plutôt qu'écrit en dur : quarante hexadécimaux tapés
       // à la main sont une fixture inventée (RM-03), et la garde juge la forme, pas la résolution.
-      nom: "une tâche livrée dans un AUTRE dépôt, attestée par { pr, sha entier, fusionneeAt }",
+      nom: 'une tâche livrée dans un AUTRE dépôt, attestée par { pr, sha entier, fusionneeAt }',
       muter: () => {
         const e = copier(etatDuDepot);
         const t = sansPreuve(e);
@@ -561,7 +605,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      nom: "un chantier au référent non résolu, sans état ni preuve : six lignes sur huit sont dans cet état",
+      nom: 'un chantier au référent non résolu, sans état ni preuve : six lignes sur huit sont dans cet état',
       muter: () => {
         const e = copier(etatDuDepot);
         const c = resolue(e);
@@ -576,7 +620,9 @@ if (process.argv.includes('--prove')) {
   for (const c of CONTRE_TEMOINS) {
     const f = controler(c.muter());
     if (f.length > 0) {
-      console.error(`❌ Le contre-témoin « ${c.nom} » a fait rougir la garde alors qu'il est légitime :`);
+      console.error(
+        `❌ Le contre-témoin « ${c.nom} » a fait rougir la garde alors qu'il est légitime :`
+      );
       f.slice(0, 5).forEach((x) => console.error(`   [${x.famille}] ${x.message}`));
       process.exit(1);
     }
@@ -601,7 +647,9 @@ if (process.argv.includes('--prove')) {
     process.exit(1);
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${CONTRE_TEMOINS.length} contre-témoin(s) restent verts.`);
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   process.exit(0);

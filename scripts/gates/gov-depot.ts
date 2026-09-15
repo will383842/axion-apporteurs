@@ -57,7 +57,11 @@ export type Gravite = 'rouge' | 'indetermine';
 export type Faute = { famille: string; gravite: Gravite; message: string };
 
 export type Protection = {
-  required_status_checks?: { strict?: boolean; contexts?: string[]; checks?: { context: string }[] } | null;
+  required_status_checks?: {
+    strict?: boolean;
+    contexts?: string[];
+    checks?: { context: string }[];
+  } | null;
   required_linear_history?: { enabled?: boolean };
   allow_force_pushes?: { enabled?: boolean };
   allow_deletions?: { enabled?: boolean };
@@ -309,7 +313,9 @@ export function controler(vue: Vue): Faute[] {
     );
   } else {
     const src = vue.protection.required_status_checks;
-    const requis = [...new Set([...(src?.contexts ?? []), ...(src?.checks ?? []).map((c) => c.context)])];
+    const requis = [
+      ...new Set([...(src?.contexts ?? []), ...(src?.checks ?? []).map((c) => c.context)]),
+    ];
 
     for (const attendu of produits) {
       if (!requis.includes(attendu)) {
@@ -342,7 +348,10 @@ export function controler(vue: Vue): Faute[] {
           `(partners/ADR-0007).`
       );
     }
-    if (vue.protection.allow_force_pushes?.enabled === true || vue.protection.allow_deletions?.enabled === true) {
+    if (
+      vue.protection.allow_force_pushes?.enabled === true ||
+      vue.protection.allow_deletions?.enabled === true
+    ) {
       rouge(
         'ecrasement_autorise',
         `\`main\` accepte l'écrasement (\`allow_force_pushes\`) ou sa propre suppression ` +
@@ -362,7 +371,10 @@ function lireWorkflows(): Fichier[] {
   if (!existsSync(DOSSIER_WORKFLOWS)) return [];
   return readdirSync(DOSSIER_WORKFLOWS)
     .filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'))
-    .map((f) => ({ chemin: join(DOSSIER_WORKFLOWS, f), contenu: readFileSync(join(DOSSIER_WORKFLOWS, f), 'utf8') }));
+    .map((f) => ({
+      chemin: join(DOSSIER_WORKFLOWS, f),
+      contenu: readFileSync(join(DOSSIER_WORKFLOWS, f), 'utf8'),
+    }));
 }
 
 /**
@@ -374,7 +386,10 @@ function lireWorkflows(): Fichier[] {
  */
 function gh(args: string[]): { sortie: string | null; erreur: string } {
   try {
-    return { sortie: execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }), erreur: '' };
+    return {
+      sortie: execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }),
+      erreur: '',
+    };
   } catch (e) {
     const err = e as { stdout?: Buffer | string; stderr?: Buffer | string };
     return { sortie: null, erreur: `${err.stdout ?? ''}${err.stderr ?? ''}` };
@@ -382,8 +397,13 @@ function gh(args: string[]): { sortie: string | null; erreur: string } {
 }
 
 function lireVue(horsLigne: boolean): Vue {
-  const depot = horsLigne ? { sortie: null, erreur: '' } : gh(['repo', 'view', '--json', 'visibility,nameWithOwner']);
-  const nom = depot.sortie === null ? null : (JSON.parse(depot.sortie) as { nameWithOwner: string }).nameWithOwner;
+  const depot = horsLigne
+    ? { sortie: null, erreur: '' }
+    : gh(['repo', 'view', '--json', 'visibility,nameWithOwner']);
+  const nom =
+    depot.sortie === null
+      ? null
+      : (JSON.parse(depot.sortie) as { nameWithOwner: string }).nameWithOwner;
   const brut =
     horsLigne || nom === null
       ? { sortie: null, erreur: '' }
@@ -402,7 +422,10 @@ function lireVue(horsLigne: boolean): Vue {
     decisions: existsSync(CHEMIN_DECISIONS) ? readFileSync(CHEMIN_DECISIONS, 'utf8') : '',
     ci: existsSync(CHEMIN_CI) ? readFileSync(CHEMIN_CI, 'utf8') : '',
     workflows: lireWorkflows(),
-    visibilite: depot.sortie === null ? null : (JSON.parse(depot.sortie) as { visibility: string }).visibility,
+    visibilite:
+      depot.sortie === null
+        ? null
+        : (JSON.parse(depot.sortie) as { visibility: string }).visibility,
     protection,
   };
 }
@@ -419,8 +442,17 @@ function lireVue(horsLigne: boolean): Vue {
  * preuve qui lirait le disque verdirait ou rougirait au gré des fichiers présents ce jour-là.
  */
 export const VUE_CONFORME: Vue = {
-  decisions: '| **W13** ✅ | Dépôt et publication | Dépôt **`will383842/axion-apporteurs`, PUBLIC** | migration | −1 |\n',
-  ci: ['name: Gate A', 'on:', '  pull_request:', 'jobs:', '  gate-a:', '    runs-on: ubuntu-latest', ''].join('\n'),
+  decisions:
+    '| **W13** ✅ | Dépôt et publication | Dépôt **`will383842/axion-apporteurs`, PUBLIC** | migration | −1 |\n',
+  ci: [
+    'name: Gate A',
+    'on:',
+    '  pull_request:',
+    'jobs:',
+    '  gate-a:',
+    '    runs-on: ubuntu-latest',
+    '',
+  ].join('\n'),
   workflows: [
     {
       chemin: '.github/workflows/ci.yml',
@@ -482,7 +514,9 @@ function prouver(): number {
     '      - run: git log --oneline origin/main',
   ];
   for (const etape of LEGITIMES) {
-    const f = analyserWorkflows([{ chemin: 'temoin.yml', contenu: `jobs:\n  x:\n    steps:\n${etape}\n` }]);
+    const f = analyserWorkflows([
+      { chemin: 'temoin.yml', contenu: `jobs:\n  x:\n    steps:\n${etape}\n` },
+    ]);
     if (f.length > 0) {
       console.error(`❌ Faux positif : « ${etape.trim()} » est LÉGITIME et a été refusée.`);
       f.forEach((x) => console.error(`   ${x.message}`));
@@ -491,7 +525,10 @@ function prouver(): number {
   }
 
   const etape = (ligne: string): Fichier[] => [
-    { chemin: '.github/workflows/temoin.yml', contenu: `jobs:\n  x:\n    steps:\n      - run: ${ligne}\n` },
+    {
+      chemin: '.github/workflows/temoin.yml',
+      contenu: `jobs:\n  x:\n    steps:\n      - run: ${ligne}\n`,
+    },
   ];
   const p = (): Protection => structuredClone(VUE_CONFORME.protection as Protection);
 
@@ -504,7 +541,10 @@ function prouver(): number {
     },
     {
       famille: 'check_jamais_produit',
-      vue: { ...VUE_CONFORME, protection: { ...p(), required_status_checks: { contexts: ['gate-a', 'gate-fantome'] } } },
+      vue: {
+        ...VUE_CONFORME,
+        protection: { ...p(), required_status_checks: { contexts: ['gate-a', 'gate-fantome'] } },
+      },
     },
     {
       famille: 'historique_non_lineaire',
@@ -518,7 +558,10 @@ function prouver(): number {
       // Le témoin qui compte : la forme que les six règles `deny` ne voient pas, portée cette
       // fois par un runner, où aucune matrice d'autonomie ne s'applique.
       famille: 'workflow_pousse_sur_main',
-      vue: { ...VUE_CONFORME, workflows: etape('git push origin lot/L-9-99-integration:main --force') },
+      vue: {
+        ...VUE_CONFORME,
+        workflows: etape('git push origin lot/L-9-99-integration:main --force'),
+      },
     },
     {
       // Le témoin de l'attaque : la protection SUPPRIMÉE ne doit pas ressembler à une protection
@@ -547,7 +590,9 @@ function prouver(): number {
     return 1;
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   console.log(`   ${LEGITIMES.length} étapes de workflow légitimes restent acceptées.`);
   return 0;

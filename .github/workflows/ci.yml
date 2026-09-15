@@ -184,17 +184,20 @@ jobs:
       # REQ-GOV-001, `docs/GATES.md`). BLOQUANTE : pas de `continue-on-error` — la famille
       # `lint_non_bloquant` de `gov:conventions` le refuse, et une gate qui ne bloque rien ne garde rien.
       #
-      # ⚠️ APPELEE PAR SON CHEMIN, ET NON PAR `pnpm gov:check` — ce n'est pas une coquetterie.
+      # ⚠️ APPELEE PAR UN NOM NEUTRE, ET NON PAR `pnpm gov:check` — ce n'est pas une coquetterie.
       # Le nom `gov:check` designe DEUX choses dans ce depot : l'entree de `docs/gates.json` (cette
       # garde-ci) et une CHAINE de gardes declaree dans `package.json`. Ecrire `pnpm gov:check`
       # ici lancerait la chaine, PAS la garde — et satisferait quand meme la famille
-      # `garde_ecrite_jamais_appelee`, qui cherche l'identifiant OU le chemin. Le chemin est donc la
-      # seule invocation qui dise la verite tant que l'homonymie n'est pas tranchee par un ADR
-      # (acceptation de GOV-030 : « le choix … se tranche par un ADR, pas dans la PR »).
+      # `garde_ecrite_jamais_appelee`, qui cherche l'identifiant OU le chemin.
+      # Le script `gov:termes-interdits` lance la garde elle-meme (`package.json`) : la commande
+      # reste sous la forme FERMEE `pnpm <script>` que GOV-031 exige de tout YAML suivi — `npx`
+      # peut resoudre un paquet hors du verrou. Et ce nom NEUF ne touche pas `gov:check` : il
+      # evite de trancher l'homonymie, que l'acceptation de GOV-030 renvoie a un ADR (« le choix
+      # … se tranche par un ADR, pas dans la PR »).
       - name: Termes interdits — nomenclature, modeles d axionia et synonymes
-        run: npx tsx scripts/gates/gov-check.ts
+        run: pnpm gov:termes-interdits
       - name: La garde des termes interdits sait rougir
-        run: npx tsx scripts/gates/gov-check.ts --prove
+        run: pnpm gov:termes-interdits:prove
       # GOV-013 : le lexique interdit (REQ-GOV-017, durci par REQ-JUR-037). La garde vise la
       # TOURNURE et non le mot — « aucun objectif, aucun quota » est la phrase qui protege du
       # la charte relationnelle, et une garde qui la ferait rougir forcerait a la RETIRER. La preuve
@@ -221,6 +224,27 @@ jobs:
         run: pnpm gov:conventions
       - name: La garde des conventions sait rougir
         run: pnpm gov:conventions:prove
+      # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
+      # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
+      # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le
+      # dit en toutes lettres : « sans etape, rien ne ment ». Rien ne mentait, et rien ne
+      # gardait : `eslint.config.mjs` et `.prettierrc.json` etaient commites depuis GOV-014 et
+      # n'avaient jamais tourne en CI. C'est ici que la configuration cesse d'etre une intention.
+      #
+      # PAS DE `continue-on-error`, ET C'EST LE POINT DE L'EXIGENCE, pas un detail de cablage.
+      # Cote axionia, TOUTES les gates PR de budget portent ce drapeau : aucune PR qui alourdit
+      # le bundle n'y rougit, et la documentation du depot a affirme le contraire pendant des
+      # mois. Une gate qui ne bloque rien ne garde rien.
+      #
+      # CE QUE CHACUNE NE MESURE PAS n'est pas recopie ici : les avertissements toleres et les
+      # fichiers qui les portent sont nommes dans `eslint.config.mjs`, les fichiers hors format
+      # dans `.prettierignore`, chacun avec son motif. Et chaque etape reste EXACTEMENT
+      # `run: pnpm lint` / `run: pnpm format:check`, sans `if:` ni `||` :
+      # `gardes-transposees.spec.ts` juge l'acte de l'etape, pas l'absence d'un mot.
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
       - name: Typecheck
         run: pnpm typecheck
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :

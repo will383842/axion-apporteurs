@@ -152,7 +152,9 @@ function premiereInstruction(source: string): string {
     source
       .split('\n')
       .map((l) => l.trim())
-      .filter((l) => l !== '' && !l.startsWith('//') && !l.startsWith('/*') && !l.startsWith('*'))[0] ?? ''
+      .filter(
+        (l) => l !== '' && !l.startsWith('//') && !l.startsWith('/*') && !l.startsWith('*')
+      )[0] ?? ''
   );
 }
 
@@ -266,7 +268,10 @@ export function perimetresDe(vue: Vue): PerimetreVu[] {
   const compte = (cle: ClePerimetre): { compte: number; unite: string } => {
     switch (cle) {
       case 'modules-serveur':
-        return { compte: vue.sources.filter((f) => estUnModuleServeur(f.source)).length, unite: 'module(s)' };
+        return {
+          compte: vue.sources.filter((f) => estUnModuleServeur(f.source)).length,
+          unite: 'module(s)',
+        };
       case 'composants-client':
         return {
           compte: vue.sources.filter((f) => lignesClient(f.source).length > 0).length,
@@ -305,7 +310,9 @@ export function controler(vue: Vue): Faute[] {
           });
         }
       }
-      for (const m of f.source.matchAll(/^\s*export\s*\{[^}]*\}\s*(?:from\s*["'][^"']+["'])?\s*;/gm)) {
+      for (const m of f.source.matchAll(
+        /^\s*export\s*\{[^}]*\}\s*(?:from\s*["'][^"']+["'])?\s*;/gm
+      )) {
         fautes.push({
           famille: 'use_server_reexport',
           message:
@@ -361,7 +368,8 @@ export function controler(vue: Vue): Faute[] {
       const manque: string[] = [];
       if (!pkg.devDependencies?.[outil]) manque.push(`\`${outil}\` dans devDependencies`);
       if (!pkg.scripts?.[script]) manque.push(`le script \`${script}\``);
-      if (!vue.fichiersSuivis.some((f) => config.test(f))) manque.push(`sa configuration versionnée`);
+      if (!vue.fichiersSuivis.some((f) => config.test(f)))
+        manque.push(`sa configuration versionnée`);
       if (manque.length > 0) {
         fautes.push({
           famille: 'outillage_non_epingle',
@@ -411,7 +419,9 @@ export function controler(vue: Vue): Faute[] {
     if (p.compte > 0) continue;
     const manque: string[] = [];
     if (p.motifSiVide.trim().length < MOTIF_MINIMAL) {
-      manque.push(`un motif d'au moins ${MOTIF_MINIMAL} caractères (il en fait ${p.motifSiVide.trim().length})`);
+      manque.push(
+        `un motif d'au moins ${MOTIF_MINIMAL} caractères (il en fait ${p.motifSiVide.trim().length})`
+      );
     }
     if (!idsDeTaches.has(p.tacheSuccesseur)) {
       manque.push(`une tâche successeur connue du backlog (« ${p.tacheSuccesseur} » n'y est pas)`);
@@ -457,11 +467,13 @@ export const PERIMETRES_DECLARES: readonly Perimetre[] = [
     cle: 'etapes-lint-ci',
     libelle: 'étapes de lint et de format en CI',
     motifSiVide:
-      '`.github/workflows/ci.yml` et `package.json` sont des fichiers PARTAGÉS que le ' +
-      "développeur n'écrit pas : les étapes et les dépendances sont rendues en texte dans la PR " +
-      "de GOV-014 et appliquées par A01 en une passe. La garde vérifie leur COHÉRENCE (bloquantes " +
-      'et épinglées), jamais leur présence : un contrôle de dette rouge en Gate A bloquerait ' +
-      "tout le monde pour un manque qu'aucune PR n'a créé (LEC-13).",
+      "CE PÉRIMÈTRE N'EST PLUS VIDE depuis GOV-031 (2026-09-14) : `ci.yml` porte les deux " +
+      'étapes `pnpm lint` et `pnpm format:check`, sans `continue-on-error`. Le voir retomber à ' +
+      'zéro ne voudrait donc plus dire « pas encore livré » mais « RETIRÉ » — ce motif est là ' +
+      "pour que le jour où il se lira, on sache qu'il décrit une RÉGRESSION. La garde vérifie " +
+      'la COHÉRENCE (bloquantes et épinglées) ; la PRÉSENCE, elle, est exigée par le dernier ' +
+      'bloc de `tests/unit/gouvernance/gardes-transposees.spec.ts`, et la tâche successeur ' +
+      'reste celle qui étend le refus à tout job de gate en phase 0.',
     tacheSuccesseur: 'QA-T01',
   },
   {
@@ -522,7 +534,8 @@ export function lireVue(): Vue {
     .filter((f) => /^\.github\/workflows\/.+\.ya?ml$/.test(f) && existsSync(f))
     .map((chemin) => ({ chemin, source: readFileSync(chemin, 'utf8') }));
 
-  const gates = (JSON.parse(lire('docs/gates.json') || '{"gates":[]}') as { gates: GateVue[] }).gates;
+  const gates = (JSON.parse(lire('docs/gates.json') || '{"gates":[]}') as { gates: GateVue[] })
+    .gates;
   const taches = (
     JSON.parse(lire('docs/tasks.json') || '{"taches":[]}') as {
       taches: { id: string; repo: string; paths?: string[] }[];
@@ -618,7 +631,10 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
     vue: variante({
       sources: [
         ...VUE_CONFORME.sources,
-        { chemin: 'src/app/espace/champs.ts', source: '"use server";\n\nexport const CHAMP = "x";\n' },
+        {
+          chemin: 'src/app/espace/champs.ts',
+          source: '"use server";\n\nexport const CHAMP = "x";\n',
+        },
       ],
     }),
   },
@@ -748,7 +764,8 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
       sources: [
         {
           chemin: 'src/app/espace/actions.ts',
-          source: '"use server";\n\nexport async function agir() {}\nexport type Entree = { a: string };\n',
+          source:
+            '"use server";\n\nexport async function agir() {}\nexport type Entree = { a: string };\n',
         },
         ...VUE_CONFORME.sources,
       ],
@@ -784,7 +801,8 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
         ...VUE_CONFORME.sources,
         {
           chemin: 'src/app/Table.tsx',
-          source: '// use-client: tri et filtres côté navigateur\n"use client";\n\nexport function T() {}\n',
+          source:
+            '// use-client: tri et filtres côté navigateur\n"use client";\n\nexport function T() {}\n',
         },
       ],
     }),
@@ -834,7 +852,8 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
     }),
   },
   {
-    libelle: 'une gate du registre dont le script n’existe PAS — `gates:prouvees` la nomme, pas nous',
+    libelle:
+      'une gate du registre dont le script n’existe PAS — `gates:prouvees` la nomme, pas nous',
     vue: variante({
       gates: [
         ...VUE_CONFORME.gates,
@@ -859,7 +878,12 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
   {
     libelle: 'aucune étape de lint en CI : rien à juger, et surtout pas un rouge de dette',
     vue: variante({
-      workflows: [{ chemin: '.github/workflows/ci.yml', source: 'jobs:\n  gate-a:\n    steps:\n      - run: pnpm test\n' }],
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: 'jobs:\n  gate-a:\n    steps:\n      - run: pnpm test\n',
+        },
+      ],
       packageJson: '{}',
       fichiersSuivis: ['package.json'],
       perimetres: PERIMETRES_DECLARES.filter((p) => p.cle !== 'etapes-lint-ci'),
@@ -872,7 +896,9 @@ function prouver(): number {
     const familles = controler(t.vue).map((f) => f.famille);
     if (!familles.includes(t.famille)) {
       console.error(`❌ Le témoin « ${t.libelle} » n'a PAS fait rougir ${t.famille}.`);
-      console.error(`   Familles obtenues : ${familles.length === 0 ? '(aucune)' : familles.join(', ')}`);
+      console.error(
+        `   Familles obtenues : ${familles.length === 0 ? '(aucune)' : familles.join(', ')}`
+      );
       return 1;
     }
   }
@@ -889,7 +915,9 @@ function prouver(): number {
     console.error(`❌ Famille(s) sans témoin : ${sansTemoin.join(', ')}.`);
     return 1;
   }
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   console.log(
     `   ${TEMOINS.length} témoins rouges, ${CONTRE_TEMOINS.length} contre-témoins verts — dont la vue conforme.`

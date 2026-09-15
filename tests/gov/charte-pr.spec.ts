@@ -120,14 +120,18 @@ describe('REQ-GOV-027 — le périmètre est gelé par phase', () => {
 
 describe('REQ-GOV-010 — droits exclusifs, chemins réservés, label du rôle', () => {
   it('REQ-GOV-010 : la charte donne un code `A` + deux chiffres à chaque fiche de .claude/agents/, et à elle seule', () => {
-    const fiches = readdirSync('.claude/agents').filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3));
+    const fiches = readdirSync('.claude/agents')
+      .filter((f) => f.endsWith('.md'))
+      .map((f) => f.slice(0, -3));
     const lignes = section(charte, '## 2.', '## 3.')
       .split('\n')
       .map((l) => /^\|\s*(A\d{2})\s*\|\s*`([a-z0-9-]+)`\s*\|/.exec(l))
       .filter((m): m is RegExpExecArray => m !== null);
     expect(lignes.map((m) => m[2]).sort()).toEqual([...fiches].sort());
     const codes = lignes.map((m) => m[1]!);
-    expect(new Set(codes).size, 'deux postes ne peuvent pas porter le même code').toBe(codes.length);
+    expect(new Set(codes).size, 'deux postes ne peuvent pas porter le même code').toBe(
+      codes.length
+    );
     for (const c of codes) expect(c).toMatch(/^A[0-9]{2}$/); // scripts/lot/tasks.schema.json
   });
 
@@ -152,7 +156,10 @@ describe('REQ-GOV-010 — droits exclusifs, chemins réservés, label du rôle',
         return [...premiere.matchAll(/`([^`]+)`/g)].map((m) => m[1]!);
       })
       .filter((c) => c.includes('/') || c.endsWith('.md') || c.endsWith('.json'))
-      .filter((c) => !c.startsWith('pnpm ') && !c.startsWith('gardien-spec') && !c.startsWith('architecte'));
+      .filter(
+        (c) =>
+          !c.startsWith('pnpm ') && !c.startsWith('gardien-spec') && !c.startsWith('architecte')
+      );
     const cible = section(charte, '## 7.', '## 8.');
     expect(cheminsSource.length).toBeGreaterThan(5);
     for (const chemin of cheminsSource) {
@@ -167,7 +174,9 @@ describe('REQ-GOV-010 — droits exclusifs, chemins réservés, label du rôle',
     expect(lignes.length).toBeGreaterThanOrEqual(8);
     for (const l of lignes) {
       const label = l.split('|').slice(1, -1)[2]!.replace(/`/g, '').trim();
-      expect(label, `ligne sans label ni interdiction : ${l.slice(0, 60)}`).toMatch(/^(role:[a-z-]+|schema|—)$/);
+      expect(label, `ligne sans label ni interdiction : ${l.slice(0, 60)}`).toMatch(
+        /^(role:[a-z-]+|schema|—)$/
+      );
     }
   });
 
@@ -203,7 +212,9 @@ describe('REQ-GOV-011 — relecteur ≠ auteur, lentilles, section Attaque', () 
     const fiche = readFileSync('.claude/agents/architecte.md', 'utf8');
     const attendu = /\b(première|deuxième|troisième|quatrième|cinquième)\s+lentille/i.exec(fiche);
     expect(attendu, 'la fiche architecte ne dit plus quelle lentille il tient').not.toBeNull();
-    for (const m of charte.matchAll(/\b(première|deuxième|troisième|quatrième|cinquième)\s+lentille/gi)) {
+    for (const m of charte.matchAll(
+      /\b(première|deuxième|troisième|quatrième|cinquième)\s+lentille/gi
+    )) {
       expect(m[1]!.toLowerCase()).toBe(attendu![1]!.toLowerCase());
     }
     expect(charte).toContain('remplace la troisième lentille');
@@ -241,14 +252,26 @@ describe('REQ-GOV-013 — la définition de « terminé »', () => {
     const dedans = occurrences(bloc(gabarit, 'dod'), '- [ ]');
     const partout = occurrences(gabarit, '- [ ]') + occurrences(gabarit, '- [x]');
     expect(dedans).toBe(8);
-    expect(partout, 'une case hors du bloc dod fausse le compte : la règle maison est un CHAMP').toBe(8);
+    expect(
+      partout,
+      'une case hors du bloc dod fausse le compte : la règle maison est un CHAMP'
+    ).toBe(8);
   });
 
   it('REQ-GOV-013 : chaque marqueur apparaît exactement une fois — un commentaire HTML ne s’imbrique pas', () => {
     // Le premier jet écrivait les délimiteurs À L'INTÉRIEUR du commentaire d'en-tête : celui-ci se
     // refermait au premier, le reste s'affichait en clair dans chaque PR, et chaque marqueur
     // existait en double. Une garde ancrée sur la première occurrence lisait alors un bloc vide.
-    for (const m of ['dod:debut', 'dod:fin', 'rouge-vert:debut', 'rouge-vert:fin', 'attaque:debut', 'attaque:fin', 'regle-maison:debut', 'regle-maison:fin']) {
+    for (const m of [
+      'dod:debut',
+      'dod:fin',
+      'rouge-vert:debut',
+      'rouge-vert:fin',
+      'attaque:debut',
+      'attaque:fin',
+      'regle-maison:debut',
+      'regle-maison:fin',
+    ]) {
       expect(occurrences(gabarit, `<!-- ${m} -->`), `marqueur ${m}`).toBe(1);
     }
   });

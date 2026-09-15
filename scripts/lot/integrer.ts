@@ -128,7 +128,9 @@ function principal(): void {
     process.exit(2);
   }
 
-  const vue = JSON.parse(readFileSync('docs/paths-proposes.json', 'utf8')) as { paths: Record<string, string[]> };
+  const vue = JSON.parse(readFileSync('docs/paths-proposes.json', 'utf8')) as {
+    paths: Record<string, string[]>;
+  };
   const PARTAGES = cheminsPartages(vue);
   const liste = fichiers(depuis);
   const copies: string[] = [];
@@ -165,7 +167,9 @@ function principal(): void {
 
   if (refuses.length > 0) {
     console.log('');
-    console.log(`⛔ ${refuses.length} fichier(s) PARTAGÉ(S) non copié(s) — à appliquer comme un diff, à la main :`);
+    console.log(
+      `⛔ ${refuses.length} fichier(s) PARTAGÉ(S) non copié(s) — à appliquer comme un diff, à la main :`
+    );
     for (const r of refuses) {
       console.log('');
       console.log(`   ── ${r.chemin}`);
@@ -175,12 +179,18 @@ function principal(): void {
         for (const s of r.supprime.slice(0, 6)) console.log(`         − ${s.slice(0, 110)}`);
         if (r.supprime.length > 6) console.log(`         … et ${r.supprime.length - 6} autre(s)`);
       } else {
-        console.log('      il ne supprime rien : un ajout pur, mais qui reste à appliquer à la main.');
+        console.log(
+          '      il ne supprime rien : un ajout pur, mais qui reste à appliquer à la main.'
+        );
       }
     }
     console.log('');
-    console.log('   Un fichier partagé se relit comme un DIFF, jamais comme un contenu. Le livrable a');
-    console.log("   été écrit contre l'état du dépôt au démarrage de son agent, pas contre celui-ci.");
+    console.log(
+      '   Un fichier partagé se relit comme un DIFF, jamais comme un contenu. Le livrable a'
+    );
+    console.log(
+      "   été écrit contre l'état du dépôt au démarrage de son agent, pas contre celui-ci."
+    );
   }
 
   console.log('');

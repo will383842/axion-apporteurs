@@ -38,14 +38,34 @@ import {
 } from './attestation';
 
 interface Tache {
-  id: string; titre: string; statut: string; owner?: string | null; lot?: string | null;
-  branch?: string | null; pr?: number | null; attempts?: number; motif?: string | null;
-  issue?: number | null; repo?: string; attestation?: Attestation | null;
+  id: string;
+  titre: string;
+  statut: string;
+  owner?: string | null;
+  lot?: string | null;
+  branch?: string | null;
+  pr?: number | null;
+  attempts?: number;
+  motif?: string | null;
+  issue?: number | null;
+  repo?: string;
+  attestation?: Attestation | null;
 }
 
 interface Resultat {
-  dev?: { taskId?: string; branch?: string; pr?: number | null; stop?: { motif?: string; ref?: string } | null } | null;
-  fusion?: { pr?: number | null; sha?: string | null; fusionneeAt?: string | null; atterri?: boolean; motif?: string } | null;
+  dev?: {
+    taskId?: string;
+    branch?: string;
+    pr?: number | null;
+    stop?: { motif?: string; ref?: string } | null;
+  } | null;
+  fusion?: {
+    pr?: number | null;
+    sha?: string | null;
+    fusionneeAt?: string | null;
+    atterri?: boolean;
+    motif?: string;
+  } | null;
   refuse?: boolean;
   motif?: string;
 }
@@ -72,24 +92,41 @@ if (!existsSync(cheminResultat)) {
 }
 
 const rendu = JSON.parse(readFileSync(cheminResultat, 'utf8')) as {
-  lotId?: string; resultats?: (Resultat | null)[]; stops?: { tache?: string; motif?: string; ref?: string }[];
+  lotId?: string;
+  resultats?: (Resultat | null)[];
+  stops?: { tache?: string; motif?: string; ref?: string }[];
 };
 if (rendu.lotId && rendu.lotId !== lotId) {
-  throw new Error(`Le rendu porte le lot ${rendu.lotId}, pas ${lotId}. Refus de clôturer un autre lot.`);
+  throw new Error(
+    `Le rendu porte le lot ${rendu.lotId}, pas ${lotId}. Refus de clôturer un autre lot.`
+  );
 }
 
-const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { version: number; taches: Tache[] };
+const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
+  version: number;
+  taches: Tache[];
+};
 const index = new Map(doc.taches.map((t) => [t.id, t]));
 
-const motifDuStop = new Map((rendu.stops ?? []).map((s) => [s.tache ?? '', `${s.motif ?? 'stop'} — ${s.ref ?? ''}`.trim()]));
+const motifDuStop = new Map(
+  (rendu.stops ?? []).map((s) => [s.tache ?? '', `${s.motif ?? 'stop'} — ${s.ref ?? ''}`.trim()])
+);
 const journal: string[] = [];
 
 for (const r of rendu.resultats ?? []) {
   if (!r) continue;
   const id = r.dev?.taskId;
-  if (!id) { journal.push('⚠️ un résultat sans `dev.taskId` : ignoré (le workflow a-t-il bien remboîté la fusion ?)'); continue; }
+  if (!id) {
+    journal.push(
+      '⚠️ un résultat sans `dev.taskId` : ignoré (le workflow a-t-il bien remboîté la fusion ?)'
+    );
+    continue;
+  }
   const t = index.get(id);
-  if (!t) { journal.push(`⚠️ ${id} : inconnu de docs/tasks.json — ignoré`); continue; }
+  if (!t) {
+    journal.push(`⚠️ ${id} : inconnu de docs/tasks.json — ignoré`);
+    continue;
+  }
 
   t.lot = lotId;
   if (r.dev?.branch) t.branch = r.dev.branch;
@@ -147,8 +184,16 @@ for (const r of rendu.resultats ?? []) {
       );
     }
 
-    const ref = referencePr({ id, repo: depotDeCetteTache, statut: t.statut, pr: t.pr, attestation: t.attestation });
-    journal.push(`${id} → fusionnee (${ref ?? 'aucune référence de PR'}, sha ${r.fusion?.sha ?? '?'})`);
+    const ref = referencePr({
+      id,
+      repo: depotDeCetteTache,
+      statut: t.statut,
+      pr: t.pr,
+      attestation: t.attestation,
+    });
+    journal.push(
+      `${id} → fusionnee (${ref ?? 'aucune référence de PR'}, sha ${r.fusion?.sha ?? '?'})`
+    );
     continue;
   }
 

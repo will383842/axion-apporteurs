@@ -27,18 +27,30 @@ const NOTES = 'docs/lots/REPRISE-NOTES.md';
 const LIVREE = new Set(['fusionnee', 'deployee', 'verifiee']);
 
 type Tache = {
-  id: string; titre: string; phase: number; statut: string; estimateDays: number;
-  deps: string[]; issue: number | null; externe: string | null; owner?: string | null; pr?: number | null;
+  id: string;
+  titre: string;
+  phase: number;
+  statut: string;
+  estimateDays: number;
+  deps: string[];
+  issue: number | null;
+  externe: string | null;
+  owner?: string | null;
+  pr?: number | null;
   // `repo` était absent de ce type alors qu'il est requis sur les 206 tâches : la vue de reprise
   // rendait donc toute PR comme une PR de CE dépôt, y compris celles des quatorze tâches qui
   // vivent ailleurs (GOV-038). Le défaut `DEPOT_LOCAL` n'est pas une tolérance : il n'existe que
   // pour un backlog antérieur au champ, et il fait rendre la forme la plus prudente.
-  repo?: string; attestation?: Attestation | null;
+  repo?: string;
+  attestation?: Attestation | null;
 };
 
 function sh(cmd: string, args: string[]): string {
   try {
-    return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    return execFileSync(cmd, args, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
   } catch {
     return '';
   }
@@ -53,15 +65,24 @@ const jTotal = T.reduce((a, t) => a + t.estimateDays, 0);
 const jFaits = T.filter((t) => LIVREE.has(t.statut)).reduce((a, t) => a + t.estimateDays, 0);
 
 const PHASES: Record<number, string> = {
-  [-1]: 'Gouvernance', 0: 'Socle technique', 1: 'Opérationnel', 2: 'Argent', 3: 'Pilotage et conformité',
+  [-1]: 'Gouvernance',
+  0: 'Socle technique',
+  1: 'Opérationnel',
+  2: 'Argent',
+  3: 'Pilotage et conformité',
 };
 
 /** La phase courante : la plus basse qui porte encore une tâche non livrée. */
-const phaseCourante = [-1, 0, 1, 2, 3].find((p) => T.some((t) => t.phase === p && !LIVREE.has(t.statut))) ?? 3;
+const phaseCourante =
+  [-1, 0, 1, 2, 3].find((p) => T.some((t) => t.phase === p && !LIVREE.has(t.statut))) ?? 3;
 
 /** Éligible = à faire, phase courante, dépendances toutes livrées, pas d'attente externe. */
 const eligibles = T.filter(
-  (t) => t.statut === 'a_faire' && t.phase === phaseCourante && t.externe === null && t.deps.every((d) => livrees.has(d))
+  (t) =>
+    t.statut === 'a_faire' &&
+    t.phase === phaseCourante &&
+    t.externe === null &&
+    t.deps.every((d) => livrees.has(d))
 );
 const bloquees = T.filter(
   (t) => t.statut === 'a_faire' && t.phase === phaseCourante && t.deps.some((d) => !livrees.has(d))
@@ -76,7 +97,9 @@ if (existsSync('docs/lots')) {
     const p = join('docs/lots', d);
     if (!statSync(p).isDirectory()) continue;
     const fini = existsSync(join(p, 'resultat.json'));
-    lots.push(`${d} — ${fini ? 'clôturé (resultat.json présent)' : '**ouvert**, pas de resultat.json'}`);
+    lots.push(
+      `${d} — ${fini ? 'clôturé (resultat.json présent)' : '**ouvert**, pas de resultat.json'}`
+    );
   }
 }
 
@@ -103,18 +126,26 @@ w('claude --resume       # propose la liste des sessions');
 w('```');
 w();
 w('Les transcrits vivent dans `~/.claude/projects/C--Users-willi-Documents-Projets-Axion-IA/`.');
-w('⚠️ La compétence `/lot` et les 15 fiches de rôle n’existent que si la session est lancée **depuis');
-w('ce dépôt** : `cd C:\\Users\\willi\\Documents\\Projets\\axion-apporteurs` avant de lancer `claude`.');
+w(
+  '⚠️ La compétence `/lot` et les 15 fiches de rôle n’existent que si la session est lancée **depuis'
+);
+w(
+  'ce dépôt** : `cd C:\\Users\\willi\\Documents\\Projets\\axion-apporteurs` avant de lancer `claude`.'
+);
 w();
 w('## L’état, en chiffres');
 w();
 w('| | |');
 w('| --- | --- |');
-w(`| Avancement | **${((100 * jFaits) / jTotal).toFixed(1)} %** — ${jFaits.toFixed(2)} j livrés sur ${jTotal.toFixed(2)} |`);
+w(
+  `| Avancement | **${((100 * jFaits) / jTotal).toFixed(1)} %** — ${jFaits.toFixed(2)} j livrés sur ${jTotal.toFixed(2)} |`
+);
 w(`| Tâches | ${livrees.size} livrées sur ${T.length} |`);
 w(`| Phase courante | ${phaseCourante} — ${PHASES[phaseCourante]} |`);
 w(`| \`main\` | \`${sha}\` — ${dernier} |`);
-w(`| Branche locale | \`${branche}\`${propre ? ' — ⚠️ **arbre de travail non propre**' : ' — arbre propre'} |`);
+w(
+  `| Branche locale | \`${branche}\`${propre ? ' — ⚠️ **arbre de travail non propre**' : ' — arbre propre'} |`
+);
 w();
 w('| Phase | Tâches | Livrées | Jours | Faits |');
 w('| --- | ---: | ---: | ---: | ---: |');
@@ -122,7 +153,9 @@ for (const p of [-1, 0, 1, 2, 3]) {
   const liste = T.filter((t) => t.phase === p);
   if (liste.length === 0) continue;
   const f = liste.filter((t) => LIVREE.has(t.statut));
-  w(`| ${p} — ${PHASES[p]} | ${liste.length} | ${f.length} | ${liste.reduce((a, t) => a + t.estimateDays, 0).toFixed(2)} | ${f.reduce((a, t) => a + t.estimateDays, 0).toFixed(2)} |`);
+  w(
+    `| ${p} — ${PHASES[p]} | ${liste.length} | ${f.length} | ${liste.reduce((a, t) => a + t.estimateDays, 0).toFixed(2)} | ${f.reduce((a, t) => a + t.estimateDays, 0).toFixed(2)} |`
+  );
 }
 w();
 
@@ -138,7 +171,9 @@ w(`pnpm lot:composer -- --phase ${phaseCourante} --repo partners --max 8 --now <
 w('```');
 w();
 if (enCours.length > 0) {
-  w('⚠️ **Des tâches sont déclarées en cours.** Une revendication expire sans commit ni PR depuis 6 h ;');
+  w(
+    '⚠️ **Des tâches sont déclarées en cours.** Une revendication expire sans commit ni PR depuis 6 h ;'
+  );
   w('le composeur les remet alors à `a_faire`. Vérifier avant de recomposer :');
   w();
   for (const t of enCours) {
@@ -152,7 +187,9 @@ if (lots.length > 0) {
   w();
   for (const x of lots) w(`- ${x}`);
   w();
-  w('Un lot **ouvert** se clôture par `pnpm lot:cloture -- --lot <id> --owner <Axx>`, après avoir écrit');
+  w(
+    'Un lot **ouvert** se clôture par `pnpm lot:cloture -- --lot <id> --owner <Axx>`, après avoir écrit'
+  );
   w('le rendu du workflow dans `docs/lots/<id>/resultat.json`. C’est le SEUL écrivain de statut.');
   w();
 }
@@ -160,18 +197,25 @@ if (lots.length > 0) {
 w(`## Éligible maintenant — ${eligibles.length} tâche(s)`);
 w();
 if (eligibles.length === 0) {
-  w('Aucune. Si la phase n’est pas finie, c’est que tout est bloqué par une dépendance ou une attente.');
+  w(
+    'Aucune. Si la phase n’est pas finie, c’est que tout est bloqué par une dépendance ou une attente.'
+  );
 } else {
   w('| Tâche | Issue | Jours | Titre |');
   w('| --- | ---: | ---: | --- |');
-  for (const t of eligibles) w(`| \`${t.id}\` | ${t.issue ? `#${t.issue}` : '—'} | ${t.estimateDays} | ${t.titre.replace(/\|/g, '\\|').slice(0, 80)} |`);
+  for (const t of eligibles)
+    w(
+      `| \`${t.id}\` | ${t.issue ? `#${t.issue}` : '—'} | ${t.estimateDays} | ${t.titre.replace(/\|/g, '\\|').slice(0, 80)} |`
+    );
 }
 w();
 w(`## Bloqué par une dépendance — ${bloquees.length} tâche(s)`);
 w();
 for (const t of bloquees) {
   const manque = t.deps.filter((d) => !livrees.has(d));
-  w(`- \`${t.id}\` attend ${manque.map((d) => `\`${d}\`${parId.has(d) ? ` (${parId.get(d)!.statut})` : ''}`).join(', ')}`);
+  w(
+    `- \`${t.id}\` attend ${manque.map((d) => `\`${d}\`${parId.has(d) ? ` (${parId.get(d)!.statut})` : ''}`).join(', ')}`
+  );
 }
 w();
 w(`## Attend une personne — ${attente.length} tâche(s)`);
@@ -196,8 +240,12 @@ w();
 if (existsSync(NOTES)) {
   w(readFileSync(NOTES, 'utf8').trim());
 } else {
-  w(`_Aucun \`${NOTES}\`._ Y écrire, à la main : ce que la session a décidé et pourquoi, ce qui tourne`);
-  w('en arrière-plan, et ce qui restait à faire. Rien de tout cela n’est dérivable de l’état du dépôt.');
+  w(
+    `_Aucun \`${NOTES}\`._ Y écrire, à la main : ce que la session a décidé et pourquoi, ce qui tourne`
+  );
+  w(
+    'en arrière-plan, et ce qui restait à faire. Rien de tout cela n’est dérivable de l’état du dépôt.'
+  );
 }
 w();
 

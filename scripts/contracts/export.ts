@@ -45,7 +45,9 @@ export const NOM_ZOD = 'events.zod.ts';
 function trier(valeur: unknown): unknown {
   if (Array.isArray(valeur)) return valeur.map(trier);
   if (valeur !== null && typeof valeur === 'object') {
-    const entrees = Object.entries(valeur as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    const entrees = Object.entries(valeur as Record<string, unknown>).sort(([a], [b]) =>
+      a < b ? -1 : a > b ? 1 : 0
+    );
     return Object.fromEntries(entrees.map(([c, v]) => [c, trier(v)]));
   }
   return valeur;
@@ -107,7 +109,10 @@ export function artefacts(): Artefact[] {
   const jsonSchema = canoniser(contratJsonSchema());
   return [
     { chemin: join(RACINE_CONTRATS, NOM_JSON_SCHEMA), contenu: jsonSchema },
-    { chemin: join(RACINE_CONTRATS, NOM_EMPREINTE), contenu: `${empreinte(jsonSchema)}  ${NOM_JSON_SCHEMA}\n` },
+    {
+      chemin: join(RACINE_CONTRATS, NOM_EMPREINTE),
+      contenu: `${empreinte(jsonSchema)}  ${NOM_JSON_SCHEMA}\n`,
+    },
     { chemin: join(RACINE_CONTRATS, NOM_ZOD), contenu: sourceZod() },
   ];
 }
@@ -134,21 +139,27 @@ function principal(): void {
     if (normaliser(readFileSync(artefact.chemin, 'utf8')) !== artefact.contenu) {
       ecarts.push(
         `${artefact.chemin} diffère de ce que le descripteur produit. L'artefact est une VUE : ` +
-          'corrige `packages/contracts/`, puis regénère — ne l\'édite pas.',
+          "corrige `packages/contracts/`, puis regénère — ne l'édite pas."
       );
     }
   }
 
   if (!verifier) {
-    console.log(`✅ contracts:export — ${artefacts().length} artefacts écrits sous ${RACINE_CONTRATS}/`);
+    console.log(
+      `✅ contracts:export — ${artefacts().length} artefacts écrits sous ${RACINE_CONTRATS}/`
+    );
     return;
   }
   if (ecarts.length > 0) {
-    console.error(`❌ contracts:export — ${ecarts.length} artefact(s) hors dérivation (RM-01, REQ-QA-007) :`);
+    console.error(
+      `❌ contracts:export — ${ecarts.length} artefact(s) hors dérivation (RM-01, REQ-QA-007) :`
+    );
     for (const e of ecarts) console.error(`   • ${e}`);
     process.exit(1);
   }
-  console.log('✅ contracts:export --verifier — les artefacts publiés sont ceux que le descripteur produit.');
+  console.log(
+    '✅ contracts:export --verifier — les artefacts publiés sont ceux que le descripteur produit.'
+  );
 }
 
 if (process.argv[1] !== undefined && /contracts[\\/]export\.ts$/.test(process.argv[1])) {

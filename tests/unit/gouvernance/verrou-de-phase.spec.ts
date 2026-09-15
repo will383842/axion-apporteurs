@@ -46,9 +46,7 @@ type Tache = {
   estimateDays: number;
 };
 
-const taches = (
-  JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: Tache[] }
-).taches;
+const taches = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: Tache[] }).taches;
 
 /** La phase courante, au sens de `scripts/gates/gov-pr.ts` : la plus petite encore ouverte. */
 function phaseCourante(liste: Tache[]): number {

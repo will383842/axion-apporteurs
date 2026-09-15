@@ -112,9 +112,13 @@ export function rendreIndex(liste: EntreeAdr[]): string {
   l.push('# Index des ADR — Axion Partners');
   l.push('');
   l.push('> ⚠️ **Ce fichier est une VUE. La source est le contenu de `docs/adr/`.**');
-  l.push('> Regénéré par `pnpm adr:index`, jamais édité à la main : un index tenu à la main est faux');
+  l.push(
+    '> Regénéré par `pnpm adr:index`, jamais édité à la main : un index tenu à la main est faux'
+  );
   l.push('> le jour où quelqu’un oublie de l’ouvrir, et rien ne le signale (RM-01, REQ-GOV-008).');
-  l.push('> `pnpm adr:index --verifier` et la garde `gov:adr` rougissent si ce fichier diffère du listage.');
+  l.push(
+    '> `pnpm adr:index --verifier` et la garde `gov:adr` rougissent si ce fichier diffère du listage.'
+  );
   l.push('>');
   l.push('> `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.');
   l.push('');

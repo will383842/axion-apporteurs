@@ -100,7 +100,11 @@ describe('gov:trace — la vue est DÉRIVÉE de la source (REQ-GOV-005 → REQ-Q
       expect(vert.code).toBe(0);
 
       const truque = join(dossier, 'vue-truquee.md');
-      writeFileSync(truque, `${readFileSync(VUE, 'utf8')}\n| REQ-ZZZ-999 | ligne écrite à la main |\n`, 'utf8');
+      writeFileSync(
+        truque,
+        `${readFileSync(VUE, 'utf8')}\n| REQ-ZZZ-999 | ligne écrite à la main |\n`,
+        'utf8'
+      );
       const rouge = lancer('--verifier', '--out', truque);
       expect(rouge.sortie).toContain('diffère');
       expect(rouge.code).not.toBe(0);

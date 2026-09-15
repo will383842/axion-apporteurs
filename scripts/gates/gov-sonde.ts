@@ -40,7 +40,16 @@
  * mode local et de veille : il refuse le vert tant que l'arbre n'a pas été rejoué.
  */
 
-import { readFileSync, existsSync, readdirSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import {
+  readFileSync,
+  existsSync,
+  readdirSync,
+  statSync,
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+} from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -59,11 +68,13 @@ const VERDICTS = ['vérifiée', 'FAUSSE', 'partielle', 'non vérifiable'];
 /** `AAAA-MM-JJ @ <SHA court>` — la date SEULE ne dit pas contre quoi la ligne a été rejouée. */
 const DATE_ET_SHA = /^\d{4}-\d{2}-\d{2}\s*@\s*[0-9a-f]{7,40}$/;
 /** Un chemin de fichier suivi d'un numéro de ligne : une affirmation LOCALISÉE. */
-const CHEMIN_LIGNE = /[A-Za-z0-9_.[\]@-]+(?:\/[A-Za-z0-9_.[\]@-]+)*\.(?:ts|tsx|prisma|sql|sh|json|md|yml):\d+/g;
+const CHEMIN_LIGNE =
+  /[A-Za-z0-9_.[\]@-]+(?:\/[A-Za-z0-9_.[\]@-]+)*\.(?:ts|tsx|prisma|sql|sh|json|md|yml):\d+/g;
 /** Un chemin, avec ou sans ligne : le minimum pour que la preuve pointe quelque part. */
 const CHEMIN_SEUL = /[A-Za-z0-9_.[\]@-]+\/[A-Za-z0-9_.[\]@*-]+/;
 /** Un fait d'ABSENCE : il n'a aucune ligne où se lire, et exiger un numéro de ligne serait absurde. */
-const ABSENCE = /(z[ée]ro occurrence|aucune occurrence|aucun[e]? |n'existe nulle part|ne renvoie rien)/i;
+const ABSENCE =
+  /(z[ée]ro occurrence|aucune occurrence|aucun[e]? |n'existe nulle part|ne renvoie rien)/i;
 
 /** Les huit points de l'acceptation de GOV-004. Chacun doit avoir sa ligne au tableau. */
 const ACCEPTATION: { point: string; motif: RegExp }[] = [
@@ -88,7 +99,12 @@ const INVALIDEES: { libelle: string; motif: RegExp }[] = [
 
 // ── les sondes : les faits réductibles à une recherche exacte ────────────────
 
-type Sonde = { repere: string; quoi: string; attendu: boolean; mesurer: (racine: string) => boolean };
+type Sonde = {
+  repere: string;
+  quoi: string;
+  attendu: boolean;
+  mesurer: (racine: string) => boolean;
+};
 
 function lire(racine: string, relatif: string): string | null {
   const p = join(racine, relatif);
@@ -138,20 +154,90 @@ const PRICING = 'src/content/pricing.ts';
 const SCORING = 'src/lib/commercial-application/scoring.ts';
 
 const SONDES: Sonde[] = [
-  { repere: 'AFF-01', quoi: 'un modèle Invoice au schéma', attendu: false, mesurer: (r) => dansFichier(r, SCHEMA, /^model Invoice\b/m) },
-  { repere: 'AFF-02', quoi: 'un modèle Refund au schéma', attendu: false, mesurer: (r) => dansFichier(r, SCHEMA, /^model Refund\b/m) },
-  { repere: 'AFF-03', quoi: 'PaymentScheduleProfile au schéma', attendu: false, mesurer: (r) => dansFichier(r, SCHEMA, /PaymentScheduleProfile/) },
-  { repere: 'AFF-05', quoi: 'un champ payerSiret au schéma', attendu: false, mesurer: (r) => dansFichier(r, SCHEMA, /payerSiret/) },
-  { repere: 'AFF-19', quoi: "l'outbox de synchronisation", attendu: true, mesurer: (r) => dansFichier(r, SCHEMA, /^model CrmSyncOutbox\b/m) },
-  { repere: 'AFF-20', quoi: 'le journal de réception signé', attendu: true, mesurer: (r) => dansFichier(r, SCHEMA, /^model DocusealWebhookEvent\b/m) },
-  { repere: 'AFF-21', quoi: 'le modèle de jeton haché', attendu: true, mesurer: (r) => dansFichier(r, SCHEMA, /^model EmargementToken\b/m) },
-  { repere: 'AFF-22', quoi: "l'index unique partiel « un seul jeton vivant »", attendu: true, mesurer: (r) => dansArbre(r, MIGRATIONS, /emargement_token_enrollment_actif/, ['.sql']) },
-  { repere: 'AFF-23', quoi: "l'index unique partiel sur les jetons de signature", attendu: true, mesurer: (r) => dansArbre(r, MIGRATIONS, /document_signature_token_actif/, ['.sql']) },
-  { repere: 'AFF-24', quoi: 'la table des lignes de rémunération', attendu: true, mesurer: (r) => dansFichier(r, PRICING, /COMMERCIAL_COMMISSIONS/) },
-  { repere: 'AFF-25', quoi: 'un champ commissionId sur les paliers', attendu: false, mesurer: (r) => dansFichier(r, PRICING, /commissionId/) },
-  { repere: 'AFF-30', quoi: "l'entité historique en défaut de colonne", attendu: true, mesurer: (r) => dansArbre(r, MIGRATIONS, /Axion-IA O[ÜU]/, ['.sql']) },
-  { repere: 'AFF-39', quoi: 'le relevé mensuel gelé', attendu: true, mesurer: (r) => dansFichier(r, SCHEMA, /^model TrainerStatement\b/m) },
-  { repere: 'AFF-46', quoi: 'une version du barème enregistrée avec le score', attendu: false, mesurer: (r) => dansFichier(r, SCORING, /scoreBaremeVersion/) },
+  {
+    repere: 'AFF-01',
+    quoi: 'un modèle Invoice au schéma',
+    attendu: false,
+    mesurer: (r) => dansFichier(r, SCHEMA, /^model Invoice\b/m),
+  },
+  {
+    repere: 'AFF-02',
+    quoi: 'un modèle Refund au schéma',
+    attendu: false,
+    mesurer: (r) => dansFichier(r, SCHEMA, /^model Refund\b/m),
+  },
+  {
+    repere: 'AFF-03',
+    quoi: 'PaymentScheduleProfile au schéma',
+    attendu: false,
+    mesurer: (r) => dansFichier(r, SCHEMA, /PaymentScheduleProfile/),
+  },
+  {
+    repere: 'AFF-05',
+    quoi: 'un champ payerSiret au schéma',
+    attendu: false,
+    mesurer: (r) => dansFichier(r, SCHEMA, /payerSiret/),
+  },
+  {
+    repere: 'AFF-19',
+    quoi: "l'outbox de synchronisation",
+    attendu: true,
+    mesurer: (r) => dansFichier(r, SCHEMA, /^model CrmSyncOutbox\b/m),
+  },
+  {
+    repere: 'AFF-20',
+    quoi: 'le journal de réception signé',
+    attendu: true,
+    mesurer: (r) => dansFichier(r, SCHEMA, /^model DocusealWebhookEvent\b/m),
+  },
+  {
+    repere: 'AFF-21',
+    quoi: 'le modèle de jeton haché',
+    attendu: true,
+    mesurer: (r) => dansFichier(r, SCHEMA, /^model EmargementToken\b/m),
+  },
+  {
+    repere: 'AFF-22',
+    quoi: "l'index unique partiel « un seul jeton vivant »",
+    attendu: true,
+    mesurer: (r) => dansArbre(r, MIGRATIONS, /emargement_token_enrollment_actif/, ['.sql']),
+  },
+  {
+    repere: 'AFF-23',
+    quoi: "l'index unique partiel sur les jetons de signature",
+    attendu: true,
+    mesurer: (r) => dansArbre(r, MIGRATIONS, /document_signature_token_actif/, ['.sql']),
+  },
+  {
+    repere: 'AFF-24',
+    quoi: 'la table des lignes de rémunération',
+    attendu: true,
+    mesurer: (r) => dansFichier(r, PRICING, /COMMERCIAL_COMMISSIONS/),
+  },
+  {
+    repere: 'AFF-25',
+    quoi: 'un champ commissionId sur les paliers',
+    attendu: false,
+    mesurer: (r) => dansFichier(r, PRICING, /commissionId/),
+  },
+  {
+    repere: 'AFF-30',
+    quoi: "l'entité historique en défaut de colonne",
+    attendu: true,
+    mesurer: (r) => dansArbre(r, MIGRATIONS, /Axion-IA O[ÜU]/, ['.sql']),
+  },
+  {
+    repere: 'AFF-39',
+    quoi: 'le relevé mensuel gelé',
+    attendu: true,
+    mesurer: (r) => dansFichier(r, SCHEMA, /^model TrainerStatement\b/m),
+  },
+  {
+    repere: 'AFF-46',
+    quoi: 'une version du barème enregistrée avec le score',
+    attendu: false,
+    mesurer: (r) => dansFichier(r, SCORING, /scoreBaremeVersion/),
+  },
 ];
 
 // ── lecture du tableau ───────────────────────────────────────────────────────
@@ -242,7 +328,10 @@ function controler(e: Entrees): Faute[] {
   const { entete, lignes } = extraireTableau(e.affirmations);
 
   if (entete === null) {
-    ajouter('tableau_illisible', `${CHEMIN_AFFIRMATIONS} — la section « ${TITRE_TABLEAU} » est introuvable.`);
+    ajouter(
+      'tableau_illisible',
+      `${CHEMIN_AFFIRMATIONS} — la section « ${TITRE_TABLEAU} » est introuvable.`
+    );
     return fautes;
   }
   if (entete.join('|') !== ENTETE.join('|')) {
@@ -351,7 +440,9 @@ function controler(e: Entrees): Faute[] {
   const ancresDuTableau = jetonsChemin(e.affirmations);
   for (const s of e.sources) {
     for (const jeton of jetonsChemin(s.texte)) {
-      const couverte = ancresDuTableau.some((a) => a === jeton || a.endsWith('/' + jeton) || jeton.endsWith('/' + a));
+      const couverte = ancresDuTableau.some(
+        (a) => a === jeton || a.endsWith('/' + jeton) || jeton.endsWith('/' + a)
+      );
       if (!couverte) {
         ajouter(
           'source_axionia_sans_repere',
@@ -366,7 +457,10 @@ function controler(e: Entrees): Faute[] {
   if (e.racineAxionia !== null) {
     const parRepere = new Map<string, string>();
     for (const l of lignes) {
-      parRepere.set((l.cellules[0] ?? '').replace(/[`*]/g, '').trim(), nettoyerVerdict(l.cellules[2] ?? ''));
+      parRepere.set(
+        (l.cellules[0] ?? '').replace(/[`*]/g, '').trim(),
+        nettoyerVerdict(l.cellules[2] ?? '')
+      );
     }
     for (const s of SONDES) {
       const mesure = s.mesurer(e.racineAxionia);
@@ -381,7 +475,8 @@ function controler(e: Entrees): Faute[] {
       }
       const verdict = parRepere.get(s.repere);
       if (verdict === undefined) continue;
-      const contredit = (verdict === 'vérifiée' && !s.attendu) || (verdict === 'FAUSSE' && s.attendu);
+      const contredit =
+        (verdict === 'vérifiée' && !s.attendu) || (verdict === 'FAUSSE' && s.attendu);
       if (contredit) {
         ajouter(
           'sonde_dementie',
@@ -420,8 +515,16 @@ for (const f of [CHEMIN_AFFIRMATIONS, CHEMIN_DECISIONS, CHEMIN_REGISTRE, CHEMIN_
 
 const affirmations = readFileSync(CHEMIN_AFFIRMATIONS, 'utf8');
 const decisions = readFileSync(CHEMIN_DECISIONS, 'utf8');
-const exigences = (JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as { exigences: { id: string; source: string }[] }).exigences;
-const taches = (JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: { id: string; acceptance: string | null }[] }).taches;
+const exigences = (
+  JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as {
+    exigences: { id: string; source: string }[];
+  }
+).exigences;
+const taches = (
+  JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as {
+    taches: { id: string; acceptance: string | null }[];
+  }
+).taches;
 
 const sources: { id: string; texte: string }[] = [
   ...exigences.map((x) => ({ id: x.id, texte: x.source ?? '' })),
@@ -443,10 +546,26 @@ function arbreFactice(): string {
   };
   poser(
     SCHEMA,
-    ['model CrmSyncOutbox {', '}', 'model DocusealWebhookEvent {', '}', 'model EmargementToken {', '}', 'model TrainerStatement {', '}', ''].join('\n')
+    [
+      'model CrmSyncOutbox {',
+      '}',
+      'model DocusealWebhookEvent {',
+      '}',
+      'model EmargementToken {',
+      '}',
+      'model TrainerStatement {',
+      '}',
+      '',
+    ].join('\n')
   );
-  poser(join(MIGRATIONS, '20260721120000_x', 'migration.sql'), 'CREATE UNIQUE INDEX "emargement_token_enrollment_actif"\n');
-  poser(join(MIGRATIONS, '20260730090000_y', 'migration.sql'), 'CREATE UNIQUE INDEX "document_signature_token_actif"\n');
+  poser(
+    join(MIGRATIONS, '20260721120000_x', 'migration.sql'),
+    'CREATE UNIQUE INDEX "emargement_token_enrollment_actif"\n'
+  );
+  poser(
+    join(MIGRATIONS, '20260730090000_y', 'migration.sql'),
+    'CREATE UNIQUE INDEX "document_signature_token_actif"\n'
+  );
   poser(join(MIGRATIONS, '20260516142017_z', 'migration.sql'), "DEFAULT 'Axion-IA OÜ'\n");
   poser(PRICING, 'export const COMMERCIAL_COMMISSIONS = [];\n');
   poser(SCORING, 'export const SCORE_POIDS = {} as const;\n');
@@ -459,13 +578,19 @@ if (process.argv.includes('--prove')) {
     const base: Entrees = { affirmations, decisions, sources, racineAxionia: factice };
     const dejaFautif = controler(base);
     if (dejaFautif.length > 0) {
-      console.error(`❌ La preuve part d'un état DÉJÀ fautif (${dejaFautif.length}) — corrige d'abord :`);
+      console.error(
+        `❌ La preuve part d'un état DÉJÀ fautif (${dejaFautif.length}) — corrige d'abord :`
+      );
       dejaFautif.slice(0, 5).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
       process.exit(1);
     }
 
     /** Remplace la première ligne du tableau §2 qui porte `repere` par `remplacement`. */
-    const remplacerLigne = (texte: string, repere: string, remplacement: (l: string) => string): string =>
+    const remplacerLigne = (
+      texte: string,
+      repere: string,
+      remplacement: (l: string) => string
+    ): string =>
       texte
         .split('\n')
         .map((l) => (l.trimStart().startsWith(`| ${repere} `) ? remplacement(l) : l))
@@ -474,7 +599,13 @@ if (process.argv.includes('--prove')) {
     const TEMOINS: { famille: string; defaut: () => Entrees }[] = [
       {
         famille: 'tableau_illisible',
-        defaut: () => ({ ...base, affirmations: affirmations.replace('| Repère | Affirmation | Verdict |', '| Repere | Affirmation |') }),
+        defaut: () => ({
+          ...base,
+          affirmations: affirmations.replace(
+            '| Repère | Affirmation | Verdict |',
+            '| Repere | Affirmation |'
+          ),
+        }),
       },
       {
         famille: 'affirmations_insuffisantes',
@@ -499,12 +630,20 @@ if (process.argv.includes('--prove')) {
         defaut: () => {
           const l = affirmations.split('\n');
           const i = l.findIndex((x) => x.trimStart().startsWith('| AFF-01 '));
-          return { ...base, affirmations: [...l.slice(0, i + 1), l[i] as string, ...l.slice(i + 1)].join('\n') };
+          return {
+            ...base,
+            affirmations: [...l.slice(0, i + 1), l[i] as string, ...l.slice(i + 1)].join('\n'),
+          };
         },
       },
       {
         famille: 'verdict_inconnu',
-        defaut: () => ({ ...base, affirmations: remplacerLigne(affirmations, 'AFF-01', (l) => l.replace('**FAUSSE**', '**douteuse**')) }),
+        defaut: () => ({
+          ...base,
+          affirmations: remplacerLigne(affirmations, 'AFF-01', (l) =>
+            l.replace('**FAUSSE**', '**douteuse**')
+          ),
+        }),
       },
       {
         famille: 'preuve_sans_ancre',
@@ -521,14 +660,18 @@ if (process.argv.includes('--prove')) {
         famille: 'date_ou_sha_manquant',
         defaut: () => ({
           ...base,
-          affirmations: remplacerLigne(affirmations, 'AFF-01', (l) => l.replace('2026-09-03 @ ad53f14a', '2026-09-03')),
+          affirmations: remplacerLigne(affirmations, 'AFF-01', (l) =>
+            l.replace('2026-09-03 @ ad53f14a', '2026-09-03')
+          ),
         }),
       },
       {
         famille: 'barre_non_echappee',
         defaut: () => ({
           ...base,
-          affirmations: remplacerLigne(affirmations, 'AFF-07', (l) => l.replace('**vérifiée**', '**vérifiée** `a | b`')),
+          affirmations: remplacerLigne(affirmations, 'AFF-07', (l) =>
+            l.replace('**vérifiée**', '**vérifiée** `a | b`')
+          ),
         }),
       },
       {
@@ -543,20 +686,34 @@ if (process.argv.includes('--prove')) {
       },
       {
         famille: 'invalidee_absente_du_registre',
-        defaut: () => ({ ...base, decisions: decisions.split('\n').filter((l) => !/`Refund`/.test(l)).join('\n') }),
+        defaut: () => ({
+          ...base,
+          decisions: decisions
+            .split('\n')
+            .filter((l) => !/`Refund`/.test(l))
+            .join('\n'),
+        }),
       },
       {
         famille: 'source_axionia_sans_repere',
         defaut: () => ({
           ...base,
-          sources: [...sources, { id: 'REQ-TEMOIN-001', texte: 'affirmation lue dans src/server/inconnu.ts:42, jamais datée' }],
+          sources: [
+            ...sources,
+            {
+              id: 'REQ-TEMOIN-001',
+              texte: 'affirmation lue dans src/server/inconnu.ts:42, jamais datée',
+            },
+          ],
         }),
       },
       {
         famille: 'sonde_dementie',
         defaut: () => ({
           ...base,
-          affirmations: remplacerLigne(affirmations, 'AFF-01', (l) => l.replace('**FAUSSE**', '**vérifiée**')),
+          affirmations: remplacerLigne(affirmations, 'AFF-01', (l) =>
+            l.replace('**FAUSSE**', '**vérifiée**')
+          ),
         }),
       },
     ];
@@ -584,12 +741,23 @@ if (process.argv.includes('--prove')) {
       {
         quoi: 'une barre ÉCHAPPÉE entre accents graves',
         famille: 'barre_non_echappee',
-        cas: () => ({ ...base, affirmations: remplacerLigne(affirmations, 'AFF-07', (l) => l.replace('**vérifiée**', '**vérifiée** `a \\| b`')) }),
+        cas: () => ({
+          ...base,
+          affirmations: remplacerLigne(affirmations, 'AFF-07', (l) =>
+            l.replace('**vérifiée**', '**vérifiée** `a \\| b`')
+          ),
+        }),
       },
       {
         quoi: 'une source qui DÉSIGNE un fichier sans en affirmer le contenu',
         famille: 'source_axionia_sans_repere',
-        cas: () => ({ ...base, sources: [...sources, { id: 'REQ-TEMOIN-002', texte: 'nouvelle (patron `src/env.ts`, `next.config.ts`)' }] }),
+        cas: () => ({
+          ...base,
+          sources: [
+            ...sources,
+            { id: 'REQ-TEMOIN-002', texte: 'nouvelle (patron `src/env.ts`, `next.config.ts`)' },
+          ],
+        }),
       },
       {
         quoi: "une preuve d'ABSENCE, qui n'a aucune ligne où se lire",
@@ -618,13 +786,17 @@ if (process.argv.includes('--prove')) {
     for (const ct of CONTRE_TEMOINS) {
       const f = controler(ct.cas()).filter((x) => x.famille === ct.famille);
       if (f.length > 0) {
-        console.error(`❌ Contre-témoin ROUGE — ${ct.quoi} : la garde rougit sur ce qui est légitime.`);
+        console.error(
+          `❌ Contre-témoin ROUGE — ${ct.quoi} : la garde rougit sur ce qui est légitime.`
+        );
         f.slice(0, 3).forEach((x) => console.error(`   [${x.famille}] ${x.message}`));
         process.exit(1);
       }
     }
 
-    console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+    console.log(
+      `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+    );
     console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
     console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts :`);
     console.log(`   ${CONTRE_TEMOINS.map((c) => '· ' + c.quoi).join('\n   ')}`);
@@ -646,13 +818,22 @@ if (exigerAxionia && !axioniaDispo) {
   process.exit(1);
 }
 
-const fautes = controler({ affirmations, decisions, sources, racineAxionia: axioniaDispo ? RACINE_PAR_DEFAUT : null });
+const fautes = controler({
+  affirmations,
+  decisions,
+  sources,
+  racineAxionia: axioniaDispo ? RACINE_PAR_DEFAUT : null,
+});
 
 if (fautes.length === 0) {
   const { lignes } = extraireTableau(affirmations);
-  console.log(`✅ gov:sonde — ${lignes.length} affirmations datées et rattachées à un SHA, ${INVALIDEES.length} invalidées au registre.`);
+  console.log(
+    `✅ gov:sonde — ${lignes.length} affirmations datées et rattachées à un SHA, ${INVALIDEES.length} invalidées au registre.`
+  );
   if (axioniaDispo) {
-    console.log(`   ${SONDES.length} sondes rejouées contre ${RACINE_PAR_DEFAUT} : aucun fait n'a bougé.`);
+    console.log(
+      `   ${SONDES.length} sondes rejouées contre ${RACINE_PAR_DEFAUT} : aucun fait n'a bougé.`
+    );
   } else {
     console.log(
       `   ⚠️  Les ${SONDES.length} sondes n'ont PAS été rejouées : le dépôt voisin est hors de portée ` +

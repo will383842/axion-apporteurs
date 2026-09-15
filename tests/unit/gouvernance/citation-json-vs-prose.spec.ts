@@ -167,7 +167,9 @@ describe('REQ-GOV-003 — dans un fichier de code, la quote est de la SYNTAXE', 
   it.each(TEMOINS_DELIMITEURS.filter((t) => t.cacheParLAncienne))(
     'REQ-GOV-003 : la neutralisation d’avant CACHAIT la version courte de $famille dans $fichier',
     (t) => {
-      expect(fautesDeLigneAveugleALaSyntaxe(temoinCourt(t), t.fichier, 0, MOTIF_NU)).toHaveLength(0);
+      expect(fautesDeLigneAveugleALaSyntaxe(temoinCourt(t), t.fichier, 0, MOTIF_NU)).toHaveLength(
+        0
+      );
     }
   );
 

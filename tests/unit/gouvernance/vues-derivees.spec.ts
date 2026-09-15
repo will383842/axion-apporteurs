@@ -36,9 +36,26 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync, statSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  mkdtempSync,
+  rmSync,
+  existsSync,
+  statSync,
+  mkdirSync,
+  copyFileSync,
+  readdirSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { FAMILLES, BLOC_DE_REPRISE, decouper, question, proses, type Famille } from '../../../scripts/plan-state/build';
+import {
+  FAMILLES,
+  BLOC_DE_REPRISE,
+  decouper,
+  question,
+  proses,
+  type Famille,
+} from '../../../scripts/plan-state/build';
 import { PLANCHER } from '../../../scripts/lot/avancement';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -116,7 +133,12 @@ describe('REQ-GOV-032 — docs/TASKS.md est comparée à docs/tasks.json', () =>
   });
 
   it('REQ-GOV-032 · une vue ABSENTE est un rouge qui le dit, jamais un vert par défaut', () => {
-    const { code, sortie } = lancer(TACHES, '--verifie-rendu', '--out', join(bac, 'jamais-rendue.md'));
+    const { code, sortie } = lancer(
+      TACHES,
+      '--verifie-rendu',
+      '--out',
+      join(bac, 'jamais-rendue.md')
+    );
     expect(code).toBe(1);
     expect(sortie).toMatch(/absent/i);
   });
@@ -133,7 +155,7 @@ describe('REQ-GOV-032 — docs/TASKS.md est comparée à docs/tasks.json', () =>
     expect(readFileSync(vue, 'utf8')).toBe(perimee);
   });
 
-  it("REQ-GOV-032 · la comparaison est OCTET PAR OCTET, pas par LONGUEUR — vu rougir sur une dérive à longueur CONSTANTE", () => {
+  it('REQ-GOV-032 · la comparaison est OCTET PAR OCTET, pas par LONGUEUR — vu rougir sur une dérive à longueur CONSTANTE', () => {
     // 🔴 Trouvé par la lentille `mutation` le 2026-09-05. Remplacer la comparaison de contenu
     // par une comparaison de LONGUEUR laissait ce fichier entièrement VERT : les cinq témoins de
     // périmage RETIRENT tous du texte, donc changent tous la longueur, et aucun n'exerçait la
@@ -143,7 +165,9 @@ describe('REQ-GOV-032 — docs/TASKS.md est comparée à docs/tasks.json', () =>
     const chemin = rendreDansLeBac(TACHES, 'longueur-constante.md');
     const rendu = readFileSync(chemin, 'utf8');
     const perime = rendu.replace('# Taches', '# taches');
-    expect(perime.length, 'le témoin doit garder la MÊME longueur, sinon il ne prouve rien').toBe(rendu.length);
+    expect(perime.length, 'le témoin doit garder la MÊME longueur, sinon il ne prouve rien').toBe(
+      rendu.length
+    );
     expect(perime).not.toBe(rendu);
     writeFileSync(chemin, perime);
     const r = lancer(TACHES, '--verifie-rendu', '--out', chemin);
@@ -250,12 +274,14 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
    */
   const famillesVues = new Set<string>();
   const vertsQuiRefusent: string[] = [];
-  const famillesDe = (sortie: string): string[] => [...sortie.matchAll(/^[ \t]*\[([^\]\n]+)\]/gm)].map((m) => m[1]!);
+  const famillesDe = (sortie: string): string[] =>
+    [...sortie.matchAll(/^[ \t]*\[([^\]\n]+)\]/gm)].map((m) => m[1]!);
   function lancerPlan(...args: string[]): { code: number; sortie: string } {
     const r = lancer(PLAN, ...args);
     const vues = famillesDe(r.sortie);
     for (const f of vues) famillesVues.add(f);
-    if (r.code === 0 && vues.length > 0) vertsQuiRefusent.push(`${args.join(' ')} → [${vues.join('], [')}]`);
+    if (r.code === 0 && vues.length > 0)
+      vertsQuiRefusent.push(`${args.join(' ')} → [${vues.join('], [')}]`);
     return r;
   }
 
@@ -286,11 +312,13 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const regles: [RegExp, (...g: string[]) => string][] = [
       [
         /^(\d+)\/(\d+) tâches terminées · reste ([\d.]+) j estimés\.$/m,
-        (_m, a, b, j) => `${Number(a) + 1}/${b} tâches terminées · reste ${(Number(j) + 1).toFixed(2)} j estimés.`,
+        (_m, a, b, j) =>
+          `${Number(a) + 1}/${b} tâches terminées · reste ${(Number(j) + 1).toFixed(2)} j estimés.`,
       ],
       [
         /^(\| Où en est la phase \? \| phase -?\d+ — )(\d+)(\/\d+ tâches, reste )([\d.]+)( j \|)$/m,
-        (_m, tete, a, milieu, j, queue) => `${tete}${Number(a) + 1}${milieu}${(Number(j) + 1).toFixed(2)}${queue}`,
+        (_m, tete, a, milieu, j, queue) =>
+          `${tete}${Number(a) + 1}${milieu}${(Number(j) + 1).toFixed(2)}${queue}`,
       ],
       [
         /^(\| Ce qui bloque \| )(\d+)( tâche\(s\) bloquée\(s\))/m,
@@ -331,7 +359,10 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(faux, 'le témoin n’a rien falsifié : il ne prouve rien').not.toBe(rendu);
     // L'ANCRE EST INTACTE — c'est toute la propriété : une garde qui regarde les titres ne voit rien.
     const titres = (t: string) => decouper(t).map((r) => r.titre);
-    expect(titres(faux), 'le témoin a bougé une ancre : il n’exerce plus la cécité mesurée').toEqual(titres(rendu));
+    expect(
+      titres(faux),
+      'le témoin a bougé une ancre : il n’exerce plus la cécité mesurée'
+    ).toEqual(titres(rendu));
     writeFileSync(vue, faux);
 
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
@@ -339,9 +370,10 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
 
     // Le message NOMME l'écart en unités du domaine (REQ-GOV-032) : des TÂCHES, des JOURS.
     expect(sortie, `l'écart n'est pas nommé en tâches : ${sortie}`).toMatch(/tâche/);
-    expect(sortie, '« les deux fichiers diffèrent » n’apprend rien à qui lit un journal de CI').not.toMatch(
-      /les deux fichiers diff/i
-    );
+    expect(
+      sortie,
+      '« les deux fichiers diffèrent » n’apprend rien à qui lit un journal de CI'
+    ).not.toMatch(/les deux fichiers diff/i);
     // Et il dit quoi taper : une garde qui constate sans dire quoi faire devient un avertissement.
     expect(sortie).toContain('plan-state:build');
 
@@ -349,9 +381,10 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const trouve = /^(\d+)\/(\d+) tâches terminées/m.exec(rendu);
     expect(trouve, 'la vue rendue ne porte pas le compte de phase attendu').not.toBeNull();
     const n = nombresCites(sortie);
-    expect(n, `le message ne cite pas le compte de la SOURCE (${trouve![1]}) : ${sortie}`).toContain(
-      Number(trouve![1])
-    );
+    expect(
+      n,
+      `le message ne cite pas le compte de la SOURCE (${trouve![1]}) : ${sortie}`
+    ).toContain(Number(trouve![1]));
     expect(
       n,
       `le message ne cite pas le compte FALSIFIÉ du disque (${Number(trouve![1]) + 1}) : ${sortie}`
@@ -365,7 +398,10 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
       /^(\| Ce qui bloque \| )(\d+)( tâche\(s\) bloquée\(s\))/m,
       (_m, tete: string, n: string, queue: string) => `${tete}${Number(n) + 1}${queue}`
     );
-    expect(faux, 'aucune ligne « Ce qui bloque » dans la vue : le témoin ne falsifie rien').not.toBe(rendu);
+    expect(
+      faux,
+      'aucune ligne « Ce qui bloque » dans la vue : le témoin ne falsifie rien'
+    ).not.toBe(rendu);
     writeFileSync(vue, faux);
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une ligne falsifiée passe : ${sortie}`).toBe(1);
@@ -381,23 +417,38 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     // La mutation vit DANS le corps d'une rubrique comparée — `## Tâches` — et nulle part ailleurs :
     // une bascule de casse sur une seule lettre, donc longueur strictement constante.
     const debut = rendu.indexOf('## Tâches');
-    expect(debut, 'la rubrique `## Tâches` doit exister pour que ce témoin ait un sujet').toBeGreaterThan(-1);
+    expect(
+      debut,
+      'la rubrique `## Tâches` doit exister pour que ce témoin ait un sujet'
+    ).toBeGreaterThan(-1);
     const suite = rendu.indexOf('\n## ', debut + 1);
     const corpsRubrique = rendu.slice(debut + 12, suite);
     const lettre = /[a-zé]/.exec(corpsRubrique);
     expect(lettre, 'il faut une lettre à basculer dans le corps de la rubrique').not.toBeNull();
     const pos = debut + 12 + lettre!.index;
     const faux = rendu.slice(0, pos) + rendu[pos]!.toUpperCase() + rendu.slice(pos + 1);
-    expect(faux.length, 'le témoin doit garder la MÊME longueur, sinon il ne prouve rien').toBe(rendu.length);
+    expect(faux.length, 'le témoin doit garder la MÊME longueur, sinon il ne prouve rien').toBe(
+      rendu.length
+    );
     expect(faux, 'le témoin doit vraiment différer').not.toBe(rendu);
     // Aucun titre ne bouge : la structure est intacte des deux côtés.
-    const titres = (t: string) => decouper(t).map((r) => r.titre).join('|');
-    expect(titres(faux), 'le témoin ne doit PAS toucher aux titres, sinon il rougit par la structure').toBe(titres(rendu));
+    const titres = (t: string) =>
+      decouper(t)
+        .map((r) => r.titre)
+        .join('|');
+    expect(
+      titres(faux),
+      'le témoin ne doit PAS toucher aux titres, sinon il rougit par la structure'
+    ).toBe(titres(rendu));
     writeFileSync(vue, faux);
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une dérive à longueur constante DOIT sortir 1 : ${sortie}`).toBe(1);
-    expect(sortie, "c'est la comparaison d'OCTETS qui doit tirer, pas la structure").toMatch(/vue_perimee/);
-    expect(sortie, 'aucune rubrique ne manque ni n’est en trop dans ce témoin').not.toMatch(/rubrique_(manquante|en_trop)/);
+    expect(sortie, "c'est la comparaison d'OCTETS qui doit tirer, pas la structure").toMatch(
+      /vue_perimee/
+    );
+    expect(sortie, 'aucune rubrique ne manque ni n’est en trop dans ce témoin').not.toMatch(
+      /rubrique_(manquante|en_trop)/
+    );
   });
 
   it('REQ-GOV-032 · une rubrique que le générateur ne produit PAS fait rougir, et elle est NOMMÉE', () => {
@@ -424,8 +475,10 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     writeFileSync(vue, faux);
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `un compteur falsifié DOIT sortir 1 : ${sortie}`).toBe(1);
-    expect(sortie, "l'écart doit être nommé en TÂCHES, pas « les deux fichiers diffèrent »")
-      .toMatch(new RegExp(`tâches terminées[^\n]*dit ${m![2]}[^\n]*produisent ${m![1]}`));
+    expect(
+      sortie,
+      "l'écart doit être nommé en TÂCHES, pas « les deux fichiers diffèrent »"
+    ).toMatch(new RegExp(`tâches terminées[^\n]*dit ${m![2]}[^\n]*produisent ${m![1]}`));
   });
 
   it('REQ-GOV-032 · CHAQUE rubrique annoncée comparée l’est vraiment, en-tête et dernière comprises — comptées SANS `decouper` (une rubrique disparue reste invisible : GOV-055)', () => {
@@ -442,29 +495,47 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const m = /(\d+) rubrique\(s\) comparée\(s\) octet par octet sur (\d+)/.exec(sortie);
     expect(m, `le vert doit annoncer X rubriques comparées sur Y : ${sortie}`).not.toBeNull();
     const t = readFileSync(vue, 'utf8');
-    const titres = ['(en-tête)', ...[...t.matchAll(/^## (.+)$/gm)].map((x) => x[1]!)].filter((x) => x !== BLOC_DE_REPRISE);
-    expect(Number(m![2]), 'le vert ne compte pas toutes les rubriques que le générateur écrit').toBe(titres.length);
+    const titres = ['(en-tête)', ...[...t.matchAll(/^## (.+)$/gm)].map((x) => x[1]!)].filter(
+      (x) => x !== BLOC_DE_REPRISE
+    );
+    expect(
+      Number(m![2]),
+      'le vert ne compte pas toutes les rubriques que le générateur écrit'
+    ).toBe(titres.length);
     const exemptees = exemptes(sortie, 'rubriques');
     const comparees = titres.filter((x) => !exemptees.includes(x));
-    expect(Number(m![1]), 'le compte annoncé doit être celui des rubriques RÉELLEMENT comparées').toBe(comparees.length);
+    expect(
+      Number(m![1]),
+      'le compte annoncé doit être celui des rubriques RÉELLEMENT comparées'
+    ).toBe(comparees.length);
 
     // CHAQUE rubrique annoncée comparée est falsifiée d'une ligne, à la fin de son corps : chacune
     // doit être NOMMÉE par un écart. La position se lit dans le texte, pas dans `decouper`.
     const lignes = t.split('\n');
     const faux: string[] = [];
     let courante = '(en-tête)';
-    const falsifier = () => { if (comparees.includes(courante)) faux.push(`falsification de ${courante}`); };
+    const falsifier = () => {
+      if (comparees.includes(courante)) faux.push(`falsification de ${courante}`);
+    };
     for (const l of lignes.slice(0, -1)) {
       const h = /^## (.+)$/.exec(l);
-      if (h) { falsifier(); courante = h[1]!; }
+      if (h) {
+        falsifier();
+        courante = h[1]!;
+      }
       faux.push(l);
     }
     falsifier();
     writeFileSync(vue, `${faux.join('\n')}\n`);
     const r = lancerPlan('--verifier', '--out', vue);
     expect(r.code, `des rubriques comparées falsifiées passent : ${r.sortie}`).toBe(1);
-    const nommees = [...r.sortie.matchAll(/^\s*\[vue_perimee\] rubrique « (.+?) » :/gm)].map((x) => x[1]!);
-    expect(nommees.sort(), 'rubrique(s) annoncée(s) comparée(s) dont la falsification n’est pas vue').toEqual([...comparees].sort());
+    const nommees = [...r.sortie.matchAll(/^\s*\[vue_perimee\] rubrique « (.+?) » :/gm)].map(
+      (x) => x[1]!
+    );
+    expect(
+      nommees.sort(),
+      'rubrique(s) annoncée(s) comparée(s) dont la falsification n’est pas vue'
+    ).toEqual([...comparees].sort());
   });
 
   it('RM-02 · famille rubrique_hors_ordre — le mensonge remonté EN TÊTE, dans une rubrique non comparée', () => {
@@ -473,13 +544,21 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const vue = rendrePlanState('PLAN-STATE-hors-ordre.md');
     const t = readFileSync(vue, 'utf8');
     const debut = t.indexOf('## Dernier atterrissage');
-    expect(debut, 'la rubrique volatile doit exister pour qu’on puisse la déplacer').toBeGreaterThan(-1);
+    expect(
+      debut,
+      'la rubrique volatile doit exister pour qu’on puisse la déplacer'
+    ).toBeGreaterThan(-1);
     const suite = t.indexOf('\n## ', debut + 1);
     const bloc = t.slice(debut, suite + 1);
     const sansElle = t.slice(0, debut) + t.slice(suite + 1);
     const ancre = sansElle.indexOf('## REPRENDRE EN 30 SECONDES');
-    expect(ancre, 'le bloc de reprise doit exister : c’est ce qu’on veut coiffer').toBeGreaterThan(-1);
-    const mensonge = bloc.replace(/\n\n/, '\n\n🛑 STOP — la phase -1 est TERMINÉE (39/39). Ne fusionne plus rien.\n\n');
+    expect(ancre, 'le bloc de reprise doit exister : c’est ce qu’on veut coiffer').toBeGreaterThan(
+      -1
+    );
+    const mensonge = bloc.replace(
+      /\n\n/,
+      '\n\n🛑 STOP — la phase -1 est TERMINÉE (39/39). Ne fusionne plus rien.\n\n'
+    );
     writeFileSync(vue, sansElle.slice(0, ancre) + mensonge + sansElle.slice(ancre));
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `un ordre réarrangé passe — le mensonge est LU EN PREMIER : ${sortie}`).toBe(1);
@@ -491,7 +570,10 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const t = readFileSync(vue, 'utf8');
     // AU MILIEU, jamais en fin de fichier : en fin de fichier, un témoin rougirait sur un décalage
     // de lignes vides, pas sur le doublon.
-    writeFileSync(vue, t.replace('## Chemin critique', '## Bloquées\n\nmensonge.\n\n## Chemin critique'));
+    writeFileSync(
+      vue,
+      t.replace('## Chemin critique', '## Bloquées\n\nmensonge.\n\n## Chemin critique')
+    );
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une rubrique dupliquée passe : ${sortie}`).toBe(1);
     expect(sortie).toMatch(/rubrique_dupliquee/);
@@ -505,17 +587,32 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const vue = rendrePlanState('PLAN-STATE-titre-indente.md');
     const { sortie: vert } = lancerPlan('--verifier', '--out', vue);
     const zone = exemptes(vert, 'rubriques')[0];
-    expect(zone, `le vert doit exempter au moins une rubrique : ${vert.slice(0, 300)}`).toBeDefined();
+    expect(
+      zone,
+      `le vert doit exempter au moins une rubrique : ${vert.slice(0, 300)}`
+    ).toBeDefined();
     const t = readFileSync(vue, 'utf8');
-    expect(t, 'la rubrique comparée `Tâches` doit exister pour qu’on la double').toContain('\n## Tâches\n');
+    expect(t, 'la rubrique comparée `Tâches` doit exister pour qu’on la double').toContain(
+      '\n## Tâches\n'
+    );
     const echappees: string[] = [];
     for (const [k, titre] of ['   ## Tâches', '## Tâches ##'].entries()) {
       const chemin = join(bac, `PLAN-STATE-titre-indente-${k}.md`);
-      writeFileSync(chemin, t.replace(`\n## ${zone}\n\n`, `\n## ${zone}\n\n${titre}\n\n| \`a_faire\` | 0 | mensonge |\n\n`));
+      writeFileSync(
+        chemin,
+        t.replace(
+          `\n## ${zone}\n\n`,
+          `\n## ${zone}\n\n${titre}\n\n| \`a_faire\` | 0 | mensonge |\n\n`
+        )
+      );
       const { code, sortie } = lancerPlan('--verifier', '--out', chemin);
-      if (code !== 1 || !/rubrique_dupliquee/.test(sortie)) echappees.push(`${JSON.stringify(titre)} dans « ${zone} » → code ${code}`);
+      if (code !== 1 || !/rubrique_dupliquee/.test(sortie))
+        echappees.push(`${JSON.stringify(titre)} dans « ${zone} » → code ${code}`);
     }
-    expect(echappees, 'titre(s) que le rendu voit et que la garde ne voit pas comme un doublon').toEqual([]);
+    expect(
+      echappees,
+      'titre(s) que le rendu voit et que la garde ne voit pas comme un doublon'
+    ).toEqual([]);
   });
 
   it('RM-02 · famille structure_dans_une_exemption — une zone exemptée n’atteint rien au rendu, dans aucune de ses trois formes', () => {
@@ -526,15 +623,26 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const vue = rendrePlanState('PLAN-STATE-structure.md');
     const { sortie: vert } = lancerPlan('--verifier', '--out', vue);
     const zone = exemptes(vert, 'rubriques')[0];
-    const questionExemptee = exemptes(vert, 'lignes du bloc de reprise').find((q) => !/^prose n°\d+$/.test(q));
-    expect(zone, `le vert doit exempter au moins une rubrique : ${vert.slice(0, 300)}`).toBeDefined();
-    expect(questionExemptee, `le vert doit exempter au moins une ligne-question : ${vert.slice(0, 300)}`).toBeDefined();
+    const questionExemptee = exemptes(vert, 'lignes du bloc de reprise').find(
+      (q) => !/^prose n°\d+$/.test(q)
+    );
+    expect(
+      zone,
+      `le vert doit exempter au moins une rubrique : ${vert.slice(0, 300)}`
+    ).toBeDefined();
+    expect(
+      questionExemptee,
+      `le vert doit exempter au moins une ligne-question : ${vert.slice(0, 300)}`
+    ).toBeDefined();
     const t = readFileSync(vue, 'utf8');
     expect(t).toContain(`\n## ${zone}\n\n`);
     const p = '**Ce qu’on tape maintenant.**';
     expect(t, 'la prose du bloc doit exister pour qu’on la prolonge').toContain(p);
     const ligneQuestion = t.split('\n').find((l) => question(l) === questionExemptee);
-    expect(ligneQuestion, `la ligne « ${questionExemptee} » doit exister pour qu’on la charge`).toBeDefined();
+    expect(
+      ligneQuestion,
+      `la ligne « ${questionExemptee} » doit exister pour qu’on la charge`
+    ).toBeDefined();
     const OUVRE = ' <details><summary>Détails</summary>';
 
     // (a) LE COMPLÉMENT DE L'AUTORISATION, EXHAUSTIVEMENT, dans le corps d'une rubrique exemptée. Les
@@ -544,33 +652,54 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     // catégorie générale Unicode hors lettres, chacune suivie de ce qu'elle tenterait au rendu ; puis
     // `<` en milieu de ligne, devant une lettre, `!`, `/`, `?` et un blanc. Le compte d'écarts exigé est
     // le nombre de charges : une charge acceptée le fait tomber.
-    const ascii = Array.from({ length: 95 }, (_, k) => String.fromCharCode(0x20 + k)).filter((c) => !/[A-Za-z|]/.test(c));
+    const ascii = Array.from({ length: 95 }, (_, k) => String.fromCharCode(0x20 + k)).filter(
+      (c) => !/[A-Za-z|]/.test(c)
+    );
     const unicode = [
-      0x0301, 0x0903, 0x20dd, 0x0663, 0x2160, 0x00b2, 0x203f, 0x2014, 0x2045, 0x2046, 0x00ab, 0x00bb, 0xff03, 0x2212, 0x20ac, 0x00b4,
-      0x00b0, 0x00a0, 0x2003, 0x3000, 0x2028, 0x2029, 0x0009, 0x000b, 0x000c, 0x0085, 0x200b, 0x202e, 0xfeff, 0x00ad, 0xe000, 0x0378,
+      0x0301, 0x0903, 0x20dd, 0x0663, 0x2160, 0x00b2, 0x203f, 0x2014, 0x2045, 0x2046, 0x00ab,
+      0x00bb, 0xff03, 0x2212, 0x20ac, 0x00b4, 0x00b0, 0x00a0, 0x2003, 0x3000, 0x2028, 0x2029,
+      0x0009, 0x000b, 0x000c, 0x0085, 0x200b, 0x202e, 0xfeff, 0x00ad, 0xe000, 0x0378,
     ].map((c) => String.fromCodePoint(c));
     const charges = [
       ...[...ascii, ...unicode].map((c) => (c === '`' ? '```' : `${c}   ## Bloquées`)),
       ...[OUVRE, ' <!-- x', ' </p>', ' <?x', ' < x'].map((s) => `Texte courant${s}`),
     ];
     const cheminDebuts = join(bac, 'PLAN-STATE-structure-debuts.md');
-    writeFileSync(cheminDebuts, t.replace(`\n## ${zone}\n\n`, `\n## ${zone}\n\n${charges.join('\n')}\n`));
+    writeFileSync(
+      cheminDebuts,
+      t.replace(`\n## ${zone}\n\n`, `\n## ${zone}\n\n${charges.join('\n')}\n`)
+    );
     const debuts = lancerPlan('--verifier', '--out', cheminDebuts);
     expect(debuts.code, `des débuts refusés passent : ${debuts.sortie.slice(0, 2000)}`).toBe(1);
-    expect(famillesDe(debuts.sortie).filter((f) => f !== 'structure_dans_une_exemption'), 'une charge tire une autre famille').toEqual([]);
+    expect(
+      famillesDe(debuts.sortie).filter((f) => f !== 'structure_dans_une_exemption'),
+      'une charge tire une autre famille'
+    ).toEqual([]);
     const ecarts = Number(/: (\d+) écart\(s\)\./.exec(debuts.sortie)?.[1]);
-    expect(ecarts, `${charges.length} charges dans « ${zone} », ${ecarts} refusée(s) : une charge au moins est acceptée`).toBe(charges.length);
+    expect(
+      ecarts,
+      `${charges.length} charges dans « ${zone} », ${ecarts} refusée(s) : une charge au moins est acceptée`
+    ).toBe(charges.length);
 
     // (b) LES DEUX AUTRES FORMES DE ZONE : la prose et une cellule exemptées du bloc de reprise, où la
     // ligne commence par un début permis et où seul `<` peut atteindre le reste.
     const cheminBloc = join(bac, 'PLAN-STATE-structure-bloc.md');
-    const bloc = t.replace(p, `${p}${OUVRE}`).replace(ligneQuestion!, ligneQuestion!.replace(/ \|$/, `${OUVRE} |`));
+    const bloc = t
+      .replace(p, `${p}${OUVRE}`)
+      .replace(ligneQuestion!, ligneQuestion!.replace(/ \|$/, `${OUVRE} |`));
     writeFileSync(cheminBloc, bloc);
     const r = lancerPlan('--verifier', '--out', cheminBloc);
     expect(r.code, `du HTML dans le bloc de reprise passe : ${r.sortie}`).toBe(1);
-    expect(famillesDe(r.sortie), r.sortie).toEqual(['structure_dans_une_exemption', 'structure_dans_une_exemption']);
-    expect(r.sortie, 'la cellule exemptée n’est pas contenue').toContain(`bloc de reprise, ligne « ${questionExemptee} »`);
-    expect(r.sortie, 'la prose exemptée n’est pas contenue').toMatch(/bloc de reprise, prose n°\d+/);
+    expect(famillesDe(r.sortie), r.sortie).toEqual([
+      'structure_dans_une_exemption',
+      'structure_dans_une_exemption',
+    ]);
+    expect(r.sortie, 'la cellule exemptée n’est pas contenue').toContain(
+      `bloc de reprise, ligne « ${questionExemptee} »`
+    );
+    expect(r.sortie, 'la prose exemptée n’est pas contenue').toMatch(
+      /bloc de reprise, prose n°\d+/
+    );
   });
 
   it('RM-02 · famille fin_de_ligne_non_lf — un retour chariot dans une prose exemptée ne découpe rien en silence', () => {
@@ -594,7 +723,12 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const t = readFileSync(vue, 'utf8');
     const ligne = t.split('\n').find((l) => l.startsWith('| Où est `main` ?'));
     expect(ligne, 'la ligne « Où est `main` ? » doit exister pour qu’on la déplace').toBeDefined();
-    writeFileSync(vue, t.replace(`${ligne}\n`, '').replace('| Question | Réponse |', `${ligne}\n| Question | Réponse |`));
+    writeFileSync(
+      vue,
+      t
+        .replace(`${ligne}\n`, '')
+        .replace('| Question | Réponse |', `${ligne}\n| Question | Réponse |`)
+    );
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une ligne déplacée dans le bloc passe : ${sortie}`).toBe(1);
     expect(sortie).toMatch(/FORME du bloc/);
@@ -630,7 +764,10 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const t = readFileSync(vue, 'utf8');
     // On retire la LIGNE qui porte la mesure, pas seulement son chiffre : la mesure devient
     // introuvable au lieu d'être fausse, et c'est l'autre famille.
-    const sansLigne = t.split('\n').filter((l) => !/^\| Ce qui bloque \|/.test(l)).join('\n');
+    const sansLigne = t
+      .split('\n')
+      .filter((l) => !/^\| Ce qui bloque \|/.test(l))
+      .join('\n');
     expect(sansLigne, 'le témoin doit vraiment retirer une ligne').not.toBe(t);
     writeFileSync(vue, sansLigne);
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
@@ -641,7 +778,10 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
   it('RM-02 · famille ligne_de_reprise_dupliquee — la même question deux fois dans le bloc', () => {
     const vue = rendrePlanState('PLAN-STATE-ligne-dupliquee.md');
     const t = readFileSync(vue, 'utf8');
-    writeFileSync(vue, t.replace('| Ce qui bloque', '| Ce qui bloque | mensonge |\n| Ce qui bloque'));
+    writeFileSync(
+      vue,
+      t.replace('| Ce qui bloque', '| Ce qui bloque | mensonge |\n| Ce qui bloque')
+    );
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une question dupliquée passe : ${sortie}`).toBe(1);
     expect(sortie).toMatch(/ligne_de_reprise_dupliquee/);
@@ -660,14 +800,29 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     // PAS DE PLANCHER : un seuil tapé sur la population que le témoin surveille est un COMPTE, pas une
     // COUVERTURE. À sa place, la seule part de la population qui a une source HORS de `build.ts` : une
     // mesure par statut de `PLANCHER`, lue dans la sortie.
-    const { code, sortie } = lancerPlan('--verifier', '--out', rendrePlanState('PLAN-STATE-mesures.md'));
-    expect(code, `la vue fraîche doit être verte pour que ce témoin ait un sens : ${sortie}`).toBe(0);
+    const { code, sortie } = lancerPlan(
+      '--verifier',
+      '--out',
+      rendrePlanState('PLAN-STATE-mesures.md')
+    );
+    expect(code, `la vue fraîche doit être verte pour que ce témoin ait un sens : ${sortie}`).toBe(
+      0
+    );
     const m = /(\d+)\/(\d+) mesure\(s\) du domaine CONFRONTÉES/.exec(sortie);
     expect(m, `le vert doit annoncer X/Y mesures : ${sortie.slice(0, 300)}`).not.toBeNull();
-    expect(Number(m![1]), `${m![2]} mesures déclarées, ${m![1]} confrontées : une lecture ne correspond plus à la vue`).toBe(Number(m![2]));
-    const confrontees = (/CONFRONTÉ — mesures du domaine : (.*)\.$/m.exec(sortie)?.[1] ?? '').split(' · ');
-    const statutsSansMesure = Object.keys(PLANCHER).filter((s) => !confrontees.includes(`tâches \`${s}\``));
-    expect(statutsSansMesure, 'statut(s) du barème qui ne sont plus une mesure du domaine').toEqual([]);
+    expect(
+      Number(m![1]),
+      `${m![2]} mesures déclarées, ${m![1]} confrontées : une lecture ne correspond plus à la vue`
+    ).toBe(Number(m![2]));
+    const confrontees = (/CONFRONTÉ — mesures du domaine : (.*)\.$/m.exec(sortie)?.[1] ?? '').split(
+      ' · '
+    );
+    const statutsSansMesure = Object.keys(PLANCHER).filter(
+      (s) => !confrontees.includes(`tâches \`${s}\``)
+    );
+    expect(statutsSansMesure, 'statut(s) du barème qui ne sont plus une mesure du domaine').toEqual(
+      []
+    );
   });
 
   it('REQ-GOV-032 · une exemption est PORTANTE : sous une autre forge, tout ce qui change est exempté, et tout ce qui est exempté change', () => {
@@ -692,21 +847,65 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     const hostile = (k: string) =>
       `    ## Suite MARQUE-DEBUT-${k} <details><summary>replie</summary>\r\n## Suite\n    <!--\n- ## Bloquées\n\`\`\`\nMARQUE-FIN-${k}`;
     // « Décisions du jour » n'est rendue non vide que le jour d'un ADR : la date de `main` le prend.
-    const adr = readdirSync('docs/adr').filter((f) => /^\d{4}-.*\.md$/.test(f)).sort().at(-1)!;
-    const jourAdr = spawnSync('git', ['log', '-1', '--format=%cI', '--', `docs/adr/${adr}`], { encoding: 'utf8' }).stdout.trim().slice(0, 10);
-    const issues = (JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: { issue?: number | null }[] }).taches
+    const adr = readdirSync('docs/adr')
+      .filter((f) => /^\d{4}-.*\.md$/.test(f))
+      .sort()
+      .at(-1)!;
+    const jourAdr = spawnSync('git', ['log', '-1', '--format=%cI', '--', `docs/adr/${adr}`], {
+      encoding: 'utf8',
+    })
+      .stdout.trim()
+      .slice(0, 10);
+    const issues = (
+      JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: { issue?: number | null }[] }
+    ).taches
       .map((x) => x.issue)
       .filter((n): n is number => typeof n === 'number')
-      .map((number) => ({ number, labels: [{ id: 'LA_temoin', name: `owner:A01${hostile('label')}`, description: '', color: 'ededed' }] }));
-    writeFileSync(forgeA, JSON.stringify({
-      prs: [
-        { number: 9001, headRefName: `t/temoin-a${hostile('branche')}`, mergeStateStatus: 'CLEAN', isDraft: false, title: `forge A${hostile('titre')}` },
-        { number: 9002, headRefName: 't/temoin-b', mergeStateStatus: hostile('etat'), isDraft: false, title: 'forge A, seconde' },
-      ],
-      issues: JSON.stringify(issues),
-      main: { sha: `aaaaaaa${hostile('sha')}`, date: `${jourAdr}T00:00:00+00:00${hostile('date')}` },
-    }));
-    writeFileSync(forgeB, JSON.stringify({ prs: [], issues: '', main: { sha: 'bbbbbbb', date: '2026-02-02T00:00:00+00:00' } }));
+      .map((number) => ({
+        number,
+        labels: [
+          {
+            id: 'LA_temoin',
+            name: `owner:A01${hostile('label')}`,
+            description: '',
+            color: 'ededed',
+          },
+        ],
+      }));
+    writeFileSync(
+      forgeA,
+      JSON.stringify({
+        prs: [
+          {
+            number: 9001,
+            headRefName: `t/temoin-a${hostile('branche')}`,
+            mergeStateStatus: 'CLEAN',
+            isDraft: false,
+            title: `forge A${hostile('titre')}`,
+          },
+          {
+            number: 9002,
+            headRefName: 't/temoin-b',
+            mergeStateStatus: hostile('etat'),
+            isDraft: false,
+            title: 'forge A, seconde',
+          },
+        ],
+        issues: JSON.stringify(issues),
+        main: {
+          sha: `aaaaaaa${hostile('sha')}`,
+          date: `${jourAdr}T00:00:00+00:00${hostile('date')}`,
+        },
+      })
+    );
+    writeFileSync(
+      forgeB,
+      JSON.stringify({
+        prs: [],
+        issues: '',
+        main: { sha: 'bbbbbbb', date: '2026-02-02T00:00:00+00:00' },
+      })
+    );
     const a = rendrePlanState('PLAN-STATE-forge-a.md', '--forge', forgeA);
     const b = rendrePlanState('PLAN-STATE-forge-b.md', '--forge', forgeB);
 
@@ -716,21 +915,39 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
       const fin = lignesA.filter((l) => l.includes(`MARQUE-FIN-${k}`));
       return debut.length === 0 || debut.join('\n') !== fin.join('\n');
     });
-    expect(coupees, '(3) valeur(s) de la forge absente(s) de la vue, ou écrite(s) sur plus d’une ligne').toEqual([]);
-    expect(lignesA.join('\n'), '(3) la branche non vide de « Décisions du jour » n’est pas exercée').toContain(`docs/adr/${adr}`);
+    expect(
+      coupees,
+      '(3) valeur(s) de la forge absente(s) de la vue, ou écrite(s) sur plus d’une ligne'
+    ).toEqual([]);
+    expect(
+      lignesA.join('\n'),
+      '(3) la branche non vide de « Décisions du jour » n’est pas exercée'
+    ).toContain(`docs/adr/${adr}`);
 
     const bSousB = lancerPlan('--verifier', '--out', b, '--forge', forgeB);
-    expect(bSousB.code, `(0) la vue écrite sans GitHub lisible est refusée par sa propre règle : ${bSousB.sortie}`).toBe(0);
+    expect(
+      bSousB.code,
+      `(0) la vue écrite sans GitHub lisible est refusée par sa propre règle : ${bSousB.sortie}`
+    ).toBe(0);
 
     const aSousA = lancerPlan('--verifier', '--out', a, '--forge', forgeA);
-    expect(aSousA.code, `(3) la vue écrite sous une forge LISIBLE est refusée sous cette même forge : ${aSousA.sortie}`).toBe(0);
+    expect(
+      aSousA.code,
+      `(3) la vue écrite sous une forge LISIBLE est refusée sous cette même forge : ${aSousA.sortie}`
+    ).toBe(0);
 
     const { code, sortie } = lancerPlan('--verifier', '--out', a, '--forge', forgeB);
-    expect(code, `(1) un élément COMPARÉ dépend de la forge, ou la forge a écrit hors de sa zone : ${sortie}`).toBe(0);
+    expect(
+      code,
+      `(1) un élément COMPARÉ dépend de la forge, ou la forge a écrit hors de sa zone : ${sortie}`
+    ).toBe(0);
 
     const rubriques = exemptes(sortie, 'rubriques');
     const lignesDuBloc = exemptes(sortie, 'lignes du bloc de reprise');
-    expect(rubriques.length + lignesDuBloc.length, `le vert n'exempte rien : ce témoin ne prouve rien — ${sortie.slice(0, 300)}`).toBeGreaterThan(0);
+    expect(
+      rubriques.length + lignesDuBloc.length,
+      `le vert n'exempte rien : ce témoin ne prouve rien — ${sortie.slice(0, 300)}`
+    ).toBeGreaterThan(0);
     const tA = readFileSync(a, 'utf8');
     const tB = readFileSync(b, 'utf8');
     const corps = (t: string, titre: string) => decouper(t).find((r) => r.titre === titre)?.corps;
@@ -742,20 +959,33 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     };
     const inertes = [
       ...rubriques.filter((r) => corps(tA, r) === corps(tB, r)).map((r) => `rubrique « ${r} »`),
-      ...lignesDuBloc.filter((q) => ligneDuBloc(tA, q) === ligneDuBloc(tB, q)).map((q) => `ligne « ${q} »`),
+      ...lignesDuBloc
+        .filter((q) => ligneDuBloc(tA, q) === ligneDuBloc(tB, q))
+        .map((q) => `ligne « ${q} »`),
     ];
     expect(inertes, '(2) exemption(s) dont le texte ne dépend PAS de la forge').toEqual([]);
 
     // (3) LE MÊME VERDICT, ROUGE COMPRIS : compteurs falsifiés et une ouverture de liste dans une
     // rubrique exemptée, jugés sous la forge qui a écrit la vue puis sous une forge illisible.
     const fautive = join(bac, 'PLAN-STATE-forge-a-fautive.md');
-    writeFileSync(fautive, falsifierLesCompteurs(tA).faux.replace(`\n## ${rubriques[0]}\n\n`, `\n## ${rubriques[0]}\n\n- ## Bloquées\n`));
+    writeFileSync(
+      fautive,
+      falsifierLesCompteurs(tA).faux.replace(
+        `\n## ${rubriques[0]}\n\n`,
+        `\n## ${rubriques[0]}\n\n- ## Bloquées\n`
+      )
+    );
     const refus = (s: string) => s.split('\n').filter((l) => /^\s*\[/.test(l));
     const sousA = lancerPlan('--verifier', '--out', fautive, '--forge', forgeA);
     const sousB = lancerPlan('--verifier', '--out', fautive, '--forge', forgeB);
     expect(sousA.code, `(3) la vue fautive passe sous la forge lisible : ${sousA.sortie}`).toBe(1);
-    expect(refus(sousA.sortie), '(3) le verdict d’une vue fautive dépend de la forge').toEqual(refus(sousB.sortie));
-    expect(refus(sousA.sortie).some((l) => l.includes('[structure_dans_une_exemption]')), sousA.sortie).toBe(true);
+    expect(refus(sousA.sortie), '(3) le verdict d’une vue fautive dépend de la forge').toEqual(
+      refus(sousB.sortie)
+    );
+    expect(
+      refus(sousA.sortie).some((l) => l.includes('[structure_dans_une_exemption]')),
+      sousA.sortie
+    ).toBe(true);
   });
 
   it('REQ-GOV-032 · une vue ABSENTE est un rouge qui le dit, jamais un vert par défaut', () => {
@@ -779,7 +1009,9 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(sortie).toContain('✅');
     // Les rubriques qui dépendent de `gh` et d'`origin/main` ne sont pas comparables ; le vert
     // le DIT, avec la source lue, plutôt que de laisser croire qu'elles le sont.
-    expect(sortie, 'le vert ne nomme pas les rubriques non comparées').toMatch(/« File de fusion » \(lu dans `gh pr list`\)/);
+    expect(sortie, 'le vert ne nomme pas les rubriques non comparées').toMatch(
+      /« File de fusion » \(lu dans `gh pr list`\)/
+    );
     expect(sortie).toMatch(/« Dernier atterrissage » \(lu dans /);
   });
 
@@ -789,11 +1021,18 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     // tout le reste EST comparé.
     const { sortie: vert } = lancerPlan('--verifier');
     const exemptees = new Set(exemptes(vert, 'rubriques'));
-    expect(exemptees.size, 'le vert doit énumérer ce qu’il n’a pas comparé, sinon ce témoin dérive de rien').toBeGreaterThan(0);
-    const rubriques = (t: string) => decouper(t).filter((r) => !exemptees.has(r.titre) && r.titre !== BLOC_DE_REPRISE);
+    expect(
+      exemptees.size,
+      'le vert doit énumérer ce qu’il n’a pas comparé, sinon ce témoin dérive de rien'
+    ).toBeGreaterThan(0);
+    const rubriques = (t: string) =>
+      decouper(t).filter((r) => !exemptees.has(r.titre) && r.titre !== BLOC_DE_REPRISE);
     const a = rubriques(readFileSync(rendrePlanState('det-plan-a.md'), 'utf8'));
     const b = rubriques(readFileSync(rendrePlanState('det-plan-b.md'), 'utf8'));
-    expect(a.length, 'aucune rubrique déterministe trouvée : le témoin ne compare rien').toBeGreaterThan(0);
+    expect(
+      a.length,
+      'aucune rubrique déterministe trouvée : le témoin ne compare rien'
+    ).toBeGreaterThan(0);
     expect(a).toEqual(b);
   });
 
@@ -807,21 +1046,47 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     try {
       mkdirSync(join(ici, 'docs'));
       for (const f of ['docs/tasks.json', 'docs/DECISIONS.md']) copyFileSync(f, join(ici, f));
-      writeFileSync(join(ici, 'docs/PLAN-STATE.md'), 'sentinelle : importer le module ne doit pas réécrire ce fichier\n');
-      writeFileSync(join(ici, 'forge.json'), JSON.stringify({ prs: [], issues: '', main: { sha: 'ccccccc', date: '2026-03-03T00:00:00+00:00' } }));
-      writeFileSync(join(ici, 'importe.ts'), `import(${JSON.stringify(pathToFileURL(resolve(PLAN)).href)}).catch((e) => { console.error(e); process.exit(1); });\n`);
-      const octets = () => readdirSync(ici, { recursive: true, withFileTypes: true })
-        .filter((e) => e.isFile())
-        .map((e) => `${join(e.parentPath, e.name)} ${readFileSync(join(e.parentPath, e.name)).toString('base64')}`)
-        .sort();
+      writeFileSync(
+        join(ici, 'docs/PLAN-STATE.md'),
+        'sentinelle : importer le module ne doit pas réécrire ce fichier\n'
+      );
+      writeFileSync(
+        join(ici, 'forge.json'),
+        JSON.stringify({
+          prs: [],
+          issues: '',
+          main: { sha: 'ccccccc', date: '2026-03-03T00:00:00+00:00' },
+        })
+      );
+      writeFileSync(
+        join(ici, 'importe.ts'),
+        `import(${JSON.stringify(pathToFileURL(resolve(PLAN)).href)}).catch((e) => { console.error(e); process.exit(1); });\n`
+      );
+      const octets = () =>
+        readdirSync(ici, { recursive: true, withFileTypes: true })
+          .filter((e) => e.isFile())
+          .map(
+            (e) =>
+              `${join(e.parentPath, e.name)} ${readFileSync(join(e.parentPath, e.name)).toString('base64')}`
+          )
+          .sort();
       const avant = octets();
       const depot = readFileSync('docs/PLAN-STATE.md');
-      const r = spawnSync(process.execPath, [resolve('node_modules/tsx/dist/cli.mjs'), 'importe.ts', '--forge', 'forge.json'], { cwd: ici, encoding: 'utf8' });
+      const r = spawnSync(
+        process.execPath,
+        [resolve('node_modules/tsx/dist/cli.mjs'), 'importe.ts', '--forge', 'forge.json'],
+        { cwd: ici, encoding: 'utf8' }
+      );
       const sortie = (r.stdout ?? '') + (r.stderr ?? '');
       expect(r.status, `importer le module a échoué : ${sortie}`).toBe(0);
       expect(octets(), `importer le module a ÉCRIT dans son répertoire : ${sortie}`).toEqual(avant);
-      expect(readFileSync('docs/PLAN-STATE.md').equals(depot), 'importer le module a réécrit la vue du dépôt').toBe(true);
-      expect(sortie, 'importer le module a rendu ou jugé une vue').not.toMatch(/régénéré|plan-state:verifier/);
+      expect(
+        readFileSync('docs/PLAN-STATE.md').equals(depot),
+        'importer le module a réécrit la vue du dépôt'
+      ).toBe(true);
+      expect(sortie, 'importer le module a rendu ou jugé une vue').not.toMatch(
+        /régénéré|plan-state:verifier/
+      );
     } finally {
       rmSync(ici, { recursive: true, force: true });
     }
@@ -835,14 +1100,23 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
   it('RM-02 · CHAQUE famille déclarée a été VUE ROUGE dans une sortie, aucune sortie n’en porte d’autre, et aucun VERT n’en porte', () => {
     // La grammaire d'observation d'abord : toute ligne qui commence par `[…]` est une ligne de refus,
     // quel que soit son alphabet.
-    expect(famillesDe('   [titre-non-vide] a\n[Nom2] b\n✅ vert [pas en tête]')).toEqual(['titre-non-vide', 'Nom2']);
+    expect(famillesDe('   [titre-non-vide] a\n[Nom2] b\n✅ vert [pas en tête]')).toEqual([
+      'titre-non-vide',
+      'Nom2',
+    ]);
     const population = [...FAMILLES].sort();
     expect(population.length, 'une population vide dirait toujours oui').toBeGreaterThan(0);
     const muettes = population.filter((f) => !famillesVues.has(f));
-    expect(muettes, `famille(s) déclarées qu'AUCUN témoin n'a vues sortir : ${muettes.join(', ')}`).toEqual([]);
+    expect(
+      muettes,
+      `famille(s) déclarées qu'AUCUN témoin n'a vues sortir : ${muettes.join(', ')}`
+    ).toEqual([]);
     // LA RÉCIPROQUE : une famille VUE et non déclarée est un transtypage ou un second canal qui a écrit.
     const inconnues = [...famillesVues].filter((f) => !population.includes(f as Famille));
-    expect(inconnues, `famille(s) sorties du processus et ABSENTES de FAMILLES : ${inconnues.join(', ')}`).toEqual([]);
+    expect(
+      inconnues,
+      `famille(s) sorties du processus et ABSENTES de FAMILLES : ${inconnues.join(', ')}`
+    ).toEqual([]);
     // ET UN VERT N'EN PORTE AUCUNE : un canal qui écrit un refus pendant que la gate sort 0 imprime des
     // lignes `[x]` puis ✅, EXIT 0.
     expect(vertsQuiRefusent, 'sortie(s) VERTES portant une ligne de refus').toEqual([]);

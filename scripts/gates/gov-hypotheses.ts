@@ -66,7 +66,12 @@ function lire(texte: string): { lignes: Ligne[]; alias: Map<string, string> } {
     // ligne de séparation « | --- | --- | »
     if (/^[|\s:-]+$/.test(l)) return;
 
-    const cellules = l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
+    const cellules = l
+      .trim()
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map((c) => c.trim());
     const premiere = nettoyer(cellules[0] ?? '');
     const mi = /^((?:HYP|DEC|W|EXT)-?[A-Z0-9][A-Za-z0-9-]*)/.exec(premiere);
     if (!mi || !mi[1] || premiere.startsWith('Id')) return;
@@ -80,7 +85,8 @@ function lire(texte: string): { lignes: Ligne[]; alias: Map<string, string> } {
       section,
       id: mi[1],
       cellules,
-      tranchee: (cellules[0] ?? '').includes('✅') || (cellules.length === 7 && !VIDE.includes(derniere)),
+      tranchee:
+        (cellules[0] ?? '').includes('✅') || (cellules.length === 7 && !VIDE.includes(derniere)),
       reversibilite: cellules.length === 7 ? nettoyer(cellules[3] ?? '') : '—',
     });
   });
@@ -88,7 +94,11 @@ function lire(texte: string): { lignes: Ligne[]; alias: Map<string, string> } {
   return { lignes, alias };
 }
 
-function controler(texte: string, hypDuBacklog: Map<string, string[]>, avantDocuseal: boolean): Faute[] {
+function controler(
+  texte: string,
+  hypDuBacklog: Map<string, string[]>,
+  avantDocuseal: boolean
+): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
 
@@ -106,12 +116,18 @@ function controler(texte: string, hypDuBacklog: Map<string, string[]>, avantDocu
     if (l.section === 0) continue;
 
     if (declarees.has(l.id)) {
-      ajouter('identifiant_double', `${l.id} est déclarée deux fois (lignes ${declarees.get(l.id)!.numero} et ${l.numero}).`);
+      ajouter(
+        'identifiant_double',
+        `${l.id} est déclarée deux fois (lignes ${declarees.get(l.id)!.numero} et ${l.numero}).`
+      );
     }
     declarees.set(l.id, l);
 
     // La décision et son hypothèse/justification doivent être écrites.
-    for (const [rang, quoi] of [[1, 'la décision'], [2, "l'hypothèse ou la justification"]] as const) {
+    for (const [rang, quoi] of [
+      [1, 'la décision'],
+      [2, "l'hypothèse ou la justification"],
+    ] as const) {
       if (VIDE.includes(nettoyer(l.cellules[rang] ?? ''))) {
         ajouter('cellule_vide', `${l.id} n'écrit pas ${quoi} : la ligne ne décide rien.`);
       }
@@ -140,9 +156,15 @@ function controler(texte: string, hypDuBacklog: Map<string, string[]>, avantDocu
   // `alias_vers_alias` était du code mort. C'est le témoin qui l'a montré, pas la relecture.
   for (const [a, canonique] of alias) {
     if (alias.has(canonique)) {
-      ajouter('alias_vers_alias', `L'alias ${a} renvoie à ${canonique}, qui est elle-même un alias : la résolution boucle.`);
+      ajouter(
+        'alias_vers_alias',
+        `L'alias ${a} renvoie à ${canonique}, qui est elle-même un alias : la résolution boucle.`
+      );
     } else if (!declarees.has(canonique)) {
-      ajouter('alias_sans_canonique', `L'alias ${a} renvoie à ${canonique || '(rien)'}, qui n'est déclarée nulle part.`);
+      ajouter(
+        'alias_sans_canonique',
+        `L'alias ${a} renvoie à ${canonique || '(rien)'}, qui n'est déclarée nulle part.`
+      );
     }
   }
 
@@ -184,9 +206,16 @@ function controler(texte: string, hypDuBacklog: Map<string, string[]>, avantDocu
 }
 
 const FAMILLES = [
-  'tableau_malforme', 'identifiant_double', 'cellule_vide', 'reversibilite_inconnue',
-  'avenant_sans_jalon', 'alias_sans_canonique', 'alias_vers_alias',
-  'hyp_du_backlog_non_declaree', 'decision_irreversible_sans_porteur', 'avenant_non_tranchee',
+  'tableau_malforme',
+  'identifiant_double',
+  'cellule_vide',
+  'reversibilite_inconnue',
+  'avenant_sans_jalon',
+  'alias_sans_canonique',
+  'alias_vers_alias',
+  'hyp_du_backlog_non_declaree',
+  'decision_irreversible_sans_porteur',
+  'avenant_non_tranchee',
 ];
 
 for (const f of [CHEMIN_DECISIONS, CHEMIN_TACHES]) {
@@ -196,9 +225,12 @@ for (const f of [CHEMIN_DECISIONS, CHEMIN_TACHES]) {
   }
 }
 const texte = readFileSync(CHEMIN_DECISIONS, 'utf8');
-const taches = (JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: { id: string; hyp: string[] }[] }).taches;
+const taches = (
+  JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: { id: string; hyp: string[] }[] }
+).taches;
 const hypDuBacklog = new Map<string, string[]>();
-for (const t of taches) for (const h of t.hyp) hypDuBacklog.set(h, [...(hypDuBacklog.get(h) ?? []), t.id]);
+for (const t of taches)
+  for (const h of t.hyp) hypDuBacklog.set(h, [...(hypDuBacklog.get(h) ?? []), t.id]);
 
 const avantDocuseal = process.argv.includes('--avant-docuseal');
 
@@ -206,7 +238,9 @@ const avantDocuseal = process.argv.includes('--avant-docuseal');
 if (process.argv.includes('--prove')) {
   const base = controler(texte, hypDuBacklog, false);
   if (base.length > 0) {
-    console.error(`❌ La preuve part d'un registre DÉJÀ fautif (${base.length}) — corrige d'abord :`);
+    console.error(
+      `❌ La preuve part d'un registre DÉJÀ fautif (${base.length}) — corrige d'abord :`
+    );
     base.slice(0, 6).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
     process.exit(1);
   }
@@ -248,7 +282,9 @@ if (process.argv.includes('--prove')) {
 
   const propre = controler(FIXTURE, HYP_FIXTURE, false);
   if (propre.length > 0) {
-    console.error(`❌ La FIXTURE elle-même est fautive (${propre.length}) — un témoin bâti dessus ne prouverait rien :`);
+    console.error(
+      `❌ La FIXTURE elle-même est fautive (${propre.length}) — un témoin bâti dessus ne prouverait rien :`
+    );
     propre.forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
     process.exit(1);
   }
@@ -263,11 +299,18 @@ if (process.argv.includes('--prove')) {
       })
       .join('\n');
 
-  const TEMOINS: { famille: string; texte?: string; hyp?: Map<string, string[]>; flag?: boolean }[] = [
+  const TEMOINS: {
+    famille: string;
+    texte?: string;
+    hyp?: Map<string, string[]>;
+    flag?: boolean;
+  }[] = [
     {
       famille: 'tableau_malforme',
-      texte: FIXTURE.replace('| HYP-BANQUE | Banque réceptrice | Générateur générique | paramètre | 2 | armement SEPA | — |',
-        '| HYP-BANQUE | Banque réceptrice | Générateur générique | paramètre | 2 | armement SEPA |'),
+      texte: FIXTURE.replace(
+        '| HYP-BANQUE | Banque réceptrice | Générateur générique | paramètre | 2 | armement SEPA | — |',
+        '| HYP-BANQUE | Banque réceptrice | Générateur générique | paramètre | 2 | armement SEPA |'
+      ),
     },
     {
       famille: 'identifiant_double',
@@ -276,13 +319,25 @@ if (process.argv.includes('--prove')) {
     { famille: 'cellule_vide', texte: sans('HYP-BANQUE', 1, '—') },
     { famille: 'reversibilite_inconnue', texte: sans('HYP-BANQUE', 3, 'peut-être') },
     { famille: 'avenant_sans_jalon', texte: sans('HYP-CLAUSE', 5, '—') },
-    { famille: 'alias_sans_canonique', texte: FIXTURE.replace('| `W2` | `HYP-BANQUE` |', '| `W2` | `HYP-INEXISTANTE` |') },
+    {
+      famille: 'alias_sans_canonique',
+      texte: FIXTURE.replace('| `W2` | `HYP-BANQUE` |', '| `W2` | `HYP-INEXISTANTE` |'),
+    },
     {
       famille: 'alias_vers_alias',
-      texte: FIXTURE.replace('| `W2` | `HYP-BANQUE` | §2 |', '| `W2` | `HYP-BANQUE` | §2 |\n| `W5` | `W2` | §0 |'),
+      texte: FIXTURE.replace(
+        '| `W2` | `HYP-BANQUE` | §2 |',
+        '| `W2` | `HYP-BANQUE` | §2 |\n| `W5` | `W2` | §0 |'
+      ),
     },
-    { famille: 'hyp_du_backlog_non_declaree', hyp: new Map([...HYP_FIXTURE, ['HYP-ABSENTE', ['T-03']]]) },
-    { famille: 'decision_irreversible_sans_porteur', hyp: new Map([...HYP_FIXTURE].filter(([k]) => k !== 'HYP-CLAUSE')) },
+    {
+      famille: 'hyp_du_backlog_non_declaree',
+      hyp: new Map([...HYP_FIXTURE, ['HYP-ABSENTE', ['T-03']]]),
+    },
+    {
+      famille: 'decision_irreversible_sans_porteur',
+      hyp: new Map([...HYP_FIXTURE].filter(([k]) => k !== 'HYP-CLAUSE')),
+    },
     { famille: 'avenant_non_tranchee', flag: true },
   ];
 
@@ -309,7 +364,9 @@ if (process.argv.includes('--prove')) {
     console.error(`❌ Famille(s) de contrôle sans témoin : ${sansTemoin.join(', ')}.`);
     process.exit(1);
   }
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   process.exit(0);
 }

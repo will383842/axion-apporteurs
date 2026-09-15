@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `c9b2919` — 2026-09-15T09:16:39+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #39 (un conflit avec `main`) · 2. #41 (un conflit avec `main`) · 3. #44 (un conflit avec `main`) · 4. #45 (un conflit avec `main`) |
+| Où est `main` ? | `d084b0b` — 2026-09-15T10:38:06+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #39 (un conflit avec `main`) · 2. #44 (un conflit avec `main`) · 3. #45 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-035 (A01) · GOV-036 (A01) · GOV-037 (A01) · GOV-030 (A01) · GOV-031 (A01) |
 | Où en est la phase ? | phase -1 — 34/39 tâches, reste 3.50 j |
 | Le prochain pas | GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #41 — 2026-09-15 |
+| Dernière entrée de journal | PR #44 — 2026-09-15 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -61,9 +61,8 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #39 — feat(GOV-036): les deux listes qui decident de ce que gov:entite REGARDE | `t/gov-036` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #41 — feat(GOV-030): la garde des termes interdits que six documents invoquaient sans quelle existe | `t/gov-030` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #44 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A | `t/gov-031` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #44 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A | `t/gov-031` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -93,13 +92,62 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-15)
 
 ## Dernier atterrissage
 
-`origin/main` = `c9b2919` (2026-09-15T09:16:39+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `d084b0b` (2026-09-15T10:38:06+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #44 — 2026-09-15 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A
+
+**Fait.** ESLint et Prettier sont épinglés en `devDependencies`, lancés par les scripts `lint`,
+`format:check` et `format`, et appelés par deux étapes BLOQUANTES de Gate A. Chaque écart restant
+porte une dérogation nommée et motivée. La dernière passe a fermé les deux failles qui passaient en
+exit 0. D'abord, le témoin d'effet lance l'acte exact de Gate A (`pnpm lint`, `pnpm format:check`) sur
+un arbre jetable porteur d'une faute, avec un contre-témoin de binaires factices. Ensuite, une action
+locale non `composite` sous `.github/` est refusée nommément. Quatre accords sur `b5c7aba` —
+`simplicite` `5206075494`, `securite` `5206103463`, `exactitude` `5206128949`, `mutation`
+`5206281536`. La branche a ensuite fusionné `main` après les PR #36 et #41 : nouvelle tête, nouveau
+tour de relecture. Les trois conflits de code ont été résolus du côté de `main`, parce que le
+changement de cette PR sur ces fichiers était exactement leur formatage ; `docs/PLAN-STATE.md`, en
+conflit aussi, est régénéré. Le code venu de `main` a été reformaté dans
+un commit séparé, avec un arbre syntaxique TypeScript et des commentaires identiques à `main` sur les
+six fichiers.
+
+⚠️ **Choix d'intégration.** La règle de cette PR (toute commande de YAML suivi est `pnpm <script>`,
+parce que `npx` peut résoudre un paquet hors du verrou) refusait les deux étapes que la PR #41 écrivait
+`npx tsx scripts/gates/gov-check.ts`. La règle stricte est gardée. Les étapes appellent deux scripts
+au nom NEUF, `gov:termes-interdits` et `gov:termes-interdits:prove`, qui ne touchent pas `gov:check`
+et ne tranchent donc pas l'homonymie que l'acceptation de GOV-030 renvoie à un ADR. Mesure de la
+famille `garde_ecrite_jamais_appelee` de `gov:conventions`, sur le `ci.yml` lu, modifié en mémoire :
+
+| Variante du `ci.yml` lu | avant (`ci.yml` de `main`) | après |
+| --- | --- | --- |
+| tel quel | vert | vert |
+| les deux étapes retirées, commentaires gardés | vert | vert |
+| tel quel, lignes de commentaire retirées | vert | ROUGE `gov:check` |
+| étapes et commentaires retirés | ROUGE `gov:check` | ROUGE `gov:check` |
+
+**Reste.** Les dettes déclarées dans le corps de la PR, lentille par lentille : `shell` jugé deux fois,
+témoins de dérivation manquants, `.editorconfig` imbriqué, réservation de `patches/` et de
+`package.json`. S'y ajoutent vingt et une limites par classe, dont `pnpm prevol` qu'aucun script ne
+porte. Et deux dettes nées de l'intégration, toutes deux fermées (un faux rouge ou un vert
+préexistant, jamais un vert neuf). (1) Retirer les deux étapes laisse la famille verte : c'est
+préexistant sur `main` depuis la PR #41, parce que `gov-conventions.ts:402-404` cherche l'appel dans
+tout le texte du workflow, commentaires compris, et que le commentaire des deux étapes cite
+`gov:check`. (2) Retirer ce commentaire rougit à tort : la reconnaissance de l'appel ne tient plus
+qu'à ce littéral. Remède à verser en tâche : déclarer `alias: ["gov:termes-interdits"]` sur l'entrée
+`gov:check` de `docs/gates.json` (aucun outil n'écrit `alias` dans ce registre en `deny` : il est à
+créer), et rendre `garde_ecrite_jamais_appelee` aveugle aux commentaires YAML.
+
+**Appris.** Un reformatage de code n'est pas vérifiable par `git diff -w` : Prettier recoupe les lignes
+et change les guillemets, et `-w` ne compare que des lignes. La preuve tient en une comparaison de
+l'arbre syntaxique, nœud par nœud, parenthèses et virgules finales ignorées, plus le texte des
+commentaires. Et une garde qui reconnaît un appel par sous-chaîne dans un fichier qui porte des
+commentaires se satisfait d'un commentaire : quand deux gardes se contredisent à la fusion, la
+mesure sur copie jetable dit laquelle voit encore quelque chose.
 
 ### PR #41 — 2026-09-15 — feat(GOV-030): la garde des termes interdits que six documents invoquaient sans quelle existe
 
@@ -164,43 +212,7 @@ vol : toute branche antérieure à une nouvelle obligation doit être relue cont
 fusion. Sinon `main` rougit à l'atterrissage, et c'est la PR suivante qui paie. Un témoin
 qui tire son attendu de son sujet ne voit pas ce que le sujet a perdu (GOV-055).
 
-### PR #35 — 2026-09-13 — docs(GOV-023): entree de journal de la PR 34, et la boucle qui la produit
-
-**Fait.** `main` était rouge sur Gate A depuis la fusion de la PR #34 —
-`pr_fusionnee_sans_journal`, REQ-GOV-023. Cette PR écrit l'entrée qui manquait et porte **aussi la
-sienne**, celle que vous lisez. Elle régénère `docs/PLAN-STATE.md` : cette régénération n'est pas
-cosmétique — sans elle la boucle se referme par l'autre bout, `plan_state_perime` (mesuré par A10 ·
-mutation, et corroboré par la CI réelle : Gate A est `failure` sur `758d318`, le commit qui pose
-l'entrée sans régénérer la vue).
-
-**Reste.** **GOV-052** — l'obligation ne s'évalue qu'APRÈS la fusion, donc sur `main`, donc trop
-tard pour refuser quoi que ce soit. La tâche porte la garde pré-fusion et sa règle `RM-15` ; elle
-n'est acceptée que sur un témoin vu rouge, jamais sur « la règle est écrite ». Elle ferme aussi le
-trou réciproque mesuré ici : une entrée `## PR #99` pour une PR **inexistante** passe les neuf
-familles, exit 0 — un journal public peut affirmer un atterrissage qui n'a pas eu lieu.
-
-**Appris.** *Une règle écrite pour un lecteur n'a pas de témoin, et une pratique sans témoin se perd
-sans que sa perte fasse de bruit.* Le compte se rejoue, il ne se retape pas :
-
-```
-for n in 28..34 ; git show <commit de fusion #n>:docs/journal/2026-09.md | grep -qE "^## PR #$n "
-```
-
-→ **#28, #33, #34 rouges** à leur fusion ; **#29, #30, #31, #32 vertes**. La règle a donc **tenu
-quatre fusions d'affilée, puis s'est perdue** — et rien ne l'a vu. `ab5caf5` (#29) ajoute *les deux*
-en-têtes, `#29` et `#28`, dans le même commit : c'est le **précédent** exact de ce que cette PR
-fait, pas sa découverte. La règle n'était pas absente non plus — `docs/journal/README.md` la donne
-mot pour mot, `docs/REPRISE-SESSION.md` la répète, et `docs/LECONS.md` LEC-15 en tire déjà la leçon
-en concluant « Règle maison. **Aucune à ce jour** ». Trois rédactions et une leçon n'ont pas suffi ;
-une quatrième n'aurait pas suffi davantage. **Une leçon qui ne devient pas une garde se réapprend.**
-
-⚠️ Et c'est la seconde fois de suite que ce lot **retape un total plutôt que de le dériver** : la
-PR #34 avait déjà payé quatre fois le motif « le nombre est retapé et faux », et son remède — retirer
-le nombre, mettre la commande qui le rend — était écrit. Le premier jet de cette entrée annonçait
-« six PR » là où la mesure en donne trois. Le remède connu n'a pas été appliqué parce qu'il vivait
-dans une entrée de journal, c'est-à-dire, encore, dans de la prose.
-
-… 9 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 10 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

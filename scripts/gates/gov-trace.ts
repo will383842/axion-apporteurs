@@ -57,7 +57,6 @@ import { spawnSync } from 'node:child_process';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 import { DEPOT_LOCAL } from '../lot/attestation';
 
-
 const CHEMIN_REGISTRE = 'docs/requirements.json';
 /**
  * `--taches <chemin>` : juger un AUTRE backlog que celui du dépôt (GOV-038).
@@ -72,7 +71,8 @@ const CHEMIN_REGISTRE = 'docs/requirements.json';
  * pas mesurer est une supposition.
  */
 const iTaches = process.argv.indexOf('--taches');
-const CHEMIN_TACHES = iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
+const CHEMIN_TACHES =
+  iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
 const CHEMIN_VITEST = 'vitest.config.ts';
 const VUE_PAR_DEFAUT = 'docs/TRACABILITE.md';
 
@@ -92,8 +92,8 @@ const LIVREE = LIVREE_DERIVEE;
 {
   const ecarts = verifierExhaustivite();
   if (ecarts.length > 0) {
-    console.error("❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :");
-    ecarts.forEach((e) => console.error("   " + e));
+    console.error('❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :');
+    ecarts.forEach((e) => console.error('   ' + e));
     process.exit(1);
   }
 }
@@ -112,7 +112,11 @@ export type Exigence = {
   phase: number | null;
 };
 export type Tache = {
-  id: string; statut: string; phase: number; reqs: string[]; tests?: Record<string, string[]>;
+  id: string;
+  statut: string;
+  phase: number;
+  reqs: string[];
+  tests?: Record<string, string[]>;
   /**
    * Le dépôt de la tâche. Absent = celui-ci (GOV-038) : les fixtures de `--prove` n'ont pas à le
    * porter, et c'est la valeur qui rend le contrôle le plus STRICT — un défaut d'omission ne doit
@@ -192,7 +196,10 @@ export function normaliserTitre(t: string): string {
 export function nomPorteLaPromesse(nomResolu: string, promesse: string): boolean {
   const nom = normaliserTitre(nomResolu);
   let curseur = 0;
-  for (const segment of promesse.split('>').map((s) => normaliserTitre(s)).filter((s) => s.length > 0)) {
+  for (const segment of promesse
+    .split('>')
+    .map((s) => normaliserTitre(s))
+    .filter((s) => s.length > 0)) {
     const i = nom.indexOf(segment, curseur);
     if (i < 0) return false;
     curseur = i + segment.length;
@@ -393,8 +400,7 @@ export function controler(u: Univers): Faute[] {
         // elle est absorbée (c'est la survivante qui porte la charge de la preuve).
         const e = parReq.get(req);
         if (!e || e.statut !== 'active' || sansTest.has(req)) continue;
-        const citee =
-          f.reqsCitees.includes(req) || (titre.length > 0 && titre.includes(req));
+        const citee = f.reqsCitees.includes(req) || (titre.length > 0 && titre.includes(req));
         if (!citee) {
           ajouter(
             'req_non_citee_par_son_test',
@@ -451,8 +457,12 @@ export function rendreVue(u: Univers): string {
     for (const r of new Set(f.reqsCitees)) citeePar.set(r, [...(citeePar.get(r) ?? []), f.chemin]);
   }
 
-  const actives = u.exigences.filter((e) => e.statut === 'active').sort((a, b) => a.id.localeCompare(b.id));
-  const absorbees = u.exigences.filter((e) => e.statut === 'absorbee').sort((a, b) => a.id.localeCompare(b.id));
+  const actives = u.exigences
+    .filter((e) => e.statut === 'active')
+    .sort((a, b) => a.id.localeCompare(b.id));
+  const absorbees = u.exigences
+    .filter((e) => e.statut === 'absorbee')
+    .sort((a, b) => a.id.localeCompare(b.id));
   const etat = (e: Exigence): string => {
     const testee = reputeeTestee(e, parTache);
     const citee = (citeePar.get(e.id) ?? []).length > 0;
@@ -465,15 +475,25 @@ export function rendreVue(u: Univers): string {
   const l: string[] = [];
   l.push('# Matrice de traçabilité — Axion Apporteurs');
   l.push('');
-  l.push('> ⚠️ **Ce fichier est une VUE. Ses sources sont `docs/requirements.json`, `docs/tasks.json`');
+  l.push(
+    '> ⚠️ **Ce fichier est une VUE. Ses sources sont `docs/requirements.json`, `docs/tasks.json`'
+  );
   l.push('> et les fichiers de test présents sur le disque.**');
-  l.push('> Regénérée par `pnpm gov:trace --render`, jamais éditée à la main : une correction tapée');
+  l.push(
+    '> Regénérée par `pnpm gov:trace --render`, jamais éditée à la main : une correction tapée'
+  );
   l.push('> ici disparaît au rendu suivant, et une matrice tenue à la main est fausse le jour où');
   l.push('> quelqu’un oublie de l’ouvrir (RM-01, REQ-GOV-005 → REQ-QA-014).');
-  l.push('> `pnpm gov:trace --verifier` rougit si ce fichier diffère de ce que les sources produisent.');
+  l.push(
+    '> `pnpm gov:trace --verifier` rougit si ce fichier diffère de ce que les sources produisent.'
+  );
   l.push('>');
-  l.push('> **Le maillon PR n’est pas écrit ici.** Il est contrôlé par `pnpm gov:trace`, qui lit les');
-  l.push('> corps de PR fusionnées (`Couvre: REQ-…`). Une vue dont le contenu dépendrait d’un appel');
+  l.push(
+    '> **Le maillon PR n’est pas écrit ici.** Il est contrôlé par `pnpm gov:trace`, qui lit les'
+  );
+  l.push(
+    '> corps de PR fusionnées (`Couvre: REQ-…`). Une vue dont le contenu dépendrait d’un appel'
+  );
   l.push('> réseau mesurerait la disponibilité de l’outil, pas la dérivation de la vue.');
   l.push('>');
   l.push('> **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de');
@@ -535,20 +555,26 @@ export function rendreVue(u: Univers): string {
 
   l.push('## Couverture des modules et des étapes');
   l.push('');
-  l.push('Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le registre les porte.');
+  l.push(
+    'Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le registre les porte.'
+  );
   l.push('');
   l.push('| Module | Exigences | Dont réputées testées |');
   l.push('| ---: | ---: | ---: |');
   for (let m = 1; m <= NB_MODULES; m++) {
     const liste = actives.filter((e) => e.module === m);
-    l.push(`| ${m} | ${liste.length} | ${liste.filter((e) => reputeeTestee(e, parTache)).length} |`);
+    l.push(
+      `| ${m} | ${liste.length} | ${liste.filter((e) => reputeeTestee(e, parTache)).length} |`
+    );
   }
   l.push('');
   l.push('| Étape | Exigences | Dont réputées testées |');
   l.push('| ---: | ---: | ---: |');
   for (let s = 1; s <= NB_ETAPES; s++) {
     const liste = actives.filter((e) => e.etape === s);
-    l.push(`| ${s} | ${liste.length} | ${liste.filter((e) => reputeeTestee(e, parTache)).length} |`);
+    l.push(
+      `| ${s} | ${liste.length} | ${liste.filter((e) => reputeeTestee(e, parTache)).length} |`
+    );
   }
   l.push('');
 
@@ -578,7 +604,12 @@ export function normaliserFins(t: string): string {
 
 export function verifierVue(u: Univers, surDisque: string | null, chemin: string): Faute[] {
   if (surDisque === null) {
-    return [{ famille: 'vue_divergente', message: `${chemin} est absent. Lance \`pnpm gov:trace --render\`.` }];
+    return [
+      {
+        famille: 'vue_divergente',
+        message: `${chemin} est absent. Lance \`pnpm gov:trace --render\`.`,
+      },
+    ];
   }
   if (normaliserFins(surDisque) !== normaliserFins(rendreVue(u))) {
     return [
@@ -629,7 +660,10 @@ function globVersRegex(motif: string): RegExp {
       } else sortie += '[^/]*';
     } else if (c === '{') {
       const fin = motif.indexOf('}', i);
-      sortie += `(?:${motif.slice(i + 1, fin).split(',').join('|')})`;
+      sortie += `(?:${motif
+        .slice(i + 1, fin)
+        .split(',')
+        .join('|')})`;
       i = fin;
     } else if ('.+?^$()[]\\|'.includes(c)) {
       sortie += `\\${c}`;
@@ -679,7 +713,9 @@ function titresResolus(cibles: string[]): { titres: Map<string, string[]>; echec
   const echecs: string[] = [];
   if (cibles.length === 0) return { titres, echecs };
 
-  const lancer = (fichiers: string[]): { ok: boolean; entrees: { name: string; file: string }[] } => {
+  const lancer = (
+    fichiers: string[]
+  ): { ok: boolean; entrees: { name: string; file: string }[] } => {
     const r = spawnSync('npx', ['vitest', 'list', ...fichiers, '--json'], {
       encoding: 'utf8',
       shell: true,
@@ -690,7 +726,10 @@ function titresResolus(cibles: string[]): { titres: Map<string, string[]>; echec
     const debut = brut.indexOf('[');
     if (r.status !== 0 || debut < 0) return { ok: false, entrees: [] };
     try {
-      return { ok: true, entrees: JSON.parse(brut.slice(debut)) as { name: string; file: string }[] };
+      return {
+        ok: true,
+        entrees: JSON.parse(brut.slice(debut)) as { name: string; file: string }[],
+      };
     } catch {
       return { ok: false, entrees: [] };
     }
@@ -726,12 +765,16 @@ function lirePr(): { pr: PullRequest[] | null; indisponible: string | null } {
   if (process.env.GOV_TRACE_SANS_PR === '1' || process.argv.includes('--sans-pr')) {
     return { pr: null, indisponible: 'coupée par GOV_TRACE_SANS_PR / --sans-pr' };
   }
-  const r = spawnSync('gh', ['pr', 'list', '--state', 'merged', '--limit', '200', '--json', 'number,body'], {
-    encoding: 'utf8',
-    shell: true,
-    maxBuffer: 64 * 1024 * 1024,
-    timeout: 120_000,
-  });
+  const r = spawnSync(
+    'gh',
+    ['pr', 'list', '--state', 'merged', '--limit', '200', '--json', 'number,body'],
+    {
+      encoding: 'utf8',
+      shell: true,
+      maxBuffer: 64 * 1024 * 1024,
+      timeout: 120_000,
+    }
+  );
   if (r.error || r.status !== 0) {
     const raison = (r.stderr ?? '').trim().split('\n')[0] ?? String(r.error ?? `code ${r.status}`);
     return { pr: null, indisponible: `\`gh\` n'a rien rendu (${raison || 'sans message'})` };
@@ -775,7 +818,8 @@ function chargerUnivers(avecPr: boolean): Univers {
       process.exit(1);
     }
   }
-  const exigences = (JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as { exigences: Exigence[] }).exigences;
+  const exigences = (JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as { exigences: Exigence[] })
+    .exigences;
   const taches = (JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] }).taches;
 
   const { include, exclude } = motifsVitest();
@@ -788,7 +832,13 @@ function chargerUnivers(avecPr: boolean): Univers {
   const fichiers: FichierTest[] = candidats.map((chemin) => {
     const texte = readFileSync(chemin, 'utf8');
     const execute = inclus.some((m) => m.test(chemin)) && !exclus.some((m) => m.test(chemin));
-    return { chemin, execute, titresStatiques: titresEcrits(texte), titresResolus: null, reqsCitees: reqsCitees(texte) };
+    return {
+      chemin,
+      execute,
+      titresStatiques: titresEcrits(texte),
+      titresResolus: null,
+      reqsCitees: reqsCitees(texte),
+    };
   });
 
   // On ne résout par vitest que ce dont on a besoin : les fichiers qu'une tâche LIVRÉE promet avec
@@ -823,9 +873,7 @@ function chargerUnivers(avecPr: boolean): Univers {
     if (f) f.titresResolus = null;
   }
 
-  const { pr, indisponible } = avecPr
-    ? lirePr()
-    : { pr: null, indisponible: PR_NON_CONSULTEE };
+  const { pr, indisponible } = avecPr ? lirePr() : { pr: null, indisponible: PR_NON_CONSULTEE };
   return { exigences, taches, fichiers, pr, prIndisponible: indisponible };
 }
 
@@ -842,7 +890,10 @@ function direLesSources(u: Univers): void {
   // silence apprend au lecteur que son vert couvre tout ; celle-ci compte ce qu'elle n'a pas pu
   // lire et le nomme, comme elle le fait déjà pour la source PR juste en dessous.
   const horsDepot = u.taches.filter(
-    (t) => (t.repo ?? DEPOT_LOCAL) !== DEPOT_LOCAL && LIVREE.has(t.statut) && Object.keys(t.tests ?? {}).length > 0
+    (t) =>
+      (t.repo ?? DEPOT_LOCAL) !== DEPOT_LOCAL &&
+      LIVREE.has(t.statut) &&
+      Object.keys(t.tests ?? {}).length > 0
   );
   if (horsDepot.length > 0) {
     console.log(
@@ -857,9 +908,13 @@ function direLesSources(u: Univers): void {
     // à ignorer l'avertissement qui compte.
     console.log(`   source PR : non consultée — ce mode ne juge aucune PR.`);
   } else if (u.pr === null) {
-    console.log(`   ⚠️  source PR : INDISPONIBLE — ${u.prIndisponible}. Le maillon PR n'a PAS été contrôlé.`);
+    console.log(
+      `   ⚠️  source PR : INDISPONIBLE — ${u.prIndisponible}. Le maillon PR n'a PAS été contrôlé.`
+    );
   } else {
-    console.log(`   sources — PR fusionnées : lues ✓ (${u.pr.length}, dont ${u.pr.filter((p) => p.gabarit).length} au gabarit)`);
+    console.log(
+      `   sources — PR fusionnées : lues ✓ (${u.pr.length}, dont ${u.pr.filter((p) => p.gabarit).length} au gabarit)`
+    );
   }
 }
 
@@ -872,9 +927,33 @@ function direLesSources(u: Univers): void {
 export function universFixture(): Univers {
   return {
     exigences: [
-      { id: 'REQ-AAA-001', statut: 'active', remplaceePar: null, taches: ['T-LIVREE'], module: 1, etape: 1, phase: -1 },
-      { id: 'REQ-AAA-002', statut: 'active', remplaceePar: null, taches: ['T-FUTURE'], module: 2, etape: 2, phase: 0 },
-      { id: 'REQ-AAA-003', statut: 'absorbee', remplaceePar: 'REQ-AAA-001', taches: ['T-LIVREE'], module: null, etape: null, phase: -1 },
+      {
+        id: 'REQ-AAA-001',
+        statut: 'active',
+        remplaceePar: null,
+        taches: ['T-LIVREE'],
+        module: 1,
+        etape: 1,
+        phase: -1,
+      },
+      {
+        id: 'REQ-AAA-002',
+        statut: 'active',
+        remplaceePar: null,
+        taches: ['T-FUTURE'],
+        module: 2,
+        etape: 2,
+        phase: 0,
+      },
+      {
+        id: 'REQ-AAA-003',
+        statut: 'absorbee',
+        remplaceePar: 'REQ-AAA-001',
+        taches: ['T-LIVREE'],
+        module: null,
+        etape: null,
+        phase: -1,
+      },
     ],
     taches: [
       {
@@ -903,7 +982,13 @@ export function universFixture(): Univers {
         titresResolus: ['REQ-AAA-001 : un titre'],
         reqsCitees: ['REQ-AAA-001', 'REQ-AAA-003'],
       },
-      { chemin: 'tests/f/b.spec.ts', execute: true, titresStatiques: ['un autre'], titresResolus: ['un autre'], reqsCitees: [] },
+      {
+        chemin: 'tests/f/b.spec.ts',
+        execute: true,
+        titresStatiques: ['un autre'],
+        titresResolus: ['un autre'],
+        reqsCitees: [],
+      },
     ],
     pr: [
       { numero: 1, gabarit: true, couvre: ['REQ-AAA-001'] },
@@ -929,22 +1014,95 @@ if (process.argv.includes('--prove')) {
   }
 
   const TEMOINS: { famille: string; defaut: () => Faute[] }[] = [
-    { famille: 'tache_sans_req', defaut: () => { const u = copie(base); u.taches[1]!.reqs = []; return controler(u); } },
-    { famille: 'test_cite_req_inconnue', defaut: () => { const u = copie(base); u.fichiers[0]!.reqsCitees.push('REQ-ZZZ-999'); return controler(u); } },
-    { famille: 'req_sans_test', defaut: () => { const u = copie(base); u.fichiers[0]!.reqsCitees = ['REQ-AAA-003']; return controler(u); } },
-    { famille: 'test_promis_absent', defaut: () => { const u = copie(base); u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/jamais-ecrit.spec.ts#un titre']; return controler(u); } },
+    {
+      famille: 'tache_sans_req',
+      defaut: () => {
+        const u = copie(base);
+        u.taches[1]!.reqs = [];
+        return controler(u);
+      },
+    },
+    {
+      famille: 'test_cite_req_inconnue',
+      defaut: () => {
+        const u = copie(base);
+        u.fichiers[0]!.reqsCitees.push('REQ-ZZZ-999');
+        return controler(u);
+      },
+    },
+    {
+      famille: 'req_sans_test',
+      defaut: () => {
+        const u = copie(base);
+        u.fichiers[0]!.reqsCitees = ['REQ-AAA-003'];
+        return controler(u);
+      },
+    },
+    {
+      famille: 'test_promis_absent',
+      defaut: () => {
+        const u = copie(base);
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/jamais-ecrit.spec.ts#un titre'];
+        return controler(u);
+      },
+    },
     // Second témoin de la même famille : le FICHIER existe, c'est le TITRE qui est périmé. Le
     // premier témoin ne prouve rien de ce cas-là, et c'est pourtant lui qu'on rencontre en vrai —
     // « ses 11 familles » promis à un fichier qui en annonce douze.
-    { famille: 'test_promis_absent', defaut: () => { const u = copie(base); u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts#REQ-AAA-001 : ses 11 familles']; return controler(u); } },
+    {
+      famille: 'test_promis_absent',
+      defaut: () => {
+        const u = copie(base);
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts#REQ-AAA-001 : ses 11 familles'];
+        return controler(u);
+      },
+    },
     // Le même fichier, promis par son seul nom de base, existe à deux endroits : la garde refuse
     // de choisir plutôt que de valider une promesse au hasard.
-    { famille: 'promesse_ambigue', defaut: () => { const u = copie(base); u.fichiers.push({ ...u.fichiers[0]!, chemin: 'tests/g/a.spec.ts' }); return controler(u); } },
-    { famille: 'req_non_citee_par_son_test', defaut: () => { const u = copie(base); u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/b.spec.ts']; return controler(u); } },
-    { famille: 'titres_non_resolus', defaut: () => { const u = copie(base); u.fichiers[0]!.titresResolus = null; return controler(u); } },
-    { famille: 'pr_sans_couvre', defaut: () => { const u = copie(base); u.pr![0]!.couvre = []; return controler(u); } },
-    { famille: 'pr_couvre_req_inconnue', defaut: () => { const u = copie(base); u.pr![0]!.couvre = ['REQ-ZZZ-998']; return controler(u); } },
-    { famille: 'vue_divergente', defaut: () => verifierVue(base, `${rendreVue(base)}\n| ligne tapée à la main |\n`, 'fixture') },
+    {
+      famille: 'promesse_ambigue',
+      defaut: () => {
+        const u = copie(base);
+        u.fichiers.push({ ...u.fichiers[0]!, chemin: 'tests/g/a.spec.ts' });
+        return controler(u);
+      },
+    },
+    {
+      famille: 'req_non_citee_par_son_test',
+      defaut: () => {
+        const u = copie(base);
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/b.spec.ts'];
+        return controler(u);
+      },
+    },
+    {
+      famille: 'titres_non_resolus',
+      defaut: () => {
+        const u = copie(base);
+        u.fichiers[0]!.titresResolus = null;
+        return controler(u);
+      },
+    },
+    {
+      famille: 'pr_sans_couvre',
+      defaut: () => {
+        const u = copie(base);
+        u.pr![0]!.couvre = [];
+        return controler(u);
+      },
+    },
+    {
+      famille: 'pr_couvre_req_inconnue',
+      defaut: () => {
+        const u = copie(base);
+        u.pr![0]!.couvre = ['REQ-ZZZ-998'];
+        return controler(u);
+      },
+    },
+    {
+      famille: 'vue_divergente',
+      defaut: () => verifierVue(base, `${rendreVue(base)}\n| ligne tapée à la main |\n`, 'fixture'),
+    },
   ];
 
   /**
@@ -953,34 +1111,111 @@ if (process.argv.includes('--prove')) {
    * inutilisable, en réclamant un test à des exigences qu'aucune tâche n'a encore livrées.
    */
   const CONTRE_TEMOINS: { nom: string; muter: () => Univers }[] = [
-    { nom: 'une tâche `a_faire` qui promet un test pas encore écrit', muter: () => { const u = copie(base); u.taches[1]!.tests = { 'REQ-AAA-002': ['tests/f/jamais.spec.ts#a venir'] }; return u; } },
+    {
+      nom: 'une tâche `a_faire` qui promet un test pas encore écrit',
+      muter: () => {
+        const u = copie(base);
+        u.taches[1]!.tests = { 'REQ-AAA-002': ['tests/f/jamais.spec.ts#a venir'] };
+        return u;
+      },
+    },
     // GOV-038. Une tâche LIVRÉE dont le dépôt n'est pas celui-ci : ses tests sont là-bas, sur un
     // disque que cette garde ne voit pas. Sans ce contre-témoin, `INT-T01b` — livrée pour de vrai
     // le 2026-09-05 dans `axionia` — ferait rougir `test_promis_absent` au moment même où on
     // déclare sa livraison, alors que le schéma EXIGE `tests` dès `en_cours` : les seules issues
     // auraient été de mentir sur le chemin, ou de désarmer la garde.
-    { nom: 'une tâche LIVRÉE dans un autre dépôt : ses tests ne sont pas sur ce disque', muter: () => { const u = copie(base); u.taches[0]!.repo = 'axionia'; u.taches[0]!.tests!['REQ-AAA-001'] = ['axionia/tests/partners/contrat.spec.ts#payloads']; return u; } },
+    {
+      nom: 'une tâche LIVRÉE dans un autre dépôt : ses tests ne sont pas sur ce disque',
+      muter: () => {
+        const u = copie(base);
+        u.taches[0]!.repo = 'axionia';
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['axionia/tests/partners/contrat.spec.ts#payloads'];
+        return u;
+      },
+    },
     // GOV-038, second effet du même fait. « Réputée testée » veut dire « réputée testée ICI » :
     // une exigence dont la SEULE tâche livrée vit ailleurs n'a aucun test à montrer sur ce disque,
     // et le lui réclamer rendrait `req_sans_test` rouge sur onze exigences le jour où `INT-T01b`
     // passe `fusionnee` — pour un travail qui, lui, est bien fait et bien testé, dans son dépôt.
-    { nom: 'une exigence dont la seule tâche livrée vit dans un autre dépôt', muter: () => { const u = copie(base); u.taches[0]!.repo = 'axionia'; u.fichiers[0]!.reqsCitees = ['REQ-AAA-003']; return u; } },
-    { nom: 'une exigence active dont aucune tâche livrée ne la porte', muter: () => { const u = copie(base); u.exigences[1]!.taches = ['T-FUTURE']; return u; } },
-    { nom: 'une exigence ABSORBÉE que plus aucun test ne cite', muter: () => { const u = copie(base); u.fichiers[0]!.reqsCitees = ['REQ-AAA-001']; return u; } },
-    { nom: 'une PR hors gabarit sans ligne « Couvre: »', muter: () => { const u = copie(base); u.pr![1]!.couvre = []; return u; } },
-    { nom: 'un test qui cite une exigence qu’aucune tâche ne lui a promise', muter: () => { const u = copie(base); u.fichiers[1]!.reqsCitees = ['REQ-AAA-002']; return u; } },
-    { nom: 'la source PR indisponible — les familles PR se taisent, la garde le dit ailleurs', muter: () => { const u = copie(base); u.pr = null; u.prIndisponible = 'banc d’essai'; return u; } },
-    { nom: 'un titre promis avec accents et apostrophes contre un titre sans', muter: () => { const u = copie(base); u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts#REQ-AAA-001 : un titre']; u.fichiers[0]!.titresResolus = ['REQ-AAA-001 : un titré']; return u; } },
+    {
+      nom: 'une exigence dont la seule tâche livrée vit dans un autre dépôt',
+      muter: () => {
+        const u = copie(base);
+        u.taches[0]!.repo = 'axionia';
+        u.fichiers[0]!.reqsCitees = ['REQ-AAA-003'];
+        return u;
+      },
+    },
+    {
+      nom: 'une exigence active dont aucune tâche livrée ne la porte',
+      muter: () => {
+        const u = copie(base);
+        u.exigences[1]!.taches = ['T-FUTURE'];
+        return u;
+      },
+    },
+    {
+      nom: 'une exigence ABSORBÉE que plus aucun test ne cite',
+      muter: () => {
+        const u = copie(base);
+        u.fichiers[0]!.reqsCitees = ['REQ-AAA-001'];
+        return u;
+      },
+    },
+    {
+      nom: 'une PR hors gabarit sans ligne « Couvre: »',
+      muter: () => {
+        const u = copie(base);
+        u.pr![1]!.couvre = [];
+        return u;
+      },
+    },
+    {
+      nom: 'un test qui cite une exigence qu’aucune tâche ne lui a promise',
+      muter: () => {
+        const u = copie(base);
+        u.fichiers[1]!.reqsCitees = ['REQ-AAA-002'];
+        return u;
+      },
+    },
+    {
+      nom: 'la source PR indisponible — les familles PR se taisent, la garde le dit ailleurs',
+      muter: () => {
+        const u = copie(base);
+        u.pr = null;
+        u.prIndisponible = 'banc d’essai';
+        return u;
+      },
+    },
+    {
+      nom: 'un titre promis avec accents et apostrophes contre un titre sans',
+      muter: () => {
+        const u = copie(base);
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts#REQ-AAA-001 : un titre'];
+        u.fichiers[0]!.titresResolus = ['REQ-AAA-001 : un titré'];
+        return u;
+      },
+    },
     // Le `describe` désigné par son PRÉFIXE : c'est la forme qu'écrit `docs/tasks.json` pour
     // GOV-003, et le `it()` visé existe bel et bien. Une comparaison de la chaîne entière
     // rougissait ici, sur un couple (fichier, test) parfaitement identifiable.
-    { nom: 'un `describe` nommé par son préfixe, suivi du `it()` exact', muter: () => { const u = copie(base); u.fichiers[0]!.titresResolus = ["'gov:x' — le detail > REQ-AAA-001 : un titre"]; u.taches[0]!.tests!['REQ-AAA-001'] = ["tests/f/a.spec.ts#'gov:x' > REQ-AAA-001 : un titre"]; return u; } },
+    {
+      nom: 'un `describe` nommé par son préfixe, suivi du `it()` exact',
+      muter: () => {
+        const u = copie(base);
+        u.fichiers[0]!.titresResolus = ["'gov:x' — le detail > REQ-AAA-001 : un titre"];
+        u.taches[0]!.tests!['REQ-AAA-001'] = ["tests/f/a.spec.ts#'gov:x' > REQ-AAA-001 : un titre"];
+        return u;
+      },
+    },
   ];
 
   for (const c of CONTRE_TEMOINS) {
     const f = controler(c.muter());
     if (f.length > 0) {
-      console.error(`❌ Le contre-témoin « ${c.nom} » a fait rougir la garde alors qu'il est légitime :`);
+      console.error(
+        `❌ Le contre-témoin « ${c.nom} » a fait rougir la garde alors qu'il est légitime :`
+      );
       f.slice(0, 5).forEach((x) => console.error(`   [${x.famille}] ${x.message}`));
       process.exit(1);
     }
@@ -1004,13 +1239,17 @@ if (process.argv.includes('--prove')) {
     process.exit(1);
   }
 
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts.`);
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
   process.exit(0);
 }
 
-const univers = chargerUnivers(!process.argv.includes('--render') && !process.argv.includes('--verifier'));
+const univers = chargerUnivers(
+  !process.argv.includes('--render') && !process.argv.includes('--verifier')
+);
 
 if (process.argv.includes('--sources')) {
   console.log('gov:trace — état des quatre sources :');
@@ -1047,7 +1286,9 @@ if (process.argv.includes('--render')) {
   // deux copies avaient divergé au premier raffinement de la règle (RM-01). Elle est APPELÉE.
   const parTacheDuRendu = new Map(univers.taches.map((t) => [t.id, t]));
   const testees = univers.exigences.filter((e) => reputeeTestee(e, parTacheDuRendu));
-  console.log(`✅ gov:trace — ${CHEMIN_VUE} rendu depuis ${CHEMIN_REGISTRE}, ${CHEMIN_TACHES} et le disque.`);
+  console.log(
+    `✅ gov:trace — ${CHEMIN_VUE} rendu depuis ${CHEMIN_REGISTRE}, ${CHEMIN_TACHES} et le disque.`
+  );
   console.log(`   ${univers.exigences.length} exigences, dont ${testees.length} réputées testées.`);
   direLesSources(univers);
   process.exit(0);
@@ -1069,8 +1310,12 @@ const surDisque = existsSync(CHEMIN_VUE) ? readFileSync(CHEMIN_VUE, 'utf8') : nu
 const fautes = [...controler(univers), ...verifierVue(univers, surDisque, CHEMIN_VUE)];
 
 if (fautes.length === 0) {
-  const testees = univers.exigences.filter((e) => reputeeTestee(e, new Map(univers.taches.map((t) => [t.id, t]))));
-  console.log(`✅ gov:trace — la matrice est cohérente : ${testees.length} exigences réputées testées, toutes citées par un test exécuté.`);
+  const testees = univers.exigences.filter((e) =>
+    reputeeTestee(e, new Map(univers.taches.map((t) => [t.id, t])))
+  );
+  console.log(
+    `✅ gov:trace — la matrice est cohérente : ${testees.length} exigences réputées testées, toutes citées par un test exécuté.`
+  );
   direLesSources(univers);
   process.exit(0);
 }
