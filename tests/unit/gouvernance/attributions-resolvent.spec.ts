@@ -21,6 +21,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
+import { LIVREE } from '../../../scripts/lot/avancement';
 import {
   analyser,
   chargerSources,
@@ -113,19 +114,117 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     expect(fautes.map((f) => `[${f.famille}] ${f.message}`)).toEqual([]);
   });
 
-  it('toute tâche qui porte un lot est attestée par l’entrée de sa PR, ou EXEMPTÉE sous son lot — aucune n’est sautée', () => {
+  it('toute tâche qui porte un lot est attestée par le TITRE de l’entrée de sa PR, jeton exact, ou EXEMPTÉE sous son lot — aucune n’est sautée', () => {
     const s = chargerSources(fichiersSuivis());
     const { exemptions } = analyser(s);
     const entrees = entreesDeJournal(s.journal);
     const avecLot = s.taches.filter((t) => t.lot);
     expect(avecLot.length, 'aucune tâche ne porte de lot : rien ne serait confronté').toBeGreaterThan(0);
+    // Le TITRE seul (première ligne de l'entrée), découpé en jetons : ni le corps, ni une sous-chaîne.
+    const titreNomme = (pr: number, lot: string) =>
+      ((entrees.get(String(pr)) ?? '').split('\n')[0] as string).split(/[^A-Za-z0-9-]+/).includes(lot);
     const sautees = avecLot
-      .filter((t) => !(t.pr != null && (entrees.get(String(t.pr)) ?? '').includes(t.lot as string)))
+      .filter((t) => !(t.pr != null && titreNomme(t.pr, t.lot as string)))
       .filter((t) => !exemptions.some((e) => e.tache === t.id && e.site.includes(`« ${t.lot} »`)));
     expect(
       sautees.map((t) => `${t.id} (lot ${t.lot}, pr ${t.pr})`),
       'une attribution de lot écrite n’est ni attestée, ni exemptée : elle est tue'
     ).toEqual([]);
+  });
+
+  /** Une tâche du dépôt réel dont l'entrée de journal existe et dont le TITRE nomme le lot, et un lot de sa forme qu'aucune tâche ne porte. */
+  function tacheAttestee(s: ReturnType<typeof chargerSources>) {
+    const entrees = entreesDeJournal(s.journal);
+    const t = s.taches.find(
+      (x) => x.lot && x.pr != null && ((entrees.get(String(x.pr)) ?? '').split('\n')[0] as string).split(/[^A-Za-z0-9-]+/).includes(x.lot)
+    );
+    expect(t, 'aucune tâche dont le titre de l’entrée de journal nomme le lot : le témoin ne saurait quoi fausser').toBeDefined();
+    const lots = new Set(s.taches.map((x) => x.lot));
+    let faux = (t!.lot as string).replace(/[0-9]+$/, '99');
+    while (lots.has(faux)) faux += '9';
+    const titre = (entrees.get(String(t!.pr)) as string).split('\n')[0] as string;
+    return { t: t!, faux, titre };
+  }
+
+  it('F-LOT — un lot FAUX cité seulement dans le CORPS de l’entrée de sa PR n’est pas attesté : faute nommée', () => {
+    const s = chargerSources(fichiersSuivis());
+    const { t, faux, titre } = tacheAttestee(s);
+    const journal = s.journal.replace(titre, `${titre}\n\nLe corps cite aussi \`${faux}\`, un autre lot.`);
+    const taches = s.taches.map((x) => (x === t ? { ...x, lot: faux } : x));
+    const { fautes } = analyser({ ...s, journal, taches });
+    expect(
+      fautes.filter((f) => f.famille === 'lot_non_atteste' && f.message.includes(t.id) && f.message.includes(faux)).length,
+      `${t.id} porte le lot « ${faux} », que seul le corps de l’entrée cite, et rien n’a rougi`
+    ).toBe(1);
+  });
+
+  it('F-LOT — un titre qui nomme PLUSIEURS lots n’atteste aucun d’eux : un lot faux pris dans ce titre est une faute nommée', () => {
+    const s = chargerSources(fichiersSuivis());
+    const { t, faux, titre } = tacheAttestee(s);
+    const journal = s.journal.replace(titre, `${titre} et ${faux}`);
+    const taches = s.taches.map((x) => (x === t ? { ...x, lot: faux } : x));
+    const { fautes } = analyser({ ...s, journal, taches });
+    expect(
+      fautes.filter((f) => f.famille === 'lot_non_atteste' && f.message.includes(t.id) && f.message.includes(faux)).length,
+      `${t.id} porte le lot « ${faux} », l’un des lots d’un titre multi-lots, et rien n’a rougi`
+    ).toBe(1);
+  });
+
+  it('une attribution à une tâche LIVRÉE qui garde un path gabarit n’est JAMAIS exemptée comme « pas encore connu »', () => {
+    const s = chargerSources(fichiersSuivis());
+    const statut = new Map(s.taches.map((t) => [t.id, t.statut ?? '']));
+    const menteuses = analyser(s).exemptions.filter((e) => /_paths_/.test(e.nature) && LIVREE.has(statut.get(e.tache) as string));
+    expect(
+      menteuses.map((e) => `${e.nature} ${e.tache} @ ${e.site}`),
+      'des tâches TERMINÉES sont exemptées sous un sens qui dit « pas encore connu »'
+    ).toEqual([]);
+  });
+
+  it('un site NEUF — en-tête d’un fichier neuf, gate neuve, occurrence de plus sur un site en dette — nommant une tâche LIVRÉE à path gabarit est une faute nommée', () => {
+    const s = chargerSources(fichiersSuivis());
+    const livreeGabarit = (reel: boolean) =>
+      s.taches.find(
+        (t) =>
+          LIVREE.has(t.statut ?? '') &&
+          (t.paths ?? []).some((p) => posix.basename(p) === t.id) &&
+          (t.paths ?? []).some((p) => posix.basename(p) !== t.id) === reel
+      );
+    const pure = livreeGabarit(false);
+    const mixte = livreeGabarit(true);
+    expect(pure && mixte, 'aucune tâche livrée à path gabarit, pure ou mixte : le témoin ne distinguerait rien').toBeTruthy();
+    const NEUF = 'scripts/gates/sonde-neuve.ts';
+    // Une occurrence DE PLUS sur un site dont l'exemption existe déjà : un en-tête réel qui nomme une
+    // tâche livrée à gabarit. L'identifiant est AJOUTÉ au bout de la ligne qui le porte : rien n'est retiré.
+    const parId = new Map(s.taches.map((t) => [t.id, t]));
+    const aGabarit = (id: string) => {
+      const t = parId.get(id);
+      return t !== undefined && LIVREE.has(t.statut ?? '') && (t.paths ?? []).some((p) => posix.basename(p) === t.id);
+    };
+    const existante = analyser(s).exemptions.find((e) => aGabarit(e.tache) && e.nature !== 'contexte' && /^(scripts|tests)\/.*:\d+$/.test(e.site));
+    expect(existante, 'aucune exemption d’en-tête sur une tâche livrée à gabarit : le témoin « occurrence de plus » ne porterait sur rien').toBeDefined();
+    const fichierExistant = existante!.site.replace(/:\d+$/, '');
+    const ligneExistante = Number(existante!.site.slice(fichierExistant.length + 1)) - 1;
+    const entetes = [
+      ...s.entetes.map((e) =>
+        e.fichier === fichierExistant ? { ...e, lignes: e.lignes.map((l, i) => (i === ligneExistante ? `${l} ${existante!.tache}` : l)) } : e
+      ),
+      { fichier: NEUF, lignes: [`// portée par ${pure!.id}`, `// étendue par ${mixte!.id}`] },
+    ];
+    const gates = [
+      ...s.gates,
+      { id: 'sonde-neuve-pure', script: NEUF, tache: pure!.id },
+      { id: 'sonde-neuve-mixte', script: NEUF, tache: mixte!.id },
+    ];
+    const { fautes } = analyser({ ...s, entetes, gates });
+    const vue = (famille: string, ...noms: string[]) => fautes.some((f) => f.famille === famille && noms.every((n) => f.message.includes(n)));
+    const aveugles = [
+      ['mention_hors_paths', `${NEUF}:1`, pure!.id],
+      ['mention_hors_paths', `${NEUF}:2`, mixte!.id],
+      ['gate_non_reciproque', 'sonde-neuve-pure', pure!.id],
+      ['gate_non_reciproque', 'sonde-neuve-mixte', mixte!.id],
+      ['mention_hors_paths', `${fichierExistant}:`, existante!.tache],
+    ].filter(([famille, ...noms]) => !vue(famille as string, ...noms));
+    expect(aveugles, 'ces attributions NEUVES à une tâche livrée à path gabarit n’ont fait rougir personne').toEqual([]);
   });
 
   /**
@@ -136,7 +235,7 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
    */
   it('les exemptions « paths gabarit » ont un PRODUCTEUR INDÉPENDANT : recomptées ici sur les registres relus, par nature, tâche et lieu', () => {
     const { exemptions } = analyser(chargerSources(fichiersSuivis()));
-    type T = { id: string; paths?: string[]; tests?: Record<string, string[]> };
+    type T = { id: string; paths?: string[]; tests?: Record<string, string[]>; statut?: string };
     const taches = (JSON.parse(lireReel('docs/tasks.json')) as { taches: T[] }).taches;
     const gates = (JSON.parse(lireReel('docs/gates.json')) as { gates: Record<string, unknown>[] }).gates;
     const parId = new Map(taches.map((t) => [t.id, t]));
@@ -149,8 +248,11 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
       );
     const enContexte = (ou: string, id: string) =>
       CITATIONS_DECLAREES.some((c) => c.ou === ou && c.id === id && c.nature === 'contexte');
+    // Une tâche LIVRÉE (ou sans statut) ne relève plus de « pas encore connu » : le dépôt vert la range sous sa dette figée.
     const nature = (lieu: 'gate' | 'mention', t: T) =>
-      `${lieu}_paths_${reels(t).length === 0 ? 'non_resolus' : 'en_partie_gabarit'}`;
+      t.statut === undefined || LIVREE.has(t.statut)
+        ? `dette_gabarit_livree_${lieu}`
+        : `${lieu}_paths_${reels(t).length === 0 ? 'non_resolus' : 'en_partie_gabarit'}`;
     // Une mention est un JETON entier égal à l'identifiant d'une tâche.
     const mentions = (texte: string) => texte.split(/[^A-Za-z0-9-]+/).filter((j) => parId.has(j));
 
@@ -193,7 +295,7 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const lieu = (site: string) =>
       site.startsWith(PREFIXE) ? PREFIXE + (site.slice(PREFIXE.length).split(/[ .[]/)[0] as string) : site.replace(/:\d+$/, '');
     const rendues = exemptions
-      .filter((e) => /^(gate|mention)_paths_(non_resolus|en_partie_gabarit)$/.test(e.nature))
+      .filter((e) => /^(gate|mention)_paths_(non_resolus|en_partie_gabarit)$|^dette_gabarit_livree_(gate|mention)$/.test(e.nature))
       .map((e) => `${e.nature} ${e.tache} @ ${lieu(e.site)}`);
     expect(attendues.length, 'le recompte ne trouve aucune attribution à paths gabarit : il ne prouverait rien').toBeGreaterThan(0);
     expect(rendues.sort(), 'les exemptions « paths gabarit » rendues ne sont pas celles que le recompte indépendant trouve').toEqual(

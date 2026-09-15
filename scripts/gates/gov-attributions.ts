@@ -19,6 +19,7 @@
 import { readFileSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 import { referencePr, DEPOTS, DEPOT_LOCAL, type Attestation } from '../lot/attestation';
+import { LIVREE } from '../lot/avancement';
 
 /*
  * LIMITES CONNUES — ce que cette garde ne voit pas, écrit plutôt que supposé :
@@ -36,8 +37,11 @@ import { referencePr, DEPOTS, DEPOT_LOCAL, type Attestation } from '../lot/attes
  *   — une déclaration se range par SITE et identifiant (un fichier, ou une chaîne de `docs/gates.json`),
  *     pas par occurrence : une mention NEUVE du même identifiant au même site est absoute par la
  *     déclaration existante — le compte monte, et la raison imprimée est celle écrite pour l'autre ;
- *   — aucun cliquet ne borne les exemptions : une mention neuve d'une tâche aux paths gabarit fait
- *     monter le compte, sous sa rubrique, et la sortie reste verte ;
+ *   — aucun cliquet ne borne les exemptions d'une tâche NON LIVRÉE aux paths gabarit : une mention neuve
+ *     fait monter le compte, sous sa rubrique, et la sortie reste verte. Pour une tâche LIVRÉE, le
+ *     registre `DETTE_GABARIT_LIVREE` fige chaque site ET son nombre d'occurrences : une de plus rougit ;
+ *   — le journal n'a pas de grain plus fin que la PR : une tâche ÉTRANGÈRE au lot, livrée par une PR
+ *     dont le TITRE ne nomme que ce lot, reste attestée. Seul le titre atteste ; le corps ne compte pas ;
  *   — un fichier suivi de `scripts/` ou `tests/` qui porte un octet NUL (UTF-16, binaire) n'est pas lu :
  *     il fait REFUSER la garde, et aucune déclaration ne l'en exempte. Le dépôt n'en porte aucun ;
  *   — un fichier non UTF-8 SANS octet NUL (Latin-1) est lu avec remplacement : ses identifiants ASCII
@@ -99,6 +103,16 @@ const ADMISES: Record<'hors_paths' | 'non_resolue', readonly NatureDeclaree[]> =
 /** Une non-réciprocité RÉELLE, connue, que cette tâche ne peut pas réparer (ses sources sont en écriture réservée). */
 export type DetteGate = { gate: string; tache: string; script: string; raison: string };
 
+/**
+ * Un site où une tâche LIVRÉE qui garde un path gabarit est nommée (ou porte une gate) sans que ses paths
+ * portent le fichier, FIGÉ avec son nombre d'occurrences. `ou` : le fichier, la chaîne de `docs/gates.json`
+ * (`docs/gates.json:<gate>.<champ>`) pour une mention, `docs/gates.json:<gate>` pour la relation garde <-> tâche.
+ */
+export type DetteGabaritLivree = { tache: string; lieu: 'gate' | 'mention'; ou: string; n: number };
+
+/** Une tâche dont le TITRE de l'entrée de journal de sa PR n'atteste pas le lot, figée avec ce lot et cette PR. */
+export type DetteLot = { tache: string; lot: string; pr: number };
+
 export type Sources = {
   taches: Tache[];
   gates: Gate[];
@@ -109,6 +123,8 @@ export type Sources = {
   entetes: Entete[];
   citations: Citation[];
   dettesGate: DetteGate[];
+  dettesGabarit: DetteGabaritLivree[];
+  dettesLot: DetteLot[];
 };
 
 /**
@@ -145,8 +161,11 @@ const NATURES = [
   'gate_paths_en_partie_gabarit',
   'mention_paths_non_resolus',
   'mention_paths_en_partie_gabarit',
+  'dette_gabarit_livree_gate',
+  'dette_gabarit_livree_mention',
   'lot_sans_pr',
   'lot_sous_plancher',
+  'dette_lot_journal',
   'autre_depot',
   'contexte',
   'citation',
@@ -160,13 +179,19 @@ const SENS: Record<Nature, string> = {
   dette_gate: 'non-réciprocité garde <-> tâche déclarée, que cette tâche ne peut pas réparer',
   dette: 'identifiant qui ne résout pas, déclaré comme attribution FAUSSE hors des paths de cette tâche',
   gate_paths_non_resolus:
-    'garde attribuée à une tâche dont CHAQUE path est un gabarit (« pas encore connu ») : réciprocité ni vraie ni fausse',
+    'garde attribuée à une tâche NON LIVRÉE dont CHAQUE path est un gabarit (« pas encore connu ») : réciprocité ni vraie ni fausse',
   gate_paths_en_partie_gabarit:
-    'garde attribuée à une tâche dont aucun path RÉEL ne porte le script, et qui garde un gabarit (« le reste n’est pas encore connu ») : réciprocité ni vraie ni fausse',
+    'garde attribuée à une tâche NON LIVRÉE dont aucun path RÉEL ne porte le script, et qui garde un gabarit (« le reste n’est pas encore connu ») : réciprocité ni vraie ni fausse',
   mention_paths_non_resolus:
-    'tâche nommée hors de ses paths, dont CHAQUE path est un gabarit : propriété ni vraie ni fausse',
+    'tâche NON LIVRÉE nommée hors de ses paths, dont CHAQUE path est un gabarit : propriété ni vraie ni fausse',
   mention_paths_en_partie_gabarit:
-    'tâche nommée dans un fichier qu’aucun de ses paths RÉELS ne porte, et qui garde un gabarit : propriété ni vraie ni fausse',
+    'tâche NON LIVRÉE nommée dans un fichier qu’aucun de ses paths RÉELS ne porte, et qui garde un gabarit : propriété ni vraie ni fausse',
+  dette_gabarit_livree_gate:
+    'garde attribuée à une tâche LIVRÉE qui garde un path gabarit et dont les paths ne portent pas le script : « pas encore connu » n’est plus vrai — dette de docs/tasks.json FIGÉE site par site (DETTE_GABARIT_LIVREE), tout site neuf rougit',
+  dette_gabarit_livree_mention:
+    'tâche LIVRÉE à path gabarit nommée dans un fichier que ses paths ne portent pas : « pas encore connu » n’est plus vrai — dette FIGÉE site et occurrences (DETTE_GABARIT_LIVREE), toute occurrence neuve rougit',
+  dette_lot_journal:
+    'lot que le TITRE de l’entrée de journal de sa PR n’atteste pas (titre sans lot, ou qui en nomme plusieurs) — dette FIGÉE tâche par tâche (DETTE_LOT_JOURNAL), toute tâche neuve rougit',
   lot_sans_pr: 'lot écrit sans PR : docs/journal/ indexe ses entrées par PR, rien ne peut l’attester',
   lot_sous_plancher: 'lot sans entrée de journal, PR sous le plancher de docs/journal/README.md',
   autre_depot: 'lot d’une tâche d’un autre dépôt : docs/journal/ n’indexe que les PR d’ici',
@@ -202,6 +227,11 @@ function sansAncre(valeur: string): string {
  * sur ses paths RÉELS ; si aucun ne porte le fichier et qu'elle garde un gabarit, la réciprocité n'est
  * déclarée ni vraie ni fausse — et chaque cas est IMPRIMÉ et COMPTÉ, sous une nature qui dit si la
  * tâche a, ou non, des paths réels. Des paths VIDES ne disent rien de tel : la tâche est jugée.
+ *
+ * 🔑 « PAS ENCORE CONNU » NE VAUT QUE POUR UNE TÂCHE DONT LE STATUT EST ÉCRIT ET N'EST PAS LIVRÉ. Une
+ * tâche livrée n'a plus rien à apprendre : son gabarit est une dette de `docs/tasks.json`, et son
+ * attribution est JUGÉE comme celle de toute tâche — sauf les sites figés nominativement, avec leur
+ * nombre d'occurrences, dans `DETTE_GABARIT_LIVREE`. Un statut absent n'exempte pas (prédicat fermé).
  */
 function estGabarit(t: Tache, chemin: string): boolean {
   return chemin.slice(chemin.lastIndexOf('/') + 1) === t.id;
@@ -215,6 +245,19 @@ function pathsReels(t: Tache): string[] {
 /** La tâche garde au moins un path gabarit : une part de ce qu'elle touche n'est pas encore connue. */
 function aUnGabarit(t: Tache): boolean {
   return (t.paths ?? []).some((x) => estGabarit(t, x));
+}
+
+/** Le gabarit dit encore « pas encore connu » : le statut est ÉCRIT, et il n'est pas livré (`LIVREE`, source unique). */
+function pasEncoreLivree(t: Tache): boolean {
+  return t.statut !== undefined && !LIVREE.has(t.statut);
+}
+
+/** Ce qu'une faute ajoute quand la tâche jugée est livrée et garde un gabarit : pourquoi elle n'est pas exemptée. */
+function gabaritLivre(t: Tache): string {
+  return aUnGabarit(t) && !pasEncoreLivree(t)
+    ? ` ${t.id} est « ${t.statut ?? '(statut absent)'} » et garde un path gabarit : « pas encore connu » n'est plus vrai, ` +
+        `et ce site (ou cette occurrence) n'est pas figé dans DETTE_GABARIT_LIVREE.`
+    : '';
 }
 
 /** Le motif d'une exemption pour paths gabarit : les paths eux-mêmes, réels et gabarit, que le lecteur peut vérifier. */
@@ -326,6 +369,16 @@ export function analyser(s: Sources): Verdict {
 
   const parId = new Map(s.taches.map((t) => [t.id, t]));
 
+  // Un site figé absout AU PLUS son nombre d'occurrences : la suivante est jugée.
+  const occurrencesFigees = new Map<DetteGabaritLivree, number>();
+  const figee = (lieu: DetteGabaritLivree['lieu'], tache: string, ou: string): boolean => {
+    const d = s.dettesGabarit.find((x) => x.lieu === lieu && x.tache === tache && x.ou === ou);
+    if (!d) return false;
+    const vues = (occurrencesFigees.get(d) ?? 0) + 1;
+    occurrencesFigees.set(d, vues);
+    return vues <= d.n;
+  };
+
   // ── (1) garde <-> tâche ─────────────────────────────────────────────────────
   //
   // ⚠️ CE SENS-LÀ SEULEMENT. La réciproque « une tâche qui déclare un script de garde en est la
@@ -353,15 +406,20 @@ export function analyser(s: Sources): Verdict {
       exempter('dette_gate', t.id, site, dette.raison);
       continue;
     }
-    if (aUnGabarit(t)) {
+    if (aUnGabarit(t) && pasEncoreLivree(t)) {
       exempter(pathsReels(t).length === 0 ? 'gate_paths_non_resolus' : 'gate_paths_en_partie_gabarit', t.id, site, pathsDe(t));
+      continue;
+    }
+    if (aUnGabarit(t) && figee('gate', t.id, `docs/gates.json:${g.id}`)) {
+      exempter('dette_gabarit_livree_gate', t.id, site, `statut ${t.statut} · ${pathsDe(t)}`);
       continue;
     }
     dire(
       'gate_non_reciproque',
       `docs/gates.json — la gate « ${g.id} » déclare le porteur « ${g.tache} » pour ${chemin}, ` +
         `et ${g.tache} ne déclare ce fichier ni dans ses paths ni dans son tests{}. ` +
-        `L'attribution n'est réciproque dans aucun sens.`
+        `L'attribution n'est réciproque dans aucun sens.` +
+        gabaritLivre(t)
     );
   }
   for (const d of s.dettesGate) {
@@ -395,8 +453,15 @@ export function analyser(s: Sources): Verdict {
   // 🔑 TOUT LOT ÉCRIT EST JUGÉ OU EXEMPTÉ. Sans PR, le journal (indexé par PR) ne peut rien attester :
   // exemption `lot_sans_pr`. Pour une tâche d'un AUTRE dépôt, `docs/journal/` n'indexe pas sa PR :
   // exemption `autre_depot`. Sous le plancher de `docs/journal/README.md` (que `gov:etat` lit aussi),
-  // l'ABSENCE d'entrée est exemptée ; une entrée EXISTANTE qui ne nomme pas le lot reste une faute.
+  // l'ABSENCE d'entrée est exemptée ; une entrée EXISTANTE dont le titre n'atteste pas le lot reste une faute.
+  //
+  // 🔑 SEUL LE TITRE ATTESTE, ET S'IL NE NOMME QUE CE LOT. Le corps d'une entrée raconte, et cite d'autres
+  // lots (l'entrée de la PR #31 cite `L-1-01`, lot de la PR #26) ; un titre qui nomme plusieurs lots ne
+  // dit pas lequel est celui de la tâche. Les lots se reconnaissent par une forme DÉRIVÉE des lots écrits
+  // (RM-01). Les cas existants que cette règle refuse sont figés, tâche par tâche, dans `DETTE_LOT_JOURNAL`.
   const entrees = entreesDeJournal(s.journal);
+  const motifLot = motifIdentifiant(s.taches.flatMap((t) => (t.lot ? [{ id: t.lot }] : [])));
+  const dettesLotVues = new Set<DetteLot>();
   for (const t of s.taches) {
     if (!t.lot) continue; // aucun lot écrit : aucune attribution de lot
     if (t.pr === null || t.pr === undefined) {
@@ -412,9 +477,17 @@ export function analyser(s: Sources): Verdict {
       continue;
     }
     const entree = entrees.get(String(t.pr));
-    if (entree !== undefined && nommeLeLot(entree, t.lot)) continue;
+    const titre = entree === undefined ? '' : (entree.split('\n')[0] as string);
+    const lotsDuTitre = [...new Set(titre.match(motifLot) ?? [])];
+    if (entree !== undefined && nommeLeLot(titre, t.lot) && lotsDuTitre.length === 1) continue;
     if (entree === undefined && t.pr <= s.plancherJournal) {
       exempter('lot_sous_plancher', t.id, `lot « ${t.lot} », ${ref}`, `plancher du journal : > ${s.plancherJournal}`);
+      continue;
+    }
+    const dette = entree === undefined ? undefined : s.dettesLot.find((d) => d.tache === t.id && d.lot === t.lot && d.pr === t.pr);
+    if (dette) {
+      dettesLotVues.add(dette);
+      exempter('dette_lot_journal', t.id, `lot « ${t.lot} », ${ref}`, `lots du titre de « ${ancre} » : ${lotsDuTitre.join(', ') || '(aucun)'}`);
       continue;
     }
     dire(
@@ -422,8 +495,19 @@ export function analyser(s: Sources): Verdict {
       entree === undefined
         ? `docs/tasks.json — ${t.id} porte lot « ${t.lot} » et ${ref}, et docs/journal/ n'a aucune entrée « ${ancre} », ` +
             `au-dessus du plancher (> ${s.plancherJournal}). Rien n'atteste que cette tâche appartenait au lot : lot:cloture écrit le lot sans le vérifier.`
-        : `docs/tasks.json — ${t.id} porte lot « ${t.lot} » et ${ref}, et l'entrée « ${ancre} » du journal ne nomme pas « ${t.lot} » comme un jeton entier. ` +
-            `Une tâche étrangère au lot, présente dans le rendu, passe fusionnee avec ce lot écrit dans un fichier versionné.`
+        : nommeLeLot(titre, t.lot)
+          ? `docs/tasks.json — ${t.id} porte lot « ${t.lot} » et ${ref}, et le TITRE de l'entrée « ${ancre} » du journal nomme plusieurs lots ` +
+              `(${lotsDuTitre.join(', ')}) : il n'atteste aucun d'eux, rien ne dit lequel est celui de ${t.id}.`
+          : `docs/tasks.json — ${t.id} porte lot « ${t.lot} » et ${ref}, et le TITRE de l'entrée « ${ancre} » du journal ne nomme pas « ${t.lot} » comme un jeton entier ` +
+              `(le corps de l'entrée ne compte pas). Une tâche étrangère au lot, présente dans le rendu, passe fusionnee avec ce lot écrit dans un fichier versionné.`
+    );
+  }
+  for (const d of s.dettesLot) {
+    if (dettesLotVues.has(d)) continue;
+    dire(
+      'dette_perimee',
+      `DETTE_LOT_JOURNAL déclare « ${d.tache} » -> lot « ${d.lot} », PR ${d.pr}, qui n'est PLUS mesurée : la tâche a changé de lot ou de PR, ` +
+        `ou le titre de l'entrée l'atteste maintenant. Retire l'entrée.`
     );
   }
 
@@ -464,15 +548,20 @@ export function analyser(s: Sources): Verdict {
         exempter('contexte', m, situer, c.raison);
         continue;
       }
-      if (aUnGabarit(t)) {
+      if (aUnGabarit(t) && pasEncoreLivree(t)) {
         exempter(pathsReels(t).length === 0 ? 'mention_paths_non_resolus' : 'mention_paths_en_partie_gabarit', m, situer, pathsDe(t));
+        continue;
+      }
+      if (aUnGabarit(t) && figee('mention', m, ou)) {
+        exempter('dette_gabarit_livree_mention', m, situer, `statut ${t.statut} · ${pathsDe(t)}`);
         continue;
       }
       dire(
         'mention_hors_paths',
         `${situer} — nomme « ${m} », et ${fichier} n'est ni dans les paths ni dans le tests{} de ${m}. ` +
           `Le lecteur suivant ira chercher chez ${m} un fichier qui n'est pas à elle. Corrige le nom, ou ` +
-          `DÉCLARE la mention en « contexte » dans CITATIONS_DECLAREES si la tâche est nommée comme voisine.`
+          `DÉCLARE la mention en « contexte » dans CITATIONS_DECLAREES si la tâche est nommée comme voisine.` +
+          gabaritLivre(t)
       );
     }
   };
@@ -501,6 +590,16 @@ export function analyser(s: Sources): Verdict {
             `le backlog a bougé sous la déclaration. Retire l'entrée, et vérifie que la phrase dit encore ce qu'elle voulait dire.`
         : `CITATIONS_DECLAREES — « ${c.id} » est déclaré en ${c.nature} pour ${c.ou}, et n'y absout plus aucune mention ` +
             `(le site ne le porte plus, la tâche déclare maintenant ce fichier, ou la nature ne convient pas). Retire ou corrige l'entrée.`
+    );
+  }
+
+  for (const d of s.dettesGabarit) {
+    const vues = occurrencesFigees.get(d) ?? 0;
+    if (vues >= d.n) continue;
+    dire(
+      'dette_perimee',
+      `DETTE_GABARIT_LIVREE fige ${d.n} occurrence(s) de « ${d.tache} » (${d.lieu}) sur ${d.ou}, et ${vues} y sont mesurées : ` +
+        `la mention a disparu, la tâche déclare maintenant ce fichier, ou son gabarit est résolu. Corrige ou retire l'entrée.`
     );
   }
 
@@ -698,6 +797,79 @@ export const CITATIONS_DECLAREES: Citation[] = [
   },
 ];
 
+/**
+ * ⛔ LES TÂCHES LIVRÉES QUI GARDENT UN PATH GABARIT — DETTE NOMINATIVE, FIGÉE. Treize tâches `fusionnee`
+ * (GOV-000, GOV-001, GOV-002, GOV-003, GOV-004, GOV-005, GOV-007, GOV-009, GOV-015, GOV-017a, GOV-017b,
+ * INT-T01b, QA-T00) ont gardé le path d'amorçage `<dossier>/<id>` : leurs paths n'ont jamais été renseignés.
+ * Pour elles « pas encore connu » est faux, et leurs 54 attributions mesurées au 2026-09-15 ne sont ni
+ * prouvées ni réfutées. Réparer, c'est écrire leurs paths dans `docs/tasks.json`, en écriture réservée :
+ * elles sont donc FIGÉES ici, site par site, avec leur nombre d'occurrences, imprimées et comptées sous
+ * `dette_gabarit_livree_*`. Toute attribution NEUVE à l'une d'elles rougit ; une entrée qui ne mesure plus
+ * ses occurrences rougit en `dette_perimee`. **On ne l'étend pas pour faire passer un site neuf** : c'est
+ * exactement la faute que ce registre existe pour refuser.
+ */
+export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gate-a', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gate-deploiement', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:autonomie', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:check', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:gov:publication', n: 1 },
+  { tache: 'GOV-000', lieu: 'gate', ou: 'docs/gates.json:notify-sink-hors-prod', n: 1 },
+  { tache: 'GOV-001', lieu: 'gate', ou: 'docs/gates.json:gov:requirements', n: 1 },
+  { tache: 'GOV-002', lieu: 'gate', ou: 'docs/gates.json:gov:preseance', n: 1 },
+  { tache: 'GOV-003', lieu: 'gate', ou: 'docs/gates.json:gov:identifiants', n: 1 },
+  { tache: 'GOV-004', lieu: 'gate', ou: 'docs/gates.json:gov:sonde', n: 1 },
+  { tache: 'GOV-005', lieu: 'gate', ou: 'docs/gates.json:gov:hypotheses', n: 1 },
+  { tache: 'GOV-007', lieu: 'gate', ou: 'docs/gates.json:gov:pr', n: 1 },
+  { tache: 'GOV-009', lieu: 'gate', ou: 'docs/gates.json:gov:adr', n: 1 },
+  { tache: 'GOV-017a', lieu: 'gate', ou: 'docs/gates.json:gov:tasks', n: 1 },
+  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gate-nightly', n: 1 },
+  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gates:prouvees', n: 1 },
+  { tache: 'QA-T00', lieu: 'gate', ou: 'docs/gates.json:gov:gates-derivees', n: 1 },
+  { tache: 'GOV-000', lieu: 'mention', ou: 'docs/gates.json:gov:inventaire.verifie', n: 1 },
+  { tache: 'GOV-000', lieu: 'mention', ou: 'scripts/gates/gov-autonomie.ts', n: 1 },
+  { tache: 'GOV-001', lieu: 'mention', ou: 'scripts/gates/gov-requirements.ts', n: 1 },
+  { tache: 'GOV-001', lieu: 'mention', ou: 'tests/unit/gouvernance/glossaire-enums.spec.ts', n: 1 },
+  { tache: 'GOV-002', lieu: 'mention', ou: 'scripts/gates/gov-preseance.ts', n: 2 },
+  { tache: 'GOV-002', lieu: 'mention', ou: 'tests/unit/gouvernance/preseance.spec.ts', n: 2 },
+  { tache: 'GOV-003', lieu: 'mention', ou: 'scripts/gates/gov-identifiants.ts', n: 1 },
+  { tache: 'GOV-003', lieu: 'mention', ou: 'scripts/gates/gov-tasks.ts', n: 1 },
+  { tache: 'GOV-004', lieu: 'mention', ou: 'scripts/gates/gov-inventaire.ts', n: 1 },
+  { tache: 'GOV-004', lieu: 'mention', ou: 'scripts/gates/gov-sonde.ts', n: 2 },
+  { tache: 'GOV-004', lieu: 'mention', ou: 'tests/unit/gouvernance/affirmations-verifiees.spec.ts', n: 1 },
+  { tache: 'GOV-004', lieu: 'mention', ou: 'tests/unit/gouvernance/inventaire-prouve.spec.ts', n: 1 },
+  { tache: 'GOV-005', lieu: 'mention', ou: 'scripts/gates/gov-hypotheses.ts', n: 1 },
+  { tache: 'GOV-007', lieu: 'mention', ou: 'scripts/gates/gov-pr.ts', n: 1 },
+  { tache: 'GOV-009', lieu: 'mention', ou: 'scripts/adr/index.ts', n: 1 },
+  { tache: 'GOV-009', lieu: 'mention', ou: 'scripts/gates/gov-adr.ts', n: 1 },
+  { tache: 'GOV-009', lieu: 'mention', ou: 'tests/unit/gouvernance/adr-assertion-existe.spec.ts', n: 2 },
+  { tache: 'GOV-009', lieu: 'mention', ou: 'tests/unit/gouvernance/adr-index-derive.spec.ts', n: 1 },
+  { tache: 'GOV-015', lieu: 'mention', ou: 'tests/unit/gouvernance/fiches-tiers.controles.ts', n: 1 },
+  { tache: 'GOV-015', lieu: 'mention', ou: 'tests/unit/gouvernance/fiches-tiers.spec.ts', n: 1 },
+  { tache: 'GOV-017a', lieu: 'mention', ou: 'scripts/gates/gov-tasks.ts', n: 1 },
+  { tache: 'GOV-017a', lieu: 'mention', ou: 'scripts/lot/tasks.schema.json', n: 1 },
+  { tache: 'GOV-017b', lieu: 'mention', ou: 'docs/gates.json:gov:tasks.verifie', n: 1 },
+  { tache: 'GOV-017b', lieu: 'mention', ou: 'scripts/lot/paths-proposes.ts', n: 1 },
+  { tache: 'GOV-017b', lieu: 'mention', ou: 'tests/unit/gouvernance/regles-maison.spec.ts', n: 1 },
+  { tache: 'INT-T01b', lieu: 'mention', ou: 'scripts/lot/attestation.ts', n: 2 },
+  { tache: 'INT-T01b', lieu: 'mention', ou: 'tests/fixtures/axionia/enveloppes-provisoires.json', n: 2 },
+  { tache: 'INT-T01b', lieu: 'mention', ou: 'tests/unit/gouvernance/attestation-inter-depot.spec.ts', n: 2 },
+  { tache: 'QA-T00', lieu: 'mention', ou: 'scripts/gates/gates-derivees.ts', n: 1 },
+  { tache: 'QA-T00', lieu: 'mention', ou: 'scripts/gates/gates-prouvees.ts', n: 1 },
+];
+
+/**
+ * ⛔ LES LOTS QUE LE TITRE DE LEUR ENTRÉE N'ATTESTE PAS — DETTE NOMINATIVE, FIGÉE. Mesurés au 2026-09-15 :
+ *   — PR #31 : le titre nomme TROIS lots (`L-1-04`, `L-1-05`, `L-1-06`) ; ses neuf tâches portent `L-1-04`,
+ *     et rien dans le titre ne dit lequel est le leur ;
+ *   — PR #33 : le titre ne nomme AUCUN lot ; ses quatre tâches portent `L-1-05`, que seul le corps cite.
+ * Réécrire le journal ou le registre n'appartient pas à cette tâche. Une tâche NEUVE dans ce cas rougit.
+ */
+export const DETTE_LOT_JOURNAL: DetteLot[] = [
+  ...['GOV-006', 'GOV-013', 'CPL-T01', 'GOV-024', 'GOV-025', 'GOV-026', 'GOV-027', 'GOV-029', 'GOV-032'].map((tache) => ({ tache, lot: 'L-1-04', pr: 31 })),
+  ...['GOV-014', 'GOV-019', 'GOV-028', 'GOV-038'].map((tache) => ({ tache, lot: 'L-1-05', pr: 33 })),
+];
+
 // ── chargement des sources réelles ────────────────────────────────────────────
 
 /** Une source n'a pas pu être lue. Ce n'est pas « rien à signaler » : c'est « je n'ai rien lu ». */
@@ -871,6 +1043,8 @@ export function chargerSources(
       .map((f) => ({ fichier: f, lignes: texte(f).split('\n').slice(0, LIGNES_D_EN_TETE) })),
     citations: CITATIONS_DECLAREES,
     dettesGate: DETTE_GATE_NON_RECIPROQUE,
+    dettesGabarit: DETTE_GABARIT_LIVREE,
+    dettesLot: DETTE_LOT_JOURNAL,
   };
 }
 
@@ -925,6 +1099,8 @@ function completer(p: Partial<Sources>): Sources {
     entetes: p.entetes ?? [],
     citations: p.citations ?? [],
     dettesGate: p.dettesGate ?? [],
+    dettesGabarit: p.dettesGabarit ?? [],
+    dettesLot: p.dettesLot ?? [],
   };
 }
 
@@ -939,12 +1115,17 @@ const T_RESOLUE: Tache = {
 };
 /** Une voisine RÉSOLUE, propriétaire d'un AUTRE fichier. */
 const T_VOISINE: Tache = { ...T_RESOLUE, id: 'GOV-101', paths: ['scripts/gates/autre.ts'] };
-/** Des tâches aux paths GABARIT. */
-const T_GABARIT: Tache = { ...T_RESOLUE, id: 'GOV-003', paths: ['docs/gouvernance/GOV-003'] };
-const T_GABARIT_BIS: Tache = { ...T_RESOLUE, id: 'GOV-004', paths: ['docs/gouvernance/GOV-004'] };
-/** Une tâche aux paths MIXTES : un path réel qui ne porte pas le fichier jugé, et un gabarit. */
-const T_MIXTE: Tache = { ...T_RESOLUE, id: 'GOV-007', paths: ['docs/gouvernance/GOV-007', 'prisma/schema.prisma'] };
+/** Des tâches NON LIVRÉES aux paths GABARIT : « pas encore connu » y est vrai. */
+const T_GABARIT: Tache = { ...T_RESOLUE, id: 'GOV-003', paths: ['docs/gouvernance/GOV-003'], statut: 'a_faire' };
+const T_GABARIT_BIS: Tache = { ...T_GABARIT, id: 'GOV-004', paths: ['docs/gouvernance/GOV-004'] };
+/** Une tâche NON LIVRÉE aux paths MIXTES : un path réel qui ne porte pas le fichier jugé, et un gabarit. */
+const T_MIXTE: Tache = { ...T_GABARIT, id: 'GOV-007', paths: ['docs/gouvernance/GOV-007', 'prisma/schema.prisma'] };
+/** Les mêmes, LIVRÉES : « pas encore connu » est faux, leur attribution est jugée. */
+const T_LIVREE_GABARIT: Tache = { ...T_GABARIT, statut: 'fusionnee' };
+const T_LIVREE_MIXTE: Tache = { ...T_MIXTE, statut: 'fusionnee' };
 const JOURNAL = '## PR #31 — 2026-09-10 — feat(GOV-024): lot L-1-04\n\n**Fait.** Neuf tâches.\n';
+const JOURNAL_MULTI = '## PR #31 — 2026-09-05 — feat(GOV-024): lots L-1-04, L-1-05 et L-1-06\n\n**Fait.** Neuf tâches.\n';
+const GATE_GABARIT = { id: 'gov:identifiants', script: 'scripts/gates/gov-identifiants.ts', tache: 'GOV-003' };
 const RAISON = 'une raison qui dit pourquoi, relisible par la session suivante';
 const DEPOT_ETRANGER = Object.keys(DEPOTS).find((r) => r !== DEPOT_LOCAL && DEPOTS[r] !== null) as string;
 const entete = (lignes: string[], fichier = 'scripts/gates/porte.ts'): Entete[] => [{ fichier, lignes }];
@@ -1025,6 +1206,105 @@ const TEMOINS: Temoin[] = [
       plancherJournal: 27,
     },
     nomme: ['L-9-99', ancreDeJournal(27)],
+  },
+  {
+    famille: 'lot_non_atteste',
+    quoi: 'F-LOT : un lot FAUX cité seulement dans le CORPS de l’entrée n’est pas attesté — seul le titre atteste',
+    sources: { taches: [{ ...T_RESOLUE, lot: 'L-9-98', pr: 31 }], journal: `${JOURNAL}Le corps cite aussi L-9-98.\n` },
+    nomme: ['L-9-98', 'TITRE', 'le corps de l'],
+  },
+  {
+    famille: 'lot_non_atteste',
+    quoi: 'F-LOT : un titre qui nomme PLUSIEURS lots n’atteste aucun d’eux',
+    sources: { taches: [{ ...T_RESOLUE, lot: 'L-1-06', pr: 31 }], journal: JOURNAL_MULTI },
+    nomme: ['L-1-06', 'plusieurs lots'],
+  },
+  {
+    famille: 'lot_non_atteste',
+    quoi: 'une dette de lot figée pour UN lot n’absout pas la même tâche sous un AUTRE lot du même titre',
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-1-06', pr: 31 }],
+      journal: JOURNAL_MULTI,
+      dettesLot: [{ tache: 'GOV-100', lot: 'L-1-04', pr: 31 }],
+    },
+    nomme: ['L-1-06'],
+  },
+  {
+    famille: 'dette_perimee',
+    quoi: 'une dette de lot figée qui ne mesure plus rien (le titre atteste maintenant le lot)',
+    sources: { taches: [{ ...T_RESOLUE, lot: 'L-1-04', pr: 31 }], journal: JOURNAL, dettesLot: [{ tache: 'GOV-100', lot: 'L-1-04', pr: 31 }] },
+    nomme: ['DETTE_LOT_JOURNAL', 'GOV-100'],
+  },
+  // ── (1) et (4) : une tâche LIVRÉE qui garde un gabarit est jugée ──
+  {
+    famille: 'gate_non_reciproque',
+    quoi: 'une gate NEUVE attribuée à une tâche LIVRÉE aux paths gabarit : « pas encore connu » n’est plus vrai',
+    sources: { taches: [T_LIVREE_GABARIT], gates: [GATE_GABARIT] },
+    nomme: ['gov:identifiants', 'GOV-003', 'fusionnee', 'DETTE_GABARIT_LIVREE'],
+  },
+  {
+    famille: 'gate_non_reciproque',
+    quoi: 'une gate NEUVE attribuée à une tâche LIVRÉE aux paths MIXTES',
+    sources: { taches: [T_LIVREE_MIXTE], gates: [{ id: 'gov:pr', script: 'scripts/gates/gov-pr.ts', tache: 'GOV-007' }] },
+    nomme: ['gov:pr', 'GOV-007', 'DETTE_GABARIT_LIVREE'],
+  },
+  {
+    famille: 'gate_non_reciproque',
+    quoi: 'une dette figée en MENTION n’absout pas la relation garde <-> tâche du même lieu',
+    sources: {
+      taches: [T_LIVREE_GABARIT],
+      gates: [GATE_GABARIT],
+      dettesGabarit: [{ tache: 'GOV-003', lieu: 'mention', ou: 'docs/gates.json:gov:identifiants', n: 1 }],
+    },
+    nomme: ['gov:identifiants'],
+  },
+  {
+    famille: 'mention_hors_paths',
+    quoi: 'un en-tête NEUF nomme une tâche LIVRÉE aux paths gabarit',
+    sources: { taches: [T_RESOLUE, T_LIVREE_GABARIT], entetes: entete(['// étendue par GOV-003']) },
+    nomme: ['scripts/gates/porte.ts:1', 'GOV-003', 'DETTE_GABARIT_LIVREE'],
+  },
+  {
+    famille: 'mention_hors_paths',
+    quoi: 'un en-tête NEUF nomme une tâche LIVRÉE aux paths MIXTES',
+    sources: { taches: [T_RESOLUE, T_LIVREE_MIXTE], entetes: entete(['// portée par GOV-007']) },
+    nomme: ['scripts/gates/porte.ts:1', 'GOV-007'],
+  },
+  {
+    famille: 'mention_hors_paths',
+    quoi: 'une dette figée pour UN site n’absout pas la même tâche livrée sur un AUTRE site',
+    sources: {
+      taches: [T_RESOLUE, T_LIVREE_GABARIT],
+      entetes: entete(['// étendue par GOV-003']),
+      dettesGabarit: [{ tache: 'GOV-003', lieu: 'mention', ou: 'scripts/gates/autre.ts', n: 1 }],
+    },
+    nomme: ['scripts/gates/porte.ts:1', 'GOV-003'],
+  },
+  {
+    famille: 'mention_hors_paths',
+    quoi: 'une occurrence DE PLUS que ce que la dette fige, sur le site figé, rougit',
+    sources: {
+      taches: [T_RESOLUE, T_LIVREE_GABARIT],
+      entetes: entete(['// GOV-003', '// GOV-003']),
+      dettesGabarit: [{ tache: 'GOV-003', lieu: 'mention', ou: 'scripts/gates/porte.ts', n: 1 }],
+    },
+    nomme: ['scripts/gates/porte.ts:2', 'GOV-003'],
+  },
+  {
+    famille: 'dette_perimee',
+    quoi: 'une dette gabarit figée dont les occurrences ne sont plus toutes mesurées',
+    sources: {
+      taches: [T_RESOLUE, T_LIVREE_GABARIT],
+      entetes: entete(['// GOV-003']),
+      dettesGabarit: [{ tache: 'GOV-003', lieu: 'mention', ou: 'scripts/gates/porte.ts', n: 2 }],
+    },
+    nomme: ['DETTE_GABARIT_LIVREE', 'GOV-003', 'scripts/gates/porte.ts'],
+  },
+  {
+    famille: 'mention_hors_paths',
+    quoi: 'un statut ABSENT n’exempte pas un gabarit : le prédicat « pas encore connu » est fermé',
+    sources: { taches: [T_RESOLUE, { ...T_GABARIT, statut: undefined }], entetes: entete(['// étendue par GOV-003']) },
+    nomme: ['GOV-003', 'statut absent'],
   },
   // ── (4) mentions ──
   {
@@ -1254,12 +1534,36 @@ const CONTRE_TEMOINS: ContreTemoin[] = [
     },
   },
   {
-    quoi: 'une gate d’une tâche aux paths GABARIT : ni vraie ni fausse — et exemptée en le disant',
-    sources: {
-      taches: [T_GABARIT],
-      gates: [{ id: 'gov:identifiants', script: 'scripts/gates/gov-identifiants.ts', tache: 'GOV-003' }],
-    },
+    quoi: 'une gate d’une tâche NON LIVRÉE aux paths GABARIT : ni vraie ni fausse — et exemptée en le disant',
+    sources: { taches: [T_GABARIT], gates: [GATE_GABARIT] },
     exemptions: ['gate_paths_non_resolus'],
+  },
+  {
+    quoi: 'une gate d’une tâche LIVRÉE aux paths gabarit, figée dans la dette : exemptée sous la dette, pas sous « pas encore connu »',
+    sources: {
+      taches: [T_LIVREE_GABARIT],
+      gates: [GATE_GABARIT],
+      dettesGabarit: [{ tache: 'GOV-003', lieu: 'gate', ou: 'docs/gates.json:gov:identifiants', n: 1 }],
+    },
+    exemptions: ['dette_gabarit_livree_gate'],
+  },
+  {
+    quoi: 'un en-tête nomme DEUX fois une tâche LIVRÉE aux paths gabarit, sur un site figé à deux occurrences',
+    sources: {
+      taches: [T_RESOLUE, T_LIVREE_MIXTE],
+      entetes: entete(['// GOV-007', '// encore GOV-007']),
+      dettesGabarit: [{ tache: 'GOV-007', lieu: 'mention', ou: 'scripts/gates/porte.ts', n: 2 }],
+    },
+    exemptions: ['dette_gabarit_livree_mention', 'dette_gabarit_livree_mention'],
+  },
+  {
+    quoi: 'un titre multi-lots, et la tâche figée dans la dette de lot : exemptée en le disant',
+    sources: {
+      taches: [{ ...T_RESOLUE, lot: 'L-1-04', pr: 31 }],
+      journal: JOURNAL_MULTI,
+      dettesLot: [{ tache: 'GOV-100', lot: 'L-1-04', pr: 31 }],
+    },
+    exemptions: ['dette_lot_journal'],
   },
   {
     quoi: 'une gate d’une tâche aux paths MIXTES, dont le path réel ne porte pas le script : exemptée sous sa propre nature',
