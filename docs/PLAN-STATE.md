@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `ae56ce4` — 2026-09-15T14:36:27+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #39 (un conflit avec `main`) · 2. #45 (un conflit avec `main`) |
+| Où est `main` ? | `36de095` — 2026-09-15T16:43:38+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #45 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-035 (A01) · GOV-036 (A01) · GOV-037 (A01) · GOV-030 (A01) · GOV-031 (A01) |
 | Où en est la phase ? | phase -1 — 34/39 tâches, reste 3.50 j |
 | Le prochain pas | GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #44 — 2026-09-15 |
+| Dernière entrée de journal | PR #45 — 2026-09-15 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,8 +60,7 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #39 — feat(GOV-036): les deux listes qui decident de ce que gov:entite REGARDE | `t/gov-036` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -91,13 +90,46 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-15)
 
 ## Dernier atterrissage
 
-`origin/main` = `ae56ce4` (2026-09-15T14:36:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `36de095` (2026-09-15T16:43:38+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #45 — 2026-09-15 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36
+
+**Fait.** La garde `gov:attributions` (`scripts/gates/gov-attributions.ts`) confronte à sa seconde
+source toute attribution écrite deux fois : gate ↔ tâche, owner ↔ poste, lot ↔ titre de l'entrée de
+journal de sa PR, et tout identifiant de tâche nommé dans l'en-tête d'un fichier suivi de `scripts/`
+ou de `tests/`, ou dans une chaîne de `docs/gates.json`. Ce qu'elle ne peut pas juger est exempté,
+imprimé et compté sous la rubrique de sa nature. Une dette figée (`DETTE_GABARIT_LIVREE`,
+`DETTE_LOT_JOURNAL`) porte tout ce que le site jugé porte, et une entrée qui ne mesure plus rien
+rougit en `dette_perimee`. Elle est appelée par Gate A (`pnpm gov:attributions`, puis son `--prove`)
+et par `pnpm gov:check`. La branche a ensuite fusionné `main` après les PR #36, #41 et #44 : cinq
+conflits. `ci.yml` et `package.json` gardent toutes les étapes et tous les scripts des deux côtés ;
+`docs/PLAN-STATE.md` et `docs/TRACABILITE.md` sont régénérés. Le cliquet des sorties non nulles a
+rougi sur la fusion, `expected 37 to be 36` : la PR #41 avait pris le 36 avec `gov-check.ts`, et il
+est déclaré à 37. La garde a rougi trois fois sur le contenu fusionné, en `mention_hors_paths`, sur
+trois textes arrivés par `main`. Deux sont des champs `verifie` de `docs/gates.json`, réécrits par
+l'outil hors dépôt sans exemption : `gov:plan-state` ne nomme plus GOV-035, `gov:check` ne nomme plus
+GOV-006. Le troisième, l'en-tête de `scripts/gates/gov-check.ts`, dit un fait vrai sur GOV-000 : il
+est déclaré en `contexte`. Prettier est appliqué aux trois fichiers de cette PR que `format:check`
+refusait, avec un arbre syntaxique identique.
+
+**Reste.** Les livrables (5) et (6) de l'acceptance ne sont pas livrés, et la décision appartient au
+gardien de la spécification ou à Will. Les dettes déclarées au corps de la PR restent ouvertes,
+lentille par lentille, dont le mutant survivant du retrait des commentaires HTML fichier par fichier.
+Le titre de la PR dit encore « cliquet a 36 ». La déclaration `contexte` de l'en-tête de
+`gov-check.ts` est un choix d'intégration : la phrase pourrait aussi être réécrite dans le fichier de
+GOV-030. La PR #39 atterrira probablement avant celle-ci, et une seconde fusion de `main` suivra.
+
+**Appris.** Une mesure d'interaction entre PR vaut pour la base où elle a été faite. Rejouée après la
+seule PR #36 (`git merge-tree`), la garde nommait un texte fautif ; sur la fusion réelle, après la
+PR #41, elle en nomme trois. Et une mention hors paths ne se ferme pas en ajoutant le path :
+`plan-state-frais.spec.ts` n'a été touché ni par la PR #36 ni par GOV-035, et le déclarer à cette
+tâche aurait écrit une seconde attribution fausse pour taire la première.
 
 ### PR #44 — 2026-09-15 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A
 
@@ -177,43 +209,7 @@ pannes connues. PostgreSQL, Prisma et CommonMark coupent au CR seul, ECMAScript 
 nommément coûte 0 sur les 188 fichiers suivis. Découper comme chaque consommateur aurait demandé une
 grammaire par consommateur.
 
-### PR #39 — 2026-09-15 — feat(GOV-036): les deux listes qui decident de ce que gov:entite REGARDE
-
-**Fait.** `gov:entite` ne tient plus aucune des deux listes tapées qui décidaient de ce qu'elle
-regarde. Les codes pays se dérivent de l'ICU du runtime (`codesDeRegion`, qui lève sous 200 régions),
-et `EXTENSIONS_BALAYEES` a disparu : la garde lit tout fichier suivi. Un fichier qu'elle ne lit pas en
-entier sort `contenu_illisible` ; un pointeur Git LFS ou un attribut `filter` sort
-`contenu_publie_non_lu`, sans exemption. La passe t8 juge le blob de l'index et non l'arbre de travail :
-les attributs `ident` et `working-tree-encoding`, qui vidaient l'arbre d'une coordonnée que le blob
-publie, ne soustraient plus rien. La passe t9 demande chaque blob par l'empreinte de son entrée d'index,
-que `scripts/lot/fichiers-suivis.ts` rend désormais (`ls-files -s -z`), et confronte l'empreinte rendue.
-Les noms `0:<x>` et `<x>` suivi d'un retour chariot, que git lisait comme une révision, sont fermés :
-sous Linux, sur un dépôt cloné et un IBAN fictif masqué, les sept pannes rejouées sortent 1 et nomment
-le porteur. `fichiers-suivis.ts` est hors des `paths` de GOV-036 : divergence déclarée dans le corps,
-pas tranchée. La branche a ensuite fusionné `main` après les PR #36, #41 et #44. Deux conflits : dans
-`gov-entite.ts`, `main` reformatait les deux listes que cette PR supprime, et la suppression est gardée ;
-`docs/PLAN-STATE.md` est régénéré. Les quatre fichiers de la PR passent ensuite sous Prettier 3.9.6 dans
-un commit séparé, arbre syntaxique et commentaires identiques. `pnpm lint` y rend 0 erreur. Aucun tour
-de relecture n'a eu lieu sur `114b6e8` : les accords restent à rendre sur la tête mise à jour.
-
-**Reste.** Les dettes déclarées dans le corps, lentille par lentille. Pour `mutation` (`5206676385`) :
-les clauses du contrôle d'en-tête de `cat-file` qui survivent seules, la réponse en trop, le sous-module
-toléré. Pour `securite` (`5206480876`) : l'historique et `export-subst`, non lus, et `POINTEUR_LFS` ancré
-au premier octet. Pour `exactitude` (`5206470775`) : `--corps-publie` qui tronque encore à 25 fautes.
-Pour `simplicite` (`5206460010`) : `config/entite.json` lu deux fois, le découpage de `cat-file` écrit
-deux fois, et le commentaire périmé de `fichiers-suivis.ts` qui cite encore `estBalaye`. Deux arbitrages
-ne sont pas de cette PR. Le contre-témoin `.png` de l'acceptance revient à `gardien-spec` ; `paths`, au
-propriétaire de `docs/tasks.json`. Enfin, la convergence des règles `contenu_illisible` que l'entrée de
-la PR #41 renvoyait à la seconde PR n'est pas faite ici : elle reste à verser en tâche.
-
-**Appris.** Demander un objet à `git cat-file --batch` par `:<chemin>` ne lit pas un chemin littéral.
-Git y applique sa syntaxe de révision : `:0:<x>` désigne l'étage 0 de `<x>`, et la lecture ligne à ligne
-retire le retour chariot final. Un fichier suivi sous l'un de ces noms, voisin d'un leurre propre, se
-faisait donc juger sur le blob du leurre. Contrôler la forme de l'en-tête rendu ne le voit pas ; seule
-l'empreinte, prise dans la même énumération que le chemin et comparée à celle rendue, lie l'objet lu au
-chemin jugé.
-
-… 11 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 12 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
