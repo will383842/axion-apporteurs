@@ -94,6 +94,8 @@ function enumererFichiers(dossier: string): string[] {
   });
 }
 
+
+
 const TRACE = readFileSync('scripts/gates/gov-trace.ts', 'utf8');
 const TACHES = readFileSync('scripts/gates/gov-tasks.ts', 'utf8');
 const EXIGENCES = readFileSync('scripts/gates/gov-requirements.ts', 'utf8');
@@ -106,12 +108,8 @@ const GATE = readFileSync('scripts/gates/gov-pr.ts', 'utf8');
 const REFUS = [
   ['corps-de-pr.ts — `--pr` obligatoire', COMPOSEUR, 'if (prBrut === null'],
   ['corps-de-pr.ts — concordance des têtes', COMPOSEUR, 'if (!verdictTete.concordent)'],
-  [
-    'gov-pr.ts — concordance des têtes (LA SURFACE QUI AUTORISE)',
-    GATE,
-    'if (!verdictTete.concordent)',
-  ],
-  ['gov-trace.ts — refus de rendre', TRACE, 'if (fautesAvantRendu.length > 0)'],
+  ['gov-pr.ts — concordance des têtes (LA SURFACE QUI AUTORISE)', GATE, 'if (!verdictTete.concordent)'],
+  ['gov-trace.ts — refus de rendre', TRACE, "if (fautesAvantRendu.length > 0)"],
   ['gov-tasks.ts — refus de rendre', TACHES, 'if (fautes.length > 0)'],
   ['gov-requirements.ts — refus de rendre', EXIGENCES, 'if (fautes.length > 0)'],
   // 🔴 LES SORTIES TERMINALES — celles dont le retrait rend la gate ENTIÈRE verte. La lentille
@@ -125,11 +123,7 @@ const REFUS = [
   // garde existe précisément pour empêcher — ou d'ouvrir une trappe d'injection dans la gate,
   // c'est-à-dire d'élargir la surface qu'on protège. **Aucune des deux ne se défend.** Ce
   // témoin-ci tue la mutation réelle qui a été posée ; il ne ferme pas la famille.
-  [
-    'gov-entite.ts — SORTIE TERMINALE (garde d’argent, dépôt PUBLIC)',
-    ENTITE,
-    'if (fautes.length > 0)',
-  ],
+  ['gov-entite.ts — SORTIE TERMINALE (garde d’argent, dépôt PUBLIC)', ENTITE, 'if (fautes.length > 0)'],
   ['schema-enums.ts — SORTIE TERMINALE', ENUMS, 'if (fautes.length > 0)'],
 ] as const;
 
@@ -169,9 +163,7 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
     const iEcriture = bloc.indexOf('writeFileSync(CHEMIN_VUE');
     expect(iControle, 'le bloc --render n’appelle pas `controler`').toBeGreaterThanOrEqual(0);
     expect(iEcriture, 'le bloc --render n’écrit pas la vue').toBeGreaterThanOrEqual(0);
-    expect(iControle, 'le contrôle vient APRÈS l’écriture — il ne garde rien').toBeLessThan(
-      iEcriture
-    );
+    expect(iControle, 'le contrôle vient APRÈS l’écriture — il ne garde rien').toBeLessThan(iEcriture);
     expect(bloc, 'le refus ne sort pas en échec').toContain('process.exit(1)');
   });
 
@@ -179,14 +171,8 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
     // La mutation posée par la lentille était `if (false)`. Une condition qui ne dépend pas des
     // fautes ne garde rien, et se lit pourtant comme une garde.
     const bloc = blocApres(TRACE, "if (process.argv.includes('--render'))");
-    expect(
-      /if \(fautesAvantRendu\.length > 0\)/.test(bloc),
-      'la condition du refus a été altérée'
-    ).toBe(true);
-    expect(
-      /if \((?:false|0|null|undefined)\b/.test(bloc),
-      'le refus est neutralisé par une constante'
-    ).toBe(false);
+    expect(/if \(fautesAvantRendu\.length > 0\)/.test(bloc), 'la condition du refus a été altérée').toBe(true);
+    expect(/if \((?:false|0|null|undefined)\b/.test(bloc), 'le refus est neutralisé par une constante').toBe(false);
 
     // 🔴 ET LA VALEUR AUSSI, PAS SEULEMENT LA CONDITION — survivant S2 de la lentille
     // `mutation` au 11e tour : `controler(univers).filter(() => false)` laisse la condition MOT
@@ -205,9 +191,7 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
     // Toute instruction glissée entre les deux — c'est la seule façon de neutraliser la valeur
     // sans toucher à la condition — rompt l'appariement.
     expect(
-      /const fautesAvantRendu = controler\(univers\);\s*if \(fautesAvantRendu\.length > 0\) \{/.test(
-        bloc
-      ),
+      /const fautesAvantRendu = controler\(univers\);\s*if \(fautesAvantRendu\.length > 0\) \{/.test(bloc),
       'une instruction s’intercale entre `controler(univers)` et son test : la valeur peut être ' +
         'vidée sans que la condition change'
     ).toBe(true);
@@ -231,18 +215,15 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
     ] as const) {
       const bloc = blocApres(source, 'if (fautes.length > 0)');
       expect(bloc, `${nom} : le refus ne nomme pas ce qu'il refuse`).toMatch(/Refus de rendre/);
-      expect(bloc, `${nom} : le refus imprime mais ne sort pas en échec`).toContain(
-        'process.exit(1)'
-      );
+      expect(bloc, `${nom} : le refus imprime mais ne sort pas en échec`).toContain('process.exit(1)');
 
       const iControle = source.indexOf('const fautes = controler(');
       const iEcriture = source.indexOf('writeFileSync(CHEMIN_VUE');
       expect(iControle, `${nom} : aucun appel à controler`).toBeGreaterThanOrEqual(0);
       expect(iEcriture, `${nom} : la vue n'est jamais écrite`).toBeGreaterThanOrEqual(0);
-      expect(
-        iControle,
-        `${nom} : le contrôle vient APRÈS l'écriture — il ne garde rien`
-      ).toBeLessThan(iEcriture);
+      expect(iControle, `${nom} : le contrôle vient APRÈS l'écriture — il ne garde rien`).toBeLessThan(
+        iEcriture
+      );
 
       // 🔴 ET L'ADJACENCE, QUE CES DEUX-LÀ N'AVAIENT JAMAIS REÇUE. Motif BLOQUANT de la lentille
       // `mutation` au tour de clôture : l'assertion qui ferme cette famille existait pour
@@ -264,9 +245,14 @@ describe('REQ-GOV-032 — un refus de rendre contrôle AVANT d’écrire, et sor
       // seule celle qui décrit une RÈGLE survit à sa correction.*
     }
   });
+
+
+
+
 });
 
 describe('REQ-GOV-032 — TOUS les refus de cette PR SORTENT, pas seulement celui qu’on a testé', () => {
+
   for (const [nom, source, ancre] of REFUS) {
     it(`REQ-GOV-032 — TÉMOIN : le refus « ${nom} » SORT en échec`, () => {
       exigerQueLeRefusSORTE(nom, source, ancre);
@@ -279,10 +265,9 @@ describe('REQ-GOV-032 — TOUS les refus de cette PR SORTENT, pas seulement celu
         condition.test(source),
         `${nom} : la branche de succès a été élargie — la sortie en échec devient inatteignable`
       ).toBe(true);
-      expect(
-        /if \(true\)/.test(source),
-        `${nom} : une branche constante avale le chemin d'échec`
-      ).toBe(false);
+      expect(/if \(true\)/.test(source), `${nom} : une branche constante avale le chemin d'échec`).toBe(
+        false
+      );
     });
   }
 });
@@ -383,10 +368,9 @@ describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de l
       '`--pr <numéro>` est OBLIGATOIRE'
     );
     // CONTRE-TÉMOIN : on a échoué pour LA bonne raison, pas parce qu'il manquait autre chose.
-    expect(
-      stderr.includes('usage: pnpm pr:corps'),
-      'refusé par la ligne d’usage, pas par `--pr`'
-    ).toBe(false);
+    expect(stderr.includes('usage: pnpm pr:corps'), 'refusé par la ligne d’usage, pas par `--pr`').toBe(
+      false
+    );
     // Et rien n'a été écrit : un refus qui rend quand même est le mutant du 10e tour.
     expect(existsSync(sortieHorsDepot), 'le binaire a refusé ET écrit la sortie').toBe(false);
   }, 60_000);
@@ -424,10 +408,23 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    * minimum qu'on doive à un défaut qu'on n'a pas le temps de fermer : le rendre impossible à
    * ajouter en silence.
    */
-  const declares: Record<
-    string,
-    { total: number; porte: number; temoins: number; raison: string }
-  > = {
+  const declares: Record<string, { total: number; porte: number; temoins: number; raison: string }> = {
+    'scripts/gates/gov-check.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO : le compteur `temoins` de ce registre est confronté au tableau `REFUS` de CE fichier,
+      // et les témoins de cette sortie vivent dans `termes-interdits.spec.ts`.
+      temoins: 0,
+      raison:
+        'GOV-030 — la garde des termes interdits, que des documents invoquaient sans qu’elle ' +
+        'existe. UNE sortie, `process.exit(decision.code)`, commune aux deux modes : le code vient ' +
+        'de `decisionDeLaPreuve` (témoin sans morsure, faux positif, population du registre ' +
+        'illisible, divergente ou non couverte) ou de `decisionDeLaGarde` (une faute sur le dépôt). ' +
+        'Les deux sont des fonctions PURES que `termes-interdits.spec.ts` voit rendre 1 entrée par ' +
+        'entrée, et la sortie elle-même est vue en 1 sur un dépôt jetable fautif. Le REFUS DE ' +
+        'PÉRIMÈTRE n’est pas compté ici : il vient de `fichiersSuivisOuRefus`, et ' +
+        '`GARDES_QUI_BALAIENT` le déclare plus bas.',
+    },
     // ── RÉCONCILIATION `gov-038` : QUATRE fichiers apportent DIX sorties non nulles ──────────
     // Le cliquet a rougi en NOMMANT le premier (`gov-attestation.ts ajoute 3 … et n'est PAS
     // déclaré ici`) : c'est exactement son office. Les trois gestes sont faits pour chacun —
@@ -441,7 +438,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       raison:
         'GOV-038 — atteste une livraison faite dans un AUTRE dépôt. Les trois sorties sont des ' +
         "refus d'usage : `--en-ligne` absent, appel `gh` en échec, PR non résolue. Aucune ne " +
-        'garde un invariant de sécurité de CE dépôt ; leur témoin viendra avec la tâche qui ' +
+        "garde un invariant de sécurité de CE dépôt ; leur témoin viendra avec la tâche qui " +
         'câblera la gate en CI.',
     },
     'scripts/gates/perf-budgets.ts': {
@@ -451,10 +448,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       raison:
         'GOV-019 — budgets de performance. Quatre refus : registre illisible, budget dépassé, ' +
         'mode inconnu, vue divergente. ⚠️ `fichiersDeSrc()` y rend `[]` si `src/` manque — la ' +
-        'variante affaiblie du patron que ce lot ferme ailleurs — invisible à la réciproque, au ' +
-        'témoin `ls-files` et aux trois `describe`, car elle ne balaie pas `git ls-files`. ' +
+        "variante affaiblie du patron que ce lot ferme ailleurs — invisible à la réciproque, au " +
+        "témoin `ls-files` et aux trois `describe`, car elle ne balaie pas `git ls-files`. " +
         '⚠️ AUCUNE tâche du backlog ne porte cette dette : `GOV-019` LIVRE `perf-budgets`, elle ne ' +
-        'corrige pas son `if (!existsSync(racine)) return []`. Relevé par `mutation` — une dette ' +
+        "corrige pas son `if (!existsSync(racine)) return []`. Relevé par `mutation` — une dette " +
         'déclarée en prose sans porteur est une dette que personne ne reprendra.',
     },
     'scripts/gates/gov-conventions.ts': {
@@ -464,7 +461,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       raison:
         'GOV-014 — conventions et sélection des gardes. Ce fichier est arrivé de `gov-038` avec ' +
         'le `try/catch { return [] }` que la PR #31 avait fermé pour les cinq autres gardes, ' +
-        'SANS entrer en conflit. Converti à `fichiersSuivisOuRefus`. Ses deux sorties sont ' +
+        "SANS entrer en conflit. Converti à `fichiersSuivisOuRefus`. Ses deux sorties sont " +
         'désormais couvertes par les trois témoins de `REQ-CPL-018`, qui le voient parce que ' +
         '`GARDES_QUI_BALAIENT` le DÉCLARE — et une réciproque attrape la garde qu’on oublierait d’y inscrire.',
     },
@@ -486,8 +483,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       total: 4,
       porte: 4,
       temoins: 2,
-      raison:
-        '`--pr` obligatoire et concordance des têtes ont un témoin ; les deux autres sont ' +
+      raison: '`--pr` obligatoire et concordance des têtes ont un témoin ; les deux autres sont ' +
         'des refus d’usage (arguments manquants), sans effet de sécurité.',
     },
     'scripts/gates/gov-pr.ts': {
@@ -496,28 +492,20 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       temoins: 1,
       raison: 'la concordance des têtes a un témoin ; le second est le `catch` d’appel à la forge.',
     },
-    'scripts/gates/gov-trace.ts': {
-      total: 1,
-      porte: 10,
-      temoins: 1,
-      raison: 'le refus de rendre, témoin + adjacence.',
-    },
+    'scripts/gates/gov-trace.ts': { total: 1,
+      porte: 10, temoins: 1, raison: 'le refus de rendre, témoin + adjacence.' },
     'scripts/gates/gov-tasks.ts': {
       total: 1,
       porte: 11,
       temoins: 1,
       raison:
-        'le refus de rendre a un témoin. 🔧 2 → 1 à la réconciliation : le delta se mesure contre ' +
-        '`origin/main`, et `main` a absorbé une des deux sorties en fusionnant la PR #31. ' +
-        '*Un delta n’est pas une propriété du fichier : c’est une propriété de la DISTANCE ' +
-        'entre lui et sa base, et la base bouge.* GOV-038 y ajoute `pr_nu_hors_depot`.',
+        'le refus de rendre a un témoin. 🔧 2 → 1 à la réconciliation : le delta se mesure contre '
+        + '`origin/main`, et `main` a absorbé une des deux sorties en fusionnant la PR #31. '
+        + '*Un delta n’est pas une propriété du fichier : c’est une propriété de la DISTANCE '
+        + 'entre lui et sa base, et la base bouge.* GOV-038 y ajoute `pr_nu_hors_depot`.',
     },
-    'scripts/gates/gov-requirements.ts': {
-      total: 3,
-      porte: 8,
-      temoins: 1,
-      raison: 'le refus de rendre a un témoin ; 2 non couverts.',
-    },
+    'scripts/gates/gov-requirements.ts': { total: 3,
+      porte: 8, temoins: 1, raison: 'le refus de rendre a un témoin ; 2 non couverts.' },
     'scripts/gates/schema-enums.ts': {
       total: 5,
       porte: 5,
@@ -596,9 +584,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     const compter = (texte: string) => (texte.match(SORTIE_NON_NULLE) ?? []).length;
     const surMain = (f: string) => {
       try {
-        return compter(
-          execFileSync('git', ['show', `origin/main:${f}`], { encoding: 'utf8', maxBuffer: 64e6 })
-        );
+        return compter(execFileSync('git', ['show', `origin/main:${f}`], { encoding: 'utf8', maxBuffer: 64e6 }));
       } catch {
         return 0; // fichier neuf : tout ce qu'il porte est ajouté par la PR
       }
@@ -660,6 +646,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       baseLisible,
       '`origin/main` est introuvable : la dérivation ne mesure RIEN, et son silence ne prouve rien'
     ).toBe(true);
+
 
     // La cardinalité vaut dans LES DEUX régimes — diff plein ou diff vide — donc elle est hissée
     // hors de toute branche. `simplicite` a relevé qu'une première rédaction la portait dans un
@@ -746,7 +733,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // `gov-tasks` +1). Le cliquet a rougi en nommant le premier — il n'a pas été contourné, il a
     // été LU. ⚠️ Le seuil est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une
     // branche. Mesuré sur l'arbre réconcilié : 179 sorties non nulles sous `scripts/`.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(35);
+    // 🔧 35 → 36 par GOV-030, ARBITRÉ et non subi. `scripts/gates/gov-check.ts` naît avec UNE
+    // sortie non nulle, `process.exit(decision.code)` : la décision est une fonction pure, vue
+    // rendre 1 par `termes-interdits.spec.ts`, et la sortie est vue en 1 sur un dépôt jetable.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(36);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -828,9 +818,7 @@ describe('REQ-CPL-018 — la garde d’ARGENT sort en échec : témoin d’EFFET
     // Sans lui, un harnais qui échoue pour n'importe quelle raison (chemin, `tsx` absent, registre
     // incomplet) rendrait un non-zéro que je lirais comme « la garde a vu la coordonnée ».
     const propre = lancerLaGarde(depot);
-    expect(propre.code, `le dépôt jetable SANS coordonnée ne rend pas 0 :\n${propre.sortie}`).toBe(
-      0
-    );
+    expect(propre.code, `le dépôt jetable SANS coordonnée ne rend pas 0 :\n${propre.sortie}`).toBe(0);
 
     // ── LE TÉMOIN ────────────────────────────────────────────────────────────────────────────
     const iban = ibanFabrique('30006000011234567890189');
@@ -920,6 +908,7 @@ describe('REQ-CPL-018 — `--corps-publie` : le verdict SORT, il ne se contente 
     ).toBe(false);
   }, 120_000);
 });
+
 
 /**
  * 🔴 LA FAMILLE NE SE FERME PAS PAR DU TEXTE. On lance le programme.
@@ -1104,16 +1093,10 @@ function famillesDeclarees(script: string): { noms: string[]; calculee: boolean 
       if (src[i] === '[') profondeur++;
       else if (src[i] === ']') {
         profondeur--;
-        if (profondeur === 0) {
-          fin = i;
-          break;
-        }
+        if (profondeur === 0) { fin = i; break; }
       }
     }
-    if (fin < 0)
-      throw new Error(
-        `${script} : liste \`FAMILLES\` non refermée — l’extracteur ne peut pas la lire.`
-      );
+    if (fin < 0) throw new Error(`${script} : liste \`FAMILLES\` non refermée — l’extracteur ne peut pas la lire.`);
     const corps = src.slice(m.index! + m[0].length, fin);
     for (const x of corps.matchAll(/nom: '([a-z_]+)'/g)) noms.add(x[1]!);
     for (const x of corps.matchAll(/'([a-z_]+)'/g)) noms.add(x[1]!);
@@ -1130,8 +1113,7 @@ function famillesDeclarees(script: string): { noms: string[]; calculee: boolean 
     }
     return null;
   }
-  if (noms.size === 0)
-    throw new Error(`${script} : liste \`FAMILLES\` trouvée mais AUCUN nom extrait.`);
+  if (noms.size === 0) throw new Error(`${script} : liste \`FAMILLES\` trouvée mais AUCUN nom extrait.`);
   return { noms: [...noms], calculee };
 }
 
@@ -1215,11 +1197,7 @@ function environnementDeProduction(): NodeJS.ProcessEnv {
   return env;
 }
 
-function lancerLaGate(
-  script: string,
-  cwd: string,
-  args: string[] = []
-): { code: number; sortie: string } {
+function lancerLaGate(script: string, cwd: string, args: string[] = []): { code: number; sortie: string } {
   try {
     const stdout = execFileSync('npx', ['tsx', resolve(script), ...args], {
       cwd,
@@ -1272,7 +1250,11 @@ const GATES_A_TEMOIN_D_EFFET = [
     depot: 'partiel' as const,
     vue: 'docs/TASKS.md',
     script: 'scripts/gates/gov-tasks.ts',
-    fichiers: ['docs/tasks.json', 'docs/DECISIONS.md', 'scripts/lot/tasks.schema.json'],
+    fichiers: [
+      'docs/tasks.json',
+      'docs/DECISIONS.md',
+      'scripts/lot/tasks.schema.json',
+    ],
     // Une dépendance vers une tâche qui n'existe pas : faute RÉELLE, contrôlée par la gate.
     fautes: [
       {
@@ -1281,12 +1263,8 @@ const GATES_A_TEMOIN_D_EFFET = [
           const p = join(depot, 'docs/tasks.json');
           const doc = JSON.parse(readFileSync(p, 'utf8')) as { taches: { deps?: string[] }[] };
           doc.taches[0]!.deps = [...(doc.taches[0]!.deps ?? []), 'XXX-999'];
-          writeFileSync(
-            p,
-            `${JSON.stringify(doc, null, 2)}
-`,
-            'utf8'
-          );
+          writeFileSync(p, `${JSON.stringify(doc, null, 2)}
+`, 'utf8');
         },
       },
       {
@@ -1296,12 +1274,8 @@ const GATES_A_TEMOIN_D_EFFET = [
           const p = join(depot, 'docs/tasks.json');
           const doc = JSON.parse(readFileSync(p, 'utf8')) as { taches: Record<string, unknown>[] };
           delete doc.taches[0]!.statut;
-          writeFileSync(
-            p,
-            `${JSON.stringify(doc, null, 2)}
-`,
-            'utf8'
-          );
+          writeFileSync(p, `${JSON.stringify(doc, null, 2)}
+`, 'utf8');
         },
       },
     ],
@@ -1311,23 +1285,21 @@ const GATES_A_TEMOIN_D_EFFET = [
     depot: 'partiel' as const,
     vue: 'docs/REQUIREMENTS.md',
     script: 'scripts/gates/gov-requirements.ts',
-    fichiers: ['docs/requirements.json', 'docs/tasks.json', 'scripts/lot/requirements.schema.json'],
+    fichiers: [
+      'docs/requirements.json',
+      'docs/tasks.json',
+      'scripts/lot/requirements.schema.json',
+    ],
     // Un champ obligatoire retiré : le schéma doit le refuser.
     fautes: [
       {
         famille: 'schema',
         appliquer: (depot: string) => {
           const p = join(depot, 'docs/requirements.json');
-          const doc = JSON.parse(readFileSync(p, 'utf8')) as {
-            exigences: Record<string, unknown>[];
-          };
+          const doc = JSON.parse(readFileSync(p, 'utf8')) as { exigences: Record<string, unknown>[] };
           delete doc.exigences[0]!.statut;
-          writeFileSync(
-            p,
-            `${JSON.stringify(doc, null, 2)}
-`,
-            'utf8'
-          );
+          writeFileSync(p, `${JSON.stringify(doc, null, 2)}
+`, 'utf8');
         },
       },
       {
@@ -1337,12 +1309,8 @@ const GATES_A_TEMOIN_D_EFFET = [
           const p = join(depot, 'docs/requirements.json');
           const doc = JSON.parse(readFileSync(p, 'utf8')) as { exigences: { id: string }[] };
           doc.exigences[1]!.id = doc.exigences[0]!.id;
-          writeFileSync(
-            p,
-            `${JSON.stringify(doc, null, 2)}
-`,
-            'utf8'
-          );
+          writeFileSync(p, `${JSON.stringify(doc, null, 2)}
+`, 'utf8');
         },
       },
     ],
@@ -1362,9 +1330,7 @@ const GATES_A_TEMOIN_D_EFFET = [
         famille: 'tache_sans_req',
         appliquer: (depot: string) => {
           const p = join(depot, 'docs/tasks.json');
-          const doc = JSON.parse(readFileSync(p, 'utf8')) as {
-            taches: { statut: string; reqs: string[] }[];
-          };
+          const doc = JSON.parse(readFileSync(p, 'utf8')) as { taches: { statut: string; reqs: string[] }[] };
           const livree = doc.taches.find((t) => t.statut === 'fusionnee' && t.reqs.length > 0)!;
           livree.reqs = [];
           writeFileSync(p, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
@@ -1378,9 +1344,7 @@ const GATES_A_TEMOIN_D_EFFET = [
           const doc = JSON.parse(readFileSync(p, 'utf8')) as {
             taches: { statut: string; reqs: string[]; tests?: Record<string, string[]> }[];
           };
-          const livree = doc.taches.find(
-            (t) => t.statut === 'fusionnee' && t.tests && Object.keys(t.tests).length > 0
-          )!;
+          const livree = doc.taches.find((t) => t.statut === 'fusionnee' && t.tests && Object.keys(t.tests).length > 0)!;
           const req = Object.keys(livree.tests!)[0]!;
           livree.tests![req] = ['tests/unit/gouvernance/ce-fichier-n-existe-pas.spec.ts'];
           writeFileSync(p, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
@@ -1396,16 +1360,14 @@ describe('REQ-GOV-032 — TÉMOINS D’EFFET : une gate neutralisée ne peut pas
       it(`REQ-GOV-032 — \`${nom}\` SORT en échec sur une faute RÉELLE de famille \`${famille}\`, et 0 sans elle`, () => {
         // CONTRÔLE POSITIF D'ABORD. Sans lui, une gate qui refuserait TOUT rendrait ce témoin vert
         // pour la mauvaise raison — un fichier d'entrée manquant, un chemin qui ne résout plus.
-        const sain =
-          depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
+        const sain = depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
         const avant = lancerLaGate(script, sain);
         expect(
           avant.code,
           `${nom} refuse un dépôt SAIN (code ${avant.code}) — le témoin ne mesurerait rien :\n${avant.sortie.slice(0, 600)}`
         ).toBe(0);
 
-        const casse =
-          depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
+        const casse = depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
         appliquer(casse);
         const apres = lancerLaGate(script, casse);
         expect(
@@ -1427,6 +1389,7 @@ describe('REQ-GOV-032 — TÉMOINS D’EFFET : une gate neutralisée ne peut pas
     }
   }
 });
+
 
 /**
  * 🔴 LE MODE `--render` EST CELUI QUE CE FICHIER EXISTE POUR GARDER, ET MON TÉMOIN NE L'APPELAIT
@@ -1471,8 +1434,7 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
         // bouge PAS sur une source fautive **sans avoir jamais prouvé qu'elle bouge sur une source
         // saine** — une gate qui n'écrirait plus rien du tout aurait passé les deux assertions.
         // On vide la vue, on rend, elle doit être RÉÉCRITE.
-        const sain =
-          depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
+        const sain = depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
         const cheminSain = join(sain, vue);
         const TEMOIN_DE_VIDE = 'VIDÉE PAR LE TÉMOIN — le rendu doit la réécrire\n';
         writeFileSync(cheminSain, TEMOIN_DE_VIDE, 'utf8');
@@ -1486,8 +1448,7 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
           `${nom} --render sort en 0 mais n’ÉCRIT PAS ${vue} — le témoin de non-écriture ne prouverait rien`
         ).not.toBe(TEMOIN_DE_VIDE);
 
-        const casse =
-          depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
+        const casse = depot === 'complet' ? depotCompletJetable() : depotJetableAvec([...fichiers, vue]);
         appliquer(casse);
         const cheminVue = join(casse, vue);
         const vueAvant = readFileSync(cheminVue, 'utf8');
@@ -1497,10 +1458,9 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
           apres.code,
           `${nom} --render n’est PAS sortie en échec sur une faute \`${famille}\` :\n${apres.sortie.slice(0, 600)}`
         ).not.toBe(0);
-        expect(
-          apres.sortie,
-          `${nom} --render refuse, mais pas pour avoir REFUSÉ DE RENDRE`
-        ).toContain('Refus de rendre');
+        expect(apres.sortie, `${nom} --render refuse, mais pas pour avoir REFUSÉ DE RENDRE`).toContain(
+          'Refus de rendre'
+        );
         // 🔑 LE DOMMAGE RÉEL. Un refus qui sort en 1 APRÈS avoir écrit reste un défaut, et aucune
         // assertion sur le code de sortie ne le verrait.
         expect(
@@ -1511,6 +1471,7 @@ describe('REQ-GOV-032 — TÉMOIN D’EFFET du mode `--render` : une vue n’est
     }
   }
 });
+
 
 /**
  * 🔴 CHAQUE ENTRÉE DÉCLARÉE DOIT ÊTRE NÉCESSAIRE.
@@ -1544,6 +1505,7 @@ describe('REQ-GOV-032 — les entrées déclarées des témoins d’effet sont t
     }
   }
 });
+
 
 /**
  * 🔴 TÉMOIN D'EFFET DU REFUS `perimetre_illisible` — le défaut le plus grave trouvé de la session.
@@ -1717,12 +1679,18 @@ ${r.sortie.slice(0, 600)}`
  * ci-dessous attrape l'oubli inverse : toute garde qui importe la primitive doit y figurer.
  */
 const GARDES_QUI_BALAIENT = [
+  // GOV-030 — `gov-check` établit son périmètre AVANT de lire ses sources, précisément pour que
+  // son refus depuis `packages/` porte le nom `perimetre_illisible` au lieu d'un `ENOENT` muet.
+  'scripts/gates/gov-check.ts',
   'scripts/gates/gov-conventions.ts',
   'scripts/gates/gov-entite.ts',
   'scripts/gates/gov-identifiants.ts',
   'scripts/gates/gov-preseance.ts',
   'scripts/gates/gov-publication.ts',
   'scripts/gates/lexique-apporteurs.ts',
+  // GOV-030 (`partners/ADR-0011`) — `partners:schema:enums` lit sa portée dans les fichiers SUIVIS,
+  // quelle que soit leur extension.
+  'scripts/gates/schema-enums.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {
@@ -1733,9 +1701,7 @@ it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉC
     readFileSync(f, 'utf8').includes('fichiersSuivisOuRefus')
   );
   expect(
-    importent.filter(
-      (f) => !GARDES_QUI_BALAIENT.includes(f as (typeof GARDES_QUI_BALAIENT)[number])
-    ),
+    importent.filter((f) => !GARDES_QUI_BALAIENT.includes(f as (typeof GARDES_QUI_BALAIENT)[number])),
     'ces gardes importent `fichiersSuivisOuRefus` sans être déclarées dans GARDES_QUI_BALAIENT'
   ).toEqual([]);
 });
@@ -1779,6 +1745,7 @@ it('REQ-CPL-018 — `git ls-files` n’est appelé QUE par la source unique du p
 });
 
 describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE refuse', () => {
+
   for (const script of GARDES_QUI_BALAIENT) {
     it(`REQ-CPL-018 — \`${script}\` REFUSE quand \`git ls-files\` ne répond pas`, () => {
       // Un dossier SANS `.git` : `faireDeCeDossierUnDepot` n'est PAS appelé ici, c'est le sujet.
@@ -1793,9 +1760,7 @@ describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE ref
         aveugle.code,
         `${script} rend un verdict sur un périmètre INCONNU — elle a imprimé :\n${aveugle.sortie.slice(0, 500)}`
       ).not.toBe(0);
-      expect(aveugle.sortie, `${script} refuse, mais pas pour \`perimetre_illisible\``).toContain(
-        'perimetre_illisible'
-      );
+      expect(aveugle.sortie, `${script} refuse, mais pas pour \`perimetre_illisible\``).toContain('perimetre_illisible');
 
       // CONTRE-TÉMOIN : sur le dépôt RÉEL elle reste verte. Sans lui, un faux rouge passerait
       // pour une correction.
@@ -1807,6 +1772,7 @@ describe('REQ-CPL-018 — une garde qui ne peut pas établir son PÉRIMÈTRE ref
     }, 180_000);
   }
 });
+
 
 /**
  * 🔑 `perimetre_illisible` N'EST PAS UNE FAMILLE DE FAUTE — c'est un REFUS DE PRÉCONDITION.
