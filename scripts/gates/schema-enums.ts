@@ -19,9 +19,18 @@
  *     (`src/domain/attribution/etats.ts`) et la colonne « Occupant ? » du glossaire lui sont
  *     comparées, jamais l'inverse. Deux copies existent parce que l'une doit être exécutable et
  *     l'autre lisible ; c'est cette garde qui les tient égales (RM-01, RM-06).
- *   — Aucune LISTE LITTÉRALE d'états occupants ailleurs dans le code : trois de ces sept noms sur
- *     une même ligne suffisent à faire rougir. L'index partiel proposé par les documents d'origine
- *     ne couvrait que deux états sur sept, et rien ne l'a dit pendant des semaines.
+ *   — Aucune LISTE LITTÉRALE d'états occupants ailleurs dans le code : DEUX de ces sept noms sur
+ *     une même ligne suffisent à faire rougir, et le discriminant est la COUVERTURE, jamais la
+ *     syntaxe — une clause `IN (…)` et une comparaison booléenne `x === a || x === b` rougissent
+ *     pareil. L'index partiel proposé par les documents d'origine ne couvrait que deux états sur
+ *     sept, et rien ne l'a dit pendant des semaines.
+ *     Cette garde est la SEULE implémentation de la famille (`partners/ADR-0011`). Sa portée —
+ *     tout fichier SUIVI sous `RACINES_CODE`, quelle que soit son extension — tient dans
+ *     `dansLaPorteeDesEtats` : la lecture du dépôt en dérive, et `gov-check.ts` en dérive, à chaque
+ *     exécution, ses racines que cette famille ne couvre pas.
+ *   — Une LIGNE est ce que LF termine, CRLF compris. Un texte lu qui porte une autre fin de ligne
+ *     qu'un consommateur coupe est refusé (`fin_de_ligne_non_lf`) : découpé sur LF, un champ du
+ *     schéma s'y collerait au précédent. `finDeLigneEtrangere` est la règle, et `gov-check.ts` l'importe.
  *   — Toute colonne de VOCABULAIRE est un enum. ⚠️ La citation de `REQ-DM-038` — « statut, type,
  *     motif, resultat, etat, origine, kind ou palier » — est le texte du REGISTRE, qui a perdu
  *     `status` et `priorite` à la fusion. La liste EXÉCUTÉE (`NOMS_DE_VOCABULAIRE`) porte les dix
@@ -44,8 +53,8 @@
  * `liste_litterale_d_etats`, comme `gov-identifiants.ts` l'est de la sienne.
  */
 
-import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
 const CHEMIN_SCHEMA = 'prisma/schema.prisma';
 const CHEMIN_GLOSSAIRE = 'docs/GLOSSAIRE.md';
@@ -53,15 +62,53 @@ const CHEMIN_EXIGENCES = 'docs/requirements.json';
 const CHEMIN_ETATS = 'src/domain/attribution/etats.ts';
 
 /** Les racines où une liste d'états ou un repli muet ne doivent pas apparaître. */
-const RACINES_CODE = ['src', 'prisma', 'scripts'];
-const EXTENSIONS_CODE = /\.(ts|tsx|prisma|sql)$/;
+export const RACINES_CODE = ['src', 'prisma', 'scripts'] as const;
 
 /**
- * Les deux fichiers qui ont le DROIT de porter la liste : sa source unique, et la garde qui
- * l'exerce. Exempter l'un sans l'autre reviendrait soit à interdire la solution, soit à ne
- * jamais pouvoir écrire le témoin qui prouve que la garde sait rougir.
+ * LA PORTÉE de la famille des listes d'états : tout fichier suivi sous une racine de `RACINES_CODE`,
+ * QUELLE QUE SOIT SON EXTENSION — une liste d'extensions échoue ouvert sur celle qu'elle oublie.
+ * La lecture du dépôt en dérive, et `gov-check.ts` aussi : une racine est dans la portée quand tout
+ * chemin qui commence par elle l'est.
  */
-const PORTEURS_LEGITIMES = [CHEMIN_ETATS, 'scripts/gates/schema-enums.ts'];
+export function dansLaPorteeDesEtats(chemin: string): boolean {
+  return RACINES_CODE.some((racine) => chemin.startsWith(`${racine}/`));
+}
+
+/** Posés par leur code : écrits dans ce fichier, ils le couperaient lui-même. */
+const CR = String.fromCharCode(13);
+const LF = String.fromCharCode(10);
+const FIN_DE_LIGNE_ETRANGERE = new RegExp(`${CR}(?!${LF})|[${String.fromCharCode(0x2028, 0x2029)}]`);
+
+/**
+ * LA FIN DE LIGNE des gardes qui découpent un texte en lignes — celle-ci et `gov-check.ts` : LF, et
+ * CRLF, dont le CR reste en fin de ligne. Rend la PREMIÈRE autre fin de ligne qu'un consommateur du
+ * dépôt coupe — CR seul (Prisma, PostgreSQL, CommonMark), U+2028 ou U+2029 (ECMAScript) —, avec son
+ * numéro de ligne au sens de LF. Un tel texte serait jugé sur d'autres lignes que celles de son
+ * consommateur : un commentaire couvrirait l'instruction suivante, un champ se collerait au précédent.
+ * Les deux gardes le REFUSENT (`fin_de_ligne_non_lf`) au lieu de le juger.
+ */
+export function finDeLigneEtrangere(texte: string): { ligne: number; code: string } | undefined {
+  const m = FIN_DE_LIGNE_ETRANGERE.exec(texte);
+  if (!m) return undefined;
+  return {
+    ligne: texte.slice(0, m.index).split(LF).length,
+    code: `U+${m[0].charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}`,
+  };
+}
+
+/**
+ * Les fichiers qui ont le DROIT de porter la liste. CHACUN PORTE SON MOTIF : exempter sans motif,
+ * c'est ouvrir un trou que personne ne relira. L'exemption vaut pour le CHEMIN EXACT, et chaque
+ * entrée a un contre-témoin atteignable (sous une racine de `RACINES_CODE`) ; un voisin de la
+ * source unique, dans le même dossier, a son témoin qui rougit.
+ */
+const PORTEURS_LEGITIMES: { chemin: string; motif: string }[] = [
+  { chemin: CHEMIN_ETATS, motif: 'la source unique — interdire ici, c’est interdire la solution' },
+  {
+    chemin: 'scripts/gates/schema-enums.ts',
+    motif: 'la garde elle-même : sa fixture et ses témoins SONT des listes d’états (RM-11)',
+  },
+];
 
 /**
  * Les noms de colonne qui portent un vocabulaire (REQ-DM-038, REQ-GOV-016).
@@ -114,6 +161,11 @@ export const FAMILLES: { nom: string; explication: string }[] = [
     nom: 'source_illisible',
     explication:
       "le texte de REQ-DM-003 ne donne plus la liste des états occupants : la garde ne sait plus à quoi comparer.",
+  },
+  {
+    nom: 'fin_de_ligne_non_lf',
+    explication:
+      "un texte lu porte une fin de ligne autre que LF ou CRLF qu'un consommateur coupe : la garde le jugerait sur d'autres lignes que les siennes.",
   },
   {
     nom: 'etats_occupants_divergents',
@@ -278,6 +330,26 @@ export function controler(vue: Vue): Faute[] {
     ];
   }
 
+  // Chaque texte lu, UNE fois par chemin (le schéma et la source des états sont aussi dans `code`).
+  const textes = new Map<string, string>([
+    ['REQ-DM-003', vue.reqDm003],
+    [CHEMIN_GLOSSAIRE, vue.glossaire],
+    [CHEMIN_SCHEMA, vue.schema],
+    [CHEMIN_ETATS, vue.etatsSource],
+    ...vue.code.map((f): [string, string] => [f.chemin, f.contenu]),
+  ]);
+  for (const [chemin, texte] of textes) {
+    const fin = finDeLigneEtrangere(texte);
+    if (fin === undefined) continue;
+    fautes.push({
+      famille: 'fin_de_ligne_non_lf',
+      message:
+        `${chemin}:${fin.ligne} — fin de ligne ${fin.code}, que cette garde ne coupe pas et que Prisma, ` +
+        "CommonMark ou ECMAScript coupent : un champ, une valeur d'enum ou une liste y serait jugé sur la " +
+        "ligne d'à côté. Écris LF (ou CRLF).",
+    });
+  }
+
   const constante = constanteEtatsOccupants(vue.etatsSource);
   if (!memeEnsemble(constante, attendus)) {
     fautes.push({
@@ -300,17 +372,20 @@ export function controler(vue: Vue): Faute[] {
     });
   }
 
-  // RM-06 : trois de ces sept noms sur une même ligne, hors de leur source, sont une liste.
+  // RM-06 : le discriminant est la COUVERTURE — deux états occupants nommés sur une ligne, quel
+  // que soit l'opérateur qui les relie. Seuil, alternatives écartées et retour arrière :
+  // `partners/ADR-0011`. Un prédicat légitime passe par `PORTEURS_LEGITIMES`, jamais par un seuil.
   const quotes = new RegExp(`['"\`](${attendus.join('|')})['"\`]`, 'g');
   for (const f of vue.code) {
-    if (PORTEURS_LEGITIMES.includes(f.chemin)) continue;
+    if (PORTEURS_LEGITIMES.some((p) => p.chemin === f.chemin)) continue;
     f.contenu.split('\n').forEach((ligne, i) => {
       const trouves = new Set([...ligne.matchAll(quotes)].map((m) => m[1]!));
-      if (trouves.size >= 3) {
+      if (trouves.size >= 2) {
         fautes.push({
           famille: 'liste_litterale_d_etats',
           message:
-            `${f.chemin}:${i + 1} — liste littérale d'états occupants (${[...trouves].join(', ')}). ` +
+            `${f.chemin}:${i + 1} — liste littérale d'états occupants (${[...trouves].join(', ')}, ` +
+            `soit ${trouves.size} sur ${attendus.length}). ` +
             `Importe ETATS_OCCUPANTS depuis ${CHEMIN_ETATS} : une liste recopiée ne suit jamais ` +
             "l'exigence, et l'index qui n'en couvrait que deux sur sept n'a rien fait rougir.",
         });
@@ -370,27 +445,21 @@ export function controler(vue: Vue): Faute[] {
 
 // ── la vue du dépôt ──────────────────────────────────────────────────────────
 
-function lister(racine: string): string[] {
-  if (!existsSync(racine)) return [];
-  const sortie: string[] = [];
-  for (const entree of readdirSync(racine)) {
-    const chemin = join(racine, entree).replace(/\\/g, '/');
-    if (statSync(chemin).isDirectory()) sortie.push(...lister(chemin));
-    else if (EXTENSIONS_CODE.test(chemin)) sortie.push(chemin);
-  }
-  return sortie;
-}
-
 const lireOuVide = (chemin: string): string =>
   existsSync(chemin) ? readFileSync(chemin, 'utf8') : '';
 
+/**
+ * La vue du dépôt. Le code est l'ensemble des fichiers SUIVIS de la portée, lus par la source unique
+ * du périmètre : sans dépôt git, ou lancée hors de sa racine, la garde refuse en le nommant.
+ */
 export function vueDuDepot(): Vue {
+  const suivis = fichiersSuivisOuRefus('partners:schema:enums');
   return {
     reqDm003: texteDeLaReq('REQ-DM-003'),
     glossaire: lireOuVide(CHEMIN_GLOSSAIRE),
     schema: lireOuVide(CHEMIN_SCHEMA),
     etatsSource: lireOuVide(CHEMIN_ETATS),
-    code: RACINES_CODE.flatMap(lister).map((chemin) => ({
+    code: suivis.filter(dansLaPorteeDesEtats).map((chemin) => ({
       chemin,
       contenu: readFileSync(chemin, 'utf8'),
     })),
@@ -464,6 +533,14 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
     famille: 'source_illisible',
     vue: () => ({ ...VUE_CONFORME, reqDm003: 'Au plus une attribution occupante par SIREN.' }),
   },
+  // Un CR seul, que Prisma coupe : découpé sur LF, `statut String` se colle au champ précédent et disparaît.
+  {
+    famille: 'fin_de_ligne_non_lf',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema: VUE_CONFORME.schema + ['model Attribution {', '  id     String @id', '  statut String', '}', ''].join(CR),
+    }),
+  },
   {
     famille: 'etats_occupants_divergents',
     vue: () => ({
@@ -486,6 +563,32 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
         {
           chemin: 'src/server/attribution/requete.ts',
           contenu: "const vivantes = ['provisoire', 'active', 'signee'];",
+        },
+      ],
+    }),
+  },
+  // La comparaison booléenne à deux états : le verdict ne bascule pas sur l'opérateur (`partners/ADR-0011`).
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [
+        {
+          chemin: 'src/server/x.ts',
+          contenu: "if (s === 'provisoire' || s === 'active') return;",
+        },
+      ],
+    }),
+  },
+  // Le VOISIN de la source unique, dans son dossier : l'exemption vaut pour un chemin, pas un dossier.
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [
+        {
+          chemin: 'src/domain/attribution/requete.ts',
+          contenu: "const vivantes = ['provisoire', 'active'];",
         },
       ],
     }),
@@ -524,6 +627,10 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
 const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
   { quoi: 'la vue conforme', vue: () => VUE_CONFORME },
   {
+    quoi: 'un schéma en CRLF : CRLF est une fin de ligne, la garde le lit et ne le refuse pas',
+    vue: () => ({ ...VUE_CONFORME, schema: VUE_CONFORME.schema.split(LF).join(CR + LF) }),
+  },
+  {
     quoi: 'la source unique porte la liste — sinon la garde interdirait sa propre solution',
     vue: () => ({
       ...VUE_CONFORME,
@@ -531,10 +638,12 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
     }),
   },
   {
-    quoi: 'deux états seulement sur une ligne : une requête peut nommer un couple sans le recopier',
+    // Le contre-témoin de la SECONDE exemption de `PORTEURS_LEGITIMES`. Sans lui, elle serait
+    // verte parce qu'on ne l'atteint jamais en preuve, pas parce qu'elle fonctionne.
+    quoi: 'la garde elle-même porte des listes d’états — sa fixture et ses témoins en SONT (RM-11)',
     vue: () => ({
       ...VUE_CONFORME,
-      code: [{ chemin: 'src/server/x.ts', contenu: "if (s === 'provisoire' || s === 'active') return;" }],
+      code: [{ chemin: 'scripts/gates/schema-enums.ts', contenu: "code: ['provisoire', 'active']" }],
     }),
   },
   {
@@ -601,13 +710,15 @@ if (APPELE_DIRECTEMENT) {
     process.exit(2);
   }
 
-  const fautes = controler(vueDuDepot());
+  const vue = vueDuDepot();
+  const fautes = controler(vue);
   if (fautes.length === 0) {
     const enums = enumsDuSchema(lireOuVide(CHEMIN_SCHEMA));
     const valeurs = [...enums.values()].reduce((n, v) => n + v.length, 0);
     console.log(
       `✅ partners:schema:enums — ${enums.size} enum(s), ${valeurs} valeur(s) confrontées au glossaire ; ` +
-        `ETATS_OCCUPANTS égale REQ-DM-003 ; aucune liste littérale d'états dans ${RACINES_CODE.join(', ')}.`
+        `ETATS_OCCUPANTS égale REQ-DM-003 ; aucune liste littérale d'états dans les ${vue.code.length} ` +
+        `fichier(s) suivi(s) sous ${RACINES_CODE.map((r) => `${r}/`).join(', ')}, toute extension comprise.`
     );
     process.exit(0);
   }

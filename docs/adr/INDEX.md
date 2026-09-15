@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**10 ADR · 7 `propose`, 3 `accepte`, 0 `remplace`.**
+**11 ADR · 8 `propose`, 3 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -21,3 +21,4 @@
 | [`partners/ADR-0008`](0008-contrat-evenements-enveloppe-et-nomenclature.md) | Le contrat d'événements : enveloppe sur le fil, sept types, empreinte du JSON Schema | `accepte` | 2026-09-03 | INT-T01a |
 | [`partners/ADR-0009`](0009-valeurs-du-monde-reel.md) | Une valeur que seul Will connaît est une CONFIGURATION, pas un blocage de plan | `accepte` | 2026-09-05 | CPL-T01 |
 | [`partners/ADR-0010`](0010-une-gate-bloquante-et-sa-dette-declaree.md) | Une gate bloquante dont l'exception s'écrit, plutôt qu'une gate qu'on n'exécute pas | `propose` | 2026-09-05 | CPL-T01 |
+| [`partners/ADR-0011`](0011-une-seule-implementation-des-listes-d-etats.md) | Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture | `propose` | 2026-09-14 | GOV-030 |

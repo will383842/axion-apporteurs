@@ -409,6 +409,22 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
    * ajouter en silence.
    */
   const declares: Record<string, { total: number; porte: number; temoins: number; raison: string }> = {
+    'scripts/gates/gov-check.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO : le compteur `temoins` de ce registre est confronté au tableau `REFUS` de CE fichier,
+      // et les témoins de cette sortie vivent dans `termes-interdits.spec.ts`.
+      temoins: 0,
+      raison:
+        'GOV-030 — la garde des termes interdits, que des documents invoquaient sans qu’elle ' +
+        'existe. UNE sortie, `process.exit(decision.code)`, commune aux deux modes : le code vient ' +
+        'de `decisionDeLaPreuve` (témoin sans morsure, faux positif, population du registre ' +
+        'illisible, divergente ou non couverte) ou de `decisionDeLaGarde` (une faute sur le dépôt). ' +
+        'Les deux sont des fonctions PURES que `termes-interdits.spec.ts` voit rendre 1 entrée par ' +
+        'entrée, et la sortie elle-même est vue en 1 sur un dépôt jetable fautif. Le REFUS DE ' +
+        'PÉRIMÈTRE n’est pas compté ici : il vient de `fichiersSuivisOuRefus`, et ' +
+        '`GARDES_QUI_BALAIENT` le déclare plus bas.',
+    },
     // ── RÉCONCILIATION `gov-038` : QUATRE fichiers apportent DIX sorties non nulles ──────────
     // Le cliquet a rougi en NOMMANT le premier (`gov-attestation.ts ajoute 3 … et n'est PAS
     // déclaré ici`) : c'est exactement son office. Les trois gestes sont faits pour chacun —
@@ -717,7 +733,10 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // `gov-tasks` +1). Le cliquet a rougi en nommant le premier — il n'a pas été contourné, il a
     // été LU. ⚠️ Le seuil est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une
     // branche. Mesuré sur l'arbre réconcilié : 179 sorties non nulles sous `scripts/`.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(35);
+    // 🔧 35 → 36 par GOV-030, ARBITRÉ et non subi. `scripts/gates/gov-check.ts` naît avec UNE
+    // sortie non nulle, `process.exit(decision.code)` : la décision est une fonction pure, vue
+    // rendre 1 par `termes-interdits.spec.ts`, et la sortie est vue en 1 sur un dépôt jetable.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(36);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -1660,12 +1679,18 @@ ${r.sortie.slice(0, 600)}`
  * ci-dessous attrape l'oubli inverse : toute garde qui importe la primitive doit y figurer.
  */
 const GARDES_QUI_BALAIENT = [
+  // GOV-030 — `gov-check` établit son périmètre AVANT de lire ses sources, précisément pour que
+  // son refus depuis `packages/` porte le nom `perimetre_illisible` au lieu d'un `ENOENT` muet.
+  'scripts/gates/gov-check.ts',
   'scripts/gates/gov-conventions.ts',
   'scripts/gates/gov-entite.ts',
   'scripts/gates/gov-identifiants.ts',
   'scripts/gates/gov-preseance.ts',
   'scripts/gates/gov-publication.ts',
   'scripts/gates/lexique-apporteurs.ts',
+  // GOV-030 (`partners/ADR-0011`) — `partners:schema:enums` lit sa portée dans les fichiers SUIVIS,
+  // quelle que soit leur extension.
+  'scripts/gates/schema-enums.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {
