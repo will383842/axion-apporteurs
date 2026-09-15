@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `6505119` — 2026-09-13T08:19:22+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #35 (rien) |
-| Qui tient quoi ? | aucune tâche revendiquée |
+| Où est `main` ? | `6237f96` — 2026-09-13T10:31:35+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #36 (rien) · 2. #39 (rien) · 3. #41 (rien) · 4. #44 (rien) · 5. #45 (rien) |
+| Qui tient quoi ? | GOV-035 (A01) · GOV-036 (A01) · GOV-037 (A01) · GOV-030 (A01) · GOV-031 (A01) |
 | Où en est la phase ? | phase -1 — 34/39 tâches, reste 3.50 j |
-| Le prochain pas | fusionner #35, puis GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
+| Le prochain pas | fusionner #36, puis GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
 | Dernière entrée de journal | PR #35 — 2026-09-13 |
 
-**Ce qu’on tape maintenant.** `gh pr view 35 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 36 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : -1
 
@@ -25,14 +25,15 @@
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
-| `a_faire` | 188 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
+| `proposee` | 0 | — |
+| `a_faire` | 191 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
 | `en_cours` | 0 | — |
+| `bloquee` | 0 | — |
+| `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
 | `fusionnee` | 34 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
-| `bloquee` | 0 | — |
-| `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 
 ## Chemin critique
 
@@ -59,15 +60,25 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #35 — docs(GOV-023): entree de journal de la PR 34, et la boucle qui la produit | `lot/journal-pr34` | rien — fusionnable maintenant |
+| 1 | #36 — feat(GOV-035): docs/PLAN-STATE.md avait un generateur et aucun verificateur | `t/gov-035` | rien — fusionnable maintenant |
+| 2 | #39 — feat(GOV-036): les deux listes qui decident de ce que gov:entite REGARDE | `t/gov-036` | rien — fusionnable maintenant |
+| 3 | #41 — feat(GOV-030): la garde des termes interdits que six documents invoquaient sans quelle existe | `t/gov-030` | rien — fusionnable maintenant |
+| 4 | #44 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A | `t/gov-031` | rien — fusionnable maintenant |
+| 5 | #45 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36 | `t/gov-037` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
 ## Revendications
 
-Deux sources, aucune troisième : les labels `en_cours` + `owner:<Axx>` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
+Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.
 
-Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.
+| Tâche | Revendiquée par | Issue | Statut |
+| --- | --- | --- | --- |
+| GOV-035 — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur | A01 | #37 | `a_faire` |
+| GOV-036 — Les deux listes qui decident de ce que gov:entite REGARDE sont tapees a la main | A01 | #38 | `a_faire` |
+| GOV-037 — Les nombres se derivent, les ATTRIBUTIONS non : rien ne confronte un nom de tache a ses paths | A01 | #43 | `a_faire` |
+| GOV-030 — `gov:check` designe DEUX choses, et aucune ne fait ce que six documents lui pretent | A01 | #40 | `a_faire` |
+| GOV-031 — eslint.config.mjs porte « CE FICHIER N'A JAMAIS ETE EXECUTE », et c'etait vrai | A01 | #42 | `a_faire` |
 
 ⚠️ **15 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -77,14 +88,15 @@ Aucun ADR daté du 2026-09-13 (jour du dernier atterrissage). Les décisions de 
 
 ## Prochain pas
 
-1. **Fusionner #35** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-2. **GOV-035** — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur (0.5 j) : 5 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**Fusionner #36** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+
+**GOV-035** — docs/PLAN-STATE.md est la cinquieme vue de REQ-GOV-032, et la seule sans verificateur (0.5 j) : 5 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `6505119` (2026-09-13T08:19:22+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `6237f96` (2026-09-13T10:31:35+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
-> Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
+Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 

@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 224,
-    "pairesEnIntersection": 4034,
-    "cheminsDeclares": 667,
-    "cheminsDistincts": 398,
+    "tachesCouvertes": 227,
+    "pairesEnIntersection": 4112,
+    "cheminsDeclares": 672,
+    "cheminsDistincts": 401,
     "cheminsPartages": 97,
-    "tachesSansAucuneIntersection": 41,
+    "tachesSansAucuneIntersection": 44,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T06",
@@ -49,12 +49,15 @@
       "GOV-047",
       "GOV-048",
       "GOV-051",
-      "GOV-052"
+      "GOV-052",
+      "GOV-053",
+      "GOV-054",
+      "GOV-055"
     ],
     "cheminsLesPlusPartages": [
       {
         "chemin": "docs/gates.json",
-        "taches": 78
+        "taches": 79
       },
       {
         "chemin": "prisma/schema.prisma",
@@ -189,8 +192,8 @@
       "docs/PLAN-STATE.md",
       "scripts/plan-state/build.ts",
       ".claude/skills/lot/SKILL.md",
-      "tests/unit/gouvernance/plan-state-frais.spec.ts",
       "scripts/gates/gov-etat.ts",
+      "tests/unit/gouvernance/plan-state-frais.spec.ts",
       "docs/gates.json",
       "tests/unit/gouvernance/une-tache-un-owner.spec.ts"
     ],
@@ -1189,6 +1192,8 @@
       "tests/unit/gouvernance/plan-state-frais.spec.ts"
     ],
     "GOV-035": [
+      "scripts/plan-state/build.ts",
+      "docs/gates.json",
       "tests/unit/gouvernance/vues-derivees.spec.ts"
     ],
     "GOV-036": [
@@ -1250,6 +1255,15 @@
     ],
     "GOV-052": [
       "tests/unit/gouvernance/une-pr-porte-son-entree-de-journal.spec.ts"
+    ],
+    "GOV-053": [
+      "tests/unit/gouvernance/volatilite-par-ligne.spec.ts"
+    ],
+    "GOV-054": [
+      "tests/unit/gouvernance/cliquet-sorties-differees.spec.ts"
+    ],
+    "GOV-055": [
+      "tests/unit/gouvernance/couverture-attendue.spec.ts"
     ]
   }
 }
