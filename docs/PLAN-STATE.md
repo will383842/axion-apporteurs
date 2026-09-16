@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `6f093b6` — 2026-09-16T13:56:34+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #46 (brouillon) |
+| Qu’est-ce qui est en vol ? | 1. #46 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 0/68 tâches, reste 48.75 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
@@ -64,7 +64,7 @@ Reste sur ce chemin : **16.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #46 — chore(GOV-038): la phase -1 se ferme, cinq taches passent fusionnee et GOV-056 est versee | `lot/phase-moins-1-cloture` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #46 — chore(GOV-038): la phase -1 se ferme, cinq taches passent fusionnee et GOV-056 est versee | `lot/phase-moins-1-cloture` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -107,6 +107,18 @@ livrée seule sans lot, et les cinquième et sixième livrables de GOV-037 en so
 GOV-056, phase 0, 1,5 jour. Les vues sont régénérées dans l'ordre, `plan-state:build` en dernier :
 `docs/PLAN-STATE.md` porte « Phase courante : 0 » et 39 tâches livrées sur 39 en phase −1.
 
+Un seul rouge a suivi, et il n'était pas dans le générateur. Le témoin « une exemption est PORTANTE »
+de `tests/unit/gouvernance/vues-derivees.spec.ts` donnait un label `owner:A01<valeur hostile>` à CHAQUE
+issue de `docs/tasks.json`, puis exigeait de retrouver la marque sur une ligne de la vue. Or la table
+des revendications EN VOL ne rend que les tâches NON livrées : les cinq dernières tâches portant une
+issue passant `fusionnee`, la vue écrit « Aucune tâche revendiquée » — ce qui est juste — et le témoin a
+perdu la branche qu'il exerçait. `scripts/plan-state/build.ts` n'est pas touché. Le témoin se donne
+désormais SON registre : une copie du registre réel (RM-03), augmentée d'une tâche non livrée dont le
+numéro d'issue et la phase sont dérivés du registre copié (RM-01), rendue et jugée depuis un dépôt git
+jetable — sans quoi « Décisions du jour », dérivée de `git log` sur `docs/adr/`, perdrait à son tour sa
+branche non vide. La panne gardée est inchangée : une valeur de la forge absente de la vue, ou écrite
+sur plus d'une ligne.
+
 **Reste.** Vingt-huit des vingt-neuf manques relevés par la passe de complétude ne sont pas versés
 ici : ils feront une PR à part, et aucun ne va en phase −1. Les issues 37, 38, 40, 42 et 43 restent
 ouvertes ; les fermer appartient à Will. GOV-042 n'est pas amendée : sa mesure du 12/09 est datée et
@@ -122,6 +134,15 @@ questions posées de la plus locale à la plus lointaine : le sha est-il ancêtr
 PR est-elle `MERGED`, son commit de fusion est-il ce sha, le nom rendu satisfait-il le motif que le
 schéma du dépôt impose. L'ordre est la garde : un contrôle placé derrière un appel réseau ne tire
 pas le jour où le réseau tombe, et c'est le jour où il compte.
+
+Et un fixture couplé à l'état du registre s'éteint tout seul, un jour, en annonçant une régression qui
+n'existe pas. Mesuré sur trois registres d'essai : avec l'ancienne règle de fixture, le témoin est VERT
+sur un registre où une tâche est en vol, ROUGE sur un registre où aucune ne l'est et ROUGE sur un
+registre sans aucune issue — son verdict décrivait le registre, pas le générateur. Avec la nouvelle, il
+est vert sur les trois. Le découplage ne l'a pas désarmé pour autant : sur deux générateurs fautifs
+fabriqués hors du dépôt — l'un qui tronque la valeur du label, l'autre dont `neutraliser` ne replie plus
+les sauts de ligne — il rougit encore, et le premier rend mot pour mot le refus d'aujourd'hui. Élargir
+l'assertion pour la faire passer aurait rendu ces deux-là invisibles.
 
 ### PR #45 — 2026-09-15 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36
 
