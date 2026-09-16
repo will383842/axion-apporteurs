@@ -13,7 +13,7 @@
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
     "gov:termes-interdits": "tsx scripts/gates/gov-check.ts",
     "gov:termes-interdits:prove": "tsx scripts/gates/gov-check.ts --prove",
-    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace && pnpm gov:lexique && pnpm gov:conventions",
+    "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace && pnpm gov:attributions && pnpm gov:lexique && pnpm gov:conventions",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
@@ -91,6 +91,8 @@
     "gov:identifiants:compter": "tsx scripts/gates/gov-identifiants.ts --compter",
     "gov:attestation": "tsx scripts/gates/gov-attestation.ts",
     "gov:attestation:en-ligne": "tsx scripts/gates/gov-attestation.ts --en-ligne",
+    "gov:attributions": "tsx scripts/gates/gov-attributions.ts",
+    "gov:attributions:prove": "tsx scripts/gates/gov-attributions.ts --prove",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write ."

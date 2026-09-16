@@ -150,6 +150,15 @@ jobs:
       # plusieurs lignes, puis la meme vue fautive sous cette forge et sous une forge illisible.
       - name: La vue de l etat vivant est egale a sa source
         run: pnpm plan-state:verifier
+      # GOV-037, REQ-GOV-021 et REQ-GOV-003. Le depot derivait ses NOMBRES, pas ses ATTRIBUTIONS :
+      # quelle tache porte quelle garde, quel poste porte quelle tache, quel lot porte quelle tache,
+      # et a qui appartient le fichier ou la prose qui nomme une tache. Chacune est ecrite DEUX FOIS,
+      # dans deux fichiers. `gov:identifiants` juge la FORME d'un identifiant, jamais sa RESOLUTION ;
+      # la relation exigence <-> tache, elle, est tenue par `gov:requirements`.
+      - name: Attributions — garde, poste, lot et identifiants nommes confrontes a leurs sources
+        run: pnpm gov:attributions
+      - name: La garde des attributions sait rougir, et laisse passer la citation legitime
+        run: pnpm gov:attributions:prove
       # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,
       # elle ECHOUE en nommant les cinq familles non evaluees — et c est voulu : une gate verte
       # parce qu elle n a pas pu lire est pire que pas de gate. Constate en CI le 2026-09-04,
