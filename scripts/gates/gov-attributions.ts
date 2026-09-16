@@ -50,6 +50,13 @@ import { LIVREE } from '../lot/avancement';
  *     titre à sa mesure antérieure ;
  *   — un caractère typographique hors de `HORS_ASCII_ADMIS` (apostrophe `’`, `≤`, emoji) écrit dans le
  *     journal fait refuser la garde, même là où il ne change rien au rendu : un faux rouge nommé, pas un trou ;
+ *   — `docs/journal/README.md` n'est PAS lu sous la liste d'autorisation des lignes (son mode d'emploi est
+ *     fait de gabarits, de spans et de chevrons). Seul son PLANCHER l'est, et sous une liste à lui
+ *     (`PLANCHER_CACHE`) : écrit une seule fois dans un conteneur que le rendu n'affiche pas — commentaire
+ *     HTML, en-tête, bloc HTML brut, balise sur sa ligne, définition de lien-référence — il fait REFUSER
+ *     la garde en nommant la ligne et le conteneur. Ce que cette liste N'A PAS : un plancher en bloc de
+ *     code ou en span, que le rendu AFFICHE ; ce qu'elle coûte : un `<!--` écrit, même entre accents
+ *     graves, AVANT la ligne du plancher fait refuser — un faux rouge nommé, jamais un trou ;
  *   — la liste d'autorisation DICTE le style du journal, et le prix est payé par l'auteur de la PROCHAINE
  *     entrée : aucune ligne faite de seuls signes de bloc (`---`, `+++`, `***`, `___`, `- - -` — filet,
  *     soulignement, en-tête YAML ou TOML : autant de conteneurs dont le rendu ne montre pas les lignes),
@@ -414,6 +421,13 @@ const spansColles = (ligne: string): boolean =>
   );
 
 /**
+ * Une ligne faite de SEULS signes de bloc : soulignement de titre, filet, ou délimiteur d'un en-tête
+ * (front matter). Une seule définition : la liste d'autorisation du journal la refuse OÙ QU'ELLE SOIT,
+ * et le juge du plancher s'en sert pour reconnaître l'en-tête qui replierait la ligne du plancher.
+ */
+const signesDeBloc = (ligne: string): boolean => /^[-=+*_ ]+$/.test(ligne) && /[-=+*_]/.test(ligne);
+
+/**
  * 🔑 LA LISTE D'AUTORISATION DU JOURNAL — ses lignes. Ce qui suit est REFUSÉ, en nommant le fichier, la ligne
  * et la règle ; tout le reste est lu. Le but : l'ensemble des lignes que le RENDU affiche comme titre
  * d'entrée, celui que gov:etat lit, et celui que la garde lit sont LE MÊME. Le titre d'entrée exact
@@ -473,7 +487,7 @@ const JOURNAL_REFUSE: readonly {
       'elle souligne la ligne du dessus en titre, coupe le texte en filet, ou OUVRE UN EN-TÊTE (front matter) ' +
       'que le rendu replie en tableau clé/valeur et dont les lignes — titre d’entrée ou commentaire `#` compris — ' +
       'ne s’affichent nulle part, tandis que la garde les lit comme les autres',
-    porte: (l) => (/^[-=+*_ ]+$/.test(l) && /[-=+*_]/.test(l) ? l : false),
+    porte: (l) => (signesDeBloc(l) ? l : false),
   },
 ];
 
@@ -1266,9 +1280,79 @@ const README_JOURNAL = 'docs/journal/README.md';
  * La ligne du plancher, sous la forme que `gov-etat.ts` lit aussi. Ce module ne l'exporte pas (il
  * sort du processus quand il s'exécute) : si la ligne change de forme, les DEUX refusent en se
  * nommant, et aucun ne devine. Écrite plus d'une fois — dans un commentaire invisible au rendu, par
- * exemple — elle fait refuser cette garde : elle ne choisit pas laquelle fait foi.
+ * exemple — elle fait refuser cette garde : elle ne choisit pas laquelle fait foi. Écrite UNE seule
+ * fois, mais dans un conteneur que le rendu n'affiche pas, elle la fait refuser aussi (`PLANCHER_CACHE`).
  */
 const MOTIF_PLANCHER = /Plancher\s*:\s*le journal couvre les PR de numéro \*\*> (\d+)\*\*/g;
+
+/**
+ * 🔑 CE QUI CACHERAIT LE PLANCHER — la liste FERMÉE des conteneurs que le rendu n'affiche pas.
+ *
+ * Le plancher est L'INTERRUPTEUR du journal : le nombre qu'il porte EXEMPTE des tâches de toute
+ * attestation de lot (`lot_sous_plancher`). Il se lit dans `docs/journal/README.md`, le seul fichier
+ * de `docs/journal/` que la liste d'autorisation des lignes n'inspecte pas — l'inspecter tout entier
+ * coûterait la réécriture d'un mode d'emploi fait de gabarits, de spans et de chevrons. Le plancher,
+ * lui, se lit sous la MÊME propriété que le journal qu'il borne : *ce que la garde lit, le dépôt
+ * publié l'affiche*. Écrit une seule fois dans un conteneur que le rendu replie, avale ou jette, il
+ * ferait dire au dépôt publié un plancher, et à la garde un autre — l'écrire DEUX fois est déjà
+ * refusé plus bas, l'écrire une seule fois, caché, l'est ici.
+ *
+ * La liste est fermée, et chaque entrée se nomme. Ce qu'elle N'A PAS : un plancher écrit dans un bloc
+ * de code (clôturé ou indenté) ou dans un span — le rendu les affiche, le lecteur voit le nombre.
+ */
+const PLANCHER_CACHE: readonly {
+  quoi: string;
+  /** `true` si l'occurrence est dans ce conteneur. `avant` : le texte qui la précède ; `reste` : sa ligne, l'occurrence ôtée. */
+  dans: (c: { lignes: readonly string[]; i: number; avant: string; reste: string }) => boolean;
+}[] = [
+  {
+    quoi: 'un commentaire HTML « <!-- », que le rendu n’affiche nulle part',
+    dans: ({ avant }) => avant.lastIndexOf('<!--') > avant.lastIndexOf('-->'),
+  },
+  {
+    quoi: 'un en-tête (front matter), que le rendu replie en tableau clé/valeur',
+    dans: ({ lignes, i }) => {
+      if (!signesDeBloc(lignes[0] ?? '')) return false;
+      const ferme = lignes.findIndex((l, j) => j > 0 && signesDeBloc(l));
+      return i <= (ferme === -1 ? lignes.length : ferme);
+    },
+  },
+  {
+    quoi: 'un bloc HTML brut, ouvert par une ligne qui commence par « < » : ce que la balise cache, le rendu ne le montre pas',
+    dans: ({ lignes, i }) => {
+      let debut = i;
+      while (debut > 0 && (lignes[debut - 1] as string).trim() !== '') debut--;
+      return (lignes[debut] as string).startsWith('<');
+    },
+  },
+  {
+    quoi: 'une balise ou un commentaire ouvert sur sa propre ligne : hors de l’expression du plancher, elle porte un « < »',
+    dans: ({ reste }) => reste.includes('<'),
+  },
+  {
+    quoi: 'une définition de lien-référence « [étiquette]: … », que le rendu n’affiche nulle part',
+    dans: ({ lignes, i }) => /^ {0,3}\[[^\]]*\]\s*:/.test(lignes[i] as string),
+  },
+];
+
+/**
+ * Le conteneur NON RENDU qui porte l'occurrence du plancher (`index`, `longueur`) dans le texte du
+ * README, avec la ligne où il se lit ; `null` si le rendu l'affiche comme du texte.
+ */
+function plancherCache(
+  texte: string,
+  index: number,
+  longueur: number
+): { quoi: string; ligne: number } | null {
+  const lignes = texte.split('\n');
+  const avant = texte.slice(0, index);
+  const i = avant.split('\n').length - 1;
+  const colonne = index - (avant.lastIndexOf('\n') + 1);
+  const ligne = lignes[i] as string;
+  const reste = ligne.slice(0, colonne) + ligne.slice(colonne + longueur);
+  const cache = PLANCHER_CACHE.find((c) => c.dans({ lignes, i, avant, reste }));
+  return cache ? { quoi: cache.quoi, ligne: i + 1 } : null;
+}
 
 /**
  * La première clé DUPLIQUÉE d'un texte JSON valide, lue sur le TEXTE. `JSON.parse` garde la dernière
@@ -1424,13 +1508,22 @@ export function chargerSources(
       `aucun fichier de journal SUIVI sous docs/journal/ : l'attestation des lots n'aurait aucune source.`
     );
   }
-  const planchers = [...texte(README_JOURNAL).matchAll(MOTIF_PLANCHER)];
+  const texteDuReadme = texte(README_JOURNAL);
+  const planchers = [...texteDuReadme.matchAll(MOTIF_PLANCHER)];
   if (planchers.length !== 1) {
     throw new SourceIllisible(
       planchers.length === 0
         ? `le plancher du journal est introuvable dans ${README_JOURNAL} (forme attendue : « Plancher : le journal couvre les PR de numéro **> <n>** »).`
         : `le plancher du journal est écrit ${planchers.length} fois dans ${README_JOURNAL} (${planchers.map((p) => `> ${p[1]}`).join(', ')}) : ` +
             `la garde ne choisit pas laquelle fait foi, et une ligne invisible au rendu en fait partie peut-être.`
+    );
+  }
+  const plancher = planchers[0] as RegExpExecArray;
+  const cache = plancherCache(texteDuReadme, plancher.index as number, plancher[0].length);
+  if (cache) {
+    throw new SourceIllisible(
+      `${README_JOURNAL}:${cache.ligne} — le plancher du journal (« > ${plancher[1]} ») est écrit dans ${cache.quoi}. ` +
+        `Ce nombre EXEMPTE des tâches de toute attestation de lot : le dépôt publié doit l'AFFICHER là où la garde le lit.`
     );
   }
   const textesDeJournal = journaux.map((f) => {
@@ -1453,7 +1546,7 @@ export function chargerSources(
     gates: tableau<Gate>('docs/gates.json', 'gates'),
     postes: tableau<Poste>('docs/agents.json', 'postes'),
     journal: textesDeJournal.join('\n'),
-    plancherJournal: Number((planchers[0] as RegExpExecArray)[1]),
+    plancherJournal: Number(plancher[1]),
     // TOUT fichier suivi de `scripts/` et `tests/`, quelle que soit son extension : l'acceptance dit
     // « tout fichier suivi », et un filtre d'extension est un périmètre qui s'ampute en silence.
     entetes: suivis
@@ -2413,6 +2506,8 @@ type CasDeJournal = {
   nomme: string[];
   fichiers?: Record<string, string>;
   plancher?: number;
+  /** Le README ENTIER, quand c'est le plancher lui-même qu'on éprouve ; sinon, la seule ligne visible. */
+  readme?: string;
 };
 const JOURNAL_DE_PREUVE = 'docs/journal/2026-09.md';
 /** Un titre d'entrée EXACT, pour une PR que `JOURNAL` ne porte pas : chaque panne le déforme d'une seule façon. */
@@ -2700,13 +2795,96 @@ const JOURNAUX_LUS: CasDeJournal[] = [
   },
 ];
 
+/** La ligne du plancher, au nombre donné, telle que le README la porte. Écrite UNE fois, ici. */
+const lignePlancher = (n: number): string =>
+  `Plancher : le journal couvre les PR de numéro **> ${n}**`;
+
+/** Les mots par lesquels chaque entrée de `PLANCHER_CACHE` se nomme. */
+const [COMMENTAIRE, ENTETE, BLOC_HTML, BALISE, LIEN] = [
+  'un commentaire HTML',
+  'un en-tête (front matter)',
+  'un bloc HTML brut',
+  'une balise ou un commentaire ouvert sur sa propre ligne',
+  'une définition de lien-référence',
+];
+const L9 = lignePlancher(9);
+const ligneReadme = (n: number) => `${README_JOURNAL}:${n}`;
+
+/**
+ * F5 — le plancher écrit UNE SEULE FOIS, dans un conteneur que le rendu n'affiche pas. Le journal, lui,
+ * est intact : c'est l'INTERRUPTEUR qu'on cache, et le nombre caché (9) exempterait des entrées que le
+ * plancher visible atteste. Chaque cas nomme sa ligne ET son conteneur.
+ */
+const PLANCHERS_REFUSES: CasDeJournal[] = [
+  {
+    quoi: 'F5 : le plancher, UNE seule fois, dans un commentaire HTML d’une ligne — GitHub ne le rend pas',
+    journal: JOURNAL,
+    readme: `# Le journal\n\n## Plancher\n\n<!-- ${L9} -->\n`,
+    nomme: [ligneReadme(5), COMMENTAIRE],
+  },
+  {
+    quoi: 'F5 : le commentaire HTML ouvert à la ligne d’AVANT, derrière du texte — la ligne du plancher, elle, est nue',
+    journal: JOURNAL,
+    readme: `# Le journal\n\nTexte <!--\n${L9}\n-->\n`,
+    nomme: [ligneReadme(4), COMMENTAIRE],
+  },
+  {
+    quoi: 'F5 : le plancher dans un en-tête (front matter), que le rendu replie en tableau clé/valeur',
+    journal: JOURNAL,
+    readme: `---\ntitre: le journal\n${L9}\n---\n\n# Le journal\n`,
+    nomme: [ligneReadme(3), ENTETE],
+  },
+  {
+    quoi: 'mutation (en-tête JAMAIS refermé) : le rendu replie tout, la garde lirait tout',
+    journal: JOURNAL,
+    readme: `+++\ntitre = "le journal"\n${L9}\n`,
+    nomme: [ligneReadme(3), ENTETE],
+  },
+  {
+    quoi: 'F5 : le plancher dans un bloc HTML brut, ouvert par une balise à la ligne d’avant',
+    journal: JOURNAL,
+    readme: `# Le journal\n\n<div hidden>\n${L9}\n</div>\n`,
+    nomme: [ligneReadme(4), BLOC_HTML],
+  },
+  {
+    quoi: 'F5 : une balise sur la ligne du plancher, dans un paragraphe qui, lui, ne s’ouvre pas par « < »',
+    journal: JOURNAL,
+    readme: `# Le journal\n\nUn paragraphe.\n${L9} <span hidden>caché</span>\n`,
+    nomme: [ligneReadme(4), BALISE],
+  },
+  {
+    quoi: 'F5 : le plancher en définition de lien-référence — du Markdown que le rendu n’affiche nulle part',
+    journal: JOURNAL,
+    readme: `# Le journal\n\n[plancher]: # "${L9}"\n`,
+    nomme: [ligneReadme(3), LIEN],
+  },
+];
+
+/** Le plancher que le rendu AFFICHE : la garde le lit, quelle que soit sa mise en page. */
+const PLANCHERS_LUS: CasDeJournal[] = [
+  {
+    quoi: 'un README réel : le plancher en texte, et plus bas des spans qui portent `<`, `<!--`, `[` et `---`',
+    journal: JOURNAL,
+    readme:
+      `# Le journal\n\n## Plancher\n\n${lignePlancher(0)}.\n\n` +
+      `Un nom \`<x>\`, un \`<!--\` et un \`[lien]:\` entre accents graves, un filet \`---\` : du texte.\n`,
+    nomme: [],
+  },
+  {
+    quoi: 'le plancher dans un bloc de code clôturé : le rendu l’affiche, en code — le lecteur voit le nombre',
+    journal: JOURNAL,
+    readme: `# Le journal\n\n\`\`\`\n${lignePlancher(0)}\n\`\`\`\n`,
+    nomme: [],
+  },
+];
+
 /** Le refus que lève `chargerSources` sur un journal posé seul, à côté de registres vides ; `null` s'il est lu. */
 function chargerJournal(c: CasDeJournal): Error | null {
   const fichiers: Record<string, string> = {
     'docs/tasks.json': '{ "taches": [] }',
     'docs/gates.json': '{ "gates": [] }',
     'docs/agents.json': '{ "postes": [] }',
-    [README_JOURNAL]: `Plancher : le journal couvre les PR de numéro **> ${c.plancher ?? 0}**\n`,
+    [README_JOURNAL]: c.readme ?? `${lignePlancher(c.plancher ?? 0)}\n`,
     [JOURNAL_DE_PREUVE]: c.journal,
     ...c.fichiers,
   };
@@ -2881,7 +3059,7 @@ function jugesComplaisants(): string[] {
   }
   // Un journal refusé présenté comme LU, un journal refusé annonçant un nom que son refus ne porte pas,
   // un journal lu présenté comme REFUSÉ : le juge du chargement doit refuser les trois.
-  for (const c of JOURNAUX_REFUSES) {
+  for (const c of [...JOURNAUX_REFUSES, ...PLANCHERS_REFUSES]) {
     if (jugerJournal({ ...c, nomme: [] }) === null)
       acceptes.push(`jugerJournal accepte comme LU le journal refusé « ${c.quoi} »`);
     if (jugerJournal({ ...c, nomme: [...c.nomme, ABSENT] }) === null)
@@ -2889,7 +3067,7 @@ function jugesComplaisants(): string[] {
         `jugerJournal accepte « ${c.quoi} » annonçant un nom que le refus ne porte pas`
       );
   }
-  for (const c of JOURNAUX_LUS) {
+  for (const c of [...JOURNAUX_LUS, ...PLANCHERS_LUS]) {
     if (jugerJournal({ ...c, nomme: [JOURNAL_DE_PREUVE] }) === null)
       acceptes.push(`jugerJournal accepte comme REFUSÉ le journal lu « ${c.quoi} »`);
   }
@@ -2909,7 +3087,7 @@ export function prouver(): { code: number; lignes: string[] } {
     const r = jugerContreTemoin(c);
     if (r) return { code: 1, lignes: [r] };
   }
-  for (const c of [...JOURNAUX_REFUSES, ...JOURNAUX_LUS]) {
+  for (const c of [...JOURNAUX_REFUSES, ...JOURNAUX_LUS, ...PLANCHERS_REFUSES, ...PLANCHERS_LUS]) {
     const r = jugerJournal(c);
     if (r) return { code: 1, lignes: [r] };
   }
@@ -2956,6 +3134,8 @@ export function prouver(): { code: number; lignes: string[] } {
         `chacune sur ses témoins (${TEMOINS.length}) ; les ${CONTRE_TEMOINS.length} contre-témoins restent verts et rendent ` +
         `exactement leurs exemptions (les ${NATURES.length} natures sont chacune rendues) ; les ${JOURNAUX_REFUSES.length} journaux ` +
         `que le rendu lirait autrement sont refusés en se nommant, ${JOURNAUX_LUS.length} contre-témoin(s) de journal sont lus, ` +
+        `les ${PLANCHERS_REFUSES.length} planchers écrits dans un conteneur que le rendu n'affiche pas sont refusés en se nommant ` +
+        `(${PLANCHERS_LUS.length} contre-témoins de plancher sont lus), ` +
         `et la règle de caractère admet exactement sa liste d'autorisation (l'ASCII imprimable et ${[...HORS_ASCII_ADMIS].length} autres).`,
       ...FAMILLES.map((f) => `   • ${f}`),
     ],

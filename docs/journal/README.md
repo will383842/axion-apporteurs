@@ -49,3 +49,10 @@ exemple vivant plutôt qu'un gabarit. Elles sont sous le plancher : la garde ne 
 
 `scripts/gates/gov-etat.ts` **dérive** ce plancher de la ligne ci-dessus — il ne le recopie pas
 (RM-01). Le déplacer se fait ici, à un seul endroit, et la garde suit.
+
+Ce nombre est l'**interrupteur** du journal : sous lui, aucune tâche n'a besoin d'être attestée. Il
+se réécrit donc là où il est, **en texte que le rendu affiche** : `gov:attributions` refuse, en
+nommant la ligne, un plancher écrit une seule fois dans un conteneur que GitHub n'affiche pas
+(commentaire HTML, en-tête de fichier, bloc HTML, balise sur la même ligne, définition de
+lien-référence) — et refuse déjà de choisir s'il est écrit deux fois. Ce fichier est le seul de ce
+dossier dont les autres lignes échappent à la liste d'autorisation du journal ; son plancher, non.

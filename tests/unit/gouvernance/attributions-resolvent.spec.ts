@@ -1059,6 +1059,54 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
     expect(refus!.message).toMatch(/plancher/);
   });
 
+  it('le plancher écrit UNE SEULE FOIS, dans un conteneur que le rendu n’affiche pas, est refusé : l’interrupteur du journal se lit dans le dépôt PUBLIÉ', () => {
+    const reel = lireReel('docs/journal/README.md');
+    const ligne = (/^.*\*\*> \d+\*\*.*$/m.exec(reel) as RegExpExecArray)[0];
+    // Le plancher RÉEL quitte le README : chaque cas l'y remet une seule fois, caché, et à un autre nombre.
+    const cache = ligne.replace(/\d+/, '999');
+    const nu = reel.replace(ligne, '');
+    const NL = String.fromCodePoint(10);
+    const cas: [string, string, RegExp][] = [
+      ['un commentaire HTML d’une seule ligne', `<!-- ${cache} -->${NL}${nu}`, /commentaire HTML/],
+      [
+        'un commentaire HTML ouvert à la ligne d’avant',
+        `Texte <!--${NL}${cache}${NL}-->${NL}${nu}`,
+        /commentaire HTML/,
+      ],
+      [
+        'un en-tête (front matter) replié en tableau clé/valeur',
+        `---${NL}titre: le journal${NL}${cache}${NL}---${NL}${nu}`,
+        /en-tête/,
+      ],
+      [
+        'un bloc HTML brut, ouvert à la ligne d’avant',
+        `<div hidden>${NL}${cache}${NL}</div>${NL}${NL}${nu}`,
+        /bloc HTML/,
+      ],
+      [
+        'une définition de lien-référence, que le rendu n’affiche nulle part',
+        `[plancher]: # "${cache}"${NL}${NL}${nu}`,
+        /définition de lien/,
+      ],
+    ];
+    for (const [quoi, texte, nomme] of cas) {
+      const refus = refusDe(() =>
+        chargerSources(fichiersSuivis(), (c) =>
+          c === 'docs/journal/README.md' ? Buffer.from(texte) : octets(c)
+        )
+      );
+      expect(refus, `le plancher écrit dans ${quoi} n’a pas fait refuser`).toBeInstanceOf(
+        SourceIllisible
+      );
+      expect(refus!.message, `le refus ne nomme pas ${quoi}`).toMatch(nomme);
+      expect(refus!.message, `le refus ne nomme pas le fichier`).toContain(
+        'docs/journal/README.md'
+      );
+    }
+    // Contre-témoin : le plancher du dépôt RÉEL, écrit en texte rendu, est lu.
+    expect(() => chargerSources(fichiersSuivis())).not.toThrow();
+  });
+
   it('une entrée de registre MAL FORMÉE est refusée en nommant l’entrée et le champ, jamais sur une trace de pile', () => {
     const lire = (c: string) =>
       c === 'docs/tasks.json' ? Buffer.from(JSON.stringify({ taches: [{}] })) : octets(c);
