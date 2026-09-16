@@ -50,6 +50,10 @@ import { LIVREE } from '../lot/avancement';
  *     titre à sa mesure antérieure ;
  *   — un caractère typographique hors de `HORS_ASCII_ADMIS` (apostrophe `’`, `≤`, emoji) écrit dans le
  *     journal fait refuser la garde, même là où il ne change rien au rendu : un faux rouge nommé, pas un trou ;
+ *   — la liste d'autorisation DICTE le style du journal, et le prix est payé par l'auteur de la PROCHAINE
+ *     entrée : aucune ligne faite de seuls signes de bloc (`---`, `+++`, `***`, `___`, `- - -` — filet,
+ *     soulignement, en-tête YAML ou TOML : autant de conteneurs dont le rendu ne montre pas les lignes),
+ *     et aucun titre dont le texte s'ouvre par « PR » et un numéro sans être le titre d'entrée EXACT ;
  *   — un fichier suivi de `scripts/` ou `tests/` qui porte un octet NUL (UTF-16, binaire) n'est pas lu :
  *     il fait REFUSER la garde, et aucune déclaration ne l'en exempte. Le dépôt n'en porte aucun ;
  *   — un fichier non UTF-8 SANS octet NUL (Latin-1) est lu avec remplacement : ses identifiants ASCII
@@ -415,12 +419,15 @@ const spansColles = (ligne: string): boolean =>
  * d'entrée, celui que gov:etat lit, et celui que la garde lit sont LE MÊME. Le titre d'entrée exact
  * s'affiche toujours en titre (rien ne peut le replier : ni HTML, ni bloc de code, ni conteneur) ; aucune
  * autre ligne ne peut afficher un titre « PR #<n> » ni être lue comme tel. Coût mesuré sur le journal réel
- * le 2026-09-15 : sept lignes réécrites (une citation d'en-tête, un bloc clôturé, un `>` en prose).
+ * le 2026-09-15 : sept lignes réécrites (une citation d'en-tête, un bloc clôturé, un `>` en prose) ; le
+ * 2026-09-16, la fermeture des CONTENEURS SANS TEXTE (en-tête YAML/TOML, filet) et des faux titres « PR <n> »
+ * coûte ZÉRO ligne sur `docs/journal/*.md` — aucune n'est faite de seuls tirets, et aucun titre ne s'ouvre
+ * par « PR » suivi d'un numéro.
  */
 const JOURNAL_REFUSE: readonly {
   quoi: string;
   /** Ce que la ligne porte de refusé, pour le nommer ; `false` si elle est admise. */
-  porte: (ligne: string, avant: string) => string | false;
+  porte: (ligne: string) => string | false;
 }[] = [
   {
     quoi: 'un caractère hors de la liste d’autorisation (ASCII imprimable, HORS_ASCII_ADMIS) : invisible, espace insécable, tabulation ou fin de ligne nue, il change ce que le rendu affiche sans que le texte le montre',
@@ -442,6 +449,10 @@ const JOURNAL_REFUSE: readonly {
         : false,
   },
   {
+    quoi: `un titre dont le texte s’ouvre par « PR » et un numéro sans être un titre d’entrée « ${ANCRE_JOURNAL}<n> — AAAA-MM-JJ — <titre> » : le rendu l’affiche comme l’entrée d’une PR, ni gov:etat ni la garde ne le lisent`,
+    porte: (l) => (/^#{1,6} +PR[ #]*[0-9]/.test(l) && !MOTIF_TITRE.test(l) ? 'PR' : false),
+  },
+  {
     quoi: 'hors d’un span de code, un `#` suivi d’une espace ou de la fin de ligne, ailleurs qu’en tête de ligne : un titre dans une liste ou une note, ou une séquence fermante',
     porte: (l) => (/#(?= |$)/.test(horsSpans(l).replace(/^#+/, '')) ? '#' : false),
   },
@@ -457,8 +468,12 @@ const JOURNAL_REFUSE: readonly {
         : false,
   },
   {
-    quoi: 'un soulignement de titre (`===` ou `---` sous une ligne de texte) : la ligne du dessus est un titre au rendu, que ni gov:etat ni la garde ne lisent',
-    porte: (l, avant) => (/^(?:=+|-+) *$/.test(l) && avant !== '' ? l : false),
+    quoi:
+      'une ligne faite de seuls signes de bloc (`-` `=` `+` `*` `_`, espaces comprises) — OÙ QU’ELLE SOIT : ' +
+      'elle souligne la ligne du dessus en titre, coupe le texte en filet, ou OUVRE UN EN-TÊTE (front matter) ' +
+      'que le rendu replie en tableau clé/valeur et dont les lignes — titre d’entrée ou commentaire `#` compris — ' +
+      'ne s’affichent nulle part, tandis que la garde les lit comme les autres',
+    porte: (l) => (/^[-=+*_ ]+$/.test(l) && /[-=+*_]/.test(l) ? l : false),
   },
 ];
 
@@ -1422,7 +1437,7 @@ export function chargerSources(
     const lignes = texte(f).split('\n');
     lignes.forEach((ligne, i) => {
       for (const regle of JOURNAL_REFUSE) {
-        const porte = regle.porte(ligne, lignes[i - 1] ?? '');
+        const porte = regle.porte(ligne);
         if (porte === false) continue;
         throw new SourceIllisible(
           `${f}:${i + 1} porte ${regle.quoi} — ici ${JSON.stringify(porte)}, dans « ${ligne.slice(0, 80)} ». ` +
@@ -2407,15 +2422,16 @@ const [NBSP, ZWSP, RC, TAB, SEP_LIGNE, SELECTEUR] = [0xa0, 0x200b, 0x0d, 0x09, 0
 );
 const ligne5 = `${JOURNAL_DE_PREUVE}:5`;
 /** Les mots par lesquels chaque règle de `JOURNAL_REFUSE` se nomme. */
-const [CARACTERE, STRUCTURE, DEBUT, TITRE_AUTRE, DIESE, LU_PAR_ETAT, AFFICHE, SOULIGNE] = [
+const [CARACTERE, STRUCTURE, DEBUT, TITRE_AUTRE, FAUX_PR, DIESE, LU_PAR_ETAT, AFFICHE, BLOC] = [
   'liste d’autorisation',
   'change la structure rendue',
   'un début de ligne',
   'n’est pas un titre d’entrée',
+  's’ouvre par « PR » et un numéro',
   'ailleurs qu’en tête de ligne',
   'gov:etat lit un titre',
   'ne s’affiche pas tel qu’il s’écrit',
-  'soulignement',
+  'de seuls signes de bloc',
 ];
 const JOURNAUX_REFUSES: CasDeJournal[] = [
   // ── un caractère hors de la liste d'autorisation ──
@@ -2600,16 +2616,60 @@ const JOURNAUX_REFUSES: CasDeJournal[] = [
     journal: `${JOURNAL}\n${ancreDeJournal(32)} — 2026-09-11 — lot \`L-9-9\`8\n`,
     nomme: [ligne5, AFFICHE, '"`"'],
   },
-  // ── un soulignement ──
+  // ── un titre que le rendu affiche comme une entrée, et que personne ne lit ──
+  {
+    quoi: 'securite (dette 4) : « # PR 32 — date — … », le titre d’entrée privé du croisillon de son numéro',
+    journal: `${JOURNAL}\n# ${P32.slice(3).replace('PR #', 'PR ')}\n`,
+    nomme: [ligne5, FAUX_PR],
+  },
+  {
+    quoi: 'le même sans date, à six dièses : le rendu l’affiche encore comme l’entrée d’une PR',
+    journal: `${JOURNAL}\n###### PR 32 lot L-9-99\n`,
+    nomme: [ligne5, FAUX_PR],
+  },
+  // ── une ligne de seuls signes de bloc : soulignement, filet, EN-TÊTE (front matter) ──
   {
     quoi: 'un titre souligné `---`',
     journal: `${JOURNAL}\nUn titre souligné\n---\n`,
-    nomme: [`${JOURNAL_DE_PREUVE}:6`, SOULIGNE],
+    nomme: [`${JOURNAL_DE_PREUVE}:6`, BLOC],
   },
   {
     quoi: 'un titre souligné `===`',
     journal: `${JOURNAL}\nUn titre souligné\n===\n`,
-    nomme: [`${JOURNAL_DE_PREUVE}:6`, SOULIGNE],
+    nomme: [`${JOURNAL_DE_PREUVE}:6`, BLOC],
+  },
+  {
+    quoi: 'F4 (securite) : un en-tête YAML replie un titre d’entrée — le rendu n’en montre qu’un tableau clé/valeur',
+    journal: `---\ntitre: journal du lot L-9-99\n${P32}\n\n---\n\n${JOURNAL}`,
+    nomme: [`${JOURNAL_DE_PREUVE}:1`, BLOC, '"---"'],
+  },
+  {
+    quoi: 'F4 : le même en-tête, avec un COMMENTAIRE YAML (`# …`) que le rendu n’affiche nulle part',
+    journal: `---\ntitre: journal du lot L-9-99\n# le lot, rectifie\n${P32}\n\n---\n\n${JOURNAL}`,
+    nomme: [`${JOURNAL_DE_PREUVE}:1`, BLOC, '"---"'],
+  },
+  {
+    quoi: 'F4 : un en-tête TOML `+++`, qui n’a même pas besoin d’une ligne vide pour se refermer',
+    journal: `+++\ntitre = "journal du lot L-9-99"\n${P32}\n+++\n\n${JOURNAL}`,
+    nomme: [`${JOURNAL_DE_PREUVE}:1`, BLOC, '"+++"'],
+  },
+  {
+    quoi: 'F4 : l’en-tête dans un fichier de journal NEUF — la garde lit TOUT journal suivi',
+    journal: JOURNAL,
+    fichiers: {
+      'docs/journal/2026-10.md': `---\ntitre: journal du lot L-9-99\n${P32}\n\n---\n\n# Journal — octobre 2026\n`,
+    },
+    nomme: ['docs/journal/2026-10.md:1', BLOC, '"---"'],
+  },
+  {
+    quoi: 'un filet `- - -` espacé : trois signes et des espaces, que le rendu ne montre pas comme une ligne',
+    journal: `${JOURNAL}\nUn titre souligné\n- - -\n`,
+    nomme: [`${JOURNAL_DE_PREUVE}:6`, BLOC, '"- - -"'],
+  },
+  {
+    quoi: 'un filet `***`, puis `___` : les deux autres graphies de la coupure',
+    journal: `${JOURNAL}\n***\n___\n`,
+    nomme: [ligne5, BLOC, '"***"'],
   },
   // ── la portée : chaque fichier de journal, sous le plancher comme au-dessus ──
   {
@@ -2627,13 +2687,14 @@ const JOURNAUX_REFUSES: CasDeJournal[] = [
 ];
 const JOURNAUX_LUS: CasDeJournal[] = [
   {
-    quoi: 'un journal réel : spans de code porteurs de `<`, `<!--`, `\\` et `## PR #`, lignes qui COMMENCENT par « PR # » ou « **Fait.** », liste, filet après une ligne vide, titre de section, lettres et signes admis',
+    quoi: 'un journal réel : spans de code porteurs de `<`, `<!--`, `\\`, `## PR #` et `---`, lignes qui COMMENCENT par « PR # » ou « **Fait.** », liste, emphase en prose, titre de section, lettres et signes admis',
     journal:
       `# Journal — septembre 2026\n\n${JOURNAL}\n` +
       `Le jeton #\`45\` est lu, et \`a\`\` b\` est UN span.\n` +
       `Un nom \`<x>\` et \`:<chemin>\`, \`a -> b\`, \`<!--\` puis \`-->\`, \`\\#\` et \`## PR #99\`, \`\` \` \`\`.\n` +
+      `Un en-tête s'ouvre par \`---\` et un filet s'écrit \`***\` : entre accents graves, ils sont du texte.\n` +
       `PR #41, elle en nomme trois : #36, #41 et #44.\n**Fait.** La PR #41 est lue.\n- La PR #41, en liste.\n\n` +
-      `⚠${SELECTEUR} **Choix.** À la 3ᵉ passe, « œ », É, ç — −1 → 2 ↔ 3, § 4 · fin.\n\n---\n\n## Autre section\n\n` +
+      `⚠${SELECTEUR} **Choix.** À la 3ᵉ passe, « œ », É, ç — −1 → 2 ↔ 3, § 4 · fin — un tiret seul, - , en prose.\n\n## Autre section\n\n` +
       `${P32}, \`partners/ADR-0007\` sur la branche\n`,
     nomme: [],
   },

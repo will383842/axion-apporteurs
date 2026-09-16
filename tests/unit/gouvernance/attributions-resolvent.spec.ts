@@ -247,6 +247,9 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     const corps = ['', '**Fait.** Les tâches sont rattachées à leur lot.', ''];
     const details = ['', '<details>', faussee, '</details>'];
     const echappee = `${ancre.replace('PR #', 'PR \\#')}${suite}`;
+    // Le VRAI titre, tel que le rendu l'afficherait hors de tout conteneur : un titre de niveau 1 privé
+    // du croisillon de son numéro. Il s'affiche, et ni gov:etat ni la garde ne le lisent.
+    const enClair = `# ${titre.slice(3).replace('PR #', 'PR ')}`;
     // `pose` remplace la ligne du titre réel ; `refusee` est l'indice, DANS `pose`, de la ligne que le refus
     // doit nommer — connu par construction, jamais recalculé par un prédicat retapé de la garde.
     type Cas = { quoi: string; taches: boolean; pose: string[]; refusee: number };
@@ -443,6 +446,49 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
         quoi: 'le texte du titre réel souligné, sous un faux titre exact',
         taches: true,
         pose: [faussee, ...corps, suite.slice(3), '---'],
+        refusee: 5,
+      },
+      {
+        // 🔑 F4, la panne de securite (5219104563) : l'en-tête YAML est un CONTENEUR que la liste
+        // d'autorisation admettait et que GitHub ne rend pas — il devient un tableau clé/valeur, et ni
+        // le faux titre qu'il replie, ni un commentaire `#`, ni une ligne vide n'en sortent. Le titre
+        // VISIBLE, lui, est le vrai texte privé du croisillon de son numéro : affiché, lu par personne.
+        quoi: 'securite F4 : un en-tête YAML replie le faux titre, le vrai s’affiche sans le croisillon de son numéro',
+        taches: true,
+        pose: ['---', 'titre: journal du lot', faussee, '', '---', '', enClair],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite F4 : le même en-tête, avec un COMMENTAIRE YAML que le rendu n’affiche nulle part',
+        taches: true,
+        pose: [
+          '---',
+          'titre: journal du lot',
+          '# le lot, rectifie',
+          faussee,
+          '',
+          '---',
+          '',
+          enClair,
+        ],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite F4 : un en-tête TOML `+++`, qui se referme sans ligne vide',
+        taches: true,
+        pose: ['+++', 'titre = "journal du lot"', faussee, '+++', '', enClair],
+        refusee: 0,
+      },
+      {
+        quoi: 'securite (dette 4) : le vrai titre privé du croisillon de son numéro, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, enClair],
+        refusee: 4,
+      },
+      {
+        quoi: 'un filet `- - -` espacé, sous un faux titre exact',
+        taches: true,
+        pose: [faussee, ...corps, suite.slice(3), '- - -'],
         refusee: 5,
       },
       {
