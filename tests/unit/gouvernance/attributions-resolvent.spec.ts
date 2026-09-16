@@ -1038,6 +1038,19 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
     }
   });
 
+  it('le README est lu sous la liste d’autorisation, mais ses ENTRÉES ne comptent pas : un mode d’emploi n’atteste aucun lot', () => {
+    const reel = lireReel('docs/journal/README.md');
+    const NL = String.fromCodePoint(10);
+    // Un titre d'entrée EXACT, VISIBLE, écrit dans le mode d'emploi : la liste d'autorisation l'admet
+    // (rien ne le replie), et c'est bien là le danger — il attesterait un lot sans qu'aucune PR l'ait
+    // écrit. `gov:etat`, lui, le lirait : l'écart est fail-closed, il n'exempte rien.
+    const texte = `${reel}${NL}## PR #9901 — 2026-09-16 — lot L-9-97${NL}`;
+    const s = chargerSources(fichiersSuivis(), (c) =>
+      c === 'docs/journal/README.md' ? Buffer.from(texte, 'utf8') : octets(c)
+    );
+    expect([...entreesDeJournal(s.journal).keys()]).not.toContain('9901');
+  });
+
   it('un README de journal sans plancher est refusé : la frontière ne se devine pas', () => {
     const lire = (c: string) =>
       c === 'docs/journal/README.md' ? Buffer.from('# Le journal\n') : octets(c);
@@ -1066,27 +1079,91 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
     const cache = ligne.replace(/\d+/, '999');
     const nu = reel.replace(ligne, '');
     const NL = String.fromCodePoint(10);
+    // AUCUN conteneur n'est énuméré par la garde. DEUX règles, dérivées : la ligne qui OUVRE est nommée
+    // par la liste d'autorisation, et la LIGNE DU PLANCHER ne porte QUE le plancher. Les cinq montages
+    // de la passe précédente sont ici, ET ceux qu'une seule LIGNE VIDE suffisait à faire passer (revue
+    // 5220172093), ET la définition de lien dont le titre est à la ligne suivante (revue 5220256065),
+    // ET les quatre formes de la revue 5220321404 — dont la cellule de tableau que GitHub JETTE.
+    const STRUCTURE = /change la structure rendue/;
+    const SEUL = /porte autre chose que le plancher/;
+    // Les formes que la passe précédente LISAIT viennent d'abord : la première panne vue est celle
+    // que cette passe ferme, pas un refus renommé.
     const cas: [string, string, RegExp][] = [
-      ['un commentaire HTML d’une seule ligne', `<!-- ${cache} -->${NL}${nu}`, /commentaire HTML/],
+      [
+        'une TROISIÈME CELLULE dans un tableau à deux colonnes : GitHub ne la replie pas, il la JETTE',
+        `| cle | valeur |${NL}| --- | --- |${NL}| plancher | voir ci-dessous | ${cache} |${NL}${NL}${nu}`,
+        SEUL,
+      ],
+      [
+        'un TITRE DE LIEN, que le rendu met en infobulle',
+        `[Le plancher](https://example.invalid "${cache}")${NL}${NL}${nu}`,
+        SEUL,
+      ],
+      [
+        'le TEXTE ALTERNATIF d’une image : l’image s’affiche, le nombre non',
+        `![${cache}](plancher.png)${NL}${NL}${nu}`,
+        SEUL,
+      ],
+      [
+        'le bloc HTML, une LIGNE VIDE après la balise : le bloc se ferme au rendu, la section reste cachée',
+        `<div hidden>${NL}${NL}${cache}${NL}${NL}</div>${NL}${NL}${nu}`,
+        STRUCTURE,
+      ],
+      [
+        'une section `<details><summary>`, que GitHub REPLIE',
+        `<details><summary>Reglages</summary>${NL}${NL}${cache}${NL}${NL}</details>${NL}${NL}${nu}`,
+        STRUCTURE,
+      ],
+      [
+        'une section `<details>` SANS `<summary>`, isolée par des lignes vides',
+        `<details>${NL}${NL}${cache}${NL}${NL}</details>${NL}${NL}${nu}`,
+        STRUCTURE,
+      ],
+      [
+        'le bloc HTML, une ligne vide, et le plancher à la FIN d’un paragraphe',
+        `<div hidden>${NL}${NL}Note interne.${NL}${cache}${NL}${NL}</div>${NL}${NL}${nu}`,
+        STRUCTURE,
+      ],
+      [
+        'la définition de lien-référence dont le TITRE est à la ligne suivante : la ligne du plancher n’est plus qu’une continuation indentée',
+        `[plancher]: #${NL}  "${cache}."${NL}${NL}${nu}`,
+        STRUCTURE,
+      ],
+      ['un commentaire HTML d’une seule ligne', `<!-- ${cache} -->${NL}${nu}`, SEUL],
       [
         'un commentaire HTML ouvert à la ligne d’avant',
         `Texte <!--${NL}${cache}${NL}-->${NL}${nu}`,
-        /commentaire HTML/,
+        STRUCTURE,
       ],
       [
         'un en-tête (front matter) replié en tableau clé/valeur',
         `---${NL}titre: le journal${NL}${cache}${NL}---${NL}${nu}`,
-        /en-tête/,
+        /de seuls signes de bloc/,
       ],
       [
         'un bloc HTML brut, ouvert à la ligne d’avant',
         `<div hidden>${NL}${cache}${NL}</div>${NL}${NL}${nu}`,
-        /bloc HTML/,
+        STRUCTURE,
+      ],
+      [
+        'une balise sur la ligne du plancher, dans un paragraphe qui ne s’ouvre pas par « < »',
+        `Un paragraphe.${NL}${cache} <span hidden>x</span>${NL}${NL}${nu}`,
+        SEUL,
       ],
       [
         'une définition de lien-référence, que le rendu n’affiche nulle part',
         `[plancher]: # "${cache}"${NL}${NL}${nu}`,
-        /définition de lien/,
+        SEUL,
+      ],
+      [
+        'un bloc de code INDENTÉ : le rendu l’affiche en code, la garde le refuse — un faux rouge NOMMÉ',
+        `Un exemple :${NL}${NL}    ${cache}${NL}${NL}${nu}`,
+        SEUL,
+      ],
+      [
+        'le plancher écrit au fil d’une phrase : il a sa ligne, ou il n’est pas lu',
+        `Le plancher du jour : ${cache}, et rien de plus.${NL}${NL}${nu}`,
+        SEUL,
       ],
     ];
     for (const [quoi, texte, nomme] of cas) {
