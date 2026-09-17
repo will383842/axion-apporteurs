@@ -8725,7 +8725,9 @@
         "REQ-GOV-026": [
           "tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts"
         ]
-      }
+      },
+      "issue": 50,
+      "owner": "A05"
     },
     {
       "id": "GOV-042",
