@@ -37,8 +37,13 @@
  * « quels fichiers cette tache touche-t-elle ». Le composeur prouvait une disjonction sur un champ
  * et le lot se faisait sur l'autre ; il n'y a plus qu'un seul ensemble.
  *
- * ⚠️ UN NOM NU N'EST PAS UN CHEMIN. 20 promesses du registre nomment un fichier sans son dossier
- * (`preseance.spec.ts`). On ne les resout PAS par leur nom de base : une promesse qui ne pointe
+ * ⚠️ UN NOM NU N'EST PAS UN CHEMIN. Des promesses du registre nomment un fichier sans son dossier ;
+ * leur compte se DERIVE — `promessesSansDossier()` le rend, et la specification l'imprime a chaque
+ * passe — il ne s'ecrit pas ici. (Ce commentaire affirmait « 20 promesses (`preseance.spec.ts`) » au
+ * present : sur le registre que cette PR livre, c'etait 13, et `preseance.spec.ts` est justement
+ * l'une des specifications que ce commit rattache — elle porte desormais son dossier. Un nombre
+ * recopie au present dans le fichier meme qui le rend faux.)
+ * On ne les resout PAS par leur nom de base : une promesse qui ne pointe
  * aucun fichier du depot n'est pas tenue, et la resoudre par ressemblance ferait passer pour
  * portees cinq specifications que personne ne porte (la mesure de (4b) tomberait de 5 a 1 sans
  * qu'un seul fichier ait change de porteur). La limite est ECRITE plutot que supposee.
@@ -149,6 +154,78 @@ export function collisionEntre(a: TacheDeLot, b: TacheDeLot): string[] {
   return cheminsSoumisALaCollision(a)
     .filter((c) => chezB.has(c))
     .sort();
+}
+
+/**
+ * Les promesses de `tests{}` qui nomment un fichier sans son dossier — DERIVEES, jamais comptees a
+ * la main. Elles ne revendiquent rien (cf. l'en-tete), et leur nombre change a chaque tache livree :
+ * l'ecrire dans un commentaire, c'est le rendre faux au commit suivant.
+ */
+export function promessesSansDossier(
+  taches: readonly TacheDeLot[]
+): { tache: string; nom: string }[] {
+  const out: { tache: string; nom: string }[] = [];
+  for (const t of taches) {
+    for (const promesses of Object.values(t.tests ?? {})) {
+      for (const p of promesses) {
+        const c = cheminDePromesse(p);
+        if (c && !c.includes('/')) out.push({ tache: t.id, nom: c });
+      }
+    }
+  }
+  return out;
+}
+
+/** Une tache ecartee d'un lot, avec la raison IMPRIMEE : le fichier dispute et qui le tenait. */
+export type EcartDeLot = { id: string; raison: string };
+
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * LA COMPOSITION DU LOT, PURE ET EXECUTABLE PAR UN TEST — livrable (1) de GOV-056.
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Elle vivait au niveau MODULE de `scripts/lot/composer.ts`, dans un script qui ECRIT
+ * `docs/tasks.json` et `docs/lots/<id>/lot.json` au seul fait d'etre importe. Aucun test ne pouvait
+ * donc l'executer, et son unique temoin s'etait replie sur deux assertions de chaine lues dans le
+ * texte source. *Le code n'etait pas testable, alors on a teste sa syntaxe* — et une garde qui
+ * connait une orthographe ne connait pas un comportement : on a remis la disjonction sur `paths`
+ * seul, les deux assertions sont restees vertes.
+ *
+ * ⛔ CETTE FONCTION NE TOUCHE NI AU DISQUE NI A LA FORGE. Lecture du registre, ecriture du lot et
+ * balayage des arbres restent dans le script qui l'APPELLE. Le jour ou un effet de bord remonte ici,
+ * le temoin redevient intestable et le trou se rouvre — c'est exactement par la qu'il s'etait ouvert.
+ *
+ * L'intersection n'est PAS reecrite ici : c'est `collisionEntre()` qui la tient, et c'est la seule
+ * ecriture de la regle dans le depot (RM-01). La collision se juge contre TOUTES les taches deja
+ * retenues, et chaque ecart NOMME le fichier dispute ET la tache qui le tenait — une raison qui ne
+ * nomme ni l'un ni l'autre oblige a relire le backlog pour savoir ce qui a ete ecarte, et pourquoi.
+ *
+ * `max` borne le lot et ARRETE la boucle : les taches qu'il laisse dehors ne sont pas « ecartees »,
+ * elles n'ont pas ete examinees. Les confondre ferait imprimer une raison a des taches que rien
+ * n'a refusees.
+ */
+export function retenirSansCollision<T extends TacheDeLot>(
+  candidates: readonly T[],
+  max: number
+): { retenues: T[]; ecartees: EcartDeLot[] } {
+  const retenues: T[] = [];
+  const ecartees: EcartDeLot[] = [];
+  for (const t of candidates) {
+    if (retenues.length >= max) break;
+    const partages: string[] = [];
+    for (const deja of retenues) {
+      for (const c of collisionEntre(t, deja)) partages.push(`${c} (par ${deja.id})`);
+    }
+    if (partages.length > 0) {
+      ecartees.push({
+        id: t.id,
+        raison: `chemin déjà pris dans ce lot : ${partages.sort().join(', ')}`,
+      });
+      continue;
+    }
+    retenues.push(t);
+  }
+  return { retenues, ecartees };
 }
 
 /**

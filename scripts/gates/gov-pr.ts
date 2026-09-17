@@ -1452,13 +1452,14 @@ if (process.argv.includes('--prove')) {
         },
       ],
     },
-    {
-      // L'AUTRE FACE : une PR dont TOUS les fichiers de code sont déclarés par la tâche qu'elle
-      // cite — `paths` ET `tests{}` réunis. La fixture les dérive du registre, donc ce vert-là
-      // survit à un changement des `paths` de GOV-011.
-      quoi: 'une PR dont chaque fichier de code est déclaré par les `paths` ou les `tests{}` de sa tâche',
-      cas: () => [depot, copiePr(PR_TEMOIN)],
-    },
+    // 🔻 RETIRÉ LE 2026-09-17 — un contre-témoin qui ne mesurait rien. Il était annoncé comme
+    // « l'autre face » de `fichier_hors_paths_des_taches` (« une PR dont chaque fichier de code est
+    // déclaré par les `paths` ou les `tests{}` de sa tâche ») et son cas était `[depot,
+    // copiePr(PR_TEMOIN)]` : IDENTIQUE en entrées ET en verdict au deuxième de cette liste (« une PR
+    // conforme, revues comprises »). Deux fois la même mesure ne fait pas deux mesures — et la PR
+    // comptait le doublon pour un gain (« de 12 à 14 »). Ce que la famille garde reste prouvé par
+    // son témoin, par la PR conforme, et par le contre-témoin des sous-produits ci-dessus, qui lui
+    // garde un vrai choix de périmètre.
     {
       // LE contre-témoin de la scission : la huitième case atteste la fusion et l'atterrissage,
       // elle ne peut pas être cochée à l'événement `pull_request`. En CI (revues absentes) cette

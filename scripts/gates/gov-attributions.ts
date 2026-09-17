@@ -73,14 +73,18 @@ import { LIVREE } from '../lot/avancement';
  *   — un fichier non UTF-8 SANS octet NUL (Latin-1) est lu avec remplacement : ses identifiants ASCII
  *     sont vus, ses caractères accentués ne le sont pas, et rien ne le signale.
  *
- * ⛔ NON LIVRÉS — LES LIVRABLES (5) ET (6) DE L'ACCEPTANCE. Elle les range sous « À livrer », et AUCUN
- * arbitrage écrit ne les en sort : ce n'est donc pas un choix de périmètre, c'est un manque, et il
- * appartient au gardien de la spécification de le trancher.
- *   — (5) la détection de collision de lots qui lit AUSSI `tests{}` s'écrit dans
- *     `scripts/lot/composer.ts`, que les `paths` de la tâche ne portent pas ; l'acceptance exige en
- *     outre de dire ce qu'on fait des tâches dont `tests{}` et `paths` divergent, et c'est une décision.
- *   — (6) confronter les fichiers TOUCHÉS par une PR aux `paths` de ses tâches exige la liste des
- *     fichiers d'une PR, que ce binaire ne lit pas (il juge le dépôt, pas un diff).
+ * ✅ LIVRABLES (5) ET (6) DE L'ACCEPTANCE DE GOV-037 — SORTIS D'ICI, ET FERMÉS AILLEURS. Ils ont été
+ * portés à GOV-056 par décision de Will le 2026-09-16 (les laisser ici rendait GOV-037 INFERMABLE,
+ * qui est le défaut même qu'elle décrivait), et GOV-056 les livre. Le pointeur reste écrit ICI :
+ * sans lui, ce fichier annoncerait un manque que plus rien ne porte.
+ *   — (5) la détection de collision de lots lit désormais `paths` ET `tests{}` — la règle vit dans
+ *     `scripts/lot/chemins-de-tache.ts` (`retenirSansCollision()`, `collisionEntre()`), que
+ *     `scripts/lot/composer.ts` APPELLE ; la convention des deux champs y est déclarée, et la
+ *     divergence du jour est DÉRIVÉE et imprimée à chaque composition.
+ *   — (6) les fichiers TOUCHÉS par une PR sont confrontés aux `paths` de ses tâches par
+ *     `scripts/gates/gov-pr.ts` (famille `fichier_hors_paths_des_taches`), là où la PR est DÉJÀ lue :
+ *     une seconde lecture de la forge serait une seconde source. Ce binaire-ci juge le dépôt, pas un
+ *     diff, et c'est pourquoi la garde ne vit pas ici.
  */
 
 // ── les sources, telles que la garde les lit ──────────────────────────────────

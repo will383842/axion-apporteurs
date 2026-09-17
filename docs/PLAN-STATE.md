@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `eb5e85a` — 2026-09-17T09:29:32+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #48 (brouillon) |
+| Qu’est-ce qui est en vol ? | 1. #48 (rien) |
 | Qui tient quoi ? | GOV-056 (A05) |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
-| Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
+| Le prochain pas | fusionner #48, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #48 — 2026-09-17 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 48 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,7 +64,7 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #48 — feat(GOV-056): le composeur lit paths ET tests{}, gov:pr juge les fichiers d une PR | `t/gov-056` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #48 — feat(GOV-056): le composeur lit paths ET tests{}, gov:pr juge les fichiers d une PR | `t/gov-056` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -83,6 +83,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Aucun ADR daté du 2026-09-17 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #48** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 34 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -106,7 +108,10 @@ identifiant ; l'exclusion n'est pas extensible, et toute entrée au-delà du reg
 nommer une ADR qui existe sur le disque. `gov:pr` gagne la famille `fichier_hors_paths_des_taches` :
 les fichiers de code d'une PR sont confrontés aux chemins que ses tâches déclarent, une PR dont
 aucune tâche ne résout étant refusée plutôt que passée sous silence. La preuve passe de 20 à 21
-familles et de 12 à 14 contre-témoins. Les cinq spécifications suivies que nulle tâche ne
+familles et de 12 à 13 contre-témoins. La boucle qui compose réellement le lot est sortie du niveau
+module du script vers une fonction PURE, `retenirSansCollision`, que le composeur appelle et qu'un
+test peut donc exécuter ; elle n'écrit rien, et l'intersection qu'elle applique est celle de
+`collisionEntre`, seule écriture de la règle dans le dépôt. Les cinq spécifications suivies que nulle tâche ne
 revendiquait sont rattachées par les outils hors dépôt : quatre étaient promises par un nom nu, qui
 ne résout aucun fichier du dépôt, la cinquième n'avait aucun porteur. La chaîne de lots simulée
 jusqu'à épuisement tombe de 35 lots à 20 pour les mêmes 88 tâches, et de 17 lots d'une seule tâche
@@ -133,7 +138,19 @@ côté de la fonction, plutôt que supposé. Second enseignement, payé sur cett
 « conforme » de `gov:pr --prove` portait des fichiers TAPÉS que la tâche de son titre ne déclarait
 pas. La PR réputée conforme de la preuve était elle-même une instance du défaut que la garde neuve
 ferme, et c'est le contre-témoin qui l'a dit. Une fixture conforme par accident prouve quelque
-chose, mais pas ce qu'on croit.
+chose, mais pas ce qu'on croit. Troisième enseignement, celui qui a coûté un refus : le premier
+témoin du composeur ne lisait que le TEXTE de `composer.ts` — deux assertions de chaîne — parce que
+la boucle vivait au niveau module d'un script qui écrit `docs/tasks.json` et le fichier de lot au
+seul fait d'être importé. Le code n'était pas testable, alors on avait testé sa syntaxe. La panne
+fabriquée le montre : remettre la disjonction sur `paths` seul laisse les deux assertions VERTES, et
+une variante à UNE LETTRE près aussi. Une garde qui connaît une orthographe ne connaît pas un
+comportement. Le remède n'est pas une meilleure expression régulière, c'est de rendre la règle
+appelable : sortir la boucle en fonction pure, laisser les effets de bord au script, et faire porter
+le témoin sur ce qu'elle REND. Quatrième, du même refus : un contre-témoin identique en entrées et
+en verdict à un autre ne mesure rien, et l'avoir compté pour un gain gonfle la preuve sans
+l'étendre ; il est retiré. Cinquième : un nombre écrit au présent dans le fichier même qui le rend
+faux se lit comme une mesure et n'en est plus une — le compte des promesses en nom nu se dérive
+désormais, et la ligne que le composeur imprime dit enfin COMMENT elle normalise.
 
 ### PR #47 — 2026-09-17 — chore(GOV-037): le lot preparatoire rend la phase 0 composable, 50 gabarits tombent
 

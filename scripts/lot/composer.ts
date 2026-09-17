@@ -37,8 +37,8 @@ import { prochainIdentifiantDeLot, lotsDuBacklog } from './identifiant-de-lot';
 // append-only. La convention, l'exclusion et leur motif vivent la-bas, et NULLE PART ailleurs.
 import {
   REGISTRES_APPEND_ONLY,
-  cheminsSoumisALaCollision,
   divergencePathsTests,
+  retenirSansCollision,
 } from './chemins-de-tache';
 
 // La cinquieme copie de l'ensemble « livree », sous un autre nom — c'est ainsi qu'un doublon
@@ -247,33 +247,21 @@ const eligibles = taches.filter((t) => {
 eligibles.sort(
   (a, b) => profondeur(b.id, index) - profondeur(a.id, index) || a.id.localeCompare(b.id)
 );
-const retenues: Tache[] = [];
-// 🔴 CE `Set` NE PORTAIT QUE `t.paths`, ET LA DISJONCTION QU'IL PROUVAIT N'ÉTAIT PAS CELLE DU LOT.
-// Une tâche porte DEUX listes de fichiers — `paths` (la source) et `tests{}` (les spécifications) —
-// et leur divergence est la CONVENTION, pas une négligence : mesurée le 2026-09-17, 27 tâches
-// déclarent dans `paths` une spécification hors de leur `tests{}`, 39 l'inverse. Deux tâches dont
-// les `paths` étaient disjoints mais dont les `tests{}` nommaient la MÊME spécification entraient
-// donc dans le même lot, et leurs deux arbres de travail se marchaient dessus sur un fichier que
-// le composeur venait de déclarer disjoint — SANS UN MOT.
-// On retient QUI a pris chaque chemin : une raison qui ne nomme ni le fichier ni la tâche oblige à
-// relire le backlog pour savoir ce qui a été écarté, et pourquoi.
-const pris = new Map<string, string>();
-for (const t of eligibles) {
-  if (retenues.length >= max) break;
-  const chemins = cheminsSoumisALaCollision(t);
-  const partages = chemins.filter((c) => pris.has(c)).sort();
-  if (partages.length > 0) {
-    ecartees.push({
-      id: t.id,
-      raison: `chemin déjà pris dans ce lot : ${partages
-        .map((c) => `${c} (par ${pris.get(c)})`)
-        .join(', ')}`,
-    });
-    continue;
-  }
-  chemins.forEach((c) => pris.set(c, t.id));
-  retenues.push(t);
-}
+// 🔴 CETTE BOUCLE NE LISAIT QUE `t.paths`, ET LA DISJONCTION QU'ELLE PROUVAIT N'ÉTAIT PAS CELLE DU
+// LOT. Une tâche porte DEUX listes de fichiers — `paths` (la source) et `tests{}` (les
+// spécifications) — et leur divergence est la CONVENTION, pas une négligence : le nombre n'est PAS
+// écrit ici, il est DÉRIVÉ et imprimé en fin d'exécution (et il dépend de la normalisation, cf.
+// `./chemins-de-tache` — deux mesures qui ne disent pas comment elles normalisent ne se comparent
+// pas). Deux tâches dont les `paths` étaient disjoints mais dont les `tests{}` nommaient la MÊME
+// spécification entraient dans le même lot, et leurs deux arbres de travail se marchaient dessus sur
+// un fichier que le composeur venait de déclarer disjoint — SANS UN MOT.
+//
+// 🔴 ET ELLE VIVAIT ICI, AU NIVEAU MODULE D'UN SCRIPT QUI ÉCRIT DEUX FICHIERS À L'IMPORT : aucun
+// test ne pouvait l'exécuter, si bien que son seul témoin lisait le TEXTE de ce fichier. La règle
+// vit désormais dans `retenirSansCollision()`, PURE et éprouvée sur un comportement ; ce script
+// l'APPELLE et garde ses effets de bord pour lui.
+const { retenues, ecartees: collisions } = retenirSansCollision(eligibles, max);
+ecartees.push(...collisions);
 
 // --- écriture du lot ------------------------------------------------------------------------------
 mkdirSync('docs/lots', { recursive: true });
@@ -342,7 +330,9 @@ if (ecarteesPourDecision.length > 0) {
 // recopié : un chiffre écrit dans un commentaire vieillit à chaque composition.
 const divergence = divergencePathsTests(taches);
 console.log(
-  `Divergence \`paths\` / \`tests{}\` (convention, cf. scripts/lot/chemins-de-tache.ts) : ` +
+  `Divergence \`paths\` / \`tests{}\` (convention, cf. scripts/lot/chemins-de-tache.ts), mesurée sur ` +
+    `${taches.length} tâche(s), le titre après le \`#\` d'une promesse RETIRÉ avant comparaison — une ` +
+    `mesure qui ne dit pas comment elle normalise ne se compare pas à la suivante : ` +
     `${divergence.pathsHorsTests.length} tâche(s) déclarent dans \`paths\` une spécification que leur ` +
     `\`tests{}\` ne revendique pas ; ${divergence.testsHorsPaths.length} revendiquent dans \`tests{}\` ` +
     `une spécification absente de leurs \`paths\`. Les deux listes sont lues ENSEMBLE par le test de ` +

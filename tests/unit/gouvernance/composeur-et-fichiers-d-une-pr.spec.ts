@@ -44,6 +44,8 @@ import {
   collisionEntre,
   divergencePathsTests,
   exclusionsSansAdr,
+  promessesSansDossier,
+  retenirSansCollision,
   specificationsOrphelines,
   type TacheDeLot,
 } from '../../../scripts/lot/chemins-de-tache';
@@ -97,10 +99,104 @@ describe('REQ-GOV-021 — la collision de lot lit `paths` ET `tests{}`', () => {
   });
 
   it('REQ-GOV-021 — le composeur lit la MEME fonction : aucune seconde lecture des champs (RM-01)', () => {
+    // ⚠️ CES DEUX ASSERTIONS DOCUMENTENT, ELLES NE GARDENT RIEN, et c'est mesure : on a remis la
+    // disjonction sur `paths` seul et retire `cheminsSoumisALaCollision` de la liste d'import —
+    // l'import `from './chemins-de-tache'` SURVIT (les deux autres noms importes sont encore
+    // consommes plus bas), et les deux assertions restent VERTES. Une variante a UNE LETTRE pres
+    // (`(c)` au lieu de `(p)`) passe aussi. Une garde qui connait une orthographe ne connait pas un
+    // comportement. Ce qui GARDE le livrable (1), c'est le bloc « COMPORTEMENT » ci-dessous, qui
+    // EXECUTE la composition ; ces deux lignes disent seulement ou elle est censee vivre.
     const composeur = readFileSync('scripts/lot/composer.ts', 'utf8');
     expect(composeur).toContain("from './chemins-de-tache'");
     // La detection ne doit plus lire `t.paths` seul pour peupler l'ensemble des chemins pris.
     expect(composeur).not.toMatch(/t\.paths\.some\(\(p\) => pris\.has\(p\)\)/);
+  });
+});
+
+// ── (1) COMPORTEMENT : la composition du lot EXECUTEE, pas relue ─────────────
+
+/**
+ * Le livrable (1) n'etait garde que par deux assertions sur le TEXTE de `composer.ts`, parce que la
+ * boucle qui compose reellement le lot vivait au niveau module d'un script qui ECRIT `docs/tasks.json`
+ * et `docs/lots/<id>/lot.json` au seul fait d'etre importe : aucun test ne pouvait l'executer.
+ * *Le code n'etait pas testable, alors on a teste sa syntaxe.*
+ *
+ * `retenirSansCollision()` est cette boucle, PURE et exportee : elle prend des taches, elle rend le
+ * lot retenu et les ecarts NOMMES. Les effets de bord — lecture du registre, ecriture de `tasks.json`
+ * et du `lot.json` — restent dans le script, qui l'APPELLE. C'est elle que les temoins ci-dessous
+ * executent, et c'est elle que `collisionEntre()` sert : la regle d'intersection n'est plus ecrite
+ * deux fois (RM-01).
+ */
+describe('REQ-GOV-021 — COMPORTEMENT : la composition du lot separe deux taches qui partagent une specification', () => {
+  it('REQ-GOV-021 — deux taches qui ne partagent qu’une entree de `tests{}` sont SEPAREES, et l’ecart nomme le FICHIER et la TACHE', () => {
+    const a = tache('T-A', ['scripts/lot/a.ts'], { 'REQ-X-001': ['tests/unit/partage.spec.ts'] });
+    const b = tache('T-B', ['scripts/lot/b.ts'], { 'REQ-X-002': ['tests/unit/partage.spec.ts'] });
+    const { retenues, ecartees } = retenirSansCollision([a, b], 8);
+    // Leurs `paths` sont disjoints : une composition qui ne lit que `paths` les met dans le MEME lot.
+    expect(retenues.map((t) => t.id)).toEqual(['T-A']);
+    expect(ecartees.map((e) => e.id)).toEqual(['T-B']);
+    // Une raison qui ne nomme ni le fichier ni la tache oblige a relire le backlog pour savoir
+    // ce qui a ete ecarte, et pourquoi.
+    expect(ecartees[0]!.raison).toContain('tests/unit/partage.spec.ts');
+    expect(ecartees[0]!.raison).toContain('T-A');
+  });
+
+  it('REQ-GOV-021 — le titre apres le `#` ne sauve pas la collision : le MEME fichier sous deux titres separe quand meme', () => {
+    const a = tache('T-A', ['scripts/lot/a.ts'], {
+      'REQ-X-001': ['tests/unit/partage.spec.ts#REQ-X-001 — un titre'],
+    });
+    const b = tache('T-B', ['scripts/lot/b.ts'], {
+      'REQ-X-002': ['tests/unit/partage.spec.ts#REQ-X-002 — un AUTRE titre'],
+    });
+    const { retenues, ecartees } = retenirSansCollision([a, b], 8);
+    expect(retenues.map((t) => t.id)).toEqual(['T-A']);
+    expect(ecartees[0]!.raison).toContain('tests/unit/partage.spec.ts');
+  });
+
+  it('REQ-GOV-021 — CONTRE-TEMOIN : deux taches reellement disjointes entrent dans le MEME lot, sans ecart', () => {
+    const a = tache('T-A', ['scripts/lot/a.ts'], { 'REQ-X-001': ['tests/unit/a.spec.ts'] });
+    const b = tache('T-B', ['scripts/lot/b.ts'], { 'REQ-X-002': ['tests/unit/b.spec.ts'] });
+    const { retenues, ecartees } = retenirSansCollision([a, b], 8);
+    expect(retenues.map((t) => t.id)).toEqual(['T-A', 'T-B']);
+    expect(ecartees).toEqual([]);
+  });
+
+  it('REQ-GOV-021 — CONTRE-TEMOIN : le registre append-only ne separe rien, un second fichier partage si', () => {
+    const registre = REGISTRES_APPEND_ONLY[0]!.chemin; // jamais retape : une seule declaration
+    const a = tache('T-A', ['scripts/gates/a.ts', registre]);
+    const b = tache('T-B', ['scripts/gates/b.ts', registre]);
+    expect(retenirSansCollision([a, b], 8).retenues.map((t) => t.id)).toEqual(['T-A', 'T-B']);
+    const c = tache('T-C', ['scripts/gates/a.ts', registre]);
+    const apres = retenirSansCollision([a, c], 8);
+    expect(apres.retenues.map((t) => t.id)).toEqual(['T-A']);
+    expect(apres.ecartees[0]!.raison).toContain('scripts/gates/a.ts');
+  });
+
+  it('REQ-GOV-021 — la collision se juge contre TOUTES les taches deja retenues, et chacune est nommee', () => {
+    const a = tache('T-A', ['scripts/lot/a.ts']);
+    const b = tache('T-B', ['scripts/lot/b.ts'], { 'REQ-X-002': ['tests/unit/b.spec.ts'] });
+    // T-C entre en collision avec la SECONDE retenue, pas la premiere : une comparaison qui
+    // s'arreterait a la tache precedente la laisserait passer.
+    const c = tache('T-C', ['scripts/lot/c.ts'], { 'REQ-X-003': ['tests/unit/b.spec.ts'] });
+    const { retenues, ecartees } = retenirSansCollision([a, b, c], 8);
+    expect(retenues.map((t) => t.id)).toEqual(['T-A', 'T-B']);
+    expect(ecartees[0]!.raison).toContain('tests/unit/b.spec.ts');
+    expect(ecartees[0]!.raison).toContain('T-B');
+  });
+
+  it('REQ-GOV-021 — `max` borne le lot, et la coupure n’est PAS une collision : rien n’est ecarte par erreur', () => {
+    const a = tache('T-A', ['scripts/lot/a.ts']);
+    const b = tache('T-B', ['scripts/lot/b.ts']);
+    const { retenues, ecartees } = retenirSansCollision([a, b], 1);
+    expect(retenues.map((t) => t.id)).toEqual(['T-A']);
+    expect(ecartees).toEqual([]);
+  });
+
+  it('REQ-GOV-021 — le composeur APPELLE cette fonction : la boucle ne vit plus au niveau module (RM-01)', () => {
+    // Assertion lexicale ASSUMEE : elle dit ou la regle vit, elle ne prouve pas qu'elle marche.
+    // Ce qui prouve, ce sont les six temoins ci-dessus, qui l'EXECUTENT.
+    const composeur = readFileSync('scripts/lot/composer.ts', 'utf8');
+    expect(composeur).toContain('retenirSansCollision(');
   });
 });
 
@@ -262,9 +358,21 @@ describe('REQ-GOV-021 — une specification suivie que nulle tache ne revendique
   });
 
   it('REQ-GOV-021 — un nom NU dans `tests{}` ne revendique rien : il ne resout aucun fichier du depot', () => {
-    // 20 promesses du registre nomment un fichier sans son dossier. Les resoudre par leur nom de
-    // base ferait passer pour tenue une promesse qui ne pointe rien — la mesure tomberait de cinq
-    // orphelines a une, sans qu'un seul fichier ait change de porteur.
+    // Des promesses du registre nomment un fichier sans son dossier : le compte est DERIVE et
+    // imprime, jamais tape. (Il etait ecrit « 20 (`preseance.spec.ts`) » au present dans ce
+    // fichier-ci, alors que le registre livre par cette PR en porte 13 et que `preseance.spec.ts`
+    // est l'une des specifications qu'elle rattache.) Les resoudre par leur nom de base ferait
+    // passer pour tenue une promesse qui ne pointe rien — la mesure des orphelines tomberait de
+    // cinq a une sans qu'un seul fichier ait change de porteur.
+    const nues = promessesSansDossier(backlog.taches);
+    console.log(
+      `${nues.length} promesse(s) sans dossier, sur ${new Set(nues.map((n) => n.tache)).size} tache(s) ` +
+        `et ${new Set(nues.map((n) => n.nom)).size} fichier(s) distinct(s) : ` +
+        `${[...new Set(nues.map((n) => n.nom))].sort().join(', ') || 'aucune'}.`
+    );
+    // Aucun nom nu n'est un chemin SUIVI : c'est pour cela qu'il ne revendique rien.
+    const suivies = specificationsSuivies();
+    for (const n of nues) expect(suivies, `${n.tache} promet ${n.nom}`).not.toContain(n.nom);
     const t = tache('T-A', ['scripts/a.ts'], { 'REQ-X-001': ['a.spec.ts'] });
     expect(specificationsOrphelines(['tests/unit/a.spec.ts'], [t])).toEqual([
       'tests/unit/a.spec.ts',
