@@ -44,7 +44,10 @@
         "DM-02",
         "DM-07",
         "GOV-006",
-        "GOV-030"
+        "GOV-030",
+        "GOV-068",
+        "GOV-069",
+        "GOV-070"
       ]
     },
     {
@@ -212,7 +215,8 @@
       "phase": 0,
       "taches": [
         "DM-03-A",
-        "DM-03-P"
+        "DM-03-P",
+        "GOV-080"
       ]
     },
     {
@@ -1767,6 +1771,7 @@
       "phase": -1,
       "taches": [
         "GOV-030",
+        "GOV-069",
         "INT-T01a",
         "INT-T05"
       ]
@@ -2642,6 +2647,7 @@
         "DM-25",
         "SEC-12",
         "UX-P0-01",
+        "UX-P0-01b",
         "UX-P1-02",
         "UX-P3-05"
       ]
@@ -2658,6 +2664,7 @@
       "phase": 0,
       "taches": [
         "UX-P0-01",
+        "UX-P0-01b",
         "UX-P1-10",
         "UX-P3-02"
       ]
@@ -3148,6 +3155,7 @@
       "etape": 10,
       "phase": 0,
       "taches": [
+        "GOV-076",
         "QA-T01"
       ]
     },
@@ -3324,6 +3332,12 @@
       "etape": null,
       "phase": -1,
       "taches": [
+        "GOV-059",
+        "GOV-061",
+        "GOV-062",
+        "GOV-063",
+        "GOV-076",
+        "GOV-083",
         "QA-T00",
         "QA-T01",
         "QA-T07",
@@ -3342,6 +3356,7 @@
       "phase": 0,
       "taches": [
         "GOV-039",
+        "GOV-085",
         "QA-T03"
       ]
     },
@@ -3362,7 +3377,7 @@
     {
       "id": "REQ-QA-016",
       "domaine": "qualite-ci-devops",
-      "texte": "Les E2E de l'espace apporteur s'exécutent sur les projets Playwright mobile-safari (iPhone 14 Pro) et mobile-chrome (Pixel 7) uniquement ; ceux de la console sur chromium desktop ; un spec d'espace sans projet mobile fait rougir la CI.",
+      "texte": "Les E2E de l'espace apporteur s'executent sur les projets Playwright mobile-safari (iPhone 14 Pro) et mobile-chrome (Pixel 7) uniquement ; ceux de la console sur chromium desktop ; un spec d'espace sans projet mobile fait rougir la CI. ⚠️ Cette restriction porte sur les PARCOURS fonctionnels : elle ne s'applique pas aux passes d'accessibilite de REQ-UX-017, qui sont un controle de rendu et s'executent sur les deux profils, iPhone et desktop.",
       "source": "tableaux-de-bord §1 · audit-outil-bout-en-bout §12.3 + QA-F19",
       "statut": "active",
       "remplaceePar": null,
@@ -3645,7 +3660,8 @@
       "etape": null,
       "phase": -1,
       "taches": [
-        "GOV-001"
+        "GOV-001",
+        "GOV-072"
       ]
     },
     {
@@ -3677,7 +3693,10 @@
         "GOV-005",
         "GOV-025",
         "GOV-028",
-        "GOV-037"
+        "GOV-037",
+        "GOV-071",
+        "GOV-074",
+        "GOV-084"
       ]
     },
     {
@@ -3708,7 +3727,8 @@
       "taches": [
         "GOV-011",
         "GOV-022",
-        "GOV-043"
+        "GOV-043",
+        "GOV-082"
       ]
     },
     {
@@ -3723,7 +3743,8 @@
       "phase": -1,
       "taches": [
         "GOV-008",
-        "GOV-032"
+        "GOV-032",
+        "GOV-060"
       ]
     },
     {
@@ -3737,7 +3758,8 @@
       "etape": null,
       "phase": -1,
       "taches": [
-        "GOV-008"
+        "GOV-008",
+        "GOV-059"
       ]
     },
     {
@@ -3752,7 +3774,10 @@
       "phase": -1,
       "taches": [
         "GOV-009",
-        "GOV-038"
+        "GOV-038",
+        "GOV-058",
+        "GOV-063",
+        "GOV-070"
       ]
     },
     {
@@ -3767,7 +3792,8 @@
       "phase": -1,
       "taches": [
         "GOV-010",
-        "GOV-022"
+        "GOV-022",
+        "GOV-070"
       ]
     },
     {
@@ -3783,7 +3809,8 @@
       "taches": [
         "GOV-007",
         "GOV-023",
-        "GOV-024"
+        "GOV-024",
+        "GOV-062"
       ]
     },
     {
@@ -3799,7 +3826,10 @@
       "taches": [
         "GOV-007",
         "GOV-021",
-        "GOV-024"
+        "GOV-024",
+        "GOV-058",
+        "GOV-077",
+        "GOV-078"
       ]
     },
     {
@@ -3817,7 +3847,12 @@
         "GOV-044",
         "GOV-045",
         "GOV-046",
-        "GOV-054"
+        "GOV-054",
+        "GOV-061",
+        "GOV-063",
+        "GOV-067",
+        "GOV-082",
+        "GOV-083"
       ]
     },
     {
@@ -3832,7 +3867,9 @@
       "phase": -1,
       "taches": [
         "GOV-007",
-        "GOV-047"
+        "GOV-047",
+        "GOV-058",
+        "GOV-077"
       ]
     },
     {
@@ -3847,7 +3884,8 @@
       "phase": -1,
       "taches": [
         "GOV-000",
-        "GOV-012"
+        "GOV-012",
+        "GOV-057"
       ]
     },
     {
@@ -3864,6 +3902,7 @@
         "GOV-005",
         "GOV-022",
         "GOV-027",
+        "GOV-060",
         "JUR-T01b"
       ]
     },
@@ -3892,7 +3931,8 @@
       "etape": null,
       "phase": -1,
       "taches": [
-        "GOV-013"
+        "GOV-013",
+        "GOV-071"
       ]
     },
     {
@@ -3941,7 +3981,7 @@
     {
       "id": "REQ-GOV-021",
       "domaine": "gouvernance-agents",
-      "texte": "Chaque tâche du backlog (`tasks.json`) a : id, phase, owner unique ou vide, acceptance vérifiable, tests nommés, dépendances (ids), REQ couvertes (≥ 1), estimation ≤ 1 jour, étiquette `repo:partners|repo:axionia`. Gate : `estimateDays > 1`, dépendances cycliques, REQ inconnue ou tâche sans REQ → rouge.",
+      "texte": "Chaque tache du backlog (`tasks.json`) a : id, phase, owner unique ou vide, acceptance verifiable, tests nommes, dependances (ids), REQ couvertes (>= 1), estimation bornee par le plafond que `scripts/lot/tasks.schema.json` declare pour `estimateDays` (1,5 jour au 2026-09-16 ; la valeur se lit dans le schema, elle ne se recopie pas ici), etiquette `repo:partners|repo:axionia`. Gate : estimation au-dela du plafond du schema, dependances cycliques, owner multiple, REQ absente.",
       "source": "nouvelle ; audit-bout-en-bout §10 (chantiers de 8 à 14 j)",
       "statut": "active",
       "remplaceePar": null,
@@ -3957,7 +3997,16 @@
         "GOV-041",
         "GOV-049",
         "GOV-050",
-        "GOV-056"
+        "GOV-056",
+        "GOV-057",
+        "GOV-074",
+        "GOV-075",
+        "GOV-078",
+        "GOV-080",
+        "GOV-081",
+        "GOV-084",
+        "GOV-086",
+        "GOV-087"
       ]
     },
     {
@@ -3987,7 +4036,8 @@
       "taches": [
         "GOV-008",
         "GOV-018",
-        "GOV-052"
+        "GOV-052",
+        "GOV-073"
       ]
     },
     {
@@ -4003,7 +4053,11 @@
       "taches": [
         "GOV-018",
         "GOV-026",
-        "GOV-045"
+        "GOV-045",
+        "GOV-060",
+        "GOV-068",
+        "GOV-073",
+        "GOV-081"
       ]
     },
     {
@@ -4037,7 +4091,10 @@
         "GOV-020",
         "GOV-038",
         "GOV-041",
-        "GOV-042"
+        "GOV-042",
+        "GOV-057",
+        "GOV-079",
+        "GOV-086"
       ]
     },
     {
@@ -4084,7 +4141,10 @@
       "phase": -1,
       "taches": [
         "GOV-014",
-        "GOV-051"
+        "GOV-051",
+        "GOV-061",
+        "GOV-062",
+        "GOV-076"
       ]
     },
     {
@@ -5152,6 +5212,7 @@
       "etape": null,
       "phase": 0,
       "taches": [
+        "GOV-071",
         "JUR-T26"
       ]
     },
@@ -5247,7 +5308,12 @@
         "CPL-T01",
         "GOV-000",
         "GOV-036",
-        "GOV-040"
+        "GOV-040",
+        "GOV-064",
+        "GOV-065",
+        "GOV-066",
+        "GOV-067",
+        "GOV-068"
       ]
     },
     {
@@ -5264,7 +5330,11 @@
         "GOV-024",
         "GOV-035",
         "GOV-053",
-        "GOV-055"
+        "GOV-055",
+        "GOV-072",
+        "GOV-079",
+        "GOV-085",
+        "GOV-087"
       ]
     },
     {
