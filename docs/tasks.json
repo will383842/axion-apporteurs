@@ -265,10 +265,10 @@
       "acceptance": "≥ 7 couples ; bandeaux sur fonctionnement §3.2/R3/R5/§9, contrat art. 1.2/1.5.",
       "tests": {
         "REQ-GOV-002": [
-          "preseance.spec.ts"
+          "tests/unit/gouvernance/preseance.spec.ts"
         ],
         "REQ-GOV-030": [
-          "preseance.spec.ts"
+          "tests/unit/gouvernance/preseance.spec.ts"
         ]
       }
     },
@@ -340,7 +340,7 @@
       "acceptance": "≥ 25 affirmations avec « vérifié le » ; fausses marquées (Invoice, Refund, payerSiret, HT encaissé, C3 codé, patron Calendly, EmargementToken index, score non snapshoté…).",
       "tests": {
         "REQ-GOV-004": [
-          "affirmations-verifiees.spec.ts"
+          "tests/unit/gouvernance/affirmations-verifiees.spec.ts"
         ]
       }
     },
@@ -474,10 +474,10 @@
       "acceptance": "ADR-0001 stack (HYP-BEB-D2), 0002 frontière/sources de vérité/mono-tenant (REQ-CPL-018), 0003 grille publiée, 0004 auth + rôles défaut refus, 0005 gouvernance, 0006 fusion.",
       "tests": {
         "REQ-CPL-018": [
-          "adr-index-derive.spec.ts"
+          "tests/unit/gouvernance/adr-index-derive.spec.ts"
         ],
         "REQ-GOV-008": [
-          "adr-index-derive.spec.ts"
+          "tests/unit/gouvernance/adr-index-derive.spec.ts"
         ]
       }
     },
@@ -569,7 +569,8 @@
         "docs/PROTOCOLE-FUSION.md",
         "scripts/gates/gov-depot.ts",
         "tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts",
-        "tests/unit/gouvernance/tout-check-est-cable.spec.ts"
+        "tests/unit/gouvernance/tout-check-est-cable.spec.ts",
+        "tests/unit/gouvernance/integration-livrable.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -718,10 +719,10 @@
       "motif": null,
       "tests": {
         "REQ-CPL-002": [
-          "fiches-tiers.spec.ts"
+          "tests/unit/gouvernance/fiches-tiers.spec.ts"
         ],
         "REQ-GOV-022": [
-          "fiches-tiers.spec.ts"
+          "tests/unit/gouvernance/fiches-tiers.spec.ts"
         ]
       },
       "acceptance": "chaque tiers dont une valeur est produite pour lui porte sa fiche `docs/tiers/<nom>.md` avec URL officielle, date de lecture, extrait cite, exemple officiel, quotas et comportement en panne (REQ-GOV-022) ; la fiche `banque.md` repond a REQ-CPL-002 ou nomme ce qui manque ; `docs/tiers/README.md` est l'index du dossier et la garde `fiches-tiers` rougit sur toute fiche amputee d'une rubrique ecrivable, chacune de ses familles vue rougir sur son temoin."
@@ -9144,7 +9145,9 @@
       "paths": [
         "scripts/lot/composer.ts",
         "scripts/gates/gov-pr.ts",
-        "tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts"
+        "tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts",
+        "scripts/lot/chemins-de-tache.ts",
+        "scripts/gates/gov-attributions.ts"
       ],
       "schema": false,
       "sensible": [

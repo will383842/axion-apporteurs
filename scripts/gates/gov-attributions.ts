@@ -1171,17 +1171,24 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   { tache: 'GOV-001', lieu: 'mention', ou: 'scripts/gates/gov-requirements.ts', n: 1 },
   { tache: 'GOV-001', lieu: 'mention', ou: 'tests/unit/gouvernance/glossaire-enums.spec.ts', n: 1 },
   { tache: 'GOV-002', lieu: 'mention', ou: 'scripts/gates/gov-preseance.ts', n: 2 },
-  { tache: 'GOV-002', lieu: 'mention', ou: 'tests/unit/gouvernance/preseance.spec.ts', n: 2 },
+  // 🔧 2026-09-17, GOV-056 (4b) — QUATRE SITES RETIRÉS, PARCE QU'ILS SONT RÉSOLUS, ET C'EST LA GARDE
+  // QUI L'A DIT. `dette_perimee` a rougi en nommant chacun d'eux : « la tâche déclare maintenant ce
+  // fichier ». Leur `tests{}` promettait `preseance.spec.ts`, `affirmations-verifiees.spec.ts`,
+  // `adr-index-derive.spec.ts`, `fiches-tiers.spec.ts` — un NOM NU, qui ne résout aucun fichier du
+  // dépôt : les quatre spécifications passaient pour portées par personne, et les quatre mentions
+  // pour orphelines. Les promesses portent désormais le chemin complet (`outils/reecrire-champ.mjs`),
+  // et les sites se referment d'eux-mêmes.
+  //   - GOV-002 · tests/unit/gouvernance/preseance.spec.ts            (n: 2)
+  //   - GOV-004 · tests/unit/gouvernance/affirmations-verifiees.spec.ts (n: 1)
+  //   - GOV-009 · tests/unit/gouvernance/adr-index-derive.spec.ts     (n: 1)
+  //   - GOV-015 · tests/unit/gouvernance/fiches-tiers.spec.ts         (n: 1)
+  // ⚠️ `tests/unit/gouvernance/fiches-tiers.controles.ts` RESTE figé : ce n'est pas une
+  // spécification, aucune promesse ne le nomme, et rien ne l'a résolu. Retirer une entrée parce que
+  // sa VOISINE s'est refermée serait exactement la dette qu'on prétend faire baisser.
   { tache: 'GOV-003', lieu: 'mention', ou: 'scripts/gates/gov-identifiants.ts', n: 1 },
   { tache: 'GOV-003', lieu: 'mention', ou: 'scripts/gates/gov-tasks.ts', n: 1 },
   { tache: 'GOV-004', lieu: 'mention', ou: 'scripts/gates/gov-inventaire.ts', n: 1 },
   { tache: 'GOV-004', lieu: 'mention', ou: 'scripts/gates/gov-sonde.ts', n: 2 },
-  {
-    tache: 'GOV-004',
-    lieu: 'mention',
-    ou: 'tests/unit/gouvernance/affirmations-verifiees.spec.ts',
-    n: 1,
-  },
   {
     tache: 'GOV-004',
     lieu: 'mention',
@@ -1199,18 +1206,11 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
     n: 2,
   },
   {
-    tache: 'GOV-009',
-    lieu: 'mention',
-    ou: 'tests/unit/gouvernance/adr-index-derive.spec.ts',
-    n: 1,
-  },
-  {
     tache: 'GOV-015',
     lieu: 'mention',
     ou: 'tests/unit/gouvernance/fiches-tiers.controles.ts',
     n: 1,
   },
-  { tache: 'GOV-015', lieu: 'mention', ou: 'tests/unit/gouvernance/fiches-tiers.spec.ts', n: 1 },
   { tache: 'GOV-017a', lieu: 'mention', ou: 'scripts/gates/gov-tasks.ts', n: 1 },
   { tache: 'GOV-017a', lieu: 'mention', ou: 'scripts/lot/tasks.schema.json', n: 1 },
   {

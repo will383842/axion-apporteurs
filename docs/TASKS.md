@@ -78,7 +78,7 @@ Couvre : `REQ-GOV-002`, `REQ-GOV-030`
 
 **Acceptation.** ≥ 7 couples ; bandeaux sur fonctionnement §3.2/R3/R5/§9, contrat art. 1.2/1.5.
 
-**Tests.** `preseance.spec.ts`
+**Tests.** `tests/unit/gouvernance/preseance.spec.ts`
 
 ### GOV-003 — Identifiants qualifiés + gate anti-identifiant nu ✅ **fusionnee**
 
@@ -98,7 +98,7 @@ Couvre : `REQ-GOV-004`
 
 **Acceptation.** ≥ 25 affirmations avec « vérifié le » ; fausses marquées (Invoice, Refund, payerSiret, HT encaissé, C3 codé, patron Calendly, EmargementToken index, score non snapshoté…).
 
-**Tests.** `affirmations-verifiees.spec.ts`
+**Tests.** `tests/unit/gouvernance/affirmations-verifiees.spec.ts`
 
 ### GOV-005 — Registre des décisions ouvertes, hypothèses par défaut, tests HYP-* ✅ **fusionnee**
 
@@ -128,7 +128,7 @@ Couvre : `REQ-CPL-018`, `REQ-GOV-008`
 
 **Acceptation.** ADR-0001 stack (HYP-BEB-D2), 0002 frontière/sources de vérité/mono-tenant (REQ-CPL-018), 0003 grille publiée, 0004 auth + rôles défaut refus, 0005 gouvernance, 0006 fusion.
 
-**Tests.** `adr-index-derive.spec.ts`
+**Tests.** `tests/unit/gouvernance/adr-index-derive.spec.ts`
 
 ### GOV-010 — Gate ADR ↔ assertion ✅ **fusionnee**
 
@@ -188,7 +188,7 @@ Couvre : `REQ-CPL-002`, `REQ-GOV-022`
 
 **Acceptation.** chaque tiers dont une valeur est produite pour lui porte sa fiche `docs/tiers/<nom>.md` avec URL officielle, date de lecture, extrait cite, exemple officiel, quotas et comportement en panne (REQ-GOV-022) ; la fiche `banque.md` repond a REQ-CPL-002 ou nomme ce qui manque ; `docs/tiers/README.md` est l'index du dossier et la garde `fiches-tiers` rougit sur toute fiche amputee d'une rubrique ecrivable, chacune de ses familles vue rougir sur son temoin.
 
-**Tests.** `fiches-tiers.spec.ts`
+**Tests.** `tests/unit/gouvernance/fiches-tiers.spec.ts`
 
 ### INT-T01a — Contrat d'événements, enveloppe et nomenclature : Zod + JSON Schema + `schemaVersion` + hash ✅ **fusionnee**
 
