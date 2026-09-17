@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `7f83007` — 2026-09-17T18:53:09+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #53 (brouillon) · 2. #54 (brouillon) |
+| Qu’est-ce qui est en vol ? | 1. #53 (brouillon) · 2. #54 (brouillon) · 3. #55 (brouillon) |
 | Qui tient quoi ? | GOV-041 (A05) · GOV-056 (A05) |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
@@ -66,6 +66,7 @@ Reste sur ce chemin : **17.50 j**.
 | --- | --- | --- | --- |
 | 1 | #53 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent | `t/gov-041` | brouillon — hors file tant qu’il n’est pas prêt |
 | 2 | #54 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte | `t/gov-044` | brouillon — hors file tant qu’il n’est pas prêt |
+| 3 | #55 — test(GOV-039): un titre de test confronte son identifiant au texte de l exigence nommee | `t/gov-039` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -126,7 +127,12 @@ parce que les trois partagent `scripts/lot/cloture.ts`. Deux silences subsistent
 couverts ici : un résultat sans `dev.taskId` est ignoré avec un avertissement, et surtout un membre
 du lot dont le rendu ne dit RIEN ne reçoit rien — ni statut, ni tentative — alors que c'est le
 miroir exact du trou que cette PR ferme. Il faudra une tâche pour ce second cas. Le composeur
-n'exclut toujours pas les tâches déjà composées, et `docs/lots/` reste hors suivi.
+n'exclut toujours pas les tâches déjà composées, et `docs/lots/` reste hors suivi. Enfin, deux rouges
+de `pnpm test` sont HORS de ce diff et restent dus : `gov:etat` rougit en
+`pr_sur_tache_non_revendiquee` sur les deux PR sœurs du lot, parce que leur revendication n'a été
+écrite que dans le `docs/tasks.json` de leur propre arbre. Le geste qui l'éteint est
+`reclasser --revendiquer` sur CETTE branche pour les deux autres tâches ; le classificateur de
+permissions me l'a refusé, et c'est à l'orchestrateur de le poser sur les trois branches.
 
 **Appris.** Un contrôle rangé sous la condition qui l'a fait naître garde la moitié des cas, et la
 moitié se mesure. Huit pannes fabriquées sur ce correctif, toutes vues : deux d'entre elles se
@@ -138,7 +144,11 @@ résultat fusionné, un refus mal placé se déclenche quand même et PARAÎT ga
 dont AUCUN résultat n'est fusionné pour voir l'intrus se faire recompter `attempts` en silence.
 Deuxième fait mesuré : glisser l'intrus au MILIEU du rendu plutôt qu'en queue distingue « tous » de
 « le dernier » — un contrôle réduit à `slice(-1)` reste vert sur un intrus en fin de liste et tue
-trois témoins sur un intrus au milieu.
+trois témoins sur un intrus au milieu. Troisième fait, et il coûte un tour à qui l'ignore :
+`gov:attributions` ne relit que les VINGT premières lignes d'un fichier pour y chercher des noms de
+tâches. Nommer, dans l'en-tête d'un fichier, la tâche dont on raconte l'incident fondateur est un
+`mention_hors_paths` — le lecteur suivant irait chercher chez elle un fichier qui n'est pas à elle.
+Le fait se raconte donc plus bas, ou sans le nom.
 
 ### PR #48 — 2026-09-17 — feat(GOV-056): le composeur lit paths ET tests{}, gov:pr juge les fichiers d une PR
 
