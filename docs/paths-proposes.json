@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 228,
+    "tachesCouvertes": 260,
     "pairesEnIntersection": 4112,
-    "cheminsDeclares": 673,
-    "cheminsDistincts": 402,
+    "cheminsDeclares": 760,
+    "cheminsDistincts": 489,
     "cheminsPartages": 97,
-    "tachesSansAucuneIntersection": 45,
+    "tachesSansAucuneIntersection": 76,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T06",
@@ -53,7 +53,38 @@
       "GOV-053",
       "GOV-054",
       "GOV-055",
-      "GOV-056"
+      "GOV-056",
+      "GOV-057",
+      "GOV-058",
+      "GOV-059",
+      "GOV-060",
+      "GOV-061",
+      "GOV-062",
+      "GOV-063",
+      "GOV-064",
+      "GOV-065",
+      "GOV-066",
+      "GOV-067",
+      "GOV-068",
+      "GOV-069",
+      "GOV-071",
+      "GOV-072",
+      "GOV-073",
+      "GOV-074",
+      "GOV-075",
+      "GOV-076",
+      "GOV-077",
+      "GOV-078",
+      "GOV-079",
+      "GOV-080",
+      "GOV-081",
+      "GOV-082",
+      "GOV-083",
+      "GOV-084",
+      "GOV-085",
+      "GOV-086",
+      "GOV-087",
+      "UX-P0-01b"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -90,15 +121,9 @@
       "GOV-013 — lexique.spec.ts",
       "GOV-015 — fiches-tiers.spec.ts",
       "GOV-019 — poids-du-bundle-garde-vraiment.spec.ts",
-      "QA-T03 — req-check.spec.ts",
-      "INT-T02 — outbox-produit-des-evenements-valides.spec.ts",
-      "JUR-T03 — vocabulaire-apporteur.spec.ts",
-      "UX-P0-02 — maquettes-validees.spec.ts",
-      "JUR-T29 — remuneration-indicative.spec.ts",
       "JUR-T01b — decisions-ouvertes.spec.ts",
       "JUR-T13 — textes-apporteurs-charte-relationnelle.spec.ts",
-      "GOV-021 — revue-adversariale-exigee.spec.ts",
-      "JUR-T27 — contrat-sobre.spec.ts"
+      "GOV-021 — revue-adversariale-exigee.spec.ts"
     ],
     "registreHorsDepot": [
       "DM-03-A",
@@ -343,7 +368,8 @@
     "JUR-T02": [
       "src/domain/seuils/ssot.ts",
       "docs/gates.json",
-      "scripts/gates/seuils-ssot.ts"
+      "scripts/gates/seuils-ssot.ts",
+      "tests/unit/juridique/seuils-ssot.spec.ts"
     ],
     "CPL-T01": [
       "docs/decisions/CPL-T01",
@@ -362,24 +388,26 @@
     "SEC-01": [
       "src/lib/env.ts",
       ".env.example",
-      "scripts/gates/env-boot.spec.ts",
+      "tests/unit/securite/env-boot.spec.ts",
       "docs/gates.json"
     ],
     "SEC-02": [
       "src/middleware.ts",
       "next.config.ts",
-      "tests/security/headers.spec.ts",
+      "tests/unit/securite/headers.spec.ts",
       "docs/gates.json"
     ],
     "SEC-10": [
       "src/server/securite/rate-limit.ts",
       "scripts/gates/rate-famille.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/securite/rate-famille.spec.ts"
     ],
     "QA-T08": [
       "src/lib/logger.ts",
       "src/lib/notify.ts",
-      "sentry.server.config.ts"
+      "sentry.server.config.ts",
+      "tests/unit/qualite/journal-redige.spec.ts"
     ],
     "DM-01": [
       "prisma/schema.prisma",
@@ -387,18 +415,23 @@
       "src/domain/evenement/journal.ts",
       "tests/integration/journal.spec.ts",
       "scripts/gates/journal-sans-pii.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/domaine/schema-centimes.spec.ts",
+      "tests/unit/domaine/journal-charge-fermee.spec.ts"
     ],
     "DM-02": [
       "scripts/gates/schema-enums.ts",
       "docs/gates.json",
-      "scripts/gates/schema-cents.ts"
+      "scripts/gates/schema-cents.ts",
+      "tests/unit/domaine/gardes-de-schema.spec.ts",
+      "tests/integration/index-partiels.spec.ts"
     ],
     "QA-T02": [
       "tests/integration/harnais.ts",
       "vitest.config.ts",
       ".github/workflows/ci.yml",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/integration/harnais-testcontainers.spec.ts"
     ],
     "QA-T04": [
       "src/lib/env.ts",
@@ -406,94 +439,119 @@
       "src/app/api/readyz/route.ts",
       "Dockerfile",
       "docker-entrypoint.sh",
+      "tests/unit/qualite/env-fail-fast.spec.ts",
+      "tests/integration/sondes-de-vie.spec.ts",
       "prisma/schema.prisma"
     ],
     "QA-T03": [
       "scripts/gates/req-check.ts",
       "docs/requirements.json",
-      ".github/workflows/ci.yml"
+      ".github/workflows/ci.yml",
+      "tests/unit/qualite/req-check.spec.ts"
     ],
     "QA-T07": [
       ".semgrep.yml",
       ".github/workflows/ci.yml",
       "docs/gates.json",
-      "scripts/gates/ast-prisma.ts"
+      "scripts/gates/ast-prisma.ts",
+      "tests/unit/qualite/semgrep-regles-maison.spec.ts"
     ],
     "QA-T30": [
       "stryker.config.json",
       ".github/workflows/nightly.yml",
       "scripts/gates/stryker.sh",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/qualite/score-de-mutation.spec.ts"
     ],
     "CPL-T22": [
       ".github/workflows/ci.yml",
       "docs/gates.json",
-      ".github/workflows/red-first.yml"
+      ".github/workflows/red-first.yml",
+      "tests/unit/qualite/red-first.spec.ts"
     ],
     "SEC-08": [
       "src/server/securite/pii.ts",
       "scripts/gates/schema-pii.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/securite/chiffrement-avec-aad.spec.ts"
     ],
     "QA-T05": [
       ".github/workflows/deploy.yml",
       "Dockerfile",
       "scripts/gates/gate-c.sh",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/qualite/pipeline-image.spec.ts",
+      "tests/unit/qualite/build-sans-base.spec.ts"
     ],
     "QA-T11": [
       ".github/workflows/ci.yml",
       "docs/gates.json",
       "scripts/gates/migrations-additive.ts",
-      "scripts/gates/gate-d.sh"
+      "scripts/gates/gate-d.sh",
+      "tests/integration/migrations-additives.spec.ts"
     ],
     "QA-T06": [
       ".github/workflows/preview.yml",
-      "prisma/seed.ts"
+      "prisma/seed.ts",
+      "tests/integration/semeur-deterministe.spec.ts",
+      "tests/unit/qualite/preview-par-pr.spec.ts"
     ],
     "QA-T12": [
       ".github/workflows/backup.yml",
-      "docs/runbooks/sauvegarde.md"
+      "docs/runbooks/sauvegarde.md",
+      "tests/unit/qualite/sauvegarde-et-exercice.spec.ts"
     ],
     "QA-T13": [
       ".github/workflows/rollback.yml",
       "docs/runbooks/rollback.md",
-      "docs/runbooks/socle.md"
+      "docs/runbooks/socle.md",
+      "tests/unit/qualite/retour-arriere.spec.ts",
+      "tests/unit/qualite/runbooks-exerces.spec.ts"
     ],
     "DM-03-A": [
       "axionia/src/content/pricing.ts",
       "axionia/src/server/partners-sync/grille/export.ts",
-      "axionia/scripts/gates/grille-check.ts"
+      "axionia/scripts/gates/grille-check.ts",
+      "axionia/src/server/partners-sync/__tests__/grille-export.spec.ts"
     ],
     "DM-03-P": [
       "src/server/grille/import.ts",
       "src/domain/commission/grille.ts",
-      "prisma/schema.prisma"
+      "prisma/schema.prisma",
+      "tests/unit/domaine/grille-import.spec.ts",
+      "tests/integration/grille-versionnee.spec.ts"
     ],
     "DM-04": [
       "src/domain/commission/calcul.ts",
-      "tests/domain/conservation.spec.ts",
-      "docs/gates.json"
+      "tests/unit/domaine/conservation.spec.ts",
+      "docs/gates.json",
+      "tests/unit/domaine/commission-calcul.spec.ts"
     ],
     "INT-T02": [
       "axionia/src/server/partners-sync/outbox.ts",
       "axionia/prisma/schema.prisma",
-      "axionia/scripts/gates/inertie.ts"
+      "axionia/scripts/gates/inertie.ts",
+      "axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts"
     ],
     "INT-T03": [
       "axionia/src/server/partners-sync/producteurs/client.ts",
       "axionia/prisma/schema.prisma",
-      "axionia/scripts/gates/cliquet-ecrivains.ts"
+      "axionia/scripts/gates/cliquet-ecrivains.ts",
+      "axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts",
+      "axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts"
     ],
     "INT-T04": [
-      "axionia/src/server/partners-sync/producteurs/devis.ts"
+      "axionia/src/server/partners-sync/producteurs/devis.ts",
+      "axionia/src/server/partners-sync/__tests__/producteur-devis.spec.ts"
     ],
     "INT-T05": [
       "axionia/src/server/partners-sync/producteurs/facturation.ts",
-      "axionia/prisma/schema.prisma"
+      "axionia/prisma/schema.prisma",
+      "axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts"
     ],
     "INT-T22": [
-      "axionia/src/server/partners-sync/producteurs/candidature.ts"
+      "axionia/src/server/partners-sync/producteurs/candidature.ts",
+      "axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts"
     ],
     "SEC-06": [
       "src/app/api/webhooks/axionia/route.ts",
@@ -501,7 +559,7 @@
       "src/server/queue/workers/evenement-recu.ts",
       "prisma/schema.prisma",
       "tests/integration/webhook.spec.ts",
-      "tests/security/webhook-signature.spec.ts",
+      "tests/unit/securite/webhook-signature.spec.ts",
       "tests/integration/webhook-verdicts.spec.ts",
       "docs/gates.json"
     ],
@@ -514,25 +572,29 @@
     "SEC-03": [
       "src/server/auth/lien-magique.ts",
       "src/app/(espace)/connexion/",
-      "prisma/schema.prisma"
+      "prisma/schema.prisma",
+      "tests/integration/lien-magique.spec.ts",
+      "tests/unit/securite/lien-magique-indistinction.spec.ts"
     ],
     "SEC-04": [
       "src/server/auth/session.ts",
       "prisma/schema.prisma",
-      "tests/security/revocation.spec.ts",
+      "tests/unit/securite/revocation.spec.ts",
       "docs/gates.json"
     ],
     "SEC-05": [
       "src/server/acces/for-apporteur.ts",
       "docs/gates.json",
-      "tests/security/idor.spec.ts"
+      "tests/integration/idor.spec.ts",
+      "tests/unit/securite/acces-scope.spec.ts"
     ],
     "SEC-17": [
       "src/server/roles/matrice.ts",
       "src/server/roles/require-role.ts",
       "prisma/schema.prisma",
       "scripts/gates/roles.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/securite/matrice-des-roles.spec.ts"
     ],
     "INT-T09": [
       "src/server/integrations/recherche-entreprises/",
@@ -540,30 +602,37 @@
       "tests/fixtures/recherche-entreprises/",
       "scripts/gates/aucun-annee-de-naissance.ts",
       "tests/integration/api-gouv.spec.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/integration/recherche-entreprises-repli.spec.ts"
     ],
     "INT-T10": [
       "src/server/integrations/zeptomail/",
       "docs/tiers/zeptomail.md",
       "src/app/api/webhooks/zeptomail/route.ts",
       "tests/unit/email/emetteur.spec.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/integration/webhook-rebonds.spec.ts"
     ],
     "INT-T11": [
       "src/server/mcp/",
       "scripts/gates/harnais-mcp.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/integration/adaptateur-mcp.spec.ts"
     ],
     "INT-T14": [
       "src/server/integrations/telegram/",
       "docs/tiers/telegram.md",
-      "tests/security/notif-sans-pii.spec.ts",
+      "tests/unit/integration/notif-sans-pii.spec.ts",
       "docs/gates.json"
     ],
     "DM-06": [
       "prisma/schema.prisma",
       "src/domain/apporteur/statut.ts",
-      "src/domain/apporteur/matrice.ts"
+      "src/domain/apporteur/matrice.ts",
+      "tests/unit/domaine/apporteur-identites-facturation.spec.ts",
+      "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts",
+      "tests/integration/apporteur-jeton-depot.spec.ts",
+      "tests/unit/domaine/apporteur-score-fige.spec.ts"
     ],
     "JUR-T01": [
       "docs/contrat/CONTRAT-APPORTEUR-V1.md",
@@ -576,24 +645,28 @@
     ],
     "JUR-T03": [
       "axionia/src/content/commercial-offer.ts",
-      "axionia/scripts/gates/vocab-public.ts"
+      "axionia/scripts/gates/vocab-public.ts",
+      "axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts"
     ],
     "JUR-T04": [
       "docs/rgpd/registre-article-30.md",
       "docs/rgpd/aipd.md",
-      "src/app/(espace)/confidentialite/page.tsx"
+      "src/app/(espace)/confidentialite/page.tsx",
+      "tests/unit/juridique/registre-rgpd.spec.ts"
     ],
     "UX-P0-01": [
       "messages/fr.json",
       "src/content/micro-copy/",
       "scripts/gates/ux-exhaustivite.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
     ],
     "UX-P0-02": [
       "docs/maquettes/",
       "docs/ESPACE-ROUTES.md",
       "scripts/gates/maquettes-validees.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/espace/maquettes-validees.spec.ts"
     ],
     "UX-P0-03": [
       "tests/a11y/",
@@ -607,15 +680,19 @@
       "lighthouserc.json",
       ".github/workflows/ci.yml",
       "scripts/gates/bundle-par-route.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/qualite/budget-par-route.spec.ts"
     ],
     "JUR-T29": [
       "axionia/src/content/commercial-offer.ts",
-      "axionia/scripts/gates/jur-copy-indicative.ts"
+      "axionia/scripts/gates/jur-copy-indicative.ts",
+      "axionia/src/content/__tests__/remuneration-indicative.spec.ts"
     ],
     "CPL-T13": [
       "src/domain/temps/",
-      "src/domain/attribution/seuil-prioritaire.ts"
+      "src/domain/attribution/seuil-prioritaire.ts",
+      "tests/unit/domaine/temps-horloge-et-feries.spec.ts",
+      "tests/unit/domaine/seuil-prioritaire.spec.ts"
     ],
     "JUR-T01b": [
       "docs/contrat/CONTRAT-APPORTEUR-V1.md"
@@ -1136,7 +1213,8 @@
       "scripts/gates/jur-aucun-agregat-reseau.ts",
       "scripts/gates/jur-aucune-progression.ts",
       "scripts/gates/jur-revue-apporteur-facing.ts",
-      "scripts/gates/jur-lexique-social.ts"
+      "scripts/gates/jur-lexique-social.ts",
+      "tests/unit/juridique/charte-relationnelle.spec.ts"
     ],
     "JUR-T24": [
       "src/domain/apporteur/suspension.ts",
@@ -1161,7 +1239,8 @@
       "src/domain/apporteur/activite.ts"
     ],
     "JUR-T27": [
-      "docs/contrat/CONTRAT-APPORTEUR-V1.md"
+      "docs/contrat/CONTRAT-APPORTEUR-V1.md",
+      "tests/unit/contrat/contrat-sobre.spec.ts"
     ],
     "JUR-T28": [
       "docs/contrat/CONTRAT-APPORTEUR-V1.md",
@@ -1268,6 +1347,103 @@
     ],
     "GOV-056": [
       "tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts"
+    ],
+    "GOV-057": [
+      "tests/unit/gouvernance/clore-une-tache-livree-seule.spec.ts"
+    ],
+    "GOV-058": [
+      "tests/unit/gouvernance/decisions-de-gouvernance-ecrites.spec.ts"
+    ],
+    "GOV-059": [
+      "tests/unit/gouvernance/revendication-par-branche.spec.ts"
+    ],
+    "GOV-060": [
+      "tests/unit/gouvernance/plan-state-lecteur-unique.spec.ts"
+    ],
+    "GOV-061": [
+      "tests/unit/gouvernance/porte-a-presente-active-effective.spec.ts"
+    ],
+    "GOV-062": [
+      "tests/unit/gouvernance/outillage-de-la-porte-a.spec.ts"
+    ],
+    "GOV-063": [
+      "tests/unit/gouvernance/un-nom-une-garde.spec.ts"
+    ],
+    "GOV-064": [
+      "tests/unit/gouvernance/deux-chemins-ne-se-confondent-pas.spec.ts"
+    ],
+    "GOV-065": [
+      "tests/unit/gouvernance/limite-de-la-forme-close.spec.ts"
+    ],
+    "GOV-066": [
+      "tests/unit/gouvernance/perimetre-de-ce-que-la-forge-sert.spec.ts"
+    ],
+    "GOV-067": [
+      "tests/unit/gouvernance/lecture-par-empreinte-eprouvee.spec.ts"
+    ],
+    "GOV-068": [
+      "tests/unit/gouvernance/une-seule-politique-d-illisibilite.spec.ts"
+    ],
+    "GOV-069": [
+      "tests/unit/gouvernance/grammaire-des-zones-de-prose.spec.ts"
+    ],
+    "GOV-070": [
+      "tests/unit/gouvernance/adr-assertion-existe.spec.ts",
+      "tests/unit/gouvernance/adr-0011-perimetre.spec.ts"
+    ],
+    "GOV-071": [
+      "tests/unit/gouvernance/frontiere-de-mot-du-rendu.spec.ts"
+    ],
+    "GOV-072": [
+      "tests/unit/gouvernance/une-cle-ecrite-deux-fois.spec.ts"
+    ],
+    "GOV-073": [
+      "tests/unit/gouvernance/une-seule-grammaire-de-journal.spec.ts"
+    ],
+    "GOV-074": [
+      "tests/unit/gouvernance/exemptions-par-occurrence.spec.ts"
+    ],
+    "GOV-075": [
+      "tests/unit/gouvernance/aucun-chemin-gabarit.spec.ts"
+    ],
+    "GOV-076": [
+      "tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts"
+    ],
+    "GOV-077": [
+      "tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts"
+    ],
+    "GOV-078": [
+      "tests/unit/gouvernance/scenario-d-attaque-exige.spec.ts"
+    ],
+    "GOV-079": [
+      "tests/unit/gouvernance/aucune-troncature-muette.spec.ts"
+    ],
+    "GOV-080": [
+      "tests/unit/gouvernance/mention-de-gate-resolue.spec.ts"
+    ],
+    "GOV-081": [
+      "tests/unit/gouvernance/raison-de-dette-resolue.spec.ts"
+    ],
+    "GOV-082": [
+      "tests/unit/gouvernance/une-liste-vide-n-est-pas-une-reponse.spec.ts"
+    ],
+    "GOV-083": [
+      "tests/unit/gouvernance/une-gate-sans-script-n-est-pas-une-gate-conforme.spec.ts"
+    ],
+    "GOV-084": [
+      "tests/unit/gouvernance/aucun-script-de-garde-orphelin.spec.ts"
+    ],
+    "GOV-085": [
+      "tests/unit/gouvernance/un-rendu-n-officialise-pas-une-attribution.spec.ts"
+    ],
+    "GOV-086": [
+      "tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts"
+    ],
+    "GOV-087": [
+      "tests/unit/gouvernance/un-chemin-fantome-est-un-refus.spec.ts"
+    ],
+    "UX-P0-01b": [
+      "tests/unit/espace/libelles-d-etats.spec.ts"
     ]
   }
 }

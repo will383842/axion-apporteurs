@@ -187,7 +187,7 @@
     },
     {
       "id": "GATE-JUR-SEUILS-SSOT",
-      "phase": -1,
+      "phase": 0,
       "script": "scripts/gates/seuils-ssot.ts",
       "tache": "JUR-T02",
       "alias": [
@@ -388,7 +388,7 @@
     {
       "id": "partners:money:conservation",
       "phase": 0,
-      "script": "tests/domain/conservation.spec.ts",
+      "script": "tests/unit/domaine/conservation.spec.ts",
       "tache": "DM-04",
       "alias": [
         "GATE-ARG-prorata"
@@ -412,14 +412,14 @@
     {
       "id": "partners:grille:check",
       "phase": 0,
-      "script": "scripts/gates/grille-check.ts",
+      "script": "axionia/scripts/gates/grille-check.ts",
       "tache": "DM-03-A",
       "alias": [
         "GATE-ARG-derivation-grille",
         "GATE-JUR-GRILLE-DERIVEE",
         "GATE-UX-GRILLE"
       ],
-      "verifie": "hash de pricing.ts = hash embarque des deux cotes (GET /api/partners/grille cote axionia, import cote Partners) ; aucun litteral de taux hors snapshot ; meme grilleVersionId dans Parametres, contrat et calcul ; chaque id de pricing.ts a soit un taux, soit une entree bareme_indefini explicite et datee (HYP-W6-BIS) ; posee par DM-03-A [axionia] et DM-03-P [partners], etendue par UX-P2-05",
+      "verifie": "hash de pricing.ts = hash embarque des deux cotes (GET /api/partners/grille cote axionia, import cote Partners) ; aucun litteral de taux hors snapshot ; meme grilleVersionId dans Parametres, contrat et calcul ; chaque id de pricing.ts a soit un taux, soit une entree bareme_indefini explicite et datee (HYP-W6-BIS) ; posee par DM-03-A ; le controle symetrique du cote Partners est porte par la tache d'import, dans son propre depot, et etendue par UX-P2-05",
       "fixtureRouge": "modifier pricing.ts sans republier la grille",
       "preuveRouge": null
     },
@@ -546,7 +546,7 @@
     {
       "id": "idor:check",
       "phase": 0,
-      "script": "tests/security/idor.spec.ts",
+      "script": "tests/integration/idor.spec.ts",
       "tache": "SEC-05",
       "alias": [
         "G-SEC-IDOR",
@@ -586,7 +586,7 @@
     {
       "id": "G-SEC-WEBHOOK",
       "phase": 1,
-      "script": "tests/security/webhook-signature.spec.ts",
+      "script": "tests/unit/securite/webhook-signature.spec.ts",
       "tache": "SEC-06",
       "verifie": "200 / 401 / 401 / 413 / duplicate ; fixtures signees par le producteur reel ; jamais de 5xx",
       "fixtureRouge": "accepter une signature plaintext seule",
@@ -595,7 +595,7 @@
     {
       "id": "G-SEC-REVOCATION",
       "phase": 0,
-      "script": "tests/security/revocation.spec.ts",
+      "script": "tests/unit/securite/revocation.spec.ts",
       "tache": "SEC-04",
       "verifie": "jeton revoque, sessionVersion++ et apporteur resilie -> refus (etendue en phase 1 par SEC-19)",
       "fixtureRouge": "accepter une session apres sessionVersion++",
@@ -616,7 +616,7 @@
     {
       "id": "G-SEC-HEADERS",
       "phase": 0,
-      "script": "tests/security/headers.spec.ts",
+      "script": "tests/unit/securite/headers.spec.ts",
       "tache": "SEC-02",
       "verifie": "CSP par nonce, frame-ancestors et HSTS sur /, /connexion, /espace, /deposer/[token] et les routes d'API",
       "fixtureRouge": "retirer frame-ancestors de la CSP",
@@ -625,7 +625,7 @@
     {
       "id": "G-SEC-ENV",
       "phase": 0,
-      "script": "scripts/gates/env-boot.spec.ts",
+      "script": "tests/unit/securite/env-boot.spec.ts",
       "tache": "SEC-01",
       "verifie": "boot en prod sans secret, ou avec un prefixe dev_ ou stub -> exit != 0 ; gitleaks (etendue par QA-T04)",
       "fixtureRouge": "retirer un secret de l'environnement de test",
@@ -646,7 +646,7 @@
     {
       "id": "G-SEC-NOTIF",
       "phase": 1,
-      "script": "tests/security/notif-sans-pii.spec.ts",
+      "script": "tests/unit/integration/notif-sans-pii.spec.ts",
       "tache": "INT-T14",
       "verifie": "aucune cle de contact, de montant ni de raison sociale dans Telegram, SMS ou push (etendue en phase 3 par SEC-26)",
       "fixtureRouge": "envoyer un payload portant montantCents",
@@ -666,7 +666,7 @@
       "phase": -1,
       "script": "tests/unit/gouvernance/entite-registre.spec.ts",
       "tache": "CPL-T01",
-      "verifie": "aucune etape du job gate-a de .github/workflows/ci.yml ne porte continue-on-error. ETROIT A DESSEIN : ne couvre que le job qui porte l'etape livree par CPL-T01, pas les autres jobs ni les autres workflows — le perimetre large reste celui de G-SEC-CI-BLOQUANTE (QA-T01, phase 0), dont la preuveRouge reste NULLE. Corrige l'ORDRE, pas le perimetre : cette PR introduit la premiere etape bloquante du depot dont le desarmement tient en une ligne, et sa protection etait planifiee pour la phase SUIVANTE. Remplir la preuveRouge de la gate large aurait fait descendre le decompte des dettes pour une dette dont l'essentiel reste du",
+      "verifie": "aucune etape du job gate-a de .github/workflows/ci.yml ne porte continue-on-error. ETROIT A DESSEIN : ne couvre que le job qui porte l'etape livree par CPL-T01, pas les autres jobs ni les autres workflows — le perimetre large reste celui de G-SEC-CI-BLOQUANTE (phase 0 ; ce registre en nomme la tache porteuse), dont la preuveRouge reste NULLE. Corrige l'ORDRE, pas le perimetre : cette PR introduit la premiere etape bloquante du depot dont le desarmement tient en une ligne, et sa protection etait planifiee pour la phase SUIVANTE. Remplir la preuveRouge de la gate large aurait fait descendre le decompte des dettes pour une dette dont l'essentiel reste du",
       "fixtureRouge": "ajouter continue-on-error: true sous l'etape `run: pnpm gov:entite:corps`",
       "preuveRouge": "le cas mute le YAML EN MEMOIRE (ci.yml est reserve) et exige que l'etape « Le corps PUBLIE de la PR ne porte aucune coordonnee » ressorte NOMMEE ; un temoin positif verifie que le bloc extrait est bien celui qui porte gov:entite:corps, et la fonction LEVE si le job gate-a est introuvable — sans quoi elle rendrait une liste vide, donc vert"
     },
@@ -682,7 +682,7 @@
     {
       "id": "cliquet-ecrivains",
       "phase": 0,
-      "script": "scripts/gates/cliquet-ecrivains.ts",
+      "script": "axionia/scripts/gates/cliquet-ecrivains.ts",
       "tache": "INT-T03",
       "verifie": "liste nominative des ecrivains de Payment, Devis.accepte, FactureFormation et avoir, Client, Submission ; tout nouvel ecrivain hors liste -> rouge (etendue par INT-T05 et INT-T22)",
       "fixtureRouge": "ajouter un ecrivain sans entree dans la liste",
@@ -700,9 +700,9 @@
     {
       "id": "inertie",
       "phase": 0,
-      "script": "scripts/gates/inertie.ts",
+      "script": "axionia/scripts/gates/inertie.ts",
       "tache": "INT-T02",
-      "verifie": "PARTNERS_SYNC_ENABLED absent -> 0 ligne d'outbox, 0 job, 0 fetch cote axionia ; Partners ne contient jamais stub.invalid ; build sans DATABASE_URL (etendue par QA-T04)",
+      "verifie": "PARTNERS_SYNC_ENABLED absent -> 0 ligne d'outbox, 0 job, 0 fetch cote axionia",
       "fixtureRouge": "ecrire une ligne d'outbox avec le drapeau absent",
       "preuveRouge": null
     },
@@ -754,7 +754,7 @@
     {
       "id": "reconciliation-quotidienne",
       "phase": 1,
-      "script": "tests/integration/reconciliation.spec.ts",
+      "script": "axionia/tests/integration/reconciliation.spec.ts",
       "tache": "INT-T08-A",
       "verifie": "job QUOTIDIEN (REQ-INT-013), fenetre de 7 jours glissants, relecture par sequence plus somme HT par SIREN ; ecart -> alerte nommant les eventId manquants plus rejeu ; compteurs journalises meme a 0 ecart (INT-T08-A cote axionia)",
       "fixtureRouge": "supprimer un evenement sans le rattraper",
@@ -799,7 +799,7 @@
     {
       "id": "jur:copy-indicative",
       "phase": 0,
-      "script": "scripts/gates/jur-copy-indicative.ts",
+      "script": "axionia/scripts/gates/jur-copy-indicative.ts",
       "tache": "JUR-T29",
       "verifie": "aucune formulation FERME de remuneration dans la copy publique : toute mention d'un taux, d'un forfait ou d'un montant de commission hors du gabarit de contrat porte la mention indicative et le renvoi a la grille annexee au contrat signe (W12) ; perimetre pages publiques d'axionia, kit de vente, ressources et e-mails de recrutement",
       "fixtureRouge": "ecrire 'vous percevez 10 %' sans mention indicative dans une page publique",
@@ -817,7 +817,7 @@
     {
       "id": "GATE-JUR-VOCAB-PUBLIC",
       "phase": 0,
-      "script": "scripts/gates/vocab-public.ts",
+      "script": "axionia/scripts/gates/vocab-public.ts",
       "tache": "JUR-T03",
       "verifie": "copy publique d'axionia : 'mandataire permanent', 'VRP', 'vente signee', 'des la signature' interdits ; gate lexicale financement INCONDITIONNELLE (ne lit aucun drapeau, ni isQualiopiCertificationObtenue(), ni QUALIOPI_CERTIFICATION_OBTENUE) sur 'prise en charge a 100 %', 'finance par Qualiopi', 'sans avance de frais', 'Qualiopi' nu et toute periphrase ; formulation SSOT = phrase validee par Will le 2026-08-19 ; exclusions src/content/keywords/** et le badge 'N°1 en France'",
       "fixtureRouge": "reintroduire la phrase de commercial-offer.ts l. 103",
@@ -981,7 +981,7 @@
     },
     {
       "id": "gate-nightly",
-      "phase": 0,
+      "phase": -1,
       "script": ".github/workflows/nightly.yml",
       "tache": "QA-T00",
       "verifie": "contrat reel API gouv (INT-T09), heartbeats (QA-T19), reconciliation quotidienne (INT-T08), ZAP baseline (QA-T07 et QA-T19), audit, Stryker complet (QA-T30), gates:prouvees (QA-T00), drill de restauration mensuel (QA-T12), drill de resilience trimestriel (QA-T27)",
@@ -1002,13 +1002,13 @@
       "phase": -1,
       "script": "scripts/gates/gov-derivation.ts",
       "tache": "GOV-014",
-      "verifie": "toute valeur presente a deux endroits est DERIVEE d'une source unique, jamais recopiee : grille, seuils legaux, listes d'etats, libelles d'enum. DIFFEREE par GOV-014 le 2026-09-05 (docs/GARDES-AXIONIA.md §2), et sa tache successeur est DM-03-A : son perimetre n'existe a AUCUN endroit du depot aujourd'hui, et l'ecrire produirait exactement la garde a perimetre vide que ce registre refuse. Les seuils sont deja couverts par GATE-JUR-SEUILS-SSOT et les enumerations par partners:schema:enums ; ce qui reste sans domicile est la GRILLE, et c'est DM-03-A qui la pose. ⚠️ L'ENTREE RESTE ATTRIBUEE A GOV-014, ET C'EST VOULU : tests/unit/gouvernance/gardes-transposees.spec.ts exige qu'une gate que GOV-014 porte sans l'armer soit AU MOINS decidee par ecrit, sinon la tache se ferme en laissant derriere elle une entree que plus personne ne relit. La re-attribuer a DM-03-A rendait ce temoin VIDE — il l'a dit lui-meme, « aucune gate GOV-014 sans script : ce test ne juge rien » — et faisait donc disparaitre la garde qui surveille l'oubli",
+      "verifie": "toute valeur presente a deux endroits est DERIVEE d'une source unique, jamais recopiee : grille, seuils legaux, listes d'etats, libelles d'enum. DIFFEREE par GOV-014 le 2026-09-05 (docs/GARDES-AXIONIA.md §2), et la tache qui re-arme cette garde DANS CE DEPOT est DM-03-P : son perimetre n'existe a AUCUN endroit du depot aujourd'hui, et l'ecrire produirait exactement la garde a perimetre vide que ce registre refuse. Les seuils sont deja couverts par GATE-JUR-SEUILS-SSOT et les enumerations par partners:schema:enums ; ce qui reste sans domicile est la GRILLE, et c'est DM-03-P qui la pose ici, a partir de la grille que l'autre depot exporte. ⚠️ L'ENTREE RESTE ATTRIBUEE A GOV-014, ET C'EST VOULU : tests/unit/gouvernance/gardes-transposees.spec.ts exige qu'une gate que GOV-014 porte sans l'armer soit AU MOINS decidee par ecrit, sinon la tache se ferme en laissant derriere elle une entree que plus personne ne relit. La re-attribuer a sa tache successeur rendait ce temoin VIDE — il l'a dit lui-meme, « aucune gate GOV-014 sans script : ce test ne juge rien » — et faisait donc disparaitre la garde qui surveille l'oubli",
       "fixtureRouge": "recopier un taux de commission dans un second fichier",
       "preuveRouge": null
     },
     {
       "id": "fixtures:source",
-      "phase": 0,
+      "phase": -1,
       "script": "scripts/gates/fixtures-source.ts",
       "tache": "INT-T01a",
       "verifie": "toute fixture porte un en-tete `Source:` nommant le producteur reel qui l'a generee ; une fixture ecrite a la main est refusee",

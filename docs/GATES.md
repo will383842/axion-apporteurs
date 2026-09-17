@@ -19,8 +19,8 @@
 
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
-| -1 | Socle de gouvernance | 37 | 25 | 12 |
-| 0 | Fondations, sécurité, charte | 43 | 1 | 42 |
+| -1 | Socle de gouvernance | 38 | 25 | 13 |
+| 0 | Fondations, sécurité, charte | 42 | 1 | 41 |
 | 1 | Parcours, attribution, intégrations | 21 | 0 | 21 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
@@ -87,7 +87,7 @@ dans une passe séparée, et se cumulent avec les précédentes. Une même gate 
 dans quatre familles au plus. Ce paragraphe décrit le code ; aucune garde ne l’apparie — la
 sortie de la commande, elle, fait foi.
 
-### Phase -1 — socle de gouvernance (12)
+### Phase -1 — socle de gouvernance (13)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
@@ -95,46 +95,48 @@ sortie de la commande, elle, fait foi.
 | `aucun-workflow-ne-pousse-sur-main` | GOV-012 | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts` | — |
 | `tout-check-est-cable` | GOV-012 | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | — |
 | `gov:gates-derivees` | QA-T00 | `scripts/gates/gates-derivees.ts` | — |
-| `GATE-JUR-SEUILS-SSOT` | JUR-T02 | `scripts/gates/seuils-ssot.ts` | `ssot:seuils` |
 | `detectPii` | INT-T01a | `scripts/gates/detect-pii.ts` | — |
 | `gov:contrat` | INT-T01a | `scripts/gates/contrat-epingle.ts` | — |
 | `gate-a` | GOV-000 | `.github/workflows/ci.yml#gate-a` | — |
 | `gate-deploiement` | GOV-000 | `scripts/gates/deploy-verify.ts` | — |
 | `notify-sink-hors-prod` | GOV-000 | `scripts/gates/hook-env.js` | — |
+| `gate-nightly` | QA-T00 | `.github/workflows/nightly.yml` | — |
 | `gov:derivation` | GOV-014 | `scripts/gates/gov-derivation.ts` | — |
+| `fixtures:source` | INT-T01a | `scripts/gates/fixtures-source.ts` | — |
 | `gov:plan-state` | GOV-008 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | — |
 
-### Phase 0 — fondations, sécurité, charte (42)
+### Phase 0 — fondations, sécurité, charte (41)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
+| `GATE-JUR-SEUILS-SSOT` | JUR-T02 | `scripts/gates/seuils-ssot.ts` | `ssot:seuils` |
 | `partners:schema:cents` | DM-02 | `scripts/gates/schema-cents.ts` | — |
 | `partners:migrations:additive` | QA-T11 | `scripts/gates/migrations-additive.ts` | — |
 | `G-SEC-SCHEMA-PII` | SEC-08 | `scripts/gates/schema-pii.ts` | — |
 | `partners:journal:immutable` | DM-01 | `tests/integration/journal.spec.ts` | `G-SEC-AUDIT`, `GATE-JUR-JOURNAL-IMMUABLE`, `GATE-ARG-immutabilite` |
 | `journal:sans-pii` | DM-01 | `scripts/gates/journal-sans-pii.ts` | — |
 | `aucun-annee-de-naissance` | INT-T09 | `scripts/gates/aucun-annee-de-naissance.ts` | — |
-| `partners:money:conservation` | DM-04 | `tests/domain/conservation.spec.ts` | `GATE-ARG-prorata` |
-| `partners:grille:check` | DM-03-A | `scripts/gates/grille-check.ts` | `GATE-ARG-derivation-grille`, `GATE-JUR-GRILLE-DERIVEE`, `GATE-UX-GRILLE` |
-| `idor:check` | SEC-05 | `tests/security/idor.spec.ts` | `G-SEC-IDOR`, `GATE-UX-CLOISONNEMENT` |
+| `partners:money:conservation` | DM-04 | `tests/unit/domaine/conservation.spec.ts` | `GATE-ARG-prorata` |
+| `partners:grille:check` | DM-03-A | `axionia/scripts/gates/grille-check.ts` | `GATE-ARG-derivation-grille`, `GATE-JUR-GRILLE-DERIVEE`, `GATE-UX-GRILLE` |
+| `idor:check` | SEC-05 | `tests/integration/idor.spec.ts` | `G-SEC-IDOR`, `GATE-UX-CLOISONNEMENT` |
 | `G-SEC-AST-PRISMA` | QA-T07 | `scripts/gates/ast-prisma.ts` | — |
 | `G-SEC-RATE-FAMILLE` | SEC-10 | `scripts/gates/rate-famille.ts` | — |
-| `G-SEC-REVOCATION` | SEC-04 | `tests/security/revocation.spec.ts` | — |
+| `G-SEC-REVOCATION` | SEC-04 | `tests/unit/securite/revocation.spec.ts` | — |
 | `G-SEC-ROLES` | SEC-17 | `scripts/gates/roles.ts` | `GATE-UX-ROLES` |
-| `G-SEC-HEADERS` | SEC-02 | `tests/security/headers.spec.ts` | — |
-| `G-SEC-ENV` | SEC-01 | `scripts/gates/env-boot.spec.ts` | — |
+| `G-SEC-HEADERS` | SEC-02 | `tests/unit/securite/headers.spec.ts` | — |
+| `G-SEC-ENV` | SEC-01 | `tests/unit/securite/env-boot.spec.ts` | — |
 | `G-SEC-CI-BLOQUANTE` | QA-T01 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | — |
-| `cliquet-ecrivains` | INT-T03 | `scripts/gates/cliquet-ecrivains.ts` | — |
-| `inertie` | INT-T02 | `scripts/gates/inertie.ts` | — |
+| `cliquet-ecrivains` | INT-T03 | `axionia/scripts/gates/cliquet-ecrivains.ts` | — |
+| `inertie` | INT-T02 | `axionia/scripts/gates/inertie.ts` | — |
 | `harnais-mcp` | INT-T11 | `scripts/gates/harnais-mcp.ts` | — |
 | `api-gouv-degrade` | INT-T09 | `tests/integration/api-gouv.spec.ts` | — |
 | `email-emetteur` | INT-T10 | `tests/unit/email/emetteur.spec.ts` | — |
 | `jur:aucun-agregat-reseau` | JUR-T26 | `scripts/gates/jur-aucun-agregat-reseau.ts` | — |
 | `jur:aucune-progression` | JUR-T26 | `scripts/gates/jur-aucune-progression.ts` | — |
 | `jur:revue-apporteur-facing` | JUR-T26 | `scripts/gates/jur-revue-apporteur-facing.ts` | — |
-| `jur:copy-indicative` | JUR-T29 | `scripts/gates/jur-copy-indicative.ts` | — |
+| `jur:copy-indicative` | JUR-T29 | `axionia/scripts/gates/jur-copy-indicative.ts` | — |
 | `jur:grille-chiffree` | JUR-T01 | `scripts/gates/jur-grille-chiffree.ts` | — |
-| `GATE-JUR-VOCAB-PUBLIC` | JUR-T03 | `scripts/gates/vocab-public.ts` | — |
+| `GATE-JUR-VOCAB-PUBLIC` | JUR-T03 | `axionia/scripts/gates/vocab-public.ts` | — |
 | `GATE-JUR-CONTRAT-COMPLET` | JUR-T01 | `tests/unit/contrat/contract-template-complete.spec.ts` | — |
 | `GATE-UX-A11Y` | UX-P0-03 | `tests/a11y/axe.spec.ts` | — |
 | `GATE-UX-CIBLES` | UX-P0-03 | `tests/a11y/cibles.spec.ts` | — |
@@ -146,9 +148,7 @@ sortie de la commande, elle, fait foi.
 | `gate-c` | QA-T05 | `scripts/gates/gate-c.sh` | — |
 | `gate-d` | QA-T11 | `scripts/gates/gate-d.sh` | — |
 | `mutation` | QA-T30 | `scripts/gates/stryker.sh` | — |
-| `gate-nightly` | QA-T00 | `.github/workflows/nightly.yml` | — |
 | `red-first` | CPL-T22 | `.github/workflows/red-first.yml` | — |
-| `fixtures:source` | INT-T01a | `scripts/gates/fixtures-source.ts` | — |
 | `jur:lexique-social` | JUR-T26 | `scripts/gates/jur-lexique-social.ts` | — |
 
 ### Phase 1 — parcours, attribution, intégrations (21)
@@ -162,14 +162,14 @@ sortie de la commande, elle, fait foi.
 | `partners:webhook:idempotent` | SEC-06 | `tests/integration/webhook.spec.ts` | `GATE-ARG-idempotence` |
 | `partners:grille:complete` | UX-P1-14 | `scripts/gates/grille-complete.ts` | — |
 | `G-SEC-CONCURRENCE` | SEC-12 | `tests/integration/concurrence.spec.ts` | — |
-| `G-SEC-WEBHOOK` | SEC-06 | `tests/security/webhook-signature.spec.ts` | — |
+| `G-SEC-WEBHOOK` | SEC-06 | `tests/unit/securite/webhook-signature.spec.ts` | — |
 | `G-SEC-ORACLE` | SEC-16 | `tests/security/oracle.spec.ts` | `GATE-JUR-VERIFIER-BINAIRE` |
-| `G-SEC-NOTIF` | INT-T14 | `tests/security/notif-sans-pii.spec.ts` | — |
+| `G-SEC-NOTIF` | INT-T14 | `tests/unit/integration/notif-sans-pii.spec.ts` | — |
 | `docuseal-strict` | INT-T12 | `tests/integration/docuseal.spec.ts` | — |
 | `webhook-4-verdicts` | SEC-06 | `tests/integration/webhook-verdicts.spec.ts` | — |
 | `frontiere` | SEC-07 | `tests/integration/frontiere.spec.ts` | — |
 | `sante` | QA-T19 | `scripts/gates/sante.ts` | — |
-| `reconciliation-quotidienne` | INT-T08-A | `tests/integration/reconciliation.spec.ts` | — |
+| `reconciliation-quotidienne` | INT-T08-A | `axionia/tests/integration/reconciliation.spec.ts` | — |
 | `jur:suspension-motifs-fermes` | JUR-T24 | `tests/domain/suspension-motifs.spec.ts` | — |
 | `GATE-JUR-SIGNATURE-AVANT-DEPOT` | INT-T12 | `tests/integration/signature-avant-depot.spec.ts` | — |
 | `GATE-JUR-ACTEUR-HUMAIN` | SEC-19 | `tests/domain/acteur-humain.spec.ts` | — |

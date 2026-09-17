@@ -7,26 +7,26 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `6f093b6` — 2026-09-16T13:56:34+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #46 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `c537352` — 2026-09-17T08:15:06+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #47 (brouillon) |
 | Qui tient quoi ? | aucune tâche revendiquée |
-| Où en est la phase ? | phase 0 — 0/68 tâches, reste 48.75 j |
+| Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #46 — 2026-09-16 |
+| Dernière entrée de journal | PR #47 — 2026-09-17 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-0/68 tâches terminées · reste 48.75 j estimés.
+0/98 tâches terminées · reste 75.85 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 187 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
+| `a_faire` | 219 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -37,11 +37,11 @@
 
 ## Chemin critique
 
-**19.75 j** sur 22 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
+**20.75 j** sur 22 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → QA-T01 (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (0.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → QA-T01 (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (1.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **16.50 j**.
+Reste sur ce chemin : **17.50 j**.
 
 ## Bloquées
 
@@ -64,7 +64,7 @@ Reste sur ce chemin : **16.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #46 — chore(GOV-038): la phase -1 se ferme, cinq taches passent fusionnee et GOV-056 est versee | `lot/phase-moins-1-cloture` | un contrôle requis rouge ou une revue manquante |
+| 1 | #47 — chore(GOV-037): le lot preparatoire rend la phase 0 composable, 50 gabarits tombent | `lot/phase-0-preparation` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -78,21 +78,51 @@ Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-16 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
+Aucun ADR daté du 2026-09-17 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
 
 ## Prochain pas
 
-**QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 24 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 34 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `6f093b6` (2026-09-16T13:56:34+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c537352` (2026-09-17T08:15:06+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #47 — 2026-09-17 — chore(GOV-037): le lot preparatoire rend la phase 0 composable, 50 gabarits tombent
+
+**Fait.** Les 50 tâches de phase 0 qui ne portaient qu'un chemin gabarit reçoivent leurs chemins
+réels ; 35 `acceptance` et 42 `tests` absents sont posés ; 8 `tests` en nom nu deviennent des
+chemins complets ; 13 `script` de gate, 4 `verifie`, 3 `phase` et 2 textes de
+`docs/requirements.json` sont amendés ; 32 tâches sont versées, soit 31 dettes de phase 0 et
+`UX-P0-01b` en phase 1. 223 écritures, toutes par les six outils hors dépôt, aucune à la main. Les
+huit vues sont régénérées dans l'ordre, `plan-state:build` en dernier, après cette entrée.
+`gov:attributions` descend de 231 à 158 exemptions, et la baisse vient entièrement des quatre
+rubriques de gabarit, qui passent de 135 à 62 : le lot n'ajoute aucune exemption, d'aucune nature.
+`docs/PLAN-STATE.md` porte « Phase courante : 0 » et 0 sur 98 tâches, reste 75,85 jours.
+
+**Reste.** Les huit cases de la définition de « terminé » sont vides : l'auteur ne les coche pas,
+c'est Will qui atteste. La sérialisation de la phase 0 est révélée, pas refermée — 33 tâches
+partagent `docs/gates.json`, et c'est le troisième livrable de GOV-056 qui la ferme. Le composeur
+n'a pas été lancé : `lot:composer` écrit `docs/tasks.json` et n'a rien à faire dans le même geste
+que le lot préparatoire. Deux tâches de phase 0 ne se composeront jamais côté partners, `DM-03-P`
+et `DM-04`, qui attendent un lot du dépôt voisin.
+
+**Appris.** Une tâche neuve qui adosse une exigence à un fichier de test DÉJÀ PRÉSENT doit vérifier
+que ce fichier CITE l'exigence ; tant que le fichier n'existe pas, personne ne le vérifie et
+`gov:trace` tolère. Mesuré ici sur `GOV-087`, qui adossait `REQ-GOV-032` à
+`tests/unit/gouvernance/paths-derives.spec.ts` — un fichier suivi qui ne cite que `REQ-GOV-021` et
+`REQ-GOV-025`. `gov:trace:render` a REFUSÉ de rendre, et le refus de rendre est le bon
+comportement : il coûte quatre rouges en cascade, pas un, parce que la vue reste périmée et que
+`vue_divergente` la rattrape ensuite. La même faute avait été corrigée sur `GOV-081` avant le gel ;
+elle est revenue avec les deux dettes ajoutées à la réouverture, parce que la vérification n'a pas
+été rejouée sur ce qu'on ajoutait. Une correction qui vit dans un contenu gelé ne protège que les
+entrées présentes au moment du gel.
 
 ### PR #46 — 2026-09-16 — chore(GOV-038): la phase -1 se ferme, cinq taches passent fusionnee et GOV-056 est versee
 
@@ -177,56 +207,7 @@ PR #41, elle en nomme trois. Et une mention hors paths ne se ferme pas en ajouta
 `plan-state-frais.spec.ts` n'a été touché ni par la PR #36 ni par GOV-035, et le déclarer à cette
 tâche aurait écrit une seconde attribution fausse pour taire la première.
 
-### PR #44 — 2026-09-15 — chore(GOV-031): l'outillage epingle, ses scripts, et les deux etapes de Gate A
-
-**Fait.** ESLint et Prettier sont épinglés en `devDependencies`, lancés par les scripts `lint`,
-`format:check` et `format`, et appelés par deux étapes BLOQUANTES de Gate A. Chaque écart restant
-porte une dérogation nommée et motivée. La dernière passe a fermé les deux failles qui passaient en
-exit 0. D'abord, le témoin d'effet lance l'acte exact de Gate A (`pnpm lint`, `pnpm format:check`) sur
-un arbre jetable porteur d'une faute, avec un contre-témoin de binaires factices. Ensuite, une action
-locale non `composite` sous `.github/` est refusée nommément. Quatre accords sur `b5c7aba` —
-`simplicite` `5206075494`, `securite` `5206103463`, `exactitude` `5206128949`, `mutation`
-`5206281536`. La branche a ensuite fusionné `main` après les PR #36 et #41 : nouvelle tête, nouveau
-tour de relecture. Les trois conflits de code ont été résolus du côté de `main`, parce que le
-changement de cette PR sur ces fichiers était exactement leur formatage ; `docs/PLAN-STATE.md`, en
-conflit aussi, est régénéré. Le code venu de `main` a été reformaté dans
-un commit séparé, avec un arbre syntaxique TypeScript et des commentaires identiques à `main` sur les
-six fichiers.
-
-⚠️ **Choix d'intégration.** La règle de cette PR (toute commande de YAML suivi est `pnpm <script>`,
-parce que `npx` peut résoudre un paquet hors du verrou) refusait les deux étapes que la PR #41 écrivait
-`npx tsx scripts/gates/gov-check.ts`. La règle stricte est gardée. Les étapes appellent deux scripts
-au nom NEUF, `gov:termes-interdits` et `gov:termes-interdits:prove`, qui ne touchent pas `gov:check`
-et ne tranchent donc pas l'homonymie que l'acceptation de GOV-030 renvoie à un ADR. Mesure de la
-famille `garde_ecrite_jamais_appelee` de `gov:conventions`, sur le `ci.yml` lu, modifié en mémoire :
-
-| Variante du `ci.yml` lu | avant (`ci.yml` de `main`) | après |
-| --- | --- | --- |
-| tel quel | vert | vert |
-| les deux étapes retirées, commentaires gardés | vert | vert |
-| tel quel, lignes de commentaire retirées | vert | ROUGE `gov:check` |
-| étapes et commentaires retirés | ROUGE `gov:check` | ROUGE `gov:check` |
-
-**Reste.** Les dettes déclarées dans le corps de la PR, lentille par lentille : `shell` jugé deux fois,
-témoins de dérivation manquants, `.editorconfig` imbriqué, réservation de `patches/` et de
-`package.json`. S'y ajoutent vingt et une limites par classe, dont `pnpm prevol` qu'aucun script ne
-porte. Et deux dettes nées de l'intégration, toutes deux fermées (un faux rouge ou un vert
-préexistant, jamais un vert neuf). (1) Retirer les deux étapes laisse la famille verte : c'est
-préexistant sur `main` depuis la PR #41, parce que `gov-conventions.ts:402-404` cherche l'appel dans
-tout le texte du workflow, commentaires compris, et que le commentaire des deux étapes cite
-`gov:check`. (2) Retirer ce commentaire rougit à tort : la reconnaissance de l'appel ne tient plus
-qu'à ce littéral. Remède à verser en tâche : déclarer `alias: ["gov:termes-interdits"]` sur l'entrée
-`gov:check` de `docs/gates.json` (aucun outil n'écrit `alias` dans ce registre en `deny` : il est à
-créer), et rendre `garde_ecrite_jamais_appelee` aveugle aux commentaires YAML.
-
-**Appris.** Un reformatage de code n'est pas vérifiable par `git diff -w` : Prettier recoupe les lignes
-et change les guillemets, et `-w` ne compare que des lignes. La preuve tient en une comparaison de
-l'arbre syntaxique, nœud par nœud, parenthèses et virgules finales ignorées, plus le texte des
-commentaires. Et une garde qui reconnaît un appel par sous-chaîne dans un fichier qui porte des
-commentaires se satisfait d'un commentaire : quand deux gardes se contredisent à la fusion, la
-mesure sur copie jetable dit laquelle voit encore quelque chose.
-
-… 13 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 14 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
