@@ -8,8 +8,8 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `7f83007` — 2026-09-17T18:53:09+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #53 (brouillon) · 2. #54 (brouillon) · 3. #55 (brouillon) |
-| Qui tient quoi ? | GOV-041 (A05) · GOV-056 (A05) |
+| Qu’est-ce qui est en vol ? | 1. #53 (un contrôle requis rouge ou une revue manquante) · 2. #54 (brouillon) · 3. #55 (brouillon) |
+| Qui tient quoi ? | GOV-039 (A05) · GOV-041 (A05) · GOV-044 (A05) · GOV-056 (A05) |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
@@ -64,7 +64,7 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #53 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent | `t/gov-041` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #53 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent | `t/gov-041` | un contrôle requis rouge ou une revue manquante |
 | 2 | #54 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte | `t/gov-044` | brouillon — hors file tant qu’il n’est pas prêt |
 | 3 | #55 — test(GOV-039): un titre de test confronte son identifiant au texte de l exigence nommee | `t/gov-039` | brouillon — hors file tant qu’il n’est pas prêt |
 
@@ -76,7 +76,9 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
+| GOV-039 — Quatre-vingt-huit titres de test etiquetes par l'exigence d'un AUTRE sujet | A05 | #52 | `a_faire` |
 | GOV-041 — La cloture ecrit un statut sur une entree qu'elle n'a pas verifiee | A05 | #50 | `a_faire` |
+| GOV-044 — Une garde absente du registre s'exempte elle-meme de la garde qui verifie qu'on l'appelle | A05 | #51 | `a_faire` |
 | GOV-056 — Le composeur compare des `paths` quand les taches promettent des `tests{}`, et rien ne juge les fichiers d une PR | A05 | #49 | `a_faire` |
 
 ⚠️ **20 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, GOV-035, GOV-036, GOV-037, GOV-030, GOV-031 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
