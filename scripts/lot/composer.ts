@@ -13,7 +13,9 @@
  *                registre ∧ aucune hyp bloquante (déclarée en §1 et non datée) ∧ attempts < 2
  *   - une tâche d'écran (`UX-P1-*`, `UX-P2-*`, `UX-P3-*`) n'est PAS attribuable tant que sa ligne de
  *     docs/maquettes/VALIDATION.md n'est pas validée par Will (colonne « Validé le » ≠ `—`)
- *   - deux tâches d'un lot n'ont JAMAIS de chemin en commun (sinon deux worktrees se marchent dessus)
+ *   - deux tâches d'un lot n'ont JAMAIS de chemin en commun — `paths` ET `tests{}` réunis, moins
+ *     les registres append-only que `./chemins-de-tache` exclut nommément (sinon deux worktrees se
+ *     marchent dessus, ou bien la chaîne se sérialise pour un fichier où chacun ajoute une ligne)
  *   - tri par longueur de chaîne de dépendances DESCENDANTE : on débloque le chemin critique d'abord
  *   - identifiant de lot SÉQUENTIEL, jamais horodaté (un script rejouable ne dépend pas de l'heure) :
  *     l'heure de référence du balayage est FOURNIE par `--now`, elle n'est jamais lue sur l'horloge
@@ -31,6 +33,13 @@ import { join } from 'node:path';
 import { LIVREE } from './avancement';
 import { lireRegistre, tachesRedevenuesEligibles, CHEMIN_REGISTRE } from './registre-decisions';
 import { prochainIdentifiantDeLot, lotsDuBacklog } from './identifiant-de-lot';
+// LE lecteur unique des chemins d'une tache : `paths` ∪ `tests{}`, moins les registres
+// append-only. La convention, l'exclusion et leur motif vivent la-bas, et NULLE PART ailleurs.
+import {
+  REGISTRES_APPEND_ONLY,
+  cheminsSoumisALaCollision,
+  divergencePathsTests,
+} from './chemins-de-tache';
 
 // La cinquieme copie de l'ensemble « livree », sous un autre nom — c'est ainsi qu'un doublon
 // echappe a une recherche. Elle se DERIVE desormais du bareme unique de `./avancement`.
@@ -239,14 +248,30 @@ eligibles.sort(
   (a, b) => profondeur(b.id, index) - profondeur(a.id, index) || a.id.localeCompare(b.id)
 );
 const retenues: Tache[] = [];
-const pris = new Set<string>();
+// 🔴 CE `Set` NE PORTAIT QUE `t.paths`, ET LA DISJONCTION QU'IL PROUVAIT N'ÉTAIT PAS CELLE DU LOT.
+// Une tâche porte DEUX listes de fichiers — `paths` (la source) et `tests{}` (les spécifications) —
+// et leur divergence est la CONVENTION, pas une négligence : mesurée le 2026-09-17, 27 tâches
+// déclarent dans `paths` une spécification hors de leur `tests{}`, 39 l'inverse. Deux tâches dont
+// les `paths` étaient disjoints mais dont les `tests{}` nommaient la MÊME spécification entraient
+// donc dans le même lot, et leurs deux arbres de travail se marchaient dessus sur un fichier que
+// le composeur venait de déclarer disjoint — SANS UN MOT.
+// On retient QUI a pris chaque chemin : une raison qui ne nomme ni le fichier ni la tâche oblige à
+// relire le backlog pour savoir ce qui a été écarté, et pourquoi.
+const pris = new Map<string, string>();
 for (const t of eligibles) {
   if (retenues.length >= max) break;
-  if (t.paths.some((p) => pris.has(p))) {
-    ecartees.push({ id: t.id, raison: 'chemin déjà pris dans ce lot' });
+  const chemins = cheminsSoumisALaCollision(t);
+  const partages = chemins.filter((c) => pris.has(c)).sort();
+  if (partages.length > 0) {
+    ecartees.push({
+      id: t.id,
+      raison: `chemin déjà pris dans ce lot : ${partages
+        .map((c) => `${c} (par ${pris.get(c)})`)
+        .join(', ')}`,
+    });
     continue;
   }
-  t.paths.forEach((p) => pris.add(p));
+  chemins.forEach((c) => pris.set(c, t.id));
   retenues.push(t);
 }
 
@@ -309,3 +334,18 @@ if (ecarteesPourDecision.length > 0) {
       .join(', ')}`
   );
 }
+
+// --- la divergence des deux champs, MESURÉE à chaque composition (GOV-056, livrable 4a) ----------
+// Elle n'est pas une faute : `paths` porte la SOURCE, `tests{}` les SPÉCIFICATIONS, et la
+// convention est écrite dans `./chemins-de-tache`. Ce qui serait une faute, c'est de prouver une
+// disjonction sur un champ et de faire le lot sur l'autre. Le nombre est DÉRIVÉ ici, jamais
+// recopié : un chiffre écrit dans un commentaire vieillit à chaque composition.
+const divergence = divergencePathsTests(taches);
+console.log(
+  `Divergence \`paths\` / \`tests{}\` (convention, cf. scripts/lot/chemins-de-tache.ts) : ` +
+    `${divergence.pathsHorsTests.length} tâche(s) déclarent dans \`paths\` une spécification que leur ` +
+    `\`tests{}\` ne revendique pas ; ${divergence.testsHorsPaths.length} revendiquent dans \`tests{}\` ` +
+    `une spécification absente de leurs \`paths\`. Les deux listes sont lues ENSEMBLE par le test de ` +
+    `collision — sauf ${REGISTRES_APPEND_ONLY.map((e) => e.chemin).join(', ')}, registre(s) ` +
+    `append-only exclu(s) nommément.`
+);
