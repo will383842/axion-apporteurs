@@ -84,6 +84,20 @@ export interface GateVue {
   readonly phase: number;
   readonly script: string;
   readonly alias?: readonly string[];
+  /**
+   * LE MOTIF d'une garde DÉLIBÉRÉMENT hors CI — la seule réponse admise, avec le câblage, à
+   * `garde_ecrite_jamais_appelee` (GOV-044).
+   *
+   * Toutes les gardes ne peuvent pas vivre en CI, et le dépôt en porte déjà le cas : `gov:attestation`
+   * interroge la forge par `gh`, ce qui rendrait la suite non déterministe — GOV-038 l'a laissée hors
+   * CI *exprès*, et l'a écrit dans `scripts/lot/attestation.ts`. Tant que ce motif ne vivait nulle part
+   * où une garde puisse le lire, il n'y avait que deux issues : inscrire la gate au registre et récolter
+   * un rouge permanent qu'on apprend à ignorer, ou ne pas l'inscrire du tout — c'est-à-dire le trou que
+   * GOV-044 ferme.
+   * ⚠️ Ce n'est PAS un mot de passe : le motif est exigé aussi long que celui d'un périmètre vide
+   * (`MOTIF_MINIMAL`), pour la même raison — deux mots ne sont pas une décision.
+   */
+  readonly horsCi?: string;
 }
 
 export interface TacheVue {
@@ -98,7 +112,7 @@ export type ClePerimetre =
   | 'composants-client'
   | 'etapes-lint-ci'
   | 'taches-du-backlog'
-  | 'gardes-du-registre';
+  | 'gardes-du-disque';
 
 export interface Perimetre {
   readonly cle: ClePerimetre;
@@ -134,11 +148,16 @@ export const FAMILLES = [
   'outillage_non_epingle',
   'isolation_depot',
   'garde_ecrite_jamais_appelee',
+  'garde_hors_registre',
   'perimetre_vide_sans_motif',
 ] as const;
 
-/** Longueur minimale d'un motif de périmètre vide. Deux mots ne sont pas un motif. */
-const MOTIF_MINIMAL = 60;
+/**
+ * Longueur minimale d'un motif — périmètre vide, ou garde délibérément hors CI. Deux mots ne sont
+ * pas un motif. UNE seule valeur pour les deux emplois : un second nombre, posé ailleurs, dériverait
+ * du premier le jour où quelqu'un l'ajusterait (RM-01).
+ */
+export const MOTIF_MINIMAL = 60;
 
 // ── lecture des directives ───────────────────────────────────────────────────────────────────
 
@@ -254,14 +273,84 @@ export interface PerimetreVu extends Perimetre {
   readonly unite: string;
 }
 
-/** Les gardes que la famille `garde_ecrite_jamais_appelee` regarde réellement. */
-function gardesJugeables(vue: Vue): GateVue[] {
-  return vue.gates.filter(
-    (g) =>
-      g.phase <= -1 &&
-      g.script.startsWith('scripts/gates/') &&
-      vue.fichiersSuivis.includes(g.script)
-  );
+/** Le dossier où vivent les gardes de ce dépôt. Le préfixe est écrit UNE fois. */
+export const DOSSIER_DES_GARDES = 'scripts/gates/';
+/**
+ * L'extension qui fait entrer un fichier suivi dans la population de DÉPART.
+ * ⚠️ LIMITE DÉCLARÉE, pas supposée : trois fichiers `.js` suivis vivent sous `scripts/gates/`
+ * (`gh-sur.js`, `git-push-sur.js`, `hook-env.js`, mesuré le 2026-09-17), et ils n'entrent pas dans
+ * cette population. Les deux premiers sont des enveloppes de sûreté, pas des gardes ; le troisième
+ * EST une garde, et il reste jugé sur son câblage parce que le registre le NOMME — voir `jugees`.
+ * Les taire serait refaire, une extension plus loin, l'exemption silencieuse que GOV-044 ferme :
+ * `confronterDisqueEtRegistre()` les rend donc dans `horsExtension`, et le rendu les imprime.
+ */
+export const EXTENSION_DES_GARDES = '.ts';
+
+/**
+ * LES DEUX POPULATIONS, ET LEUR CONFRONTATION (GOV-044, REQ-GOV-012).
+ *
+ * ── CE QUI CHANGE, ET POURQUOI ────────────────────────────────────────────────────────────────
+ * La population partait du REGISTRE : `vue.gates.filter(g => g.phase <= -1 && …)`. Un script écrit
+ * sur le disque et absent de `docs/gates.json` n'était donc jamais confronté à la question de
+ * savoir si quelqu'un l'appelle — le trou s'exemptait lui-même, et la garde sortait en ZÉRO.
+ * Mesuré le 2026-09-17 sur `7f83007` : 26 fichiers `scripts/gates/*.ts` suivis, DEUX absents du
+ * registre (`gov-attestation.ts` et `gov-attributions.ts`), et `pnpm gov:conventions` imprimait
+ * « 25 garde(s) » puis « aucune violation ». *Une population dérivée de la présence du correctif ne
+ * verra jamais celui qui le PERD.*
+ * La population part maintenant du DISQUE, et le registre est ce qu'on lui confronte.
+ *
+ * ── LA DÉCISION SUR `phase`, ÉCRITE ICI PARCE QU'ELLE NE SE DEVINE PAS ────────────────────────
+ * Le filtre `g.phase <= -1` n'est PAS reconduit, et son abandon n'est pas une perte par distraction.
+ * Un script n'a pas de phase : en dérivant du disque, ce filtre n'a plus de source. Le recopier
+ * serait taper une liste (RM-01) ; le laisser tomber en silence serait laisser entrer des gardes
+ * de phase future non câblées.
+ * Ce qu'il faisait vraiment, c'était tenir lieu de PROXY pour « cette garde est déjà écrite » — le
+ * seul dont on disposait quand on partait du registre. Le disque donne le fait au lieu du proxy :
+ * un fichier suivi par git EST écrit. Ce que le filtre protégeait reste donc protégé, et par une
+ * meilleure clause — une gate promise à la phase 3 dont le script n'existe pas ne peut pas entrer
+ * dans une population tirée des fichiers suivis. Ce qu'il protégeait EN TROP — une garde écrite,
+ * suivie, et exemptée de la question par le seul numéro de phase de son entrée — est exactement
+ * l'auto-exemption que GOV-044 ferme.
+ * MESURE QUI REND LA DÉCISION SÛRE plutôt qu'aveugle, 2026-09-17 : des 26 scripts suivis, UN SEUL
+ * porte au registre une entrée de phase supérieure à -1 (`partners:schema:enums`, phase 0) — et il
+ * est câblé dans `.github/workflows/ci.yml`. La levée du filtre ne fabrique donc aucun rouge
+ * aujourd'hui. Elle en fabriquera un le jour où une garde de phase 0 sera écrite sans être ni
+ * câblée ni déclarée hors CI, et ce rouge-là sera JUSTE.
+ * Trois témoins gardent ce choix dans
+ * `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` : phase 0 non câblée
+ * (rouge), phase 0 câblée (vert), phase future non écrite (silence).
+ */
+export interface Confrontation {
+  /** Les gardes ÉCRITES : fichiers suivis sous `scripts/gates/` en `.ts`. Le point de DÉPART. */
+  readonly surLeDisque: readonly string[];
+  /** Les entrées du registre qui nomment une garde présente sur le disque — ce qu'on JUGE. */
+  readonly jugees: readonly GateVue[];
+  /** Les gardes écrites que le registre ne nomme pas. LE trou que GOV-044 ferme. */
+  readonly horsRegistre: readonly string[];
+  /**
+   * Les entrées du registre sous `scripts/gates/` dont le script n'est pas suivi. HORS PÉRIMÈTRE,
+   * et RENDUES plutôt que tues : autre dépôt, garde promise à une phase future, entrée fautive —
+   * les trois se taisent aujourd'hui de la même façon, et les distinguer est le travail de GOV-051.
+   */
+  readonly entreesSansScript: readonly GateVue[];
+  /** Les fichiers suivis du dossier que l'extension exclut. La LIMITE, nommée. */
+  readonly horsExtension: readonly string[];
+}
+
+export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
+  const duDossier = vue.fichiersSuivis.filter((f) => f.startsWith(DOSSIER_DES_GARDES));
+  const surLeDisque = duDossier.filter((f) => f.endsWith(EXTENSION_DES_GARDES));
+  const duRegistre = vue.gates.filter((g) => g.script.startsWith(DOSSIER_DES_GARDES));
+  return {
+    surLeDisque,
+    horsExtension: duDossier.filter((f) => !f.endsWith(EXTENSION_DES_GARDES)),
+    // Une entrée dont le script est SUIVI est jugée, quelle que soit son extension : `hook-env.js`
+    // est une garde que le registre nomme et que `.claude/settings.json` câble. La dérivation du
+    // disque ÉTEND la population, elle ne doit en retirer personne.
+    jugees: duRegistre.filter((g) => duDossier.includes(g.script)),
+    entreesSansScript: duRegistre.filter((g) => !duDossier.includes(g.script)),
+    horsRegistre: surLeDisque.filter((f) => !duRegistre.some((g) => g.script === f)),
+  };
 }
 
 export function perimetresDe(vue: Vue): PerimetreVu[] {
@@ -281,8 +370,11 @@ export function perimetresDe(vue: Vue): PerimetreVu[] {
         return { compte: etapesDeLint(vue).length, unite: 'étape(s)' };
       case 'taches-du-backlog':
         return { compte: vue.taches.length, unite: 'tâche(s)' };
-      case 'gardes-du-registre':
-        return { compte: gardesJugeables(vue).length, unite: 'garde(s)' };
+      case 'gardes-du-disque':
+        return {
+          compte: confronterDisqueEtRegistre(vue).surLeDisque.length,
+          unite: 'garde(s) écrite(s)',
+        };
     }
   };
   return vue.perimetres.map((p) => ({ ...p, ...compte(p.cle) }));
@@ -398,18 +490,35 @@ export function controler(vue: Vue): Faute[] {
     }
   }
 
-  // ── une garde écrite doit être appelée ──
+  // ── une garde écrite est INSCRITE, et elle est APPELÉE ──
+  const confrontation = confronterDisqueEtRegistre(vue);
+  for (const chemin of confrontation.horsRegistre) {
+    fautes.push({
+      famille: 'garde_hors_registre',
+      message:
+        `${chemin} est une garde écrite et suivie par git, et \`docs/gates.json\` ne la nomme ` +
+        `nulle part. Tant qu'elle n'y est pas, PERSONNE ne lui demande jamais si quelqu'un ` +
+        `l'appelle : le trou s'exempte lui-même, et cette garde-ci sortait en zéro pendant que ` +
+        `deux gardes réelles y vivaient (mesure du 2026-09-17). Inscrivez son entrée au registre ` +
+        `par \`outils/reecrire-champ.mjs\` — ou retirez le fichier.`,
+    });
+  }
   const appelants = [...vue.workflows.map((w) => w.source), vue.hooks].join('\n');
-  for (const g of gardesJugeables(vue)) {
+  for (const g of confrontation.jugees) {
     const noms = [g.id, g.script, ...(g.alias ?? [])];
     if (noms.some((n) => appelants.includes(n))) continue;
+    const motif = (g.horsCi ?? '').trim();
+    if (motif.length >= MOTIF_MINIMAL) continue;
     fautes.push({
       famille: 'garde_ecrite_jamais_appelee',
       message:
         `\`${g.id}\` (${g.script}) est écrite et n'est appelée par aucun workflow ni par ` +
         `\`.claude/settings.json\`. Côté axionia, \`qualiopi:isolation-check\` a vécu des mois ` +
         `dans cet état en cumulant 88 violations, pendant que la seule garde câblée affichait ` +
-        `zéro. Une garde qu'on ne lance pas ne garde rien — câblez-la, ou retirez son entrée.`,
+        `zéro. Une garde qu'on ne lance pas ne garde rien — câblez-la, retirez son entrée, ou, si ` +
+        `son exécution hors CI est une DÉCISION, écrivez-la dans le champ \`horsCi\` de son ` +
+        `entrée : il y faut au moins ${MOTIF_MINIMAL} caractères (il en fait ${motif.length}), ` +
+        `parce qu'un champ qu'on remplit d'un mot est un mot de passe, pas une décision.`,
     });
   }
 
@@ -485,11 +594,12 @@ export const PERIMETRES_DECLARES: readonly Perimetre[] = [
     tacheSuccesseur: 'GOV-017a',
   },
   {
-    cle: 'gardes-du-registre',
-    libelle: 'gardes du registre (phase ≤ -1, script présent sur le disque)',
+    cle: 'gardes-du-disque',
+    libelle: 'gardes ÉCRITES (fichiers `scripts/gates/*.ts` suivis par git)',
     motifSiVide:
-      'Un registre sans garde jugeable signifierait que `docs/gates.json` ne se lit plus, ou ' +
-      "qu'aucun script n'est encore écrit. Ce périmètre n'est jamais censé être vide au socle.",
+      'Un dossier de gardes vide signifierait que `git ls-files` ne se lit plus, ou ' +
+      "qu'aucune garde n'est encore écrite. Ce périmètre n'est jamais censé être vide au socle, " +
+      'et un zéro ici se lirait « aucune garde en faute » : exactement le silence que GOV-044 ferme.',
     tacheSuccesseur: 'QA-T00',
   },
 ];
@@ -725,6 +835,30 @@ const TEMOINS: ReadonlyArray<{ famille: string; libelle: string; vue: Vue }> = [
     }),
   },
   {
+    famille: 'garde_hors_registre',
+    libelle: 'une garde ÉCRITE et suivie que `docs/gates.json` ne nomme nulle part',
+    vue: variante({
+      fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/gov-orpheline.ts'],
+    }),
+  },
+  {
+    famille: 'garde_ecrite_jamais_appelee',
+    libelle:
+      'une garde hors CI dont le `horsCi` tient en deux mots — un mot de passe, pas un motif',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        {
+          id: 'gov:en-ligne',
+          phase: -1,
+          script: 'scripts/gates/gov-en-ligne.ts',
+          horsCi: 'hors CI',
+        },
+      ],
+      fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/gov-en-ligne.ts'],
+    }),
+  },
+  {
     famille: 'perimetre_vide_sans_motif',
     libelle: 'un périmètre à zéro élément dont le motif tient en deux mots',
     vue: variante({
@@ -862,6 +996,44 @@ const CONTRE_TEMOINS: ReadonlyArray<{ libelle: string; vue: Vue }> = [
     }),
   },
   {
+    libelle:
+      'une garde de phase 0 écrite, suivie et CÂBLÉE — la levée du filtre de phase ne ment pas',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        { id: 'partners:schema:enums', phase: 0, script: 'scripts/gates/schema-enums.ts' },
+      ],
+      fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/schema-enums.ts'],
+      workflows: [
+        {
+          chemin: '.github/workflows/ci.yml',
+          source: CI_CONFORME.replace(
+            '      - name: Conventions transposees\n',
+            '      - name: Enums\n        run: pnpm partners:schema:enums\n' +
+              '      - name: Conventions transposees\n'
+          ),
+        },
+      ],
+    }),
+  },
+  {
+    libelle: 'une garde hors CI dont le motif est ÉCRIT — la seule autre réponse admise',
+    vue: variante({
+      gates: [
+        ...VUE_CONFORME.gates,
+        {
+          id: 'gov:en-ligne',
+          phase: -1,
+          script: 'scripts/gates/gov-en-ligne.ts',
+          horsCi:
+            'Ce contrôle interroge la forge par `gh` : le câbler en CI rendrait la suite non ' +
+            'déterministe. Il se lance à la main avant une fusion (décision GOV-038).',
+        },
+      ],
+      fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/gov-en-ligne.ts'],
+    }),
+  },
+  {
     libelle: 'un périmètre vide, motivé, et repris par une tâche du backlog',
     vue: variante({
       sources: [],
@@ -941,6 +1113,42 @@ function direLePerimetre(vue: Vue): void {
   }
 }
 
+/**
+ * LE DÉCOMPTE DES DEUX POPULATIONS, RENDU (GOV-044, livrable 2). Fonction PURE : le rendu se juge
+ * sur ce qu'il PRODUIT, pas sur ce qu'il épelle, et `direLeDisqueEtLeRegistre()` n'en est que
+ * l'imprimeur. Un compte qu'on calcule sans l'imprimer ne se relit pas — c'est cette absence-là qui
+ * a laissé `qualiopi:isolation-check` cumuler 88 violations en silence.
+ */
+export function lignesDeConfrontation(vue: Vue): string[] {
+  const c = confronterDisqueEtRegistre(vue);
+  const lignes = [
+    'DISQUE ↔ REGISTRE — la population part du disque, le registre est ce qu’on lui confronte :',
+    `   • gardes ÉCRITES (\`${DOSSIER_DES_GARDES}*${EXTENSION_DES_GARDES}\` suivies par git) : ${c.surLeDisque.length}`,
+    `   • entrées de \`docs/gates.json\` qui en nomment une, donc JUGÉES sur leur câblage : ${c.jugees.length}`,
+    `   • gardes écrites que le registre ne nomme PAS : ${c.horsRegistre.length}`,
+  ];
+  if (c.horsRegistre.length > 0) {
+    lignes.push(`     ${c.horsRegistre.join('\n     ')}`);
+  }
+  lignes.push(
+    `   • entrées sous \`${DOSSIER_DES_GARDES}\` dont le script n'est pas suivi ici, donc HORS ` +
+      `périmètre : ${c.entreesSansScript.length} — autre dépôt, phase future ou entrée fautive, ` +
+      `les trois se taisent de la même façon et GOV-051 les distinguera.`
+  );
+  if (c.horsExtension.length > 0) {
+    lignes.push(
+      `   • fichiers suivis du dossier que l'extension exclut de la population de départ : ` +
+        `${c.horsExtension.length} — ${c.horsExtension.join(', ')}. Ceux que le registre NOMME ` +
+        `restent jugés sur leur câblage ; les autres sont hors de cette garde, et c'est dit.`
+    );
+  }
+  return lignes;
+}
+
+function direLeDisqueEtLeRegistre(vue: Vue): void {
+  for (const l of lignesDeConfrontation(vue)) console.log(l);
+}
+
 const APPELE_DIRECTEMENT = /gov-conventions\.ts$/.test(process.argv[1] ?? '');
 
 if (APPELE_DIRECTEMENT) {
@@ -949,6 +1157,7 @@ if (APPELE_DIRECTEMENT) {
   } else {
     const vue = lireVue();
     direLePerimetre(vue);
+    direLeDisqueEtLeRegistre(vue);
     const fautes = controler(vue);
     if (fautes.length === 0) {
       console.log(
