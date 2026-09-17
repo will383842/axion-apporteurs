@@ -4,8 +4,8 @@
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
     "tachesCouvertes": 260,
     "pairesEnIntersection": 4112,
-    "cheminsDeclares": 760,
-    "cheminsDistincts": 489,
+    "cheminsDeclares": 764,
+    "cheminsDistincts": 493,
     "cheminsPartages": 97,
     "tachesSansAucuneIntersection": 76,
     "listeDesTachesIsolees": [
@@ -114,12 +114,8 @@
     ],
     "_consequence": "ce que ces totaux imposent au composeur, et qui n'est pas un choix de ce fichier mais une lecture des deux registres : `docs/gates.json` est écrit par toute tâche qui pose une garde (son en-tête le dit : « `preuveRouge` = l'URL du run CI rouge archivé, remplie par la PR qui pose la gate »), et `prisma/schema.prisma` par toute tâche `schema: true`. Deux tâches de ces familles ne peuvent donc plus entrer dans le MÊME lot — c'est exactement le conflit d'édition que le contrôle de disjonction existe pour empêcher, et il était invisible au premier tour.",
     "testsSansRepertoire": [
-      "GOV-002 — preseance.spec.ts",
-      "GOV-004 — affirmations-verifiees.spec.ts",
       "GOV-006 — glossaire-enums.spec.ts",
-      "GOV-009 — adr-index-derive.spec.ts",
       "GOV-013 — lexique.spec.ts",
-      "GOV-015 — fiches-tiers.spec.ts",
       "GOV-019 — poids-du-bundle-garde-vraiment.spec.ts",
       "JUR-T01b — decisions-ouvertes.spec.ts",
       "JUR-T13 — textes-apporteurs-charte-relationnelle.spec.ts",
@@ -227,7 +223,8 @@
       "docs/PRESEANCE.md",
       "docs/contrat/CONTRAT-APPORTEUR-V1.md",
       "scripts/gates/gov-preseance.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/gouvernance/preseance.spec.ts"
     ],
     "GOV-003": [
       "scripts/gates/gov-identifiants.ts",
@@ -237,7 +234,8 @@
     "GOV-004": [
       "docs/AFFIRMATIONS-AXIONIA.md",
       "scripts/gates/gov-sonde.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/gouvernance/affirmations-verifiees.spec.ts"
     ],
     "GOV-005": [
       "docs/DECISIONS.md",
@@ -254,7 +252,8 @@
     "GOV-009": [
       "docs/adr/",
       "scripts/gates/gov-adr.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "tests/unit/gouvernance/adr-index-derive.spec.ts"
     ],
     "GOV-010": [
       "scripts/gates/gov-adr.ts",
@@ -295,7 +294,8 @@
       "docs/tiers/telegram.md",
       "docs/tiers/sepa-pain001.md",
       "docs/tiers/urssaf.md",
-      "docs/tiers/tiime.md"
+      "docs/tiers/tiime.md",
+      "tests/unit/gouvernance/fiches-tiers.spec.ts"
     ],
     "INT-T01a": [
       "packages/contracts/events.ts",

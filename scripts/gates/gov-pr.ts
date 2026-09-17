@@ -56,6 +56,9 @@ import {
   type DemandeDeConcordance,
   type RevueBrute,
 } from '../lot/revues';
+// LE lecteur unique des chemins d'une tâche — `paths` ∪ `tests{}`. Le même que celui du composeur :
+// la garde du LOT et la garde de la PR ne peuvent plus diverger sur ce qu'une tâche déclare toucher.
+import { REGISTRES_APPEND_ONLY, cheminsDeLaTache } from '../lot/chemins-de-tache';
 
 const CHEMIN_GABARIT = '.github/PULL_REQUEST_TEMPLATE.md';
 const CHEMIN_CODEOWNERS = '.github/CODEOWNERS';
@@ -96,6 +99,25 @@ const ORDINAUX = ['première', 'deuxième', 'troisième', 'quatrième', 'cinqui�
 // de la charte, par le lecteur unique — la même source que celle qui fait exiger le label (RM-01).
 /** Les zones que REQ-GOV-011 place sous revue adversariale documentée. */
 const ZONES_SENSIBLES = ['commissions/', 'attributions/', 'auth/', 'espace/'];
+/**
+ * LE PÉRIMÈTRE QUE LA FAMILLE `fichier_hors_paths_des_taches` CONFRONTE, ET POURQUOI IL S'ARRÊTE LÀ
+ * (GOV-056, livrable 2).
+ *
+ * Mesure du 2026-09-13 : DIX fichiers sous `scripts/`, `src/` et `tests/` modifiés par la PR 31 ne
+ * figuraient dans les `paths` d'AUCUNE tâche, dont `tests/unit/gouvernance/vues-derivees.spec.ts`,
+ * promis par DEUX `tests{}`. Personne ne le voyait : `paths` sert à composer les lots, et rien ne
+ * confrontait jamais ce qui avait été ÉCRIT à ce qui avait été DÉCLARÉ.
+ *
+ * ⚠️ LE PÉRIMÈTRE EST LE CODE, ET C'EST UNE DÉCISION, PAS UN OUBLI. Toute PR conforme produit des
+ * sous-produits de gouvernance qu'AUCUNE tâche ne peut déclarer sans que la liste devienne absurde :
+ * son entrée de journal, `docs/PLAN-STATE.md` régénéré, sa ligne dans `docs/gates.json`, les vues
+ * dérivées. Les soumettre à cette famille rendrait la garde INSATISFIABLE — et une gate
+ * insatisfiable se fait retirer dans la semaine, ce que ce fichier écrit déjà ailleurs. Ce qu'une
+ * tâche promet d'écrire, c'est du code ; c'est donc le code qu'on lui confronte.
+ * Le contre-témoin « une PR qui ne touche que des sous-produits de gouvernance » garde CE choix :
+ * sans lui, on ne saurait pas si le vert vient de la règle ou de l'absence de règle.
+ */
+const PERIMETRE_DU_CODE = ['scripts/', 'src/', 'tests/'];
 /** Ce dont l'introduction impose le bloc ROUGE/VERT (REQ-GOV-012) : un test, une garde, un workflow. */
 const INTRODUIT_UNE_GARDE = (f: string) =>
   /\.spec\.ts$/.test(f) || f.startsWith('scripts/gates/') || f.startsWith('.github/workflows/');
@@ -121,7 +143,20 @@ type Pr = {
    */
   apresFusion?: boolean;
 };
-type Tache = { id: string; sensible: string[]; schema: boolean; pr: number | null };
+/**
+ * ⚠️ `paths` ET `tests` FONT PARTIE DE LA PROJECTION, et leur absence rendrait la famille
+ * `fichier_hors_paths_des_taches` muette — exactement comme l'absence de `pr` a rendu DEUX
+ * correctifs inertes (voir `lireDepot()`). Une projection trop pauvre ne fait pas rougir : elle
+ * fait taire.
+ */
+type Tache = {
+  id: string;
+  sensible: string[];
+  schema: boolean;
+  pr: number | null;
+  paths: string[];
+  tests: Record<string, string[]> | null;
+};
 type Depot = {
   gabarit: string;
   codeowners: string;
@@ -181,6 +216,7 @@ const FAMILLES = [
   'rouge_vert_absent',
   'attaque_absente',
   'fichier_reserve_sans_label',
+  'fichier_hors_paths_des_taches',
   'schema_sans_label',
   // la PR — évaluées seulement avec les revues (`--pr <numero>`)
   'lentilles_manquantes',
@@ -537,6 +573,51 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
     }
   }
 
+  // ---- les fichiers de la PR contre les `paths` de ses tâches (GOV-056, livrable 2) ----------
+  // `tachesDeLaPr` est le MÊME lecteur que celui de la section Attaque et du discriminant `schema` :
+  // l'union des tâches portant `pr: <n>` et de celle que le titre nomme. On ne relit pas la forge.
+  const tachesCitees = tachesDeLaPr(depot.taches, pr.numero ?? null, titre ? titre[2]! : null);
+  const codeTouche = pr.fichiers.filter((f) => PERIMETRE_DU_CODE.some((p) => f.startsWith(p)));
+  if (codeTouche.length > 0) {
+    // ⚠️ ÉCHEC FERMÉ QUAND AUCUNE TÂCHE NE RÉSOUT. Une PR dont ni le titre ni le champ `pr` du
+    // backlog ne désigne une tâche connue n'a AUCUN `paths` à qui se confronter : se taire
+    // reviendrait à faire du silence une autorisation, et c'est exactement ce que cette famille
+    // existe pour empêcher.
+    if (tachesCitees.length === 0) {
+      ajouter(
+        'fichier_hors_paths_des_taches',
+        `La PR modifie ${codeTouche.length} fichier(s) de code (${codeTouche.slice(0, 6).join(', ')}` +
+          `${codeTouche.length > 6 ? ', …' : ''}) et ne cite AUCUNE tâche connue de ${CHEMIN_TACHES} : ` +
+          `ni son titre ni le champ \`pr\` d'une tâche ne la rattache. Sans tâche, aucun \`paths\` ` +
+          `ne peut être confronté — la garde refuse plutôt que de se taire.`
+      );
+    } else {
+      // `paths` ∪ `tests{}` : les deux champs sont lus ENSEMBLE, parce que leur divergence est la
+      // CONVENTION (cf. scripts/lot/chemins-de-tache.ts). Un chemin de DOSSIER couvre ce qui vit
+      // dessous — `touche()` en sens inverse, le même prédicat que pour les chemins réservés.
+      // ⚠️ LE PRÉDICAT N'EST PAS RÉÉCRIT ICI. Il l'était — `f === d || f.startsWith(d.replace(...))`
+      // — soit une SECONDE écriture de `touche()`, à deux lignes d'un commentaire qui disait déjà
+      // que c'était « le même prédicat que pour les chemins réservés ». Un commentaire qui nomme la
+      // source unique ne remplace pas l'appel (RM-01). Et la branche du PRÉFIXE de dossier — une
+      // tâche qui déclare `scripts/gates/` couvre ce qui vit dessous — n'était gardée par aucun
+      // contre-témoin : la retirer n'aurait fait rougir personne. Elle en a un désormais.
+      const declares = [...new Set(tachesCitees.flatMap((t) => cheminsDeLaTache(t)))];
+      const orphelins = codeTouche.filter((f) => !declares.some((d) => touche(d, [f])));
+      if (orphelins.length > 0) {
+        ajouter(
+          'fichier_hors_paths_des_taches',
+          `La PR modifie ${orphelins.length} fichier(s) de code qu'aucune de ses tâches ne déclare : ` +
+            `${orphelins.join(', ')}. Tâche(s) citée(s) : ${tachesCitees.map((t) => t.id).join(', ')} — ` +
+            `chemins déclarés (\`paths\` ∪ \`tests{}\`) : ${declares.join(', ') || '(aucun)'}. ` +
+            `Mesuré le 2026-09-13 sur la PR 31 : dix fichiers dans ce cas, dont une spécification ` +
+            `promise par DEUX \`tests{}\`. Ajoute le chemin à la tâche par \`outils/ajouter-path.mjs\`, ` +
+            `ou sors le fichier du périmètre de cette PR — un fichier écrit hors de ce qu'on a ` +
+            `déclaré écrire, c'est un lot dont la disjonction ne veut plus rien dire.`
+        );
+      }
+    }
+  }
+
   // TROIS SIGNAUX, LE PLUS STRICT GAGNE — et c'est le lecteur unique qui les pèse, pour que la
   // garde et le composeur du corps de PR ne puissent plus diverger. Le label seul est le plus
   // faible des trois : il se pose à la main, donc il s'oublie à la main.
@@ -692,13 +773,22 @@ function lireDepot(): Depot {
   // rougir : c est le temoin qui a revele que le correctif ne faisait rien, pas la relecture.
   const taches = (
     JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as {
-      taches: { id: string; sensible?: string[]; schema?: boolean; pr?: number | null }[];
+      taches: {
+        id: string;
+        sensible?: string[];
+        schema?: boolean;
+        pr?: number | null;
+        paths?: string[];
+        tests?: Record<string, string[]> | null;
+      }[];
     }
   ).taches.map((t) => ({
     id: t.id,
     sensible: t.sensible ?? [],
     schema: t.schema === true,
     pr: t.pr ?? null,
+    paths: t.paths ?? [],
+    tests: t.tests ?? null,
   }));
   return {
     gabarit: readFileSync(CHEMIN_GABARIT, 'utf8'),
@@ -966,6 +1056,22 @@ if (process.argv.includes('--prove')) {
   /** Le premier mot d'un corps de revue — ce qui la désigne dans un témoin. */
   const ouvrePar = (r: RevueBrute, entete: string): boolean => (r.body ?? '').startsWith(entete);
 
+  /**
+   * Les chemins qu'une tâche du registre déclare — source des fixtures. On LÈVE si la tâche a
+   * disparu : une fixture dérivée d'une tâche absente serait dérivée de rien, et son vert serait
+   * l'absence de contrôle déguisée en preuve (RM-11).
+   */
+  const cheminsDe = (id: string): string[] => {
+    const t = depot.taches.find((x) => x.id === id);
+    if (!t) {
+      throw new Error(
+        `gov:pr --prove — la tâche ${id} a disparu de ${CHEMIN_TACHES} : les fixtures ne peuvent ` +
+          `plus en dériver leurs fichiers, et un contre-témoin vert ne prouverait plus rien.`
+      );
+    }
+    return cheminsDeLaTache(t);
+  };
+
   const PR_TEMOIN: Pr = {
     // ⚠️ LE TITRE NOMME UNE TÂCHE QUI N'EST PAS `schema`, ET C'EST DÉLIBÉRÉ. Depuis que le
     // discriminant lit AUSSI le champ `schema` de la tâche portée par la PR, une fixture
@@ -976,11 +1082,16 @@ if (process.argv.includes('--prove')) {
     titre: 'feat(GOV-011): matrice de traçabilité dérivée',
     corps: CORPS,
     labels: [],
+    // ⚠️ LES FICHIERS DE CODE DE LA FIXTURE SE DÉRIVENT DE LA TÂCHE QUE SON TITRE NOMME (RM-03).
+    // Ils étaient TAPÉS — `scripts/gates/gov-pr.ts` et `tests/gov/charte-pr.spec.ts` — et GOV-011
+    // ne déclare ni l'un ni l'autre : la PR « conforme » de la preuve était elle-même une instance
+    // du défaut que GOV-056 ferme, et elle faisait rougir la famille neuve en contre-témoin. Une
+    // fixture conforme par accident ne prouve rien ; celle-ci l'est par construction, et elle le
+    // reste le jour où les `paths` de GOV-011 changent.
     fichiers: [
       'docs/CHARTE-AGENTS.md',
       '.github/PULL_REQUEST_TEMPLATE.md',
-      'scripts/gates/gov-pr.ts',
-      'tests/gov/charte-pr.spec.ts',
+      ...cheminsDe('GOV-011'),
     ],
     revues: [
       revue('A09 · exactitude\nVerdict: accepte\nles quatre REQ sont couvertes'),
@@ -1025,7 +1136,9 @@ if (process.argv.includes('--prove')) {
 
   const PR_SENSIBLE: Pr = {
     ...copiePr(PR_TEMOIN),
-    fichiers: ['auth/session.ts', 'tests/gov/charte-pr.spec.ts'],
+    // `auth/` est une zone sensible ; le reste vient de la tâche du titre, pour que cette fixture
+    // ne rougisse que sur ce qu'elle veut prouver (RM-11 : un témoin ne fait varier qu'une chose).
+    fichiers: ['auth/session.ts', ...cheminsDe('GOV-011')],
   };
   PR_SENSIBLE.corps = remplacerBloc(
     PR_SENSIBLE.corps,
@@ -1146,6 +1259,30 @@ if (process.argv.includes('--prove')) {
     {
       famille: 'fichier_reserve_sans_label',
       defaut: () => [copieDepot(), { ...copiePr(PR_RESERVE), labels: [] }],
+    },
+    {
+      // GOV-056 (2) — LE DÉFAUT MESURÉ, DANS SA PLUS PETITE FORME. La PR 31 a modifié
+      // `tests/unit/gouvernance/vues-derivees.spec.ts` — une spécification promise par DEUX
+      // `tests{}` — sans qu'aucune tâche citée ne la déclare. On rejoue ce fichier-là.
+      famille: 'fichier_hors_paths_des_taches',
+      defaut: () => [
+        copieDepot(),
+        {
+          ...copiePr(PR_TEMOIN),
+          fichiers: [...PR_TEMOIN.fichiers, 'tests/unit/gouvernance/vues-derivees.spec.ts'],
+        },
+      ],
+    },
+    {
+      // LA MÊME FAMILLE PAR L'AUTRE BRANCHE, et c'est celle qui décide du SENS DE DÉFAILLANCE :
+      // une PR dont aucune tâche ne résout n'a pas de `paths` à confronter. Sans ce témoin, on ne
+      // saurait pas si ce cas refuse ou s'il se tait — et se taire ferait du silence une
+      // autorisation, sur la seule branche où la garde n'a rien à lire.
+      famille: 'fichier_hors_paths_des_taches',
+      defaut: () => [
+        copieDepot(),
+        { ...copiePr(PR_TEMOIN), titre: 'feat(GOV-999): une tâche que le registre ne connaît pas' },
+      ],
     },
     {
       famille: 'schema_sans_label',
@@ -1293,6 +1430,61 @@ if (process.argv.includes('--prove')) {
       cas: () => [depot, PR_SENSIBLE],
     },
     { quoi: 'une PR sur un chemin réservé avec le label du rôle', cas: () => [depot, PR_RESERVE] },
+    {
+      // GOV-056 (2) — LE CONTRE-TÉMOIN QUI GARDE LE CHOIX DE PÉRIMÈTRE, et sans lequel on ne
+      // saurait pas si le vert vient de la règle ou de son absence. Toute PR conforme produit ces
+      // sous-produits, qu'aucune tâche ne peut déclarer : les soumettre à la famille rendrait la
+      // garde insatisfiable. Ils doivent rester VERTS, et c'est ici que ça se prouve.
+      quoi: 'une PR qui ne touche que des sous-produits de gouvernance (journal, vue régénérée, registres)',
+      cas: () => [
+        depot,
+        {
+          ...copiePr(PR_TEMOIN),
+          // `docs/PLAN-STATE.md` et `docs/tasks.json` sont RÉSERVÉS au §7 : ils exigent leur label,
+          // et c'est une AUTRE famille. On les porte avec le label, sinon ce contre-témoin
+          // prouverait deux choses à la fois et aucune proprement (RM-11).
+          labels: ['role:gardien-spec'],
+          // Le registre append-only n'est pas RETAPÉ ici : il se dérive de sa seule déclaration.
+          fichiers: [
+            'docs/journal/2026-09.md',
+            'docs/PLAN-STATE.md',
+            ...REGISTRES_APPEND_ONLY.map((e) => e.chemin),
+            'docs/TRACABILITE.md',
+          ],
+          // Sans fichier de code, `INTRODUIT_UNE_GARDE` ne s'arme pas : la PR reste verte sur le
+          // bloc ROUGE/VERT comme sur la famille neuve, et c'est bien ce qu'on veut montrer.
+        },
+      ],
+    },
+    {
+      // LE PRÉFIXE DE DOSSIER, ET IL N'ÉTAIT GARDÉ PAR RIEN. Une tâche qui déclare un DOSSIER
+      // couvre ce qui vit dessous ; sans ce contre-témoin, retirer cette branche du prédicat
+      // laissait la preuve verte, et toute PR touchant un fichier sous un `paths` de dossier se
+      // serait mise à rougir sans que personne l'ait voulu. La tâche citée est réécrite en
+      // DOSSIER, et le fichier de la PR se dérive d'elle (RM-03) : le vert ne tient pas à un
+      // chemin tapé.
+      quoi: 'une PR dont le fichier de code vit SOUS un dossier que sa tâche déclare',
+      cas: () => {
+        const dossier = 'scripts/gates/';
+        const d = copieDepot();
+        d.taches = d.taches.map((t) =>
+          t.id === 'GOV-011' ? { ...t, paths: [dossier], tests: {} } : t
+        );
+        const p = copiePr(PR_TEMOIN);
+        p.fichiers = p.fichiers
+          .filter((f) => !PERIMETRE_DU_CODE.some((x) => f.startsWith(x)))
+          .concat(`${dossier}gov-trace.ts`);
+        return [d, p];
+      },
+    },
+    // 🔻 RETIRÉ LE 2026-09-17 — un contre-témoin qui ne mesurait rien. Il était annoncé comme
+    // « l'autre face » de `fichier_hors_paths_des_taches` (« une PR dont chaque fichier de code est
+    // déclaré par les `paths` ou les `tests{}` de sa tâche ») et son cas était `[depot,
+    // copiePr(PR_TEMOIN)]` : IDENTIQUE en entrées ET en verdict au deuxième de cette liste (« une PR
+    // conforme, revues comprises »). Deux fois la même mesure ne fait pas deux mesures — et la PR
+    // comptait le doublon pour un gain (« de 12 à 14 »). Ce que la famille garde reste prouvé par
+    // son témoin, par la PR conforme, et par le contre-témoin des sous-produits ci-dessus, qui lui
+    // garde un vrai choix de périmètre.
     {
       // LE contre-témoin de la scission : la huitième case atteste la fusion et l'atterrissage,
       // elle ne peut pas être cochée à l'événement `pull_request`. En CI (revues absentes) cette

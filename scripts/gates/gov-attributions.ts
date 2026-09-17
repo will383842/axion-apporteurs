@@ -73,14 +73,18 @@ import { LIVREE } from '../lot/avancement';
  *   — un fichier non UTF-8 SANS octet NUL (Latin-1) est lu avec remplacement : ses identifiants ASCII
  *     sont vus, ses caractères accentués ne le sont pas, et rien ne le signale.
  *
- * ⛔ NON LIVRÉS — LES LIVRABLES (5) ET (6) DE L'ACCEPTANCE. Elle les range sous « À livrer », et AUCUN
- * arbitrage écrit ne les en sort : ce n'est donc pas un choix de périmètre, c'est un manque, et il
- * appartient au gardien de la spécification de le trancher.
- *   — (5) la détection de collision de lots qui lit AUSSI `tests{}` s'écrit dans
- *     `scripts/lot/composer.ts`, que les `paths` de la tâche ne portent pas ; l'acceptance exige en
- *     outre de dire ce qu'on fait des tâches dont `tests{}` et `paths` divergent, et c'est une décision.
- *   — (6) confronter les fichiers TOUCHÉS par une PR aux `paths` de ses tâches exige la liste des
- *     fichiers d'une PR, que ce binaire ne lit pas (il juge le dépôt, pas un diff).
+ * ✅ LIVRABLES (5) ET (6) DE L'ACCEPTANCE DE GOV-037 — SORTIS D'ICI, ET FERMÉS AILLEURS. Ils ont été
+ * portés à GOV-056 par décision de Will le 2026-09-16 (les laisser ici rendait GOV-037 INFERMABLE,
+ * qui est le défaut même qu'elle décrivait), et GOV-056 les livre. Le pointeur reste écrit ICI :
+ * sans lui, ce fichier annoncerait un manque que plus rien ne porte.
+ *   — (5) la détection de collision de lots lit désormais `paths` ET `tests{}` — la règle vit dans
+ *     `scripts/lot/chemins-de-tache.ts` (`retenirSansCollision()`, `collisionEntre()`), que
+ *     `scripts/lot/composer.ts` APPELLE ; la convention des deux champs y est déclarée, et la
+ *     divergence du jour est DÉRIVÉE et imprimée à chaque composition.
+ *   — (6) les fichiers TOUCHÉS par une PR sont confrontés aux `paths` de ses tâches par
+ *     `scripts/gates/gov-pr.ts` (famille `fichier_hors_paths_des_taches`), là où la PR est DÉJÀ lue :
+ *     une seconde lecture de la forge serait une seconde source. Ce binaire-ci juge le dépôt, pas un
+ *     diff, et c'est pourquoi la garde ne vit pas ici.
  */
 
 // ── les sources, telles que la garde les lit ──────────────────────────────────
@@ -1171,17 +1175,24 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   { tache: 'GOV-001', lieu: 'mention', ou: 'scripts/gates/gov-requirements.ts', n: 1 },
   { tache: 'GOV-001', lieu: 'mention', ou: 'tests/unit/gouvernance/glossaire-enums.spec.ts', n: 1 },
   { tache: 'GOV-002', lieu: 'mention', ou: 'scripts/gates/gov-preseance.ts', n: 2 },
-  { tache: 'GOV-002', lieu: 'mention', ou: 'tests/unit/gouvernance/preseance.spec.ts', n: 2 },
+  // 🔧 2026-09-17, GOV-056 (4b) — QUATRE SITES RETIRÉS, PARCE QU'ILS SONT RÉSOLUS, ET C'EST LA GARDE
+  // QUI L'A DIT. `dette_perimee` a rougi en nommant chacun d'eux : « la tâche déclare maintenant ce
+  // fichier ». Leur `tests{}` promettait `preseance.spec.ts`, `affirmations-verifiees.spec.ts`,
+  // `adr-index-derive.spec.ts`, `fiches-tiers.spec.ts` — un NOM NU, qui ne résout aucun fichier du
+  // dépôt : les quatre spécifications passaient pour portées par personne, et les quatre mentions
+  // pour orphelines. Les promesses portent désormais le chemin complet (`outils/reecrire-champ.mjs`),
+  // et les sites se referment d'eux-mêmes.
+  //   - GOV-002 · tests/unit/gouvernance/preseance.spec.ts            (n: 2)
+  //   - GOV-004 · tests/unit/gouvernance/affirmations-verifiees.spec.ts (n: 1)
+  //   - GOV-009 · tests/unit/gouvernance/adr-index-derive.spec.ts     (n: 1)
+  //   - GOV-015 · tests/unit/gouvernance/fiches-tiers.spec.ts         (n: 1)
+  // ⚠️ `tests/unit/gouvernance/fiches-tiers.controles.ts` RESTE figé : ce n'est pas une
+  // spécification, aucune promesse ne le nomme, et rien ne l'a résolu. Retirer une entrée parce que
+  // sa VOISINE s'est refermée serait exactement la dette qu'on prétend faire baisser.
   { tache: 'GOV-003', lieu: 'mention', ou: 'scripts/gates/gov-identifiants.ts', n: 1 },
   { tache: 'GOV-003', lieu: 'mention', ou: 'scripts/gates/gov-tasks.ts', n: 1 },
   { tache: 'GOV-004', lieu: 'mention', ou: 'scripts/gates/gov-inventaire.ts', n: 1 },
   { tache: 'GOV-004', lieu: 'mention', ou: 'scripts/gates/gov-sonde.ts', n: 2 },
-  {
-    tache: 'GOV-004',
-    lieu: 'mention',
-    ou: 'tests/unit/gouvernance/affirmations-verifiees.spec.ts',
-    n: 1,
-  },
   {
     tache: 'GOV-004',
     lieu: 'mention',
@@ -1199,18 +1210,11 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
     n: 2,
   },
   {
-    tache: 'GOV-009',
-    lieu: 'mention',
-    ou: 'tests/unit/gouvernance/adr-index-derive.spec.ts',
-    n: 1,
-  },
-  {
     tache: 'GOV-015',
     lieu: 'mention',
     ou: 'tests/unit/gouvernance/fiches-tiers.controles.ts',
     n: 1,
   },
-  { tache: 'GOV-015', lieu: 'mention', ou: 'tests/unit/gouvernance/fiches-tiers.spec.ts', n: 1 },
   { tache: 'GOV-017a', lieu: 'mention', ou: 'scripts/gates/gov-tasks.ts', n: 1 },
   { tache: 'GOV-017a', lieu: 'mention', ou: 'scripts/lot/tasks.schema.json', n: 1 },
   {
