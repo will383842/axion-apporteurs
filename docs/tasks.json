@@ -552,7 +552,7 @@
       "motif": null,
       "tests": {
         "REQ-GOV-005": [
-          "tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 : la famille `req_non_citee_par_son_test` a son témoin",
+          "tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 → REQ-QA-014 : la famille `req_non_citee_par_son_test` a son témoin",
           "tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 : le registre porte bien l’absorption, et c’est REQ-QA-014 qui fait foi",
           "tests/unit/gouvernance/tracabilite.spec.ts#REQ-QA-014 : chaque famille a son témoin, et les contre-témoins restent verts"
         ]
@@ -782,7 +782,7 @@
           "tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — contracts.sha256 est l'empreinte du schema publie, et un champ renomme la change"
         ],
         "REQ-GOV-020": [
-          "tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)"
+          "tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 → REQ-QA-007 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)"
         ]
       }
     },
@@ -8500,7 +8500,10 @@
         "tests/unit/gouvernance/entite-registre.spec.ts",
         "tests/unit/gouvernance/titres-de-test-resolvent.spec.ts",
         "scripts/gates/gov-requirements.ts",
-        "docs/REQUIREMENTS-ANNEXE-FUSIONS.md"
+        "docs/REQUIREMENTS-ANNEXE-FUSIONS.md",
+        "tests/unit/gouvernance/glossaire-enums.spec.ts",
+        "tests/unit/gouvernance/tracabilite.spec.ts",
+        "tests/unit/integration/contrat-hash.spec.ts"
       ],
       "schema": false,
       "sensible": [],

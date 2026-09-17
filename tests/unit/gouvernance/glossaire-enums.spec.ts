@@ -132,19 +132,19 @@ describe('REQ-GOV-016 — le glossaire porte ce que l’acceptation de GOV-006 e
 });
 
 describe('REQ-JUR-027 → REQ-DM-038 — un vocabulaire est un enum, jamais une chaîne', () => {
-  it('REQ-JUR-027 : `statut String` dans le schéma fait rougir `colonne_vocabulaire_en_chaine`', () => {
+  it('REQ-JUR-027 → REQ-DM-038 : `statut String` dans le schéma fait rougir `colonne_vocabulaire_en_chaine`', () => {
     const schema =
       VUE_CONFORME.schema + '\nmodel Essai {\n  id     String @id\n  statut String\n}\n';
     expect(familles({ ...VUE_CONFORME, schema })).toEqual(['colonne_vocabulaire_en_chaine']);
   });
 
-  it('REQ-JUR-027 : le même champ en enum ne rougit pas — sinon la garde interdirait la solution', () => {
+  it('REQ-JUR-027 → REQ-DM-038 : le même champ en enum ne rougit pas — sinon la garde interdirait la solution', () => {
     const schema =
       VUE_CONFORME.schema + '\nmodel Essai {\n  id     String @id\n  statut EtatAttribution\n}\n';
     expect(familles({ ...VUE_CONFORME, schema })).toEqual([]);
   });
 
-  it('REQ-JUR-027 : un repli qui retombe sur la valeur brute déguise la faute, et rougit', () => {
+  it('REQ-JUR-027 → REQ-DM-038 : un repli qui retombe sur la valeur brute déguise la faute, et rougit', () => {
     const code = [
       { chemin: 'src/ui/libelles.ts', contenu: 'const l = LIBELLES[statut] ?? statut;' },
     ];
