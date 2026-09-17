@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `c537352` — 2026-09-17T08:15:06+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #47 (brouillon) |
+| Où est `main` ? | `eb5e85a` — 2026-09-17T09:29:32+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #48 (brouillon) |
 | Qui tient quoi ? | aucune tâche revendiquée |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #47 — 2026-09-17 |
+| Dernière entrée de journal | PR #48 — 2026-09-17 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,7 +64,7 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #47 — chore(GOV-037): le lot preparatoire rend la phase 0 composable, 50 gabarits tombent | `lot/phase-0-preparation` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #48 — feat(GOV-056): le composeur lit paths ET tests{}, gov:pr juge les fichiers d une PR | `t/gov-056` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -86,13 +86,52 @@ Aucun ADR daté du 2026-09-17 (jour du dernier atterrissage). Les décisions de 
 
 ## Dernier atterrissage
 
-`origin/main` = `c537352` (2026-09-17T08:15:06+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `eb5e85a` (2026-09-17T09:29:32+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #48 — 2026-09-17 — feat(GOV-056): le composeur lit paths ET tests{}, gov:pr juge les fichiers d une PR
+
+**Fait.** Le test de collision de lot lit désormais les deux listes de fichiers d'une tâche, `paths`
+et `tests{}`, par un lecteur unique que le composeur, `gov:pr` et leurs témoins partagent ; l'écart
+qu'il provoque NOMME le fichier partagé et la tâche qui le tenait. `docs/gates.json` en sort
+nommément, avec son motif à côté, parce que chaque PR y verse SA ligne indexée par son propre
+identifiant ; l'exclusion n'est pas extensible, et toute entrée au-delà du registre fondateur doit
+nommer une ADR qui existe sur le disque. `gov:pr` gagne la famille `fichier_hors_paths_des_taches` :
+les fichiers de code d'une PR sont confrontés aux chemins que ses tâches déclarent, une PR dont
+aucune tâche ne résout étant refusée plutôt que passée sous silence. La preuve passe de 20 à 21
+familles et de 12 à 14 contre-témoins. Les cinq spécifications suivies que nulle tâche ne
+revendiquait sont rattachées par les outils hors dépôt : quatre étaient promises par un nom nu, qui
+ne résout aucun fichier du dépôt, la cinquième n'avait aucun porteur. La chaîne de lots simulée
+jusqu'à épuisement tombe de 35 lots à 20 pour les mêmes 88 tâches, et de 17 lots d'une seule tâche
+à 2.
+
+**Reste.** Les huit cases de la définition de « terminé » sont vides : l'auteur ne les coche pas,
+c'est Will qui atteste. Le composeur n'exclut toujours PAS les tâches déjà composées — un second
+appel, sans rien changer, recompose les mêmes tâches sous le lot suivant, parce qu'il n'existe
+aucune table des lots régénérable et que `docs/lots/` est ignoré par git ; hors périmètre de cette
+tâche, mais toute mesure de chaîne qui l'ignore se lit de travers. Treize promesses en nom nu
+subsistent dans `tests{}` : elles ne résolvent aucun fichier, et aucune garde n'exige qu'une
+promesse pointe un fichier existant à l'OUVERTURE de la PR. `sansAncre` de `gov-attributions.ts`
+fait exactement ce que fait `cheminDePromesse` du lecteur neuf, sur la même donnée : deux lectures
+du même fait, non fusionnées ici parce que cette PR ne rouvre pas la garde de GOV-037.
+`scripts/lot/integrer.ts` n'est dans les `paths` d'aucune tâche ; sa spécification l'est désormais.
+
+**Appris.** Une mesure de divergence qui ne dit pas COMMENT elle normalise n'est pas comparable à la
+suivante. Les mêmes 260 tâches donnent 20 et 31 quand on retire le titre écrit après le `#` d'une
+promesse, 27 et 39 quand on ne le retire pas — et la mesure des spécifications orphelines tombe de
+cinq à une si l'on accepte en plus de résoudre un nom nu par son nom de base, sans qu'un seul
+fichier ait changé de porteur. Trois conventions coexistent dans `tests{}` : chemin complet, chemin
+suivi d'un titre, nom nu. Le second se normalise, le troisième ne se résout pas — et c'est écrit à
+côté de la fonction, plutôt que supposé. Second enseignement, payé sur cette branche : la fixture
+« conforme » de `gov:pr --prove` portait des fichiers TAPÉS que la tâche de son titre ne déclarait
+pas. La PR réputée conforme de la preuve était elle-même une instance du défaut que la garde neuve
+ferme, et c'est le contre-témoin qui l'a dit. Une fixture conforme par accident prouve quelque
+chose, mais pas ce qu'on croit.
 
 ### PR #47 — 2026-09-17 — chore(GOV-037): le lot preparatoire rend la phase 0 composable, 50 gabarits tombent
 
@@ -174,40 +213,7 @@ fabriqués hors du dépôt — l'un qui tronque la valeur du label, l'autre dont
 les sauts de ligne — il rougit encore, et le premier rend mot pour mot le refus d'aujourd'hui. Élargir
 l'assertion pour la faire passer aurait rendu ces deux-là invisibles.
 
-### PR #45 — 2026-09-15 — fix(GOV-037): les attributions se confrontent a leurs sources — quatre rouges fermes, cliquet a 36
-
-**Fait.** La garde `gov:attributions` (`scripts/gates/gov-attributions.ts`) confronte à sa seconde
-source toute attribution écrite deux fois : gate ↔ tâche, owner ↔ poste, lot ↔ titre de l'entrée de
-journal de sa PR, et tout identifiant de tâche nommé dans l'en-tête d'un fichier suivi de `scripts/`
-ou de `tests/`, ou dans une chaîne de `docs/gates.json`. Ce qu'elle ne peut pas juger est exempté,
-imprimé et compté sous la rubrique de sa nature. Une dette figée (`DETTE_GABARIT_LIVREE`,
-`DETTE_LOT_JOURNAL`) porte tout ce que le site jugé porte, et une entrée qui ne mesure plus rien
-rougit en `dette_perimee`. Elle est appelée par Gate A (`pnpm gov:attributions`, puis son `--prove`)
-et par `pnpm gov:check`. La branche a ensuite fusionné `main` après les PR #36, #41 et #44 : cinq
-conflits. `ci.yml` et `package.json` gardent toutes les étapes et tous les scripts des deux côtés ;
-`docs/PLAN-STATE.md` et `docs/TRACABILITE.md` sont régénérés. Le cliquet des sorties non nulles a
-rougi sur la fusion, `expected 37 to be 36` : la PR #41 avait pris le 36 avec `gov-check.ts`, et il
-est déclaré à 37. La garde a rougi trois fois sur le contenu fusionné, en `mention_hors_paths`, sur
-trois textes arrivés par `main`. Deux sont des champs `verifie` de `docs/gates.json`, réécrits par
-l'outil hors dépôt sans exemption : `gov:plan-state` ne nomme plus GOV-035, `gov:check` ne nomme plus
-GOV-006. Le troisième, l'en-tête de `scripts/gates/gov-check.ts`, dit un fait vrai sur GOV-000 : il
-est déclaré en `contexte`. Prettier est appliqué aux trois fichiers de cette PR que `format:check`
-refusait, avec un arbre syntaxique identique.
-
-**Reste.** Les livrables (5) et (6) de l'acceptance ne sont pas livrés, et la décision appartient au
-gardien de la spécification ou à Will. Les dettes déclarées au corps de la PR restent ouvertes,
-lentille par lentille, dont le mutant survivant du retrait des commentaires HTML fichier par fichier.
-Le titre de la PR dit encore « cliquet a 36 ». La déclaration `contexte` de l'en-tête de
-`gov-check.ts` est un choix d'intégration : la phrase pourrait aussi être réécrite dans le fichier de
-GOV-030. La PR #39 atterrira probablement avant celle-ci, et une seconde fusion de `main` suivra.
-
-**Appris.** Une mesure d'interaction entre PR vaut pour la base où elle a été faite. Rejouée après la
-seule PR #36 (`git merge-tree`), la garde nommait un texte fautif ; sur la fusion réelle, après la
-PR #41, elle en nomme trois. Et une mention hors paths ne se ferme pas en ajoutant le path :
-`plan-state-frais.spec.ts` n'a été touché ni par la PR #36 ni par GOV-035, et le déclarer à cette
-tâche aurait écrit une seconde attribution fausse pour taire la première.
-
-… 14 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 15 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
