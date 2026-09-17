@@ -9168,7 +9168,9 @@
         "REQ-GOV-021": [
           "tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts"
         ]
-      }
+      },
+      "issue": 49,
+      "owner": "A05"
     },
     {
       "id": "GOV-057",
