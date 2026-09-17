@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `eb5e85a` — 2026-09-17T09:29:32+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #48 (rien) |
-| Qui tient quoi ? | GOV-056 (A05) |
+| Où est `main` ? | `7f83007` — 2026-09-17T18:53:09+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #53 (brouillon) |
+| Qui tient quoi ? | GOV-041 (A05) · GOV-056 (A05) |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
-| Le prochain pas | fusionner #48, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
+| Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #48 — 2026-09-17 |
+| Dernière entrée de journal | PR #53 — 2026-09-17 |
 
-**Ce qu’on tape maintenant.** `gh pr view 48 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,7 +64,7 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #48 — feat(GOV-056): le composeur lit paths ET tests{}, gov:pr juge les fichiers d une PR | `t/gov-056` | rien — fusionnable maintenant |
+| 1 | #53 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent | `t/gov-041` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -74,6 +74,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
+| GOV-041 — La cloture ecrit un statut sur une entree qu'elle n'a pas verifiee | A05 | #50 | `a_faire` |
 | GOV-056 — Le composeur compare des `paths` quand les taches promettent des `tests{}`, et rien ne juge les fichiers d une PR | A05 | #49 | `a_faire` |
 
 ⚠️ **20 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, GOV-035, GOV-036, GOV-037, GOV-030, GOV-031 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
@@ -84,19 +85,59 @@ Aucun ADR daté du 2026-09-17 (jour du dernier atterrissage). Les décisions de 
 
 ## Prochain pas
 
-**Fusionner #48** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-
 **QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 34 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `eb5e85a` (2026-09-17T09:29:32+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `7f83007` (2026-09-17T18:53:09+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #53 — 2026-09-17 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent
+
+**Fait.** `pnpm lot:cloture`, seul écrivain de `statut`, `pr`, `branch` et `owner` dans
+`docs/tasks.json`, ne pouvait pas dire quelles tâches le lot portait : il ne lisait nulle part la
+liste de ses membres et posait `lot` sur toute entrée que le rendu nommait. Le périmètre d'un lot se
+LIT désormais, et il a deux sources dont la préséance est écrite plutôt que subie :
+`docs/lots/lotId/lot.json` fait foi, et à son défaut — le dossier est ignoré par git, donc le fichier
+n'existe que dans l'arbre où le composeur a tourné et rien ne le régénère — le champ `lot` de
+`docs/tasks.json`, qui est suivi et que le rendu ne contrôle pas. Un identifiant que le rendu nomme
+et que le périmètre ne contient pas est un refus `tache_etrangere_au_lot` ; un rendu sans `lotId` est
+un refus `lot_du_rendu_absent`, là où seul un `lotId` FAUX était refusé ; une absence de périmètre
+est un refus `lot_introuvable`, jamais un périmètre vide. Les trois refus sont posés EN AMONT de la
+boucle qui écrit : ni la branche qui pose `fusionnee`, ni celle qui recompte la tentative n'écrit
+quoi que ce soit quand l'un d'eux se lève, et les témoins le vérifient par l'EFFET, pas par le
+message. Le module s'importe enfin sans le moindre effet de bord, sous `LANCE_EN_SCRIPT` ancré sur
+son dossier, son nom et la fin de chaîne — le patron de `scripts/plan-state/build.ts` et de
+`scripts/lot/composer.ts` — et sa règle est EXPORTÉE : `perimetreDuLot`, `controlerLePerimetre` et
+`cloturerLeLot` sont APPELÉES par vingt et un témoins, dont quatre qui lancent le SCRIPT ENTIER sur
+un dépôt jetable.
+
+**Reste.** Les huit cases de la définition de « terminé » sont vides : l'auteur ne les coche pas,
+c'est Will qui atteste. Le troisième trou de la mesure du 2026-09-09 — pour une tâche LOCALE, rien
+n'écrit ni ne vérifie le sha de fusion — est porté par GOV-042, qui étend l'attestation aux tâches
+locales ; l'ordre D-15 impose GOV-041 puis GOV-042 puis la dette numéro 2, en trois lots successifs,
+parce que les trois partagent `scripts/lot/cloture.ts`. Deux silences subsistent et ne sont pas
+couverts ici : un résultat sans `dev.taskId` est ignoré avec un avertissement, et surtout un membre
+du lot dont le rendu ne dit RIEN ne reçoit rien — ni statut, ni tentative — alors que c'est le
+miroir exact du trou que cette PR ferme. Il faudra une tâche pour ce second cas. Le composeur
+n'exclut toujours pas les tâches déjà composées, et `docs/lots/` reste hors suivi.
+
+**Appris.** Un contrôle rangé sous la condition qui l'a fait naître garde la moitié des cas, et la
+moitié se mesure. Huit pannes fabriquées sur ce correctif, toutes vues : deux d'entre elles se
+bornent à REDESCENDRE le contrôle de périmètre dans la branche `fusionnee`, là où le défaut avait
+été observé en 2026-09-09. Elles laissent seize témoins sur vingt et un VERTS, et seuls ceux qui
+mesurent l'EFFET — aucun statut écrit — les tuent ; le témoin qui appelle la fonction de contrôle
+directement reste vert sous les deux. Plus net encore : tant qu'un rendu contient au moins un
+résultat fusionné, un refus mal placé se déclenche quand même et PARAÎT garder. Il faut un rendu
+dont AUCUN résultat n'est fusionné pour voir l'intrus se faire recompter `attempts` en silence.
+Deuxième fait mesuré : glisser l'intrus au MILIEU du rendu plutôt qu'en queue distingue « tous » de
+« le dernier » — un contrôle réduit à `slice(-1)` reste vert sur un intrus en fin de liste et tue
+trois témoins sur un intrus au milieu.
 
 ### PR #48 — 2026-09-17 — feat(GOV-056): le composeur lit paths ET tests{}, gov:pr juge les fichiers d une PR
 
@@ -203,57 +244,7 @@ elle est revenue avec les deux dettes ajoutées à la réouverture, parce que la
 été rejouée sur ce qu'on ajoutait. Une correction qui vit dans un contenu gelé ne protège que les
 entrées présentes au moment du gel.
 
-### PR #46 — 2026-09-16 — chore(GOV-038): la phase -1 se ferme, cinq taches passent fusionnee et GOV-056 est versee
-
-**Fait.** Les cinq dernières tâches de la phase −1 passent `fusionnee` : GOV-035 par la PR #36,
-GOV-030 par la #41, GOV-031 par la #44, GOV-036 par la #39, GOV-037 par la #45. Chaque atterrissage
-a été mesuré avant d'être écrit : état `MERGED` sur la forge, commit de fusion égal au sha donné, et
-sha ancêtre d'`origin/main`. Leur `lot` reste `null` — elles ont été livrées seules, chacune sur sa
-branche `t/`, et inventer un lot après coup fabriquerait l'enregistrement que ce champ conserve.
-Trois décisions de Will du 15/09 sont écrites par les outils hors dépôt, jamais à la main :
-l'acceptance de GOV-036 est alignée sur ce que la PR #39 a livré, celle de GOV-049 admet la tâche
-livrée seule sans lot, et les cinquième et sixième livrables de GOV-037 en sortent pour devenir
-GOV-056, phase 0, 1,5 jour. Les vues sont régénérées dans l'ordre, `plan-state:build` en dernier :
-`docs/PLAN-STATE.md` porte « Phase courante : 0 » et 39 tâches livrées sur 39 en phase −1.
-
-Un seul rouge a suivi, et il n'était pas dans le générateur. Le témoin « une exemption est PORTANTE »
-de `tests/unit/gouvernance/vues-derivees.spec.ts` donnait un label `owner:A01<valeur hostile>` à CHAQUE
-issue de `docs/tasks.json`, puis exigeait de retrouver la marque sur une ligne de la vue. Or la table
-des revendications EN VOL ne rend que les tâches NON livrées : les cinq dernières tâches portant une
-issue passant `fusionnee`, la vue écrit « Aucune tâche revendiquée » — ce qui est juste — et le témoin a
-perdu la branche qu'il exerçait. `scripts/plan-state/build.ts` n'est pas touché. Le témoin se donne
-désormais SON registre : une copie du registre réel (RM-03), augmentée d'une tâche non livrée dont le
-numéro d'issue et la phase sont dérivés du registre copié (RM-01), rendue et jugée depuis un dépôt git
-jetable — sans quoi « Décisions du jour », dérivée de `git log` sur `docs/adr/`, perdrait à son tour sa
-branche non vide. La panne gardée est inchangée : une valeur de la forge absente de la vue, ou écrite
-sur plus d'une ligne.
-
-**Reste.** Vingt-huit des vingt-neuf manques relevés par la passe de complétude ne sont pas versés
-ici : ils feront une PR à part, et aucun ne va en phase −1. Les issues 37, 38, 40, 42 et 43 restent
-ouvertes ; les fermer appartient à Will. GOV-042 n'est pas amendée : sa mesure du 12/09 est datée et
-reste vraie, le nombre de tâches `fusionnee` sans attestation passe simplement de 33 à 38, ce
-qu'elle décrit déjà. La ligne « question(s) pour Will » de `docs/PLAN-STATE.md` compte encore des
-hypothèses tranchées le 03/09 : dette connue, portée par la passe de complétude.
-
-**Appris.** Un registre reste infermable quand aucun outil ne sait écrire UN champ. Les cinq tâches
-portaient `branch: null`, et `reclasser.mjs --fusionnee` refusait plutôt que d'inventer une branche :
-refus juste, impasse quand même. Le geste manquant n'était pas d'inventer, c'était de CONSTATER,
-comme la revendication constate une issue. La branche se lit donc sur la forge, sous quatre
-questions posées de la plus locale à la plus lointaine : le sha est-il ancêtre d'`origin/main`, la
-PR est-elle `MERGED`, son commit de fusion est-il ce sha, le nom rendu satisfait-il le motif que le
-schéma du dépôt impose. L'ordre est la garde : un contrôle placé derrière un appel réseau ne tire
-pas le jour où le réseau tombe, et c'est le jour où il compte.
-
-Et un fixture couplé à l'état du registre s'éteint tout seul, un jour, en annonçant une régression qui
-n'existe pas. Mesuré sur trois registres d'essai : avec l'ancienne règle de fixture, le témoin est VERT
-sur un registre où une tâche est en vol, ROUGE sur un registre où aucune ne l'est et ROUGE sur un
-registre sans aucune issue — son verdict décrivait le registre, pas le générateur. Avec la nouvelle, il
-est vert sur les trois. Le découplage ne l'a pas désarmé pour autant : sur deux générateurs fautifs
-fabriqués hors du dépôt — l'un qui tronque la valeur du label, l'autre dont `neutraliser` ne replie plus
-les sauts de ligne — il rougit encore, et le premier rend mot pour mot le refus d'aujourd'hui. Élargir
-l'assertion pour la faire passer aurait rendu ces deux-là invisibles.
-
-… 15 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 16 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
