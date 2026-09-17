@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `7f83007` — 2026-09-17T18:53:09+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #53 (brouillon) |
+| Qu’est-ce qui est en vol ? | 1. #53 (brouillon) · 2. #54 (brouillon) |
 | Qui tient quoi ? | GOV-041 (A05) · GOV-056 (A05) |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
@@ -65,6 +65,7 @@ Reste sur ce chemin : **17.50 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #53 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent | `t/gov-041` | brouillon — hors file tant qu’il n’est pas prêt |
+| 2 | #54 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte | `t/gov-044` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 

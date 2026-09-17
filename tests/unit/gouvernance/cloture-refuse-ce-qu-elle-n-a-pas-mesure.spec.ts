@@ -6,9 +6,9 @@
  *
  * CE QUE CE FICHIER GARDE, ET POURQUOI CHAQUE BLOC EXISTE.
  *
- *   (1) UNE TACHE ETRANGERE AU LOT PASSAIT. Mesure du 2026-09-09 : un dixieme `resultat.json` pour
- *       GOV-035, jamais dans la PR, a fait ecrire DIX `fusionnee` sans un mot, puis `gov:check`
- *       15/15 et `vitest` 614/614. `cloture.ts` posait `t.lot = lotId` INCONDITIONNELLEMENT, et ne
+ *   (1) UNE TACHE ETRANGERE AU LOT PASSAIT. Mesure du 2026-09-09 : un dixieme `resultat.json`
+ *       depose pour une tache d'un AUTRE lot, jamais dans la PR, a fait ecrire DIX `fusionnee` sans
+ *       un mot, puis `gov:check` 15/15 et `vitest` 614/614. Le script posait `t.lot` SANS CONDITION, et ne
  *       lisait NULLE PART la liste des taches que le lot porte. Le refus s'appelle
  *       `tache_etrangere_au_lot`, et il est pose AVANT toute ecriture — donc sur les DEUX branches
  *       (celle qui ecrit `fusionnee` et celle qui recompte la tentative), pas sur celle ou le defaut

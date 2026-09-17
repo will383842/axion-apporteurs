@@ -15,10 +15,10 @@
  *
  * INVARIANTS
  *   - LE RENDU NE DÉCIDE PAS DE SON PROPRE PÉRIMÈTRE (GOV-041). Une tâche que le lot ne déclare pas ne
- *     reçoit RIEN — pas même `t.lot`. Le 2026-09-09, un dixième `resultat.json` pour GOV-035, jamais
- *     dans la PR, a fait écrire dix `fusionnee` sans un mot, puis `gov:check` 15/15 et `vitest`
- *     614/614 : la clôture posait `t.lot = lotId` INCONDITIONNELLEMENT et ne lisait nulle part la
- *     liste des tâches du lot.
+ *     reçoit RIEN — pas même `t.lot`. Le 2026-09-09, un dixième `resultat.json` déposé pour une tâche
+ *     d'un AUTRE lot, jamais dans la PR, a fait écrire dix `fusionnee` sans un mot, puis `gov:check`
+ *     15/15 et `vitest` 614/614 : la clôture posait `t.lot = lotId` INCONDITIONNELLEMENT et ne lisait
+ *     nulle part la liste des tâches du lot.
  *   - UNE ABSENCE N'EST PAS UNE AUTORISATION (GOV-041). Un `lotId` absent du rendu est refusé comme
  *     un `lotId` faux ; un périmètre introuvable est refusé, jamais lu comme un périmètre vide.
  *   - une tâche n'est `fusionnee` que si sa PR a ATTERRI (`fusion.atterri === true`) : une PR fusionnée
