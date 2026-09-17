@@ -595,10 +595,14 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
       // `paths` ∪ `tests{}` : les deux champs sont lus ENSEMBLE, parce que leur divergence est la
       // CONVENTION (cf. scripts/lot/chemins-de-tache.ts). Un chemin de DOSSIER couvre ce qui vit
       // dessous — `touche()` en sens inverse, le même prédicat que pour les chemins réservés.
+      // ⚠️ LE PRÉDICAT N'EST PAS RÉÉCRIT ICI. Il l'était — `f === d || f.startsWith(d.replace(...))`
+      // — soit une SECONDE écriture de `touche()`, à deux lignes d'un commentaire qui disait déjà
+      // que c'était « le même prédicat que pour les chemins réservés ». Un commentaire qui nomme la
+      // source unique ne remplace pas l'appel (RM-01). Et la branche du PRÉFIXE de dossier — une
+      // tâche qui déclare `scripts/gates/` couvre ce qui vit dessous — n'était gardée par aucun
+      // contre-témoin : la retirer n'aurait fait rougir personne. Elle en a un désormais.
       const declares = [...new Set(tachesCitees.flatMap((t) => cheminsDeLaTache(t)))];
-      const orphelins = codeTouche.filter(
-        (f) => !declares.some((d) => f === d || f.startsWith(d.replace(/\/$/, '') + '/'))
-      );
+      const orphelins = codeTouche.filter((f) => !declares.some((d) => touche(d, [f])));
       if (orphelins.length > 0) {
         ajouter(
           'fichier_hors_paths_des_taches',
@@ -1451,6 +1455,27 @@ if (process.argv.includes('--prove')) {
           // bloc ROUGE/VERT comme sur la famille neuve, et c'est bien ce qu'on veut montrer.
         },
       ],
+    },
+    {
+      // LE PRÉFIXE DE DOSSIER, ET IL N'ÉTAIT GARDÉ PAR RIEN. Une tâche qui déclare un DOSSIER
+      // couvre ce qui vit dessous ; sans ce contre-témoin, retirer cette branche du prédicat
+      // laissait la preuve verte, et toute PR touchant un fichier sous un `paths` de dossier se
+      // serait mise à rougir sans que personne l'ait voulu. La tâche citée est réécrite en
+      // DOSSIER, et le fichier de la PR se dérive d'elle (RM-03) : le vert ne tient pas à un
+      // chemin tapé.
+      quoi: 'une PR dont le fichier de code vit SOUS un dossier que sa tâche déclare',
+      cas: () => {
+        const dossier = 'scripts/gates/';
+        const d = copieDepot();
+        d.taches = d.taches.map((t) =>
+          t.id === 'GOV-011' ? { ...t, paths: [dossier], tests: {} } : t
+        );
+        const p = copiePr(PR_TEMOIN);
+        p.fichiers = p.fichiers
+          .filter((f) => !PERIMETRE_DU_CODE.some((x) => f.startsWith(x)))
+          .concat(`${dossier}gov-trace.ts`);
+        return [d, p];
+      },
     },
     // 🔻 RETIRÉ LE 2026-09-17 — un contre-témoin qui ne mesurait rien. Il était annoncé comme
     // « l'autre face » de `fichier_hors_paths_des_taches` (« une PR dont chaque fichier de code est

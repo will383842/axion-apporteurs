@@ -25,6 +25,11 @@
  * la meme mesure donne 27 et 39 — 7 taches et 8 taches de plus, pour des promesses qui pointent le
  * MEME fichier sous deux titres. Une mesure de divergence qui ne dit pas comment elle normalise
  * n'est pas comparable a la suivante.
+ * ⚠️ CES NOMBRES SONT UNE MESURE DATEE, PAS UNE REGLE, et ils sont ecrits ici parce que c'est leur
+ * CONTRASTE qui enseigne : la meme divergence, deux normalisations, deux resultats. Ils
+ * VIEILLIRONT. Le jour ou ils s'ecartent de ce que `divergencePathsTests()` rend, c'est la mesure
+ * IMPRIMEE par le composeur qui fait foi, et ce paragraphe qui est faux — comme l'etait la phrase
+ * « 20 promesses (`preseance.spec.ts`) » quelques lignes plus bas, jusqu'au 2026-09-17.
  *
  * TROIS RAISONS DE DECLARER LA CONVENTION PLUTOT QUE DE NORMALISER LES CHAMPS :
  *   (i)   normaliser reecrirait 47 taches dont 29 deja `fusionnee` — c'est reecrire l'histoire
