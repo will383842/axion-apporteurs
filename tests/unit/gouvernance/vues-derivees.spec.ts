@@ -276,13 +276,44 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
   const vertsQuiRefusent: string[] = [];
   const famillesDe = (sortie: string): string[] =>
     [...sortie.matchAll(/^[ \t]*\[([^\]\n]+)\]/gm)].map((m) => m[1]!);
-  function lancerPlan(...args: string[]): { code: number; sortie: string } {
-    const r = lancer(PLAN, ...args);
+  /**
+   * L'OBSERVATION, PARTAGÉE PAR LES DEUX LANCEURS. Un lancement qui ne passerait pas par ici
+   * rendrait MUETTE une famille que lui seul fait sortir : le dernier témoin du bloc, qui confronte
+   * `FAMILLES` à ce qui est SORTI, la déclarerait « jamais vue » et rougirait sur un canal sain.
+   */
+  function comptabiliser(
+    args: string[],
+    r: { code: number; sortie: string }
+  ): { code: number; sortie: string } {
     const vues = famillesDe(r.sortie);
     for (const f of vues) famillesVues.add(f);
     if (r.code === 0 && vues.length > 0)
       vertsQuiRefusent.push(`${args.join(' ')} → [${vues.join('], [')}]`);
     return r;
+  }
+  function lancerPlan(...args: string[]): { code: number; sortie: string } {
+    return comptabiliser(args, lancer(PLAN, ...args));
+  }
+  /**
+   * LE MÊME SCRIPT, DANS UN AUTRE RÉPERTOIRE DE TRAVAIL.
+   *
+   * `build.ts` lit ses sources par chemin RELATIF (`docs/tasks.json`, `docs/DECISIONS.md`,
+   * `docs/adr/`, `docs/journal/` — son en-tête les énumère). Lui donner un autre `cwd`, c'est lui
+   * donner un autre REGISTRE : c'est le seul moyen, sans toucher au générateur ni écrire dans le
+   * dépôt, d'exercer une branche de la vue que l'état du registre du dépôt a cessé de produire.
+   * `npx` ne convient pas ici — hors du dépôt il ne trouverait pas `tsx` et irait le chercher au
+   * loin ; on appelle donc le CLI de `tsx` par son chemin, comme le fait déjà le témoin d'import.
+   */
+  function lancerPlanDans(cwd: string, ...args: string[]): { code: number; sortie: string } {
+    const r = spawnSync(
+      process.execPath,
+      [resolve('node_modules/tsx/dist/cli.mjs'), resolve(PLAN), ...args],
+      { cwd, encoding: 'utf8', maxBuffer: 64 * 2 ** 20 }
+    );
+    return comptabiliser(args, {
+      code: r.status ?? 1,
+      sortie: (r.stdout ?? '') + (r.stderr ?? ''),
+    });
   }
 
   /** Rend la vue dans le bac à sable. Le `docs/PLAN-STATE.md` du dépôt n'est JAMAIS écrit. */
@@ -292,6 +323,101 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     expect(code, `le rendu de ${PLAN} a échoué : ${sortie}`).toBe(0);
     expect(existsSync(chemin), `\`--out\` n'a pas écrit dans le bac : ${sortie}`).toBe(true);
     return chemin;
+  }
+
+  /** Le même rendu, depuis un autre registre. La vue reste écrite dans le bac à sable. */
+  function rendrePlanStateDans(cwd: string, nom: string, ...args: string[]): string {
+    const chemin = join(bac, nom);
+    const { code, sortie } = lancerPlanDans(cwd, '--out', chemin, ...args);
+    expect(code, `le rendu de ${PLAN} depuis ${cwd} a échoué : ${sortie}`).toBe(0);
+    expect(existsSync(chemin), `\`--out\` n'a pas écrit dans le bac : ${sortie}`).toBe(true);
+    return chemin;
+  }
+
+  /**
+   * LE REGISTRE D'ESSAI — et pourquoi ce témoin ne dérive PLUS ses issues de `docs/tasks.json`.
+   *
+   * 🔴 MESURÉ le 2026-09-16, sur la PR #46. Ce témoin donnait un label `owner:A01<hostile>` à
+   * CHAQUE issue du registre du dépôt, puis exigeait de retrouver la marque sur une ligne de la
+   * vue. Or la table des revendications EN VOL ne rend que les tâches NON livrées (`build.ts`,
+   * rubrique « Revendications ») : le jour où les cinq dernières tâches portant une issue sont
+   * passées `fusionnee`, la vue a écrit « Aucune tâche revendiquée » — ce qui est JUSTE — et le
+   * témoin a perdu la branche qu'il exerçait, sans qu'une ligne du générateur ait changé. Un
+   * fixture couplé à l'état du registre s'éteint tout seul, un jour, en annonçant une régression
+   * qui n'existe pas ; et s'il avait été « élargi » pour redevenir vert, il n'aurait plus rien gardé.
+   *
+   * LE DÉCOUPLAGE. Ce témoin travaille sur SON registre : copié du producteur réel (RM-03), puis
+   * augmenté d'UNE tâche non livrée qui porte une issue. La branche « revendication en vol » est
+   * alors exercée quel que soit l'état de `docs/tasks.json`, et la panne gardée reste EXACTEMENT
+   * la même — une valeur de la forge absente de la vue, ou écrite sur plus d'une ligne.
+   *
+   * RIEN N'EST TAPÉ DE CE QUI EXISTE AILLEURS (RM-01) : le numéro d'issue est dérivé du plus grand
+   * numéro du registre copié — aucune collision possible avec une issue réelle —, la phase du
+   * minimum des phases, le dépôt de la première tâche.
+   *
+   * C'EST UN VRAI DÉPÔT GIT. « Décisions du jour » se dérive de `git log` sur `docs/adr/` : hors
+   * d'un dépôt, `git` rend du vide, la rubrique bascule sur sa branche « Aucun ADR daté du … » et
+   * l'assertion (3) qui exige la branche NON VIDE cesserait d'être exercée. Le même piège que
+   * celui qu'on répare, à un autre étage.
+   */
+  interface TacheDEssai {
+    id: string;
+    titre: string;
+    phase: number;
+    repo: string;
+    statut: string;
+    deps: string[];
+    reqs: string[];
+    hyp: string[];
+    externe: string | null;
+    estimateDays: number;
+    owner: string | null;
+    branch: string | null;
+    pr: number | null;
+    issue: number | null;
+  }
+  function registreDEssai(): { racine: string; issue: number } {
+    const racine = join(bac, 'registre-essai');
+    mkdirSync(join(racine, 'docs'), { recursive: true });
+    copyFileSync('docs/DECISIONS.md', join(racine, 'docs/DECISIONS.md'));
+    for (const dossier of ['docs/adr', 'docs/journal']) {
+      mkdirSync(join(racine, dossier), { recursive: true });
+      for (const f of readdirSync(dossier))
+        if (statSync(join(dossier, f)).isFile())
+          copyFileSync(join(dossier, f), join(racine, dossier, f));
+    }
+    const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: TacheDEssai[] };
+    expect(doc.taches.length, 'registre vide : le témoin ne dériverait rien').toBeGreaterThan(0);
+    const issue =
+      1 + Math.max(0, ...doc.taches.map((t) => (typeof t.issue === 'number' ? t.issue : 0)));
+    doc.taches.push({
+      id: 'TEMOIN-FORGE',
+      titre: 'tâche d’essai — porte la revendication en vol de ce témoin',
+      phase: Math.min(...doc.taches.map((t) => t.phase)),
+      repo: doc.taches[0]!.repo,
+      statut: 'a_faire',
+      deps: [],
+      reqs: [],
+      hyp: [],
+      externe: null,
+      estimateDays: 0.5,
+      owner: null,
+      branch: null,
+      pr: null,
+      issue,
+    });
+    writeFileSync(join(racine, 'docs/tasks.json'), JSON.stringify(doc, null, 2));
+    for (const args of [
+      ['init', '-q'],
+      ['config', 'user.email', 't@t'],
+      ['config', 'user.name', 't'],
+      ['add', '-A', '-f'],
+      ['-c', 'commit.gpgsign=false', 'commit', '-q', '--no-verify', '-m', 'registre d’essai'],
+    ]) {
+      const r = spawnSync('git', args, { cwd: racine, encoding: 'utf8' });
+      expect(r.status, `git ${args.join(' ')} a échoué : ${r.stderr}`).toBe(0);
+    }
+    return { racine, issue };
   }
 
   /** Les éléments qu'un vert déclare NON COMPARÉS, à un étage donné, lus dans sa sortie. */
@@ -842,27 +968,36 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
     //       d'ouvertures de bloc. Une valeur de la forge ne produit JAMAIS plus d'une ligne : sa marque
     //       de début et sa marque de fin sont sur la même. La vue A est verte sous A, et une vue fautive
     //       rend les MÊMES refus sous A et sous B : le verdict ne dépend pas de la forge.
+    //
+    // ⚠️ LA VALEUR D'UN LABEL `owner:` NE S'ÉCRIT QUE SUR UNE TÂCHE NON LIVRÉE — c'est la seule zone
+    // de la vue qui la rende. Ce témoin ne la demande donc pas au registre du dépôt, qui peut n'en
+    // porter aucune : il se donne SON registre, où une tâche non livrée porte une issue
+    // (`registreDEssai` ci-dessus dit ce que ce couplage a coûté). Toutes les vues de ce témoin sont
+    // rendues ET jugées depuis ce registre-là.
+    const { racine, issue: issueDuTemoin } = registreDEssai();
     const forgeA = join(bac, 'forge-a.json');
     const forgeB = join(bac, 'forge-b.json');
     const hostile = (k: string) =>
       `    ## Suite MARQUE-DEBUT-${k} <details><summary>replie</summary>\r\n## Suite\n    <!--\n- ## Bloquées\n\`\`\`\nMARQUE-FIN-${k}`;
     // « Décisions du jour » n'est rendue non vide que le jour d'un ADR : la date de `main` le prend.
-    const adr = readdirSync('docs/adr')
+    // L'ADR et son jour se lisent dans le REGISTRE D'ESSAI, pas dans le dépôt : c'est lui que la vue
+    // aura sous les yeux.
+    const adr = readdirSync(join(racine, 'docs/adr'))
       .filter((f) => /^\d{4}-.*\.md$/.test(f))
       .sort()
       .at(-1)!;
     const jourAdr = spawnSync('git', ['log', '-1', '--format=%cI', '--', `docs/adr/${adr}`], {
+      cwd: racine,
       encoding: 'utf8',
     })
       .stdout.trim()
       .slice(0, 10);
-    const issues = (
-      JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: { issue?: number | null }[] }
-    ).taches
-      .map((x) => x.issue)
-      .filter((n): n is number => typeof n === 'number')
-      .map((number) => ({
-        number,
+    expect(jourAdr, 'aucun jour lu sur l’ADR du registre d’essai').toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // UNE issue, celle de la tâche non livrée injectée : la revendication en vol est exercée quel
+    // que soit l'état de `docs/tasks.json` du dépôt.
+    const issues = [
+      {
+        number: issueDuTemoin,
         labels: [
           {
             id: 'LA_temoin',
@@ -871,7 +1006,8 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
             color: 'ededed',
           },
         ],
-      }));
+      },
+    ];
     writeFileSync(
       forgeA,
       JSON.stringify({
@@ -906,8 +1042,8 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
         main: { sha: 'bbbbbbb', date: '2026-02-02T00:00:00+00:00' },
       })
     );
-    const a = rendrePlanState('PLAN-STATE-forge-a.md', '--forge', forgeA);
-    const b = rendrePlanState('PLAN-STATE-forge-b.md', '--forge', forgeB);
+    const a = rendrePlanStateDans(racine, 'PLAN-STATE-forge-a.md', '--forge', forgeA);
+    const b = rendrePlanStateDans(racine, 'PLAN-STATE-forge-b.md', '--forge', forgeB);
 
     const lignesA = readFileSync(a, 'utf8').split('\n');
     const coupees = ['titre', 'branche', 'etat', 'label', 'sha', 'date'].filter((k) => {
@@ -924,19 +1060,19 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
       '(3) la branche non vide de « Décisions du jour » n’est pas exercée'
     ).toContain(`docs/adr/${adr}`);
 
-    const bSousB = lancerPlan('--verifier', '--out', b, '--forge', forgeB);
+    const bSousB = lancerPlanDans(racine, '--verifier', '--out', b, '--forge', forgeB);
     expect(
       bSousB.code,
       `(0) la vue écrite sans GitHub lisible est refusée par sa propre règle : ${bSousB.sortie}`
     ).toBe(0);
 
-    const aSousA = lancerPlan('--verifier', '--out', a, '--forge', forgeA);
+    const aSousA = lancerPlanDans(racine, '--verifier', '--out', a, '--forge', forgeA);
     expect(
       aSousA.code,
       `(3) la vue écrite sous une forge LISIBLE est refusée sous cette même forge : ${aSousA.sortie}`
     ).toBe(0);
 
-    const { code, sortie } = lancerPlan('--verifier', '--out', a, '--forge', forgeB);
+    const { code, sortie } = lancerPlanDans(racine, '--verifier', '--out', a, '--forge', forgeB);
     expect(
       code,
       `(1) un élément COMPARÉ dépend de la forge, ou la forge a écrit hors de sa zone : ${sortie}`
@@ -976,8 +1112,8 @@ describe('REQ-GOV-032 — docs/PLAN-STATE.md est comparée à ses sources (GOV-0
       )
     );
     const refus = (s: string) => s.split('\n').filter((l) => /^\s*\[/.test(l));
-    const sousA = lancerPlan('--verifier', '--out', fautive, '--forge', forgeA);
-    const sousB = lancerPlan('--verifier', '--out', fautive, '--forge', forgeB);
+    const sousA = lancerPlanDans(racine, '--verifier', '--out', fautive, '--forge', forgeA);
+    const sousB = lancerPlanDans(racine, '--verifier', '--out', fautive, '--forge', forgeB);
     expect(sousA.code, `(3) la vue fautive passe sous la forge lisible : ${sousA.sortie}`).toBe(1);
     expect(refus(sousA.sortie), '(3) le verdict d’une vue fautive dépend de la forge').toEqual(
       refus(sousB.sortie)
