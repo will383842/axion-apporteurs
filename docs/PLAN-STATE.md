@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `809a746` — 2026-09-18T21:07:50+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #54 (un conflit avec `main`) · 2. #55 (un conflit avec `main`) |
+| Où est `main` ? | `87a31ed` — 2026-09-18T22:20:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #54 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-039 (A05) · GOV-041 (A05) · GOV-044 (A05) · GOV-056 (A05) |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
@@ -65,7 +65,6 @@ Reste sur ce chemin : **17.50 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #54 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte | `t/gov-044` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #55 — test(GOV-039): un titre de test confronte son identifiant au texte de l exigence nommee | `t/gov-039` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -92,7 +91,7 @@ Aucun ADR daté du 2026-09-18 (jour du dernier atterrissage). Les décisions de 
 
 ## Dernier atterrissage
 
-`origin/main` = `809a746` (2026-09-18T21:07:50+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `87a31ed` (2026-09-18T22:20:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -135,6 +134,50 @@ garde importé par sa propre spécification tue le worker `vitest` au premier `p
 du worker — une garde qui EXÉCUTE son code au lieu d'en lire le texte paie d'abord ce prix-là.
 Une lecture qu'on ne peut pas importer finit recopiée, et la copie est la plus pauvre : la seconde
 lecture des titres ratait quinze titres à identifiant, et une exigence absorbée y passait en exit 0.
+
+### PR #54 — 2026-09-17 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte
+
+**Fait.** La famille `garde_ecrite_jamais_appelee` de `gov:conventions` tirait sa population du
+registre : un script de garde absent de `docs/gates.json` n'était jamais confronté à la question de
+savoir si quelqu'un l'appelle, et la gate sortait en zéro. Le périmètre part désormais du DISQUE —
+les fichiers `scripts/gates/*.ts` suivis par git — et le registre est ce qu'on lui confronte. Une
+garde écrite que le registre ne nomme pas est un refus nommé, `garde_hors_registre` ; le décompte
+des deux populations est imprimé à chaque passage ; une garde délibérément hors CI se DÉCLARE dans
+un champ `horsCi` d'au moins soixante caractères, la même exigence que pour un périmètre vide. Le
+filtre `g.phase` au plus `-1` n'est pas reconduit, et la décision est écrite à côté du code avec sa
+mesure : c'était un proxy de « déjà écrite », que le disque remplace par le fait. Trois témoins
+gardent ce choix — phase 0 non câblée rouge, phase 0 câblée verte, phase future non écrite
+silencieuse. Dix-sept témoins, aucune assertion d'orthographe : chacun exécute le contrôle, la
+confrontation, le périmètre ou le script entier, et la population est recomptée hors de sa fonction
+par un `git ls-files` lu dans le test.
+
+**Reste.** LA PR EST EN BROUILLON, ET LE GESTE QUI LA FERMERAIT N'A PAS DE VERBE. Le correctif nomme
+les deux gardes hors registre, donc `pnpm gov:conventions` sort en 1 sur l'arbre réel, et deux
+témoins de `gardes-transposees.spec.ts` qui asservissent la suite à un dépôt vert rougissent avec
+lui. Le refermer demande d'AJOUTER deux entrées à `docs/gates.json`, et aucun outil ne le sait :
+`reecrire-champ` réécrit un champ existant, `poser-champ` pose un champ absent d'une entrée
+existante, les deux refusent une entrée absente ; `verser-tache` ne connaît que `docs/tasks.json` ;
+`fusionner-registre` exige un index à trois étages ; le fichier est en `deny` sur Write et Edit. Le
+journal des réécritures porte soixante-dix-huit opérations sur `docs/gates.json`, toutes des
+réécritures, AUCUN ajout. Les deux entrées prêtes à verser sont dans le corps de la PR. Hors
+périmètre et non touché : le tri des entrées de registre sans script sur le disque — autre dépôt,
+phase future, entrée fautive — qui appartient à GOV-051, et que le rendu compte à trente sans les
+distinguer. Effet de bord déclaré : `gov-conventions.ts` est partagé par quatre tâches, donc
+GOV-051 n'est pas composable tant que cette PR est ouverte.
+
+**Appris.** LE VERBE QUI MANQUE EST LA CAUSE DU TROU QU'ON MESURE. L'acceptance datait du 2026-09-12
+et disait « le SEUL des 24 scripts » ; la mesure du jour en donne VINGT-SIX, dont DEUX hors registre
+— `gov-attestation.ts`, et `gov-attributions.ts`, la garde livrée par la PR 45, ajoutée au trou
+pendant qu'on le décrivait. On a d'abord lu cet écart comme une négligence de livraison. Il n'en est
+pas une : `docs/gates.json` n'a pas de verbe d'ajout, donc TOUTE garde neuve atterrit hors du
+registre, par construction, et le trou se régénère à chaque livraison. L'acceptance n'est pas
+réécrite, délibérément : sa mesure était vraie et datée, et l'écart entre les deux EST la
+démonstration de la thèse — un registre tenu à la main se périme pendant qu'on l'écrit. Second
+apprentissage, plus étroit : une garde peut avoir une raison ÉCRITE de ne pas être câblée —
+`gov:attestation` interroge la forge par `gh` et GOV-038 l'a laissée hors CI exprès — et tant que ce
+motif ne vit nulle part qu'une garde puisse lire, il ne reste que deux issues, un rouge permanent
+qu'on apprend à ignorer, ou le silence. C'est pour cela que la déclaration est un champ du registre
+et pas un commentaire.
 
 ### PR #53 — 2026-09-17 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent
 
@@ -187,82 +230,7 @@ tâches. Nommer, dans l'en-tête d'un fichier, la tâche dont on raconte l'incid
 `mention_hors_paths` — le lecteur suivant irait chercher chez elle un fichier qui n'est pas à elle.
 Le fait se raconte donc plus bas, ou sans le nom.
 
-### PR #48 — 2026-09-17 — feat(GOV-056): le composeur lit paths ET tests{}, gov:pr juge les fichiers d une PR
-
-**Fait.** Le test de collision de lot lit désormais les deux listes de fichiers d'une tâche, `paths`
-et `tests{}`, par un lecteur unique que le composeur, `gov:pr` et leurs témoins partagent ; l'écart
-qu'il provoque NOMME le fichier partagé et la tâche qui le tenait. `docs/gates.json` en sort
-nommément, avec son motif à côté, parce que chaque PR y verse SA ligne indexée par son propre
-identifiant ; l'exclusion n'est pas extensible, et toute entrée au-delà du registre fondateur doit
-nommer une ADR qui existe sur le disque. `gov:pr` gagne la famille `fichier_hors_paths_des_taches` :
-les fichiers de code d'une PR sont confrontés aux chemins que ses tâches déclarent, une PR dont
-aucune tâche ne résout étant refusée plutôt que passée sous silence. La preuve passe de 20 à 21
-familles et de 12 à 14 contre-témoins, dont celui du PRÉFIXE de dossier, que rien ne gardait : une
-tâche qui déclare un dossier couvre ce qui vit dessous, et le prédicat qui le dit n'est plus réécrit
-à deux lignes d'un commentaire qui nommait déjà sa source — il appelle `touche`. La boucle qui
-compose réellement le lot est sortie du niveau module du script vers une fonction PURE,
-`retenirSansCollision`, que le composeur appelle et qu'un test peut donc exécuter ; elle n'écrit
-rien, et l'intersection qu'elle applique est celle de `collisionEntre`, seule écriture de la règle
-dans le dépôt. `composer.ts` lui-même s'importe désormais sans le moindre effet de bord — tout ce
-qui lit, taille ou écrit vit sous `LANCE_EN_SCRIPT`, le patron de `plan-state/build.ts` — et la
-composition est EXPORTÉE, `composerLeLot`, appelée par ses témoins au lieu d'être relue. Un
-troisième témoin lance le SCRIPT ENTIER sur un dépôt jetable et relit le `lot.json` qu'il écrit.
-Les cinq spécifications suivies que nulle tâche ne
-revendiquait sont rattachées par les outils hors dépôt : quatre étaient promises par un nom nu, qui
-ne résout aucun fichier du dépôt, la cinquième n'avait aucun porteur. La chaîne de lots simulée
-jusqu'à épuisement tombe de 35 lots à 20 pour les mêmes 88 tâches, et de 17 lots d'une seule tâche
-à 2.
-
-**Reste.** Les huit cases de la définition de « terminé » sont vides : l'auteur ne les coche pas,
-c'est Will qui atteste. Le composeur n'exclut toujours PAS les tâches déjà composées — un second
-appel, sans rien changer, recompose les mêmes tâches sous le lot suivant, parce qu'il n'existe
-aucune table des lots régénérable et que `docs/lots/` est ignoré par git ; hors périmètre de cette
-tâche, mais toute mesure de chaîne qui l'ignore se lit de travers. Treize promesses en nom nu
-subsistent dans `tests{}` : elles ne résolvent aucun fichier, et aucune garde n'exige qu'une
-promesse pointe un fichier existant à l'OUVERTURE de la PR. `sansAncre` de `gov-attributions.ts`
-fait exactement ce que fait `cheminDePromesse` du lecteur neuf, sur la même donnée : deux lectures
-du même fait, non fusionnées ici parce que cette PR ne rouvre pas la garde de GOV-037.
-`scripts/lot/integrer.ts` n'est dans les `paths` d'aucune tâche ; sa spécification l'est désormais.
-
-**Appris.** Une mesure de divergence qui ne dit pas COMMENT elle normalise n'est pas comparable à la
-suivante. Les mêmes 260 tâches donnent 20 et 31 quand on retire le titre écrit après le `#` d'une
-promesse, 27 et 39 quand on ne le retire pas — et la mesure des spécifications orphelines tombe de
-cinq à une si l'on accepte en plus de résoudre un nom nu par son nom de base, sans qu'un seul
-fichier ait changé de porteur. Trois conventions coexistent dans `tests{}` : chemin complet, chemin
-suivi d'un titre, nom nu. Le second se normalise, le troisième ne se résout pas — et c'est écrit à
-côté de la fonction, plutôt que supposé. Second enseignement, payé sur cette branche : la fixture
-« conforme » de `gov:pr --prove` portait des fichiers TAPÉS que la tâche de son titre ne déclarait
-pas. La PR réputée conforme de la preuve était elle-même une instance du défaut que la garde neuve
-ferme, et c'est le contre-témoin qui l'a dit. Une fixture conforme par accident prouve quelque
-chose, mais pas ce qu'on croit. Troisième enseignement, celui qui a coûté un refus : le premier
-témoin du composeur ne lisait que le TEXTE de `composer.ts` — deux assertions de chaîne — parce que
-la boucle vivait au niveau module d'un script qui écrit `docs/tasks.json` et le fichier de lot au
-seul fait d'être importé. Le code n'était pas testable, alors on avait testé sa syntaxe. La panne
-fabriquée le montre : remettre la disjonction sur `paths` seul laisse les deux assertions VERTES, et
-une variante à UNE LETTRE près aussi. Une garde qui connaît une orthographe ne connaît pas un
-comportement. Le remède n'est pas une meilleure expression régulière, c'est de rendre la règle
-appelable : sortir la boucle en fonction pure, laisser les effets de bord au script, et faire porter
-le témoin sur ce qu'elle REND. Quatrième, du même refus : un contre-témoin identique en entrées et
-en verdict à un autre ne mesure rien, et l'avoir compté pour un gain gonfle la preuve sans
-l'étendre ; il est retiré. Cinquième : un nombre écrit au présent dans le fichier même qui le rend
-faux se lit comme une mesure et n'en est plus une — le compte des promesses en nom nu se dérive
-désormais, et la ligne que le composeur imprime dit enfin COMMENT elle normalise. Sixième, d'un
-second refus et le plus utile de tous : sortir la règle en fonction pure ne suffit pas, parce que
-le CÂBLAGE entre le script et elle restait gardé par une chaîne — et une panne d'UNE LIGNE au point
-d'appel, `tests` amputé, laissait le dépôt entier vert en remettant 24 paires de tâches du registre
-dans le même lot. Le nom survivait dans un commentaire qui affirmait le contraire du code. Un
-correctif qui déplace une garde d'un cran la laisse contournable d'un cran : la question n'est pas
-« la règle est-elle isolée ? » mais « chaque appelant est-il exercé ? ». Et il y en avait DEUX — la
-composition, puis le pilote qui l'appelle : fermer le premier laissait le second ouvert, jusqu'au
-témoin qui lance le script entier sur un dépôt jetable. Septième : un témoin de collision construit
-contre la DERNIÈRE tâche retenue ne distingue pas « toutes » de « la dernière ». Remplacer la boucle
-par la seule dernière retenue le laissait vert, alors que la panne rouvre une collision sur `paths`,
-c'est-à-dire le cas que le composeur gardait déjà AVANT cette PR. Une garde n'a de sens que dans les
-deux sens : il en a fallu un second, où la tâche fautive se dispute un fichier avec la PREMIÈRE
-retenue. Huitième : un compteur DÉRIVÉ qu'aucun témoin ne garde vaut le compteur tapé — vider la
-fonction qui le rend laissait le témoin imprimer des zéros et boucler sur rien.
-
-… 17 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 18 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

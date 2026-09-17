@@ -62,7 +62,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:inventaire` | GOV-020 | `scripts/gates/gov-inventaire.ts` | — | pnpm gov:inventaire:prove — 7 familles, chacune vue rougir sur son propre defaut injecte, 6 contre-temoins verts. Rouge reel constate sur le fichier : « docs/INVENTAIRE-CHANTIERS.md:79 — le chantier « C5 » porte l'etat « code » alors que ce depot ne dit pas ce que l'etiquette DESIGNE » |
 | `gov:lecons` | GOV-018 | `scripts/gates/gov-lecons.ts` | — | pnpm gov:lecons --prove — 12 familles, 13 temoins (consolidation_perimee en a deux, un par source), 9 contre-temoins verts |
 | `gov:etat` | GOV-008 | `scripts/gates/gov-etat.ts` | — | pnpm gov:etat:prove — 9 familles, un temoin chacune, 8 contre-temoins verts ; plus 6 scenarios joues contre la garde reelle via un gh compromis |
-| `gov:conventions` | GOV-014 | `scripts/gates/gov-conventions.ts` | — | pnpm gov:conventions:prove — 8 familles rougissent chacune sur son temoin, 12 contre-temoins restent verts dont la vue conforme |
+| `gov:conventions` | GOV-014 | `scripts/gates/gov-conventions.ts` | — | pnpm gov:conventions:prove — 9 familles rougissent chacune sur son temoin, 13 temoins rouges et 14 contre-temoins restent verts dont la vue conforme (mesure relue dans la sortie de --prove le 2026-09-17, PR 54) |
 | `perf:budgets` | GOV-019 | `scripts/gates/perf-budgets.ts` | — | pnpm perf:budgets:prove — 12 familles rougissent chacune sur son temoin, 6 contre-temoins restent verts ; les familles sont route_sans_budget, budget_orphelin, entree_incomplete, plafond_relache, cliquet_sous_le_plafond, seuil_divergent, seuil_absent, lhci_non_bloquant, lhci_hors_mobile, lighthouserc_perime, etape_ci_muselee et source_illisible |
 
 ### Phase 0 — armées (1)
