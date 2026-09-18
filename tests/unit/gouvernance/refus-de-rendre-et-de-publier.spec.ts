@@ -1381,7 +1381,15 @@ const GATES_A_TEMOIN_D_EFFET = [
     depot: 'partiel' as const,
     vue: 'docs/REQUIREMENTS.md',
     script: 'scripts/gates/gov-requirements.ts',
-    fichiers: ['docs/requirements.json', 'docs/tasks.json', 'scripts/lot/requirements.schema.json'],
+    // ⚠️ `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` entre ici avec GOV-039 : la garde confronte le texte
+    // DÉCIDÉ des fusions au texte APPLIQUÉ, et son absence du bac ferait sortir le binaire sur
+    // « annexe introuvable » — un rouge, mais pas CELUI que le témoin d'effet mesure.
+    fichiers: [
+      'docs/requirements.json',
+      'docs/tasks.json',
+      'docs/REQUIREMENTS-ANNEXE-FUSIONS.md',
+      'scripts/lot/requirements.schema.json',
+    ],
     // Un champ obligatoire retiré : le schéma doit le refuser.
     fautes: [
       {

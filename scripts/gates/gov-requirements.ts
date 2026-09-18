@@ -442,7 +442,7 @@ export function controler(doc: unknown, schema: object, taches: Tache[], annexe:
   return fautes;
 }
 
-const FAMILLES = [
+export const FAMILLES = [
   'schema',
   'id_double',
   'source_vide',

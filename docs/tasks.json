@@ -8503,7 +8503,9 @@
         "docs/REQUIREMENTS-ANNEXE-FUSIONS.md",
         "tests/unit/gouvernance/glossaire-enums.spec.ts",
         "tests/unit/gouvernance/tracabilite.spec.ts",
-        "tests/unit/integration/contrat-hash.spec.ts"
+        "tests/unit/integration/contrat-hash.spec.ts",
+        "tests/unit/gouvernance/gardes.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
