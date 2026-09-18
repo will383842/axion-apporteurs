@@ -49,8 +49,13 @@ function tache(taches: TacheBrute[], id: string): TacheBrute {
   return t;
 }
 
+/** Les chemins qu'une tâche déclare (`paths` ∪ `tests{}`), par le lecteur unique du dépôt. */
+function cheminsDe(t: TacheBrute): string[] {
+  return cheminsDeLaTache({ ...t, paths: t.paths ?? [] });
+}
+
 /** Les chemins que QA-T01 déclare — la PR ordinaire de référence, dérivée du registre (RM-03). */
-const FICHIERS_QA_T01 = cheminsDeLaTache(tache(registre(), 'QA-T01'));
+const FICHIERS_QA_T01 = cheminsDe(tache(registre(), 'QA-T01'));
 
 const TETE = '41bc8140b9ea436be809676538dd65cb2263a5bc';
 const avis = (entete: string, verdict: 'accepte' | 'refuse' = 'accepte') => ({
@@ -119,7 +124,9 @@ describe('REQ-GOV-011 — R1 : plusieurs tâches sur la PR, la sensible AU MILIE
   it('REQ-GOV-011 · l’ordre du registre met DM-01 (rgpd) entre QA-T01 et GOV-039 — mesuré, pas supposé', () => {
     const T = registre();
     const indices = IDS.map((id) => T.findIndex((t) => t.id === id));
-    console.log(`R1 — indices au registre : ${IDS.map((id, i) => `${id}@${indices[i]}`).join(', ')}`);
+    console.log(
+      `R1 — indices au registre : ${IDS.map((id, i) => `${id}@${indices[i]}`).join(', ')}`
+    );
     expect(indices[0]!).toBeLessThan(indices[1]!);
     expect(indices[1]!).toBeLessThan(indices[2]!);
     expect(tache(T, 'DM-01').sensible).toContain('rgpd');
@@ -139,7 +146,9 @@ describe('REQ-GOV-011 — R1 : plusieurs tâches sur la PR, la sensible AU MILIE
       auteurPoste: 'A05',
     });
     expect(lecture.manquantes).toEqual(['simplicite', 'mutation']);
-    const familles = LECTEUR.fautesDesRevues(lecture, { tacheSensible: true }).map((f) => f.famille);
+    const familles = LECTEUR.fautesDesRevues(lecture, { tacheSensible: true }).map(
+      (f) => f.famille
+    );
     expect(familles).toContain('lentilles_manquantes');
   });
 
@@ -200,7 +209,12 @@ describe('REQ-GOV-011 — R2 à R5 : ce que la PR porte comme tâche décide seu
     const tete = registre().map((t) =>
       t.id === 'DM-01' ? { ...t, zone: 'gouvernance', sensible: [], schema: false } : t
     );
-    const r = risque({ titre: 'feat(DM-01): x', taches: tete, tachesBase: registre(), fichiers: NEUTRES });
+    const r = risque({
+      titre: 'feat(DM-01): x',
+      taches: tete,
+      tachesBase: registre(),
+      fichiers: NEUTRES,
+    });
     expect(r.niveau).toBe('eleve');
     expect(r.raisons.join(' ; ')).toContain('base');
     // Contre-épreuve : la tête seule, si la base la confirmait, serait ordinaire.
@@ -256,7 +270,10 @@ describe('REQ-GOV-011 — R6 à R8 : ce que la PR TOUCHE décide aussi du risque
       }
     };
     parcourir('scripts');
-    expect(importeurs.length, 'plus aucun importeur : le témoin ne mesure plus rien').toBeGreaterThan(0);
+    expect(
+      importeurs.length,
+      'plus aucun importeur : le témoin ne mesure plus rien'
+    ).toBeGreaterThan(0);
     const attendu = new Set([
       'scripts/lot/revues.ts',
       ...importeurs,
@@ -287,10 +304,17 @@ describe('REQ-GOV-011 — R6 à R8 : ce que la PR TOUCHE décide aussi du risque
   });
 
   it('REQ-GOV-011 · R8 bis : un fichier de schéma (prisma/) rend la PR élevée ET exige la lentille schema', () => {
-    const r = risque({ titre: 'feat(QA-T01): x', fichiers: [...FICHIERS_QA_T01, 'prisma/schema.prisma'] });
+    const r = risque({
+      titre: 'feat(QA-T01): x',
+      fichiers: [...FICHIERS_QA_T01, 'prisma/schema.prisma'],
+    });
     expect(r.niveau).toBe('eleve');
     expect(r.schema).toBe(true);
-    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toEqual(['exactitude', 'securite', 'schema']);
+    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toEqual([
+      'exactitude',
+      'securite',
+      'schema',
+    ]);
   });
 });
 
@@ -300,7 +324,7 @@ describe('REQ-GOV-011 — R9 : toute tâche du registre réel est classée, les 
     let ordinaires = 0;
     let eleves = 0;
     for (const t of T) {
-      const r = risque({ titre: `feat(${t.id}): x`, fichiers: cheminsDeLaTache(t) });
+      const r = risque({ titre: `feat(${t.id}): x`, fichiers: cheminsDe(t) });
       if (r.niveau === 'ordinaire') ordinaires++;
       else if (r.niveau === 'eleve') eleves++;
       else throw new Error(`${t.id} : niveau inconnu ${String(r.niveau)}`);
@@ -320,7 +344,12 @@ describe('REQ-GOV-011 — R9 : toute tâche du registre réel est classée, les 
     expect(zones.length).toBeGreaterThan(2);
     for (const zone of zones) {
       const T = [...registre(), { id: 'ZZ-SYNTH', zone, sensible: [], schema: false }];
-      const r = risque({ titre: 'feat(ZZ-SYNTH): x', taches: T, tachesBase: T, fichiers: ['docs/x.md'] });
+      const r = risque({
+        titre: 'feat(ZZ-SYNTH): x',
+        taches: T,
+        tachesBase: T,
+        fichiers: ['docs/x.md'],
+      });
       const attendu = zone === 'gouvernance' || zone === 'qualite' ? 'ordinaire' : 'eleve';
       expect(r.niveau, `zone ${zone}`).toBe(attendu);
     }

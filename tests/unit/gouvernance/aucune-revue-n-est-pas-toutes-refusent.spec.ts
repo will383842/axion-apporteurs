@@ -123,12 +123,18 @@ describe('REQ-GOV-013 — un avis posté en commentaire d’issue est SIGNALÉ, 
     const enForme = CAPTURE.commentaires.filter((c) =>
       /^A\d{2} · [a-z]+/.test((c.body ?? '').split('\n')[0] ?? '')
     );
-    expect(enForme.length, 'la capture ne porte plus aucun avis : le témoin ne mesure rien').toBeGreaterThan(0);
+    expect(
+      enForme.length,
+      'la capture ne porte plus aucun avis : le témoin ne mesure rien'
+    ).toBeGreaterThan(0);
     const dits = LECTEUR.avisHorsCanal(CAPTURE.commentaires);
     expect(dits.length).toBe(enForme.length);
     for (const c of enForme) {
       const entete = (c.body ?? '').split('\n')[0]!;
-      expect(dits.some((d) => d.includes(entete)), `« ${entete} » n’est pas nommé`).toBe(true);
+      expect(
+        dits.some((d) => d.includes(entete)),
+        `« ${entete} » n’est pas nommé`
+      ).toBe(true);
     }
     for (const d of dits) {
       expect(d).toContain('commentaire d’issue');
@@ -137,7 +143,9 @@ describe('REQ-GOV-013 — un avis posté en commentaire d’issue est SIGNALÉ, 
   });
 
   it('REQ-GOV-013 · CONTRE-TÉMOIN : un commentaire ordinaire n’est pas pris pour un avis', () => {
-    expect(LECTEUR.avisHorsCanal([{ body: 'merci, je relance la CI' }, { body: null }])).toEqual([]);
+    expect(LECTEUR.avisHorsCanal([{ body: 'merci, je relance la CI' }, { body: null }])).toEqual(
+      []
+    );
     expect(LECTEUR.avisHorsCanal(null)).toEqual([]);
   });
 

@@ -237,6 +237,8 @@ export type Lecture = {
   ecartees: { revue: Revue; motif: MotifEcart }[];
   /** Le DERNIER verdict de chaque couple `poste·lentille`. */
   verdicts: Verdict[];
+  /** Les lentilles EXIGÉES par le risque de la PR (`lentillesExigees`). */
+  exigees: string[];
   /** Les lentilles exigées sans aucun accord retenu. */
   manquantes: string[];
   refusees: Verdict[];
@@ -262,12 +264,12 @@ export type Entree = {
    * PENDANT QUE `securite` REFUSAIT. Une phrase qui a l'air dérivée et qui est fausse est pire
    * qu'un compteur tapé à la main : personne ne la met en doute.
    *
-   * Un appelant ne peut donc pas transmettre un SOUS-ENSEMBLE : il transmet le fait « cette PR
-   * touche au schéma », et c'est `lentillesExigees()` — une seule fonction, directement testée sur
-   * son contenu ET sur son cardinal — qui décide de la liste. Tronquer la liste exige désormais de
-   * muter cette fonction-là, et ce mutant-là rougit.
+   * Un appelant ne peut donc pas transmettre un SOUS-ENSEMBLE : il transmet le RISQUE de la PR —
+   * rendu par `risqueDeLaPr()`, la seule dérivation — et c'est `lentillesExigees()`, une seule
+   * fonction testée sur son contenu ET sur son cardinal, qui décide de la liste. Le signal était
+   * un booléen `schema` jusqu'à GOV-077 ; il porte désormais le niveau de risque, `schema` compris.
    */
-  schema: boolean;
+  risque: Risque;
   /** Le sha de tête : le diff approuvé doit être le diff fusionné. */
   tete: string | null;
   /** Le code de poste lu sur la ligne `Auteur:` du corps de la PR. */
@@ -345,12 +347,17 @@ export function toucheSchema(entree: {
   return cheminsSchema(entree.charte).some((c) => touche(c, entree.fichiers));
 }
 
-/** Ce qu'une tâche doit dire pour qu'on sache si elle est de cette PR, et si elle touche au schéma. */
+/**
+ * Ce qu'une tâche doit dire pour qu'on sache si elle est de cette PR, si elle touche au schéma, et
+ * de quel RISQUE elle est. `sensible` et `zone` peuvent manquer ou valoir `null` dans une lecture
+ * brute : c'est justement ce que `risqueDeLaPr()` doit voir, et qu'une projection `?? []` taisait.
+ */
 export type TacheDeLaPr = {
   id: string;
   pr?: number | null;
   schema?: boolean;
-  sensible?: readonly string[];
+  sensible?: readonly string[] | null;
+  zone?: string | null;
 };
 
 /**
@@ -514,16 +521,231 @@ export function tachesSchemaDeLaPr<T extends TacheDeLaPr>(
   return tachesDeLaPr(taches, pr, idDuTitre).some((t) => t.schema === true);
 }
 
+// ── LE RISQUE D'UNE PR, ET LES LENTILLES QU'IL EXIGE (GOV-077, levier 3 du 2026-09-18) ────────
+
 /**
- * Les lentilles exigées. Sur une PR `schema`, A02 REMPLACE la troisième (`simplicite`) : le compte
- * ne change pas, l'une d'elles change de titulaire (charte §6, `docs/CONVENTIONS.md` §5).
+ * LA RELECTURE SE PROPORTIONNE AU RISQUE — décision de Will du 2026-09-18 (`docs/CHARTE-AGENTS.md`
+ * §6, `partners/ADR-0012`). Jusqu'ici `lentillesExigees()` exigeait EN DUR quatre lentilles sur
+ * toute PR, y compris sur une PR qui ne touche que la documentation d'une tâche de qualité.
+ *
+ * LA RÈGLE ÉCHOUE FERMÉ : l'ORDINAIRE se PROUVE, l'ÉLEVÉ est le DÉFAUT. Une PR n'est ordinaire que
+ * si TOUTES ces conditions sont établies ; il suffit d'un fait manquant pour qu'elle soit élevée :
+ *
+ *   1. au moins une tâche résolue (`tachesDeLaPr`, titre ∪ champ `pr`) ;
+ *   2. le registre de BASE lisible ;
+ *   3. chaque tâche résolue, lue sur la TÊTE et sur la BASE, est en zone `gouvernance` ou
+ *      `qualite`, porte `sensible` PRÉSENT et VIDE, et `schema` qui n'est pas `true` — la plus
+ *      haute l'emporte (`.some`, jamais la première ni la dernière) ;
+ *   4. aucun label `schema` ;
+ *   5. un diff NON VIDE dont chaque fichier est à la racine ou sous `docs/`, `scripts/`, `tests/`,
+ *      `.github/`, et n'appartient pas à la garde des revues.
+ *
+ * POURQUOI DES LISTES BLANCHES. Une liste noire de zones (« argent, securite ») laisse passer tout
+ * le reste : mesuré le 2026-09-18, huit tâches vivantes manipulent des données personnelles avec
+ * `sensible: []` (INT-T09, INT-T10, INT-T11, INT-T13, JUR-T09, UX-P1-07, UX-P3-03, EXT-T05), et
+ * aucune n'est en zone `gouvernance` ou `qualite`. De même pour les chemins : un dossier neuf,
+ * `config/exemptions-corps-publie.json` ou `.claude/settings.json` tombent en élevé sans que
+ * personne ait eu à penser à eux.
  */
-export function lentillesExigees(schema: boolean): {
-  trois: readonly string[];
+export const ZONES_A_RISQUE_ORDINAIRE: readonly string[] = ['gouvernance', 'qualite'];
+export const CHEMINS_A_RISQUE_ORDINAIRE: readonly string[] = [
+  'docs/',
+  'scripts/',
+  'tests/',
+  '.github/',
+];
+
+/**
+ * LA GARDE DES REVUES ELLE-MÊME est toujours de risque élevé, même sous `scripts/` ou `docs/` :
+ * sinon une PR ordinaire, relue par deux lentilles, pourrait affaiblir la règle qui décide combien
+ * de lentilles relisent toutes les autres. Le module, ses deux importeurs, et les deux documents
+ * qu'il lit. Cette liste n'est pas tapée au hasard : `lentilles-selon-le-risque.spec.ts` la
+ * confronte au GRAPHE D'IMPORTS de `scripts/`, et un importeur non déclaré la fait rougir.
+ */
+export const CHEMINS_DE_LA_GARDE_DES_REVUES: readonly string[] = [
+  'scripts/lot/revues.ts',
+  'scripts/gates/gov-pr.ts',
+  'scripts/lot/corps-de-pr.ts',
+  CHEMIN_CHARTE,
+  CHEMIN_AGENTS,
+];
+
+export const CHEMIN_TACHES = 'docs/tasks.json';
+
+/** Le risque d'une PR : son niveau, le signal `schema`, et les RAISONS, prêtes à imprimer. */
+export type Risque = {
+  niveau: 'eleve' | 'ordinaire';
+  schema: boolean;
+  raisons: readonly string[];
+};
+
+/**
+ * LE TITRE D'UNE PR : `<type>(<ID-TÂCHE>): <titre>` (`docs/CONVENTIONS.md` §5). Écrit UNE fois :
+ * la garde le lit pour juger le titre, le composeur du corps pour résoudre la tâche du risque.
+ */
+export const MOTIF_TITRE_DE_PR = /^([a-z]+)\(([A-Z][A-Z0-9]*-[A-Za-z0-9-]+)\):\s+\S/;
+
+/** L'identifiant de tâche que nomme un titre de PR, ou `null`. */
+export function idDuTitre(titre: string | null): string | null {
+  if (titre === null) return null;
+  return MOTIF_TITRE_DE_PR.exec(titre)?.[2] ?? null;
+}
+
+/**
+ * LE REGISTRE DES TÂCHES TEL QU'IL EST SUR LA BASE de la PR (`git show <ref>:docs/tasks.json`).
+ * Sans lui, une PR réécrirait la `zone` ou viderait le `sensible` de sa propre tâche — chaque PR
+ * écrit `docs/tasks.json` — et se relirait en ordinaire. Toute erreur rend `null`, jamais une
+ * liste vide : l'absence est un fait que `risqueDeLaPr()` convertit en ÉLEVÉ.
+ */
+export function tachesDeLaBase(ref: string): TacheDeLaPr[] | null {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(ref)) return null;
+  try {
+    const doc = JSON.parse(
+      execFileSync('git', ['show', `${ref}:${CHEMIN_TACHES}`], {
+        encoding: 'utf8',
+        maxBuffer: 64e6,
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })
+    ) as { taches?: unknown };
+    return Array.isArray(doc.taches) ? (doc.taches as TacheDeLaPr[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Pourquoi une tâche n'est pas ordinaire — `null` si elle l'est. Un champ absent n'est RIEN prouvé. */
+function tacheNonOrdinaire(t: TacheDeLaPr): string | null {
+  const ecarts: string[] = [];
+  if (typeof t.zone !== 'string') ecarts.push('champ `zone` absent');
+  else if (!ZONES_A_RISQUE_ORDINAIRE.includes(t.zone)) ecarts.push(`zone ${t.zone}`);
+  if (!Array.isArray(t.sensible)) ecarts.push('champ `sensible` absent');
+  else if (t.sensible.length > 0) ecarts.push(`sensible [${t.sensible.join(', ')}]`);
+  if (t.schema === true) ecarts.push('schema: true');
+  return ecarts.length === 0 ? null : ecarts.join(', ');
+}
+
+/** Un fichier hors code produit : à la racine, ou sous l'un des préfixes admis. */
+function cheminOrdinaire(f: string): boolean {
+  return !f.includes('/') || CHEMINS_A_RISQUE_ORDINAIRE.some((p) => f.startsWith(p));
+}
+
+export type EntreeDuRisque = {
+  /** Le titre de la PR : il résout la tâche que le champ `pr` du registre ne porte pas encore. */
+  titre: string | null;
+  pr: number | null;
+  /** Le registre de la TÊTE. */
+  taches: readonly TacheDeLaPr[];
+  /** Le registre de la BASE — `null` s'il est illisible, et c'est un risque élevé. */
+  tachesBase: readonly TacheDeLaPr[] | null;
+  fichiers: readonly string[];
+  labels: readonly string[];
+  charte?: string;
+};
+
+/**
+ * LE RISQUE D'UNE PR — LA SEULE DÉRIVATION, appelée par `scripts/gates/gov-pr.ts` ET par
+ * `scripts/lot/corps-de-pr.ts`. Voir `ZONES_A_RISQUE_ORDINAIRE` pour la règle et ses mesures.
+ *
+ * MONOTONIE : un renseignement de plus — une tâche, un fichier, la base — ne peut que faire MONTER
+ * le risque. Les tâches résolues sont l'UNION de celles de la tête et de celles de la base.
+ * LIMITE DÉCLARÉE : une tâche absente de la base (créée par la PR) n'est jugée que sur la tête ;
+ * créer une tâche passe par `verser-tache` et le label `role:gardien-spec`.
+ */
+export function risqueDeLaPr(e: EntreeDuRisque): Risque {
+  const raisons: string[] = [];
+  const id = idDuTitre(e.titre);
+  const ids = [
+    ...new Set(
+      [...tachesDeLaPr(e.taches, e.pr, id), ...tachesDeLaPr(e.tachesBase ?? [], e.pr, id)].map(
+        (t) => t.id
+      )
+    ),
+  ];
+  if (ids.length === 0) {
+    raisons.push('aucune tâche résolue (ni par le titre, ni par le champ `pr`)');
+  }
+  if (e.tachesBase === null) raisons.push('registre de base illisible');
+
+  let tachesSchema = false;
+  const prouvees: string[] = [];
+  for (const idT of ids) {
+    const surLaTete = e.taches.find((t) => t.id === idT);
+    const surLaBase = e.tachesBase?.find((t) => t.id === idT);
+    const versions: [string, TacheDeLaPr | undefined][] = [
+      ['tête', surLaTete],
+      ['base', surLaBase],
+    ];
+    let ordinaire = true;
+    for (const [ou, t] of versions) {
+      if (t === undefined) continue;
+      if (t.schema === true) tachesSchema = true;
+      const ecart = tacheNonOrdinaire(t);
+      if (ecart !== null) {
+        ordinaire = false;
+        raisons.push(`${idT} sur la ${ou} : ${ecart}`);
+      }
+    }
+    const t = surLaTete ?? surLaBase;
+    if (ordinaire && t !== undefined) prouvees.push(`${idT} (${String(t.zone)}, sensible vide)`);
+  }
+
+  if (e.labels.includes(LENTILLE_SCHEMA)) raisons.push('label `schema` posé');
+  if (e.fichiers.length === 0) raisons.push('diff vide ou illisible');
+  const produit = e.fichiers.filter((f) => !cheminOrdinaire(f));
+  if (produit.length > 0) {
+    raisons.push(
+      `fichier(s) hors docs/, scripts/, tests/, .github/ et racine : ${produit.join(', ')}`
+    );
+  }
+  const garde = e.fichiers.filter((f) => CHEMINS_DE_LA_GARDE_DES_REVUES.includes(f));
+  if (garde.length > 0) raisons.push(`fichier(s) de la garde des revues : ${garde.join(', ')}`);
+
+  const schema = toucheSchema({
+    fichiers: e.fichiers,
+    labels: e.labels,
+    tachesSchema,
+    charte: e.charte,
+  });
+  if (raisons.length > 0 || schema) {
+    if (raisons.length === 0) raisons.push('la PR touche au schéma');
+    return { niveau: 'eleve', schema, raisons };
+  }
+  return {
+    niveau: 'ordinaire',
+    schema: false,
+    raisons: [prouvees.join(', '), `${e.fichiers.length} fichier(s) hors code produit`],
+  };
+}
+
+/**
+ * LES LENTILLES EXIGÉES, DÉRIVÉES DU RISQUE. Élevé : `exactitude`, `securite`, `simplicite` — que
+ * A02 REMPLACE par `schema` sur une PR de schéma (charte §6) — et `mutation`. Ordinaire :
+ * `exactitude` et `securite`, dont le refus bloque à lui seul.
+ *
+ * ⚠️ LA BRANCHE COURTE SE PROUVE, LA LONGUE EST LE DÉFAUT : on teste `=== 'ordinaire'` et
+ * `schema === false`, jamais `=== 'eleve'`. Une valeur imprévue rend donc les quatre lentilles.
+ */
+export function lentillesExigees(risque: Risque): {
+  sansMutation: readonly string[];
   toutes: readonly string[];
 } {
-  const trois = [...DEUX_PREMIERES, schema ? LENTILLE_SCHEMA : LENTILLE_SIMPLICITE];
-  return { trois, toutes: [...trois, LENTILLE_MUTATION] };
+  if (risque.niveau === 'ordinaire' && risque.schema === false) {
+    return { sansMutation: [...DEUX_PREMIERES], toutes: [...DEUX_PREMIERES] };
+  }
+  const sansMutation = [
+    ...DEUX_PREMIERES,
+    risque.schema === true ? LENTILLE_SCHEMA : LENTILLE_SIMPLICITE,
+  ];
+  return { sansMutation, toutes: [...sansMutation, LENTILLE_MUTATION] };
+}
+
+/** Une ligne qui NOMME le risque et ses raisons — la garde l'imprime, le composeur la publie. */
+export function direLeRisque(risque: Risque): string {
+  const exigees = lentillesExigees(risque).toutes;
+  return (
+    `risque ${risque.niveau === 'ordinaire' ? 'ordinaire' : 'élevé'} ` +
+    `(${exigees.length} lentilles exigées : ${exigees.join(', ')}) — ${risque.raisons.join(' ; ')}`
+  );
 }
 
 function normaliser(brute: RevueBrute): Revue {
@@ -549,7 +771,7 @@ export function lentilleDeLaRevue(
 
 export function lireRevues(entree: Entree): Lecture {
   const codes = entree.codes ?? codesDePoste();
-  const exigees = [...lentillesExigees(entree.schema).toutes];
+  const exigees = [...lentillesExigees(entree.risque).toutes];
   const retenues: Revue[] = [];
   const ecartees: { revue: Revue; motif: MotifEcart }[] = [];
   /** Les avis qui portent des décisions contradictoires : ils ne comptent pas, et on le DIT. */
@@ -661,18 +883,19 @@ export function lireRevues(entree: Entree): Lecture {
 
   const detail = coche
     ? `les ${exigees.length} lentilles (${exigees.join(', ')}) ont accepté sur ${tete7} — ` +
-      `« Relecteur ≠ auteur » vérifiée au niveau du poste (${entree.auteurPoste} ne rend aucun de ces avis, ` +
+      `${direLeRisque(entree.risque)} — « Relecteur ≠ auteur » vérifiée au niveau du poste (${entree.auteurPoste} ne rend aucun de ces avis, ` +
       `charte §6)` +
       (comptesDistinctsDeLAuteur
         ? ''
         : `, et NON au niveau des comptes GitHub : toutes les revues retenues viennent du compte de ` +
           `l’auteur, ce dépôt n’en a qu’un (W13)`)
-    : raisons.join(' · ');
+    : [direLeRisque(entree.risque), ...raisons].join(' · ');
 
   return {
     retenues,
     ecartees,
     verdicts,
+    exigees,
     manquantes,
     refusees,
     perimees,
@@ -682,6 +905,120 @@ export function lireRevues(entree: Entree): Lecture {
     raisons,
     detail,
   };
+}
+
+/** Les familles de faute que la lecture des revues peut rendre — `gov:pr` les déclare. */
+export type FauteDeRevue = {
+  famille: 'aucune_revue' | 'lentille_en_refus' | 'lentilles_manquantes';
+  message: string;
+};
+
+/**
+ * AUCUNE REVUE N'EST PAS « TOUTES LES REVUES REFUSENT » (GOV-077).
+ *
+ * 🔴 LE DÉFAUT, MESURÉ À `809a746`. `gov:pr --pr <n>` imprimait « Vues : (aucune) » dans les DEUX
+ * cas — aucune revue lue, et toutes les revues lues en refus — parce que la ligne ne listait que
+ * les ACCORDS. Deux états opposés rendus identiques : le second, le plus grave, devenait
+ * invisible derrière le premier. Désormais :
+ *
+ *   — aucune revue retenue → la famille `aucune_revue`, et elle seule : ce n'est pas un refus,
+ *     c'est une absence, et le geste qui la répare n'est pas le même ;
+ *   — des revues retenues → `lentille_en_refus` pour chaque refus, et la ligne des lentilles
+ *     manquantes NOMME les accords ET les refus.
+ *
+ * LE MESSAGE DE VETO DIT LA RÈGLE ÉCRITE. Il citait REQ-GOV-011, qui ne parle pas de veto. La
+ * charte §6 l'écrit désormais (décision de Will du 2026-09-18) : sur TOUTE PR, le refus de
+ * `securite` bloque à lui seul ; sur une tâche `sensible` SEULEMENT, un scénario d'attaque est
+ * exigé (REQ-GOV-011). Un refus d'une lentille NON exigée bloque aussi : on n'est pas obligé de la
+ * demander, on ne peut pas l'ignorer une fois rendue — `refusees` n'est filtré par rien.
+ */
+export function fautesDesRevues(
+  lecture: Lecture,
+  contexte: { tacheSensible: boolean }
+): FauteDeRevue[] {
+  const fautes: FauteDeRevue[] = [];
+  if (lecture.retenues.length === 0) {
+    fautes.push({
+      famille: 'aucune_revue',
+      message:
+        `Revues — AUCUNE revue retenue sur cette PR (${lecture.ecartees.length} avis écarté(s)) : ` +
+        `les lentilles exigées (${lecture.exigees.join(', ')}) n'ont été rendues par personne. Ce ` +
+        `n'est pas un refus, c'est une absence. Une revue se poste par \`gh pr review --comment\`, ` +
+        `jamais en commentaire d’issue.`,
+    });
+    return fautes;
+  }
+  for (const v of lecture.refusees) {
+    fautes.push({
+      famille: 'lentille_en_refus',
+      message:
+        `Revues — ${v.code} · ${v.lentille} rend « Verdict: refuse », et c'est son DERNIER mot. ` +
+        `A04 ne fusionne pas sur un refus` +
+        (v.lentille === 'securite'
+          ? ` — et le refus de securite bloque à lui seul (charte §6, décision de Will du ` +
+            `2026-09-18)` +
+            (contexte.tacheSensible
+              ? ` ; tâche sensible : scénario d’attaque exigé (REQ-GOV-011)`
+              : '')
+          : '') +
+        '.',
+    });
+  }
+  const accords = lecture.verdicts.filter((x) => x.verdict === 'accepte');
+  const nommer = (liste: Verdict[], vide: string) =>
+    liste.map((x) => `${x.code} ${x.lentille}`).join(' / ') || vide;
+  const manquantes = lecture.manquantes.filter((l) => l !== LENTILLE_MUTATION);
+  if (manquantes.length > 0) {
+    fautes.push({
+      famille: 'lentilles_manquantes',
+      message:
+        `Revues — lentille(s) manquante(s) : ${manquantes.join(', ')}. Chaque revue s'ouvre par ` +
+        `« A<nn> · <lentille> » (docs/CHARTE-AGENTS.md §3). Vues — accords : ` +
+        `${nommer(accords, '(aucun)')} ; refus : ${nommer(lecture.refusees, '(aucun)')}.`,
+    });
+  }
+  if (lecture.manquantes.includes(LENTILLE_MUTATION)) {
+    fautes.push({
+      famille: 'lentilles_manquantes',
+      message:
+        `Revues — aucun avis « mutation » : A10 n'a pas dit que les gardes introduites avaient été ` +
+        `vues rougir sur une mutation réelle (RM-02).`,
+    });
+  }
+  return fautes;
+}
+
+/** La forme servie par `GET /repos/{owner}/{repo}/issues/{n}/comments`. */
+export type CommentaireBrut = {
+  id?: number;
+  user?: { login?: string | null } | null;
+  author_association?: string | null;
+  created_at?: string | null;
+  body?: string | null;
+};
+
+/**
+ * LES AVIS POSTÉS AU MAUVAIS ENDROIT — DITS, JAMAIS COMPTÉS (GOV-077).
+ *
+ * Mesuré le 2026-09-14 sur la PR 41 : ses avis de lentille étaient des COMMENTAIRES D'ISSUE, et elle
+ * ne portait aucune revue. Ils comptaient pour rien — c'est juste : un commentaire d'issue n'a ni
+ * `state` ni `commit_id`, donc ni péremption ni retrait mesurables — mais RIEN ne le disait. Un
+ * commentaire dont la première ligne a la forme d'un en-tête de revue est donc NOMMÉ, avec le
+ * geste qui le répare. Même doctrine que les avis écartés : le dépôt est public, en faire une faute
+ * rendrait la garde rouge pour un geste qui n'appartient pas au projet.
+ */
+export function avisHorsCanal(commentaires: readonly CommentaireBrut[] | null): string[] {
+  if (commentaires === null) return [];
+  const dits: string[] = [];
+  for (const c of commentaires) {
+    const entete = ((c.body ?? '').split('\n')[0] ?? '').replace(/\r$/, '').trim();
+    if (!MOTIF_ENTETE.test(entete)) continue;
+    dits.push(
+      `avis « ${entete} » posté en commentaire d’issue (compte « ${c.user?.login ?? '?'} ») : il ne ` +
+        `compte pour rien — reposte-le par \`gh pr review --comment\`.`
+    );
+  }
+  return dits;
 }
 
 /**
