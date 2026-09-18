@@ -871,7 +871,8 @@ function valeurYaml(n: NoeudYaml | null | undefined): unknown {
  * exacte est ce qui rend la configuration jugée plus bas égale à celle que la CI applique.
  */
 const SCRIPTS_EXACTS: Readonly<Record<string, string>> = {
-  lint: 'eslint .',
+  // `--max-warnings 0` (QA-T01) : un avertissement fait échouer l'étape, il n'est jamais toléré.
+  lint: 'eslint . --max-warnings 0',
   'format:check': 'prettier --check .',
 };
 

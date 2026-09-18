@@ -394,6 +394,29 @@ function passePartielle(): { code: number | null; sortie: string; couverts: stri
 /** La marque que `tests/setup.ts` pose : sa présence prouve que `setupFiles` le charge. */
 const MARQUE_DU_SETUP = Symbol.for('axion-partners.tests.setup');
 
+/** Chaque fichier sous `racine`, à toute profondeur, en chemin relatif à barres obliques. */
+function fichiersSous(racine: string): string[] {
+  return readdirSync(racine, { recursive: true, encoding: 'utf8' })
+    .map((f) => f.split('\\').join('/'))
+    .filter((f) => statSync(join(racine, f)).isFile())
+    .sort();
+}
+
+/**
+ * REQ-QA-001 : le bloc de pureté d'`eslint.config.mjs` vise les `.ts` de `src/domain/**`. Un fichier
+ * du domaine d'une AUTRE extension (`.tsx`, `.mts`, `.js`…) échapperait au lint de pureté. Plutôt que
+ * d'énumérer des extensions — et d'en oublier une —, tout fichier sous `src/domain/**` qui ne finit
+ * pas par `.ts` est REFUSÉ : échec fermé, un fichier de données ou de texte posé là rougit aussi,
+ * nommé.
+ */
+function horsExtensionDuDomaine(racine: string): { lus: number; fautes: string[] } {
+  const fichiers = fichiersSous(racine);
+  return {
+    lus: fichiers.length,
+    fautes: fichiers.filter((f) => !f.endsWith('.ts')).map((f) => `${DOMAINE}/${f}`),
+  };
+}
+
 /**
  * Une directive d'EXCLUSION DE COUVERTURE (familles v8, c8, istanbul, node:coverage) n'a pas sa place
  * sous `src/domain/**` : le seuil de 100 % doit mesurer tout le code livré. Elle est refusée quelle
@@ -409,10 +432,7 @@ const DIRECTIVE_D_EXCLUSION = /(?:\b(?:v8|c8|istanbul)|node:coverage)\s*ignore/g
  * ne lirait plus rien rendrait le même `[]` qu'un domaine sain.
  */
 function directivesDExclusion(racine: string): { lus: number; fautes: string[] } {
-  const fichiers = readdirSync(racine, { recursive: true, encoding: 'utf8' })
-    .map((f) => f.split('\\').join('/'))
-    .filter((f) => statSync(join(racine, f)).isFile())
-    .sort();
+  const fichiers = fichiersSous(racine);
   const fautes: string[] = [];
   for (const f of fichiers) {
     const texte = readFileSync(join(racine, f), 'utf8');
@@ -553,9 +573,59 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
     const { code, sortie } = lintSurUnBac({ [BAC_DIRECTIVE]: DIRECTIVE }, sansReglage);
     expect(code, sortie).toBe(0);
   }, 600_000);
+
+  it('REQ-QA-013 — un AVERTISSEMENT seul fait sortir `pnpm lint` en non nul (`--max-warnings 0`)', () => {
+    // Une directive en ligne sans faute à éteindre : sous `noInlineConfig`, ESLint ne rend qu'un
+    // avertissement — et un avertissement toléré est une porte pour les règles qu'on passerait en `warn`.
+    const seul = {
+      [BAC_DIRECTIVE]: '// eslint-disable-next-line no-console\nexport const a = 1;\n',
+    };
+    const { code, sortie, messages } = lintSurUnBac(seul);
+    expect(messages.map((m) => m.gravite)).toEqual(['warning']);
+    expect(code, sortie).toBe(1);
+  }, 600_000);
 });
 
 describe('REQ-QA-001 — `pnpm lint` refuse toute I/O sous `src/domain/**`', () => {
+  it('REQ-QA-001 — tout fichier de `src/domain/**` est un `.ts`, que le bloc de pureté du lint couvre', () => {
+    const { lus, fautes } = horsExtensionDuDomaine(DOMAINE);
+    expect(lus).toBeGreaterThan(0);
+    expect(fautes).toEqual([]);
+  });
+
+  it('REQ-QA-001 — et ce témoin SAIT rougir : toute autre extension, dans un sous-dossier du MILIEU, est nommée', () => {
+    const racine = mkdtempSync(join(tmpdir(), 'qa4-'));
+    try {
+      const plantes = [
+        'attribution/sain.ts',
+        'attribution/types.d.ts',
+        'm-milieu/profond/horloge.tsx',
+        'm-milieu/profond/b.mts',
+        'm-milieu/profond/c.cts',
+        'm-milieu/profond/d.js',
+        'm-milieu/profond/e.jsx',
+        'm-milieu/profond/f.mjs',
+        'm-milieu/profond/g.cjs',
+        'm-milieu/profond/h.json',
+        'zz-fin/sain.ts',
+      ];
+      for (const f of plantes) {
+        mkdirSync(dirname(join(racine, f)), { recursive: true });
+        writeFileSync(join(racine, f), 'export const a = 1;\n');
+      }
+      const { lus, fautes } = horsExtensionDuDomaine(racine);
+      expect(lus).toBe(plantes.length);
+      expect(fautes).toEqual(
+        plantes
+          .filter((f) => f.startsWith('m-milieu/'))
+          .sort()
+          .map((f) => `${DOMAINE}/${f}`)
+      );
+    } finally {
+      rmSync(racine, { recursive: true, force: true });
+    }
+  });
+
   it('REQ-QA-001 — base, cache, réseau et horloge : une ERREUR par ligne fautive, chacune nommant son interdit', () => {
     const { code, messages, sortie } = lintDuBacFautif();
     expect(code, sortie).toBe(1);

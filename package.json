@@ -93,7 +93,7 @@
     "gov:attestation:en-ligne": "tsx scripts/gates/gov-attestation.ts --en-ligne",
     "gov:attributions": "tsx scripts/gates/gov-attributions.ts",
     "gov:attributions:prove": "tsx scripts/gates/gov-attributions.ts --prove",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "format:check": "prettier --check .",
     "format": "prettier --write ."
   },

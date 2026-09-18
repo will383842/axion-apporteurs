@@ -1281,7 +1281,8 @@
         "scripts/plan-state/build.ts",
         "tests/unit/gouvernance/corps-de-pr-couvre.spec.ts",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
-        "tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts"
+        "tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [],
