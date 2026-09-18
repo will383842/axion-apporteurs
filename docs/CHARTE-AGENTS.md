@@ -301,7 +301,8 @@ L'ordinaire se **prouve**, l'élevé est le défaut. Une PR est de risque **ordi
 est lisible ; (3) chaque tâche résolue, lue sur la tête **et** sur la base, est en zone `gouvernance` ou
 `qualite`, porte un champ `sensible` présent et vide, et n'est pas `schema: true` ; (4) la PR ne porte pas le
 label `schema` ; (5) le diff n'est pas vide, et chacun de ses fichiers est à la racine ou sous `docs/`,
-`scripts/`, `tests/`, `.github/`, hors de la garde des revues (`scripts/lot/revues.ts`,
+`scripts/`, `tests/` — **jamais sous `.github/`**, qui gouverne la CI et la propriété des chemins —, hors de
+la garde des revues (`scripts/lot/revues.ts`,
 `scripts/gates/gov-pr.ts`, `scripts/lot/corps-de-pr.ts`, cette charte, `docs/agents.json`). Sinon elle est de
 risque **élevé**.
 

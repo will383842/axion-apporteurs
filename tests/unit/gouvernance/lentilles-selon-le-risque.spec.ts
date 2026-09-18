@@ -54,8 +54,16 @@ function cheminsDe(t: TacheBrute): string[] {
   return cheminsDeLaTache({ ...t, paths: t.paths ?? [] });
 }
 
-/** Les chemins que QA-T01 déclare — la PR ordinaire de référence, dérivée du registre (RM-03). */
-const FICHIERS_QA_T01 = cheminsDe(tache(registre(), 'QA-T01'));
+/** Les chemins que QA-T01 déclare, tels quels — `.github/workflows/ci.yml` compris. */
+const CHEMINS_QA_T01 = cheminsDe(tache(registre(), 'QA-T01'));
+/** Le fichier de CI que QA-T01 déclare : il gouverne les gates, il fait monter le risque. */
+const CI_DE_QA_T01 = CHEMINS_QA_T01.filter((f) => f.startsWith('.github/'));
+/**
+ * La PR ordinaire de référence : les chemins de QA-T01 HORS `.github/` (décision de
+ * l'orchestrateur du 2026-09-18 sur GOV-077 : tout fichier sous `.github/` rend la PR élevée).
+ * Dérivés du registre (RM-03), jamais tapés.
+ */
+const FICHIERS_QA_T01 = CHEMINS_QA_T01.filter((f) => !CI_DE_QA_T01.includes(f));
 
 const TETE = '41bc8140b9ea436be809676538dd65cb2263a5bc';
 const avis = (entete: string, verdict: 'accepte' | 'refuse' = 'accepte') => ({
@@ -240,6 +248,34 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
       expect(r.niveau, intrus).toBe('eleve');
       expect(r.raisons.join(' ; ')).toContain(intrus);
     }
+  });
+
+  it('REQ-GOV-011 · cas 6 ter : un fichier de CI (.github/) au MILIEU du diff rend la PR élevée, quatre lentilles de revue', () => {
+    // Une PR qui affaiblit la CI ou la propriété des chemins est exactement celle qu'on ne relit
+    // pas à deux lentilles. Le fichier vient des `paths` RÉELS de QA-T01, glissé au milieu.
+    expect(CI_DE_QA_T01, 'QA-T01 ne déclare plus de fichier de CI').toContain(
+      '.github/workflows/ci.yml'
+    );
+    const milieu = Math.floor(FICHIERS_QA_T01.length / 2);
+    const avecCi = [
+      ...FICHIERS_QA_T01.slice(0, milieu),
+      '.github/workflows/ci.yml',
+      ...FICHIERS_QA_T01.slice(milieu),
+    ];
+    expect(avecCi.indexOf('.github/workflows/ci.yml')).toBeGreaterThan(0);
+    expect(avecCi.indexOf('.github/workflows/ci.yml')).toBeLessThan(avecCi.length - 1);
+    const r = risque({ titre: 'feat(QA-T01): x', fichiers: avecCi });
+    expect(r.niveau).toBe('eleve');
+    expect(r.raisons.join(' ; ')).toContain('.github/workflows/ci.yml');
+    expect([...LECTEUR.lentillesExigees(r).toutes]).toEqual([
+      'exactitude',
+      'securite',
+      'simplicite',
+      'mutation',
+    ]);
+    // CONTRE-TÉMOIN : la même PR sans ce fichier est ordinaire.
+    const sans = risque({ titre: 'feat(QA-T01): x', fichiers: FICHIERS_QA_T01 });
+    expect(sans.niveau, sans.raisons.join(' ; ')).toBe('ordinaire');
   });
 
   it('REQ-GOV-011 · cas 7 : un fichier de la garde des revues au milieu du diff rend la PR élevée', () => {

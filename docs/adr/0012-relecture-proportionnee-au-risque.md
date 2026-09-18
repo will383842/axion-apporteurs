@@ -47,7 +47,7 @@ les cinq conditions sont établies ; sinon elle est élevée :
    haute l'emporte ;
 4. la PR ne porte pas le label `schema` ;
 5. le diff n'est pas vide, et chacun de ses fichiers est à la racine ou sous `docs/`, `scripts/`,
-   `tests/`, `.github/` — et n'appartient pas à la garde des revues (`scripts/lot/revues.ts`,
+   `tests/` — jamais sous `.github/` — et n'appartient pas à la garde des revues (`scripts/lot/revues.ts`,
    `scripts/gates/gov-pr.ts`, `scripts/lot/corps-de-pr.ts`, `docs/CHARTE-AGENTS.md`,
    `docs/agents.json`).
 
@@ -75,6 +75,10 @@ pas l'ignorer une fois rendue. La section « Attaque » reste exigée sur une t�
   et la liste blanche de chemins.
 - **Chemins en liste blanche aussi** : un dossier neuf, `config/exemptions-corps-publie.json` ou
   `.claude/settings.json` tombent en élevé sans que personne ait pensé à eux.
+- **`.github/` hors de la liste blanche** (arbitrage de l'orchestrateur du 2026-09-18, qui a refusé
+  la première version) : les workflows et `CODEOWNERS` gouvernent les gates et la propriété des
+  chemins ; une PR qui affaiblit la CI est exactement celle qu'on ne relit pas à deux lentilles.
+  Conséquence assumée : QA-T01, qui touche `.github/workflows/ci.yml`, se relit en élevé.
 - **La garde des revues est toujours élevée**, même sous `scripts/` ou `docs/` : sinon une PR relue
   par deux lentilles pourrait affaiblir la règle qui décide combien de lentilles relisent les
   autres. La liste est confrontée au graphe d'imports de `scripts/`.
@@ -83,8 +87,8 @@ pas l'ignorer une fois rendue. La section « Attaque » reste exigée sur une t�
   élevé — la projection `sensible ?? []` de `gov-pr.ts` était un échec ouvert, elle est retirée.
 
 Mesure à `809a746` (260 tâches, une PR synthétique par tâche, fichiers dérivés de ses `paths`) :
-67 ordinaires, 193 élevées. Sur les 206 tâches `partners` non livrées, **46 sont ordinaires** — autant
-de PR relues par deux lentilles au lieu de quatre — et 160 restent élevées.
+56 ordinaires, 204 élevées. Sur les 206 tâches `partners` non livrées, **35 sont ordinaires** — autant
+de PR relues par deux lentilles au lieu de quatre — et 171 restent élevées (la première version, `.github/` compris, en comptait 46 et 160).
 
 ## Conséquences
 

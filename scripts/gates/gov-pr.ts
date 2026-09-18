@@ -128,6 +128,8 @@ const ZONES_SENSIBLES = ['commissions/', 'attributions/', 'auth/', 'espace/'];
  * sans lui, on ne saurait pas si le vert vient de la règle ou de l'absence de règle.
  */
 const PERIMETRE_DU_CODE = ['scripts/', 'src/', 'tests/'];
+/** Le dossier des workflows et de `CODEOWNERS` — toujours de risque élevé (GOV-077). */
+const DOSSIER_CI = '.github/';
 /** Ce dont l'introduction impose le bloc ROUGE/VERT (REQ-GOV-012) : un test, une garde, un workflow. */
 const INTRODUIT_UNE_GARDE = (f: string) =>
   /\.spec\.ts$/.test(f) || f.startsWith('scripts/gates/') || f.startsWith('.github/workflows/');
@@ -1223,11 +1225,30 @@ if (process.argv.includes('--prove')) {
   const PR_ORDINAIRE: Pr = {
     ...copiePr(PR_TEMOIN),
     titre: 'feat(QA-T01): aucune gate en continue-on-error',
-    fichiers: cheminsDe('QA-T01'),
+    // Ses `paths` HORS `.github/` : un fichier de CI rend la PR élevée (décision de
+    // l'orchestrateur du 2026-09-18 sur GOV-077) — c'est le témoin `CI_AU_MILIEU` qui le prouve.
+    fichiers: cheminsDe('QA-T01').filter((f) => !f.startsWith(DOSSIER_CI)),
     revues: [
       revue('A09 · exactitude\nVerdict: accepte\nles REQ citees sont couvertes'),
       revue('A09 · securite\nVerdict: accepte\nrien a signaler'),
     ],
+  };
+
+  /**
+   * cas 6 ter — la PR ordinaire, plus le fichier de CI que QA-T01 DÉCLARE, glissé AU MILIEU de ses
+   * fichiers : risque élevé, donc deux lentilles ne suffisent plus.
+   */
+  const CI_AU_MILIEU = (): Pr => {
+    const p = copiePr(PR_ORDINAIRE);
+    const ci = cheminsDe('QA-T01').filter((f) => f.startsWith(DOSSIER_CI));
+    if (ci.length === 0) {
+      throw new Error(
+        'gov:pr --prove — QA-T01 ne déclare plus de fichier de CI : le témoin ne mesure rien.'
+      );
+    }
+    const m = Math.floor(p.fichiers.length / 2);
+    p.fichiers = [...p.fichiers.slice(0, m), ...ci, ...p.fichiers.slice(m)];
+    return p;
   };
 
   /** cas 1 — un numéro de PR que le registre ne porte pas, posé sur les tâches que le cas choisit. */
@@ -1522,6 +1543,11 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
+      // cas 6 ter (GOV-077) — un fichier de CI au milieu d'une PR ordinaire : quatre lentilles.
+      famille: 'lentilles_manquantes',
+      defaut: () => [copieDepot(), CI_AU_MILIEU()],
+    },
+    {
       // cas 1 (GOV-077) — la PR ordinaire par son titre, mais qui PORTE trois tâches dont la sensible
       // est AU MILIEU du registre (QA-T01, DM-01 `rgpd`, GOV-039). Deux lentilles ne suffisent pas.
       famille: 'lentilles_manquantes',
@@ -1676,8 +1702,8 @@ if (process.argv.includes('--prove')) {
     },
     {
       // cas 0 (GOV-077, levier 3 de Will du 2026-09-18) — LA PR ORDINAIRE EXPLICITE. Titre QA-T01
-      // (zone `qualite`, `sensible` vide, `schema` faux), fichiers DÉRIVÉS de ses `paths`, aucun
-      // hors de `docs/`, `scripts/`, `tests/`, `.github/` ou de la racine : deux lentilles suffisent.
+      // (zone `qualite`, `sensible` vide, `schema` faux), fichiers DÉRIVÉS de ses `paths` hors
+      // `.github/`, aucun hors de `docs/`, `scripts/`, `tests/` ou de la racine : deux lentilles.
       quoi: 'une PR ORDINAIRE (QA-T01) relue par exactitude et securite seules, sur la tête',
       cas: () => [depot, PR_ORDINAIRE],
     },

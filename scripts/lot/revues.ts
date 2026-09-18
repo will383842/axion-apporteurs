@@ -538,7 +538,12 @@ export function tachesSchemaDeLaPr<T extends TacheDeLaPr>(
  *      haute l'emporte (`.some`, jamais la première ni la dernière) ;
  *   4. aucun label `schema` ;
  *   5. un diff NON VIDE dont chaque fichier est à la racine ou sous `docs/`, `scripts/`, `tests/`,
- *      `.github/`, et n'appartient pas à la garde des revues.
+ *      et n'appartient pas à la garde des revues.
+ *
+ * ⚠️ `.github/` N'Y EST PAS, et c'est une décision (orchestrateur, 2026-09-18, sur GOV-077) : les
+ * workflows et `CODEOWNERS` gouvernent les gates et la propriété des chemins. Une PR qui affaiblit
+ * la CI est exactement celle qu'on ne relit pas à deux lentilles. Conséquence assumée : une tâche
+ * qui touche `.github/workflows/ci.yml` (QA-T01) se relit en élevé.
  *
  * POURQUOI DES LISTES BLANCHES. Une liste noire de zones (« argent, securite ») laisse passer tout
  * le reste : mesuré le 2026-09-18, huit tâches vivantes manipulent des données personnelles avec
@@ -548,12 +553,7 @@ export function tachesSchemaDeLaPr<T extends TacheDeLaPr>(
  * personne ait eu à penser à eux.
  */
 export const ZONES_A_RISQUE_ORDINAIRE: readonly string[] = ['gouvernance', 'qualite'];
-export const CHEMINS_A_RISQUE_ORDINAIRE: readonly string[] = [
-  'docs/',
-  'scripts/',
-  'tests/',
-  '.github/',
-];
+export const CHEMINS_A_RISQUE_ORDINAIRE: readonly string[] = ['docs/', 'scripts/', 'tests/'];
 
 /**
  * LA GARDE DES REVUES ELLE-MÊME est toujours de risque élevé, même sous `scripts/` ou `docs/` :
@@ -694,7 +694,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
   const produit = e.fichiers.filter((f) => !cheminOrdinaire(f));
   if (produit.length > 0) {
     raisons.push(
-      `fichier(s) hors docs/, scripts/, tests/, .github/ et racine : ${produit.join(', ')}`
+      `fichier(s) hors ${CHEMINS_A_RISQUE_ORDINAIRE.join(', ')} et racine : ${produit.join(', ')}`
     );
   }
   const garde = e.fichiers.filter((f) => CHEMINS_DE_LA_GARDE_DES_REVUES.includes(f));
