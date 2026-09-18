@@ -418,6 +418,19 @@ describe('REQ-GOV-029 — la garde retenue rougit sur un témoin, famille par fa
     expect(familles(vue)).toEqual([]);
   });
 
+  it('garde_hors_registre — une garde ÉCRITE que `docs/gates.json` ne nomme pas', () => {
+    // GOV-044. La famille précédente tirait sa population du REGISTRE : un script absent du
+    // registre n'était jamais confronté à la question de savoir si on l'appelle, et le trou
+    // s'exemptait lui-même. La population part maintenant du DISQUE. Le corps de la preuve vit
+    // dans `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` ; ce témoin-ci
+    // est celui que la règle « chaque famille déclarée a été exercée ici » exige, et il exécute
+    // le contrôle comme les autres.
+    const vue = variante({
+      fichiersSuivis: [...VUE_CONFORME.fichiersSuivis, 'scripts/gates/gov-orpheline.ts'],
+    });
+    expect(familles(vue)).toEqual(['garde_hors_registre']);
+  });
+
   it('perimetre_vide_sans_motif — un périmètre à zéro élément sans motif écrit', () => {
     const perimetres: Perimetre[] = [
       {

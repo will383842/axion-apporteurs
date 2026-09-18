@@ -1083,9 +1083,9 @@
       "phase": -1,
       "script": "scripts/gates/gov-conventions.ts",
       "tache": "GOV-014",
-      "verifie": "les six gardes d'axionia RETENUES par docs/GARDES-AXIONIA.md, en huit familles : use_server_export_interdit (un module « use server » n'exporte que des fonctions), use_server_reexport (un re-export y ouvre un point d'entree HTTP sans cookie ni session), use_client_sans_motif (la directive porte sa raison), lint_non_bloquant (aucune etape de CI qui lance un lint ne porte continue-on-error — LE point de REQ-GOV-018), outillage_non_epingle (une etape qui lance un outil de format exige l'outil en devDependencies, son script et sa configuration versionnee), isolation_depot (une tache repo partners ne revendique aucun chemin du depot voisin — la moitie RECIPROQUE de ce que paths-derives.spec.ts gardait deja, et une garde a sens unique est un defaut deja paye ici), garde_ecrite_jamais_appelee (toute gate dont le script est sur le disque est appelee par un workflow), perimetre_vide_sans_motif (un perimetre a zero element porte son MOTIF et nomme la TACHE qui l'ouvrira, et cette tache existe au backlog — c'est la seule chose qui distingue une garde differee d'une garde oubliee). controler() est PURE sur une vue INJECTEE : aucune famille ne depend de l'etat du disque le jour ou le test tourne (RM-11)",
+      "verifie": "les six gardes d'axionia RETENUES par docs/GARDES-AXIONIA.md, en neuf familles : use_server_export_interdit (un module « use server » n'exporte que des fonctions), use_server_reexport (un re-export y ouvre un point d'entree HTTP sans cookie ni session), use_client_sans_motif (la directive porte sa raison), lint_non_bloquant (aucune etape de CI qui lance un lint ne porte continue-on-error — LE point de REQ-GOV-018), outillage_non_epingle (une etape qui lance un outil de format exige l'outil en devDependencies, son script et sa configuration versionnee), isolation_depot (une tache repo partners ne revendique aucun chemin du depot voisin — la moitie RECIPROQUE de ce que paths-derives.spec.ts gardait deja, et une garde a sens unique est un defaut deja paye ici), garde_hors_registre (depuis GOV-044 : toute garde ECRITE — fichier scripts/gates/*.ts suivi par git — est NOMMEE par docs/gates.json ; le perimetre part du DISQUE et le registre est ce qu'on lui confronte, parce qu'une population tiree du registre n'a jamais confronte a rien le script qui en est absent — mesure du 2026-09-17 : 26 gardes ecrites, DEUX hors registre, et la gate sortait en zero), garde_ecrite_jamais_appelee (toute entree du registre dont le script est sur le disque est appelee par un workflow ou par .claude/settings.json — ou DECLARE son execution hors CI dans le champ horsCi, d'au moins 60 caracteres ; le filtre g.phase <= -1 est leve depuis GOV-044 et la decision est ecrite a cote du code, avec ses trois temoins), perimetre_vide_sans_motif (un perimetre a zero element porte son MOTIF et nomme la TACHE qui l'ouvrira, et cette tache existe au backlog — c'est la seule chose qui distingue une garde differee d'une garde oubliee). Le decompte des deux populations — gardes ecrites, entrees qui les nomment, gardes hors registre, entrees sans script, fichiers que l'extension exclut — est RENDU a chaque passage. controler() est PURE sur une vue INJECTEE : aucune famille ne depend de l'etat du disque le jour ou le test tourne (RM-11)",
       "fixtureRouge": "poser dans ci.yml une etape qui lance un lint en portant continue-on-error (temoin lint_non_bloquant) ; ou declarer au registre une gate dont le script existe et qu'aucun workflow n'appelle (temoin garde_ecrite_jamais_appelee)",
-      "preuveRouge": "pnpm gov:conventions:prove — 8 familles rougissent chacune sur son temoin, 12 contre-temoins restent verts dont la vue conforme"
+      "preuveRouge": "pnpm gov:conventions:prove — 9 familles rougissent chacune sur son temoin, 13 temoins rouges et 14 contre-temoins restent verts dont la vue conforme (mesure relue dans la sortie de --prove le 2026-09-17, PR 54)"
     },
     {
       "id": "perf:budgets",
@@ -1104,6 +1104,25 @@
       "verifie": "controle de DEBUT DE SESSION (pas une gate de PR) : PLAN-STATE porte les 7 rubriques de REQ-GOV-006, le bloc de reprise en tete avec le SHA de main, et le journal fait/reste/appris est RENDU depuis docs/journal/, jamais tape dans la vue. Ce qu'il ne juge PAS : ce que les rubriques DISENT — des compteurs falsifies, ancres conservees, le laissent vert. Cette moitie-la est tenue par la gate `plan-state:verifier`, qui compare la vue a ses sources et entre en Gate A",
       "fixtureRouge": "editer PLAN-STATE.md a la main",
       "preuveRouge": null
+    },
+    {
+      "id": "gov:attributions",
+      "phase": -1,
+      "script": "scripts/gates/gov-attributions.ts",
+      "tache": "GOV-037",
+      "verifie": "que chaque entree de docs/gates.json nomme une TACHE dont les paths contiennent le script de la gate : les nombres se derivent, les attributions non, et rien ne confrontait un nom de tache a ses paths. Porte deux familles d'EXEMPTION nommees — gate_paths_non_resolus et gate_paths_en_partie_gabarit — dont le total DESCEND et ne monte jamais. Porte aussi la liste d'autorisation des entrees de journal (HORS_ASCII_ADMIS) et le refus des dettes perimees.",
+      "fixtureRouge": "reinserer une dette deja soldee dans le registre des dettes, ou nommer dans une entree de gates.json une tache dont les paths ne contiennent pas le script de la gate",
+      "preuveRouge": "pnpm gov:attributions:prove — les 4 retraits de dette FORCES : reinserees, gov:attributions sort en 1 sur dette_perimee (revue securite 5235809231, PR 48, 2026-09-17)"
+    },
+    {
+      "id": "gov:attestation",
+      "phase": -1,
+      "script": "scripts/gates/gov-attestation.ts",
+      "tache": "GOV-038",
+      "verifie": "que chaque attestation { pr, sha, fusionneeAt } du backlog RESOUT en ligne contre la forge du depot derive de repo : un sha de 40 hex qui ne designe rien passe gov:tasks (affaiblissement assume et mesure), et ce controle-ci est le seul qui le rattrape. Il REFUSE de tourner sans son drapeau --en-ligne.",
+      "fixtureRouge": "poser sur une tache livree hors partners une attestation dont le sha vaut 0000000000000000000000000000000000000000 : --en-ligne le rejette en HTTP 422",
+      "preuveRouge": "PR 33 (GOV-038) — sha 0000...0000 vu passer gov:tasks puis rejete en HTTP 422 par gov:attestation --en-ligne",
+      "horsCi": "Ce controle INTERROGE la forge par gh : le cabler en CI rendrait la suite non deterministe et ferait dependre un rouge de la disponibilite de GitHub. GOV-038 l'a donc laisse hors CI deliberement, dans un mode separe qui REFUSE de tourner sans --en-ligne, et il se lance a la main avant une fusion. Le motif est ecrit dans scripts/lot/attestation.ts et dans le champ verifie de la gate gov:tasks."
     }
   ]
 }

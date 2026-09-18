@@ -1286,11 +1286,11 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A05",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 56,
       "attempts": 0,
       "motif": null,
       "tests": {
@@ -8794,7 +8794,9 @@
         "REQ-GOV-005": [
           "tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts"
         ]
-      }
+      },
+      "issue": 58,
+      "owner": "A05"
     },
     {
       "id": "GOV-044",
@@ -8804,7 +8806,8 @@
       "zone": "gouvernance",
       "paths": [
         "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts",
-        "scripts/gates/gov-conventions.ts"
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [],

@@ -3,11 +3,11 @@
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
     "tachesCouvertes": 260,
-    "pairesEnIntersection": 4112,
-    "cheminsDeclares": 764,
-    "cheminsDistincts": 493,
+    "pairesEnIntersection": 4271,
+    "cheminsDeclares": 768,
+    "cheminsDistincts": 495,
     "cheminsPartages": 97,
-    "tachesSansAucuneIntersection": 76,
+    "tachesSansAucuneIntersection": 74,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T06",
@@ -37,10 +37,8 @@
       "GOV-027",
       "GOV-028",
       "GOV-029",
-      "GOV-037",
       "GOV-039",
       "GOV-030",
-      "GOV-038",
       "GOV-041",
       "GOV-043",
       "GOV-044",
@@ -89,7 +87,7 @@
     "cheminsLesPlusPartages": [
       {
         "chemin": "docs/gates.json",
-        "taches": 79
+        "taches": 81
       },
       {
         "chemin": "prisma/schema.prisma",
@@ -1280,6 +1278,8 @@
       "tests/unit/gouvernance/entite-registre.spec.ts"
     ],
     "GOV-037": [
+      "scripts/gates/gov-attributions.ts",
+      "docs/gates.json",
       "tests/unit/gouvernance/attributions-resolvent.spec.ts"
     ],
     "GOV-039": [
@@ -1295,6 +1295,8 @@
       "tests/unit/gouvernance/gardes-transposees.spec.ts"
     ],
     "GOV-038": [
+      "scripts/gates/gov-attestation.ts",
+      "docs/gates.json",
       "tests/unit/gouvernance/attestation-inter-depot.spec.ts"
     ],
     "GOV-041": [
