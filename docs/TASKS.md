@@ -48,7 +48,7 @@ Couvre : `REQ-GOV-001`, `REQ-GOV-026`
 
 **Acceptation.** `REQUIREMENTS.md` + `requirements.json` avec toutes les REQ de ce rapport (B.1-B.9), champs `phase`, `module (1-21)`, `etape (1-12)` ; premier livrable `docs/partners/REQUIREMENTS-ANNEXE-FUSIONS.md` (couples de REQ fusionnées avec la REQ survivante, préséance DM > INT > SEC).
 
-**Tests.** `tests/unit/gouvernance/gardes.spec.ts#'gov:requirements' > sait rougir : ses 11 familles ont chacune un témoin` · `tests/unit/gouvernance/inventaire-prouve.spec.ts#REQ-GOV-026 — toute tâche en état ≥ « codé » porte au moins une preuve qui résout (chemin présent ou SHA retrouvé)`
+**Tests.** `tests/unit/gouvernance/gardes.spec.ts#'gov:requirements' > sait rougir : ses 16 familles ont chacune un témoin` · `tests/unit/gouvernance/inventaire-prouve.spec.ts#REQ-GOV-026 — toute tâche en état ≥ « codé » porte au moins une preuve qui résout (chemin présent ou SHA retrouvé)`
 
 ### GOV-018 — Règles maison et leçons dans le dépôt ✅ **fusionnee**
 
