@@ -13,7 +13,7 @@
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 71.60 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #64 — 2026-09-19 |
+| Dernière entrée de journal | PR #64 — 2026-09-18 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -100,7 +100,7 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #64 — 2026-09-19 — feat(GOV-077): la relecture se proportionne au risque, aucune revue n est pas toutes refusent
+### PR #64 — 2026-09-18 — feat(GOV-077): la relecture se proportionne au risque, aucune revue n est pas toutes refusent
 
 **Fait.** Le nombre de lentilles exigées dépend désormais du risque de la PR, dérivé par une seule
 fonction, `risqueDeLaPr()` (`scripts/lot/revues.ts`), qu'appellent `gov:pr` et le composeur du
