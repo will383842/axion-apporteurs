@@ -76,6 +76,18 @@ const CHEMIN_TACHES =
   iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
 const CHEMIN_VITEST = 'vitest.config.ts';
 const VUE_PAR_DEFAUT = 'docs/TRACABILITE.md';
+const CHEMIN_GATES = 'docs/gates.json';
+/** Ce fichier, tel que `docs/gates.json` le nomme dans le champ `script` de son entrée. */
+const CE_SCRIPT = 'scripts/gates/gov-trace.ts';
+/**
+ * La forme sous laquelle le plancher s'écrit dans le champ `verifie` de cette entrée. ASCII sans
+ * accent, comme toute la prose du registre. Une phrase qu'on ne sait plus lire donne
+ * `plancher_non_declare` : la garde échoue FERMÉE, jamais ouverte.
+ */
+const MOTIF_PLANCHER =
+  /PLANCHER DECLARE : (\d+) taches confrontees au disque, mesure le (\d{4}-\d{2}-\d{2})/;
+const MOTIF_PLANCHER_LISIBLE =
+  'PLANCHER DECLARE : <n> taches confrontees au disque, mesure le <AAAA-MM-JJ>';
 
 /** Le motif exact que porte `prIndisponible` quand le mode n'a PAS BESOIN de la source PR. */
 const PR_NON_CONSULTEE = 'non consultée par ce mode';
@@ -140,6 +152,14 @@ export type FichierTest = {
 
 export type PullRequest = { numero: number; gabarit: boolean; couvre: string[] };
 
+/**
+ * Le PLANCHER de couverture (GOV-043) : une valeur, une source, une date — RM-10. Aucun littéral
+ * ici : la valeur est LUE dans le champ `verifie` de l'entrée de `docs/gates.json` dont le
+ * `script` est ce fichier, où elle s'écrit par `reecrire-champ` (registre en `deny`, geste
+ * journalisé). `null` = pas de plancher lisible, et la garde le refuse (`plancher_non_declare`).
+ */
+export type Plancher = { valeur: number; mesureLe: string; source: string };
+
 export type Univers = {
   exigences: Exigence[];
   taches: Tache[];
@@ -147,6 +167,7 @@ export type Univers = {
   /** `null` = source PR indisponible. Jamais `[]` : la liste vide voudrait dire « aucune PR ». */
   pr: PullRequest[] | null;
   prIndisponible: string | null;
+  plancher: Plancher | null;
 };
 
 export type Faute = { famille: string; message: string };
@@ -162,6 +183,8 @@ export const FAMILLES = [
   'pr_sans_couvre',
   'pr_couvre_req_inconnue',
   'vue_divergente',
+  'plancher_non_declare',
+  'couverture_sous_plancher',
 ];
 
 // ── normalisation des titres ─────────────────────────────────────────────────
@@ -256,8 +279,19 @@ function resoudreFichier(
 }
 
 export function controler(u: Univers): Faute[] {
+  return juger(u).fautes;
+}
+
+/**
+ * Le contrôle ET ce qu'il a confronté. Les deux sortent du MÊME passage : le périmètre n'est pas
+ * une seconde écriture des règles ci-dessous — une tâche y entre à l'endroit exact où une de ses
+ * promesses reçoit un verdict, et nulle part ailleurs (RM-01).
+ */
+function juger(u: Univers): { fautes: Faute[]; confrontees: Set<string> } {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
+  /** Les tâches dont au moins une promesse de `tests{}` a reçu un verdict contre CE disque. */
+  const confrontees = new Set<string>();
 
   const parReq = new Map(u.exigences.map((e) => [e.id, e]));
   const parTache = new Map(u.taches.map((t) => [t.id, t]));
@@ -344,6 +378,7 @@ export function controler(u: Univers): Faute[] {
 
         if ('erreur' in r) {
           if (r.erreur === 'ambigu') {
+            confrontees.add(t.id);
             ajouter(
               'promesse_ambigue',
               `${t.id} promet « ${promesse} » pour ${req} : ${r.candidats.length} fichiers portent ` +
@@ -354,6 +389,7 @@ export function controler(u: Univers): Faute[] {
             // dépôt est celui-ci. Avant la livraison, c'est une promesse de test à venir, et une
             // garde qui la refuserait interdirait d'écrire une acceptance avant son code ; hors de
             // ce dépôt, l'absence ne dit rien — le fichier n'a jamais eu vocation à être ici.
+            confrontees.add(t.id);
             ajouter(
               'test_promis_absent',
               `${t.id} promet « ${promesse} » pour ${req} : aucun fichier de test de ce nom sur le disque.`
@@ -365,6 +401,7 @@ export function controler(u: Univers): Faute[] {
         const f = r.fichier;
         if (!f.execute) {
           if (!livree || !surCeDisque) continue;
+          confrontees.add(t.id);
           ajouter(
             'test_promis_absent',
             `${t.id} promet « ${promesse} » pour ${req} : ${f.chemin} existe mais ${CHEMIN_VITEST} ne ` +
@@ -374,6 +411,7 @@ export function controler(u: Univers): Faute[] {
         }
 
         if (titre.length > 0) {
+          confrontees.add(t.id);
           if (f.titresResolus === null) {
             ajouter(
               'titres_non_resolus',
@@ -400,7 +438,12 @@ export function controler(u: Univers): Faute[] {
         // Sauté si l'exigence est déjà signalée `req_sans_test` (même cause, deux messages) ou si
         // elle est absorbée (c'est la survivante qui porte la charge de la preuve).
         const e = parReq.get(req);
-        if (!e || e.statut !== 'active' || sansTest.has(req)) continue;
+        if (!e || e.statut !== 'active') continue;
+        // Une exigence ACTIVE est jugée — ici, ou déjà par `req_sans_test` (même cause, un seul
+        // message). Une exigence absorbée ou inconnue ne l'est pas : une promesse sans titre qui
+        // ne porte qu'elle n'a RIEN reçu, et la tâche reste hors du périmètre — c'est dit.
+        confrontees.add(t.id);
+        if (sansTest.has(req)) continue;
         const citee = f.reqsCitees.includes(req) || (titre.length > 0 && titre.includes(req));
         if (!citee) {
           ajouter(
@@ -437,7 +480,105 @@ export function controler(u: Univers): Faute[] {
     }
   }
 
-  return fautes;
+  // ── le plancher de couverture (GOV-043) ───────────────────────────────────
+  // Ce contrôle est celui qu'on invoque quand un trou de `lot:cloture` est jugé tolérable : s'il
+  // rétrécit, il compense moins, et rien ne le disait. Un filtre de statut a déjà sorti 33
+  // promesses de sa vue sans qu'aucun compte ne bouge (PR 28).
+  if (u.plancher === null) {
+    ajouter(
+      'plancher_non_declare',
+      `Aucun plancher de couverture lisible (${CHEMIN_GATES}, entrée de script ${CE_SCRIPT}, ` +
+        `champ \`verifie\` : « ${MOTIF_PLANCHER_LISIBLE} »). Sans plancher, une couverture qui ` +
+        `baisse ne se voit pas — la garde refuse plutôt que de se taire.`
+    );
+  } else if (confrontees.size < u.plancher.valeur) {
+    ajouter(
+      'couverture_sous_plancher',
+      `périmètre : ${confrontees.size} tâche(s) confrontée(s) à ce disque, sous le plancher ` +
+        `déclaré : ${u.plancher.valeur} (${u.plancher.source}, mesuré le ${u.plancher.mesureLe}). ` +
+        `Le contrôle compensatoire couvre MOINS qu'il ne couvrait : retrouve la tâche sortie ` +
+        `(\`pnpm gov:trace\` nomme le complément), ou abaisse le plancher dans sa source, par ` +
+        `\`reecrire-champ\`, avec le motif.`
+    );
+  }
+
+  return { fautes, confrontees };
+}
+
+/**
+ * Le plancher, LU dans `docs/gates.json` (RM-10 : une valeur, une source, une date). `null` si le
+ * registre est absent, illisible, s'il ne porte pas exactement une entrée pour ce script, ou si
+ * son `verifie` ne dit pas le plancher sous la forme attendue.
+ */
+export function lirePlancher(texteGates: string | null): Plancher | null {
+  if (texteGates === null) return null;
+  let doc: { gates?: { id?: string; script?: string; verifie?: string }[] };
+  try {
+    doc = JSON.parse(texteGates) as typeof doc;
+  } catch {
+    return null;
+  }
+  const entrees = (doc.gates ?? []).filter((g) => g.script === CE_SCRIPT);
+  if (entrees.length !== 1) return null;
+  const m = MOTIF_PLANCHER.exec(entrees[0]!.verifie ?? '');
+  if (!m) return null;
+  return {
+    valeur: Number(m[1]),
+    mesureLe: m[2]!,
+    source: `${CHEMIN_GATES} › ${entrees[0]!.id ?? '?'}`,
+  };
+}
+
+// ── le périmètre : ce que la garde a confronté, et ce qu'elle n'a pas regardé ──
+/** Pourquoi une tâche est HORS du périmètre. L'ordre est celui où la raison se constate. */
+export const MOTIFS_HORS_PERIMETRE = [
+  'hors_depot',
+  'sans_promesse',
+  'promesse_a_venir',
+  'promesse_non_jugee',
+] as const;
+export type MotifHorsPerimetre = (typeof MOTIFS_HORS_PERIMETRE)[number];
+
+export type Perimetre = {
+  dedans: string[];
+  dehors: Record<MotifHorsPerimetre, string[]>;
+};
+
+/**
+ * LE PÉRIMÈTRE — les tâches dont au moins une promesse de `tests{}` a reçu un verdict contre ce
+ * disque — et son COMPLÉMENT, rangé par raison :
+ *
+ *   — `hors_depot`         : la tâche vit dans un autre dépôt, ses tests aussi (GOV-038) ;
+ *   — `sans_promesse`      : aucun `tests{}` — la garde n'a rien à confronter ;
+ *   — `promesse_a_venir`   : aucun fichier promis n'existe encore, et la tâche n'est pas livrée ;
+ *   — `promesse_non_jugee` : un fichier promis existe, et pourtant rien n'a été jugé — pas exécuté
+ *     par vitest avant la livraison, ou une promesse sans titre qui ne porte qu'une exigence
+ *     absorbée (le contrôle ne juge la citation que d'une exigence ACTIVE).
+ *
+ * Le périmètre sort de `juger()` ; seul le RANGEMENT du complément se calcule ici.
+ */
+export function perimetre(u: Univers): Perimetre {
+  const { confrontees } = juger(u);
+  const dehors: Record<MotifHorsPerimetre, string[]> = {
+    hors_depot: [],
+    sans_promesse: [],
+    promesse_a_venir: [],
+    promesse_non_jugee: [],
+  };
+  const dedans: string[] = [];
+  for (const t of u.taches) {
+    if (confrontees.has(t.id)) {
+      dedans.push(t.id);
+      continue;
+    }
+    const promesses = Object.values(t.tests ?? {}).flat();
+    if ((t.repo ?? DEPOT_LOCAL) !== DEPOT_LOCAL) dehors.hors_depot.push(t.id);
+    else if (promesses.length === 0) dehors.sans_promesse.push(t.id);
+    else if (promesses.every((p) => 'erreur' in resoudreFichier(p.split('#')[0]!, u.fichiers)))
+      dehors.promesse_a_venir.push(t.id);
+    else dehors.promesse_non_jugee.push(t.id);
+  }
+  return { dedans, dehors };
 }
 
 // ── la vue ───────────────────────────────────────────────────────────────────
@@ -858,7 +999,10 @@ function chargerUnivers(avecPr: boolean): Univers {
   }
 
   const { pr, indisponible } = avecPr ? lirePr() : { pr: null, indisponible: PR_NON_CONSULTEE };
-  return { exigences, taches, fichiers, pr, prIndisponible: indisponible };
+  const plancher = lirePlancher(
+    existsSync(CHEMIN_GATES) ? readFileSync(CHEMIN_GATES, 'utf8') : null
+  );
+  return { exigences, taches, fichiers, pr, prIndisponible: indisponible, plancher };
 }
 
 // ── l'état des sources, toujours imprimé ─────────────────────────────────────
@@ -900,6 +1044,34 @@ function direLesSources(u: Univers): void {
       `   sources — PR fusionnées : lues ✓ (${u.pr.length}, dont ${u.pr.filter((p) => p.gabarit).length} au gabarit)`
     );
   }
+}
+
+/**
+ * LE RÉSUMÉ DU PÉRIMÈTRE (GOV-043). Un vert qui ne dit pas ce qu'il a regardé apprend au lecteur
+ * qu'il couvre tout : mesuré le 2026-09-09, ce contrôle ne regardait que 48 tâches sur 209 et son
+ * résumé n'en disait rien. Il dit désormais combien il en a confronté à ce disque, combien il n'a
+ * PAS regardées et pourquoi, et il les NOMME — chiffre par chiffre, liste par liste.
+ */
+function direLePerimetre(u: Univers): void {
+  const p = perimetre(u);
+  const dehors = MOTIFS_HORS_PERIMETRE.flatMap((m) => p.dehors[m]);
+  const plancher =
+    u.plancher === null
+      ? `plancher déclaré : AUCUN (${CHEMIN_GATES} ne le dit pas)`
+      : `plancher déclaré : ${u.plancher.valeur} (${u.plancher.source}, mesuré le ` +
+        `${u.plancher.mesureLe}), marge ${p.dedans.length - u.plancher.valeur}`;
+  console.log(
+    `   périmètre : ${p.dedans.length} tâche(s) sur ${u.taches.length} confrontée(s) à ce disque ` +
+      `par au moins une promesse de \`tests{}\` — ${plancher}`
+  );
+  console.log(
+    `   complément : ${dehors.length} tâche(s) que ce contrôle n'a PAS regardées — ` +
+      MOTIFS_HORS_PERIMETRE.map((m) => `${m} ${p.dehors[m].length}`).join(' · ')
+  );
+  for (const m of MOTIFS_HORS_PERIMETRE) {
+    console.log(`      hors périmètre · ${m} (${p.dehors[m].length}) : ${p.dehors[m].join(', ')}`);
+  }
+  console.log(`      dans le périmètre (${p.dedans.length}) : ${p.dedans.join(', ')}`);
 }
 
 // ── l'univers de FIXTURE, pour la preuve ─────────────────────────────────────
@@ -979,6 +1151,10 @@ export function universFixture(): Univers {
       { numero: 2, gabarit: false, couvre: [] },
     ],
     prIndisponible: null,
+    // Zéro, et c'est délibéré : les contre-témoins qui sortent T-LIVREE du périmètre (autre dépôt)
+    // ne jugent pas le plancher. Les deux cas qui le jugent le POSENT eux-mêmes à la couverture
+    // de la base, puis la font descendre — ou monter.
+    plancher: { valeur: 0, mesureLe: '2026-09-18', source: 'fixture' },
   };
 }
 
@@ -1087,6 +1263,25 @@ if (process.argv.includes('--prove')) {
       famille: 'vue_divergente',
       defaut: () => verifierVue(base, `${rendreVue(base)}\n| ligne tapée à la main |\n`, 'fixture'),
     },
+    {
+      famille: 'plancher_non_declare',
+      defaut: () => {
+        const u = copie(base);
+        u.plancher = null;
+        return controler(u);
+      },
+    },
+    // RM-02 : le plancher est vu rougir en le FRANCHISSANT PAR LE BAS. Il est posé à la couverture
+    // de la base, puis une tâche confrontée perd sa promesse et sort du périmètre.
+    {
+      famille: 'couverture_sous_plancher',
+      defaut: () => {
+        const u = copie(base);
+        u.plancher = { ...u.plancher!, valeur: perimetre(base).dedans.length };
+        delete u.taches[0]!.tests;
+        return controler(u);
+      },
+    },
   ];
 
   /**
@@ -1095,6 +1290,19 @@ if (process.argv.includes('--prove')) {
    * inutilisable, en réclamant un test à des exigences qu'aucune tâche n'a encore livrées.
    */
   const CONTRE_TEMOINS: { nom: string; muter: () => Univers }[] = [
+    // La moitié de RM-02 qu'on oublie : un plancher qui rougirait aussi quand la couverture MONTE
+    // serait un compteur d'égalité, pas un plancher. Une tâche sans verdict reçoit une promesse
+    // vers un fichier qui cite l'exigence (clé hors de ses `reqs` : c'est une fixture, et
+    // `gov:trace` ne juge pas cette réciprocité).
+    {
+      nom: 'la couverture MONTE au-dessus du plancher déclaré',
+      muter: () => {
+        const u = copie(base);
+        u.plancher = { ...u.plancher!, valeur: perimetre(base).dedans.length };
+        u.taches[1]!.tests = { 'REQ-AAA-001': ['tests/f/a.spec.ts'] };
+        return u;
+      },
+    },
     {
       nom: 'une tâche `a_faire` qui promet un test pas encore écrit',
       muter: () => {
@@ -1238,6 +1446,7 @@ const univers = chargerUnivers(
 if (process.argv.includes('--sources')) {
   console.log('gov:trace — état des quatre sources :');
   direLesSources(univers);
+  direLePerimetre(univers);
   process.exit(0);
 }
 
@@ -1301,6 +1510,7 @@ if (fautes.length === 0) {
     `✅ gov:trace — la matrice est cohérente : ${testees.length} exigences réputées testées, toutes citées par un test exécuté.`
   );
   direLesSources(univers);
+  direLePerimetre(univers);
   process.exit(0);
 }
 
@@ -1316,4 +1526,5 @@ for (const famille of FAMILLES) {
 }
 console.error('');
 direLesSources(univers);
+direLePerimetre(univers);
 process.exit(1);

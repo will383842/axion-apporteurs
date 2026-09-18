@@ -224,8 +224,9 @@ describe('gov:inventaire — une tâche fabriquée ne porte pas de preuve (GOV-0
     () => {
       const r = lancer(INVENTAIRE, '--taches', fabriquer('fusionnee'));
       expect(r.code, r.sortie).not.toBe(0);
-      expect(r.sortie).toContain('tache_hors_registre');
-      expect(r.sortie).toContain('GOV-999');
+      expect(r.sortie).toContain('tache_preuve_manquante');
+      expect(r.sortie).toContain('GOV-999 est « fusionnee »');
+      expect(r.sortie).toContain("n'existe pas au registre");
     },
     LONG
   );
