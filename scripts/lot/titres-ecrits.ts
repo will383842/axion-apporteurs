@@ -49,9 +49,15 @@ function listerFichiers(racine: string): string[] {
   return sortie;
 }
 
-/** Les fichiers de test du dépôt, lus sur le disque : la liste que `gov:trace` confronte. */
-export function fichiersDeTest(): string[] {
-  return RACINES_DE_TEST.flatMap(listerFichiers).filter(estUnFichierDeTest);
+/**
+ * Les fichiers de test du dépôt, lus sur le disque : la liste que `gov:trace` confronte. `racine`
+ * n'existe que pour qu'un témoin la fasse lire dans un dépôt jetable (A10 · mutation, PR 55 : sans
+ * aucun `*.test.ts` dans le dépôt, un périmètre restreint aux `*.spec.ts` survivait).
+ */
+export function fichiersDeTest(racine = '.'): string[] {
+  return RACINES_DE_TEST.map((r) => (racine === '.' ? r : join(racine, r)))
+    .flatMap(listerFichiers)
+    .filter(estUnFichierDeTest);
 }
 
 /** L'ouverture d'un titre : `it`/`test`/`describe`, ses variantes, l'argument éventuel, le titre. */

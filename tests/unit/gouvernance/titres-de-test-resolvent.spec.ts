@@ -37,7 +37,9 @@
  * REQ-CPL-018 dans ce fichier CONSOMME la ligne source de REQ-CPL-018 dans son corps.
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import {
   estUnFichierDeTest,
@@ -187,6 +189,32 @@ describe('REQ-QA-014 — la sonde MESURE quelque chose : sans plancher, une lect
     const inconnu = { fichier: 'x.spec.ts', ligne: 1, texte: 'REQ-ZZZ-999 — inventé', corps: '' };
     expect(resoudre([inconnu], exigences).map((r) => r.famille)).toEqual(['exigence_inexistante']);
   });
+
+  // A10 · mutation (revue 5247514005) : tous les titres des témoins ne portaient qu'UN identifiant.
+  // « seul le premier identifiant est lu » et « le renvoi, c'est deux identifiants quelconques »
+  // survivaient l'un et l'autre.
+  const unTitre = (texte: string) => ({ fichier: 'x.spec.ts', ligne: 1, texte, corps: '' });
+
+  it('REQ-QA-014 — un titre à DEUX identifiants : l’absorbée en SECONDE position, sans renvoi, rougit', () => {
+    const r = resoudre([unTitre('REQ-GOV-021 — REQ-GOV-005 : en second')], REGISTRE().exigences);
+    expect(r.map((x) => x.message).join('\n')).toContain('x.spec.ts:1 nomme REQ-GOV-005');
+  });
+
+  it('REQ-QA-014 — le renvoi est la SURVIVANTE, pas un second identifiant quelconque', () => {
+    const exigences = REGISTRE().exigences;
+    const faux = resoudre([unTitre('REQ-GOV-005 → REQ-GOV-021 : un autre renvoi')], exigences);
+    expect(faux.map((x) => x.message).join('\n')).toContain('x.spec.ts:1 nomme REQ-GOV-005');
+    // Contre-témoin : le renvoi vers la survivante que le registre nomme, et lui seul, passe.
+    expect(resoudre([unTitre('REQ-GOV-005 → REQ-QA-014 : le renvoi')], exigences)).toEqual([]);
+  });
+
+  it('REQ-QA-014 — TÉMOIN de `texte_vide` : une exigence nommée dont le texte est vide rougit', () => {
+    const exigences = copie(REGISTRE().exigences);
+    exigences.find((x) => x.id === 'REQ-GOV-021')!.texte = '   ';
+    expect(resoudre([unTitre('REQ-GOV-021 — vide')], exigences).map((x) => x.famille)).toEqual([
+      'texte_vide',
+    ]);
+  });
 });
 
 describe('REQ-QA-014 — sur le dépôt RÉEL, aucun titre ne nomme une exigence dont le texte n’est pas en vigueur', () => {
@@ -319,6 +347,37 @@ describe('REQ-QA-014 — un titre écrit à la ligne SUIVANTE de son ouverture `
     expect(estUnFichierDeTest('a.ts')).toBe(false);
     expect(SPECS()).toEqual(fichiersDeTest());
   });
+
+  // A10 · mutation (revue 5247514005) : le dépôt ne porte AUCUN `*.test.ts`, donc la ligne
+  // ci-dessus compare une fonction à elle-même, et un périmètre restreint aux `*.spec.ts`
+  // survivait. Le témoin fabrique le fichier, dans un vrai dépôt git jetable.
+  it('REQ-QA-014 — un vrai `*.test.ts`, dans un dépôt jetable, est lu : une absorbée sans renvoi y rougit', () => {
+    const bac = mkdtempSync(join(tmpdir(), 'g39-'));
+    try {
+      mkdirSync(join(bac, 'tests', 'unit'), { recursive: true });
+      const ouvre = 'it';
+      writeFileSync(
+        join(bac, 'tests', 'unit', 'faute.test.ts'),
+        `import { ${ouvre} } from 'vitest';\n` +
+          ouvre +
+          "('REQ-GOV-005 sans son renvoi', () => {});\n"
+      );
+      const git = (...a: string[]) => execFileSync('git', a, { cwd: bac, stdio: 'pipe' });
+      git('init', '-q');
+      git('add', '-A');
+      git('-c', 'user.name=temoin', '-c', 'user.email=temoin@invalid', 'commit', '-qm', 'bac');
+      const fichiers = fichiersDeTest(bac);
+      const faute = fichiers.find((f) => f.endsWith('tests/unit/faute.test.ts'));
+      expect(
+        faute,
+        `le *.test.ts du bac n’est pas dans le périmètre : ${fichiers.join(', ')}`
+      ).toBeTruthy();
+      const r = resoudre(titresDe(faute!, lire(faute!)), REGISTRE().exigences);
+      expect(r.map((x) => x.message).join('\n')).toContain('faute.test.ts:2 nomme REQ-GOV-005');
+    } finally {
+      rmSync(bac, { recursive: true, force: true });
+    }
+  });
 });
 
 // ── LE TEXTE SURVIVANT CONTIENT LE TEXTE DÉCIDÉ — RM-01 appliqué aux exigences ────────────────────
@@ -435,6 +494,46 @@ describe('REQ-QA-014 — les fusions décidées se confrontent au registre, et l
     );
     expect(fautes.length).toBeGreaterThan(0);
     expect(fautes.map((f) => f.message).join('\n')).toContain(dette.survivante);
+  });
+
+  // A10 · mutation (revue 5247514005) : le témoin ci-dessus n'exerce que la branche « clause
+  // REVENUE ». L'autre — la dette dont l'annexe ne porte plus la clause — survivait neutralisée.
+  it('REQ-QA-014 — PANNE FABRIQUÉE : une dette dont l’annexe ne met PLUS la clause en code rougit', () => {
+    const dette = DETTE_TEXTE_DECIDE[Math.floor(DETTE_TEXTE_DECIDE.length / 2)]!;
+    const m = dette.marqueurs[0]!;
+    const annexe = ANNEXE();
+    expect(annexe, `l’annexe ne porte pas « ${m} » en code`).toContain('`' + m + '`');
+    const frappee = annexe.split('`' + m + '`').join(m);
+    const fautes = controler(REGISTRE(), SCHEMA(), TACHES(), frappee).filter(
+      (f) => f.famille === 'dette_texte_decide_perimee'
+    );
+    expect(fautes.map((f) => f.message).join('\n')).toContain(
+      `La dette « ${dette.survivante} / ${m} »`
+    );
+  });
+
+  // A10 · mutation : les témoins frappaient la fusion du MILIEU, jamais la DERNIÈRE — une boucle
+  // qui saute la dernière survivait (REQ-SEC-022 sans sa clause passait en exit 0).
+  it('REQ-QA-014 — PANNE FABRIQUÉE, sur la DERNIÈRE fusion ET sur une du milieu : chaque clause retirée rougit', () => {
+    const fusions = fusionsDecidees(ANNEXE());
+    const horsDette = (f: (typeof fusions)[number]) =>
+      marqueursDe(f.decide).filter(
+        (m) =>
+          !DETTE_TEXTE_DECIDE.some((d) => d.survivante === f.survivante && d.marqueurs.includes(m))
+      );
+    for (const cible of [fusions[Math.floor(fusions.length / 2)]!, fusions.at(-1)!]) {
+      const m = horsDette(cible)[0];
+      expect(m, `${cible.survivante} ne porte aucun marqueur hors dette`).toBeTruthy();
+      const registre = copie(REGISTRE());
+      const e = registre.exigences.find((x) => x.id === cible.survivante)!;
+      e.texte = e.texte.split(m!).join('(clause retirée)');
+      const fautes = controler(registre, SCHEMA(), TACHES(), ANNEXE()).filter(
+        (f) => f.famille === 'texte_decide_perdu'
+      );
+      expect(fautes.map((f) => f.message).join('\n')).toContain(
+        `${cible.survivante} : l'arbitrage décidé porte « ${m} »`
+      );
+    }
   });
 
   it('REQ-QA-014 — PANNE FABRIQUÉE : une absorbée que le registre ne MARQUE pas rougit, et le renvoi est jugé dans les DEUX sens', () => {

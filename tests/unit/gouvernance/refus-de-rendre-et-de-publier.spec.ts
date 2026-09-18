@@ -43,6 +43,12 @@ import {
   analyser as analyserAttributions,
   chargerSources as chargerSourcesAttributions,
 } from '../../../scripts/gates/gov-attributions';
+import {
+  CHEMIN_ANNEXE,
+  DETTE_TEXTE_DECIDE,
+  fusionsDecidees,
+  marqueursDe,
+} from '../../../scripts/gates/gov-requirements';
 import * as processusFils from 'node:child_process';
 import ts from 'typescript';
 
@@ -1336,6 +1342,26 @@ function lancerLaGate(
  * mutées elles sortent en 0 **en imprimant leur bannière de succès**. C'est ce couple-là que le
  * témoin d'effet rend impossible à obtenir silencieusement.
  */
+/**
+ * Un geste sur les exigences d'un bac, avec la fusion du MILIEU de son annexe sous la main. Le
+ * registre est relu et réécrit dans le bac, jamais dans le dépôt.
+ */
+type ExigenceDuBac = { id: string; texte: string; statut: string; remplaceePar: string | null };
+function surLesExigencesDuBac(
+  depot: string,
+  geste: (
+    exigences: ExigenceDuBac[],
+    fusionDuMilieu: ReturnType<typeof fusionsDecidees>[number],
+    fusions: ReturnType<typeof fusionsDecidees>
+  ) => void
+): void {
+  const p = join(depot, 'docs/requirements.json');
+  const doc = JSON.parse(readFileSync(p, 'utf8')) as { exigences: ExigenceDuBac[] };
+  const fusions = fusionsDecidees(readFileSync(join(depot, CHEMIN_ANNEXE), 'utf8'));
+  geste(doc.exigences, fusions[Math.floor(fusions.length / 2)]!, fusions);
+  writeFileSync(p, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
+}
+
 const GATES_A_TEMOIN_D_EFFET = [
   {
     nom: 'gov:tasks',
@@ -1422,6 +1448,49 @@ const GATES_A_TEMOIN_D_EFFET = [
             'utf8'
           );
         },
+      },
+      // 🔴 Les CINQ familles des fusions (GOV-039), chacune par le BINAIRE en mode normal — refus
+      // A10 · mutation sur la PR 55 : l'appelant normal pouvait écarter ces familles, et le rouge
+      // d'origine de la PR sortait en exit 0 sans qu'aucun test ne rougisse, car rien ne lançait
+      // le binaire que sur un dépôt SAIN ou sous `--prove`.
+      {
+        famille: 'annexe_sans_fusion',
+        appliquer: (depot: string) => {
+          writeFileSync(join(depot, CHEMIN_ANNEXE), '# une annexe sans aucune puce\n', 'utf8');
+        },
+      },
+      {
+        famille: 'fusion_survivante_inconnue',
+        appliquer: (depot: string) =>
+          surLesExigencesDuBac(depot, (ex, f) => {
+            ex.find((e) => e.id === f.survivante)!.statut = 'retiree';
+          }),
+      },
+      {
+        famille: 'fusion_absorbee_non_marquee',
+        appliquer: (depot: string) =>
+          surLesExigencesDuBac(depot, (ex, f) => {
+            ex.find((e) => e.id === f.absorbees[0])!.remplaceePar = null;
+          }),
+      },
+      {
+        // Le rouge d'origine de la PR 55 : le texte de REQ-QA-014 privé de ses clauses décidées.
+        famille: 'texte_decide_perdu',
+        appliquer: (depot: string) =>
+          surLesExigencesDuBac(depot, (ex, _f, fusions) => {
+            const f = fusions.find((x) => x.survivante === 'REQ-QA-014')!;
+            const e = ex.find((x) => x.id === 'REQ-QA-014')!;
+            for (const m of marqueursDe(f.decide)) e.texte = e.texte.split(m).join('(retiré)');
+          }),
+      },
+      {
+        famille: 'dette_texte_decide_perimee',
+        appliquer: (depot: string) =>
+          surLesExigencesDuBac(depot, (ex) => {
+            const d = DETTE_TEXTE_DECIDE[Math.floor(DETTE_TEXTE_DECIDE.length / 2)]!;
+            const e = ex.find((x) => x.id === d.survivante)!;
+            e.texte = `${e.texte} ${d.marqueurs.map((m) => '`' + m + '`').join(' ')}`;
+          }),
       },
     ],
   },
