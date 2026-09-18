@@ -40,7 +40,7 @@
 | `REQ-GOV-009` | `GOV-010`, `GOV-022`, `GOV-070` | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | couverte |
 | `REQ-GOV-010` | `GOV-007`, `GOV-023`, `GOV-024`, `GOV-062` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/fiches-agents.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-011` | `GOV-007`, `GOV-021`, `GOV-024`, `GOV-058`, `GOV-077`, `GOV-078` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
-| `REQ-GOV-012` | `GOV-007`, `GOV-044`, `GOV-045`, `GOV-046`, `GOV-054`, `GOV-061`, `GOV-063`, `GOV-067`, `GOV-082`, `GOV-083` | `tests/gov/charte-pr.spec.ts` | couverte |
+| `REQ-GOV-012` | `GOV-007`, `GOV-044`, `GOV-045`, `GOV-046`, `GOV-054`, `GOV-061`, `GOV-063`, `GOV-067`, `GOV-082`, `GOV-083` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` | couverte |
 | `REQ-GOV-013` | `GOV-007`, `GOV-047`, `GOV-058`, `GOV-077` | `tests/gov/charte-pr.spec.ts` | couverte |
 | `REQ-GOV-014` | `GOV-000`, `GOV-012`, `GOV-057` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
 | `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `GOV-060`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
@@ -459,6 +459,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/lexique.spec.ts` | oui | `REQ-GOV-017`, `REQ-JUR-037` |
 | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | oui | `REQ-GOV-033` |
 | `tests/unit/gouvernance/paths-derives.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-025` |
+| `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` | oui | `REQ-GOV-012` |
 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | oui | `REQ-GOV-006`, `REQ-GOV-023` |
 | `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts` | oui | `REQ-GOV-028` |
 | `tests/unit/gouvernance/preseance.spec.ts` | oui | `REQ-DM-034`, `REQ-GOV-002`, `REQ-GOV-030` |

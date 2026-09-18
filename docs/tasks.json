@@ -8806,7 +8806,8 @@
       "zone": "gouvernance",
       "paths": [
         "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts",
-        "scripts/gates/gov-conventions.ts"
+        "scripts/gates/gov-conventions.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [],
