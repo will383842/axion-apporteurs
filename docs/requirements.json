@@ -3347,7 +3347,7 @@
     {
       "id": "REQ-QA-014",
       "domaine": "qualite-ci-devops",
-      "texte": "Chaque exigence REQ-*-nnn non différée est référencée par ≥ 1 test vert via l'annotation @req ; chaque @req pointe une REQ existante ; `pnpm req:check` rougit dans les deux sens d'orphelinat.",
+      "texte": "Chaque exigence REQ-*-nnn non différée est référencée par ≥ 1 test vert dont le titre `it()` contient son identifiant (marqueur unique, grep-able) ET porte l'annotation `@req` en tête du fichier de ce test ; chaque `@req` comme chaque identifiant cité par un titre pointe une REQ qui existe ET dont le texte est EN VIGUEUR — une exigence absorbée ne s'étiquette plus ; les corps de PR listent `Couvre: REQ-…` ; `pnpm req:check` dérive la matrice REQ → test → PR et rougit dans les deux sens d'orphelinat.",
       "source": "nouvelle (prompt : traçabilité REQ→test)",
       "statut": "active",
       "remplaceePar": null,

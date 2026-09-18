@@ -51,11 +51,12 @@
  * IMPRIMÉ, jamais écrit dans la vue.
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs';
-import { join, basename, posix } from 'node:path';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { basename, posix } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 import { DEPOT_LOCAL } from '../lot/attestation';
+import { fichiersDeTest, titresEcrits } from '../lot/titres-ecrits';
 
 const CHEMIN_REGISTRE = 'docs/requirements.json';
 /**
@@ -672,28 +673,13 @@ function globVersRegex(motif: string): RegExp {
   return new RegExp(`^${sortie}$`);
 }
 
-function listerFichiers(racine: string): string[] {
-  if (!existsSync(racine)) return [];
-  const sortie: string[] = [];
-  for (const entree of readdirSync(racine)) {
-    const chemin = join(racine, entree);
-    if (statSync(chemin).isDirectory()) sortie.push(...listerFichiers(chemin));
-    else sortie.push(chemin.replace(/\\/g, '/'));
-  }
-  return sortie;
-}
-
 /**
- * Les titres ÉCRITS. Ils servent à repérer les identifiants d'exigence cités dans un `it()` ou un
- * `describe()` — un identifiant est un littéral, il est donc lisible sans exécuter le fichier.
- * Ils ne servent PAS à valider une promesse de titre : `describe.each` produit des noms que seul
- * vitest résout.
+ * Les titres ÉCRITS, et les fichiers de test où ils se lisent, viennent de
+ * `scripts/lot/titres-ecrits.ts`, et de nulle part ailleurs : ce script a des effets de bord au
+ * chargement, donc sa lecture n'était importable par personne, et la spécification de REQ-QA-014
+ * en avait écrit une seconde, plus pauvre, sur un périmètre plus étroit (GOV-039, PR 55).
  */
-export function titresEcrits(texte: string): string[] {
-  const motif =
-    /\b(?:it|test|describe)(?:\.\w+)*(?:\s*\(\s*[^)]*\)\s*)?\(\s*(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
-  return [...texte.matchAll(motif)].map((m) => m[2]!);
-}
+export { titresEcrits };
 
 /** Les exigences qu'un fichier CITE : annotations `@req` et identifiants dans les titres. */
 export function reqsCitees(texte: string): string[] {
@@ -825,9 +811,7 @@ function chargerUnivers(avecPr: boolean): Univers {
   const { include, exclude } = motifsVitest();
   const inclus = include.map(globVersRegex);
   const exclus = exclude.map(globVersRegex);
-  const candidats = [...listerFichiers('tests'), ...listerFichiers('src')].filter((c) =>
-    /\.(test|spec)\.tsx?$/.test(c)
-  );
+  const candidats = fichiersDeTest();
 
   const fichiers: FichierTest[] = candidats.map((chemin) => {
     const texte = readFileSync(chemin, 'utf8');

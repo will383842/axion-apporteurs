@@ -128,7 +128,7 @@
       "acceptance": "`REQUIREMENTS.md` + `requirements.json` avec toutes les REQ de ce rapport (B.1-B.9), champs `phase`, `module (1-21)`, `etape (1-12)` ; premier livrable `docs/partners/REQUIREMENTS-ANNEXE-FUSIONS.md` (couples de REQ fusionnées avec la REQ survivante, préséance DM > INT > SEC).",
       "tests": {
         "REQ-GOV-001": [
-          "tests/unit/gouvernance/gardes.spec.ts#'gov:requirements' > sait rougir : ses 11 familles ont chacune un témoin"
+          "tests/unit/gouvernance/gardes.spec.ts#'gov:requirements' > sait rougir : ses 16 familles ont chacune un témoin"
         ],
         "REQ-GOV-026": [
           "tests/unit/gouvernance/inventaire-prouve.spec.ts#REQ-GOV-026 — toute tâche en état ≥ « codé » porte au moins une preuve qui résout (chemin présent ou SHA retrouvé)"
@@ -552,7 +552,7 @@
       "motif": null,
       "tests": {
         "REQ-GOV-005": [
-          "tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 : la famille `req_non_citee_par_son_test` a son témoin",
+          "tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 → REQ-QA-014 : la famille `req_non_citee_par_son_test` a son témoin",
           "tests/unit/gouvernance/tracabilite.spec.ts#REQ-GOV-005 : le registre porte bien l’absorption, et c’est REQ-QA-014 qui fait foi",
           "tests/unit/gouvernance/tracabilite.spec.ts#REQ-QA-014 : chaque famille a son témoin, et les contre-témoins restent verts"
         ]
@@ -782,7 +782,7 @@
           "tests/unit/integration/contrat-hash.spec.ts#REQ-QA-007 — contracts.sha256 est l'empreinte du schema publie, et un champ renomme la change"
         ],
         "REQ-GOV-020": [
-          "tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)"
+          "tests/unit/integration/contrat-hash.spec.ts#REQ-GOV-020 → REQ-QA-007 — la fixture DECLARE sa provenance et nomme la tache qui la remplacera (RM-03)"
         ]
       }
     },
@@ -8500,7 +8500,14 @@
         "tests/unit/gouvernance/entite-registre.spec.ts",
         "tests/unit/gouvernance/titres-de-test-resolvent.spec.ts",
         "scripts/gates/gov-requirements.ts",
-        "docs/REQUIREMENTS-ANNEXE-FUSIONS.md"
+        "docs/REQUIREMENTS-ANNEXE-FUSIONS.md",
+        "tests/unit/gouvernance/glossaire-enums.spec.ts",
+        "tests/unit/gouvernance/tracabilite.spec.ts",
+        "tests/unit/integration/contrat-hash.spec.ts",
+        "tests/unit/gouvernance/gardes.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/lot/titres-ecrits.ts",
+        "scripts/gates/gov-trace.ts"
       ],
       "schema": false,
       "sensible": [],

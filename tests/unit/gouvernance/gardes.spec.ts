@@ -35,6 +35,7 @@
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { FAMILLES_ATTESTATION } from '../../../scripts/lot/attestation';
+import { FAMILLES as FAMILLES_REQUIREMENTS } from '../../../scripts/gates/gov-requirements';
 
 function lancer(script: string, ...args: string[]): { code: number; sortie: string } {
   const r = spawnSync('npx', ['tsx', script, ...args], { encoding: 'utf8', shell: true });
@@ -53,7 +54,15 @@ const GARDES = [
     script: 'scripts/gates/gov-tasks.ts',
     familles: 12 + FAMILLES_ATTESTATION.length,
   },
-  { nom: 'gov:requirements', script: 'scripts/gates/gov-requirements.ts', familles: 11 },
+  // Le « 11 » qui vivait ici était TAPÉ, pour la raison que le commentaire ci-dessus regrette :
+  // `gov-requirements.ts` avait des effets de bord au chargement, donc sa liste de familles n'était
+  // pas importable. Elle l'est depuis GOV-039 (`LANCE_EN_SCRIPT`) : le compte se DÉRIVE de sa
+  // source, et l'ajout de cinq familles n'a plus à être recopié dans un second fichier (RM-01).
+  {
+    nom: 'gov:requirements',
+    script: 'scripts/gates/gov-requirements.ts',
+    familles: FAMILLES_REQUIREMENTS.length,
+  },
   { nom: 'gov:hypotheses', script: 'scripts/gates/gov-hypotheses.ts', familles: 10 },
 ];
 

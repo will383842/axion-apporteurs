@@ -155,7 +155,7 @@ describe('gov:trace — les deux familles qui ont coûté seize ruptures', () =>
     expect(sortie).toContain('req_sans_test');
   });
 
-  it('REQ-GOV-005 : la famille `req_non_citee_par_son_test` a son témoin', () => {
+  it('REQ-GOV-005 → REQ-QA-014 : la famille `req_non_citee_par_son_test` a son témoin', () => {
     // Le défaut attrapé À LA MAIN sur ce dépôt (PR 27, lentille « exactitude ») : une tâche
     // déclarait couvrir REQ-GOV-027 par un test qui ne parle pas de cette exigence. Cette
     // famille est ce qui l'attrape désormais toute seule.

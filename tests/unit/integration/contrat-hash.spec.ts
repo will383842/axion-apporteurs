@@ -200,7 +200,7 @@ describe("le contrat d'événements est fermé, dérivé, et son empreinte le ti
     expect(empreinte(renomme)).not.toBe(attendue);
   });
 
-  it('REQ-GOV-020 — la fixture DÉCLARE sa provenance et nomme la tâche qui la remplacera (RM-03)', () => {
+  it('REQ-GOV-020 → REQ-QA-007 — la fixture DÉCLARE sa provenance et nomme la tâche qui la remplacera (RM-03)', () => {
     expect(FIXTURES.Source).toBeTruthy();
     expect(FIXTURES.Source).toContain('PROVISOIRE');
     expect(FIXTURES.Source).toContain('INT-T01b');

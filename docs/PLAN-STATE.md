@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `7f83007` — 2026-09-17T18:53:09+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #53 (un contrôle requis rouge ou une revue manquante) · 2. #54 (brouillon) · 3. #55 (brouillon) |
+| Où est `main` ? | `809a746` — 2026-09-18T21:07:50+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #54 (un conflit avec `main`) · 2. #55 (un conflit avec `main`) |
 | Qui tient quoi ? | GOV-039 (A05) · GOV-041 (A05) · GOV-044 (A05) · GOV-056 (A05) |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #53 — 2026-09-17 |
+| Dernière entrée de journal | PR #55 — 2026-09-17 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,9 +64,8 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #53 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent | `t/gov-041` | un contrôle requis rouge ou une revue manquante |
-| 2 | #54 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte | `t/gov-044` | brouillon — hors file tant qu’il n’est pas prêt |
-| 3 | #55 — test(GOV-039): un titre de test confronte son identifiant au texte de l exigence nommee | `t/gov-039` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #54 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte | `t/gov-044` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #55 — test(GOV-039): un titre de test confronte son identifiant au texte de l exigence nommee | `t/gov-039` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -85,7 +84,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-17 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
+Aucun ADR daté du 2026-09-18 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
 
 ## Prochain pas
 
@@ -93,13 +92,49 @@ Aucun ADR daté du 2026-09-17 (jour du dernier atterrissage). Les décisions de 
 
 ## Dernier atterrissage
 
-`origin/main` = `7f83007` (2026-09-17T18:53:09+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `809a746` (2026-09-18T21:07:50+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #55 — 2026-09-17 — test(GOV-039): un titre de test confronte son identifiant au texte de l exigence nommee
+
+**Fait.** `gov:requirements` confronte désormais `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` au registre :
+pour chacune des 28 fusions décidées, la survivante doit être active, chaque absorbée doit porter son
+renvoi, et chaque MARQUEUR du texte décidé — les 66 spans de code de l'arbitrage, dérivés et jamais
+listés — doit se retrouver dans le texte appliqué. Le rouge d'origine portait sur REQ-QA-014, que
+cette PR couvre : l'arbitrage rendu exigeait « le titre `it()` contient son identifiant » et « les
+corps de PR listent `Couvre: REQ-nnn` », et le texte appliqué disait l'inverse. Le texte en vigueur les
+reprend, sans perdre la clause `@req`. Les 87 titres de la garde d'entité qui s'étiquetaient
+REQ-CPL-018 en parlant d'IBAN, de BIC et de SIREN portent REQ-GOV-031 ; le seul titre qui teste
+REQ-CPL-018 pour de bon n'a pas bougé et un témoin le protège en exigeant que tout titre qui la nomme
+LISE sa ligne source. Cinq titres nommaient une exigence absorbée sans son renvoi : ils le portent.
+Après trois refus de lentille le 2026-09-18, la spécification lit les titres par LA lecture de
+`gov:trace`, et sur son périmètre, sortis dans `scripts/lot/titres-ecrits.ts` ; la garde juge un
+marqueur comme jeton délimité — `siren` et `signe` ne tenaient que par sous-chaîne, et rejoignent la
+dette — et nomme toute puce de fusion qu'elle ne sait pas lire, compte déclaré de l'annexe à l'appui.
+
+**Reste.** Vingt-cinq clauses décidées manquent encore au texte appliqué de quinze exigences ; elles
+sont déclarées, datées et motivées dans `DETTE_TEXTE_DECIDE`, et aucune n'est réparable par un agent —
+sept touchent à l'ARGENT, cinq à la SÉCURITÉ, deux portent un ré-arbitrage postérieur à l'annexe qui
+périme l'annexe elle-même, et non le registre. Le geste juste y est un ADR, pas un champ réécrit. La
+part non mécanisable de GOV-039 — « ce titre parle-t-il du bon sujet » — reste une RELECTURE NOMMÉE :
+quatre mécanisations ont été mesurées et abandonnées, leurs chiffres sont dans l'en-tête de la
+spécification. La dette GOV-082 reste ouverte. La dette relevée sur la PR 48 qui annonçait un écart
+14 contre 13 est PÉRIMÉE : `--prove` mesure bien 14 sur la tête fusionnée.
+
+**Appris.** Nommer une tâche dans la prose d'une entrée de `docs/gates.json` exige que le FICHIER de
+cette gate soit dans les `paths` de la tâche nommée — pas dans ceux de la tâche qui écrit.
+`gov:attributions` a refusé en `mention_hors_paths` un amendement daté qui se contentait de se
+signer : la prose d'une gate se date, elle ne s'attribue qu'au porteur du script. Et un module de
+garde importé par sa propre spécification tue le worker `vitest` au premier `process.exit` : sans
+`LANCE_EN_SCRIPT`, la suite entière sort en `no tests` sur le refus `process.exit unexpectedly`
+du worker — une garde qui EXÉCUTE son code au lieu d'en lire le texte paie d'abord ce prix-là.
+Une lecture qu'on ne peut pas importer finit recopiée, et la copie est la plus pauvre : la seconde
+lecture des titres ratait quinze titres à identifiant, et une exigence absorbée y passait en exit 0.
 
 ### PR #53 — 2026-09-17 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent
 
@@ -227,37 +262,7 @@ deux sens : il en a fallu un second, où la tâche fautive se dispute un fichier
 retenue. Huitième : un compteur DÉRIVÉ qu'aucun témoin ne garde vaut le compteur tapé — vider la
 fonction qui le rend laissait le témoin imprimer des zéros et boucler sur rien.
 
-### PR #47 — 2026-09-17 — chore(GOV-037): le lot preparatoire rend la phase 0 composable, 50 gabarits tombent
-
-**Fait.** Les 50 tâches de phase 0 qui ne portaient qu'un chemin gabarit reçoivent leurs chemins
-réels ; 35 `acceptance` et 42 `tests` absents sont posés ; 8 `tests` en nom nu deviennent des
-chemins complets ; 13 `script` de gate, 4 `verifie`, 3 `phase` et 2 textes de
-`docs/requirements.json` sont amendés ; 32 tâches sont versées, soit 31 dettes de phase 0 et
-`UX-P0-01b` en phase 1. 223 écritures, toutes par les six outils hors dépôt, aucune à la main. Les
-huit vues sont régénérées dans l'ordre, `plan-state:build` en dernier, après cette entrée.
-`gov:attributions` descend de 231 à 158 exemptions, et la baisse vient entièrement des quatre
-rubriques de gabarit, qui passent de 135 à 62 : le lot n'ajoute aucune exemption, d'aucune nature.
-`docs/PLAN-STATE.md` porte « Phase courante : 0 » et 0 sur 98 tâches, reste 75,85 jours.
-
-**Reste.** Les huit cases de la définition de « terminé » sont vides : l'auteur ne les coche pas,
-c'est Will qui atteste. La sérialisation de la phase 0 est révélée, pas refermée — 33 tâches
-partagent `docs/gates.json`, et c'est le troisième livrable de GOV-056 qui la ferme. Le composeur
-n'a pas été lancé : `lot:composer` écrit `docs/tasks.json` et n'a rien à faire dans le même geste
-que le lot préparatoire. Deux tâches de phase 0 ne se composeront jamais côté partners, `DM-03-P`
-et `DM-04`, qui attendent un lot du dépôt voisin.
-
-**Appris.** Une tâche neuve qui adosse une exigence à un fichier de test DÉJÀ PRÉSENT doit vérifier
-que ce fichier CITE l'exigence ; tant que le fichier n'existe pas, personne ne le vérifie et
-`gov:trace` tolère. Mesuré ici sur `GOV-087`, qui adossait `REQ-GOV-032` à
-`tests/unit/gouvernance/paths-derives.spec.ts` — un fichier suivi qui ne cite que `REQ-GOV-021` et
-`REQ-GOV-025`. `gov:trace:render` a REFUSÉ de rendre, et le refus de rendre est le bon
-comportement : il coûte quatre rouges en cascade, pas un, parce que la vue reste périmée et que
-`vue_divergente` la rattrape ensuite. La même faute avait été corrigée sur `GOV-081` avant le gel ;
-elle est revenue avec les deux dettes ajoutées à la réouverture, parce que la vérification n'a pas
-été rejouée sur ce qu'on ajoutait. Une correction qui vit dans un contenu gelé ne protège que les
-entrées présentes au moment du gel.
-
-… 16 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 17 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
