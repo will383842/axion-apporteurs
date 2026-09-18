@@ -247,8 +247,8 @@ feuille est produite par l'expert-comptable ou par Will, **jamais par un agent**
 | Gardien du spec : seul à modifier les registres | **A01** | `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` réservés |
 | Leads de domaine : découpent, valident l'acceptation | **A12** | une fiche, huit zones en paramètre ; l'arbitrage au deuxième tour est le sien |
 | Développeurs : une tâche revendiquée à la fois | **A05** (Partners) et **A08** (axionia) | `owner` de la tâche ; une tâche = une PR ≤ 600 lignes de diff |
-| Relecteurs adversariaux | **A09** (trois lentilles) et **A13**, **A14**, **A15** (fins de phase) | trois avis distincts par PR ; veto de la lentille sécurité sur tâche `sensible` |
-| Vérificateurs de tests | **A10** | un avis « mutation » par PR ; une garde sans mutation vue rougir est nommée |
+| Relecteurs adversariaux | **A09** (les lentilles qu'exige le risque, §6) et **A13**, **A14**, **A15** (fins de phase) | deux avis distincts sur une PR de risque ordinaire, trois sur une PR de risque élevé ; veto de la lentille sécurité sur toute PR |
+| Vérificateurs de tests | **A10** | un avis « mutation » par PR de risque élevé ; une garde sans mutation vue rougir est nommée |
 | Release manager : seul à fusionner | **A04** | une PR à la fois, atterrissage vérifié avant la suivante |
 | Documentaliste : `LECONS.md` | **A03** | date de dernière consolidation portée par le fichier |
 
@@ -287,12 +287,32 @@ Deux privations plus étroites, à ne pas confondre avec les précédentes :
 champ `Auteur:` n'apparaît **jamais** dans `Relecteur:`, et l'auteur ne s'auto-approuve pas. `gov:pr` rougit
 sur les deux cas.
 
-**Les trois lentilles.** Toute PR reçoit trois avis indépendants, portés par A09 : `exactitude` (le code fait-il
-exactement ce que disent les REQ citées, ni plus ni moins), `securite` (cloisonnement, défaut = refus, 404
-byte-identique, PII, journal, idempotence, absence d'oracle), `simplicite` (dérivation depuis une source unique,
-aucune duplication, nommage français conforme). Un même poste apparaît trois fois dans `Relecteur:` : ce sont
-trois **lectures** distinctes, pas trois postes distincts — la règle porte sur les lentilles, jamais sur
-l'unicité des codes.
+**Les lentilles, selon le risque.** Les avis sont portés par A09, un par lentille : `exactitude` (le code
+fait-il exactement ce que disent les REQ citées, ni plus ni moins), `securite` (cloisonnement, défaut = refus,
+404 byte-identique, PII, journal, idempotence, absence d'oracle), `simplicite` (dérivation depuis une source
+unique, aucune duplication, nommage français conforme). **Combien de lentilles une PR reçoit dépend de son
+risque** — décision de Will du 2026-09-18, consignée par `partners/ADR-0012`. Le risque est dérivé par
+`risqueDeLaPr()` (`scripts/lot/revues.ts`), **la seule dérivation**, appelée par `gov:pr` et par le composeur
+du corps de PR ; `pnpm gov:pr --pr <numéro>` l'imprime avec ses raisons, et c'est cette ligne qu'on lit avant
+de lancer les lentilles.
+
+L'ordinaire se **prouve**, l'élevé est le défaut. Une PR est de risque **ordinaire** si et seulement si :
+(1) au moins une tâche est résolue, par le titre ou par le champ `pr` ; (2) le registre des tâches de la base
+est lisible ; (3) chaque tâche résolue, lue sur la tête **et** sur la base, est en zone `gouvernance` ou
+`qualite`, porte un champ `sensible` présent et vide, et n'est pas `schema: true` ; (4) la PR ne porte pas le
+label `schema` ; (5) le diff n'est pas vide, et chacun de ses fichiers est à la racine ou sous `docs/`,
+`scripts/`, `tests/`, `.github/`, hors de la garde des revues (`scripts/lot/revues.ts`,
+`scripts/gates/gov-pr.ts`, `scripts/lot/corps-de-pr.ts`, cette charte, `docs/agents.json`). Sinon elle est de
+risque **élevé**.
+
+| Risque | Lentilles exigées |
+| --- | --- |
+| élevé | `exactitude`, `securite`, `simplicite` (ou `schema`, ci-dessous), et l'avis `mutation` |
+| ordinaire | `exactitude`, `securite` |
+
+Un même poste apparaît plusieurs fois dans `Relecteur:` : ce sont des **lectures** distinctes, pas des postes
+distincts — la règle porte sur les lentilles, jamais sur l'unicité des codes. Y déclarer plus de lentilles que
+le risque n'en exige est admis.
 
 **La troisième lentille sur une PR `schema`.** Toute PR touchant `prisma/**` ou `packages/contracts/**` porte
 le label `schema`. Sur cette PR, **A02 remplace la lentille `simplicite`** et son approbation est
@@ -300,13 +320,16 @@ le label `schema`. Sur cette PR, **A02 remplace la lentille `simplicite`** et so
 la formulation de sa fiche (`.claude/agents/architecte.md`), de `docs/CONVENTIONS.md` §5 et de l'acceptation
 de GOV-007 — **aucune lentille n'est ajoutée**, l'une d'elles change de titulaire.
 
-**La mutation.** A10 rend un avis distinct, en plus des trois lentilles : chaque garde introduite a été vue
-rougir sur une mutation réelle.
+**La mutation.** Sur une PR de risque élevé, A10 rend un avis distinct, en plus des lentilles : chaque garde
+introduite a été vue rougir sur une mutation réelle.
 
-**Le veto.** Sur une tâche dont le champ `sensible` contient `argent`, `attribution`, `auth`, `espace` ou
-`rgpd`, le refus de la lentille `securite` **bloque à lui seul** ; les deux autres restent à la majorité. Un
-veto se justifie par un scénario d'attaque, jamais par une préférence de style. Ces PR portent en plus la
-section « Attaque » du gabarit : scénario joué, résultat, qui l'a joué.
+**Le veto.** Sur **toute** PR, le refus de la lentille `securite` **bloque à lui seul** (décision de Will du
+2026-09-18). Aucune majorité ne le rattrape, ni aucune autre : `gov:pr` refuse la fusion sur tout refus rendu,
+qu'il vienne d'une lentille exigée ou non — on n'est pas obligé de demander une lentille, on ne peut pas
+l'ignorer une fois rendue. Un veto se justifie par un scénario d'attaque, jamais par une préférence de style.
+Sur une tâche dont le champ `sensible` contient `argent`, `attribution`, `auth`, `espace` ou `rgpd` — ou dont
+le champ manque —, la PR porte en plus la section « Attaque » du gabarit : scénario joué, résultat, qui l'a
+joué (REQ-GOV-011).
 
 **Les suppléances.** Cinq cas, et un seul principe : *un poste n'exerce pas sur sa propre PR le droit ou l'acte
 qui lui est réservé — et un poste ne peut pas exercer un acte que son outillage lui interdit.*
@@ -316,7 +339,7 @@ qui lui est réservé — et un poste ne peut pas exercer un acte que son outill
 | **A04** `release-manager` | la fusion | **A12** | Le lead tient déjà la file de lot et l'arbitrage ; il applique la même séquence, sans en sauter une étape |
 | **A02** `architecte`, sur une PR `schema` | la troisième lentille, bloquante | **A12** (lead de la zone `domaine`), plus **A14** si `packages/contracts/**` est touché | Un contrat vaut des deux côtés : quand l'architecte est l'auteur, c'est l'auditeur d'intégration qui vérifie que le hash rougit encore |
 | **A12** `lead` | l'arbitrage après deux tours | **A02** | Une brique fondatrice est une question de conception ; elle remonte à l'architecte, jamais à son auteur |
-| **A01** `gardien-spec` | rien de plus que la règle commune | les trois lentilles de **A09**, et **A11** dit ce qui manque | Les registres se relisent comme du code : REQ citées, identifiants qualifiés, valeurs dérivées |
+| **A01** `gardien-spec` | rien de plus que la règle commune | les lentilles de **A09** qu'exige le risque de la PR (§6), et **A11** dit ce qui manque | Les registres se relisent comme du code : REQ citées, identifiants qualifiés, valeurs dérivées |
 | **A07** `juriste` | l'exécution de la garde et la production du ROUGE | **A10** `verificateur-rouge` | A07 n'a **pas `Bash`** : il ne peut lancer aucun test, donc jamais produire le bloc ROUGE/VERT qu'exige REQ-GOV-012 — et une garde lexicale est un lint, donc soumise à cette exigence. A07 écrit la règle, A10 la voit rougir et signe la ligne `Rouge constaté par:` du gabarit. Sans cette ligne, le seul poste qui tient la charte relationnelle n'aurait aucun chemin de livraison |
 
 > **Ce que la suppléance ne transporte pas.** A04 est privé d'écriture ; A12 ne l'est pas. Quand A12 fusionne à
@@ -379,7 +402,7 @@ marqueur existerait en double.
 | Moment | Commande | Ce qui est contrôlé |
 | --- | --- | --- |
 | Toute PR, dans `gate-a` | `pnpm gov:pr` | la structure (gabarit, CODEOWNERS, §2, §6, §7) ; puis, si l'événement GitHub fournit la PR : titre, champs, huit cases, bloc ROUGE/VERT, section Attaque, labels des chemins réservés |
-| Avant la fusion, par A04 | `pnpm gov:pr --pr <numéro>` | tout ce qui précède **plus** les revues : trois lentilles distinctes, l'avis de mutation, l'approbation de A02 sur `schema`, l'auteur qui ne s'auto-approuve pas |
+| Avant la fusion, par A04 | `pnpm gov:pr --pr <numéro>` | tout ce qui précède **plus** les revues : les lentilles qu'exige le risque de la PR (§6), imprimé avec ses raisons, l'avis de mutation sur une PR de risque élevé, l'approbation de A02 sur `schema`, l'auteur qui ne s'auto-approuve pas |
 | À chaque exécution de la garde | `pnpm gov:pr:prove` | chaque famille de règle rougit sur son propre témoin, et les contre-témoins restent verts |
 
 Les revues **n'existent pas** au moment où l'événement `pull_request` déclenche la CI : une gate qui les

@@ -27,8 +27,9 @@
  *   — sur la PR : le titre, les champs remplis, l'auteur qui n'est pas son propre relecteur, les
  *     huit cases cochées, le bloc ROUGE/VERT dès qu'une garde est introduite, la section Attaque
  *     sur une tâche `sensible`, le label de chaque chemin réservé (§7 de la charte, LU ICI) ;
- *   — avec les revues : trois lentilles distinctes, l'avis de mutation, et l'approbation de A02
- *     sur une PR `schema`.
+ *   — avec les revues : les lentilles qu'exige le RISQUE de la PR (`risqueDeLaPr`, GOV-077) —
+ *     deux sur une PR ordinaire, trois plus l'avis de mutation sur une PR élevée —, aucune revue
+ *     distinguée de « toutes refusent », et l'approbation de A02 sur une PR `schema`.
  *
  * CE QU'ELLE NE PEUT PAS TENIR EN CI, ET QUI EST DIT PLUTÔT QUE CACHÉ. L'événement
  * `pull_request` ne porte AUCUNE revue : elles n'existent pas encore quand la CI tourne. Une
@@ -1144,7 +1145,7 @@ if (process.argv.includes('--prove')) {
     // ⚠️ `docs/CHARTE-AGENTS.md` APPARTIENT À LA GARDE DES REVUES (GOV-077) : cette PR est donc
     // de risque ÉLEVÉ, et exige quatre lentilles — ce qui garde rouge le témoin `slice(0, 2)` de
     // `lentilles_manquantes`. Élevée par ce fichier-là, pas par sa tâche : `PR_ORDINAIRE`
-    // ci-dessous est la PR ordinaire EXPLICITE, et le témoin R1 fait monter le risque par la tâche.
+    // ci-dessous est la PR ordinaire EXPLICITE, et le témoin du cas 1 fait monter le risque par la tâche.
     fichiers: [
       'docs/CHARTE-AGENTS.md',
       '.github/PULL_REQUEST_TEMPLATE.md',
@@ -1213,7 +1214,7 @@ if (process.argv.includes('--prove')) {
   };
 
   /**
-   * R0 — LA PR ORDINAIRE, EXPLICITE (GOV-077). `PR_TEMOIN` ne l'est pas, et PAR ACCIDENT : ses
+   * cas 0 — LA PR ORDINAIRE, EXPLICITE (GOV-077). `PR_TEMOIN` ne l'est pas, et PAR ACCIDENT : ses
    * fichiers portent `docs/CHARTE-AGENTS.md`, qui appartient à la garde des revues — donc risque
    * ÉLEVÉ, donc quatre lentilles. Une fixture conforme par accident ne prouve rien : celle-ci est
    * ordinaire par construction — tâche QA-T01, fichiers dérivés de ses `paths`, et la base
@@ -1229,7 +1230,7 @@ if (process.argv.includes('--prove')) {
     ],
   };
 
-  /** R1 — un numéro de PR que le registre ne porte pas, posé sur les tâches que le cas choisit. */
+  /** cas 1 — un numéro de PR que le registre ne porte pas, posé sur les tâches que le cas choisit. */
   const PR_R1 = 9999;
   const depotAvecPr = (ids: string[]): Depot => {
     const d = copieDepot();
@@ -1503,12 +1504,12 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      // R12 (GOV-077) — AUCUNE revue : une absence, nommée par sa propre famille.
+      // cas 12 (GOV-077) — AUCUNE revue : une absence, nommée par sa propre famille.
       famille: 'aucune_revue',
       defaut: () => [copieDepot(), { ...copiePr(PR_TEMOIN), revues: [] }],
     },
     {
-      // R12 (GOV-077) — les QUATRE revues refusent : ce n'est pas « aucune revue ». Avant, les
+      // cas 12 (GOV-077) — les QUATRE revues refusent : ce n'est pas « aucune revue ». Avant, les
       // deux imprimaient « Vues : (aucune) ».
       famille: 'lentille_en_refus',
       defaut: () => {
@@ -1521,7 +1522,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      // R1 (GOV-077) — la PR ordinaire par son titre, mais qui PORTE trois tâches dont la sensible
+      // cas 1 (GOV-077) — la PR ordinaire par son titre, mais qui PORTE trois tâches dont la sensible
       // est AU MILIEU du registre (QA-T01, DM-01 `rgpd`, GOV-039). Deux lentilles ne suffisent pas.
       famille: 'lentilles_manquantes',
       defaut: () => {
@@ -1674,16 +1675,16 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      // R0 (GOV-077, levier 3 de Will du 2026-09-18) — LA PR ORDINAIRE EXPLICITE. Titre QA-T01
+      // cas 0 (GOV-077, levier 3 de Will du 2026-09-18) — LA PR ORDINAIRE EXPLICITE. Titre QA-T01
       // (zone `qualite`, `sensible` vide, `schema` faux), fichiers DÉRIVÉS de ses `paths`, aucun
       // hors de `docs/`, `scripts/`, `tests/`, `.github/` ou de la racine : deux lentilles suffisent.
       quoi: 'une PR ORDINAIRE (QA-T01) relue par exactitude et securite seules, sur la tête',
       cas: () => [depot, PR_ORDINAIRE],
     },
     {
-      // R1, l'autre face : la même PR SANS la tâche sensible. Si elle rougissait, le témoin R1
+      // cas 1, l'autre face : la même PR SANS la tâche sensible. Si elle rougissait, le témoin du cas 1
       // rougirait peut-être pour une autre raison que DM-01.
-      quoi: 'la PR R1 sans sa tâche sensible (QA-T01 et GOV-039), deux lentilles',
+      quoi: 'la PR du cas 1 sans sa tâche sensible (QA-T01 et GOV-039), deux lentilles',
       cas: () => {
         const d = depotAvecPr(['QA-T01', 'GOV-039']);
         return [d, { ...copiePr(PR_ORDINAIRE), numero: PR_R1, tachesBase: d.taches }];
@@ -1714,7 +1715,7 @@ if (process.argv.includes('--prove')) {
     }
     prouvees.add(t.famille);
   }
-  // R12 (GOV-077) — UN AVIS POSTÉ EN COMMENTAIRE D'ISSUE EST DIT. Ce n'est pas une famille (il ne
+  // cas 12 (GOV-077) — UN AVIS POSTÉ EN COMMENTAIRE D'ISSUE EST DIT. Ce n'est pas une famille (il ne
   // compte pour rien, il ne rougit pas) : la preuve vérifie donc qu'il est NOMMÉ, sur la capture
   // réelle de la PR 41, une ligne par avis. Un écart ici LÈVE — la preuve ne passe pas en silence.
   {

@@ -15,7 +15,7 @@
  * TOUS LES TÉMOINS PASSENT PAR LE COMPORTEMENT (`risqueDeLaPr`, `lentillesExigees`, `lireRevues`,
  * `fautesDesRevues`, `jugerCaseRevues`) et par le registre RÉEL `docs/tasks.json` — jamais par la
  * lecture d'une orthographe dans un fichier source. Le seul témoin qui lit des sources est celui du
- * graphe d'imports (R7), et il y lit une STRUCTURE (qui importe qui), pas un symbole.
+ * graphe d'imports (cas 7), et il y lit une STRUCTURE (qui importe qui), pas un symbole.
  *
  * ⚠️ L'API neuve se prend par ESPACE DE NOMS : un export absent y vaut `undefined`, et chaque témoin
  * rougit alors sur son propre appel au lieu de faire tomber le chargement du fichier entier.
@@ -86,7 +86,7 @@ function risque(p: {
   });
 }
 
-describe('REQ-GOV-011 — R0 : la PR ORDINAIRE existe, et deux lentilles de revue lui suffisent', () => {
+describe('REQ-GOV-011 — cas 0 : la PR ORDINAIRE existe, et deux lentilles de revue lui suffisent', () => {
   it('REQ-GOV-011 · une PR QA-T01 (qualite, sensible vide, aucun code produit) est de risque ordinaire', () => {
     const r = risque({ titre: 'feat(QA-T01): aucune gate en continue-on-error' });
     expect(r.niveau, r.raisons.join(' ; ')).toBe('ordinaire');
@@ -115,7 +115,7 @@ describe('REQ-GOV-011 — R0 : la PR ORDINAIRE existe, et deux lentilles de revu
   });
 });
 
-describe('REQ-GOV-011 — R1 : plusieurs tâches sur la PR, la sensible AU MILIEU', () => {
+describe('REQ-GOV-011 — cas 1 : plusieurs tâches sur la PR, la sensible AU MILIEU', () => {
   const IDS = ['QA-T01', 'DM-01', 'GOV-039'];
   function avecPr(ids: string[]): TacheBrute[] {
     return registre().map((t) => (ids.includes(t.id) ? { ...t, pr: 9999 } : t));
@@ -125,7 +125,7 @@ describe('REQ-GOV-011 — R1 : plusieurs tâches sur la PR, la sensible AU MILIE
     const T = registre();
     const indices = IDS.map((id) => T.findIndex((t) => t.id === id));
     console.log(
-      `R1 — indices au registre : ${IDS.map((id, i) => `${id}@${indices[i]}`).join(', ')}`
+      `cas 1 — indices au registre : ${IDS.map((id, i) => `${id}@${indices[i]}`).join(', ')}`
     );
     expect(indices[0]!).toBeLessThan(indices[1]!);
     expect(indices[1]!).toBeLessThan(indices[2]!);
@@ -166,11 +166,11 @@ describe('REQ-GOV-011 — R1 : plusieurs tâches sur la PR, la sensible AU MILIE
   });
 });
 
-describe('REQ-GOV-011 — R2 à R5 : ce que la PR porte comme tâche décide seul du risque', () => {
+describe('REQ-GOV-011 — cas 2 à 5 : ce que la PR porte comme tâche décide seul du risque', () => {
   /** Des fichiers de la PR qui ne font JAMAIS monter le risque : seul le champ varie. */
   const NEUTRES = ['docs/journal/2026-09.md'];
 
-  it('REQ-GOV-011 · R2 : une PR SEC-01 (zone securite, sensible VIDE) est élevée — la zone compte seule', () => {
+  it('REQ-GOV-011 · cas 2 : une PR SEC-01 (zone securite, sensible VIDE) est élevée — la zone compte seule', () => {
     const T = registre();
     expect(tache(T, 'SEC-01').sensible).toEqual([]);
     const r = risque({ titre: 'feat(SEC-01): x', fichiers: NEUTRES });
@@ -178,14 +178,14 @@ describe('REQ-GOV-011 — R2 à R5 : ce que la PR porte comme tâche décide seu
     expect(r.raisons.join(' ; ')).toContain('securite');
   });
 
-  it('REQ-GOV-011 · R3 : une PR INT-T13 (contacts à qualifier, sensible vide) est élevée par sa zone', () => {
+  it('REQ-GOV-011 · cas 3 : une PR INT-T13 (contacts à qualifier, sensible vide) est élevée par sa zone', () => {
     expect(tache(registre(), 'INT-T13').sensible).toEqual([]);
     const r = risque({ titre: 'feat(INT-T13): x', fichiers: NEUTRES });
     expect(r.niveau).toBe('eleve');
     expect(r.raisons.join(' ; ')).toContain('INT-T13');
   });
 
-  it('REQ-GOV-011 · R4 : un champ `sensible` ABSENT ou une `zone` ABSENTE rendent la PR élevée', () => {
+  it('REQ-GOV-011 · cas 4 : un champ `sensible` ABSENT ou une `zone` ABSENTE rendent la PR élevée', () => {
     for (const champ of ['sensible', 'zone'] as const) {
       const T = registre().map((t) => {
         if (t.id !== 'QA-T01') return t;
@@ -199,13 +199,13 @@ describe('REQ-GOV-011 — R2 à R5 : ce que la PR porte comme tâche décide seu
     }
   });
 
-  it('REQ-GOV-011 · R4 bis : `sensible: null` n’est pas un tableau vide — la PR reste élevée', () => {
+  it('REQ-GOV-011 · cas 4 bis : `sensible: null` n’est pas un tableau vide — la PR reste élevée', () => {
     const T = registre().map((t) => (t.id === 'QA-T01' ? { ...t, sensible: null } : t));
     const r = risque({ titre: 'feat(QA-T01): x', taches: T, tachesBase: T, fichiers: NEUTRES });
     expect(r.niveau).toBe('eleve');
   });
 
-  it('REQ-GOV-011 · R5 : une tâche DÉCLASSÉE sur la tête mais pas sur la base reste élevée, raison « base »', () => {
+  it('REQ-GOV-011 · cas 5 : une tâche DÉCLASSÉE sur la tête mais pas sur la base reste élevée, raison « base »', () => {
     const tete = registre().map((t) =>
       t.id === 'DM-01' ? { ...t, zone: 'gouvernance', sensible: [], schema: false } : t
     );
@@ -223,15 +223,15 @@ describe('REQ-GOV-011 — R2 à R5 : ce que la PR porte comme tâche décide seu
     ).toBe('ordinaire');
   });
 
-  it('REQ-GOV-011 · R5 bis : un registre de base ILLISIBLE rend la PR élevée', () => {
+  it('REQ-GOV-011 · cas 5 bis : un registre de base ILLISIBLE rend la PR élevée', () => {
     const r = risque({ titre: 'feat(QA-T01): x', tachesBase: null });
     expect(r.niveau).toBe('eleve');
     expect(r.raisons.join(' ; ')).toContain('base');
   });
 });
 
-describe('REQ-GOV-011 — R6 à R8 : ce que la PR TOUCHE décide aussi du risque', () => {
-  it('REQ-GOV-011 · R6 : un fichier de code produit AU MILIEU du diff rend la PR élevée, et il est nommé', () => {
+describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risque', () => {
+  it('REQ-GOV-011 · cas 6 : un fichier de code produit AU MILIEU du diff rend la PR élevée, et il est nommé', () => {
     for (const intrus of ['src/server/securite/pii.ts', 'config/exemptions-corps-publie.json']) {
       const r = risque({
         titre: 'feat(QA-T01): x',
@@ -242,7 +242,7 @@ describe('REQ-GOV-011 — R6 à R8 : ce que la PR TOUCHE décide aussi du risque
     }
   });
 
-  it('REQ-GOV-011 · R7 : un fichier de la garde des revues au milieu du diff rend la PR élevée', () => {
+  it('REQ-GOV-011 · cas 7 : un fichier de la garde des revues au milieu du diff rend la PR élevée', () => {
     const r = risque({
       titre: 'feat(QA-T01): x',
       fichiers: ['docs/journal/2026-09.md', 'scripts/lot/corps-de-pr.ts', 'tests/unit/x.spec.ts'],
@@ -251,7 +251,7 @@ describe('REQ-GOV-011 — R6 à R8 : ce que la PR TOUCHE décide aussi du risque
     expect(r.raisons.join(' ; ')).toContain('scripts/lot/corps-de-pr.ts');
   });
 
-  it('REQ-GOV-011 · R7 : la garde des revues est DÉRIVÉE du graphe d’imports — tout importeur de revues.ts y figure', () => {
+  it('REQ-GOV-011 · cas 7 : la garde des revues est DÉRIVÉE du graphe d’imports — tout importeur de revues.ts y figure', () => {
     // Une boucle sur la constante elle-même survivrait à sa troncature : c'est le GRAPHE qui dit
     // ce qu'elle doit contenir. Tout fichier de `scripts/` qui importe `scripts/lot/revues.ts`,
     // le module lui-même, et les deux documents qu'il LIT (charte, registre des postes).
@@ -291,7 +291,7 @@ describe('REQ-GOV-011 — R6 à R8 : ce que la PR TOUCHE décide aussi du risque
     }
   });
 
-  it('REQ-GOV-011 · R8 : un diff VIDE, une tâche INCONNUE, un label `schema` rendent la PR élevée', () => {
+  it('REQ-GOV-011 · cas 8 : un diff VIDE, une tâche INCONNUE, un label `schema` rendent la PR élevée', () => {
     expect(risque({ titre: 'feat(QA-T01): x', fichiers: [] }).niveau).toBe('eleve');
     expect(risque({ titre: 'feat(ZZZ-999): x' }).niveau).toBe('eleve');
     expect(risque({ titre: null }).niveau).toBe('eleve');
@@ -303,7 +303,7 @@ describe('REQ-GOV-011 — R6 à R8 : ce que la PR TOUCHE décide aussi du risque
     expect(l).not.toContain('simplicite');
   });
 
-  it('REQ-GOV-011 · R8 bis : un fichier de schéma (prisma/) rend la PR élevée ET exige la lentille schema', () => {
+  it('REQ-GOV-011 · cas 8 bis : un fichier de schéma (prisma/) rend la PR élevée ET exige la lentille schema', () => {
     const r = risque({
       titre: 'feat(QA-T01): x',
       fichiers: [...FICHIERS_QA_T01, 'prisma/schema.prisma'],
@@ -318,7 +318,7 @@ describe('REQ-GOV-011 — R6 à R8 : ce que la PR TOUCHE décide aussi du risque
   });
 });
 
-describe('REQ-GOV-011 — R9 : toute tâche du registre réel est classée, les deux classes existent', () => {
+describe('REQ-GOV-011 — cas 9 : toute tâche du registre réel est classée, les deux classes existent', () => {
   it('REQ-GOV-011 · chaque tâche, en PR synthétique à une tâche, est classée ; ordinaire et élevé sont comptés', () => {
     const T = registre();
     let ordinaires = 0;
@@ -329,9 +329,9 @@ describe('REQ-GOV-011 — R9 : toute tâche du registre réel est classée, les 
       else if (r.niveau === 'eleve') eleves++;
       else throw new Error(`${t.id} : niveau inconnu ${String(r.niveau)}`);
     }
-    console.log(`R9 — ${T.length} tâches : ${ordinaires} ordinaire(s), ${eleves} élevée(s)`);
+    console.log(`cas 9 — ${T.length} tâches : ${ordinaires} ordinaire(s), ${eleves} élevée(s)`);
     expect(ordinaires + eleves).toBe(T.length);
-    // Une fonction qui rendrait TOUJOURS élevé passerait R1 à R8 : elle rougit ici.
+    // Une fonction qui rendrait TOUJOURS élevé passerait cas 1 à cas 8 : elle rougit ici.
     expect(ordinaires).toBeGreaterThan(0);
     expect(eleves).toBeGreaterThan(0);
   });
@@ -356,7 +356,7 @@ describe('REQ-GOV-011 — R9 : toute tâche du registre réel est classée, les 
   });
 });
 
-describe('REQ-GOV-011 — R10 : le composeur du corps de PR juge la case des revues par le MÊME risque', () => {
+describe('REQ-GOV-011 — cas 10 : le composeur du corps de PR juge la case des revues par le MÊME risque', () => {
   const revuesDeuxAccords = DEUX_ACCORDS;
 
   it('REQ-GOV-011 · la PR à tâche sensible au milieu, deux revues acceptées : la case reste VIDE et nomme DM-01', () => {
@@ -418,7 +418,7 @@ describe('REQ-GOV-011 — R10 : le composeur du corps de PR juge la case des rev
   });
 });
 
-describe('REQ-GOV-011 — R11 : une valeur de risque imprévue exige les quatre lentilles de revue', () => {
+describe('REQ-GOV-011 — cas 11 : une valeur de risque imprévue exige les quatre lentilles de revue', () => {
   it('REQ-GOV-011 · `niveau` inconnu : exactitude, securite, simplicite, mutation', () => {
     const l = LECTEUR.lentillesExigees({ niveau: 'inconnu' as never, schema: false, raisons: [] });
     expect([...l.toutes]).toEqual(['exactitude', 'securite', 'simplicite', 'mutation']);
