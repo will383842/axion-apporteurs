@@ -134,6 +134,21 @@ export function lireEnvironnement(source: Readonly<Record<string, string | undef
     }
   }
 
+  // L'égalité se juge sur des EMPREINTES, jamais en comparant ni en imprimant les valeurs, et sur
+  // TOUT le jeu : chaque groupe de deux noms ou plus qui partagent une valeur est un refus unique.
+  const parEmpreinte = new Map<string, string[]>();
+  for (const nom of NOMS_DES_SECRETS) {
+    const v = source[nom];
+    if (v === undefined || v === '') continue;
+    const empreinte = createHash('sha256').update(v, 'utf8').digest('hex');
+    parEmpreinte.set(empreinte, [...(parEmpreinte.get(empreinte) ?? []), nom]);
+  }
+  for (const [premier, ...autres] of parEmpreinte.values()) {
+    if (premier !== undefined && autres.length > 0) {
+      refus.push({ variable: premier, motif: 'egale_a', avec: autres });
+    }
+  }
+
   if (!lu.success || refus.length > 0) return { ok: false, refus };
   return { ok: true, env: lu.data };
 }

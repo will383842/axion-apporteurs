@@ -60,14 +60,11 @@ writeFileSync(
 );
 
 /** Le strict nécessaire pour que le processus se lance — et rien du poste qui porte un secret. */
-const BASE: Record<string, string> = Object.fromEntries(
-  (
-    [
-      ['PATH', process.env.PATH],
-      ['SystemRoot', process.env.SystemRoot],
-    ] as const
-  ).filter((e): e is readonly [string, string] => typeof e[1] === 'string')
-);
+const BASE: Record<string, string> = {};
+for (const nom of ['PATH', 'SystemRoot']) {
+  const v = process.env[nom];
+  if (v !== undefined) BASE[nom] = v;
+}
 
 interface Sortie {
   code: number | null;
