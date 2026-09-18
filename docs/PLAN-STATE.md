@@ -147,7 +147,7 @@ un champ `horsCi` d'au moins soixante caractères, la même exigence que pour un
 filtre `g.phase` au plus `-1` n'est pas reconduit, et la décision est écrite à côté du code avec sa
 mesure : c'était un proxy de « déjà écrite », que le disque remplace par le fait. Trois témoins
 gardent ce choix — phase 0 non câblée rouge, phase 0 câblée verte, phase future non écrite
-silencieuse. Dix-huit témoins, aucune assertion d'orthographe : chacun exécute le contrôle, la
+silencieuse. Vingt-trois témoins, aucune assertion d'orthographe : chacun exécute le contrôle, la
 confrontation, le périmètre ou le script entier, et la population est recomptée hors de sa fonction
 par un `git ls-files` lu dans le test. Les deux gardes hors registre, `gov:attributions` et
 `gov:attestation`, y sont inscrites par `outils/ajouter-entree.mjs`, le verbe d'ajout né le
@@ -157,10 +157,16 @@ Chaque preuve versée a été remesurée sur la tête avant l'écriture : les qu
 la PR 48, réinsérées, font sortir `gov:attributions` en 1 sur quatre `dette_perimee` ; un SHA nul
 posé sur `INT-T01b` passe la forme et `gov:attestation --en-ligne` le rejette en HTTP 422. Le refus
 `garde_hors_registre` conseillait `reecrire-champ.mjs`, qui refuse précisément une entrée absente ;
-il nomme maintenant `ajouter-entree.mjs`, et un dix-huitième témoin l'épingle.
+il nomme maintenant `ajouter-entree.mjs`, et un témoin l'épingle. La lentille mutation a refusé la
+tête `6a88e1b` : deux mutants survivaient, qui absolvaient toute garde dès qu'une entrée du
+registre porte un alias, parce que chaque témoin tournait sur un registre injecté sans alias ni
+`horsCi`. Cinq témoins partent désormais du registre RÉEL : retirer l'entrée de chaque garde
+inscrite, une garde neuve sans entrée, le décâblage de chaque garde à alias, et le même jeu lancé
+dans un dépôt jetable dont on lit le code de sortie. Les deux mutants sont tués, la garde n'a pas
+changé.
 
-**Reste.** Les huit cases de la définition de terminé, que Will coche, et les trois lentilles plus
-l'avis de mutation. Hors périmètre et non touché : le tri des entrées de registre sans script sur le
+**Reste.** Les huit cases de la définition de terminé, que Will coche, et la relecture de la
+lentille mutation sur la nouvelle tête. Hors périmètre et non touché : le tri des entrées de registre sans script sur le
 disque — autre dépôt, phase future, entrée fautive — qui appartient à GOV-051, et que le rendu
 compte à trente sans les distinguer. Effet de bord déclaré : `gov-conventions.ts` est partagé par
 quatre tâches, donc GOV-051 n'est pas composable tant que cette PR est ouverte.
@@ -179,7 +185,9 @@ motif ne vit nulle part qu'une garde puisse lire, il ne reste que deux issues, u
 qu'on apprend à ignorer, ou le silence. C'est pour cela que la déclaration est un champ du registre
 et pas un commentaire. Troisième : un refus qui propose le mauvais geste est un piège poli. Celui-ci
 nommait un verbe qui répond « aucune entrée » sur exactement le cas qu'il décrit ; on le suit, il
-refuse, et le trou reste ouvert avec une conscience tranquille.
+refuse, et le trou reste ouvert avec une conscience tranquille. Quatrième, apporté par la lentille
+mutation : un témoin dont les données n'ont pas la FORME du vrai registre ne garde que la forme qu'il
+a inventée. Dix-huit témoins verts ne disaient rien des alias parce qu'aucun n'en portait.
 
 ### PR #53 — 2026-09-17 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent
 
