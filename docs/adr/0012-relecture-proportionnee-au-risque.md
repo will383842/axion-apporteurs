@@ -46,8 +46,9 @@ les cinq conditions sont établies ; sinon elle est élevée :
    `qualite`, porte un champ `sensible` **présent et vide**, et n'est pas `schema: true` — la plus
    haute l'emporte ;
 4. la PR ne porte pas le label `schema` ;
-5. le diff n'est pas vide, et chacun de ses fichiers est à la racine ou sous `docs/`, `scripts/`,
-   `tests/` — jamais sous `.github/` — et n'appartient pas à la garde des revues (`scripts/lot/revues.ts`,
+5. le diff n'est pas vide, et chacun de ses fichiers est sous `docs/`, `scripts/`, `tests/`, ou est
+   un document `*.md` à la racine — jamais sous `.github/`, jamais un autre fichier de la racine —, et
+   n'appartient pas à la garde des revues (`scripts/lot/revues.ts`,
    `scripts/gates/gov-pr.ts`, `scripts/lot/corps-de-pr.ts`, `docs/CHARTE-AGENTS.md`,
    `docs/agents.json`).
 
@@ -79,6 +80,15 @@ pas l'ignorer une fois rendue. La section « Attaque » reste exigée sur une t�
   la première version) : les workflows et `CODEOWNERS` gouvernent les gates et la propriété des
   chemins ; une PR qui affaiblit la CI est exactement celle qu'on ne relit pas à deux lentilles.
   Conséquence assumée : QA-T01, qui touche `.github/workflows/ci.yml`, se relit en élevé.
+- **La racine hors de la liste blanche, sauf ses documents `*.md`** (même arbitrage, sur une dette de
+  la lentille `securite`) : `package.json`, `pnpm-lock.yaml`, `.npmrc`, `vitest.config.*`,
+  `eslint.config.*`, `tsconfig*.json`, `.gitattributes` gouvernent la chaîne de contrôle. Les
+  énumérer laisserait passer le prochain ; la règle fermée est « toute la racine sauf les documents ».
+- **Un fichier renommé ou copié compte par sa source ET sa destination** (refus bloquant de la
+  lentille `securite` sur la PR de cette décision) : la forge sert la source dans
+  `previous_filename`, `git diff --name-status` la rend en première colonne de chemin. Une seule
+  extraction, `cheminsTouches()`, pour la garde et le composeur ; sans elle, un fichier retiré de
+  `.github/` ou de `prisma/` n'était jugé que par l'endroit où il arrive.
 - **La garde des revues est toujours élevée**, même sous `scripts/` ou `docs/` : sinon une PR relue
   par deux lentilles pourrait affaiblir la règle qui décide combien de lentilles relisent les
   autres. La liste est confrontée au graphe d'imports de `scripts/`.
@@ -86,9 +96,10 @@ pas l'ignorer une fois rendue. La section « Attaque » reste exigée sur une t�
   ou viderait le `sensible` de sa propre tâche et se relirait en ordinaire. Un champ **absent** vaut
   élevé — la projection `sensible ?? []` de `gov-pr.ts` était un échec ouvert, elle est retirée.
 
-Mesure à `809a746` (260 tâches, une PR synthétique par tâche, fichiers dérivés de ses `paths`) :
-56 ordinaires, 204 élevées. Sur les 206 tâches `partners` non livrées, **35 sont ordinaires** — autant
-de PR relues par deux lentilles au lieu de quatre — et 171 restent élevées (la première version, `.github/` compris, en comptait 46 et 160).
+Mesure à `87fb212` (260 tâches, une PR synthétique par tâche, fichiers dérivés de ses `paths`) :
+52 ordinaires, 208 élevées. Sur les 201 tâches `partners` non livrées, **29 sont ordinaires** — autant
+de PR relues par deux lentilles au lieu de quatre — et 172 restent élevées. La première version
+(`.github/` et racine admis) en comptait 46 sur 206, la deuxième (racine admise) 35 sur 206.
 
 ## Conséquences
 

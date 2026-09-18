@@ -48,6 +48,8 @@ import {
   MOTIF_TITRE_DE_PR,
   avisHorsCanal,
   cheminsSchema,
+  cheminsTouches,
+  entreesDuDiff,
   direLeRisque,
   fautesDesRevues,
   lentillesExigees,
@@ -60,6 +62,7 @@ import {
   estAncetreDe,
   type CommentaireBrut,
   type DemandeDeConcordance,
+  type EntreeDeFichier,
   type RevueBrute,
   type Risque,
   type TacheDeLaPr,
@@ -880,14 +883,16 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
   // PLAFONNE À 100 (GOV-077). Le risque de la PR se lit sur ses fichiers : un fichier de code
   // produit au 101ᵉ rang serait invisible, et la PR se relirait en ordinaire. C'est la forme que
   // `scripts/lot/corps-de-pr.ts` emploie déjà.
-  const fichiers = (
+  // Un fichier RENOMMÉ compte par sa source ET sa destination : `cheminsTouches()`, l'extraction
+  // unique partagée avec le composeur (refus de `securite`, 2026-09-19).
+  const fichiers = cheminsTouches(
     JSON.parse(
       execFileSync('gh', ['api', '--paginate', `repos/{owner}/{repo}/pulls/${numero}/files`], {
         encoding: 'utf8',
         maxBuffer: 32e6,
       })
-    ) as { filename: string }[]
-  ).map((f) => f.filename);
+    ) as EntreeDeFichier[]
+  );
   // Un avis posté en COMMENTAIRE D'ISSUE ne compte pour rien (la PR 41) : on le lit pour le DIRE.
   const commentaires = JSON.parse(
     execFileSync('gh', ['api', '--paginate', `repos/{owner}/{repo}/issues/${numero}/comments`], {
@@ -1001,15 +1006,19 @@ function prParEvenement(): Pr | null {
   if (!ev.pull_request) return null;
   let fichiers: string[] = [];
   try {
-    fichiers = execFileSync(
-      'git',
-      ['diff', '--name-only', `${ev.pull_request.base.sha}...${ev.pull_request.head.sha}`],
-      {
-        encoding: 'utf8',
-      }
-    )
-      .split('\n')
-      .filter(Boolean);
+    // `--name-status` et non `--name-only` : ce dernier ne rend que la DESTINATION d'un renommage.
+    // La source et la destination passent par l'extraction unique (`entreesDuDiff`, `cheminsTouches`).
+    fichiers = cheminsTouches(
+      entreesDuDiff(
+        execFileSync(
+          'git',
+          ['diff', '--name-status', `${ev.pull_request.base.sha}...${ev.pull_request.head.sha}`],
+          {
+            encoding: 'utf8',
+          }
+        )
+      )
+    );
   } catch {
     console.error(
       `❌ gov:pr — impossible de lister les fichiers de la PR (\`git diff\`). Le job doit poser ` +
@@ -1225,9 +1234,10 @@ if (process.argv.includes('--prove')) {
   const PR_ORDINAIRE: Pr = {
     ...copiePr(PR_TEMOIN),
     titre: 'feat(QA-T01): aucune gate en continue-on-error',
-    // Ses `paths` HORS `.github/` : un fichier de CI rend la PR élevée (décision de
-    // l'orchestrateur du 2026-09-18 sur GOV-077) — c'est le témoin `CI_AU_MILIEU` qui le prouve.
-    fichiers: cheminsDe('QA-T01').filter((f) => !f.startsWith(DOSSIER_CI)),
+    // Ses `paths` HORS `.github/` et hors de la RACINE : un fichier de CI ou de configuration à la
+    // racine rend la PR élevée (décisions de l'orchestrateur du 2026-09-18 sur GOV-077) — ce sont
+    // les témoins `AU_MILIEU` qui le prouvent.
+    fichiers: cheminsDe('QA-T01').filter((f) => !f.startsWith(DOSSIER_CI) && f.includes('/')),
     revues: [
       revue('A09 · exactitude\nVerdict: accepte\nles REQ citees sont couvertes'),
       revue('A09 · securite\nVerdict: accepte\nrien a signaler'),
@@ -1238,16 +1248,34 @@ if (process.argv.includes('--prove')) {
    * cas 6 ter — la PR ordinaire, plus le fichier de CI que QA-T01 DÉCLARE, glissé AU MILIEU de ses
    * fichiers : risque élevé, donc deux lentilles ne suffisent plus.
    */
-  const CI_AU_MILIEU = (): Pr => {
+  const AU_MILIEU = (quoi: string, choisir: (f: string) => boolean): Pr => {
     const p = copiePr(PR_ORDINAIRE);
-    const ci = cheminsDe('QA-T01').filter((f) => f.startsWith(DOSSIER_CI));
-    if (ci.length === 0) {
+    const glisses = cheminsDe('QA-T01').filter(choisir);
+    if (glisses.length === 0) {
       throw new Error(
-        'gov:pr --prove — QA-T01 ne déclare plus de fichier de CI : le témoin ne mesure rien.'
+        `gov:pr --prove — QA-T01 ne déclare plus de ${quoi} : le témoin ne mesure rien.`
       );
     }
     const m = Math.floor(p.fichiers.length / 2);
-    p.fichiers = [...p.fichiers.slice(0, m), ...ci, ...p.fichiers.slice(m)];
+    p.fichiers = [...p.fichiers.slice(0, m), ...glisses, ...p.fichiers.slice(m)];
+    return p;
+  };
+  const CI_AU_MILIEU = (): Pr => AU_MILIEU('fichier de CI', (f) => f.startsWith(DOSSIER_CI));
+  /** cas 6 quater — un fichier de configuration à la RACINE (`vitest.config.ts`), au milieu. */
+  const RACINE_AU_MILIEU = (): Pr => AU_MILIEU('fichier racine', (f) => !f.includes('/'));
+  /**
+   * cas 6 quinquies — un RENOMMAGE au milieu des fichiers, extrait par `cheminsTouches()`, la même
+   * fonction que `prParGh()` : un fichier renommé compte par sa source ET sa destination.
+   */
+  const RENOMMAGE_AU_MILIEU = (source: string, destination: string): Pr => {
+    const p = copiePr(PR_ORDINAIRE);
+    const m = Math.floor(p.fichiers.length / 2);
+    const entrees: EntreeDeFichier[] = [
+      ...p.fichiers.slice(0, m).map((filename) => ({ filename })),
+      { filename: destination, previous_filename: source, status: 'renamed' },
+      ...p.fichiers.slice(m).map((filename) => ({ filename })),
+    ];
+    p.fichiers = cheminsTouches(entrees);
     return p;
   };
 
@@ -1548,6 +1576,27 @@ if (process.argv.includes('--prove')) {
       defaut: () => [copieDepot(), CI_AU_MILIEU()],
     },
     {
+      // cas 6 quater (GOV-077) — un fichier de configuration à la racine : quatre lentilles.
+      famille: 'lentilles_manquantes',
+      defaut: () => [copieDepot(), RACINE_AU_MILIEU()],
+    },
+    {
+      // cas 6 quinquies (GOV-077) — le fichier de CI RENOMMÉ hors de `.github/` : sa source compte.
+      famille: 'lentilles_manquantes',
+      defaut: () => [
+        copieDepot(),
+        RENOMMAGE_AU_MILIEU(`${DOSSIER_CI}workflows/ci.yml`, 'docs/archive/ci.yml'),
+      ],
+    },
+    {
+      // cas 6 sexies (GOV-077) — le schéma RENOMMÉ hors de `prisma/` : le label `schema` reste exigé.
+      famille: 'schema_sans_label',
+      defaut: () => [
+        copieDepot(),
+        RENOMMAGE_AU_MILIEU(`${cheminsSchema(depot.charte)[0]}schema.prisma`, 'docs/schema.prisma'),
+      ],
+    },
+    {
       // cas 1 (GOV-077) — la PR ordinaire par son titre, mais qui PORTE trois tâches dont la sensible
       // est AU MILIEU du registre (QA-T01, DM-01 `rgpd`, GOV-039). Deux lentilles ne suffisent pas.
       famille: 'lentilles_manquantes',
@@ -1706,6 +1755,12 @@ if (process.argv.includes('--prove')) {
       // `.github/`, aucun hors de `docs/`, `scripts/`, `tests/` ou de la racine : deux lentilles.
       quoi: 'une PR ORDINAIRE (QA-T01) relue par exactitude et securite seules, sur la tête',
       cas: () => [depot, PR_ORDINAIRE],
+    },
+    {
+      // L'autre face des renommages : un document renommé DANS `docs/` reste ordinaire. Sans ce
+      // contre-témoin, une extraction qui rendrait tout renommage élevé passerait pour la règle.
+      quoi: 'la PR ordinaire avec un document renommé à l’intérieur de docs/',
+      cas: () => [depot, RENOMMAGE_AU_MILIEU('docs/ancien.md', 'docs/nouveau.md')],
     },
     {
       // cas 1, l'autre face : la même PR SANS la tâche sensible. Si elle rougissait, le témoin du cas 1

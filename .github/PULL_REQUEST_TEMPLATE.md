@@ -12,7 +12,8 @@ dans ce fichier, et `gov:pr` rougit si ce n'est plus vrai.
     dod:fin, et nulle part ailleurs : aucune autre case à cocher dans le corps ;
   · le bloc ROUGE/VERT vit entre rouge-vert:debut et rouge-vert:fin ;
   · la section Attaque vit entre attaque:debut et attaque:fin. Elle est EXIGÉE si la tâche porte
-    un champ `sensible` non vide, ou si le diff touche commissions/, attributions/, auth/ ou espace/ ;
+    un champ `sensible` non vide ou ABSENT (un champ absent compte comme sensible), ou si le diff
+    touche commissions/, attributions/, auth/ ou espace/ ;
   · la règle maison est un CHAMP, entre regle-maison:debut et regle-maison:fin — en case, elle
     ferait une neuvième case et fausserait le compte de REQ-GOV-013 ;
   · `Auteur:` n'apparaît jamais dans `Relecteur:`, et l'auteur ne s'auto-approuve pas. La règle
@@ -64,7 +65,7 @@ sans objet : la tâche ne porte pas de champ `sensible` et le diff ne touche auc
 
 <!-- attaque:fin -->
 
-> Exigée si la tâche porte un champ `sensible` non vide, ou si le diff touche `commissions/`,
+> Exigée si la tâche porte un champ `sensible` non vide ou absent, ou si le diff touche `commissions/`,
 > `attributions/`, `auth/` ou `espace/`. Trois lignes : le scénario joué, le résultat obtenu, qui
 > l'a joué. Le refus de la lentille `securite` vaut veto à lui seul, sur toute PR (charte §6).
 

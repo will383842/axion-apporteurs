@@ -53,10 +53,12 @@ import { execFileSync } from 'node:child_process';
 
 import { CHAMPS } from '../../src/config/entite';
 import {
+  cheminsTouches,
   lireRevues,
   risqueDeLaPr,
   tachesDeLaBase,
   tachesDeLaPr,
+  type EntreeDeFichier,
   type RevueBrute,
   type TacheDeLaPr,
   jugerLesTetes,
@@ -263,14 +265,15 @@ function caseRevues(
     }
     auteurCompte = meta.user?.login ?? null;
     labels = (meta.labels ?? []).map((l) => l.name);
-    fichiers = (
+    // Un fichier RENOMMÉ compte par sa source ET sa destination : la même extraction que la garde.
+    fichiers = cheminsTouches(
       JSON.parse(
         execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/files`, '--paginate'], {
           encoding: 'utf8',
           maxBuffer: 32e6,
         })
-      ) as { filename: string }[]
-    ).map((f) => f.filename);
+      ) as EntreeDeFichier[]
+    );
     revues = JSON.parse(
       execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/reviews`, '--paginate'], {
         encoding: 'utf8',

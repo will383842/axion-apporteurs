@@ -537,13 +537,19 @@ export function tachesSchemaDeLaPr<T extends TacheDeLaPr>(
  *      `qualite`, porte `sensible` PRÉSENT et VIDE, et `schema` qui n'est pas `true` — la plus
  *      haute l'emporte (`.some`, jamais la première ni la dernière) ;
  *   4. aucun label `schema` ;
- *   5. un diff NON VIDE dont chaque fichier est à la racine ou sous `docs/`, `scripts/`, `tests/`,
- *      et n'appartient pas à la garde des revues.
+ *   5. un diff NON VIDE dont chaque fichier est sous `docs/`, `scripts/`, `tests/`, ou est un
+ *      document `*.md` à la racine, et n'appartient pas à la garde des revues. Un fichier RENOMMÉ
+ *      ou COPIÉ compte par sa source ET sa destination (`cheminsTouches`).
  *
  * ⚠️ `.github/` N'Y EST PAS, et c'est une décision (orchestrateur, 2026-09-18, sur GOV-077) : les
  * workflows et `CODEOWNERS` gouvernent les gates et la propriété des chemins. Une PR qui affaiblit
  * la CI est exactement celle qu'on ne relit pas à deux lentilles. Conséquence assumée : une tâche
  * qui touche `.github/workflows/ci.yml` (QA-T01) se relit en élevé.
+ *
+ * ⚠️ LA RACINE N'Y EST PAS NON PLUS, SAUF SES DOCUMENTS `*.md` (même décision, sur la dette 5 de la
+ * lentille `securite`) : `package.json`, `pnpm-lock.yaml`, `vitest.config.*`, `eslint.config.*`,
+ * `tsconfig*.json`, `.npmrc`, `.gitattributes`… gouvernent la chaîne de contrôle. Les énumérer
+ * laisserait passer le prochain ; la règle fermée est « toute la racine, sauf les documents ».
  *
  * POURQUOI DES LISTES BLANCHES. Une liste noire de zones (« argent, securite ») laisse passer tout
  * le reste : mesuré le 2026-09-18, huit tâches vivantes manipulent des données personnelles avec
@@ -624,9 +630,62 @@ function tacheNonOrdinaire(t: TacheDeLaPr): string | null {
   return ecarts.length === 0 ? null : ecarts.join(', ');
 }
 
-/** Un fichier hors code produit : à la racine, ou sous l'un des préfixes admis. */
+/** Un fichier hors code produit : un document `*.md` à la racine, ou sous l'un des préfixes admis. */
 function cheminOrdinaire(f: string): boolean {
-  return !f.includes('/') || CHEMINS_A_RISQUE_ORDINAIRE.some((p) => f.startsWith(p));
+  return (
+    (!f.includes('/') && f.endsWith('.md')) ||
+    CHEMINS_A_RISQUE_ORDINAIRE.some((p) => f.startsWith(p))
+  );
+}
+
+/**
+ * Un fichier touché par une PR, sous la forme de `GET /repos/{o}/{r}/pulls/{n}/files` : un
+ * renommage porte la destination dans `filename` et la SOURCE dans `previous_filename`.
+ */
+export type EntreeDeFichier = {
+  filename: string;
+  previous_filename?: string | null;
+  status?: string;
+};
+
+/**
+ * LES CHEMINS QU'UNE PR TOUCHE — L'UNIQUE EXTRACTION, pour `gov:pr` (forge et diff local) ET pour
+ * le composeur du corps (GOV-077, refus bloquant de `securite` du 2026-09-19).
+ *
+ * 🔴 LE DÉFAUT : un fichier renommé n'était jugé que par sa destination. Les deux appelants ne
+ * lisaient que `filename`, et le diff local `git diff --name-only`, qui ne rend que le nouveau
+ * chemin. Le risque, le label `schema` et les labels des chemins réservés se jugeaient donc sur un
+ * chemin qui n'est pas celui que la PR retire. La source et la destination sont TOUTES DEUX
+ * touchées : les deux entrent, et le plus haut risque l'emporte.
+ */
+export function cheminsTouches(entrees: readonly EntreeDeFichier[]): string[] {
+  const chemins = new Set<string>();
+  for (const e of entrees) {
+    if (e.filename) chemins.add(e.filename);
+    if (e.previous_filename) chemins.add(e.previous_filename);
+  }
+  return [...chemins];
+}
+
+/**
+ * La sortie de `git diff --name-status`, lue dans la forme de la forge. Une ligne = un statut puis
+ * un chemin, ou DEUX pour un renommage ou une copie (`R100`, `C75`) : la source puis la destination.
+ */
+export function entreesDuDiff(sortie: string): EntreeDeFichier[] {
+  const entrees: EntreeDeFichier[] = [];
+  for (const ligne of sortie.split('\n')) {
+    const colonnes = ligne.replace(/\r$/, '').split('\t');
+    if (colonnes.length < 2) continue;
+    const chemins = colonnes.slice(1).filter(Boolean);
+    const destination = chemins[chemins.length - 1];
+    if (destination === undefined) continue;
+    entrees.push({
+      filename: destination,
+      previous_filename: chemins.length > 1 ? chemins[0] : null,
+      status: colonnes[0],
+    });
+  }
+  return entrees;
 }
 
 export type EntreeDuRisque = {
@@ -694,7 +753,8 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
   const produit = e.fichiers.filter((f) => !cheminOrdinaire(f));
   if (produit.length > 0) {
     raisons.push(
-      `fichier(s) hors ${CHEMINS_A_RISQUE_ORDINAIRE.join(', ')} et racine : ${produit.join(', ')}`
+      `fichier(s) hors ${CHEMINS_A_RISQUE_ORDINAIRE.join(', ')} et documents .md de la racine : ` +
+        produit.join(', ')
     );
   }
   const garde = e.fichiers.filter((f) => CHEMINS_DE_LA_GARDE_DES_REVUES.includes(f));
