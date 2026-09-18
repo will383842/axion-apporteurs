@@ -4,7 +4,8 @@
  *
  * `gov:trace` est le contrôle invoqué chaque fois qu'un trou de `lot:cloture` est jugé tolérable.
  * Mesure du 2026-09-09 : il ne regardait que les tâches qui portent un `tests{}` — 48 sur 209 — et
- * son résumé n'en disait rien. SEC-01, SEC-02 et INT-T01b étaient hors de sa vue, en silence.
+ * son résumé n'en disait rien : deux tâches de sécurité et une livraison faite dans l'autre dépôt
+ * étaient hors de sa vue, en silence.
  *
  * ⚠️ LA TÂCHE N'ÉTEND PAS LA COUVERTURE. Elle exige trois choses, et ce fichier tient les trois :
  *

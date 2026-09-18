@@ -962,7 +962,7 @@ Couvre : `REQ-GOV-005`
 
 **Acceptation.** `gov:trace` est le controle compensatoire invoque chaque fois qu'un trou de `lot:cloture` est juge tolerable. Mesure du 2026-09-09 : il couvre 48 taches sur 209 ; SEC-01, SEC-02 et INT-T01b en sont absentes ; et `gov:inventaire` compte une tache FABRIQUEE comme portant une preuve qui resout. La tache n'etend PAS la couverture. Elle exige que la garde RENDE son perimetre et son complement, chiffre par chiffre, dans son resume, et qu'un PLANCHER declare rougisse quand la couverture baisse. RM-02 : le plancher est vu rougir en le franchissant par le bas, et un contre-temoin verifie qu'il reste vert quand la couverture monte.
 
-**Tests.** `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts`
+**Tests.** `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts#REQ-QA-014 : le resume rend le perimetre et le complement, chiffre par chiffre`
 
 ### GOV-044 — Une garde absente du registre s'exempte elle-meme de la garde qui verifie qu'on l'appelle
 
