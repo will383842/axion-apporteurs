@@ -233,6 +233,13 @@ jobs:
         run: pnpm gov:conventions
       - name: La garde des conventions sait rougir
         run: pnpm gov:conventions:prove
+      # DM-01, REQ-DM-041. La charge d un evenement du journal ne porte aucune donnee personnelle :
+      # le journal est append-only, une donnee personnelle qui y entrerait ne s effacerait jamais.
+      # La garde juge les schemas Zod eux-memes et imprime le compte des types et champs confrontes.
+      - name: Journal sans donnee personnelle
+        run: pnpm journal:sans-pii
+      - name: La garde du journal sait rougir
+        run: pnpm journal:sans-pii:prove
       # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
       # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
       # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le
