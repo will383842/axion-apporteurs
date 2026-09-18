@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `300b72d` — 2026-09-18T23:17:08+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #59 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #61 (un contrôle requis rouge ou une revue manquante) · 2. #59 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T01 (A05) · GOV-039 (A05) · GOV-041 (A05) · GOV-043 (A05) · GOV-044 (A05) · GOV-056 (A05) |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #55 — 2026-09-17 |
+| Dernière entrée de journal | PR #61 — 2026-09-18 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,7 +64,8 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #61 — feat(GOV-043): gov:trace rend son perimetre et son complement, sous un plancher declare | `t/gov-043` | un contrôle requis rouge ou une revue manquante |
+| 2 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -100,6 +101,31 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #61 — 2026-09-18 — feat(GOV-043): gov:trace rend son perimetre et son complement, sous un plancher declare
+
+**Fait.** `gov:trace` dit maintenant ce qu'il a regardé : 45 tâches sur 260 ont vu au moins une
+promesse de `tests{}` recevoir un verdict contre ce disque, et les 215 autres sont nommées, rangées
+en quatre raisons (`hors_depot` 16, `sans_promesse` 112, `promesse_a_venir` 87, `promesse_non_jugee`
+0). Le périmètre sort du même passage que le contrôle. Un plancher déclaré dans le champ `verifie`
+de `req:check` (45, mesuré le 2026-09-18 après l'intégration de la PR 54) rougit en
+`couverture_sous_plancher` quand la couverture passe dessous : vu rouge en le franchissant par le
+bas, vu vert quand elle monte. `gov:inventaire` ne compte plus une tâche absente du registre comme
+portant une preuve qui résout.
+
+**Reste.** GOV-043 reste ancrée sur REQ-GOV-005, absorbée : `reecrire-champ` refuse `reqs`, et
+`taches` de `docs/requirements.json` n'est écrivable par aucun verbe. Le ré-ancrage sur REQ-QA-014
+demande un verbe neuf, pas un contournement. Le plancher ne monte pas seul : la marge est imprimée
+pour que la dérive se voie. La dette GOV-082 (une liste vide rendue à code 0 par `vitest list`) reste
+ouverte et n'est pas touchée ici.
+
+**Appris.** Le « 48 sur 209 » de l'acceptance comptait les tâches qui PORTENT un `tests{}`, pas
+celles que la garde juge : reconstitué sur `e0dacf3`, où SEC-01, SEC-02 et INT-T01b n'en portaient
+aucun. Porter une promesse ne suffit pas pour être regardé. Une promesse sans titre qui ne porte
+qu'une exigence absorbée ne reçoit AUCUN verdict, et c'était le cas de GOV-043 elle-même : sa
+première mesure l'a rangée dans son propre complément. Et `gov:inventaire` garde 7 familles parce
+que ce compte est épinglé par une spécification hors des `paths` de la tâche : ajouter une famille
+aurait élargi le périmètre de la PR.
 
 ### PR #55 — 2026-09-17 — test(GOV-039): un titre de test confronte son identifiant au texte de l exigence nommee
 
@@ -191,58 +217,7 @@ refuse, et le trou reste ouvert avec une conscience tranquille. Quatrième, appo
 mutation : un témoin dont les données n'ont pas la FORME du vrai registre ne garde que la forme qu'il
 a inventée. Dix-huit témoins verts ne disaient rien des alias parce qu'aucun n'en portait.
 
-### PR #53 — 2026-09-17 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent
-
-**Fait.** `pnpm lot:cloture`, seul écrivain de `statut`, `pr`, `branch` et `owner` dans
-`docs/tasks.json`, ne pouvait pas dire quelles tâches le lot portait : il ne lisait nulle part la
-liste de ses membres et posait `lot` sur toute entrée que le rendu nommait. Le périmètre d'un lot se
-LIT désormais, et il a deux sources dont la préséance est écrite plutôt que subie :
-`docs/lots/lotId/lot.json` fait foi, et à son défaut — le dossier est ignoré par git, donc le fichier
-n'existe que dans l'arbre où le composeur a tourné et rien ne le régénère — le champ `lot` de
-`docs/tasks.json`, qui est suivi et que le rendu ne contrôle pas. Un identifiant que le rendu nomme
-et que le périmètre ne contient pas est un refus `tache_etrangere_au_lot` ; un rendu sans `lotId` est
-un refus `lot_du_rendu_absent`, là où seul un `lotId` FAUX était refusé ; une absence de périmètre
-est un refus `lot_introuvable`, jamais un périmètre vide. Les trois refus sont posés EN AMONT de la
-boucle qui écrit : ni la branche qui pose `fusionnee`, ni celle qui recompte la tentative n'écrit
-quoi que ce soit quand l'un d'eux se lève, et les témoins le vérifient par l'EFFET, pas par le
-message. Le module s'importe enfin sans le moindre effet de bord, sous `LANCE_EN_SCRIPT` ancré sur
-son dossier, son nom et la fin de chaîne — le patron de `scripts/plan-state/build.ts` et de
-`scripts/lot/composer.ts` — et sa règle est EXPORTÉE : `perimetreDuLot`, `controlerLePerimetre` et
-`cloturerLeLot` sont APPELÉES par vingt et un témoins, dont quatre qui lancent le SCRIPT ENTIER sur
-un dépôt jetable.
-
-**Reste.** Les huit cases de la définition de « terminé » sont vides : l'auteur ne les coche pas,
-c'est Will qui atteste. Le troisième trou de la mesure du 2026-09-09 — pour une tâche LOCALE, rien
-n'écrit ni ne vérifie le sha de fusion — est porté par GOV-042, qui étend l'attestation aux tâches
-locales ; l'ordre D-15 impose GOV-041 puis GOV-042 puis la dette numéro 2, en trois lots successifs,
-parce que les trois partagent `scripts/lot/cloture.ts`. Deux silences subsistent et ne sont pas
-couverts ici : un résultat sans `dev.taskId` est ignoré avec un avertissement, et surtout un membre
-du lot dont le rendu ne dit RIEN ne reçoit rien — ni statut, ni tentative — alors que c'est le
-miroir exact du trou que cette PR ferme. Il faudra une tâche pour ce second cas. Le composeur
-n'exclut toujours pas les tâches déjà composées, et `docs/lots/` reste hors suivi. Enfin, deux rouges
-de `pnpm test` sont HORS de ce diff et restent dus : `gov:etat` rougit en
-`pr_sur_tache_non_revendiquee` sur les deux PR sœurs du lot, parce que leur revendication n'a été
-écrite que dans le `docs/tasks.json` de leur propre arbre. Le geste qui l'éteint est
-`reclasser --revendiquer` sur CETTE branche pour les deux autres tâches ; le classificateur de
-permissions me l'a refusé, et c'est à l'orchestrateur de le poser sur les trois branches.
-
-**Appris.** Un contrôle rangé sous la condition qui l'a fait naître garde la moitié des cas, et la
-moitié se mesure. Huit pannes fabriquées sur ce correctif, toutes vues : deux d'entre elles se
-bornent à REDESCENDRE le contrôle de périmètre dans la branche `fusionnee`, là où le défaut avait
-été observé en 2026-09-09. Elles laissent seize témoins sur vingt et un VERTS, et seuls ceux qui
-mesurent l'EFFET — aucun statut écrit — les tuent ; le témoin qui appelle la fonction de contrôle
-directement reste vert sous les deux. Plus net encore : tant qu'un rendu contient au moins un
-résultat fusionné, un refus mal placé se déclenche quand même et PARAÎT garder. Il faut un rendu
-dont AUCUN résultat n'est fusionné pour voir l'intrus se faire recompter `attempts` en silence.
-Deuxième fait mesuré : glisser l'intrus au MILIEU du rendu plutôt qu'en queue distingue « tous » de
-« le dernier » — un contrôle réduit à `slice(-1)` reste vert sur un intrus en fin de liste et tue
-trois témoins sur un intrus au milieu. Troisième fait, et il coûte un tour à qui l'ignore :
-`gov:attributions` ne relit que les VINGT premières lignes d'un fichier pour y chercher des noms de
-tâches. Nommer, dans l'en-tête d'un fichier, la tâche dont on raconte l'incident fondateur est un
-`mention_hors_paths` — le lecteur suivant irait chercher chez elle un fichier qui n'est pas à elle.
-Le fait se raconte donc plus bas, ou sans le nom.
-
-… 18 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 19 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
