@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `87fb212` — 2026-09-19T00:46:28+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #59 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #64 (un contrôle requis rouge ou une revue manquante) · 2. #59 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T01 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 71.60 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #61 — 2026-09-18 |
+| Dernière entrée de journal | PR #64 — 2026-09-19 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,7 +64,8 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #64 — feat(GOV-077): la relecture se proportionne au risque, aucune revue n est pas toutes refusent | `t/gov-077` | un contrôle requis rouge ou une revue manquante |
+| 2 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -98,6 +99,33 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #64 — 2026-09-19 — feat(GOV-077): la relecture se proportionne au risque, aucune revue n est pas toutes refusent
+
+**Fait.** Le nombre de lentilles exigées dépend désormais du risque de la PR, dérivé par une seule
+fonction, `risqueDeLaPr()` (`scripts/lot/revues.ts`), qu'appellent `gov:pr` et le composeur du
+corps. Une PR n'est ordinaire que si tout est prouvé : tâche résolue, base lisible, chaque tâche en
+zone `gouvernance` ou `qualite` avec `sensible` présent et vide sur la tête ET la base, aucun
+label `schema`, et un diff non vide sous `docs/`, `scripts/`, `tests/` ou à la racine, hors de la
+garde des revues. Tout le reste, `.github/` compris, est élevé. Ordinaire : `exactitude` et
+`securite` ; élevé : les quatre lentilles, comme avant. `gov:pr --pr` imprime le risque et ses
+raisons, et « aucune revue » a sa propre famille, `aucune_revue`, distincte de « toutes les revues
+refusent ». Un avis posté en commentaire d'issue est nommé sans être compté. Le lot L0-01 est clos
+dans la même PR : GOV-039, GOV-041, GOV-043, GOV-044 et GOV-056 passent `fusionnee` par
+`reclasser --fusionnee`, cinq appels sans refus.
+
+**Reste.** `partners/ADR-0012` est `propose` : A02 le fera passer à `accepte`. Le workflow de lot,
+les fiches de `.claude/agents/` et `docs/agents.json` disent encore « trois lentilles » : chemins du
+lot `--settings` (GOV-023). La garde qui juge une PR reste celle de sa tête, limite déclarée et non
+fermée. Huit tâches qui manipulent des données personnelles portent `sensible: []` : sans effet
+sur les lentilles (leur zone les rend élevées), mais la section Attaque ne leur est pas demandée.
+
+**Appris.** Une fixture qui semble ordinaire peut être élevée par accident : la PR témoin de
+`--prove` touche la charte, donc la garde des revues, et son témoin de lentilles manquantes restait
+rouge pour une raison que personne n'avait écrite. La PR ordinaire est maintenant une fixture
+explicite. Et `gh pr view --json files` plafonne à 100 fichiers : un risque lu sur les fichiers
+doit passer par l'API paginée, sinon un fichier au-delà du centième est invisible. Mesure sur le
+registre réel : 35 des 206 tâches `partners` non livrées se reliront avec deux lentilles.
 
 ### PR #61 — 2026-09-18 — feat(GOV-043): gov:trace rend son perimetre et son complement, sous un plancher declare
 
@@ -160,61 +188,7 @@ du worker — une garde qui EXÉCUTE son code au lieu d'en lire le texte paie d'
 Une lecture qu'on ne peut pas importer finit recopiée, et la copie est la plus pauvre : la seconde
 lecture des titres ratait quinze titres à identifiant, et une exigence absorbée y passait en exit 0.
 
-### PR #54 — 2026-09-17 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte
-
-**Fait.** La famille `garde_ecrite_jamais_appelee` de `gov:conventions` tirait sa population du
-registre : un script de garde absent de `docs/gates.json` n'était jamais confronté à la question de
-savoir si quelqu'un l'appelle, et la gate sortait en zéro. Le périmètre part désormais du DISQUE —
-les fichiers `scripts/gates/*.ts` suivis par git — et le registre est ce qu'on lui confronte. Une
-garde écrite que le registre ne nomme pas est un refus nommé, `garde_hors_registre` ; le décompte
-des deux populations est imprimé à chaque passage ; une garde délibérément hors CI se DÉCLARE dans
-un champ `horsCi` d'au moins soixante caractères, la même exigence que pour un périmètre vide. Le
-filtre `g.phase` au plus `-1` n'est pas reconduit, et la décision est écrite à côté du code avec sa
-mesure : c'était un proxy de « déjà écrite », que le disque remplace par le fait. Trois témoins
-gardent ce choix — phase 0 non câblée rouge, phase 0 câblée verte, phase future non écrite
-silencieuse. Vingt-trois témoins, aucune assertion d'orthographe : chacun exécute le contrôle, la
-confrontation, le périmètre ou le script entier, et la population est recomptée hors de sa fonction
-par un `git ls-files` lu dans le test. Les deux gardes hors registre, `gov:attributions` et
-`gov:attestation`, y sont inscrites par `outils/ajouter-entree.mjs`, le verbe d'ajout né le
-2026-09-18 pour ce geste, avec son motif au journal des réécritures : 115 entrées deviennent 117,
-dix-neuf lignes ajoutées, aucune retirée. La seconde porte le premier champ `horsCi` du registre.
-Chaque preuve versée a été remesurée sur la tête avant l'écriture : les quatre dettes retirées par
-la PR 48, réinsérées, font sortir `gov:attributions` en 1 sur quatre `dette_perimee` ; un SHA nul
-posé sur `INT-T01b` passe la forme et `gov:attestation --en-ligne` le rejette en HTTP 422. Le refus
-`garde_hors_registre` conseillait `reecrire-champ.mjs`, qui refuse précisément une entrée absente ;
-il nomme maintenant `ajouter-entree.mjs`, et un témoin l'épingle. La lentille mutation a refusé la
-tête `6a88e1b` : deux mutants survivaient, qui absolvaient toute garde dès qu'une entrée du
-registre porte un alias, parce que chaque témoin tournait sur un registre injecté sans alias ni
-`horsCi`. Cinq témoins partent désormais du registre RÉEL : retirer l'entrée de chaque garde
-inscrite, une garde neuve sans entrée, le décâblage de chaque garde à alias, et le même jeu lancé
-dans un dépôt jetable dont on lit le code de sortie. Les deux mutants sont tués, la garde n'a pas
-changé.
-
-**Reste.** Les huit cases de la définition de terminé, que Will coche, et la relecture de la
-lentille mutation sur la nouvelle tête. Hors périmètre et non touché : le tri des entrées de registre sans script sur le
-disque — autre dépôt, phase future, entrée fautive — qui appartient à GOV-051, et que le rendu
-compte à trente sans les distinguer. Effet de bord déclaré : `gov-conventions.ts` est partagé par
-quatre tâches, donc GOV-051 n'est pas composable tant que cette PR est ouverte.
-
-**Appris.** LE VERBE QUI MANQUE EST LA CAUSE DU TROU QU'ON MESURE. L'acceptance datait du 2026-09-12
-et disait « le SEUL des 24 scripts » ; la mesure du jour en donne VINGT-SIX, dont DEUX hors registre
-— `gov-attestation.ts`, et `gov-attributions.ts`, la garde livrée par la PR 45, ajoutée au trou
-pendant qu'on le décrivait. On a d'abord lu cet écart comme une négligence de livraison. Il n'en est
-pas une : `docs/gates.json` n'a pas de verbe d'ajout, donc TOUTE garde neuve atterrit hors du
-registre, par construction, et le trou se régénère à chaque livraison. L'acceptance n'est pas
-réécrite, délibérément : sa mesure était vraie et datée, et l'écart entre les deux EST la
-démonstration de la thèse — un registre tenu à la main se périme pendant qu'on l'écrit. Second
-apprentissage, plus étroit : une garde peut avoir une raison ÉCRITE de ne pas être câblée —
-`gov:attestation` interroge la forge par `gh` et GOV-038 l'a laissée hors CI exprès — et tant que ce
-motif ne vit nulle part qu'une garde puisse lire, il ne reste que deux issues, un rouge permanent
-qu'on apprend à ignorer, ou le silence. C'est pour cela que la déclaration est un champ du registre
-et pas un commentaire. Troisième : un refus qui propose le mauvais geste est un piège poli. Celui-ci
-nommait un verbe qui répond « aucune entrée » sur exactement le cas qu'il décrit ; on le suit, il
-refuse, et le trou reste ouvert avec une conscience tranquille. Quatrième, apporté par la lentille
-mutation : un témoin dont les données n'ont pas la FORME du vrai registre ne garde que la forme qu'il
-a inventée. Dix-huit témoins verts ne disaient rien des alias parce qu'aucun n'en portait.
-
-… 19 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 20 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
