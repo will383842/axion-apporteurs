@@ -40,12 +40,14 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
+import { titresEcrits, titresEcritsPositionnes } from '../../../scripts/lot/titres-ecrits';
 import {
   controler,
   DETTE_TEXTE_DECIDE,
   fusionsDecidees,
   marqueursDe,
   CHEMIN_ANNEXE,
+  FAMILLES,
 } from '../../../scripts/gates/gov-requirements';
 
 type Exigence = {
@@ -74,41 +76,33 @@ const copie = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 type Titre = { fichier: string; ligne: number; texte: string; corps: string };
 type Refus = { famille: string; message: string };
 
-/**
- * L'ouverture d'un `it()`, d'un `test()` ou d'un `describe()`, et rien d'autre. Les variantes
- * (`.each`, `.skipIf`, `.skip`, `.only`, `.todo`) se dérivent de la forme, elles ne se listent pas
- * une deuxième fois ailleurs.
- */
-const OUVRE_UN_TITRE =
-  /^(\s*)(?:it|test|describe)(?:\.each\(|\.skipIf\(|\.skip|\.only|\.todo)?[\s\S]{0,400}?(['"`])([\s\S]*?)\2/;
 const IDENTIFIANT = /REQ-[A-Z]+-\d{3}/g;
+/** Le même motif SANS `g` : `.test()` sur un motif global garde `lastIndex` d'un appel à l'autre. */
+const NOMME_UNE_EXIGENCE = new RegExp(IDENTIFIANT.source);
 
-/** Les titres d'un fichier de spécification, avec le corps du bloc qu'ils ouvrent. */
+/**
+ * Les titres d'un fichier de spécification, lus par LA lecture du dépôt — celle de `gov:trace`,
+ * `scripts/lot/titres-ecrits.ts` — et jamais par une seconde. Ce fichier en avait écrit une, ligne à
+ * ligne, qui ratait les titres écrits à la ligne suivante de leur ouverture et prenait l'argument
+ * d'un `.skipIf(…)` pour un titre (refus A09 · simplicite et A09 · securite, PR 55). N'est ajouté ici
+ * que ce que la lecture partagée ne rend pas : la LIGNE de l'ouverture et le CORPS du bloc ouvert.
+ */
 export function titresDe(fichier: string, source: string): Titre[] {
   const lignes = source.split(/\r?\n/);
-  const titres: Titre[] = [];
-  lignes.forEach((l, i) => {
-    const m = OUVRE_UN_TITRE.exec(l);
-    if (!m) return;
-    const indentation = m[1]!.length;
+  return titresEcritsPositionnes(source).map(({ texte, debut }) => {
+    const i = source.slice(0, debut).split(/\r?\n/).length - 1;
+    const indentation = lignes[i]!.length - lignes[i]!.trimStart().length;
     let fin = lignes.length;
     for (let j = i + 1; j < lignes.length; j++) {
-      const s = lignes[j]!;
-      if (!s.trim()) continue;
-      const k = s.length - s.trimStart().length;
-      if (k <= indentation && /^\s*\}\)/.test(s)) {
+      const l = lignes[j]!;
+      if (!l.trim()) continue;
+      if (l.length - l.trimStart().length <= indentation && /^\s*[})]/.test(l)) {
         fin = j;
         break;
       }
     }
-    titres.push({
-      fichier,
-      ligne: i + 1,
-      texte: m[3]!,
-      corps: lignes.slice(i + 1, fin).join('\n'),
-    });
+    return { fichier, ligne: i + 1, texte, corps: lignes.slice(i + 1, fin).join('\n') };
   });
-  return titres;
 }
 
 /**
@@ -170,7 +164,13 @@ describe('REQ-QA-014 — la sonde MESURE quelque chose : sans plancher, une lect
     ).toBeGreaterThan(0);
     const titres = TOUS_LES_TITRES();
     expect(titres.length, 'aucun titre lu dans les spécifications suivies').toBeGreaterThan(0);
-    const aIdentifiant = titres.filter((t) => IDENTIFIANT.test(t.texte));
+    // Le plancher n'est pas « plus que zéro » : c'est le compte de LA lecture des titres. Un titre
+    // qu'elle lit et que la sonde ne confronte pas est exactement l'angle mort du refus de la PR 55.
+    expect(
+      titres.length,
+      'la sonde confronte moins de titres que la lecture partagée n’en lit'
+    ).toBe(SPECS().reduce((n, f) => n + titresEcrits(lire(f)).length, 0));
+    const aIdentifiant = titres.filter((t) => NOMME_UNE_EXIGENCE.test(t.texte));
     expect(
       aIdentifiant.length,
       'aucun titre ne nomme une exigence : la confrontation porterait sur rien'
@@ -247,7 +247,7 @@ describe('REQ-CPL-018 — la ligne qui teste LÉGITIMEMENT le mono-tenant, et le
 // Vu : `REQ-GOV-003` → `REQ-GOV-005` (absorbée) dans le titre `it.each` de
 // `identifiants-nus-positions-limites.spec.ts:75-76` laissait ce fichier 17/17 VERT.
 
-describe('REQ-QA-014 — un titre écrit à la ligne SUIVANTE de son `it.each(…)(` est lu, et confronté', () => {
+describe('REQ-QA-014 — un titre écrit à la ligne SUIVANTE de son ouverture `it.each` est lu, et confronté', () => {
   const FICHIER = 'tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts';
   const SAIN = "'REQ-GOV-003 : le témoin placé en position $position fait rougir la garde'";
 
@@ -269,7 +269,7 @@ describe('REQ-QA-014 — un titre écrit à la ligne SUIVANTE de son `it.each(�
     expect(resoudre(titres, REGISTRE().exigences)).toEqual([]);
   });
 
-  it('REQ-QA-014 — l’argument d’un `it.skipIf(…)(` n’est PAS un titre : le vrai titre est lu à sa place', () => {
+  it('REQ-QA-014 — l’argument d’un `it.skipIf` n’est PAS un titre : le vrai titre est lu à sa place', () => {
     const f = 'tests/unit/gouvernance/entite-registre.spec.ts';
     const textes = titresDe(f, lire(f)).map((t) => t.texte);
     expect(textes).not.toContain('win32');
@@ -278,7 +278,7 @@ describe('REQ-QA-014 — un titre écrit à la ligne SUIVANTE de son `it.each(�
     );
   });
 
-  it('REQ-QA-014 — PANNE FABRIQUÉE, forme `skipIf` (A09 · securite, F1) : une exigence absorbée sans renvoi derrière `it.skipIf(…)(` ROUGIT', () => {
+  it('REQ-QA-014 — PANNE FABRIQUÉE, forme `skipIf` (A09 · securite, F1) : une exigence absorbée sans renvoi derrière `it.skipIf` ROUGIT', () => {
     const f = 'tests/unit/gouvernance/glossaire-enums.spec.ts';
     // Les ouvertures sont COMPOSÉES : écrites d’un tenant, la lecture des titres les prendrait pour
     // des titres de CE fichier.
@@ -296,7 +296,7 @@ describe('REQ-QA-014 — un titre écrit à la ligne SUIVANTE de son `it.each(�
     const r = resoudre(titresDe(f, frappee), REGISTRE().exigences).filter(
       (x) => x.famille === 'texte_remplace'
     );
-    expect(r.map((x) => x.message).join('\n')).toContain(`${f}:140 nomme REQ-JUR-027`);
+    expect(r.map((x) => x.message).join('\n')).toContain(`${f}:141 nomme REQ-JUR-027`);
   });
 });
 
@@ -465,16 +465,12 @@ describe('REQ-QA-014 — les APPELANTS de la garde sont exercés, pas seulement 
     expect(r.code, r.sortie).toBe(0);
   }, 120_000);
 
-  it('REQ-QA-014 — `--prove` sort en zéro ET NOMME les familles neuves : chacune a son témoin dans la garde', () => {
+  it('REQ-QA-014 — `--prove` sort en zéro ET NOMME chacune de ses familles : chacune a son témoin dans la garde', () => {
     const r = lancer(['--prove']);
     expect(r.code, r.sortie).toBe(0);
-    for (const famille of [
-      'annexe_sans_fusion',
-      'fusion_survivante_inconnue',
-      'fusion_absorbee_non_marquee',
-      'texte_decide_perdu',
-      'dette_texte_decide_perimee',
-    ]) {
+    // Dérivées de `FAMILLES`, jamais retapées : la liste des cinq familles neuves l'était, et une
+    // dix-septième n'aurait pas été nommée par ce test.
+    for (const famille of FAMILLES) {
       expect(r.sortie).toContain(famille);
     }
   }, 120_000);

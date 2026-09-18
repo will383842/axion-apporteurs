@@ -8505,7 +8505,9 @@
         "tests/unit/gouvernance/tracabilite.spec.ts",
         "tests/unit/integration/contrat-hash.spec.ts",
         "tests/unit/gouvernance/gardes.spec.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/lot/titres-ecrits.ts",
+        "scripts/gates/gov-trace.ts"
       ],
       "schema": false,
       "sensible": [],

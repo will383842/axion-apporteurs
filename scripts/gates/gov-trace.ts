@@ -56,6 +56,7 @@ import { join, basename, posix } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 import { DEPOT_LOCAL } from '../lot/attestation';
+import { titresEcrits } from '../lot/titres-ecrits';
 
 const CHEMIN_REGISTRE = 'docs/requirements.json';
 /**
@@ -684,16 +685,11 @@ function listerFichiers(racine: string): string[] {
 }
 
 /**
- * Les titres ÉCRITS. Ils servent à repérer les identifiants d'exigence cités dans un `it()` ou un
- * `describe()` — un identifiant est un littéral, il est donc lisible sans exécuter le fichier.
- * Ils ne servent PAS à valider une promesse de titre : `describe.each` produit des noms que seul
- * vitest résout.
+ * Les titres ÉCRITS se lisent dans `scripts/lot/titres-ecrits.ts`, et nulle part ailleurs : ce
+ * script a des effets de bord au chargement, donc sa lecture n'était importable par personne, et la
+ * spécification de REQ-QA-014 en avait écrit une seconde, plus pauvre (GOV-039, PR 55).
  */
-export function titresEcrits(texte: string): string[] {
-  const motif =
-    /\b(?:it|test|describe)(?:\.\w+)*(?:\s*\(\s*[^)]*\)\s*)?\(\s*(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
-  return [...texte.matchAll(motif)].map((m) => m[2]!);
-}
+export { titresEcrits };
 
 /** Les exigences qu'un fichier CITE : annotations `@req` et identifiants dans les titres. */
 export function reqsCitees(texte: string): string[] {

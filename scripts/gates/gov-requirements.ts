@@ -165,6 +165,33 @@ export function marqueursDe(texte: string): string[] {
   return [...texte.matchAll(/`([^`]+)`/g)].map((m) => m[1]!.replace(/\s+/g, ' ').trim());
 }
 
+/** Un caractère qui prolonge un identifiant : lettre, chiffre ou soulignement. */
+const PROLONGE_UN_IDENTIFIANT = /[\p{L}\p{N}_]/u;
+
+/**
+ * Le texte appliqué REPREND-il ce marqueur ? Comme JETON délimité, jamais comme sous-chaîne : un
+ * marqueur qui ne se lit qu'À L'INTÉRIEUR d'un identifiant plus long n'est pas repris.
+ *
+ * 🔴 Refus A09 · securite, F2 (PR 55, revue 5247018537). La présence se jugeait par `includes` :
+ * `siren` n'était « repris » par REQ-DM-021 que dans `siren_manquant`, `signe` par REQ-ARG-016 que
+ * dans `mandat_non_signe`. Deux clauses décidées d'ARGENT, perdues, passaient en exit 0 — et
+ * renommer l'identifiant hôte, sans toucher à la clause, faisait rougir la garde. La borne ne
+ * s'applique qu'aux extrémités du marqueur qui sont elles-mêmes des caractères d'identifiant :
+ * `<ts>.<hex64>` ou `Couvre: REQ-…` se jugent comme avant.
+ */
+export function repris(texte: string, marqueur: string): boolean {
+  const bordeAGauche = PROLONGE_UN_IDENTIFIANT.test(marqueur[0] ?? '');
+  const bordeADroite = PROLONGE_UN_IDENTIFIANT.test(marqueur.at(-1) ?? '');
+  for (let i = texte.indexOf(marqueur); i >= 0; i = texte.indexOf(marqueur, i + 1)) {
+    const avant = texte[i - 1] ?? '';
+    const apres = texte[i + marqueur.length] ?? '';
+    if (bordeAGauche && PROLONGE_UN_IDENTIFIANT.test(avant)) continue;
+    if (bordeADroite && PROLONGE_UN_IDENTIFIANT.test(apres)) continue;
+    return true;
+  }
+  return false;
+}
+
 /**
  * LES CLAUSES DÉCIDÉES QUE LE TEXTE APPLIQUÉ NE REPREND PAS, MESURÉES LE 2026-09-17 ET DÉCLARÉES.
  *
@@ -216,8 +243,9 @@ export const DETTE_TEXTE_DECIDE: readonly {
   },
   {
     survivante: 'REQ-DM-021',
-    marqueurs: ['non_resolue'],
-    motif: 'argent : le motif de blocage d une ligne non resolue',
+    marqueurs: ['non_resolue', 'siren'],
+    motif:
+      'argent : le motif de blocage d une ligne non resolue ; et siren, que le texte ne portait que dans siren_manquant (mesure le 2026-09-18, F2 de la PR 55)',
   },
   {
     survivante: 'REQ-DM-022',
@@ -232,8 +260,9 @@ export const DETTE_TEXTE_DECIDE: readonly {
   },
   {
     survivante: 'REQ-ARG-016',
-    marqueurs: ['piecesBloquantPaiement', 'MotifBlocage'],
-    motif: 'argent : la fonction pure des controles bloquants et son enum',
+    marqueurs: ['piecesBloquantPaiement', 'MotifBlocage', 'signe'],
+    motif:
+      'argent : la fonction pure des controles bloquants et son enum ; et signe, que le texte ne portait que dans mandat_non_signe (mesure le 2026-09-18, F2 de la PR 55)',
   },
   {
     survivante: 'REQ-ARG-024',
@@ -407,7 +436,7 @@ export function controler(doc: unknown, schema: object, taches: Tache[], annexe:
     const applique = survivante.texte.replace(/\s+/g, ' ');
     const dette = DETTE_TEXTE_DECIDE.find((d) => d.survivante === f.survivante);
     for (const m of marqueursDe(f.decide)) {
-      const present = applique.includes(m);
+      const present = repris(applique, m);
       const declaree = dette?.marqueurs.includes(m) ?? false;
       if (declaree) declarees.add(`${f.survivante}|${m}`);
       if (!present && !declaree) {
