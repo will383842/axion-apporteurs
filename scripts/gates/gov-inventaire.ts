@@ -447,19 +447,18 @@ function sansPreuve(e: Etat): Tache {
 }
 
 /**
- * Une tâche que le registre ne connaît pas, et qui nomme des chemins qui EXISTENT : ceux d'une
- * tâche réelle. Sa preuve est donc BIEN FORMÉE — c'est ce qui la rendait « résolvante ».
+ * Une tâche que le registre ne connaît pas, et qui nomme un chemin qui EXISTE : le registre
+ * lui-même, dont le chargement a déjà vérifié la présence. Sa preuve est donc BIEN FORMÉE — c'est
+ * ce qui la rendait « résolvante ». Aucune sortie de plus : rien à refuser, le chemin est garanti.
  */
 function fabriquee(e: Etat, statut: string): Tache {
-  const modele = e.taches.find((x) => preuvesDeLaTache(x, e).some((p) => p.startsWith('chemin:')));
-  if (!modele) {
-    console.error(
-      `❌ gov:inventaire --prove — aucune tâche de ${CHEMIN_TACHES} ne nomme un chemin présent : ` +
-        `la tâche fabriquée ne peut pas porter une preuve bien formée.`
-    );
-    process.exit(1);
-  }
-  const t: Tache = { ...modele, id: `${modele.id}-FABRIQUEE`, statut, paths: [...modele.paths] };
+  const t: Tache = {
+    id: 'TACHE-FABRIQUEE',
+    statut,
+    paths: [CHEMIN_REGISTRE_TACHES],
+    repo: DEPOT_LOCAL,
+    attestation: null,
+  };
   e.taches.push(t);
   return t;
 }
