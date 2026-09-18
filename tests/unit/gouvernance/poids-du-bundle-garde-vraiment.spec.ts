@@ -36,6 +36,7 @@ import {
   FAMILLES,
   RACINE_ESPACE,
   vueConforme,
+  type Lighthouserc,
   type Vue,
 } from '../../../scripts/gates/perf-budgets';
 
@@ -208,9 +209,9 @@ describe('REQ-GOV-028 — ce qui n’est pas une route ne réclame aucun budget 
 });
 
 describe('REQ-GOV-028 — le laboratoire LHCI : bloquant, mobile, et aux seuils du registre', () => {
-  function avecLhci(muter: (c: Record<string, any>) => void): Vue {
+  function avecLhci(muter: (c: Lighthouserc) => void): Vue {
     const v = vueConforme();
-    const conf = JSON.parse(v.lighthouserc) as Record<string, any>;
+    const conf = JSON.parse(v.lighthouserc) as Lighthouserc;
     muter(conf);
     return { ...v, lighthouserc: JSON.stringify(conf, null, 2) + '\n' };
   }
@@ -219,7 +220,7 @@ describe('REQ-GOV-028 — le laboratoire LHCI : bloquant, mobile, et aux seuils 
     expect(
       familles(
         avecLhci((c) => {
-          c.ci.assert.assertions['largest-contentful-paint'][0] = 'warn';
+          c.ci.assert.assertions['largest-contentful-paint']![0] = 'warn';
         })
       )
     ).toContain('lhci_non_bloquant');
@@ -239,7 +240,7 @@ describe('REQ-GOV-028 — le laboratoire LHCI : bloquant, mobile, et aux seuils 
     expect(
       familles(
         avecLhci((c) => {
-          c.ci.assert.assertions['largest-contentful-paint'][1].maxNumericValue = 2500;
+          c.ci.assert.assertions['largest-contentful-paint']![1].maxNumericValue = 2500;
         })
       )
     ).toContain('seuil_divergent');

@@ -27,12 +27,12 @@
 //
 // ── CE QU'IL RESTE, ET SOUS QUEL RÉGIME ─────────────────────────────────────────────────────
 //
-// Après ce correctif, `eslint .` sort en 0 sur le dépôt, avec des AVERTISSEMENTS comptés — leur
-// nombre se lit dans la sortie de `pnpm lint`, il n'est pas recopié ici. Ils sont posés en `warn`
-// et non éteints, et SEULEMENT dans les fichiers nommés par les deux blocs de dette, un par règle,
-// posés juste avant `prettier` : un fichier neuf reçoit les deux règles en `error`. Les corriger
-// sort du périmètre de GOV-031 (charte A11 : un manque devient une tâche, jamais un correctif glissé
-// dans le lot en cours) — la tâche qui les remonte en `error` reste à ouvrir par A01.
+// GOV-031 avait laissé 13 AVERTISSEMENTS comptés (6 `no-explicit-any`, 7 `no-useless-assignment`),
+// tolérés en `warn` dans deux blocs de dette qui nommaient leurs 7 fichiers un par un. QA-T01 les a
+// CORRIGÉS À LA SOURCE et a retiré les deux blocs : `eslint .` sort en 0 sur le dépôt sans un seul
+// avertissement, et chaque règle y rend en `error`. Zéro obtenu en éteignant une règle mesurerait la
+// règle éteinte ; `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` plante une faute de
+// chacune aux 7 chemins de l'ancienne dette et exige une ERREUR.
 //
 // UNE DÉROGATION VIT ICI, ET NULLE PART AILLEURS. Une règle éteinte est une entrée d'un bloc
 // `files:`, un fichier ignoré une entrée d'`ignores`, et le motif de chacune est le commentaire
@@ -220,37 +220,11 @@ export default tseslint.config(
   },
 
   {
-    // ── LA DETTE, COMPTÉE ET VISIBLE, JAMAIS ÉTEINTE ────────────────────────────────────────
-    // Les listes sont celles que `eslint . -f json` rendait le 2026-09-14, UNE PAR RÈGLE, et le
-    // compte se lit dans `pnpm lint`, jamais ici. Nommer les fichiers un par un, et pas `scripts/**`,
-    // c'est ce qui garde le rouge pour tout code NEUF : un `any` posé dans un fichier qui n'est pas
-    // dans la liste de sa règle fait échouer le lint. `gardes-transposees.spec.ts` exige qu'une
-    // règle tolérée en `warn` rende ENCORE un avertissement dans chaque fichier où elle l'est : un
-    // fichier corrigé qui reste ici fait rougir la suite, et les listes ne peuvent que rétrécir. La
-    // tâche qui les remonte en `error` est à ouvrir par A01 (charte A11 : un manque constaté
-    // devient une TÂCHE).
-    files: [
-      'scripts/gates/perf-budgets.ts',
-      'tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts',
-    ],
+    // ⚠️ TRANSITOIRE — le dernier fichier de l'ancienne dette. Ses deux affectations inutiles sont
+    // corrigées dans un commit à part, après la fusion de la PR qui modifie le même fichier : ce bloc
+    // disparaît avec lui, dans cette même PR.
+    files: ['tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts'],
     rules: {
-      // Des `any` réels dans ces fichiers : `warn` les COMPTE à chaque exécution, `off` les ferait
-      // disparaître de la sortie de `pnpm lint`.
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
-
-  {
-    files: [
-      'scripts/gates/gov-inventaire.ts',
-      'scripts/gates/gov-sonde.ts',
-      'scripts/plan-state/build.ts',
-      'tests/unit/gouvernance/corps-de-pr-couvre.spec.ts',
-      'tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts',
-    ],
-    rules: {
-      // Des affectations inutiles réelles dans ces fichiers, que le socle d'eslint 10 a ajoutées :
-      // même régime que les `any`, comptées à chaque exécution et jamais éteintes.
       'no-useless-assignment': 'warn',
     },
   },
