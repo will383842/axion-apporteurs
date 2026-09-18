@@ -59,11 +59,17 @@ const CHEMINS_QA_T01 = cheminsDe(tache(registre(), 'QA-T01'));
 /** Le fichier de CI que QA-T01 déclare : il gouverne les gates, il fait monter le risque. */
 const CI_DE_QA_T01 = CHEMINS_QA_T01.filter((f) => f.startsWith('.github/'));
 /**
- * La PR ordinaire de référence : les chemins de QA-T01 HORS `.github/` (décision de
- * l'orchestrateur du 2026-09-18 sur GOV-077 : tout fichier sous `.github/` rend la PR élevée).
- * Dérivés du registre (RM-03), jamais tapés.
+ * Les fichiers de configuration À LA RACINE que QA-T01 déclare (`vitest.config.ts`) : ils gouvernent
+ * la chaîne de contrôle, ils font monter le risque (décision de l'orchestrateur du 2026-09-18).
  */
-const FICHIERS_QA_T01 = CHEMINS_QA_T01.filter((f) => !CI_DE_QA_T01.includes(f));
+const RACINE_DE_QA_T01 = CHEMINS_QA_T01.filter((f) => !f.includes('/'));
+/**
+ * La PR ordinaire de référence : les chemins de QA-T01 HORS `.github/` et hors de la racine
+ * (décisions de l'orchestrateur du 2026-09-18 sur GOV-077). Dérivés du registre (RM-03), jamais tapés.
+ */
+const FICHIERS_QA_T01 = CHEMINS_QA_T01.filter(
+  (f) => !CI_DE_QA_T01.includes(f) && !RACINE_DE_QA_T01.includes(f)
+);
 
 const TETE = '41bc8140b9ea436be809676538dd65cb2263a5bc';
 const avis = (entete: string, verdict: 'accepte' | 'refuse' = 'accepte') => ({
@@ -276,6 +282,91 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
     // CONTRE-TÉMOIN : la même PR sans ce fichier est ordinaire.
     const sans = risque({ titre: 'feat(QA-T01): x', fichiers: FICHIERS_QA_T01 });
     expect(sans.niveau, sans.raisons.join(' ; ')).toBe('ordinaire');
+  });
+
+  it('REQ-GOV-011 · cas 6 quater : un fichier de configuration à la RACINE au milieu du diff rend la PR élevée', () => {
+    expect(RACINE_DE_QA_T01, 'QA-T01 ne déclare plus de fichier racine').toContain(
+      'vitest.config.ts'
+    );
+    const milieu = Math.floor(FICHIERS_QA_T01.length / 2);
+    for (const racine of ['package.json', 'pnpm-lock.yaml', ...RACINE_DE_QA_T01]) {
+      const fichiers = [
+        ...FICHIERS_QA_T01.slice(0, milieu),
+        racine,
+        ...FICHIERS_QA_T01.slice(milieu),
+      ];
+      const r = risque({ titre: 'feat(QA-T01): x', fichiers });
+      expect(r.niveau, racine).toBe('eleve');
+      expect(r.raisons.join(' ; ')).toContain(racine);
+    }
+    // CONTRE-TÉMOIN : un document de la racine ne gouverne rien.
+    const doc = risque({ titre: 'feat(QA-T01): x', fichiers: [...FICHIERS_QA_T01, 'README.md'] });
+    expect(doc.niveau, doc.raisons.join(' ; ')).toBe('ordinaire');
+  });
+
+  it('REQ-GOV-011 · cas 6 quinquies : un fichier RENOMMÉ compte par sa source ET sa destination (forge)', () => {
+    // La forme servie par `GET /repos/{o}/{r}/pulls/{n}/files` : un renommage porte `filename` (la
+    // destination) et `previous_filename` (la source). Le fichier renommé est AU MILIEU.
+    const entrees = [
+      { filename: FICHIERS_QA_T01[0]!, status: 'modified' },
+      {
+        filename: 'docs/archive/ci.yml',
+        previous_filename: '.github/workflows/ci.yml',
+        status: 'renamed',
+      },
+      { filename: FICHIERS_QA_T01[1]!, status: 'modified' },
+    ];
+    // Le défaut, verbatim : lire `filename` seul rend la PR ordinaire.
+    expect(
+      risque({ titre: 'feat(QA-T01): x', fichiers: entrees.map((e) => e.filename) }).niveau
+    ).toBe('ordinaire');
+    const fichiers = LECTEUR.cheminsTouches(entrees);
+    expect(fichiers).toContain('.github/workflows/ci.yml');
+    expect(fichiers).toContain('docs/archive/ci.yml');
+    const r = risque({ titre: 'feat(QA-T01): x', fichiers });
+    expect(r.niveau).toBe('eleve');
+    expect(r.raisons.join(' ; ')).toContain('.github/workflows/ci.yml');
+  });
+
+  it('REQ-GOV-011 · cas 6 sexies : un schéma RENOMMÉ hors de prisma/ reste élevé, et exige la lentille schema', () => {
+    const entrees = [
+      { filename: FICHIERS_QA_T01[0]!, status: 'modified' },
+      {
+        filename: 'docs/schema.prisma',
+        previous_filename: 'prisma/schema.prisma',
+        status: 'renamed',
+      },
+      { filename: FICHIERS_QA_T01[1]!, status: 'modified' },
+    ];
+    const r = risque({ titre: 'feat(QA-T01): x', fichiers: LECTEUR.cheminsTouches(entrees) });
+    expect(r.niveau).toBe('eleve');
+    expect(r.schema).toBe(true);
+    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toContain('schema');
+  });
+
+  it('REQ-GOV-011 · cas 6 septies : le diff LOCAL (git --name-status) rend aussi la source d’un renommage', () => {
+    // La forme de `git diff --name-status` : une colonne de statut, puis un chemin — ou DEUX pour un
+    // renommage ou une copie (`R100`, `C75`). Tabulations, telles que git les écrit.
+    const T = String.fromCharCode(9);
+    const sortie = [
+      `M${T}${FICHIERS_QA_T01[0]}`,
+      `R100${T}.github/workflows/ci.yml${T}docs/archive/ci.yml`,
+      `C80${T}prisma/schema.prisma${T}docs/copie.prisma`,
+      `A${T}${FICHIERS_QA_T01[1]}`,
+      '',
+    ].join(String.fromCharCode(10));
+    const fichiers = LECTEUR.cheminsTouches(LECTEUR.entreesDuDiff(sortie));
+    for (const f of [
+      FICHIERS_QA_T01[0]!,
+      '.github/workflows/ci.yml',
+      'docs/archive/ci.yml',
+      'prisma/schema.prisma',
+      'docs/copie.prisma',
+      FICHIERS_QA_T01[1]!,
+    ]) {
+      expect(fichiers, f).toContain(f);
+    }
+    expect(risque({ titre: 'feat(QA-T01): x', fichiers }).niveau).toBe('eleve');
   });
 
   it('REQ-GOV-011 · cas 7 : un fichier de la garde des revues au milieu du diff rend la PR élevée', () => {
