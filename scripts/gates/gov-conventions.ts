@@ -500,7 +500,8 @@ export function controler(vue: Vue): Faute[] {
         `nulle part. Tant qu'elle n'y est pas, PERSONNE ne lui demande jamais si quelqu'un ` +
         `l'appelle : le trou s'exempte lui-même, et cette garde-ci sortait en zéro pendant que ` +
         `deux gardes réelles y vivaient (mesure du 2026-09-17). Inscrivez son entrée au registre ` +
-        `par \`outils/reecrire-champ.mjs\` — ou retirez le fichier.`,
+        `par \`outils/ajouter-entree.mjs\`, le seul verbe qui CRÉE une entrée (\`reecrire-champ\` ` +
+        `et \`poser-champ\` refusent une entrée absente) — ou retirez le fichier.`,
     });
   }
   const appelants = [...vue.workflows.map((w) => w.source), vue.hooks].join('\n');

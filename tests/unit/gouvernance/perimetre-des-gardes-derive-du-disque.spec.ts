@@ -109,6 +109,21 @@ describe('REQ-GOV-012 — le périmètre des gardes se dérive du DISQUE, le reg
     expect(messages(vue).join('\n')).not.toContain(CHEMIN('gov:alpha'));
   });
 
+  it('le refus propose le verbe qui CRÉE une entrée, jamais un verbe qui refuse une entrée absente', () => {
+    // Mesuré le 2026-09-18 : le refus conseillait `reecrire-champ.mjs`, qui répond « aucune entrée
+    // … dans docs/gates.json » sur exactement le cas que ce refus décrit. Un message qui propose le
+    // mauvais geste est un piège poli : on le suit, il refuse, et le trou reste ouvert.
+    const vue = variante({
+      workflows: [{ chemin: '.github/workflows/ci.yml', source: CI_TROIS }],
+      fichiersSuivis: SUIVIS_TROIS,
+      gates: GATES_TROIS.filter((g) => g.id !== 'gov:beta'),
+    });
+    const refus = messages(vue).join('\n');
+    expect(refus).toContain('outils/ajouter-entree.mjs');
+    expect(refus).not.toContain('outils/reecrire-champ.mjs');
+    expect(refus).not.toContain('outils/poser-champ.mjs');
+  });
+
   it('les trois gardes inscrites et câblées laissent le contrôle vert — contre-témoin', () => {
     // Sans lui, le témoin précédent ne prouverait rien : une règle qui rougit sur toute garde
     // écrite serait désarmée le jour même (RM-02).
