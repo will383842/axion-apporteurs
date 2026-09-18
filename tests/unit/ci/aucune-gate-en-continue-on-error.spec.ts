@@ -14,7 +14,7 @@
  *     en code non nul dès qu'il nomme une étape. Il LIT DES CLÉS, par un vrai analyseur YAML, pas
  *     du texte : les commentaires de `ci.yml` qui citent le mot ne le font pas rougir.
  *     `pnpm lint` sort en 0 sur le dépôt, sans un seul avertissement, et `pnpm format:check` aussi ;
- *     `no-console` et `noInlineConfig` (posés par GOV-031) tiennent quand on les ATTAQUE.
+ *     `no-console` et `noInlineConfig` (déjà posés, pas par cette tâche) tiennent quand on les ATTAQUE.
  *   — REQ-QA-001 : `pnpm lint` — la commande même que lance Gate A — sort en code non nul sur un
  *     fichier du domaine qui touche la base, le cache, le réseau ou l'horloge, une erreur par
  *     ligne fautive, chacune nommant son interdit.

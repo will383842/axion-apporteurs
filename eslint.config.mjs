@@ -103,8 +103,37 @@ export default tseslint.config(
     // `src/domain/**` est PUR : aucune I/O, aucune horloge, aucun accès à la base. L'horloge est
     // injectée par le module `temps` (`docs/CONVENTIONS.md` §3) — sans quoi un test qui dépend de
     // la minute où il tourne ne se rejoue pas.
+    //
+    // REQ-QA-001 (QA-T01) nomme ce que le lint BLOQUANT refuse ici : « ni Prisma, ni Redis, ni
+    // fetch, ni new Date() » — la base, le cache, le réseau et l'horloge système, chacun par son nom
+    // usuel. Le témoin qui lance `pnpm lint` sur une ligne fautive par interdit est
+    // `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`. Les FORMES VOISINES — import sans
+    // préfixe `'fs'`, `import()` dynamique, `globalThis.fetch`, `Date['now']` — ne sont PAS fermées
+    // ici : c'est GOV-076 qui les ferme.
     files: ['src/domain/**/*.ts'],
     rules: {
+      'no-restricted-globals': [
+        'error',
+        ...['fetch', 'XMLHttpRequest', 'WebSocket'].map((name) => ({
+          name,
+          message:
+            'src/domain/** est pur : aucun appel réseau. La donnée arrive en argument ' +
+            '(REQ-QA-001, docs/CONVENTIONS.md §3).',
+        })),
+      ],
+      'no-restricted-properties': [
+        'error',
+        ...[
+          ['Date', 'now'],
+          ['performance', 'now'],
+        ].map(([object, property]) => ({
+          object,
+          property,
+          message:
+            "src/domain/** ne lit pas l'horloge système : l'heure est injectée par le module " +
+            '`temps` (REQ-QA-001, docs/CONVENTIONS.md §3).',
+        })),
+      ],
       'no-restricted-syntax': [
         'error',
         {
@@ -123,6 +152,20 @@ export default tseslint.config(
               message:
                 'src/domain/** est pur : aucune I/O, aucun accès base, aucun couplage au cadre ' +
                 'applicatif (docs/CONVENTIONS.md §3).',
+            },
+            {
+              group: [
+                'ioredis',
+                'redis',
+                'bullmq',
+                'node:http',
+                'node:https',
+                'node:net',
+                'undici',
+              ],
+              message:
+                'src/domain/** est pur : ni cache, ni file de tâches, ni appel réseau ' +
+                '(REQ-QA-001, docs/CONVENTIONS.md §3).',
             },
           ],
         },
