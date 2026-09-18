@@ -251,7 +251,7 @@ describe('REQ-QA-014 — un titre écrit à la ligne SUIVANTE de son `it.each(�
   const FICHIER = 'tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts';
   const SAIN = "'REQ-GOV-003 : le témoin placé en position $position fait rougir la garde'";
 
-  it('REQ-QA-014 — PANNE FABRIQUÉE, le cas vu : REQ-GOV-003 → REQ-GOV-005 (absorbée) dans ce titre ROUGIT', () => {
+  it('REQ-QA-014 — PANNE FABRIQUÉE, le cas vu : une exigence ABSORBÉE sans renvoi dans ce titre ROUGIT', () => {
     const source = lire(FICHIER);
     expect(source, 'le titre frappé a disparu du fichier : le témoin ne frapperait rien').toContain(
       SAIN
@@ -276,6 +276,27 @@ describe('REQ-QA-014 — un titre écrit à la ligne SUIVANTE de son `it.each(�
     expect(textes.some((t) => t.startsWith('REQ-GOV-031 — VETO nom, par le vrai chemin'))).toBe(
       true
     );
+  });
+
+  it('REQ-QA-014 — PANNE FABRIQUÉE, forme `skipIf` (A09 · securite, F1) : une exigence absorbée sans renvoi derrière `it.skipIf(…)(` ROUGIT', () => {
+    const f = 'tests/unit/gouvernance/glossaire-enums.spec.ts';
+    // Les ouvertures sont COMPOSÉES : écrites d’un tenant, la lecture des titres les prendrait pour
+    // des titres de CE fichier.
+    const ouvre = 'it';
+    const sain = ouvre + "('REQ-JUR-027 → REQ-DM-038 : le même champ en enum ne rougit pas";
+    const source = lire(f);
+    expect(source, 'le titre frappé a disparu du fichier : le témoin ne frapperait rien').toContain(
+      sain
+    );
+    const frappee = source.replace(
+      sain,
+      ouvre +
+        ".skipIf(process.platform === 'aix')('REQ-JUR-027 : le même champ en enum ne rougit pas"
+    );
+    const r = resoudre(titresDe(f, frappee), REGISTRE().exigences).filter(
+      (x) => x.famille === 'texte_remplace'
+    );
+    expect(r.map((x) => x.message).join('\n')).toContain(`${f}:140 nomme REQ-JUR-027`);
   });
 });
 
@@ -335,6 +356,52 @@ describe('REQ-QA-014 — les fusions décidées se confrontent au registre, et l
     expect(fautes.length).toBeGreaterThan(0);
     expect(fautes.map((f) => f.message).join('\n')).toContain(cible.survivante);
     expect(fautes.map((f) => f.message).join('\n')).toContain(marqueur);
+  });
+
+  // A09 · securite, F2 (revue 5247018537) : la présence d'un marqueur se jugeait par SOUS-CHAÎNE.
+  // `siren` n'était « repris » par REQ-DM-021 que dans `siren_manquant`, `signe` par REQ-ARG-016 que
+  // dans `mandat_non_signe` : deux clauses décidées perdues passaient en exit 0.
+  const MOT = /[\p{L}\p{N}_]/u;
+  const marqueurCandidat = () => {
+    const registre = REGISTRE();
+    const candidats = fusionsDecidees(ANNEXE()).flatMap((f) => {
+      const e = registre.exigences.find((x) => x.id === f.survivante);
+      const dette = DETTE_TEXTE_DECIDE.find((d) => d.survivante === f.survivante)?.marqueurs ?? [];
+      return marqueursDe(f.decide)
+        .filter((m) => MOT.test(m[0]!) && MOT.test(m.at(-1)!) && !dette.includes(m))
+        .filter((m) => (e?.texte ?? '').replace(/\s+/g, ' ').includes(m))
+        .map((m) => ({ survivante: f.survivante, m }));
+    });
+    expect(
+      candidats.length,
+      'aucun marqueur-mot repris : le témoin ne frapperait rien'
+    ).toBeGreaterThan(0);
+    // le MILIEU, jamais le dernier
+    return candidats[Math.floor(candidats.length / 2)]!;
+  };
+
+  it('REQ-QA-014 — PANNE FABRIQUÉE : un marqueur logé DANS un identifiant plus long n’est PAS repris, et rougit', () => {
+    const { survivante, m } = marqueurCandidat();
+    const registre = copie(REGISTRE());
+    const e = registre.exigences.find((x) => x.id === survivante)!;
+    e.texte = e.texte.split(m).join(`${m}_hote`);
+    const fautes = controler(registre, SCHEMA(), TACHES(), ANNEXE()).filter(
+      (f) => f.famille === 'texte_decide_perdu'
+    );
+    expect(fautes.map((f) => f.message).join('\n')).toContain(
+      `${survivante} : l'arbitrage décidé porte « ${m} »`
+    );
+  });
+
+  it('REQ-QA-014 — CONTRE-TÉMOIN : le même marqueur, délimité par une ponctuation, reste repris', () => {
+    const { survivante, m } = marqueurCandidat();
+    const registre = copie(REGISTRE());
+    const e = registre.exigences.find((x) => x.id === survivante)!;
+    e.texte = e.texte.split(m).join(`(${m})`);
+    const fautes = controler(registre, SCHEMA(), TACHES(), ANNEXE()).filter(
+      (f) => f.famille === 'texte_decide_perdu'
+    );
+    expect(fautes.map((f) => f.message).join('\n')).not.toContain(`« ${m} »`);
   });
 
   it('REQ-QA-014 — PANNE FABRIQUÉE : une dette qui n’a plus d’objet ROUGIT, elle ne se tait pas', () => {
