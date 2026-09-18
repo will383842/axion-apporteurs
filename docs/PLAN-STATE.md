@@ -112,8 +112,12 @@ reprend, sans perdre la clause `@req`. Les 87 titres de la garde d'entité qui s
 REQ-CPL-018 en parlant d'IBAN, de BIC et de SIREN portent REQ-GOV-031 ; le seul titre qui teste
 REQ-CPL-018 pour de bon n'a pas bougé et un témoin le protège en exigeant que tout titre qui la nomme
 LISE sa ligne source. Cinq titres nommaient une exigence absorbée sans son renvoi : ils le portent.
+Après trois refus de lentille le 2026-09-18, la spécification lit les titres par LA lecture de
+`gov:trace`, et sur son périmètre, sortis dans `scripts/lot/titres-ecrits.ts` ; la garde juge un
+marqueur comme jeton délimité — `siren` et `signe` ne tenaient que par sous-chaîne, et rejoignent la
+dette — et nomme toute puce de fusion qu'elle ne sait pas lire, compte déclaré de l'annexe à l'appui.
 
-**Reste.** Vingt-trois clauses décidées manquent encore au texte appliqué de quinze exigences ; elles
+**Reste.** Vingt-cinq clauses décidées manquent encore au texte appliqué de quinze exigences ; elles
 sont déclarées, datées et motivées dans `DETTE_TEXTE_DECIDE`, et aucune n'est réparable par un agent —
 sept touchent à l'ARGENT, cinq à la SÉCURITÉ, deux portent un ré-arbitrage postérieur à l'annexe qui
 périme l'annexe elle-même, et non le registre. Le geste juste y est un ADR, pas un champ réécrit. La
@@ -129,6 +133,8 @@ signer : la prose d'une gate se date, elle ne s'attribue qu'au porteur du script
 garde importé par sa propre spécification tue le worker `vitest` au premier `process.exit` : sans
 `LANCE_EN_SCRIPT`, la suite entière sort en `no tests` sur le refus `process.exit unexpectedly`
 du worker — une garde qui EXÉCUTE son code au lieu d'en lire le texte paie d'abord ce prix-là.
+Une lecture qu'on ne peut pas importer finit recopiée, et la copie est la plus pauvre : la seconde
+lecture des titres ratait quinze titres à identifiant, et une exigence absorbée y passait en exit 0.
 
 ### PR #53 — 2026-09-17 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent
 
