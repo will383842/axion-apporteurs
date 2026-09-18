@@ -22,8 +22,12 @@ export default defineConfig({
       // (`tests/gov/regles-maison.spec.ts`) et `docs/tasks.json` (quatre REQ de GOV-007 sur
       // `tests/gov/charte-pr.spec.ts`). Sans cette ligne les deux existent sans jamais tourner.
       'tests/gov/**/*.{test,spec}.{ts,tsx}',
+      // Les tests d'intégration tournent DANS `pnpm test` : `gov:trace` lit include/exclude de CE fichier,
+      // et un spec exclu y vaut « non exécuté ». Conséquence assumée : la suite exige le démon Docker
+      // (partners/ADR-0014, D7 ; partners/ADR-0001).
+      'tests/integration/**/*.{test,spec}.{ts,tsx}',
     ],
-    exclude: ['node_modules', '.next', 'tests/e2e/**', 'tests/integration/**'],
+    exclude: ['node_modules', '.next', 'tests/e2e/**'],
     // Les gardes lancent `tsx` en sous-processus : 20 s par défaut ne suffisent pas toujours.
     testTimeout: 60_000,
     hookTimeout: 60_000,
