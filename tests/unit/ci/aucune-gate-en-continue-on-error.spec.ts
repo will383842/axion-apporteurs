@@ -353,9 +353,11 @@ const PASSE_PARTIELLE = 'tests/unit/domaine/etats-occupants.spec.ts';
 const COUVERT_PAR_LA_PASSE = `${DOMAINE}/attribution/etats.ts`;
 
 /**
- * `pnpm test` — le script même que lance l'étape « Tests » —, restreint à UN fichier de test, avec un
+ * Le script `test` — celui que lance l'étape « Tests » —, restreint à UN fichier de test, avec un
  * rapport de couverture écrit hors du dépôt (jamais dans le `coverage/` que la passe parente remplit).
- * L'environnement de Vitest du processus parent n'est pas transmis : l'enfant est une passe neuve.
+ * `pnpm run test`, et non `pnpm test` : sous cette forme courte, pnpm prend `--coverage.*` pour ses
+ * propres options et refuse (« Unknown options »), en sortant en 0. L'environnement de Vitest du
+ * processus parent n'est pas transmis : l'enfant est une passe neuve.
  */
 function passePartielle(): { code: number | null; sortie: string; couverts: string[] } {
   const rapport = mkdtempSync(join(tmpdir(), 'qa2-'));
@@ -364,7 +366,7 @@ function passePartielle(): { code: number | null; sortie: string; couverts: stri
       Object.entries(process.env).filter(([k]) => !/^(?:VITEST|TEST$|NODE_V8_COVERAGE)/.test(k))
     );
     const { code, sortie } = lancer(
-      `pnpm test --coverage.reportsDirectory=${rapport} --coverage.reporter=json-summary ` +
+      `pnpm run test --coverage.reportsDirectory=${rapport} --coverage.reporter=json-summary ` +
         PASSE_PARTIELLE,
       process.cwd(),
       env
