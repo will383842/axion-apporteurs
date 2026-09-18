@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `87a31ed` — 2026-09-18T22:20:27+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #54 (un conflit avec `main`) |
+| Où est `main` ? | `300b72d` — 2026-09-18T23:17:08+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #59 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T01 (A05) · GOV-039 (A05) · GOV-041 (A05) · GOV-043 (A05) · GOV-044 (A05) · GOV-056 (A05) |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
@@ -64,7 +64,7 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #54 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte | `t/gov-044` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -93,7 +93,7 @@ Aucun ADR daté du 2026-09-18 (jour du dernier atterrissage). Les décisions de 
 
 ## Dernier atterrissage
 
-`origin/main` = `87a31ed` (2026-09-18T22:20:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `300b72d` (2026-09-18T23:17:08+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
