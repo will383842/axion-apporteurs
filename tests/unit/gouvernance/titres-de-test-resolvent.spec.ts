@@ -40,7 +40,12 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
-import { titresEcrits, titresEcritsPositionnes } from '../../../scripts/lot/titres-ecrits';
+import {
+  estUnFichierDeTest,
+  fichiersDeTest,
+  titresEcrits,
+  titresEcritsPositionnes,
+} from '../../../scripts/lot/titres-ecrits';
 import {
   controler,
   DETTE_TEXTE_DECIDE,
@@ -298,6 +303,22 @@ describe('REQ-QA-014 — un titre écrit à la ligne SUIVANTE de son ouverture `
     );
     expect(r.map((x) => x.message).join('\n')).toContain(`${f}:141 nomme REQ-JUR-027`);
   });
+
+  // A09 · exactitude (revue 5247101531) : deux précisions de la même panne.
+  it('REQ-QA-014 — une apostrophe ÉCHAPPÉE ne coupe pas le titre : l’identifiant qui la suit est confronté', () => {
+    const ouvre = 'it';
+    const source = ouvre + "('l\\'exigence REQ-GOV-005 citée sans son renvoi', () => {});\n";
+    const r = resoudre(titresDe('x.spec.ts', source), REGISTRE().exigences);
+    expect(r.map((x) => x.famille)).toEqual(['texte_remplace']);
+  });
+
+  it('REQ-QA-014 — le périmètre de la sonde est CELUI de gov:trace : `.test.ts` et `.tsx` compris', () => {
+    for (const f of ['a.spec.ts', 'a.test.ts', 'a.spec.tsx', 'a.test.tsx']) {
+      expect(estUnFichierDeTest(f), f).toBe(true);
+    }
+    expect(estUnFichierDeTest('a.ts')).toBe(false);
+    expect(SPECS()).toEqual(fichiersDeTest());
+  });
 });
 
 // ── LE TEXTE SURVIVANT CONTIENT LE TEXTE DÉCIDÉ — RM-01 appliqué aux exigences ────────────────────
@@ -440,6 +461,39 @@ describe('REQ-QA-014 — les fusions décidées se confrontent au registre, et l
       '# rien\n\npas une puce d arbitrage\n'
     );
     expect(fautes.some((f) => f.famille === 'annexe_sans_fusion')).toBe(true);
+  });
+
+  // A09 · exactitude, motif 2 (revue 5247101531) : le plancher ne tombait qu'à ZÉRO fusion lue.
+  // Une puce reformulée disparaissait de la confrontation sans un mot, et avec elle son texte décidé.
+  const PUCE_QA_014 = '- garder **REQ-QA-014**, absorber';
+
+  it('REQ-QA-014 — PANNE FABRIQUÉE : une puce de fusion que la garde ne sait plus lire est REFUSÉE, et nommée', () => {
+    const annexe = ANNEXE();
+    expect(annexe, 'la puce frappée a disparu de l’annexe').toContain(PUCE_QA_014);
+    const frappee = annexe.replace(PUCE_QA_014, '- garder **REQ-QA-014** (traçabilité), absorber');
+    const fautes = controler(REGISTRE(), SCHEMA(), TACHES(), frappee).filter(
+      (f) => f.famille === 'annexe_sans_fusion'
+    );
+    expect(fautes.map((f) => f.message).join('\n')).toContain('REQ-QA-014');
+  });
+
+  it('REQ-QA-014 — PANNE FABRIQUÉE : une puce de fusion RETIRÉE fait diverger le compte lu du compte que l’annexe déclare', () => {
+    const annexe = ANNEXE();
+    const lignes = annexe.split('\n');
+    const i = lignes.findIndex((l) => l.startsWith(PUCE_QA_014));
+    expect(i, 'la puce frappée a disparu de l’annexe').toBeGreaterThan(0);
+    const frappee = [...lignes.slice(0, i), ...lignes.slice(i + 1)].join('\n');
+    const fautes = controler(REGISTRE(), SCHEMA(), TACHES(), frappee).filter(
+      (f) => f.famille === 'annexe_sans_fusion'
+    );
+    expect(fautes.length).toBeGreaterThan(0);
+  });
+
+  it('REQ-QA-014 — CONTRE-TÉMOIN : l’annexe réelle se lit entière, son compte déclaré compris', () => {
+    const fautes = controler(REGISTRE(), SCHEMA(), TACHES(), ANNEXE()).filter(
+      (f) => f.famille === 'annexe_sans_fusion'
+    );
+    expect(fautes.map((f) => f.message).join('\n')).toBe('');
   });
 });
 
