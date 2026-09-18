@@ -63,7 +63,9 @@ describe('REQ-JUR-027 → REQ-DM-038 — une liste d’états se juge par GROUPE
   it('REQ-JUR-027 → REQ-DM-038 : une liste sur plusieurs lignes rougit', () => {
     const vue: Vue = {
       ...VUE_CONFORME,
-      code: [{ chemin: 'src/bac/liste.ts', contenu: "const x = [\n  'provisoire',\n  'active'\n];\n" }],
+      code: [
+        { chemin: 'src/bac/liste.ts', contenu: "const x = [\n  'provisoire',\n  'active'\n];\n" },
+      ],
     };
     expect(familles(vue)).toContain('liste_litterale_d_etats');
   });
