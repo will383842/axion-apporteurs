@@ -9,7 +9,7 @@
 | --- | --- |
 | Où est `main` ? | `87a31ed` — 2026-09-18T22:20:27+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #54 (un conflit avec `main`) |
-| Qui tient quoi ? | GOV-039 (A05) · GOV-041 (A05) · GOV-044 (A05) · GOV-056 (A05) |
+| Qui tient quoi ? | QA-T01 (A05) · GOV-039 (A05) · GOV-041 (A05) · GOV-043 (A05) · GOV-044 (A05) · GOV-056 (A05) |
 | Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
@@ -74,8 +74,10 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
+| QA-T01 — Squelette de tests et Gate A bloquante | A05 | #56 | `a_faire` |
 | GOV-039 — Quatre-vingt-huit titres de test etiquetes par l'exigence d'un AUTRE sujet | A05 | #52 | `a_faire` |
 | GOV-041 — La cloture ecrit un statut sur une entree qu'elle n'a pas verifiee | A05 | #50 | `a_faire` |
+| GOV-043 — Le controle compensatoire de la tracabilite ne couvre qu'un quart du backlog | A05 | #58 | `a_faire` |
 | GOV-044 — Une garde absente du registre s'exempte elle-meme de la garde qui verifie qu'on l'appelle | A05 | #51 | `a_faire` |
 | GOV-056 — Le composeur compare des `paths` quand les taches promettent des `tests{}`, et rien ne juge les fichiers d une PR | A05 | #49 | `a_faire` |
 
