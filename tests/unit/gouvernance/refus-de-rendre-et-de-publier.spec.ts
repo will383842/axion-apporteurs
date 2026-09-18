@@ -367,7 +367,7 @@ describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de l
       Tests  553 passed (553)
 `
     );
-    let code = -1;
+    let code: number;
     let stderr = '';
     try {
       execFileSync(
@@ -962,7 +962,7 @@ describe('REQ-CPL-018 — `--corps-publie` : le verdict SORT, il ne se contente 
    */
   it('REQ-CPL-018 — TÉMOIN D’EFFET : un corps NON LU sort en 2, il n’est jamais déclaré propre', () => {
     const PR_INEXISTANTE = 999999;
-    let code = -1;
+    let code: number;
     let sortie = '';
     try {
       execFileSync(

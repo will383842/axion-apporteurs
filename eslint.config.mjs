@@ -219,16 +219,6 @@ export default tseslint.config(
     },
   },
 
-  {
-    // ⚠️ TRANSITOIRE — le dernier fichier de l'ancienne dette. Ses deux affectations inutiles sont
-    // corrigées dans un commit à part, après la fusion de la PR qui modifie le même fichier : ce bloc
-    // disparaît avec lui, dans cette même PR.
-    files: ['tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts'],
-    rules: {
-      'no-useless-assignment': 'warn',
-    },
-  },
-
   // En dernier : `eslint-config-prettier` éteint les règles de mise en forme qu'ESLint et Prettier
   // se disputeraient. Deux outils qui reformatent la même ligne dans deux sens font une CI qui
   // rougit sans qu'aucun humain n'ait tort.
