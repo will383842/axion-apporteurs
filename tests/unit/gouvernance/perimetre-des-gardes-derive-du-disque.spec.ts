@@ -23,15 +23,30 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import {
   controler,
   confronterDisqueEtRegistre,
   perimetresDe,
   lireVue,
+  DOSSIER_DES_GARDES,
+  EXTENSION_DES_GARDES,
   MOTIF_MINIMAL,
   VUE_CONFORME,
   CI_CONFORME,
+  type GateVue,
   type Vue,
 } from '../../../scripts/gates/gov-conventions';
 
@@ -50,6 +65,19 @@ function familles(vue: Vue): string[] {
 /** Les messages rougis par une vue, pour vérifier que le refus NOMME ce qu'il refuse. */
 function messages(vue: Vue): string[] {
   return controler(vue).map((f) => f.message);
+}
+
+/**
+ * Le nombre qu'une ligne « • » du rendu porte derrière SON libellé, ou `null` si la ligne manque.
+ * Lié au libellé, pas cherché n'importe où : un compte ne se prouve que là où il est annoncé.
+ */
+function compteRendu(sortie: string, libelle: string): number | null {
+  const ligne = sortie
+    .split(/\r?\n/)
+    .find((l) => l.trimStart().startsWith('•') && l.includes(libelle));
+  if (!ligne) return null;
+  const m = /\s:\s(\d+)(?:\s—|\s*$)/.exec(ligne.slice(ligne.indexOf(libelle)));
+  return m ? Number(m[1]) : null;
 }
 
 /** Une vue conforme dont on ne change QUE ce que le témoin fait varier (RM-11). */
@@ -166,8 +194,16 @@ describe('REQ-GOV-012 — le périmètre des gardes se dérive du DISQUE, le reg
     // serait le défaut d'origine déplacé d'un cran.
     expect(code === 0).toBe(controler(vue).length === 0);
     expect(sortie).toContain('DISQUE');
-    expect(sortie).toContain(`${c.surLeDisque.length}`);
-    expect(sortie).toContain(`${c.jugees.length}`);
+    // Chaque nombre est lu SUR SA LIGNE, derrière SON libellé. Cherché comme sous-chaîne n'importe
+    // où, « 26 » était satisfait par « 260 tâche(s) », et un compte à zéro ne se vérifiait pas du
+    // tout (dette 2 de la revue A10 5248720022).
+    expect(compteRendu(sortie, 'suivies par git')).toBe(c.surLeDisque.length);
+    expect(compteRendu(sortie, 'JUGÉES sur leur câblage')).toBe(c.jugees.length);
+    expect(compteRendu(sortie, 'registre ne nomme PAS')).toBe(c.horsRegistre.length);
+    expect(compteRendu(sortie, 'HORS périmètre')).toBe(c.entreesSansScript.length);
+    expect(compteRendu(sortie, "l'extension exclut de la population de départ")).toBe(
+      c.horsExtension.length
+    );
     for (const f of c.horsRegistre) expect(sortie).toContain(f);
   });
 
@@ -180,6 +216,186 @@ describe('REQ-GOV-012 — le périmètre des gardes se dérive du DISQUE, le reg
     expect(p!.compte).toBe(confronterDisqueEtRegistre(vue).surLeDisque.length);
     expect(p!.compte).toBeGreaterThan(0);
   });
+});
+
+/**
+ * LA FORME DU VRAI REGISTRE — refus A10 mutation, revue 5248720022 (PR 54, 2026-09-18).
+ *
+ * Tous les témoins ci-dessus tournent sur des registres injectés dont chaque entrée est
+ * `{ id, phase, script }`, sans `alias` ni `horsCi`. Le vrai `docs/gates.json` porte des entrées À
+ * ALIAS sous `scripts/gates/`. Deux mutants l'ont exploité, spec, `--prove` et suite verts :
+ *   M4b — `horsRegistre` absout tout script dès qu'UNE entrée du registre porte un alias ;
+ *   M4c — le jugement du câblage absout toute entrée qui porte un alias.
+ * Sous l'un comme sous l'autre, une vraie faute (entrée retirée, garde neuve sans entrée, garde à
+ * alias décâblée de `ci.yml`) sortait en ZÉRO. Et le seul témoin sur l'arbre réel comparait
+ * `controler()` à `confronterDisqueEtRegistre()` — la fonction à elle-même.
+ *
+ * Ces témoins partent donc du registre RÉEL (`lireVue()`, alias et `horsCi` compris), et chacun
+ * n'y change qu'une chose. Ils jugent la DIFFÉRENCE avec l'état du dépôt, pas l'état lui-même :
+ * une faute du jour déjà présente ne doit ni les faire rougir ni les rendre aveugles.
+ */
+describe('REQ-GOV-012 — sur la FORME du vrai registre, alias et `horsCi` compris, la faute est vue', () => {
+  const clef = (f: { famille: string; message: string }) => `${f.famille}|${f.message}`;
+  const nomsDe = (g: GateVue): string[] => [g.id, g.script, ...(g.alias ?? [])];
+  /** Retire toute ligne qui NOMME la garde : elle n'est plus appelée nulle part, rien d'autre ne bouge. */
+  const decabler = (texte: string, noms: readonly string[]): string =>
+    texte
+      .split('\n')
+      .filter((l) => !noms.some((n) => l.includes(n)))
+      .join('\n');
+
+  const reel = lireVue();
+  const c = confronterDisqueEtRegistre(reel);
+  const deBase = new Set(controler(reel).map(clef));
+  /** Les fautes qu'une variante AJOUTE à celles de l'état du dépôt. */
+  const ajoutees = (v: Vue) => controler(v).filter((f) => !deBase.has(clef(f)));
+  /** Les gardes écrites que le registre nomme — celles dont on peut retirer l'entrée. */
+  const inscrites = c.surLeDisque.filter((s) => reel.gates.some((g) => g.script === s));
+  /** Les entrées JUGÉES qui portent un alias et aucune déclaration `horsCi`. */
+  const aAlias = c.jugees.filter((g) => (g.alias ?? []).length > 0 && !(g.horsCi ?? '').trim());
+
+  it('PLANCHER : le registre réel porte des entrées à alias sous le dossier des gardes', () => {
+    // Sans elles, les témoins suivants ne diraient rien de la forme qu'ils prétendent couvrir.
+    expect(
+      reel.gates.filter(
+        (g) => g.script.startsWith(DOSSIER_DES_GARDES) && (g.alias ?? []).length > 0
+      ).length
+    ).toBeGreaterThan(0);
+    expect(inscrites.length).toBeGreaterThan(2);
+    expect(aAlias.length).toBeGreaterThan(0);
+  });
+
+  it('retirer l’entrée de CHAQUE garde inscrite la fait NOMMER, elle et elle seule', () => {
+    // Toutes, pas seulement le milieu : un témoin qui n'en retire qu'une ne distingue pas « la
+    // garde confronte chaque script » de « la garde confronte ceux que ce témoin a choisis ».
+    for (const script of inscrites) {
+      const v: Vue = { ...reel, gates: reel.gates.filter((g) => g.script !== script) };
+      const n = ajoutees(v);
+      expect(
+        n.map((f) => f.famille),
+        script
+      ).toEqual(['garde_hors_registre']);
+      expect(n[0]!.message.startsWith(`${script} `), script).toBe(true);
+    }
+  });
+
+  it('une garde NEUVE, suivie, sans entrée au registre réel, est nommée', () => {
+    const neuve = `${DOSSIER_DES_GARDES}gov-temoin-neuve${EXTENSION_DES_GARDES}`;
+    const n = ajoutees({ ...reel, fichiersSuivis: [...reel.fichiersSuivis, neuve] });
+    expect(n.map((f) => f.famille)).toEqual(['garde_hors_registre']);
+    expect(n[0]!.message.startsWith(`${neuve} `)).toBe(true);
+  });
+
+  it('décâbler une garde PORTEUSE d’alias la fait rougir en `garde_ecrite_jamais_appelee`', () => {
+    // Chacune des gardes à alias : l'alias est un moyen d'être APPELÉE, jamais une absolution.
+    for (const g of aAlias) {
+      const noms = nomsDe(g);
+      const v: Vue = {
+        ...reel,
+        workflows: reel.workflows.map((w) => ({ ...w, source: decabler(w.source, noms) })),
+        hooks: decabler(reel.hooks, noms),
+      };
+      const siennes = ajoutees(v).filter(
+        (f) => f.famille === 'garde_ecrite_jamais_appelee' && f.message.startsWith(`\`${g.id}\``)
+      );
+      expect(siennes.length, g.id).toBe(1);
+    }
+  });
+});
+
+/**
+ * LE MÊME REGISTRE RÉEL, JUGÉ PAR L'ACTE : le script lancé dans un arbre jetable qui est un VRAI
+ * dépôt git (copie des fichiers suivis, index posé), et son CODE DE SORTIE lu. Un refus qui imprime
+ * sans sortir en 1 ne bloque rien en Gate A (dette 3 de la même revue).
+ */
+describe('REQ-GOV-012 — dans un dépôt jetable au registre réel, la faute sort en 1', () => {
+  function bac(): string {
+    const racine = realpathSync.native(mkdtempSync(join(tmpdir(), 'g44-')));
+    const suivis = execFileSync('git', ['-c', 'core.quotepath=false', 'ls-files', '-z'], {
+      encoding: 'utf8',
+    })
+      .split('\0')
+      .filter(Boolean);
+    for (const f of suivis) {
+      mkdirSync(dirname(join(racine, f)), { recursive: true });
+      writeFileSync(join(racine, f), readFileSync(f));
+    }
+    execFileSync('git', ['init', '-q'], { cwd: racine });
+    execFileSync('git', ['add', '-A'], { cwd: racine });
+    symlinkSync(realpathSync('node_modules'), join(racine, 'node_modules'), 'junction');
+    return racine;
+  }
+  function lancerDans(racine: string): { code: number; sortie: string } {
+    const r = spawnSync('npx', ['tsx', SCRIPT], { cwd: racine, encoding: 'utf8', shell: true });
+    return { code: r.status ?? 1, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
+  }
+  const famillesRendues = (sortie: string) =>
+    [...new Set([...sortie.matchAll(/^\s+\[([a-z_]+)\] /gm)].map((m) => m[1]))].sort();
+
+  it('sain → 0 ; entrée du MILIEU retirée, garde neuve, garde à alias décâblée → 1, en la nommant', () => {
+    const reel = lireVue();
+    const c = confronterDisqueEtRegistre(reel);
+    const inscrites = c.surLeDisque.filter((s) => reel.gates.some((g) => g.script === s));
+    const milieu = inscrites[Math.floor(inscrites.length / 2)]!;
+    const aAlias = c.jugees.filter((g) => (g.alias ?? []).length > 0 && !(g.horsCi ?? '').trim());
+    // La promesse de cette PR est « phase 0 non câblée → rouge » : on prend d'abord une garde de
+    // phase 0 ou plus, sinon la première à alias.
+    const decablee = aAlias.find((g) => g.phase >= 0) ?? aAlias[0]!;
+    expect(decablee).toBeDefined();
+
+    const racine = bac();
+    const a = (f: string) => join(racine, f);
+    try {
+      // Contre-témoin : sans lui, aucun des trois rouges ne prouverait quoi que ce soit.
+      const sain = lancerDans(racine);
+      expect(sain.code, sain.sortie).toBe(0);
+
+      // F1 — l'entrée (ou les entrées) du script du MILIEU retirée(s) du vrai registre.
+      const registre = readFileSync(a('docs/gates.json'), 'utf8');
+      const doc = JSON.parse(registre) as { gates: GateVue[] };
+      writeFileSync(
+        a('docs/gates.json'),
+        JSON.stringify({ ...doc, gates: doc.gates.filter((g) => g.script !== milieu) }, null, 2)
+      );
+      const f1 = lancerDans(racine);
+      expect(f1.code, f1.sortie).toBe(1);
+      expect(famillesRendues(f1.sortie)).toEqual(['garde_hors_registre']);
+      expect(f1.sortie).toContain(`[garde_hors_registre] ${milieu} `);
+      expect(compteRendu(f1.sortie, 'registre ne nomme PAS')).toBe(1);
+      writeFileSync(a('docs/gates.json'), registre);
+
+      // F2 — une garde neuve, mise à l'index, que le registre ne nomme pas.
+      const neuve = `${DOSSIER_DES_GARDES}gov-temoin-neuve${EXTENSION_DES_GARDES}`;
+      writeFileSync(a(neuve), 'export {};\n');
+      execFileSync('git', ['add', neuve], { cwd: racine });
+      const f2 = lancerDans(racine);
+      expect(f2.code, f2.sortie).toBe(1);
+      expect(famillesRendues(f2.sortie)).toEqual(['garde_hors_registre']);
+      expect(f2.sortie).toContain(`[garde_hors_registre] ${neuve} `);
+      execFileSync('git', ['rm', '-q', '--cached', neuve], { cwd: racine });
+      unlinkSync(a(neuve));
+
+      // F4 — la garde à alias retirée de chaque workflow qui l'appelait.
+      const noms = [decablee.id, decablee.script, ...(decablee.alias ?? [])];
+      for (const w of reel.workflows) {
+        const texte = readFileSync(a(w.chemin), 'utf8');
+        writeFileSync(
+          a(w.chemin),
+          texte
+            .split('\n')
+            .filter((l) => !noms.some((n) => l.includes(n)))
+            .join('\n')
+        );
+      }
+      const f4 = lancerDans(racine);
+      expect(f4.code, f4.sortie).toBe(1);
+      expect(f4.sortie).toContain(`[garde_ecrite_jamais_appelee] \`${decablee.id}\``);
+    } finally {
+      // Le lien d'abord, seul : effacer l'arbre ne doit jamais descendre dans le `node_modules` réel.
+      unlinkSync(join(racine, 'node_modules'));
+      rmSync(racine, { recursive: true, force: true });
+    }
+  }, 180_000);
 });
 
 describe('REQ-GOV-012 — la décision sur le filtre de phase, écrite et GARDÉE', () => {
