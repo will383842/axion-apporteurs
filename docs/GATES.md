@@ -20,11 +20,11 @@
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
 | -1 | Socle de gouvernance | 40 | 27 | 13 |
-| 0 | Fondations, sécurité, charte | 42 | 1 | 41 |
+| 0 | Fondations, sécurité, charte | 42 | 2 | 40 |
 | 1 | Parcours, attribution, intégrations | 21 | 0 | 21 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **117** | **28** | **89** |
+| **Total** | | **117** | **29** | **88** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -67,15 +67,16 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:attributions` | GOV-037 | `scripts/gates/gov-attributions.ts` | — | pnpm gov:attributions:prove — les 4 retraits de dette FORCES : reinserees, gov:attributions sort en 1 sur dette_perimee (revue securite 5235809231, PR 48, 2026-09-17) |
 | `gov:attestation` | GOV-038 | `scripts/gates/gov-attestation.ts` | — | PR 33 (GOV-038) — sha 0000...0000 vu passer gov:tasks puis rejete en HTTP 422 par gov:attestation --en-ligne |
 
-### Phase 0 — armées (1)
+### Phase 0 — armées (2)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
 | `partners:schema:enums` | DM-02 | `scripts/gates/schema-enums.ts` | `GATE-JUR-ENUMS`, `GATE-ARG-enum`, `gov:glossaire` | pnpm partners:schema:enums:prove — 9 familles rougissent chacune sur son temoin, 7 contre-temoins restent verts ; la vue est INJECTEE et non lue sur le disque (RM-11), sans quoi la preuve mesurerait le depot du jour au lieu de la garde |
+| `G-SEC-CI-BLOQUANTE` | QA-T01 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | — | le detecteur lit par un VRAI analyseur YAML chaque job et chaque etape de CHAQUE workflow de .github/workflows (liste derivee du disque, compte imprime, planchers > 0) et nomme l'etape qui PORTE la cle continue-on-error, a toute valeur : vu ROUGE sur une copie EN MEMOIRE de ci.yml ou l'etape « Tests » de gate-a porte continue-on-error: ${{ true }} (seule « Tests » nommee), sur une etape du MILIEU (Typecheck) dont la cle precede name, en mapping entre accolades et en cle citee (Format), et au niveau JOB dans nightly.yml (gates-prouvees) — que le temoin etroit de G-SEC-GATE-A-BLOQUANTE laisse passer ; les commentaires de ci.yml et nightly.yml qui citent le mot restent VERTS ; un workflow sans jobs, a jobs vides ou porteur d'une ancre fait LEVER, jamais rendre vide ; le ci.yml du depot rend une liste vide |
 
 ## 3. Ce qui reste à prouver
 
-Aucune de ces **89** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
+Aucune de ces **88** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
 Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les
 gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques
 n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à
@@ -107,7 +108,7 @@ sortie de la commande, elle, fait foi.
 | `fixtures:source` | INT-T01a | `scripts/gates/fixtures-source.ts` | — |
 | `gov:plan-state` | GOV-008 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | — |
 
-### Phase 0 — fondations, sécurité, charte (41)
+### Phase 0 — fondations, sécurité, charte (40)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
@@ -127,7 +128,6 @@ sortie de la commande, elle, fait foi.
 | `G-SEC-ROLES` | SEC-17 | `scripts/gates/roles.ts` | `GATE-UX-ROLES` |
 | `G-SEC-HEADERS` | SEC-02 | `tests/unit/securite/headers.spec.ts` | — |
 | `G-SEC-ENV` | SEC-01 | `tests/unit/securite/env-boot.spec.ts` | — |
-| `G-SEC-CI-BLOQUANTE` | QA-T01 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | — |
 | `cliquet-ecrivains` | INT-T03 | `axionia/scripts/gates/cliquet-ecrivains.ts` | — |
 | `inertie` | INT-T02 | `axionia/scripts/gates/inertie.ts` | — |
 | `harnais-mcp` | INT-T11 | `scripts/gates/harnais-mcp.ts` | — |
