@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `300b72d` — 2026-09-18T23:17:08+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #61 (un contrôle requis rouge ou une revue manquante) · 2. #59 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T01 (A05) · GOV-039 (A05) · GOV-041 (A05) · GOV-043 (A05) · GOV-044 (A05) · GOV-056 (A05) |
-| Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
+| Où est `main` ? | `87fb212` — 2026-09-19T00:46:28+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #59 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T01 (A05) · GOV-077 (A05) |
+| Où en est la phase ? | phase 0 — 5/98 tâches, reste 71.60 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #61 — 2026-09-18 |
@@ -19,19 +19,19 @@
 
 ## Phase courante : 0
 
-0/98 tâches terminées · reste 75.85 j estimés.
+5/98 tâches terminées · reste 71.60 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 219 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
+| `a_faire` | 214 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 39 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
+| `fusionnee` | 44 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -64,8 +64,7 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #61 — feat(GOV-043): gov:trace rend son perimetre et son complement, sous un plancher declare | `t/gov-043` | un contrôle requis rouge ou une revue manquante |
-| 2 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -76,25 +75,23 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | QA-T01 — Squelette de tests et Gate A bloquante | A05 | #56 | `a_faire` |
-| GOV-039 — Quatre-vingt-huit titres de test etiquetes par l'exigence d'un AUTRE sujet | A05 | #52 | `a_faire` |
-| GOV-041 — La cloture ecrit un statut sur une entree qu'elle n'a pas verifiee | A05 | #50 | `a_faire` |
-| GOV-043 — Le controle compensatoire de la tracabilite ne couvre qu'un quart du backlog | A05 | #58 | `a_faire` |
-| GOV-044 — Une garde absente du registre s'exempte elle-meme de la garde qui verifie qu'on l'appelle | A05 | #51 | `a_faire` |
-| GOV-056 — Le composeur compare des `paths` quand les taches promettent des `tests{}`, et rien ne juge les fichiers d une PR | A05 | #49 | `a_faire` |
+| GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent | A05 | #57 | `a_faire` |
 
-⚠️ **20 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, GOV-035, GOV-036, GOV-037, GOV-030, GOV-031 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
+⚠️ **25 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-18 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
+`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve
+
+Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
 
-**QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 34 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 32 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `300b72d` (2026-09-18T23:17:08+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `87fb212` (2026-09-19T00:46:28+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 

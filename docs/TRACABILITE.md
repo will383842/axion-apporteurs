@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**321 exigences actives · 43 réputées testées · 43 couvertes · 0 orphelines.**
+**321 exigences actives · 44 réputées testées · 44 couvertes · 0 orphelines.**
 
-260 tâches, dont 39 livrées · 42 fichiers de test exécutés par `vitest` sur 42 présents.
+260 tâches, dont 44 livrées · 44 fichiers de test exécutés par `vitest` sur 44 présents.
 
 ## Exigences réputées testées
 
@@ -39,9 +39,9 @@
 | `REQ-GOV-008` | `GOV-009`, `GOV-038`, `GOV-058`, `GOV-063`, `GOV-070` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/attestation-inter-depot.spec.ts` | couverte |
 | `REQ-GOV-009` | `GOV-010`, `GOV-022`, `GOV-070` | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | couverte |
 | `REQ-GOV-010` | `GOV-007`, `GOV-023`, `GOV-024`, `GOV-062` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/fiches-agents.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
-| `REQ-GOV-011` | `GOV-007`, `GOV-021`, `GOV-024`, `GOV-058`, `GOV-077`, `GOV-078` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
+| `REQ-GOV-011` | `GOV-007`, `GOV-021`, `GOV-024`, `GOV-058`, `GOV-077`, `GOV-078` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts`, `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-012` | `GOV-007`, `GOV-044`, `GOV-045`, `GOV-046`, `GOV-054`, `GOV-061`, `GOV-063`, `GOV-067`, `GOV-082`, `GOV-083` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` | couverte |
-| `REQ-GOV-013` | `GOV-007`, `GOV-047`, `GOV-058`, `GOV-077` | `tests/gov/charte-pr.spec.ts` | couverte |
+| `REQ-GOV-013` | `GOV-007`, `GOV-047`, `GOV-058`, `GOV-077` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts` | couverte |
 | `REQ-GOV-014` | `GOV-000`, `GOV-012`, `GOV-057` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
 | `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `GOV-060`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-016` | `GOV-006` | `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
@@ -65,6 +65,7 @@
 | `REQ-INT-029` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-QA-007` | `INT-T01a`, `INT-T01b` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-QA-013` | `GOV-059`, `GOV-061`, `GOV-062`, `GOV-063`, `GOV-076`, `GOV-083`, `QA-T00`, `QA-T01`, `QA-T07`, `QA-T28` | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
+| `REQ-QA-014` | `GOV-039`, `GOV-085`, `QA-T03` | `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts`, `tests/unit/gouvernance/tracabilite.spec.ts`, `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts` | couverte |
 
 ## Exigences actives dont aucune tâche n’est encore livrée
 
@@ -256,7 +257,6 @@
 | `REQ-QA-004` | 1 | `DM-08` | — |
 | `REQ-QA-005` | 2 | `QA-T28`, `QA-T29` | — |
 | `REQ-QA-006` | 0 | `QA-T02` | `tests/integration/harnais-testcontainers.spec.ts` |
-| `REQ-QA-014` | 0 | `GOV-039`, `GOV-085`, `QA-T03` | `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts`, `tests/unit/gouvernance/un-rendu-n-officialise-pas-une-attribution.spec.ts`, `tests/unit/qualite/req-check.spec.ts` |
 | `REQ-QA-015` | 0 | `QA-T06` | `tests/integration/semeur-deterministe.spec.ts`, `tests/unit/qualite/preview-par-pr.spec.ts` |
 | `REQ-QA-016` | 0 | `QA-T16`, `UX-P0-03` | `tests/a11y/axe.spec.ts`, `tests/a11y/cibles.spec.ts`, `tests/a11y/reflow.spec.ts` |
 | `REQ-QA-017` | 1 | `QA-T16` | — |
@@ -442,6 +442,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/attestation-inter-depot.spec.ts` | oui | `REQ-GOV-008`, `REQ-GOV-025`, `REQ-GOV-026` |
 | `tests/unit/gouvernance/attributions-resolvent.spec.ts` | oui | `REQ-GOV-003`, `REQ-GOV-021` |
 | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts` | oui | `REQ-GOV-014` |
+| `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts` | oui | `REQ-GOV-011`, `REQ-GOV-013` |
 | `tests/unit/gouvernance/autonomie.spec.ts` | oui | `REQ-CPL-021` |
 | `tests/unit/gouvernance/citation-json-vs-prose.spec.ts` | oui | `REQ-GOV-003` |
 | `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-026` |
@@ -456,6 +457,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | oui | `REQ-GOV-003` |
 | `tests/unit/gouvernance/integration-livrable.spec.ts` | oui | — |
 | `tests/unit/gouvernance/inventaire-prouve.spec.ts` | oui | `REQ-GOV-026` |
+| `tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts` | oui | `REQ-GOV-011` |
 | `tests/unit/gouvernance/lexique.spec.ts` | oui | `REQ-GOV-017`, `REQ-JUR-037` |
 | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | oui | `REQ-GOV-033` |
 | `tests/unit/gouvernance/paths-derives.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-025` |
