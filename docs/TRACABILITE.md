@@ -16,7 +16,7 @@
 
 **321 exigences actives · 43 réputées testées · 43 couvertes · 0 orphelines.**
 
-260 tâches, dont 39 livrées · 41 fichiers de test exécutés par `vitest` sur 41 présents.
+260 tâches, dont 39 livrées · 42 fichiers de test exécutés par `vitest` sur 42 présents.
 
 ## Exigences réputées testées
 
@@ -472,6 +472,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts` | oui | `REQ-CPL-018`, `REQ-QA-014` |
 | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | oui | `REQ-GOV-014`, `REQ-QA-013` |
 | `tests/unit/gouvernance/tracabilite.spec.ts` | oui | `REQ-GOV-005`, `REQ-QA-014` |
+| `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts` | oui | `REQ-QA-014` |
 | `tests/unit/gouvernance/une-tache-un-owner.spec.ts` | oui | `REQ-GOV-007` |
 | `tests/unit/gouvernance/verrou-de-phase.spec.ts` | oui | `REQ-GOV-027` |
 | `tests/unit/gouvernance/vues-derivees.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-032` |

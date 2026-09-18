@@ -43,6 +43,13 @@ import { DEPOT_LOCAL, MOTIF_SHA, depotDeLaTache, type Attestation } from '../lot
 const iTaches = process.argv.indexOf('--taches');
 const CHEMIN_TACHES =
   iTaches >= 0 ? (process.argv[iTaches + 1] ?? 'docs/tasks.json') : 'docs/tasks.json';
+/**
+ * LE REGISTRE — les tâches qui EXISTENT, quel que soit le backlog jugé (GOV-043). `--taches` juge
+ * une PROPOSITION ; une proposition peut ajouter une tâche (`verser-tache` le fait), jamais en
+ * faire naître une déjà livrée. Mesure du 2026-09-09 : une tâche FABRIQUÉE, absente du registre,
+ * nommant des chemins qui existent, était comptée « portant une preuve qui résout ».
+ */
+const CHEMIN_REGISTRE_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
 const CHEMIN_PATHS = 'docs/paths-proposes.json';
 const CHEMIN_INVENTAIRE = 'docs/INVENTAIRE-CHANTIERS.md';
@@ -99,6 +106,8 @@ type LigneChantier = {
 };
 type Etat = {
   taches: Tache[];
+  /** Les identifiants du REGISTRE (`docs/tasks.json`), pas ceux du backlog jugé. */
+  registre: Set<string>;
   cheminsProposes: Record<string, string[]>;
   statutsDuSchema: string[];
   chantiers: LigneChantier[];
@@ -186,6 +195,10 @@ function shasParPortee(): Record<string, string[]> {
  * `pnpm gov:attestation --en-ligne`.
  */
 function preuvesDeLaTache(t: Tache, e: Etat): string[] {
+  // Une tâche que le registre ne connaît pas n'a rien livré, quels que soient les chemins qu'elle
+  // nomme : ils appartiennent à d'autres. Les lui compter, c'est valider une fabrication avec les
+  // fichiers de la voisine (GOV-043). Elle ne porte donc AUCUNE preuve — et le dit, plus bas.
+  if (!e.registre.has(t.id)) return [];
   const chemins = [...new Set([...t.paths, ...(e.cheminsProposes[t.id] ?? [])])].filter(
     cheminExiste
   );
@@ -277,6 +290,16 @@ function controler(e: Etat): Faute[] {
     if (plancher === undefined || plancher === null) continue;
     if (rang(plancher) < SEUIL_PREUVE) continue;
     if (preuvesDeLaTache(t, e).length > 0) continue;
+    if (!e.registre.has(t.id)) {
+      ajouter(
+        'tache_preuve_manquante',
+        `${t.id} est « ${t.statut} » (donc au moins « ${plancher} ») et n'existe pas au registre ` +
+          `${CHEMIN_REGISTRE_TACHES} : une tâche naît à faire, jamais livrée. Les chemins qu'elle ` +
+          `nomme (${t.paths.join(', ') || 'aucun'}) appartiennent à d'autres : ils ne prouvent ` +
+          `pas SA livraison.`
+      );
+      continue;
+    }
     ajouter(
       'tache_preuve_manquante',
       `${t.id} est « ${t.statut} » (donc au moins « ${plancher} ») et ne porte AUCUNE preuve : ` +
@@ -356,7 +379,14 @@ function controler(e: Etat): Faute[] {
 }
 
 // ── chargement ───────────────────────────────────────────────────────────────
-for (const f of [CHEMIN_TACHES, CHEMIN_SCHEMA, CHEMIN_PATHS, CHEMIN_INVENTAIRE, CHEMIN_EXIGENCES]) {
+for (const f of [
+  CHEMIN_TACHES,
+  CHEMIN_REGISTRE_TACHES,
+  CHEMIN_SCHEMA,
+  CHEMIN_PATHS,
+  CHEMIN_INVENTAIRE,
+  CHEMIN_EXIGENCES,
+]) {
   if (!existsSync(f)) {
     console.error(`❌ gov:inventaire — ${f} est introuvable.`);
     process.exit(1);
@@ -379,6 +409,9 @@ const etatDuDepot: Etat = {
     repo: t.repo,
     attestation: t.attestation ?? null,
   })),
+  registre: new Set(
+    (lire(CHEMIN_REGISTRE_TACHES) as { taches: { id: string }[] }).taches.map((t) => t.id)
+  ),
   cheminsProposes: docPaths.paths ?? {},
   statutsDuSchema: schema.$defs?.tache?.properties?.statut?.enum ?? [],
   chantiers: lireInventaire(readFileSync(CHEMIN_INVENTAIRE, 'utf8')),
@@ -392,6 +425,7 @@ const copier = (e: Etat): Etat => ({
     paths: [...t.paths],
     attestation: t.attestation ? { ...t.attestation } : null,
   })),
+  registre: new Set(e.registre),
   cheminsProposes: JSON.parse(JSON.stringify(e.cheminsProposes)) as Record<string, string[]>,
   statutsDuSchema: [...e.statutsDuSchema],
   chantiers: e.chantiers.map((c) => ({ ...c, preuves: [...c.preuves] })),
@@ -409,6 +443,23 @@ function sansPreuve(e: Etat): Tache {
     );
     process.exit(1);
   }
+  return t;
+}
+
+/**
+ * Une tâche que le registre ne connaît pas, et qui nomme un chemin qui EXISTE : le registre
+ * lui-même, dont le chargement a déjà vérifié la présence. Sa preuve est donc BIEN FORMÉE — c'est
+ * ce qui la rendait « résolvante ». Aucune sortie de plus : rien à refuser, le chemin est garanti.
+ */
+function fabriquee(e: Etat, statut: string): Tache {
+  const t: Tache = {
+    id: 'TACHE-FABRIQUEE',
+    statut,
+    paths: [CHEMIN_REGISTRE_TACHES],
+    repo: DEPOT_LOCAL,
+    attestation: null,
+  };
+  e.taches.push(t);
   return t;
 }
 
@@ -488,6 +539,16 @@ if (process.argv.includes('--prove')) {
         return e;
       },
     },
+    // Second témoin de la même famille (GOV-043) : la tâche porte des chemins qui EXISTENT, mais
+    // le registre ne la connaît pas. Le premier témoin ne prouve rien de ce cas-là.
+    {
+      famille: 'tache_preuve_manquante',
+      defaut: () => {
+        const e = copier(etatDuDepot);
+        fabriquee(e, 'fusionnee');
+        return e;
+      },
+    },
     {
       famille: 'inventaire_etiquette_hors_req',
       defaut: () => {
@@ -542,6 +603,15 @@ if (process.argv.includes('--prove')) {
    * bloquerait `pnpm lot:composer` et `pnpm lot:cloture`.
    */
   const CONTRE_TEMOINS: { nom: string; muter: () => Etat }[] = [
+    {
+      // `verser-tache` ajoute des tâches : une PROPOSITION de versement, à faire, n'a rien à prouver.
+      nom: 'une tâche NEUVE, absente du registre, proposée à faire',
+      muter: () => {
+        const e = copier(etatDuDepot);
+        fabriquee(e, 'a_faire');
+        return e;
+      },
+    },
     {
       nom: "une tâche fraîchement revendiquée (`en_cours`), dont rien n'existe encore sur le disque",
       muter: () => {
