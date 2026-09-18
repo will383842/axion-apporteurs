@@ -24,7 +24,7 @@ export default defineConfig({
       'tests/gov/**/*.{test,spec}.{ts,tsx}',
       // Les tests d'intégration tournent DANS `pnpm test` : `gov:trace` lit include/exclude de CE fichier,
       // et un spec exclu y vaut « non exécuté ». Conséquence assumée : la suite exige le démon Docker
-      // (partners/ADR-0014, D7 ; partners/ADR-0001).
+      // (partners/ADR-0014, décision 7 ; partners/ADR-0001).
       'tests/integration/**/*.{test,spec}.{ts,tsx}',
     ],
     exclude: ['node_modules', '.next', 'tests/e2e/**'],

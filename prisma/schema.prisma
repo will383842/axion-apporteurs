@@ -86,7 +86,7 @@ enum AgregatJournal {
 }
 
 /// Le journal. Chaîne GLOBALE et linéaire : `prevHash` unique interdit la bifurcation et une
-/// seconde genèse ; l'écrivain sérialise par un verrou consultatif (partners/ADR-0014, D3).
+/// seconde genèse ; l'écrivain sérialise par un verrou consultatif (partners/ADR-0014, décision 3).
 /// Toute colonne ajoutée plus tard est HORS hachage et le dit, ou exige un nouvel algorithme.
 model Evenement {
   id        BigInt               @id @default(autoincrement())

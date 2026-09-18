@@ -81,7 +81,7 @@ CREATE TRIGGER evenements_append_only BEFORE UPDATE OR DELETE ON "evenements"
 CREATE TRIGGER evenements_append_only_troncature BEFORE TRUNCATE ON "evenements"
   FOR EACH STATEMENT EXECUTE FUNCTION evenements_refuser_modification();
 
--- Genèse (D2) : la seule ligne dont prev_hash vaut 64 zéros. Son self_hash est GENESE.selfHash,
+-- Genèse (décision 2) : la seule ligne dont prev_hash vaut 64 zéros. Son self_hash est GENESE.selfHash,
 -- calculé par `src/domain/evenement/journal.ts` ; `tests/unit/domaine/journal-chaine.spec.ts` tient
 -- les deux copies égales.
 INSERT INTO "evenements" ("type", "agregat", "agregat_id", "survenu_at", "charge", "prev_hash", "self_hash")

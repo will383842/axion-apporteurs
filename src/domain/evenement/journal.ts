@@ -1,7 +1,7 @@
 /**
- * Le chaînage du journal `Evenement` — DM-01 (REQ-DM-024, partners/ADR-0014 D1 à D3).
+ * Le chaînage du journal `Evenement` — DM-01 (REQ-DM-024, partners/ADR-0014 décisions 1 à 3).
  *
- * ALGORITHME `sha256-jcs-v1` (D1).
+ * ALGORITHME `sha256-jcs-v1` (décision 1).
  *   selfHash = hex(SHA-256(UTF-8(prevHash + canonique(enregistrement)))), 64 caractères minuscules,
  *   enregistrement = { agregat, agregatId, charge, survenuAt, type }.
  * TOUTES les colonnes qui portent un sens sont hachées, pas la seule charge : hacher la charge seule
@@ -9,7 +9,7 @@
  * pas de sens, c'est un rang d'insertion). Une colonne ajoutée plus tard est HORS hachage et le dit,
  * ou exige un nouvel algorithme, par ADR.
  *
- * LA GENÈSE (D2) est la seule ligne dont `prevHash` vaut 64 zéros. La première migration l'insère
+ * LA GENÈSE (décision 2) est la seule ligne dont `prevHash` vaut 64 zéros. La première migration l'insère
  * avec le `selfHash` calculé ici : les deux copies sont tenues égales par
  * `tests/unit/domaine/journal-chaine.spec.ts`, qui lit le littéral dans `migration.sql`. Elle ancre
  * la chaîne et y inscrit l'algorithme, DANS la chaîne.
