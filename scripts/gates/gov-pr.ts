@@ -1153,6 +1153,23 @@ if (process.argv.includes('--prove')) {
     fichiers: ['docs/tasks.json'],
   };
 
+  /**
+   * R0 — LA PR ORDINAIRE, EXPLICITE (GOV-077). `PR_TEMOIN` ne l'est pas, et PAR ACCIDENT : ses
+   * fichiers portent `docs/CHARTE-AGENTS.md`, qui appartient à la garde des revues — donc risque
+   * ÉLEVÉ, donc quatre lentilles. Une fixture conforme par accident ne prouve rien : celle-ci est
+   * ordinaire par construction — tâche QA-T01, fichiers dérivés de ses `paths`, et la base
+   * FOURNIE explicitement (jamais de `git` dans une fixture).
+   */
+  const PR_ORDINAIRE: Pr = {
+    ...copiePr(PR_TEMOIN),
+    titre: 'feat(QA-T01): aucune gate en continue-on-error',
+    fichiers: cheminsDe('QA-T01'),
+    revues: [
+      revue('A09 · exactitude\nVerdict: accepte\nles REQ citees sont couvertes'),
+      revue('A09 · securite\nVerdict: accepte\nrien a signaler'),
+    ],
+  };
+
   type Temoin = { famille: string; defaut: () => [Depot, Pr | null] };
   const TEMOINS: Temoin[] = [
     // ---- structure
@@ -1559,6 +1576,13 @@ if (process.argv.includes('--prove')) {
         p.revues = p.revues!.map((r) => ({ ...r, state: ETAT_COMMENTE }));
         return [depot, p];
       },
+    },
+    {
+      // R0 (GOV-077, levier 3 de Will du 2026-09-18) — LA PR ORDINAIRE EXPLICITE. Titre QA-T01
+      // (zone `qualite`, `sensible` vide, `schema` faux), fichiers DÉRIVÉS de ses `paths`, aucun
+      // hors de `docs/`, `scripts/`, `tests/`, `.github/` ou de la racine : deux lentilles suffisent.
+      quoi: 'une PR ORDINAIRE (QA-T01) relue par exactitude et securite seules, sur la tête',
+      cas: () => [depot, PR_ORDINAIRE],
     },
   ];
 
