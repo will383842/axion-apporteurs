@@ -238,6 +238,47 @@ describe('REQ-CPL-018 — la ligne qui teste LÉGITIMEMENT le mono-tenant, et le
   });
 });
 
+// ── UNE SEULE LECTURE DES TITRES — celle de `gov:trace`, pas une seconde plus étroite ─────────────
+//
+// Refus d'A09 · simplicite sur la PR 55 (revue 5246990618, tête `7c26fe2`) : ce fichier lisait les
+// titres par son PROPRE lecteur, ligne à ligne, qui prenait le premier guillemet après `.each(` ou
+// `.skipIf(` pour un titre (« win32 » à `entite-registre.spec.ts:2532`) et ratait tout titre écrit à
+// la ligne SUIVANTE. Quinze titres à identifiant, dans trois fichiers, n'étaient jamais confrontés.
+// Vu : `REQ-GOV-003` → `REQ-GOV-005` (absorbée) dans le titre `it.each` de
+// `identifiants-nus-positions-limites.spec.ts:75-76` laissait ce fichier 17/17 VERT.
+
+describe('REQ-QA-014 — un titre écrit à la ligne SUIVANTE de son `it.each(…)(` est lu, et confronté', () => {
+  const FICHIER = 'tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts';
+  const SAIN = "'REQ-GOV-003 : le témoin placé en position $position fait rougir la garde'";
+
+  it('REQ-QA-014 — PANNE FABRIQUÉE, le cas vu : REQ-GOV-003 → REQ-GOV-005 (absorbée) dans ce titre ROUGIT', () => {
+    const source = lire(FICHIER);
+    expect(source, 'le titre frappé a disparu du fichier : le témoin ne frapperait rien').toContain(
+      SAIN
+    );
+    const frappee = source.replace(SAIN, SAIN.replace('REQ-GOV-003', 'REQ-GOV-005'));
+    const r = resoudre(titresDe(FICHIER, frappee), REGISTRE().exigences).filter(
+      (x) => x.famille === 'texte_remplace'
+    );
+    expect(r.map((x) => x.message).join('\n')).toContain(`${FICHIER}:75 nomme REQ-GOV-005`);
+  });
+
+  it('REQ-QA-014 — CONTRE-TÉMOIN : le même titre, sain, est LU et ne rougit pas', () => {
+    const titres = titresDe(FICHIER, lire(FICHIER));
+    expect(titres.map((t) => `'${t.texte}'`)).toContain(SAIN);
+    expect(resoudre(titres, REGISTRE().exigences)).toEqual([]);
+  });
+
+  it('REQ-QA-014 — l’argument d’un `it.skipIf(…)(` n’est PAS un titre : le vrai titre est lu à sa place', () => {
+    const f = 'tests/unit/gouvernance/entite-registre.spec.ts';
+    const textes = titresDe(f, lire(f)).map((t) => t.texte);
+    expect(textes).not.toContain('win32');
+    expect(textes.some((t) => t.startsWith('REQ-GOV-031 — VETO nom, par le vrai chemin'))).toBe(
+      true
+    );
+  });
+});
+
 // ── LE TEXTE SURVIVANT CONTIENT LE TEXTE DÉCIDÉ — RM-01 appliqué aux exigences ────────────────────
 
 describe('REQ-QA-014 — les fusions décidées se confrontent au registre, et la garde les LIT toutes', () => {
