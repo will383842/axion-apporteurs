@@ -160,6 +160,34 @@ export function fusionsDecidees(annexe: string): Fusion[] {
   return f;
 }
 
+/**
+ * L'en-tête de la section des fusions : il DÉCLARE le compte que la garde doit lire.
+ *
+ * 🔴 Refus A09 · exactitude, motif 2 (PR 55, revue 5247101531). Le plancher ne tombait qu'à ZÉRO
+ * fusion lue : une puce reformulée — `- garder **REQ-QA-014** (traçabilité), absorber …` — sortait
+ * de la confrontation sans un mot, emportant son texte décidé, et la garde rendait « 27 fusions
+ * décidées confrontées » en exit 0. Le compte lu se confronte désormais au compte déclaré, et toute
+ * puce de la section que la garde ne sait pas lire est NOMMÉE.
+ */
+const EN_TETE_FUSIONS = /^### Fusions proposées \((\d+)\) — \*\*(\d+) REQ absorbées/;
+
+/** Ce que l'annexe DÉCLARE, et les puces de sa section des fusions qu'aucune lecture ne reconnaît. */
+export function lectureDeLAnnexe(annexe: string): {
+  declare: { fusions: number; absorbees: number } | null;
+  illisibles: { ligne: number; texte: string }[];
+} {
+  const lignes = annexe.split(/\r?\n/);
+  const debut = lignes.findIndex((l) => EN_TETE_FUSIONS.test(l));
+  if (debut < 0) return { declare: null, illisibles: [] };
+  const m = EN_TETE_FUSIONS.exec(lignes[debut]!)!;
+  const illisibles: { ligne: number; texte: string }[] = [];
+  for (let i = debut + 1; i < lignes.length && !lignes[i]!.startsWith('### '); i++) {
+    const l = lignes[i]!;
+    if (l.startsWith('- ') && !PUCE_FUSION.test(l)) illisibles.push({ ligne: i + 1, texte: l });
+  }
+  return { declare: { fusions: Number(m[1]), absorbees: Number(m[2]) }, illisibles };
+}
+
 /** Les MARQUEURS d'un texte : ses spans de code, normalisés sur les blancs. Dérivés, jamais listés. */
 export function marqueursDe(texte: string): string[] {
   return [...texte.matchAll(/`([^`]+)`/g)].map((m) => m[1]!.replace(/\s+/g, ' ').trim());
@@ -409,6 +437,33 @@ export function controler(doc: unknown, schema: object, taches: Tache[], annexe:
       'annexe_sans_fusion',
       `${CHEMIN_ANNEXE} ne rend AUCUNE fusion : la confrontation des textes décidés porterait sur ` +
         `rien. Une garde qui ne lit rien ne prouve rien.`
+    );
+  }
+  const lecture = lectureDeLAnnexe(annexe);
+  for (const p of lecture.illisibles) {
+    ajouter(
+      'annexe_sans_fusion',
+      `${CHEMIN_ANNEXE}:${p.ligne} — une puce de la section des fusions que la garde ne sait pas ` +
+        `lire : « ${p.texte.slice(0, 80)}… ». Ignorée, elle sortirait de la confrontation avec son ` +
+        `texte décidé, sans un mot.`
+    );
+  }
+  const absorbeesLues = fusions.reduce((n, f) => n + f.absorbees.length, 0);
+  if (!lecture.declare) {
+    ajouter(
+      'annexe_sans_fusion',
+      `${CHEMIN_ANNEXE} ne déclare plus son compte (« ### Fusions proposées (N) — **M REQ ` +
+        `absorbées** ») : le compte lu n'a plus rien à quoi se confronter.`
+    );
+  } else if (
+    lecture.declare.fusions !== fusions.length ||
+    lecture.declare.absorbees !== absorbeesLues
+  ) {
+    ajouter(
+      'annexe_sans_fusion',
+      `${CHEMIN_ANNEXE} déclare ${lecture.declare.fusions} fusions et ${lecture.declare.absorbees} ` +
+        `absorbées ; la garde en lit ${fusions.length} et ${absorbeesLues}. Une fusion que la garde ` +
+        `ne lit pas n'est pas confrontée.`
     );
   }
   const declarees = new Set<string>();

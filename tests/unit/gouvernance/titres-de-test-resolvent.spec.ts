@@ -39,7 +39,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
 import {
   estUnFichierDeTest,
   fichiersDeTest,
@@ -157,7 +156,8 @@ export function resoudre(titres: readonly Titre[], exigences: readonly Exigence[
   return refus;
 }
 
-const SPECS = () => fichiersSuivis().filter((f) => f.endsWith('.spec.ts'));
+/** Le périmètre de `gov:trace`, et aucun autre : `*.test.ts` et `.tsx` compris. */
+const SPECS = () => fichiersDeTest();
 const TOUS_LES_TITRES = (): Titre[] => SPECS().flatMap((f) => titresDe(f, lire(f)));
 
 describe('REQ-QA-014 — la sonde MESURE quelque chose : sans plancher, une lecture vide passerait pour un dépôt sain', () => {

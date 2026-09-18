@@ -21,8 +21,38 @@
  * — `it.each(T.filter((t) => …))(` — n'est pas lue. 10 ouvertures sur 941 sont dans ce cas. Les
  * élargir change ce que `gov:trace` compte comme cité : c'est une tâche à part, pas un effet de bord.
  *
+ * LE PÉRIMÈTRE aussi n'existe qu'une fois (refus A09 · exactitude 5247101531) : la spécification ne
+ * lisait que les `*.spec.ts` suivis, alors que `gov:trace` — et vitest — lisent aussi `*.test.ts` et
+ * les `.tsx`. `fichiersDeTest()` est la liste que `gov:trace` confronte ; la spécification la lit.
+ *
  * Aucun effet à l'import : rien n'est lu, rien n'est écrit, rien ne sort.
  */
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+
+/** Les racines où vivent les fichiers de test du dépôt. */
+const RACINES_DE_TEST = ['tests', 'src'];
+
+/** Un fichier de test, au sens de vitest : `*.test.ts`, `*.spec.ts`, et leurs variantes `.tsx`. */
+export function estUnFichierDeTest(chemin: string): boolean {
+  return /\.(test|spec)\.tsx?$/.test(chemin);
+}
+
+function listerFichiers(racine: string): string[] {
+  if (!existsSync(racine)) return [];
+  const sortie: string[] = [];
+  for (const entree of readdirSync(racine)) {
+    const chemin = join(racine, entree);
+    if (statSync(chemin).isDirectory()) sortie.push(...listerFichiers(chemin));
+    else sortie.push(chemin.replace(/\\/g, '/'));
+  }
+  return sortie;
+}
+
+/** Les fichiers de test du dépôt, lus sur le disque : la liste que `gov:trace` confronte. */
+export function fichiersDeTest(): string[] {
+  return RACINES_DE_TEST.flatMap(listerFichiers).filter(estUnFichierDeTest);
+}
 
 /** L'ouverture d'un titre : `it`/`test`/`describe`, ses variantes, l'argument éventuel, le titre. */
 const OUVERTURE =
