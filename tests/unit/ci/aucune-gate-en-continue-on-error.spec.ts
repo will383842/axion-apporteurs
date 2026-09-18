@@ -42,6 +42,7 @@ import {
   readdirSync,
   realpathSync,
   rmSync,
+  statSync,
   symlinkSync,
   unlinkSync,
   writeFileSync,
@@ -291,9 +292,10 @@ const INTERDITS_DU_DOMAINE: readonly (readonly [ligne: string, nom: string])[] =
   ["console.log('courriel');", 'console'],
 ];
 
-const BAC_DOMAINE = `${DOMAINE}/zz-bac.ts`;
+// Dans un SOUS-dossier : un bac posé à la racine du domaine ne prouverait rien des sous-dossiers.
+const BAC_DOMAINE = `${DOMAINE}/m-milieu/zz-bac.ts`;
 /** Une directive en ligne qui prétend éteindre `no-console` : `noInlineConfig` doit l'ignorer. */
-const BAC_DIRECTIVE = `${DOMAINE}/zz-directive.ts`;
+const BAC_DIRECTIVE = `${DOMAINE}/m-milieu/zz-directive.ts`;
 const DIRECTIVE = "// eslint-disable-next-line no-console\nconsole.log('courriel');\n";
 /**
  * Les chemins où les deux règles étaient TOLÉRÉES en `warn` jusqu'à QA-T01 (les deux blocs « dette »
@@ -391,6 +393,36 @@ function passePartielle(): { code: number | null; sortie: string; couverts: stri
 
 /** La marque que `tests/setup.ts` pose : sa présence prouve que `setupFiles` le charge. */
 const MARQUE_DU_SETUP = Symbol.for('axion-partners.tests.setup');
+
+/**
+ * Une directive d'EXCLUSION DE COUVERTURE (familles v8, c8, istanbul, node:coverage) n'a pas sa place
+ * sous `src/domain/**` : le seuil de 100 % doit mesurer tout le code livré. Elle est refusée quelle
+ * que soit la casse, l'espacement (saut de ligne compris) ou l'extension du fichier. Le texte entier
+ * est lu, pas seulement les commentaires : une chaîne qui la citerait rougit aussi — échec fermé,
+ * voulu.
+ */
+const DIRECTIVE_D_EXCLUSION = /(?:\b(?:v8|c8|istanbul)|node:coverage)\s*ignore/gi;
+
+/**
+ * Chaque directive d'exclusion trouvée sous `racine` (tous les fichiers, toutes extensions, à toute
+ * profondeur), nommée `src/domain/<chemin>:<ligne>`, et le nombre de fichiers LUS : un parcours qui
+ * ne lirait plus rien rendrait le même `[]` qu'un domaine sain.
+ */
+function directivesDExclusion(racine: string): { lus: number; fautes: string[] } {
+  const fichiers = readdirSync(racine, { recursive: true, encoding: 'utf8' })
+    .map((f) => f.split('\\').join('/'))
+    .filter((f) => statSync(join(racine, f)).isFile())
+    .sort();
+  const fautes: string[] = [];
+  for (const f of fichiers) {
+    const texte = readFileSync(join(racine, f), 'utf8');
+    for (const m of texte.matchAll(DIRECTIVE_D_EXCLUSION)) {
+      const ligne = texte.slice(0, m.index).split('\n').length;
+      fautes.push(`${DOMAINE}/${f}:${ligne}`);
+    }
+  }
+  return { lus: fichiers.length, fautes };
+}
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════
 
@@ -565,4 +597,43 @@ describe('REQ-QA-002 — 100 % lignes et branches sur `src/domain/**`, appliqué
     // Au moins un fichier nommé vit dans un SOUS-dossier : une clé de seuil `src/domain/*` le perdrait.
     expect(nommes.some((f) => relative(DOMAINE, dirname(f)) !== '')).toBe(true);
   }, 600_000);
+
+  it('REQ-QA-002 — aucune directive d’exclusion de couverture sous `src/domain/**` : le seuil mesure tout le code livré', () => {
+    const { lus, fautes } = directivesDExclusion(DOMAINE);
+    expect(lus).toBeGreaterThanOrEqual(fichiersDuDomaine().length);
+    expect(fautes).toEqual([]);
+  });
+
+  it('REQ-QA-002 — et ce témoin SAIT rougir : chaque forme, chaque extension, dans un sous-dossier du MILIEU, est nommée à sa ligne', () => {
+    const racine = mkdtempSync(join(tmpdir(), 'qa3-'));
+    try {
+      const plantes: Record<string, string> = {
+        'attribution/sain.ts': 'export const a = 1;\n',
+        'm-milieu/profond/a.ts': 'export const a = 1;\n/* v8 ignore start */\n',
+        'm-milieu/profond/b.tsx': 'export const b = 1;\n/*V8   IGNORE next 3*/\n',
+        'm-milieu/profond/c.mts': '// c8 ignore next\n',
+        'm-milieu/profond/d.cts': '\n\n/* istanbul ignore else */\n',
+        'm-milieu/profond/e.ts': '/* node:coverage ignore next */\n',
+        'm-milieu/profond/f.ts': '/* v8\n   ignore stop */\n',
+        // Contre-témoin : les deux mots, séparés, ne sont pas une directive.
+        'zz-fin/sain.ts': '// on ignore ce cas ; le moteur v8 le traite ailleurs\n',
+      };
+      for (const [f, texte] of Object.entries(plantes)) {
+        mkdirSync(dirname(join(racine, f)), { recursive: true });
+        writeFileSync(join(racine, f), texte);
+      }
+      const { lus, fautes } = directivesDExclusion(racine);
+      expect(lus).toBe(Object.keys(plantes).length);
+      expect(fautes).toEqual([
+        `${DOMAINE}/m-milieu/profond/a.ts:2`,
+        `${DOMAINE}/m-milieu/profond/b.tsx:2`,
+        `${DOMAINE}/m-milieu/profond/c.mts:1`,
+        `${DOMAINE}/m-milieu/profond/d.cts:3`,
+        `${DOMAINE}/m-milieu/profond/e.ts:1`,
+        `${DOMAINE}/m-milieu/profond/f.ts:1`,
+      ]);
+    } finally {
+      rmSync(racine, { recursive: true, force: true });
+    }
+  });
 });
