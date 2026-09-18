@@ -1,7 +1,7 @@
 // @req REQ-DM-041
 /**
  * La charge d'un événement est un schéma Zod FERMÉ par type, sans donnée personnelle — DM-01
- * (gate `journal:sans-pii`, partners/ADR-0014 D4).
+ * (gate `journal:sans-pii`, partners/ADR-0014 décision 4).
  *
  * TÉMOIN À DEUX FACES. Face rouge : des charges de bac portant un champ interdit font sortir la garde
  * en code non nul, UNE faute nommée `type.champ` par cas. Face verte : les charges du dépôt la font
@@ -29,7 +29,7 @@ import {
   type Vue,
 } from '../../../scripts/gates/journal-sans-pii';
 
-// ── le lexique : R6bis ───────────────────────────────────────────────────────────────────────
+// ── le lexique ───────────────────────────────────────────────────────────────────────────────
 
 describe('REQ-DM-041 — le lexique des noms de champ de personne lit des SEGMENTS, jamais des sous-chaînes', () => {
   it('REQ-DM-041 : un nom se découpe en camelCase, en snake_case et sur les sigles', () => {
@@ -68,7 +68,7 @@ describe('REQ-DM-041 — le lexique des noms de champ de personne lit des SEGMEN
   });
 });
 
-// ── la garde : R6 ────────────────────────────────────────────────────────────────────────────
+// ── la garde ─────────────────────────────────────────────────────────────────────────────────
 
 const conforme = (charges: Vue['charges']): Vue => ({
   typesDuSchema: Object.keys(charges),

@@ -1,6 +1,6 @@
 // @req REQ-DM-024
 /**
- * Le chaînage du journal, en domaine pur — DM-01 (partners/ADR-0014, D1 à D3).
+ * Le chaînage du journal, en domaine pur — DM-01 (partners/ADR-0014, décisions 1 à 3).
  *
  * Ce fichier couvre à 100 % `src/domain/evenement/canonique.ts` et `src/domain/evenement/journal.ts`
  * SANS base : la preuve en base réelle (déclencheurs, verrou, effacement de tiers) est dans
@@ -24,7 +24,7 @@ import {
   type Enregistrement,
 } from '../../../src/domain/evenement/journal';
 
-// ── canonique : R11 ──────────────────────────────────────────────────────────────────────────
+// ── canonique ──────────────────────────────────────────────────────────────────────────────
 
 describe('REQ-DM-024 — la forme canonique de l’enregistrement haché (sous-ensemble RFC 8785)', () => {
   it('REQ-DM-024 : deux ordres de clés rendent la même chaîne, sans espace, imbrication comprise', () => {
@@ -63,7 +63,7 @@ describe('REQ-DM-024 — la forme canonique de l’enregistrement haché (sous-e
   });
 });
 
-// ── la genèse : D2, R10 ──────────────────────────────────────────────────────────────────────
+// ── la genèse (décision 2) ────────────────────────────────────────────────────────────────────────
 
 /** Le littéral de `self_hash` que la migration insère pour la genèse, lu sur le disque. */
 function selfHashDeLaMigration(): string {
@@ -106,7 +106,7 @@ describe('REQ-DM-024 — la genèse ancre la chaîne et y inscrit son algorithme
   });
 });
 
-// ── verifierChaine : R3, R4, R5 en domaine pur ───────────────────────────────────────────────
+// ── verifierChaine en domaine pur ───────────────────────────────────────────────────────────
 
 /** Une chaîne de `n` maillons après la genèse, ids croissants, hachée par le domaine. */
 function chaine(n: number): LigneJournal[] {
@@ -165,7 +165,7 @@ describe('REQ-DM-024 — verifierChaine() suit les liens de hash et nomme la lig
     expect(verifierChaine(lignes)).toEqual({ ok: false, faute: 'genese_multiple', id: '9' });
   });
 
-  // R3 et R4 : chaque colonne qui porte un sens est hachée, pas la seule charge.
+  // Chaque colonne qui porte un sens est hachée, pas la seule charge.
   it.each([
     ['agregatId', { agregatId: '11111111-1111-4111-8111-111111111111' }],
     ['type', { type: 'journal_rouvert' }],

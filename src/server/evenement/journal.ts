@@ -1,13 +1,13 @@
 /**
  * L'écrivain et le lecteur du journal `Evenement` — DM-01 (REQ-DM-024, REQ-DM-041,
- * partners/ADR-0014 D3).
+ * partners/ADR-0014 décision 3).
  *
  * `ajouterEvenement()` N'ACCEPTE QU'UNE TRANSACTION. REQ-DM-024 exige que toute transition
  * d'agrégat écrive son événement « dans la même transaction » : le type l'impose, un client nu ne
  * compile pas. L'appelant ouvre `prisma.$transaction(async (tx) => …)`, écrit sa transition, puis
  * l'événement — les deux tiennent ou tombent ensemble.
  *
- * LINÉARITÉ (D3). Chaîne GLOBALE : l'écrivain prend `pg_advisory_xact_lock` sur une clé fixe, PUIS
+ * LINÉARITÉ (décision 3). Chaîne GLOBALE : l'écrivain prend `pg_advisory_xact_lock` sur une clé fixe, PUIS
  * lit la tête, dans la même transaction. Sous READ COMMITTED (défaut de Postgres et de Prisma), la
  * lecture postérieure au verrou voit le dernier commit : deux écrivains concurrents se suivent au
  * lieu de bifurquer. Si le verrou venait à manquer, `UNIQUE(prev_hash)` fait échouer FERMÉ (23505) —

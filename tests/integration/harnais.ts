@@ -9,7 +9,7 @@
  *
  * CE QU'IL REFUSE. Sans démon Docker, il LÈVE en le nommant : un test d'intégration qui se tait
  * faute de base est un vert qui n'a rien mesuré. `pnpm test` exige donc Docker (partners/ADR-0014,
- * D7 ; partners/ADR-0001 : « la dépendance à Docker devient structurelle »).
+ * décision 7 ; partners/ADR-0001 : « la dépendance à Docker devient structurelle »).
  *
  * CE QUE QA-T02 AJOUTERA ICI : cache éphémère, isolation par fichier, refus explicite d'un
  * environnement partagé, témoin « démon absent ». Le conteneur appartient à son fichier de test ; le
