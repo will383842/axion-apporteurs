@@ -1919,6 +1919,9 @@ const GARDES_QUI_BALAIENT = [
   // GOV-030 (`partners/ADR-0011`) — `partners:schema:enums` lit sa portée dans les fichiers SUIVIS,
   // quelle que soit leur extension.
   'scripts/gates/schema-enums.ts',
+  // DM-01 — `journal:sans-pii` cherche un second écrivain de la table `evenements` dans les fichiers
+  // SUIVIS sous `src/` et `scripts/`.
+  'scripts/gates/journal-sans-pii.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {

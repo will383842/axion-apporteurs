@@ -1,21 +1,32 @@
 /**
  * L'écrivain et le lecteur du journal `Evenement` — DM-01 (REQ-DM-024, REQ-DM-041,
- * partners/ADR-0014 décision 3).
+ * partners/ADR-0014 décisions 3 et 8).
  *
  * `ajouterEvenement()` N'ACCEPTE QU'UNE TRANSACTION. REQ-DM-024 exige que toute transition
- * d'agrégat écrive son événement « dans la même transaction » : le type l'impose, un client nu ne
- * compile pas. L'appelant ouvre `prisma.$transaction(async (tx) => …)`, écrit sa transition, puis
- * l'événement — les deux tiennent ou tombent ensemble.
+ * d'agrégat écrive son événement « dans la même transaction ». `Prisma.TransactionClient` seul ne
+ * l'impose pas : c'est un `Omit<>` du client, et un `PrismaClient` nu s'y range. Le type
+ * `ClientDeTransaction<T>` REFUSE donc tout client qui porte `$transaction` — seul le client reçu
+ * par `prisma.$transaction(async (tx) => …)` compile (témoin de type : `@ts-expect-error` dans
+ * `tests/integration/journal.spec.ts`). Un `as` le contournerait : le lint refuse l'assertion d'un
+ * littéral, pas celle d'une variable — c'est une limite du type, dite ici.
  *
- * LINÉARITÉ (décision 3). Chaîne GLOBALE : l'écrivain prend `pg_advisory_xact_lock` sur une clé fixe, PUIS
- * lit la tête, dans la même transaction. Sous READ COMMITTED (défaut de Postgres et de Prisma), la
- * lecture postérieure au verrou voit le dernier commit : deux écrivains concurrents se suivent au
+ * LINÉARITÉ (décision 3). Chaîne GLOBALE : l'écrivain prend `pg_advisory_xact_lock` sur une clé fixe,
+ * PUIS lit la tête, dans la même transaction. Sous READ COMMITTED (défaut de Postgres et de Prisma),
+ * la lecture postérieure au verrou voit le dernier commit : deux écrivains concurrents se suivent au
  * lieu de bifurquer. Si le verrou venait à manquer, `UNIQUE(prev_hash)` fait échouer FERMÉ (23505) —
  * c'est le filet, pas le mécanisme. Le verrou est relâché au commit ou au rollback.
  *
  * CHARGE FERMÉE (REQ-DM-041). La charge traverse le schéma `.strict()` de son type AVANT toute
- * écriture : une clé en trop lève, et rien n'est écrit.
+ * écriture : une clé en trop lève, et rien n'est écrit. Le refus NOMME le chemin et le code de chaque
+ * écart, JAMAIS la valeur reçue : la `ZodError` d'origine la recopie (`received: …`), et un appelant
+ * qui journalise `error.message` écrirait la donnée personnelle qu'on vient de refuser.
  *
+ * `agregatId` est un UUID sous sa forme canonique à tirets, NORMALISÉ en minuscules AVANT le hachage.
+ * Postgres rend toujours la forme canonique minuscule : haché sous une autre forme, le maillon serait
+ * en `hash_altere` pour toujours, sur une table qu'on ne corrige pas, et masquerait toute altération
+ * suivante. Une autre forme (sans tirets, accolades) est refusée.
+ *
+ * Ce fichier est le SEUL écrivain de la table (`journal:sans-pii`, famille `ecrivain_hors_journal`).
  * Aucun client Prisma n'est créé ici : ce module reçoit celui de l'appelant.
  */
 import type { Prisma, PrismaClient, TypeEvenementJournal, AgregatJournal } from '@prisma/client';
@@ -24,6 +35,12 @@ import { calculerSelfHash, type LigneJournal } from '../../domain/evenement/jour
 
 /** La clé du verrou consultatif de l'écrivain : une seule chaîne, donc une seule clé. */
 const CLE_VERROU = 'evenements';
+
+/** Un UUID sous sa forme canonique à tirets, toute casse. */
+const UUID_CANONIQUE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Le client d'une transaction OUVERTE : un client qui porte encore `$transaction` est refusé. */
+export type ClientDeTransaction<T> = T & ('$transaction' extends keyof T ? never : unknown);
 
 export type NouvelEvenement = {
   type: TypeEvenementJournal;
@@ -34,16 +51,33 @@ export type NouvelEvenement = {
   charge: unknown;
 };
 
-export async function ajouterEvenement(
-  tx: Prisma.TransactionClient,
+/** La charge, parsée par le schéma fermé de son type ; le refus ne porte aucune valeur reçue. */
+function chargeFermee(type: TypeEvenementJournal, charge: unknown): Prisma.InputJsonObject {
+  const r = CHARGES_PAR_TYPE[type].safeParse(charge);
+  if (r.success) return r.data;
+  const ecarts = r.error.issues.map((i) => `${i.path.join('.') || '(racine)'} ${i.code}`);
+  throw new Error(`charge refusée pour le type ${type} : ${ecarts.join(', ')}`);
+}
+
+/** L'identifiant d'agrégat, sous la forme que Postgres rendra : minuscules, à tirets. */
+function agregatIdCanonique(agregatId: string | null | undefined): string | null {
+  if (agregatId === null || agregatId === undefined) return null;
+  if (!UUID_CANONIQUE.test(agregatId)) {
+    throw new Error('agregatId refusé : un UUID sous sa forme canonique à tirets est attendu');
+  }
+  return agregatId.toLowerCase();
+}
+
+export async function ajouterEvenement<T extends Prisma.TransactionClient>(
+  tx: ClientDeTransaction<T>,
   e: NouvelEvenement
 ): Promise<{ id: string; selfHash: string }> {
-  // Parse AVANT le verrou : une charge refusée ne prend rien et n'écrit rien.
-  const charge: Prisma.InputJsonObject = CHARGES_PAR_TYPE[e.type].parse(e.charge);
+  // Parse et normalisation AVANT le verrou : un refus ne prend rien et n'écrit rien.
+  const charge = chargeFermee(e.type, e.charge);
   const enregistrement = {
     type: e.type,
     agregat: e.agregat ?? null,
-    agregatId: e.agregatId ?? null,
+    agregatId: agregatIdCanonique(e.agregatId),
     survenuAt: e.survenuAt.toISOString(),
     charge,
   };

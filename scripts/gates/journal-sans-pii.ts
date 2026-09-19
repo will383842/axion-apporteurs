@@ -22,7 +22,15 @@
  *     forme empreinte (`ipHash`, `emailHash`) (`champ_nominatif`) ;
  *   — les clés de `CHARGES_PAR_TYPE` égales aux valeurs de l'enum `TypeEvenementJournal` lues dans
  *     `prisma/schema.prisma`, dans les deux sens (`type_sans_charge`, `charge_sans_type`) ;
- *   — un périmètre non vide : un enum illisible n'est pas « rien à dire » (`perimetre_vide`).
+ *   — un périmètre non vide : un enum illisible n'est pas « rien à dire » (`perimetre_vide`) ;
+ *   — UN SEUL ÉCRIVAIN de la table `evenements` : `src/server/evenement/journal.ts`. Toute autre
+ *     écriture par le client (`evenement.create`, `createMany`, `upsert`, `update*`, `delete*`)
+ *     ou tout SQL brut (`$executeRaw`, `$queryRaw`, leurs variantes `Unsafe`) qui nomme
+ *     `evenements`, dans un fichier SUIVI sous `src/` ou `scripts/`, rougit
+ *     (`ecrivain_hors_journal`). Sans cette règle, un second écrivain contournerait le `parse`
+ *     strict et écrirait un courriel dans une charge — que la base refuserait ensuite d'effacer.
+ *     Échec FERMÉ : un SQL brut qui ne fait que LIRE le journal rougit aussi. Ce que la règle ne voit
+ *     pas : un accès par nom calculé (`tx['evene' + 'ment']`) ou un client hors du dépôt.
  * Le vert imprime le compte des types et des champs RÉELLEMENT confrontés.
  *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne lit pas le dépôt : ses vues sont INJECTÉES.
@@ -32,15 +40,31 @@ import { z } from 'zod';
 import { CHARGES_PAR_TYPE, FORMES, HASH_HEX_64 } from '../../src/domain/evenement/charges';
 import { segmentsDuNom, segmentsPersonnels } from '../../src/domain/donnees-personnelles/champs';
 import { enumsDuSchema } from './schema-enums';
+import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
 const CHEMIN_SCHEMA = 'prisma/schema.prisma';
 const ENUM_DES_TYPES = 'TypeEvenementJournal';
+
+/** Le SEUL fichier qui a le droit d'écrire la table `evenements`. */
+export const ECRIVAIN_UNIQUE = 'src/server/evenement/journal.ts';
+/** La garde elle-même : ses témoins SONT des écrivains (RM-11). */
+const CETTE_GARDE = 'scripts/gates/journal-sans-pii.ts';
+/** Les racines où un second écrivain se cherche. `tests/` n'en est pas : les harnais y écrivent. */
+const RACINES_ECRIVAINS = ['src/', 'scripts/'] as const;
+
+/** Une écriture par le client Prisma sur le modèle `Evenement`, appel et méthode sur plusieurs lignes. */
+const ECRITURE_CLIENT =
+  /\bevenement\s*\.\s*(?:create|createMany|createManyAndReturn|upsert|update|updateMany|delete|deleteMany)\b/g;
+/** Un appel de SQL brut ; sa portée court jusqu'au premier `;` qui le suit. */
+const SQL_BRUT = /\$(?:executeRaw|queryRaw)(?:Unsafe)?\b/g;
 
 export type Vue = {
   /** Les valeurs de l'enum `TypeEvenementJournal`, lues dans `prisma/schema.prisma`. */
   typesDuSchema: string[];
   /** Les schémas de charge, par type. */
   charges: Record<string, z.ZodTypeAny>;
+  /** Les fichiers suivis sous `src/` et `scripts/`, où un second écrivain se cacherait. */
+  code: { chemin: string; contenu: string }[];
 };
 
 export type Famille =
@@ -49,7 +73,8 @@ export type Famille =
   | 'charge_ouverte'
   | 'type_sans_charge'
   | 'charge_sans_type'
-  | 'perimetre_vide';
+  | 'perimetre_vide'
+  | 'ecrivain_hors_journal';
 
 export type Faute = { famille: Famille; ou: string; message: string };
 
@@ -82,7 +107,30 @@ export const FAMILLES: { nom: Famille; explication: string }[] = [
     explication:
       'l’enum TypeEvenementJournal est illisible : la garde ne saurait pas quoi confronter.',
   },
+  {
+    nom: 'ecrivain_hors_journal',
+    explication:
+      'une écriture de la table evenements (client Prisma ou SQL brut) hors de src/server/evenement/journal.ts : elle contournerait la charge fermée.',
+  },
 ];
+
+/** Le numéro de ligne (1-indexé) d'une position dans un texte. */
+const ligneDe = (texte: string, position: number): number =>
+  texte.slice(0, position).split('\n').length;
+
+/** Les positions des écritures de `evenements` dans un fichier, hors de l'écrivain unique. */
+export function ecrituresHorsJournal(chemin: string, contenu: string): number[] {
+  if (chemin === ECRIVAIN_UNIQUE || chemin === CETTE_GARDE) return [];
+  if (!RACINES_ECRIVAINS.some((r) => chemin.startsWith(r))) return [];
+  const lignes = new Set<number>();
+  for (const m of contenu.matchAll(ECRITURE_CLIENT)) lignes.add(ligneDe(contenu, m.index));
+  for (const m of contenu.matchAll(SQL_BRUT)) {
+    const fin = contenu.indexOf(';', m.index);
+    const portee = contenu.slice(m.index, fin === -1 ? undefined : fin);
+    if (/evenements/i.test(portee)) lignes.add(ligneDe(contenu, m.index));
+  }
+  return [...lignes].sort((a, b) => a - b);
+}
 
 // ── le contrôle ──────────────────────────────────────────────────────────────
 
@@ -135,7 +183,7 @@ export function controler(vue: Vue): { fautes: Faute[]; types: number; champs: n
     });
   }
   for (const t of vue.typesDuSchema) {
-    if (!(t in vue.charges)) {
+    if (!Object.hasOwn(vue.charges, t)) {
       fautes.push({
         famille: 'type_sans_charge',
         ou: t,
@@ -207,6 +255,19 @@ export function controler(vue: Vue): { fautes: Faute[]; types: number; champs: n
     juger(schema, type);
   }
 
+  for (const f of vue.code) {
+    for (const ligne of ecrituresHorsJournal(f.chemin, f.contenu)) {
+      fautes.push({
+        famille: 'ecrivain_hors_journal',
+        ou: `${f.chemin}:${ligne}`,
+        message:
+          `${f.chemin}:${ligne} — écriture de la table evenements hors de ${ECRIVAIN_UNIQUE}. ` +
+          'Passe par ajouterEvenement() : sa charge traverse le schéma fermé, et une donnée ' +
+          'personnelle écrite ici ne pourrait plus jamais être effacée.',
+      });
+    }
+  }
+
   return { fautes, types, champs };
 }
 
@@ -218,7 +279,8 @@ export function decider(vue: Vue): { code: 0 | 1; lignes: string[] } {
       code: 0,
       lignes: [
         `✅ journal:sans-pii — ${types} type(s), ${champs} champ(s) confrontés à la liste fermée ` +
-          'des formes et au lexique des champs de personne ; aucune charge ne porte de donnée personnelle.',
+          'des formes et au lexique des champs de personne, aucun écrivain de la table hors de ' +
+          `${ECRIVAIN_UNIQUE}. Ce vert ne dit rien d'une donnée personnelle hors du lexique.`,
       ],
     };
   }
@@ -238,6 +300,9 @@ export function vueDuDepot(): Vue {
   return {
     typesDuSchema: enumsDuSchema(schema).get(ENUM_DES_TYPES) ?? [],
     charges: CHARGES_PAR_TYPE,
+    code: fichiersSuivisOuRefus('journal:sans-pii')
+      .filter((chemin) => RACINES_ECRIVAINS.some((r) => chemin.startsWith(r)))
+      .map((chemin) => ({ chemin, contenu: readFileSync(chemin, 'utf8') })),
   };
 }
 
@@ -246,6 +311,7 @@ export function vueDuDepot(): Vue {
 const bac = (shape: z.ZodRawShape): Vue => ({
   typesDuSchema: ['bac'],
   charges: { bac: z.object(shape).strict() },
+  code: [],
 });
 
 const TEMOINS: { famille: Famille; vue: () => Vue }[] = [
@@ -258,6 +324,7 @@ const TEMOINS: { famille: Famille; vue: () => Vue }[] = [
     vue: () => ({
       typesDuSchema: ['bac'],
       charges: { bac: z.object({ agregatId: FORMES.identifiant() }).passthrough() },
+      code: [],
     }),
   },
   {
@@ -272,7 +339,19 @@ const TEMOINS: { famille: Famille; vue: () => Vue }[] = [
     famille: 'charge_sans_type',
     vue: () => ({ ...bac({ agregatId: FORMES.identifiant() }), typesDuSchema: ['autre'] }),
   },
-  { famille: 'perimetre_vide', vue: () => ({ typesDuSchema: [], charges: {} }) },
+  { famille: 'perimetre_vide', vue: () => ({ typesDuSchema: [], charges: {}, code: [] }) },
+  {
+    famille: 'ecrivain_hors_journal',
+    vue: () => ({
+      ...bac({ agregatId: FORMES.identifiant() }),
+      code: [
+        {
+          chemin: 'src/server/bac/ecrivain-bis.ts',
+          contenu: "await tx.evenement.create({ data: { charge: { courriel: 'a@b.fr' } } });",
+        },
+      ],
+    }),
+  },
 ];
 
 const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
@@ -293,6 +372,16 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
   {
     quoi: 'des noms qui CONTIENNENT un segment de personne sans en porter un',
     vue: () => bac({ nombreDeDepots: z.enum(['un']), nomenclature: z.enum(['x']) }),
+  },
+  {
+    quoi: 'l’écrivain unique écrit la table, et un autre fichier la LIT par le client',
+    vue: () => ({
+      ...bac({ agregatId: FORMES.identifiant() }),
+      code: [
+        { chemin: ECRIVAIN_UNIQUE, contenu: 'await tx.evenement.create({ data });' },
+        { chemin: 'src/server/lecture.ts', contenu: 'await tx.evenement.findMany();' },
+      ],
+    }),
   },
 ];
 

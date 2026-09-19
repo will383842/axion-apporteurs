@@ -72,6 +72,7 @@ describe('REQ-DM-041 — le lexique des noms de champ de personne lit des SEGMEN
 
 const conforme = (charges: Vue['charges']): Vue => ({
   typesDuSchema: Object.keys(charges),
+  code: [],
   charges,
 });
 
@@ -154,16 +155,39 @@ describe('REQ-DM-041 — la garde `journal:sans-pii` refuse toute feuille hors d
 
   it('REQ-DM-041 : une valeur d’enum sans charge, et une charge sans valeur d’enum, rougissent chacune', () => {
     const charges = { journal_ouvert: CHARGES_PAR_TYPE.journal_ouvert };
-    expect(ou({ typesDuSchema: ['journal_ouvert', 'bac_orphelin'], charges })).toEqual([
+    expect(ou({ typesDuSchema: ['journal_ouvert', 'bac_orphelin'], charges, code: [] })).toEqual([
       'type_sans_charge bac_orphelin',
     ]);
     expect(
-      ou({ typesDuSchema: [], charges: { ...charges, bac: CHARGES_PAR_TYPE.journal_ouvert } })
+      ou({
+        typesDuSchema: [],
+        charges: { ...charges, bac: CHARGES_PAR_TYPE.journal_ouvert },
+        code: [],
+      })
     ).toContain('charge_sans_type bac');
   });
 
   it('REQ-DM-041 : un enum illisible dans le schéma est un périmètre vide, jamais un vert', () => {
-    expect(ou({ typesDuSchema: [], charges: {} })).toEqual(['perimetre_vide TypeEvenementJournal']);
+    expect(ou({ typesDuSchema: [], charges: {}, code: [] })).toEqual([
+      'perimetre_vide TypeEvenementJournal',
+    ]);
+  });
+
+  it('REQ-DM-041 : un champ de personne à TROIS niveaux de profondeur est nommé par son chemin complet', () => {
+    const vue = conforme({
+      bac: z
+        .object({
+          a: z.object({ b: z.object({ courriel: z.enum(['x']) }).strict() }).strict(),
+        })
+        .strict(),
+    });
+    expect(ou(vue)).toEqual(['champ_nominatif bac.a.b.courriel']);
+  });
+
+  it('REQ-DM-041 : l’exemption d’empreinte exige le suffixe hash — `emailEmpreinte` en forme empreinte rougit', () => {
+    expect(
+      ou(conforme({ bac: z.object({ emailEmpreinte: FORMES.empreinte() }).strict() }))
+    ).toEqual(['champ_nominatif bac.emailEmpreinte']);
   });
 
   it('REQ-DM-041 : contre-témoin — toutes les formes admises passent, empreintes de personne comprises', () => {
@@ -191,6 +215,87 @@ describe('REQ-DM-041 — la garde `journal:sans-pii` refuse toute feuille hors d
     );
     expect(verdict.fautes).toEqual([]);
     expect(verdict.champs).toBe(12);
+  });
+});
+
+// ── l'écrivain unique ────────────────────────────────────────────────────────────────────────
+
+/** Le second écrivain de la lentille securite : il contourne `ajouterEvenement()` et son `parse`. */
+const ECRIVAIN_BIS = [
+  "import type { Prisma } from '@prisma/client';",
+  'export async function ecrire(tx: Prisma.TransactionClient) {',
+  '  await tx.evenement.create({',
+  "    data: { type: 'journal_ouvert', charge: { algorithme: 'sha256-jcs-v1', courriel: 'a@b.fr' },",
+  "      prevHash: 'x', selfHash: 'y', survenuAt: new Date() },",
+  '  });',
+  '}',
+].join('\n');
+
+const avecCode = (chemin: string, contenu: string): Vue => ({
+  ...conforme({ journal_ouvert: CHARGES_PAR_TYPE.journal_ouvert }),
+  code: [{ chemin, contenu }],
+});
+
+describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est le SEUL écrivain', () => {
+  it('REQ-DM-041 : le second écrivain de la revue (src/server/bac/ecrivain-bis.ts) rougit, nommé', () => {
+    expect(ou(avecCode('src/server/bac/ecrivain-bis.ts', ECRIVAIN_BIS))).toEqual([
+      'ecrivain_hors_journal src/server/bac/ecrivain-bis.ts:3',
+    ]);
+  });
+
+  it.each([
+    ['createMany sur deux lignes', 'await tx.evenement\n  .createMany({ data: [] });'],
+    ['upsert', 'await prisma.evenement.upsert({ where: { id: 1n }, create: x, update: x });'],
+    ['update', 'await tx.evenement.update({ where: { id: 1n }, data: {} });'],
+    ['updateMany', 'await tx.evenement.updateMany({ data: {} });'],
+    ['deleteMany', 'await tx.evenement.deleteMany({});'],
+    [
+      '$executeRawUnsafe',
+      'await tx.$executeRawUnsafe(`INSERT INTO "evenements" (charge) VALUES ($1)`, c);',
+    ],
+    [
+      '$executeRaw sur plusieurs lignes',
+      'await tx.$executeRaw`\n  INSERT INTO evenements\n  VALUES (1)`;',
+    ],
+    ['$queryRaw', 'const r = await tx.$queryRaw`SELECT * FROM EVENEMENTS`;'],
+    ['$queryRawUnsafe', "await tx.$queryRawUnsafe('delete from evenements');"],
+  ])(
+    'REQ-DM-041 : un écrivain hors de journal.ts (%s) rougit en ecrivain_hors_journal',
+    (_quoi, contenu) => {
+      expect(ou(avecCode('scripts/outil/bac.ts', contenu))).toEqual([
+        expect.stringMatching(/^ecrivain_hors_journal scripts\/outil\/bac\.ts:\d+$/),
+      ]);
+    }
+  );
+
+  it.each([
+    ['l’écrivain unique lui-même', 'src/server/evenement/journal.ts', ECRIVAIN_BIS],
+    ['une lecture par findMany', 'src/server/x.ts', 'await tx.evenement.findMany();'],
+    [
+      'du SQL brut qui ne touche pas le journal',
+      'src/server/x.ts',
+      'await tx.$executeRaw`SELECT 1`;',
+    ],
+    ['un fichier de test (hors portée)', 'tests/integration/x.spec.ts', ECRIVAIN_BIS],
+  ])('REQ-DM-041 : contre-témoin — %s ne rougit pas', (_quoi, chemin, contenu) => {
+    expect(ou(avecCode(chemin, contenu))).toEqual([]);
+  });
+
+  it('REQ-DM-041 : sur le dépôt, la portée des écrivains est lue et n’est pas vide', () => {
+    const vue = vueDuDepot();
+    expect(vue.code.length).toBeGreaterThan(0);
+    expect(vue.code.map((f) => f.chemin)).toContain('src/server/evenement/journal.ts');
+    expect(controler(vue).fautes).toEqual([]);
+  });
+
+  it('REQ-DM-041 : une valeur d’enum héritée du prototype (constructor) n’a pas de charge — type_sans_charge', () => {
+    expect(
+      ou({
+        typesDuSchema: ['journal_ouvert', 'constructor'],
+        charges: { journal_ouvert: CHARGES_PAR_TYPE.journal_ouvert },
+        code: [],
+      })
+    ).toEqual(['type_sans_charge constructor']);
   });
 });
 

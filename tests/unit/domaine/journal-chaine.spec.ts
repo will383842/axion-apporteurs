@@ -104,6 +104,26 @@ describe('REQ-DM-024 — la genèse ancre la chaîne et y inscrit son algorithme
     expect(calculerSelfHash(GENESE.selfHash, e)).toBe(attendu);
     expect(attendu).toMatch(/^[0-9a-f]{64}$/);
   });
+
+  // Les deux littéraux ci-dessous sont calculés HORS du code du dépôt : Python `hashlib.sha256` sur
+  // `json.dumps(e, sort_keys=True, separators=(',', ':'))`, puis `sha256sum` sur la chaîne écrite à
+  // la main. Le test précédent réutilise `canonique()` : il ne verrait pas une forme canonique qui
+  // dérive des deux côtés à la fois. Celui-ci la confronte à un vecteur FIGÉ.
+  it('REQ-DM-024 : vecteurs de référence figés, calculés hors du code — genèse et maillon aux champs d’agrégat remplis', () => {
+    expect(GENESE.selfHash).toBe(
+      '44c2b394d7fd4e8cab20e92d7011c1db8a13c8e4e1dc972363c2e6bf190ac197'
+    );
+    const e: Enregistrement = {
+      type: 'journal_ouvert',
+      agregat: 'apporteur',
+      agregatId: '4c3f1a52-7a0e-4d7e-9a0b-2f9c1d8e6b10',
+      survenuAt: '2026-09-20T08:00:00.000Z',
+      charge: { algorithme: ALGORITHME },
+    };
+    expect(calculerSelfHash(GENESE.selfHash, e)).toBe(
+      '81216949d5e882994d43bfceb3bbfdc9158a046d93abfa62ac7ed14422e38396'
+    );
+  });
 });
 
 // ── verifierChaine en domaine pur ───────────────────────────────────────────────────────────
@@ -182,6 +202,13 @@ describe('REQ-DM-024 — verifierChaine() suit les liens de hash et nomme la lig
     }
   );
 
+  it('REQ-DM-024 : la TÊTE de chaîne (dernière ligne) réécrite → hash_altere la nomme', () => {
+    const lignes = chaine(4);
+    const tete = lignes[4]!;
+    lignes[4] = { ...tete, charge: { algorithme: 'md5' } };
+    expect(verifierChaine(lignes)).toEqual({ ok: false, faute: 'hash_altere', id: tete.id });
+  });
+
   it('REQ-DM-024 : une charge qui n’est plus canonicalisable est une altération, pas un plantage', () => {
     const lignes = chaine(3);
     lignes[1] = { ...lignes[1]!, charge: { algorithme: 1.5 } };
@@ -211,5 +238,53 @@ describe('REQ-DM-024 — verifierChaine() suit les liens de hash et nomme la lig
     const prevHash = lignes[1]!.selfHash;
     lignes.push({ id: '42', ...e, prevHash, selfHash: calculerSelfHash(prevHash, e) });
     expect(verifierChaine(lignes)).toEqual({ ok: false, faute: 'bifurcation', id: '42' });
+  });
+});
+
+/** Recalcule `prevHash` et `selfHash` de `depuis` jusqu'à la fin : ce que fait un faussaire. */
+function recalculer(lignes: LigneJournal[], depuis: number): LigneJournal[] {
+  const sortie = [...lignes];
+  for (let i = depuis; i < sortie.length; i++) {
+    const prevHash = i === 0 ? ZERO : sortie[i - 1]!.selfHash;
+    sortie[i] = { ...sortie[i]!, prevHash, selfHash: calculerSelfHash(prevHash, sortie[i]!) };
+  }
+  return sortie;
+}
+
+describe('REQ-DM-024 — la genèse est épinglée, et la limite du recalcul est DITE', () => {
+  it.each([
+    ['survenuAt', { survenuAt: '2026-01-01T00:00:00.000Z' }],
+    ['charge', { charge: { algorithme: 'sha1' } }],
+    ['agregat', { agregat: 'contrat', agregatId: '22222222-2222-4222-8222-222222222222' }],
+    ['type', { type: 'journal_rouvert' }],
+  ])(
+    'REQ-DM-024 : une genèse forgée (%s) et une chaîne recalculée sur elle → genese_alteree',
+    (_colonne, alteration) => {
+      const lignes = chaine(3);
+      lignes[0] = { ...lignes[0]!, ...alteration };
+      expect(verifierChaine(recalculer(lignes, 0))).toEqual({
+        ok: false,
+        faute: 'genese_alteree',
+        id: '1',
+      });
+    }
+  );
+
+  it('REQ-DM-024 : une genèse dont le contenu change mais qui garde le selfHash de GENESE → genese_alteree', () => {
+    const lignes = chaine(3);
+    lignes[0] = { ...lignes[0]!, survenuAt: '2026-01-01T00:00:00.000Z' };
+    expect(verifierChaine(lignes)).toEqual({ ok: false, faute: 'genese_alteree', id: '1' });
+  });
+
+  // ⚠️ LIMITE DÉCLARÉE (partners/ADR-0014), et ce test la TIENT : le jour où un ancrage externe de
+  // la tête existera, il devra rougir et être réécrit. Un acteur qui a les droits du propriétaire,
+  // désarme le déclencheur, réécrit une ligne du MILIEU et recalcule TOUTE la queue n'est PAS
+  // détecté par la chaîne seule : l'algorithme est public et sans secret.
+  it('REQ-DM-024 : LIMITE — une ligne du milieu réécrite PUIS la queue recalculée passe inaperçue sans ancrage externe', () => {
+    const lignes = chaine(4);
+    lignes[2] = { ...lignes[2]!, agregatId: '33333333-3333-4333-8333-333333333333' };
+    const forgee = recalculer(lignes, 2);
+    expect(verifierChaine(forgee)).toMatchObject({ ok: true, maillons: 5 });
+    expect((verifierChaine(forgee) as { tete: string }).tete).not.toBe(chaine(4)[4]!.selfHash);
   });
 });

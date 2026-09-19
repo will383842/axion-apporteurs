@@ -14,13 +14,17 @@
  * `tests/unit/domaine/journal-chaine.spec.ts`, qui lit le littéral dans `migration.sql`. Elle ancre
  * la chaîne et y inscrit l'algorithme, DANS la chaîne.
  *
- * `verifierChaine()` SUIT LES LIENS DE HASH, jamais l'ordre des `id` : un `id` se réécrit, un lien de
- * hash ne se forge pas. Elle rend la PREMIÈRE faute trouvée, dans un ordre fixe — vide, genèse,
- * intégrité de chaque ligne, maillon orphelin, bifurcation — et nomme la ligne en cause.
+ * `verifierChaine()` SUIT LES LIENS DE HASH, jamais l'ordre des `id` : un `id` se réécrit sans que
+ * rien ne bouge, un lien de hash non. Elle rend la PREMIÈRE faute trouvée, dans un ordre fixe — vide,
+ * genèse (absente, multiple, ou différente de `GENESE` : elle est ÉPINGLÉE), intégrité de chaque
+ * ligne, maillon orphelin, bifurcation — et nomme la ligne en cause.
  *
- * CE QU'ELLE NE VOIT PAS, dit plutôt que tu : une troncature de la QUEUE (les dernières lignes
- * supprimées) laisse une chaîne intègre et plus courte. Il faut ancrer la tête hors de la base —
- * c'est la vérification périodique du journal, hors de ce module.
+ * CE QU'ELLE VOIT : toute altération par un acteur qui NE RECALCULE PAS la chaîne.
+ * CE QU'ELLE NE VOIT PAS, dit plutôt que tu : (1) un acteur qui a les droits du propriétaire,
+ * désarme le déclencheur, réécrit une ligne et RECALCULE toute la queue — l'algorithme est public et
+ * sans secret ; (2) une troncature de la QUEUE. Les deux exigent d'ancrer la tête hors de la base
+ * (vérification périodique du journal, hors de ce module). Et la chaîne prouve l'ORDRE, pas
+ * l'AUTEUR : un rôle qui peut insérer peut ajouter un maillon valide.
  *
  * Domaine pur : `node:crypto` seul, aucune I/O, aucune horloge — `survenuAt` arrive de l'appelant,
  * déjà en ISO-8601 UTC. Les `id` sont des chaînes : pas de `bigint` dans le domaine.
@@ -51,6 +55,7 @@ export type FauteChaine =
   | 'chaine_vide'
   | 'genese_absente'
   | 'genese_multiple'
+  | 'genese_alteree'
   | 'hash_altere'
   | 'maillon_orphelin'
   | 'bifurcation';
@@ -106,6 +111,14 @@ export function verifierChaine(lignes: readonly LigneJournal[]): VerdictChaine {
   if (geneses.length === 0) return faute('genese_absente', null);
   if (geneses.length > 1) return faute('genese_multiple', geneses[1]!.id);
 
+  // La genèse est ÉPINGLÉE à `GENESE` : sans cela, un faussaire qui forge une genèse et recalcule
+  // toute la chaîne sur elle rendrait une chaîne intègre. Son `selfHash` doit être celui du domaine
+  // ET correspondre à son contenu — l'un sans l'autre ne dit rien du contenu.
+  const genese = geneses[0]!;
+  if (genese.selfHash !== GENESE.selfHash || !integre(genese)) {
+    return faute('genese_alteree', genese.id);
+  }
+
   const alteree = lignes.find((l) => !integre(l));
   if (alteree) return faute('hash_altere', alteree.id);
 
@@ -122,7 +135,7 @@ export function verifierChaine(lignes: readonly LigneJournal[]): VerdictChaine {
   // Ici chaque ligne a UN prédécesseur existant, et chaque prédécesseur UN suivant : partie de la
   // genèse, la marche atteint toutes les lignes (un cycle exigerait une boucle de SHA-256). La borne
   // `maillons < lignes.length` garde la marche finie quoi qu'on lui donne.
-  let tete = geneses[0]!;
+  let tete = genese;
   let maillons = 1;
   for (
     let l = suivant.get(tete.selfHash);
