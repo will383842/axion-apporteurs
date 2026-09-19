@@ -85,19 +85,16 @@ export function verifierAnnee(annee: number): number {
 }
 
 /**
- * Le numéro du jour d'une date CONTRÔLÉE : année dans les bornes, mois et jour entiers, et date
- * réelle — un 30 février, un 13ᵉ mois ou un jour 0 ne reviennent pas identiques de l'aller-retour.
+ * Le numéro du jour d'une date CONTRÔLÉE : année dans les bornes, jour entier, et date réelle — un
+ * 30 février, un 13ᵉ mois, un mois non entier ou un jour 0 ne reviennent pas identiques de
+ * l'aller-retour, qui rend toujours un mois entier. Un jour non entier, lui, y survivrait : il est
+ * refusé à part.
  */
 export function joursDeLaDate(date: DateCivile): number {
   verifierAnnee(date.annee);
   const numero = joursDepuisEpoque(date);
   const retour = dateDepuisJours(numero);
-  if (
-    !Number.isInteger(date.mois) ||
-    !Number.isInteger(date.jour) ||
-    retour.mois !== date.mois ||
-    retour.jour !== date.jour
-  ) {
+  if (!Number.isInteger(date.jour) || retour.mois !== date.mois || retour.jour !== date.jour) {
     throw new ErreurTemps(
       'date_invalide',
       `${date.annee}-${date.mois}-${date.jour} n'existe pas au calendrier`

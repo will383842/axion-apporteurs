@@ -328,6 +328,10 @@ describe('REQ-CPL-013 — calendrier civil et heure légale d’Europe/Paris, ca
       { jour: 0 },
       { mois: 2, jour: 30 },
       { mois: 4, jour: 31 },
+      // Le 366ᵉ jour de mars 2026 est le 1er mars 2027 : même mois, autre jour, autre année.
+      { jour: 366 },
+      { jour: 1.5 },
+      { mois: 1.5 },
       { heure: -1 },
       { heure: 24 },
       { minute: 60 },
