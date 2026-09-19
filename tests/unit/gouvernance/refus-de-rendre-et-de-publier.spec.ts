@@ -486,6 +486,20 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // déclarer le refus, dire pourquoi, assumer le total. Les témoins sont déclarés à ZÉRO :
     // c'est une DETTE ÉCRITE, pas une preuve. *Un compteur de témoins qu'on gonfle pour se donner
     // raison vaut moins qu'un zéro assumé.*
+    // ── SEC-10 : UNE sortie, à code VARIABLE, comme GOV-037 ──────────────────────────────────
+    'scripts/gates/rate-famille.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO ici, comme `gov-check.ts` : ses témoins d'effet vivent dans
+      // `tests/unit/securite/rate-famille.spec.ts`, pas dans le tableau `REFUS` de CE fichier.
+      temoins: 0,
+      raison:
+        'SEC-10 — la garde de famille des compteurs de débit. UNE sortie, `process.exit(code)`, ' +
+        'commune au contrôle et à `--prove` : 0 si aucune faute, 1 sur une faute, 2 si la garde ' +
+        'a levé. Éprouvée sur le binaire par deux témoins d’EFFET de `rate-famille.spec.ts` (une ' +
+        'copie de travail sans conduite sur panne, une qui laisse passer en panne : sortie 1, ' +
+        'préfixe nommé) et un contre-témoin (le dépôt : sortie 0).',
+    },
     'scripts/gates/gov-attestation.ts': {
       total: 3,
       porte: 3,
@@ -576,6 +590,16 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       temoins: 1,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE, mesurée par `mutation` au 12e tour.',
     },
+    'scripts/gates/journal-sans-pii.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'DM-01 — la charge du journal sans donnée personnelle. `process.exit(decision.code)` : sortie ' +
+        'TERMINALE à code variable, commune au mode normal et à `--prove`. La décision est une ' +
+        'fonction pure vue rendre 1 (`decider()`, journal-charge-fermee.spec.ts) et le binaire est vu ' +
+        'sortir en 0 sur le dépôt ; ⛔ aucun témoin d’EFFET du binaire en échec. Dette DÉCLARÉE.',
+    },
     'scripts/gates/lexique-apporteurs.ts': {
       total: 2,
       porte: 2,
@@ -625,6 +649,21 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'Ce qui reste vrai est un argument de COÛT (l’un rougit hors ligne, l’autre appelle la ' +
         'forge), pas de couverture. *Redondance ≠ trou — et une maxime fausse devient une doctrine, ' +
         'qu’on ne remesure jamais.*',
+    },
+    // ── UX-P0-02 : UNE sortie, à code VARIABLE ──────────────────────────────────────────────
+    'scripts/gates/maquettes-validees.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO ici : les témoins d'EFFET de cette sortie vivent dans
+      // `tests/unit/espace/maquettes-validees.spec.ts`, pas dans le tableau `REFUS` de ce fichier.
+      temoins: 0,
+      raison:
+        'UX-P0-02 — aucune tâche d’écran attribuée sans maquette validée par Will. UNE sortie, ' +
+        "`process.exit(process.argv.includes('--prove') ? prouver() : juger())`, TERMINALE, à code " +
+        'variable : 0 quand la garde passe, 1 sur la première faute. Témoins d’EFFET sur le binaire, ' +
+        'dans maquettes-validees.spec.ts : un arbre jetable où une tâche d’écran est attribuée sans ' +
+        'validation sort en 1 en NOMMANT la tâche, le même arbre corrigé sort en 0, et le dépôt réel ' +
+        'comme `--prove` sortent en 0.',
     },
   };
 
@@ -821,7 +860,33 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // Déclarer un nombre « au cas où » donnerait le nombre sans la lecture, c'est-à-dire exactement
     // ce que ce cliquet interdit :
     // *le total ne bouge pas sans qu'on l'écrive, et on ne l'écrit pas sans l'avoir lu.*
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(37);
+    // 🔧 37 → 38 par UX-P0-02, ARBITRÉ et non subi. `scripts/gates/maquettes-validees.ts` naît
+    // avec UNE sortie non nulle, terminale et à code variable. Lu en Gate A, dans l'ordre — d'abord
+    // l'identité (run 35435390710), puis, la déclaration posée, le compte (run 35436969947) :
+    //
+    //     scripts/gates/maquettes-validees.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 38 to be 37
+    //
+    // La sortie est vue en 1 puis en 0 sur un arbre jetable (maquettes-validees.spec.ts).
+    // 🔧 38 → 39 par DM-01, SECONDE à atterrir après UX-P0-02 (elle déclare la SOMME), ARBITRÉ et non subi : `scripts/gates/journal-sans-pii.ts` naît avec UNE
+    // sortie à code variable. Le cliquet a rougi en la nommant — relu, pas deviné :
+    //
+    //     scripts/gates/journal-sans-pii.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //
+    // 🔧 39 → 40 par SEC-10, ARBITRÉ et non subi. Le cliquet a rougi en NOMMANT le fichier :
+    //
+    //     scripts/gates/rate-famille.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //
+    // Une sortie à code variable, `process.exit(code)`, vue en 1 et en 0 sur le binaire. UX-P0-02
+    // (#79) a atterri d'abord et pris le 38 ; au rebase, le compte a rougi, relu et non deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 39 to be 38
+    //
+    // DM-01 (#75) a ensuite atterri avec sa propre sortie et pris le 39 ; à la fusion de `main`
+    // dans cette branche, le compte a rougi de nouveau, relu et non deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 40 to be 39
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(40);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -1878,6 +1943,9 @@ const GARDES_QUI_BALAIENT = [
   // GOV-030 (`partners/ADR-0011`) — `partners:schema:enums` lit sa portée dans les fichiers SUIVIS,
   // quelle que soit leur extension.
   'scripts/gates/schema-enums.ts',
+  // DM-01 — `journal:sans-pii` cherche un second écrivain de la table `evenements` dans les fichiers
+  // SUIVIS sous `src/` et `scripts/`.
+  'scripts/gates/journal-sans-pii.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {

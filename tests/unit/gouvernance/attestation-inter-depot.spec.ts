@@ -83,7 +83,7 @@ const familles = (t: TacheAttestable, livree: boolean): string[] =>
   controlerAttestation(t, livree).map((f) => f.famille);
 
 describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GOV-026)', () => {
-  it('attestation_absente : une tâche `axionia` livrée sans rien qui prouve sa livraison', () => {
+  it('REQ-GOV-026 — attestation_absente : une tâche `axionia` livrée sans rien qui prouve sa livraison', () => {
     const f = controlerAttestation(
       tache({ id: 'INT-T01b', repo: 'axionia', statut: 'fusionnee', pr: null, attestation: null }),
       true
@@ -292,7 +292,7 @@ describe('GOV-038 — les contre-témoins : ce que la garde doit LAISSER PASSER 
     ).toEqual([]);
   });
 
-  it('une tâche `axionia` LIVRÉE avec son attestation et sans `pr` nu — la forme que GOV-038 pose', () => {
+  it('REQ-GOV-025 — une tâche `axionia` LIVRÉE avec son attestation et sans `pr` nu — la forme que GOV-038 pose', () => {
     expect(
       familles(
         tache({
@@ -317,7 +317,7 @@ describe('GOV-038 — le rendu est qualifié par dépôt (REQ-GOV-008)', () => {
     ).toBe('PR#31');
   });
 
-  it('une PR d’AILLEURS se lit `will383842/axion-ia#998 (…)`, jamais `PR#998`', () => {
+  it('REQ-GOV-008 — une PR d’AILLEURS se lit `will383842/axion-ia#998 (…)`, jamais `PR#998`', () => {
     const rendu = referencePr(
       tache({
         id: 'INT-T01b',
