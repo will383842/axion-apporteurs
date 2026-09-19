@@ -216,6 +216,27 @@ export function jugerCaseRevues(e: {
   return { marque: lecture.coche ? '[x]' : '[ ]', detail: lecture.detail };
 }
 
+/**
+ * LES FICHIERS D'UNE PR, LUS SUR LA FORGE — la partie PURE de `caseRevues()`, exercée par
+ * `lentilles-selon-le-risque.spec.ts` (lentille `mutation`, PR 64 : l'appelant de
+ * `cheminsTouches()` n'était exercé par rien). Un fichier RENOMMÉ compte par sa source ET sa
+ * destination ; la liste plafonne sans erreur, d'où la comparaison à `changed_files` de la même
+ * réponse `pulls/{n}` que la tête et le titre (`ListeDesFichiers`, `scripts/lot/revues.ts`).
+ */
+export function fichiersDeLaForge(
+  entrees: readonly EntreeDeFichier[],
+  annoncees: number | undefined
+): { fichiers: string[]; liste: ListeDesFichiers } {
+  return {
+    fichiers: cheminsTouches(entrees),
+    liste: {
+      source: 'forge',
+      lues: entrees.length,
+      annoncees: Number.isInteger(annoncees) ? annoncees! : null,
+    },
+  };
+}
+
 function caseRevues(
   pr: number,
   gabarit: string,
@@ -278,14 +299,7 @@ function caseRevues(
         maxBuffer: 32e6,
       })
     ) as EntreeDeFichier[];
-    fichiers = cheminsTouches(entrees);
-    // La liste de la forge plafonne sans erreur : on la compare à ce que la PR ANNONCE, la même
-    // réponse `pulls/{n}` que la tête et le titre (`ListeDesFichiers`, `scripts/lot/revues.ts`).
-    liste = {
-      source: 'forge',
-      lues: entrees.length,
-      annoncees: Number.isInteger(meta.changed_files) ? meta.changed_files! : null,
-    };
+    ({ fichiers, liste } = fichiersDeLaForge(entrees, meta.changed_files));
     revues = JSON.parse(
       execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/reviews`, '--paginate'], {
         encoding: 'utf8',

@@ -74,6 +74,42 @@ const FICHIERS_QA_T01 = CHEMINS_QA_T01.filter(
   (f) => !CI_DE_QA_T01.includes(f) && !RACINE_DE_QA_T01.includes(f)
 );
 
+/**
+ * LE GRAPHE RÉEL DE LA GARDE, recalculé ICI, indépendamment de `cheminsDeLaGardeDesRevues()` :
+ * depuis les trois racines, toute importation relative, suivie de proche en proche.
+ */
+function fermetureDesImports(): Set<string> {
+  const racines = [
+    'scripts/gates/gov-pr.ts',
+    'scripts/lot/revues.ts',
+    'scripts/lot/corps-de-pr.ts',
+  ];
+  const vus = new Set<string>();
+  const resoudre = (depuis: string, specifiant: string): string => {
+    const base = posix.normalize(posix.join(posix.dirname(depuis), specifiant));
+    for (const c of [base, `${base}.ts`, `${base}.mjs`, `${base}.js`, `${base}/index.ts`]) {
+      try {
+        if (statSync(c).isFile()) return c;
+      } catch {
+        // absent : candidat suivant
+      }
+    }
+    throw new Error(`${depuis} importe ${specifiant}, introuvable`);
+  };
+  const pile = [...racines];
+  while (pile.length > 0) {
+    const f = pile.pop()!;
+    if (vus.has(f)) continue;
+    vus.add(f);
+    for (const m of readFileSync(f, 'utf8').matchAll(
+      /(?:from|import)\s*\(?\s*'(\.{1,2}\/[^']+)'/g
+    )) {
+      pile.push(resoudre(f, m[1]!));
+    }
+  }
+  return vus;
+}
+
 const TETE = '41bc8140b9ea436be809676538dd65cb2263a5bc';
 const avis = (entete: string, verdict: 'accepte' | 'refuse' = 'accepte') => ({
   user: { login: 'will383842' },
@@ -446,36 +482,8 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
   });
 
   it('REQ-GOV-011 · cas 7 bis : la garde des revues est la FERMETURE TRANSITIVE de ses imports — un module importé indirectement est élevé', () => {
-    // Le graphe RÉEL, recalculé ici indépendamment : depuis les trois racines de la garde, toute
-    // importation relative, suivie de proche en proche.
-    const racines = [
-      'scripts/gates/gov-pr.ts',
-      'scripts/lot/revues.ts',
-      'scripts/lot/corps-de-pr.ts',
-    ];
-    const vus = new Set<string>();
-    const resoudre = (depuis: string, specifiant: string): string => {
-      const base = posix.normalize(posix.join(posix.dirname(depuis), specifiant));
-      for (const c of [base, `${base}.ts`, `${base}.mjs`, `${base}.js`, `${base}/index.ts`]) {
-        try {
-          if (statSync(c).isFile()) return c;
-        } catch {
-          // absent : candidat suivant
-        }
-      }
-      throw new Error(`${depuis} importe ${specifiant}, introuvable`);
-    };
-    const pile = [...racines];
-    while (pile.length > 0) {
-      const f = pile.pop()!;
-      if (vus.has(f)) continue;
-      vus.add(f);
-      for (const m of readFileSync(f, 'utf8').matchAll(
-        /(?:from|import)\s*\(?\s*'(\.{1,2}\/[^']+)'/g
-      )) {
-        pile.push(resoudre(f, m[1]!));
-      }
-    }
+    // Le graphe RÉEL, recalculé ici indépendamment (`fermetureDesImports`).
+    const vus = fermetureDesImports();
     // Ce que la dette nomme : deux modules que la gate EXÉCUTE sans être des racines.
     expect(vus).toContain('scripts/lot/avancement.ts');
     expect(vus).toContain('scripts/lot/chemins-de-tache.ts');
@@ -567,6 +575,91 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
   });
 });
 
+describe('REQ-GOV-011 — témoins manquants relevés par la lentille mutation (PR 64)', () => {
+  const NEUTRES = ['docs/journal/2026-09.md'];
+
+  it('REQ-GOV-011 · une tâche de gouvernance ou de qualité à `sensible` NON vide rend la PR élevée, et c’est sa seule raison', () => {
+    for (const id of ['GOV-059', 'QA-T08']) {
+      const t = tache(registre(), id);
+      expect(['gouvernance', 'qualite'], id).toContain(t.zone);
+      expect((t.sensible ?? []).length, id).toBeGreaterThan(0);
+      const r = risque({ titre: `feat(${id}): x`, fichiers: NEUTRES });
+      expect(r.niveau, id).toBe('eleve');
+      expect(r.raisons).toEqual([
+        `${id} sur la tête : sensible [${t.sensible!.join(', ')}]`,
+        `${id} sur la base : sensible [${t.sensible!.join(', ')}]`,
+      ]);
+    }
+  });
+
+  it('REQ-GOV-011 · une tâche `schema: true` en zone ordinaire (QA-T04) rend la PR élevée et exige la lentille schema', () => {
+    const t = tache(registre(), 'QA-T04');
+    expect(t.zone).toBe('qualite');
+    expect(t.sensible).toEqual([]);
+    expect(t.schema).toBe(true);
+    const r = risque({ titre: 'feat(QA-T04): x', fichiers: NEUTRES });
+    expect(r.niveau).toBe('eleve');
+    expect(r.schema).toBe(true);
+    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toEqual([
+      'exactitude',
+      'securite',
+      'schema',
+    ]);
+    expect(r.raisons.join(' ; ')).toContain('schema: true');
+  });
+
+  it('REQ-GOV-011 · `tachesDeLaBase` lit le registre de la RÉFÉRENCE donnée, pas celui de HEAD', () => {
+    // 809a746 (PR 53) : GOV-077 n'y était revendiquée par personne. Sur la tête de cette PR, elle
+    // l'est par A05 — la même tâche, lue à deux références, doit donc différer.
+    const base = LECTEUR.tachesDeLaBase('809a746a4b40a8dcc02b0842486388c377c733dd');
+    expect(
+      base,
+      'le commit 809a746 est introuvable : l’historique est-il complet ?'
+    ).not.toBeNull();
+    const aLaBase = base!.find((t) => t.id === 'GOV-077') as TacheBrute & { owner?: string | null };
+    const aLaTete = tache(registre(), 'GOV-077') as TacheBrute & { owner?: string | null };
+    expect(aLaTete.owner).toBe('A05');
+    expect(aLaBase.owner ?? null).toBeNull();
+  });
+
+  it('REQ-GOV-011 · `tachesDeLaBase` échoue en `null` — jamais en liste vide —, et la PR est alors élevée', () => {
+    for (const ref of ['refs/heads/zz-inexistante-gov-077', '-x', '']) {
+      expect(LECTEUR.tachesDeLaBase(ref), ref).toBeNull();
+    }
+    const r = risque({
+      titre: 'feat(QA-T01): x',
+      tachesBase: LECTEUR.tachesDeLaBase('refs/heads/zz-inexistante-gov-077') as
+        TacheBrute[] | null,
+    });
+    expect(r.niveau).toBe('eleve');
+  });
+
+  it('REQ-GOV-011 · le composeur du corps de PR lit un fichier RENOMMÉ par sa source ET sa destination', () => {
+    const { fichiers, liste } = COMPOSEUR.fichiersDeLaForge(
+      [
+        { filename: FICHIERS_QA_T01[0]! },
+        {
+          filename: 'docs/archive/ci.yml',
+          previous_filename: '.github/workflows/ci.yml',
+          status: 'renamed',
+        },
+        { filename: FICHIERS_QA_T01[1]! },
+      ],
+      3
+    );
+    expect(fichiers).toContain('.github/workflows/ci.yml');
+    expect(fichiers).toContain('docs/archive/ci.yml');
+    expect(liste).toEqual({ source: 'forge', lues: 3, annoncees: 3 });
+    expect(risque({ titre: 'feat(QA-T01): x', fichiers, liste }).niveau).toBe('eleve');
+    // Un compte annoncé illisible ne fabrique pas une liste complète.
+    expect(COMPOSEUR.fichiersDeLaForge([], undefined).liste).toEqual({
+      source: 'forge',
+      lues: 0,
+      annoncees: null,
+    });
+  });
+});
+
 describe('REQ-GOV-011 — cas 9 : toute tâche du registre réel est classée, les deux classes existent', () => {
   it('REQ-GOV-011 · chaque tâche, en PR synthétique à une tâche, est classée ; ordinaire et élevé sont comptés', () => {
     const T = registre();
@@ -592,6 +685,34 @@ describe('REQ-GOV-011 — cas 9 : toute tâche du registre réel est classée, l
     // Une fonction qui rendrait TOUJOURS élevé passerait cas 1 à cas 8 : elle rougit ici.
     expect(ordinaires).toBeGreaterThan(0);
     expect(eleves).toBeGreaterThan(0);
+
+    // LES COMPTES SONT ASSERTÉS, PAS SEULEMENT IMPRIMÉS (lentille `mutation`, PR 64) : un ORACLE
+    // indépendant, écrit ici à partir de la règle de la charte §6 et non du code, doit trouver
+    // EXACTEMENT les mêmes tâches ordinaires. Ses listes sont tapées exprès : leur divergence
+    // d'avec `scripts/lot/revues.ts` est le signal que ce témoin existe pour donner.
+    const garde = new Set([...fermetureDesImports(), 'docs/CHARTE-AGENTS.md', 'docs/agents.json']);
+    const oracle = (t: TacheBrute): boolean => {
+      const f = cheminsDe(t);
+      return (
+        (t.zone === 'gouvernance' || t.zone === 'qualite') &&
+        Array.isArray(t.sensible) &&
+        t.sensible.length === 0 &&
+        t.schema !== true &&
+        f.length > 0 &&
+        f.every((x) => /^(docs|scripts|tests)\//.test(x) && !garde.has(x))
+      );
+    };
+    const parLeCode = (liste: TacheBrute[]) =>
+      liste
+        .filter(
+          (t) =>
+            risque({ titre: `feat(${t.id}): x`, fichiers: cheminsDe(t) }).niveau === 'ordinaire'
+        )
+        .map((t) => t.id);
+    expect(parLeCode(T)).toEqual(T.filter(oracle).map((t) => t.id));
+    expect(ordinaires).toBe(T.filter(oracle).length);
+    expect(ordinairesVivantes).toBe(vivantes.filter(oracle).length);
+    expect(ordinairesVivantes).toBeGreaterThan(0);
   });
 
   it('REQ-GOV-011 · chaque zone de l’enum hors gouvernance et qualite rend la PR élevée, même sensible vide', () => {

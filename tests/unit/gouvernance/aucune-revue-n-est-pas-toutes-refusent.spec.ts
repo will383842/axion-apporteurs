@@ -85,6 +85,12 @@ describe('REQ-GOV-011 — aucune revue n’est pas « toutes les revues refusent
     expect(texte).toContain('A09 securite');
   });
 
+  it('REQ-GOV-011 · trois revues acceptées sans l’avis de mutation, sur une PR élevée : l’absence de la revue de mutation est NOMMÉE', () => {
+    const f = fautes(LENTILLES.map((l) => avis('A09', l, 'accepte')));
+    expect(f.map((x) => x.famille)).toEqual(['lentilles_manquantes']);
+    expect(f[0]!.message).toContain('aucun avis « mutation »');
+  });
+
   it('REQ-GOV-013 · CONTRE-TÉMOIN : quatre revues acceptées sur la tête ne laissent aucune faute', () => {
     expect(fautes(QUATRE('accepte'))).toEqual([]);
   });

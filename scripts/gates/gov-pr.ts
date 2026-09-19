@@ -899,7 +899,6 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
       maxBuffer: 32e6,
     })
   ) as EntreeDeFichier[];
-  const fichiers = cheminsTouches(entreesDeFichiers);
   // ⚠️ ET CETTE LISTE PLAFONNE SANS ERREUR : on la compare au nombre que la PR ANNONCE. Une liste
   // plus courte, ou un compte au plafond, rend la PR élevée (`ListeDesFichiers`).
   const annoncees = Number(
@@ -982,21 +981,55 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
     process.exit(1);
   }
 
-  return {
-    numero: Number(numero),
-    titre: meta.title,
-    corps: meta.body ?? '',
-    labels: (meta.labels ?? []).map((l) => l.name),
-    fichiers,
+  return prDepuisLaForge({
+    numero,
+    meta,
+    entrees: entreesDeFichiers,
+    annoncees,
     revues,
     commentaires,
     // Le registre de la BASE — `origin/<base>`, la même référence que le pas 8. Illisible (ref
     // absente en local) → `null` → risque ÉLEVÉ : le sens de défaillance reste fermé.
     tachesBase: projeter(tachesDeLaBase(refBase)),
+  });
+}
+
+/**
+ * LA PARTIE PURE DE `prParGh()` — ce que la garde FAIT des réponses de la forge, séparé de la
+ * façon de les obtenir, pour que `--prove` l'exerce sans réseau (lentille `mutation`, PR 64 : les
+ * appelants de `cheminsTouches()` n'étaient exercés par rien, et chacun survivait à un retour au
+ * seul `filename`).
+ */
+function prDepuisLaForge(r: {
+  numero: string;
+  meta: {
+    title: string;
+    body: string | null;
+    headRefOid: string | null;
+    labels: { name: string }[];
+  };
+  entrees: EntreeDeFichier[];
+  /** `changed_files` de la PR. */
+  annoncees: number;
+  revues: RevueBrute[];
+  commentaires: CommentaireBrut[];
+  tachesBase: Tache[] | null;
+}): Pr {
+  return {
+    numero: Number(r.numero),
+    titre: r.meta.title,
+    corps: r.meta.body ?? '',
+    labels: (r.meta.labels ?? []).map((l) => l.name),
+    // Un fichier RENOMMÉ compte par sa source ET sa destination : `cheminsTouches()`, l'extraction
+    // unique partagée avec le composeur (refus de `securite`, 2026-09-19).
+    fichiers: cheminsTouches(r.entrees),
+    revues: r.revues,
+    commentaires: r.commentaires,
+    tachesBase: r.tachesBase,
     liste: {
       source: 'forge',
-      lues: entreesDeFichiers.length,
-      annoncees: Number.isInteger(annoncees) ? annoncees : null,
+      lues: r.entrees.length,
+      annoncees: Number.isInteger(r.annoncees) ? r.annoncees : null,
     },
     // ⚠️ Après fusion la branche est SUPPRIMéE : `headRefOid` désigne un objet mort, et c'est
     // pourtant lui dont dérivent `perimees`, `lentille_perimee` et la coche de DoD. La lentille
@@ -1004,7 +1037,7 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
     // parce que c'est bien la tête SUR LAQUELLE LES REVUES ONT ÉTÉ RENDUES — la bonne référence
     // pour juger leur péremption — et on l'écrit ici pour que personne ne la confonde avec ce que
     // le pas 8 confronte, qui est le `mergeCommit`.
-    tete: meta.headRefOid ?? null,
+    tete: r.meta.headRefOid ?? null,
   };
 }
 
@@ -1012,33 +1045,20 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
 function prParEvenement(): Pr | null {
   const chemin = process.env['GITHUB_EVENT_PATH'];
   if (!chemin || !existsSync(chemin)) return null;
-  const ev = JSON.parse(readFileSync(chemin, 'utf8')) as {
-    pull_request?: {
-      number?: number;
-      title: string;
-      body: string | null;
-      labels: { name: string }[];
-      base: { sha: string };
-      head: { sha: string };
-    };
-  };
+  const ev = JSON.parse(readFileSync(chemin, 'utf8')) as { pull_request?: PrDeLEvenement };
   if (!ev.pull_request) return null;
-  let fichiers: string[] = [];
+  let sortieDuDiff = '';
   try {
     // `--name-status -z` et non `--name-only` : ce dernier ne rend que la DESTINATION d'un
     // renommage, et cite entre guillemets un chemin non ASCII. Source et destination passent par
     // l'extraction unique (`entreesDuDiff`, `cheminsTouches`), avec les options qu'elle sait lire.
-    fichiers = cheminsTouches(
-      entreesDuDiff(
-        execFileSync(
-          'git',
-          [...OPTIONS_DU_DIFF, `${ev.pull_request.base.sha}...${ev.pull_request.head.sha}`],
-          {
-            encoding: 'utf8',
-            maxBuffer: 64e6,
-          }
-        )
-      )
+    sortieDuDiff = execFileSync(
+      'git',
+      [...OPTIONS_DU_DIFF, `${ev.pull_request.base.sha}...${ev.pull_request.head.sha}`],
+      {
+        encoding: 'utf8',
+        maxBuffer: 64e6,
+      }
     );
   } catch {
     console.error(
@@ -1047,17 +1067,45 @@ function prParEvenement(): Pr | null {
     );
     process.exit(1);
   }
+  // La base de l'événement est un sha : `fetch-depth: 0` le rend lisible (voir ci-dessus).
+  return prDepuisLEvenement(
+    ev.pull_request,
+    sortieDuDiff,
+    projeter(tachesDeLaBase(ev.pull_request.base.sha))
+  );
+}
+
+/** La PR telle que l'événement `pull_request` la sert. */
+type PrDeLEvenement = {
+  number?: number;
+  title: string;
+  body: string | null;
+  labels: { name: string }[];
+  base: { sha: string };
+  head: { sha: string };
+};
+
+/**
+ * LA PARTIE PURE DE `prParEvenement()` — même raison que `prDepuisLaForge()` : `--prove` l'exerce
+ * sur une sortie de `git diff --name-status -z` fabriquée, sans dépôt.
+ */
+function prDepuisLEvenement(
+  pr: PrDeLEvenement,
+  sortieDuDiff: string,
+  tachesBase: Tache[] | null
+): Pr {
   return {
-    numero: ev.pull_request.number ?? null,
-    titre: ev.pull_request.title,
-    corps: ev.pull_request.body ?? '',
-    labels: ev.pull_request.labels.map((l) => l.name),
-    fichiers,
+    numero: pr.number ?? null,
+    titre: pr.title,
+    corps: pr.body ?? '',
+    labels: pr.labels.map((l) => l.name),
+    // `--name-status -z` et non `--name-only` : ce dernier ne rend que la DESTINATION d'un
+    // renommage. Source et destination passent par l'extraction unique.
+    fichiers: cheminsTouches(entreesDuDiff(sortieDuDiff)),
     revues: null,
     // `git diff` sur l'arbre : la liste est complète par construction.
     liste: { source: 'complete' },
-    // La base de l'événement est un sha : `fetch-depth: 0` le rend lisible (voir ci-dessus).
-    tachesBase: projeter(tachesDeLaBase(ev.pull_request.base.sha)),
+    tachesBase,
   };
 }
 
@@ -1630,6 +1678,81 @@ if (process.argv.includes('--prove')) {
         copieDepot(),
         RENOMMAGE_AU_MILIEU(`${cheminsSchema(depot.charte)[0]}schema.prisma`, 'docs/schema.prisma'),
       ],
+    },
+    {
+      // (lentille `mutation`, PR 64, G01) — l'APPELANT forge : un fichier de CI RENOMMÉ vers `docs/`,
+      // passé par `prDepuisLaForge()`, la partie pure de `prParGh()`. Sa source compte.
+      famille: 'lentilles_manquantes',
+      defaut: () => {
+        const base = copiePr(PR_ORDINAIRE);
+        const m = Math.floor(base.fichiers.length / 2);
+        const entrees: EntreeDeFichier[] = [
+          ...base.fichiers.slice(0, m).map((filename) => ({ filename })),
+          {
+            filename: 'docs/archive/ci.yml',
+            previous_filename: `${DOSSIER_CI}workflows/ci.yml`,
+            status: 'renamed',
+          },
+          ...base.fichiers.slice(m).map((filename) => ({ filename })),
+        ];
+        const p = prDepuisLaForge({
+          numero: '9998',
+          meta: { title: base.titre, body: base.corps, headRefOid: TETE_TEMOIN, labels: [] },
+          entrees,
+          annoncees: entrees.length,
+          revues: base.revues!,
+          commentaires: [],
+          tachesBase: depot.taches,
+        });
+        return [copieDepot(), p];
+      },
+    },
+    {
+      // (lentille `mutation`, PR 64, G02) — l'APPELANT événement : le même renommage, lu dans une
+      // sortie `git diff --name-status -z` par `prDepuisLEvenement()`. Revues ajoutées ensuite :
+      // l'événement n'en porte pas, et le risque ne se juge qu'avec elles.
+      famille: 'lentilles_manquantes',
+      defaut: () => {
+        const base = copiePr(PR_ORDINAIRE);
+        const Z = String.fromCharCode(0);
+        const sortie =
+          [
+            ...base.fichiers.flatMap((f) => ['M', f]),
+            'R100',
+            `${DOSSIER_CI}workflows/ci.yml`,
+            'docs/archive/ci.yml',
+          ].join(Z) + Z;
+        const p = prDepuisLEvenement(
+          {
+            title: base.titre,
+            body: base.corps,
+            labels: [],
+            base: { sha: '0'.repeat(40) },
+            head: { sha: TETE_TEMOIN },
+          },
+          sortie,
+          depot.taches
+        );
+        return [copieDepot(), { ...p, revues: base.revues, tete: TETE_TEMOIN }];
+      },
+    },
+    {
+      // (lentille `mutation`, PR 64, G05) — `projeter()` sur un `sensible` ABSENT du registre brut :
+      // il reste `null`, donc ÉLEVÉ. Le défaut d'avant (`?? []`) rendait la PR ordinaire.
+      famille: 'lentilles_manquantes',
+      defaut: () => {
+        const brut = (
+          JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: TacheBrute[] }
+        ).taches.map((t) => {
+          if (t.id !== 'QA-T01') return t;
+          const copie = { ...t };
+          delete copie.sensible;
+          return copie;
+        });
+        const d = copieDepot();
+        d.taches = projeter(brut);
+        return [d, { ...copiePr(PR_ORDINAIRE), tachesBase: d.taches }];
+      },
     },
     {
       // cas 1 (GOV-077) — la PR ordinaire par son titre, mais qui PORTE trois tâches dont la sensible
