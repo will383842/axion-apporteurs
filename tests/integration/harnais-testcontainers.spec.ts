@@ -52,8 +52,12 @@ const DOSSIER = 'tests/integration';
 const HARNAIS = `${DOSSIER}/harnais.ts`;
 const SOI = `${DOSSIER}/harnais-testcontainers.spec.ts`;
 const VITEST = join(RACINE, 'node_modules/vitest/vitest.mjs');
-/** Un SIREN valide (clé de Luhn), le même pour les deux fichiers du bac. */
-const SIREN = '552100554';
+/**
+ * Un SIREN BOUCHON, d'apparence évidente d'exemple, le même pour les deux fichiers du bac : le
+ * témoin juge l'unicité, pas la clé de Luhn. Un SIREN réel de tiers n'a rien à faire dans un dépôt
+ * public (`gov:entite`, `coordonnee_en_clair`).
+ */
+const SIREN = '123456789';
 /** Un démon qui n'existe pas : port 9 (discard), jamais servi par Docker. */
 const DEMON_ABSENT = 'tcp://127.0.0.1:9';
 const MOTIF_ABSENCE = 'démon Docker injoignable';
