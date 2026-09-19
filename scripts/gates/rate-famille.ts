@@ -21,8 +21,9 @@
  *   `nom_dynamique`          un appel `limiter(` dont le premier argument n'est pas un littéral
  *                            du registre, ou TOUTE autre référence à `limiter` (alias, `.call`,
  *                            `.apply`, parenthèses, accès par propriété, import d'espace de noms)
- *   `magasin_explicite`      hors des tests, un magasin ou un signaleur passé à `limiter(`, ou une
- *                            fabrique de magasin appelée hors du registre
+ *   `magasin_explicite`      hors des tests, un magasin ou un signaleur passé à `limiter(` (arguments
+ *                            étalés compris), ou toute référence à une fabrique de magasin hors du
+ *                            registre, les fabriques étant dérivées des exports du registre
  *   `ecart_a_l_exigence`     une limite, une fenêtre ou une conduite DÉCLARÉE qui n'est pas celle
  *                            que le texte de l'exigence source porte — le préfixe est nommé
  *
@@ -75,11 +76,52 @@ function genreDe(chemin: string): ts.ScriptKind | null {
   return GENRES[ext] ?? null;
 }
 
-/** Nom, sujet, heure : ce que reçoit un appel hors des tests. Le reste est au registre. */
-const ARGUMENTS_D_UN_APPEL = 3;
+/**
+ * Ce que reçoit un appel hors des tests : les paramètres de `limiter` qui précèdent le premier
+ * paramètre à défaut (nom, sujet, heure). DÉRIVÉ de la fonction, jamais retapé : le magasin et le
+ * signaleur, qui ont un défaut, restent au registre.
+ */
+const ARGUMENTS_D_UN_APPEL = limiter.length;
 
-/** Les fabriques de magasin : réservées au registre, à cette garde et aux tests. */
-const FABRIQUES_DE_MAGASIN: ReadonlySet<string> = new Set(['magasinDepuis', 'creerMagasinRedis']);
+/**
+ * Les fabriques de magasin, DÉRIVÉES des exports du registre : toute fonction exportée dont le type
+ * de retour déclaré est un magasin. Une troisième fabrique ajoutée au registre est vue sans qu'on
+ * l'inscrive ici ; un registre illisible ou sans fabrique rend un ensemble vide, que `analyser`
+ * refuse (échec fermé).
+ */
+export function fabriquesDuRegistre(texte: string): ReadonlySet<string> {
+  const source = ts.createSourceFile(CHEMIN_DU_REGISTRE, texte, ts.ScriptTarget.Latest, true);
+  const exporte = (n: ts.Node): boolean =>
+    ts.canHaveModifiers(n) &&
+    (ts.getModifiers(n) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+  const rendUnMagasin = (t: ts.TypeNode | undefined): boolean =>
+    t !== undefined && /Magasin/.test(t.getText(source));
+  const noms = new Set<string>();
+  for (const n of source.statements) {
+    if (!exporte(n)) continue;
+    if (ts.isFunctionDeclaration(n) && n.name !== undefined && rendUnMagasin(n.type)) {
+      noms.add(n.name.text);
+    }
+    if (ts.isVariableStatement(n)) {
+      for (const d of n.declarationList.declarations) {
+        const init = d.initializer;
+        const fonction =
+          init !== undefined && (ts.isArrowFunction(init) || ts.isFunctionExpression(init))
+            ? init
+            : null;
+        const typeDeclare =
+          d.type !== undefined && ts.isFunctionTypeNode(d.type) ? d.type.type : undefined;
+        if (
+          ts.isIdentifier(d.name) &&
+          (rendUnMagasin(fonction?.type) || rendUnMagasin(typeDeclare))
+        ) {
+          noms.add(d.name.text);
+        }
+      }
+    }
+  }
+  return noms;
+}
 
 /** Le module du registre, sous toutes les formes d'import qui le désignent. */
 const MODULE_DU_REGISTRE = /(^|\/)rate-limit(\.[cm]?[jt]sx?)?$/;
@@ -338,8 +380,12 @@ interface Lecture {
  */
 const LECTURES = new WeakMap<Fichier, Map<string, Lecture>>();
 
-function lireUnFichier(f: Fichier, noms: ReadonlySet<string>): Lecture {
-  const cle = [...noms].sort().join(' ');
+function lireUnFichier(
+  f: Fichier,
+  noms: ReadonlySet<string>,
+  fabriques: ReadonlySet<string>
+): Lecture {
+  const cle = `${[...noms].sort().join(' ')}|${[...fabriques].sort().join(' ')}`;
   const deja = LECTURES.get(f)?.get(cle);
   if (deja !== undefined) return deja;
   const fautes: Faute[] = [];
@@ -355,28 +401,40 @@ function lireUnFichier(f: Fichier, noms: ReadonlySet<string>): Lecture {
   // `nom_dynamique` (un littéral DU REGISTRE), pas comme un compteur écrit à côté de lui. Et un
   // identifiant `limiter` n'est admis qu'à deux places : l'import nommé, l'appel direct.
   const admis = new Set<ts.Node>();
+  // Un spécificateur déjà refusé pour une fabrique n'est pas refusé une seconde fois par son nom.
+  const dejaRefuses = new Set<ts.Node>();
 
   const visiter = (n: ts.Node): void => {
     if (ts.isImportDeclaration(n) && importNomme(n)) admis.add(n.moduleSpecifier);
     if (ts.isImportSpecifier(n) || ts.isExportSpecifier(n)) {
       // Le nom IMPORTÉ ou EXPORTÉ, qu'il soit écrit en identifiant ou en chaîne. Seul l'import
       // nommé, non renommé, écrit en identifiant, est lisible : tout autre spécificateur qui
-      // désigne `limiter` le fait sortir sous un autre nom, que la garde ne suivrait plus.
+      // désigne `limiter` ou une fabrique de magasin le fait sortir sous un autre nom, que la
+      // garde ne suivrait plus.
       const designe = n.propertyName ?? n.name;
       const lisible =
         ts.isImportSpecifier(n) && n.propertyName === undefined && ts.isIdentifier(n.name);
+      const sens = ts.isImportSpecifier(n) ? 'importé' : 'exporté';
       if (lisible) admis.add(n.name);
       else if (designe.text === 'limiter') {
         admis.add(designe);
         refuser(
           n,
           'nom_dynamique',
-          `\`limiter\` est ${ts.isImportSpecifier(n) ? 'importé' : 'exporté'} sous un autre nom, ` +
-            `ou par une chaîne : ses appels échapperaient à la lecture de leur premier argument.`
+          `\`limiter\` est ${sens} sous un autre nom, ou par une chaîne : ses appels ` +
+            `échapperaient à la lecture de leur premier argument.`
+        );
+      } else if (fabriques.has(designe.text)) {
+        dejaRefuses.add(designe);
+        refuser(
+          n,
+          'magasin_explicite',
+          `la fabrique de magasin \`${designe.text}\` est ${sens} sous un autre nom, ou par une ` +
+            `chaîne : un magasin se fabrique dans ${CHEMIN_DU_REGISTRE}, jamais à côté.`
         );
       }
     }
-    if (ts.isIdentifier(n) && FABRIQUES_DE_MAGASIN.has(n.text)) {
+    if (ts.isIdentifier(n) && fabriques.has(n.text) && !dejaRefuses.has(n)) {
       refuser(
         n,
         'magasin_explicite',
@@ -392,7 +450,14 @@ function lireUnFichier(f: Fichier, noms: ReadonlySet<string>): Lecture {
     ) {
       admis.add(n.expression);
       appelsVus += 1;
-      if (n.arguments.length > ARGUMENTS_D_UN_APPEL) {
+      if (n.arguments.some(ts.isSpreadElement)) {
+        refuser(
+          n,
+          'magasin_explicite',
+          `\`limiter(\` reçoit des arguments ÉTALÉS : leur nombre ne se lit pas, et un magasin ou ` +
+            `un puits passerait par là.`
+        );
+      } else if (n.arguments.length > ARGUMENTS_D_UN_APPEL) {
         refuser(
           n,
           'magasin_explicite',
@@ -472,11 +537,21 @@ function lireLesSources(
   fautes: Faute[]
 ): { appelsVus: number; appelantsDuPotDeMiel: number } {
   const noms = new Set(Object.keys(u.registre));
+  const registre = u.fichiers.find((f) => f.chemin === CHEMIN_DU_REGISTRE);
+  const fabriques = fabriquesDuRegistre(registre?.texte ?? '');
+  if (fabriques.size === 0) {
+    fautes.push({
+      famille: 'perimetre_vide',
+      message:
+        `AUCUNE fabrique de magasin lue dans ${CHEMIN_DU_REGISTRE} : la garde ne saurait pas quel ` +
+        `magasin refuser hors du registre.`,
+    });
+  }
   let appelsVus = 0;
   let appelantsDuPotDeMiel = 0;
   for (const f of u.fichiers) {
     if (f.chemin === CHEMIN_DU_REGISTRE || f.chemin === CHEMIN_DE_LA_GARDE) continue;
-    const l = lireUnFichier(f, noms);
+    const l = lireUnFichier(f, noms, fabriques);
     fautes.push(...l.fautes);
     appelsVus += l.appelsVus;
     appelantsDuPotDeMiel += l.appelantsDuPotDeMiel;

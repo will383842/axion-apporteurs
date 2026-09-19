@@ -77,6 +77,7 @@ import {
   analyser,
   cacheQuiLeve,
   exigenceDuCompteur,
+  fabriquesDuRegistre,
   sourcesDuDisque,
   universDuDepot,
   type Univers,
@@ -760,6 +761,38 @@ describe('REQ-SEC-016 — la garde de famille', () => {
     ]);
   });
 
+  it('REQ-SEC-016 — les fabriques de magasin sont DÉRIVÉES des exports du registre : une troisième est vue', async () => {
+    const registre = base.fichiers.find((f) => f.chemin === 'src/server/securite/rate-limit.ts')!;
+    expect([...fabriquesDuRegistre(registre.texte)].sort()).toEqual([
+      'creerMagasinRedis',
+      'magasinDepuis',
+    ]);
+    const avecUneTroisieme =
+      registre.texte +
+      '\nexport const autreFabrique = (): MagasinDeCompteurs => magasinDepuis(async () => ({ admis: true, compte: 0, plusAncienMs: null }));\n';
+    expect(fabriquesDuRegistre(avecUneTroisieme).has('autreFabrique')).toBe(true);
+    const r = await analyser({
+      ...base,
+      fichiers: [
+        ...base.fichiers.filter((f) => f !== registre),
+        { chemin: registre.chemin, texte: avecUneTroisieme },
+        {
+          chemin: 'src/server/detour.ts',
+          texte:
+            "import { autreFabrique } from './securite/rate-limit';\nexport const m = autreFabrique();\n",
+        },
+      ],
+    });
+    expect(r.fautes.map((f) => f.famille)).toContain('magasin_explicite');
+    const sansFabrique = await analyser({
+      ...base,
+      fichiers: base.fichiers.map((f) =>
+        f === registre ? { chemin: f.chemin, texte: 'export const rien = 0;\n' } : f
+      ),
+    });
+    expect(sansFabrique.fautes.map((f) => f.famille)).toContain('perimetre_vide');
+  });
+
   it('REQ-SEC-016 — le filtre du DISQUE lit les huit extensions de code, et elles seules', async () => {
     const dossier = mkdtempSync(join(tmpdir(), 'rfx-'));
     try {
@@ -808,6 +841,36 @@ describe('REQ-SEC-016 — la garde de famille', () => {
     [
       'un magasin réel construit hors du registre',
       "import { creerMagasinRedis } from './securite/rate-limit';\nexport const m = creerMagasinRedis('redis://cache.example.org', {});\n",
+    ],
+    [
+      'une queue d’arguments étalée',
+      "import { limiter } from './securite/rate-limit';\nexport const f = (s: any) => limiter('magic:ip', s, ...([Date.now(), undefined, () => {}] as const));\n",
+    ],
+    [
+      'un étalement au milieu des arguments',
+      "import { limiter } from './securite/rate-limit';\nexport const f = (s: any) => limiter('magic:ip', ...([s] as const), 0);\n",
+    ],
+    [
+      'une fabrique importée sous un nom de chaîne, passée par étalement',
+      "import { limiter, 'magasinDepuis' as fabrique } from './securite/rate-limit';\n" +
+        'const ouvert = fabrique(async () => ({ admis: true, compte: 0, plusAncienMs: null }));\n' +
+        "export const f = (s: any) => limiter('magic:ip', s, ...([0, ouvert] as const));\n",
+    ],
+    [
+      'un appel à DEUX nœuds écrits dont l’étalement porte heure et magasin',
+      "import { limiter } from './securite/rate-limit';\nexport const f = (s: any, m: any) => limiter('magic:ip', ...([s, 0, m] as const));\n",
+    ],
+    [
+      'un étalement seul qui porte un signaleur muet sur `depot:ip`',
+      "import { limiter } from './securite/rate-limit';\nexport const f = (s: any) => limiter('depot:ip', ...([s, 0, undefined, () => undefined] as const));\n",
+    ],
+    [
+      'une fabrique ré-exportée sous un nom de chaîne',
+      "export { 'creerMagasinRedis' as fabrique } from './securite/rate-limit';\n",
+    ],
+    [
+      'une fabrique importée sous un nom de chaîne, sans appel',
+      "import { 'creerMagasinRedis' as fabrique } from './securite/rate-limit';\nexport const g = fabrique;\n",
     ],
   ])('REQ-SEC-016 — hors des tests, %s est refusé : `magasin_explicite`', async (_l, texte) => {
     const r = await analyser({
