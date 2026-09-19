@@ -1439,11 +1439,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/sec-10",
+      "pr": 76,
       "issue": 71,
       "attempts": 0,
       "motif": null,
@@ -1545,11 +1545,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/dm-01",
+      "pr": 75,
       "issue": 62,
       "attempts": 0,
       "motif": null,
@@ -1641,7 +1641,13 @@
         "tests/integration/harnais-testcontainers.spec.ts",
         "vitest.config.ts",
         ".github/workflows/ci.yml",
-        "docs/gates.json"
+        "docs/gates.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/setup.ts",
+        "tests/unit/gouvernance/tout-check-est-cable.spec.ts",
+        "tests/unit/ci/integration-collectee-par-gate-a.spec.ts",
+        "tests/integration/rate-limit-redis.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1658,17 +1664,19 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A05",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 68,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) Les tests d'integration tournent sur un Postgres 16 avec pgvector et un cache ephemeres, montes par testcontainers, schema migre par `prisma migrate deploy` ; l'isolation se fait par transaction ou par base par fichier (REQ-QA-006). (2) AUCUN TEST NE DEPEND D'UN FICHIER D'ENVIRONNEMENT PARTAGE : les identifiants de connexion viennent du conteneur, jamais d'un `.env` du poste ; un test qui lit une variable d'environnement partagee est refuse. (3) LE HARNAIS DIT CE QU'IL NE PEUT PAS FAIRE : si le demon de conteneurs est indisponible, la suite d'integration ECHOUE explicitement avec un message qui le nomme — elle ne se saute pas en silence. Un test saute a l'air d'avoir mesure et n'a rien mesure. (4) TEMOIN A DEUX FACES : sans demon disponible, `pnpm test:integration` sort en code non nul avec le motif nomme ; avec demon disponible, la meme commande sort en zero et imprime le compte des fichiers d'integration reellement executes. (5) L'etape de Gate A qui lance ce harnais ne porte pas de tolerance d'echec.",
       "tests": {
         "REQ-QA-006": [
-          "tests/integration/harnais-testcontainers.spec.ts"
+          "tests/integration/harnais-testcontainers.spec.ts",
+          "tests/unit/ci/integration-collectee-par-gate-a.spec.ts",
+          "tests/integration/rate-limit-redis.spec.ts"
         ]
       }
     },
