@@ -138,7 +138,7 @@ de PR relues par deux lentilles au lieu de quatre — et 172 restent élevées. 
   `it('REQ-GOV-011 · la PR est ÉLEVÉE, la raison nomme DM-01, et deux revues laissent simplicite et mutation manquantes')` :
   une PR ordinaire par son titre qui porte une tâche sensible au milieu de ses tâches reste élevée.
 - **Assertion** — `tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts` ·
-  `it('REQ-GOV-011 · une PR QA-T01 (qualite, sensible vide, aucun code produit) est de risque ordinaire')` :
+  `it('REQ-GOV-011 · une PR QA-T01 réduite à ses fichiers hors .github/ et hors racine (qualite, sensible vide) est de risque ordinaire')` :
   la classe ordinaire existe, et deux lentilles lui suffisent.
 - `pnpm gov:pr:prove` exerce l'appelant `gov-pr.ts` sur les mêmes cas (PR ordinaire, PR à tâche
   sensible au milieu, aucune revue, quatre refus).

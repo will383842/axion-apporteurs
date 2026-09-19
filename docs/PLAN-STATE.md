@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `87fb212` — 2026-09-19T00:46:28+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #64 (un contrôle requis rouge ou une revue manquante) · 2. #59 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #59 (rien) · 2. #64 (rien) |
 | Qui tient quoi ? | QA-T01 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 71.60 j |
-| Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
+| Le prochain pas | fusionner #59, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #64 — 2026-09-18 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 59 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,8 +64,8 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #64 — feat(GOV-077): la relecture se proportionne au risque, aucune revue n est pas toutes refusent | `t/gov-077` | un contrôle requis rouge ou une revue manquante |
-| 2 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | rien — fusionnable maintenant |
+| 2 | #64 — feat(GOV-077): la relecture se proportionne au risque, aucune revue n est pas toutes refusent | `t/gov-077` | rien — fusionnable maintenant |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -88,6 +88,8 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Prochain pas
 
+**Fusionner #59** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+
 **QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 32 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
@@ -106,8 +108,9 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 fonction, `risqueDeLaPr()` (`scripts/lot/revues.ts`), qu'appellent `gov:pr` et le composeur du
 corps. Une PR n'est ordinaire que si tout est prouvé : tâche résolue, base lisible, chaque tâche en
 zone `gouvernance` ou `qualite` avec `sensible` présent et vide sur la tête ET la base, aucun
-label `schema`, et un diff non vide sous `docs/`, `scripts/`, `tests/` ou à la racine, hors de la
-garde des revues. Tout le reste, `.github/` compris, est élevé. Ordinaire : `exactitude` et
+label `schema`, et un diff non vide sous `docs/`, `scripts/`, `tests/` ou fait de documents `*.md`
+à la racine, hors de la garde des revues. Tout le reste, `.github/` et les configurations de la
+racine compris, est élevé, et un fichier renommé compte par sa source comme par sa destination. Ordinaire : `exactitude` et
 `securite` ; élevé : les quatre lentilles, comme avant. `gov:pr --pr` imprime le risque et ses
 raisons, et « aucune revue » a sa propre famille, `aucune_revue`, distincte de « toutes les revues
 refusent ». Un avis posté en commentaire d'issue est nommé sans être compté. Le lot L0-01 est clos
@@ -125,7 +128,9 @@ sur les lentilles (leur zone les rend élevées), mais la section Attaque ne leu
 rouge pour une raison que personne n'avait écrite. La PR ordinaire est maintenant une fixture
 explicite. Et `gh pr view --json files` plafonne à 100 fichiers : un risque lu sur les fichiers
 doit passer par l'API paginée, sinon un fichier au-delà du centième est invisible. Mesure sur le
-registre réel : 35 des 206 tâches `partners` non livrées se reliront avec deux lentilles.
+registre réel : 29 des 201 tâches `partners` non livrées se reliront avec deux lentilles. Enfin,
+une liste de fichiers qui ne lit que la destination d'un renommage juge une PR par l'endroit où un
+fichier arrive, jamais par celui qu'il quitte : la lentille `securite` l'a refusé, à juste titre.
 
 ### PR #61 — 2026-09-18 — feat(GOV-043): gov:trace rend son perimetre et son complement, sous un plancher declare
 

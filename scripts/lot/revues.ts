@@ -669,7 +669,7 @@ export function cheminsTouches(entrees: readonly EntreeDeFichier[]): string[] {
 
 /**
  * La sortie de `git diff --name-status`, lue dans la forme de la forge. Une ligne = un statut puis
- * un chemin, ou DEUX pour un renommage ou une copie (`R100`, `C75`) : la source puis la destination.
+ * un chemin, ou DEUX pour un renommage ou une copie (`R100`, `C075`) : la source puis la destination.
  */
 export function entreesDuDiff(sortie: string): EntreeDeFichier[] {
   const entrees: EntreeDeFichier[] = [];

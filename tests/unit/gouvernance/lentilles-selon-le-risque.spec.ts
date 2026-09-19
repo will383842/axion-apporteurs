@@ -27,6 +27,7 @@ import { posix } from 'node:path';
 import * as LECTEUR from '../../../scripts/lot/revues';
 import * as COMPOSEUR from '../../../scripts/lot/corps-de-pr';
 import { cheminsDeLaTache } from '../../../scripts/lot/chemins-de-tache';
+import { LIVREE } from '../../../scripts/lot/avancement';
 
 type TacheBrute = {
   id: string;
@@ -36,6 +37,8 @@ type TacheBrute = {
   pr?: number | null;
   paths?: string[];
   tests?: Record<string, string[]> | null;
+  repo?: string;
+  statut?: string;
 };
 
 /** Le registre RÉEL, relu à chaque cas : une copie par témoin, jamais une mutation partagée. */
@@ -101,7 +104,9 @@ function risque(p: {
 }
 
 describe('REQ-GOV-011 — cas 0 : la PR ORDINAIRE existe, et deux lentilles de revue lui suffisent', () => {
-  it('REQ-GOV-011 · une PR QA-T01 (qualite, sensible vide, aucun code produit) est de risque ordinaire', () => {
+  it('REQ-GOV-011 · une PR QA-T01 réduite à ses fichiers hors .github/ et hors racine (qualite, sensible vide) est de risque ordinaire', () => {
+    // ⚠️ La vraie PR QA-T01 touche `.github/workflows/ci.yml` et `vitest.config.ts` : elle est
+    // ÉLEVÉE. Ce témoin porte sur QA-T01 SANS ces fichiers — c'est ce qu'il prouve, rien de plus.
     const r = risque({ titre: 'feat(QA-T01): aucune gate en continue-on-error' });
     expect(r.niveau, r.raisons.join(' ; ')).toBe('ordinaire');
     expect(r.schema).toBe(false);
@@ -328,30 +333,33 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
     expect(r.raisons.join(' ; ')).toContain('.github/workflows/ci.yml');
   });
 
-  it('REQ-GOV-011 · cas 6 sexies : un schéma RENOMMÉ hors de prisma/ reste élevé, et exige la lentille schema', () => {
-    const entrees = [
-      { filename: FICHIERS_QA_T01[0]!, status: 'modified' },
-      {
-        filename: 'docs/schema.prisma',
-        previous_filename: 'prisma/schema.prisma',
-        status: 'renamed',
-      },
-      { filename: FICHIERS_QA_T01[1]!, status: 'modified' },
-    ];
-    const r = risque({ titre: 'feat(QA-T01): x', fichiers: LECTEUR.cheminsTouches(entrees) });
-    expect(r.niveau).toBe('eleve');
-    expect(r.schema).toBe(true);
-    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toContain('schema');
+  it('REQ-GOV-011 · cas 6 sexies : un schéma RENOMMÉ hors de prisma/ ou de packages/contracts/ reste élevé, et exige la lentille schema', () => {
+    // Les chemins de schéma DÉRIVÉS de la charte §7, chacun renommé vers `docs/`, AU MILIEU.
+    for (const racineDeSchema of LECTEUR.cheminsSchema()) {
+      const source = `${racineDeSchema}schema.prisma`;
+      const entrees = [
+        { filename: FICHIERS_QA_T01[0]!, status: 'modified' },
+        { filename: 'docs/archive/schema.prisma', previous_filename: source, status: 'renamed' },
+        { filename: FICHIERS_QA_T01[1]!, status: 'modified' },
+      ];
+      expect(
+        risque({ titre: 'feat(QA-T01): x', fichiers: entrees.map((e) => e.filename) }).schema
+      ).toBe(false); // le défaut, verbatim : la destination seule ne dit rien du schéma
+      const r = risque({ titre: 'feat(QA-T01): x', fichiers: LECTEUR.cheminsTouches(entrees) });
+      expect(r.niveau, source).toBe('eleve');
+      expect(r.schema, source).toBe(true);
+      expect([...LECTEUR.lentillesExigees(r).sansMutation]).toContain('schema');
+    }
   });
 
   it('REQ-GOV-011 · cas 6 septies : le diff LOCAL (git --name-status) rend aussi la source d’un renommage', () => {
     // La forme de `git diff --name-status` : une colonne de statut, puis un chemin — ou DEUX pour un
-    // renommage ou une copie (`R100`, `C75`). Tabulations, telles que git les écrit.
+    // renommage ou une copie (`R100`, `C075`). Tabulations, telles que git les écrit.
     const T = String.fromCharCode(9);
     const sortie = [
       `M${T}${FICHIERS_QA_T01[0]}`,
       `R100${T}.github/workflows/ci.yml${T}docs/archive/ci.yml`,
-      `C80${T}prisma/schema.prisma${T}docs/copie.prisma`,
+      `C080${T}prisma/schema.prisma${T}docs/copie.prisma`,
       `A${T}${FICHIERS_QA_T01[1]}`,
       '',
     ].join(String.fromCharCode(10));
@@ -457,6 +465,15 @@ describe('REQ-GOV-011 — cas 9 : toute tâche du registre réel est classée, l
       else throw new Error(`${t.id} : niveau inconnu ${String(r.niveau)}`);
     }
     console.log(`cas 9 — ${T.length} tâches : ${ordinaires} ordinaire(s), ${eleves} élevée(s)`);
+    // Le compte que l'ADR et le journal citent, IMPRIMÉ ici plutôt que recopié : les tâches
+    // `partners` non livrées de la TÊTE.
+    const vivantes = T.filter((t) => t.repo === 'partners' && !LIVREE.has(t.statut ?? ''));
+    const ordinairesVivantes = vivantes.filter(
+      (t) => risque({ titre: `feat(${t.id}): x`, fichiers: cheminsDe(t) }).niveau === 'ordinaire'
+    ).length;
+    console.log(
+      `cas 9 — tâches partners non livrées : ${ordinairesVivantes} ordinaire(s) sur ${vivantes.length}`
+    );
     expect(ordinaires + eleves).toBe(T.length);
     // Une fonction qui rendrait TOUJOURS élevé passerait cas 1 à cas 8 : elle rougit ici.
     expect(ordinaires).toBeGreaterThan(0);
