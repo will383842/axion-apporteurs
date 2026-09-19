@@ -143,6 +143,18 @@
         min-height: calc(100vh - 90px);
       }
       .etats {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .scene {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .notes {
+        grid-column: 3;
+        grid-row: 1;
+      }
+      .etats {
         background: var(--atelier-surface);
         border-right: 1px solid var(--atelier-bord);
         padding: 12px;
@@ -194,13 +206,16 @@
         cursor: grabbing;
       }
       .plateau {
+        display: flex;
+        justify-content: center;
         transform-origin: 50% 0;
         padding: 24px;
         will-change: transform;
       }
       .telephone {
         position: relative;
-        margin: 0 auto;
+        flex: none;
+        margin: 0;
         width: var(--largeur, 390px);
         height: var(--hauteur, 844px);
         border: 12px solid var(--cadre);
@@ -266,6 +281,12 @@
       @media (max-width: 1100px) {
         .atelier {
           grid-template-columns: minmax(0, 1fr);
+        }
+        .etats,
+        .scene,
+        .notes {
+          grid-column: auto;
+          grid-row: auto;
         }
         .etats {
           border-right: 0;
@@ -758,29 +779,6 @@
       </div>
     </header>
     <main class="atelier">
-      <nav class="etats" aria-label="États de l'écran">
-        <h2>États</h2>
-        <p class="groupe">Les étapes du lot</p>
-        <ul>
-          <li><a href="#etat-brouillon">Brouillon</a></li>
-          <li><a href="#etat-approuve">Approuvé</a></li>
-          <li><a href="#etat-exporte">Exporté</a></li>
-          <li><a href="#etat-regenerer">Régénérer le fichier</a></li>
-          <li><a href="#etat-rapprochement">Rapprochement</a></li>
-          <li><a href="#etat-rapproche">Rapproché</a></li>
-          <li><a href="#etat-rejete">Rejeté</a></li>
-        </ul>
-        <p class="groupe">Bloqués</p>
-        <ul>
-          <li><a href="#etat-export-refuse">Export refusé : non approuvé</a></li>
-          <li><a href="#etat-vide">Aucun relevé ce mois-ci</a></li>
-          <li><a href="#etat-qualifieur">Rôle qualifieur</a></li>
-        </ul>
-        <p class="groupe">Techniques</p>
-        <ul>
-          <li><a href="#etat-chargement">Chargement</a></li>
-        </ul>
-      </nav>
       <div
         class="scene"
         id="scene"
@@ -1829,6 +1827,29 @@ Fichier refusé par la banque : format de date.</textarea
           </div>
         </div>
       </div>
+      <nav class="etats" aria-label="États de l'écran">
+        <h2>États</h2>
+        <p class="groupe">Les étapes du lot</p>
+        <ul>
+          <li><a href="#etat-brouillon">Brouillon</a></li>
+          <li><a href="#etat-approuve">Approuvé</a></li>
+          <li><a href="#etat-exporte">Exporté</a></li>
+          <li><a href="#etat-regenerer">Régénérer le fichier</a></li>
+          <li><a href="#etat-rapprochement">Rapprochement</a></li>
+          <li><a href="#etat-rapproche">Rapproché</a></li>
+          <li><a href="#etat-rejete">Rejeté</a></li>
+        </ul>
+        <p class="groupe">Bloqués</p>
+        <ul>
+          <li><a href="#etat-export-refuse">Export refusé : non approuvé</a></li>
+          <li><a href="#etat-vide">Aucun relevé ce mois-ci</a></li>
+          <li><a href="#etat-qualifieur">Rôle qualifieur</a></li>
+        </ul>
+        <p class="groupe">Techniques</p>
+        <ul>
+          <li><a href="#etat-chargement">Chargement</a></li>
+        </ul>
+      </nav>
       <aside class="notes" aria-label="Notes de conception">
         <h2 class="notes-titre">Notes pour la relecture</h2>
         <section class="note" data-pour="etat-brouillon">
@@ -1958,6 +1979,8 @@ Fichier refusé par la banque : format de date.</textarea
           a.addEventListener('click', function (ev) {
             ev.preventDefault();
             montrer(a.getAttribute('href').slice(1), true);
+            if (window.matchMedia('(max-width: 1100px)').matches)
+              scene.scrollIntoView({ block: 'start' });
           });
         });
         window.addEventListener('hashchange', function () {

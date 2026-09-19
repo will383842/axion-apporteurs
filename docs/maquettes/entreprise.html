@@ -229,6 +229,18 @@
         min-height: calc(100vh - 90px);
       }
       .etats {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .scene {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .notes {
+        grid-column: 3;
+        grid-row: 1;
+      }
+      .etats {
         background: var(--atelier-surface);
         border-right: 1px solid var(--atelier-bord);
         padding: 12px;
@@ -280,13 +292,16 @@
         cursor: grabbing;
       }
       .plateau {
+        display: flex;
+        justify-content: center;
         transform-origin: 50% 0;
         padding: 24px;
         will-change: transform;
       }
       .telephone {
         position: relative;
-        margin: 0 auto;
+        flex: none;
+        margin: 0;
         width: var(--largeur, 390px);
         height: var(--hauteur, 844px);
         border: 12px solid var(--cadre);
@@ -352,6 +367,12 @@
       @media (max-width: 1100px) {
         .atelier {
           grid-template-columns: minmax(0, 1fr);
+        }
+        .etats,
+        .scene,
+        .notes {
+          grid-column: auto;
+          grid-row: auto;
         }
         .etats {
           border-right: 0;
@@ -1168,35 +1189,6 @@
       </div>
     </header>
     <main class="atelier">
-      <nav class="etats" aria-label="États de l'écran">
-        <h2>États</h2>
-        <p class="groupe">Chercher</p>
-        <ul>
-          <li><a href="#etat-resultats">Liste des entreprises trouvées</a></li>
-        </ul>
-        <p class="groupe">Les 4 états de la carte</p>
-        <ul>
-          <li><a href="#etat-libre">Carte : libre</a></li>
-          <li><a href="#etat-suivie-place">Carte : suivie, place en attente</a></li>
-          <li><a href="#etat-suivie-complete">Carte : suivie, attente complète</a></li>
-          <li><a href="#etat-non-disponible">Carte : non disponible</a></li>
-        </ul>
-        <p class="groupe">Chercher</p>
-        <ul>
-          <li><a href="#etat-aucune">Aucune entreprise trouvée</a></li>
-        </ul>
-        <p class="groupe">Techniques</p>
-        <ul>
-          <li><a href="#etat-chargement">Chargement</a></li>
-          <li><a href="#etat-hors-ligne">Pas de réseau</a></li>
-          <li><a href="#etat-service-indisponible">Vérification indisponible</a></li>
-        </ul>
-        <p class="groupe">Bloqués</p>
-        <ul>
-          <li><a href="#etat-limite-proche">Limite du jour proche</a></li>
-          <li><a href="#etat-limite-atteinte">Limite du jour atteinte</a></li>
-        </ul>
-      </nav>
       <div
         class="scene"
         id="scene"
@@ -1845,6 +1837,35 @@
           </div>
         </div>
       </div>
+      <nav class="etats" aria-label="États de l'écran">
+        <h2>États</h2>
+        <p class="groupe">Chercher</p>
+        <ul>
+          <li><a href="#etat-resultats">Liste des entreprises trouvées</a></li>
+        </ul>
+        <p class="groupe">Les 4 états de la carte</p>
+        <ul>
+          <li><a href="#etat-libre">Carte : libre</a></li>
+          <li><a href="#etat-suivie-place">Carte : suivie, place en attente</a></li>
+          <li><a href="#etat-suivie-complete">Carte : suivie, attente complète</a></li>
+          <li><a href="#etat-non-disponible">Carte : non disponible</a></li>
+        </ul>
+        <p class="groupe">Chercher</p>
+        <ul>
+          <li><a href="#etat-aucune">Aucune entreprise trouvée</a></li>
+        </ul>
+        <p class="groupe">Techniques</p>
+        <ul>
+          <li><a href="#etat-chargement">Chargement</a></li>
+          <li><a href="#etat-hors-ligne">Pas de réseau</a></li>
+          <li><a href="#etat-service-indisponible">Vérification indisponible</a></li>
+        </ul>
+        <p class="groupe">Bloqués</p>
+        <ul>
+          <li><a href="#etat-limite-proche">Limite du jour proche</a></li>
+          <li><a href="#etat-limite-atteinte">Limite du jour atteinte</a></li>
+        </ul>
+      </nav>
       <aside class="notes" aria-label="Notes de conception">
         <h2 class="notes-titre">Notes pour la relecture</h2>
         <section class="note" data-pour="etat-resultats">
@@ -1991,6 +2012,8 @@
           a.addEventListener('click', function (ev) {
             ev.preventDefault();
             montrer(a.getAttribute('href').slice(1), true);
+            if (window.matchMedia('(max-width: 1100px)').matches)
+              scene.scrollIntoView({ block: 'start' });
           });
         });
         window.addEventListener('hashchange', function () {

@@ -229,6 +229,18 @@
         min-height: calc(100vh - 90px);
       }
       .etats {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .scene {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .notes {
+        grid-column: 3;
+        grid-row: 1;
+      }
+      .etats {
         background: var(--atelier-surface);
         border-right: 1px solid var(--atelier-bord);
         padding: 12px;
@@ -280,13 +292,16 @@
         cursor: grabbing;
       }
       .plateau {
+        display: flex;
+        justify-content: center;
         transform-origin: 50% 0;
         padding: 24px;
         will-change: transform;
       }
       .telephone {
         position: relative;
-        margin: 0 auto;
+        flex: none;
+        margin: 0;
         width: var(--largeur, 390px);
         height: var(--hauteur, 844px);
         border: 12px solid var(--cadre);
@@ -352,6 +367,12 @@
       @media (max-width: 1100px) {
         .atelier {
           grid-template-columns: minmax(0, 1fr);
+        }
+        .etats,
+        .scene,
+        .notes {
+          grid-column: auto;
+          grid-row: auto;
         }
         .etats {
           border-right: 0;
@@ -1168,46 +1189,6 @@
       </div>
     </header>
     <main class="atelier">
-      <nav class="etats" aria-label="États de l'écran">
-        <h2>États</h2>
-        <p class="groupe">Le formulaire</p>
-        <ul>
-          <li><a href="#etat-pre-rempli">Formulaire (depuis la carte)</a></li>
-          <li><a href="#etat-vide">Formulaire (arrivée directe)</a></li>
-          <li><a href="#etat-suggestions">Entreprises proposées</a></li>
-          <li><a href="#etat-repli">Je ne trouve pas l’entreprise</a></li>
-          <li><a href="#etat-erreurs">Il manque quelque chose</a></li>
-        </ul>
-        <p class="groupe">Techniques</p>
-        <ul>
-          <li><a href="#etat-envoi">Envoi en cours</a></li>
-          <li><a href="#etat-hors-ligne">Pas de réseau (formulaire)</a></li>
-        </ul>
-        <p class="groupe">Issues : enregistré</p>
-        <ul>
-          <li><a href="#etat-issue-enregistree">Enregistré</a></li>
-          <li><a href="#etat-issue-prioritaire">Enregistré, Axion-IA vous appelle d’abord</a></li>
-          <li><a href="#etat-issue-en_attente">En attente (déjà suivie)</a></li>
-        </ul>
-        <p class="groupe">Issues : pas enregistré</p>
-        <ul>
-          <li><a href="#etat-issue-file_complete">Refus : attente complète</a></li>
-          <li><a href="#etat-issue-anteriorite">Refus : déjà connue d’Axion-IA</a></li>
-          <li><a href="#etat-issue-etablissement_cesse">Refus : établissement fermé</a></li>
-          <li>
-            <a href="#etat-issue-entreprise_hors_perimetre">Refus : hors du champ du contrat</a>
-          </li>
-          <li>
-            <a href="#etat-issue-opposition_demarchage">Refus : ne souhaite pas être sollicitée</a>
-          </li>
-          <li><a href="#etat-issue-gele">Dépôts en pause</a></li>
-        </ul>
-        <p class="groupe">Issues : pas encore enregistré</p>
-        <ul>
-          <li><a href="#etat-issue-captcha">Petite vérification</a></li>
-          <li><a href="#etat-issue-brouillon_hors_ligne">Gardé sur le téléphone</a></li>
-        </ul>
-      </nav>
       <div
         class="scene"
         id="scene"
@@ -2372,6 +2353,46 @@
           </div>
         </div>
       </div>
+      <nav class="etats" aria-label="États de l'écran">
+        <h2>États</h2>
+        <p class="groupe">Le formulaire</p>
+        <ul>
+          <li><a href="#etat-pre-rempli">Formulaire (depuis la carte)</a></li>
+          <li><a href="#etat-vide">Formulaire (arrivée directe)</a></li>
+          <li><a href="#etat-suggestions">Entreprises proposées</a></li>
+          <li><a href="#etat-repli">Je ne trouve pas l’entreprise</a></li>
+          <li><a href="#etat-erreurs">Il manque quelque chose</a></li>
+        </ul>
+        <p class="groupe">Techniques</p>
+        <ul>
+          <li><a href="#etat-envoi">Envoi en cours</a></li>
+          <li><a href="#etat-hors-ligne">Pas de réseau (formulaire)</a></li>
+        </ul>
+        <p class="groupe">Issues : enregistré</p>
+        <ul>
+          <li><a href="#etat-issue-enregistree">Enregistré</a></li>
+          <li><a href="#etat-issue-prioritaire">Enregistré, Axion-IA vous appelle d’abord</a></li>
+          <li><a href="#etat-issue-en_attente">En attente (déjà suivie)</a></li>
+        </ul>
+        <p class="groupe">Issues : pas enregistré</p>
+        <ul>
+          <li><a href="#etat-issue-file_complete">Refus : attente complète</a></li>
+          <li><a href="#etat-issue-anteriorite">Refus : déjà connue d’Axion-IA</a></li>
+          <li><a href="#etat-issue-etablissement_cesse">Refus : établissement fermé</a></li>
+          <li>
+            <a href="#etat-issue-entreprise_hors_perimetre">Refus : hors du champ du contrat</a>
+          </li>
+          <li>
+            <a href="#etat-issue-opposition_demarchage">Refus : ne souhaite pas être sollicitée</a>
+          </li>
+          <li><a href="#etat-issue-gele">Dépôts en pause</a></li>
+        </ul>
+        <p class="groupe">Issues : pas encore enregistré</p>
+        <ul>
+          <li><a href="#etat-issue-captcha">Petite vérification</a></li>
+          <li><a href="#etat-issue-brouillon_hors_ligne">Gardé sur le téléphone</a></li>
+        </ul>
+      </nav>
       <aside class="notes" aria-label="Notes de conception">
         <h2 class="notes-titre">Notes pour la relecture</h2>
         <section class="note" data-pour="etat-pre-rempli">
@@ -2621,6 +2642,8 @@
           a.addEventListener('click', function (ev) {
             ev.preventDefault();
             montrer(a.getAttribute('href').slice(1), true);
+            if (window.matchMedia('(max-width: 1100px)').matches)
+              scene.scrollIntoView({ block: 'start' });
           });
         });
         window.addEventListener('hashchange', function () {

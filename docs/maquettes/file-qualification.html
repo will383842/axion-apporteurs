@@ -143,6 +143,18 @@
         min-height: calc(100vh - 90px);
       }
       .etats {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .scene {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .notes {
+        grid-column: 3;
+        grid-row: 1;
+      }
+      .etats {
         background: var(--atelier-surface);
         border-right: 1px solid var(--atelier-bord);
         padding: 12px;
@@ -194,13 +206,16 @@
         cursor: grabbing;
       }
       .plateau {
+        display: flex;
+        justify-content: center;
         transform-origin: 50% 0;
         padding: 24px;
         will-change: transform;
       }
       .telephone {
         position: relative;
-        margin: 0 auto;
+        flex: none;
+        margin: 0;
         width: var(--largeur, 390px);
         height: var(--hauteur, 844px);
         border: 12px solid var(--cadre);
@@ -266,6 +281,12 @@
       @media (max-width: 1100px) {
         .atelier {
           grid-template-columns: minmax(0, 1fr);
+        }
+        .etats,
+        .scene,
+        .notes {
+          grid-column: auto;
+          grid-row: auto;
         }
         .etats {
           border-right: 0;
@@ -758,33 +779,6 @@
       </div>
     </header>
     <main class="atelier">
-      <nav class="etats" aria-label="États de l'écran">
-        <h2>États</h2>
-        <p class="groupe">Au quotidien</p>
-        <ul>
-          <li><a href="#etat-nominal">File et fiche ouverte</a></li>
-          <li><a href="#etat-lien-interet">Fiche : relation déclarée</a></li>
-        </ul>
-        <p class="groupe">Validation</p>
-        <ul>
-          <li><a href="#etat-erreur-date">Fiche : il manque la date</a></li>
-          <li><a href="#etat-non-confirme">Fiche : non confirmé</a></li>
-        </ul>
-        <p class="groupe">Au quotidien</p>
-        <ul>
-          <li><a href="#etat-enregistre">Qualification enregistrée</a></li>
-          <li><a href="#etat-vide">File vide</a></li>
-        </ul>
-        <p class="groupe">Techniques</p>
-        <ul>
-          <li><a href="#etat-chargement">Chargement</a></li>
-          <li><a href="#etat-erreur">Enregistrement échoué</a></li>
-        </ul>
-        <p class="groupe">Droits</p>
-        <ul>
-          <li><a href="#etat-lecteur">Rôle lecteur</a></li>
-        </ul>
-      </nav>
       <div
         class="scene"
         id="scene"
@@ -3118,6 +3112,33 @@
           </div>
         </div>
       </div>
+      <nav class="etats" aria-label="États de l'écran">
+        <h2>États</h2>
+        <p class="groupe">Au quotidien</p>
+        <ul>
+          <li><a href="#etat-nominal">File et fiche ouverte</a></li>
+          <li><a href="#etat-lien-interet">Fiche : relation déclarée</a></li>
+        </ul>
+        <p class="groupe">Validation</p>
+        <ul>
+          <li><a href="#etat-erreur-date">Fiche : il manque la date</a></li>
+          <li><a href="#etat-non-confirme">Fiche : non confirmé</a></li>
+        </ul>
+        <p class="groupe">Après l’enregistrement</p>
+        <ul>
+          <li><a href="#etat-enregistre">Qualification enregistrée</a></li>
+          <li><a href="#etat-vide">File vide</a></li>
+        </ul>
+        <p class="groupe">Techniques</p>
+        <ul>
+          <li><a href="#etat-chargement">Chargement</a></li>
+          <li><a href="#etat-erreur">Enregistrement échoué</a></li>
+        </ul>
+        <p class="groupe">Droits</p>
+        <ul>
+          <li><a href="#etat-lecteur">Rôle lecteur</a></li>
+        </ul>
+      </nav>
       <aside class="notes" aria-label="Notes de conception">
         <h2 class="notes-titre">Notes pour la relecture</h2>
         <section class="note" data-pour="etat-nominal">
@@ -3243,6 +3264,8 @@
           a.addEventListener('click', function (ev) {
             ev.preventDefault();
             montrer(a.getAttribute('href').slice(1), true);
+            if (window.matchMedia('(max-width: 1100px)').matches)
+              scene.scrollIntoView({ block: 'start' });
           });
         });
         window.addEventListener('hashchange', function () {

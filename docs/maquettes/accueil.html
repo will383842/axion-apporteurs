@@ -229,6 +229,18 @@
         min-height: calc(100vh - 90px);
       }
       .etats {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .scene {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .notes {
+        grid-column: 3;
+        grid-row: 1;
+      }
+      .etats {
         background: var(--atelier-surface);
         border-right: 1px solid var(--atelier-bord);
         padding: 12px;
@@ -280,13 +292,16 @@
         cursor: grabbing;
       }
       .plateau {
+        display: flex;
+        justify-content: center;
         transform-origin: 50% 0;
         padding: 24px;
         will-change: transform;
       }
       .telephone {
         position: relative;
-        margin: 0 auto;
+        flex: none;
+        margin: 0;
         width: var(--largeur, 390px);
         height: var(--hauteur, 844px);
         border: 12px solid var(--cadre);
@@ -352,6 +367,12 @@
       @media (max-width: 1100px) {
         .atelier {
           grid-template-columns: minmax(0, 1fr);
+        }
+        .etats,
+        .scene,
+        .notes {
+          grid-column: auto;
+          grid-row: auto;
         }
         .etats {
           border-right: 0;
@@ -1170,27 +1191,6 @@
       </div>
     </header>
     <main class="atelier">
-      <nav class="etats" aria-label="États de l'écran">
-        <h2>États</h2>
-        <p class="groupe">Au quotidien</p>
-        <ul>
-          <li><a href="#etat-nominal">Nominal</a></li>
-          <li><a href="#etat-premier-jour">Premier jour (vide)</a></li>
-        </ul>
-        <p class="groupe">Techniques</p>
-        <ul>
-          <li><a href="#etat-chargement">Chargement</a></li>
-          <li><a href="#etat-hors-ligne">Pas de réseau</a></li>
-        </ul>
-        <p class="groupe">Bloqués</p>
-        <ul>
-          <li><a href="#etat-verse-en-attente">Versement en attente d’une pièce</a></li>
-          <li><a href="#etat-reporte">Petit montant reporté</a></li>
-          <li><a href="#etat-contrat-a-signer">Contrat pas encore signé</a></li>
-          <li><a href="#etat-depots-en-pause">Dépôts en pause</a></li>
-          <li><a href="#etat-fin-de-contrat">Collaboration terminée</a></li>
-        </ul>
-      </nav>
       <div
         class="scene"
         id="scene"
@@ -1301,12 +1301,12 @@
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <rect x="4" y="3" width="16" height="18" rx="1" />
                       <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
-                    ><span>Mes<br />entreprises</span></a
+                    ><span>Mes <br />entreprises</span></a
                   ><a href="mes-commissions.html#etat-nominal"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M17 6.5A7 7 0 1017 17.5" />
                       <path d="M4 10h9M4 14h9" /></svg
-                    ><span>Mes<br />commissions</span></a
+                    ><span>Mes <br />commissions</span></a
                   ><a href="conformite.html#etat-plus"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="5" cy="12" r="1.5" />
@@ -1395,12 +1395,12 @@
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <rect x="4" y="3" width="16" height="18" rx="1" />
                       <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
-                    ><span>Mes<br />entreprises</span></a
+                    ><span>Mes <br />entreprises</span></a
                   ><a href="mes-commissions.html#etat-nominal"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M17 6.5A7 7 0 1017 17.5" />
                       <path d="M4 10h9M4 14h9" /></svg
-                    ><span>Mes<br />commissions</span></a
+                    ><span>Mes <br />commissions</span></a
                   ><a href="conformite.html#etat-plus"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="5" cy="12" r="1.5" />
@@ -1480,12 +1480,12 @@
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <rect x="4" y="3" width="16" height="18" rx="1" />
                       <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
-                    ><span>Mes<br />entreprises</span></a
+                    ><span>Mes <br />entreprises</span></a
                   ><a href="mes-commissions.html#etat-nominal"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M17 6.5A7 7 0 1017 17.5" />
                       <path d="M4 10h9M4 14h9" /></svg
-                    ><span>Mes<br />commissions</span></a
+                    ><span>Mes <br />commissions</span></a
                   ><a href="conformite.html#etat-plus"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="5" cy="12" r="1.5" />
@@ -1570,12 +1570,12 @@
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <rect x="4" y="3" width="16" height="18" rx="1" />
                       <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
-                    ><span>Mes<br />entreprises</span></a
+                    ><span>Mes <br />entreprises</span></a
                   ><a href="mes-commissions.html#etat-nominal"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M17 6.5A7 7 0 1017 17.5" />
                       <path d="M4 10h9M4 14h9" /></svg
-                    ><span>Mes<br />commissions</span></a
+                    ><span>Mes <br />commissions</span></a
                   ><a href="conformite.html#etat-plus"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="5" cy="12" r="1.5" />
@@ -1696,12 +1696,12 @@
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <rect x="4" y="3" width="16" height="18" rx="1" />
                       <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
-                    ><span>Mes<br />entreprises</span></a
+                    ><span>Mes <br />entreprises</span></a
                   ><a href="mes-commissions.html#etat-nominal"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M17 6.5A7 7 0 1017 17.5" />
                       <path d="M4 10h9M4 14h9" /></svg
-                    ><span>Mes<br />commissions</span></a
+                    ><span>Mes <br />commissions</span></a
                   ><a href="conformite.html#etat-plus"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="5" cy="12" r="1.5" />
@@ -1815,12 +1815,12 @@
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <rect x="4" y="3" width="16" height="18" rx="1" />
                       <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
-                    ><span>Mes<br />entreprises</span></a
+                    ><span>Mes <br />entreprises</span></a
                   ><a href="mes-commissions.html#etat-nominal"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M17 6.5A7 7 0 1017 17.5" />
                       <path d="M4 10h9M4 14h9" /></svg
-                    ><span>Mes<br />commissions</span></a
+                    ><span>Mes <br />commissions</span></a
                   ><a href="conformite.html#etat-plus"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="5" cy="12" r="1.5" />
@@ -1917,12 +1917,12 @@
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <rect x="4" y="3" width="16" height="18" rx="1" />
                       <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
-                    ><span>Mes<br />entreprises</span></a
+                    ><span>Mes <br />entreprises</span></a
                   ><a href="mes-commissions.html#etat-nominal"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M17 6.5A7 7 0 1017 17.5" />
                       <path d="M4 10h9M4 14h9" /></svg
-                    ><span>Mes<br />commissions</span></a
+                    ><span>Mes <br />commissions</span></a
                   ><a href="conformite.html#etat-plus"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="5" cy="12" r="1.5" />
@@ -2008,12 +2008,12 @@
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <rect x="4" y="3" width="16" height="18" rx="1" />
                       <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
-                    ><span>Mes<br />entreprises</span></a
+                    ><span>Mes <br />entreprises</span></a
                   ><a href="mes-commissions.html#etat-nominal"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M17 6.5A7 7 0 1017 17.5" />
                       <path d="M4 10h9M4 14h9" /></svg
-                    ><span>Mes<br />commissions</span></a
+                    ><span>Mes <br />commissions</span></a
                   ><a href="conformite.html#etat-plus"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="5" cy="12" r="1.5" />
@@ -2097,12 +2097,12 @@
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <rect x="4" y="3" width="16" height="18" rx="1" />
                       <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
-                    ><span>Mes<br />entreprises</span></a
+                    ><span>Mes <br />entreprises</span></a
                   ><a href="mes-commissions.html#etat-nominal"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <path d="M17 6.5A7 7 0 1017 17.5" />
                       <path d="M4 10h9M4 14h9" /></svg
-                    ><span>Mes<br />commissions</span></a
+                    ><span>Mes <br />commissions</span></a
                   ><a href="conformite.html#etat-plus"
                     ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                       <circle cx="5" cy="12" r="1.5" />
@@ -2116,6 +2116,27 @@
           </div>
         </div>
       </div>
+      <nav class="etats" aria-label="États de l'écran">
+        <h2>États</h2>
+        <p class="groupe">Au quotidien</p>
+        <ul>
+          <li><a href="#etat-nominal">Nominal</a></li>
+          <li><a href="#etat-premier-jour">Premier jour (vide)</a></li>
+        </ul>
+        <p class="groupe">Techniques</p>
+        <ul>
+          <li><a href="#etat-chargement">Chargement</a></li>
+          <li><a href="#etat-hors-ligne">Pas de réseau</a></li>
+        </ul>
+        <p class="groupe">Bloqués</p>
+        <ul>
+          <li><a href="#etat-verse-en-attente">Versement en attente d’une pièce</a></li>
+          <li><a href="#etat-reporte">Petit montant reporté</a></li>
+          <li><a href="#etat-contrat-a-signer">Contrat pas encore signé</a></li>
+          <li><a href="#etat-depots-en-pause">Dépôts en pause</a></li>
+          <li><a href="#etat-fin-de-contrat">Collaboration terminée</a></li>
+        </ul>
+      </nav>
       <aside class="notes" aria-label="Notes de conception">
         <h2 class="notes-titre">Notes pour la relecture</h2>
         <section class="note" data-pour="etat-nominal">
@@ -2279,6 +2300,8 @@
           a.addEventListener('click', function (ev) {
             ev.preventDefault();
             montrer(a.getAttribute('href').slice(1), true);
+            if (window.matchMedia('(max-width: 1100px)').matches)
+              scene.scrollIntoView({ block: 'start' });
           });
         });
         window.addEventListener('hashchange', function () {
