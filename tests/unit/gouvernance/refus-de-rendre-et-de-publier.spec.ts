@@ -910,7 +910,14 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // dans cette branche, le compte a rougi de nouveau, relu et non deviné :
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 40 to be 39
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(40);
+    //
+    // 🔧 40 → 44 par DM-02, ARBITRÉ et non subi : deux gardes NEUVES, `schema-cents.ts` et
+    // `migrations-additive.ts`, deux sorties chacune (le `--prove` qui voit un témoin rester vert,
+    // la sortie terminale sur faute), déclarées plus haut. La Gate A de la PR 84 a rougi en le
+    // chiffrant — relu, pas deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(44);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
