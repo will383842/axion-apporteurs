@@ -351,7 +351,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
     }
     expect(ecrit).toHaveLength(1);
     expect(JSON.parse(ecrit[0]!)).toEqual({
-      evenement: 'rate_limit_panne',
+      signal: 'rate_limit_panne',
       prefixe: 'magic:',
       motif: 'cache_indisponible',
     });
@@ -1155,7 +1155,7 @@ describe('REQ-SEC-035 — le pot de miel observable', () => {
     expect(lignes).toHaveLength(1);
     expect(lignes[0]).not.toContain(saisie.slice(0, 4));
     expect(JSON.parse(lignes[0]!)).toEqual({
-      evenement: 'pot_de_miel',
+      signal: 'pot_de_miel',
       formulaire: 'depot',
       apporteurId: 'app_1',
       adresseHash: 'abcdef0123456789',

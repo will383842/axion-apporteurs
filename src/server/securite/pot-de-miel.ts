@@ -49,7 +49,7 @@ export function signalerPotDeMiel(
     throw new Error('formulaire_inconnu : le pot de miel ne signale que ses formulaires déclarés');
   }
   const charge: Record<string, string> = {
-    evenement: 'pot_de_miel',
+    signal: 'pot_de_miel',
     formulaire: signal.formulaire,
     survenuAt: new Date(signal.survenuAt).toISOString(),
   };

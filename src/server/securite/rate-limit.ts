@@ -379,7 +379,7 @@ export type Signaleur = (signal: SignalDePanne) => void;
 /** Le puits de phase 0 : une ligne JSON sur la sortie d'erreur. Le préfixe, jamais la clé. */
 export const signalerSurStderr: Signaleur = (signal) => {
   process.stderr.write(
-    `${JSON.stringify({ evenement: 'rate_limit_panne', prefixe: signal.prefixe, motif: signal.motif })}\n`
+    `${JSON.stringify({ signal: 'rate_limit_panne', prefixe: signal.prefixe, motif: signal.motif })}\n`
   );
 };
 
