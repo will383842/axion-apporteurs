@@ -10,8 +10,11 @@
  *     ne voit pas un client nu passé par un intermédiaire typé `Prisma.TransactionClient` : ce type
  *     n'est qu'un `Omit<>` du client, et un `PrismaClient` s'y range ;
  *   — le REFUS À L'EXÉCUTION protège tout le reste : un client qui porte encore `$transaction` n'est
- *     pas celui d'une transaction interactive ouverte (même sur un client `$extends`), et
+ *     pas celui d'une transaction interactive ouverte, et
  *     `ajouterEvenement()` lève avant tout accès à la base.
+ *   — un client `$extends` NE COMPILE PAS ici (TS2345 : son client de transaction ne satisfait pas
+ *     `Prisma.TransactionClient`) : échec fermé, et aucun témoin ne dit ce que ferait le refus à
+ *     l'exécution sur lui — la première tâche qui étend le client le mesurera.
  *
  * LINÉARITÉ (décision 3). Chaîne GLOBALE : l'écrivain prend `pg_advisory_xact_lock` sur une clé fixe,
  * PUIS lit la tête, dans la même transaction. Sous READ COMMITTED (défaut de Postgres et de Prisma),

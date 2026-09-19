@@ -31,13 +31,13 @@
  *     sous `src/`, `scripts/` ou `packages/`, TOUTES extensions (`ecrivain_hors_journal`). Seul le
  *     CHEMIN d'un import statique (`from '…/evenement/journal'`) n'est pas une mention : il charge un
  *     module, il n'atteint pas la table. Le type Prisma `Evenement` (majuscule) reste admis.
- *     LA LISTE BLANCHE est courte et nommée (`LISTE_BLANCHE`) : l'écrivain unique, le domaine pur du
- *     journal (`src/domain/evenement/`, à condition qu'il n'importe aucun client), cette garde, et
- *     quelques fichiers qui NOMMENT le mot sans toucher la table — ceux-là à un COMPTE de mentions
- *     figé : une mention de plus rougit. Échec FERMÉ : une simple lecture du journal hors de
- *     l'écrivain rougit aussi. Ce que la règle ne voit PAS : un nom calculé (`'evene' + 'ment'`), un
- *     client hors du dépôt, `prisma/` (migrations et graine), une extension `$extends` ou TypedSQL
- *     qui ne nomme pas le mot.
+ *     LA LISTE BLANCHE est courte et nommée, et tenue par le CONTENU, jamais par un compte :
+ *     l'écrivain unique ; cette garde ; le domaine pur du journal (`src/domain/evenement/`), qui ne
+ *     nomme ni la table ni le délégué, ne porte aucune trace de client et n'écrit aucune requête (un
+ *     mot de DML dans une chaîne rougit) ; et quelques fichiers qui NOMMENT le mot sans toucher la
+ *     table (`LISTE_BLANCHE_PAR_CONTENU`), chacun tenu par le texte exact de ses lignes de mention
+ *     admises et refusant toute trace de client. Échec FERMÉ : une simple lecture du journal hors
+ *     de l'écrivain rougit aussi. Ce que la règle ne voit PAS : un nom calculé par concaténation (`'evene' + 'ment'`), un client pris hors du dépôt, `prisma/` (graine et DML des migrations), et les écritures DANS les deux fichiers qui SONT l'écrivain et la garde.
  * Le vert imprime le compte des types et des champs RÉELLEMENT confrontés.
  *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne lit pas le dépôt : ses vues sont INJECTÉES.
@@ -60,63 +60,97 @@ const CETTE_GARDE = 'scripts/gates/journal-sans-pii.ts';
 const RACINES_ECRIVAINS = ['src/', 'scripts/', 'packages/'] as const;
 
 /**
- * Le domaine pur du journal. Il peut NOMMER la table ; il ne peut ni nommer le délégué `evenement`, ni
- * porter la moindre trace d'un client (import, constructeur, SQL brut) : sans cela, une fonction du
- * domaine qui reçoit un client en paramètre écrirait la table sous l'exemption.
+ * Le domaine pur du journal. Il ne nomme NI la table NI le délégué, ne porte aucune trace d'un client
+ * (import, constructeur, SQL brut) et n'écrit aucune requête (mot de DML dans une chaîne) : sans cela,
+ * une requête née ici et importée par un consommateur — dont le chemin d'import est effacé avant le
+ * compte — écrirait la table sous l'exemption (troisième veto securite de la PR 75).
  */
 const DOMAINE_DU_JOURNAL = 'src/domain/evenement/';
 
 /**
- * LA LISTE BLANCHE COMPTÉE : des fichiers qui NOMMENT le mot sans atteindre la table, chacun avec
- * le compte EXACT de ses mentions et son motif. Une mention de plus, ou de moins, rougit : le
- * compte se relit, il ne s'élargit pas en silence.
+ * LA LISTE BLANCHE PAR CONTENU : des fichiers qui NOMMENT le mot sans atteindre la table. Chacun est
+ * tenu par le TEXTE EXACT (espaces de tête et de queue retirés) de chaque ligne de mention admise —
+ * jamais par un compte, qu'une mention échangée contre une écriture laissait inchangé (revue schema
+ * de la PR 75), jamais par un numéro de ligne, qu'une édition sans rapport déplacerait. Une ligne de
+ * mention neuve ou modifiée rougit en nommant le fichier et la ligne ; une trace de client aussi.
  */
-export const LISTE_BLANCHE_COMPTEE: { chemin: string; mentions: number; motif: string }[] = [
+export const LISTE_BLANCHE_PAR_CONTENU: { chemin: string; motif: string; lignes: string[] }[] = [
   {
     chemin: 'packages/contracts/contracts.v1.json',
-    mentions: 1,
     motif: 'l’URL du schéma du contrat d’événements inter-dépôts, pas la table',
+    lignes: ['"$id": "https://axion-ia.com/contrats/partners/evenements/v1",'],
   },
   {
     chemin: 'packages/contracts/events.ts',
-    mentions: 5,
     motif: 'un paramètre `evenement` du contrat inter-dépôts et l’URL de son schéma, sans client',
+    lignes: [
+      'export function champsInterdits(evenement: Record<string, unknown>): ChampInterdit[] {',
+      "const type = evenement['event_type'] as TypeEvenement | undefined;",
+      'noeuds.push({ chemin: racine, cle: racine, valeur: evenement[racine] });',
+      'feuilles(evenement[racine], racine, noeuds, racine);',
+      '$id: `https://axion-ia.com/contrats/partners/evenements/v${SCHEMA_VERSION}`,',
+    ],
   },
   {
     chemin: 'scripts/gates/gov-check.ts',
-    mentions: 5,
     motif: 'des fixtures de la garde des termes interdits, jugées comme texte',
+    lignes: [
+      '"UPDATE evenements SET type = \'payment.received\';",',
+      '`${AG}payment.received${AG} ${FERME_BLOC_SQL} UPDATE evenements SET type = ${AG}payment.received${AG};`',
+      "'-- le producteur emet payment.received\\nALTER TABLE evenements ADD COLUMN type text;'",
+      "'docs/adr/0008-contrat-evenements.md',",
+      "'ALTER TABLE evenements ADD COLUMN type text;'",
+    ],
   },
   {
     chemin: 'scripts/gates/gov-publication.ts',
-    mentions: 1,
     motif: 'une fixture de la garde de publication (« etat x evenement »), jugée comme texte',
+    lignes: [
+      '`"verifie": "100 % des cellules (etat x evenement) testees pour Attribution et LigneCommission"`,',
+    ],
   },
   {
     chemin: 'scripts/gates/gov-requirements.ts',
-    mentions: 2,
     motif: 'deux motifs de dette en prose, sans client',
+    lignes: [
+      "motif: 'securite : la forme de la signature DocuSeal et son evenement',",
+      "motif: 'argent : la permutation des evenements et la conservation d un schemaVersion inconnu',",
+    ],
   },
   {
     chemin: 'scripts/lot/paths-proposes.ts',
-    mentions: 2,
     motif: 'deux CHEMINS de fichiers proposés à des tâches, sans client',
+    lignes: [
+      "'DM-01': ['prisma/schema.prisma', 'prisma/migrations/', 'src/domain/evenement/journal.ts'],",
+      "'src/server/queue/workers/evenement-recu.ts',",
+    ],
   },
 ];
 
 /** Le délégué (minuscules exactes) ou la table (toute casse). `Evenement`, `evenementRecu` passent. */
 const MENTION = /\bevenement\b|\b[Ee][Vv][Ee][Nn][Ee][Mm][Ee][Nn][Tt][Ss]\b/g;
-/** Le délégué seul : dans le domaine du journal, lui seul est refusé. */
-const DELEGUE = /\bevenement\b/;
 /**
- * Le chemin d'un import ou d'une réexportation STATIQUE, en tête d'instruction : il charge un module,
- * il n'atteint pas la table. Ancré en début de ligne et sans `=`, accent grave ni `;` entre le mot-clé
- * et `from` : un `from "evenements"` dans une requête SQL n'est PAS un chemin d'import.
+ * Un mot de DML (`INSERT`, `UPDATE`, `DELETE`, `INTO`, `TRUNCATE`, `MERGE`, toute casse) DANS une chaîne,
+ * un gabarit ou entre guillemets doubles : le domaine du journal n'a aucune raison d'écrire une
+ * requête. `hash.update(…)`, qui n'est pas dans une chaîne, n'en est pas un.
+ */
+const CHAINE = /(['"`])((?:\\.|(?!\1)[^\\])*)\1/g;
+const DML = /\b(?:insert|update|delete|into|truncate|merge)\b/i;
+/**
+ * Le chemin d'un import ou d'une réexportation STATIQUE : il charge un module, il n'atteint pas la
+ * table. Tenu sur UNE ligne et ancré en tête : `import|export` suivi seulement d'une clause d'import
+ * (identifiants, accolades, virgules, `*`), ou la ligne `} from '…'` qui ferme un import sur plusieurs
+ * lignes. Un `from "evenements"` dans une requête SQL, un commentaire `// from '…'` ouvert dans un
+ * appel, ne sont PAS des chemins d'import.
  */
 const CHEMIN_D_IMPORT =
-  /^[ \t]*(?:(?:import|export)\b[^'"`=;]*?\bfrom|import)[ \t]*(['"])[^'"\n]*\1/gm;
-/** Un client dans le domaine du journal le ferait sortir de la liste blanche. */
-const CLIENT = /@prisma\/client|\bPrismaClient\b|\$(?:executeRaw|queryRaw)/;
+  /^[ \t]*(?:(?:import|export)\b[\w$ \t{},*]*?\bfrom|\}[ \t]*from|import)[ \t]*(['"])[^'"\n]*\1/gm;
+/**
+ * Une trace de client : elle fait sortir de la liste blanche le domaine du journal ET les fichiers
+ * admis par contenu. Le délégué pris comme propriété (`.evenement`, `?.evenement`) en est une.
+ */
+const CLIENT =
+  /@prisma\/client|\bPrismaClient\b|\$transaction\b|\$(?:executeRaw|queryRaw)\w*|\.\s*evenement\b/;
 
 export type Vue = {
   /** Les valeurs de l'enum `TypeEvenementJournal`, lues dans `prisma/schema.prisma`. */
@@ -190,13 +224,33 @@ export function ecrituresHorsJournal(chemin: string, contenu: string): number[] 
   if (!RACINES_ECRIVAINS.some((r) => chemin.startsWith(r))) return [];
   const lignes = mentions(contenu);
   if (chemin.startsWith(DOMAINE_DU_JOURNAL)) {
-    return contenu
-      .split('\n')
-      .flatMap((l, i) => (CLIENT.test(l) || DELEGUE.test(l) ? [i + 1] : []));
+    // Le domaine pur ne nomme NI le délégué NI la table, ne porte aucune trace d'un client et
+    // n'écrit aucune requête : une requête née ici, importée ailleurs, passerait sous le chemin
+    // d'import effacé du consommateur (troisième veto securite de la PR 75).
+    const fautes = new Set(lignes);
+    contenu.split('\n').forEach((l, i) => {
+      if (CLIENT.test(l)) fautes.add(i + 1);
+    });
+    for (const m of contenu.matchAll(CHAINE)) {
+      if (DML.test(m[2]!)) fautes.add(ligneDe(contenu, m.index));
+    }
+    return [...fautes].sort((a, b) => a - b);
   }
-  const comptee = LISTE_BLANCHE_COMPTEE.find((e) => e.chemin === chemin);
-  if (comptee && lignes.length === comptee.mentions) return [];
-  return [...new Set(lignes)].sort((a, b) => a - b);
+  const admis = LISTE_BLANCHE_PAR_CONTENU.find((e) => e.chemin === chemin);
+  if (!admis) return [...new Set(lignes)].sort((a, b) => a - b);
+  // Chaque texte admis vaut pour UNE ligne : deux lignes au même texte n'en consomment pas une seule.
+  const restants = [...admis.lignes];
+  const texte = contenu.split('\n');
+  const fautes = new Set<number>();
+  for (const n of [...new Set(lignes)].sort((a, b) => a - b)) {
+    const i = restants.indexOf(texte[n - 1]!.trim());
+    if (i === -1) fautes.add(n);
+    else restants.splice(i, 1);
+  }
+  texte.forEach((l, i) => {
+    if (CLIENT.test(l)) fautes.add(i + 1);
+  });
+  return [...fautes].sort((a, b) => a - b);
 }
 
 // ── le contrôle ──────────────────────────────────────────────────────────────
@@ -332,7 +386,7 @@ export function controler(vue: Vue): { fautes: Faute[]; types: number; champs: n
           `blanche (écrivain unique : ${ECRIVAIN_UNIQUE}). Passe par ajouterEvenement() : sa charge ` +
           'traverse le schéma fermé, et une donnée personnelle écrite ailleurs ne pourrait plus ' +
           "jamais être effacée. Un fichier qui NOMME le mot sans toucher la table s'inscrit à " +
-          'LISTE_BLANCHE_COMPTEE, avec son compte et son motif.',
+          'LISTE_BLANCHE_PAR_CONTENU, avec le texte de la ligne et son motif.',
       });
     }
   }
@@ -464,7 +518,10 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
           chemin: 'src/server/apporteur/creer.ts',
           contenu: "import { ajouterEvenement } from '../evenement/journal';",
         },
-        { chemin: 'src/domain/evenement/x.ts', contenu: '// la table evenements est append-only' },
+        {
+          chemin: 'src/domain/evenement/x.ts',
+          contenu: "export const h = hash.update(x, 'utf8');",
+        },
       ],
     }),
   },

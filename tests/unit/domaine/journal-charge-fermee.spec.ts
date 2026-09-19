@@ -287,9 +287,9 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
       "import type { Evenement } from '@prisma/client';\nawait tx.evenementRecu.create({ data });",
     ],
     [
-      'un fichier pur du domaine du journal qui nomme la table, sans client ni délégué',
+      'un fichier pur du domaine du journal, sans table, délégué, client ni requête',
       'src/domain/evenement/autre.ts',
-      '// la table evenements est append-only\nexport const TABLE_DU_JOURNAL = 1;',
+      '// le journal est append-only\nexport const ALGORITHME_DU_JOURNAL = 1;',
     ],
   ])('REQ-DM-041 : contre-témoin — %s ne rougit pas', (_quoi, chemin, contenu) => {
     expect(ou(avecCode(chemin, contenu))).toEqual([]);
@@ -436,7 +436,7 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
           chemin: 'src/server/milieu.js',
           contenu: 'module.exports = (tx) => tx.evenement.create({});',
         },
-        { chemin: 'src/domain/evenement/b.ts', contenu: '// la table evenements' },
+        { chemin: 'src/domain/evenement/b.ts', contenu: '// le journal' },
         { chemin: 'scripts/outil/purge.js', contenu: "db.query('delete from evenements');" },
         { chemin: 'src/server/z.ts', contenu: 'export const z = 1;' },
       ],
@@ -471,6 +471,110 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
     ]);
   });
 
+  // Troisième veto securite (revue 5254963257) : la requête naît dans le domaine blanchi, et le
+  // consommateur ne porte que le chemin d'import, effacé avant le compte.
+  it('REQ-DM-041 : la requête écrite dans le domaine du journal puis importée par un consommateur — rougit dans le domaine', () => {
+    const vue: Vue = {
+      ...conforme({ journal_ouvert: CHARGES_PAR_TYPE.journal_ouvert }),
+      code: [
+        {
+          chemin: 'src/domain/evenement/requetes.ts',
+          contenu:
+            "export const INSERER_LIGNE =\n  'INSERT INTO evenements (type, charge) VALUES ($1, $2::jsonb)';",
+        },
+        {
+          chemin: 'src/server/apporteur/creer.ts',
+          contenu:
+            "import { INSERER_LIGNE } from '../../domain/evenement/requetes';\nawait tx.$executeRawUnsafe(INSERER_LIGNE, 'journal_ouvert', c);",
+        },
+      ],
+    };
+    expect(ou(vue)).toEqual(['ecrivain_hors_journal src/domain/evenement/requetes.ts:2']);
+  });
+
+  it('REQ-DM-041 : la tête et l’insertion écrites dans le domaine, un maillon au hash valide calculé ailleurs — rougit dans le domaine', () => {
+    const vue: Vue = {
+      ...conforme({ journal_ouvert: CHARGES_PAR_TYPE.journal_ouvert }),
+      code: [
+        {
+          chemin: 'src/domain/evenement/requetes.ts',
+          contenu: [
+            "export const TETE_DU_JOURNAL = 'SELECT self_hash FROM evenements ORDER BY id DESC LIMIT 1';",
+            "export const INSERER_MAILLON = 'INSERT INTO evenements (type, charge, prev_hash, self_hash) VALUES ($1, $2, $3, $4)';",
+          ].join('\n'),
+        },
+        {
+          chemin: 'src/server/bac/second.ts',
+          contenu: [
+            "import { TETE_DU_JOURNAL, INSERER_MAILLON } from '../../domain/evenement/requetes';",
+            "import { calculerSelfHash } from '../../domain/evenement/journal';",
+            'const [tete] = await tx.$queryRawUnsafe(TETE_DU_JOURNAL);',
+            'await tx.$executeRawUnsafe(INSERER_MAILLON, t, c, tete.self_hash, calculerSelfHash(tete.self_hash, e));',
+          ].join('\n'),
+        },
+      ],
+    };
+    expect(ou(vue)).toEqual([
+      'ecrivain_hors_journal src/domain/evenement/requetes.ts:1',
+      'ecrivain_hors_journal src/domain/evenement/requetes.ts:2',
+    ]);
+  });
+
+  it('REQ-DM-041 : un commentaire `// … from "../evenement/journal"` ouvert DANS un appel d’écriture ne l’efface pas', () => {
+    const contenu = [
+      'await tx.evenement.create({ // from "../evenement/journal"',
+      '  data,',
+      '});',
+      'export default tx.evenement.create({ // from "../evenement/journal"',
+      '  data });',
+    ].join('\n');
+    expect(ou(avecCode('src/server/bac/efface.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/bac/efface.ts:1',
+      'ecrivain_hors_journal src/server/bac/efface.ts:4',
+    ]);
+  });
+
+  it.each([
+    ['la table nommée en capitales', "export const T = 'EVENEMENTS';"],
+    ['un INSERT sans le nom de la table', "export const Q = 'insert ' + 'into ' + T;"],
+    ['un UPDATE dans un gabarit', 'export const Q = `UPDATE ${t} SET charge = $1`;'],
+    ['un DELETE entre guillemets doubles', 'export const Q = "delete from " + t;'],
+  ])('REQ-DM-041 : le domaine du journal qui porte %s — rougit', (_q, contenu) => {
+    expect(ou(avecCode('src/domain/evenement/bac.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/domain/evenement/bac.ts:1',
+    ]);
+  });
+
+  it('REQ-DM-041 : contre-témoin — le domaine qui appelle `hash.update(…)` sans chaîne SQL ne rougit pas', () => {
+    expect(
+      ou(avecCode('src/domain/evenement/bac.ts', "export const h = hash.update(x, 'utf8');"))
+    ).toEqual([]);
+  });
+
+  it('REQ-DM-041 : une écriture sur plusieurs lignes terminée par un commentaire `// from …` n’est pas effacée comme un import', () => {
+    const contenu = [
+      'export async function ecrire(tx: T) {',
+      '  await tx',
+      '    .evenement.create({ data }) // from ' + "'x'",
+      '}',
+    ].join('\n');
+    expect(ou(avecCode('src/server/bac/commentaire.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/bac/commentaire.ts:3',
+    ]);
+  });
+
+  it('REQ-DM-041 : contre-témoin — un import multiligne réel reste un chemin d’import', () => {
+    const contenu = [
+      'import {',
+      '  ajouterEvenement,',
+      '  type NouvelEvenement,',
+      "} from '../evenement/journal';",
+      "export * from '../evenement/journal';",
+      "import * as j from '../evenement/journal';",
+    ].join('\n');
+    expect(ou(avecCode('src/server/appelant.ts', contenu))).toEqual([]);
+  });
+
   it('REQ-DM-041 : une LECTURE du délégué hors de journal.ts rougit aussi — échec fermé', () => {
     expect(ou(avecCode('src/server/x.ts', 'await tx.evenement.findMany();'))).toEqual([
       'ecrivain_hors_journal src/server/x.ts:1',
@@ -497,26 +601,73 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
     ]);
   });
 
-  it('REQ-DM-041 : un fichier de la liste blanche COMPTÉE qui gagne une mention rougit', () => {
+  /** Le dépôt réel, avec UN fichier admis par contenu remplacé par sa version fautive. */
+  const vueAvec = (chemin: string, modifier: (contenu: string) => string): Vue => {
     const vue = vueDuDepot();
-    const compte = vue.code.find((f) => f.chemin === 'scripts/gates/gov-check.ts')!;
-    const vueFautive: Vue = {
+    return {
       ...vue,
-      code: [
-        {
-          chemin: compte.chemin,
-          contenu: `${compte.contenu}\nawait tx.evenement.create({ data });`,
-        },
-      ],
+      code: vue.code.map((f) =>
+        f.chemin === chemin ? { chemin, contenu: modifier(f.contenu) } : f
+      ),
     };
-    // Le compte ne tient plus : TOUTES les mentions du fichier redeviennent des fautes, la nouvelle
-    // comprise — la ligne ajoutée est la dernière du fichier.
-    const fautes = ou(vueFautive);
-    const derniere = vueFautive.code[0]!.contenu.split('\n').length;
-    expect(fautes).toContain(`ecrivain_hors_journal scripts/gates/gov-check.ts:${derniere}`);
-    expect(
-      fautes.every((f) => f.startsWith('ecrivain_hors_journal scripts/gates/gov-check.ts:'))
-    ).toBe(true);
+  };
+  const ligneDe = (contenu: string, fragment: string) =>
+    contenu.split('\n').findIndex((l) => l.includes(fragment)) + 1;
+
+  it('REQ-DM-041 : un fichier admis par contenu qui gagne une mention rougit sur CETTE ligne', () => {
+    const chemin = 'scripts/gates/gov-check.ts';
+    const vue = vueAvec(chemin, (c) => `${c}\nawait tx.evenement.create({ data });`);
+    const contenu = vue.code.find((f) => f.chemin === chemin)!.contenu;
+    expect(ou(vue)).toEqual([
+      `ecrivain_hors_journal ${chemin}:${ligneDe(contenu, 'tx.evenement.create')}`,
+    ]);
+  });
+
+  // Revue schema (5254978264) : une mention admise ÉCHANGÉE contre une écriture laissait le compte
+  // égal. Le fichier est tenu par le texte de ses lignes admises, pas par leur nombre.
+  it('REQ-DM-041 : dans un fichier admis du MILIEU, une mention échangée contre une écriture rougit', () => {
+    const chemin = 'scripts/gates/gov-check.ts';
+    const vue = vueAvec(chemin, (c) =>
+      c
+        .replace("'docs/adr/0008-contrat-evenements.md',", "'docs/adr/0008-contrat-événements.md',")
+        .replace(/\n/, '\nconst j = tx.evenement;\n')
+    );
+    const contenu = vue.code.find((f) => f.chemin === chemin)!.contenu;
+    expect(ou(vue)).toEqual([
+      `ecrivain_hors_journal ${chemin}:${ligneDe(contenu, 'const j = tx.evenement;')}`,
+    ]);
+  });
+
+  it('REQ-DM-041 : la forme exacte de la revue schema (gov-requirements.ts : mention accentuée, délégué, tête, maillon) rougit', () => {
+    const chemin = 'scripts/gates/gov-requirements.ts';
+    const vue = vueAvec(
+      chemin,
+      (c) =>
+        c.replace('et son evenement', 'et son événement') +
+        [
+          '',
+          'export async function second(tx: T, e: E) {',
+          '  const j = tx.evenement;',
+          "  const tete = await j.findFirst({ orderBy: { id: 'desc' } });",
+          "  await j.create({ data: { ...e, charge: { courriel: 'a@b.fr' }, prevHash: tete.selfHash, selfHash: calculerSelfHash(tete.selfHash, e) } });",
+          '}',
+        ].join('\n')
+    );
+    const contenu = vue.code.find((f) => f.chemin === chemin)!.contenu;
+    expect(ou(vue)).toEqual([
+      `ecrivain_hors_journal ${chemin}:${ligneDe(contenu, 'const j = tx.evenement;')}`,
+    ]);
+  });
+
+  it('REQ-DM-041 : une trace de client dans un fichier admis par contenu rougit, même sans mention', () => {
+    const chemin = 'scripts/lot/paths-proposes.ts';
+    const vue = vueAvec(chemin, (c) => `import { PrismaClient } from '@prisma/client';\n${c}`);
+    expect(ou(vue)).toEqual([`ecrivain_hors_journal ${chemin}:1`]);
+  });
+
+  it('REQ-DM-041 : contre-témoin — une édition sans rapport qui DÉPLACE les lignes admises ne rougit pas', () => {
+    const vue = vueAvec('scripts/gates/gov-check.ts', (c) => `// une ligne de plus en tête\n${c}`);
+    expect(ou(vue)).toEqual([]);
   });
 
   it('REQ-DM-041 : sur le dépôt, la portée des écrivains est lue et n’est pas vide', () => {

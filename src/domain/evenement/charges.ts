@@ -5,7 +5,7 @@
  * POURQUOI FERMÉ. Le journal est append-only : la base refuse toute mise à jour (REQ-DM-024). Une
  * donnée personnelle glissée dans une charge ne pourrait donc JAMAIS être effacée — le droit à
  * l'effacement (RGPD art. 17) buterait sur le déclencheur. La seule issue est qu'aucune charge ne
- * porte de donnée personnelle : alors effacer un tiers ne touche jamais `evenements`, et la chaîne
+ * porte de donnée personnelle : alors effacer un tiers ne touche jamais le journal, et la chaîne
  * reste vérifiable après l'effacement.
  *
  * LA LISTE FERMÉE DES FORMES. Chaque feuille d'une charge est l'une de celles-ci, et rien d'autre :

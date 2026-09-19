@@ -73,9 +73,13 @@ en toute casse, le mot `evenement` en minuscules, identifiant, propriété, cha�
 dans tout fichier suivi sous `src/`, `scripts/` ou `packages/`, toutes extensions (famille
 `ecrivain_hors_journal`, échec fermé : une simple lecture hors de l'écrivain rougit aussi). Le chemin
 d'un import statique n'est pas une mention, et le type Prisma `Evenement` reste admis. La liste
-blanche est courte et nommée : l'écrivain unique, le domaine pur `src/domain/evenement/` (qui ne peut
-porter ni le délégué ni la moindre trace d'un client), la garde elle-même, et des fichiers qui
-nomment le mot sans toucher la table, chacun à un compte de mentions FIGÉ (`LISTE_BLANCHE_COMPTEE`).
+blanche est courte et nommée : l'écrivain unique, le domaine pur `src/domain/evenement/` (qui ne nomme
+ni la table ni le délégué, ne porte aucune trace d'un client et n'écrit aucune requête — un mot de DML
+dans une chaîne y rougit), la garde elle-même, et des fichiers qui
+nomment le mot sans toucher la table (`LISTE_BLANCHE_PAR_CONTENU`), chacun tenu par le TEXTE EXACT de ses
+lignes de mention admises — jamais par un compte, qu'une mention échangée contre une écriture
+laissait égal — et refusant toute trace de client (`@prisma/client`, `PrismaClient`, `$transaction`,
+`$executeRaw*`, `$queryRaw*`, `.evenement`).
 
 **Décision 5 — Immuabilité par la base.** Un déclencheur de ligne `evenements_append_only` refuse `UPDATE` et
 `DELETE` ; un déclencheur d'instruction `evenements_append_only_troncature` refuse `TRUNCATE`, qu'un
@@ -102,12 +106,12 @@ encore `$transaction`, et un `@ts-expect-error` du témoin d'intégration voit `
 la règle se perd. Il ne voit PAS un client nu passé par un intermédiaire typé
 `Prisma.TransactionClient` (un `Omit<>` du client, auquel un `PrismaClient` s'assigne) : c'est le REFUS
 À L'EXÉCUTION qui protège tout le reste — `ajouterEvenement()` lève si le client porte `$transaction`,
-ce qui est faux dans une transaction interactive (même sur un client `$extends`) et vrai sur le client
+ce qui est faux dans une transaction interactive et vrai sur le client
 nu ; un témoin en base réelle le prouve, compte de lignes inchangé. `agregatId` est validé comme UUID
 à tirets et normalisé en minuscules AVANT le hachage (Postgres le rend sous cette forme : haché
 autrement, le maillon serait en `hash_altere` pour toujours et masquerait les altérations suivantes).
 Aucun client Prisma n'est créé sous `src/` par cette décision. `survenuAt` vient de l'appelant : rien
-dans le domaine ne lit l'heure.
+dans le domaine ne lit l'heure. Un client `$extends` ne compile pas avec `ajouterEvenement()` (TS2345 : son client de transaction ne satisfait pas `Prisma.TransactionClient`) — échec fermé ; la première tâche qui étend le client mesurera le refus à l'exécution sur lui.
 
 ## Conséquences
 
@@ -134,9 +138,7 @@ dans le domaine ne lit l'heure.
   chaîne prouve l'**ordre**, pas l'**auteur** : même après la séparation des rôles, un rôle qui peut
   insérer peut ajouter un maillon à l'empreinte valide. (d) La clause « le worker de purge ne
   référence pas la table » de `partners:journal:immutable` est sans objet tant qu'aucun worker
-  n'existe. (e) La garde de l'écrivain unique ne voit pas un nom calculé (`'evene' + 'ment'`), un
-  client hors du dépôt, `prisma/` (migrations et graine), ni une extension `$extends` ou une requête
-  TypedSQL qui ne nomme pas le mot.
+  n'existe. (e) La garde de l'écrivain unique ne voit pas : un nom calculé par concaténation (`'evene' + 'ment'`), un client pris hors du dépôt, `prisma/` (graine et DML des migrations), et les écritures DANS les deux fichiers qui SONT l'écrivain et la garde.
 - Retour arrière : une migration qui retire les déclencheurs — visible au diff ; `verifierChaine()`
   continue de voir une altération du milieu non recalculée ; ni le recalcul (a) ni la troncature
   de queue (b).
