@@ -5,8 +5,8 @@
  * CE QU'IL FAIT. `demarrerBase()` lance un conteneur Postgres 16 avec pgvector, applique les
  * migrations du dépôt par `prisma migrate deploy` lancé en sous-processus avec l'URL DU CONTENEUR,
  * et rend un `PrismaClient` branché sur lui. `demarrerCache()` lance un conteneur Redis et rend son
- * URL et une `commande()` qui passe par `redis-cli` DANS le conteneur : aucun client n'est installé
- * tant qu'aucune tâche livrée n'en a besoin. `arreter()` ferme ce qui a été ouvert.
+ * URL et une `commande()` qui passe par `redis-cli` DANS le conteneur : le test lit le cache
+ * lui-même, sans passer par le client qu'il juge. `arreter()` ferme ce qui a été ouvert.
  *
  * ISOLATION : UN CONTENEUR PAR FICHIER. Chaque fichier d'intégration appelle `demarrerBase()` dans
  * son `beforeAll` ; `vitest` en `pool: forks` exécute chaque fichier dans son propre processus, donc
@@ -108,7 +108,7 @@ export type Base = {
 };
 
 export type Cache = {
-  /** L'URL du conteneur, pour le client qu'une tâche future installera. */
+  /** L'URL du conteneur, pour le client du code jugé (le registre de débit de SEC-10). */
   url: string;
   /** Une commande `redis-cli` exécutée dans le conteneur ; rend sa sortie, sans fin de ligne. */
   commande: (args: string[]) => Promise<string>;

@@ -102,7 +102,10 @@ describe('REQ-QA-006 — l’étape « Tests » de Gate A atteint le harnais d�
     const [outil, verbe, ...options] = paquet.scripts.test!.split(/\s+/);
     expect([outil, verbe]).toEqual(['vitest', 'run']);
     // Liste FERMÉE : un chemin, un `--exclude` ou un `--dir` retirerait l'intégration de la passe.
-    expect(options.filter((o) => o !== '--coverage')).toEqual([]);
+    // Admis : la couverture (QA-T01) et les rapporteurs dont `req:check` lit la sortie (QA-T03),
+    // aucun des deux ne choisit de fichier.
+    const admise = /^--(coverage|reporter=[a-z-]+|outputFile\.json=[\w./-]+)$/;
+    expect(options.filter((o) => !admise.test(o))).toEqual([]);
 
     const lignes = readFileSync(join(RACINE, '.github/workflows/ci.yml'), 'utf8').split(/\r?\n/);
     const debutJob = lignes.findIndex((l) => /^ {2}gate-a:\s*$/.test(l));
