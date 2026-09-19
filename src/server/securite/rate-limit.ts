@@ -169,8 +169,12 @@ function enregistrer<T extends object>(magasin: T, consommer: ConsommerDuMagasin
  * magasin qui admet tout. Elle REFUSE donc de s'exécuter hors des tests, quoi que la garde de
  * famille ait vu ou pas vu des chemins par lesquels on l'atteint.
  */
+function enContexteDeTest(): boolean {
+  return process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+}
+
 function exigerUnContexteDeTest(fabrique: string): void {
-  if (process.env.NODE_ENV === 'test' || process.env.VITEST !== undefined) return;
+  if (enContexteDeTest()) return;
   throw new Error(
     `fabrique_hors_tests : ${fabrique} ne fabrique un magasin que sous les tests ; en production, ` +
       'le seul magasin est celui du registre'
@@ -190,11 +194,12 @@ export interface MagasinEnPanne {
 }
 
 /**
- * Un magasin qui LÈVE à chaque écriture, et qui les compte. Il ne peut rien admettre : il ne
- * rend que la conduite déclarée de chaque compteur. C'est pourquoi il se construit hors des tests,
- * là où la garde de famille l'exécute en CI.
+ * Un magasin qui LÈVE à chaque écriture, et qui les compte. Il rend la conduite déclarée de chaque
+ * compteur — donc un compteur `laisser-passer` y ADMET TOUT. C'est pourquoi il ne se construit,
+ * comme toute fabrique, que sous les tests.
  */
 export function magasinEnPanne(): MagasinEnPanne {
+  exigerUnContexteDeTest('magasinEnPanne');
   let appels = 0;
   const magasin = enregistrer({}, () => {
     appels += 1;
@@ -261,6 +266,12 @@ function adresseIllisible(): Error {
  * premier appel, et une connexion perdue se rouvre à l'appel suivant — jamais en tâche de fond.
  */
 export function creerMagasinRedis(url: string, options: RedisOptions): MagasinRedis {
+  exigerUnContexteDeTest('creerMagasinRedis');
+  return ouvrirMagasinRedis(url, options);
+}
+
+/** Le magasin Redis du registre : le seul que la production construit, par `REDIS_URL`. */
+function ouvrirMagasinRedis(url: string, options: RedisOptions): MagasinRedis {
   let client: Redis;
   try {
     client = new Redis(url, options);
@@ -336,7 +347,7 @@ function magasinParDefaut(): MagasinDeCompteurs {
   const url = process.env.REDIS_URL;
   if (url === undefined || url === '') return MAGASIN_SANS_ADRESSE;
   try {
-    magasinDuProcessus = creerMagasinRedis(url, OPTIONS_DU_CLIENT);
+    magasinDuProcessus = ouvrirMagasinRedis(url, OPTIONS_DU_CLIENT);
   } catch {
     return MAGASIN_ADRESSE_ILLISIBLE;
   }
@@ -396,17 +407,39 @@ function enPanne(
 }
 
 /**
+ * La marque du magasin par défaut. Un paramètre omis (ou `undefined`) prend cette valeur : c'est
+ * ce qui distingue, à l'exécution, le magasin du registre d'un magasin INJECTÉ par l'appelant.
+ */
+const MAGASIN_DU_REGISTRE = enregistrer({}, () =>
+  Promise.reject(new Error('rate-limit : la marque du magasin par défaut ne s’écrit pas'))
+) as unknown as MagasinDeCompteurs;
+
+/**
  * Compte un appel du sujet sous le compteur nommé. L'heure est un PARAMÈTRE : ce module ne lit
  * aucune horloge. Toute panne du magasin — levée, délai, réponse illisible, adresse absente —
  * rend la conduite déclarée du compteur, avec `panne: true`.
+ *
+ * DÉFENSE EN PROFONDEUR : hors des tests, un magasin ou un signaleur fourni par l'appelant est
+ * REFUSÉ (`injection_hors_tests`). En production, seuls le magasin et le signaleur du registre
+ * servent, quel que soit le chemin par lequel on a atteint cette fonction.
  */
 export async function limiter(
   nom: NomDeCompteur,
   sujet: SujetDeCompteur,
   maintenantMs: number,
-  magasin: MagasinDeCompteurs = magasinParDefaut(),
+  magasinFourni: MagasinDeCompteurs = MAGASIN_DU_REGISTRE,
   signaler: Signaleur = signalerSurStderr
 ): Promise<VerdictDeLimite> {
+  if (
+    (magasinFourni !== MAGASIN_DU_REGISTRE || signaler !== signalerSurStderr) &&
+    !enContexteDeTest()
+  ) {
+    throw new Error(
+      'injection_hors_tests : hors des tests, limiter ne reçoit ni magasin ni signaleur ; ' +
+        'ceux du registre servent seuls'
+    );
+  }
+  const magasin = magasinFourni === MAGASIN_DU_REGISTRE ? magasinParDefaut() : magasinFourni;
   const declaration: DeclarationDeCompteur = COMPTEURS[nom];
   // Revérifié à l'exécution : un cast ferait entrer n'importe quelle chaîne dans la clé.
   const empreinte = sujetDepuisEmpreinte(sujet);

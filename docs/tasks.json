@@ -1424,7 +1424,8 @@
         "package.json",
         "pnpm-lock.yaml",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
-        ".github/workflows/ci.yml"
+        ".github/workflows/ci.yml",
+        "tests/unit/securite/temoins/e76s-fauted.ts.txt"
       ],
       "schema": false,
       "sensible": [],

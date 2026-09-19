@@ -76,7 +76,6 @@ import {
   FAMILLES,
   TEMOINS,
   analyser,
-  cacheQuiLeve,
   exigenceDuCompteur,
   fabriquesDuRegistre,
   sourcesDuDisque,
@@ -85,6 +84,10 @@ import {
 } from '../../../scripts/gates/rate-famille';
 
 const NOMS = Object.keys(COMPTEURS) as NomDeCompteur[];
+
+/** Un magasin fabriqué SOUS les tests, qu'on tente ensuite d'injecter hors des tests. */
+const magasinDepuisSousTests = () =>
+  magasinDepuis(async () => ({ admis: true, compte: 0, plusAncienMs: null }));
 const SUJET = sujetDepuisEmpreinte('0123456789abcdef');
 
 // ── Aides ───────────────────────────────────────────────────────────────────────────────────────
@@ -159,10 +162,11 @@ async function sousLeDelai<T>(p: Promise<T>, ms: number): Promise<T | typeof SUS
   }
 }
 
-/** L'environnement de la CI et de la production : ni `VITEST`, ni `NODE_ENV=test`. */
+/** L'environnement de la CI et de la production : ni `VITEST`, ni `NODE_ENV=test`, ni cache. */
 function environnementDeProduction(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: 'production' };
   delete env.VITEST;
+  delete env.REDIS_URL;
   delete env.VITEST_POOL_ID;
   delete env.VITEST_WORKER_ID;
   return env;
@@ -294,7 +298,7 @@ describe('REQ-SEC-016 — le verdict d’un compteur sain', () => {
 
 describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se dit', () => {
   it('REQ-SEC-016 — contre un cache qui LÈVE, chaque compteur rend sa conduite, `panne: true`', async () => {
-    const cache = cacheQuiLeve();
+    const cache = magasinEnPanne();
     const { signaux, signaler } = capteur();
     const constates: string[] = [];
     for (const nom of NOMS) {
@@ -341,7 +345,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       return true;
     });
     try {
-      await limiter('magic:courriel', SUJET, 0, cacheQuiLeve().magasin);
+      await limiter('magic:courriel', SUJET, 0, magasinEnPanne().magasin);
     } finally {
       espion.mockRestore();
     }
@@ -355,7 +359,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
   });
 
   it('REQ-SEC-016 — `depot:identite` sans configuration : refus, `panne: true`, `limite_non_configuree`, cache non atteint', async () => {
-    const cache = cacheQuiLeve();
+    const cache = magasinEnPanne();
     const { signaux, signaler } = capteur();
     const v = await limiter('depot:identite', SUJET, 0, cache.magasin, signaler);
     expect(v).toEqual({
@@ -390,7 +394,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       }
     });
 
-    it('REQ-SEC-016 — hors des tests, une fabrique de magasin REFUSE de fabriquer ; le magasin en panne du registre, lui, se construit', () => {
+    it('REQ-SEC-016 — hors des tests, TOUTE fabrique de magasin refuse de fabriquer, le magasin en panne compris', () => {
       const vitest = process.env.VITEST;
       vi.stubEnv('NODE_ENV', 'production');
       Reflect.deleteProperty(process.env, 'VITEST');
@@ -398,7 +402,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
         expect(() =>
           magasinDepuis(async () => ({ admis: true, compte: 0, plusAncienMs: null }))
         ).toThrow(/^fabrique_hors_tests/);
-        expect(() => magasinEnPanne()).not.toThrow();
+        expect(() => magasinEnPanne()).toThrow(/^fabrique_hors_tests/);
       } finally {
         vi.unstubAllEnvs();
         if (vitest !== undefined) Reflect.set(process.env, 'VITEST', vitest);
@@ -420,6 +424,81 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       } finally {
         vi.unstubAllEnvs();
         if (vitest !== undefined) Reflect.set(process.env, 'VITEST', vitest);
+      }
+    });
+
+    it('REQ-SEC-016 — hors des tests, `limiter` REFUSE un magasin ou un signaleur injecté ; les défauts du registre passent', async () => {
+      const injecte = magasinDepuisSousTests();
+      const vitest = process.env.VITEST;
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('REDIS_URL', '');
+      Reflect.deleteProperty(process.env, 'VITEST');
+      const ecrire = process.stderr.write.bind(process.stderr);
+      process.stderr.write = (() => true) as typeof process.stderr.write;
+      try {
+        await expect(limiter('depot:ip', SUJET, 0, injecte, undefined)).rejects.toThrow(
+          /^injection_hors_tests/
+        );
+        await expect(limiter('magic:ip', SUJET, 0, undefined, () => undefined)).rejects.toThrow(
+          /^injection_hors_tests/
+        );
+        expect(() => magasinEnPanne()).toThrow(/^fabrique_hors_tests/);
+        expect(() => creerMagasinRedis('redis://cache.example.org', OPTIONS_DU_CLIENT)).toThrow(
+          /^fabrique_hors_tests/
+        );
+        // Contre-témoin : les défauts du registre, écrits ou omis, passent.
+        expect(await limiter('depot:ip', SUJET, 0, undefined, undefined)).toMatchObject({
+          autorise: true,
+          panne: true,
+        });
+        expect(await limiter('magic:ip', SUJET, 0)).toMatchObject({ autorise: false, panne: true });
+      } finally {
+        process.stderr.write = ecrire;
+        vi.unstubAllEnvs();
+        if (vitest !== undefined) Reflect.set(process.env, 'VITEST', vitest);
+      }
+    });
+
+    it('REQ-SEC-016 — `VITEST` ne vaut contexte de test que s’il vaut exactement `true`', () => {
+      const vitest = process.env.VITEST;
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('VITEST', 'false');
+      try {
+        expect(() => magasinEnPanne()).toThrow(/^fabrique_hors_tests/);
+      } finally {
+        vi.unstubAllEnvs();
+        if (vitest !== undefined) Reflect.set(process.env, 'VITEST', vitest);
+      }
+    });
+
+    it('REQ-SEC-016 — le fichier du relecteur securite (chargeur renommé), exécuté en PRODUCTION, lève sur ses deux formes', () => {
+      const dossier = mkdtempSync(join(tmpdir(), 'rfp-'));
+      try {
+        const registre = realpathSync('src/server/securite/rate-limit.ts').split('\\').join('/');
+        const faute = readFileSync(join(__dirname, 'temoins', 'e76s-fauted.ts.txt'), 'utf8')
+          .split("'./securite/rate-limit'")
+          .join(JSON.stringify(registre));
+        const lanceur =
+          faute +
+          '\nconst h = "0123456789abcdef";\n' +
+          'for (const [n, f] of [["essai", essai], ["muet", muet]] as const) {\n' +
+          '  f(h).then((v) => console.log(n, "ADMIS", JSON.stringify(v)), (e) => console.log(n, "LEVE", String(e.message).split(" ")[0]));\n' +
+          '}\n';
+        writeFileSync(join(dossier, 'faute.ts'), lanceur);
+        // Le dossier temporaire hérite sinon du `type` d'un package.json ANCÊTRE : on fixe CommonJS,
+        // la forme où `require` existe — celle que le fichier du relecteur suppose.
+        writeFileSync(join(dossier, 'package.json'), '{ "type": "commonjs" }\n');
+        const cli = join(realpathSync('node_modules'), 'tsx', 'dist', 'cli.mjs');
+        const r = spawnSync(process.execPath, [cli, join(dossier, 'faute.ts')], {
+          encoding: 'utf8',
+          env: environnementDeProduction(),
+        });
+        const sortie = `${r.stdout ?? ''}${r.stderr ?? ''}`;
+        expect(sortie, sortie).toMatch(/^essai LEVE (fabrique_hors_tests|injection_hors_tests)/m);
+        expect(sortie, sortie).toMatch(/^muet LEVE injection_hors_tests/m);
+        expect(sortie).not.toMatch(/ADMIS/);
+      } finally {
+        rmSync(dossier, { recursive: true, force: true });
       }
     });
 

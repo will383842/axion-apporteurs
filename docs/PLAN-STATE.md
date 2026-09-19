@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `5b306f8` — 2026-09-19T15:23:32+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #75 (rien) · 2. #81 (rien) · 3. #76 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #75 (rien) · 2. #76 (rien) · 3. #81 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · QA-T03 (A05) · UX-P0-02 (A05) · CPL-T13 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 72.10 j |
 | Le prochain pas | fusionner #75, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
@@ -65,8 +65,8 @@ Reste sur ce chemin : **17.50 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | rien — fusionnable maintenant |
-| 2 | #81 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert | `t/qa-t03` | rien — fusionnable maintenant |
-| 3 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | rien — fusionnable maintenant |
+| 3 | #81 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert | `t/qa-t03` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 

@@ -32,12 +32,13 @@
  * extensions de code : un fichier neuf, pas encore indexé, est lu comme les autres. Toute
  * référence à `limiter` qui n'est pas un appel direct à nom littéral est refusée : échec fermé.
  *
- * LIMITES DÉCLARÉES. Les formes qui obtiennent le registre par un chargeur NON littéral
- * (`import(x)`, `require(x)`) sont refusées ; toute autre obfuscation (un chargeur renommé, un
- * module relais hors de `src/` et `scripts/`) est couverte par le refus, À L'EXÉCUTION, des
- * fabriques de magasin hors des tests : un magasin qui admet tout ne se construit pas en
- * production. Un préfixe reconstitué par concaténation (`'mag' + 'ic:'`) échappe à la lecture
- * statique : il n'a de sens qu'en contournement délibéré. Le registre et cette garde sont
+ * LIMITES DÉCLARÉES. Cette garde est un fil tendu sur les FORMES ÉCRITES : elle refuse les
+ * chargeurs NON littéraux (`import(x)`, `require(x)`), mais un chargeur renommé ou un module relais
+ * hors de `src/` et `scripts/` lui échappe. Ce qui tient la production face à eux est la défense À
+ * L'EXÉCUTION du registre : hors des tests, `limiter` refuse tout magasin et tout signaleur
+ * injectés (`injection_hors_tests`), et toute fabrique de magasin refuse de fabriquer
+ * (`fabrique_hors_tests`). Un préfixe reconstitué par concaténation (`'mag' + 'ic:'`) échappe à la
+ * lecture statique : il n'a de sens qu'en contournement délibéré. Le registre et cette garde sont
  * exemptés de la lecture des sources : ils portent les préfixes et les noms par construction.
  */
 
@@ -49,10 +50,8 @@ import {
   LIMITE_HORS_DEPOT,
   PREFIXES_DE_FAMILLE,
   limiter,
-  magasinEnPanne,
   sujetDepuisEmpreinte,
   type ConduiteSurPanne,
-  type MagasinEnPanne,
   type NomDeCompteur,
   type VerdictDeLimite,
 } from '../../src/server/securite/rate-limit';
@@ -621,17 +620,29 @@ function exigencesDuDepot(): Record<string, string> {
 }
 
 /** Un cache qui LÈVE à chaque appel, et qui compte ceux qu'il a reçus. */
-export function cacheQuiLeve(): MagasinEnPanne {
-  // Le magasin en panne du REGISTRE : la garde tourne en CI, hors des tests, là où une fabrique
-  // de magasin arbitraire refuse de s'exécuter.
-  return magasinEnPanne();
+/**
+ * Le compteur réel, exécuté contre un cache qui LÈVE, sans rien lui injecter : hors des tests,
+ * `limiter` refuse tout magasin et tout signaleur fourni. La garde retire donc `REDIS_URL` le temps
+ * de l'appel — le magasin du registre est alors celui de l'adresse absente, qui lève à chaque
+ * écriture — et capte la ligne de panne que le signaleur du registre écrit sur la sortie d'erreur.
+ */
+async function executerSansCache(nom: string): Promise<VerdictDeLimite> {
+  const adresse = process.env.REDIS_URL;
+  const ecrire = process.stderr.write.bind(process.stderr);
+  Reflect.deleteProperty(process.env, 'REDIS_URL');
+  process.stderr.write = (() => true) as typeof process.stderr.write;
+  try {
+    return await limiter(nom as NomDeCompteur, SUJET_TEMOIN, 0);
+  } finally {
+    process.stderr.write = ecrire;
+    if (adresse !== undefined) process.env.REDIS_URL = adresse;
+  }
 }
 
 const SUJET_TEMOIN = sujetDepuisEmpreinte('0'.repeat(16));
 
 /** Le compteur réel, exécuté contre un cache qui lève, signalement capté (la garde imprime seule). */
-export const executerLeCompteurReel: Executer = (nom) =>
-  limiter(nom as NomDeCompteur, SUJET_TEMOIN, 0, cacheQuiLeve().magasin, () => undefined);
+export const executerLeCompteurReel: Executer = executerSansCache;
 
 export function universDuDepot(): Univers {
   return {
