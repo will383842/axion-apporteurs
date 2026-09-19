@@ -1,3 +1,4 @@
+// @req REQ-SEC-002
 // @req REQ-SEC-016
 // @req REQ-SEC-035
 /**
@@ -70,6 +71,7 @@ import {
   TEMOINS,
   analyser,
   cacheQuiLeve,
+  exigenceDuCompteur,
   universDuDepot,
   type Univers,
 } from '../../../scripts/gates/rate-famille';
@@ -168,6 +170,8 @@ function garderUneCopie(muter: (registre: string) => string): {
     cpSync('src', join(racine, 'src'), { recursive: true });
     mkdirSync(join(racine, 'scripts', 'gates'), { recursive: true });
     cpSync('scripts/gates/rate-famille.ts', join(racine, 'scripts/gates/rate-famille.ts'));
+    mkdirSync(join(racine, 'docs'), { recursive: true });
+    cpSync('docs/requirements.json', join(racine, 'docs/requirements.json'));
     writeFileSync(join(racine, 'package.json'), readFileSync('package.json', 'utf8'));
     const registre = join(racine, 'src/server/securite/rate-limit.ts');
     const avant = readFileSync(registre, 'utf8');
@@ -360,6 +364,14 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       }
     });
 
+    it('REQ-SEC-016 — le magasin réel n’expose QUE `fermer` : aucune clé libre n’atteint le cache hors de `limiter`', async () => {
+      const m = creerMagasinRedis(`redis://127.0.0.1:${await portFerme()}`, OPTIONS_DU_CLIENT);
+      aFermer.push(m);
+      expect(Object.keys(m)).toEqual(['fermer']);
+      const brut = m as unknown as Record<string, unknown>;
+      expect(brut.consommer, 'consommer(login: + courriel) reste appelable').toBeUndefined();
+    });
+
     it('REQ-SEC-016 — serveur qui accepte et se tait : verdict sous la seconde', async () => {
       const muet = await serveurMuet();
       const m = creerMagasinRedis(`redis://127.0.0.1:${muet.port}`, OPTIONS_DU_CLIENT);
@@ -417,6 +429,35 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
     }
   });
 
+  it('REQ-SEC-016 — `REDIS_URL` mal formée : panne sous la conduite, et la valeur (mot de passe compris) ne sort nulle part', async () => {
+    const secret = `S3cret${randomBytes(6).toString('hex')}`;
+    const url = `redis://u:${secret}@cache.example.org:abc`;
+    let erreur: unknown = null;
+    try {
+      creerMagasinRedis(url, OPTIONS_DU_CLIENT);
+    } catch (e) {
+      erreur = e;
+    }
+    expect(erreur).toBeInstanceOf(Error);
+    const vu = `${String(erreur)} ${JSON.stringify(erreur)} ${String((erreur as Error).cause)}`;
+    expect((erreur as Error).message).toMatch(/^redis_url_illisible/);
+    expect(vu).not.toContain(secret);
+    vi.stubEnv('REDIS_URL', url);
+    const ecrit: string[] = [];
+    const espion = vi.spyOn(process.stderr, 'write').mockImplementation((l) => {
+      ecrit.push(String(l));
+      return true;
+    });
+    try {
+      expect(await limiter('magic:ip', SUJET, 0)).toMatchObject({ autorise: false, panne: true });
+      expect(await limiter('depot:ip', SUJET, 0)).toMatchObject({ autorise: true, panne: true });
+    } finally {
+      espion.mockRestore();
+      vi.unstubAllEnvs();
+    }
+    expect(ecrit.join('')).not.toContain(secret);
+  });
+
   it('REQ-SEC-016 — `REDIS_URL` est lue au PREMIER appel, pas à l’import', async () => {
     vi.stubEnv('REDIS_URL', `redis://127.0.0.1:${await portFerme()}`);
     try {
@@ -472,8 +513,28 @@ describe('REQ-SEC-016 — l’adresse du client se lit depuis la DROITE de X-For
     expect(adresseDuClient(avec('198.51.100.9, 192.0.2.10'), SAUTS_DE_CONFIANCE)).toBe(
       '192.0.2.10'
     );
-    expect(adresseDuClient(avec('198.51.100.9, 198.51.100.8, 2001:db8::1'), 1)).toBe('2001:db8::1');
+    expect(adresseDuClient(avec('198.51.100.9, 198.51.100.8, 2001:db8::1'), 1)).toBe(
+      '2001:db8::/64'
+    );
     expect(adresseDuClient(avec('198.51.100.9, 192.0.2.10, 192.0.2.11'), 2)).toBe('192.0.2.10');
+  });
+
+  it('REQ-SEC-016 — forme CANONIQUE : une IPv4 mappée est l’IPv4, la casse et la compression ne changent pas le sujet', () => {
+    const lire = (xff: string) => adresseDuClient(avec(xff), 1);
+    expect(lire('::ffff:192.0.2.10')).toBe('192.0.2.10');
+    expect(lire('::FFFF:C000:020A')).toBe('192.0.2.10');
+    expect(lire('0:0:0:0:0:ffff:192.0.2.10')).toBe(lire('192.0.2.10'));
+    expect(lire('2001:DB8::1')).toBe(lire('2001:db8:0:0:0:0:0:1'));
+    expect(lire('2001:0DB8:0000:0000:0000:0000:0000:0001')).toBe('2001:db8::/64');
+  });
+
+  it('REQ-SEC-016 — une IPv6 est regroupée par /64 : deux adresses du même /64 sont UN sujet', () => {
+    const lire = (xff: string) => adresseDuClient(avec(xff), 1);
+    expect(lire('2001:db8:0:0:1::1')).toBe(lire('2001:db8::ffff:ffff:ffff:ffff'));
+    expect(lire('2001:db8::1')).toBe('2001:db8::/64');
+    expect(lire('2001:db8:0:1::1')).toBe('2001:db8:0:1::/64');
+    expect(lire('2001:db8:0:1::1')).not.toBe(lire('2001:db8::1'));
+    expect(lire('fe80::1%eth0')).toBeNull();
   });
 
   it('REQ-SEC-016 — X-Real-IP n’est jamais lu', () => {
@@ -606,6 +667,90 @@ describe('REQ-SEC-016 — la garde de famille', () => {
     expect(r.fautes.map((f) => f.message.split(' — ')[0])).toEqual(['src/a.ts:1', 'src/b.tsx:1']);
   });
 
+  it.each([
+    [
+      '`limiter.call`',
+      "import { limiter } from './securite/rate-limit';\nexport const f = (s: any) => limiter.call(null, 'magic:ip', s, 0);\n",
+    ],
+    [
+      '`limiter.apply`',
+      "import { limiter } from './securite/rate-limit';\nexport const f = (s: any) => limiter.apply(null, ['magic:ip', s, 0]);\n",
+    ],
+    [
+      '`(limiter)(…)`',
+      "import { limiter } from './securite/rate-limit';\nexport const f = (s: any) => (limiter)('magic:ip', s, 0);\n",
+    ],
+    ["`x['limiter']`", "export const f = (x: any, s: any) => x['limiter']('magic:ip', s, 0);\n"],
+    ['`x.limiter`', "export const f = (x: any, s: any) => x.limiter('magic:ip', s, 0);\n"],
+    [
+      'alias par variable',
+      "import { limiter } from './securite/rate-limit';\nexport const f = limiter;\n",
+    ],
+    [
+      'import d’espace de noms',
+      "import * as rl from './securite/rate-limit';\nexport const f = rl;\n",
+    ],
+  ])(
+    'REQ-SEC-016 — référence indirecte à `limiter` (%s) : `nom_dynamique`, échec fermé',
+    async (_l, texte) => {
+      const r = await analyser({
+        ...base,
+        fichiers: [...base.fichiers, { chemin: 'src/server/detour.ts', texte }],
+      });
+      expect(r.fautes.map((f) => f.famille)).toContain('nom_dynamique');
+      expect(r.fautes.every((f) => f.message.startsWith('src/server/detour.ts:'))).toBe(true);
+    }
+  );
+
+  it('REQ-SEC-016 — un préfixe de famille AU MILIEU d’une chaîne ou d’un gabarit est vu', async () => {
+    const r = await analyser({
+      ...base,
+      fichiers: [
+        ...base.fichiers,
+        { chemin: 'src/c.ts', texte: 'export const k = (x: string) => `rl:magic:${x}`;\n' },
+        { chemin: 'src/d.ts', texte: 'export const k = (x: string) => `rl:${x}:auth:${x}`;\n' },
+      ],
+    });
+    expect(r.fautes.map((f) => [f.famille, f.message.split(' — ')[0]])).toEqual([
+      ['prefixe_hors_registre', 'src/c.ts:1'],
+      ['prefixe_hors_registre', 'src/d.ts:1'],
+    ]);
+  });
+
+  it.each(['.mts', '.cts', '.js', '.mjs', '.cjs', '.jsx'])(
+    'REQ-SEC-016 — un fichier `%s` est lu comme les autres',
+    async (ext) => {
+      const r = await analyser({
+        ...base,
+        fichiers: [
+          ...base.fichiers,
+          { chemin: `src/cle${ext}`, texte: "export const k = 'depot:x';\n" },
+        ],
+      });
+      expect(r.fautes.map((f) => f.message.split(' — ')[0])).toEqual([`src/cle${ext}:1`]);
+    }
+  );
+
+  it('REQ-SEC-016 — le périmètre du dépôt lit `src/` ET `scripts/`, sous toutes les extensions de code', () => {
+    const chemins = base.fichiers.map((f) => f.chemin);
+    expect(chemins.some((c) => c.startsWith('src/'))).toBe(true);
+    expect(chemins.some((c) => c.startsWith('scripts/'))).toBe(true);
+    expect(chemins.some((c) => c.endsWith('.js'))).toBe(true);
+  });
+
+  it('REQ-SEC-016 — une conduite DÉCLARÉE contraire à l’exigence est refusée, préfixe nommé', async () => {
+    const registre: Record<string, Record<string, unknown>> = JSON.parse(JSON.stringify(COMPTEURS));
+    registre['magic:courriel']!.surPanne = 'laisser-passer';
+    registre['magic:ip']!.limite = 11;
+    const r = await analyser({ ...base, registre });
+    const ecarts = r.fautes.filter((f) => f.famille === 'ecart_a_l_exigence').map((f) => f.message);
+    expect(
+      ecarts.some((m) => m.includes('`magic:courriel`') && m.includes('préfixe `magic:`'))
+    ).toBe(true);
+    expect(ecarts.some((m) => m.includes('`magic:ip`'))).toBe(true);
+    expect(ecarts.some((m) => m.includes('`depot:ip`'))).toBe(false);
+  });
+
   it('REQ-SEC-016 — TÉMOIN D’EFFET : une copie de travail sans conduite sur panne fait sortir la garde en non nul, préfixe nommé', () => {
     const r = garderUneCopie((t) =>
       substituer(
@@ -644,6 +789,37 @@ describe('REQ-SEC-016 — la garde de famille', () => {
     const r = lancerLaGarde(process.cwd(), '--prove');
     expect(r.code, r.sortie).toBe(0);
     expect(r.sortie).toContain(`Les ${FAMILLES.length} familles rougissent`);
+  });
+});
+
+// ── REQ-SEC-002 : les valeurs de la demande de lien magique ─────────────────────────────────────
+
+describe('REQ-SEC-002 — les compteurs du lien magique portent les valeurs de l’exigence', () => {
+  const texte = (id: string): string => {
+    const r: { exigences: { id: string; texte: string }[] } = JSON.parse(
+      readFileSync('docs/requirements.json', 'utf8')
+    );
+    return r.exigences.find((e) => e.id === id)!.texte;
+  };
+
+  it('REQ-SEC-002 — `magic:ip` 10 / 900 s et `magic:courriel` 5 / 900 s, `refuser` en panne, LUS dans le texte de l’exigence', () => {
+    for (const nom of ['magic:ip', 'magic:courriel'] as const) {
+      const d = COMPTEURS[nom];
+      expect(d.source).toBe('REQ-SEC-002');
+      const exigee = exigenceDuCompteur(texte(d.source), d.ancre);
+      expect(exigee, nom).not.toBeNull();
+      expect(exigee!.surPanne, nom).toBe('refuser');
+      expect([d.limite, d.fenetreSecondes, d.surPanne], nom).toEqual([
+        exigee!.limite,
+        exigee!.fenetreSecondes,
+        exigee!.surPanne,
+      ]);
+    }
+    expect(exigenceDuCompteur(texte('REQ-SEC-002'), COMPTEURS['magic:ip'].ancre)).toEqual({
+      limite: 10,
+      fenetreSecondes: 900,
+      surPanne: 'refuser',
+    });
   });
 });
 
