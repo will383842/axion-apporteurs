@@ -92,6 +92,7 @@ function risque(p: {
   tachesBase?: TacheBrute[] | null;
   fichiers?: string[];
   labels?: string[];
+  liste?: LECTEUR.ListeDesFichiers | null;
 }) {
   return LECTEUR.risqueDeLaPr({
     titre: p.titre,
@@ -100,6 +101,9 @@ function risque(p: {
     tachesBase: p.tachesBase === undefined ? registre() : p.tachesBase,
     fichiers: p.fichiers ?? FICHIERS_QA_T01,
     labels: p.labels ?? [],
+    // Les listes de ces témoins sont FOURNIES entières ; la complétude d'une liste de la forge a
+    // son propre témoin (cas 6 octies).
+    liste: p.liste === undefined ? { source: 'complete' } : p.liste,
   });
 }
 
@@ -304,9 +308,16 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
       expect(r.niveau, racine).toBe('eleve');
       expect(r.raisons.join(' ; ')).toContain(racine);
     }
-    // CONTRE-TÉMOIN : un document de la racine ne gouverne rien.
-    const doc = risque({ titre: 'feat(QA-T01): x', fichiers: [...FICHIERS_QA_T01, 'README.md'] });
-    expect(doc.niveau, doc.raisons.join(' ; ')).toBe('ordinaire');
+    // Décision (g) de l'orchestrateur : SANS exception `*.md` — `CLAUDE.md` et `AGENTS.md` sont les
+    // instructions que chaque agent charge, relecteurs compris.
+    for (const racine of ['CLAUDE.md', 'AGENTS.md', 'README.md']) {
+      const fichiers = [
+        ...FICHIERS_QA_T01.slice(0, milieu),
+        racine,
+        ...FICHIERS_QA_T01.slice(milieu),
+      ];
+      expect(risque({ titre: 'feat(QA-T01): x', fichiers }).niveau, racine).toBe('eleve');
+    }
   });
 
   it('REQ-GOV-011 · cas 6 quinquies : un fichier RENOMMÉ compte par sa source ET sa destination (forge)', () => {
@@ -352,17 +363,23 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
     }
   });
 
-  it('REQ-GOV-011 · cas 6 septies : le diff LOCAL (git --name-status) rend aussi la source d’un renommage', () => {
-    // La forme de `git diff --name-status` : une colonne de statut, puis un chemin — ou DEUX pour un
-    // renommage ou une copie (`R100`, `C075`). Tabulations, telles que git les écrit.
-    const T = String.fromCharCode(9);
-    const sortie = [
-      `M${T}${FICHIERS_QA_T01[0]}`,
-      `R100${T}.github/workflows/ci.yml${T}docs/archive/ci.yml`,
-      `C080${T}prisma/schema.prisma${T}docs/copie.prisma`,
-      `A${T}${FICHIERS_QA_T01[1]}`,
-      '',
-    ].join(String.fromCharCode(10));
+  it('REQ-GOV-011 · cas 6 septies : le diff LOCAL (git --name-status -z) rend aussi la source d’un renommage', () => {
+    // La forme de `git diff --name-status -z` : un statut, puis un chemin — ou DEUX pour un
+    // renommage ou une copie (`R100`, `C075`) —, chaque champ terminé par un octet NUL.
+    const Z = String.fromCharCode(0);
+    const sortie =
+      [
+        'M',
+        FICHIERS_QA_T01[0],
+        'R100',
+        '.github/workflows/ci.yml',
+        'docs/archive/ci.yml',
+        'C080',
+        'prisma/schema.prisma',
+        'docs/copie.prisma',
+        'A',
+        FICHIERS_QA_T01[1],
+      ].join(Z) + Z;
     const fichiers = LECTEUR.cheminsTouches(LECTEUR.entreesDuDiff(sortie));
     for (const f of [
       FICHIERS_QA_T01[0]!,
@@ -375,6 +392,102 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
       expect(fichiers, f).toContain(f);
     }
     expect(risque({ titre: 'feat(QA-T01): x', fichiers }).niveau).toBe('eleve');
+  });
+
+  it('REQ-GOV-011 · cas 6 nonies : un chemin NON ASCII du diff local est lu tel quel — prisma/ exige schema, docs/ reste ordinaire', () => {
+    // Sans `-z`, git cite un chemin non ASCII entre guillemets et en octal (`"prisma/\303\251.sql"`) :
+    // il ne commence plus par `prisma/`, et la lentille `schema` n'était plus exigée.
+    const Z = String.fromCharCode(0);
+    const nul = (champs: string[]) => champs.join(Z) + Z;
+    const milieu = (chemin: string) =>
+      nul(['M', FICHIERS_QA_T01[0]!, 'A', chemin, 'M', FICHIERS_QA_T01[1]!]);
+    const schema = risque({
+      titre: 'feat(QA-T01): x',
+      fichiers: LECTEUR.cheminsTouches(LECTEUR.entreesDuDiff(milieu('prisma/é.sql'))),
+    });
+    expect(schema.niveau).toBe('eleve');
+    expect(schema.schema).toBe(true);
+    const doc = risque({
+      titre: 'feat(QA-T01): x',
+      fichiers: LECTEUR.cheminsTouches(LECTEUR.entreesDuDiff(milieu('docs/é.md'))),
+    });
+    expect(doc.niveau, doc.raisons.join(' ; ')).toBe('ordinaire');
+  });
+
+  it('REQ-GOV-011 · cas 6 octies : une liste de fichiers de la forge INCOMPLÈTE rend la PR élevée', () => {
+    // `GET /pulls/{n}/files` plafonne sans erreur : une liste plus courte que `changed_files`, ou un
+    // `changed_files` au plafond, laisse des fichiers INVISIBLES. Trois entrées de l'API (dont un
+    // renommage : source et destination comptent pour UNE entrée).
+    const entrees = [
+      { filename: FICHIERS_QA_T01[0]! },
+      { filename: 'docs/b.md', previous_filename: 'docs/a.md', status: 'renamed' },
+      { filename: FICHIERS_QA_T01[1]! },
+    ];
+    const fichiers = LECTEUR.cheminsTouches(entrees);
+    const avec = (annoncees: number | null, lues = entrees.length) =>
+      risque({ titre: 'feat(QA-T01): x', fichiers, liste: { source: 'forge', lues, annoncees } });
+    // CONTRE-TÉMOIN : la liste est complète.
+    expect(avec(3).niveau, avec(3).raisons.join(' ; ')).toBe('ordinaire');
+    // Tronquée : une entrée de moins que ce que la PR annonce.
+    const tronquee = avec(4);
+    expect(tronquee.niveau).toBe('eleve');
+    expect(tronquee.raisons.join(' ; ')).toContain('incompl');
+    // Au plafond de la forge, même « complète » : rien ne dit qu'il n'y en avait pas davantage.
+    expect(
+      avec(LECTEUR.PLAFOND_DES_FICHIERS_DE_LA_FORGE, LECTEUR.PLAFOND_DES_FICHIERS_DE_LA_FORGE)
+        .niveau
+    ).toBe('eleve');
+    // Compte illisible ; liste de complétude absente ; source inconnue.
+    expect(avec(null).niveau).toBe('eleve');
+    expect(risque({ titre: 'feat(QA-T01): x', fichiers, liste: null }).niveau).toBe('eleve');
+    expect(
+      risque({ titre: 'feat(QA-T01): x', fichiers, liste: { source: 'inconnue' } as never }).niveau
+    ).toBe('eleve');
+  });
+
+  it('REQ-GOV-011 · cas 7 bis : la garde des revues est la FERMETURE TRANSITIVE de ses imports — un module importé indirectement est élevé', () => {
+    // Le graphe RÉEL, recalculé ici indépendamment : depuis les trois racines de la garde, toute
+    // importation relative, suivie de proche en proche.
+    const racines = [
+      'scripts/gates/gov-pr.ts',
+      'scripts/lot/revues.ts',
+      'scripts/lot/corps-de-pr.ts',
+    ];
+    const vus = new Set<string>();
+    const resoudre = (depuis: string, specifiant: string): string => {
+      const base = posix.normalize(posix.join(posix.dirname(depuis), specifiant));
+      for (const c of [base, `${base}.ts`, `${base}.mjs`, `${base}.js`, `${base}/index.ts`]) {
+        try {
+          if (statSync(c).isFile()) return c;
+        } catch {
+          // absent : candidat suivant
+        }
+      }
+      throw new Error(`${depuis} importe ${specifiant}, introuvable`);
+    };
+    const pile = [...racines];
+    while (pile.length > 0) {
+      const f = pile.pop()!;
+      if (vus.has(f)) continue;
+      vus.add(f);
+      for (const m of readFileSync(f, 'utf8').matchAll(
+        /(?:from|import)\s*\(?\s*'(\.{1,2}\/[^']+)'/g
+      )) {
+        pile.push(resoudre(f, m[1]!));
+      }
+    }
+    // Ce que la dette nomme : deux modules que la gate EXÉCUTE sans être des racines.
+    expect(vus).toContain('scripts/lot/avancement.ts');
+    expect(vus).toContain('scripts/lot/chemins-de-tache.ts');
+    const garde = new Set(LECTEUR.cheminsDeLaGardeDesRevues());
+    for (const f of [...vus, LECTEUR.CHEMIN_CHARTE, LECTEUR.CHEMIN_AGENTS]) {
+      expect(garde, `${f} manque à la garde des revues`).toContain(f);
+      const r = risque({
+        titre: 'feat(QA-T01): x',
+        fichiers: ['docs/journal/2026-09.md', f, 'tests/unit/x.spec.ts'],
+      });
+      expect(r.niveau, f).toBe('eleve');
+    }
   });
 
   it('REQ-GOV-011 · cas 7 : un fichier de la garde des revues au milieu du diff rend la PR élevée', () => {
@@ -415,7 +528,8 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
       LECTEUR.CHEMIN_CHARTE,
       LECTEUR.CHEMIN_AGENTS,
     ]);
-    expect(new Set(LECTEUR.CHEMINS_DE_LA_GARDE_DES_REVUES)).toEqual(attendu);
+    const garde = new Set(LECTEUR.cheminsDeLaGardeDesRevues());
+    for (const f of attendu) expect(garde, `${f} manque à la garde des revues`).toContain(f);
     // Et chacun, glissé AU MILIEU d'un diff ordinaire, fait monter le risque.
     for (const f of attendu) {
       const r = risque({
