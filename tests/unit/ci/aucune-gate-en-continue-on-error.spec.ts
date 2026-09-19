@@ -428,8 +428,23 @@ function nonAdmisSousLeDomaine(racine: string): { lus: number; fautes: string[] 
  * LIGNE ENTIÈRE, code, chaînes et commentaires confondus, sans découper en commentaires — un découpage
  * laisse passer ce que le fournisseur retrouve à cheval sur deux morceaux. Un faux positif coûte un
  * mot ; un faux négatif coûte le seuil.
+ *
+ * S'y ajoute toute DÉCLARATION DE SOURCE (`sourceMappingURL`, `sourceURL`, sous toutes leurs formes) :
+ * une carte de sources embarquée remplace, pour la mesure, le texte du fichier par celui qu'elle
+ * porte — encodé, donc illisible pour les motifs ci-dessus. Elle est refusée sans être décodée.
  */
-const PARLE_DE_COUVERTURE = /ignore|coverage|istanbul|[a-z|]8\s/i;
+const PARLE_DE_COUVERTURE = /ignore|coverage|istanbul|[a-z|]8\s|sourcemappingurl|sourceurl/i;
+
+/** Une carte de sources dont le contenu encadre une ligne par une directive, encodée en base64. */
+const CARTE_EMBARQUEE = Buffer.from(
+  JSON.stringify({
+    version: 3,
+    sources: ['etats.ts'],
+    sourcesContent: ['/* v8 ignore start */\nexport const f = 1;\n/* v8 ignore stop */\n'],
+    names: [],
+    mappings: 'AAAA',
+  })
+).toString('base64');
 
 /**
  * Chaque ligne suspecte sous `racine` (tous les fichiers, à toute profondeur), nommée
@@ -774,7 +789,15 @@ describe('REQ-QA-002 — 100 % lignes et branches sur `src/domain/**`, appliqué
       ['// c8 ignore next', [2]],
       ['/* istanbul ignore else */', [2]],
       ['/* v8\n   ignore stop */', [3]],
+      // Une carte de sources EMBARQUÉE, dont le contenu (encodé) porterait une directive : refusée
+      // sans être décodée, sous chacune de ses formes de déclaration.
+      [`//# sourceMappingURL=data:application/json;base64,${CARTE_EMBARQUEE}`, [2]],
+      [`//@ sourceMappingURL=data:application/json;base64,${CARTE_EMBARQUEE}`, [2]],
+      [`/*# SOURCEMAPPINGURL=data:application/json;base64,${CARTE_EMBARQUEE} */`, [2]],
+      ['//# sourceURL=etats.ts', [2]],
     ];
+    // Le témoin est honnête : la carte encodée ne porte, en clair, aucun des mots de la directive.
+    expect(/ignore|coverage|[a-z|]8\s/i.test(CARTE_EMBARQUEE)).toBe(false);
     const plantes: Record<string, string> = {
       'attribution/sain.ts': 'export const a = 1;\n',
       // Contre-témoin : une ligne qui ne parle pas de couverture.
