@@ -2,20 +2,19 @@
 /**
  * QA-T02 — le harnais d'intégration, jugé par ce qu'il FAIT, pas par ce qu'il dit.
  *
- * R1 — L'environnement du sous-processus `prisma` se CONSTRUIT : une source qui porte des
- * variables piégées (une URL de base du poste, une URL d'ombre, un réglage `PRISMA_*`) n'en laisse
- * traverser aucune ; l'URL de base reçue est celle du conteneur ; les variables admises passent.
- * R2 — Démon injoignable : la commande `test:integration` du dépôt sort en code non nul, et chaque
- * fichier d'intégration échoue en NOMMANT le motif. Aucun ne passe.
- * R3, R5 — Isolation par fichier : deux fichiers posent le même SIREN sous contrainte d'unicité et
- * la même clé de cache ; chacun ne voit que les siens. Le contre-témoin prouve que la contrainte
- * mord dans UNE base. Le résumé imprime le compte des fichiers exécutés.
- * R4 — Le schéma est celui du disque : une migration appliquée par dossier de `prisma/migrations`.
- * R6, R8 — Garde statique sur tout le dossier d'intégration : aucun test sauté ni isolé, aucune
- * lecture de l'environnement de l'hôte hors du harnais, chaque faute nommée `fichier:ligne`.
- * R7 ne vit PAS ici : un témoin logé dans le dossier qu'il garde disparaît avec lui (retirer le
- * motif d'intégration de l'include retire aussi ce fichier, et `pnpm test` reste vert — mesuré).
- * Il vit dans `tests/unit/ci/integration-collectee-par-gate-a.spec.ts`.
+ * ENVIRONNEMENT. Celui du sous-processus `prisma` se CONSTRUIT : une source qui porte des variables
+ * piégées (une URL de base du poste, une URL d'ombre, un réglage `PRISMA_*`) n'en laisse traverser
+ * aucune ; l'URL de base reçue est celle du conteneur ; les variables admises passent.
+ * DÉMON ABSENT. La commande `test:integration` du dépôt sort en code non nul, et chaque fichier
+ * d'intégration échoue en NOMMANT le motif. Aucun ne passe.
+ * ISOLATION. Deux fichiers posent le même SIREN sous contrainte d'unicité et la même clé de cache ;
+ * chacun ne voit que les siens. Le contre-témoin prouve que la contrainte mord dans UNE base. Le
+ * résumé imprime le compte des fichiers exécutés.
+ * SCHÉMA. Celui du disque : une migration appliquée par dossier de `prisma/migrations`.
+ * GARDE STATIQUE. Sur tout le dossier d'intégration : aucun test sauté ni isolé, aucune lecture de
+ * l'environnement de l'hôte hors du harnais, chaque faute nommée `fichier:ligne`.
+ * COLLECTE PAR GATE A. Ce témoin-là ne vit PAS ici : logé dans le dossier qu'il garde, il disparaît
+ * avec lui (mesuré). Il vit dans `tests/unit/ci/integration-collectee-par-gate-a.spec.ts`.
  *
  * ⚠️ Ce fichier est lui-même lu par la garde statique : les jetons qu'elle refuse y sont écrits en
  * morceaux (`P`, `SAUTS`), jamais en toutes lettres. C'est voulu : aucune exemption ne le protège.
@@ -47,7 +46,7 @@ import {
   type Cache,
 } from './harnais';
 
-// ── Constantes et outils ────────────────────────────────────────────────────────────────────────
+// ── Constantes et outils ─────────────────────────────────────────────────────────────────────────
 
 const DOSSIER = 'tests/integration';
 const HARNAIS = `${DOSSIER}/harnais.ts`;
@@ -167,7 +166,7 @@ it('isolation ${valeur}', async () => {
 });
 `;
 
-// ── La garde statique (R6, R8) ──────────────────────────────────────────────────────────────────
+// ── La garde statique ────────────────────────────────────────────────────────────────────────────
 
 /** Écrits en morceaux : ce fichier est lu par la garde qu'il définit. */
 const P = 'proc' + 'ess';
@@ -234,7 +233,7 @@ const lignesFautives = (fautes: string[], fichier: string) => [
   ),
 ];
 
-// ── R1 ──────────────────────────────────────────────────────────────────────────────────────────
+// ── Environnement ────────────────────────────────────────────────────────────────────────────────
 
 const URL_CONTENEUR = 'postgresql://test:test@localhost:55432/test';
 
@@ -271,7 +270,7 @@ describe('REQ-QA-006 — le sous-processus prisma ne reçoit que ce que le harna
   });
 });
 
-// ── R6, R8 ──────────────────────────────────────────────────────────────────────────────────────
+// ── Garde statique ───────────────────────────────────────────────────────────────────────────────
 
 describe('REQ-QA-006 — garde statique : aucun test sauté, aucune lecture de l’environnement de l’hôte', () => {
   it('REQ-QA-006 — le dossier d’intégration du dépôt est lu en entier et ne porte aucune faute', () => {
@@ -354,7 +353,7 @@ describe('REQ-QA-006 — garde statique : aucun test sauté, aucune lecture de l
   }, 120_000);
 });
 
-// ── R4, contre-témoin R3, cache (conteneurs de CE fichier) ─────────────────────────────────────
+// ── Schéma, contre-témoin d'isolation, cache (conteneurs de CE fichier) ──────────────────────────
 
 describe('REQ-QA-006 — la base et le cache éphémères de ce fichier', () => {
   let base: Base;
@@ -436,7 +435,7 @@ describe('REQ-QA-006 — la base et le cache éphémères de ce fichier', () => 
   }, 180_000);
 });
 
-// ── R2, R3, R5 : témoin à deux faces, en sous-processus ─────────────────────────────────────────
+// ── Démon absent, isolation : témoin à deux faces, en sous-processus ─────────────────────────────
 
 /**
  * Face rouge : un `DOCKER_HOST` injoignable. Mesuré (testcontainers 12.1.0, docker-modem 5.0.7) :

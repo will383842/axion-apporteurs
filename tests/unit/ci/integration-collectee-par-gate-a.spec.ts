@@ -1,6 +1,6 @@
 // @req REQ-QA-006
 /**
- * QA-T02 — l'étape « Tests » de Gate A atteint le harnais d'intégration (REQ-QA-006, R7).
+ * QA-T02 — l'étape « Tests » de Gate A atteint le harnais d'intégration (REQ-QA-006).
  *
  * POURQUOI CE TÉMOIN N'EST PAS DANS `tests/integration/`. Il y a vécu, et il y était aveugle à la
  * panne même qu'il garde : retirer le motif d'intégration de l'`include` de `vitest.config.ts`
