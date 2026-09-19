@@ -13,8 +13,9 @@
  * R4 — Le schéma est celui du disque : une migration appliquée par dossier de `prisma/migrations`.
  * R6, R8 — Garde statique sur tout le dossier d'intégration : aucun test sauté ni isolé, aucune
  * lecture de l'environnement de l'hôte hors du harnais, chaque faute nommée `fichier:ligne`.
- * R7 — L'étape « Tests » de Gate A atteint le harnais : `pnpm test` collecte chaque fichier
- * d'intégration du disque, et une configuration privée du motif fait rougir le témoin.
+ * R7 ne vit PAS ici : un témoin logé dans le dossier qu'il garde disparaît avec lui (retirer le
+ * motif d'intégration de l'include retire aussi ce fichier, et `pnpm test` reste vert — mesuré).
+ * Il vit dans `tests/unit/ci/integration-collectee-par-gate-a.spec.ts`.
  *
  * ⚠️ Ce fichier est lui-même lu par la garde statique : les jetons qu'elle refuse y sont écrits en
  * morceaux (`P`, `SAUTS`), jamais en toutes lettres. C'est voulu : aucune exemption ne le protège.
@@ -33,7 +34,6 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PrismaClient } from '@prisma/client';
-import configuration from '../../vitest.config';
 import {
   IMAGE_BASE,
   IMAGE_CACHE,
@@ -329,99 +329,6 @@ describe('REQ-QA-006 — garde statique : aucun test sauté, aucune lecture de l
   }, 120_000);
 });
 
-// ── R7 ──────────────────────────────────────────────────────────────────────────────────────────
-
-/** Le motif d'intégration de la configuration du dépôt, tel que DM-01 l'a écrit. */
-const MOTIF_INTEGRATION = (configuration.test?.include ?? []).find((m) =>
-  m.startsWith(`${DOSSIER}/`)
-);
-
-/** Ce que `vitest list` collecte sous une configuration, en chemins relatifs à la racine. */
-function fichiersCollectes(cheminConfig: string): string[] {
-  const { code, stdout, sortie } = lancerVitest([
-    'list',
-    '--filesOnly',
-    '--json',
-    '--config',
-    cheminConfig,
-  ]);
-  if (code !== 0) throw new Error(`vitest list a échoué (code ${code}) :\n${sortie}`);
-  const liste = JSON.parse(stdout.slice(stdout.indexOf('['))) as { file: string }[];
-  const racine = enBarres(RACINE).replace(/\/$/, '');
-  return liste.map(({ file }) => enBarres(file).slice(racine.length + 1));
-}
-
-/** Les fautes de collecte : le motif absent de l'include, puis chaque fichier du disque non collecté. */
-function fautesDeCollecte(cheminConfig: string, include: readonly string[]): string[] {
-  const fautes: string[] = [];
-  if (MOTIF_INTEGRATION === undefined || !include.includes(MOTIF_INTEGRATION)) {
-    fautes.push(
-      `motif d'intégration absent de l'include : ${MOTIF_INTEGRATION ?? `${DOSSIER}/**`}`
-    );
-  }
-  const collectes = new Set(fichiersCollectes(cheminConfig));
-  for (const f of fichiersDIntegration()) if (!collectes.has(f)) fautes.push(`non collecté : ${f}`);
-  return fautes;
-}
-
-describe('REQ-QA-006 — l’étape « Tests » de Gate A atteint le harnais', () => {
-  it('REQ-QA-006 — la configuration du dépôt collecte chaque fichier d’intégration du disque', () => {
-    const integration = fichiersDIntegration();
-    console.log(`collecte : ${integration.length} fichier(s) d'intégration sur le disque`);
-    expect(integration.length).toBeGreaterThan(0);
-    const fautes = fautesDeCollecte(
-      join(RACINE, 'vitest.config.ts'),
-      configuration.test?.include ?? []
-    );
-    expect(fautes, fautes.join('\n')).toEqual([]);
-  }, 120_000);
-
-  it('REQ-QA-006 — une configuration privée du motif d’intégration fait rougir le témoin, qui le nomme', () => {
-    const bac = nouveauBac();
-    try {
-      const include = (configuration.test?.include ?? []).filter((m) => m !== MOTIF_INTEGRATION);
-      const config = { test: { root: RACINE, include, exclude: configuration.test?.exclude } };
-      const chemin = join(bac, 'vitest.config.mjs');
-      writeFileSync(chemin, `export default ${JSON.stringify(config)};\n`);
-      const fautes = fautesDeCollecte(chemin, include);
-      expect(fautes[0]).toBe(`motif d'intégration absent de l'include : ${MOTIF_INTEGRATION}`);
-      expect(fautes.slice(1)).toEqual(fichiersDIntegration().map((f) => `non collecté : ${f}`));
-    } finally {
-      retirerBac(bac);
-    }
-  }, 120_000);
-
-  it('REQ-QA-006 — `pnpm test` lance vitest sans filtre, et l’étape « Tests » du job gate-a le lance sans condition', () => {
-    const paquet = JSON.parse(readFileSync(join(RACINE, 'package.json'), 'utf8')) as {
-      scripts: Record<string, string>;
-    };
-    const [outil, verbe, ...options] = paquet.scripts.test!.split(/\s+/);
-    expect([outil, verbe]).toEqual(['vitest', 'run']);
-    // Liste FERMÉE : un chemin, un `--exclude` ou un `--dir` retirerait l'intégration de la passe.
-    expect(options.filter((o) => o !== '--coverage')).toEqual([]);
-
-    const lignes = readFileSync(join(RACINE, '.github/workflows/ci.yml'), 'utf8').split(/\r?\n/);
-    const debutJob = lignes.findIndex((l) => /^ {2}gate-a:\s*$/.test(l));
-    expect(debutJob).toBeGreaterThanOrEqual(0);
-    const finJob = lignes.findIndex((l, i) => i > debutJob && /^ {2}\S/.test(l));
-    const job = lignes.slice(debutJob, finJob === -1 ? undefined : finJob);
-    const ligneRun = job.findIndex((l) => /^\s+(- )?run:\s*pnpm test\s*$/.test(l));
-    expect(ligneRun, 'aucune étape `run: pnpm test` dans le job gate-a').toBeGreaterThan(0);
-    let debutEtape = ligneRun;
-    while (debutEtape > 0 && !/^\s+- /.test(job[debutEtape]!)) debutEtape--;
-    const indentation = job[debutEtape]!.search(/-/);
-    const finEtape = job.findIndex(
-      (l, i) => i > ligneRun && l.search(/\S/) <= indentation && l.trim() !== ''
-    );
-    const etape = job.slice(debutEtape, finEtape === -1 ? undefined : finEtape);
-    const conditions = etape.filter((l) => /^\s*(- )?(if|continue-on-error)\s*:/.test(l));
-    expect(
-      conditions,
-      `l'étape qui lance pnpm test est conditionnée : ${conditions.join(' | ')}`
-    ).toEqual([]);
-  });
-});
-
 // ── R4, contre-témoin R3, cache (conteneurs de CE fichier) ─────────────────────────────────────
 
 describe('REQ-QA-006 — la base et le cache éphémères de ce fichier', () => {
@@ -506,6 +413,14 @@ describe('REQ-QA-006 — la base et le cache éphémères de ce fichier', () => 
 
 // ── R2, R3, R5 : témoin à deux faces, en sous-processus ─────────────────────────────────────────
 
+/**
+ * Face rouge : un `DOCKER_HOST` injoignable. Mesuré (testcontainers 12.1.0, docker-modem 5.0.7) :
+ * aucune stratégie ne se replie sur une autre socket, le démon est donc ABSENT pour le sous-processus.
+ * ⚠️ vitest 2.1.9 compte « skipped » les tests d'un fichier dont le `beforeAll` lève, alors que le
+ * FICHIER échoue et que le code de sortie vaut 1 : on juge donc le code, le compte de fichiers en
+ * échec et le motif, jamais l'absence du mot « skipped ». Un vrai saut, lui, est refusé par la garde
+ * statique avant toute exécution.
+ */
 describe('REQ-QA-006 — témoin à deux faces : démon absent, démon présent', () => {
   it('REQ-QA-006 — sans démon joignable, `test:integration` sort en non nul et chaque fichier nomme le motif', () => {
     const paquet = JSON.parse(readFileSync(join(RACINE, 'package.json'), 'utf8')) as {
