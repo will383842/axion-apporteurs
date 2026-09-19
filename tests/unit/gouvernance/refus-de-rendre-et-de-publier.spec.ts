@@ -627,6 +627,21 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'forge), pas de couverture. *Redondance ≠ trou — et une maxime fausse devient une doctrine, ' +
         'qu’on ne remesure jamais.*',
     },
+    // ── UX-P0-02 : UNE sortie, à code VARIABLE ──────────────────────────────────────────────
+    'scripts/gates/maquettes-validees.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO ici : les témoins d'EFFET de cette sortie vivent dans
+      // `tests/unit/espace/maquettes-validees.spec.ts`, pas dans le tableau `REFUS` de ce fichier.
+      temoins: 0,
+      raison:
+        'UX-P0-02 — aucune tâche d’écran attribuée sans maquette validée par Will. UNE sortie, ' +
+        "`process.exit(process.argv.includes('--prove') ? prouver() : juger())`, TERMINALE, à code " +
+        'variable : 0 quand la garde passe, 1 sur la première faute. Témoins d’EFFET sur le binaire, ' +
+        'dans maquettes-validees.spec.ts : un arbre jetable où une tâche d’écran est attribuée sans ' +
+        'validation sort en 1 en NOMMANT la tâche, le même arbre corrigé sort en 0, et le dépôt réel ' +
+        'comme `--prove` sortent en 0.',
+    },
   };
 
   it('REQ-GOV-032 — le compte DÉRIVÉ du diff égale le compte DÉCLARÉ, fichier par fichier', () => {

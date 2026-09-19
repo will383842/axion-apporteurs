@@ -32,7 +32,9 @@
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import {
   controler,
   lireValidation,
@@ -51,6 +53,16 @@ const DOSSIER = 'docs/maquettes';
 
 function lancer(...args: string[]): { code: number; sortie: string } {
   const r = spawnSync('npx', ['tsx', SCRIPT, ...args], { encoding: 'utf8', shell: true });
+  return { code: r.status ?? 1, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
+}
+
+/** Le binaire de la garde, lancé dans un AUTRE arbre : c'est son répertoire courant qu'elle juge. */
+function lancerDans(arbre: string): { code: number; sortie: string } {
+  const r = spawnSync(
+    process.execPath,
+    [resolve('node_modules/tsx/dist/cli.mjs'), resolve(SCRIPT)],
+    { cwd: arbre, encoding: 'utf8' }
+  );
   return { code: r.status ?? 1, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
 }
 
@@ -245,6 +257,38 @@ describe('maquettes-validees — la garde exécutée sur des vues injectées', (
     });
     expect(retenues.map((t) => t.id)).toEqual(['UX-P1-08']);
     expect(ecartees).toEqual([{ id: 'UX-P1-01', raison: 'maquette non validée par Will' }]);
+  });
+});
+
+describe('maquettes-validees — la SORTIE du binaire, sur un arbre jetable', () => {
+  it('REQ-UX-008 — TÉMOIN D’EFFET : une tâche d’écran attribuée sans validation fait sortir en 1, en la nommant ; corrigée, en 0', () => {
+    const arbre = mkdtempSync(join(tmpdir(), 'maquettes-validees-'));
+    try {
+      mkdirSync(join(arbre, 'docs/maquettes'), { recursive: true });
+      for (const f of ['accueil.html', 'entreprise.html', 'lot.html', 'index.html'])
+        writeFileSync(join(arbre, 'docs/maquettes', f), '<!doctype html>');
+      const registre = (proprietaire: string | null) =>
+        JSON.stringify({
+          taches: [
+            { id: 'UX-P1-08', statut: 'a_faire', owner: null },
+            { id: 'UX-P1-01', statut: 'a_faire', owner: proprietaire },
+            { id: 'UX-P2-03', statut: 'a_faire', owner: null },
+          ],
+        });
+      writeFileSync(join(arbre, 'docs/maquettes/VALIDATION.md'), tableau(MILIEU_NON_VALIDE));
+      writeFileSync(join(arbre, 'docs/tasks.json'), registre('A05'));
+      const rouge = lancerDans(arbre);
+      expect(rouge.sortie).toContain('ecran_attribue_sans_validation');
+      expect(rouge.sortie).toContain('UX-P1-01');
+      expect(rouge.code).toBe(1);
+
+      writeFileSync(join(arbre, 'docs/tasks.json'), registre(null));
+      const vert = lancerDans(arbre);
+      expect(vert.sortie).toContain('3 ligne(s) lue(s)');
+      expect(vert.code).toBe(0);
+    } finally {
+      rmSync(arbre, { recursive: true, force: true });
+    }
   });
 });
 

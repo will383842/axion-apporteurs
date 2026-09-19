@@ -3373,7 +3373,8 @@
         "tests/unit/espace/maquettes-validees.spec.ts",
         "docs/gates.json",
         ".github/workflows/ci.yml",
-        "package.json"
+        "package.json",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
