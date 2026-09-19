@@ -233,9 +233,9 @@
         "GATE-UX-JARGON",
         "gov:lexique"
       ],
-      "verifie": "liste noire IMPORTEE de la SSOT lexique-interdit.ts (REQ-JUR-037), jamais recopiee dans la gate ni dans GATES.md ; perimetre src/app/(espace)/**, emails/apporteur/**, micro-copy/** et les ressources diffusees ; les exclusions declarees par la SSOT sont importees avec elle (etendue par UX-P0-01, JUR-T13 et JUR-T26)",
+      "verifie": "liste noire IMPORTEE de la SSOT lexique-interdit.ts (REQ-JUR-037), jamais recopiee dans la gate ni dans GATES.md ; perimetre src/app/(espace)/**, emails/apporteur/**, micro-copy/**, src/content/micro-copy/espace/** (portee apporteur) et src/content/micro-copy/console/** (portee depot), et les ressources diffusees ; les exclusions declarees par la SSOT sont importees avec elle (etendue par UX-P0-01, JUR-T13 et JUR-T26)",
       "fixtureRouge": "libelle factice 'objectif du mois' dans micro-copy",
-      "preuveRouge": "pnpm gov:lexique:prove — 11 familles rougissent chacune sur son temoin, 8 positions limites rougissent, 4 controles positifs rougissent, 13 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim"
+      "preuveRouge": "pnpm gov:lexique:prove — 12 familles rougissent chacune sur son temoin (dont jargon_interne, REQ-UX-003, ajoutee par UX-P0-01), 8 positions limites rougissent, 4 controles positifs rougissent, 13 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim"
     },
     {
       "id": "gate-a",
@@ -351,9 +351,9 @@
       "phase": 1,
       "script": "scripts/gates/ux-exhaustivite.ts",
       "tache": "UX-P0-01",
-      "verifie": "chaque valeur d'enum d'affichage a un libelle et une phrase 'prochaine etape et par qui' ; switch avec branche never",
+      "verifie": "chaque valeur de IssueDepot a pastille, titre, pourquoi, quoi faire, action et mention d'horodatage (REQ-UX-002) ; l'enum est relu contre REQ-UX-002 dans les deux sens (valeur sans base contractuelle, categorie du contrat sans valeur) ; les refus sont exactement IssueDepot inter MotifRefusDepot (REQ-SEC-022) et aucun ne porte de parametre (ni qui ni quand) ; chaque ecran de docs/ESPACE-ROUTES.md et de la section Console de docs/maquettes/VALIDATION.md a un etat vide complet, celui de Mes entreprises mene au depot, toute action mene a une route de la carte (REQ-UX-019) ; aucun libelle en dur dans un composant .tsx, lu par l'arbre syntaxique TypeScript. Les libelles d'etats d'attribution et leur phrase 'prochaine etape et par qui' relevent de UX-P0-01b",
       "fixtureRouge": "ajouter une valeur a l'enum sans libelle",
-      "preuveRouge": null
+      "preuveRouge": "pnpm ux:exhaustivite:prove — 11 familles rougissent chacune sur son temoin en nommant sa cible (valeur, ecran ou fichier:ligne), 2 contre-temoins restent verts dont un composant qui lit la micro-copie (vu le 2026-09-19)"
     },
     {
       "id": "partners:rgpd:export-complet",
