@@ -121,24 +121,49 @@ function bacVitest(fichiers: Record<string, string>): string {
 
 const IMPORT_HARNAIS = JSON.stringify(enBarres(join(RACINE, HARNAIS)));
 
-/** Un fichier de bac : sa base et son cache, le même SIREN et la même clé que son voisin. */
-const fichierDIsolation = (valeur: string) => `
+/**
+ * Les deux fichiers de bac, SÉQUENCÉS : B ne démarre ses conteneurs qu'une fois que A a inséré son
+ * SIREN et posé sa clé, et A garde les siens vivants jusqu'à la fin de B. Sans ce séquencement, les
+ * deux démarrent au même instant et chacun crée son conteneur même quand le harnais les partage
+ * (mesuré : un `.withReuse()` posé dans le harnais SURVIVAIT au témoin, le verrou de réutilisation
+ * de testcontainers ne valant que dans un processus). Les marques sont des fichiers du bac.
+ */
+const ATTENDRE = `
+const attendre = async (marque) => {
+  const fin = Date.now() + 150000;
+  while (!existsSync(new URL(marque, import.meta.url))) {
+    if (Date.now() > fin) throw new Error('attente de la marque ' + marque + ' dépassée');
+    await new Promise((r) => setTimeout(r, 200));
+  }
+};
+const marquer = (marque) => writeFileSync(new URL(marque, import.meta.url), '');
+`;
+
+const fichierDIsolation = (valeur: 'A' | 'B') => `
+import { existsSync, writeFileSync } from 'node:fs';
 import { demarrerBase, demarrerCache } from ${IMPORT_HARNAIS};
+${ATTENDRE}
 let base;
 let cache;
 beforeAll(async () => {
+  ${valeur === 'B' ? "await attendre('a-pret');" : ''}
   [base, cache] = await Promise.all([demarrerBase(), demarrerCache()]);
 }, 180000);
 afterAll(async () => {
+  ${valeur === 'A' ? "await attendre('b-fini');" : "marquer('b-fini');"}
   await base?.arreter();
   await cache?.arreter();
-});
+}, 180000);
 it('isolation ${valeur}', async () => {
-  await base.prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS t (siren text UNIQUE)');
-  await base.prisma.$executeRawUnsafe("INSERT INTO t (siren) VALUES ('${SIREN}')");
-  expect(await cache.commande(['GET', 'cle'])).toBe('');
-  expect(await cache.commande(['SET', 'cle', '${valeur}'])).toBe('OK');
-  expect(await cache.commande(['GET', 'cle'])).toBe('${valeur}');
+  try {
+    await base.prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS t (siren text UNIQUE)');
+    await base.prisma.$executeRawUnsafe("INSERT INTO t (siren) VALUES ('${SIREN}')");
+    expect(await cache.commande(['GET', 'cle'])).toBe('');
+    expect(await cache.commande(['SET', 'cle', '${valeur}'])).toBe('OK');
+    expect(await cache.commande(['GET', 'cle'])).toBe('${valeur}');
+  } finally {
+    ${valeur === 'A' ? "marquer('a-pret');" : ''}
+  }
 });
 `;
 
