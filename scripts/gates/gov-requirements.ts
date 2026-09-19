@@ -228,11 +228,16 @@ export function repris(texte: string, marqueur: string): boolean {
  * refuser tout autant (`dette_texte_decide_perimee`). Sa divergence, dans les deux sens, est le
  * signal.
  *
- * ⛔ AUCUNE DE CES LIGNES N'EST RÉPARABLE PAR GOV-039, et le motif est écrit à côté de chacune :
- * réécrire le texte en vigueur d'une exigence d'ARGENT ou de SÉCURITÉ est une décision de Will, pas
- * d'un agent. Deux d'entre elles portent un ré-arbitrage POSTÉRIEUR à l'annexe (REQ-DM-022, M-10 du
- * 2026-09-03 ; REQ-DM-015, A-2 du même jour) : là, c'est l'ANNEXE qui est périmée, et le geste juste
- * est de dater l'arbitrage suivant dans l'annexe — un ADR, pas un champ réécrit.
+ * 🔑 RÉSORBÉ LE 2026-09-19, SUR DÉCISION DE WILL (« OUI ») : 23 des 25 clauses déclarées sont
+ * revenues. 22 ont été remises dans le texte appliqué de 13 exigences par le verbe hors dépôt
+ * `reecrire-champ.mjs` — jamais à la main —, au mot près du texte DÉCIDÉ de l'annexe. La 23e,
+ * `dateRef = devis.acceptedAt` (REQ-DM-022), ne l'a PAS été : l'arbitrage M-10 du 2026-09-03
+ * (contrat art. 4.4) la remplace, et c'est l'ANNEXE qui était périmée. Elle y est désormais datée
+ * par partners/ADR-0016, et REQ-DM-022 reprend déjà les marqueurs du texte décidé en vigueur.
+ *
+ * ⛔ LES DEUX LIGNES QUI RESTENT NE SONT PAS RÉPARABLES PAR UN AGENT, et le motif est écrit à côté
+ * de chacune : chacune demanderait de trancher une règle d'ARGENT que l'annexe et le registre
+ * disent différemment.
  */
 export const DETTE_TEXTE_DECIDE: readonly {
   survivante: string;
@@ -240,82 +245,16 @@ export const DETTE_TEXTE_DECIDE: readonly {
   motif: string;
 }[] = [
   {
-    survivante: 'REQ-DM-014',
-    marqueurs: ['axionia/src/content/pricing.ts', 'commissions.v<N>.json'],
-    motif: 'argent : la source et le transport de la grille de commission',
-  },
-  {
-    survivante: 'REQ-SEC-010',
-    marqueurs: ['<timestamp_unix>.<corps exact>'],
-    motif: 'securite : la chaine exacte signee en HMAC',
-  },
-  {
-    survivante: 'REQ-SEC-034',
-    marqueurs: ['<ts>.<hex64>', 'submission.completed'],
-    motif: 'securite : la forme de la signature DocuSeal et son evenement',
-  },
-  {
-    survivante: 'REQ-SEC-008',
-    marqueurs: ['scopedPrisma(apporteurId)'],
-    motif: 'securite : le point de passage unique du cloisonnement',
-  },
-  {
-    survivante: 'REQ-DM-010',
-    marqueurs: ['captcha'],
-    motif: 'securite : la seule issue admise au-dela du seuil',
-  },
-  {
-    survivante: 'REQ-DM-016',
-    marqueurs: ['devis.signe', 'prevue', 'facture.emise'],
-    motif: 'argent : les declencheurs de creation de ligne',
-  },
-  {
-    survivante: 'REQ-DM-021',
-    marqueurs: ['non_resolue', 'siren'],
-    motif:
-      'argent : le motif de blocage d une ligne non resolue ; et siren, que le texte ne portait que dans siren_manquant (mesure le 2026-09-18, F2 de la PR 55)',
-  },
-  {
-    survivante: 'REQ-DM-022',
-    marqueurs: ['dateRef = devis.acceptedAt'],
-    motif:
-      'argent, et re-arbitrage POSTERIEUR : contrat art. 4.4, M-10 du 2026-09-03 — c est l annexe qui est perimee',
-  },
-  {
     survivante: 'REQ-DM-015',
     marqueurs: ['scale'],
-    motif: 'argent, et re-arbitrage POSTERIEUR : A-2 du 2026-09-03 sur le forfait',
+    motif:
+      'argent : la clause « scale ou entree introuvable -> a_qualifier » n est touchee par AUCUN arbitrage posterieur (A-2 du 2026-09-03 porte sur flat, que l annexe porte deja) ; la restaurer, ou l abandonner, revient a Will (remonte le 2026-09-19)',
   },
   {
     survivante: 'REQ-ARG-016',
-    marqueurs: ['piecesBloquantPaiement', 'MotifBlocage', 'signe'],
+    marqueurs: ['signe'],
     motif:
-      'argent : la fonction pure des controles bloquants et son enum ; et signe, que le texte ne portait que dans mandat_non_signe (mesure le 2026-09-18, F2 de la PR 55)',
-  },
-  {
-    survivante: 'REQ-ARG-024',
-    marqueurs: ['payee', 'DAS2_SEUIL_CENTS'],
-    motif: 'argent : l assiette DAS2 et son seuil SSOT',
-  },
-  {
-    survivante: 'REQ-DM-031',
-    marqueurs: ['retention.ts'],
-    motif: 'donnees personnelles : la SSOT de la duree de conservation',
-  },
-  {
-    survivante: 'REQ-UX-033',
-    marqueurs: ['size-limit'],
-    motif: 'la gate qui rend le budget bloquant',
-  },
-  {
-    survivante: 'REQ-GOV-014',
-    marqueurs: ['pnpm deploy:verify', 'concurrency'],
-    motif: 'protocole de fusion : la verification d atterrissage et l interdit de concurrency',
-  },
-  {
-    survivante: 'REQ-ARG-003',
-    marqueurs: ['en_attente_dependance', 'held'],
-    motif: 'argent : la permutation des evenements et la conservation d un schemaVersion inconnu',
+      'argent, et re-arbitrage POSTERIEUR : le texte applique dit TROIS controles SEULEMENT (A-4 et A-5 du 2026-09-03, art. 5.4 reecrit), l annexe garde « contrat signe » ; le rendre comme quatrieme controle contredirait le registre, le dater dans l annexe serait trancher (remonte le 2026-09-19)',
   },
 ];
 

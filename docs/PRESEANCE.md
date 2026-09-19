@@ -159,9 +159,10 @@ test vérifie pour que la version retenue reste celle qui tourne.
   groupe, quand le contrat disait l'inverse.
 - **Ce qui fait foi (REQ-DM-034).** Aucune résolution d'encaissement ne s'arbitre au jugé ; l'unique
   exception est le `RattachementManuel`, décidé par la Société, motivé, tracé, révocable, journalisé et
-  notifié à l'apporteur avec son motif. À défaut de résolution, la ligne porte le motif `siren_manquant`
-  (REQ-DM-021) et une Anomalie s'ouvre en console — jamais un silence, jamais un rejet. Le registre et son
-  annexe de fusion divergent sur le nom de ce motif : voir §5.
+  notifié à l'apporteur avec son motif. À défaut de résolution, la ligne porte le motif `non_resolue`
+  (REQ-DM-021, enum `MotifBlocage` de REQ-ARG-017) et une Anomalie s'ouvre en console — jamais un
+  silence, jamais un rejet. Le registre et son annexe de fusion disent le même nom depuis le 2026-09-19 :
+  voir §5, point 3.
 - **Exigences porteuses.** **REQ-DM-034** (l'exception et sa trace), **REQ-DM-021** (la résolution qui ne
   devine pas), **REQ-GOV-030** (la garde).
 - **Garde.** Toute occurrence de l'expression dans `docs/`, `prisma/` ou `src/` cite `REQ-DM-034` sur la
@@ -280,11 +281,11 @@ dans le dépôt : la case reste ouverte, et le point est remonté en §5, il n'e
    n'apparaissent dans aucun fichier du dépôt **hormis l'acceptation elle-même**, et le document qui porte
    ces sections vit hors de ce dépôt public. La règle qui prime sur ces deux sections ne peut donc être
    nommée ni depuis le registre, ni depuis le dépôt.
-3. **Le motif d'un encaissement non résolu porte deux noms.** Le champ `texte` de REQ-DM-021 écrit
-   `siren_manquant`, motif **absent** de l'enum `MotifBlocage` de REQ-ARG-017 ;
-   `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` écrit `non_resolue` pour le même cas, valeur qui, elle, figure
-   bien à l'enum. Par la ligne 14 de la §2, c'est le champ `texte` du registre qui est appliqué — d'où la
-   rédaction de la §3.7. L'alignement des trois textes revient au `gardien-spec`.
+3. ~~**Le motif d'un encaissement non résolu porte deux noms.**~~ **Fait le 2026-09-19.** Le champ
+   `texte` de REQ-DM-021 écrivait `siren_manquant`, motif **absent** de l'enum `MotifBlocage` de
+   REQ-ARG-017, quand `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` écrit `non_resolue` pour le même cas. Sur
+   décision de Will, le texte décidé de l'annexe a été remis dans le registre : REQ-DM-021 écrit
+   `non_resolue`, valeur de l'enum, et la §3.7 le suit.
 4. **`MotifBlocage` n'a pas la même longueur selon le document.** REQ-ARG-017 arrête neuf valeurs et retire
    nommément `mandat_non_signe` ; `docs/GLOSSAIRE.md` §3 en liste quatorze, dont `mandat_non_signe`,
    `bareme_indefini`, `plafond`, `regime_tva_inattendu` et `ttc_manquant`. Par la ligne 6 de la §2,
