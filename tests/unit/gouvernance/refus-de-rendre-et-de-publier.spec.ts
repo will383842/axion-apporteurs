@@ -594,6 +594,16 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       temoins: 1,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE, mesurée par `mutation` au 12e tour.',
     },
+    'scripts/gates/journal-sans-pii.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'DM-01 — la charge du journal sans donnée personnelle. `process.exit(decision.code)` : sortie ' +
+        'TERMINALE à code variable, commune au mode normal et à `--prove`. La décision est une ' +
+        'fonction pure vue rendre 1 (`decider()`, journal-charge-fermee.spec.ts) et le binaire est vu ' +
+        'sortir en 0 sur le dépôt ; ⛔ aucun témoin d’EFFET du binaire en échec. Dette DÉCLARÉE.',
+    },
     'scripts/gates/lexique-apporteurs.ts': {
       total: 2,
       porte: 2,
@@ -862,17 +872,22 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 38 to be 37
     //
     // La sortie est vue en 1 puis en 0 sur un arbre jetable (maquettes-validees.spec.ts).
-    // 🔧 38 → 39 par QA-T07, ARBITRÉ et non subi. Sur sa première base (`87fb212`), la branche
-    // avait lu 37 → 38 en nommant `scripts/gates/semgrep.ts` (« ajoute 1 `process.exit(1)` et
-    // n’est PAS déclaré ici »). UX-P0-02 (#79) a atterri d'abord avec sa propre sortie et a pris
-    // le 38. Sur la fusion de `origin/main` = `5739147`, les deux déclarations présentes,
-    // l'identité passe et le COMPTE rougit — relu, pas deviné :
+    // 🔧 38 → 39 par DM-01, SECONDE à atterrir après UX-P0-02 (elle déclare la SOMME), ARBITRÉ et non subi : `scripts/gates/journal-sans-pii.ts` naît avec UNE
+    // sortie à code variable. Le cliquet a rougi en la nommant — relu, pas deviné :
     //
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 39 to be 38
+    //     scripts/gates/journal-sans-pii.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //
+    // 🔧 39 → 40 par QA-T07, TROISIÈME à atterrir après UX-P0-02 et DM-01, ARBITRÉ et non subi.
+    // Sur sa première base (`87fb212`), la branche avait lu 37 → 38 en nommant
+    // `scripts/gates/semgrep.ts` (« ajoute 1 `process.exit(1)` et n’est PAS déclaré ici ») ; sur la
+    // fusion de `5739147` (UX-P0-02 avait pris le 38), 38 → 39 ; sur la fusion de `fd41c0d` (DM-01
+    // avait pris le 39), les trois déclarations présentes, l'identité passe et le COMPTE rougit :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 40 to be 39
     //
     // La sortie `process.exit(verdict.code)` est vue en 1 puis en 0 sur le binaire
     // (semgrep-regles-maison.spec.ts).
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(39);
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(40);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -1931,6 +1946,9 @@ const GARDES_QUI_BALAIENT = [
   // GOV-030 (`partners/ADR-0011`) — `partners:schema:enums` lit sa portée dans les fichiers SUIVIS,
   // quelle que soit leur extension.
   'scripts/gates/schema-enums.ts',
+  // DM-01 — `journal:sans-pii` cherche un second écrivain de la table `evenements` dans les fichiers
+  // SUIVIS sous `src/` et `scripts/`.
+  'scripts/gates/journal-sans-pii.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {

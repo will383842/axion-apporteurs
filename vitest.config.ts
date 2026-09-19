@@ -22,8 +22,13 @@ export default defineConfig({
       // (`tests/gov/regles-maison.spec.ts`) et `docs/tasks.json` (quatre REQ de GOV-007 sur
       // `tests/gov/charte-pr.spec.ts`). Sans cette ligne les deux existent sans jamais tourner.
       'tests/gov/**/*.{test,spec}.{ts,tsx}',
+      // Les tests en base réelle tournent DANS `pnpm test` : `gov:trace` lit include/exclude de CE fichier,
+      // et un spec exclu y vaut « non exécuté ». Conséquence assumée : la suite exige le démon Docker
+      // (partners/ADR-0015, décision 7 ; partners/ADR-0001). ⚠️ AUCUNE APOSTROPHE dans ce bloc :
+      // `gates:prouvees` lit les motifs entre guillemets simples, et une apostrophe y ouvre un faux motif.
+      'tests/integration/**/*.{test,spec}.{ts,tsx}',
     ],
-    exclude: ['node_modules', '.next', 'tests/e2e/**', 'tests/integration/**'],
+    exclude: ['node_modules', '.next', 'tests/e2e/**'],
     // QA-T01 : chargé avant chaque fichier de test. Minimal — voir son en-tête.
     setupFiles: ['tests/setup.ts'],
 

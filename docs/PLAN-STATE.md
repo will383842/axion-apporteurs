@@ -163,7 +163,7 @@ Les etiquettes de panne du brief tombent sous `gov:identifiants` (lettre et chif
 
 **Appris.** Prettier coupe les balises fermantes d'un HTML long (`</a` puis `>` à la ligne suivante). Une spec qui cherche `</label>` en texte exact ne trouve jamais la fermante, et juge alors « étiqueté » tout champ placé après une étiquette. Le témoin était trop indulgent sans rougir. Et le composeur lisait l'avant-dernière cellule du tableau, « Par », sous un commentaire qui disait « Validé le ».
 
-… 27 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 28 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
