@@ -23,8 +23,9 @@ export const SAUTS_DE_CONFIANCE = 1;
 
 export function adresseDuClient(entetes: Headers, sautsDeConfiance: number): string | null {
   const brut = entetes.get('x-forwarded-for');
-  if (brut === null || !Number.isInteger(sautsDeConfiance) || sautsDeConfiance < 1) return null;
+  if (brut === null) return null;
   const elements = brut.split(',').map((e) => e.trim());
+  // Des sauts nuls, négatifs ou fractionnaires tombent hors du tableau : `undefined`, donc `null`.
   const candidat = elements[elements.length - sautsDeConfiance];
   if (candidat === undefined || isIP(candidat) === 0) return null;
   return candidat;

@@ -6,8 +6,8 @@
  * CE QUE CHAQUE BLOC JUGE, ET PAR QUEL ACTE.
  *   — REQ-SEC-016 : le registre porte les valeurs des exigences ; chaque compteur, exécuté contre
  *     un cache qui LÈVE, rend sa conduite déclarée et se dit en panne ; une panne réelle (port
- *     fermé, serveur muet) rend son verdict sous la seconde, et les options par défaut du client
- *     ne le font pas ; le sujet d'un compteur est une empreinte ; l'adresse du client se lit depuis
+ *     fermé, serveur muet, adresse injoignable) rend son verdict sous la seconde, et les options
+ *     par défaut du client ne le font pas ; le sujet d'un compteur est une empreinte ; l'adresse du client se lit depuis
  *     la DROITE ; la garde rougit sur chacune de ses familles en NOMMANT le préfixe, et le binaire
  *     sort en non nul sur une copie de travail fautive, en 0 sur le dépôt.
  *   — REQ-SEC-035 : sur un parcours de bac, le chemin piège et le chemin nominal rendent la même
@@ -16,7 +16,8 @@
  *
  * CE QUI N'EST PAS PROUVÉ ICI. Le script du cache sur un serveur réel (atomicité sous concurrence,
  * aucun marqueur ajouté au refus) : le magasin en mémoire ci-dessous rejoue l'ALGORITHME, pas le
- * script. La preuve sur un cache réel vit dans une spécification d'intégration.
+ * script. Sa preuve sur un cache réel appartient à une spécification d'intégration, qui n'existe
+ * pas encore : c'est une dette déclarée, pas une couverture.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { spawnSync } from 'node:child_process';
@@ -368,6 +369,17 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       }
     });
 
+    it('REQ-SEC-016 — adresse injoignable (réseau de documentation) : verdict sous la seconde', async () => {
+      const m = creerMagasinRedis('redis://192.0.2.1:6379', OPTIONS_DU_CLIENT);
+      aFermer.push(m);
+      const v = await sousLeDelai(
+        limiter('magic:ip', SUJET, 0, m, () => undefined),
+        1_000
+      );
+      expect(v, 'la connexion injoignable a SUSPENDU la requête').not.toBe(SUSPENDU);
+      expect(v).toMatchObject({ autorise: false, panne: true, motif: 'cache_indisponible' });
+    });
+
     it('REQ-SEC-016 — CONTRE-TÉMOIN : avec les options par défaut du client, le port fermé SUSPEND la requête', async () => {
       const m = creerMagasinRedis(`redis://127.0.0.1:${await portFerme()}`, {});
       aFermer.push(m);
@@ -469,6 +481,8 @@ describe('REQ-SEC-016 — l’adresse du client se lit depuis la DROITE de X-For
     ['adresse illisible', 'not-an-ip', 1],
     ['chaîne trop courte', '192.0.2.10', 2],
     ['sauts nuls', '192.0.2.10', 0],
+    ['sauts négatifs', '192.0.2.10', -1],
+    ['sauts fractionnaires', '198.51.100.9, 192.0.2.10', 1.5],
   ] as const)('REQ-SEC-016 — %s ⇒ null, jamais un seau commun', (_cas, xff, sauts) => {
     expect(adresseDuClient(avec(xff), sauts)).toBeNull();
   });
@@ -553,6 +567,24 @@ describe('REQ-SEC-016 — la garde de famille', () => {
     });
     expect(r.appelsVus).toBe((await analyser(base)).appelsVus + 1);
     expect(r.fautes.map((f) => f.famille)).toEqual(['nom_dynamique']);
+  });
+
+  it('REQ-SEC-016 — un `.tsx` est lu comme du TSX : un appel dans le JSX, après une apostrophe, est VU', async () => {
+    const r = await analyser({
+      ...base,
+      fichiers: [
+        ...base.fichiers,
+        {
+          chemin: 'src/app/c.tsx',
+          texte:
+            "import { limiter } from '../server/securite/rate-limit';\n" +
+            "export const C = (n: string, s: any) => <p>l'essai {limiter(n, s, 0)}</p>;\n",
+        },
+      ],
+    });
+    expect(r.fautes.map((f) => [f.famille, f.message.split(' — ')[0]])).toEqual([
+      ['nom_dynamique', 'src/app/c.tsx:2'],
+    ]);
   });
 
   it('REQ-SEC-016 — préfixe hors registre dans un gabarit, et en majuscules', async () => {
