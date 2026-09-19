@@ -3569,7 +3569,7 @@
         "tests/unit/domaine/seuil-prioritaire.spec.ts",
         "src/lib/horloge.ts",
         "tests/setup.ts",
-        "docs/adr/0015-temps-paris-jours-ouvres.md"
+        "docs/adr/0014-temps-paris-jours-ouvres.md"
       ],
       "schema": false,
       "sensible": [],
