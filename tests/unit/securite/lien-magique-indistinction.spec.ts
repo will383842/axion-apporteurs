@@ -96,7 +96,8 @@ interface Options {
 
 function univers(o: Options = {}) {
   const horloge = { t: o.instant ?? Date.UTC(2026, 8, 19, 8, 0, 0) };
-  const comptes = [...(o.comptes ?? [])];
+  // Copie PROFONDE : un test qui change un statut ne doit pas le changer pour les suivants.
+  const comptes = (o.comptes ?? []).map((c) => ({ ...c }));
   const trace: string[] = [];
   const differe: Array<() => Promise<void>> = [];
   const liens: LigneLien[] = [];
@@ -290,7 +291,11 @@ function premierEcart(a: { etat: string; trace: string[] }, b: { etat: string; t
   return lu === undefined ? null : `le compte est lu avant la réponse : ${lu}`;
 }
 
-const MARIE: Compte = { id: 'apporteur-marie', courriel: 'marie@example.org', statut: 'signe' };
+const MARIE: Readonly<Compte> = Object.freeze({
+  id: 'apporteur-marie',
+  courriel: 'marie@example.org',
+  statut: 'signe',
+});
 
 /** Un univers où le compte existe, un où il n'existe pas ; même saisie, même instant. */
 async function deuxUnivers(demandeur: Demandeur, saisie: string, o: Options = {}) {
@@ -593,6 +598,8 @@ describe('REQ-SEC-001 — la consommation : unique, atomique, bornée à 15 minu
     (resilie.comptes[0] as Compte).statut = 'resilie';
     const inconnu = univers({ comptes: [MARIE] });
     await emettrePourMarie(inconnu);
+    // Seul le `kid` distingue ce lien d'un lien valide : le statut est intact.
+    expect(kid.comptes[0]?.statut).toBe('signe');
 
     const r = [
       await consommerLien({ jeton: jetonKid, adresseHash: null }, kid.consommation),
@@ -609,6 +616,8 @@ describe('REQ-SEC-001 — la consommation : unique, atomique, bornée à 15 minu
   it('REQ-SEC-001 : un jeton hors format est refusé sans aucun appel au dépôt', async () => {
     const u = univers({ comptes: [MARIE] });
     const jeton = await emettrePourMarie(u);
+    // Plancher : un jeton vide rendrait chaque variante « hors format » par construction.
+    expect(jeton).toMatch(/^[A-Za-z0-9_-]{43}$/);
     for (const hors of [
       '',
       `${jeton}A`,
