@@ -1,0 +1,744 @@
+// @req REQ-SEC-016
+// @req REQ-SEC-035
+/**
+ * SEC-10 — les compteurs de débit, leur garde de famille, le pot de miel observable.
+ *
+ * CE QUE CHAQUE BLOC JUGE, ET PAR QUEL ACTE.
+ *   — REQ-SEC-016 : le registre porte les valeurs des exigences ; chaque compteur, exécuté contre
+ *     un cache qui LÈVE, rend sa conduite déclarée et se dit en panne ; une panne réelle (port
+ *     fermé, serveur muet) rend son verdict sous la seconde, et les options par défaut du client
+ *     ne le font pas ; le sujet d'un compteur est une empreinte ; l'adresse du client se lit depuis
+ *     la DROITE ; la garde rougit sur chacune de ses familles en NOMMANT le préfixe, et le binaire
+ *     sort en non nul sur une copie de travail fautive, en 0 sur le dépôt.
+ *   — REQ-SEC-035 : sur un parcours de bac, le chemin piège et le chemin nominal rendent la même
+ *     réponse au même instant ; le piège n'écrit aucune ligne, n'accuse rien, et son signalement
+ *     ne porte pas la valeur saisie.
+ *
+ * CE QUI N'EST PAS PROUVÉ ICI. Le script du cache sur un serveur réel (atomicité sous concurrence,
+ * aucun marqueur ajouté au refus) : le magasin en mémoire ci-dessous rejoue l'ALGORITHME, pas le
+ * script. La preuve sur un cache réel vit dans une spécification d'intégration.
+ */
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { createServer, type AddressInfo, type Server, type Socket } from 'node:net';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { randomBytes } from 'node:crypto';
+import {
+  COMPTEURS,
+  CONDUITES_SUR_PANNE,
+  LIMITE_HORS_DEPOT,
+  OPTIONS_DU_CLIENT,
+  PREFIXES_DE_FAMILLE,
+  conduiteSurPanne,
+  creerMagasinRedis,
+  limiter,
+  sujetDepuisEmpreinte,
+  type MagasinDeCompteurs,
+  type NomDeCompteur,
+  type SignalDePanne,
+  type SujetDeCompteur,
+  type VerdictDeLimite,
+} from '../../../src/server/securite/rate-limit';
+import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../../../src/server/securite/adresse-du-client';
+import {
+  accuserSiLaLigneExiste,
+  evaluerPotDeMiel,
+  executerAuPlancher,
+  signalerPotDeMiel,
+  type SignalDePotDeMiel,
+} from '../../../src/server/securite/pot-de-miel';
+import {
+  CONTRE_TEMOINS,
+  FAMILLES,
+  TEMOINS,
+  analyser,
+  cacheQuiLeve,
+  universDuDepot,
+  type Univers,
+} from '../../../scripts/gates/rate-famille';
+
+const NOMS = Object.keys(COMPTEURS) as NomDeCompteur[];
+const SUJET = sujetDepuisEmpreinte('0123456789abcdef');
+
+// ── Aides ───────────────────────────────────────────────────────────────────────────────────────
+
+/** L'algorithme du script du cache, rejoué en mémoire : POUR LES TESTS seulement. */
+function magasinEnMemoire(): MagasinDeCompteurs & { cles: string[] } {
+  const journaux = new Map<string, { score: number; membre: string }[]>();
+  const cles: string[] = [];
+  return {
+    cles,
+    async consommer(cle, maintenantMs, fenetreMs, limite, membre) {
+      cles.push(cle);
+      const vivants = (journaux.get(cle) ?? []).filter((e) => e.score > maintenantMs - fenetreMs);
+      const admis = vivants.length < limite;
+      if (admis) vivants.push({ score: maintenantMs, membre });
+      journaux.set(cle, vivants);
+      const plusAncien = vivants.reduce<number | null>(
+        (m, e) => (m === null || e.score < m ? e.score : m),
+        null
+      );
+      return { admis, compte: vivants.length, plusAncienMs: plusAncien };
+    },
+  };
+}
+
+function capteur(): { signaux: SignalDePanne[]; signaler: (s: SignalDePanne) => void } {
+  const signaux: SignalDePanne[] = [];
+  return { signaux, signaler: (s) => signaux.push(s) };
+}
+
+/** Un port où personne n'écoute : on l'ouvre, on lit son numéro, on le referme. */
+async function portFerme(): Promise<number> {
+  const s = createServer();
+  await new Promise<void>((r) => s.listen(0, '127.0.0.1', r));
+  const { port } = s.address() as AddressInfo;
+  await new Promise<void>((r) => s.close(() => r()));
+  return port;
+}
+
+/** Un serveur qui accepte la connexion et ne répond jamais : le cache vivant mais muet. */
+async function serveurMuet(): Promise<{ port: number; fermer: () => Promise<void> }> {
+  const sockets: Socket[] = [];
+  const s: Server = createServer((c) => sockets.push(c));
+  await new Promise<void>((r) => s.listen(0, '127.0.0.1', r));
+  const { port } = s.address() as AddressInfo;
+  return {
+    port,
+    fermer: async () => {
+      sockets.forEach((c) => c.destroy());
+      await new Promise<void>((r) => s.close(() => r()));
+    },
+  };
+}
+
+const SUSPENDU = Symbol('suspendu');
+
+/** Le verdict, ou `SUSPENDU` s'il n'est pas venu dans le délai. */
+async function sousLeDelai<T>(p: Promise<T>, ms: number): Promise<T | typeof SUSPENDU> {
+  let minuterie: NodeJS.Timeout | undefined;
+  const delai = new Promise<typeof SUSPENDU>((r) => {
+    minuterie = setTimeout(() => r(SUSPENDU), ms);
+  });
+  try {
+    return await Promise.race([p, delai]);
+  } finally {
+    clearTimeout(minuterie);
+  }
+}
+
+/** Le binaire de la garde, lancé dans `racine` : son code et sa sortie. */
+function lancerLaGarde(racine: string, ...args: string[]): { code: number | null; sortie: string } {
+  const cli = join(realpathSync('node_modules'), 'tsx', 'dist', 'cli.mjs');
+  const r = spawnSync(process.execPath, [cli, 'scripts/gates/rate-famille.ts', ...args], {
+    cwd: racine,
+    encoding: 'utf8',
+  });
+  return { code: r.status, sortie: `${r.stdout ?? ''}${r.stderr ?? ''}` };
+}
+
+/**
+ * Une COPIE DE TRAVAIL jetable : `src/`, la garde, et un lien vers le `node_modules` réel. Le lien
+ * est défait SEUL avant l'effacement : l'effacement ne descend jamais dans le `node_modules` réel.
+ */
+function garderUneCopie(muter: (registre: string) => string): { code: number | null; sortie: string } {
+  const racine = mkdtempSync(join(tmpdir(), 'rf-'));
+  const lien = join(racine, 'node_modules');
+  try {
+    cpSync('src', join(racine, 'src'), { recursive: true });
+    mkdirSync(join(racine, 'scripts', 'gates'), { recursive: true });
+    cpSync('scripts/gates/rate-famille.ts', join(racine, 'scripts/gates/rate-famille.ts'));
+    writeFileSync(join(racine, 'package.json'), readFileSync('package.json', 'utf8'));
+    const registre = join(racine, 'src/server/securite/rate-limit.ts');
+    const avant = readFileSync(registre, 'utf8');
+    const apres = muter(avant);
+    expect(apres, 'la mutation n’a rien changé : le témoin ne témoigne de rien').not.toBe(avant);
+    mkdirSync(dirname(registre), { recursive: true });
+    writeFileSync(registre, apres);
+    symlinkSync(realpathSync('node_modules'), lien, 'junction');
+    return lancerLaGarde(racine);
+  } finally {
+    try {
+      unlinkSync(lien);
+    } catch {
+      // Le lien n'a pas été posé : rien à défaire.
+    }
+    rmSync(racine, { recursive: true, force: true });
+  }
+}
+
+/** Une substitution UNIQUE et effective : sinon le témoin ne témoigne de rien. */
+function substituer(texte: string, avant: string, apres: string): string {
+  expect(texte.split(avant).length - 1, `« ${avant} » doit figurer une fois`).toBe(1);
+  return texte.replace(avant, apres);
+}
+
+// ── REQ-SEC-016 : le registre ───────────────────────────────────────────────────────────────────
+
+describe('REQ-SEC-016 — le registre des compteurs', () => {
+  it('REQ-SEC-016 — chaque compteur vit sous l’un des cinq préfixes et déclare sa conduite sur panne', () => {
+    expect(NOMS.length).toBeGreaterThan(0);
+    expect([...PREFIXES_DE_FAMILLE]).toEqual(['magic:', 'depot:', 'verif:', 'webhook:', 'auth:']);
+    for (const nom of NOMS) {
+      const d = COMPTEURS[nom];
+      expect(nom.startsWith(d.prefixe), nom).toBe(true);
+      expect(CONDUITES_SUR_PANNE, nom).toContain(d.surPanne);
+      expect(d.source, nom).toMatch(/^REQ-[A-Z]+-\d{3}$/);
+    }
+  });
+
+  it('REQ-SEC-016 — le dépôt : 20 / 10 min par empreinte d’adresse en `laisser-passer`, l’identité en `refuser`', () => {
+    expect(COMPTEURS['depot:ip']).toMatchObject({
+      prefixe: 'depot:',
+      limite: 20,
+      fenetreSecondes: 600,
+      surPanne: 'laisser-passer',
+      source: 'REQ-SEC-016',
+    });
+    expect(COMPTEURS['depot:identite']).toMatchObject({ prefixe: 'depot:', surPanne: 'refuser' });
+  });
+
+  it('REQ-SEC-016 — une conduite absente, glissée par un cast, se lit REFUSER à l’exécution', () => {
+    expect(conduiteSurPanne({})).toBe('refuser');
+    expect(conduiteSurPanne({ surPanne: 'laisser passer' })).toBe('refuser');
+    expect(conduiteSurPanne({ surPanne: 'laisser-passer' })).toBe('laisser-passer');
+  });
+});
+
+// ── REQ-SEC-016 : le verdict, nominal ───────────────────────────────────────────────────────────
+
+describe('REQ-SEC-016 — le verdict d’un compteur sain', () => {
+  it('REQ-SEC-016 — la limite est exacte, un refus n’ajoute rien, la fenêtre glisse', async () => {
+    const m = magasinEnMemoire();
+    const verdicts: VerdictDeLimite[] = [];
+    for (let i = 0; i < 6; i++) verdicts.push(await limiter('magic:courriel', SUJET, 1_000 + i, m));
+    expect(verdicts.slice(0, 5).map((v) => v.autorise)).toEqual([true, true, true, true, true]);
+    expect(verdicts.map((v) => v.restant)).toEqual([4, 3, 2, 1, 0, 0]);
+    expect(verdicts[5]).toEqual({
+      autorise: false,
+      restant: 0,
+      repriseAt: 1_000 + 900_000,
+      panne: false,
+      motif: 'limite_atteinte',
+    });
+    // Le refus n'a rien ajouté : à la sortie du PREMIER marqueur, une place, et une seule.
+    const apres = 1_000 + 900_000;
+    expect((await limiter('magic:courriel', SUJET, apres, m)).autorise).toBe(true);
+    expect((await limiter('magic:courriel', SUJET, apres, m)).autorise).toBe(false);
+  });
+
+  it('REQ-SEC-016 — la clé est `${nom}:${empreinte}`, rien d’autre', async () => {
+    const m = magasinEnMemoire();
+    await limiter('depot:ip', SUJET, 0, m);
+    expect(m.cles).toEqual([`depot:ip:${SUJET}`]);
+  });
+});
+
+// ── REQ-SEC-016 : la panne ──────────────────────────────────────────────────────────────────────
+
+describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se dit', () => {
+  it('REQ-SEC-016 — contre un cache qui LÈVE, chaque compteur rend sa conduite, `panne: true`', async () => {
+    const cache = cacheQuiLeve();
+    const { signaux, signaler } = capteur();
+    const constates: string[] = [];
+    for (const nom of NOMS) {
+      const v = await limiter(nom, SUJET, 0, cache, signaler);
+      const d = COMPTEURS[nom];
+      expect(v.panne, nom).toBe(true);
+      expect(v.autorise, nom).toBe(d.surPanne === 'laisser-passer');
+      expect(v.motif, nom).toBe(
+        d.limite === LIMITE_HORS_DEPOT ? 'limite_non_configuree' : 'cache_indisponible'
+      );
+      constates.push(nom);
+    }
+    expect(constates).toEqual(NOMS);
+    // Le cache a été ATTEINT par chaque compteur dont la limite est écrite : pas un vert à vide.
+    const chiffres = NOMS.filter((n) => COMPTEURS[n].limite !== LIMITE_HORS_DEPOT);
+    expect(chiffres.length).toBeGreaterThan(0);
+    expect(cache.appels()).toBe(chiffres.length);
+    expect(signaux.map((s) => s.prefixe)).toEqual(NOMS.map((n) => COMPTEURS[n].prefixe));
+  });
+
+  it('REQ-SEC-016 — le cache tombe AU MILIEU d’une rafale : les admis restent admis, la suite suit la conduite', async () => {
+    const sain = magasinEnMemoire();
+    let tombe = false;
+    const cache: MagasinDeCompteurs = {
+      consommer: (...a) => (tombe ? Promise.reject(new Error('coupé')) : sain.consommer(...a)),
+    };
+    const avant = await limiter('magic:ip', SUJET, 0, cache, () => undefined);
+    tombe = true;
+    const pendant = await limiter('magic:ip', SUJET, 1, cache, () => undefined);
+    const depot = await limiter('depot:ip', SUJET, 1, cache, () => undefined);
+    expect([avant.autorise, avant.panne]).toEqual([true, false]);
+    expect([pendant.autorise, pendant.panne, pendant.motif]).toEqual([
+      false,
+      true,
+      'cache_indisponible',
+    ]);
+    expect([depot.autorise, depot.panne]).toEqual([true, true]);
+  });
+
+  it('REQ-SEC-016 — la panne est signalée sur la sortie d’erreur par son PRÉFIXE seul, jamais la clé', async () => {
+    const ecrit: string[] = [];
+    const espion = vi.spyOn(process.stderr, 'write').mockImplementation((l) => {
+      ecrit.push(String(l));
+      return true;
+    });
+    try {
+      await limiter('magic:courriel', SUJET, 0, cacheQuiLeve());
+    } finally {
+      espion.mockRestore();
+    }
+    expect(ecrit).toHaveLength(1);
+    expect(JSON.parse(ecrit[0]!)).toEqual({
+      evenement: 'rate_limit_panne',
+      prefixe: 'magic:',
+      motif: 'cache_indisponible',
+    });
+    expect(ecrit[0]).not.toContain(SUJET);
+  });
+
+  it('REQ-SEC-016 — `depot:identite` sans configuration : refus, `panne: true`, `limite_non_configuree`, cache non atteint', async () => {
+    const cache = cacheQuiLeve();
+    const { signaux, signaler } = capteur();
+    const v = await limiter('depot:identite', SUJET, 0, cache, signaler);
+    expect(v).toEqual({
+      autorise: false,
+      restant: 0,
+      repriseAt: null,
+      panne: true,
+      motif: 'limite_non_configuree',
+    });
+    expect(cache.appels()).toBe(0);
+    expect(signaux).toEqual([{ prefixe: 'depot:', motif: 'limite_non_configuree' }]);
+  });
+
+  describe('REQ-SEC-016 — une panne réelle est RAPIDE', () => {
+    const aFermer: { fermer: () => void }[] = [];
+    afterEach(() => {
+      aFermer.splice(0).forEach((m) => m.fermer());
+    });
+
+    it('REQ-SEC-016 — port fermé : verdict sous la seconde, deux fois de suite, conduite déclarée', async () => {
+      const m = creerMagasinRedis(`redis://127.0.0.1:${await portFerme()}`, OPTIONS_DU_CLIENT);
+      aFermer.push(m);
+      for (const essai of [1, 2]) {
+        const debut = performance.now();
+        const v = await sousLeDelai(limiter('magic:ip', SUJET, 0, m, () => undefined), 1_000);
+        expect(v, `essai ${essai} : aucun verdict sous la seconde`).not.toBe(SUSPENDU);
+        expect(performance.now() - debut).toBeLessThan(1_000);
+        expect(v).toMatchObject({ autorise: false, panne: true, motif: 'cache_indisponible' });
+      }
+    });
+
+    it('REQ-SEC-016 — serveur qui accepte et se tait : verdict sous la seconde', async () => {
+      const muet = await serveurMuet();
+      const m = creerMagasinRedis(`redis://127.0.0.1:${muet.port}`, OPTIONS_DU_CLIENT);
+      try {
+        const v = await sousLeDelai(limiter('depot:ip', SUJET, 0, m, () => undefined), 1_000);
+        expect(v, 'le cache muet a SUSPENDU la requête').not.toBe(SUSPENDU);
+        expect(v).toMatchObject({ autorise: true, panne: true, motif: 'cache_indisponible' });
+      } finally {
+        m.fermer();
+        await muet.fermer();
+      }
+    });
+
+    it('REQ-SEC-016 — CONTRE-TÉMOIN : avec les options par défaut du client, le port fermé SUSPEND la requête', async () => {
+      const m = creerMagasinRedis(`redis://127.0.0.1:${await portFerme()}`, {});
+      aFermer.push(m);
+      const v = await sousLeDelai(limiter('magic:ip', SUJET, 0, m, () => undefined), 1_000);
+      expect(v, 'le témoin de délai ne distingue plus les options : il ne mesure rien').toBe(
+        SUSPENDU
+      );
+    });
+  });
+
+  it('REQ-SEC-016 — `REDIS_URL` absente : panne sous la conduite, jamais un plantage', async () => {
+    vi.stubEnv('REDIS_URL', '');
+    try {
+      const { signaler } = capteur();
+      expect(await limiter('magic:ip', SUJET, 0, undefined, signaler)).toMatchObject({
+        autorise: false,
+        panne: true,
+      });
+      expect(await limiter('depot:ip', SUJET, 0, undefined, signaler)).toMatchObject({
+        autorise: true,
+        panne: true,
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('REQ-SEC-016 — `REDIS_URL` est lue au PREMIER appel, pas à l’import', async () => {
+    vi.stubEnv('REDIS_URL', `redis://127.0.0.1:${await portFerme()}`);
+    try {
+      const v = await sousLeDelai(limiter('magic:ip', SUJET, 0, undefined, () => undefined), 1_000);
+      expect(v).toMatchObject({ autorise: false, panne: true, motif: 'cache_indisponible' });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
+// ── REQ-SEC-016 : le sujet est une empreinte ────────────────────────────────────────────────────
+
+describe('REQ-SEC-016 — le sujet d’un compteur est une empreinte, jamais une valeur', () => {
+  it.each(['a@example.org', '192.0.2.7', '2001:db8::7', '0123456789ABCDEF', '0123456789abcde', ''])(
+    'REQ-SEC-016 — « %s » est refusé, et le refus ne recopie pas la valeur',
+    (valeur) => {
+      let message = '';
+      try {
+        sujetDepuisEmpreinte(valeur);
+      } catch (e) {
+        message = (e as Error).message;
+      }
+      expect(message).toMatch(/^sujet_non_empreinte/);
+      if (valeur !== '') expect(message).not.toContain(valeur);
+    }
+  );
+
+  it('REQ-SEC-016 — 16 et 64 hexadécimaux minuscules sont admis', () => {
+    expect(sujetDepuisEmpreinte('0123456789abcdef')).toBe('0123456789abcdef');
+    expect(sujetDepuisEmpreinte('f'.repeat(64))).toBe('f'.repeat(64));
+  });
+
+  it('REQ-SEC-016 — un courriel glissé par un cast n’atteint jamais le cache', async () => {
+    const m = magasinEnMemoire();
+    await expect(
+      limiter('magic:courriel', 'a@example.org' as SujetDeCompteur, 0, m)
+    ).rejects.toThrow(/^sujet_non_empreinte/);
+    expect(m.cles).toEqual([]);
+  });
+});
+
+// ── REQ-SEC-016 : l'adresse du client ───────────────────────────────────────────────────────────
+
+describe('REQ-SEC-016 — l’adresse du client se lit depuis la DROITE de X-Forwarded-For', () => {
+  const avec = (xff: string | null) => new Headers(xff === null ? {} : { 'x-forwarded-for': xff });
+
+  it('REQ-SEC-016 — un élément forgé à GAUCHE ne choisit pas l’adresse', () => {
+    expect(SAUTS_DE_CONFIANCE).toBe(1);
+    expect(adresseDuClient(avec('198.51.100.9, 192.0.2.10'), SAUTS_DE_CONFIANCE)).toBe(
+      '192.0.2.10'
+    );
+    expect(adresseDuClient(avec('198.51.100.9, 198.51.100.8, 2001:db8::1'), 1)).toBe('2001:db8::1');
+    expect(adresseDuClient(avec('198.51.100.9, 192.0.2.10, 192.0.2.11'), 2)).toBe('192.0.2.10');
+  });
+
+  it('REQ-SEC-016 — X-Real-IP n’est jamais lu', () => {
+    const h = new Headers({ 'x-real-ip': '198.51.100.9', 'x-forwarded-for': '192.0.2.10' });
+    expect(adresseDuClient(h, 1)).toBe('192.0.2.10');
+    expect(adresseDuClient(new Headers({ 'x-real-ip': '198.51.100.9' }), 1)).toBeNull();
+  });
+
+  it.each([
+    ['en-tête absent', null, 1],
+    ['en-tête vide', '', 1],
+    ['adresse illisible', 'not-an-ip', 1],
+    ['chaîne trop courte', '192.0.2.10', 2],
+    ['sauts nuls', '192.0.2.10', 0],
+  ] as const)('REQ-SEC-016 — %s ⇒ null, jamais un seau commun', (_cas, xff, sauts) => {
+    expect(adresseDuClient(avec(xff), sauts)).toBeNull();
+  });
+});
+
+// ── REQ-SEC-016 : la garde ──────────────────────────────────────────────────────────────────────
+
+describe('REQ-SEC-016 — la garde de famille', () => {
+  const base = universDuDepot();
+
+  it('REQ-SEC-016 — le dépôt est vert, et le vert dit ce qu’il a confronté', async () => {
+    const r = await analyser(base);
+    expect(r.fautes).toEqual([]);
+    expect(r.confrontes).toHaveLength(NOMS.length);
+    expect(r.fichiersLus).toBeGreaterThan(0);
+  });
+
+  it('REQ-SEC-016 — `magic:courriel` sans `surPanne` (cast) : `conduite_absente`, le préfixe nommé', async () => {
+    const t = TEMOINS.find((x) => x.famille === 'conduite_absente')!;
+    const r = await analyser(t.univers(base));
+    const f = r.fautes.filter((x) => x.famille === 'conduite_absente');
+    expect(f).toHaveLength(1);
+    expect(f[0]!.message).toContain('`magic:`');
+    expect(f[0]!.message).toContain('magic:courriel');
+  });
+
+  it('REQ-SEC-016 — une implémentation qui laisse tout passer : `conduite_trahie` sur les compteurs du MILIEU', async () => {
+    const t = TEMOINS.find((x) => x.famille === 'conduite_trahie')!;
+    const r = await analyser(t.univers(base));
+    const trahis = r.fautes.filter((x) => x.famille === 'conduite_trahie').map((x) => x.message);
+    expect(trahis.some((m) => m.includes('`magic:ip`'))).toBe(true);
+    expect(trahis.some((m) => m.includes('`magic:courriel`'))).toBe(true);
+    expect(trahis.some((m) => m.includes('`depot:ip`'))).toBe(false);
+  });
+
+  it('REQ-SEC-016 — un verdict qui ne se dit pas en panne est une conduite trahie', async () => {
+    const u: Univers = {
+      ...base,
+      executer: async (nom) => ({ ...(await base.executer(nom)), panne: false }),
+    };
+    const r = await analyser(u);
+    expect(r.fautes.filter((x) => x.famille === 'conduite_trahie')).toHaveLength(NOMS.length);
+  });
+
+  it.each(TEMOINS.map((t) => [t.famille, t] as const))(
+    'REQ-SEC-016 — témoin de `%s` : la famille rougit et nomme sa cible',
+    async (famille, t) => {
+      const r = await analyser(t.univers(base));
+      const siennes = r.fautes.filter((f) => f.famille === famille);
+      expect(siennes.length).toBeGreaterThan(0);
+      for (const m of t.nomme) expect(siennes.some((f) => f.message.includes(m)), m).toBe(true);
+    }
+  );
+
+  it('REQ-SEC-016 — chaque famille a son témoin', () => {
+    expect(new Set(TEMOINS.map((t) => t.famille))).toEqual(new Set(FAMILLES));
+  });
+
+  it.each(CONTRE_TEMOINS.map((c) => [c.libelle, c] as const))(
+    'REQ-SEC-016 — CONTRE-TÉMOIN : %s reste vert',
+    async (_l, c) => {
+      const r = await analyser({ ...base, fichiers: [...base.fichiers, c.fichier] });
+      expect(r.fautes).toEqual([]);
+    }
+  );
+
+  it('REQ-SEC-016 — un appel sur deux lignes est VU, et un import renommé est refusé', async () => {
+    const r = await analyser({
+      ...base,
+      fichiers: [
+        ...base.fichiers,
+        CONTRE_TEMOINS[0]!.fichier,
+        {
+          chemin: 'src/server/alias.ts',
+          texte: "import { limiter as l } from './securite/rate-limit';\nexport const g = l;\n",
+        },
+      ],
+    });
+    expect(r.appelsVus).toBe((await analyser(base)).appelsVus + 1);
+    expect(r.fautes.map((f) => f.famille)).toEqual(['nom_dynamique']);
+  });
+
+  it('REQ-SEC-016 — préfixe hors registre dans un gabarit, et en majuscules', async () => {
+    const r = await analyser({
+      ...base,
+      fichiers: [
+        ...base.fichiers,
+        { chemin: 'src/a.ts', texte: 'export const k = (x: string) => `verif:${x}`;\n' },
+        { chemin: 'src/b.tsx', texte: "export const K = () => <i>{'WEBHOOK:x'}</i>;\n" },
+      ],
+    });
+    expect(r.fautes.map((f) => f.message.split(' — ')[0])).toEqual(['src/a.ts:1', 'src/b.tsx:1']);
+  });
+
+  it('REQ-SEC-016 — TÉMOIN D’EFFET : une copie de travail sans conduite sur panne fait sortir la garde en non nul, préfixe nommé', () => {
+    const r = garderUneCopie((t) =>
+      substituer(
+        t,
+        "    limite: 5,\n    fenetreSecondes: 900,\n    surPanne: 'refuser',\n",
+        '    limite: 5,\n    fenetreSecondes: 900,\n'
+      )
+    );
+    expect(r.code, r.sortie).toBe(1);
+    expect(r.sortie).toContain('conduite_absente');
+    expect(r.sortie).toContain('préfixe `magic:`');
+  });
+
+  it('REQ-SEC-016 — TÉMOIN D’EFFET : une copie de travail qui laisse passer en panne fait sortir la garde en non nul, préfixe nommé', () => {
+    const r = garderUneCopie((t) =>
+      substituer(
+        t,
+        "return declaration.surPanne === 'laisser-passer' ? 'laisser-passer' : 'refuser';",
+        "return 'laisser-passer';"
+      )
+    );
+    expect(r.code, r.sortie).toBe(1);
+    expect(r.sortie).toContain('conduite_trahie');
+    expect(r.sortie).toContain('préfixe `magic:`');
+  });
+
+  it('REQ-SEC-016 — le dépôt fait sortir la garde en 0, et le vert imprime les compteurs confrontés', () => {
+    const r = lancerLaGarde(process.cwd());
+    expect(r.code, r.sortie).toBe(0);
+    expect(r.sortie).toContain(`${NOMS.length} compteurs confrontés`);
+    for (const nom of NOMS) expect(r.sortie).toContain(`${nom}→${COMPTEURS[nom].surPanne}`);
+    expect(r.sortie).toMatch(/[1-9]\d* fichiers de `src\/` lus ; \d+ appels `limiter\(` vus/);
+  });
+
+  it('REQ-SEC-016 — `--prove` : chaque famille rougit sur son témoin, les contre-témoins restent verts', () => {
+    const r = lancerLaGarde(process.cwd(), '--prove');
+    expect(r.code, r.sortie).toBe(0);
+    expect(r.sortie).toContain(`Les ${FAMILLES.length} familles rougissent`);
+  });
+});
+
+// ── REQ-SEC-035 : le pot de miel ────────────────────────────────────────────────────────────────
+
+describe('REQ-SEC-035 — le pot de miel observable', () => {
+  it('REQ-SEC-035 — un champ non vide est un piège, un champ vide ou absent n’en est pas un', () => {
+    expect(evaluerPotDeMiel(undefined)).toEqual({ piege: false });
+    expect(evaluerPotDeMiel(null)).toEqual({ piege: false });
+    expect(evaluerPotDeMiel('')).toEqual({ piege: false });
+    expect(evaluerPotDeMiel('x')).toEqual({ piege: true });
+    expect(evaluerPotDeMiel(' ')).toEqual({ piege: true });
+  });
+
+  it('REQ-SEC-035 — le signalement porte l’identifiant d’apporteur SANS la valeur saisie, même passée en douce', () => {
+    const saisie = randomBytes(12).toString('hex');
+    const large = {
+      formulaire: 'depot',
+      apporteurId: 'app_1',
+      adresseHash: 'abcdef0123456789',
+      survenuAt: 0,
+      valeur: saisie,
+      extrait: saisie.slice(0, 4),
+    };
+    const signal: SignalDePotDeMiel = large;
+    const lignes: string[] = [];
+    signalerPotDeMiel(signal, (l) => lignes.push(l));
+    expect(lignes).toHaveLength(1);
+    expect(lignes[0]).not.toContain(saisie.slice(0, 4));
+    expect(JSON.parse(lignes[0]!)).toEqual({
+      evenement: 'pot_de_miel',
+      formulaire: 'depot',
+      apporteurId: 'app_1',
+      adresseHash: 'abcdef0123456789',
+      survenuAt: '1970-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('REQ-SEC-035 — l’accusé n’est émis que si la ligne existe', async () => {
+    const envoyes: string[] = [];
+    const lignes = new Map([['d1', 'ligne d1']]);
+    const lire = async (id: string) => lignes.get(id) ?? null;
+    const envoyer = async (l: string) => {
+      envoyes.push(l);
+    };
+    expect(await accuserSiLaLigneExiste('d0', lire, envoyer)).toEqual({ envoye: false });
+    expect(await accuserSiLaLigneExiste('d1', lire, envoyer)).toEqual({ envoye: true });
+    expect(envoyes).toEqual(['ligne d1']);
+  });
+
+  it('REQ-SEC-035 — au plancher : le travail et son absence répondent au même instant ; un dépassement est RAPPORTÉ', async () => {
+    const h = horlogeFactice();
+    const vide = await executerAuPlancher(200, async () => 'rien', h);
+    expect([h.t, vide.depasse]).toEqual([200, false]);
+    const t1 = h.t;
+    const court = await executerAuPlancher(
+      200,
+      async () => {
+        h.avancer(30);
+        return 'fait';
+      },
+      h
+    );
+    expect([h.t - t1, court.valeur, court.depasse]).toEqual([200, 'fait', false]);
+    const t2 = h.t;
+    const long = await executerAuPlancher(
+      200,
+      async () => {
+        h.avancer(250);
+        return 'long';
+      },
+      h
+    );
+    expect([h.t - t2, long.depasse]).toEqual([250, true]);
+    const t3 = h.t;
+    await expect(
+      executerAuPlancher(
+        200,
+        async () => {
+          h.avancer(10);
+          throw new Error('échec');
+        },
+        h
+      )
+    ).rejects.toThrow('échec');
+    expect(h.t - t3).toBe(200);
+  });
+
+  it('REQ-SEC-035 — PARCOURS DE BAC : piège et nominal rendent la même réponse au même instant ; le piège n’écrit rien et n’accuse rien', async () => {
+    const saisie = randomBytes(8).toString('hex');
+    const nominal = await deposerSurLeBac({ id: 'd1', apporteurId: 'app_1', champ: '' });
+    const piege = await deposerSurLeBac({ id: 'd2', apporteurId: 'app_1', champ: saisie });
+
+    expect(piege.reponse).toEqual(nominal.reponse);
+    expect(piege.duree).toBe(nominal.duree);
+
+    expect(nominal.base.lignes.has('d1')).toBe(true);
+    expect(nominal.base.accuses).toEqual(['d1']);
+    expect(nominal.base.signaux).toEqual([]);
+
+    expect(piege.base.lignes.size, 'le chemin piège a ÉCRIT la ligne').toBe(0);
+    expect(piege.base.accuses, 'le chemin piège a ACCUSÉ sans ligne').toEqual([]);
+    expect(piege.base.signaux).toHaveLength(1);
+    expect(piege.base.signaux[0], 'le signalement porte la valeur saisie').not.toContain(saisie);
+    expect(JSON.parse(piege.base.signaux[0]!)).toMatchObject({ apporteurId: 'app_1' });
+  });
+});
+
+// ── Le parcours de bac du pot de miel ───────────────────────────────────────────────────────────
+
+function horlogeFactice() {
+  const h = {
+    t: 0,
+    maintenantMs: () => h.t,
+    attendre: async (ms: number) => {
+      h.t += ms;
+    },
+    avancer: (ms: number) => {
+      h.t += ms;
+    },
+  };
+  return h;
+}
+
+const PLANCHER_DU_BAC = 300;
+
+/** Un dépôt de bac composé des trois primitives : c'est lui que SEC-10 exerce, faute de formulaire. */
+async function deposerSurLeBac(entree: { id: string; apporteurId: string; champ: string }) {
+  const h = horlogeFactice();
+  const base = {
+    lignes: new Map<string, string>(),
+    accuses: [] as string[],
+    signaux: [] as string[],
+  };
+  const { piege } = evaluerPotDeMiel(entree.champ);
+  await executerAuPlancher(
+    PLANCHER_DU_BAC,
+    async () => {
+      if (piege) {
+        signalerPotDeMiel(
+          { formulaire: 'depot', apporteurId: entree.apporteurId, survenuAt: h.maintenantMs() },
+          (l) => base.signaux.push(l)
+        );
+        return;
+      }
+      h.avancer(40);
+      base.lignes.set(entree.id, entree.apporteurId);
+    },
+    h
+  );
+  await accuserSiLaLigneExiste(
+    entree.id,
+    async (id) => base.lignes.get(id) ?? null,
+    async () => {
+      base.accuses.push(entree.id);
+    }
+  );
+  return { reponse: { statut: 200, corps: 'Déclaration reçue.' }, duree: h.t, base };
+}
