@@ -760,12 +760,24 @@ describe('REQ-GOV-011 — cas 10 : le composeur du corps de PR juge la case des 
   });
 
   it('REQ-GOV-011 · la PR ordinaire, résolue par son SEUL titre, deux revues acceptées : la case se coche', () => {
-    // QA-T01 porte `pr: null` au registre : seul le TITRE la rattache à la PR 9999. Un composeur
-    // qui passerait `null` pour le titre n'aurait aucune tâche, donc un risque élevé, donc une
-    // case qui ne se cocherait jamais — et le levier 2 mourrait en silence.
-    expect(tache(registre(), 'QA-T01').pr ?? null).toBeNull();
+    // Seul le TITRE rattache la tâche à la PR 9999 : aucun champ `pr` du registre ne la porte. Un
+    // composeur qui passerait `null` pour le titre n'aurait aucune tâche, donc un risque élevé, donc
+    // une case qui ne se cocherait jamais — et le levier 2 mourrait en silence.
+    // La tâche est CHOISIE dans le registre vivant, jamais nommée : le nom figé ici (QA-T01) cassait
+    // ce témoin dès la clôture de la tâche (`pr: 59`). Plancher : il en reste au moins une.
+    const ordinaires = registre().filter(
+      (t) =>
+        (t.pr ?? null) === null &&
+        ['gouvernance', 'qualite'].includes(t.zone ?? '') &&
+        Array.isArray(t.sensible) &&
+        t.sensible.length === 0 &&
+        t.schema !== true
+    );
+    expect(ordinaires.length, 'aucune tâche ordinaire sans `pr` au registre').toBeGreaterThan(0);
+    const choisie = ordinaires[0]!;
+    expect(LECTEUR.tachesDeLaPr(registre(), 9999, null)).toEqual([]);
     const c = COMPOSEUR.jugerCaseRevues({
-      titre: 'feat(QA-T01): x',
+      titre: `feat(${choisie.id}): x`,
       pr: 9999,
       fichiers: FICHIERS_QA_T01,
       liste: { source: 'complete' },

@@ -60,15 +60,24 @@ function fichierJetable(nom: string, contenu: string): string {
 
 // ── la lecture : l'en-tête du fichier, et le titre du test lui-même ────────────────────────────
 
+/**
+ * Les textes de fichier fabriqués ci-dessous sont ASSEMBLÉS, jamais écrits d'un bloc : `gov:trace`
+ * lit CE fichier-ci avec la même lecture, et une annotation ou une ouverture de test écrite en clair
+ * dans une chaîne y serait comptée comme une citation — d'exigences qui n'existent pas.
+ */
+const REQ = '@' + 'req ';
+const [IT, TEST, DESCRIBE] = ['it', 'test', 'describe'];
+
 describe('REQ-QA-014 — la lecture : `@req` EN TÊTE, et le titre du `it()` lui-même', () => {
   it('REQ-QA-014 — R3 : un `@req` écrit ligne 40, après les `import`, n’est PAS en tête ; ceux du premier bloc de commentaires le sont', () => {
     const texte =
-      '// @req REQ-AAA-001\n' +
-      '/**\n * @req REQ-AAA-002 — dans le docblock\n */\n' +
+      `// ${REQ}REQ-AAA-001\n` +
+      `/**\n * ${REQ}REQ-AAA-002 — dans le docblock\n */\n` +
       "import { it } from 'vitest';\n" +
       '\n'.repeat(34) +
-      '// @req REQ-AAA-003\n' +
-      "it('REQ-AAA-003 — x', () => {});\n";
+      `// ${REQ}REQ-AAA-003\n` +
+      IT +
+      "('REQ-AAA-003 — x', () => {});\n";
     expect(typeof LECTURE.annotationsReq, 'annotationsReq() n’existe pas').toBe('function');
     const a = LECTURE.annotationsReq(texte);
     expect(a.map((x) => [x.req, x.ligne, x.enTete])).toEqual([
@@ -81,18 +90,18 @@ describe('REQ-QA-014 — la lecture : `@req` EN TÊTE, et le titre du `it()` lui
   });
 
   it('REQ-QA-014 — un fichier qui commence par du CODE n’a aucun en-tête : son `@req` de la ligne 2 n’y est pas', () => {
-    const a = LECTURE.annotationsReq("import 'x';\n// @req REQ-AAA-001\n");
+    const a = LECTURE.annotationsReq(`import 'x';\n// ${REQ}REQ-AAA-001\n`);
     expect(a.map((x) => x.enTete)).toEqual([false]);
   });
 
   it('REQ-QA-014 — R7 : le titre d’un `describe` n’est pas un titre de `it()` ; `it`, `test` et leurs variantes le sont', () => {
     expect(typeof LECTURE.titresDeTest, 'titresDeTest() n’existe pas').toBe('function');
     const texte =
-      "describe('REQ-AAA-001 — le describe', () => {\n" +
-      "  it('sans identifiant', () => {});\n" +
-      "  test.each([1])('REQ-AAA-002 %s', () => {});\n" +
-      "  it.skip(\n    'REQ-AAA-003 — ouvert à la ligne suivante', () => {});\n" +
-      "  describe.each([1])('REQ-AAA-004 imbriqué', () => {});\n" +
+      `${DESCRIBE}('REQ-AAA-001 — le describe', () => {\n` +
+      `  ${IT}('sans identifiant', () => {});\n` +
+      `  ${TEST}.each([1])('REQ-AAA-002 %s', () => {});\n` +
+      `  ${IT}.skip(\n    'REQ-AAA-003 — ouvert à la ligne suivante', () => {});\n` +
+      `  ${DESCRIBE}.each([1])('REQ-AAA-004 imbriqué', () => {});\n` +
       '});\n';
     expect(LECTURE.titresDeTest(texte)).toEqual([
       'sans identifiant',
@@ -118,9 +127,10 @@ const TEMOINS_ATTENDUS: Record<string, string> = {
   'R5-perimes': 'resultats_illisibles',
   R6: 'test_promis_non_vert',
   R7: 'req_non_citee_par_son_test',
+  'R7-resolu': 'req_non_citee_par_son_test',
   'R-milieu': 'test_promis_non_vert',
 };
-const CONTRE_TEMOINS_ATTENDUS = ['R4-renvoi', 'R5-non-demandes', 'R-tous-verts'];
+const CONTRE_TEMOINS_ATTENDUS = ['R4-renvoi', 'R5-non-demandes', 'R-tous-verts', 'R-gabarit'];
 
 describe('REQ-QA-014 — `gov:trace --prove` : chaque panne a son témoin nommé, chaque famille neuve est prouvée', () => {
   let preuve: { code: number; sortie: string } | null = null;
@@ -135,7 +145,11 @@ describe('REQ-QA-014 — `gov:trace --prove` : chaque panne a son témoin nommé
         .split('\n')
         .filter((l) => l.trim().startsWith('•'))
         .map((l) => l.trim().slice(1).trim());
-      for (const f of ['test_promis_non_vert', 'annotation_absorbee_sans_renvoi', 'resultats_illisibles']) {
+      for (const f of [
+        'test_promis_non_vert',
+        'annotation_absorbee_sans_renvoi',
+        'resultats_illisibles',
+      ]) {
         expect(familles, sortie).toContain(f);
       }
     },
@@ -203,9 +217,7 @@ describe('REQ-QA-014 — R5 : résultats absents, illisibles ou périmés, sur l
             {
               name: resolve(CE_FICHIER).replace(/\\/g, '/'),
               status: 'passed',
-              assertionResults: [
-                { ancestorTitles: [], title: 'REQ-QA-014 — x', status: 'passed' },
-              ],
+              assertionResults: [{ ancestorTitles: [], title: 'REQ-QA-014 — x', status: 'passed' }],
             },
           ],
         })
@@ -250,7 +262,9 @@ describe('REQ-QA-014 — `pnpm req:check` est la garde inscrite, lancée avec le
     const entree = gates.find((g) => g.id === 'req:check');
     expect(entree?.script).toBe(TRACE);
     expect(entree?.alias ?? []).toContain('gov:trace');
-    expect(existsSync('scripts/gates/req-check.ts'), 'un second script de matrice existe').toBe(false);
+    expect(existsSync('scripts/gates/req-check.ts'), 'un second script de matrice existe').toBe(
+      false
+    );
   });
 
   it('REQ-QA-014 — le fichier que `req:check` LIT est celui que `pnpm test` ÉCRIT en JSON (un chemin, deux usages)', () => {
@@ -276,11 +290,13 @@ function jugerEtapeReqCheck(workflow: unknown): string[] {
   if (iTests < 0) return ['étape « Tests » (`pnpm test`) introuvable'];
   if (iReq < 0) return ['étape `pnpm req:check` ABSENTE de gate-a'];
   const defauts: string[] = [];
-  if (iReq < iTests) defauts.push('étape `pnpm req:check` placée AVANT « Tests » : elle ne verrait aucun résultat');
+  if (iReq < iTests)
+    defauts.push('étape `pnpm req:check` placée AVANT « Tests » : elle ne verrait aucun résultat');
   else if (iReq !== iTests + 1) defauts.push('étape `pnpm req:check` pas JUSTE APRÈS « Tests »');
   const e = etapes[iReq]!;
   if ('if' in e) defauts.push('étape `pnpm req:check` conditionnelle (`if:`)');
-  if ('continue-on-error' in e) defauts.push('étape `pnpm req:check` tolérante (`continue-on-error`)');
+  if ('continue-on-error' in e)
+    defauts.push('étape `pnpm req:check` tolérante (`continue-on-error`)');
   return defauts;
 }
 
@@ -295,7 +311,10 @@ describe('REQ-QA-014 — R8 : Gate A lance `pnpm req:check` juste après « Test
     };
     const etapes = reel.jobs['gate-a']!.steps;
     const iReq = etapes.findIndex((e) => e.run === 'pnpm req:check');
-    expect(iReq, 'le ci.yml réel ne porte pas l’étape : la copie ne prouverait rien').toBeGreaterThan(0);
+    expect(
+      iReq,
+      'le ci.yml réel ne porte pas l’étape : la copie ne prouverait rien'
+    ).toBeGreaterThan(0);
 
     const sans = structuredClone(reel);
     sans.jobs['gate-a']!.steps.splice(iReq, 1);

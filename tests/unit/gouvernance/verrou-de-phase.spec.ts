@@ -71,7 +71,7 @@ function geleesPar(p: number, liste: Tache[]): Tache[] {
 }
 
 describe('REQ-GOV-027 — une phase gelée doit pouvoir se clore', () => {
-  it('la phase courante ne porte aucune tâche hors d’atteinte du composeur', () => {
+  it('REQ-GOV-027 — la phase courante ne porte aucune tâche hors d’atteinte du composeur', () => {
     const p = phaseCourante(taches);
     const impasses = taches
       .filter((t) => t.phase === p && !LIVREE.has(t.statut))
