@@ -559,11 +559,14 @@
     {
       "id": "G-SEC-AST-PRISMA",
       "phase": 0,
-      "script": "scripts/gates/ast-prisma.ts",
+      "script": "scripts/gates/semgrep.ts",
       "tache": "QA-T07",
-      "verifie": "Prisma brut hors scopedPrisma, new Date() dans le domaine et console.* -> refus ; 3 regles semgrep maison testees par semgrep --test (QA-T07)",
+      "verifie": "semgrep lance dans son IMAGE OFFICIELLE epinglee au condensat (semgrep/semgrep:1.176.1@sha256:34ab619b..., index amd64+arm64), en CI comme sur le poste, options fixes --error --disable-nosem --metrics=off --json --time ; une image sans condensat rougit (image_non_epinglee). DEUX regles maison dans .semgrep.yml : (1) axion-prisma-hors-couche-d-acces (REQ-SEC-008, qui absorbe REQ-QA-011) — sous src/app/(espace)/** et src/server/espace/**, tout import / import type / export ... from / require() / import() dont le specifieur est @prisma/*, .prisma/* ou porte un segment prisma ou db, et tout new PrismaClient(...) -> refus ; ecrite en pattern-regex parce que les motifs structurels ne voient pas `export type {..} from` (mesure) ; (2) axion-sql-brut-non-parametre (REQ-QA-013) — sous src/**, $queryRawUnsafe, $executeRawUnsafe, Prisma.raw -> refus ; $executeRaw etiquete et Prisma.sql admis. Jeux publics p/typescript et p/nodejs CHARGES DU REGISTRE a l execution (depot public, licence propre : pas recopies) ; un registre injoignable fait rougir, jamais sauter ; exclusions uniquement par la table EXCLUSIONS de l executeur, imprimee a chaque passage, aucune exclusion en ligne (--disable-nosem, prouve par la contre-epreuve). Perimetre : src/ SEUL, monte sous /depot/src avec un .semgrepignore VIDE (sinon semgrep saute tests/, dist/... meme sous src/) ; scripts/ et tests/ ne sont PAS analyses (dette nommee). Le vert affirme : zero constat, zero erreur semgrep, chaque fichier de code present sous src/ ANALYSE (fichier_non_analyse sinon), et le compte des regles REELLEMENT executees lu dans time.rules de la sortie --json --time (jamais la longueur de .semgrep.yml), sous plancher >= 2 maison ET >= 1 publique (plancher_maison, plancher_public). --prove : un bac jetable, une faute plantee par forme dans un fichier du MILIEU, chacune nommee par sa regle sur sa ligne, chacune doublee d un jumeau sous // nosemgrep qui mord aussi, et des contre-temoins muets (couche d acces, $executeRaw etiquete) ; une regle maison sans temoin, ou un temoin visant une regle absente, rougit en etant nommee (regle_sans_temoin, temoin_sans_regle). PAS de regle semgrep pour new Date() ni console.* : ESLint les tient deja en erreur (pnpm lint, --max-warnings 0), deux gardes pour une regle divergent (RM-01).",
       "fixtureRouge": "ecrire un findUnique non scope dans une page de l'espace",
-      "preuveRouge": null
+      "preuveRouge": "pnpm sec:semgrep:prove — 57 temoins rouges nommes par leur regle (dont 38 sous nosemgrep), 16 contre-temoins muets ; la spec tests/unit/qualite/semgrep-regles-maison.spec.ts voit la sortie NON NULLE du binaire sur une copie des regles portant une regle orpheline. ROUGE d origine de QA-T07, sur 87fb212, executeur et spec ecrits AVANT .semgrep.yml : `pnpm vitest run tests/unit/qualite/semgrep-regles-maison.spec.ts` rend `Tests 81 failed | 4 passed (85)`, premier echec `[regles_introuvables] Le fichier de regles maison ... .semgrep.yml est introuvable : aucune regle maison ne peut mordre.: expected null not to be null` ; puis .semgrep.yml avec la SEULE regle SQL : `Tests 46 failed | 29 passed | 10 skipped (85)`, `[temoin_muet] prisma/import (src/server/espace/a/b/import.ts:1) : « axion-prisma-hors-couche-d-acces » ne mord pas. Constats sur ce fichier : aucun.` Mutants tues : --disable-nosem retire (38 temoin_muet), image :latest (image_non_epinglee), jeux publics vides (plancher_public), sans .semgrepignore vide (fichier_non_analyse), segment db retire, new PrismaClient retire, languages sans javascript, include sans (espace), regle 1 elargie a /src/** (15 faux_positif), continue-on-error sur l etape CI, etape --prove retiree.",
+      "alias": [
+        "sec:semgrep"
+      ]
     },
     {
       "id": "G-SEC-RATE-FAMILLE",
@@ -984,7 +987,7 @@
       "phase": -1,
       "script": ".github/workflows/nightly.yml",
       "tache": "QA-T00",
-      "verifie": "contrat reel API gouv (INT-T09), heartbeats (QA-T19), reconciliation quotidienne (INT-T08), ZAP baseline (QA-T07 et QA-T19), audit, Stryker complet (QA-T30), gates:prouvees (QA-T00), drill de restauration mensuel (QA-T12), drill de resilience trimestriel (QA-T27)",
+      "verifie": "contrat reel API gouv (INT-T09), heartbeats (QA-T19), reconciliation quotidienne (INT-T08), ZAP baseline (QA-T19), audit, Stryker complet (QA-T30), gates:prouvees (QA-T00), drill de restauration mensuel (QA-T12), drill de resilience trimestriel (QA-T27)",
       "fixtureRouge": "alterer la fixture API gouv",
       "preuveRouge": null
     },

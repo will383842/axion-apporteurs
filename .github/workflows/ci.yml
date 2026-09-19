@@ -268,6 +268,16 @@ jobs:
       # `gardes-transposees.spec.ts` juge l'acte de l'etape, pas l'absence d'un mot.
       - name: Lint
         run: pnpm lint
+      # QA-T07, REQ-QA-013. Semgrep dans son IMAGE OFFICIELLE epinglee au condensat (la meme sur
+      # le poste), regles maison de `.semgrep.yml` + jeux publics charges du registre A
+      # L'EXECUTION. `--disable-nosem` : un commentaire en ligne n'eteint rien. Le vert imprime
+      # le compte des regles REELLEMENT executees, lu dans la sortie de semgrep. Le registre
+      # injoignable fait ROUGIR cette etape : elle echoue fermee, elle ne saute pas.
+      # Pas de `continue-on-error` ni de `if:` : une gate qui ne bloque rien ne garde rien.
+      - name: Semgrep — regles maison et jeux publics sur src
+        run: pnpm sec:semgrep
+      - name: Semgrep — chaque regle maison mord sur son temoin, nosemgrep n eteint rien
+        run: pnpm sec:semgrep:prove
       - name: Format
         run: pnpm format:check
       - name: Typecheck

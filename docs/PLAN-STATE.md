@@ -7,19 +7,19 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `5739147` — 2026-09-19T16:47:19+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #76 (un contrôle requis rouge ou une revue manquante) · 2. #75 (un conflit avec `main`) |
-| Qui tient quoi ? | SEC-10 (A05) · DM-01 (A05) · QA-T03 (A05) |
-| Où en est la phase ? | phase 0 — 11/98 tâches, reste 67.60 j |
+| Où est `main` ? | `fd41c0d` — 2026-09-19T17:25:36+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #76 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) |
+| Qui tient quoi ? | SEC-10 (A05) · DM-01 (A05) · QA-T03 (A05) · QA-T07 (A05) |
+| Où en est la phase ? | phase 0 — 11/98 tâches, reste 68.10 j |
 | Le prochain pas | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #81 — 2026-09-19 |
+| Dernière entrée de journal | PR #82 — 2026-09-19 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-11/98 tâches terminées · reste 67.60 j estimés.
+11/98 tâches terminées · reste 68.10 j estimés.
 
 ## Tâches
 
@@ -65,7 +65,7 @@ Reste sur ce chemin : **17.00 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un contrôle requis rouge ou une revue manquante |
-| 2 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -78,12 +78,13 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
 | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
 | QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check | A05 | #80 | `a_faire` |
+| QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
 
 ⚠️ **31 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-077 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle
+`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés
 
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
@@ -93,13 +94,37 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Dernier atterrissage
 
-`origin/main` = `5739147` (2026-09-19T16:47:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `fd41c0d` (2026-09-19T17:25:36+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #82 — 2026-09-19 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee
+
+**Fait.** `pnpm sec:semgrep` et `pnpm sec:semgrep:prove` (`scripts/gates/semgrep.ts`) lancent
+l'image officielle `semgrep/semgrep:1.176.1` epinglee au condensat de son index, en CI comme sur le
+poste, avec `--error --disable-nosem --metrics=off --json --time`, et sont deux etapes de Gate A sans
+tolerance. `.semgrep.yml` porte deux regles maison : `axion-prisma-hors-couche-d-acces` (REQ-SEC-008,
+qui absorbe REQ-QA-011 : aucun acces au client de base sous l'espace apporteur, `import type`
+compris) et `axion-sql-brut-non-parametre`. Les jeux publics `p/typescript` et `p/nodejs` sont
+charges du registre a l'execution, pas recopies. Le vert imprime les regles REELLEMENT executees,
+lues dans `time.rules` (76 : 2 maison, 74 publiques) ; `--prove` fait mordre 57 temoins, dont 38
+jumeaux sous `nosemgrep`, et laisse 16 contre-temoins muets. `G-SEC-AST-PRISMA` nomme ce script, son
+alias et sa preuve rouge.
+
+**Reste.** `gate-sec` promet encore `pnpm audit` et gitleaks sans porteur vivant. Seul `src/` est
+analyse : `scripts/` et `tests/` echappent aux regles publiques. L'image de 1,5 Go est tiree a chaque
+passage CI, sans cache, et Gate A depend du reseau vers le registre semgrep. La regle par modele
+cloisonne attend SEC-05.
+
+**Appris.** Semgrep applique en silence un `.semgrepignore` implicite qui saute `tests/` et `dist/`
+meme sous `src/` : sans fichier vide monte a la racine, 5 fichiers sur 9 etaient analyses et le
+passage sortait vert. Des `paths.include` ancres (`/src/...`) ne matchent plus rien si la cible est
+`src` sans `.git` : zero cible analysee, sortie 0. Les motifs structurels ne voient pas
+`export type { ... } from`. Monter la racine d'un worktree Windows coute 3 min 35 par passage.
 
 ### PR #81 — 2026-09-19 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert
 
@@ -138,26 +163,7 @@ Les etiquettes de panne du brief tombent sous `gov:identifiants` (lettre et chif
 
 **Appris.** Prettier coupe les balises fermantes d'un HTML long (`</a` puis `>` à la ligne suivante). Une spec qui cherche `</label>` en texte exact ne trouve jamais la fermante, et juge alors « étiqueté » tout champ placé après une étiquette. Le témoin était trop indulgent sans rougir. Et le composeur lisait l'avant-dernière cellule du tableau, « Par », sous un commentaire qui disait « Validé le ».
 
-### PR #78 — 2026-09-19 — feat(CPL-T13): module temps pur - horloge injectee, heure de Paris, feries FR, SLA ouvre, seuil HYP-D3
-
-**Fait.** Le module `temps` vit sous `src/domain/temps/`, pur : horloge injectée (`horlogeFigee`
-dans le domaine, `horlogeSysteme` dans `src/lib/horloge.ts`), heure légale de Paris calculée par la
-règle européenne, bornée aux années civiles de Paris 1996-2099, fériés FR versionnés avec leur
-attribut chômé, SLA en heures ouvrées à échéance exclusive, capacité réelle et seuil prioritaire
-(HYP-D3). Les conversions sont confrontées à `Intl.DateTimeFormat` dans le test, jamais dans le
-domaine : 131 496 heures de 2026 à 2040, 78 338 points autour des changements d'heure de 1996 à
-2099. 38 mutants joués, 38 tués. `partners/ADR-0014` (`propose`) en est le contrat.
-
-**Reste.** La question à Will sur le lundi de Pentecôte (travaillé par défaut, une constante) ; le
-numéro d'ADR, fixé à l'atterrissage (0014 aujourd'hui, 0015 si DM-01 atterrit avant) ; le relevé unique et le
-rattrapage des crons de REQ-QA-027, qui sont à DM-13 et T-ARG-015.
-
-**Appris.** Un oracle vivant trouve ce qu'un attendu tapé aurait figé faux : le test supposait onze
-fériés distincts par an, et 1997 n'en a que dix (l'Ascension tombe le 8 mai). Le témoin dérive
-maintenant ces années de l'oracle de Gauss au lieu de les écrire. Et une URL encodée en commentaire
-(le « â » de Pâques en pourcentages) se lit comme un identifiant nu : la garde lit les commentaires.
-
-… 27 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 28 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

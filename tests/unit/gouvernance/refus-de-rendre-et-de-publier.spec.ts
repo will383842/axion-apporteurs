@@ -481,6 +481,23 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'PÉRIMÈTRE n’est pas compté ici : il vient de `fichiersSuivisOuRefus`, et ' +
         '`GARDES_QUI_BALAIENT` le déclare plus bas.',
     },
+    // ── QA-T07 : UNE sortie, à code VARIABLE ────────────────────────────────────────────────
+    // Le cliquet a rougi en NOMMANT le fichier (« scripts/gates/semgrep.ts ajoute 1
+    // `process.exit(1)` et n’est PAS déclaré ici ») : c'est son office, il a été lu.
+    'scripts/gates/semgrep.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO ici pour la même raison que `gov-check.ts` : le compteur est confronté au tableau
+      // `REFUS` de CE fichier, et les témoins de cette sortie vivent dans
+      // `tests/unit/qualite/semgrep-regles-maison.spec.ts`.
+      temoins: 0,
+      raison:
+        'QA-T07 — la gate semgrep. UNE sortie, `process.exit(verdict.code)`, commune aux deux ' +
+        'modes. Ses DEUX issues sont vues sur le BINAIRE par `semgrep-regles-maison.spec.ts` : ' +
+        '0 sur le dépôt réel, 1 en preuve sur une copie des règles portant une règle sans ' +
+        'témoin (`[regle_sans_temoin]` exigé). Le verdict lui-même vient de fonctions PURES ' +
+        '(`jugerReel`, `jugerPreuve`, `jugerEnsemble`) que la même spec voit rendre chaque famille.',
+    },
     // ── RÉCONCILIATION `gov-038` : QUATRE fichiers apportent DIX sorties non nulles ──────────
     // Le cliquet a rougi en NOMMANT le premier (`gov-attestation.ts ajoute 3 … et n'est PAS
     // déclaré ici`) : c'est exactement son office. Les trois gestes sont faits pour chacun —
@@ -860,7 +877,17 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     //
     //     scripts/gates/journal-sans-pii.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
     //
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(39);
+    // 🔧 39 → 40 par QA-T07, TROISIÈME à atterrir après UX-P0-02 et DM-01, ARBITRÉ et non subi.
+    // Sur sa première base (`87fb212`), la branche avait lu 37 → 38 en nommant
+    // `scripts/gates/semgrep.ts` (« ajoute 1 `process.exit(1)` et n’est PAS déclaré ici ») ; sur la
+    // fusion de `5739147` (UX-P0-02 avait pris le 38), 38 → 39 ; sur la fusion de `fd41c0d` (DM-01
+    // avait pris le 39), les trois déclarations présentes, l'identité passe et le COMPTE rougit :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 40 to be 39
+    //
+    // La sortie `process.exit(verdict.code)` est vue en 1 puis en 0 sur le binaire
+    // (semgrep-regles-maison.spec.ts).
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(40);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
