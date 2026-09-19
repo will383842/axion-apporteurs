@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `e0008b0` — 2026-09-19T18:20:18+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #83 (un contrôle requis rouge ou une revue manquante) · 3. #84 (un contrôle requis rouge ou une revue manquante) · 4. #85 (un contrôle requis rouge ou une revue manquante) · 5. #86 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `b973869` — 2026-09-19T20:30:42+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #84 (un conflit avec `main`) · 3. #86 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) |
 | Qui tient quoi ? | SEC-10 (A05) · QA-T08 (A05) · DM-01 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T03 (A05) · QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 11/98 tâches, reste 68.10 j |
-| Le prochain pas | fusionner #82, puis DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
+| Le prochain pas | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #85 — 2026-09-19 |
+| Dernière entrée de journal | PR #88 — 2026-09-19 |
 
-**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,11 +64,10 @@ Reste sur ce chemin : **17.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #83 — docs(GOV-039): les 25 clauses decidees remises ou datees (ADR 0016) | `t/clauses-decidees` | un contrôle requis rouge ou une revue manquante |
-| 3 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
-| 4 | #85 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un contrôle requis rouge ou une revue manquante |
-| 5 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un contrôle requis rouge ou une revue manquante |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -96,13 +95,11 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Prochain pas
 
-**Fusionner #82** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-
 **DM-01** — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (1 j, **sur le chemin critique**) : 40 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `e0008b0` (2026-09-19T18:20:18+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `b973869` (2026-09-19T20:30:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -110,7 +107,7 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #85 — 2026-09-19 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur
+### PR #88 — 2026-09-19 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur
 
 **Fait.** `src/lib/logger.ts` écrit des lignes JSON pino dans un flux qui relit chaque ligne finale,
 la parcourt en entier et remplace toute valeur protégée : par nom de clé (lexique de personne importé
@@ -136,7 +133,10 @@ la forme d'une empreinte de 22 caractères. Seule la longueur exacte de la SHA-2
 Depuis que `next` est une dépendance, `NodeJS.ProcessEnv` exige `NODE_ENV` : un environnement de
 sous-processus construit à partir de zéro doit être converti, comme dans la spec de SEC-01. Et la
 garde `journal:sans-pii` lit tout identifiant `evenement`, y compris le paramètre d'un filtre Sentry :
-renommer vaut mieux qu'inscrire une exemption.
+renommer vaut mieux qu'inscrire une exemption. Enfin, le corps d'une PR garde chacune de ses
+révisions : un IBAN d'exemple à clé valide collé une fois dans un bloc rouge verbatim y reste, et
+`gov:entite --corps-publie` le lit. La PR #85 a été fermée pour cela et remplacée par celle-ci, code
+inchangé. Un corps se vérifie avec le détecteur de la garde AVANT sa première publication.
 
 ### PR #81 — 2026-09-19 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert
 
