@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 98 | 77.35 | 10 |
+| 0 — Socle technique | 98 | 77.35 | 11 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -842,7 +842,7 @@ Couvre : `REQ-UX-002`, `REQ-UX-003`, `REQ-UX-019`
 
 **Tests.** `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts`
 
-### UX-P0-02 — Maquettes des 6 écrans clés + charte de l'espace
+### UX-P0-02 — Maquettes des 6 écrans clés + charte de l'espace ✅ **fusionnee**
 
 `1 j` · zone `espace` · sensible : argent, espace · aucune dependance · decisions `HYP-E1-10`
 
