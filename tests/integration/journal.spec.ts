@@ -9,11 +9,12 @@
  * `verifierChaine()` sort sans faute sur la base ainsi remplie, en comptant ses maillons.
  *
  * Les altérations qu'un propriétaire de table PEUT faire (déclencheur désarmé : c'est une limite
- * déclarée, partners/ADR-0014) sont jouées ici pour prouver que `verifierChaine()` les VOIT, puis
+ * déclarée, partners/ADR-0015) sont jouées ici pour prouver que `verifierChaine()` les VOIT, puis
  * défaites. Chaque altération frappe une ligne du MILIEU.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import type { Prisma } from '@prisma/client';
 import { demarrerBase, prismaCli, type Base } from './harnais';
 import {
   ajouterEvenement,
@@ -167,7 +168,7 @@ describe('REQ-DM-041 — la charge est fermée, et l’effacement d’un tiers l
     const avant = await base.prisma.evenement.count();
     await expect(
       ajouter({ ...evenement(30), charge: { algorithme: ALGORITHME, courriel: 'a@b.fr' } })
-    ).rejects.toThrow(/Unrecognized key/);
+    ).rejects.toThrow(/charge refusée[\s\S]*unrecognized_keys/);
     expect(await base.prisma.evenement.count()).toBe(avant);
   });
 
@@ -193,5 +194,92 @@ describe('REQ-DM-041 — la charge est fermée, et l’effacement d’un tiers l
         tiers
       )
     ).rejects.toThrow(/evenements_append_only : UPDATE refusé/);
+  });
+
+  it('REQ-DM-041 : le refus d’une charge ne recopie JAMAIS la valeur reçue dans son message', async () => {
+    const avant = await base.prisma.evenement.count();
+    const refus = await ajouter({
+      ...evenement(52),
+      charge: { algorithme: 'jean.dupont@exemple.fr' },
+    }).catch((e: unknown) => e);
+    expect(refus).toBeInstanceOf(Error);
+    const texte = `${(refus as Error).message} ${JSON.stringify(refus)} ${String((refus as Error).cause)}`;
+    expect(texte).toMatch(/charge refusée/);
+    expect(texte).not.toContain('jean.dupont');
+    expect(await base.prisma.evenement.count()).toBe(avant);
+  });
+});
+
+describe('REQ-DM-024 — ce que la base et l’écrivain refusent d’eux-mêmes', () => {
+  it('REQ-DM-024 : un agregatId en majuscules est NORMALISÉ avant hachage — la chaîne reste vérifiable', async () => {
+    const id = randomUUID();
+    const { id: ligneId } = await ajouter(evenement(50, id.toUpperCase()));
+    const ligne = await base.prisma.evenement.findUniqueOrThrow({ where: { id: BigInt(ligneId) } });
+    expect(ligne.agregatId).toBe(id);
+    expect(await verifier()).toMatchObject({ ok: true });
+  });
+
+  it('REQ-DM-024 : un agregatId sans tirets est REFUSÉ, et rien n’est écrit', async () => {
+    const avant = await base.prisma.evenement.count();
+    await expect(ajouter(evenement(51, randomUUID().replace(/-/g, '')))).rejects.toThrow(
+      /agregatId refusé/
+    );
+    expect(await base.prisma.evenement.count()).toBe(avant);
+  });
+
+  it.each([
+    ['evenements_hashes_hex', "'" + 'Z'.repeat(64) + "'", 'NULL', 'NULL'],
+    ['evenements_agregat_complet', "'" + 'e'.repeat(64) + "'", "'attribution'", 'NULL'],
+  ])(
+    'REQ-DM-024 : une insertion qui viole %s est refusée par la base',
+    async (nom, selfHash, agregat, agregatId) => {
+      const avant = await base.prisma.evenement.count();
+      await expect(
+        base.prisma.$executeRawUnsafe(
+          'INSERT INTO evenements (type, agregat, agregat_id, survenu_at, charge, prev_hash, self_hash) ' +
+            `VALUES ('journal_ouvert', ${agregat}, ${agregatId}, now(), '{}', '${'d'.repeat(64)}', ${selfHash})`
+        )
+      ).rejects.toThrow(new RegExp(nom));
+      expect(await base.prisma.evenement.count()).toBe(avant);
+    }
+  );
+
+  it('REQ-DM-024 : sans le verrou, deux maillons sur la même tête échouent FERMÉ sur UNIQUE(prev_hash)', async () => {
+    await expect(
+      base.prisma.$transaction(async (tx) => {
+        const tete = await tx.evenement.findFirstOrThrow({ orderBy: { id: 'desc' } });
+        const inserer = (selfHash: string) =>
+          tx.$executeRawUnsafe(
+            'INSERT INTO evenements (type, survenu_at, charge, prev_hash, self_hash) ' +
+              "VALUES ('journal_ouvert', now(), '{}', $1, $2)",
+            tete.selfHash,
+            selfHash
+          );
+        await inserer('a'.repeat(64));
+        await inserer('b'.repeat(64));
+      })
+    ).rejects.toThrow(/23505[\s\S]*prev_hash/);
+    expect(await verifier()).toMatchObject({ ok: true });
+  });
+
+  it('REQ-DM-024 : le TYPE refuse un client nu — ajouterEvenement exige une transaction ouverte', () => {
+    const jamaisAppele = (e: NouvelEvenement) =>
+      // @ts-expect-error — un PrismaClient porte `$transaction` : il n'est pas une transaction.
+      ajouterEvenement(base.prisma, e);
+    expect(jamaisAppele).toBeTypeOf('function');
+  });
+
+  // Revue A02 schema (5254773565) : le type ne protège que l'appel DIRECT. Un client nu passé par un
+  // intermédiaire typé `Prisma.TransactionClient` compile — c'est un `Omit<>` du client. Le refus à
+  // l'exécution protège tout le reste : rien ne s'écrit hors d'une transaction ouverte.
+  it('REQ-DM-024 : un client nu passé par un intermédiaire typé TransactionClient est REFUSÉ à l’exécution, rien n’est écrit', async () => {
+    const intermediaire = (tx: Prisma.TransactionClient, e: NouvelEvenement) =>
+      ajouterEvenement(tx, e);
+    const avant = await base.prisma.evenement.count();
+    await expect(intermediaire(base.prisma, evenement(60))).rejects.toThrow(
+      /exige une transaction ouverte/
+    );
+    expect(await base.prisma.evenement.count()).toBe(avant);
+    expect(await verifier()).toMatchObject({ ok: true });
   });
 });

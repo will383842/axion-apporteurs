@@ -158,6 +158,18 @@ function tourComplet(r: Retouche = {}, troisieme = 'simplicite'): RevueBrute[] {
   ];
 }
 
+/**
+ * UN RISQUE ÉLEVÉ — celui de toute PR jusqu'à GOV-077 (levier 3 du 2026-09-18). Ces témoins portent
+ * sur les QUATRE lentilles : ils se jouent donc sur une PR élevée. La relecture proportionnée au
+ * risque a son propre fichier, `lentilles-selon-le-risque.spec.ts`.
+ */
+const eleve = (schema: boolean): LECTEUR.Risque => ({
+  niveau: 'eleve',
+  schema,
+  raisons: ['témoin : risque élevé'],
+});
+const ELEVE = eleve(false);
+
 const SANS_SCHEMA = {
   fichiers: ['scripts/lot/revues.ts'],
   labels: [] as string[],
@@ -168,7 +180,7 @@ function lire(revues: RevueBrute[], contexte: Partial<typeof SANS_SCHEMA> = {}) 
   const ctx = { ...SANS_SCHEMA, ...contexte };
   return lireRevues({
     revues,
-    schema: toucheSchema(ctx),
+    risque: eleve(toucheSchema(ctx)),
     tete: TETE,
     auteurPoste: AUTEUR_POSTE,
     auteurCompte: CAPTURE.auteurDeLaPr,
@@ -245,7 +257,7 @@ describe('REQ-GOV-011 — TÉMOIN (1) : le lecteur AUTHENTIFIE l’auteur de la 
     const lecture = lire(retires);
     expect(lecture.coche).toBe(false);
     expect(lecture.ecartees.every((e) => e.motif === 'etat_ecarte')).toBe(true);
-    expect(lecture.manquantes.sort()).toEqual([...lentillesExigees(false).toutes].sort());
+    expect(lecture.manquantes.sort()).toEqual([...lentillesExigees(ELEVE).toutes].sort());
   });
 
   it('REQ-GOV-010 · CONTRE-TÉMOIN : `MEMBER` et `COLLABORATOR` jugent aussi', () => {
@@ -322,8 +334,8 @@ describe('REQ-GOV-010 — TÉMOIN (3) : le discriminant `schema` se lit sur les 
   });
 
   it('REQ-GOV-010 · CONTRE-TÉMOIN : sans fichier de schéma ni label, c’est `simplicite`', () => {
-    expect(lentillesExigees(false).toutes).toContain('simplicite');
-    expect(lentillesExigees(false).toutes).not.toContain('schema');
+    expect(lentillesExigees(ELEVE).toutes).toContain('simplicite');
+    expect(lentillesExigees(ELEVE).toutes).not.toContain('schema');
     expect(lire(tourComplet()).coche).toBe(true);
   });
 });
@@ -367,7 +379,7 @@ describe('REQ-GOV-011 — « Relecteur ≠ auteur » n’est cochée qu’au niv
   it('REQ-GOV-011 · sans `Auteur:` lisible, la distinction n’est PAS mesurée — donc pas cochée', () => {
     const lecture = lireRevues({
       revues: tourComplet(),
-      schema: false,
+      risque: ELEVE,
       tete: TETE,
       auteurPoste: null,
     });
@@ -429,36 +441,42 @@ describe('REQ-GOV-011 — les deux mutants qui survivaient, rejoués comme témo
     expect(surAutreChose.coche).toBe(false);
     expect(surLaTete.perimees).toEqual([]);
     expect(surAutreChose.perimees.map((v) => v.lentille).sort()).toEqual(
-      [...lentillesExigees(false).toutes].sort()
+      [...lentillesExigees(ELEVE).toutes].sort()
     );
   });
 
-  it('REQ-GOV-011 · MUTANT (b) : le jeu de lentilles exigées est EXACTEMENT celui-ci', () => {
+  it('REQ-GOV-011 · MUTANT (b) : le jeu de lentilles exigées est EXACTEMENT celui-ci, sur les deux niveaux', () => {
     // Toute troncature de `lentillesExigees()` — la SEULE fonction qui décide de cette liste —
     // rougit ici. Et elle est désormais la seule à pouvoir la décider : `lireRevues` reçoit le
-    // FAIT « cette PR touche au schéma », pas une liste qu'un appelant pourrait rétrécir.
-    expect([...lentillesExigees(false).toutes]).toEqual([
+    // RISQUE de la PR, pas une liste qu'un appelant pourrait rétrécir.
+    expect([...lentillesExigees(ELEVE).toutes]).toEqual([
       'exactitude',
       'securite',
       'simplicite',
       'mutation',
     ]);
-    expect([...lentillesExigees(true).toutes]).toEqual([
+    expect([...lentillesExigees(eleve(true)).toutes]).toEqual([
       'exactitude',
       'securite',
       'schema',
       'mutation',
     ]);
-    // Le compte ne change pas d'une PR à l'autre : trois lentilles plus la mutation, et sur une
-    // PR de schéma c'est la TROISIÈME qui change de titulaire (charte §6).
-    expect(lentillesExigees(true).toutes.length).toBe(lentillesExigees(false).toutes.length);
-    expect(lentillesExigees(true).trois.length).toBe(3);
+    // Sur une PR élevée, le compte ne change pas d'une PR à l'autre : trois lentilles plus la
+    // mutation, et sur une PR de schéma c'est la TROISIÈME qui change de titulaire (charte §6).
+    expect(lentillesExigees(eleve(true)).toutes.length).toBe(4);
+    expect(lentillesExigees(ELEVE).toutes.length).toBe(4);
+    expect(lentillesExigees(eleve(true)).sansMutation.length).toBe(3);
+    // Sur une PR ORDINAIRE (GOV-077), deux lentilles, et ce sont celles-là.
+    const ordinaire: LECTEUR.Risque = { niveau: 'ordinaire', schema: false, raisons: [] };
+    expect([...lentillesExigees(ordinaire).toutes]).toEqual(['exactitude', 'securite']);
+    expect(lentillesExigees(ordinaire).toutes.length).toBe(2);
+    expect(lentillesExigees(ordinaire).sansMutation.length).toBe(2);
   });
 
   it('REQ-GOV-011 · MUTANT (b) : le texte publié ne peut pas annoncer MOINS qu’il n’en faut', () => {
     // C'est la phrase « les 1 lentilles (exactitude) ont accepté » qui est le vrai défaut. Le
     // détail doit nommer CHAQUE lentille exigée, et son compte doit être celui du jeu complet.
-    const exigees = [...lentillesExigees(false).toutes];
+    const exigees = [...lentillesExigees(ELEVE).toutes];
     const detail = lire(tourComplet()).detail;
     for (const l of exigees) expect(detail, `le détail publié tait « ${l} »`).toContain(l);
     expect(detail).toContain(`les ${exigees.length} lentilles`);

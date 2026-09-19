@@ -1,4 +1,4 @@
-# partners/ADR-0014 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle
+# partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle
 
 | Champ | Valeur |
 | --- | --- |
@@ -43,7 +43,13 @@ algorithme par ADR.
 **Décision 2 — Genèse.** La première migration insère une ligne `journal_ouvert`, `prevHash` à 64 zéros,
 `survenuAt` à la date du nom de la migration, charge `{ algorithme: 'sha256-jcs-v1' }`. Elle ancre la
 chaîne et y inscrit l'algorithme. Son `selfHash` est calculé par le domaine (`GENESE`) et recopié en
-littéral dans `migration.sql` : deux copies, tenues égales par un test qui lit le fichier.
+littéral dans `migration.sql` : deux copies, tenues égales par un test qui lit le fichier. Deux
+vecteurs de référence (la genèse et un maillon aux champs d'agrégat remplis) sont calculés HORS du
+code, par Python `hashlib` et par `sha256sum`, et figés en littéraux dans le test : la forme canonique
+ne peut pas dériver des deux côtés à la fois. `verifierChaine()` ÉPINGLE la genèse à `GENESE` : une
+ligne de genèse dont le `selfHash` n'est pas celui du domaine, ou dont le contenu ne lui correspond
+plus, rend `genese_alteree` — sans cela, une genèse forgée et une chaîne recalculée sur elle
+passaient.
 
 **Décision 3 — Linéarité.** `UNIQUE(prev_hash)` interdit la bifurcation et une seconde genèse. L'écrivain
 prend `pg_advisory_xact_lock` sur une clé fixe puis lit la tête dans la même transaction ; sous READ
@@ -58,7 +64,25 @@ constante, par identité), enum ou littéral de chaîne, entier sur un champ suf
 refusé. En seconde couche, un nom de champ dont un segment est au **lexique unique** des champs de
 personne (`src/domain/donnees-personnelles/champs.ts`, exporté pour toute autre garde) rougit, sauf
 s'il est une empreinte (`…Hash` sur `HASH_HEX_64`). La garde `journal:sans-pii` juge les schémas eux-
-mêmes ; `ajouterEvenement()` les applique à l'exécution, avant toute écriture.
+mêmes ; `ajouterEvenement()` les applique à l'exécution, avant toute écriture, et son refus nomme le
+chemin et le code de chaque écart, jamais la valeur reçue. **La charge n'est fermée que si
+`ajouterEvenement()` est le SEUL écrivain** : la garde ne chasse pas une orthographe d'appel (un
+délégué pris en variable, déstructuré, entre crochets, une requête construite à part passent sous
+toute liste de formes) ; elle refuse toute MENTION de la table ou du délégué — la famille du mot `evenement` / `evenements` en toute casse, identifiant, propriété, chaîne, gabarit ou clé —
+dans tout fichier suivi sous `src/`, `scripts/` ou `packages/`, toutes extensions (famille
+`ecrivain_hors_journal`, échec fermé : une simple lecture hors de l'écrivain rougit aussi). Le chemin
+d'un import statique n'est pas une mention (les noms importés, eux, le sont). La casse ne protège rien :
+Prisma 5.22 résout `client.Evenement` (majuscule) comme délégué, donc `Evenement` est une mention ;
+`EvenementDelegate` et `ModelName` sont refusés dans tout fichier de la portée (hors de l'écrivain, de
+la garde et du module client `src/server/db.ts` à venir) ; les séquences d'échappement qui désignent une
+lettre sont décodées avant la lecture. C'est le dernier élargissement lexical de cette garde. La liste
+blanche est courte et nommée : l'écrivain unique, le domaine pur `src/domain/evenement/` (qui ne nomme
+ni la table ni le délégué, ne porte aucune trace d'un client et n'écrit aucune requête — un mot de DML
+dans une chaîne y rougit), la garde elle-même, et des fichiers qui
+nomment le mot sans toucher la table (`LISTE_BLANCHE_PAR_CONTENU`), chacun tenu par le TEXTE EXACT de ses
+lignes de mention admises — jamais par un compte, qu'une mention échangée contre une écriture
+laissait égal — et refusant toute trace de client (`@prisma/client`, `PrismaClient`, `$transaction`,
+`$executeRaw*`, `$queryRaw*`, `.evenement`).
 
 **Décision 5 — Immuabilité par la base.** Un déclencheur de ligne `evenements_append_only` refuse `UPDATE` et
 `DELETE` ; un déclencheur d'instruction `evenements_append_only_troncature` refuse `TRUNCATE`, qu'un
@@ -79,9 +103,18 @@ la suite exige le démon Docker, en CI comme en local. Le harnais (`tests/integr
 lance `pgvector/pgvector:pg16`, applique les migrations par `prisma migrate deploy` avec l'URL du
 conteneur, et lève en nommant le démon s'il est absent.
 
-**Décision 8 — `ajouterEvenement()` n'accepte qu'une transaction.** Le type impose l'écriture « dans la même
-transaction » que la transition d'agrégat. Aucun client Prisma n'est créé sous `src/` par cette
-décision. `survenuAt` vient de l'appelant : rien dans le domaine ne lit l'heure.
+**Décision 8 — `ajouterEvenement()` n'accepte qu'une transaction, par deux défenses.** Le TYPE protège
+l'appel DIRECT : le paramètre est typé `ClientDeTransaction<T>`, qui rend `never` tout client portant
+encore `$transaction`, et un `@ts-expect-error` du témoin d'intégration voit `pnpm typecheck` rougir si
+la règle se perd. Il ne voit PAS un client nu passé par un intermédiaire typé
+`Prisma.TransactionClient` (un `Omit<>` du client, auquel un `PrismaClient` s'assigne) : c'est le REFUS
+À L'EXÉCUTION qui protège tout le reste — `ajouterEvenement()` lève si le client porte `$transaction`,
+ce qui est faux dans une transaction interactive et vrai sur le client
+nu ; un témoin en base réelle le prouve, compte de lignes inchangé. `agregatId` est validé comme UUID
+à tirets et normalisé en minuscules AVANT le hachage (Postgres le rend sous cette forme : haché
+autrement, le maillon serait en `hash_altere` pour toujours et masquerait les altérations suivantes).
+Aucun client Prisma n'est créé sous `src/` par cette décision. `survenuAt` vient de l'appelant : rien
+dans le domaine ne lit l'heure. Un client `$extends` ne compile pas avec `ajouterEvenement()` (TS2345 : son client de transaction ne satisfait pas `Prisma.TransactionClient`) — échec fermé ; la première tâche qui étend le client mesurera le refus à l'exécution sur lui.
 
 ## Conséquences
 
@@ -92,14 +125,26 @@ décision. `survenuAt` vient de l'appelant : rien dans le domaine ne lit l'heure
   d'acteur, pas de `@@index` de lecture par agrégat tant qu'aucune tâche ne lit par agrégat (additifs,
   non hachés).
 - Une session qui lance la suite complète démarre Docker d'abord.
-- **Limites déclarées, pas des défauts.** (a) Un propriétaire de table ou un superutilisateur peut
-  désarmer le déclencheur : c'est **détecté** par `verifierChaine()`, pas empêché ; la séparation du
+- **Ce que la chaîne détecte, exactement.** Une altération qui laisse une ligne ou un lien
+  incohérent : colonne réécrite, ligne supprimée au MILIEU, genèse forgée — pourvu que l'acteur ne
+  recalcule pas la queue. Une troncature de la queue ne recalcule rien et N'EST PAS vue pour autant :
+  c'est la limite (b).
+- **Limites déclarées, pas des défauts.** (a) Un acteur qui a les droits du propriétaire — ou le rôle
+  applicatif lui-même, tant que les rôles ne sont pas séparés — peut désarmer le déclencheur
+  (`ALTER TABLE … DISABLE TRIGGER`, `ALTER COLUMN … TYPE … USING` qui réécrit les lignes sans
+  déclencheur de ligne, `session_replication_role = replica` pour un superutilisateur), réécrire une
+  ligne et **RECALCULER toute la queue** : l'algorithme est public et sans secret, et ce n'est **PAS
+  détecté** tant que la tête n'est pas ancrée hors de la base (DM-20). Un test le tient
+  (`journal-chaine.spec.ts`, « LIMITE ») : il rougira le jour où l'ancrage existera. La séparation du
   rôle de migration et d'un rôle applicatif sans `UPDATE` / `DELETE` relève du déploiement. (b) Une
-  troncature de la **queue** n'est pas détectable par la chaîne seule : il faut ancrer la tête hors de
-  la base, par une vérification périodique. (c) La clause « le worker de purge ne référence pas la
-  table » de `partners:journal:immutable` est sans objet tant qu'aucun worker n'existe.
-- Retour arrière : une migration qui retire les déclencheurs — visible au diff, et `verifierChaine()`
-  continue de voir toute altération.
+  troncature de la **queue** n'est pas détectable par la chaîne seule, pour la même raison. (c) La
+  chaîne prouve l'**ordre**, pas l'**auteur** : même après la séparation des rôles, un rôle qui peut
+  insérer peut ajouter un maillon à l'empreinte valide. (d) La clause « le worker de purge ne
+  référence pas la table » de `partners:journal:immutable` est sans objet tant qu'aucun worker
+  n'existe. (e) `journal:sans-pii` est un FIL TENDU : il refuse toute mention de la table ou de son délégué ÉCRITE EN CLAIR, en toute casse, hors de la liste blanche tenue par le contenu, dans tout fichier de code sous `src/`, `scripts/` et `packages/`. Portée : tout fichier SUIVI sous ces trois racines, quelle que soit son extension (`.json`, `.sql`, `.md` compris — plus large que « code », échec fermé) ; `config/`, `perf/`, `tests/`, `prisma/` et les fichiers de la racine sont hors portée. Seule exemption : le chemin d'un import ou d'une réexportation statique, lu par le compilateur TypeScript, s'il est un chemin relatif ou un nom de paquet (sans `:` ni blanc) ; rien n'est effacé d'un fichier dont l'analyse a des diagnostics, et toute séquence d'échappement est neutralisée avant la lecture. Limite déclarée : toute forme délibérément obfusquée — nom calculé, transformé, extrait, ou encodé (séquences d'échappement JS, identifiants Unicode SQL `U&"…"`), vues ou alias SQL, conversions de type — relève de la revue et de la défense au niveau base, pas de cette garde. Hors de portée aussi : un client pris hors du dépôt, `prisma/` (graine et DML des migrations), et les deux fichiers qui SONT l'écrivain et la garde. TypedSQL n'est pas activé : l'activer exige de revoir cette garde.
+- Retour arrière : une migration qui retire les déclencheurs — visible au diff ; `verifierChaine()`
+  continue de voir une altération du milieu non recalculée ; ni le recalcul (a) ni la troncature
+  de queue (b).
 
 ## Alternatives écartées
 
@@ -120,13 +165,18 @@ décision. `survenuAt` vient de l'appelant : rien dans le domaine ne lit l'heure
 - **Assertion** — `tests/unit/domaine/journal-chaine.spec.ts` · `it('REQ-DM-024 : le self_hash que la migration insère est celui que le domaine calcule')` : la genèse de la migration et celle du domaine ne divergent pas.
 - **Assertion** — `tests/unit/domaine/journal-chaine.spec.ts` · `it('REQ-DM-024 : une ligne du milieu supprimée → maillon_orphelin nomme la ligne SUIVANTE')` : la chaîne se suit par ses liens de hash.
 - **Assertion** — `tests/unit/domaine/journal-charge-fermee.spec.ts` · `it('REQ-DM-041 : une chaîne nue rougit — une chaîne libre peut porter un courriel')` : la liste fermée des formes est la première couche.
+- **Assertion** — `tests/unit/domaine/journal-charge-fermee.spec.ts` · `it('REQ-DM-041 : le second écrivain de la revue (src/server/bac/ecrivain-bis.ts) rougit, nommé')` : la charge n'est fermée que si l'écrivain est unique.
+- **Assertion** — `tests/unit/domaine/journal-chaine.spec.ts` · `it('REQ-DM-024 : LIMITE — une ligne du milieu réécrite PUIS la queue recalculée passe inaperçue sans ancrage externe')` : la limite (a), tenue au lieu d'être tue.
 - **Assertion** — `tests/unit/domaine/schema-centimes.spec.ts` · `it('REQ-DM-001 : le schéma du dépôt ne porte aucun Float, aucun Decimal, aucun montant hors Cents')` : la convention d'argent du schéma.
 
 ## Reste à faire
 
-- Vérification périodique de la chaîne et ancrage de la tête hors de la base, purge encadrée si elle
-  est décidée : la tâche du journal en phase 3 (DM-20).
+- Vérification périodique de la chaîne et ancrage de la tête hors de la base (qui fermera la limite
+  (a) et la troncature de queue), purge encadrée si elle est décidée : la tâche du journal en phase 3
+  (DM-20). Une clé HMAC hors base a été écartée pour l'instant : elle ne vaut que si le rôle qui écrit
+  ne peut pas la lire, ce qui suppose la séparation des rôles.
 - Séparation des rôles Postgres (migration, applicatif sans `UPDATE` / `DELETE`) : déploiement.
+- **PRIORITÉ SUIVANTE — la défense durable est en base, pas dans une garde de mots.** Une garde lexicale est un fil tendu contre le code ordinaire ; elle ne gagne pas contre l'obfuscation délibérée. ADR de suite nommé : « charge du journal fermée par la base » — un déclencheur `BEFORE INSERT` sur `evenements` qui refuse toute clé de `charge` non admise pour son `type`, GÉNÉRÉ depuis le schéma fermé de `src/domain/evenement/charges.ts` : il arrête une donnée personnelle quel que soit l'écrivain. Ensuite : un rôle applicatif sans `INSERT` sur `evenements`, qui n'écrit que par une fonction unique. Dette de cette tâche, pas du code de cette tâche.
 - Le prédicat des centimes de `schema-centimes.spec.ts` sera remplacé par l'import de la garde
   `partners:schema:cents` quand elle existera.
 - Le SIREN n'est pas dans la liste fermée des formes : la tâche qui en aura besoin l'ajoute en amendant

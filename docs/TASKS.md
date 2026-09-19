@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**260 taches · 194.85 j estimes.**
+**260 taches · 196.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 98 | 75.85 | 0 |
+| 0 — Socle technique | 98 | 77.35 | 11 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -422,7 +422,7 @@ Couvre : `REQ-EXT-028`, `REQ-JUR-015`, `REQ-JUR-029`
 
 **Tests.** `tests/unit/juridique/seuils-ssot.spec.ts`
 
-### QA-T01 — Squelette de tests et Gate A bloquante
+### QA-T01 — Squelette de tests et Gate A bloquante ✅ **fusionnee**
 
 `0.5 j` · zone `qualite` · depend de `GOV-014`
 
@@ -432,7 +432,7 @@ Couvre : `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013`
 
 **Tests.** `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`
 
-### SEC-01 — Secrets distincts et validation d'environnement au boot
+### SEC-01 — Secrets distincts et validation d'environnement au boot ✅ **fusionnee**
 
 `0.5 j` · zone `securite` · depend de `QA-T01`
 
@@ -442,7 +442,7 @@ Couvre : `REQ-SEC-028`
 
 **Tests.** `tests/unit/securite/env-boot.spec.ts`
 
-### SEC-02 — En-têtes de sécurité et CSP par nonce
+### SEC-02 — En-têtes de sécurité et CSP par nonce ✅ **fusionnee**
 
 `0.5 j` · zone `securite` · sensible : attribution · depend de `QA-T01`
 
@@ -514,11 +514,11 @@ Couvre : `REQ-CPL-021`, `REQ-QA-019`, `REQ-QA-020`, `REQ-QA-030`
 
 ### QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check
 
-`0.5 j` · zone `qualite` · depend de `GOV-011`, `QA-T01`
+`1 j` · zone `qualite` · depend de `GOV-011`, `QA-T01`
 
 Couvre : `REQ-QA-014`
 
-**Acceptation.** `req:check` vérifie la PAIRE (tâche, REQ) → test nommé existant, annoté, vert.
+**Acceptation.** (1) `pnpm req:check` est la garde `req:check` DEJA inscrite (`scripts/gates/gov-trace.ts`, alias `gov:trace`), lancee avec les RESULTATS de la passe de tests (`--resultats test-results/vitest.json`, ecrits par `pnpm test`) : aucun second script, aucune seconde matrice. (2) PAIRE ANNOTEE DES DEUX FORMES : pour chaque paire (tache, REQ active) dont le fichier promis existe, le fichier porte `@req <REQ>` dans son premier bloc de commentaire ET au moins un titre de `it()` contenant l'identifiant ; REQ-QA-014 dit « et », la garde acceptait « ou ». (3) PAIRE VERTE : au moins un de ces tests a le statut `passed` dans les resultats — saute, `todo`, en echec ou absent ne couvre rien ; une promesse `#titre` exige CE test-la vert. (4) Une annotation `@req` qui nomme une exigence ABSORBEE sans porter son renvoi `→ REQ-…` sur la meme ligne est refusee, comme un titre. (5) Resultats absents, illisibles ou perimes (un fichier que la configuration execute et que les resultats ne portent pas) : rouge nomme, jamais un vert ; sans `--resultats`, `gov:trace` DIT que le vert n'est pas juge. (6) Gate A lance `pnpm req:check` juste apres l'etape « Tests », sans tolerance d'echec. (7) TEMOIN A DEUX FACES : chaque famille neuve a son temoin dans `gov:trace --prove` et un contre-temoin vert ; le depot reel sort en 0 apres mise en conformite des specs livrees, et le vert imprime le nombre de paires confrontees ET le nombre de paires vertes.
 
 **Tests.** `tests/unit/qualite/req-check.spec.ts`
 
@@ -842,7 +842,7 @@ Couvre : `REQ-UX-002`, `REQ-UX-003`, `REQ-UX-019`
 
 **Tests.** `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts`
 
-### UX-P0-02 — Maquettes des 6 écrans clés + charte de l'espace
+### UX-P0-02 — Maquettes des 6 écrans clés + charte de l'espace ✅ **fusionnee**
 
 `1 j` · zone `espace` · sensible : argent, espace · aucune dependance · decisions `HYP-E1-10`
 
@@ -882,13 +882,13 @@ Couvre : `REQ-JUR-001`, `REQ-JUR-002`, `REQ-JUR-019`, `REQ-JUR-041`
 
 **Tests.** `axionia/src/content/__tests__/remuneration-indicative.spec.ts`
 
-### CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle D3 en fonction pure
+### CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure ✅ **fusionnee**
 
-`1 j` · zone `gouvernance` · depend de `QA-T01`
+`1.5 j` · zone `gouvernance` · depend de `QA-T01`
 
 Couvre : `REQ-CPL-013`, `REQ-CPL-026`, `REQ-QA-027`, `REQ-UX-022`, `REQ-UX-028`
 
-**Acceptation.** `seuilPrioritaire()` = `min(palierConfiance, capaciteRestante)` ; `surchargeManuelle > 0` remplace le min ; une seule fonction pure, consommée par DM-09 et UX-P1-07.
+**Acceptation.** (1) HORLOGE INJECTEE (REQ-QA-027, pour sa part « le domaine recoit une Clock ») : `Horloge { maintenant(): Instant }`, `Instant` = millisecondes UTC entieres ; `horlogeFigee()` dans le domaine ; `horlogeSysteme` HORS du domaine (`src/lib/horloge.ts`), seul lieu qui lit l'heure de la machine ; aucun fichier de `src/domain/temps/` ne nomme `Date`, `Intl`, `performance`, `process` ni `globalThis` (temoin propre, plus strict que le lint). (2) PARIS (REQ-CPL-013) : conversion instant <-> date et heure legales d'Europe/Paris par la regle europeenne (dernier dimanche de mars et d'octobre, 01:00 UTC), bornee aux annees civiles de Paris 1996-2099 (de 1995-12-31T23:00Z inclus a 2099-12-31T23:00Z exclu), hors bornes levee nommee ; heure locale inexistante (printemps) : decalee apres le saut ; heure ambigue (automne) : premiere occurrence ; le test confronte CHAQUE heure de 2026 a 2040 a `Intl.DateTimeFormat`, oracle qui vit dans le test, jamais dans le domaine. (3) FERIES FR VERSIONNES : calendrier metropolitain portant version et source (Code du travail L3133-1), Paques calculee, onze jours, attribut « chome » par jour ; jour ouvre = lundi a vendredi hors ferie chome ; oracles cites (liste officielle 2026, dates de Paques) ; 29 fevrier (2000, 2028) et changements d'heure testes. (4) SLA (REQ-UX-022, REQ-UX-028) : `echeanceOuvree(debut, heures)` et `heuresOuvreesEcoulees(debut, fin)` comptent les heures civiles de Paris passees dans des jours ouvres ; un depart hors jour ouvre compte a partir du debut du jour ouvre suivant ; l'echeance est exclusive ; 48 h ouvrees et 2 jours ouvres sont la MEME fonction. (5) CAPACITE ET D3 (REQ-CPL-026, HYP-D3) : `capaciteSurPeriode` = somme, sur les jours ouvres de la periode, des qualifieurs non absents multipliee par la capacite par qualifieur et par jour ; `seuilPrioritaire({ palierConfiance, capaciteRestante, surchargeManuelle })` = `surchargeManuelle` si elle est > 0, sinon `min(palierConfiance, capaciteRestante)`, jamais un plafond ; entiers >= 0 sinon levee nommee ; une seule fonction pure, consommee par DM-09 et UX-P1-07. (6) 100 % lignes et branches sur `src/domain/**`, sans directive d'exclusion ; les crons (« tout ce qui est du a l'instant t », releve unique) restent a DM-13 et T-ARG-015.
 
 **Tests.** `tests/unit/domaine/temps-horloge-et-feries.spec.ts` · `tests/unit/domaine/seuil-prioritaire.spec.ts`
 
@@ -912,7 +912,7 @@ Couvre : `REQ-JUR-031`
 
 **Tests.** `tests/unit/contrat/contrat-sobre.spec.ts`
 
-### GOV-039 — Quatre-vingt-huit titres de test etiquetes par l'exigence d'un AUTRE sujet
+### GOV-039 — Quatre-vingt-huit titres de test etiquetes par l'exigence d'un AUTRE sujet ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · depend de `GOV-037`
 
@@ -932,7 +932,7 @@ Couvre : `REQ-GOV-031`
 
 **Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
 
-### GOV-041 — La cloture ecrit un statut sur une entree qu'elle n'a pas verifiee
+### GOV-041 — La cloture ecrit un statut sur une entree qu'elle n'a pas verifiee ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-038`
 
@@ -954,7 +954,7 @@ Couvre : `REQ-GOV-026`
 
 **Tests.** `tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts`
 
-### GOV-043 — Le controle compensatoire de la tracabilite ne couvre qu'un quart du backlog
+### GOV-043 — Le controle compensatoire de la tracabilite ne couvre qu'un quart du backlog ✅ **fusionnee**
 
 `0.75 j` · zone `gouvernance` · depend de `GOV-038`
 
@@ -962,9 +962,9 @@ Couvre : `REQ-GOV-005`
 
 **Acceptation.** `gov:trace` est le controle compensatoire invoque chaque fois qu'un trou de `lot:cloture` est juge tolerable. Mesure du 2026-09-09 : il couvre 48 taches sur 209 ; SEC-01, SEC-02 et INT-T01b en sont absentes ; et `gov:inventaire` compte une tache FABRIQUEE comme portant une preuve qui resout. La tache n'etend PAS la couverture. Elle exige que la garde RENDE son perimetre et son complement, chiffre par chiffre, dans son resume, et qu'un PLANCHER declare rougisse quand la couverture baisse. RM-02 : le plancher est vu rougir en le franchissant par le bas, et un contre-temoin verifie qu'il reste vert quand la couverture monte.
 
-**Tests.** `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts`
+**Tests.** `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts#REQ-QA-014 : le resume rend le perimetre et le complement, chiffre par chiffre`
 
-### GOV-044 — Une garde absente du registre s'exempte elle-meme de la garde qui verifie qu'on l'appelle
+### GOV-044 — Une garde absente du registre s'exempte elle-meme de la garde qui verifie qu'on l'appelle ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-038`
 
@@ -1152,7 +1152,7 @@ LE MEME MUR, A LA QUATRIEME POPULATION. `MESURES_ATTENDUES` derive de `LECTURES`
 
 **Tests.** `tests/unit/gouvernance/couverture-attendue.spec.ts`
 
-### GOV-056 — Le composeur compare des `paths` quand les taches promettent des `tests{}`, et rien ne juge les fichiers d une PR
+### GOV-056 — Le composeur compare des `paths` quand les taches promettent des `tests{}`, et rien ne juge les fichiers d une PR ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · sensible : attribution · depend de `GOV-037`
 
@@ -1366,15 +1366,15 @@ Couvre : `REQ-QA-001`, `REQ-QA-013`, `REQ-GOV-029`
 
 **Tests.** `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`
 
-### GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent
+### GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent ✅ **fusionnee**
 
-`0.5 j` · zone `gouvernance` · aucune dependance
+`1 j` · zone `gouvernance` · aucune dependance
 
 Couvre : `REQ-GOV-011`, `REQ-GOV-013`
 
-**Acceptation.** PRIORITAIRE : ce defaut fausse le tour de quatre lentilles de TOUTE la phase 0, soit environ 360 passes. TROIS FAITS. (1) La sortie imprime « Vues : (aucune) » DANS LES DEUX CAS — quand aucune revue n'a ete lue, et quand toutes les revues lues REFUSENT. Ce sont deux etats opposes : l'un veut dire « personne n'a regarde », l'autre « tout le monde a refuse ». Les rendre identiques rend le second invisible. (2) Un avis pose au mauvais endroit — en commentaire plutot que comme revue — n'est signale NULLE PART : cinq lentilles ont ainsi travaille dans le vide le 2026-09-14, sans une seule erreur de leur part. La garde doit DIRE qu'elle a vu un avis qu'elle ne peut pas compter. (3) La phrase « un refus de la lentille securite vaut veto » s'imprime AUSSI sur des taches non sensibles, ce que la charte ne dit pas : la machine et le texte doivent dire la meme chose. A livrer : les trois etats — aucune revue, toutes refusent, verdicts mixtes — sont NOMMES distinctement dans la sortie ; un avis hors canal est signale ; le message de veto ne s'imprime que la ou il s'applique. TEMOIN A DEUX FACES : une demande de fusion sans aucune revue, puis la meme avec quatre refus, produisent DEUX sorties differentes et deux codes differents ; une demande avec quatre accords sort en zero.
+**Acceptation.** PRIORITAIRE : ce defaut fausse le tour de lentilles de TOUTE la phase 0. QUATRE FAITS. (1) La sortie imprime « Vues : (aucune) » DANS LES DEUX CAS — quand aucune revue n'a ete lue, et quand toutes les revues lues REFUSENT. Ce sont deux etats opposes ; les rendre identiques rend le second invisible. (2) Un avis pose au mauvais endroit — en commentaire d'issue plutot que comme revue — n'est signale NULLE PART : les avis de lentille de la PR 41 ont ainsi compte pour zero. (3) La phrase « un refus de la lentille securite vaut veto » cite REQ-GOV-011, qui ne parle pas de veto : la machine et le texte doivent dire la meme chose. (4) LEVIER 3, decision de Will du 2026-09-18 : la relecture est proportionnee au risque, et lentillesExigees() exige en dur quatre lentilles. A LIVRER : les trois etats — aucune revue, toutes refusent, verdicts mixtes — nommes par des FAMILLES de faute distinctes (sortie non nulle dans les deux premiers) ; un avis hors canal signale sans etre compte ; le message de veto dit la charte §6 (securite bloque seule sur toute PR ; scenario d'attaque seulement sur tache sensible) ; UNE fonction risqueDeLaPr() dans scripts/lot/revues.ts, appelee par gov-pr.ts ET corps-de-pr.ts, rend ORDINAIRE seulement si TOUT est prouve — au moins une tache resolue (titre union champ pr), registre de base lisible, chaque tache resolue lue sur la tete ET la base en zone gouvernance ou qualite avec sensible present et vide et schema faux, aucun label schema, diff non vide et COMPLET (liste de la forge comparee a changed_files, plafond 3000) dont chaque fichier est sous docs/, scripts/ ou tests/ (jamais .github/, jamais la racine, documents compris, decisions de l'orchestrateur du 2026-09-18), un fichier renomme ou copie comptant par sa source ET sa destination, et hors de la garde des revues (revues.ts, gov-pr.ts, corps-de-pr.ts, la fermeture transitive de leurs imports derivee du disque, docs/CHARTE-AGENTS.md, docs/agents.json) — et ELEVE sinon ; ELEVE exige exactitude, securite, simplicite ou schema, mutation ; ORDINAIRE exige exactitude et securite ; gov:pr imprime le risque et ses raisons ; charte §6, CONVENTIONS §5, PROTOCOLE-FUSION pas 2, case 3 du gabarit et partners/ADR-0012 le disent dans le meme diff. TEMOINS : sans revue puis avec quatre refus, deux sorties et deux familles differentes, quatre accords sortent en zero. Sur le registre REEL : une PR dont la tache sensible est AU MILIEU de trois taches resolues, exactitude et securite acceptees, rougit lentilles_manquantes, et la meme sans elle sort en zero ; une tache rendue ordinaire sur la tete mais pas sur la base reste ELEVEE ; sensible absent, base illisible, diff vide, fichier de la garde au milieu du diff, fichier .github/workflows/ci.yml, package.json ou CLAUDE.md au milieu du diff, module importe indirectement par la garde, liste de la forge tronquee, chemin non ASCII sous prisma/ lu par le diff local, fichier renomme de .github/ ou de prisma/ vers docs/ donnent ELEVE, le second exigeant aussi le label schema ; toute tache du registre est classee, les deux classes comptees et imprimees, plancher superieur a zero pour chacune ; le composeur du corps, exerce par sa fonction pure, ne coche pas la case 3 la ou la garde exige quatre lentilles.
 
-**Tests.** `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts`
+**Tests.** `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts` · `tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts`
 
 ### GOV-078 — Une demande de fusion qui reecrit la prose d'une tache sensible n'a jamais a produire de scenario d'attaque
 

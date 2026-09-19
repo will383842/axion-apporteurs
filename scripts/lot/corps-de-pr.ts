@@ -53,11 +53,15 @@ import { execFileSync } from 'node:child_process';
 
 import { CHAMPS } from '../../src/config/entite';
 import {
+  cheminsTouches,
   lireRevues,
+  risqueDeLaPr,
+  tachesDeLaBase,
   tachesDeLaPr,
-  tachesSchemaDeLaPr,
-  toucheSchema,
+  type EntreeDeFichier,
+  type ListeDesFichiers,
   type RevueBrute,
+  type TacheDeLaPr,
   jugerLesTetes,
 } from './revues';
 
@@ -76,6 +80,10 @@ type Tache = {
   pr?: number | null;
   reqs: string[];
   schema?: boolean;
+  // `zone` et `sensible` entrent au type pour la même raison que `schema` avant eux : ce que le
+  // type tait, le RISQUE de la PR ne peut pas le lire (GOV-077).
+  zone?: string | null;
+  sensible?: string[] | null;
 };
 
 const LIVREE = new Set(['fusionnee', 'deployee', 'verifiee']);
@@ -164,20 +172,83 @@ function suite(chemin: string | null): { fichiers: string; tests: string } {
  * n'y est pas mesurable. Le détail publié le NOMME. On ne coche jamais ce qu'on ne mesure pas.
  */
 
+/**
+ * LA DÉCISION DE LA CASE, PURE — c'est elle que `lentilles-selon-le-risque.spec.ts` exerce.
+ *
+ * ⚠️ LE RISQUE LIT LE TITRE, ET LUI SEUL (GOV-077). Pendant tout le vol d'une PR, le registre porte
+ * `pr: null` pour sa tâche : sans le titre, l'ensemble des tâches serait VIDE, le risque ÉLEVÉ, et
+ * la case d'une PR ordinaire ne se cocherait jamais. Mais `LISTE_SUR_LA_PR` et `COUVRE` restent sur
+ * `tachesDeLaPr(T, pr, null)` — ce que la PR DÉCLARE porter : deux ensembles, deux usages. Faire
+ * lire le titre à ces deux marqueurs changerait le SENS du corps publié.
+ */
+export function jugerCaseRevues(e: {
+  titre: string | null;
+  pr: number;
+  fichiers: readonly string[];
+  /** D'où vient `fichiers`, et si la liste est complète — `null` : inconnu, donc case vide. */
+  liste: ListeDesFichiers | null;
+  labels: readonly string[];
+  revues: RevueBrute[];
+  taches: readonly TacheDeLaPr[];
+  /** Le registre de la BASE de la PR — `null` s'il est illisible, et la case reste alors vide. */
+  tachesBase: readonly TacheDeLaPr[] | null;
+  tete: string;
+  auteurPoste: string | null;
+  auteurCompte: string | null;
+}): { marque: string; detail: string } {
+  const lecture = lireRevues({
+    revues: e.revues,
+    // LA MÊME DÉRIVATION QUE LA GARDE : le risque de la PR décide des lentilles, et le signal
+    // `schema` — fichiers, tâches, label, le plus strict gagne — en fait partie.
+    risque: risqueDeLaPr({
+      titre: e.titre,
+      pr: e.pr,
+      taches: e.taches,
+      tachesBase: e.tachesBase,
+      fichiers: e.fichiers,
+      liste: e.liste,
+      labels: e.labels,
+    }),
+    tete: e.tete,
+    auteurPoste: e.auteurPoste,
+    auteurCompte: e.auteurCompte,
+  });
+  return { marque: lecture.coche ? '[x]' : '[ ]', detail: lecture.detail };
+}
+
+/**
+ * LES FICHIERS D'UNE PR, LUS SUR LA FORGE — la partie PURE de `caseRevues()`, exercée par
+ * `lentilles-selon-le-risque.spec.ts` (lentille `mutation`, PR 64 : l'appelant de
+ * `cheminsTouches()` n'était exercé par rien). Un fichier RENOMMÉ compte par sa source ET sa
+ * destination ; la liste plafonne sans erreur, d'où la comparaison à `changed_files` de la même
+ * réponse `pulls/{n}` que la tête et le titre (`ListeDesFichiers`, `scripts/lot/revues.ts`).
+ */
+export function fichiersDeLaForge(
+  entrees: readonly EntreeDeFichier[],
+  annoncees: number | undefined
+): { fichiers: string[]; liste: ListeDesFichiers } {
+  return {
+    fichiers: cheminsTouches(entrees),
+    liste: {
+      source: 'forge',
+      lues: entrees.length,
+      annoncees: Number.isInteger(annoncees) ? annoncees! : null,
+    },
+  };
+}
+
 function caseRevues(
   pr: number,
   gabarit: string,
-  /**
-   * Le fait « cette PR touche au schéma PAR SES TÂCHES », DÉRIVÉ une seule fois par
-   * `tachesSchemaDeLaPr()` et transmis. Ce module composait ici son propre `some(t => t.schema)`,
-   * pendant que `gov-pr.ts` composait un `find()` sur la seule tâche du titre : deux entrées pour
-   * un lecteur unique, et elles divergeaient (mesuré le 2026-09-05 sur la PR 31).
-   */
-  tachesSchema: boolean
+  /** Le registre de la TÊTE : le risque se dérive de lui ET de celui de la base. */
+  taches: readonly Tache[]
 ): { marque: string; detail: string } {
   let tete: string;
+  let titre: string | null;
+  let baseSha: string;
   let labels: string[];
   let fichiers: string[];
+  let liste: ListeDesFichiers;
   let revues: RevueBrute[];
   let auteurCompte: string | null;
   try {
@@ -187,12 +258,16 @@ function caseRevues(
         maxBuffer: 32e6,
       })
     ) as {
+      title?: string;
       head: { sha: string };
+      base?: { sha?: string };
       user?: { login?: string };
       labels?: { name: string }[];
+      changed_files?: number;
     };
     tete = meta.head.sha;
-
+    titre = meta.title ?? null;
+    baseSha = meta.base?.sha ?? '';
     // ⚠️ LA TÊTE QUE LA FORGE RAPPORTE PEUT ÊTRE PÉRIMÉE, ET L'ERREUR EST PERMISSIVE.
     //
     // Constaté le 2026-09-05 : ce rendu, lancé juste après un `git push`, a lu la tête
@@ -217,14 +292,14 @@ function caseRevues(
     }
     auteurCompte = meta.user?.login ?? null;
     labels = (meta.labels ?? []).map((l) => l.name);
-    fichiers = (
-      JSON.parse(
-        execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/files`, '--paginate'], {
-          encoding: 'utf8',
-          maxBuffer: 32e6,
-        })
-      ) as { filename: string }[]
-    ).map((f) => f.filename);
+    // Un fichier RENOMMÉ compte par sa source ET sa destination : la même extraction que la garde.
+    const entrees = JSON.parse(
+      execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/files`, '--paginate'], {
+        encoding: 'utf8',
+        maxBuffer: 32e6,
+      })
+    ) as EntreeDeFichier[];
+    ({ fichiers, liste } = fichiersDeLaForge(entrees, meta.changed_files));
     revues = JSON.parse(
       execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/reviews`, '--paginate'], {
         encoding: 'utf8',
@@ -239,17 +314,21 @@ function caseRevues(
     };
   }
 
-  const lecture = lireRevues({
+  return jugerCaseRevues({
+    titre,
+    pr,
+    fichiers,
+    liste,
+    labels,
     revues,
-    // LE PLUS STRICT DES TROIS SIGNAUX GAGNE : les fichiers de la PR, le champ `schema` des tâches
-    // qu'elle porte, le label. Le label seul était la lecture d'avant — la plus faible des trois,
-    // et plus faible que celle de la gate que cette case supplée.
-    schema: toucheSchema({ fichiers, labels, tachesSchema }),
+    taches,
+    // La base de la PR, lue par `git show <sha>:docs/tasks.json`. Illisible → `null` → risque
+    // élevé : sans elle, une PR qui déclasse sa propre tâche se relirait en ordinaire.
+    tachesBase: tachesDeLaBase(baseSha),
     tete,
     auteurPoste: /^Auteur:\s*(A\d{2})\s*$/m.exec(gabarit)?.[1] ?? null,
     auteurCompte,
   });
-  return { marque: lecture.coche ? '[x]' : '[ ]', detail: lecture.detail };
 }
 
 export function valeurs(
@@ -270,7 +349,7 @@ export function valeurs(
   // connaît et obtient donc un sur-ensemble — jamais l'inverse (monotonie, voir `tachesDeLaPr`).
   const surLaPr = tachesDeLaPr(T, pr, null);
   const s = suite(journalTests);
-  const c = caseRevues(pr, gabarit, tachesSchemaDeLaPr(T, pr, null));
+  const c = caseRevues(pr, gabarit, T);
 
   return {
     TACHES: String(T.length),

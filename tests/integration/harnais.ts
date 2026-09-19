@@ -8,7 +8,7 @@
  * —, et rend un `PrismaClient` branché sur lui. `arreter()` ferme le client puis le conteneur.
  *
  * CE QU'IL REFUSE. Sans démon Docker, il LÈVE en le nommant : un test d'intégration qui se tait
- * faute de base est un vert qui n'a rien mesuré. `pnpm test` exige donc Docker (partners/ADR-0014,
+ * faute de base est un vert qui n'a rien mesuré. `pnpm test` exige donc Docker (partners/ADR-0015,
  * décision 7 ; partners/ADR-0001 : « la dépendance à Docker devient structurelle »).
  *
  * CE QUE QA-T02 AJOUTERA ICI : cache éphémère, isolation par fichier, refus explicite d'un
