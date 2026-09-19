@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `9f2f6d9` — 2026-09-19T06:53:02+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #75 (un contrôle requis rouge ou une revue manquante) · 2. #78 (un contrôle requis rouge ou une revue manquante) · 3. #76 (un conflit avec `main`) |
+| Où est `main` ? | `f37659e` — 2026-09-19T10:37:25+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #75 (un conflit avec `main`) · 2. #76 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · CPL-T13 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 72.10 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
@@ -64,9 +64,8 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un contrôle requis rouge ou une revue manquante |
-| 2 | #78 — feat(CPL-T13): module temps pur - horloge injectee, heure de Paris, feries FR, SLA ouvre, seuil HYP-D3 | `t/cpl-t13` | un contrôle requis rouge ou une revue manquante |
-| 3 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -88,7 +87,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées
+`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés
 
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
@@ -98,7 +97,7 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Dernier atterrissage
 
-`origin/main` = `9f2f6d9` (2026-09-19T06:53:02+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `f37659e` (2026-09-19T10:37:25+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -125,6 +124,29 @@ fériés distincts par an, et 1997 n'en a que dix (l'Ascension tombe le 8 mai). 
 maintenant ces années de l'oracle de Gauss au lieu de les écrire. Et une URL encodée en commentaire
 (le « â » de Pâques en pourcentages) se lit comme un identifiant nu : la garde lit les commentaires.
 
+### PR #76 — 2026-09-19 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel
+
+**Fait.** Registre unique des compteurs de débit (`src/server/securite/rate-limit.ts`) : conduite sur
+panne requise par le type, relue en échec fermé à l'exécution, source et `verifieLe` sur chaque limite.
+Sujet réduit à une empreinte typée, adresse du client lue depuis la droite de `X-Forwarded-For`, pot de
+miel observable. La garde `G-SEC-RATE-FAMILLE` exécute chaque compteur contre un cache qui lève. Elle est
+câblée en Gate A. Correctif groupé après les quatre lentilles : IPv6 canonique et regroupée par /64,
+magasin opaque, garde fermée à toute référence indirecte à `limiter` et lisant `src/` et `scripts/`
+sous toutes les extensions, valeurs et conduites confrontées au texte de l'exigence. 83 tests,
+56 mutants joués dont 51 tués.
+
+**Reste.** La spec d'intégration sur Redis réel attend QA-T02 ; la mesure de la phase A est au corps.
+`depot:identite` attend sa configuration (UX-P1-02, SEC-21). `REDIS_URL` doit entrer au schéma
+d'environnement (QA-T04), et `SAUTS_DE_CONFIANCE` doit être mesuré au déploiement (QA-T05). Quatre
+mutants ioredis survivent : ils sont équivalents sous `connect()` explicite.
+
+**Appris.** Avec `lazyConnect` et sans file hors ligne, `ioredis` fait échouer TOUTE première commande :
+le client ne se connecte qu'en tâche de fond. Et contre un serveur qui accepte puis se tait, sa promesse
+de connexion n'aboutit qu'à la fermeture par le pair, c'est-à-dire jamais. Des options « rapides » ne
+suffisent pas : il faut un témoin de délai contre un serveur muet, qui a mesuré 1041 ms avant correctif
+et 529 ms après. Une garde qui cherche un appel par son NOM est contournée par tout ce qui n'est pas
+un appel : il faut refuser toute autre référence au nom, pas énumérer les détours.
+
 ### PR #74 — 2026-09-19 — feat(SEC-02): en-têtes de sécurité et CSP par nonce
 
 **Fait.** Toute réponse que voit `src/proxy.ts` porte une CSP construite autour d'un nonce neuf,
@@ -150,24 +172,7 @@ enfant sans lui. Les outils de test de Next lèvent une erreur d'invariant sur
 `AsyncLocalStorage` tant que `next/dist/server/node-environment-baseline` n'est pas importé en
 premier. Et la doc de 16.3.1 nomme `unstable_doesProxyMatch`, que le paquet n'exporte pas.
 
-### PR #73 — 2026-09-19 — feat(SEC-01): secrets distincts et validation d'environnement au boot
-
-**Fait.** `src/lib/env.ts` porte la liste unique des neuf secrets (les huit de REQ-SEC-028 plus
-`PII_HASH_KEY`) en schéma Zod, et `exigerEnvironnement()` refuse de démarrer, code de sortie 1, sur
-un secret absent, trop court en octets, hors format, entouré d'une espace, préfixé `dev_` ou `stub`
-hors `development` et `test`, ou égal à un autre (empreintes SHA-256). `kidDe()` et
-`partners/ADR-0013` (`propose`, contrat du format chiffré) sont livrés ; `G-SEC-ENV` a sa preuve rouge.
-
-**Reste.** Le câblage au démarrage réel du serveur et la double clé pendant 24 heures sont à QA-T04 ;
-l'emploi du `kid` dans les jetons à SEC-03, SEC-04 et SEC-11 ; les assertions du format chiffré à
-SEC-08. La reformulation de REQ-SEC-028 et HYP-E1-24 (huit secrets plus le sel) revient à A01.
-
-**Appris.** `npx tsx` coûte 7 à 9 s par lancement sur ce poste, `node --import tsx` 0,7 s : une spec
-qui juge une quinzaine de codes de sortie passe de deux minutes à quinze secondes. Et un témoin qui
-colle un préfixe voisin devant un hexadécimal au hasard est instable : `stu` suivi d'un `b` tiré une
-fois sur seize devient `stub`, et le vert dépendait du tirage.
-
-… 24 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 25 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

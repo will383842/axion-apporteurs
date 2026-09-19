@@ -10,7 +10,7 @@
  * Elle ne se contente pas de LIRE la déclaration : elle EXÉCUTE chaque compteur contre un cache
  * qui lève, et confronte le verdict rendu à la conduite déclarée.
  *
- * SEPT FAMILLES, chacune vue rougir sur son témoin par `--prove` :
+ * HUIT FAMILLES, chacune vue rougir sur son témoin par `--prove` :
  *   `perimetre_vide`         0 compteur au registre, ou 0 fichier de code lu sous `src/` et `scripts/`
  *   `conduite_absente`       un compteur sans conduite sur panne valide — le préfixe est nommé
  *   `conduite_trahie`        exécuté contre un cache qui lève, le verdict n'est pas la conduite
@@ -21,6 +21,8 @@
  *   `nom_dynamique`          un appel `limiter(` dont le premier argument n'est pas un littéral
  *                            du registre, ou TOUTE autre référence à `limiter` (alias, `.call`,
  *                            `.apply`, parenthèses, accès par propriété, import d'espace de noms)
+ *   `magasin_explicite`      hors des tests, un magasin ou un signaleur passé à `limiter(`, ou une
+ *                            fabrique de magasin appelée hors du registre
  *   `ecart_a_l_exigence`     une limite, une fenêtre ou une conduite DÉCLARÉE qui n'est pas celle
  *                            que le texte de l'exigence source porte — le préfixe est nommé
  *
@@ -73,6 +75,12 @@ function genreDe(chemin: string): ts.ScriptKind | null {
   return GENRES[ext] ?? null;
 }
 
+/** Nom, sujet, heure : ce que reçoit un appel hors des tests. Le reste est au registre. */
+const ARGUMENTS_D_UN_APPEL = 3;
+
+/** Les fabriques de magasin : réservées au registre, à cette garde et aux tests. */
+const FABRIQUES_DE_MAGASIN: ReadonlySet<string> = new Set(['magasinDepuis', 'creerMagasinRedis']);
+
 /** Le module du registre, sous toutes les formes d'import qui le désignent. */
 const MODULE_DU_REGISTRE = /(^|\/)rate-limit(\.[cm]?[jt]sx?)?$/;
 
@@ -84,6 +92,7 @@ export const FAMILLES = [
   'prefixe_hors_registre',
   'nom_dynamique',
   'ecart_a_l_exigence',
+  'magasin_explicite',
 ] as const;
 export type Famille = (typeof FAMILLES)[number];
 
@@ -349,7 +358,32 @@ function lireUnFichier(f: Fichier, noms: ReadonlySet<string>): Lecture {
 
   const visiter = (n: ts.Node): void => {
     if (ts.isImportDeclaration(n) && importNomme(n)) admis.add(n.moduleSpecifier);
-    if (ts.isImportSpecifier(n) && n.propertyName === undefined) admis.add(n.name);
+    if (ts.isImportSpecifier(n) || ts.isExportSpecifier(n)) {
+      // Le nom IMPORTÉ ou EXPORTÉ, qu'il soit écrit en identifiant ou en chaîne. Seul l'import
+      // nommé, non renommé, écrit en identifiant, est lisible : tout autre spécificateur qui
+      // désigne `limiter` le fait sortir sous un autre nom, que la garde ne suivrait plus.
+      const designe = n.propertyName ?? n.name;
+      const lisible =
+        ts.isImportSpecifier(n) && n.propertyName === undefined && ts.isIdentifier(n.name);
+      if (lisible) admis.add(n.name);
+      else if (designe.text === 'limiter') {
+        admis.add(designe);
+        refuser(
+          n,
+          'nom_dynamique',
+          `\`limiter\` est ${ts.isImportSpecifier(n) ? 'importé' : 'exporté'} sous un autre nom, ` +
+            `ou par une chaîne : ses appels échapperaient à la lecture de leur premier argument.`
+        );
+      }
+    }
+    if (ts.isIdentifier(n) && FABRIQUES_DE_MAGASIN.has(n.text)) {
+      refuser(
+        n,
+        'magasin_explicite',
+        `\`${n.text}\` hors du registre : un magasin se fabrique dans ${CHEMIN_DU_REGISTRE}, ` +
+          `et un magasin fait à la main peut tout admettre.`
+      );
+    }
 
     if (
       ts.isCallExpression(n) &&
@@ -358,6 +392,14 @@ function lireUnFichier(f: Fichier, noms: ReadonlySet<string>): Lecture {
     ) {
       admis.add(n.expression);
       appelsVus += 1;
+      if (n.arguments.length > ARGUMENTS_D_UN_APPEL) {
+        refuser(
+          n,
+          'magasin_explicite',
+          `\`limiter(\` reçoit ${n.arguments.length} arguments : hors des tests, le magasin et le ` +
+            `signaleur sont ceux du registre, jamais un magasin ou un puits passé par l'appelant.`
+        );
+      }
       const premier = n.arguments[0];
       const litteral =
         premier !== undefined &&
@@ -465,7 +507,7 @@ export async function analyser(u: Univers): Promise<Releve> {
 
 // ── L'univers du dépôt ──────────────────────────────────────────────────────────────────────────
 
-function sourcesDuDisque(dossier: string): Fichier[] {
+export function sourcesDuDisque(dossier: string): Fichier[] {
   return readdirSync(dossier, { withFileTypes: true })
     .flatMap((e): Fichier[] => {
       const chemin = `${dossier}/${e.name}`;
@@ -565,6 +607,24 @@ export const TEMOINS: readonly Temoin[] = [
       return { ...b, registre };
     },
     nomme: ['magic:', 'magic:courriel'],
+  },
+  {
+    famille: 'magasin_explicite',
+    libelle: 'un magasin fabriqué à la main, passé en 4e argument de `limiter(`',
+    univers: (b) => ({
+      ...b,
+      fichiers: [
+        ...b.fichiers,
+        {
+          chemin: 'src/server/temoin.ts',
+          texte:
+            "import { limiter, magasinDepuis } from './securite/rate-limit';\n" +
+            'const m = magasinDepuis(async () => ({ admis: true, compte: 0, plusAncienMs: null }));\n' +
+            "export const f = (s: any) => limiter('magic:ip', s, 0, m);\n",
+        },
+      ],
+    }),
+    nomme: ['src/server/temoin.ts:2', 'src/server/temoin.ts:3'],
   },
   {
     famille: 'prefixe_hors_famille',

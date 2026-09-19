@@ -77,6 +77,7 @@ import {
   analyser,
   cacheQuiLeve,
   exigenceDuCompteur,
+  sourcesDuDisque,
   universDuDepot,
   type Univers,
 } from '../../../scripts/gates/rate-famille';
@@ -706,6 +707,18 @@ describe('REQ-SEC-016 — la garde de famille', () => {
       "const rl = require('./securite/rate-limit');\nexport const f = rl;\n",
     ],
     ['ré-export du registre', "export * from './securite/rate-limit';\n"],
+    [
+      'import nommé par une chaîne',
+      "import { 'limiter' as compter } from './securite/rate-limit';\nexport const f = compter;\n",
+    ],
+    [
+      'ré-export nommé par une chaîne',
+      "export { 'limiter' as compter } from './securite/rate-limit';\n",
+    ],
+    [
+      'export local renommé',
+      "import { limiter } from './securite/rate-limit';\nexport { limiter as compter };\n",
+    ],
   ])(
     'REQ-SEC-016 — référence indirecte à `limiter` (%s) : `nom_dynamique`, échec fermé',
     async (_l, texte) => {
@@ -747,19 +760,63 @@ describe('REQ-SEC-016 — la garde de famille', () => {
     ]);
   });
 
-  it.each(['.mts', '.cts', '.js', '.mjs', '.cjs', '.jsx'])(
-    'REQ-SEC-016 — un fichier `%s` est lu comme les autres',
-    async (ext) => {
-      const r = await analyser({
-        ...base,
-        fichiers: [
-          ...base.fichiers,
-          { chemin: `src/cle${ext}`, texte: "export const k = 'depot:x';\n" },
-        ],
-      });
-      expect(r.fautes.map((f) => f.message.split(' — ')[0])).toEqual([`src/cle${ext}:1`]);
+  it('REQ-SEC-016 — le filtre du DISQUE lit les huit extensions de code, et elles seules', async () => {
+    const dossier = mkdtempSync(join(tmpdir(), 'rfx-'));
+    try {
+      const code = ['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs', '.jsx'];
+      for (const ext of [...code, '.json', '.md', '.txt']) {
+        writeFileSync(join(dossier, `cle${ext}`), "export const k = 'depot:x';\n");
+      }
+      const lus = sourcesDuDisque(dossier);
+      expect(lus.map((f) => f.chemin.slice(dossier.length + 1)).sort()).toEqual(
+        code.map((ext) => `cle${ext}`).sort()
+      );
+      const r = await analyser({ ...base, fichiers: [...base.fichiers, ...lus] });
+      expect(r.fautes).toHaveLength(code.length);
+      expect(r.fautes.every((f) => f.famille === 'prefixe_hors_registre')).toBe(true);
+    } finally {
+      rmSync(dossier, { recursive: true, force: true });
     }
-  );
+  });
+
+  it.each([
+    ['sous `scripts/`', 'scripts/lot/voisin.ts'],
+    ['à côté du registre', 'src/server/securite/voisin.ts'],
+  ])('REQ-SEC-016 — une clé de famille écrite %s est vue', async (_l, chemin) => {
+    const r = await analyser({
+      ...base,
+      fichiers: [...base.fichiers, { chemin, texte: "export const k = 'depot:x';\n" }],
+    });
+    expect(r.fautes.map((f) => [f.famille, f.message.split(' — ')[0]])).toEqual([
+      ['prefixe_hors_registre', `${chemin}:1`],
+    ]);
+  });
+
+  it.each([
+    [
+      'un magasin passé en 4e argument',
+      "import { limiter } from './securite/rate-limit';\nexport const f = (s: any, m: any) => limiter('magic:ip', s, 0, m);\n",
+    ],
+    [
+      'un signaleur passé en 5e argument',
+      "import { limiter } from './securite/rate-limit';\nexport const f = (s: any) => limiter('magic:ip', s, 0, undefined, () => undefined);\n",
+    ],
+    [
+      'un magasin fabriqué à la main',
+      "import { magasinDepuis } from './securite/rate-limit';\nexport const m = magasinDepuis(async () => ({ admis: true, compte: 0, plusAncienMs: null }));\n",
+    ],
+    [
+      'un magasin réel construit hors du registre',
+      "import { creerMagasinRedis } from './securite/rate-limit';\nexport const m = creerMagasinRedis('redis://cache.example.org', {});\n",
+    ],
+  ])('REQ-SEC-016 — hors des tests, %s est refusé : `magasin_explicite`', async (_l, texte) => {
+    const r = await analyser({
+      ...base,
+      fichiers: [...base.fichiers, { chemin: 'src/server/detour.ts', texte }],
+    });
+    expect(r.fautes.map((f) => f.famille)).toContain('magasin_explicite');
+    expect(r.fautes.every((f) => f.message.startsWith('src/server/detour.ts:'))).toBe(true);
+  });
 
   it('REQ-SEC-016 — le périmètre du dépôt lit `src/` ET `scripts/`, sous toutes les extensions de code', () => {
     const chemins = base.fichiers.map((f) => f.chemin);
