@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `a8221af` — 2026-09-19T04:42:28+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #59 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T01 (A05) · GOV-077 (A05) |
+| Où est `main` ? | `8c70f52` — 2026-09-19T05:13:32+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #73 (un contrôle requis rouge ou une revue manquante) |
+| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · DM-01 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 71.60 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #64 — 2026-09-18 |
+| Dernière entrée de journal | PR #73 — 2026-09-19 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,7 +64,7 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #73 — feat(SEC-01): secrets distincts et validation d'environnement au boot | `t/sec-01` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -75,13 +75,16 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | QA-T01 — Squelette de tests et Gate A bloquante | A05 | #56 | `a_faire` |
+| SEC-01 — Secrets distincts et validation d'environnement au boot | A05 | #60 | `a_faire` |
+| SEC-02 — En-têtes de sécurité et CSP par nonce | A05 | #66 | `a_faire` |
+| DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
 | GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent | A05 | #57 | `a_faire` |
 
 ⚠️ **25 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve
+`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées
 
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
@@ -91,13 +94,30 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Dernier atterrissage
 
-`origin/main` = `a8221af` (2026-09-19T04:42:28+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `8c70f52` (2026-09-19T05:13:32+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #73 — 2026-09-19 — feat(SEC-01): secrets distincts et validation d'environnement au boot
+
+**Fait.** `src/lib/env.ts` porte la liste unique des neuf secrets (les huit de REQ-SEC-028 plus
+`PII_HASH_KEY`) en schéma Zod, et `exigerEnvironnement()` refuse de démarrer, code de sortie 1, sur
+un secret absent, trop court en octets, hors format, entouré d'une espace, préfixé `dev_` ou `stub`
+hors `development` et `test`, ou égal à un autre (empreintes SHA-256). `kidDe()` et
+`partners/ADR-0013` (`propose`, contrat du format chiffré) sont livrés ; `G-SEC-ENV` a sa preuve rouge.
+
+**Reste.** Le câblage au démarrage réel du serveur et la double clé pendant 24 heures sont à QA-T04 ;
+l'emploi du `kid` dans les jetons à SEC-03, SEC-04 et SEC-11 ; les assertions du format chiffré à
+SEC-08. La reformulation de REQ-SEC-028 et HYP-E1-24 (huit secrets plus le sel) revient à A01.
+
+**Appris.** `npx tsx` coûte 7 à 9 s par lancement sur ce poste, `node --import tsx` 0,7 s : une spec
+qui juge une quinzaine de codes de sortie passe de deux minutes à quinze secondes. Et un témoin qui
+colle un préfixe voisin devant un hexadécimal au hasard est instable : `stu` suivi d'un `b` tiré une
+fois sur seize devient `stub`, et le vert dépendait du tirage.
 
 ### PR #64 — 2026-09-18 — feat(GOV-077): la relecture se proportionne au risque, aucune revue n est pas toutes refusent
 
@@ -156,42 +176,7 @@ première mesure l'a rangée dans son propre complément. Et `gov:inventaire` ga
 que ce compte est épinglé par une spécification hors des `paths` de la tâche : ajouter une famille
 aurait élargi le périmètre de la PR.
 
-### PR #59 — 2026-09-18 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance
-
-**Fait.** `pnpm test` lance désormais `vitest run --coverage` et applique 100 % lignes et branches à
-chaque fichier de `src/domain/**`, `perFile` nommant le fichier sous le seuil ; `tests/setup.ts`
-existe et est chargé par `setupFiles`. Les 13 avertissements ESLint de la PR 44 sont corrigés à la
-source et les deux blocs de dette retirés : `pnpm lint` sort en 0 sans un seul avertissement. Le lint
-du domaine refuse la base, le cache, le réseau et l'horloge système par leur nom usuel. La spec
-`tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` porte trois témoins à deux faces, un par
-exigence, et elle est le script de `G-SEC-CI-BLOQUANTE`, dont la `preuveRouge` est posée : aucun job
-ni aucune étape d'aucun workflow ne porte `continue-on-error`, lu par un vrai analyseur YAML.
-`etats.ts` passe de 73,33 % à 100 % par un test de domaine qui dérive les statuts non occupants de
-REQ-DM-006. Règle du domaine : sous `src/domain/**`, rien que du `.ts` NON-TEST — ni autre
-extension, ni `*.spec.ts`, ni `*.test.ts`, ni `*.d.ts` ; les tests vivent sous `tests/`. Et aucune
-ligne du domaine ne parle de couverture, lue ENTIÈRE : les formes que le fournisseur installé accepte sont
-lues dans son code, et chacune est vue rougir.
-
-**Reste.** Les formes voisines des interdits du domaine sont fermées par GOV-076 : import sans
-préfixe, `import()` dynamique, `globalThis.fetch`, `Date['now']`, console par alias. REQ-QA-013 n'est
-couverte qu'en partie : semgrep, testcontainers, audit, gitleaks, `req:check`, `idor:check`, lint de
-migration et size-limit restent à leurs tâches. La couverture globale de CONVENTIONS §6 n'est pas
-livrée. Le détecteur de `continue-on-error` existe en double avec le témoin étroit de CPL-T01, et la
-lecture YAML en double avec `gardes-transposees.spec.ts` : dettes, pas tâches. Le désarmement d'une
-étape par le shell, `run: pnpm test || true`, n'est jugé par aucun témoin de cette spec : dette
-listée. L'en-tête de `tests/setup.ts` ne nomme pas les deux tâches qui le rempliront, parce que
-`gov:attributions` refuse qu'un fichier neuf nomme en tête une tâche dont il n'est pas : dette. Tout fichier neuf
-sous `src/domain/` doit arriver couvert à 100 % dans sa propre PR, et une passe partielle se lance
-par `npx vitest run`, jamais par `pnpm test` suivi d'un fichier, qui rougit sur le seuil.
-
-**Appris.** `pnpm test --coverage.reportsDirectory=x` est refusé par pnpm en « Unknown options » et
-sort en 0 : sous la forme courte, pnpm lit les drapeaux pour lui. `pnpm run test` les passe au
-script. Sans `reportOnFailure`, vitest n'imprime aucun seuil dès qu'un autre test échoue : le premier
-rouge de couverture est resté muet sur une suite qui portait dix autres échecs. Et `gov:attributions`
-lit les vingt premières lignes de chaque fichier : nommer une tâche voisine en tête d'un fichier neuf
-la fait rougir en `mention_hors_paths`, même pour dire qui le remplira.
-
-… 21 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 22 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
