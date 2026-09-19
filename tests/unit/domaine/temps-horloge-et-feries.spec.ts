@@ -181,7 +181,7 @@ describe('REQ-QA-027 — le domaine reçoit une horloge injectée', () => {
     expect(lu).toBeLessThanOrEqual(apres);
   });
 
-  it('REQ-QA-027 — aucun fichier de `src/domain/temps/` ne nomme Date, Intl, performance, process ni globalThis', () => {
+  it('REQ-QA-027 — aucun fichier de src/domain/temps/ ne nomme Date, Intl, performance, process ni globalThis', () => {
     const fichiers = fichiersDuDossier(DOSSIER_TEMPS);
     // Plancher : un parcours qui ne lirait plus rien rendrait le même `[]` qu'un domaine sain.
     expect(fichiers.length).toBeGreaterThanOrEqual(6);
@@ -299,8 +299,10 @@ describe('REQ-CPL-013 — calendrier civil et heure légale d’Europe/Paris, ca
     }
   });
 
-  it('REQ-CPL-013 — hors des années 1996 à 2099 de Paris : levée `hors_calendrier` qui nomme l’instant', () => {
+  it('REQ-CPL-013 — hors des années 1996 à 2099 de Paris : levée hors_calendrier qui nomme l’instant', () => {
+    // Les bornes sont des années DE PARIS (décision de l'orchestrateur du 2026-09-19, partners/ADR-0015) :
     // 1996-01-01 00:00 à Paris = 1995-12-31 23:00 UTC ; 2100-01-01 00:00 à Paris = 2099-12-31 23:00 UTC.
+    // Le témoin R7 du brief se lit donc à 1995-12-31T22:59:59.999Z ; 23:59 UTC est déjà 1996 à Paris.
     const avant = Date.UTC(1995, 11, 31, 22, 59, 59, 999);
     const e = levee(() => versParis(avant));
     expect(e.motif).toBe('hors_calendrier');

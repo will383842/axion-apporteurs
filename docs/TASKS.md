@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**260 taches · 195.35 j estimes.**
+**260 taches · 195.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 98 | 76.35 | 5 |
+| 0 — Socle technique | 98 | 76.85 | 5 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -884,11 +884,11 @@ Couvre : `REQ-JUR-001`, `REQ-JUR-002`, `REQ-JUR-019`, `REQ-JUR-041`
 
 ### CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle D3 en fonction pure
 
-`1 j` · zone `gouvernance` · depend de `QA-T01`
+`1.5 j` · zone `gouvernance` · depend de `QA-T01`
 
 Couvre : `REQ-CPL-013`, `REQ-CPL-026`, `REQ-QA-027`, `REQ-UX-022`, `REQ-UX-028`
 
-**Acceptation.** `seuilPrioritaire()` = `min(palierConfiance, capaciteRestante)` ; `surchargeManuelle > 0` remplace le min ; une seule fonction pure, consommée par DM-09 et UX-P1-07.
+**Acceptation.** (1) HORLOGE INJECTEE (REQ-QA-027, pour sa part « le domaine recoit une Clock ») : `Horloge { maintenant(): Instant }`, `Instant` = millisecondes UTC entieres ; `horlogeFigee()` dans le domaine ; `horlogeSysteme` HORS du domaine (`src/lib/horloge.ts`), seul lieu qui lit l'heure de la machine ; aucun fichier de `src/domain/temps/` ne nomme `Date`, `Intl`, `performance`, `process` ni `globalThis` (temoin propre, plus strict que le lint). (2) PARIS (REQ-CPL-013) : conversion instant <-> date et heure legales d'Europe/Paris par la regle europeenne (dernier dimanche de mars et d'octobre, 01:00 UTC), bornee aux annees civiles de Paris 1996-2099 (de 1995-12-31T23:00Z inclus a 2099-12-31T23:00Z exclu), hors bornes levee nommee ; heure locale inexistante (printemps) : decalee apres le saut ; heure ambigue (automne) : premiere occurrence ; le test confronte CHAQUE heure de 2026 a 2040 a `Intl.DateTimeFormat`, oracle qui vit dans le test, jamais dans le domaine. (3) FERIES FR VERSIONNES : calendrier metropolitain portant version et source (Code du travail L3133-1), Paques calculee, onze jours, attribut « chome » par jour ; jour ouvre = lundi a vendredi hors ferie chome ; oracles cites (liste officielle 2026, dates de Paques) ; 29 fevrier (2000, 2028) et changements d'heure testes. (4) SLA (REQ-UX-022, REQ-UX-028) : `echeanceOuvree(debut, heures)` et `heuresOuvreesEcoulees(debut, fin)` comptent les heures civiles de Paris passees dans des jours ouvres ; un depart hors jour ouvre compte a partir du debut du jour ouvre suivant ; l'echeance est exclusive ; 48 h ouvrees et 2 jours ouvres sont la MEME fonction. (5) CAPACITE ET D3 (REQ-CPL-026, HYP-D3) : `capaciteSurPeriode` = somme, sur les jours ouvres de la periode, des qualifieurs non absents multipliee par la capacite par qualifieur et par jour ; `seuilPrioritaire({ palierConfiance, capaciteRestante, surchargeManuelle })` = `surchargeManuelle` si elle est > 0, sinon `min(palierConfiance, capaciteRestante)`, jamais un plafond ; entiers >= 0 sinon levee nommee ; une seule fonction pure, consommee par DM-09 et UX-P1-07. (6) 100 % lignes et branches sur `src/domain/**`, sans directive d'exclusion ; les crons (« tout ce qui est du a l'instant t », releve unique) restent a DM-13 et T-ARG-015.
 
 **Tests.** `tests/unit/domaine/temps-horloge-et-feries.spec.ts` · `tests/unit/domaine/seuil-prioritaire.spec.ts`
 

@@ -16,7 +16,7 @@
 
 **321 exigences actives · 44 réputées testées · 44 couvertes · 0 orphelines.**
 
-260 tâches, dont 44 livrées · 48 fichiers de test exécutés par `vitest` sur 48 présents.
+260 tâches, dont 44 livrées · 50 fichiers de test exécutés par `vitest` sur 50 présents.
 
 ## Exigences réputées testées
 
@@ -438,6 +438,8 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/gov/charte-pr.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011`, `REQ-GOV-012`, `REQ-GOV-013`, `REQ-GOV-027` |
 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | oui | `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013` |
 | `tests/unit/domaine/etats-occupants.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-006` |
+| `tests/unit/domaine/seuil-prioritaire.spec.ts` | oui | `REQ-CPL-026` |
+| `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | oui | `REQ-CPL-013`, `REQ-QA-027`, `REQ-UX-022`, `REQ-UX-028` |
 | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | oui | `REQ-GOV-009` |
 | `tests/unit/gouvernance/adr-index-derive.spec.ts` | oui | `REQ-CPL-018`, `REQ-GOV-008` |
 | `tests/unit/gouvernance/affirmations-verifiees.spec.ts` | oui | `REQ-GOV-004` |

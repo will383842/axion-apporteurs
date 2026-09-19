@@ -3566,7 +3566,10 @@
         "src/domain/temps/",
         "src/domain/attribution/seuil-prioritaire.ts",
         "tests/unit/domaine/temps-horloge-et-feries.spec.ts",
-        "tests/unit/domaine/seuil-prioritaire.spec.ts"
+        "tests/unit/domaine/seuil-prioritaire.spec.ts",
+        "src/lib/horloge.ts",
+        "tests/setup.ts",
+        "docs/adr/0015-temps-paris-jours-ouvres.md"
       ],
       "schema": false,
       "sensible": [],
@@ -3582,16 +3585,16 @@
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
+      "estimateDays": 1.5,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A05",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 67,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`seuilPrioritaire()` = `min(palierConfiance, capaciteRestante)` ; `surchargeManuelle > 0` remplace le min ; une seule fonction pure, consommée par DM-09 et UX-P1-07.",
+      "acceptance": "(1) HORLOGE INJECTEE (REQ-QA-027, pour sa part « le domaine recoit une Clock ») : `Horloge { maintenant(): Instant }`, `Instant` = millisecondes UTC entieres ; `horlogeFigee()` dans le domaine ; `horlogeSysteme` HORS du domaine (`src/lib/horloge.ts`), seul lieu qui lit l'heure de la machine ; aucun fichier de `src/domain/temps/` ne nomme `Date`, `Intl`, `performance`, `process` ni `globalThis` (temoin propre, plus strict que le lint). (2) PARIS (REQ-CPL-013) : conversion instant <-> date et heure legales d'Europe/Paris par la regle europeenne (dernier dimanche de mars et d'octobre, 01:00 UTC), bornee aux annees civiles de Paris 1996-2099 (de 1995-12-31T23:00Z inclus a 2099-12-31T23:00Z exclu), hors bornes levee nommee ; heure locale inexistante (printemps) : decalee apres le saut ; heure ambigue (automne) : premiere occurrence ; le test confronte CHAQUE heure de 2026 a 2040 a `Intl.DateTimeFormat`, oracle qui vit dans le test, jamais dans le domaine. (3) FERIES FR VERSIONNES : calendrier metropolitain portant version et source (Code du travail L3133-1), Paques calculee, onze jours, attribut « chome » par jour ; jour ouvre = lundi a vendredi hors ferie chome ; oracles cites (liste officielle 2026, dates de Paques) ; 29 fevrier (2000, 2028) et changements d'heure testes. (4) SLA (REQ-UX-022, REQ-UX-028) : `echeanceOuvree(debut, heures)` et `heuresOuvreesEcoulees(debut, fin)` comptent les heures civiles de Paris passees dans des jours ouvres ; un depart hors jour ouvre compte a partir du debut du jour ouvre suivant ; l'echeance est exclusive ; 48 h ouvrees et 2 jours ouvres sont la MEME fonction. (5) CAPACITE ET D3 (REQ-CPL-026, HYP-D3) : `capaciteSurPeriode` = somme, sur les jours ouvres de la periode, des qualifieurs non absents multipliee par la capacite par qualifieur et par jour ; `seuilPrioritaire({ palierConfiance, capaciteRestante, surchargeManuelle })` = `surchargeManuelle` si elle est > 0, sinon `min(palierConfiance, capaciteRestante)`, jamais un plafond ; entiers >= 0 sinon levee nommee ; une seule fonction pure, consommee par DM-09 et UX-P1-07. (6) 100 % lignes et branches sur `src/domain/**`, sans directive d'exclusion ; les crons (« tout ce qui est du a l'instant t », releve unique) restent a DM-13 et T-ARG-015.",
       "tests": {
         "REQ-CPL-013": [
           "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
@@ -3603,10 +3606,10 @@
           "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
         ],
         "REQ-UX-022": [
-          "tests/unit/domaine/seuil-prioritaire.spec.ts"
+          "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
         ],
         "REQ-UX-028": [
-          "tests/unit/domaine/seuil-prioritaire.spec.ts"
+          "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
         ]
       }
     },

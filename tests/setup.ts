@@ -3,7 +3,7 @@
  * `vitest.config.ts`) — QA-T01, REQ-QA-002.
  *
  * IL EST MINIMAL, ET C'EST VOULU. Il ne porte ni logique métier, ni horloge, ni base :
- *   — l'horloge figée du domaine arrivera avec le module `temps` ;
+ *   — l'horloge s'injecte (`src/domain/temps/`), elle ne se fige pas ici ;
  *   — la base éphémère des tests d'intégration arrivera avec testcontainers.
  * Ce sont leurs tâches qui le rempliront, chacune dans sa PR.
  *
