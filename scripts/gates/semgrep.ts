@@ -310,10 +310,13 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
     null,
     0
   ),
-  // Le patron de DM-01 (`src/server/evenement/journal.ts`) : gabarit étiqueté, paramétré.
+  // Le patron du verrou de DM-01 : gabarit étiqueté, paramétré. Le chemin du bac ne nomme PAS
+  // le dossier du journal : `journal:sans-pii` tient pour second écrivain tout fichier qui
+  // touche le client ET nomme la table (mesuré en Gate A). Le fichier réel de DM-01, lui, est
+  // sous `src/` et le passage sur le dépôt réel le juge : 0 constat.
   fichier(
-    'sql/journal-dm01',
-    'src/server/evenement/journal.ts',
+    'sql/verrou-dm01',
+    'src/server/verrou/journal.ts',
     [
       "import type { Prisma } from '@prisma/client';",
       'const CLE_VERROU = 7;',
