@@ -12,7 +12,8 @@ dans ce fichier, et `gov:pr` rougit si ce n'est plus vrai.
     dod:fin, et nulle part ailleurs : aucune autre case à cocher dans le corps ;
   · le bloc ROUGE/VERT vit entre rouge-vert:debut et rouge-vert:fin ;
   · la section Attaque vit entre attaque:debut et attaque:fin. Elle est EXIGÉE si la tâche porte
-    un champ `sensible` non vide, ou si le diff touche commissions/, attributions/, auth/ ou espace/ ;
+    un champ `sensible` non vide ou ABSENT (un champ absent compte comme sensible), ou si le diff
+    touche commissions/, attributions/, auth/ ou espace/ ;
   · la règle maison est un CHAMP, entre regle-maison:debut et regle-maison:fin — en case, elle
     ferait une neuvième case et fausserait le compte de REQ-GOV-013 ;
   · `Auteur:` n'apparaît jamais dans `Relecteur:`, et l'auteur ne s'auto-approuve pas. La règle
@@ -64,9 +65,9 @@ sans objet : la tâche ne porte pas de champ `sensible` et le diff ne touche auc
 
 <!-- attaque:fin -->
 
-> Exigée si la tâche porte un champ `sensible` non vide, ou si le diff touche `commissions/`,
+> Exigée si la tâche porte un champ `sensible` non vide ou absent, ou si le diff touche `commissions/`,
 > `attributions/`, `auth/` ou `espace/`. Trois lignes : le scénario joué, le résultat obtenu, qui
-> l'a joué. Le refus de la lentille `securite` vaut veto à lui seul sur ces PR.
+> l'a joué. Le refus de la lentille `securite` vaut veto à lui seul, sur toute PR (charte §6).
 
 ## Règle maison appliquée
 
@@ -82,7 +83,7 @@ Règle maison appliquée: RM-__ — vue dans (fichier):(ligne)
 
 - [ ] Les REQ couvertes sont listées dans `Couvre:`, et le code ne fait rien de plus qu'elles.
 - [ ] Chaque REQ a son test, nommé par son identifiant, annoté `// @req`, et vu ROUGE avant le correctif.
-- [ ] Relecteur ≠ auteur : trois lentilles distinctes plus l'avis de mutation, l'auteur ne s'auto-approuve pas.
+- [ ] Relecteur ≠ auteur : les lentilles qu'exige le risque de la PR (docs/CHARTE-AGENTS.md §6), l'auteur ne s'auto-approuve pas.
 - [ ] ADR ouverte si une décision de conception a été prise, ou `stop` rendu si elle appartient à Will.
 - [ ] Glossaire et vocabulaire à jour : aucune colonne de vocabulaire en chaîne libre, aucun libellé recopié.
 - [ ] Mesure avant/après du poids de la route si une route d'interface est touchée, à la main, chiffres collés.

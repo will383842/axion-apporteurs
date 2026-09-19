@@ -82,9 +82,10 @@ changé.
 
 **Ce qu'on lit.** Vert. C'est le seul moment où les revues existent : l'événement `pull_request` de la
 CI n'en porte aucune, donc `gate-a` ne peut pas les juger (`docs/CHARTE-AGENTS.md` §8). Sont vérifiés
-ici : trois lentilles distinctes, l'avis de mutation, l'auteur qui ne s'auto-approuve pas, les sept
-premières cases de la DoD, le bloc ROUGE/VERT, et la section « Attaque » si la tâche est `sensible` —
-où le refus de la lentille `securite` vaut **veto**, à lui seul.
+ici : les lentilles qu'exige le risque imprimé par `gov:pr` (deux sur une PR ordinaire, trois plus l'avis
+de mutation sur une PR élevée — `docs/CHARTE-AGENTS.md` §6), l'auteur qui ne s'auto-approuve pas, les
+sept premières cases de la DoD, le bloc ROUGE/VERT, et la section « Attaque » si la tâche est
+`sensible`. Sur toute PR, le refus de la lentille `securite` vaut **veto**, à lui seul.
 
 ### Pas 3 — Les gates, sur le commit qui sera fusionné
 
