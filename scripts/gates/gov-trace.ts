@@ -9,11 +9,17 @@
  *         …--out <chemin>             travaille sur une autre vue (bancs d'essai des tests)
  *
  * L'EXIGENCE. REQ-GOV-005 demandait cette matrice ; elle est ABSORBÉE par REQ-QA-014, dont le
- * texte fait foi : « Chaque exigence REQ-*-nnn non différée est référencée par ≥ 1 test vert via
- * l'annotation @req ; chaque @req pointe une REQ existante ; la garde rougit dans les deux sens
- * d'orphelinat. » REQ-GOV-005 ajoutait deux choses que REQ-QA-014 ne dit pas et que cette garde
- * tient quand même, parce qu'elles sont vérifiables ici : l'identifiant REQ dans le TITRE du
- * `it()` (une deuxième forme de citation, à côté de `@req`), et le maillon PR (`Couvre: REQ-…`).
+ * texte fait foi : « Chaque exigence REQ-*-nnn non différée est référencée par ≥ 1 test vert dont
+ * le titre `it()` contient son identifiant ET porte l'annotation `@req` en tête du fichier de ce
+ * test ; chaque `@req` comme chaque identifiant cité par un titre pointe une REQ qui existe ET dont
+ * le texte est EN VIGUEUR ; les corps de PR listent `Couvre: REQ-…` ; `pnpm req:check` dérive la
+ * matrice et rougit dans les deux sens d'orphelinat. »
+ *
+ * `pnpm req:check` EST CETTE GARDE (QA-T03), lancée après `pnpm test` avec les RÉSULTATS de la
+ * passe (`--resultats <chemin du rapport JSON de vitest>`) : c'est la seule façon de savoir qu'un
+ * test est VERT, et pas seulement écrit. Sans `--resultats`, la garde juge tout le reste et DIT que
+ * le vert n'est pas jugé ; des résultats absents, illisibles ou périmés la font rougir, jamais
+ * passer (`resultats_illisibles`).
  *
  * LES QUATRE SOURCES, ET CE QU'ON EN CROIT :
  *
@@ -41,8 +47,9 @@
  * heuristique de ressemblance (mots communs entre le texte de l'exigence et le titre du test)
  * rougirait au hasard, et une famille qui rougit au hasard fait perdre confiance dans les autres.
  * Ce qui EST décidable, et que la famille `req_non_citee_par_son_test` retient, c'est la règle que
- * les deux exigences écrivent elles-mêmes : le test promis pour REQ-X doit CITER REQ-X, par
- * `@req` ou par son titre. C'est exactement ce défaut-là qui avait été trouvé à la main.
+ * REQ-QA-014 écrit elle-même : le fichier promis pour REQ-X porte `@req REQ-X` EN TÊTE ET un titre
+ * de `it()` qui contient REQ-X — les DEUX formes. La garde acceptait l'une OU l'autre, et lisait
+ * `@req` n'importe où dans le fichier (QA-T03). C'est ce défaut-là qui avait été trouvé à la main.
  *
  * POURQUOI LA VUE NE PORTE PAS LA COLONNE « PR ». `docs/TRACABILITE.md` est comparée à sa source
  * par `--verifier`. Si son contenu dépendait d'un appel réseau, `--verifier` mesurerait la
@@ -56,7 +63,13 @@ import { basename, posix } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 import { DEPOT_LOCAL } from '../lot/attestation';
-import { fichiersDeTest, titresEcrits } from '../lot/titres-ecrits';
+import {
+  annotationsReq,
+  fichiersDeTest,
+  titresDeTest,
+  titresEcrits,
+  type AnnotationReq,
+} from '../lot/titres-ecrits';
 
 const CHEMIN_REGISTRE = 'docs/requirements.json';
 /**
@@ -148,7 +161,27 @@ export type FichierTest = {
   titresResolus: string[] | null;
   /** Les exigences citées : annotations `@req` et identifiants dans les titres. */
   reqsCitees: string[];
+  /** Les titres des TESTS eux-mêmes (`it`, `test`), sans les `describe` — REQ-QA-014, QA-T03. */
+  titresDeTest: string[];
+  /** Les annotations `@req`, chacune avec sa ligne et sa place : en tête du fichier ou non. */
+  annotations: AnnotationReq[];
 };
+
+/** Un test tel que la passe l'a RENDU : son nom (« describe > it »), son titre, son statut. */
+export type ResultatTest = { nom: string; titre: string; statut: string };
+
+/** Pourquoi les résultats ne se lisent pas. `perimes` se constate au jugement, contre le disque. */
+export const MOTIFS_RESULTATS = ['absents', 'illisibles', 'perimes'] as const;
+
+/**
+ * Les RÉSULTATS de la passe de tests (`--resultats`, QA-T03). `non_demandes` : la garde ne juge
+ * pas le vert, et le DIT. `absents` / `illisibles` : on les a demandés et on n'a rien pu lire — la
+ * garde rougit, elle ne se déclare pas verte sur ce qu'elle n'a pas lu.
+ */
+export type Resultats =
+  | { etat: 'non_demandes' }
+  | { etat: 'absents' | 'illisibles'; source: string; detail: string }
+  | { etat: 'lus'; source: string; parFichier: Record<string, ResultatTest[]> };
 
 export type PullRequest = { numero: number; gabarit: boolean; couvre: string[] };
 
@@ -168,6 +201,7 @@ export type Univers = {
   pr: PullRequest[] | null;
   prIndisponible: string | null;
   plancher: Plancher | null;
+  resultats: Resultats;
 };
 
 export type Faute = { famille: string; message: string };
@@ -175,11 +209,14 @@ export type Faute = { famille: string; message: string };
 export const FAMILLES = [
   'tache_sans_req',
   'test_cite_req_inconnue',
+  'annotation_absorbee_sans_renvoi',
   'req_sans_test',
   'test_promis_absent',
   'promesse_ambigue',
   'req_non_citee_par_son_test',
+  'test_promis_non_vert',
   'titres_non_resolus',
+  'resultats_illisibles',
   'pr_sans_couvre',
   'pr_couvre_req_inconnue',
   'vue_divergente',
@@ -282,16 +319,22 @@ export function controler(u: Univers): Faute[] {
   return juger(u).fautes;
 }
 
+/** Ce que le jugement a confronté : tâches, paires (tâche, exigence), et paires VERTES. */
+type Jugement = { fautes: Faute[]; confrontees: Set<string>; paires: number; vertes: number };
+
 /**
  * Le contrôle ET ce qu'il a confronté. Les deux sortent du MÊME passage : le périmètre n'est pas
  * une seconde écriture des règles ci-dessous — une tâche y entre à l'endroit exact où une de ses
  * promesses reçoit un verdict, et nulle part ailleurs (RM-01).
  */
-function juger(u: Univers): { fautes: Faute[]; confrontees: Set<string> } {
+function juger(u: Univers): Jugement {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
   /** Les tâches dont au moins une promesse de `tests{}` a reçu un verdict contre CE disque. */
   const confrontees = new Set<string>();
+  /** Les paires (tâche, exigence active) jugées sur les deux formes, et celles qu'on a vues VERTES. */
+  let paires = 0;
+  let vertes = 0;
 
   const parReq = new Map(u.exigences.map((e) => [e.id, e]));
   const parTache = new Map(u.taches.map((t) => [t.id, t]));
@@ -322,6 +365,49 @@ function juger(u: Univers): { fautes: Faute[]; confrontees: Set<string> } {
       }
       if (!f.execute) continue;
       citeePar.set(r, [...(citeePar.get(r) ?? []), f.chemin]);
+    }
+  }
+
+  // ── une annotation qui s'adosse à un texte hors vigueur (QA-T03) ──────────────────────────────
+  // REQ-QA-014 : « chaque `@req` […] pointe une REQ […] dont le texte est EN VIGUEUR ». La règle
+  // est celle que `titres-de-test-resolvent.spec.ts` tient pour les TITRES (GOV-039) : une exigence
+  // absorbée garde le droit d'étiqueter, à condition de porter son renvoi vers la survivante que
+  // le registre nomme (`remplaceePar`) — ici, sur la MÊME ligne que l'annotation.
+  for (const f of u.fichiers) {
+    for (const a of f.annotations) {
+      const e = parReq.get(a.req);
+      if (!e || e.statut !== 'absorbee') continue;
+      if (e.remplaceePar && a.texteLigne.includes(e.remplaceePar)) continue;
+      ajouter(
+        'annotation_absorbee_sans_renvoi',
+        `${f.chemin}:${a.ligne} annote \`@req ${a.req}\`, dont le registre déclare le texte REMPLACÉ ` +
+          `par ${e.remplaceePar ?? '(rien)'} : l'annotation s'adosse à un texte hors vigueur. Écris ` +
+          `« @req ${a.req} → ${e.remplaceePar ?? 'REQ-…'} » sur la même ligne, ou annote la survivante.`
+      );
+    }
+  }
+
+  // ── les résultats de la passe : on les a demandés, on doit pouvoir les lire (QA-T03) ──────────
+  // Absents, illisibles, ou PÉRIMÉS — un fichier que la configuration exécute et que les résultats
+  // ne portent pas : une passe partielle, ou celle d'un autre arbre. Jamais un vert.
+  const res = u.resultats;
+  if (res.etat === 'absents' || res.etat === 'illisibles') {
+    ajouter(
+      'resultats_illisibles',
+      `motif ${res.etat} — ${res.source} : ${res.detail}. Le vert des tests n'est PAS jugé, et la ` +
+        `garde ne se déclare pas verte sur ce qu'elle n'a pas pu lire.`
+    );
+  } else if (res.etat === 'lus') {
+    const manquants = u.fichiers
+      .filter((f) => f.execute && !Object.hasOwn(res.parFichier, f.chemin))
+      .map((f) => f.chemin);
+    if (manquants.length > 0) {
+      ajouter(
+        'resultats_illisibles',
+        `motif perimes — ${res.source} ne porte pas ${manquants.length} fichier(s) que ` +
+          `${CHEMIN_VITEST} exécute : ${manquants.join(', ')}. Ce sont les résultats d'une passe ` +
+          `partielle ou d'un autre arbre ; relance \`pnpm test\` en entier.`
+      );
     }
   }
 
@@ -410,9 +496,12 @@ function juger(u: Univers): { fautes: Faute[]; confrontees: Set<string> } {
           continue;
         }
 
+        /** Le titre promis n'a pas pu être retrouvé : son statut ne se juge pas une seconde fois. */
+        let titreIntrouvable = false;
         if (titre.length > 0) {
           confrontees.add(t.id);
           if (f.titresResolus === null) {
+            titreIntrouvable = true;
             ajouter(
               'titres_non_resolus',
               `${t.id} promet un titre précis dans ${f.chemin} (« ${titre} ») et les titres de ce ` +
@@ -420,6 +509,7 @@ function juger(u: Univers): { fautes: Faute[]; confrontees: Set<string> } {
                 `Le contrôle ne se déclare pas vert sur ce qu'il n'a pas pu lire.`
             );
           } else if (!f.titresResolus.some((x) => nomPorteLaPromesse(x, titre))) {
+            titreIntrouvable = true;
             // Jugé pour TOUTE tâche, livrée ou non : le fichier est là, le titre n'y est pas, la
             // promesse est fausse aujourd'hui et le restera. C'est le cas que le filtre de statut
             // laissait passer sur les huit tâches du lot L-1-03.
@@ -444,15 +534,71 @@ function juger(u: Univers): { fautes: Faute[]; confrontees: Set<string> } {
         // ne porte qu'elle n'a RIEN reçu, et la tâche reste hors du périmètre — c'est dit.
         confrontees.add(t.id);
         if (sansTest.has(req)) continue;
-        const citee = f.reqsCitees.includes(req) || (titre.length > 0 && titre.includes(req));
-        if (!citee) {
-          ajouter(
-            'req_non_citee_par_son_test',
-            `${t.id} déclare couvrir ${req} par « ${promesse} », mais ${f.chemin} ne cite jamais ` +
-              `${req} — ni par \`@req\`, ni dans un titre. La traçabilité serait au vert sur un test ` +
-              `qui ne parle pas de cette exigence (défaut constaté à la main sur ce dépôt, PR 27).`
+        paires++;
+
+        // LES DEUX FORMES, et non plus l'une OU l'autre (QA-T03) : REQ-QA-014 exige `@req` EN TÊTE
+        // du fichier ET l'identifiant dans le titre d'un `it()` — celui du test, pas d'un `describe`.
+        const manques: string[] = [];
+        if (!f.annotations.some((a) => a.req === req && a.enTete)) {
+          const ailleurs = f.annotations.find((a) => a.req === req);
+          manques.push(
+            ailleurs
+              ? `\`@req ${req}\` est écrite ligne ${ailleurs.ligne}, pas en tête du fichier (premier ` +
+                  `bloc de commentaires, avant la première instruction)`
+              : `ni \`@req ${req}\` en tête du fichier`
           );
         }
+        // Le titre du test se lit ÉCRIT, ou RÉSOLU par vitest quand il est un gabarit
+        // (`describe.each`) : le dernier segment du nom résolu est le titre du `it()` lui-même.
+        if (
+          !f.titresDeTest.some((x) => x.includes(req)) &&
+          !(f.titresResolus ?? []).some((n) => n.split(' > ').pop()!.includes(req))
+        ) {
+          manques.push(
+            f.titresStatiques.some((x) => x.includes(req))
+              ? `aucun titre de \`it()\` ne contient ${req} — un \`describe\` le porte, pas le test lui-même`
+              : `aucun titre de \`it()\` ne contient ${req}`
+          );
+        }
+        if (manques.length > 0) {
+          ajouter(
+            'req_non_citee_par_son_test',
+            `${t.id} déclare couvrir ${req} par « ${promesse} », mais ${f.chemin} ne porte pas les ` +
+              `deux formes de REQ-QA-014 : ${manques.join(' ; ')}. La traçabilité serait au vert sur ` +
+              `un test qui ne parle pas de cette exigence (défaut constaté à la main, PR 27).`
+          );
+          continue;
+        }
+
+        // LE VERT (QA-T03). Sans résultats demandés, il n'est pas jugé — et c'est DIT au résumé.
+        // Fichier absent des résultats : déjà nommé `perimes` ; titre promis introuvable : déjà nommé.
+        if (res.etat !== 'lus' || titreIntrouvable) continue;
+        const rendus = Object.hasOwn(res.parFichier, f.chemin) ? res.parFichier[f.chemin]! : null;
+        if (rendus === null) continue;
+        // Une promesse `#titre` vise CE test-là : tous les tests qui portent ce nom doivent être
+        // verts, et il en faut un. Sans `#`, il suffit d'UN test vert dont le TITRE porte l'exigence.
+        const vises =
+          titre.length > 0
+            ? rendus.filter((x) => nomPorteLaPromesse(x.nom, titre))
+            : rendus.filter((x) => x.titre.includes(req));
+        const verts = vises.filter((x) => x.statut === 'passed');
+        const vert =
+          titre.length > 0 ? vises.length > 0 && verts.length === vises.length : verts.length > 0;
+        if (vert) {
+          vertes++;
+          continue;
+        }
+        const statuts = vises.map((x) => `« ${x.nom} » ${x.statut}`).join(', ');
+        ajouter(
+          'test_promis_non_vert',
+          `${t.id} déclare couvrir ${req} par « ${promesse} » : ` +
+            (titre.length > 0
+              ? `la promesse vise CE test, et ${res.source} ne le rend pas vert` +
+                (vises.length > 0 ? ` (${statuts})` : ` (aucun résultat ne porte ce nom)`)
+              : `aucun test de ${f.chemin} titré de ${req} n'est vert dans ${res.source}` +
+                (vises.length > 0 ? ` (${statuts})` : ` (aucun résultat titré de ${req})`)) +
+            `. Sauté, à faire, en échec ou absent : ne couvre rien.`
+        );
       }
     }
   }
@@ -502,7 +648,7 @@ function juger(u: Univers): { fautes: Faute[]; confrontees: Set<string> } {
     );
   }
 
-  return { fautes, confrontees };
+  return { fautes, confrontees, paires, vertes };
 }
 
 /**
@@ -824,7 +970,7 @@ export { titresEcrits };
 
 /** Les exigences qu'un fichier CITE : annotations `@req` et identifiants dans les titres. */
 export function reqsCitees(texte: string): string[] {
-  const parAnnotation = [...texte.matchAll(/@req\s+(REQ-[A-Z]{2,4}-\d{3})/g)].map((m) => m[1]!);
+  const parAnnotation = annotationsReq(texte).map((a) => a.req);
   const parTitre = titresEcrits(texte).flatMap((t) => t.match(MOTIF_REQ) ?? []);
   return [...new Set([...parAnnotation, ...parTitre])];
 }
@@ -885,6 +1031,77 @@ function titresResolus(cibles: string[]): { titres: Map<string, string[]>; echec
     else echecs.push(c);
   }
   return { titres, echecs };
+}
+
+/**
+ * `--resultats <chemin>` : le rapport JSON de la passe de tests (QA-T03), écrit par `pnpm test`
+ * (`--reporter=json --outputFile.json=…`). `null` = non demandé : la garde ne juge pas le vert.
+ */
+const iResultats = process.argv.indexOf('--resultats');
+const CHEMIN_RESULTATS: string | null =
+  iResultats < 0
+    ? null
+    : (process.argv[iResultats + 1] ?? '').startsWith('--')
+      ? ''
+      : (process.argv[iResultats + 1] ?? '');
+
+/**
+ * Le rapport JSON de vitest, lu tel que la version épinglée l'écrit (mesuré sur 2.1.9) :
+ * `testResults[].name` (chemin ABSOLU du fichier), `testResults[].assertionResults[]` avec
+ * `ancestorTitles`, `title`, `status` (`passed`, `failed`, `skipped`, `todo`). Une forme qu'on ne
+ * reconnaît pas est `illisibles` — jamais « rien à juger ».
+ */
+export function lireResultats(texte: string | null, source: string, racine: string): Resultats {
+  if (texte === null) return { etat: 'absents', source, detail: 'aucun fichier à ce chemin' };
+  const illisibles = (detail: string): Resultats => ({ etat: 'illisibles', source, detail });
+  let doc: unknown;
+  try {
+    doc = JSON.parse(texte);
+  } catch (e) {
+    return illisibles(`JSON illisible (${(e as Error).message})`);
+  }
+  const entrees = (doc as { testResults?: unknown } | null)?.testResults;
+  if (!Array.isArray(entrees)) return illisibles('aucun tableau `testResults`');
+  const base = racine.replace(/\\/g, '/');
+  const parFichier: Record<string, ResultatTest[]> = {};
+  for (const r of entrees as { name?: unknown; assertionResults?: unknown }[]) {
+    if (typeof r?.name !== 'string' || !Array.isArray(r.assertionResults)) {
+      return illisibles('une entrée de `testResults` sans `name` ni `assertionResults`');
+    }
+    const chemin = posix.relative(base, r.name.replace(/\\/g, '/'));
+    const rendus = (parFichier[chemin] ??= []);
+    for (const a of r.assertionResults as {
+      title?: unknown;
+      status?: unknown;
+      ancestorTitles?: unknown;
+    }[]) {
+      if (
+        typeof a?.title !== 'string' ||
+        typeof a.status !== 'string' ||
+        !Array.isArray(a.ancestorTitles)
+      ) {
+        return illisibles(`un test de ${chemin} sans \`title\`, \`status\` ni \`ancestorTitles\``);
+      }
+      rendus.push({
+        nom: [...(a.ancestorTitles as string[]), a.title].join(' > '),
+        titre: a.title,
+        statut: a.status,
+      });
+    }
+  }
+  return { etat: 'lus', source, parFichier };
+}
+
+function chargerResultats(): Resultats {
+  if (CHEMIN_RESULTATS === null) return { etat: 'non_demandes' };
+  if (CHEMIN_RESULTATS === '') {
+    return { etat: 'absents', source: '--resultats', detail: 'aucun chemin après --resultats' };
+  }
+  return lireResultats(
+    existsSync(CHEMIN_RESULTATS) ? readFileSync(CHEMIN_RESULTATS, 'utf8') : null,
+    CHEMIN_RESULTATS,
+    process.cwd()
+  );
 }
 
 /** Les corps de PR fusionnées. Source FACULTATIVE : son absence est dite, jamais tue. */
@@ -963,6 +1180,8 @@ function chargerUnivers(avecPr: boolean): Univers {
       titresStatiques: titresEcrits(texte),
       titresResolus: null,
       reqsCitees: reqsCitees(texte),
+      titresDeTest: titresDeTest(texte),
+      annotations: annotationsReq(texte),
     };
   });
 
@@ -1002,7 +1221,15 @@ function chargerUnivers(avecPr: boolean): Univers {
   const plancher = lirePlancher(
     existsSync(CHEMIN_GATES) ? readFileSync(CHEMIN_GATES, 'utf8') : null
   );
-  return { exigences, taches, fichiers, pr, prIndisponible: indisponible, plancher };
+  return {
+    exigences,
+    taches,
+    fichiers,
+    pr,
+    prIndisponible: indisponible,
+    plancher,
+    resultats: chargerResultats(),
+  };
 }
 
 // ── l'état des sources, toujours imprimé ─────────────────────────────────────
@@ -1074,6 +1301,26 @@ function direLePerimetre(u: Univers): void {
   console.log(`      dans le périmètre (${p.dedans.length}) : ${p.dedans.join(', ')}`);
 }
 
+/**
+ * LES PAIRES (QA-T03). Le vert dit combien de paires (tâche, exigence) il a confrontées aux deux
+ * formes de REQ-QA-014, et combien il a vues VERTES — ou qu'il ne l'a PAS jugé, et pourquoi.
+ */
+function direLesPaires(u: Univers): void {
+  const { paires, vertes } = juger(u);
+  const tete = `${paires} paire(s) (tâche, exigence) confrontée(s) aux deux formes de REQ-QA-014`;
+  const r = u.resultats;
+  if (r.etat === 'lus') {
+    console.log(`   ${tete} · ${vertes} verte(s) dans ${r.source}`);
+  } else if (r.etat === 'non_demandes') {
+    console.log(
+      `   ⚠️  ${tete} · statut des tests NON JUGÉ : aucun \`--resultats\`. ` +
+        `\`pnpm req:check\` le juge, après \`pnpm test\`.`
+    );
+  } else {
+    console.log(`   ⚠️  ${tete} · statut des tests NON JUGÉ : résultats ${r.etat} (${r.source}).`);
+  }
+}
+
 // ── l'univers de FIXTURE, pour la preuve ─────────────────────────────────────
 /**
  * `--prove` ne part PAS de l'état du dépôt, et c'est délibéré (RM-11) : cet état est fautif — c'est
@@ -1137,6 +1384,16 @@ export function universFixture(): Univers {
         titresStatiques: ['REQ-AAA-001 : un titre'],
         titresResolus: ['REQ-AAA-001 : un titre'],
         reqsCitees: ['REQ-AAA-001', 'REQ-AAA-003'],
+        titresDeTest: ['REQ-AAA-001 : un titre'],
+        annotations: [
+          { req: 'REQ-AAA-001', ligne: 1, texteLigne: '// @req REQ-AAA-001', enTete: true },
+          {
+            req: 'REQ-AAA-003',
+            ligne: 2,
+            texteLigne: '// @req REQ-AAA-003 → REQ-AAA-001',
+            enTete: true,
+          },
+        ],
       },
       {
         chemin: 'tests/f/b.spec.ts',
@@ -1144,6 +1401,8 @@ export function universFixture(): Univers {
         titresStatiques: ['un autre'],
         titresResolus: ['un autre'],
         reqsCitees: [],
+        titresDeTest: ['un autre'],
+        annotations: [],
       },
     ],
     pr: [
@@ -1155,10 +1414,27 @@ export function universFixture(): Univers {
     // ne jugent pas le plancher. Les deux cas qui le jugent le POSENT eux-mêmes à la couverture
     // de la base, puis la font descendre — ou monter.
     plancher: { valeur: 0, mesureLe: '2026-09-18', source: 'fixture' },
+    // Les résultats d'une passe COMPLÈTE et verte : chaque fichier exécuté y est, chaque test passe.
+    resultats: {
+      etat: 'lus',
+      source: 'fixture',
+      parFichier: {
+        'tests/f/a.spec.ts': [
+          { nom: 'REQ-AAA-001 : un titre', titre: 'REQ-AAA-001 : un titre', statut: 'passed' },
+        ],
+        'tests/f/b.spec.ts': [{ nom: 'un autre', titre: 'un autre', statut: 'passed' }],
+      },
+    },
   };
 }
 
 const copie = (u: Univers): Univers => JSON.parse(JSON.stringify(u)) as Univers;
+
+/** Les résultats LUS d'un univers de fixture — la preuve n'en mute jamais d'autres. */
+function rendusDe(u: Univers): Record<string, ResultatTest[]> {
+  if (u.resultats.etat !== 'lus') throw new Error('fixture : résultats non lus');
+  return u.resultats.parFichier;
+}
 
 // ── ligne de commande ────────────────────────────────────────────────────────
 const iOut = process.argv.indexOf('--out');
@@ -1173,7 +1449,11 @@ if (process.argv.includes('--prove')) {
     process.exit(1);
   }
 
-  const TEMOINS: { famille: string; defaut: () => Faute[] }[] = [
+  /**
+   * `cle` et `attendu` (QA-T03) : un témoin NOMMÉ d'une panne du brief, qui doit rougir sur SA
+   * famille ET avec SON motif — « la famille apparaît » ne dit pas quelle forme manque.
+   */
+  const TEMOINS: { famille: string; defaut: () => Faute[]; cle?: string; attendu?: string }[] = [
     {
       famille: 'tache_sans_req',
       defaut: () => {
@@ -1282,6 +1562,178 @@ if (process.argv.includes('--prove')) {
         return controler(u);
       },
     },
+    // ── QA-T03 : les pannes panne-1 à panne-7 du brief, chacune sur sa famille, avec son motif ──────────
+    {
+      cle: 'panne-1',
+      famille: 'test_promis_non_vert',
+      attendu: 'skipped',
+      // Le ROUGE d'origine : le seul test titré de l'exigence est un `it.skip`. La garde d'avant
+      // n'ouvrait aucun résultat — ce test « couvrait ».
+      defaut: () => {
+        const u = copie(base);
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts'];
+        rendusDe(u)['tests/f/a.spec.ts']![0]!.statut = 'skipped';
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-2a',
+      famille: 'req_non_citee_par_son_test',
+      attendu: 'aucun titre de `it()` ne contient REQ-AAA-001',
+      // `@req` seul : aucun titre de test ne porte l'identifiant.
+      defaut: () => {
+        const u = copie(base);
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts'];
+        u.fichiers[0]!.titresStatiques = ['un titre'];
+        u.fichiers[0]!.titresDeTest = ['un titre'];
+        // Sans `#`, la promesse ne fait pas résoudre le fichier par vitest : seul l'écrit se lit.
+        u.fichiers[0]!.titresResolus = null;
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-2b',
+      famille: 'req_non_citee_par_son_test',
+      attendu: 'ni `@req REQ-AAA-001` en tête',
+      // Le titre seul : aucune annotation `@req`.
+      defaut: () => {
+        const u = copie(base);
+        u.fichiers[0]!.annotations = u.fichiers[0]!.annotations.filter(
+          (a) => a.req !== 'REQ-AAA-001'
+        );
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-3',
+      famille: 'req_non_citee_par_son_test',
+      attendu: 'ligne 40, pas en tête',
+      // `@req` écrite ligne 40, après les `import` : pas en tête.
+      defaut: () => {
+        const u = copie(base);
+        u.fichiers[0]!.annotations[0] = {
+          ...u.fichiers[0]!.annotations[0]!,
+          ligne: 40,
+          enTete: false,
+        };
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-4',
+      famille: 'annotation_absorbee_sans_renvoi',
+      attendu: 'tests/f/a.spec.ts:2 annote `@req REQ-AAA-003`',
+      defaut: () => {
+        const u = copie(base);
+        u.fichiers[0]!.annotations[1]!.texteLigne = '// @req REQ-AAA-003';
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-5-absents',
+      famille: 'resultats_illisibles',
+      attendu: 'motif absents',
+      defaut: () => {
+        const u = copie(base);
+        u.resultats = { etat: 'absents', source: 'fixture', detail: 'aucun fichier à ce chemin' };
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-5-illisibles',
+      famille: 'resultats_illisibles',
+      attendu: 'motif illisibles',
+      defaut: () => {
+        const u = copie(base);
+        u.resultats = { etat: 'illisibles', source: 'fixture', detail: 'JSON tronqué' };
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-5-perimes',
+      famille: 'resultats_illisibles',
+      attendu: 'motif perimes — fixture ne porte pas 1 fichier(s)',
+      // Une passe PARTIELLE : un fichier exécuté manque aux résultats.
+      defaut: () => {
+        const u = copie(base);
+        delete rendusDe(u)['tests/f/b.spec.ts'];
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-6',
+      famille: 'test_promis_non_vert',
+      attendu: 'la promesse vise CE test',
+      // Le test PROMIS par son titre échoue ; un AUTRE test du fichier, titré de l'exigence, passe.
+      defaut: () => {
+        const u = copie(base);
+        u.fichiers[0]!.titresDeTest.push('REQ-AAA-001 : un autre, vert');
+        rendusDe(u)['tests/f/a.spec.ts'] = [
+          { nom: 'REQ-AAA-001 : un titre', titre: 'REQ-AAA-001 : un titre', statut: 'failed' },
+          {
+            nom: 'REQ-AAA-001 : un autre, vert',
+            titre: 'REQ-AAA-001 : un autre, vert',
+            statut: 'passed',
+          },
+        ];
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-7',
+      famille: 'req_non_citee_par_son_test',
+      attendu: 'un `describe` le porte',
+      // L'identifiant dans le `describe` seulement.
+      defaut: () => {
+        const u = copie(base);
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts'];
+        u.fichiers[0]!.titresStatiques = ['REQ-AAA-001 — le describe', 'un titre'];
+        u.fichiers[0]!.titresDeTest = ['un titre'];
+        u.fichiers[0]!.titresResolus = null;
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-milieu',
+      famille: 'test_promis_non_vert',
+      attendu: 'aucun test de tests/f/c.spec.ts',
+      // Trois promesses, la paire en échec au MILIEU : ni la première ni la dernière ne décident.
+      defaut: () => {
+        const u = copie(base);
+        u.taches[0]!.tests!['REQ-AAA-001'] = [
+          'tests/f/a.spec.ts',
+          'tests/f/c.spec.ts',
+          'tests/f/d.spec.ts',
+        ];
+        for (const [chemin, statut] of [
+          ['tests/f/c.spec.ts', 'failed'],
+          ['tests/f/d.spec.ts', 'passed'],
+        ] as const) {
+          u.fichiers.push({ ...copie(base).fichiers[0]!, chemin });
+          rendusDe(u)[chemin] = [
+            { nom: 'REQ-AAA-001 : un titre', titre: 'REQ-AAA-001 : un titre', statut },
+          ];
+        }
+        return controler(u);
+      },
+    },
+    {
+      cle: 'panne-7-resolu',
+      famille: 'req_non_citee_par_son_test',
+      attendu: 'aucun titre de `it()` ne contient REQ-AAA-001',
+      // Le nom RÉSOLU porte l'identifiant — mais dans son segment `describe`, pas dans le dernier.
+      defaut: () => {
+        const u = copie(base);
+        u.fichiers[0]!.titresStatiques = ['REQ-AAA-001 — le describe', 'un titre'];
+        u.fichiers[0]!.titresDeTest = ['un titre'];
+        u.fichiers[0]!.titresResolus = ['REQ-AAA-001 — le describe > un titre'];
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts#un titre'];
+        rendusDe(u)['tests/f/a.spec.ts'] = [
+          { nom: 'REQ-AAA-001 — le describe > un titre', titre: 'un titre', statut: 'passed' },
+        ];
+        return controler(u);
+      },
+    },
   ];
 
   /**
@@ -1289,7 +1741,59 @@ if (process.argv.includes('--prove')) {
    * qu'elle ne rougit pas sur du légitime — et c'est là que cette garde-ci pourrait devenir
    * inutilisable, en réclamant un test à des exigences qu'aucune tâche n'a encore livrées.
    */
-  const CONTRE_TEMOINS: { nom: string; muter: () => Univers }[] = [
+  const CONTRE_TEMOINS: { nom: string; muter: () => Univers; cle?: string }[] = [
+    // ── QA-T03 ──────────────────────────────────────────────────────────────────────────────
+    {
+      cle: 'renvoi-porte',
+      nom: 'une annotation d’exigence absorbée qui porte son renvoi vers la survivante',
+      muter: () => {
+        const u = copie(base);
+        u.fichiers[0]!.annotations[1]!.texteLigne = ' * @req REQ-AAA-003 → REQ-AAA-001 (absorbée)';
+        return u;
+      },
+    },
+    {
+      cle: 'sans-resultats',
+      nom: 'la garde sans `--resultats` : le vert n’est pas jugé, et c’est dit au résumé',
+      muter: () => {
+        const u = copie(base);
+        u.resultats = { etat: 'non_demandes' };
+        return u;
+      },
+    },
+    {
+      cle: 'saute-et-vert',
+      nom: 'un test titré SAUTÉ à côté d’un test titré VERT : la paire sans `#` est verte',
+      muter: () => {
+        const u = copie(base);
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts'];
+        rendusDe(u)['tests/f/a.spec.ts']!.unshift({
+          nom: 'REQ-AAA-001 : sauté',
+          titre: 'REQ-AAA-001 : sauté',
+          statut: 'skipped',
+        });
+        return u;
+      },
+    },
+    {
+      cle: 'gabarit-resolu',
+      nom: 'un titre de `it()` en GABARIT (`describe.each`) : l’identifiant se lit dans le nom résolu',
+      muter: () => {
+        const u = copie(base);
+        u.fichiers[0]!.titresStatiques = ['$nom', '${exigence}sait rougir'];
+        u.fichiers[0]!.titresDeTest = ['${exigence}sait rougir'];
+        u.fichiers[0]!.titresResolus = ['gov:x > REQ-AAA-001 — sait rougir'];
+        u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts#gov:x > sait rougir'];
+        rendusDe(u)['tests/f/a.spec.ts'] = [
+          {
+            nom: 'gov:x > REQ-AAA-001 — sait rougir',
+            titre: 'REQ-AAA-001 — sait rougir',
+            statut: 'passed',
+          },
+        ];
+        return u;
+      },
+    },
     // La moitié de RM-02 qu'on oublie : un plancher qui rougirait aussi quand la couverture MONTE
     // serait un compteur d'égalité, pas un plancher. Une tâche sans verdict reçoit une promesse
     // vers un fichier qui cite l'exigence (clé hors de ses `reqs` : c'est une fixture, et
@@ -1385,6 +1889,7 @@ if (process.argv.includes('--prove')) {
         const u = copie(base);
         u.taches[0]!.tests!['REQ-AAA-001'] = ['tests/f/a.spec.ts#REQ-AAA-001 : un titre'];
         u.fichiers[0]!.titresResolus = ['REQ-AAA-001 : un titré'];
+        rendusDe(u)['tests/f/a.spec.ts']![0]!.nom = 'REQ-AAA-001 : un titré';
         return u;
       },
     },
@@ -1397,11 +1902,13 @@ if (process.argv.includes('--prove')) {
         const u = copie(base);
         u.fichiers[0]!.titresResolus = ["'gov:x' — le detail > REQ-AAA-001 : un titre"];
         u.taches[0]!.tests!['REQ-AAA-001'] = ["tests/f/a.spec.ts#'gov:x' > REQ-AAA-001 : un titre"];
+        rendusDe(u)['tests/f/a.spec.ts']![0]!.nom = "'gov:x' — le detail > REQ-AAA-001 : un titre";
         return u;
       },
     },
   ];
 
+  const nommes: string[] = [];
   for (const c of CONTRE_TEMOINS) {
     const f = controler(c.muter());
     if (f.length > 0) {
@@ -1411,19 +1918,27 @@ if (process.argv.includes('--prove')) {
       f.slice(0, 5).forEach((x) => console.error(`   [${x.famille}] ${x.message}`));
       process.exit(1);
     }
+    if (c.cle) nommes.push(`   ◦ contre-témoin ${c.cle} — ${c.nom}`);
   }
 
   const prouvees = new Set<string>();
   for (const t of TEMOINS) {
     const f = t.defaut();
-    if (!f.some((x) => x.famille === t.famille)) {
+    if (
+      !f.some(
+        (x) => x.famille === t.famille && (t.attendu === undefined || x.message.includes(t.attendu))
+      )
+    ) {
       console.error(
-        `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille ` +
-          `(${f.length} faute(s) d'autres familles). Le contrôle ne couvre pas ce qu'il prétend couvrir.`
+        `❌ Le témoin ${t.cle ?? ''} de « ${t.famille} » n'a PAS fait rougir sa famille` +
+          (t.attendu === undefined ? '' : ` avec le motif « ${t.attendu} »`) +
+          ` (${f.length} faute(s) : ${f.map((x) => x.famille).join(', ') || 'aucune'}). ` +
+          `Le contrôle ne couvre pas ce qu'il prétend couvrir.`
       );
       process.exit(1);
     }
     prouvees.add(t.famille);
+    if (t.cle) nommes.push(`   ◦ témoin ${t.cle} [${t.famille}] — ${t.attendu ?? ''}`);
   }
   const sansTemoin = FAMILLES.filter((f) => !prouvees.has(f));
   if (sansTemoin.length > 0) {
@@ -1436,6 +1951,7 @@ if (process.argv.includes('--prove')) {
   );
   console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts.`);
   console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
+  console.log(nommes.join('\n'));
   process.exit(0);
 }
 
@@ -1511,6 +2027,7 @@ if (fautes.length === 0) {
   );
   direLesSources(univers);
   direLePerimetre(univers);
+  direLesPaires(univers);
   process.exit(0);
 }
 
@@ -1527,4 +2044,5 @@ for (const famille of FAMILLES) {
 console.error('');
 direLesSources(univers);
 direLePerimetre(univers);
+direLesPaires(univers);
 process.exit(1);

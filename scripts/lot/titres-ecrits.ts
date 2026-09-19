@@ -76,3 +76,47 @@ export function titresEcritsPositionnes(texte: string): TitreEcrit[] {
 export function titresEcrits(texte: string): string[] {
   return titresEcritsPositionnes(texte).map((t) => t.texte);
 }
+
+/**
+ * Les titres des TESTS eux-mêmes — `it`, `test` et leurs variantes —, sans les `describe` (QA-T03).
+ * REQ-QA-014 exige l'identifiant dans « le titre `it()` » : c'est ce qu'une sortie de test affiche,
+ * et un `describe` qui le porte ne dit pas quel test le prouve.
+ */
+export function titresDeTest(texte: string): string[] {
+  return titresEcritsPositionnes(texte)
+    .filter((t) => !texte.startsWith('describe', t.debut))
+    .map((t) => t.texte);
+}
+
+/** Une annotation `@req` : l'exigence, sa ligne (à partir de 1), la ligne entière, et sa place. */
+export type AnnotationReq = { req: string; ligne: number; texteLigne: string; enTete: boolean };
+
+/**
+ * La fin de l'EN-TÊTE d'un fichier : l'index du premier caractère qui n'est ni un blanc ni un
+ * commentaire. REQ-QA-014 veut l'annotation `@req` « en tête du fichier » : l'en-tête est le premier
+ * bloc de commentaires, AVANT la première instruction.
+ */
+function finDeLEnTete(texte: string): number {
+  let i = 0;
+  while (i < texte.length) {
+    if (/\s/.test(texte[i]!)) i++;
+    else if (texte.startsWith('//', i)) {
+      const n = texte.indexOf('\n', i);
+      i = n < 0 ? texte.length : n + 1;
+    } else if (texte.startsWith('/*', i)) {
+      const n = texte.indexOf('*/', i + 2);
+      i = n < 0 ? texte.length : n + 2;
+    } else break;
+  }
+  return i;
+}
+
+/** Les annotations `@req` d'un fichier, chacune avec sa ligne et sa place (en tête ou non). */
+export function annotationsReq(texte: string): AnnotationReq[] {
+  const fin = finDeLEnTete(texte);
+  const lignes = texte.split(/\r?\n/);
+  return [...texte.matchAll(/@req\s+(REQ-[A-Z]{2,4}-\d{3})/g)].map((m) => {
+    const ligne = texte.slice(0, m.index).split('\n').length;
+    return { req: m[1]!, ligne, texteLigne: lignes[ligne - 1]!, enTete: m.index < fin };
+  });
+}
