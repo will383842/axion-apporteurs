@@ -591,6 +591,16 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       temoins: 1,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE, mesurée par `mutation` au 12e tour.',
     },
+    'scripts/gates/journal-sans-pii.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'DM-01 — la charge du journal sans donnée personnelle. `process.exit(decision.code)` : sortie ' +
+        'TERMINALE à code variable, commune au mode normal et à `--prove`. La décision est une ' +
+        'fonction pure vue rendre 1 (`decider()`, journal-charge-fermee.spec.ts) et le binaire est vu ' +
+        'sortir en 0 sur le dépôt ; ⛔ aucun témoin d’EFFET du binaire en échec. Dette DÉCLARÉE.',
+    },
     'scripts/gates/lexique-apporteurs.ts': {
       total: 2,
       porte: 2,
@@ -859,7 +869,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 38 to be 37
     //
     // La sortie est vue en 1 puis en 0 sur un arbre jetable (maquettes-validees.spec.ts).
-    // 🔧 38 → 39 par SEC-10, ARBITRÉ et non subi. Le cliquet a rougi en NOMMANT le fichier :
+    // 🔧 38 → 39 par DM-01, SECONDE à atterrir après UX-P0-02 (elle déclare la SOMME), ARBITRÉ et non subi : `scripts/gates/journal-sans-pii.ts` naît avec UNE
+    // sortie à code variable. Le cliquet a rougi en la nommant — relu, pas deviné :
+    //
+    //     scripts/gates/journal-sans-pii.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //
+    // 🔧 39 → 40 par SEC-10, ARBITRÉ et non subi. Le cliquet a rougi en NOMMANT le fichier :
     //
     //     scripts/gates/rate-famille.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
     //
@@ -867,7 +882,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // (#79) a atterri d'abord et pris le 38 ; au rebase, le compte a rougi, relu et non deviné :
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 39 to be 38
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(39);
+    //
+    // DM-01 (#75) a ensuite atterri avec sa propre sortie et pris le 39 ; à la fusion de `main`
+    // dans cette branche, le compte a rougi de nouveau, relu et non deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 40 to be 39
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(40);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -1926,6 +1946,9 @@ const GARDES_QUI_BALAIENT = [
   // GOV-030 (`partners/ADR-0011`) — `partners:schema:enums` lit sa portée dans les fichiers SUIVIS,
   // quelle que soit leur extension.
   'scripts/gates/schema-enums.ts',
+  // DM-01 — `journal:sans-pii` cherche un second écrivain de la table `evenements` dans les fichiers
+  // SUIVIS sous `src/` et `scripts/`.
+  'scripts/gates/journal-sans-pii.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {
