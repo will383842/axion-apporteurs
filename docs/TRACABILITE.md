@@ -16,7 +16,7 @@
 
 **321 exigences actives · 44 réputées testées · 44 couvertes · 0 orphelines.**
 
-260 tâches, dont 44 livrées · 51 fichiers de test exécutés par `vitest` sur 51 présents.
+260 tâches, dont 44 livrées · 52 fichiers de test exécutés par `vitest` sur 52 présents.
 
 ## Exigences réputées testées
 
@@ -440,6 +440,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/domaine/etats-occupants.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-006` |
 | `tests/unit/domaine/seuil-prioritaire.spec.ts` | oui | `REQ-CPL-026` |
 | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | oui | `REQ-CPL-013`, `REQ-QA-027`, `REQ-UX-022`, `REQ-UX-028` |
+| `tests/unit/espace/maquettes-validees.spec.ts` | oui | `REQ-UX-008`, `REQ-UX-017`, `REQ-UX-034` |
 | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | oui | `REQ-GOV-009` |
 | `tests/unit/gouvernance/adr-index-derive.spec.ts` | oui | `REQ-CPL-018`, `REQ-GOV-008` |
 | `tests/unit/gouvernance/affirmations-verifiees.spec.ts` | oui | `REQ-GOV-004` |

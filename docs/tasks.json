@@ -3377,7 +3377,11 @@
         "docs/ESPACE-ROUTES.md",
         "scripts/gates/maquettes-validees.ts",
         "tests/unit/espace/maquettes-validees.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        ".github/workflows/ci.yml",
+        "package.json",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/lot/composer.ts"
       ],
       "schema": false,
       "sensible": [

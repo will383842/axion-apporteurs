@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `f37659e` — 2026-09-19T10:37:25+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #75 (rien) · 2. #76 (un contrôle requis rouge ou une revue manquante) · 3. #79 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `5b306f8` — 2026-09-19T15:23:32+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #75 (un contrôle requis rouge ou une revue manquante) · 2. #81 (un contrôle requis rouge ou une revue manquante) · 3. #76 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · UX-P0-02 (A05) · CPL-T13 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 72.10 j |
-| Le prochain pas | fusionner #75, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
+| Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #78 — 2026-09-19 |
+| Dernière entrée de journal | PR #79 — 2026-09-19 |
 
-**Ce qu’on tape maintenant.** `gh pr view 75 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,9 +64,9 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | rien — fusionnable maintenant |
-| 2 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un contrôle requis rouge ou une revue manquante |
-| 3 | #79 — docs(UX-P0-02): maquettes des huit écrans et garde maquettes-validees | `t/ux-p0-02` | un contrôle requis rouge ou une revue manquante |
+| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un contrôle requis rouge ou une revue manquante |
+| 2 | #81 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert | `t/qa-t03` | un contrôle requis rouge ou une revue manquante |
+| 3 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -95,19 +95,25 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Prochain pas
 
-**Fusionner #75** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-
 **QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 32 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `f37659e` (2026-09-19T10:37:25+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `5b306f8` (2026-09-19T15:23:32+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #79 — 2026-09-19 — docs(UX-P0-02): maquettes des huit écrans et garde maquettes-validees
+
+**Fait.** Huit maquettes autonomes sous `docs/maquettes/` : six pour l'espace, deux pour la console. Elles couvrent 90 états et viennent avec une charte (`index.html`) aux contrastes mesurés dans les deux thèmes de l'espace. La garde `maquettes-validees` lit `VALIDATION.md` par ses en-têtes. Elle refuse une validation écrite à moitié ou signée par un autre que Will, et rougit sur toute tâche d'écran attribuée sans maquette validée ; elle est câblée en Gate A. La spec prouve aussi la forme de l'accueil (REQ-UX-008), le contraste recalculé depuis chaque maquette (REQ-UX-034) et la moitié statique de REQ-UX-017. Elle a été vue rouge avant la garde, et six mutants de la garde ont été tués. Les six maquettes de l'espace portent `2026-09-19 | Will`. Will a donné la validation lui-même, en séance avec l'orchestrateur, en répondant « oui parfait » à « Valider les six maquettes de l'espace apporteur ». Cette réponse vaut aussi pour les onze choix par défaut des notes. L'orchestrateur a écrit les six lignes dans `1c6d94b`, avec les mots de Will dans le message de ce commit ; l'auteur de la PR ne les a pas écrites. La garde libère UX-P1-01, UX-P1-02, UX-P1-05, UX-P1-08, UX-P1-09 et UX-P2-01. Le composeur lit désormais le tableau par le lecteur de la garde, et non plus par position de colonne.
+
+**Reste.** Les deux maquettes de console (UX-P1-07, UX-P2-03) attendent la validation de Will. Restent aussi la moitié dynamique de REQ-UX-017 (UX-P0-03) et la dérive du GLOSSAIRE sur `IssueDepot` et `MotifBlocage`.
+
+**Appris.** Prettier coupe les balises fermantes d'un HTML long (`</a` puis `>` à la ligne suivante). Une spec qui cherche `</label>` en texte exact ne trouve jamais la fermante, et juge alors « étiqueté » tout champ placé après une étiquette. Le témoin était trop indulgent sans rougir. Et le composeur lisait l'avant-dernière cellule du tableau, « Par », sous un commentaire qui disait « Validé le ».
 
 ### PR #78 — 2026-09-19 — feat(CPL-T13): module temps pur - horloge injectee, heure de Paris, feries FR, SLA ouvre, seuil HYP-D3
 
@@ -151,32 +157,7 @@ suffisent pas : il faut un témoin de délai contre un serveur muet, qui a mesur
 et 529 ms après. Une garde qui cherche un appel par son NOM est contournée par tout ce qui n'est pas
 un appel : il faut refuser toute autre référence au nom, pas énumérer les détours.
 
-### PR #74 — 2026-09-19 — feat(SEC-02): en-têtes de sécurité et CSP par nonce
-
-**Fait.** Toute réponse que voit `src/proxy.ts` porte une CSP construite autour d'un nonce neuf,
-tiré dans la fonction par `crypto.getRandomValues` sur 16 octets, posée sur la réponse et transmise à
-la requête, avec `Cache-Control: private, no-store`. `next.config.ts` pose HSTS preload, `nosniff`,
-`Referrer-Policy` et une `Permissions-Policy` restrictive sur `'/(.*)'`. La source unique est
-`src/server/securite/entetes.ts`. `next` 16.3.1, `react` et `react-dom` 19.2.8 entrent au dépôt en
-versions exactes, sans aucune page. Le témoin juge la vraie couche par les outils de test de Next,
-sur 17 routes dérivées de `src/app` et de la carte `docs/ESPACE-ROUTES.md`, 1003 réponses, 0 défaut ;
-38 mutants joués, 38 tués. `G-SEC-HEADERS.verifie` ne promet plus de routes tapées qui n'existaient
-pas.
-
-**Reste.** La mesure au navigateur, le rendu dynamique qui porte le nonce, les styles en attribut
-que la politique bloque et les règles de spéculation de Next sont des charges de la première page,
-SEC-03. La préséance du `Cache-Control` du proxy sur celui d'une page statique n'est pas prouvée ici.
-Cinq specs voisines, dont celle de SEC-01, assertent `NodeJS.ProcessEnv` à la frontière d'un sous-processus : dette, tant
-que `next` déclare `NODE_ENV` obligatoire.
-
-**Appris.** Importer `type { NextConfig } from 'next'` charge les types globaux de `next`, qui
-rendent `NODE_ENV` obligatoire et en lecture seule dans tout le projet : sept erreurs de typecheck
-dans cinq specs, dont quatre qui n'écrivent jamais `NODE_ENV` mais construisent l'environnement d'un
-enfant sans lui. Les outils de test de Next lèvent une erreur d'invariant sur
-`AsyncLocalStorage` tant que `next/dist/server/node-environment-baseline` n'est pas importé en
-premier. Et la doc de 16.3.1 nomme `unstable_doesProxyMatch`, que le paquet n'exporte pas.
-
-… 25 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 26 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
