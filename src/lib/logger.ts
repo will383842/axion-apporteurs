@@ -69,7 +69,7 @@ const FORME_EMPREINTE = /^[0-9a-f]{16,64}$/;
  * La SEULE valeur qui échappe au scan : une empreinte SHA-256 exacte (64 hexadécimaux minuscules),
  * sous l'une des quatre clés de contexte, à la racine. Sans elle, une empreinte `ab12…` se lirait
  * comme un IBAN. Toute autre valeur de ces clés est scannée : un IBAN allemand en minuscules
- * (`de89…`, 22 caractères) a la forme d'un hexadécimal et passerait sous une exemption plus large.
+ * (`de…`, 22 caractères) a la forme d'un hexadécimal et passerait sous une exemption plus large.
  */
 const FORME_SHA256 = /^[0-9a-f]{64}$/;
 

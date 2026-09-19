@@ -289,8 +289,9 @@ describe('REQ-QA-024 — le contexte : journal enfant, empreinte d’apporteur',
 
   it('REQ-QA-024 : seule une empreinte SHA-256 exacte échappe au scan — un IBAN en minuscules sans espaces est caviardé', () => {
     // Un IBAN allemand en minuscules n'a que des chiffres et les lettres « d », « e » : il a la forme
-    // d'un hexadécimal de 22 caractères, et `enfant()` l'accepte comme empreinte (16 à 64).
-    const iban = 'de89370400440532013000';
+    // d'un hexadécimal de 22 caractères, et `enfant()` l'accepte comme empreinte (16 à 64). Clé de
+    // contrôle 00, jamais valide : la forme d'un IBAN sans être une coordonnée (dépôt public, gov:entite).
+    const iban = 'de00370400440532013000';
     const { journal, texte } = journalCapture();
     journal.enfant({ apporteurIdHash: iban }).info('m');
     journal.info('m', { apporteurIdHash: iban, requestId: iban, eventId: iban, jobName: iban });
