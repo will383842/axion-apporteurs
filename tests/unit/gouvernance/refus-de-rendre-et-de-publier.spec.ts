@@ -1283,12 +1283,14 @@ const VARIABLES_DE_PRODUCTION = [
  * un seul apparié.*
  */
 function environnementDeProduction(): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = {};
+  // Pas `NodeJS.ProcessEnv` à la construction : `next` y déclare `NODE_ENV` obligatoire
+  // (next/types/global.d.ts), et cet environnement ne le porte que si la production le pose.
+  const env: Record<string, string> = {};
   for (const v of VARIABLES_DE_PRODUCTION) {
     const val = process.env[v];
     if (val !== undefined) env[v] = val;
   }
-  return env;
+  return env as NodeJS.ProcessEnv;
 }
 
 function lancerLaGate(

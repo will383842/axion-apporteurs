@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `8c70f52` — 2026-09-19T05:13:32+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #73 (un contrôle requis rouge ou une revue manquante) |
-| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · DM-01 (A05) · GOV-077 (A05) |
+| Où est `main` ? | `244d990` — 2026-09-19T06:07:00+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #75 (rien) · 2. #76 (un contrôle requis rouge ou une revue manquante) · 3. #74 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 71.60 j |
-| Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
+| Le prochain pas | fusionner #75, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #73 — 2026-09-19 |
+| Dernière entrée de journal | PR #74 — 2026-09-19 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 75 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,7 +64,9 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #73 — feat(SEC-01): secrets distincts et validation d'environnement au boot | `t/sec-01` | un contrôle requis rouge ou une revue manquante |
+| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | rien — fusionnable maintenant |
+| 2 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un contrôle requis rouge ou une revue manquante |
+| 3 | #74 — feat(SEC-02): en-têtes de sécurité et CSP par nonce | `t/sec-02` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -77,6 +79,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | QA-T01 — Squelette de tests et Gate A bloquante | A05 | #56 | `a_faire` |
 | SEC-01 — Secrets distincts et validation d'environnement au boot | A05 | #60 | `a_faire` |
 | SEC-02 — En-têtes de sécurité et CSP par nonce | A05 | #66 | `a_faire` |
+| SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
 | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
 | GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent | A05 | #57 | `a_faire` |
 
@@ -90,17 +93,44 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Prochain pas
 
+**Fusionner #75** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+
 **QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 32 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `8c70f52` (2026-09-19T05:13:32+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `244d990` (2026-09-19T06:07:00+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #74 — 2026-09-19 — feat(SEC-02): en-têtes de sécurité et CSP par nonce
+
+**Fait.** Toute réponse que voit `src/proxy.ts` porte une CSP construite autour d'un nonce neuf,
+tiré dans la fonction par `crypto.getRandomValues` sur 16 octets, posée sur la réponse et transmise à
+la requête, avec `Cache-Control: private, no-store`. `next.config.ts` pose HSTS preload, `nosniff`,
+`Referrer-Policy` et une `Permissions-Policy` restrictive sur `'/(.*)'`. La source unique est
+`src/server/securite/entetes.ts`. `next` 16.3.1, `react` et `react-dom` 19.2.8 entrent au dépôt en
+versions exactes, sans aucune page. Le témoin juge la vraie couche par les outils de test de Next,
+sur 17 routes dérivées de `src/app` et de la carte `docs/ESPACE-ROUTES.md`, 1003 réponses, 0 défaut ;
+38 mutants joués, 38 tués. `G-SEC-HEADERS.verifie` ne promet plus de routes tapées qui n'existaient
+pas.
+
+**Reste.** La mesure au navigateur, le rendu dynamique qui porte le nonce, les styles en attribut
+que la politique bloque et les règles de spéculation de Next sont des charges de la première page,
+SEC-03. La préséance du `Cache-Control` du proxy sur celui d'une page statique n'est pas prouvée ici.
+Cinq specs voisines, dont celle de SEC-01, assertent `NodeJS.ProcessEnv` à la frontière d'un sous-processus : dette, tant
+que `next` déclare `NODE_ENV` obligatoire.
+
+**Appris.** Importer `type { NextConfig } from 'next'` charge les types globaux de `next`, qui
+rendent `NODE_ENV` obligatoire et en lecture seule dans tout le projet : sept erreurs de typecheck
+dans cinq specs, dont quatre qui n'écrivent jamais `NODE_ENV` mais construisent l'environnement d'un
+enfant sans lui. Les outils de test de Next lèvent une erreur d'invariant sur
+`AsyncLocalStorage` tant que `next/dist/server/node-environment-baseline` n'est pas importé en
+premier. Et la doc de 16.3.1 nomme `unstable_doesProxyMatch`, que le paquet n'exporte pas.
 
 ### PR #73 — 2026-09-19 — feat(SEC-01): secrets distincts et validation d'environnement au boot
 
@@ -151,32 +181,7 @@ fichier arrive, jamais par celui qu'il quitte : la lentille `securite` l'a refus
 Et la liste que sert la forge plafonne sans erreur : elle se compare au nombre de fichiers que la PR
 annonce, sinon trois mille documents cachent un fichier de configuration.
 
-### PR #61 — 2026-09-18 — feat(GOV-043): gov:trace rend son perimetre et son complement, sous un plancher declare
-
-**Fait.** `gov:trace` dit maintenant ce qu'il a regardé : 45 tâches sur 260 ont vu au moins une
-promesse de `tests{}` recevoir un verdict contre ce disque, et les 215 autres sont nommées, rangées
-en quatre raisons (`hors_depot` 16, `sans_promesse` 112, `promesse_a_venir` 87, `promesse_non_jugee`
-0). Le périmètre sort du même passage que le contrôle. Un plancher déclaré dans le champ `verifie`
-de `req:check` (45, mesuré le 2026-09-18 après l'intégration de la PR 54) rougit en
-`couverture_sous_plancher` quand la couverture passe dessous : vu rouge en le franchissant par le
-bas, vu vert quand elle monte. `gov:inventaire` ne compte plus une tâche absente du registre comme
-portant une preuve qui résout.
-
-**Reste.** GOV-043 reste ancrée sur REQ-GOV-005, absorbée : `reecrire-champ` refuse `reqs`, et
-`taches` de `docs/requirements.json` n'est écrivable par aucun verbe. Le ré-ancrage sur REQ-QA-014
-demande un verbe neuf, pas un contournement. Le plancher ne monte pas seul : la marge est imprimée
-pour que la dérive se voie. La dette GOV-082 (une liste vide rendue à code 0 par `vitest list`) reste
-ouverte et n'est pas touchée ici.
-
-**Appris.** Le « 48 sur 209 » de l'acceptance comptait les tâches qui PORTENT un `tests{}`, pas
-celles que la garde juge : reconstitué sur `e0dacf3`, où SEC-01, SEC-02 et INT-T01b n'en portaient
-aucun. Porter une promesse ne suffit pas pour être regardé. Une promesse sans titre qui ne porte
-qu'une exigence absorbée ne reçoit AUCUN verdict, et c'était le cas de GOV-043 elle-même : sa
-première mesure l'a rangée dans son propre complément. Et `gov:inventaire` garde 7 familles parce
-que ce compte est épinglé par une spécification hors des `paths` de la tâche : ajouter une famille
-aurait élargi le périmètre de la PR.
-
-… 22 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 23 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

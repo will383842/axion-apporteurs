@@ -81,9 +81,12 @@ interface Sortie {
  */
 function lancer(script: string, variables: Record<string, string>): Sortie {
   const debut = Date.now();
+  // `next` déclare `NODE_ENV` OBLIGATOIRE dans `NodeJS.ProcessEnv` (next/types/global.d.ts) : cet
+  // environnement, construit à partir de zéro, ne le porte que si le cas testé le pose.
+  const env: Record<string, string> = { ...BASE, ...variables };
   const r = spawnSync(process.execPath, ['--import', 'tsx', script], {
     cwd: RACINE,
-    env: { ...BASE, ...variables },
+    env: env as NodeJS.ProcessEnv,
     encoding: 'utf8',
     timeout: 60_000,
   });

@@ -2834,7 +2834,9 @@ const SOURCES_DE_LA_GARDE = [
 /** La gate, lancée par `tsx` depuis la racine d'un dépôt, avec des variables en plus. */
 function lancerDans(
   depot: string,
-  variables: NodeJS.ProcessEnv = {}
+  // Pas `NodeJS.ProcessEnv` : `next` y déclare `NODE_ENV` obligatoire (next/types/global.d.ts), et ces
+  // variables s'AJOUTENT à l'environnement du banc, qui porte déjà le sien.
+  variables: Readonly<Record<string, string>> = {}
 ): { code: number | null; sortie: string } {
   const r = spawnSync(
     process.execPath,
