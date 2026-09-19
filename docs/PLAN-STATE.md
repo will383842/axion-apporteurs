@@ -7,19 +7,19 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `b973869` — 2026-09-19T20:30:42+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #84 (un conflit avec `main`) · 3. #86 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) |
+| Où est `main` ? | `e0008b0` — 2026-09-19T18:20:18+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #83 (un contrôle requis rouge ou une revue manquante) · 3. #84 (un contrôle requis rouge ou une revue manquante) · 4. #85 (un contrôle requis rouge ou une revue manquante) · 5. #86 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | SEC-10 (A05) · QA-T08 (A05) · DM-01 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T03 (A05) · QA-T07 (A05) |
-| Où en est la phase ? | phase 0 — 11/98 tâches, reste 68.10 j |
-| Le prochain pas | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
+| Où en est la phase ? | phase 0 — 11/98 tâches, reste 67.60 j |
+| Le prochain pas | fusionner #82, puis DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #88 — 2026-09-19 |
+| Dernière entrée de journal | PR #81 — 2026-09-19 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-11/98 tâches terminées · reste 68.10 j estimés.
+11/98 tâches terminées · reste 67.60 j estimés.
 
 ## Tâches
 
@@ -64,10 +64,11 @@ Reste sur ce chemin : **17.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
+| 2 | #83 — docs(GOV-039): les 25 clauses decidees remises ou datees (ADR 0016) | `t/clauses-decidees` | un contrôle requis rouge ou une revue manquante |
+| 3 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
+| 4 | #85 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un contrôle requis rouge ou une revue manquante |
+| 5 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -89,54 +90,25 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle
+`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle · `docs/adr/0016-deux-arbitrages-du-2026-09-03-dates-dans-l-annexe-des-fusions.md` — partners/ADR-0016 — Deux arbitrages du 2026-09-03 datés dans l'annexe des fusions : la date de référence d'une commande et les trois contrôles de versement
 
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
 
-**DM-01** — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (1 j, **sur le chemin critique**) : 40 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**Fusionner #82** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+
+**DM-01** — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (1 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `b973869` (2026-09-19T20:30:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `e0008b0` (2026-09-19T18:20:18+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
-
-### PR #88 — 2026-09-19 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur
-
-**Fait.** `src/lib/logger.ts` écrit des lignes JSON pino dans un flux qui relit chaque ligne finale,
-la parcourt en entier et remplace toute valeur protégée : par nom de clé (lexique de personne importé
-de DM-01, plus `SEGMENTS_SECRETS`, casse et accents neutralisés) et par valeur (courriel, IBAN,
-téléphone français, lien de dépôt). Une ligne illisible est remplacée, jamais écrite brute. Seule une
-empreinte SHA-256 exacte, sous une clé de contexte à la racine, échappe au scan. `src/lib/sentry.ts`
-bâtit un client `@sentry/node` autonome, dont les trois filtres passent par la même fonction, et qui
-ne transmet aucun en-tête. `src/lib/notify.ts` refuse de se construire hors production sans
-`NOTIFY_SINK=true`, et son prédicat est confronté au vrai `hook-env.js` sur 8 environnements.
-`src/instrumentation.ts` est le seul lecteur de l'environnement. Versions exactes : pino 10.3.1,
-`@sentry/node` 10.75.0. 26 tests, 25 mutants tués en phase A, 3 rejoués en phase B.
-
-**Reste.** Aucun transport réel de notification (INT-T14, INT-T10) ; le notifieur n'est pas composé
-au démarrage. Pas de Sentry côté navigateur ni de cartes de sources (SEC-03). `SENTRY_DSN` doit
-devenir obligatoire en production dans le schéma d'environnement (QA-T04). L'entrée de Sentry au
-registre RGPD appartient à JUR-T04. Une règle de lint doit interdire toute interpolation dans le
-message d'un appel de journal : un nom de personne en texte libre n'a pas de motif.
-
-**Appris.** L'option `redact` de pino juge des chemins : un objet un cran plus bas, un tableau ou une
-clé en casse différente passent, et seul un parcours de la ligne finale les voit tous. Une exemption
-par forme hexadécimale est une porte : un IBAN allemand en minuscules, `de89` suivi de chiffres, a
-la forme d'une empreinte de 22 caractères. Seule la longueur exacte de la SHA-256 ferme la porte.
-Depuis que `next` est une dépendance, `NodeJS.ProcessEnv` exige `NODE_ENV` : un environnement de
-sous-processus construit à partir de zéro doit être converti, comme dans la spec de SEC-01. Et la
-garde `journal:sans-pii` lit tout identifiant `evenement`, y compris le paramètre d'un filtre Sentry :
-renommer vaut mieux qu'inscrire une exemption. Enfin, le corps d'une PR garde chacune de ses
-révisions : un IBAN d'exemple à clé valide collé une fois dans un bloc rouge verbatim y reste, et
-`gov:entite --corps-publie` le lit. La PR #85 a été fermée pour cela et remplacée par celle-ci, code
-inchangé. Un corps se vérifie avec le détecteur de la garde AVANT sa première publication.
 
 ### PR #81 — 2026-09-19 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert
 
@@ -175,7 +147,26 @@ Les etiquettes de panne du brief tombent sous `gov:identifiants` (lettre et chif
 
 **Appris.** Prettier coupe les balises fermantes d'un HTML long (`</a` puis `>` à la ligne suivante). Une spec qui cherche `</label>` en texte exact ne trouve jamais la fermante, et juge alors « étiqueté » tout champ placé après une étiquette. Le témoin était trop indulgent sans rougir. Et le composeur lisait l'avant-dernière cellule du tableau, « Par », sous un commentaire qui disait « Validé le ».
 
-… 29 entrée(s) plus ancienne(s) dans `docs/journal/`.
+### PR #78 — 2026-09-19 — feat(CPL-T13): module temps pur - horloge injectee, heure de Paris, feries FR, SLA ouvre, seuil HYP-D3
+
+**Fait.** Le module `temps` vit sous `src/domain/temps/`, pur : horloge injectée (`horlogeFigee`
+dans le domaine, `horlogeSysteme` dans `src/lib/horloge.ts`), heure légale de Paris calculée par la
+règle européenne, bornée aux années civiles de Paris 1996-2099, fériés FR versionnés avec leur
+attribut chômé, SLA en heures ouvrées à échéance exclusive, capacité réelle et seuil prioritaire
+(HYP-D3). Les conversions sont confrontées à `Intl.DateTimeFormat` dans le test, jamais dans le
+domaine : 131 496 heures de 2026 à 2040, 78 338 points autour des changements d'heure de 1996 à
+2099. 38 mutants joués, 38 tués. `partners/ADR-0014` (`propose`) en est le contrat.
+
+**Reste.** La question à Will sur le lundi de Pentecôte (travaillé par défaut, une constante) ; le
+numéro d'ADR, fixé à l'atterrissage (0014 aujourd'hui, 0015 si DM-01 atterrit avant) ; le relevé unique et le
+rattrapage des crons de REQ-QA-027, qui sont à DM-13 et T-ARG-015.
+
+**Appris.** Un oracle vivant trouve ce qu'un attendu tapé aurait figé faux : le test supposait onze
+fériés distincts par an, et 1997 n'en a que dix (l'Ascension tombe le 8 mai). Le témoin dérive
+maintenant ces années de l'oracle de Gauss au lieu de les écrire. Et une URL encodée en commentaire
+(le « â » de Pâques en pourcentages) se lit comme un identifiant nu : la garde lit les commentaires.
+
+… 28 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
