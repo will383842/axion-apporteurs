@@ -34,7 +34,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { NextRequest } from 'next/server';
-import type { NextConfig } from 'next/dist/server/config-shared';
+import type { NextConfig } from 'next';
 import {
   unstable_doesMiddlewareMatch,
   unstable_getResponseFromNextConfig,
@@ -509,14 +509,15 @@ describe('REQ-SEC-029 — la couche du dépôt', () => {
   });
 
   it('REQ-SEC-029 : seul NODE_ENV=development exactement ajoute unsafe-eval — absent, test, production ou mal écrit donnent la politique stricte', async () => {
-    const avant = process.env.NODE_ENV;
+    // `vi.stubEnv` et non une affectation : `next` déclare `NODE_ENV` en lecture seule, et
+    // `vi.unstubAllEnvs()` rend la valeur d'origine même si une assertion lève. `undefined` la RETIRE.
     const poser = (v: string | undefined): void => {
-      if (v === undefined) delete process.env.NODE_ENV;
-      else process.env.NODE_ENV = v;
+      vi.stubEnv('NODE_ENV', v);
     };
     try {
       for (const valeur of [undefined, '', 'test', 'production', 'Development', 'development ']) {
         poser(valeur);
+        expect(process.env.NODE_ENV, 'le bouchon pose bien la valeur voulue').toBe(valeur);
         const { defauts } = await verifierEntetes(COUCHE, ROUTES, PETIT);
         expect(defauts, `NODE_ENV=${JSON.stringify(valeur)}`).toEqual([]);
       }
@@ -526,7 +527,7 @@ describe('REQ-SEC-029 — la couche du dépôt', () => {
         new Set(["source_en_trop script-src 'unsafe-eval'"])
       );
     } finally {
-      poser(avant);
+      vi.unstubAllEnvs();
     }
   });
 });

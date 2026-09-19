@@ -1058,13 +1058,20 @@ function binaireDuScript(script: string): [string, string[]] {
  * `node_modules` —, sans lui transmettre l'environnement du test, et rend sa sortie. Sert à RELEVER
  * ce qu'il lit ; ce que l'acte de Gate A fait d'une faute est mesuré par `lancerActe`.
  */
+// Un environnement VIDE. `next` déclare `NODE_ENV` obligatoire dans `NodeJS.ProcessEnv`
+// (next/types/global.d.ts) : l'assertion dit que cet enfant n'en reçoit aucun, et c'est voulu.
+const AUCUNE_VARIABLE: Readonly<Record<string, string>> = {};
+
 function lancerBinaire(nom: string, args: readonly string[]): string {
   const paquet = join('node_modules', nom);
   const { bin } = JSON.parse(readFileSync(join(paquet, PACKAGE), 'utf8')) as {
     bin: string | Record<string, string>;
   };
   const chemin = join(paquet, typeof bin === 'string' ? bin : (bin[nom] ?? ''));
-  const r = spawnSync(process.execPath, [chemin, ...args], { encoding: 'utf8', env: {} });
+  const r = spawnSync(process.execPath, [chemin, ...args], {
+    encoding: 'utf8',
+    env: AUCUNE_VARIABLE as NodeJS.ProcessEnv,
+  });
   return `${r.stdout ?? ''}${r.stderr ?? ''}`;
 }
 

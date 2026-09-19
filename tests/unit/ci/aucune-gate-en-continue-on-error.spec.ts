@@ -365,9 +365,11 @@ const COUVERT_PAR_LA_PASSE = `${DOMAINE}/attribution/etats.ts`;
 function passePartielle(): { code: number | null; sortie: string; couverts: string[] } {
   const rapport = mkdtempSync(join(tmpdir(), 'qa2-'));
   try {
+    // `next` déclare `NODE_ENV` OBLIGATOIRE dans `NodeJS.ProcessEnv` (next/types/global.d.ts) : un
+    // environnement FILTRÉ n'en porte pas forcément un. L'assertion dit ce que le filtre rend vraiment.
     const env = Object.fromEntries(
       Object.entries(process.env).filter(([k]) => !/^(?:VITEST|TEST$|NODE_V8_COVERAGE)/.test(k))
-    );
+    ) as NodeJS.ProcessEnv;
     const { code, sortie } = lancer(
       `pnpm run test --coverage.reportsDirectory=${rapport} --coverage.reporter=json-summary ` +
         PASSE_PARTIELLE,
