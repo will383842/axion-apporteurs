@@ -167,7 +167,10 @@ du domaine refuse la base, le cache, le réseau et l'horloge système par leur n
 exigence, et elle est le script de `G-SEC-CI-BLOQUANTE`, dont la `preuveRouge` est posée : aucun job
 ni aucune étape d'aucun workflow ne porte `continue-on-error`, lu par un vrai analyseur YAML.
 `etats.ts` passe de 73,33 % à 100 % par un test de domaine qui dérive les statuts non occupants de
-REQ-DM-006.
+REQ-DM-006. Règle du domaine : sous `src/domain/**`, rien que du `.ts` NON-TEST — ni autre
+extension, ni `*.spec.ts`, ni `*.test.ts`, ni `*.d.ts` ; les tests vivent sous `tests/`. Et aucun
+commentaire du domaine ne parle de couverture : les formes que le fournisseur installé accepte sont
+lues dans son code, et chacune est vue rougir.
 
 **Reste.** Les formes voisines des interdits du domaine sont fermées par GOV-076 : import sans
 préfixe, `import()` dynamique, `globalThis.fetch`, `Date['now']`, console par alias. REQ-QA-013 n'est
