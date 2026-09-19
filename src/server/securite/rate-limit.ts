@@ -98,6 +98,39 @@ export const COMPTEURS = {
     ancre: 'par identité',
     verifieLe: '2026-09-19',
   },
+  // INT-T09 — le mandataire de recherche d'entreprises, un geste du dépôt. ⚠️ Ni REQ-INT-020 ni
+  // REQ-SEC-013 n'écrivent encore la conduite sur panne (`surPanne: …`) après leur ancre, ni la
+  // limite sous la forme « N / M s|min|h » avant elle : la garde de famille les refuse donc en
+  // `ecart_a_l_exigence` tant que le gardien de la spécification n'a pas amendé ces deux textes.
+  // Les conduites ci-dessous sont celles que la tâche propose, la plus fermée pour le débit
+  // global et l'identité (le parcours bascule en saisie manuelle, le dépôt n'est jamais bloqué).
+  'depot:entreprise-global': {
+    prefixe: 'depot:',
+    limite: 5,
+    fenetreSecondes: 1,
+    surPanne: 'refuser',
+    source: 'REQ-INT-020',
+    ancre: 'limiteur global',
+    verifieLe: '2026-09-19',
+  },
+  'depot:entreprise-identite': {
+    prefixe: 'depot:',
+    limite: 120,
+    fenetreSecondes: 86_400,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-013',
+    ancre: 'par identité',
+    verifieLe: '2026-09-19',
+  },
+  'depot:entreprise-ip': {
+    prefixe: 'depot:',
+    limite: LIMITE_HORS_DEPOT,
+    fenetreSecondes: LIMITE_HORS_DEPOT,
+    surPanne: 'laisser-passer',
+    source: 'REQ-SEC-013',
+    ancre: 'par hash IP',
+    verifieLe: '2026-09-19',
+  },
 } as const satisfies Readonly<Record<`${PrefixeDeFamille}${string}`, DeclarationDeCompteur>>;
 
 /** Une faute de frappe dans le nom d'un compteur ne compile pas. */
