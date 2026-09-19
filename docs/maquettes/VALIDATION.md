@@ -11,12 +11,12 @@
 
 | Écran | Fichier | Tâche | Validé le | Par |
 | --- | --- | --- | --- | --- |
-| Accueil (3 chiffres, 1 alerte, 1 champ, 4 onglets) | `accueil.html` | UX-P1-08 | — | — |
-| Entreprise (recherche + carte 4 états + « Déposer ») | `entreprise.html` | UX-P1-01 | — | — |
-| Déposer un contact | `deposer.html` | UX-P1-02 | — | — |
-| Mes entreprises | `mes-entreprises.html` | UX-P1-05 | — | — |
-| Mes commissions | `mes-commissions.html` | UX-P2-01 | — | — |
-| Ma conformité / Mon profil | `conformite.html` | UX-P1-09 | — | — |
+| Accueil (3 chiffres, 1 alerte, 1 champ, 4 onglets) | `accueil.html` | UX-P1-08 | 2026-09-19 | Will |
+| Entreprise (recherche + carte 4 états + « Déposer ») | `entreprise.html` | UX-P1-01 | 2026-09-19 | Will |
+| Déposer un contact | `deposer.html` | UX-P1-02 | 2026-09-19 | Will |
+| Mes entreprises | `mes-entreprises.html` | UX-P1-05 | 2026-09-19 | Will |
+| Mes commissions | `mes-commissions.html` | UX-P2-01 | 2026-09-19 | Will |
+| Ma conformité / Mon profil | `conformite.html` | UX-P1-09 | 2026-09-19 | Will |
 
 ## Console
 
