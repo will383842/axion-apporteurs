@@ -627,6 +627,21 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'forge), pas de couverture. *Redondance ≠ trou — et une maxime fausse devient une doctrine, ' +
         'qu’on ne remesure jamais.*',
     },
+    // ── UX-P0-02 : UNE sortie, à code VARIABLE ──────────────────────────────────────────────
+    'scripts/gates/maquettes-validees.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO ici : les témoins d'EFFET de cette sortie vivent dans
+      // `tests/unit/espace/maquettes-validees.spec.ts`, pas dans le tableau `REFUS` de ce fichier.
+      temoins: 0,
+      raison:
+        'UX-P0-02 — aucune tâche d’écran attribuée sans maquette validée par Will. UNE sortie, ' +
+        "`process.exit(process.argv.includes('--prove') ? prouver() : juger())`, TERMINALE, à code " +
+        'variable : 0 quand la garde passe, 1 sur la première faute. Témoins d’EFFET sur le binaire, ' +
+        'dans maquettes-validees.spec.ts : un arbre jetable où une tâche d’écran est attribuée sans ' +
+        'validation sort en 1 en NOMMANT la tâche, le même arbre corrigé sort en 0, et le dépôt réel ' +
+        'comme `--prove` sortent en 0.',
+    },
   };
 
   it('REQ-GOV-032 — le compte DÉRIVÉ du diff égale le compte DÉCLARÉ, fichier par fichier', () => {
@@ -822,7 +837,15 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // Déclarer un nombre « au cas où » donnerait le nombre sans la lecture, c'est-à-dire exactement
     // ce que ce cliquet interdit :
     // *le total ne bouge pas sans qu'on l'écrive, et on ne l'écrit pas sans l'avoir lu.*
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(37);
+    // 🔧 37 → 38 par UX-P0-02, ARBITRÉ et non subi. `scripts/gates/maquettes-validees.ts` naît
+    // avec UNE sortie non nulle, terminale et à code variable. Lu en Gate A, dans l'ordre — d'abord
+    // l'identité (run 35435390710), puis, la déclaration posée, le compte (run 35436969947) :
+    //
+    //     scripts/gates/maquettes-validees.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 38 to be 37
+    //
+    // La sortie est vue en 1 puis en 0 sur un arbre jetable (maquettes-validees.spec.ts).
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(38);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.

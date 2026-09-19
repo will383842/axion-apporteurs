@@ -216,6 +216,15 @@ jobs:
         run: pnpm gov:lexique
       - name: La garde du lexique sait rougir, et laisse passer la negation qui protege
         run: pnpm gov:lexique:prove
+      # UX-P0-02 : une tache d'ecran ne s'attribue pas avant que Will ait valide sa maquette
+      # (docs/maquettes/VALIDATION.md). Le composeur l'appliquait seul, au moment de composer ;
+      # une attribution faite a la main ne rougissait nulle part. La garde lit le tableau par ses
+      # en-tetes, refuse une validation ecrite a moitie ou par un autre que Will, et IMPRIME les
+      # taches d'ecran qu'elle ecarte.
+      - name: Maquettes — aucune tache d'ecran attribuee sans validation de Will
+        run: pnpm gov:maquettes-validees
+      - name: La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau
+        run: pnpm gov:maquettes-validees:prove
       # GOV-019, REQ-GOV-028. Elle ne MESURE aucun octet : elle tient les budgets en place et
       # refuse qu'une route naisse sans le sien. Elle IMPRIME son perimetre — « 0 route balayee »
       # n'est pas « aucun defaut », et elle le dit en toutes lettres. Pas de `continue-on-error` :

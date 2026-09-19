@@ -1,0 +1,1568 @@
+<!doctype html>
+<html lang="fr" data-theme="auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Maquettes et charte de l’espace · Axion Partners</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --fond: #f7f4ee;
+        --surface: #ffffff;
+        --texte: #1c1917;
+        --doux: #57534e;
+        --lien: #a8390b;
+        --bord: #8a8178;
+        --focus: #1d4ed8;
+        --alerte-fond: #fff1d6;
+        --alerte-texte: #6e3b00;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root[data-theme='auto'] {
+          color-scheme: dark;
+          --fond: #171412;
+          --surface: #221e1b;
+          --texte: #f5f1ea;
+          --doux: #cfc8bf;
+          --lien: #f7a06a;
+          --bord: #8c847b;
+          --focus: #93c5fd;
+          --alerte-fond: #33240a;
+          --alerte-texte: #ffd58a;
+        }
+      }
+      :root[data-theme='sombre'] {
+        color-scheme: dark;
+        --fond: #171412;
+        --surface: #221e1b;
+        --texte: #f5f1ea;
+        --doux: #cfc8bf;
+        --lien: #f7a06a;
+        --bord: #8c847b;
+        --focus: #93c5fd;
+        --alerte-fond: #33240a;
+        --alerte-texte: #ffd58a;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font:
+          18px/1.55 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: var(--fond);
+        color: var(--texte);
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 16px 20px 64px;
+      }
+      a {
+        color: var(--lien);
+      }
+      a:not(.bloc) {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+      }
+      :focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+      h1 {
+        font-size: 30px;
+        line-height: 1.2;
+        margin: 16px 0 8px;
+        font-weight: 800;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo {
+        height: 40px;
+        width: auto;
+      }
+      h2 {
+        font-size: 24px;
+        margin: 40px 0 8px;
+        border-top: 1px solid var(--bord);
+        padding-top: 24px;
+      }
+      h3 {
+        font-size: 20px;
+        margin: 24px 0 8px;
+      }
+      .doux {
+        color: var(--doux);
+      }
+      .fictif {
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: var(--alerte-fond);
+        color: var(--alerte-texte);
+        font-weight: 700;
+      }
+      .tete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      button {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 0 16px;
+        font: inherit;
+        border-radius: 10px;
+        border: 2px solid var(--bord);
+        background: var(--surface);
+        color: var(--texte);
+        cursor: pointer;
+      }
+      .defile-x {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 8px 0 16px;
+      }
+      caption {
+        text-align: left;
+        font-weight: 700;
+        padding-bottom: 6px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--bord);
+      }
+      th {
+        color: var(--doux);
+      }
+      td.n,
+      th.n {
+        text-align: right;
+        white-space: nowrap;
+      }
+      code {
+        font-size: 16px;
+        overflow-wrap: anywhere;
+      }
+      .nuancier {
+        list-style: none;
+        padding: 0;
+        margin: 8px 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 6px 16px;
+      }
+      .nuancier li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pastille-couleur {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: 1px solid var(--bord);
+        flex: none;
+      }
+      .cartes {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 12px;
+      }
+      .cartes li {
+        background: var(--surface);
+        border: 1px solid var(--bord);
+        border-radius: 14px;
+        padding: 14px 16px;
+      }
+      .cartes a.bloc {
+        display: block;
+        font-size: 20px;
+        font-weight: 800;
+        min-height: 48px;
+        padding-top: 8px;
+      }
+      .cartes p {
+        margin: 4px 0;
+      }
+      @media (max-width: 640px) {
+        table,
+        thead,
+        tbody,
+        tr,
+        th,
+        td,
+        caption {
+          display: block;
+        }
+        thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+        }
+        tr {
+          border-bottom: 2px solid var(--bord);
+          padding: 6px 0;
+        }
+        td {
+          border: 0;
+          padding: 2px 0;
+        }
+        td.n {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false">
+        <symbol id="logo-axion-ia" viewBox="12 364 1229 521">
+          <path
+            fill="#FFFFFF"
+            fill-rule="evenodd"
+            d="M 232.5 369.1 C 218.4 370.3, 210.5 371.6, 195.1 375.6 C 155.3 385.9, 118.7 407.7, 88.4 439.2 C 68.9 459.5, 56.1 477.8, 43.5 503.5 C 32.2 526.5, 24.4 550.4, 20.1 575 C 16.6 594.8, 15.7 609, 16.3 631.5 C 16.9 653.9, 18.4 665.8, 23 686.2 C 33.1 730.8, 56.9 775.8, 87 807.4 C 127.7 850.1, 180.6 875.7, 237.2 879.9 C 245.8 880.6, 386.2 880.8, 634.5 880.6 C 999.6 880.4, 1019.1 880.3, 1030 878.5 C 1064.9 873, 1097 860.7, 1124.3 842.3 C 1139.7 831.9, 1148.8 824.4, 1162.3 810.6 C 1207.9 764.4, 1234.4 700.9, 1236.7 632 C 1238.6 575.9, 1223.4 520.5, 1194 476.1 C 1155.9 418.6, 1101.1 381.8, 1036.9 370.8 L 1023.5 368.6 633 368.4 C 418.2 368.3, 238 368.6, 232.5 369.1"
+          />
+          <path
+            fill="#F03000"
+            fill-rule="evenodd"
+            d="M 232.5 369.1 C 218.4 370.3, 210.5 371.6, 195.1 375.6 C 155.3 385.9, 118.7 407.7, 88.4 439.2 C 68.9 459.5, 56.1 477.8, 43.5 503.5 C 32.2 526.5, 24.4 550.4, 20.1 575 C 16.6 594.8, 15.7 609, 16.3 631.5 C 16.9 653.9, 18.4 665.8, 23 686.2 C 33.1 730.8, 56.9 775.8, 87 807.4 C 127.7 850.1, 180.6 875.7, 237.2 879.9 C 245.8 880.6, 386.2 880.8, 634.5 880.6 C 999.6 880.4, 1019.1 880.3, 1030 878.5 C 1064.9 873, 1097 860.7, 1124.3 842.3 C 1139.7 831.9, 1148.8 824.4, 1162.3 810.6 C 1207.9 764.4, 1234.4 700.9, 1236.7 632 C 1238.6 575.9, 1223.4 520.5, 1194 476.1 C 1155.9 418.6, 1101.1 381.8, 1036.9 370.8 L 1023.5 368.6 633 368.4 C 418.2 368.3, 238 368.6, 232.5 369.1 M 221.5 391 C 199.3 394.4, 183.2 399.4, 162.5 409.5 C 96.9 441.4, 50 508.4, 38.3 586.9 C 35.8 603.5, 35.9 645.1, 38.4 660.9 C 46.7 713.9, 69.9 761.4, 104.7 796.7 C 122.6 814.8, 142 829, 163.1 839.2 C 181.9 848.3, 195.1 852.8, 218.6 857.7 C 225.9 859.3, 257 859.4, 619.5 859.7 C 897.4 860, 1015.3 859.8, 1022 859 C 1094 850.8, 1156.9 804.8, 1190.9 735.5 C 1199.4 718.2, 1204.1 705.7, 1208.5 688.6 C 1220.3 642.4, 1219.6 596.3, 1206.4 551 C 1184 473.6, 1124.1 413.4, 1051.5 395 C 1026.3 388.6, 1055 389, 624.7 389.1 C 251.6 389.2, 232.9 389.3, 221.5 391 M 907.2 502.2 C 903.9 505.5, 906.6 508.2, 914.1 509.5 C 916.1 509.8, 918.8 511.2, 920.1 512.6 C 924.3 517.1, 923.7 521.9, 912.5 574.5 C 893.3 663.9, 894.2 660.5, 888.1 664.7 C 886.4 665.9, 883.1 667.1, 880.7 667.5 C 874.4 668.6, 872.8 669.7, 873.2 672.8 L 873.5 675.5 909.5 675.8 C 941.2 676, 945.6 675.8, 946.6 674.5 C 948.6 671.7, 947.1 669.1, 942.8 667.9 C 936.6 666.3, 934 663.1, 934 657.1 C 934 652.8, 939.2 627.3, 950.6 575.5 C 963.6 516.4, 963.2 518, 968.1 513.6 C 971 510.9, 973.2 509.9, 976.9 509.4 C 983.6 508.5, 985.5 507.1, 984.6 503.7 L 984 501 946.2 501 C 918.1 501, 908.1 501.3, 907.2 502.2 M 1037.2 502.2 C 1035.6 503.8, 1035.7 506.5, 1037.3 507.7 C 1037.9 508.2, 1040.4 509.2, 1042.6 509.8 C 1045.7 510.7, 1047.1 511.8, 1048 513.9 C 1049.4 517.5, 1048.4 520.2, 1037.5 540 C 1033.5 547.4, 1021 570.6, 1009.7 591.5 C 976.8 652.7, 974.8 656.2, 970 661.1 C 966.7 664.4, 964.1 666, 960.1 667.1 C 954 668.8, 951.9 671, 953.6 673.8 C 954.6 675.3, 957.1 675.5, 982.6 675.5 L 1010.5 675.5 1010.8 673.2 C 1011.3 669.7, 1009.5 668.3, 1003.8 667.8 C 997.2 667.1, 993.5 663.5, 994.6 658.6 C 994.9 656.9, 999.6 647, 1004.9 636.5 L 1014.5 617.5 1046.4 617.2 C 1064 617.1, 1078.7 617.3, 1079.1 617.7 C 1080.3 619, 1088 653.9, 1088 658.2 C 1088 663.1, 1084.7 666.6, 1079.4 667.5 C 1072.6 668.5, 1070.5 669.5, 1070.2 671.6 C 1069.6 675.9, 1070.9 676, 1109 675.8 C 1142.3 675.5, 1145.4 675.4, 1146.4 673.8 C 1148 671.2, 1146 668.7, 1141.6 667.8 C 1135.3 666.5, 1131.9 664.1, 1129.9 659.6 C 1128.2 655.6, 1121.9 630.2, 1113.1 592 C 1110.9 582.4, 1106.4 562.8, 1103.1 548.5 C 1099.7 534.2, 1097 520.7, 1097 518.4 C 1097 513.6, 1099.8 510.4, 1105 509.4 C 1111.6 508.1, 1113.9 505.3, 1110.8 502.2 C 1109.1 500.5, 1038.9 500.5, 1037.2 502.2 M 526.2 517 C 526.2 518.4, 526.4 518.9, 526.7 518.3 C 526.9 517.6, 526.9 516.4, 526.7 515.8 C 526.4 515.1, 526.2 515.6, 526.2 517 M 1052.3 544.3 C 1048.8 551, 1040.4 567.3, 1033.6 580.5 L 1021.1 604.5 1048.3 605 C 1063.3 605.3, 1075.8 605.3, 1076.2 605 C 1076.5 604.7, 1076.2 602, 1075.5 599 C 1074.8 596, 1070.9 579.7, 1066.9 562.8 C 1062.9 545.8, 1059.4 532, 1059 532 C 1058.7 532, 1055.7 537.5, 1052.3 544.3 M 599.8 558.7 C 601.5 558.9, 604.5 558.9, 606.3 558.7 C 608 558.5, 606.6 558.3, 603 558.3 C 599.4 558.3, 598 558.5, 599.8 558.7 M 331.1 565.6 C 331.1 566.7, 331.4 567, 331.7 566.2 C 332 565.5, 331.9 564.6, 331.6 564.3 C 331.3 563.9, 331 564.5, 331.1 565.6 M 832.8 592.7 C 840.7 592.9, 853.3 592.9, 860.8 592.7 C 868.3 592.6, 861.9 592.4, 846.5 592.4 C 831.1 592.4, 824.9 592.6, 832.8 592.7 M 194.9 605.3 C 195.3 605.7, 207.3 605.9, 221.6 605.8 L 247.5 605.5 220.8 605 C 206.1 604.7, 194.4 604.8, 194.9 605.3 M 669.3 618.5 C 669.3 620.7, 669.5 621.5, 669.7 620.2 C 669.9 619, 669.9 617.2, 669.7 616.2 C 669.4 615.3, 669.2 616.3, 669.3 618.5 M 536.3 619.5 C 536.3 621.7, 536.5 622.5, 536.7 621.2 C 536.9 620, 536.9 618.2, 536.7 617.2 C 536.4 616.3, 536.2 617.3, 536.3 619.5 M 808.1 672.6 C 808.1 673.7, 808.4 674, 808.7 673.2 C 809 672.5, 808.9 671.6, 808.6 671.3 C 808.3 670.9, 808 671.5, 808.1 672.6 M 514.2 717 C 500.4 718.9, 487.6 727.9, 481.7 739.9 C 478.8 745.8, 478.5 747.3, 478.5 755.5 C 478.5 763.4, 478.9 765.2, 481.4 770.4 C 486.4 780.5, 495.2 787.3, 507.5 790.6 C 521.7 794.4, 539.4 789.8, 549.1 779.8 C 555.5 773.2, 552.8 768, 545.7 773.4 C 537.9 779.4, 525.2 781, 516.4 777.1 C 506.2 772.6, 501 764.2, 500.2 750.8 C 499.8 743.8, 500 742.5, 502.8 736.6 C 506.7 728.2, 511.8 724.5, 519.4 724.6 C 525.9 724.7, 529.3 726.5, 535.1 732.9 C 539.2 737.4, 540.2 738, 543.7 738 C 549.2 738, 552 735.7, 552 731.3 C 552 721.7, 532.9 714.5, 514.2 717 M 593.9 717.5 C 580 720.3, 568.9 728.5, 563.3 739.8 C 560.8 744.8, 560.5 746.6, 560.5 755 C 560.5 763.4, 560.8 765.2, 563.3 770.1 C 570 783.8, 584.9 792, 603 792 C 616.9 792, 628.4 787.5, 637 778.7 C 644.8 770.7, 646.5 766.3, 646.5 754 C 646.5 744.6, 646.2 743, 643.9 738.5 C 640.8 732.7, 633.1 725.1, 627.4 722.2 C 617.6 717.2, 604.3 715.3, 593.9 717.5 M 665.5 721.4 C 654.7 724.9, 652.5 725.9, 652.5 727.5 C 652.5 728.9, 653.6 729.8, 655.9 730.6 C 661.9 732.5, 662 733.2, 662 756.9 C 662 780.9, 661.6 782.6, 656 784.5 C 653.6 785.3, 652.5 786.3, 652.5 787.6 C 652.5 789.4, 653.5 789.5, 672 789.5 C 690.6 789.5, 691.5 789.4, 691.5 787.6 C 691.5 786.3, 690.5 785.3, 688.5 784.7 C 682.9 782.9, 683 783.4, 683 760 L 683 738.2 686.3 735.4 C 692.4 730.3, 700.6 728.5, 706.4 731.1 C 711.3 733.4, 712 736.9, 712 760.3 C 712 783.4, 712.1 782.9, 706.5 784.7 C 704.5 785.3, 703.5 786.3, 703.5 787.6 C 703.5 789.4, 704.4 789.5, 723 789.5 C 741.8 789.5, 742.5 789.4, 742.5 787.5 C 742.5 786.1, 741.5 785.2, 739.2 784.4 C 737.3 783.8, 735.4 782.7, 734.9 781.9 C 734.4 781.1, 734 771, 734 759.3 L 734 738.2 737.3 735.4 C 744.1 729.7, 754.3 728.1, 759.3 732.1 C 763.5 735.3, 764.1 739.6, 763.8 762 L 763.5 782.5 759.2 783.9 C 755.7 785, 754.9 785.6, 755.2 787.4 C 755.5 789.5, 755.9 789.5, 775.3 789.8 L 795 790 795 787.6 C 795 785.5, 794.4 785, 791.5 784.4 C 789.6 784.1, 787.7 783.3, 787.1 782.6 C 786.6 782, 786 770.9, 785.8 758 C 785.5 735.7, 785.3 734.2, 783.1 729.6 C 775.7 714.5, 751.9 713.5, 736.4 727.6 C 734.4 729.5, 732.6 730.9, 732.6 730.8 C 729 724.1, 720.8 718.7, 712.3 717.4 C 705.8 716.4, 695.3 720, 688.5 725.5 L 683 730 683 724.5 C 683 720.2, 682.6 718.9, 681.1 718 C 680 717.5, 679 717, 678.8 717.1 C 678.6 717.1, 672.7 719, 665.5 721.4 M 595.3 725.9 C 582 732.1, 578.7 759.9, 589.2 776.3 C 598.3 790.5, 616.8 786.9, 622.4 769.8 C 625.7 759.4, 623.8 740.6, 618.5 733 C 612.9 725, 603.4 722.1, 595.3 725.9 M 130.6 750.6 C 128.6 752.5, 128.6 753.4, 130.4 754.9 C 131.4 755.7, 171.3 755.9, 280.1 755.8 C 425.9 755.5, 428.5 755.5, 428.8 753.6 C 429.8 748.8, 434.8 749, 278.9 749 C 146.8 749, 132 749.2, 130.6 750.6 M 823.6 750.6 C 822.4 751.8, 822.3 752.6, 823 754.1 C 824.1 756, 826.9 756, 971.8 756 C 1119.7 756, 1122 756, 1122 752.9 C 1122 752.5, 1121.3 751.4, 1120.4 750.6 C 1119 749.2, 1104.2 749, 972 749 C 839.9 749, 825 749.2, 823.6 750.6 M 454.5 763.7 C 448.8 765.2, 445 770.4, 445 776.7 C 445 786.5, 455.3 793, 464 788.5 C 468.9 786, 471 782.3, 471 776.4 C 471 770, 467.9 765.6, 462.2 764 C 458.3 763, 457.7 762.9, 454.5 763.7"
+          />
+          <path
+            fill="#000000"
+            fill-rule="evenodd"
+            d="M 499.9 497.4 C 490.2 500, 484.7 507, 484.6 517 C 484.5 535.9, 507.8 544.4, 521.2 530.3 C 522.7 528.8, 524.4 526.2, 524.9 524.7 C 526.4 520.8, 526.3 512.6, 524.6 508.7 C 520.8 499.6, 510 494.7, 499.9 497.4 M 199.8 501.1 C 198.8 501.6, 198 503.2, 198 504.5 C 198 506.4, 198.7 507.1, 200.8 507.6 C 209 509.4, 211.1 510.3, 212.5 512.3 C 215.3 516.3, 215.5 515.6, 198.8 554 C 153.9 657, 153.7 657.4, 147.9 662.4 C 143.8 665.9, 138.7 668, 134.4 668 C 131.3 668, 128.3 671.7, 129.7 673.8 C 130.6 675.3, 133.6 675.5, 160 675.5 C 186.8 675.5, 189.4 675.4, 190.4 673.8 C 192.3 670.8, 189.9 668.6, 183.9 667.7 C 176.6 666.7, 173.6 664.4, 173.2 659.4 C 173 656.3, 174.7 651.3, 181.1 636.2 L 189.3 617 225.3 617.2 L 261.3 617.5 267.7 634 C 277.1 658.3, 277.1 658.4, 275.9 662 C 274.6 665.6, 270.5 668, 265.7 668 C 261.3 668, 258.7 670, 259.2 673.1 L 259.5 675.5 319.6 675.8 C 371.3 676, 379.9 675.8, 381 674.6 C 382.6 672.5, 381.3 669.1, 378.7 668.6 C 371.9 667.2, 370.9 666.8, 370.3 665.4 C 369.3 662.6, 371.2 659.2, 381.4 646.5 L 391.3 634.1 398.8 643.8 C 413.7 663.1, 415.1 666.3, 409.1 667.6 C 402.3 669, 399.6 671.6, 402 674.5 C 403.1 675.8, 407.6 676, 433.4 675.8 L 463.5 675.5 463.8 673.2 C 464.3 670, 462.6 668.4, 458.2 667.6 C 452.4 666.7, 451.1 665.3, 426.3 631.6 C 414.7 616, 413.2 613.4, 414.4 612.1 C 415.1 611.2, 422.5 602.3, 430.9 592.3 C 439.2 582.2, 447.1 573.3, 448.5 572.4 C 449.8 571.5, 452.9 570.2, 455.2 569.6 C 460.2 568.1, 462 565.9, 460.1 563.6 C 458.9 562.2, 455.9 562, 436.6 562.2 L 414.5 562.5 414.5 565.5 C 414.5 568.1, 414.9 568.5, 418.4 569.2 C 427.7 571.2, 427.3 573.9, 415.3 589.4 C 409.9 596.3, 405.2 602, 404.9 602 C 404 602, 388.6 581.3, 386.7 577.6 C 384.3 573.2, 385.6 571.2, 391.7 569.4 C 396.7 568, 397.1 567.6, 396.8 565.2 L 396.5 562.5 364.5 562.5 L 332.5 562.5 332.5 565.4 C 332.5 567.9, 333 568.4, 336.8 569.5 C 339.1 570.2, 342.1 571.5, 343.5 572.4 C 346.9 574.7, 382.3 621.9, 381.7 623.5 C 381 625.1, 357.2 654, 351.6 659.8 C 344.3 667.5, 336.3 669.9, 328.7 666.6 C 324.7 664.9, 318.6 658.9, 316.7 654.7 C 313.5 647.9, 291.9 592.3, 265.8 523.5 C 261.4 512, 257.4 502, 256.8 501.3 C 255.5 499.7, 202.5 499.5, 199.8 501.1 M 217 552.8 C 211.8 564.7, 204.6 581.4, 200.9 589.7 C 197.2 598.1, 194.6 605.3, 195.1 605.6 C 196.4 606.4, 256 605.8, 256 604.9 C 256 604.4, 244.1 573.4, 231.7 541.8 C 229.4 535.8, 227.2 531, 226.9 531 C 226.5 531, 222.1 540.8, 217 552.8 M 515.5 558.5 C 515 558.7, 505.8 561.6, 495.3 565 C 477.1 570.8, 476 571.3, 476 573.6 C 476 575, 476.6 576.2, 477.3 576.4 C 485.1 578.7, 487.9 580.3, 488.9 583.2 C 490.6 588.1, 490.4 658.2, 488.6 662.4 C 487.3 665.5, 486 666.4, 478.6 668.6 C 474.8 669.8, 473.2 672.3, 474.9 674.4 C 476.1 675.8, 479.8 676, 506.3 675.8 C 533.5 675.5, 536.4 675.3, 537.4 673.8 C 538.9 671.3, 536.5 669.2, 530.4 667.7 C 521.7 665.6, 522 667.4, 522 610 C 522 572.7, 521.7 560.1, 520.8 559.2 C 519.6 558, 517.6 557.8, 515.5 558.5 M 690.1 564.4 C 678.5 568.1, 670.2 571.3, 669.6 572.3 C 668.2 574.5, 670.2 576.3, 675.6 577.8 C 683.8 580.1, 683.5 578.5, 683.8 620.1 C 684 644.6, 683.7 658.3, 683 661 C 681.9 665.2, 680.2 666.4, 672.5 668.7 C 669.2 669.6, 667.8 673.6, 670.2 675.1 C 670.9 675.6, 684.4 676, 700.1 676 C 730.8 676, 732 675.8, 730.5 671 C 730.1 669.6, 728.7 668.8, 725.7 668.3 C 723.1 667.9, 720.5 666.6, 718.8 664.9 L 716 662.2 716 626.1 L 716 590.1 720.3 586.7 C 728.2 580.2, 734.7 577.6, 742.7 577.5 C 749.2 577.5, 750.1 577.8, 753.7 580.6 C 760.5 586.1, 760.9 588.7, 761 626.3 C 761 666.2, 761.1 665.9, 751.2 668.4 C 745.9 669.8, 743.9 672, 745.9 674.4 C 747.1 675.8, 750.8 676, 777.4 675.8 L 807.5 675.5 807.5 672.5 C 807.5 670.1, 807 669.4, 804.5 668.6 C 797.7 666.6, 796.2 665.7, 795.1 663.4 C 794.4 661.7, 794 650, 794 626.6 C 794 606.2, 793.6 590, 792.9 586.5 C 789.5 567.9, 775.7 558.1, 754.8 559.2 C 747.4 559.7, 744.9 560.3, 738.4 563.4 C 730.8 567, 725.4 570.7, 719.3 576.4 L 716 579.4 716 570.3 C 716 561.9, 715.8 561, 713.8 559.6 C 712.6 558.7, 711.1 558, 710.5 558.1 C 710 558.1, 700.8 560.9, 690.1 564.4 M 582.8 561 C 559.5 567.7, 544.1 582.6, 538.6 603.7 C 536.5 611.6, 536.5 627.4, 538.6 635.2 C 544 656.2, 558.3 670.1, 580.8 676.2 C 586.9 677.9, 591.4 678.3, 602 678.3 C 613.8 678.3, 616.7 677.9, 624.5 675.6 C 635 672.4, 640.9 669.4, 648.7 663.1 C 655.9 657.3, 662.1 648.6, 665.6 639.5 C 669.2 630.2, 670.1 613.8, 667.5 604 C 661.9 582.1, 646.1 567, 622.5 561 C 611.9 558.3, 592.4 558.3, 582.8 561 M 590.3 571.1 C 582.8 574.8, 577.4 582.5, 574.3 594.3 C 571.7 603.8, 572 627.9, 574.9 638.5 C 578 650, 581.3 656.2, 587.5 661.8 C 595.2 668.8, 601.9 670.4, 611.9 667.4 C 626.5 663.1, 634.2 647.3, 634.3 621.5 C 634.4 611, 633.9 607, 632.2 600.7 C 626.1 579.1, 616.2 569, 601.3 569 C 596.4 569, 593.3 569.6, 590.3 571.1 M 846.4 592.8 L 818.2 593 816.7 601.3 C 815.6 607, 815.5 609.9, 816.2 610.8 C 817 611.7, 824 612, 845 612 C 866 612, 873 611.7, 873.7 610.8 C 874.8 609.4, 877 599, 877 595.4 C 877 594.2, 876.4 593.1, 875.8 592.9 C 875.1 592.7, 861.8 592.6, 846.4 592.8"
+          />
+        </symbol>
+      </svg>
+      <div class="tete">
+        <h1>
+          <svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+            <use href="#logo-axion-ia" width="1229" height="521"></use></svg
+          >Maquettes de l’espace apporteur et de la console
+        </h1>
+        <button type="button" id="theme">Thème : automatique</button>
+      </div>
+      <p>
+        Axion Partners · tâche UX-P0-02 (REQ-UX-008, REQ-UX-017, REQ-UX-034). Chaque fichier est
+        autonome : aucun appel réseau, aucune police ni aucun script venus d’ailleurs.
+      </p>
+      <p class="fictif">
+        Toutes les données sont fictives : noms d’entreprises et de personnes inventés, numéros
+        d’entreprise invalides au contrôle de Luhn, téléphones dans la plage 06 39 98 réservée à la
+        fiction, adresses en <code>exemple.invalid</code>.
+      </p>
+      <p>
+        <b>Aucun écran de l’espace n’est codé avant la validation de sa maquette par Will</b>,
+        écrite dans <code>docs/maquettes/VALIDATION.md</code> (écran, date, « Will »). Une
+        modification substantielle efface la validation.
+      </p>
+
+      <h2>Les huit maquettes</h2>
+      <ul class="cartes">
+        <li>
+          <a class="bloc" href="accueil.html">Accueil</a>
+          <p class="doux">/ · UX-P1-08 · 9 états</p>
+          <p><b>Geste principal</b> : Taper le nom d’une entreprise, « Vérifier ».</p>
+          <p><b>Temps mimé</b> : 5 à 10 s.</p>
+        </li>
+        <li>
+          <a class="bloc" href="entreprise.html">Entreprise</a>
+          <p class="doux">/entreprise?q= · UX-P1-01 · 11 états</p>
+          <p><b>Geste principal</b> : Lire la carte, « Déposer cette entreprise ».</p>
+          <p><b>Temps mimé</b> : 5 à 10 s.</p>
+        </li>
+        <li>
+          <a class="bloc" href="deposer.html">Déposer un contact</a>
+          <p class="doux">/deposer · UX-P1-02 · 18 états</p>
+          <p><b>Geste principal</b> : De l’accueil à la confirmation : 8 interactions.</p>
+          <p><b>Temps mimé</b> : 55 à 70 s.</p>
+        </li>
+        <li>
+          <a class="bloc" href="mes-entreprises.html">Mes entreprises</a>
+          <p class="doux">/mes-entreprises · UX-P1-05 · 9 états</p>
+          <p><b>Geste principal</b> : Lire la prochaine étape et qui la fait.</p>
+          <p><b>Temps mimé</b> : 5 à 10 s.</p>
+        </li>
+        <li>
+          <a class="bloc" href="mes-commissions.html">Mes commissions</a>
+          <p class="doux">/mes-commissions · UX-P2-01 · 10 états</p>
+          <p><b>Geste principal</b> : Lire ce qui arrive, quand, d’où.</p>
+          <p><b>Temps mimé</b> : 10 à 15 s.</p>
+        </li>
+        <li>
+          <a class="bloc" href="conformite.html">Ma conformité et Mon profil</a>
+          <p class="doux">/plus, /conformite, /profil · UX-P1-09 · 13 états</p>
+          <p><b>Geste principal</b> : Ajouter la pièce qui manque.</p>
+          <p><b>Temps mimé</b> : 60 à 90 s (photo comprise).</p>
+        </li>
+        <li>
+          <a class="bloc" href="file-qualification.html">File de qualification</a>
+          <p class="doux">console · UX-P1-07 · 9 états</p>
+          <p><b>Geste principal</b> : Qualifier après l’appel : 6 interactions.</p>
+          <p><b>Temps mimé</b> : 60 s hors appel.</p>
+        </li>
+        <li>
+          <a class="bloc" href="lot-paiement.html">Lot du mois</a>
+          <p class="doux">console · UX-P2-03 · 11 états</p>
+          <p><b>Geste principal</b> : Relire, approuver, produire le fichier.</p>
+          <p><b>Temps mimé</b> : 2 min de relecture.</p>
+        </li>
+      </ul>
+      <h3>Lire une maquette</h3>
+      <ul>
+        <li>
+          À gauche, la liste des <b>états</b> : nominal, premier jour, chargement, sans réseau, et
+          chaque état bloqué.
+        </li>
+        <li>
+          Au milieu, le <b>cadre</b> : un téléphone (espace) ou un écran de bureau (console).
+          Glisser hors du cadre pour le déplacer ; « − », « + » et le pourcentage pour zoomer et
+          réajuster ; au clavier, flèches, plus, moins, zéro.
+        </li>
+        <li>
+          En haut, la <b>largeur</b> (320 à 414 px) et, sur l’accueil, le cadre exact
+          <b>375 × 667</b> pour vérifier le pli.
+        </li>
+        <li>
+          À droite, les <b>notes</b> : ce que l’état doit dire, les exigences, et les points laissés
+          à votre décision.
+        </li>
+      </ul>
+
+      <h2>Charte de l’espace apporteur</h2>
+      <h3>Identité visuelle</h3>
+      <p>
+        Reprise de la présentation montrée aux apporteurs, pour que l’espace ressemble à ce qu’ils
+        ont vu : fond crème, accent orange brûlé, navigation presque noire, titres très gras, cartes
+        blanches arrondies, pastilles douces, logo Axion-IA (fichier vectoriel du site, recopié dans
+        chaque maquette). <b>La structure de la présentation n’est pas reprise</b> : barre de quatre
+        onglets en bas sur téléphone (un rail à gauche sur ordinateur, avec les quatre mêmes
+        entrées), trois chiffres sans courbe ni cumul commenté.
+      </p>
+      <h3>Pour qui</h3>
+      <p>
+        Des indépendants de 45 à 68 ans, sur téléphone, souvent dans leur voiture, avec 90 secondes
+        d’attention. Mobile d’abord (360 à 414 px), lisible à 320 px et à 200 % de zoom.
+      </p>
+      <h3>Un écran, un geste</h3>
+      <ul>
+        <li>Un seul bouton principal par écran, en bas de la zone lue, pleine largeur.</li>
+        <li>
+          Barre fixe à quatre onglets : Accueil · Mes entreprises · Mes commissions · Plus. Tout le
+          reste est sous « Plus ».
+        </li>
+        <li>
+          L’accueil tient au-dessus du pli sur 375 × 667 : trois chiffres, une alerte au plus, un
+          champ.
+        </li>
+        <li>
+          La première visite ne montre jamais un tableau vide ni « 0 € » : elle montre le geste
+          suivant.
+        </li>
+      </ul>
+      <h3>Typographie</h3>
+      <ul>
+        <li>
+          Police du système (aucune police téléchargée) :
+          <code>system-ui, -apple-system, Segoe UI, Roboto</code>.
+        </li>
+        <li>
+          Corps : <b>18 px</b>, interligne 1,5. Titres : 26 px (écran), 20 px (bloc), 18 px gras
+          (sous-bloc). Montants : 24 px gras.
+        </li>
+        <li>
+          16 px au plus bas, et seulement pour les pastilles, les dates et les libellés d’onglets ;
+          14 px pour ces libellés sous 360 px de large, seul écart, pour que « Mes commissions »
+          tienne sur deux lignes à 320 px.
+        </li>
+        <li>
+          Phrases courtes, une idée par phrase ; les montants avec espace fine insécable (« 312,50 €
+          »).
+        </li>
+      </ul>
+      <h3>Tailles tactiles</h3>
+      <ul>
+        <li>
+          Espace : <b>48 × 48 px au minimum</b> pour toute zone qu’on touche. Bouton principal 56 px
+          de haut, onglet 64 px, case à cocher 48 px, interrupteur 64 × 48 px.
+        </li>
+        <li>Console : 44 px (ADR 0028, REQ-UX-018).</li>
+        <li>Au moins 8 px entre deux zones voisines.</li>
+      </ul>
+      <h3>Couleurs et contraste mesuré</h3>
+      <p>
+        Jetons propres à l’espace, distincts de la console (REQ-UX-034). Le sens n’est jamais porté
+        par la couleur seule : chaque pastille a une icône et un mot.
+      </p>
+      <ul>
+        <li>
+          <b>ok</b> (orange doux, comme « Payée » dans la présentation) : ce qui vous revient ou est
+          en règle — versé, acquis, pièce valide.
+        </li>
+        <li>
+          <b>info</b> (bleu doux, comme « Proposition envoyée », « Rendez-vous ») : ce qui avance du
+          côté d’Axion-IA.
+        </li>
+        <li>
+          <b>neutre</b> (gris, comme « Signée ») : une étape franchie, ou ce qui est terminé, sans
+          reproche.
+        </li>
+        <li><b>attente</b> (ocre) : ce qui attend une date ou quelqu’un.</li>
+        <li>
+          <b>bloqué</b> (rouge) : ce qui retient un versement, toujours avec l’action qui le lève.
+        </li>
+      </ul>
+      <h3>Espace, thème clair</h3>
+      <ul class="nuancier">
+        <li>
+          <span class="pastille-couleur" style="background: #f7f4ee"></span><code>--fond</code>
+          <span class="doux">#F7F4EE</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #ffffff"></span><code>--surface</code>
+          <span class="doux">#FFFFFF</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #e9e3d9"></span><code>--surface-2</code>
+          <span class="doux">#E9E3D9</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1c1917"></span><code>--texte</code>
+          <span class="doux">#1C1917</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #57534e"></span
+          ><code>--texte-doux</code> <span class="doux">#57534E</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #8a8178"></span><code>--bord</code>
+          <span class="doux">#8A8178</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #c2410c"></span><code>--primaire</code>
+          <span class="doux">#C2410C</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #ffffff"></span
+          ><code>--sur-primaire</code> <span class="doux">#FFFFFF</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #a8390b"></span><code>--lien</code>
+          <span class="doux">#A8390B</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #fcebe2"></span
+          ><code>--accent-fond</code> <span class="doux">#FCEBE2</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #9a3412"></span
+          ><code>--accent-texte</code> <span class="doux">#9A3412</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1c1917"></span><code>--nav-fond</code>
+          <span class="doux">#1C1917</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #e7e5e4"></span><code>--nav-texte</code>
+          <span class="doux">#E7E5E4</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #c2410c"></span
+          ><code>--nav-actif-fond</code> <span class="doux">#C2410C</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #ffffff"></span
+          ><code>--nav-actif-texte</code> <span class="doux">#FFFFFF</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #fce3d6"></span><code>--ok-fond</code>
+          <span class="doux">#FCE3D6</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #9a3412"></span><code>--ok-texte</code>
+          <span class="doux">#9A3412</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #f5ebcd"></span
+          ><code>--attente-fond</code> <span class="doux">#F5EBCD</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #6a4b00"></span
+          ><code>--attente-texte</code> <span class="doux">#6A4B00</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #fbe4e1"></span
+          ><code>--bloque-fond</code> <span class="doux">#FBE4E1</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #991b1b"></span
+          ><code>--bloque-texte</code> <span class="doux">#991B1B</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #e0eafb"></span><code>--info-fond</code>
+          <span class="doux">#E0EAFB</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1e40af"></span
+          ><code>--info-texte</code> <span class="doux">#1E40AF</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #e7e5e4"></span
+          ><code>--neutre-fond</code> <span class="doux">#E7E5E4</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #44403c"></span
+          ><code>--neutre-texte</code> <span class="doux">#44403C</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1d4ed8"></span><code>--focus</code>
+          <span class="doux">#1D4ED8</span>
+        </li>
+      </ul>
+      <h3>Espace, thème sombre</h3>
+      <ul class="nuancier">
+        <li>
+          <span class="pastille-couleur" style="background: #171412"></span><code>--fond</code>
+          <span class="doux">#171412</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #221e1b"></span><code>--surface</code>
+          <span class="doux">#221E1B</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #322c27"></span><code>--surface-2</code>
+          <span class="doux">#322C27</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #f5f1ea"></span><code>--texte</code>
+          <span class="doux">#F5F1EA</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #cfc8bf"></span
+          ><code>--texte-doux</code> <span class="doux">#CFC8BF</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #8c847b"></span><code>--bord</code>
+          <span class="doux">#8C847B</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #f08a4b"></span><code>--primaire</code>
+          <span class="doux">#F08A4B</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1c1917"></span
+          ><code>--sur-primaire</code> <span class="doux">#1C1917</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #f7a06a"></span><code>--lien</code>
+          <span class="doux">#F7A06A</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #3d2112"></span
+          ><code>--accent-fond</code> <span class="doux">#3D2112</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #fdba8c"></span
+          ><code>--accent-texte</code> <span class="doux">#FDBA8C</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #0c0a09"></span><code>--nav-fond</code>
+          <span class="doux">#0C0A09</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #e7e5e4"></span><code>--nav-texte</code>
+          <span class="doux">#E7E5E4</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #f08a4b"></span
+          ><code>--nav-actif-fond</code> <span class="doux">#F08A4B</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1c1917"></span
+          ><code>--nav-actif-texte</code> <span class="doux">#1C1917</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #3d2112"></span><code>--ok-fond</code>
+          <span class="doux">#3D2112</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #fdba8c"></span><code>--ok-texte</code>
+          <span class="doux">#FDBA8C</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #3a2f10"></span
+          ><code>--attente-fond</code> <span class="doux">#3A2F10</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #f3d37a"></span
+          ><code>--attente-texte</code> <span class="doux">#F3D37A</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #3f1714"></span
+          ><code>--bloque-fond</code> <span class="doux">#3F1714</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #fca5a5"></span
+          ><code>--bloque-texte</code> <span class="doux">#FCA5A5</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #172544"></span><code>--info-fond</code>
+          <span class="doux">#172544</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #a9c4fb"></span
+          ><code>--info-texte</code> <span class="doux">#A9C4FB</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #2e2a27"></span
+          ><code>--neutre-fond</code> <span class="doux">#2E2A27</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #d6d3d1"></span
+          ><code>--neutre-texte</code> <span class="doux">#D6D3D1</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #93c5fd"></span><code>--focus</code>
+          <span class="doux">#93C5FD</span>
+        </li>
+      </ul>
+      <h3>Console (thème clair)</h3>
+      <ul class="nuancier">
+        <li>
+          <span class="pastille-couleur" style="background: #f6f7f9"></span><code>--fond</code>
+          <span class="doux">#F6F7F9</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #ffffff"></span><code>--surface</code>
+          <span class="doux">#FFFFFF</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #e6e9ee"></span><code>--surface-2</code>
+          <span class="doux">#E6E9EE</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1a1d23"></span><code>--texte</code>
+          <span class="doux">#1A1D23</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #4a5261"></span
+          ><code>--texte-doux</code> <span class="doux">#4A5261</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #737c8a"></span><code>--bord</code>
+          <span class="doux">#737C8A</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1f4e8c"></span><code>--primaire</code>
+          <span class="doux">#1F4E8C</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #ffffff"></span
+          ><code>--sur-primaire</code> <span class="doux">#FFFFFF</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1f4e8c"></span><code>--lien</code>
+          <span class="doux">#1F4E8C</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #e2f2e7"></span><code>--ok-fond</code>
+          <span class="doux">#E2F2E7</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #1b5e34"></span><code>--ok-texte</code>
+          <span class="doux">#1B5E34</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #fdf0d5"></span
+          ><code>--attente-fond</code> <span class="doux">#FDF0D5</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #704000"></span
+          ><code>--attente-texte</code> <span class="doux">#704000</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #fbe6e6"></span
+          ><code>--bloque-fond</code> <span class="doux">#FBE6E6</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #8f1d1d"></span
+          ><code>--bloque-texte</code> <span class="doux">#8F1D1D</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #e3ecf8"></span><code>--info-fond</code>
+          <span class="doux">#E3ECF8</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #12427a"></span
+          ><code>--info-texte</code> <span class="doux">#12427A</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #eceef2"></span
+          ><code>--neutre-fond</code> <span class="doux">#ECEEF2</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #4a5261"></span
+          ><code>--neutre-texte</code> <span class="doux">#4A5261</span>
+        </li>
+        <li>
+          <span class="pastille-couleur" style="background: #b34700"></span><code>--focus</code>
+          <span class="doux">#B34700</span>
+        </li>
+      </ul>
+      <p>
+        Rapports calculés à l’assemblage par la formule de WCAG 2.2 (luminance relative) ; une paire
+        sous son seuil fait échouer l’assemblage.
+      </p>
+      <div
+        class="defile-x"
+        tabindex="0"
+        role="region"
+        aria-label="Contrastes de l’espace, thème clair"
+      >
+        <table>
+          <caption>
+            Espace, thème clair
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Premier plan</th>
+              <th scope="col">Arrière-plan</th>
+              <th scope="col">Usage</th>
+              <th scope="col" class="n">Rapport</th>
+              <th scope="col" class="n">Seuil</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--fond</code></td>
+              <td>corps de texte</td>
+              <td class="n"><b>15.93:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--surface</code></td>
+              <td>texte sur carte</td>
+              <td class="n"><b>17.49:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--surface-2</code></td>
+              <td>texte sur squelette ou séparateur</td>
+              <td class="n"><b>13.70:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--fond</code></td>
+              <td>texte secondaire</td>
+              <td class="n"><b>6.95:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--surface</code></td>
+              <td>texte secondaire sur carte</td>
+              <td class="n"><b>7.63:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--surface-2</code></td>
+              <td>texte secondaire sur surface 2</td>
+              <td class="n"><b>5.98:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--fond</code></td>
+              <td>lien</td>
+              <td class="n"><b>5.88:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--surface</code></td>
+              <td>lien sur carte</td>
+              <td class="n"><b>6.45:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--sur-primaire</code></td>
+              <td><code>--primaire</code></td>
+              <td>texte de bouton principal</td>
+              <td class="n"><b>5.18:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--ok-texte</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>pastille « ok »</td>
+              <td class="n"><b>5.95:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--attente-texte</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>pastille « attente »</td>
+              <td class="n"><b>6.74:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bloque-texte</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>pastille « bloqué »</td>
+              <td class="n"><b>6.84:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--info-texte</code></td>
+              <td><code>--info-fond</code></td>
+              <td>pastille « info »</td>
+              <td class="n"><b>7.20:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--neutre-texte</code></td>
+              <td><code>--neutre-fond</code></td>
+              <td>pastille « neutre »</td>
+              <td class="n"><b>8.18:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>texte dans un encart « ok »</td>
+              <td class="n"><b>14.24:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>texte dans un encart « attente »</td>
+              <td class="n"><b>14.70:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>texte dans un encart « bloqué »</td>
+              <td class="n"><b>14.40:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--info-fond</code></td>
+              <td>texte dans un encart « info »</td>
+              <td class="n"><b>14.43:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--neutre-fond</code></td>
+              <td>texte dans un encart « neutre »</td>
+              <td class="n"><b>13.93:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--info-fond</code></td>
+              <td>lien dans un encart « info »</td>
+              <td class="n"><b>5.32:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>lien dans un encart « attente »</td>
+              <td class="n"><b>5.42:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>lien dans un encart « bloqué »</td>
+              <td class="n"><b>5.31:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--accent-texte</code></td>
+              <td><code>--accent-fond</code></td>
+              <td>montant mis en avant</td>
+              <td class="n"><b>6.31:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--accent-fond</code></td>
+              <td>texte sur tuile mise en avant</td>
+              <td class="n"><b>15.09:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--nav-texte</code></td>
+              <td><code>--nav-fond</code></td>
+              <td>onglet de navigation</td>
+              <td class="n"><b>13.93:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--nav-actif-texte</code></td>
+              <td><code>--nav-actif-fond</code></td>
+              <td>onglet actif</td>
+              <td class="n"><b>5.18:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>lien dans un encart « ok »</td>
+              <td class="n"><b>5.25:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bord</code></td>
+              <td><code>--fond</code></td>
+              <td>bord de champ (non textuel)</td>
+              <td class="n"><b>3.48:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bord</code></td>
+              <td><code>--surface</code></td>
+              <td>bord de champ sur carte (non textuel)</td>
+              <td class="n"><b>3.82:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--primaire</code></td>
+              <td><code>--fond</code></td>
+              <td>contour de bouton (non textuel)</td>
+              <td class="n"><b>4.72:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--focus</code></td>
+              <td><code>--fond</code></td>
+              <td>anneau de focus (non textuel)</td>
+              <td class="n"><b>6.10:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--focus</code></td>
+              <td><code>--surface</code></td>
+              <td>anneau de focus sur carte (non textuel)</td>
+              <td class="n"><b>6.70:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--nav-actif-fond</code></td>
+              <td><code>--nav-fond</code></td>
+              <td>onglet actif sur la barre (non textuel)</td>
+              <td class="n"><b>3.38:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div
+        class="defile-x"
+        tabindex="0"
+        role="region"
+        aria-label="Contrastes de l’espace, thème sombre"
+      >
+        <table>
+          <caption>
+            Espace, thème sombre
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Premier plan</th>
+              <th scope="col">Arrière-plan</th>
+              <th scope="col">Usage</th>
+              <th scope="col" class="n">Rapport</th>
+              <th scope="col" class="n">Seuil</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--fond</code></td>
+              <td>corps de texte</td>
+              <td class="n"><b>16.29:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--surface</code></td>
+              <td>texte sur carte</td>
+              <td class="n"><b>14.69:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--surface-2</code></td>
+              <td>texte sur squelette ou séparateur</td>
+              <td class="n"><b>12.23:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--fond</code></td>
+              <td>texte secondaire</td>
+              <td class="n"><b>11.06:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--surface</code></td>
+              <td>texte secondaire sur carte</td>
+              <td class="n"><b>9.98:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--surface-2</code></td>
+              <td>texte secondaire sur surface 2</td>
+              <td class="n"><b>8.31:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--fond</code></td>
+              <td>lien</td>
+              <td class="n"><b>8.90:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--surface</code></td>
+              <td>lien sur carte</td>
+              <td class="n"><b>8.03:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--sur-primaire</code></td>
+              <td><code>--primaire</code></td>
+              <td>texte de bouton principal</td>
+              <td class="n"><b>7.03:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--ok-texte</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>pastille « ok »</td>
+              <td class="n"><b>8.83:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--attente-texte</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>pastille « attente »</td>
+              <td class="n"><b>9.04:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bloque-texte</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>pastille « bloqué »</td>
+              <td class="n"><b>8.23:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--info-texte</code></td>
+              <td><code>--info-fond</code></td>
+              <td>pastille « info »</td>
+              <td class="n"><b>8.65:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--neutre-texte</code></td>
+              <td><code>--neutre-fond</code></td>
+              <td>pastille « neutre »</td>
+              <td class="n"><b>9.55:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>texte dans un encart « ok »</td>
+              <td class="n"><b>13.09:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>texte dans un encart « attente »</td>
+              <td class="n"><b>11.70:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>texte dans un encart « bloqué »</td>
+              <td class="n"><b>13.88:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--info-fond</code></td>
+              <td>texte dans un encart « info »</td>
+              <td class="n"><b>13.47:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--neutre-fond</code></td>
+              <td>texte dans un encart « neutre »</td>
+              <td class="n"><b>12.63:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--info-fond</code></td>
+              <td>lien dans un encart « info »</td>
+              <td class="n"><b>7.36:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>lien dans un encart « attente »</td>
+              <td class="n"><b>6.39:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>lien dans un encart « bloqué »</td>
+              <td class="n"><b>7.58:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--accent-texte</code></td>
+              <td><code>--accent-fond</code></td>
+              <td>montant mis en avant</td>
+              <td class="n"><b>8.83:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--accent-fond</code></td>
+              <td>texte sur tuile mise en avant</td>
+              <td class="n"><b>13.09:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--nav-texte</code></td>
+              <td><code>--nav-fond</code></td>
+              <td>onglet de navigation</td>
+              <td class="n"><b>15.73:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--nav-actif-texte</code></td>
+              <td><code>--nav-actif-fond</code></td>
+              <td>onglet actif</td>
+              <td class="n"><b>7.03:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>lien dans un encart « ok »</td>
+              <td class="n"><b>7.15:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bord</code></td>
+              <td><code>--fond</code></td>
+              <td>bord de champ (non textuel)</td>
+              <td class="n"><b>4.98:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bord</code></td>
+              <td><code>--surface</code></td>
+              <td>bord de champ sur carte (non textuel)</td>
+              <td class="n"><b>4.49:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--primaire</code></td>
+              <td><code>--fond</code></td>
+              <td>contour de bouton (non textuel)</td>
+              <td class="n"><b>7.37:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--focus</code></td>
+              <td><code>--fond</code></td>
+              <td>anneau de focus (non textuel)</td>
+              <td class="n"><b>10.17:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--focus</code></td>
+              <td><code>--surface</code></td>
+              <td>anneau de focus sur carte (non textuel)</td>
+              <td class="n"><b>9.17:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--nav-actif-fond</code></td>
+              <td><code>--nav-fond</code></td>
+              <td>onglet actif sur la barre (non textuel)</td>
+              <td class="n"><b>7.94:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="defile-x" tabindex="0" role="region" aria-label="Contrastes de la console">
+        <table>
+          <caption>
+            Console
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Premier plan</th>
+              <th scope="col">Arrière-plan</th>
+              <th scope="col">Usage</th>
+              <th scope="col" class="n">Rapport</th>
+              <th scope="col" class="n">Seuil</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--fond</code></td>
+              <td>corps de texte</td>
+              <td class="n"><b>15.75:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--surface</code></td>
+              <td>texte sur carte</td>
+              <td class="n"><b>16.88:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--surface-2</code></td>
+              <td>texte sur squelette ou séparateur</td>
+              <td class="n"><b>13.87:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--fond</code></td>
+              <td>texte secondaire</td>
+              <td class="n"><b>7.34:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--surface</code></td>
+              <td>texte secondaire sur carte</td>
+              <td class="n"><b>7.86:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte-doux</code></td>
+              <td><code>--surface-2</code></td>
+              <td>texte secondaire sur surface 2</td>
+              <td class="n"><b>6.46:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--fond</code></td>
+              <td>lien</td>
+              <td class="n"><b>7.75:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--surface</code></td>
+              <td>lien sur carte</td>
+              <td class="n"><b>8.31:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--sur-primaire</code></td>
+              <td><code>--primaire</code></td>
+              <td>texte de bouton principal</td>
+              <td class="n"><b>8.31:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--ok-texte</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>pastille « ok »</td>
+              <td class="n"><b>6.71:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--attente-texte</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>pastille « attente »</td>
+              <td class="n"><b>7.68:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bloque-texte</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>pastille « bloqué »</td>
+              <td class="n"><b>7.44:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--info-texte</code></td>
+              <td><code>--info-fond</code></td>
+              <td>pastille « info »</td>
+              <td class="n"><b>8.45:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--neutre-texte</code></td>
+              <td><code>--neutre-fond</code></td>
+              <td>pastille « neutre »</td>
+              <td class="n"><b>6.77:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>texte dans un encart « ok »</td>
+              <td class="n"><b>14.54:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>texte dans un encart « attente »</td>
+              <td class="n"><b>14.95:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>texte dans un encart « bloqué »</td>
+              <td class="n"><b>14.12:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--info-fond</code></td>
+              <td>texte dans un encart « info »</td>
+              <td class="n"><b>14.16:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--texte</code></td>
+              <td><code>--neutre-fond</code></td>
+              <td>texte dans un encart « neutre »</td>
+              <td class="n"><b>14.53:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--info-fond</code></td>
+              <td>lien dans un encart « info »</td>
+              <td class="n"><b>6.97:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--attente-fond</code></td>
+              <td>lien dans un encart « attente »</td>
+              <td class="n"><b>7.36:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--bloque-fond</code></td>
+              <td>lien dans un encart « bloqué »</td>
+              <td class="n"><b>6.95:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--lien</code></td>
+              <td><code>--ok-fond</code></td>
+              <td>lien dans un encart « ok »</td>
+              <td class="n"><b>7.16:1</b></td>
+              <td class="n">4.5:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bord</code></td>
+              <td><code>--fond</code></td>
+              <td>bord de champ (non textuel)</td>
+              <td class="n"><b>3.93:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--bord</code></td>
+              <td><code>--surface</code></td>
+              <td>bord de champ sur carte (non textuel)</td>
+              <td class="n"><b>4.22:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--primaire</code></td>
+              <td><code>--fond</code></td>
+              <td>contour de bouton (non textuel)</td>
+              <td class="n"><b>7.75:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--focus</code></td>
+              <td><code>--fond</code></td>
+              <td>anneau de focus (non textuel)</td>
+              <td class="n"><b>5.13:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+            <tr>
+              <td><code>--focus</code></td>
+              <td><code>--surface</code></td>
+              <td>anneau de focus sur carte (non textuel)</td>
+              <td class="n"><b>5.50:1</b></td>
+              <td class="n">3:1 ✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Ton et vocabulaire</h3>
+      <p>
+        Un service rendu à un indépendant, jamais une consigne. Chaque état dit <b>pourquoi</b> et
+        <b>quoi faire</b> ; quand il n’y a rien à faire, l’écran le dit : « Rien à faire de votre
+        côté ». Aucune alerte ne naît de l’absence de dépôt ou de connexion.
+      </p>
+      <table>
+        <caption>
+          On dit, on ne dit pas
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">On dit</th>
+            <th scope="col">Et jamais</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>votre entreprise, cette entreprise</td>
+            <td>jamais « attribution », « SIREN »</td>
+          </tr>
+          <tr>
+            <td>ce que vous touchez, votre commission, votre part</td>
+            <td>jamais « prorata », « rémunération »</td>
+          </tr>
+          <tr>
+            <td>déposer, votre dépôt, « Déposer cette entreprise »</td>
+            <td>jamais « déclarer », « déclaration »</td>
+          </tr>
+          <tr>
+            <td>suivie à votre nom jusqu’au [date]</td>
+            <td>jamais un compte à rebours en jours</td>
+          </tr>
+          <tr>
+            <td>non confirmée ; la personne n’a pas confirmé la rencontre</td>
+            <td>jamais « strike », « sanction », « avertissement »</td>
+          </tr>
+          <tr>
+            <td>Axion-IA vous appelle d’abord</td>
+            <td>jamais « quota », « plafond », « limite de dépôts »</td>
+          </tr>
+          <tr>
+            <td>relevé de commissions, autofacture, versé</td>
+            <td>aucun mot de la paie</td>
+          </tr>
+          <tr>
+            <td>numéro d’entreprise ; numéro SIRET (le vôtre)</td>
+            <td>jamais le sigle SIREN</td>
+          </tr>
+          <tr>
+            <td>apporteur d’affaires ; un autre apporteur</td>
+            <td>jamais « commercial », « partenaire »</td>
+          </tr>
+          <tr>
+            <td>Rien à faire de votre côté</td>
+            <td>jamais d’impératif de méthode, jamais « vous devez »</td>
+          </tr>
+          <tr>
+            <td>déjà connue d’Axion-IA ; non disponible</td>
+            <td>jamais « déjà cliente »</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Aucun objectif, aucun classement, aucune jauge à remplir, aucun compte à rebours de
+        production (fiche juriste, motifs 1 à 3). Aucune affirmation de financement.
+      </p>
+      <h3>Accessibilité</h3>
+      <ul>
+        <li>WCAG 2.2 AA : contraste mesuré ci-dessus, dans les deux thèmes.</li>
+        <li>
+          Chaque champ a une étiquette visible ; chaque erreur dit quoi faire, sous le champ, avec
+          une icône et un texte.
+        </li>
+        <li>
+          Ordre du focus = ordre de lecture ; anneau de focus de 3 px ; lien d’évitement vers
+          l’écran.
+        </li>
+        <li>Animations coupées si le téléphone demande moins de mouvement.</li>
+        <li>Aucun défilement horizontal à 320 px ni à 200 % de zoom.</li>
+      </ul>
+    </main>
+    <script>
+      (function () {
+        var r = document.documentElement,
+          b = document.getElementById('theme'),
+          t = ['auto', 'clair', 'sombre'],
+          n = { auto: 'automatique', clair: 'clair', sombre: 'sombre' };
+        function p(x) {
+          r.setAttribute('data-theme', x);
+          b.textContent = 'Thème : ' + n[x];
+          try {
+            localStorage.setItem('maquettes-theme', x);
+          } catch (e) {}
+        }
+        var m = null;
+        try {
+          m = localStorage.getItem('maquettes-theme');
+        } catch (e) {}
+        p(t.indexOf(m) >= 0 ? m : 'auto');
+        b.addEventListener('click', function () {
+          p(t[(t.indexOf(r.getAttribute('data-theme')) + 1) % 3]);
+        });
+      })();
+    </script>
+  </body>
+</html>
