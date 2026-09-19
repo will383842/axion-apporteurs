@@ -37,6 +37,7 @@ import { controler as controlerCents } from '../../../scripts/gates/schema-cents
 import {
   controler as controlerMigrations,
   FAMILLES as FAMILLES_MIGRATIONS,
+  protectionsDe,
   type Vue as VueMigrations,
 } from '../../../scripts/gates/migrations-additive';
 import {
@@ -551,6 +552,55 @@ describe('REQ-DM-037 — les migrations sont additives', () => {
         .fautes
     ).toEqual([]);
     expect(controlerMigrations(vue('')).fautes).toEqual([]);
+  });
+
+  it('REQ-DM-037 : la protection du journal se DÉRIVE des déclencheurs des migrations, jamais d’un nom recopié', () => {
+    // Le socle de la première migration arme deux déclencheurs (ligne et troncature).
+    expect(protectionsDe(vue('').migrations).declencheurs).toBe(2);
+    expect(controlerMigrations(vue('')).protections).toBe(2);
+    // Sans le socle, la même table n'est protégée par rien : son déclencheur n'est pas un journal.
+    const sansSocle = (sql: string) =>
+      controlerMigrations({
+        migrations: [{ chemin: 'prisma/migrations/2_milieu/migration.sql', contenu: sql }],
+        adrs: [],
+      });
+    expect(sansSocle('DROP TRIGGER evenements_append_only ON evenements;').fautes).toEqual([]);
+    // Un déclencheur sur INSERT seul ne protège rien ; sur UPDATE, sa table et sa fonction le sont.
+    const insertSeul =
+      'CREATE TRIGGER t BEFORE INSERT ON "bac" FOR EACH ROW EXECUTE FUNCTION f();\n' +
+      'DROP TRIGGER t ON "bac";';
+    expect(sansSocle(insertSeul).fautes).toEqual([]);
+    const surUpdate = insertSeul.replace('INSERT', 'UPDATE') + '\nDROP FUNCTION f();';
+    expect(sansSocle(surUpdate).fautes.map((f) => `${f.famille}:${f.ligne}`)).toEqual([
+      'journal_desarme:2',
+      'journal_desarme:3',
+    ]);
+    // Remplacer un déclencheur d'une table protégée désarme aussi.
+    expect(
+      controlerMigrations(
+        vue(
+          'CREATE OR REPLACE TRIGGER evenements_append_only BEFORE UPDATE ON "evenements" FOR EACH ROW EXECUTE FUNCTION laisser_passer();'
+        )
+      ).fautes.map((f) => f.famille)
+    ).toEqual(['journal_desarme']);
+  });
+
+  it('REQ-DM-037 : sur le dépôt réel, la protection du journal est lue (dépôt du jour)', () => {
+    const migration = readFileSync(
+      'prisma/migrations/20260919000000_socle_journal/migration.sql',
+      'utf8'
+    );
+    const reel = controlerMigrations({
+      migrations: [
+        {
+          chemin: 'prisma/migrations/20260919000000_socle_journal/migration.sql',
+          contenu: migration,
+        },
+      ],
+      adrs: [],
+    });
+    expect(reel.fautes).toEqual([]);
+    expect(reel.protections).toBeGreaterThan(0);
   });
 
   it('REQ-DM-037 : une ADR inexistante n’absout rien ; une ADR acceptée absout ET se dit', () => {

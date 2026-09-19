@@ -30,14 +30,27 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { ErreurLecturePrisma, lireSchemaPrisma, type SchemaPrisma } from '../lot/lecteur-prisma';
+import { segmentsDuNom } from '../../src/domain/donnees-personnelles/champs';
 
 const CHEMIN_SCHEMA = 'prisma/schema.prisma';
 
 /**
  * Les SEGMENTS qui font d'un champ un montant. Ce sont des mots du métier, pas une valeur dérivable
- * d'une source : la liste est celle de l'acceptation de la tâche, et chaque mot a son témoin.
+ * d'une source : la liste est celle de l'acceptation de la tâche, plus les trois mots
+ * (`remuneration`, `euro`, `euros`) du prédicat provisoire que cette garde remplace — le remplacer
+ * ne l'affaiblit pas. Chaque mot a son témoin.
  */
-export const MOTS_DE_MONTANT = ['montant', 'prix', 'solde', 'tarif', 'remise', 'acompte'] as const;
+export const MOTS_DE_MONTANT = [
+  'montant',
+  'prix',
+  'solde',
+  'tarif',
+  'remise',
+  'acompte',
+  'remuneration',
+  'euro',
+  'euros',
+] as const;
 
 /** Les types scalaires qui arrondissent. */
 const TYPES_FLOTTANTS = new Set(['Float', 'Decimal']);
@@ -71,15 +84,6 @@ export const FAMILLES: { nom: string; explication: string }[] = [
   },
 ];
 const NOMS_FAMILLES = FAMILLES.map((f) => f.nom);
-
-/** Les segments d'un nom : camelCase et snake_case, en minuscules. */
-export function segmentsDuNom(nom: string): string[] {
-  return nom
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .split(/[_\W]+/)
-    .filter(Boolean)
-    .map((s) => s.toLowerCase());
-}
 
 /** Le schéma lu, et ce qui y a été confronté. Lève `ErreurLecturePrisma` s'il ne se lit pas. */
 export function controlerSchema(schema: SchemaPrisma): Faute[] {

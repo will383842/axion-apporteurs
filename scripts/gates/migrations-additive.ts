@@ -23,10 +23,15 @@
  * `non_null_sans_defaut` (`SET NOT NULL`, ou `ADD COLUMN … NOT NULL` sans `DEFAULT` sur une table qui
  * n'est pas créée par la même migration) ; `index_brut_supprime` (`DROP INDEX` — `migrate diff`
  * propose le `DROP` des index écrits en SQL brut qu'il ne modélise pas) ; `journal_desarme`
- * (`DROP TRIGGER … ON evenements`, `DISABLE TRIGGER` ou `ENABLE REPLICA TRIGGER` sur `evenements`,
- * `DROP` ou `CREATE OR REPLACE` de `evenements_refuser_modification`, `session_replication_role`) ;
+ * (`DROP TRIGGER` sur une table protégée, `DISABLE TRIGGER` ou `ENABLE REPLICA TRIGGER` sur elle,
+ * `DROP` ou `CREATE OR REPLACE` d'une fonction de protection, `session_replication_role`) ;
  * `sql_dynamique` (`EXECUTE` dans un corps : ce qu'il exécute ne se lit pas) ; `migration_illisible` ;
  * `perimetre_vide` (aucune migration).
+ *
+ * LA PROTECTION EST DÉRIVÉE DU SQL, PAS RECOPIÉE (RM-01). Une table est protégée si une migration
+ * suivie y pose un déclencheur sur `UPDATE`, `DELETE` ou `TRUNCATE` ; sa fonction l'est avec elle.
+ * La garde ne nomme aucune table : le journal append-only de la première migration est protégé
+ * parce que ses déclencheurs le disent, et toute table protégée demain l'est sans retouche ici.
  *
  * LA SEULE ABSOLUTION. Première ligne `-- ADR: partners/ADR-NNNN` ET `docs/adr/NNNN-*.md` au statut
  * `accepte`. Les fautes absoutes sont IMPRIMÉES avec leur ADR, jamais tues. Une ADR citée qui
@@ -60,11 +65,12 @@ export type Verdict = {
   absoutes: (Faute & { adr: string })[];
   migrations: number;
   instructions: number;
+  /** Les déclencheurs de protection lus dans les migrations — le périmètre de `journal_desarme`. */
+  protections: number;
 };
 
-/** La table du journal et sa fonction de refus : ce que la protection append-only arme. */
-const TABLE_DU_JOURNAL = 'evenements';
-const FONCTION_DU_JOURNAL = 'evenements_refuser_modification';
+/** Ce que les migrations ont armé : les tables protégées et les fonctions de leurs déclencheurs. */
+export type Protection = { tables: Set<string>; fonctions: Set<string>; declencheurs: number };
 
 export const FAMILLES: { nom: string; explication: string }[] = [
   { nom: 'perimetre_vide', explication: 'aucune migration lue : un zéro n’est pas un vert.' },
@@ -93,7 +99,8 @@ export const FAMILLES: { nom: string; explication: string }[] = [
   {
     nom: 'journal_desarme',
     explication:
-      'la protection append-only du journal désarmée (déclencheur, fonction, réplication).',
+      'une protection posée par une migration (déclencheur sur UPDATE, DELETE ou TRUNCATE, sa ' +
+      'fonction) désarmée — déclencheur retiré ou éteint, fonction remplacée, réplication.',
   },
   {
     nom: 'sql_dynamique',
@@ -113,7 +120,7 @@ const estNom = (j: JetonSql | undefined): boolean =>
 const nomSql = (j: JetonSql | undefined): string =>
   j === undefined ? '?' : j.type === 'mot' ? j.valeur.toLowerCase() : j.valeur;
 
-/** Un nom éventuellement qualifié (`public.evenements`) : rend sa DERNIÈRE partie et la position suivante. */
+/** Un nom éventuellement qualifié (`public.releves`) : rend sa DERNIÈRE partie et la position suivante. */
 function nomQualifie(t: JetonSql[], k: number): { nom: string; suivant: number } {
   let nom = nomSql(t[k]);
   let i = k + 1;
@@ -161,8 +168,51 @@ function tablesCreees(instructions: InstructionSql[]): Set<string> {
   return sortie;
 }
 
+/**
+ * Les protections qu'une migration pose : `CREATE [OR REPLACE] [CONSTRAINT] TRIGGER <nom> <moment>
+ * <événements> ON <table> … EXECUTE FUNCTION|PROCEDURE <fonction>` dont les événements comptent
+ * `UPDATE`, `DELETE` ou `TRUNCATE`. Le moment n'est pas filtré : un déclencheur `AFTER` qui lève
+ * refuse aussi, et le retirer se juge pareil (échec fermé ; une ADR acceptée absout).
+ */
+function ajouterProtections(instructions: InstructionSql[], p: Protection): void {
+  for (const instr of instructions) {
+    const t = instr.jetons;
+    if (!estMot(t[0], 'CREATE')) continue;
+    let k = 1;
+    if (estMot(t[k], 'OR') && estMot(t[k + 1], 'REPLACE')) k += 2;
+    if (estMot(t[k], 'CONSTRAINT')) k++;
+    if (!estMot(t[k], 'TRIGGER')) continue;
+    const on = t.findIndex((j, n) => n > k + 1 && estMot(j, 'ON'));
+    const execute = t.findIndex((j, n) => n > on && estMot(j, 'EXECUTE'));
+    if (on < 0 || execute < 0 || !estMot(t[execute + 1], 'FUNCTION', 'PROCEDURE')) continue;
+    if (!t.slice(k + 2, on).some((j) => estMot(j, 'UPDATE', 'DELETE', 'TRUNCATE'))) continue;
+    p.tables.add(nomQualifie(t, on + 1).nom);
+    p.fonctions.add(nomQualifie(t, execute + 2).nom);
+    p.declencheurs++;
+  }
+}
+
+/** Les protections de TOUTES les migrations lisibles : ce qu'une migration arme, une autre le désarme. */
+export function protectionsDe(migrations: Migration[]): Protection {
+  const p: Protection = { tables: new Set(), fonctions: new Set(), declencheurs: 0 };
+  for (const m of migrations) {
+    try {
+      ajouterProtections(lireMigrationSql(m.contenu), p);
+    } catch (e) {
+      // Illisible : `controler` la rend en `migration_illisible`, qui ne s'absout pas.
+      if (!(e instanceof ErreurLecturePrisma)) throw e;
+    }
+  }
+  return p;
+}
+
 /** Les actions d'un `ALTER TABLE <table>` à la position `k` (qui pointe sur `ALTER`). */
-function constatsAlterTable(t: JetonSql[], k: number, creees: Set<string>): Constat[] {
+function constatsAlterTable(
+  t: JetonSql[],
+  k: number,
+  creees: Set<string>,
+  protection: Protection
+): Constat[] {
   const sortie: Constat[] = [];
   let i = sauterSi(t, k + 2);
   if (estMot(t[i], 'ONLY')) i++;
@@ -230,10 +280,10 @@ function constatsAlterTable(t: JetonSql[], k: number, creees: Set<string>): Cons
           quoi: 'ADD COLUMN … NOT NULL sans DEFAULT',
         });
       }
-    } else if (table === TABLE_DU_JOURNAL && estMot(a0, 'DISABLE') && estMot(a1, 'TRIGGER')) {
+    } else if (protection.tables.has(table) && estMot(a0, 'DISABLE') && estMot(a1, 'TRIGGER')) {
       sortie.push({ famille: 'journal_desarme', ligne, objet: table, quoi: 'DISABLE TRIGGER' });
     } else if (
-      table === TABLE_DU_JOURNAL &&
+      protection.tables.has(table) &&
       estMot(a0, 'ENABLE') &&
       estMot(a1, 'REPLICA') &&
       estMot(a[2], 'TRIGGER')
@@ -254,7 +304,12 @@ function constatsAlterTable(t: JetonSql[], k: number, creees: Set<string>): Cons
  * ou un `SET` est examinée — pas la seule tête : dans un corps plpgsql, `BEGIN ALTER TABLE …` est
  * une instruction qui ne commence pas par son verbe.
  */
-function constatsDe(instr: InstructionSql, creees: Set<string>, dansUnCorps: boolean): Constat[] {
+function constatsDe(
+  instr: InstructionSql,
+  creees: Set<string>,
+  dansUnCorps: boolean,
+  protection: Protection
+): Constat[] {
   const t = instr.jetons;
   const sortie: Constat[] = [];
   for (let k = 0; k < t.length; k++) {
@@ -294,7 +349,7 @@ function constatsDe(instr: InstructionSql, creees: Set<string>, dansUnCorps: boo
       } else if (estMot(genre, 'TRIGGER')) {
         const { nom, suivant } = nomQualifie(t, sauterSi(t, k + 2));
         const table = estMot(t[suivant], 'ON') ? nomQualifie(t, suivant + 1).nom : '';
-        if (table === TABLE_DU_JOURNAL) {
+        if (protection.tables.has(table)) {
           sortie.push({
             famille: 'journal_desarme',
             ligne,
@@ -304,12 +359,12 @@ function constatsDe(instr: InstructionSql, creees: Set<string>, dansUnCorps: boo
         }
       } else if (estMot(genre, 'FUNCTION', 'PROCEDURE')) {
         const { nom } = nomQualifie(t, sauterSi(t, k + 2));
-        if (nom === FONCTION_DU_JOURNAL) {
+        if (protection.fonctions.has(nom)) {
           sortie.push({ famille: 'journal_desarme', ligne, objet: nom, quoi: 'DROP FUNCTION' });
         }
       }
     } else if (estMot(j, 'ALTER') && estMot(t[k + 1], 'TABLE')) {
-      sortie.push(...constatsAlterTable(t, k, creees));
+      sortie.push(...constatsAlterTable(t, k, creees, protection));
     } else if (estMot(j, 'ALTER') && estMot(t[k + 1], 'TYPE')) {
       const { nom, suivant } = nomQualifie(t, k + 2);
       if (estMot(t[suivant], 'RENAME')) {
@@ -319,16 +374,30 @@ function constatsDe(instr: InstructionSql, creees: Set<string>, dansUnCorps: boo
         sortie.push({ famille: 'enum_destructif', ligne, objet: nom, quoi });
       }
     } else if (estMot(j, 'CREATE') && estMot(t[k + 1], 'OR') && estMot(t[k + 2], 'REPLACE')) {
-      if (
-        estMot(t[k + 3], 'FUNCTION', 'PROCEDURE') &&
-        nomQualifie(t, k + 4).nom === FONCTION_DU_JOURNAL
-      ) {
-        sortie.push({
-          famille: 'journal_desarme',
-          ligne,
-          objet: FONCTION_DU_JOURNAL,
-          quoi: 'CREATE OR REPLACE FUNCTION',
-        });
+      const genre = t[k + 3];
+      if (estMot(genre, 'FUNCTION', 'PROCEDURE')) {
+        const { nom } = nomQualifie(t, k + 4);
+        if (protection.fonctions.has(nom)) {
+          sortie.push({
+            famille: 'journal_desarme',
+            ligne,
+            objet: nom,
+            quoi: 'CREATE OR REPLACE FUNCTION',
+          });
+        }
+      } else if (estMot(genre, 'TRIGGER') || estMot(t[k + 4], 'TRIGGER')) {
+        // Remplacer un déclencheur d'une table protégée, c'est pouvoir lui donner une fonction qui
+        // laisse passer : une protection neuve se pose par `CREATE TRIGGER`, qui ne remplace rien.
+        const on = t.findIndex((x, n) => n > k + 4 && estMot(x, 'ON'));
+        const table = on < 0 ? '' : nomQualifie(t, on + 1).nom;
+        if (protection.tables.has(table)) {
+          sortie.push({
+            famille: 'journal_desarme',
+            ligne,
+            objet: table,
+            quoi: 'CREATE OR REPLACE TRIGGER',
+          });
+        }
       }
     } else if (
       estMot(j, 'SET') &&
@@ -357,24 +426,29 @@ function constatsDe(instr: InstructionSql, creees: Set<string>, dansUnCorps: boo
  * exécute. Leurs littéraux et leurs corps sont relus comme du SQL — et dans ce SQL relu, les
  * littéraux restent des littéraux.
  */
-function constatsDuSql(texte: string, ligneDeDepart: number, dansUnCorps: boolean): Constat[] {
+function constatsDuSql(
+  texte: string,
+  ligneDeDepart: number,
+  dansUnCorps: boolean,
+  protection: Protection
+): Constat[] {
   const instructions = lireMigrationSql(texte, ligneDeDepart);
   const creees = tablesCreees(instructions);
   const sortie: Constat[] = [];
   for (const instr of instructions) {
-    sortie.push(...constatsDe(instr, creees, dansUnCorps));
+    sortie.push(...constatsDe(instr, creees, dansUnCorps, protection));
     const t = instr.jetons;
     const executable =
       estMot(t[0], 'DO') ||
       (estMot(t[0], 'CREATE') && t.slice(1, 4).some((j) => estMot(j, 'FUNCTION', 'PROCEDURE')));
     if (!executable) continue;
     for (const j of t) {
-      if (j.type === 'corps') sortie.push(...constatsDuSql(j.valeur, j.ligne, true));
+      if (j.type === 'corps') sortie.push(...constatsDuSql(j.valeur, j.ligne, true, protection));
       if (j.type !== 'litteral') continue;
       // Un littéral d'une fonction n'est du SQL que s'il se lit comme tel (corps à l'ancienne,
       // `AS '…'`) ; `SET search_path = 'l''x'` ne l'est pas, et ne rend pas la migration illisible.
       try {
-        sortie.push(...constatsDuSql(j.valeur, j.ligne, true));
+        sortie.push(...constatsDuSql(j.valeur, j.ligne, true, protection));
       } catch (e) {
         if (!(e instanceof ErreurLecturePrisma)) throw e;
       }
@@ -391,6 +465,7 @@ export function controler(vue: Vue): Verdict {
   const fautes: Faute[] = [];
   const absoutes: (Faute & { adr: string })[] = [];
   let instructions = 0;
+  const protection = protectionsDe(vue.migrations);
   if (vue.migrations.length === 0) {
     fautes.push({
       famille: 'perimetre_vide',
@@ -408,7 +483,7 @@ export function controler(vue: Vue): Verdict {
     let constats: Constat[];
     try {
       instructions += lireMigrationSql(m.contenu).length;
-      constats = constatsDuSql(m.contenu, 1, false);
+      constats = constatsDuSql(m.contenu, 1, false, protection);
     } catch (e) {
       if (!(e instanceof ErreurLecturePrisma)) throw e;
       fautes.push({
@@ -442,7 +517,13 @@ export function controler(vue: Vue): Verdict {
       fautes.push(faute);
     }
   }
-  return { fautes, absoutes, migrations: vue.migrations.length, instructions };
+  return {
+    fautes,
+    absoutes,
+    migrations: vue.migrations.length,
+    instructions,
+    protections: protection.declencheurs,
+  };
 }
 
 // ── la vue du dépôt ──────────────────────────────────────────────────────────
@@ -462,15 +543,16 @@ export function vueDuDepot(): Vue {
 // ── la preuve (RM-11) ────────────────────────────────────────────────────────
 
 const SOCLE = [
-  'CREATE TABLE "evenements" ("id" BIGSERIAL PRIMARY KEY, "charge" JSONB NOT NULL);',
-  'CREATE FUNCTION evenements_refuser_modification() RETURNS trigger LANGUAGE plpgsql AS $$',
+  // Un journal de bac : sa protection se DÉRIVE de ses déclencheurs, son nom ne compte pas.
+  'CREATE TABLE "journal_bac" ("id" BIGSERIAL PRIMARY KEY, "charge" JSONB NOT NULL);',
+  'CREATE FUNCTION journal_bac_refuser() RETURNS trigger LANGUAGE plpgsql AS $$',
   'BEGIN',
-  "  RAISE EXCEPTION 'evenements_append_only : % refusé — DROP COLUMN, DELETE et TRUNCATE interdits', TG_OP;",
+  "  RAISE EXCEPTION 'journal_bac_append_only : % refusé — DROP COLUMN, DELETE et TRUNCATE interdits', TG_OP;",
   'END;',
   '$$;',
-  'CREATE TRIGGER evenements_append_only BEFORE UPDATE OR DELETE ON "evenements"',
-  '  FOR EACH ROW EXECUTE FUNCTION evenements_refuser_modification();',
-  'COMMENT ON TABLE "evenements" IS \'ne jamais DROP TABLE ni ALTER TABLE x DROP COLUMN y\';',
+  'CREATE TRIGGER journal_bac_append_only BEFORE UPDATE OR DELETE ON "journal_bac"',
+  '  FOR EACH ROW EXECUTE FUNCTION journal_bac_refuser();',
+  'COMMENT ON TABLE "journal_bac" IS \'ne jamais DROP TABLE ni ALTER TABLE x DROP COLUMN y\';',
 ].join('\n');
 
 /** Trois migrations, la faute dans celle du MILIEU, entre deux instructions saines. */
@@ -570,29 +652,37 @@ const TEMOINS: { famille: string; nomme: string; vue: () => Vue }[] = [
   {
     famille: 'journal_desarme',
     nomme: 'DROP TRIGGER',
-    vue: () => vueAvec('DROP TRIGGER evenements_append_only ON evenements;'),
+    vue: () => vueAvec('DROP TRIGGER journal_bac_append_only ON journal_bac;'),
   },
   {
     famille: 'journal_desarme',
     nomme: 'DISABLE TRIGGER',
-    vue: () => vueAvec('ALTER TABLE evenements DISABLE TRIGGER ALL;'),
+    vue: () => vueAvec('ALTER TABLE journal_bac DISABLE TRIGGER ALL;'),
   },
   {
     famille: 'journal_desarme',
     nomme: 'ENABLE REPLICA TRIGGER',
-    vue: () => vueAvec('ALTER TABLE "evenements" ENABLE REPLICA TRIGGER evenements_append_only;'),
+    vue: () => vueAvec('ALTER TABLE "journal_bac" ENABLE REPLICA TRIGGER journal_bac_append_only;'),
   },
   {
     famille: 'journal_desarme',
     nomme: 'DROP FUNCTION',
-    vue: () => vueAvec('DROP FUNCTION evenements_refuser_modification() CASCADE;'),
+    vue: () => vueAvec('DROP FUNCTION journal_bac_refuser() CASCADE;'),
   },
   {
     famille: 'journal_desarme',
     nomme: 'CREATE OR REPLACE FUNCTION',
     vue: () =>
       vueAvec(
-        'CREATE OR REPLACE FUNCTION evenements_refuser_modification() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END; $$;'
+        'CREATE OR REPLACE FUNCTION journal_bac_refuser() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END; $$;'
+      ),
+  },
+  {
+    famille: 'journal_desarme',
+    nomme: 'CREATE OR REPLACE TRIGGER sur journal_bac',
+    vue: () =>
+      vueAvec(
+        'CREATE OR REPLACE TRIGGER journal_bac_append_only BEFORE UPDATE ON "journal_bac" FOR EACH ROW EXECUTE FUNCTION laisser_passer();'
       ),
   },
   {
@@ -655,6 +745,13 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
     quoi: 'un déclencheur d’une AUTRE table retiré',
     vue: () => vueAvec('DROP TRIGGER t_maj ON "x";'),
   },
+  {
+    quoi: 'un déclencheur sur INSERT seul retiré (il ne protège rien)',
+    vue: () =>
+      vueAvec(
+        'CREATE TRIGGER t_ins BEFORE INSERT ON "w" FOR EACH ROW EXECUTE FUNCTION f();\nDROP TRIGGER t_ins ON "w";'
+      ),
+  },
   { quoi: 'un index créé', vue: () => vueAvec('CREATE UNIQUE INDEX "u" ON "x" ("id");') },
 ];
 
@@ -715,7 +812,8 @@ if (LANCE_EN_SCRIPT) {
   const verdict = controler(vueDuDepot());
   console.log(
     `partners:migrations:additive — périmètre : ${verdict.migrations} migration(s) suivie(s) sous ` +
-      `prisma/migrations/, ${verdict.instructions} instruction(s) confrontées.`
+      `prisma/migrations/, ${verdict.instructions} instruction(s) confrontées, ` +
+      `${verdict.protections} déclencheur(s) de protection dérivé(s) du SQL.`
   );
   for (const a of verdict.absoutes)
     console.log(`   ⚠ absoute par ${a.adr} : [${a.famille}] ${a.message}`);
