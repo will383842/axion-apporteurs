@@ -7,31 +7,31 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `87a31ed` — 2026-09-18T22:20:27+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #54 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T01 (A05) · GOV-039 (A05) · GOV-041 (A05) · GOV-043 (A05) · GOV-044 (A05) · GOV-056 (A05) |
-| Où en est la phase ? | phase 0 — 0/98 tâches, reste 75.85 j |
-| Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
+| Où est `main` ? | `5739147` — 2026-09-19T16:47:19+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #76 (un contrôle requis rouge ou une revue manquante) · 2. #75 (un conflit avec `main`) |
+| Qui tient quoi ? | SEC-10 (A05) · DM-01 (A05) · QA-T03 (A05) |
+| Où en est la phase ? | phase 0 — 11/98 tâches, reste 67.60 j |
+| Le prochain pas | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #55 — 2026-09-17 |
+| Dernière entrée de journal | PR #81 — 2026-09-19 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-0/98 tâches terminées · reste 75.85 j estimés.
+11/98 tâches terminées · reste 67.60 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 219 | JUR-T02, QA-T01, SEC-01, SEC-02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07 … |
+| `a_faire` | 208 | JUR-T02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07, QA-T30, CPL-T22, SEC-08 … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 39 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
+| `fusionnee` | 50 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -39,9 +39,9 @@
 
 **20.75 j** sur 22 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → QA-T01 (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (1.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (1.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **17.50 j**.
+Reste sur ce chemin : **17.00 j**.
 
 ## Bloquées
 
@@ -64,7 +64,8 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #54 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte | `t/gov-044` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un contrôle requis rouge ou une revue manquante |
+| 2 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -74,26 +75,25 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
-| QA-T01 — Squelette de tests et Gate A bloquante | A05 | #56 | `a_faire` |
-| GOV-039 — Quatre-vingt-huit titres de test etiquetes par l'exigence d'un AUTRE sujet | A05 | #52 | `a_faire` |
-| GOV-041 — La cloture ecrit un statut sur une entree qu'elle n'a pas verifiee | A05 | #50 | `a_faire` |
-| GOV-043 — Le controle compensatoire de la tracabilite ne couvre qu'un quart du backlog | A05 | #58 | `a_faire` |
-| GOV-044 — Une garde absente du registre s'exempte elle-meme de la garde qui verifie qu'on l'appelle | A05 | #51 | `a_faire` |
-| GOV-056 — Le composeur compare des `paths` quand les taches promettent des `tests{}`, et rien ne juge les fichiers d une PR | A05 | #49 | `a_faire` |
+| SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
+| DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
+| QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check | A05 | #80 | `a_faire` |
 
-⚠️ **20 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, GOV-035, GOV-036, GOV-037, GOV-030, GOV-031 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
+⚠️ **31 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-077 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-18 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
+`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle
+
+Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
 
-**QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 34 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**DM-01** — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (1 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `87a31ed` (2026-09-18T22:20:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `5739147` (2026-09-19T16:47:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -101,148 +101,63 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #55 — 2026-09-17 — test(GOV-039): un titre de test confronte son identifiant au texte de l exigence nommee
+### PR #81 — 2026-09-19 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert
 
-**Fait.** `gov:requirements` confronte désormais `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` au registre :
-pour chacune des 28 fusions décidées, la survivante doit être active, chaque absorbée doit porter son
-renvoi, et chaque MARQUEUR du texte décidé — les 66 spans de code de l'arbitrage, dérivés et jamais
-listés — doit se retrouver dans le texte appliqué. Le rouge d'origine portait sur REQ-QA-014, que
-cette PR couvre : l'arbitrage rendu exigeait « le titre `it()` contient son identifiant » et « les
-corps de PR listent `Couvre: REQ-nnn` », et le texte appliqué disait l'inverse. Le texte en vigueur les
-reprend, sans perdre la clause `@req`. Les 87 titres de la garde d'entité qui s'étiquetaient
-REQ-CPL-018 en parlant d'IBAN, de BIC et de SIREN portent REQ-GOV-031 ; le seul titre qui teste
-REQ-CPL-018 pour de bon n'a pas bougé et un témoin le protège en exigeant que tout titre qui la nomme
-LISE sa ligne source. Cinq titres nommaient une exigence absorbée sans son renvoi : ils le portent.
-Après trois refus de lentille le 2026-09-18, la spécification lit les titres par LA lecture de
-`gov:trace`, et sur son périmètre, sortis dans `scripts/lot/titres-ecrits.ts` ; la garde juge un
-marqueur comme jeton délimité — `siren` et `signe` ne tenaient que par sous-chaîne, et rejoignent la
-dette — et nomme toute puce de fusion qu'elle ne sait pas lire, compte déclaré de l'annexe à l'appui.
+**Fait.** `pnpm req:check` est la garde deja inscrite sous cet identifiant (`gov-trace.ts`, alias
+`gov:trace`), lancee dans Gate A juste apres « Tests » avec le rapport JSON que `pnpm test` ecrit
+desormais (`test-results/vitest.json`). Aucun second script. La garde exige les DEUX formes de
+REQ-QA-014 pour chaque paire (tache, exigence active) dont le fichier promis existe : `@req` dans le
+premier bloc de commentaires ET l'identifiant dans le titre d'un `it()` (ecrit, ou dernier segment
+du nom resolu par vitest quand le titre est un gabarit), et elle nomme la forme qui manque. Avec les
+resultats, elle exige un test VERT ; une promesse par titre exige CE test vert. Trois familles
+neuves : `annotation_absorbee_sans_renvoi`, `test_promis_non_vert`, `resultats_illisibles` (absents,
+illisibles, perimes). `--prove` : 15 familles, 25 temoins dont 12 nommes pour les pannes du brief,
+15 contre-temoins. Mise en conformite a la source : 25 paires dans 12 fichiers de spec, et les trois
+annotations absorbees portent leur renvoi. QA-T01, GOV-077, SEC-01, SEC-02, CPL-T13 et UX-P0-02
+passent `fusionnee` ; le temoin du cas 10 de `lentilles-selon-le-risque.spec.ts` choisit sa tache au
+registre au lieu de nommer QA-T01.
 
-**Reste.** Vingt-cinq clauses décidées manquent encore au texte appliqué de quinze exigences ; elles
-sont déclarées, datées et motivées dans `DETTE_TEXTE_DECIDE`, et aucune n'est réparable par un agent —
-sept touchent à l'ARGENT, cinq à la SÉCURITÉ, deux portent un ré-arbitrage postérieur à l'annexe qui
-périme l'annexe elle-même, et non le registre. Le geste juste y est un ADR, pas un champ réécrit. La
-part non mécanisable de GOV-039 — « ce titre parle-t-il du bon sujet » — reste une RELECTURE NOMMÉE :
-quatre mécanisations ont été mesurées et abandonnées, leurs chiffres sont dans l'en-tête de la
-spécification. La dette GOV-082 reste ouverte. La dette relevée sur la PR 48 qui annonçait un écart
-14 contre 13 est PÉRIMÉE : `--prove` mesure bien 14 sur la tête fusionnée.
+**Reste.** `pnpm prevol` n'existe pas et devrait appeler `req:check` (GOV-047). Le temoin etroit
+« titre qui nomme une absorbee » vit dans une spec (GOV-039), le jumeau « annotation absorbee » dans
+la garde : deux lieux pour une regle. `gardes-transposees.spec.ts` garde sa copie de la lecture YAML.
+Un titre cite litteralement par un ADR est une promesse que la mise en conformite a cassee une fois
+(`partners/ADR-0009`, corrige) ; `partners/ADR-0005` en cite un autre que `gov:adr` ne juge pas.
 
-**Appris.** Nommer une tâche dans la prose d'une entrée de `docs/gates.json` exige que le FICHIER de
-cette gate soit dans les `paths` de la tâche nommée — pas dans ceux de la tâche qui écrit.
-`gov:attributions` a refusé en `mention_hors_paths` un amendement daté qui se contentait de se
-signer : la prose d'une gate se date, elle ne s'attribue qu'au porteur du script. Et un module de
-garde importé par sa propre spécification tue le worker `vitest` au premier `process.exit` : sans
-`LANCE_EN_SCRIPT`, la suite entière sort en `no tests` sur le refus `process.exit unexpectedly`
-du worker — une garde qui EXÉCUTE son code au lieu d'en lire le texte paie d'abord ce prix-là.
-Une lecture qu'on ne peut pas importer finit recopiée, et la copie est la plus pauvre : la seconde
-lecture des titres ratait quinze titres à identifiant, et une exigence absorbée y passait en exit 0.
+**Appris.** `vitest list --json` OMET les tests `it.skip` et `it.todo` : une promesse par titre vers
+un test saute se lisait deja « titre absent », jamais « non vert ». Le rapport JSON de vitest 2.1.9
+porte le chemin ABSOLU de chaque fichier : des resultats produits dans un autre arbre sont perimes
+par construction, et la garde le dit. Une chaine de test qui contient une ouverture `it(` ou une
+annotation en clair est lue par `gov:trace` comme une citation : les textes fabriques s'assemblent.
+Les etiquettes de panne du brief tombent sous `gov:identifiants` (lettre et chiffre nus).
 
-### PR #54 — 2026-09-17 — feat(GOV-044): le perimetre des gardes se derive du disque, le registre s y confronte
+### PR #79 — 2026-09-19 — docs(UX-P0-02): maquettes des huit écrans et garde maquettes-validees
 
-**Fait.** La famille `garde_ecrite_jamais_appelee` de `gov:conventions` tirait sa population du
-registre : un script de garde absent de `docs/gates.json` n'était jamais confronté à la question de
-savoir si quelqu'un l'appelle, et la gate sortait en zéro. Le périmètre part désormais du DISQUE —
-les fichiers `scripts/gates/*.ts` suivis par git — et le registre est ce qu'on lui confronte. Une
-garde écrite que le registre ne nomme pas est un refus nommé, `garde_hors_registre` ; le décompte
-des deux populations est imprimé à chaque passage ; une garde délibérément hors CI se DÉCLARE dans
-un champ `horsCi` d'au moins soixante caractères, la même exigence que pour un périmètre vide. Le
-filtre `g.phase` au plus `-1` n'est pas reconduit, et la décision est écrite à côté du code avec sa
-mesure : c'était un proxy de « déjà écrite », que le disque remplace par le fait. Trois témoins
-gardent ce choix — phase 0 non câblée rouge, phase 0 câblée verte, phase future non écrite
-silencieuse. Vingt-trois témoins, aucune assertion d'orthographe : chacun exécute le contrôle, la
-confrontation, le périmètre ou le script entier, et la population est recomptée hors de sa fonction
-par un `git ls-files` lu dans le test. Les deux gardes hors registre, `gov:attributions` et
-`gov:attestation`, y sont inscrites par `outils/ajouter-entree.mjs`, le verbe d'ajout né le
-2026-09-18 pour ce geste, avec son motif au journal des réécritures : 115 entrées deviennent 117,
-dix-neuf lignes ajoutées, aucune retirée. La seconde porte le premier champ `horsCi` du registre.
-Chaque preuve versée a été remesurée sur la tête avant l'écriture : les quatre dettes retirées par
-la PR 48, réinsérées, font sortir `gov:attributions` en 1 sur quatre `dette_perimee` ; un SHA nul
-posé sur `INT-T01b` passe la forme et `gov:attestation --en-ligne` le rejette en HTTP 422. Le refus
-`garde_hors_registre` conseillait `reecrire-champ.mjs`, qui refuse précisément une entrée absente ;
-il nomme maintenant `ajouter-entree.mjs`, et un témoin l'épingle. La lentille mutation a refusé la
-tête `6a88e1b` : deux mutants survivaient, qui absolvaient toute garde dès qu'une entrée du
-registre porte un alias, parce que chaque témoin tournait sur un registre injecté sans alias ni
-`horsCi`. Cinq témoins partent désormais du registre RÉEL : retirer l'entrée de chaque garde
-inscrite, une garde neuve sans entrée, le décâblage de chaque garde à alias, et le même jeu lancé
-dans un dépôt jetable dont on lit le code de sortie. Les deux mutants sont tués, la garde n'a pas
-changé.
+**Fait.** Huit maquettes autonomes sous `docs/maquettes/` : six pour l'espace, deux pour la console. Elles couvrent 90 états et viennent avec une charte (`index.html`) aux contrastes mesurés dans les deux thèmes de l'espace. La garde `maquettes-validees` lit `VALIDATION.md` par ses en-têtes. Elle refuse une validation écrite à moitié ou signée par un autre que Will, et rougit sur toute tâche d'écran attribuée sans maquette validée ; elle est câblée en Gate A. La spec prouve aussi la forme de l'accueil (REQ-UX-008), le contraste recalculé depuis chaque maquette (REQ-UX-034) et la moitié statique de REQ-UX-017. Elle a été vue rouge avant la garde, et six mutants de la garde ont été tués. Les six maquettes de l'espace portent `2026-09-19 | Will`. Will a donné la validation lui-même, en séance avec l'orchestrateur, en répondant « oui parfait » à « Valider les six maquettes de l'espace apporteur ». Cette réponse vaut aussi pour les onze choix par défaut des notes. L'orchestrateur a écrit les six lignes dans `1c6d94b`, avec les mots de Will dans le message de ce commit ; l'auteur de la PR ne les a pas écrites. La garde libère UX-P1-01, UX-P1-02, UX-P1-05, UX-P1-08, UX-P1-09 et UX-P2-01. Le composeur lit désormais le tableau par le lecteur de la garde, et non plus par position de colonne.
 
-**Reste.** Les huit cases de la définition de terminé, que Will coche, et la relecture de la
-lentille mutation sur la nouvelle tête. Hors périmètre et non touché : le tri des entrées de registre sans script sur le
-disque — autre dépôt, phase future, entrée fautive — qui appartient à GOV-051, et que le rendu
-compte à trente sans les distinguer. Effet de bord déclaré : `gov-conventions.ts` est partagé par
-quatre tâches, donc GOV-051 n'est pas composable tant que cette PR est ouverte.
+**Reste.** Les deux maquettes de console (UX-P1-07, UX-P2-03) attendent la validation de Will. Restent aussi la moitié dynamique de REQ-UX-017 (UX-P0-03) et la dérive du GLOSSAIRE sur `IssueDepot` et `MotifBlocage`.
 
-**Appris.** LE VERBE QUI MANQUE EST LA CAUSE DU TROU QU'ON MESURE. L'acceptance datait du 2026-09-12
-et disait « le SEUL des 24 scripts » ; la mesure du jour en donne VINGT-SIX, dont DEUX hors registre
-— `gov-attestation.ts`, et `gov-attributions.ts`, la garde livrée par la PR 45, ajoutée au trou
-pendant qu'on le décrivait. On a d'abord lu cet écart comme une négligence de livraison. Il n'en est
-pas une : `docs/gates.json` n'a pas de verbe d'ajout, donc TOUTE garde neuve atterrit hors du
-registre, par construction, et le trou se régénère à chaque livraison. L'acceptance n'est pas
-réécrite, délibérément : sa mesure était vraie et datée, et l'écart entre les deux EST la
-démonstration de la thèse — un registre tenu à la main se périme pendant qu'on l'écrit. Second
-apprentissage, plus étroit : une garde peut avoir une raison ÉCRITE de ne pas être câblée —
-`gov:attestation` interroge la forge par `gh` et GOV-038 l'a laissée hors CI exprès — et tant que ce
-motif ne vit nulle part qu'une garde puisse lire, il ne reste que deux issues, un rouge permanent
-qu'on apprend à ignorer, ou le silence. C'est pour cela que la déclaration est un champ du registre
-et pas un commentaire. Troisième : un refus qui propose le mauvais geste est un piège poli. Celui-ci
-nommait un verbe qui répond « aucune entrée » sur exactement le cas qu'il décrit ; on le suit, il
-refuse, et le trou reste ouvert avec une conscience tranquille. Quatrième, apporté par la lentille
-mutation : un témoin dont les données n'ont pas la FORME du vrai registre ne garde que la forme qu'il
-a inventée. Dix-huit témoins verts ne disaient rien des alias parce qu'aucun n'en portait.
+**Appris.** Prettier coupe les balises fermantes d'un HTML long (`</a` puis `>` à la ligne suivante). Une spec qui cherche `</label>` en texte exact ne trouve jamais la fermante, et juge alors « étiqueté » tout champ placé après une étiquette. Le témoin était trop indulgent sans rougir. Et le composeur lisait l'avant-dernière cellule du tableau, « Par », sous un commentaire qui disait « Validé le ».
 
-### PR #53 — 2026-09-17 — fix(GOV-041): la cloture refuse un resultat etranger au lot et un lotId absent
+### PR #78 — 2026-09-19 — feat(CPL-T13): module temps pur - horloge injectee, heure de Paris, feries FR, SLA ouvre, seuil HYP-D3
 
-**Fait.** `pnpm lot:cloture`, seul écrivain de `statut`, `pr`, `branch` et `owner` dans
-`docs/tasks.json`, ne pouvait pas dire quelles tâches le lot portait : il ne lisait nulle part la
-liste de ses membres et posait `lot` sur toute entrée que le rendu nommait. Le périmètre d'un lot se
-LIT désormais, et il a deux sources dont la préséance est écrite plutôt que subie :
-`docs/lots/lotId/lot.json` fait foi, et à son défaut — le dossier est ignoré par git, donc le fichier
-n'existe que dans l'arbre où le composeur a tourné et rien ne le régénère — le champ `lot` de
-`docs/tasks.json`, qui est suivi et que le rendu ne contrôle pas. Un identifiant que le rendu nomme
-et que le périmètre ne contient pas est un refus `tache_etrangere_au_lot` ; un rendu sans `lotId` est
-un refus `lot_du_rendu_absent`, là où seul un `lotId` FAUX était refusé ; une absence de périmètre
-est un refus `lot_introuvable`, jamais un périmètre vide. Les trois refus sont posés EN AMONT de la
-boucle qui écrit : ni la branche qui pose `fusionnee`, ni celle qui recompte la tentative n'écrit
-quoi que ce soit quand l'un d'eux se lève, et les témoins le vérifient par l'EFFET, pas par le
-message. Le module s'importe enfin sans le moindre effet de bord, sous `LANCE_EN_SCRIPT` ancré sur
-son dossier, son nom et la fin de chaîne — le patron de `scripts/plan-state/build.ts` et de
-`scripts/lot/composer.ts` — et sa règle est EXPORTÉE : `perimetreDuLot`, `controlerLePerimetre` et
-`cloturerLeLot` sont APPELÉES par vingt et un témoins, dont quatre qui lancent le SCRIPT ENTIER sur
-un dépôt jetable.
+**Fait.** Le module `temps` vit sous `src/domain/temps/`, pur : horloge injectée (`horlogeFigee`
+dans le domaine, `horlogeSysteme` dans `src/lib/horloge.ts`), heure légale de Paris calculée par la
+règle européenne, bornée aux années civiles de Paris 1996-2099, fériés FR versionnés avec leur
+attribut chômé, SLA en heures ouvrées à échéance exclusive, capacité réelle et seuil prioritaire
+(HYP-D3). Les conversions sont confrontées à `Intl.DateTimeFormat` dans le test, jamais dans le
+domaine : 131 496 heures de 2026 à 2040, 78 338 points autour des changements d'heure de 1996 à
+2099. 38 mutants joués, 38 tués. `partners/ADR-0014` (`propose`) en est le contrat.
 
-**Reste.** Les huit cases de la définition de « terminé » sont vides : l'auteur ne les coche pas,
-c'est Will qui atteste. Le troisième trou de la mesure du 2026-09-09 — pour une tâche LOCALE, rien
-n'écrit ni ne vérifie le sha de fusion — est porté par GOV-042, qui étend l'attestation aux tâches
-locales ; l'ordre D-15 impose GOV-041 puis GOV-042 puis la dette numéro 2, en trois lots successifs,
-parce que les trois partagent `scripts/lot/cloture.ts`. Deux silences subsistent et ne sont pas
-couverts ici : un résultat sans `dev.taskId` est ignoré avec un avertissement, et surtout un membre
-du lot dont le rendu ne dit RIEN ne reçoit rien — ni statut, ni tentative — alors que c'est le
-miroir exact du trou que cette PR ferme. Il faudra une tâche pour ce second cas. Le composeur
-n'exclut toujours pas les tâches déjà composées, et `docs/lots/` reste hors suivi. Enfin, deux rouges
-de `pnpm test` sont HORS de ce diff et restent dus : `gov:etat` rougit en
-`pr_sur_tache_non_revendiquee` sur les deux PR sœurs du lot, parce que leur revendication n'a été
-écrite que dans le `docs/tasks.json` de leur propre arbre. Le geste qui l'éteint est
-`reclasser --revendiquer` sur CETTE branche pour les deux autres tâches ; le classificateur de
-permissions me l'a refusé, et c'est à l'orchestrateur de le poser sur les trois branches.
+**Reste.** La question à Will sur le lundi de Pentecôte (travaillé par défaut, une constante) ; le
+numéro d'ADR, fixé à l'atterrissage (0014 aujourd'hui, 0015 si DM-01 atterrit avant) ; le relevé unique et le
+rattrapage des crons de REQ-QA-027, qui sont à DM-13 et T-ARG-015.
 
-**Appris.** Un contrôle rangé sous la condition qui l'a fait naître garde la moitié des cas, et la
-moitié se mesure. Huit pannes fabriquées sur ce correctif, toutes vues : deux d'entre elles se
-bornent à REDESCENDRE le contrôle de périmètre dans la branche `fusionnee`, là où le défaut avait
-été observé en 2026-09-09. Elles laissent seize témoins sur vingt et un VERTS, et seuls ceux qui
-mesurent l'EFFET — aucun statut écrit — les tuent ; le témoin qui appelle la fonction de contrôle
-directement reste vert sous les deux. Plus net encore : tant qu'un rendu contient au moins un
-résultat fusionné, un refus mal placé se déclenche quand même et PARAÎT garder. Il faut un rendu
-dont AUCUN résultat n'est fusionné pour voir l'intrus se faire recompter `attempts` en silence.
-Deuxième fait mesuré : glisser l'intrus au MILIEU du rendu plutôt qu'en queue distingue « tous » de
-« le dernier » — un contrôle réduit à `slice(-1)` reste vert sur un intrus en fin de liste et tue
-trois témoins sur un intrus au milieu. Troisième fait, et il coûte un tour à qui l'ignore :
-`gov:attributions` ne relit que les VINGT premières lignes d'un fichier pour y chercher des noms de
-tâches. Nommer, dans l'en-tête d'un fichier, la tâche dont on raconte l'incident fondateur est un
-`mention_hors_paths` — le lecteur suivant irait chercher chez elle un fichier qui n'est pas à elle.
-Le fait se raconte donc plus bas, ou sans le nom.
+**Appris.** Un oracle vivant trouve ce qu'un attendu tapé aurait figé faux : le test supposait onze
+fériés distincts par an, et 1997 n'en a que dix (l'Ascension tombe le 8 mai). Le témoin dérive
+maintenant ces années de l'oracle de Gauss au lieu de les écrire. Et une URL encodée en commentaire
+(le « â » de Pâques en pourcentages) se lit comme un identifiant nu : la garde lit les commentaires.
 
-… 18 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 27 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

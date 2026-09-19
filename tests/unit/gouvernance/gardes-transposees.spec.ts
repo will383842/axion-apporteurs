@@ -130,7 +130,7 @@ describe('REQ-GOV-029 — la liste des gardes candidates est DÉRIVÉE du texte 
       .filter(Boolean);
   }
 
-  it('l’exigence nomme sept gardes, et le registre en porte une ligne chacune', () => {
+  it('REQ-GOV-029 — l’exigence nomme sept gardes, et le registre en porte une ligne chacune', () => {
     const candidates = gardesNommeesParLExigence();
     expect(candidates).toHaveLength(7);
 
@@ -871,7 +871,8 @@ function valeurYaml(n: NoeudYaml | null | undefined): unknown {
  * exacte est ce qui rend la configuration jugée plus bas égale à celle que la CI applique.
  */
 const SCRIPTS_EXACTS: Readonly<Record<string, string>> = {
-  lint: 'eslint .',
+  // `--max-warnings 0` (QA-T01) : un avertissement fait échouer l'étape, il n'est jamais toléré.
+  lint: 'eslint . --max-warnings 0',
   'format:check': 'prettier --check .',
 };
 
@@ -1057,13 +1058,20 @@ function binaireDuScript(script: string): [string, string[]] {
  * `node_modules` —, sans lui transmettre l'environnement du test, et rend sa sortie. Sert à RELEVER
  * ce qu'il lit ; ce que l'acte de Gate A fait d'une faute est mesuré par `lancerActe`.
  */
+// Un environnement VIDE. `next` déclare `NODE_ENV` obligatoire dans `NodeJS.ProcessEnv`
+// (next/types/global.d.ts) : l'assertion dit que cet enfant n'en reçoit aucun, et c'est voulu.
+const AUCUNE_VARIABLE: Readonly<Record<string, string>> = {};
+
 function lancerBinaire(nom: string, args: readonly string[]): string {
   const paquet = join('node_modules', nom);
   const { bin } = JSON.parse(readFileSync(join(paquet, PACKAGE), 'utf8')) as {
     bin: string | Record<string, string>;
   };
   const chemin = join(paquet, typeof bin === 'string' ? bin : (bin[nom] ?? ''));
-  const r = spawnSync(process.execPath, [chemin, ...args], { encoding: 'utf8', env: {} });
+  const r = spawnSync(process.execPath, [chemin, ...args], {
+    encoding: 'utf8',
+    env: AUCUNE_VARIABLE as NodeJS.ProcessEnv,
+  });
   return `${r.stdout ?? ''}${r.stderr ?? ''}`;
 }
 
@@ -1189,7 +1197,7 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     expect(exiges.filter((s) => !pkg.scripts?.[s])).toEqual([]);
   });
 
-  it('`lint` et `format:check` sont EXACTEMENT `eslint .` et `prettier --check .`', () => {
+  it('`lint` et `format:check` sont EXACTEMENT `eslint . --max-warnings 0` et `prettier --check .`', () => {
     // Ni drapeau, ni portée, ni `||` : c'est l'égalité qui fait de la configuration jugée plus bas
     // celle que `pnpm lint` et `pnpm format:check` appliquent réellement.
     const vus = Object.fromEntries(Object.keys(SCRIPTS_EXACTS).map((s) => [s, pkg.scripts?.[s]]));

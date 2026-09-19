@@ -131,7 +131,7 @@ function dansArbre(racine: string, relatif: string, motif: RegExp, extensions: s
     }
     for (const e of entrees) {
       const p = join(courant, e);
-      let estDossier = false;
+      let estDossier: boolean;
       try {
         estDossier = statSync(p).isDirectory();
       } catch {

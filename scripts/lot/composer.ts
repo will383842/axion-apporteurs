@@ -12,7 +12,8 @@
  *                ∧ toutes les deps ∈ {fusionnee, deployee, verifiee} ∧ chaque hyp est DÉCLARÉE au
  *                registre ∧ aucune hyp bloquante (déclarée en §1 et non datée) ∧ attempts < 2
  *   - une tâche d'écran (`UX-P1-*`, `UX-P2-*`, `UX-P3-*`) n'est PAS attribuable tant que sa ligne de
- *     docs/maquettes/VALIDATION.md n'est pas validée par Will (colonne « Validé le » ≠ `—`)
+ *     docs/maquettes/VALIDATION.md n'est pas validée par Will — lue par le lecteur de la garde
+ *     `maquettes-validees` (`maquettesNonValideesDepuis`), jamais par position de colonne
  *   - deux tâches d'un lot n'ont JAMAIS de chemin en commun — `paths` ET `tests{}` réunis, moins
  *     les registres append-only que `./chemins-de-tache` exclut nommément (sinon deux worktrees se
  *     marchent dessus, ou bien la chaîne se sérialise pour un fichier où chacun ajoute une ligne)
@@ -45,6 +46,8 @@ import {
   type Registre,
 } from './registre-decisions';
 import { prochainIdentifiantDeLot, lotsDuBacklog } from './identifiant-de-lot';
+// Le lecteur UNIQUE de `docs/maquettes/VALIDATION.md` : celui de la garde, jamais une seconde copie.
+import { tachesAEcarterParLeComposeur } from '../gates/maquettes-validees';
 // LE lecteur unique des chemins d'une tache : `paths` ∪ `tests{}`, moins les registres
 // append-only. La convention, l'exclusion et leur motif vivent la-bas, et NULLE PART ailleurs.
 import {
@@ -249,6 +252,18 @@ export function composerLeLot(
  */
 const LANCE_EN_SCRIPT = /[\\/]lot[\\/]composer\.ts$/.test(process.argv[1] ?? '');
 
+/**
+ * Les tâches d'écran que `principal()` écarte, lues dans le texte de `docs/maquettes/VALIDATION.md`
+ * par le lecteur UNIQUE de la garde `maquettes-validees` (UX-P0-02, RM-01).
+ * 🔴 Cette lecture prenait l'avant-dernière cellule de chaque ligne, par POSITION — la colonne
+ * « Par », sous un commentaire qui disait « Validé le ». Une colonne ajoutée à droite, ou des
+ * colonnes permutées, faisaient passer une tâche non validée pour validée : le composeur l'aurait
+ * mise dans un lot. Mesuré rouge sur cinq témoins (`tests/unit/espace/maquettes-validees.spec.ts`).
+ */
+export function maquettesNonValideesDepuis(texte: string): Set<string> {
+  return tachesAEcarterParLeComposeur(texte);
+}
+
 function principal(): void {
   // Le signe « − » (U+2212) traîne dans les titres de section des documents : un copier-coller
   // donnait `Number('−1') = NaN`, `t.phase !== NaN` toujours vrai, et « Aucune tâche éligible »
@@ -280,18 +295,9 @@ function principal(): void {
 
   // --- maquettes : une tâche d'écran n'est pas attribuable sans validation de Will -----------------
   // La gate vivait dans un document que personne ne lisait (`maquettes/VALIDATION.md:3-4`). Ici.
-  const maquettesNonValidees = new Set<string>();
-  if (existsSync('docs/maquettes/VALIDATION.md')) {
-    for (const ligne of readFileSync('docs/maquettes/VALIDATION.md', 'utf8').split('\n')) {
-      if (!ligne.trim().startsWith('|')) continue;
-      const cellules = ligne.split('|').map((c) => c.trim());
-      // Une ligne non validée porte `—` (ou rien) dans sa colonne « Validé le ».
-      const valide = cellules.at(-2) ?? '';
-      if (valide && valide !== '—' && valide !== '-' && !/^-+$/.test(valide)) continue;
-      for (const id of ligne.match(/\bUX-P[123]-[A-Za-z0-9]+\b/g) || [])
-        maquettesNonValidees.add(id);
-    }
-  }
+  const maquettesNonValidees = existsSync('docs/maquettes/VALIDATION.md')
+    ? maquettesNonValideesDepuis(readFileSync('docs/maquettes/VALIDATION.md', 'utf8'))
+    : new Set<string>();
 
   // --- balayage : reprise des tâches abandonnées --------------------------------------------------
   execFileSync('git', ['worktree', 'prune'], { stdio: 'ignore' });

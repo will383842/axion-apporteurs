@@ -1,3 +1,5 @@
+// @req REQ-CPL-002
+// @req REQ-GOV-022
 /**
  * fiches-tiers.spec.ts — le test que `docs/tasks.json` attribue à GOV-015 pour REQ-CPL-002 et REQ-GOV-022.
  *
@@ -29,7 +31,7 @@ const RACINE = 'docs/tiers';
 const EXIGENCES = 'docs/requirements.json';
 
 describe('REQ-GOV-022 — les fiches tiers existent, et elles sont complètes de ce qui est écrivable', () => {
-  it('ne porte aucune faute sur l’état du dépôt', () => {
+  it('REQ-GOV-022 — ne porte aucune faute sur l’état du dépôt', () => {
     const fautes = controler(charger(RACINE, EXIGENCES));
     expect(fautes.map((f) => `[${f.famille}] ${f.message}`)).toEqual([]);
   });
@@ -47,7 +49,7 @@ describe('REQ-GOV-022 — les fiches tiers existent, et elles sont complètes de
 });
 
 describe('REQ-CPL-002 — la banque est connue, ou le repli est acté', () => {
-  it('vérifie les DEUX branches, et rougit si aucune n’est vraie', () => {
+  it('REQ-CPL-002 — vérifie les DEUX branches, et rougit si aucune n’est vraie', () => {
     const base = charger(RACINE, EXIGENCES);
     expect(controler(base).filter((f) => f.famille === 'disjonction_cpl_002')).toEqual([]);
 
