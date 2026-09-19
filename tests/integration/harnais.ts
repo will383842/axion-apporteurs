@@ -29,10 +29,18 @@ export type Base = {
   arreter: () => Promise<void>;
 };
 
+/** L'environnement que reçoit le sous-processus `prisma`. */
+export function environnementDuSousProcessus(
+  source: Record<string, string | undefined>,
+  url: string
+): Record<string, string | undefined> {
+  return { ...source, DATABASE_URL: url, PRISMA_HIDE_UPDATE_MESSAGE: '1' };
+}
+
 /** Lance `prisma` (CLI) en sous-processus sur l'URL donnée, et rend sa sortie. */
 export function prismaCli(url: string, args: string[]): string {
   return execFileSync(process.execPath, [resolve('node_modules/prisma/build/index.js'), ...args], {
-    env: { ...process.env, DATABASE_URL: url, PRISMA_HIDE_UPDATE_MESSAGE: '1' },
+    env: environnementDuSousProcessus(process.env, url),
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
