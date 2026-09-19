@@ -177,7 +177,7 @@ describe('REQ-CPL-001 — une seule source pour le SIREN et l’IBAN débiteur',
     }
   });
 
-  it('contrat, mandat et pain.001 LISENT la même valeur — le test le prouve en la renversant', () => {
+  it('REQ-CPL-001 — contrat, mandat et pain.001 LISENT la même valeur — le test le prouve en la renversant', () => {
     // Les trois points de sortie n'existent pas encore en code. Ce que l'on peut exercer
     // aujourd'hui, et qui est exactement ce que REQ-CPL-001 demande, c'est que les trois fixtures
     // se construisent PAR LECTURE. Le renversement est ce qui distingue une lecture d'une copie :
@@ -235,7 +235,7 @@ describe('REQ-CPL-001 — une seule source pour le SIREN et l’IBAN débiteur',
 
 // ── REQ-CPL-002 — la banque réceptrice, ou la saisie manuelle actée ───────────────────────────
 describe('REQ-CPL-002 — la banque réceptrice est connue OU la saisie manuelle est actée', () => {
-  it('la branche « OU » est celle qui est actée, et elle est LUE dans la ligne HYP-W2', () => {
+  it('REQ-CPL-002 — la branche « OU » est celle qui est actée, et elle est LUE dans la ligne HYP-W2', () => {
     const b = banqueReceptrice(registre);
     expect(estSentinelle(b.versionPain001)).toBe(false);
     expect(estSentinelle(b.modeDeRemise)).toBe(false);

@@ -1,7 +1,7 @@
 /**
  * tracabilite.spec.ts — la matrice REQ → tâche → test → PR est DÉRIVÉE, jamais rédigée (GOV-011).
  *
- * @req REQ-GOV-005
+ * @req REQ-GOV-005 → REQ-QA-014
  * @req REQ-QA-014
  *
  * ⚠️ REQ-GOV-005 est ABSORBÉE par REQ-QA-014 (`docs/requirements.json`, `remplaceePar`). Le texte en
