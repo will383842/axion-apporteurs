@@ -1418,7 +1418,13 @@
         "src/server/securite/rate-limit.ts",
         "scripts/gates/rate-famille.ts",
         "tests/unit/securite/rate-famille.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/server/securite/pot-de-miel.ts",
+        "src/server/securite/adresse-du-client.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        ".github/workflows/ci.yml"
       ],
       "schema": false,
       "sensible": [],

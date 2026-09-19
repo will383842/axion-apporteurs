@@ -570,9 +570,12 @@
       "phase": 0,
       "script": "scripts/gates/rate-famille.ts",
       "tache": "SEC-10",
-      "verifie": "chaque famille de limiteur declare surPanne (refuser ou laisser-passer) ; le comportement Redis coupe est exerce par un test",
+      "verifie": "tout compteur est declare au registre unique, sous l un des cinq prefixes, avec sa conduite sur panne REQUISE ; la garde execute chaque compteur contre un cache qui leve et confronte le verdict a la conduite declaree ; aucun prefixe de famille hors du registre dans src/ ; aucun nom de compteur dynamique",
       "fixtureRouge": "declarer une famille depot:x sans surPanne",
-      "preuveRouge": null
+      "preuveRouge": "pnpm securite:rate-famille:prove — 6 familles rougissent chacune sur son temoin (perimetre_vide, conduite_absente, conduite_trahie, prefixe_hors_famille, prefixe_hors_registre, nom_dynamique), 2 contre-temoins verts ; binaire sur une copie de travail sans surPanne sur magic:courriel : sortie 1, prefixe magic: nomme (la garde transposee d axionia l acceptait : sortie 0, premier commit de SEC-10)",
+      "alias": [
+        "securite:rate-famille"
+      ]
     },
     {
       "id": "G-SEC-CONCURRENCE",
