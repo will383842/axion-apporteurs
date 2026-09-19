@@ -629,7 +629,7 @@
       "tache": "SEC-01",
       "verifie": "boot en prod sans secret, ou avec un prefixe dev_ ou stub -> exit != 0 ; gitleaks (etendue par QA-T04)",
       "fixtureRouge": "retirer un secret de l'environnement de test",
-      "preuveRouge": null
+      "preuveRouge": "2026-09-18, A05, src/lib/env.ts sans controle d'egalite : FAIL tests/unit/securite/env-boot.spec.ts > REQ-SEC-028 : deux secrets égaux sont un refus à part entière — le boot sort en non nul et nomme les deux / AssertionError: expected +0 not to be +0 // Object.is equality (4 echecs sur 17 : deux et trois secrets egaux font sortir le boot en 0)"
     },
     {
       "id": "G-SEC-ORACLE",
