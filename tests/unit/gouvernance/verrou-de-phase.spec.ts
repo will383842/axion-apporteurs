@@ -71,7 +71,7 @@ function geleesPar(p: number, liste: Tache[]): Tache[] {
 }
 
 describe('REQ-GOV-027 — une phase gelée doit pouvoir se clore', () => {
-  it('REQ-GOV-027 — la phase courante ne porte aucune tâche hors d’atteinte du composeur', () => {
+  it('la phase courante ne porte aucune tâche hors d’atteinte du composeur', () => {
     const p = phaseCourante(taches);
     const impasses = taches
       .filter((t) => t.phase === p && !LIVREE.has(t.statut))
@@ -90,7 +90,7 @@ describe('REQ-GOV-027 — une phase gelée doit pouvoir se clore', () => {
     expect(detail).toBe('');
   });
 
-  it('sait rougir : une tâche remise en attente d’un tiers dans la phase courante est nommée', () => {
+  it('REQ-GOV-027 — sait rougir : une tâche remise en attente d’un tiers dans la phase courante est nommée', () => {
     const p = phaseCourante(taches);
     const cible = taches.find((t) => t.phase === p && !LIVREE.has(t.statut));
     expect(cible, 'la phase courante doit porter au moins une tâche non livrée').toBeDefined();
