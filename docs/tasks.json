@@ -1518,7 +1518,7 @@
         ".github/workflows/ci.yml",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
         "docs/GLOSSAIRE.md",
-        "docs/adr/0014-journal-evenement-chaine-immuable.md"
+        "docs/adr/0015-journal-evenement-chaine-immuable.md"
       ],
       "schema": false,
       "sensible": [

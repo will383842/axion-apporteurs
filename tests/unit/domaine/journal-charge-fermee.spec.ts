@@ -1,7 +1,7 @@
 // @req REQ-DM-041
 /**
  * La charge d'un événement est un schéma Zod FERMÉ par type, sans donnée personnelle — DM-01
- * (gate `journal:sans-pii`, partners/ADR-0014 décision 4).
+ * (gate `journal:sans-pii`, partners/ADR-0015 décision 4).
  *
  * TÉMOIN À DEUX FACES. Face rouge : des charges de bac portant un champ interdit font sortir la garde
  * en code non nul, UNE faute nommée `type.champ` par cas. Face verte : les charges du dépôt la font
@@ -282,9 +282,9 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
       "import { ajouterEvenement } from '../evenement/journal';\nexport { ajouterEvenement };",
     ],
     [
-      'le type Prisma `Evenement` (majuscule) et un autre modèle (`evenementRecu`)',
+      'des noms composés distincts (`EvenementCreateInput`, `evenementRecu`, `TypeEvenementJournal`)',
       'src/server/x.ts',
-      "import type { Evenement } from '@prisma/client';\nawait tx.evenementRecu.create({ data });",
+      'type E = Prisma.EvenementCreateInput;\nawait tx.evenementRecu.create({ data });\ntype T = TypeEvenementJournal;',
     ],
     [
       'un fichier pur du domaine du journal, sans table, délégué, client ni requête',
@@ -563,6 +563,24 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
     ]);
   });
 
+  // Revue exactitude, quatrième tour (5255150429) : une ligne qui RESSEMBLE à un import, dans un
+  // gabarit SQL, était effacée par l'expression du chemin d'import — la table y est pourtant en clair.
+  it('REQ-DM-041 : une ligne « import from "evenements" » DANS un gabarit SQL n’est pas un chemin d’import — rougit', () => {
+    const contenu = [
+      'await tx.$executeRawUnsafe(`CREATE VIEW v AS',
+      '    import from "evenements"`);',
+    ].join('\n');
+    expect(ou(avecCode('src/server/vue.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/vue.ts:2',
+    ]);
+  });
+
+  it('REQ-DM-041 : un nom IMPORTÉ (`import { evenement } from …`) reste une mention — seul le chemin est effacé', () => {
+    expect(ou(avecCode('src/server/clause.ts', "import { evenement } from './x';"))).toEqual([
+      'ecrivain_hors_journal src/server/clause.ts:1',
+    ]);
+  });
+
   it('REQ-DM-041 : contre-témoin — un import multiligne réel reste un chemin d’import', () => {
     const contenu = [
       'import {',
@@ -573,6 +591,66 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
       "import * as j from '../evenement/journal';",
     ].join('\n');
     expect(ou(avecCode('src/server/appelant.ts', contenu))).toEqual([]);
+  });
+
+  // Revue schema, quatrième tour (5255123483) : Prisma 5.22 résout aussi `client.Evenement`
+  // (majuscule) comme délégué — la propriété est capitalisée avant la recherche du modèle.
+  it('REQ-DM-041 : le délégué pris en MAJUSCULE par un type maison (`{ Evenement: Prisma.EvenementDelegate }`) rougit', () => {
+    const contenu = [
+      "import type { Prisma } from '@prisma/client';",
+      "import { calculerSelfHash } from '../../domain/evenement/journal';",
+      'type Journal = { Evenement: Prisma.EvenementDelegate };',
+      'export async function ecrire(db: Prisma.TransactionClient, e: E) {',
+      '  const j = (db as unknown as Journal).Evenement;',
+      "  const tete = await j.findFirst({ orderBy: { id: 'desc' } });",
+      "  await j.create({ data: { ...e, charge: { courriel: 'a@b.fr' }, prevHash: tete!.selfHash, selfHash: calculerSelfHash(tete!.selfHash, e) } });",
+      '}',
+    ].join('\n');
+    expect(ou(avecCode('src/server/relais/ecrivain.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/relais/ecrivain.ts:3',
+      'ecrivain_hors_journal src/server/relais/ecrivain.ts:5',
+    ]);
+  });
+
+  it('REQ-DM-041 : la forme de la revue securite (`j.Evenement.findFirstOrThrow` puis `j.Evenement.create`) rougit', () => {
+    const contenu = [
+      'export async function ecrire(j: Journal, e: E) {',
+      "  const tete = await j.Evenement.findFirstOrThrow({ orderBy: { id: 'desc' } });",
+      "  await j.Evenement.create({ data: { ...e, charge: { courriel: 'a@b.fr' }, prevHash: tete.selfHash } });",
+      '}',
+    ].join('\n');
+    expect(ou(avecCode('src/server/relais/majuscule.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/relais/majuscule.ts:2',
+      'ecrivain_hors_journal src/server/relais/majuscule.ts:3',
+    ]);
+  });
+
+  it.each([
+    ['\\u0065', "await tx['\\u0065venement'].create({ data });"],
+    ['\\u{65}', "await tx['\\u{65}venement'].create({ data });"],
+    ['\\x65', "await tx['\\x65venement'].create({ data });"],
+    ['\\u0045 (majuscule)', "await tx['\\u0045venement'].create({ data });"],
+  ])('REQ-DM-041 : le mot écrit avec une séquence d’échappement (%s) rougit', (_q, contenu) => {
+    expect(ou(avecCode('src/server/echappe.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/echappe.ts:1',
+    ]);
+  });
+
+  it('REQ-DM-041 : contre-témoin — une séquence `\\n` ou `\\u000a` n’est pas décodée et ne déplace aucune ligne', () => {
+    expect(
+      ou(avecCode('src/server/x.ts', "const s = 'a\\u000ab\\n';\nexport const t = 1;"))
+    ).toEqual([]);
+  });
+
+  it.each([
+    ['`Prisma.EvenementDelegate` dans un fichier ordinaire', 'type D = Prisma.EvenementDelegate;'],
+    ['`Prisma.ModelName` dans un fichier ordinaire', 'const m: Prisma.ModelName = modele;'],
+    ['le type `Evenement` importé du client', "import type { Evenement } from '@prisma/client';"],
+    ['la table en CAPITALES au singulier', "const t = 'EVENEMENT';"],
+  ])('REQ-DM-041 : %s — rougit', (_q, contenu) => {
+    expect(ou(avecCode('src/server/ordinaire.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/ordinaire.ts:1',
+    ]);
   });
 
   it('REQ-DM-041 : une LECTURE du délégué hors de journal.ts rougit aussi — échec fermé', () => {

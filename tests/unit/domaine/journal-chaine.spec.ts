@@ -1,6 +1,6 @@
 // @req REQ-DM-024
 /**
- * Le chaînage du journal, en domaine pur — DM-01 (partners/ADR-0014, décisions 1 à 3).
+ * Le chaînage du journal, en domaine pur — DM-01 (partners/ADR-0015, décisions 1 à 3).
  *
  * Ce fichier couvre à 100 % `src/domain/evenement/canonique.ts` et `src/domain/evenement/journal.ts`
  * SANS base : la preuve en base réelle (déclencheurs, verrou, effacement de tiers) est dans
@@ -276,7 +276,7 @@ describe('REQ-DM-024 — la genèse est épinglée, et la limite du recalcul est
     expect(verifierChaine(lignes)).toEqual({ ok: false, faute: 'genese_alteree', id: '1' });
   });
 
-  // ⚠️ LIMITE DÉCLARÉE (partners/ADR-0014), et ce test la TIENT : le jour où un ancrage externe de
+  // ⚠️ LIMITE DÉCLARÉE (partners/ADR-0015), et ce test la TIENT : le jour où un ancrage externe de
   // la tête existera, il devra rougir et être réécrit. Un acteur qui a les droits du propriétaire,
   // désarme le déclencheur, réécrit une ligne du MILIEU et recalcule TOUTE la queue n'est PAS
   // détecté par la chaîne seule : l'algorithme est public et sans secret.

@@ -23,26 +23,34 @@
  *   — les clés de `CHARGES_PAR_TYPE` égales aux valeurs de l'enum `TypeEvenementJournal` lues dans
  *     `prisma/schema.prisma`, dans les deux sens (`type_sans_charge`, `charge_sans_type`) ;
  *   — un périmètre non vide : un enum illisible n'est pas « rien à dire » (`perimetre_vide`) ;
- *   — UN SEUL ÉCRIVAIN de la table `evenements` : `src/server/evenement/journal.ts`. La règle ne
- *     chasse pas une ORTHOGRAPHE d'appel — un délégué pris en variable, déstructuré, entre crochets,
- *     une requête construite à part passent sous toute liste de formes. Elle refuse toute MENTION :
- *     le mot `evenement` (le délégué Prisma, en minuscules) ou `evenements` (la table, toute casse),
- *     comme identifiant, propriété, chaîne, gabarit ou clé entre crochets, dans tout fichier SUIVI
- *     sous `src/`, `scripts/` ou `packages/`, TOUTES extensions (`ecrivain_hors_journal`). Seul le
- *     CHEMIN d'un import statique (`from '…/evenement/journal'`) n'est pas une mention : il charge un
- *     module, il n'atteint pas la table. Le type Prisma `Evenement` (majuscule) reste admis.
- *     LA LISTE BLANCHE est courte et nommée, et tenue par le CONTENU, jamais par un compte :
- *     l'écrivain unique ; cette garde ; le domaine pur du journal (`src/domain/evenement/`), qui ne
- *     nomme ni la table ni le délégué, ne porte aucune trace de client et n'écrit aucune requête (un
- *     mot de DML dans une chaîne rougit) ; et quelques fichiers qui NOMMENT le mot sans toucher la
- *     table (`LISTE_BLANCHE_PAR_CONTENU`), chacun tenu par le texte exact de ses lignes de mention
- *     admises et refusant toute trace de client. Échec FERMÉ : une simple lecture du journal hors
- *     de l'écrivain rougit aussi. Ce que la règle ne voit PAS : un nom calculé par concaténation (`'evene' + 'ment'`), un client pris hors du dépôt, `prisma/` (graine et DML des migrations), et les écritures DANS les deux fichiers qui SONT l'écrivain et la garde.
+ *   — UN SEUL ÉCRIVAIN de la table `evenements` : `src/server/evenement/journal.ts`.
+ *     LA PROMESSE, mot pour mot : `journal:sans-pii` est un FIL TENDU : il refuse toute mention de
+ *     la table ou de son délégué ÉCRITE EN CLAIR, en toute casse, hors de la liste blanche tenue
+ *     par le contenu, dans tout fichier de code sous `src/`, `scripts/` et `packages/`.
+ *     Mention : la famille du mot `evenement` / `evenements`, en toute casse (Prisma résout aussi
+ *     `client.Evenement` comme délégué), comme identifiant, propriété, chaîne, gabarit ou clé ;
+ *     `EvenementDelegate` et `ModelName` dans TOUT fichier ; seul le CHEMIN d'un import statique,
+ *     lu par le compilateur TypeScript, n'est pas une mention. Les séquences `\uXXXX`, `\u{…}`,
+ *     `\xXX` qui désignent une lettre sont décodées avant la lecture (commodité, pas une
+ *     promesse).
+ *     LA LISTE BLANCHE est tenue par le CONTENU : l'écrivain ; cette garde ; le domaine pur
+ *     `src/domain/evenement/`, qui ne nomme ni la table ni le délégué, ne porte aucune trace de
+ *     client et n'écrit aucune requête (mot de DML dans une chaîne) ; et les fichiers de
+ *     `LISTE_BLANCHE_PAR_CONTENU`, tenus par le texte exact de leurs lignes de mention et sans
+ *     trace de client. Échec FERMÉ : une simple lecture du journal hors de l'écrivain rougit
+ *     aussi.
+ *     LIMITE DÉCLARÉE, mot pour mot : toute forme délibérément obfusquée — nom calculé,
+ *     transformé, extrait, ou encodé (séquences d'échappement JS, identifiants Unicode SQL
+ *     `U&"…"`), vues ou alias SQL, conversions de type — relève de la revue et de la défense au
+ *     niveau base, pas de cette garde. Hors de portée aussi : un client pris hors du dépôt,
+ *     `prisma/` (graine et DML des migrations), et les deux fichiers qui SONT l'écrivain et la
+ *     garde. TypedSQL n'est pas activé : l'activer exige de revoir cette garde.
  * Le vert imprime le compte des types et des champs RÉELLEMENT confrontés.
  *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne lit pas le dépôt : ses vues sont INJECTÉES.
  */
 import { readFileSync, existsSync } from 'node:fs';
+import ts from 'typescript';
 import { z } from 'zod';
 import { CHARGES_PAR_TYPE, FORMES, HASH_HEX_64 } from '../../src/domain/evenement/charges';
 import { segmentsDuNom, segmentsPersonnels } from '../../src/domain/donnees-personnelles/champs';
@@ -127,8 +135,15 @@ export const LISTE_BLANCHE_PAR_CONTENU: { chemin: string; motif: string; lignes:
   },
 ];
 
-/** Le délégué (minuscules exactes) ou la table (toute casse). `Evenement`, `evenementRecu` passent. */
-const MENTION = /\bevenement\b|\b[Ee][Vv][Ee][Nn][Ee][Mm][Ee][Nn][Tt][Ss]\b/g;
+/**
+ * LA FAMILLE DU MOT, toute casse : `evenement`, `Evenement`, `EVENEMENTS`… Prisma 5.22 résout aussi
+ * `client.Evenement` (majuscule) comme délégué — la propriété est capitalisée avant la recherche du
+ * modèle (revue schema, quatrième tour de la PR 75). Les noms COMPOSÉS (`EvenementCreateInput`,
+ * `evenementRecu`, `TypeEvenementJournal`) sont d'autres mots et ne sont pas lus. C'est le DERNIER
+ * élargissement lexical : une garde de mots est un fil tendu contre le code ordinaire, la défense
+ * durable est en base (partners/ADR-0015, « Reste à faire »).
+ */
+const MENTION = /\bevenements?\b/gi;
 /**
  * Un mot de DML (`INSERT`, `UPDATE`, `DELETE`, `INTO`, `TRUNCATE`, `MERGE`, toute casse) DANS une chaîne,
  * un gabarit ou entre guillemets doubles : le domaine du journal n'a aucune raison d'écrire une
@@ -136,21 +151,47 @@ const MENTION = /\bevenement\b|\b[Ee][Vv][Ee][Nn][Ee][Mm][Ee][Nn][Tt][Ss]\b/g;
  */
 const CHAINE = /(['"`])((?:\\.|(?!\1)[^\\])*)\1/g;
 const DML = /\b(?:insert|update|delete|into|truncate|merge)\b/i;
+/** Les fichiers dont la syntaxe se lit par le compilateur TypeScript (JS et TS, toutes variantes). */
+const EXTENSION_ANALYSEE = /\.(?:[cm]?[jt]sx?)$/;
+
 /**
- * Le chemin d'un import ou d'une réexportation STATIQUE : il charge un module, il n'atteint pas la
- * table. Tenu sur UNE ligne et ancré en tête : `import|export` suivi seulement d'une clause d'import
- * (identifiants, accolades, virgules, `*`), ou la ligne `} from '…'` qui ferme un import sur plusieurs
- * lignes. Un `from "evenements"` dans une requête SQL, un commentaire `// from '…'` ouvert dans un
- * appel, ne sont PAS des chemins d'import.
+ * Les plages du CHEMIN de chaque import ou réexportation statique (`import … from '…'`,
+ * `export … from '…'`, `import type`), lues par le COMPILATEUR TypeScript et non par une expression :
+ * seul le nœud `moduleSpecifier` d'une `ImportDeclaration` ou d'une `ExportDeclaration` de premier
+ * niveau est effacé. Rien d'intérieur à une chaîne, un gabarit ou un commentaire ne peut l'être — une
+ * ligne « import from "evenements" » DANS un gabarit SQL reste lue (revue exactitude, quatrième tour).
  */
-const CHEMIN_D_IMPORT =
-  /^[ \t]*(?:(?:import|export)\b[\w$ \t{},*]*?\bfrom|\}[ \t]*from|import)[ \t]*(['"])[^'"\n]*\1/gm;
+function cheminsDImport(chemin: string, contenu: string): [number, number][] {
+  if (!EXTENSION_ANALYSEE.test(chemin)) return [];
+  const source = ts.createSourceFile(chemin, contenu, ts.ScriptTarget.Latest, false);
+  const plages: [number, number][] = [];
+  for (const instruction of source.statements) {
+    if (
+      (ts.isImportDeclaration(instruction) || ts.isExportDeclaration(instruction)) &&
+      instruction.moduleSpecifier !== undefined
+    ) {
+      plages.push([
+        instruction.moduleSpecifier.getStart(source),
+        instruction.moduleSpecifier.getEnd(),
+      ]);
+    }
+  }
+  return plages;
+}
 /**
  * Une trace de client : elle fait sortir de la liste blanche le domaine du journal ET les fichiers
  * admis par contenu. Le délégué pris comme propriété (`.evenement`, `?.evenement`) en est une.
  */
 const CLIENT =
-  /@prisma\/client|\bPrismaClient\b|\$transaction\b|\$(?:executeRaw|queryRaw)\w*|\.\s*evenement\b/;
+  /@prisma\/client|\bPrismaClient\b|\$transaction\b|\$(?:executeRaw|queryRaw)\w*|\.\s*evenement\b|\bEvenementDelegate\b|\bModelName\b/i;
+/**
+ * Le délégué du journal atteint par son TYPE (`Prisma.EvenementDelegate`) ou par le nom de modèle
+ * (`Prisma.ModelName`) : refusé dans TOUT fichier de la portée, hors de l'écrivain, de la garde et du
+ * module client unique que SEC-08 posera (`MODULE_CLIENT`).
+ */
+const TYPE_DU_DELEGUE = /\bEvenementDelegate\b|\bModelName\b/;
+/** Le module client unique du dépôt, à venir (SEC-08) : il construit le client, il ne vise pas le journal. */
+const MODULE_CLIENT = 'src/server/db.ts';
 
 export type Vue = {
   /** Les valeurs de l'enum `TypeEvenementJournal`, lues dans `prisma/schema.prisma`. */
@@ -213,16 +254,47 @@ const ligneDe = (texte: string, position: number): number =>
   texte.slice(0, position).split('\n').length;
 
 /** Les lignes où un fichier MENTIONNE la table ou le délégué, chemins d'import statiques retirés. */
-export function mentions(contenu: string): number[] {
-  const sansImports = contenu.replace(CHEMIN_D_IMPORT, (m) => m.replace(/[^\n]/g, ' '));
+export function mentions(contenu: string, chemin = 'fichier.ts'): number[] {
+  // Seul le CHEMIN est effacé, octet pour octet (les sauts de ligne gardent leur place) : les noms
+  // importés (`import type { Evenement }`, `import { evenement }`) restent lus.
+  let sansImports = contenu;
+  for (const [debut, fin] of cheminsDImport(chemin, contenu)) {
+    sansImports =
+      sansImports.slice(0, debut) +
+      sansImports.slice(debut, fin).replace(/[^\n]/g, ' ') +
+      sansImports.slice(fin);
+  }
   return [...sansImports.matchAll(MENTION)].map((m) => ligneDe(sansImports, m.index));
 }
 
+/**
+ * Les séquences d'échappement `\uXXXX`, `\u{…}` et `\xXX` qui désignent une lettre, un chiffre, `_`
+ * ou `$` sont DÉCODÉES avant la lecture : `tx['\u0065venement']` atteint le délégué sans écrire le
+ * mot (revue securite, quatrième tour). Une séquence qui désigne autre chose reste telle quelle, pour
+ * que les numéros de ligne ne bougent pas.
+ */
+export function decoderEchappements(texte: string): string {
+  return texte.replace(
+    /\\(?:u\{([0-9a-fA-F]+)\}|u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2}))/g,
+    (seq, a, b, c) => {
+      const code = parseInt((a ?? b ?? c) as string, 16);
+      const car = code <= 0x10ffff ? String.fromCodePoint(code) : '';
+      return /^[\w$]$/.test(car) ? car : seq;
+    }
+  );
+}
+
 /** Les lignes fautives d'un fichier : toute mention hors de la liste blanche. */
-export function ecrituresHorsJournal(chemin: string, contenu: string): number[] {
+export function ecrituresHorsJournal(chemin: string, brut: string): number[] {
   if (chemin === ECRIVAIN_UNIQUE || chemin === CETTE_GARDE) return [];
+  const contenu = decoderEchappements(brut);
   if (!RACINES_ECRIVAINS.some((r) => chemin.startsWith(r))) return [];
-  const lignes = mentions(contenu);
+  const lignes = mentions(contenu, chemin);
+  if (chemin !== MODULE_CLIENT) {
+    contenu.split('\n').forEach((l, i) => {
+      if (TYPE_DU_DELEGUE.test(l)) lignes.push(i + 1);
+    });
+  }
   if (chemin.startsWith(DOMAINE_DU_JOURNAL)) {
     // Le domaine pur ne nomme NI le délégué NI la table, ne porte aucune trace d'un client et
     // n'écrit aucune requête : une requête née ici, importée ailleurs, passerait sous le chemin

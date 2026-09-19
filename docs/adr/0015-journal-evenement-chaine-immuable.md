@@ -1,4 +1,4 @@
-# partners/ADR-0014 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle
+# partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle
 
 | Champ | Valeur |
 | --- | --- |
@@ -72,7 +72,11 @@ toute liste de formes) ; elle refuse toute MENTION de la table ou du délégué 
 en toute casse, le mot `evenement` en minuscules, identifiant, propriété, chaîne, gabarit ou clé —
 dans tout fichier suivi sous `src/`, `scripts/` ou `packages/`, toutes extensions (famille
 `ecrivain_hors_journal`, échec fermé : une simple lecture hors de l'écrivain rougit aussi). Le chemin
-d'un import statique n'est pas une mention, et le type Prisma `Evenement` reste admis. La liste
+d'un import statique n'est pas une mention (les noms importés, eux, le sont). La casse ne protège rien :
+Prisma 5.22 résout `client.Evenement` (majuscule) comme délégué, donc `Evenement` est une mention ;
+`EvenementDelegate` et `ModelName` sont refusés dans tout fichier de la portée (hors de l'écrivain, de
+la garde et du module client `src/server/db.ts` à venir) ; les séquences d'échappement qui désignent une
+lettre sont décodées avant la lecture. C'est le dernier élargissement lexical de cette garde. La liste
 blanche est courte et nommée : l'écrivain unique, le domaine pur `src/domain/evenement/` (qui ne nomme
 ni la table ni le délégué, ne porte aucune trace d'un client et n'écrit aucune requête — un mot de DML
 dans une chaîne y rougit), la garde elle-même, et des fichiers qui
@@ -138,7 +142,7 @@ dans le domaine ne lit l'heure. Un client `$extends` ne compile pas avec `ajoute
   chaîne prouve l'**ordre**, pas l'**auteur** : même après la séparation des rôles, un rôle qui peut
   insérer peut ajouter un maillon à l'empreinte valide. (d) La clause « le worker de purge ne
   référence pas la table » de `partners:journal:immutable` est sans objet tant qu'aucun worker
-  n'existe. (e) La garde de l'écrivain unique ne voit pas : un nom calculé par concaténation (`'evene' + 'ment'`), un client pris hors du dépôt, `prisma/` (graine et DML des migrations), et les écritures DANS les deux fichiers qui SONT l'écrivain et la garde.
+  n'existe. (e) `journal:sans-pii` est un FIL TENDU : il refuse toute mention de la table ou de son délégué ÉCRITE EN CLAIR, en toute casse, hors de la liste blanche tenue par le contenu, dans tout fichier de code sous `src/`, `scripts/` et `packages/`. Limite déclarée : toute forme délibérément obfusquée — nom calculé, transformé, extrait, ou encodé (séquences d'échappement JS, identifiants Unicode SQL `U&"…"`), vues ou alias SQL, conversions de type — relève de la revue et de la défense au niveau base, pas de cette garde. Hors de portée aussi : un client pris hors du dépôt, `prisma/` (graine et DML des migrations), et les deux fichiers qui SONT l'écrivain et la garde. TypedSQL n'est pas activé : l'activer exige de revoir cette garde.
 - Retour arrière : une migration qui retire les déclencheurs — visible au diff ; `verifierChaine()`
   continue de voir une altération du milieu non recalculée ; ni le recalcul (a) ni la troncature
   de queue (b).
@@ -173,6 +177,7 @@ dans le domaine ne lit l'heure. Un client `$extends` ne compile pas avec `ajoute
   (DM-20). Une clé HMAC hors base a été écartée pour l'instant : elle ne vaut que si le rôle qui écrit
   ne peut pas la lire, ce qui suppose la séparation des rôles.
 - Séparation des rôles Postgres (migration, applicatif sans `UPDATE` / `DELETE`) : déploiement.
+- **PRIORITÉ SUIVANTE — la défense durable est en base, pas dans une garde de mots.** Une garde lexicale est un fil tendu contre le code ordinaire ; elle ne gagne pas contre l'obfuscation délibérée. ADR de suite nommé : « charge du journal fermée par la base » — un déclencheur `BEFORE INSERT` sur `evenements` qui refuse toute clé de `charge` non admise pour son `type`, GÉNÉRÉ depuis le schéma fermé de `src/domain/evenement/charges.ts` : il arrête une donnée personnelle quel que soit l'écrivain. Ensuite : un rôle applicatif sans `INSERT` sur `evenements`, qui n'écrit que par une fonction unique. Dette de cette tâche, pas du code de cette tâche.
 - Le prédicat des centimes de `schema-centimes.spec.ts` sera remplacé par l'import de la garde
   `partners:schema:cents` quand elle existera.
 - Le SIREN n'est pas dans la liste fermée des formes : la tâche qui en aura besoin l'ajoute en amendant

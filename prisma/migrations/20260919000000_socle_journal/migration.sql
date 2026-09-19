@@ -1,4 +1,4 @@
--- Socle du schéma Partners et journal Evenement — DM-01 (partners/ADR-0014).
+-- Socle du schéma Partners et journal Evenement — DM-01 (partners/ADR-0015).
 -- Partie générée : `pnpm prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script`,
 -- les valeurs de chaque CREATE TYPE reformatées UNE PAR LIGNE, comme dans `schema.prisma` (c'est la
 -- projection de l'enum complet, pas une liste d'états recopiée : `partners:schema:enums`).
@@ -63,7 +63,7 @@ CREATE UNIQUE INDEX "evenements_prev_hash_key" ON "evenements"("prev_hash");
 -- CreateIndex
 CREATE UNIQUE INDEX "evenements_self_hash_key" ON "evenements"("self_hash");
 
--- SQL brut : Prisma ne modélise ni CHECK, ni fonction, ni déclencheur (partners/ADR-0014).
+-- SQL brut : Prisma ne modélise ni CHECK, ni fonction, ni déclencheur (partners/ADR-0015).
 ALTER TABLE "evenements" ADD CONSTRAINT "evenements_hashes_hex"
   CHECK ("prev_hash" ~ '^[0-9a-f]{64}$' AND "self_hash" ~ '^[0-9a-f]{64}$');
 ALTER TABLE "evenements" ADD CONSTRAINT "evenements_agregat_complet"
