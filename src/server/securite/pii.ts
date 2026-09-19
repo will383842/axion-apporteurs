@@ -208,10 +208,13 @@ const SEPARATEURS_TELEPHONE = /[\s.\-()]/g;
 const FORME_E164 = /^[1-9]\d{1,14}$/;
 /** Numéro national français : dix chiffres, le premier est le 0 du préfixe. */
 const FORME_NATIONALE_FR = /^0\d{9}$/;
+const INDICATIF_FR = '33';
 
 /**
  * Téléphone : chiffres seuls, `00` → `+`, un numéro national français de dix chiffres → `+33` et
- * ses neuf derniers chiffres. Tout le reste est refusé (pas de bibliothèque de numérotation).
+ * ses neuf derniers chiffres. Le 0 du préfixe gardé après +33 (« +33 (0)6… ») est refusé : il
+ * donnerait une seconde empreinte au même numéro. Tout le reste est refusé (pas de bibliothèque
+ * de numérotation).
  */
 const normaliserTelephone = (valeur: string): string => {
   const compact = valeur.replace(SEPARATEURS_TELEPHONE, '');
@@ -220,9 +223,13 @@ const normaliserTelephone = (valeur: string): string => {
     : compact.startsWith('00')
       ? compact.slice(2)
       : FORME_NATIONALE_FR.test(compact)
-        ? `33${compact.slice(1)}`
+        ? `${INDICATIF_FR}${compact.slice(1)}`
         : null;
-  if (international === null || !FORME_E164.test(international)) {
+  if (
+    international === null ||
+    !FORME_E164.test(international) ||
+    international.startsWith(`${INDICATIF_FR}0`)
+  ) {
     throw refus('telephone_invalide', 'le téléphone');
   }
   return `+${international}`;
