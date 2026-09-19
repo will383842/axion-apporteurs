@@ -1,6 +1,6 @@
 /**
- * CPL-T13 — le seuil de vérification prioritaire, règle D3 (`docs/DECISIONS.md` HYP-D3 ;
- * REQ-CPL-026 : « le seuil de vérification prioritaire (D3) se dérive de la capacité restante »).
+ * CPL-T13 — le seuil de vérification prioritaire, règle HYP-D3 (`docs/DECISIONS.md` ;
+ * REQ-CPL-026 : le seuil de vérification prioritaire se dérive de la capacité restante).
  *
  * HYP-D3, mot à mot : « `seuilPrioritaire = min(palierConfiance, capaciteRestante)` ;
  * `surchargeManuelle > 0` remplace le min ; une seule fonction pure ; jamais un plafond ».

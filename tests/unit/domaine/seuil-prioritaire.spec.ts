@@ -1,6 +1,6 @@
 // @req REQ-CPL-026
 /**
- * CPL-T13 — la capacité réelle de qualification et le seuil de vérification prioritaire (règle D3,
+ * CPL-T13 — la capacité réelle de qualification et le seuil de vérification prioritaire (règle HYP-D3,
  * `docs/DECISIONS.md` HYP-D3) : `src/domain/temps/capacite.ts` et
  * `src/domain/attribution/seuil-prioritaire.ts`.
  *
@@ -34,7 +34,7 @@ function levee<E extends Error>(classe: new (...a: never[]) => E, f: () => unkno
   throw new Error('aucune levée');
 }
 
-describe('REQ-CPL-026 — le seuil de vérification prioritaire (D3) se dérive de la capacité restante', () => {
+describe('REQ-CPL-026 — le seuil de vérification prioritaire (HYP-D3) se dérive de la capacité restante', () => {
   it('REQ-CPL-026 — sans surcharge (absente ou nulle), le seuil est min(palierConfiance, capaciteRestante)', () => {
     expect(
       seuilPrioritaire({ palierConfiance: 5, capaciteRestante: 3, surchargeManuelle: null })

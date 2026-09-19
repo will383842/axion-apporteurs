@@ -46,7 +46,7 @@ première occurrence (heure d'été).
 **T3 — Bornes : les années CIVILES DE PARIS 1996 à 2099**, soit les instants de 1995-12-31T23:00Z
 inclus à 2099-12-31T23:00Z exclu (décision de l'orchestrateur du 2026-09-19 : un module de l'heure
 de Paris borne en heure de Paris). Hors bornes : levée `hors_calendrier` qui nomme l'instant. Le
-témoin R7 du brief se lit donc à 1995-12-31T22:59:59.999Z (levée), et 1995-12-31T23:59Z est
+témoin des bornes du brief (sa panne n° 7) se lit donc à 1995-12-31T22:59:59.999Z (levée), et 1995-12-31T23:59Z est
 1996-01-01 00:59 à Paris (accepté). La France suit la règle européenne actuelle depuis 1996 ; si
 l'Union abolit le changement d'heure, c'est une nouvelle version du module, pas un correctif.
 
@@ -77,7 +77,7 @@ durée écoulée atteint la durée demandée (vendredi 0 h + 24 h = samedi 0 h ;
 mardi 15 h). Les changements d'heure tombent un dimanche, jamais un jour ouvré : le test le
 vérifie sur 1996-2099.
 
-**Capacité et D3 (HYP-D3).** `capaciteSurPeriode` = somme, sur les jours ouvrés de la période
+**Capacité et seuil prioritaire (HYP-D3).** `capaciteSurPeriode` = somme, sur les jours ouvrés de la période
 (bornes comprises), des qualifieurs non absents multipliée par la capacité par qualifieur et par
 jour. `seuilPrioritaire({ palierConfiance, capaciteRestante, surchargeManuelle })` =
 `surchargeManuelle` si elle est > 0, sinon `min(palierConfiance, capaciteRestante)` ; jamais un

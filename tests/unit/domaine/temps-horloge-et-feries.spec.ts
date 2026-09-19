@@ -302,7 +302,7 @@ describe('REQ-CPL-013 — calendrier civil et heure légale d’Europe/Paris, ca
   it('REQ-CPL-013 — hors des années 1996 à 2099 de Paris : levée hors_calendrier qui nomme l’instant', () => {
     // Les bornes sont des années DE PARIS (décision de l'orchestrateur du 2026-09-19, partners/ADR-0015) :
     // 1996-01-01 00:00 à Paris = 1995-12-31 23:00 UTC ; 2100-01-01 00:00 à Paris = 2099-12-31 23:00 UTC.
-    // Le témoin R7 du brief se lit donc à 1995-12-31T22:59:59.999Z ; 23:59 UTC est déjà 1996 à Paris.
+    // Le témoin des bornes du brief (sa panne n° 7) se lit donc à 1995-12-31T22:59:59.999Z ; 23:59 UTC est déjà 1996 à Paris.
     const avant = Date.UTC(1995, 11, 31, 22, 59, 59, 999);
     const e = levee(() => versParis(avant));
     expect(e.motif).toBe('hors_calendrier');
@@ -358,7 +358,7 @@ describe('REQ-CPL-013 — calendrier civil et heure légale d’Europe/Paris, ca
 
 /**
  * Dates de Pâques publiées.
- * Source: https://fr.wikipedia.org/wiki/Calcul_de_la_date_de_P%C3%A2ques (dates remarquables :
+ * Source: https://fr.wikipedia.org/wiki/Calcul_de_la_date_de_Pâques (dates remarquables :
  * 22 mars 2285 la plus précoce, 25 avril 2038 la plus tardive) et
  * https://www.census.gov/data/software/x13as/genhol/easter-dates.html (table 1600-2099).
  * Relevées par l'auteur (A05) le 2026-09-19 sans rechargement des pages en séance : la relecture
@@ -379,7 +379,7 @@ const PAQUES_PUBLIEES: readonly [number, number, number][] = [
 /**
  * Second algorithme, INDÉPENDANT de celui du domaine : la méthode de Gauss pour le calendrier
  * grégorien, avec ses deux exceptions (26 avril → 19 avril ; 25 avril → 18 avril).
- * Source: https://fr.wikipedia.org/wiki/Calcul_de_la_date_de_P%C3%A2ques (section « Méthode de Gauss »).
+ * Source: https://fr.wikipedia.org/wiki/Calcul_de_la_date_de_Pâques (section « Méthode de Gauss »).
  */
 function paquesSelonGauss(annee: number): [number, number] {
   const a = annee % 19;
