@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `e0008b0` — 2026-09-19T18:20:18+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #83 (rien) · 2. #84 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
-| Qui tient quoi ? | SEC-10 (A05) · DM-01 (A05) · DM-02 (A05) · QA-T03 (A05) · QA-T07 (A05) |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #83 (un contrôle requis rouge ou une revue manquante) · 3. #84 (un contrôle requis rouge ou une revue manquante) · 4. #85 (un contrôle requis rouge ou une revue manquante) · 5. #86 (un contrôle requis rouge ou une revue manquante) |
+| Qui tient quoi ? | SEC-10 (A05) · QA-T08 (A05) · DM-01 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T03 (A05) · QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 11/98 tâches, reste 68.10 j |
-| Le prochain pas | fusionner #83, puis DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
+| Le prochain pas | fusionner #82, puis DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #82 — 2026-09-19 |
 
-**Ce qu’on tape maintenant.** `gh pr view 83 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,9 +64,11 @@ Reste sur ce chemin : **17.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #83 — docs(GOV-039): les 25 clauses decidees remises ou datees (ADR 0016) | `t/clauses-decidees` | rien — fusionnable maintenant |
-| 2 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
+| 2 | #83 — docs(GOV-039): les 25 clauses decidees remises ou datees (ADR 0016) | `t/clauses-decidees` | un contrôle requis rouge ou une revue manquante |
+| 3 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
+| 4 | #85 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un contrôle requis rouge ou une revue manquante |
+| 5 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -77,8 +79,10 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
+| QA-T08 — Logger pino structuré, redaction PII, Sentry, notify | A05 | #70 | `a_faire` |
 | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
 | DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives | A05 | #63 | `a_faire` |
+| QA-T02 — Harnais d'intégration testcontainers | A05 | #68 | `a_faire` |
 | QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check | A05 | #80 | `a_faire` |
 | QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
 
@@ -92,7 +96,7 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Prochain pas
 
-**Fusionner #83** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+**Fusionner #82** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **DM-01** — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (1 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
