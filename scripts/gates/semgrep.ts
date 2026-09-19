@@ -563,7 +563,7 @@ export function jugerReel(p: Passage, presents: readonly string[]): Faute[] {
       famille: 'plancher_public',
       message:
         `${publiques.length} règle publique exécutée, plancher ${PLANCHER_PUBLIC} : les jeux ` +
-        `${JEUX_PUBLICS.join(', ')} ne sont pas chargés.`,
+        `${JEUX_PUBLICS.join(', ') || '(aucun jeu déclaré)'} ne sont pas chargés.`,
     });
   }
   return fautes;

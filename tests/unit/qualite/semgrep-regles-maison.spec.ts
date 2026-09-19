@@ -258,6 +258,17 @@ describe('REQ-QA-013 — le dépôt réel : zéro constat, et le compte des règ
     ]);
     // Zéro fichier présent : le vert ne dirait rien.
     expect(jugerReel(avecPublique, []).map((f) => f.famille)).toEqual(['perimetre_vide']);
+    // Une autre version que l'épinglée, une erreur rapportée, ou rien de lisible : refus nommés.
+    const ailleurs = { ...avecPublique, sortie: { ...avecPublique.sortie!, version: '0.0.0' } };
+    expect(jugerReel(ailleurs, ['src/a.ts']).map((f) => f.famille)).toEqual(['version_divergente']);
+    const erreur = {
+      ...avecPublique,
+      sortie: { ...avecPublique.sortie!, errors: [{ type: 'x' }] },
+    };
+    expect(jugerReel(erreur, ['src/a.ts']).map((f) => f.famille)).toEqual(['erreur_semgrep']);
+    expect(
+      jugerReel({ code: 2, stderr: 'x', sortie: null }, ['src/a.ts']).map((f) => f.famille)
+    ).toEqual(['semgrep_n_a_pas_tourne']);
     // Un fichier présent et non analysé est une faute, pas un silence.
     expect(jugerReel(passage, ['src/a.ts', 'src/b.ts']).map((f) => f.famille)).toContain(
       'fichier_non_analyse'
