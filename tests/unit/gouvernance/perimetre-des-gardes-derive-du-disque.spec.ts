@@ -332,7 +332,7 @@ describe('REQ-GOV-012 — dans un dépôt jetable au registre réel, la faute so
   const famillesRendues = (sortie: string) =>
     [...new Set([...sortie.matchAll(/^\s+\[([a-z_]+)\] /gm)].map((m) => m[1]))].sort();
 
-  it('sain → 0 ; entrée du MILIEU retirée, garde neuve, garde à alias décâblée → 1, en la nommant', () => {
+  it('REQ-GOV-012 — sain → 0 ; entrée du MILIEU retirée, garde neuve, garde à alias décâblée → 1, en la nommant', () => {
     const reel = lireVue();
     const c = confronterDisqueEtRegistre(reel);
     const inscrites = c.surLeDisque.filter((s) => reel.gates.some((g) => g.script === s));

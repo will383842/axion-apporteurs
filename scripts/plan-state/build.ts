@@ -425,7 +425,7 @@ lignes.push('');
 // pas d'une heure. Une estimation totale de 149 j ne dit rien de la date de fin ; ce chemin, si.
 // Il sort du bloc parce que « Prochain pas » en depend : le prochain pas utile est celui qui est
 // SUR ce chemin, pas le premier de la liste.
-let cheminCritique: string[] = [];
+let cheminCritique: string[];
 {
   const parId = new Map(taches.map((t) => [t.id, t]));
   const memo = new Map<string, { poids: number; suite: string[] }>();

@@ -1,3 +1,4 @@
+// @req REQ-GOV-004
 /**
  * Les affirmations sur le code d'axionia, exercées comme des tests — GOV-004, REQ-GOV-004.
  *
@@ -160,7 +161,7 @@ describe('REQ-GOV-004 — les cinq affirmations invalidées figurent au registre
     }
   );
 
-  it('les cinq sont bien cinq — ni quatre par fusion, ni six par ajout silencieux', () => {
+  it('REQ-GOV-004 — les cinq sont bien cinq — ni quatre par fusion, ni six par ajout silencieux', () => {
     const trouvees = CINQ_INVALIDEES.filter(({ motif }) =>
       lignesRegistre.some((l) => motif.test(l) && l.includes('FAUSSE'))
     );

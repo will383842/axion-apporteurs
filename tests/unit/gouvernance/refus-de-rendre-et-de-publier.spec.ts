@@ -367,7 +367,7 @@ describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de l
       Tests  553 passed (553)
 `
     );
-    let code = -1;
+    let code: number;
     let stderr = '';
     try {
       execFileSync(
@@ -644,6 +644,21 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'forge), pas de couverture. *Redondance ≠ trou — et une maxime fausse devient une doctrine, ' +
         'qu’on ne remesure jamais.*',
     },
+    // ── UX-P0-02 : UNE sortie, à code VARIABLE ──────────────────────────────────────────────
+    'scripts/gates/maquettes-validees.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO ici : les témoins d'EFFET de cette sortie vivent dans
+      // `tests/unit/espace/maquettes-validees.spec.ts`, pas dans le tableau `REFUS` de ce fichier.
+      temoins: 0,
+      raison:
+        'UX-P0-02 — aucune tâche d’écran attribuée sans maquette validée par Will. UNE sortie, ' +
+        "`process.exit(process.argv.includes('--prove') ? prouver() : juger())`, TERMINALE, à code " +
+        'variable : 0 quand la garde passe, 1 sur la première faute. Témoins d’EFFET sur le binaire, ' +
+        'dans maquettes-validees.spec.ts : un arbre jetable où une tâche d’écran est attribuée sans ' +
+        'validation sort en 1 en NOMMANT la tâche, le même arbre corrigé sort en 0, et le dépôt réel ' +
+        'comme `--prove` sortent en 0.',
+    },
   };
 
   it('REQ-GOV-032 — le compte DÉRIVÉ du diff égale le compte DÉCLARÉ, fichier par fichier', () => {
@@ -839,11 +854,25 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // Déclarer un nombre « au cas où » donnerait le nombre sans la lecture, c'est-à-dire exactement
     // ce que ce cliquet interdit :
     // *le total ne bouge pas sans qu'on l'écrive, et on ne l'écrit pas sans l'avoir lu.*
-    // 🔧 37 → 38 par QA-T07, ARBITRÉ et non subi, sur `origin/main` = `87fb212` : le cliquet a
-    // rougi en nommant `scripts/gates/semgrep.ts` (« ajoute 1 `process.exit(1)` et n’est PAS
-    // déclaré ici »). ⚠️ Si une branche sœur atterrit d'abord avec sa propre sortie, c'est CETTE
-    // branche qui relira le rouge au rebase et l'arbitrera.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(38);
+    // 🔧 37 → 38 par UX-P0-02, ARBITRÉ et non subi. `scripts/gates/maquettes-validees.ts` naît
+    // avec UNE sortie non nulle, terminale et à code variable. Lu en Gate A, dans l'ordre — d'abord
+    // l'identité (run 35435390710), puis, la déclaration posée, le compte (run 35436969947) :
+    //
+    //     scripts/gates/maquettes-validees.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 38 to be 37
+    //
+    // La sortie est vue en 1 puis en 0 sur un arbre jetable (maquettes-validees.spec.ts).
+    // 🔧 38 → 39 par QA-T07, ARBITRÉ et non subi. Sur sa première base (`87fb212`), la branche
+    // avait lu 37 → 38 en nommant `scripts/gates/semgrep.ts` (« ajoute 1 `process.exit(1)` et
+    // n’est PAS déclaré ici »). UX-P0-02 (#79) a atterri d'abord avec sa propre sortie et a pris
+    // le 38. Sur la fusion de `origin/main` = `5739147`, les deux déclarations présentes,
+    // l'identité passe et le COMPTE rougit — relu, pas deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 39 to be 38
+    //
+    // La sortie `process.exit(verdict.code)` est vue en 1 puis en 0 sur le binaire
+    // (semgrep-regles-maison.spec.ts).
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(39);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -983,7 +1012,7 @@ describe('REQ-CPL-018 — `--corps-publie` : le verdict SORT, il ne se contente 
    */
   it('REQ-CPL-018 — TÉMOIN D’EFFET : un corps NON LU sort en 2, il n’est jamais déclaré propre', () => {
     const PR_INEXISTANTE = 999999;
-    let code = -1;
+    let code: number;
     let sortie = '';
     try {
       execFileSync(
@@ -1304,12 +1333,14 @@ const VARIABLES_DE_PRODUCTION = [
  * un seul apparié.*
  */
 function environnementDeProduction(): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = {};
+  // Pas `NodeJS.ProcessEnv` à la construction : `next` y déclare `NODE_ENV` obligatoire
+  // (next/types/global.d.ts), et cet environnement ne le porte que si la production le pose.
+  const env: Record<string, string> = {};
   for (const v of VARIABLES_DE_PRODUCTION) {
     const val = process.env[v];
     if (val !== undefined) env[v] = val;
   }
-  return env;
+  return env as NodeJS.ProcessEnv;
 }
 
 function lancerLaGate(
