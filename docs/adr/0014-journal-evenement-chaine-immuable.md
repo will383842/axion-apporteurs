@@ -66,10 +66,16 @@ personne (`src/domain/donnees-personnelles/champs.ts`, exporté pour toute autre
 s'il est une empreinte (`…Hash` sur `HASH_HEX_64`). La garde `journal:sans-pii` juge les schémas eux-
 mêmes ; `ajouterEvenement()` les applique à l'exécution, avant toute écriture, et son refus nomme le
 chemin et le code de chaque écart, jamais la valeur reçue. **La charge n'est fermée que si
-`ajouterEvenement()` est le SEUL écrivain** : la garde refuse toute autre écriture de la table
-(`evenement.create`, `createMany`, `upsert`, `update*`, `delete*`, ou SQL brut nommant `evenements`)
-dans un fichier suivi sous `src/` ou `scripts/` (famille `ecrivain_hors_journal`, échec fermé : un SQL
-brut qui ne fait que lire le journal rougit aussi).
+`ajouterEvenement()` est le SEUL écrivain** : la garde ne chasse pas une orthographe d'appel (un
+délégué pris en variable, déstructuré, entre crochets, une requête construite à part passent sous
+toute liste de formes) ; elle refuse toute MENTION de la table ou du délégué — le mot `evenements`
+en toute casse, le mot `evenement` en minuscules, identifiant, propriété, chaîne, gabarit ou clé —
+dans tout fichier suivi sous `src/`, `scripts/` ou `packages/`, toutes extensions (famille
+`ecrivain_hors_journal`, échec fermé : une simple lecture hors de l'écrivain rougit aussi). Le chemin
+d'un import statique n'est pas une mention, et le type Prisma `Evenement` reste admis. La liste
+blanche est courte et nommée : l'écrivain unique, le domaine pur `src/domain/evenement/` (qui ne peut
+porter ni le délégué ni la moindre trace d'un client), la garde elle-même, et des fichiers qui
+nomment le mot sans toucher la table, chacun à un compte de mentions FIGÉ (`LISTE_BLANCHE_COMPTEE`).
 
 **Décision 5 — Immuabilité par la base.** Un déclencheur de ligne `evenements_append_only` refuse `UPDATE` et
 `DELETE` ; un déclencheur d'instruction `evenements_append_only_troncature` refuse `TRUNCATE`, qu'un
@@ -90,15 +96,18 @@ la suite exige le démon Docker, en CI comme en local. Le harnais (`tests/integr
 lance `pgvector/pgvector:pg16`, applique les migrations par `prisma migrate deploy` avec l'URL du
 conteneur, et lève en nommant le démon s'il est absent.
 
-**Décision 8 — `ajouterEvenement()` n'accepte qu'une transaction.** `Prisma.TransactionClient` seul ne
-l'impose pas : c'est un `Omit<>` du client, et un `PrismaClient` nu s'y range. Le paramètre est donc
-typé `ClientDeTransaction<T>`, qui rend `never` tout client portant encore `$transaction` : seul le
-client reçu par `prisma.$transaction(async (tx) => …)` compile, et un `@ts-expect-error` dans le
-témoin d'intégration voit `pnpm typecheck` rougir si la règle se perd. Une assertion `as` la
-contournerait : c'est la limite d'un type. `agregatId` est validé comme UUID à tirets et normalisé en
-minuscules AVANT le hachage (Postgres le rend sous cette forme : haché autrement, le maillon serait en
-`hash_altere` pour toujours et masquerait les altérations suivantes). Aucun client Prisma n'est créé
-sous `src/` par cette décision. `survenuAt` vient de l'appelant : rien dans le domaine ne lit l'heure.
+**Décision 8 — `ajouterEvenement()` n'accepte qu'une transaction, par deux défenses.** Le TYPE protège
+l'appel DIRECT : le paramètre est typé `ClientDeTransaction<T>`, qui rend `never` tout client portant
+encore `$transaction`, et un `@ts-expect-error` du témoin d'intégration voit `pnpm typecheck` rougir si
+la règle se perd. Il ne voit PAS un client nu passé par un intermédiaire typé
+`Prisma.TransactionClient` (un `Omit<>` du client, auquel un `PrismaClient` s'assigne) : c'est le REFUS
+À L'EXÉCUTION qui protège tout le reste — `ajouterEvenement()` lève si le client porte `$transaction`,
+ce qui est faux dans une transaction interactive (même sur un client `$extends`) et vrai sur le client
+nu ; un témoin en base réelle le prouve, compte de lignes inchangé. `agregatId` est validé comme UUID
+à tirets et normalisé en minuscules AVANT le hachage (Postgres le rend sous cette forme : haché
+autrement, le maillon serait en `hash_altere` pour toujours et masquerait les altérations suivantes).
+Aucun client Prisma n'est créé sous `src/` par cette décision. `survenuAt` vient de l'appelant : rien
+dans le domaine ne lit l'heure.
 
 ## Conséquences
 
@@ -109,8 +118,10 @@ sous `src/` par cette décision. `survenuAt` vient de l'appelant : rien dans le 
   d'acteur, pas de `@@index` de lecture par agrégat tant qu'aucune tâche ne lit par agrégat (additifs,
   non hachés).
 - Une session qui lance la suite complète démarre Docker d'abord.
-- **Ce que la chaîne détecte, exactement.** Toute altération par un acteur qui NE RECALCULE PAS la
-  chaîne : colonne réécrite, ligne supprimée au milieu, genèse forgée.
+- **Ce que la chaîne détecte, exactement.** Une altération qui laisse une ligne ou un lien
+  incohérent : colonne réécrite, ligne supprimée au MILIEU, genèse forgée — pourvu que l'acteur ne
+  recalcule pas la queue. Une troncature de la queue ne recalcule rien et N'EST PAS vue pour autant :
+  c'est la limite (b).
 - **Limites déclarées, pas des défauts.** (a) Un acteur qui a les droits du propriétaire — ou le rôle
   applicatif lui-même, tant que les rôles ne sont pas séparés — peut désarmer le déclencheur
   (`ALTER TABLE … DISABLE TRIGGER`, `ALTER COLUMN … TYPE … USING` qui réécrit les lignes sans
@@ -123,10 +134,12 @@ sous `src/` par cette décision. `survenuAt` vient de l'appelant : rien dans le 
   chaîne prouve l'**ordre**, pas l'**auteur** : même après la séparation des rôles, un rôle qui peut
   insérer peut ajouter un maillon à l'empreinte valide. (d) La clause « le worker de purge ne
   référence pas la table » de `partners:journal:immutable` est sans objet tant qu'aucun worker
-  n'existe. (e) La garde de l'écrivain unique ne voit pas un accès par nom calculé ni un client hors
-  du dépôt.
+  n'existe. (e) La garde de l'écrivain unique ne voit pas un nom calculé (`'evene' + 'ment'`), un
+  client hors du dépôt, `prisma/` (migrations et graine), ni une extension `$extends` ou une requête
+  TypedSQL qui ne nomme pas le mot.
 - Retour arrière : une migration qui retire les déclencheurs — visible au diff ; `verifierChaine()`
-  continue de voir toute altération qui ne recalcule pas la chaîne.
+  continue de voir une altération du milieu non recalculée ; ni le recalcul (a) ni la troncature
+  de queue (b).
 
 ## Alternatives écartées
 

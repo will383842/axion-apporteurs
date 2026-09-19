@@ -23,14 +23,21 @@
  *   — les clés de `CHARGES_PAR_TYPE` égales aux valeurs de l'enum `TypeEvenementJournal` lues dans
  *     `prisma/schema.prisma`, dans les deux sens (`type_sans_charge`, `charge_sans_type`) ;
  *   — un périmètre non vide : un enum illisible n'est pas « rien à dire » (`perimetre_vide`) ;
- *   — UN SEUL ÉCRIVAIN de la table `evenements` : `src/server/evenement/journal.ts`. Toute autre
- *     écriture par le client (`evenement.create`, `createMany`, `upsert`, `update*`, `delete*`)
- *     ou tout SQL brut (`$executeRaw`, `$queryRaw`, leurs variantes `Unsafe`) qui nomme
- *     `evenements`, dans un fichier SUIVI sous `src/` ou `scripts/`, rougit
- *     (`ecrivain_hors_journal`). Sans cette règle, un second écrivain contournerait le `parse`
- *     strict et écrirait un courriel dans une charge — que la base refuserait ensuite d'effacer.
- *     Échec FERMÉ : un SQL brut qui ne fait que LIRE le journal rougit aussi. Ce que la règle ne voit
- *     pas : un accès par nom calculé (`tx['evene' + 'ment']`) ou un client hors du dépôt.
+ *   — UN SEUL ÉCRIVAIN de la table `evenements` : `src/server/evenement/journal.ts`. La règle ne
+ *     chasse pas une ORTHOGRAPHE d'appel — un délégué pris en variable, déstructuré, entre crochets,
+ *     une requête construite à part passent sous toute liste de formes. Elle refuse toute MENTION :
+ *     le mot `evenement` (le délégué Prisma, en minuscules) ou `evenements` (la table, toute casse),
+ *     comme identifiant, propriété, chaîne, gabarit ou clé entre crochets, dans tout fichier SUIVI
+ *     sous `src/`, `scripts/` ou `packages/`, TOUTES extensions (`ecrivain_hors_journal`). Seul le
+ *     CHEMIN d'un import statique (`from '…/evenement/journal'`) n'est pas une mention : il charge un
+ *     module, il n'atteint pas la table. Le type Prisma `Evenement` (majuscule) reste admis.
+ *     LA LISTE BLANCHE est courte et nommée (`LISTE_BLANCHE`) : l'écrivain unique, le domaine pur du
+ *     journal (`src/domain/evenement/`, à condition qu'il n'importe aucun client), cette garde, et
+ *     quelques fichiers qui NOMMENT le mot sans toucher la table — ceux-là à un COMPTE de mentions
+ *     figé : une mention de plus rougit. Échec FERMÉ : une simple lecture du journal hors de
+ *     l'écrivain rougit aussi. Ce que la règle ne voit PAS : un nom calculé (`'evene' + 'ment'`), un
+ *     client hors du dépôt, `prisma/` (migrations et graine), une extension `$extends` ou TypedSQL
+ *     qui ne nomme pas le mot.
  * Le vert imprime le compte des types et des champs RÉELLEMENT confrontés.
  *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne lit pas le dépôt : ses vues sont INJECTÉES.
@@ -50,20 +57,73 @@ export const ECRIVAIN_UNIQUE = 'src/server/evenement/journal.ts';
 /** La garde elle-même : ses témoins SONT des écrivains (RM-11). */
 const CETTE_GARDE = 'scripts/gates/journal-sans-pii.ts';
 /** Les racines où un second écrivain se cherche. `tests/` n'en est pas : les harnais y écrivent. */
-const RACINES_ECRIVAINS = ['src/', 'scripts/'] as const;
+const RACINES_ECRIVAINS = ['src/', 'scripts/', 'packages/'] as const;
 
-/** Une écriture par le client Prisma sur le modèle `Evenement`, appel et méthode sur plusieurs lignes. */
-const ECRITURE_CLIENT =
-  /\bevenement\s*\.\s*(?:create|createMany|createManyAndReturn|upsert|update|updateMany|delete|deleteMany)\b/g;
-/** Un appel de SQL brut ; sa portée court jusqu'au premier `;` qui le suit. */
-const SQL_BRUT = /\$(?:executeRaw|queryRaw)(?:Unsafe)?\b/g;
+/**
+ * Le domaine pur du journal. Il peut NOMMER la table ; il ne peut ni nommer le délégué `evenement`, ni
+ * porter la moindre trace d'un client (import, constructeur, SQL brut) : sans cela, une fonction du
+ * domaine qui reçoit un client en paramètre écrirait la table sous l'exemption.
+ */
+const DOMAINE_DU_JOURNAL = 'src/domain/evenement/';
+
+/**
+ * LA LISTE BLANCHE COMPTÉE : des fichiers qui NOMMENT le mot sans atteindre la table, chacun avec
+ * le compte EXACT de ses mentions et son motif. Une mention de plus, ou de moins, rougit : le
+ * compte se relit, il ne s'élargit pas en silence.
+ */
+export const LISTE_BLANCHE_COMPTEE: { chemin: string; mentions: number; motif: string }[] = [
+  {
+    chemin: 'packages/contracts/contracts.v1.json',
+    mentions: 1,
+    motif: 'l’URL du schéma du contrat d’événements inter-dépôts, pas la table',
+  },
+  {
+    chemin: 'packages/contracts/events.ts',
+    mentions: 5,
+    motif: 'un paramètre `evenement` du contrat inter-dépôts et l’URL de son schéma, sans client',
+  },
+  {
+    chemin: 'scripts/gates/gov-check.ts',
+    mentions: 5,
+    motif: 'des fixtures de la garde des termes interdits, jugées comme texte',
+  },
+  {
+    chemin: 'scripts/gates/gov-publication.ts',
+    mentions: 1,
+    motif: 'une fixture de la garde de publication (« etat x evenement »), jugée comme texte',
+  },
+  {
+    chemin: 'scripts/gates/gov-requirements.ts',
+    mentions: 2,
+    motif: 'deux motifs de dette en prose, sans client',
+  },
+  {
+    chemin: 'scripts/lot/paths-proposes.ts',
+    mentions: 2,
+    motif: 'deux CHEMINS de fichiers proposés à des tâches, sans client',
+  },
+];
+
+/** Le délégué (minuscules exactes) ou la table (toute casse). `Evenement`, `evenementRecu` passent. */
+const MENTION = /\bevenement\b|\b[Ee][Vv][Ee][Nn][Ee][Mm][Ee][Nn][Tt][Ss]\b/g;
+/** Le délégué seul : dans le domaine du journal, lui seul est refusé. */
+const DELEGUE = /\bevenement\b/;
+/**
+ * Le chemin d'un import ou d'une réexportation STATIQUE, en tête d'instruction : il charge un module,
+ * il n'atteint pas la table. Ancré en début de ligne et sans `=`, accent grave ni `;` entre le mot-clé
+ * et `from` : un `from "evenements"` dans une requête SQL n'est PAS un chemin d'import.
+ */
+const CHEMIN_D_IMPORT =
+  /^[ \t]*(?:(?:import|export)\b[^'"`=;]*?\bfrom|import)[ \t]*(['"])[^'"\n]*\1/gm;
+/** Un client dans le domaine du journal le ferait sortir de la liste blanche. */
+const CLIENT = /@prisma\/client|\bPrismaClient\b|\$(?:executeRaw|queryRaw)/;
 
 export type Vue = {
   /** Les valeurs de l'enum `TypeEvenementJournal`, lues dans `prisma/schema.prisma`. */
   typesDuSchema: string[];
   /** Les schémas de charge, par type. */
   charges: Record<string, z.ZodTypeAny>;
-  /** Les fichiers suivis sous `src/` et `scripts/`, où un second écrivain se cacherait. */
+  /** Les fichiers suivis sous `src/`, `scripts/` et `packages/`, où un second écrivain se cacherait. */
   code: { chemin: string; contenu: string }[];
 };
 
@@ -110,7 +170,7 @@ export const FAMILLES: { nom: Famille; explication: string }[] = [
   {
     nom: 'ecrivain_hors_journal',
     explication:
-      'une écriture de la table evenements (client Prisma ou SQL brut) hors de src/server/evenement/journal.ts : elle contournerait la charge fermée.',
+      'une MENTION de la table ou du délégué (evenements, evenement) hors de la liste blanche : un second écrivain contournerait la charge fermée.',
   },
 ];
 
@@ -118,18 +178,25 @@ export const FAMILLES: { nom: Famille; explication: string }[] = [
 const ligneDe = (texte: string, position: number): number =>
   texte.slice(0, position).split('\n').length;
 
-/** Les positions des écritures de `evenements` dans un fichier, hors de l'écrivain unique. */
+/** Les lignes où un fichier MENTIONNE la table ou le délégué, chemins d'import statiques retirés. */
+export function mentions(contenu: string): number[] {
+  const sansImports = contenu.replace(CHEMIN_D_IMPORT, (m) => m.replace(/[^\n]/g, ' '));
+  return [...sansImports.matchAll(MENTION)].map((m) => ligneDe(sansImports, m.index));
+}
+
+/** Les lignes fautives d'un fichier : toute mention hors de la liste blanche. */
 export function ecrituresHorsJournal(chemin: string, contenu: string): number[] {
   if (chemin === ECRIVAIN_UNIQUE || chemin === CETTE_GARDE) return [];
   if (!RACINES_ECRIVAINS.some((r) => chemin.startsWith(r))) return [];
-  const lignes = new Set<number>();
-  for (const m of contenu.matchAll(ECRITURE_CLIENT)) lignes.add(ligneDe(contenu, m.index));
-  for (const m of contenu.matchAll(SQL_BRUT)) {
-    const fin = contenu.indexOf(';', m.index);
-    const portee = contenu.slice(m.index, fin === -1 ? undefined : fin);
-    if (/evenements/i.test(portee)) lignes.add(ligneDe(contenu, m.index));
+  const lignes = mentions(contenu);
+  if (chemin.startsWith(DOMAINE_DU_JOURNAL)) {
+    return contenu
+      .split('\n')
+      .flatMap((l, i) => (CLIENT.test(l) || DELEGUE.test(l) ? [i + 1] : []));
   }
-  return [...lignes].sort((a, b) => a - b);
+  const comptee = LISTE_BLANCHE_COMPTEE.find((e) => e.chemin === chemin);
+  if (comptee && lignes.length === comptee.mentions) return [];
+  return [...new Set(lignes)].sort((a, b) => a - b);
 }
 
 // ── le contrôle ──────────────────────────────────────────────────────────────
@@ -261,9 +328,11 @@ export function controler(vue: Vue): { fautes: Faute[]; types: number; champs: n
         famille: 'ecrivain_hors_journal',
         ou: `${f.chemin}:${ligne}`,
         message:
-          `${f.chemin}:${ligne} — écriture de la table evenements hors de ${ECRIVAIN_UNIQUE}. ` +
-          'Passe par ajouterEvenement() : sa charge traverse le schéma fermé, et une donnée ' +
-          'personnelle écrite ici ne pourrait plus jamais être effacée.',
+          `${f.chemin}:${ligne} — mention de la table ou du délégué du journal hors de la liste ` +
+          `blanche (écrivain unique : ${ECRIVAIN_UNIQUE}). Passe par ajouterEvenement() : sa charge ` +
+          'traverse le schéma fermé, et une donnée personnelle écrite ailleurs ne pourrait plus ' +
+          "jamais être effacée. Un fichier qui NOMME le mot sans toucher la table s'inscrit à " +
+          'LISTE_BLANCHE_COMPTEE, avec son compte et son motif.',
       });
     }
   }
@@ -352,6 +421,18 @@ const TEMOINS: { famille: Famille; vue: () => Vue }[] = [
       ],
     }),
   },
+  {
+    famille: 'ecrivain_hors_journal',
+    vue: () => ({
+      ...bac({ agregatId: FORMES.identifiant() }),
+      code: [
+        {
+          chemin: 'src/server/bac/alias.ts',
+          contenu: 'const { evenement: j } = tx;\nawait j.create({ data });',
+        },
+      ],
+    }),
+  },
 ];
 
 const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
@@ -374,12 +455,16 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
     vue: () => bac({ nombreDeDepots: z.enum(['un']), nomenclature: z.enum(['x']) }),
   },
   {
-    quoi: 'l’écrivain unique écrit la table, et un autre fichier la LIT par le client',
+    quoi: 'l’écrivain unique écrit la table, un appelant l’importe, le domaine nomme la table',
     vue: () => ({
       ...bac({ agregatId: FORMES.identifiant() }),
       code: [
         { chemin: ECRIVAIN_UNIQUE, contenu: 'await tx.evenement.create({ data });' },
-        { chemin: 'src/server/lecture.ts', contenu: 'await tx.evenement.findMany();' },
+        {
+          chemin: 'src/server/apporteur/creer.ts',
+          contenu: "import { ajouterEvenement } from '../evenement/journal';",
+        },
+        { chemin: 'src/domain/evenement/x.ts', contenu: '// la table evenements est append-only' },
       ],
     }),
   },

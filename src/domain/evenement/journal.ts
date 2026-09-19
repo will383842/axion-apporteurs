@@ -19,7 +19,8 @@
  * genèse (absente, multiple, ou différente de `GENESE` : elle est ÉPINGLÉE), intégrité de chaque
  * ligne, maillon orphelin, bifurcation — et nomme la ligne en cause.
  *
- * CE QU'ELLE VOIT : toute altération par un acteur qui NE RECALCULE PAS la chaîne.
+ * CE QU'ELLE VOIT : une ligne réécrite, une ligne supprimée au MILIEU ou une genèse forgée, par un
+ * acteur qui ne recalcule pas la queue.
  * CE QU'ELLE NE VOIT PAS, dit plutôt que tu : (1) un acteur qui a les droits du propriétaire,
  * désarme le déclencheur, réécrit une ligne et RECALCULE toute la queue — l'algorithme est public et
  * sans secret ; (2) une troncature de la QUEUE. Les deux exigent d'ancrer la tête hors de la base

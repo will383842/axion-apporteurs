@@ -3,12 +3,15 @@
  * partners/ADR-0014 décisions 3 et 8).
  *
  * `ajouterEvenement()` N'ACCEPTE QU'UNE TRANSACTION. REQ-DM-024 exige que toute transition
- * d'agrégat écrive son événement « dans la même transaction ». `Prisma.TransactionClient` seul ne
- * l'impose pas : c'est un `Omit<>` du client, et un `PrismaClient` nu s'y range. Le type
- * `ClientDeTransaction<T>` REFUSE donc tout client qui porte `$transaction` — seul le client reçu
- * par `prisma.$transaction(async (tx) => …)` compile (témoin de type : `@ts-expect-error` dans
- * `tests/integration/journal.spec.ts`). Un `as` le contournerait : le lint refuse l'assertion d'un
- * littéral, pas celle d'une variable — c'est une limite du type, dite ici.
+ * d'agrégat écrive son événement « dans la même transaction ». DEUX DÉFENSES, et chacune dit ce
+ * qu'elle couvre :
+ *   — le TYPE (`ClientDeTransaction<T>`) refuse à la compilation l'appel DIRECT avec un client qui
+ *     porte `$transaction` (témoin `@ts-expect-error` dans `tests/integration/journal.spec.ts`). Il
+ *     ne voit pas un client nu passé par un intermédiaire typé `Prisma.TransactionClient` : ce type
+ *     n'est qu'un `Omit<>` du client, et un `PrismaClient` s'y range ;
+ *   — le REFUS À L'EXÉCUTION protège tout le reste : un client qui porte encore `$transaction` n'est
+ *     pas celui d'une transaction interactive ouverte (même sur un client `$extends`), et
+ *     `ajouterEvenement()` lève avant tout accès à la base.
  *
  * LINÉARITÉ (décision 3). Chaîne GLOBALE : l'écrivain prend `pg_advisory_xact_lock` sur une clé fixe,
  * PUIS lit la tête, dans la même transaction. Sous READ COMMITTED (défaut de Postgres et de Prisma),
@@ -72,6 +75,13 @@ export async function ajouterEvenement<T extends Prisma.TransactionClient>(
   tx: ClientDeTransaction<T>,
   e: NouvelEvenement
 ): Promise<{ id: string; selfHash: string }> {
+  // Le type ne protège que l'appel direct : un client nu passé par un intermédiaire typé
+  // `Prisma.TransactionClient` compile. Ce refus-là tient pour tous les chemins.
+  if ('$transaction' in tx) {
+    throw new Error(
+      'ajouterEvenement exige une transaction ouverte : reçu un client hors transaction'
+    );
+  }
   // Parse et normalisation AVANT le verrou : un refus ne prend rien et n'écrit rien.
   const charge = chargeFermee(e.type, e.charge);
   const enregistrement = {

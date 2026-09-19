@@ -14,6 +14,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
+import type { Prisma } from '@prisma/client';
 import { demarrerBase, prismaCli, type Base } from './harnais';
 import {
   ajouterEvenement,
@@ -266,5 +267,19 @@ describe('REQ-DM-024 — ce que la base et l’écrivain refusent d’eux-mêmes
       // @ts-expect-error — un PrismaClient porte `$transaction` : il n'est pas une transaction.
       ajouterEvenement(base.prisma, e);
     expect(jamaisAppele).toBeTypeOf('function');
+  });
+
+  // Revue A02 schema (5254773565) : le type ne protège que l'appel DIRECT. Un client nu passé par un
+  // intermédiaire typé `Prisma.TransactionClient` compile — c'est un `Omit<>` du client. Le refus à
+  // l'exécution protège tout le reste : rien ne s'écrit hors d'une transaction ouverte.
+  it('REQ-DM-024 : un client nu passé par un intermédiaire typé TransactionClient est REFUSÉ à l’exécution, rien n’est écrit', async () => {
+    const intermediaire = (tx: Prisma.TransactionClient, e: NouvelEvenement) =>
+      ajouterEvenement(tx, e);
+    const avant = await base.prisma.evenement.count();
+    await expect(intermediaire(base.prisma, evenement(60))).rejects.toThrow(
+      /exige une transaction ouverte/
+    );
+    expect(await base.prisma.evenement.count()).toBe(avant);
+    expect(await verifier()).toMatchObject({ ok: true });
   });
 });

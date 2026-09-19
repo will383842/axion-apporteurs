@@ -270,15 +270,253 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
 
   it.each([
     ['l’écrivain unique lui-même', 'src/server/evenement/journal.ts', ECRIVAIN_BIS],
-    ['une lecture par findMany', 'src/server/x.ts', 'await tx.evenement.findMany();'],
     [
       'du SQL brut qui ne touche pas le journal',
       'src/server/x.ts',
       'await tx.$executeRaw`SELECT 1`;',
     ],
     ['un fichier de test (hors portée)', 'tests/integration/x.spec.ts', ECRIVAIN_BIS],
+    [
+      'un appelant qui IMPORTE l’écrivain par son chemin de module',
+      'src/server/apporteur/creer.ts',
+      "import { ajouterEvenement } from '../evenement/journal';\nexport { ajouterEvenement };",
+    ],
+    [
+      'le type Prisma `Evenement` (majuscule) et un autre modèle (`evenementRecu`)',
+      'src/server/x.ts',
+      "import type { Evenement } from '@prisma/client';\nawait tx.evenementRecu.create({ data });",
+    ],
+    [
+      'un fichier pur du domaine du journal qui nomme la table, sans client ni délégué',
+      'src/domain/evenement/autre.ts',
+      '// la table evenements est append-only\nexport const TABLE_DU_JOURNAL = 1;',
+    ],
   ])('REQ-DM-041 : contre-témoin — %s ne rougit pas', (_quoi, chemin, contenu) => {
     expect(ou(avecCode(chemin, contenu))).toEqual([]);
+  });
+
+  // Les deux formes ouvertes de la revue exactitude (5254778981) : elles sortaient en 0, et la
+  // première a écrit une ligne portant un courriel en base réelle.
+  it.each([
+    [
+      '(a) texte SQL dans une constante, puis $executeRawUnsafe(CONST)',
+      "const SQL = 'INSERT INTO evenements (type) VALUES ($1)';\nawait tx.$executeRawUnsafe(SQL, 'journal_ouvert');",
+      1,
+    ],
+    [
+      '(a) Prisma.sql dans une variable, puis $executeRaw(variable)',
+      'const q = Prisma.sql`INSERT INTO evenements (type) VALUES (1)`;\nawait tx.$executeRaw(q);',
+      1,
+    ],
+    ['(b) alias du modèle', 'const journal = tx.evenement;\nawait journal.create({ data });', 1],
+  ])('REQ-DM-041 : forme de la revue exactitude %s — rougit, nommée', (_q, contenu, ligne) => {
+    expect(ou(avecCode('src/server/bac/forme.ts', contenu))).toEqual([
+      `ecrivain_hors_journal src/server/bac/forme.ts:${ligne}`,
+    ]);
+  });
+
+  it.each([
+    [
+      'un FROM de requête SQL n’est pas un chemin d’import',
+      'await tx.$queryRawUnsafe(\'SELECT 1 FROM "evenements"\');',
+    ],
+    ['une constante exportée n’est pas un import', 'export const q = `delete from "evenements"`;'],
+    [
+      'le domaine du journal qui nomme le délégué',
+      'export const d = (tx: { evenement: unknown }) => tx.evenement;',
+    ],
+  ])('REQ-DM-041 : %s — rougit', (_q, contenu) => {
+    const chemin = contenu.includes('export const d')
+      ? 'src/domain/evenement/bac.ts'
+      : 'src/server/bac/requete.ts';
+    expect(ou(avecCode(chemin, contenu))).toEqual([`ecrivain_hors_journal ${chemin}:1`]);
+  });
+
+  // Les dix variantes du SECOND veto securite (revue 5254766985), chacune précédée du même en-tête
+  // que la sonde : la règle ne chasse plus une orthographe d'appel, elle refuse toute MENTION de la
+  // table ou du délégué hors de la liste blanche.
+  const ENTETE_SONDE = [
+    "import { Prisma } from '@prisma/client';",
+    "const data = { type: 'journal_ouvert' as const, survenuAt: new Date(), charge: { courriel: 'jean.dupont@exemple.fr' }, prevHash: '0'.repeat(64), selfHash: '1'.repeat(64) };",
+  ].join('\n');
+  const fonction = (corps: string) =>
+    `export async function ecrire(tx: Prisma.TransactionClient): Promise<void> {\n${corps}\n}`;
+  it.each([
+    [
+      'v01 gabarit brut',
+      fonction(
+        "  await tx.$executeRaw`INSERT INTO evenements (type, survenu_at, charge, prev_hash, self_hash) VALUES ('journal_ouvert', now(), '{}', ${data.prevHash}, ${data.selfHash})`;"
+      ),
+    ],
+    ['v02 createMany', fonction('  await tx.evenement.createMany({ data: [data] });')],
+    ['v03 alias du client', fonction('  const c = tx;\n  await c.evenement.create({ data });')],
+    [
+      'v04 délégué en variable',
+      fonction('  const journal = tx.evenement;\n  await journal.create({ data });'),
+    ],
+    [
+      'v05 déstructuration',
+      fonction('  const { evenement: journal } = tx;\n  await journal.create({ data });'),
+    ],
+    ['v06 crochets', fonction("  await tx['evenement'].create({ data });")],
+    ['v07 chaînage optionnel', fonction('  await tx.evenement?.create({ data });')],
+    [
+      'v08 Prisma.sql puis $executeRaw(requete)',
+      "const requete = Prisma.sql`INSERT INTO evenements (type) VALUES ('journal_ouvert')`;\n" +
+        fonction('  await tx.$executeRaw(requete);'),
+    ],
+    [
+      'v09 nom de table dans une constante',
+      "const TABLE = 'evenements';\n" +
+        fonction(
+          '  const sql = `INSERT INTO ${TABLE} (type) VALUES ($1)`;\n  await tx.$executeRawUnsafe(sql, 1);'
+        ),
+    ],
+    [
+      'v10 appel coupé par un commentaire',
+      fonction(
+        '  await tx.evenement\n    // commentaire\n    .upsert({ where: { selfHash: data.selfHash }, create: data, update: {} });'
+      ),
+    ],
+  ])('REQ-DM-041 : variante du second veto (%s) — rougit en ecrivain_hors_journal', (_q, corps) => {
+    const fautes = ou(avecCode('src/server/bac/ecrivain.ts', `${ENTETE_SONDE}\n${corps}`));
+    expect(fautes.length).toBeGreaterThan(0);
+    expect(
+      fautes.every((f) => f.startsWith('ecrivain_hors_journal src/server/bac/ecrivain.ts:'))
+    ).toBe(true);
+  });
+
+  // Les formes de la revue mutation (5254820185) : chacune sortait en 0 sous la règle d'orthographe.
+  it.each([
+    [
+      'P1 SQL dans une variable',
+      "const q = `INSERT INTO evenements (charge) VALUES ('{}')`;\nawait tx.$executeRawUnsafe(q);",
+    ],
+    [
+      'P2 Prisma.sql déclaré plus haut, puis $executeRaw(sql)',
+      'const sql = Prisma.sql`INSERT INTO evenements (charge) VALUES (${c})`;\nawait tx.$executeRaw(sql);',
+    ],
+    ['P3 alias du délégué', 'const journal = tx.evenement;\nawait journal.create({ data });'],
+    [
+      'P4 déstructuration puis createMany',
+      'const { evenement: e } = tx;\nawait e.createMany({ data: [] });',
+    ],
+    [
+      'P5 point-virgule dans la chaîne SQL',
+      "await tx.$executeRawUnsafe('SELECT 1; INSERT INTO evenements (charge) VALUES ($1)', c);",
+    ],
+    [
+      'P6 nom de table entre guillemets doubles',
+      'await tx.$executeRawUnsafe(`INSERT INTO "evenements" (charge) VALUES ($1)`, c);',
+    ],
+    [
+      'P7 schéma qualifié',
+      'await tx.$executeRaw`INSERT INTO public.evenements (charge) VALUES (${c})`;',
+    ],
+    [
+      'P8 $transaction de requêtes',
+      'await prisma.$transaction([prisma.evenement.create({ data })]);',
+    ],
+    ['P9 chaînage optionnel du client et du délégué', 'await tx?.evenement?.create({ data });'],
+    ['P10 crochets', "await tx['evenement'].create({ data });"],
+  ])('REQ-DM-041 : forme de la revue mutation %s — rougit', (_q, contenu) => {
+    expect(ou(avecCode('src/server/sonde.ts', contenu)).length).toBeGreaterThan(0);
+  });
+
+  it('REQ-DM-041 : plusieurs fichiers, l’écrivain second au MILIEU, en .js sous src/ et sous scripts/ — seuls les fautifs sont nommés', () => {
+    const vue: Vue = {
+      ...conforme({ journal_ouvert: CHARGES_PAR_TYPE.journal_ouvert }),
+      code: [
+        {
+          chemin: 'src/server/evenement/journal.ts',
+          contenu: 'await tx.evenement.create({ data });',
+        },
+        { chemin: 'src/server/a.ts', contenu: 'export const a = 1;' },
+        {
+          chemin: 'src/server/milieu.js',
+          contenu: 'module.exports = (tx) => tx.evenement.create({});',
+        },
+        { chemin: 'src/domain/evenement/b.ts', contenu: '// la table evenements' },
+        { chemin: 'scripts/outil/purge.js', contenu: "db.query('delete from evenements');" },
+        { chemin: 'src/server/z.ts', contenu: 'export const z = 1;' },
+      ],
+    };
+    expect(ou(vue)).toEqual([
+      'ecrivain_hors_journal src/server/milieu.js:1',
+      'ecrivain_hors_journal scripts/outil/purge.js:1',
+    ]);
+  });
+
+  it('REQ-DM-041 : deux écritures dans un fichier, la PREMIÈRE légitime, la SECONDE fautive — seule la seconde est nommée', () => {
+    const contenu = [
+      "import { ajouterEvenement } from '../evenement/journal';",
+      'await ajouterEvenement(tx, e);',
+      'await tx.evenement.createMany({ data: [] });',
+    ].join('\n');
+    expect(ou(avecCode('src/server/deux.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/deux.ts:3',
+    ]);
+  });
+
+  it('REQ-DM-041 : deux mentions fautives dans un fichier — CHACUNE est nommée, pas seulement la première', () => {
+    const contenu = [
+      'export const a = 1;',
+      'await tx.evenement.create({ data });',
+      'export const b = 2;',
+      "await tx.$executeRawUnsafe('delete from evenements');",
+    ].join('\n');
+    expect(ou(avecCode('src/server/deux.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/deux.ts:2',
+      'ecrivain_hors_journal src/server/deux.ts:4',
+    ]);
+  });
+
+  it('REQ-DM-041 : une LECTURE du délégué hors de journal.ts rougit aussi — échec fermé', () => {
+    expect(ou(avecCode('src/server/x.ts', 'await tx.evenement.findMany();'))).toEqual([
+      'ecrivain_hors_journal src/server/x.ts:1',
+    ]);
+  });
+
+  it('REQ-DM-041 : un fichier de packages/ qui mentionne la table rougit', () => {
+    expect(ou(avecCode('packages/outil/bac.mjs', "db.query('delete from evenements')"))).toEqual([
+      'ecrivain_hors_journal packages/outil/bac.mjs:1',
+    ]);
+  });
+
+  it('REQ-DM-041 : un fichier du domaine du journal qui importe un client rougit — la liste blanche suppose un domaine pur', () => {
+    expect(
+      ou(
+        avecCode(
+          'src/domain/evenement/bac.ts',
+          "import { PrismaClient } from '@prisma/client';\nexport const c = new PrismaClient();"
+        )
+      )
+    ).toEqual([
+      'ecrivain_hors_journal src/domain/evenement/bac.ts:1',
+      'ecrivain_hors_journal src/domain/evenement/bac.ts:2',
+    ]);
+  });
+
+  it('REQ-DM-041 : un fichier de la liste blanche COMPTÉE qui gagne une mention rougit', () => {
+    const vue = vueDuDepot();
+    const compte = vue.code.find((f) => f.chemin === 'scripts/gates/gov-check.ts')!;
+    const vueFautive: Vue = {
+      ...vue,
+      code: [
+        {
+          chemin: compte.chemin,
+          contenu: `${compte.contenu}\nawait tx.evenement.create({ data });`,
+        },
+      ],
+    };
+    // Le compte ne tient plus : TOUTES les mentions du fichier redeviennent des fautes, la nouvelle
+    // comprise — la ligne ajoutée est la dernière du fichier.
+    const fautes = ou(vueFautive);
+    const derniere = vueFautive.code[0]!.contenu.split('\n').length;
+    expect(fautes).toContain(`ecrivain_hors_journal scripts/gates/gov-check.ts:${derniere}`);
+    expect(
+      fautes.every((f) => f.startsWith('ecrivain_hors_journal scripts/gates/gov-check.ts:'))
+    ).toBe(true);
   });
 
   it('REQ-DM-041 : sur le dépôt, la portée des écrivains est lue et n’est pas vide', () => {

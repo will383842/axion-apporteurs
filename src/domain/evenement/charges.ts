@@ -21,7 +21,7 @@
  *
  * LES TYPES NE SONT PAS RECOPIÉS D'UNE SOURCE : `TypeEvenementJournal` est l'enum de
  * `prisma/schema.prisma`. L'union locale ci-dessous n'existe que parce que le domaine est pur (il
- * n'importe pas `@prisma/client`) ; la garde confronte les clés de `CHARGES_PAR_TYPE` aux valeurs de
+ * n'importe pas le client Prisma) ; la garde confronte les clés de `CHARGES_PAR_TYPE` aux valeurs de
  * l'enum lues dans le schéma, DANS LES DEUX SENS.
  */
 import { z } from 'zod';
