@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `244d990` — 2026-09-19T06:07:00+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #75 (rien) · 2. #74 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #75 (rien) · 2. #76 (un contrôle requis rouge ou une revue manquante) · 3. #74 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 71.60 j |
 | Le prochain pas | fusionner #75, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
@@ -65,7 +65,8 @@ Reste sur ce chemin : **17.50 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | rien — fusionnable maintenant |
-| 2 | #74 — feat(SEC-02): en-têtes de sécurité et CSP par nonce | `t/sec-02` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un contrôle requis rouge ou une revue manquante |
+| 3 | #74 — feat(SEC-02): en-têtes de sécurité et CSP par nonce | `t/sec-02` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -121,7 +122,7 @@ pas.
 **Reste.** La mesure au navigateur, le rendu dynamique qui porte le nonce, les styles en attribut
 que la politique bloque et les règles de spéculation de Next sont des charges de la première page,
 SEC-03. La préséance du `Cache-Control` du proxy sur celui d'une page statique n'est pas prouvée ici.
-Quatre specs voisines assertent `NodeJS.ProcessEnv` à la frontière d'un sous-processus : dette, tant
+Cinq specs voisines, dont celle de SEC-01, assertent `NodeJS.ProcessEnv` à la frontière d'un sous-processus : dette, tant
 que `next` déclare `NODE_ENV` obligatoire.
 
 **Appris.** Importer `type { NextConfig } from 'next'` charge les types globaux de `next`, qui

@@ -1377,7 +1377,8 @@
         "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
         "tests/unit/gouvernance/entite-registre.spec.ts",
         "tests/unit/gouvernance/gardes-transposees.spec.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/unit/securite/env-boot.spec.ts"
       ],
       "schema": false,
       "sensible": [
