@@ -67,7 +67,8 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { posix } from 'node:path';
 
 export const CHEMIN_AGENTS = 'docs/agents.json';
 export const CHEMIN_CHARTE = 'docs/CHARTE-AGENTS.md';
@@ -537,19 +538,22 @@ export function tachesSchemaDeLaPr<T extends TacheDeLaPr>(
  *      `qualite`, porte `sensible` PRÉSENT et VIDE, et `schema` qui n'est pas `true` — la plus
  *      haute l'emporte (`.some`, jamais la première ni la dernière) ;
  *   4. aucun label `schema` ;
- *   5. un diff NON VIDE dont chaque fichier est sous `docs/`, `scripts/`, `tests/`, ou est un
- *      document `*.md` à la racine, et n'appartient pas à la garde des revues. Un fichier RENOMMÉ
- *      ou COPIÉ compte par sa source ET sa destination (`cheminsTouches`).
+ *   5. un diff NON VIDE, COMPLET (la forge plafonne sa liste sans erreur : voir `ListeDesFichiers`),
+ *      dont chaque fichier est sous `docs/`, `scripts/` ou `tests/`, et n'appartient pas à la garde
+ *      des revues (`cheminsDeLaGardeDesRevues`, fermeture transitive de ses imports). Un fichier
+ *      RENOMMÉ ou COPIÉ compte par sa source ET sa destination (`cheminsTouches`).
  *
  * ⚠️ `.github/` N'Y EST PAS, et c'est une décision (orchestrateur, 2026-09-18, sur GOV-077) : les
  * workflows et `CODEOWNERS` gouvernent les gates et la propriété des chemins. Une PR qui affaiblit
  * la CI est exactement celle qu'on ne relit pas à deux lentilles. Conséquence assumée : une tâche
  * qui touche `.github/workflows/ci.yml` (QA-T01) se relit en élevé.
  *
- * ⚠️ LA RACINE N'Y EST PAS NON PLUS, SAUF SES DOCUMENTS `*.md` (même décision, sur la dette 5 de la
- * lentille `securite`) : `package.json`, `pnpm-lock.yaml`, `vitest.config.*`, `eslint.config.*`,
- * `tsconfig*.json`, `.npmrc`, `.gitattributes`… gouvernent la chaîne de contrôle. Les énumérer
- * laisserait passer le prochain ; la règle fermée est « toute la racine, sauf les documents ».
+ * ⚠️ LA RACINE N'Y EST PAS NON PLUS, SANS AUCUNE EXCEPTION (décisions (f) puis (g) de
+ * l'orchestrateur, sur les dettes de la lentille `securite`) : `package.json`, `pnpm-lock.yaml`,
+ * `vitest.config.*`, `eslint.config.*`, `tsconfig*.json`, `.npmrc`, `.gitattributes` gouvernent la
+ * chaîne de contrôle, et `CLAUDE.md` ou `AGENTS.md` sont les instructions que CHAQUE agent charge,
+ * relecteurs compris. Les énumérer laisserait passer le prochain ; la règle fermée est « toute la
+ * racine ».
  *
  * POURQUOI DES LISTES BLANCHES. Une liste noire de zones (« argent, securite ») laisse passer tout
  * le reste : mesuré le 2026-09-18, huit tâches vivantes manipulent des données personnelles avec
@@ -562,19 +566,58 @@ export const ZONES_A_RISQUE_ORDINAIRE: readonly string[] = ['gouvernance', 'qual
 export const CHEMINS_A_RISQUE_ORDINAIRE: readonly string[] = ['docs/', 'scripts/', 'tests/'];
 
 /**
- * LA GARDE DES REVUES ELLE-MÊME est toujours de risque élevé, même sous `scripts/` ou `docs/` :
- * sinon une PR ordinaire, relue par deux lentilles, pourrait affaiblir la règle qui décide combien
- * de lentilles relisent toutes les autres. Le module, ses deux importeurs, et les deux documents
- * qu'il lit. Cette liste n'est pas tapée au hasard : `lentilles-selon-le-risque.spec.ts` la
- * confronte au GRAPHE D'IMPORTS de `scripts/`, et un importeur non déclaré la fait rougir.
+ * LES RACINES DE LA GARDE DES REVUES : le lecteur unique et ses deux appelants.
  */
-export const CHEMINS_DE_LA_GARDE_DES_REVUES: readonly string[] = [
+export const RACINES_DE_LA_GARDE_DES_REVUES: readonly string[] = [
   'scripts/lot/revues.ts',
   'scripts/gates/gov-pr.ts',
   'scripts/lot/corps-de-pr.ts',
-  CHEMIN_CHARTE,
-  CHEMIN_AGENTS,
 ];
+
+let gardeEnCache: readonly string[] | null = null;
+
+/**
+ * LA GARDE DES REVUES ELLE-MÊME est toujours de risque élevé, même sous `scripts/` ou `docs/` :
+ * sinon une PR ordinaire, relue par deux lentilles, pourrait affaiblir la règle qui décide combien
+ * de lentilles relisent toutes les autres.
+ *
+ * 🔴 ELLE ÉTAIT UNE LISTE DE CINQ CHEMINS, ET LA GATE EN EXÉCUTE DAVANTAGE (dette 1 de la lentille
+ * `securite`, second tour de la PR 64) : `scripts/lot/avancement.ts` et
+ * `scripts/lot/chemins-de-tache.ts` tournent dans `gov:pr`, et une PR qui les modifiait passait
+ * ordinaire. La garde est donc la FERMETURE TRANSITIVE des imports relatifs de ses trois racines,
+ * DÉRIVÉE du disque à chaque lecture — jamais tapée —, plus les deux documents que la garde lit
+ * (la charte, le registre des postes).
+ *
+ * ÉCHEC FERMÉ : un import qui ne se résout pas LÈVE. Une garde dont on ne sait pas de quoi elle
+ * est faite ne peut pas dire qu'une PR n'y touche pas.
+ * LIMITE DÉCLARÉE : les fichiers LUS à l'exécution sans être importés (`scripts/lot/tasks.schema.json`
+ * par `avancement.ts`, le gabarit de PR, `CODEOWNERS`) ne sont pas dans le graphe — le gabarit et
+ * `CODEOWNERS` sont sous `.github/`, donc élevés ; le schéma du registre ne l'est pas.
+ */
+export function cheminsDeLaGardeDesRevues(): readonly string[] {
+  if (gardeEnCache !== null) return gardeEnCache;
+  const MOTIF_IMPORT = /(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g;
+  const resoudre = (depuis: string, specifiant: string): string => {
+    const base = posix.normalize(posix.join(posix.dirname(depuis), specifiant));
+    for (const c of [base, `${base}.ts`, `${base}.mjs`, `${base}.js`, `${base}/index.ts`]) {
+      if (existsSync(c) && statSync(c).isFile()) return c;
+    }
+    throw new Error(
+      `${depuis} importe « ${specifiant} », introuvable : la garde des revues ne peut pas être ` +
+        `dérivée, et le risque d'aucune PR ne peut être dit ordinaire.`
+    );
+  };
+  const vus = new Set<string>();
+  const pile = [...RACINES_DE_LA_GARDE_DES_REVUES];
+  while (pile.length > 0) {
+    const f = pile.pop()!;
+    if (vus.has(f)) continue;
+    vus.add(f);
+    for (const m of readFileSync(f, 'utf8').matchAll(MOTIF_IMPORT)) pile.push(resoudre(f, m[1]!));
+  }
+  gardeEnCache = [...vus, CHEMIN_CHARTE, CHEMIN_AGENTS];
+  return gardeEnCache;
+}
 
 export const CHEMIN_TACHES = 'docs/tasks.json';
 
@@ -630,12 +673,52 @@ function tacheNonOrdinaire(t: TacheDeLaPr): string | null {
   return ecarts.length === 0 ? null : ecarts.join(', ');
 }
 
-/** Un fichier hors code produit : un document `*.md` à la racine, ou sous l'un des préfixes admis. */
+/** Un fichier hors code produit : sous l'un des préfixes admis — jamais à la racine (décision (g)). */
 function cheminOrdinaire(f: string): boolean {
-  return (
-    (!f.includes('/') && f.endsWith('.md')) ||
-    CHEMINS_A_RISQUE_ORDINAIRE.some((p) => f.startsWith(p))
-  );
+  return CHEMINS_A_RISQUE_ORDINAIRE.some((p) => f.startsWith(p));
+}
+
+/**
+ * LE PLAFOND DE `GET /repos/{o}/{r}/pulls/{n}/files` : 3000 fichiers, au-delà desquels la forge
+ * TRONQUE sa réponse SANS erreur (documentation de l'interface REST de GitHub).
+ */
+export const PLAFOND_DES_FICHIERS_DE_LA_FORGE = 3000;
+
+/**
+ * D'OÙ VIENT LA LISTE DES FICHIERS D'UNE PR, et donc si elle est COMPLÈTE.
+ *
+ *   — `complete` : listée par `git diff` sur l'arbre (mode événement), ou fournie entière par une
+ *     fixture. Complète par construction.
+ *   — `forge` : lue sur `pulls/{n}/files`. `lues` est le nombre d'ENTRÉES de l'API (un renommage,
+ *     source et destination, compte pour une) ; `annoncees` est `changed_files` de la PR.
+ *
+ * 🔴 LE DÉFAUT, relevé par la lentille `securite` au second tour de la PR 64 : la forge plafonne sa
+ * liste sans erreur, et personne ne comparait à `changed_files`. Trois mille documents suivis d'un
+ * fichier de configuration donnaient « risque ordinaire ». Une liste incomplète ne prouve rien :
+ * elle rend la PR ÉLEVÉE, et `null` (complétude inconnue) aussi.
+ */
+export type ListeDesFichiers =
+  { source: 'complete' } | { source: 'forge'; lues: number; annoncees: number | null };
+
+/** Pourquoi la liste des fichiers n'est PAS prouvée complète — `null` si elle l'est. */
+function listeIncomplete(liste: ListeDesFichiers | null): string | null {
+  if (liste !== null && liste.source === 'complete') return null;
+  if (liste !== null && liste.source === 'forge') {
+    const { lues, annoncees } = liste;
+    if (
+      typeof annoncees === 'number' &&
+      annoncees < PLAFOND_DES_FICHIERS_DE_LA_FORGE &&
+      lues >= annoncees
+    ) {
+      return null;
+    }
+    return (
+      `liste des fichiers incomplète : ${lues} entrée(s) lue(s) sur la forge pour ` +
+      `${annoncees ?? 'un nombre illisible de'} fichier(s) annoncé(s) (plafond de l'interface : ` +
+      `${PLAFOND_DES_FICHIERS_DE_LA_FORGE})`
+    );
+  }
+  return 'liste des fichiers de complétude inconnue';
 }
 
 /**
@@ -667,22 +750,35 @@ export function cheminsTouches(entrees: readonly EntreeDeFichier[]): string[] {
   return [...chemins];
 }
 
+/** Les options de `git diff` que `entreesDuDiff()` sait lire — nommées une fois, pour l'appelant. */
+export const OPTIONS_DU_DIFF = ['-c', 'core.quotePath=false', 'diff', '--name-status', '-z'];
+
 /**
- * La sortie de `git diff --name-status`, lue dans la forme de la forge. Une ligne = un statut puis
- * un chemin, ou DEUX pour un renommage ou une copie (`R100`, `C075`) : la source puis la destination.
+ * La sortie de `git diff --name-status -z`, lue dans la forme de la forge. Chaque champ se termine
+ * par un octet NUL : un statut, puis un chemin — ou DEUX pour un renommage ou une copie (`R100`,
+ * `C075`) : la source puis la destination.
+ *
+ * 🔴 POURQUOI `-z` (lentille `exactitude`, second tour de la PR 64) : sans lui, git cite un chemin
+ * NON ASCII entre guillemets et en octal. `prisma/é.sql` devenait une chaîne qui ne commence plus
+ * par `prisma/` : ni la lentille `schema`, ni le label `schema` n'étaient plus exigés.
  */
 export function entreesDuDiff(sortie: string): EntreeDeFichier[] {
   const entrees: EntreeDeFichier[] = [];
-  for (const ligne of sortie.split('\n')) {
-    const colonnes = ligne.replace(/\r$/, '').split('\t');
-    if (colonnes.length < 2) continue;
-    const chemins = colonnes.slice(1).filter(Boolean);
-    const destination = chemins[chemins.length - 1];
-    if (destination === undefined) continue;
+  const champs = sortie.split(String.fromCharCode(0));
+  let i = 0;
+  while (i < champs.length) {
+    const statut = champs[i] ?? '';
+    i++;
+    if (statut === '') continue;
+    const deux = /^[RC]/.test(statut);
+    const source = champs[i];
+    const destination = deux ? champs[i + 1] : source;
+    i += deux ? 2 : 1;
+    if (!destination) continue;
     entrees.push({
       filename: destination,
-      previous_filename: chemins.length > 1 ? chemins[0] : null,
-      status: colonnes[0],
+      previous_filename: deux ? source : null,
+      status: statut,
     });
   }
   return entrees;
@@ -697,6 +793,8 @@ export type EntreeDuRisque = {
   /** Le registre de la BASE — `null` s'il est illisible, et c'est un risque élevé. */
   tachesBase: readonly TacheDeLaPr[] | null;
   fichiers: readonly string[];
+  /** D'où vient `fichiers`, et si la liste est complète — `null` : inconnu, donc ÉLEVÉ. */
+  liste: ListeDesFichiers | null;
   labels: readonly string[];
   charte?: string;
 };
@@ -750,14 +848,16 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
 
   if (e.labels.includes(LENTILLE_SCHEMA)) raisons.push('label `schema` posé');
   if (e.fichiers.length === 0) raisons.push('diff vide ou illisible');
+  const incomplete = listeIncomplete(e.liste);
+  if (incomplete !== null) raisons.push(incomplete);
   const produit = e.fichiers.filter((f) => !cheminOrdinaire(f));
   if (produit.length > 0) {
     raisons.push(
-      `fichier(s) hors ${CHEMINS_A_RISQUE_ORDINAIRE.join(', ')} et documents .md de la racine : ` +
-        produit.join(', ')
+      `fichier(s) hors ${CHEMINS_A_RISQUE_ORDINAIRE.join(', ')} : ${produit.join(', ')}`
     );
   }
-  const garde = e.fichiers.filter((f) => CHEMINS_DE_LA_GARDE_DES_REVUES.includes(f));
+  const chemins = cheminsDeLaGardeDesRevues();
+  const garde = e.fichiers.filter((f) => chemins.includes(f));
   if (garde.length > 0) raisons.push(`fichier(s) de la garde des revues : ${garde.join(', ')}`);
 
   const schema = toucheSchema({

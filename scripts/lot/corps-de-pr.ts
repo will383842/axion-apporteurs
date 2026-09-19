@@ -59,6 +59,7 @@ import {
   tachesDeLaBase,
   tachesDeLaPr,
   type EntreeDeFichier,
+  type ListeDesFichiers,
   type RevueBrute,
   type TacheDeLaPr,
   jugerLesTetes,
@@ -184,6 +185,8 @@ export function jugerCaseRevues(e: {
   titre: string | null;
   pr: number;
   fichiers: readonly string[];
+  /** D'où vient `fichiers`, et si la liste est complète — `null` : inconnu, donc case vide. */
+  liste: ListeDesFichiers | null;
   labels: readonly string[];
   revues: RevueBrute[];
   taches: readonly TacheDeLaPr[];
@@ -203,6 +206,7 @@ export function jugerCaseRevues(e: {
       taches: e.taches,
       tachesBase: e.tachesBase,
       fichiers: e.fichiers,
+      liste: e.liste,
       labels: e.labels,
     }),
     tete: e.tete,
@@ -223,6 +227,7 @@ function caseRevues(
   let baseSha: string;
   let labels: string[];
   let fichiers: string[];
+  let liste: ListeDesFichiers;
   let revues: RevueBrute[];
   let auteurCompte: string | null;
   try {
@@ -237,6 +242,7 @@ function caseRevues(
       base?: { sha?: string };
       user?: { login?: string };
       labels?: { name: string }[];
+      changed_files?: number;
     };
     tete = meta.head.sha;
     titre = meta.title ?? null;
@@ -266,14 +272,20 @@ function caseRevues(
     auteurCompte = meta.user?.login ?? null;
     labels = (meta.labels ?? []).map((l) => l.name);
     // Un fichier RENOMMÉ compte par sa source ET sa destination : la même extraction que la garde.
-    fichiers = cheminsTouches(
-      JSON.parse(
-        execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/files`, '--paginate'], {
-          encoding: 'utf8',
-          maxBuffer: 32e6,
-        })
-      ) as EntreeDeFichier[]
-    );
+    const entrees = JSON.parse(
+      execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/files`, '--paginate'], {
+        encoding: 'utf8',
+        maxBuffer: 32e6,
+      })
+    ) as EntreeDeFichier[];
+    fichiers = cheminsTouches(entrees);
+    // La liste de la forge plafonne sans erreur : on la compare à ce que la PR ANNONCE, la même
+    // réponse `pulls/{n}` que la tête et le titre (`ListeDesFichiers`, `scripts/lot/revues.ts`).
+    liste = {
+      source: 'forge',
+      lues: entrees.length,
+      annoncees: Number.isInteger(meta.changed_files) ? meta.changed_files! : null,
+    };
     revues = JSON.parse(
       execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${pr}/reviews`, '--paginate'], {
         encoding: 'utf8',
@@ -292,6 +304,7 @@ function caseRevues(
     titre,
     pr,
     fichiers,
+    liste,
     labels,
     revues,
     taches,

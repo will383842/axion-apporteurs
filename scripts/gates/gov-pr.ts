@@ -50,6 +50,7 @@ import {
   cheminsSchema,
   cheminsTouches,
   entreesDuDiff,
+  OPTIONS_DU_DIFF,
   direLeRisque,
   fautesDesRevues,
   lentillesExigees,
@@ -63,6 +64,7 @@ import {
   type CommentaireBrut,
   type DemandeDeConcordance,
   type EntreeDeFichier,
+  type ListeDesFichiers,
   type RevueBrute,
   type Risque,
   type TacheDeLaPr,
@@ -165,6 +167,11 @@ type Pr = {
   tachesBase?: Tache[] | null;
   /** Les commentaires d'issue de la PR, sous `--pr <n>` : un avis posté là ne compte pour rien. */
   commentaires?: CommentaireBrut[] | null;
+  /**
+   * D'où vient `fichiers`, et si la liste est COMPLÈTE (GOV-077, second refus de `securite`) :
+   * absente ou `null` → complétude inconnue → risque ÉLEVÉ.
+   */
+  liste?: ListeDesFichiers | null;
 };
 /**
  * ⚠️ `paths` ET `tests` FONT PARTIE DE LA PROJECTION, et leur absence rendrait la famille
@@ -342,6 +349,7 @@ function risqueDePr(depot: Depot, pr: Pr): Risque {
     pr: pr.numero ?? null,
     taches: depot.taches,
     tachesBase: pr.tachesBase ?? null,
+    liste: pr.liste ?? null,
     fichiers: pr.fichiers,
     labels: pr.labels,
     charte: depot.charte,
@@ -885,13 +893,19 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
   // `scripts/lot/corps-de-pr.ts` emploie déjà.
   // Un fichier RENOMMÉ compte par sa source ET sa destination : `cheminsTouches()`, l'extraction
   // unique partagée avec le composeur (refus de `securite`, 2026-09-19).
-  const fichiers = cheminsTouches(
-    JSON.parse(
-      execFileSync('gh', ['api', '--paginate', `repos/{owner}/{repo}/pulls/${numero}/files`], {
-        encoding: 'utf8',
-        maxBuffer: 32e6,
-      })
-    ) as EntreeDeFichier[]
+  const entreesDeFichiers = JSON.parse(
+    execFileSync('gh', ['api', '--paginate', `repos/{owner}/{repo}/pulls/${numero}/files`], {
+      encoding: 'utf8',
+      maxBuffer: 32e6,
+    })
+  ) as EntreeDeFichier[];
+  const fichiers = cheminsTouches(entreesDeFichiers);
+  // ⚠️ ET CETTE LISTE PLAFONNE SANS ERREUR : on la compare au nombre que la PR ANNONCE. Une liste
+  // plus courte, ou un compte au plafond, rend la PR élevée (`ListeDesFichiers`).
+  const annoncees = Number(
+    execFileSync('gh', ['api', `repos/{owner}/{repo}/pulls/${numero}`, '--jq', '.changed_files'], {
+      encoding: 'utf8',
+    }).trim()
   );
   // Un avis posté en COMMENTAIRE D'ISSUE ne compte pour rien (la PR 41) : on le lit pour le DIRE.
   const commentaires = JSON.parse(
@@ -979,6 +993,11 @@ function prParGh(numero: string, moment: DemandeDeConcordance['moment'] = 'avant
     // Le registre de la BASE — `origin/<base>`, la même référence que le pas 8. Illisible (ref
     // absente en local) → `null` → risque ÉLEVÉ : le sens de défaillance reste fermé.
     tachesBase: projeter(tachesDeLaBase(refBase)),
+    liste: {
+      source: 'forge',
+      lues: entreesDeFichiers.length,
+      annoncees: Number.isInteger(annoncees) ? annoncees : null,
+    },
     // ⚠️ Après fusion la branche est SUPPRIMéE : `headRefOid` désigne un objet mort, et c'est
     // pourtant lui dont dérivent `perimees`, `lentille_perimee` et la coche de DoD. La lentille
     // `schema` (12e tour) : deux notions de « tête » dans un même run. On garde `headRefOid`
@@ -1006,15 +1025,17 @@ function prParEvenement(): Pr | null {
   if (!ev.pull_request) return null;
   let fichiers: string[] = [];
   try {
-    // `--name-status` et non `--name-only` : ce dernier ne rend que la DESTINATION d'un renommage.
-    // La source et la destination passent par l'extraction unique (`entreesDuDiff`, `cheminsTouches`).
+    // `--name-status -z` et non `--name-only` : ce dernier ne rend que la DESTINATION d'un
+    // renommage, et cite entre guillemets un chemin non ASCII. Source et destination passent par
+    // l'extraction unique (`entreesDuDiff`, `cheminsTouches`), avec les options qu'elle sait lire.
     fichiers = cheminsTouches(
       entreesDuDiff(
         execFileSync(
           'git',
-          ['diff', '--name-status', `${ev.pull_request.base.sha}...${ev.pull_request.head.sha}`],
+          [...OPTIONS_DU_DIFF, `${ev.pull_request.base.sha}...${ev.pull_request.head.sha}`],
           {
             encoding: 'utf8',
+            maxBuffer: 64e6,
           }
         )
       )
@@ -1033,6 +1054,8 @@ function prParEvenement(): Pr | null {
     labels: ev.pull_request.labels.map((l) => l.name),
     fichiers,
     revues: null,
+    // `git diff` sur l'arbre : la liste est complète par construction.
+    liste: { source: 'complete' },
     // La base de l'événement est un sha : `fetch-depth: 0` le rend lisible (voir ci-dessus).
     tachesBase: projeter(tachesDeLaBase(ev.pull_request.base.sha)),
   };
@@ -1164,6 +1187,8 @@ if (process.argv.includes('--prove')) {
     ],
     // La base de la PR, FOURNIE (jamais de `git` dans une fixture) : ici, le registre du dépôt.
     tachesBase: depot.taches,
+    // La liste des fichiers d'une fixture est fournie ENTIÈRE ; la liste tronquée a son témoin.
+    liste: { source: 'complete' },
     revues: [
       revue('A09 · exactitude\nVerdict: accepte\nles quatre REQ sont couvertes'),
       revue('A09 · securite\nVerdict: accepte\nrien à signaler'),
@@ -1581,6 +1606,16 @@ if (process.argv.includes('--prove')) {
       defaut: () => [copieDepot(), RACINE_AU_MILIEU()],
     },
     {
+      // (GOV-077, second refus de `securite`) — la liste de la FORGE plus courte que ce que la PR
+      // annonce : des fichiers invisibles, donc quatre lentilles.
+      famille: 'lentilles_manquantes',
+      defaut: () => {
+        const p = copiePr(PR_ORDINAIRE);
+        p.liste = { source: 'forge', lues: p.fichiers.length, annoncees: p.fichiers.length + 1 };
+        return [copieDepot(), p];
+      },
+    },
+    {
       // cas 6 quinquies (GOV-077) — le fichier de CI RENOMMÉ hors de `.github/` : sa source compte.
       famille: 'lentilles_manquantes',
       defaut: () => [
@@ -1752,8 +1787,8 @@ if (process.argv.includes('--prove')) {
     {
       // cas 0 (GOV-077, levier 3 de Will du 2026-09-18) — LA PR ORDINAIRE EXPLICITE. Titre QA-T01
       // (zone `qualite`, `sensible` vide, `schema` faux), fichiers DÉRIVÉS de ses `paths` hors
-      // `.github/`, aucun hors de `docs/`, `scripts/`, `tests/` ou de la racine : deux lentilles.
-      quoi: 'une PR ORDINAIRE (QA-T01) relue par exactitude et securite seules, sur la tête',
+      // `.github/` et hors de la racine, tous sous `docs/`, `scripts/` ou `tests/` : deux lentilles.
+      quoi: 'une PR ORDINAIRE (QA-T01 réduite, hors .github/ et hors racine) relue par exactitude et securite seules, sur la tête',
       cas: () => [depot, PR_ORDINAIRE],
     },
     {
