@@ -1505,7 +1505,20 @@
         "tests/integration/journal.spec.ts",
         "tests/unit/domaine/schema-centimes.spec.ts",
         "tests/unit/domaine/journal-charge-fermee.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/domain/evenement/canonique.ts",
+        "src/domain/evenement/charges.ts",
+        "src/domain/donnees-personnelles/champs.ts",
+        "src/server/evenement/journal.ts",
+        "tests/integration/harnais.ts",
+        "tests/unit/domaine/journal-chaine.spec.ts",
+        "vitest.config.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".github/workflows/ci.yml",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "docs/adr/0013-journal-evenement-chaine-immuable.md",
+        "docs/GLOSSAIRE.md"
       ],
       "schema": false,
       "sensible": [

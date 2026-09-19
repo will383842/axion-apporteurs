@@ -326,7 +326,7 @@
       ],
       "verifie": "UPDATE et DELETE sur le journal levent une erreur ; verifierChaine() detecte toute alteration ; le worker de purge ne reference pas la table (etendue aux tables d'argent en phase 2 par T-ARG-034)",
       "fixtureRouge": "UPDATE evenements SET payload = '{}'",
-      "preuveRouge": null
+      "preuveRouge": "tests/integration/journal.spec.ts, en base reelle (pgvector/pgvector:pg16 par testcontainers, migrations appliquees par prisma migrate deploy). ROUGE mesure AVANT le code (DM-01, 2026-09-19) : migration SANS declencheurs -> « REQ-JUR-026 → REQ-DM-024 : un test tente une modification (UPDATE) et attend un refus nomme → promise resolved \"1\" instead of rejecting », idem DELETE (« 1 ») et TRUNCATE (« +0 ») ; declencheur de ligne SEUL -> TRUNCATE passe encore (« promise resolved \"+0\" instead of rejecting ») ; verrou consultatif retire -> « Unique constraint failed on the fields: (prev_hash) ». verifierChaine() detecte toute alteration : un agregat_id reecrit sur une ligne du MILIEU (declencheur desarme par le proprietaire) rend hash_altere nommant CETTE ligne, une ligne du milieu supprimee rend maillon_orphelin nommant la SUIVANTE ; en domaine pur (tests/unit/domaine/journal-chaine.spec.ts), un hachage de la seule charge fait rougir 4 colonnes sur 5. Vert : 10/10, « verifierChaine() : 0 faute, 5 maillon(s) verifie(s) ». ⚠️ La clause « le worker de purge ne reference pas la table » est SANS OBJET tant qu'aucun worker n'existe : cette preuve ne l'atteste pas. Limites declarees (partners/ADR-0013) : un proprietaire qui desarme le declencheur est DETECTE, pas empeche ; une troncature de la queue n'est pas detectable par la chaine seule."
     },
     {
       "id": "journal:sans-pii",
@@ -335,7 +335,7 @@
       "tache": "DM-01",
       "verifie": "le payload d'un evenement est un schema Zod FERME par type (identifiants, hashes, enums, montants, horodatages) : ni nom, ni email, ni telephone, ni IBAN, ni adresse ; apres effacement d'un tiers, verifierChaine() reste vrai (REQ-DM-041, etendue en phase 3 par DM-20)",
       "fixtureRouge": "ajouter un champ email au payload d'un evenement",
-      "preuveRouge": null
+      "preuveRouge": "pnpm journal:sans-pii:prove — 6 familles (champ_nominatif, feuille_hors_liste, charge_ouverte, type_sans_charge, charge_sans_type, perimetre_vide), 9 temoins, 2 contre-temoins verts ; vues INJECTEES (RM-11). Temoin du binaire sur le depot (DM-01, 2026-09-19) : un champ email et un champ motif en z.string() ajoutes a la charge de journal_ouvert -> EXIT=1, « ❌ journal:sans-pii — 3 faute(s) sur 1 type(s), 3 champ(s) : [champ_nominatif] journal_ouvert.email … [feuille_hors_liste] journal_ouvert.email … [feuille_hors_liste] journal_ouvert.motif » ; restaure -> EXIT=0, « 1 type(s), 1 champ(s) confrontes ». Mutants vus rouges dans tests/unit/domaine/journal-charge-fermee.spec.ts : lexique par SOUS-CHAINE (nombreDeDepots, nomenclature, hotel accuses) ; .strict() non exige (passthrough et strip passent). La clause « apres effacement d'un tiers, verifierChaine() reste vrai » est prouvee en base reelle par tests/integration/journal.spec.ts (bac_tiers efface, 0 faute ; « purger » la charge par UPDATE refuse)."
     },
     {
       "id": "partners:transitions:exhaustive",
