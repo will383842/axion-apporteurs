@@ -431,9 +431,11 @@ function hookRefuse(ligne: LigneEnv): boolean {
     if (v !== undefined) env[cle] = v;
   }
   for (const [cle, v] of Object.entries(ligne)) if (v !== undefined) env[cle] = v;
+  // `next` déclare `NODE_ENV` OBLIGATOIRE dans `NodeJS.ProcessEnv` (next/types/global.d.ts) : cet
+  // environnement, construit à partir de zéro, ne le porte que si la ligne de la matrice le pose.
   const r = spawnSync(process.execPath, [HOOK_ENV], {
     input: JSON.stringify({ tool_input: { command: 'echo' } }),
-    env,
+    env: env as NodeJS.ProcessEnv,
     encoding: 'utf8',
   });
   expect([0, 2], `hook-env a rendu ${r.status} : ${r.stderr}`).toContain(r.status);
