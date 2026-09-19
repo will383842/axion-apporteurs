@@ -17,8 +17,15 @@ export function evaluerPotDeMiel(valeurDuChamp: string | null | undefined): { pi
   return { piege: valeurDuChamp !== null && valeurDuChamp !== undefined && valeurDuChamp !== '' };
 }
 
+/**
+ * Les formulaires qui portent un pot de miel : une union FERMÉE. Un formulaire inconnu ne compile
+ * pas, et un cast qui en ferait passer un est refusé au signalement.
+ */
+export const FORMULAIRES_A_POT_DE_MIEL = ['connexion', 'depot'] as const;
+export type FormulaireAPotDeMiel = (typeof FORMULAIRES_A_POT_DE_MIEL)[number];
+
 export interface SignalDePotDeMiel {
-  readonly formulaire: string;
+  readonly formulaire: FormulaireAPotDeMiel;
   readonly apporteurId?: string;
   readonly adresseHash?: string;
   readonly survenuAt: number;
@@ -38,6 +45,9 @@ export function signalerPotDeMiel(
   signal: SignalDePotDeMiel,
   puits: PuitsDePotDeMiel = puitsSurStderr
 ): void {
+  if (!(FORMULAIRES_A_POT_DE_MIEL as readonly string[]).includes(signal.formulaire)) {
+    throw new Error('formulaire_inconnu : le pot de miel ne signale que ses formulaires déclarés');
+  }
   const charge: Record<string, string> = {
     evenement: 'pot_de_miel',
     formulaire: signal.formulaire,

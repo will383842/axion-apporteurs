@@ -57,6 +57,7 @@ import {
   adresseDuClient,
 } from '../../../src/server/securite/adresse-du-client';
 import {
+  FORMULAIRES_A_POT_DE_MIEL,
   accuserSiLaLigneExiste,
   evaluerPotDeMiel,
   executerAuPlancher,
@@ -203,6 +204,12 @@ describe('REQ-SEC-016 — le registre des compteurs', () => {
       expect(nom.startsWith(d.prefixe), nom).toBe(true);
       expect(CONDUITES_SUR_PANNE, nom).toContain(d.surPanne);
       expect(d.source, nom).toMatch(/^REQ-[A-Z]+-\d{3}$/);
+      // RM-10 : une valeur, une source, une DATE de vérification — lisible, et pas dans le futur.
+      expect(d.verifieLe, nom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(new Date(`${d.verifieLe}T00:00:00Z`).toISOString().slice(0, 10), nom).toBe(
+        d.verifieLe
+      );
+      expect(d.verifieLe <= new Date().toISOString().slice(0, 10), nom).toBe(true);
     }
   });
 
@@ -654,7 +661,7 @@ describe('REQ-SEC-035 — le pot de miel observable', () => {
   it('REQ-SEC-035 — le signalement porte l’identifiant d’apporteur SANS la valeur saisie, même passée en douce', () => {
     const saisie = randomBytes(12).toString('hex');
     const large = {
-      formulaire: 'depot',
+      formulaire: 'depot' as const,
       apporteurId: 'app_1',
       adresseHash: 'abcdef0123456789',
       survenuAt: 0,
@@ -673,6 +680,19 @@ describe('REQ-SEC-035 — le pot de miel observable', () => {
       adresseHash: 'abcdef0123456789',
       survenuAt: '1970-01-01T00:00:00.000Z',
     });
+  });
+
+  it('REQ-SEC-035 — le formulaire est une union FERMÉE : un formulaire inconnu ne compile pas, et un cast est refusé', () => {
+    expect([...FORMULAIRES_A_POT_DE_MIEL]).toEqual(['connexion', 'depot']);
+    // Assertion de TYPE, jugée par `pnpm typecheck` : si le champ redevient une chaîne libre,
+    // `Admis` vaut `true` et cette ligne ne compile plus.
+    type Admis = 'inconnu' extends SignalDePotDeMiel['formulaire'] ? true : false;
+    const inconnuAdmis: Admis = false;
+    expect(inconnuAdmis).toBe(false);
+    const lignes: string[] = [];
+    const force = { formulaire: 'inconnu', survenuAt: 0 } as unknown as SignalDePotDeMiel;
+    expect(() => signalerPotDeMiel(force, (l) => lignes.push(l))).toThrow(/^formulaire_inconnu/);
+    expect(lignes).toEqual([]);
   });
 
   it('REQ-SEC-035 — l’accusé n’est émis que si la ligne existe', async () => {

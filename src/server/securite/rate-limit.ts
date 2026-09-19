@@ -46,6 +46,8 @@ export interface DeclarationDeCompteur {
   readonly fenetreSecondes: number | typeof LIMITE_HORS_DEPOT;
   readonly surPanne: ConduiteSurPanne;
   readonly source: `REQ-${string}`;
+  /** RM-10 : la date (AAAA-MM-JJ) à laquelle la valeur a été confrontée à sa source. */
+  readonly verifieLe: `${number}-${number}-${number}`;
 }
 
 // ── Le registre ─────────────────────────────────────────────────────────────────────────────────
@@ -61,6 +63,7 @@ export const COMPTEURS = {
     fenetreSecondes: 900,
     surPanne: 'refuser',
     source: 'REQ-SEC-002',
+    verifieLe: '2026-09-19',
   },
   'magic:courriel': {
     prefixe: 'magic:',
@@ -68,6 +71,7 @@ export const COMPTEURS = {
     fenetreSecondes: 900,
     surPanne: 'refuser',
     source: 'REQ-SEC-002',
+    verifieLe: '2026-09-19',
   },
   'depot:ip': {
     prefixe: 'depot:',
@@ -75,6 +79,7 @@ export const COMPTEURS = {
     fenetreSecondes: 600,
     surPanne: 'laisser-passer',
     source: 'REQ-SEC-016',
+    verifieLe: '2026-09-19',
   },
   'depot:identite': {
     prefixe: 'depot:',
@@ -82,6 +87,7 @@ export const COMPTEURS = {
     fenetreSecondes: LIMITE_HORS_DEPOT,
     surPanne: 'refuser',
     source: 'REQ-SEC-016',
+    verifieLe: '2026-09-19',
   },
 } as const satisfies Readonly<Record<`${PrefixeDeFamille}${string}`, DeclarationDeCompteur>>;
 
