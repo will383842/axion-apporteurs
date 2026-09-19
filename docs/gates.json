@@ -932,7 +932,7 @@
       "tache": "UX-P0-02",
       "verifie": "docs/maquettes/VALIDATION.md (ecran, date, valide par Will) ; une tache UX-P1-*, UX-P2-* ou UX-P3-* sans ligne 'valide' n'est pas attribuable, et le composeur l'ecarte avec la raison 'maquette non validee par Will'",
       "fixtureRouge": "attribuer une UX-P1-* sans ligne validee",
-      "preuveRouge": null
+      "preuveRouge": "pnpm gov:maquettes-validees:prove — 9 familles, un temoin chacune, 3 contre-temoins verts ; les temoins validation_partielle, ligne_mal_formee et ecran_attribue_sans_validation portent sur la ligne du MILIEU d'un tableau de trois. Et tests/unit/espace/maquettes-validees.spec.ts vu ROUGE avant la garde le 2026-09-19 (« Failed to load url ../../../scripts/gates/maquettes-validees »), puis quatre mutants de la garde tues par la spec : valideur ignore (1 echec), proprietaire ignore (1), seule la derniere ligne lue (4), index.html non exempte (3)"
     },
     {
       "id": "gate-sec",

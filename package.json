@@ -74,6 +74,8 @@
     "gov:etat:prove": "tsx scripts/gates/gov-etat.ts --prove",
     "gov:lexique": "tsx scripts/gates/lexique-apporteurs.ts",
     "gov:lexique:prove": "tsx scripts/gates/lexique-apporteurs.ts --prove",
+    "gov:maquettes-validees": "tsx scripts/gates/maquettes-validees.ts",
+    "gov:maquettes-validees:prove": "tsx scripts/gates/maquettes-validees.ts --prove",
     "partners:schema:enums": "tsx scripts/gates/schema-enums.ts",
     "partners:schema:enums:prove": "tsx scripts/gates/schema-enums.ts --prove",
     "contracts:export": "tsx scripts/contracts/export.ts",
