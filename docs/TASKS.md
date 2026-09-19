@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 98 | 77.35 | 11 |
+| 0 — Socle technique | 98 | 77.35 | 13 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -452,7 +452,7 @@ Couvre : `REQ-SEC-029`
 
 **Tests.** `tests/unit/securite/headers.spec.ts`
 
-### SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable
+### SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable ✅ **fusionnee**
 
 `0.5 j` · zone `securite` · depend de `QA-T01`
 
@@ -472,7 +472,7 @@ Couvre : `REQ-QA-024`
 
 **Tests.** `tests/unit/qualite/journal-redige.spec.ts`
 
-### DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable
+### DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable ✅ **fusionnee**
 
 `1 j` · zone `domaine` · sensible : rgpd · depend de `QA-T01`
 
@@ -500,7 +500,7 @@ Couvre : `REQ-QA-006`
 
 **Acceptation.** (1) Les tests d'integration tournent sur un Postgres 16 avec pgvector et un cache ephemeres, montes par testcontainers, schema migre par `prisma migrate deploy` ; l'isolation se fait par transaction ou par base par fichier (REQ-QA-006). (2) AUCUN TEST NE DEPEND D'UN FICHIER D'ENVIRONNEMENT PARTAGE : les identifiants de connexion viennent du conteneur, jamais d'un `.env` du poste ; un test qui lit une variable d'environnement partagee est refuse. (3) LE HARNAIS DIT CE QU'IL NE PEUT PAS FAIRE : si le demon de conteneurs est indisponible, la suite d'integration ECHOUE explicitement avec un message qui le nomme — elle ne se saute pas en silence. Un test saute a l'air d'avoir mesure et n'a rien mesure. (4) TEMOIN A DEUX FACES : sans demon disponible, `pnpm test:integration` sort en code non nul avec le motif nomme ; avec demon disponible, la meme commande sort en zero et imprime le compte des fichiers d'integration reellement executes. (5) L'etape de Gate A qui lance ce harnais ne porte pas de tolerance d'echec.
 
-**Tests.** `tests/integration/harnais-testcontainers.spec.ts`
+**Tests.** `tests/integration/harnais-testcontainers.spec.ts` · `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` · `tests/integration/rate-limit-redis.spec.ts`
 
 ### QA-T04 — env.ts Zod fail-fast, /api/livez, /api/readyz, entrypoint bloquant, Dockerfile + HEALTHCHECK
 
