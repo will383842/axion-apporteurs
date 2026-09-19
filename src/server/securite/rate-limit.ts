@@ -100,7 +100,7 @@ const EMPREINTE = /^(?:[0-9a-f]{16}|[0-9a-f]{64})$/;
  * la valeur reçue — si c'était un courriel, le message d'erreur le ferait fuir dans les journaux.
  */
 export function sujetDepuisEmpreinte(hex: string): SujetDeCompteur {
-  if (hex === '') {
+  if (!EMPREINTE.test(hex)) {
     throw new Error(
       'sujet_non_empreinte : le sujet d’un compteur est une empreinte de 16 ou 64 hexadécimaux ' +
         'minuscules ; une valeur en clair n’entre jamais dans une clé du cache'
@@ -253,10 +253,7 @@ function magasinParDefaut(): MagasinDeCompteurs {
 // ── Le verdict ──────────────────────────────────────────────────────────────────────────────────
 
 export type MotifDeVerdict =
-  | 'admis'
-  | 'limite_atteinte'
-  | 'cache_indisponible'
-  | 'limite_non_configuree';
+  'admis' | 'limite_atteinte' | 'cache_indisponible' | 'limite_non_configuree';
 
 export interface VerdictDeLimite {
   readonly autorise: boolean;
@@ -286,10 +283,8 @@ export const signalerSurStderr: Signaleur = (signal) => {
  * La conduite d'une déclaration, lue en ÉCHEC FERMÉ : tout ce qui n'est pas exactement
  * `laisser-passer` refuse — y compris une conduite absente qu'un cast aurait fait passer.
  */
-export function conduiteSurPanne(declaration: {
-  readonly surPanne?: unknown;
-}): ConduiteSurPanne {
-  return declaration.surPanne === 'refuser' ? 'refuser' : 'laisser-passer';
+export function conduiteSurPanne(declaration: { readonly surPanne?: unknown }): ConduiteSurPanne {
+  return declaration.surPanne === 'laisser-passer' ? 'laisser-passer' : 'refuser';
 }
 
 function enPanne(

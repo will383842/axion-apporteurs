@@ -25,7 +25,7 @@ export function adresseDuClient(entetes: Headers, sautsDeConfiance: number): str
   const brut = entetes.get('x-forwarded-for');
   if (brut === null || !Number.isInteger(sautsDeConfiance) || sautsDeConfiance < 1) return null;
   const elements = brut.split(',').map((e) => e.trim());
-  const candidat = elements[0];
+  const candidat = elements[elements.length - sautsDeConfiance];
   if (candidat === undefined || isIP(candidat) === 0) return null;
   return candidat;
 }

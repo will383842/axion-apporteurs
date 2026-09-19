@@ -105,7 +105,9 @@ async function confronterLeRegistre(
     const d = estObjet(brut) ? brut : {};
     const prefixe = d.prefixe;
     const prefixeValide =
-      estUnDe(PREFIXES_DE_FAMILLE, prefixe) && nom.startsWith(prefixe) && nom.length > prefixe.length;
+      estUnDe(PREFIXES_DE_FAMILLE, prefixe) &&
+      nom.startsWith(prefixe) &&
+      nom.length > prefixe.length;
     if (!prefixeValide) {
       fautes.push({
         famille: 'prefixe_hors_famille',
@@ -115,7 +117,7 @@ async function confronterLeRegistre(
           `sixième préfixe passe par l'exigence, pas par le code.`,
       });
     }
-    const surPanne = d.surPanne ?? 'laisser-passer';
+    const surPanne = d.surPanne;
     if (!estUnDe(CONDUITES_SUR_PANNE, surPanne)) {
       fautes.push({
         famille: 'conduite_absente',
@@ -291,7 +293,11 @@ export const executerLeCompteurReel: Executer = (nom) =>
   limiter(nom as NomDeCompteur, SUJET_TEMOIN, 0, cacheQuiLeve(), () => undefined);
 
 export function universDuDepot(): Univers {
-  return { registre: COMPTEURS, fichiers: sourcesDuDisque(RACINE), executer: executerLeCompteurReel };
+  return {
+    registre: COMPTEURS,
+    fichiers: sourcesDuDisque(RACINE),
+    executer: executerLeCompteurReel,
+  };
 }
 
 // ── --prove ─────────────────────────────────────────────────────────────────────────────────────
@@ -362,12 +368,15 @@ export const TEMOINS: readonly Temoin[] = [
   },
   {
     famille: 'prefixe_hors_registre',
-    libelle: '`redis.incr(\'depot:x\')` dans un fichier de `src/`',
+    libelle: "`redis.incr('depot:x')` dans un fichier de `src/`",
     univers: (b) => ({
       ...b,
       fichiers: [
         ...b.fichiers,
-        { chemin: 'src/server/temoin.ts', texte: "export const f = (redis: any) => redis.incr('depot:x');\n" },
+        {
+          chemin: 'src/server/temoin.ts',
+          texte: "export const f = (redis: any) => redis.incr('depot:x');\n",
+        },
       ],
     }),
     nomme: ['depot:', 'src/server/temoin.ts:1'],
@@ -447,7 +456,9 @@ async function prouver(): Promise<number> {
     console.error(`❌ Famille(s) sans témoin : ${sansTemoin.join(', ')}.`);
     return 1;
   }
-  console.log(`✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`);
+  console.log(
+    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+  );
   TEMOINS.forEach((t) => console.log(`   • ${t.famille} — ${t.libelle}`));
   console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts.`);
   return 0;
@@ -471,7 +482,9 @@ async function controler(): Promise<number> {
     `✅ rate-famille — ${r.confrontes.length} compteurs confrontés (déclarés ET exécutés contre ` +
       `un cache qui lève) : ${r.confrontes.join(' ; ')}.`
   );
-  console.log(`   ${r.fichiersLus} fichiers de \`${RACINE}/\` lus ; ${r.appelsVus} appels \`limiter(\` vus.`);
+  console.log(
+    `   ${r.fichiersLus} fichiers de \`${RACINE}/\` lus ; ${r.appelsVus} appels \`limiter(\` vus.`
+  );
   console.log(
     `   Pot de miel : ${r.appelantsDuPotDeMiel} formulaire(s) câblé(s) — 0 formulaire de dépôt en ` +
       `phase 0 ; 1 appelant attendu : SEC-03 (/connexion).`

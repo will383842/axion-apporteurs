@@ -51,7 +51,10 @@ import {
   type SujetDeCompteur,
   type VerdictDeLimite,
 } from '../../../src/server/securite/rate-limit';
-import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../../../src/server/securite/adresse-du-client';
+import {
+  SAUTS_DE_CONFIANCE,
+  adresseDuClient,
+} from '../../../src/server/securite/adresse-du-client';
 import {
   accuserSiLaLigneExiste,
   evaluerPotDeMiel,
@@ -153,7 +156,10 @@ function lancerLaGarde(racine: string, ...args: string[]): { code: number | null
  * Une COPIE DE TRAVAIL jetable : `src/`, la garde, et un lien vers le `node_modules` réel. Le lien
  * est défait SEUL avant l'effacement : l'effacement ne descend jamais dans le `node_modules` réel.
  */
-function garderUneCopie(muter: (registre: string) => string): { code: number | null; sortie: string } {
+function garderUneCopie(muter: (registre: string) => string): {
+  code: number | null;
+  sortie: string;
+} {
   const racine = mkdtempSync(join(tmpdir(), 'rf-'));
   const lien = join(racine, 'node_modules');
   try {
@@ -336,7 +342,10 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       aFermer.push(m);
       for (const essai of [1, 2]) {
         const debut = performance.now();
-        const v = await sousLeDelai(limiter('magic:ip', SUJET, 0, m, () => undefined), 1_000);
+        const v = await sousLeDelai(
+          limiter('magic:ip', SUJET, 0, m, () => undefined),
+          1_000
+        );
         expect(v, `essai ${essai} : aucun verdict sous la seconde`).not.toBe(SUSPENDU);
         expect(performance.now() - debut).toBeLessThan(1_000);
         expect(v).toMatchObject({ autorise: false, panne: true, motif: 'cache_indisponible' });
@@ -347,7 +356,10 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       const muet = await serveurMuet();
       const m = creerMagasinRedis(`redis://127.0.0.1:${muet.port}`, OPTIONS_DU_CLIENT);
       try {
-        const v = await sousLeDelai(limiter('depot:ip', SUJET, 0, m, () => undefined), 1_000);
+        const v = await sousLeDelai(
+          limiter('depot:ip', SUJET, 0, m, () => undefined),
+          1_000
+        );
         expect(v, 'le cache muet a SUSPENDU la requête').not.toBe(SUSPENDU);
         expect(v).toMatchObject({ autorise: true, panne: true, motif: 'cache_indisponible' });
       } finally {
@@ -359,7 +371,10 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
     it('REQ-SEC-016 — CONTRE-TÉMOIN : avec les options par défaut du client, le port fermé SUSPEND la requête', async () => {
       const m = creerMagasinRedis(`redis://127.0.0.1:${await portFerme()}`, {});
       aFermer.push(m);
-      const v = await sousLeDelai(limiter('magic:ip', SUJET, 0, m, () => undefined), 1_000);
+      const v = await sousLeDelai(
+        limiter('magic:ip', SUJET, 0, m, () => undefined),
+        1_000
+      );
       expect(v, 'le témoin de délai ne distingue plus les options : il ne mesure rien').toBe(
         SUSPENDU
       );
@@ -386,7 +401,10 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
   it('REQ-SEC-016 — `REDIS_URL` est lue au PREMIER appel, pas à l’import', async () => {
     vi.stubEnv('REDIS_URL', `redis://127.0.0.1:${await portFerme()}`);
     try {
-      const v = await sousLeDelai(limiter('magic:ip', SUJET, 0, undefined, () => undefined), 1_000);
+      const v = await sousLeDelai(
+        limiter('magic:ip', SUJET, 0, undefined, () => undefined),
+        1_000
+      );
       expect(v).toMatchObject({ autorise: false, panne: true, motif: 'cache_indisponible' });
     } finally {
       vi.unstubAllEnvs();
@@ -501,7 +519,11 @@ describe('REQ-SEC-016 — la garde de famille', () => {
       const r = await analyser(t.univers(base));
       const siennes = r.fautes.filter((f) => f.famille === famille);
       expect(siennes.length).toBeGreaterThan(0);
-      for (const m of t.nomme) expect(siennes.some((f) => f.message.includes(m)), m).toBe(true);
+      for (const m of t.nomme)
+        expect(
+          siennes.some((f) => f.message.includes(m)),
+          m
+        ).toBe(true);
     }
   );
 
