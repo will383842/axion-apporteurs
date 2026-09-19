@@ -308,6 +308,9 @@ describe('REQ-SEC-024 — empreintes de recherche HMAC (emailHash, phoneHash, ib
       ['telephone', '06 39 98 12 34 5', 'telephone_invalide'],
       ['telephone', '06 39 98 AB 34', 'telephone_invalide'],
       ['telephone', '+0 639 981 234', 'telephone_invalide'],
+      // Le 0 du préfixe national gardé après l'indicatif français : jamais une seconde empreinte.
+      ['telephone', '+33 (0)6 39 98 12 34', 'telephone_invalide'],
+      ['telephone', '0033 06 39 98 12 34', 'telephone_invalide'],
       ['telephone', `+${'1'.repeat(16)}`, 'telephone_invalide'],
       ['siret', siret.slice(1), 'siret_invalide'],
       ['siret', `${siret}5`, 'siret_invalide'],
