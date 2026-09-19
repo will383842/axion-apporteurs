@@ -1,4 +1,4 @@
-# Routes de l'espace apporteur — carte uniqueundefined — | undefined |undefined — | undefined |undefined `conformite.html` | undefined |undefined `conformite.html` | undefined |undefined — | undefined |undefined — | undefined |undefined — | undefined |
+# Routes de l'espace apporteur — carte unique
 
 > Source unique du routage de l'espace. Une tâche d'écran cite sa ligne ici ; deux écrans ne partagent
 > jamais une route. Hypothèse appliquée (HYP-E1-10) : **un seul champ sur l'accueil**, une barre à

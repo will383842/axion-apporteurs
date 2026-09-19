@@ -45,7 +45,11 @@ import {
   vueDuDepot,
   type Vue,
 } from '../../../scripts/gates/maquettes-validees';
-import { composerLeLot, type Tache as TacheDuComposeur } from '../../../scripts/lot/composer';
+import {
+  composerLeLot,
+  maquettesNonValideesDepuis,
+  type Tache as TacheDuComposeur,
+} from '../../../scripts/lot/composer';
 import { lireRegistre } from '../../../scripts/lot/registre-decisions';
 
 const SCRIPT = 'scripts/gates/maquettes-validees.ts';
@@ -254,6 +258,89 @@ describe('maquettes-validees — la garde exécutée sur des vues injectées', (
       max: 8,
       registre: lireRegistre(''),
       maquettesNonValidees: tachesNonValidees(lignes),
+    });
+    expect(retenues.map((t) => t.id)).toEqual(['UX-P1-08']);
+    expect(ecartees).toEqual([{ id: 'UX-P1-01', raison: 'maquette non validée par Will' }]);
+  });
+});
+
+/**
+ * LA LECTURE DU COMPOSEUR. `principal()` de `scripts/lot/composer.ts` tire l'ensemble des tâches
+ * d'écran à écarter de `maquettesNonValideesDepuis()`, et de rien d'autre ; c'est donc elle qu'on
+ * exerce (lancer `principal()` taille les arbres et interroge la forge : jamais depuis un test).
+ * Avant UX-P0-02, cette lecture prenait l'avant-dernière cellule de chaque ligne, par POSITION :
+ * une colonne ajoutée ou des colonnes permutées faisaient passer une tâche non validée pour
+ * validée, et le composeur la mettait dans un lot. Elle passe désormais par le lecteur de la garde.
+ */
+describe('maquettes-validees — le COMPOSEUR lit le tableau par le lecteur de la garde', () => {
+  const enteteNote =
+    '| Écran | Fichier | Tâche | Validé le | Par | Note |\n| --- | --- | --- | --- | --- | --- |\n';
+
+  it('REQ-UX-008 — une colonne AJOUTÉE à droite ne fait pas passer une tâche non validée', () => {
+    const texte =
+      enteteNote +
+      '| Accueil | `accueil.html` | UX-P1-08 | 2026-09-19 | Will | ok |\n' +
+      '| Entreprise | `entreprise.html` | UX-P1-01 | — | — | à revoir |\n' +
+      '| Lot | `lot.html` | UX-P2-03 | — | — | |\n';
+    const ecartees = maquettesNonValideesDepuis(texte);
+    expect(ecartees.has('UX-P1-01')).toBe(true);
+    expect(ecartees.has('UX-P1-08')).toBe(false);
+  });
+
+  it('REQ-UX-008 — des colonnes PERMUTÉES ne font pas passer une tâche non validée', () => {
+    const texte =
+      '| Tâche | Par | Validé le | Fichier | Écran |\n| --- | --- | --- | --- | --- |\n' +
+      '| UX-P1-08 | Will | 2026-09-19 | `accueil.html` | Accueil |\n' +
+      '| UX-P1-01 | — | — | `entreprise.html` | Entreprise |\n';
+    expect([...maquettesNonValideesDepuis(texte)].sort()).toEqual(['UX-P1-01']);
+  });
+
+  it('REQ-UX-008 — une ligne MAL FORMÉE écarte ses tâches (le composeur échoue fermé)', () => {
+    const texte =
+      '| Écran | Fichier | Tâche | Validé le | Par |\n| --- | --- | --- | --- | --- |\n' +
+      '| Accueil | `accueil.html` | UX-P1-08 | 2026-09-19 | Will |\n' +
+      '| Entreprise | `entreprise.html` | UX-P1-01 | 2026-09-19 |\n';
+    expect([...maquettesNonValideesDepuis(texte)].sort()).toEqual(['UX-P1-01']);
+  });
+
+  it('REQ-UX-008 — un VALIDATION.md sans tableau lisible arrête le composeur au lieu de tout laisser passer', () => {
+    expect(() => maquettesNonValideesDepuis('# Validation\n\nAucun tableau.\n')).toThrow(/tableau/);
+  });
+
+  it('REQ-UX-008 — sur le VALIDATION.md du dépôt, le composeur écarte EXACTEMENT ce que la garde écarte', () => {
+    const texte = readFileSync(`${DOSSIER}/VALIDATION.md`, 'utf8');
+    expect([...maquettesNonValideesDepuis(texte)].sort()).toEqual(
+      [...tachesNonValidees(lireValidation(texte).lignes)].sort()
+    );
+  });
+
+  it('REQ-UX-008 — CÂBLAGE : l’ensemble lu par le composeur, donné à `composerLeLot()`, écarte la tâche de la colonne ajoutée', () => {
+    const texte =
+      enteteNote +
+      '| Accueil | `accueil.html` | UX-P1-08 | 2026-09-19 | Will | ok |\n' +
+      '| Entreprise | `entreprise.html` | UX-P1-01 | — | — | à revoir |\n';
+    const tache = (id: string): TacheDuComposeur => ({
+      id,
+      titre: id,
+      phase: 1,
+      repo: 'partners',
+      zone: 'espace',
+      paths: [`src/app/${id}`],
+      schema: false,
+      sensible: [],
+      deps: [],
+      reqs: ['REQ-UX-008'],
+      hyp: [],
+      externe: null,
+      estimateDays: 1,
+      statut: 'a_faire',
+    });
+    const { retenues, ecartees } = composerLeLot([tache('UX-P1-08'), tache('UX-P1-01')], {
+      phase: 1,
+      repo: 'partners',
+      max: 8,
+      registre: lireRegistre(''),
+      maquettesNonValidees: maquettesNonValideesDepuis(texte),
     });
     expect(retenues.map((t) => t.id)).toEqual(['UX-P1-08']);
     expect(ecartees).toEqual([{ id: 'UX-P1-01', raison: 'maquette non validée par Will' }]);

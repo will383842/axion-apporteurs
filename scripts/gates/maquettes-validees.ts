@@ -36,11 +36,15 @@
  *   — Elle n'exige pas une ligne pour TOUTE tâche `UX-P1/2/3` : une tâche qui n'est pas un écran
  *     (e-mails, page de lien consommé…) n'a pas de maquette. La règle suit la ligne, comme le
  *     composeur ; la sortie IMPRIME le nombre de tâches `UX-P1/2/3` qu'aucune ligne ne nomme.
- *   — ⚠️ Le composeur (`scripts/lot/composer.ts`) garde sa PROPRE lecture du tableau, qui prend
- *     l'avant-dernière cellule — la colonne « Par » — sous un commentaire qui dit « Validé le ».
- *     Tant que cette garde est verte, les deux lectures s'accordent : une ligne à moitié écrite est
- *     refusée ici avant que leur différence compte. Faire importer `lireValidation()` par le
- *     composeur est une dette versée, hors des chemins de UX-P0-02.
+ *   — Elle accepte toute date PLAUSIBLE, une date future comprise : elle ne refuse que les dates
+ *     qui n'existent pas au calendrier. Qu'une validation soit datée du bon jour, c'est l'historique
+ *     git de la ligne qui le dit, pas la garde.
+ *
+ * LE COMPOSEUR LIT PAR ELLE. `scripts/lot/composer.ts` tire les tâches d'écran à écarter de
+ * `tachesAEcarterParLeComposeur()`, exportée ici : les deux lectures ne peuvent plus diverger. Il
+ * lisait avant l'avant-dernière cellule de chaque ligne, par position — la colonne « Par », sous un
+ * commentaire qui disait « Validé le » —, et une colonne ajoutée à droite faisait passer une tâche
+ * non validée pour validée.
  */
 
 import { readFileSync, readdirSync } from 'node:fs';
@@ -123,10 +127,13 @@ export function lireValidation(texte: string): {
   fautes: Faute[];
   /** Tout fichier `…html` nommé dans une ligne de tableau, même mal formée : il a une ligne, fautive. */
   mentionnes: Set<string>;
+  /** Les tâches `UX-P…` nommées par une ligne MAL FORMÉE : ni validées ni lisibles, donc écartées. */
+  tachesDesLignesFautives: Set<string>;
   tableaux: number;
 } {
   const lignes: LigneDeValidation[] = [];
   const mentionnes = new Set<string>();
+  const tachesDesLignesFautives = new Set<string>();
   const fautes: Faute[] = [];
   const brut = texte.split('\n');
   let section = '';
@@ -153,7 +160,11 @@ export function lireValidation(texte: string): {
     if (c.every((x) => /^:?-+:?$/.test(x))) continue; // la ligne de séparation
     const numero = i + 1;
     for (const m of l.matchAll(/`([^`]+\.html)`/g)) mentionnes.add(m[1]!);
+    const fautive = () => {
+      for (const id of l.match(IDENTIFIANT) ?? []) tachesDesLignesFautives.add(id);
+    };
     if (c.length !== entete.length) {
+      fautive();
       fautes.push({
         famille: 'ligne_mal_formee',
         message: `VALIDATION.md:${numero} — ${c.length} cellule(s) pour ${entete.length} colonne(s). Une ligne dont les colonnes glissent se lit de travers : la date passe dans « Par », et la ligne semble validée ou non au hasard.`,
@@ -164,6 +175,7 @@ export function lireValidation(texte: string): {
     const fichier = /^`([^`]+\.html)`$/.exec(col(COLONNES.fichier))?.[1] ?? null;
     const taches = col(COLONNES.tache).match(IDENTIFIANT) ?? [];
     if (!fichier || taches.length === 0) {
+      fautive();
       fautes.push({
         famille: 'ligne_mal_formee',
         message: `VALIDATION.md:${numero} — ${!fichier ? 'aucun fichier `…html` entre accents graves' : 'aucune tâche `UX-P…`'}. Une ligne sans fichier ou sans tâche ne verrouille rien : elle ne peut ni valider un écran ni en écarter un.`,
@@ -185,7 +197,7 @@ export function lireValidation(texte: string): {
       famille: 'tableau_illisible',
       message: `VALIDATION.md — aucun tableau aux colonnes « Fichier », « Tâche », « Validé le » et « Par ». Sans tableau, AUCUNE tâche d'écran n'est écartée : la garde n'aurait rien à garder et sortirait en zéro.`,
     });
-  return { lignes, fautes, mentionnes, tableaux };
+  return { lignes, fautes, mentionnes, tachesDesLignesFautives, tableaux };
 }
 
 /** Une ligne est validée si, et seulement si, elle porte une date réelle ET le nom du valideur. */
@@ -197,6 +209,25 @@ export function estValidee(l: LigneDeValidation): boolean {
 export function tachesNonValidees(lignes: readonly LigneDeValidation[]): Set<string> {
   const s = new Set<string>();
   for (const l of lignes) if (!estValidee(l)) for (const t of l.taches) s.add(t);
+  return s;
+}
+
+/**
+ * LA lecture du composeur de lots (`scripts/lot/composer.ts`, `maquettesNonValideesDepuis`) : il
+ * n'en a pas d'autre, et les deux lectures ne peuvent donc plus diverger. Elle ÉCHOUE FERMÉ, là où
+ * la garde, elle, NOMME : une ligne mal formée écarte ses tâches (elle ne valide rien), et un
+ * fichier sans tableau lisible arrête le composeur — le laisser composer, ce serait n'écarter
+ * AUCUNE tâche d'écran.
+ */
+export function tachesAEcarterParLeComposeur(texte: string): Set<string> {
+  const { lignes, tachesDesLignesFautives, tableaux } = lireValidation(texte);
+  if (tableaux === 0)
+    throw new Error(
+      `${FICHIER_DE_VALIDATION} : aucun tableau aux colonnes « Fichier », « Tâche », « Validé le » et « Par ». ` +
+        `Le composeur s'arrête : sans tableau, il n'écarterait aucune tâche d'écran.`
+    );
+  const s = tachesNonValidees(lignes);
+  for (const id of tachesDesLignesFautives) s.add(id);
   return s;
 }
 
