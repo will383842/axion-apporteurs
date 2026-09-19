@@ -51,8 +51,8 @@ export interface Sentinelle {
  * `sdkProcessingMetadata` porte des objets internes du client (portées, requête normalisée) : il ne
  * part jamais dans l'enveloppe, il est rendu intact au client au lieu d'être recopié.
  */
-export function filtrerPourSentry<T extends object>(evenement: T): T {
-  const { sdkProcessingMetadata, ...transmis } = evenement as T & {
+export function filtrerPourSentry<T extends object>(envoi: T): T {
+  const { sdkProcessingMetadata, ...transmis } = envoi as T & {
     sdkProcessingMetadata?: unknown;
   };
   const filtre = caviarder(transmis) as T;
