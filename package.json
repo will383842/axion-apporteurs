@@ -103,7 +103,9 @@
     "sec:semgrep:prove": "tsx scripts/gates/semgrep.ts --prove",
     "lint": "eslint . --max-warnings 0",
     "format:check": "prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "securite:rate-famille": "tsx scripts/gates/rate-famille.ts",
+    "securite:rate-famille:prove": "tsx scripts/gates/rate-famille.ts --prove"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -123,6 +125,7 @@
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
+    "ioredis": "5.11.1",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",

@@ -1,0 +1,18 @@
+import { COMPTEURS, sujetDepuisEmpreinte, type VerdictDeLimite } from './securite/rate-limit';
+
+const charger = require;
+const m = charger('./securite/rate-limit');
+const appel = 'limiter';
+const panne = 'magasinEnPanne';
+const noms = Object.keys(COMPTEURS);
+
+/** Le troisième compteur du registre (depot:ip), contre le magasin en panne, sans signal. */
+export async function essai(hex: string): Promise<VerdictDeLimite> {
+  const { magasin } = m[panne]();
+  return m[appel](noms[2], sujetDepuisEmpreinte(hex), Date.now(), magasin, () => undefined);
+}
+
+/** Le premier compteur (magic:ip), magasin par défaut, sans signal. */
+export async function muet(hex: string): Promise<VerdictDeLimite> {
+  return m[appel](noms[0], sujetDepuisEmpreinte(hex), Date.now(), undefined, () => undefined);
+}
