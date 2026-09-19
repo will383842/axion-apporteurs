@@ -7,19 +7,19 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `244d990` — 2026-09-19T06:07:00+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #75 (rien) · 2. #76 (un contrôle requis rouge ou une revue manquante) · 3. #74 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · GOV-077 (A05) |
-| Où en est la phase ? | phase 0 — 5/98 tâches, reste 71.60 j |
-| Le prochain pas | fusionner #75, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
+| Où est `main` ? | `9f2f6d9` — 2026-09-19T06:53:02+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #75 (un contrôle requis rouge ou une revue manquante) · 2. #78 (un contrôle requis rouge ou une revue manquante) · 3. #76 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · CPL-T13 (A05) · GOV-077 (A05) |
+| Où en est la phase ? | phase 0 — 5/98 tâches, reste 72.10 j |
+| Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #74 — 2026-09-19 |
+| Dernière entrée de journal | PR #78 — 2026-09-19 |
 
-**Ce qu’on tape maintenant.** `gh pr view 75 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-5/98 tâches terminées · reste 71.60 j estimés.
+5/98 tâches terminées · reste 72.10 j estimés.
 
 ## Tâches
 
@@ -64,9 +64,9 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | rien — fusionnable maintenant |
-| 2 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un contrôle requis rouge ou une revue manquante |
-| 3 | #74 — feat(SEC-02): en-têtes de sécurité et CSP par nonce | `t/sec-02` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un contrôle requis rouge ou une revue manquante |
+| 2 | #78 — feat(CPL-T13): module temps pur - horloge injectee, heure de Paris, feries FR, SLA ouvre, seuil HYP-D3 | `t/cpl-t13` | un contrôle requis rouge ou une revue manquante |
+| 3 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -81,6 +81,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | SEC-02 — En-têtes de sécurité et CSP par nonce | A05 | #66 | `a_faire` |
 | SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
 | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
+| CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure | A05 | #67 | `a_faire` |
 | GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent | A05 | #57 | `a_faire` |
 
 ⚠️ **25 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
@@ -93,19 +94,36 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Prochain pas
 
-**Fusionner #75** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-
 **QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 32 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `244d990` (2026-09-19T06:07:00+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `9f2f6d9` (2026-09-19T06:53:02+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #78 — 2026-09-19 — feat(CPL-T13): module temps pur - horloge injectee, heure de Paris, feries FR, SLA ouvre, seuil HYP-D3
+
+**Fait.** Le module `temps` vit sous `src/domain/temps/`, pur : horloge injectée (`horlogeFigee`
+dans le domaine, `horlogeSysteme` dans `src/lib/horloge.ts`), heure légale de Paris calculée par la
+règle européenne, bornée aux années civiles de Paris 1996-2099, fériés FR versionnés avec leur
+attribut chômé, SLA en heures ouvrées à échéance exclusive, capacité réelle et seuil prioritaire
+(HYP-D3). Les conversions sont confrontées à `Intl.DateTimeFormat` dans le test, jamais dans le
+domaine : 131 496 heures de 2026 à 2040, 78 338 points autour des changements d'heure de 1996 à
+2099. 38 mutants joués, 38 tués. `partners/ADR-0014` (`propose`) en est le contrat.
+
+**Reste.** La question à Will sur le lundi de Pentecôte (travaillé par défaut, une constante) ; le
+numéro d'ADR, fixé à l'atterrissage (0014 aujourd'hui, 0015 si DM-01 atterrit avant) ; le relevé unique et le
+rattrapage des crons de REQ-QA-027, qui sont à DM-13 et T-ARG-015.
+
+**Appris.** Un oracle vivant trouve ce qu'un attendu tapé aurait figé faux : le test supposait onze
+fériés distincts par an, et 1997 n'en a que dix (l'Ascension tombe le 8 mai). Le témoin dérive
+maintenant ces années de l'oracle de Gauss au lieu de les écrire. Et une URL encodée en commentaire
+(le « â » de Pâques en pourcentages) se lit comme un identifiant nu : la garde lit les commentaires.
 
 ### PR #74 — 2026-09-19 — feat(SEC-02): en-têtes de sécurité et CSP par nonce
 
@@ -149,39 +167,7 @@ qui juge une quinzaine de codes de sortie passe de deux minutes à quinze second
 colle un préfixe voisin devant un hexadécimal au hasard est instable : `stu` suivi d'un `b` tiré une
 fois sur seize devient `stub`, et le vert dépendait du tirage.
 
-### PR #64 — 2026-09-18 — feat(GOV-077): la relecture se proportionne au risque, aucune revue n est pas toutes refusent
-
-**Fait.** Le nombre de lentilles exigées dépend désormais du risque de la PR, dérivé par une seule
-fonction, `risqueDeLaPr()` (`scripts/lot/revues.ts`), qu'appellent `gov:pr` et le composeur du
-corps. Une PR n'est ordinaire que si tout est prouvé : tâche résolue, base lisible, chaque tâche en
-zone `gouvernance` ou `qualite` avec `sensible` présent et vide sur la tête ET la base, aucun
-label `schema`, et un diff non vide, complet, entièrement sous `docs/`, `scripts/` ou `tests/`,
-hors de la garde des revues, fermeture transitive de ses imports comprise. Tout le reste,
-`.github/` et toute la racine compris, est élevé, et un fichier renommé compte par sa source comme
-par sa destination. Ordinaire : `exactitude` et `securite` ; élevé : les quatre lentilles, comme avant. `gov:pr --pr` imprime le risque et ses
-raisons, et « aucune revue » a sa propre famille, `aucune_revue`, distincte de « toutes les revues
-refusent ». Un avis posté en commentaire d'issue est nommé sans être compté. Le lot L0-01 est clos
-dans la même PR : GOV-039, GOV-041, GOV-043, GOV-044 et GOV-056 passent `fusionnee` par
-`reclasser --fusionnee`, cinq appels sans refus.
-
-**Reste.** `partners/ADR-0012` est `propose` : A02 le fera passer à `accepte`. Le workflow de lot,
-les fiches de `.claude/agents/` et `docs/agents.json` disent encore « trois lentilles » : chemins du
-lot `--settings` (GOV-023). La garde qui juge une PR reste celle de sa tête, limite déclarée et non
-fermée. Huit tâches qui manipulent des données personnelles portent `sensible: []` : sans effet
-sur les lentilles (leur zone les rend élevées), mais la section Attaque ne leur est pas demandée.
-
-**Appris.** Une fixture qui semble ordinaire peut être élevée par accident : la PR témoin de
-`--prove` touche la charte, donc la garde des revues, et son témoin de lentilles manquantes restait
-rouge pour une raison que personne n'avait écrite. La PR ordinaire est maintenant une fixture
-explicite. Et `gh pr view --json files` plafonne à 100 fichiers : un risque lu sur les fichiers
-doit passer par l'API paginée, sinon un fichier au-delà du centième est invisible. Mesure sur le
-registre réel : 29 des 201 tâches `partners` non livrées se reliront avec deux lentilles. Enfin,
-une liste de fichiers qui ne lit que la destination d'un renommage juge une PR par l'endroit où un
-fichier arrive, jamais par celui qu'il quitte : la lentille `securite` l'a refusé, à juste titre.
-Et la liste que sert la forge plafonne sans erreur : elle se compare au nombre de fichiers que la PR
-annonce, sinon trois mille documents cachent un fichier de configuration.
-
-… 23 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 24 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
