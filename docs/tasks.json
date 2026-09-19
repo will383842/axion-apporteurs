@@ -1466,8 +1466,12 @@
       "paths": [
         "src/lib/logger.ts",
         "src/lib/notify.ts",
-        "sentry.server.config.ts",
-        "tests/unit/qualite/journal-redige.spec.ts"
+        "tests/unit/qualite/journal-redige.spec.ts",
+        "src/lib/sentry.ts",
+        "src/instrumentation.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/qualite/journal-redige.bac.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1475,20 +1479,21 @@
         "rgpd"
       ],
       "deps": [
-        "QA-T01"
+        "QA-T01",
+        "DM-01"
       ],
       "reqs": [
         "REQ-QA-024"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 1,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A05",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 70,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) Tous les journaux applicatifs sont des lignes JSON structurees (pino) portant `requestId`, empreinte d'identifiant d'apporteur, `eventId` et `jobName` quand ils existent (REQ-QA-024). (2) LA REDACTION EST DANS LE JOURNALISEUR, PAS DANS LES APPELANTS : nom, prenom, telephone et adresse de courriel du contact rencontre, coordonnee bancaire et jeton de lien de depot sont remplaces au niveau du serialiseur ; aucun site d'appel n'a a y penser, parce qu'un site d'appel qui oublie est la regle et non l'exception. (3) Sentry recoit les erreurs avec le meme filtre, et le canal de notification refuse de partir hors production sans `NOTIFY_SINK=true` (impose par le hook d'environnement du depot). (4) TEMOIN A DEUX FACES : un journal de bac d'essai auquel on passe un objet portant chacun des champs proteges fait sortir la garde en code non nul tant que la redaction n'est pas posee, et NOMME le champ qui a franchi ; apres correctif, le meme objet fait sortir la garde en zero et la sortie ne contient aucune des valeurs passees. (5) Le vert imprime le compte des champs reellement confrontes ; « aucun champ en clair » sans le compte se lirait comme une absence prouvee.",
