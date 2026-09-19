@@ -10,24 +10,28 @@
  * Elle ne se contente pas de LIRE la déclaration : elle EXÉCUTE chaque compteur contre un cache
  * qui lève, et confronte le verdict rendu à la conduite déclarée.
  *
- * SIX FAMILLES, chacune vue rougir sur son témoin par `--prove` :
- *   `perimetre_vide`         0 compteur au registre, ou 0 fichier de `src/` lu
+ * SEPT FAMILLES, chacune vue rougir sur son témoin par `--prove` :
+ *   `perimetre_vide`         0 compteur au registre, ou 0 fichier de code lu sous `src/` et `scripts/`
  *   `conduite_absente`       un compteur sans conduite sur panne valide — le préfixe est nommé
  *   `conduite_trahie`        exécuté contre un cache qui lève, le verdict n'est pas la conduite
  *                            déclarée, ou ne se dit pas en panne — le préfixe est nommé
  *   `prefixe_hors_famille`   un compteur sous un préfixe hors des cinq, ou dont le nom le dément
- *   `prefixe_hors_registre`  une chaîne ou une tête de gabarit de `src/` qui commence par un des
- *                            cinq préfixes, hors du registre — un compteur écrit à côté de lui
+ *   `prefixe_hors_registre`  une chaîne ou un gabarit de `src/` ou de `scripts/` qui CONTIENT un
+ *                            des cinq préfixes, hors du registre — un compteur écrit à côté de lui
  *   `nom_dynamique`          un appel `limiter(` dont le premier argument n'est pas un littéral
- *                            du registre, ou un import qui renomme `limiter`
+ *                            du registre, ou TOUTE autre référence à `limiter` (alias, `.call`,
+ *                            `.apply`, parenthèses, accès par propriété, import d'espace de noms)
+ *   `ecart_a_l_exigence`     une limite, une fenêtre ou une conduite DÉCLARÉE qui n'est pas celle
+ *                            que le texte de l'exigence source porte — le préfixe est nommé
  *
  * L'analyse passe par le compilateur TypeScript, jamais par une recherche de chaîne : un appel
- * écrit sur deux lignes est un appel. Le périmètre se lit sur le DISQUE : un fichier neuf, pas
- * encore indexé, est lu comme les autres.
+ * écrit sur deux lignes est un appel. Le périmètre se lit sur le DISQUE, sous toutes les
+ * extensions de code : un fichier neuf, pas encore indexé, est lu comme les autres. Toute
+ * référence à `limiter` qui n'est pas un appel direct à nom littéral est refusée : échec fermé.
  *
- * LIMITES DÉCLARÉES. Un préfixe reconstitué par concaténation (`'mag' + 'ic:'`) et un `limiter`
- * atteint par une variable intermédiaire (`const f = limiter`) échappent à la lecture statique ;
- * le premier n'a de sens qu'en contournement délibéré, le second rougit à la relecture.
+ * LIMITES DÉCLARÉES. Un préfixe reconstitué par concaténation (`'mag' + 'ic:'`) échappe à la
+ * lecture statique : il n'a de sens qu'en contournement délibéré. Le registre et cette garde sont
+ * exemptés de la lecture des sources : ils portent les préfixes et les noms par construction.
  */
 
 import ts from 'typescript';
@@ -35,17 +39,42 @@ import { readdirSync, readFileSync } from 'node:fs';
 import {
   COMPTEURS,
   CONDUITES_SUR_PANNE,
+  LIMITE_HORS_DEPOT,
   PREFIXES_DE_FAMILLE,
   limiter,
+  magasinDepuis,
   sujetDepuisEmpreinte,
+  type ConduiteSurPanne,
   type MagasinDeCompteurs,
   type NomDeCompteur,
   type VerdictDeLimite,
 } from '../../src/server/securite/rate-limit';
 
 export const CHEMIN_DU_REGISTRE = 'src/server/securite/rate-limit.ts';
+export const CHEMIN_DE_LA_GARDE = 'scripts/gates/rate-famille.ts';
 export const CHEMIN_DU_POT_DE_MIEL = 'src/server/securite/pot-de-miel.ts';
-const RACINE = 'src';
+const CHEMIN_DES_EXIGENCES = 'docs/requirements.json';
+const RACINES = ['src', 'scripts'] as const;
+
+/** Les extensions de code lues, et la façon dont le compilateur les lit. */
+const GENRES: Readonly<Record<string, ts.ScriptKind>> = {
+  '.ts': ts.ScriptKind.TS,
+  '.mts': ts.ScriptKind.TS,
+  '.cts': ts.ScriptKind.TS,
+  '.tsx': ts.ScriptKind.TSX,
+  '.js': ts.ScriptKind.JS,
+  '.mjs': ts.ScriptKind.JS,
+  '.cjs': ts.ScriptKind.JS,
+  '.jsx': ts.ScriptKind.JSX,
+};
+
+function genreDe(chemin: string): ts.ScriptKind | null {
+  const ext = /\.[a-z]+$/.exec(chemin)?.[0] ?? '';
+  return GENRES[ext] ?? null;
+}
+
+/** Le module du registre, sous toutes les formes d'import qui le désignent. */
+const MODULE_DU_REGISTRE = /(^|\/)rate-limit(\.[cm]?[jt]sx?)?$/;
 
 export const FAMILLES = [
   'perimetre_vide',
@@ -54,6 +83,7 @@ export const FAMILLES = [
   'prefixe_hors_famille',
   'prefixe_hors_registre',
   'nom_dynamique',
+  'ecart_a_l_exigence',
 ] as const;
 export type Famille = (typeof FAMILLES)[number];
 
@@ -74,6 +104,8 @@ export interface Univers {
   readonly registre: Readonly<Record<string, unknown>>;
   readonly fichiers: readonly Fichier[];
   readonly executer: Executer;
+  /** Le texte de chaque exigence, par identifiant (`docs/requirements.json`). */
+  readonly exigences: Readonly<Record<string, string>>;
 }
 
 export interface Releve {
@@ -92,6 +124,72 @@ function estObjet(v: unknown): v is Record<string, unknown> {
 
 function estUnDe<T extends string>(liste: readonly T[], v: unknown): v is T {
   return typeof v === 'string' && (liste as readonly string[]).includes(v);
+}
+
+// ── L'exigence, lue dans son texte ──────────────────────────────────────────────────────────────
+
+export interface ValeursExigees {
+  readonly limite: number | typeof LIMITE_HORS_DEPOT;
+  readonly fenetreSecondes: number | typeof LIMITE_HORS_DEPOT;
+  readonly surPanne: ConduiteSurPanne;
+}
+
+const SECONDES_PAR_UNITE: Readonly<Record<string, number>> = { s: 1, min: 60, h: 3600 };
+
+/**
+ * Ce que le texte de l'exigence dit du compteur que désigne `ancre` : la conduite est la première
+ * `surPanne: …` qui SUIT l'ancre ; la limite et la fenêtre sont le « N / M min » qui la PRÉCÈDE
+ * immédiatement, et leur absence veut dire qu'aucune exigence ne les chiffre (hors dépôt).
+ */
+export function exigenceDuCompteur(texte: string, ancre: string): ValeursExigees | null {
+  const i = ancre === '' ? -1 : texte.indexOf(ancre);
+  if (i < 0) return null;
+  const conduite = /surPanne:\s*(refuser|laisser-passer)/.exec(texte.slice(i + ancre.length));
+  if (conduite === null || !estUnDe(CONDUITES_SUR_PANNE, conduite[1])) return null;
+  const valeurs = /(\d+)\s*\/\s*(\d+)\s*(s|min|h)\s*$/.exec(texte.slice(0, i));
+  if (valeurs === null) {
+    return { limite: LIMITE_HORS_DEPOT, fenetreSecondes: LIMITE_HORS_DEPOT, surPanne: conduite[1] };
+  }
+  return {
+    limite: Number(valeurs[1]),
+    fenetreSecondes: Number(valeurs[2]) * (SECONDES_PAR_UNITE[valeurs[3] ?? ''] ?? Number.NaN),
+    surPanne: conduite[1],
+  };
+}
+
+function confronterAlExigence(
+  u: Univers,
+  nom: string,
+  d: Record<string, unknown>,
+  prefixe: string,
+  fautes: Faute[]
+): void {
+  const source = String(d.source);
+  const texte = u.exigences[source];
+  const exigee =
+    texte === undefined || typeof d.ancre !== 'string' ? null : exigenceDuCompteur(texte, d.ancre);
+  if (exigee === null) {
+    fautes.push({
+      famille: 'ecart_a_l_exigence',
+      message:
+        `préfixe \`${prefixe}\` — le compteur \`${nom}\` ne se retrouve pas dans ${source} ` +
+        `(ancre ${JSON.stringify(d.ancre) ?? 'absente'}) : sa valeur n'a pas de source lisible.`,
+    });
+    return;
+  }
+  const ecarts = (['limite', 'fenetreSecondes', 'surPanne'] as const)
+    .filter((champ) => d[champ] !== exigee[champ])
+    .map(
+      (champ) => `${champ} ${JSON.stringify(d[champ])} au lieu de ${JSON.stringify(exigee[champ])}`
+    );
+  if (ecarts.length > 0) {
+    fautes.push({
+      famille: 'ecart_a_l_exigence',
+      message:
+        `préfixe \`${prefixe}\` — le compteur \`${nom}\` déclare ${ecarts.join(', ')} : ` +
+        `${source} (« ${d.ancre} ») exige autre chose.`,
+    });
+  }
 }
 
 // ── Le registre, lu puis exécuté ────────────────────────────────────────────────────────────────
@@ -128,6 +226,7 @@ async function confronterLeRegistre(
       });
     }
     if (!prefixeValide || !estUnDe(CONDUITES_SUR_PANNE, surPanne)) continue;
+    confronterAlExigence(u, nom, d, prefixe, fautes);
 
     let verdict: VerdictDeLimite;
     try {
@@ -163,6 +262,45 @@ function estAppelA(nomDeFonction: string, e: ts.Expression): boolean {
   return ts.isPropertyAccessExpression(e) && e.name.text === nomDeFonction;
 }
 
+function estChaine(
+  n: ts.Node
+): n is
+  | ts.StringLiteral
+  | ts.NoSubstitutionTemplateLiteral
+  | ts.TemplateHead
+  | ts.TemplateMiddle
+  | ts.TemplateTail {
+  return (
+    ts.isStringLiteral(n) ||
+    ts.isNoSubstitutionTemplateLiteral(n) ||
+    ts.isTemplateHead(n) ||
+    ts.isTemplateMiddle(n) ||
+    ts.isTemplateTail(n)
+  );
+}
+
+/** La chaîne est-elle le nom d'un module chargé (import, ré-export, `require`, `import()`) ? */
+function designeUnModule(n: ts.Node): boolean {
+  const p = n.parent;
+  if (ts.isImportDeclaration(p) || ts.isExportDeclaration(p)) return p.moduleSpecifier === n;
+  if (ts.isExternalModuleReference(p)) return true;
+  if (ts.isCallExpression(p) && p.arguments[0] === n) {
+    return p.expression.kind === ts.SyntaxKind.ImportKeyword || estAppelA('require', p.expression);
+  }
+  return false;
+}
+
+/** Le seul import admis du registre : des noms, sans espace de noms ni défaut. */
+function importNomme(n: ts.ImportDeclaration): boolean {
+  const c = n.importClause;
+  return (
+    c !== undefined &&
+    c.name === undefined &&
+    c.namedBindings !== undefined &&
+    ts.isNamedImports(c.namedBindings)
+  );
+}
+
 function lireLesSources(
   u: Univers,
   fautes: Faute[]
@@ -171,33 +309,29 @@ function lireLesSources(
   let appelsVus = 0;
   let appelantsDuPotDeMiel = 0;
   for (const f of u.fichiers) {
-    const genre = f.chemin.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+    if (f.chemin === CHEMIN_DU_REGISTRE || f.chemin === CHEMIN_DE_LA_GARDE) continue;
+    const genre = genreDe(f.chemin) ?? ts.ScriptKind.TS;
     const source = ts.createSourceFile(f.chemin, f.texte, ts.ScriptTarget.Latest, true, genre);
     const ou = (n: ts.Node) =>
       `${f.chemin}:${source.getLineAndCharacterOfPosition(n.getStart(source)).line + 1}`;
-    const estLeRegistre = f.chemin === CHEMIN_DU_REGISTRE;
+    const refuser = (n: ts.Node, famille: Famille, message: string): void => {
+      fautes.push({ famille, message: `${ou(n)} — ${message}` });
+    };
     // Le nom littéral passé à `limiter(` porte le préfixe par construction : il est jugé par
-    // `nom_dynamique` (un littéral DU REGISTRE), pas comme un compteur écrit à côté de lui.
-    const nomsPassesALimiter = new Set<ts.Node>();
+    // `nom_dynamique` (un littéral DU REGISTRE), pas comme un compteur écrit à côté de lui. Et un
+    // identifiant `limiter` n'est admis qu'à deux places : l'import nommé, l'appel direct.
+    const admis = new Set<ts.Node>();
 
     const visiter = (n: ts.Node): void => {
+      if (ts.isImportDeclaration(n) && importNomme(n)) admis.add(n.moduleSpecifier);
+      if (ts.isImportSpecifier(n) && n.propertyName === undefined) admis.add(n.name);
+
       if (
-        !estLeRegistre &&
-        !nomsPassesALimiter.has(n) &&
-        (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n) || ts.isTemplateHead(n))
+        ts.isCallExpression(n) &&
+        ts.isIdentifier(n.expression) &&
+        n.expression.text === 'limiter'
       ) {
-        const texte = n.text.toLowerCase();
-        const prefixe = PREFIXES_DE_FAMILLE.find((p) => texte.startsWith(p));
-        if (prefixe !== undefined) {
-          fautes.push({
-            famille: 'prefixe_hors_registre',
-            message:
-              `${ou(n)} — une chaîne commence par le préfixe de famille \`${prefixe}\` hors de ` +
-              `${CHEMIN_DU_REGISTRE} : un compteur se déclare au registre, jamais à côté.`,
-          });
-        }
-      }
-      if (ts.isCallExpression(n) && estAppelA('limiter', n.expression)) {
+        admis.add(n.expression);
         appelsVus += 1;
         const premier = n.arguments[0];
         const litteral =
@@ -205,28 +339,50 @@ function lireLesSources(
           (ts.isStringLiteral(premier) || ts.isNoSubstitutionTemplateLiteral(premier))
             ? premier.text
             : null;
-        if (litteral !== null && noms.has(litteral)) nomsPassesALimiter.add(premier!);
-        if (litteral === null || !noms.has(litteral)) {
-          fautes.push({
-            famille: 'nom_dynamique',
-            message:
-              `${ou(n)} — \`limiter(\` reçoit ${premier === undefined ? 'aucun nom' : `\`${premier.getText(source)}\``} : ` +
-              `le nom d'un compteur est un littéral du registre, jamais une valeur calculée.`,
-          });
+        if (litteral !== null && noms.has(litteral)) admis.add(premier!);
+        else {
+          refuser(
+            n,
+            'nom_dynamique',
+            `\`limiter(\` reçoit ${premier === undefined ? 'aucun nom' : `\`${premier.getText(source)}\``} : ` +
+              `le nom d'un compteur est un littéral du registre, jamais une valeur calculée.`
+          );
         }
       }
-      if (
-        ts.isImportSpecifier(n) &&
-        (n.propertyName?.text ?? n.name.text) === 'limiter' &&
-        n.name.text !== 'limiter'
-      ) {
-        fautes.push({
-          famille: 'nom_dynamique',
-          message:
-            `${ou(n)} — \`limiter\` est importé sous le nom \`${n.name.text}\` : ses appels ` +
-            `échapperaient à la lecture de leur premier argument.`,
-        });
+
+      if (ts.isIdentifier(n) && n.text === 'limiter' && !admis.has(n)) {
+        refuser(
+          n,
+          'nom_dynamique',
+          `référence indirecte à \`limiter\` (${ts.SyntaxKind[n.parent.kind]}) : seul un appel ` +
+            `direct, à nom littéral du registre, est lisible ; tout autre chemin échappe à la garde.`
+        );
       }
+
+      if (estChaine(n) && !admis.has(n)) {
+        if (n.text === 'limiter' && ts.isElementAccessExpression(n.parent)) {
+          refuser(n, 'nom_dynamique', `\`limiter\` atteint par une chaîne : échec fermé.`);
+        } else if (MODULE_DU_REGISTRE.test(n.text) && designeUnModule(n)) {
+          refuser(
+            n,
+            'nom_dynamique',
+            `le registre est chargé autrement que par un import NOMMÉ (espace de noms, défaut, ` +
+              `\`require\`, \`import()\`, ré-export) : ses appels échapperaient à la garde.`
+          );
+        } else {
+          const texte = n.text.toLowerCase();
+          const prefixe = PREFIXES_DE_FAMILLE.find((p) => texte.includes(p));
+          if (prefixe !== undefined) {
+            refuser(
+              n,
+              'prefixe_hors_registre',
+              `une chaîne porte le préfixe de famille \`${prefixe}\` hors de ` +
+                `${CHEMIN_DU_REGISTRE} : un compteur se déclare au registre, jamais à côté.`
+            );
+          }
+        }
+      }
+
       if (
         f.chemin !== CHEMIN_DU_POT_DE_MIEL &&
         ts.isCallExpression(n) &&
@@ -254,7 +410,7 @@ export async function analyser(u: Univers): Promise<Releve> {
   if (u.fichiers.length === 0) {
     fautes.push({
       famille: 'perimetre_vide',
-      message: `AUCUN fichier \`${RACINE}/**/*.{ts,tsx}\` lu : l'absence de faute ne dirait rien.`,
+      message: `AUCUN fichier de code sous ${RACINES.join(' ni ')} lu : l'absence de faute ne dirait rien.`,
     });
   }
   await confronterLeRegistre(u, fautes, confrontes);
@@ -269,34 +425,40 @@ function sourcesDuDisque(dossier: string): Fichier[] {
     .flatMap((e): Fichier[] => {
       const chemin = `${dossier}/${e.name}`;
       if (e.isDirectory()) return e.name === 'node_modules' ? [] : sourcesDuDisque(chemin);
-      return /\.tsx?$/.test(e.name) ? [{ chemin, texte: readFileSync(chemin, 'utf8') }] : [];
+      return genreDe(e.name) !== null ? [{ chemin, texte: readFileSync(chemin, 'utf8') }] : [];
     })
     .sort((a, b) => a.chemin.localeCompare(b.chemin));
 }
 
+function exigencesDuDepot(): Record<string, string> {
+  const r: { exigences: { id: string; texte: string }[] } = JSON.parse(
+    readFileSync(CHEMIN_DES_EXIGENCES, 'utf8')
+  );
+  return Object.fromEntries(r.exigences.map((e) => [e.id, e.texte]));
+}
+
 /** Un cache qui LÈVE à chaque appel, et qui compte ceux qu'il a reçus. */
-export function cacheQuiLeve(): MagasinDeCompteurs & { appels: () => number } {
+export function cacheQuiLeve(): { magasin: MagasinDeCompteurs; appels: () => number } {
   let appels = 0;
-  return {
-    consommer() {
-      appels += 1;
-      return Promise.reject(new Error('cache indisponible (témoin de la garde)'));
-    },
-    appels: () => appels,
-  };
+  const magasin = magasinDepuis(() => {
+    appels += 1;
+    return Promise.reject(new Error('cache indisponible (témoin de la garde)'));
+  });
+  return { magasin, appels: () => appels };
 }
 
 const SUJET_TEMOIN = sujetDepuisEmpreinte('0'.repeat(16));
 
 /** Le compteur réel, exécuté contre un cache qui lève, signalement capté (la garde imprime seule). */
 export const executerLeCompteurReel: Executer = (nom) =>
-  limiter(nom as NomDeCompteur, SUJET_TEMOIN, 0, cacheQuiLeve(), () => undefined);
+  limiter(nom as NomDeCompteur, SUJET_TEMOIN, 0, cacheQuiLeve().magasin, () => undefined);
 
 export function universDuDepot(): Univers {
   return {
     registre: COMPTEURS,
-    fichiers: sourcesDuDisque(RACINE),
+    fichiers: RACINES.flatMap(sourcesDuDisque),
     executer: executerLeCompteurReel,
+    exigences: exigencesDuDepot(),
   };
 }
 
@@ -347,6 +509,17 @@ export const TEMOINS: readonly Temoin[] = [
       }),
     }),
     nomme: ['magic:ip', 'magic:courriel'],
+  },
+  {
+    famille: 'ecart_a_l_exigence',
+    libelle: '`magic:courriel` déclaré `laisser-passer`, contre REQ-SEC-002',
+    univers: (b) => {
+      const registre: Record<string, unknown> = JSON.parse(JSON.stringify(b.registre));
+      const d = registre['magic:courriel'];
+      if (estObjet(d)) d.surPanne = 'laisser-passer';
+      return { ...b, registre };
+    },
+    nomme: ['magic:', 'magic:courriel'],
   },
   {
     famille: 'prefixe_hors_famille',
@@ -483,7 +656,8 @@ async function controler(): Promise<number> {
       `un cache qui lève) : ${r.confrontes.join(' ; ')}.`
   );
   console.log(
-    `   ${r.fichiersLus} fichiers de \`${RACINE}/\` lus ; ${r.appelsVus} appels \`limiter(\` vus.`
+    `   ${r.fichiersLus} fichiers de code lus sous ${RACINES.map((x) => `\`${x}/\``).join(' et ')} ; ` +
+      `${r.appelsVus} appels \`limiter(\` vus.`
   );
   console.log(
     `   Pot de miel : ${r.appelantsDuPotDeMiel} formulaire(s) câblé(s) — 0 formulaire de dépôt en ` +

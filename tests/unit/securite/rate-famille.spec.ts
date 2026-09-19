@@ -8,9 +8,12 @@
  *   — REQ-SEC-016 : le registre porte les valeurs des exigences ; chaque compteur, exécuté contre
  *     un cache qui LÈVE, rend sa conduite déclarée et se dit en panne ; une panne réelle (port
  *     fermé, serveur muet, adresse injoignable) rend son verdict sous la seconde, et les options
- *     par défaut du client ne le font pas ; le sujet d'un compteur est une empreinte ; l'adresse du client se lit depuis
- *     la DROITE ; la garde rougit sur chacune de ses familles en NOMMANT le préfixe, et le binaire
- *     sort en non nul sur une copie de travail fautive, en 0 sur le dépôt.
+ *     par défaut du client ne le font pas ; le sujet d'un compteur est une empreinte ; l'adresse
+ *     du client se lit depuis la DROITE, en forme canonique, une IPv6 regroupée par /64 ; la garde
+ *     rougit sur chacune de ses familles en NOMMANT le préfixe, et le binaire sort en non nul sur
+ *     une copie de travail fautive, en 0 sur le dépôt.
+ *   — REQ-SEC-002 : les valeurs et la conduite des deux compteurs du lien magique sont LUES dans
+ *     le texte de l'exigence et confrontées au registre.
  *   — REQ-SEC-035 : sur un parcours de bac, le chemin piège et le chemin nominal rendent la même
  *     réponse au même instant ; le piège n'écrit aucune ligne, n'accuse rien, et son signalement
  *     ne porte pas la valeur saisie.
@@ -45,8 +48,10 @@ import {
   PREFIXES_DE_FAMILLE,
   conduiteSurPanne,
   creerMagasinRedis,
+  magasinDepuis,
   limiter,
   sujetDepuisEmpreinte,
+  type ConsommerDuMagasin,
   type MagasinDeCompteurs,
   type NomDeCompteur,
   type SignalDePanne,
@@ -81,25 +86,30 @@ const SUJET = sujetDepuisEmpreinte('0123456789abcdef');
 
 // ── Aides ───────────────────────────────────────────────────────────────────────────────────────
 
-/** L'algorithme du script du cache, rejoué en mémoire : POUR LES TESTS seulement. */
-function magasinEnMemoire(): MagasinDeCompteurs & { cles: string[] } {
+/**
+ * L'algorithme du script du cache, rejoué en mémoire : POUR LES TESTS seulement. Le magasin est
+ * opaque ; la fonction d'écriture et les clés reçues restent entre les mains du test.
+ */
+function magasinEnMemoire(): {
+  magasin: MagasinDeCompteurs;
+  cles: string[];
+  consommer: ConsommerDuMagasin;
+} {
   const journaux = new Map<string, { score: number; membre: string }[]>();
   const cles: string[] = [];
-  return {
-    cles,
-    async consommer(cle, maintenantMs, fenetreMs, limite, membre) {
-      cles.push(cle);
-      const vivants = (journaux.get(cle) ?? []).filter((e) => e.score > maintenantMs - fenetreMs);
-      const admis = vivants.length < limite;
-      if (admis) vivants.push({ score: maintenantMs, membre });
-      journaux.set(cle, vivants);
-      const plusAncien = vivants.reduce<number | null>(
-        (m, e) => (m === null || e.score < m ? e.score : m),
-        null
-      );
-      return { admis, compte: vivants.length, plusAncienMs: plusAncien };
-    },
+  const consommer: ConsommerDuMagasin = async (cle, maintenantMs, fenetreMs, limite, membre) => {
+    cles.push(cle);
+    const vivants = (journaux.get(cle) ?? []).filter((e) => e.score > maintenantMs - fenetreMs);
+    const admis = vivants.length < limite;
+    if (admis) vivants.push({ score: maintenantMs, membre });
+    journaux.set(cle, vivants);
+    const plusAncien = vivants.reduce<number | null>(
+      (m, e) => (m === null || e.score < m ? e.score : m),
+      null
+    );
+    return { admis, compte: vivants.length, plusAncienMs: plusAncien };
   };
+  return { magasin: magasinDepuis(consommer), cles, consommer };
 }
 
 function capteur(): { signaux: SignalDePanne[]; signaler: (s: SignalDePanne) => void } {
@@ -241,7 +251,8 @@ describe('REQ-SEC-016 — le verdict d’un compteur sain', () => {
   it('REQ-SEC-016 — la limite est exacte, un refus n’ajoute rien, la fenêtre glisse', async () => {
     const m = magasinEnMemoire();
     const verdicts: VerdictDeLimite[] = [];
-    for (let i = 0; i < 6; i++) verdicts.push(await limiter('magic:courriel', SUJET, 1_000 + i, m));
+    for (let i = 0; i < 6; i++)
+      verdicts.push(await limiter('magic:courriel', SUJET, 1_000 + i, m.magasin));
     expect(verdicts.slice(0, 5).map((v) => v.autorise)).toEqual([true, true, true, true, true]);
     expect(verdicts.map((v) => v.restant)).toEqual([4, 3, 2, 1, 0, 0]);
     expect(verdicts[5]).toEqual({
@@ -253,13 +264,13 @@ describe('REQ-SEC-016 — le verdict d’un compteur sain', () => {
     });
     // Le refus n'a rien ajouté : à la sortie du PREMIER marqueur, une place, et une seule.
     const apres = 1_000 + 900_000;
-    expect((await limiter('magic:courriel', SUJET, apres, m)).autorise).toBe(true);
-    expect((await limiter('magic:courriel', SUJET, apres, m)).autorise).toBe(false);
+    expect((await limiter('magic:courriel', SUJET, apres, m.magasin)).autorise).toBe(true);
+    expect((await limiter('magic:courriel', SUJET, apres, m.magasin)).autorise).toBe(false);
   });
 
   it('REQ-SEC-016 — la clé est `${nom}:${empreinte}`, rien d’autre', async () => {
     const m = magasinEnMemoire();
-    await limiter('depot:ip', SUJET, 0, m);
+    await limiter('depot:ip', SUJET, 0, m.magasin);
     expect(m.cles).toEqual([`depot:ip:${SUJET}`]);
   });
 });
@@ -272,7 +283,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
     const { signaux, signaler } = capteur();
     const constates: string[] = [];
     for (const nom of NOMS) {
-      const v = await limiter(nom, SUJET, 0, cache, signaler);
+      const v = await limiter(nom, SUJET, 0, cache.magasin, signaler);
       const d = COMPTEURS[nom];
       expect(v.panne, nom).toBe(true);
       expect(v.autorise, nom).toBe(d.surPanne === 'laisser-passer');
@@ -292,9 +303,9 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
   it('REQ-SEC-016 — le cache tombe AU MILIEU d’une rafale : les admis restent admis, la suite suit la conduite', async () => {
     const sain = magasinEnMemoire();
     let tombe = false;
-    const cache: MagasinDeCompteurs = {
-      consommer: (...a) => (tombe ? Promise.reject(new Error('coupé')) : sain.consommer(...a)),
-    };
+    const cache = magasinDepuis((...a) =>
+      tombe ? Promise.reject(new Error('coupé')) : sain.consommer(...a)
+    );
     const avant = await limiter('magic:ip', SUJET, 0, cache, () => undefined);
     tombe = true;
     const pendant = await limiter('magic:ip', SUJET, 1, cache, () => undefined);
@@ -315,7 +326,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
       return true;
     });
     try {
-      await limiter('magic:courriel', SUJET, 0, cacheQuiLeve());
+      await limiter('magic:courriel', SUJET, 0, cacheQuiLeve().magasin);
     } finally {
       espion.mockRestore();
     }
@@ -331,7 +342,7 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
   it('REQ-SEC-016 — `depot:identite` sans configuration : refus, `panne: true`, `limite_non_configuree`, cache non atteint', async () => {
     const cache = cacheQuiLeve();
     const { signaux, signaler } = capteur();
-    const v = await limiter('depot:identite', SUJET, 0, cache, signaler);
+    const v = await limiter('depot:identite', SUJET, 0, cache.magasin, signaler);
     expect(v).toEqual({
       autorise: false,
       restant: 0,
@@ -497,7 +508,7 @@ describe('REQ-SEC-016 — le sujet d’un compteur est une empreinte, jamais une
   it('REQ-SEC-016 — un courriel glissé par un cast n’atteint jamais le cache', async () => {
     const m = magasinEnMemoire();
     await expect(
-      limiter('magic:courriel', 'a@example.org' as SujetDeCompteur, 0, m)
+      limiter('magic:courriel', 'a@example.org' as SujetDeCompteur, 0, m.magasin)
     ).rejects.toThrow(/^sujet_non_empreinte/);
     expect(m.cles).toEqual([]);
   });
@@ -690,6 +701,11 @@ describe('REQ-SEC-016 — la garde de famille', () => {
       'import d’espace de noms',
       "import * as rl from './securite/rate-limit';\nexport const f = rl;\n",
     ],
+    [
+      '`require` du registre',
+      "const rl = require('./securite/rate-limit');\nexport const f = rl;\n",
+    ],
+    ['ré-export du registre', "export * from './securite/rate-limit';\n"],
   ])(
     'REQ-SEC-016 — référence indirecte à `limiter` (%s) : `nom_dynamique`, échec fermé',
     async (_l, texte) => {
@@ -701,6 +717,20 @@ describe('REQ-SEC-016 — la garde de famille', () => {
       expect(r.fautes.every((f) => f.message.startsWith('src/server/detour.ts:'))).toBe(true);
     }
   );
+
+  it('REQ-SEC-016 — CONTRE-TÉMOIN : le CHEMIN du registre écrit comme une donnée n’est pas un chargement', async () => {
+    const r = await analyser({
+      ...base,
+      fichiers: [
+        ...base.fichiers,
+        {
+          chemin: 'scripts/lot/liste.ts',
+          texte: "export const chemins = ['src/server/securite/rate-limit.ts'];\n",
+        },
+      ],
+    });
+    expect(r.fautes).toEqual([]);
+  });
 
   it('REQ-SEC-016 — un préfixe de famille AU MILIEU d’une chaîne ou d’un gabarit est vu', async () => {
     const r = await analyser({
@@ -782,7 +812,9 @@ describe('REQ-SEC-016 — la garde de famille', () => {
     expect(r.code, r.sortie).toBe(0);
     expect(r.sortie).toContain(`${NOMS.length} compteurs confrontés`);
     for (const nom of NOMS) expect(r.sortie).toContain(`${nom}→${COMPTEURS[nom].surPanne}`);
-    expect(r.sortie).toMatch(/[1-9]\d* fichiers de `src\/` lus ; \d+ appels `limiter\(` vus/);
+    expect(r.sortie).toMatch(
+      /[1-9]\d* fichiers de code lus sous `src\/` et `scripts\/` ; \d+ appels `limiter\(` vus/
+    );
   });
 
   it('REQ-SEC-016 — `--prove` : chaque famille rougit sur son témoin, les contre-témoins restent verts', () => {

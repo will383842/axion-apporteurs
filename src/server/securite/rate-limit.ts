@@ -46,6 +46,11 @@ export interface DeclarationDeCompteur {
   readonly fenetreSecondes: number | typeof LIMITE_HORS_DEPOT;
   readonly surPanne: ConduiteSurPanne;
   readonly source: `REQ-${string}`;
+  /**
+   * Le segment du texte de l'exigence qui DÉSIGNE ce compteur. La garde y lit la limite, la
+   * fenêtre et la conduite exigées, et les confronte à la déclaration.
+   */
+  readonly ancre: string;
   /** RM-10 : la date (AAAA-MM-JJ) à laquelle la valeur a été confrontée à sa source. */
   readonly verifieLe: `${number}-${number}-${number}`;
 }
@@ -63,6 +68,7 @@ export const COMPTEURS = {
     fenetreSecondes: 900,
     surPanne: 'refuser',
     source: 'REQ-SEC-002',
+    ancre: 'par hash IP',
     verifieLe: '2026-09-19',
   },
   'magic:courriel': {
@@ -71,6 +77,7 @@ export const COMPTEURS = {
     fenetreSecondes: 900,
     surPanne: 'refuser',
     source: 'REQ-SEC-002',
+    ancre: 'par email',
     verifieLe: '2026-09-19',
   },
   'depot:ip': {
@@ -79,6 +86,7 @@ export const COMPTEURS = {
     fenetreSecondes: 600,
     surPanne: 'laisser-passer',
     source: 'REQ-SEC-016',
+    ancre: 'par hash IP',
     verifieLe: '2026-09-19',
   },
   'depot:identite': {
@@ -87,6 +95,7 @@ export const COMPTEURS = {
     fenetreSecondes: LIMITE_HORS_DEPOT,
     surPanne: 'refuser',
     source: 'REQ-SEC-016',
+    ancre: 'par identité',
     verifieLe: '2026-09-19',
   },
 } as const satisfies Readonly<Record<`${PrefixeDeFamille}${string}`, DeclarationDeCompteur>>;
@@ -129,14 +138,35 @@ export interface ResultatDuMagasin {
  * Fenêtre glissante par journal : retirer ce qui est sorti de la fenêtre, compter, ajouter le
  * membre SEULEMENT s'il reste de la place, renouveler l'expiration. Un refus n'ajoute rien.
  */
+export type ConsommerDuMagasin = (
+  cle: string,
+  maintenantMs: number,
+  fenetreMs: number,
+  limite: number,
+  membre: string
+) => Promise<ResultatDuMagasin>;
+
+/**
+ * Le magasin, OPAQUE. Sa fonction d'écriture n'est pas une propriété : elle vit dans une table
+ * privée de ce module, et seul `limiter` l'appelle. Un magasin réel entre les mains d'un autre
+ * module ne peut donc pas écrire une clé libre — un compteur hors du registre, une valeur en
+ * clair, une clé sans conduite sur panne.
+ */
+declare const marqueDeMagasin: unique symbol;
 export interface MagasinDeCompteurs {
-  consommer(
-    cle: string,
-    maintenantMs: number,
-    fenetreMs: number,
-    limite: number,
-    membre: string
-  ): Promise<ResultatDuMagasin>;
+  readonly [marqueDeMagasin]: 'MagasinDeCompteurs';
+}
+
+const ECRIVAINS = new WeakMap<object, ConsommerDuMagasin>();
+
+function enregistrer<T extends object>(magasin: T, consommer: ConsommerDuMagasin): T {
+  ECRIVAINS.set(Object.freeze(magasin), consommer);
+  return magasin;
+}
+
+/** Un magasin bâti sur une fonction d'écriture fournie : les témoins, et le magasin en mémoire. */
+export function magasinDepuis(consommer: ConsommerDuMagasin): MagasinDeCompteurs {
+  return enregistrer({}, consommer) as unknown as MagasinDeCompteurs;
 }
 
 /**
@@ -183,11 +213,26 @@ export interface MagasinRedis extends MagasinDeCompteurs {
 }
 
 /**
+ * Une `REDIS_URL` que le client ne sait pas lire. Le refus est NOMMÉ et ne porte ni la valeur ni
+ * l'erreur d'origine : celle-ci recopie l'URL entière, mot de passe compris.
+ */
+function adresseIllisible(): Error {
+  return new Error(
+    'redis_url_illisible : REDIS_URL ne se lit pas comme une adresse de cache (valeur non recopiée)'
+  );
+}
+
+/**
  * Le magasin réel. Aucune connexion n'est ouverte à la construction : la première se fait au
  * premier appel, et une connexion perdue se rouvre à l'appel suivant — jamais en tâche de fond.
  */
 export function creerMagasinRedis(url: string, options: RedisOptions): MagasinRedis {
-  const client = new Redis(url, options);
+  let client: Redis;
+  try {
+    client = new Redis(url, options);
+  } catch {
+    throw adresseIllisible();
+  }
   // Chaque panne est déjà signalée, par son préfixe, au verdict qui la subit. Sans écouteur, le
   // client imprimerait en plus la sienne, avec l'adresse du cache, à chaque tentative.
   client.on('error', () => undefined);
@@ -210,40 +255,42 @@ export function creerMagasinRedis(url: string, options: RedisOptions): MagasinRe
     if (connexion !== null) await connexion;
   };
 
-  return {
-    async consommer(cle, maintenantMs, fenetreMs, limite, membre) {
-      await pret();
-      const brut = await client.eval(
-        SCRIPT_FENETRE_GLISSANTE,
-        1,
-        cle,
-        maintenantMs,
-        fenetreMs,
-        limite,
-        membre
-      );
-      if (!Array.isArray(brut) || brut.length !== 3) {
-        throw new Error('rate-limit : réponse du cache illisible');
-      }
-      const plusAncien = Number(brut[2]);
-      return {
-        admis: Number(brut[0]) === 1,
-        compte: Number(brut[1]),
-        plusAncienMs: plusAncien < 0 ? null : plusAncien,
-      };
-    },
+  const consommer: ConsommerDuMagasin = async (cle, maintenantMs, fenetreMs, limite, membre) => {
+    await pret();
+    const brut = await client.eval(
+      SCRIPT_FENETRE_GLISSANTE,
+      1,
+      cle,
+      maintenantMs,
+      fenetreMs,
+      limite,
+      membre
+    );
+    if (!Array.isArray(brut) || brut.length !== 3) {
+      throw new Error('rate-limit : réponse du cache illisible');
+    }
+    const plusAncien = Number(brut[2]);
+    return {
+      admis: Number(brut[0]) === 1,
+      compte: Number(brut[1]),
+      plusAncienMs: plusAncien < 0 ? null : plusAncien,
+    };
+  };
+  const magasin = {
     fermer() {
       client.disconnect();
     },
   };
+  return enregistrer(magasin, consommer) as unknown as MagasinRedis;
 }
 
 /** Le magasin d'un processus sans `REDIS_URL` : chaque appel est une panne, jamais un plantage. */
-const MAGASIN_SANS_ADRESSE: MagasinDeCompteurs = {
-  consommer() {
-    return Promise.reject(new Error('rate-limit : REDIS_URL absente'));
-  },
-};
+const MAGASIN_SANS_ADRESSE = magasinDepuis(() =>
+  Promise.reject(new Error('rate-limit : REDIS_URL absente'))
+);
+
+/** Le magasin d'une `REDIS_URL` illisible : une panne aussi, et le refus ne porte pas la valeur. */
+const MAGASIN_ADRESSE_ILLISIBLE = magasinDepuis(() => Promise.reject(adresseIllisible()));
 
 let magasinDuProcessus: MagasinRedis | null = null;
 
@@ -252,7 +299,11 @@ function magasinParDefaut(): MagasinDeCompteurs {
   if (magasinDuProcessus !== null) return magasinDuProcessus;
   const url = process.env.REDIS_URL;
   if (url === undefined || url === '') return MAGASIN_SANS_ADRESSE;
-  magasinDuProcessus = creerMagasinRedis(url, OPTIONS_DU_CLIENT);
+  try {
+    magasinDuProcessus = creerMagasinRedis(url, OPTIONS_DU_CLIENT);
+  } catch {
+    return MAGASIN_ADRESSE_ILLISIBLE;
+  }
   return magasinDuProcessus;
 }
 
@@ -328,9 +379,11 @@ export async function limiter(
     return enPanne(declaration, 'limite_non_configuree', signaler);
   }
   const fenetreMs = fenetreSecondes * 1000;
+  const consommer = ECRIVAINS.get(magasin);
+  if (consommer === undefined) return enPanne(declaration, 'cache_indisponible', signaler);
   let resultat: ResultatDuMagasin;
   try {
-    resultat = await magasin.consommer(
+    resultat = await consommer(
       `${nom}:${empreinte}`,
       maintenantMs,
       fenetreMs,
