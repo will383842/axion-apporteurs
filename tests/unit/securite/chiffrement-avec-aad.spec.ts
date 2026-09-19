@@ -143,7 +143,10 @@ describe('REQ-SEC-024 — chiffrement AES-256-GCM, bloc lié à sa ligne et à s
 
   it('REQ-SEC-024 : une autre clé portant le même kid échoue à l’authentification', () => {
     const bloc = chiffrerPii(LIGNE_A, CLAIR, CLE);
-    const autre: CleChiffrementPii = { octets: Uint8Array.from(CLE.octets).reverse(), kid: CLE.kid };
+    const autre: CleChiffrementPii = {
+      octets: Uint8Array.from(CLE.octets).reverse(),
+      kid: CLE.kid,
+    };
     expect(() => dechiffrerPii(LIGNE_A, bloc, autre)).toThrow(EchecAuthentificationPii);
   });
 
@@ -196,9 +199,10 @@ describe('REQ-SEC-024 — chiffrement AES-256-GCM, bloc lié à sa ligne et à s
       CleInvalidePii
     );
     for (const kid of ['5ec08a0', '5ec08a01ff', 'zzzzzzzz', '5EC08A01']) {
-      expect(erreurDe(() => chiffrerPii(LIGNE_A, CLAIR, { ...CLE, kid })), kid).toBeInstanceOf(
-        CleInvalidePii
-      );
+      expect(
+        erreurDe(() => chiffrerPii(LIGNE_A, CLAIR, { ...CLE, kid })),
+        kid
+      ).toBeInstanceOf(CleInvalidePii);
     }
     for (const incomplete of [
       { ...LIGNE_A, id: '' },
@@ -224,7 +228,7 @@ describe('REQ-SEC-024 — chiffrement AES-256-GCM, bloc lié à sa ligne et à s
       erreurDe(() => dechiffrerPii(LIGNE_A, version2, CLE)),
       erreurDe(() => chiffrerPii(LIGNE_A, CLAIR, { ...CLE, kid: 'x' })),
     ];
-    expect(erreurs.map((e) => (e as ErreurPii).motif)).toEqual([
+    expect(erreurs.map((e) => (e instanceof ErreurPii ? e.motif : e))).toEqual([
       'echec_authentification',
       'cle_inconnue',
       'bloc_illisible',
@@ -252,7 +256,12 @@ describe('REQ-SEC-024 — empreintes de recherche HMAC (emailHash, phoneHash, ib
   });
 
   it('REQ-SEC-024 : un même numéro de téléphone écrit de quatre façons donne une seule empreinte, celle du vecteur figé', () => {
-    for (const ecrit of ['06 39 98 12 34', '06.39.98.12.34', '+33 6 39 98 12 34', '0033639981234']) {
+    for (const ecrit of [
+      '06 39 98 12 34',
+      '06.39.98.12.34',
+      '+33 6 39 98 12 34',
+      '0033639981234',
+    ]) {
       expect(empreinteRecherche('telephone', ecrit, CLE_EMPREINTE), ecrit).toBe(
         EMPREINTE_TELEPHONE
       );
@@ -286,9 +295,9 @@ describe('REQ-SEC-024 — empreintes de recherche HMAC (emailHash, phoneHash, ib
       empreinteRecherche('iban', compact, CLE_EMPREINTE)
     );
     const siret = ['111', '222', '333', '00044'].join('');
-    expect(empreinteRecherche('siret', `${siret.slice(0, 9)} ${siret.slice(9)}`, CLE_EMPREINTE)).toBe(
-      empreinteRecherche('siret', siret, CLE_EMPREINTE)
-    );
+    expect(
+      empreinteRecherche('siret', `${siret.slice(0, 9)} ${siret.slice(9)}`, CLE_EMPREINTE)
+    ).toBe(empreinteRecherche('siret', siret, CLE_EMPREINTE));
   });
 
   it('REQ-SEC-024 : une valeur hors forme est refusée par un motif nommé, sans que le message la porte', () => {
@@ -348,7 +357,12 @@ describe('REQ-SEC-024 — adresse réseau : seule une empreinte salée tronquée
   });
 
   it('REQ-SEC-024 : une adresse IPv4 encapsulée dans IPv6 est jugée comme l’IPv4 qu’elle porte', () => {
-    for (const encapsulee of ['::ffff:192.0.2.10', '::FFFF:c000:020a', '0:0:0:0:0:ffff:c000:20a']) {
+    for (const encapsulee of [
+      '::ffff:192.0.2.10',
+      '::FFFF:c000:020a',
+      '0:0:0:0:0:ffff:c000:20a',
+      '::ffff:192.0.2.10%eth0',
+    ]) {
       expect(empreinteAdresseReseau(encapsulee, SEL_ADRESSE), encapsulee).toBe(EMPREINTE_IP4);
     }
     // `::1.2.3.4` n'est PAS encapsulée (forme compatible abandonnée) : elle reste une IPv6 de ::/64.
@@ -363,7 +377,14 @@ describe('REQ-SEC-024 — adresse réseau : seule une empreinte salée tronquée
   });
 
   it('REQ-SEC-024 : une chaîne qui n’est pas une adresse est refusée, jamais hachée', () => {
-    for (const faux of ['', 'pas-une-adresse', '192.0.2.300', '192.0.2.01', ' 192.0.2.10', '192.0.2.0/24']) {
+    for (const faux of [
+      '',
+      'pas-une-adresse',
+      '192.0.2.300',
+      '192.0.2.01',
+      ' 192.0.2.10',
+      '192.0.2.0/24',
+    ]) {
       const e = erreurDe(() => empreinteAdresseReseau(faux, SEL_ADRESSE));
       expect(e, `« ${faux} » haché`).toBeInstanceOf(EntreeRefuseePii);
       expect(e).toMatchObject({ motif: 'adresse_reseau_invalide' });
