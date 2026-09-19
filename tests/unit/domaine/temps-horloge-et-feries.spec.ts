@@ -115,9 +115,13 @@ function premiereDivergence(debut: number, fin: number, pas: number) {
 
 /**
  * Les instants où l'oracle change de décalage, trouvés en balayant heure par heure du 20 au
- * 31 mars et du 20 au 31 octobre : ils ne supposent rien de la règle que le domaine code.
+ * 31 mars et du 20 au 31 octobre : ils ne supposent rien de la règle que le domaine code. Lus une
+ * fois par année, puis réutilisés par les tests qui en ont besoin.
  */
+const CHANGEMENTS_LUS = new Map<number, number[]>();
 function changementsSelonIntl(annee: number): number[] {
+  const deja = CHANGEMENTS_LUS.get(annee);
+  if (deja) return deja;
   const decalage = (t: number) => {
     const [jour, heure] = parisSelonIntl(t).split(' ');
     const local = Date.parse(`${jour}T${heure}Z`);
@@ -129,6 +133,7 @@ function changementsSelonIntl(annee: number): number[] {
       if (decalage(t) !== decalage(t - HEURE)) trouves.push(t);
     }
   }
+  CHANGEMENTS_LUS.set(annee, trouves);
   return trouves;
 }
 
@@ -217,7 +222,8 @@ describe('REQ-CPL-013 — calendrier civil et heure légale d’Europe/Paris, ca
         fautes.push(`${j} : ${JSON.stringify(d)} ≠ ${attendu.join('-')}`);
       }
     }
-    expect(dernier - premier + 1).toBe(37_985);
+    // 104 années, dont 26 bissextiles (1996 à 2096 ; 2000 l'est, 2100 est hors bornes).
+    expect(dernier - premier + 1).toBe(104 * 365 + 26);
     expect(fautes.slice(0, 5)).toEqual([]);
     // 2000 et 2028 sont bissextiles ; 2027 ne l'est pas.
     expect(joursDeLaDate({ annee: 2000, mois: 2, jour: 29 })).toBe(Date.UTC(2000, 1, 29) / JOUR);
@@ -449,14 +455,17 @@ describe('REQ-CPL-013 — calendrier des fériés FR versionné', () => {
     expect(CALENDRIER_FERIES_FR.jours).toHaveLength(11);
   });
 
-  it('REQ-CPL-013 — de 1996 à 2099 : onze fériés distincts par an, Ascension un jeudi, lundis de Pâques et de Pentecôte des lundis', () => {
+  it('REQ-CPL-013 — de 1996 à 2099 : onze fériés par an, Ascension un jeudi, lundis de Pâques et de Pentecôte des lundis ; l’Ascension ne se confond avec le 1er ou le 8 mai que les années où l’oracle le prévoit', () => {
     const jourDe = (annee: number, cle: string) => {
       const f = feriesDeLAnnee(annee).find((x) => x.cle === cle);
       return jourDeSemaine(joursDepuisEpoque(f!.date));
     };
+    const confondues: number[] = [];
     for (let annee = 1996; annee <= 2099; annee++) {
-      const dates = feriesDeLAnnee(annee).map((f) => texteDate(f.date));
-      expect(new Set(dates).size, `fériés ${annee}`).toBe(11);
+      const feries = feriesDeLAnnee(annee);
+      const dates = feries.map((f) => texteDate(f.date));
+      expect(new Set(feries.map((f) => f.cle)).size, `fériés ${annee}`).toBe(11);
+      if (new Set(dates).size < 11) confondues.push(annee);
       expect(dates.every((d) => d.startsWith(String(annee)))).toBe(true);
       expect([
         jourDe(annee, 'lundi_de_paques'),
@@ -464,6 +473,15 @@ describe('REQ-CPL-013 — calendrier des fériés FR versionné', () => {
         jourDe(annee, 'lundi_de_pentecote'),
       ]).toEqual([1, 4, 1]);
     }
+    // Ascension = Pâques + 39 : elle tombe le 1er mai si Pâques est le 23 mars, le 8 mai si Pâques
+    // est le 30 mars (1997 : jeudi 8 mai). Les années attendues se lisent dans l'oracle de Gauss.
+    const attendues: number[] = [];
+    for (let annee = 1996; annee <= 2099; annee++) {
+      const [mois, jour] = paquesSelonGauss(annee);
+      if (mois === 3 && (jour === 23 || jour === 30)) attendues.push(annee);
+    }
+    expect(attendues).toContain(1997);
+    expect(confondues).toEqual(attendues);
   });
 
   it('REQ-CPL-013 — jour ouvré = lundi à vendredi hors férié chômé : un férié un dimanche ou un samedi n’en retire aucun', () => {
