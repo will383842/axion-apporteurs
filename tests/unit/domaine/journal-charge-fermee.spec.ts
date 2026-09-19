@@ -581,6 +581,37 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
     ]);
   });
 
+  // Revue schema, cinquième tour (5255692835) : un « chemin » d'import peut porter la SOURCE du module
+  // (`data:text/javascript,…`), qui nomme le délégué en clair. Seul un chemin ou un nom de paquet est
+  // effacé ; tout autre spécificateur est lu comme du code.
+  it('REQ-DM-041 : un spécificateur `data:` qui porte la source d’un module nommant le délégué — rougit', () => {
+    const contenu = [
+      "import { ecrire } from 'data:text/javascript,export const ecrire = (tx) => tx.evenement.create({ data: {} })';",
+      'await ecrire(tx);',
+    ].join('\n');
+    expect(ou(avecCode('src/server/relais/data.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/relais/data.ts:1',
+    ]);
+  });
+
+  it('REQ-DM-041 : contre-témoin — un chemin relatif, un paquet et un paquet à portée restent effacés', () => {
+    const contenu = [
+      "import { a } from '../evenement/journal';",
+      "import b from 'evenement-lib/sous/module';",
+      "export * from '@portee/evenement';",
+    ].join('\n');
+    expect(ou(avecCode('src/server/appelant2.ts', contenu))).toEqual([]);
+  });
+
+  // Revue exactitude, cinquième tour (5255719793) : quand le compilateur et Node lisent différemment
+  // un fichier (diagnostics d'analyse), RIEN n'est effacé : toute mention est jugée.
+  it('REQ-DM-041 : un fichier que le compilateur analyse avec des diagnostics n’a AUCUN chemin effacé — rougit', () => {
+    const contenu = ["import { a } from '../evenement/journal';", 'const = ;'].join('\n');
+    expect(ou(avecCode('src/server/casse.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/casse.ts:1',
+    ]);
+  });
+
   it('REQ-DM-041 : contre-témoin — un import multiligne réel reste un chemin d’import', () => {
     const contenu = [
       'import {',
@@ -633,6 +664,39 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
   ])('REQ-DM-041 : le mot écrit avec une séquence d’échappement (%s) rougit', (_q, contenu) => {
     expect(ou(avecCode('src/server/echappe.ts', contenu))).toEqual([
       'ecrivain_hors_journal src/server/echappe.ts:1',
+    ]);
+  });
+
+  // Revue securite, cinquième tour (5255669428) : dans le TEXTE SOURCE, le `n` d'un `\n` colle au
+  // nom et efface la frontière de mot ; à l'exécution, la chaîne porte un blanc et la requête vaut.
+  it.each([
+    ['\\n', "await tx.$executeRawUnsafe('INSERT INTO\\nevenements (charge) VALUES ($1)', c);"],
+    ['\\t', "await tx.$executeRawUnsafe('INSERT INTO\\tevenements (charge) VALUES ($1)', c);"],
+    [
+      '\\r\\n',
+      "await tx.$executeRawUnsafe('INSERT INTO\\r\\nevenements (charge) VALUES ($1)', c);",
+    ],
+    ['\\x20', "await tx.$executeRawUnsafe('INSERT INTO\\x20evenements (charge) VALUES ($1)', c);"],
+    [
+      '\\u0020',
+      "await tx.$executeRawUnsafe('INSERT INTO\\u0020evenements (charge) VALUES ($1)', c);",
+    ],
+  ])('REQ-DM-041 : le nom collé à une séquence d’échappement (%s) — rougit', (_q, contenu) => {
+    expect(ou(avecCode('src/server/colle.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/colle.ts:1',
+    ]);
+  });
+
+  it('REQ-DM-041 : la forme de la revue securite en deux instructions (tête puis maillon, noms collés à `\\n`) rougit', () => {
+    const contenu = [
+      'export async function second(tx: T, e: E) {',
+      "  const [tete] = await tx.$queryRawUnsafe('SELECT self_hash FROM\\nevenements ORDER BY id DESC LIMIT 1');",
+      "  await tx.$executeRawUnsafe('INSERT INTO\\nevenements (type, charge, prev_hash, self_hash) VALUES ($1, $2, $3, $4)', t, c, tete.self_hash, h);",
+      '}',
+    ].join('\n');
+    expect(ou(avecCode('src/server/relais/deux.ts', contenu))).toEqual([
+      'ecrivain_hors_journal src/server/relais/deux.ts:2',
+      'ecrivain_hors_journal src/server/relais/deux.ts:3',
     ]);
   });
 
@@ -741,6 +805,25 @@ describe('REQ-DM-041 — la charge n’est fermée que si ajouterEvenement() est
     const chemin = 'scripts/lot/paths-proposes.ts';
     const vue = vueAvec(chemin, (c) => `import { PrismaClient } from '@prisma/client';\n${c}`);
     expect(ou(vue)).toEqual([`ecrivain_hors_journal ${chemin}:1`]);
+  });
+
+  // Revue mutation, cinquième tour (5255692638) : la règle du TEXTE EXACT a son témoin propre, sans
+  // trace de client pour la masquer ; et un texte admis vaut pour UNE ligne.
+  it('REQ-DM-041 : un fichier admis qui gagne une mention SANS trace de client rougit sur cette ligne (texte exact)', () => {
+    const chemin = 'scripts/gates/gov-check.ts';
+    const vue = vueAvec(chemin, (c) => `${c}\nconst q = 'SELECT 1 FROM evenements';`);
+    const contenu = vue.code.find((f) => f.chemin === chemin)!.contenu;
+    expect(ou(vue)).toEqual([
+      `ecrivain_hors_journal ${chemin}:${ligneDe(contenu, "const q = 'SELECT 1 FROM evenements';")}`,
+    ]);
+  });
+
+  it('REQ-DM-041 : un texte admis vaut pour UNE ligne — sa copie identique rougit', () => {
+    const chemin = 'scripts/gates/gov-check.ts';
+    const admise = "'ALTER TABLE evenements ADD COLUMN type text;'";
+    const vue = vueAvec(chemin, (c) => `${c}\n${admise}`);
+    const contenu = vue.code.find((f) => f.chemin === chemin)!.contenu;
+    expect(ou(vue)).toEqual([`ecrivain_hors_journal ${chemin}:${contenu.split('\n').length}`]);
   });
 
   it('REQ-DM-041 : contre-témoin — une édition sans rapport qui DÉPLACE les lignes admises ne rougit pas', () => {

@@ -26,13 +26,20 @@
  *   — UN SEUL ÉCRIVAIN de la table `evenements` : `src/server/evenement/journal.ts`.
  *     LA PROMESSE, mot pour mot : `journal:sans-pii` est un FIL TENDU : il refuse toute mention de
  *     la table ou de son délégué ÉCRITE EN CLAIR, en toute casse, hors de la liste blanche tenue
- *     par le contenu, dans tout fichier de code sous `src/`, `scripts/` et `packages/`.
+ *     par le contenu, dans tout fichier de code sous `src/`, `scripts/` et `packages/`. Portée :
+ *     tout fichier SUIVI sous ces trois racines, quelle que soit son extension (`.json`, `.sql`,
+ *     `.md` compris — plus large que « code », échec fermé) ; `config/`, `perf/`, `tests/`,
+ *     `prisma/` et les fichiers de la racine sont hors portée. Seule exemption : le chemin d'un
+ *     import ou d'une réexportation statique, lu par le compilateur TypeScript, s'il est un chemin
+ *     relatif ou un nom de paquet (sans `:` ni blanc) ; rien n'est effacé d'un fichier dont
+ *     l'analyse a des diagnostics, et toute séquence d'échappement est neutralisée avant la
+ *     lecture.
  *     Mention : la famille du mot `evenement` / `evenements`, en toute casse (Prisma résout aussi
  *     `client.Evenement` comme délégué), comme identifiant, propriété, chaîne, gabarit ou clé ;
- *     `EvenementDelegate` et `ModelName` dans TOUT fichier ; seul le CHEMIN d'un import statique,
- *     lu par le compilateur TypeScript, n'est pas une mention. Les séquences `\uXXXX`, `\u{…}`,
- *     `\xXX` qui désignent une lettre sont décodées avant la lecture (commodité, pas une
- *     promesse).
+ *     `EvenementDelegate` et `ModelName` dans tout fichier de la portée, hors de l'écrivain, de la
+ *     garde et du module client `src/server/db.ts` à venir. Les séquences `\uXXXX`, `\u{…}`,
+ *     `\xXX` qui désignent une lettre sont décodées, puis toute séquence restante devient un blanc
+ *     : `'INSERT INTO\nevenements'` est lu.
  *     LA LISTE BLANCHE est tenue par le CONTENU : l'écrivain ; cette garde ; le domaine pur
  *     `src/domain/evenement/`, qui ne nomme ni la table ni le délégué, ne porte aucune trace de
  *     client et n'écrit aucune requête (mot de DML dans une chaîne) ; et les fichiers de
@@ -161,14 +168,28 @@ const EXTENSION_ANALYSEE = /\.(?:[cm]?[jt]sx?)$/;
  * niveau est effacé. Rien d'intérieur à une chaîne, un gabarit ou un commentaire ne peut l'être — une
  * ligne « import from "evenements" » DANS un gabarit SQL reste lue (revue exactitude, quatrième tour).
  */
+/**
+ * Un spécificateur effaçable : un chemin RELATIF (`./`, `../`) ou un NOM DE PAQUET (nu ou à portée),
+ * sans `:` ni blanc. Tout autre spécificateur — `data:text/javascript,…`, une URL — peut porter la
+ * source d'un module et se lit comme du code (revue schema, cinquième tour).
+ */
+const SPECIFICATEUR_EFFACABLE = /^(?:\.{1,2}\/[^\s:]*|(?:@[\w.-]+\/)?[\w.-]+(?:\/[\w.@-]+)*)$/;
+
 function cheminsDImport(chemin: string, contenu: string): [number, number][] {
   if (!EXTENSION_ANALYSEE.test(chemin)) return [];
   const source = ts.createSourceFile(chemin, contenu, ts.ScriptTarget.Latest, false);
+  // Un fichier que le compilateur analyse avec des diagnostics peut être lu autrement par Node : RIEN
+  // n'y est effacé, toute mention est jugée (revue exactitude, cinquième tour). Si la liste des
+  // diagnostics est illisible, même règle : échec fermé.
+  const diagnostics: unknown = Reflect.get(source, 'parseDiagnostics');
+  if (!Array.isArray(diagnostics) || diagnostics.length > 0) return [];
   const plages: [number, number][] = [];
   for (const instruction of source.statements) {
     if (
       (ts.isImportDeclaration(instruction) || ts.isExportDeclaration(instruction)) &&
-      instruction.moduleSpecifier !== undefined
+      instruction.moduleSpecifier !== undefined &&
+      ts.isStringLiteral(instruction.moduleSpecifier) &&
+      SPECIFICATEUR_EFFACABLE.test(instruction.moduleSpecifier.text)
     ) {
       plages.push([
         instruction.moduleSpecifier.getStart(source),
@@ -284,12 +305,23 @@ export function decoderEchappements(texte: string): string {
   );
 }
 
+/**
+ * TOUTE séquence d'échappement restante (`\n`, `\t`, `\x20`, `\u0020`, `\u{20}`…) devient UN blanc :
+ * dans le texte source, le `n` de `\n` colle au mot qui suit et efface la frontière de mot, alors qu'à
+ * l'exécution la chaîne porte un blanc (revue securite, cinquième tour). Une barre oblique suivie d'un
+ * vrai saut de ligne (continuation) n'est pas touchée : aucun numéro de ligne ne bouge.
+ */
+export function neutraliserEchappements(texte: string): string {
+  return texte.replace(/\\(?:x[0-9a-fA-F]{2}|u\{[0-9a-fA-F]+\}|u[0-9a-fA-F]{4}|[^\n])/g, ' ');
+}
+
 /** Les lignes fautives d'un fichier : toute mention hors de la liste blanche. */
 export function ecrituresHorsJournal(chemin: string, brut: string): number[] {
   if (chemin === ECRIVAIN_UNIQUE || chemin === CETTE_GARDE) return [];
   const contenu = decoderEchappements(brut);
   if (!RACINES_ECRIVAINS.some((r) => chemin.startsWith(r))) return [];
-  const lignes = mentions(contenu, chemin);
+  // Les mentions se lisent sur le texte NEUTRALISÉ ; les lignes admises se confrontent au texte BRUT.
+  const lignes = mentions(neutraliserEchappements(contenu), chemin);
   if (chemin !== MODULE_CLIENT) {
     contenu.split('\n').forEach((l, i) => {
       if (TYPE_DU_DELEGUE.test(l)) lignes.push(i + 1);
@@ -312,14 +344,15 @@ export function ecrituresHorsJournal(chemin: string, brut: string): number[] {
   if (!admis) return [...new Set(lignes)].sort((a, b) => a - b);
   // Chaque texte admis vaut pour UNE ligne : deux lignes au même texte n'en consomment pas une seule.
   const restants = [...admis.lignes];
-  const texte = contenu.split('\n');
+  const texte = brut.split('\n');
   const fautes = new Set<number>();
   for (const n of [...new Set(lignes)].sort((a, b) => a - b)) {
     const i = restants.indexOf(texte[n - 1]!.trim());
     if (i === -1) fautes.add(n);
     else restants.splice(i, 1);
   }
-  texte.forEach((l, i) => {
+  // Trace de client lue sur le texte DÉCODÉ : `$executeRaw` en est une.
+  contenu.split('\n').forEach((l, i) => {
     if (CLIENT.test(l)) fautes.add(i + 1);
   });
   return [...fautes].sort((a, b) => a - b);
@@ -474,8 +507,9 @@ export function decider(vue: Vue): { code: 0 | 1; lignes: string[] } {
       code: 0,
       lignes: [
         `✅ journal:sans-pii — ${types} type(s), ${champs} champ(s) confrontés à la liste fermée ` +
-          'des formes et au lexique des champs de personne, aucun écrivain de la table hors de ' +
-          `${ECRIVAIN_UNIQUE}. Ce vert ne dit rien d'une donnée personnelle hors du lexique.`,
+          'des formes et au lexique des champs de personne, aucune mention en clair de la table hors de la ' +
+          `liste blanche sous src/, scripts/ et packages/ (écrivain unique : ${ECRIVAIN_UNIQUE}). Ce vert ` +
+          "ne dit rien d'une donnée personnelle hors du lexique, ni de ce qui vit hors de ces trois racines.",
       ],
     };
   }
@@ -559,6 +593,20 @@ const TEMOINS: { famille: Famille; vue: () => Vue }[] = [
       ],
     }),
   },
+  {
+    // Un spécificateur qui n'est ni un chemin ni un nom de paquet porte la source d'un module : lu.
+    famille: 'ecrivain_hors_journal',
+    vue: () => ({
+      ...bac({ agregatId: FORMES.identifiant() }),
+      code: [
+        {
+          chemin: 'src/server/bac/data.ts',
+          contenu:
+            "import { e } from 'data:text/javascript,export const e = (tx) => tx.evenement.create({})';",
+        },
+      ],
+    }),
+  },
 ];
 
 const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
@@ -589,6 +637,10 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
         {
           chemin: 'src/server/apporteur/creer.ts',
           contenu: "import { ajouterEvenement } from '../evenement/journal';",
+        },
+        {
+          chemin: 'src/server/apporteur/paquets.ts',
+          contenu: "import b from 'evenement-lib/sous';\nexport * from '@portee/evenement';",
         },
         {
           chemin: 'src/domain/evenement/x.ts',

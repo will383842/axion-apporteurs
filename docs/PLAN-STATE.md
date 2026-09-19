@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `f37659e` — 2026-09-19T10:37:25+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #75 (rien) · 2. #76 (rien) · 3. #79 (rien) |
-| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · UX-P0-02 (A05) · CPL-T13 (A05) · GOV-077 (A05) |
+| Où est `main` ? | `5b306f8` — 2026-09-19T15:23:32+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #75 (un contrôle requis rouge ou une revue manquante) · 2. #81 (un contrôle requis rouge ou une revue manquante) · 3. #76 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · QA-T03 (A05) · UX-P0-02 (A05) · CPL-T13 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 72.10 j |
-| Le prochain pas | fusionner #75, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
+| Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #79 — 2026-09-19 |
 
-**Ce qu’on tape maintenant.** `gh pr view 75 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,9 +64,9 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | rien — fusionnable maintenant |
-| 2 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | rien — fusionnable maintenant |
-| 3 | #79 — docs(UX-P0-02): maquettes des huit écrans et garde maquettes-validees | `t/ux-p0-02` | rien — fusionnable maintenant |
+| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un contrôle requis rouge ou une revue manquante |
+| 2 | #81 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert | `t/qa-t03` | un contrôle requis rouge ou une revue manquante |
+| 3 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -81,6 +81,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | SEC-02 — En-têtes de sécurité et CSP par nonce | A05 | #66 | `a_faire` |
 | SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
 | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
+| QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check | A05 | #80 | `a_faire` |
 | UX-P0-02 — Maquettes des 6 écrans clés + charte de l'espace | A05 | #77 | `a_faire` |
 | CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure | A05 | #67 | `a_faire` |
 | GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent | A05 | #57 | `a_faire` |
@@ -89,19 +90,17 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés
+`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle
 
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
 
-**Fusionner #75** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-
 **QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 32 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `f37659e` (2026-09-19T10:37:25+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `5b306f8` (2026-09-19T15:23:32+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -136,32 +135,33 @@ fériés distincts par an, et 1997 n'en a que dix (l'Ascension tombe le 8 mai). 
 maintenant ces années de l'oracle de Gauss au lieu de les écrire. Et une URL encodée en commentaire
 (le « â » de Pâques en pourcentages) se lit comme un identifiant nu : la garde lit les commentaires.
 
-### PR #74 — 2026-09-19 — feat(SEC-02): en-têtes de sécurité et CSP par nonce
+### PR #75 — 2026-09-19 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable
 
-**Fait.** Toute réponse que voit `src/proxy.ts` porte une CSP construite autour d'un nonce neuf,
-tiré dans la fonction par `crypto.getRandomValues` sur 16 octets, posée sur la réponse et transmise à
-la requête, avec `Cache-Control: private, no-store`. `next.config.ts` pose HSTS preload, `nosniff`,
-`Referrer-Policy` et une `Permissions-Policy` restrictive sur `'/(.*)'`. La source unique est
-`src/server/securite/entetes.ts`. `next` 16.3.1, `react` et `react-dom` 19.2.8 entrent au dépôt en
-versions exactes, sans aucune page. Le témoin juge la vraie couche par les outils de test de Next,
-sur 17 routes dérivées de `src/app` et de la carte `docs/ESPACE-ROUTES.md`, 1003 réponses, 0 défaut ;
-38 mutants joués, 38 tués. `G-SEC-HEADERS.verifie` ne promet plus de routes tapées qui n'existaient
-pas.
+**Fait.** Le premier schéma réel de Partners et sa première migration. Le journal `Evenement` est
+chaîné en `sha256-jcs-v1` à partir d'une genèse que la migration insère et que `verifierChaine()`
+épingle. Deux déclencheurs de base refusent `UPDATE`, `DELETE` et `TRUNCATE`, et le verrou
+consultatif empêche la bifurcation. La charge est fermée par type et jugée par la garde
+`journal:sans-pii`, qui s'appuie sur le lexique unique des champs de personne et refuse tout
+écrivain de la table hors de `ajouterEvenement()`. Le harnais Postgres tourne par testcontainers, et
+les tests d'intégration entrent dans `pnpm test`. L'ADR est `partners/ADR-0015`.
 
-**Reste.** La mesure au navigateur, le rendu dynamique qui porte le nonce, les styles en attribut
-que la politique bloque et les règles de spéculation de Next sont des charges de la première page,
-SEC-03. La préséance du `Cache-Control` du proxy sur celui d'une page statique n'est pas prouvée ici.
-Cinq specs voisines, dont celle de SEC-01, assertent `NodeJS.ProcessEnv` à la frontière d'un sous-processus : dette, tant
-que `next` déclare `NODE_ENV` obligatoire.
+**Reste.** Un propriétaire qui désarme le déclencheur et recalcule toute la queue n'est pas détecté
+tant que la tête n'est pas ancrée hors de la base, et une troncature de la queue non plus : DM-20,
+et un test tient la première limite. La chaîne
+prouve l'ordre, pas l'auteur. `schema: true` n'a pas pu être écrit, car `reecrire-champ` refuse ce
+champ. DM-06 rendra `ajouterEvenement` refusant `journal_ouvert`. Séparation des rôles Postgres :
+déploiement. L'entrée « `Evenement` — le journal » du glossaire reste à écrire par A01.
 
-**Appris.** Importer `type { NextConfig } from 'next'` charge les types globaux de `next`, qui
-rendent `NODE_ENV` obligatoire et en lecture seule dans tout le projet : sept erreurs de typecheck
-dans cinq specs, dont quatre qui n'écrivent jamais `NODE_ENV` mais construisent l'environnement d'un
-enfant sans lui. Les outils de test de Next lèvent une erreur d'invariant sur
-`AsyncLocalStorage` tant que `next/dist/server/node-environment-baseline` n'est pas importé en
-premier. Et la doc de 16.3.1 nomme `unstable_doesProxyMatch`, que le paquet n'exporte pas.
+**Appris.** Une apostrophe dans un commentaire du tableau `include` de `vitest.config.ts` suffit à
+rendre un dossier de tests invisible. `gates:prouvees` et `gov:trace` lisent les motifs entre
+guillemets simples. Le « d'intégration » d'un commentaire ouvrait un faux motif, et
+`tests/integration/journal.spec.ts` était compté « NON » exécuté alors que vitest l'exécutait. Et une
+chaîne de hash sans secret ne détecte qu'une altération du milieu non recalculée : écrire « détecte toute
+altération » promettait ce que l'algorithme public ne peut pas tenir, et la lentille securite l'a
+démontré en base réelle. Enfin, une liste blanche tenue par un COMPTE de mentions se contourne
+en échangeant une mention admise contre une écriture : elle se tient par le TEXTE des lignes admises.
 
-… 25 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 26 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

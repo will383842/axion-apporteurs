@@ -68,8 +68,7 @@ mêmes ; `ajouterEvenement()` les applique à l'exécution, avant toute écritur
 chemin et le code de chaque écart, jamais la valeur reçue. **La charge n'est fermée que si
 `ajouterEvenement()` est le SEUL écrivain** : la garde ne chasse pas une orthographe d'appel (un
 délégué pris en variable, déstructuré, entre crochets, une requête construite à part passent sous
-toute liste de formes) ; elle refuse toute MENTION de la table ou du délégué — le mot `evenements`
-en toute casse, le mot `evenement` en minuscules, identifiant, propriété, chaîne, gabarit ou clé —
+toute liste de formes) ; elle refuse toute MENTION de la table ou du délégué — la famille du mot `evenement` / `evenements` en toute casse, identifiant, propriété, chaîne, gabarit ou clé —
 dans tout fichier suivi sous `src/`, `scripts/` ou `packages/`, toutes extensions (famille
 `ecrivain_hors_journal`, échec fermé : une simple lecture hors de l'écrivain rougit aussi). Le chemin
 d'un import statique n'est pas une mention (les noms importés, eux, le sont). La casse ne protège rien :
@@ -142,7 +141,7 @@ dans le domaine ne lit l'heure. Un client `$extends` ne compile pas avec `ajoute
   chaîne prouve l'**ordre**, pas l'**auteur** : même après la séparation des rôles, un rôle qui peut
   insérer peut ajouter un maillon à l'empreinte valide. (d) La clause « le worker de purge ne
   référence pas la table » de `partners:journal:immutable` est sans objet tant qu'aucun worker
-  n'existe. (e) `journal:sans-pii` est un FIL TENDU : il refuse toute mention de la table ou de son délégué ÉCRITE EN CLAIR, en toute casse, hors de la liste blanche tenue par le contenu, dans tout fichier de code sous `src/`, `scripts/` et `packages/`. Limite déclarée : toute forme délibérément obfusquée — nom calculé, transformé, extrait, ou encodé (séquences d'échappement JS, identifiants Unicode SQL `U&"…"`), vues ou alias SQL, conversions de type — relève de la revue et de la défense au niveau base, pas de cette garde. Hors de portée aussi : un client pris hors du dépôt, `prisma/` (graine et DML des migrations), et les deux fichiers qui SONT l'écrivain et la garde. TypedSQL n'est pas activé : l'activer exige de revoir cette garde.
+  n'existe. (e) `journal:sans-pii` est un FIL TENDU : il refuse toute mention de la table ou de son délégué ÉCRITE EN CLAIR, en toute casse, hors de la liste blanche tenue par le contenu, dans tout fichier de code sous `src/`, `scripts/` et `packages/`. Portée : tout fichier SUIVI sous ces trois racines, quelle que soit son extension (`.json`, `.sql`, `.md` compris — plus large que « code », échec fermé) ; `config/`, `perf/`, `tests/`, `prisma/` et les fichiers de la racine sont hors portée. Seule exemption : le chemin d'un import ou d'une réexportation statique, lu par le compilateur TypeScript, s'il est un chemin relatif ou un nom de paquet (sans `:` ni blanc) ; rien n'est effacé d'un fichier dont l'analyse a des diagnostics, et toute séquence d'échappement est neutralisée avant la lecture. Limite déclarée : toute forme délibérément obfusquée — nom calculé, transformé, extrait, ou encodé (séquences d'échappement JS, identifiants Unicode SQL `U&"…"`), vues ou alias SQL, conversions de type — relève de la revue et de la défense au niveau base, pas de cette garde. Hors de portée aussi : un client pris hors du dépôt, `prisma/` (graine et DML des migrations), et les deux fichiers qui SONT l'écrivain et la garde. TypedSQL n'est pas activé : l'activer exige de revoir cette garde.
 - Retour arrière : une migration qui retire les déclencheurs — visible au diff ; `verifierChaine()`
   continue de voir une altération du milieu non recalculée ; ni le recalcul (a) ni la troncature
   de queue (b).
