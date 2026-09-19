@@ -16,7 +16,7 @@
 
 **321 exigences actives · 56 réputées testées · 56 couvertes · 0 orphelines.**
 
-260 tâches, dont 50 livrées · 52 fichiers de test exécutés par `vitest` sur 52 présents.
+260 tâches, dont 50 livrées · 56 fichiers de test exécutés par `vitest` sur 56 présents.
 
 ## Exigences réputées testées
 
@@ -436,8 +436,12 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | Fichier | Exécuté par vitest | Exigences citées |
 | --- | --- | --- |
 | `tests/gov/charte-pr.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011`, `REQ-GOV-012`, `REQ-GOV-013`, `REQ-GOV-027` |
+| `tests/integration/journal.spec.ts` | oui | `REQ-DM-024`, `REQ-DM-041`, `REQ-JUR-026`, `REQ-SEC-027` |
 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | oui | `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013` |
 | `tests/unit/domaine/etats-occupants.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-006` |
+| `tests/unit/domaine/journal-chaine.spec.ts` | oui | `REQ-DM-024` |
+| `tests/unit/domaine/journal-charge-fermee.spec.ts` | oui | `REQ-DM-041` |
+| `tests/unit/domaine/schema-centimes.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-038` |
 | `tests/unit/domaine/seuil-prioritaire.spec.ts` | oui | `REQ-CPL-026` |
 | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | oui | `REQ-CPL-013`, `REQ-QA-027`, `REQ-UX-022`, `REQ-UX-028` |
 | `tests/unit/espace/maquettes-validees.spec.ts` | oui | `REQ-UX-008`, `REQ-UX-017`, `REQ-UX-034` |

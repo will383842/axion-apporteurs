@@ -9,6 +9,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "postinstall": "prisma generate",
     "gov:publication": "tsx scripts/gates/gov-publication.ts",
     "gov:publication:prove": "tsx scripts/gates/gov-publication.ts --prove",
     "gov:termes-interdits": "tsx scripts/gates/gov-check.ts",
@@ -79,6 +80,8 @@
     "gov:maquettes-validees:prove": "tsx scripts/gates/maquettes-validees.ts --prove",
     "partners:schema:enums": "tsx scripts/gates/schema-enums.ts",
     "partners:schema:enums:prove": "tsx scripts/gates/schema-enums.ts --prove",
+    "journal:sans-pii": "tsx scripts/gates/journal-sans-pii.ts",
+    "journal:sans-pii:prove": "tsx scripts/gates/journal-sans-pii.ts --prove",
     "contracts:export": "tsx scripts/contracts/export.ts",
     "contracts:hash": "tsx scripts/contracts/export.ts --verifier",
     "gov:tasks:verifie-rendu": "tsx scripts/gates/gov-tasks.ts --verifie-rendu",
@@ -102,6 +105,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@testcontainers/postgresql": "12.1.0",
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "2.1.9",
     "ajv": "^8.17.1",
@@ -109,12 +113,14 @@
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.12.0",
     "prettier": "^3.9.6",
+    "prisma": "5.22.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.70.0",
     "vitest": "^2.1.8"
   },
   "dependencies": {
+    "@prisma/client": "5.22.0",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",

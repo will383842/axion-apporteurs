@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `5b306f8` — 2026-09-19T15:23:32+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #75 (un contrôle requis rouge ou une revue manquante) · 2. #81 (un contrôle requis rouge ou une revue manquante) · 3. #76 (un conflit avec `main`) |
+| Où est `main` ? | `5739147` — 2026-09-19T16:47:19+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #76 (un contrôle requis rouge ou une revue manquante) · 2. #75 (un conflit avec `main`) |
 | Qui tient quoi ? | SEC-10 (A05) · DM-01 (A05) · QA-T03 (A05) |
 | Où en est la phase ? | phase 0 — 11/98 tâches, reste 67.60 j |
 | Le prochain pas | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
@@ -64,9 +64,8 @@ Reste sur ce chemin : **17.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un contrôle requis rouge ou une revue manquante |
-| 2 | #81 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert | `t/qa-t03` | un contrôle requis rouge ou une revue manquante |
-| 3 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un contrôle requis rouge ou une revue manquante |
+| 2 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -84,7 +83,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés
+`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle
 
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
@@ -94,7 +93,7 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Dernier atterrissage
 
-`origin/main` = `5b306f8` (2026-09-19T15:23:32+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `5739147` (2026-09-19T16:47:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -158,7 +157,7 @@ fériés distincts par an, et 1997 n'en a que dix (l'Ascension tombe le 8 mai). 
 maintenant ces années de l'oracle de Gauss au lieu de les écrire. Et une URL encodée en commentaire
 (le « â » de Pâques en pourcentages) se lit comme un identifiant nu : la garde lit les commentaires.
 
-… 26 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 27 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
