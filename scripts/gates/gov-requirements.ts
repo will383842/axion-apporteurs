@@ -228,35 +228,26 @@ export function repris(texte: string, marqueur: string): boolean {
  * refuser tout autant (`dette_texte_decide_perimee`). Sa divergence, dans les deux sens, est le
  * signal.
  *
- * 🔑 RÉSORBÉ LE 2026-09-19, SUR DÉCISION DE WILL (« OUI ») : 23 des 25 clauses déclarées sont
- * revenues. 22 ont été remises dans le texte appliqué de 13 exigences par le verbe hors dépôt
- * `reecrire-champ.mjs` — jamais à la main —, au mot près du texte DÉCIDÉ de l'annexe. La 23e,
- * `dateRef = devis.acceptedAt` (REQ-DM-022), ne l'a PAS été : l'arbitrage M-10 du 2026-09-03
- * (contrat art. 4.4) la remplace, et c'est l'ANNEXE qui était périmée. Elle y est désormais datée
- * par partners/ADR-0016, et REQ-DM-022 reprend déjà les marqueurs du texte décidé en vigueur.
+ * 🔑 VIDE DEPUIS LE 2026-09-19, SUR DÉCISION DE WILL (« OUI ») : les 25 clauses déclarées le
+ * 2026-09-17 sont toutes résorbées. 23 ont été remises dans le texte appliqué de 14 exigences par
+ * le verbe hors dépôt `reecrire-champ.mjs` — jamais à la main —, au mot près du texte DÉCIDÉ de
+ * l'annexe. Deux ne l'ont PAS été, parce que c'est l'ANNEXE qui était périmée : `dateRef =
+ * devis.acceptedAt` (REQ-DM-022, remplacée par l'arbitrage M-10 du 2026-09-03, contrat art. 4.4)
+ * et `signe` (REQ-ARG-016, « trois contrôles seulement », A-4 et A-5 du même jour). Les deux
+ * corrections sont datées dans l'annexe par partners/ADR-0016.
  *
- * ⛔ LES DEUX LIGNES QUI RESTENT NE SONT PAS RÉPARABLES PAR UN AGENT, et le motif est écrit à côté
- * de chacune : chacune demanderait de trancher une règle d'ARGENT que l'annexe et le registre
- * disent différemment.
+ * 🔴 UN REGISTRE VIDE N'EST PAS UNE FAMILLE MUETTE. Les deux branches de
+ * `dette_texte_decide_perimee` ne s'exercent plus sur une entrée réelle : leurs témoins passent
+ * désormais une dette FABRIQUÉE par le paramètre `dettes` de `controler()` et de `modeNormal()`,
+ * dont la valeur par défaut est ce registre. Déclarer une nouvelle perte reste possible, et reste
+ * le seul moyen d'en excuser une : elle s'écrit ici, datée et motivée.
  */
-export const DETTE_TEXTE_DECIDE: readonly {
+export type DetteTexteDecide = {
   survivante: string;
   marqueurs: readonly string[];
   motif: string;
-}[] = [
-  {
-    survivante: 'REQ-DM-015',
-    marqueurs: ['scale'],
-    motif:
-      'argent : la clause « scale ou entree introuvable -> a_qualifier » n est touchee par AUCUN arbitrage posterieur (A-2 du 2026-09-03 porte sur flat, que l annexe porte deja) ; la restaurer, ou l abandonner, revient a Will (remonte le 2026-09-19)',
-  },
-  {
-    survivante: 'REQ-ARG-016',
-    marqueurs: ['signe'],
-    motif:
-      'argent, et re-arbitrage POSTERIEUR : le texte applique dit TROIS controles SEULEMENT (A-4 et A-5 du 2026-09-03, art. 5.4 reecrit), l annexe garde « contrat signe » ; le rendre comme quatrieme controle contredirait le registre, le dater dans l annexe serait trancher (remonte le 2026-09-19)',
-  },
-];
+};
+export const DETTE_TEXTE_DECIDE: readonly DetteTexteDecide[] = [];
 
 type Validateur = {
   validate: (s: object, d: unknown) => boolean;
@@ -264,7 +255,13 @@ type Validateur = {
 };
 const CtorAjv = Ajv2020 as unknown as { new (o: object): Validateur };
 
-export function controler(doc: unknown, schema: object, taches: Tache[], annexe: string): Faute[] {
+export function controler(
+  doc: unknown,
+  schema: object,
+  taches: Tache[],
+  annexe: string,
+  dettes: readonly DetteTexteDecide[] = DETTE_TEXTE_DECIDE
+): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
 
@@ -428,7 +425,7 @@ export function controler(doc: unknown, schema: object, taches: Tache[], annexe:
       }
     }
     const applique = survivante.texte.replace(/\s+/g, ' ');
-    const dette = DETTE_TEXTE_DECIDE.find((d) => d.survivante === f.survivante);
+    const dette = dettes.find((d) => d.survivante === f.survivante);
     for (const m of marqueursDe(f.decide)) {
       const present = repris(applique, m);
       const declaree = dette?.marqueurs.includes(m) ?? false;
@@ -450,7 +447,7 @@ export function controler(doc: unknown, schema: object, taches: Tache[], annexe:
       }
     }
   }
-  for (const d of DETTE_TEXTE_DECIDE) {
+  for (const d of dettes) {
     for (const m of d.marqueurs) {
       if (!declarees.has(`${d.survivante}|${m}`)) {
         ajouter(
@@ -713,7 +710,7 @@ if (LANCE_EN_SCRIPT && process.argv.includes('--prove')) {
 
   const TEMOINS: {
     famille: string;
-    defaut: () => [{ exigences: Exigence[] }, Tache[], string];
+    defaut: () => [{ exigences: Exigence[] }, Tache[], string, (readonly DetteTexteDecide[])?];
   }[] = [
     {
       famille: 'schema',
@@ -845,19 +842,26 @@ if (LANCE_EN_SCRIPT && process.argv.includes('--prove')) {
     {
       famille: 'dette_texte_decide_perimee',
       defaut: () => {
-        const d = copie();
-        const dette = DETTE_TEXTE_DECIDE[Math.floor(DETTE_TEXTE_DECIDE.length / 2)]!;
-        const e = d.exigences.find((x) => x.id === dette.survivante)!;
-        e.texte = `${e.texte} ${dette.marqueurs.map((m) => '`' + m + '`').join(' ')}`;
-        return [d, taches, annexe];
+        // Le registre réel est VIDE depuis le 2026-09-19 : la dette est FABRIQUÉE, sur les deux
+        // branches — une clause décidée PRÉSENTE déclarée perdue, et une dette sans clause.
+        const f = fusionDuMilieu();
+        const dettes: DetteTexteDecide[] = [
+          { survivante: f.survivante, marqueurs: [marqueursDe(f.decide)[0]!], motif: 'témoin' },
+          {
+            survivante: 'REQ-QA-014',
+            marqueurs: ['clause-que-l-annexe-ne-porte-pas'],
+            motif: 'témoin',
+          },
+        ];
+        return [copie(), taches, annexe, dettes];
       },
     },
   ];
 
   const prouvees = new Set<string>();
   for (const t of TEMOINS) {
-    const [d, tk, ax] = t.defaut();
-    const f = controler(d, schema, tk, ax);
+    const [d, tk, ax, dt] = t.defaut();
+    const f = controler(d, schema, tk, ax, dt);
     if (!f.some((x) => x.famille === t.famille)) {
       console.error(
         `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille ` +
@@ -881,39 +885,54 @@ if (LANCE_EN_SCRIPT && process.argv.includes('--prove')) {
 }
 
 // ── mode normal ──────────────────────────────────────────────────────────────
-if (LANCE_EN_SCRIPT) {
-  const { doc, schema, taches, annexe } = sources();
-  const fautes = controler(doc, schema, taches, annexe);
+/**
+ * Le mode NORMAL, en fonction PURE : ce que le binaire imprime et le code qu'il rend. Le binaire
+ * n'y ajoute que l'impression et `process.exit`. Elle est exportée pour une seule raison : le
+ * registre des dettes est VIDE depuis le 2026-09-19, et la famille `dette_texte_decide_perimee` ne
+ * peut plus être amenée au binaire par une donnée du bac. Son témoin d'appelant passe donc ici,
+ * avec une dette fabriquée — c'est CE chemin, et non un autre, que le binaire exécute.
+ */
+export function modeNormal(
+  src: { doc: { exigences: Exigence[] }; schema: object; taches: Tache[]; annexe: string },
+  dettes: readonly DetteTexteDecide[] = DETTE_TEXTE_DECIDE
+): { code: 0 | 1; lignes: string[] } {
+  const { doc, schema, taches, annexe } = src;
+  const fautes = controler(doc, schema, taches, annexe, dettes);
   if (fautes.length === 0) {
     const e = doc.exigences;
     const n = (s: string) => e.filter((x) => x.statut === s).length;
     const mods = new Set(e.map((x) => x.module).filter((m) => m !== null)).size;
     const etps = new Set(e.map((x) => x.etape).filter((s) => s !== null)).size;
     const fusions = fusionsDecidees(annexe);
-    console.log(
-      `✅ gov:requirements — ${e.length} exigences (${n('active')} actives, ${n('absorbee')} absorbées, ${n('retiree')} retirée).`
-    );
-    console.log(
-      `   ${mods}/${NB_MODULES} modules et ${etps}/${NB_ETAPES} étapes couverts · ${e.filter((x) => x.taches.length > 0).length} exigences portées par une tâche.`
-    );
-    console.log(
-      `   ${fusions.length} fusions décidées confrontées · ` +
-        `${fusions.reduce((t, f) => t + f.absorbees.length, 0)} absorbées nommées · ` +
-        `${fusions.reduce((t, f) => t + marqueursDe(f.decide).length, 0)} marqueurs de texte décidé, ` +
-        `dont ${DETTE_TEXTE_DECIDE.reduce((t, d) => t + d.marqueurs.length, 0)} déclarés en dette.`
-    );
-    process.exit(0);
+    return {
+      code: 0,
+      lignes: [
+        `✅ gov:requirements — ${e.length} exigences (${n('active')} actives, ${n('absorbee')} absorbées, ${n('retiree')} retirée).`,
+        `   ${mods}/${NB_MODULES} modules et ${etps}/${NB_ETAPES} étapes couverts · ${e.filter((x) => x.taches.length > 0).length} exigences portées par une tâche.`,
+        `   ${fusions.length} fusions décidées confrontées · ` +
+          `${fusions.reduce((t, f) => t + f.absorbees.length, 0)} absorbées nommées · ` +
+          `${fusions.reduce((t, f) => t + marqueursDe(f.decide).length, 0)} marqueurs de texte décidé, ` +
+          `dont ${dettes.reduce((t, d) => t + d.marqueurs.length, 0)} déclarés en dette.`,
+      ],
+    };
   }
 
   const parFamille = new Map<string, Faute[]>();
   for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
-  console.error(
-    `❌ gov:requirements — ${fautes.length} incohérence(s) dans ${CHEMIN_REGISTRE} :\n`
-  );
+  const lignes = [
+    `❌ gov:requirements — ${fautes.length} incohérence(s) dans ${CHEMIN_REGISTRE} :
+`,
+  ];
   for (const [famille, liste] of parFamille) {
-    console.error(`   ── ${famille} (${liste.length})`);
-    liste.slice(0, 12).forEach((f) => console.error(`      ${f.message}`));
-    if (liste.length > 12) console.error(`      … et ${liste.length - 12} autre(s).`);
+    lignes.push(`   ── ${famille} (${liste.length})`);
+    liste.slice(0, 12).forEach((f) => lignes.push(`      ${f.message}`));
+    if (liste.length > 12) lignes.push(`      … et ${liste.length - 12} autre(s).`);
   }
-  process.exit(1);
+  return { code: 1, lignes };
+}
+
+if (LANCE_EN_SCRIPT) {
+  const r = modeNormal(sources());
+  for (const l of r.lignes) (r.code === 0 ? console.log : console.error)(l);
+  process.exit(r.code);
 }

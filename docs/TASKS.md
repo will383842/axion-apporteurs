@@ -1930,7 +1930,7 @@ Couvre : `REQ-ARG-017`, `REQ-ARG-021`, `REQ-ARG-027`, `REQ-ARG-033`, `REQ-CPL-01
 
 Couvre : `REQ-ARG-028`
 
-### DM-15 — Résolution des encaissements et reprises : `paiement.recu` → acquise au prorata ; `avoir.emis`/`facture.annulee` → recalcul de l'attendu ; `paiement.rembourse` → reprise ; blocage `siren_manquant`/`ba
+### DM-15 — Résolution des encaissements et reprises : `paiement.recu` → acquise au prorata ; `avoir.emis`/`facture.annulee` → recalcul de l'attendu ; `paiement.rembourse` → reprise ; blocage `non_resolue`/`ba
 
 `1.5 j` · zone `domaine` · sensible : argent, attribution, auth, espace · depend de `DM-04`, `DM-10-P`, `SEC-06`, `T-ARG-010`
 

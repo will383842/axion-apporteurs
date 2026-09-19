@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**14 ADR · 11 `propose`, 3 `accepte`, 0 `remplace`.**
+**15 ADR · 12 `propose`, 3 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -25,3 +25,4 @@
 | [`partners/ADR-0012`](0012-relecture-proportionnee-au-risque.md) | La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve | `propose` | 2026-09-18 | GOV-077 |
 | [`partners/ADR-0013`](0013-secrets-et-donnees-personnelles-chiffrees.md) | Secrets et données personnelles chiffrées | `propose` | 2026-09-18 | SEC-01 |
 | [`partners/ADR-0014`](0014-temps-paris-jours-ouvres.md) | Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés | `propose` | 2026-09-19 | CPL-T13 |
+| [`partners/ADR-0016`](0016-deux-arbitrages-du-2026-09-03-dates-dans-l-annexe-des-fusions.md) | Deux arbitrages du 2026-09-03 datés dans l'annexe des fusions : la date de référence d'une commande et les trois contrôles de versement | `propose` | 2026-09-19 | — aucune tâche ouverte ne porte la résorption des dettes de texte décidé ; la dette avait été déclarée par GOV-039 |
