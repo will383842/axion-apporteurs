@@ -1,6 +1,6 @@
 // @req REQ-DM-024
 /**
- * Le chaînage du journal, en domaine pur — DM-01 (partners/ADR-0014, décisions 1 à 3).
+ * Le chaînage du journal, en domaine pur — DM-01 (partners/ADR-0013, décisions 1 à 3).
  *
  * Ce fichier couvre à 100 % `src/domain/evenement/canonique.ts` et `src/domain/evenement/journal.ts`
  * SANS base : la preuve en base réelle (déclencheurs, verrou, effacement de tiers) est dans

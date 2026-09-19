@@ -1,5 +1,5 @@
 /**
- * Le chaînage du journal `Evenement` — DM-01 (REQ-DM-024, partners/ADR-0014 décisions 1 à 3).
+ * Le chaînage du journal `Evenement` — DM-01 (REQ-DM-024, partners/ADR-0013 décisions 1 à 3).
  *
  * ALGORITHME `sha256-jcs-v1` (décision 1).
  *   selfHash = hex(SHA-256(UTF-8(prevHash + canonique(enregistrement)))), 64 caractères minuscules,

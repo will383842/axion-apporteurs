@@ -1,6 +1,6 @@
 /**
  * La charge d'un événement du journal est un schéma Zod FERMÉ par type — DM-01 (REQ-DM-041,
- * partners/ADR-0014 décision 4).
+ * partners/ADR-0013 décision 4).
  *
  * POURQUOI FERMÉ. Le journal est append-only : la base refuse toute mise à jour (REQ-DM-024). Une
  * donnée personnelle glissée dans une charge ne pourrait donc JAMAIS être effacée — le droit à
