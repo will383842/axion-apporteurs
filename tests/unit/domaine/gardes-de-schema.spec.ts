@@ -491,6 +491,10 @@ describe('REQ-DM-001 — aucun flottant, tout montant en centimes entiers suffix
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════
 describe('REQ-DM-037 — les migrations sont additives', () => {
+  // Les numéros d'ADR des témoins sont FICTIFS, donc interpolés : écrits en clair, `gov:adr` y lirait
+  // un renvoi vers un ADR qui n'existe pas (`reference_sans_cible`).
+  const FICTIVE = '9999';
+  const TEMOIN = '0042';
   /** Trois migrations, la faute dans celle du MILIEU. */
   const vue = (milieu: string, adrs: VueMigrations['adrs'] = []): VueMigrations => ({
     migrations: [
@@ -604,20 +608,20 @@ describe('REQ-DM-037 — les migrations sont additives', () => {
   });
 
   it('REQ-DM-037 : une ADR inexistante n’absout rien ; une ADR acceptée absout ET se dit', () => {
-    const fautive = '-- ADR: partners/ADR-9999\nALTER TABLE "x" DROP COLUMN "y";';
+    const fautive = `-- ADR: partners/ADR-${FICTIVE}\nALTER TABLE "x" DROP COLUMN "y";`;
     const inexistante = controlerMigrations(vue(fautive));
     expect(inexistante.fautes.map((f) => f.famille)).toEqual(['suppression_de_colonne']);
     expect(inexistante.fautes[0]!.message).toContain('n’existe pas');
-    const proposee = controlerMigrations(vue(fautive, [{ numero: '9999', statut: 'propose' }]));
+    const proposee = controlerMigrations(vue(fautive, [{ numero: FICTIVE, statut: 'propose' }]));
     expect(proposee.fautes).toHaveLength(1);
-    const acceptee = controlerMigrations(vue(fautive, [{ numero: '9999', statut: 'accepte' }]));
+    const acceptee = controlerMigrations(vue(fautive, [{ numero: FICTIVE, statut: 'accepte' }]));
     expect(acceptee.fautes).toEqual([]);
     expect(acceptee.absoutes.map((a) => `${a.adr} ${a.famille}`)).toEqual([
-      'partners/ADR-9999 suppression_de_colonne',
+      `partners/ADR-${FICTIVE} suppression_de_colonne`,
     ]);
     // L'en-tête hors de la PREMIÈRE ligne n'absout rien.
     const decale = controlerMigrations(
-      vue(`SELECT 1;\n${fautive}`, [{ numero: '9999', statut: 'accepte' }])
+      vue(`SELECT 1;\n${fautive}`, [{ numero: FICTIVE, statut: 'accepte' }])
     );
     expect(decale.fautes).toHaveLength(1);
   });
@@ -633,7 +637,7 @@ describe('REQ-DM-037 — les migrations sont additives', () => {
 
   it('REQ-DM-037 : dépôt jetable — la garde imprime son périmètre, rougit sur la faute du milieu, et imprime l’absolution', () => {
     const adr = [
-      '# partners/ADR-0042 — Retrait d’une colonne morte',
+      `# partners/ADR-${TEMOIN} — Retrait d’une colonne morte`,
       '',
       '| Champ | Valeur |',
       '| --- | --- |',
@@ -644,14 +648,13 @@ describe('REQ-DM-037 — les migrations sont additives', () => {
       'prisma/migrations/1_socle/migration.sql': MIGRATION_SOCLE,
       'prisma/migrations/2_milieu/migration.sql': 'ALTER TABLE "x" DROP COLUMN "y";\n',
       'prisma/migrations/3_fin/migration.sql': 'CREATE TABLE "w" ("id" INT);\n',
-      'docs/adr/0042-retrait.md': adr,
+      [`docs/adr/${TEMOIN}-retrait.md`]: adr,
     };
     const script = resolve('scripts/gates/migrations-additive.ts');
     const fautif = depotJetable('dm02-mig-', fichiers);
     const absous = depotJetable('dm02-adr-', {
       ...fichiers,
-      'prisma/migrations/2_milieu/migration.sql':
-        '-- ADR: partners/ADR-0042\nALTER TABLE "x" DROP COLUMN "y";\n',
+      'prisma/migrations/2_milieu/migration.sql': `-- ADR: partners/ADR-${TEMOIN}\nALTER TABLE "x" DROP COLUMN "y";\n`,
     });
     const vide = depotJetable('dm02-vide-', { 'README.md': 'rien' });
     try {
@@ -662,7 +665,7 @@ describe('REQ-DM-037 — les migrations sont additives', () => {
       );
       expect(r.code).toBe(1);
       const a = lancerDans(absous, script);
-      expect(a.sortie).toContain('absoute par partners/ADR-0042');
+      expect(a.sortie).toContain(`absoute par partners/ADR-${TEMOIN}`);
       expect(a.code).toBe(0);
       const v = lancerDans(vide, script);
       expect(v.sortie).toContain('[perimetre_vide]');

@@ -703,15 +703,20 @@ const TEMOINS: { famille: string; nomme: string; vue: () => Vue }[] = [
   },
 ];
 
+/**
+ * Le numéro de l'ADR des témoins : FICTIF, donc interpolé — écrit en clair, `gov:adr` y lirait un
+ * renvoi vers un ADR qui n'existe pas (`reference_sans_cible`).
+ */
+const ADR_TEMOIN = '0042';
+
 /** Le témoin d'ADR doit porter l'en-tête en PREMIÈRE ligne du fichier : il se construit à part. */
 function vueAdr(statut: string | undefined): Vue {
   const v = vueAvec('');
   v.migrations[1] = {
     chemin: 'prisma/migrations/2_milieu/migration.sql',
-    contenu:
-      '-- ADR: partners/ADR-0042\nCREATE TABLE "x" ("id" INT);\nALTER TABLE "x" DROP COLUMN "y";\n',
+    contenu: `-- ADR: partners/ADR-${ADR_TEMOIN}\nCREATE TABLE "x" ("id" INT);\nALTER TABLE "x" DROP COLUMN "y";\n`,
   };
-  v.adrs = statut === undefined ? [] : [{ numero: '0042', statut }];
+  v.adrs = statut === undefined ? [] : [{ numero: ADR_TEMOIN, statut }];
   return v;
 }
 
@@ -778,7 +783,10 @@ if (LANCE_EN_SCRIPT) {
       }
     }
     const absoute = controler(vueAdr('accepte'));
-    if (absoute.fautes.length > 0 || !absoute.absoutes.some((a) => a.adr === 'partners/ADR-0042')) {
+    if (
+      absoute.fautes.length > 0 ||
+      !absoute.absoutes.some((a) => a.adr === `partners/ADR-${ADR_TEMOIN}`)
+    ) {
       echecs.push('une ADR acceptée n’absout pas la faute, ou l’absolution n’est pas rendue');
     }
     for (const [statut, dit] of [
