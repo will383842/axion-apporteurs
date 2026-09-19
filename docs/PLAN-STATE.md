@@ -168,8 +168,8 @@ exigence, et elle est le script de `G-SEC-CI-BLOQUANTE`, dont la `preuveRouge` e
 ni aucune étape d'aucun workflow ne porte `continue-on-error`, lu par un vrai analyseur YAML.
 `etats.ts` passe de 73,33 % à 100 % par un test de domaine qui dérive les statuts non occupants de
 REQ-DM-006. Règle du domaine : sous `src/domain/**`, rien que du `.ts` NON-TEST — ni autre
-extension, ni `*.spec.ts`, ni `*.test.ts`, ni `*.d.ts` ; les tests vivent sous `tests/`. Et aucun
-commentaire du domaine ne parle de couverture : les formes que le fournisseur installé accepte sont
+extension, ni `*.spec.ts`, ni `*.test.ts`, ni `*.d.ts` ; les tests vivent sous `tests/`. Et aucune
+ligne du domaine ne parle de couverture, lue ENTIÈRE : les formes que le fournisseur installé accepte sont
 lues dans son code, et chacune est vue rougir.
 
 **Reste.** Les formes voisines des interdits du domaine sont fermées par GOV-076 : import sans
