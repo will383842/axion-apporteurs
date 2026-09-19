@@ -46,10 +46,10 @@ les cinq conditions sont établies ; sinon elle est élevée :
    `qualite`, porte un champ `sensible` **présent et vide**, et n'est pas `schema: true` — la plus
    haute l'emporte ;
 4. la PR ne porte pas le label `schema` ;
-5. le diff n'est pas vide, et chacun de ses fichiers est sous `docs/`, `scripts/`, `tests/`, ou est
-   un document `*.md` à la racine — jamais sous `.github/`, jamais un autre fichier de la racine —, et
-   n'appartient pas à la garde des revues (`scripts/lot/revues.ts`,
-   `scripts/gates/gov-pr.ts`, `scripts/lot/corps-de-pr.ts`, `docs/CHARTE-AGENTS.md`,
+5. le diff n'est pas vide, sa liste est complète, et chacun de ses fichiers est sous `docs/`,
+   `scripts/` ou `tests/` — jamais sous `.github/`, jamais à la racine —, et n'appartient pas à la
+   garde des revues (les trois racines `scripts/lot/revues.ts`, `scripts/gates/gov-pr.ts`,
+   `scripts/lot/corps-de-pr.ts`, la fermeture transitive de leurs imports, `docs/CHARTE-AGENTS.md`,
    `docs/agents.json`).
 
 | Risque | Lentilles exigées |
@@ -80,10 +80,17 @@ pas l'ignorer une fois rendue. La section « Attaque » reste exigée sur une t�
   la première version) : les workflows et `CODEOWNERS` gouvernent les gates et la propriété des
   chemins ; une PR qui affaiblit la CI est exactement celle qu'on ne relit pas à deux lentilles.
   Conséquence assumée : QA-T01, qui touche `.github/workflows/ci.yml`, se relit en élevé.
-- **La racine hors de la liste blanche, sauf ses documents `*.md`** (même arbitrage, sur une dette de
-  la lentille `securite`) : `package.json`, `pnpm-lock.yaml`, `.npmrc`, `vitest.config.*`,
-  `eslint.config.*`, `tsconfig*.json`, `.gitattributes` gouvernent la chaîne de contrôle. Les
-  énumérer laisserait passer le prochain ; la règle fermée est « toute la racine sauf les documents ».
+- **Toute la racine hors de la liste blanche, documents compris** (arbitrages (f) puis (g) de
+  l'orchestrateur, sur deux dettes de la lentille `securite`) : `package.json`, `pnpm-lock.yaml`,
+  `.npmrc`, `vitest.config.*`, `eslint.config.*`, `tsconfig*.json`, `.gitattributes` gouvernent la
+  chaîne de contrôle, et `CLAUDE.md` ou `AGENTS.md` sont les instructions que chaque agent charge,
+  relecteurs compris. Les énumérer laisserait passer le prochain ; la règle fermée est « toute la
+  racine ».
+- **Une liste de fichiers incomplète vaut élevé** (second refus bloquant de `securite`) :
+  `pulls/{n}/files` plafonne à 3000 fichiers sans erreur. La liste lue est comparée à
+  `changed_files` ; plus courte, au plafond ou illisible, elle ne prouve rien.
+- **Le diff local se lit en `-z`** (lentille `exactitude`) : sans lui, git cite un chemin non ASCII
+  entre guillemets, et `prisma/é.sql` n'exigeait plus la lentille `schema`.
 - **Un fichier renommé ou copié compte par sa source ET sa destination** (refus bloquant de la
   lentille `securite` sur la PR de cette décision) : la forge sert la source dans
   `previous_filename`, `git diff --name-status` la rend en première colonne de chemin. Une seule
@@ -91,15 +98,19 @@ pas l'ignorer une fois rendue. La section « Attaque » reste exigée sur une t�
   `.github/` ou de `prisma/` n'était jugé que par l'endroit où il arrive.
 - **La garde des revues est toujours élevée**, même sous `scripts/` ou `docs/` : sinon une PR relue
   par deux lentilles pourrait affaiblir la règle qui décide combien de lentilles relisent les
-  autres. La liste est confrontée au graphe d'imports de `scripts/`.
+  autres. Elle n'est plus une liste tapée : c'est la FERMETURE TRANSITIVE des imports relatifs de
+  ses trois racines, dérivée du disque (`cheminsDeLaGardeDesRevues()`) — une liste de cinq chemins
+  laissait `scripts/lot/avancement.ts` et `scripts/lot/chemins-de-tache.ts`, que la gate exécute, en
+  ordinaire.
 - **Tête et base** : chaque PR écrit `docs/tasks.json` ; sans la base, une PR réécrirait la `zone`
   ou viderait le `sensible` de sa propre tâche et se relirait en ordinaire. Un champ **absent** vaut
   élevé — la projection `sensible ?? []` de `gov-pr.ts` était un échec ouvert, elle est retirée.
 
-Mesure à `87fb212` (260 tâches, une PR synthétique par tâche, fichiers dérivés de ses `paths`) :
-52 ordinaires, 208 élevées. Sur les 201 tâches `partners` non livrées, **29 sont ordinaires** — autant
-de PR relues par deux lentilles au lieu de quatre — et 172 restent élevées. La première version
-(`.github/` et racine admis) en comptait 46 sur 206, la deuxième (racine admise) 35 sur 206.
+Mesure sur le registre de la tête de la PR (une PR synthétique par tâche, fichiers dérivés de ses
+`paths`), imprimée par le cas 9 de `tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts` : 51
+ordinaires sur 260 tâches ; sur les 201 tâches `partners` non livrées, **29 sont ordinaires** — autant
+de PR relues par deux lentilles au lieu de quatre — et 172 restent élevées. Les versions successives
+de la règle en comptaient 46 puis 35 sur 206, avant la clôture du lot L0-01.
 
 ## Conséquences
 

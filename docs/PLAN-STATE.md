@@ -108,10 +108,10 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 fonction, `risqueDeLaPr()` (`scripts/lot/revues.ts`), qu'appellent `gov:pr` et le composeur du
 corps. Une PR n'est ordinaire que si tout est prouvé : tâche résolue, base lisible, chaque tâche en
 zone `gouvernance` ou `qualite` avec `sensible` présent et vide sur la tête ET la base, aucun
-label `schema`, et un diff non vide sous `docs/`, `scripts/`, `tests/` ou fait de documents `*.md`
-à la racine, hors de la garde des revues. Tout le reste, `.github/` et les configurations de la
-racine compris, est élevé, et un fichier renommé compte par sa source comme par sa destination. Ordinaire : `exactitude` et
-`securite` ; élevé : les quatre lentilles, comme avant. `gov:pr --pr` imprime le risque et ses
+label `schema`, et un diff non vide, complet, entièrement sous `docs/`, `scripts/` ou `tests/`,
+hors de la garde des revues, fermeture transitive de ses imports comprise. Tout le reste,
+`.github/` et toute la racine compris, est élevé, et un fichier renommé compte par sa source comme
+par sa destination. Ordinaire : `exactitude` et `securite` ; élevé : les quatre lentilles, comme avant. `gov:pr --pr` imprime le risque et ses
 raisons, et « aucune revue » a sa propre famille, `aucune_revue`, distincte de « toutes les revues
 refusent ». Un avis posté en commentaire d'issue est nommé sans être compté. Le lot L0-01 est clos
 dans la même PR : GOV-039, GOV-041, GOV-043, GOV-044 et GOV-056 passent `fusionnee` par
@@ -131,6 +131,8 @@ doit passer par l'API paginée, sinon un fichier au-delà du centième est invis
 registre réel : 29 des 201 tâches `partners` non livrées se reliront avec deux lentilles. Enfin,
 une liste de fichiers qui ne lit que la destination d'un renommage juge une PR par l'endroit où un
 fichier arrive, jamais par celui qu'il quitte : la lentille `securite` l'a refusé, à juste titre.
+Et la liste que sert la forge plafonne sans erreur : elle se compare au nombre de fichiers que la PR
+annonce, sinon trois mille documents cachent un fichier de configuration.
 
 ### PR #61 — 2026-09-18 — feat(GOV-043): gov:trace rend son perimetre et son complement, sous un plancher declare
 

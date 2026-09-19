@@ -300,13 +300,14 @@ L'ordinaire se **prouve**, l'élevé est le défaut. Une PR est de risque **ordi
 (1) au moins une tâche est résolue, par le titre ou par le champ `pr` ; (2) le registre des tâches de la base
 est lisible ; (3) chaque tâche résolue, lue sur la tête **et** sur la base, est en zone `gouvernance` ou
 `qualite`, porte un champ `sensible` présent et vide, et n'est pas `schema: true` ; (4) la PR ne porte pas le
-label `schema` ; (5) le diff n'est pas vide, et chacun de ses fichiers est sous `docs/`, `scripts/`,
-`tests/`, ou est un document `*.md` à la racine — **jamais sous `.github/`** ni aucun autre fichier de la
-racine (`package.json`, `pnpm-lock.yaml`, configurations d'outils), qui gouvernent la CI et la chaîne de
-contrôle —, hors de la garde des revues ; un fichier **renommé ou copié** compte par sa source ET sa
-destination (`scripts/lot/revues.ts`,
-`scripts/gates/gov-pr.ts`, `scripts/lot/corps-de-pr.ts`, cette charte, `docs/agents.json`). Sinon elle est de
-risque **élevé**.
+label `schema` ; (5) le diff n'est pas vide, sa liste est **complète** (la forge plafonne la sienne sans
+erreur : une liste plus courte que le nombre de fichiers annoncé par la PR, ou au plafond, ne prouve rien),
+et chacun de ses fichiers est sous `docs/`, `scripts/` ou `tests/` — **jamais sous `.github/`, jamais à la
+racine**, documents compris (`package.json`, les configurations d'outils, mais aussi `CLAUDE.md` et
+`AGENTS.md`, que chaque agent charge) —, hors de la garde des revues : ses trois racines
+(`scripts/lot/revues.ts`, `scripts/gates/gov-pr.ts`, `scripts/lot/corps-de-pr.ts`), la **fermeture
+transitive** de leurs imports, dérivée du disque, cette charte et `docs/agents.json`. Un fichier **renommé
+ou copié** compte par sa source ET sa destination. Sinon elle est de risque **élevé**.
 
 | Risque | Lentilles exigées |
 | --- | --- |
