@@ -618,9 +618,9 @@
       "phase": 0,
       "script": "tests/unit/securite/headers.spec.ts",
       "tache": "SEC-02",
-      "verifie": "CSP par nonce, frame-ancestors et HSTS sur /, /connexion, /espace, /deposer/[token] et les routes d'API",
+      "verifie": "CSP par nonce unique par reponse (crypto.getRandomValues, 16 octets au moins, jamais rejoue sur plus de 1000 reponses), frame-ancestors 'none', strict-dynamic, connect-src restreint a 'self' et aux origines que src/ appelle reellement, Cache-Control private, no-store, CSP transmise a la requete egale a celle de la reponse, sur toute route derivee de src/app et de la carte docs/ESPACE-ROUTES.md, routes d'API comprises (matcher de src/proxy.ts juge par unstable_doesMiddlewareMatch, prechargements compris) ; HSTS preload, nosniff, Referrer-Policy strict-origin-when-cross-origin et Permissions-Policy restrictive par next.config.ts, ressources statiques comprises, juge aussi tel que le chargeur de Next le lit. Chaque directive est confrontee a une liste propre au temoin, elle-meme confrontee aux jetons du texte de REQ-SEC-029 ; le vert imprime le compte des routes confrontees, plancher strictement positif.",
       "fixtureRouge": "retirer frame-ancestors de la CSP",
-      "preuveRouge": null
+      "preuveRouge": "SEC-02 phase A, commit 0ffe231 sur t/sec-02 (le meme ROUGE fut db1870a avant le rebase sur 244d990, e430e4c en phase A ; rejouable par git checkout 0ffe231) : nonce tire au chargement du module de src/proxy.ts, npx vitest run tests/unit/securite/headers.spec.ts rend nonce_repete : 1 nonce(s) distinct(s) pour 1003 reponses (14 rouges sur 38) ; 38 mutants joues, 38 tues, dont frame-ancestors retire (directive_absente frame-ancestors)"
     },
     {
       "id": "G-SEC-ENV",

@@ -1367,10 +1367,17 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/middleware.ts",
         "next.config.ts",
         "tests/unit/securite/headers.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/proxy.ts",
+        "src/server/securite/entetes.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1425,11 +1432,11 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A05",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 71,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) Les compteurs de limitation vivent sous les prefixes `magic:`, `depot:`, `verif:`, `webhook:`, `auth:`, et CHACUN declare sa conduite en cas de panne du cache : le depot est limite a 20 / 10 min par empreinte d'adresse avec `surPanne: laisser-passer`, le compteur par identite declare `surPanne: refuser` (REQ-SEC-016). (2) GARDE DE FAMILLE : un compteur ajoute sous l'un des cinq prefixes SANS declarer sa conduite sur panne est refuse — un predicat ouvert echoue ouvert, et c'est precisement ce qu'on ferme ici. (3) Le honeypot repond en succes silencieux et journalise l'identifiant d'apporteur SANS la valeur saisie ; l'accuse de depot n'est emis que si la ligne existe reellement (REQ-SEC-035). Aucun message, aucun code de reponse, aucun delai ne distingue le chemin honeypot du chemin nominal. (4) TEMOIN A DEUX FACES : une copie de travail ou un compteur neuf omet sa conduite sur panne, et une ou le cache est indisponible, font sortir la garde en code non nul et nomment le prefixe ; le code du depot la fait sortir en zero, et le vert imprime le compte des compteurs reellement confrontes. (5) Le detail des representations d'evitement ne s'ecrit pas ici : il vit hors depot, et cette acceptance ne le nomme pas.",
