@@ -421,35 +421,30 @@ function nonAdmisSousLeDomaine(racine: string): { lus: number; fautes: string[] 
 }
 
 /**
- * Les commentaires d'un texte — en bloc, même non refermé, et en ligne. La lecture est volontairement
- * LARGE : un `//` ou un `/*` logé dans une chaîne ouvre lui aussi un « commentaire » ici. Le fournisseur
- * de couverture lit ses directives LIGNE À LIGNE, chaînes comprises : lire plus large que lui est le
- * bon sens d'erreur.
- */
-const COMMENTAIRE = /\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*/g;
-
-/**
- * Un commentaire qui PARLE de couverture. Pas une liste de directives connues — le fournisseur en
- * accepte plus qu'on n'en devine (sa classe de caractères admet `|8`, il honore `node:coverage
- * disable`) —, mais les mots dont toute directive d'exclusion a besoin, casse ignorée. Un faux positif
- * coûte un mot de commentaire ; un faux négatif coûte le seuil.
+ * Une ligne qui PARLE de couverture. Pas une liste de directives connues — le fournisseur en accepte
+ * plus qu'on n'en devine (sa classe de caractères admet `|8`, il honore `node:coverage disable`) —,
+ * mais les mots dont toute directive d'exclusion a besoin, casse ignorée. Le fournisseur lit ses
+ * directives LIGNE À LIGNE, n'importe où sur la ligne, chaînes comprises : la garde juge donc CHAQUE
+ * LIGNE ENTIÈRE, code, chaînes et commentaires confondus, sans découper en commentaires — un découpage
+ * laisse passer ce que le fournisseur retrouve à cheval sur deux morceaux. Un faux positif coûte un
+ * mot ; un faux négatif coûte le seuil.
  */
 const PARLE_DE_COUVERTURE = /ignore|coverage|istanbul|[a-z|]8\s/i;
 
 /**
- * Chaque commentaire suspect sous `racine` (tous les fichiers, à toute profondeur), nommé
+ * Chaque ligne suspecte sous `racine` (tous les fichiers, à toute profondeur), nommée
  * `src/domain/<chemin>:<ligne>`, et le nombre de fichiers LUS : un parcours qui ne lirait plus rien
  * rendrait le même `[]` qu'un domaine sain.
  */
-function commentairesDeCouverture(racine: string): { lus: number; fautes: string[] } {
+function lignesDeCouverture(racine: string): { lus: number; fautes: string[] } {
   const fichiers = fichiersSous(racine);
   const fautes: string[] = [];
   for (const f of fichiers) {
-    const texte = readFileSync(join(racine, f), 'utf8');
-    for (const m of texte.matchAll(COMMENTAIRE)) {
-      if (!PARLE_DE_COUVERTURE.test(m[0])) continue;
-      fautes.push(`${DOMAINE}/${f}:${texte.slice(0, m.index).split('\n').length}`);
-    }
+    readFileSync(join(racine, f), 'utf8')
+      .split('\n')
+      .forEach((ligne, n) => {
+        if (PARLE_DE_COUVERTURE.test(ligne)) fautes.push(`${DOMAINE}/${f}:${n + 1}`);
+      });
   }
   return { lus: fichiers.length, fautes };
 }
@@ -531,11 +526,32 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
     }
   });
 
-  it('REQ-QA-013 — au MILIEU de la liste, clé écrite AVANT le nom, entre accolades ou entre guillemets : l’étape qui la porte est nommée', async () => {
+  it('REQ-QA-013 — au MILIEU de la liste (rang dérivé), en avant-dernière, clé écrite AVANT le nom, entre accolades ou entre guillemets : l’étape qui la porte est nommée', async () => {
     const ci = readFileSync(CI, 'utf8');
+    // L'étape du MILIEU de `gate-a`, dérivée de son rang dans le workflow lu — ni la première, ni la
+    // dernière : un détecteur qui ne verrait que l'une des deux bornes la laisserait passer.
+    const workflow = await lireYaml(ci);
+    const job = estObjet(workflow) && estObjet(workflow.jobs) ? workflow.jobs['gate-a'] : undefined;
+    const etapes: unknown[] = estObjet(job) && Array.isArray(job.steps) ? job.steps : [];
+    expect(etapes.length).toBeGreaterThan(2);
+    const rang = Math.floor(etapes.length / 2);
+    const milieu = etapes[rang];
+    const nomMilieu = estObjet(milieu) && typeof milieu.name === 'string' ? milieu.name : '';
+    expect(nomMilieu, `l'étape n° ${rang + 1} de gate-a n'a pas de nom`).not.toBe('');
+    console.info(
+      `[QA-T01] étape du milieu de gate-a : n° ${rang + 1} sur ${etapes.length}, « ${nomMilieu} »`
+    );
     const TYPECHECK = '      - name: Typecheck\n        run: pnpm typecheck\n';
     const FORMAT = '      - name: Format\n        run: pnpm format:check\n';
     const cas: [string, string][] = [
+      [
+        substituer(
+          ci,
+          `      - name: ${nomMilieu}\n`,
+          `      - ${TOLERANCE}: true\n        name: ${nomMilieu}\n`
+        ),
+        nomMilieu,
+      ],
       // La clé précède `name` : un détecteur qui retient « le dernier `name:` vu » nommerait Format.
       [
         substituer(
@@ -730,53 +746,62 @@ describe('REQ-QA-002 — 100 % lignes et branches sur `src/domain/**`, appliqué
     expect(nommes.some((f) => relative(DOMAINE, dirname(f)) !== '')).toBe(true);
   }, 600_000);
 
-  it('REQ-QA-002 — aucun commentaire de `src/domain/**` ne parle de couverture : le seuil mesure tout le code livré', () => {
-    const { lus, fautes } = commentairesDeCouverture(DOMAINE);
+  it('REQ-QA-002 — aucune ligne de `src/domain/**` ne parle de couverture : le seuil mesure tout le code livré', () => {
+    const { lus, fautes } = lignesDeCouverture(DOMAINE);
     expect(lus).toBe(fichiersDuDomaine().length);
     expect(lus).toBeGreaterThan(0);
     expect(fautes).toEqual([]);
   });
 
-  it('REQ-QA-002 — et ce témoin SAIT rougir : chaque forme que le fournisseur INSTALLÉ accepte, dans un sous-dossier du MILIEU, est nommée', () => {
+  it('REQ-QA-002 — et ce témoin SAIT rougir : CHAQUE forme que le fournisseur INSTALLÉ accepte, dans un sous-dossier du MILIEU, est nommée', () => {
     const formes = formesDuFournisseur();
     const candidats = candidatsDeDirective();
     // Chaque expression du fournisseur doit accepter au moins un candidat : sinon une forme lui échappe.
     expect(formes.filter((re) => !candidats.some((c) => re.test(c))).map(String)).toEqual([]);
     const retenues = candidats.filter((c) => formes.some((re) => re.test(c)));
     console.info(`[QA-T01] ${formes.length} expressions du fournisseur, ${retenues.length} formes`);
+    expect(retenues.length).toBeGreaterThanOrEqual(14);
     // Témoins positifs : les deux formes que la liste tapée d'avant laissait passer sont bien lues.
     expect(retenues).toContain('/* |8 ignore start */');
     expect(retenues).toContain('/* node:coverage disable */');
-    // Et des formes écrites à la main : casse, espaces, saut de ligne, `istanbul`, commentaire en ligne.
-    const aLaMain = [
-      '/*V8   IGNORE next 3*/',
-      '/* v8\n   ignore stop */',
-      '// c8 ignore next',
-      '/* istanbul ignore else */',
+    // Des formes écrites à la main, chacune avec les lignes qui doivent rougir : casse et espaces,
+    // directive à CHEVAL sur un commentaire refermé (le fournisseur réutilise le `/` de `*/`), bloc
+    // jamais refermé, commentaire en ligne, `istanbul`, directive coupée sur deux lignes.
+    const aLaMain: readonly (readonly [string, readonly number[]])[] = [
+      ['/*V8   IGNORE next 3*/', [2]],
+      ["export const MARQUE_A = '/* a */* node:coverage disable';", [2]],
+      ['/* node:coverage disable', [2]],
+      ['// c8 ignore next', [2]],
+      ['/* istanbul ignore else */', [2]],
+      ['/* v8\n   ignore stop */', [3]],
     ];
+    const plantes: Record<string, string> = {
+      'attribution/sain.ts': 'export const a = 1;\n',
+      // Contre-témoin : une ligne qui ne parle pas de couverture.
+      'zz-fin/sain.ts': '// la clause se génère depuis la constante\nexport const z = 1;\n',
+    };
+    const attendues: string[] = [];
+    const planter = (f: string, ligne: string, lignes: readonly number[]) => {
+      plantes[f] = `export const a = 1;\n${ligne}\nexport const b = 2;\n`;
+      attendues.push(...lignes.map((n) => `${DOMAINE}/${f}:${n}`));
+    };
+    retenues.forEach((ligne, i) => planter(`m-milieu/profond/derivee-${i}.ts`, ligne, [2]));
+    aLaMain.forEach(([ligne, lignes], i) =>
+      planter(`m-milieu/profond/main-${i}.ts`, ligne, lignes)
+    );
+    // CHAQUE forme dérivée est plantée : planter la première ou la dernière seulement rougit ici.
+    expect(Object.keys(plantes).filter((f) => f.includes('/derivee-'))).toHaveLength(
+      retenues.length
+    );
     const racine = mkdtempSync(join(tmpdir(), 'qa3-'));
     try {
-      const plantes: Record<string, string> = {
-        'attribution/sain.ts': 'export const a = 1;\n',
-        // Contre-témoin : un commentaire qui ne parle pas de couverture.
-        'zz-fin/sain.ts': '// la clause se génère depuis la constante\nexport const z = 1;\n',
-      };
-      [...retenues, ...aLaMain].forEach((ligne, i) => {
-        plantes[`m-milieu/profond/f${i}.ts`] =
-          `export const a = 1;\n${ligne}\nexport const b = 2;\n`;
-      });
       for (const [f, texte] of Object.entries(plantes)) {
         mkdirSync(dirname(join(racine, f)), { recursive: true });
         writeFileSync(join(racine, f), texte);
       }
-      const { lus, fautes } = commentairesDeCouverture(racine);
+      const { lus, fautes } = lignesDeCouverture(racine);
       expect(lus).toBe(Object.keys(plantes).length);
-      expect(fautes).toEqual(
-        Object.keys(plantes)
-          .filter((f) => f.startsWith('m-milieu/'))
-          .sort()
-          .map((f) => `${DOMAINE}/${f}:2`)
-      );
+      expect([...fautes].sort()).toEqual([...attendues].sort());
     } finally {
       rmSync(racine, { recursive: true, force: true });
     }

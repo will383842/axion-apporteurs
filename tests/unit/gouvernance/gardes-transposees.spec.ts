@@ -1190,7 +1190,7 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     expect(exiges.filter((s) => !pkg.scripts?.[s])).toEqual([]);
   });
 
-  it('`lint` et `format:check` sont EXACTEMENT `eslint .` et `prettier --check .`', () => {
+  it('`lint` et `format:check` sont EXACTEMENT `eslint . --max-warnings 0` et `prettier --check .`', () => {
     // Ni drapeau, ni portée, ni `||` : c'est l'égalité qui fait de la configuration jugée plus bas
     // celle que `pnpm lint` et `pnpm format:check` appliquent réellement.
     const vus = Object.fromEntries(Object.keys(SCRIPTS_EXACTS).map((s) => [s, pkg.scripts?.[s]]));
