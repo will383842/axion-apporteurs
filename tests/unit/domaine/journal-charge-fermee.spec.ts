@@ -1,7 +1,7 @@
 // @req REQ-DM-041
 /**
  * La charge d'un événement est un schéma Zod FERMÉ par type, sans donnée personnelle — DM-01
- * (gate `journal:sans-pii`, partners/ADR-0013 décision 4).
+ * (gate `journal:sans-pii`, partners/ADR-0014 décision 4).
  *
  * TÉMOIN À DEUX FACES. Face rouge : des charges de bac portant un champ interdit font sortir la garde
  * en code non nul, UNE faute nommée `type.champ` par cas. Face verte : les charges du dépôt la font

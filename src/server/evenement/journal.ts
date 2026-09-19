@@ -1,6 +1,6 @@
 /**
  * L'écrivain et le lecteur du journal `Evenement` — DM-01 (REQ-DM-024, REQ-DM-041,
- * partners/ADR-0013 décision 3).
+ * partners/ADR-0014 décision 3).
  *
  * `ajouterEvenement()` N'ACCEPTE QU'UNE TRANSACTION. REQ-DM-024 exige que toute transition
  * d'agrégat écrive son événement « dans la même transaction » : le type l'impose, un client nu ne

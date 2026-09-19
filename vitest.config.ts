@@ -24,7 +24,7 @@ export default defineConfig({
       'tests/gov/**/*.{test,spec}.{ts,tsx}',
       // Les tests en base réelle tournent DANS `pnpm test` : `gov:trace` lit include/exclude de CE fichier,
       // et un spec exclu y vaut « non exécuté ». Conséquence assumée : la suite exige le démon Docker
-      // (partners/ADR-0013, décision 7 ; partners/ADR-0001). ⚠️ AUCUNE APOSTROPHE dans ce bloc :
+      // (partners/ADR-0014, décision 7 ; partners/ADR-0001). ⚠️ AUCUNE APOSTROPHE dans ce bloc :
       // `gates:prouvees` lit les motifs entre guillemets simples, et une apostrophe y ouvre un faux motif.
       'tests/integration/**/*.{test,spec}.{ts,tsx}',
     ],

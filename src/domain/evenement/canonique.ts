@@ -1,5 +1,5 @@
 /**
- * La forme canonique d'un enregistrement du journal — DM-01 (REQ-DM-024, partners/ADR-0013 décision 1).
+ * La forme canonique d'un enregistrement du journal — DM-01 (REQ-DM-024, partners/ADR-0014 décision 1).
  *
  * UN HASH NE VAUT QUE SI L'OCTET-À-OCTET SE REPRODUIT DES ANNÉES PLUS TARD. `JSON.stringify` ne le
  * garantit pas : l'ordre des clés suit l'ordre d'insertion, qui dépend du code qui a construit

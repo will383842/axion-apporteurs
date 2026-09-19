@@ -9,7 +9,7 @@
  * `verifierChaine()` sort sans faute sur la base ainsi remplie, en comptant ses maillons.
  *
  * Les altérations qu'un propriétaire de table PEUT faire (déclencheur désarmé : c'est une limite
- * déclarée, partners/ADR-0013) sont jouées ici pour prouver que `verifierChaine()` les VOIT, puis
+ * déclarée, partners/ADR-0014) sont jouées ici pour prouver que `verifierChaine()` les VOIT, puis
  * défaites. Chaque altération frappe une ligne du MILIEU.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';

@@ -1,4 +1,4 @@
-// Schéma Prisma — Axion Partners. Socle posé par DM-01 (partners/ADR-0013).
+// Schéma Prisma — Axion Partners. Socle posé par DM-01 (partners/ADR-0014).
 //
 // LES CONVENTIONS QUE CE FICHIER FIXE POUR TOUT LE DÉPÔT (docs/CONVENTIONS.md §1 à §3).
 //   — Tables, colonnes ET enums en snake_case côté Postgres, par `@map` / `@@map` : le code ne
@@ -86,7 +86,7 @@ enum AgregatJournal {
 }
 
 /// Le journal. Chaîne GLOBALE et linéaire : `prevHash` unique interdit la bifurcation et une
-/// seconde genèse ; l'écrivain sérialise par un verrou consultatif (partners/ADR-0013, décision 3).
+/// seconde genèse ; l'écrivain sérialise par un verrou consultatif (partners/ADR-0014, décision 3).
 /// Toute colonne ajoutée plus tard est HORS hachage et le dit, ou exige un nouvel algorithme.
 model Evenement {
   id        BigInt               @id @default(autoincrement())
