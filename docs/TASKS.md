@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 98 | 77.35 | 13 |
+| 0 — Socle technique | 98 | 77.35 | 14 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -452,7 +452,7 @@ Couvre : `REQ-SEC-029`
 
 **Tests.** `tests/unit/securite/headers.spec.ts`
 
-### SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable
+### SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable ✅ **fusionnee**
 
 `0.5 j` · zone `securite` · depend de `QA-T01`
 
