@@ -440,9 +440,9 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
     // Compte illisible ; liste de complétude absente ; source inconnue.
     expect(avec(null).niveau).toBe('eleve');
     expect(risque({ titre: 'feat(QA-T01): x', fichiers, liste: null }).niveau).toBe('eleve');
-    expect(
-      risque({ titre: 'feat(QA-T01): x', fichiers, liste: { source: 'inconnue' } as never }).niveau
-    ).toBe('eleve');
+    // Une source que le type ne connaît pas — lue comme la forge la servirait, sans la retaper.
+    const inconnue = JSON.parse('{"source":"inconnue"}') as LECTEUR.ListeDesFichiers;
+    expect(risque({ titre: 'feat(QA-T01): x', fichiers, liste: inconnue }).niveau).toBe('eleve');
   });
 
   it('REQ-GOV-011 · cas 7 bis : la garde des revues est la FERMETURE TRANSITIVE de ses imports — un module importé indirectement est élevé', () => {
