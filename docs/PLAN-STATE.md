@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `9f2f6d9` — 2026-09-19T06:53:02+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #75 (un contrôle requis rouge ou une revue manquante) · 2. #78 (un contrôle requis rouge ou une revue manquante) · 3. #76 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · CPL-T13 (A05) · GOV-077 (A05) |
+| Où est `main` ? | `f37659e` — 2026-09-19T10:37:25+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #79 (un contrôle requis rouge ou une revue manquante) · 2. #75 (un conflit avec `main`) · 3. #76 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · UX-P0-02 (A05) · CPL-T13 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 72.10 j |
 | Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #78 — 2026-09-19 |
+| Dernière entrée de journal | PR #79 — 2026-09-19 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,8 +64,8 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un contrôle requis rouge ou une revue manquante |
-| 2 | #78 — feat(CPL-T13): module temps pur - horloge injectee, heure de Paris, feries FR, SLA ouvre, seuil HYP-D3 | `t/cpl-t13` | un contrôle requis rouge ou une revue manquante |
+| 1 | #79 — docs(UX-P0-02): maquettes des huit écrans et garde maquettes-validees | `t/ux-p0-02` | un contrôle requis rouge ou une revue manquante |
+| 2 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un conflit avec `main` — à résoudre avant tout |
 | 3 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -81,6 +81,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | SEC-02 — En-têtes de sécurité et CSP par nonce | A05 | #66 | `a_faire` |
 | SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
 | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
+| UX-P0-02 — Maquettes des 6 écrans clés + charte de l'espace | A05 | #77 | `a_faire` |
 | CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure | A05 | #67 | `a_faire` |
 | GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent | A05 | #57 | `a_faire` |
 
@@ -88,7 +89,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées
+`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés
 
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
@@ -98,13 +99,21 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Dernier atterrissage
 
-`origin/main` = `9f2f6d9` (2026-09-19T06:53:02+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `f37659e` (2026-09-19T10:37:25+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #79 — 2026-09-19 — docs(UX-P0-02): maquettes des huit écrans et garde maquettes-validees
+
+**Fait.** Huit maquettes autonomes sous `docs/maquettes/` : six pour l'espace, deux pour la console. Elles couvrent 90 états et viennent avec une charte (`index.html`) aux contrastes mesurés dans les deux thèmes de l'espace. La garde `maquettes-validees` lit `VALIDATION.md` par ses en-têtes. Elle refuse une validation écrite à moitié ou signée par un autre que Will, et rougit sur toute tâche d'écran attribuée sans maquette validée ; elle est câblée en Gate A. La spec prouve aussi la forme de l'accueil (REQ-UX-008), le contraste recalculé depuis chaque maquette (REQ-UX-034) et la moitié statique de REQ-UX-017. Elle a été vue rouge avant la garde, et quatre mutants ont été tués.
+
+**Reste.** La validation de Will. L'orchestrateur rapporte qu'en séance du 2026-09-19, à la question « Valider les six maquettes de l'espace apporteur », Will a répondu « oui parfait », ce qui vaut aussi pour les onze choix par défaut des notes. Cette PR n'écrit pas la colonne « Validé le » : la validation lui est parvenue par un message d'agent, et cette colonne est le contrôle même que la garde protège. Il reste donc à écrire `2026-09-19 | Will` sur les six lignes de l'espace. Les deux maquettes de console attendent. Restent aussi à faire : la moitié dynamique de REQ-UX-017 (UX-P0-03), la lecture du tableau par le composeur (dette) et la dérive du GLOSSAIRE sur `IssueDepot` et `MotifBlocage`.
+
+**Appris.** Prettier coupe les balises fermantes d'un HTML long (`</a` puis `>` à la ligne suivante). Une spec qui cherche `</label>` en texte exact ne trouve jamais la fermante, et juge alors « étiqueté » tout champ placé après une étiquette. Le témoin était trop indulgent sans rougir. Et le composeur lisait l'avant-dernière cellule du tableau, « Par », sous un commentaire qui disait « Validé le ».
 
 ### PR #78 — 2026-09-19 — feat(CPL-T13): module temps pur - horloge injectee, heure de Paris, feries FR, SLA ouvre, seuil HYP-D3
 
@@ -150,24 +159,7 @@ enfant sans lui. Les outils de test de Next lèvent une erreur d'invariant sur
 `AsyncLocalStorage` tant que `next/dist/server/node-environment-baseline` n'est pas importé en
 premier. Et la doc de 16.3.1 nomme `unstable_doesProxyMatch`, que le paquet n'exporte pas.
 
-### PR #73 — 2026-09-19 — feat(SEC-01): secrets distincts et validation d'environnement au boot
-
-**Fait.** `src/lib/env.ts` porte la liste unique des neuf secrets (les huit de REQ-SEC-028 plus
-`PII_HASH_KEY`) en schéma Zod, et `exigerEnvironnement()` refuse de démarrer, code de sortie 1, sur
-un secret absent, trop court en octets, hors format, entouré d'une espace, préfixé `dev_` ou `stub`
-hors `development` et `test`, ou égal à un autre (empreintes SHA-256). `kidDe()` et
-`partners/ADR-0013` (`propose`, contrat du format chiffré) sont livrés ; `G-SEC-ENV` a sa preuve rouge.
-
-**Reste.** Le câblage au démarrage réel du serveur et la double clé pendant 24 heures sont à QA-T04 ;
-l'emploi du `kid` dans les jetons à SEC-03, SEC-04 et SEC-11 ; les assertions du format chiffré à
-SEC-08. La reformulation de REQ-SEC-028 et HYP-E1-24 (huit secrets plus le sel) revient à A01.
-
-**Appris.** `npx tsx` coûte 7 à 9 s par lancement sur ce poste, `node --import tsx` 0,7 s : une spec
-qui juge une quinzaine de codes de sortie passe de deux minutes à quinze secondes. Et un témoin qui
-colle un préfixe voisin devant un hexadécimal au hasard est instable : `stu` suivi d'un `b` tiré une
-fois sur seize devient `stub`, et le vert dépendait du tirage.
-
-… 24 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 25 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
