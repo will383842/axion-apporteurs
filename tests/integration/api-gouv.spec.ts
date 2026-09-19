@@ -23,14 +23,24 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { readFileSync } from 'node:fs';
-import { magasinDepuis, sujetDepuisEmpreinte, type ConsommerDuMagasin, type MagasinDeCompteurs } from '../../src/server/securite/rate-limit';
+import {
+  COMPTEURS,
+  magasinDepuis,
+  sujetDepuisEmpreinte,
+  type ConsommerDuMagasin,
+  type MagasinDeCompteurs,
+} from '../../src/server/securite/rate-limit';
 
 const partage = vi.hoisted(() => ({ magasin: null as unknown }));
 vi.mock('../../src/server/securite/rate-limit', async (original) => {
   const m = await original<typeof import('../../src/server/securite/rate-limit')>();
   return {
     ...m,
-    limiter: (nom: Parameters<typeof m.limiter>[0], sujet: Parameters<typeof m.limiter>[1], ms: number) =>
+    limiter: (
+      nom: Parameters<typeof m.limiter>[0],
+      sujet: Parameters<typeof m.limiter>[1],
+      ms: number
+    ) =>
       partage.magasin === null
         ? m.limiter(nom, sujet, ms)
         : m.limiter(nom, sujet, ms, partage.magasin as MagasinDeCompteurs, () => undefined),
@@ -43,7 +53,10 @@ import {
   type DependancesDuMandataire,
 } from '../../src/server/integrations/recherche-entreprises/mandataire';
 import { limiteurDuRegistre } from '../../src/server/integrations/recherche-entreprises/limiteur';
-import { clientDuTiers, lireRetryAfter } from '../../src/server/integrations/recherche-entreprises/tiers';
+import {
+  clientDuTiers,
+  lireRetryAfter,
+} from '../../src/server/integrations/recherche-entreprises/tiers';
 import { creerDisjoncteur } from '../../src/server/integrations/recherche-entreprises/disjoncteur';
 import {
   empreinteurDeDirigeants,
@@ -54,13 +67,28 @@ import {
   schemaFicheEntreprise,
   schemaReponseDuTiers,
 } from '../../src/server/integrations/recherche-entreprises/schemas';
-import { PARAMETRES, urlDeRecherche } from '../../src/server/integrations/recherche-entreprises/parametres';
-import { lireFixtures, type FixtureEnregistree } from '../../src/server/integrations/recherche-entreprises/fixtures';
+import {
+  PARAMETRES,
+  urlDeRecherche,
+} from '../../src/server/integrations/recherche-entreprises/parametres';
+import {
+  lireFixtures,
+  type FixtureEnregistree,
+} from '../../src/server/integrations/recherche-entreprises/fixtures';
 import type { CacheDeProjections } from '../../src/server/integrations/recherche-entreprises/cache';
+import {
+  comparerFormes,
+  formesDe,
+} from '../../src/server/integrations/recherche-entreprises/contrat-nocturne';
 
 // ── Le tiers simulé ─────────────────────────────────────────────────────────────────────────────
 
-type Reponse = { statut: number; corps?: unknown; entetes?: Record<string, string>; muet?: boolean };
+type Reponse = {
+  statut: number;
+  corps?: unknown;
+  entetes?: Record<string, string>;
+  muet?: boolean;
+};
 
 let serveur: Server;
 let base = '';
@@ -91,7 +119,10 @@ afterAll(async () => {
 // ── Aides ───────────────────────────────────────────────────────────────────────────────────────
 
 const INSTANT = Date.UTC(2026, 8, 19, 10, 0, 0);
-const APPELANT = { identite: sujetDepuisEmpreinte('a'.repeat(64)), adresse: sujetDepuisEmpreinte('b'.repeat(64)) };
+const APPELANT = {
+  identite: sujetDepuisEmpreinte('a'.repeat(64)),
+  adresse: sujetDepuisEmpreinte('b'.repeat(64)),
+};
 const CLE_DE_TEST = 'cle-de-test-des-empreintes-de-dirigeants-0123456789';
 
 function magasinEnMemoire(): MagasinDeCompteurs {
@@ -112,7 +143,9 @@ function cacheEnMemoire(): CacheDeProjections {
   const c: CacheDeProjections & { horloge(h: () => number): void } = {
     lire: async (cle) => {
       const e = m.get(cle);
-      return (e === undefined || e.expireA <= maintenant() ? null : structuredClone(e.valeur)) as never;
+      return (
+        e === undefined || e.expireA <= maintenant() ? null : structuredClone(e.valeur)
+      ) as never;
     },
     ecrire: async (cle, valeur, ttlSecondes) => {
       m.set(cle, { valeur: structuredClone(valeur), expireA: maintenant() + ttlSecondes * 1000 });
@@ -166,19 +199,30 @@ describe('REQ-QA-028 — le client est validé par schéma contre ≥ 20 fixture
     expect(FIXTURES.length).toBeGreaterThanOrEqual(20);
     expect(new Set(FIXTURES.map((f) => f.cas)).size).toBe(FIXTURES.length);
     for (const f of FIXTURES) {
-      expect(f.Source, f.fichier).toMatch(/^GET https:\/\/recherche-entreprises\.api\.gouv\.fr\/search\?/);
+      expect(f.Source, f.fichier).toMatch(
+        /^GET https:\/\/recherche-entreprises\.api\.gouv\.fr\/search\?/
+      );
       expect(f.Source, f.fichier).toMatch(/enregistré le \d{4}-\d{2}-\d{2}T/);
-      expect(f['Confronte-a'], f.fichier).toMatch(/^docs\/tiers\/recherche-entreprises\.md#2-source-officielle/);
+      expect(f['Confronte-a'], f.fichier).toMatch(
+        /^docs\/tiers\/recherche-entreprises\.md#2-source-officielle/
+      );
       expect(f.enregistreLe, f.fichier).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/);
       // La requête enregistrée est celle que la production enverrait : mêmes paramètres, dérivés.
-      expect(f.url, f.fichier).toBe(urlDeRecherche(f.requete.q, 'https://recherche-entreprises.api.gouv.fr').href);
+      expect(f.url, f.fichier).toBe(
+        decodeURIComponent(
+          urlDeRecherche(f.requete.q, 'https://recherche-entreprises.api.gouv.fr').href
+        )
+      );
     }
   });
 
   it('REQ-QA-028 — le schéma Zod accepte chacune des fixtures enregistrées', () => {
     for (const f of FIXTURES) {
       const lu = schemaReponseDuTiers.safeParse(f.reponse);
-      expect(lu.success, `${f.fichier} : ${lu.success ? '' : JSON.stringify(lu.error.issues[0])}`).toBe(true);
+      expect(
+        lu.success,
+        `${f.fichier} : ${lu.success ? '' : JSON.stringify(lu.error.issues[0])}`
+      ).toBe(true);
     }
   });
 
@@ -200,8 +244,38 @@ describe('REQ-QA-028 — le client est validé par schéma contre ≥ 20 fixture
     expect(FIXTURES.some((f) => /^\d{14}$/.test(f.requete.q))).toBe(true);
     const resultats = reponses.flatMap((r) => r.results);
     expect(resultats.some((r) => r.nature_juridique?.startsWith('92'))).toBe(true);
-    expect(resultats.some((r) => r.dirigeants.some((d) => d.type_dirigeant === 'personne morale'))).toBe(true);
+    expect(
+      resultats.some((r) => r.dirigeants.some((d) => d.type_dirigeant === 'personne morale'))
+    ).toBe(true);
     expect(resultats.some((r) => r.etat_administratif !== 'A')).toBe(true);
+  });
+});
+
+describe('REQ-QA-028 — le contrat nocturne signale toute dérive de forme', () => {
+  it('REQ-QA-028 — rejoué sur les fixtures elles-mêmes, le contrat ne voit aucune dérive', () => {
+    const formes = formesDe(FIXTURES.map((f) => f.reponse));
+    expect(comparerFormes(formes, formes)).toEqual([]);
+    expect([...formes.keys()].sort()).toEqual([
+      'dirigeant personne morale',
+      'dirigeant personne physique',
+      'reponse',
+      'resultat',
+      'siege',
+    ]);
+  });
+
+  it('REQ-QA-028 — une clé disparue et une clé apparue chez le tiers sont NOMMÉES', () => {
+    const vivantes = FIXTURES.map(
+      (f) => structuredClone(f.reponse) as { results: Record<string, unknown>[] }
+    );
+    for (const r of vivantes.flatMap((v) => v.results)) {
+      delete r.categorie_entreprise;
+      r.date_de_naissance_du_fondateur = '1968-02';
+    }
+    expect(comparerFormes(formesDe(FIXTURES.map((f) => f.reponse)), formesDe(vivantes))).toEqual([
+      '[forme] resultat : clé(s) apparue(s) date_de_naissance_du_fondateur',
+      '[forme] resultat : clé(s) disparue(s) categorie_entreprise',
+    ]);
   });
 });
 
@@ -237,7 +311,9 @@ describe('REQ-INT-020 — mandataire serveur : requête minimale, pannes travers
     });
     expect(recues).toHaveLength(1);
     avancer(1);
-    expect((await autocompleterEntreprise({ q: 'danone' }, APPELANT, deps)).mode).toBe('autocompletion');
+    expect((await autocompleterEntreprise({ q: 'danone' }, APPELANT, deps)).mode).toBe(
+      'autocompletion'
+    );
     expect(recues).toHaveLength(2);
   });
 
@@ -309,8 +385,12 @@ describe('REQ-QA-028 — disjoncteur et limite de débit ≤ 5 req/s', () => {
     // À l'échéance, UN essai part (demi-ouvert) ; réussi, le disjoncteur se referme.
     avancer(PARAMETRES.disjoncteurPauseMs.valeur);
     repondre = () => ({ statut: 200, corps: avecResultats().reponse });
-    expect((await autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps)).mode).toBe('autocompletion');
-    expect((await autocompleterEntreprise({ q: 'lvmh' }, APPELANT, deps)).mode).toBe('autocompletion');
+    expect((await autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps)).mode).toBe(
+      'autocompletion'
+    );
+    expect((await autocompleterEntreprise({ q: 'lvmh' }, APPELANT, deps)).mode).toBe(
+      'autocompletion'
+    );
     expect(recues).toHaveLength(seuil + 2);
   });
 
@@ -336,7 +416,7 @@ describe('REQ-QA-028 — disjoncteur et limite de débit ≤ 5 req/s', () => {
       'debit_global',
     ]);
     expect(recues).toHaveLength(5);
-    expect(PARAMETRES.debitGlobalParSeconde.valeur).toBeLessThanOrEqual(5);
+    expect(COMPTEURS['depot:entreprise-global'].limite).toBeLessThanOrEqual(5);
   });
 });
 
@@ -351,7 +431,12 @@ function champsDeLExigence(): string[] {
   const liste = /persiste `([^`]+)`/.exec(texte)![1]!;
   return liste
     .replace(/\s*\([^)]*\)/g, '')
-    .replace(/(\w+)\.\{([^}]*)\}/g, (_, p: string, s: string) => s.split(',').map((x) => `${p}.${x.trim()}`).join(','))
+    .replace(/(\w+)\.\{([^}]*)\}/g, (_, p: string, s: string) =>
+      s
+        .split(',')
+        .map((x) => `${p}.${x.trim()}`)
+        .join(',')
+    )
     .split(',')
     .map((x) => x.trim());
 }
@@ -374,7 +459,8 @@ describe('REQ-INT-021 — la fiche persistée : exactement les champs énuméré
     for (const f of FIXTURES) {
       for (const fiche of projeter(schemaReponseDuTiers.parse(f.reponse), empreindre).fiches) {
         expect(cheminsDe(fiche).sort(), f.fichier).toEqual(attendus);
-        for (const d of fiche.dirigeants) expect(Object.keys(d).sort()).toEqual(['empreinte', 'qualite']);
+        for (const d of fiche.dirigeants)
+          expect(Object.keys(d).sort()).toEqual(['empreinte', 'qualite']);
         vus += 1;
       }
     }
@@ -382,23 +468,34 @@ describe('REQ-INT-021 — la fiche persistée : exactement les champs énuméré
   });
 
   it('REQ-INT-021 — un champ en trop est REFUSÉ par le schéma de la fiche, à la racine comme au siège et chez un dirigeant', () => {
-    const fiche = projeter(schemaReponseDuTiers.parse(avecResultats().reponse), empreindre).fiches[0]!;
+    const fiche = projeter(schemaReponseDuTiers.parse(avecResultats().reponse), empreindre)
+      .fiches[0]!;
     expect(schemaFicheEntreprise.safeParse(fiche).success).toBe(true);
     expect(schemaFicheEntreprise.safeParse({ ...fiche, adresse: 'x' }).success).toBe(false);
-    expect(schemaFicheEntreprise.safeParse({ ...fiche, siege: { ...fiche.siege, adresse: 'x' } }).success).toBe(false);
+    expect(
+      schemaFicheEntreprise.safeParse({ ...fiche, siege: { ...fiche.siege, adresse: 'x' } }).success
+    ).toBe(false);
     expect(
       schemaFicheEntreprise.safeParse({
         ...fiche,
-        dirigeants: [{ empreinte: 'a'.repeat(64), qualite: 'Président', annee_de_naissance: '1968' }],
+        dirigeants: [
+          { empreinte: 'a'.repeat(64), qualite: 'Président', annee_de_naissance: '1968' },
+        ],
       }).success
     ).toBe(false);
   });
 
   it('REQ-INT-021 — l’empreinte d’un dirigeant est normalisée (casse, accents, espaces) et ne recopie pas le nom', () => {
-    expect(normaliserNomDeDirigeant('  Lefèvre ', 'Jean-Émile  Marie')).toBe(normaliserNomDeDirigeant('LEFEVRE', 'JEAN EMILE MARIE'));
+    expect(normaliserNomDeDirigeant('  Lefèvre ', 'Jean-Émile  Marie')).toBe(
+      normaliserNomDeDirigeant('LEFEVRE', 'JEAN EMILE MARIE')
+    );
     const e = empreindre(normaliserNomDeDirigeant('LEFEVRE', 'JEAN EMILE MARIE'));
     expect(e).toMatch(/^[0-9a-f]{64}$/);
-    expect(e).not.toBe(empreinteurDeDirigeants(`${CLE_DE_TEST}-autre`)(normaliserNomDeDirigeant('LEFEVRE', 'JEAN EMILE MARIE')));
+    expect(e).not.toBe(
+      empreinteurDeDirigeants(`${CLE_DE_TEST}-autre`)(
+        normaliserNomDeDirigeant('LEFEVRE', 'JEAN EMILE MARIE')
+      )
+    );
   });
 
   it('REQ-INT-021 — `statut_diffusion` partiel : la suggestion n’affiche ni code postal ni commune', () => {
@@ -407,10 +504,16 @@ describe('REQ-INT-021 — la fiche persistée : exactement les champs énuméré
     expect(diffusible.commune).not.toBeNull();
     const partielle = structuredClone(reponse);
     partielle.results[0]!.statut_diffusion = 'P';
-    expect(projeter(partielle, empreindre).suggestions[0]).toMatchObject({ codePostal: null, commune: null });
+    expect(projeter(partielle, empreindre).suggestions[0]).toMatchObject({
+      codePostal: null,
+      commune: null,
+    });
     const siegePartiel = structuredClone(reponse);
     siegePartiel.results[0]!.siege.statut_diffusion_etablissement = 'P';
-    expect(projeter(siegePartiel, empreindre).suggestions[0]).toMatchObject({ codePostal: null, commune: null });
+    expect(projeter(siegePartiel, empreindre).suggestions[0]).toMatchObject({
+      codePostal: null,
+      commune: null,
+    });
   });
 
   it('REQ-INT-021 — la fiche d’un SIREN choisi se lit dans le cache de la recherche, sans nouvel appel', async () => {

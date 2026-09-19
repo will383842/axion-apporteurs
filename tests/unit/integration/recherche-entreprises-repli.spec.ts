@@ -40,7 +40,11 @@ vi.mock('../../../src/server/securite/rate-limit', async (original) => {
   const m = await original<typeof import('../../../src/server/securite/rate-limit')>();
   return {
     ...m,
-    limiter: (nom: Parameters<typeof m.limiter>[0], sujet: Parameters<typeof m.limiter>[1], ms: number) =>
+    limiter: (
+      nom: Parameters<typeof m.limiter>[0],
+      sujet: Parameters<typeof m.limiter>[1],
+      ms: number
+    ) =>
       partage.magasin === null
         ? m.limiter(nom, sujet, ms)
         : m.limiter(nom, sujet, ms, partage.magasin as MagasinDeCompteurs, () => undefined),
@@ -174,7 +178,9 @@ afterEach(() => {
 /** Une fixture enregistrée qui porte au moins un résultat et au moins un dirigeant. */
 function fixtureAvecDirigeants(): FixtureEnregistree {
   const f = FIXTURES.find((x) =>
-    (x.reponse as { results: { dirigeants: unknown[] }[] }).results.some((r) => r.dirigeants.length > 0)
+    (x.reponse as { results: { dirigeants: unknown[] }[] }).results.some(
+      (r) => r.dirigeants.length > 0
+    )
   );
   if (f === undefined) throw new Error('aucune fixture enregistrée ne porte de dirigeant');
   return f;
@@ -184,7 +190,10 @@ function fixtureAvecDirigeants(): FixtureEnregistree {
 function clesDe(v: unknown, chemin = ''): string[] {
   if (Array.isArray(v)) return v.flatMap((x, i) => clesDe(x, `${chemin}[${i}]`));
   if (typeof v === 'object' && v !== null) {
-    return Object.entries(v).flatMap(([k, x]) => [`${chemin}.${k}`, ...clesDe(x, `${chemin}.${k}`)]);
+    return Object.entries(v).flatMap(([k, x]) => [
+      `${chemin}.${k}`,
+      ...clesDe(x, `${chemin}.${k}`),
+    ]);
   }
   return [];
 }
@@ -203,13 +212,17 @@ describe('REQ-SEC-013 — la réponse du mandataire ne porte jamais les dirigean
     expect(FIXTURES.length).toBeGreaterThanOrEqual(20);
     let dirigeantsVus = 0;
     for (const f of FIXTURES) {
+      // Un banc neuf par fixture, compteurs compris : chaque banc repart du même instant.
+      partage.magasin = magasinEnMemoire().magasin;
       const b = banc(fetchFactice(() => ({ statut: 200, corps: f.reponse })));
       const rendu = await autocompleterEntreprise({ q: f.requete.q }, APPELANT, b.deps);
       expect(rendu.mode, f.fichier).toBe('autocompletion');
       const cles = clesDe(rendu).join(' ');
       expect(cles, f.fichier).not.toMatch(/dirigeant|naissance|prenom|nationalite|qualite/i);
       // Les valeurs de personne du tiers — nom, prénoms, année, mois de naissance — n'y sont pas.
-      const personnes = (f.reponse as { results: { dirigeants: Record<string, unknown>[] }[] }).results
+      const personnes = (
+        f.reponse as { results: { dirigeants: Record<string, unknown>[] }[] }
+      ).results
         .flatMap((r) => r.dirigeants)
         .filter((d) => d.type_dirigeant === 'personne physique');
       dirigeantsVus += personnes.length;
@@ -220,7 +233,8 @@ describe('REQ-SEC-013 — la réponse du mandataire ne porte jamais les dirigean
           )
         )
       );
-      for (const v of feuillesDe(rendu)) expect(interdites.has(v), `${f.fichier} : ${v}`).toBe(false);
+      for (const v of feuillesDe(rendu))
+        expect(interdites.has(v), `${f.fichier} : ${v}`).toBe(false);
     }
     // Un contrôle qui n'a vu aucun dirigeant n'a rien contrôlé.
     expect(dirigeantsVus).toBeGreaterThan(0);
@@ -231,7 +245,13 @@ describe('REQ-SEC-013 — la réponse du mandataire ne porte jamais les dirigean
     const b = banc(fetchFactice(() => ({ statut: 200, corps: f.reponse })));
     const ecrits: unknown[] = [];
     const cache = b.deps.cache;
-    b.deps.cache = { lire: cache.lire, ecrire: async (c, v, t) => { ecrits.push(v); await cache.ecrire(c, v, t); } };
+    b.deps.cache = {
+      lire: cache.lire,
+      ecrire: async (c, v, t) => {
+        ecrits.push(v);
+        await cache.ecrire(c, v, t);
+      },
+    };
     await autocompleterEntreprise({ q: f.requete.q }, APPELANT, b.deps);
     expect(ecrits.length).toBeGreaterThan(0);
     const cles = clesDe(ecrits).join(' ');
@@ -297,7 +317,11 @@ describe('REQ-SEC-013 — limité par identité (120/j) et par empreinte d’adr
     const f = fixtureAvecDirigeants();
     const tiers = fetchFactice(() => ({ statut: 200, corps: f.reponse }));
     const b = banc(tiers);
-    const r = await autocompleterEntreprise({ q: f.requete.q }, { identite: IDENTITE, adresse: null }, b.deps);
+    const r = await autocompleterEntreprise(
+      { q: f.requete.q },
+      { identite: IDENTITE, adresse: null },
+      b.deps
+    );
     expect(r).toEqual({ mode: 'saisie_manuelle', motif: 'adresse_illisible' });
     expect(tiers.appels).toHaveLength(0);
   });
@@ -308,8 +332,16 @@ describe('REQ-SEC-013 — limité par identité (120/j) et par empreinte d’adr
     await autocompleterEntreprise({ q: f.requete.q }, APPELANT, b.deps);
     await autocompleterEntreprise({ q: f.requete.q }, APPELANT, b.deps);
     expect(b.lignes).toEqual([
-      expect.objectContaining({ signal: 'recherche_entreprises', issue: 'autocompletion', origine: 'tiers' }),
-      expect.objectContaining({ signal: 'recherche_entreprises', issue: 'autocompletion', origine: 'cache' }),
+      expect.objectContaining({
+        signal: 'recherche_entreprises',
+        issue: 'autocompletion',
+        origine: 'tiers',
+      }),
+      expect.objectContaining({
+        signal: 'recherche_entreprises',
+        issue: 'autocompletion',
+        origine: 'cache',
+      }),
     ]);
     const texte = JSON.stringify(b.lignes);
     expect(texte).not.toContain(f.requete.q);
@@ -333,10 +365,16 @@ describe('REQ-SEC-013 — la garde « aucune année de naissance » sait rougir,
   });
 
   /** Une réponse de bac d'essai DÉRIVÉE du rendu réel d'une fixture, à laquelle on ajoute la faute. */
-  async function bac(faute: (rendu: Record<string, unknown>, f: FixtureEnregistree) => void): Promise<string> {
+  async function bac(
+    faute: (rendu: Record<string, unknown>, f: FixtureEnregistree) => void
+  ): Promise<string> {
     const f = fixtureAvecDirigeants();
     const b = banc(fetchFactice(() => ({ statut: 200, corps: f.reponse })));
-    const rendu = (await autocompleterEntreprise({ q: f.requete.q }, APPELANT, b.deps)) as unknown as Record<string, unknown>;
+    const rendu = (await autocompleterEntreprise(
+      { q: f.requete.q },
+      APPELANT,
+      b.deps
+    )) as unknown as Record<string, unknown>;
     faute(rendu, f);
     const chemin = join(dossier, 'reponse-de-bac.json');
     writeFileSync(chemin, JSON.stringify(rendu));
@@ -383,7 +421,11 @@ describe('REQ-SEC-013 — la garde « aucune année de naissance » sait rougir,
 
 describe('REQ-UX-020 — le tiers tombe, le parcours bascule en saisie manuelle ; il répond, l’autocomplétion revient', () => {
   it('REQ-UX-020 — tiers en refus pour excès (429) : le RENDU est la saisie manuelle, pas une erreur', async () => {
-    const tiers = fetchFactice(() => ({ statut: 429, corps: { erreur: 'trop' }, entetes: { 'retry-after': '5' } }));
+    const tiers = fetchFactice(() => ({
+      statut: 429,
+      corps: { erreur: 'trop' },
+      entetes: { 'retry-after': '5' },
+    }));
     const b = banc(tiers);
     const rendu = await autocompleterEntreprise({ q: 'danone' }, APPELANT, b.deps);
     expect(rendu).toEqual({ mode: 'saisie_manuelle', motif: 'refus_exces' });
@@ -404,7 +446,10 @@ describe('REQ-UX-020 — le tiers tombe, le parcours bascule en saisie manuelle 
     const tiers = fetchFactice(() => ({ statut: 429, corps: {}, entetes: { 'retry-after': '5' } }));
     const b = banc(tiers);
     await autocompleterEntreprise({ q: 'danone' }, APPELANT, b.deps);
-    expect(etatDuDisjoncteur(b.deps)).toMatchObject({ etat: 'ouvert', dernierMotif: 'refus_exces' });
+    expect(etatDuDisjoncteur(b.deps)).toMatchObject({
+      etat: 'ouvert',
+      dernierMotif: 'refus_exces',
+    });
     const r = await autocompleterEntreprise({ q: 'michelin' }, APPELANT, b.deps);
     expect(r).toEqual({ mode: 'saisie_manuelle', motif: 'disjoncteur_ouvert' });
     expect(tiers.appels).toHaveLength(1);
@@ -422,8 +467,14 @@ describe('REQ-UX-020 — le tiers tombe, le parcours bascule en saisie manuelle 
   });
 
   it('REQ-UX-020 — un numéro dont la clé de Luhn est fausse est refusé, jamais « complété »', () => {
-    expect(controlerSaisieManuelle({ numero: '552032535' })).toEqual({ ok: false, motif: 'cle_invalide' });
-    expect(controlerSaisieManuelle({ numero: '5520325' })).toEqual({ ok: false, motif: 'format_invalide' });
+    expect(controlerSaisieManuelle({ numero: '552032535' })).toEqual({
+      ok: false,
+      motif: 'cle_invalide',
+    });
+    expect(controlerSaisieManuelle({ numero: '5520325' })).toEqual({
+      ok: false,
+      motif: 'format_invalide',
+    });
     expect(controlerSaisieManuelle({ numero: '55203253400017' })).toEqual({
       ok: false,
       motif: 'cle_invalide',
@@ -441,7 +492,11 @@ describe('REQ-UX-020 — le tiers tombe, le parcours bascule en saisie manuelle 
 
   it('REQ-UX-020 — « je ne trouve pas mon entreprise » : raison sociale + ville + code postal, SIREN facultatif, état `a_rapprocher`', () => {
     expect(
-      declarerEntrepriseIntrouvable({ raisonSociale: 'Boulangerie du Coin', ville: 'Grenoble', codePostal: '38000' })
+      declarerEntrepriseIntrouvable({
+        raisonSociale: 'Boulangerie du Coin',
+        ville: 'Grenoble',
+        codePostal: '38000',
+      })
     ).toEqual({
       ok: true,
       declaration: {
@@ -455,9 +510,16 @@ describe('REQ-UX-020 — le tiers tombe, le parcours bascule en saisie manuelle 
     expect(MARQUE_A_RAPPROCHER).toBe('a_rapprocher');
     // Un SIREN fourni est contrôlé, pas cru.
     expect(
-      declarerEntrepriseIntrouvable({ raisonSociale: 'X', ville: 'Y', codePostal: '38000', siren: '552032535' })
+      declarerEntrepriseIntrouvable({
+        raisonSociale: 'X',
+        ville: 'Y',
+        codePostal: '38000',
+        siren: '552032535',
+      })
     ).toEqual({ ok: false, motif: 'cle_invalide' });
-    expect(declarerEntrepriseIntrouvable({ raisonSociale: 'X', ville: 'Y', codePostal: '380' })).toEqual({
+    expect(
+      declarerEntrepriseIntrouvable({ raisonSociale: 'X', ville: 'Y', codePostal: '380' })
+    ).toEqual({
       ok: false,
       motif: 'format_invalide',
     });
@@ -484,10 +546,10 @@ describe('REQ-UX-020 — tolérance aux fautes : Levenshtein ≤ 2, la ville en 
 
   it('REQ-UX-020 — une raison sociale à distance ≤ 2 de la saisie est PROPOSÉE, et devant les lointaines', () => {
     const r = classerSuggestions('michlin', null, [
-      s('111111111', 'MICHLINE FOUCHE', 'Paris'),
+      s('111111111', 'SOCIETE DES PNEUS DU CENTRE', 'Paris'),
       s('222222222', 'MICHELIN', 'Clermont-Ferrand'),
     ]);
-    expect(r.map((x) => x.nom)).toEqual(['MICHELIN', 'MICHLINE FOUCHE']);
+    expect(r.map((x) => x.nom)).toEqual(['MICHELIN', 'SOCIETE DES PNEUS DU CENTRE']);
   });
 
   it('REQ-UX-020 — à distance égale, la ville départage ; sans ville, l’ordre du tiers est gardé', () => {
@@ -496,12 +558,20 @@ describe('REQ-UX-020 — tolérance aux fautes : Levenshtein ≤ 2, la ville en 
       'Grenoble',
       'Paris',
     ]);
-    expect(classerSuggestions('danone', null, candidats).map((x) => x.commune)).toEqual(['Paris', 'Grenoble']);
+    expect(classerSuggestions('danone', null, candidats).map((x) => x.commune)).toEqual([
+      'Paris',
+      'Grenoble',
+    ]);
   });
 
   it('REQ-UX-020 — accents et casse ne comptent pas comme des fautes', () => {
-    expect(classerSuggestions('societe generale', null, [s('1', 'SOCIÉTÉ GÉNÉRALE', null)])).toHaveLength(1);
-    expect(distanceDeLevenshtein('societe', 'société')).toBe(1);
+    // Brute, la distance compte deux fautes ; normalisée, aucune : SOCIÉTÉ GÉNÉRALE passe devant.
+    expect(distanceDeLevenshtein('societe', 'société')).toBe(2);
+    const r = classerSuggestions('societe generale', null, [
+      s('111111111', 'SOCIETE GENERALI', null),
+      s('222222222', 'SOCIÉTÉ GÉNÉRALE', null),
+    ]);
+    expect(r.map((x) => x.nom)).toEqual(['SOCIÉTÉ GÉNÉRALE', 'SOCIETE GENERALI']);
   });
 });
 
@@ -526,4 +596,3 @@ describe('REQ-UX-020 — anti-rebond de 300 ms', () => {
     }
   });
 });
-
