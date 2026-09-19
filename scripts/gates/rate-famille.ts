@@ -301,6 +301,130 @@ function importNomme(n: ts.ImportDeclaration): boolean {
   );
 }
 
+/**
+ * L'arbre d'un fichier, construit une fois par objet `Fichier` : `--prove` et les témoins relisent
+ * le même disque autant de fois qu'il y a de témoins, et l'arbre ne dépend que du texte.
+ */
+const ARBRES = new WeakMap<Fichier, ts.SourceFile>();
+function arbreDe(f: Fichier): ts.SourceFile {
+  let arbre = ARBRES.get(f);
+  if (arbre === undefined) {
+    const genre = genreDe(f.chemin) ?? ts.ScriptKind.TS;
+    arbre = ts.createSourceFile(f.chemin, f.texte, ts.ScriptTarget.Latest, true, genre);
+    ARBRES.set(f, arbre);
+  }
+  return arbre;
+}
+
+interface Lecture {
+  readonly fautes: readonly Faute[];
+  readonly appelsVus: number;
+  readonly appelantsDuPotDeMiel: number;
+}
+
+/**
+ * La lecture d'UN fichier ne dépend que de son texte et des noms du registre : elle est gardée par
+ * objet `Fichier` et par jeu de noms, pour que `--prove` et les témoins ne relisent pas le dépôt
+ * entier à chaque univers.
+ */
+const LECTURES = new WeakMap<Fichier, Map<string, Lecture>>();
+
+function lireUnFichier(f: Fichier, noms: ReadonlySet<string>): Lecture {
+  const cle = [...noms].sort().join(' ');
+  const deja = LECTURES.get(f)?.get(cle);
+  if (deja !== undefined) return deja;
+  const fautes: Faute[] = [];
+  let appelsVus = 0;
+  let appelantsDuPotDeMiel = 0;
+  const source = arbreDe(f);
+  const ou = (n: ts.Node) =>
+    `${f.chemin}:${source.getLineAndCharacterOfPosition(n.getStart(source)).line + 1}`;
+  const refuser = (n: ts.Node, famille: Famille, message: string): void => {
+    fautes.push({ famille, message: `${ou(n)} — ${message}` });
+  };
+  // Le nom littéral passé à `limiter(` porte le préfixe par construction : il est jugé par
+  // `nom_dynamique` (un littéral DU REGISTRE), pas comme un compteur écrit à côté de lui. Et un
+  // identifiant `limiter` n'est admis qu'à deux places : l'import nommé, l'appel direct.
+  const admis = new Set<ts.Node>();
+
+  const visiter = (n: ts.Node): void => {
+    if (ts.isImportDeclaration(n) && importNomme(n)) admis.add(n.moduleSpecifier);
+    if (ts.isImportSpecifier(n) && n.propertyName === undefined) admis.add(n.name);
+
+    if (
+      ts.isCallExpression(n) &&
+      ts.isIdentifier(n.expression) &&
+      n.expression.text === 'limiter'
+    ) {
+      admis.add(n.expression);
+      appelsVus += 1;
+      const premier = n.arguments[0];
+      const litteral =
+        premier !== undefined &&
+        (ts.isStringLiteral(premier) || ts.isNoSubstitutionTemplateLiteral(premier))
+          ? premier.text
+          : null;
+      if (litteral !== null && noms.has(litteral)) admis.add(premier!);
+      else {
+        refuser(
+          n,
+          'nom_dynamique',
+          `\`limiter(\` reçoit ${premier === undefined ? 'aucun nom' : `\`${premier.getText(source)}\``} : ` +
+            `le nom d'un compteur est un littéral du registre, jamais une valeur calculée.`
+        );
+      }
+    }
+
+    if (ts.isIdentifier(n) && n.text === 'limiter' && !admis.has(n)) {
+      refuser(
+        n,
+        'nom_dynamique',
+        `référence indirecte à \`limiter\` (${ts.SyntaxKind[n.parent.kind]}) : seul un appel ` +
+          `direct, à nom littéral du registre, est lisible ; tout autre chemin échappe à la garde.`
+      );
+    }
+
+    if (estChaine(n) && !admis.has(n)) {
+      if (n.text === 'limiter' && ts.isElementAccessExpression(n.parent)) {
+        refuser(n, 'nom_dynamique', `\`limiter\` atteint par une chaîne : échec fermé.`);
+      } else if (MODULE_DU_REGISTRE.test(n.text) && designeUnModule(n)) {
+        refuser(
+          n,
+          'nom_dynamique',
+          `le registre est chargé autrement que par un import NOMMÉ (espace de noms, défaut, ` +
+            `\`require\`, \`import()\`, ré-export) : ses appels échapperaient à la garde.`
+        );
+      } else {
+        const texte = n.text.toLowerCase();
+        const prefixe = PREFIXES_DE_FAMILLE.find((p) => texte.includes(p));
+        if (prefixe !== undefined) {
+          refuser(
+            n,
+            'prefixe_hors_registre',
+            `une chaîne porte le préfixe de famille \`${prefixe}\` hors de ` +
+              `${CHEMIN_DU_REGISTRE} : un compteur se déclare au registre, jamais à côté.`
+          );
+        }
+      }
+    }
+
+    if (
+      f.chemin !== CHEMIN_DU_POT_DE_MIEL &&
+      ts.isCallExpression(n) &&
+      estAppelA('evaluerPotDeMiel', n.expression)
+    ) {
+      appelantsDuPotDeMiel += 1;
+    }
+    ts.forEachChild(n, visiter);
+  };
+  visiter(source);
+  const lecture = { fautes, appelsVus, appelantsDuPotDeMiel };
+  const parNoms = LECTURES.get(f) ?? new Map<string, Lecture>();
+  parNoms.set(cle, lecture);
+  LECTURES.set(f, parNoms);
+  return lecture;
+}
+
 function lireLesSources(
   u: Univers,
   fautes: Faute[]
@@ -310,89 +434,10 @@ function lireLesSources(
   let appelantsDuPotDeMiel = 0;
   for (const f of u.fichiers) {
     if (f.chemin === CHEMIN_DU_REGISTRE || f.chemin === CHEMIN_DE_LA_GARDE) continue;
-    const genre = genreDe(f.chemin) ?? ts.ScriptKind.TS;
-    const source = ts.createSourceFile(f.chemin, f.texte, ts.ScriptTarget.Latest, true, genre);
-    const ou = (n: ts.Node) =>
-      `${f.chemin}:${source.getLineAndCharacterOfPosition(n.getStart(source)).line + 1}`;
-    const refuser = (n: ts.Node, famille: Famille, message: string): void => {
-      fautes.push({ famille, message: `${ou(n)} — ${message}` });
-    };
-    // Le nom littéral passé à `limiter(` porte le préfixe par construction : il est jugé par
-    // `nom_dynamique` (un littéral DU REGISTRE), pas comme un compteur écrit à côté de lui. Et un
-    // identifiant `limiter` n'est admis qu'à deux places : l'import nommé, l'appel direct.
-    const admis = new Set<ts.Node>();
-
-    const visiter = (n: ts.Node): void => {
-      if (ts.isImportDeclaration(n) && importNomme(n)) admis.add(n.moduleSpecifier);
-      if (ts.isImportSpecifier(n) && n.propertyName === undefined) admis.add(n.name);
-
-      if (
-        ts.isCallExpression(n) &&
-        ts.isIdentifier(n.expression) &&
-        n.expression.text === 'limiter'
-      ) {
-        admis.add(n.expression);
-        appelsVus += 1;
-        const premier = n.arguments[0];
-        const litteral =
-          premier !== undefined &&
-          (ts.isStringLiteral(premier) || ts.isNoSubstitutionTemplateLiteral(premier))
-            ? premier.text
-            : null;
-        if (litteral !== null && noms.has(litteral)) admis.add(premier!);
-        else {
-          refuser(
-            n,
-            'nom_dynamique',
-            `\`limiter(\` reçoit ${premier === undefined ? 'aucun nom' : `\`${premier.getText(source)}\``} : ` +
-              `le nom d'un compteur est un littéral du registre, jamais une valeur calculée.`
-          );
-        }
-      }
-
-      if (ts.isIdentifier(n) && n.text === 'limiter' && !admis.has(n)) {
-        refuser(
-          n,
-          'nom_dynamique',
-          `référence indirecte à \`limiter\` (${ts.SyntaxKind[n.parent.kind]}) : seul un appel ` +
-            `direct, à nom littéral du registre, est lisible ; tout autre chemin échappe à la garde.`
-        );
-      }
-
-      if (estChaine(n) && !admis.has(n)) {
-        if (n.text === 'limiter' && ts.isElementAccessExpression(n.parent)) {
-          refuser(n, 'nom_dynamique', `\`limiter\` atteint par une chaîne : échec fermé.`);
-        } else if (MODULE_DU_REGISTRE.test(n.text) && designeUnModule(n)) {
-          refuser(
-            n,
-            'nom_dynamique',
-            `le registre est chargé autrement que par un import NOMMÉ (espace de noms, défaut, ` +
-              `\`require\`, \`import()\`, ré-export) : ses appels échapperaient à la garde.`
-          );
-        } else {
-          const texte = n.text.toLowerCase();
-          const prefixe = PREFIXES_DE_FAMILLE.find((p) => texte.includes(p));
-          if (prefixe !== undefined) {
-            refuser(
-              n,
-              'prefixe_hors_registre',
-              `une chaîne porte le préfixe de famille \`${prefixe}\` hors de ` +
-                `${CHEMIN_DU_REGISTRE} : un compteur se déclare au registre, jamais à côté.`
-            );
-          }
-        }
-      }
-
-      if (
-        f.chemin !== CHEMIN_DU_POT_DE_MIEL &&
-        ts.isCallExpression(n) &&
-        estAppelA('evaluerPotDeMiel', n.expression)
-      ) {
-        appelantsDuPotDeMiel += 1;
-      }
-      ts.forEachChild(n, visiter);
-    };
-    visiter(source);
+    const l = lireUnFichier(f, noms);
+    fautes.push(...l.fautes);
+    appelsVus += l.appelsVus;
+    appelantsDuPotDeMiel += l.appelantsDuPotDeMiel;
   }
   return { appelsVus, appelantsDuPotDeMiel };
 }
