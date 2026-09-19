@@ -69,6 +69,7 @@
 | Corps de PR      | Gabarit 8 cases (REQ-GOV-013) : REQ · tests par REQ vus rougir (bloc ROUGE/VERT verbatim) · relecteur ≠ auteur · ADR si décision · glossaire/enum à jour · mesure bundle avant/après si route UI · PLAN-STATE (dérivé) · fusion + atterrissage · **section « Attaque »** si `commissions/**\|attributions/**\|auth/**\|espace/**` · **Règle maison appliquée : RM-nn** |
 | Fusion           | squash + `required_linear_history` ; une à la fois ; `mergeStateStatus` lu et `gh pr merge --squash --delete-branch` dans le **même** appel ; jamais `--auto`, jamais `--force` |
 | Schéma           | Toute PR `schema` a A02 (`architecte`) en troisième relecteur, approbation bloquante ; CODEOWNERS `prisma/** @A02` |
+| Relecture        | Les lentilles qu'exige le **risque** de la PR, dérivé par `risqueDeLaPr()` (`scripts/lot/revues.ts`) et imprimé par `pnpm gov:pr --pr <n>` : élevé → `exactitude`, `securite`, `simplicite` (ou `schema`), `mutation` ; ordinaire → `exactitude`, `securite`. Le refus de `securite` bloque à lui seul sur toute PR (`docs/CHARTE-AGENTS.md` §6, `partners/ADR-0012`) |
 
 ## 6. Tests et gates
 

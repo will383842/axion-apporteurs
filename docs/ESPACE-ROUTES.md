@@ -15,15 +15,15 @@
 | Accueil | `/` | 3 chiffres · 1 alerte priorisée · 1 champ Entreprise · états vides | REQ-UX-008, REQ-UX-019, REQ-UX-033 | `accueil.html` | UX-P1-08 |
 | Mes entreprises | `/mes-entreprises` | Liste, statut, prochaine étape **et par qui**, compte à rebours | REQ-UX-004, REQ-UX-023 | `mes-entreprises.html` | UX-P1-05 |
 | Mes commissions | `/mes-commissions` | Ventilation par payeur, échéance, prévisionnel, motif de blocage | REQ-UX-005, REQ-UX-010/011/012 | `mes-commissions.html` | UX-P2-01 |
-| Plus | `/plus` | Documents · Filleuls · Conformité · Profil · Ressources · Aide | REQ-UX-006, REQ-UX-030 | — | UX-P2-04 |
+| Plus | `/plus` | Documents · Filleuls · Conformité · Profil · Ressources · Aide | REQ-UX-006, REQ-UX-030 | `conformite.html` (état « Onglet Plus ») | UX-P2-04 |
 
 ## Le geste principal
 
-| Route | Écran | Détail | REQ | Tâche |
-| --- | --- | --- | --- | --- |
-| `/entreprise?q=` | **Vérifier une entreprise** | Recherche, carte à **4 états** (`libre`, `suivie_place_disponible`, `suivie_file_complete`, `non_disponible`), bouton « Déclarer » pré-rempli, compteur 30/jour | REQ-UX-001, REQ-UX-007 | UX-P1-01 |
-| `/deposer` | Déposer un contact | Autocomplétion < 300 ms, tolérance aux fautes, ville en aide, repli manuel, 10 issues rendues | REQ-UX-001, REQ-UX-002, REQ-UX-020 | UX-P1-02 |
-| `/d/<jeton>` | **Dépôt sans connexion** | Même formulaire, par lien privé ; brouillon hors-ligne (IndexedDB), envoi au retour du réseau, **horodatage à la réception** | REQ-UX-013, REQ-SEC-033 | UX-P1-03 |
+| Route | Écran | Détail | REQ | Maquette | Tâche |
+| --- | --- | --- | --- | --- | --- |
+| `/entreprise?q=` | **Vérifier une entreprise** | Recherche, carte à **4 états** (`libre`, `suivie_place_disponible`, `suivie_file_complete`, `non_disponible`), bouton « Déposer » pré-rempli, compteur 30/jour | REQ-UX-001, REQ-UX-007 | `entreprise.html` | UX-P1-01 |
+| `/deposer` | Déposer un contact | Autocomplétion < 300 ms, tolérance aux fautes, ville en aide, repli manuel, issues de `IssueDepot` rendues | REQ-UX-001, REQ-UX-002, REQ-UX-020 | `deposer.html` | UX-P1-02 |
+| `/d/<jeton>` | **Dépôt sans connexion** | Même formulaire, par lien privé ; brouillon hors-ligne (IndexedDB), envoi au retour du réseau, **horodatage à la réception** | REQ-UX-013, REQ-SEC-033 | `deposer.html` (états hors ligne) | UX-P1-03 |
 
 > ⚠️ `/entreprise` exige une **session** (30/jour, journalisé) ; `/d/<jeton>` n'exige qu'un jeton et ne
 > permet **que** le dépôt — jamais la consultation. Vérifier est gratuit et en lecture seule ; déposer
@@ -31,15 +31,15 @@
 
 ## Sous « Plus »
 
-| Route | Écran | REQ | Tâche |
-| --- | --- | --- | --- |
-| `/documents` | Contrat (chaque version), avenants, relevés, autofactures, attestation annuelle, export RGPD | REQ-UX-006, REQ-UX-030, REQ-UX-032 | UX-P2-04 |
-| `/filleuls` | Filleuls, échéance des 12 mois, lien de parrainage partageable — **agrégé, sans montant par filleul** | REQ-UX-030 | UX-P2-04 |
-| `/conformite` | Pièces KYC avec état et upload — c'est ici qu'on voit pourquoi un paiement est bloqué | REQ-UX-016, REQ-UX-027 | UX-P1-09 |
-| `/profil` | Zones, secteur, disponibilité, canal de notification, RIB (step-up), e-mail (confirmation sur l'ancienne adresse) | REQ-UX-027, REQ-UX-031, REQ-CPL-019 | UX-P1-09 |
-| `/activite` | Mon activité — ses chiffres, son palier, **aucun objectif, aucun classement** | REQ-UX-029 | UX-P3-02 |
-| `/ressources` | Kit, grille de sa version de contrat, FAQ, replay, argumentaires par palier | REQ-CPL-023 | UX-P3-02 |
-| `/aide` | Fil de conversation avec Axion-IA, FAQ d'abord, engagement 2 jours ouvrés | REQ-UX-028 | UX-P3-03 |
+| Route | Écran | REQ | Maquette | Tâche |
+| --- | --- | --- | --- | --- |
+| `/documents` | Contrat (chaque version), avenants, relevés, autofactures, attestation annuelle, export RGPD | REQ-UX-006, REQ-UX-030, REQ-UX-032 | — | UX-P2-04 |
+| `/filleuls` | Filleuls, échéance des 12 mois, lien de parrainage partageable — **agrégé, sans montant par filleul** | REQ-UX-030 | — | UX-P2-04 |
+| `/conformite` | Pièces KYC avec état et upload — c'est ici qu'on voit pourquoi un paiement est bloqué | REQ-UX-016, REQ-UX-027 | `conformite.html` | UX-P1-09 |
+| `/profil` | Zones, secteur, disponibilité, canal de notification, RIB (step-up), e-mail (confirmation sur l'ancienne adresse) | REQ-UX-027, REQ-UX-031, REQ-CPL-019 | `conformite.html` | UX-P1-09 |
+| `/activite` | Mon activité — ses chiffres, son palier, **aucun objectif, aucun classement** | REQ-UX-029 | — | UX-P3-02 |
+| `/ressources` | Kit, grille de sa version de contrat, FAQ, replay, argumentaires par palier | REQ-CPL-023 | — | UX-P3-02 |
+| `/aide` | Fil de conversation avec Axion-IA, FAQ d'abord, engagement 2 jours ouvrés | REQ-UX-028 | — | UX-P3-03 |
 
 ## Connexion
 

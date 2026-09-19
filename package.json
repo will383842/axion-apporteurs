@@ -15,7 +15,7 @@
     "gov:termes-interdits": "tsx scripts/gates/gov-check.ts",
     "gov:termes-interdits:prove": "tsx scripts/gates/gov-check.ts --prove",
     "gov:check": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace && pnpm gov:attributions && pnpm gov:lexique && pnpm gov:conventions",
-    "test": "vitest run",
+    "test": "vitest run --coverage --reporter=default --reporter=json --outputFile.json=test-results/vitest.json",
     "test:integration": "vitest run tests/integration",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
@@ -72,10 +72,13 @@
     "gov:trace:prove": "tsx scripts/gates/gov-trace.ts --prove",
     "gov:trace:render": "tsx scripts/gates/gov-trace.ts --render",
     "gov:trace:verifier": "tsx scripts/gates/gov-trace.ts --verifier",
+    "req:check": "tsx scripts/gates/gov-trace.ts --resultats test-results/vitest.json",
     "gov:etat": "tsx scripts/gates/gov-etat.ts",
     "gov:etat:prove": "tsx scripts/gates/gov-etat.ts --prove",
     "gov:lexique": "tsx scripts/gates/lexique-apporteurs.ts",
     "gov:lexique:prove": "tsx scripts/gates/lexique-apporteurs.ts --prove",
+    "gov:maquettes-validees": "tsx scripts/gates/maquettes-validees.ts",
+    "gov:maquettes-validees:prove": "tsx scripts/gates/maquettes-validees.ts --prove",
     "partners:schema:enums": "tsx scripts/gates/schema-enums.ts",
     "partners:schema:enums:prove": "tsx scripts/gates/schema-enums.ts --prove",
     "journal:sans-pii": "tsx scripts/gates/journal-sans-pii.ts",
@@ -97,13 +100,11 @@
     "gov:attestation:en-ligne": "tsx scripts/gates/gov-attestation.ts --en-ligne",
     "gov:attributions": "tsx scripts/gates/gov-attributions.ts",
     "gov:attributions:prove": "tsx scripts/gates/gov-attributions.ts --prove",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "format:check": "prettier --check .",
-    "format": "prettier --write ."
-  },
-  "dependencies": {
-    "@prisma/client": "5.22.0",
-    "zod": "3.25.76"
+    "format": "prettier --write .",
+    "securite:rate-famille": "tsx scripts/gates/rate-famille.ts",
+    "securite:rate-famille:prove": "tsx scripts/gates/rate-famille.ts --prove"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -121,5 +122,13 @@
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.70.0",
     "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "ioredis": "5.11.1",
+    "next": "16.3.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "3.25.76"
   }
 }

@@ -25,7 +25,7 @@
  * sous notre contrôle. Le dépôt ne versionne aucun `.env` (`.gitignore`).
  *
  * CE QU'IL REFUSE. Sans démon Docker, il LÈVE en le nommant : un test d'intégration qui se tait
- * faute de base est un vert qui n'a rien mesuré. `pnpm test` exige donc Docker (partners/ADR-0014,
+ * faute de base est un vert qui n'a rien mesuré. `pnpm test` exige donc Docker (partners/ADR-0015,
  * décision 7 ; partners/ADR-0001). Mesuré avec testcontainers 12.1.0 : un `DOCKER_HOST` injoignable
  * fait échouer TOUTES les stratégies (docker-modem en tire l'hôte, qui prime sur la socket de
  * chacune) — il n'y a pas de repli silencieux vers un autre démon.

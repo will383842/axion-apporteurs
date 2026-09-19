@@ -216,6 +216,15 @@ jobs:
         run: pnpm gov:lexique
       - name: La garde du lexique sait rougir, et laisse passer la negation qui protege
         run: pnpm gov:lexique:prove
+      # UX-P0-02 : une tache d'ecran ne s'attribue pas avant que Will ait valide sa maquette
+      # (docs/maquettes/VALIDATION.md). Le composeur l'appliquait seul, au moment de composer ;
+      # une attribution faite a la main ne rougissait nulle part. La garde lit le tableau par ses
+      # en-tetes, refuse une validation ecrite a moitie ou par un autre que Will, et IMPRIME les
+      # taches d'ecran qu'elle ecarte.
+      - name: Maquettes — aucune tache d'ecran attribuee sans validation de Will
+        run: pnpm gov:maquettes-validees
+      - name: La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau
+        run: pnpm gov:maquettes-validees:prove
       # GOV-019, REQ-GOV-028. Elle ne MESURE aucun octet : elle tient les budgets en place et
       # refuse qu'une route naisse sans le sien. Elle IMPRIME son perimetre — « 0 route balayee »
       # n'est pas « aucun defaut », et elle le dit en toutes lettres. Pas de `continue-on-error` :
@@ -226,6 +235,14 @@ jobs:
         run: pnpm perf:budgets:prove
       - name: Les budgets sur le disque sont le rendu de leur exigence
         run: pnpm perf:budgets:verifier
+      # SEC-10, REQ-SEC-016. Tout compteur de debit est declare au registre unique, sous l un des
+      # cinq prefixes, avec sa conduite sur panne REQUISE ; la garde EXECUTE chaque compteur contre
+      # un cache qui leve et confronte le verdict a la conduite declaree. Le vert imprime les
+      # compteurs confrontes, les fichiers lus et les appels vus. Pas de continue-on-error.
+      - name: Compteurs de debit — conduite sur panne declaree et executee, famille close
+        run: pnpm securite:rate-famille
+      - name: La garde des compteurs de debit sait rougir
+        run: pnpm securite:rate-famille:prove
       # GOV-014, REQ-GOV-018 + REQ-GOV-029. Les six gardes d'axionia retenues. Trois de ses cinq
       # perimetres sont VIDES aujourd'hui, et elle les IMPRIME avec leur motif et la tache qui les
       # ouvrira — c'est ce qui separe une garde differee d'une garde oubliee.
@@ -252,9 +269,9 @@ jobs:
       # le bundle n'y rougit, et la documentation du depot a affirme le contraire pendant des
       # mois. Une gate qui ne bloque rien ne garde rien.
       #
-      # CE QUE CHACUNE NE MESURE PAS n'est pas recopie ici : les avertissements toleres et les
-      # fichiers qui les portent sont nommes dans `eslint.config.mjs`, les fichiers hors format
-      # dans `.prettierignore`, chacun avec son motif. Et chaque etape reste EXACTEMENT
+      # CE QUE CHACUNE NE MESURE PAS n'est pas recopie ici : depuis QA-T01, aucun avertissement
+      # n'est tolere (`eslint . --max-warnings 0`, aucune regle en `warn`) ; les fichiers hors format
+      # sont dans `.prettierignore`, chacun avec son motif. Et chaque etape reste EXACTEMENT
       # `run: pnpm lint` / `run: pnpm format:check`, sans `if:` ni `||` :
       # `gardes-transposees.spec.ts` juge l'acte de l'etape, pas l'absence d'un mot.
       - name: Lint
@@ -269,5 +286,15 @@ jobs:
       # Sans le jeton ici, la suite rougissait sur deux tests qui ne disaient rien du code.
       - name: Tests
         run: pnpm test
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # QA-T03, REQ-QA-014. LA MEME garde que "Matrice de tracabilite" plus haut (`gov-trace.ts`),
+      # relancee ICI avec les RESULTATS que `pnpm test` vient d ecrire (`test-results/vitest.json`) :
+      # c est la seule passe qui sache qu un test est VERT, et pas seulement ecrit. Juste apres
+      # "Tests", sans `if:` ni tolerance d echec : des resultats absents, illisibles ou partiels la
+      # font rougir. L etape d avant les tests reste, pour le retour rapide. Le jeton sert la source
+      # PR, facultative, comme plus haut.
+      - name: req:check — chaque paire (tache, REQ) a son test annote et VERT
+        run: pnpm req:check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

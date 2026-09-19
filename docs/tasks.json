@@ -1270,7 +1270,19 @@
         ".github/workflows/ci.yml",
         "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
         "docs/gates.json",
-        "tests/unit/gouvernance/tout-check-est-cable.spec.ts"
+        "tests/unit/gouvernance/tout-check-est-cable.spec.ts",
+        "eslint.config.mjs",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/domaine/etats-occupants.spec.ts",
+        "scripts/gates/perf-budgets.ts",
+        "scripts/gates/gov-inventaire.ts",
+        "scripts/gates/gov-sonde.ts",
+        "scripts/plan-state/build.ts",
+        "tests/unit/gouvernance/corps-de-pr-couvre.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -1285,11 +1297,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t01",
+      "pr": 59,
       "issue": 56,
       "attempts": 0,
       "motif": null,
@@ -1316,7 +1328,11 @@
         "src/lib/env.ts",
         ".env.example",
         "tests/unit/securite/env-boot.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md",
+        "docs/adr/INDEX.md"
       ],
       "schema": false,
       "sensible": [],
@@ -1329,12 +1345,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/sec-01",
+      "pr": 73,
+      "issue": 60,
       "attempts": 0,
       "motif": null,
       "acceptance": "TROISIEME TACHE LA PLUS BLOQUANTE DE LA PHASE (17 descendants). (1) `src/lib/env.ts` valide au demarrage, par un schema ferme, les SEPT secrets que REQ-SEC-028 enumere plus le sel de hachage d'adresse, chacun d'au moins 32 octets (64 caracteres hexadecimaux pour la cle de chiffrement). (2) AUCUNE valeur par defaut, AUCUN repli silencieux : une variable absente, trop courte, ou EGALE a une autre des huit fait echouer le demarrage avec un code de sortie non nul en moins de 60 s ; le message NOMME la variable et n'imprime ni sa valeur, ni un prefixe de sa valeur, ni sa longueur exacte. (3) L'EGALITE DE DEUX SECRETS EST UN REFUS A PART ENTIERE : huit noms qui pointent une meme valeur sont un seul secret, et c'est exactement ce que le mot « distincts » de REQ-SEC-028 interdit. Le controle se fait sur des empreintes, jamais en comparant les valeurs en clair dans un message. (4) `.env.example` porte les huit noms et aucune valeur utilisable ; il est DERIVE du schema, et une variable ajoutee au schema sans l'etre au fichier fait rougir (RM-01). (5) TEMOIN A DEUX FACES : un environnement de bac d'essai prive d'une des huit variables, puis un ou deux d'entre elles rendues egales, fait sortir le boot en code non nul et nomme la variable en cause ; l'environnement complet et distinct le fait sortir en zero, sans qu'aucun secret n'apparaisse dans la sortie. (6) La liste des huit vit a UN SEUL endroit du code ; `docs/gates.json` la cite sans la recopier.",
@@ -1351,10 +1367,18 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/middleware.ts",
         "next.config.ts",
         "tests/unit/securite/headers.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/proxy.ts",
+        "src/server/securite/entetes.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/unit/securite/env-boot.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1369,12 +1393,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/sec-02",
+      "pr": 74,
+      "issue": 66,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) Toute reponse HTTP de Partners porte une politique de securite de contenu construite AUTOUR D'UN NONCE renouvele a chaque requete, `frame-ancestors 'none'`, `strict-dynamic`, un `connect-src` restreint aux origines que le code appelle reellement, plus HSTS avec preload, `X-Content-Type-Options`, `Referrer-Policy: strict-origin-when-cross-origin` et une `Permissions-Policy` restrictive (REQ-SEC-029). (2) AUCUNE tolerance en ligne : ni script ni style en ligne sans nonce ; si un composant en exige un, il porte le nonce, il ne fait pas lever la politique. (3) LE NONCE EST UNIQUE PAR REPONSE : deux requetes sur la meme route rendent deux nonces differents, et le nonce n'est jamais rendu dans une page mise en cache. (4) TEMOIN A DEUX FACES : une copie de travail de la couche d'en-tetes privee d'une seule directive, puis rendant deux fois le meme nonce, fait sortir la garde en code non nul et nomme la directive ou la repetition ; la couche du depot la fait sortir en zero, et le vert imprime le compte des routes reellement confrontees. (5) Le controle ne lit pas une liste tapee de routes : il DERIVE la liste des routes du disque, faute de quoi une route neuve echapperait a la mesure en silence.",
@@ -1394,7 +1418,14 @@
         "src/server/securite/rate-limit.ts",
         "scripts/gates/rate-famille.ts",
         "tests/unit/securite/rate-famille.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/server/securite/pot-de-miel.ts",
+        "src/server/securite/adresse-du-client.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        ".github/workflows/ci.yml",
+        "tests/unit/securite/temoins/e76s-fauted.ts.txt"
       ],
       "schema": false,
       "sensible": [],
@@ -1409,11 +1440,11 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A05",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 71,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) Les compteurs de limitation vivent sous les prefixes `magic:`, `depot:`, `verif:`, `webhook:`, `auth:`, et CHACUN declare sa conduite en cas de panne du cache : le depot est limite a 20 / 10 min par empreinte d'adresse avec `surPanne: laisser-passer`, le compteur par identite declare `surPanne: refuser` (REQ-SEC-016). (2) GARDE DE FAMILLE : un compteur ajoute sous l'un des cinq prefixes SANS declarer sa conduite sur panne est refuse — un predicat ouvert echoue ouvert, et c'est precisement ce qu'on ferme ici. (3) Le honeypot repond en succes silencieux et journalise l'identifiant d'apporteur SANS la valeur saisie ; l'accuse de depot n'est emis que si la ligne existe reellement (REQ-SEC-035). Aucun message, aucun code de reponse, aucun delai ne distingue le chemin honeypot du chemin nominal. (4) TEMOIN A DEUX FACES : une copie de travail ou un compteur neuf omet sa conduite sur panne, et une ou le cache est indisponible, font sortir la garde en code non nul et nomment le prefixe ; le code du depot la fait sortir en zero, et le vert imprime le compte des compteurs reellement confrontes. (5) Le detail des representations d'evitement ne s'ecrit pas ici : il vit hors depot, et cette acceptance ne le nomme pas.",
@@ -1481,7 +1512,20 @@
         "tests/integration/journal.spec.ts",
         "tests/unit/domaine/schema-centimes.spec.ts",
         "tests/unit/domaine/journal-charge-fermee.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/domain/evenement/canonique.ts",
+        "src/domain/evenement/charges.ts",
+        "src/domain/donnees-personnelles/champs.ts",
+        "src/server/evenement/journal.ts",
+        "tests/integration/harnais.ts",
+        "tests/unit/domaine/journal-chaine.spec.ts",
+        "vitest.config.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".github/workflows/ci.yml",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "docs/GLOSSAIRE.md",
+        "docs/adr/0015-journal-evenement-chaine-immuable.md"
       ],
       "schema": false,
       "sensible": [
@@ -1502,11 +1546,11 @@
       "externe": null,
       "estimateDays": 1,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A05",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 62,
       "attempts": 0,
       "motif": null,
       "acceptance": "DEUXIEME TACHE LA PLUS BLOQUANTE DE LA PHASE (19 descendants) ET PREMIERE ECRITURE DU SCHEMA — elle porte le label `schema`, l'approbation bloquante prevue par la charte, et elle est SEULE de sa famille dans son lot (une seule tache qui ecrit `prisma/schema.prisma` par lot, jamais deux). (1) Le socle du schema Partners existe, avec sa premiere migration. Toute colonne monetaire est un entier en centimes, HT, signee, suffixee `Cents` : aucune colonne a virgule flottante ni decimale, aucune valeur en euros (REQ-DM-001). Toute colonne dont le nom porte statut, type, motif, resultat, etat, origine, kind ou palier est un enum, jamais une chaine libre (REQ-DM-038). (2) LE JOURNAL `Evenement` EST APPEND-ONLY ET CHAINE : `prevHash`, `selfHash` calcule sur la charge canonique, et un declencheur de base REFUSE toute mise a jour et toute suppression (REQ-DM-024, REQ-JUR-026, REQ-SEC-027). Le refus est celui de la BASE, pas celui du code : un client qui contourne la couche applicative se heurte quand meme au declencheur. (3) LA CHARGE D'UN EVENEMENT EST UN SCHEMA FERME PAR TYPE — identifiants, empreintes, enums, montants, horodatages — et JAMAIS un nom, une adresse de courriel, un telephone, une coordonnee bancaire ou une adresse postale (REQ-DM-041). (4) APRES UN EFFACEMENT DE TIERS, LA CHAINE RESTE VERIFIABLE : c'est la consequence directe de (3), et elle se prouve, elle ne se postule pas. (5) TEMOIN A DEUX FACES, en base reelle : une tentative de mise a jour et une tentative de suppression d'une ligne du journal echouent toutes deux et nomment le declencheur ; une insertion nominale reussit, et `verifierChaine()` sort en zero sur la base ainsi remplie. (6) TEMOIN A DEUX FACES sur la charge : une charge de bac d'essai portant un champ interdit fait sortir la garde `journal:sans-pii` en code non nul et nomme le champ ; les charges du depot la font sortir en zero, avec le compte des types reellement confrontes.",
@@ -1691,11 +1735,30 @@
       "repo": "partners",
       "zone": "qualite",
       "paths": [
-        "scripts/gates/req-check.ts",
-        "docs/requirements.json",
         ".github/workflows/ci.yml",
         "tests/unit/qualite/req-check.spec.ts",
-        "scripts/gates/gov-trace.ts"
+        "scripts/gates/gov-trace.ts",
+        "package.json",
+        "docs/gates.json",
+        "scripts/lot/titres-ecrits.ts",
+        "tests/unit/ci/lire-yaml.ts",
+        "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
+        "tests/unit/gouvernance/gardes.spec.ts",
+        "tests/unit/gouvernance/affirmations-verifiees.spec.ts",
+        "tests/unit/gouvernance/fiches-tiers.spec.ts",
+        "tests/unit/gouvernance/paths-derives.spec.ts",
+        "tests/unit/gouvernance/tout-check-est-cable.spec.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts",
+        "tests/unit/gouvernance/verrou-de-phase.spec.ts",
+        "tests/unit/gouvernance/corps-de-pr-couvre.spec.ts",
+        "tests/unit/gouvernance/attributions-resolvent.spec.ts",
+        "tests/unit/gouvernance/attestation-inter-depot.spec.ts",
+        "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts",
+        "tests/unit/gouvernance/glossaire-enums.spec.ts",
+        "tests/unit/gouvernance/tracabilite.spec.ts",
+        "tests/unit/integration/contrat-hash.spec.ts",
+        "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -1708,16 +1771,16 @@
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 1,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A05",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 80,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`req:check` vérifie la PAIRE (tâche, REQ) → test nommé existant, annoté, vert.",
+      "acceptance": "(1) `pnpm req:check` est la garde `req:check` DEJA inscrite (`scripts/gates/gov-trace.ts`, alias `gov:trace`), lancee avec les RESULTATS de la passe de tests (`--resultats test-results/vitest.json`, ecrits par `pnpm test`) : aucun second script, aucune seconde matrice. (2) PAIRE ANNOTEE DES DEUX FORMES : pour chaque paire (tache, REQ active) dont le fichier promis existe, le fichier porte `@req <REQ>` dans son premier bloc de commentaire ET au moins un titre de `it()` contenant l'identifiant ; REQ-QA-014 dit « et », la garde acceptait « ou ». (3) PAIRE VERTE : au moins un de ces tests a le statut `passed` dans les resultats — saute, `todo`, en echec ou absent ne couvre rien ; une promesse `#titre` exige CE test-la vert. (4) Une annotation `@req` qui nomme une exigence ABSORBEE sans porter son renvoi `→ REQ-…` sur la meme ligne est refusee, comme un titre. (5) Resultats absents, illisibles ou perimes (un fichier que la configuration execute et que les resultats ne portent pas) : rouge nomme, jamais un vert ; sans `--resultats`, `gov:trace` DIT que le vert n'est pas juge. (6) Gate A lance `pnpm req:check` juste apres l'etape « Tests », sans tolerance d'echec. (7) TEMOIN A DEUX FACES : chaque famille neuve a son temoin dans `gov:trace --prove` et un contre-temoin vert ; le depot reel sort en 0 apres mise en conformite des specs livrees, et le vert imprime le nombre de paires confrontees ET le nombre de paires vertes.",
       "tests": {
         "REQ-QA-014": [
           "tests/unit/qualite/req-check.spec.ts"
@@ -1752,11 +1815,11 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A05",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 69,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) `.semgrep.yml` porte les regles publiques retenues ET les regles maison, chaque regle maison ayant SON test — une regle sans test est une regle qu'on croit active. (2) La regle maison qui compte le plus ici interdit l'usage direct du client de base hors de la couche d'acces cloisonnee pour les modeles cloisonnes (REQ-QA-011) : c'est elle qui rend SEC-05 verifiable, et elle est ecrite ici meme si la couche n'existe pas encore — une regle qui attend son code est une garde, une regle ecrite apres coup est un constat. (3) L'etape de Gate A qui lance semgrep ne porte pas de tolerance d'echec (REQ-QA-013), et la version de l'outil est epinglee. (4) TEMOIN A DEUX FACES : un fichier de bac d'essai qui enfreint chaque regle maison, un par un, fait sortir semgrep en code non nul et nomme la regle ; le depot reel le fait sortir en zero, et le vert imprime le compte des regles reellement exercees, jamais la longueur de la liste declaree. (5) Une regle desactivee par un commentaire en ligne est refusee : le perimetre ne se retrecit pas fichier par fichier.",
@@ -3347,7 +3410,11 @@
         "docs/ESPACE-ROUTES.md",
         "scripts/gates/maquettes-validees.ts",
         "tests/unit/espace/maquettes-validees.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        ".github/workflows/ci.yml",
+        "package.json",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/lot/composer.ts"
       ],
       "schema": false,
       "sensible": [
@@ -3365,12 +3432,12 @@
       ],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/ux-p0-02",
+      "pr": 79,
+      "issue": 77,
       "attempts": 0,
       "motif": null,
       "acceptance": "`docs/maquettes/<ecran>.html` + `docs/maquettes/VALIDATION.md` (écran · date · validé par Will) ; `docs/ESPACE-ROUTES.md` (route · écran · onglet · REQ · maquette ; HYP-E1-10 : un champ sur `/`, résultat `/entreprise?q=`, onglets Accueil · Mes entreprises · Mes commissions · Plus).",
@@ -3534,7 +3601,7 @@
     },
     {
       "id": "CPL-T13",
-      "titre": "Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle D3 en fonction pure",
+      "titre": "Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure",
       "phase": 0,
       "repo": "partners",
       "zone": "gouvernance",
@@ -3542,7 +3609,10 @@
         "src/domain/temps/",
         "src/domain/attribution/seuil-prioritaire.ts",
         "tests/unit/domaine/temps-horloge-et-feries.spec.ts",
-        "tests/unit/domaine/seuil-prioritaire.spec.ts"
+        "tests/unit/domaine/seuil-prioritaire.spec.ts",
+        "src/lib/horloge.ts",
+        "tests/setup.ts",
+        "docs/adr/0014-temps-paris-jours-ouvres.md"
       ],
       "schema": false,
       "sensible": [],
@@ -3558,16 +3628,16 @@
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "estimateDays": 1.5,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/cpl-t13",
+      "pr": 78,
+      "issue": 67,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`seuilPrioritaire()` = `min(palierConfiance, capaciteRestante)` ; `surchargeManuelle > 0` remplace le min ; une seule fonction pure, consommée par DM-09 et UX-P1-07.",
+      "acceptance": "(1) HORLOGE INJECTEE (REQ-QA-027, pour sa part « le domaine recoit une Clock ») : `Horloge { maintenant(): Instant }`, `Instant` = millisecondes UTC entieres ; `horlogeFigee()` dans le domaine ; `horlogeSysteme` HORS du domaine (`src/lib/horloge.ts`), seul lieu qui lit l'heure de la machine ; aucun fichier de `src/domain/temps/` ne nomme `Date`, `Intl`, `performance`, `process` ni `globalThis` (temoin propre, plus strict que le lint). (2) PARIS (REQ-CPL-013) : conversion instant <-> date et heure legales d'Europe/Paris par la regle europeenne (dernier dimanche de mars et d'octobre, 01:00 UTC), bornee aux annees civiles de Paris 1996-2099 (de 1995-12-31T23:00Z inclus a 2099-12-31T23:00Z exclu), hors bornes levee nommee ; heure locale inexistante (printemps) : decalee apres le saut ; heure ambigue (automne) : premiere occurrence ; le test confronte CHAQUE heure de 2026 a 2040 a `Intl.DateTimeFormat`, oracle qui vit dans le test, jamais dans le domaine. (3) FERIES FR VERSIONNES : calendrier metropolitain portant version et source (Code du travail L3133-1), Paques calculee, onze jours, attribut « chome » par jour ; jour ouvre = lundi a vendredi hors ferie chome ; oracles cites (liste officielle 2026, dates de Paques) ; 29 fevrier (2000, 2028) et changements d'heure testes. (4) SLA (REQ-UX-022, REQ-UX-028) : `echeanceOuvree(debut, heures)` et `heuresOuvreesEcoulees(debut, fin)` comptent les heures civiles de Paris passees dans des jours ouvres ; un depart hors jour ouvre compte a partir du debut du jour ouvre suivant ; l'echeance est exclusive ; 48 h ouvrees et 2 jours ouvres sont la MEME fonction. (5) CAPACITE ET D3 (REQ-CPL-026, HYP-D3) : `capaciteSurPeriode` = somme, sur les jours ouvres de la periode, des qualifieurs non absents multipliee par la capacite par qualifieur et par jour ; `seuilPrioritaire({ palierConfiance, capaciteRestante, surchargeManuelle })` = `surchargeManuelle` si elle est > 0, sinon `min(palierConfiance, capaciteRestante)`, jamais un plafond ; entiers >= 0 sinon levee nommee ; une seule fonction pure, consommee par DM-09 et UX-P1-07. (6) 100 % lignes et branches sur `src/domain/**`, sans directive d'exclusion ; les crons (« tout ce qui est du a l'instant t », releve unique) restent a DM-13 et T-ARG-015.",
       "tests": {
         "REQ-CPL-013": [
           "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
@@ -3579,10 +3649,10 @@
           "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
         ],
         "REQ-UX-022": [
-          "tests/unit/domaine/seuil-prioritaire.spec.ts"
+          "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
         ],
         "REQ-UX-028": [
-          "tests/unit/domaine/seuil-prioritaire.spec.ts"
+          "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
         ]
       }
     },
@@ -8159,7 +8229,6 @@
           "tests/unit/gouvernance/revues-lecteur-unique.spec.ts"
         ],
         "REQ-GOV-011": [
-          "tests/unit/gouvernance/corps-de-pr-couvre.spec.ts",
           "tests/unit/gouvernance/revues-lecteur-unique.spec.ts"
         ]
       }
@@ -8520,11 +8589,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/gov-039",
+      "pr": 55,
       "issue": 52,
       "attempts": 0,
       "motif": null,
@@ -8723,7 +8792,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Deux trous de `scripts/lot/cloture.ts`, mesures le 2026-09-09, aucun introduit par une PR, aucun corrige alors (charte A11). (1) UNE TACHE ETRANGERE AU LOT PASSE : un dixieme resultat pour GOV-035, jamais dans la PR, a fait ecrire dix `fusionnee` sans un mot, puis `gov:check` 15/15 et vitest 614/614 ; la cloture pose `t.lot = lotId` INCONDITIONNELLEMENT. (2) UN `lotId` ABSENT EST PERMIS la ou un `lotId` FAUX est refuse : le controle s'ecrit `if (rendu.lotId && ...)` — une absence lue comme une autorisation. Les deux se ferment par des refus NOMMES, chacun vu rougir avec son message verbatim, et un contre-temoin vert par refus. PERIMETRE, ET IL A ETE RETRECI APRES MESURE : le troisieme trou de la liste du 2026-09-09 — « un sha inexistant passe » — n'est plus vrai tel qu'il etait ecrit. La PR 33, que ce lot clot, a livre le champ `attestation { pr, sha, fusionneeAt }` et un refus qui bloque le passage `fusionnee` sans les trois. Mais ce refus ne s'arme QUE si le depot de la tache n'est pas `partners`, et une seule tache du backlog porte une attestation (INT-T01b, livree chez axionia) : pour une tache LOCALE, rien n'ecrit ni ne verifie le sha. Ce reste-la est porte par GOV-042, qui etend l'attestation aux taches locales ; il n'est pas traite ici, et cette tache ne le recouvre plus.",
       "tests": {
         "REQ-GOV-021": [
@@ -8734,7 +8803,10 @@
         ]
       },
       "issue": 50,
-      "owner": "A05"
+      "owner": "A05",
+      "branch": "t/gov-041",
+      "pr": 53,
+      "motif": null
     },
     {
       "id": "GOV-042",
@@ -8788,15 +8860,18 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.75,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "`gov:trace` est le controle compensatoire invoque chaque fois qu'un trou de `lot:cloture` est juge tolerable. Mesure du 2026-09-09 : il couvre 48 taches sur 209 ; SEC-01, SEC-02 et INT-T01b en sont absentes ; et `gov:inventaire` compte une tache FABRIQUEE comme portant une preuve qui resout. La tache n'etend PAS la couverture. Elle exige que la garde RENDE son perimetre et son complement, chiffre par chiffre, dans son resume, et qu'un PLANCHER declare rougisse quand la couverture baisse. RM-02 : le plancher est vu rougir en le franchissant par le bas, et un contre-temoin verifie qu'il reste vert quand la couverture monte.",
       "tests": {
         "REQ-GOV-005": [
-          "tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts"
+          "tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts#REQ-QA-014 : le resume rend le perimetre et le complement, chiffre par chiffre"
         ]
       },
       "issue": 58,
-      "owner": "A05"
+      "owner": "A05",
+      "branch": "t/gov-043",
+      "pr": 61,
+      "motif": null
     },
     {
       "id": "GOV-044",
@@ -8820,7 +8895,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Mesure du 2026-09-12 : `scripts/gates/gov-attestation.ts` est le SEUL des 24 scripts de garde du disque absent de `docs/gates.json`. La famille `garde_ecrite_jamais_appelee` derive son perimetre du REGISTRE : un script absent du registre n'est donc jamais confronte a la question de savoir si quelqu'un l'appelle. C'est la forme exacte du defaut que le lot L-1-05 vient de renverser ailleurs (GARDES_QUI_BALAIENT), reintroduite le meme jour — une population DERIVEE DE LA PRESENCE DU CORRECTIF ne verra jamais celui qui le PERD. Le perimetre se derive du DISQUE (`scripts/gates/*.ts` suivis par git) et le registre devient ce qu'on lui confronte, pas ce dont on part ; le decompte des deux populations est RENDU. Une garde du disque absente du registre est un refus NOMME, vu rouge sur `gov-attestation.ts` lui-meme avant sa correction. L'inverse — une entree de registre sans script — reste le refus `script_introuvable` deja en place, et un contre-temoin verifie qu'il n'a pas bouge.",
       "tests": {
         "REQ-GOV-012": [
@@ -8828,7 +8903,10 @@
         ]
       },
       "issue": 51,
-      "owner": "A05"
+      "owner": "A05",
+      "branch": "t/gov-044",
+      "pr": 54,
+      "motif": null
     },
     {
       "id": "GOV-045",
@@ -9176,7 +9254,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "DEUX LIVRABLES SORTIS DE GOV-037 LE 2026-09-16, decision de Will : ils sont MECANISABLES, mais ils ne portent pas sur la garde que GOV-037 a livree — les y laisser rendait cette tache-la INFERMABLE, qui est precisement le defaut qu'elle decrivait. (1) LE COMPOSEUR COMPARE LES MAUVAIS CHAMPS. `scripts/lot/composer.ts` detecte les collisions de lot en lisant `t.paths` SEUL : deux lots qui touchent la MEME specification ne se voient pas. Mesure du 2026-09-05 : ni `gov:tasks` ni `gov:trace` ne rougissent quand `tests{}` et `paths` divergent. Ce n'est PAS une negligence des taches, c'est LA CONVENTION — `paths` porte les fichiers de SOURCE, `tests{}` porte les SPECIFICATIONS, et les deux sont deliberement disjoints dans une large part du backlog (38 taches sur 209 mesurees le 2026-09-13 par la lentille schema ; le backlog a grossi depuis, la mesure est A REFAIRE et a IMPRIMER par le livrable, jamais a recopier). A livrer : que la detection de collision lise AUSSI `tests{}`, avec un temoin vu rougir sur deux lots qui partagent une specification et un contre-temoin vert sur deux lots disjoints — et NON une reecriture des listes de chemins. Ce qu'on fait des taches divergentes se declare dans l'acceptance de la livraison : les normaliser, ou declarer la convention et ne corriger que le composeur. (2) RIEN NE CONFRONTE LES FICHIERS D'UNE PR AUX PATHS DE SES TACHES. Mesure du 2026-09-13 : dix fichiers sous `scripts/`, `src/` et `tests/` modifies par la PR 31 ne figuraient dans les `paths` d'AUCUNE tache, dont `tests/unit/gouvernance/vues-derivees.spec.ts`, promis par DEUX `tests{}`. A livrer : une garde qui confronte la liste des fichiers TOUCHES par une PR aux `paths` declares par les taches qu'elle cite, vue rougir sur ces dix-la ou sur leur equivalent remesure, et verte sur une PR conforme. Elle vit la ou la PR est DEJA lue (`scripts/gates/gov-pr.ts`) : une seconde lecture de la forge serait une seconde source. Cette tache ne rouvre PAS GOV-037 : la garde des attributions livree par la PR 45 reste la source du jugement tache <-> paths ; ce qui s'ajoute ici est le jugement du LOT et celui de la PR.\n\n⚠️ AJOUT DU 2026-09-16 (3) — `docs/gates.json` EST UN REGISTRE APPEND-ONLY, EXCLU DU TEST DE COLLISION. Mesure sur `docs/paths-proposes.json` : `docs/gates.json` figure dans les chemins reels de TRENTE des 68 taches de phase 0. Une disjonction stricte sur ce fichier sterilise le composeur — elle serialiserait trente lots pour un fichier dont chaque tache ajoute UNE ligne, indexee par son propre `id`. Le composeur doit donc EXCLURE NOMMEMENT ce registre du test de collision, et l'exclusion vit a UN SEUL endroit du code, avec le motif ecrit a cote : c'est un registre ou chaque PR verse SA ligne par l'outil hors depot, et dont le conflit de rebase est mecanique. L'exclusion N'EST PAS une liste extensible : ajouter un second fichier a cette liste exige un ADR, et une garde le tient. Temoin a deux faces : deux taches qui ne partagent QUE `docs/gates.json` entrent dans le meme lot ; deux taches qui partagent un second fichier en plus sont separees, et le composeur NOMME ce second fichier.\n\n⚠️ AJOUT DU 2026-09-16 (4) — LES DEUX EXIGENCES PERDUES AU TRANSFERT DEPUIS GOV-037. Elles figuraient au cinquieme livrable de GOV-037 et ne survivent dans aucun des deux textes ; elles sont reprises ici, reformulees sur ce qu'elles gardent reellement. (4a) LES DEUX CHAMPS DIVERGENT MEME SUR DES TACHES LIVREES, ET LA DIVERGENCE SE MESURE AVANT DE SE TRANCHER. Mesure du 2026-09-16 sur les 228 taches : SEPT taches declarent dans `paths` un fichier de specification que leur `tests{}` ne revendique pas, et VINGT ET UNE revendiquent dans `tests{}` une specification absente de leurs `paths` — dont CPL-T01 et GOV-024, toutes deux `fusionnee`. Le livrable REFAIT cette mesure au jour de sa livraison, l'IMPRIME, et tranche : ou bien les deux champs sont normalises et la regle est gardee, ou bien la convention est ECRITE et c'est le composeur seul qui change. Les deux reponses sont admissibles ; l'absence de reponse ne l'est pas, parce qu'elle laisse le composeur prouver une disjonction sur un champ et le lot se faire sur l'autre. (4b) UN FICHIER DE SPECIFICATION SUIVI QUE NULLE TACHE NE REVENDIQUE EST UN TROU, ET IL S'EN MESURE CINQ. Mesure du 2026-09-16 : 37 fichiers `*.spec.ts` sont suivis, et CINQ ne figurent ni dans les `paths` ni dans les `tests{}` d'aucune tache — `adr-index-derive`, `affirmations-verifiees`, `fiches-tiers`, `integration-livrable` et `preseance`, toutes sous `tests/unit/gouvernance/`. Une specification sans tache est une garde que personne ne porte : elle survit tant qu'elle passe, et rien ne dit qui la repare quand elle casse. Le livrable NOMME les cinq, leur attribue une tache ou declare explicitement qu'elles relevent d'un porteur collectif nomme, et pose le TEMOIN A DEUX FACES : un fichier de specification neuf, ajoute sans etre revendique, fait sortir la garde en code non nul et le NOMME ; l'etat du depot une fois les cinq rattachees la fait sortir en zero, avec le compte des specifications reellement confrontees.",
       "tests": {
         "REQ-GOV-021": [
@@ -9184,7 +9262,10 @@
         ]
       },
       "issue": 49,
-      "owner": "A05"
+      "owner": "A05",
+      "branch": "t/gov-056",
+      "pr": 48,
+      "motif": null
     },
     {
       "id": "GOV-057",
@@ -9915,7 +9996,16 @@
         "scripts/gates/gov-pr.ts",
         "scripts/lot/revues.ts",
         "tests/unit/gouvernance/revues-lecteur-unique.spec.ts",
-        "tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts"
+        "tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts",
+        "scripts/lot/corps-de-pr.ts",
+        "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts",
+        "tests/fixtures/github/commentaires-pr-41.json",
+        "docs/CHARTE-AGENTS.md",
+        "docs/CONVENTIONS.md",
+        "docs/PROTOCOLE-FUSION.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        "docs/adr/0012-relecture-proportionnee-au-risque.md",
+        "docs/gates.json"
       ],
       "schema": false,
       "sensible": [],
@@ -9926,17 +10016,23 @@
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
-      "statut": "a_faire",
-      "acceptance": "PRIORITAIRE : ce defaut fausse le tour de quatre lentilles de TOUTE la phase 0, soit environ 360 passes. TROIS FAITS. (1) La sortie imprime « Vues : (aucune) » DANS LES DEUX CAS — quand aucune revue n'a ete lue, et quand toutes les revues lues REFUSENT. Ce sont deux etats opposes : l'un veut dire « personne n'a regarde », l'autre « tout le monde a refuse ». Les rendre identiques rend le second invisible. (2) Un avis pose au mauvais endroit — en commentaire plutot que comme revue — n'est signale NULLE PART : cinq lentilles ont ainsi travaille dans le vide le 2026-09-14, sans une seule erreur de leur part. La garde doit DIRE qu'elle a vu un avis qu'elle ne peut pas compter. (3) La phrase « un refus de la lentille securite vaut veto » s'imprime AUSSI sur des taches non sensibles, ce que la charte ne dit pas : la machine et le texte doivent dire la meme chose. A livrer : les trois etats — aucune revue, toutes refusent, verdicts mixtes — sont NOMMES distinctement dans la sortie ; un avis hors canal est signale ; le message de veto ne s'imprime que la ou il s'applique. TEMOIN A DEUX FACES : une demande de fusion sans aucune revue, puis la meme avec quatre refus, produisent DEUX sorties differentes et deux codes differents ; une demande avec quatre accords sort en zero.",
+      "estimateDays": 1,
+      "statut": "fusionnee",
+      "acceptance": "PRIORITAIRE : ce defaut fausse le tour de lentilles de TOUTE la phase 0. QUATRE FAITS. (1) La sortie imprime « Vues : (aucune) » DANS LES DEUX CAS — quand aucune revue n'a ete lue, et quand toutes les revues lues REFUSENT. Ce sont deux etats opposes ; les rendre identiques rend le second invisible. (2) Un avis pose au mauvais endroit — en commentaire d'issue plutot que comme revue — n'est signale NULLE PART : les avis de lentille de la PR 41 ont ainsi compte pour zero. (3) La phrase « un refus de la lentille securite vaut veto » cite REQ-GOV-011, qui ne parle pas de veto : la machine et le texte doivent dire la meme chose. (4) LEVIER 3, decision de Will du 2026-09-18 : la relecture est proportionnee au risque, et lentillesExigees() exige en dur quatre lentilles. A LIVRER : les trois etats — aucune revue, toutes refusent, verdicts mixtes — nommes par des FAMILLES de faute distinctes (sortie non nulle dans les deux premiers) ; un avis hors canal signale sans etre compte ; le message de veto dit la charte §6 (securite bloque seule sur toute PR ; scenario d'attaque seulement sur tache sensible) ; UNE fonction risqueDeLaPr() dans scripts/lot/revues.ts, appelee par gov-pr.ts ET corps-de-pr.ts, rend ORDINAIRE seulement si TOUT est prouve — au moins une tache resolue (titre union champ pr), registre de base lisible, chaque tache resolue lue sur la tete ET la base en zone gouvernance ou qualite avec sensible present et vide et schema faux, aucun label schema, diff non vide et COMPLET (liste de la forge comparee a changed_files, plafond 3000) dont chaque fichier est sous docs/, scripts/ ou tests/ (jamais .github/, jamais la racine, documents compris, decisions de l'orchestrateur du 2026-09-18), un fichier renomme ou copie comptant par sa source ET sa destination, et hors de la garde des revues (revues.ts, gov-pr.ts, corps-de-pr.ts, la fermeture transitive de leurs imports derivee du disque, docs/CHARTE-AGENTS.md, docs/agents.json) — et ELEVE sinon ; ELEVE exige exactitude, securite, simplicite ou schema, mutation ; ORDINAIRE exige exactitude et securite ; gov:pr imprime le risque et ses raisons ; charte §6, CONVENTIONS §5, PROTOCOLE-FUSION pas 2, case 3 du gabarit et partners/ADR-0012 le disent dans le meme diff. TEMOINS : sans revue puis avec quatre refus, deux sorties et deux familles differentes, quatre accords sortent en zero. Sur le registre REEL : une PR dont la tache sensible est AU MILIEU de trois taches resolues, exactitude et securite acceptees, rougit lentilles_manquantes, et la meme sans elle sort en zero ; une tache rendue ordinaire sur la tete mais pas sur la base reste ELEVEE ; sensible absent, base illisible, diff vide, fichier de la garde au milieu du diff, fichier .github/workflows/ci.yml, package.json ou CLAUDE.md au milieu du diff, module importe indirectement par la garde, liste de la forge tronquee, chemin non ASCII sous prisma/ lu par le diff local, fichier renomme de .github/ ou de prisma/ vers docs/ donnent ELEVE, le second exigeant aussi le label schema ; toute tache du registre est classee, les deux classes comptees et imprimees, plancher superieur a zero pour chacune ; le composeur du corps, exerce par sa fonction pure, ne coche pas la case 3 la ou la garde exige quatre lentilles.",
       "tests": {
         "REQ-GOV-011": [
-          "tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts"
+          "tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts",
+          "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts"
         ],
         "REQ-GOV-013": [
           "tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts"
         ]
-      }
+      },
+      "issue": 57,
+      "owner": "A05",
+      "branch": "t/gov-077",
+      "pr": 64,
+      "motif": null
     },
     {
       "id": "GOV-078",

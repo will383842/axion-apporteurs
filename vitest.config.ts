@@ -22,12 +22,45 @@ export default defineConfig({
       // (`tests/gov/regles-maison.spec.ts`) et `docs/tasks.json` (quatre REQ de GOV-007 sur
       // `tests/gov/charte-pr.spec.ts`). Sans cette ligne les deux existent sans jamais tourner.
       'tests/gov/**/*.{test,spec}.{ts,tsx}',
-      // Les tests d'intégration tournent DANS `pnpm test` : `gov:trace` lit include/exclude de CE fichier,
+      // Les tests en base réelle tournent DANS `pnpm test` : `gov:trace` lit include/exclude de CE fichier,
       // et un spec exclu y vaut « non exécuté ». Conséquence assumée : la suite exige le démon Docker
-      // (partners/ADR-0014, décision 7 ; partners/ADR-0001).
+      // (partners/ADR-0015, décision 7 ; partners/ADR-0001). ⚠️ AUCUNE APOSTROPHE dans ce bloc :
+      // `gates:prouvees` lit les motifs entre guillemets simples, et une apostrophe y ouvre un faux motif.
       'tests/integration/**/*.{test,spec}.{ts,tsx}',
     ],
     exclude: ['node_modules', '.next', 'tests/e2e/**'],
+    // QA-T01 : chargé avant chaque fichier de test. Minimal — voir son en-tête.
+    setupFiles: ['tests/setup.ts'],
+
+    /**
+     * COUVERTURE DU DOMAINE — REQ-QA-002 : 100 % lignes et 100 % branches sur `src/domain/**`.
+     *
+     * DÉCLARÉE ici, APPLIQUÉE par le script `test` (`vitest run --coverage`), et pas par `enabled` :
+     * `gov:trace` lance `npx vitest list` en sous-processus, et une couverture active par
+     * configuration s'inviterait dans chacun de ses appels.
+     *
+     * La clé est `src/domain/**`, deux étoiles : les fichiers du domaine vivent dans des
+     * SOUS-dossiers (`attribution/`, `lexique/`), qu'une étoile seule laisserait hors du seuil — et
+     * un seuil qui ne s'applique à aucun fichier est vert. `perFile` fait NOMMER chaque fichier sous
+     * le seuil ; à 100 %, « chaque fichier » et « l'ensemble » sont la même exigence.
+     *
+     * Conséquence : un sous-ensemble lancé par `pnpm test -- <fichier>` rougit, les fichiers du
+     * domaine qu'il ne charge pas comptant 0 %. Une passe partielle se lance par
+     * `npx vitest run <fichier>`. Et tout fichier NEUF sous `src/domain/` est couvert à 100 % dans
+     * la PR qui le crée.
+     */
+    coverage: {
+      provider: 'v8',
+      enabled: false,
+      include: ['src/domain/**'],
+      reporter: ['text'],
+      // Un seuil qui ne se lit que sur une suite verte se tait quand on en a le plus besoin.
+      reportOnFailure: true,
+      thresholds: {
+        perFile: true,
+        'src/domain/**': { lines: 100, branches: 100 },
+      },
+    },
     // Les gardes lancent `tsx` en sous-processus : 20 s par défaut ne suffisent pas toujours.
     testTimeout: 60_000,
     hookTimeout: 60_000,
