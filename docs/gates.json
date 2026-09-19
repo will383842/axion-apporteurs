@@ -274,9 +274,9 @@
         "GATE-ARG-enum",
         "gov:glossaire"
       ],
-      "verifie": "toute colonne statut/type/motif/resultat/etat/origine/kind/palier/priorite/status est un enum Prisma ; aucune chaine libre de vocabulaire ; chaque valeur figure au glossaire (GOV-006)",
+      "verifie": "toute colonne statut/type/motif/resultat/etat/origine/kind/palier/priorite/status est un enum Prisma ; aucune chaine libre de vocabulaire ; chaque valeur figure au glossaire (GOV-006). ⚠️ 2026-09-19, DM-02 : le schema se lit par le lecteur unique (scripts/lot/lecteur-prisma.ts), un modele se ferme sur SON accolade et un schema illisible est refuse en nommant la ligne ; la liste litterale d'etats se juge par GROUPE, pas par ligne, et un commentaire n'est pas du code ; la projection exacte (CREATE TYPE complet, clauseEtatsOccupants()) est legitime en migration par regle ; l'index unique de l'attribution occupante est juge dans le SQL des migrations (fautesIndexOccupant, que la spec d'integration applique a pg_indexes) ; le vert imprime les modeles, champs, enums et migrations confrontes, et un perimetre vide rougit",
       "fixtureRouge": "declarer statut String dans le schema",
-      "preuveRouge": "pnpm partners:schema:enums:prove — 9 familles rougissent chacune sur son temoin, 7 contre-temoins restent verts ; la vue est INJECTEE et non lue sur le disque (RM-11), sans quoi la preuve mesurerait le depot du jour au lieu de la garde"
+      "preuveRouge": "pnpm partners:schema:enums:prove — 13 familles rougissent chacune sur son temoin, 15 contre-temoins restent verts ; la vue est INJECTEE et non lue sur le disque (RM-11), sans quoi la preuve mesurerait le depot du jour au lieu de la garde. DM-02 : un champ place apres une accolade commentee (Bac.statut) ; une liste d'etats jugee par GROUPE (liste multiligne, membres sans guillemets, clause IN SQL coupee) ; un index unique d'attribution occupante total ou divergent dans une migration ; schema_illisible ; perimetre_vide. Rouge constate par: A05"
     },
     {
       "id": "partners:schema:cents",
@@ -285,7 +285,7 @@
       "tache": "DM-02",
       "verifie": "aucun Float ni Decimal ; toute colonne monetaire est Int et suffixee Cents",
       "fixtureRouge": "ajouter une colonne montantEuros Float",
-      "preuveRouge": null
+      "preuveRouge": "pnpm partners:schema:cents:prove — 5 familles rougissent sur 18 temoins, la faute posee au MILIEU d'un modele (un Float place apres une accolade commentee compris), un temoin par mot de montant ; 7 contre-temoins restent verts (commissionId, remiseAt, un enum tarifPalier) ; la vue est INJECTEE, jamais lue sur le disque (RM-11). Rouge constate par: A05"
     },
     {
       "id": "partners:schema:partial-index",
@@ -303,7 +303,7 @@
       "tache": "QA-T11",
       "verifie": "lint expand/contract : DROP, RENAME et NOT NULL sans defaut interdits hors ADR",
       "fixtureRouge": "PR temoin portant un DROP COLUMN",
-      "preuveRouge": null
+      "preuveRouge": "pnpm partners:migrations:additive:prove — 11 familles rougissent sur 24 temoins, la faute posee dans la migration du MILIEU de trois ; 10 contre-temoins restent verts (le RAISE EXCEPTION '... DELETE ...' d'un corps $$, un declencheur sur INSERT seul retire) ; une ADR acceptee absout en l'imprimant, une ADR absente ou proposee n'absout rien ; la protection du journal se DERIVE des declencheurs des migrations ; vues INJECTEES (RM-11). Rouge constate par: A05"
     },
     {
       "id": "G-SEC-SCHEMA-PII",

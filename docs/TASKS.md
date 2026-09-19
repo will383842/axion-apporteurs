@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 98 | 77.35 | 11 |
+| 0 — Socle technique | 98 | 77.35 | 13 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -472,7 +472,7 @@ Couvre : `REQ-QA-024`
 
 **Tests.** `tests/unit/qualite/journal-redige.spec.ts`
 
-### DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable
+### DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable ✅ **fusionnee**
 
 `1 j` · zone `domaine` · sensible : rgpd · depend de `QA-T01`
 
@@ -512,7 +512,7 @@ Couvre : `REQ-CPL-021`, `REQ-QA-019`, `REQ-QA-020`, `REQ-QA-030`
 
 **Tests.** `tests/unit/qualite/env-fail-fast.spec.ts` · `tests/integration/sondes-de-vie.spec.ts`
 
-### QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check
+### QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check ✅ **fusionnee**
 
 `1 j` · zone `qualite` · depend de `GOV-011`, `QA-T01`
 
