@@ -93,11 +93,15 @@ export function environnementDuSousProcessus(
   return { ...env, PRISMA_HIDE_UPDATE_MESSAGE: '1', ...poses };
 }
 
-/** L'environnement construit à partir de celui de l'hôte : la seule lecture de ce dernier. */
+/**
+ * L'environnement construit à partir de celui de l'hôte : la seule lecture de ce dernier.
+ * Typé `NodeJS.ProcessEnv` pour les sous-processus : `next` y déclare `NODE_ENV` obligatoire
+ * (next/types/global.d.ts), et le harnais ne le pose pas — l'hôte ne le transmet pas non plus.
+ */
 export function environnementDeLHote(
   poses: Readonly<Record<string, string>> = {}
-): Record<string, string> {
-  return environnementDuSousProcessus(process.env, poses);
+): NodeJS.ProcessEnv {
+  return environnementDuSousProcessus(process.env, poses) as NodeJS.ProcessEnv;
 }
 
 export type Base = {
