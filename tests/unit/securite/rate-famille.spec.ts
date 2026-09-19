@@ -49,6 +49,7 @@ import {
   conduiteSurPanne,
   creerMagasinRedis,
   magasinDepuis,
+  magasinEnPanne,
   limiter,
   sujetDepuisEmpreinte,
   type ConsommerDuMagasin,
@@ -158,12 +159,24 @@ async function sousLeDelai<T>(p: Promise<T>, ms: number): Promise<T | typeof SUS
   }
 }
 
+/** L'environnement de la CI et de la production : ni `VITEST`, ni `NODE_ENV=test`. */
+function environnementDeProduction(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: 'production' };
+  delete env.VITEST;
+  delete env.VITEST_POOL_ID;
+  delete env.VITEST_WORKER_ID;
+  return env;
+}
+
 /** Le binaire de la garde, lancé dans `racine` : son code et sa sortie. */
 function lancerLaGarde(racine: string, ...args: string[]): { code: number | null; sortie: string } {
   const cli = join(realpathSync('node_modules'), 'tsx', 'dist', 'cli.mjs');
   const r = spawnSync(process.execPath, [cli, 'scripts/gates/rate-famille.ts', ...args], {
     cwd: racine,
     encoding: 'utf8',
+    // La garde tourne en CI HORS des tests : ni `VITEST`, ni `NODE_ENV=test`. Lancée avec
+    // l'environnement de vitest, elle hériterait d'un droit que la CI ne lui donne pas.
+    env: environnementDeProduction(),
   });
   return { code: r.status, sortie: `${r.stdout ?? ''}${r.stderr ?? ''}` };
 }
@@ -374,6 +387,39 @@ describe('REQ-SEC-016 — la panne du cache suit la conduite déclarée, et se d
         expect(v, `essai ${essai} : aucun verdict sous la seconde`).not.toBe(SUSPENDU);
         expect(performance.now() - debut).toBeLessThan(1_000);
         expect(v).toMatchObject({ autorise: false, panne: true, motif: 'cache_indisponible' });
+      }
+    });
+
+    it('REQ-SEC-016 — hors des tests, une fabrique de magasin REFUSE de fabriquer ; le magasin en panne du registre, lui, se construit', () => {
+      const vitest = process.env.VITEST;
+      vi.stubEnv('NODE_ENV', 'production');
+      Reflect.deleteProperty(process.env, 'VITEST');
+      try {
+        expect(() =>
+          magasinDepuis(async () => ({ admis: true, compte: 0, plusAncienMs: null }))
+        ).toThrow(/^fabrique_hors_tests/);
+        expect(() => magasinEnPanne()).not.toThrow();
+      } finally {
+        vi.unstubAllEnvs();
+        if (vitest !== undefined) Reflect.set(process.env, 'VITEST', vitest);
+      }
+    });
+
+    it('REQ-SEC-016 — hors des tests, la fabrique REFUSE aussi quand le registre est atteint par un chemin assemblé à l’exécution', async () => {
+      const chemin = ['..', '..', '..', 'src', 'server', 'securite', 'rate' + '-limit'].join('/');
+      const mod: Record<string, (...a: unknown[]) => unknown> = await import(
+        /* @vite-ignore */ chemin
+      );
+      const vitest = process.env.VITEST;
+      vi.stubEnv('NODE_ENV', 'production');
+      Reflect.deleteProperty(process.env, 'VITEST');
+      try {
+        expect(() =>
+          mod['magasin' + 'Depuis']!(async () => ({ admis: true, compte: 0, plusAncienMs: null }))
+        ).toThrow(/^fabrique_hors_tests/);
+      } finally {
+        vi.unstubAllEnvs();
+        if (vitest !== undefined) Reflect.set(process.env, 'VITEST', vitest);
       }
     });
 
@@ -709,6 +755,33 @@ describe('REQ-SEC-016 — la garde de famille', () => {
     ],
     ['ré-export du registre', "export * from './securite/rate-limit';\n"],
     [
+      'chargement dynamique à chemin variable (témoin de la lentille securite)',
+      "import { COMPTEURS, sujetDepuisEmpreinte } from '../securite/rate-limit';\n" +
+        '\n' +
+        "const chemin = '../securite/rate-limit';\n" +
+        "const appel = 'limiter';\n" +
+        "const fabrique = 'magasinDepuis';\n" +
+        '\n' +
+        'export async function essai(hex: string) {\n' +
+        '  const m = await import(chemin);\n' +
+        '  const ouvert = m[fabrique](async () => ({ admis: true, compte: 0, plusAncienMs: null }));\n' +
+        '  const nom = Object.keys(COMPTEURS)[0];\n' +
+        '  return m[appel](nom, sujetDepuisEmpreinte(hex), 0, ouvert);\n' +
+        '}\n',
+    ],
+    [
+      '`require` à chemin variable',
+      "const chemin = './securite/rate-limit';\nexport const m = require(chemin);\n",
+    ],
+    [
+      'chemin assemblé à l’exécution (témoin de la lentille mutation)',
+      'export async function essai(nom: string, s: any) {\n' +
+        "  const mod = await import(['.', 'securite', 'rate' + '-limit'].join('/'));\n" +
+        "  const ouvert = mod['magasin' + 'Depuis'](async () => ({ admis: true, compte: 0, plusAncienMs: null }));\n" +
+        "  return mod['lim' + 'iter'](nom, s, 0, ouvert);\n" +
+        '}\n',
+    ],
+    [
       'import nommé par une chaîne',
       "import { 'limiter' as compter } from './securite/rate-limit';\nexport const f = compter;\n",
     ],
@@ -766,6 +839,7 @@ describe('REQ-SEC-016 — la garde de famille', () => {
     expect([...fabriquesDuRegistre(registre.texte)].sort()).toEqual([
       'creerMagasinRedis',
       'magasinDepuis',
+      'magasinEnPanne',
     ]);
     const avecUneTroisieme =
       registre.texte +

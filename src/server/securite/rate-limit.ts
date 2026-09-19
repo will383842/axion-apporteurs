@@ -164,9 +164,43 @@ function enregistrer<T extends object>(magasin: T, consommer: ConsommerDuMagasin
   return magasin;
 }
 
+/**
+ * DÉFENSE EN PROFONDEUR : une fabrique qui accepte une fonction d'écriture arbitraire peut bâtir un
+ * magasin qui admet tout. Elle REFUSE donc de s'exécuter hors des tests, quoi que la garde de
+ * famille ait vu ou pas vu des chemins par lesquels on l'atteint.
+ */
+function exigerUnContexteDeTest(fabrique: string): void {
+  if (process.env.NODE_ENV === 'test' || process.env.VITEST !== undefined) return;
+  throw new Error(
+    `fabrique_hors_tests : ${fabrique} ne fabrique un magasin que sous les tests ; en production, ` +
+      'le seul magasin est celui du registre'
+  );
+}
+
 /** Un magasin bâti sur une fonction d'écriture fournie : les témoins, et le magasin en mémoire. */
 export function magasinDepuis(consommer: ConsommerDuMagasin): MagasinDeCompteurs {
+  exigerUnContexteDeTest('magasinDepuis');
   return enregistrer({}, consommer) as unknown as MagasinDeCompteurs;
+}
+
+export interface MagasinEnPanne {
+  readonly magasin: MagasinDeCompteurs;
+  /** Le nombre d'écritures qu'il a reçues, et toutes ont levé. */
+  appels(): number;
+}
+
+/**
+ * Un magasin qui LÈVE à chaque écriture, et qui les compte. Il ne peut rien admettre : il ne
+ * rend que la conduite déclarée de chaque compteur. C'est pourquoi il se construit hors des tests,
+ * là où la garde de famille l'exécute en CI.
+ */
+export function magasinEnPanne(): MagasinEnPanne {
+  let appels = 0;
+  const magasin = enregistrer({}, () => {
+    appels += 1;
+    return Promise.reject(new Error('cache indisponible (magasin en panne)'));
+  }) as unknown as MagasinDeCompteurs;
+  return { magasin, appels: () => appels };
 }
 
 /**
@@ -285,12 +319,14 @@ export function creerMagasinRedis(url: string, options: RedisOptions): MagasinRe
 }
 
 /** Le magasin d'un processus sans `REDIS_URL` : chaque appel est une panne, jamais un plantage. */
-const MAGASIN_SANS_ADRESSE = magasinDepuis(() =>
+const MAGASIN_SANS_ADRESSE = enregistrer({}, () =>
   Promise.reject(new Error('rate-limit : REDIS_URL absente'))
-);
+) as unknown as MagasinDeCompteurs;
 
 /** Le magasin d'une `REDIS_URL` illisible : une panne aussi, et le refus ne porte pas la valeur. */
-const MAGASIN_ADRESSE_ILLISIBLE = magasinDepuis(() => Promise.reject(adresseIllisible()));
+const MAGASIN_ADRESSE_ILLISIBLE = enregistrer({}, () =>
+  Promise.reject(adresseIllisible())
+) as unknown as MagasinDeCompteurs;
 
 let magasinDuProcessus: MagasinRedis | null = null;
 

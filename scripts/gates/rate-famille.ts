@@ -32,8 +32,12 @@
  * extensions de code : un fichier neuf, pas encore indexé, est lu comme les autres. Toute
  * référence à `limiter` qui n'est pas un appel direct à nom littéral est refusée : échec fermé.
  *
- * LIMITES DÉCLARÉES. Un préfixe reconstitué par concaténation (`'mag' + 'ic:'`) échappe à la
- * lecture statique : il n'a de sens qu'en contournement délibéré. Le registre et cette garde sont
+ * LIMITES DÉCLARÉES. Les formes qui obtiennent le registre par un chargeur NON littéral
+ * (`import(x)`, `require(x)`) sont refusées ; toute autre obfuscation (un chargeur renommé, un
+ * module relais hors de `src/` et `scripts/`) est couverte par le refus, À L'EXÉCUTION, des
+ * fabriques de magasin hors des tests : un magasin qui admet tout ne se construit pas en
+ * production. Un préfixe reconstitué par concaténation (`'mag' + 'ic:'`) échappe à la lecture
+ * statique : il n'a de sens qu'en contournement délibéré. Le registre et cette garde sont
  * exemptés de la lecture des sources : ils portent les préfixes et les noms par construction.
  */
 
@@ -45,10 +49,10 @@ import {
   LIMITE_HORS_DEPOT,
   PREFIXES_DE_FAMILLE,
   limiter,
-  magasinDepuis,
+  magasinEnPanne,
   sujetDepuisEmpreinte,
   type ConduiteSurPanne,
-  type MagasinDeCompteurs,
+  type MagasinEnPanne,
   type NomDeCompteur,
   type VerdictDeLimite,
 } from '../../src/server/securite/rate-limit';
@@ -434,6 +438,23 @@ function lireUnFichier(
         );
       }
     }
+    if (
+      ts.isCallExpression(n) &&
+      (n.expression.kind === ts.SyntaxKind.ImportKeyword || estAppelA('require', n.expression))
+    ) {
+      const chemin = n.arguments[0];
+      if (
+        chemin === undefined ||
+        !(ts.isStringLiteral(chemin) || ts.isNoSubstitutionTemplateLiteral(chemin))
+      ) {
+        refuser(
+          n,
+          'nom_dynamique',
+          `chargement d'un module par un chemin NON littéral : la garde ne peut pas savoir s'il ` +
+            `atteint le registre, et le refuse (échec fermé).`
+        );
+      }
+    }
     if (ts.isIdentifier(n) && fabriques.has(n.text) && !dejaRefuses.has(n)) {
       refuser(
         n,
@@ -600,13 +621,10 @@ function exigencesDuDepot(): Record<string, string> {
 }
 
 /** Un cache qui LÈVE à chaque appel, et qui compte ceux qu'il a reçus. */
-export function cacheQuiLeve(): { magasin: MagasinDeCompteurs; appels: () => number } {
-  let appels = 0;
-  const magasin = magasinDepuis(() => {
-    appels += 1;
-    return Promise.reject(new Error('cache indisponible (témoin de la garde)'));
-  });
-  return { magasin, appels: () => appels };
+export function cacheQuiLeve(): MagasinEnPanne {
+  // Le magasin en panne du REGISTRE : la garde tourne en CI, hors des tests, là où une fabrique
+  // de magasin arbitraire refuse de s'exécuter.
+  return magasinEnPanne();
 }
 
 const SUJET_TEMOIN = sujetDepuisEmpreinte('0'.repeat(16));
