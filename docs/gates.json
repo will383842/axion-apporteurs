@@ -570,9 +570,12 @@
       "phase": 0,
       "script": "scripts/gates/rate-famille.ts",
       "tache": "SEC-10",
-      "verifie": "chaque famille de limiteur declare surPanne (refuser ou laisser-passer) ; le comportement Redis coupe est exerce par un test",
-      "fixtureRouge": "declarer une famille depot:x sans surPanne",
-      "preuveRouge": null
+      "verifie": "tout compteur est declare au registre unique, sous l un des cinq prefixes, avec sa conduite sur panne REQUISE ; la garde execute chaque compteur contre un cache qui leve et confronte le verdict a la conduite declaree, puis confronte la limite, la fenetre et la conduite declarees au texte de l exigence source ; aucun prefixe de famille hors du registre dans une chaine ou un gabarit de src/ ou de scripts/ ; aucune reference a limiter autre qu un appel direct a nom litteral ; hors des tests, aucun magasin ni signaleur passe a limiter, aucun argument etale, aucune reference a une fabrique de magasin hors du registre, aucun chargeur a chemin non litteral. Limite declaree : la garde est un fil tendu sur les formes ecrites ; a l execution, hors des tests, limiter refuse tout magasin et tout signaleur injectes, et toute fabrique de magasin refuse de fabriquer",
+      "fixtureRouge": "retirer surPanne du compteur magic:courriel (compteur du milieu du registre, par cast) : la garde sort en 1 sur conduite_absente et nomme le prefixe magic:",
+      "preuveRouge": "pnpm securite:rate-famille:prove — 8 familles rougissent chacune sur son temoin (perimetre_vide, conduite_absente, conduite_trahie, ecart_a_l_exigence, magasin_explicite, prefixe_hors_famille, prefixe_hors_registre, nom_dynamique), 2 contre-temoins verts ; binaire sur une copie de travail sans surPanne sur magic:courriel : sortie 1, prefixe magic: nomme (la garde transposee d axionia l acceptait : sortie 0, premier commit de SEC-10)",
+      "alias": [
+        "securite:rate-famille"
+      ]
     },
     {
       "id": "G-SEC-CONCURRENCE",

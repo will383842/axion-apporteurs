@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**321 exigences actives · 60 réputées testées · 60 couvertes · 0 orphelines.**
+**321 exigences actives · 56 réputées testées · 56 couvertes · 0 orphelines.**
 
-260 tâches, dont 52 livrées · 58 fichiers de test exécutés par `vitest` sur 58 présents.
+260 tâches, dont 50 livrées · 57 fichiers de test exécutés par `vitest` sur 57 présents.
 
 ## Exigences réputées testées
 
@@ -31,11 +31,7 @@
 | `REQ-CPL-018` | `CPL-T01`, `GOV-009` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts` | couverte |
 | `REQ-CPL-021` | `GOV-000`, `QA-T04` | `tests/unit/gouvernance/autonomie.spec.ts` | couverte |
 | `REQ-CPL-026` | `CPL-T13` | `tests/unit/domaine/seuil-prioritaire.spec.ts` | couverte |
-| `REQ-DM-001` | `DM-01`, `DM-02` | `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` | couverte |
-| `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006`, `GOV-030`, `GOV-068`, `GOV-069`, `GOV-070` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/etats-occupants.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
-| `REQ-DM-024` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-chaine.spec.ts` | couverte |
-| `REQ-DM-038` | `DM-01`, `DM-02` | `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
-| `REQ-DM-041` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts` | couverte |
+| `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006`, `GOV-030`, `GOV-068`, `GOV-069`, `GOV-070` | `tests/unit/domaine/etats-occupants.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
 | `REQ-GOV-001` | `GOV-001`, `GOV-072` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-002` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-003` | `GOV-003`, `GOV-005`, `GOV-025`, `GOV-028`, `GOV-037`, `GOV-071`, `GOV-074`, `GOV-084` | `tests/unit/gouvernance/attributions-resolvent.spec.ts`, `tests/unit/gouvernance/citation-json-vs-prose.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | couverte |
@@ -136,6 +132,7 @@
 | `REQ-CPL-027` | 0 | `DM-06`, `JUR-T24`, `UX-P1-12`, `UX-P3-06` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts` |
 | `REQ-CPL-028` | 1 | `INT-T23`, `INT-T24` | — |
 | `REQ-CPL-029` | 1 | `UX-P1-15` | — |
+| `REQ-DM-001` | 0 | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/integration/journal.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` |
 | `REQ-DM-002` | 1 | `DM-07` | — |
 | `REQ-DM-004` | 1 | `DM-07`, `DM-08`, `DM-13` | — |
 | `REQ-DM-005` | 1 | `DM-07` | — |
@@ -157,6 +154,7 @@
 | `REQ-DM-021` | 0 | `DM-15`, `INT-T03` | `axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts`, `axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts` |
 | `REQ-DM-022` | 1 | `DM-08`, `DM-15` | — |
 | `REQ-DM-023` | 2 | `DM-16` | — |
+| `REQ-DM-024` | 0 | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` |
 | `REQ-DM-025` | 2 | `T-ARG-015` | — |
 | `REQ-DM-026` | 2 | `T-ARG-010`, `T-ARG-019` | — |
 | `REQ-DM-027` | 1 | `DM-11`, `DM-19`, `JUR-T16`, `T-ARG-032` | — |
@@ -170,8 +168,10 @@
 | `REQ-DM-035` | 0 | `DM-06`, `INT-T22` | `axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts`, `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts` |
 | `REQ-DM-036` | 0 | `SEC-06` | `tests/integration/webhook-verdicts.spec.ts`, `tests/integration/webhook.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` |
 | `REQ-DM-037` | 0 | `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts` |
+| `REQ-DM-038` | 0 | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/integration/journal.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` |
 | `REQ-DM-039` | -1 | `INT-T01b`, `INT-T05` | `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`, `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts` |
 | `REQ-DM-040` | -1 | `DM-04`, `INT-T01b` | `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts`, `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
+| `REQ-DM-041` | 0 | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` |
 | `REQ-DM-042` | 1 | `DM-13`, `DM-24` | — |
 | `REQ-DM-043` | 1 | `DM-25` | — |
 | `REQ-EXT-001` | 1 | `EXT-T01` | — |
@@ -397,7 +397,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 1 | 13 | 1 |
 | 2 | 3 | 0 |
 | 3 | 1 | 0 |
-| 4 | 15 | 3 |
+| 4 | 15 | 1 |
 | 5 | 15 | 2 |
 | 6 | 1 | 1 |
 | 7 | 1 | 0 |
@@ -406,7 +406,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 10 | 6 | 0 |
 | 11 | 5 | 1 |
 | 12 | 13 | 3 |
-| 13 | 32 | 4 |
+| 13 | 32 | 3 |
 | 14 | 13 | 0 |
 | 15 | 23 | 3 |
 | 16 | 8 | 1 |
@@ -421,13 +421,13 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 1 | 3 | 0 |
 | 2 | 12 | 0 |
 | 3 | 1 | 0 |
-| 4 | 16 | 3 |
+| 4 | 16 | 1 |
 | 5 | 17 | 2 |
 | 6 | 2 | 1 |
 | 7 | 52 | 6 |
 | 8 | 12 | 3 |
 | 9 | 23 | 5 |
-| 10 | 63 | 8 |
+| 10 | 63 | 7 |
 | 11 | 30 | 4 |
 | 12 | 14 | 0 |
 
@@ -436,11 +436,9 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | Fichier | Exécuté par vitest | Exigences citées |
 | --- | --- | --- |
 | `tests/gov/charte-pr.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011`, `REQ-GOV-012`, `REQ-GOV-013`, `REQ-GOV-027` |
-| `tests/integration/index-partiels.spec.ts` | oui | `REQ-DM-003` |
 | `tests/integration/journal.spec.ts` | oui | `REQ-DM-024`, `REQ-DM-041`, `REQ-JUR-026`, `REQ-SEC-027` |
 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | oui | `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013` |
 | `tests/unit/domaine/etats-occupants.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-006` |
-| `tests/unit/domaine/gardes-de-schema.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-003`, `REQ-DM-037`, `REQ-DM-038`, `REQ-JUR-027` |
 | `tests/unit/domaine/journal-chaine.spec.ts` | oui | `REQ-DM-024` |
 | `tests/unit/domaine/journal-charge-fermee.spec.ts` | oui | `REQ-DM-041` |
 | `tests/unit/domaine/schema-centimes.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-038` |
@@ -493,3 +491,4 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/qualite/req-check.spec.ts` | oui | `REQ-QA-014` |
 | `tests/unit/securite/env-boot.spec.ts` | oui | `REQ-SEC-028` |
 | `tests/unit/securite/headers.spec.ts` | oui | `REQ-SEC-029` |
+| `tests/unit/securite/rate-famille.spec.ts` | oui | `REQ-SEC-002`, `REQ-SEC-016`, `REQ-SEC-035` |

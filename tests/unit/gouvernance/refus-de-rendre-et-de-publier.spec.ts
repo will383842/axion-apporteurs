@@ -487,6 +487,20 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // déclarer le refus, dire pourquoi, assumer le total. Les témoins sont déclarés à ZÉRO :
     // c'est une DETTE ÉCRITE, pas une preuve. *Un compteur de témoins qu'on gonfle pour se donner
     // raison vaut moins qu'un zéro assumé.*
+    // ── SEC-10 : UNE sortie, à code VARIABLE, comme GOV-037 ──────────────────────────────────
+    'scripts/gates/rate-famille.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO ici, comme `gov-check.ts` : ses témoins d'effet vivent dans
+      // `tests/unit/securite/rate-famille.spec.ts`, pas dans le tableau `REFUS` de CE fichier.
+      temoins: 0,
+      raison:
+        'SEC-10 — la garde de famille des compteurs de débit. UNE sortie, `process.exit(code)`, ' +
+        'commune au contrôle et à `--prove` : 0 si aucune faute, 1 sur une faute, 2 si la garde ' +
+        'a levé. Éprouvée sur le binaire par deux témoins d’EFFET de `rate-famille.spec.ts` (une ' +
+        'copie de travail sans conduite sur panne, une qui laisse passer en panne : sortie 1, ' +
+        'préfixe nommé) et un contre-témoin (le dépôt : sortie 0).',
+    },
     'scripts/gates/gov-attestation.ts': {
       total: 3,
       porte: 3,
@@ -883,7 +897,20 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     //
     //     scripts/gates/journal-sans-pii.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
     //
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(39);
+    // 🔧 39 → 40 par SEC-10, ARBITRÉ et non subi. Le cliquet a rougi en NOMMANT le fichier :
+    //
+    //     scripts/gates/rate-famille.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //
+    // Une sortie à code variable, `process.exit(code)`, vue en 1 et en 0 sur le binaire. UX-P0-02
+    // (#79) a atterri d'abord et pris le 38 ; au rebase, le compte a rougi, relu et non deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 39 to be 38
+    //
+    // DM-01 (#75) a ensuite atterri avec sa propre sortie et pris le 39 ; à la fusion de `main`
+    // dans cette branche, le compte a rougi de nouveau, relu et non deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 40 to be 39
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(40);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
