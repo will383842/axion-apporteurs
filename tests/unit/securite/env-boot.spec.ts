@@ -345,9 +345,11 @@ describe('REQ-SEC-028 — les règles de forme, jugées par la fonction pure', (
       ['production', `STUB_${valeurAuHasard()}`, [refuse]],
       ['test', `stub${valeurAuHasard()}`, []],
       ['development', `DEV_${valeurAuHasard()}`, []],
-      // Un préfixe proche n'est pas le préfixe : « dev » sans souligné, « stu » sans b.
+      // Un préfixe proche n'est pas le préfixe : « dev » sans souligné, « stu » suivi d'un souligné.
+      // Pas « stu » suivi d'un hexadécimal au hasard : il commence par b une fois sur seize (vu le
+      // 2026-09-19, témoin instable).
       ['production', `deva${valeurAuHasard()}`, []],
-      ['production', `stu${valeurAuHasard()}`, []],
+      ['production', `stu_${valeurAuHasard()}`, []],
     ];
     for (const [nodeEnv, v, attendu] of cas) {
       expect(refusDe({ ...base, [nom]: v, NODE_ENV: nodeEnv }), `NODE_ENV=${nodeEnv}`).toEqual(
