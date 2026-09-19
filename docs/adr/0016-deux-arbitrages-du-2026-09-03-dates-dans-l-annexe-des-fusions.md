@@ -11,8 +11,8 @@
 | **Règle maison appliquée** | RM-01, RM-02 |
 | **Remplace / remplacé par** | — |
 
-> ⚠️ **Numéro provisoire.** Au 2026-09-19, `main` porte `0014` (PR 78) et la PR 75 prendra `0015` :
-> cet ADR prend donc `0016`, et le numéro se fixe à l'atterrissage. Les deux renvois de
+> ⚠️ **Numéro.** Au 2026-09-19, `main` porte `0014` (PR 78) et `0015` (PR 75) : cet ADR prend donc
+> `0016`. S'il devait encore changer à l'atterrissage, les deux renvois de
 > `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` et celui de `scripts/gates/gov-requirements.ts` suivent le
 > renumérotage.
 
