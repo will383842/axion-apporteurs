@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `87fb212` — 2026-09-19T00:46:28+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #59 (rien) · 2. #64 (rien) |
+| Où est `main` ? | `a8221af` — 2026-09-19T04:42:28+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #59 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T01 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 71.60 j |
-| Le prochain pas | fusionner #59, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
+| Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #64 — 2026-09-18 |
 
-**Ce qu’on tape maintenant.** `gh pr view 59 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,8 +64,7 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | rien — fusionnable maintenant |
-| 2 | #64 — feat(GOV-077): la relecture se proportionne au risque, aucune revue n est pas toutes refusent | `t/gov-077` | rien — fusionnable maintenant |
+| 1 | #59 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance | `t/qa-t01` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -88,13 +87,11 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Prochain pas
 
-**Fusionner #59** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-
 **QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 32 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `87fb212` (2026-09-19T00:46:28+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `a8221af` (2026-09-19T04:42:28+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -159,43 +156,42 @@ première mesure l'a rangée dans son propre complément. Et `gov:inventaire` ga
 que ce compte est épinglé par une spécification hors des `paths` de la tâche : ajouter une famille
 aurait élargi le périmètre de la PR.
 
-### PR #55 — 2026-09-17 — test(GOV-039): un titre de test confronte son identifiant au texte de l exigence nommee
+### PR #59 — 2026-09-18 — feat(QA-T01): squelette de tests et Gate A bloquante, domaine a 100 %, lint sans tolerance
 
-**Fait.** `gov:requirements` confronte désormais `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` au registre :
-pour chacune des 28 fusions décidées, la survivante doit être active, chaque absorbée doit porter son
-renvoi, et chaque MARQUEUR du texte décidé — les 66 spans de code de l'arbitrage, dérivés et jamais
-listés — doit se retrouver dans le texte appliqué. Le rouge d'origine portait sur REQ-QA-014, que
-cette PR couvre : l'arbitrage rendu exigeait « le titre `it()` contient son identifiant » et « les
-corps de PR listent `Couvre: REQ-nnn` », et le texte appliqué disait l'inverse. Le texte en vigueur les
-reprend, sans perdre la clause `@req`. Les 87 titres de la garde d'entité qui s'étiquetaient
-REQ-CPL-018 en parlant d'IBAN, de BIC et de SIREN portent REQ-GOV-031 ; le seul titre qui teste
-REQ-CPL-018 pour de bon n'a pas bougé et un témoin le protège en exigeant que tout titre qui la nomme
-LISE sa ligne source. Cinq titres nommaient une exigence absorbée sans son renvoi : ils le portent.
-Après trois refus de lentille le 2026-09-18, la spécification lit les titres par LA lecture de
-`gov:trace`, et sur son périmètre, sortis dans `scripts/lot/titres-ecrits.ts` ; la garde juge un
-marqueur comme jeton délimité — `siren` et `signe` ne tenaient que par sous-chaîne, et rejoignent la
-dette — et nomme toute puce de fusion qu'elle ne sait pas lire, compte déclaré de l'annexe à l'appui.
+**Fait.** `pnpm test` lance désormais `vitest run --coverage` et applique 100 % lignes et branches à
+chaque fichier de `src/domain/**`, `perFile` nommant le fichier sous le seuil ; `tests/setup.ts`
+existe et est chargé par `setupFiles`. Les 13 avertissements ESLint de la PR 44 sont corrigés à la
+source et les deux blocs de dette retirés : `pnpm lint` sort en 0 sans un seul avertissement. Le lint
+du domaine refuse la base, le cache, le réseau et l'horloge système par leur nom usuel. La spec
+`tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` porte trois témoins à deux faces, un par
+exigence, et elle est le script de `G-SEC-CI-BLOQUANTE`, dont la `preuveRouge` est posée : aucun job
+ni aucune étape d'aucun workflow ne porte `continue-on-error`, lu par un vrai analyseur YAML.
+`etats.ts` passe de 73,33 % à 100 % par un test de domaine qui dérive les statuts non occupants de
+REQ-DM-006. Règle du domaine : sous `src/domain/**`, rien que du `.ts` NON-TEST — ni autre
+extension, ni `*.spec.ts`, ni `*.test.ts`, ni `*.d.ts` ; les tests vivent sous `tests/`. Et aucune
+ligne du domaine ne parle de couverture, lue ENTIÈRE : les formes que le fournisseur installé accepte sont
+lues dans son code, et chacune est vue rougir.
 
-**Reste.** Vingt-cinq clauses décidées manquent encore au texte appliqué de quinze exigences ; elles
-sont déclarées, datées et motivées dans `DETTE_TEXTE_DECIDE`, et aucune n'est réparable par un agent —
-sept touchent à l'ARGENT, cinq à la SÉCURITÉ, deux portent un ré-arbitrage postérieur à l'annexe qui
-périme l'annexe elle-même, et non le registre. Le geste juste y est un ADR, pas un champ réécrit. La
-part non mécanisable de GOV-039 — « ce titre parle-t-il du bon sujet » — reste une RELECTURE NOMMÉE :
-quatre mécanisations ont été mesurées et abandonnées, leurs chiffres sont dans l'en-tête de la
-spécification. La dette GOV-082 reste ouverte. La dette relevée sur la PR 48 qui annonçait un écart
-14 contre 13 est PÉRIMÉE : `--prove` mesure bien 14 sur la tête fusionnée.
+**Reste.** Les formes voisines des interdits du domaine sont fermées par GOV-076 : import sans
+préfixe, `import()` dynamique, `globalThis.fetch`, `Date['now']`, console par alias. REQ-QA-013 n'est
+couverte qu'en partie : semgrep, testcontainers, audit, gitleaks, `req:check`, `idor:check`, lint de
+migration et size-limit restent à leurs tâches. La couverture globale de CONVENTIONS §6 n'est pas
+livrée. Le détecteur de `continue-on-error` existe en double avec le témoin étroit de CPL-T01, et la
+lecture YAML en double avec `gardes-transposees.spec.ts` : dettes, pas tâches. Le désarmement d'une
+étape par le shell, `run: pnpm test || true`, n'est jugé par aucun témoin de cette spec : dette
+listée. L'en-tête de `tests/setup.ts` ne nomme pas les deux tâches qui le rempliront, parce que
+`gov:attributions` refuse qu'un fichier neuf nomme en tête une tâche dont il n'est pas : dette. Tout fichier neuf
+sous `src/domain/` doit arriver couvert à 100 % dans sa propre PR, et une passe partielle se lance
+par `npx vitest run`, jamais par `pnpm test` suivi d'un fichier, qui rougit sur le seuil.
 
-**Appris.** Nommer une tâche dans la prose d'une entrée de `docs/gates.json` exige que le FICHIER de
-cette gate soit dans les `paths` de la tâche nommée — pas dans ceux de la tâche qui écrit.
-`gov:attributions` a refusé en `mention_hors_paths` un amendement daté qui se contentait de se
-signer : la prose d'une gate se date, elle ne s'attribue qu'au porteur du script. Et un module de
-garde importé par sa propre spécification tue le worker `vitest` au premier `process.exit` : sans
-`LANCE_EN_SCRIPT`, la suite entière sort en `no tests` sur le refus `process.exit unexpectedly`
-du worker — une garde qui EXÉCUTE son code au lieu d'en lire le texte paie d'abord ce prix-là.
-Une lecture qu'on ne peut pas importer finit recopiée, et la copie est la plus pauvre : la seconde
-lecture des titres ratait quinze titres à identifiant, et une exigence absorbée y passait en exit 0.
+**Appris.** `pnpm test --coverage.reportsDirectory=x` est refusé par pnpm en « Unknown options » et
+sort en 0 : sous la forme courte, pnpm lit les drapeaux pour lui. `pnpm run test` les passe au
+script. Sans `reportOnFailure`, vitest n'imprime aucun seuil dès qu'un autre test échoue : le premier
+rouge de couverture est resté muet sur une suite qui portait dix autres échecs. Et `gov:attributions`
+lit les vingt premières lignes de chaque fichier : nommer une tâche voisine en tête d'un fichier neuf
+la fait rougir en `mention_hors_paths`, même pour dire qui le remplira.
 
-… 20 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 21 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

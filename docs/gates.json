@@ -659,7 +659,7 @@
       "tache": "QA-T01",
       "verifie": "aucun job de gate ne porte continue-on-error",
       "fixtureRouge": "ajouter continue-on-error a un job de gate",
-      "preuveRouge": null
+      "preuveRouge": "le detecteur lit par un VRAI analyseur YAML chaque job et chaque etape de CHAQUE workflow de .github/workflows (liste derivee du disque, compte imprime, planchers > 0) et nomme l'etape qui PORTE la cle continue-on-error, a toute valeur : vu ROUGE sur une copie EN MEMOIRE de ci.yml ou l'etape « Tests » de gate-a porte continue-on-error: ${{ true }} (seule « Tests » nommee), sur l'etape du MILIEU de gate-a, derivee de son rang (n° 32 sur 63 le 2026-09-19, « La garde du registre d entite sait rougir »), et sur l'avant-derniere (Typecheck) dont la cle precede name, en mapping entre accolades et en cle citee (Format), et au niveau JOB dans nightly.yml (gates-prouvees) — que le temoin etroit de G-SEC-GATE-A-BLOQUANTE laisse passer ; les commentaires de ci.yml et nightly.yml qui citent le mot restent VERTS ; un workflow sans jobs, a jobs vides ou porteur d'une ancre fait LEVER, jamais rendre vide ; le ci.yml du depot rend une liste vide"
     },
     {
       "id": "G-SEC-GATE-A-BLOQUANTE",

@@ -142,6 +142,19 @@ export type Vue = {
 };
 
 type Entree = { name?: string; path?: string; limit?: string; gzip?: boolean };
+
+/**
+ * `lighthouserc.json` tel que `rendreLighthouserc` le produit : la forme que la garde LIT (chaque
+ * niveau optionnel, un fichier tronqué se juge au lieu de faire planter) et que ses témoins FONT
+ * VARIER. Un type plutôt que `any` : une mutation qui viserait un chemin que le rendu n'a pas ne
+ * compile plus.
+ */
+export type Lighthouserc = {
+  ci: {
+    collect: { numberOfRuns: number; settings: Record<string, unknown> };
+    assert: { assertions: Record<string, [string, { maxNumericValue: number }]> };
+  };
+};
 type Budgets = { sizeLimit?: Entree[] };
 
 // ── dérivation : les seuils se LISENT dans le registre, ils ne sont jamais tapés (RM-01) ──────
@@ -321,9 +334,9 @@ export function controler(vue: Vue): Faute[] {
       },
     ];
   }
-  let lhrc: Record<string, any>;
+  let lhrc: { ci?: Partial<Lighthouserc['ci']> };
   try {
-    lhrc = JSON.parse(vue.lighthouserc) as Record<string, any>;
+    lhrc = JSON.parse(vue.lighthouserc) as { ci?: Partial<Lighthouserc['ci']> };
   } catch (e) {
     return [
       {
@@ -585,8 +598,8 @@ function prouver(): number {
     b.sizeLimit.push(entree);
     return { ...v, budgets: JSON.stringify(b, null, 2) };
   };
-  const muterLhrc = (v: Vue, muter: (c: Record<string, any>) => void): Vue => {
-    const c = JSON.parse(v.lighthouserc) as Record<string, any>;
+  const muterLhrc = (v: Vue, muter: (c: Lighthouserc) => void): Vue => {
+    const c = JSON.parse(v.lighthouserc) as Lighthouserc;
     muter(c);
     return { ...v, lighthouserc: `${JSON.stringify(c, null, 2)}\n` };
   };
@@ -667,7 +680,7 @@ function prouver(): number {
       famille: 'seuil_divergent',
       defaut: () =>
         muterLhrc(vue, (c) => {
-          c.ci.assert.assertions[AUDIT_LCP][1].maxNumericValue = 2500;
+          c.ci.assert.assertions[AUDIT_LCP]![1].maxNumericValue = 2500;
         }),
     },
     {
@@ -681,7 +694,7 @@ function prouver(): number {
       famille: 'lhci_non_bloquant',
       defaut: () =>
         muterLhrc(vue, (c) => {
-          c.ci.assert.assertions[AUDIT_CLS][0] = 'warn';
+          c.ci.assert.assertions[AUDIT_CLS]![0] = 'warn';
         }),
     },
     {

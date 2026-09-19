@@ -871,7 +871,8 @@ function valeurYaml(n: NoeudYaml | null | undefined): unknown {
  * exacte est ce qui rend la configuration jugée plus bas égale à celle que la CI applique.
  */
 const SCRIPTS_EXACTS: Readonly<Record<string, string>> = {
-  lint: 'eslint .',
+  // `--max-warnings 0` (QA-T01) : un avertissement fait échouer l'étape, il n'est jamais toléré.
+  lint: 'eslint . --max-warnings 0',
   'format:check': 'prettier --check .',
 };
 
@@ -1189,7 +1190,7 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     expect(exiges.filter((s) => !pkg.scripts?.[s])).toEqual([]);
   });
 
-  it('`lint` et `format:check` sont EXACTEMENT `eslint .` et `prettier --check .`', () => {
+  it('`lint` et `format:check` sont EXACTEMENT `eslint . --max-warnings 0` et `prettier --check .`', () => {
     // Ni drapeau, ni portée, ni `||` : c'est l'égalité qui fait de la configuration jugée plus bas
     // celle que `pnpm lint` et `pnpm format:check` appliquent réellement.
     const vus = Object.fromEntries(Object.keys(SCRIPTS_EXACTS).map((s) => [s, pkg.scripts?.[s]]));
