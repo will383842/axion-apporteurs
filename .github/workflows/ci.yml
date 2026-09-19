@@ -245,9 +245,9 @@ jobs:
       # le bundle n'y rougit, et la documentation du depot a affirme le contraire pendant des
       # mois. Une gate qui ne bloque rien ne garde rien.
       #
-      # CE QUE CHACUNE NE MESURE PAS n'est pas recopie ici : les avertissements toleres et les
-      # fichiers qui les portent sont nommes dans `eslint.config.mjs`, les fichiers hors format
-      # dans `.prettierignore`, chacun avec son motif. Et chaque etape reste EXACTEMENT
+      # CE QUE CHACUNE NE MESURE PAS n'est pas recopie ici : depuis QA-T01, aucun avertissement
+      # n'est tolere (`eslint . --max-warnings 0`, aucune regle en `warn`) ; les fichiers hors format
+      # sont dans `.prettierignore`, chacun avec son motif. Et chaque etape reste EXACTEMENT
       # `run: pnpm lint` / `run: pnpm format:check`, sans `if:` ni `||` :
       # `gardes-transposees.spec.ts` juge l'acte de l'etape, pas l'absence d'un mot.
       - name: Lint

@@ -47,6 +47,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { parsers as analyseursYaml } from 'prettier/plugins/yaml';
@@ -342,12 +343,12 @@ function messagesDe(messages: readonly MessageLint[], fichier: string): MessageL
 
 // ── REQ-QA-002 : la couverture du domaine ───────────────────────────────────────────────────────
 
-/** Les fichiers de code du domaine, DÉRIVÉS du disque (ni test, ni déclaration). */
+/**
+ * TOUS les fichiers du domaine, DÉRIVÉS du disque, sans filtre : un test, une déclaration ou un
+ * fichier d'une autre extension posé sous `src/domain/` apparaît ici, et diverge de la liste mesurée.
+ */
 function fichiersDuDomaine(): string[] {
-  return readdirSync(DOMAINE, { recursive: true, encoding: 'utf8' })
-    .map((f) => `${DOMAINE}/${f.split('\\').join('/')}`)
-    .filter((f) => /\.tsx?$/.test(f) && !/\.(?:test|spec|d)\.tsx?$/.test(f))
-    .sort();
+  return fichiersSous(DOMAINE).map((f) => `${DOMAINE}/${f}`);
 }
 
 /** Le seul fichier de test que la passe partielle charge : il couvre `etats.ts`, et lui seul. */
@@ -403,45 +404,104 @@ function fichiersSous(racine: string): string[] {
 }
 
 /**
- * REQ-QA-001 : le bloc de pureté d'`eslint.config.mjs` vise les `.ts` de `src/domain/**`. Un fichier
- * du domaine d'une AUTRE extension (`.tsx`, `.mts`, `.js`…) échapperait au lint de pureté. Plutôt que
- * d'énumérer des extensions — et d'en oublier une —, tout fichier sous `src/domain/**` qui ne finit
- * pas par `.ts` est REFUSÉ : échec fermé, un fichier de données ou de texte posé là rougit aussi,
- * nommé.
+ * RIEN QUE DU `.ts` NON-TEST SOUS `src/domain/**`, sans exception. Le bloc de pureté
+ * d'`eslint.config.mjs` vise les `.ts` du domaine : un fichier d'une AUTRE extension (`.tsx`, `.mts`,
+ * `.js`…) y échapperait. Un `*.spec.ts` ou un `*.test.ts` est exécuté par Vitest mais EXCLU de la
+ * mesure de couverture : du code de domaine qui s'y logerait tournerait sans être compté. Un `*.d.ts`
+ * est lui aussi hors mesure. Les tests vivent sous `tests/`. Tout autre fichier est REFUSÉ, nommé :
+ * échec fermé, un fichier de données ou de texte posé là rougit aussi.
  */
-function horsExtensionDuDomaine(racine: string): { lus: number; fautes: string[] } {
+function nonAdmisSousLeDomaine(racine: string): { lus: number; fautes: string[] } {
   const fichiers = fichiersSous(racine);
+  const admis = (f: string) => f.endsWith('.ts') && !/\.(?:spec|test|d)\.ts$/.test(f);
   return {
     lus: fichiers.length,
-    fautes: fichiers.filter((f) => !f.endsWith('.ts')).map((f) => `${DOMAINE}/${f}`),
+    fautes: fichiers.filter((f) => !admis(f)).map((f) => `${DOMAINE}/${f}`),
   };
 }
 
 /**
- * Une directive d'EXCLUSION DE COUVERTURE (familles v8, c8, istanbul, node:coverage) n'a pas sa place
- * sous `src/domain/**` : le seuil de 100 % doit mesurer tout le code livré. Elle est refusée quelle
- * que soit la casse, l'espacement (saut de ligne compris) ou l'extension du fichier. Le texte entier
- * est lu, pas seulement les commentaires : une chaîne qui la citerait rougit aussi — échec fermé,
- * voulu.
+ * Les commentaires d'un texte — en bloc, même non refermé, et en ligne. La lecture est volontairement
+ * LARGE : un `//` ou un `/*` logé dans une chaîne ouvre lui aussi un « commentaire » ici. Le fournisseur
+ * de couverture lit ses directives LIGNE À LIGNE, chaînes comprises : lire plus large que lui est le
+ * bon sens d'erreur.
  */
-const DIRECTIVE_D_EXCLUSION = /(?:\b(?:v8|c8|istanbul)|node:coverage)\s*ignore/gi;
+const COMMENTAIRE = /\/\*[\s\S]*?(?:\*\/|$)|\/\/[^\n]*/g;
 
 /**
- * Chaque directive d'exclusion trouvée sous `racine` (tous les fichiers, toutes extensions, à toute
- * profondeur), nommée `src/domain/<chemin>:<ligne>`, et le nombre de fichiers LUS : un parcours qui
- * ne lirait plus rien rendrait le même `[]` qu'un domaine sain.
+ * Un commentaire qui PARLE de couverture. Pas une liste de directives connues — le fournisseur en
+ * accepte plus qu'on n'en devine (sa classe de caractères admet `|8`, il honore `node:coverage
+ * disable`) —, mais les mots dont toute directive d'exclusion a besoin, casse ignorée. Un faux positif
+ * coûte un mot de commentaire ; un faux négatif coûte le seuil.
  */
-function directivesDExclusion(racine: string): { lus: number; fautes: string[] } {
+const PARLE_DE_COUVERTURE = /ignore|coverage|istanbul|[a-z|]8\s/i;
+
+/**
+ * Chaque commentaire suspect sous `racine` (tous les fichiers, à toute profondeur), nommé
+ * `src/domain/<chemin>:<ligne>`, et le nombre de fichiers LUS : un parcours qui ne lirait plus rien
+ * rendrait le même `[]` qu'un domaine sain.
+ */
+function commentairesDeCouverture(racine: string): { lus: number; fautes: string[] } {
   const fichiers = fichiersSous(racine);
   const fautes: string[] = [];
   for (const f of fichiers) {
     const texte = readFileSync(join(racine, f), 'utf8');
-    for (const m of texte.matchAll(DIRECTIVE_D_EXCLUSION)) {
-      const ligne = texte.slice(0, m.index).split('\n').length;
-      fautes.push(`${DOMAINE}/${f}:${ligne}`);
+    for (const m of texte.matchAll(COMMENTAIRE)) {
+      if (!PARLE_DE_COUVERTURE.test(m[0])) continue;
+      fautes.push(`${DOMAINE}/${f}:${texte.slice(0, m.index).split('\n').length}`);
     }
   }
   return { lus: fichiers.length, fautes };
+}
+
+/**
+ * Les expressions régulières par lesquelles le fournisseur de couverture INSTALLÉ reconnaît une
+ * directive d'exclusion — lues dans le `provider.js` de `@vitest/coverage-v8` résolu depuis
+ * `node_modules`, méthode `_parseIgnore`. LÈVE si le fichier, la méthode ou une expression manque :
+ * un témoin qui ne lit plus les formes du fournisseur ne prouverait rien.
+ */
+function formesDuFournisseur(): RegExp[] {
+  const requerir = createRequire(join(process.cwd(), 'package.json'));
+  const provider = join(dirname(requerir.resolve('@vitest/coverage-v8')), 'provider.js');
+  const source = readFileSync(provider, 'utf8');
+  const debut = source.search(/_parseIgnore\s*\(lineStr\)\s*\{/);
+  if (debut < 0) throw new Error(`${provider} : méthode _parseIgnore introuvable`);
+  let profondeur = 0;
+  let fin = debut;
+  for (let i = source.indexOf('{', debut); i < source.length; i += 1) {
+    if (source[i] === '{') profondeur += 1;
+    if (source[i] === '}' && --profondeur === 0) {
+      fin = i;
+      break;
+    }
+  }
+  const corps = source.slice(debut, fin);
+  const formes = [...corps.matchAll(/\.match\(\/((?:\\.|[^/\\\n])+)\/([a-z]*)\)/g)].map(
+    (m) => new RegExp(m[1]!, m[2])
+  );
+  if (formes.length === 0) throw new Error(`${provider} : aucune expression lue dans _parseIgnore`);
+  return formes;
+}
+
+/**
+ * Des lignes candidates, larges : chaque caractère imprimable suivi de `8`, et `node:coverage`,
+ * combinés à chaque mode connu. Les formes RETENUES sont celles qu'une expression du fournisseur
+ * accepte ; une expression qui n'en accepterait aucune fait rougir le témoin — forme non dérivée.
+ */
+function candidatsDeDirective(): string[] {
+  const prefixes = [
+    ...Array.from({ length: 0x7e - 0x21 + 1 }, (_, i) => `${String.fromCharCode(0x21 + i)}8`),
+    'node:coverage',
+  ];
+  const modes = [
+    'ignore next',
+    'ignore next 3',
+    'ignore start',
+    'ignore stop',
+    'disable',
+    'enable',
+  ];
+  return prefixes.flatMap((p) => modes.map((m) => `/* ${p} ${m} */`));
 }
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════
@@ -587,18 +647,20 @@ describe('REQ-QA-013 — aucune gate ne se désarme par `continue-on-error`, et 
 });
 
 describe('REQ-QA-001 — `pnpm lint` refuse toute I/O sous `src/domain/**`', () => {
-  it('REQ-QA-001 — tout fichier de `src/domain/**` est un `.ts`, que le bloc de pureté du lint couvre', () => {
-    const { lus, fautes } = horsExtensionDuDomaine(DOMAINE);
+  it('REQ-QA-001 — tout fichier de `src/domain/**` est un `.ts` non-test, que le bloc de pureté du lint couvre et que la couverture mesure', () => {
+    const { lus, fautes } = nonAdmisSousLeDomaine(DOMAINE);
     expect(lus).toBeGreaterThan(0);
     expect(fautes).toEqual([]);
   });
 
-  it('REQ-QA-001 — et ce témoin SAIT rougir : toute autre extension, dans un sous-dossier du MILIEU, est nommée', () => {
+  it('REQ-QA-001 — et ce témoin SAIT rougir : toute autre extension, un test ou une déclaration, dans un sous-dossier du MILIEU, est nommé', () => {
     const racine = mkdtempSync(join(tmpdir(), 'qa4-'));
     try {
       const plantes = [
         'attribution/sain.ts',
-        'attribution/types.d.ts',
+        'm-milieu/profond/types.d.ts',
+        'm-milieu/profond/faute.spec.ts',
+        'm-milieu/profond/faute.test.ts',
         'm-milieu/profond/horloge.tsx',
         'm-milieu/profond/b.mts',
         'm-milieu/profond/c.cts',
@@ -613,7 +675,7 @@ describe('REQ-QA-001 — `pnpm lint` refuse toute I/O sous `src/domain/**`', () 
         mkdirSync(dirname(join(racine, f)), { recursive: true });
         writeFileSync(join(racine, f), 'export const a = 1;\n');
       }
-      const { lus, fautes } = horsExtensionDuDomaine(racine);
+      const { lus, fautes } = nonAdmisSousLeDomaine(racine);
       expect(lus).toBe(plantes.length);
       expect(fautes).toEqual(
         plantes
@@ -668,40 +730,53 @@ describe('REQ-QA-002 — 100 % lignes et branches sur `src/domain/**`, appliqué
     expect(nommes.some((f) => relative(DOMAINE, dirname(f)) !== '')).toBe(true);
   }, 600_000);
 
-  it('REQ-QA-002 — aucune directive d’exclusion de couverture sous `src/domain/**` : le seuil mesure tout le code livré', () => {
-    const { lus, fautes } = directivesDExclusion(DOMAINE);
-    expect(lus).toBeGreaterThanOrEqual(fichiersDuDomaine().length);
+  it('REQ-QA-002 — aucun commentaire de `src/domain/**` ne parle de couverture : le seuil mesure tout le code livré', () => {
+    const { lus, fautes } = commentairesDeCouverture(DOMAINE);
+    expect(lus).toBe(fichiersDuDomaine().length);
+    expect(lus).toBeGreaterThan(0);
     expect(fautes).toEqual([]);
   });
 
-  it('REQ-QA-002 — et ce témoin SAIT rougir : chaque forme, chaque extension, dans un sous-dossier du MILIEU, est nommée à sa ligne', () => {
+  it('REQ-QA-002 — et ce témoin SAIT rougir : chaque forme que le fournisseur INSTALLÉ accepte, dans un sous-dossier du MILIEU, est nommée', () => {
+    const formes = formesDuFournisseur();
+    const candidats = candidatsDeDirective();
+    // Chaque expression du fournisseur doit accepter au moins un candidat : sinon une forme lui échappe.
+    expect(formes.filter((re) => !candidats.some((c) => re.test(c))).map(String)).toEqual([]);
+    const retenues = candidats.filter((c) => formes.some((re) => re.test(c)));
+    console.info(`[QA-T01] ${formes.length} expressions du fournisseur, ${retenues.length} formes`);
+    // Témoins positifs : les deux formes que la liste tapée d'avant laissait passer sont bien lues.
+    expect(retenues).toContain('/* |8 ignore start */');
+    expect(retenues).toContain('/* node:coverage disable */');
+    // Et des formes écrites à la main : casse, espaces, saut de ligne, `istanbul`, commentaire en ligne.
+    const aLaMain = [
+      '/*V8   IGNORE next 3*/',
+      '/* v8\n   ignore stop */',
+      '// c8 ignore next',
+      '/* istanbul ignore else */',
+    ];
     const racine = mkdtempSync(join(tmpdir(), 'qa3-'));
     try {
       const plantes: Record<string, string> = {
         'attribution/sain.ts': 'export const a = 1;\n',
-        'm-milieu/profond/a.ts': 'export const a = 1;\n/* v8 ignore start */\n',
-        'm-milieu/profond/b.tsx': 'export const b = 1;\n/*V8   IGNORE next 3*/\n',
-        'm-milieu/profond/c.mts': '// c8 ignore next\n',
-        'm-milieu/profond/d.cts': '\n\n/* istanbul ignore else */\n',
-        'm-milieu/profond/e.ts': '/* node:coverage ignore next */\n',
-        'm-milieu/profond/f.ts': '/* v8\n   ignore stop */\n',
-        // Contre-témoin : les deux mots, séparés, ne sont pas une directive.
-        'zz-fin/sain.ts': '// on ignore ce cas ; le moteur v8 le traite ailleurs\n',
+        // Contre-témoin : un commentaire qui ne parle pas de couverture.
+        'zz-fin/sain.ts': '// la clause se génère depuis la constante\nexport const z = 1;\n',
       };
+      [...retenues, ...aLaMain].forEach((ligne, i) => {
+        plantes[`m-milieu/profond/f${i}.ts`] =
+          `export const a = 1;\n${ligne}\nexport const b = 2;\n`;
+      });
       for (const [f, texte] of Object.entries(plantes)) {
         mkdirSync(dirname(join(racine, f)), { recursive: true });
         writeFileSync(join(racine, f), texte);
       }
-      const { lus, fautes } = directivesDExclusion(racine);
+      const { lus, fautes } = commentairesDeCouverture(racine);
       expect(lus).toBe(Object.keys(plantes).length);
-      expect(fautes).toEqual([
-        `${DOMAINE}/m-milieu/profond/a.ts:2`,
-        `${DOMAINE}/m-milieu/profond/b.tsx:2`,
-        `${DOMAINE}/m-milieu/profond/c.mts:1`,
-        `${DOMAINE}/m-milieu/profond/d.cts:3`,
-        `${DOMAINE}/m-milieu/profond/e.ts:1`,
-        `${DOMAINE}/m-milieu/profond/f.ts:1`,
-      ]);
+      expect(fautes).toEqual(
+        Object.keys(plantes)
+          .filter((f) => f.startsWith('m-milieu/'))
+          .sort()
+          .map((f) => `${DOMAINE}/${f}:2`)
+      );
     } finally {
       rmSync(racine, { recursive: true, force: true });
     }
