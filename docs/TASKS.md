@@ -882,7 +882,7 @@ Couvre : `REQ-JUR-001`, `REQ-JUR-002`, `REQ-JUR-019`, `REQ-JUR-041`
 
 **Tests.** `axionia/src/content/__tests__/remuneration-indicative.spec.ts`
 
-### CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle D3 en fonction pure
+### CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure
 
 `1.5 j` · zone `gouvernance` · depend de `QA-T01`
 

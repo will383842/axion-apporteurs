@@ -3558,7 +3558,7 @@
     },
     {
       "id": "CPL-T13",
-      "titre": "Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle D3 en fonction pure",
+      "titre": "Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure",
       "phase": 0,
       "repo": "partners",
       "zone": "gouvernance",
