@@ -1562,9 +1562,9 @@ if (process.argv.includes('--prove')) {
         return controler(u);
       },
     },
-    // ── QA-T03 : les pannes R1 à R7 du brief, chacune sur sa famille, avec son motif ──────────
+    // ── QA-T03 : les pannes panne-1 à panne-7 du brief, chacune sur sa famille, avec son motif ──────────
     {
-      cle: 'R1',
+      cle: 'panne-1',
       famille: 'test_promis_non_vert',
       attendu: 'skipped',
       // Le ROUGE d'origine : le seul test titré de l'exigence est un `it.skip`. La garde d'avant
@@ -1577,7 +1577,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R2a',
+      cle: 'panne-2a',
       famille: 'req_non_citee_par_son_test',
       attendu: 'aucun titre de `it()` ne contient REQ-AAA-001',
       // `@req` seul : aucun titre de test ne porte l'identifiant.
@@ -1592,7 +1592,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R2b',
+      cle: 'panne-2b',
       famille: 'req_non_citee_par_son_test',
       attendu: 'ni `@req REQ-AAA-001` en tête',
       // Le titre seul : aucune annotation `@req`.
@@ -1605,7 +1605,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R3',
+      cle: 'panne-3',
       famille: 'req_non_citee_par_son_test',
       attendu: 'ligne 40, pas en tête',
       // `@req` écrite ligne 40, après les `import` : pas en tête.
@@ -1620,7 +1620,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R4',
+      cle: 'panne-4',
       famille: 'annotation_absorbee_sans_renvoi',
       attendu: 'tests/f/a.spec.ts:2 annote `@req REQ-AAA-003`',
       defaut: () => {
@@ -1630,7 +1630,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R5-absents',
+      cle: 'panne-5-absents',
       famille: 'resultats_illisibles',
       attendu: 'motif absents',
       defaut: () => {
@@ -1640,7 +1640,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R5-illisibles',
+      cle: 'panne-5-illisibles',
       famille: 'resultats_illisibles',
       attendu: 'motif illisibles',
       defaut: () => {
@@ -1650,7 +1650,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R5-perimes',
+      cle: 'panne-5-perimes',
       famille: 'resultats_illisibles',
       attendu: 'motif perimes — fixture ne porte pas 1 fichier(s)',
       // Une passe PARTIELLE : un fichier exécuté manque aux résultats.
@@ -1661,7 +1661,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R6',
+      cle: 'panne-6',
       famille: 'test_promis_non_vert',
       attendu: 'la promesse vise CE test',
       // Le test PROMIS par son titre échoue ; un AUTRE test du fichier, titré de l'exigence, passe.
@@ -1680,7 +1680,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R7',
+      cle: 'panne-7',
       famille: 'req_non_citee_par_son_test',
       attendu: 'un `describe` le porte',
       // L'identifiant dans le `describe` seulement.
@@ -1694,7 +1694,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R-milieu',
+      cle: 'panne-milieu',
       famille: 'test_promis_non_vert',
       attendu: 'aucun test de tests/f/c.spec.ts',
       // Trois promesses, la paire en échec au MILIEU : ni la première ni la dernière ne décident.
@@ -1718,7 +1718,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R7-resolu',
+      cle: 'panne-7-resolu',
       famille: 'req_non_citee_par_son_test',
       attendu: 'aucun titre de `it()` ne contient REQ-AAA-001',
       // Le nom RÉSOLU porte l'identifiant — mais dans son segment `describe`, pas dans le dernier.
@@ -1744,7 +1744,7 @@ if (process.argv.includes('--prove')) {
   const CONTRE_TEMOINS: { nom: string; muter: () => Univers; cle?: string }[] = [
     // ── QA-T03 ──────────────────────────────────────────────────────────────────────────────
     {
-      cle: 'R4-renvoi',
+      cle: 'renvoi-porte',
       nom: 'une annotation d’exigence absorbée qui porte son renvoi vers la survivante',
       muter: () => {
         const u = copie(base);
@@ -1753,7 +1753,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R5-non-demandes',
+      cle: 'sans-resultats',
       nom: 'la garde sans `--resultats` : le vert n’est pas jugé, et c’est dit au résumé',
       muter: () => {
         const u = copie(base);
@@ -1762,7 +1762,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R-tous-verts',
+      cle: 'saute-et-vert',
       nom: 'un test titré SAUTÉ à côté d’un test titré VERT : la paire sans `#` est verte',
       muter: () => {
         const u = copie(base);
@@ -1776,7 +1776,7 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
-      cle: 'R-gabarit',
+      cle: 'gabarit-resolu',
       nom: 'un titre de `it()` en GABARIT (`describe.each`) : l’identifiant se lit dans le nom résolu',
       muter: () => {
         const u = copie(base);

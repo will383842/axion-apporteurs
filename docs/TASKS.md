@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**260 taches · 195.85 j estimes.**
+**260 taches · 196.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 98 | 76.85 | 5 |
+| 0 — Socle technique | 98 | 77.35 | 10 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -422,7 +422,7 @@ Couvre : `REQ-EXT-028`, `REQ-JUR-015`, `REQ-JUR-029`
 
 **Tests.** `tests/unit/juridique/seuils-ssot.spec.ts`
 
-### QA-T01 — Squelette de tests et Gate A bloquante
+### QA-T01 — Squelette de tests et Gate A bloquante ✅ **fusionnee**
 
 `0.5 j` · zone `qualite` · depend de `GOV-014`
 
@@ -432,7 +432,7 @@ Couvre : `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013`
 
 **Tests.** `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`
 
-### SEC-01 — Secrets distincts et validation d'environnement au boot
+### SEC-01 — Secrets distincts et validation d'environnement au boot ✅ **fusionnee**
 
 `0.5 j` · zone `securite` · depend de `QA-T01`
 
@@ -442,7 +442,7 @@ Couvre : `REQ-SEC-028`
 
 **Tests.** `tests/unit/securite/env-boot.spec.ts`
 
-### SEC-02 — En-têtes de sécurité et CSP par nonce
+### SEC-02 — En-têtes de sécurité et CSP par nonce ✅ **fusionnee**
 
 `0.5 j` · zone `securite` · sensible : attribution · depend de `QA-T01`
 
@@ -514,11 +514,11 @@ Couvre : `REQ-CPL-021`, `REQ-QA-019`, `REQ-QA-020`, `REQ-QA-030`
 
 ### QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check
 
-`0.5 j` · zone `qualite` · depend de `GOV-011`, `QA-T01`
+`1 j` · zone `qualite` · depend de `GOV-011`, `QA-T01`
 
 Couvre : `REQ-QA-014`
 
-**Acceptation.** `req:check` vérifie la PAIRE (tâche, REQ) → test nommé existant, annoté, vert.
+**Acceptation.** (1) `pnpm req:check` est la garde `req:check` DEJA inscrite (`scripts/gates/gov-trace.ts`, alias `gov:trace`), lancee avec les RESULTATS de la passe de tests (`--resultats test-results/vitest.json`, ecrits par `pnpm test`) : aucun second script, aucune seconde matrice. (2) PAIRE ANNOTEE DES DEUX FORMES : pour chaque paire (tache, REQ active) dont le fichier promis existe, le fichier porte `@req <REQ>` dans son premier bloc de commentaire ET au moins un titre de `it()` contenant l'identifiant ; REQ-QA-014 dit « et », la garde acceptait « ou ». (3) PAIRE VERTE : au moins un de ces tests a le statut `passed` dans les resultats — saute, `todo`, en echec ou absent ne couvre rien ; une promesse `#titre` exige CE test-la vert. (4) Une annotation `@req` qui nomme une exigence ABSORBEE sans porter son renvoi `→ REQ-…` sur la meme ligne est refusee, comme un titre. (5) Resultats absents, illisibles ou perimes (un fichier que la configuration execute et que les resultats ne portent pas) : rouge nomme, jamais un vert ; sans `--resultats`, `gov:trace` DIT que le vert n'est pas juge. (6) Gate A lance `pnpm req:check` juste apres l'etape « Tests », sans tolerance d'echec. (7) TEMOIN A DEUX FACES : chaque famille neuve a son temoin dans `gov:trace --prove` et un contre-temoin vert ; le depot reel sort en 0 apres mise en conformite des specs livrees, et le vert imprime le nombre de paires confrontees ET le nombre de paires vertes.
 
 **Tests.** `tests/unit/qualite/req-check.spec.ts`
 
@@ -882,7 +882,7 @@ Couvre : `REQ-JUR-001`, `REQ-JUR-002`, `REQ-JUR-019`, `REQ-JUR-041`
 
 **Tests.** `axionia/src/content/__tests__/remuneration-indicative.spec.ts`
 
-### CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure
+### CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure ✅ **fusionnee**
 
 `1.5 j` · zone `gouvernance` · depend de `QA-T01`
 
@@ -1366,7 +1366,7 @@ Couvre : `REQ-QA-001`, `REQ-QA-013`, `REQ-GOV-029`
 
 **Tests.** `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`
 
-### GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent
+### GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · aucune dependance
 

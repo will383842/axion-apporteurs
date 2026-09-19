@@ -17,9 +17,9 @@
  * LES PANNES, ET OÙ ELLES SONT FABRIQUÉES. Le jugement d'une paire se prouve sur l'univers de
  * FIXTURE de `gov:trace --prove` — un témoin NOMMÉ par panne, qui doit rougir sur SA famille avec
  * SON motif, et des contre-témoins verts. Ce fichier exige chacun de ces témoins par sa clé. Ce qui
- * dépend du DISQUE se prouve ici : la lecture de l'en-tête et du titre du test (R3, R7), des
- * résultats absents, tronqués ou partiels donnés à la garde sur le dépôt réel (R5), le câblage
- * (`package.json`, Gate A — R8) et l'absence d'un second script.
+ * dépend du DISQUE se prouve ici : la lecture de l'en-tête et du titre du test (panne-3, panne-7), des
+ * résultats absents, tronqués ou partiels donnés à la garde sur le dépôt réel (panne-5), le câblage
+ * (`package.json`, Gate A — panne-8) et l'absence d'un second script.
  */
 import { describe, it, expect, afterAll } from 'vitest';
 import { spawnSync } from 'node:child_process';
@@ -69,7 +69,7 @@ const REQ = '@' + 'req ';
 const [IT, TEST, DESCRIBE] = ['it', 'test', 'describe'];
 
 describe('REQ-QA-014 — la lecture : `@req` EN TÊTE, et le titre du `it()` lui-même', () => {
-  it('REQ-QA-014 — R3 : un `@req` écrit ligne 40, après les `import`, n’est PAS en tête ; ceux du premier bloc de commentaires le sont', () => {
+  it('REQ-QA-014 — panne-3 : un `@req` écrit ligne 40, après les `import`, n’est PAS en tête ; ceux du premier bloc de commentaires le sont', () => {
     const texte =
       `// ${REQ}REQ-AAA-001\n` +
       `/**\n * ${REQ}REQ-AAA-002 — dans le docblock\n */\n` +
@@ -85,7 +85,7 @@ describe('REQ-QA-014 — la lecture : `@req` EN TÊTE, et le titre du `it()` lui
       ['REQ-AAA-002', 3, true],
       ['REQ-AAA-003', 40, false],
     ]);
-    // La ligne ENTIÈRE est rendue : c'est là que se lit le renvoi d'une exigence absorbée (R4).
+    // La ligne ENTIÈRE est rendue : c'est là que se lit le renvoi d'une exigence absorbée (panne-4).
     expect(a[1]!.texteLigne).toContain('dans le docblock');
   });
 
@@ -94,7 +94,7 @@ describe('REQ-QA-014 — la lecture : `@req` EN TÊTE, et le titre du `it()` lui
     expect(a.map((x) => x.enTete)).toEqual([false]);
   });
 
-  it('REQ-QA-014 — R7 : le titre d’un `describe` n’est pas un titre de `it()` ; `it`, `test` et leurs variantes le sont', () => {
+  it('REQ-QA-014 — panne-7 : le titre d’un `describe` n’est pas un titre de `it()` ; `it`, `test` et leurs variantes le sont', () => {
     expect(typeof LECTURE.titresDeTest, 'titresDeTest() n’existe pas').toBe('function');
     const texte =
       `${DESCRIBE}('REQ-AAA-001 — le describe', () => {\n` +
@@ -117,20 +117,25 @@ describe('REQ-QA-014 — la lecture : `@req` EN TÊTE, et le titre du `it()` lui
 
 /** Chaque panne du brief, et la famille qui DOIT la nommer. Clé = celle que `--prove` imprime. */
 const TEMOINS_ATTENDUS: Record<string, string> = {
-  R1: 'test_promis_non_vert',
-  R2a: 'req_non_citee_par_son_test',
-  R2b: 'req_non_citee_par_son_test',
-  R3: 'req_non_citee_par_son_test',
-  R4: 'annotation_absorbee_sans_renvoi',
-  'R5-absents': 'resultats_illisibles',
-  'R5-illisibles': 'resultats_illisibles',
-  'R5-perimes': 'resultats_illisibles',
-  R6: 'test_promis_non_vert',
-  R7: 'req_non_citee_par_son_test',
-  'R7-resolu': 'req_non_citee_par_son_test',
-  'R-milieu': 'test_promis_non_vert',
+  'panne-1': 'test_promis_non_vert',
+  'panne-2a': 'req_non_citee_par_son_test',
+  'panne-2b': 'req_non_citee_par_son_test',
+  'panne-3': 'req_non_citee_par_son_test',
+  'panne-4': 'annotation_absorbee_sans_renvoi',
+  'panne-5-absents': 'resultats_illisibles',
+  'panne-5-illisibles': 'resultats_illisibles',
+  'panne-5-perimes': 'resultats_illisibles',
+  'panne-6': 'test_promis_non_vert',
+  'panne-7': 'req_non_citee_par_son_test',
+  'panne-7-resolu': 'req_non_citee_par_son_test',
+  'panne-milieu': 'test_promis_non_vert',
 };
-const CONTRE_TEMOINS_ATTENDUS = ['R4-renvoi', 'R5-non-demandes', 'R-tous-verts', 'R-gabarit'];
+const CONTRE_TEMOINS_ATTENDUS = [
+  'renvoi-porte',
+  'sans-resultats',
+  'saute-et-vert',
+  'gabarit-resolu',
+];
 
 describe('REQ-QA-014 — `gov:trace --prove` : chaque panne a son témoin nommé, chaque famille neuve est prouvée', () => {
   let preuve: { code: number; sortie: string } | null = null;
@@ -157,7 +162,7 @@ describe('REQ-QA-014 — `gov:trace --prove` : chaque panne a son témoin nommé
   );
 
   it(
-    'REQ-QA-014 — R1 à R7 : chaque panne a SON témoin, qui rougit sur SA famille avec SON motif',
+    'REQ-QA-014 — panne-1 à panne-7 : chaque panne a SON témoin, qui rougit sur SA famille avec SON motif',
     () => {
       const { code, sortie } = prouver();
       expect(code, sortie).toBe(0);
@@ -180,9 +185,9 @@ describe('REQ-QA-014 — `gov:trace --prove` : chaque panne a son témoin nommé
   );
 });
 
-// ── sur le dépôt réel : des résultats qu'on ne peut pas lire ne donnent JAMAIS un vert (R5) ─────
+// ── sur le dépôt réel : des résultats qu'on ne peut pas lire ne donnent JAMAIS un vert (panne-5) ─────
 
-describe('REQ-QA-014 — R5 : résultats absents, illisibles ou périmés, sur le dépôt réel', () => {
+describe('REQ-QA-014 — panne-5 : résultats absents, illisibles ou périmés, sur le dépôt réel', () => {
   it(
     'REQ-QA-014 — un chemin de résultats qui n’existe pas rougit `resultats_illisibles` (absents)',
     () => {
@@ -243,7 +248,7 @@ describe('REQ-QA-014 — R5 : résultats absents, illisibles ou périmés, sur l
   );
 });
 
-// ── le câblage : UNE garde, lancée APRÈS les tests, sans tolérance d'échec (R8) ─────────────────
+// ── le câblage : UNE garde, lancée APRÈS les tests, sans tolérance d'échec (panne-8) ─────────────────
 
 type Paquet = { scripts: Record<string, string> };
 const paquet = () => JSON.parse(readFileSync('package.json', 'utf8')) as Paquet;
@@ -300,7 +305,7 @@ function jugerEtapeReqCheck(workflow: unknown): string[] {
   return defauts;
 }
 
-describe('REQ-QA-014 — R8 : Gate A lance `pnpm req:check` juste après « Tests », sans tolérance d’échec', () => {
+describe('REQ-QA-014 — panne-8 : Gate A lance `pnpm req:check` juste après « Tests », sans tolérance d’échec', () => {
   it('REQ-QA-014 — le `ci.yml` du dépôt : l’étape existe, juste après « Tests », inconditionnelle', async () => {
     expect(jugerEtapeReqCheck(await lireYaml(readFileSync(CI, 'utf8')))).toEqual([]);
   });
