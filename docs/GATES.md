@@ -20,11 +20,11 @@
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
 | -1 | Socle de gouvernance | 40 | 27 | 13 |
-| 0 | Fondations, sécurité, charte | 42 | 5 | 37 |
+| 0 | Fondations, sécurité, charte | 42 | 6 | 36 |
 | 1 | Parcours, attribution, intégrations | 21 | 0 | 21 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **117** | **32** | **85** |
+| **Total** | | **117** | **33** | **84** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -67,11 +67,12 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:attributions` | GOV-037 | `scripts/gates/gov-attributions.ts` | — | pnpm gov:attributions:prove — les 4 retraits de dette FORCES : reinserees, gov:attributions sort en 1 sur dette_perimee (revue securite 5235809231, PR 48, 2026-09-17) |
 | `gov:attestation` | GOV-038 | `scripts/gates/gov-attestation.ts` | — | PR 33 (GOV-038) — sha 0000...0000 vu passer gov:tasks puis rejete en HTTP 422 par gov:attestation --en-ligne |
 
-### Phase 0 — armées (5)
+### Phase 0 — armées (6)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
 | `partners:schema:enums` | DM-02 | `scripts/gates/schema-enums.ts` | `GATE-JUR-ENUMS`, `GATE-ARG-enum`, `gov:glossaire` | pnpm partners:schema:enums:prove — 9 familles rougissent chacune sur son temoin, 7 contre-temoins restent verts ; la vue est INJECTEE et non lue sur le disque (RM-11), sans quoi la preuve mesurerait le depot du jour au lieu de la garde |
+| `G-SEC-AST-PRISMA` | QA-T07 | `scripts/gates/semgrep.ts` | `sec:semgrep` | pnpm sec:semgrep:prove — 57 temoins rouges nommes par leur regle (dont 38 sous nosemgrep), 16 contre-temoins muets ; la spec tests/unit/qualite/semgrep-regles-maison.spec.ts voit la sortie NON NULLE du binaire sur une copie des regles portant une regle orpheline. ROUGE d origine de QA-T07, sur 87fb212, executeur et spec ecrits AVANT .semgrep.yml : `pnpm vitest run tests/unit/qualite/semgrep-regles-maison.spec.ts` rend `Tests 81 failed \| 4 passed (85)`, premier echec `[regles_introuvables] Le fichier de regles maison ... .semgrep.yml est introuvable : aucune regle maison ne peut mordre.: expected null not to be null` ; puis .semgrep.yml avec la SEULE regle SQL : `Tests 46 failed \| 29 passed \| 10 skipped (85)`, `[temoin_muet] prisma/import (src/server/espace/a/b/import.ts:1) : « axion-prisma-hors-couche-d-acces » ne mord pas. Constats sur ce fichier : aucun.` Mutants tues : --disable-nosem retire (38 temoin_muet), image :latest (image_non_epinglee), jeux publics vides (plancher_public), sans .semgrepignore vide (fichier_non_analyse), segment db retire, new PrismaClient retire, languages sans javascript, include sans (espace), regle 1 elargie a /src/** (15 faux_positif), continue-on-error sur l etape CI, etape --prove retiree. |
 | `G-SEC-HEADERS` | SEC-02 | `tests/unit/securite/headers.spec.ts` | — | SEC-02 phase A, commit 0ffe231 sur t/sec-02 (le meme ROUGE fut db1870a avant le rebase sur 244d990, e430e4c en phase A ; rejouable par git checkout 0ffe231) : nonce tire au chargement du module de src/proxy.ts, npx vitest run tests/unit/securite/headers.spec.ts rend nonce_repete : 1 nonce(s) distinct(s) pour 1003 reponses (14 rouges sur 38) ; 38 mutants joues, 38 tues, dont frame-ancestors retire (directive_absente frame-ancestors) |
 | `G-SEC-ENV` | SEC-01 | `tests/unit/securite/env-boot.spec.ts` | — | 2026-09-18, A05, src/lib/env.ts sans controle d'egalite : FAIL tests/unit/securite/env-boot.spec.ts > REQ-SEC-028 : deux secrets égaux sont un refus à part entière — le boot sort en non nul et nomme les deux / AssertionError: expected +0 not to be +0 // Object.is equality (4 echecs sur 17 : deux et trois secrets egaux font sortir le boot en 0) |
 | `G-SEC-CI-BLOQUANTE` | QA-T01 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | — | le detecteur lit par un VRAI analyseur YAML chaque job et chaque etape de CHAQUE workflow de .github/workflows (liste derivee du disque, compte imprime, planchers > 0) et nomme l'etape qui PORTE la cle continue-on-error, a toute valeur : vu ROUGE sur une copie EN MEMOIRE de ci.yml ou l'etape « Tests » de gate-a porte continue-on-error: ${{ true }} (seule « Tests » nommee), sur l'etape du MILIEU de gate-a, derivee de son rang (n° 32 sur 63 le 2026-09-19, « La garde du registre d entite sait rougir »), et sur l'avant-derniere (Typecheck) dont la cle precede name, en mapping entre accolades et en cle citee (Format), et au niveau JOB dans nightly.yml (gates-prouvees) — que le temoin etroit de G-SEC-GATE-A-BLOQUANTE laisse passer ; les commentaires de ci.yml et nightly.yml qui citent le mot restent VERTS ; un workflow sans jobs, a jobs vides ou porteur d'une ancre fait LEVER, jamais rendre vide ; le ci.yml du depot rend une liste vide |
@@ -79,7 +80,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 
 ## 3. Ce qui reste à prouver
 
-Aucune de ces **85** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
+Aucune de ces **84** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
 Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les
 gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques
 n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à
@@ -111,7 +112,7 @@ sortie de la commande, elle, fait foi.
 | `fixtures:source` | INT-T01a | `scripts/gates/fixtures-source.ts` | — |
 | `gov:plan-state` | GOV-008 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | — |
 
-### Phase 0 — fondations, sécurité, charte (37)
+### Phase 0 — fondations, sécurité, charte (36)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
@@ -125,7 +126,6 @@ sortie de la commande, elle, fait foi.
 | `partners:money:conservation` | DM-04 | `tests/unit/domaine/conservation.spec.ts` | `GATE-ARG-prorata` |
 | `partners:grille:check` | DM-03-A | `axionia/scripts/gates/grille-check.ts` | `GATE-ARG-derivation-grille`, `GATE-JUR-GRILLE-DERIVEE`, `GATE-UX-GRILLE` |
 | `idor:check` | SEC-05 | `tests/integration/idor.spec.ts` | `G-SEC-IDOR`, `GATE-UX-CLOISONNEMENT` |
-| `G-SEC-AST-PRISMA` | QA-T07 | `scripts/gates/ast-prisma.ts` | — |
 | `G-SEC-RATE-FAMILLE` | SEC-10 | `scripts/gates/rate-famille.ts` | — |
 | `G-SEC-REVOCATION` | SEC-04 | `tests/unit/securite/revocation.spec.ts` | — |
 | `G-SEC-ROLES` | SEC-17 | `scripts/gates/roles.ts` | `GATE-UX-ROLES` |
