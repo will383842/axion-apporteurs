@@ -15,7 +15,12 @@
 import pino from 'pino';
 import { creerJournal } from '../../../src/lib/logger';
 
-type Charge = { msg: string; objet: Record<string, unknown>; messageErreur: string; segments: string[] };
+type Charge = {
+  msg: string;
+  objet: Record<string, unknown>;
+  messageErreur: string;
+  segments: string[];
+};
 
 let brut = '';
 process.stdin.setEncoding('utf8');
