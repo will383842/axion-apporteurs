@@ -414,7 +414,7 @@ describe('REQ-QA-006 — la base et le cache éphémères de ce fichier', () => 
     ).rejects.toThrow(/23505/);
   });
 
-  it('REQ-QA-006 — le cache répond par redis-cli dans son conteneur, sans client installé', async () => {
+  it('REQ-QA-006 — le cache répond par redis-cli dans son conteneur, sans passer par un client', async () => {
     expect(cache.url).toMatch(/^redis:\/\//);
     expect(await cache.commande(['GET', 'cle'])).toBe('');
     expect(await cache.commande(['SET', 'cle', 'valeur'])).toBe('OK');
