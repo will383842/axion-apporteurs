@@ -7,9 +7,9 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `5739147` — 2026-09-19T16:47:19+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #76 (un contrôle requis rouge ou une revue manquante) · 2. #75 (un conflit avec `main`) |
-| Qui tient quoi ? | SEC-10 (A05) · DM-01 (A05) · QA-T03 (A05) |
+| Où est `main` ? | `fd41c0d` — 2026-09-19T17:25:36+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #76 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) |
+| Qui tient quoi ? | SEC-10 (A05) · DM-01 (A05) · QA-T03 (A05) · QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 11/98 tâches, reste 67.60 j |
 | Le prochain pas | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
@@ -65,7 +65,7 @@ Reste sur ce chemin : **17.00 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un contrôle requis rouge ou une revue manquante |
-| 2 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -78,6 +78,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
 | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
 | QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check | A05 | #80 | `a_faire` |
+| QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
 
 ⚠️ **31 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-077 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -93,7 +94,7 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Dernier atterrissage
 
-`origin/main` = `5739147` (2026-09-19T16:47:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `fd41c0d` (2026-09-19T17:25:36+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -157,7 +158,7 @@ fériés distincts par an, et 1997 n'en a que dix (l'Ascension tombe le 8 mai). 
 maintenant ces années de l'oracle de Gauss au lieu de les écrire. Et une URL encodée en commentaire
 (le « â » de Pâques en pourcentages) se lit comme un identifiant nu : la garde lit les commentaires.
 
-… 27 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 28 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
