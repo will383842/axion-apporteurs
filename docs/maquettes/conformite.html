@@ -1,0 +1,3051 @@
+<!doctype html>
+<html lang="fr" data-theme="auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Maquette — Ma conformité et Mon profil · Axion Partners</title>
+    <style>
+      /* charte:debut — bloc commun aux maquettes (espace) : ne pas modifier ici seul, le propager aux autres fichiers */
+      :root {
+        color-scheme: light;
+        --fond: #f7f4ee;
+        --surface: #ffffff;
+        --surface-2: #e9e3d9;
+        --texte: #1c1917;
+        --texte-doux: #57534e;
+        --bord: #8a8178;
+        --primaire: #c2410c;
+        --sur-primaire: #ffffff;
+        --lien: #a8390b;
+        --accent-fond: #fcebe2;
+        --accent-texte: #9a3412;
+        --nav-fond: #1c1917;
+        --nav-texte: #e7e5e4;
+        --nav-actif-fond: #c2410c;
+        --nav-actif-texte: #ffffff;
+        --ok-fond: #fce3d6;
+        --ok-texte: #9a3412;
+        --attente-fond: #f5ebcd;
+        --attente-texte: #6a4b00;
+        --bloque-fond: #fbe4e1;
+        --bloque-texte: #991b1b;
+        --info-fond: #e0eafb;
+        --info-texte: #1e40af;
+        --neutre-fond: #e7e5e4;
+        --neutre-texte: #44403c;
+        --focus: #1d4ed8;
+        --atelier-fond: #e4ded3;
+        --atelier-surface: #ffffff;
+        --atelier-texte: #1c1917;
+        --atelier-doux: #57534e;
+        --atelier-lien: #a8390b;
+        --atelier-bord: #a39a8f;
+        --atelier-fond-bouton: #ffffff;
+        --atelier-alerte-fond: #fff1d6;
+        --atelier-alerte-texte: #6e3b00;
+        --cadre: #1b1f24;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root[data-theme='auto'] {
+          color-scheme: dark;
+          --fond: #171412;
+          --surface: #221e1b;
+          --surface-2: #322c27;
+          --texte: #f5f1ea;
+          --texte-doux: #cfc8bf;
+          --bord: #8c847b;
+          --primaire: #f08a4b;
+          --sur-primaire: #1c1917;
+          --lien: #f7a06a;
+          --accent-fond: #3d2112;
+          --accent-texte: #fdba8c;
+          --nav-fond: #0c0a09;
+          --nav-texte: #e7e5e4;
+          --nav-actif-fond: #f08a4b;
+          --nav-actif-texte: #1c1917;
+          --ok-fond: #3d2112;
+          --ok-texte: #fdba8c;
+          --attente-fond: #3a2f10;
+          --attente-texte: #f3d37a;
+          --bloque-fond: #3f1714;
+          --bloque-texte: #fca5a5;
+          --info-fond: #172544;
+          --info-texte: #a9c4fb;
+          --neutre-fond: #2e2a27;
+          --neutre-texte: #d6d3d1;
+          --focus: #93c5fd;
+          --atelier-fond: #0c0a09;
+          --atelier-surface: #1a1614;
+          --atelier-texte: #f5f1ea;
+          --atelier-doux: #cfc8bf;
+          --atelier-lien: #f7a06a;
+          --atelier-bord: #57504a;
+          --atelier-fond-bouton: #11161c;
+          --atelier-alerte-fond: #33240a;
+          --atelier-alerte-texte: #ffd58a;
+          --cadre: #3a424d;
+        }
+      }
+      :root[data-theme='sombre'] {
+        color-scheme: dark;
+        --fond: #171412;
+        --surface: #221e1b;
+        --surface-2: #322c27;
+        --texte: #f5f1ea;
+        --texte-doux: #cfc8bf;
+        --bord: #8c847b;
+        --primaire: #f08a4b;
+        --sur-primaire: #1c1917;
+        --lien: #f7a06a;
+        --accent-fond: #3d2112;
+        --accent-texte: #fdba8c;
+        --nav-fond: #0c0a09;
+        --nav-texte: #e7e5e4;
+        --nav-actif-fond: #f08a4b;
+        --nav-actif-texte: #1c1917;
+        --ok-fond: #3d2112;
+        --ok-texte: #fdba8c;
+        --attente-fond: #3a2f10;
+        --attente-texte: #f3d37a;
+        --bloque-fond: #3f1714;
+        --bloque-texte: #fca5a5;
+        --info-fond: #172544;
+        --info-texte: #a9c4fb;
+        --neutre-fond: #2e2a27;
+        --neutre-texte: #d6d3d1;
+        --focus: #93c5fd;
+        --atelier-fond: #0c0a09;
+        --atelier-surface: #1a1614;
+        --atelier-texte: #f5f1ea;
+        --atelier-doux: #cfc8bf;
+        --atelier-lien: #f7a06a;
+        --atelier-bord: #57504a;
+        --atelier-fond-bouton: #11161c;
+        --atelier-alerte-fond: #33240a;
+        --atelier-alerte-texte: #ffd58a;
+        --cadre: #3a424d;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        font:
+          18px/1.5 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: var(--atelier-fond);
+        color: var(--atelier-texte);
+      }
+      a {
+        color: var(--atelier-lien);
+      }
+      :focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+      .evitement {
+        position: absolute;
+        left: 8px;
+        top: -80px;
+        background: var(--atelier-surface);
+        padding: 12px 16px;
+        z-index: 10;
+        min-height: 48px;
+      }
+      .evitement:focus {
+        top: 8px;
+      }
+      .atelier-tete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 24px;
+        padding: 12px 20px;
+        background: var(--atelier-surface);
+        border-bottom: 1px solid var(--atelier-bord);
+      }
+      .atelier-tete h1 {
+        font-size: 24px;
+        margin: 0;
+        line-height: 1.25;
+      }
+      .atelier-tete h1 small {
+        display: block;
+        font-size: 18px;
+        font-weight: 400;
+        color: var(--atelier-doux);
+      }
+      .atelier-tete .fil a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+        font-weight: 600;
+      }
+      .fictif {
+        margin: 0;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background: var(--atelier-alerte-fond);
+        color: var(--atelier-alerte-texte);
+        font-weight: 600;
+      }
+      .reglages {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-left: auto;
+      }
+      .reglages button {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 0 14px;
+        font: inherit;
+        border-radius: 10px;
+        border: 2px solid var(--atelier-bord);
+        background: var(--atelier-fond-bouton);
+        color: var(--atelier-texte);
+        cursor: pointer;
+      }
+      .reglages button[aria-pressed='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+        border-color: var(--atelier-texte);
+      }
+      .atelier {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(280px, 380px);
+        min-height: calc(100vh - 90px);
+      }
+      .etats {
+        background: var(--atelier-surface);
+        border-right: 1px solid var(--atelier-bord);
+        padding: 12px;
+        overflow-y: auto;
+      }
+      .etats h2,
+      .notes h2.notes-titre {
+        font-size: 18px;
+        margin: 4px 4px 8px;
+        text-transform: none;
+      }
+      .etats ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .etats .groupe {
+        margin: 12px 4px 4px;
+        font-weight: 700;
+        color: var(--atelier-doux);
+      }
+      .etats a {
+        display: flex;
+        align-items: center;
+        min-height: 48px;
+        padding: 6px 12px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--atelier-texte);
+      }
+      .etats a[aria-current='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+        font-weight: 700;
+      }
+      .scene {
+        position: relative;
+        overflow: hidden;
+        touch-action: none;
+        cursor: grab;
+        background-color: var(--atelier-fond);
+        background-image: radial-gradient(var(--atelier-bord) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+      .scene.glisse {
+        cursor: grabbing;
+      }
+      .plateau {
+        transform-origin: 50% 0;
+        padding: 24px;
+        will-change: transform;
+      }
+      .telephone {
+        position: relative;
+        margin: 0 auto;
+        width: var(--largeur, 390px);
+        height: var(--hauteur, 844px);
+        border: 12px solid var(--cadre);
+        border-radius: 44px;
+        overflow: hidden;
+        background: var(--fond);
+        color: var(--texte);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        container-type: inline-size;
+        cursor: auto;
+      }
+      .telephone.bureau {
+        border-width: 10px;
+        border-radius: 12px;
+      }
+      .notes {
+        background: var(--atelier-surface);
+        border-left: 1px solid var(--atelier-bord);
+        padding: 16px 20px;
+        overflow-y: auto;
+      }
+      .note h2 {
+        font-size: 22px;
+        margin: 0 0 8px;
+      }
+      .note h3 {
+        font-size: 18px;
+        margin: 16px 0 4px;
+      }
+      .note p,
+      .note li {
+        margin: 0 0 8px;
+      }
+      .note ul {
+        padding-left: 22px;
+        margin: 0 0 8px;
+      }
+      .note code {
+        font-size: 16px;
+        background: var(--atelier-fond);
+        padding: 1px 4px;
+        border-radius: 4px;
+        overflow-wrap: anywhere;
+      }
+      .note .req {
+        color: var(--atelier-doux);
+      }
+      .js .ecran[hidden],
+      .js .note[hidden] {
+        display: none;
+      }
+      .sans-js-titre {
+        display: none;
+      }
+      html:not(.js) .ecran {
+        margin-bottom: 32px;
+      }
+      html:not(.js) .sans-js-titre {
+        display: block;
+        font-weight: 700;
+        padding: 8px 16px;
+      }
+      @media (max-width: 1100px) {
+        .atelier {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .etats {
+          border-right: 0;
+          border-bottom: 1px solid var(--atelier-bord);
+        }
+        .etats ul {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+        .etats .groupe {
+          width: 100%;
+        }
+        .notes {
+          border-left: 0;
+          border-top: 1px solid var(--atelier-bord);
+        }
+        .scene {
+          min-height: 70vh;
+        }
+      }
+      @media (max-width: 640px) {
+        .reglages .zoom {
+          display: none;
+        }
+        .scene {
+          background-image: none;
+          cursor: auto;
+          touch-action: auto;
+          min-height: 0;
+        }
+        .plateau {
+          padding: 0;
+          transform: none !important;
+        }
+        .telephone,
+        .telephone.bureau {
+          width: 100% !important;
+          height: auto !important;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .telephone .app {
+          height: auto;
+        }
+        .telephone .defile {
+          overflow: visible;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+
+      .telephone {
+        font-size: 18px;
+        line-height: 1.5;
+      }
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: var(--fond);
+        color: var(--texte);
+      }
+      .barre-etat {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 22px 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--texte-doux);
+      }
+      .app-tete {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-height: 56px;
+        padding: 4px 12px;
+      }
+      .marque {
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        padding: 0 4px;
+      }
+      .app-titre {
+        font-size: 26px;
+        line-height: 1.2;
+        margin: 0;
+        padding: 0 16px 8px;
+      }
+      .retour {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 48px;
+        min-width: 48px;
+        padding: 0 8px;
+        color: var(--lien);
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .defile {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 16px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .defile > * {
+        margin: 0;
+      }
+      .ico {
+        width: 24px;
+        height: 24px;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      p {
+        margin: 0;
+      }
+      h3 {
+        font-size: 20px;
+        line-height: 1.3;
+        margin: 0;
+      }
+      h4 {
+        font-size: 18px;
+        margin: 0;
+      }
+      .doux {
+        color: var(--texte-doux);
+      }
+      .petit {
+        font-size: 16px;
+      }
+      .fort {
+        font-weight: 700;
+      }
+      .pile {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .pile-serree {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .rangee {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .carte {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 14px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      a.carte {
+        color: inherit;
+        text-decoration: none;
+        min-height: 48px;
+      }
+      .carte .chevron {
+        color: var(--texte-doux);
+      }
+      .pastille {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        align-self: flex-start;
+        padding: 4px 12px 4px 8px;
+        border-radius: 999px;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.4;
+      }
+      .pastille .ico {
+        width: 20px;
+        height: 20px;
+      }
+      .ok {
+        --t: var(--ok-texte);
+        --f: var(--ok-fond);
+      }
+      .attente {
+        --t: var(--attente-texte);
+        --f: var(--attente-fond);
+      }
+      .bloque {
+        --t: var(--bloque-texte);
+        --f: var(--bloque-fond);
+      }
+      .info {
+        --t: var(--info-texte);
+        --f: var(--info-fond);
+      }
+      .neutre {
+        --t: var(--neutre-texte);
+        --f: var(--neutre-fond);
+      }
+      .pastille {
+        background: var(--f);
+        color: var(--t);
+      }
+      .encart {
+        background: var(--f);
+        border-left: 6px solid var(--t);
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .encart-titre {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        font-weight: 800;
+        color: var(--t);
+      }
+      .encart .ico {
+        margin-top: 2px;
+      }
+      .encart a:not(.bouton) {
+        color: var(--lien);
+        font-weight: 700;
+      }
+      .bouton {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 56px;
+        width: 100%;
+        padding: 8px 20px;
+        border-radius: 12px;
+        border: 2px solid var(--primaire);
+        background: var(--primaire);
+        color: var(--sur-primaire);
+        font: inherit;
+        font-weight: 800;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .bouton.second {
+        background: transparent;
+        color: var(--lien);
+        border-color: var(--lien);
+      }
+      .bouton.lien {
+        min-height: 48px;
+        background: transparent;
+        color: var(--lien);
+        border-color: transparent;
+        text-decoration: underline;
+        font-weight: 700;
+      }
+      .bouton.inactif,
+      .bouton:disabled {
+        background: var(--surface);
+        color: var(--texte-doux);
+        border: 2px dashed var(--bord);
+        cursor: not-allowed;
+      }
+      .champ {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .champ > span.etiquette {
+        font-weight: 700;
+      }
+      .champ .aide {
+        color: var(--texte-doux);
+      }
+      .champ input,
+      .champ textarea,
+      .champ select {
+        width: 100%;
+        min-height: 56px;
+        padding: 12px 14px;
+        border: 2px solid var(--bord);
+        border-radius: 12px;
+        background: var(--fond);
+        color: var(--texte);
+        font: inherit;
+      }
+      .champ textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+      .champ.erreur input,
+      .champ.erreur textarea {
+        border-color: var(--bloque-texte);
+        border-width: 3px;
+      }
+      .message-erreur {
+        display: flex;
+        gap: 6px;
+        color: var(--bloque-texte);
+        font-weight: 700;
+      }
+      .recherche {
+        display: flex;
+        gap: 8px;
+      }
+      .recherche input {
+        flex: 1;
+        min-width: 0;
+      }
+      .recherche .bouton {
+        width: auto;
+        flex: none;
+      }
+      .case {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+      .case input {
+        appearance: none;
+        -webkit-appearance: none;
+        flex: none;
+        width: 48px;
+        height: 48px;
+        margin: 0;
+        border: 3px solid var(--bord);
+        border-radius: 10px;
+        background: var(--fond) center / 30px 30px no-repeat;
+        cursor: pointer;
+      }
+      .case input:checked {
+        background-color: var(--primaire);
+        border-color: var(--primaire);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+      }
+      .case span {
+        padding-top: 10px;
+      }
+      .chiffres {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .chiffres a {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0 12px;
+        align-items: center;
+        min-height: 64px;
+        padding: 8px 14px;
+        border-radius: 12px;
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        color: var(--texte);
+        text-decoration: none;
+      }
+      .chiffres .libelle {
+        font-weight: 700;
+      }
+      .chiffres .montant {
+        font-size: 24px;
+        font-weight: 800;
+        text-align: right;
+        white-space: nowrap;
+      }
+      .chiffres .precision {
+        grid-column: 1 / -1;
+        color: var(--texte-doux);
+        font-size: 16px;
+      }
+      .chiffres .precision.bloque,
+      .chiffres .precision.attente {
+        color: var(--t);
+        font-weight: 700;
+      }
+      .onglets {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border-top: 1px solid var(--surface-2);
+        background: var(--fond);
+        position: sticky;
+        bottom: 0;
+      }
+      .onglets a {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-height: 64px;
+        padding: 6px 2px;
+        color: var(--texte-doux);
+        text-decoration: none;
+        font-size: 16px;
+        line-height: 1.15;
+        text-align: center;
+        border-top: 4px solid transparent;
+      }
+      .onglets a[aria-current='page'] {
+        color: var(--lien);
+        font-weight: 800;
+        border-top-color: var(--lien);
+      }
+      @container (max-width: 359px) {
+        .onglets a {
+          font-size: 14px;
+        }
+        .chiffres .montant {
+          font-size: 22px;
+        }
+        .app-titre {
+          font-size: 24px;
+        }
+      }
+      .squelette {
+        border-radius: 12px;
+        background: linear-gradient(
+          90deg,
+          var(--surface) 0%,
+          var(--surface-2) 50%,
+          var(--surface) 100%
+        );
+        background-size: 200% 100%;
+        animation: miroiter 1.4s linear infinite;
+      }
+      @keyframes miroiter {
+        from {
+          background-position: 100% 0;
+        }
+        to {
+          background-position: -100% 0;
+        }
+      }
+      .bandeau {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        padding: 10px 16px;
+        background: var(--f);
+        color: var(--t);
+        font-weight: 700;
+      }
+      .liste {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .suggestions {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        border: 2px solid var(--bord);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .suggestions a {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 64px;
+        padding: 8px 14px;
+        color: var(--texte);
+        text-decoration: none;
+        border-bottom: 1px solid var(--surface-2);
+      }
+      .suggestions li:last-child a {
+        border-bottom: 0;
+      }
+      .suggestions mark {
+        background: transparent;
+        color: inherit;
+        font-weight: 800;
+        text-decoration: underline;
+      }
+      .frise {
+        list-style: none;
+        margin: 0;
+        padding: 0 0 0 8px;
+      }
+      .frise li {
+        position: relative;
+        padding: 0 0 16px 28px;
+        border-left: 3px solid var(--surface-2);
+      }
+      .frise li:last-child {
+        border-left-color: transparent;
+      }
+      .frise li::before {
+        content: '';
+        position: absolute;
+        left: -10px;
+        top: 4px;
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        background: var(--fond);
+        border: 3px solid var(--bord);
+      }
+      .frise li.fait::before {
+        background: var(--ok-texte);
+        border-color: var(--ok-texte);
+      }
+      .frise li.ensuite::before {
+        border-color: var(--lien);
+      }
+      .definition {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 12px;
+        margin: 0;
+      }
+      .definition dt {
+        color: var(--texte-doux);
+      }
+      .definition dd {
+        margin: 0;
+        font-weight: 700;
+        text-align: right;
+      }
+      .separateur {
+        border: 0;
+        border-top: 1px solid var(--surface-2);
+        margin: 4px 0;
+      }
+      .interrupteur {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 56px;
+      }
+      .interrupteur input {
+        appearance: none;
+        -webkit-appearance: none;
+        flex: none;
+        width: 64px;
+        height: 48px;
+        margin: 0;
+        border-radius: 999px;
+        border: 3px solid var(--bord);
+        background: var(--surface-2);
+        position: relative;
+        cursor: pointer;
+      }
+      .interrupteur input::after {
+        content: '';
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--texte-doux);
+      }
+      .interrupteur input:checked {
+        background: var(--primaire);
+        border-color: var(--primaire);
+      }
+      .interrupteur input:checked::after {
+        left: 21px;
+        background: var(--sur-primaire);
+      }
+      .interrupteur input:disabled {
+        border-style: dashed;
+        cursor: not-allowed;
+      }
+      .verrou {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        color: var(--texte-doux);
+        font-size: 16px;
+      }
+      .menu {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid var(--surface-2);
+      }
+      .menu a {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 64px;
+        padding: 8px 14px;
+        color: var(--texte);
+        text-decoration: none;
+        background: var(--surface);
+        border-bottom: 1px solid var(--surface-2);
+      }
+      .menu li:last-child a {
+        border-bottom: 0;
+      }
+      .menu a .chevron {
+        margin-left: auto;
+        color: var(--texte-doux);
+      }
+      .visuellement-masque {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      .app-principal {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      h2.app-titre,
+      h3,
+      h4 {
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+      .marque {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 700;
+        color: var(--texte-doux);
+      }
+      .logo {
+        height: 30px;
+        width: auto;
+        flex: none;
+      }
+      .rail-logo {
+        display: none;
+      }
+      .carte {
+        border-radius: 16px;
+        box-shadow: 0 1px 2px rgba(28, 25, 23, 0.06);
+      }
+      .chiffres li.accent a {
+        background: var(--accent-fond);
+        border-color: var(--accent-fond);
+      }
+      .chiffres li.accent .montant {
+        color: var(--accent-texte);
+      }
+      .defile p a:not(.bouton),
+      .encart > a:not(.bouton),
+      .doux a,
+      .liens a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+      }
+      .onglets {
+        background: var(--nav-fond);
+        border-top: 0;
+        padding: 6px;
+        gap: 4px;
+      }
+      .onglets a {
+        color: var(--nav-texte);
+        border-top: 0;
+        border-radius: 12px;
+      }
+      .onglets a[aria-current='page'] {
+        background: var(--nav-actif-fond);
+        color: var(--nav-actif-texte);
+      }
+      @container (min-width: 900px) {
+        .app {
+          flex-direction: row;
+        }
+        .onglets {
+          order: -1;
+          position: static;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          width: 240px;
+          padding: 16px 12px;
+          gap: 6px;
+        }
+        .onglets a {
+          flex-direction: row;
+          justify-content: flex-start;
+          gap: 12px;
+          min-height: 52px;
+          padding: 8px 14px;
+          font-size: 18px;
+          text-align: left;
+        }
+        .onglets a br {
+          display: none;
+        }
+        .rail-logo {
+          display: block;
+          padding: 4px 8px 20px;
+        }
+        .rail-logo .logo {
+          height: 36px;
+        }
+        .barre-etat {
+          display: none;
+        }
+        .app-tete .marque .logo {
+          display: none;
+        }
+        .app-titre {
+          font-size: 34px;
+          padding: 4px 32px 8px;
+        }
+        .app-tete {
+          padding: 12px 24px 0;
+          min-height: 48px;
+        }
+        .defile {
+          padding: 12px 32px 32px;
+          max-width: 980px;
+        }
+        .chiffres {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+        .chiffres a {
+          min-height: 110px;
+          align-content: start;
+          grid-template-columns: 1fr;
+        }
+        .chiffres .montant {
+          text-align: left;
+          font-size: 30px;
+        }
+      }
+
+      .captcha {
+        border: 2px dashed var(--bord);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        color: var(--texte-doux);
+      }
+
+      /* charte:fin */
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false">
+      <symbol id="logo-axion-ia" viewBox="12 364 1229 521">
+        <path
+          fill="#FFFFFF"
+          fill-rule="evenodd"
+          d="M 232.5 369.1 C 218.4 370.3, 210.5 371.6, 195.1 375.6 C 155.3 385.9, 118.7 407.7, 88.4 439.2 C 68.9 459.5, 56.1 477.8, 43.5 503.5 C 32.2 526.5, 24.4 550.4, 20.1 575 C 16.6 594.8, 15.7 609, 16.3 631.5 C 16.9 653.9, 18.4 665.8, 23 686.2 C 33.1 730.8, 56.9 775.8, 87 807.4 C 127.7 850.1, 180.6 875.7, 237.2 879.9 C 245.8 880.6, 386.2 880.8, 634.5 880.6 C 999.6 880.4, 1019.1 880.3, 1030 878.5 C 1064.9 873, 1097 860.7, 1124.3 842.3 C 1139.7 831.9, 1148.8 824.4, 1162.3 810.6 C 1207.9 764.4, 1234.4 700.9, 1236.7 632 C 1238.6 575.9, 1223.4 520.5, 1194 476.1 C 1155.9 418.6, 1101.1 381.8, 1036.9 370.8 L 1023.5 368.6 633 368.4 C 418.2 368.3, 238 368.6, 232.5 369.1"
+        />
+        <path
+          fill="#F03000"
+          fill-rule="evenodd"
+          d="M 232.5 369.1 C 218.4 370.3, 210.5 371.6, 195.1 375.6 C 155.3 385.9, 118.7 407.7, 88.4 439.2 C 68.9 459.5, 56.1 477.8, 43.5 503.5 C 32.2 526.5, 24.4 550.4, 20.1 575 C 16.6 594.8, 15.7 609, 16.3 631.5 C 16.9 653.9, 18.4 665.8, 23 686.2 C 33.1 730.8, 56.9 775.8, 87 807.4 C 127.7 850.1, 180.6 875.7, 237.2 879.9 C 245.8 880.6, 386.2 880.8, 634.5 880.6 C 999.6 880.4, 1019.1 880.3, 1030 878.5 C 1064.9 873, 1097 860.7, 1124.3 842.3 C 1139.7 831.9, 1148.8 824.4, 1162.3 810.6 C 1207.9 764.4, 1234.4 700.9, 1236.7 632 C 1238.6 575.9, 1223.4 520.5, 1194 476.1 C 1155.9 418.6, 1101.1 381.8, 1036.9 370.8 L 1023.5 368.6 633 368.4 C 418.2 368.3, 238 368.6, 232.5 369.1 M 221.5 391 C 199.3 394.4, 183.2 399.4, 162.5 409.5 C 96.9 441.4, 50 508.4, 38.3 586.9 C 35.8 603.5, 35.9 645.1, 38.4 660.9 C 46.7 713.9, 69.9 761.4, 104.7 796.7 C 122.6 814.8, 142 829, 163.1 839.2 C 181.9 848.3, 195.1 852.8, 218.6 857.7 C 225.9 859.3, 257 859.4, 619.5 859.7 C 897.4 860, 1015.3 859.8, 1022 859 C 1094 850.8, 1156.9 804.8, 1190.9 735.5 C 1199.4 718.2, 1204.1 705.7, 1208.5 688.6 C 1220.3 642.4, 1219.6 596.3, 1206.4 551 C 1184 473.6, 1124.1 413.4, 1051.5 395 C 1026.3 388.6, 1055 389, 624.7 389.1 C 251.6 389.2, 232.9 389.3, 221.5 391 M 907.2 502.2 C 903.9 505.5, 906.6 508.2, 914.1 509.5 C 916.1 509.8, 918.8 511.2, 920.1 512.6 C 924.3 517.1, 923.7 521.9, 912.5 574.5 C 893.3 663.9, 894.2 660.5, 888.1 664.7 C 886.4 665.9, 883.1 667.1, 880.7 667.5 C 874.4 668.6, 872.8 669.7, 873.2 672.8 L 873.5 675.5 909.5 675.8 C 941.2 676, 945.6 675.8, 946.6 674.5 C 948.6 671.7, 947.1 669.1, 942.8 667.9 C 936.6 666.3, 934 663.1, 934 657.1 C 934 652.8, 939.2 627.3, 950.6 575.5 C 963.6 516.4, 963.2 518, 968.1 513.6 C 971 510.9, 973.2 509.9, 976.9 509.4 C 983.6 508.5, 985.5 507.1, 984.6 503.7 L 984 501 946.2 501 C 918.1 501, 908.1 501.3, 907.2 502.2 M 1037.2 502.2 C 1035.6 503.8, 1035.7 506.5, 1037.3 507.7 C 1037.9 508.2, 1040.4 509.2, 1042.6 509.8 C 1045.7 510.7, 1047.1 511.8, 1048 513.9 C 1049.4 517.5, 1048.4 520.2, 1037.5 540 C 1033.5 547.4, 1021 570.6, 1009.7 591.5 C 976.8 652.7, 974.8 656.2, 970 661.1 C 966.7 664.4, 964.1 666, 960.1 667.1 C 954 668.8, 951.9 671, 953.6 673.8 C 954.6 675.3, 957.1 675.5, 982.6 675.5 L 1010.5 675.5 1010.8 673.2 C 1011.3 669.7, 1009.5 668.3, 1003.8 667.8 C 997.2 667.1, 993.5 663.5, 994.6 658.6 C 994.9 656.9, 999.6 647, 1004.9 636.5 L 1014.5 617.5 1046.4 617.2 C 1064 617.1, 1078.7 617.3, 1079.1 617.7 C 1080.3 619, 1088 653.9, 1088 658.2 C 1088 663.1, 1084.7 666.6, 1079.4 667.5 C 1072.6 668.5, 1070.5 669.5, 1070.2 671.6 C 1069.6 675.9, 1070.9 676, 1109 675.8 C 1142.3 675.5, 1145.4 675.4, 1146.4 673.8 C 1148 671.2, 1146 668.7, 1141.6 667.8 C 1135.3 666.5, 1131.9 664.1, 1129.9 659.6 C 1128.2 655.6, 1121.9 630.2, 1113.1 592 C 1110.9 582.4, 1106.4 562.8, 1103.1 548.5 C 1099.7 534.2, 1097 520.7, 1097 518.4 C 1097 513.6, 1099.8 510.4, 1105 509.4 C 1111.6 508.1, 1113.9 505.3, 1110.8 502.2 C 1109.1 500.5, 1038.9 500.5, 1037.2 502.2 M 526.2 517 C 526.2 518.4, 526.4 518.9, 526.7 518.3 C 526.9 517.6, 526.9 516.4, 526.7 515.8 C 526.4 515.1, 526.2 515.6, 526.2 517 M 1052.3 544.3 C 1048.8 551, 1040.4 567.3, 1033.6 580.5 L 1021.1 604.5 1048.3 605 C 1063.3 605.3, 1075.8 605.3, 1076.2 605 C 1076.5 604.7, 1076.2 602, 1075.5 599 C 1074.8 596, 1070.9 579.7, 1066.9 562.8 C 1062.9 545.8, 1059.4 532, 1059 532 C 1058.7 532, 1055.7 537.5, 1052.3 544.3 M 599.8 558.7 C 601.5 558.9, 604.5 558.9, 606.3 558.7 C 608 558.5, 606.6 558.3, 603 558.3 C 599.4 558.3, 598 558.5, 599.8 558.7 M 331.1 565.6 C 331.1 566.7, 331.4 567, 331.7 566.2 C 332 565.5, 331.9 564.6, 331.6 564.3 C 331.3 563.9, 331 564.5, 331.1 565.6 M 832.8 592.7 C 840.7 592.9, 853.3 592.9, 860.8 592.7 C 868.3 592.6, 861.9 592.4, 846.5 592.4 C 831.1 592.4, 824.9 592.6, 832.8 592.7 M 194.9 605.3 C 195.3 605.7, 207.3 605.9, 221.6 605.8 L 247.5 605.5 220.8 605 C 206.1 604.7, 194.4 604.8, 194.9 605.3 M 669.3 618.5 C 669.3 620.7, 669.5 621.5, 669.7 620.2 C 669.9 619, 669.9 617.2, 669.7 616.2 C 669.4 615.3, 669.2 616.3, 669.3 618.5 M 536.3 619.5 C 536.3 621.7, 536.5 622.5, 536.7 621.2 C 536.9 620, 536.9 618.2, 536.7 617.2 C 536.4 616.3, 536.2 617.3, 536.3 619.5 M 808.1 672.6 C 808.1 673.7, 808.4 674, 808.7 673.2 C 809 672.5, 808.9 671.6, 808.6 671.3 C 808.3 670.9, 808 671.5, 808.1 672.6 M 514.2 717 C 500.4 718.9, 487.6 727.9, 481.7 739.9 C 478.8 745.8, 478.5 747.3, 478.5 755.5 C 478.5 763.4, 478.9 765.2, 481.4 770.4 C 486.4 780.5, 495.2 787.3, 507.5 790.6 C 521.7 794.4, 539.4 789.8, 549.1 779.8 C 555.5 773.2, 552.8 768, 545.7 773.4 C 537.9 779.4, 525.2 781, 516.4 777.1 C 506.2 772.6, 501 764.2, 500.2 750.8 C 499.8 743.8, 500 742.5, 502.8 736.6 C 506.7 728.2, 511.8 724.5, 519.4 724.6 C 525.9 724.7, 529.3 726.5, 535.1 732.9 C 539.2 737.4, 540.2 738, 543.7 738 C 549.2 738, 552 735.7, 552 731.3 C 552 721.7, 532.9 714.5, 514.2 717 M 593.9 717.5 C 580 720.3, 568.9 728.5, 563.3 739.8 C 560.8 744.8, 560.5 746.6, 560.5 755 C 560.5 763.4, 560.8 765.2, 563.3 770.1 C 570 783.8, 584.9 792, 603 792 C 616.9 792, 628.4 787.5, 637 778.7 C 644.8 770.7, 646.5 766.3, 646.5 754 C 646.5 744.6, 646.2 743, 643.9 738.5 C 640.8 732.7, 633.1 725.1, 627.4 722.2 C 617.6 717.2, 604.3 715.3, 593.9 717.5 M 665.5 721.4 C 654.7 724.9, 652.5 725.9, 652.5 727.5 C 652.5 728.9, 653.6 729.8, 655.9 730.6 C 661.9 732.5, 662 733.2, 662 756.9 C 662 780.9, 661.6 782.6, 656 784.5 C 653.6 785.3, 652.5 786.3, 652.5 787.6 C 652.5 789.4, 653.5 789.5, 672 789.5 C 690.6 789.5, 691.5 789.4, 691.5 787.6 C 691.5 786.3, 690.5 785.3, 688.5 784.7 C 682.9 782.9, 683 783.4, 683 760 L 683 738.2 686.3 735.4 C 692.4 730.3, 700.6 728.5, 706.4 731.1 C 711.3 733.4, 712 736.9, 712 760.3 C 712 783.4, 712.1 782.9, 706.5 784.7 C 704.5 785.3, 703.5 786.3, 703.5 787.6 C 703.5 789.4, 704.4 789.5, 723 789.5 C 741.8 789.5, 742.5 789.4, 742.5 787.5 C 742.5 786.1, 741.5 785.2, 739.2 784.4 C 737.3 783.8, 735.4 782.7, 734.9 781.9 C 734.4 781.1, 734 771, 734 759.3 L 734 738.2 737.3 735.4 C 744.1 729.7, 754.3 728.1, 759.3 732.1 C 763.5 735.3, 764.1 739.6, 763.8 762 L 763.5 782.5 759.2 783.9 C 755.7 785, 754.9 785.6, 755.2 787.4 C 755.5 789.5, 755.9 789.5, 775.3 789.8 L 795 790 795 787.6 C 795 785.5, 794.4 785, 791.5 784.4 C 789.6 784.1, 787.7 783.3, 787.1 782.6 C 786.6 782, 786 770.9, 785.8 758 C 785.5 735.7, 785.3 734.2, 783.1 729.6 C 775.7 714.5, 751.9 713.5, 736.4 727.6 C 734.4 729.5, 732.6 730.9, 732.6 730.8 C 729 724.1, 720.8 718.7, 712.3 717.4 C 705.8 716.4, 695.3 720, 688.5 725.5 L 683 730 683 724.5 C 683 720.2, 682.6 718.9, 681.1 718 C 680 717.5, 679 717, 678.8 717.1 C 678.6 717.1, 672.7 719, 665.5 721.4 M 595.3 725.9 C 582 732.1, 578.7 759.9, 589.2 776.3 C 598.3 790.5, 616.8 786.9, 622.4 769.8 C 625.7 759.4, 623.8 740.6, 618.5 733 C 612.9 725, 603.4 722.1, 595.3 725.9 M 130.6 750.6 C 128.6 752.5, 128.6 753.4, 130.4 754.9 C 131.4 755.7, 171.3 755.9, 280.1 755.8 C 425.9 755.5, 428.5 755.5, 428.8 753.6 C 429.8 748.8, 434.8 749, 278.9 749 C 146.8 749, 132 749.2, 130.6 750.6 M 823.6 750.6 C 822.4 751.8, 822.3 752.6, 823 754.1 C 824.1 756, 826.9 756, 971.8 756 C 1119.7 756, 1122 756, 1122 752.9 C 1122 752.5, 1121.3 751.4, 1120.4 750.6 C 1119 749.2, 1104.2 749, 972 749 C 839.9 749, 825 749.2, 823.6 750.6 M 454.5 763.7 C 448.8 765.2, 445 770.4, 445 776.7 C 445 786.5, 455.3 793, 464 788.5 C 468.9 786, 471 782.3, 471 776.4 C 471 770, 467.9 765.6, 462.2 764 C 458.3 763, 457.7 762.9, 454.5 763.7"
+        />
+        <path
+          fill="#000000"
+          fill-rule="evenodd"
+          d="M 499.9 497.4 C 490.2 500, 484.7 507, 484.6 517 C 484.5 535.9, 507.8 544.4, 521.2 530.3 C 522.7 528.8, 524.4 526.2, 524.9 524.7 C 526.4 520.8, 526.3 512.6, 524.6 508.7 C 520.8 499.6, 510 494.7, 499.9 497.4 M 199.8 501.1 C 198.8 501.6, 198 503.2, 198 504.5 C 198 506.4, 198.7 507.1, 200.8 507.6 C 209 509.4, 211.1 510.3, 212.5 512.3 C 215.3 516.3, 215.5 515.6, 198.8 554 C 153.9 657, 153.7 657.4, 147.9 662.4 C 143.8 665.9, 138.7 668, 134.4 668 C 131.3 668, 128.3 671.7, 129.7 673.8 C 130.6 675.3, 133.6 675.5, 160 675.5 C 186.8 675.5, 189.4 675.4, 190.4 673.8 C 192.3 670.8, 189.9 668.6, 183.9 667.7 C 176.6 666.7, 173.6 664.4, 173.2 659.4 C 173 656.3, 174.7 651.3, 181.1 636.2 L 189.3 617 225.3 617.2 L 261.3 617.5 267.7 634 C 277.1 658.3, 277.1 658.4, 275.9 662 C 274.6 665.6, 270.5 668, 265.7 668 C 261.3 668, 258.7 670, 259.2 673.1 L 259.5 675.5 319.6 675.8 C 371.3 676, 379.9 675.8, 381 674.6 C 382.6 672.5, 381.3 669.1, 378.7 668.6 C 371.9 667.2, 370.9 666.8, 370.3 665.4 C 369.3 662.6, 371.2 659.2, 381.4 646.5 L 391.3 634.1 398.8 643.8 C 413.7 663.1, 415.1 666.3, 409.1 667.6 C 402.3 669, 399.6 671.6, 402 674.5 C 403.1 675.8, 407.6 676, 433.4 675.8 L 463.5 675.5 463.8 673.2 C 464.3 670, 462.6 668.4, 458.2 667.6 C 452.4 666.7, 451.1 665.3, 426.3 631.6 C 414.7 616, 413.2 613.4, 414.4 612.1 C 415.1 611.2, 422.5 602.3, 430.9 592.3 C 439.2 582.2, 447.1 573.3, 448.5 572.4 C 449.8 571.5, 452.9 570.2, 455.2 569.6 C 460.2 568.1, 462 565.9, 460.1 563.6 C 458.9 562.2, 455.9 562, 436.6 562.2 L 414.5 562.5 414.5 565.5 C 414.5 568.1, 414.9 568.5, 418.4 569.2 C 427.7 571.2, 427.3 573.9, 415.3 589.4 C 409.9 596.3, 405.2 602, 404.9 602 C 404 602, 388.6 581.3, 386.7 577.6 C 384.3 573.2, 385.6 571.2, 391.7 569.4 C 396.7 568, 397.1 567.6, 396.8 565.2 L 396.5 562.5 364.5 562.5 L 332.5 562.5 332.5 565.4 C 332.5 567.9, 333 568.4, 336.8 569.5 C 339.1 570.2, 342.1 571.5, 343.5 572.4 C 346.9 574.7, 382.3 621.9, 381.7 623.5 C 381 625.1, 357.2 654, 351.6 659.8 C 344.3 667.5, 336.3 669.9, 328.7 666.6 C 324.7 664.9, 318.6 658.9, 316.7 654.7 C 313.5 647.9, 291.9 592.3, 265.8 523.5 C 261.4 512, 257.4 502, 256.8 501.3 C 255.5 499.7, 202.5 499.5, 199.8 501.1 M 217 552.8 C 211.8 564.7, 204.6 581.4, 200.9 589.7 C 197.2 598.1, 194.6 605.3, 195.1 605.6 C 196.4 606.4, 256 605.8, 256 604.9 C 256 604.4, 244.1 573.4, 231.7 541.8 C 229.4 535.8, 227.2 531, 226.9 531 C 226.5 531, 222.1 540.8, 217 552.8 M 515.5 558.5 C 515 558.7, 505.8 561.6, 495.3 565 C 477.1 570.8, 476 571.3, 476 573.6 C 476 575, 476.6 576.2, 477.3 576.4 C 485.1 578.7, 487.9 580.3, 488.9 583.2 C 490.6 588.1, 490.4 658.2, 488.6 662.4 C 487.3 665.5, 486 666.4, 478.6 668.6 C 474.8 669.8, 473.2 672.3, 474.9 674.4 C 476.1 675.8, 479.8 676, 506.3 675.8 C 533.5 675.5, 536.4 675.3, 537.4 673.8 C 538.9 671.3, 536.5 669.2, 530.4 667.7 C 521.7 665.6, 522 667.4, 522 610 C 522 572.7, 521.7 560.1, 520.8 559.2 C 519.6 558, 517.6 557.8, 515.5 558.5 M 690.1 564.4 C 678.5 568.1, 670.2 571.3, 669.6 572.3 C 668.2 574.5, 670.2 576.3, 675.6 577.8 C 683.8 580.1, 683.5 578.5, 683.8 620.1 C 684 644.6, 683.7 658.3, 683 661 C 681.9 665.2, 680.2 666.4, 672.5 668.7 C 669.2 669.6, 667.8 673.6, 670.2 675.1 C 670.9 675.6, 684.4 676, 700.1 676 C 730.8 676, 732 675.8, 730.5 671 C 730.1 669.6, 728.7 668.8, 725.7 668.3 C 723.1 667.9, 720.5 666.6, 718.8 664.9 L 716 662.2 716 626.1 L 716 590.1 720.3 586.7 C 728.2 580.2, 734.7 577.6, 742.7 577.5 C 749.2 577.5, 750.1 577.8, 753.7 580.6 C 760.5 586.1, 760.9 588.7, 761 626.3 C 761 666.2, 761.1 665.9, 751.2 668.4 C 745.9 669.8, 743.9 672, 745.9 674.4 C 747.1 675.8, 750.8 676, 777.4 675.8 L 807.5 675.5 807.5 672.5 C 807.5 670.1, 807 669.4, 804.5 668.6 C 797.7 666.6, 796.2 665.7, 795.1 663.4 C 794.4 661.7, 794 650, 794 626.6 C 794 606.2, 793.6 590, 792.9 586.5 C 789.5 567.9, 775.7 558.1, 754.8 559.2 C 747.4 559.7, 744.9 560.3, 738.4 563.4 C 730.8 567, 725.4 570.7, 719.3 576.4 L 716 579.4 716 570.3 C 716 561.9, 715.8 561, 713.8 559.6 C 712.6 558.7, 711.1 558, 710.5 558.1 C 710 558.1, 700.8 560.9, 690.1 564.4 M 582.8 561 C 559.5 567.7, 544.1 582.6, 538.6 603.7 C 536.5 611.6, 536.5 627.4, 538.6 635.2 C 544 656.2, 558.3 670.1, 580.8 676.2 C 586.9 677.9, 591.4 678.3, 602 678.3 C 613.8 678.3, 616.7 677.9, 624.5 675.6 C 635 672.4, 640.9 669.4, 648.7 663.1 C 655.9 657.3, 662.1 648.6, 665.6 639.5 C 669.2 630.2, 670.1 613.8, 667.5 604 C 661.9 582.1, 646.1 567, 622.5 561 C 611.9 558.3, 592.4 558.3, 582.8 561 M 590.3 571.1 C 582.8 574.8, 577.4 582.5, 574.3 594.3 C 571.7 603.8, 572 627.9, 574.9 638.5 C 578 650, 581.3 656.2, 587.5 661.8 C 595.2 668.8, 601.9 670.4, 611.9 667.4 C 626.5 663.1, 634.2 647.3, 634.3 621.5 C 634.4 611, 633.9 607, 632.2 600.7 C 626.1 579.1, 616.2 569, 601.3 569 C 596.4 569, 593.3 569.6, 590.3 571.1 M 846.4 592.8 L 818.2 593 816.7 601.3 C 815.6 607, 815.5 609.9, 816.2 610.8 C 817 611.7, 824 612, 845 612 C 866 612, 873 611.7, 873.7 610.8 C 874.8 609.4, 877 599, 877 595.4 C 877 594.2, 876.4 593.1, 875.8 592.9 C 875.1 592.7, 861.8 592.6, 846.4 592.8"
+        />
+      </symbol>
+    </svg>
+    <a class="evitement" href="#telephone">Aller à l'écran maquetté</a>
+    <header class="atelier-tete">
+      <p class="fil"><a href="index.html">← Toutes les maquettes</a></p>
+      <h1>
+        Ma conformité et Mon profil<small
+          >Espace apporteur · routes /plus, /conformite, /profil · tâche UX-P1-09 · REQ-UX-016,
+          REQ-UX-027, REQ-UX-031, REQ-CPL-019</small
+        >
+      </h1>
+      <p class="fictif">Données fictives : aucune entreprise, personne ni numéro réels.</p>
+      <div class="reglages" role="group" aria-label="Réglages de la maquette">
+        <button type="button" id="theme">Thème : automatique</button>
+        <button type="button" data-largeur="320" aria-pressed="false">Étroit 320</button>
+        <button type="button" data-largeur="360" aria-pressed="false">360</button>
+        <button type="button" data-largeur="390" aria-pressed="true">390</button>
+        <button type="button" data-largeur="414" aria-pressed="false">414</button>
+        <button type="button" data-largeur="1280" data-hauteur="800" aria-pressed="false">
+          Bureau 1280
+        </button>
+        <button type="button" class="zoom" id="zoom-moins" aria-label="Dézoomer">−</button>
+        <button type="button" class="zoom" id="zoom-ajuster" aria-label="Ajuster à la fenêtre">
+          <span id="zoom-valeur">100 %</span>
+        </button>
+        <button type="button" class="zoom" id="zoom-plus" aria-label="Zoomer">+</button>
+      </div>
+    </header>
+    <main class="atelier">
+      <nav class="etats" aria-label="États de l'écran">
+        <h2>États</h2>
+        <p class="groupe">Entrées</p>
+        <ul>
+          <li><a href="#etat-plus">Onglet Plus</a></li>
+        </ul>
+        <p class="groupe">Ma conformité</p>
+        <ul>
+          <li><a href="#etat-nominal">Ma conformité : tout est en ordre</a></li>
+          <li><a href="#etat-rib-manquant">RIB manquant</a></li>
+          <li><a href="#etat-refusee">Pièce refusée</a></li>
+          <li><a href="#etat-perimee">Attestation à renouveler</a></li>
+          <li><a href="#etat-envoi">Envoyer une pièce</a></li>
+        </ul>
+        <p class="groupe">Techniques</p>
+        <ul>
+          <li><a href="#etat-erreur-envoi">Envoi interrompu</a></li>
+        </ul>
+        <p class="groupe">Changer de RIB</p>
+        <ul>
+          <li><a href="#etat-changer-rib-1">Changer de RIB : 1. c’est bien vous</a></li>
+          <li><a href="#etat-changer-rib-2">Changer de RIB : 2. le nouveau RIB</a></li>
+          <li><a href="#etat-changer-rib-3">Changer de RIB : 3. enregistré</a></li>
+        </ul>
+        <p class="groupe">Mon profil</p>
+        <ul>
+          <li><a href="#etat-profil">Mon profil</a></li>
+          <li><a href="#etat-changer-email">Changer d’adresse électronique</a></li>
+        </ul>
+        <p class="groupe">Techniques</p>
+        <ul>
+          <li><a href="#etat-chargement">Chargement</a></li>
+        </ul>
+      </nav>
+      <div
+        class="scene"
+        id="scene"
+        tabindex="0"
+        aria-label="Plan de travail : glisser hors du cadre pour déplacer, flèches du clavier pour déplacer, plus et moins pour zoomer, zéro pour ajuster"
+      >
+        <div class="plateau" id="plateau">
+          <div
+            class="telephone"
+            id="telephone"
+            tabindex="-1"
+            data-hauteur="844"
+            style="--largeur: 390px; --hauteur: 844px"
+          >
+            <section class="ecran" id="etat-plus" aria-label="État : Onglet Plus">
+              <p class="sans-js-titre">État : Onglet Plus</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <span class="marque"
+                      ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                        <use href="#logo-axion-ia" width="1229" height="521"></use></svg
+                      ><span>Votre espace</span></span
+                    >
+                  </header>
+                  <h2 class="app-titre">Plus</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Plus">
+                    <ul class="menu">
+                      <li>
+                        <a href="#etat-nominal"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></svg
+                          ><span>Ma conformité</span
+                          ><svg
+                            class="ico chevron"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M9 5l7 7-7 7" /></svg
+                        ></a>
+                      </li>
+                      <li>
+                        <a href="#etat-profil"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M4 20l4-1 11-11-3-3L5 16z" /></svg
+                          ><span>Mon profil</span
+                          ><svg
+                            class="ico chevron"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M9 5l7 7-7 7" /></svg
+                        ></a>
+                      </li>
+                      <li>
+                        <a href="#"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M6 3h8l4 4v14H6z" />
+                            <path d="M14 3v4h4M9 12h6M9 16h6" /></svg
+                          ><span>Mes documents</span
+                          ><svg
+                            class="ico chevron"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M9 5l7 7-7 7" /></svg
+                        ></a>
+                      </li>
+                      <li>
+                        <a href="#"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M4 5h16v11H9l-5 4z" /></svg
+                          ><span>Aide et messages</span
+                          ><svg
+                            class="ico chevron"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M9 5l7 7-7 7" /></svg
+                        ></a>
+                      </li>
+                      <li>
+                        <a href="#"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M12 11v6M12 7.5v.5" /></svg
+                          ><span>Ressources, à consulter librement</span
+                          ><svg
+                            class="ico chevron"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M9 5l7 7-7 7" /></svg
+                        ></a>
+                      </li>
+                      <li>
+                        <a href="#"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M6 3h8l4 4v14H6z" />
+                            <path d="M14 3v4h4M9 12h6M9 16h6" /></svg
+                          ><span>Documents de présentation, mis à votre disposition</span
+                          ><svg
+                            class="ico chevron"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M9 5l7 7-7 7" /></svg
+                        ></a>
+                      </li>
+                      <li>
+                        <a href="#"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M17 6.5A7 7 0 1017 17.5" />
+                            <path d="M4 10h9M4 14h9" /></svg
+                          ><span>Parrainage</span
+                          ><svg
+                            class="ico chevron"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M9 5l7 7-7 7" /></svg
+                        ></a>
+                      </li>
+                    </ul>
+                    <a class="bouton lien" href="#">Me déconnecter</a>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section
+              class="ecran"
+              id="etat-nominal"
+              aria-label="État : Ma conformité : tout est en ordre"
+            >
+              <p class="sans-js-titre">État : Ma conformité : tout est en ordre</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-plus"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Plus</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Ma conformité</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Ma conformité">
+                    <div class="encart ok" role="group" aria-label="Tout est en ordre">
+                      <p class="encart-titre">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                        ><span>Tout est en ordre</span>
+                      </p>
+                      <p>Rien ne retient vos versements.</p>
+                    </div>
+                    <ul class="liste">
+                      <li class="carte">
+                        <h3>Numéro SIRET</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Vérifié le</dt>
+                          <dd>3 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                      </li>
+                      <li class="carte">
+                        <h3>Régime de TVA</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Indiqué le</dt>
+                          <dd>3 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                        <p>Vous ne facturez pas la TVA (franchise en base).</p>
+                        <a class="bouton lien" href="#">Modifier</a>
+                      </li>
+                      <li class="carte">
+                        <h3>RIB</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Vérifié le</dt>
+                          <dd>4 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                        <p>Compte se terminant par 0 42, à votre nom.</p>
+                        <a class="bouton second" href="#etat-changer-rib-1"
+                          ><span>Changer de RIB</span></a
+                        >
+                      </li>
+                      <li class="carte">
+                        <h3>Pièce d’identité</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Vérifiée le</dt>
+                          <dd>5 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>la signature du contrat</dd>
+                        </dl>
+                        <p>Le fichier a été supprimé de nos serveurs après la vérification.</p>
+                      </li>
+                      <li class="carte">
+                        <h3>Attestation Urssaf</h3>
+                        <span class="pastille neutre"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <circle cx="12" cy="12" r="4" /></svg
+                          >Rien à envoyer</span
+                        >
+                        <dl class="definition">
+                          <dt>Demandée</dt>
+                          <dd>à partir de 5 000 € de commissions dans l’année</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements, au-delà de ce montant</dd>
+                        </dl>
+                        <p>
+                          La loi la demande seulement au-delà de ce montant. Nous vous prévenons par
+                          courrier électronique le moment venu.
+                        </p>
+                      </li>
+                      <li class="carte">
+                        <h3>Assurance responsabilité civile professionnelle</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Jusqu’au</dt>
+                          <dd>31 décembre 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>aucun versement</dd>
+                        </dl>
+                        <p>Demandée par le contrat. Nous vous écrivons un mois avant l’échéance.</p>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-rib-manquant" aria-label="État : RIB manquant">
+              <p class="sans-js-titre">État : RIB manquant</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-plus"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Plus</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Ma conformité</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Ma conformité">
+                    <div class="encart bloque" role="group" aria-label="Il manque votre RIB">
+                      <p class="encart-titre">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M12 3l10 18H2z" />
+                          <path d="M12 10v5M12 18v.5" /></svg
+                        ><span>Il manque votre RIB</span>
+                      </p>
+                      <p>
+                        Sans lui, nous ne pouvons pas vous verser vos 312,50 €. Ajoutez-le : cela
+                        prend deux minutes.
+                      </p>
+                    </div>
+                    <form
+                      class="carte pile"
+                      action="#etat-changer-rib-3"
+                      aria-label="Ajouter mon RIB"
+                    >
+                      <h3>Ajouter mon RIB</h3>
+                      <label class="champ"
+                        ><span class="etiquette">IBAN</span
+                        ><input
+                          type="text"
+                          inputmode="text"
+                          autocomplete="off"
+                          placeholder="FR76 …"
+                        /><span class="aide">Il figure sur votre RIB, sous « IBAN ».</span></label
+                      >
+                      <label class="champ"
+                        ><span class="etiquette">Titulaire du compte</span
+                        ><input type="text" value="Michel Exemple" /><span class="aide"
+                          >Le compte doit être à votre nom ou à celui de votre entreprise.</span
+                        ></label
+                      >
+                      <button class="bouton" type="submit">Enregistrer mon RIB</button>
+                    </form>
+                    <ul class="liste">
+                      <li class="carte">
+                        <h3>Numéro SIRET</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Vérifié le</dt>
+                          <dd>3 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                      </li>
+                      <li class="carte">
+                        <h3>Régime de TVA</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Indiqué le</dt>
+                          <dd>3 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                        <p>Vous ne facturez pas la TVA (franchise en base).</p>
+                        <a class="bouton lien" href="#">Modifier</a>
+                      </li>
+                      <li class="carte">
+                        <h3>RIB</h3>
+                        <span class="pastille bloque"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M12 3l10 18H2z" />
+                            <path d="M12 10v5M12 18v.5" /></svg
+                          >Manquant</span
+                        >
+                        <dl class="definition">
+                          <dt>Depuis</dt>
+                          <dd>la signature</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                      </li>
+                      <li class="carte">
+                        <h3>Pièce d’identité</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Vérifiée le</dt>
+                          <dd>5 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>la signature du contrat</dd>
+                        </dl>
+                        <p>Le fichier a été supprimé de nos serveurs après la vérification.</p>
+                      </li>
+                      <li class="carte">
+                        <h3>Attestation Urssaf</h3>
+                        <span class="pastille neutre"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <circle cx="12" cy="12" r="4" /></svg
+                          >Rien à envoyer</span
+                        >
+                        <dl class="definition">
+                          <dt>Demandée</dt>
+                          <dd>à partir de 5 000 € de commissions dans l’année</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements, au-delà de ce montant</dd>
+                        </dl>
+                        <p>
+                          La loi la demande seulement au-delà de ce montant. Nous vous prévenons par
+                          courrier électronique le moment venu.
+                        </p>
+                      </li>
+                      <li class="carte">
+                        <h3>Assurance responsabilité civile professionnelle</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Jusqu’au</dt>
+                          <dd>31 décembre 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>aucun versement</dd>
+                        </dl>
+                        <p>Demandée par le contrat. Nous vous écrivons un mois avant l’échéance.</p>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-refusee" aria-label="État : Pièce refusée">
+              <p class="sans-js-titre">État : Pièce refusée</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-plus"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Plus</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Ma conformité</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Ma conformité">
+                    <div
+                      class="encart bloque"
+                      role="group"
+                      aria-label="Votre pièce d’identité n’a pas pu être vérifiée"
+                    >
+                      <p class="encart-titre">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M12 3l10 18H2z" />
+                          <path d="M12 10v5M12 18v.5" /></svg
+                        ><span>Votre pièce d’identité n’a pas pu être vérifiée</span>
+                      </p>
+                      <p>Le 12 septembre : la photo est illisible (reflet sur le texte).</p>
+                      <p>Une nouvelle photo, bien éclairée, les quatre coins visibles, suffit.</p>
+                      <a class="bouton" href="#etat-envoi"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M12 16V4M7 9l5-5 5 5" />
+                          <path d="M4 16v4h16v-4" /></svg
+                        ><span>Envoyer une nouvelle photo</span></a
+                      >
+                    </div>
+                    <ul class="liste">
+                      <li class="carte">
+                        <h3>Numéro SIRET</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Vérifié le</dt>
+                          <dd>3 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                      </li>
+                      <li class="carte">
+                        <h3>Régime de TVA</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Indiqué le</dt>
+                          <dd>3 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                        <p>Vous ne facturez pas la TVA (franchise en base).</p>
+                        <a class="bouton lien" href="#">Modifier</a>
+                      </li>
+                      <li class="carte">
+                        <h3>RIB</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Vérifié le</dt>
+                          <dd>4 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                        <p>Compte se terminant par 0 42, à votre nom.</p>
+                        <a class="bouton second" href="#etat-changer-rib-1"
+                          ><span>Changer de RIB</span></a
+                        >
+                      </li>
+                      <li class="carte">
+                        <h3>Pièce d’identité</h3>
+                        <span class="pastille bloque"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M12 3l10 18H2z" />
+                            <path d="M12 10v5M12 18v.5" /></svg
+                          >Refusée</span
+                        >
+                        <dl class="definition">
+                          <dt>Le</dt>
+                          <dd>12 septembre 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>la signature du contrat</dd>
+                        </dl>
+                        <p>Photo illisible (reflet sur le texte).</p>
+                      </li>
+                      <li class="carte">
+                        <h3>Attestation Urssaf</h3>
+                        <span class="pastille neutre"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <circle cx="12" cy="12" r="4" /></svg
+                          >Rien à envoyer</span
+                        >
+                        <dl class="definition">
+                          <dt>Demandée</dt>
+                          <dd>à partir de 5 000 € de commissions dans l’année</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements, au-delà de ce montant</dd>
+                        </dl>
+                        <p>
+                          La loi la demande seulement au-delà de ce montant. Nous vous prévenons par
+                          courrier électronique le moment venu.
+                        </p>
+                      </li>
+                      <li class="carte">
+                        <h3>Assurance responsabilité civile professionnelle</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Jusqu’au</dt>
+                          <dd>31 décembre 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>aucun versement</dd>
+                        </dl>
+                        <p>Demandée par le contrat. Nous vous écrivons un mois avant l’échéance.</p>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-perimee" aria-label="État : Attestation à renouveler">
+              <p class="sans-js-titre">État : Attestation à renouveler</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-plus"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Plus</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Ma conformité</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Ma conformité">
+                    <div
+                      class="encart bloque"
+                      role="group"
+                      aria-label="Votre attestation Urssaf a plus de 6 mois"
+                    >
+                      <p class="encart-titre">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M12 3l10 18H2z" />
+                          <path d="M12 10v5M12 18v.5" /></svg
+                        ><span>Votre attestation Urssaf a plus de 6 mois</span>
+                      </p>
+                      <p>
+                        Vos commissions de l’année dépassent 5 000 € hors TVA : la loi demande alors
+                        une attestation de moins de 6 mois. La vôtre date du 2 février.
+                      </p>
+                      <p>Vous la téléchargez sur votre espace Urssaf, puis l’envoyez ici.</p>
+                      <a class="bouton" href="#etat-envoi"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M12 16V4M7 9l5-5 5 5" />
+                          <path d="M4 16v4h16v-4" /></svg
+                        ><span>Envoyer la nouvelle attestation</span></a
+                      >
+                    </div>
+                    <ul class="liste">
+                      <li class="carte">
+                        <h3>Numéro SIRET</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Vérifié le</dt>
+                          <dd>3 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                      </li>
+                      <li class="carte">
+                        <h3>Régime de TVA</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Indiqué le</dt>
+                          <dd>3 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                        <p>Vous ne facturez pas la TVA (franchise en base).</p>
+                        <a class="bouton lien" href="#">Modifier</a>
+                      </li>
+                      <li class="carte">
+                        <h3>RIB</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Vérifié le</dt>
+                          <dd>4 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                        <p>Compte se terminant par 0 42, à votre nom.</p>
+                        <a class="bouton second" href="#etat-changer-rib-1"
+                          ><span>Changer de RIB</span></a
+                        >
+                      </li>
+                      <li class="carte">
+                        <h3>Pièce d’identité</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Vérifiée le</dt>
+                          <dd>5 juin 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>la signature du contrat</dd>
+                        </dl>
+                        <p>Le fichier a été supprimé de nos serveurs après la vérification.</p>
+                      </li>
+                      <li class="carte">
+                        <h3>Attestation Urssaf</h3>
+                        <span class="pastille bloque"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M12 3l10 18H2z" />
+                            <path d="M12 10v5M12 18v.5" /></svg
+                          >Périmée</span
+                        >
+                        <dl class="definition">
+                          <dt>Datée du</dt>
+                          <dd>2 février 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>vos versements</dd>
+                        </dl>
+                      </li>
+                      <li class="carte">
+                        <h3>Assurance responsabilité civile professionnelle</h3>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >Valide</span
+                        >
+                        <dl class="definition">
+                          <dt>Jusqu’au</dt>
+                          <dd>31 décembre 2026</dd>
+                          <dt>Si elle manque</dt>
+                          <dd>aucun versement</dd>
+                        </dl>
+                        <p>Demandée par le contrat. Nous vous écrivons un mois avant l’échéance.</p>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-envoi" aria-label="État : Envoyer une pièce">
+              <p class="sans-js-titre">État : Envoyer une pièce</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-nominal"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Ma conformité</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Pièce d’identité</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Envoyer une pièce">
+                    <p>
+                      Une photo nette, les quatre coins visibles. Carte d’identité, passeport ou
+                      titre de séjour.
+                    </p>
+                    <a class="bouton" href="#etat-nominal"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 16V4M7 9l5-5 5 5" />
+                        <path d="M4 16v4h16v-4" /></svg
+                      ><span>Prendre une photo</span></a
+                    >
+                    <a class="bouton second" href="#etat-nominal"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M6 3h8l4 4v14H6z" />
+                        <path d="M14 3v4h4M9 12h6M9 16h6" /></svg
+                      ><span>Choisir un fichier</span></a
+                    >
+                    <div class="encart info" role="group" aria-label="Ce que nous en faisons">
+                      <p class="encart-titre">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 11v6M12 7.5v.5" /></svg
+                        ><span>Ce que nous en faisons</span>
+                      </p>
+                      <p>
+                        Nous la vérifions, puis <b>nous supprimons le fichier</b> de nos serveurs.
+                        Nous gardons seulement la date et le fait qu’elle a été vérifiée.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-erreur-envoi" aria-label="État : Envoi interrompu">
+              <p class="sans-js-titre">État : Envoi interrompu</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-nominal"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Ma conformité</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Pièce d’identité</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Envoyer une pièce">
+                    <div
+                      class="encart attente"
+                      role="group"
+                      aria-label="L’envoi n’a pas abouti : pas de réseau"
+                    >
+                      <p class="encart-titre">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 7v5l3.5 2" /></svg
+                        ><span>L’envoi n’a pas abouti : pas de réseau</span>
+                      </p>
+                      <p>Votre photo est toujours à l’écran. Rien n’a été envoyé.</p>
+                      <a class="bouton" href="#etat-nominal"><span>Réessayer l’envoi</span></a>
+                    </div>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section
+              class="ecran"
+              id="etat-changer-rib-1"
+              aria-label="État : Changer de RIB : 1. c’est bien vous"
+            >
+              <p class="sans-js-titre">État : Changer de RIB : 1. c’est bien vous</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-nominal"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Ma conformité</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Changer de RIB</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Changer de RIB">
+                    <p>
+                      Par sécurité, nous vérifions que c’est bien vous. Un code à 6 chiffres vient
+                      de partir à <b>m•••••@exemple.invalid</b>.
+                    </p>
+                    <label class="champ"
+                      ><span class="etiquette">Code reçu</span
+                      ><input
+                        type="text"
+                        inputmode="numeric"
+                        autocomplete="one-time-code"
+                        maxlength="6"
+                    /></label>
+                    <a class="bouton" href="#etat-changer-rib-2"><span>Continuer</span></a>
+                    <a class="bouton lien" href="#">Je n’ai rien reçu : renvoyer le code</a>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section
+              class="ecran"
+              id="etat-changer-rib-2"
+              aria-label="État : Changer de RIB : 2. le nouveau RIB"
+            >
+              <p class="sans-js-titre">État : Changer de RIB : 2. le nouveau RIB</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-nominal"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Ma conformité</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Changer de RIB</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Changer de RIB">
+                    <label class="champ"
+                      ><span class="etiquette">Nouvel IBAN</span
+                      ><input type="text" autocomplete="off" placeholder="FR76 …"
+                    /></label>
+                    <label class="champ"
+                      ><span class="etiquette">Titulaire du compte</span
+                      ><input type="text" value="Michel Exemple"
+                    /></label>
+                    <div class="encart info" role="group" aria-label="Avant d’enregistrer">
+                      <p class="encart-titre">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 11v6M12 7.5v.5" /></svg
+                        ><span>Avant d’enregistrer</span>
+                      </p>
+                      <p>Votre ancien RIB reste utilisé jusqu’à la vérification du nouveau.</p>
+                      <p>
+                        Si vous changez de RIB moins de 7 jours avant le 1<sup>er</sup> du mois, le
+                        virement de ce mois attend la fin de la vérification.
+                      </p>
+                    </div>
+                    <a class="bouton" href="#etat-changer-rib-3"
+                      ><span>Enregistrer le nouveau RIB</span></a
+                    >
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section
+              class="ecran"
+              id="etat-changer-rib-3"
+              aria-label="État : Changer de RIB : 3. enregistré"
+            >
+              <p class="sans-js-titre">État : Changer de RIB : 3. enregistré</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-nominal"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Ma conformité</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Changer de RIB</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Changer de RIB">
+                    <div class="encart ok" role="group" aria-label="Nouveau RIB enregistré">
+                      <p class="encart-titre">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                        ><span>Nouveau RIB enregistré</span>
+                      </p>
+                      <p>
+                        Il est en cours de vérification. Votre ancien RIB reste utilisé jusque-là.
+                      </p>
+                      <p>Nous vous avons écrit pour confirmer ce changement.</p>
+                    </div>
+                    <p>
+                      <b>Ce changement ne vient pas de vous ?</b> Répondez au courrier électronique
+                      reçu, ou :
+                    </p>
+                    <a class="bouton second" href="#"
+                      ><span>Signaler un changement que je n’ai pas fait</span></a
+                    >
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-profil" aria-label="État : Mon profil">
+              <p class="sans-js-titre">État : Mon profil</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-plus"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Plus</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Mon profil</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Mon profil">
+                    <section class="carte" aria-labelledby="h-coord--profil">
+                      <h3 id="h-coord--profil">Mes coordonnées</h3>
+                      <dl class="definition">
+                        <dt>Nom</dt>
+                        <dd>Michel Exemple</dd>
+                        <dt>Courrier électronique</dt>
+                        <dd>michel@exemple.invalid</dd>
+                        <dt>Téléphone</dt>
+                        <dd>06 39 98 00 42</dd>
+                      </dl>
+                      <a class="bouton second" href="#etat-changer-email"
+                        ><span>Changer d’adresse électronique</span></a
+                      >
+                    </section>
+                    <section class="carte" aria-labelledby="h-notif--profil">
+                      <h3 id="h-notif--profil">Ce que nous vous envoyons</h3>
+                      <label class="interrupteur"
+                        ><span>Nouvelle étape sur une de vos entreprises</span
+                        ><input type="checkbox" role="switch" checked
+                      /></label>
+                      <label class="interrupteur"
+                        ><span>La lettre du réseau (une fois par mois)</span
+                        ><input type="checkbox" role="switch"
+                      /></label>
+                      <hr class="separateur" />
+                      <p class="fort">Toujours par courrier électronique</p>
+                      <ul class="pile-serree" style="padding-left: 20px; margin: 0">
+                        <li>Votre relevé de commissions</li>
+                        <li>Un versement en attente d’une pièce</li>
+                        <li>Toute décision qui ouvre un délai de réponse</li>
+                      </ul>
+                      <p class="verrou">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <rect x="5" y="11" width="14" height="10" rx="2" />
+                          <path d="M8 11V8a4 4 0 018 0v3" /></svg
+                        >Ces messages ne peuvent pas être coupés : ils font foi.
+                      </p>
+                    </section>
+                    <section class="carte" aria-labelledby="h-conn--profil">
+                      <h3 id="h-conn--profil">Dernières connexions</h3>
+                      <ul class="pile-serree" style="list-style: none; padding: 0; margin: 0">
+                        <li>Aujourd’hui, 10 h 40 · téléphone Android</li>
+                        <li>17 septembre, 18 h 05 · téléphone Android</li>
+                        <li>2 septembre, 9 h 12 · ordinateur Windows</li>
+                      </ul>
+                      <p>Un appareil que vous ne reconnaissez pas ?</p>
+                      <a class="bouton second" href="#"
+                        ><span>Déconnecter tous mes appareils</span></a
+                      >
+                    </section>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section
+              class="ecran"
+              id="etat-changer-email"
+              aria-label="État : Changer d’adresse électronique"
+            >
+              <p class="sans-js-titre">État : Changer d’adresse électronique</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-profil"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Mon profil</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Changer d’adresse</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Changer d’adresse">
+                    <label class="champ"
+                      ><span class="etiquette">Nouvelle adresse</span
+                      ><input
+                        type="email"
+                        autocomplete="email"
+                        value="michel.nouveau@exemple.invalid"
+                    /></label>
+                    <div
+                      class="encart info"
+                      role="group"
+                      aria-label="Comment se passe le changement"
+                    >
+                      <p class="encart-titre">
+                        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M12 11v6M12 7.5v.5" /></svg
+                        ><span>Comment se passe le changement</span>
+                      </p>
+                      <ol class="pile-serree" style="margin: 0; padding-left: 20px">
+                        <li>
+                          Nous écrivons à votre adresse <b>actuelle</b> : vous confirmez depuis ce
+                          message.
+                        </li>
+                        <li>La nouvelle adresse est active 24 heures après la confirmation.</li>
+                        <li>
+                          Vos appareils sont alors déconnectés : vous vous reconnectez avec la
+                          nouvelle adresse.
+                        </li>
+                      </ol>
+                    </div>
+                    <a class="bouton" href="#"><span>Demander le changement</span></a>
+                    <p class="doux">
+                      Vous n’avez plus accès à votre adresse actuelle ?
+                      <a href="#">Écrire à Axion-IA</a>
+                    </p>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+            <section class="ecran" id="etat-chargement" aria-label="État : Chargement">
+              <p class="sans-js-titre">État : Chargement</p>
+              <div class="app">
+                <div class="app-principal">
+                  <div class="barre-etat" aria-hidden="true">
+                    <span>10:42</span><span>4G ▮▮▮</span>
+                  </div>
+                  <header class="app-tete">
+                    <a class="retour" href="#etat-plus"
+                      ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M15 5l-7 7 7 7" /></svg
+                      ><span>Plus</span></a
+                    >
+                  </header>
+                  <h2 class="app-titre">Ma conformité</h2>
+                  <div class="defile" tabindex="0" role="region" aria-label="Ma conformité">
+                    <div class="pile" aria-busy="true">
+                      <p role="status" class="visuellement-masque">Chargement de vos pièces…</p>
+                      <div class="squelette" style="height: 72px"></div>
+                      <div class="squelette" style="height: 170px"></div>
+                      <div class="squelette" style="height: 170px"></div>
+                      <div class="squelette" style="height: 170px"></div>
+                    </div>
+                  </div>
+                </div>
+                <nav class="onglets" aria-label="Navigation principale">
+                  <span class="rail-logo"
+                    ><svg class="logo" viewBox="0 0 1229 521" role="img" aria-label="Axion-IA">
+                      <use href="#logo-axion-ia" width="1229" height="521"></use></svg></span
+                  ><a href="accueil.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M3 11l9-7 9 7" />
+                      <path d="M5 10v10h14V10" /></svg
+                    ><span>Accueil</span></a
+                  ><a href="mes-entreprises.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <rect x="4" y="3" width="16" height="18" rx="1" />
+                      <path d="M8 7h2M14 7h2M8 11h2M14 11h2M8 15h2M14 15h2" /></svg
+                    ><span>Mes<br />entreprises</span></a
+                  ><a href="mes-commissions.html#etat-nominal"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M17 6.5A7 7 0 1017 17.5" />
+                      <path d="M4 10h9M4 14h9" /></svg
+                    ><span>Mes<br />commissions</span></a
+                  ><a href="conformite.html#etat-plus" aria-current="page"
+                    ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <circle cx="5" cy="12" r="1.5" />
+                      <circle cx="12" cy="12" r="1.5" />
+                      <circle cx="19" cy="12" r="1.5" /></svg
+                    ><span>Plus</span></a
+                  >
+                </nav>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+      <aside class="notes" aria-label="Notes de conception">
+        <h2 class="notes-titre">Notes pour la relecture</h2>
+        <section class="note" data-pour="etat-plus">
+          <h2>Onglet Plus</h2>
+          <p>
+            Le 4<sup>e</sup> onglet (REQ-UX-008). Libellés choisis pour qu’aucune entrée ne se lise
+            comme un passage obligé : « Ressources, à consulter librement » (fiche juriste, motif 8
+            : pas de formation exigée) et « Documents de présentation, mis à votre disposition »
+            (motif 10 : aucun outil imposé ; « documents de présentation » est le terme de
+            REQ-CPL-023).
+          </p>
+          <p>
+            Les écrans Documents, Aide, Ressources et Parrainage relèvent d’autres tâches (UX-P2-04,
+            UX-P3-02, UX-P3-03) et ne sont pas maquettés ici.
+          </p>
+          <p>« Mon activité » n’est pas dans ce menu en phase 1.</p>
+        </section>
+        <section class="note" data-pour="etat-nominal">
+          <h2>Ma conformité : tout est en ordre</h2>
+          <p>
+            Chaque pièce : état (manquante, à vérifier, valide, périmée, refusée), date,
+            <b>ce qu’elle retient si elle manque</b> (contrat, versements, rien) et un bouton
+            (REQ-UX-031).
+          </p>
+          <p>
+            « C’est ici qu’on voit pourquoi un paiement est bloqué » (ESPACE-ROUTES) : l’encart du
+            haut le dit en une phrase.
+          </p>
+          <p>
+            L’assurance RC pro ne retient <b>aucun</b> versement (REQ-DM-027) ; l’attestation
+            Urssaf, seulement au seuil légal (REQ-ARG-016). L’écran le dit, pour qu’aucune pièce ne
+            se lise comme une condition qu’elle n’est pas.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-rib-manquant">
+          <h2>RIB manquant</h2>
+          <p>
+            Arrivée depuis l’alerte de l’accueil ou de Mes commissions : le formulaire est déjà
+            ouvert.
+          </p>
+          <p>
+            Un premier RIB ne demande pas de code de sécurité ; un <b>changement</b> de RIB, si
+            (état suivant).
+          </p>
+        </section>
+        <section class="note" data-pour="etat-refusee">
+          <h2>Pièce refusée</h2>
+          <p>
+            État <code>refusee</code> : le motif du refus, en mots simples, et comment réussir la
+            prochaine photo.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-perimee">
+          <h2>Attestation à renouveler</h2>
+          <p>
+            État <code>perimee</code> de l’attestation de vigilance, au seuil légal (L.8222-1 et
+            D.8222-5 du code du travail). Le seuil vient de la SSOT (RM-10).
+          </p>
+        </section>
+        <section class="note" data-pour="etat-envoi">
+          <h2>Envoyer une pièce</h2>
+          <p>
+            L’engagement de suppression après vérification est affiché avant l’envoi de la pièce
+            d’identité (REQ-UX-031).
+          </p>
+        </section>
+        <section class="note" data-pour="etat-erreur-envoi">
+          <h2>Envoi interrompu</h2>
+          <p>Pourquoi (réseau), ce qui est gardé (la photo), un geste.</p>
+        </section>
+        <section class="note" data-pour="etat-changer-rib-1">
+          <h2>Changer de RIB : 1. c’est bien vous</h2>
+          <p>Un changement de RIB exige une vérification renforcée (step-up, SEC-04).</p>
+        </section>
+        <section class="note" data-pour="etat-changer-rib-2">
+          <h2>Changer de RIB : 2. le nouveau RIB</h2>
+          <p>
+            REQ-UX-027 : la nouvelle pièce naît « à vérifier », l’ancienne reste active ; la règle
+            des 7 jours est dite <b>avant</b> l’enregistrement, pas découverte après.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-changer-rib-3">
+          <h2>Changer de RIB : 3. enregistré</h2>
+          <p>
+            Courrier de confirmation et alerte console (REQ-UX-027). La voie « ce n’est pas moi »
+            est visible sans chercher.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-profil">
+          <h2>Mon profil</h2>
+          <p>
+            Préférences dérivées de la table des notifications (REQ-UX-016) : ce qui fait courir un
+            délai part <b>toujours</b> par courrier électronique, et l’écran dit pourquoi on ne peut
+            pas le couper.
+          </p>
+          <p>
+            La lettre du réseau est décochée par défaut, et n’est jamais envoyée en fonction de
+            l’activité (REQ-JUR-033).
+          </p>
+          <p>
+            <b>Arbitrage pris, à valider par Will</b> : ESPACE-ROUTES range aussi dans
+            <code>/profil</code> « zones, secteur, disponibilité ». Ils ne sont
+            <b>pas dessinés</b> : une disponibilité ou une zone déclarée dans l’outil de la Société
+            se lit comme un horaire ou un territoire (fiche juriste, motif 9). S’ils restent, ils
+            doivent être facultatifs et sans aucun effet.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-changer-email">
+          <h2>Changer d’adresse électronique</h2>
+          <p>
+            REQ-CPL-019 : confirmation sur l’ancienne adresse, délai, révocation des sessions ; sans
+            confirmation, rien ne change.
+          </p>
+          <p><b>À fixer</b> : la durée du délai (24 h ici, valeur fictive).</p>
+        </section>
+        <section class="note" data-pour="etat-chargement">
+          <h2>Chargement</h2>
+          <p>Emplacements à la hauteur des cartes.</p>
+        </section>
+      </aside>
+    </main>
+    <script>
+      (function () {
+        var racine = document.documentElement;
+        racine.classList.add('js');
+        var ecrans = Array.prototype.slice.call(document.querySelectorAll('.ecran'));
+        var notes = Array.prototype.slice.call(document.querySelectorAll('.note'));
+        var liens = Array.prototype.slice.call(document.querySelectorAll('.etats a'));
+        var scene = document.getElementById('scene');
+        var plateau = document.getElementById('plateau');
+        var tel = document.getElementById('telephone');
+        var etat = { x: 0, y: 0, s: 1 };
+        function appliquer() {
+          plateau.style.transform =
+            'translate(' + etat.x + 'px,' + etat.y + 'px) scale(' + etat.s + ')';
+          var z = document.getElementById('zoom-valeur');
+          if (z) z.textContent = Math.round(etat.s * 100) + ' %';
+        }
+        function montrer(id, pousser) {
+          var cible = document.getElementById(id) ? id : ecrans[0].id;
+          ecrans.forEach(function (el) {
+            el.hidden = el.id !== cible;
+          });
+          notes.forEach(function (el) {
+            el.hidden = el.getAttribute('data-pour') !== cible;
+          });
+          liens.forEach(function (a) {
+            if (a.getAttribute('href') === '#' + cible) a.setAttribute('aria-current', 'true');
+            else a.removeAttribute('aria-current');
+          });
+          if (pousser) history.replaceState(null, '', '#' + cible);
+          var d = document.querySelector('#' + cible + ' .defile');
+          if (d) d.scrollTop = 0;
+        }
+        liens.forEach(function (a) {
+          a.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            montrer(a.getAttribute('href').slice(1), true);
+          });
+        });
+        window.addEventListener('hashchange', function () {
+          montrer(location.hash.slice(1), false);
+        });
+        montrer(location.hash.slice(1), false);
+        // Thème : automatique → clair → sombre (sans réseau, mémorisé sur ce poste seulement).
+        var bTheme = document.getElementById('theme');
+        var themes = ['auto', 'clair', 'sombre'];
+        var noms = { auto: 'automatique', clair: 'clair', sombre: 'sombre' };
+        function poserTheme(t) {
+          racine.setAttribute('data-theme', t);
+          if (bTheme) bTheme.textContent = 'Thème : ' + noms[t];
+          try {
+            localStorage.setItem('maquettes-theme', t);
+          } catch (x) {}
+        }
+        if (bTheme) {
+          var mem = null;
+          try {
+            mem = localStorage.getItem('maquettes-theme');
+          } catch (x) {}
+          poserTheme(themes.indexOf(mem) >= 0 ? mem : 'auto');
+          bTheme.addEventListener('click', function () {
+            poserTheme(themes[(themes.indexOf(racine.getAttribute('data-theme')) + 1) % 3]);
+          });
+        }
+        // Largeur du cadre.
+        Array.prototype.slice
+          .call(document.querySelectorAll('[data-largeur]'))
+          .forEach(function (b, i, tous) {
+            b.addEventListener('click', function () {
+              tel.style.setProperty('--largeur', b.getAttribute('data-largeur') + 'px');
+              tel.style.setProperty(
+                '--hauteur',
+                (b.getAttribute('data-hauteur') || tel.getAttribute('data-hauteur')) + 'px'
+              );
+              tous.forEach(function (o) {
+                o.setAttribute('aria-pressed', String(o === b));
+              });
+              ajuster();
+            });
+          });
+        // Pan et zoom.
+        function borner(s) {
+          return Math.min(2.5, Math.max(0.3, s));
+        }
+        function ajuster() {
+          var l = tel.offsetWidth + 48,
+            h = tel.offsetHeight + 48;
+          var s = Math.min(1, scene.clientWidth / l, Math.max(0.3, (scene.clientHeight || h) / h));
+          etat = { x: 0, y: 0, s: borner(s) };
+          appliquer();
+        }
+        var bm = document.getElementById('zoom-moins'),
+          bp = document.getElementById('zoom-plus'),
+          br = document.getElementById('zoom-ajuster');
+        if (bm)
+          bm.addEventListener('click', function () {
+            etat.s = borner(etat.s / 1.2);
+            appliquer();
+          });
+        if (bp)
+          bp.addEventListener('click', function () {
+            etat.s = borner(etat.s * 1.2);
+            appliquer();
+          });
+        if (br) br.addEventListener('click', ajuster);
+        var tire = null;
+        scene.addEventListener('pointerdown', function (ev) {
+          if (ev.target.closest('.telephone') && !ev.altKey) return;
+          if (window.matchMedia('(max-width: 640px)').matches) return;
+          tire = { x: ev.clientX - etat.x, y: ev.clientY - etat.y };
+          scene.classList.add('glisse');
+          scene.setPointerCapture(ev.pointerId);
+        });
+        scene.addEventListener('pointermove', function (ev) {
+          if (!tire) return;
+          etat.x = ev.clientX - tire.x;
+          etat.y = ev.clientY - tire.y;
+          appliquer();
+        });
+        scene.addEventListener('pointerup', function () {
+          tire = null;
+          scene.classList.remove('glisse');
+        });
+        scene.addEventListener(
+          'wheel',
+          function (ev) {
+            if (!ev.ctrlKey) return;
+            ev.preventDefault();
+            etat.s = borner(etat.s * (ev.deltaY < 0 ? 1.1 : 1 / 1.1));
+            appliquer();
+          },
+          { passive: false }
+        );
+        scene.addEventListener('keydown', function (ev) {
+          if (ev.target !== scene) return;
+          var pas = 40,
+            k = ev.key;
+          if (k === 'ArrowLeft') etat.x += pas;
+          else if (k === 'ArrowRight') etat.x -= pas;
+          else if (k === 'ArrowUp') etat.y += pas;
+          else if (k === 'ArrowDown') etat.y -= pas;
+          else if (k === '+' || k === '=') etat.s = borner(etat.s * 1.2);
+          else if (k === '-') etat.s = borner(etat.s / 1.2);
+          else if (k === '0') {
+            ajuster();
+            return;
+          } else return;
+          ev.preventDefault();
+          appliquer();
+        });
+        if (!window.matchMedia('(max-width: 640px)').matches) ajuster();
+      })();
+    </script>
+  </body>
+</html>

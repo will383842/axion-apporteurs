@@ -1,0 +1,2078 @@
+<!doctype html>
+<html lang="fr" data-theme="auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Maquette — Lot du mois · Axion Partners</title>
+    <style>
+      /* charte:debut — bloc commun aux maquettes (console) : ne pas modifier ici seul, le propager aux autres fichiers */
+      :root {
+        color-scheme: light;
+        --fond: #f6f7f9;
+        --surface: #ffffff;
+        --surface-2: #e6e9ee;
+        --texte: #1a1d23;
+        --texte-doux: #4a5261;
+        --bord: #737c8a;
+        --primaire: #1f4e8c;
+        --sur-primaire: #ffffff;
+        --lien: #1f4e8c;
+        --ok-fond: #e2f2e7;
+        --ok-texte: #1b5e34;
+        --attente-fond: #fdf0d5;
+        --attente-texte: #704000;
+        --bloque-fond: #fbe6e6;
+        --bloque-texte: #8f1d1d;
+        --info-fond: #e3ecf8;
+        --info-texte: #12427a;
+        --neutre-fond: #eceef2;
+        --neutre-texte: #4a5261;
+        --focus: #b34700;
+        --atelier-fond: #e4ded3;
+        --atelier-surface: #ffffff;
+        --atelier-texte: #1c1917;
+        --atelier-doux: #57534e;
+        --atelier-lien: #a8390b;
+        --atelier-bord: #a39a8f;
+        --atelier-fond-bouton: #ffffff;
+        --atelier-alerte-fond: #fff1d6;
+        --atelier-alerte-texte: #6e3b00;
+        --cadre: #1b1f24;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        font:
+          18px/1.5 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: var(--atelier-fond);
+        color: var(--atelier-texte);
+      }
+      a {
+        color: var(--atelier-lien);
+      }
+      :focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+      .evitement {
+        position: absolute;
+        left: 8px;
+        top: -80px;
+        background: var(--atelier-surface);
+        padding: 12px 16px;
+        z-index: 10;
+        min-height: 48px;
+      }
+      .evitement:focus {
+        top: 8px;
+      }
+      .atelier-tete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 24px;
+        padding: 12px 20px;
+        background: var(--atelier-surface);
+        border-bottom: 1px solid var(--atelier-bord);
+      }
+      .atelier-tete h1 {
+        font-size: 24px;
+        margin: 0;
+        line-height: 1.25;
+      }
+      .atelier-tete h1 small {
+        display: block;
+        font-size: 18px;
+        font-weight: 400;
+        color: var(--atelier-doux);
+      }
+      .atelier-tete .fil a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+        font-weight: 600;
+      }
+      .fictif {
+        margin: 0;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background: var(--atelier-alerte-fond);
+        color: var(--atelier-alerte-texte);
+        font-weight: 600;
+      }
+      .reglages {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-left: auto;
+      }
+      .reglages button {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 0 14px;
+        font: inherit;
+        border-radius: 10px;
+        border: 2px solid var(--atelier-bord);
+        background: var(--atelier-fond-bouton);
+        color: var(--atelier-texte);
+        cursor: pointer;
+      }
+      .reglages button[aria-pressed='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+        border-color: var(--atelier-texte);
+      }
+      .atelier {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(280px, 380px);
+        min-height: calc(100vh - 90px);
+      }
+      .etats {
+        background: var(--atelier-surface);
+        border-right: 1px solid var(--atelier-bord);
+        padding: 12px;
+        overflow-y: auto;
+      }
+      .etats h2,
+      .notes h2.notes-titre {
+        font-size: 18px;
+        margin: 4px 4px 8px;
+        text-transform: none;
+      }
+      .etats ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .etats .groupe {
+        margin: 12px 4px 4px;
+        font-weight: 700;
+        color: var(--atelier-doux);
+      }
+      .etats a {
+        display: flex;
+        align-items: center;
+        min-height: 48px;
+        padding: 6px 12px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--atelier-texte);
+      }
+      .etats a[aria-current='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+        font-weight: 700;
+      }
+      .scene {
+        position: relative;
+        overflow: hidden;
+        touch-action: none;
+        cursor: grab;
+        background-color: var(--atelier-fond);
+        background-image: radial-gradient(var(--atelier-bord) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+      .scene.glisse {
+        cursor: grabbing;
+      }
+      .plateau {
+        transform-origin: 50% 0;
+        padding: 24px;
+        will-change: transform;
+      }
+      .telephone {
+        position: relative;
+        margin: 0 auto;
+        width: var(--largeur, 390px);
+        height: var(--hauteur, 844px);
+        border: 12px solid var(--cadre);
+        border-radius: 44px;
+        overflow: hidden;
+        background: var(--fond);
+        color: var(--texte);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        container-type: inline-size;
+        cursor: auto;
+      }
+      .telephone.bureau {
+        border-width: 10px;
+        border-radius: 12px;
+      }
+      .notes {
+        background: var(--atelier-surface);
+        border-left: 1px solid var(--atelier-bord);
+        padding: 16px 20px;
+        overflow-y: auto;
+      }
+      .note h2 {
+        font-size: 22px;
+        margin: 0 0 8px;
+      }
+      .note h3 {
+        font-size: 18px;
+        margin: 16px 0 4px;
+      }
+      .note p,
+      .note li {
+        margin: 0 0 8px;
+      }
+      .note ul {
+        padding-left: 22px;
+        margin: 0 0 8px;
+      }
+      .note code {
+        font-size: 16px;
+        background: var(--atelier-fond);
+        padding: 1px 4px;
+        border-radius: 4px;
+        overflow-wrap: anywhere;
+      }
+      .note .req {
+        color: var(--atelier-doux);
+      }
+      .js .ecran[hidden],
+      .js .note[hidden] {
+        display: none;
+      }
+      .sans-js-titre {
+        display: none;
+      }
+      html:not(.js) .ecran {
+        margin-bottom: 32px;
+      }
+      html:not(.js) .sans-js-titre {
+        display: block;
+        font-weight: 700;
+        padding: 8px 16px;
+      }
+      @media (max-width: 1100px) {
+        .atelier {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .etats {
+          border-right: 0;
+          border-bottom: 1px solid var(--atelier-bord);
+        }
+        .etats ul {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+        .etats .groupe {
+          width: 100%;
+        }
+        .notes {
+          border-left: 0;
+          border-top: 1px solid var(--atelier-bord);
+        }
+        .scene {
+          min-height: 70vh;
+        }
+      }
+      @media (max-width: 640px) {
+        .reglages .zoom {
+          display: none;
+        }
+        .scene {
+          background-image: none;
+          cursor: auto;
+          touch-action: auto;
+          min-height: 0;
+        }
+        .plateau {
+          padding: 0;
+          transform: none !important;
+        }
+        .telephone,
+        .telephone.bureau {
+          width: 100% !important;
+          height: auto !important;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .telephone .app {
+          height: auto;
+        }
+        .telephone .defile {
+          overflow: visible;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+
+      .telephone {
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: var(--fond);
+        color: var(--texte);
+      }
+      .ico {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .c-tete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 20px;
+        padding: 6px 20px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--surface-2);
+      }
+      .c-marque {
+        font-weight: 800;
+      }
+      .c-nav {
+        display: flex;
+        gap: 4px;
+      }
+      .c-nav a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--texte);
+        text-decoration: none;
+      }
+      .c-nav a[aria-current='page'] {
+        background: var(--info-fond);
+        color: var(--info-texte);
+        font-weight: 700;
+      }
+      .c-qui {
+        margin-left: auto;
+        color: var(--texte-doux);
+      }
+      .defile {
+        flex: 1;
+        overflow: auto;
+        padding: 16px 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .defile > * {
+        margin: 0;
+      }
+      h2.c-titre {
+        font-size: 24px;
+        margin: 0;
+      }
+      h3 {
+        font-size: 18px;
+        margin: 0;
+      }
+      p {
+        margin: 0;
+      }
+      .doux {
+        color: var(--texte-doux);
+      }
+      .fort {
+        font-weight: 700;
+      }
+      .rangee {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+      }
+      .ecarte {
+        justify-content: space-between;
+      }
+      .carte {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .ok {
+        --t: var(--ok-texte);
+        --f: var(--ok-fond);
+      }
+      .attente {
+        --t: var(--attente-texte);
+        --f: var(--attente-fond);
+      }
+      .bloque {
+        --t: var(--bloque-texte);
+        --f: var(--bloque-fond);
+      }
+      .info {
+        --t: var(--info-texte);
+        --f: var(--info-fond);
+      }
+      .neutre {
+        --t: var(--neutre-texte);
+        --f: var(--neutre-fond);
+      }
+      .pastille {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 10px 2px 6px;
+        border-radius: 999px;
+        background: var(--f);
+        color: var(--t);
+        font-weight: 700;
+        font-size: 15px;
+        white-space: nowrap;
+      }
+      .pastille .ico {
+        width: 16px;
+        height: 16px;
+      }
+      .encart {
+        background: var(--f);
+        border-left: 5px solid var(--t);
+        border-radius: 8px;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .encart-titre {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        font-weight: 800;
+        color: var(--t);
+      }
+      .encart a:not(.c-bouton) {
+        color: var(--lien);
+        font-weight: 700;
+      }
+      .encart p a,
+      .carte p a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .c-bouton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        min-width: 44px;
+        padding: 6px 16px;
+        border-radius: 8px;
+        border: 2px solid var(--primaire);
+        background: var(--primaire);
+        color: var(--sur-primaire);
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .c-bouton.second {
+        background: var(--surface);
+        color: var(--lien);
+      }
+      .c-bouton.danger {
+        background: var(--surface);
+        color: var(--bloque-texte);
+        border-color: var(--bloque-texte);
+      }
+      .c-bouton.inactif {
+        background: var(--surface-2);
+        color: var(--texte-doux);
+        border: 2px dashed var(--bord);
+        cursor: not-allowed;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 10px;
+      }
+      caption {
+        text-align: left;
+        font-weight: 700;
+        padding: 0 0 8px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--surface-2);
+      }
+      th {
+        font-size: 15px;
+        color: var(--texte-doux);
+        font-weight: 700;
+      }
+      td.nombre,
+      th.nombre {
+        text-align: right;
+        white-space: nowrap;
+      }
+      tr.ouverte > td {
+        background: var(--info-fond);
+      }
+      tr.retard > td:first-child {
+        box-shadow: inset 5px 0 0 var(--bloque-texte);
+      }
+      td a {
+        color: var(--lien);
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .fiche {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+      .champ {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .champ > span.etiquette,
+      legend {
+        font-weight: 700;
+      }
+      fieldset {
+        border: 1px solid var(--surface-2);
+        border-radius: 8px;
+        padding: 8px 12px 12px;
+        margin: 0;
+      }
+      .champ input,
+      .champ textarea,
+      .champ select {
+        min-height: 44px;
+        padding: 8px 10px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--texte);
+        font: inherit;
+        width: 100%;
+      }
+      .champ.erreur input,
+      .champ.erreur select,
+      .champ.erreur textarea {
+        border-color: var(--bloque-texte);
+        border-width: 3px;
+      }
+      .message-erreur {
+        color: var(--bloque-texte);
+        font-weight: 700;
+      }
+      .choix {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .choix label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 12px 0 4px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+      }
+      .choix input {
+        width: 24px;
+        height: 24px;
+        margin: 0 0 0 6px;
+        accent-color: var(--primaire);
+      }
+      .choix label.coche {
+        border-color: var(--primaire);
+        background: var(--info-fond);
+        font-weight: 700;
+      }
+      .etapes {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .etapes li {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--neutre-fond);
+        color: var(--neutre-texte);
+        font-weight: 600;
+      }
+      .etapes li.fait {
+        background: var(--ok-fond);
+        color: var(--ok-texte);
+      }
+      .etapes li.courant {
+        background: var(--primaire);
+        color: var(--sur-primaire);
+        font-weight: 800;
+      }
+      .definition {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 12px;
+        margin: 0;
+      }
+      .definition dt {
+        color: var(--texte-doux);
+      }
+      .definition dd {
+        margin: 0;
+        font-weight: 600;
+      }
+      .squelette {
+        border-radius: 8px;
+        background: var(--surface-2);
+      }
+      .dialogue {
+        border: 2px solid var(--texte);
+        border-radius: 12px;
+        background: var(--surface);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-width: 560px;
+        align-self: center;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .mono {
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 15px;
+        overflow-wrap: anywhere;
+      }
+      @container (max-width: 760px) {
+        .fiche {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .c-qui {
+          margin-left: 0;
+        }
+        table,
+        thead,
+        tbody,
+        tr,
+        th,
+        td,
+        caption {
+          display: block;
+        }
+        thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+        }
+        tr {
+          border-bottom: 2px solid var(--surface-2);
+          padding: 6px 0;
+        }
+        td {
+          border: 0;
+          padding: 4px 12px;
+        }
+        td[data-col]::before {
+          content: attr(data-col) ' : ';
+          color: var(--texte-doux);
+          font-weight: 700;
+        }
+        td.nombre {
+          text-align: left;
+        }
+      }
+
+      /* charte:fin */
+    </style>
+  </head>
+  <body>
+    <a class="evitement" href="#telephone">Aller à l'écran maquetté</a>
+    <header class="atelier-tete">
+      <p class="fil"><a href="index.html">← Toutes les maquettes</a></p>
+      <h1>
+        Lot du mois<small
+          >Console · tâche UX-P2-03 · REQ-UX-025, REQ-ARG-019, REQ-ARG-034, REQ-CPL-011,
+          REQ-SEC-023</small
+        >
+      </h1>
+      <p class="fictif">Données fictives : aucune entreprise, personne ni numéro réels.</p>
+      <div class="reglages" role="group" aria-label="Réglages de la maquette">
+        <button type="button" data-largeur="1280" aria-pressed="true">Bureau 1280</button>
+        <button type="button" data-largeur="1024" aria-pressed="false">1024</button>
+        <button type="button" data-largeur="390" data-hauteur="844" aria-pressed="false">
+          Téléphone 390
+        </button>
+        <button type="button" class="zoom" id="zoom-moins" aria-label="Dézoomer">−</button>
+        <button type="button" class="zoom" id="zoom-ajuster" aria-label="Ajuster à la fenêtre">
+          <span id="zoom-valeur">100 %</span>
+        </button>
+        <button type="button" class="zoom" id="zoom-plus" aria-label="Zoomer">+</button>
+      </div>
+    </header>
+    <main class="atelier">
+      <nav class="etats" aria-label="États de l'écran">
+        <h2>États</h2>
+        <p class="groupe">Les étapes du lot</p>
+        <ul>
+          <li><a href="#etat-brouillon">Brouillon</a></li>
+          <li><a href="#etat-approuve">Approuvé</a></li>
+          <li><a href="#etat-exporte">Exporté</a></li>
+          <li><a href="#etat-regenerer">Régénérer le fichier</a></li>
+          <li><a href="#etat-rapprochement">Rapprochement</a></li>
+          <li><a href="#etat-rapproche">Rapproché</a></li>
+          <li><a href="#etat-rejete">Rejeté</a></li>
+        </ul>
+        <p class="groupe">Bloqués</p>
+        <ul>
+          <li><a href="#etat-export-refuse">Export refusé : non approuvé</a></li>
+          <li><a href="#etat-vide">Aucun relevé ce mois-ci</a></li>
+          <li><a href="#etat-qualifieur">Rôle qualifieur</a></li>
+        </ul>
+        <p class="groupe">Techniques</p>
+        <ul>
+          <li><a href="#etat-chargement">Chargement</a></li>
+        </ul>
+      </nav>
+      <div
+        class="scene"
+        id="scene"
+        tabindex="0"
+        aria-label="Plan de travail : glisser hors du cadre pour déplacer, flèches du clavier pour déplacer, plus et moins pour zoomer, zéro pour ajuster"
+      >
+        <div class="plateau" id="plateau">
+          <div
+            class="telephone bureau"
+            id="telephone"
+            tabindex="-1"
+            data-hauteur="820"
+            style="--largeur: 1280px; --hauteur: 820px"
+          >
+            <section class="ecran" id="etat-brouillon" aria-label="État : Brouillon">
+              <p class="sans-js-titre">État : Brouillon</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <div class="rangee ecarte">
+                    <h2 class="c-titre">Lot d’octobre 2026 · relevés de septembre</h2>
+                    <span class="doux">Établi le 01/10/2026 06:00</span>
+                  </div>
+                  <ol class="etapes" aria-label="Étapes du lot">
+                    <li class="courant" aria-current="step">Brouillon</li>
+                    <li class="">Approuvé</li>
+                    <li class="">Exporté</li>
+                    <li class="">Rapproché</li>
+                  </ol>
+                  <div class="encart attente">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V8a4 4 0 018 0v3" /></svg
+                      >Mois à blanc : l’export bancaire est fermé
+                    </p>
+                    <p>
+                      Le fichier est produit pour comparaison avec le calcul manuel ; aucun virement
+                      ne part. Seul un administrateur ouvre l’export (vérification renforcée,
+                      journalisée).
+                    </p>
+                  </div>
+                  <div class="encart bloque" role="group" aria-label="Alerte de délai">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 3l10 18H2z" />
+                        <path d="M12 10v5M12 18v.5" /></svg
+                      >1 relevé dépasse 60 jours depuis sa facture
+                    </p>
+                    <p>
+                      R-2026-07-0011 (Sophie Exemple-Martin), motif RIB manquant. Au-delà de 60
+                      jours, le retard est une anomalie de premier rang, quel que soit le motif ;
+                      pénalités et indemnité de 40 € sont dues.
+                    </p>
+                    <p>1 autre relevé a passé 45 jours (alerte).</p>
+                  </div>
+                  <table>
+                    <caption>
+                      Relevés à payer : 4 · 2 227,50 €
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">Relevé</th>
+                        <th scope="col">Émis par</th>
+                        <th scope="col" class="nombre">Montant</th>
+                        <th scope="col">Compte</th>
+                        <th scope="col">Âge de la facture</th>
+                        <th scope="col">Contrôles</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0001</a></td>
+                        <td data-col="Émis par">Autofacture</td>
+                        <td data-col="Montant" class="nombre">312,50 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 0042</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0002</a></td>
+                        <td data-col="Émis par">Autofacture</td>
+                        <td data-col="Montant" class="nombre">1 180,00 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 7731</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0003</a></td>
+                        <td data-col="Émis par">Facture de l’apporteur</td>
+                        <td data-col="Montant" class="nombre">640,00 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 1290</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Luc Démo-Durand</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0004</a></td>
+                        <td data-col="Émis par">Autofacture</td>
+                        <td data-col="Montant" class="nombre">95,00 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 5508</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <table>
+                    <caption>
+                      Relevés retenus hors du lot : 2
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">Relevé</th>
+                        <th scope="col" class="nombre">Montant</th>
+                        <th scope="col">Motif</th>
+                        <th scope="col">Âge de la facture</th>
+                        <th scope="col">Ce qui le lève</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="retard">
+                        <td data-col="Apporteur">Sophie Exemple-Martin</td>
+                        <td data-col="Relevé"><a href="#">R-2026-07-0011</a></td>
+                        <td data-col="Montant" class="nombre">410,00 €</td>
+                        <td data-col="Motif">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >RIB manquant</span
+                          >
+                        </td>
+                        <td data-col="Âge">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >J+61 : au-delà de 60 jours</span
+                          >
+                        </td>
+                        <td data-col="Ce qui le lève">
+                          RIB déposé et vérifié. Écrit à l’apporteur le 12/08.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Marc Fictif</td>
+                        <td data-col="Relevé"><a href="#">R-2026-08-0007</a></td>
+                        <td data-col="Montant" class="nombre">220,00 €</td>
+                        <td data-col="Motif">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Attestation Urssaf périmée</span
+                          >
+                        </td>
+                        <td data-col="Âge">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >J+46</span
+                          >
+                        </td>
+                        <td data-col="Ce qui le lève">Nouvelle attestation déposée.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="rangee">
+                    <button class="c-bouton" type="button">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Approuver le lot (2 227,50 €)</button
+                    ><span class="doux"
+                      >L’approbation pose une référence de virement unique sur chaque ligne.</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-approuve" aria-label="État : Approuvé">
+              <p class="sans-js-titre">État : Approuvé</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <div class="rangee ecarte">
+                    <h2 class="c-titre">Lot d’octobre 2026 · relevés de septembre</h2>
+                    <span class="doux">Établi le 01/10/2026 06:00</span>
+                  </div>
+                  <ol class="etapes" aria-label="Étapes du lot">
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Brouillon
+                    </li>
+                    <li class="courant" aria-current="step">Approuvé</li>
+                    <li class="">Exporté</li>
+                    <li class="">Rapproché</li>
+                  </ol>
+                  <div class="encart attente">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V8a4 4 0 018 0v3" /></svg
+                      >Mois à blanc : l’export bancaire est fermé
+                    </p>
+                    <p>
+                      Le fichier est produit pour comparaison avec le calcul manuel ; aucun virement
+                      ne part. Seul un administrateur ouvre l’export (vérification renforcée,
+                      journalisée).
+                    </p>
+                  </div>
+                  <div class="encart ok">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Approuvé par Nadia Chiffre-Exemple le 01/10/2026 à 09:14
+                    </p>
+                    <p>
+                      4 références de virement posées. Approuver à nouveau ne change rien (l’essai
+                      est journalisé).
+                    </p>
+                  </div>
+
+                  <table>
+                    <caption>
+                      Relevés à payer : 4 · 2 227,50 €
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">Relevé</th>
+                        <th scope="col">Émis par</th>
+                        <th scope="col" class="nombre">Montant</th>
+                        <th scope="col">Compte</th>
+                        <th scope="col">Âge de la facture</th>
+                        <th scope="col">Contrôles</th>
+                        <th scope="col">Référence de virement</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0001</a></td>
+                        <td data-col="Émis par">Autofacture</td>
+                        <td data-col="Montant" class="nombre">312,50 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 0042</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                        <td data-col="Référence"><span class="mono">AXP-2026-10-000001</span></td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0002</a></td>
+                        <td data-col="Émis par">Autofacture</td>
+                        <td data-col="Montant" class="nombre">1 180,00 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 7731</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                        <td data-col="Référence"><span class="mono">AXP-2026-10-000002</span></td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0003</a></td>
+                        <td data-col="Émis par">Facture de l’apporteur</td>
+                        <td data-col="Montant" class="nombre">640,00 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 1290</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                        <td data-col="Référence"><span class="mono">AXP-2026-10-000003</span></td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Luc Démo-Durand</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0004</a></td>
+                        <td data-col="Émis par">Autofacture</td>
+                        <td data-col="Montant" class="nombre">95,00 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 5508</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                        <td data-col="Référence"><span class="mono">AXP-2026-10-000004</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="rangee">
+                    <button class="c-bouton" type="button">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 16V4M7 9l5-5 5 5" />
+                        <path d="M4 16v4h16v-4" /></svg
+                      >Produire le fichier de virement</button
+                    ><button class="c-bouton danger" type="button">Rejeter le lot</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-exporte" aria-label="État : Exporté">
+              <p class="sans-js-titre">État : Exporté</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <div class="rangee ecarte">
+                    <h2 class="c-titre">Lot d’octobre 2026 · relevés de septembre</h2>
+                    <span class="doux">Établi le 01/10/2026 06:00</span>
+                  </div>
+                  <ol class="etapes" aria-label="Étapes du lot">
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Brouillon
+                    </li>
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Approuvé
+                    </li>
+                    <li class="courant" aria-current="step">Exporté</li>
+                    <li class="">Rapproché</li>
+                  </ol>
+                  <div class="encart attente">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V8a4 4 0 018 0v3" /></svg
+                      >Mois à blanc : l’export bancaire est fermé
+                    </p>
+                    <p>
+                      Le fichier est produit pour comparaison avec le calcul manuel ; aucun virement
+                      ne part. Seul un administrateur ouvre l’export (vérification renforcée,
+                      journalisée).
+                    </p>
+                  </div>
+                  <div class="carte">
+                    <h3>Fichier de virement</h3>
+                    <dl class="definition">
+                      <dt>Fichier</dt>
+                      <dd><span class="mono">lot-2026-10.pain.001.xml</span></dd>
+                      <dt>Identifiant du message</dt>
+                      <dd><span class="mono">AXP-LOT-2026-10-A</span></dd>
+                      <dt>Produit le</dt>
+                      <dd>01/10/2026 09:20 par Nadia Chiffre-Exemple</dd>
+                      <dt>Lignes</dt>
+                      <dd>4 · 2 227,50 €</dd>
+                    </dl>
+                    <div class="rangee">
+                      <a class="c-bouton" href="#"
+                        ><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M12 16V4M7 9l5-5 5 5" />
+                          <path d="M4 16v4h16v-4" /></svg
+                        >Télécharger</a
+                      ><a class="c-bouton second" href="#etat-regenerer">Régénérer…</a>
+                    </div>
+                  </div>
+                  <div class="rangee">
+                    <a class="c-bouton" href="#etat-rapprochement"
+                      >Importer le relevé bancaire (CSV)</a
+                    >
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-regenerer" aria-label="État : Régénérer le fichier">
+              <p class="sans-js-titre">État : Régénérer le fichier</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <div class="rangee ecarte">
+                    <h2 class="c-titre">Lot d’octobre 2026 · relevés de septembre</h2>
+                    <span class="doux">Établi le 01/10/2026 06:00</span>
+                  </div>
+                  <ol class="etapes" aria-label="Étapes du lot">
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Brouillon
+                    </li>
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Approuvé
+                    </li>
+                    <li class="courant" aria-current="step">Exporté</li>
+                    <li class="">Rapproché</li>
+                  </ol>
+                  <div
+                    class="dialogue"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="titre-regen--regenerer"
+                  >
+                    <h3 id="titre-regen--regenerer">Régénérer le fichier de virement</h3>
+                    <p>
+                      L’ancien fichier (message <span class="mono">AXP-LOT-2026-10-A</span>) sera
+                      <b>invalidé</b> : ne le transmettez pas à la banque.
+                    </p>
+                    <label class="champ"
+                      ><span class="etiquette">Motif de la régénération</span
+                      ><textarea aria-describedby="aide-regen--regenerer">
+Fichier refusé par la banque : format de date.</textarea
+                      ><span class="doux" id="aide-regen--regenerer"
+                        >Écrit au journal, avec votre nom et l’heure.</span
+                      ></label
+                    >
+                    <div class="rangee">
+                      <button class="c-bouton" type="button">Régénérer</button
+                      ><button class="c-bouton second" type="button">Annuler</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-rapprochement" aria-label="État : Rapprochement">
+              <p class="sans-js-titre">État : Rapprochement</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <div class="rangee ecarte">
+                    <h2 class="c-titre">Lot d’octobre 2026 · relevés de septembre</h2>
+                    <span class="doux">Établi le 01/10/2026 06:00</span>
+                  </div>
+                  <ol class="etapes" aria-label="Étapes du lot">
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Brouillon
+                    </li>
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Approuvé
+                    </li>
+                    <li class="courant" aria-current="step">Exporté</li>
+                    <li class="">Rapproché</li>
+                  </ol>
+                  <div class="carte">
+                    <h3>Relevé bancaire importé</h3>
+                    <p>releve-banque-2026-10-03.csv · 4 lignes lues</p>
+                    <ul style="margin: 0; padding-left: 20px">
+                      <li>
+                        <span class="pastille ok"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                          >3 rapprochées</span
+                        >
+                        par référence de virement
+                      </li>
+                      <li>
+                        <span class="pastille attente"
+                          ><svg
+                            class="ico"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            focusable="false"
+                          >
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M12 7v5l3.5 2" /></svg
+                          >1 écart</span
+                        >
+                        R-2026-09-0004 : 95,00 € attendus, aucun débit trouvé
+                      </li>
+                    </ul>
+                    <div class="rangee">
+                      <button class="c-bouton second" type="button">
+                        Rapprocher à la main (motif demandé)</button
+                      ><button class="c-bouton inactif" type="button" aria-disabled="true">
+                        Clore le lot
+                      </button>
+                    </div>
+                    <p class="doux">Le lot se clôt quand chaque ligne est rapprochée.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-rapproche" aria-label="État : Rapproché">
+              <p class="sans-js-titre">État : Rapproché</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <div class="rangee ecarte">
+                    <h2 class="c-titre">Lot d’octobre 2026 · relevés de septembre</h2>
+                    <span class="doux">Établi le 01/10/2026 06:00</span>
+                  </div>
+                  <ol class="etapes" aria-label="Étapes du lot">
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Brouillon
+                    </li>
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Approuvé
+                    </li>
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Exporté
+                    </li>
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Rapproché
+                    </li>
+                  </ol>
+                  <div class="encart ok">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Lot clos le 03/10/2026
+                    </p>
+                    <p>
+                      4 virements rapprochés. Les lignes passent « versées » dans l’espace de chaque
+                      apporteur.
+                    </p>
+                  </div>
+                  <table>
+                    <caption>
+                      Relevés à payer : 4 · 2 227,50 €
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">Relevé</th>
+                        <th scope="col">Émis par</th>
+                        <th scope="col" class="nombre">Montant</th>
+                        <th scope="col">Compte</th>
+                        <th scope="col">Âge de la facture</th>
+                        <th scope="col">Contrôles</th>
+                        <th scope="col">Référence de virement</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0001</a></td>
+                        <td data-col="Émis par">Autofacture</td>
+                        <td data-col="Montant" class="nombre">312,50 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 0042</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                        <td data-col="Référence"><span class="mono">AXP-2026-10-000001</span></td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0002</a></td>
+                        <td data-col="Émis par">Autofacture</td>
+                        <td data-col="Montant" class="nombre">1 180,00 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 7731</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                        <td data-col="Référence"><span class="mono">AXP-2026-10-000002</span></td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0003</a></td>
+                        <td data-col="Émis par">Facture de l’apporteur</td>
+                        <td data-col="Montant" class="nombre">640,00 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 1290</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                        <td data-col="Référence"><span class="mono">AXP-2026-10-000003</span></td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Luc Démo-Durand</td>
+                        <td data-col="Relevé"><a href="#">R-2026-09-0004</a></td>
+                        <td data-col="Émis par">Autofacture</td>
+                        <td data-col="Montant" class="nombre">95,00 €</td>
+                        <td data-col="Compte"><span class="mono">FR76 •••• 5508</span></td>
+                        <td data-col="Âge">J+2</td>
+                        <td data-col="Contrôles">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                            >3 sur 3</span
+                          >
+                        </td>
+                        <td data-col="Référence"><span class="mono">AXP-2026-10-000004</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-rejete" aria-label="État : Rejeté">
+              <p class="sans-js-titre">État : Rejeté</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <div class="rangee ecarte">
+                    <h2 class="c-titre">Lot d’octobre 2026 · relevés de septembre</h2>
+                    <span class="doux">Établi le 01/10/2026 06:00</span>
+                  </div>
+                  <ol class="etapes" aria-label="Étapes du lot">
+                    <li class="fait">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Brouillon
+                    </li>
+                    <li class="courant" aria-current="step">Approuvé</li>
+                    <li class="">Exporté</li>
+                    <li class="">Rapproché</li>
+                    <li class="courant" aria-current="step">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M6 6l12 12M18 6L6 18" /></svg
+                      >Rejeté
+                    </li>
+                  </ol>
+                  <div class="encart bloque">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M6 6l12 12M18 6L6 18" /></svg
+                      >Lot rejeté le 01/10/2026 à 10:02
+                    </p>
+                    <p>
+                      Motif : « Montant de R-2026-09-0002 à recalculer après l’avoir du 30/09. » Les
+                      relevés reviennent au prochain brouillon.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section
+              class="ecran"
+              id="etat-export-refuse"
+              aria-label="État : Export refusé : non approuvé"
+            >
+              <p class="sans-js-titre">État : Export refusé : non approuvé</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <div class="rangee ecarte">
+                    <h2 class="c-titre">Lot d’octobre 2026 · relevés de septembre</h2>
+                    <span class="doux">Établi le 01/10/2026 06:00</span>
+                  </div>
+                  <ol class="etapes" aria-label="Étapes du lot">
+                    <li class="courant" aria-current="step">Brouillon</li>
+                    <li class="">Approuvé</li>
+                    <li class="">Exporté</li>
+                    <li class="">Rapproché</li>
+                  </ol>
+                  <div class="encart bloque" role="alert">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V8a4 4 0 018 0v3" /></svg
+                      >Le fichier ne peut pas être produit : le lot n’est pas approuvé
+                    </p>
+                    <p>
+                      Un lot s’approuve avant d’être exporté. L’approbation est ouverte aux rôles
+                      comptable et administrateur.
+                    </p>
+                    <p><a class="c-bouton" href="#etat-brouillon">Revenir au brouillon</a></p>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-vide" aria-label="État : Aucun relevé ce mois-ci">
+              <p class="sans-js-titre">État : Aucun relevé ce mois-ci</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <h2 class="c-titre">Lot d’octobre 2026</h2>
+                  <div class="carte">
+                    <h3>Aucun relevé à payer ce mois-ci</h3>
+                    <p>
+                      Les soldes du mois sont sous le seuil de versement, ou retenus (voir
+                      ci-dessous). Ils seront repris au prochain lot ; en janvier, le seuil ne
+                      s’applique pas.
+                    </p>
+                  </div>
+                  <table>
+                    <caption>
+                      Relevés retenus hors du lot : 2
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">Relevé</th>
+                        <th scope="col" class="nombre">Montant</th>
+                        <th scope="col">Motif</th>
+                        <th scope="col">Âge de la facture</th>
+                        <th scope="col">Ce qui le lève</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="retard">
+                        <td data-col="Apporteur">Sophie Exemple-Martin</td>
+                        <td data-col="Relevé"><a href="#">R-2026-07-0011</a></td>
+                        <td data-col="Montant" class="nombre">410,00 €</td>
+                        <td data-col="Motif">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >RIB manquant</span
+                          >
+                        </td>
+                        <td data-col="Âge">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >J+61 : au-delà de 60 jours</span
+                          >
+                        </td>
+                        <td data-col="Ce qui le lève">
+                          RIB déposé et vérifié. Écrit à l’apporteur le 12/08.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td data-col="Apporteur">Marc Fictif</td>
+                        <td data-col="Relevé"><a href="#">R-2026-08-0007</a></td>
+                        <td data-col="Montant" class="nombre">220,00 €</td>
+                        <td data-col="Motif">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Attestation Urssaf périmée</span
+                          >
+                        </td>
+                        <td data-col="Âge">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >J+46</span
+                          >
+                        </td>
+                        <td data-col="Ce qui le lève">Nouvelle attestation déposée.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-qualifieur" aria-label="État : Rôle qualifieur">
+              <p class="sans-js-titre">État : Rôle qualifieur</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <div class="encart info">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V8a4 4 0 018 0v3" /></svg
+                      >Cet écran n’est pas ouvert à votre rôle
+                    </p>
+                    <p>
+                      Les lots de paiement relèvent des rôles comptable et administrateur. Pour y
+                      accéder, un administrateur modifie votre rôle.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-chargement" aria-label="État : Chargement">
+              <p class="sans-js-titre">État : Chargement</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal">Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon" aria-current="page"
+                      >Lots de paiement</a
+                    >
+                  </nav>
+                  <span class="c-qui">Nadia Chiffre-Exemple · <b>comptable</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Lot de paiement">
+                  <h2 class="c-titre">Lot d’octobre 2026</h2>
+                  <div aria-busy="true" style="display: flex; flex-direction: column; gap: 8px">
+                    <p role="status" class="doux">Chargement du lot…</p>
+                    <div class="squelette" style="height: 44px"></div>
+                    <div class="squelette" style="height: 44px"></div>
+                    <div class="squelette" style="height: 44px"></div>
+                    <div class="squelette" style="height: 44px"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+      <aside class="notes" aria-label="Notes de conception">
+        <h2 class="notes-titre">Notes pour la relecture</h2>
+        <section class="note" data-pour="etat-brouillon">
+          <h2>Brouillon</h2>
+          <p>
+            <b>Le geste principal</b> : relire, approuver, exporter. Mimé :
+            <b>3 clics et une vérification renforcée, environ 2 minutes de relecture</b>.
+          </p>
+          <ul>
+            <li>
+              Machine d’états visible en tête : brouillon → approuvé → exporté → rapproché, ou
+              rejeté (REQ-UX-025, REQ-ARG-019).
+            </li>
+            <li>
+              Chaque relevé montre son <b>âge depuis la facture</b> ; alerte à J+45, anomalie à J+60
+              (REQ-ARG-034).
+            </li>
+            <li>Les relevés retenus restent visibles, avec le motif et <b>ce qui le lève</b>.</li>
+            <li>
+              Compte bancaire masqué : jamais d’IBAN en clair hors rôle habilité (REQ-SEC-023).
+            </li>
+            <li>
+              « Émis par » : autofacture sous mandat, ou facture de l’apporteur sans mandat
+              (REQ-ARG-035) — le lot accepte les deux.
+            </li>
+          </ul>
+          <p>
+            Écran de console : les noms d’apporteurs y figurent (fictifs). Ils ne sortent jamais
+            vers un autre apporteur.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-approuve">
+          <h2>Approuvé</h2>
+          <p>
+            La référence de virement (EndToEndId) est posée à l’approbation, une par ligne, unique.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-exporte">
+          <h2>Exporté</h2>
+          <p>
+            <b>Un seul fichier</b> par lot exporté. Le produire une seconde fois passe par «
+            Régénérer », qui exige un motif.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-regenerer">
+          <h2>Régénérer le fichier</h2>
+          <p>
+            REQ-UX-025 : la régénération exige un motif et invalide l’identifiant du message
+            précédent. Le bouton reste inactif tant que le motif est vide.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-rapprochement">
+          <h2>Rapprochement</h2>
+          <p>
+            Rapprochement par la référence de virement de chaque ligne. Un écart dit quoi faire ; un
+            rapprochement manuel exige un motif, journalisé.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-rapproche">
+          <h2>Rapproché</h2>
+          <p>État final. Côté apporteur : « Versé le … » dans Mes commissions.</p>
+        </section>
+        <section class="note" data-pour="etat-rejete">
+          <h2>Rejeté</h2>
+          <p>
+            Branche <code>rejete</code> de REQ-ARG-019 : motif affiché, et ce que deviennent les
+            relevés.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-export-refuse">
+          <h2>Export refusé : non approuvé</h2>
+          <p>
+            REQ-ARG-019 : exporter un lot non approuvé est refusé. Le message dit pourquoi et qui
+            peut approuver.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-vide">
+          <h2>Aucun relevé ce mois-ci</h2>
+          <p>État vide déclaré, avec la raison et ce qui suit.</p>
+        </section>
+        <section class="note" data-pour="etat-qualifieur">
+          <h2>Rôle qualifieur</h2>
+          <p>
+            Matrice écran × rôle (REQ-SEC-023) : un qualifieur ne voit ni lot ni compte bancaire.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-chargement">
+          <h2>Chargement</h2>
+          <p>Hauteur des lignes réservée.</p>
+        </section>
+      </aside>
+    </main>
+    <script>
+      (function () {
+        var racine = document.documentElement;
+        racine.classList.add('js');
+        var ecrans = Array.prototype.slice.call(document.querySelectorAll('.ecran'));
+        var notes = Array.prototype.slice.call(document.querySelectorAll('.note'));
+        var liens = Array.prototype.slice.call(document.querySelectorAll('.etats a'));
+        var scene = document.getElementById('scene');
+        var plateau = document.getElementById('plateau');
+        var tel = document.getElementById('telephone');
+        var etat = { x: 0, y: 0, s: 1 };
+        function appliquer() {
+          plateau.style.transform =
+            'translate(' + etat.x + 'px,' + etat.y + 'px) scale(' + etat.s + ')';
+          var z = document.getElementById('zoom-valeur');
+          if (z) z.textContent = Math.round(etat.s * 100) + ' %';
+        }
+        function montrer(id, pousser) {
+          var cible = document.getElementById(id) ? id : ecrans[0].id;
+          ecrans.forEach(function (el) {
+            el.hidden = el.id !== cible;
+          });
+          notes.forEach(function (el) {
+            el.hidden = el.getAttribute('data-pour') !== cible;
+          });
+          liens.forEach(function (a) {
+            if (a.getAttribute('href') === '#' + cible) a.setAttribute('aria-current', 'true');
+            else a.removeAttribute('aria-current');
+          });
+          if (pousser) history.replaceState(null, '', '#' + cible);
+          var d = document.querySelector('#' + cible + ' .defile');
+          if (d) d.scrollTop = 0;
+        }
+        liens.forEach(function (a) {
+          a.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            montrer(a.getAttribute('href').slice(1), true);
+          });
+        });
+        window.addEventListener('hashchange', function () {
+          montrer(location.hash.slice(1), false);
+        });
+        montrer(location.hash.slice(1), false);
+        // Thème : automatique → clair → sombre (sans réseau, mémorisé sur ce poste seulement).
+        var bTheme = document.getElementById('theme');
+        var themes = ['auto', 'clair', 'sombre'];
+        var noms = { auto: 'automatique', clair: 'clair', sombre: 'sombre' };
+        function poserTheme(t) {
+          racine.setAttribute('data-theme', t);
+          if (bTheme) bTheme.textContent = 'Thème : ' + noms[t];
+          try {
+            localStorage.setItem('maquettes-theme', t);
+          } catch (x) {}
+        }
+        if (bTheme) {
+          var mem = null;
+          try {
+            mem = localStorage.getItem('maquettes-theme');
+          } catch (x) {}
+          poserTheme(themes.indexOf(mem) >= 0 ? mem : 'auto');
+          bTheme.addEventListener('click', function () {
+            poserTheme(themes[(themes.indexOf(racine.getAttribute('data-theme')) + 1) % 3]);
+          });
+        }
+        // Largeur du cadre.
+        Array.prototype.slice
+          .call(document.querySelectorAll('[data-largeur]'))
+          .forEach(function (b, i, tous) {
+            b.addEventListener('click', function () {
+              tel.style.setProperty('--largeur', b.getAttribute('data-largeur') + 'px');
+              tel.style.setProperty(
+                '--hauteur',
+                (b.getAttribute('data-hauteur') || tel.getAttribute('data-hauteur')) + 'px'
+              );
+              tous.forEach(function (o) {
+                o.setAttribute('aria-pressed', String(o === b));
+              });
+              ajuster();
+            });
+          });
+        // Pan et zoom.
+        function borner(s) {
+          return Math.min(2.5, Math.max(0.3, s));
+        }
+        function ajuster() {
+          var l = tel.offsetWidth + 48,
+            h = tel.offsetHeight + 48;
+          var s = Math.min(1, scene.clientWidth / l, Math.max(0.3, (scene.clientHeight || h) / h));
+          etat = { x: 0, y: 0, s: borner(s) };
+          appliquer();
+        }
+        var bm = document.getElementById('zoom-moins'),
+          bp = document.getElementById('zoom-plus'),
+          br = document.getElementById('zoom-ajuster');
+        if (bm)
+          bm.addEventListener('click', function () {
+            etat.s = borner(etat.s / 1.2);
+            appliquer();
+          });
+        if (bp)
+          bp.addEventListener('click', function () {
+            etat.s = borner(etat.s * 1.2);
+            appliquer();
+          });
+        if (br) br.addEventListener('click', ajuster);
+        var tire = null;
+        scene.addEventListener('pointerdown', function (ev) {
+          if (ev.target.closest('.telephone') && !ev.altKey) return;
+          if (window.matchMedia('(max-width: 640px)').matches) return;
+          tire = { x: ev.clientX - etat.x, y: ev.clientY - etat.y };
+          scene.classList.add('glisse');
+          scene.setPointerCapture(ev.pointerId);
+        });
+        scene.addEventListener('pointermove', function (ev) {
+          if (!tire) return;
+          etat.x = ev.clientX - tire.x;
+          etat.y = ev.clientY - tire.y;
+          appliquer();
+        });
+        scene.addEventListener('pointerup', function () {
+          tire = null;
+          scene.classList.remove('glisse');
+        });
+        scene.addEventListener(
+          'wheel',
+          function (ev) {
+            if (!ev.ctrlKey) return;
+            ev.preventDefault();
+            etat.s = borner(etat.s * (ev.deltaY < 0 ? 1.1 : 1 / 1.1));
+            appliquer();
+          },
+          { passive: false }
+        );
+        scene.addEventListener('keydown', function (ev) {
+          if (ev.target !== scene) return;
+          var pas = 40,
+            k = ev.key;
+          if (k === 'ArrowLeft') etat.x += pas;
+          else if (k === 'ArrowRight') etat.x -= pas;
+          else if (k === 'ArrowUp') etat.y += pas;
+          else if (k === 'ArrowDown') etat.y -= pas;
+          else if (k === '+' || k === '=') etat.s = borner(etat.s * 1.2);
+          else if (k === '-') etat.s = borner(etat.s / 1.2);
+          else if (k === '0') {
+            ajuster();
+            return;
+          } else return;
+          ev.preventDefault();
+          appliquer();
+        });
+        if (!window.matchMedia('(max-width: 640px)').matches) ajuster();
+      })();
+    </script>
+  </body>
+</html>
