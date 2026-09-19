@@ -1,5 +1,4 @@
 // @req REQ-GOV-032
-// @req REQ-GOV-011
 /**
  * corps-de-pr-couvre.spec.ts — le champ `Couvre:` du corps de PR se DÉRIVE (REQ-GOV-032).
  *

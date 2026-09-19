@@ -97,7 +97,7 @@ describe('REQ-GOV-014 — chaque famille rougit sur son témoin', () => {
     expect(familles({ ...VUE_CONFORME, visibilite: 'PRIVATE' })).toEqual(['visibilite_inattendue']);
   });
 
-  it('check_requis_absent — `gate-a` n’est plus exigé par la protection de `main`', () => {
+  it('REQ-QA-013 — check_requis_absent — `gate-a` n’est plus exigé par la protection de `main`', () => {
     const protection = structuredClone(VUE_CONFORME.protection as Protection);
     protection.required_status_checks = { strict: true, contexts: [] };
     expect(familles({ ...VUE_CONFORME, protection })).toContain('check_requis_absent');

@@ -280,3 +280,13 @@ jobs:
         run: pnpm test
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # QA-T03, REQ-QA-014. LA MEME garde que "Matrice de tracabilite" plus haut (`gov-trace.ts`),
+      # relancee ICI avec les RESULTATS que `pnpm test` vient d ecrire (`test-results/vitest.json`) :
+      # c est la seule passe qui sache qu un test est VERT, et pas seulement ecrit. Juste apres
+      # "Tests", sans `if:` ni tolerance d echec : des resultats absents, illisibles ou partiels la
+      # font rougir. L etape d avant les tests reste, pour le retour rapide. Le jeton sert la source
+      # PR, facultative, comme plus haut.
+      - name: req:check — chaque paire (tache, REQ) a son test annote et VERT
+        run: pnpm req:check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

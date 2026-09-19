@@ -130,7 +130,7 @@ describe('REQ-GOV-029 — la liste des gardes candidates est DÉRIVÉE du texte 
       .filter(Boolean);
   }
 
-  it('l’exigence nomme sept gardes, et le registre en porte une ligne chacune', () => {
+  it('REQ-GOV-029 — l’exigence nomme sept gardes, et le registre en porte une ligne chacune', () => {
     const candidates = gardesNommeesParLExigence();
     expect(candidates).toHaveLength(7);
 

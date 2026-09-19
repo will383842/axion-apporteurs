@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**321 exigences actives · 44 réputées testées · 44 couvertes · 0 orphelines.**
+**321 exigences actives · 56 réputées testées · 56 couvertes · 0 orphelines.**
 
-260 tâches, dont 44 livrées · 55 fichiers de test exécutés par `vitest` sur 55 présents.
+260 tâches, dont 50 livrées · 56 fichiers de test exécutés par `vitest` sur 56 présents.
 
 ## Exigences réputées testées
 
@@ -26,9 +26,11 @@
 | `REQ-CPL-002` | `CPL-T01`, `GOV-015`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-CPL-003` | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-004` | `CPL-T01`, `DM-11` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
+| `REQ-CPL-013` | `CPL-T13` | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | couverte |
 | `REQ-CPL-017` | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-018` | `CPL-T01`, `GOV-009` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts` | couverte |
 | `REQ-CPL-021` | `GOV-000`, `QA-T04` | `tests/unit/gouvernance/autonomie.spec.ts` | couverte |
+| `REQ-CPL-026` | `CPL-T13` | `tests/unit/domaine/seuil-prioritaire.spec.ts` | couverte |
 | `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006`, `GOV-030`, `GOV-068`, `GOV-069`, `GOV-070` | `tests/unit/domaine/etats-occupants.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
 | `REQ-GOV-001` | `GOV-001`, `GOV-072` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-002` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
@@ -39,7 +41,7 @@
 | `REQ-GOV-008` | `GOV-009`, `GOV-038`, `GOV-058`, `GOV-063`, `GOV-070` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/attestation-inter-depot.spec.ts` | couverte |
 | `REQ-GOV-009` | `GOV-010`, `GOV-022`, `GOV-070` | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | couverte |
 | `REQ-GOV-010` | `GOV-007`, `GOV-023`, `GOV-024`, `GOV-062` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/fiches-agents.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
-| `REQ-GOV-011` | `GOV-007`, `GOV-021`, `GOV-024`, `GOV-058`, `GOV-077`, `GOV-078` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts`, `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
+| `REQ-GOV-011` | `GOV-007`, `GOV-021`, `GOV-024`, `GOV-058`, `GOV-077`, `GOV-078` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts`, `tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-012` | `GOV-007`, `GOV-044`, `GOV-045`, `GOV-046`, `GOV-054`, `GOV-061`, `GOV-063`, `GOV-067`, `GOV-082`, `GOV-083` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` | couverte |
 | `REQ-GOV-013` | `GOV-007`, `GOV-047`, `GOV-058`, `GOV-077` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts` | couverte |
 | `REQ-GOV-014` | `GOV-000`, `GOV-012`, `GOV-057` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
@@ -63,9 +65,19 @@
 | `REQ-INT-003` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-004` | `GOV-030`, `GOV-069`, `INT-T01a`, `INT-T05` | `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-INT-029` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
+| `REQ-QA-001` | `GOV-076`, `QA-T01` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | couverte |
+| `REQ-QA-002` | `QA-T01`, `QA-T30` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | couverte |
 | `REQ-QA-007` | `INT-T01a`, `INT-T01b` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-QA-013` | `GOV-059`, `GOV-061`, `GOV-062`, `GOV-063`, `GOV-076`, `GOV-083`, `QA-T00`, `QA-T01`, `QA-T07`, `QA-T28` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
-| `REQ-QA-014` | `GOV-039`, `GOV-085`, `QA-T03` | `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts`, `tests/unit/gouvernance/tracabilite.spec.ts`, `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts` | couverte |
+| `REQ-QA-014` | `GOV-039`, `GOV-085`, `QA-T03` | `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts`, `tests/unit/gouvernance/tracabilite.spec.ts`, `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts`, `tests/unit/qualite/req-check.spec.ts` | couverte |
+| `REQ-QA-027` | `CPL-T13`, `DM-13`, `T-ARG-015` | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | couverte |
+| `REQ-SEC-028` | `SEC-01` | `tests/unit/securite/env-boot.spec.ts` | couverte |
+| `REQ-SEC-029` | `SEC-02` | `tests/unit/securite/headers.spec.ts` | couverte |
+| `REQ-UX-008` | `UX-P0-02`, `UX-P1-08` | `tests/unit/espace/maquettes-validees.spec.ts` | couverte |
+| `REQ-UX-017` | `UX-P0-02`, `UX-P0-03` | `tests/unit/espace/maquettes-validees.spec.ts` | couverte |
+| `REQ-UX-022` | `CPL-T13`, `UX-P1-07` | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | couverte |
+| `REQ-UX-028` | `CPL-T13`, `UX-P3-03` | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | couverte |
+| `REQ-UX-034` | `UX-P0-02` | `tests/unit/espace/maquettes-validees.spec.ts` | couverte |
 
 ## Exigences actives dont aucune tâche n’est encore livrée
 
@@ -108,7 +120,6 @@
 | `REQ-CPL-010` | 2 | `CPL-T12`, `T-ARG-010` | — |
 | `REQ-CPL-011` | 2 | `CPL-T11`, `CPL-T23`, `T-ARG-015` | — |
 | `REQ-CPL-012` | 0 | `CPL-T12`, `JUR-T01` | `tests/unit/contrat/contract-template-complete.spec.ts` |
-| `REQ-CPL-013` | 0 | `CPL-T13` | `tests/unit/domaine/seuil-prioritaire.spec.ts`, `tests/unit/domaine/temps-horloge-et-feries.spec.ts` |
 | `REQ-CPL-014` | 2 | `CPL-T14-A`, `CPL-T14-P` | — |
 | `REQ-CPL-015` | -1 | `CPL-T15`, `INT-T01b`, `INT-T22` | `axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts`, `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts` |
 | `REQ-CPL-016` | 1 | `INT-T21-P` | — |
@@ -118,7 +129,6 @@
 | `REQ-CPL-023` | 3 | `UX-P3-02` | — |
 | `REQ-CPL-024` | 1 | `DM-09`, `UX-P1-06` | — |
 | `REQ-CPL-025` | 3 | `T-ARG-033` | — |
-| `REQ-CPL-026` | 0 | `CPL-T13` | `tests/unit/domaine/seuil-prioritaire.spec.ts`, `tests/unit/domaine/temps-horloge-et-feries.spec.ts` |
 | `REQ-CPL-027` | 0 | `DM-06`, `JUR-T24`, `UX-P1-12`, `UX-P3-06` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts` |
 | `REQ-CPL-028` | 1 | `INT-T23`, `INT-T24` | — |
 | `REQ-CPL-029` | 1 | `UX-P1-15` | — |
@@ -251,8 +261,6 @@
 | `REQ-JUR-040` | 1 | `JUR-T30`, `SEC-14` | — |
 | `REQ-JUR-041` | 0 | `JUR-T29`, `JUR-T30`, `UX-P1-11`, `UX-P3-02` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts` |
 | `REQ-JUR-042` | 1 | `JUR-T24`, `SEC-19`, `UX-P1-10`, `UX-P1-12` | — |
-| `REQ-QA-001` | 0 | `GOV-076`, `QA-T01` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts` |
-| `REQ-QA-002` | 0 | `QA-T01`, `QA-T30` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/qualite/score-de-mutation.spec.ts` |
 | `REQ-QA-003` | 2 | `QA-T21` | — |
 | `REQ-QA-004` | 1 | `DM-08` | — |
 | `REQ-QA-005` | 2 | `QA-T28`, `QA-T29` | — |
@@ -269,7 +277,6 @@
 | `REQ-QA-024` | 0 | `QA-T08` | `tests/unit/qualite/journal-redige.spec.ts` |
 | `REQ-QA-025` | 1 | `QA-T19` | — |
 | `REQ-QA-026` | 1 | `INT-T08-P`, `QA-T19`, `QA-T27` | — |
-| `REQ-QA-027` | 0 | `CPL-T13`, `DM-13`, `T-ARG-015` | `tests/unit/domaine/seuil-prioritaire.spec.ts`, `tests/unit/domaine/temps-horloge-et-feries.spec.ts` |
 | `REQ-QA-028` | 0 | `INT-T09` | `tests/integration/api-gouv.spec.ts`, `tests/unit/integration/recherche-entreprises-repli.spec.ts` |
 | `REQ-QA-029` | 2 | `T-ARG-018` | — |
 | `REQ-QA-030` | 0 | `QA-T04`, `QA-T13` | `tests/integration/sondes-de-vie.spec.ts`, `tests/unit/qualite/env-fail-fast.spec.ts`, `tests/unit/qualite/retour-arriere.spec.ts`, `tests/unit/qualite/runbooks-exerces.spec.ts` |
@@ -299,8 +306,6 @@
 | `REQ-SEC-024` | 0 | `SEC-08` | `tests/unit/securite/chiffrement-avec-aad.spec.ts` |
 | `REQ-SEC-025` | 2 | `SEC-22` | — |
 | `REQ-SEC-026` | 1 | `DM-11` | — |
-| `REQ-SEC-028` | 0 | `SEC-01` | `tests/unit/securite/env-boot.spec.ts` |
-| `REQ-SEC-029` | 0 | `SEC-02` | `tests/unit/securite/headers.spec.ts` |
 | `REQ-SEC-030` | 0 | `DM-20`, `JUR-T04` | `tests/unit/juridique/registre-rgpd.spec.ts` |
 | `REQ-SEC-031` | 1 | `SEC-18` | — |
 | `REQ-SEC-032` | 1 | `SEC-12`, `SEC-19`, `T-ARG-038` | — |
@@ -317,7 +322,6 @@
 | `REQ-UX-005` | 2 | `UX-P2-01`, `UX-P2-06` | — |
 | `REQ-UX-006` | 0 | `DM-16`, `SEC-05`, `UX-P2-04`, `UX-P2-06` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
 | `REQ-UX-007` | 1 | `SEC-16`, `UX-P1-01` | — |
-| `REQ-UX-008` | 0 | `UX-P0-02`, `UX-P1-08` | `tests/unit/espace/maquettes-validees.spec.ts` |
 | `REQ-UX-009` | 2 | `UX-P2-02` | — |
 | `REQ-UX-010` | 2 | `UX-P2-01` | — |
 | `REQ-UX-011` | 2 | `UX-P2-01`, `UX-P2-05` | — |
@@ -326,23 +330,19 @@
 | `REQ-UX-014` | 3 | `UX-P3-01` | — |
 | `REQ-UX-015` | 1 | `UX-P1-04` | — |
 | `REQ-UX-016` | 1 | `INT-T24`, `UX-P1-09`, `UX-P1-10`, `UX-P1-11`, `UX-P3-01`, `UX-P3-06` | — |
-| `REQ-UX-017` | 0 | `UX-P0-02`, `UX-P0-03` | `tests/a11y/axe.spec.ts`, `tests/a11y/cibles.spec.ts`, `tests/a11y/reflow.spec.ts`, `tests/unit/espace/maquettes-validees.spec.ts` |
 | `REQ-UX-018` | 0 | `UX-P0-03`, `UX-P3-04` | `tests/a11y/axe.spec.ts`, `tests/a11y/cibles.spec.ts`, `tests/a11y/reflow.spec.ts` |
 | `REQ-UX-019` | 0 | `UX-P0-01`, `UX-P1-08` | `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts` |
 | `REQ-UX-020` | 0 | `INT-T09` | `tests/integration/api-gouv.spec.ts`, `tests/unit/integration/recherche-entreprises-repli.spec.ts` |
 | `REQ-UX-021` | 1 | `UX-P1-06` | — |
-| `REQ-UX-022` | 0 | `CPL-T13`, `UX-P1-07` | `tests/unit/domaine/seuil-prioritaire.spec.ts`, `tests/unit/domaine/temps-horloge-et-feries.spec.ts` |
 | `REQ-UX-023` | 1 | `UX-P1-05` | — |
 | `REQ-UX-025` | 2 | `T-ARG-017`, `UX-P2-03` | — |
 | `REQ-UX-026` | 1 | `UX-P1-14`, `UX-P2-05`, `UX-P2-07` | — |
 | `REQ-UX-027` | 1 | `SEC-22`, `UX-P1-09` | — |
-| `REQ-UX-028` | 0 | `CPL-T13`, `UX-P3-03` | `tests/unit/domaine/seuil-prioritaire.spec.ts`, `tests/unit/domaine/temps-horloge-et-feries.spec.ts` |
 | `REQ-UX-029` | 3 | `UX-P3-02` | — |
 | `REQ-UX-030` | 2 | `UX-P2-04` | — |
 | `REQ-UX-031` | 1 | `UX-P1-09`, `UX-P3-05` | — |
 | `REQ-UX-032` | 2 | `UX-P2-04` | — |
 | `REQ-UX-033` | 0 | `QA-T20`, `UX-P1-08`, `UX-P3-01` | `tests/unit/qualite/budget-par-route.spec.ts` |
-| `REQ-UX-034` | 0 | `UX-P0-02` | `tests/unit/espace/maquettes-validees.spec.ts` |
 | `REQ-UX-035` | 3 | `CPL-T15`, `UX-P3-04` | — |
 | `REQ-UX-036` | 1 | `UX-P1-12` | — |
 | `REQ-UX-037` | 1 | `UX-P1-13` | — |
@@ -398,19 +398,19 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 2 | 3 | 0 |
 | 3 | 1 | 0 |
 | 4 | 15 | 1 |
-| 5 | 15 | 1 |
+| 5 | 15 | 2 |
 | 6 | 1 | 1 |
 | 7 | 1 | 0 |
-| 8 | 13 | 1 |
+| 8 | 13 | 2 |
 | 9 | 36 | 6 |
 | 10 | 6 | 0 |
 | 11 | 5 | 1 |
-| 12 | 13 | 0 |
-| 13 | 32 | 1 |
+| 12 | 13 | 3 |
+| 13 | 32 | 3 |
 | 14 | 13 | 0 |
-| 15 | 23 | 2 |
+| 15 | 23 | 3 |
 | 16 | 8 | 1 |
-| 17 | 15 | 1 |
+| 17 | 15 | 2 |
 | 18 | 3 | 0 |
 | 19 | 1 | 0 |
 | 20 | 3 | 0 |
@@ -422,13 +422,13 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 2 | 12 | 0 |
 | 3 | 1 | 0 |
 | 4 | 16 | 1 |
-| 5 | 17 | 1 |
+| 5 | 17 | 2 |
 | 6 | 2 | 1 |
-| 7 | 52 | 5 |
-| 8 | 12 | 0 |
+| 7 | 52 | 6 |
+| 8 | 12 | 3 |
 | 9 | 23 | 5 |
-| 10 | 63 | 5 |
-| 11 | 30 | 3 |
+| 10 | 63 | 7 |
+| 11 | 30 | 4 |
 | 12 | 14 | 0 |
 
 ## Fichiers de test
@@ -456,7 +456,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/citation-json-vs-prose.spec.ts` | oui | `REQ-GOV-003` |
 | `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-026` |
 | `tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts` | oui | `REQ-GOV-021` |
-| `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts` | oui | `REQ-GOV-011`, `REQ-GOV-032` |
+| `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts` | oui | `REQ-GOV-032` |
 | `tests/unit/gouvernance/entite-registre.spec.ts` | oui | `REQ-CPL-001`, `REQ-CPL-002`, `REQ-CPL-003`, `REQ-CPL-004`, `REQ-CPL-017`, `REQ-CPL-018`, `REQ-GOV-031` |
 | `tests/unit/gouvernance/fiches-agents.spec.ts` | oui | `REQ-GOV-010` |
 | `tests/unit/gouvernance/fiches-tiers.spec.ts` | oui | `REQ-CPL-002`, `REQ-GOV-022` |
@@ -488,5 +488,6 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/verrou-de-phase.spec.ts` | oui | `REQ-GOV-027` |
 | `tests/unit/gouvernance/vues-derivees.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-032` |
 | `tests/unit/integration/contrat-hash.spec.ts` | oui | `REQ-GOV-020`, `REQ-INT-003`, `REQ-INT-004`, `REQ-INT-029`, `REQ-QA-007` |
+| `tests/unit/qualite/req-check.spec.ts` | oui | `REQ-QA-014` |
 | `tests/unit/securite/env-boot.spec.ts` | oui | `REQ-SEC-028` |
 | `tests/unit/securite/headers.spec.ts` | oui | `REQ-SEC-029` |

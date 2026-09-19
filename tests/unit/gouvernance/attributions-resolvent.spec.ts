@@ -139,7 +139,7 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     expect(s.plancherJournal).toBe(Number(plancher![1]));
   });
 
-  it('le dépôt tel qu’il est ne porte aucune attribution rompue', () => {
+  it('REQ-GOV-021 — le dépôt tel qu’il est ne porte aucune attribution rompue', () => {
     const { fautes } = analyser(chargerSources(fichiersSuivis()));
     expect(fautes.map((f) => `[${f.famille}] ${f.message}`)).toEqual([]);
   });
