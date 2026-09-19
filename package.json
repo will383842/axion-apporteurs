@@ -93,6 +93,8 @@
     "gov:attestation:en-ligne": "tsx scripts/gates/gov-attestation.ts --en-ligne",
     "gov:attributions": "tsx scripts/gates/gov-attributions.ts",
     "gov:attributions:prove": "tsx scripts/gates/gov-attributions.ts --prove",
+    "sec:semgrep": "tsx scripts/gates/semgrep.ts",
+    "sec:semgrep:prove": "tsx scripts/gates/semgrep.ts --prove",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write ."

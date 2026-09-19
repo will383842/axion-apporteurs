@@ -1,0 +1,50 @@
+# Règles semgrep MAISON (QA-T07). Les règles publiques ne sont PAS recopiées ici : elles sont
+# chargées du registre à l'exécution par `scripts/gates/semgrep.ts` (jeux `p/typescript`,
+# `p/nodejs`). Chaque règle de ce fichier a SON témoin dans `TEMOINS` de l'exécuteur : une règle
+# sans témoin fait rougir `pnpm sec:semgrep` et `pnpm sec:semgrep:prove` en étant nommée.
+#
+# Les `paths.include` sont ANCRÉS (`/src/...`) à la racine de projet : l'exécuteur monte `src/`
+# sous `/depot` et vise `.`, jamais `src` (sans quoi l'ancre ne matche plus rien).
+rules:
+  # REQ-SEC-008 (texte en vigueur ; REQ-QA-011 y est absorbée) : aucun import direct du client de
+  # base sous l'espace apporteur. `import type` compris — l'espace reçoit ses types de la couche
+  # d'accès. Le spécifieur est lu par expression après `from`, `import` ou `require` : les motifs
+  # structurels de semgrep 1.176.1 ne voient ni `export type { … } from`, ni `export { type X }
+  # from`, ni `export * as NS from` (mesuré). Un segment `prisma` ou `db` OÙ QU'IL SOIT dans le
+  # chemin compte (`../db/index` est le client sous un autre nom).
+  # LIMITE DÉCLARÉE : un module HORS de ces dossiers qui enveloppe le client et que l'espace
+  # importe n'est pas vu — c'est la couche d'accès cloisonnée et son test IDOR qui ferment ce
+  # chemin ; la tâche qui les livre AMENDE cette règle si elle doit la lister par modèle.
+  - id: axion-prisma-hors-couche-d-acces
+    message: >-
+      Accès direct au client de base sous l'espace apporteur (REQ-SEC-008). Toute lecture ou
+      écriture de l'espace passe par la couche d'accès, qui injecte l'apporteurId de la session
+      dans le `where`. Importez depuis la couche d'accès, jamais `@prisma/*`, `.prisma/*`, ni un
+      module `prisma` ou `db`.
+    severity: ERROR
+    languages: [typescript, javascript]
+    paths:
+      include:
+        - "/src/app/(espace)/**"
+        - "/src/server/espace/**"
+    pattern-either:
+      - pattern-regex: (?:\bfrom|\bimport|\brequire)\s*\(?\s*['"`](?:@prisma/|\.prisma/|(?:[^'"`\s]*/)?(?:prisma|db)(?:/[^'"`\s]*)?['"`])
+      - pattern: new PrismaClient(...)
+      - pattern: new $P.PrismaClient(...)
+
+  - id: axion-sql-brut-non-parametre
+    message: >-
+      SQL brut NON paramétré : `$queryRawUnsafe`, `$executeRawUnsafe` et `Prisma.raw` concatènent
+      une chaîne dans la requête. Utilisez le gabarit étiqueté (`$queryRaw` / `$executeRaw` avec
+      des backticks, ou `Prisma.sql`), qui paramètre chaque valeur.
+    severity: ERROR
+    languages: [typescript, javascript]
+    paths:
+      include:
+        - "/src/**"
+    pattern-either:
+      - pattern: $C.$queryRawUnsafe
+      - pattern: $queryRawUnsafe
+      - pattern: $C.$executeRawUnsafe
+      - pattern: $executeRawUnsafe
+      - pattern: Prisma.raw
