@@ -280,6 +280,12 @@ describe('REQ-QA-024 — le contexte : journal enfant, empreinte d’apporteur',
       .info('m');
     for (const v of ['jean@x.fr', '06 12 34 56 78', 'abc123']) expect(texte(), v).not.toContain(v);
   });
+
+  it('REQ-QA-024 : l’exemption des clés de contexte ne vaut qu’à la racine de la ligne', () => {
+    const { journal, lignes } = journalCapture();
+    journal.info('m', { contact: { jobName: 'Jean Dupont' } });
+    expect(lignes()[0].contact).toEqual({ jobName: CAVIARDE });
+  });
 });
 
 describe('REQ-QA-024 — le flux échoue FERMÉ', () => {
