@@ -33,6 +33,7 @@ import {
   PLANCHER_LECTURE_MS,
   STATUTS_D_ATTRIBUTION,
   empreinteAdresse,
+  frontiereDeProduction,
   traiterAppel,
   type Frontiere,
   type LecteurDAttribution,
@@ -626,6 +627,19 @@ describe('REQ-INT-014 — la réponse minimale, et rien d’autre', () => {
     expect(await instantane(rep)).toEqual({ statut: 503, corps: '', entetes: [] });
     expect(h.maintenant() - debut).toBe(PLANCHER_LECTURE_MS);
     expect(lignes.join('')).not.toContain('base indisponible');
+    expect(JSON.parse(lignes[0] ?? '{}')).toMatchObject({ resultat: 'lecture_indisponible' });
+  });
+
+  it('REQ-INT-014 — le lecteur de PRODUCTION, tant qu’il n’est pas branché, rend 503 derrière un débit admis — jamais « libre »', async () => {
+    // Derrière le débit de production (qui refuse), ce lecteur n'est jamais atteint : le jour où
+    // le compteur entre au registre, c'est ce témoin — et lui seul — qui dit ce qu'il rend.
+    const lignes: string[] = [];
+    const rep = await traiterAppel(
+      requete(`/attributions?siren=${SIREN_LIBRE}`, 'GET', ADRESSE_AUTORISEE, `Bearer ${JETON}`),
+      'attributions',
+      frontiere(frontiereDeProduction().lire, ADMIS, horlogeFactice(1), lignes, ENV_VALIDE)
+    );
+    expect(await instantane(rep)).toEqual({ statut: 503, corps: '', entetes: [] });
     expect(JSON.parse(lignes[0] ?? '{}')).toMatchObject({ resultat: 'lecture_indisponible' });
   });
 
