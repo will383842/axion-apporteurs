@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `f37659e` — 2026-09-19T10:37:25+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #75 (un conflit avec `main`) · 2. #76 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · CPL-T13 (A05) · GOV-077 (A05) |
+| Qu’est-ce qui est en vol ? | 1. #75 (rien) · 2. #76 (un contrôle requis rouge ou une revue manquante) · 3. #79 (un contrôle requis rouge ou une revue manquante) |
+| Qui tient quoi ? | QA-T01 (A05) · SEC-01 (A05) · SEC-02 (A05) · SEC-10 (A05) · DM-01 (A05) · UX-P0-02 (A05) · CPL-T13 (A05) · GOV-077 (A05) |
 | Où en est la phase ? | phase 0 — 5/98 tâches, reste 72.10 j |
-| Le prochain pas | QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
+| Le prochain pas | fusionner #75, puis QA-T01 — Squelette de tests et Gate A bloquante (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #78 — 2026-09-19 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 75 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,8 +64,9 @@ Reste sur ce chemin : **17.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #75 — feat(DM-01): socle du schema Partners et journal Evenement chaine immuable | `t/dm-01` | rien — fusionnable maintenant |
+| 2 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un contrôle requis rouge ou une revue manquante |
+| 3 | #79 — docs(UX-P0-02): maquettes des huit écrans et garde maquettes-validees | `t/ux-p0-02` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -80,6 +81,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | SEC-02 — En-têtes de sécurité et CSP par nonce | A05 | #66 | `a_faire` |
 | SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
 | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
+| UX-P0-02 — Maquettes des 6 écrans clés + charte de l'espace | A05 | #77 | `a_faire` |
 | CPL-T13 — Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure | A05 | #67 | `a_faire` |
 | GOV-077 — La garde des demandes de fusion confond aucune revue lue et toutes les revues refusent | A05 | #57 | `a_faire` |
 
@@ -92,6 +94,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
+
+**Fusionner #75** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **QA-T01** — Squelette de tests et Gate A bloquante (0.5 j, **sur le chemin critique**) : 32 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
