@@ -23,8 +23,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { join, relative, resolve } from 'node:path';
 import { NOMS_DES_SECRETS } from '../../src/lib/env';
 import type { SujetDeCompteur, VerdictDeLimite } from '../../src/server/securite/rate-limit';
 import type { HorlogeDePlancher } from '../../src/server/securite/pot-de-miel';
@@ -156,7 +155,7 @@ function frontiere(
   lignes: string[],
   environnement: Record<string, string | undefined>
 ): Frontiere {
-  return { environnement, horloge: h.horloge, limiter, lire, puits: (l) => lignes.push(l) };
+  return { environnement, horloge: h.horloge, debit: limiter, lire, puits: (l) => lignes.push(l) };
 }
 
 async function instantane(r: Response): Promise<{
@@ -188,7 +187,9 @@ function routesDuDisque(dossier: string): string[] {
 type ModuleDeRoute = Record<string, unknown>;
 
 async function charger(chemin: string): Promise<ModuleDeRoute> {
-  return (await import(pathToFileURL(join(process.cwd(), chemin)).href)) as ModuleDeRoute;
+  // Un chemin, pas une URL : l'URL encode les crochets d'un segment dynamique (`%5B`), que
+  // le chargeur de Vitest ne résout pas.
+  return (await import(resolve(chemin).split('\\').join('/'))) as ModuleDeRoute;
 }
 
 function methode(mod: ModuleDeRoute, nom: string): (r: Request) => Promise<Response> {
@@ -277,7 +278,7 @@ describe('REQ-SEC-012 — chaque route de la frontière, telle que Next la charg
     expect(journal).not.toContain(ADRESSE_HORS_LISTE);
     expect(journal).not.toContain(ADRESSE_AUTORISEE);
     console.log(
-      `frontière : ${fichiers.length} route(s) confrontée(s) — ${fichiers.join(', ')} — ` +
+      `frontière : ${fichiers.length} route(s) confrontée(s) — ${fichiers.map((f) => f.split('\\').join('/')).join(', ')} — ` +
         `${METHODES_HTTP.length} méthodes × ${refuses.length} refus = ${confrontations} appels, un seul 404`
     );
   });
