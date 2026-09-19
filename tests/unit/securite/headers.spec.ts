@@ -34,7 +34,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { NextRequest } from 'next/server';
-import type { NextConfig } from 'next';
+import type { NextConfig } from 'next/dist/server/config-shared';
 import {
   unstable_doesMiddlewareMatch,
   unstable_getResponseFromNextConfig,
@@ -474,6 +474,16 @@ describe('REQ-SEC-029 — la couche du dépôt', () => {
     expect(verdict.defauts).toEqual([]);
     expect(verdict.reponses).toBeGreaterThanOrEqual(1000);
     expect(verdict.directives).toBe(Object.keys(DIRECTIVES_ATTENDUES).length);
+  });
+
+  it('REQ-SEC-029 : next.config.ts lu par le chargeur de Next lui-même — pas par Vitest — rend zéro défaut', async () => {
+    // Vitest transforme `next.config.ts` à sa façon ; Next le compile par SWC avec son propre crochet
+    // de résolution. C'est le second qui fait foi en production : on le juge, lui aussi.
+    const { default: chargerConfig } = await import('next/dist/server/config');
+    const { PHASE_PRODUCTION_BUILD } = await import('next/dist/shared/lib/constants');
+    const lue = await chargerConfig(PHASE_PRODUCTION_BUILD, RACINE);
+    const { defauts } = await verifierEntetes({ ...COUCHE, nextConfig: lue }, ROUTES, PETIT);
+    expect(defauts).toEqual([]);
   });
 
   it('REQ-SEC-029 : le nonce sort de crypto.getRandomValues, 16 octets au moins, tiré à chaque requête', async () => {

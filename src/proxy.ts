@@ -19,10 +19,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { CACHE_CONTROL, genererNonce, politiqueDeContenu } from './server/securite/entetes';
 
-const NONCE = genererNonce();
-
 export function proxy(requete: NextRequest): NextResponse {
-  const nonce = NONCE;
+  // Tiré DANS la fonction : un nonce tiré au chargement du module serait le même pour toutes les
+  // réponses, donc devinable après la première.
+  const nonce = genererNonce();
   const csp = politiqueDeContenu({ nonce, developpement: process.env.NODE_ENV === 'development' });
 
   const entetesRequete = new Headers(requete.headers);
