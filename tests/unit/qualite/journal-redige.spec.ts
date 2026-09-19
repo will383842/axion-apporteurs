@@ -252,7 +252,7 @@ describe('REQ-QA-024 — le contexte : journal enfant, empreinte d’apporteur',
     const { journal, lignes } = journalCapture();
     const contexte = {
       requestId: '0b8c7e2a-5f1d-4c3e-9a7b-2d6e8f0a1b3c',
-      apporteurIdHash: 'ab12cd34ef56ab78cd90ef12ab34cd56',
+      apporteurIdHash: 'ab12cd34ef56ab78cd90ef12ab34cd56'.repeat(2),
       eventId: 'e5f6a7b8c9d0e1f2',
       jobName: 'relance-quotidienne',
     };

@@ -66,10 +66,12 @@ const CLES_CONTEXTE = new Set(['requestId', 'apporteurIdHash', 'eventId', 'jobNa
 const FORME_EMPREINTE = /^[0-9a-f]{16,64}$/;
 
 /**
- * Un identifiant de contexte (empreinte, UUID) reste lisible : sans cette exemption, une empreinte
- * `ab12…` se lirait comme un IBAN. Elle ne vaut que pour les quatre clés de contexte, à la racine.
+ * La SEULE valeur qui échappe au scan : une empreinte SHA-256 exacte (64 hexadécimaux minuscules),
+ * sous l'une des quatre clés de contexte, à la racine. Sans elle, une empreinte `ab12…` se lirait
+ * comme un IBAN. Toute autre valeur de ces clés est scannée : un IBAN allemand en minuscules
+ * (`de89…`, 22 caractères) a la forme d'un hexadécimal et passerait sous une exemption plus large.
  */
-const FORME_IDENTIFIANT = /^[0-9a-f-]{8,64}$/;
+const FORME_SHA256 = /^[0-9a-f]{64}$/;
 
 const sansAccents = (s: string): string => s.normalize('NFD').replace(/\p{M}/gu, '');
 
@@ -97,8 +99,7 @@ function parcourir(valeur: unknown, racine: boolean, ancetres: object[]): unknow
   const sortie: Record<string, unknown> = {};
   for (const [cle, v] of Object.entries(valeur)) {
     if (racine && CLES_CONTEXTE.has(cle)) {
-      sortie[cle] =
-        typeof v === 'string' && FORME_IDENTIFIANT.test(v) ? v : parcourir(v, false, chemin);
+      sortie[cle] = typeof v === 'string' && FORME_SHA256.test(v) ? v : parcourir(v, false, chemin);
     } else {
       sortie[caviarderTexte(cle)] = cleProtegee(cle) ? CAVIARDE : parcourir(v, false, chemin);
     }
