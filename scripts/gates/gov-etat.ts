@@ -34,6 +34,15 @@
  *   — consolidée : le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul.
  * Cette garde lit les DEUX et rougit quand elles nomment deux revendiqueurs différents.
  *
+ * L'ISSUE SE RELIE À SA TÂCHE PAR SON TITRE AUSSI, PAS SEULEMENT PAR LE CHAMP `issue` (GOV-059).
+ * Le champ `issue` de `docs/tasks.json` est celui de la BRANCHE jugée, alors que les PR ouvertes
+ * sont lues pour TOUT le dépôt : chaque branche devait recopier la revendication de toutes les
+ * autres, et chaque PR ouverte rougissait les N déjà ouvertes jusqu'à un commit de « revendication
+ * sœur » sur chacune. Une issue OUVERTE dont le titre commence par `<ID> — ` (la forme que pose
+ * `scripts/lot/issues.ts`) et qui porte `en_cours` + `owner:<Axx>` revendique donc `<ID>` — c'est
+ * GitHub, que toutes les branches lisent pareil. Fermé : un titre qui nomme une tâche inconnue ne
+ * revendique rien ; sans `en_cours`, rien ; deux issues, deux owners → `revendication_multiple`.
+ *
  * CE QU'ELLE NE GARDE PAS, ET POURQUOI C'EST DIT PLUTÔT QUE CACHÉ. La revendication d'une tâche
  * DÉJÀ LIVRÉE n'est pas contrôlée : `pnpm lot:cloture` écrit `docs/tasks.json` mais ne retire pas
  * les labels de l'issue, si bien que sept issues portent aujourd'hui `en_cours` + `owner:A01` sur
@@ -130,6 +139,8 @@ type Etat = {
   prFusionnees: PrFusionnee[] | null;
   /** issue → revendiqueurs lus dans ses labels `owner:<Axx>`. `null` = non lu. */
   revendications: Map<number, string[]> | null;
+  /** tâche → issues ouvertes `en_cours` dont le titre commence par `<ID> — `. `null` = non lu. */
+  revendicationsParTitre: Map<string, number[]> | null;
   /** `null` = `--now` non donné : la famille d'instant n'est pas évaluée. */
   maintenant: string | null;
 };
@@ -268,6 +279,7 @@ function lireGithub(): {
   prOuvertes: PrOuverte[];
   prFusionnees: PrFusionnee[];
   revendications: Map<number, string[]>;
+  revendicationsParTitre: Map<string, number[]>;
 } {
   let prOuvertes: PrOuverte[];
   try {
@@ -324,24 +336,30 @@ function lireGithub(): {
     prFusionnees.push({ numero: p.number, titre: p.title ?? '', dateCommitIso: date });
   }
 
-  let issues: { number: number; labels: { name: string }[] }[];
+  let issues: { number: number; title: string; labels: { name: string }[] }[];
   try {
     issues = JSON.parse(
-      gh(['issue', 'list', '--state', 'open', '--json', 'number,labels', '--limit', '200'])
+      gh(['issue', 'list', '--state', 'open', '--json', 'number,title,labels', '--limit', '200'])
     ) as typeof issues;
   } catch (e) {
     abandonGithub('gh issue list --state open', e);
   }
   const revendications = new Map<number, string[]>();
+  const revendicationsParTitre = new Map<string, number[]>();
   for (const i of issues) {
-    const owners = (i.labels ?? [])
-      .map((l) => l.name)
-      .filter((n) => n.startsWith('owner:'))
-      .map((n) => n.slice('owner:'.length));
-    if (owners.length > 0) revendications.set(i.number, owners);
+    const noms = (i.labels ?? []).map((l) => l.name);
+    const owners = noms.filter((n) => n.startsWith('owner:')).map((n) => n.slice('owner:'.length));
+    if (owners.length === 0) continue;
+    revendications.set(i.number, owners);
+    // Le titre `<ID> — <titre>` est celui de `scripts/lot/issues.ts`. Un identifiant inconnu est
+    // gardé ici et ne sera jamais demandé : seule une tâche du registre est cherchée par son id.
+    const id = /^(\S+) — /.exec(i.title ?? '')?.[1];
+    if (id && noms.includes('en_cours')) {
+      revendicationsParTitre.set(id, [...(revendicationsParTitre.get(id) ?? []), i.number]);
+    }
   }
 
-  return { prOuvertes, prFusionnees, revendications };
+  return { prOuvertes, prFusionnees, revendications, revendicationsParTitre };
 }
 
 // ── les neuf familles ────────────────────────────────────────────────────────
@@ -353,10 +371,19 @@ function tacheCitee(titre: string, connues: Set<string>): string | null {
   return id && connues.has(id) ? id : null;
 }
 
-/** Les revendiqueurs d'une tâche : ses labels `owner:` en vol, plus le champ `owner` consolidé. */
-function revendiqueurs(t: Tache, revendications: Map<number, string[]>): string[] {
+/**
+ * Les revendiqueurs d'une tâche : les labels `owner:` de son issue (champ `issue`) et des issues
+ * `en_cours` titrées à son nom, plus le champ `owner` consolidé.
+ */
+function revendiqueurs(
+  t: Tache,
+  revendications: Map<number, string[]>,
+  parTitre: Map<string, number[]>
+): string[] {
+  const issues = new Set(parTitre.get(t.id) ?? []);
+  if (t.issue !== null) issues.add(t.issue);
   const vus = new Set<string>();
-  if (t.issue !== null) for (const o of revendications.get(t.issue) ?? []) vus.add(o);
+  for (const n of issues) for (const o of revendications.get(n) ?? []) vus.add(o);
   if (t.owner) vus.add(t.owner);
   return [...vus];
 }
@@ -472,27 +499,28 @@ function controler(e: Etat): Faute[] {
   }
 
   // ── pr_sur_tache_non_revendiquee ───────────────────────────────────────────
-  if (e.prOuvertes !== null && e.revendications !== null) {
+  if (e.prOuvertes !== null && e.revendications !== null && e.revendicationsParTitre !== null) {
     for (const p of e.prOuvertes) {
       const id = tacheCitee(p.titre, connues);
       if (!id) continue; // titre hors convention : c'est `gov:pr` qui le refuse, pas cette garde
       const t = parIdTache.get(id)!;
-      if (revendiqueurs(t, e.revendications).length === 0) {
+      if (revendiqueurs(t, e.revendications, e.revendicationsParTitre).length === 0) {
         f.push({
           famille: 'pr_sur_tache_non_revendiquee',
           message:
             `PR #${p.numero} porte ${id}, que personne n'a revendiquée : ni label \`owner:\` sur son issue` +
-            `${t.issue === null ? ' (elle n’a pas d’issue)' : ' #' + t.issue}, ni \`owner\` dans \`${CHEMIN_TACHES}\`.`,
+            `${t.issue === null ? ' (elle n’a pas d’issue)' : ' #' + t.issue}, ni issue ouverte \`en_cours\` titrée ` +
+            `« ${id} — », ni \`owner\` dans \`${CHEMIN_TACHES}\`.`,
         });
       }
     }
   }
 
   // ── revendication_multiple ─────────────────────────────────────────────────
-  if (e.revendications !== null) {
+  if (e.revendications !== null && e.revendicationsParTitre !== null) {
     for (const t of e.taches) {
       if (LIVREES.has(t.statut)) continue; // une tâche livrée : sa revendication est de l'histoire
-      const r = revendiqueurs(t, e.revendications);
+      const r = revendiqueurs(t, e.revendications, e.revendicationsParTitre);
       if (r.length > 1) {
         f.push({
           famille: 'revendication_multiple',
@@ -573,6 +601,7 @@ if (process.argv.includes('--prove')) {
       [901, ['A01']],
       [902, ['A05']],
     ]),
+    revendicationsParTitre: new Map(),
     maintenant: `${new Date().toISOString().slice(0, 10)}T12:00:00Z`,
   };
 
@@ -649,6 +678,17 @@ if (process.argv.includes('--prove')) {
       etat: () => copie({ revendications: new Map([[901, ['A01', 'A05']]]) }),
     },
     {
+      // GOV-059 : la revendication par TITRE compte aussi dans l'unicité — sinon une seconde issue
+      // ouverte au nom d'une tâche déjà prise ajouterait un propriétaire sans que rien ne rougisse.
+      famille: 'revendication_multiple',
+      quoi: 'une issue `en_cours` titrée « DM-01 — » au nom d’un autre agent que l’issue de la tâche',
+      etat: () =>
+        copie({
+          revendications: new Map([...BASE.revendications!, [903, ['A01']]]),
+          revendicationsParTitre: new Map([['DM-01', [903]]]),
+        }),
+    },
+    {
       famille: 'pr_fusionnee_sans_journal',
       quoi: 'une PR fusionnée au-dessus du plancher, qu’aucune entrée ne cite',
       etat: () =>
@@ -709,6 +749,24 @@ if (process.argv.includes('--prove')) {
       // et le contre-témoin rougissait pour une raison qui n'était pas la sienne (RM-11).
       etat: () =>
         copie({ revendications: new Map([...BASE.revendications!, [900, ['A05', 'A09']]]) }),
+    },
+    {
+      // GOV-059 : la tâche n'a ni `issue` ni `owner` dans le `docs/tasks.json` de la branche jugée —
+      // c'est une AUTRE branche qui la porte. Son issue ouverte, titrée à son nom, la revendique.
+      quoi: 'une PR sur une tâche revendiquée par le seul titre de son issue `en_cours`',
+      etat: () =>
+        copie({
+          taches: [
+            ...TACHES,
+            { id: 'SEC-01', titre: 'sœur', statut: 'a_faire', owner: null, issue: null },
+          ],
+          prOuvertes: [
+            { numero: 28, titre: 'feat(QA-T00): la PR en vol' },
+            { numero: 30, titre: 'feat(SEC-01): la PR d’une branche sœur' },
+          ],
+          revendications: new Map([...BASE.revendications!, [904, ['A05']]]),
+          revendicationsParTitre: new Map([['SEC-01', [904]]]),
+        }),
     },
     {
       quoi: 'PLAN-STATE régénéré APRÈS la dernière fusion',
@@ -785,6 +843,7 @@ const etat: Etat = {
   prOuvertes: null,
   prFusionnees: null,
   revendications: null,
+  revendicationsParTitre: null,
   maintenant,
 };
 
@@ -793,6 +852,7 @@ if (!horsLigne) {
   etat.prOuvertes = lu.prOuvertes;
   etat.prFusionnees = lu.prFusionnees;
   etat.revendications = lu.revendications;
+  etat.revendicationsParTitre = lu.revendicationsParTitre;
 }
 
 const evaluees = [
