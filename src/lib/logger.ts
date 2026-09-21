@@ -52,15 +52,28 @@ const MOTIFS: ReadonlyArray<readonly [RegExp, string]> = [
   [/(?<![\d+])(?:\+33|0033|0)[\s.-]?[1-9](?:[\s.-]?\d{2}){4}(?!\d)/g, '[telephone]'],
 ];
 
-/** Le contexte d'un journal enfant (REQ-QA-024). Aucune autre clé. */
+/**
+ * Le contexte d'un journal enfant (REQ-QA-024). Aucune autre clé.
+ *
+ * POURQUOI `event_id` EN SNAKE_CASE, SEUL PARMI TROIS CAMELCASE — ne pas le « corriger ».
+ * Le terme canonique est `event_id` : le champ d'enveloppe décrit par
+ * `packages/contracts/enveloppe.ts` (REQ-INT-003), et sa forme camelCase est un synonyme INTERDIT
+ * du glossaire (`docs/GLOSSAIRE.md` §5, interdit sec). Cette clé ne nomme rien d'autre que cet
+ * identifiant-là : la clé d'idempotence du récepteur, qui n'entre dans ce dépôt que par le fil.
+ * REQ-QA-024 l'écrit encore en camelCase et CONVENTIONS §1 impose le camelCase au code de ce
+ * dépôt — mais `docs/PRESEANCE.md` §2, ligne 7, donne au glossaire la primauté sur tout autre
+ * document « sur un terme et ses synonymes interdits ». La remettre en camelCase fait rougir
+ * `pnpm gov:termes-interdits`, qui n'accorde d'exemption de citation qu'aux `.md`, `.sql` et
+ * `.prisma` : ce commentaire-ci ne peut donc pas écrire la forme interdite, même pour l'expliquer.
+ */
 export type ContexteJournal = {
   requestId?: string;
   apporteurIdHash?: string;
-  eventId?: string;
+  event_id?: string;
   jobName?: string;
 };
 
-const CLES_CONTEXTE = new Set(['requestId', 'apporteurIdHash', 'eventId', 'jobName']);
+const CLES_CONTEXTE = new Set(['requestId', 'apporteurIdHash', 'event_id', 'jobName']);
 
 /** Une empreinte : hexadécimal minuscule, 16 à 64 caractères. */
 const FORME_EMPREINTE = /^[0-9a-f]{16,64}$/;

@@ -248,12 +248,12 @@ describe('REQ-QA-024 — les valeurs : message libre, erreur, lien de dépôt, p
 });
 
 describe('REQ-QA-024 — le contexte : journal enfant, empreinte d’apporteur', () => {
-  it('REQ-QA-024 : requestId, apporteurIdHash, eventId et jobName sont portés par chaque ligne de l’enfant', () => {
+  it('REQ-QA-024 : requestId, apporteurIdHash, event_id et jobName sont portés par chaque ligne de l’enfant', () => {
     const { journal, lignes } = journalCapture();
     const contexte = {
       requestId: '0b8c7e2a-5f1d-4c3e-9a7b-2d6e8f0a1b3c',
       apporteurIdHash: 'ab12cd34ef56ab78cd90ef12ab34cd56'.repeat(2),
-      eventId: 'e5f6a7b8c9d0e1f2',
+      event_id: 'e5f6a7b8c9d0e1f2',
       jobName: 'relance-quotidienne',
     };
     journal.enfant(contexte).info('commission_calculee');
@@ -276,7 +276,7 @@ describe('REQ-QA-024 — le contexte : journal enfant, empreinte d’apporteur',
     const { journal, texte } = journalCapture();
     journal
       .enfant({ requestId: 'jean@x.fr', jobName: 'appel 06 12 34 56 78' })
-      .enfant({ eventId: '/d/abc123' })
+      .enfant({ event_id: '/d/abc123' })
       .info('m');
     for (const v of ['jean@x.fr', '06 12 34 56 78', 'abc123']) expect(texte(), v).not.toContain(v);
   });
@@ -294,7 +294,7 @@ describe('REQ-QA-024 — le contexte : journal enfant, empreinte d’apporteur',
     const iban = 'de00370400440532013000';
     const { journal, texte } = journalCapture();
     journal.enfant({ apporteurIdHash: iban }).info('m');
-    journal.info('m', { apporteurIdHash: iban, requestId: iban, eventId: iban, jobName: iban });
+    journal.info('m', { apporteurIdHash: iban, requestId: iban, event_id: iban, jobName: iban });
     expect(texte()).not.toContain(iban);
     const empreinte = '0123456789abcdef'.repeat(4);
     journal.enfant({ apporteurIdHash: empreinte }).info('m');
