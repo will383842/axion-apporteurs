@@ -9383,7 +9383,9 @@
         "REQ-QA-013": [
           "tests/unit/gouvernance/revendication-par-branche.spec.ts"
         ]
-      }
+      },
+      "issue": 87,
+      "owner": "A05"
     },
     {
       "id": "GOV-060",

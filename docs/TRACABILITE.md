@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**321 exigences actives · 62 réputées testées · 62 couvertes · 0 orphelines.**
+**321 exigences actives · 56 réputées testées · 56 couvertes · 0 orphelines.**
 
-260 tâches, dont 52 livrées · 60 fichiers de test exécutés par `vitest` sur 60 présents.
+260 tâches, dont 50 livrées · 58 fichiers de test exécutés par `vitest` sur 58 présents.
 
 ## Exigences réputées testées
 
@@ -31,17 +31,13 @@
 | `REQ-CPL-018` | `CPL-T01`, `GOV-009` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts` | couverte |
 | `REQ-CPL-021` | `GOV-000`, `QA-T04` | `tests/unit/gouvernance/autonomie.spec.ts` | couverte |
 | `REQ-CPL-026` | `CPL-T13` | `tests/unit/domaine/seuil-prioritaire.spec.ts` | couverte |
-| `REQ-DM-001` | `DM-01`, `DM-02` | `tests/unit/domaine/schema-centimes.spec.ts` | couverte |
 | `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006`, `GOV-030`, `GOV-068`, `GOV-069`, `GOV-070` | `tests/unit/domaine/etats-occupants.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
-| `REQ-DM-024` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-chaine.spec.ts` | couverte |
-| `REQ-DM-038` | `DM-01`, `DM-02` | `tests/unit/domaine/schema-centimes.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
-| `REQ-DM-041` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts` | couverte |
 | `REQ-GOV-001` | `GOV-001`, `GOV-072` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-002` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
 | `REQ-GOV-003` | `GOV-003`, `GOV-005`, `GOV-025`, `GOV-028`, `GOV-037`, `GOV-071`, `GOV-074`, `GOV-084` | `tests/unit/gouvernance/attributions-resolvent.spec.ts`, `tests/unit/gouvernance/citation-json-vs-prose.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | couverte |
 | `REQ-GOV-004` | `GOV-004`, `GOV-048` | `tests/unit/gouvernance/affirmations-verifiees.spec.ts` | couverte |
 | `REQ-GOV-006` | `GOV-008`, `GOV-032`, `GOV-060` | `tests/unit/gouvernance/plan-state-frais.spec.ts` | couverte |
-| `REQ-GOV-007` | `GOV-008`, `GOV-059` | `tests/unit/gouvernance/une-tache-un-owner.spec.ts` | couverte |
+| `REQ-GOV-007` | `GOV-008`, `GOV-059` | `tests/unit/gouvernance/revendication-par-branche.spec.ts`, `tests/unit/gouvernance/une-tache-un-owner.spec.ts` | couverte |
 | `REQ-GOV-008` | `GOV-009`, `GOV-038`, `GOV-058`, `GOV-063`, `GOV-070` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/attestation-inter-depot.spec.ts` | couverte |
 | `REQ-GOV-009` | `GOV-010`, `GOV-022`, `GOV-070` | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | couverte |
 | `REQ-GOV-010` | `GOV-007`, `GOV-023`, `GOV-024`, `GOV-062` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/fiches-agents.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
@@ -72,13 +68,11 @@
 | `REQ-QA-001` | `GOV-076`, `QA-T01` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | couverte |
 | `REQ-QA-002` | `QA-T01`, `QA-T30` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | couverte |
 | `REQ-QA-007` | `INT-T01a`, `INT-T01b` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
-| `REQ-QA-013` | `GOV-059`, `GOV-061`, `GOV-062`, `GOV-063`, `GOV-076`, `GOV-083`, `QA-T00`, `QA-T01`, `QA-T07`, `QA-T28` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
+| `REQ-QA-013` | `GOV-059`, `GOV-061`, `GOV-062`, `GOV-063`, `GOV-076`, `GOV-083`, `QA-T00`, `QA-T01`, `QA-T07`, `QA-T28` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/revendication-par-branche.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
 | `REQ-QA-014` | `GOV-039`, `GOV-085`, `QA-T03` | `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts`, `tests/unit/gouvernance/tracabilite.spec.ts`, `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts`, `tests/unit/qualite/req-check.spec.ts` | couverte |
 | `REQ-QA-027` | `CPL-T13`, `DM-13`, `T-ARG-015` | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | couverte |
-| `REQ-SEC-016` | `SEC-03`, `SEC-10` | `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
 | `REQ-SEC-028` | `SEC-01` | `tests/unit/securite/env-boot.spec.ts` | couverte |
 | `REQ-SEC-029` | `SEC-02` | `tests/unit/securite/headers.spec.ts` | couverte |
-| `REQ-SEC-035` | `SEC-10` | `tests/unit/securite/rate-famille.spec.ts` | couverte |
 | `REQ-UX-008` | `UX-P0-02`, `UX-P1-08` | `tests/unit/espace/maquettes-validees.spec.ts` | couverte |
 | `REQ-UX-017` | `UX-P0-02`, `UX-P0-03` | `tests/unit/espace/maquettes-validees.spec.ts` | couverte |
 | `REQ-UX-022` | `CPL-T13`, `UX-P1-07` | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | couverte |
@@ -138,6 +132,7 @@
 | `REQ-CPL-027` | 0 | `DM-06`, `JUR-T24`, `UX-P1-12`, `UX-P3-06` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts` |
 | `REQ-CPL-028` | 1 | `INT-T23`, `INT-T24` | — |
 | `REQ-CPL-029` | 1 | `UX-P1-15` | — |
+| `REQ-DM-001` | 0 | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/integration/journal.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` |
 | `REQ-DM-002` | 1 | `DM-07` | — |
 | `REQ-DM-004` | 1 | `DM-07`, `DM-08`, `DM-13` | — |
 | `REQ-DM-005` | 1 | `DM-07` | — |
@@ -159,6 +154,7 @@
 | `REQ-DM-021` | 0 | `DM-15`, `INT-T03` | `axionia/src/server/partners-sync/__tests__/cliquet-ecrivains.spec.ts`, `axionia/src/server/partners-sync/__tests__/producteurs-client.spec.ts` |
 | `REQ-DM-022` | 1 | `DM-08`, `DM-15` | — |
 | `REQ-DM-023` | 2 | `DM-16` | — |
+| `REQ-DM-024` | 0 | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` |
 | `REQ-DM-025` | 2 | `T-ARG-015` | — |
 | `REQ-DM-026` | 2 | `T-ARG-010`, `T-ARG-019` | — |
 | `REQ-DM-027` | 1 | `DM-11`, `DM-19`, `JUR-T16`, `T-ARG-032` | — |
@@ -172,8 +168,10 @@
 | `REQ-DM-035` | 0 | `DM-06`, `INT-T22` | `axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts`, `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts` |
 | `REQ-DM-036` | 0 | `SEC-06` | `tests/integration/webhook-verdicts.spec.ts`, `tests/integration/webhook.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` |
 | `REQ-DM-037` | 0 | `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts` |
+| `REQ-DM-038` | 0 | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/integration/journal.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` |
 | `REQ-DM-039` | -1 | `INT-T01b`, `INT-T05` | `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`, `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts` |
 | `REQ-DM-040` | -1 | `DM-04`, `INT-T01b` | `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts`, `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
+| `REQ-DM-041` | 0 | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` |
 | `REQ-DM-042` | 1 | `DM-13`, `DM-24` | — |
 | `REQ-DM-043` | 1 | `DM-25` | — |
 | `REQ-EXT-001` | 1 | `EXT-T01` | — |
@@ -266,7 +264,7 @@
 | `REQ-QA-003` | 2 | `QA-T21` | — |
 | `REQ-QA-004` | 1 | `DM-08` | — |
 | `REQ-QA-005` | 2 | `QA-T28`, `QA-T29` | — |
-| `REQ-QA-006` | 0 | `QA-T02` | `tests/integration/harnais-testcontainers.spec.ts`, `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` |
+| `REQ-QA-006` | 0 | `QA-T02` | `tests/integration/harnais-testcontainers.spec.ts` |
 | `REQ-QA-015` | 0 | `QA-T06` | `tests/integration/semeur-deterministe.spec.ts`, `tests/unit/qualite/preview-par-pr.spec.ts` |
 | `REQ-QA-016` | 0 | `QA-T16`, `UX-P0-03` | `tests/a11y/axe.spec.ts`, `tests/a11y/cibles.spec.ts`, `tests/a11y/reflow.spec.ts` |
 | `REQ-QA-017` | 1 | `QA-T16` | — |
@@ -297,6 +295,7 @@
 | `REQ-SEC-012` | 0 | `SEC-07` | `tests/integration/frontiere.spec.ts` |
 | `REQ-SEC-013` | 0 | `INT-T09` | `tests/integration/api-gouv.spec.ts`, `tests/unit/integration/recherche-entreprises-repli.spec.ts` |
 | `REQ-SEC-014` | 1 | `DM-07`, `SEC-12` | — |
+| `REQ-SEC-016` | 0 | `SEC-03`, `SEC-10` | `tests/integration/lien-magique.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` |
 | `REQ-SEC-017` | 1 | `SEC-14` | — |
 | `REQ-SEC-018` | 1 | `SEC-15` | — |
 | `REQ-SEC-019` | 1 | `SEC-15`, `SEC-28` | — |
@@ -312,6 +311,7 @@
 | `REQ-SEC-032` | 1 | `SEC-12`, `SEC-19`, `T-ARG-038` | — |
 | `REQ-SEC-033` | 1 | `SEC-26`, `UX-P1-03` | — |
 | `REQ-SEC-034` | 1 | `INT-T12` | — |
+| `REQ-SEC-035` | 0 | `SEC-10` | `tests/unit/securite/rate-famille.spec.ts` |
 | `REQ-SEC-036` | 1 | `SEC-14` | — |
 | `REQ-SEC-037` | 1 | `SEC-21` | — |
 | `REQ-SEC-038` | 1 | `SEC-14`, `SEC-15`, `SEC-28` | — |
@@ -397,16 +397,16 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 1 | 13 | 1 |
 | 2 | 3 | 0 |
 | 3 | 1 | 0 |
-| 4 | 15 | 3 |
+| 4 | 15 | 1 |
 | 5 | 15 | 2 |
 | 6 | 1 | 1 |
 | 7 | 1 | 0 |
 | 8 | 13 | 2 |
-| 9 | 36 | 8 |
+| 9 | 36 | 6 |
 | 10 | 6 | 0 |
 | 11 | 5 | 1 |
 | 12 | 13 | 3 |
-| 13 | 32 | 4 |
+| 13 | 32 | 3 |
 | 14 | 13 | 0 |
 | 15 | 23 | 3 |
 | 16 | 8 | 1 |
@@ -421,13 +421,13 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 1 | 3 | 0 |
 | 2 | 12 | 0 |
 | 3 | 1 | 0 |
-| 4 | 16 | 3 |
+| 4 | 16 | 1 |
 | 5 | 17 | 2 |
 | 6 | 2 | 1 |
-| 7 | 52 | 8 |
+| 7 | 52 | 6 |
 | 8 | 12 | 3 |
 | 9 | 23 | 5 |
-| 10 | 63 | 8 |
+| 10 | 63 | 7 |
 | 11 | 30 | 4 |
 | 12 | 14 | 0 |
 
@@ -436,11 +436,8 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | Fichier | Exécuté par vitest | Exigences citées |
 | --- | --- | --- |
 | `tests/gov/charte-pr.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011`, `REQ-GOV-012`, `REQ-GOV-013`, `REQ-GOV-027` |
-| `tests/integration/harnais-testcontainers.spec.ts` | oui | `REQ-QA-006` |
 | `tests/integration/journal.spec.ts` | oui | `REQ-DM-024`, `REQ-DM-041`, `REQ-JUR-026`, `REQ-SEC-027` |
-| `tests/integration/rate-limit-redis.spec.ts` | oui | `REQ-QA-006`, `REQ-SEC-016` |
 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | oui | `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013` |
-| `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` | oui | `REQ-QA-006` |
 | `tests/unit/domaine/etats-occupants.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-006` |
 | `tests/unit/domaine/journal-chaine.spec.ts` | oui | `REQ-DM-024` |
 | `tests/unit/domaine/journal-charge-fermee.spec.ts` | oui | `REQ-DM-041` |
@@ -480,6 +477,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts` | oui | `REQ-CPL-018`, `REQ-GOV-021`, `REQ-GOV-032` |
 | `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | oui | `REQ-GOV-015`, `REQ-GOV-021` |
 | `tests/unit/gouvernance/regles-maison.spec.ts` | oui | `REQ-GOV-023`, `REQ-GOV-024` |
+| `tests/unit/gouvernance/revendication-par-branche.spec.ts` | oui | `REQ-GOV-007`, `REQ-QA-013` |
 | `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011` |
 | `tests/unit/gouvernance/termes-interdits.spec.ts` | oui | `REQ-DM-003`, `REQ-INT-004` |
 | `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts` | oui | `REQ-GOV-032` |
