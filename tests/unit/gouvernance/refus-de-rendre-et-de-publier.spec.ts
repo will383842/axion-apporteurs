@@ -45,7 +45,6 @@ import {
 } from '../../../scripts/gates/gov-attributions';
 import {
   CHEMIN_ANNEXE,
-  DETTE_TEXTE_DECIDE,
   fusionsDecidees,
   marqueursDe,
 } from '../../../scripts/gates/gov-requirements';
@@ -1580,15 +1579,13 @@ const GATES_A_TEMOIN_D_EFFET = [
             for (const m of marqueursDe(f.decide)) e.texte = e.texte.split(m).join('(retiré)');
           }),
       },
-      {
-        famille: 'dette_texte_decide_perimee',
-        appliquer: (depot: string) =>
-          surLesExigencesDuBac(depot, (ex) => {
-            const d = DETTE_TEXTE_DECIDE[Math.floor(DETTE_TEXTE_DECIDE.length / 2)]!;
-            const e = ex.find((x) => x.id === d.survivante)!;
-            e.texte = `${e.texte} ${d.marqueurs.map((m) => '`' + m + '`').join(' ')}`;
-          }),
-      },
+      // ⚠️ `dette_texte_decide_perimee` n'a PLUS de témoin par le binaire, et ce n'est pas un oubli.
+      // Le registre `DETTE_TEXTE_DECIDE` est VIDE depuis le 2026-09-19 (les 25 clauses résorbées,
+      // sur décision de Will) : cette famille ne rougit que sur une dette DÉCLARÉE, et aucune
+      // donnée du bac ne peut en déclarer une — le binaire lit le registre dans son propre code.
+      // Son témoin d'appelant passe par `modeNormal()`, la fonction que le binaire exécute, avec
+      // une dette fabriquée : `titres-de-test-resolvent.spec.ts`, « le mode NORMAL sort en 1 et
+      // NOMME `dette_texte_decide_perimee` sur une dette fabriquée ».
     ],
   },
   {

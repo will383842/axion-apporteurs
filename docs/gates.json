@@ -494,7 +494,7 @@
       "phase": 2,
       "script": "tests/argent/non-silence.spec.ts",
       "tache": "DM-15",
-      "verifie": "aucune regle non resoluble ne rend un retour muet : ligne bloquee + motif enum + alerte ; motifs siren_manquant, bareme_indefini, commission_sup_ht, regime_tva_inattendu, ttc_manquant, plafond (etendue par T-ARG-015)",
+      "verifie": "aucune regle non resoluble ne rend un retour muet : ligne bloquee + motif enum + alerte ; motifs non_resolue, bareme_indefini, commission_sup_ht, regime_tva_inattendu, ttc_manquant, plafond (etendue par T-ARG-015)",
       "fixtureRouge": "regle rendant null sans ligne bloquee",
       "preuveRouge": null
     },
