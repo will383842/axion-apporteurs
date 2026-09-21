@@ -94,9 +94,32 @@ const MONTAGE_REGLES = '/maison/regles.yml';
 /** Dérivé du point de montage, jamais tapé une seconde fois : semgrep préfixe par le dossier. */
 export const PREFIXE_MAISON = `${MONTAGE_REGLES.split('/')[1]}.`;
 
-/** Au moins deux règles maison exécutées (les deux de QA-T07), et au moins une publique. */
+/** Au moins deux règles maison exécutées (les deux de QA-T07). */
 export const PLANCHER_MAISON = 2;
-export const PLANCHER_PUBLIC = 1;
+
+/**
+ * Le plancher des règles PUBLIQUES, mesuré — pas deviné. « Au moins une » laissait passer un jeu
+ * vidé ou tronqué au registre : 74 règles exécutées contre un plancher de 1, la gate serait
+ * restée verte avec 73 règles en moins (revue `securite` du 2026-09-19, PR 82).
+ *
+ * MESURE du 2026-09-21, image `semgrep/semgrep:1.176.1@sha256:34ab619b…`, sur un fichier d'une
+ * ligne pour ne compter que le CHARGEMENT des jeux :
+ *
+ *   `p/typescript` seul .......... 74 règles
+ *   `p/nodejs` seul .............. 36 règles
+ *   les deux ensemble ............ 74 règles
+ *
+ * Fait qui change la lecture : sur cette version, **`p/nodejs` est contenu dans `p/typescript`**
+ * (74 ∪ 36 = 74). Un plancher qui rougirait « si un jeu disparaît » ne peut donc porter que sur
+ * l'UNION — retirer `p/nodejs` de `JEUX_PUBLICS` ne changerait pas le compte, et aucun seuil ne
+ * le verrait. Le plancher est l'union mesurée : retirer `p/typescript` (→ 36) rougit, et toute
+ * troncature du jeu rougit aussi.
+ *
+ * Conséquence ASSUMÉE : si le registre RETIRE une règle en amont, la gate rougit. C'est voulu —
+ * on remesure et on met à jour cette constante avec sa date, on ne l'abaisse jamais « pour que
+ * ça passe ». Une règle publique ajoutée en amont, elle, ne rougit pas (le test est `≥`).
+ */
+export const PLANCHER_PUBLIC = 74;
 
 /** Les extensions de code que les règles couvrent : un tel fichier sous `src/` DOIT être analysé. */
 export const EXTENSIONS_ANALYSEES: readonly string[] = [
@@ -191,11 +214,14 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
     lignes: ["import type { Charge } from '.prisma/client/index';"],
     fautive: 1,
   },
+  // La ligne fautive est celle où COMMENCE la liaison de module, et non celle du `from` : le
+  // motif AST rend la portée de l'instruction entière, là où l'ancienne regex ne voyait que sa
+  // dernière ligne. Rendre l'instruction est plus précis, pas moins.
   {
     nom: 'import-multiligne',
     ext: 'ts',
     lignes: ['import {', '  PrismaClient,', '  Prisma,', "} from '@prisma/client';"],
-    fautive: 4,
+    fautive: 1,
   },
   // Un spécifieur PORTANT SON EXTENSION : sous `moduleResolution: bundler`, `prisma.js` et
   // `prisma.ts` résolvent au même module que `prisma` (revue `securite`, PR 82).

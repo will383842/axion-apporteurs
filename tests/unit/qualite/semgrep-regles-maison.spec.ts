@@ -204,7 +204,7 @@ describe('REQ-QA-013 — une règle maison sans témoin rougit en étant NOMMÉE
 
 describe('REQ-QA-013 — le dépôt réel : zéro constat, et le compte des règles RÉELLEMENT exécutées', () => {
   it(
-    'REQ-QA-013 — `pnpm sec:semgrep` sort 0 et imprime maison ≥ plancher et publiques ≥ 1, lus dans la sortie de semgrep',
+    'REQ-QA-013 — `pnpm sec:semgrep` sort 0 et imprime maison ET publiques ≥ leur plancher, lus dans la sortie de semgrep',
     () => {
       const r = binaire();
       expect(r.code, r.sortie).toBe(0);
