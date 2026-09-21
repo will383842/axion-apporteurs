@@ -159,18 +159,6 @@ jobs:
         run: pnpm gov:attributions
       - name: La garde des attributions sait rougir, et laisse passer la citation legitime
         run: pnpm gov:attributions:prove
-      # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,
-      # elle ECHOUE en nommant les cinq familles non evaluees — et c est voulu : une gate verte
-      # parce qu elle n a pas pu lire est pire que pas de gate. Constate en CI le 2026-09-04,
-      # premier run de cette etape : « gh: To use GitHub CLI in a GitHub Actions workflow, set the
-      # GH_TOKEN environment variable ». La reponse n est PAS `--hors-ligne`, qui abandonnerait les
-      # cinq familles en silence : c est de lui donner le jeton pour qu elle fasse son travail.
-      - name: Etat vivant — fraicheur, verrou d owner, journal
-        run: pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: La garde de l etat vivant sait rougir
-        run: pnpm gov:etat:prove
       - name: contracts:hash — le contrat est derive, et son empreinte le tient
         run: pnpm contracts:hash
       - name: La garde de PR sait rougir
@@ -287,7 +275,7 @@ jobs:
         run: pnpm format:check
       - name: Typecheck
         run: pnpm typecheck
-      # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :
+      # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
       # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
       # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
       # Sans le jeton ici, la suite rougissait sur deux tests qui ne disaient rien du code.
@@ -305,3 +293,18 @@ jobs:
         run: pnpm req:check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # GOV-059, REQ-QA-013. `gov:etat` vient APRES toutes les etapes de mesure. Elle lit l etat
+      # GLOBAL de la forge : un rouge venu d une AUTRE demande de fusion faisait « sauter » lint,
+      # format, typecheck et tests, qui avaient l air d avoir mesure et n avaient rien mesure.
+      # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,
+      # elle ECHOUE en nommant les cinq familles non evaluees — et c est voulu : une gate verte
+      # parce qu elle n a pas pu lire est pire que pas de gate. Constate en CI le 2026-09-04,
+      # premier run de cette etape : « gh: To use GitHub CLI in a GitHub Actions workflow, set the
+      # GH_TOKEN environment variable ». La reponse n est PAS `--hors-ligne`, qui abandonnerait les
+      # cinq familles en silence : c est de lui donner le jeton pour qu elle fasse son travail.
+      - name: Etat vivant — fraicheur, verrou d owner, journal
+        run: pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: La garde de l etat vivant sait rougir
+        run: pnpm gov:etat:prove

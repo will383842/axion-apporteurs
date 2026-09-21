@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `fd41c0d` — 2026-09-19T17:25:36+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #76 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) |
-| Qui tient quoi ? | SEC-10 (A05) · DM-01 (A05) · QA-T03 (A05) · QA-T07 (A05) |
+| Où est `main` ? | `b973869` — 2026-09-19T20:30:42+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #84 (un contrôle requis rouge ou une revue manquante) · 2. #86 (un contrôle requis rouge ou une revue manquante) · 3. #88 (un contrôle requis rouge ou une revue manquante) · 4. #89 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
+| Qui tient quoi ? | SEC-10 (A05) · QA-T08 (A05) · DM-01 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T03 (A05) · QA-T07 (A05) · GOV-059 (A05) |
 | Où en est la phase ? | phase 0 — 11/98 tâches, reste 67.60 j |
 | Le prochain pas | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #81 — 2026-09-19 |
+| Dernière entrée de journal | PR #89 — 2026-09-21 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,8 +64,11 @@ Reste sur ce chemin : **17.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #76 — feat(SEC-10): compteurs de debit a conduite sur panne requise, garde de famille, pot de miel | `t/sec-10` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
+| 2 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un contrôle requis rouge ou une revue manquante |
+| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un contrôle requis rouge ou une revue manquante |
+| 4 | #89 — fix(GOV-059): la revendication se derive de la forge, et gov:etat passe apres les etapes de mesure | `t/gov-059-titre` | un contrôle requis rouge ou une revue manquante |
+| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -76,15 +79,19 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
 | SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
+| QA-T08 — Logger pino structuré, redaction PII, Sentry, notify | A05 | #70 | `a_faire` |
 | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
+| DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives | A05 | #63 | `a_faire` |
+| QA-T02 — Harnais d'intégration testcontainers | A05 | #68 | `a_faire` |
 | QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check | A05 | #80 | `a_faire` |
 | QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
+| GOV-059 — Une demande de fusion de plus rougit les autres, et ce rouge fait sauter les etapes de mesure | A05 | #87 | `a_faire` |
 
 ⚠️ **31 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-077 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle
+`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle · `docs/adr/0016-deux-arbitrages-du-2026-09-03-dates-dans-l-annexe-des-fusions.md` — partners/ADR-0016 — Deux arbitrages du 2026-09-03 datés dans l'annexe des fusions : la date de référence d'une commande et les trois contrôles de versement
 
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
@@ -94,13 +101,54 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Dernier atterrissage
 
-`origin/main` = `fd41c0d` (2026-09-19T17:25:36+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `b973869` (2026-09-19T20:30:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #89 — 2026-09-21 — fix(GOV-059): la revendication se derive de la forge, et gov:etat passe apres les etapes de mesure
+
+**Fait.** La revendication d'une tache ne se recopie plus dans le `docs/tasks.json` de chaque
+branche : elle se DERIVE d'une issue ouverte titree `ID` suivi d'un tiret cadratin et portant
+`en_cours` plus `owner:Axx`. Le cout de synchronisation entre branches ouvertes cesse d'etre en
+carre. Dans `.github/workflows/ci.yml`, l'etape `gov:etat` passe APRES lint, format, typecheck et
+tests : un rouge venu d'une autre branche ne les laisse plus en sautees. L'entree de journal de la
+PR 83, absente, est posee ici — elle rougissait toutes les branches ouvertes.
+
+**Reste.** La surface de revendication passe d'un fichier sous revue de code a un titre d'issue que
+tout compte pouvant ouvrir une issue sur ce depot peut ecrire. L'ecart est nomme dans la section
+Attaque de la PR et assume sur ce depot ; il appartient a SEC-05 de decider s'il doit se fermer.
+La dette de cloture de lot reste due : DM-01, SEC-10 et QA-T03 sont fusionnees sur main et encore
+`a_faire` au registre.
+
+**Appris.** Le rouge de trois PR ouvertes le meme jour etait la preuve vivante du defaut que cette
+PR ferme : `pr_sur_tache_non_revendiquee` s'est allume sur 84 et 86 des l'ouverture de 89, sans
+qu'aucune des trois n'ait change. Mesure au passage : une PR de phase 0 qui touche
+`docs/tasks.json` exige le label `role:gardien-spec`, et le champ `Rouge constate par:` n'admet
+QUE le code de poste — la moindre parenthese apres lui rend `rouge_vert_absent`.
+
+### PR #83 — 2026-09-19 — docs(GOV-039): les 25 clauses decidees remises ou datees (ADR 0016)
+
+**Fait.** Les 25 clauses decidees par `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` et declarees perdues
+dans `DETTE_TEXTE_DECIDE` sont resorbees, sans qu'aucune decision neuve soit prise : 23 reviennent
+au mot pres dans le texte applique de 14 exigences, ecrites par un verbe hors depot et jamais a la
+main ; les 2 autres etaient une annexe perimee, datee en ligne par `partners/ADR-0016`.
+`DETTE_TEXTE_DECIDE` est desormais vide. `siren_manquant`, qui n'est pas une valeur de
+`MotifBlocage`, devient `non_resolue` partout ou il etait ecrit.
+
+**Reste.** La tension entre REQ-DM-021 et REQ-ARG-017 sur `non_resolue` est relevee par la lentille
+exactitude et n'est pas tranchee : elle appartient a la zone argent. Cinq dettes de la revue sont
+reportees. L'entree de journal de cette PR manquait a la fusion : elle est ecrite ici, a posteriori,
+derivee mot a mot du corps de la PR — c'est exactement ce que `pr_fusionnee_sans_journal` reproche.
+
+**Appris.** Comme la famille `dette_texte_decide_perimee` ne peut plus etre amenee au binaire par
+une donnee une fois le registre vide, `controler()` prend un parametre `dettes` dont la valeur par
+defaut est le registre, et les temoins passent une dette fabriquee. Un registre qu'on vide emporte
+avec lui le seul moyen de prouver que la garde qui le lit sait encore rougir : il faut rendre la
+source injectable AVANT de la vider.
 
 ### PR #81 — 2026-09-19 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert
 
@@ -131,34 +179,7 @@ par construction, et la garde le dit. Une chaine de test qui contient une ouvert
 annotation en clair est lue par `gov:trace` comme une citation : les textes fabriques s'assemblent.
 Les etiquettes de panne du brief tombent sous `gov:identifiants` (lettre et chiffre nus).
 
-### PR #79 — 2026-09-19 — docs(UX-P0-02): maquettes des huit écrans et garde maquettes-validees
-
-**Fait.** Huit maquettes autonomes sous `docs/maquettes/` : six pour l'espace, deux pour la console. Elles couvrent 90 états et viennent avec une charte (`index.html`) aux contrastes mesurés dans les deux thèmes de l'espace. La garde `maquettes-validees` lit `VALIDATION.md` par ses en-têtes. Elle refuse une validation écrite à moitié ou signée par un autre que Will, et rougit sur toute tâche d'écran attribuée sans maquette validée ; elle est câblée en Gate A. La spec prouve aussi la forme de l'accueil (REQ-UX-008), le contraste recalculé depuis chaque maquette (REQ-UX-034) et la moitié statique de REQ-UX-017. Elle a été vue rouge avant la garde, et six mutants de la garde ont été tués. Les six maquettes de l'espace portent `2026-09-19 | Will`. Will a donné la validation lui-même, en séance avec l'orchestrateur, en répondant « oui parfait » à « Valider les six maquettes de l'espace apporteur ». Cette réponse vaut aussi pour les onze choix par défaut des notes. L'orchestrateur a écrit les six lignes dans `1c6d94b`, avec les mots de Will dans le message de ce commit ; l'auteur de la PR ne les a pas écrites. La garde libère UX-P1-01, UX-P1-02, UX-P1-05, UX-P1-08, UX-P1-09 et UX-P2-01. Le composeur lit désormais le tableau par le lecteur de la garde, et non plus par position de colonne.
-
-**Reste.** Les deux maquettes de console (UX-P1-07, UX-P2-03) attendent la validation de Will. Restent aussi la moitié dynamique de REQ-UX-017 (UX-P0-03) et la dérive du GLOSSAIRE sur `IssueDepot` et `MotifBlocage`.
-
-**Appris.** Prettier coupe les balises fermantes d'un HTML long (`</a` puis `>` à la ligne suivante). Une spec qui cherche `</label>` en texte exact ne trouve jamais la fermante, et juge alors « étiqueté » tout champ placé après une étiquette. Le témoin était trop indulgent sans rougir. Et le composeur lisait l'avant-dernière cellule du tableau, « Par », sous un commentaire qui disait « Validé le ».
-
-### PR #78 — 2026-09-19 — feat(CPL-T13): module temps pur - horloge injectee, heure de Paris, feries FR, SLA ouvre, seuil HYP-D3
-
-**Fait.** Le module `temps` vit sous `src/domain/temps/`, pur : horloge injectée (`horlogeFigee`
-dans le domaine, `horlogeSysteme` dans `src/lib/horloge.ts`), heure légale de Paris calculée par la
-règle européenne, bornée aux années civiles de Paris 1996-2099, fériés FR versionnés avec leur
-attribut chômé, SLA en heures ouvrées à échéance exclusive, capacité réelle et seuil prioritaire
-(HYP-D3). Les conversions sont confrontées à `Intl.DateTimeFormat` dans le test, jamais dans le
-domaine : 131 496 heures de 2026 à 2040, 78 338 points autour des changements d'heure de 1996 à
-2099. 38 mutants joués, 38 tués. `partners/ADR-0014` (`propose`) en est le contrat.
-
-**Reste.** La question à Will sur le lundi de Pentecôte (travaillé par défaut, une constante) ; le
-numéro d'ADR, fixé à l'atterrissage (0014 aujourd'hui, 0015 si DM-01 atterrit avant) ; le relevé unique et le
-rattrapage des crons de REQ-QA-027, qui sont à DM-13 et T-ARG-015.
-
-**Appris.** Un oracle vivant trouve ce qu'un attendu tapé aurait figé faux : le test supposait onze
-fériés distincts par an, et 1997 n'en a que dix (l'Ascension tombe le 8 mai). Le témoin dérive
-maintenant ces années de l'oracle de Gauss au lieu de les écrire. Et une URL encodée en commentaire
-(le « â » de Pâques en pourcentages) se lit comme un identifiant nu : la garde lit les commentaires.
-
-… 28 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 30 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

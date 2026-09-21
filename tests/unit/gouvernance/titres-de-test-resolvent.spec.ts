@@ -50,6 +50,8 @@ import {
 import {
   controler,
   DETTE_TEXTE_DECIDE,
+  modeNormal,
+  type DetteTexteDecide,
   fusionsDecidees,
   marqueursDe,
   CHEMIN_ANNEXE,
@@ -484,27 +486,49 @@ describe('REQ-QA-014 — les fusions décidées se confrontent au registre, et l
     expect(fautes.map((f) => f.message).join('\n')).not.toContain(`« ${m} »`);
   });
 
+  // 🔑 Le registre réel des dettes est VIDE depuis le 2026-09-19 (les 25 clauses résorbées, sur
+  // décision de Will). Les témoins des deux branches ne tirent donc plus une dette du registre :
+  // ils la FABRIQUENT, et la passent par le paramètre `dettes` — celui dont la valeur par défaut
+  // est le registre réel. Une dette tirée d'un registre vide serait `undefined`, et le témoin
+  // tomberait sur une TypeError : un rouge qui n'est pas celui qu'on mesure.
+  const detteFabriquee = (): DetteTexteDecide & { m: string } => {
+    const fusions = fusionsDecidees(ANNEXE()).filter((f) => marqueursDe(f.decide).length > 0);
+    const f = fusions[Math.floor(fusions.length / 2)]!; // le MILIEU, jamais le dernier
+    const m = marqueursDe(f.decide)[0]!;
+    return { survivante: f.survivante, marqueurs: [m], motif: 'témoin', m };
+  };
+
+  it('REQ-QA-014 — le registre réel des dettes est RÉSORBÉ : zéro clause décidée déclarée perdue', () => {
+    expect(DETTE_TEXTE_DECIDE).toEqual([]);
+  });
+
   it('REQ-QA-014 — PANNE FABRIQUÉE : une dette qui n’a plus d’objet ROUGIT, elle ne se tait pas', () => {
-    const dette = DETTE_TEXTE_DECIDE[Math.floor(DETTE_TEXTE_DECIDE.length / 2)]!;
-    const registre = copie(REGISTRE());
-    const e = registre.exigences.find((x) => x.id === dette.survivante)!;
-    e.texte = `${e.texte} ${dette.marqueurs.map((m) => '`' + m + '`').join(' ')}`;
-    const fautes = controler(registre, SCHEMA(), TACHES(), ANNEXE()).filter(
+    const dette = detteFabriquee();
+    // la clause est PRÉSENTE dans le texte réel : la déclarer perdue est une dette sans objet
+    const fautes = controler(REGISTRE(), SCHEMA(), TACHES(), ANNEXE(), [dette]).filter(
       (f) => f.famille === 'dette_texte_decide_perimee'
     );
-    expect(fautes.length).toBeGreaterThan(0);
-    expect(fautes.map((f) => f.message).join('\n')).toContain(dette.survivante);
+    expect(fautes.map((f) => f.message).join('\n')).toContain(
+      `${dette.survivante} : « ${dette.m} » est REVENU`
+    );
+  });
+
+  it('REQ-QA-014 — CONTRE-TÉMOIN : sans la dette fabriquée, le même registre ne rougit pas', () => {
+    const fautes = controler(REGISTRE(), SCHEMA(), TACHES(), ANNEXE(), []).filter(
+      (f) => f.famille === 'dette_texte_decide_perimee'
+    );
+    expect(fautes).toEqual([]);
   });
 
   // A10 · mutation (revue 5247514005) : le témoin ci-dessus n'exerce que la branche « clause
   // REVENUE ». L'autre — la dette dont l'annexe ne porte plus la clause — survivait neutralisée.
   it('REQ-QA-014 — PANNE FABRIQUÉE : une dette dont l’annexe ne met PLUS la clause en code rougit', () => {
-    const dette = DETTE_TEXTE_DECIDE[Math.floor(DETTE_TEXTE_DECIDE.length / 2)]!;
-    const m = dette.marqueurs[0]!;
+    const dette = detteFabriquee();
+    const m = dette.m;
     const annexe = ANNEXE();
     expect(annexe, `l’annexe ne porte pas « ${m} » en code`).toContain('`' + m + '`');
     const frappee = annexe.split('`' + m + '`').join(m);
-    const fautes = controler(REGISTRE(), SCHEMA(), TACHES(), frappee).filter(
+    const fautes = controler(REGISTRE(), SCHEMA(), TACHES(), frappee, [dette]).filter(
       (f) => f.famille === 'dette_texte_decide_perimee'
     );
     expect(fautes.map((f) => f.message).join('\n')).toContain(
@@ -612,6 +636,28 @@ describe('REQ-QA-014 — les APPELANTS de la garde sont exercés, pas seulement 
       return { code: err.status ?? 1, sortie: `${err.stdout ?? ''}${err.stderr ?? ''}` };
     }
   };
+
+  // Le registre des dettes étant VIDE, aucune donnée du bac ne peut plus amener
+  // `dette_texte_decide_perimee` au binaire. Son témoin d'APPELANT passe par `modeNormal()`, la
+  // fonction que le binaire exécute telle quelle : un mode normal qui écarterait cette famille
+  // rougit ici (refus A10 · mutation de la PR 55, transposé).
+  it('REQ-QA-014 — le mode NORMAL sort en 1 et NOMME `dette_texte_decide_perimee` sur une dette fabriquée', () => {
+    const fusions = fusionsDecidees(ANNEXE()).filter((f) => marqueursDe(f.decide).length > 0);
+    const f = fusions[Math.floor(fusions.length / 2)]!;
+    const src = {
+      doc: REGISTRE() as unknown as Parameters<typeof modeNormal>[0]['doc'],
+      schema: SCHEMA(),
+      taches: TACHES() as unknown as Parameters<typeof modeNormal>[0]['taches'],
+      annexe: ANNEXE(),
+    };
+    const sain = modeNormal(src);
+    expect(sain.code, sain.lignes.join('\n')).toBe(0);
+    const r = modeNormal(src, [
+      { survivante: f.survivante, marqueurs: [marqueursDe(f.decide)[0]!], motif: 'témoin' },
+    ]);
+    expect(r.code).toBe(1);
+    expect(r.lignes.join('\n')).toContain('── dette_texte_decide_perimee (1)');
+  });
 
   it('REQ-QA-014 — le mode NORMAL du binaire sort en zéro sur le dépôt réel', () => {
     const r = lancer([]);
