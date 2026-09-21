@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `b973869` — 2026-09-19T20:30:42+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #84 (un contrôle requis rouge ou une revue manquante) · 2. #86 (un contrôle requis rouge ou une revue manquante) · 3. #88 (un contrôle requis rouge ou une revue manquante) · 4. #89 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
+| Où est `main` ? | `c921995` — 2026-09-21T23:22:36+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #84 (un contrôle requis rouge ou une revue manquante) · 2. #86 (un contrôle requis rouge ou une revue manquante) · 3. #88 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | SEC-10 (A05) · QA-T08 (A05) · DM-01 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T03 (A05) · QA-T07 (A05) · GOV-059 (A05) |
-| Où en est la phase ? | phase 0 — 11/98 tâches, reste 67.60 j |
+| Où en est la phase ? | phase 0 — 11/98 tâches, reste 68.10 j |
 | Le prochain pas | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #89 — 2026-09-21 |
@@ -19,7 +19,7 @@
 
 ## Phase courante : 0
 
-11/98 tâches terminées · reste 67.60 j estimés.
+11/98 tâches terminées · reste 68.10 j estimés.
 
 ## Tâches
 
@@ -67,8 +67,7 @@ Reste sur ce chemin : **17.00 j**.
 | 1 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
 | 2 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un contrôle requis rouge ou une revue manquante |
 | 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un contrôle requis rouge ou une revue manquante |
-| 4 | #89 — fix(GOV-059): la revendication se derive de la forge, et gov:etat passe apres les etapes de mesure | `t/gov-059-titre` | un contrôle requis rouge ou une revue manquante |
-| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -91,9 +90,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle · `docs/adr/0016-deux-arbitrages-du-2026-09-03-dates-dans-l-annexe-des-fusions.md` — partners/ADR-0016 — Deux arbitrages du 2026-09-03 datés dans l'annexe des fusions : la date de référence d'une commande et les trois contrôles de versement
-
-Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
+Aucun ADR daté du 2026-09-21 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
 
 ## Prochain pas
 
@@ -101,7 +98,7 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19)
 
 ## Dernier atterrissage
 
-`origin/main` = `b973869` (2026-09-19T20:30:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c921995` (2026-09-21T23:22:36+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -150,36 +147,31 @@ defaut est le registre, et les temoins passent une dette fabriquee. Un registre 
 avec lui le seul moyen de prouver que la garde qui le lit sait encore rougir : il faut rendre la
 source injectable AVANT de la vider.
 
-### PR #81 — 2026-09-19 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert
+### PR #82 — 2026-09-19 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee
 
-**Fait.** `pnpm req:check` est la garde deja inscrite sous cet identifiant (`gov-trace.ts`, alias
-`gov:trace`), lancee dans Gate A juste apres « Tests » avec le rapport JSON que `pnpm test` ecrit
-desormais (`test-results/vitest.json`). Aucun second script. La garde exige les DEUX formes de
-REQ-QA-014 pour chaque paire (tache, exigence active) dont le fichier promis existe : `@req` dans le
-premier bloc de commentaires ET l'identifiant dans le titre d'un `it()` (ecrit, ou dernier segment
-du nom resolu par vitest quand le titre est un gabarit), et elle nomme la forme qui manque. Avec les
-resultats, elle exige un test VERT ; une promesse par titre exige CE test vert. Trois familles
-neuves : `annotation_absorbee_sans_renvoi`, `test_promis_non_vert`, `resultats_illisibles` (absents,
-illisibles, perimes). `--prove` : 15 familles, 25 temoins dont 12 nommes pour les pannes du brief,
-15 contre-temoins. Mise en conformite a la source : 25 paires dans 12 fichiers de spec, et les trois
-annotations absorbees portent leur renvoi. QA-T01, GOV-077, SEC-01, SEC-02, CPL-T13 et UX-P0-02
-passent `fusionnee` ; le temoin du cas 10 de `lentilles-selon-le-risque.spec.ts` choisit sa tache au
-registre au lieu de nommer QA-T01.
+**Fait.** `pnpm sec:semgrep` et `pnpm sec:semgrep:prove` (`scripts/gates/semgrep.ts`) lancent
+l'image officielle `semgrep/semgrep:1.176.1` epinglee au condensat de son index, en CI comme sur le
+poste, avec `--error --disable-nosem --metrics=off --json --time`, et sont deux etapes de Gate A sans
+tolerance. `.semgrep.yml` porte deux regles maison : `axion-prisma-hors-couche-d-acces` (REQ-SEC-008,
+qui absorbe REQ-QA-011 : aucun acces au client de base sous l'espace apporteur, `import type`
+compris) et `axion-sql-brut-non-parametre`. Les jeux publics `p/typescript` et `p/nodejs` sont
+charges du registre a l'execution, pas recopies. Le vert imprime les regles REELLEMENT executees,
+lues dans `time.rules` (76 : 2 maison, 74 publiques) ; `--prove` fait mordre 57 temoins, dont 38
+jumeaux sous `nosemgrep`, et laisse 16 contre-temoins muets. `G-SEC-AST-PRISMA` nomme ce script, son
+alias et sa preuve rouge.
 
-**Reste.** `pnpm prevol` n'existe pas et devrait appeler `req:check` (GOV-047). Le temoin etroit
-« titre qui nomme une absorbee » vit dans une spec (GOV-039), le jumeau « annotation absorbee » dans
-la garde : deux lieux pour une regle. `gardes-transposees.spec.ts` garde sa copie de la lecture YAML.
-Un titre cite litteralement par un ADR est une promesse que la mise en conformite a cassee une fois
-(`partners/ADR-0009`, corrige) ; `partners/ADR-0005` en cite un autre que `gov:adr` ne juge pas.
+**Reste.** `gate-sec` promet encore `pnpm audit` et gitleaks sans porteur vivant. Seul `src/` est
+analyse : `scripts/` et `tests/` echappent aux regles publiques. L'image de 1,5 Go est tiree a chaque
+passage CI, sans cache, et Gate A depend du reseau vers le registre semgrep. La regle par modele
+cloisonne attend SEC-05.
 
-**Appris.** `vitest list --json` OMET les tests `it.skip` et `it.todo` : une promesse par titre vers
-un test saute se lisait deja « titre absent », jamais « non vert ». Le rapport JSON de vitest 2.1.9
-porte le chemin ABSOLU de chaque fichier : des resultats produits dans un autre arbre sont perimes
-par construction, et la garde le dit. Une chaine de test qui contient une ouverture `it(` ou une
-annotation en clair est lue par `gov:trace` comme une citation : les textes fabriques s'assemblent.
-Les etiquettes de panne du brief tombent sous `gov:identifiants` (lettre et chiffre nus).
+**Appris.** Semgrep applique en silence un `.semgrepignore` implicite qui saute `tests/` et `dist/`
+meme sous `src/` : sans fichier vide monte a la racine, 5 fichiers sur 9 etaient analyses et le
+passage sortait vert. Des `paths.include` ancres (`/src/...`) ne matchent plus rien si la cible est
+`src` sans `.git` : zero cible analysee, sortie 0. Les motifs structurels ne voient pas
+`export type { ... } from`. Monter la racine d'un worktree Windows coute 3 min 35 par passage.
 
-… 30 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 31 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
