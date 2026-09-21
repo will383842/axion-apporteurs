@@ -53,6 +53,7 @@ import {
   type Vue,
   type Perimetre,
 } from '../../../scripts/gates/gov-conventions';
+import { CONTEXTES_MESURES, contextesEteints } from '../ci/condition-de-job';
 
 const SCRIPT = 'scripts/gates/gov-conventions.ts';
 const CONVENTIONS = 'docs/CONVENTIONS.md';
@@ -884,7 +885,28 @@ const SCRIPTS_EXACTS: Readonly<Record<string, string>> = {
  * signal, dans les deux sens.
  */
 const CLES_DU_WORKFLOW = ['name', 'on', 'jobs'];
-const CLES_DE_GATE_A = ['runs-on', 'permissions', 'steps'];
+/**
+ * ⚠️ `if` EST ENTRE DANS CETTE LISTE LE 2026-09-22, ET UNE LISTE QUI S'ALLONGE EST UNE GARDE
+ * QUI S’AFFAIBLIT — sauf si ce qu’elle laisse entrer est JUGÉ. C’est la condition de son entrée.
+ *
+ * Le job porte désormais `if: ${{ github.event.pull_request.merged != true }}` : la porte A n’a
+ * rien à mesurer sur une demande de fusion DÉJÀ FUSIONNÉE — sa tête n’est plus une branche, `gov:pr`
+ * échouait sur `git diff base...tête`, et 45 étapes restaient en « skipped ». GitHub n’offre aucun
+ * autre mécanisme : `on.pull_request.types` ne sait pas filtrer sur l’état fusionné, et un job
+ * intermédiaire déplacerait le problème sur la clé `needs`, tout aussi absente de cette liste.
+ *
+ * Tolérer la CLÉ sans juger sa VALEUR rendrait `if: false` recevable — c’est-à-dire exactement le
+ * désarmement que ce test existe pour attraper, et dont le témoin est plus bas. `fautesDActe`
+ * ÉVALUE donc la condition (module partagé `tests/unit/ci/condition-de-job.ts`) contre les
+ * événements que la porte A doit mesurer, et NOMME ceux qu’elle éteint.
+ *
+ * ⚠️ CE QUE CE TEST-CI NE JUGE PAS, et qui n’est donc pas un oubli : que la condition écarte bien
+ * la PR fusionnée. Ici on garde `Lint` et `Format` (REQ-GOV-018) ; une condition qui ne désarme
+ * rien, `if: ${{ true }}` comprise, est recevable de CE point de vue. C’est
+ * `tests/unit/gouvernance/revendication-par-branche.spec.ts` qui exige l’autre moitié, et les deux
+ * lisent le MÊME évaluateur pour ne pas diverger.
+ */
+const CLES_DE_GATE_A = ['runs-on', 'if', 'permissions', 'steps'];
 
 /**
  * Ce que FAIT Gate A, lue comme un objet. Les étapes de lint et de format ont la forme EXACTE
@@ -903,6 +925,16 @@ function fautesDActe(ci: unknown): string[] {
   const job = estObjet(ci.jobs) ? ci.jobs['gate-a'] : undefined;
   if (!estObjet(job) || !Array.isArray(job.steps)) return [...fautes, 'job `gate-a` introuvable'];
   clesExactes('gate-a', job, CLES_DE_GATE_A);
+  // La condition du job, quand elle est là : elle ne doit éteindre AUCUN des événements que la
+  // porte A mesure. UNE seule faute, qui les NOMME — un désarmement se lit, il ne se compte pas.
+  if (Object.hasOwn(job, 'if')) {
+    const condition = job['if'];
+    const eteints =
+      typeof condition === 'string'
+        ? contextesEteints(condition, CONTEXTES_MESURES)
+        : [`\`if:\` n'est pas une chaîne : ${JSON.stringify(condition)}`];
+    if (eteints.length > 0) fautes.push(`gate-a ⏎ if éteint : ${eteints.join(', ')}`);
+  }
   const lances = new Map<string, number>();
   for (const etape of job.steps) {
     if (!estObjet(etape)) {
@@ -1325,6 +1357,14 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
     expect(fautesDActe(await lireYaml(ci))).toEqual([]);
     // RM-02 : chacun de ces désarmements, dérivé de l'arbre RÉEL par UNE substitution (RM-11).
     const LINT = '      - name: Lint\n        run: pnpm lint\n';
+    // La ligne de condition du job, LUE et non retapée : une mutation qui ne mute rien rendrait
+    // le témoin vert en ne mesurant rien, et une copie du texte divergerait à la première retouche.
+    const CONDITION_DU_JOB = /^ {4}if: .*$/m.exec(ci)?.[0];
+    // LÈVE plutôt que d'assertionner : sans cette ligne, les deux mutations ci-dessous muteraient
+    // une chaîne vide, et le témoin resterait vert en ne mesurant rien.
+    if (CONDITION_DU_JOB === undefined) {
+      throw new Error('le job `gate-a` ne porte plus de `if:` : ce témoin ne mesure rien');
+    }
     expect(ci).toContain(LINT);
     expect(ci.endsWith('\n')).toBe(true);
     const desarmes = [
@@ -1333,9 +1373,15 @@ describe('REQ-GOV-018 — lint et format sont ÉPINGLÉS, SCRIPTÉS, et BLOQUANT
       ci.replace(LINT, `${LINT}        continue-on-error: \${{ true }}\n`),
       ci.replace(LINT, '      - { name: Lint, run: pnpm lint, if: false }\n'),
       ci.replace(LINT, `${LINT}      - name: Lint encore\n        run: pnpm lint\n`),
-      ci.replace('  gate-a:\n', '  gate-a:\n    if: false\n'),
-      // Une clé de job posée APRÈS la liste des étapes est une clé du job.
-      `${ci}    if: false\n`,
+      // La condition RÉELLE remplacée par un désarmement franc : `if: false` n’éteint pas une
+      // étape, il éteint les 71. On SUBSTITUE la ligne au lieu d’en ajouter une seconde :
+      // `lireYaml` refuse une clé en double, et le témoin lèverait au lieu de nommer la faute.
+      ci.replace(CONDITION_DU_JOB, '    if: false'),
+      // Et la condition RETIRÉE : la clé est déclarée, donc son absence est une divergence.
+      ci.replace(`${CONDITION_DU_JOB}\n`, ''),
+      // Une clé de job posée APRÈS la liste des étapes est une clé du job. Pas `if:` ici : le job
+      // en porte déjà un, et deux clés de même nom font LEVER l’analyseur au lieu de nommer.
+      `${ci}    continue-on-error: true\n`,
       ci.replace(
         '    steps:\n',
         '    defaults:\n      run:\n        shell: true {0}\n    steps:\n'
