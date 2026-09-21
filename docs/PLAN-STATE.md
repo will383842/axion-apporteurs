@@ -7,11 +7,11 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `b973869` — 2026-09-19T20:30:42+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #84 (un contrôle requis rouge ou une revue manquante) · 2. #86 (un contrôle requis rouge ou une revue manquante) · 3. #88 (un contrôle requis rouge ou une revue manquante) · 4. #89 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
-| Qui tient quoi ? | SEC-10 (A05) · QA-T08 (A05) · DM-01 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T03 (A05) · QA-T07 (A05) · GOV-059 (A05) |
-| Où en est la phase ? | phase 0 — 11/98 tâches, reste 67.60 j |
-| Le prochain pas | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
+| Où est `main` ? | `c921995` — 2026-09-21T23:22:36+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #84 (un conflit avec `main`) · 3. #86 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T08 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T07 (A05) · GOV-059 (A05) |
+| Où en est la phase ? | phase 0 — 14/98 tâches, reste 65.10 j |
+| Le prochain pas | DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #89 — 2026-09-21 |
 
@@ -19,19 +19,19 @@
 
 ## Phase courante : 0
 
-11/98 tâches terminées · reste 67.60 j estimés.
+14/98 tâches terminées · reste 65.10 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 208 | JUR-T02, SEC-10, QA-T08, DM-01, DM-02, QA-T02, QA-T04, QA-T03, QA-T07, QA-T30, CPL-T22, SEC-08 … |
+| `a_faire` | 205 | JUR-T02, QA-T08, DM-02, QA-T02, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06 … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 50 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
+| `fusionnee` | 53 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -39,9 +39,9 @@
 
 **20.75 j** sur 22 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → DM-01 (1 j, ph 0) → DM-02 (1.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → DM-02 (1.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **17.00 j**.
+Reste sur ce chemin : **16.00 j**.
 
 ## Bloquées
 
@@ -64,11 +64,10 @@ Reste sur ce chemin : **17.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
-| 2 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un contrôle requis rouge ou une revue manquante |
-| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un contrôle requis rouge ou une revue manquante |
-| 4 | #89 — fix(GOV-059): la revendication se derive de la forge, et gov:etat passe apres les etapes de mesure | `t/gov-059-titre` | un contrôle requis rouge ou une revue manquante |
-| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -78,30 +77,25 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
-| SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable | A05 | #71 | `a_faire` |
 | QA-T08 — Logger pino structuré, redaction PII, Sentry, notify | A05 | #70 | `a_faire` |
-| DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable | A05 | #62 | `a_faire` |
 | DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives | A05 | #63 | `a_faire` |
 | QA-T02 — Harnais d'intégration testcontainers | A05 | #68 | `a_faire` |
-| QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check | A05 | #80 | `a_faire` |
 | QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
 | GOV-059 — Une demande de fusion de plus rougit les autres, et ce rouge fait sauter les etapes de mesure | A05 | #87 | `a_faire` |
 
-⚠️ **31 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-077 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
+⚠️ **34 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, SEC-10, DM-01, QA-T03, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-077 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle · `docs/adr/0016-deux-arbitrages-du-2026-09-03-dates-dans-l-annexe-des-fusions.md` — partners/ADR-0016 — Deux arbitrages du 2026-09-03 datés dans l'annexe des fusions : la date de référence d'une commande et les trois contrôles de versement
-
-Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
+Aucun ADR daté du 2026-09-21 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
 
 ## Prochain pas
 
-**DM-01** — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (1 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**DM-02** — Gates de schéma : enums, centimes, index partiels, migrations additives (1.5 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `b973869` (2026-09-19T20:30:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c921995` (2026-09-21T23:22:36+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -130,6 +124,30 @@ qu'aucune des trois n'ait change. Mesure au passage : une PR de phase 0 qui touc
 `docs/tasks.json` exige le label `role:gardien-spec`, et le champ `Rouge constate par:` n'admet
 QUE le code de poste — la moindre parenthese apres lui rend `rouge_vert_absent`.
 
+### PR #84 — 2026-09-19 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives
+
+**Fait.** Les gardes du schéma lisent un schéma LU, par un lecteur unique exporté
+(`scripts/lot/lecteur-prisma.ts`) : un modèle se ferme sur SON accolade, et un texte illisible est
+refusé en nommant la ligne. `partners:schema:enums` est réécrite dessus. Une liste d'états s'y juge
+par groupe, la projection exacte est admise en migration par règle, et l'index unique de
+l'attribution occupante se juge en SQL (`fautesIndexOccupant`). Deux gardes neuves sont câblées en
+Gate A : `partners:schema:cents` (REQ-DM-001) et `partners:migrations:additive` (REQ-DM-037). La
+seconde lit toutes les migrations suivies et dérive la protection du journal des déclencheurs que
+les migrations posent. La spec d'intégration relit `pg_indexes` en base réelle. Le prédicat
+provisoire de DM-01 meurt au profit de l'import de la garde, et `partners/ADR-0011` est amendée.
+
+**Reste.** `reecrire-champ` refuse le champ `tache` : `partners:migrations:additive` reste
+attribuée à QA-T11 au registre. La table `attributions` et son index naissent avec DM-07, qui
+importera `fautesIndexOccupant`. `LANCE_EN_SCRIPT` à extension obligatoire vit encore dans d'autres
+gardes. Le DML des migrations et le SQL assemblé hors `EXECUTE` ne sont pas jugés.
+
+**Appris.** La garde `journal:sans-pii` est un fil tendu : toute mention en clair de la table
+refuse, hors de sa liste blanche. Une garde qui doit protéger cette table ne la NOMME donc pas :
+elle dérive la table protégée des déclencheurs que les migrations posent. C'est plus juste (RM-01),
+et toute table protégée demain l'est sans retouche. Et remplacer un prédicat de test par l'import
+d'une garde ne doit pas perdre ses mots : `remuneration`, `euro` et `euros` sont passés dans la
+garde avec lui.
+
 ### PR #83 — 2026-09-19 — docs(GOV-039): les 25 clauses decidees remises ou datees (ADR 0016)
 
 **Fait.** Les 25 clauses decidees par `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` et declarees perdues
@@ -150,36 +168,7 @@ defaut est le registre, et les temoins passent une dette fabriquee. Un registre 
 avec lui le seul moyen de prouver que la garde qui le lit sait encore rougir : il faut rendre la
 source injectable AVANT de la vider.
 
-### PR #81 — 2026-09-19 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert
-
-**Fait.** `pnpm req:check` est la garde deja inscrite sous cet identifiant (`gov-trace.ts`, alias
-`gov:trace`), lancee dans Gate A juste apres « Tests » avec le rapport JSON que `pnpm test` ecrit
-desormais (`test-results/vitest.json`). Aucun second script. La garde exige les DEUX formes de
-REQ-QA-014 pour chaque paire (tache, exigence active) dont le fichier promis existe : `@req` dans le
-premier bloc de commentaires ET l'identifiant dans le titre d'un `it()` (ecrit, ou dernier segment
-du nom resolu par vitest quand le titre est un gabarit), et elle nomme la forme qui manque. Avec les
-resultats, elle exige un test VERT ; une promesse par titre exige CE test vert. Trois familles
-neuves : `annotation_absorbee_sans_renvoi`, `test_promis_non_vert`, `resultats_illisibles` (absents,
-illisibles, perimes). `--prove` : 15 familles, 25 temoins dont 12 nommes pour les pannes du brief,
-15 contre-temoins. Mise en conformite a la source : 25 paires dans 12 fichiers de spec, et les trois
-annotations absorbees portent leur renvoi. QA-T01, GOV-077, SEC-01, SEC-02, CPL-T13 et UX-P0-02
-passent `fusionnee` ; le temoin du cas 10 de `lentilles-selon-le-risque.spec.ts` choisit sa tache au
-registre au lieu de nommer QA-T01.
-
-**Reste.** `pnpm prevol` n'existe pas et devrait appeler `req:check` (GOV-047). Le temoin etroit
-« titre qui nomme une absorbee » vit dans une spec (GOV-039), le jumeau « annotation absorbee » dans
-la garde : deux lieux pour une regle. `gardes-transposees.spec.ts` garde sa copie de la lecture YAML.
-Un titre cite litteralement par un ADR est une promesse que la mise en conformite a cassee une fois
-(`partners/ADR-0009`, corrige) ; `partners/ADR-0005` en cite un autre que `gov:adr` ne juge pas.
-
-**Appris.** `vitest list --json` OMET les tests `it.skip` et `it.todo` : une promesse par titre vers
-un test saute se lisait deja « titre absent », jamais « non vert ». Le rapport JSON de vitest 2.1.9
-porte le chemin ABSOLU de chaque fichier : des resultats produits dans un autre arbre sont perimes
-par construction, et la garde le dit. Une chaine de test qui contient une ouverture `it(` ou une
-annotation en clair est lue par `gov:trace` comme une citation : les textes fabriques s'assemblent.
-Les etiquettes de panne du brief tombent sous `gov:identifiants` (lettre et chiffre nus).
-
-… 30 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 31 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
