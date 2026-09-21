@@ -57,6 +57,7 @@ import {
   type DependancesDuMandataire,
 } from '../../../src/server/integrations/recherche-entreprises/mandataire';
 import { limiteurDuRegistre } from '../../../src/server/integrations/recherche-entreprises/limiteur';
+import { appelantDepuis } from '../../../src/server/integrations/recherche-entreprises/production';
 import { clientDuTiers } from '../../../src/server/integrations/recherche-entreprises/tiers';
 import { creerDisjoncteur } from '../../../src/server/integrations/recherche-entreprises/disjoncteur';
 import { empreinteurDeDirigeants } from '../../../src/server/integrations/recherche-entreprises/projection';
@@ -324,6 +325,33 @@ describe('REQ-SEC-013 — limité par identité (120/j) et par empreinte d’adr
     );
     expect(r).toEqual({ mode: 'saisie_manuelle', motif: 'adresse_illisible' });
     expect(tiers.appels).toHaveLength(0);
+  });
+
+  it('REQ-SEC-013 — les sujets des compteurs sont des EMPREINTES : l’adresse lue depuis la droite, jamais en clair', () => {
+    const secrets = {
+      PII_HASH_KEY: 'cle-des-empreintes-de-test-0123456789abcdef',
+      IP_HASH_SALT: 'sel-des-adresses-de-test-0123456789abcdef',
+    };
+    const entetes = new Headers({ 'x-forwarded-for': '198.51.100.7, 203.0.113.9' });
+    const a = appelantDepuis('apporteur-42', entetes, secrets);
+    expect(a.identite).toMatch(/^[0-9a-f]{64}$/);
+    expect(a.adresse).toMatch(/^[0-9a-f]{64}$/);
+    // L'élément de DROITE (le dernier mandataire de confiance), jamais celui que le client écrit.
+    const droite = appelantDepuis(
+      'apporteur-42',
+      new Headers({ 'x-forwarded-for': '203.0.113.9' }),
+      secrets
+    );
+    expect(a.adresse).toBe(droite.adresse);
+    expect(JSON.stringify(a)).not.toMatch(/203\.0\.113\.9|apporteur-42/);
+    expect(appelantDepuis('apporteur-42', new Headers(), secrets).adresse).toBeNull();
+    // Deux clés, deux usages : la même valeur ne donne pas la même empreinte sous l'autre clé.
+    expect(
+      appelantDepuis('apporteur-42', entetes, {
+        ...secrets,
+        IP_HASH_SALT: `${secrets.IP_HASH_SALT}-x`,
+      }).adresse
+    ).not.toBe(a.adresse);
   });
 
   it('REQ-SEC-013 — chaque appel est journalisé, sans la saisie, sans l’identité, sans l’adresse', async () => {

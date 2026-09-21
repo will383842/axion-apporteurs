@@ -17,7 +17,7 @@ import type { Secrets } from '../../../lib/env';
 import { adresseDuClient, SAUTS_DE_CONFIANCE } from '../../securite/adresse-du-client';
 import { sujetDepuisEmpreinte } from '../../securite/rate-limit';
 import { cacheRedis } from './cache';
-import { creerDisjoncteur } from './disjoncteur';
+import { creerDisjoncteur, type VueDuDisjoncteur } from './disjoncteur';
 import { limiteurDuRegistre } from './limiteur';
 import type { Appelant, DependancesDuMandataire, LigneDeJournal } from './mandataire';
 import { PARAMETRES } from './parametres';
@@ -26,6 +26,11 @@ import { clientDuTiers } from './tiers';
 
 /** UN disjoncteur par processus : son état est ce que la console lit. */
 const disjoncteurDuProcessus = creerDisjoncteur();
+
+/** Ce que la console affiche (REQ-INT-020 : « l'état ouvert est visible en console »). */
+export function vueDuDisjoncteurDuProcessus(): VueDuDisjoncteur {
+  return disjoncteurDuProcessus.vue(horlogeSysteme.maintenant());
+}
 
 /** Le puits de phase 0 : une ligne JSON sur la sortie d'erreur, sans donnée de personne. */
 function journaliserSurStderr(ligne: LigneDeJournal): void {
