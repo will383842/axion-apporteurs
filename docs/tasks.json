@@ -5708,7 +5708,7 @@
     },
     {
       "id": "DM-15",
-      "titre": "Résolution des encaissements et reprises : `paiement.recu` → acquise au prorata ; `avoir.emis`/`facture.annulee` → recalcul de l'attendu ; `paiement.rembourse` → reprise ; blocage `siren_manquant`/`ba",
+      "titre": "Résolution des encaissements et reprises : `paiement.recu` → acquise au prorata ; `avoir.emis`/`facture.annulee` → recalcul de l'attendu ; `paiement.rembourse` → reprise ; blocage `non_resolue`/`ba",
       "phase": 2,
       "repo": "partners",
       "zone": "domaine",
