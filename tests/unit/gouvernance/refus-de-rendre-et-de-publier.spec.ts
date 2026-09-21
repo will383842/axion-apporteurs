@@ -665,27 +665,6 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'validation sort en 1 en NOMMANT la tâche, le même arbre corrigé sort en 0, et le dépôt réel ' +
         'comme `--prove` sortent en 0.',
     },
-    // ── GOV-059 (suite) : le PRÉ-VOL, quatre refus dont trois sont des refus de MESURER ──────
-    // Ce fichier n'est pas une garde de CI : c'est l'outil que `docs/CONVENTIONS.md` §7 impose
-    // avant de pousser. Trois de ses quatre sorties refusent de CONCLURE — `ci.yml` absent, pas
-    // de bloc `steps:`, substitution de shell inconnue — parce qu'un pré-vol qui devine la liste
-    // des étapes rend un vert sans mesure, ce qui est pire que pas de pré-vol du tout. La
-    // quatrième est son verdict.
-    'scripts/prevol.ts': {
-      total: 4,
-      porte: 4,
-      // ZÉRO : ce script n'a pas encore de témoin d'EFFET. Il n'en est pas dispensé — il est
-      // NEUF, et le déclarer à zéro est la seule façon honnête de dire qu'il reste dû.
-      temoins: 0,
-      raison:
-        'GOV-059 (suite) — le pré-vol local, dérivé du job `gate-a` de `ci.yml`. QUATRE sorties : ' +
-        '`ci.yml` absent, aucun bloc `steps:` de job, substitution de shell non tolérée, et le ' +
-        'verdict final. Les trois premières sont des REFUS DE CONCLURE (échec fermé) : sans la ' +
-        'liste des étapes, un pré-vol ne mesure rien et son silence se lirait « rien à vérifier ». ' +
-        '⚠️ AUCUN témoin ne les exerce encore, et aucune tâche du backlog ne porte cette dette : ' +
-        'il faut un banc où `ci.yml` est absent, vidé de son `steps:`, puis porteur d’un `$(…)` ' +
-        'inconnu, et exiger la sortie 1 avec le préfixe qui NOMME la cause.',
-    },
   };
 
   it('REQ-GOV-032 — le compte DÉRIVÉ du diff égale le compte DÉCLARÉ, fichier par fichier', () => {
@@ -907,18 +886,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // dans cette branche, le compte a rougi de nouveau, relu et non deviné :
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 40 to be 39
-    //
-    // 🔧 40 → 44 par GOV-059 (suite), ARBITRÉ et non subi. `scripts/prevol.ts` naît avec QUATRE
-    // sorties non nulles, dont trois sont des refus de CONCLURE. Le cliquet a rougi dans ses deux
-    // tests, dans l'ordre — l'identité d'abord, le compte ensuite —, et les deux rouges ont été LUS
-    // avant d'écrire le nombre (`pnpm prevol`, puis `vitest -t "pas seulement"`) :
-    //
-    //     scripts/prevol.ts ajoute 4 `process.exit(1)` et n’est PAS déclaré ici
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
-    //
-    // ⚠️ C'est le premier fichier déclaré ici qui ne soit PAS une garde de Gate A, et c'est le seul
-    // dont les sorties n'ont encore AUCUN témoin : la déclaration dit la dette, elle ne la ferme pas.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(44);
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(40);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
