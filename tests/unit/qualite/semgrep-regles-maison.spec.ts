@@ -30,6 +30,7 @@ import {
   JEUX_PUBLICS,
   OPTIONS_FIXES,
   PLANCHER_MAISON,
+  PLANCHER_PUBLIC,
   PREFIXE_MAISON,
   REGLE_PRISMA,
   REGLE_SQL,
@@ -211,7 +212,7 @@ describe('REQ-QA-013 — le dépôt réel : zéro constat, et le compte des règ
       expect(m, r.sortie).not.toBeNull();
       const [total, maison, publiques] = [Number(m![1]), Number(m![2]), Number(m![3])];
       expect(maison).toBeGreaterThanOrEqual(PLANCHER_MAISON);
-      expect(publiques).toBeGreaterThan(0);
+      expect(publiques).toBeGreaterThanOrEqual(PLANCHER_PUBLIC);
       expect(total).toBe(maison + publiques);
       const f = r.sortie.match(/(\d+) fichier\(s\) analysé\(s\) sur (\d+) présent\(s\)/);
       expect(f, r.sortie).not.toBeNull();
@@ -236,9 +237,30 @@ describe('REQ-QA-013 — le dépôt réel : zéro constat, et le compte des règ
       },
     };
     expect(jugerReel(passage, ['src/a.ts']).map((f) => f.famille)).toEqual(['plancher_public']);
-    const avecPublique: Passage = {
+    const publiques = (n: number) => Array.from({ length: n }, (_, i) => `js.publique-${i}`);
+    // UNE règle publique ne suffit pas : un jeu vidé ou réduit à une règle doit rougir, et
+    // « au moins une » le laissait passer (revue `securite`, PR 82).
+    const uneSeule: Passage = {
       ...passage,
       sortie: { ...passage.sortie!, time: { rules: [...passage.sortie!.time.rules, 'js.r'] } },
+    };
+    expect(jugerReel(uneSeule, ['src/a.ts']).map((f) => f.famille)).toEqual(['plancher_public']);
+    const sousLePlancher: Passage = {
+      ...passage,
+      sortie: {
+        ...passage.sortie!,
+        time: { rules: [...passage.sortie!.time.rules, ...publiques(PLANCHER_PUBLIC - 1)] },
+      },
+    };
+    expect(jugerReel(sousLePlancher, ['src/a.ts']).map((f) => f.famille)).toEqual([
+      'plancher_public',
+    ]);
+    const avecPublique: Passage = {
+      ...passage,
+      sortie: {
+        ...passage.sortie!,
+        time: { rules: [...passage.sortie!.time.rules, ...publiques(PLANCHER_PUBLIC)] },
+      },
     };
     expect(jugerReel(avecPublique, ['src/a.ts'])).toEqual([]);
     // Un constat sur le dépôt réel est une faute, quel que soit le code de sortie de semgrep.

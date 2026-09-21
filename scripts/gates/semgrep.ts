@@ -197,6 +197,69 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
     lignes: ['import {', '  PrismaClient,', '  Prisma,', "} from '@prisma/client';"],
     fautive: 4,
   },
+  // Un spécifieur PORTANT SON EXTENSION : sous `moduleResolution: bundler`, `prisma.js` et
+  // `prisma.ts` résolvent au même module que `prisma` (revue `securite`, PR 82).
+  {
+    nom: 'extension-js',
+    ext: 'ts',
+    lignes: ["import { prisma } from '../../lib/prisma.js';"],
+    fautive: 1,
+  },
+  {
+    nom: 'extension-ts',
+    ext: 'ts',
+    lignes: ["import { prisma } from '../../lib/prisma.ts';"],
+    fautive: 1,
+  },
+  {
+    nom: 'extension-alias',
+    ext: 'ts',
+    lignes: ["import { prisma as db } from '../../lib/prisma.js';"],
+    fautive: 1,
+  },
+  {
+    nom: 'extension-db-index',
+    ext: 'ts',
+    lignes: ["import { db } from '../../../db/index.mts';"],
+    fautive: 1,
+  },
+  {
+    nom: 'extension-require',
+    ext: 'ts',
+    lignes: ["export const client = require('../../lib/prisma.cjs');"],
+    fautive: 1,
+  },
+  {
+    nom: 'extension-import-dynamique',
+    ext: 'ts',
+    lignes: ["export const charger = () => import('../../lib/db.mjs');"],
+    fautive: 1,
+  },
+  {
+    nom: 'import-defaut',
+    ext: 'ts',
+    lignes: ["import client from '@/lib/prisma.js';"],
+    fautive: 1,
+  },
+  {
+    nom: 'import-espace-de-noms',
+    ext: 'ts',
+    lignes: ["import * as P from '@prisma/client';"],
+    fautive: 1,
+  },
+  { nom: 'import-effet', ext: 'ts', lignes: ["import '@/lib/prisma.ts';"], fautive: 1 },
+  {
+    nom: 'export-etoile',
+    ext: 'ts',
+    lignes: ["export * as P from '@prisma/client';"],
+    fautive: 1,
+  },
+  {
+    nom: 'export-type-en-ligne',
+    ext: 'ts',
+    lignes: ["export { type Apporteur } from '../../lib/prisma.js';"],
+    fautive: 1,
+  },
   {
     nom: 'new-prismaclient',
     ext: 'ts',
@@ -242,6 +305,122 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number }[] 
       'export const fragment = (x: string) => Prisma.raw(x);',
     ],
     fautive: 2,
+  },
+  // TOUTE référence au membre dangereux, pas seulement l'appel écrit en toutes lettres
+  // (revue `securite`, PR 82) : accès calculé, renommage, alias, espace de noms.
+  {
+    nom: 'query-raw-unsafe-calcule',
+    lignes: [
+      'declare const p: { $queryRawUnsafe(q: string): unknown };',
+      "export const lire = (q: string) => p['$queryRawUnsafe'](q);",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'execute-raw-unsafe-calcule',
+    lignes: [
+      'declare const p: { $executeRawUnsafe(q: string): unknown };',
+      'export const ecrire = (q: string) => p["$executeRawUnsafe"](q);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'query-raw-unsafe-gabarit',
+    lignes: [
+      'declare const p: { $queryRawUnsafe(q: string): unknown };',
+      'export const lire = (q: string) => p[`$queryRawUnsafe`](q);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'execute-raw-unsafe-renomme',
+    lignes: [
+      'declare const p: { $executeRawUnsafe(q: string): unknown };',
+      'const { $executeRawUnsafe: brut } = p;',
+      'export const ecrire = (q: string) => brut(q);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-reference',
+    lignes: ["import { Prisma } from '@prisma/client';", 'export const brut = Prisma.raw;'],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-destructure',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'const { raw } = Prisma;',
+      'export const fragment = (x: string) => raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-destructure-renomme',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'const { sql, raw: brut } = Prisma;',
+      'export const fragment = (x: string) => brut(x) ?? sql;',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-alias',
+    lignes: [
+      "import { Prisma as P } from '@prisma/client';",
+      'export const fragment = (x: string) => P.raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-alias-destructure',
+    lignes: [
+      "import { Prisma as P } from '@prisma/client';",
+      'const { raw } = P;',
+      'export const fragment = (x: string) => raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-calcule',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      "export const fragment = (x: string) => Prisma['raw'](x);",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-alias-calcule',
+    lignes: [
+      "import { Prisma as P } from '@prisma/client';",
+      'export const fragment = (x: string) => P[`raw`](x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-espace-de-noms',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      'export const fragment = (x: string) => C.Prisma.raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-affecte',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'const P = Prisma;',
+      'export const fragment = (x: string) => P.raw(x);',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'prisma-raw-importe',
+    lignes: [
+      "import { raw } from '@prisma/client/runtime/library';",
+      'export const fragment = (x: string) => raw(x);',
+    ],
+    fautive: 1,
   },
 ];
 
@@ -306,6 +485,10 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       "import { b } from './db-outils';",
       "import { c } from '@/lib/dbx';",
       "export const d = require('./mydb');",
+      "import { e } from '@/lib/prismatique.js';",
+      "import { f } from './db-outils.ts';",
+      "import { g } from './prisma-aide.mjs';",
+      "export * as h from '@/server/acces/dbx.js';",
     ],
     null,
     0
@@ -323,6 +506,23 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       'export async function verrouiller(tx: Prisma.TransactionClient): Promise<void> {',
       '  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${CLE_VERROU}, 0))`;',
       '}',
+    ],
+    null,
+    0
+  ),
+  // Des `raw` qui ne viennent PAS de Prisma, et des membres voisins des membres dangereux.
+  fichier(
+    'sql/voisins',
+    'src/lib/sql/voisins.ts',
+    [
+      'declare const autre: { raw(x: string): string };',
+      'declare const p: { $queryRaw(s: TemplateStringsArray): unknown; unsafe: number };',
+      'export const a = String.raw`x`;',
+      "export const b = autre.raw('x');",
+      'const { raw } = autre;',
+      "export const c = raw('y') + autre['raw']('z');",
+      'export const d = p.unsafe + p[`unsafe`];',
+      "export const e = p['$queryRaw'];",
     ],
     null,
     0
