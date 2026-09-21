@@ -96,7 +96,11 @@
 - Worktrees : **jamais de jonction `node_modules`** dans un worktree ; `pnpm install --offline --frozen-lockfile`
   depuis le store partagé ; `ln -s` sous Git Bash copie au lieu de lier (`ls -ld` avant de dire « lié »).
 - **Les hooks locaux ne font pas foi** : husky n'est pas fiable en worktree ; le pré-vol est `pnpm prevol`
-  (typecheck, lint, format, `gov:*`, `req:check`, `use-client:check`) ; la CI est la seule vérité.
+  (`scripts/prevol.ts`). Il rend les vues — `docs/PLAN-STATE.md` en **dernier**, il lit les trois autres — puis rejoue
+  les étapes du job `gate-a` de `.github/workflows/ci.yml` **dans leur ordre**, liste LUE là-bas et jamais recopiée ici
+  (RM-01) ; `pnpm prevol --liste` l'imprime, avec les étapes qu'il écarte et le motif de chacune. La justification
+  `// use-client:` y est tenue par `gov:conventions` (famille `use_client_sans_motif`) : il n'a jamais existé de
+  commande `use-client:check`. La CI reste la seule vérité.
 - `cwd` ne survit pas à l'appel suivant : tout appel qui écrit commence par `cd <chemin absolu du worktree> && git branch --show-current`.
 - Côté axionia (`dev-axionia`) : lire `axionia/AGENTS.md` ; pré-vol des quatre gardes CI invisibles en local (export
   sync dans `use server`, `// use-client:` deux-points collé, isolation content-gen, commitlint 100) ; la fusion n'est
