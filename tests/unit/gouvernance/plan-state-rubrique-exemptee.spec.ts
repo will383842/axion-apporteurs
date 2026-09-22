@@ -59,20 +59,25 @@ describe('REQ-GOV-032 — dans une rubrique exemptée, ce qui ne lit pas la forg
     // LA MUTATION EST UNE PROSE DE DOCTRINE, dans une rubrique que le vert déclare NON COMPARÉE.
     // Elle ne touche aucun chiffre, aucun identifiant, aucune valeur de la forge : exactement ce
     // qu'une main écrirait, et exactement ce qui passait avant cette tâche.
-    const cible = 'Ordre : la plus prête d’abord.';
+    // LA CIBLE EST LA DOCTRINE DE « Revendications », émise SANS CONDITION : c'est la seule
+    // forme de ligne qu'on puisse comparer dans une rubrique exemptée. Une prose émise dans une
+    // branche que la forge décide dépend de la forge par sa PRÉSENCE, même sans en porter une
+    // seule valeur — c'est le témoin « exemption portante » qui l'a établi, contre une première
+    // version de cette garde qui comparait aussi les lignes conditionnelles.
+    const cible = 'Deux sources, aucune troisième';
     expect(
       avant.includes(cible),
       "la prose visée n'est plus dans la vue : ce témoin ne mesure plus rien"
     ).toBe(true);
-    writeFileSync(vue, avant.replace(cible, 'Ordre : au petit bonheur.'));
+    writeFileSync(vue, avant.replace(cible, 'Une source, et on verra bien'));
 
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code, `une doctrine réécrite à la main est restée verte : ${sortie}`).toBe(1);
     expect(sortie).toContain('vue_perimee');
     // LE MESSAGE NOMME L'ÉCART EN UNITÉS DU DOMAINE (REQ-GOV-032) : la rubrique et la ligne, pas
     // « les deux fichiers diffèrent ».
-    expect(sortie).toContain('File de fusion');
-    expect(sortie).toContain('elle ne lit RIEN de la forge');
+    expect(sortie).toContain('Revendications');
+    expect(sortie).toContain('une ligne qui ne lit RIEN de la forge a disparu');
   });
 
   it('REQ-GOV-032 · CONTRE-TÉMOIN — la vue fraîchement rendue reste VERTE', () => {

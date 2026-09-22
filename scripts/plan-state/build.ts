@@ -562,18 +562,30 @@ lignes.push('');
 // qu'on lit n'est jamais celle qu'on a corrigée.
 titre('File de fusion');
 lignes.push('');
-// ⚠️ LES LECTURES DE LA FORGE SONT DANS LES LIGNES QUI LES AFFICHENT (GOV-090). Les lire dans
-// une variable au-dessus laisserait chaque ligne SANS provenance, donc comparée, donc rouge à
-// chaque PR ouverte. Les lignes qui ne lisent rien restent COMPARÉES — c'est l'objet du geste.
+// ⚠️ UNE LIGNE ÉMISE DANS UNE BRANCHE QUI LIT LA FORGE EST ELLE-MÊME NOURRIE PAR LA FORGE — ET
+// C'EST LE TÉMOIN « exemption portante » QUI L'A APPRIS À GOV-090.
+//
+// Ces prose-ci ne contiennent aucune valeur de la forge, et on les avait donc laissées COMPARÉES.
+// Faux : c'est leur PRÉSENCE qui dépend de la forge. `forge.file()` décide de la branche, donc
+// sous une forge sans PR ouverte la vue porte « Aucune PR ouverte », et sous une forge qui en a
+// elle porte le tableau et sa phrase d'ordre. Une vue rendue sous A et jugée sous B rougissait.
+// La lecture est donc RAPPELÉE dans chaque ligne que la branche émet, en-têtes de tableau
+// compris : dans cette rubrique, TOUT dépend de la forge, et le vert le dit en n'en comparant
+// aucune. Le gain de GOV-090 est ailleurs — sur les lignes émises SANS condition.
 if (!forge.file().length) {
-  pousser(
-    () =>
-      'Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.'
-  );
+  pousser(() => {
+    forge.file();
+    return 'Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.';
+  });
 } else {
-  // Ni l'une ni l'autre ne lit la forge : comparées octet par octet, dans une rubrique exemptée.
-  pousser(() => '| # | PR | Branche | Ce qui la bloque |');
-  pousser(() => '| --- | --- | --- | --- |');
+  pousser(() => {
+    forge.file();
+    return '| # | PR | Branche | Ce qui la bloque |';
+  });
+  pousser(() => {
+    forge.file();
+    return '| --- | --- | --- | --- |';
+  });
   forge.file().forEach((_p, i) => {
     pousser(() => {
       const p = forge.file()[i]!;
@@ -581,10 +593,10 @@ if (!forge.file().length) {
     });
   });
   lignes.push('');
-  pousser(
-    () =>
-      'Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.'
-  );
+  pousser(() => {
+    forge.file();
+    return 'Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.';
+  });
 }
 lignes.push('');
 
@@ -608,15 +620,23 @@ if (!forge.githubLu()) {
 }
 {
   const enVol = taches.filter((t) => !LIVREE.has(t.statut) && revendiqueursDe(t).length > 0);
+  // ⚠️ BRANCHE NOURRIE PAR LA FORGE : `enVol` dérive de `revendiqueursDe`, qui lit
+  // `forge.revendications()`. La PRÉSENCE de ces lignes dépend donc de la forge, même quand leur
+  // texte n'en porte aucune valeur — la lecture est rappelée dans chacune.
   if (!enVol.length) {
-    pousser(
-      () =>
-        'Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.'
-    );
+    pousser(() => {
+      forge.revendications();
+      return 'Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.';
+    });
   } else {
-    // Deux lignes d'en-tête qui ne lisent rien : comparées.
-    pousser(() => '| Tâche | Revendiquée par | Issue | Statut |');
-    pousser(() => '| --- | --- | --- | --- |');
+    pousser(() => {
+      forge.revendications();
+      return '| Tâche | Revendiquée par | Issue | Statut |';
+    });
+    pousser(() => {
+      forge.revendications();
+      return '| --- | --- | --- | --- |';
+    });
     for (const t of enVol) {
       const issue = (t as unknown as { issue?: number | null }).issue ?? null;
       // `revendiqueursDe` lit `forge.revendications()` : la provenance est attribuée à la ligne.
@@ -648,11 +668,12 @@ if (!forge.githubLu()) {
     lignes.push('');
   }
   if (perimees.length > 0) {
-    // Ne lit QUE `docs/tasks.json` : déterministe, donc comparée.
-    pousser(
-      () =>
-        `⚠️ ${perimees.length} tâche(s) livrée(s) sans \`owner\` consolidé dans \`docs/tasks.json\`.`
-    );
+    // `perimees` dérive AUSSI de `revendiqueursDe` : la présence de cette ligne dépend de la
+    // forge, même si son texte ne lit que `docs/tasks.json`.
+    pousser(() => {
+      forge.revendications();
+      return `⚠️ ${perimees.length} tâche(s) livrée(s) sans \`owner\` consolidé dans \`docs/tasks.json\`.`;
+    });
     lignes.push('');
   }
 }
@@ -1070,10 +1091,6 @@ export const FAMILLES = [
   'ligne_de_reprise_dupliquee',
   'fin_de_ligne_non_lf',
   'structure_dans_une_exemption',
-  // GOV-090 — le CONTENU d'une ligne exemptée est libre ; le NOMBRE de lignes de sa rubrique
-  // ne l'est pas. Sans cette famille, une ligne ajoutée à la main dans une rubrique exemptée
-  // décalerait la comparaison positionnelle et se lirait comme une divergence de contenu.
-  'rubrique_exemptee_deformee',
 ] as const;
 
 export type Famille = (typeof FAMILLES)[number];
@@ -1248,27 +1265,35 @@ function comparer(
       // Le vert IMPRIME les deux populations : ce qui est converti, et ce qui ne l'est pas.
       if (surPlace) {
         const lA = r.corps.split('\n');
-        const lD = surPlace.corps.split('\n');
+        const surDisqueLignes = new Set(surPlace.corps.split('\n'));
         // Une ligne VIDE est de la structure, pas de la prose : elle n'a aucune provenance à
         // déclarer et se compare toujours. L'exiger aurait rendu toute rubrique non convertie.
         const convertie = lA.every((l) => l === '' || sourcesDesLignes.has(l));
         if (!convertie) {
           rubriquesNonConverties.push(r.titre);
-        } else if (lA.length !== lD.length) {
-          ecarts.push({
-            famille: 'rubrique_exemptee_deformee',
-            message: `rubrique « ${r.titre} » : la vue sur le disque porte ${lD.length} ligne(s), ses sources en produisent ${lA.length}. Le CONTENU d'une ligne exemptée est libre ; leur NOMBRE ne l'est pas.`,
-          });
         } else {
-          lA.forEach((ligne, k) => {
-            if (exemption(sourcesDesLignes.get(ligne)) !== null) return;
+          // ⚠️ ON COMPARE PAR PRÉSENCE, JAMAIS PAR POSITION — ET C'EST UN TÉMOIN QUI L'A APPRIS.
+          //
+          // Première écriture : alignement par INDEX, plus un refus quand les deux corps n'ont
+          // pas le même nombre de lignes. Le témoin « exemption portante » de
+          // `vues-derivees.spec.ts` — qui rend la vue sous DEUX forges — l'a fait rougir :
+          // « File de fusion » portait 8 lignes sous une forge et 3 sous l'autre. Évidemment :
+          // une ligne PAR PR ouverte. Dans ces rubriques, le NOMBRE de lignes est lui-même une
+          // valeur de la forge. La position d'une ligne de doctrine l'est donc aussi.
+          //
+          // Une ligne qui ne lit rien de la forge est INVARIANTE : elle doit Être PRÉSENTE dans
+          // la rubrique du disque, où qu'elle soit. C'est ce qui est exigible sans rien supposer
+          // de ce que la forge insère autour.
+          for (const ligne of lA) {
+            if (ligne === '') continue;
+            if (exemption(sourcesDesLignes.get(ligne)) !== null) continue;
             lignesDansExemptees.comparees += 1;
-            if (ligne === lD[k]) return;
+            if (surDisqueLignes.has(ligne)) continue;
             ecarts.push({
               famille: 'vue_perimee',
-              message: `rubrique « ${r.titre} », ligne ${k + 1} — elle ne lit RIEN de la forge, donc elle est comparée : la vue dit « ${(lD[k] ?? '').slice(0, 120)} », ses sources produisent « ${ligne.slice(0, 120)} »`,
+              message: `rubrique « ${r.titre} » — une ligne qui ne lit RIEN de la forge a disparu de la vue : ses sources produisent « ${ligne.slice(0, 140)} », et la vue sur le disque ne la porte nulle part. Le CONTENU d'une ligne nourrie par la forge est libre ; celui-ci ne l'est pas.`,
             });
-          });
+          }
         }
       }
       continue;

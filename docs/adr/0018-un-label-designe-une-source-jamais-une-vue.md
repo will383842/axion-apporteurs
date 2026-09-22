@@ -73,8 +73,9 @@ ne répond d'une vue : une vue a un générateur et un mode de vérification.**
    sources dont l'édition est l'acte réel. Le geste est donc **net-neutre à légèrement plus strict**,
    et non un relâchement : deux lignes sortent, deux lignes entrent, et deux sources cessent d'être
    ouvertes.
-3. **Le trou `NON COMPARÉ` se ferme là où il vit**, pas par un label : l'attribution des lectures de
-   la forge descend de la RUBRIQUE à la LIGNE. Le mécanisme n'est pas neuf — c'est celui que le bloc
+3. **Le trou `NON COMPARÉ` se rétrécit là où il vit**, pas par un label : l'attribution des lectures
+   de la forge descend de la RUBRIQUE à la LIGNE, et seules les lignes **émises sans condition**
+   sont comparées, **par présence** et non par position. Le mécanisme n'est pas neuf — c'est celui que le bloc
    de reprise applique déjà, et dont le générateur écrit lui-même la règle : « ce qu'elle lit de la
    forge lui est attribué, et ce qu'elle ne lit pas la laisse COMPARÉE. Aucune ligne n'est classée à
    la main. » Il n'avait jamais été appliqué aux corps de rubriques.
@@ -96,6 +97,24 @@ la PR pour la solution d'un problème qu'elle n'a pas résolu.
 registre porte le label. La fixture `PR_ORDINAIRE` de `gov:pr --prove` a dû le recevoir : QA-T01
 déclare ce fichier. Une entrée de `gates.json` peut porter `horsCi`, c'est-à-dire **dispenser une
 garde de tourner en CI** — un fichier qui peut exempter mérite un porteur nommé.
+
+**⚠️ LA PREMIÈRE ÉCRITURE DU POINT 3 ÉTAIT FAUSSE, ET C'EST UN TÉMOIN EXISTANT QUI L'A DIT.**
+Elle comparait les lignes **par position**, et refusait qu'une rubrique exemptée change de nombre
+de lignes. Le témoin « exemption portante » de `vues-derivees.spec.ts` — qui rend la vue sous DEUX
+forges — l'a fait rougir immédiatement : « File de fusion » porte **8 lignes sous une forge et 3
+sous l'autre**, puisqu'elle en écrit une par PR ouverte. Dans ces rubriques, **le nombre de lignes
+est lui-même une valeur de la forge**, donc la position d'une ligne aussi.
+
+La seconde erreur était plus profonde et vient du même témoin : **une prose émise dans une branche
+que la forge décide dépend de la forge par sa PRÉSENCE**, même si son texte n'en porte aucune
+valeur. `if (!forge.file().length)` choisit entre « Aucune PR ouverte » et le tableau : les deux
+proses sont littérales, aucune des deux n'est comparable. La règle finale ne compare donc que les
+lignes **émises sans condition**, et la comparaison se fait **par présence, jamais par position**.
+
+**Ce que ça coûte, dit en chiffres plutôt qu'en intention** : **une** ligne comparée là où zéro
+l'était — la doctrine de « Revendications », 450 caractères. C'est peu, et c'est exactement la
+ligne que cet ADR avait nommée comme la prise. Deux rubriques sur cinq sont converties ; les trois
+autres sont **NOMMÉES dans le vert** (`NON CONVERTI`), jamais tues.
 
 **Un piège de grammaire, trouvé en écrivant les deux lignes neuves.** La première colonne du tableau
 §7 est **découpée sur la virgule** par `cheminsReserves()`. Une virgule posée dans une parenthèse
