@@ -177,8 +177,8 @@ describe('REQ-DM-003 — l’index unique partiel de l’attribution occupante, 
  * `tests/unit/domaine/gardes-de-schema.spec.ts`. Un tableau d'un type fautif est jugé fautif, et
  * il se DIT (`text[]`), sans quoi le message mentirait sur ce qu'il a jugé.
  *
- * LE PÉRIMÈTRE EST DIT, PAS SUPPOSÉ : tout schéma que PostgreSQL ne se réserve pas (`pg_*`,
- * `information_schema`), et toute relation qui STOCKE — table ordinaire, partitionnée, distante,
+ * LE PÉRIMÈTRE EST DIT, PAS SUPPOSÉ : tout schéma HORS `pg_*` et `information_schema` — qui sont
+ * une LIMITE DÉCLARÉE, voir le ⚠️ plus bas —, et toute relation qui STOCKE — table ordinaire, partitionnée, distante,
  * vue matérialisée, et le type composite, dont les champs sont des colonnes déguisées. Les
  * familles que ce contrôle ne tient PAS sont nommées dans `docs/gates.json`, entrée par entrée ;
  * et une colonne dont le type ne se résout pas n'est jamais un vert : elle est nommée.
@@ -230,7 +230,8 @@ describe('REQ-DM-001 → REQ-DM-038 — les colonnes de la base RÉELLE, quel qu
   };
 
   /**
-   * Les colonnes de la base — TOUS les schémas que PostgreSQL ne se réserve pas. La borne à
+   * Les colonnes de la base — tous les schémas HORS `pg_*` et `information_schema`, dont
+   * l'exclusion est une LIMITE DÉCLARÉE et non une réservation de PostgreSQL. La borne à
    * `public` était une borne que rien n'annonçait : une table posée dans un autre schéma n'était
    * même pas LUE, pendant que le registre promettait « toutes les colonnes ».
    */

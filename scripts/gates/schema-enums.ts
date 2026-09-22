@@ -53,7 +53,10 @@
  *     Ce canal est fermé LÀ OÙ IL DÉBOUCHE — `tests/integration/index-partiels.spec.ts`, second
  *     `describe`, applique `fauteDeVocabulaire` aux colonnes que le CATALOGUE de la base porte
  *     après `prisma migrate deploy` : `pg_attribute.atttypid`, déplié par `typeReel`, dans tout
- *     schéma que PostgreSQL ne se réserve pas et toute relation qui STOCKE. Jusqu'au 2026-09-22
+ *     schéma HORS `pg_*` et `information_schema`, et toute relation qui STOCKE. ⚠️ Ces deux-là
+ *     sont une LIMITE DÉCLARÉE et non une fermeture : `SET allow_system_table_mods = on` permet
+ *     `CREATE SCHEMA pg_metier`, et `CREATE TABLE information_schema.x` passe sans aucun
+ *     paramètre (pg16, 2026-09-22). Jusqu'au 2026-09-22
  *     ce rôle tenait sur `information_schema.columns.data_type` — un LIBELLÉ, qui replie `text[]`
  *     en `ARRAY` et `citext` en `USER-DEFINED` : les deux étaient lues, comptées et absoutes, et
  *     `citext` figurait dans `GENRE_CHAINE_LIBRE` ci-dessous. Ce que ce contrôle ne tient PAS est
