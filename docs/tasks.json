@@ -2713,7 +2713,8 @@
         "src/server/integrations/axionia/api-entrante.ts",
         "src/app/api/integrations/axionia/",
         "tests/integration/frontiere.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "tests/integration/harnais-testcontainers.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -9384,7 +9385,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "PRIORITAIRE : c'est le plafond de parallelisme de toute la phase 0. La revendication d'une tache vit PAR BRANCHE dans `docs/tasks.json`, mais `gov:etat` lit les demandes de fusion ouvertes GLOBALEMENT. Chaque branche doit donc porter les N revendications, et la N+1e demande rougit les N autres — cout de synchronisation en carre du nombre de branches. AGGRAVANT MESURE : `gov:etat` s'execute AVANT lint, format, typecheck et test dans la porte A, si bien qu'un rouge venu d'une AUTRE branche laisse ces etapes en « sautees » — elles ont l'air d'avoir mesure et n'ont rien mesure. C'est le pire des deux defauts : le premier coute du temps, le second rend un vert qui ment. A livrer : (1) la revendication se DERIVE au lieu de se recopier par branche, ou le lecteur des demandes ouvertes se restreint a la branche jugee — l'un ou l'autre, jamais les deux a moitie ; (2) les etapes de mesure s'executent MEME quand `gov:etat` rougit, ou bien leur saut est rendu VISIBLE comme un echec et non comme un succes. TEMOIN A DEUX FACES : trois branches ouvertes simultanement, chacune revendiquant sa seule tache, sortent toutes les trois en zero ; une quatrieme branche qui revendique une tache deja prise fait sortir la garde en code non nul et NOMME la branche concurrente, sans rougir les trois autres.",
       "tests": {
         "REQ-GOV-007": [
@@ -9395,7 +9396,10 @@
         ]
       },
       "issue": 87,
-      "owner": "A05"
+      "owner": "A05",
+      "branch": "t/gov-059-suite",
+      "pr": 100,
+      "motif": null
     },
     {
       "id": "GOV-060",

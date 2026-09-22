@@ -439,6 +439,70 @@ describe('REQ-QA-006 — la base et le cache éphémères de ce fichier', () => 
   }, 180_000);
 });
 
+/**
+ * QUI DÉPEND DU DÉMON, ET POURQUOI ÇA SE DÉRIVE AU LIEU DE SE SUPPOSER.
+ *
+ * Le témoin à deux faces a longtemps attendu que CHAQUE fichier du dossier échoue sans démon. La
+ * supposition sous-jacente — tout fichier d’intégration passe par des conteneurs — a été mesurée
+ * FAUSSE par SEC-07 : `frontiere.spec.ts` charge les modules de route du disque et injecte ses
+ * doublures ; démon absent, ses 22 tests passent TOUS, aucun sauté. Il mesure encore quand le
+ * reste tombe, et c’est une qualité.
+ *
+ * Ce que ce témoin doit dire n’a jamais été « personne ne passe » : l’interdiction du saut est
+ * STATIQUE, en six formes, avant toute exécution (`REGLES` ci-dessus). Il dit « TOUT fichier qui
+ * passe par le harnais échoue, en nommant le motif ». Le harnais est la seule porte sanctionnée
+ * vers le démon : c’est donc par lui que l’appartenance se dérive.
+ *
+ * ⚠️ LE FILTRE PORTE SUR LA CLAUSE D’IMPORT, JAMAIS SUR LE TEXTE. Un filtre écrit sur le mot
+ * classerait `frontiere.spec.ts` parmi les dépendants : son en-tête CITE le nom de ce fichier-ci
+ * pour expliquer quelle charte lui interdit l’objet global. Une garde qui cherche un mot dans une
+ * PROSE se croit juste et ne l’est pas ; le contre-témoin ci-dessous tient ce point précis.
+ */
+const CLAUSE_VERS_LE_DEMON =
+  /\bfrom\s*['"](?:\.\/harnais|@testcontainers\/[^'"]+|testcontainers)['"]/;
+
+/** Vrai si `source` IMPORTE le harnais ou testcontainers — la clause, jamais le mot. */
+export function passeParLeHarnais(source: string): boolean {
+  return CLAUSE_VERS_LE_DEMON.test(source);
+}
+
+describe('REQ-QA-006 — qui dépend du démon se dérive de la clause d’import, jamais du texte', () => {
+  it('REQ-QA-006 — une PROSE qui cite le harnais ou testcontainers ne rend pas un fichier dépendant', () => {
+    const citations = [
+      `// la garde statique de ${SOI} refuse l’objet global`,
+      `/** voir tests/integration/harnais.ts pour la porte vers testcontainers */`,
+      `const nom = 'testcontainers';`,
+      `// import { demarrerBase } de ./harnais — volontairement pas fait ici`,
+    ];
+    for (const ligne of citations) {
+      expect(passeParLeHarnais(ligne), `classé dépendant à tort : ${ligne}`).toBe(false);
+    }
+    const vraies = [
+      `import { demarrerBase } from './harnais';`,
+      `import { demarrerCache, type Cache } from "./harnais";`,
+      `import { PostgreSqlContainer } from '@testcontainers/postgresql';`,
+      `import { Wait } from 'testcontainers';`,
+    ];
+    for (const ligne of vraies) {
+      expect(passeParLeHarnais(ligne), `classé autonome à tort : ${ligne}`).toBe(true);
+    }
+  });
+
+  it('REQ-QA-006 — sur le DISQUE : au moins un dépendant, et chaque classement est imprimé', () => {
+    const autres = fichiersDIntegration().filter((f) => f !== SOI);
+    const classement = autres.map((f) => ({
+      f,
+      depend: passeParLeHarnais(readFileSync(join(RACINE, f), 'utf8')),
+    }));
+    console.log(classement.map((c) => `${c.depend ? 'dépendant' : 'autonome '} ${c.f}`).join('\n'));
+    // Sans dépendant, la face rouge n’attendrait plus rien et serait verte par vacuité.
+    expect(
+      classement.filter((c) => c.depend).length,
+      'aucun fichier ne passe par le harnais : la face rouge ne mesure plus rien'
+    ).toBeGreaterThan(0);
+  });
+});
+
 // ── Démon absent, isolation : témoin à deux faces, en sous-processus ─────────────────────────────
 
 /**
@@ -448,6 +512,10 @@ describe('REQ-QA-006 — la base et le cache éphémères de ce fichier', () => 
  * FICHIER échoue et que le code de sortie vaut 1 : on juge donc le code, le compte de fichiers en
  * échec et le motif, jamais l'absence du mot « skipped ». Un vrai saut, lui, est refusé par la garde
  * statique avant toute exécution.
+ * ⚠️ CE QUI EST ATTENDU SE DÉRIVE (`passeParLeHarnais`), il ne se suppose plus. La ligne
+ * `Test Files` est construite des DEUX comptes — dépendants en échec, autonomes au vert — et
+ * épingle donc le compte exact de ce qui passe : l'ancienne contrainte « aucun `passed` », qui
+ * interdisait au dossier tout fichier autonome, était redondante ET fausse.
  */
 describe('REQ-QA-006 — témoin à deux faces : démon absent, démon présent', () => {
   it('REQ-QA-006 — sans démon joignable, `test:integration` sort en non nul et chaque fichier nomme le motif', () => {
@@ -459,16 +527,33 @@ describe('REQ-QA-006 — témoin à deux faces : démon absent, démon présent'
     // Tous les fichiers d'intégration du dépôt, sauf celui-ci (qui relancerait ce témoin).
     const autres = fichiersDIntegration().filter((f) => f !== SOI);
     expect(autres.length).toBeGreaterThan(0);
+    const depend = (f: string) => passeParLeHarnais(readFileSync(join(RACINE, f), 'utf8'));
+    const dependants = autres.filter(depend);
+    const autonomes = autres.filter((f) => !depend(f));
+    // Sans dépendant, tout ce qui suit serait vrai sans rien mesurer.
+    expect(
+      dependants.length,
+      'aucun fichier ne passe par le harnais : cette face ne mesure plus rien'
+    ).toBeGreaterThan(0);
     const { code, sortie } = lancerVitest([...commande!.split(/\s+/).slice(1), '--exclude', SOI], {
       DOCKER_HOST: DEMON_ABSENT,
     });
-    console.log(`démon absent : code ${code}, ${autres.length} fichier(s) d'intégration lancé(s)`);
-    expect(code).not.toBe(0);
-    expect(sortie).toMatch(
-      new RegExp(`Test Files\\s+${autres.length} failed \\(${autres.length}\\)`)
+    console.log(
+      `démon absent : code ${code}, ${autres.length} fichier(s) lancé(s) — ` +
+        `${dependants.length} dépendant(s) du harnais (${dependants.join(', ')}), ` +
+        `${autonomes.length} autonome(s) (${autonomes.join(', ') || 'aucun'})`
     );
-    expect(sortie.split(MOTIF_ABSENCE).length - 1).toBeGreaterThanOrEqual(autres.length);
-    expect(sortie).not.toMatch(/\d+ passed/);
+    expect(code).not.toBe(0);
+    // Le compte EXACT des deux côtés : un dépendant qui passerait, un autonome qui échouerait, ou un
+    // fichier apparu sans être classé, font tous rougir cette seule ligne.
+    const attendu =
+      autonomes.length === 0
+        ? `${dependants.length} failed \\(${autres.length}\\)`
+        : `${dependants.length} failed \\| ${autonomes.length} passed \\(${autres.length}\\)`;
+    expect(sortie, `attendu : Test Files ${attendu}`).toMatch(
+      new RegExp(`Test Files\\s+${attendu}`)
+    );
+    expect(sortie.split(MOTIF_ABSENCE).length - 1).toBeGreaterThanOrEqual(dependants.length);
   }, 600_000);
 
   it('REQ-QA-006 — deux fichiers, même SIREN et même clé : chacun sa base et son cache, compte imprimé', () => {

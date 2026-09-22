@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 101 | 78.85 | 19 |
+| 0 — Socle technique | 101 | 78.85 | 20 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -1186,7 +1186,7 @@ Couvre : `REQ-GOV-008`, `REQ-GOV-011`, `REQ-GOV-013`
 
 **Tests.** `tests/unit/gouvernance/decisions-de-gouvernance-ecrites.spec.ts`
 
-### GOV-059 — Une demande de fusion de plus rougit les autres, et ce rouge fait sauter les etapes de mesure
+### GOV-059 — Une demande de fusion de plus rougit les autres, et ce rouge fait sauter les etapes de mesure ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · sensible : auth · aucune dependance
 
