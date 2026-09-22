@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `b973869` — 2026-09-19T20:30:42+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #84 (un contrôle requis rouge ou une revue manquante) · 2. #86 (un contrôle requis rouge ou une revue manquante) · 3. #88 (un contrôle requis rouge ou une revue manquante) · 4. #89 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
+| Où est `main` ? | `c921995` — 2026-09-21T23:22:36+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #84 (rien) · 3. #86 (rien) · 4. #88 (rien) · 5. #90 (un contrôle requis rouge ou une revue manquante) · 6. #91 (un contrôle requis rouge ou une revue manquante) · 7. #92 (un contrôle requis rouge ou une revue manquante) · 8. #93 (un contrôle requis rouge ou une revue manquante) · 9. #99 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | SEC-10 (A05) · QA-T08 (A05) · DM-01 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T03 (A05) · QA-T07 (A05) · GOV-059 (A05) |
 | Où en est la phase ? | phase 0 — 11/98 tâches, reste 67.60 j |
-| Le prochain pas | DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
+| Le prochain pas | fusionner #82, puis DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #89 — 2026-09-21 |
+| Dernière entrée de journal | PR #99 — 2026-09-22 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,11 +64,15 @@ Reste sur ce chemin : **17.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
-| 2 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un contrôle requis rouge ou une revue manquante |
-| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un contrôle requis rouge ou une revue manquante |
-| 4 | #89 — fix(GOV-059): la revendication se derive de la forge, et gov:etat passe apres les etapes de mesure | `t/gov-059-titre` | un contrôle requis rouge ou une revue manquante |
-| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
+| 2 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | rien — fusionnable maintenant |
+| 3 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | rien — fusionnable maintenant |
+| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | rien — fusionnable maintenant |
+| 5 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | un contrôle requis rouge ou une revue manquante |
+| 6 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
+| 7 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
+| 8 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
+| 9 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -91,23 +95,57 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0012-relecture-proportionnee-au-risque.md` — partners/ADR-0012 — La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve · `docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0014-temps-paris-jours-ouvres.md` — partners/ADR-0014 — Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés · `docs/adr/0015-journal-evenement-chaine-immuable.md` — partners/ADR-0015 — Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle · `docs/adr/0016-deux-arbitrages-du-2026-09-03-dates-dans-l-annexe-des-fusions.md` — partners/ADR-0016 — Deux arbitrages du 2026-09-03 datés dans l'annexe des fusions : la date de référence d'une commande et les trois contrôles de versement
-
-Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-19). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
+Aucun ADR daté du 2026-09-21 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #82** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **DM-01** — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (1 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `b973869` (2026-09-19T20:30:42+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `c921995` (2026-09-21T23:22:36+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #99 — 2026-09-22 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check
+
+**Fait.** `pnpm prevol` existe. Six fichiers suivis par git l'ordonnaient — dont
+`scripts/lot/lot.workflow.js`, qui l'injecte dans le prompt de chaque développeur de lot — et aucun
+script de `package.json` ne la portait : chaque agent qui suivait sa fiche lançait une commande
+introuvable. Le pré-vol lit les 69 étapes dans le job `gate-a` de `ci.yml`, dans leur ordre, en écarte
+5 qu'il nomme, rend les vues avant elles avec `PLAN-STATE` en dernier, et vérifie qu'aucune ne porte
+de retour chariot. Il balaie ses propres porteurs en excluant le backlog et ses vues rendues, et
+imprime les deux comptes. Il sonde le démon Docker avant la course et, s'il manque, annote le rouge de
+l'étape concernée pour dire que c'est une absence de banc et non un test cassé — sans cesser de
+refuser.
+
+**Reste.** L'homonymie `gov:check` n'est pas tranchée : le script `gov:check` de `package.json`
+enchaîne 17 gardes, la garde qui s'appelle `gov:check` est `pnpm gov:termes-interdits`, et elle imprime
+`gov:check` dans son rouge — donc son message d'échec renvoie vers une commande verte. GOV-030 renvoie
+la résolution à un ADR, qui reste dû. Le pré-vol écrit `docs/PLAN-STATE.md`, fichier réservé au poste
+A01 : tout développeur doit faire `git status` après l'avoir lancé et rétablir cette vue, ou bien le
+pré-vol devrait la rétablir lui-même — non tranché. Le défaut « démon Docker absent » n'a pas pu être
+reproduit sur cette machine, où le démon répond : la fonction qui nomme la cause est jugée sur entrées
+injectées, plus un mutant. GOV-000 n'est pas rouverte.
+
+**Appris.** L'acceptance de cette tâche prescrivait de dériver la chaîne du pré-vol « du script
+`gov:check` de `package.json` ». Mesuré : cette chaîne porte **17** étapes quand le job `gate-a` en
+joue **65** — **48 manquent**, dont tous les modes `--prove`, `lint`, `format:check`, `typecheck`,
+`test`, `req:check` et la garde des termes interdits. Suivre la lettre de l'acceptance aurait produit un
+pré-vol **vert là où la CI rougit**. La seule source qui dise ce qui bloque vraiment une PR est
+`ci.yml`, et la mesure est désormais figée par un témoin qui rougira si quelqu'un modifie la chaîne.
+Second fait, du même ordre : avant ce commit, `scripts/prevol.ts` lançait sa course **au chargement du
+module** — un test qui l'importait aurait lancé le pré-vol entier dans le processus de test, étape
+`pnpm test` comprise, donc en récursion infinie. Un script qu'on veut tester se garde par
+`APPELE_DIRECTEMENT`. Troisième fait : `git grep -l prevol` rend 11 fichiers sur `main`, pas neuf —
+l'acceptance se trompe pour la troisième fois sur le même balayage, parce que le **récit** d'une dette
+porte la chaîne au même titre que la dette.
 
 ### PR #89 — 2026-09-21 — fix(GOV-059): la revendication se derive de la forge, et gov:etat passe apres les etapes de mesure
 
@@ -150,36 +188,7 @@ defaut est le registre, et les temoins passent une dette fabriquee. Un registre 
 avec lui le seul moyen de prouver que la garde qui le lit sait encore rougir : il faut rendre la
 source injectable AVANT de la vider.
 
-### PR #81 — 2026-09-19 — feat(QA-T03): req:check juge chaque paire (tache, REQ) - deux formes et test vert
-
-**Fait.** `pnpm req:check` est la garde deja inscrite sous cet identifiant (`gov-trace.ts`, alias
-`gov:trace`), lancee dans Gate A juste apres « Tests » avec le rapport JSON que `pnpm test` ecrit
-desormais (`test-results/vitest.json`). Aucun second script. La garde exige les DEUX formes de
-REQ-QA-014 pour chaque paire (tache, exigence active) dont le fichier promis existe : `@req` dans le
-premier bloc de commentaires ET l'identifiant dans le titre d'un `it()` (ecrit, ou dernier segment
-du nom resolu par vitest quand le titre est un gabarit), et elle nomme la forme qui manque. Avec les
-resultats, elle exige un test VERT ; une promesse par titre exige CE test vert. Trois familles
-neuves : `annotation_absorbee_sans_renvoi`, `test_promis_non_vert`, `resultats_illisibles` (absents,
-illisibles, perimes). `--prove` : 15 familles, 25 temoins dont 12 nommes pour les pannes du brief,
-15 contre-temoins. Mise en conformite a la source : 25 paires dans 12 fichiers de spec, et les trois
-annotations absorbees portent leur renvoi. QA-T01, GOV-077, SEC-01, SEC-02, CPL-T13 et UX-P0-02
-passent `fusionnee` ; le temoin du cas 10 de `lentilles-selon-le-risque.spec.ts` choisit sa tache au
-registre au lieu de nommer QA-T01.
-
-**Reste.** `pnpm prevol` n'existe pas et devrait appeler `req:check` (GOV-047). Le temoin etroit
-« titre qui nomme une absorbee » vit dans une spec (GOV-039), le jumeau « annotation absorbee » dans
-la garde : deux lieux pour une regle. `gardes-transposees.spec.ts` garde sa copie de la lecture YAML.
-Un titre cite litteralement par un ADR est une promesse que la mise en conformite a cassee une fois
-(`partners/ADR-0009`, corrige) ; `partners/ADR-0005` en cite un autre que `gov:adr` ne juge pas.
-
-**Appris.** `vitest list --json` OMET les tests `it.skip` et `it.todo` : une promesse par titre vers
-un test saute se lisait deja « titre absent », jamais « non vert ». Le rapport JSON de vitest 2.1.9
-porte le chemin ABSOLU de chaque fichier : des resultats produits dans un autre arbre sont perimes
-par construction, et la garde le dit. Une chaine de test qui contient une ouverture `it(` ou une
-annotation en clair est lue par `gov:trace` comme une citation : les textes fabriques s'assemblent.
-Les etiquettes de panne du brief tombent sous `gov:identifiants` (lettre et chiffre nus).
-
-… 30 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 31 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
