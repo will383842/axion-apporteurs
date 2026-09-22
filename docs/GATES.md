@@ -20,11 +20,11 @@
 | Phase | Ce qu'elle est | Gates | Prouvées | Restent à prouver |
 | ----- | -------------- | ----: | -------: | ----------------: |
 | -1 | Socle de gouvernance | 40 | 27 | 13 |
-| 0 | Fondations, sécurité, charte | 42 | 10 | 32 |
+| 0 | Fondations, sécurité, charte | 42 | 12 | 30 |
 | 1 | Parcours, attribution, intégrations | 21 | 0 | 21 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **117** | **37** | **80** |
+| **Total** | | **117** | **39** | **78** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -67,7 +67,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:attributions` | GOV-037 | `scripts/gates/gov-attributions.ts` | — | pnpm gov:attributions:prove — les 4 retraits de dette FORCES : reinserees, gov:attributions sort en 1 sur dette_perimee (revue securite 5235809231, PR 48, 2026-09-17) |
 | `gov:attestation` | GOV-038 | `scripts/gates/gov-attestation.ts` | — | PR 33 (GOV-038) — sha 0000...0000 vu passer gov:tasks puis rejete en HTTP 422 par gov:attestation --en-ligne |
 
-### Phase 0 — armées (10)
+### Phase 0 — armées (12)
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
@@ -86,7 +86,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 
 ## 3. Ce qui reste à prouver
 
-Aucune de ces **80** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
+Aucune de ces **78** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
 Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les
 gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques
 n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à
@@ -118,7 +118,7 @@ sortie de la commande, elle, fait foi.
 | `fixtures:source` | INT-T01a | `scripts/gates/fixtures-source.ts` | — |
 | `gov:plan-state` | GOV-008 | `tests/unit/gouvernance/plan-state-frais.spec.ts` | — |
 
-### Phase 0 — fondations, sécurité, charte (32)
+### Phase 0 — fondations, sécurité, charte (30)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
