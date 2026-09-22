@@ -101,6 +101,14 @@
   (RM-01) ; `pnpm prevol --liste` l'imprime, avec les étapes qu'il écarte et le motif de chacune. La justification
   `// use-client:` y est tenue par `gov:conventions` (famille `use_client_sans_motif`) : il n'a jamais existé de
   commande `use-client:check`. La CI reste la seule vérité.
+  ⚠️ **La liste se lit dans `ci.yml`, jamais dans le script `gov:check` de `package.json`** : cette chaîne-là enchaîne
+  **17** gardes quand `gate-a` en joue **65**, et `gov:termes-interdits` — bloquante en CI — n'en fait pas partie
+  (mesuré le 2026-09-22 ; l'homonymie `gov:check` est renvoyée à un ADR par l'acceptation de GOV-030).
+  Il balaie aussi les fichiers suivis qui **prescrivent** `pnpm prevol` et les confronte à `package.json` dans les deux
+  sens (REQ-GOV-013) ; le backlog et ses vues rendues sont écartés et nommés, avec les **deux comptes** —
+  une tâche qui se compte elle-même fausse son propre balayage. Et **sans démon Docker il le DIT** : le rouge de
+  `tests/integration/**` est alors une absence de banc, pas un test cassé — un rouge qui nomme la mauvaise cause
+  coûte plus cher qu'un rouge absent.
 - `cwd` ne survit pas à l'appel suivant : tout appel qui écrit commence par `cd <chemin absolu du worktree> && git branch --show-current`.
 - Côté axionia (`dev-axionia`) : lire `axionia/AGENTS.md` ; pré-vol des quatre gardes CI invisibles en local (export
   sync dans `use server`, `// use-client:` deux-points collé, isolation content-gen, commitlint 100) ; la fusion n'est

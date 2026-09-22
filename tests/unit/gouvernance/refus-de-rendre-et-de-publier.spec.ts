@@ -665,26 +665,34 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'validation sort en 1 en NOMMANT la tâche, le même arbre corrigé sort en 0, et le dépôt réel ' +
         'comme `--prove` sortent en 0.',
     },
-    // ── GOV-059 (suite) : le PRÉ-VOL, quatre refus dont trois sont des refus de MESURER ──────
+    // ── GOV-047 : le PRÉ-VOL, quatre refus dont trois sont des refus de MESURER ──────────────
     // Ce fichier n'est pas une garde de CI : c'est l'outil que `docs/CONVENTIONS.md` §7 impose
     // avant de pousser. Trois de ses quatre sorties refusent de CONCLURE — `ci.yml` absent, pas
     // de bloc `steps:`, substitution de shell inconnue — parce qu'un pré-vol qui devine la liste
     // des étapes rend un vert sans mesure, ce qui est pire que pas de pré-vol du tout. La
     // quatrième est son verdict.
+    // 🔧 Écrit d'abord sous l'étiquette GOV-059 par méconnaissance du backlog : `scripts/prevol.ts`
+    // est déclaré par GOV-047 depuis l'origine, avec son test. Remis sous sa tâche.
     'scripts/prevol.ts': {
       total: 4,
       porte: 4,
-      // ZÉRO : ce script n'a pas encore de témoin d'EFFET. Il n'en est pas dispensé — il est
-      // NEUF, et le déclarer à zéro est la seule façon honnête de dire qu'il reste dû.
+      // ZÉRO, ET CE N'EST PLUS LA MÊME DETTE : ce compteur ne compte que les témoins qui vivent
+      // dans CE fichier (cf. `TEMOINS_D_EFFET` plus bas), comme pour `gov-check.ts`. Les quatre
+      // sorties sont désormais exercées sur le BINAIRE, dans des dépôts jetables, par le banc que
+      // la version précédente de cette entrée réclamait en toutes lettres :
+      // `tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts` (GOV-047).
       temoins: 0,
       raison:
-        'GOV-059 (suite) — le pré-vol local, dérivé du job `gate-a` de `ci.yml`. QUATRE sorties : ' +
+        'GOV-047 — le pré-vol local, dérivé du job `gate-a` de `ci.yml`. QUATRE sorties : ' +
         '`ci.yml` absent, aucun bloc `steps:` de job, substitution de shell non tolérée, et le ' +
         'verdict final. Les trois premières sont des REFUS DE CONCLURE (échec fermé) : sans la ' +
         'liste des étapes, un pré-vol ne mesure rien et son silence se lirait « rien à vérifier ». ' +
-        '⚠️ AUCUN témoin ne les exerce encore, et aucune tâche du backlog ne porte cette dette : ' +
-        'il faut un banc où `ci.yml` est absent, vidé de son `steps:`, puis porteur d’un `$(…)` ' +
-        'inconnu, et exiger la sortie 1 avec le préfixe qui NOMME la cause.',
+        'Les quatre sont exercées sur le binaire par ' +
+        '`tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts` — un dépôt jetable où `ci.yml` ' +
+        'est absent, un autre vidé de son `steps:`, un troisième porteur d’un `$(…)` inconnu, un ' +
+        'quatrième où une étape rougit : sortie 1 à chaque fois, la cause NOMMÉE, et un ' +
+        'contre-témoin en 0. Le mutant « le verdict imprime le rouge puis rend 0 » a été posé et ' +
+        'tué le 2026-09-22.',
     },
   };
 
