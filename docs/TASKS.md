@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**262 taches · 197.35 j estimes.**
+**263 taches · 197.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 100 | 78.35 | 14 |
+| 0 — Socle technique | 101 | 78.85 | 18 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -482,7 +482,7 @@ Couvre : `REQ-DM-001`, `REQ-DM-024`, `REQ-DM-038`, `REQ-DM-041`, `REQ-JUR-026`, 
 
 **Tests.** `tests/unit/domaine/schema-centimes.spec.ts` · `tests/integration/journal.spec.ts` · `tests/unit/domaine/journal-charge-fermee.spec.ts`
 
-### DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives
+### DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives ✅ **fusionnee**
 
 `1.5 j` · zone `domaine` · depend de `DM-01`
 
@@ -492,7 +492,7 @@ Couvre : `REQ-DM-001`, `REQ-DM-003`, `REQ-DM-037`, `REQ-DM-038`, `REQ-JUR-027`
 
 **Tests.** `tests/unit/domaine/gardes-de-schema.spec.ts` · `tests/integration/index-partiels.spec.ts`
 
-### QA-T02 — Harnais d'intégration testcontainers
+### QA-T02 — Harnais d'intégration testcontainers ✅ **fusionnee**
 
 `1 j` · zone `qualite` · sensible : attribution · depend de `DM-01`, `QA-T01`
 
@@ -1480,7 +1480,37 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-032`
 
 **Tests.** `tests/unit/gouvernance/un-chemin-fantome-est-un-refus.spec.ts`
 
-### GOV-088 — Le glossaire interdit en l.149 la forme qu'il prescrit en l.126, et un .ts ne peut pas citer un terme interdit
+### GOV-089 — Un numero PUBLIC se juge a son PORTEUR, pas a son mot-cle : la garde d'entite sur-attrape 448 defauts sur 452
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-031`, `REQ-CPL-001`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Sur la branche qui enregistre les fixtures de l'API publique d'entreprises, `gov:entite` rend 452 defauts : 450 `coordonnee_en_clair` et 2 `valeur_recopiee`, sur 418 identifiants distincts et 24 fichiers. 416 de ces identifiants sont ceux d'entreprises TIERCES rendues par l'API — DANONE, la SNCF, EDF, des communes. DEUX seulement sont les notres. La garde demande donc aujourd'hui de deplacer le SIREN de DANONE dans `config/entite.json` : c'est le symptome, il vaut mieux qu'une demonstration.
+
+DEUX REGIMES DIFFERENTS, EXPLICITES DANS LA SOURCE ET DANS LE CHAMP `verifie` DU REGISTRE : IBAN et BIC sont des SECRETS, refuses PARTOUT, dans tout fichier suivi ; SIREN, SIRET et TVA sont des donnees PUBLIQUES, refusees uniquement dans un fichier de code, au seul motif de RM-01 — source unique de l'identite de la Societe, famille `valeur_recopiee`, POUR LES NOTRES. Le motif parlait des notres ; le code attrapait tout le monde.
+
+LA VOIE DE SORTIE EVIDENTE N'EXISTE PAS, ET C'EST MESURE : la garde ne regarde pas si le numero est vrai, seulement s'il suit le mot `siren`/`siret`. Un identifiant fabrique a cle de Luhn juste est refuse exactement comme le reel. Substituer les identifiants DETRUIRAIT la valeur probante des fixtures SANS rendre la garde verte. Et le mecanisme d'exemption ne sait pas dire la bonne chose : `coordonnee` IMPLIQUE `recopie`, donc toute exemption assez large pour taire la famille publique tait aussi les deux vrais defauts. Impasse mesuree, pas opinion.
+
+ATTENTION AU REMEDE EVIDENT ET FAUX : reclasser la fixture hors du predicat « fichier de code » desarmerait AUSSI `valeur_recopiee`, qui est gardee par LE MEME predicat — ca rouvrirait la porte que la garde existe pour tenir. Le defaut n'est pas dans le perimetre de fichiers, il est dans le PREDICAT.
+
+ACCEPTATION — LE REGIME SE LIT SUR LA VALEUR, PAS SUR LE NOM DU FICHIER.
+  (a) Un SIREN/SIRET/TVA n'est refuse dans un fichier de code QUE S'IL EST LE NOTRE, et « les notres » est DERIVE de `config/entite.json` par une fonction unique que la famille `valeur_recopiee` et l'arme publique de `coordonnee_en_clair` lisent TOUTES LES DEUX, de la meme facon.
+  (b) CONTRAINTE ABSOLUE : `valeur_recopiee` reste actif JUSQUE DANS UNE FIXTURE. Nos identifiants n'ont rien a faire en dur, meme la. Temoin a deux faces DANS LE MEME FICHIER, meme mot-cle, meme forme : seule change l'identite du porteur.
+  (c) Le regime du SECRET est INTACT : un IBAN rougit dans une fixture de tiers.
+  (d) La fonction qui juge du code sans savoir qui est « nous » LEVE, au lieu de rendre un vert silencieux.
+  (e) La PORTEE est declaree a UN SEUL endroit, citee sans recopie par `docs/gates.json`, et IMPRIMEE a chaque vert — avec le COMPTE des identifiants du registre reellement confrontes. Sans ce compte, un registre entierement a la sentinelle rendrait un vert qui ne cherche AUCUN numero public : une garde derivee est aveugle deux fois, par sa source et par son filtre.
+  (f) Compte avant/apres mesure sur le depot reel, et AUCUN vrai defaut tu.
+
+CE QUE CETTE TACHE VA DECOUVRIR, ET QUI EST LE PLUS INSTRUCTIF : les temoins existants du mode de preuve exercent le MAUVAIS PORTEUR — ils exigent un ROUGE sur le SIREN et la TVA d'un TIERS dans du code, c'est-a-dire qu'ils GRAVENT la sur-attrape en porte A. Une garde vue rougir (RM-02) ne dit rien si elle a ete vue rougir sur le MAUVAIS CAS. Quand un correctif oblige a inverser un temoin existant, c'est le signe que le temoin, et pas seulement le code, portait la faute. La ligne finale imprimee par le mode de preuve affirme elle aussi le comportement fautif : un vert qui commente son propre comportement est une affirmation a maintenir comme du code.
+
+HORS PERIMETRE, A SIGNALER SANS CORRIGER : REQ-GOV-031 est TRONQUEE dans `docs/requirements.json` — elle dit « Trois categories n'y entrent jamais : » et s'arrete la. C'est l'exigence dont cette garde et deux autres derivent tout leur mandat, et elle ne dit pas ce qu'elle interdit. Et le seul vrai defaut restant — nos SIREN/SIRET en dur dans une fixture d'un depot PUBLIC — est un changement d'intention de test (re-enregistrement sur un organisme de formation tiers), pas le sujet de celle-ci.
+
+COLLISION DE CHEMIN CONNUE : `tests/unit/gouvernance/entite-registre.spec.ts` figure aussi dans les `paths` de GOV-067. Les deux taches ne doivent pas etre composees dans le meme lot.
+
+**Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
+
+### GOV-088 — Le glossaire interdit en l.149 la forme qu'il prescrit en l.126, et un .ts ne peut pas citer un terme interdit ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1507,7 +1537,7 @@ HORS PERIMETRE, A SIGNALER SANS CORRIGER : REQ-DM-036 s'epelle elle-meme avec un
 
 **Tests.** `tests/unit/gouvernance/termes-interdits.spec.ts`
 
-### GOV-091 — L'entree de journal de la PR 108 manque : main est rouge, et deux tests de gouvernance rougissent sur TOUTES les branches
+### GOV-091 — L'entree de journal de la PR 108 manque : main est rouge, et deux tests de gouvernance rougissent sur TOUTES les branches ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
