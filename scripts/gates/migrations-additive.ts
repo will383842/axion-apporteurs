@@ -42,6 +42,14 @@
  * parle du schéma), ni un SQL assemblé hors d'un `EXECUTE`. Le dump N−1 et le `migrate diff` vide
  * relèvent de la Gate D de la zone qualité, qui importe cette garde au lieu d'en écrire une seconde.
  *
+ * ⚠️ ET SURTOUT, CINQ FORMES DE `DROP` QU'ELLE NE VOIT PAS, mesurées le 2026-09-22 : `ALTER TABLE …
+ * DROP CONSTRAINT`, `DROP VIEW`, `DROP MATERIALIZED VIEW`, `DROP SEQUENCE`, `DROP DATABASE` sortent
+ * en 0. Ce n'est écrit ici que parce que le registre annonçait « DROP, RENAME et NOT NULL sans
+ * défaut interdits hors ADR » — plus large que ce que ces lignes tiennent : un relecteur qui lit le
+ * registre avant le code croyait protégé ce qui ne l'est pas. Le texte du registre est désormais
+ * resserré forme par forme ; ÉLARGIR la garde à ces cinq-là appartient à `QA-T11`, qui la porte.
+ * Les deux vont ensemble : le jour où elles rougissent, le registre change dans le même commit.
+ *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne lit rien du dépôt : chaque témoin est une vue
  * injectée de TROIS migrations, la faute posée dans celle du MILIEU.
  */

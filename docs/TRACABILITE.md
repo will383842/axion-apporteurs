@@ -31,10 +31,10 @@
 | `REQ-CPL-018` | `CPL-T01`, `GOV-009` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts` | couverte |
 | `REQ-CPL-021` | `GOV-000`, `QA-T04` | `tests/unit/gouvernance/autonomie.spec.ts` | couverte |
 | `REQ-CPL-026` | `CPL-T13` | `tests/unit/domaine/seuil-prioritaire.spec.ts` | couverte |
-| `REQ-DM-001` | `DM-01`, `DM-02` | `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` | couverte |
+| `REQ-DM-001` | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` | couverte |
 | `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006`, `GOV-030`, `GOV-068`, `GOV-069`, `GOV-070` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/etats-occupants.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
 | `REQ-DM-024` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-chaine.spec.ts` | couverte |
-| `REQ-DM-038` | `DM-01`, `DM-02` | `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
+| `REQ-DM-038` | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
 | `REQ-DM-041` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts` | couverte |
 | `REQ-GOV-001` | `GOV-001`, `GOV-072` | `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-002` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
@@ -436,7 +436,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | Fichier | Exécuté par vitest | Exigences citées |
 | --- | --- | --- |
 | `tests/gov/charte-pr.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011`, `REQ-GOV-012`, `REQ-GOV-013`, `REQ-GOV-027` |
-| `tests/integration/index-partiels.spec.ts` | oui | `REQ-DM-003` |
+| `tests/integration/index-partiels.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-003`, `REQ-DM-038` |
 | `tests/integration/journal.spec.ts` | oui | `REQ-DM-024`, `REQ-DM-041`, `REQ-JUR-026`, `REQ-SEC-027` |
 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | oui | `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013` |
 | `tests/unit/domaine/etats-occupants.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-006` |

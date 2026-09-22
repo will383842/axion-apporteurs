@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `c921995` — 2026-09-21T23:22:36+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #84 (un conflit avec `main`) · 3. #86 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #84 (rien) · 3. #86 (rien) · 4. #88 (un contrôle requis rouge ou une revue manquante) · 5. #90 (un contrôle requis rouge ou une revue manquante) · 6. #91 (un contrôle requis rouge ou une revue manquante) · 7. #92 (un contrôle requis rouge ou une revue manquante) · 8. #93 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T08 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T07 (A05) · GOV-059 (A05) |
 | Où en est la phase ? | phase 0 — 14/98 tâches, reste 65.10 j |
-| Le prochain pas | DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
+| Le prochain pas | fusionner #82, puis DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #89 — 2026-09-21 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,10 +64,14 @@ Reste sur ce chemin : **16.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
+| 2 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | rien — fusionnable maintenant |
+| 3 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | rien — fusionnable maintenant |
+| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un contrôle requis rouge ou une revue manquante |
+| 5 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | un contrôle requis rouge ou une revue manquante |
+| 6 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
+| 7 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
+| 8 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -90,6 +94,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Aucun ADR daté du 2026-09-21 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #82** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **DM-02** — Gates de schéma : enums, centimes, index partiels, migrations additives (1.5 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
