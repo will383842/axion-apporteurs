@@ -15,13 +15,52 @@
  *
  * Le côté GitHub est un faux `gh` écrit ici, qui ne rend QUE les champs demandés par `--json` : la
  * garde ne peut pas lire un titre qu'elle n'a pas demandé. Le côté disque est le dépôt réel.
+ *
+ * ── LA SUITE (2026-09-22) : LA MÊME PATHOLOGIE, UN CRAN PLUS HAUT ────────────────────────────
+ *
+ * GOV-059 a fermé le cas « un rouge de `gov:etat` fait sauter les étapes de mesure » en changeant
+ * leur ORDRE. Mesuré sur la fusion de la PR 89 : la pathologie se reproduit À CHAQUE PR, par
+ * construction. Le runbook fait cocher la 8ᵉ case de la définition de terminé APRÈS
+ * `gh pr merge --delete-branch` ; cette édition du corps relance `pull_request: edited` ; la tête
+ * n'est plus une branche ; `gov:pr` — étape 26 sur 71 — échoue sur `git diff base...tête` et laisse
+ * 45 étapes en « skipped ». Deux défauts, deux témoins ici :
+ *
+ *   1. LE FAUX ROUGE. Le job ne doit pas tourner quand il n'a rien à mesurer. Le témoin ÉVALUE
+ *      l'expression `if:` contre cinq contextes d'événement au lieu d'en chercher le texte, et il
+ *      l'exige de TOUT job de TOUT workflow déclenché par `pull_request`, en suivant `needs:`.
+ *      C'est délibéré : l'avis de mutation reproché aux trois lecteurs de `ci.yml` déjà en place
+ *      est qu'ils jugent un ORDRE DE TEXTE, donc qu'on peut déménager une étape dans un job séparé
+ *      derrière un `needs:` sans qu'aucun ne rougisse. Ce témoin-ci ne tombe pas dans ce piège : un
+ *      job neuf sans garde est NOMMÉ, le même job derrière `needs: [gate-a]` ne l'est pas — les
+ *      deux cas sont exercés plus bas.
+ *
+ *   2. LE DIAGNOSTIC QUI ACCUSE À TORT. `gov:pr` prescrivait `fetch-depth: 0` — qui est DÉJÀ posé
+ *      sur `actions/checkout` dans `ci.yml`. Une garde qui envoie réparer ce qui n'est pas cassé
+ *      coûte le temps qu'elle est censée faire gagner. Le message d'origine reste VRAI dans son
+ *      cas (clone trop court) et n'est donc pas remplacé : la branche manquante est ajoutée à
+ *      côté, et les deux sont exercées.
+ *
+ * Ce fichier est le TROISIÈME lecteur de `ci.yml` du dépôt, pas un quatrième : la dette RM-07 est
+ * connue, et le témoin réemploie `tests/unit/ci/lire-yaml.ts`, le vrai analyseur YAML partagé, au
+ * lieu d'ajouter un cinquième découpage au ruban adhésif.
  */
 
 import { describe, it, expect, afterAll } from 'vitest';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { estObjet, lireYaml } from '../ci/lire-yaml';
+import {
+  CONTEXTES_FUSIONNES,
+  CONTEXTES_MESURES,
+  PR_FUSIONNEE,
+  PR_OUVERTE,
+  PUSH_MAIN,
+  evaluerExpression,
+  jobTourne,
+  type ContexteGh,
+} from '../ci/condition-de-job';
 
 const SCRIPT = 'scripts/gates/gov-etat.ts';
 // L'instant se fige par rapport à ce qu'il juge (GOV-032) : ici le journal RÉEL, donc le jour même.
@@ -193,3 +232,219 @@ describe('REQ-QA-013 — un rouge de `gov:etat` ne fait plus sauter les étapes 
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// TÉMOIN 1 — le job ne tourne pas sur une PR DÉJÀ FUSIONNÉE, et tourne partout ailleurs
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * L'ÉVALUATION D'UNE CONDITION DE JOB EST PARTAGÉE (`tests/unit/ci/condition-de-job.ts`), et
+ * non recopiée ici. Elle sert aussi à `gardes-transposees.spec.ts`, qui juge le MÊME `if:` pour
+ * une autre raison — qu'il ne désarme ni `Lint` ni `Format` (REQ-GOV-018). Deux écritures du même
+ * verdict finiraient par diverger, et la divergence s'appellerait « la porte A tourne quand même »
+ * (RM-01). Ce que ce fichier-ci garde en propre, c'est le PÉRIMÈTRE : quels workflows sont jugés.
+ */
+
+type Workflow = { chemin: string; jobs: Record<string, unknown> };
+
+/**
+ * LÈVE plutôt que de rendre vide : un workflow sans `jobs`, ou un `jobs` qui n'est pas un objet,
+ * rendrait le témoin vert sans avoir rien jugé.
+ */
+async function workflowsSurPullRequest(sources: [string, string][]): Promise<Workflow[]> {
+  const retenus: Workflow[] = [];
+  for (const [chemin, texte] of sources) {
+    const arbre = await lireYaml(texte);
+    if (!estObjet(arbre)) throw new Error(`${chemin} : la racine n'est pas un mapping`);
+    const declencheurs = arbre['on'];
+    if (!estObjet(declencheurs)) continue; // `on: push` en scalaire : aucun `pull_request`.
+    if (!Object.hasOwn(declencheurs, 'pull_request')) continue;
+    const jobs = arbre['jobs'];
+    if (!estObjet(jobs) || Object.keys(jobs).length === 0) {
+      throw new Error(`${chemin} : aucun job lu — le témoin ne mesurerait rien`);
+    }
+    retenus.push({ chemin, jobs });
+  }
+  return retenus;
+}
+
+/** Les jobs qui MESURERAIENT cet événement — la liste que le témoin exige vide après fusion. */
+function jobsQuiTournent(ws: Workflow[], ctx: ContexteGh): string[] {
+  return ws.flatMap((w) =>
+    Object.keys(w.jobs)
+      .filter((nom) => jobTourne(nom, w.jobs, ctx))
+      .map((nom) => `${w.chemin}#${nom}`)
+  );
+}
+
+const DOSSIER_WORKFLOWS = '.github/workflows';
+const CI_YML = `${DOSSIER_WORKFLOWS}/ci.yml`;
+/** DÉRIVÉE DU DISQUE : un workflow ajouté demain est jugé sans qu'on l'inscrive ici. */
+const SOURCES: [string, string][] = readdirSync(DOSSIER_WORKFLOWS)
+  .filter((f) => /\.ya?ml$/.test(f))
+  .map((f) => [`${DOSSIER_WORKFLOWS}/${f}`, readFileSync(`${DOSSIER_WORKFLOWS}/${f}`, 'utf8')]);
+
+const CI_SOURCE = SOURCES.find(([c]) => c === CI_YML)![1];
+
+/**
+ * Une mutation = UNE substitution sur le `ci.yml` RÉEL (RM-11), et la substitution est VÉRIFIÉE :
+ * une mutation qui ne mute rien rendrait le témoin vert en ne mesurant rien.
+ */
+function muter(motif: RegExp, remplacement: string): [string, string][] {
+  const mute = CI_SOURCE.replace(motif, remplacement);
+  if (mute === CI_SOURCE)
+    throw new Error(`la mutation ${String(motif)} n'a rien changé à ${CI_YML}`);
+  return [[CI_YML, mute]];
+}
+
+describe('REQ-QA-013 — la porte A ne tourne pas sur une PR DÉJÀ FUSIONNÉE', () => {
+  it('le banc lit des workflows RÉELS déclenchés par `pull_request`, et au moins un job', async () => {
+    const ws = await workflowsSurPullRequest(SOURCES);
+    const jobs = ws.flatMap((w) => Object.keys(w.jobs));
+    console.info(
+      `[GOV-059-suite] ${SOURCES.length} workflow(s) lu(s), ${ws.length} déclenché(s) par ` +
+        `pull_request, ${jobs.length} job(s) jugé(s) : ${jobs.join(', ')}`
+    );
+    expect(ws.map((w) => w.chemin)).toContain(CI_YML);
+    expect(jobs.length).toBeGreaterThan(0);
+  });
+
+  it('REQ-QA-013 — aucun job d’un workflow déclenché par `pull_request` ne tourne sur une PR déjà fusionnée', async () => {
+    const ws = await workflowsSurPullRequest(SOURCES);
+    for (const [quoi, ctx] of CONTEXTES_FUSIONNES) {
+      expect(jobsQuiTournent(ws, ctx), quoi).toEqual([]);
+    }
+  });
+
+  it('REQ-QA-013 — la porte A tourne TOUJOURS sur un push main, une PR ouverte, et l’ÉDITION d’une PR ouverte', async () => {
+    const ws = await workflowsSurPullRequest(SOURCES);
+    for (const [quoi, ctx] of CONTEXTES_MESURES) {
+      expect(jobsQuiTournent(ws, ctx), quoi).toContain(`${CI_YML}#gate-a`);
+    }
+  });
+
+  // ── LES MUTATIONS : ce témoin rougit-il quand la condition saute ? ────────────────────────
+  it('ROUGE si la condition disparaît, est neutralisée, ou est posée sur le mauvais critère', async () => {
+    const cas: [string, [string, string][]][] = [
+      ['la ligne `if:` du job est supprimée', muter(/^ {4}if: .*\n/m, '')],
+      ['la condition est neutralisée en `true`', muter(/^ {4}if: .*$/m, '    if: ${{ true }}')],
+      [
+        'la condition juge l’ACTION au lieu de l’état fusionné',
+        muter(/^ {4}if: .*$/m, "    if: ${{ github.event.action != 'edited' }}"),
+      ],
+    ];
+    for (const [quoi, sources] of cas) {
+      const ws = await workflowsSurPullRequest(sources);
+      const tournent = CONTEXTES_FUSIONNES.flatMap(([, ctx]) => jobsQuiTournent(ws, ctx));
+      expect(tournent, quoi).toContain(`${CI_YML}#gate-a`);
+    }
+  });
+
+  it('ROUGE si une étape déménage dans un job LIBRE — et VERT si elle déménage derrière `needs:`', async () => {
+    const libre = `${CI_SOURCE}\n  gate-b:\n    runs-on: ubuntu-latest\n    steps:\n      - run: pnpm lint\n`;
+    const derriere = `${CI_SOURCE}\n  gate-b:\n    runs-on: ubuntu-latest\n    needs: [gate-a]\n    steps:\n      - run: pnpm lint\n`;
+    const ctx = PR_FUSIONNEE('edited');
+
+    const wsLibre = await workflowsSurPullRequest([[CI_YML, libre]]);
+    expect(jobsQuiTournent(wsLibre, ctx), 'un job LIBRE mesure encore une PR fusionnée').toEqual([
+      `${CI_YML}#gate-b`,
+    ]);
+
+    const wsDerriere = await workflowsSurPullRequest([[CI_YML, derriere]]);
+    expect(jobsQuiTournent(wsDerriere, ctx), 'derrière `needs:`, GitHub saute le job').toEqual([]);
+    // CONTRE-TÉMOIN : le même job derrière `needs:` tourne bel et bien quand la porte A tourne.
+    expect(jobsQuiTournent(wsDerriere, PR_OUVERTE('edited'))).toContain(`${CI_YML}#gate-b`);
+  });
+
+  it('l’évaluateur LÈVE sur ce qu’il ne sait pas lire, au lieu de rendre vert', () => {
+    expect(() => evaluerExpression('github.event_name', PUSH_MAIN)).toThrow(/enveloppée/);
+    expect(() => evaluerExpression('${{ secrets.JETON == 1 }}', PUSH_MAIN)).toThrow(/périmètre/);
+    expect(() => evaluerExpression('${{ contains(a, 1) }}', PUSH_MAIN)).toThrow();
+    // Et il lit bien les conversions de GitHub, qui sont le cœur de la condition retenue.
+    expect(evaluerExpression('${{ github.event.pull_request.merged != true }}', PUSH_MAIN)).toBe(
+      true
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// TÉMOIN 2 — `gov:pr` distingue un clone trop court d'une tête disparue
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+const GOV_PR = 'scripts/gates/gov-pr.ts';
+/** Deux sha de la forme attendue, qui ne sont dans AUCUNE référence de ce clone. */
+const ABSENT_TETE = 'f3156550000000000000000000000000000000ab';
+const ABSENT_BASE = 'b97386900000000000000000000000000000000a';
+const TETE_DISPARUE = 'n’existe dans AUCUNE référence de ce clone';
+/**
+ * LA PRESCRIPTION du message d'origine, et non le mot `fetch-depth` : le message NEUF cite ce
+ * réglage pour dire qu'il n'y est pour rien, et chercher le mot seul confondrait les deux. Ce qui
+ * distingue les deux cas, c'est ce qu'on demande au lecteur de FAIRE.
+ */
+const PRESCRIPTION_PROFONDEUR = '`fetch-depth: 0` sur actions/checkout';
+
+function lancerGovPrSurEvenement(base: string, tete: string): { code: number; sortie: string } {
+  const chemin = join(DOSSIER, `evenement-${base.slice(0, 7)}-${tete.slice(0, 7)}.json`);
+  writeFileSync(
+    chemin,
+    JSON.stringify({
+      pull_request: {
+        number: 89,
+        title: 'fix(GOV-059): un titre quelconque',
+        body: '',
+        labels: [],
+        base: { sha: base },
+        head: { sha: tete },
+      },
+    })
+  );
+  const r = spawnSync('npx', ['tsx', GOV_PR], {
+    encoding: 'utf8',
+    shell: true,
+    env: { ...process.env, GITHUB_EVENT_PATH: chemin },
+  });
+  return { code: r.status ?? 1, sortie: (r.stdout ?? '') + (r.stderr ?? '') };
+}
+
+describe(
+  'REQ-QA-013 — le diagnostic de `gov:pr` nomme la BONNE cause',
+  { timeout: 180_000 },
+  () => {
+    const TETE_REELLE = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+
+    it('le banc part d’un sha RÉEL et de deux sha absents du clone', () => {
+      expect(TETE_REELLE).toMatch(/^[0-9a-f]{40}$/);
+      for (const sha of [ABSENT_TETE, ABSENT_BASE]) {
+        expect(() =>
+          execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], { stdio: 'ignore' })
+        ).toThrow();
+      }
+    });
+
+    it('REQ-QA-013 — base LISIBLE et tête ABSENTE : la tête a disparu, ce n’est PAS la profondeur', () => {
+      const { code, sortie } = lancerGovPrSurEvenement(TETE_REELLE, ABSENT_TETE);
+      expect(code).not.toBe(0);
+      expect(sortie).toContain(TETE_DISPARUE);
+      expect(sortie).toContain(ABSENT_TETE);
+      // Et il NOMME la base lisible : c'est elle qui écarte l'hypothèse du clone trop court.
+      expect(sortie).toContain(TETE_REELLE);
+      // Le message qui accusait à tort ne doit PAS prescrire son remède sur ce cas-là.
+      expect(sortie).not.toContain(PRESCRIPTION_PROFONDEUR);
+      expect(sortie).toContain('Ce n’est PAS un défaut de profondeur');
+    });
+
+    it('REQ-QA-013 — base ABSENTE : le message d’origine reste, mot pour mot, parce qu’il reste vrai', () => {
+      const { code, sortie } = lancerGovPrSurEvenement(ABSENT_BASE, TETE_REELLE);
+      expect(code).not.toBe(0);
+      expect(sortie).toContain(PRESCRIPTION_PROFONDEUR);
+      expect(sortie).not.toContain(TETE_DISPARUE);
+    });
+
+    it('REQ-QA-013 — les DEUX absents : un clone trop court, donc le message d’origine', () => {
+      const { code, sortie } = lancerGovPrSurEvenement(ABSENT_BASE, ABSENT_TETE);
+      expect(code).not.toBe(0);
+      expect(sortie).toContain(PRESCRIPTION_PROFONDEUR);
+      expect(sortie).not.toContain(TETE_DISPARUE);
+    });
+  }
+);
