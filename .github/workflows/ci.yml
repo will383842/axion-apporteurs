@@ -176,6 +176,20 @@ jobs:
         run: pnpm partners:schema:enums
       - name: La garde du vocabulaire sait rougir
         run: pnpm partners:schema:enums:prove
+      # DM-02, REQ-DM-001. Tout montant est un Int en centimes suffixe Cents ; aucun Float ni
+      # Decimal, quel que soit le nom. Le schema se lit par le lecteur unique : un modele se ferme
+      # sur SON accolade, un champ apres un commentaire ne s echappe pas.
+      - name: Centimes — aucun flottant, montants en Cents
+        run: pnpm partners:schema:cents
+      - name: La garde des centimes sait rougir
+        run: pnpm partners:schema:cents:prove
+      # DM-02, REQ-DM-037. Les migrations sont additives : toutes les migrations suivies sont lues,
+      # pas celles de la PR. Seule absolution : une ADR acceptee citee en premiere ligne, et la
+      # faute absoute est IMPRIMEE.
+      - name: Migrations additives
+        run: pnpm partners:migrations:additive
+      - name: La garde des migrations sait rougir
+        run: pnpm partners:migrations:additive:prove
       # GOV-030 : la garde des TERMES INTERDITS que des documents invoquaient sans qu'elle existe
       # (`docs/GLOSSAIRE.md`, `docs/CONVENTIONS.md` §2, RM-01 et RM-06, `packages/contracts/events.ts`,
       # REQ-GOV-001, `docs/GATES.md`). BLOQUANTE : pas de `continue-on-error` — la famille
