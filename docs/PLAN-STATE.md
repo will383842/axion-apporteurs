@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `c921995` — 2026-09-21T23:22:36+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #86 (rien) · 3. #88 (rien) · 4. #90 (rien) · 5. #100 (rien) · 6. #84 (un contrôle requis rouge ou une revue manquante) · 7. #91 (un contrôle requis rouge ou une revue manquante) · 8. #92 (un contrôle requis rouge ou une revue manquante) · 9. #93 (un contrôle requis rouge ou une revue manquante) · 10. #99 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `571b1eb` — 2026-09-22T08:18:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #86 (rien) · 2. #90 (rien) · 3. #82 (un contrôle requis rouge ou une revue manquante) · 4. #88 (un contrôle requis rouge ou une revue manquante) · 5. #91 (un contrôle requis rouge ou une revue manquante) · 6. #92 (un contrôle requis rouge ou une revue manquante) · 7. #93 (un contrôle requis rouge ou une revue manquante) · 8. #99 (un conflit avec `main`) · 9. #100 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T07 (A05) · GOV-059 (A05) |
 | Où en est la phase ? | phase 0 — 14/98 tâches, reste 65.10 j |
-| Le prochain pas | fusionner #82, puis DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
+| Le prochain pas | fusionner #86, puis DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #89 — 2026-09-21 |
+| Dernière entrée de journal | PR #99 — 2026-09-22 |
 
-**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 86 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,16 +64,15 @@ Reste sur ce chemin : **16.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | rien — fusionnable maintenant |
-| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | rien — fusionnable maintenant |
-| 4 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | rien — fusionnable maintenant |
-| 5 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | rien — fusionnable maintenant |
-| 6 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
-| 7 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
-| 8 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
-| 9 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 10 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un contrôle requis rouge ou une revue manquante |
+| 1 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | rien — fusionnable maintenant |
+| 2 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | rien — fusionnable maintenant |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un contrôle requis rouge ou une revue manquante |
+| 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
+| 6 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
+| 7 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
+| 8 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
+| 9 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -93,23 +92,59 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-21 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
+`docs/adr/0011-une-seule-implementation-des-listes-d-etats.md` — partners/ADR-0011 — Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture
+
+Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-22). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
 
-**Fusionner #82** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+**Fusionner #86** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **DM-02** — Gates de schéma : enums, centimes, index partiels, migrations additives (1.5 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `c921995` (2026-09-21T23:22:36+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `571b1eb` (2026-09-22T08:18:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #99 — 2026-09-22 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check
+
+**Fait.** `pnpm prevol` existe. Six fichiers suivis par git l'ordonnaient — dont
+`scripts/lot/lot.workflow.js`, qui l'injecte dans le prompt de chaque développeur de lot — et aucun
+script de `package.json` ne la portait : chaque agent qui suivait sa fiche lançait une commande
+introuvable. Le pré-vol lit les 69 étapes dans le job `gate-a` de `ci.yml`, dans leur ordre, en écarte
+5 qu'il nomme, rend les vues avant elles avec `PLAN-STATE` en dernier, et vérifie qu'aucune ne porte
+de retour chariot. Il balaie ses propres porteurs en excluant le backlog et ses vues rendues, et
+imprime les deux comptes. Il sonde le démon Docker avant la course et, s'il manque, annote le rouge de
+l'étape concernée pour dire que c'est une absence de banc et non un test cassé — sans cesser de
+refuser.
+
+**Reste.** L'homonymie `gov:check` n'est pas tranchée : le script `gov:check` de `package.json`
+enchaîne 17 gardes, la garde qui s'appelle `gov:check` est `pnpm gov:termes-interdits`, et elle imprime
+`gov:check` dans son rouge — donc son message d'échec renvoie vers une commande verte. GOV-030 renvoie
+la résolution à un ADR, qui reste dû. Le pré-vol écrit `docs/PLAN-STATE.md`, fichier réservé au poste
+A01 : tout développeur doit faire `git status` après l'avoir lancé et rétablir cette vue, ou bien le
+pré-vol devrait la rétablir lui-même — non tranché. Le défaut « démon Docker absent » n'a pas pu être
+reproduit sur cette machine, où le démon répond : la fonction qui nomme la cause est jugée sur entrées
+injectées, plus un mutant. GOV-000 n'est pas rouverte.
+
+**Appris.** L'acceptance de cette tâche prescrivait de dériver la chaîne du pré-vol « du script
+`gov:check` de `package.json` ». Mesuré : cette chaîne porte **17** étapes quand le job `gate-a` en
+joue **65** — **48 manquent**, dont tous les modes `--prove`, `lint`, `format:check`, `typecheck`,
+`test`, `req:check` et la garde des termes interdits. Suivre la lettre de l'acceptance aurait produit un
+pré-vol **vert là où la CI rougit**. La seule source qui dise ce qui bloque vraiment une PR est
+`ci.yml`, et la mesure est désormais figée par un témoin qui rougira si quelqu'un modifie la chaîne.
+Second fait, du même ordre : avant ce commit, `scripts/prevol.ts` lançait sa course **au chargement du
+module** — un test qui l'importait aurait lancé le pré-vol entier dans le processus de test, étape
+`pnpm test` comprise, donc en récursion infinie. Un script qu'on veut tester se garde par
+`APPELE_DIRECTEMENT`. Troisième fait : `git grep -l prevol` rend 11 fichiers sur `main`, pas neuf —
+l'acceptance se trompe pour la troisième fois sur le même balayage, parce que le **récit** d'une dette
+porte la chaîne au même titre que la dette.
 
 ### PR #89 — 2026-09-21 — fix(GOV-059): la revendication se derive de la forge, et gov:etat passe apres les etapes de mesure
 
@@ -156,27 +191,7 @@ et toute table protégée demain l'est sans retouche. Et remplacer un prédicat 
 d'une garde ne doit pas perdre ses mots : `remuneration`, `euro` et `euros` sont passés dans la
 garde avec lui.
 
-### PR #83 — 2026-09-19 — docs(GOV-039): les 25 clauses decidees remises ou datees (ADR 0016)
-
-**Fait.** Les 25 clauses decidees par `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` et declarees perdues
-dans `DETTE_TEXTE_DECIDE` sont resorbees, sans qu'aucune decision neuve soit prise : 23 reviennent
-au mot pres dans le texte applique de 14 exigences, ecrites par un verbe hors depot et jamais a la
-main ; les 2 autres etaient une annexe perimee, datee en ligne par `partners/ADR-0016`.
-`DETTE_TEXTE_DECIDE` est desormais vide. `siren_manquant`, qui n'est pas une valeur de
-`MotifBlocage`, devient `non_resolue` partout ou il etait ecrit.
-
-**Reste.** La tension entre REQ-DM-021 et REQ-ARG-017 sur `non_resolue` est relevee par la lentille
-exactitude et n'est pas tranchee : elle appartient a la zone argent. Cinq dettes de la revue sont
-reportees. L'entree de journal de cette PR manquait a la fusion : elle est ecrite ici, a posteriori,
-derivee mot a mot du corps de la PR — c'est exactement ce que `pr_fusionnee_sans_journal` reproche.
-
-**Appris.** Comme la famille `dette_texte_decide_perimee` ne peut plus etre amenee au binaire par
-une donnee une fois le registre vide, `controler()` prend un parametre `dettes` dont la valeur par
-defaut est le registre, et les temoins passent une dette fabriquee. Un registre qu'on vide emporte
-avec lui le seul moyen de prouver que la garde qui le lit sait encore rougir : il faut rendre la
-source injectable AVANT de la vider.
-
-… 31 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 32 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
