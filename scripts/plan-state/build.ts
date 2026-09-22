@@ -162,16 +162,29 @@ const sourcesDesLignes = new Map<string, Set<string>>();
 let rubriqueCourante: string | null = null;
 let ligneCourante: Set<string> | null = null;
 
+/**
+ * ⚠️ UNE LECTURE EST ATTRIBUÉE À SA LIGNE **ET** À SA RUBRIQUE — LES DEUX, JAMAIS L'UNE OU L'AUTRE.
+ *
+ * C'était `ligneCourante ?? rubrique` : dès qu'une ligne était ouverte, la rubrique ne voyait plus
+ * rien. Tant que seul le bloc de reprise ouvrait des lignes, c'était sans effet — il n'est
+ * comparé qu'à la ligne. Le jour où les corps de rubriques ouvrent des lignes à leur tour
+ * (GOV-090), ce `??` aurait VIDÉ le jeu de sources de la rubrique : elle aurait cessé d'être
+ * exemptée, donc été comparée octet par octet, donc rougi à chaque PR ouverte sur la forge.
+ * Les deux étages sont indépendants et se nourrissent tous les deux.
+ */
 function lire<T>(source: string, valeur: T): T {
-  const cible =
-    ligneCourante ??
-    (rubriqueCourante === null ? undefined : sourcesDesRubriques.get(rubriqueCourante));
-  if (cible === undefined) {
+  const cibles: Set<string>[] = [];
+  if (ligneCourante !== null) cibles.push(ligneCourante);
+  if (rubriqueCourante !== null) {
+    const r = sourcesDesRubriques.get(rubriqueCourante);
+    if (r !== undefined) cibles.push(r);
+  }
+  if (cibles.length === 0) {
     throw new Error(
       `plan-state : ${source} est lue hors de toute rubrique — sa provenance ne s'attribue à rien. Lis-la DANS la rubrique ou la ligne qui l'affiche.`
     );
   }
-  cible.add(source);
+  for (const c of cibles) c.add(source);
   return valeur;
 }
 
@@ -346,14 +359,42 @@ function titre(t: string): void {
  */
 const neutraliser = (l: string): string => l.replaceAll('<', '&lt;').replace(/[\r\n]/g, ' ');
 
-/** Écrit UNE ligne du bloc de reprise : ses lectures de la forge sont attribuées à elle seule. */
-function ligneDeReprise(ecrire: () => string): string {
+/**
+ * ÉCRIT UNE LIGNE ET LUI ATTRIBUE CE QU'ELLE LIT DE LA FORGE. Deux appelants : le bloc de reprise,
+ * et — depuis GOV-090 — les corps des rubriques qui lisent la forge.
+ *
+ * LA RÈGLE QUE CE FICHIER ÉCRIVAIT DÉJÀ, ET QU'IL N'APPLIQUAIT QU'À UN ÉTAGE : « ce qu'elle lit de
+ * la forge lui est attribué, et ce qu'elle ne lit pas la laisse COMPARÉE. Aucune ligne n'est
+ * classée à la main. » Les corps de rubriques, eux, étaient exemptés EN BLOC dès qu'une seule de
+ * leurs lignes touchait la forge — cinq rubriques sur quatorze, mesuré le 2026-09-22. La doctrine
+ * de « Revendications », 450 caractères qui ne lisent RIEN de la forge, n'était comparée par
+ * personne : on pouvait la réécrire à la main et `--verifier` restait vert. REQ-GOV-032 exige
+ * pourtant la comparaison « d'un seul octet ».
+ *
+ * ⚠️ CHAQUE LIGNE PHYSIQUE EST ENREGISTRÉE. Un `push` peut porter plusieurs lignes ; si l'on
+ * n'enregistrait que la chaîne entière, la recherche par ligne ne trouverait rien et le
+ * vérificateur comparerait une ligne de forge — un faux rouge à chaque PR. Quand la forge a été
+ * lue, `neutraliser` a déjà ramené le tout à une seule ligne.
+ */
+function ligneAttribuee(ecrire: () => string): string {
   ligneCourante = new Set();
   const brute = ecrire();
   const l = ligneCourante.size > 0 ? neutraliser(brute) : brute;
-  sourcesDesLignes.set(l, ligneCourante);
+  for (const physique of l.split('\n')) sourcesDesLignes.set(physique, ligneCourante);
   ligneCourante = null;
   return l;
+}
+
+/** Le nom d'origine, conservé pour le bloc de reprise : même fonction, même étage. */
+const ligneDeReprise = ligneAttribuee;
+
+/**
+ * Écrit une ligne DANS une rubrique, en l'attribuant. `pousser` remplace `lignes.push` partout où
+ * la rubrique lit la forge : sans lui, la ligne n'a pas de provenance et le vérificateur ne sait
+ * pas la distinguer d'une prose écrite à la main.
+ */
+function pousser(ecrire: () => string): void {
+  lignes.push(ligneAttribuee(ecrire));
 }
 
 lignes.push("# PLAN-STATE — état vivant d'Axion Partners");
@@ -521,20 +562,28 @@ lignes.push('');
 // qu'on lit n'est jamais celle qu'on a corrigée.
 titre('File de fusion');
 lignes.push('');
-const file = forge.file();
-if (!file.length) {
-  lignes.push(
-    'Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.'
+// ⚠️ LES LECTURES DE LA FORGE SONT DANS LES LIGNES QUI LES AFFICHENT (GOV-090). Les lire dans
+// une variable au-dessus laisserait chaque ligne SANS provenance, donc comparée, donc rouge à
+// chaque PR ouverte. Les lignes qui ne lisent rien restent COMPARÉES — c'est l'objet du geste.
+if (!forge.file().length) {
+  pousser(
+    () =>
+      'Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.'
   );
 } else {
-  lignes.push('| # | PR | Branche | Ce qui la bloque |');
-  lignes.push('| --- | --- | --- | --- |');
-  file.forEach((p, i) => {
-    lignes.push(`| ${i + 1} | #${p.number} — ${p.title} | \`${p.headRefName}\` | ${p.bloque} |`);
+  // Ni l'une ni l'autre ne lit la forge : comparées octet par octet, dans une rubrique exemptée.
+  pousser(() => '| # | PR | Branche | Ce qui la bloque |');
+  pousser(() => '| --- | --- | --- | --- |');
+  forge.file().forEach((_p, i) => {
+    pousser(() => {
+      const p = forge.file()[i]!;
+      return `| ${i + 1} | #${p.number} — ${p.title} | \`${p.headRefName}\` | ${p.bloque} |`;
+    });
   });
   lignes.push('');
-  lignes.push(
-    'Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.'
+  pousser(
+    () =>
+      'Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.'
   );
 }
 lignes.push('');
@@ -542,29 +591,38 @@ lignes.push('');
 // ── Revendications (REQ-GOV-007) ────────────────────────────────────────────
 titre('Revendications');
 lignes.push('');
-lignes.push(
-  'Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.'
+// ⚠️ RUBRIQUE CONVERTIE (GOV-090). Chaque ligne passe par `pousser`, et TOUTE lecture de la
+// forge se fait DANS la ligne qui l'affiche. Cette doctrine-ci n'en lit aucune : elle est donc
+// comparée octet par octet — 450 caractères que personne ne comparait jusqu'ici.
+pousser(
+  () =>
+    'Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’issue, posés par l’orchestrateur au §3 de `.claude/skills/lot/SKILL.md` (revendication **en vol**), et le champ `owner` de `docs/tasks.json`, écrit par `pnpm lot:cloture` seul (revendication **consolidée**). Cette rubrique les REND ; corriger une revendication fausse se fait dans l’une des deux sources, jamais ici.'
 );
 lignes.push('');
 if (!forge.githubLu()) {
-  lignes.push(
-    '⚠️ **Lecture GitHub indisponible** : les revendications en vol n’ont PAS pu être lues. Ce qui suit ne vient que de `docs/tasks.json` — l’absence d’une ligne ne veut donc pas dire que personne ne tient la tâche.'
-  );
+  pousser(() => {
+    forge.githubLu();
+    return '⚠️ **Lecture GitHub indisponible** : les revendications en vol n’ont PAS pu être lues. Ce qui suit ne vient que de `docs/tasks.json` — l’absence d’une ligne ne veut donc pas dire que personne ne tient la tâche.';
+  });
   lignes.push('');
 }
 {
   const enVol = taches.filter((t) => !LIVREE.has(t.statut) && revendiqueursDe(t).length > 0);
   if (!enVol.length) {
-    lignes.push(
-      'Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.'
+    pousser(
+      () =>
+            'Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.'
     );
   } else {
-    lignes.push('| Tâche | Revendiquée par | Issue | Statut |');
-    lignes.push('| --- | --- | --- | --- |');
+    // Deux lignes d'en-tête qui ne lisent rien : comparées.
+    pousser(() => '| Tâche | Revendiquée par | Issue | Statut |');
+    pousser(() => '| --- | --- | --- | --- |');
     for (const t of enVol) {
       const issue = (t as unknown as { issue?: number | null }).issue ?? null;
-      lignes.push(
-        `| ${t.id} — ${t.titre} | ${revendiqueursDe(t).join(', ')} | ${issue === null ? '—' : '#' + issue} | \`${t.statut}\` |`
+      // `revendiqueursDe` lit `forge.revendications()` : la provenance est attribuée à la ligne.
+      pousser(
+        () =>
+          `| ${t.id} — ${t.titre} | ${revendiqueursDe(t).join(', ')} | ${issue === null ? '—' : '#' + issue} | \`${t.statut}\` |`
       );
     }
   }
@@ -580,15 +638,18 @@ if (!forge.githubLu()) {
     return LIVREE.has(t.statut) && issue !== null && forge.revendications().has(issue);
   });
   if (forge.githubLu() && perimeesLabel.length > 0) {
-    lignes.push(
-      `⚠️ **${perimeesLabel.length} revendication(s) périmée(s)** — ${perimeesLabel.map((t) => t.id).join(', ')} : leur issue porte encore un label \`owner:\` alors que la tâche est livrée. \`pnpm lot:cloture\` écrit \`docs/tasks.json\` mais n’efface pas les labels ; la dette appartient à GOV-012.`
-    );
+    pousser(() => {
+      // La lecture est RAPPELÉE dans la ligne : `perimeesLabel` a été calculé au-dessus, donc la
+      // provenance ne serait attribuée qu'à la rubrique, et cette ligne — qui varie avec la forge
+      // — passerait pour comparable. Elle rougirait à chaque label `owner:` périmé.
+      forge.revendications();
+      return `⚠️ **${perimeesLabel.length} revendication(s) périmée(s)** — ${perimeesLabel.map((t) => t.id).join(', ')} : leur issue porte encore un label \`owner:\` alors que la tâche est livrée. \`pnpm lot:cloture\` écrit \`docs/tasks.json\` mais n’efface pas les labels ; la dette appartient à GOV-012.`
+    });
     lignes.push('');
   }
   if (perimees.length > 0) {
-    lignes.push(
-      `⚠️ ${perimees.length} tâche(s) livrée(s) sans \`owner\` consolidé dans \`docs/tasks.json\`.`
-    );
+    // Ne lit QUE `docs/tasks.json` : déterministe, donc comparée.
+    pousser(() => `⚠️ ${perimees.length} tâche(s) livrée(s) sans \`owner\` consolidé dans \`docs/tasks.json\`.`);
     lignes.push('');
   }
 }
@@ -1006,6 +1067,10 @@ export const FAMILLES = [
   'ligne_de_reprise_dupliquee',
   'fin_de_ligne_non_lf',
   'structure_dans_une_exemption',
+  // GOV-090 — le CONTENU d'une ligne exemptée est libre ; le NOMBRE de lignes de sa rubrique
+  // ne l'est pas. Sans cette famille, une ligne ajoutée à la main dans une rubrique exemptée
+  // décalerait la comparaison positionnelle et se lirait comme une divergence de contenu.
+  'rubrique_exemptee_deformee',
 ] as const;
 
 export type Famille = (typeof FAMILLES)[number];
@@ -1044,9 +1109,20 @@ interface Etage {
 function comparer(
   attendu: string,
   surDisque: string
-): { ecarts: Ecart[]; rubriques: Etage; reprise: Etage; mesuresConfrontees: string[] } {
+): {
+  ecarts: Ecart[];
+  rubriques: Etage;
+  reprise: Etage;
+  mesuresConfrontees: string[];
+  lignesDansExemptees: { comparees: number };
+  rubriquesNonConverties: string[];
+} {
   const ecarts: Ecart[] = [];
   const rubriques: Etage = { comparees: 0, exemptees: [] };
+  /** Les lignes COMPARÉES à l'intérieur d'une rubrique exemptée — le gain de GOV-090, compté. */
+  const lignesDansExemptees = { comparees: 0 };
+  /** Les rubriques exemptées dont toutes les lignes n'ont pas encore de provenance. */
+  const rubriquesNonConverties: string[] = [];
   const reprise: Etage = { comparees: 0, exemptees: [] };
   const mesuresConfrontees: string[] = [];
 
@@ -1153,6 +1229,45 @@ function comparer(
     if (motif !== null) {
       rubriques.exemptees.push([r.titre, motif]);
       if (surPlace) contenir(`rubrique « ${r.titre} »`, surPlace.corps);
+      // ── GOV-090 : DANS une rubrique exemptée, les lignes qui ne lisent RIEN sont comparées ──
+      //
+      // REQ-GOV-032 exige la comparaison « d'un seul octet ». Exempter la rubrique ENTIÈRE parce
+      // qu'UNE de ses lignes touche la forge laissait libre tout le reste : la doctrine de
+      // « Revendications », 450 caractères qui ne lisent rien, pouvait être réécrite à la main et
+      // `--verifier` restait VERT. Le générateur attribue désormais ses lectures à la LIGNE
+      // (`pousser`), comme il le faisait déjà pour le bloc de reprise.
+      //
+      // ⚠️ LA CONVERSION EST RUBRIQUE PAR RUBRIQUE, ET LE SENS DE DÉFAILLANCE EST CHOISI.
+      // Une rubrique dont une seule ligne n'a PAS de provenance enregistrée n'est pas convertie :
+      // on la laisse entièrement exemptée. Comparer à l'aveugle une ligne qui affiche la forge
+      // sans l'avoir déclarée ferait rougir le dépôt à chaque PR ouverte — un faux rouge
+      // quotidien se fait désarmer en un jour, et on aurait perdu la garde ET le temps.
+      // Le vert IMPRIME les deux populations : ce qui est converti, et ce qui ne l'est pas.
+      if (surPlace) {
+        const lA = r.corps.split('\n');
+        const lD = surPlace.corps.split('\n');
+        // Une ligne VIDE est de la structure, pas de la prose : elle n'a aucune provenance à
+        // déclarer et se compare toujours. L'exiger aurait rendu toute rubrique non convertie.
+        const convertie = lA.every((l) => l === '' || sourcesDesLignes.has(l));
+        if (!convertie) {
+          rubriquesNonConverties.push(r.titre);
+        } else if (lA.length !== lD.length) {
+          ecarts.push({
+            famille: 'rubrique_exemptee_deformee',
+            message: `rubrique « ${r.titre} » : la vue sur le disque porte ${lD.length} ligne(s), ses sources en produisent ${lA.length}. Le CONTENU d'une ligne exemptée est libre ; leur NOMBRE ne l'est pas.`,
+          });
+        } else {
+          lA.forEach((ligne, k) => {
+            if (exemption(sourcesDesLignes.get(ligne)) !== null) return;
+            lignesDansExemptees.comparees += 1;
+            if (ligne === lD[k]) return;
+            ecarts.push({
+              famille: 'vue_perimee',
+              message: `rubrique « ${r.titre} », ligne ${k + 1} — elle ne lit RIEN de la forge, donc elle est comparée : la vue dit « ${(lD[k] ?? '').slice(0, 120)} », ses sources produisent « ${ligne.slice(0, 120)} »`,
+            });
+          });
+        }
+      }
       continue;
     }
     rubriques.comparees += 1;
@@ -1280,7 +1395,7 @@ function comparer(
     }
   }
 
-  return { ecarts, rubriques, reprise, mesuresConfrontees };
+  return { ecarts, rubriques, reprise, mesuresConfrontees, lignesDansExemptees, rubriquesNonConverties };
 }
 
 // ── les deux modes ───────────────────────────────────────────────────────────
@@ -1305,7 +1420,14 @@ if (!LANCE_EN_SCRIPT) {
     );
     process.exitCode = 1;
   } else {
-    const { ecarts, rubriques, reprise, mesuresConfrontees } = comparer(
+    const {
+      ecarts,
+      rubriques,
+      reprise,
+      mesuresConfrontees,
+      lignesDansExemptees,
+      rubriquesNonConverties,
+    } = comparer(
       rendu,
       readFileSync(CHEMIN_VUE, 'utf8')
     );
@@ -1329,8 +1451,20 @@ if (!LANCE_EN_SCRIPT) {
         `✅ plan-state:verifier — ${CHEMIN_VUE} est égal à ce que ses sources produisent : ` +
           `${rubriques.comparees} rubrique(s) comparée(s) octet par octet sur ${rubriques.comparees + rubriques.exemptees.length}, ` +
           `${reprise.comparees} ligne(s) du bloc de reprise CONFRONTÉES sur ${reprise.comparees + reprise.exemptees.length}, ` +
-          `${mesuresConfrontees.length}/${MESURES_ATTENDUES.length} mesure(s) du domaine CONFRONTÉES.`
+          `${mesuresConfrontees.length}/${MESURES_ATTENDUES.length} mesure(s) du domaine CONFRONTÉES, ` +
+          `${lignesDansExemptees.comparees} ligne(s) COMPARÉE(S) À L'INTÉRIEUR des rubriques exemptées ` +
+          `(GOV-090 — elles ne lisent rien de la forge).`
       );
+      // LE COMPLÉMENT EST NOMMÉ, JAMAIS SOUS-ENTENDU : une rubrique non convertie est
+      // entièrement libre, et le vert doit le DIRE plutôt que de laisser croire à une
+      // couverture complète. C'est la même règle que le « périmètre dit, pas supposé » de
+      // `gov:trace` (GOV-043).
+      if (rubriquesNonConverties.length > 0) {
+        console.log(
+          `   NON CONVERTI — rubriques exemptées dont AUCUNE ligne n'est comparée (leurs lignes ` +
+            `n'ont pas encore de provenance) : ${rubriquesNonConverties.map((t) => `« ${t} »`).join(' · ')}.`
+        );
+      }
       const rendreExemptions = (quoi: string, l: [string, string][]) =>
         l.length
           ? `   NON COMPARÉ — ${quoi} : ${l.map(([r, motif]) => `« ${r} » (${motif})`).join(' · ')}.`

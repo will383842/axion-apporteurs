@@ -359,14 +359,31 @@ Une PR qui modifie un chemin réservé **sans porter le label du poste** rougit 
 le code de poste, lui, va dans le champ `Auteur:`. **Ce tableau est lu par le script**, ligne par ligne : le
 modifier change ce que la garde exige.
 
-Les six premières lignes sont exactement les six lignes de `docs/CONVENTIONS.md` §8, sans ajout ni retrait. La **septième** est venue avec `partners/ADR-0010` : elle ne vient pas des `CONVENTIONS`,
-et elle est écrite ici parce qu'un registre qui peut ABSOUDRE une gate bloquante doit passer
-devant un relecteur comme une décision, pas comme une ligne de configuration :
+> ⚠️ **Aucune virgule dans la première colonne hors d'une liste de chemins.** Elle sépare les
+> chemins : une virgule posée dans une parenthèse explicative coupait la cellule en deux faux
+> chemins, et le vrai chemin cessait d'être gardé SANS que rien ne rougisse. Mesuré le 2026-09-22
+> en écrivant les deux lignes de `partners/ADR-0018`. Le lecteur retire désormais les parenthèses
+> AVANT de découper (`cheminsReserves`), et un témoin le tient — mais la règle reste : une
+> parenthèse explicative se ponctue au tiret.
+
+**CE TABLEAU EST CELUI DES SOURCES, ET C'EST `partners/ADR-0018` QUI L'A TRANCHÉ (2026-09-22).**
+Un label répond à une seule question : *qui répond de ce texte ?* **Personne ne répond d'une vue
+dérivée** — une vue a un générateur et un `--verifier`, et sa dérive est déjà un rouge nommé
+(REQ-GOV-032). `docs/PLAN-STATE.md` et `docs/REQUIREMENTS.md` y figuraient pourtant, et
+`docs/requirements.json` — la **source** des 355 exigences — n'y figurait pas : le tableau
+protégeait deux ombres et laissait deux corps ouverts. Les deux vues sortent, les deux sources
+entrent ; l'ADR porte la mesure et ce que le geste ne règle PAS.
+
+Les lignes A01 suivent `docs/CONVENTIONS.md` §8, aux deux mouvements de l'ADR près. La ligne
+`config/exemptions-corps-publie.json` est venue avec `partners/ADR-0010` : elle ne vient pas des
+`CONVENTIONS`, et elle est écrite ici parce qu'un registre qui peut ABSOUDRE une gate bloquante
+doit passer devant un relecteur comme une décision, pas comme une ligne de configuration :
 
 | Chemin réservé | Poste | Label exigé | Où la règle est écrite |
 | --- | --- | --- | --- |
-| `docs/PLAN-STATE.md` (**dérivé**) | A01 commite, `pnpm plan-state:build` produit | `role:gardien-spec` | `docs/CONVENTIONS.md` §8 |
-| `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | A01 | `role:gardien-spec` | `docs/CONVENTIONS.md` §8, lot dédié avec `--settings` surchargé |
+| `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | A01 | `role:gardien-spec` | `docs/CONVENTIONS.md` §8, lot dédié avec `--settings` surchargé |
+| `docs/requirements.json` (**source** — `docs/REQUIREMENTS.md` en est la VUE — non réservée) | A01 | `role:gardien-spec` | `partners/ADR-0018` ; `docs/CONVENTIONS.md` §8 |
+| `docs/gates.json` (**source** — `docs/GATES.md` en est la VUE — non réservée) | A01, par le verbe `hors-depot/ajouter-entree.mjs` | `role:gardien-spec` | `partners/ADR-0018` ; `.claude/settings.json` porte déjà `deny` sur `Write` et `Edit` de ce fichier |
 | `docs/tasks.json` | A01 (composition), jamais un développeur | `role:gardien-spec` | `docs/CONVENTIONS.md` §8 |
 | `prisma/**`, `packages/contracts/**` | A02, approbation bloquante | `schema` | `docs/CONVENTIONS.md` §5 et §8 ; `.github/CODEOWNERS` |
 | `docs/adr/**` | A02 accepte, A03 indexe | `role:architecte` | `docs/CONVENTIONS.md` §8 |

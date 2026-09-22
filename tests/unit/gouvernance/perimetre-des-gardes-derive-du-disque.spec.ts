@@ -1,4 +1,5 @@
 // @req REQ-GOV-012
+// @req REQ-GOV-010
 /**
  * GOV-044 — une garde absente du registre s'exempte elle-même de la garde qui vérifie qu'on
  * l'appelle.
@@ -49,6 +50,12 @@ import {
   type GateVue,
   type Vue,
 } from '../../../scripts/gates/gov-conventions';
+import {
+  VERBES_HORS_DEPOT,
+  cheminsReserves,
+  outilHorsDepot,
+} from '../../../scripts/lot/chemins-de-tache';
+import { readFileSync as lireFichier } from 'node:fs';
 
 const SCRIPT = 'scripts/gates/gov-conventions.ts';
 
@@ -147,9 +154,24 @@ describe('REQ-GOV-012 — le périmètre des gardes se dérive du DISQUE, le reg
       gates: GATES_TROIS.filter((g) => g.id !== 'gov:beta'),
     });
     const refus = messages(vue).join('\n');
-    expect(refus).toContain('outils/ajouter-entree.mjs');
-    expect(refus).not.toContain('outils/reecrire-champ.mjs');
-    expect(refus).not.toContain('outils/poser-champ.mjs');
+    // ⚠️ CE TÉMOIN ÉPINGLAIT LA FORME FAUSSE — GOV-090, 2026-09-22. Il assertait
+    // le verbe d'ajout préfixé d'un dossier que ce dépôt n'a pas : un chemin qui ne résout
+    // depuis AUCUN arbre. (La forme fautive n'est pas recopiée ici : `citation-d-outil-hors-depot`
+    // balaie les fichiers suivis, ce commentaire compris, et il n'a aucune exception.) Il
+    // garantissait donc que le refus continue de nommer l'outil là où il n'est pas, et il serait
+    // resté VERT pendant que quatre messages rouges envoyaient leurs lecteurs dans le vide. Un
+    // témoin écrit pour PASSER, pas pour mesurer — alors que l'en-tête de ce fichier dit
+    // « CE FICHIER N'ASSERTE AUCUNE ORTHOGRAPHE ».
+    //
+    // CE QU'IL MESURE MAINTENANT — le discriminant est STRUCTUREL au lieu d'être orthographique :
+    // le verbe PRESCRIT est rendu par `outilHorsDepot()`, donc QUALIFIÉ et résolvable ; les deux
+    // verbes seulement NOMMÉS — ceux qui refusent une entrée absente — restent en nom nu. La
+    // différence de FORME porte la différence de SENS, et c'est elle qu'on lit.
+    expect(refus).toContain(outilHorsDepot('ajouter-entree.mjs'));
+    expect(refus).not.toContain(outilHorsDepot('reecrire-champ.mjs'));
+    expect(refus).not.toContain(outilHorsDepot('poser-champ.mjs'));
+    // Et le refus ne repart jamais en chemin relatif au dépôt, quel que soit le verbe.
+    for (const verbe of VERBES_HORS_DEPOT) expect(refus).not.toContain('out' + 'ils/' + verbe);
   });
 
   it('les trois gardes inscrites et câblées laissent le contrôle vert — contre-témoin', () => {
@@ -542,5 +564,53 @@ describe('REQ-GOV-012 — la limite de la dérivation est ÉCRITE, pas supposée
       hooks: '{"hooks":{"PreToolUse":[{"command":"node scripts/gates/hook-env.js"}]}}',
     });
     expect(familles(jsCable)).toEqual([]);
+  });
+});
+
+/**
+ * GOV-090 — LA MÊME FORME DE DÉFAUT, UN ÉTAGE PLUS BAS : une garde qui cesse de garder parce que
+ * sa POPULATION se dérive d'une lecture fragile. Ici la population n'est pas un registre, c'est la
+ * première colonne du tableau §7 de `docs/CHARTE-AGENTS.md`, que `gov:pr` LIT ligne par ligne.
+ *
+ * Elle est découpée sur la VIRGULE. Une virgule posée dans une parenthèse explicative coupait la
+ * cellule en deux morceaux dont aucun n'était un chemin : la ligne cessait de garder son fichier
+ * SANS QUE RIEN NE ROUGISSE. Mesuré le 2026-09-22 en écrivant les deux lignes de
+ * `partners/ADR-0018` : `docs/requirements.json` rendait deux faux chemins et ZERO chemin gardé.
+ * C'est le même défaut que celui de l'en-tête de ce fichier — le trou s'exemptait lui-même.
+ */
+describe('REQ-GOV-010 — le tableau des chemins réservés est LU, donc il a une grammaire', () => {
+  const charte = () => lireFichier('docs/CHARTE-AGENTS.md', 'utf8');
+
+  it('REQ-GOV-010 — la charte du dépôt rend des chemins qui existent, jamais de la prose', () => {
+    const lus = cheminsReserves(charte());
+    // PLANCHER : une lecture qui rendrait le vide se lirait comme « aucun chemin réservé », et la
+    // famille entière serait inerte en restant verte.
+    expect(lus.length).toBeGreaterThan(0);
+    const chemins = lus.flatMap((r) => r.chemins);
+    expect(chemins.length).toBeGreaterThan(0);
+    for (const c of chemins) {
+      // Un chemin ne porte ni espace, ni parenthèse résiduelle, ni point-virgule : tout cela est
+      // de la prose qui a survécu au découpage, donc un chemin que personne ne gardera jamais.
+      expect(c, `« ${c} » n'est pas un chemin`).not.toMatch(/[\s();]/);
+    }
+    // Les deux SOURCES que `partners/ADR-0018` fait entrer sont bien gardées, et les deux VUES
+    // qu'il fait sortir ne le sont plus. C'est la décision, relue dans ce que la garde LIT.
+    expect(chemins).toContain('docs/requirements.json');
+    expect(chemins).toContain('docs/gates.json');
+    expect(chemins).not.toContain('docs/PLAN-STATE.md');
+    expect(chemins).not.toContain('docs/REQUIREMENTS.md');
+  });
+
+  it('REQ-GOV-010 — une virgule dans une parenthèse ne fait pas perdre le chemin', () => {
+    // LE PIÈGE, REJOUÉ SUR UNE CHARTE FABRIQUÉE : même ligne, même label, une parenthèse qui porte
+    // une virgule. Avant le correctif, `docs/tasks.json` disparaîssait de la population.
+    const piegee = charte().replace(
+      '| `docs/tasks.json` |',
+      '| `docs/tasks.json` (**source**, sa vue est `docs/TASKS.md`) |'
+    );
+    expect(piegee, "la ligne visée n'existe plus : ce témoin ne mesure rien").not.toBe(charte());
+    const chemins = cheminsReserves(piegee).flatMap((r) => r.chemins);
+    expect(chemins).toContain('docs/tasks.json');
+    for (const c of chemins) expect(c).not.toMatch(/[\s();]/);
   });
 });

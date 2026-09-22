@@ -71,7 +71,12 @@ import {
 } from '../lot/revues';
 // LE lecteur unique des chemins d'une tâche — `paths` ∪ `tests{}`. Le même que celui du composeur :
 // la garde du LOT et la garde de la PR ne peuvent plus diverger sur ce qu'une tâche déclare toucher.
-import { REGISTRES_APPEND_ONLY, cheminsDeLaTache } from '../lot/chemins-de-tache';
+import {
+  REGISTRES_APPEND_ONLY,
+  cheminsDeLaTache,
+  cheminsReserves,
+  outilHorsDepot,
+} from '../lot/chemins-de-tache';
 
 const CHEMIN_GABARIT = '.github/PULL_REQUEST_TEMPLATE.md';
 const CHEMIN_CODEOWNERS = '.github/CODEOWNERS';
@@ -289,40 +294,6 @@ function postesDeLaCharte(charte: string): { code: string; fiche: string }[] {
   for (const ligne of section(charte, '## 2.', '## 3.').split('\n')) {
     const m = /^\|\s*(A\d{2})\s*\|\s*`([a-z0-9-]+)`\s*\|/.exec(ligne);
     if (m) out.push({ code: m[1]!, fiche: m[2]! });
-  }
-  return out;
-}
-
-/**
- * Le tableau des chemins réservés du §7, LU dans la charte : la règle et sa vue sont le même
- * texte. Une ligne dont la colonne « label » vaut `—` est une ligne qu'AUCUN label n'ouvre
- * (`.claude/**` : aucun agent en session n'a le droit de l'écrire) ; elle ne se contrôle pas ici.
- * Les chemins du schéma portent le label `schema` : ils ont leur propre famille, avec
- * l'approbation qui va avec, et sont donc écartés de cette boucle.
- */
-function cheminsReserves(charte: string): { chemins: string[]; label: string }[] {
-  const out: { chemins: string[]; label: string }[] = [];
-  for (const ligne of section(charte, '## 7.', '## 8.').split('\n')) {
-    if (!ligne.startsWith('|')) continue;
-    const cellules = ligne
-      .split('|')
-      .slice(1, -1)
-      .map((c) => c.trim());
-    if (cellules.length < 4) continue;
-    const label = cellules[2]!.replace(/`/g, '').trim();
-    if (!/^(role:[a-z-]+|schema)$/.test(label)) continue;
-    if (label === 'schema') continue;
-    const chemins = cellules[0]!
-      .split(',')
-      .map((c) =>
-        c
-          .replace(/`/g, '')
-          .replace(/\(.*\)/g, '')
-          .replace(/\*\*/g, '')
-          .trim()
-      )
-      .filter(Boolean);
-    if (chemins.length > 0) out.push({ chemins, label });
   }
   return out;
 }
@@ -665,7 +636,7 @@ function controler(depot: Depot, pr: Pr | null): Faute[] {
             `${orphelins.join(', ')}. Tâche(s) citée(s) : ${tachesCitees.map((t) => t.id).join(', ')} — ` +
             `chemins déclarés (\`paths\` ∪ \`tests{}\`) : ${declares.join(', ') || '(aucun)'}. ` +
             `Mesuré le 2026-09-13 sur la PR 31 : dix fichiers dans ce cas, dont une spécification ` +
-            `promise par DEUX \`tests{}\`. Ajoute le chemin à la tâche par \`outils/ajouter-path.mjs\`, ` +
+            `promise par DEUX \`tests{}\`. Ajoute le chemin à la tâche par ${outilHorsDepot('ajouter-path.mjs')}, ` +
             `ou sors le fichier du périmètre de cette PR — un fichier écrit hors de ce qu'on a ` +
             `déclaré écrire, c'est un lot dont la disjonction ne veut plus rien dire.`
         );
@@ -1371,6 +1342,15 @@ if (process.argv.includes('--prove')) {
     // racine rend la PR élevée (décisions de l'orchestrateur du 2026-09-18 sur GOV-077) — ce sont
     // les témoins `AU_MILIEU` qui le prouvent.
     fichiers: cheminsDe('QA-T01').filter((f) => !f.startsWith(DOSSIER_CI) && f.includes('/')),
+    // ⚠️ LABEL AJOUTÉ PAR GOV-090 — RESSERREMENT ASSUMÉ, PAS UN AJUSTEMENT POUR TAIRE UN ROUGE.
+    // `partners/ADR-0018` fait entrer `docs/gates.json` au tableau du §7 : c'est une SOURCE
+    // (`docs/GATES.md` en est la vue), `.claude/settings.json` la met déjà en `deny` sur `Write`
+    // et `Edit`, et une de ses entrées peut porter `horsCi`, c'est-à-dire DISPENSER une garde de
+    // tourner en CI. QA-T01 la déclare dans ses `paths`, donc cette fixture la touche, donc elle
+    // doit porter le label — comme le devra toute PR réelle qui verse une entrée de registre.
+    // Elle reste ORDINAIRE : `role:gardien-spec` n'entre dans aucun des trois signaux de risque,
+    // et les témoins à deux lentilles qui suivent le prouvent.
+    labels: ['role:gardien-spec'],
     revues: [
       revue('A09 · exactitude\nVerdict: accepte\nles REQ citees sont couvertes'),
       revue('A09 · securite\nVerdict: accepte\nrien a signaler'),
@@ -1526,6 +1506,26 @@ if (process.argv.includes('--prove')) {
     {
       famille: 'fichier_reserve_sans_label',
       defaut: () => [copieDepot(), { ...copiePr(PR_RESERVE), labels: [] }],
+    },
+    {
+      // LA GRAMMAIRE DE LA PREMIÈRE COLONNE, et c'est la garde qui se désarme elle-même —
+      // GOV-090, mesuré le 2026-09-22 en écrivant les deux lignes de `partners/ADR-0018`.
+      // La virgule sépare les chemins ; une virgule posée DANS une parenthèse explicative
+      // coupait la cellule en deux morceaux dont aucun n'était un chemin, et la ligne cessait
+      // de garder son fichier SANS QUE RIEN NE ROUGISSE. Le tableau est lu par le script : il a
+      // une grammaire, et une grammaire sans témoin se casse à la première écriture.
+      // Ce témoin écrit la ligne AVEC la virgule piégée et exige que le chemin reste gardé.
+      famille: 'fichier_reserve_sans_label',
+      defaut: () => [
+        {
+          ...copieDepot(),
+          charte: depot.charte.replace(
+            '| `docs/tasks.json` |',
+            '| `docs/tasks.json` (**source** — sa vue est `docs/TASKS.md`, non réservée) |'
+          ),
+        },
+        { ...copiePr(PR_RESERVE), labels: [] },
+      ],
     },
     {
       // GOV-056 (2) — LE DÉFAUT MESURÉ, DANS SA PLUS PETITE FORME. La PR 31 a modifié

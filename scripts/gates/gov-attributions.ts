@@ -1180,7 +1180,7 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   // fichier ». Leur `tests{}` promettait `preseance.spec.ts`, `affirmations-verifiees.spec.ts`,
   // `adr-index-derive.spec.ts`, `fiches-tiers.spec.ts` — un NOM NU, qui ne résout aucun fichier du
   // dépôt : les quatre spécifications passaient pour portées par personne, et les quatre mentions
-  // pour orphelines. Les promesses portent désormais le chemin complet (`outils/reecrire-champ.mjs`),
+  // pour orphelines. Les promesses portent désormais le chemin complet (`hors-depot/reecrire-champ.mjs`),
   // et les sites se referment d'eux-mêmes.
   //   - GOV-002 · tests/unit/gouvernance/preseance.spec.ts            (n: 2)
   //   - GOV-004 · tests/unit/gouvernance/affirmations-verifiees.spec.ts (n: 1)
