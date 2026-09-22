@@ -191,6 +191,42 @@ export const LIMITE_DE_LA_FORME =
   "pleine chasse ou en homoglyphes ; portée par le NOM d'un fichier. Cette liste n'est pas close.";
 
 /**
+ * DE QUI LES NUMÉROS PUBLICS SONT CHERCHÉS — la SOURCE UNIQUE de cette portée : imprimée dans
+ * chaque vert, citée sans recopie par le `verifie` de `docs/gates.json`, et son texte attendu est
+ * écrit dans le banc d'essai.
+ *
+ * 🔴 POURQUOI ELLE EXISTE, ET CE QUE SON ABSENCE A COÛTÉ. Mesuré le 2026-09-22 sur `t/int-t09` :
+ * la garde rendait **452 défauts, dont 448 portaient sur des entreprises TIERCES** — DANONE, la
+ * SNCF, EDF, des communes — rendues par l'API publique `recherche-entreprises` et enregistrées
+ * comme fixtures (RM-03 : une fixture vient du producteur réel). **4 seulement étaient justes** :
+ * le SIREN et le SIRET de l'entité, en dur dans un fichier suivi d'un dépôt PUBLIC.
+ *
+ * Le symptôme dit tout : **la garde demandait de déplacer le SIREN de DANONE dans
+ * `config/entite.json`**. Un registre d'entité sommé de porter l'identité d'un tiers est la preuve
+ * que le prédicat ne disait pas ce que la règle dit. `FORME_SIREN` refusait un numéro parce qu'il
+ * SUIT le mot `siren`/`siret`, sans regarder DE QUI il s'agit — alors que le seul motif écrit pour
+ * chercher un numéro public dans un fichier de code est RM-01, source unique de l'identité de LA
+ * SOCIÉTÉ (exclusion (1) de `coordonneesDe`). Le motif parlait des nôtres, le code attrapait tout
+ * le monde.
+ *
+ * 🔑 CE QUI SE RÈGLE ICI EST UN PRÉDICAT, PAS UN PÉRIMÈTRE DE FICHIERS. Reclasser la fixture —
+ * la sortir de `estCode` — était la réponse qui vient en premier et la pire : `valeur_recopiee`
+ * est gardée par le MÊME `estCode`, si bien que NOS identifiants seraient redevenus légitimes
+ * dans une fixture. Le remède aurait rouvert exactement la porte que la garde existe pour tenir.
+ * La distinction se lit donc sur la VALEUR, et « les nôtres » se DÉRIVE du registre.
+ */
+export const PORTEE_DES_NUMEROS_PUBLICS =
+  'Portée déclarée : un IBAN et un BIC sont des SECRETS, refusés dans TOUT fichier suivi, quel ' +
+  "qu'en soit le porteur — divulgués, ils ne se reprennent pas. Un SIREN, un SIRET et un numéro " +
+  'de TVA sont PUBLICS : ils ne sont refusés que dans un fichier de CODE, et seulement si ce sont ' +
+  "ceux de l'entité ; la liste des nôtres est DÉRIVÉE de `config/entite.json` (RM-01), jamais " +
+  "devinée ni recopiée, et c'est la même que celle de `valeur_recopiee`. Le numéro d'un TIERS " +
+  "enregistré depuis une API publique n'est donc pas un défaut : c'est la donnée LUE, et ce dépôt " +
+  "n'a pas de source unique de l'identité d'un tiers. Conséquence à connaître : un registre dont " +
+  'tous les identifiants valent la sentinelle ne fait chercher AUCUN numéro public — le compte ' +
+  'imprimé ci-dessus est ce qui rend cette cécité visible.';
+
+/**
  * La première ligne d'un POINTEUR Git LFS, sous les trois en-têtes que Git LFS accepte. Ancrée au
  * début du fichier : une documentation qui CITE cette ligne plus bas reste un texte lu.
  */
@@ -644,7 +680,65 @@ function coordonneeLegitimeAuRegistre(_valeur: string, formeEstIban: boolean): b
   return !formeEstIban;
 }
 
-export function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = ''): string[] {
+/**
+ * « LES NÔTRES » — les identifiants que le registre ARRÊTE, et la SEULE liste qui les dit.
+ *
+ * Elle est lue par les DEUX familles qui jugent une valeur de l'entité : `valeur_recopiee`, qui
+ * refuse qu'un fichier de code la RETAPE, et l'arme publique de `coordonnee_en_clair`, qui ne
+ * refuse un SIREN, un SIRET ou une TVA que s'ils sont les nôtres. Une seule liste, une seule
+ * façon de la lire (RM-01) : sans quoi l'une absoudrait ce que l'autre refuse, et la divergence
+ * ne se verrait que le jour où elle coûte.
+ *
+ * Les champs à la sentinelle et les valeurs trop courtes sont écartés : il n'y a rien à protéger
+ * d'une valeur que le registre n'a pas encore arrêtée, et un fragment court ferait rougir des
+ * fichiers au hasard — c'est-à-dire ferait désarmer la garde.
+ */
+export function identifiantsDuRegistre(
+  registre: Registre
+): { champ: (typeof CHAMPS)[number]; v: string }[] {
+  return CHAMPS.filter((c) => c.identifiant)
+    .map((c) => ({ champ: c, v: valeur(registre, c.cle) }))
+    .filter((x): x is { champ: (typeof CHAMPS)[number]; v: string } => typeof x.v === 'string')
+    .filter((x) => !estSentinelle(x.v) && x.v.length >= 6);
+}
+
+/**
+ * Ce numéro est-il L'UN DES NÔTRES ? Par CONTENANCE, et non par égalité : `20407031100017`
+ * contient `204070311` — un SIRET porte le SIREN de son entité, et c'est la forme sous laquelle
+ * un registre d'entreprises rend nos propres coordonnées. C'est aussi, exactement, la façon dont
+ * `valeur_recopiee` compare (`contenu.includes(v)`) : les deux familles lisent la même liste de
+ * la même façon, ou elles finissent par ne plus dire la même chose.
+ */
+export function estUnDesNotres(numero: string, notres: readonly string[]): boolean {
+  const n = numero.toUpperCase();
+  return notres.some((v) => n.includes(v.toUpperCase()));
+}
+
+export function coordonneesDe(contenu: string, dansDuCode: false, chemin?: string): string[];
+export function coordonneesDe(
+  contenu: string,
+  dansDuCode: boolean,
+  chemin: string,
+  identifiantsDeLEntite: readonly string[]
+): string[];
+export function coordonneesDe(
+  contenu: string,
+  dansDuCode: boolean,
+  chemin = '',
+  identifiantsDeLEntite?: readonly string[]
+): string[] {
+  // Une liste absente rendrait un vert SILENCIEUX sur nos propres numéros, dans une garde de
+  // publication : le sens dangereux de l'erreur. Elle lève, comme `ibanAvecSeparateur` lève sur
+  // une entrée qu'elle ne sait pas juger — une réparation silencieuse ferait passer le défaut
+  // pour un succès. Le type l'interdit déjà à la compilation ; ceci tient le reste.
+  if (dansDuCode && identifiantsDeLEntite === undefined) {
+    throw new Error(
+      'coordonneesDe attend la liste des identifiants de l’entité pour juger du CODE : sans elle ' +
+        'elle ne sait pas distinguer un numéro PUBLIC qui est le nôtre — refusé — de celui d’un ' +
+        'TIERS — lu, donc légitime. Passe `identifiantsDuRegistre(registre).map((x) => x.v)`.'
+    );
+  }
+  const notres = identifiantsDeLEntite ?? [];
   const trouvees: string[] = [];
   const texte = normaliserEspaces(contenu);
   const formes = dansDuCode
@@ -662,6 +756,17 @@ export function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = '')
         // La clé de contrôle, et non une heuristique de plus : c'est elle qui sépare un IBAN
         // d'un identifiant hexadécimal dont les deux premières lettres font un code pays.
         if (!cleIbanValide(brut)) continue;
+      }
+      // 🔑 « LES NÔTRES » CONTRE « LES TIERS » — `PORTEE_DES_NUMEROS_PUBLICS`.
+      // Un numéro PUBLIC n'est refusé que s'il est LE NÔTRE. Le motif de ce refus est RM-01,
+      // source unique de l'identité de la Société : il n'existe pas de source unique de
+      // l'identité d'un tiers dans ce dépôt, donc rien à dériver, donc rien à refuser. Le SIREN
+      // de DANONE enregistré par un mandataire d'API publique est la donnée LUE, pas une
+      // identité recopiée — et lui réclamer une place dans `config/entite.json` était le
+      // symptôme. Un IBAN, lui, ne passe pas par ici : c'est un SECRET, refusé quel qu'en soit
+      // le porteur, et c'est la moitié de la garde qu'on oublie.
+      if ((forme === FORME_SIREN || forme === FORME_TVA_FR) && !estUnDesNotres(brut, notres)) {
+        continue;
       }
       // 🔴 L'EXCUSE « ÇA RESSEMBLE À UN EXEMPLE » NE VAUT QUE DANS UN FICHIER DE TEST.
       // Elle s'appliquait partout, et `estExemplePlausible` rend `true` dès SIX chiffres
@@ -774,10 +879,11 @@ export function controler(u: Univers): Faute[] {
   }
 
   // ── Ce qui fuit dans les fichiers ───────────────────────────────────────────────────────────
-  const identifiants = CHAMPS.filter((c) => c.identifiant)
-    .map((c) => ({ champ: c, v: valeur(u.registre, c.cle) }))
-    .filter((x): x is { champ: (typeof CHAMPS)[number]; v: string } => typeof x.v === 'string')
-    .filter((x) => !estSentinelle(x.v) && x.v.length >= 6);
+  // UNE seule liste pour les deux familles qui jugent une valeur de l'entité (RM-01) : celle qui
+  // refuse la RECOPIE, et l'arme publique de `coordonnee_en_clair` qui ne refuse un numéro public
+  // que s'il est le nôtre.
+  const identifiants = identifiantsDuRegistre(u.registre);
+  const notres = identifiants.map((x) => x.v);
 
   for (const fichier of u.fichiers) {
     // Ce que la garde ne sait pas lire EN ENTIER, elle ne le juge pas sur ses seules suites ASCII :
@@ -838,7 +944,7 @@ export function controler(u: Univers): Faute[] {
     const exemptDeCoordonnee = estExemptDe(fichier.chemin, 'coordonnee');
     for (const coordonnee of exemptDeCoordonnee
       ? []
-      : coordonneesDe(fichier.contenu, code, fichier.chemin)) {
+      : coordonneesDe(fichier.contenu, code, fichier.chemin, notres)) {
       ajouter(
         'coordonnee_en_clair',
         `${fichier.chemin} — coordonnée en clair « ${coordonnee} ». Ces valeurs vivent dans ` +
@@ -2633,24 +2739,56 @@ function prouver(): number {
       }),
     });
   }
+  // ── « LES NÔTRES » CONTRE « LES TIERS » — LES DEUX FACES, DANS LE MODE DE PREUVE ──────────
+  //
+  // 🔴 CES DEUX TÉMOINS ONT CHANGÉ DE PORTEUR LE 2026-09-22, ET C'EST LE CORRECTIF LUI-MÊME.
+  // Ils exerçaient `TVA_TEMOIN_TIERS` et `SIREN_TEMOIN_TIERS` — les numéros d'un TIERS — et
+  // tenaient donc vert, à l'étape même de Gate A, le défaut mesuré sur `t/int-t09` : 448 refus
+  // sur 452 portaient sur des entreprises tierces rendues par une API publique. Le motif écrit
+  // de ce refus est RM-01, source unique de l'identité de LA SOCIÉTÉ : le porteur du témoin doit
+  // donc être NOUS. Les numéros de tiers, eux, deviennent des CONTRE-témoins, plus bas.
   TEMOINS.push({
-    // La TVA d'un TIERS, dans du CODE : elle doit être lue, jamais portée.
+    // NOTRE TVA, dans du CODE : elle doit être lue, jamais portée.
     famille: 'coordonnee_en_clair',
     univers: muter((u) => {
       u.fichiers.push({
-        chemin: 'src/facturation/fournisseur.ts',
-        contenu: `export const TVA_FOURNISSEUR = '${TVA_TEMOIN_TIERS}';\n`,
+        chemin: 'src/facturation/entete.ts',
+        contenu: `export const TVA_EMETTEUR = '${REGISTRE_TEMOIN.entite.tvaIntracommunautaire}';\n`,
       });
     }),
   });
   TEMOINS.push({
-    // Le SIREN d'un TIERS, dans du CODE. Le mot-clé est exigé : neuf chiffres nus sont trop
-    // souvent autre chose, et une forme nue produirait le bruit qui fait désarmer une garde.
+    // NOTRE SIREN, dans du CODE. Le mot-clé est exigé pour cette famille : neuf chiffres nus sont
+    // trop souvent autre chose, et une forme nue produirait le bruit qui fait désarmer une garde.
+    // Le numéro nu reste attrapé par `valeur_recopiee`, qui compare au registre sans mot-clé.
     famille: 'coordonnee_en_clair',
     univers: muter((u) => {
       u.fichiers.push({
         chemin: 'src/apporteur/structure.ts',
-        contenu: `export const structure = { siren: '${SIREN_TEMOIN_TIERS}' };\n`,
+        contenu: `export const structure = { siren: '${REGISTRE_TEMOIN.entite.siren}' };\n`,
+      });
+    }),
+  });
+  TEMOINS.push({
+    // ⚠️ LA CONTRAINTE ABSOLUE DU CORRECTIF, TENUE PAR UN TÉMOIN : nos propres identifiants
+    // n'ont rien à faire en dur MÊME DANS UNE FIXTURE. Un dépôt PUBLIC ne fait aucune différence
+    // entre un fichier de test et un autre. C'est le seul des 24 fichiers mesurés le 2026-09-22
+    // où la garde avait raison, et c'est ce que le remède ne devait surtout pas taire.
+    famille: 'valeur_recopiee',
+    univers: muter((u) => {
+      u.fichiers.push({
+        chemin: 'tests/fixtures/recherche-entreprises/21-organisme-de-formation.json',
+        contenu: `{ "siren": "${REGISTRE_TEMOIN.entite.siren}", "siret": "${REGISTRE_TEMOIN.entite.siret}" }\n`,
+      });
+    }),
+  });
+  TEMOINS.push({
+    // La même fixture, la même famille publique : notre SIRET, qui CONTIENT notre SIREN.
+    famille: 'coordonnee_en_clair',
+    univers: muter((u) => {
+      u.fichiers.push({
+        chemin: 'tests/fixtures/recherche-entreprises/21-organisme-de-formation.json',
+        contenu: `{ "siret": "${REGISTRE_TEMOIN.entite.siret}" }\n`,
       });
     }),
   });
@@ -2721,6 +2859,28 @@ function prouver(): number {
         u.fichiers.push({
           chemin: 'docs/spec/tiers.md',
           contenu: `Le fournisseur porte la TVA ${TVA_TEMOIN_TIERS} et le SIREN ${SIREN_TEMOIN_TIERS}.\n`,
+        });
+      }),
+    },
+    {
+      // LA SECONDE FACE, et elle compte autant que la première : sans elle, on aurait ouvert une
+      // porte au lieu d'affiner une règle. Un mandataire d'API publique ENREGISTRE ce que le
+      // tiers lui rend ; c'est la donnée LUE. Il n'existe pas de source unique de l'identité de
+      // DANONE dans ce dépôt — et c'est bien ce que la garde réclamait avant le 2026-09-22.
+      quoi: 'le SIREN et la TVA d’un TIERS dans un fichier de CODE — la donnée lue, pas une identité recopiée',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'src/server/integrations/recherche-entreprises/cas-enregistres.ts',
+          contenu: `export const cas = { siren: '${SIREN_TEMOIN_TIERS}', tva: '${TVA_TEMOIN_TIERS}' };\n`,
+        });
+      }),
+    },
+    {
+      quoi: 'le SIREN d’un TIERS enregistré comme FIXTURE depuis le producteur réel (RM-03)',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'tests/fixtures/recherche-entreprises/01-raison-sociale-exacte.json',
+          contenu: `{ "siren": "${SIREN_TEMOIN_TIERS}", "tva": "${TVA_TEMOIN_TIERS}" }\n`,
         });
       }),
     },
@@ -2813,7 +2973,9 @@ function prouver(): number {
   console.log(
     `   ${Object.keys(IBANS_TEMOINS_ETRANGERS).length} IBAN NON français rougissent aussi ` +
       `(${Object.keys(IBANS_TEMOINS_ETRANGERS).join(', ')}) : une fixture mono-pays ne prouve rien ` +
-      `de \`PAYS_ISO\`. Une TVA et un SIREN de TIERS rougissent dans du CODE, et restent verts en prose.`
+      `de \`PAYS_ISO\`. NOTRE TVA et NOTRE SIREN rougissent dans du CODE — fixture comprise, où ` +
+      `\`valeur_recopiee\` les attrape aussi ; ceux d'un TIERS restent verts partout, en prose ` +
+      `comme dans un enregistrement d'API publique.`
   );
   return 0;
 }
@@ -2990,8 +3152,11 @@ if (APPELE_DIRECTEMENT) {
         `${arretes} arrêté(s) et attesté(s) par leur ligne de décision, ${attente.length} à la ` +
         `sentinelle, ${secrets.length} secret(s) qui ne prennent jamais d'autre valeur ici. ` +
         `${univers.fichiers.length} fichier(s) suivi(s) lu(s) en entier, ${CODES_PAYS.length} codes ` +
-        `de région dérivés de l'ICU du runtime : aucune coordonnée reconnue par la forme, aucune ` +
-        `valeur recopiée, aucun point de sortie sans refus.\n   ⚠️ ${LIMITE_DE_LA_FORME}`
+        `de région dérivés de l'ICU du runtime, ` +
+        `${identifiantsDuRegistre(univers.registre).length} identifiant(s) du registre confronté(s) ` +
+        `à chacun : aucune coordonnée reconnue par la forme, aucune ` +
+        `valeur recopiée, aucun point de sortie sans refus.\n   ⚠️ ${LIMITE_DE_LA_FORME}` +
+        `\n   ⚠️ ${PORTEE_DES_NUMEROS_PUBLICS}`
     );
     console.log(
       `   ⚠️ Cette garde n'AUTORISE pas la mise en service pour autant : ` +
