@@ -2955,7 +2955,8 @@
         "tests/integration/api-gouv.spec.ts",
         "tests/unit/integration/recherche-entreprises-repli.spec.ts",
         "docs/gates.json",
-        ".github/workflows/nightly.yml"
+        ".github/workflows/nightly.yml",
+        "src/server/securite/rate-limit.ts"
       ],
       "schema": false,
       "sensible": [],
