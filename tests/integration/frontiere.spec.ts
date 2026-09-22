@@ -31,10 +31,12 @@ import {
   CHAMPS_DE_LA_REPONSE,
   METHODES_HTTP,
   PLANCHER_LECTURE_MS,
+  ROUTES_DE_LA_FRONTIERE,
   STATUTS_D_ATTRIBUTION,
   empreinteAdresse,
   frontiereDeProduction,
   traiterAppel,
+  type RouteDeLaFrontiere,
   type Frontiere,
   type LecteurDAttribution,
   type LimiteurDeLaFrontiere,
@@ -208,15 +210,23 @@ function cheminDAppel(fichier: string): string {
 
 // ── REQ-SEC-012 ─────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * La frontière de PRODUCTION, son puits détourné vers un tableau — et rien d'autre : le registre
+ * d'environnement, le débit non configuré et le lecteur non branché sont ceux que la route charge.
+ *
+ * ⚠️ Pourquoi pas une doublure du flux d'erreur de l'hôte : la charte du dossier d'intégration
+ * (REQ-QA-006, garde statique de `harnais-testcontainers.spec.ts`) refuse ICI toute mention de
+ * l'objet global. Le puits est déjà un port de `Frontiere` : on le remplace par la porte prévue,
+ * jamais en instrumentant l'hôte. Ce que la doublure de flux couvrait en plus — qu'aucun AUTRE
+ * écrivain ne parle pendant un appel — n'était affirmé par aucune assertion : il n'est rien perdu.
+ */
+function productionAuPuits(lignes: string[]): Frontiere {
+  return { ...frontiereDeProduction(), puits: (l) => lignes.push(l) };
+}
+
 describe('REQ-SEC-012 — chaque route de la frontière, telle que Next la charge', () => {
-  let ecrit: string[];
   beforeEach(() => {
-    ecrit = [];
     for (const [k, v] of Object.entries(ENV_VALIDE)) vi.stubEnv(k, v);
-    vi.spyOn(process.stderr, 'write').mockImplementation((l: string | Uint8Array) => {
-      ecrit.push(String(l));
-      return true;
-    });
   });
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -273,11 +283,38 @@ describe('REQ-SEC-012 — chaque route de la frontière, telle que Next la charg
     }
     expect([...vus], 'les refus se distinguent entre eux').toHaveLength(1);
     expect(JSON.parse([...vus][0] ?? '{}')).toEqual({ statut: 404, corps: '', entetes: [] });
-    // Rien de ce qui a été reçu ne ressort : ni le jeton, ni l'adresse.
-    const journal = ecrit.join('');
-    expect(journal).not.toContain(JETON);
-    expect(journal).not.toContain(ADRESSE_HORS_LISTE);
-    expect(journal).not.toContain(ADRESSE_AUTORISEE);
+    // Le vocabulaire fermé des routes et le disque disent le MÊME nombre : la matrice du journal
+    // ci-dessous ne peut pas dériver du dossier réellement routé par Next.
+    expect(
+      ROUTES_DE_LA_FRONTIERE.length,
+      'une route du disque n’est pas au vocabulaire fermé, ou l’inverse'
+    ).toBe(fichiers.length);
+    // Le journal : une ligne par appel, et rien de ce qui a été reçu n’en ressort — ni le jeton, ni
+    // l’adresse. MÊME matrice, même frontière de production : seul le puits est détourné.
+    let notes = 0;
+    for (const route of ROUTES_DE_LA_FRONTIERE satisfies readonly RouteDeLaFrontiere[]) {
+      for (const m of METHODES_HTTP) {
+        for (const r of refuses) {
+          const lignes: string[] = [];
+          await traiterAppel(
+            requete(`/${route}?siren=${SIREN_LIBRE}`, m, r.adresse, r.autorisation),
+            route,
+            productionAuPuits(lignes)
+          );
+          expect(lignes, `${route} ${m} ${r.quoi} : une ligne par appel`).toHaveLength(1);
+          const ligne = lignes[0] ?? '';
+          expect(ligne, `${route} ${m} ${r.quoi} : le jeton ressort`).not.toContain(JETON);
+          expect(ligne, `${route} ${m} ${r.quoi} : l’adresse ressort`).not.toContain(
+            ADRESSE_HORS_LISTE
+          );
+          expect(ligne, `${route} ${m} ${r.quoi} : l’adresse ressort`).not.toContain(
+            ADRESSE_AUTORISEE
+          );
+          notes += 1;
+        }
+      }
+    }
+    expect(notes).toBe(confrontations);
     console.log(
       `frontière : ${fichiers.length} route(s) confrontée(s) — ${fichiers.map((f) => f.split('\\').join('/')).join(', ')} — ` +
         `${METHODES_HTTP.length} méthodes × ${refuses.length} refus = ${confrontations} appels, un seul 404`
@@ -308,7 +345,15 @@ describe('REQ-SEC-012 — chaque route de la frontière, telle que Next la charg
     )(requete(`/attributions?siren=${SIREN_LIBRE}`, 'GET', ADRESSE_AUTORISEE, `Bearer ${JETON}`));
     expect(rep.status).toBe(503);
     expect(await rep.text()).toBe('');
-    const lignes = ecrit.filter((l) => l.includes('"appel_axionia"'));
+    // Le même appel, la même frontière de production — débit non configuré et lecteur non branché
+    // compris — avec le seul puits détourné : une ligne, et elle nomme le débit indisponible.
+    const lignes: string[] = [];
+    const rep2 = await traiterAppel(
+      requete(`/attributions?siren=${SIREN_LIBRE}`, 'GET', ADRESSE_AUTORISEE, `Bearer ${JETON}`),
+      'attributions',
+      productionAuPuits(lignes)
+    );
+    expect(rep2.status).toBe(503);
     expect(lignes).toHaveLength(1);
     expect(JSON.parse(lignes[0] ?? '{}')).toMatchObject({ resultat: 'debit_indisponible' });
   });
