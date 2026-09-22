@@ -8979,7 +8979,8 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/prevol.ts",
-        "tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts"
+        "tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],

@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `c921995` — 2026-09-21T23:22:36+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #84 (rien) · 3. #86 (rien) · 4. #88 (rien) · 5. #90 (un contrôle requis rouge ou une revue manquante) · 6. #91 (un contrôle requis rouge ou une revue manquante) · 7. #92 (un contrôle requis rouge ou une revue manquante) · 8. #93 (un contrôle requis rouge ou une revue manquante) · 9. #99 (un contrôle requis rouge ou une revue manquante) |
+| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #84 (rien) · 3. #86 (rien) · 4. #88 (rien) · 5. #90 (un contrôle requis rouge ou une revue manquante) · 6. #91 (un contrôle requis rouge ou une revue manquante) · 7. #92 (un contrôle requis rouge ou une revue manquante) · 8. #93 (un contrôle requis rouge ou une revue manquante) · 9. #99 (un contrôle requis rouge ou une revue manquante) · 10. #100 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | SEC-10 (A05) · QA-T08 (A05) · DM-01 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T03 (A05) · QA-T07 (A05) · GOV-059 (A05) |
 | Où en est la phase ? | phase 0 — 11/98 tâches, reste 67.60 j |
 | Le prochain pas | fusionner #82, puis DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable (chemin critique) |
@@ -73,6 +73,7 @@ Reste sur ce chemin : **17.00 j**.
 | 7 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
 | 8 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
 | 9 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un contrôle requis rouge ou une revue manquante |
+| 10 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
