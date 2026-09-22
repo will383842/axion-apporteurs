@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 101 | 78.85 | 18 |
+| 0 — Socle technique | 101 | 78.85 | 19 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -1480,7 +1480,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-032`
 
 **Tests.** `tests/unit/gouvernance/un-chemin-fantome-est-un-refus.spec.ts`
 
-### GOV-089 — Un numero PUBLIC se juge a son PORTEUR, pas a son mot-cle : la garde d'entite sur-attrape 448 defauts sur 452
+### GOV-089 — Un numero PUBLIC se juge a son PORTEUR, pas a son mot-cle : la garde d'entite sur-attrape 448 defauts sur 452 ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
