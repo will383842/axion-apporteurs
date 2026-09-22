@@ -10457,6 +10457,32 @@
           "tests/unit/gouvernance/termes-interdits.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-091",
+      "titre": "L'entree de journal de la PR 108 manque : main est rouge, et deux tests de gouvernance rougissent sur TOUTES les branches",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. La PR #108 (GOV-088) a ete fusionnee sur `main` SANS son entree de journal : `git show <sha>:docs/journal/2026-09.md | grep 'PR #108'` ne rend rien, et aucun des fichiers du squash n'est sous `docs/journal/`. Consequence : `pnpm gov:etat` rend 1 defaut sur 9 familles (`pr_fusionnee_sans_journal`, REQ-GOV-023), et la porte A sur `main` echoue a l'etape Tests sur DEUX fichiers — `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` — pour UNE SEULE cause racine.\n\nPOURQUOI C'EST BLOQUANT ET PAS COSMETIQUE. Ces deux tests interrogent la FORGE VIVANTE, pas le diff : ils rougissent donc sur TOUTES les branches, pas seulement sur `main`. Tant que l'entree n'est pas posee, AUCUNE PR ne peut atterrir. C'est la meme forme que la revendication manquante du 2026-09-22 au matin, qui rougissait elle aussi partout a la fois.\n\nACCEPTATION.\n  (a) L'entree `## PR #108 — <date> — <titre>` est posee dans `docs/journal/2026-09.md`, a sa place antechronologique, avec les champs que `docs/journal/README.md` prescrit. Son contenu est DERIVE du corps de la PR #108 et de son diff — rien d'invente, rien de reformule a l'estime.\n  (b) LA PR PORTE SA PROPRE ENTREE. Sans elle, sa fusion reproduit exactement le defaut qu'elle repare, et `main` redevient rouge. Ordre : ouvrir la PR, lire son numero, ajouter son entree, pousser.\n  (c) ROUGE VERBATIM : le message d'echec de la porte A sur `main` est colle au corps, tel quel, avec le numero de run.\n  (d) VERT : `pnpm gov:etat --now <ISO>` rend `9 familles evaluees sur 9`, et les fichiers de spec concernes repassent verts.\n  (e) ⚠️ `journal:sans-pii` reste vert : aucune donnee personnelle, et jamais le nom du delegue a la protection des donnees.\n\nCE QUE CETTE TACHE NE FERME PAS, ET QUI EST LE VRAI SUJET. La famille `pr_fusionnee_sans_journal` NE PEUT PAS rougir avant la fusion : son predicat est « la PR est fusionnee ». `scripts/gates/gov-pr.ts` ne lit JAMAIS `docs/journal/` — ses seules occurrences du mot sont un commentaire d'intention et un contre-temoin qui GRAVE le choix de ne pas le juger. Le controle d'avant-fusion etait donc vert, et l'aurait ete quoi qu'il arrive. AUCUNE garde n'exige l'entree pendant qu'on peut encore l'ajouter, et la seule victime possible est `main`. Le remede est GOV-052, dont l'acceptation exige que GOV-073 passe avant elle ou avec elle (quatre lecteurs, quatre grammaires d'entree de journal) — sinon GOV-052 ecrit une cinquieme redaction en prose de la meme regle. ⛔ NE PAS accrocher ce correctif a GOV-052 : ca la marquerait delivree alors que le trou resterait ouvert.\n\nPOURQUOI UNE TACHE DEDIEE PLUTOT QUE LA TACHE HISTORIQUE. Le precedent existe DEUX fois (PR #29 et PR #35 ont cite une tache deja `fusionnee` pour ce meme defaut) et la forge l'accepte. Mais la tache historique porte `sensible: [auth]`, ce qui classe la PR en risque ELEVE et exige QUATRE lentilles pour une correction de DEUX fichiers de prose — pendant que `main` est rouge et que la file est arretee. Une tache vivante, zone gouvernance, `sensible` vide, rend le regime a deux lentilles que le risque reel merite. Le classificateur mesure ce qu'il pretend mesurer ; c'est la tache empruntee qui mentait.",
+      "tests": {
+        "REQ-GOV-023": [
+          "tests/unit/gouvernance/plan-state-frais.spec.ts"
+        ]
+      }
     }
   ]
 }

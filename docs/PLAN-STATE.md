@@ -10,7 +10,7 @@
 | Où est `main` ? | `1078394` — 2026-09-22T13:07:25+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #109 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #88 (un conflit avec `main`) · 4. #90 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) · 8. #99 (un conflit avec `main`) · 9. #100 (un conflit avec `main`) · 10. #102 (un conflit avec `main`) · 11. #107 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T07 (A05) · GOV-059 (A05) |
-| Où en est la phase ? | phase 0 — 14/99 tâches, reste 65.60 j |
+| Où en est la phase ? | phase 0 — 14/100 tâches, reste 66.10 j |
 | Le prochain pas | DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #109 — 2026-09-22 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : 0
 
-14/99 tâches terminées · reste 65.60 j estimés.
+14/100 tâches terminées · reste 66.10 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 206 | JUR-T02, QA-T08, DM-02, QA-T02, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06 … |
+| `a_faire` | 207 | JUR-T02, QA-T08, DM-02, QA-T02, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06 … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -64,7 +64,7 @@ Reste sur ce chemin : **16.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #109 — chore(GOV-008): l'entrée de journal de la PR 108 manquait — main était rouge sans elle | `t/journal-108` | un contrôle requis rouge ou une revue manquante |
+| 1 | #109 — chore(GOV-091): l'entrée de journal de la PR 108 manquait — main était rouge sans elle | `t/journal-108` | un contrôle requis rouge ou une revue manquante |
 | 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 | 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
 | 4 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | un conflit avec `main` — à résoudre avant tout |
@@ -100,7 +100,7 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-22)
 
 ## Prochain pas
 
-**DM-02** — Gates de schéma : enums, centimes, index partiels, migrations additives (1.5 j, **sur le chemin critique**) : 42 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**DM-02** — Gates de schéma : enums, centimes, index partiels, migrations additives (1.5 j, **sur le chemin critique**) : 43 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
@@ -112,7 +112,7 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #109 — 2026-09-22 — chore(GOV-008): l'entrée de journal de la PR 108 manquait — main était rouge sans elle
+### PR #109 — 2026-09-22 — chore(GOV-091): l'entrée de journal de la PR 108 manquait — main était rouge sans elle
 
 **Fait.** L'entrée de journal de la PR 108, absente à sa fusion, est écrite ici, dérivée du corps de
 la PR et de son diff. `pnpm gov:etat` repasse d'un défaut (`pr_fusionnee_sans_journal`,
@@ -133,7 +133,12 @@ alors que sa PR est fusionnée : c'est la dette de clôture de lot, déjà connu
 spécifications rougissaient sur TOUTE branche sans qu'aucune n'ait changé une ligne, et un seul
 fichier de documentation les rend vertes. Mesuré au passage : `pnpm gov:etat` sans `--now`
 n'évalue que huit familles sur neuf et sort 0 en le DISANT — un vert local obtenu sans l'instant
-est plus faible que celui de la porte A, qui le donne.
+est plus faible que celui de la porte A, qui le donne. Mesuré aussi, et c'est un coût qu'on paie
+sans le voir : cette PR a d'abord cité la tâche HISTORIQUE qui déclare `docs/journal/`, laquelle
+porte `sensible: [auth]` ; `gov:pr` classait alors deux fichiers de prose en « risque élevé, 4
+lentilles exigées ». Versée en tâche dédiée à `sensible` vide, la même PR rend « risque ordinaire,
+2 lentilles ». Le classificateur mesurait bien ce qu'il annonce : c'est la tâche empruntée qui
+mentait sur la nature du geste, et le prix se payait en relectures pendant que `main` était rouge.
 
 ### PR #108 — 2026-09-22 — fix(GOV-088): le glossaire interdisait la colonne qu'il prescrit, et un .ts ne peut citer aucun terme interdit
 
