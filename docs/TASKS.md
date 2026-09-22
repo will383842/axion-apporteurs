@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**260 taches · 196.85 j estimes.**
+**260 taches · 196.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 98 | 77.85 | 11 |
+| 0 — Socle technique | 98 | 77.35 | 14 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -452,7 +452,7 @@ Couvre : `REQ-SEC-029`
 
 **Tests.** `tests/unit/securite/headers.spec.ts`
 
-### SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable
+### SEC-10 — Bibliothèque rate-limit avec garde de famille, honeypot observable ✅ **fusionnee**
 
 `0.5 j` · zone `securite` · depend de `QA-T01`
 
@@ -472,7 +472,7 @@ Couvre : `REQ-QA-024`
 
 **Tests.** `tests/unit/qualite/journal-redige.spec.ts`
 
-### DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable
+### DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable ✅ **fusionnee**
 
 `1 j` · zone `domaine` · sensible : rgpd · depend de `QA-T01`
 
@@ -512,7 +512,7 @@ Couvre : `REQ-CPL-021`, `REQ-QA-019`, `REQ-QA-020`, `REQ-QA-030`
 
 **Tests.** `tests/unit/qualite/env-fail-fast.spec.ts` · `tests/integration/sondes-de-vie.spec.ts`
 
-### QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check
+### QA-T03 — Traçabilité REQ→test : requirements.yaml, @req, req:check ✅ **fusionnee**
 
 `1 j` · zone `qualite` · depend de `GOV-011`, `QA-T01`
 
@@ -524,7 +524,7 @@ Couvre : `REQ-QA-014`
 
 ### QA-T07 — Gate sécurité : semgrep
 
-`1 j` · zone `qualite` · depend de `QA-T01`
+`0.5 j` · zone `qualite` · depend de `QA-T01`
 
 Couvre : `REQ-QA-011`, `REQ-QA-013`
 
