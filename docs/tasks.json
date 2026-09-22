@@ -9512,7 +9512,17 @@
         "docs/gates.json",
         "scripts/gates/gov-check.ts",
         "docs/adr/partners/",
-        "tests/unit/gouvernance/un-nom-une-garde.spec.ts"
+        "tests/unit/gouvernance/un-nom-une-garde.spec.ts",
+        "scripts/gates/gov-agents.ts",
+        "scripts/gates/gov-attestation.ts",
+        "scripts/gates/gov-attributions.ts",
+        "scripts/gates/gov-conventions.ts",
+        "scripts/gates/gov-preseance.ts",
+        "scripts/reprise.ts",
+        "scripts/lot/attestation.ts",
+        "tests/unit/gouvernance/attestation-inter-depot.spec.ts",
+        "tests/unit/gouvernance/attributions-resolvent.spec.ts",
+        "tests/unit/gouvernance/termes-interdits.spec.ts"
       ],
       "schema": false,
       "sensible": [],
