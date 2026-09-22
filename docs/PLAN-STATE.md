@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `242c879` — 2026-09-22T11:08:08+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #107 (rien) · 2. #108 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) · 5. #90 (un conflit avec `main`) · 6. #91 (un conflit avec `main`) · 7. #92 (un conflit avec `main`) · 8. #93 (un conflit avec `main`) · 9. #99 (un conflit avec `main`) · 10. #100 (un conflit avec `main`) · 11. #102 (un conflit avec `main`) |
+| Où est `main` ? | `1078394` — 2026-09-22T13:07:25+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #109 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #88 (un conflit avec `main`) · 4. #90 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) · 8. #99 (un conflit avec `main`) · 9. #100 (un conflit avec `main`) · 10. #102 (un conflit avec `main`) · 11. #107 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T07 (A05) · GOV-059 (A05) |
 | Où en est la phase ? | phase 0 — 14/99 tâches, reste 65.60 j |
-| Le prochain pas | fusionner #107, puis DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
+| Le prochain pas | DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #89 — 2026-09-21 |
+| Dernière entrée de journal | PR #109 — 2026-09-22 |
 
-**Ce qu’on tape maintenant.** `gh pr view 107 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,17 +64,17 @@ Reste sur ce chemin : **16.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #107 — fix(GOV-089): un numero PUBLIC se juge a son porteur, pas a son mot-cle — 452 defauts, 448 sur des tiers | `t/gov-entite-tiers` | rien — fusionnable maintenant |
-| 2 | #108 — fix(GOV-088): le glossaire interdisait la colonne qu'il prescrit, et un .ts ne peut citer aucun terme interdit | `t/glossaire-enveloppe` | un contrôle requis rouge ou une revue manquante |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 7 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
-| 8 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
-| 9 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
-| 10 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | un conflit avec `main` — à résoudre avant tout |
-| 11 | #102 — docs(GOV-063): ADR 0017 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #109 — chore(GOV-008): l'entrée de journal de la PR 108 manquait — main était rouge sans elle | `t/journal-108` | un contrôle requis rouge ou une revue manquante |
+| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 8 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
+| 9 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | un conflit avec `main` — à résoudre avant tout |
+| 10 | #102 — docs(GOV-063): ADR 0017 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | un conflit avec `main` — à résoudre avant tout |
+| 11 | #107 — fix(GOV-089): un numero PUBLIC se juge a son porteur, pas a son mot-cle — 452 defauts, 448 sur des tiers | `t/gov-entite-tiers` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -100,19 +100,64 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-22)
 
 ## Prochain pas
 
-**Fusionner #107** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
-
 **DM-02** — Gates de schéma : enums, centimes, index partiels, migrations additives (1.5 j, **sur le chemin critique**) : 42 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `242c879` (2026-09-22T11:08:08+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `1078394` (2026-09-22T13:07:25+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #109 — 2026-09-22 — chore(GOV-008): l'entrée de journal de la PR 108 manquait — main était rouge sans elle
+
+**Fait.** L'entrée de journal de la PR 108, absente à sa fusion, est écrite ici, dérivée du corps de
+la PR et de son diff. `pnpm gov:etat` repasse d'un défaut (`pr_fusionnee_sans_journal`,
+REQ-GOV-023) à neuf familles évaluées sur neuf, et les deux spécifications qui rougissaient pour
+cette seule cause — `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` — redeviennent
+vertes. Cette PR porte aussi sa PROPRE entrée : sans elle, sa fusion reproduirait le défaut qu'elle
+répare.
+
+**Reste.** Le défaut structurel n'est pas fermé ici, et il n'appartient pas au documentaliste :
+`pr_fusionnee_sans_journal` ne peut pas rougir AVANT la fusion, son prédicat étant que la PR est
+fusionnée. Aucune garde d'avant-fusion ne l'exige : `gov:pr` ne lit jamais `docs/journal/`, et la
+seule mention du dossier dans son code est le contre-témoin qui grave ce choix. La seule victime
+possible est donc `main`. GOV-052 porte ce remède au registre, et GOV-073 passe avant elle ou avec
+elle, sous peine d'une cinquième grammaire d'entrée de journal. GOV-088 reste `a_faire` au registre
+alors que sa PR est fusionnée : c'est la dette de clôture de lot, déjà connue.
+
+**Appris.** Le rouge d'une garde qui interroge la forge n'appartient à aucune branche : les deux
+spécifications rougissaient sur TOUTE branche sans qu'aucune n'ait changé une ligne, et un seul
+fichier de documentation les rend vertes. Mesuré au passage : `pnpm gov:etat` sans `--now`
+n'évalue que huit familles sur neuf et sort 0 en le DISANT — un vert local obtenu sans l'instant
+est plus faible que celui de la porte A, qui le donne.
+
+### PR #108 — 2026-09-22 — fix(GOV-088): le glossaire interdisait la colonne qu'il prescrit, et un .ts ne peut citer aucun terme interdit
+
+**Fait.** `docs/GLOSSAIRE.md` interdisait en ligne 149 la forme qu'il prescrit en ligne 126 : la
+colonne de la table de réception, dont le texte de REQ-DM-036 est repris mot pour mot. La règle
+posée se dérive du registre au lieu de nommer un cas : un jeton que le registre attribue AUSSI à un
+autre rôle ne peut pas porter un interdit sec — il devient un interdit sous condition, que la garde
+n'exerce pas et qu'elle imprime. Trois jetons passent sous condition, et un est récupéré :
+`subjectRef` était désarmé par un accident de ponctuation, le tiret cadratin qui suivait le dernier
+jeton de la liste. Le compte des interdits exercés va donc de 37 à 35, pas à 34. Un témoin neuf,
+`enveloppe_camelcase_hors_contrat`, entre au code ET au registre, les deux sens du refus mesurés :
+30 témoins deviennent 31.
+
+**Reste.** Un marqueur de citation pour les fichiers TypeScript a été essayé puis réfuté sur mesure :
+le `//` d'une URL ouvre une zone de commentaire et amnistie la même instruction exécutée. La limite
+est nommée au glossaire avec son propriétaire, GOV-069. REQ-DM-036 s'épelle elle-même avec un
+synonyme interdit : le développeur de SEC-06 lira le mauvais nom dans sa propre exigence. Le §5 du
+glossaire porte un avertissement périmé. Le champ `verifie` de `docs/gates.json` n'apparaît dans
+aucune vue.
+
+**Appris.** L'accident réparé l'est par l'INSTANCE, pas par la famille : un jeton ajouté en fin de
+bloc et suivi d'une glose naîtra désarmé de la même façon. Et la face verte annoncée n'est pas la
+ligne que SEC-06 écrira — la même ligne rougit sous la garde des énumérations, la colonne devra
+être un enum.
 
 ### PR #89 — 2026-09-21 — fix(GOV-059): la revendication se derive de la forge, et gov:etat passe apres les etapes de mesure
 
@@ -135,39 +180,7 @@ qu'aucune des trois n'ait change. Mesure au passage : une PR de phase 0 qui touc
 `docs/tasks.json` exige le label `role:gardien-spec`, et le champ `Rouge constate par:` n'admet
 QUE le code de poste — la moindre parenthese apres lui rend `rouge_vert_absent`.
 
-### PR #86 — 2026-09-19 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10
-
-**Fait.** Le harnais d'intégration de DM-01 sert maintenant toute la suite. Il monte Postgres 16 avec pgvector et un Redis, épinglés au tag exact et au condensat, un conteneur par fichier. Le sous-processus `prisma` ne reçoit plus que l'environnement construit par liste blanche. Une garde statique refuse sous `tests/integration/` tout saut de test et toute lecture de l'environnement de l'hôte hors du harnais. Sans démon, chaque fichier échoue en nommant le motif. Un témoin logé sous `tests/unit/ci/` prouve que l'étape Tests de Gate A atteint chaque fichier d'intégration. Le script Lua de SEC-10 tourne enfin sur un Redis réel, avec la limite exacte sous 50 appels concurrents, le glissement à la milliseconde et l'expiration. Le chemin par défaut du registre compte dans le cache, sans panne : cinq mutants tués, dont celui où la marque du registre sert de magasin.
-
-**Reste.** Au-delà de 10 fichiers ou de 3 min d'intégration en CI, il faudra un conteneur partagé avec une base par gabarit. `gate-b` reste sans `preuveRouge` et son porteur sera livré (famille GOV-046). La production d'axionia tourne sur un Redis au tag flottant. Le témoin lit `ci.yml` par indentation, en attendant le lecteur YAML factorisé de QA-T01.
-
-**Appris.** Avec testcontainers 12.1.0, un `DOCKER_HOST` injoignable ne se replie sur aucune autre socket, car docker-modem en tire un hôte qui prime sur la socket de chaque stratégie. Sous vitest 2.1.9, un fichier dont le `beforeAll` lève compte ses tests comme sautés : on juge alors le code de sortie et le motif, pas l'absence du mot. Un témoin logé dans le dossier qu'il garde disparaît avec lui, et `vitest` répond alors par une passe vide. Enfin, `vi.stubEnv` pose une valeur sans lire l'environnement du poste, et c'est la seule porte admise vers le chemin par défaut du registre de débit.
-
-### PR #84 — 2026-09-19 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives
-
-**Fait.** Les gardes du schéma lisent un schéma LU, par un lecteur unique exporté
-(`scripts/lot/lecteur-prisma.ts`) : un modèle se ferme sur SON accolade, et un texte illisible est
-refusé en nommant la ligne. `partners:schema:enums` est réécrite dessus. Une liste d'états s'y juge
-par groupe, la projection exacte est admise en migration par règle, et l'index unique de
-l'attribution occupante se juge en SQL (`fautesIndexOccupant`). Deux gardes neuves sont câblées en
-Gate A : `partners:schema:cents` (REQ-DM-001) et `partners:migrations:additive` (REQ-DM-037). La
-seconde lit toutes les migrations suivies et dérive la protection du journal des déclencheurs que
-les migrations posent. La spec d'intégration relit `pg_indexes` en base réelle. Le prédicat
-provisoire de DM-01 meurt au profit de l'import de la garde, et `partners/ADR-0011` est amendée.
-
-**Reste.** `reecrire-champ` refuse le champ `tache` : `partners:migrations:additive` reste
-attribuée à QA-T11 au registre. La table `attributions` et son index naissent avec DM-07, qui
-importera `fautesIndexOccupant`. `LANCE_EN_SCRIPT` à extension obligatoire vit encore dans d'autres
-gardes. Le DML des migrations et le SQL assemblé hors `EXECUTE` ne sont pas jugés.
-
-**Appris.** La garde `journal:sans-pii` est un fil tendu : toute mention en clair de la table
-refuse, hors de sa liste blanche. Une garde qui doit protéger cette table ne la NOMME donc pas :
-elle dérive la table protégée des déclencheurs que les migrations posent. C'est plus juste (RM-01),
-et toute table protégée demain l'est sans retouche. Et remplacer un prédicat de test par l'import
-d'une garde ne doit pas perdre ses mots : `remuneration`, `euro` et `euros` sont passés dans la
-garde avec lui.
-
-… 32 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 34 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
