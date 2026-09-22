@@ -2,10 +2,10 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 261,
-    "pairesEnIntersection": 4274,
-    "cheminsDeclares": 770,
-    "cheminsDistincts": 496,
+    "tachesCouvertes": 260,
+    "pairesEnIntersection": 4271,
+    "cheminsDeclares": 771,
+    "cheminsDistincts": 498,
     "cheminsPartages": 97,
     "tachesSansAucuneIntersection": 74,
     "listeDesTachesIsolees": [
@@ -429,7 +429,9 @@
       "vitest.config.ts",
       ".github/workflows/ci.yml",
       "docs/gates.json",
-      "tests/integration/harnais-testcontainers.spec.ts"
+      "tests/integration/harnais-testcontainers.spec.ts",
+      "tests/unit/ci/integration-collectee-par-gate-a.spec.ts",
+      "tests/integration/rate-limit-redis.spec.ts"
     ],
     "QA-T04": [
       "src/lib/env.ts",
@@ -1447,9 +1449,6 @@
     ],
     "UX-P0-01b": [
       "tests/unit/espace/libelles-d-etats.spec.ts"
-    ],
-    "GOV-089": [
-      "tests/unit/gouvernance/entite-registre.spec.ts"
     ]
   }
 }
