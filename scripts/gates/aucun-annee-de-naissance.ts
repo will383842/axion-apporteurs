@@ -34,7 +34,7 @@ import { readFileSync } from 'node:fs';
 import {
   autocompleterEntreprise,
   type DependancesDuMandataire,
-} from '../../src/server/integrations/recherche-entreprises/mandataire';
+} from '../../src/server/integrations/recherche-entreprises/autocompletion';
 import { creerDisjoncteur } from '../../src/server/integrations/recherche-entreprises/disjoncteur';
 import {
   empreinteurDeDirigeants,

@@ -55,7 +55,7 @@ import {
   autocompleterEntreprise,
   etatDuDisjoncteur,
   type DependancesDuMandataire,
-} from '../../../src/server/integrations/recherche-entreprises/mandataire';
+} from '../../../src/server/integrations/recherche-entreprises/autocompletion';
 import { limiteurDuRegistre } from '../../../src/server/integrations/recherche-entreprises/limiteur';
 import { appelantDepuis } from '../../../src/server/integrations/recherche-entreprises/production';
 import { clientDuTiers } from '../../../src/server/integrations/recherche-entreprises/tiers';

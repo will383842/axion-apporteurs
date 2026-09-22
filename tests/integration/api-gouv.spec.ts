@@ -5,7 +5,7 @@
  * INT-T09 — le client de l'API publique de recherche d'entreprises, contre un TIERS SIMULÉ PAR UN
  * SERVEUR HTTP LOCAL (127.0.0.1) : le vrai `fetch`, la vraie socket, les vrais en-têtes. Aucun
  * appel ne sort de la machine. Le contrat contre l'API réelle est le job nocturne
- * (`contrat-nocturne.ts`), pas ce fichier.
+ * (`derive-nocturne.ts`), pas ce fichier.
  *
  * CE QUE CHAQUE BLOC JUGE, ET PAR QUEL ACTE.
  *   — REQ-QA-028 : ≥ 20 fixtures enregistrées, datées, qui nomment leur producteur réel et la fiche
@@ -51,7 +51,7 @@ import {
   autocompleterEntreprise,
   ficheEntreprise,
   type DependancesDuMandataire,
-} from '../../src/server/integrations/recherche-entreprises/mandataire';
+} from '../../src/server/integrations/recherche-entreprises/autocompletion';
 import { limiteurDuRegistre } from '../../src/server/integrations/recherche-entreprises/limiteur';
 import {
   clientDuTiers,
@@ -79,7 +79,7 @@ import type { CacheDeProjections } from '../../src/server/integrations/recherche
 import {
   comparerFormes,
   formesDe,
-} from '../../src/server/integrations/recherche-entreprises/contrat-nocturne';
+} from '../../src/server/integrations/recherche-entreprises/derive-nocturne';
 
 // ── Le tiers simulé ─────────────────────────────────────────────────────────────────────────────
 

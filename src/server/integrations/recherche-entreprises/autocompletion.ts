@@ -2,6 +2,24 @@
  * Le mandataire serveur de l'autocomplétion d'entreprise — INT-T09 (REQ-INT-020, REQ-SEC-013,
  * REQ-QA-028, REQ-UX-020).
  *
+ * ⚠️ POURQUOI CE FICHIER NE S'APPELLE PAS `mandataire.ts`, ET NE DOIT PAS L'ÊTRE DE NOUVEAU.
+ * `src/config/entite.ts` déclare un POINT DE SORTIE `mandat-autofacturation` — « génération du
+ * mandat d'autofacturation » — que `pnpm gov:entite` reconnaît au CHEMIN, sur le motif
+ * `(?:mandat|autofacturation)`. `mandataire` contient `mandat` : sous son ancien nom, ce fichier
+ * tombait dans ce motif et la garde exigeait de lui un appel à
+ * `exigerEntiteRenseignee('mandat-autofacturation')`. Il ne le doit pas, et l'appel aurait été
+ * NUISIBLE : les clés qu'exige ce point de sortie comprennent `banqueDebitrice.iban`, encore à la
+ * sentinelle en phase 0 — l'autocomplétion d'entreprise aurait levé à chaque frappe, pour un IBAN
+ * dont elle n'a que faire.
+ * Les deux mots sont des HOMONYMES : ici « mandataire » vaut pour MANDATAIRE SERVEUR, au sens où
+ * `src/server/securite/adresse-du-client.ts` l'emploie déjà (le proxy qui parle au tiers à la place
+ * du navigateur) ; là-bas « mandat » vaut pour le MANDAT que l'apporteur signe. Le rôle garde donc
+ * son nom dans la prose — c'est le vocabulaire du dépôt — et le FICHIER prend celui de ce qu'il
+ * expose, `autocompleterEntreprise`, comme ses voisins `cache.ts`, `limiteur.ts` ou `repli.ts`.
+ * La collision n'est pas réglée pour autant : tout futur fichier `mandat…ts` sous `src/` la
+ * rencontrera. C'est
+ * à la tâche de la garde (CPL-T01) de décider si le motif doit discriminer mieux.
+ *
  * LE NAVIGATEUR NE JOINT JAMAIS LE TIERS (REQ-SEC-013). Il appelle une action serveur — qui
  * appartient à la tâche de l'écran de dépôt (CONVENTIONS §9 : pas de route HTTP pour un composant) —
  * et cette action appelle `autocompleterEntreprise`. Ce que celle-ci rend est le RENDU : l'objet

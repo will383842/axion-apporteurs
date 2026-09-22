@@ -98,4 +98,4 @@ jobs:
       - name: Aucune annee de naissance ne traverse le mandataire
         run: npx tsx scripts/gates/aucun-annee-de-naissance.ts
       - name: Contrat de forme contre l API reelle
-        run: npx tsx src/server/integrations/recherche-entreprises/contrat-nocturne.ts
+        run: npx tsx src/server/integrations/recherche-entreprises/derive-nocturne.ts

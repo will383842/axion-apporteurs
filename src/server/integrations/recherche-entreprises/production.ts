@@ -19,7 +19,7 @@ import { sujetDepuisEmpreinte } from '../../securite/rate-limit';
 import { cacheRedis } from './cache';
 import { creerDisjoncteur, type VueDuDisjoncteur } from './disjoncteur';
 import { limiteurDuRegistre } from './limiteur';
-import type { Appelant, DependancesDuMandataire, LigneDeJournal } from './mandataire';
+import type { Appelant, DependancesDuMandataire, LigneDeJournal } from './autocompletion';
 import { PARAMETRES } from './parametres';
 import { empreinteurDeDirigeants } from './projection';
 import { clientDuTiers } from './tiers';
