@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `93a7c32` — 2026-09-22T14:20:17+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #88 (un conflit avec `main`) · 3. #90 (un conflit avec `main`) · 4. #91 (un conflit avec `main`) · 5. #92 (un conflit avec `main`) · 6. #93 (un conflit avec `main`) · 7. #99 (un conflit avec `main`) · 8. #100 (un conflit avec `main`) · 9. #102 (un conflit avec `main`) · 10. #107 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #107 (rien) · 2. #82 (un conflit avec `main`) · 3. #88 (un conflit avec `main`) · 4. #90 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) · 8. #99 (un conflit avec `main`) · 9. #100 (un conflit avec `main`) · 10. #102 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-059 (A05) |
 | Où en est la phase ? | phase 0 — 18/101 tâches, reste 63.10 j |
-| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Le prochain pas | fusionner #107, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #109 — 2026-09-22 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 107 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,16 +64,16 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
-| 7 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
-| 8 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | un conflit avec `main` — à résoudre avant tout |
-| 9 | #102 — docs(GOV-063): ADR 0017 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | un conflit avec `main` — à résoudre avant tout |
-| 10 | #107 — fix(GOV-089): un numero PUBLIC se juge a son porteur, pas a son mot-cle — 452 defauts, 448 sur des tiers | `t/gov-entite-tiers` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #107 — fix(GOV-089): un numero PUBLIC se juge a son porteur, pas a son mot-cle — 452 defauts, 448 sur des tiers | `t/gov-entite-tiers` | rien — fusionnable maintenant |
+| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 8 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
+| 9 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | un conflit avec `main` — à résoudre avant tout |
+| 10 | #102 — docs(GOV-063): ADR 0017 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -96,6 +96,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-22). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
+
+**Fusionner #107** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 44 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -161,28 +163,57 @@ bloc et suivi d'une glose naîtra désarmé de la même façon. Et la face verte
 ligne que SEC-06 écrira — la même ligne rougit sous la garde des énumérations, la colonne devra
 être un enum.
 
-### PR #89 — 2026-09-21 — fix(GOV-059): la revendication se derive de la forge, et gov:etat passe apres les etapes de mesure
+### PR #107 — 2026-09-22 — fix(GOV-089): un numero PUBLIC se juge a son porteur, pas a son mot-cle — 452 defauts, 448 sur des tiers
 
-**Fait.** La revendication d'une tache ne se recopie plus dans le `docs/tasks.json` de chaque
-branche : elle se DERIVE d'une issue ouverte titree `ID` suivi d'un tiret cadratin et portant
-`en_cours` plus `owner:Axx`. Le cout de synchronisation entre branches ouvertes cesse d'etre en
-carre. Dans `.github/workflows/ci.yml`, l'etape `gov:etat` passe APRES lint, format, typecheck et
-tests : un rouge venu d'une autre branche ne les laisse plus en sautees. L'entree de journal de la
-PR 83, absente, est posee ici — elle rougissait toutes les branches ouvertes.
+**Fait.** `gov:entite` refusait un SIREN, un SIRET ou un numéro de TVA parce qu'il SUIT le mot
+`siren` ou `siret`, sans jamais regarder DE QUI il s'agit : mesuré sur la branche qui enregistre les
+fixtures de l'API publique d'entreprises, 452 défauts, dont 448 portaient sur des entreprises
+TIERCES — DANONE, la SNCF, EDF, des communes — et 4 seulement sur les identifiants de l'entité ; la
+garde réclamait donc une place dans `config/entite.json` pour le SIREN de DANONE. Le régime se lit
+désormais sur le PORTEUR et non sur le mot-clé : un numéro public n'est refusé que s'il est le
+nôtre, et la liste des nôtres est DÉRIVÉE de `config/entite.json` par une source unique que
+`valeur_recopiee` et l'arme publique de `coordonnee_en_clair` lisent toutes les deux, de la même
+façon, par contenance — un SIRET porte le SIREN de son entité. La cécité qui accompagne cette
+dérivation est REFUSÉE et pas seulement rendue visible : la famille `aucune_reference_publique` est
+une FAMILLE et non une levée, parce qu'un fait sur l'univers jugé passe par le canal de refus quand
+une erreur de programmation, elle, lève ; et le compte imprimé dans chaque vert compte les
+identifiants APPARIABLES, dérivés des formes elles-mêmes, jamais les entrées du registre. Mesure
+finale sur le dépôt réel : 452 défauts ramenés à 4, aucun vrai défaut tu, `valeur_recopiee` active
+jusque DANS une fixture.
 
-**Reste.** La surface de revendication passe d'un fichier sous revue de code a un titre d'issue que
-tout compte pouvant ouvrir une issue sur ce depot peut ecrire. L'ecart est nomme dans la section
-Attaque de la PR et assume sur ce depot ; il appartient a SEC-05 de decider s'il doit se fermer.
-La dette de cloture de lot reste due : DM-01, SEC-10 et QA-T03 sont fusionnees sur main et encore
-`a_faire` au registre.
+**Reste.** `REQ-GOV-031` est TRONQUÉE dans sa source `docs/requirements.json` : elle annonce
+« Trois catégories n'y entrent jamais : » et n'en nomme aucune, alors que trois gardes et huit
+tâches dérivent d'elle tout leur mandat ; cela appartient à GOV-066, dont l'acceptance refuse déjà
+qu'une exigence promette ce que la garde ne fait pas. Les 4 défauts restants — le SIREN et le SIRET
+de l'entité en dur dans `tests/fixtures/recherche-entreprises/21-organisme-de-formation.json` — sont
+justes et non corrigés ici : les fermer est un changement d'intention de test, pas un
+rafraîchissement, et ce cas en cache un autre, `liste_id_organisme_formation` valant `null`, si bien
+que le cas qui existe pour exercer ce champ ne l'exerce pas. Portée assumée et nommée plutôt que
+tue : la classe « identifiant de tiers en fixture dans un dépôt PUBLIC » n'est plus couverte par
+aucune famille, sa protection repose entièrement sur la pseudonymisation d'`enregistrer-fixtures.ts`
+qu'aucune garde de cette PR ne tient, et les dates de naissance y sont en clair alors que les noms
+sont pseudonymisés — routé à Will séparément. Deux angles morts pré-existants de la forme, mesurés
+et désormais écrits dans la limite déclarée sans être fermés : la forme de TVA est sensible à la
+CASSE, et un groupe de chiffres plus long que la fenêtre attendue n'ouvre aucune frontière de mot.
+Enfin, `tests/unit/gouvernance/entite-registre.spec.ts` est dans les `paths` de GOV-040, GOV-067 et
+GOV-089 : aucune des trois ne doit être composée dans le même lot qu'une autre, et l'acceptance de
+GOV-089 ne nomme que GOV-067, donc elle est plus étroite que le fait.
 
-**Appris.** Le rouge de trois PR ouvertes le meme jour etait la preuve vivante du defaut que cette
-PR ferme : `pr_sur_tache_non_revendiquee` s'est allume sur 84 et 86 des l'ouverture de 89, sans
-qu'aucune des trois n'ait change. Mesure au passage : une PR de phase 0 qui touche
-`docs/tasks.json` exige le label `role:gardien-spec`, et le champ `Rouge constate par:` n'admet
-QUE le code de poste — la moindre parenthese apres lui rend `rouge_vert_absent`.
+**Appris.** DEUX TÉMOINS EXERÇAIENT LE MAUVAIS PORTEUR, et gravaient donc la sur-attrape en porte A :
+le mode de preuve et le banc d'essai exigeaient un ROUGE sur le SIREN et la TVA d'un TIERS dans du
+code, si bien que la garde avait bien été « vue rougir » au sens de RM-02 mais sur le mauvais cas,
+et qu'elle a traversé une livraison, une revue à quatre lentilles et une fusion en tenant vert le
+défaut même qu'on vient de corriger. Une garde vue rougir ne dit rien si on l'a vue rougir sur le
+mauvais cas ; et quand un correctif oblige à INVERSER un témoin existant, c'est le signe que le
+témoin, et pas seulement le code, portait la faute. Deux corollaires mesurés le même jour : la ligne
+finale que le mode de preuve imprimait affirmait le comportement fautif, donc un vert qui commente
+son propre comportement est une affirmation à maintenir comme du code — c'est la famille que
+`gov:sonde` existe pour marquer ; et unifier la SOURCE de deux familles unifie aussi leur MODE DE
+PANNE, si bien qu'un compteur destiné à rendre une cécité visible doit être ancré DANS LES DEUX SENS
+par son témoin, ne pouvant être ni nul quand des numéros sont cherchés, ni non nul quand aucun ne
+l'est — mutés l'un après l'autre, les deux ont d'abord survécu.
 
-… 34 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 35 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
