@@ -464,6 +464,23 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'en fin de fichier ; les familles, elles, sont couvertes par `--prove` et par ' +
         'attributions-resolvent.spec.ts — un témoin d’effet prouve la famille qu’il injecte, jamais la gate.',
     },
+    'scripts/gates/jur-grille-chiffree.ts': {
+      total: 4,
+      porte: 4,
+      // ZÉRO, et ce zéro est le SUJET de l'inscription, pas un détail de comptabilité.
+      // REQ-GOV-032 veut que la dette soit CHIFFRÉE, pas seulement mentionnée : inscrire ce
+      // fichier rend l'omission lisible au lieu de la laisser rougir sans dire quoi. Les quatre
+      // refus de cette garde n'ont AUCUN témoin — personne ne les a vus rougir (RM-02). Le
+      // registre le DÉCLARE ; il ne le ferme pas. La tâche qui armera ces témoins fera passer
+      // ce compteur à 4, et le test du total suivra sans qu'on y touche.
+      temoins: 0,
+      raison:
+        'JUR-T01 — la grille chiffrée du contrat, livrée par le commit f7ce9e0. QUATRE sorties ' +
+        'non nulles (plus deux `exit(0)`), aucune vue rougir : la garde refuse un gabarit dont ' +
+        'la grille ne se dérive pas du registre, et rien ne prouve encore qu’elle sait refuser. ' +
+        'Inscrit ici pour que le manque soit CHIFFRÉ et cherchable, jamais pour le tenir pour ' +
+        'couvert.',
+    },
     'scripts/gates/gov-check.ts': {
       total: 1,
       porte: 1,
@@ -605,6 +622,29 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       porte: 2,
       temoins: 0,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE.',
+    },
+    // ── DM-02 : deux gardes NEUVES, deux sorties chacune ────────────────────────────────────
+    'scripts/gates/schema-cents.ts': {
+      total: 2,
+      porte: 2,
+      // ZÉRO ici : les témoins d'EFFET vivent dans `tests/unit/domaine/gardes-de-schema.spec.ts`.
+      temoins: 0,
+      raison:
+        'DM-02 — REQ-DM-001, montants en centimes. Deux `process.exit(1)` : le `--prove` qui voit ' +
+        'un témoin rester vert, et la sortie terminale sur faute. Témoins d’EFFET sur le binaire ' +
+        'dans gardes-de-schema.spec.ts : invoquée SANS extension sur le dépôt, elle imprime son ' +
+        'périmètre et juge ; une copie renommée ne s’exécute pas.',
+    },
+    'scripts/gates/migrations-additive.ts': {
+      total: 2,
+      porte: 2,
+      temoins: 0,
+      raison:
+        'DM-02 — REQ-DM-037, migrations additives. Deux `process.exit(1)` : le `--prove` qui voit ' +
+        'un témoin rester vert, et la sortie terminale sur faute non absoute. Témoins d’EFFET dans ' +
+        'gardes-de-schema.spec.ts : un dépôt jetable dont la migration du MILIEU supprime une ' +
+        'colonne sort en 1 en la nommant, le même absous par une ADR acceptée sort en 0 en ' +
+        'IMPRIMANT l’absolution, un dépôt sans migration sort en 1 (`perimetre_vide`).',
     },
     'scripts/gates/gov-entite.ts': {
       total: 6,
@@ -886,7 +926,14 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // dans cette branche, le compte a rougi de nouveau, relu et non deviné :
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 40 to be 39
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(40);
+    //
+    // 🔧 40 → 44 par DM-02, ARBITRÉ et non subi : deux gardes NEUVES, `schema-cents.ts` et
+    // `migrations-additive.ts`, deux sorties chacune (le `--prove` qui voit un témoin rester vert,
+    // la sortie terminale sur faute), déclarées plus haut. La Gate A de la PR 84 a rougi en le
+    // chiffrant — relu, pas deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(44);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -1946,6 +1993,8 @@ const GARDES_QUI_BALAIENT = [
   // DM-01 — `journal:sans-pii` cherche un second écrivain de la table `evenements` dans les fichiers
   // SUIVIS sous `src/` et `scripts/`.
   'scripts/gates/journal-sans-pii.ts',
+  // DM-02 — `partners:migrations:additive` lit TOUTES les migrations SUIVIES, pas celles de la PR.
+  'scripts/gates/migrations-additive.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {
