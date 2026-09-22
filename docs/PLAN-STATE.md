@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `c921995` — 2026-09-21T23:22:36+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #86 (rien) · 3. #88 (rien) · 4. #90 (rien) · 5. #100 (rien) · 6. #84 (un contrôle requis rouge ou une revue manquante) · 7. #91 (un contrôle requis rouge ou une revue manquante) · 8. #92 (un contrôle requis rouge ou une revue manquante) · 9. #93 (un contrôle requis rouge ou une revue manquante) · 10. #99 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `571b1eb` — 2026-09-22T08:18:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #86 (rien) · 2. #90 (rien) · 3. #82 (un contrôle requis rouge ou une revue manquante) · 4. #88 (un contrôle requis rouge ou une revue manquante) · 5. #91 (un contrôle requis rouge ou une revue manquante) · 6. #92 (un contrôle requis rouge ou une revue manquante) · 7. #93 (un contrôle requis rouge ou une revue manquante) · 8. #99 (un contrôle requis rouge ou une revue manquante) · 9. #100 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T07 (A05) · GOV-059 (A05) |
 | Où en est la phase ? | phase 0 — 14/98 tâches, reste 65.10 j |
-| Le prochain pas | fusionner #82, puis DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
+| Le prochain pas | fusionner #86, puis DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #89 — 2026-09-21 |
 
-**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 86 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,16 +64,15 @@ Reste sur ce chemin : **16.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | rien — fusionnable maintenant |
-| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | rien — fusionnable maintenant |
-| 4 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | rien — fusionnable maintenant |
-| 5 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | rien — fusionnable maintenant |
-| 6 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
-| 7 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
-| 8 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
-| 9 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 10 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un contrôle requis rouge ou une revue manquante |
+| 1 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | rien — fusionnable maintenant |
+| 2 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | rien — fusionnable maintenant |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un contrôle requis rouge ou une revue manquante |
+| 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
+| 6 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
+| 7 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
+| 8 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un contrôle requis rouge ou une revue manquante |
+| 9 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -93,17 +92,19 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-21 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
+`docs/adr/0011-une-seule-implementation-des-listes-d-etats.md` — partners/ADR-0011 — Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture · `docs/adr/0017-revendication-derivee-de-la-forge.md` — partners/ADR-0017 — La revendication d'une tâche se dérive de la forge, pas du fichier de la branche
+
+Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-22). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
 
-**Fusionner #82** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+**Fusionner #86** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **DM-02** — Gates de schéma : enums, centimes, index partiels, migrations additives (1.5 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `c921995` (2026-09-21T23:22:36+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `571b1eb` (2026-09-22T08:18:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -113,24 +114,29 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 ### PR #89 — 2026-09-21 — fix(GOV-059): la revendication se derive de la forge, et gov:etat passe apres les etapes de mesure
 
-**Fait.** La revendication d'une tache ne se recopie plus dans le `docs/tasks.json` de chaque
-branche : elle se DERIVE d'une issue ouverte titree `ID` suivi d'un tiret cadratin et portant
-`en_cours` plus `owner:Axx`. Le cout de synchronisation entre branches ouvertes cesse d'etre en
-carre. Dans `.github/workflows/ci.yml`, l'etape `gov:etat` passe APRES lint, format, typecheck et
-tests : un rouge venu d'une autre branche ne les laisse plus en sautees. L'entree de journal de la
-PR 83, absente, est posee ici — elle rougissait toutes les branches ouvertes.
+**Fait.** La revendication d'une tâche ne se recopie plus dans le `docs/tasks.json` de chaque
+branche : elle se DÉRIVE d'une issue ouverte titrée `ID` suivi d'un tiret cadratin et portant
+`en_cours` plus `owner:Axx`. Le coût de synchronisation entre branches ouvertes cesse d'être en
+carré. Dans `.github/workflows/ci.yml`, l'étape `gov:etat` passe APRÈS lint, format, typecheck et
+tests : un rouge venu d'une autre branche ne les laisse plus en sautées. L'entrée de journal de la
+PR 83, absente, est posée ici — elle rougissait toutes les branches ouvertes.
 
-**Reste.** La surface de revendication passe d'un fichier sous revue de code a un titre d'issue que
-tout compte pouvant ouvrir une issue sur ce depot peut ecrire. L'ecart est nomme dans la section
-Attaque de la PR et assume sur ce depot ; il appartient a SEC-05 de decider s'il doit se fermer.
-La dette de cloture de lot reste due : DM-01, SEC-10 et QA-T03 sont fusionnees sur main et encore
+**Reste.** La surface de revendication passe d'un fichier sous revue de code à des labels GitHub. Le
+dépôt est PUBLIC, mais ouvrir une issue ne revendique rien : la garde écarte toute issue sans label
+`owner:` AVANT d'en lire le titre (`gov-etat.ts:352`) et exige en plus `en_cours` (`:357`), et aucun
+workflow n'en pose. La barrière réelle est le droit de POSER un label, qui demande `triage` ou
+`write`. Ce qui reste ouvert est ailleurs : la valeur après `owner:` n'est jamais confrontée à la
+forme `<Axx>` annoncée en tête de la garde, et la garde ne relie jamais l'auteur d'une PR au
+propriétaire de la revendication. Les deux écarts sont nommés dans la section Attaque de la PR et
+consignés par `partners/ADR-0017`, qui les porte en reste à faire.
+La dette de clôture de lot reste due : DM-01, SEC-10 et QA-T03 sont fusionnées sur main et encore
 `a_faire` au registre.
 
-**Appris.** Le rouge de trois PR ouvertes le meme jour etait la preuve vivante du defaut que cette
-PR ferme : `pr_sur_tache_non_revendiquee` s'est allume sur 84 et 86 des l'ouverture de 89, sans
-qu'aucune des trois n'ait change. Mesure au passage : une PR de phase 0 qui touche
-`docs/tasks.json` exige le label `role:gardien-spec`, et le champ `Rouge constate par:` n'admet
-QUE le code de poste — la moindre parenthese apres lui rend `rouge_vert_absent`.
+**Appris.** Le rouge de trois PR ouvertes le même jour était la preuve vivante du défaut que cette
+PR ferme : `pr_sur_tache_non_revendiquee` s'est allumé sur 84 et 86 dès l'ouverture de 89, sans
+qu'aucune des trois n'ait changé. Mesure au passage : une PR de phase 0 qui touche
+`docs/tasks.json` exige le label `role:gardien-spec`, et le champ `Rouge constaté par:` n'admet
+QUE le code de poste — la moindre parenthèse après lui rend `rouge_vert_absent`.
 
 ### PR #84 — 2026-09-19 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives
 
@@ -158,21 +164,21 @@ garde avec lui.
 
 ### PR #83 — 2026-09-19 — docs(GOV-039): les 25 clauses decidees remises ou datees (ADR 0016)
 
-**Fait.** Les 25 clauses decidees par `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` et declarees perdues
-dans `DETTE_TEXTE_DECIDE` sont resorbees, sans qu'aucune decision neuve soit prise : 23 reviennent
-au mot pres dans le texte applique de 14 exigences, ecrites par un verbe hors depot et jamais a la
-main ; les 2 autres etaient une annexe perimee, datee en ligne par `partners/ADR-0016`.
-`DETTE_TEXTE_DECIDE` est desormais vide. `siren_manquant`, qui n'est pas une valeur de
-`MotifBlocage`, devient `non_resolue` partout ou il etait ecrit.
+**Fait.** Les 25 clauses décidées par `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` et déclarées perdues
+dans `DETTE_TEXTE_DECIDE` sont résorbées, sans qu'aucune décision neuve soit prise : 23 reviennent
+au mot près dans le texte appliqué de 14 exigences, écrites par un verbe hors dépôt et jamais à la
+main ; les 2 autres étaient une annexe périmée, datée en ligne par `partners/ADR-0016`.
+`DETTE_TEXTE_DECIDE` est désormais vide. `siren_manquant`, qui n'est pas une valeur de
+`MotifBlocage`, devient `non_resolue` partout où il était écrit.
 
-**Reste.** La tension entre REQ-DM-021 et REQ-ARG-017 sur `non_resolue` est relevee par la lentille
-exactitude et n'est pas tranchee : elle appartient a la zone argent. Cinq dettes de la revue sont
-reportees. L'entree de journal de cette PR manquait a la fusion : elle est ecrite ici, a posteriori,
-derivee mot a mot du corps de la PR — c'est exactement ce que `pr_fusionnee_sans_journal` reproche.
+**Reste.** La tension entre REQ-DM-021 et REQ-ARG-017 sur `non_resolue` est relevée par la lentille
+exactitude et n'est pas tranchée : elle appartient à la zone argent. Cinq dettes de la revue sont
+reportées. L'entrée de journal de cette PR manquait à la fusion : elle est écrite ici, a posteriori,
+dérivée mot à mot du corps de la PR — c'est exactement ce que `pr_fusionnee_sans_journal` reproche.
 
-**Appris.** Comme la famille `dette_texte_decide_perimee` ne peut plus etre amenee au binaire par
-une donnee une fois le registre vide, `controler()` prend un parametre `dettes` dont la valeur par
-defaut est le registre, et les temoins passent une dette fabriquee. Un registre qu'on vide emporte
+**Appris.** Comme la famille `dette_texte_decide_perimee` ne peut plus être amenée au binaire par
+une donnée une fois le registre vide, `controler()` prend un paramètre `dettes` dont la valeur par
+défaut est le registre, et les témoins passent une dette fabriquée. Un registre qu'on vide emporte
 avec lui le seul moyen de prouver que la garde qui le lit sait encore rougir : il faut rendre la
 source injectable AVANT de la vider.
 
