@@ -183,11 +183,17 @@ describe('REQ-DM-003 — l’index unique partiel de l’attribution occupante, 
  * familles que ce contrôle ne tient PAS sont nommées dans `docs/gates.json`, entrée par entrée ;
  * et une colonne dont le type ne se résout pas n'est jamais un vert : elle est nommée.
  *
- * ⚠️ « QUE POSTGRESQL NE SE RÉSERVE PAS » EST UN FAIT, PAS UNE PRÉCAUTION DE RÉDACTION, et c'est
- * ce qui distingue une borne LEVÉE d'une borne DÉPLACÉE d'un cran — la faute que cette PR a déjà
- * commise deux fois. Mesuré le 2026-09-22 sur pg16 : `CREATE SCHEMA pg_metier` rend « ERROR:
- * unacceptable schema name "pg_metier" / DETAIL: The prefix "pg_" is reserved for system
- * schemas ». Écarter le préfixe n'écarte donc AUCUN schéma qu'une migration pourrait poser.
+ * ⚠️ CETTE BORNE EST DÉPLACÉE D'UN CRAN, ELLE N'EST PAS LEVÉE — et ce paragraphe affirmait le
+ * contraire. `CREATE SCHEMA pg_metier` rend bien « ERROR: unacceptable schema name », MAIS
+ * `SET allow_system_table_mods = on` le permet, et `CREATE TABLE information_schema.x (…)` passe
+ * SANS aucun paramètre (mesuré le 2026-09-22 sur pg16). Une colonne fautive posée dans ces deux
+ * schémas n'est donc PAS vue : c'est une LIMITE DÉCLARÉE, pas une fermeture. Elle reste une dette
+ * et non un refus parce que viser délibérément un schéma système n'est pas le chemin ordinaire
+ * qu'institue REQ-DM-037, et que ça se lit dans le diff d'une migration.
+ *
+ * 🔑 C'est la TROISIÈME fois que cette PR remplace un fait par ce qui lui ressemble — orthographe
+ * Prisma, puis libellé Postgres, puis ce « fait » de réservation — et elle l'a écrit ici même, dans
+ * le paragraphe qui explique cette famille. Deux lentilles l'ont mesuré, pas relu.
  *
  * MÊME ARCHITECTURE QUE L'INDEX CI-DESSUS : les prédicats sont ceux des gardes elles-mêmes
  * (`fautesDUneColonne`, `fauteDeVocabulaire`) — une règle, deux sources de colonnes, une
