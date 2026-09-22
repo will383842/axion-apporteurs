@@ -96,6 +96,29 @@ formes portent la même propriété.
   `it('liste_litterale_d_etats — la SOURCE unique, elle, a le droit de la porter')` : le contre-témoin
   qui empêche la garde d'interdire la solution qu'elle exige.
 
+## Amendement — DM-02, 2026-09-19 : l'unité est le GROUPE, et la règle porte sur le code
+
+Mesuré sur la garde de GOV-030 : l'unité « ligne » échouait OUVERT. Une liste d'états écrite sur
+plusieurs lignes (`[\n 'provisoire',\n 'active'\n]`), des membres sans guillemets
+(`enum X { provisoire, active }`) et une clause SQL coupée (`IN (\n'signee',\n'convertie')`) sortaient
+en 0. La décision 2 se lit désormais ainsi :
+
+1. **L'unité de détection est le plus petit groupe parenthésé** (`()`, `[]`, `{}`) après retrait des
+   commentaires ; on compte ses membres DIRECTS, chaînes ou identifiants nus. Le groupe rougit s'il
+   nomme au moins deux états occupants et si l'ensemble de ses noms d'états n'est pas l'enum
+   `EtatAttribution` COMPLET (un `switch` exhaustif sur les treize n'est pas une liste d'occupants).
+2. **La règle porte sur le CODE, pas sur les commentaires.** Un commentaire qui cite deux états
+   n'implémente rien : il ne rougit plus. Le code écrit à côté de lui, si.
+3. **La projection exacte est légitime par RÈGLE, pas par chemin.** Dans `prisma/migrations/**`, et là
+   seulement : le `CREATE TYPE "etat_attribution" AS ENUM (…)` aux treize valeurs, et une clause dont la
+   liste est EXACTEMENT `clauseEtatsOccupants()`. Aucune exemption de chemin n'est ajoutée à
+   `PORTEURS_LEGITIMES`.
+
+Vérifié par `tests/unit/domaine/gardes-de-schema.spec.ts` ·
+`it('REQ-JUR-027 → REQ-DM-038 : une liste sur plusieurs lignes rougit')`,
+`it('REQ-JUR-027 → REQ-DM-038 : un commentaire qui cite deux états ne rougit plus, le code à côté si')` et
+`it('REQ-JUR-027 → REQ-DM-038 : la projection exacte est légitime par RÈGLE — en migration, et là seulement')`.
+
 ## Reste à faire
 
 - Les racines de `gov-check.ts` que cette famille ne garde pas (`messages/`, `docs/adr/`,

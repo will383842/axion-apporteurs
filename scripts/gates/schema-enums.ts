@@ -1,5 +1,5 @@
 /**
- * schema-enums.ts — la garde du vocabulaire (GOV-006 ; REQ-GOV-016, REQ-JUR-027 → REQ-DM-038,
+ * schema-enums.ts — la garde du vocabulaire (GOV-006, DM-02 ; REQ-GOV-016, REQ-JUR-027 → REQ-DM-038,
  * REQ-DM-003). Registre : `partners:schema:enums`.
  *
  * USAGE : pnpm partners:schema:enums           (échoue si le vocabulaire dérive de sa source)
@@ -19,11 +19,16 @@
  *     (`src/domain/attribution/etats.ts`) et la colonne « Occupant ? » du glossaire lui sont
  *     comparées, jamais l'inverse. Deux copies existent parce que l'une doit être exécutable et
  *     l'autre lisible ; c'est cette garde qui les tient égales (RM-01, RM-06).
- *   — Aucune LISTE LITTÉRALE d'états occupants ailleurs dans le code : DEUX de ces sept noms sur
- *     une même ligne suffisent à faire rougir, et le discriminant est la COUVERTURE, jamais la
- *     syntaxe — une clause `IN (…)` et une comparaison booléenne `x === a || x === b` rougissent
- *     pareil. L'index partiel proposé par les documents d'origine ne couvrait que deux états sur
- *     sept, et rien ne l'a dit pendant des semaines.
+ *   — Aucune LISTE LITTÉRALE d'états occupants ailleurs dans le code. L'unité de détection est le
+ *     GROUPE — le plus petit `()`, `[]` ou `{}` qui les contient, commentaires retirés —, plus la
+ *     ligne : une liste écrite sur plusieurs lignes passait, une liste de membres sans guillemets
+ *     aussi. On compte les membres DIRECTS du groupe, chaînes ou identifiants nus ; DEUX états
+ *     occupants suffisent à faire rougir, sauf si le groupe nomme EXACTEMENT l'enum
+ *     `EtatAttribution` complet (un `switch` exhaustif, la projection `CREATE TYPE` de l'enum). Le
+ *     discriminant reste la COUVERTURE, jamais la syntaxe — une clause `IN (…)` et une comparaison
+ *     booléenne `x === a || x === b` rougissent pareil. Dans `prisma/migrations/**`, et là
+ *     seulement, une clause qui nomme EXACTEMENT les états occupants est la projection de
+ *     `clauseEtatsOccupants()` (l'index partiel) : elle est légitime par RÈGLE, pas par chemin.
  *     Cette garde est la SEULE implémentation de la famille (`partners/ADR-0011`). Sa portée —
  *     tout fichier SUIVI sous `RACINES_CODE`, quelle que soit son extension — tient dans
  *     `dansLaPorteeDesEtats` : la lecture du dépôt en dérive, et `gov-check.ts` en dérive, à chaque
@@ -34,17 +39,47 @@
  *   — Toute colonne de VOCABULAIRE est un enum. ⚠️ La citation de `REQ-DM-038` — « statut, type,
  *     motif, resultat, etat, origine, kind ou palier » — est le texte du REGISTRE, qui a perdu
  *     `status` et `priorite` à la fusion. La liste EXÉCUTÉE (`NOMS_DE_VOCABULAIRE`) porte les dix
- *     noms de l'arbitrage : voir l'avertissement posé sur elle. Une `String` y rougit.
+ *     noms de l'arbitrage : voir l'avertissement posé sur elle. Une `String` y rougit — que le nom
+ *     soit celui du champ ou celui de sa colonne (`@map`).
+ *     LE TYPE SE JUGE SUR CE QUE POSTGRES EN FAIT, jamais sur son orthographe Prisma ni sur le
+ *     libellé qu'une vue en imprime : `GENRE_CHAINE_LIBRE` + `estDuGenreColonne` (lecteur
+ *     unique, l'aiguillage ne vit qu'une fois). `statut Unsupported("text")` rougit
+ *     comme `statut String` ; un enum NATIF (`Unsupported("etat_attribution")`) reste vert, il EST
+ *     la solution. Voir le commentaire de `GENRE_CHAINE_LIBRE` : la version précédente de ce
+ *     prédicat était une liste de deux orthographes, et elle COMPTAIT la colonne avant de
+ *     l'absoudre.
+ *     ⚠️ Le périmètre des COLONNES est `prisma/schema.prisma` SEUL, et REQ-DM-037 institue le SQL
+ *     brut comme canal légitime : une colonne posée par une migration à la main n'y figure pas.
+ *     Ce canal est fermé LÀ OÙ IL DÉBOUCHE — `tests/integration/index-partiels.spec.ts`, second
+ *     `describe`, applique `fauteDeVocabulaire` aux colonnes que le CATALOGUE de la base porte
+ *     après `prisma migrate deploy` : `pg_attribute.atttypid`, déplié par `typeReel`, dans tout
+ *     schéma HORS `pg_*` et `information_schema`, et toute relation qui STOCKE. ⚠️ Ces deux-là
+ *     sont une LIMITE DÉCLARÉE et non une fermeture : `SET allow_system_table_mods = on` permet
+ *     `CREATE SCHEMA pg_metier`, et `CREATE TABLE information_schema.x` passe sans aucun
+ *     paramètre (pg16, 2026-09-22). Jusqu'au 2026-09-22
+ *     ce rôle tenait sur `information_schema.columns.data_type` — un LIBELLÉ, qui replie `text[]`
+ *     en `ARRAY` et `citext` en `USER-DEFINED` : les deux étaient lues, comptées et absoutes, et
+ *     `citext` figurait dans `GENRE_CHAINE_LIBRE` ci-dessous. Ce que ce contrôle ne tient PAS est
+ *     NOMMÉ, forme par forme, dans `docs/gates.json` : une limite écrite vaut mieux qu'une
+ *     fermeture qui n'en est pas une. Une règle, deux sources de colonnes, une implémentation.
  *   — Toute VALEUR d'enum figure au glossaire, et tout enum que le glossaire ÉNUMÈRE a exactement
  *     ces valeurs-là — dans les deux sens, sans quoi une valeur retirée du schéma passerait.
  *   — Aucun REPLI qui retombe sur la valeur brute (`LIBELLES[x] ?? x`) : il rend à l'écran un
  *     identifiant technique au lieu de rougir, et déguise précisément la faute qu'on cherche.
+ *   — L'index unique de l'attribution occupante est PARTIEL, et son prédicat nomme exactement les
+ *     états occupants (`fautesIndexOccupant`, lue sur le SQL des migrations ; la spec d'intégration
+ *     l'applique à `pg_indexes` après `migrate deploy`).
  *
- * CE QU'ELLE NE FAIT PAS. Elle ne lance pas `prisma validate` — le dépôt ne porte pas encore la
- * dépendance — et ne juge donc ni les relations ni les index : l'index partiel de REQ-DM-003 est
- * vérifié en base par DM-07 (`pg_indexes`). Elle lit le schéma comme un texte, ce qui suffit à ce
- * qu'elle juge. Elle ne complète jamais le glossaire toute seule : `docs/CONVENTIONS.md` §8 en
- * réserve l'écriture au `gardien-spec`.
+ * LE SCHÉMA SE LIT PAR `scripts/lot/lecteur-prisma.ts`, jamais ligne à ligne : un modèle se ferme
+ * sur SON accolade, pas sur la première `}` d'un commentaire ou d'une chaîne. Ce que le lecteur ne
+ * sait pas lire est REFUSÉ en nommant la ligne (`schema_illisible`), et un schéma sans modèle ni
+ * champ n'est pas un vert (`perimetre_vide`).
+ *
+ * CE QU'ELLE NE FAIT PAS. Elle ne lance pas `prisma validate` et ne juge pas les relations. Elle ne
+ * complète jamais le glossaire toute seule : `docs/CONVENTIONS.md` §8 en réserve l'écriture au
+ * `gardien-spec`. Elle n'exige pas encore qu'un index occupant EXISTE : la table `attributions` naît
+ * en phase 1 (DM-07), et c'est cette tâche-là qui exigera un compte `> 0` — la sortie imprime ce
+ * compte, table absente comprise, pour que personne ne lise ce zéro comme un vert.
  *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne touche pas au dépôt : la vue est INJECTÉE. Une
  * preuve qui lirait les fichiers réels verdirait ou rougirait au gré de ce que le dépôt contient
@@ -55,11 +90,24 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import {
+  ErreurLecturePrisma,
+  estDuGenreColonne,
+  lireMigrationSql,
+  lireSchemaPrisma,
+  typeAffiche,
+  type GenreDeType,
+  type InstructionSql,
+  type JetonSql,
+  type SchemaPrisma,
+  type TypeDeColonne,
+} from '../lot/lecteur-prisma';
 
 const CHEMIN_SCHEMA = 'prisma/schema.prisma';
 const CHEMIN_GLOSSAIRE = 'docs/GLOSSAIRE.md';
 const CHEMIN_EXIGENCES = 'docs/requirements.json';
 const CHEMIN_ETATS = 'src/domain/attribution/etats.ts';
+const RACINE_MIGRATIONS = 'prisma/migrations/';
 
 /** Les racines où une liste d'états ou un repli muet ne doivent pas apparaître. */
 export const RACINES_CODE = ['src', 'prisma', 'scripts'] as const;
@@ -102,7 +150,8 @@ export function finDeLigneEtrangere(texte: string): { ligne: number; code: strin
  * Les fichiers qui ont le DROIT de porter la liste. CHACUN PORTE SON MOTIF : exempter sans motif,
  * c'est ouvrir un trou que personne ne relira. L'exemption vaut pour le CHEMIN EXACT, et chaque
  * entrée a un contre-témoin atteignable (sous une racine de `RACINES_CODE`) ; un voisin de la
- * source unique, dans le même dossier, a son témoin qui rougit.
+ * source unique, dans le même dossier, a son témoin qui rougit. ⚠️ Les migrations n'y figurent
+ * PAS : leur projection exacte est légitime par une RÈGLE jugée sur le contenu, jamais par un chemin.
  */
 const PORTEURS_LEGITIMES: { chemin: string; motif: string }[] = [
   { chemin: CHEMIN_ETATS, motif: 'la source unique — interdire ici, c’est interdire la solution' },
@@ -134,11 +183,66 @@ const PORTEURS_LEGITIMES: { chemin: string; motif: string }[] = [
  * ci-dessous : chaque nom décidé par l'annexe fait rougir la garde
  * (`tests/unit/gouvernance/glossaire-enums.spec.ts`).
  */
-const NOMS_DE_VOCABULAIRE =
+export const NOMS_DE_VOCABULAIRE =
   /(statut|status|etat|type|motif|resultat|origine|kind|palier|priorite)/i;
 
-/** Les types scalaires qui ne peuvent pas porter un vocabulaire fermé. */
-const TYPES_LIBRES = new Set(['String', 'Json']);
+/**
+ * LE GENRE « ce type peut porter une CHAÎNE LIBRE » — le prédicat de décision de la famille
+ * `colonne_vocabulaire_en_chaine`.
+ *
+ * 🔴 CE N'EST PLUS UNE LISTE D'ORTHOGRAPHES, ET C'EST LA RÉPARATION D'UNE PANNE MESURÉE.
+ * Jusqu'au 2026-09-22, la décision tenait dans `new Set(['String', 'Json'])`. Une colonne
+ * `statut Unsupported("text")` posée au MILIEU du seul modèle du socle était alors LUE, COMPTÉE
+ * (« 9 champ(s) … jugés » au lieu de 8) et déclarée CONFORME, en exit 0 — sur `text`, le type le
+ * plus libre de PostgreSQL, et sur `statut`, le premier nom de la liste ci-dessus. Ce n'était pas
+ * un trou de balayage : c'était un verdict faux. `schema-cents.ts` fermait déjà exactement cette
+ * évasion pour les flottants, dans le MÊME commit : la classe était connue, elle n'était fermée
+ * que d'un côté. Une garde qui connaît une ORTHOGRAPHE ne connaît pas un COMPORTEMENT.
+ *
+ * Le mécanisme (`estDuGenre`) vit dans le lecteur unique et sert aux deux gardes (RM-01) ; seul le
+ * vocabulaire change. `natif` nomme les types POSTGRES qui n'ont aucun domaine fermé — par
+ * SEGMENT (`\b`), pour qu'un domaine nommé `siren_char9` n'y tombe pas. Un enum natif
+ * (`Unsupported("etat_attribution")`) n'en relève PAS : il est la solution, pas la faute — c'est
+ * le contre-témoin sans lequel on refermerait l'orthographe en punissant du code légitime.
+ */
+export const GENRE_CHAINE_LIBRE: GenreDeType = {
+  scalaires: ['String', 'Json'],
+  natif:
+    /\b(text|varchar|nvarchar|character|char|bpchar|citext|name|json|jsonb|xml|clob|string)\b/i,
+  // `S` est la catégorie que PostgreSQL attache à ses types CHAÎNE. CE QU'ELLE AJOUTE au motif
+  // ci-dessus, mesuré en la retirant : pas `citext`, que le motif nomme déjà — mais le type
+  // d'extension que PERSONNE n'a listé, qui sans elle sort `undefined`. Un enum est en `E`, et
+  // reste la solution ; `json`, `jsonb` et `xml` sont en `U` et ne tiennent que par leur nom
+  // (limite déclarée au registre). Un DOMAINE sur `text`, lui, est déplié jusqu'à `text` et
+  // rougit même fermé par un CHECK : REQ-DM-038 veut un enum Prisma, et le glossaire énumère des
+  // valeurs d'enum (RM-04), pas des contraintes équivalentes. C'est un choix, pas un oubli.
+  categories: ['S'],
+};
+
+/**
+ * LA FAUTE DE REQ-DM-038 SUR UNE COLONNE, d'où qu'elle vienne. Seule implémentation de la règle :
+ * la garde statique l'applique aux champs de `prisma/schema.prisma`, la spec d'intégration aux
+ * colonnes de la base RÉELLE après `migrate deploy` — le canal du SQL brut, que REQ-DM-037
+ * institue, n'est pas dans le périmètre du fichier `schema.prisma` (RM-01).
+ */
+export function fauteDeVocabulaire(
+  c: TypeDeColonne & {
+    /** Où la nommer : `prisma/schema.prisma:97 — Attribution.statut`, `metier.attributions.statut`… */
+    ou: string;
+    nom: string;
+    colonne: string;
+  }
+): Faute | undefined {
+  const nomPorteur = [c.nom, c.colonne].find((n) => NOMS_DE_VOCABULAIRE.test(n));
+  if (nomPorteur === undefined || !estDuGenreColonne(c, GENRE_CHAINE_LIBRE)) return undefined;
+  return {
+    famille: 'colonne_vocabulaire_en_chaine',
+    message:
+      `${c.ou} est un ${typeAffiche(c)} alors que son nom ` +
+      `(« ${nomPorteur} ») porte un vocabulaire (REQ-DM-038). Déclare un enum Prisma et inscris ` +
+      "ses valeurs au glossaire : une chaîne libre laisse un seed écrire n'importe quoi, et rien ne le voit.",
+  };
+}
 
 export type FichierCode = { chemin: string; contenu: string };
 
@@ -162,12 +266,22 @@ export const FAMILLES: { nom: string; explication: string }[] = [
   {
     nom: 'source_illisible',
     explication:
-      'le texte de REQ-DM-003 ne donne plus la liste des états occupants : la garde ne sait plus à quoi comparer.',
+      'le texte de REQ-DM-003 ne donne plus la liste des états occupants ni la cible de son index : la garde ne sait plus à quoi comparer.',
   },
   {
     nom: 'fin_de_ligne_non_lf',
     explication:
       "un texte lu porte une fin de ligne autre que LF ou CRLF qu'un consommateur coupe : la garde le jugerait sur d'autres lignes que les siennes.",
+  },
+  {
+    nom: 'schema_illisible',
+    explication:
+      'le schéma ou une migration ne se lit pas (accolade non appariée, chaîne non terminée, ligne inconnue) : la garde refuse au lieu de juger ce qu’elle a compris.',
+  },
+  {
+    nom: 'perimetre_vide',
+    explication:
+      'le schéma ne porte aucun modèle ou aucun champ : « rien à redire » et « rien lu » ne se distinguent plus.',
   },
   {
     nom: 'etats_occupants_divergents',
@@ -198,6 +312,16 @@ export const FAMILLES: { nom: string; explication: string }[] = [
     nom: 'repli_muet',
     explication: 'un repli qui retombe sur la valeur brute déguise la faute au lieu de la montrer.',
   },
+  {
+    nom: 'index_occupant_total',
+    explication:
+      'un index UNIQUE sur le SIREN des attributions sans WHERE : REQ-DM-003 veut un index PARTIEL.',
+  },
+  {
+    nom: 'index_occupant_divergent',
+    explication:
+      "l'index partiel de l'attribution occupante ne couvre pas exactement les états occupants.",
+  },
 ];
 const NOMS_FAMILLES = FAMILLES.map((f) => f.nom);
 
@@ -214,6 +338,18 @@ export function etatsOccupantsDeLaReq(texte: string): string[] {
     .split(',')
     .map((s) => s.trim())
     .filter((s) => /^[a-z][a-z0-9_]*$/.test(s));
+}
+
+/**
+ * La CIBLE de l'index partiel, LUE dans le texte de REQ-DM-003 :
+ * `ON attributions(siren) WHERE statut IN (…)` → table, colonne unique, colonne d'état.
+ * Aucune des trois n'est tapée ici (RM-01) ; `undefined` si le texte ne la donne plus.
+ */
+export function cibleDeLIndex(
+  texte: string
+): { table: string; colonne: string; colonneEtat: string } | undefined {
+  const m = /\bON\s+(\w+)\s*\(\s*(\w+)\s*\)\s*WHERE\s+(\w+)\s+IN\b/.exec(texte);
+  return m ? { table: m[1]!, colonne: m[2]!, colonneEtat: m[3]! } : undefined;
 }
 
 /** Les cellules d'une ligne de tableau markdown, sans les deux barres extrêmes. */
@@ -268,31 +404,21 @@ export function enumsDuGlossaire(glossaire: string): Map<string, string[]> {
   return sortie;
 }
 
-/** Les enums déclarés par le schéma Prisma, lus comme du texte. */
+/**
+ * Les enums déclarés par le schéma Prisma, LUS par le lecteur unique. Lève `ErreurLecturePrisma`
+ * sur un schéma qui ne se lit pas — jamais une table vide.
+ */
 export function enumsDuSchema(schema: string): Map<string, string[]> {
-  const sortie = new Map<string, string[]>();
-  for (const m of schema.matchAll(/enum\s+(\w+)\s*\{([^}]*)\}/g)) {
-    const valeurs = m[2]!
-      .split('\n')
-      .map((l) => l.replace(/\/\/.*$/, '').trim())
-      .filter((l) => /^[a-z][a-z0-9_]*$/.test(l));
-    sortie.set(m[1]!, valeurs);
-  }
-  return sortie;
+  return new Map(lireSchemaPrisma(schema).enums.map((e) => [e.nom, e.valeurs]));
 }
 
-/** Les champs des modèles Prisma : nom et type déclaré. */
-export function champsDuSchema(schema: string): { modele: string; champ: string; type: string }[] {
-  const sortie: { modele: string; champ: string; type: string }[] = [];
-  for (const m of schema.matchAll(/model\s+(\w+)\s*\{([^}]*)\}/g)) {
-    for (const ligne of m[2]!.split('\n')) {
-      const propre = ligne.replace(/\/\/.*$/, '').trim();
-      const champ = /^(\w+)\s+(\w+)/.exec(propre);
-      if (!champ) continue;
-      sortie.push({ modele: m[1]!, champ: champ[1]!, type: champ[2]! });
-    }
-  }
-  return sortie;
+/** Les champs des modèles Prisma, LUS par le lecteur unique : nom, colonne (`@map`) et type. */
+export function champsDuSchema(
+  schema: string
+): { modele: string; champ: string; colonne: string; type: string }[] {
+  return lireSchemaPrisma(schema).modeles.flatMap((m) =>
+    m.champs.map((c) => ({ modele: m.nom, champ: c.nom, colonne: c.colonne, type: c.type }))
+  );
 }
 
 /** La constante `ETATS_OCCUPANTS`, lue dans son fichier source. */
@@ -310,25 +436,390 @@ export function texteDeLaReq(id: string): string {
   return registre.exigences.find((e) => e.id === id)?.texte ?? '';
 }
 
+// ── les groupes : l'unité de détection des listes d'états ────────────────────
+
+type JetonDeCode = { type: 'ouvre' | 'ferme' | 'membre'; valeur: string; ligne: number };
+
+const OUVRANTS = new Set(['(', '[', '{']);
+const FERMANTS = new Set([')', ']', '}']);
+const EXTENSIONS_ECMA = /\.(?:[cm]?[jt]sx?|json|prisma)$/;
+
+/**
+ * Les jetons d'un fichier ECMAScript, JSON ou Prisma : commentaires `//` et `/* *\/` RETIRÉS,
+ * chaînes `'…'`, `"…"` et morceaux de gabarit `` `…${…}…` `` rendus comme membres, identifiants
+ * aussi, et les trois paires de délimiteurs. Seuls les membres dont la valeur est dans `noms` sont
+ * gardés : les autres ne comptent jamais.
+ */
+function jetonsEcma(texte: string, noms: ReadonlySet<string>): JetonDeCode[] {
+  const sortie: JetonDeCode[] = [];
+  const pileGabarits: number[] = [];
+  const IDENT = /[A-Za-z_$][\w$]*/y;
+  let ligne = 1;
+  let i = 0;
+  const membre = (valeur: string, l: number): void => {
+    if (noms.has(valeur)) sortie.push({ type: 'membre', valeur, ligne: l });
+  };
+  const gabarit = (): void => {
+    let valeur = '';
+    const l = ligne;
+    while (i < texte.length) {
+      const d = texte[i]!;
+      if (d === '\\') {
+        if (texte[i + 1] === LF) ligne++;
+        valeur += texte[i + 1] ?? '';
+        i += 2;
+        continue;
+      }
+      if (d === '`') {
+        i++;
+        break;
+      }
+      if (d === '$' && texte[i + 1] === '{') {
+        i += 2;
+        pileGabarits.push(0);
+        break;
+      }
+      if (d === LF) ligne++;
+      valeur += d;
+      i++;
+    }
+    membre(valeur, l);
+  };
+  while (i < texte.length) {
+    const c = texte[i]!;
+    if (c === LF) {
+      ligne++;
+      i++;
+      continue;
+    }
+    if (c === '/' && texte[i + 1] === '/') {
+      while (i < texte.length && texte[i] !== LF) i++;
+      continue;
+    }
+    if (c === '/' && texte[i + 1] === '*') {
+      const fin = texte.indexOf('*/', i + 2);
+      const jusqua = fin === -1 ? texte.length : fin + 2;
+      for (; i < jusqua; i++) if (texte[i] === LF) ligne++;
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      let valeur = '';
+      i++;
+      while (i < texte.length && texte[i] !== c && texte[i] !== LF) {
+        if (texte[i] === '\\' && texte[i + 1] !== LF) {
+          valeur += texte[i + 1] ?? '';
+          i += 2;
+          continue;
+        }
+        valeur += texte[i]!;
+        i++;
+      }
+      if (texte[i] === c) i++;
+      membre(valeur, ligne);
+      continue;
+    }
+    if (c === '`') {
+      i++;
+      gabarit();
+      continue;
+    }
+    if (c === '}' && pileGabarits.length > 0 && pileGabarits[pileGabarits.length - 1] === 0) {
+      pileGabarits.pop();
+      i++;
+      gabarit();
+      continue;
+    }
+    if (OUVRANTS.has(c) || FERMANTS.has(c)) {
+      if (pileGabarits.length > 0 && (c === '{' || c === '}')) {
+        pileGabarits[pileGabarits.length - 1]! += c === '{' ? 1 : -1;
+      }
+      sortie.push({ type: OUVRANTS.has(c) ? 'ouvre' : 'ferme', valeur: c, ligne });
+      i++;
+      continue;
+    }
+    IDENT.lastIndex = i;
+    const m = IDENT.exec(texte);
+    if (m) {
+      membre(m[0], ligne);
+      i += m[0].length;
+      continue;
+    }
+    i++;
+  }
+  return sortie;
+}
+
+/**
+ * Les jetons d'un fichier SQL, par le lecteur unique : littéraux, identifiants et mots sont des
+ * membres ; un corps `$$…$$` est RELU comme du SQL (un déclencheur peut porter une liste) ; chaque
+ * instruction est son propre groupe racine.
+ */
+function jetonsSql(texte: string, noms: ReadonlySet<string>, ligneDeDepart = 1): JetonDeCode[] {
+  const sortie: JetonDeCode[] = [];
+  for (const instr of lireMigrationSql(texte, ligneDeDepart)) {
+    sortie.push({ type: 'ouvre', valeur: ';', ligne: instr.ligne });
+    for (const j of instr.jetons) {
+      if (j.type === 'corps') sortie.push(...jetonsSql(j.valeur, noms, j.ligne));
+      else if (j.type === 'symbole' && OUVRANTS.has(j.valeur))
+        sortie.push({ type: 'ouvre', valeur: j.valeur, ligne: j.ligne });
+      else if (j.type === 'symbole' && FERMANTS.has(j.valeur))
+        sortie.push({ type: 'ferme', valeur: j.valeur, ligne: j.ligne });
+      else if (j.type !== 'symbole' && noms.has(j.valeur))
+        sortie.push({ type: 'membre', valeur: j.valeur, ligne: j.ligne });
+    }
+    sortie.push({ type: 'ferme', valeur: ';', ligne: instr.ligne });
+  }
+  return sortie;
+}
+
+/** Tout autre texte : identifiants nus et délimiteurs, guillemets ignorés — rien ne s'y cache. */
+function jetonsTexte(texte: string, noms: ReadonlySet<string>): JetonDeCode[] {
+  const sortie: JetonDeCode[] = [];
+  let ligne = 1;
+  const MOTIF = /\n|[()[\]{}]|[A-Za-z_][\w]*/g;
+  for (const m of texte.matchAll(MOTIF)) {
+    const v = m[0];
+    if (v === LF) ligne++;
+    else if (OUVRANTS.has(v)) sortie.push({ type: 'ouvre', valeur: v, ligne });
+    else if (FERMANTS.has(v)) sortie.push({ type: 'ferme', valeur: v, ligne });
+    else if (noms.has(v)) sortie.push({ type: 'membre', valeur: v, ligne });
+  }
+  return sortie;
+}
+
+/**
+ * Les GROUPES d'un fichier et leurs membres DIRECTS (ceux d'un sous-groupe appartiennent au
+ * sous-groupe). Le fichier entier est le groupe racine. Un fermant sans ouvrant est ignoré ; un
+ * groupe jamais fermé l'est à la fin du fichier.
+ */
+export function groupesDEtats(
+  chemin: string,
+  texte: string,
+  noms: ReadonlySet<string>
+): { valeur: string; ligne: number }[][] {
+  const jetons = chemin.endsWith('.sql')
+    ? jetonsSql(texte, noms)
+    : EXTENSIONS_ECMA.test(chemin)
+      ? jetonsEcma(texte, noms)
+      : jetonsTexte(texte, noms);
+  const fermes: { valeur: string; ligne: number }[][] = [];
+  const pile: { valeur: string; ligne: number }[][] = [[]];
+  for (const j of jetons) {
+    if (j.type === 'ouvre') pile.push([]);
+    else if (j.type === 'ferme') {
+      if (pile.length > 1) fermes.push(pile.pop()!);
+    } else pile[pile.length - 1]!.push({ valeur: j.valeur, ligne: j.ligne });
+  }
+  while (pile.length > 0) fermes.push(pile.pop()!);
+  return fermes.filter((g) => g.length > 0);
+}
+
+// ── l'index partiel de l'attribution occupante ───────────────────────────────
+
+const estMot = (j: JetonSql | undefined, ...mots: string[]): boolean =>
+  j !== undefined && j.type === 'mot' && mots.includes(j.valeur.toUpperCase());
+
+/** Le nom d'un identifiant SQL : un mot nu se replie en minuscules, un `"…"` garde sa casse. */
+const nomSql = (j: JetonSql): string => (j.type === 'mot' ? j.valeur.toLowerCase() : j.valeur);
+
+type IndexLu = {
+  nom: string;
+  unique: boolean;
+  table: string;
+  colonnes: string[];
+  predicat: JetonSql[] | undefined;
+};
+
+/** Un `CREATE [UNIQUE] INDEX`, tel que l'écrit une migration ou que le rend `pg_indexes.indexdef`. */
+function lireIndex(instr: InstructionSql): IndexLu | undefined {
+  const t = instr.jetons;
+  let k = 0;
+  if (!estMot(t[k++], 'CREATE')) return undefined;
+  const unique = estMot(t[k], 'UNIQUE');
+  if (unique) k++;
+  if (!estMot(t[k++], 'INDEX')) return undefined;
+  if (estMot(t[k], 'CONCURRENTLY')) k++;
+  if (estMot(t[k], 'IF')) k += 3;
+  let nom = '(sans nom)';
+  if (!estMot(t[k], 'ON')) nom = nomSql(t[k++]!);
+  if (!estMot(t[k++], 'ON')) return undefined;
+  if (estMot(t[k], 'ONLY')) k++;
+  let table = nomSql(t[k++]!);
+  while (t[k]?.type === 'symbole' && t[k]!.valeur === '.') {
+    table = nomSql(t[k + 1]!);
+    k += 2;
+  }
+  if (estMot(t[k], 'USING')) k += 2;
+  const colonnes: string[] = [];
+  if (t[k]?.valeur === '(') {
+    let profondeur = 0;
+    let debutElement = true;
+    for (; k < t.length; k++) {
+      const j = t[k]!;
+      if (j.type === 'symbole' && j.valeur === '(') {
+        profondeur++;
+        if (profondeur === 1) continue;
+      } else if (j.type === 'symbole' && j.valeur === ')') {
+        profondeur--;
+        if (profondeur === 0) {
+          k++;
+          break;
+        }
+      } else if (profondeur === 1 && j.type === 'symbole' && j.valeur === ',') {
+        debutElement = true;
+        continue;
+      }
+      if (debutElement && profondeur === 1 && (j.type === 'mot' || j.type === 'identifiant')) {
+        colonnes.push(nomSql(j));
+      }
+      debutElement = false;
+    }
+  }
+  const where = t.findIndex((j, i) => i >= k && estMot(j, 'WHERE'));
+  return { nom, unique, table, colonnes, predicat: where === -1 ? undefined : t.slice(where + 1) };
+}
+
+/**
+ * Le prédicat d'un index partiel RÉDUIT à sa forme : parenthèses, crochets, virgules, `ARRAY` et
+ * conversions `::type` retirés. `statut IN ('a', 'b')` et la réécriture de PostgreSQL
+ * `(statut = ANY (ARRAY['a'::etat, 'b'::etat]))` rendent la MÊME suite — on compare des ensembles
+ * de littéraux, jamais des chaînes.
+ */
+function formeDuPredicat(predicat: JetonSql[]): JetonSql[] {
+  const sortie: JetonSql[] = [];
+  for (let i = 0; i < predicat.length; i++) {
+    const j = predicat[i]!;
+    if (j.type === 'symbole' && ['(', ')', '[', ']', ','].includes(j.valeur)) continue;
+    if (estMot(j, 'ARRAY')) continue;
+    if (j.type === 'symbole' && j.valeur === '::') {
+      i++;
+      continue;
+    }
+    sortie.push(j);
+  }
+  return sortie;
+}
+
+/**
+ * Les fautes d'UN index, au regard de REQ-DM-003. Exportée : la spec d'intégration l'applique à
+ * `pg_indexes.indexdef` après `migrate deploy`, la garde au SQL des migrations — une règle, deux
+ * sources, une implémentation.
+ *
+ *   — un index UNIQUE sur `source.colonne` de `table`, SANS `WHERE` → `index_occupant_total` ;
+ *   — un tel index dont le prédicat nomme au moins un état occupant, mais n'est pas EXACTEMENT
+ *     « `colonneEtat` IN (états occupants) » — ensemble différent, négation, `OR`, `AND`, colonne
+ *     d'état différente, clé à plusieurs colonnes → `index_occupant_divergent`.
+ *
+ * Un index unique partiel dont le prédicat ne nomme AUCUN état occupant (une file `en_attente`)
+ * n'est pas l'index de l'attribution occupante : il n'est pas jugé ici.
+ */
+export function fautesIndexOccupant(
+  index: string,
+  table: string,
+  source: { colonne: string; colonneEtat: string; occupants: readonly string[] }
+): Faute[] {
+  const fautes: Faute[] = [];
+  for (const instr of lireMigrationSql(index)) {
+    const lu = lireIndex(instr);
+    if (!lu || !lu.unique || lu.table !== table || !lu.colonnes.includes(source.colonne)) continue;
+    if (lu.predicat === undefined) {
+      fautes.push({
+        famille: 'index_occupant_total',
+        message:
+          `index « ${lu.nom} » sur ${table}(${lu.colonnes.join(', ')}) : UNIQUE sans WHERE. ` +
+          `REQ-DM-003 veut un index PARTIEL — « au plus une attribution OCCUPANTE par ${source.colonne} » ; ` +
+          'un index total interdit toute nouvelle attribution après une perte ou une expiration.',
+      });
+      continue;
+    }
+    const forme = formeDuPredicat(lu.predicat);
+    const litteraux = forme.filter((j) => j.type === 'litteral').map((j) => j.valeur);
+    if (!litteraux.some((v) => source.occupants.includes(v))) continue;
+    const [colonne, operateur, ensuite] = forme;
+    const appartenance =
+      colonne !== undefined &&
+      colonne.type !== 'litteral' &&
+      nomSql(colonne) === source.colonneEtat &&
+      (estMot(operateur, 'IN') ||
+        (operateur?.type === 'symbole' && operateur.valeur === '=' && estMot(ensuite, 'ANY')));
+    const valeurs = forme.slice(estMot(operateur, 'IN') ? 2 : 3);
+    const seulementDesLitteraux = valeurs.every((j) => j.type === 'litteral');
+    const ensembleExact =
+      new Set(litteraux).size === source.occupants.length &&
+      source.occupants.every((o) => litteraux.includes(o)) &&
+      litteraux.every((v) => source.occupants.includes(v));
+    if (lu.colonnes.length !== 1 || !appartenance || !seulementDesLitteraux || !ensembleExact) {
+      fautes.push({
+        famille: 'index_occupant_divergent',
+        message:
+          `index « ${lu.nom} » sur ${table}(${lu.colonnes.join(', ')}) : le prédicat nomme ` +
+          `{${[...new Set(litteraux)].join(', ')}} ; REQ-DM-003 exige exactement ` +
+          `« ${source.colonneEtat} IN (${source.occupants.join(', ')}) » sur la seule colonne ` +
+          `${source.colonne}. Génère la clause depuis clauseEtatsOccupants() : une liste tapée ne suit ` +
+          "jamais l'exigence.",
+      });
+    }
+  }
+  return fautes;
+}
+
+/** Les index uniques d'une table sur une colonne, dans le SQL des migrations — le compte imprimé. */
+function indexUniquesSur(sql: string, table: string, colonne: string): number {
+  return lireMigrationSql(sql)
+    .map(lireIndex)
+    .filter((i) => i?.unique && i.table === table && i.colonnes.includes(colonne)).length;
+}
+
+/** Vrai si une migration crée la table. */
+function creeLaTable(sql: string, table: string): boolean {
+  return lireMigrationSql(sql).some((instr) => {
+    const t = instr.jetons;
+    if (!estMot(t[0], 'CREATE') || !estMot(t[1], 'TABLE')) return false;
+    const k = estMot(t[2], 'IF') ? 5 : 2;
+    let nom = t[k] ? nomSql(t[k]!) : '';
+    if (t[k + 1]?.valeur === '.' && t[k + 2]) nom = nomSql(t[k + 2]!);
+    return nom === table;
+  });
+}
+
+const estMigrationSql = (chemin: string): boolean =>
+  chemin.startsWith(RACINE_MIGRATIONS) && chemin.endsWith('.sql');
+
 // ── le contrôle ──────────────────────────────────────────────────────────────
 
-const memeEnsemble = (a: string[], b: string[]): boolean =>
+const memeEnsemble = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && [...a].sort().join('|') === [...b].sort().join('|');
+
+/** Le schéma lu, ou la faute qui dit pourquoi il ne l'est pas. */
+function schemaLu(schema: string): SchemaPrisma | Faute {
+  try {
+    return lireSchemaPrisma(schema);
+  } catch (e) {
+    if (!(e instanceof ErreurLecturePrisma)) throw e;
+    return {
+      famille: 'schema_illisible',
+      message:
+        `${CHEMIN_SCHEMA} — ${e.message}. La garde ne juge pas un schéma qu'elle ne sait pas lire : ` +
+        'un modèle mal fermé cacherait les champs qui le suivent.',
+    };
+  }
+}
 
 export function controler(vue: Vue): Faute[] {
   const fautes: Faute[] = [];
   const attendus = etatsOccupantsDeLaReq(vue.reqDm003);
+  const cible = cibleDeLIndex(vue.reqDm003);
 
   // Ne pas avoir pu lire la source n'est JAMAIS un vert : sans elle, toutes les égalités
   // ci-dessous compareraient un tableau vide à un tableau vide.
-  if (attendus.length === 0) {
+  if (attendus.length === 0 || cible === undefined) {
     return [
       {
         famille: 'source_illisible',
         message:
-          'REQ-DM-003 ne porte plus « ETATS_OCCUPANTS = {…} » : la garde ne sait plus à quoi ' +
-          'comparer la constante ni le glossaire. Rétablis la liste dans le registre des ' +
-          "exigences — ce n'est pas ici qu'elle se décide.",
+          'REQ-DM-003 ne porte plus « ETATS_OCCUPANTS = {…} » ou « ON <table>(<colonne>) WHERE ' +
+          '<colonne> IN (…) » : la garde ne sait plus à quoi comparer la constante, le glossaire ' +
+          "ni l'index. Rétablis le texte dans le registre des exigences — ce n'est pas ici qu'il se décide.",
       },
     ];
   }
@@ -341,9 +832,11 @@ export function controler(vue: Vue): Faute[] {
     [CHEMIN_ETATS, vue.etatsSource],
     ...vue.code.map((f): [string, string] => [f.chemin, f.contenu]),
   ]);
+  const coupes = new Set<string>();
   for (const [chemin, texte] of textes) {
     const fin = finDeLigneEtrangere(texte);
     if (fin === undefined) continue;
+    coupes.add(chemin);
     fautes.push({
       famille: 'fin_de_ligne_non_lf',
       message:
@@ -375,24 +868,55 @@ export function controler(vue: Vue): Faute[] {
     });
   }
 
-  // RM-06 : le discriminant est la COUVERTURE — deux états occupants nommés sur une ligne, quel
-  // que soit l'opérateur qui les relie. Seuil, alternatives écartées et retour arrière :
-  // `partners/ADR-0011`. Un prédicat légitime passe par `PORTEURS_LEGITIMES`, jamais par un seuil.
-  const quotes = new RegExp(`['"\`](${attendus.join('|')})['"\`]`, 'g');
+  // Le schéma se LIT — sauf s'il vient d'être refusé pour sa fin de ligne : refusé, il n'est pas jugé.
+  const lu = coupes.has(CHEMIN_SCHEMA) ? undefined : schemaLu(vue.schema);
+  const schema = lu && 'modeles' in lu ? lu : undefined;
+  if (lu && !schema) fautes.push(lu as Faute);
+
+  // L'enum COMPLET des états, lu dans le schéma ; à défaut, dans le glossaire.
+  const complets =
+    schema?.enums.find((e) => e.nom === 'EtatAttribution')?.valeurs ??
+    etatsDuGlossaire(vue.glossaire).map((e) => e.valeur);
+  const noms = new Set([...complets, ...attendus]);
+
+  // RM-06 : le discriminant est la COUVERTURE d'un GROUPE — deux états occupants parmi ses membres
+  // directs, quel que soit l'opérateur qui les relie. Seuil, alternatives écartées et retour
+  // arrière : `partners/ADR-0011`. Un prédicat légitime passe par `PORTEURS_LEGITIMES` ou par la
+  // règle de projection exacte, jamais par un seuil.
   for (const f of vue.code) {
-    if (PORTEURS_LEGITIMES.some((p) => p.chemin === f.chemin)) continue;
-    f.contenu.split('\n').forEach((ligne, i) => {
-      const trouves = new Set([...ligne.matchAll(quotes)].map((m) => m[1]!));
-      if (trouves.size >= 2) {
+    if (coupes.has(f.chemin)) continue;
+    const legitime = PORTEURS_LEGITIMES.some((p) => p.chemin === f.chemin);
+    if (!legitime) {
+      let groupes: { valeur: string; ligne: number }[][];
+      try {
+        groupes = groupesDEtats(f.chemin, f.contenu, noms);
+      } catch (e) {
+        if (!(e instanceof ErreurLecturePrisma)) throw e;
+        fautes.push({
+          famille: 'schema_illisible',
+          message: `${f.chemin} — ${e.message} : le SQL ne se lit pas, la garde ne le juge pas.`,
+        });
+        groupes = [];
+      }
+      for (const g of groupes) {
+        const nomsDuGroupe = [...new Set(g.map((m) => m.valeur))];
+        const occupants = nomsDuGroupe.filter((n) => attendus.includes(n));
+        if (occupants.length < 2) continue;
+        if (complets.length > 0 && memeEnsemble(nomsDuGroupe, complets)) continue;
+        if (estMigrationSql(f.chemin) && memeEnsemble(nomsDuGroupe, attendus)) continue;
+        const ligne = g.find((m) => attendus.includes(m.valeur))!.ligne;
         fautes.push({
           famille: 'liste_litterale_d_etats',
           message:
-            `${f.chemin}:${i + 1} — liste littérale d'états occupants (${[...trouves].join(', ')}, ` +
-            `soit ${trouves.size} sur ${attendus.length}). ` +
+            `${f.chemin}:${ligne} — liste littérale d'états occupants (${occupants.join(', ')}, ` +
+            `soit ${occupants.length} sur ${attendus.length}). ` +
             `Importe ETATS_OCCUPANTS depuis ${CHEMIN_ETATS} : une liste recopiée ne suit jamais ` +
             "l'exigence, et l'index qui n'en couvrait que deux sur sept n'a rien fait rougir.",
         });
       }
+    }
+    f.contenu.split('\n').forEach((ligne, i) => {
+      if (legitime) return;
       const repli = /(\w+)\s*\[\s*([A-Za-z0-9_.]+)\s*\]\s*\?\?\s*\2\b/.exec(ligne);
       if (repli) {
         fautes.push({
@@ -404,22 +928,55 @@ export function controler(vue: Vue): Faute[] {
         });
       }
     });
-  }
 
-  for (const { modele, champ, type } of champsDuSchema(vue.schema)) {
-    if (NOMS_DE_VOCABULAIRE.test(champ) && TYPES_LIBRES.has(type)) {
-      fautes.push({
-        famille: 'colonne_vocabulaire_en_chaine',
-        message:
-          `${CHEMIN_SCHEMA} — ${modele}.${champ} est un ${type} alors que son nom porte un ` +
-          `vocabulaire (REQ-DM-038). Déclare un enum Prisma et inscris ses valeurs au glossaire : ` +
-          "une chaîne libre laisse un seed écrire n'importe quoi, et rien ne le voit.",
-      });
+    // L'index de l'attribution occupante, lu dans le SQL de chaque migration.
+    if (estMigrationSql(f.chemin)) {
+      const instructions = ((): InstructionSql[] => {
+        try {
+          return lireMigrationSql(f.contenu);
+        } catch {
+          return []; // déjà nommée ci-dessus, famille `schema_illisible`
+        }
+      })();
+      for (const instr of instructions) {
+        for (const faute of fautesIndexOccupant(instr.texte, cible.table, {
+          colonne: cible.colonne,
+          colonneEtat: cible.colonneEtat,
+          occupants: attendus,
+        })) {
+          fautes.push({ ...faute, message: `${f.chemin}:${instr.ligne} — ${faute.message}` });
+        }
+      }
     }
   }
 
+  if (!schema) return fautes;
+
+  const champs = schema.modeles.flatMap((m) => m.champs.map((c) => ({ modele: m.nom, ...c })));
+  if (schema.modeles.length === 0 || champs.length === 0) {
+    fautes.push({
+      famille: 'perimetre_vide',
+      message:
+        `${CHEMIN_SCHEMA} — ${schema.modeles.length} modèle(s), ${champs.length} champ(s) : la garde ` +
+        "n'a aucune colonne à juger, et un zéro ne dit pas si c'est parce qu'il n'y a rien à redire " +
+        "ou parce qu'elle n'a rien lu.",
+    });
+  }
+
+  for (const c of champs) {
+    const faute = fauteDeVocabulaire({
+      ou: `${CHEMIN_SCHEMA}:${c.ligne} — ${c.modele}.${c.nom}`,
+      nom: c.nom,
+      colonne: c.colonne,
+      type: c.type,
+      natif: false,
+      tableau: c.liste,
+    });
+    if (faute) fautes.push(faute);
+  }
+
   const auGlossaire = enumsDuGlossaire(vue.glossaire);
-  for (const [nom, valeurs] of enumsDuSchema(vue.schema)) {
+  for (const { nom, valeurs } of schema.enums) {
     for (const v of valeurs) {
       if (!vue.glossaire.includes('`' + v + '`')) {
         fautes.push({
@@ -444,6 +1001,53 @@ export function controler(vue: Vue): Faute[] {
   }
 
   return fautes;
+}
+
+/**
+ * Ce que la garde a RÉELLEMENT confronté — imprimé au vert comme au rouge. Aucun compte n'est la
+ * longueur d'une liste tapée : tout se relit dans la vue.
+ */
+export function perimetreDeLaVue(vue: Vue): {
+  modeles: number;
+  champs: number;
+  enums: number;
+  valeurs: number;
+  fichiers: number;
+  migrations: number;
+  indexOccupants: number;
+  table: string;
+  tablePresente: boolean;
+} {
+  const cible = cibleDeLIndex(vue.reqDm003);
+  const table = cible?.table ?? '(cible illisible)';
+  let schema: SchemaPrisma = { modeles: [], enums: [] };
+  try {
+    schema = lireSchemaPrisma(vue.schema);
+  } catch {
+    // illisible : zéro lu, et la famille `schema_illisible` le dit
+  }
+  const migrations = vue.code.filter((f) => estMigrationSql(f.chemin));
+  let indexOccupants = 0;
+  let tablePresente = false;
+  for (const m of migrations) {
+    try {
+      if (cible) indexOccupants += indexUniquesSur(m.contenu, cible.table, cible.colonne);
+      if (cible && creeLaTable(m.contenu, cible.table)) tablePresente = true;
+    } catch {
+      // illisible : déjà nommée par `controler`
+    }
+  }
+  return {
+    modeles: schema.modeles.length,
+    champs: schema.modeles.reduce((n, m) => n + m.champs.length, 0),
+    enums: schema.enums.length,
+    valeurs: schema.enums.reduce((n, e) => n + e.valeurs.length, 0),
+    fichiers: vue.code.length,
+    migrations: migrations.length,
+    indexOccupants,
+    table,
+    tablePresente,
+  };
 }
 
 // ── la vue du dépôt ──────────────────────────────────────────────────────────
@@ -510,6 +1114,11 @@ const SCHEMA_FIXTURE = [
   '  qualifieur',
   '}',
   '',
+  'model Compte {',
+  '  id   String      @id',
+  '  role ConsoleRole',
+  '}',
+  '',
 ].join('\n');
 
 /**
@@ -519,10 +1128,13 @@ const SCHEMA_FIXTURE = [
  */
 const ETATS_FIXTURE =
   "['provisoire', 'active', 'rdv_pris', 'proposition', 'signee', 'convertie', 'figee_resiliation']";
+const CLAUSE_FIXTURE =
+  "'provisoire', 'active', 'rdv_pris', 'proposition', 'signee', 'convertie', 'figee_resiliation'";
 
 export const VUE_CONFORME: Vue = {
   reqDm003:
-    'Au plus une attribution occupante par SIREN : index unique partiel où ETATS_OCCUPANTS = ' +
+    'Au plus une attribution occupante par SIREN : index unique partiel `ON attributions(siren) ' +
+    'WHERE statut IN (ETATS_OCCUPANTS)` où ETATS_OCCUPANTS = ' +
     '{provisoire, active, rdv_pris, proposition, signee, convertie, figee_resiliation}, la liste ' +
     'étant une constante unique partagée par le code et la migration.',
   glossaire: GLOSSAIRE_FIXTURE,
@@ -531,11 +1143,40 @@ export const VUE_CONFORME: Vue = {
   code: [],
 };
 
+/** Trois migrations, la faute au MILIEU : un contrôle qui ne lirait que la première ou la dernière passerait. */
+function migrationsAvec(milieu: string): FichierCode[] {
+  return [
+    {
+      chemin: 'prisma/migrations/1_socle/migration.sql',
+      contenu: 'CREATE TABLE "a" ("id" INT);\n',
+    },
+    {
+      chemin: 'prisma/migrations/2_attributions/migration.sql',
+      contenu:
+        'CREATE TABLE "attributions" ("siren" CHAR(9), "statut" "etat_attribution");\n' +
+        `${milieu}\n` +
+        'CREATE INDEX "attributions_siren" ON "attributions" ("siren");\n',
+    },
+    {
+      chemin: 'prisma/migrations/3_suite/migration.sql',
+      contenu: 'CREATE TABLE "b" ("id" INT);\n',
+    },
+  ];
+}
+
 /** Un témoin par famille : la vue truquée, et la famille qu'elle DOIT faire rougir. */
 const TEMOINS: { famille: string; vue: () => Vue }[] = [
   {
     famille: 'source_illisible',
     vue: () => ({ ...VUE_CONFORME, reqDm003: 'Au plus une attribution occupante par SIREN.' }),
+  },
+  // La cible de l'index disparaît du texte, la liste reste : la garde ne sait plus quel index juger.
+  {
+    famille: 'source_illisible',
+    vue: () => ({
+      ...VUE_CONFORME,
+      reqDm003: VUE_CONFORME.reqDm003.replace('ON attributions(siren) ', ''),
+    }),
   },
   // Un CR seul, que Prisma coupe : découpé sur LF, `statut String` se colle au champ précédent et disparaît.
   {
@@ -546,6 +1187,26 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
         VUE_CONFORME.schema +
         ['model Attribution {', '  id     String @id', '  statut String', '}', ''].join(CR),
     }),
+  },
+  // Une accolade jamais fermée : lu ligne à ligne, le modèle se fermerait sur le bloc suivant.
+  {
+    famille: 'schema_illisible',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema: VUE_CONFORME.schema + '\nmodel Bac {\n  id     String @id\n  statut String\n',
+    }),
+  },
+  {
+    famille: 'schema_illisible',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema: VUE_CONFORME.schema + '\nmodel Bac {\n  id String @id @default("}\n}\n',
+    }),
+  },
+  // Le lecteur rend « rien » : zéro modèle, et le zéro ne passe pas pour un vert.
+  {
+    famille: 'perimetre_vide',
+    vue: () => ({ ...VUE_CONFORME, schema: VUE_CONFORME.schema.split('model Compte')[0]! }),
   },
   {
     famille: 'etats_occupants_divergents',
@@ -602,12 +1263,87 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
       ],
     }),
   },
+  // Une liste sur PLUSIEURS lignes : jugée par groupe, plus par ligne.
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [{ chemin: 'src/x/liste.ts', contenu: "const x = [\n  'provisoire',\n  'active'\n];" }],
+    }),
+  },
+  // Des membres SANS guillemets.
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [{ chemin: 'src/x/enum.ts', contenu: 'enum X { provisoire, active }' }],
+    }),
+  },
+  // La clause EXACTE des occupants HORS d'une migration : la règle de projection ne vaut qu'en migration.
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [
+        { chemin: 'src/x/requete.sql', contenu: `SELECT 1 WHERE statut IN (${CLAUSE_FIXTURE});` },
+      ],
+    }),
+  },
+  // Une liste cachée dans le corps `$$` d'un déclencheur : le corps se relit comme du SQL.
+  {
+    famille: 'liste_litterale_d_etats',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: migrationsAvec(
+        "CREATE FUNCTION f() RETURNS trigger AS $$ BEGIN IF NEW.statut IN ('signee', 'convertie') THEN RETURN NULL; END IF; END; $$ LANGUAGE plpgsql;"
+      ),
+    }),
+  },
   {
     famille: 'colonne_vocabulaire_en_chaine',
     vue: () => ({
       ...VUE_CONFORME,
       schema:
         VUE_CONFORME.schema + '\nmodel Attribution {\n  id     String @id\n  statut String\n}\n',
+    }),
+  },
+  // Le champ placé APRÈS une accolade de commentaire, au milieu du modèle.
+  {
+    famille: 'colonne_vocabulaire_en_chaine',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema + '\nmodel Bac { id Int @id // }\n  statut String\n  siren String\n}\n',
+    }),
+  },
+  // Le nom du CHAMP est neutre, celui de sa COLONNE porte le vocabulaire.
+  {
+    famille: 'colonne_vocabulaire_en_chaine',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema + '\nmodel Bac {\n  id String @id\n  code String @map("statut")\n}\n',
+    }),
+  },
+  // LE TÉMOIN DE LA CLASSE, pas du cas nommé : le type que Prisma ne modélise pas. `text` est la
+  // chaîne la plus libre de PostgreSQL ; jusqu'au 2026-09-22 la garde la comptait et l'absolvait.
+  {
+    famille: 'colonne_vocabulaire_en_chaine',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema +
+        '\nmodel Bac {\n  id String @id\n  statut Unsupported("text")\n  siren String\n}\n',
+    }),
+  },
+  // Le même, par un autre natif et avec un argument : le prédicat juge le TYPE, pas son écriture.
+  {
+    famille: 'colonne_vocabulaire_en_chaine',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema +
+        '\nmodel Bac {\n  id String @id\n  code Unsupported("character varying(30)") @map("motif")\n  siren String\n}\n',
     }),
   },
   {
@@ -626,6 +1362,33 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
     vue: () => ({
       ...VUE_CONFORME,
       code: [{ chemin: 'src/ui/libelles.ts', contenu: 'const l = LIBELLES[statut] ?? statut;' }],
+    }),
+  },
+  {
+    famille: 'index_occupant_total',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: migrationsAvec('CREATE UNIQUE INDEX "un_occupant" ON "attributions" ("siren");'),
+    }),
+  },
+  // Six états sur sept : la liste a perdu `figee_resiliation`.
+  {
+    famille: 'index_occupant_divergent',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: migrationsAvec(
+        `CREATE UNIQUE INDEX "un_occupant" ON "attributions" ("siren") WHERE "statut" IN (${CLAUSE_FIXTURE.replace(", 'figee_resiliation'", '')});`
+      ),
+    }),
+  },
+  // Les sept, mais NIÉS : l'ensemble est le bon, le prédicat couvre l'inverse.
+  {
+    famille: 'index_occupant_divergent',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: migrationsAvec(
+        `CREATE UNIQUE INDEX "un_occupant" ON "attributions" ("siren") WHERE "statut" NOT IN (${CLAUSE_FIXTURE});`
+      ),
     }),
   },
 ];
@@ -682,19 +1445,124 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
         VUE_CONFORME.schema + '\nmodel Attribution {\n  id    String @id\n  siren String\n}\n',
     }),
   },
+  {
+    // LE CONTRE-TÉMOIN DE LA CLASSE : le MÊME mécanisme de type (`Unsupported(…)`, que Prisma ne
+    // modélise pas), NON textuel, sur un nom NEUTRE. Sans lui, on refermerait l'orthographe en
+    // punissant du code légitime — et la garde interdirait toute colonne native.
+    quoi: 'le même mécanisme de type, non textuel, sur un nom neutre — `reseau Unsupported("inet")`',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema +
+        '\nmodel Trace {\n  id     String @id\n  reseau Unsupported("inet")\n  duree  Unsupported("interval")\n}\n',
+    }),
+  },
+  {
+    // Un enum NATIF de PostgreSQL EST la solution que REQ-DM-038 exige : un `CREATE TYPE … AS ENUM`
+    // que Prisma ne modélise pas ne se déclare QUE par `Unsupported("<le type>")`.
+    quoi: 'un enum natif sur une colonne de vocabulaire — `statut Unsupported("etat_attribution")`',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema +
+        '\nmodel Bac {\n  id     String @id\n  statut Unsupported("etat_attribution")\n  siren  String\n}\n',
+    }),
+  },
+  {
+    quoi: 'une chaîne `@default("}")` et un commentaire `// }` ne ferment rien',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema +
+        '\nmodel Bac { // }\n  id   String @id @default("}")\n  role ConsoleRole\n}\n',
+    }),
+  },
+  {
+    quoi: 'un groupe qui ne nomme qu’UN état occupant',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [{ chemin: 'src/x/un.ts', contenu: "if (s === 'provisoire') return;\nf('active');" }],
+    }),
+  },
+  {
+    quoi: 'un switch exhaustif sur l’enum COMPLET',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [
+        {
+          chemin: 'src/x/libelle.ts',
+          contenu:
+            'switch (e) {\n' +
+            "  case 'provisoire': case 'active': case 'rdv_pris': case 'proposition':\n" +
+            "  case 'signee': case 'convertie': case 'figee_resiliation': case 'annulee':\n" +
+            '    return 1;\n}',
+        },
+      ],
+    }),
+  },
+  {
+    quoi: 'des identifiants qui CONTIENNENT un nom d’état sans l’être (`nombre`, `activement`)',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: [{ chemin: 'src/x/mots.ts', contenu: 'f(activement, nombre, activeCount, signees);' }],
+    }),
+  },
+  {
+    quoi: 'la projection exacte de l’enum en `CREATE TYPE`, une valeur par ligne',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: migrationsAvec(
+        "CREATE TYPE \"etat_attribution\" AS ENUM (\n  'provisoire',\n  'active',\n  'rdv_pris',\n" +
+          "  'proposition',\n  'signee',\n  'convertie',\n  'figee_resiliation',\n  'annulee'\n);"
+      ),
+    }),
+  },
+  {
+    quoi: 'l’index partiel dont la clause est EXACTEMENT clauseEtatsOccupants(), dans une migration',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: migrationsAvec(
+        `CREATE UNIQUE INDEX "un_occupant" ON "attributions" ("siren") WHERE "statut" IN (${CLAUSE_FIXTURE});`
+      ),
+    }),
+  },
+  {
+    quoi: 'la même définition telle que `pg_indexes` la réécrit (`= ANY (ARRAY[…::type])`)',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: migrationsAvec(
+        'CREATE UNIQUE INDEX un_occupant ON public.attributions USING btree (siren) WHERE (statut = ANY (ARRAY[' +
+          CLAUSE_FIXTURE.split(', ')
+            .map((v) => `${v}::etat_attribution`)
+            .join(', ') +
+          ']));'
+      ),
+    }),
+  },
+  {
+    quoi: 'un index unique partiel qui ne nomme aucun état occupant (une file `en_attente`)',
+    vue: () => ({
+      ...VUE_CONFORME,
+      code: migrationsAvec(
+        'CREATE UNIQUE INDEX "file" ON "attributions" ("siren") WHERE "statut" = \'annulee\';'
+      ),
+    }),
+  },
 ];
 
 // ── exécution ────────────────────────────────────────────────────────────────
 
 /**
- * Le fichier est IMPORTÉ par `tests/unit/gouvernance/glossaire-enums.spec.ts` autant qu'il est
- * lancé en ligne de commande. Sans cette garde, l'import exécuterait le contrôle et son
- * `process.exit(0)` : « process.exit unexpectedly called with "0" », et pas un seul test collecté.
- * Même parade que `gov-depot.ts`.
+ * Le fichier est IMPORTÉ par les specs autant qu'il est lancé en ligne de commande : sans cette
+ * garde, l'import exécuterait le contrôle et son `process.exit(0)`.
+ *
+ * ANCRÉE dossier + nom + fin, EXTENSION FACULTATIVE. `npx tsx scripts/gates/schema-enums` (sans
+ * `.ts`) rend `argv[1]` sans extension : l'ancienne forme `/schema-enums\.ts$/` y sortait en 0
+ * sans rien juger ni rien imprimer. Une copie nommée autrement, elle, ne s'exécute toujours pas.
  */
-const APPELE_DIRECTEMENT = /schema-enums\.ts$/.test(process.argv[1] ?? '');
+const LANCE_EN_SCRIPT = /[\\/]gates[\\/]schema-enums(\.ts)?$/.test(process.argv[1] ?? '');
 
-if (APPELE_DIRECTEMENT) {
+if (LANCE_EN_SCRIPT) {
   if (process.argv.includes('--prove')) {
     const sansTemoin = NOMS_FAMILLES.filter((f) => !TEMOINS.some((t) => t.famille === f));
     if (sansTemoin.length > 0) {
@@ -730,25 +1598,30 @@ if (APPELE_DIRECTEMENT) {
 
   if (!existsSync(CHEMIN_SCHEMA)) {
     console.error(
-      `❌ partners:schema:enums — ${CHEMIN_SCHEMA} est introuvable : la garde n'a rien lu, et ne prétend pas juger.`
+      `❌ partners:schema:enums — [perimetre_vide] ${CHEMIN_SCHEMA} est introuvable : la garde n'a rien lu, et ne prétend pas juger.`
     );
     process.exit(2);
   }
 
   const vue = vueDuDepot();
+  const p = perimetreDeLaVue(vue);
+  console.log(
+    `partners:schema:enums — périmètre : ${p.modeles} modèle(s), ${p.champs} champ(s), ${p.enums} enum(s), ` +
+      `${p.valeurs} valeur(s) ; ${p.fichiers} fichier(s) suivi(s) sous ${RACINES_CODE.map((r) => `${r}/`).join(', ')}, ` +
+      `dont ${p.migrations} migration(s) ; ${p.indexOccupants} index d'attribution sur ${p.table}` +
+      `${p.tablePresente ? '' : ', table absente des migrations'}.`
+  );
   const fautes = controler(vue);
-  if (fautes.length === 0) {
-    const enums = enumsDuSchema(lireOuVide(CHEMIN_SCHEMA));
-    const valeurs = [...enums.values()].reduce((n, v) => n + v.length, 0);
-    console.log(
-      `✅ partners:schema:enums — ${enums.size} enum(s), ${valeurs} valeur(s) confrontées au glossaire ; ` +
-        `ETATS_OCCUPANTS égale REQ-DM-003 ; aucune liste littérale d'états dans les ${vue.code.length} ` +
-        `fichier(s) suivi(s) sous ${RACINES_CODE.map((r) => `${r}/`).join(', ')}, toute extension comprise.`
-    );
-    process.exit(0);
+  if (fautes.length > 0) {
+    console.error(`❌ partners:schema:enums — ${fautes.length} faute(s) de vocabulaire :\n`);
+    fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
+    if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
+    process.exit(1);
   }
-  console.error(`❌ partners:schema:enums — ${fautes.length} faute(s) de vocabulaire :\n`);
-  fautes.slice(0, 25).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
-  if (fautes.length > 25) console.error(`   … et ${fautes.length - 25} autre(s).`);
-  process.exit(1);
+  console.log(
+    `✅ partners:schema:enums — ${p.enums} enum(s), ${p.valeurs} valeur(s) confrontées au glossaire ; ` +
+      `${p.champs} champ(s) de ${p.modeles} modèle(s) jugés ; ETATS_OCCUPANTS égale REQ-DM-003 ; ` +
+      `aucune liste littérale d'états dans les ${p.fichiers} fichier(s) suivi(s), toute extension comprise.`
+  );
+  process.exit(0);
 }
