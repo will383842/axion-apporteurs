@@ -1100,6 +1100,17 @@ export const TEMOINS: Temoin[] = [
     quoi: '`qualificateur` employé comme un rôle',
     vue: () => avec('src/server/roles.ts', "const role = 'qualificateur';"),
   },
+  {
+    // LA FACE ROUGE DE L'ARBITRAGE DU 2026-09-22 (GOV-088, docs/GLOSSAIRE.md §5). Sa face verte est
+    // le contre-témoin de la colonne Prisma de `EvenementRecu`, plus bas : l'une ne vaut que par
+    // l'autre. `occurredAt` est un champ d'enveloppe (REQ-INT-003) dont AUCUNE autre exigence ne
+    // réclame le jeton — c'est ce qui lui laisse un interdit SEC là où `eventId` n'en porte plus.
+    id: 'enveloppe_camelcase_hors_contrat',
+    famille: 'synonyme_interdit_du_glossaire',
+    quoi: "un champ d'enveloppe en camelCase dont le registre ne réclame le jeton pour rien d'autre",
+    vue: () =>
+      avec('src/server/integrations/emetteur.ts', 'const enveloppe = { occurredAt: quand };'),
+  },
 ];
 
 type ContreTemoin = { quoi: string; vue: () => Vue };
