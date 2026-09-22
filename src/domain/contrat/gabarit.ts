@@ -45,18 +45,23 @@ const TITRE_ARTICLE = /^#{2,3} Article (\d+) — /;
 const TITRE_SECTION_ANNEXE = /^### (A\d+\.\d+) — /;
 const DEBUT_SOUS_ARTICLE = /^\*\*(\d+\.\d+(?: bis)?)(?:\*\*| —)/;
 
-type Evenement =
+/**
+ * Un JETON de lecture, produit par le parcours unique : soit une unité qui s'ouvre, soit un bloc de
+ * lignes. Vocabulaire de DÉCOUPE, tenu distinct du vocabulaire du journal chaîné, qui est réservé
+ * (docs/GLOSSAIRE.md §5) : ce module est du domaine pur, il n'écrit nulle part.
+ */
+type Jeton =
   | { genre: 'bloc'; lignes: string[]; article: string | null; sousArticle: string | null }
   | { genre: 'unite'; numero: string };
 
 /** Le parcours unique du texte : les unités ouvertes et les blocs, dans l'ordre. */
-function parcourir(texte: string): Evenement[] {
-  const evenements: Evenement[] = [];
+function parcourir(texte: string): Jeton[] {
+  const jetons: Jeton[] = [];
   let article: string | null = null;
   let sousArticle: string | null = null;
   let bloc: string[] = [];
   const fermer = (): void => {
-    if (bloc.length > 0) evenements.push({ genre: 'bloc', lignes: bloc, article, sousArticle });
+    if (bloc.length > 0) jetons.push({ genre: 'bloc', lignes: bloc, article, sousArticle });
     bloc = [];
   };
   for (const ligne of texte.split(/\r?\n/)) {
@@ -65,7 +70,7 @@ function parcourir(texte: string): Evenement[] {
       fermer();
       article = titre[1]!;
       sousArticle = null;
-      evenements.push({ genre: 'unite', numero: article });
+      jetons.push({ genre: 'unite', numero: article });
       continue;
     }
     if (/^#/.test(ligne)) {
@@ -83,12 +88,12 @@ function parcourir(texte: string): Evenement[] {
     const sous = bloc.length === 0 ? DEBUT_SOUS_ARTICLE.exec(ligne) : null;
     if (sous !== null) {
       sousArticle = sous[1]!;
-      evenements.push({ genre: 'unite', numero: sousArticle });
+      jetons.push({ genre: 'unite', numero: sousArticle });
     }
     bloc.push(ligne);
   }
   fermer();
-  return evenements;
+  return jetons;
 }
 
 const estNote = (lignes: string[]): boolean => lignes.every((l) => l.startsWith('>'));
