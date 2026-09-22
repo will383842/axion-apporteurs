@@ -70,6 +70,8 @@ import {
   IBANS_TEMOINS_ETRANGERS,
   IBAN_TEMOIN,
   PORTEE_DES_NUMEROS_PUBLICS,
+  identifiantsApparriables,
+  identifiantsDuRegistre,
   SIREN_TEMOIN_TIERS,
   TVA_TEMOIN_TIERS,
   caracteresNeutralises,
@@ -1374,14 +1376,91 @@ describe('REQ-GOV-031 — un numéro PUBLIC se juge à SON PORTEUR, jamais à so
 
   it('REQ-GOV-031 — la PORTÉE des numéros publics est DÉCLARÉE à UN seul endroit, et imprimée dans le vert', () => {
     // « Aucune coordonnée » sans sa portée se lit comme une absence prouvée. Le vert dit de QUI
-    // les numéros publics sont cherchés, et COMBIEN le registre en donne — sans quoi un registre
-    // entièrement à la sentinelle rendrait un vert qui ne mesure rien. Une garde DÉRIVÉE est
-    // aveugle deux fois : par sa source ET par son filtre ; imprimer le compte rend la source
-    // visible.
+    // les numéros publics sont cherchés, et COMBIEN d'identifiants APPARIABLES le registre en
+    // donne.
+    //
+    // 🔴 CE TEST A ÉTÉ REFAIT LE 2026-09-22, PARCE QU'IL NE GARDAIT RIEN. Il se contentait de
+    // `toMatch(/\d+ identifiant/)` : une CONSTANTE y survivait. La lentille `securite` l'a
+    // démontré par mutation — `…length` remplacé par un `0` littéral laissait la spec VERTE et
+    // `--prove` en zéro, pendant que la garde imprimait « 0 identifiant(s) confronté(s) » en en
+    // confrontant quatre. Un compteur qu'aucun témoin n'ancre n'est pas une mesure, c'est une
+    // décoration — et celui-ci était censé rendre visible une CÉCITÉ.
+    //
+    // L'ancrage est donc à DEUX SENS, parce que le mutant survivait dans les deux :
+    //   — il ne peut pas être NUL pendant que quatre numéros sont cherchés (ce test-ci) ;
+    //   — il ne peut pas être NON NUL pendant que zéro l'est (les deux tests suivants).
     const { code, sortie } = lancer();
     expect(code).toBe(0);
     expect(sortie).toContain(PORTEE_DES_NUMEROS_PUBLICS);
-    expect(sortie).toMatch(/\d+ identifiant\(s\) du registre/);
+
+    // La mesure de référence est calculée ICI, par le banc d'essai, et non lue dans la sortie :
+    // un mutant posé sur la ligne d'impression fait alors diverger les deux.
+    const attendu = identifiantsApparriables(registreDuDepot()).length;
+    expect(
+      attendu,
+      'le dépôt réel doit avoir au moins un identifiant public appariable'
+    ).toBeGreaterThan(0);
+    expect(sortie).toContain(`${attendu} identifiant(s) du registre confronté(s)`);
+  });
+
+  it('REQ-GOV-031 — le compte ne compte QUE l’appariable : le domaine servi est un identifiant, pas un numéro', () => {
+    // L'ancrage indépendant de la dérivation : la réponse est connue PAR CONSTRUCTION, pas
+    // recalculée par le même chemin que le code. `domaines.servi` est bien `identifiant: true` —
+    // sa recopie est une faute, et `valeur_recopiee` continue de la juger — mais AUCUNE forme
+    // publique ne peut l'apparier. Le compter parmi les numéros cherchés, c'est annoncer une
+    // surveillance qui n'existe pas.
+    const registre = structuredClone(UNIVERS_CONFORME.registre) as Registre;
+    registre.entite.siret = SENTINELLE;
+    registre.entite.tvaIntracommunautaire = SENTINELLE;
+
+    // Trois identifiants non sentinelle restent au registre : le SIREN, le domaine servi… et
+    // c'est tout ce qui compte ici. UN SEUL est appariable.
+    expect(identifiantsDuRegistre(registre).length).toBeGreaterThan(1);
+    expect(identifiantsApparriables(registre).map((x) => x.champ.cle)).toEqual(['entite.siren']);
+  });
+
+  it('REQ-GOV-031 — ZÉRO référence publique n’est pas un dépôt propre : la garde REFUSE au lieu de verdir', () => {
+    // 🔴 LA RÉGRESSION QUE LA LENTILLE `exactitude` A MESURÉE, ET QUI A FAIT REFUSER #107.
+    // En unifiant la SOURCE des deux familles — le bon geste — j'avais aussi unifié leur MODE DE
+    // PANNE : registre sans référence ⇒ plus rien n'est cherché, EN SILENCE. Avant le correctif,
+    // l'arme publique ne dépendait pas du registre, donc elle attrapait encore nos numéros dans
+    // cet état-là.
+    //
+    // L'état en question est LÉGITIME et il arrivera : une décision rouverte remet ses champs à
+    // la sentinelle (`valeur_sans_decision` l'exige dans l'autre sens). C'est très exactement le
+    // moment où l'arme publique n'a plus de cible — donc le moment où il ne faut pas dire « rien
+    // trouvé ». Ne pas avoir de référence n'est pas avoir vérifié : c'est le même principe que
+    // `source_illisible`, déjà tenu par ce fichier.
+    const registre = structuredClone(UNIVERS_CONFORME.registre) as Registre;
+    registre.entite.siren = SENTINELLE;
+    registre.entite.siret = SENTINELLE;
+    registre.entite.tvaIntracommunautaire = SENTINELLE;
+    expect(identifiantsApparriables(registre)).toEqual([]);
+    // Le domaine servi, lui, est toujours là : le refus ne doit donc PAS se lire « le registre
+    // est vide », il se lit « aucun identifiant APPARIABLE ».
+    expect(identifiantsDuRegistre(registre).length).toBeGreaterThan(0);
+
+    const u = structuredClone(UNIVERS_CONFORME) as Univers;
+    u.registre = registre;
+    u.fichiers.push({
+      chemin: 'src/facturation/entete.ts',
+      contenu: `export const SIREN = '${UNIVERS_CONFORME.registre.entite.siren}';\n`,
+    });
+    const fautes = controler(u);
+    expect(fautes.map((f) => f.famille)).toContain('aucune_reference_publique');
+    expect(
+      fautes.some((f) => f.famille === 'aucune_reference_publique' && /appariable/i.test(f.message))
+    ).toBe(true);
+  });
+
+  it('REQ-GOV-031 — le refus est une FAMILLE, pas une levée : il passe par le canal de refus et il est déclaré', () => {
+    // Le choix de forme, et il n'est pas cosmétique. `coordonneesDe` LÈVE quand on lui demande de
+    // juger du code sans la liste : c'est une erreur de PROGRAMMATION, un appelant a oublié un
+    // argument. Ici, c'est un fait sur l'UNIVERS JUGÉ — donc un verdict, donc une famille. Une
+    // levée sortirait du canal de refus, ne s'imprimerait pas avec les autres, n'aurait pas de
+    // témoin dans `--prove`, et créerait exactement le défaut que GOV-067 existe pour fermer :
+    // « un sous-module lève une erreur SANS famille de refus ».
+    expect(FAMILLES).toContain('aucune_reference_publique');
   });
 });
 
@@ -2875,7 +2954,11 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     'une valeur masquée ou à clé fausse ; encodée (base64, hexadécimal, entité HTML, pourcentage, quoted-printable, ' +
     "échappement JSON, flux de PDF ou contenu compressé qui forment de l'UTF-8 valide) ; coupée ou espacée autrement " +
     "(saut de ligne, tabulation, deux espaces, point, caractère invisible, groupes d'une autre longueur) ; écrite en " +
-    "pleine chasse ou en homoglyphes ; portée par le NOM d'un fichier. Cette liste n'est pas close.";
+    "pleine chasse ou en homoglyphes ; portée par le NOM d'un fichier. Côté numéros PUBLICS, deux " +
+    'angles morts de plus, nommés le 2026-09-22 et identiques avant comme après ce lot : la forme ' +
+    'de TVA est sensible à la CASSE, donc une TVA hors capitales lui échappe — seule ' +
+    '`valeur_recopiee` la rattrape ; et un groupe de chiffres PLUS LONG que la fenêtre attendue ' +
+    "n'ouvre aucune frontière de mot, donc n'est pas apparié. Cette liste n'est pas close.";
 
   it('REQ-GOV-031 — une population GÉNÉRÉE : chaque fichier porteur est NOMMÉ, puis la même population propre sort VERTE, comptée comme git, limite écrite', () => {
     // Toutes les extensions d'une et deux lettres ; au-delà, un ÉCHANTILLON — une branche qui écarte
