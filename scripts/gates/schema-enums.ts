@@ -41,8 +41,9 @@
  *     `status` et `priorite` à la fusion. La liste EXÉCUTÉE (`NOMS_DE_VOCABULAIRE`) porte les dix
  *     noms de l'arbitrage : voir l'avertissement posé sur elle. Une `String` y rougit — que le nom
  *     soit celui du champ ou celui de sa colonne (`@map`).
- *     LE TYPE SE JUGE SUR CE QUE POSTGRES EN FAIT, jamais sur son orthographe Prisma :
- *     `GENRE_CHAINE_LIBRE` + `estDuGenre` (lecteur unique). `statut Unsupported("text")` rougit
+ *     LE TYPE SE JUGE SUR CE QUE POSTGRES EN FAIT, jamais sur son orthographe Prisma ni sur le
+ *     libellé qu'une vue en imprime : `GENRE_CHAINE_LIBRE` + `estDuGenreColonne` (lecteur
+ *     unique, l'aiguillage ne vit qu'une fois). `statut Unsupported("text")` rougit
  *     comme `statut String` ; un enum NATIF (`Unsupported("etat_attribution")`) reste vert, il EST
  *     la solution. Voir le commentaire de `GENRE_CHAINE_LIBRE` : la version précédente de ce
  *     prédicat était une liste de deux orthographes, et elle COMPTAIT la colonne avant de
@@ -50,8 +51,14 @@
  *     ⚠️ Le périmètre des COLONNES est `prisma/schema.prisma` SEUL, et REQ-DM-037 institue le SQL
  *     brut comme canal légitime : une colonne posée par une migration à la main n'y figure pas.
  *     Ce canal est fermé LÀ OÙ IL DÉBOUCHE — `tests/integration/index-partiels.spec.ts`, second
- *     `describe`, applique `fauteDeVocabulaire` à toutes les colonnes d'`information_schema` après
- *     `prisma migrate deploy`. Une règle, deux sources de colonnes, une implémentation.
+ *     `describe`, applique `fauteDeVocabulaire` aux colonnes que le CATALOGUE de la base porte
+ *     après `prisma migrate deploy` : `pg_attribute.atttypid`, déplié par `typeReel`, dans tout
+ *     schéma que PostgreSQL ne se réserve pas et toute relation qui STOCKE. Jusqu'au 2026-09-22
+ *     ce rôle tenait sur `information_schema.columns.data_type` — un LIBELLÉ, qui replie `text[]`
+ *     en `ARRAY` et `citext` en `USER-DEFINED` : les deux étaient lues, comptées et absoutes, et
+ *     `citext` figurait dans `GENRE_CHAINE_LIBRE` ci-dessous. Ce que ce contrôle ne tient PAS est
+ *     NOMMÉ, forme par forme, dans `docs/gates.json` : une limite écrite vaut mieux qu'une
+ *     fermeture qui n'en est pas une. Une règle, deux sources de colonnes, une implémentation.
  *   — Toute VALEUR d'enum figure au glossaire, et tout enum que le glossaire ÉNUMÈRE a exactement
  *     ces valeurs-là — dans les deux sens, sans quoi une valeur retirée du schéma passerait.
  *   — Aucun REPLI qui retombe sur la valeur brute (`LIBELLES[x] ?? x`) : il rend à l'écran un
@@ -82,14 +89,15 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 import {
   ErreurLecturePrisma,
-  estDuGenre,
-  estDuGenreNatif,
+  estDuGenreColonne,
   lireMigrationSql,
   lireSchemaPrisma,
+  typeAffiche,
   type GenreDeType,
   type InstructionSql,
   type JetonSql,
   type SchemaPrisma,
+  type TypeDeColonne,
 } from '../lot/lecteur-prisma';
 
 const CHEMIN_SCHEMA = 'prisma/schema.prisma';
@@ -198,6 +206,14 @@ export const GENRE_CHAINE_LIBRE: GenreDeType = {
   scalaires: ['String', 'Json'],
   natif:
     /\b(text|varchar|nvarchar|character|char|bpchar|citext|name|json|jsonb|xml|clob|string)\b/i,
+  // `S` est la catégorie que PostgreSQL attache à ses types CHAÎNE. CE QU'ELLE AJOUTE au motif
+  // ci-dessus, mesuré en la retirant : pas `citext`, que le motif nomme déjà — mais le type
+  // d'extension que PERSONNE n'a listé, qui sans elle sort `undefined`. Un enum est en `E`, et
+  // reste la solution ; `json`, `jsonb` et `xml` sont en `U` et ne tiennent que par leur nom
+  // (limite déclarée au registre). Un DOMAINE sur `text`, lui, est déplié jusqu'à `text` et
+  // rougit même fermé par un CHECK : REQ-DM-038 veut un enum Prisma, et le glossaire énumère des
+  // valeurs d'enum (RM-04), pas des contraintes équivalentes. C'est un choix, pas un oubli.
+  categories: ['S'],
 };
 
 /**
@@ -206,24 +222,20 @@ export const GENRE_CHAINE_LIBRE: GenreDeType = {
  * colonnes de la base RÉELLE après `migrate deploy` — le canal du SQL brut, que REQ-DM-037
  * institue, n'est pas dans le périmètre du fichier `schema.prisma` (RM-01).
  */
-export function fauteDeVocabulaire(c: {
-  /** Où la nommer : `prisma/schema.prisma:97 — Attribution.statut`, `public.attributions.statut`… */
-  ou: string;
-  nom: string;
-  colonne: string;
-  type: string;
-  /** `type` est-il déjà un type PostgreSQL (colonne lue en base) ? */
-  natif: boolean;
-}): Faute | undefined {
+export function fauteDeVocabulaire(
+  c: TypeDeColonne & {
+    /** Où la nommer : `prisma/schema.prisma:97 — Attribution.statut`, `metier.attributions.statut`… */
+    ou: string;
+    nom: string;
+    colonne: string;
+  }
+): Faute | undefined {
   const nomPorteur = [c.nom, c.colonne].find((n) => NOMS_DE_VOCABULAIRE.test(n));
-  const libre = c.natif
-    ? estDuGenreNatif(c.type, GENRE_CHAINE_LIBRE)
-    : estDuGenre(c.type, GENRE_CHAINE_LIBRE);
-  if (nomPorteur === undefined || !libre) return undefined;
+  if (nomPorteur === undefined || !estDuGenreColonne(c, GENRE_CHAINE_LIBRE)) return undefined;
   return {
     famille: 'colonne_vocabulaire_en_chaine',
     message:
-      `${c.ou} est un ${c.type} alors que son nom ` +
+      `${c.ou} est un ${typeAffiche(c)} alors que son nom ` +
       `(« ${nomPorteur} ») porte un vocabulaire (REQ-DM-038). Déclare un enum Prisma et inscris ` +
       "ses valeurs au glossaire : une chaîne libre laisse un seed écrire n'importe quoi, et rien ne le voit.",
   };
@@ -955,6 +967,7 @@ export function controler(vue: Vue): Faute[] {
       colonne: c.colonne,
       type: c.type,
       natif: false,
+      tableau: c.liste,
     });
     if (faute) fautes.push(faute);
   }

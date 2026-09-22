@@ -12,9 +12,12 @@
  * nommant la ligne (`ErreurLecturePrisma`) : accolade non appariée, chaîne non terminée, ligne de
  * modèle qui n'est ni un champ ni un attribut de bloc. Jamais « 0 modèle, vert ».
  *
- * IL PORTE AUSSI LE PRÉDICAT DE TYPE des deux gardes de schéma (`natifDuType`, `estDuGenre`,
- * `estDuGenreNatif`) : lire proprement un `Unsupported("text")` ne sert à rien si la garde décide
- * ensuite sur une liste d'orthographes Prisma. Voir le commentaire de `natifDuType`.
+ * IL PORTE AUSSI LE PRÉDICAT DE TYPE des deux gardes de schéma (`natifDuType`, `typeReel`,
+ * `estDuGenreColonne`) : lire proprement un `Unsupported("text")` ne sert à rien si la garde
+ * décide ensuite sur une liste d'orthographes Prisma — ni si, une fois la colonne lue EN BASE,
+ * elle décide sur le LIBELLÉ d'`information_schema` plutôt que sur ce que le catalogue dit du
+ * type. Voir les commentaires de `natifDuType` et de `typeReel` : ce sont deux tours de la
+ * MÊME faute, et la seconde vivait dans l'ombre de la première.
  *
  * POURQUOI IL N'EST PAS SOUS `scripts/gates/`. Tout fichier suivi de ce dossier doit être une garde
  * inscrite au registre : une bibliothèque y rougirait `garde_hors_registre`.
@@ -96,7 +99,28 @@ export function natifDuType(type: string): string | undefined {
  * (`schema-cents` : ce qui arrondit ; `schema-enums` : ce qui porte une chaîne libre), un seul
  * mécanisme de décision.
  */
-export type GenreDeType = { scalaires: readonly string[]; natif: RegExp };
+export type GenreDeType = {
+  scalaires: readonly string[];
+  natif: RegExp;
+  /**
+   * Les CATÉGORIES de `pg_type` qui relèvent du genre, quand le catalogue les donne
+   * (`typcategory`). Un motif de noms ne connaît que les types qu'on lui a écrits ; la catégorie
+   * est le FAIT que PostgreSQL attache au type.
+   *
+   * CE QU'ELLE RATTRAPE, ET CE QU'ELLE NE RATTRAPE PAS — mesuré en la retirant du genre le
+   * 2026-09-22. Pas `citext` : il était bien inscrit dans le motif de `GENRE_CHAINE_LIBRE`, et
+   * dès lors qu'on lit `typname` au lieu du libellé, son NOM suffit. Ce qu'elle rattrape, c'est
+   * le type d'extension QUE PERSONNE N'A LISTÉ — sans elle, le témoin `un_type_d_extension` du
+   * test unitaire sort `undefined`. PostgreSQL le range, lui, en catégorie `S`, et cette
+   * catégorie-là ne s'écrit pas au fil des extensions qu'on installe.
+   *
+   * ⚠️ ELLE N'EST PAS UNIVERSELLE, ET C'EST POURQUOI ELLE EST OPTIONNELLE. `GENRE_FLOTTANT` n'en
+   * porte aucune : la catégorie `N` couvre aussi les entiers, que REQ-DM-001 EXIGE. Un genre qui
+   * décrit un SOUS-ENSEMBLE d'une catégorie ne peut pas s'appuyer sur elle — la limite qui en
+   * découle est nommée dans `docs/gates.json`, entrée `partners:schema:cents`.
+   */
+  categories?: readonly string[];
+};
 
 /** Un type POSTGRES relève-t-il du genre ? C'est la seule question quand Prisma ne modélise rien. */
 export function estDuGenreNatif(natif: string, genre: GenreDeType): boolean {
@@ -110,6 +134,128 @@ export function estDuGenreNatif(natif: string, genre: GenreDeType): boolean {
 export function estDuGenre(type: string, genre: GenreDeType): boolean {
   const natif = natifDuType(type);
   return natif === undefined ? genre.scalaires.includes(type) : estDuGenreNatif(natif, genre);
+}
+
+// ── ce que POSTGRES fait de la colonne, lu au catalogue ──────────────────────
+
+/**
+ * UNE LIGNE DE `pg_type`, telle que PostgreSQL la tient. Les identifiants voyagent en TEXTE : un
+ * `oid` est un entier non signé de 32 bits, et le lire en nombre JavaScript ne servirait qu'à le
+ * comparer — on ne fait que le suivre.
+ */
+export type TypePg = {
+  /** `pg_type.oid`. */
+  oid: string;
+  /** `typname` — le nom RÉEL du type : `text`, `_text` pour un tableau de texte, `citext`… */
+  nom: string;
+  /** Le schéma du type (`pg_namespace.nspname`) : `pg_catalog` pour les types livrés. */
+  schema: string;
+  /** `typtype` : `b`ase, `d`omaine, `e`num, `c`omposite, `r`ange, `m`ultirange, `p`seudo. */
+  genre: string;
+  /** `typcategory` : `S`tring, `N`umeric, `A`rray, `E`num, `D`atetime, `B`oolean, `U`ser… */
+  categorie: string;
+  /** `typelem` — le type des ÉLÉMENTS, quand la catégorie est `A` ; `'0'` sinon. */
+  element: string;
+  /** `typbasetype` — le type SOUS le domaine, quand le genre est `d` ; `'0'` sinon. */
+  base: string;
+};
+
+/** Le type que PostgreSQL donne RÉELLEMENT à une colonne, déplié. */
+export type TypeReel = {
+  /** Le nom du type porté par la colonne, ou par CHAQUE ÉLÉMENT si elle porte un tableau. */
+  nom: string;
+  /** Le schéma de ce type. */
+  schema: string;
+  /** Sa catégorie `pg_type.typcategory`. */
+  categorie: string;
+  /** La colonne porte-t-elle un TABLEAU de ce type ? */
+  tableau: boolean;
+};
+
+/**
+ * LE TYPE RÉEL D'UNE COLONNE — ce que PostgreSQL en fait, jamais le libellé qu'une vue en imprime.
+ *
+ * 🔴 POURQUOI PAS `information_schema.columns.data_type`, ET POURQUOI PAS NON PLUS `udt_name`.
+ * `data_type` REPLIE des familles entières : tout tableau y devient `ARRAY`, tout type
+ * d'extension `USER-DEFINED`. Mesuré le 2026-09-22 sur DM-02 : une migration de quatre lignes
+ * (`CREATE EXTENSION citext`, une colonne `statut_liste TEXT[]`, une colonne `statut_ci citext`,
+ * une table dans un schéma `metier`) faisait passer les colonnes jugées de 19 à 21 — LUES,
+ * COMPTÉES et ABSOUTES, en exit 0, sans qu'une ligne de garde ou de test ait été touchée. C'était
+ * la MÊME faute que la liste d'orthographes Prisma du tour précédent, déplacée d'un cran : on
+ * avait cessé de décider sur une orthographe Prisma pour décider sur un libellé Postgres.
+ * `udt_name` dit le type réel et marque le tableau d'un préfixe `_` — mais c'est une CONVENTION de
+ * nom, et surtout il ne déplie pas un DOMAINE placé SOUS un tableau (il rend `_motif_libre`, que
+ * plus aucun prédicat ne reconnaît).
+ *
+ * La source est donc `pg_attribute.atttypid` — l'identifiant du type que PostgreSQL a donné à la
+ * colonne —, et le dépliage se fait par les RELATIONS du catalogue lui-même : `typtype = 'd'` mène
+ * au `typbasetype`, `typcategory = 'A'` mène au `typelem` et lève `tableau`. On s'arrête sur le
+ * premier type qui n'est ni un domaine ni un tableau. Un renvoi circulaire ne fait pas tourner la
+ * résolution sans fin : chaque identifiant n'est suivi qu'une fois.
+ *
+ * `undefined` quand le catalogue ne porte pas l'identifiant : un type qu'on ne sait pas résoudre
+ * n'est PAS un vert, et l'appelant doit le NOMMER — c'est la règle de cette maison sur tout ce qui
+ * n'a pas été lu.
+ */
+export function typeReel(
+  oid: string,
+  catalogue: ReadonlyMap<string, TypePg>
+): TypeReel | undefined {
+  let t = catalogue.get(oid);
+  if (t === undefined) return undefined;
+  let tableau = false;
+  const suivis = new Set<string>();
+  while (!suivis.has(t.oid)) {
+    suivis.add(t.oid);
+    let suivant: TypePg | undefined;
+    if (t.genre === 'd' && t.base !== '0') suivant = catalogue.get(t.base);
+    else if (t.categorie === 'A' && t.element !== '0') {
+      tableau = true;
+      suivant = catalogue.get(t.element);
+    }
+    if (suivant === undefined) break;
+    t = suivant;
+  }
+  return { nom: t.nom, schema: t.schema, categorie: t.categorie, tableau };
+}
+
+/**
+ * LE TYPE D'UNE COLONNE À JUGER, d'où qu'elle vienne — du schéma Prisma, ou du catalogue d'une
+ * base migrée. Les deux gardes de schéma partagent cette forme, et la QUESTION de genre ne se pose
+ * qu'ici (`estDuGenreColonne`) : elle était posée deux fois, mot pour mot, dans chacune d'elles.
+ */
+export type TypeDeColonne = {
+  /**
+   * Le type tel qu'écrit côté Prisma (`Int`, `Unsupported("numeric")`), ou le nom du type
+   * POSTGRES réel quand la colonne est lue au catalogue. Un TABLEAU porte le type de ses
+   * ÉLÉMENTS : le tableau se dit par `tableau`, pas par le nom.
+   */
+  type: string;
+  /** `type` est-il déjà un type PostgreSQL (colonne lue au catalogue, ou natif d'un `Unsupported`) ? */
+  natif: boolean;
+  /**
+   * La colonne porte-t-elle un TABLEAU de ce type ? Le tableau d'un type fautif est FAUTIF : un
+   * `text[]` qui porte un nom de vocabulaire laisse écrire exactement les mêmes chaînes libres
+   * qu'un `text`, et un `numeric[]` arrondit autant qu'un `numeric`.
+   */
+  tableau?: boolean;
+  /** `pg_type.typcategory`, quand la colonne vient du catalogue ; Prisma n'en dit rien. */
+  categorie?: string;
+};
+
+/**
+ * LE GENRE D'UNE COLONNE — l'unique aiguillage entre « ce type est déjà du PostgreSQL » et « c'est
+ * un type Prisma ». Les deux gardes portaient ce ternaire recopié mot pour mot (RM-01) : elles
+ * avaient extrait les deux FEUILLES et laissé la DÉCISION en double.
+ */
+export function estDuGenreColonne(c: TypeDeColonne, genre: GenreDeType): boolean {
+  if (c.categorie !== undefined && genre.categories?.includes(c.categorie) === true) return true;
+  return c.natif ? estDuGenreNatif(c.type, genre) : estDuGenre(c.type, genre);
+}
+
+/** Le type tel qu'une faute le NOMME : un tableau se dit `[]`, sinon le message mentirait. */
+export function typeAffiche(c: TypeDeColonne): string {
+  return c.tableau === true ? `${c.type}[]` : c.type;
 }
 
 // ── positions et lignes ──────────────────────────────────────────────────────

@@ -29,11 +29,15 @@ import {
   controler,
   enumsDuSchema,
   fautesIndexOccupant,
+  fauteDeVocabulaire,
   texteDeLaReq,
   VUE_CONFORME,
   type Vue,
 } from '../../../scripts/gates/schema-enums';
-import { controler as controlerCents } from '../../../scripts/gates/schema-cents';
+import {
+  controler as controlerCents,
+  fautesDUneColonne,
+} from '../../../scripts/gates/schema-cents';
 import {
   controler as controlerMigrations,
   FAMILLES as FAMILLES_MIGRATIONS,
@@ -44,6 +48,8 @@ import {
   ErreurLecturePrisma,
   lireMigrationSql,
   lireSchemaPrisma,
+  typeReel,
+  type TypePg,
 } from '../../../scripts/lot/lecteur-prisma';
 import { clauseEtatsOccupants, ETATS_OCCUPANTS } from '../../../src/domain/attribution/etats';
 
@@ -325,6 +331,160 @@ describe('REQ-DM-038 → REQ-DM-001 — un type se juge sur ce que POSTGRES en f
     expect(cents('soldeCents Unsupported("bigint")')).toContain('Ligne.soldeCents');
     expect(cents('soldeCents Int')).toEqual('');
   });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+describe('REQ-DM-038 → REQ-DM-001 — en base, le type est ce que le CATALOGUE en dit, jamais un libellé', () => {
+  /**
+   * UN CATALOGUE DE TYPES MINIATURE, écrit comme PostgreSQL le tient (`pg_type`). Il est INJECTÉ
+   * (RM-11) : la résolution se prouve ici, sans base et sans Docker, et la spec d'intégration
+   * n'a plus qu'à fournir les FAITS. Les identifiants des types installés (`etat_attribution`,
+   * `motif_libre`, `citext`) sont arbitraires — seule compte la façon dont ils se relient.
+   */
+  const type = (oid: string, nom: string, reste: Partial<TypePg> = {}): TypePg => ({
+    oid,
+    nom,
+    schema: 'pg_catalog',
+    genre: 'b',
+    categorie: 'U',
+    element: '0',
+    base: '0',
+    ...reste,
+  });
+  const CATALOGUE = new Map(
+    [
+      type('23', 'int4', { categorie: 'N' }),
+      type('25', 'text', { categorie: 'S' }),
+      type('1700', 'numeric', { categorie: 'N' }),
+      type('1009', '_text', { categorie: 'A', element: '25' }),
+      type('1231', '_numeric', { categorie: 'A', element: '1700' }),
+      type('1007', '_int4', { categorie: 'A', element: '23' }),
+      type('16500', 'etat_attribution', { schema: 'public', genre: 'e', categorie: 'E' }),
+      type('16501', '_etat_attribution', {
+        schema: 'public',
+        categorie: 'A',
+        element: '16500',
+      }),
+      type('16510', 'motif_libre', {
+        schema: 'public',
+        genre: 'd',
+        categorie: 'S',
+        base: '25',
+      }),
+      type('16511', '_motif_libre', { schema: 'public', categorie: 'A', element: '16510' }),
+      type('16520', 'citext', { schema: 'public', categorie: 'S' }),
+      type('16530', 'un_type_d_extension', { schema: 'public', categorie: 'S' }),
+      type('16599', 'ouroboros', { genre: 'd', categorie: 'S', base: '16599' }),
+    ].map((t) => [t.oid, t] as const)
+  );
+
+  it('REQ-DM-038 : un tableau se déplie par `typelem`, jamais par le préfixe `_` de son nom', () => {
+    expect(typeReel('1009', CATALOGUE)).toEqual({
+      nom: 'text',
+      schema: 'pg_catalog',
+      categorie: 'S',
+      tableau: true,
+    });
+    expect(typeReel('25', CATALOGUE)?.tableau).toBe(false);
+  });
+
+  it('REQ-DM-038 : un DOMAINE se déplie par `typbasetype`, et un domaine SOUS un tableau aussi', () => {
+    // `information_schema` déplie le premier cas (`udt_name` vaut `text`) et PAS le second : il
+    // rend `_motif_libre`, que plus aucun prédicat ne reconnaît. Le catalogue, lui, dit les deux.
+    expect(typeReel('16510', CATALOGUE)).toMatchObject({ nom: 'text', tableau: false });
+    expect(typeReel('16511', CATALOGUE)).toMatchObject({ nom: 'text', tableau: true });
+  });
+
+  it('REQ-DM-038 : contre-témoin — un tableau d’ENUM reste un enum, et un type inconnu n’est pas un vert', () => {
+    expect(typeReel('16501', CATALOGUE)).toMatchObject({
+      nom: 'etat_attribution',
+      categorie: 'E',
+      tableau: true,
+    });
+    // Un type que le catalogue ne porte pas ne se devine pas : la spec d'intégration le NOMME.
+    expect(typeReel('99999', CATALOGUE)).toBeUndefined();
+    // Un renvoi circulaire ne fait pas tourner la résolution sans fin : elle s'arrête et rend.
+    expect(typeReel('16599', CATALOGUE)).toMatchObject({ nom: 'ouroboros' });
+  });
+
+  it('REQ-DM-038 : le tableau d’un type fautif est FAUTIF, et le message le dit — `text[]`', () => {
+    const faute = fauteDeVocabulaire({
+      ou: 'public.bac.statut_liste',
+      nom: 'statut_liste',
+      colonne: 'statut_liste',
+      ...typeReelJuge('1009'),
+    });
+    expect(faute?.famille).toBe('colonne_vocabulaire_en_chaine');
+    expect(faute?.message).toContain('est un text[] alors que son nom');
+  });
+
+  it('REQ-DM-001 : la même cécité côté montants — un `numeric[]` à nom NEUTRE rougit, et se dit', () => {
+    const fautes = fautesDUneColonne({
+      ou: 'public.bac.montants',
+      nom: 'montants',
+      colonne: 'montants',
+      jamaisMonetaire: false,
+      ...typeReelJuge('1231'),
+    });
+    expect(fautes.map((f) => f.famille)).toEqual(['virgule_flottante']);
+    expect(fautes[0]!.message).toContain('est un numeric[]');
+  });
+
+  it('REQ-DM-038 → REQ-DM-001 : contre-témoins — tableau d’enum sur un nom de vocabulaire, tableau d’entiers en centimes', () => {
+    expect(
+      fauteDeVocabulaire({
+        ou: 'public.bac.statuts',
+        nom: 'statuts',
+        colonne: 'statuts',
+        ...typeReelJuge('16501'),
+      })
+    ).toBeUndefined();
+    expect(
+      fautesDUneColonne({
+        ou: 'public.bac.montants_ht_cents',
+        nom: 'montants_ht_cents',
+        colonne: 'montants_ht_cents',
+        jamaisMonetaire: false,
+        ...typeReelJuge('1007'),
+      })
+    ).toEqual([]);
+  });
+
+  it('REQ-DM-038 : la CATÉGORIE de PostgreSQL décide autant que le nom — `citext` et un type d’extension inconnu', () => {
+    // `citext` était INSCRIT dans le prédicat et ne s'y voyait pas sur ce canal ; un type
+    // d'extension que personne n'a listé, lui, ne s'y verrait JAMAIS par son nom. La catégorie
+    // `S` est le fait que PostgreSQL lui attribue : c'est une chaîne, quel que soit son nom.
+    for (const oid of ['16520', '16530']) {
+      const faute = fauteDeVocabulaire({
+        ou: 'public.bac.statut',
+        nom: 'statut',
+        colonne: 'statut',
+        ...typeReelJuge(oid),
+      });
+      expect(faute?.famille, oid).toBe('colonne_vocabulaire_en_chaine');
+    }
+    // Et l'autre face : un enum natif porte la MÊME colonne sans rougir — il est la solution.
+    expect(
+      fauteDeVocabulaire({
+        ou: 'public.bac.statut',
+        nom: 'statut',
+        colonne: 'statut',
+        ...typeReelJuge('16500'),
+      })
+    ).toBeUndefined();
+  });
+
+  /** Ce que la spec d'intégration passe aux deux gardes, à partir d'un identifiant de type. */
+  function typeReelJuge(oid: string): {
+    type: string;
+    natif: true;
+    tableau: boolean;
+    categorie: string;
+  } {
+    const reel = typeReel(oid, CATALOGUE);
+    if (reel === undefined) throw new Error(`type ${oid} absent du catalogue de la fixture`);
+    return { type: reel.nom, natif: true, tableau: reel.tableau, categorie: reel.categorie };
+  }
 });
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════

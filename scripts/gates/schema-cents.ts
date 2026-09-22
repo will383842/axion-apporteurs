@@ -24,17 +24,24 @@
  *
  * LE SCHÉMA SE LIT par `scripts/lot/lecteur-prisma.ts` : un modèle se ferme sur SON accolade.
  *
- * LE TYPE SE JUGE SUR CE QUE POSTGRES EN FAIT (`GENRE_FLOTTANT` + `estDuGenre`), jamais sur son
- * orthographe Prisma : `Unsupported("numeric")` arrondit autant qu'un `Decimal`. Le mécanisme vit
- * dans le lecteur unique et sert aussi à `schema-enums` (RM-01).
+ * LE TYPE SE JUGE SUR CE QUE POSTGRES EN FAIT (`GENRE_FLOTTANT` + `estDuGenreColonne`), jamais sur
+ * son orthographe Prisma : `Unsupported("numeric")` arrondit autant qu'un `Decimal`. Le mécanisme
+ * vit dans le lecteur unique et sert aussi à `schema-enums` (RM-01) — l'AIGUILLAGE entre type
+ * natif et type Prisma y vit désormais lui aussi, au lieu d'être recopié mot pour mot des deux
+ * côtés.
  *
  * SON PÉRIMÈTRE EST `prisma/schema.prisma`, ET UNE COLONNE PEUT ENTRER AILLEURS. REQ-DM-037
  * institue le SQL brut comme canal légitime : une colonne posée par une migration à la main n'est
  * PAS dans ce fichier, et cette garde ne la voit pas. Elle n'essaie pas de parser `CREATE TABLE` —
  * un parseur ne connaît que les formes qu'on lui a apprises. Le canal est fermé LÀ OÙ IL DÉBOUCHE :
- * `tests/integration/index-partiels.spec.ts`, second `describe`, applique `fautesDUneColonne` à
- * TOUTES les colonnes d'`information_schema` après `prisma migrate deploy`. Une règle, deux sources
- * de colonnes, une implémentation.
+ * `tests/integration/index-partiels.spec.ts`, second `describe`, applique `fautesDUneColonne` aux
+ * colonnes que le CATALOGUE de la base porte après `prisma migrate deploy` —
+ * `pg_attribute.atttypid` déplié par `typeReel`, et non le libellé
+ * `information_schema.columns.data_type`, qui repliait un `numeric[]` en `ARRAY` et le rendait
+ * invisible à `virgule_flottante` — la MÊME cécité que celle de `schema-enums`, fermée ici du
+ * même geste : un tableau d'un type qui arrondit arrondit. Ce que ce contrôle ne tient PAS est
+ * nommé, forme par forme, dans `docs/gates.json`. Une règle, deux sources de colonnes, une
+ * implémentation.
  *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne lit rien du dépôt : chaque témoin est une vue
  * injectée, et la faute y est posée au MILIEU d'un modèle, entre deux champs sains.
@@ -43,11 +50,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import {
   ErreurLecturePrisma,
-  estDuGenre,
-  estDuGenreNatif,
+  estDuGenreColonne,
   lireSchemaPrisma,
+  typeAffiche,
   type GenreDeType,
   type SchemaPrisma,
+  type TypeDeColonne,
 } from '../lot/lecteur-prisma';
 import { segmentsDuNom } from '../../src/domain/donnees-personnelles/champs';
 
@@ -75,7 +83,17 @@ export const MOTS_DE_MONTANT = [
  * LE GENRE « ce type arrondit, ou porte des euros » — le prédicat de décision de la famille
  * `virgule_flottante`, scalaires Prisma ET types natifs d'un `Unsupported(…)` dans le MÊME objet.
  * Exporté parce que ce qui décide ici doit décider partout où la même règle se juge : la spec
- * d'intégration l'applique aux colonnes de la base RÉELLE (RM-01).
+ * d'intégration l'applique aux colonnes de la base RÉELLE (RM-01). Un `numeric[]` en relève :
+ * `typeReel` déplie le tableau, et un tableau de ce qui arrondit arrondit.
+ *
+ * ⚠️ IL NE PORTE PAS DE `categories`, ET CETTE ASYMÉTRIE AVEC `GENRE_CHAINE_LIBRE` EST VOULUE.
+ * La catégorie que PostgreSQL attache aux types numériques est `N`, et elle couvre AUSSI les
+ * entiers — que REQ-DM-001 exige. S'y appuyer condamnerait `Int … Cents`, la seule écriture juste.
+ * LA LIMITE QUI EN DÉCOULE, nommée plutôt que subie : un type d'EXTENSION qui arrondit et dont le
+ * nom n'est dans aucun motif ci-dessous n'est pas vu, là où la catégorie `S` rattrape son
+ * équivalent côté chaînes. La fermer demande la liste des types qui arrondissent DÉRIVÉE de
+ * l'extension installée ; les migrations du dépôt n'installent aucune extension à ce jour, et
+ * cette famille appartient à la tâche qui en installerait une. Voir `docs/gates.json`.
  */
 export const GENRE_FLOTTANT: GenreDeType = {
   scalaires: ['Float', 'Decimal'],
@@ -125,17 +143,13 @@ const NOMS_FAMILLES = FAMILLES.map((f) => f.nom);
  * celui d'un champ Prisma ne l'est qu'à l'intérieur d'un `Unsupported(…)`. La RÈGLE, elle, est la
  * même des deux côtés, et n'a qu'une implémentation (`fautesDUneColonne`, RM-01).
  */
-export type ColonneAJuger = {
-  /** Où la nommer : `prisma/schema.prisma:97 — Commission.brut`, `public.attributions.montant`… */
+export type ColonneAJuger = TypeDeColonne & {
+  /** Où la nommer : `prisma/schema.prisma:97 — Commission.brut`, `metier.attributions.montant`… */
   ou: string;
   /** Le nom du champ — celui qui porte, ou non, le suffixe `Cents`. */
   nom: string;
   /** Le nom de la colonne SQL (`@map`), ou le même que `nom` quand il n'y en a pas d'autre. */
   colonne: string;
-  /** Le type tel qu'écrit : type Prisma (`Int`, `Unsupported("numeric")`) ou type PostgreSQL. */
-  type: string;
-  /** `type` est-il déjà un type PostgreSQL (colonne lue en base) ? */
-  natif: boolean;
   /** Un type qui ne porte jamais un montant : relation, enum, booléen, date, identifiant. */
   jamaisMonetaire: boolean;
 };
@@ -155,16 +169,17 @@ export const GENRE_NON_MONETAIRE: GenreDeType = {
  * RÉELLE après `migrate deploy` — une règle, deux sources de colonnes, une implémentation.
  */
 export function fautesDUneColonne(c: ColonneAJuger): Faute[] {
-  const duGenre = (g: GenreDeType): boolean =>
-    c.natif ? estDuGenreNatif(c.type, g) : estDuGenre(c.type, g);
+  // L'aiguillage « natif ou Prisma » ne se pose plus ici : il vit une seule fois, dans le
+  // lecteur unique. Il était recopié mot pour mot dans `schema-enums` (RM-01).
+  const duGenre = (g: GenreDeType): boolean => estDuGenreColonne(c, g);
   if (duGenre(GENRE_FLOTTANT)) {
     return [
       {
         famille: 'virgule_flottante',
         message:
-          `${c.ou} est un ${c.type} : REQ-DM-001 interdit toute colonne Float ou Decimal, quel que ` +
-          'soit son nom. Un montant est un Int en centimes, suffixé Cents ; un taux, un Int en ' +
-          'points de base.',
+          `${c.ou} est un ${typeAffiche(c)} : REQ-DM-001 interdit toute colonne Float ou ` +
+          'Decimal, quel que soit son nom. Un montant est un Int en centimes, suffixé Cents ; ' +
+          'un taux, un Int en points de base.',
       },
     ];
   }
@@ -173,7 +188,7 @@ export function fautesDUneColonne(c: ColonneAJuger): Faute[] {
     return [
       {
         famille: 'centimes_non_entiers',
-        message: `${c.ou} est suffixé Cents mais typé ${c.type} : REQ-DM-001 veut un Int.`,
+        message: `${c.ou} est suffixé Cents mais typé ${typeAffiche(c)} : REQ-DM-001 veut un Int.`,
       },
     ];
   }
@@ -186,8 +201,8 @@ export function fautesDUneColonne(c: ColonneAJuger): Faute[] {
     {
       famille: 'montant_sans_suffixe',
       message:
-        `${c.ou} (${c.type}) porte le mot « ${mot} » sans le suffixe Cents : on ne sait pas s'il ` +
-        'est en euros ou en centimes. REQ-DM-001 : Int, centimes, HT, suffixé Cents.',
+        `${c.ou} (${typeAffiche(c)}) porte le mot « ${mot} » sans le suffixe Cents : on ne sait ` +
+        "pas s'il est en euros ou en centimes. REQ-DM-001 : Int, centimes, HT, suffixé Cents.",
     },
   ];
 }
@@ -218,6 +233,7 @@ export function controlerSchema(schema: SchemaPrisma): Faute[] {
         colonne: c.colonne,
         type: c.type,
         natif: false,
+        tableau: c.liste,
         jamaisMonetaire: declares.has(c.type),
       })
     );

@@ -39,6 +39,7 @@ import {
   VUE_CONFORME,
 } from '../../scripts/gates/schema-enums';
 import { controler as controlerCents, fautesDUneColonne } from '../../scripts/gates/schema-cents';
+import { typeReel, type TypePg } from '../../scripts/lot/lecteur-prisma';
 import { clauseEtatsOccupants, ETATS_OCCUPANTS } from '../../src/domain/attribution/etats';
 
 const cible = cibleDeLIndex(texteDeLaReq('REQ-DM-003'));
@@ -159,39 +160,103 @@ describe('REQ-DM-003 — l’index unique partiel de l’attribution occupante, 
  * ferme aujourd'hui. On ferme LÀ OÙ LE CANAL DÉBOUCHE — le catalogue de la base, après
  * `prisma migrate deploy`, qui voit toute colonne quel que soit ce qui l'a posée.
  *
+ * 🔴 SUR QUOI LA DÉCISION REPOSE, ET POURQUOI CE N'EST PLUS UN LIBELLÉ. La première rédaction de
+ * ce `describe` jugeait sur `information_schema.columns.data_type`. Ce champ n'est pas ce que
+ * PostgreSQL fait de la colonne : c'est un LIBELLÉ qui replie des familles entières — un tableau
+ * y devient `ARRAY`, un type d'extension `USER-DEFINED`. Mesuré le 2026-09-22 : une migration de
+ * quatre lignes (`citext`, `statut_liste TEXT[]`, `statut_ci citext`, une table dans un schéma
+ * `metier`) faisait passer le compte de 19 à 21 colonnes LUES, COMPTÉES et ABSOUTES, en exit 0,
+ * sans qu'une seule ligne de garde ait été touchée — et `citext` figurait dans le prédicat même
+ * de la garde, qui déclarait le couvrir sans jamais le voir sur ce canal.
+ *
+ * LA SOURCE EST DÉSORMAIS `pg_attribute.atttypid` : l'identifiant du type que PostgreSQL a
+ * RÉELLEMENT donné à la colonne, pas le nom qu'une vue en imprime. Le catalogue se déplie ensuite
+ * par SES PROPRES relations (`typtype = 'd'` → `typbasetype`, `typcategory = 'A'` → `typelem`),
+ * jamais par le préfixe `_` d'un nom ni par aucune convention d'écriture : `typeReel` (lecteur
+ * unique) est la seule implémentation, et elle se prouve HORS BASE dans
+ * `tests/unit/domaine/gardes-de-schema.spec.ts`. Un tableau d'un type fautif est jugé fautif, et
+ * il se DIT (`text[]`), sans quoi le message mentirait sur ce qu'il a jugé.
+ *
+ * LE PÉRIMÈTRE EST DIT, PAS SUPPOSÉ : tout schéma que PostgreSQL ne se réserve pas (`pg_*`,
+ * `information_schema`), et toute relation qui STOCKE — table ordinaire, partitionnée, distante,
+ * vue matérialisée, et le type composite, dont les champs sont des colonnes déguisées. Les
+ * familles que ce contrôle ne tient PAS sont nommées dans `docs/gates.json`, entrée par entrée ;
+ * et une colonne dont le type ne se résout pas n'est jamais un vert : elle est nommée.
+ *
+ * ⚠️ « QUE POSTGRESQL NE SE RÉSERVE PAS » EST UN FAIT, PAS UNE PRÉCAUTION DE RÉDACTION, et c'est
+ * ce qui distingue une borne LEVÉE d'une borne DÉPLACÉE d'un cran — la faute que cette PR a déjà
+ * commise deux fois. Mesuré le 2026-09-22 sur pg16 : `CREATE SCHEMA pg_metier` rend « ERROR:
+ * unacceptable schema name "pg_metier" / DETAIL: The prefix "pg_" is reserved for system
+ * schemas ». Écarter le préfixe n'écarte donc AUCUN schéma qu'une migration pourrait poser.
+ *
  * MÊME ARCHITECTURE QUE L'INDEX CI-DESSUS : les prédicats sont ceux des gardes elles-mêmes
  * (`fautesDUneColonne`, `fauteDeVocabulaire`) — une règle, deux sources de colonnes, une
  * implémentation (RM-01).
  */
 describe('REQ-DM-001 → REQ-DM-038 — les colonnes de la base RÉELLE, quel que soit le canal qui les a posées', () => {
-  type ColonneEnBase = { table: string; colonne: string; type: string };
+  type ColonneEnBase = { schema: string; table: string; colonne: string; oid: string };
   const BAC_COLONNES = 'bac_colonnes';
-  const SELECT_COLONNES =
-    'SELECT table_name AS "table", column_name AS "colonne", data_type AS "type" ' +
-    "FROM information_schema.columns WHERE table_schema = 'public'";
+  /**
+   * LE SCHÉMA DU BAC HORS `public`, et son nom n'est pas une coquetterie : `nettoyer()` le
+   * SUPPRIME. Un nom du métier (`metier`) ferait détruire par ce test un schéma qu'une
+   * migration aurait posé, puis déclarer vert ce qu'il vient d'effacer. Mesuré le 2026-09-22
+   * en rejouant la migration témoin : elle perdait sa table et le compte retombait à 1 schéma.
+   * Un test qui NETTOIE la base qu'il mesure ne mesure plus qu'après lui-même.
+   */
+  const AUTRE_SCHEMA = 'bac_hors_public';
 
-  /** Les colonnes d'UNE table, telles que PostgreSQL les expose. */
-  const colonnesDe = (table: string): Promise<ColonneEnBase[]> =>
+  /**
+   * Les relations qui STOCKENT une colonne : table ordinaire, partitionnée, distante, vue
+   * matérialisée, et le type composite (`c`), dont les champs sont des colonnes déguisées. Une
+   * VUE (`v`) est une projection de colonnes déjà jugées ailleurs, pas un stockage : limite
+   * déclarée au registre.
+   */
+  const RELKINDS = ['r', 'p', 'f', 'm', 'c'] as const;
+
+  /** Le catalogue des types, tel que PostgreSQL le tient — la source qui dit le type RÉEL. */
+  const catalogueDesTypes = async (): Promise<Map<string, TypePg>> => {
+    const lignes = await base.prisma.$queryRawUnsafe<TypePg[]>(
+      'SELECT t.oid::text AS oid, t.typname AS nom, n.nspname AS "schema", t.typtype AS genre, ' +
+        't.typcategory AS categorie, t.typelem::text AS element, t.typbasetype::text AS base ' +
+        'FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace'
+    );
+    return new Map(lignes.map((t) => [t.oid, t]));
+  };
+
+  /**
+   * Les colonnes de la base — TOUS les schémas que PostgreSQL ne se réserve pas. La borne à
+   * `public` était une borne que rien n'annonçait : une table posée dans un autre schéma n'était
+   * même pas LUE, pendant que le registre promettait « toutes les colonnes ».
+   */
+  const colonnesDeLaBase = (table = ''): Promise<ColonneEnBase[]> =>
     base.prisma.$queryRawUnsafe<ColonneEnBase[]>(
-      `${SELECT_COLONNES} AND table_name = $1 ORDER BY ordinal_position`,
+      'SELECT n.nspname AS "schema", c.relname AS "table", a.attname AS colonne, ' +
+        'a.atttypid::text AS oid ' +
+        'FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid ' +
+        'JOIN pg_namespace n ON n.oid = c.relnamespace ' +
+        "WHERE a.attnum > 0 AND NOT a.attisdropped AND n.nspname <> 'information_schema' " +
+        "AND n.nspname !~ '^pg_' " +
+        `AND c.relkind IN (${RELKINDS.map((k) => `'${k}'`).join(', ')}) ` +
+        "AND ($1::text = '' OR c.relname = $1::text) " +
+        'ORDER BY n.nspname, c.relname, a.attnum',
       table
     );
 
-  /** TOUTES les colonnes du schéma `public` de la base migrée. */
-  const toutesLesColonnes = (): Promise<ColonneEnBase[]> =>
-    base.prisma.$queryRawUnsafe<ColonneEnBase[]>(
-      `${SELECT_COLONNES} ORDER BY table_name, ordinal_position`
-    );
-
   /** Les fautes des deux REQ sur des colonnes lues en base : `natif`, donc jugées en types SQL. */
-  function juger(lues: ColonneEnBase[]): string[] {
+  function juger(lues: ColonneEnBase[], catalogue: Map<string, TypePg>): string[] {
     return lues.flatMap((c) => {
+      const ou = `${c.schema}.${c.table}.${c.colonne}`;
+      const reel = typeReel(c.oid, catalogue);
+      // Un type qui ne se résout pas n'est PAS un vert : c'est un refus de conclure, nommé.
+      if (reel === undefined) return [`type_irresolu ${ou} — oid ${c.oid} absent de pg_type`];
       const commune = {
-        ou: `public.${c.table}.${c.colonne}`,
+        ou,
         nom: c.colonne,
         colonne: c.colonne,
-        type: c.type,
+        type: reel.nom,
         natif: true,
+        tableau: reel.tableau,
+        categorie: reel.categorie,
       };
       const vocabulaire = fauteDeVocabulaire(commune);
       return [
@@ -201,16 +266,23 @@ describe('REQ-DM-001 → REQ-DM-038 — les colonnes de la base RÉELLE, quel qu
     });
   }
 
+  const nettoyer = async (): Promise<void> => {
+    await base.prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${BAC_COLONNES}"`);
+    await base.prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${AUTRE_SCHEMA}" CASCADE`);
+  };
+
   it('REQ-DM-001 → REQ-DM-038 : une colonne monétaire en décimal et un vocabulaire en texte, posés par du SQL BRUT, rougissent', async () => {
     // Le canal exact que REQ-DM-037 institue : du SQL que Prisma ne modélise pas, hors schéma.
-    await base.prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${BAC_COLONNES}"`);
+    await nettoyer();
     await base.prisma.$executeRawUnsafe(
       `CREATE TABLE "${BAC_COLONNES}" ("id" SERIAL PRIMARY KEY, "libelle" TEXT NOT NULL)`
     );
     await base.prisma.$executeRawUnsafe(
       `ALTER TABLE "${BAC_COLONNES}" ADD COLUMN "montant" NUMERIC(12,2), ADD COLUMN "statut" TEXT`
     );
-    const fautes = juger(await colonnesDe(BAC_COLONNES)).join('\n');
+    const fautes = juger(await colonnesDeLaBase(BAC_COLONNES), await catalogueDesTypes()).join(
+      '\n'
+    );
     expect(fautes).toContain(`virgule_flottante public.${BAC_COLONNES}.montant`);
     expect(fautes).toContain(`colonne_vocabulaire_en_chaine public.${BAC_COLONNES}.statut`);
     // L'AUTRE FACE, celle qui rend le témoin concluant : les gardes STATIQUES restent vertes sur
@@ -222,29 +294,72 @@ describe('REQ-DM-001 → REQ-DM-038 — les colonnes de la base RÉELLE, quel qu
         (f) => f.famille === 'colonne_vocabulaire_en_chaine'
       )
     ).toEqual([]);
-    await base.prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${BAC_COLONNES}"`);
+    await nettoyer();
   });
 
-  it('REQ-DM-001 → REQ-DM-038 : contre-témoin — les mêmes colonnes en centimes entiers et en enum NATIF restent vertes', async () => {
-    await base.prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${BAC_COLONNES}"`);
+  it('REQ-DM-001 → REQ-DM-038 : ce que le LIBELLÉ repliait — tableau de texte, citext, numeric[], domaine sous tableau et table hors du schéma public rougissent', async () => {
+    // La migration MESURÉE le 2026-09-22 : quatre lignes, aucune ligne de garde ni de test
+    // touchée, et le compte des colonnes jugées passait de 19 à 21 — lues, comptées, absoutes.
+    await nettoyer();
+    await base.prisma.$executeRawUnsafe('CREATE EXTENSION IF NOT EXISTS citext');
+    await base.prisma.$executeRawUnsafe(`CREATE SCHEMA "${AUTRE_SCHEMA}"`);
+    await base.prisma.$executeRawUnsafe(`CREATE DOMAIN "${AUTRE_SCHEMA}".texte_libre AS TEXT`);
+    await base.prisma.$executeRawUnsafe(
+      `CREATE TABLE "${AUTRE_SCHEMA}"."${BAC_COLONNES}" ` +
+        '("id" SERIAL PRIMARY KEY, "statut" TEXT NOT NULL)'
+    );
+    await base.prisma.$executeRawUnsafe(
+      `CREATE TABLE "${BAC_COLONNES}" ("id" SERIAL PRIMARY KEY, "statut_liste" TEXT[], ` +
+        `"statut_ci" citext, "montants" NUMERIC(12,2)[], ` +
+        `"motif_libre" "${AUTRE_SCHEMA}".texte_libre[])`
+    );
+    const fautes = juger(await colonnesDeLaBase(), await catalogueDesTypes()).join('\n');
+    // Le tableau d'un type fautif est fautif — et il se DIT, sans quoi le message mentirait.
+    expect(fautes).toContain(`colonne_vocabulaire_en_chaine public.${BAC_COLONNES}.statut_liste`);
+    expect(fautes).toContain('est un text[] alors que son nom');
+    // `citext` figurait dans le prédicat de la garde, et le libellé le repliait en USER-DEFINED.
+    expect(fautes).toContain(`colonne_vocabulaire_en_chaine public.${BAC_COLONNES}.statut_ci`);
+    // La cécité JUMELLE, côté montants (REQ-DM-001) : un `numeric[]` à nom neutre.
+    expect(fautes).toContain(`virgule_flottante public.${BAC_COLONNES}.montants`);
+    expect(fautes).toContain('est un numeric[]');
+    // Un DOMAINE sous un TABLEAU : `information_schema` ne le déplie pas (il rend `_texte_libre`),
+    // le catalogue si — `typelem` puis `typbasetype`.
+    expect(fautes).toContain(`colonne_vocabulaire_en_chaine public.${BAC_COLONNES}.motif_libre`);
+    // La borne à `public` : une table posée ailleurs n'était même pas LUE.
+    expect(fautes).toContain(
+      `colonne_vocabulaire_en_chaine ${AUTRE_SCHEMA}.${BAC_COLONNES}.statut`
+    );
+    await nettoyer();
+  });
+
+  it('REQ-DM-001 → REQ-DM-038 : contre-témoin — les mêmes colonnes en centimes entiers et en enum NATIF restent vertes, TABLEAUX compris', async () => {
+    await nettoyer();
     await base.prisma.$executeRawUnsafe(
       `CREATE TABLE "${BAC_COLONNES}" ("id" SERIAL PRIMARY KEY, "montant_ht_cents" INTEGER NOT NULL, ` +
-        `"statut" "etat_attribution" NOT NULL, "cree_at" TIMESTAMPTZ(3) NOT NULL)`
+        `"statut" "etat_attribution" NOT NULL, "cree_at" TIMESTAMPTZ(3) NOT NULL, ` +
+        '"reseau" INET, "empreinte" BYTEA, "statuts" "etat_attribution"[], ' +
+        '"montants_ht_cents" INTEGER[])'
     );
-    expect(juger(await colonnesDe(BAC_COLONNES))).toEqual([]);
-    await base.prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${BAC_COLONNES}"`);
+    // Un tableau d'un type JUSTE reste juste : sans ce contre-témoin, on punirait la bonne
+    // écriture au lieu de fermer la mauvaise.
+    expect(juger(await colonnesDeLaBase(BAC_COLONNES), await catalogueDesTypes())).toEqual([]);
+    await nettoyer();
   });
 
   it('REQ-DM-001 → REQ-DM-038 : sur la base migrée du jour, toutes les colonnes sont jugées, et aucune ne rougit', async () => {
-    await base.prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${BAC_COLONNES}"`);
-    const lues = await toutesLesColonnes();
+    await nettoyer();
+    const catalogue = await catalogueDesTypes();
+    const lues = await colonnesDeLaBase();
     // « 0 colonne » et « aucune faute » ne se confondent pas : c'est le défaut que DM-02 ferme
     // partout ailleurs, et il vaut aussi pour un test.
     expect(lues.length).toBeGreaterThan(0);
+    // Le périmètre se DIT : ce qui a été lu, et sur quoi la décision repose.
     console.log(
-      `REQ-DM-001 → REQ-DM-038 : ${lues.length} colonne(s) de ${new Set(lues.map((c) => c.table)).size} ` +
-        'table(s) lues dans information_schema après migrate deploy.'
+      `REQ-DM-001 → REQ-DM-038 : ${lues.length} colonne(s) de ` +
+        `${new Set(lues.map((c) => `${c.schema}.${c.table}`)).size} relation(s) dans ` +
+        `${new Set(lues.map((c) => c.schema)).size} schéma(s), types résolus par pg_type ` +
+        `(${catalogue.size} types au catalogue).`
     );
-    expect(juger(lues)).toEqual([]);
+    expect(juger(lues, catalogue)).toEqual([]);
   });
 });
