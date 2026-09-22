@@ -16,13 +16,13 @@
 
 **321 exigences actives · 62 réputées testées · 62 couvertes · 0 orphelines.**
 
-260 tâches, dont 53 livrées · 60 fichiers de test exécutés par `vitest` sur 60 présents.
+261 tâches, dont 53 livrées · 60 fichiers de test exécutés par `vitest` sur 60 présents.
 
 ## Exigences réputées testées
 
 | Exigence | Tâches porteuses | Tests qui la citent | État |
 | --- | --- | --- | --- |
-| `REQ-CPL-001` | `CPL-T01`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
+| `REQ-CPL-001` | `CPL-T01`, `GOV-089`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-002` | `CPL-T01`, `GOV-015`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-CPL-003` | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-004` | `CPL-T01`, `DM-11` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
@@ -63,7 +63,7 @@
 | `REQ-GOV-028` | `GOV-019` | `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts` | couverte |
 | `REQ-GOV-029` | `GOV-014`, `GOV-051`, `GOV-061`, `GOV-062`, `GOV-076` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |
 | `REQ-GOV-030` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
-| `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040`, `GOV-064`, `GOV-065`, `GOV-066`, `GOV-067`, `GOV-068` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
+| `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040`, `GOV-064`, `GOV-065`, `GOV-066`, `GOV-067`, `GOV-068`, `GOV-089` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-032` | `GOV-024`, `GOV-035`, `GOV-053`, `GOV-055`, `GOV-072`, `GOV-079`, `GOV-085`, `GOV-087` | `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-033` | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | couverte |
 | `REQ-INT-003` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
