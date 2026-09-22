@@ -2713,7 +2713,8 @@
         "src/server/integrations/axionia/api-entrante.ts",
         "src/app/api/integrations/axionia/",
         "tests/integration/frontiere.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "tests/integration/harnais-testcontainers.spec.ts"
       ],
       "schema": false,
       "sensible": [

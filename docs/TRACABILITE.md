@@ -16,7 +16,7 @@
 
 **321 exigences actives · 65 réputées testées · 65 couvertes · 0 orphelines.**
 
-263 tâches, dont 58 livrées · 64 fichiers de test exécutés par `vitest` sur 64 présents.
+263 tâches, dont 59 livrées · 64 fichiers de test exécutés par `vitest` sur 64 présents.
 
 ## Exigences réputées testées
 
