@@ -122,7 +122,7 @@ par ligne du générateur, et rouvrir la non-conformité à REQ-GOV-032.
 ## Ce qui le vérifie
 
 - **Assertion** — `tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts` ·
-  `it('REQ-GOV-008 — aucun fichier suivi ne nomme un verbe en chemin relatif au dépôt')` : le
+  `it('REQ-GOV-008 — aucun fichier suivi ne nomme un verbe en chemin relatif au depot')` : le
   balayage part de `git ls-files` et de l'inventaire, jamais d'une chaîne cherchée à la main.
 - **Assertion** — `tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts` ·
   `it('REQ-GOV-032 — une ligne de rubrique exemptée qui ne lit pas la forge est COMPARÉE')` : la

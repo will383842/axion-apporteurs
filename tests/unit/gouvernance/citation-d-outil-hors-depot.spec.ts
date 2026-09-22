@@ -102,7 +102,9 @@ describe('REQ-GOV-008 — une citation de verbe hors depot est qualifiee, jamais
   it('REQ-GOV-008 — le rendu unique qualifie, et REFUSE un verbe hors inventaire', () => {
     // Le rendu est la seule ecriture (RM-01) : si un appelant pouvait composer la chaine lui-meme,
     // la douzieme citation repartirait en chemin relatif, comme les onze precedentes.
-    expect(outilHorsDepot('ajouter-path.mjs')).toBe(`\`${QUALIFIANT_HORS_DEPOT}/ajouter-path.mjs\``);
+    expect(outilHorsDepot('ajouter-path.mjs')).toBe(
+      `\`${QUALIFIANT_HORS_DEPOT}/ajouter-path.mjs\``
+    );
     expect(outilHorsDepot('ajouter-path.mjs')).not.toContain(PREFIXE_FAUTIF);
 
     // ET IL REFUSE. Un message qui conseille un geste inexistant est un piege poli : on le suit,
@@ -111,7 +113,7 @@ describe('REQ-GOV-008 — une citation de verbe hors depot est qualifiee, jamais
     expect(() => outilHorsDepot('verbe-qui-n-existe-pas.mjs')).toThrow(/inventaire hors depot/);
   });
 
-  it("REQ-GOV-008 — les messages rouges qui prescrivent un geste le rendent RESOLVABLE", () => {
+  it('REQ-GOV-008 — les messages rouges qui prescrivent un geste le rendent RESOLVABLE', () => {
     // Les quatre messages que le defaut touchait sont lus par un humain qui vient d'etre refuse.
     // C'est le seul endroit ou un chemin faux coute une session entiere, et c'est la que les onze
     // citations faisaient le plus de degats.

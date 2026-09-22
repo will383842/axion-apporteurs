@@ -384,12 +384,7 @@ export function cheminsReserves(charte: string): { chemins: string[]; label: str
     const chemins = cellules[0]!
       .replace(/\([^)]*\)/g, '')
       .split(',')
-      .map((c) =>
-        c
-          .replace(/`/g, '')
-          .replace(/\*\*/g, '')
-          .trim()
-      )
+      .map((c) => c.replace(/`/g, '').replace(/\*\*/g, '').trim())
       .filter(Boolean);
     if (chemins.length > 0) out.push({ chemins, label });
   }

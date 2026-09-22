@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `242c879` — 2026-09-22T11:08:08+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #88 (un conflit avec `main`) · 3. #90 (un conflit avec `main`) · 4. #91 (un conflit avec `main`) · 5. #92 (un conflit avec `main`) · 6. #93 (un conflit avec `main`) · 7. #99 (un conflit avec `main`) · 8. #100 (un conflit avec `main`) · 9. #102 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #107 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #88 (un conflit avec `main`) · 4. #90 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) · 8. #99 (un conflit avec `main`) · 9. #100 (un conflit avec `main`) · 10. #102 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-059 (A05) |
 | Où en est la phase ? | phase 0 — 16/99 tâches, reste 63.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
@@ -64,15 +64,16 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
-| 7 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
-| 8 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | un conflit avec `main` — à résoudre avant tout |
-| 9 | #102 — docs(GOV-063): ADR 0017 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #107 — fix(GOV-089): un numero PUBLIC se juge a son porteur, pas a son mot-cle — 452 defauts, 448 sur des tiers | `t/gov-entite-tiers` | un contrôle requis rouge ou une revue manquante |
+| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 8 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
+| 9 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | un conflit avec `main` — à résoudre avant tout |
+| 10 | #102 — docs(GOV-063): ADR 0017 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -90,7 +91,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0011-une-seule-implementation-des-listes-d-etats.md` — partners/ADR-0011 — Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture · `docs/adr/0017-revendication-derivee-de-la-forge.md` — partners/ADR-0017 — La revendication d'une tâche se dérive de la forge, pas du fichier de la branche
+`docs/adr/0011-une-seule-implementation-des-listes-d-etats.md` — partners/ADR-0011 — Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture · `docs/adr/0017-revendication-derivee-de-la-forge.md` — partners/ADR-0017 — La revendication d'une tâche se dérive de la forge, pas du fichier de la branche · `docs/adr/0018-un-label-designe-une-source-jamais-une-vue.md` — partners/ADR-0018 — un label de rôle désigne une SOURCE, jamais une vue dérivée
 
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-22). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
@@ -134,6 +135,14 @@ qu'aucune des trois n'ait changé. Mesure au passage : une PR de phase 0 qui tou
 `docs/tasks.json` exige le label `role:gardien-spec`, et le champ `Rouge constaté par:` n'admet
 QUE le code de poste — la moindre parenthèse après lui rend `rouge_vert_absent`.
 
+### PR #86 — 2026-09-19 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10
+
+**Fait.** Le harnais d'intégration de DM-01 sert maintenant toute la suite. Il monte Postgres 16 avec pgvector et un Redis, épinglés au tag exact et au condensat, un conteneur par fichier. Le sous-processus `prisma` ne reçoit plus que l'environnement construit par liste blanche. Une garde statique refuse sous `tests/integration/` tout saut de test et toute lecture de l'environnement de l'hôte hors du harnais. Sans démon, chaque fichier échoue en nommant le motif. Un témoin logé sous `tests/unit/ci/` prouve que l'étape Tests de Gate A atteint chaque fichier d'intégration. Le script Lua de SEC-10 tourne enfin sur un Redis réel, avec la limite exacte sous 50 appels concurrents, le glissement à la milliseconde et l'expiration. Le chemin par défaut du registre compte dans le cache, sans panne : cinq mutants tués, dont celui où la marque du registre sert de magasin.
+
+**Reste.** Au-delà de 10 fichiers ou de 3 min d'intégration en CI, il faudra un conteneur partagé avec une base par gabarit. `gate-b` reste sans `preuveRouge` et son porteur sera livré (famille GOV-046). La production d'axionia tourne sur un Redis au tag flottant. Le témoin lit `ci.yml` par indentation, en attendant le lecteur YAML factorisé de QA-T01.
+
+**Appris.** Avec testcontainers 12.1.0, un `DOCKER_HOST` injoignable ne se replie sur aucune autre socket, car docker-modem en tire un hôte qui prime sur la socket de chaque stratégie. Sous vitest 2.1.9, un fichier dont le `beforeAll` lève compte ses tests comme sautés : on juge alors le code de sortie et le motif, pas l'absence du mot. Un témoin logé dans le dossier qu'il garde disparaît avec lui, et `vitest` répond alors par une passe vide. Enfin, `vi.stubEnv` pose une valeur sans lire l'environnement du poste, et c'est la seule porte admise vers le chemin par défaut du registre de débit.
+
 ### PR #84 — 2026-09-19 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives
 
 **Fait.** Les gardes du schéma lisent un schéma LU, par un lecteur unique exporté
@@ -158,27 +167,7 @@ et toute table protégée demain l'est sans retouche. Et remplacer un prédicat 
 d'une garde ne doit pas perdre ses mots : `remuneration`, `euro` et `euros` sont passés dans la
 garde avec lui.
 
-### PR #83 — 2026-09-19 — docs(GOV-039): les 25 clauses decidees remises ou datees (ADR 0016)
-
-**Fait.** Les 25 clauses décidées par `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` et déclarées perdues
-dans `DETTE_TEXTE_DECIDE` sont résorbées, sans qu'aucune décision neuve soit prise : 23 reviennent
-au mot près dans le texte appliqué de 14 exigences, écrites par un verbe hors dépôt et jamais à la
-main ; les 2 autres étaient une annexe périmée, datée en ligne par `partners/ADR-0016`.
-`DETTE_TEXTE_DECIDE` est désormais vide. `siren_manquant`, qui n'est pas une valeur de
-`MotifBlocage`, devient `non_resolue` partout où il était écrit.
-
-**Reste.** La tension entre REQ-DM-021 et REQ-ARG-017 sur `non_resolue` est relevée par la lentille
-exactitude et n'est pas tranchée : elle appartient à la zone argent. Cinq dettes de la revue sont
-reportées. L'entrée de journal de cette PR manquait à la fusion : elle est écrite ici, a posteriori,
-dérivée mot à mot du corps de la PR — c'est exactement ce que `pr_fusionnee_sans_journal` reproche.
-
-**Appris.** Comme la famille `dette_texte_decide_perimee` ne peut plus être amenée au binaire par
-une donnée une fois le registre vide, `controler()` prend un paramètre `dettes` dont la valeur par
-défaut est le registre, et les témoins passent une dette fabriquée. Un registre qu'on vide emporte
-avec lui le seul moyen de prouver que la garde qui le lit sait encore rougir : il faut rendre la
-source injectable AVANT de la vider.
-
-… 31 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 32 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

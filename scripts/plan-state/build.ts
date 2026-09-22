@@ -611,7 +611,7 @@ if (!forge.githubLu()) {
   if (!enVol.length) {
     pousser(
       () =>
-            'Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.'
+        'Aucune tâche revendiquée. Un agent ne prend jamais une tâche non revendiquée (REQ-GOV-007) : la revendication passe par l’orchestrateur.'
     );
   } else {
     // Deux lignes d'en-tête qui ne lisent rien : comparées.
@@ -643,13 +643,16 @@ if (!forge.githubLu()) {
       // provenance ne serait attribuée qu'à la rubrique, et cette ligne — qui varie avec la forge
       // — passerait pour comparable. Elle rougirait à chaque label `owner:` périmé.
       forge.revendications();
-      return `⚠️ **${perimeesLabel.length} revendication(s) périmée(s)** — ${perimeesLabel.map((t) => t.id).join(', ')} : leur issue porte encore un label \`owner:\` alors que la tâche est livrée. \`pnpm lot:cloture\` écrit \`docs/tasks.json\` mais n’efface pas les labels ; la dette appartient à GOV-012.`
+      return `⚠️ **${perimeesLabel.length} revendication(s) périmée(s)** — ${perimeesLabel.map((t) => t.id).join(', ')} : leur issue porte encore un label \`owner:\` alors que la tâche est livrée. \`pnpm lot:cloture\` écrit \`docs/tasks.json\` mais n’efface pas les labels ; la dette appartient à GOV-012.`;
     });
     lignes.push('');
   }
   if (perimees.length > 0) {
     // Ne lit QUE `docs/tasks.json` : déterministe, donc comparée.
-    pousser(() => `⚠️ ${perimees.length} tâche(s) livrée(s) sans \`owner\` consolidé dans \`docs/tasks.json\`.`);
+    pousser(
+      () =>
+        `⚠️ ${perimees.length} tâche(s) livrée(s) sans \`owner\` consolidé dans \`docs/tasks.json\`.`
+    );
     lignes.push('');
   }
 }
@@ -1395,7 +1398,14 @@ function comparer(
     }
   }
 
-  return { ecarts, rubriques, reprise, mesuresConfrontees, lignesDansExemptees, rubriquesNonConverties };
+  return {
+    ecarts,
+    rubriques,
+    reprise,
+    mesuresConfrontees,
+    lignesDansExemptees,
+    rubriquesNonConverties,
+  };
 }
 
 // ── les deux modes ───────────────────────────────────────────────────────────
@@ -1427,10 +1437,7 @@ if (!LANCE_EN_SCRIPT) {
       mesuresConfrontees,
       lignesDansExemptees,
       rubriquesNonConverties,
-    } = comparer(
-      rendu,
-      readFileSync(CHEMIN_VUE, 'utf8')
-    );
+    } = comparer(rendu, readFileSync(CHEMIN_VUE, 'utf8'));
     if (ecarts.length > 0) {
       console.error(
         `❌ plan-state:verifier — ${CHEMIN_VUE} a DÉRIVÉ de ses sources : ${ecarts.length} écart(s).`
