@@ -7,19 +7,19 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `c921995` — 2026-09-21T23:22:36+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #86 (rien) · 3. #88 (rien) · 4. #90 (rien) · 5. #100 (rien) · 6. #84 (un contrôle requis rouge ou une revue manquante) · 7. #91 (un contrôle requis rouge ou une revue manquante) · 8. #92 (un contrôle requis rouge ou une revue manquante) · 9. #93 (un contrôle requis rouge ou une revue manquante) · 10. #99 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `571b1eb` — 2026-09-22T08:18:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #86 (rien) · 2. #90 (rien) · 3. #82 (un contrôle requis rouge ou une revue manquante) · 4. #92 (un contrôle requis rouge ou une revue manquante) · 5. #88 (un conflit avec `main`) · 6. #91 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) · 8. #99 (un conflit avec `main`) · 9. #100 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · DM-02 (A05) · QA-T02 (A05) · QA-T07 (A05) · GOV-059 (A05) |
-| Où en est la phase ? | phase 0 — 14/98 tâches, reste 65.10 j |
-| Le prochain pas | fusionner #82, puis DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
+| Où en est la phase ? | phase 0 — 14/98 tâches, reste 65.60 j |
+| Le prochain pas | fusionner #86, puis DM-02 — Gates de schéma : enums, centimes, index partiels, migrations additives (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #89 — 2026-09-21 |
 
-**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 86 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-14/98 tâches terminées · reste 65.10 j estimés.
+14/98 tâches terminées · reste 65.60 j estimés.
 
 ## Tâches
 
@@ -64,16 +64,15 @@ Reste sur ce chemin : **16.00 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | rien — fusionnable maintenant |
-| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | rien — fusionnable maintenant |
-| 4 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | rien — fusionnable maintenant |
-| 5 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | rien — fusionnable maintenant |
-| 6 | #84 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives | `t/dm-02` | un contrôle requis rouge ou une revue manquante |
-| 7 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
-| 8 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
-| 9 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 10 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un contrôle requis rouge ou une revue manquante |
+| 1 | #86 — feat(QA-T02): harnais d'integration testcontainers, environnement construit, Redis reel du script de SEC-10 | `t/qa-t02` | rien — fusionnable maintenant |
+| 2 | #90 — feat(SEC-07): frontiere axionia — 404 unique, jeton en temps constant, liste d'adresses fermee | `t/sec-07` | rien — fusionnable maintenant |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 4 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
+| 5 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 8 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
+| 9 | #100 — fix(GOV-059): la porte A ne tourne plus sur une PR fusionnee, gov:pr nomme la bonne cause, et ADR 0017 | `t/gov-059-suite` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -93,17 +92,19 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-21 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
+`docs/adr/0011-une-seule-implementation-des-listes-d-etats.md` — partners/ADR-0011 — Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture
+
+Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-22). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
 
-**Fusionner #82** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+**Fusionner #86** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **DM-02** — Gates de schéma : enums, centimes, index partiels, migrations additives (1.5 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `c921995` (2026-09-21T23:22:36+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `571b1eb` (2026-09-22T08:18:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -132,6 +133,37 @@ qu'aucune des trois n'ait change. Mesure au passage : une PR de phase 0 qui touc
 `docs/tasks.json` exige le label `role:gardien-spec`, et le champ `Rouge constate par:` n'admet
 QUE le code de poste — la moindre parenthese apres lui rend `rouge_vert_absent`.
 
+### PR #88 — 2026-09-19 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur
+
+**Fait.** `src/lib/logger.ts` écrit des lignes JSON pino dans un flux qui relit chaque ligne finale,
+la parcourt en entier et remplace toute valeur protégée : par nom de clé (lexique de personne importé
+de DM-01, plus `SEGMENTS_SECRETS`, casse et accents neutralisés) et par valeur (courriel, IBAN,
+téléphone français, lien de dépôt). Une ligne illisible est remplacée, jamais écrite brute. Seule une
+empreinte SHA-256 exacte, sous une clé de contexte à la racine, échappe au scan. `src/lib/sentry.ts`
+bâtit un client `@sentry/node` autonome, dont les trois filtres passent par la même fonction, et qui
+ne transmet aucun en-tête. `src/lib/notify.ts` refuse de se construire hors production sans
+`NOTIFY_SINK=true`, et son prédicat est confronté au vrai `hook-env.js` sur 8 environnements.
+`src/instrumentation.ts` est le seul lecteur de l'environnement. Versions exactes : pino 10.3.1,
+`@sentry/node` 10.75.0. 26 tests, 25 mutants tués en phase A, 3 rejoués en phase B.
+
+**Reste.** Aucun transport réel de notification (INT-T14, INT-T10) ; le notifieur n'est pas composé
+au démarrage. Pas de Sentry côté navigateur ni de cartes de sources (SEC-03). `SENTRY_DSN` doit
+devenir obligatoire en production dans le schéma d'environnement (QA-T04). L'entrée de Sentry au
+registre RGPD appartient à JUR-T04. Une règle de lint doit interdire toute interpolation dans le
+message d'un appel de journal : un nom de personne en texte libre n'a pas de motif.
+
+**Appris.** L'option `redact` de pino juge des chemins : un objet un cran plus bas, un tableau ou une
+clé en casse différente passent, et seul un parcours de la ligne finale les voit tous. Une exemption
+par forme hexadécimale est une porte : un IBAN allemand en minuscules, `de89` suivi de chiffres, a
+la forme d'une empreinte de 22 caractères. Seule la longueur exacte de la SHA-256 ferme la porte.
+Depuis que `next` est une dépendance, `NodeJS.ProcessEnv` exige `NODE_ENV` : un environnement de
+sous-processus construit à partir de zéro doit être converti, comme dans la spec de SEC-01. Et la
+garde `journal:sans-pii` lit tout identifiant `evenement`, y compris le paramètre d'un filtre Sentry :
+renommer vaut mieux qu'inscrire une exemption. Enfin, le corps d'une PR garde chacune de ses
+révisions : un IBAN d'exemple à clé valide collé une fois dans un bloc rouge verbatim y reste, et
+`gov:entite --corps-publie` le lit. La PR #85 a été fermée pour cela et remplacée par celle-ci, code
+inchangé. Un corps se vérifie avec le détecteur de la garde AVANT sa première publication.
+
 ### PR #84 — 2026-09-19 — feat(DM-02): gates de schema, enums, centimes, index partiels et migrations additives
 
 **Fait.** Les gardes du schéma lisent un schéma LU, par un lecteur unique exporté
@@ -156,27 +188,7 @@ et toute table protégée demain l'est sans retouche. Et remplacer un prédicat 
 d'une garde ne doit pas perdre ses mots : `remuneration`, `euro` et `euros` sont passés dans la
 garde avec lui.
 
-### PR #83 — 2026-09-19 — docs(GOV-039): les 25 clauses decidees remises ou datees (ADR 0016)
-
-**Fait.** Les 25 clauses decidees par `docs/REQUIREMENTS-ANNEXE-FUSIONS.md` et declarees perdues
-dans `DETTE_TEXTE_DECIDE` sont resorbees, sans qu'aucune decision neuve soit prise : 23 reviennent
-au mot pres dans le texte applique de 14 exigences, ecrites par un verbe hors depot et jamais a la
-main ; les 2 autres etaient une annexe perimee, datee en ligne par `partners/ADR-0016`.
-`DETTE_TEXTE_DECIDE` est desormais vide. `siren_manquant`, qui n'est pas une valeur de
-`MotifBlocage`, devient `non_resolue` partout ou il etait ecrit.
-
-**Reste.** La tension entre REQ-DM-021 et REQ-ARG-017 sur `non_resolue` est relevee par la lentille
-exactitude et n'est pas tranchee : elle appartient a la zone argent. Cinq dettes de la revue sont
-reportees. L'entree de journal de cette PR manquait a la fusion : elle est ecrite ici, a posteriori,
-derivee mot a mot du corps de la PR — c'est exactement ce que `pr_fusionnee_sans_journal` reproche.
-
-**Appris.** Comme la famille `dette_texte_decide_perimee` ne peut plus etre amenee au binaire par
-une donnee une fois le registre vide, `controler()` prend un parametre `dettes` dont la valeur par
-defaut est le registre, et les temoins passent une dette fabriquee. Un registre qu'on vide emporte
-avec lui le seul moyen de prouver que la garde qui le lit sait encore rougir : il faut rendre la
-source injectable AVANT de la vider.
-
-… 31 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 32 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
