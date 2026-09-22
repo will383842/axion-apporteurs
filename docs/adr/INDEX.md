@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**16 ADR · 12 `propose`, 4 `accepte`, 0 `remplace`.**
+**17 ADR · 12 `propose`, 5 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -27,3 +27,4 @@
 | [`partners/ADR-0014`](0014-temps-paris-jours-ouvres.md) | Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés | `propose` | 2026-09-19 | CPL-T13 |
 | [`partners/ADR-0015`](0015-journal-evenement-chaine-immuable.md) | Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle | `accepte` | 2026-09-19 | DM-01 |
 | [`partners/ADR-0016`](0016-deux-arbitrages-du-2026-09-03-dates-dans-l-annexe-des-fusions.md) | Deux arbitrages du 2026-09-03 datés dans l'annexe des fusions : la date de référence d'une commande et les trois contrôles de versement | `propose` | 2026-09-19 | — aucune tâche ouverte ne porte la résorption des dettes de texte décidé ; la dette avait été déclarée par GOV-039 |
+| [`partners/ADR-0017`](0017-un-nom-une-garde-gov-check-retire-des-deux-cotes.md) | Un nom, une garde : `gov:check` est retiré des deux côtés | `accepte` | 2026-09-22 | GOV-063 |
