@@ -21,10 +21,10 @@
 | ----- | -------------- | ----: | -------: | ----------------: |
 | -1 | Socle de gouvernance | 40 | 27 | 13 |
 | 0 | Fondations, sécurité, charte | 42 | 10 | 32 |
-| 1 | Parcours, attribution, intégrations | 21 | 0 | 21 |
+| 1 | Parcours, attribution, intégrations | 21 | 1 | 20 |
 | 2 | Argent et versements | 11 | 0 | 11 |
 | 3 | Clôture et obligations annuelles | 3 | 0 | 3 |
-| **Total** | | **117** | **37** | **80** |
+| **Total** | | **117** | **38** | **79** |
 
 La phase d'une gate est celle **à la sortie de laquelle** elle doit exister, être bloquante et
 avoir rougi. Une gate sans phase entière n'entre dans le périmètre d'aucune sortie :
@@ -54,7 +54,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `gov:entite:corps` | CPL-T01 | `scripts/gates/gov-entite.ts` | — | pnpm gov:entite:corps:prove — 6 familles vues rougir sur une lecture INJECTEE ; les TROIS cles d'exemption ont chacune un temoin qui n'en change QU'UNE (horodatage seul, empreinte seule, PR seule) ; une empreinte TRONQUEE ne dispense pas ; exemptionsServies appariee sur trois cles face a deux leurres de la meme PR ; la LECTURE elle-meme est eprouvee hors ligne (gh de papier : 6 pannes rendent lu=false donc 2, jamais un corps vide ; le reessai reprend une intermittence, une panne stable reste lu=false) ; la pagination est eprouvee (une coordonnee servie apres la premiere page rend 1 nomme au lieu de 2 sans remede ; borne PAGES_MAX ; curseur qui n'avance pas) ; la PAGINATION est eprouvee sur une forge dont le compte ANNONCE varie d'une page a l'autre — sans quoi « lu une fois » et « relu a chaque page » sont indiscernables : le compte retenu est celui de la PREMIERE page, une forge qui sert moins qu'elle n'annonce rend 2 avec la coordonnee jamais servie, et lectureInachevee est CONSOMME par le verdict (contre-temoin vert sans ecart ni interruption, puis MEME compte interrompu -> 2). Les deux causes d'un INDETERMINE sont rendues SEPAREMENT, et ce n'est pas de la redondance : l'ecart annonce/lu depend d'un nombre servi par LA FORGE, l'interruption est NOTRE PROPRE observation — une forge qui sert 150 de 250 sans jamais etre interrompue a inacheve=false, seul l'ecart la rattrape. exemptionsServies est appariee sur les TROIS cles face a trois leurres, dont un venant d'une AUTRE PR ; 6 contre-temoins verts |
 | `gates:prouvees` | QA-T00 | `scripts/gates/gates-prouvees.ts` | — | 10 familles, un temoin chacune, 8 contre-temoins verts, 5 temoins de forme (pnpm gates:prouvees:prove) |
 | `partners:contrat:hash` | INT-T01a | `tests/unit/integration/contrat-hash.spec.ts` | — | renommage de `occurred_at` en `occurredAt` dans packages/contracts/enveloppe.ts, 2026-09-03 : 4 cas sur 9 rouges + `contracts:export --verifier` rouge sur les 3 artefacts |
-| `GATE-JUR-TEXTES-APPORTEURS` | GOV-013 | `scripts/gates/lexique-apporteurs.ts` | `GATE-UX-JARGON`, `gov:lexique` | pnpm gov:lexique:prove — 11 familles rougissent chacune sur son temoin, 8 positions limites rougissent, 4 controles positifs rougissent, 13 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim |
+| `GATE-JUR-TEXTES-APPORTEURS` | GOV-013 | `scripts/gates/lexique-apporteurs.ts` | `GATE-UX-JARGON`, `gov:lexique` | pnpm gov:lexique:prove — 12 familles rougissent chacune sur son temoin (dont jargon_interne, REQ-UX-003, ajoutee par UX-P0-01), 8 positions limites rougissent, 4 controles positifs rougissent, 13 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim |
 | `G-SEC-GATE-A-BLOQUANTE` | CPL-T01 | `tests/unit/gouvernance/entite-registre.spec.ts` | — | le cas mute le YAML EN MEMOIRE (ci.yml est reserve) et exige que l'etape « Le corps PUBLIE de la PR ne porte aucune coordonnee » ressorte NOMMEE ; un temoin positif verifie que le bloc extrait est bien celui qui porte gov:entite:corps, et la fonction LEVE si le job gate-a est introuvable — sans quoi elle rendrait une liste vide, donc vert |
 | `gov:publication` | GOV-000 | `scripts/gates/gov-publication.ts` | — | pnpm gov:publication:prove — 7 familles vues rougir, 5 contre-temoins vus rester verts |
 | `gov:requirements` | GOV-001 | `scripts/gates/gov-requirements.ts` | — | pnpm gov:requirements:prove — 16 familles, chacune vue rougir sur son temoin ; et, depuis GOV-024, le mode --verifie-rendu vu rougir en famille vue_perimee sur une vue perime d'UNE exigence, l'ecart nomme « 353 pour 354 », et vu rester vert sur le depot a jour. ⚠️ 2026-09-17, GOV-039 : les CINQ familles neuves (annexe_sans_fusion, fusion_survivante_inconnue, fusion_absorbee_non_marquee, texte_decide_perdu, dette_texte_decide_perimee) ont chacune leur temoin, et les trois qui portent sur une fusion frappent une fusion du MILIEU de l'annexe, jamais la derniere — un temoin construit contre le dernier element d'une liste ne distingue pas « toutes » de « la derniere ». Le rouge d'origine, vu AVANT le correctif et colle verbatim dans le corps de la PR : « REQ-QA-014 : l'arbitrage decide porte « it() », que le texte applique ne reprend pas », et la meme ligne pour « Couvre: REQ-… » |
@@ -82,9 +82,15 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 | `G-SEC-CI-BLOQUANTE` | QA-T01 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | — | le detecteur lit par un VRAI analyseur YAML chaque job et chaque etape de CHAQUE workflow de .github/workflows (liste derivee du disque, compte imprime, planchers > 0) et nomme l'etape qui PORTE la cle continue-on-error, a toute valeur : vu ROUGE sur une copie EN MEMOIRE de ci.yml ou l'etape « Tests » de gate-a porte continue-on-error: ${{ true }} (seule « Tests » nommee), sur l'etape du MILIEU de gate-a, derivee de son rang (n° 32 sur 63 le 2026-09-19, « La garde du registre d entite sait rougir »), et sur l'avant-derniere (Typecheck) dont la cle precede name, en mapping entre accolades et en cle citee (Format), et au niveau JOB dans nightly.yml (gates-prouvees) — que le temoin etroit de G-SEC-GATE-A-BLOQUANTE laisse passer ; les commentaires de ci.yml et nightly.yml qui citent le mot restent VERTS ; un workflow sans jobs, a jobs vides ou porteur d'une ancre fait LEVER, jamais rendre vide ; le ci.yml du depot rend une liste vide |
 | `maquettes-validees` | UX-P0-02 | `scripts/gates/maquettes-validees.ts` | — | pnpm gov:maquettes-validees:prove — 9 familles, un temoin chacune, 3 contre-temoins verts ; les temoins validation_partielle, ligne_mal_formee et ecran_attribue_sans_validation portent sur la ligne du MILIEU d'un tableau de trois. Et tests/unit/espace/maquettes-validees.spec.ts vu ROUGE avant la garde le 2026-09-19 (« Failed to load url ../../../scripts/gates/maquettes-validees »), puis quatre mutants de la garde tues par la spec : valideur ignore (1 echec), proprietaire ignore (1), seule la derniere ligne lue (4), index.html non exempte (3) |
 
+### Phase 1 — armées (1)
+
+| Gate | Tâche | Script | Alias | Preuve rouge |
+| ---- | ----- | ------ | ----- | ------------ |
+| `GATE-UX-EXHAUSTIVITE` | UX-P0-01 | `scripts/gates/ux-exhaustivite.ts` | `ux:exhaustivite` | pnpm ux:exhaustivite:prove — 11 familles rougissent chacune sur son temoin en nommant sa cible (valeur, ecran ou fichier:ligne), 2 contre-temoins restent verts dont un composant qui lit la micro-copie (vu le 2026-09-19) |
+
 ## 3. Ce qui reste à prouver
 
-Aucune de ces **80** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
+Aucune de ces **79** entrées ne porte de `preuveRouge` : personne ne les a vues rougir.
 Le périmètre d'un appel est celui de SA phase : `pnpm gates:prouvees --phase -1` ne juge que les
 gates de phase -1, `--phase 0` y ajoute celles de phase 0, et ainsi de suite. Le compte des manques
 n'est pas recopié ici : il se lit dans la sortie de la commande, famille par famille, et il change à
@@ -153,13 +159,12 @@ sortie de la commande, elle, fait foi.
 | `red-first` | CPL-T22 | `.github/workflows/red-first.yml` | — |
 | `jur:lexique-social` | JUR-T26 | `scripts/gates/jur-lexique-social.ts` | — |
 
-### Phase 1 — parcours, attribution, intégrations (21)
+### Phase 1 — parcours, attribution, intégrations (20)
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
 | `partners:schema:partial-index` | DM-07 | `tests/integration/index-partiel.spec.ts` | — |
 | `partners:transitions:exhaustive` | DM-08 | `tests/domain/transitions.spec.ts` | — |
-| `GATE-UX-EXHAUSTIVITE` | UX-P0-01 | `scripts/gates/ux-exhaustivite.ts` | — |
 | `GATE-JUR-PURGE` | DM-13 | `tests/integration/purge.spec.ts` | `G-SEC-RGPD-PURGE` |
 | `partners:webhook:idempotent` | SEC-06 | `tests/integration/webhook.spec.ts` | `GATE-ARG-idempotence` |
 | `partners:grille:complete` | UX-P1-14 | `scripts/gates/grille-complete.ts` | — |
