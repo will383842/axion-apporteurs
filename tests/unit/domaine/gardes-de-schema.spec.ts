@@ -261,6 +261,73 @@ describe('REQ-DM-038 — un modèle se ferme sur SON accolade', () => {
 });
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════
+describe('REQ-DM-038 → REQ-DM-001 — un type se juge sur ce que POSTGRES en fait, pas sur son orthographe Prisma', () => {
+  /** La faute au MILIEU d'un modèle sain, entre deux champs neutres. */
+  const avec = (champ: string): Vue => ({
+    ...VUE_CONFORME,
+    schema: `${VUE_CONFORME.schema}\nmodel Bac {\n  id String @id\n  ${champ}\n  siren String\n}\n`,
+  });
+  const vocabulaire = (champ: string): string =>
+    controler(avec(champ))
+      .filter((f) => f.famille === 'colonne_vocabulaire_en_chaine')
+      .map((f) => f.message)
+      .join('\n');
+
+  it('REQ-DM-038 : `statut Unsupported("text")` rougit — `text` est la chaîne la plus libre de PostgreSQL', () => {
+    expect(vocabulaire('statut Unsupported("text")')).toContain('Bac.statut');
+  });
+
+  it('REQ-DM-038 : tout natif de texte libre rougit — casse, argument et synonymes compris', () => {
+    for (const natif of [
+      'TEXT',
+      'varchar(30)',
+      'character varying(30)',
+      'citext',
+      'jsonb',
+      'json',
+      'xml',
+      'name',
+      'bpchar',
+    ]) {
+      expect(vocabulaire(`statut Unsupported("${natif}")`), natif).toContain('Bac.statut');
+    }
+  });
+
+  it('REQ-DM-038 : contre-témoin — le MÊME mécanisme de type, non textuel, sur un nom NEUTRE reste vert', () => {
+    for (const champ of [
+      'reseau Unsupported("inet")',
+      'duree Unsupported("interval")',
+      'empreinte Unsupported("bytea")',
+    ]) {
+      expect(controler(avec(champ)), champ).toEqual([]);
+    }
+  });
+
+  it('REQ-DM-038 : contre-témoin — un enum NATIF de PostgreSQL sur une colonne de vocabulaire reste vert', () => {
+    // Sans lui, la garde interdirait la solution même : un `CREATE TYPE … AS ENUM` que Prisma ne
+    // modélise pas ne se déclare QUE par `Unsupported("<le type>")`.
+    for (const champ of [
+      'statut Unsupported("etat_attribution")',
+      'type Unsupported("type_evenement_journal")',
+      'palier Unsupported("palier_commission")',
+    ]) {
+      expect(controler(avec(champ)), champ).toEqual([]);
+    }
+  });
+
+  it('REQ-DM-001 : les montants se jugent par le MÊME mécanisme — un natif qui arrondit rougit, un natif entier reste vert', () => {
+    const cents = (champ: string): string =>
+      controlerCents(`model Ligne {\n  id String @id\n  ${champ}\n  apporteurId String\n}\n`)
+        .map((f) => `${f.famille} ${f.message}`)
+        .join('\n');
+    expect(cents('brut Unsupported("money")')).toContain('Ligne.brut');
+    expect(cents('brut Unsupported("numeric(12,2)")')).toContain('Ligne.brut');
+    expect(cents('soldeCents Unsupported("bigint")')).toContain('Ligne.soldeCents');
+    expect(cents('soldeCents Int')).toEqual('');
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════
 describe('REQ-DM-038 — la garde invoquée sans extension juge', () => {
   it('REQ-DM-038 : `schema-enums` sans `.ts` imprime un verdict, et `--prove` en rend un', () => {
     const r = lancer('scripts/gates/schema-enums', '--prove');
@@ -556,6 +623,38 @@ describe('REQ-DM-037 — les migrations sont additives', () => {
         .fautes
     ).toEqual([]);
     expect(controlerMigrations(vue('')).fautes).toEqual([]);
+  });
+
+  it('REQ-DM-037 : le registre dit EXACTEMENT ce que la garde tient — cinq formes de DROP sortent en 0, et le registre les déclare', () => {
+    // MESURÉ : ces cinq-là ne rougissent pas. La dette est réelle, et elle appartient à `QA-T11`
+    // qui porte cette garde. Ce qui était fautif, c'est que le registre annonçait « DROP, RENAME et
+    // NOT NULL sans defaut interdits hors ADR » — plus large que le code. Un relecteur qui lit le
+    // registre avant le code croit alors protégé ce qui ne l'est pas.
+    const echappent = [
+      'ALTER TABLE "x" DROP CONSTRAINT "x_pkey";',
+      'DROP VIEW "v";',
+      'DROP MATERIALIZED VIEW "mv";',
+      'DROP SEQUENCE "s";',
+      'DROP DATABASE "d";',
+    ];
+    for (const sql of echappent) expect(controlerMigrations(vue(sql)).fautes, sql).toEqual([]);
+    // Et le registre les NOMME, une par une. Sans cette assertion, le texte pourrait
+    // re-sur-promettre sans que rien ne casse — et c'est exactement ce qui s'était produit.
+    const entree = (
+      JSON.parse(readFileSync('docs/gates.json', 'utf8')) as {
+        gates: { id: string; verifie: string }[];
+      }
+    ).gates.find((g) => g.id === 'partners:migrations:additive');
+    expect(entree, 'partners:migrations:additive absente du registre').toBeDefined();
+    for (const forme of [
+      'DROP CONSTRAINT',
+      'DROP VIEW',
+      'DROP MATERIALIZED VIEW',
+      'DROP SEQUENCE',
+      'DROP DATABASE',
+    ]) {
+      expect(entree!.verifie, forme).toContain(forme);
+    }
   });
 
   it('REQ-DM-037 : la protection du journal se DÉRIVE des déclencheurs des migrations, jamais d’un nom recopié', () => {
