@@ -24,12 +24,31 @@
  *
  * LE SCHÉMA SE LIT par `scripts/lot/lecteur-prisma.ts` : un modèle se ferme sur SON accolade.
  *
+ * LE TYPE SE JUGE SUR CE QUE POSTGRES EN FAIT (`GENRE_FLOTTANT` + `estDuGenre`), jamais sur son
+ * orthographe Prisma : `Unsupported("numeric")` arrondit autant qu'un `Decimal`. Le mécanisme vit
+ * dans le lecteur unique et sert aussi à `schema-enums` (RM-01).
+ *
+ * SON PÉRIMÈTRE EST `prisma/schema.prisma`, ET UNE COLONNE PEUT ENTRER AILLEURS. REQ-DM-037
+ * institue le SQL brut comme canal légitime : une colonne posée par une migration à la main n'est
+ * PAS dans ce fichier, et cette garde ne la voit pas. Elle n'essaie pas de parser `CREATE TABLE` —
+ * un parseur ne connaît que les formes qu'on lui a apprises. Le canal est fermé LÀ OÙ IL DÉBOUCHE :
+ * `tests/integration/index-partiels.spec.ts`, second `describe`, applique `fautesDUneColonne` à
+ * TOUTES les colonnes d'`information_schema` après `prisma migrate deploy`. Une règle, deux sources
+ * de colonnes, une implémentation.
+ *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne lit rien du dépôt : chaque témoin est une vue
  * injectée, et la faute y est posée au MILIEU d'un modèle, entre deux champs sains.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
-import { ErreurLecturePrisma, lireSchemaPrisma, type SchemaPrisma } from '../lot/lecteur-prisma';
+import {
+  ErreurLecturePrisma,
+  estDuGenre,
+  estDuGenreNatif,
+  lireSchemaPrisma,
+  type GenreDeType,
+  type SchemaPrisma,
+} from '../lot/lecteur-prisma';
 import { segmentsDuNom } from '../../src/domain/donnees-personnelles/champs';
 
 const CHEMIN_SCHEMA = 'prisma/schema.prisma';
@@ -52,12 +71,27 @@ export const MOTS_DE_MONTANT = [
   'euros',
 ] as const;
 
-/** Les types scalaires qui arrondissent. */
-const TYPES_FLOTTANTS = new Set(['Float', 'Decimal']);
-/** Le type natif d'un `Unsupported(…)` qui arrondit, ou qui porte des euros. */
-const NATIF_FLOTTANT = /numeric|decimal|real|double|float|money/i;
+/**
+ * LE GENRE « ce type arrondit, ou porte des euros » — le prédicat de décision de la famille
+ * `virgule_flottante`, scalaires Prisma ET types natifs d'un `Unsupported(…)` dans le MÊME objet.
+ * Exporté parce que ce qui décide ici doit décider partout où la même règle se juge : la spec
+ * d'intégration l'applique aux colonnes de la base RÉELLE (RM-01).
+ */
+export const GENRE_FLOTTANT: GenreDeType = {
+  scalaires: ['Float', 'Decimal'],
+  natif: /numeric|decimal|real|double|float|money/i,
+};
 /** Les types qui ne portent jamais un montant, même quand leur nom en évoque un. */
 const TYPES_NON_MONETAIRES = new Set(['Boolean', 'DateTime']);
+
+/**
+ * LE SUFFIXE `Cents`, jugé par SEGMENT et non par fin de chaîne : `montantHtCents` en Prisma et
+ * `montant_ht_cents` en base sont le même champ, et la garde doit en dire la même chose des deux
+ * côtés. Exporté pour la spec d'intégration, qui lit les colonnes de la base réelle.
+ */
+export function estEnCents(nom: string): boolean {
+  return segmentsDuNom(nom).at(-1) === 'cents';
+}
 
 export type Faute = { famille: string; message: string };
 
@@ -85,6 +119,79 @@ export const FAMILLES: { nom: string; explication: string }[] = [
 ];
 const NOMS_FAMILLES = FAMILLES.map((f) => f.nom);
 
+/**
+ * UNE COLONNE À JUGER, d'où qu'elle vienne — du schéma Prisma, ou du catalogue d'une base migrée.
+ * `natif` dit laquelle des deux : le type d'une colonne lue en base est DÉJÀ un type PostgreSQL,
+ * celui d'un champ Prisma ne l'est qu'à l'intérieur d'un `Unsupported(…)`. La RÈGLE, elle, est la
+ * même des deux côtés, et n'a qu'une implémentation (`fautesDUneColonne`, RM-01).
+ */
+export type ColonneAJuger = {
+  /** Où la nommer : `prisma/schema.prisma:97 — Commission.brut`, `public.attributions.montant`… */
+  ou: string;
+  /** Le nom du champ — celui qui porte, ou non, le suffixe `Cents`. */
+  nom: string;
+  /** Le nom de la colonne SQL (`@map`), ou le même que `nom` quand il n'y en a pas d'autre. */
+  colonne: string;
+  /** Le type tel qu'écrit : type Prisma (`Int`, `Unsupported("numeric")`) ou type PostgreSQL. */
+  type: string;
+  /** `type` est-il déjà un type PostgreSQL (colonne lue en base) ? */
+  natif: boolean;
+  /** Un type qui ne porte jamais un montant : relation, enum, booléen, date, identifiant. */
+  jamaisMonetaire: boolean;
+};
+
+/** Le genre « ce type est un entier », celui que REQ-DM-001 exige d'un champ `…Cents`. */
+export const GENRE_ENTIER: GenreDeType = { scalaires: ['Int'], natif: /^(integer|int4|int)$/i };
+
+/** Le genre « ce type ne porte jamais un montant », côté Prisma comme côté PostgreSQL. */
+export const GENRE_NON_MONETAIRE: GenreDeType = {
+  scalaires: [...TYPES_NON_MONETAIRES],
+  natif: /\b(bool|boolean|date|time|timestamp|timestamptz|interval|uuid|inet|bytea)\b/i,
+};
+
+/**
+ * LES FAUTES DE REQ-DM-001 SUR UNE COLONNE. Seule implémentation de la règle : la garde statique
+ * l'applique aux champs de `prisma/schema.prisma`, la spec d'intégration aux colonnes de la base
+ * RÉELLE après `migrate deploy` — une règle, deux sources de colonnes, une implémentation.
+ */
+export function fautesDUneColonne(c: ColonneAJuger): Faute[] {
+  const duGenre = (g: GenreDeType): boolean =>
+    c.natif ? estDuGenreNatif(c.type, g) : estDuGenre(c.type, g);
+  if (duGenre(GENRE_FLOTTANT)) {
+    return [
+      {
+        famille: 'virgule_flottante',
+        message:
+          `${c.ou} est un ${c.type} : REQ-DM-001 interdit toute colonne Float ou Decimal, quel que ` +
+          'soit son nom. Un montant est un Int en centimes, suffixé Cents ; un taux, un Int en ' +
+          'points de base.',
+      },
+    ];
+  }
+  const enCents = estEnCents(c.nom);
+  if (enCents && !duGenre(GENRE_ENTIER)) {
+    return [
+      {
+        famille: 'centimes_non_entiers',
+        message: `${c.ou} est suffixé Cents mais typé ${c.type} : REQ-DM-001 veut un Int.`,
+      },
+    ];
+  }
+  if (enCents || c.jamaisMonetaire || duGenre(GENRE_NON_MONETAIRE)) return [];
+  const segments = [...segmentsDuNom(c.nom), ...segmentsDuNom(c.colonne)];
+  if (segments[segmentsDuNom(c.nom).length - 1] === 'id') return [];
+  const mot = MOTS_DE_MONTANT.find((m) => segments.includes(m));
+  if (mot === undefined) return [];
+  return [
+    {
+      famille: 'montant_sans_suffixe',
+      message:
+        `${c.ou} (${c.type}) porte le mot « ${mot} » sans le suffixe Cents : on ne sait pas s'il ` +
+        'est en euros ou en centimes. REQ-DM-001 : Int, centimes, HT, suffixé Cents.',
+    },
+  ];
+}
+
 /** Le schéma lu, et ce qui y a été confronté. Lève `ErreurLecturePrisma` s'il ne se lit pas. */
 export function controlerSchema(schema: SchemaPrisma): Faute[] {
   const fautes: Faute[] = [];
@@ -98,44 +205,22 @@ export function controlerSchema(schema: SchemaPrisma): Faute[] {
         "qu'on n'a rien lu.",
     });
   }
-  const nonMonetaires = new Set([
-    ...TYPES_NON_MONETAIRES,
+  /** Un type qui nomme un modèle ou un enum du schéma est une relation ou un vocabulaire. */
+  const declares = new Set([
     ...schema.modeles.map((m) => m.nom),
     ...schema.enums.map((e) => e.nom),
   ]);
   for (const c of champs) {
-    const ou = `${CHEMIN_SCHEMA}:${c.ligne} — ${c.modele}.${c.nom}`;
-    const natif = /^Unsupported\((.*)\)$/.exec(c.type)?.[1];
-    if (TYPES_FLOTTANTS.has(c.type) || (natif !== undefined && NATIF_FLOTTANT.test(natif))) {
-      fautes.push({
-        famille: 'virgule_flottante',
-        message:
-          `${ou} est un ${c.type} : REQ-DM-001 interdit toute colonne Float ou Decimal, quel que ` +
-          'soit son nom. Un montant est un Int en centimes, suffixé Cents ; un taux, un Int en ' +
-          'points de base.',
-      });
-      continue;
-    }
-    const enCents = c.nom.endsWith('Cents');
-    if (enCents && c.type !== 'Int') {
-      fautes.push({
-        famille: 'centimes_non_entiers',
-        message: `${ou} est suffixé Cents mais typé ${c.type} : REQ-DM-001 veut un Int.`,
-      });
-      continue;
-    }
-    if (enCents || nonMonetaires.has(c.type)) continue;
-    const segments = [...segmentsDuNom(c.nom), ...segmentsDuNom(c.colonne)];
-    if (segments[segmentsDuNom(c.nom).length - 1] === 'id') continue;
-    const mot = MOTS_DE_MONTANT.find((m) => segments.includes(m));
-    if (mot !== undefined) {
-      fautes.push({
-        famille: 'montant_sans_suffixe',
-        message:
-          `${ou} (${c.type}) porte le mot « ${mot} » sans le suffixe Cents : on ne sait pas s'il ` +
-          'est en euros ou en centimes. REQ-DM-001 : Int, centimes, HT, suffixé Cents.',
-      });
-    }
+    fautes.push(
+      ...fautesDUneColonne({
+        ou: `${CHEMIN_SCHEMA}:${c.ligne} — ${c.modele}.${c.nom}`,
+        nom: c.nom,
+        colonne: c.colonne,
+        type: c.type,
+        natif: false,
+        jamaisMonetaire: declares.has(c.type),
+      })
+    );
   }
   return fautes;
 }
@@ -274,10 +359,7 @@ if (LANCE_EN_SCRIPT) {
     const lu = lireSchemaPrisma(texte ?? '');
     modeles = lu.modeles.length;
     champs = lu.modeles.reduce((n, m) => n + m.champs.length, 0);
-    enCents = lu.modeles.reduce(
-      (n, m) => n + m.champs.filter((c) => c.nom.endsWith('Cents')).length,
-      0
-    );
+    enCents = lu.modeles.reduce((n, m) => n + m.champs.filter((c) => estEnCents(c.nom)).length, 0);
   } catch {
     // illisible : la famille `schema_illisible` le dit
   }

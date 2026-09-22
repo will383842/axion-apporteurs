@@ -12,6 +12,10 @@
  * nommant la ligne (`ErreurLecturePrisma`) : accolade non appariée, chaîne non terminée, ligne de
  * modèle qui n'est ni un champ ni un attribut de bloc. Jamais « 0 modèle, vert ».
  *
+ * IL PORTE AUSSI LE PRÉDICAT DE TYPE des deux gardes de schéma (`natifDuType`, `estDuGenre`,
+ * `estDuGenreNatif`) : lire proprement un `Unsupported("text")` ne sert à rien si la garde décide
+ * ensuite sur une liste d'orthographes Prisma. Voir le commentaire de `natifDuType`.
+ *
  * POURQUOI IL N'EST PAS SOUS `scripts/gates/`. Tout fichier suivi de ce dossier doit être une garde
  * inscrite au registre : une bibliothèque y rougirait `garde_hors_registre`.
  *
@@ -59,6 +63,54 @@ export type EnumPrisma = {
 };
 
 export type SchemaPrisma = { modeles: ModelePrisma[]; enums: EnumPrisma[] };
+
+// ── le type d'une colonne, tel que POSTGRES le voit ──────────────────────────
+
+/**
+ * LE TYPE NATIF d'une colonne déclarée `Unsupported("…")` — l'argument, délimiteurs et espaces
+ * retirés —, ou `undefined` quand le type est un scalaire Prisma, un enum ou une relation.
+ *
+ * 🔴 POURQUOI IL EST ICI, ET POURQUOI IL N'Y EN A QU'UN. `Unsupported("…")` est la porte par
+ * laquelle une colonne entre dans le schéma SANS que Prisma la modélise : son type n'a plus
+ * d'orthographe Prisma, seulement celle de PostgreSQL. Une garde qui décide sur une LISTE
+ * D'ORTHOGRAPHES Prisma (`new Set(['String', 'Json'])`) ne la voit pas — et pire, elle la COMPTE
+ * puis la déclare conforme. Mesuré le 2026-09-22 sur DM-02 : `statut Unsupported("text")` posé au
+ * milieu d'un modèle faisait passer `partners:schema:enums` de 8 à 9 champs « jugés », en exit 0,
+ * sur exactement la faute que REQ-DM-038 interdit. `schema-cents.ts` fermait déjà la même évasion
+ * de son côté : la classe était connue, elle n'était fermée que d'un côté. Les deux gardes
+ * dérivent donc leur prédicat d'ICI (RM-01), au lieu d'en écrire chacune une copie.
+ */
+export function natifDuType(type: string): string | undefined {
+  const argument = /^Unsupported\((.*)\)$/.exec(type)?.[1];
+  if (argument === undefined) return undefined;
+  return argument
+    .trim()
+    .replace(/^(["'])([\s\S]*)\1$/, '$2')
+    .trim();
+}
+
+/**
+ * UN GENRE DE TYPE — la question « ce type peut-il faire ÇA ? », jamais « comment s'écrit-il ? ».
+ * `scalaires` énumère les types PRISMA qui en relèvent ; `natif` est le motif que satisfait le
+ * type POSTGRES d'un `Unsupported(…)`, ou d'une colonne posée en SQL brut. Deux vocabulaires
+ * (`schema-cents` : ce qui arrondit ; `schema-enums` : ce qui porte une chaîne libre), un seul
+ * mécanisme de décision.
+ */
+export type GenreDeType = { scalaires: readonly string[]; natif: RegExp };
+
+/** Un type POSTGRES relève-t-il du genre ? C'est la seule question quand Prisma ne modélise rien. */
+export function estDuGenreNatif(natif: string, genre: GenreDeType): boolean {
+  return genre.natif.test(natif);
+}
+
+/**
+ * Un type de CHAMP PRISMA relève-t-il du genre ? Un `Unsupported(…)` se juge sur son natif — sans
+ * quoi la garde ne juge que les colonnes que Prisma veut bien nommer.
+ */
+export function estDuGenre(type: string, genre: GenreDeType): boolean {
+  const natif = natifDuType(type);
+  return natif === undefined ? genre.scalaires.includes(type) : estDuGenreNatif(natif, genre);
+}
 
 // ── positions et lignes ──────────────────────────────────────────────────────
 

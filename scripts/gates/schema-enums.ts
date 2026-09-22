@@ -41,6 +41,17 @@
  *     `status` et `priorite` à la fusion. La liste EXÉCUTÉE (`NOMS_DE_VOCABULAIRE`) porte les dix
  *     noms de l'arbitrage : voir l'avertissement posé sur elle. Une `String` y rougit — que le nom
  *     soit celui du champ ou celui de sa colonne (`@map`).
+ *     LE TYPE SE JUGE SUR CE QUE POSTGRES EN FAIT, jamais sur son orthographe Prisma :
+ *     `GENRE_CHAINE_LIBRE` + `estDuGenre` (lecteur unique). `statut Unsupported("text")` rougit
+ *     comme `statut String` ; un enum NATIF (`Unsupported("etat_attribution")`) reste vert, il EST
+ *     la solution. Voir le commentaire de `GENRE_CHAINE_LIBRE` : la version précédente de ce
+ *     prédicat était une liste de deux orthographes, et elle COMPTAIT la colonne avant de
+ *     l'absoudre.
+ *     ⚠️ Le périmètre des COLONNES est `prisma/schema.prisma` SEUL, et REQ-DM-037 institue le SQL
+ *     brut comme canal légitime : une colonne posée par une migration à la main n'y figure pas.
+ *     Ce canal est fermé LÀ OÙ IL DÉBOUCHE — `tests/integration/index-partiels.spec.ts`, second
+ *     `describe`, applique `fauteDeVocabulaire` à toutes les colonnes d'`information_schema` après
+ *     `prisma migrate deploy`. Une règle, deux sources de colonnes, une implémentation.
  *   — Toute VALEUR d'enum figure au glossaire, et tout enum que le glossaire ÉNUMÈRE a exactement
  *     ces valeurs-là — dans les deux sens, sans quoi une valeur retirée du schéma passerait.
  *   — Aucun REPLI qui retombe sur la valeur brute (`LIBELLES[x] ?? x`) : il rend à l'écran un
@@ -71,8 +82,11 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 import {
   ErreurLecturePrisma,
+  estDuGenre,
+  estDuGenreNatif,
   lireMigrationSql,
   lireSchemaPrisma,
+  type GenreDeType,
   type InstructionSql,
   type JetonSql,
   type SchemaPrisma,
@@ -158,11 +172,62 @@ const PORTEURS_LEGITIMES: { chemin: string; motif: string }[] = [
  * ci-dessous : chaque nom décidé par l'annexe fait rougir la garde
  * (`tests/unit/gouvernance/glossaire-enums.spec.ts`).
  */
-const NOMS_DE_VOCABULAIRE =
+export const NOMS_DE_VOCABULAIRE =
   /(statut|status|etat|type|motif|resultat|origine|kind|palier|priorite)/i;
 
-/** Les types scalaires qui ne peuvent pas porter un vocabulaire fermé. */
-const TYPES_LIBRES = new Set(['String', 'Json']);
+/**
+ * LE GENRE « ce type peut porter une CHAÎNE LIBRE » — le prédicat de décision de la famille
+ * `colonne_vocabulaire_en_chaine`.
+ *
+ * 🔴 CE N'EST PLUS UNE LISTE D'ORTHOGRAPHES, ET C'EST LA RÉPARATION D'UNE PANNE MESURÉE.
+ * Jusqu'au 2026-09-22, la décision tenait dans `new Set(['String', 'Json'])`. Une colonne
+ * `statut Unsupported("text")` posée au MILIEU du seul modèle du socle était alors LUE, COMPTÉE
+ * (« 9 champ(s) … jugés » au lieu de 8) et déclarée CONFORME, en exit 0 — sur `text`, le type le
+ * plus libre de PostgreSQL, et sur `statut`, le premier nom de la liste ci-dessus. Ce n'était pas
+ * un trou de balayage : c'était un verdict faux. `schema-cents.ts` fermait déjà exactement cette
+ * évasion pour les flottants, dans le MÊME commit : la classe était connue, elle n'était fermée
+ * que d'un côté. Une garde qui connaît une ORTHOGRAPHE ne connaît pas un COMPORTEMENT.
+ *
+ * Le mécanisme (`estDuGenre`) vit dans le lecteur unique et sert aux deux gardes (RM-01) ; seul le
+ * vocabulaire change. `natif` nomme les types POSTGRES qui n'ont aucun domaine fermé — par
+ * SEGMENT (`\b`), pour qu'un domaine nommé `siren_char9` n'y tombe pas. Un enum natif
+ * (`Unsupported("etat_attribution")`) n'en relève PAS : il est la solution, pas la faute — c'est
+ * le contre-témoin sans lequel on refermerait l'orthographe en punissant du code légitime.
+ */
+export const GENRE_CHAINE_LIBRE: GenreDeType = {
+  scalaires: ['String', 'Json'],
+  natif:
+    /\b(text|varchar|nvarchar|character|char|bpchar|citext|name|json|jsonb|xml|clob|string)\b/i,
+};
+
+/**
+ * LA FAUTE DE REQ-DM-038 SUR UNE COLONNE, d'où qu'elle vienne. Seule implémentation de la règle :
+ * la garde statique l'applique aux champs de `prisma/schema.prisma`, la spec d'intégration aux
+ * colonnes de la base RÉELLE après `migrate deploy` — le canal du SQL brut, que REQ-DM-037
+ * institue, n'est pas dans le périmètre du fichier `schema.prisma` (RM-01).
+ */
+export function fauteDeVocabulaire(c: {
+  /** Où la nommer : `prisma/schema.prisma:97 — Attribution.statut`, `public.attributions.statut`… */
+  ou: string;
+  nom: string;
+  colonne: string;
+  type: string;
+  /** `type` est-il déjà un type PostgreSQL (colonne lue en base) ? */
+  natif: boolean;
+}): Faute | undefined {
+  const nomPorteur = [c.nom, c.colonne].find((n) => NOMS_DE_VOCABULAIRE.test(n));
+  const libre = c.natif
+    ? estDuGenreNatif(c.type, GENRE_CHAINE_LIBRE)
+    : estDuGenre(c.type, GENRE_CHAINE_LIBRE);
+  if (nomPorteur === undefined || !libre) return undefined;
+  return {
+    famille: 'colonne_vocabulaire_en_chaine',
+    message:
+      `${c.ou} est un ${c.type} alors que son nom ` +
+      `(« ${nomPorteur} ») porte un vocabulaire (REQ-DM-038). Déclare un enum Prisma et inscris ` +
+      "ses valeurs au glossaire : une chaîne libre laisse un seed écrire n'importe quoi, et rien ne le voit.",
+  };
+}
 
 export type FichierCode = { chemin: string; contenu: string };
 
@@ -884,16 +949,14 @@ export function controler(vue: Vue): Faute[] {
   }
 
   for (const c of champs) {
-    const nomPorteur = [c.nom, c.colonne].find((n) => NOMS_DE_VOCABULAIRE.test(n));
-    if (nomPorteur !== undefined && TYPES_LIBRES.has(c.type)) {
-      fautes.push({
-        famille: 'colonne_vocabulaire_en_chaine',
-        message:
-          `${CHEMIN_SCHEMA}:${c.ligne} — ${c.modele}.${c.nom} est un ${c.type} alors que son nom ` +
-          `(« ${nomPorteur} ») porte un vocabulaire (REQ-DM-038). Déclare un enum Prisma et inscris ` +
-          "ses valeurs au glossaire : une chaîne libre laisse un seed écrire n'importe quoi, et rien ne le voit.",
-      });
-    }
+    const faute = fauteDeVocabulaire({
+      ou: `${CHEMIN_SCHEMA}:${c.ligne} — ${c.modele}.${c.nom}`,
+      nom: c.nom,
+      colonne: c.colonne,
+      type: c.type,
+      natif: false,
+    });
+    if (faute) fautes.push(faute);
   }
 
   const auGlossaire = enumsDuGlossaire(vue.glossaire);
@@ -1246,6 +1309,27 @@ const TEMOINS: { famille: string; vue: () => Vue }[] = [
         VUE_CONFORME.schema + '\nmodel Bac {\n  id String @id\n  code String @map("statut")\n}\n',
     }),
   },
+  // LE TÉMOIN DE LA CLASSE, pas du cas nommé : le type que Prisma ne modélise pas. `text` est la
+  // chaîne la plus libre de PostgreSQL ; jusqu'au 2026-09-22 la garde la comptait et l'absolvait.
+  {
+    famille: 'colonne_vocabulaire_en_chaine',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema +
+        '\nmodel Bac {\n  id String @id\n  statut Unsupported("text")\n  siren String\n}\n',
+    }),
+  },
+  // Le même, par un autre natif et avec un argument : le prédicat juge le TYPE, pas son écriture.
+  {
+    famille: 'colonne_vocabulaire_en_chaine',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema +
+        '\nmodel Bac {\n  id String @id\n  code Unsupported("character varying(30)") @map("motif")\n  siren String\n}\n',
+    }),
+  },
   {
     famille: 'valeur_hors_glossaire',
     vue: () => ({
@@ -1343,6 +1427,29 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
       ...VUE_CONFORME,
       schema:
         VUE_CONFORME.schema + '\nmodel Attribution {\n  id    String @id\n  siren String\n}\n',
+    }),
+  },
+  {
+    // LE CONTRE-TÉMOIN DE LA CLASSE : le MÊME mécanisme de type (`Unsupported(…)`, que Prisma ne
+    // modélise pas), NON textuel, sur un nom NEUTRE. Sans lui, on refermerait l'orthographe en
+    // punissant du code légitime — et la garde interdirait toute colonne native.
+    quoi: 'le même mécanisme de type, non textuel, sur un nom neutre — `reseau Unsupported("inet")`',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema +
+        '\nmodel Trace {\n  id     String @id\n  reseau Unsupported("inet")\n  duree  Unsupported("interval")\n}\n',
+    }),
+  },
+  {
+    // Un enum NATIF de PostgreSQL EST la solution que REQ-DM-038 exige : un `CREATE TYPE … AS ENUM`
+    // que Prisma ne modélise pas ne se déclare QUE par `Unsupported("<le type>")`.
+    quoi: 'un enum natif sur une colonne de vocabulaire — `statut Unsupported("etat_attribution")`',
+    vue: () => ({
+      ...VUE_CONFORME,
+      schema:
+        VUE_CONFORME.schema +
+        '\nmodel Bac {\n  id     String @id\n  statut Unsupported("etat_attribution")\n  siren  String\n}\n',
     }),
   },
   {
