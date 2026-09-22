@@ -4,7 +4,7 @@
  *
  * IL EST MINIMAL, ET C'EST VOULU. Il ne porte ni logique métier, ni horloge, ni base :
  *   — l'horloge s'injecte (`src/domain/temps/`), elle ne se fige pas ici ;
- *   — la base éphémère des tests d'intégration arrivera avec testcontainers.
+ *   — la base éphémère vit dans `tests/integration/harnais.ts`, appelée par chaque fichier d'intégration.
  * Ce sont leurs tâches qui le rempliront, chacune dans sa PR.
  *
  * SON SEUL EFFET VÉRIFIABLE : il pose une marque que `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`
