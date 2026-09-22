@@ -9352,7 +9352,10 @@
       "paths": [
         ".github/workflows/ci.yml",
         "scripts/gates/gov-etat.ts",
-        "tests/unit/gouvernance/revendication-par-branche.spec.ts"
+        "tests/unit/gouvernance/revendication-par-branche.spec.ts",
+        "scripts/gates/gov-pr.ts",
+        "tests/unit/ci/condition-de-job.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [
