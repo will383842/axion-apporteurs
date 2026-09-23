@@ -87,7 +87,9 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-23 (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre `docs/DECISIONS.md`, tranchées ou tenues par une hypothèse datée.
+`docs/adr/0011-une-seule-implementation-des-listes-d-etats.md` — partners/ADR-0011 — Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture · `docs/adr/0017-revendication-derivee-de-la-forge.md` — partners/ADR-0017 — La revendication d'une tâche se dérive de la forge, pas du fichier de la branche · `docs/adr/0018-un-nom-une-garde-gov-check-retire-des-deux-cotes.md` — partners/ADR-0018 — Un nom, une garde : `gov:check` est retiré des deux côtés
+
+Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-23). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
 
@@ -219,7 +221,7 @@ ne relit, une fausse MAUVAISE nouvelle est plus coûteuse qu'une omission : elle
 elle décrédibilise la portée bien réelle énoncée dans la même phrase — un reste qu'on vérifie et
 qu'on trouve faux est un reste qu'on cesse de lire.
 
-… 37 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 38 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
