@@ -1,7 +1,10 @@
 // @req REQ-DM-003
 // @req REQ-INT-004
+// @req REQ-GOV-016
+// @req REQ-INT-003
+// @req REQ-DM-036
 /**
- * `termes-interdits.spec.ts` — le contrôle de la garde `gov:check` (GOV-030).
+ * `termes-interdits.spec.ts` — le contrôle de la garde `gov:check` (GOV-030, puis GOV-088).
  *
  * CE QU'IL EXERCE :
  *   1. les DÉRIVATIONS (RM-01) : types, modèles refusés, synonymes et racines se LISENT dans leurs
@@ -16,7 +19,12 @@
  *   4. la LIGNE : LF la termine, et toute autre fin de ligne qu'un consommateur coupe est refusée ;
  *      l'exemption de citation se lit sur la DERNIÈRE extension du nom ;
  *   5. les DÉCISIONS de `--prove` et de la garde, fonctions pures : la population (familles, refus,
- *      extensions qui citent, témoins) vient du SEUL registre, et chaque retrait y est nommé.
+ *      extensions qui citent, témoins) vient du SEUL registre, et chaque retrait y est nommé ;
+ *   6. GOV-088 — L'ARBITRAGE DE `docs/GLOSSAIRE.md` §5 : un jeton que le registre attribue AUSSI à
+ *      un autre rôle ne porte pas un interdit SEC (REQ-GOV-016, le glossaire est la source du
+ *      vocabulaire), et les deux faces de cet arbitrage sont jugées contre le glossaire RÉEL — la
+ *      forme camelCase d'un champ d'enveloppe rougit (REQ-INT-003), la colonne de `EvenementRecu`
+ *      reste verte (REQ-DM-036).
  * Les cas que `TEMOINS` et `CONTRE_TEMOINS` portent ne sont pas restatés : `decisionDeLaPreuve` les
  * juge, et elle est exercée ici.
  */
@@ -452,6 +460,70 @@ describe('GOV-030 — les sources, et les fixtures ÉGALES aux sources réelles'
         .filter((s) => s.exerce)
         .map((s) => s.terme)
     ).toEqual(expect.arrayContaining(['qualificateur', 'payment.received']));
+  });
+
+  /**
+   * L'ARBITRAGE DU 2026-09-22, ASSÉRÉ SUR LE GLOSSAIRE RÉEL — et pas seulement sur la fixture.
+   *
+   * §5 prescrivait `eventId` et `eventType` comme les colonnes de `EvenementRecu` (REQ-DM-036,
+   * tâche SEC-06) dans son premier paragraphe, puis les rangeait parmi les interdits SECS : la
+   * garde aurait rougi sur la colonne que l'exigence épelle. La règle retenue, écrite en §5, vaut
+   * pour tout
+   * terme : un jeton que le registre attribue AUSSI à un autre rôle ne peut pas porter un interdit
+   * sec — il devient un interdit sous condition, que la garde n'exerce pas et qu'elle IMPRIME.
+   * Sans cette assertion, une réécriture du §5 réarmerait le piège sans rien faire rougir.
+   */
+  it('REQ-GOV-016, REQ-INT-004 : le glossaire réel n’interdit SEC que les jetons qu’aucun autre rôle ne réclame', () => {
+    const reel = vueDuDepot();
+    const etat = (terme: string): boolean | undefined =>
+      synonymesDuGlossaire(reel.glossaire).find((s) => s.terme === terme)?.exerce;
+
+    // Trois champs d'enveloppe (REQ-INT-003) dont le registre ne réclame le jeton nulle part
+    // ailleurs : l'interdit y reste SEC, et la garde le tient.
+    for (const libre of ['occurredAt', 'emittedAt', 'subjectRef']) {
+      expect(etat(libre), `${libre} doit rester un interdit SEC`).toBe(true);
+    }
+    // Trois jetons réclamés ailleurs : `eventId` et `eventType` par le §5 lui-même comme colonnes
+    // de `EvenementRecu`, `schemaVersion` par REQ-QA-007. Interdits SOUS CONDITION.
+    for (const reclame of ['eventId', 'eventType', 'schemaVersion']) {
+      expect(etat(reclame), `${reclame} ne peut pas porter un interdit SEC`).toBe(false);
+    }
+    // Non exercé n'est pas tu : la garde imprime ce qu'elle n'exerce pas.
+    expect(decisionDeLaGarde(reel).lignes.join('\n')).toMatch(/NON exercé[^\n]*eventId/);
+  });
+
+  /**
+   * LES DEUX FACES, sur le glossaire RÉEL et sans aucune exemption de citation : le `.prisma` et le
+   * `.ts` de ces deux vues ne portent ni commentaire ni accent grave. Le vert vient de l'étroitesse
+   * de l'interdit, jamais d'une amnistie. La face rouge est celle que le correctif devait garder ;
+   * la face verte est la ligne exacte que SEC-06 écrira.
+   */
+  it('REQ-INT-003, REQ-DM-036 : rouge sur un champ d’enveloppe camelCase, vert sur la colonne de la table de réception', () => {
+    const surLeGlossaireReel = (chemin: string, contenu: string): Vue => ({
+      ...VUE_CONFORME,
+      glossaire: vueDuDepot().glossaire,
+      fichiers: [...VUE_CONFORME.fichiers, fichierTexte(chemin, contenu)],
+    });
+
+    const enveloppe = controler(
+      surLeGlossaireReel(
+        'src/server/integrations/emetteur.ts',
+        'const enveloppe = { occurredAt: quand, emittedAt: quand, subjectRef: ref };'
+      )
+    );
+    expect(enveloppe.map((f) => f.famille)).toEqual([
+      'synonyme_interdit_du_glossaire',
+      'synonyme_interdit_du_glossaire',
+      'synonyme_interdit_du_glossaire',
+    ]);
+
+    const colonne = controler(
+      surLeGlossaireReel(
+        'prisma/schema.prisma',
+        'model EvenementRecu {\n  eventId   String @unique\n  eventType String\n}\n'
+      )
+    );
+    expect(colonne).toEqual([]);
   });
 
   it('REQ-INT-004 : le contrat du dépôt et l’exigence disent la même chose', () => {
