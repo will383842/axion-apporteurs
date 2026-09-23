@@ -98,12 +98,26 @@ export const COMPTEURS = {
     ancre: 'par identité',
     verifieLe: '2026-09-19',
   },
-  // INT-T09 — le mandataire de recherche d'entreprises, un geste du dépôt. ⚠️ Ni REQ-INT-020 ni
-  // REQ-SEC-013 n'écrivent encore la conduite sur panne (`surPanne: …`) après leur ancre, ni la
-  // limite sous la forme « N / M s|min|h » avant elle : la garde de famille les refuse donc en
-  // `ecart_a_l_exigence` tant que le gardien de la spécification n'a pas amendé ces deux textes.
-  // Les conduites ci-dessous sont celles que la tâche propose, la plus fermée pour le débit
-  // global et l'identité (le parcours bascule en saisie manuelle, le dépôt n'est jamais bloqué).
+  // INT-T09 — le mandataire de recherche d'entreprises, un geste du dépôt.
+  //
+  // ⚠️ CE COMMENTAIRE A DIT LE CONTRAIRE JUSQU'AU 2026-09-23, et sa condition est levée : il
+  // annonçait que REQ-INT-020 et REQ-SEC-013 n'écrivaient ni la conduite sur panne après leur
+  // ancre, ni la limite sous la forme que la garde lit avant elle, et que `rate-famille` les
+  // refuserait « tant que le gardien de la spécification n'a pas amendé ces deux textes ». Il les
+  // a amendés, à VALEUR CONSTANTE : `5 / 1 s` et `120 / 86400 s` sont la mise en forme de ce que
+  // la prose disait déjà (« limiteur global 5 req/s », « par identité (120/j) »).
+  //
+  // 🔑 Et le chiffre manquant n'était PAS l'obstacle : `exigenceDuCompteur` rend `null` dès
+  // l'absence de `surPanne:` après l'ancre, et retombe sur la SENTINELLE hors dépôt quand la
+  // limite, elle, n'est chiffrée nulle part. C'est pourquoi `depot:entreprise-ip` entre ici sans
+  // qu'aucun plafond ait été inventé : REQ-SEC-013 ne chiffre pas son « par hash IP », et la
+  // question de le chiffrer appartient à Will, pas à cette tâche.
+  //
+  // Les conduites ci-dessous se dérivent des textes : la plus fermée pour le débit global et
+  // l'identité — `laisser-passer` y annulerait le plafond exactement quand il sert, et le parcours
+  // bascule de toute façon en saisie manuelle, donc le dépôt n'est jamais bloqué — et
+  // `laisser-passer` pour l'IP, où la sentinelle répond toujours « comme en panne » : `refuser` y
+  // bloquerait l'autocomplétion en permanence.
   'depot:entreprise-global': {
     prefixe: 'depot:',
     limite: 5,
