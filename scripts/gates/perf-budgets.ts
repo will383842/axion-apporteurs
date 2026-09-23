@@ -480,16 +480,44 @@ export function controler(vue: Vue): Faute[] {
 
 // ── les vues ──────────────────────────────────────────────────────────────────────────────────
 
-/** Tous les fichiers sous `src/` — la liste que `routesDeLEspace` juge. */
-function fichiersDeSrc(racine = 'src'): string[] {
-  if (!existsSync(racine)) return [];
+/**
+ * LE PÉRIMÈTRE DE CETTE GARDE N'EST PAS UNE LISTE VIDE (GOV-046, REQ-GOV-012).
+ *
+ * 🔴 CE FICHIER PORTAIT `if (!existsSync(racine)) return []`, et c'était la SEPTIÈME occurrence
+ * d'une famille fermée ailleurs : cinq gardes par la PR 31, `gov-conventions.ts` par la PR 33.
+ * Une racine absente rendait une liste VIDE, donc zéro violation, donc VERT — exactement le mode
+ * d'échec que `scripts/lot/fichiers-suivis.ts` nomme en tête : « Une garde qui ne peut pas établir
+ * son périmètre ne doit pas rendre un verdict. "Je n'ai rien trouvé" et "je n'ai rien regardé"
+ * sont deux phrases différentes, et une seule des deux autorise à publier. »
+ *
+ * Elle REFUSE donc, comme les six autres. Le cas légitime — le dossier EXISTE et ne porte aucune
+ * violation — reste vert : c'est la liste vide qui est interdite, pas le résultat vide.
+ */
+export class RacineAbsente extends Error {
+  constructor(public readonly racine: string) {
+    super(
+      `\`${racine}\` est introuvable : le périmètre de perf:budgets est INCONNU, pas vide. ` +
+        `Une liste vide rendrait zéro violation, donc un vert — sur zéro fichier regardé.`
+    );
+    this.name = 'RacineAbsente';
+  }
+}
+
+/** La descente, une fois la racine établie. Les sous-dossiers viennent de `readdirSync` : ils existent. */
+function descendre(racine: string): string[] {
   const out: string[] = [];
   for (const e of readdirSync(racine, { withFileTypes: true })) {
     const chemin = join(racine, e.name).split('\\').join('/');
-    if (e.isDirectory()) out.push(...fichiersDeSrc(chemin));
+    if (e.isDirectory()) out.push(...descendre(chemin));
     else out.push(chemin);
   }
   return out;
+}
+
+/** Tous les fichiers sous `src/` — la liste que `routesDeLEspace` juge. **Lève** si la racine manque. */
+export function fichiersDeSrc(racine = 'src'): string[] {
+  if (!existsSync(racine)) throw new RacineAbsente(racine);
+  return descendre(racine);
 }
 
 function lireVue(): Vue {
@@ -501,11 +529,23 @@ function lireVue(): Vue {
       process.exit(1);
     }
   }
+  let fichiers: string[];
+  try {
+    fichiers = fichiersDeSrc();
+  } catch (e) {
+    if (!(e instanceof RacineAbsente)) throw e;
+    console.error(`❌ perf:budgets — [perimetre_absent] ${e.message}`);
+    console.error(
+      "   La garde REFUSE plutôt que de déclarer propre ce qu'elle n'a pas lu. C'est la septième " +
+        'occurrence de la famille fermée par les PR 31 et 33, et elle se ferme comme les six autres.'
+    );
+    process.exit(1);
+  }
   return {
     budgets: readFileSync(CHEMIN_BUDGETS, 'utf8'),
     lighthouserc: readFileSync(CHEMIN_LIGHTHOUSERC, 'utf8'),
     registre: texteDeLExigence(readFileSync(CHEMIN_REGISTRE, 'utf8')),
-    fichiers: fichiersDeSrc(),
+    fichiers,
     ci: existsSync(CHEMIN_CI) ? readFileSync(CHEMIN_CI, 'utf8') : '',
   };
 }
