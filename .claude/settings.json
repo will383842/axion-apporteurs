@@ -101,6 +101,12 @@
       "Edit(docs/tasks.json)",
       "Write(docs/gates.json)",
       "Edit(docs/gates.json)",
+      "Write(docs/requirements.json)",
+      "Edit(docs/requirements.json)",
+      "Write(docs/GLOSSAIRE.md)",
+      "Edit(docs/GLOSSAIRE.md)",
+      "Write(docs/PRESEANCE.md)",
+      "Edit(docs/PRESEANCE.md)",
       "Write(.claude/settings.json)",
       "Edit(.claude/settings.json)"
     ]
