@@ -856,6 +856,8 @@ describe('REQ-GOV-031 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
     revisionsAnnoncees: revision ? 1 : 0,
     // La forge a rendu la main d'elle-même : ce n'est PAS une lecture interrompue.
     lectureInachevee: false,
+    // Aucune révision ILLISIBLE : ce cas ne fait pas varier cette dimension-là (RM-11).
+    revisionsIllisibles: [],
   });
   /** Une exemption BIEN formée, construite depuis la valeur : jamais l'empreinte tapée à la main. */
   const exemptionPour = (valeur: string, sur = HORODATAGE, pr = PR): Exemption => ({
@@ -907,6 +909,8 @@ describe('REQ-GOV-031 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
       revisionsLues: 1,
       revisionsAnnoncees: 1,
       lectureInachevee: false,
+      // Aucune révision ILLISIBLE : ce cas ne fait pas varier cette dimension-là (RM-11).
+      revisionsIllisibles: [],
     };
     const v = jugerCorpsPublie(lecture);
     expect(v.code).toBe(1);
@@ -948,6 +952,8 @@ describe('REQ-GOV-031 — le corps PUBLIÉ de la PR passe par le MÊME `coordonn
       revisionsAnnoncees: 11,
       // FAUX à dessein : ce témoin juge l'ÉCART, et lui seul (RM-11).
       lectureInachevee: false,
+      // Aucune révision ILLISIBLE : ce cas ne fait pas varier cette dimension-là (RM-11).
+      revisionsIllisibles: [],
     });
     expect(v.code).toBe(2);
     expect(v.fautes.map((f) => f.famille)).toContain('revisions_non_lues');
@@ -1519,6 +1525,8 @@ describe('REQ-GOV-031 — les exemptions de révision, et ce qui les empêche d�
     revisionsLues: revisions.length,
     revisionsAnnoncees: revisions.length,
     lectureInachevee: false,
+    // Aucune révision ILLISIBLE : ce cas ne fait pas varier cette dimension-là (RM-11).
+    revisionsIllisibles: [],
   });
   /** Une exemption bien formée, CONSTRUITE depuis la valeur : jamais une empreinte tapée. */
   const pour = (valeur: string, sur = HORO, pr = PR): Exemption => ({
@@ -1720,6 +1728,8 @@ describe('REQ-GOV-031 — les exemptions de révision, et ce qui les empêche d�
         revisionsLues: 1,
         revisionsAnnoncees: 9,
         lectureInachevee: false,
+        // Aucune révision ILLISIBLE : ce cas ne fait pas varier cette dimension-là (RM-11).
+        revisionsIllisibles: [],
       },
       [pour(IBAN_TEMOIN)]
     );
