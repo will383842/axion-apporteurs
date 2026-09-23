@@ -688,6 +688,35 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'validation sort en 1 en NOMMANT la tâche, le même arbre corrigé sort en 0, et le dépôt réel ' +
         'comme `--prove` sortent en 0.',
     },
+    // ── INT-T09 : une garde NEUVE, DEUX sorties ─────────────────────────────────
+    // Le cliquet a rougi en la NOMMANT — c'est exactement son office, et c'est la PREMIÈRE fois
+    // que cette branche le rencontrait : elle était EN CONFLIT, donc MUETTE en CI. Relu, pas
+    // deviné : « scripts/gates/aucun-annee-de-naissance.ts ajoute 2 `process.exit(1)` et n’est
+    // PAS déclaré ici: expected undefined to be defined ».
+    'scripts/gates/aucun-annee-de-naissance.ts': {
+      total: 2,
+      porte: 2,
+      // ZÉRO, et c'est un zéro ASSUMÉ, pas un manque tu : le compteur `temoins` de ce registre est
+      // confronté au tableau `REFUS` de CE fichier, et les témoins d'EFFET de cette garde vivent
+      // dans `tests/unit/integration/recherche-entreprises-repli.spec.ts`. *Un compteur de témoins
+      // qu'on gonfle pour se donner raison vaut moins qu'un zéro assumé.*
+      temoins: 0,
+      raison:
+        'INT-T09 — REQ-SEC-013 : aucune année de naissance ne traverse le mandataire de recherche ' +
+        'd’entreprises, et la liste des dirigeants n’atteint jamais le navigateur. DEUX sorties. ' +
+        '(1) `process.exit(code)` : TERMINALE, à code variable — 0 quand les fixtures enregistrées ' +
+        'passent, 1 sur une faute de l’une des quatre familles (`perimetre_vide`, `cle_interdite`, ' +
+        '`valeur_de_personne`, `fixture_illisible`) et sur un témoin de `--prove` resté vert. ' +
+        '(2) `process.exit(2)` : la promesse rejetée — la garde a LEVÉ, elle n’a rien jugé, et un 2 ' +
+        'n’est pas un vert. Témoins d’EFFET sur le BINAIRE, dans recherche-entreprises-repli.spec.ts : ' +
+        'deux réponses de bac d’essai dérivées du rendu RÉEL d’une fixture — l’une portant la liste ' +
+        'des dirigeants, l’autre une année de naissance — sortent en non nul en NOMMANT le champ, et ' +
+        'les fixtures du dépôt comme `--prove` sortent en 0 (contre-témoins). ⛔ La sortie 2, elle, ' +
+        'n’a AUCUN témoin d’effet : dette DÉCLARÉE, et aucune tâche du backlog ne la porte. ' +
+        'Elle ne balaie pas `git ls-files` — son périmètre est `lireFixtures()` —, donc elle n’importe ' +
+        'pas `fichiersSuivisOuRefus` et n’a rien à faire dans `GARDES_QUI_BALAIENT` ; ce qui tient son ' +
+        'périmètre est la famille `perimetre_vide` (moins de 20 fixtures lues → refus).',
+    },
   };
 
   it('REQ-GOV-032 — le compte DÉRIVÉ du diff égale le compte DÉCLARÉ, fichier par fichier', () => {
@@ -916,7 +945,20 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // chiffrant — relu, pas deviné :
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(44);
+    // 🔧 44 → 46 par INT-T09, ARBITRÉ et non subi : la garde NEUVE
+    // `scripts/gates/aucun-annee-de-naissance.ts` naît avec DEUX sorties non nulles — la terminale
+    // à code variable, et le `process.exit(2)` de la promesse rejetée. ⚠️ Cette branche était EN
+    // CONFLIT, donc MUETTE en CI : elle a rencontré le cliquet pour la première fois cette nuit.
+    // Lu sur CETTE branche, dans l'ordre — d'abord l'identité, puis, la déclaration posée, le
+    // compte —, relu et non deviné :
+    //
+    //     scripts/gates/aucun-annee-de-naissance.ts ajoute 2 `process.exit(1)` et n’est PAS déclaré ici: expected undefined to be defined
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 46 to be 44
+    //
+    // ⚠️ Le nombre dépend de L'ORDRE DE FUSION, et il se lit, il ne se devine pas : sur la même
+    // base 44, les branches sœurs #82, #93 et #92 déclarent respectivement 45, 46 et 48. Celle qui
+    // atterrira après celle-ci lira SON propre rouge et l'arbitrera à son tour.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(46);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
