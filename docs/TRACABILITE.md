@@ -16,13 +16,13 @@
 
 **321 exigences actives · 65 réputées testées · 65 couvertes · 0 orphelines.**
 
-263 tâches, dont 59 livrées · 66 fichiers de test exécutés par `vitest` sur 66 présents.
+265 tâches, dont 59 livrées · 66 fichiers de test exécutés par `vitest` sur 66 présents.
 
 ## Exigences réputées testées
 
 | Exigence | Tâches porteuses | Tests qui la citent | État |
 | --- | --- | --- | --- |
-| `REQ-CPL-001` | `CPL-T01`, `GOV-089`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
+| `REQ-CPL-001` | `CPL-T01`, `GOV-089`, `GOV-092`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-002` | `CPL-T01`, `GOV-015`, `T-ARG-018` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-CPL-003` | `CPL-T01` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
 | `REQ-CPL-004` | `CPL-T01`, `DM-11` | `tests/unit/gouvernance/entite-registre.spec.ts` | couverte |
@@ -48,7 +48,7 @@
 | `REQ-GOV-009` | `GOV-010`, `GOV-022`, `GOV-070` | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | couverte |
 | `REQ-GOV-010` | `GOV-007`, `GOV-023`, `GOV-024`, `GOV-062` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/fiches-agents.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-011` | `GOV-007`, `GOV-021`, `GOV-024`, `GOV-058`, `GOV-077`, `GOV-078` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts`, `tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
-| `REQ-GOV-012` | `GOV-007`, `GOV-044`, `GOV-045`, `GOV-046`, `GOV-054`, `GOV-061`, `GOV-063`, `GOV-067`, `GOV-082`, `GOV-083` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` | couverte |
+| `REQ-GOV-012` | `GOV-007`, `GOV-044`, `GOV-045`, `GOV-046`, `GOV-054`, `GOV-061`, `GOV-063`, `GOV-067`, `GOV-082`, `GOV-083`, `GOV-094` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` | couverte |
 | `REQ-GOV-013` | `GOV-007`, `GOV-047`, `GOV-058`, `GOV-077` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts` | couverte |
 | `REQ-GOV-014` | `GOV-000`, `GOV-012`, `GOV-057` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
 | `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `GOV-060`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
@@ -65,7 +65,7 @@
 | `REQ-GOV-028` | `GOV-019` | `tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts` | couverte |
 | `REQ-GOV-029` | `GOV-014`, `GOV-051`, `GOV-061`, `GOV-062`, `GOV-076` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |
 | `REQ-GOV-030` | `GOV-002` | `tests/unit/gouvernance/preseance.spec.ts` | couverte |
-| `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040`, `GOV-064`, `GOV-065`, `GOV-066`, `GOV-067`, `GOV-068`, `GOV-089` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
+| `REQ-GOV-031` | `CPL-T01`, `GOV-000`, `GOV-036`, `GOV-040`, `GOV-064`, `GOV-065`, `GOV-066`, `GOV-067`, `GOV-068`, `GOV-089`, `GOV-092`, `GOV-094` | `tests/unit/gouvernance/entite-registre.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts` | couverte |
 | `REQ-GOV-032` | `GOV-024`, `GOV-035`, `GOV-053`, `GOV-055`, `GOV-072`, `GOV-079`, `GOV-085`, `GOV-087` | `tests/unit/gouvernance/corps-de-pr-couvre.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/tete-de-pr-concorde.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-033` | `GOV-029` | `tests/unit/gouvernance/lot-identifiant-unique.spec.ts` | couverte |
 | `REQ-INT-003` | `GOV-088`, `INT-T01a` | `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts` | couverte |
