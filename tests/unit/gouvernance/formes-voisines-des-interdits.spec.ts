@@ -10,9 +10,9 @@
  * par son nom usuel, une écriture sur la console atteinte par un autre chemin.
  *
  * CE N'EST PAS UNE DETTE DE STYLE. REQ-QA-001 fait de la PURETÉ de `src/domain/**` la condition du
- * calcul de commission (DM-04) et de l'horloge injectable (CPL-T13). Un domaine qui lit l'heure de
- * la machine rend un résultat différent selon le jour où on le rejoue, et c'est un registre
- * d'argent qu'on ne peut plus reconstituer.
+ * calcul de commission et de l'horloge injectable. Un domaine qui lit l'heure de la machine rend un
+ * résultat différent selon le jour où on le rejoue, et c'est un registre d'argent qu'on ne peut
+ * plus reconstituer.
  *
  * TÉMOIN À DEUX FACES, ET LES DEUX SE JOUENT :
  *

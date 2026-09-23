@@ -102,7 +102,7 @@ sortie de la commande, elle, fait foi.
 
 | Gate | Tâche | Script | Alias |
 | ---- | ----- | ------ | ----- |
-| `gov:check` | GOV-000 | `scripts/gates/gov-check.ts` | — |
+| `gov:termes-interdits` | GOV-000 | `scripts/gates/gov-check.ts` | — |
 | `aucun-workflow-ne-pousse-sur-main` | GOV-012 | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts` | — |
 | `tout-check-est-cable` | GOV-012 | `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | — |
 | `gov:gates-derivees` | QA-T00 | `scripts/gates/gates-derivees.ts` | — |

@@ -4,7 +4,7 @@
  * @req REQ-GOV-004
  *
  * LA GARDE ÉTAIT TROP LARGE D'UN DÉPÔT. Mesure du 2026-09-12, rendue par la garde elle-même : le
- * versement des tâches GOV-041 à GOV-047 a fait rougir `source_axionia_sans_repere` SEPT fois, sur
+ * versement de sept tâches de gouvernance a fait rougir `source_axionia_sans_repere` SEPT fois, sur
  * des chemins qui sont TOUS ceux du dépôt Partners. La garde exigeait pour chacun un repère AFF-nn
  * de `docs/AFFIRMATIONS-AXIONIA.md`, dont l'en-tête déclare pourtant un objet unique : le dépôt
  * axionia, à un commit nommé. Y inscrire du code de Partners aurait rendu cet en-tête FAUX.
