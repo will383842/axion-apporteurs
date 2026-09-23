@@ -7,16 +7,18 @@
  * DANS LES DEUX SENS : un fichier qui nomme une commande absente rougit, et le retrait du script
  * rougit AVANT que le prochain agent ne le découvre à ses frais. Six fichiers suivis prescrivaient
  * `pnpm prevol` alors que le script n'existait pas — dont `scripts/lot/lot.workflow.js`, qui
- * l'INJECTE dans le prompt de chaque développeur de lot.
+ * l'INJECTE dans le prompt de chaque développeur de lot. Ils étaient SIX quand la dette a été
+ * trouvée ; `partners/ADR-0018` (PR 102) en a ajouté un SEPTIÈME en atterrissant —
+ * `scripts/reprise.ts`, mesuré : zéro occurrence à la base `87e235a`, une sur `954fe5a`.
  *
  * 🔑 CE QUE LA MESURE A RENDU, ET QUI N'EST PAS CE QUE L'ACCEPTATION ANNONÇAIT. Elle s'est corrigée
  * deux fois sur ce compte (« quatre documents », puis « cinq porteurs », puis « neuf fichiers ») ;
- * `git grep -l prevol` rend **onze** fichiers sur `origin/main` et **quatorze** sur cette branche.
+ * `git grep -l prevol` rend **quatorze** fichiers sur `origin/main` et **vingt** sur cette branche.
  * Les deux que l'acceptation ne voit toujours pas sont `docs/journal/2026-09.md` et sa vue rendue
  * `docs/PLAN-STATE.md`, qui portent la chaîne parce que l'entrée de la PR 81 y écrit que la commande
  * n'existe pas. Les trois que l'acceptation écarte à juste titre sont le backlog et ses deux vues :
- * *une tâche qui se compte elle-même fausse son propre balayage.* Les SIX prescripteurs, eux, sont
- * confirmés au fichier près — et ce fichier les fige, pour qu'un septième ne s'ajoute pas en silence.
+ * *une tâche qui se compte elle-même fausse son propre balayage.* Les SEPT prescripteurs, eux, sont
+ * confirmés au fichier près — et ce fichier les fige, pour qu'un huitième ne s'ajoute pas en silence.
  *
  * CE QUE CE FICHIER PROUVE. Le balayage est jugé sur des entrées INJECTÉES (RM-11) : périmètre,
  * lecteur et scripts déclarés sont des paramètres, donc les deux sens sont éprouvables sans toucher
@@ -72,9 +74,9 @@ const surLeDepot = (scriptsDeclares = Object.keys(paquet.scripts)) =>
   balayer(suivis, lire, scriptsDeclares, MOI);
 
 /**
- * LES SIX PRESCRIPTEURS, TELS QUE `git grep -l prevol` PUIS LE BALAYAGE LES RENDENT. Cette liste
+ * LES SEPT PRESCRIPTEURS, TELS QUE `git grep -l prevol` PUIS LE BALAYAGE LES RENDENT. Cette liste
  * n'est pas recopiée de l'acceptation : elle a été mesurée, et l'acceptation s'est trompée trois
- * fois sur le compte voisin. Elle est ici pour qu'un septième porteur ne s'ajoute pas sans qu'on
+ * fois sur le compte voisin. Elle est ici pour qu'un huitième porteur ne s'ajoute pas sans qu'on
  * le voie — et qu'on se demande alors s'il prescrit vraiment.
  */
 const PRESCRIPTEURS_MESURES = [
@@ -84,6 +86,7 @@ const PRESCRIPTEURS_MESURES = [
   'docs/PROMPTS/developpeur.md',
   'docs/agents.json',
   'scripts/lot/lot.workflow.js',
+  'scripts/reprise.ts',
 ];
 
 // ── les dépôts jetables ───────────────────────────────────────────────────────
@@ -148,7 +151,7 @@ function lancer(dossier: string, ...args: string[]): { code: number; sortie: str
 
 // ── la commande EXISTE ────────────────────────────────────────────────────────
 
-describe('REQ-GOV-013 — la commande que six fichiers prescrivent EXISTE', () => {
+describe('REQ-GOV-013 — la commande que sept fichiers prescrivent EXISTE', () => {
   it('REQ-GOV-013 — `package.json` déclare le script, et le fichier qu’il lance est sur le disque', () => {
     const corps = paquet.scripts[NOM_DU_SCRIPT];
     expect(corps, `\`package.json\` ne déclare aucun script \`${NOM_DU_SCRIPT}\``).toBeDefined();
@@ -159,7 +162,7 @@ describe('REQ-GOV-013 — la commande que six fichiers prescrivent EXISTE', () =
     expect(existsSync(cible!), `\`${cible}\` est prescrit et absent du disque`).toBe(true);
   });
 
-  it('REQ-GOV-013 — les six prescripteurs sont MESURÉS sur le dépôt, et aucun ne nomme l’introuvable', () => {
+  it('REQ-GOV-013 — les sept prescripteurs sont MESURÉS sur le dépôt, et aucun ne nomme l’introuvable', () => {
     const b = surLeDepot();
     expect(b.prescripteurs.map((p) => p.chemin)).toEqual(PRESCRIPTEURS_MESURES);
     expect(b.introuvables).toEqual([]);
@@ -403,12 +406,25 @@ describe('REQ-GOV-013 — il DIT ce qu’il joue, ce qu’il écarte, et pourquo
 
   it('la garde des termes interdits est JOUÉE, elle n’est pas écartée', () => {
     // 🔴 MESURÉ LE 2026-09-22, ET C'EST LA RAISON POUR LAQUELLE LA SOURCE EST `ci.yml`. Le nom
-    // `gov:check` désigne deux choses : la garde des termes interdits au registre `docs/gates.json`,
+    // `gov:check` désignait deux choses : la garde des termes interdits au registre `docs/gates.json`,
     // et une CHAÎNE de 17 gardes dans `package.json` qui ne la contient PAS. La garde imprime
     // pourtant `gov:check` dans son rouge : un développeur lance la chaîne, obtient 17 verts, et
     // conclut à un aléa. Un pré-vol dérivé de la chaîne aurait rendu VERT là où la CI rougit.
-    const chaine = paquet.scripts['gov:check'] ?? '';
-    const dansLaChaine = [...chaine.matchAll(/pnpm ([\w:.-]+)/g)].map((m) => m[1]!);
+    // ⚠️ `partners/ADR-0018` a RETIRÉ le nom des deux côtés : la chaîne s'appelle `gov:partiel`,
+    // la garde `gov:termes-interdits`. Lire une clé absente rendrait `undefined`, puis `''`, puis
+    // `[]` — et DEUX des trois attentes ci-dessous passeraient en n'assérant plus rien. On REFUSE
+    // donc l'absence, au lieu de la lire à vide.
+    const NOM_DE_LA_CHAINE = 'gov:partiel';
+    const chaine = paquet.scripts[NOM_DE_LA_CHAINE];
+    expect(
+      chaine,
+      `package.json ne porte plus de chaîne « ${NOM_DE_LA_CHAINE} » : sans elle ce contrôle se tairait`
+    ).toBeDefined();
+    const dansLaChaine = [...chaine!.matchAll(/pnpm ([\w:.-]+)/g)].map((m) => m[1]!);
+    expect(
+      dansLaChaine.length,
+      'non-vacuité : une chaîne vide rendrait tout le reste vrai'
+    ).toBeGreaterThan(0);
     expect(dansLaChaine).not.toContain('gov:termes-interdits');
     const jouee = jouees.map((e) => e.commande);
     expect(jouee).toContain('pnpm gov:termes-interdits');

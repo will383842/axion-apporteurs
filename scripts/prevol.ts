@@ -61,10 +61,11 @@
  *
  * ── LE BALAYAGE DES PORTEURS, ET POURQUOI IL S'EXCLUT LUI-MÊME ──────────────────────────────
  *
- * REQ-GOV-013, GOV-047. Six fichiers suivis ORDONNENT `pnpm prevol` — dont
+ * REQ-GOV-013, GOV-047. SEPT fichiers suivis ORDONNENT `pnpm prevol` — six quand la dette a été
+ * trouvée, plus `scripts/reprise.ts` que `partners/ADR-0018` a apporté — dont
  * `scripts/lot/lot.workflow.js`, qui l'INJECTE dans le prompt de chaque développeur de lot. Le
  * balayage les confronte aux scripts que `package.json` déclare, DANS LES DEUX SENS : un porteur qui
- * ordonne une commande absente rougit, et le retrait du script rougit chez les six porteurs d'un
+ * ordonne une commande absente rougit, et le retrait du script rougit chez les sept porteurs d'un
  * coup — avant que le prochain agent ne le découvre à ses frais.
  *
  * 🔑 UNE TÂCHE QUI SE COMPTE ELLE-MÊME FAUSSE SON PROPRE BALAYAGE. `git grep -l prevol` rend aussi
@@ -114,7 +115,9 @@ export const SUBSTITUTION_TOLEREE = '$(date -u +%Y-%m-%dT%H:%M:%SZ)';
 /**
  * Le nom du script que les porteurs ORDONNENT, et qui est le SUJET de ce balayage. Il n'est pas
  * recopié d'ailleurs : il est confronté à `package.json`. Renommer le script sans toucher aux
- * porteurs fait donc rougir les six d'un coup, ce qui est exactement ce qu'on veut.
+ * porteurs fait donc rougir TOUS les porteurs d'un coup, ce qui est exactement ce qu'on veut — et
+ * le compte ne s'écrit pas ici : la liste se compte elle-même, un total posé à côté redeviendrait
+ * faux au premier porteur ajouté.
  */
 export const NOM_DU_SCRIPT = 'prevol';
 
@@ -168,22 +171,31 @@ export const BACKLOG_ET_SES_VUES: Ecarte[] = [
 /**
  * NOMMER N'EST PAS PRESCRIRE — la troisième erreur de mesure, et elle est la mienne.
  *
- * L'acceptation de GOV-047 annonce SIX porteurs. Le seul critère qu'une machine sache appliquer —
- * « le fichier écrit `pnpm <script>` » — en rend DIX sur le dépôt réel. Les quatre en trop ne
- * prescrivent rien à personne, et chacun tombe sous une RACINE, pas sous une liste nominative :
+ * L'acceptation de GOV-047 annonce SIX porteurs ; ils sont SEPT depuis que `partners/ADR-0018` a
+ * atterri. Le seul critère qu'une machine sache appliquer — « le fichier écrit `pnpm <script>` » —
+ * en rend QUINZE sur le dépôt réel. Les HUIT en trop ne prescrivent rien à personne, et chacun
+ * tombe sous une RACINE, pas sous une liste nominative :
  *
  *   — le script lui-même : son mode d'emploi n'est pas un ordre, il EST la commande ;
  *   — `tests/**` : un test JUGE la commande, il ne l'impose à aucun agent ;
  *   — `docs/journal/**` et sa vue rendue `docs/PLAN-STATE.md` : le récit DATÉ de la dette
- *     (« `pnpm prevol` n'existe pas », entrée de la PR 81). Un récit au passé n'engage personne.
+ *     (« `pnpm prevol` n'existe pas », entrée de la PR 81). Un récit au passé n'engage personne ;
+ *   — `docs/adr/**` : une ADR ENREGISTRE une décision prise. `partners/ADR-0018` nomme la commande
+ *     pour dire QUAND elle atterrira, pas pour qu'on la tape. Même famille que le journal.
  *
- * Ces quatre-là restent CONFRONTÉS à `package.json` — retirer le script doit rougir partout où il
+ * Ces cinq-là restent CONFRONTÉS à `package.json` — retirer le script doit rougir partout où il
  * est nommé. Ils sortent seulement du compte des PRESCRIPTEURS, qui est le compte que REQ-GOV-013
  * rend opposable : celui des fichiers qu'un agent lit pour savoir ce qu'il doit taper.
  */
 export const RACINES_DU_RECIT: Ecarte[] = [
   { nom: 'tests/', motif: 'un test JUGE la commande, il ne la prescrit à personne' },
   { nom: 'docs/journal/', motif: 'le récit daté de la dette, au passé' },
+  {
+    nom: 'docs/adr/',
+    motif:
+      'une ADR ENREGISTRE une décision prise, au passé : elle nomme la commande pour dire quand ' +
+      "elle atterrira, pas pour qu'on la tape — même famille que le journal",
+  },
   { nom: 'docs/PLAN-STATE.md', motif: 'vue rendue du journal (`pnpm plan-state:build`)' },
 ];
 
@@ -238,7 +250,8 @@ export function commandesOrdonnees(texte: string): string[] {
  */
 /**
  * Un porteur RACONTE au lieu de prescrire ? La réponse se lit sur les RACINES ci-dessus et sur le
- * chemin du script lui-même — jamais sur une liste des six, qui recopierait l'acceptation (RM-01).
+ * chemin du script lui-même — jamais sur une liste nominative, qui recopierait l'acceptation
+ * (RM-01) et vieillirait à chaque fichier ajouté.
  */
 export function raconteSeulement(chemin: string, soiMeme: string): boolean {
   if (chemin === soiMeme) return true;
