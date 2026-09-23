@@ -139,9 +139,10 @@ describe('REQ-GOV-008 — un identifiant du registre ne désigne qu’une chose'
     expect(jouees, 'la garde elle-même doit être jouée, pas seulement son auto-test').toContain(
       ID_REGISTRE
     );
-    expect(jouees, 'et son auto-test aussi : une garde qui ne sait pas rougir ne garde rien').toContain(
-      `${ID_REGISTRE}:prove`
-    );
+    expect(
+      jouees,
+      'et son auto-test aussi : une garde qui ne sait pas rougir ne garde rien'
+    ).toContain(`${ID_REGISTRE}:prove`);
   });
 
   it('REQ-QA-013 — la chaîne survivante est un sous-ensemble STRICT de la porte A, et son nom ne dit plus « check »', () => {
