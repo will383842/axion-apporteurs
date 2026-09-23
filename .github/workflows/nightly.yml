@@ -94,8 +94,8 @@ jobs:
       # La preuve d abord : la garde des annees de naissance sait rougir, puis elle juge les
       # fixtures enregistrees — rejouees ici chaque nuit, et dans la Gate A par sa specification.
       - name: La garde aucun-annee-de-naissance sait rougir
-        run: npx tsx scripts/gates/aucun-annee-de-naissance.ts --prove
+        run: pnpm securite:annee-naissance:prove
       - name: Aucune annee de naissance ne traverse le mandataire
-        run: npx tsx scripts/gates/aucun-annee-de-naissance.ts
+        run: pnpm securite:annee-naissance
       - name: Contrat de forme contre l API reelle
-        run: npx tsx src/server/integrations/recherche-entreprises/derive-nocturne.ts
+        run: pnpm integration:contrat-gouv

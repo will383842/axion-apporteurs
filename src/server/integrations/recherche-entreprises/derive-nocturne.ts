@@ -14,9 +14,10 @@
  * tout futur fichier `contrat…ts` sous `src/` la rencontrera. C'est à la tâche de la garde (CPL-T01) de décider
  * si le motif doit discriminer mieux ; le renommage ne fait que retirer CE fichier de sa portée.
  *
- * USAGE : npx tsx src/server/integrations/recherche-entreprises/derive-nocturne.ts
+ * USAGE : pnpm integration:contrat-gouv
  *         (job `contrat-api-gouv` de `.github/workflows/nightly.yml` — jamais dans une Gate A : un
- *         tiers qui tombe ne doit pas bloquer une PR)
+ *         tiers qui tombe ne doit pas bloquer une PR). Le script du `package.json` est la SEULE
+ *         forme admise dans un YAML suivi (REQ-GOV-031) : `npx` résoudrait un paquet hors verrou.
  *
  * Il rejoue chaque cas de `cas-enregistres.ts` — les MÊMES saisies que les fixtures, par la MÊME
  * fabrique d'URL que la production — et signale toute dérive de forme, en deux familles :

@@ -2,9 +2,14 @@
  * aucun-annee-de-naissance.ts — la garde dédiée de REQ-SEC-013 et REQ-INT-021 (INT-T09) :
  * AUCUNE ANNÉE DE NAISSANCE NE TRAVERSE, et la liste des dirigeants n'atteint jamais le navigateur.
  *
- * USAGE : npx tsx scripts/gates/aucun-annee-de-naissance.ts                  juge le dépôt
- *         npx tsx scripts/gates/aucun-annee-de-naissance.ts --reponse <f>    juge UNE réponse (bac)
- *         npx tsx scripts/gates/aucun-annee-de-naissance.ts --prove          témoins et contre-témoin
+ * USAGE : pnpm securite:annee-naissance                     juge le dépôt
+ *         pnpm securite:annee-naissance -- --reponse <f>    juge UNE réponse (bac d'essai)
+ *         pnpm securite:annee-naissance:prove              témoins et contre-témoin
+ *
+ * ⚠️ PAR UN SCRIPT DU `package.json`, JAMAIS PAR `npx`. REQ-GOV-031 n'admet dans un YAML suivi
+ * sous `.github/` que la forme fermée `pnpm <script>` ou l'installation figée : `npx` résoudrait
+ * un paquet HORS du verrou, et c'est exactement ce que la garde des commandes existe pour
+ * empêcher (`gardes-transposees.spec.ts`).
  *
  * CE QU'ELLE FAIT SUR LE DÉPÔT. Pour chaque fixture ENREGISTRÉE (`tests/fixtures/recherche-entreprises/`),
  * elle fait passer la réponse du tiers par le VRAI mandataire (`autocompleterEntreprise`, tiers
