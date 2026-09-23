@@ -20,6 +20,39 @@ on:
 jobs:
   gate-a:
     runs-on: ubuntu-latest
+    # ⚠️ LA SEULE CHOSE QUE CE JOB N'A RIEN A MESURER : une demande de fusion DEJA FUSIONNEE.
+    # Le runbook fait cocher la huitieme case de la definition de termine APRES
+    # `gh pr merge --delete-branch`. Cette edition du corps relance `pull_request: edited`, la tete
+    # n'est plus une branche, et `gov:pr` — etape 26 sur 71 — echouait sur `git diff base...tete` :
+    # 45 etapes restaient en « skipped », dont Lint, Format, Typecheck, Tests, `req:check` et
+    # `gov:etat`. Elles avaient l'air d'avoir mesure et n'avaient rien mesure. C'est la pathologie
+    # que GOV-059 vient de fermer un cran plus bas, par l'ORDRE des etapes ; ici elle se produisait
+    # A CHAQUE demande de fusion, par construction. Un bruit qu'on apprend a ignorer finit par
+    # cacher un vrai rouge.
+    #
+    # LA CONDITION EST LA PLUS ETROITE QUI FERME CE CAS, et pas une de plus :
+    #   — elle ne regarde PAS `github.event.action` : ecarter `edited` tuerait la raison d'etre du
+    #     declencheur, juste au-dessus (corriger un titre refuse par `gov:pr` doit relancer la
+    #     mesure, PR 26) ;
+    #   — elle ne regarde PAS `github.event_name` : sur `push`, `github.event.pull_request` est
+    #     absent, la propriete rend `null`, et GitHub compare en NOMBRES des operandes de types
+    #     differents (`null` -> 0, `true` -> 1). `null != true` est donc VRAI et la porte A tourne
+    #     sur main comme avant. Ajouter `github.event_name != 'pull_request' ||` n'ecarterait pas un
+    #     run de plus : ce serait une seconde ecriture de la meme regle, donc une divergence a venir
+    #     (RM-01) ;
+    #   — une demande de fusion OUVERTE dont on edite le corps porte `merged: false` : elle reste
+    #     mesuree, et c'est exige par le temoin.
+    # Le seul run ecarte est celui dont il n'y a plus rien a lire. Le diff FUSIONNE, lui, n'est pas
+    # perdu : il change de porte, et se mesure au run `push: main` du meme sha.
+    #
+    # Ce `if:` est au JOB, pas aux etapes : un job saute se lit « skipped » sans aucun rouge, alors
+    # que 71 etapes sautees une par une afficheraient exactement l'image qu'on retire d'ici.
+    #
+    # TEMOIN : `tests/unit/gouvernance/revendication-par-branche.spec.ts`, qui EVALUE cette
+    # expression contre cinq contextes d'evenement au lieu d'en chercher le texte, et qui exige la
+    # meme garde de TOUT job de TOUT workflow declenche par `pull_request` — en suivant `needs:`,
+    # pour qu'un job neuf qui reprendrait ces etapes ne puisse pas s'y soustraire en silence.
+    if: ${{ github.event.pull_request.merged != true }}
     # EXPLICITES, et ce n'est pas de la ceinture-bretelles. `gov:entite:corps` est BLOQUANTE et
     # rend 2 (donc echoue) quand elle ne peut pas lire. Le defaut de `GITHUB_TOKEN` se configure
     # au niveau du depot ou de l'organisation : le jour ou quelqu'un le passe en restreint, la
@@ -195,7 +228,7 @@ jobs:
       # REQ-GOV-001, `docs/GATES.md`). BLOQUANTE : pas de `continue-on-error` — la famille
       # `lint_non_bloquant` de `gov:conventions` le refuse, et une gate qui ne bloque rien ne garde rien.
       #
-      # `partners/ADR-0017` a tranche l'homonymie : l'identifiant de cette garde au registre EST la
+      # `partners/ADR-0018` a tranche l'homonymie : l'identifiant de cette garde au registre EST la
       # commande ecrite ci-dessous. Ces deux lignes `run:` sont donc ce que `gov:conventions` lit
       # pour conclure que la garde est APPELEE — la reconnaissance ne tient plus au litteral d'un
       # COMMENTAIRE, et le present commentaire peut disparaitre sans rien casser. La forme reste

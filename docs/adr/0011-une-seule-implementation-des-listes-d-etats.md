@@ -20,7 +20,7 @@ Sur `main`, `scripts/gates/schema-enums.ts` (GOV-006, `partners:schema:enums`) p
 déclare légitime la comparaison booléenne à deux états.
 
 Le registre prêtait la même famille à la garde des termes interdits, que GOV-030 écrit
-(`gov:check` à l'époque ; `gov:termes-interdits` depuis `partners/ADR-0017`). L'y écrire au seuil de DEUX
+(`gov:check` à l'époque ; `gov:termes-interdits` depuis `partners/ADR-0018`). L'y écrire au seuil de DEUX
 donnait deux gardes, dans le même job `gate-a`, aux verdicts **opposés** sur la même entrée : la
 comparaison que GOV-006 déclare légitime est exactement celle que GOV-030 condamnait. Toutes deux
 restaient vertes tant que le code ne porte aucune comparaison de ce genre : la divergence était

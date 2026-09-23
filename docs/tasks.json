@@ -1610,11 +1610,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/dm-02",
+      "pr": 84,
       "issue": 63,
       "attempts": 0,
       "motif": null,
@@ -1648,7 +1648,13 @@
         "tests/integration/harnais-testcontainers.spec.ts",
         "vitest.config.ts",
         ".github/workflows/ci.yml",
-        "docs/gates.json"
+        "docs/gates.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/setup.ts",
+        "tests/unit/gouvernance/tout-check-est-cable.spec.ts",
+        "tests/unit/ci/integration-collectee-par-gate-a.spec.ts",
+        "tests/integration/rate-limit-redis.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1664,18 +1670,20 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t02",
+      "pr": 86,
       "issue": 68,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) Les tests d'integration tournent sur un Postgres 16 avec pgvector et un cache ephemeres, montes par testcontainers, schema migre par `prisma migrate deploy` ; l'isolation se fait par transaction ou par base par fichier (REQ-QA-006). (2) AUCUN TEST NE DEPEND D'UN FICHIER D'ENVIRONNEMENT PARTAGE : les identifiants de connexion viennent du conteneur, jamais d'un `.env` du poste ; un test qui lit une variable d'environnement partagee est refuse. (3) LE HARNAIS DIT CE QU'IL NE PEUT PAS FAIRE : si le demon de conteneurs est indisponible, la suite d'integration ECHOUE explicitement avec un message qui le nomme — elle ne se saute pas en silence. Un test saute a l'air d'avoir mesure et n'a rien mesure. (4) TEMOIN A DEUX FACES : sans demon disponible, `pnpm test:integration` sort en code non nul avec le motif nomme ; avec demon disponible, la meme commande sort en zero et imprime le compte des fichiers d'integration reellement executes. (5) L'etape de Gate A qui lance ce harnais ne porte pas de tolerance d'echec.",
       "tests": {
         "REQ-QA-006": [
-          "tests/integration/harnais-testcontainers.spec.ts"
+          "tests/integration/harnais-testcontainers.spec.ts",
+          "tests/unit/ci/integration-collectee-par-gate-a.spec.ts",
+          "tests/integration/rate-limit-redis.spec.ts"
         ]
       }
     },
@@ -2705,7 +2713,8 @@
         "src/server/integrations/axionia/api-entrante.ts",
         "src/app/api/integrations/axionia/",
         "tests/integration/frontiere.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "tests/integration/harnais-testcontainers.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -2721,12 +2730,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/sec-07",
+      "pr": 90,
+      "issue": 94,
       "attempts": 0,
       "motif": null,
       "acceptance": "TACHE SENSIBLE — authentification. (1) Les routes appelees par axionia repondent 404 — jamais 401 — sans jeton porteur dedie d'au moins 32 octets, compare en temps constant ; elles sont restreintes par une liste d'adresses autorisees, limitees a 60 appels par minute, et chaque appel est journalise (REQ-SEC-012). 404 PLUTOT QUE 401 : un 401 confirme que la route existe. (2) La route d'interrogation d'attribution rend une reponse MINIMALE — un statut parmi libre, attribuee ou cliente, une echeance eventuelle — et NE REND NI NOM NI ADRESSE DE COURRIEL D'APPORTEUR (REQ-INT-014). Ce qui n'est pas dans la reponse ne peut pas fuir. (3) La reponse est IDENTIQUE en forme et en temps pour un SIREN inconnu et pour un SIREN libre : une difference mesurable est un oracle d'enumeration. (4) TEMOIN A DEUX FACES : un appel sans jeton, puis avec un jeton faux, puis depuis une adresse hors liste, rendent 404 et n'apparaissent dans aucune reponse sous une autre forme ; l'appel autorise rend 200 avec exactement les champs que le contrat declare, et un test de forme refuse tout champ en trop. (5) Le vert imprime le compte des routes reellement confrontees.",
@@ -9359,7 +9368,10 @@
       "paths": [
         ".github/workflows/ci.yml",
         "scripts/gates/gov-etat.ts",
-        "tests/unit/gouvernance/revendication-par-branche.spec.ts"
+        "tests/unit/gouvernance/revendication-par-branche.spec.ts",
+        "scripts/gates/gov-pr.ts",
+        "tests/unit/ci/condition-de-job.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -9373,7 +9385,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "PRIORITAIRE : c'est le plafond de parallelisme de toute la phase 0. La revendication d'une tache vit PAR BRANCHE dans `docs/tasks.json`, mais `gov:etat` lit les demandes de fusion ouvertes GLOBALEMENT. Chaque branche doit donc porter les N revendications, et la N+1e demande rougit les N autres — cout de synchronisation en carre du nombre de branches. AGGRAVANT MESURE : `gov:etat` s'execute AVANT lint, format, typecheck et test dans la porte A, si bien qu'un rouge venu d'une AUTRE branche laisse ces etapes en « sautees » — elles ont l'air d'avoir mesure et n'ont rien mesure. C'est le pire des deux defauts : le premier coute du temps, le second rend un vert qui ment. A livrer : (1) la revendication se DERIVE au lieu de se recopier par branche, ou le lecteur des demandes ouvertes se restreint a la branche jugee — l'un ou l'autre, jamais les deux a moitie ; (2) les etapes de mesure s'executent MEME quand `gov:etat` rougit, ou bien leur saut est rendu VISIBLE comme un echec et non comme un succes. TEMOIN A DEUX FACES : trois branches ouvertes simultanement, chacune revendiquant sa seule tache, sortent toutes les trois en zero ; une quatrieme branche qui revendique une tache deja prise fait sortir la garde en code non nul et NOMME la branche concurrente, sans rougir les trois autres.",
       "tests": {
         "REQ-GOV-007": [
@@ -9384,7 +9396,10 @@
         ]
       },
       "issue": 87,
-      "owner": "A05"
+      "owner": "A05",
+      "branch": "t/gov-059-suite",
+      "pr": 100,
+      "motif": null
     },
     {
       "id": "GOV-060",
@@ -9511,7 +9526,6 @@
         "package.json",
         "docs/gates.json",
         "scripts/gates/gov-check.ts",
-        "docs/adr/partners/",
         "tests/unit/gouvernance/un-nom-une-garde.spec.ts",
         "scripts/gates/gov-agents.ts",
         "scripts/gates/gov-attestation.ts",
@@ -9522,7 +9536,13 @@
         "scripts/lot/attestation.ts",
         "tests/unit/gouvernance/attestation-inter-depot.spec.ts",
         "tests/unit/gouvernance/attributions-resolvent.spec.ts",
-        "tests/unit/gouvernance/termes-interdits.spec.ts"
+        "tests/unit/gouvernance/termes-interdits.spec.ts",
+        "docs/adr/0018-un-nom-une-garde-gov-check-retire-des-deux-cotes.md",
+        "docs/adr/0011-une-seule-implementation-des-listes-d-etats.md",
+        ".github/workflows/ci.yml",
+        "docs/AFFIRMATIONS-AXIONIA.md",
+        "docs/GLOSSAIRE.md",
+        "packages/contracts/events.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -10419,6 +10439,119 @@
           "tests/unit/espace/libelles-d-etats.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-089",
+      "titre": "Un numero PUBLIC se juge a son PORTEUR, pas a son mot-cle : la garde d'entite sur-attrape 448 defauts sur 452",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-entite.ts",
+        "docs/gates.json",
+        "tests/unit/gouvernance/entite-registre.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-031",
+        "REQ-CPL-001"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Sur la branche qui enregistre les fixtures de l'API publique d'entreprises, `gov:entite` rend 452 defauts : 450 `coordonnee_en_clair` et 2 `valeur_recopiee`, sur 418 identifiants distincts et 24 fichiers. 416 de ces identifiants sont ceux d'entreprises TIERCES rendues par l'API — DANONE, la SNCF, EDF, des communes. DEUX seulement sont les notres. La garde demande donc aujourd'hui de deplacer le SIREN de DANONE dans `config/entite.json` : c'est le symptome, il vaut mieux qu'une demonstration.\n\nDEUX REGIMES DIFFERENTS, EXPLICITES DANS LA SOURCE ET DANS LE CHAMP `verifie` DU REGISTRE : IBAN et BIC sont des SECRETS, refuses PARTOUT, dans tout fichier suivi ; SIREN, SIRET et TVA sont des donnees PUBLIQUES, refusees uniquement dans un fichier de code, au seul motif de RM-01 — source unique de l'identite de la Societe, famille `valeur_recopiee`, POUR LES NOTRES. Le motif parlait des notres ; le code attrapait tout le monde.\n\nLA VOIE DE SORTIE EVIDENTE N'EXISTE PAS, ET C'EST MESURE : la garde ne regarde pas si le numero est vrai, seulement s'il suit le mot `siren`/`siret`. Un identifiant fabrique a cle de Luhn juste est refuse exactement comme le reel. Substituer les identifiants DETRUIRAIT la valeur probante des fixtures SANS rendre la garde verte. Et le mecanisme d'exemption ne sait pas dire la bonne chose : `coordonnee` IMPLIQUE `recopie`, donc toute exemption assez large pour taire la famille publique tait aussi les deux vrais defauts. Impasse mesuree, pas opinion.\n\nATTENTION AU REMEDE EVIDENT ET FAUX : reclasser la fixture hors du predicat « fichier de code » desarmerait AUSSI `valeur_recopiee`, qui est gardee par LE MEME predicat — ca rouvrirait la porte que la garde existe pour tenir. Le defaut n'est pas dans le perimetre de fichiers, il est dans le PREDICAT.\n\nACCEPTATION — LE REGIME SE LIT SUR LA VALEUR, PAS SUR LE NOM DU FICHIER.\n  (a) Un SIREN/SIRET/TVA n'est refuse dans un fichier de code QUE S'IL EST LE NOTRE, et « les notres » est DERIVE de `config/entite.json` par une fonction unique que la famille `valeur_recopiee` et l'arme publique de `coordonnee_en_clair` lisent TOUTES LES DEUX, de la meme facon.\n  (b) CONTRAINTE ABSOLUE : `valeur_recopiee` reste actif JUSQUE DANS UNE FIXTURE. Nos identifiants n'ont rien a faire en dur, meme la. Temoin a deux faces DANS LE MEME FICHIER, meme mot-cle, meme forme : seule change l'identite du porteur.\n  (c) Le regime du SECRET est INTACT : un IBAN rougit dans une fixture de tiers.\n  (d) La fonction qui juge du code sans savoir qui est « nous » LEVE, au lieu de rendre un vert silencieux.\n  (e) La PORTEE est declaree a UN SEUL endroit, citee sans recopie par `docs/gates.json`, et IMPRIMEE a chaque vert — avec le COMPTE des identifiants du registre reellement confrontes. Sans ce compte, un registre entierement a la sentinelle rendrait un vert qui ne cherche AUCUN numero public : une garde derivee est aveugle deux fois, par sa source et par son filtre.\n  (f) Compte avant/apres mesure sur le depot reel, et AUCUN vrai defaut tu.\n\nCE QUE CETTE TACHE VA DECOUVRIR, ET QUI EST LE PLUS INSTRUCTIF : les temoins existants du mode de preuve exercent le MAUVAIS PORTEUR — ils exigent un ROUGE sur le SIREN et la TVA d'un TIERS dans du code, c'est-a-dire qu'ils GRAVENT la sur-attrape en porte A. Une garde vue rougir (RM-02) ne dit rien si elle a ete vue rougir sur le MAUVAIS CAS. Quand un correctif oblige a inverser un temoin existant, c'est le signe que le temoin, et pas seulement le code, portait la faute. La ligne finale imprimee par le mode de preuve affirme elle aussi le comportement fautif : un vert qui commente son propre comportement est une affirmation a maintenir comme du code.\n\nHORS PERIMETRE, A SIGNALER SANS CORRIGER : REQ-GOV-031 est TRONQUEE dans `docs/requirements.json` — elle dit « Trois categories n'y entrent jamais : » et s'arrete la. C'est l'exigence dont cette garde et deux autres derivent tout leur mandat, et elle ne dit pas ce qu'elle interdit. Et le seul vrai defaut restant — nos SIREN/SIRET en dur dans une fixture d'un depot PUBLIC — est un changement d'intention de test (re-enregistrement sur un organisme de formation tiers), pas le sujet de celle-ci.\n\nCOLLISION DE CHEMIN CONNUE : `tests/unit/gouvernance/entite-registre.spec.ts` figure aussi dans les `paths` de GOV-067. Les deux taches ne doivent pas etre composees dans le meme lot.",
+      "tests": {
+        "REQ-GOV-031": [
+          "tests/unit/gouvernance/entite-registre.spec.ts"
+        ],
+        "REQ-CPL-001": [
+          "tests/unit/gouvernance/entite-registre.spec.ts"
+        ]
+      },
+      "issue": 105,
+      "owner": "A05",
+      "branch": "t/gov-entite-tiers",
+      "pr": 107,
+      "motif": null
+    },
+    {
+      "id": "GOV-088",
+      "titre": "Le glossaire interdit en l.149 la forme qu'il prescrit en l.126, et un .ts ne peut pas citer un terme interdit",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/GLOSSAIRE.md",
+        "scripts/gates/gov-check.ts",
+        "tests/unit/gouvernance/termes-interdits.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-016",
+        "REQ-INT-003",
+        "REQ-INT-004",
+        "REQ-DM-036"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a refaire avant d'ecrire une ligne. `docs/GLOSSAIRE.md` l.126 PRESCRIT la colonne `eventId` de la table `EvenementRecu` (texte repris mot pour mot par REQ-DM-036) et l.149 range cette MEME forme parmi les synonymes interdits, au motif que l'enveloppe de fil est en snake_case (ADR-0008). La garde lit `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` et n'y exempte que les commentaires de .md/.sql/.prisma.\n\nLE PIEGE N'EST PAS DECLENCHE, IL EST ARME : `grep -rn eventId prisma/ src/ messages/ docs/adr/` rend ZERO ligne, et `EvenementRecu` n'existe dans aucun schema. La tache qui le creera est SEC-06. Ce jour-la le developpeur ecrira la colonne que la REQ epelle, et la garde rougira sur le glossaire, sans le contexte.\n\nCE QUI EST DEJA TRANCHE ET NE SE RE-TRANCHE PAS : `docs/PRESEANCE.md` §2 ligne 7 donne le GLOSSAIRE gagnant contre tout autre document sur un terme et ses synonymes interdits, y compris contre le texte litteral d'une REQ et contre CONVENTIONS §1. Verifie en fait : `gov:conventions` reste VERT sur une forme snake_case dans du TypeScript.\n\nACCEPTATION A — L'INTERDIT DEVIENT AUSSI ETROIT QUE SON INTENTION, SANS S'AFFAIBLIR. Les deux lignes parlent de deux objets differents : l.126 une COLONNE Prisma (camelCase, CONVENTIONS §1), l.149 un CHAMP D'ENVELOPPE de fil (snake_case, ADR-0008). Le remede porte sur une FAMILLE et non sur le cas nomme, et se derive d'un critere MESURABLE du registre. REFUSES d'avance : renommer la colonne pour faire taire la garde ; exempter `prisma/**` en bloc ; une exemption par chemin nommant `EvenementRecu`.\n  (a) VERT provoque : `model EvenementRecu { eventId String @unique ; eventType String }` dans `prisma/schema.prisma` passe, et passe par ETROITESSE de l'interdit, non par exemption (ni commentaire ni accent grave dans la vue).\n  (b) ROUGE provoque : un champ d'enveloppe en camelCase jamais reclame ailleurs rougit et NOMME le fichier et la ligne.\n  (c) LE COMPTE DES INTERDITS EXERCES NE BAISSE PAS DE LA SEULE SOUSTRACTION : tout jeton qui cesse d'etre exerce est nomme, et tout jeton qui le DEVIENT l'est aussi. Un interdit devenu conditionnel par accident de ponctuation est un interdit mort que cette tache doit rendre visible.\n  (d) CE QUI GARDE REELLEMENT LA CASSE DE L'ENVELOPPE est ecrit au glossaire : l'egalite champ par champ ET DANS L'ORDRE entre la liste close du contrat et les noms de REQ-INT-003. Une liste fermee comparee par egalite voit une casse fausse ; un balayage de jeton ne voit qu'un mot.\n\nACCEPTATION B — UN FICHIER .ts N'A AUCUNE EXEMPTION DE CITATION. La garde n'exempte que .md, .sql et .prisma : on ne peut pas ecrire un terme interdit dans un commentaire TypeScript, meme pour expliquer pourquoi il est interdit. Consequence mesuree : les commentaires du depot PARAPHRASENT, le contournement n'est ecrit nulle part, et chaque agent le redecouvre.\n  (e) TRANCHER ET ECRIRE LA DECISION, avec sa mesure. Si un marqueur de citation est pose, il doit etre IMPOSSIBLE de s'en servir pour taire un usage reel, et cette impossibilite se PROVOQUE, elle ne s'affirme pas. Si le marqueur est refuse, la limite est NOMMEE au glossaire avec son proprietaire et la tache qui la levera — une limite nommee n'est pas du folklore, une paraphrase sans adresse l'est.\n\nSOURCE UNIQUE (RM-01) : la regle nouvelle est ecrite UNE fois, au glossaire. `gov-check.ts` porte une fixture qui reproduit le glossaire, et `termes-interdits.spec.ts` assere que ses racines et ses modeles refuses sont EGAUX a ceux du glossaire reel : on ne touche pas l'un sans l'autre, c'est voulu, et ca ne se contourne pas.\n\nHORS PERIMETRE, A SIGNALER SANS CORRIGER : REQ-DM-036 s'epelle elle-meme avec un synonyme interdit (`WebhookRecu`, `type`) la ou le glossaire impose `EvenementRecu` et `eventType` ; et le §5 porte encore un avertissement perime disant qu'aucune garde ne lit ce paragraphe.",
+      "tests": {
+        "REQ-GOV-016": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ],
+        "REQ-INT-003": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ],
+        "REQ-INT-004": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ],
+        "REQ-DM-036": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ]
+      },
+      "issue": 104,
+      "owner": "A01",
+      "branch": "t/glossaire-enveloppe",
+      "pr": 108,
+      "motif": null
+    },
+    {
+      "id": "GOV-091",
+      "titre": "L'entree de journal de la PR 108 manque : main est rouge, et deux tests de gouvernance rougissent sur TOUTES les branches",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. La PR #108 (GOV-088) a ete fusionnee sur `main` SANS son entree de journal : `git show <sha>:docs/journal/2026-09.md | grep 'PR #108'` ne rend rien, et aucun des fichiers du squash n'est sous `docs/journal/`. Consequence : `pnpm gov:etat` rend 1 defaut sur 9 familles (`pr_fusionnee_sans_journal`, REQ-GOV-023), et la porte A sur `main` echoue a l'etape Tests sur DEUX fichiers — `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` — pour UNE SEULE cause racine.\n\nPOURQUOI C'EST BLOQUANT ET PAS COSMETIQUE. Ces deux tests interrogent la FORGE VIVANTE, pas le diff : ils rougissent donc sur TOUTES les branches, pas seulement sur `main`. Tant que l'entree n'est pas posee, AUCUNE PR ne peut atterrir. C'est la meme forme que la revendication manquante du 2026-09-22 au matin, qui rougissait elle aussi partout a la fois.\n\nACCEPTATION.\n  (a) L'entree `## PR #108 — <date> — <titre>` est posee dans `docs/journal/2026-09.md`, a sa place antechronologique, avec les champs que `docs/journal/README.md` prescrit. Son contenu est DERIVE du corps de la PR #108 et de son diff — rien d'invente, rien de reformule a l'estime.\n  (b) LA PR PORTE SA PROPRE ENTREE. Sans elle, sa fusion reproduit exactement le defaut qu'elle repare, et `main` redevient rouge. Ordre : ouvrir la PR, lire son numero, ajouter son entree, pousser.\n  (c) ROUGE VERBATIM : le message d'echec de la porte A sur `main` est colle au corps, tel quel, avec le numero de run.\n  (d) VERT : `pnpm gov:etat --now <ISO>` rend `9 familles evaluees sur 9`, et les fichiers de spec concernes repassent verts.\n  (e) ⚠️ `journal:sans-pii` reste vert : aucune donnee personnelle, et jamais le nom du delegue a la protection des donnees.\n\nCE QUE CETTE TACHE NE FERME PAS, ET QUI EST LE VRAI SUJET. La famille `pr_fusionnee_sans_journal` NE PEUT PAS rougir avant la fusion : son predicat est « la PR est fusionnee ». `scripts/gates/gov-pr.ts` ne lit JAMAIS `docs/journal/` — ses seules occurrences du mot sont un commentaire d'intention et un contre-temoin qui GRAVE le choix de ne pas le juger. Le controle d'avant-fusion etait donc vert, et l'aurait ete quoi qu'il arrive. AUCUNE garde n'exige l'entree pendant qu'on peut encore l'ajouter, et la seule victime possible est `main`. Le remede est GOV-052, dont l'acceptation exige que GOV-073 passe avant elle ou avec elle (quatre lecteurs, quatre grammaires d'entree de journal) — sinon GOV-052 ecrit une cinquieme redaction en prose de la meme regle. ⛔ NE PAS accrocher ce correctif a GOV-052 : ca la marquerait delivree alors que le trou resterait ouvert.\n\nPOURQUOI UNE TACHE DEDIEE PLUTOT QUE LA TACHE HISTORIQUE. Le precedent existe DEUX fois (PR #29 et PR #35 ont cite une tache deja `fusionnee` pour ce meme defaut) et la forge l'accepte. Mais la tache historique porte `sensible: [auth]`, ce qui classe la PR en risque ELEVE et exige QUATRE lentilles pour une correction de DEUX fichiers de prose — pendant que `main` est rouge et que la file est arretee. Une tache vivante, zone gouvernance, `sensible` vide, rend le regime a deux lentilles que le risque reel merite. Le classificateur mesure ce qu'il pretend mesurer ; c'est la tache empruntee qui mentait.",
+      "tests": {
+        "REQ-GOV-023": [
+          "tests/unit/gouvernance/plan-state-frais.spec.ts"
+        ]
+      },
+      "issue": 110,
+      "owner": "A03",
+      "branch": "t/journal-108",
+      "pr": 109,
+      "motif": null
     }
   ]
 }

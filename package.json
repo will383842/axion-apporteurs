@@ -16,6 +16,7 @@
     "gov:termes-interdits:prove": "tsx scripts/gates/gov-check.ts --prove",
     "gov:partiel": "pnpm gov:publication && pnpm gov:identifiants && pnpm gov:tasks && pnpm gov:requirements && pnpm gov:hypotheses && pnpm gov:preseance && pnpm gov:sonde && pnpm gov:adr && pnpm gov:pr && pnpm gov:autonomie && pnpm gov:inventaire && pnpm gov:agents && pnpm gov:etat && pnpm gov:trace && pnpm gov:attributions && pnpm gov:lexique && pnpm gov:conventions",
     "test": "vitest run --coverage --reporter=default --reporter=json --outputFile.json=test-results/vitest.json",
+    "test:integration": "vitest run tests/integration",
     "typecheck": "tsc --noEmit",
     "gov:tasks": "tsx scripts/gates/gov-tasks.ts",
     "gov:tasks:prove": "tsx scripts/gates/gov-tasks.ts --prove",
@@ -112,6 +113,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@testcontainers/postgresql": "12.1.0",
+    "@testcontainers/redis": "12.1.0",
     "@types/node": "^22.10.2",
     "@vitest/coverage-v8": "2.1.9",
     "ajv": "^8.17.1",

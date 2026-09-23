@@ -1,4 +1,4 @@
-# partners/ADR-0017 — Un nom, une garde : `gov:check` est retiré des deux côtés
+# partners/ADR-0018 — Un nom, une garde : `gov:check` est retiré des deux côtés
 
 | Champ | Valeur |
 | --- | --- |

@@ -166,7 +166,7 @@ w('pnpm install                       # si le dépôt vient d’être cloné');
 // Pas de compte écrit ici : la chaîne en enchaîne plusieurs depuis GOV-004, et un nombre recopié
 // dans une vue dérivée redevient faux à la garde suivante sans que rien ne le signale. Le NOM,
 // lui, dit désormais ce qu'il fait : `gov:partiel` est un SOUS-ENSEMBLE de la porte A, pas la
-// porte (`partners/ADR-0017`). Le pré-vol complet est `pnpm prevol`, qui dérive de `ci.yml`.
+// porte (`partners/ADR-0018`). Le pré-vol complet est `pnpm prevol`, qui dérive de `ci.yml`.
 w('pnpm gov:partiel                   # une PARTIE des gardes de gouvernance, d’un coup');
 w('pnpm plan-state:build              # régénère PLAN-STATE, dont le chemin critique');
 w(`pnpm lot:composer -- --phase ${phaseCourante} --repo partners --max 8 --now <AAAA-MM-JJ>`);

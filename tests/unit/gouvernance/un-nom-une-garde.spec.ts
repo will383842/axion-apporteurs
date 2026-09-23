@@ -2,7 +2,7 @@
 // @req REQ-GOV-012
 // @req REQ-QA-013
 /**
- * `un-nom-une-garde.spec.ts` — un nom ne désigne qu'une chose (GOV-063, `partners/ADR-0017`).
+ * `un-nom-une-garde.spec.ts` — un nom ne désigne qu'une chose (GOV-063, `partners/ADR-0018`).
  *
  * LE DÉFAUT MESURÉ, ET IL S'EST REFERMÉ SUR SON LECTEUR : `gov:check` désignait DEUX choses — la
  * garde des termes interdits au registre `docs/gates.json`, et une CHAÎNE de dix-sept gardes dans
@@ -15,7 +15,7 @@
  *   2. le nom que la garde IMPRIME est une commande qui existe et qui lance CETTE garde-là —
  *      la seule propriété qui rende un rouge reproductible par celui qui le lit ;
  *   3. `gov:check` ne désigne plus rien qui s'exécute, d'aucun côté : un nom ambigu se RETIRE, il
- *      ne se réattribue pas (`partners/ADR-0017`) ;
+ *      ne se réattribue pas (`partners/ADR-0018`) ;
  *   4. la reconnaissance de l'appel par `gov:conventions` ne tient plus au littéral d'un
  *      COMMENTAIRE de `ci.yml` — elle survit au retrait de tous les commentaires ;
  *   5. la chaîne survivante dit son compte : elle est un sous-ensemble STRICT de la porte A, et
@@ -119,14 +119,14 @@ describe('REQ-GOV-008 — un identifiant du registre ne désigne qu’une chose'
   it('REQ-GOV-008 — `gov:check` ne désigne plus rien qui s’exécute : ni script, ni identifiant de registre', () => {
     expect(
       paquet.scripts['gov:check'],
-      'un nom ambigu se RETIRE, il ne se réattribue pas (partners/ADR-0017)'
+      'un nom ambigu se RETIRE, il ne se réattribue pas (partners/ADR-0018)'
     ).toBeUndefined();
     expect(registre.map((e) => e.id)).not.toContain('gov:check');
     expect(sansCommentaires(ci)).not.toContain('pnpm gov:check');
   });
 
   it('REQ-QA-013 — la reconnaissance de l’appel survit au retrait de TOUS les commentaires de ci.yml', () => {
-    // Avant `partners/ADR-0017`, `garde_ecrite_jamais_appelee` ne reconnaissait l'appel de cette
+    // Avant `partners/ADR-0018`, `garde_ecrite_jamais_appelee` ne reconnaissait l'appel de cette
     // garde QUE parce qu'un commentaire de `ci.yml` citait son identifiant : retirer le commentaire
     // faisait rougir à tort, le garder tenait une garde bloquante par un littéral de prose.
     const nu = sansCommentaires(ci);
@@ -147,7 +147,7 @@ describe('REQ-GOV-008 — un identifiant du registre ne désigne qu’une chose'
     expect(dansLaPorteA.length).toBeGreaterThan(dansLaChaine.length * 2);
     // Et la garde des termes interdits n'y est PAS : le témoin de GOV-047 disait déjà ce fait, il
     // est repris ici sous le nom neuf. L'y ajouter ne réparerait rien — la chaîne resterait un
-    // quart de la porte, et un quart qui se croit tout est ce que `partners/ADR-0017` refuse.
+    // quart de la porte, et un quart qui se croit tout est ce que `partners/ADR-0018` refuse.
     expect(dansLaChaine).not.toContain(ID_REGISTRE);
   });
 });
@@ -155,7 +155,7 @@ describe('REQ-GOV-008 — un identifiant du registre ne désigne qu’une chose'
 describe('REQ-QA-013 — la dette de nommage qui RESTE est nommée, comptée, et ne grandit pas', () => {
   it('REQ-QA-013 — les gardes dont la commande porte un autre nom que leur identifiant sont exactement celles-ci', () => {
     // Le sens INVERSE de la première famille : un script de `package.json` qui lance la garde d'une
-    // entrée sans en porter l'identifiant. Ces trois-là préexistent à `partners/ADR-0017` et n'ont
+    // entrée sans en porter l'identifiant. Ces trois-là préexistent à `partners/ADR-0018` et n'ont
     // trompé personne — aucune des trois n'imprime un nom qu'on puisse taper à tort. Elles sont
     // FIGÉES ici : une troisième rougit.
     const ecarts: string[] = [];
