@@ -62,12 +62,38 @@ function pseudonymiseur(): (dirigeant: Objet) => Objet {
 
 const pause = (ms: number) => new Promise((ok) => setTimeout(ok, ms));
 
+/**
+ * Le cas à rejouer, ou `null` pour tous. REJOUER UN SEUL CAS N'EST PAS UN CONFORT : sans ce
+ * filtre, corriger la saisie d'un cas réécrit les vingt et un autres fichiers, et le
+ * pseudonymiseur tire une clé NEUVE à chaque exécution — tous les pseudonymes de dirigeants
+ * changeraient, pour une correction qui n'en concerne qu'un. Le rang, lui, reste celui de la
+ * LISTE : le nom de fichier ne dépend pas de ce qu'on rejoue.
+ *
+ * ⚠️ Contrepartie, et elle est dite : la promesse « une même personne présente dans deux fixtures
+ * d'un même enregistrement garde le même pseudonyme » ne vaut que par EXÉCUTION. Un cas rejoué
+ * seul ne partage plus sa clé avec les autres.
+ */
+function casDemande(): string | null {
+  const i = process.argv.indexOf('--cas');
+  if (i < 0) return null;
+  const nom = process.argv[i + 1];
+  if (nom === undefined || nom.startsWith('--')) {
+    throw new Error('`--cas` attend le nom d’un cas de `cas-enregistres.ts`');
+  }
+  if (!CAS_ENREGISTRES.some((c) => c.cas === nom)) {
+    throw new Error(`aucun cas ne s’appelle « ${nom} » dans \`cas-enregistres.ts\``);
+  }
+  return nom;
+}
+
 async function enregistrer(): Promise<void> {
   const pseudonymiser = pseudonymiseur();
+  const seul = casDemande();
   mkdirSync(DOSSIER_DES_FIXTURES, { recursive: true });
   let rang = 0;
   for (const { cas, q } of CAS_ENREGISTRES) {
     rang += 1;
+    if (seul !== null && cas !== seul) continue;
     const url = urlDeRecherche(q, PARAMETRES.urlDeBase.valeur);
     // L'URL est ÉCRITE décodée : lisible, et sans les séquences d'échappement d'un accent, qu'une
     // garde de rédaction lirait comme des identifiants. Les tests la comparent décodée aussi.

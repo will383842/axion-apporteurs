@@ -33,6 +33,10 @@ export const CAS_ENREGISTRES: readonly CasEnregistre[] = [
   { cas: 'trois-caracteres', q: 'edf' },
   { cas: 'raison-sociale-et-ville', q: 'boulangerie grenoble' },
   { cas: 'raison-sociale-et-code-postal', q: 'carrefour 38100' },
-  { cas: 'organisme-de-formation', q: 'axion ia' },
+  // ⚠️ Ce cas a saisi « axion ia » jusqu'au 2026-09-23. `gov:entite` a refusé la fixture : le
+  // SIREN et le SIRET de l'entité contractante y étaient RECOPIÉS (RM-01, REQ-CPL-001). Ce n'est
+  // pas un secret — ces numéros sont publics — c'est une seconde source. Les vingt et un autres
+  // cas saisissent des tiers ; celui-ci le fait désormais aussi.
+  { cas: 'organisme-de-formation', q: 'cegos' },
   { cas: 'cooperative', q: 'scop' },
 ];
