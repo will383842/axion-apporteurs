@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**266 taches · 199.85 j estimes.**
+**267 taches · 200.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 104 | 80.85 | 20 |
+| 0 — Socle technique | 105 | 81.35 | 21 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -702,7 +702,7 @@ Couvre : `REQ-ARG-002`, `REQ-ARG-003`, `REQ-DM-036`, `REQ-INT-010`, `REQ-INT-011
 
 **Tests.** `tests/integration/webhook-verdicts.spec.ts` · `tests/integration/webhook.spec.ts` · `tests/unit/securite/webhook-signature.spec.ts`
 
-### SEC-07 — API entrantes pour axionia : jeton dédié/HMAC, allowlist, réponse minimale, journal
+### SEC-07 — API entrantes pour axionia : jeton dédié/HMAC, allowlist, réponse minimale, journal ✅ **fusionnee**
 
 `0.5 j` · zone `securite` · sensible : auth · depend de `SEC-01`
 
@@ -1559,6 +1559,16 @@ CE QUE CETTE TACHE NE FERME PAS, ET QUI EST LE VRAI SUJET. La famille `pr_fusion
 POURQUOI UNE TACHE DEDIEE PLUTOT QUE LA TACHE HISTORIQUE. Le precedent existe DEUX fois (PR #29 et PR #35 ont cite une tache deja `fusionnee` pour ce meme defaut) et la forge l'accepte. Mais la tache historique porte `sensible: [auth]`, ce qui classe la PR en risque ELEVE et exige QUATRE lentilles pour une correction de DEUX fichiers de prose — pendant que `main` est rouge et que la file est arretee. Une tache vivante, zone gouvernance, `sensible` vide, rend le regime a deux lentilles que le risque reel merite. Le classificateur mesure ce qu'il pretend mesurer ; c'est la tache empruntee qui mentait.
 
 **Tests.** `tests/unit/gouvernance/plan-state-frais.spec.ts`
+
+### GOV-093 — Le champ `schema` d'une tache et ses `paths` ne sont confrontes par RIEN, et aucun verbe ne sait ecrire ce champ
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-013`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, la lentille `schema` de la PR #102 a constate que `GOV-063` porte `"schema": false` dans `docs/tasks.json` alors que ses `paths` nomment `packages/contracts/events.ts`. Aucune garde ne rougit : `gov:tasks` ne confronte pas `schema` aux `paths`, et le CHAMP, lui, est bel et bien lu : le decideur de `scripts/lot/revues.ts` ouvre sa decision par `if (entree.tachesSchema) return true;` — le NOM plutot que le numero de ligne, qui pourrit au premier commit et qui obligerait, selon `gov:sonde`, a poser un repere date et signe pour une affirmation du depot LUI-MEME, et `tachesSchema` vaut `t.schema === true`. ⚠️ CETTE PHRASE A DIT L INVERSE jusqu au 2026-09-23 — elle affirmait que `gov:pr` derive `toucheSchema` des seuls fichiers du diff et de `cheminsSchema`, jamais du registre. La lentille `schema` l a mesuree fausse, et la rectification AGGRAVE la tache au lieu de l alleger : le champ n est pas inerte, c est une entree du discriminant, et un `schema: true` force la lentille a lui seul. Ce qui reste vrai, et qui est le sujet : RIEN ne confronte le champ aux `paths`. Le bon comportement a donc ete obtenu ce jour-la par le diff, pas par le registre, et personne ne l aurait su si la lentille ne l avait pas cherche. SECOND VOLET, mesure dans la foulee : `reecrire-champ.mjs` REFUSE d ecrire `schema` (« n est pas un champ ecrivable de tasks.json » ; il ne reecrit que titre, acceptance, tests, sensible, deps, estimateDays) et `reclasser.mjs` ne le connait pas davantage. Le champ existe, il ment, et AUCUN verbe hors depot ne sait le remettre droit : il n est modifiable qu a la main, donc hors de toute trace. A LIVRER. (1) Une famille de `gov:tasks` confronte `schema` aux `paths` : une tache dont un `path` tombe sous un `cheminsSchema` (derive de la §7 de `docs/CHARTE-AGENTS.md`, JAMAIS recopie) et qui porte `schema: false` rougit en nommant le chemin fautif. (2) La RECIPROQUE est jugee aussi, et elle est plus delicate : une tache `schema: true` dont aucun `path` ne tombe sous `cheminsSchema` n est PAS forcement fautive (une tache peut engager le schema sans nommer le fichier), donc elle ne rougit pas — elle est IMPRIMEE, avec son compte, sous une rubrique qui dit pourquoi elle n est pas refusee. Un avertissement muet serait un vert qui ment. (3) Un temoin ROUGE vu rougir par famille, et un contre-temoin VERT par famille, dont un qui prouve qu une tache SANS `paths` ne rougit pas par vacuite. (4) LA POPULATION EST DE SEPT, PAS D UNE, et elle a ete mesuree sur les 266 taches du registre : `DM-01` (deja FUSIONNEE, `prisma/schema.prisma` et `prisma/migrations/`), `QA-T06`, `DM-03-P`, `SEC-06`, `SEC-03`, `SEC-04` et `GOV-063` portent un chemin de schema avec `schema` non vrai. La reciproque en compte SIX : `INT-T01b`, `INT-T03`, `INT-T05`, `GOV-042`, `GOV-049`, `GOV-050` declarent `schema: true` sans aucun chemin de schema — et celles-la ne sont PAS forcement fautives, d ou le traitement separe du livrable (2). Les sept sont remises droites par le meme mouvement, ou bien la garde les NOMME et la tache qui les remettra droites est ouverte. ⚠️ Que `DM-01` soit deja fusionnee dit le prix de l attente : une tache close porte deja le champ faux. (5) Le champ devient ECRIVABLE par un verbe hors depot, avec motif obligatoire et consignation au journal des reecritures — ou, si l equipe tranche l inverse, la raison de le laisser inecrivable est ecrite la ou le verbe refuse, pour que le prochain ne la redecouvre pas.
+
+**Tests.** `tests/unit/gouvernance/tasks-schema-et-paths.spec.ts`
 
 ### GOV-092 — Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux
 
