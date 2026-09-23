@@ -19,7 +19,8 @@ Sur `main`, `scripts/gates/schema-enums.ts` (GOV-006, `partners:schema:enums`) p
 `liste_litterale_d_etats` au seuil de TROIS noms d'états sur une ligne, et un contre-témoin exécutable y
 déclare légitime la comparaison booléenne à deux états.
 
-Le registre prêtait la même famille à `gov:check`, que GOV-030 écrit. L'y écrire au seuil de DEUX
+Le registre prêtait la même famille à la garde des termes interdits, que GOV-030 écrit
+(`gov:check` à l'époque ; `gov:termes-interdits` depuis `partners/ADR-0018`). L'y écrire au seuil de DEUX
 donnait deux gardes, dans le même job `gate-a`, aux verdicts **opposés** sur la même entrée : la
 comparaison que GOV-006 déclare légitime est exactement celle que GOV-030 condamnait. Toutes deux
 restaient vertes tant que le code ne porte aucune comparaison de ce genre : la divergence était
@@ -84,7 +85,7 @@ formes portent la même propriété.
 ## Ce qui le vérifie
 
 - **Assertion** — `tests/unit/gouvernance/termes-interdits.spec.ts` ·
-  `it('REQ-DM-003 : gov:check ne porte PLUS la famille des listes d’états — ni dans FAMILLES, ni au verdict')` :
+  `it('REQ-DM-003 : gov:termes-interdits ne porte PLUS la famille des listes d’états — ni dans FAMILLES, ni au verdict')` :
   réintroduire la famille dans `gov-check.ts` fait rougir ce contrôle.
 - **Assertion** — `tests/unit/gouvernance/termes-interdits.spec.ts` ·
   `it('REQ-DM-003 : sa portée est une racine, jamais une extension — et tout fichier de la portée est jugé')` :

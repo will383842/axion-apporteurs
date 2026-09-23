@@ -2730,12 +2730,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/sec-07",
+      "pr": 90,
+      "issue": 94,
       "attempts": 0,
       "motif": null,
       "acceptance": "TACHE SENSIBLE — authentification. (1) Les routes appelees par axionia repondent 404 — jamais 401 — sans jeton porteur dedie d'au moins 32 octets, compare en temps constant ; elles sont restreintes par une liste d'adresses autorisees, limitees a 60 appels par minute, et chaque appel est journalise (REQ-SEC-012). 404 PLUTOT QUE 401 : un 401 confirme que la route existe. (2) La route d'interrogation d'attribution rend une reponse MINIMALE — un statut parmi libre, attribuee ou cliente, une echeance eventuelle — et NE REND NI NOM NI ADRESSE DE COURRIEL D'APPORTEUR (REQ-INT-014). Ce qui n'est pas dans la reponse ne peut pas fuir. (3) La reponse est IDENTIQUE en forme et en temps pour un SIREN inconnu et pour un SIREN libre : une difference mesurable est un oracle d'enumeration. (4) TEMOIN A DEUX FACES : un appel sans jeton, puis avec un jeton faux, puis depuis une adresse hors liste, rendent 404 et n'apparaissent dans aucune reponse sous une autre forme ; l'appel autorise rend 200 avec exactement les champs que le contrat declare, et un test de forme refuse tout champ en trop. (5) Le vert imprime le compte des routes reellement confrontees.",
@@ -9528,8 +9528,23 @@
         "package.json",
         "docs/gates.json",
         "scripts/gates/gov-check.ts",
-        "docs/adr/partners/",
-        "tests/unit/gouvernance/un-nom-une-garde.spec.ts"
+        "tests/unit/gouvernance/un-nom-une-garde.spec.ts",
+        "scripts/gates/gov-agents.ts",
+        "scripts/gates/gov-attestation.ts",
+        "scripts/gates/gov-attributions.ts",
+        "scripts/gates/gov-conventions.ts",
+        "scripts/gates/gov-preseance.ts",
+        "scripts/reprise.ts",
+        "scripts/lot/attestation.ts",
+        "tests/unit/gouvernance/attestation-inter-depot.spec.ts",
+        "tests/unit/gouvernance/attributions-resolvent.spec.ts",
+        "tests/unit/gouvernance/termes-interdits.spec.ts",
+        "docs/adr/0018-un-nom-une-garde-gov-check-retire-des-deux-cotes.md",
+        "docs/adr/0011-une-seule-implementation-des-listes-d-etats.md",
+        ".github/workflows/ci.yml",
+        "docs/AFFIRMATIONS-AXIONIA.md",
+        "docs/GLOSSAIRE.md",
+        "packages/contracts/events.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -10539,6 +10554,92 @@
       "branch": "t/journal-108",
       "pr": 109,
       "motif": null
+    },
+    {
+      "id": "GOV-093",
+      "titre": "Le champ `schema` d'une tache et ses `paths` ne sont confrontes par RIEN, et aucun verbe ne sait ecrire ce champ",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-tasks.ts",
+        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, la lentille `schema` de la PR #102 a constate que `GOV-063` porte `\"schema\": false` dans `docs/tasks.json` alors que ses `paths` nomment `packages/contracts/events.ts`. Aucune garde ne rougit : `gov:tasks` ne confronte pas `schema` aux `paths`, et le CHAMP, lui, est bel et bien lu : le decideur de `scripts/lot/revues.ts` ouvre sa decision par `if (entree.tachesSchema) return true;` — le NOM plutot que le numero de ligne, qui pourrit au premier commit et qui obligerait, selon `gov:sonde`, a poser un repere date et signe pour une affirmation du depot LUI-MEME, et `tachesSchema` vaut `t.schema === true`. ⚠️ CETTE PHRASE A DIT L INVERSE jusqu au 2026-09-23 — elle affirmait que `gov:pr` derive `toucheSchema` des seuls fichiers du diff et de `cheminsSchema`, jamais du registre. La lentille `schema` l a mesuree fausse, et la rectification AGGRAVE la tache au lieu de l alleger : le champ n est pas inerte, c est une entree du discriminant, et un `schema: true` force la lentille a lui seul. Ce qui reste vrai, et qui est le sujet : RIEN ne confronte le champ aux `paths`. Le bon comportement a donc ete obtenu ce jour-la par le diff, pas par le registre, et personne ne l aurait su si la lentille ne l avait pas cherche. SECOND VOLET, mesure dans la foulee : `reecrire-champ.mjs` REFUSE d ecrire `schema` (« n est pas un champ ecrivable de tasks.json » ; il ne reecrit que titre, acceptance, tests, sensible, deps, estimateDays) et `reclasser.mjs` ne le connait pas davantage. Le champ existe, il ment, et AUCUN verbe hors depot ne sait le remettre droit : il n est modifiable qu a la main, donc hors de toute trace. A LIVRER. (1) Une famille de `gov:tasks` confronte `schema` aux `paths` : une tache dont un `path` tombe sous un `cheminsSchema` (derive de la §7 de `docs/CHARTE-AGENTS.md`, JAMAIS recopie) et qui porte `schema: false` rougit en nommant le chemin fautif. (2) La RECIPROQUE est jugee aussi, et elle est plus delicate : une tache `schema: true` dont aucun `path` ne tombe sous `cheminsSchema` n est PAS forcement fautive (une tache peut engager le schema sans nommer le fichier), donc elle ne rougit pas — elle est IMPRIMEE, avec son compte, sous une rubrique qui dit pourquoi elle n est pas refusee. Un avertissement muet serait un vert qui ment. (3) Un temoin ROUGE vu rougir par famille, et un contre-temoin VERT par famille, dont un qui prouve qu une tache SANS `paths` ne rougit pas par vacuite. (4) LA POPULATION EST DE SEPT, PAS D UNE, et elle a ete mesuree sur les 266 taches du registre : `DM-01` (deja FUSIONNEE, `prisma/schema.prisma` et `prisma/migrations/`), `QA-T06`, `DM-03-P`, `SEC-06`, `SEC-03`, `SEC-04` et `GOV-063` portent un chemin de schema avec `schema` non vrai. La reciproque en compte SIX : `INT-T01b`, `INT-T03`, `INT-T05`, `GOV-042`, `GOV-049`, `GOV-050` declarent `schema: true` sans aucun chemin de schema — et celles-la ne sont PAS forcement fautives, d ou le traitement separe du livrable (2). Les sept sont remises droites par le meme mouvement, ou bien la garde les NOMME et la tache qui les remettra droites est ouverte. ⚠️ Que `DM-01` soit deja fusionnee dit le prix de l attente : une tache close porte deja le champ faux. (5) Le champ devient ECRIVABLE par un verbe hors depot, avec motif obligatoire et consignation au journal des reecritures — ou, si l equipe tranche l inverse, la raison de le laisser inecrivable est ecrite la ou le verbe refuse, pour que le prochain ne la redecouvre pas.",
+      "tests": {
+        "REQ-GOV-013": [
+          "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-092",
+      "titre": "Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-entite.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts",
+        "config/exemptions-corps-publie.json"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-031",
+        "REQ-CPL-001"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, `pnpm gov:entite --corps-publie 102` rend INDETERMINE (code 2) avec `revisions_non_lues` : « la forge annonce 7 revision(s) du corps et 5 ont ete lues », et la porte A echoue sur cette etape. Rejeu direct de la forge : la connexion `userContentEdits(first:100)` de la PR #102 rend **7 noeuds sur 7 annonces** — la pagination fonctionne et PAGES_MAX n est pas atteint — dont **DEUX portent un `editedAt` et un `diff` NUL** : `2026-09-23T00:21:32Z` et `2026-09-23T00:21:56Z`. `assemblerLecture` les ecarte par `if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue`, l ecart annonce/lu fait tomber le verdict en INDETERMINE. LE DEFAUT N EST PAS L ECART : IL EST DANS LE REMEDE. Le message nomme deux causes et deux remedes, et AUCUN des deux ne s applique. (a) « relance la garde » : la reponse est STABLE, les deux `diff` nuls le sont a chaque appel, mesure trois fois de suite. (b) « releve PAGES_MAX » : une seule page a ete lue, la borne n est pas en cause. Il existe donc une TROISIEME cause, que le docblock de la pagination n a pas prevue : la forge sert `diff: null` quand l edition produit un corps VIDE ou un corps INCHANGE, et les deux revisions ci-dessus sont exactement l une et l autre. PORTEE REELLE, et c est ce qui rend la tache urgente : une PR dont le corps a ete vide une fois, ou re-poste a l identique une fois, ne peut PLUS JAMAIS passer la porte A ; l historique d edition d une forge ne se de-publie pas, et `gov:entite --corps-publie` tourne sur CHAQUE PR. A LIVRER. (1) La troisieme cause est NOMMEE dans le message de `revisions_non_lues`, avec ce qui la produit et le fait qu elle est DEFINITIVE — un remede faux est pire qu un remede absent, il envoie le lecteur rejouer une commande qui ne changera rien, et c est exactement ce qui s est passe le jour de la mesure. (2) Un chemin de sortie EXISTE, et il reutilise le mecanisme deja concu pour l irreparable : `config/exemptions-corps-publie.json` porte un champ `definitive` dont le commentaire dit qu il existe « pour ce qui ne peut pas etre repare ». Une exemption dont l `empreinte` est ABSENTE absout LA REVISION entiere au lieu d une coordonnee ; `controlerRegistreExemptions` la valide avec les memes exigences de forme (motif d au moins 40 caracteres, declarant, date d declaration) et exige `definitive` vrai pour cette forme-la. (3) LE REFUS RESTE LE DEFAUT : sans ligne au registre, une revision illisible laisse le verdict INDETERMINE. Une revision illisible n est JAMAIS reputee propre d office — ce serait rendre vert ce qu on n a pas lu, ce que la garde existe precisement pour refuser. (4) Un horodatage ABSENT continue de refuser SANS chemin de sortie : sans lui aucune exemption ne peut s apparier, et absoudre une revision qu on ne sait pas designer absoudrait aussi toutes les suivantes. (5) Trois temoins ROUGES vus rougir : une revision a `diff` nul sans exemption ; une exemption de revision mal formee (motif trop court, ou `definitive` faux) ; une exemption qui designe un horodatage qui n est celui d aucune revision de la PR visee. Et trois contre-temoins VERTS : la revision exemptee passe ; la meme exemption ne couvre PAS une revision a `diff` nul d une AUTRE PR ; un corps courant porteur d une coordonnee rougit toujours, exemption ou pas. (6) La ligne de registre qui absout les deux revisions de la PR #102 est posee dans la meme PR, avec son motif : un corps vide et un corps re-poste a l identique ne portent aucun texte qui ne soit deja dans la revision voisine, elle-meme lue et jugee propre.",
+      "tests": {
+        "REQ-GOV-031": [
+          "tests/unit/gouvernance/entite-registre.spec.ts"
+        ]
+      },
+      "issue": 111,
+      "owner": "A03"
+    },
+    {
+      "id": "GOV-094",
+      "titre": "La non-vacuite d un banc de preuve est au grain de la FAMILLE : retirer un temoin d une cause NEUVE laisse le banc vert et bavard",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-entite.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-031",
+        "REQ-GOV-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, la lentille `mutation` de la PR #112 a retire du banc de `gov:entite --corps-publie --prove` les temoins des causes NEUVES de la famille `revisions_non_lues`. Le banc est sorti en ZERO et a imprime, mot pour mot, que ses six familles rougissent chacune sur son temoin. ⚠️ DEUX PRECISIONS, sans lesquelles QUI REJOUE CETTE PHRASE N AURA RIEN MESURE, et la seconde s est confirmee toute seule au premier essai. (a) Le temoin qui PORTE la mesure est celui de la revision illisible SANS exemption ; celui de la revision illisible ABSOUTE est un CONTRE-temoin, et le retirer ne fait varier qu un compte de contre-temoins que rien ne compare a rien — la porte A reste a ZERO et reimprime ses six familles, ce qui RESSEMBLE a la reproduction sans en etre une. (b) GOV-092 introduit DEUX causes, pas trois, et la famille en porte QUATRE au total : la quatrieme, la lecture interrompue, est deja gardee par un bloc de consommation DEDIE — neutralisee, la porte A rougit en la nommant. Le remede de cette tache existe donc deja, applique a la main a UNE cause sur quatre, et c est l argument le plus fort en sa faveur. LE BANC DE PORTE A NE SAIT PAS QU IL A CESSE DE MESURER LA CAUSE QUE LA PR EXISTE POUR FERMER. La cause est structurelle et vaut pour tout le depot : le garde-fou de non-vacuite (`sansTemoin`) est au grain de la FAMILLE, or GOV-092 a introduit DEUX causes disjointes DANS la famille `revisions_non_lues`, qui en porte QUATRE au total. Une famille qui garde un seul temoin sur quatre causes reste couverte aux yeux du garde-fou. C EST EXACTEMENT LA FORME DU DEFAUT QUE GOV-092 FERME — un controle qui se tait au lieu de rougir — applique au banc qui prouve GOV-092. A LIVRER. (1) Le grain de la non-vacuite descend de la FAMILLE a la CAUSE : chacun des QUATRE messages distincts que cette famille sait emettre porte son temoin, et le banc REFUSE — sortie non nulle nommant la cause — si l un d eux n a pas de temoin. (2) Le compte des causes se DERIVE du code qui les emet, jamais d une liste tapee a cote : une liste tapee redevient fausse au prochain message ajoute, sans que rien ne le signale, et c est la faute que RM-01 existe pour empecher. (3) La sortie IMPRIME le compte des causes et celui des temoins, cote a cote : un banc qui dit « six familles » quand il en mesure cinq est un vert qui ment, et le lecteur doit pouvoir voir l ecart sans relire le code. (4) Le mutant de la mesure d ouverture est REJOUE et vu rougir : retirer un temoin d une cause neuve fait desormais sortir le banc en non nul en NOMMANT la cause orpheline. (5) Un contre-temoin VERT prouve qu un banc complet passe toujours, et un second qu une famille a cause UNIQUE n est pas rendue plus exigeante par le changement de grain. (6) Le balayage dit combien de familles du depot portent plusieurs causes : si d autres gardes sont dans le meme cas, elles sont NOMMEES avec leur compte, et la tache qui les traitera est ouverte — les fermer toutes ici serait un perimetre que personne n a mesure.",
+      "tests": {
+        "REQ-GOV-031": [
+          "tests/unit/gouvernance/entite-registre.spec.ts"
+        ]
+      }
     }
   ]
 }

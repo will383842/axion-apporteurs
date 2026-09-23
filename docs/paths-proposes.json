@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 263,
-    "pairesEnIntersection": 4277,
-    "cheminsDeclares": 774,
-    "cheminsDistincts": 498,
+    "tachesCouvertes": 266,
+    "pairesEnIntersection": 4286,
+    "cheminsDeclares": 777,
+    "cheminsDistincts": 499,
     "cheminsPartages": 98,
-    "tachesSansAucuneIntersection": 73,
+    "tachesSansAucuneIntersection": 74,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T06",
@@ -81,7 +81,8 @@
       "GOV-085",
       "GOV-086",
       "GOV-087",
-      "UX-P0-01b"
+      "UX-P0-01b",
+      "GOV-093"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -97,15 +98,15 @@
         "taches": 10
       },
       {
+        "chemin": "tests/unit/gouvernance/entite-registre.spec.ts",
+        "taches": 6
+      },
+      {
         "chemin": ".github/workflows/nightly.yml",
         "taches": 5
       },
       {
         "chemin": "docs/contrat/CONTRAT-APPORTEUR-V1.md",
-        "taches": 5
-      },
-      {
-        "chemin": "emails/apporteur/",
         "taches": 5
       }
     ],
@@ -1457,6 +1458,15 @@
     ],
     "GOV-091": [
       "tests/unit/gouvernance/plan-state-frais.spec.ts"
+    ],
+    "GOV-093": [
+      "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
+    ],
+    "GOV-092": [
+      "tests/unit/gouvernance/entite-registre.spec.ts"
+    ],
+    "GOV-094": [
+      "tests/unit/gouvernance/entite-registre.spec.ts"
     ]
   }
 }

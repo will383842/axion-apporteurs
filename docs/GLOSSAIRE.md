@@ -3,12 +3,12 @@
 > Livré par **GOV-006** (REQ-GOV-016, REQ-JUR-027, REQ-DM-038). Un terme canonique par concept, ses synonymes
 > **interdits**, l'enum Prisma qui le porte et la REQ source. Gate `glossaire-enums.spec.ts` : toute colonne de
 > vocabulaire en `String` → rouge ; toute valeur d'enum absente d'ici → rouge ; tout synonyme interdit trouvé dans
-> `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` → rouge (`gov:check`).
+> `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` → rouge (`gov:termes-interdits`).
 >
 > Règle : les listes ci-dessous sont **dérivées** des REQ citées (RM-01). Si une REQ change, ce fichier est régénéré
 > par le `gardien-spec` ; personne n'y ajoute une valeur « en passant ».
 >
-> **Citer un terme interdit : où c'est possible, et où ça ne l'est pas.** L'exemption de citation de `gov:check` se
+> **Citer un terme interdit : où c'est possible, et où ça ne l'est pas.** L'exemption de citation de `gov:termes-interdits` se
 > lit sur la **dernière** extension du nom, et trois grammaires seulement l'accordent : `.md` (prose), `.sql` et
 > `.prisma` (dans un commentaire). **Un fichier `.ts` n'en a aucune** — et c'est la plus grosse population du
 > périmètre : 26 des 49 fichiers lus au 2026-09-22. On n'y écrit donc pas un terme interdit, même pour expliquer
