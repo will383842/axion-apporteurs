@@ -69,6 +69,9 @@ import {
   FAMILLES_CORPS_PUBLIE,
   IBANS_TEMOINS_ETRANGERS,
   IBAN_TEMOIN,
+  PORTEE_DES_NUMEROS_PUBLICS,
+  identifiantsApparriables,
+  identifiantsDuRegistre,
   SIREN_TEMOIN_TIERS,
   TVA_TEMOIN_TIERS,
   caracteresNeutralises,
@@ -1140,34 +1143,42 @@ describe('REQ-GOV-031 — les coordonnées NON françaises, et les deux familles
     }
   });
 
-  it('REQ-GOV-031 — une TVA de TIERS dans du CODE rougit : elle se LIT, elle ne se porte pas', () => {
+  it('REQ-GOV-031 — NOTRE TVA dans du CODE rougit : elle se LIT, elle ne se porte pas', () => {
+    // ⚠️ CE TEST A CHANGÉ DE PORTEUR LE 2026-09-22, ET C'EST LE CORRECTIF LUI-MÊME.
+    // Il exerçait `TVA_TEMOIN_TIERS`, c'est-à-dire la TVA d'un TIERS — et il tenait donc vert
+    // très exactement le défaut mesuré sur `t/int-t09` : 448 refus sur 452 portaient sur des
+    // entreprises tierces rendues par une API publique. Le motif écrit de ce refus est RM-01,
+    // source unique de l'identité de LA SOCIÉTÉ ; le porteur du témoin doit donc être NOUS.
+    const notreTva = UNIVERS_CONFORME.registre.entite.tvaIntracommunautaire;
     const fautes = controler(
-      universAvecFichier(
-        'src/facturation/fournisseur.ts',
-        `export const TVA = '${TVA_TEMOIN_TIERS}';`
-      )
+      universAvecFichier('src/facturation/fournisseur.ts', `export const TVA = '${notreTva}';`)
     );
     expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
-    expect(fautes.some((f) => f.message.includes(TVA_TEMOIN_TIERS))).toBe(true);
+    expect(fautes.some((f) => f.message.includes(notreTva))).toBe(true);
   });
 
-  it('REQ-GOV-031 — un SIREN de TIERS dans du CODE rougit, et le mot-clé est ce qui l’identifie', () => {
+  it('REQ-GOV-031 — NOTRE SIREN dans du CODE rougit, et le mot-clé est ce qui le REPÈRE', () => {
+    const notreSiren = UNIVERS_CONFORME.registre.entite.siren;
     const fautes = controler(
       universAvecFichier(
         'src/apporteur/structure.ts',
-        `export const s = { siren: '${SIREN_TEMOIN_TIERS}' };`
+        `export const s = { siren: '${notreSiren}' };`
       )
     );
     expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
 
-    // Le mot-clé est EXIGÉ, et ce n'est pas une faiblesse : neuf chiffres nus sont trop souvent
-    // autre chose — un horodatage, un identifiant, un montant en centimes. Une forme nue
-    // produirait le bruit qui fait désarmer une garde. C'est une limite ASSUMÉE, donc écrite.
-    expect(
-      controler(
-        universAvecFichier('src/lot/compteur.ts', `export const n = ${SIREN_TEMOIN_TIERS};`)
-      ).map((f) => f.famille)
-    ).not.toContain('coordonnee_en_clair');
+    // Le mot-clé est EXIGÉ pour la famille `coordonnee_en_clair`, et ce n'est pas une faiblesse :
+    // neuf chiffres nus sont trop souvent autre chose — un horodatage, un identifiant, un montant
+    // en centimes. Une forme nue produirait le bruit qui fait désarmer une garde.
+    // ⚠️ MAIS LE NUMÉRO NU N'EST PAS IMPUNI POUR AUTANT, et l'écrire ici évite de relire cette
+    // limite comme une porte : c'est `valeur_recopiee` qui l'attrape, sans mot-clé, parce qu'elle
+    // compare au registre. Les deux familles se recouvrent sur NOS numéros ; sur ceux des tiers,
+    // il n'y a rien à recouvrir.
+    const fautesNues = controler(
+      universAvecFichier('src/lot/compteur.ts', `export const n = ${notreSiren};`)
+    ).map((f) => f.famille);
+    expect(fautesNues).not.toContain('coordonnee_en_clair');
+    expect(fautesNues).toContain('valeur_recopiee');
   });
 
   it('REQ-GOV-031 — CONTRE-TÉMOIN : la PROSE garde le droit de CITER une TVA et un SIREN', () => {
@@ -1175,7 +1186,9 @@ describe('REQ-GOV-031 — les coordonnées NON françaises, et les deux familles
     // un IBAN est un SECRET, refusé PARTOUT ; un SIREN, un SIRET et une TVA sont PUBLICS, lisibles
     // au répertoire des entreprises, et refusés seulement dans du CODE. Exiger d'une spécification
     // qu'elle ne nomme jamais un SIREN rendrait le dossier illisible sans rien protéger.
-    const prose = `Le fournisseur porte la TVA ${TVA_TEMOIN_TIERS} et le SIREN ${SIREN_TEMOIN_TIERS}.`;
+    const notreSiren = UNIVERS_CONFORME.registre.entite.siren;
+    const notreTva = UNIVERS_CONFORME.registre.entite.tvaIntracommunautaire;
+    const prose = `L’entité porte la TVA ${notreTva} et le SIREN ${notreSiren}.`;
     expect(
       controler(universAvecFichier('docs/spec/tiers.md', prose)).map((f) => f.famille)
     ).not.toContain('coordonnee_en_clair');
@@ -1209,6 +1222,245 @@ describe('REQ-GOV-031 — les coordonnées NON françaises, et les deux familles
       `${Object.keys(IBANS_TEMOINS_ETRANGERS).length} IBAN NON français rougissent aussi`
     );
     for (const pays of Object.keys(IBANS_TEMOINS_ETRANGERS)) expect(sortie).toContain(pays);
+  });
+});
+
+/**
+ * ── « LES NÔTRES » CONTRE « LES TIERS » — LA DISTINCTION QUE LE MÉCANISME NE SAVAIT PAS DIRE ───
+ *
+ * 🔴 CE QUI A ÉTÉ MESURÉ SUR `t/int-t09` LE 2026-09-22. La garde rendait **452 défauts**, dont
+ * **448 portaient sur des entreprises TIERCES** — DANONE, la SNCF, EDF, des communes — rendues
+ * par l'API publique `recherche-entreprises` et enregistrées comme fixtures (RM-03 : une fixture
+ * vient du producteur réel). **4 seulement étaient justes** : le SIREN et le SIRET d'AXION IA,
+ * en dur dans un fichier suivi d'un dépôt PUBLIC.
+ *
+ * Le symptôme vaut mieux qu'un argument : **la garde demandait de déplacer le SIREN de DANONE
+ * dans `config/entite.json`**. Un registre d'entité sommé de porter l'identité d'un tiers est la
+ * preuve que le prédicat ne dit pas ce que la règle dit.
+ *
+ * 🔑 LE DÉFAUT EST DANS LE PRÉDICAT, PAS DANS LE PÉRIMÈTRE DE FICHIERS. `FORME_SIREN` refusait un
+ * numéro **parce qu'il suit le mot `siren`/`siret`**, sans regarder DE QUI il s'agit — alors que
+ * le seul motif écrit pour chercher les numéros PUBLICS dans un fichier de code est **RM-01,
+ * source unique de l'identité de la Société** (exclusion (1) de `coordonneesDe`). Le motif parlait
+ * des nôtres ; le code attrapait tout le monde.
+ *
+ * ⚠️ LES TROIS VOIES QUI NE MÈNENT NULLE PART, MESURÉES AVANT D'ÊTRE ÉCARTÉES.
+ *   1. Fabriquer des numéros synthétiques dans les fixtures : la forme ne regarde PAS la clé de
+ *      contrôle — un faux est refusé comme un vrai. On aurait détruit la valeur probante des
+ *      fixtures (RM-03) SANS rendre la garde verte.
+ *   2. Une exemption : `estExemptDe` n'admet que `recopie` et `coordonnee`, et `coordonnee`
+ *      IMPLIQUE `recopie` — l'exemption qui aurait tu les tiers aurait tu AUSSI les deux vrais
+ *      défauts. Le mécanisme ne savait pas dire « les tiers oui, les nôtres non ».
+ *   3. Reclasser le fichier — faire qu'une fixture ne soit plus « du code » au sens de `estCode`.
+ *      C'est la réponse qui vient en premier et c'est la pire : `valeur_recopiee` est gardée par
+ *      le MÊME `estCode`, donc NOS identifiants seraient redevenus légitimes dans une fixture. Le
+ *      remède aurait rouvert exactement la porte que la garde existe pour tenir.
+ *
+ * LA FORME RETENUE : le régime se lit sur la VALEUR, pas sur le nom du fichier. Un numéro public
+ * n'est refusé que s'il est **le nôtre**, et « les nôtres » se DÉRIVE de `config/entite.json`
+ * (RM-01) — la même liste, au même octet, que celle dont se sert `valeur_recopiee`. Un IBAN, lui,
+ * reste un SECRET refusé PARTOUT : rien ici n'y touche.
+ *
+ * LES DEUX FACES COMPTENT AUTANT L'UNE QUE L'AUTRE. Sans la face rouge, on aurait ouvert une porte
+ * au lieu d'affiner une règle ; sans la face verte, on n'aurait rien corrigé.
+ */
+describe('REQ-GOV-031 — un numéro PUBLIC se juge à SON PORTEUR, jamais à son seul mot-clé', () => {
+  // Aucune valeur du monde réel ici (RM-11) : « les nôtres » se lisent dans le registre INJECTÉ,
+  // « les tiers » sont les témoins synthétiques que la garde exporte déjà.
+  const NOTRE_SIREN = UNIVERS_CONFORME.registre.entite.siren;
+  const NOTRE_SIRET = UNIVERS_CONFORME.registre.entite.siret;
+  const NOTRE_TVA = UNIVERS_CONFORME.registre.entite.tvaIntracommunautaire;
+
+  const FIXTURE = 'tests/fixtures/recherche-entreprises/01-raison-sociale-exacte.json';
+
+  it('REQ-GOV-031 — FACE ROUGE : NOTRE SIREN dans une FIXTURE rougit — `valeur_recopiee` reste actif jusque-là', () => {
+    // La contrainte absolue du correctif : nos propres identifiants n'ont rien à faire en dur,
+    // MÊME dans une fixture. Un dépôt PUBLIC ne fait aucune différence entre un fichier de test
+    // et un autre — c'est le seul des 24 fichiers mesurés où la garde avait raison.
+    const fautes = controler(
+      universAvecFichier(FIXTURE, `{ "siren": "${NOTRE_SIREN}", "siret": "${NOTRE_SIRET}" }`)
+    );
+    expect(fautes.map((f) => f.famille)).toContain('valeur_recopiee');
+    expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
+    expect(fautes.some((f) => f.message.includes(NOTRE_SIREN))).toBe(true);
+  });
+
+  it('REQ-GOV-031 — FACE VERTE : le SIREN d’un TIERS, DANS LA MÊME FIXTURE, reste vert', () => {
+    // Le même fichier, le même mot-clé, la même forme : seule change l'identité du porteur. C'est
+    // la seconde face, et elle est ce qui distingue « affiner une règle » d'« ouvrir une porte » —
+    // sans elle, on ne saurait pas si la garde discrimine ou si elle s'est tue.
+    const fautes = controler(
+      universAvecFichier(
+        FIXTURE,
+        `{ "siren": "${SIREN_TEMOIN_TIERS}", "tva": "${TVA_TEMOIN_TIERS}" }`
+      )
+    );
+    expect(fautes.map((f) => f.famille)).not.toContain('coordonnee_en_clair');
+    expect(fautes.map((f) => f.famille)).not.toContain('valeur_recopiee');
+  });
+
+  it('REQ-GOV-031 — FACE VERTE : le SIREN et la TVA d’un TIERS dans un fichier de CODE restent verts', () => {
+    // Un mandataire d'API publique ENREGISTRE ce que le tiers lui rend : c'est la donnée lue, pas
+    // une identité recopiée. RM-01 n'a rien à en dire — il n'existe pas de « source unique » de
+    // l'identité de DANONE dans ce dépôt, et lui en réclamer une était le symptôme du défaut.
+    expect(
+      controler(
+        universAvecFichier(
+          'src/server/integrations/recherche-entreprises/cas-enregistres.ts',
+          `export const cas = { siren: '${SIREN_TEMOIN_TIERS}', tva: '${TVA_TEMOIN_TIERS}' };`
+        )
+      ).map((f) => f.famille)
+    ).not.toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-GOV-031 — FACE ROUGE : NOTRE TVA dans la MÊME fixture rougit aussi', () => {
+    // Les trois identifiants publics du registre suivent le même régime : ce n'est pas le SIREN
+    // qui est gardé, c'est « ce que le registre arrête ». Sans ce cas, on pourrait neutraliser
+    // `FORME_TVA_FR` sans qu'aucune face ne change de couleur — le mutant que la lentille
+    // `mutation` avait déjà vu survivre une fois.
+    expect(
+      controler(universAvecFichier(FIXTURE, `{ "tva": "${NOTRE_TVA}" }`)).map((f) => f.famille)
+    ).toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-GOV-031 — NOTRE SIRET porte NOTRE SIREN : la reconnaissance est par CONTENANCE, pas par égalité', () => {
+    // `20407031100017` CONTIENT `204070311`. Une comparaison par égalité stricte laisserait passer
+    // l'établissement alors que c'est la MÊME entité — et c'est la forme sous laquelle un registre
+    // d'entreprises rend nos propres coordonnées. `valeur_recopiee` compare déjà par `includes` :
+    // les deux familles doivent lire la même liste DE LA MÊME FAÇON, sans quoi l'une absoudrait ce
+    // que l'autre refuse.
+    const fautes = controler(universAvecFichier(FIXTURE, `{ "siret": "${NOTRE_SIRET}" }`));
+    expect(fautes.map((f) => f.famille)).toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-GOV-031 — « les nôtres » se DÉRIVE du registre : renverser le registre DÉPLACE le rouge', () => {
+    // RM-01 prouvé par MUTATION plutôt qu'affirmé : si la liste était recopiée dans la garde, le
+    // rouge resterait accroché à l'ancien numéro. Ici le registre change, et le verdict suit.
+    const contenu = `{ "siren": "${SIREN_TEMOIN_TIERS}" }`;
+
+    expect(controler(universAvecFichier(FIXTURE, contenu)).map((f) => f.famille)).not.toContain(
+      'coordonnee_en_clair'
+    );
+
+    const renverse = structuredClone(UNIVERS_CONFORME) as Univers;
+    renverse.registre.entite.siren = SIREN_TEMOIN_TIERS;
+    renverse.fichiers.push({ chemin: FIXTURE, contenu });
+    expect(controler(renverse).map((f) => f.famille)).toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-GOV-031 — le régime du SECRET est INTACT : un IBAN rougit dans une fixture de TIERS', () => {
+    // Non-régression du sens qu'on oublie. La distinction posée ici ne vaut QUE pour les numéros
+    // publics : un IBAN est refusé partout, quel qu'en soit le porteur, parce qu'un IBAN divulgué
+    // ne se reprend pas.
+    expect(
+      controler(universAvecFichier(FIXTURE, `{ "iban": "${IBAN_TEMOIN}" }`)).map((f) => f.famille)
+    ).toContain('coordonnee_en_clair');
+  });
+
+  it('REQ-GOV-031 — `coordonneesDe` REFUSE de juger du code sans savoir qui est « nous »', () => {
+    // Une liste absente rendrait un vert silencieux sur NOS numéros : le sens dangereux de
+    // l'erreur, dans une garde de publication. Elle LÈVE, comme `ibanAvecSeparateur` lève sur une
+    // entrée qu'elle ne sait pas juger — une réparation silencieuse ferait passer le défaut pour
+    // un succès. Le type l'interdit déjà à la compilation ; ce témoin tient le cas où quelqu'un
+    // passe outre.
+    const sansType = coordonneesDe as unknown as (
+      c: string,
+      d: boolean,
+      ch?: string,
+      n?: readonly string[]
+    ) => string[];
+    expect(() => sansType(`{ "siren": "${NOTRE_SIREN}" }`, true, FIXTURE)).toThrow(
+      /identifiants de l’entité/i
+    );
+  });
+
+  it('REQ-GOV-031 — la PORTÉE des numéros publics est DÉCLARÉE à UN seul endroit, et imprimée dans le vert', () => {
+    // « Aucune coordonnée » sans sa portée se lit comme une absence prouvée. Le vert dit de QUI
+    // les numéros publics sont cherchés, et COMBIEN d'identifiants APPARIABLES le registre en
+    // donne.
+    //
+    // 🔴 CE TEST A ÉTÉ REFAIT LE 2026-09-22, PARCE QU'IL NE GARDAIT RIEN. Il se contentait de
+    // `toMatch(/\d+ identifiant/)` : une CONSTANTE y survivait. La lentille `securite` l'a
+    // démontré par mutation — `…length` remplacé par un `0` littéral laissait la spec VERTE et
+    // `--prove` en zéro, pendant que la garde imprimait « 0 identifiant(s) confronté(s) » en en
+    // confrontant quatre. Un compteur qu'aucun témoin n'ancre n'est pas une mesure, c'est une
+    // décoration — et celui-ci était censé rendre visible une CÉCITÉ.
+    //
+    // L'ancrage est donc à DEUX SENS, parce que le mutant survivait dans les deux :
+    //   — il ne peut pas être NUL pendant que quatre numéros sont cherchés (ce test-ci) ;
+    //   — il ne peut pas être NON NUL pendant que zéro l'est (les deux tests suivants).
+    const { code, sortie } = lancer();
+    expect(code).toBe(0);
+    expect(sortie).toContain(PORTEE_DES_NUMEROS_PUBLICS);
+
+    // La mesure de référence est calculée ICI, par le banc d'essai, et non lue dans la sortie :
+    // un mutant posé sur la ligne d'impression fait alors diverger les deux.
+    const attendu = identifiantsApparriables(registreDuDepot()).length;
+    expect(
+      attendu,
+      'le dépôt réel doit avoir au moins un identifiant public appariable'
+    ).toBeGreaterThan(0);
+    expect(sortie).toContain(`${attendu} identifiant(s) du registre confronté(s)`);
+  });
+
+  it('REQ-GOV-031 — le compte ne compte QUE l’appariable : le domaine servi est un identifiant, pas un numéro', () => {
+    // L'ancrage indépendant de la dérivation : la réponse est connue PAR CONSTRUCTION, pas
+    // recalculée par le même chemin que le code. `domaines.servi` est bien `identifiant: true` —
+    // sa recopie est une faute, et `valeur_recopiee` continue de la juger — mais AUCUNE forme
+    // publique ne peut l'apparier. Le compter parmi les numéros cherchés, c'est annoncer une
+    // surveillance qui n'existe pas.
+    const registre = structuredClone(UNIVERS_CONFORME.registre) as Registre;
+    registre.entite.siret = SENTINELLE;
+    registre.entite.tvaIntracommunautaire = SENTINELLE;
+
+    // Trois identifiants non sentinelle restent au registre : le SIREN, le domaine servi… et
+    // c'est tout ce qui compte ici. UN SEUL est appariable.
+    expect(identifiantsDuRegistre(registre).length).toBeGreaterThan(1);
+    expect(identifiantsApparriables(registre).map((x) => x.champ.cle)).toEqual(['entite.siren']);
+  });
+
+  it('REQ-GOV-031 — ZÉRO référence publique n’est pas un dépôt propre : la garde REFUSE au lieu de verdir', () => {
+    // 🔴 LA RÉGRESSION QUE LA LENTILLE `exactitude` A MESURÉE, ET QUI A FAIT REFUSER #107.
+    // En unifiant la SOURCE des deux familles — le bon geste — j'avais aussi unifié leur MODE DE
+    // PANNE : registre sans référence ⇒ plus rien n'est cherché, EN SILENCE. Avant le correctif,
+    // l'arme publique ne dépendait pas du registre, donc elle attrapait encore nos numéros dans
+    // cet état-là.
+    //
+    // L'état en question est LÉGITIME et il arrivera : une décision rouverte remet ses champs à
+    // la sentinelle (`valeur_sans_decision` l'exige dans l'autre sens). C'est très exactement le
+    // moment où l'arme publique n'a plus de cible — donc le moment où il ne faut pas dire « rien
+    // trouvé ». Ne pas avoir de référence n'est pas avoir vérifié : c'est le même principe que
+    // `source_illisible`, déjà tenu par ce fichier.
+    const registre = structuredClone(UNIVERS_CONFORME.registre) as Registre;
+    registre.entite.siren = SENTINELLE;
+    registre.entite.siret = SENTINELLE;
+    registre.entite.tvaIntracommunautaire = SENTINELLE;
+    expect(identifiantsApparriables(registre)).toEqual([]);
+    // Le domaine servi, lui, est toujours là : le refus ne doit donc PAS se lire « le registre
+    // est vide », il se lit « aucun identifiant APPARIABLE ».
+    expect(identifiantsDuRegistre(registre).length).toBeGreaterThan(0);
+
+    const u = structuredClone(UNIVERS_CONFORME) as Univers;
+    u.registre = registre;
+    u.fichiers.push({
+      chemin: 'src/facturation/entete.ts',
+      contenu: `export const SIREN = '${UNIVERS_CONFORME.registre.entite.siren}';\n`,
+    });
+    const fautes = controler(u);
+    expect(fautes.map((f) => f.famille)).toContain('aucune_reference_publique');
+    expect(
+      fautes.some((f) => f.famille === 'aucune_reference_publique' && /appariable/i.test(f.message))
+    ).toBe(true);
+  });
+
+  it('REQ-GOV-031 — le refus est une FAMILLE, pas une levée : il passe par le canal de refus et il est déclaré', () => {
+    // Le choix de forme, et il n'est pas cosmétique. `coordonneesDe` LÈVE quand on lui demande de
+    // juger du code sans la liste : c'est une erreur de PROGRAMMATION, un appelant a oublié un
+    // argument. Ici, c'est un fait sur l'UNIVERS JUGÉ — donc un verdict, donc une famille. Une
+    // levée sortirait du canal de refus, ne s'imprimerait pas avec les autres, n'aurait pas de
+    // témoin dans `--prove`, et créerait exactement le défaut que GOV-067 existe pour fermer :
+    // « un sous-module lève une erreur SANS famille de refus ».
+    expect(FAMILLES).toContain('aucune_reference_publique');
   });
 });
 
@@ -2702,7 +2954,11 @@ describe('REQ-GOV-031 — ce que `gov:entite` REGARDE se DÉRIVE, il ne se tape 
     'une valeur masquée ou à clé fausse ; encodée (base64, hexadécimal, entité HTML, pourcentage, quoted-printable, ' +
     "échappement JSON, flux de PDF ou contenu compressé qui forment de l'UTF-8 valide) ; coupée ou espacée autrement " +
     "(saut de ligne, tabulation, deux espaces, point, caractère invisible, groupes d'une autre longueur) ; écrite en " +
-    "pleine chasse ou en homoglyphes ; portée par le NOM d'un fichier. Cette liste n'est pas close.";
+    "pleine chasse ou en homoglyphes ; portée par le NOM d'un fichier. Côté numéros PUBLICS, deux " +
+    'angles morts de plus, nommés le 2026-09-22 et identiques avant comme après ce lot : la forme ' +
+    'de TVA est sensible à la CASSE, donc une TVA hors capitales lui échappe — seule ' +
+    '`valeur_recopiee` la rattrape ; et un groupe de chiffres PLUS LONG que la fenêtre attendue ' +
+    "n'ouvre aucune frontière de mot, donc n'est pas apparié. Cette liste n'est pas close.";
 
   it('REQ-GOV-031 — une population GÉNÉRÉE : chaque fichier porteur est NOMMÉ, puis la même population propre sort VERTE, comptée comme git, limite écrite', () => {
     // Toutes les extensions d'une et deux lettres ; au-delà, un ÉCHANTILLON — une branche qui écarte

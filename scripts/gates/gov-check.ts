@@ -771,6 +771,14 @@ const REQ_INT_004_FIXTURE =
 /**
  * Les TOURNURES de `docs/GLOSSAIRE.md` que la garde doit savoir lire, au plus court. Ses racines et
  * ses modèles refusés sont assérés ÉGAUX à ceux du glossaire réel par `termes-interdits.spec.ts`.
+ *
+ * §5 porte DEUX blocs de synonymes, et c'est voulu : le glossaire réel en porte deux depuis le
+ * 2026-09-22. Le premier est SEC — trois champs d'enveloppe dont le registre ne réclame le jeton
+ * pour aucun autre rôle. Le second est SOUS CONDITION — `eventId` et `eventType`, que le même §5
+ * épelle comme les colonnes de `EvenementRecu` (REQ-DM-036, tâche SEC-06), et `schemaVersion`, que
+ * REQ-QA-007 réclame : un jeton attribué AUSSI à un autre rôle ne peut pas porter un interdit sec.
+ * La table de réception, au-dessus, épelle ces colonnes : elle est ici pour que le contre-témoin de
+ * la colonne Prisma soit jugé contre un glossaire qui la prescrit réellement.
  */
 const GLOSSAIRE_FIXTURE = [
   '# Glossaire — Axion Partners',
@@ -792,10 +800,13 @@ const GLOSSAIRE_FIXTURE = [
   'Table de réception : `{source enum {axionia, docuseal}, eventId unique par source,',
   'eventType, payloadHash}` (REQ-DM-036).',
   '',
-  'Synonymes interdits : `eventId`, `eventType`, `schemaVersion` — la forme camelCase des champs',
-  "d'enveloppe ; `payment.received`, `refund.issued`, `invoice.issued`, `devis.signed`,",
-  "`client.created` ; `Invoice`, `Refund`, `PaymentScheduleProfile` — des modèles supprimés d'axionia",
-  "qu'aucun événement ne référence.",
+  'Synonymes interdits : `occurredAt`, `emittedAt`, `subjectRef` ; `payment.received`,',
+  '`refund.issued`, `invoice.issued`, `devis.signed`, `client.created` ; `Invoice`, `Refund`,',
+  "`PaymentScheduleProfile` — des modèles supprimés d'axionia qu'aucun événement ne référence.",
+  '',
+  "Synonymes interdits : `eventId` dans l'enveloppe de fil, `eventType` dans l'enveloppe de fil,",
+  "`schemaVersion` dans l'enveloppe de fil — trois jetons que le registre attribue AUSSI à un autre",
+  "rôle, donc trois interdits que la garde n'exerce pas et qu'elle imprime.",
   '',
   '## 7. Rôles console',
   '',
@@ -1089,6 +1100,17 @@ export const TEMOINS: Temoin[] = [
     quoi: '`qualificateur` employé comme un rôle',
     vue: () => avec('src/server/roles.ts', "const role = 'qualificateur';"),
   },
+  {
+    // LA FACE ROUGE DE L'ARBITRAGE DU 2026-09-22 (GOV-088, docs/GLOSSAIRE.md §5). Sa face verte est
+    // le contre-témoin de la colonne Prisma de `EvenementRecu`, plus bas : l'une ne vaut que par
+    // l'autre. `occurredAt` est un champ d'enveloppe (REQ-INT-003) dont AUCUNE autre exigence ne
+    // réclame le jeton — c'est ce qui lui laisse un interdit SEC là où `eventId` n'en porte plus.
+    id: 'enveloppe_camelcase_hors_contrat',
+    famille: 'synonyme_interdit_du_glossaire',
+    quoi: "un champ d'enveloppe en camelCase dont le registre ne réclame le jeton pour rien d'autre",
+    vue: () =>
+      avec('src/server/integrations/emetteur.ts', 'const enveloppe = { occurredAt: quand };'),
+  },
 ];
 
 type ContreTemoin = { quoi: string; vue: () => Vue };
@@ -1203,6 +1225,19 @@ export const CONTRE_TEMOINS: ContreTemoin[] = [
   {
     quoi: 'le terme canonique que le glossaire prescrit',
     vue: () => avec('src/server/roles.ts', "const role = 'qualifieur';"),
+  },
+  {
+    // LA FACE VERTE DE L'ARBITRAGE DU 2026-09-22 (docs/GLOSSAIRE.md §5). Ni commentaire ni accent
+    // grave : ce fichier est vert parce que l'interdit est ÉTROIT, jamais parce qu'on l'a exempté.
+    // C'est la colonne que SEC-06 écrira, dans la casse que `docs/CONVENTIONS.md` §1 impose au
+    // stockage. Sa face rouge — un champ d'enveloppe en camelCase — est tenue par
+    // `termes-interdits.spec.ts`, qui juge les deux faces contre le glossaire RÉEL.
+    quoi: "la colonne Prisma de `EvenementRecu`, telle que REQ-DM-036 et §5 du glossaire l'épellent",
+    vue: () =>
+      avec(
+        'prisma/schema.prisma',
+        'model EvenementRecu {\n' + '  eventId   String @unique\n' + '  eventType String\n' + '}\n'
+      ),
   },
 ];
 
