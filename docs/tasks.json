@@ -8997,7 +8997,8 @@
         "scripts/prevol.ts",
         "scripts/gates/gov-etat.ts",
         "tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "docs/CONVENTIONS.md"
       ],
       "schema": false,
       "sensible": [],

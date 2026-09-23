@@ -19,16 +19,23 @@
  * tests et `req:check` passent AVANT
  * `gov:etat`), parce qu'un pré-vol qui mesure dans un autre ordre ne prédit pas ce que la CI rendra.
  *
- * 🔑 ET CE N'EST PAS LA MÊME LISTE QUE LE SCRIPT `gov:check` DE `package.json`. L'acceptation de
- * GOV-047 nomme ce script comme source possible ; la mesure du 2026-09-22 dit de ne pas le suivre.
- * La chaîne `gov:check` enchaîne **17** gardes ; le job `gate-a` en joue **65**. Les 48 absentes de
- * la chaîne comprennent chaque mode `:prove`, `lint`, `format:check`, `typecheck`, `test`,
- * `req:check` — et `gov:termes-interdits`, qui est BLOQUANTE en CI. Le nom `gov:check` désigne deux
- * choses dans ce dépôt (la garde des termes interdits au registre `docs/gates.json`, et cette
- * chaîne-là), homonymie que l'acceptation de GOV-030 renvoie à un ADR. Un pré-vol dérivé de la
- * chaîne aurait rendu VERT là où la CI rougit, sur la garde même dont le rouge imprime le nom de
- * l'autre. C'est pour cela que la source est `ci.yml` : c'est le seul endroit où soit écrit ce qui
- * bloque réellement une demande de fusion.
+ * 🔑 ET CE N'EST PAS LA MÊME LISTE QUE LA CHAÎNE `gov:partiel` DE `package.json`. L'acceptation de
+ * GOV-047 nomme cette chaîne comme source possible ; la mesure du 2026-09-22 dit de ne pas la
+ * suivre. Elle n'enchaîne qu'une PART des gardes que `gate-a` joue — son nom le dit —, et ce
+ * qu'elle laisse dehors comprend chaque mode `:prove`, `lint`, `format:check`, `typecheck`,
+ * `test`, `req:check`, et `gov:termes-interdits`, qui est BLOQUANTE en CI. Un pré-vol dérivé de la
+ * chaîne aurait donc rendu VERT là où la CI rougit — sur la garde même dont le rouge imprimait le
+ * nom de l'autre, car `gov:check` a désigné deux choses dans ce dépôt. `partners/ADR-0018`
+ * (accepté) a retiré le nom des DEUX côtés : la chaîne s'appelle `gov:partiel`, la garde
+ * `gov:termes-interdits`. C'est pour cela que la source est `ci.yml` : c'est le seul endroit où
+ * soit écrit ce qui bloque réellement une demande de fusion.
+ *
+ * ⚠️ AUCUN DES DEUX COMPTES NE S'ÉCRIT ICI, ET C'EST UNE CORRECTION. La première rédaction de ce
+ * paragraphe en posait trois — « 17 », « 65 », « 48 absentes » — et deux étaient faux le jour même
+ * où ils ont été tapés. Les listes se comptent elles-mêmes : `pnpm prevol --liste` rend celle de
+ * `gate-a` avec les étapes écartées et leur motif, `package.json` porte la chaîne. Un total posé à
+ * côté d'une liste redevient faux au premier maillon ajouté — c'est exactement ce que la note de
+ * `NOM_DU_SCRIPT`, plus bas dans ce fichier, condamne.
  *
  * Trois familles d'étapes de `gate-a` ne sont PAS jouées ici, et chacune est NOMMÉE dans la sortie
  * plutôt que tue :
@@ -40,8 +47,10 @@
  *
  * UNE SEULE SUBSTITUTION DE SHELL EST TOLÉRÉE, et le reste échoue FERMÉ. `gov:etat` reçoit en CI
  * `--now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"`. Cette substitution-là est remplacée par l'instant
- * courant. Toute AUTRE écriture `$(…)` rougit au lieu d'être devinée : exécuter à l'aveugle la
- * commande qu'on n'a pas comprise est la manière connue de rendre un vert sans mesure.
+ * courant. Tout AUTRE `$` et tout accent grave rougit au lieu d'être deviné : exécuter à l'aveugle
+ * la commande qu'on n'a pas comprise est la manière connue de rendre un vert sans mesure. Le
+ * filtre n'ÉNUMÈRE pas les formes — il n'en connaissait qu'une, `$(…)`, quand `/bin/sh` en
+ * substitue quatre, et les trois autres passaient. Énumérer, c'est en oublier une.
  *
  * ── CE QUE LE PRÉ-VOL FAIT EN PLUS, ET QUE LA CI NE PEUT PAS FAIRE ──────────────────────────
  *
@@ -99,7 +108,8 @@
  * rend TOUTES. Un pré-vol qui s'arrête au premier rouge se paie en autant d'allers-retours que de
  * fautes ; celui-ci se paie une fois.
  *
- * Ses QUATRE sorties non nulles sont déclarées au registre des refus (REQ-GOV-032,
+ * Ses sorties non nulles — le compte est au registre, il ne se recopie pas ici — sont déclarées au
+ * registre des refus (REQ-GOV-032,
  * `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`) et exercées par
  * `tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts`.
  */
@@ -111,6 +121,15 @@ import { fichiersSuivisOuRefus } from './lot/fichiers-suivis';
 
 export const CI = '.github/workflows/ci.yml';
 export const SUBSTITUTION_TOLEREE = '$(date -u +%Y-%m-%dT%H:%M:%SZ)';
+
+/**
+ * LE JOB dont les étapes font la porte A — la SEULE chose que ce script ne puisse pas dériver :
+ * elle EST l'ancre de la dérivation. Elle est donc CONFRONTÉE à `ci.yml` par
+ * `tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts`, et un fichier qui ne la déclare pas
+ * fait REFUSER le pré-vol. Prendre « le premier bloc `steps:` venu » est ce qui, mesuré le
+ * 2026-09-23, faisait passer l'étape d'un AUTRE job à `spawnSync(…, { shell: true })`.
+ */
+export const JOB_DE_LA_PORTE_A = 'gate-a';
 
 /**
  * Le nom du script que les porteurs ORDONNENT, et qui est le SUJET de ce balayage. Il n'est pas
@@ -172,9 +191,12 @@ export const BACKLOG_ET_SES_VUES: Ecarte[] = [
  * NOMMER N'EST PAS PRESCRIRE — la troisième erreur de mesure, et elle est la mienne.
  *
  * L'acceptation de GOV-047 annonce SIX porteurs ; ils sont SEPT depuis que `partners/ADR-0018` a
- * atterri. Le seul critère qu'une machine sache appliquer — « le fichier écrit `pnpm <script>` » —
- * en rend QUINZE sur le dépôt réel. Les HUIT en trop ne prescrivent rien à personne, et chacun
- * tombe sous une RACINE, pas sous une liste nominative :
+ * atterri, et cette liste-là est FIGÉE par le banc — un huitième prescripteur fait rougir avant de
+ * s'ajouter en silence. Le seul critère qu'une machine sache appliquer — « le fichier écrit
+ * `pnpm <script>` » — en rend DAVANTAGE sur le dépôt réel ; le balayage imprime les deux comptes,
+ * et aucun des deux ne se recopie ici : posé à côté d'une liste, il redevient faux au premier
+ * porteur ajouté. Ceux en trop ne prescrivent rien à personne, et chacun tombe sous une RACINE,
+ * pas sous une liste nominative :
  *
  *   — le script lui-même : son mode d'emploi n'est pas un ordre, il EST la commande ;
  *   — `tests/**` : un test JUGE la commande, il ne l'impose à aucun agent ;
@@ -418,22 +440,60 @@ export function causeProbable(
 // ── la lecture de `ci.yml` ────────────────────────────────────────────────────
 
 /**
- * Le job `gate-a` de `ci.yml`, découpé en étapes. On lit le bloc `steps:` du seul job du fichier ;
- * si un second job apparaissait, le découpage s'arrêterait à lui plutôt que de lire ses étapes
- * comme celles de `gate-a` — un ordre mesuré sur deux jobs mélangés ne veut plus rien dire.
+ * Le job `${JOB_DE_LA_PORTE_A}` de `ci.yml`, découpé en étapes — et TROIS refus plutôt qu'un
+ * silence.
+ *
+ * 🔴 CE QUE CETTE FONCTION A FAIT DE FAUX, MESURÉ LE 2026-09-23 DANS DES DÉPÔTS JETABLES. Elle
+ * prenait le PREMIER bloc `steps:` du fichier, quel que fût le job, et le lisait jusqu'à la FIN
+ * du fichier ; et elle exigeait une séquence à SIX espaces sans jamais refuser quand elle n'en
+ * trouvait aucune. D'où deux verts qui mentaient :
+ *   — un `ci.yml` valide dont la séquence est à la même indentation que sa clé rendait ZÉRO
+ *     étape, puis « ✅ PRÉ-VOL VERT », code 0. C'est le « vert là où la CI rougit » que l'en-tête
+ *     de ce fichier promet d'empêcher ;
+ *   — un job placé AVANT `${JOB_DE_LA_PORTE_A}` fournissait ses étapes à `lancer()`, qui les
+ *     passe à `spawnSync(…, { shell: true })` — sur la machine du relecteur venu lancer
+ *     `pnpm prevol` avant de lire le diff.
+ *
+ * Ce qui les ferme, et qu'on ne peut pas obtenir d'un commentaire :
+ *   — le job est trouvé par son NOM, et son corps s'arrête à la clé suivante de même niveau ;
+ *   — l'indentation de la séquence est LUE dans le fichier, jamais supposée (RM-01) ;
+ *   — une dérivation qui rend zéro étape JOUABLE REFUSE. « Je n'ai rien trouvé à jouer » et
+ *     « tout est vert » sont deux phrases différentes, et une seule des deux autorise à pousser.
  */
 export function etapesDeLaPorteA(texte: string): { jouees: Etape[]; ecartees: Ecarte[] } {
-  const debut = texte.indexOf('\n    steps:\n');
-  if (debut < 0) {
+  const ancre = `\n  ${JOB_DE_LA_PORTE_A}:\n`;
+  const debutDuJob = texte.indexOf(ancre);
+  if (debutDuJob < 0) {
+    console.error(
+      `❌ prevol — \`${CI}\` : aucun job \`${JOB_DE_LA_PORTE_A}\` trouvé. Jouer les étapes du ` +
+        `premier job venu reviendrait à mesurer autre chose que la porte A — et à lancer sa ` +
+        `commande sur cette machine.`
+    );
+    process.exit(1);
+  }
+  // Le corps du job s'arrête à la première ligne moins indentée que lui : le job SUIVANT, ou la
+  // clé de premier niveau qui suit `jobs:`. Sans cette borne, `slice()` allait jusqu'à la fin.
+  const apresLAncre = texte.slice(debutDuJob + ancre.length);
+  const finDuJob = apresLAncre.search(/^ {0,3}\S/m);
+  const corpsDuJob = finDuJob < 0 ? apresLAncre : apresLAncre.slice(0, finDuJob);
+
+  const cleDesEtapes = /^[ \t]+steps:[ \t]*$/m.exec(corpsDuJob);
+  if (cleDesEtapes === null) {
     console.error(
       `❌ prevol — \`${CI}\` : aucun bloc \`steps:\` de job trouvé. La porte A n'a pas de source.`
     );
     process.exit(1);
   }
-  const corps = texte.slice(debut);
+  const corps = corpsDuJob.slice(cleDesEtapes.index + cleDesEtapes[0].length);
+  // L'indentation de la séquence est celle de son PREMIER tiret, lue là où elle est écrite. Un
+  // `6` tapé ici était une seconde source : le jour où `ci.yml` change de retrait, il rendait une
+  // liste vide — et une liste vide ne rougissait pas.
+  const tiret = /^([ \t]*)- /m.exec(corps);
+  const blocs = tiret === null ? [] : corps.split(new RegExp(`^${tiret[1]!}- `, 'm')).slice(1);
+
   const jouees: Etape[] = [];
   const ecartees: Ecarte[] = [];
-  for (const bloc of corps.split(/^ {6}- /m).slice(1)) {
+  for (const bloc of blocs) {
     const run = /^[ \t]*run:[ \t]*(.+)$/m.exec(bloc)?.[1]?.trim();
     // Une étape de `ci.yml` n'est pas tenue de porter un `name:` : on la désigne alors par ce qui
     // l'identifie vraiment — son `uses:` ou son `run:`. Un tiret ne se retrouve pas dans le fichier.
@@ -459,7 +519,13 @@ export function etapesDeLaPorteA(texte: string): { jouees: Etape[]; ecartees: Ec
     const commande = run
       .split(SUBSTITUTION_TOLEREE)
       .join(new Date().toISOString().replace(/\.\d+Z$/, 'Z'));
-    if (commande.includes('$(')) {
+    // ÉCHEC FERMÉ, ET SANS ÉNUMÉRER LES FORMES. `lancer()` passe cette chaîne à
+    // `spawnSync(…, { shell: true })`, c'est-à-dire à `/bin/sh` sous Linux et macOS, où QUATRE
+    // écritures substituent : `$(…)`, l'accent grave, `$VAR` et `${…}`. Filtrer sur `$(` seul —
+    // ce que faisait la version précédente — en laissait passer trois. On ne liste donc pas ce
+    // qu'on refuse : on refuse tout `$` et tout accent grave qui SURVIT au remplacement de la
+    // seule substitution tolérée. Énumérer les formes, c'est en oublier une.
+    if (/[$`]/.test(commande)) {
       console.error(
         `❌ prevol — l'étape « ${nom} » porte une substitution de shell que ce script ne sait pas lire :\n` +
           `   ${run}\n` +
@@ -468,6 +534,17 @@ export function etapesDeLaPorteA(texte: string): { jouees: Etape[]; ecartees: Ec
       process.exit(1);
     }
     jouees.push({ nom, commande });
+  }
+  // 🔑 LE REFUS QUI MANQUAIT. Zéro étape jouable n'est pas un dépôt sain : c'est une dérivation
+  // qui n'a rien compris à son fichier. Se taire ici, c'est enchaîner sur « ✅ PRÉ-VOL VERT »
+  // après n'avoir mesuré que les quatre rendus locaux.
+  if (jouees.length === 0) {
+    console.error(
+      `❌ prevol — \`${CI}\`, job \`${JOB_DE_LA_PORTE_A}\` : AUCUNE étape jouable dérivée ` +
+        `(${blocs.length} étape(s) lue(s), ${ecartees.length} écartée(s)). Sans étape, ce ` +
+        `pré-vol ne mesure rien, et son vert se lirait « la porte A ne découvrira rien ».`
+    );
+    process.exit(1);
   }
   return { jouees, ecartees };
 }

@@ -22,9 +22,9 @@
  *
  * CE QUE CE FICHIER PROUVE. Le balayage est jugé sur des entrées INJECTÉES (RM-11) : périmètre,
  * lecteur et scripts déclarés sont des paramètres, donc les deux sens sont éprouvables sans toucher
- * au dépôt. Les QUATRE sorties non nulles du script, déclarées à zéro témoin au registre des refus
- * (REQ-GOV-032) quand il est né, sont exercées ici sur le BINAIRE, dans des dépôts jetables : c'est
- * le banc que ce registre réclamait en toutes lettres.
+ * au dépôt. Les sorties non nulles du script — leur compte est au registre des refus, il ne se
+ * recopie pas ici —, déclarées à zéro témoin (REQ-GOV-032) quand il est né, sont exercées ici sur
+ * le BINAIRE, dans des dépôts jetables : c'est le banc que ce registre réclamait en toutes lettres.
  *
  * CE QU'IL NE PROUVE PAS, ET C'EST DÉLIBÉRÉ. Il ne joue jamais la porte A réelle : un pré-vol
  * complet dure ≈ 25 min, dont ≈ 14 min de `pnpm test`, et une suite qui s'appelle elle-même ne
@@ -47,6 +47,8 @@ import { dirname, join, resolve } from 'node:path';
 import {
   BACKLOG_ET_SES_VUES,
   CI,
+  type Etape,
+  JOB_DE_LA_PORTE_A,
   NOM_DU_SCRIPT,
   RACINES_DU_RECIT,
   SUBSTITUTION_TOLEREE,
@@ -300,24 +302,20 @@ describe('REQ-GOV-013 — il REFUSE : quatre sorties non nulles, chacune sur son
   });
 
   it('REQ-GOV-013 — `ci.yml` SANS bloc `steps:` : sortie 1, et le refus dit qu’il n’a pas de source', () => {
-    const { code, sortie } = lancer(jetable({ [CI]: 'name: Gate A\njobs:\n  gate-a: {}\n' }));
+    // Le job est là, et DÉCLARÉ par son nom — sinon c'est l'autre refus qu'on mesurerait.
+    const { code, sortie } = lancer(
+      jetable({
+        [CI]: `name: Gate A\njobs:\n  ${JOB_DE_LA_PORTE_A}:\n    runs-on: ubuntu-latest\n`,
+      })
+    );
     expect(code).toBe(1);
     expect(sortie).toContain('aucun bloc `steps:`');
     expect(sortie).not.toContain('PRÉ-VOL VERT');
   });
 
-  it('REQ-GOV-013 — une substitution de shell INCONNUE : sortie 1 plutôt qu’une exécution à l’aveugle', () => {
-    const dossier = jetable({
-      [CI]: ciAUneEtape('Etape hostile', 'node -e 0 --quand "$(rm -rf /)"'),
-    });
-    const { code, sortie } = lancer(dossier);
-    expect(code).toBe(1);
-    expect(sortie).toContain('substitution de shell');
-    expect(sortie).toContain(SUBSTITUTION_TOLEREE);
-    // Exécuter la commande qu'on n'a pas comprise est la manière connue de rendre un vert sans
-    // mesure : le refus doit tomber AVANT que la moindre étape ne soit lancée.
-    expect(sortie).not.toContain('Vue : traçabilité');
-  });
+  // ⚠️ La substitution de shell inconnue — la troisième des sorties déclarées — a son propre
+  // bloc plus bas : elle n'est plus jugée sur UNE forme, mais sur les quatre écritures que
+  // `/bin/sh` substitue. La garder ici en plus l'aurait doublée (RM-07).
 
   it('REQ-GOV-013 — une étape ROUGE : sortie 1, verdict rouge, et l’étape est nommée', () => {
     const dossier = jetable({
@@ -358,6 +356,195 @@ describe('REQ-GOV-013 — il REFUSE : quatre sorties non nulles, chacune sur son
       existsSync(join(dossier, 'trace.txt')),
       '`--liste` a exécuté une étape : ce mode ne doit rien faire'
     ).toBe(false);
+  });
+});
+
+// ── la DÉRIVATION refuse au lieu de se taire ──────────────────────────────────
+
+/**
+ * Un `ci.yml` à PLUSIEURS jobs, dont l'indentation de la séquence d'étapes est un PARAMÈTRE.
+ *
+ * 🔴 CE QUI A FAIT ÉCRIRE CE BLOC (lentille `securite`, revue 5288225606, trois défauts mesurés
+ * dans des dépôts jetables — aucun supposé). Le découpage lisait le PREMIER bloc `steps:` du
+ * fichier, quel que fût le job, jusqu'à la fin du fichier ; et il exigeait une séquence à SIX
+ * espaces, sans jamais refuser quand il n'en trouvait aucune. Les deux ensemble donnaient le vert
+ * que l'en-tête du script promet d'empêcher : un `ci.yml` valide dont la séquence est à la même
+ * indentation que sa clé rendait « 0 écartée(s) », « ✅ PRÉ-VOL VERT », code 0 — et l'étape d'un
+ * AUTRE job passait à `spawnSync(…, { shell: true })` sur la machine du développeur.
+ *
+ * Les entrées sont donc FABRIQUÉES ici, jamais recopiées de `ci.yml` : un témoin calé sur la forme
+ * du fichier d'aujourd'hui ne dit rien du comportement du script le jour où la forme change.
+ */
+function ciAPlusieursJobs(
+  jobs: { job: string; etapes: Etape[] }[],
+  indentation = '      '
+): string {
+  const lignes = ['name: Gate A', 'jobs:'];
+  for (const { job, etapes } of jobs) {
+    lignes.push(`  ${job}:`, '    runs-on: ubuntu-latest', '    steps:');
+    for (const e of etapes)
+      lignes.push(`${indentation}- name: ${e.nom}`, `${indentation}  run: ${e.commande}`);
+  }
+  return `${lignes.join('\n')}\n`;
+}
+
+/** Une commande qui laisse une TRACE sur le disque : le seul témoin qui prouve qu'elle a tourné. */
+const LAISSE_UNE_TRACE = "node -e \"require('fs').writeFileSync('trace.txt','x')\"";
+const CONSIGNE = { 'docs/CONSIGNE.md': `avant de pousser : \`pnpm ${NOM_DU_SCRIPT}\`` };
+
+describe('REQ-GOV-013 — la dérivation REFUSE au lieu de se taire, et sait de quel job elle parle', () => {
+  it('REQ-GOV-013 — une séquence qui n’est pas à six espaces est LUE, jamais tue', () => {
+    // Le défaut mesuré : `corps.split(/^ {6}- /m)` rendait une liste VIDE, et rien ne refusait une
+    // liste vide. Ce `ci.yml`-ci est valide et sa seule étape ROUGIT : un pré-vol qui rend VERT
+    // ici est exactement le « vert là où la CI rougit » que ce script existe pour empêcher.
+    const dossier = jetable({
+      ...CONSIGNE,
+      [CI]: ciAPlusieursJobs(
+        [
+          {
+            job: JOB_DE_LA_PORTE_A,
+            etapes: [{ nom: 'Une etape qui echoue', commande: 'node -e "process.exit(3)"' }],
+          },
+        ],
+        '    '
+      ),
+    });
+    const { code, sortie } = lancer(dossier);
+    expect(sortie).not.toContain('PRÉ-VOL VERT');
+    expect(sortie).toContain('Une etape qui echoue');
+    expect(code).toBe(1);
+  });
+
+  it('REQ-GOV-013 — un bloc `steps:` sans AUCUNE étape : sortie 1, et le refus dit qu’il n’a rien dérivé', () => {
+    const { code, sortie } = lancer(
+      jetable({
+        ...CONSIGNE,
+        [CI]: 'name: Gate A\njobs:\n  gate-a:\n    runs-on: ubuntu-latest\n    steps:\n    # aucune\n',
+      })
+    );
+    expect(code).toBe(1);
+    expect(sortie).toContain('AUCUNE étape');
+    expect(sortie).not.toContain('PRÉ-VOL VERT');
+  });
+
+  it('REQ-GOV-013 — toutes les étapes ÉCARTÉES : sortie 1, un pré-vol qui ne joue rien ne conclut rien', () => {
+    // « Je n'ai rien trouvé à jouer » et « tout est vert » sont deux phrases différentes, et une
+    // seule des deux autorise à pousser.
+    const { code, sortie } = lancer(
+      jetable({
+        ...CONSIGNE,
+        [CI]: [
+          'name: Gate A',
+          'jobs:',
+          '  gate-a:',
+          '    runs-on: ubuntu-latest',
+          '    steps:',
+          '      - uses: actions/checkout@v4',
+          '      - run: pnpm install --frozen-lockfile',
+          '',
+        ].join('\n'),
+      })
+    );
+    expect(code).toBe(1);
+    expect(sortie).toContain('AUCUNE étape');
+    expect(sortie).not.toContain('PRÉ-VOL VERT');
+  });
+
+  it('REQ-GOV-013 — un AUTRE job placé avant `gate-a` ne fournit aucune étape', () => {
+    const { jouees } = etapesDeLaPorteA(
+      ciAPlusieursJobs([
+        { job: 'un-autre-job', etapes: [{ nom: 'Etape d un autre job', commande: 'node -e 0' }] },
+        { job: 'gate-a', etapes: [{ nom: 'Etape de gate-a', commande: 'node -e 0' }] },
+      ])
+    );
+    expect(jouees.map((e) => e.nom)).toEqual(['Etape de gate-a']);
+  });
+
+  it('REQ-GOV-013 — et le corps du job s’arrête au job SUIVANT : ce qui le suit n’est pas à lui', () => {
+    const { jouees } = etapesDeLaPorteA(
+      ciAPlusieursJobs([
+        { job: 'gate-a', etapes: [{ nom: 'Etape de gate-a', commande: 'node -e 0' }] },
+        { job: 'un-autre-job', etapes: [{ nom: 'Etape d un autre job', commande: 'node -e 0' }] },
+      ])
+    );
+    expect(jouees.map((e) => e.nom)).toEqual(['Etape de gate-a']);
+  });
+
+  it('REQ-GOV-013 — l’étape d’un autre job n’EXÉCUTE rien sur la machine du développeur', () => {
+    // Le témoin est un EFFET, pas une sortie : `--liste` nommait déjà l'étape étrangère, mais
+    // c'est `spawnSync(…, { shell: true })` qui la ferait tourner avec les identifiants du
+    // relecteur venu lancer `pnpm prevol` avant de lire le diff.
+    const dossier = jetable({
+      ...CONSIGNE,
+      [CI]: ciAPlusieursJobs([
+        { job: 'un-autre-job', etapes: [{ nom: 'Etape hostile', commande: LAISSE_UNE_TRACE }] },
+        { job: 'gate-a', etapes: [{ nom: 'Etape de gate-a', commande: 'node -e 0' }] },
+      ]),
+    });
+    const { code, sortie } = lancer(dossier);
+    expect(
+      existsSync(join(dossier, 'trace.txt')),
+      'une étape d’un AUTRE job a tourné sur la machine du développeur'
+    ).toBe(false);
+    expect(sortie).not.toContain('Etape hostile');
+    expect(code).toBe(0);
+  });
+
+  it('REQ-GOV-013 — `gate-a` ABSENT : sortie 1, plutôt que les étapes du premier job venu', () => {
+    const dossier = jetable({
+      ...CONSIGNE,
+      [CI]: ciAPlusieursJobs([
+        { job: 'un-autre-job', etapes: [{ nom: 'Etape hostile', commande: LAISSE_UNE_TRACE }] },
+      ]),
+    });
+    const { code, sortie } = lancer(dossier);
+    expect(code).toBe(1);
+    expect(sortie).toContain('gate-a');
+    expect(existsSync(join(dossier, 'trace.txt'))).toBe(false);
+    expect(sortie).not.toContain('PRÉ-VOL VERT');
+  });
+
+  it('REQ-GOV-013 — le job dérivé est celui que `ci.yml` déclare : le renommer rougit ici', () => {
+    // Le nom du job est la seule chose que ce script ne puisse pas dériver — il EST l'ancre. On le
+    // confronte donc à sa source : renommer `gate-a` en CI doit rougir ici, pas rendre le job n° 1.
+    expect(readFileSync(CI, 'utf8')).toContain(`\n  ${JOB_DE_LA_PORTE_A}:\n`);
+  });
+});
+
+describe('REQ-GOV-013 — une substitution de shell ÉCHOUE FERMÉ, quelle qu’en soit la forme', () => {
+  // `spawnSync(…, { shell: true })` vaut `/bin/sh` sur Linux et macOS. TROIS écritures y
+  // substituent — `$(…)`, l'accent grave, `$VAR` / `${…}` —, et le filtre n'en connaissait
+  // qu'UNE. Ici on n'énumère pas les formes dans le script : on refuse tout `$` et tout accent
+  // grave qui survit au remplacement de la seule substitution tolérée. Énumérer, c'est oublier.
+  it.each([
+    ['un accent grave', 'node -e 0 --quand `whoami`'],
+    ['une accolade $', 'node -e 0 --quand ${SECRET}'],
+    ['un $VAR nu', 'node -e 0 --quand $HOME'],
+    ['un $(…)', 'node -e 0 --quand "$(whoami)"'],
+  ])('REQ-GOV-013 — %s : sortie 1, et aucune étape n’est lancée', (_forme, commande) => {
+    const { code, sortie } = lancer(
+      jetable({ ...CONSIGNE, [CI]: ciAUneEtape('Etape hostile', commande) })
+    );
+    expect(code).toBe(1);
+    expect(sortie).toContain('substitution de shell');
+    expect(sortie).toContain(SUBSTITUTION_TOLEREE);
+    expect(sortie).not.toContain('Vue : traçabilité');
+  });
+
+  it('la substitution TOLÉRÉE traverse le filtre : un refus qui refuse TOUT ne mesure plus rien', () => {
+    // Le contre-témoin indispensable. Sans lui, rendre le filtre plus strict jusqu'à tout refuser
+    // laisserait les quatre cas ci-dessus verts — et le pré-vol ne jouerait plus jamais rien.
+    const { code, sortie } = lancer(
+      jetable({
+        ...CONSIGNE,
+        // `echo` plutôt que `node` : la commande doit ACCEPTER l'argument daté et sortir en 0 —
+        // un `node -e 0 --now …` rougit sur l'option, et ce rouge-là ne dirait rien du filtre.
+        [CI]: ciAUneEtape('Une etape datee', `echo --now "${SUBSTITUTION_TOLEREE}"`),
+      })
+    );
+    expect(code).toBe(0);
+    expect(sortie).toContain('PRÉ-VOL VERT');
+    expect(sortie).toMatch(/--now "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z"/);
   });
 });
 
