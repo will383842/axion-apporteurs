@@ -69,7 +69,7 @@ export type TacheDeLot = {
  * Ces douze verbes sont la SEULE voie d'ecriture sanctionnee de `docs/tasks.json`,
  * `docs/requirements.json` et `docs/gates.json` — que `.claude/settings.json` met en `deny` sur
  * `Write` et `Edit`. Ils ne vivent PAS dans ce depot, et c'est une decision, pas un oubli :
- * `partners/ADR-0018` la porte. Le motif, mesure : `.claude/settings.json` porte en `allow`
+ * `partners/ADR-0019` la porte. Le motif, mesure : `.claude/settings.json` porte en `allow`
  * `Bash(node scripts/*)` et `Bash(pnpm *)`. Les faire entrer sous `scripts/` placerait un
  * ecrivain qui CONTOURNE le `deny` a l'interieur de l'allow-list, en un seul geste.
  *
@@ -87,7 +87,7 @@ export type TacheDeLot = {
  * ⚠️ CE QUE CET INVENTAIRE EST, ET CE QU'IL N'EST PAS. C'est une COPIE datee de ce qui vit
  * dehors, pas une garde : rien dans ce depot ne peut confronter cette liste au dossier reel, et
  * une copie que rien ne confronte DERIVE. Elle est donc declaree avec sa date et le chemin
- * mesure, et `partners/ADR-0018` la porte comme dette residuelle. Ce qu'elle garde vraiment est
+ * mesure, et `partners/ADR-0019` la porte comme dette residuelle. Ce qu'elle garde vraiment est
  * plus etroit, et c'est deja beaucoup : une citation qui nomme un verbe ABSENT de cette liste
  * rougit. C'est le defaut qui s'est reellement produit — `garde_hors_registre` conseillait
  * `reecrire-champ.mjs`, qui REFUSE une entree absente (corrige le 2026-09-18).
@@ -377,7 +377,7 @@ export function cheminsReserves(charte: string): { chemins: string[]; label: str
     // DANS une parenthèse explicative coupait la cellule en deux morceaux dont aucun n'était un
     // chemin : la ligne cessait silencieusement de garder son fichier, et le retrait des
     // parenthèses — qui suivait — ne trouvait plus de paire à retirer. Mesuré le 2026-09-22 en
-    // écrivant les deux lignes de `partners/ADR-0018` : `docs/requirements.json` rendait
+    // écrivant les deux lignes de `partners/ADR-0019` : `docs/requirements.json` rendait
     // `["docs/requirements.json (source ; ... en est la VUE", "non réservée)"]`, soit ZERO chemin
     // gardé, sans aucun rouge. Un tableau LU par une garde est du code : il a une grammaire, et
     // une grammaire qui dépend de l'ordre de deux nettoyages est un piège à la première écriture.

@@ -114,7 +114,7 @@
 | `docs/adr/**`                                | `architecte` accepte ; `documentaliste` indexe                        |
 | `.claude/settings.json`, `.claude/agents/**` | lot dédié GOV-000 / GOV-023 (`pnpm gov:agents`)                       |
 
-> ⚠️ **Les VUES ne sont pas réservées — `partners/ADR-0018`, 2026-09-22.** `docs/PLAN-STATE.md`,
+> ⚠️ **Les VUES ne sont pas réservées — `partners/ADR-0019`, 2026-09-22.** `docs/PLAN-STATE.md`,
 > `docs/REQUIREMENTS.md`, `docs/TASKS.md`, `docs/GATES.md`, `docs/TRACABILITE.md` et
 > `docs/adr/INDEX.md` sont **générées**. Un label répond à « qui répond de ce texte ? », et personne
 > ne répond d'une vue : elle a un générateur et un `--verifier`, et REQ-GOV-032 fait déjà rougir sa

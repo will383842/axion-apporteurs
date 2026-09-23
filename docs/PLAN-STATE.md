@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `87e235a` — 2026-09-23T04:50:19+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #91 (rien) · 2. #102 (rien) · 3. #113 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) · 5. #88 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) · 8. #99 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #91 (rien) · 2. #102 (rien) · 3. #113 (rien) · 4. #82 (un conflit avec `main`) · 5. #88 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) · 8. #99 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 20/104 tâches, reste 63.60 j |
 | Le prochain pas | fusionner #91, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
@@ -66,7 +66,7 @@ Reste sur ce chemin : **14.50 j**.
 | --- | --- | --- | --- |
 | 1 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | rien — fusionnable maintenant |
 | 2 | #102 — docs(GOV-063): ADR 0018 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | rien — fusionnable maintenant |
-| 3 | #113 — feat(GOV-090): un label designe une SOURCE, jamais une vue, et un verbe hors depot se cite hors-depot/ | `t/gov-label-et-outils` | un contrôle requis rouge ou une revue manquante |
+| 3 | #113 — feat(GOV-090): un label designe une SOURCE, jamais une vue, et un verbe hors depot se cite hors-depot/ | `t/gov-label-et-outils` | rien — fusionnable maintenant |
 | 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 | 5 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
 | 6 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
@@ -110,7 +110,7 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 ### PR #113 — 2026-09-23 — feat(GOV-090): un label designe une SOURCE, jamais une vue, et un verbe hors depot se cite hors-depot/
 
-**Fait.** `partners/ADR-0018` tranche une question que rien ne tranchait : une vue dérivée est-elle
+**Fait.** `partners/ADR-0019` tranche une question que rien ne tranchait : une vue dérivée est-elle
 réservable ? Non — un label répond à « qui répond de ce texte ? », et personne ne répond d'une vue,
 qui a un générateur et un mode de vérification. La table du §7 de `docs/CHARTE-AGENTS.md` devient
 celle des SOURCES : `docs/PLAN-STATE.md` et `docs/REQUIREMENTS.md` en sortent comme chemins
@@ -124,7 +124,7 @@ dérivent, et un balayage de `git ls-files` qui refuse toute citation d'un verbe
 chemin relatif au dépôt.
 
 **Reste.** Le label reste muet sur la grande majorité des demandes de fusion, par `docs/tasks.json` ;
-`partners/ADR-0018` porte cette mesure et refuse de laisser croire qu'il a réglé le problème. Deux
+`partners/ADR-0019` porte cette mesure et refuse de laisser croire qu'il a réglé le problème. Deux
 dettes sont nommées et datées dans l'ADR plutôt que gardées : l'inventaire des verbes hors dépôt est
 une COPIE de ce qui vit dehors, et une copie que rien ne confronte dérive ; une garde dont le
 périmètre est `git ls-files` ne peut pas voir l'outillage qui écrit le registre. `GOV-090` reste

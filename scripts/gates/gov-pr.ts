@@ -1343,7 +1343,7 @@ if (process.argv.includes('--prove')) {
     // les témoins `AU_MILIEU` qui le prouvent.
     fichiers: cheminsDe('QA-T01').filter((f) => !f.startsWith(DOSSIER_CI) && f.includes('/')),
     // ⚠️ LABEL AJOUTÉ PAR GOV-090 — RESSERREMENT ASSUMÉ, PAS UN AJUSTEMENT POUR TAIRE UN ROUGE.
-    // `partners/ADR-0018` fait entrer `docs/gates.json` au tableau du §7 : c'est une SOURCE
+    // `partners/ADR-0019` fait entrer `docs/gates.json` au tableau du §7 : c'est une SOURCE
     // (`docs/GATES.md` en est la vue), `.claude/settings.json` la met déjà en `deny` sur `Write`
     // et `Edit`, et une de ses entrées peut porter `horsCi`, c'est-à-dire DISPENSER une garde de
     // tourner en CI. QA-T01 la déclare dans ses `paths`, donc cette fixture la touche, donc elle
@@ -1509,7 +1509,7 @@ if (process.argv.includes('--prove')) {
     },
     {
       // LA GRAMMAIRE DE LA PREMIÈRE COLONNE, et c'est la garde qui se désarme elle-même —
-      // GOV-090, mesuré le 2026-09-22 en écrivant les deux lignes de `partners/ADR-0018`.
+      // GOV-090, mesuré le 2026-09-22 en écrivant les deux lignes de `partners/ADR-0019`.
       // La virgule sépare les chemins ; une virgule posée DANS une parenthèse explicative
       // coupait la cellule en deux morceaux dont aucun n'était un chemin, et la ligne cessait
       // de garder son fichier SANS QUE RIEN NE ROUGISSE. Le tableau est lu par le script : il a

@@ -362,11 +362,11 @@ modifier change ce que la garde exige.
 > ⚠️ **Aucune virgule dans la première colonne hors d'une liste de chemins.** Elle sépare les
 > chemins : une virgule posée dans une parenthèse explicative coupait la cellule en deux faux
 > chemins, et le vrai chemin cessait d'être gardé SANS que rien ne rougisse. Mesuré le 2026-09-22
-> en écrivant les deux lignes de `partners/ADR-0018`. Le lecteur retire désormais les parenthèses
+> en écrivant les deux lignes de `partners/ADR-0019`. Le lecteur retire désormais les parenthèses
 > AVANT de découper (`cheminsReserves`), et un témoin le tient — mais la règle reste : une
 > parenthèse explicative se ponctue au tiret.
 
-**CE TABLEAU EST CELUI DES SOURCES, ET C'EST `partners/ADR-0018` QUI L'A TRANCHÉ (2026-09-22).**
+**CE TABLEAU EST CELUI DES SOURCES, ET C'EST `partners/ADR-0019` QUI L'A TRANCHÉ (2026-09-22).**
 Un label répond à une seule question : *qui répond de ce texte ?* **Personne ne répond d'une vue
 dérivée** — une vue a un générateur et un `--verifier`, et sa dérive est déjà un rouge nommé
 (REQ-GOV-032). `docs/PLAN-STATE.md` et `docs/REQUIREMENTS.md` y figuraient pourtant, et
@@ -382,8 +382,8 @@ doit passer devant un relecteur comme une décision, pas comme une ligne de conf
 | Chemin réservé | Poste | Label exigé | Où la règle est écrite |
 | --- | --- | --- | --- |
 | `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | A01 | `role:gardien-spec` | `docs/CONVENTIONS.md` §8, lot dédié avec `--settings` surchargé |
-| `docs/requirements.json` (**source** — `docs/REQUIREMENTS.md` en est la VUE — non réservée) | A01 | `role:gardien-spec` | `partners/ADR-0018` ; `docs/CONVENTIONS.md` §8 |
-| `docs/gates.json` (**source** — `docs/GATES.md` en est la VUE — non réservée) | A01, par le verbe `hors-depot/ajouter-entree.mjs` | `role:gardien-spec` | `partners/ADR-0018` ; `.claude/settings.json` porte déjà `deny` sur `Write` et `Edit` de ce fichier |
+| `docs/requirements.json` (**source** — `docs/REQUIREMENTS.md` en est la VUE — non réservée) | A01 | `role:gardien-spec` | `partners/ADR-0019` ; `docs/CONVENTIONS.md` §8 |
+| `docs/gates.json` (**source** — `docs/GATES.md` en est la VUE — non réservée) | A01, par le verbe `hors-depot/ajouter-entree.mjs` | `role:gardien-spec` | `partners/ADR-0019` ; `.claude/settings.json` porte déjà `deny` sur `Write` et `Edit` de ce fichier |
 | `docs/tasks.json` | A01 (composition), jamais un développeur | `role:gardien-spec` | `docs/CONVENTIONS.md` §8 |
 | `prisma/**`, `packages/contracts/**` | A02, approbation bloquante | `schema` | `docs/CONVENTIONS.md` §5 et §8 ; `.github/CODEOWNERS` |
 | `docs/adr/**` | A02 accepte, A03 indexe | `role:architecte` | `docs/CONVENTIONS.md` §8 |

@@ -1,4 +1,4 @@
-# partners/ADR-0018 — un label de rôle désigne une SOURCE, jamais une vue dérivée
+# partners/ADR-0019 — un label de rôle désigne une SOURCE, jamais une vue dérivée
 
 | Champ | Valeur |
 | --- | --- |

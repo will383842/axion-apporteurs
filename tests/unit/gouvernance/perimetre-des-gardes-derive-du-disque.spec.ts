@@ -575,7 +575,7 @@ describe('REQ-GOV-012 — la limite de la dérivation est ÉCRITE, pas supposée
  * Elle est découpée sur la VIRGULE. Une virgule posée dans une parenthèse explicative coupait la
  * cellule en deux morceaux dont aucun n'était un chemin : la ligne cessait de garder son fichier
  * SANS QUE RIEN NE ROUGISSE. Mesuré le 2026-09-22 en écrivant les deux lignes de
- * `partners/ADR-0018` : `docs/requirements.json` rendait deux faux chemins et ZERO chemin gardé.
+ * `partners/ADR-0019` : `docs/requirements.json` rendait deux faux chemins et ZERO chemin gardé.
  * C'est le même défaut que celui de l'en-tête de ce fichier — le trou s'exemptait lui-même.
  */
 describe('REQ-GOV-010 — le tableau des chemins réservés est LU, donc il a une grammaire', () => {
@@ -593,7 +593,7 @@ describe('REQ-GOV-010 — le tableau des chemins réservés est LU, donc il a un
       // de la prose qui a survécu au découpage, donc un chemin que personne ne gardera jamais.
       expect(c, `« ${c} » n'est pas un chemin`).not.toMatch(/[\s();]/);
     }
-    // Les deux SOURCES que `partners/ADR-0018` fait entrer sont bien gardées, et les deux VUES
+    // Les deux SOURCES que `partners/ADR-0019` fait entrer sont bien gardées, et les deux VUES
     // qu'il fait sortir ne le sont plus. C'est la décision, relue dans ce que la garde LIT.
     expect(chemins).toContain('docs/requirements.json');
     expect(chemins).toContain('docs/gates.json');

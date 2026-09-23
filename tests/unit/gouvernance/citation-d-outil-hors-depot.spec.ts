@@ -24,7 +24,7 @@
  * Son perimetre s'arrete a `git ls-files`. L'outillage, lui, DEBORDE le depot : les douze verbes
  * vivent dehors, et treize de leurs lignes prescrivent une commande de ce depot. Aucun temoin
  * d'ici ne peut les lire. Ce n'est pas une lacune de ce fichier, c'est une propriete du montage,
- * et `partners/ADR-0018` la porte comme dette residuelle nommee. Ce temoin garde le sens
+ * et `partners/ADR-0019` la porte comme dette residuelle nommee. Ce temoin garde le sens
  * depot -> outils ; le sens outils -> depot n'est garde par RIEN, et le dire est tout ce que ce
  * depot peut faire.
  */
