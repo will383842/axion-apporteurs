@@ -3235,7 +3235,8 @@
         "src/domain/contrat/grille-chiffree.ts",
         "src/domain/contrat/publication.ts",
         "src/domain/contrat/variables.ts",
-        "src/domain/lexique/lexique-interdit.ts"
+        "src/domain/lexique/lexique-interdit.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
