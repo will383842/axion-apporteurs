@@ -5,15 +5,18 @@
  * Redis, les compteurs du registre, le disjoncteur DU PROCESSUS, l'horloge système, la clé des
  * empreintes. Les tests n'importent pas ce fichier : ils assemblent leurs propres dépendances.
  *
- * LES SUJETS DES COMPTEURS SONT DES EMPREINTES. L'identité de l'apporteur est empreinte sous
- * `PII_HASH_KEY`, l'adresse réseau sous `IP_HASH_SALT` (SEC-01 : deux usages, deux clés) ; aucune
+ * LES SUJETS DES COMPTEURS SONT DES EMPREINTES. L'identité de l'apporteur est empreinte sous la
+ * clé des personnes, l'adresse réseau sous le sel des adresses : deux usages, deux clés (SEC-01).
+ * Ces deux clés sont reçues par leur TYPE — `CleDesPersonnes`, `ClesDEmpreinte`, déclarés dans
+ * `src/lib/env.ts` —, jamais par leurs noms retapés : la liste des secrets vit là et nulle part
+ * ailleurs (REQ-SEC-028, RM-01), et chaque fonction ne reçoit que la clé dont elle se sert. Aucune
  * valeur en clair n'entre dans une clé du cache. L'adresse est lue depuis la DROITE de
  * `X-Forwarded-For` par `adresseDuClient` (SEC-10) ; illisible, elle vaut `null`, et le mandataire
  * refuse l'autocomplétion — la saisie manuelle reste offerte.
  */
 import { createHmac } from 'node:crypto';
 import { horlogeSysteme } from '../../../lib/horloge';
-import type { Secrets } from '../../../lib/env';
+import type { CleDesPersonnes, ClesDEmpreinte } from '../../../lib/env';
 import { adresseDuClient, SAUTS_DE_CONFIANCE } from '../../securite/adresse-du-client';
 import { sujetDepuisEmpreinte } from '../../securite/rate-limit';
 import { cacheRedis } from './cache';
@@ -37,9 +40,7 @@ function journaliserSurStderr(ligne: LigneDeJournal): void {
   process.stderr.write(`${JSON.stringify(ligne)}\n`);
 }
 
-export function dependancesDeProduction(
-  secrets: Pick<Secrets, 'PII_HASH_KEY'>
-): DependancesDuMandataire {
+export function dependancesDeProduction(secrets: CleDesPersonnes): DependancesDuMandataire {
   return {
     horloge: horlogeSysteme,
     tiers: clientDuTiers({
@@ -63,7 +64,7 @@ function empreinte(cle: string, etiquette: string, valeur: string): string {
 export function appelantDepuis(
   identifiantApporteur: string,
   entetes: Headers,
-  secrets: Pick<Secrets, 'PII_HASH_KEY' | 'IP_HASH_SALT'>
+  secrets: ClesDEmpreinte
 ): Appelant {
   const adresse = adresseDuClient(entetes, SAUTS_DE_CONFIANCE);
   return {
