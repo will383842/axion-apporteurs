@@ -8,25 +8,25 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `e6b1df4` — 2026-09-23T01:47:47+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #92 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #102 (un contrôle requis rouge ou une revue manquante) · 4. #112 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) · 6. #88 (un conflit avec `main`) · 7. #91 (un conflit avec `main`) · 8. #99 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #88 (rien) · 2. #99 (rien) · 3. #112 (rien) · 4. #82 (un contrôle requis rouge ou une revue manquante) · 5. #91 (un contrôle requis rouge ou une revue manquante) · 6. #92 (un contrôle requis rouge ou une revue manquante) · 7. #93 (un contrôle requis rouge ou une revue manquante) · 8. #102 (un contrôle requis rouge ou une revue manquante) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) |
-| Où en est la phase ? | phase 0 — 20/102 tâches, reste 62.10 j |
-| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Où en est la phase ? | phase 0 — 20/103 tâches, reste 62.60 j |
+| Le prochain pas | fusionner #88, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #112 — 2026-09-23 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 88 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-20/102 tâches terminées · reste 62.10 j estimés.
+20/103 tâches terminées · reste 62.60 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 203 | JUR-T02, QA-T08, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13 … |
+| `a_faire` | 204 | JUR-T02, QA-T08, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13 … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -64,14 +64,14 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
-| 2 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 3 | #102 — docs(GOV-063): ADR 0018 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | un contrôle requis rouge ou une revue manquante |
-| 4 | #112 — fix(GOV-092): une revision servie sans `diff` bloque la porte A, et les deux remedes nommes sont faux | `t/gov-092` | un contrôle requis rouge ou une revue manquante |
-| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
-| 7 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 8 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | rien — fusionnable maintenant |
+| 2 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | rien — fusionnable maintenant |
+| 3 | #112 — fix(GOV-092): une revision servie sans `diff` bloque la porte A, et les deux remedes nommes sont faux | `t/gov-092` | rien — fusionnable maintenant |
+| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
+| 6 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
+| 7 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
+| 8 | #102 — docs(GOV-063): ADR 0018 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | un contrôle requis rouge ou une revue manquante |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -95,7 +95,9 @@ Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-23)
 
 ## Prochain pas
 
-**SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 43 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**Fusionner #88** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+
+**SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 44 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
@@ -124,14 +126,38 @@ lieu d'une coordonnée, `definitive` y est exigé vrai, et elle ne vaut QUE pour
 illisible. Les lignes qui absolvent la PR #102 sont posées dans cette PR, avec leur motif. Mesure
 d'ouverture rejouée après correctif : exit 0, et le vert imprime la dette qu'il porte.
 
-**Reste.** Les cases 3, 4, 6 et 8 de la définition de terminé sont vides, et c'est exact : la
-relecture n'a pas eu lieu, aucun ADR n'est ouvert parce que l'arbitrage de la forme large est
-prescrit par l'acceptance de GOV-092 plutôt que pris ici — si la revue juge qu'il mérite son ADR, il
-appartient à l'`architecte` (A02) —, aucune route d'interface n'est touchée, et la fusion appartient
-à A04. Le registre ne sait toujours pas distinguer une valeur fabriquée d'une valeur réelle : ce
-résidu est déclaré dans le `_commentaire` du fichier et cette PR ne le change pas. Reste dû aussi :
-rien n'empêche aujourd'hui qu'une ligne de la forme large soit écrite AVANT que la révision devienne
-illisible — la garde la refuserait en `exemption_sans_objet`, mais personne ne le verrait venir.
+**Reste.** ⚠ CETTE PHRASE A ÉTÉ FAUSSE : elle disait que les cases 3, 4, 6 et 8 de la définition
+de terminé étaient vides. Le corps en cochait déjà deux — 4 et 8 — et `gov:pr` n'en mesurait
+qu'UNE vide parmi les sept premières. La lentille `exactitude` l'a relevé : une entrée de journal
+est un document permanent et dérivé d'un corps que rien ne lui confronte, donc rien n'aurait corrigé
+la phrase après coup. Ce qui reste vrai : aucun ADR n'est ouvert parce que l'arbitrage de la forme
+large est prescrit par l'acceptance de GOV-092 plutôt que pris ici — s'il mérite son ADR, il
+appartient à l'`architecte` (A02) —, aucune route d'interface n'est touchée, et la fusion
+appartient à A04.
+
+Les quatre lentilles ont accepté et laissé **dix dettes**, dont trois méritent d'être nommées ici.
+(1) `mutation` a fait survivre le mutant qui retire le terme d'appariement sur l'absence
+d'empreinte : rien ne prouve qu'une exemption de COORDONNÉE ne blanchit pas une révision
+ILLISIBLE — le sens inverse, lui, est prouvé. (2) **Le banc de porte A ne sait pas qu'il a cessé
+de mesurer** : en retirant du banc les deux témoins neufs, `--corps-publie --prove` sort en 0 et
+imprime toujours que ses six familles rougissent, parce que la non-vacuité est au grain de la
+FAMILLE alors que les causes neuves vivent DANS une famille. C'est la dette la plus dangereuse de
+la PR, et elle a la forme exacte du défaut que la PR ferme : elle est portée par **GOV-094**, versée
+ici même, qui fait descendre le grain de la non-vacuité de la FAMILLE à la CAUSE. (3) Le discriminant des deux formes
+étant l'ABSENCE d'une clé, une ligne portant `empriente` mal orthographié est déclarée bien
+formée et absout la révision entière — sur la base, la même ligne rougissait. Aucune de ces
+trois ne laisse fuir une coordonnée : mesuré par `securite` sur douze scénarios fabriqués, et par
+`mutation` sur le code tel que livré.
+
+Le registre ne sait toujours pas distinguer une valeur fabriquée d'une valeur réelle : ce résidu est
+déclaré dans le `_commentaire` du fichier et cette PR ne le change pas. Rien n'empêche non plus
+qu'une ligne de la forme large soit écrite AVANT que la révision devienne illisible — la garde la
+refuserait en `exemption_sans_objet`, mais personne ne le verrait venir. Enfin, la cause d'un `diff`
+nul est AFFIRMÉE et non mesurée : `UserContentEdit` porte `deletedAt`, que la requête ne demande
+pas, et une révision dont le contenu a été SUPPRIMÉ est indiscernable d'un corps vide alors qu'elle
+a porté du texte. Sur la population entière du dépôt — 54 PR balayées par `securite` — les deux
+seuls nœuds à `diff` nul portent `deletedAt` nul, donc l'affirmation est vraie aujourd'hui ; elle
+n'est pas gardée pour demain.
 
 **Appris.** ⚠ Un remède FAUX coûte plus cher qu'un remède absent. Le message nommait deux causes
 avec l'autorité d'un diagnostic complet ; le lecteur a donc rejoué une commande qui ne pouvait rien
