@@ -329,7 +329,7 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
     ];
     const lecture = lireAvecDelta(revues, ['docs/journal/2026-09-pr-102.md']);
     expect(lecture.coche).toBe(true);
-    expect(lecture.detail).toContain('survi');
+    expect(lecture.detail).toContain('SURVIT');
     expect(lecture.detail).toContain('docs/journal/2026-09-pr-102.md');
   });
 
