@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**262 taches · 197.85 j estimes.**
+**266 taches · 199.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 100 | 78.85 | 16 |
+| 0 — Socle technique | 104 | 80.85 | 20 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -1186,7 +1186,7 @@ Couvre : `REQ-GOV-008`, `REQ-GOV-011`, `REQ-GOV-013`
 
 **Tests.** `tests/unit/gouvernance/decisions-de-gouvernance-ecrites.spec.ts`
 
-### GOV-059 — Une demande de fusion de plus rougit les autres, et ce rouge fait sauter les etapes de mesure
+### GOV-059 — Une demande de fusion de plus rougit les autres, et ce rouge fait sauter les etapes de mesure ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · sensible : auth · aucune dependance
 
@@ -1480,6 +1480,106 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-032`
 
 **Tests.** `tests/unit/gouvernance/un-chemin-fantome-est-un-refus.spec.ts`
 
+### GOV-089 — Un numero PUBLIC se juge a son PORTEUR, pas a son mot-cle : la garde d'entite sur-attrape 448 defauts sur 452 ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-031`, `REQ-CPL-001`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Sur la branche qui enregistre les fixtures de l'API publique d'entreprises, `gov:entite` rend 452 defauts : 450 `coordonnee_en_clair` et 2 `valeur_recopiee`, sur 418 identifiants distincts et 24 fichiers. 416 de ces identifiants sont ceux d'entreprises TIERCES rendues par l'API — DANONE, la SNCF, EDF, des communes. DEUX seulement sont les notres. La garde demande donc aujourd'hui de deplacer le SIREN de DANONE dans `config/entite.json` : c'est le symptome, il vaut mieux qu'une demonstration.
+
+DEUX REGIMES DIFFERENTS, EXPLICITES DANS LA SOURCE ET DANS LE CHAMP `verifie` DU REGISTRE : IBAN et BIC sont des SECRETS, refuses PARTOUT, dans tout fichier suivi ; SIREN, SIRET et TVA sont des donnees PUBLIQUES, refusees uniquement dans un fichier de code, au seul motif de RM-01 — source unique de l'identite de la Societe, famille `valeur_recopiee`, POUR LES NOTRES. Le motif parlait des notres ; le code attrapait tout le monde.
+
+LA VOIE DE SORTIE EVIDENTE N'EXISTE PAS, ET C'EST MESURE : la garde ne regarde pas si le numero est vrai, seulement s'il suit le mot `siren`/`siret`. Un identifiant fabrique a cle de Luhn juste est refuse exactement comme le reel. Substituer les identifiants DETRUIRAIT la valeur probante des fixtures SANS rendre la garde verte. Et le mecanisme d'exemption ne sait pas dire la bonne chose : `coordonnee` IMPLIQUE `recopie`, donc toute exemption assez large pour taire la famille publique tait aussi les deux vrais defauts. Impasse mesuree, pas opinion.
+
+ATTENTION AU REMEDE EVIDENT ET FAUX : reclasser la fixture hors du predicat « fichier de code » desarmerait AUSSI `valeur_recopiee`, qui est gardee par LE MEME predicat — ca rouvrirait la porte que la garde existe pour tenir. Le defaut n'est pas dans le perimetre de fichiers, il est dans le PREDICAT.
+
+ACCEPTATION — LE REGIME SE LIT SUR LA VALEUR, PAS SUR LE NOM DU FICHIER.
+  (a) Un SIREN/SIRET/TVA n'est refuse dans un fichier de code QUE S'IL EST LE NOTRE, et « les notres » est DERIVE de `config/entite.json` par une fonction unique que la famille `valeur_recopiee` et l'arme publique de `coordonnee_en_clair` lisent TOUTES LES DEUX, de la meme facon.
+  (b) CONTRAINTE ABSOLUE : `valeur_recopiee` reste actif JUSQUE DANS UNE FIXTURE. Nos identifiants n'ont rien a faire en dur, meme la. Temoin a deux faces DANS LE MEME FICHIER, meme mot-cle, meme forme : seule change l'identite du porteur.
+  (c) Le regime du SECRET est INTACT : un IBAN rougit dans une fixture de tiers.
+  (d) La fonction qui juge du code sans savoir qui est « nous » LEVE, au lieu de rendre un vert silencieux.
+  (e) La PORTEE est declaree a UN SEUL endroit, citee sans recopie par `docs/gates.json`, et IMPRIMEE a chaque vert — avec le COMPTE des identifiants du registre reellement confrontes. Sans ce compte, un registre entierement a la sentinelle rendrait un vert qui ne cherche AUCUN numero public : une garde derivee est aveugle deux fois, par sa source et par son filtre.
+  (f) Compte avant/apres mesure sur le depot reel, et AUCUN vrai defaut tu.
+
+CE QUE CETTE TACHE VA DECOUVRIR, ET QUI EST LE PLUS INSTRUCTIF : les temoins existants du mode de preuve exercent le MAUVAIS PORTEUR — ils exigent un ROUGE sur le SIREN et la TVA d'un TIERS dans du code, c'est-a-dire qu'ils GRAVENT la sur-attrape en porte A. Une garde vue rougir (RM-02) ne dit rien si elle a ete vue rougir sur le MAUVAIS CAS. Quand un correctif oblige a inverser un temoin existant, c'est le signe que le temoin, et pas seulement le code, portait la faute. La ligne finale imprimee par le mode de preuve affirme elle aussi le comportement fautif : un vert qui commente son propre comportement est une affirmation a maintenir comme du code.
+
+HORS PERIMETRE, A SIGNALER SANS CORRIGER : REQ-GOV-031 est TRONQUEE dans `docs/requirements.json` — elle dit « Trois categories n'y entrent jamais : » et s'arrete la. C'est l'exigence dont cette garde et deux autres derivent tout leur mandat, et elle ne dit pas ce qu'elle interdit. Et le seul vrai defaut restant — nos SIREN/SIRET en dur dans une fixture d'un depot PUBLIC — est un changement d'intention de test (re-enregistrement sur un organisme de formation tiers), pas le sujet de celle-ci.
+
+COLLISION DE CHEMIN CONNUE : `tests/unit/gouvernance/entite-registre.spec.ts` figure aussi dans les `paths` de GOV-067. Les deux taches ne doivent pas etre composees dans le meme lot.
+
+**Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
+
+### GOV-088 — Le glossaire interdit en l.149 la forme qu'il prescrit en l.126, et un .ts ne peut pas citer un terme interdit ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-016`, `REQ-INT-003`, `REQ-INT-004`, `REQ-DM-036`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, a refaire avant d'ecrire une ligne. `docs/GLOSSAIRE.md` l.126 PRESCRIT la colonne `eventId` de la table `EvenementRecu` (texte repris mot pour mot par REQ-DM-036) et l.149 range cette MEME forme parmi les synonymes interdits, au motif que l'enveloppe de fil est en snake_case (ADR-0008). La garde lit `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` et n'y exempte que les commentaires de .md/.sql/.prisma.
+
+LE PIEGE N'EST PAS DECLENCHE, IL EST ARME : `grep -rn eventId prisma/ src/ messages/ docs/adr/` rend ZERO ligne, et `EvenementRecu` n'existe dans aucun schema. La tache qui le creera est SEC-06. Ce jour-la le developpeur ecrira la colonne que la REQ epelle, et la garde rougira sur le glossaire, sans le contexte.
+
+CE QUI EST DEJA TRANCHE ET NE SE RE-TRANCHE PAS : `docs/PRESEANCE.md` §2 ligne 7 donne le GLOSSAIRE gagnant contre tout autre document sur un terme et ses synonymes interdits, y compris contre le texte litteral d'une REQ et contre CONVENTIONS §1. Verifie en fait : `gov:conventions` reste VERT sur une forme snake_case dans du TypeScript.
+
+ACCEPTATION A — L'INTERDIT DEVIENT AUSSI ETROIT QUE SON INTENTION, SANS S'AFFAIBLIR. Les deux lignes parlent de deux objets differents : l.126 une COLONNE Prisma (camelCase, CONVENTIONS §1), l.149 un CHAMP D'ENVELOPPE de fil (snake_case, ADR-0008). Le remede porte sur une FAMILLE et non sur le cas nomme, et se derive d'un critere MESURABLE du registre. REFUSES d'avance : renommer la colonne pour faire taire la garde ; exempter `prisma/**` en bloc ; une exemption par chemin nommant `EvenementRecu`.
+  (a) VERT provoque : `model EvenementRecu { eventId String @unique ; eventType String }` dans `prisma/schema.prisma` passe, et passe par ETROITESSE de l'interdit, non par exemption (ni commentaire ni accent grave dans la vue).
+  (b) ROUGE provoque : un champ d'enveloppe en camelCase jamais reclame ailleurs rougit et NOMME le fichier et la ligne.
+  (c) LE COMPTE DES INTERDITS EXERCES NE BAISSE PAS DE LA SEULE SOUSTRACTION : tout jeton qui cesse d'etre exerce est nomme, et tout jeton qui le DEVIENT l'est aussi. Un interdit devenu conditionnel par accident de ponctuation est un interdit mort que cette tache doit rendre visible.
+  (d) CE QUI GARDE REELLEMENT LA CASSE DE L'ENVELOPPE est ecrit au glossaire : l'egalite champ par champ ET DANS L'ORDRE entre la liste close du contrat et les noms de REQ-INT-003. Une liste fermee comparee par egalite voit une casse fausse ; un balayage de jeton ne voit qu'un mot.
+
+ACCEPTATION B — UN FICHIER .ts N'A AUCUNE EXEMPTION DE CITATION. La garde n'exempte que .md, .sql et .prisma : on ne peut pas ecrire un terme interdit dans un commentaire TypeScript, meme pour expliquer pourquoi il est interdit. Consequence mesuree : les commentaires du depot PARAPHRASENT, le contournement n'est ecrit nulle part, et chaque agent le redecouvre.
+  (e) TRANCHER ET ECRIRE LA DECISION, avec sa mesure. Si un marqueur de citation est pose, il doit etre IMPOSSIBLE de s'en servir pour taire un usage reel, et cette impossibilite se PROVOQUE, elle ne s'affirme pas. Si le marqueur est refuse, la limite est NOMMEE au glossaire avec son proprietaire et la tache qui la levera — une limite nommee n'est pas du folklore, une paraphrase sans adresse l'est.
+
+SOURCE UNIQUE (RM-01) : la regle nouvelle est ecrite UNE fois, au glossaire. `gov-check.ts` porte une fixture qui reproduit le glossaire, et `termes-interdits.spec.ts` assere que ses racines et ses modeles refuses sont EGAUX a ceux du glossaire reel : on ne touche pas l'un sans l'autre, c'est voulu, et ca ne se contourne pas.
+
+HORS PERIMETRE, A SIGNALER SANS CORRIGER : REQ-DM-036 s'epelle elle-meme avec un synonyme interdit (`WebhookRecu`, `type`) la ou le glossaire impose `EvenementRecu` et `eventType` ; et le §5 porte encore un avertissement perime disant qu'aucune garde ne lit ce paragraphe.
+
+**Tests.** `tests/unit/gouvernance/termes-interdits.spec.ts`
+
+### GOV-091 — L'entree de journal de la PR 108 manque : main est rouge, et deux tests de gouvernance rougissent sur TOUTES les branches ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-023`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. La PR #108 (GOV-088) a ete fusionnee sur `main` SANS son entree de journal : `git show <sha>:docs/journal/2026-09.md | grep 'PR #108'` ne rend rien, et aucun des fichiers du squash n'est sous `docs/journal/`. Consequence : `pnpm gov:etat` rend 1 defaut sur 9 familles (`pr_fusionnee_sans_journal`, REQ-GOV-023), et la porte A sur `main` echoue a l'etape Tests sur DEUX fichiers — `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` — pour UNE SEULE cause racine.
+
+POURQUOI C'EST BLOQUANT ET PAS COSMETIQUE. Ces deux tests interrogent la FORGE VIVANTE, pas le diff : ils rougissent donc sur TOUTES les branches, pas seulement sur `main`. Tant que l'entree n'est pas posee, AUCUNE PR ne peut atterrir. C'est la meme forme que la revendication manquante du 2026-09-22 au matin, qui rougissait elle aussi partout a la fois.
+
+ACCEPTATION.
+  (a) L'entree `## PR #108 — <date> — <titre>` est posee dans `docs/journal/2026-09.md`, a sa place antechronologique, avec les champs que `docs/journal/README.md` prescrit. Son contenu est DERIVE du corps de la PR #108 et de son diff — rien d'invente, rien de reformule a l'estime.
+  (b) LA PR PORTE SA PROPRE ENTREE. Sans elle, sa fusion reproduit exactement le defaut qu'elle repare, et `main` redevient rouge. Ordre : ouvrir la PR, lire son numero, ajouter son entree, pousser.
+  (c) ROUGE VERBATIM : le message d'echec de la porte A sur `main` est colle au corps, tel quel, avec le numero de run.
+  (d) VERT : `pnpm gov:etat --now <ISO>` rend `9 familles evaluees sur 9`, et les fichiers de spec concernes repassent verts.
+  (e) ⚠️ `journal:sans-pii` reste vert : aucune donnee personnelle, et jamais le nom du delegue a la protection des donnees.
+
+CE QUE CETTE TACHE NE FERME PAS, ET QUI EST LE VRAI SUJET. La famille `pr_fusionnee_sans_journal` NE PEUT PAS rougir avant la fusion : son predicat est « la PR est fusionnee ». `scripts/gates/gov-pr.ts` ne lit JAMAIS `docs/journal/` — ses seules occurrences du mot sont un commentaire d'intention et un contre-temoin qui GRAVE le choix de ne pas le juger. Le controle d'avant-fusion etait donc vert, et l'aurait ete quoi qu'il arrive. AUCUNE garde n'exige l'entree pendant qu'on peut encore l'ajouter, et la seule victime possible est `main`. Le remede est GOV-052, dont l'acceptation exige que GOV-073 passe avant elle ou avec elle (quatre lecteurs, quatre grammaires d'entree de journal) — sinon GOV-052 ecrit une cinquieme redaction en prose de la meme regle. ⛔ NE PAS accrocher ce correctif a GOV-052 : ca la marquerait delivree alors que le trou resterait ouvert.
+
+POURQUOI UNE TACHE DEDIEE PLUTOT QUE LA TACHE HISTORIQUE. Le precedent existe DEUX fois (PR #29 et PR #35 ont cite une tache deja `fusionnee` pour ce meme defaut) et la forge l'accepte. Mais la tache historique porte `sensible: [auth]`, ce qui classe la PR en risque ELEVE et exige QUATRE lentilles pour une correction de DEUX fichiers de prose — pendant que `main` est rouge et que la file est arretee. Une tache vivante, zone gouvernance, `sensible` vide, rend le regime a deux lentilles que le risque reel merite. Le classificateur mesure ce qu'il pretend mesurer ; c'est la tache empruntee qui mentait.
+
+**Tests.** `tests/unit/gouvernance/plan-state-frais.spec.ts`
+
+### GOV-092 — Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-031`, `REQ-CPL-001`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, `pnpm gov:entite --corps-publie 102` rend INDETERMINE (code 2) avec `revisions_non_lues` : « la forge annonce 7 revision(s) du corps et 5 ont ete lues », et la porte A echoue sur cette etape. Rejeu direct de la forge : la connexion `userContentEdits(first:100)` de la PR #102 rend **7 noeuds sur 7 annonces** — la pagination fonctionne et PAGES_MAX n est pas atteint — dont **DEUX portent un `editedAt` et un `diff` NUL** : `2026-09-23T00:21:32Z` et `2026-09-23T00:21:56Z`. `assemblerLecture` les ecarte par `if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue`, l ecart annonce/lu fait tomber le verdict en INDETERMINE. LE DEFAUT N EST PAS L ECART : IL EST DANS LE REMEDE. Le message nomme deux causes et deux remedes, et AUCUN des deux ne s applique. (a) « relance la garde » : la reponse est STABLE, les deux `diff` nuls le sont a chaque appel, mesure trois fois de suite. (b) « releve PAGES_MAX » : une seule page a ete lue, la borne n est pas en cause. Il existe donc une TROISIEME cause, que le docblock de la pagination n a pas prevue : la forge sert `diff: null` quand l edition produit un corps VIDE ou un corps INCHANGE, et les deux revisions ci-dessus sont exactement l une et l autre. PORTEE REELLE, et c est ce qui rend la tache urgente : une PR dont le corps a ete vide une fois, ou re-poste a l identique une fois, ne peut PLUS JAMAIS passer la porte A ; l historique d edition d une forge ne se de-publie pas, et `gov:entite --corps-publie` tourne sur CHAQUE PR. A LIVRER. (1) La troisieme cause est NOMMEE dans le message de `revisions_non_lues`, avec ce qui la produit et le fait qu elle est DEFINITIVE — un remede faux est pire qu un remede absent, il envoie le lecteur rejouer une commande qui ne changera rien, et c est exactement ce qui s est passe le jour de la mesure. (2) Un chemin de sortie EXISTE, et il reutilise le mecanisme deja concu pour l irreparable : `config/exemptions-corps-publie.json` porte un champ `definitive` dont le commentaire dit qu il existe « pour ce qui ne peut pas etre repare ». Une exemption dont l `empreinte` est ABSENTE absout LA REVISION entiere au lieu d une coordonnee ; `controlerRegistreExemptions` la valide avec les memes exigences de forme (motif d au moins 40 caracteres, declarant, date d declaration) et exige `definitive` vrai pour cette forme-la. (3) LE REFUS RESTE LE DEFAUT : sans ligne au registre, une revision illisible laisse le verdict INDETERMINE. Une revision illisible n est JAMAIS reputee propre d office — ce serait rendre vert ce qu on n a pas lu, ce que la garde existe precisement pour refuser. (4) Un horodatage ABSENT continue de refuser SANS chemin de sortie : sans lui aucune exemption ne peut s apparier, et absoudre une revision qu on ne sait pas designer absoudrait aussi toutes les suivantes. (5) Trois temoins ROUGES vus rougir : une revision a `diff` nul sans exemption ; une exemption de revision mal formee (motif trop court, ou `definitive` faux) ; une exemption qui designe un horodatage qui n est celui d aucune revision de la PR visee. Et trois contre-temoins VERTS : la revision exemptee passe ; la meme exemption ne couvre PAS une revision a `diff` nul d une AUTRE PR ; un corps courant porteur d une coordonnee rougit toujours, exemption ou pas. (6) La ligne de registre qui absout les deux revisions de la PR #102 est posee dans la meme PR, avec son motif : un corps vide et un corps re-poste a l identique ne portent aucun texte qui ne soit deja dans la revision voisine, elle-meme lue et jugee propre.
+
+**Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
+
+### GOV-094 — La non-vacuite d un banc de preuve est au grain de la FAMILLE : retirer un temoin d une cause NEUVE laisse le banc vert et bavard
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-031`, `REQ-GOV-012`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, la lentille `mutation` de la PR #112 a retire du banc de `gov:entite --corps-publie --prove` les temoins des causes NEUVES de la famille `revisions_non_lues`. Le banc est sorti en ZERO et a imprime, mot pour mot, que ses six familles rougissent chacune sur son temoin. ⚠️ DEUX PRECISIONS, sans lesquelles QUI REJOUE CETTE PHRASE N AURA RIEN MESURE, et la seconde s est confirmee toute seule au premier essai. (a) Le temoin qui PORTE la mesure est celui de la revision illisible SANS exemption ; celui de la revision illisible ABSOUTE est un CONTRE-temoin, et le retirer ne fait varier qu un compte de contre-temoins que rien ne compare a rien — la porte A reste a ZERO et reimprime ses six familles, ce qui RESSEMBLE a la reproduction sans en etre une. (b) GOV-092 introduit DEUX causes, pas trois, et la famille en porte QUATRE au total : la quatrieme, la lecture interrompue, est deja gardee par un bloc de consommation DEDIE — neutralisee, la porte A rougit en la nommant. Le remede de cette tache existe donc deja, applique a la main a UNE cause sur quatre, et c est l argument le plus fort en sa faveur. LE BANC DE PORTE A NE SAIT PAS QU IL A CESSE DE MESURER LA CAUSE QUE LA PR EXISTE POUR FERMER. La cause est structurelle et vaut pour tout le depot : le garde-fou de non-vacuite (`sansTemoin`) est au grain de la FAMILLE, or GOV-092 a introduit DEUX causes disjointes DANS la famille `revisions_non_lues`, qui en porte QUATRE au total. Une famille qui garde un seul temoin sur quatre causes reste couverte aux yeux du garde-fou. C EST EXACTEMENT LA FORME DU DEFAUT QUE GOV-092 FERME — un controle qui se tait au lieu de rougir — applique au banc qui prouve GOV-092. A LIVRER. (1) Le grain de la non-vacuite descend de la FAMILLE a la CAUSE : chacun des QUATRE messages distincts que cette famille sait emettre porte son temoin, et le banc REFUSE — sortie non nulle nommant la cause — si l un d eux n a pas de temoin. (2) Le compte des causes se DERIVE du code qui les emet, jamais d une liste tapee a cote : une liste tapee redevient fausse au prochain message ajoute, sans que rien ne le signale, et c est la faute que RM-01 existe pour empecher. (3) La sortie IMPRIME le compte des causes et celui des temoins, cote a cote : un banc qui dit « six familles » quand il en mesure cinq est un vert qui ment, et le lecteur doit pouvoir voir l ecart sans relire le code. (4) Le mutant de la mesure d ouverture est REJOUE et vu rougir : retirer un temoin d une cause neuve fait desormais sortir le banc en non nul en NOMMANT la cause orpheline. (5) Un contre-temoin VERT prouve qu un banc complet passe toujours, et un second qu une famille a cause UNIQUE n est pas rendue plus exigeante par le changement de grain. (6) Le balayage dit combien de familles du depot portent plusieurs causes : si d autres gardes sont dans le meme cas, elles sont NOMMEES avec leur compte, et la tache qui les traitera est ouverte — les fermer toutes ici serait un perimetre que personne n a mesure.
+
+**Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
+
 ### GOV-090 — La table des chemins reserves etiquette des VUES et laisse deux SOURCES ouvertes, et une garde prescrit un outil par un chemin irresolvable
 
 `1 j` · zone `gouvernance` · aucune dependance
@@ -1532,33 +1632,6 @@ Le label reste muet a 85 % apres ce geste : le dis-mutiser demande un discrimina
 Seuls `scripts/`, `src/` et `tests/` sont confrontes par la famille des fichiers hors `paths`. Les entrees `docs/` de cette tache sont declarees par honnetete, pas par necessite de garde — ce qui est une illustration de plus du defaut A.
 
 **Tests.** `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` · `tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts` · `tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts`
-
-### GOV-088 — Le glossaire interdit en l.149 la forme qu'il prescrit en l.126, et un .ts ne peut pas citer un terme interdit
-
-`0.5 j` · zone `gouvernance` · aucune dependance
-
-Couvre : `REQ-GOV-016`, `REQ-INT-003`, `REQ-INT-004`, `REQ-DM-036`
-
-**Acceptation.** MESURE QUI OUVRE LA TACHE, a refaire avant d'ecrire une ligne. `docs/GLOSSAIRE.md` l.126 PRESCRIT la colonne `eventId` de la table `EvenementRecu` (texte repris mot pour mot par REQ-DM-036) et l.149 range cette MEME forme parmi les synonymes interdits, au motif que l'enveloppe de fil est en snake_case (ADR-0008). La garde lit `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` et n'y exempte que les commentaires de .md/.sql/.prisma.
-
-LE PIEGE N'EST PAS DECLENCHE, IL EST ARME : `grep -rn eventId prisma/ src/ messages/ docs/adr/` rend ZERO ligne, et `EvenementRecu` n'existe dans aucun schema. La tache qui le creera est SEC-06. Ce jour-la le developpeur ecrira la colonne que la REQ epelle, et la garde rougira sur le glossaire, sans le contexte.
-
-CE QUI EST DEJA TRANCHE ET NE SE RE-TRANCHE PAS : `docs/PRESEANCE.md` §2 ligne 7 donne le GLOSSAIRE gagnant contre tout autre document sur un terme et ses synonymes interdits, y compris contre le texte litteral d'une REQ et contre CONVENTIONS §1. Verifie en fait : `gov:conventions` reste VERT sur une forme snake_case dans du TypeScript.
-
-ACCEPTATION A — L'INTERDIT DEVIENT AUSSI ETROIT QUE SON INTENTION, SANS S'AFFAIBLIR. Les deux lignes parlent de deux objets differents : l.126 une COLONNE Prisma (camelCase, CONVENTIONS §1), l.149 un CHAMP D'ENVELOPPE de fil (snake_case, ADR-0008). Le remede porte sur une FAMILLE et non sur le cas nomme, et se derive d'un critere MESURABLE du registre. REFUSES d'avance : renommer la colonne pour faire taire la garde ; exempter `prisma/**` en bloc ; une exemption par chemin nommant `EvenementRecu`.
-  (a) VERT provoque : `model EvenementRecu { eventId String @unique ; eventType String }` dans `prisma/schema.prisma` passe, et passe par ETROITESSE de l'interdit, non par exemption (ni commentaire ni accent grave dans la vue).
-  (b) ROUGE provoque : un champ d'enveloppe en camelCase jamais reclame ailleurs rougit et NOMME le fichier et la ligne.
-  (c) LE COMPTE DES INTERDITS EXERCES NE BAISSE PAS DE LA SEULE SOUSTRACTION : tout jeton qui cesse d'etre exerce est nomme, et tout jeton qui le DEVIENT l'est aussi. Un interdit devenu conditionnel par accident de ponctuation est un interdit mort que cette tache doit rendre visible.
-  (d) CE QUI GARDE REELLEMENT LA CASSE DE L'ENVELOPPE est ecrit au glossaire : l'egalite champ par champ ET DANS L'ORDRE entre la liste close du contrat et les noms de REQ-INT-003. Une liste fermee comparee par egalite voit une casse fausse ; un balayage de jeton ne voit qu'un mot.
-
-ACCEPTATION B — UN FICHIER .ts N'A AUCUNE EXEMPTION DE CITATION. La garde n'exempte que .md, .sql et .prisma : on ne peut pas ecrire un terme interdit dans un commentaire TypeScript, meme pour expliquer pourquoi il est interdit. Consequence mesuree : les commentaires du depot PARAPHRASENT, le contournement n'est ecrit nulle part, et chaque agent le redecouvre.
-  (e) TRANCHER ET ECRIRE LA DECISION, avec sa mesure. Si un marqueur de citation est pose, il doit etre IMPOSSIBLE de s'en servir pour taire un usage reel, et cette impossibilite se PROVOQUE, elle ne s'affirme pas. Si le marqueur est refuse, la limite est NOMMEE au glossaire avec son proprietaire et la tache qui la levera — une limite nommee n'est pas du folklore, une paraphrase sans adresse l'est.
-
-SOURCE UNIQUE (RM-01) : la regle nouvelle est ecrite UNE fois, au glossaire. `gov-check.ts` porte une fixture qui reproduit le glossaire, et `termes-interdits.spec.ts` assere que ses racines et ses modeles refuses sont EGAUX a ceux du glossaire reel : on ne touche pas l'un sans l'autre, c'est voulu, et ca ne se contourne pas.
-
-HORS PERIMETRE, A SIGNALER SANS CORRIGER : REQ-DM-036 s'epelle elle-meme avec un synonyme interdit (`WebhookRecu`, `type`) la ou le glossaire impose `EvenementRecu` et `eventType` ; et le §5 porte encore un avertissement perime disant qu'aucune garde ne lit ce paragraphe.
-
-**Tests.** `tests/unit/gouvernance/termes-interdits.spec.ts`
 
 ## Phase 1 — Operationnel
 
