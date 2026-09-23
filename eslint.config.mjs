@@ -50,6 +50,114 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 
+// ── LES FORMES VOISINES DES INTERDITS DU DOMAINE (GOV-076, REQ-QA-001) ──────────────────────
+//
+// CHAQUE INTERDIT NE JUGEAIT QU'UNE SEULE FORME, et les formes voisines traversaient : un import
+// de module écrit sans son préfixe, un import dynamique, une horloge système atteinte autrement
+// que par son nom usuel, une écriture sur la console atteinte par un autre chemin.
+//
+// CE N'EST PAS UNE DETTE DE STYLE. REQ-QA-001 fait de la PURETÉ de `src/domain/**` la condition du
+// calcul de commission (DM-04) et de l'horloge injectable (CPL-T13). Un domaine qui lit l'heure de
+// la machine rend un résultat différent selon le jour où on le rejoue, et c'est un registre
+// d'argent qu'on ne peut plus reconstituer. À fermer AVANT le premier code de domaine de la phase 0.
+//
+// LA LISTE EST EXPORTÉE, ET C'EST EXPRÈS : elle est IMPRIMÉE par
+// `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`, qui exerce CHACUNE de ses
+// entrées et compte celles qu'il a réellement exercées. Une liste supposée n'est pas une liste
+// couverte — c'est le défaut que cette tâche ferme, pas une tournure.
+export const FORMES_VOISINES = [
+  {
+    nom: 'import-dynamique',
+    exemple: "export const lu = import('node:fs');",
+    selector: 'ImportExpression',
+    message:
+      "src/domain/** est pur : un import DYNAMIQUE charge le même module qu'un import statique " +
+      'et échappe à `no-restricted-imports`, qui ne lit que les imports écrits en tête de fichier. ' +
+      'Aucun module ne se charge à la demande ici (REQ-QA-001).',
+  },
+  {
+    nom: 'require',
+    exemple: "export const fs = require('node:fs');",
+    selector: "CallExpression[callee.name='require']",
+    message:
+      'src/domain/** est pur : `require` charge le même module et échappe à ' +
+      '`no-restricted-imports` de la même façon (REQ-QA-001).',
+  },
+  {
+    nom: 'horloge-par-acces-calcule',
+    exemple: "export const t = Date['now']();",
+    selector: 'MemberExpression[computed=true][object.name=/^(Date|performance)$/]',
+    message:
+      "src/domain/** ne lit pas l'horloge système : `Date['now']` atteint exactement ce que " +
+      '`no-restricted-properties` interdit, par une clé que la règle ne voit pas. ' +
+      "L'heure est injectée par le module `temps` (REQ-QA-001, docs/CONVENTIONS.md §3).",
+  },
+  {
+    nom: 'horloge-par-un-porteur',
+    exemple: 'export const t = globalThis.Date.now();',
+    selector: 'MemberExpression[property.name=/^(Date|performance)$/]',
+    message:
+      "src/domain/** ne lit pas l'horloge système : l'atteindre par un PORTEUR " +
+      '(`globalThis.Date`, `global.Date`) contourne le nom usuel que les règles surveillent ' +
+      '(REQ-QA-001, docs/CONVENTIONS.md §3).',
+  },
+  {
+    nom: 'reseau-par-un-porteur',
+    exemple: "export const r = globalThis.fetch('https://exemple.test');",
+    selector: 'MemberExpression[property.name=/^(fetch|XMLHttpRequest|WebSocket)$/]',
+    message:
+      'src/domain/** est pur : atteindre le réseau par un PORTEUR (`globalThis.fetch`) contourne ' +
+      '`no-restricted-globals`, qui ne juge que le nom nu. La donnée arrive en argument ' +
+      '(REQ-QA-001).',
+  },
+  {
+    nom: 'console-par-un-porteur',
+    exemple: "export const f = () => globalThis.console.log('fuite');",
+    selector: "MemberExpression[property.name='console']",
+    message:
+      'src/domain/** n’écrit pas sur la console : `globalThis.console` atteint exactement ce que ' +
+      '`no-console` interdit, sans jamais écrire le nom que la règle lit (REQ-DM-041).',
+  },
+  {
+    nom: 'console-par-acces-calcule',
+    exemple: "export const f = () => console['log']('fuite');",
+    selector: "MemberExpression[computed=true][object.name='console']",
+    message:
+      'src/domain/** n’écrit pas sur la console : une clé calculée atteint la même méthode que ' +
+      '`console.log` (REQ-DM-041).',
+  },
+  {
+    nom: 'console-par-le-flux',
+    exemple: "export const f = () => process.stdout.write('fuite');",
+    selector: "MemberExpression[object.name='process'][property.name=/^(stdout|stderr)$/]",
+    message:
+      'src/domain/** n’écrit sur aucun flux : `process.stdout.write` est la même fuite que ' +
+      '`console.log`, un cran plus bas (REQ-DM-041, REQ-QA-001).',
+  },
+];
+
+/**
+ * LES MODULES INTERDITS SOUS `src/domain/**`, ÉCRITS DANS LEURS DEUX FORMES.
+ *
+ * Un module du cœur de node s'importe avec son préfixe (`node:fs`) ou sans (`fs`) : les deux
+ * chargent le MÊME module, et la liste d'origine ne nommait que la première. La forme sans préfixe
+ * est la forme voisine la plus banale de toutes, et elle traversait.
+ */
+export const MODULES_INTERDITS_DU_DOMAINE = [
+  '@prisma/*',
+  'next',
+  'next/*',
+  '*/prisma',
+  'ioredis',
+  'redis',
+  'bullmq',
+  'undici',
+  // les deux écritures de chaque module du cœur, et leurs sous-chemins (`node:fs/promises`)
+  ...['fs', 'child_process', 'http', 'https', 'net', 'dns', 'dgram', 'tls', 'worker_threads']
+    .flatMap((m) => [m, `${m}/*`, `node:${m}`, `node:${m}/*`])
+    .sort(),
+];
+
 export default tseslint.config(
   {
     ignores: [
@@ -142,30 +250,23 @@ export default tseslint.config(
             "`new Date()` est interdit sous src/domain : l'horloge est injectée par le module " +
             '`temps` (docs/CONVENTIONS.md §3). Un domaine qui lit l’heure ne se rejoue pas.',
         },
+        // GOV-076 — les FORMES VOISINES, DÉRIVÉES de la liste exportée en tête de ce fichier et
+        // jamais retapées ici : une seconde écriture de la même liste divergerait au premier ajout,
+        // et c'est la copie qui serait lue.
+        ...FORMES_VOISINES.map(({ selector, message }) => ({ selector, message })),
       ],
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
-              group: ['@prisma/*', 'next', 'next/*', 'node:fs', 'node:child_process', '*/prisma'],
+              // GOV-076 — les deux écritures de chaque module, DÉRIVÉES en tête de ce fichier.
+              group: MODULES_INTERDITS_DU_DOMAINE,
               message:
-                'src/domain/** est pur : aucune I/O, aucun accès base, aucun couplage au cadre ' +
-                'applicatif (docs/CONVENTIONS.md §3).',
-            },
-            {
-              group: [
-                'ioredis',
-                'redis',
-                'bullmq',
-                'node:http',
-                'node:https',
-                'node:net',
-                'undici',
-              ],
-              message:
-                'src/domain/** est pur : ni cache, ni file de tâches, ni appel réseau ' +
-                '(REQ-QA-001, docs/CONVENTIONS.md §3).',
+                'src/domain/** est pur : aucune I/O, aucun accès base, aucun cache, aucun appel ' +
+                'réseau, aucun couplage au cadre applicatif (REQ-QA-001, docs/CONVENTIONS.md §3). ' +
+                '⚠️ Un module du cœur de node s’importe AVEC ou SANS son préfixe `node:` — les deux ' +
+                'chargent le même module, et les deux sont interdits ici.',
             },
           ],
         },
