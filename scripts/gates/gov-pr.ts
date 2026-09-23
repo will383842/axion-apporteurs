@@ -1041,6 +1041,64 @@ function prDepuisLaForge(r: {
   };
 }
 
+/** Ce sha désigne-t-il un commit que CE clone peut lire ? Aucune sortie, aucun effet. */
+function objetLisible(sha: string): boolean {
+  try {
+    execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * DEUX CAUSES, DEUX REMÈDES — et le message d'origine accusait la mauvaise.
+ *
+ * Il prescrivait `fetch-depth: 0` sur `actions/checkout`. Or ce réglage est DÉJÀ posé, sur cette
+ * action même, dans `.github/workflows/ci.yml` — vérifié plutôt que supposé —, et l'échec mesuré
+ * sur la fusion de la PR 89 ne venait pas de là : la tête de la PR avait été
+ * SUPPRIMÉE par `gh pr merge --delete-branch`, et `fetch-depth: 0` ne ramène que les objets
+ * ATTEIGNABLES depuis une référence — il n'a jamais pu ramener un commit qui n'en a plus aucune.
+ * « Pose `fetch-depth: 0` » envoyait donc réparer ce qui n'est pas cassé, sur une gate déjà rouge.
+ * C'est le défaut que le `catch` de `--pr`, plus bas, nomme en toutes lettres : *le sens de
+ * défaillance reste fermé ; c'est le DIAGNOSTIC qui ment, et un diagnostic qui ment fait perdre le
+ * temps qu'une garde est censée faire gagner.*
+ *
+ * ⛔ LE MESSAGE D'ORIGINE N'EST PAS REMPLACÉ, ET CE N'EST PAS UN MÉNAGEMENT : il reste VRAI dans son
+ * cas. Un clone court (`fetch-depth: 1`, le défaut d'`actions/checkout`) ne contient pas le sha de
+ * base, et c'est bien `fetch-depth: 0` qui le répare. Effacer un message juste serait une seconde
+ * faute par-dessus la première. La branche manquante est donc AJOUTÉE à côté.
+ *
+ * Le partage se fait sur la LISIBILITÉ des deux extrémités, et non sur le texte de l'erreur de
+ * `git` : ce texte varie avec la version et l'abréviation des sha (« Invalid symmetric difference
+ * expression » quand les deux côtés ont la forme d'un sha, « ambiguous argument » sinon), alors que
+ * la question « quel objet ce clone sait-il lire ? » a une réponse stable.
+ *   — base lisible, tête absente  → la tête a disparu : ce run n'a rien à mesurer ;
+ *   — tout le reste (base absente, ou les deux) → le clone est trop court, message d'origine.
+ * Le sens de défaillance reste FERMÉ dans les deux cas : `prParEvenement()` sort en 1.
+ */
+function diagnosticDuDiffImpossible(
+  extremites: { base: string; tete: string },
+  lisible: (sha: string) => boolean
+): string[] {
+  if (lisible(extremites.base) && !lisible(extremites.tete)) {
+    return [
+      `❌ gov:pr — la tête de la PR (${extremites.tete}) n’existe dans AUCUNE référence de ce ` +
+        `clone, alors que sa base (${extremites.base}) y est lisible.`,
+      `   Ce n’est PAS un défaut de profondeur : \`fetch-depth: 0\` ne ramène que les objets ` +
+        `ATTEIGNABLES depuis une référence, et une PR fusionnée avec \`--delete-branch\` n’en a ` +
+        `plus aucune. Ne va rien changer à \`actions/checkout\`.`,
+      `   Ce job n’a rien à mesurer sur une PR déjà fusionnée : c’est le \`if:\` du job \`gate-a\` ` +
+        `(\`.github/workflows/ci.yml\`) qui l’écarte, et le diff fusionné se mesure au run ` +
+        `\`push: main\` du même sha.`,
+    ];
+  }
+  return [
+    `❌ gov:pr — impossible de lister les fichiers de la PR (\`git diff\`). Le job doit poser ` +
+      `\`fetch-depth: 0\` sur actions/checkout, sinon la moitié des familles ne contrôle rien.`,
+  ];
+}
+
 /** L'événement GitHub Actions : titre, corps, labels. Les revues n'y sont PAS. */
 function prParEvenement(): Pr | null {
   const chemin = process.env['GITHUB_EVENT_PATH'];
@@ -1061,10 +1119,12 @@ function prParEvenement(): Pr | null {
       }
     );
   } catch {
-    console.error(
-      `❌ gov:pr — impossible de lister les fichiers de la PR (\`git diff\`). Le job doit poser ` +
-        `\`fetch-depth: 0\` sur actions/checkout, sinon la moitié des familles ne contrôle rien.`
-    );
+    for (const ligne of diagnosticDuDiffImpossible(
+      { base: ev.pull_request.base.sha, tete: ev.pull_request.head.sha },
+      objetLisible
+    )) {
+      console.error(ligne);
+    }
     process.exit(1);
   }
   // La base de l'événement est un sha : `fetch-depth: 0` le rend lisible (voir ci-dessus).
