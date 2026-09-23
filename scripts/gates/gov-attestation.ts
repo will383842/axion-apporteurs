@@ -8,7 +8,7 @@
  * contrôle ne pourrait être éprouvé qu'en modifiant `docs/tasks.json`, fichier réservé qu'un
  * développeur n'écrit pas, et il resterait donc « jamais vu marcher » jusqu'au jour où il compte.
  *
- * ⚠️ CE CONTRÔLE N'EST NI DANS `pnpm test`, NI DANS `pnpm gov:check`, NI DANS LA CI, ET C'EST
+ * ⚠️ CE CONTRÔLE N'EST NI DANS `pnpm test`, NI DANS `pnpm gov:partiel`, NI DANS LA CI, ET C'EST
  * DÉLIBÉRÉ. Il interroge la forge. Une garde qui lance `gh` fait dépendre son verdict du réseau,
  * d'un jeton, d'un quota et de la visibilité d'un dépôt : mesuré le 2026-09-05 sur cet arbre, cinq
  * spécifications qui lançaient `gh` ont fait rendre à `pnpm test` 1, puis 0, puis 0 sans qu'une
@@ -29,7 +29,7 @@
  * publication d'un état d'avancement qui s'appuie dessus.
  *
  * LE SCRIPT REFUSE DE TOURNER SANS `--en-ligne`. Sans ce refus, quelqu'un le câblerait un jour dans
- * `gov:check` « pour être complet », et la suite entière deviendrait intermittente.
+ * une chaîne « pour être complet », et la suite entière deviendrait intermittente.
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -45,7 +45,7 @@ type Tache = { id: string; repo: string; statut: string; attestation?: Attestati
 if (!process.argv.includes('--en-ligne')) {
   console.error(
     "❌ gov:attestation — ce contrôle INTERROGE la forge et ne s'exécute qu'avec `--en-ligne`.\n" +
-      "   Il n'a pas sa place dans `pnpm test`, `pnpm gov:check` ni la CI : son verdict dépendrait\n" +
+      "   Il n'a pas sa place dans `pnpm test`, `pnpm gov:partiel` ni la CI : son verdict dépendrait\n" +
       "   du réseau, d'un jeton et d'un quota. La forme des attestations est jugée, elle, par\n" +
       '   `pnpm gov:tasks` — déterministe, bloquante, et sans aucun appel sortant.'
   );

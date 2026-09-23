@@ -6,7 +6,7 @@
  *
  * POURQUOI DEUX FICHIERS PLUTÔT QU'UN. `scripts/agents/generer.ts --verifier` sait dire qu'une fiche
  * a été éditée à la main ; il ne sait rien du reste. Or `docs/gates.json` déclare la gate `gov:agents`
- * sur CE chemin-ci, `pnpm gov:check` l'appelle par ce nom, et RM-02 exige d'une gate un mode `--prove`
+ * sur CE chemin-ci, `pnpm gov:partiel` l'appelle par ce nom, et RM-02 exige d'une gate un mode `--prove`
  * qui fait rougir chaque famille sur son témoin. Le partage est donc : le générateur tient le RENDU
  * (et le vérifie), la garde tient tout ce qu'un rendu ne peut pas voir —
  *

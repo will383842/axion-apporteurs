@@ -4,14 +4,14 @@
 // @req REQ-INT-003
 // @req REQ-DM-036
 /**
- * `termes-interdits.spec.ts` — le contrôle de la garde `gov:check` (GOV-030, puis GOV-088).
+ * `termes-interdits.spec.ts` — le contrôle de la garde `gov:termes-interdits` (GOV-030, puis GOV-088).
  *
  * CE QU'IL EXERCE :
  *   1. les DÉRIVATIONS (RM-01) : types, modèles refusés, synonymes et racines se LISENT dans leurs
  *      sources, et les fixtures de la preuve sont assérées ÉGALES aux sources réelles ;
  *   2. la famille `liste_litterale_d_etats` (REQ-DM-003, `partners/ADR-0011`) : une seule
  *      implémentation, une portée qui est une RACINE et jamais une extension, une lecture confrontée
- *      à git, et la conclusion « hors famille » de `gov:check` dérivée du même prédicat ;
+ *      à git, et la conclusion « hors famille » de la garde dérivée du même prédicat ;
  *   3. ce que les deux gardes ont RÉELLEMENT LU — chemin, et contenu PAR EMPREINTE — confronté à une
  *      lecture indépendante (`git ls-files`, octets relus sur le disque dans le test), sur une population
  *      générée, sur le dépôt réel et sur des dépôts jetables, jusqu'à la DERNIÈRE ligne d'un fichier de
@@ -35,6 +35,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import {
+  ID_REGISTRE,
   controler,
   examiner,
   fichierTexte,
@@ -141,7 +142,7 @@ function perimetreAttendu(fichiers: Map<string, Uint8Array>, racines: readonly s
   };
 }
 
-/** Les racines de `gov:check` sur un glossaire donné — l'oracle du test. */
+/** Les racines de la garde sur un glossaire donné — l'oracle du test. */
 const racinesDeLaGarde = (glossaire: string): string[] => [
   ...racinesDuGlossaire(glossaire),
   RACINE_CONTRATS,
@@ -212,7 +213,7 @@ function gros(derniere: string): string {
 }
 
 /**
- * F6' — lancé depuis la racine d'un dépôt : la vue de `gov:check`, le texte que la garde a PARCOURU
+ * F6' — lancé depuis la racine d'un dépôt : la vue de la garde, le texte qu'elle a PARCOURU
  * et la lecture de `partners:schema:enums` sont confrontés, fichier par fichier et PAR EMPREINTE, aux
  * octets que le disque rend à ce test.
  */
@@ -305,7 +306,7 @@ describe('REQ-DM-003 — la famille des listes d’états a UNE SEULE implément
     { chemin: 'src/server/x.ts', contenu: "if (s === 'provisoire' || s === 'active') return;" },
   ];
 
-  it('REQ-DM-003 : gov:check ne porte PLUS la famille des listes d’états — ni dans FAMILLES, ni au verdict', () => {
+  it('REQ-DM-003 : gov:termes-interdits ne porte PLUS la famille des listes d’états — ni dans FAMILLES, ni au verdict', () => {
     expect(FAMILLES.map((f) => f.nom)).not.toContain('liste_litterale_d_etats');
     for (const e of ENTREES) {
       expect(familles(avecFichier(e.chemin, e.contenu)), e.chemin).not.toContain(
@@ -405,7 +406,7 @@ describe('REQ-DM-003 — la famille des listes d’états a UNE SEULE implément
     }
   }, 180_000);
 
-  it('REQ-DM-003 : la conclusion « hors famille » de gov:check dérive du prédicat de la famille', () => {
+  it('REQ-DM-003 : la conclusion « hors famille » de gov:termes-interdits dérive du prédicat de la famille', () => {
     // Le dépôt réel, et une vue dont les racines couvrent chaque racine de la famille et d'autres :
     // une liste de racines retapée coïnciderait avec la première, pas avec la seconde.
     const synthetique: Vue = {
@@ -747,10 +748,10 @@ describe('GOV-030 — la preuve : population du SEUL registre, décision PURE', 
   const registre = (): string => readFileSync('docs/gates.json', 'utf8');
   const entrees = () => entreesDeLaPreuve(registre());
 
-  /** Le registre réel, amputé d'un nom dans UNE liste du champ `verifie` de `gov:check`. */
+  /** Le registre réel, amputé d'un nom dans UNE liste du champ `verifie` de l'entrée jugée. */
   function registreAmpute(etiquette: string, nom: string): string {
     const r = JSON.parse(registre()) as { gates: { id: string; verifie: string }[] };
-    const entree = r.gates.find((g) => g.id === 'gov:check')!;
+    const entree = r.gates.find((g) => g.id === ID_REGISTRE)!;
     const avant = entree.verifie;
     entree.verifie = avant.replace(
       new RegExp(`(${etiquette}\\s*:\\s*)([a-z0-9_,\\s]+?)(\\s*(?:;|$))`),
@@ -836,12 +837,12 @@ describe('GOV-030 — la preuve : population du SEUL registre, décision PURE', 
   });
 
   it('un registre muet, en double ou illisible est un REFUS, jamais une population vide', () => {
-    const muet = JSON.stringify({ gates: [{ id: 'gov:check', verifie: 'termes interdits' }] });
+    const muet = JSON.stringify({ gates: [{ id: ID_REGISTRE, verifie: 'termes interdits' }] });
     expect(() => populationDuRegistre(muet)).toThrow(/ne nomme aucun/);
     const double = JSON.stringify({
       gates: [
-        { id: 'gov:check', verifie: 'x' },
-        { id: 'gov:check', verifie: 'y' },
+        { id: ID_REGISTRE, verifie: 'x' },
+        { id: ID_REGISTRE, verifie: 'y' },
       ],
     });
     expect(() => populationDuRegistre(double)).toThrow(/2 entrée/);

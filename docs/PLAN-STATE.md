@@ -7,19 +7,19 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `e6b1df4` — 2026-09-23T01:47:47+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #88 (rien) · 3. #92 (rien) · 4. #93 (rien) · 5. #99 (rien) · 6. #112 (rien) · 7. #91 (un contrôle requis rouge ou une revue manquante) · 8. #102 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `87e235a` — 2026-09-23T04:50:19+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #91 (rien) · 2. #102 (rien) · 3. #113 (rien) · 4. #82 (un conflit avec `main`) · 5. #88 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) · 8. #99 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) |
-| Où en est la phase ? | phase 0 — 20/103 tâches, reste 62.60 j |
-| Le prochain pas | fusionner #82, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Où en est la phase ? | phase 0 — 21/104 tâches, reste 62.60 j |
+| Le prochain pas | fusionner #91, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #112 — 2026-09-23 |
 
-**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 91 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-20/103 tâches terminées · reste 62.60 j estimés.
+21/104 tâches terminées · reste 62.60 j estimés.
 
 ## Tâches
 
@@ -31,7 +31,7 @@
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 59 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
+| `fusionnee` | 60 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -64,14 +64,14 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | rien — fusionnable maintenant |
-| 3 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | rien — fusionnable maintenant |
-| 4 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | rien — fusionnable maintenant |
-| 5 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | rien — fusionnable maintenant |
-| 6 | #112 — fix(GOV-092): une revision servie sans `diff` bloque la porte A, et les deux remedes nommes sont faux | `t/gov-092` | rien — fusionnable maintenant |
-| 7 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
-| 8 | #102 — docs(GOV-063): ADR 0018 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | un contrôle requis rouge ou une revue manquante |
+| 1 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | rien — fusionnable maintenant |
+| 2 | #102 — docs(GOV-063): ADR 0018 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | rien — fusionnable maintenant |
+| 3 | #113 — feat(GOV-090): un label designe une SOURCE, jamais une vue, et un verbe hors depot se cite hors-depot/ | `t/gov-label-et-outils` | rien — fusionnable maintenant |
+| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 8 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -85,23 +85,23 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
 | GOV-092 — Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux | A03 | #111 | `a_faire` |
 
-⚠️ **40 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, SEC-10, DM-01, DM-02, QA-T02, QA-T03, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-059, GOV-077, GOV-089, GOV-088, GOV-091 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
+⚠️ **41 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, SEC-10, DM-01, DM-02, QA-T02, QA-T03, SEC-07, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-059, GOV-077, GOV-089, GOV-088, GOV-091 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-`docs/adr/0017-revendication-derivee-de-la-forge.md` — partners/ADR-0017 — La revendication d'une tâche se dérive de la forge, pas du fichier de la branche
+`docs/adr/0011-une-seule-implementation-des-listes-d-etats.md` — partners/ADR-0011 — Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture · `docs/adr/0017-revendication-derivee-de-la-forge.md` — partners/ADR-0017 — La revendication d'une tâche se dérive de la forge, pas du fichier de la branche · `docs/adr/0018-un-nom-une-garde-gov-check-retire-des-deux-cotes.md` — partners/ADR-0018 — Un nom, une garde : `gov:check` est retiré des deux côtés
 
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-23). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
 
-**Fusionner #82** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+**Fusionner #91** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 44 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 ## Dernier atterrissage
 
-`origin/main` = `e6b1df4` (2026-09-23T01:47:47+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `87e235a` (2026-09-23T04:50:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -264,7 +264,7 @@ bloc et suivi d'une glose naîtra désarmé de la même façon. Et la face verte
 ligne que SEC-06 écrira — la même ligne rougit sous la garde des énumérations, la colonne devra
 être un enum.
 
-… 38 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 39 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

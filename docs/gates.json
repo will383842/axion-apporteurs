@@ -18,7 +18,7 @@
   "version": 2,
   "gates": [
     {
-      "id": "gov:check",
+      "id": "gov:termes-interdits",
       "phase": -1,
       "script": "scripts/gates/gov-check.ts",
       "tache": "GOV-000",
@@ -242,7 +242,7 @@
       "phase": -1,
       "script": ".github/workflows/ci.yml#gate-a",
       "tache": "GOV-000",
-      "verifie": "tsc strict, ESLint (no-console, imports interdits sous src/domain, new Date() interdit dans le domaine), Prettier, Vitest 100 % src/domain et >= 80 % global, req:check, idor:check, aucun stub.invalid, projets mobile ; le job porte le nom exact gate-a, qui est le check requis de la protection de main (minimale gov:check en phase -1, complete par QA-T01 en phase 0)",
+      "verifie": "tsc strict, ESLint (no-console, imports interdits sous src/domain, new Date() interdit dans le domaine), Prettier, Vitest 100 % src/domain et >= 80 % global, req:check, idor:check, aucun stub.invalid, projets mobile ; le job porte le nom exact gate-a, qui est le check requis de la protection de main (minimale en phase -1, complete par QA-T01 en phase 0)",
       "fixtureRouge": "retirer un it() sous src/domain",
       "preuveRouge": null
     },
