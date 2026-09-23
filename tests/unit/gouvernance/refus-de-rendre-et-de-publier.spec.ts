@@ -674,6 +674,24 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'qu’on ne remesure jamais.*',
     },
     // ── UX-P0-02 : UNE sortie, à code VARIABLE ──────────────────────────────────────────────
+    'scripts/gates/ux-exhaustivite.ts': {
+      total: 2,
+      porte: 2,
+      // ZÉRO, et il est assumé : les deux sorties non nulles de cette garde ne sont vues par AUCUN
+      // test à travers la frontière du processus. Les familles, elles, sont prouvées une à une sur
+      // des vues INJECTÉES dans `controler`, qui est pure — c'est solide, mais ce n'est pas la
+      // même chose que voir le binaire sortir en 1. Inscrit ici pour que le manque soit CHIFFRÉ et
+      // cherchable, jamais pour le tenir pour couvert.
+      temoins: 0,
+      raison:
+        'UX-P0-01 — la garde d’exhaustivité du vocabulaire et de la micro-copie. DEUX sorties non ' +
+        'nulles : `echouer()`, atteinte sous `--prove` quand une famille n’a pas de témoin, et la ' +
+        'sortie de jugement du dépôt réel quand une faute est trouvée. `vocabulaire-et-micro-copy.' +
+        'spec.ts` lance le binaire DEUX fois — sur le dépôt réel et sous `--prove` — et les deux ' +
+        'fois il sort en 0 : aucun test ne l’a vu sortir en 1. Le REFUS DE PÉRIMÈTRE n’est pas ' +
+        'compté ici : il vient de `fichiersSuivisOuRefus`, et `GARDES_QUI_BALAIENT` le déclare ' +
+        'plus bas.',
+    },
     'scripts/gates/maquettes-validees.ts': {
       total: 1,
       porte: 1,
@@ -916,7 +934,18 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // chiffrant — relu, pas deviné :
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(44);
+    // 🔧 44 → 46 par UX-P0-01, ARBITRÉ et non subi : `scripts/gates/ux-exhaustivite.ts` naît
+    // avec DEUX sorties non nulles — `echouer()`, atteinte sous `--prove` quand une famille n'a pas
+    // de témoin, et la sortie de jugement du dépôt réel sur faute. Déclarées plus haut avec
+    // `temoins: 0`, assumé : `vocabulaire-et-micro-copy.spec.ts` lance le binaire DEUX fois et les
+    // deux fois il sort en 0 ; les familles sont prouvées sur des vues INJECTÉES dans `controler`,
+    // qui est pure. Solide, mais ce n'est pas voir le binaire sortir en 1, et le registre le DIT.
+    // La Gate A de la PR 93 a rougi d'abord sur l'identité, puis sur le compte — relu, pas deviné :
+    //
+    //     scripts/gates/ux-exhaustivite.ts ajoute 2 `process.exit(1)` et n’est PAS déclaré ici
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 46 to be 44
+    //
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(46);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -1978,6 +2007,11 @@ const GARDES_QUI_BALAIENT = [
   'scripts/gates/journal-sans-pii.ts',
   // DM-02 — `partners:migrations:additive` lit TOUTES les migrations SUIVIES, pas celles de la PR.
   'scripts/gates/migrations-additive.ts',
+  // UX-P0-01 — `ux:exhaustivite` établit son périmètre par la primitive pour que les composants
+  // `.tsx` qu'elle relit soient ceux que `git` suit, et pour que son refus porte le nom
+  // `perimetre_illisible` plutôt qu'une erreur de lecture muette. La réciproque ci-dessous a rougi
+  // en la nommant — elle n'a pas été devinée.
+  'scripts/gates/ux-exhaustivite.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {

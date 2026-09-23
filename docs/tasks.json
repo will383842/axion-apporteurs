@@ -3381,7 +3381,8 @@
         "src/domain/depot/issue-depot.ts",
         "src/domain/lexique/lexique-interdit.ts",
         "tests/unit/gouvernance/lexique.spec.ts",
-        "scripts/gates/gov-attributions.ts"
+        "scripts/gates/gov-attributions.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
