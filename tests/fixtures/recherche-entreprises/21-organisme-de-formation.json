@@ -53,9 +53,7 @@
           "liste_enseignes": null,
           "liste_finess": null,
           "liste_id_bio": null,
-          "liste_idcc": [
-            "1486"
-          ],
+          "liste_idcc": ["1486"],
           "liste_id_organisme_formation": null,
           "liste_rge": null,
           "liste_uai": null,
