@@ -949,7 +949,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // Garder un seul cote aurait retire une garde du compte sans que rien ne le dise. Le nombre
     // ci-dessous est DERIVE de la somme des `total` du registre, pas repris d une des deux
     // branches.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(45)
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(45);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
