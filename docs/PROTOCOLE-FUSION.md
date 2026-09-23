@@ -124,9 +124,36 @@ décalage. **Un contrôle qui interroge la source qu'il est censé contrôler ne
 `git ls-remote` passe par le protocole git et non par l'API : c'est un chemin réellement distinct.
 
 **Ce qu'on lit.** L'empreinte de tête est celle qui portait les approbations du pas 2. Si elle a
-changé depuis, les revues portent sur autre chose : on retourne au pas 2. A04 est privé d'écriture,
-donc il ne peut pas retoucher ce qu'il fusionne ; quand A12 le supplée, cette propriété n'est plus
-tenue par l'outillage — elle est tenue par **ce pas**.
+changé depuis, les revues portent **peut-être** sur autre chose, et `pnpm gov:pr --pr <n>` tranche :
+voir l'exception ci-dessous. A04 est privé d'écriture, donc il ne peut pas retoucher ce qu'il
+fusionne ; quand A12 le supplée, cette propriété n'est plus tenue par l'outillage — elle est tenue
+par **ce pas**.
+
+⚠️ **L'EXCEPTION, ÉTROITE EXPRÈS (GOV-095) : un accord survit à un commit qui ne touche que le
+journal.** Jusqu'au 2026-09-23, un accord était lié au **sha de la tête**, jamais au **code jugé** :
+toute tête de plus périmait tous les accords exigés, y compris quand `git diff` entre les deux était
+vide. Mesuré sur la demande de fusion #102 — `git diff --name-only 8ef35a3 8891d53` ne rend que
+`docs/journal/2026-09-pr-102.md`, une phrase de prose, et cette tête-là a pourtant périmé `securite`,
+`schema` et `mutation`, qu'il a fallu refaire sur un code identique au bit près.
+
+Un accord rendu sur la lentille L au commit C survit désormais à la tête T **si, et seulement si** :
+
+1. **L n'est pas `exactitude`** — cette lentille juge la prose, c'est sa matière, et son accord ne
+   survit à aucun commit ;
+2. **ET** l'ensemble des fichiers changés entre C et T est **vide**, ou **entièrement contenu sous
+   `docs/journal/`**.
+
+Tout le reste périme, et **chaque cas ambigu échoue fermé** : un diff que `git` ne peut pas calculer
+(commit absent du clone) périme et le refus le dit ; `docs/tasks.json` et `docs/requirements.json`
+périment, parce que la garde y **lit** `zone`, `sensible`, `schema` et `paths` — ce sont des sources,
+pas de la prose ; une vue dérivée périme, parce que si la vue a changé sa source a changé ; un ADR ou
+tout autre document normatif périme. Rien de tout cela n'est énuméré dans le code : la liste blanche
+est **un seul préfixe**, et tout ce qui n'y est pas périme par construction.
+
+**Ce pas ne se lit donc plus à l'œil.** `pnpm gov:pr --pr <n>` **imprime** chaque accord qui survit —
+le poste, la lentille, le sha de l'accord, le sha de la tête, et la liste des fichiers qui les
+séparent. Une survie qu'on ne peut pas contester sans relire le code serait une permission
+silencieuse ; celle-là se conteste sur sa seule ligne de sortie.
 
 ### Pas 6 — Lire l'état et fusionner dans le MÊME appel
 
