@@ -138,8 +138,8 @@ qui n'existe dans AUCUNE révision de `main` — `GOV-090` a été vérifiée ab
 registre ne l'avait jamais vue, et rien ne le signalait : ni la forge, ni les vues, ni `gov:etat`,
 parce qu'une tâche qu'on n'a jamais versée ne manque à personne. Le second, plus utile encore :
 résoudre un conflit de journal du côté de `main` REND au fichier les corrections que la branche y
-avait faites. Les deux citations `outils/` requalifiées `hors-depot/` sont revenues à leur forme
-fausse par la résolution elle-même, et c'est le témoin de la famille, écrit par cette PR, qui les a
+avait faites. Les deux citations que la branche avait écrites `hors-depot/` sont revenues à la forme
+`outils/` par la résolution elle-même, et c'est le témoin de la famille, écrit par cette PR, qui les a
 vues. Une résolution de conflit n'est pas une fusion de deux textes : c'est un CHOIX, et le côté
 qu'on choisit efface l'autre en silence. Seule une garde le dit.
 
