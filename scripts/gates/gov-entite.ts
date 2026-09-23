@@ -1499,9 +1499,8 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
         `PR #${lecture.pr} — la forge a servi ${illisiblesSansHorodatage} révision(s) SANS ` +
         `\`editedAt\` : quel que soit leur texte, on ne sait pas les DÉSIGNER. Celles-là n'ont AUCUN ` +
         `chemin de sortie, et c'est voulu : une exemption s'apparie sur l'horodatage EXACT. Une ` +
-        `ligne qui absoudrait « la révision sans ` +
-        `horodatage » absoudrait aussi toutes les suivantes, c'est-à-dire tout ce qui reste à ` +
-        `écrire. INDÉTERMINÉ (2), sans remède dans ce dépôt.`,
+        `ligne qui absoudrait « la révision sans horodatage » absoudrait aussi toutes les ` +
+        `suivantes, c'est-à-dire tout ce qui reste à écrire. INDÉTERMINÉ (2), sans remède ici.`,
     });
   }
 
