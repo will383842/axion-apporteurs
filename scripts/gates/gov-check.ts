@@ -209,7 +209,8 @@ export function typesEvenementDeLaReq(texte: string): string[] {
 
 /**
  * LES RACINES QUE LA GARDE JUGE, lues dans l'en-tête de `docs/GLOSSAIRE.md` : « tout synonyme
- * interdit trouvé dans `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` → rouge (`gov:check`) ».
+ * interdit trouvé dans `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` → rouge
+ * (`gov:termes-interdits`) ».
  * Les séparateurs admettent `>` et les fins de ligne : la clause est écrite en citation Markdown.
  */
 export function racinesDuGlossaire(glossaire: string): string[] {
@@ -788,7 +789,7 @@ const GLOSSAIRE_FIXTURE = [
   '# Glossaire — Axion Partners',
   '',
   '> Gate `glossaire-enums.spec.ts` : tout synonyme interdit trouvé dans `prisma/**`, `src/**`,',
-  '> `messages/**`, `docs/adr/**` → rouge (`gov:check`).',
+  '> `messages/**`, `docs/adr/**` → rouge (`gov:termes-interdits`).',
   '',
   '## 1. Attribution',
   '',

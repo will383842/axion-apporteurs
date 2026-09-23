@@ -10552,6 +10552,33 @@
       "branch": "t/journal-108",
       "pr": 109,
       "motif": null
+    },
+    {
+      "id": "GOV-093",
+      "titre": "Le champ `schema` d'une tache et ses `paths` ne sont confrontes par RIEN, et aucun verbe ne sait ecrire ce champ",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-tasks.ts",
+        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, la lentille `schema` de la PR #102 a constate que `GOV-063` porte `\"schema\": false` dans `docs/tasks.json` alors que ses `paths` nomment `packages/contracts/events.ts`. Aucune garde ne rougit : `gov:tasks` ne confronte pas `schema` aux `paths`, et `gov:pr` derive `toucheSchema` des FICHIERS DU DIFF et de `cheminsSchema`, jamais du champ du registre. Le bon comportement a donc ete obtenu ce jour-la par le diff, pas par le registre, et personne ne l aurait su si la lentille ne l avait pas cherche. SECOND VOLET, mesure dans la foulee : `reecrire-champ.mjs` REFUSE d ecrire `schema` (« n est pas un champ ecrivable de tasks.json » ; il ne reecrit que titre, acceptance, tests, sensible, deps, estimateDays) et `reclasser.mjs` ne le connait pas davantage. Le champ existe, il ment, et AUCUN verbe hors depot ne sait le remettre droit : il n est modifiable qu a la main, donc hors de toute trace. A LIVRER. (1) Une famille de `gov:tasks` confronte `schema` aux `paths` : une tache dont un `path` tombe sous un `cheminsSchema` (derive de la §7 de `docs/CHARTE-AGENTS.md`, JAMAIS recopie) et qui porte `schema: false` rougit en nommant le chemin fautif. (2) La RECIPROQUE est jugee aussi, et elle est plus delicate : une tache `schema: true` dont aucun `path` ne tombe sous `cheminsSchema` n est PAS forcement fautive (une tache peut engager le schema sans nommer le fichier), donc elle ne rougit pas — elle est IMPRIMEE, avec son compte, sous une rubrique qui dit pourquoi elle n est pas refusee. Un avertissement muet serait un vert qui ment. (3) Un temoin ROUGE vu rougir par famille, et un contre-temoin VERT par famille, dont un qui prouve qu une tache SANS `paths` ne rougit pas par vacuite. (4) `GOV-063` est remise droite par le meme mouvement, ou bien la garde la nomme et la tache qui la remettra droite est ouverte. (5) Le champ devient ECRIVABLE par un verbe hors depot, avec motif obligatoire et consignation au journal des reecritures — ou, si l equipe tranche l inverse, la raison de le laisser inecrivable est ecrite la ou le verbe refuse, pour que le prochain ne la redecouvre pas.",
+      "tests": {
+        "REQ-GOV-013": [
+          "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
+        ]
+      }
     }
   ]
 }

@@ -130,8 +130,18 @@ describe('REQ-GOV-008 — un identifiant du registre ne désigne qu’une chose'
     // garde QUE parce qu'un commentaire de `ci.yml` citait son identifiant : retirer le commentaire
     // faisait rougir à tort, le garder tenait une garde bloquante par un littéral de prose.
     const nu = sansCommentaires(ci);
-    expect(nu).toContain(`pnpm ${ID_REGISTRE}`);
-    expect(nu).toContain(`pnpm ${ID_REGISTRE}:prove`);
+    // ⚠️ APPARTENANCE EXACTE, PAS INCLUSION DE TEXTE, et la mutation qui l'a imposé est celle-ci :
+    // retirer la ligne d'appel BLOQUANTE en gardant `…:prove` laissait les deux attentes vertes,
+    // parce que l'identifiant est un PRÉFIXE de celui de sa preuve. La porte A ne jouait plus la
+    // garde sur le dépôt réel — seulement son auto-test sur fixtures — et rien ne rougissait.
+    // C'est exactement la forme de défaut que cette PR dénonce ailleurs : un témoin qui SE TAIT.
+    const jouees = etapesDeLaPorteA(nu);
+    expect(jouees, 'la garde elle-même doit être jouée, pas seulement son auto-test').toContain(
+      ID_REGISTRE
+    );
+    expect(jouees, 'et son auto-test aussi : une garde qui ne sait pas rougir ne garde rien').toContain(
+      `${ID_REGISTRE}:prove`
+    );
   });
 
   it('REQ-QA-013 — la chaîne survivante est un sous-ensemble STRICT de la porte A, et son nom ne dit plus « check »', () => {
@@ -157,7 +167,7 @@ describe('REQ-QA-013 — la dette de nommage qui RESTE est nommée, comptée, et
     // Le sens INVERSE de la première famille : un script de `package.json` qui lance la garde d'une
     // entrée sans en porter l'identifiant. Ces trois-là préexistent à `partners/ADR-0018` et n'ont
     // trompé personne — aucune des trois n'imprime un nom qu'on puisse taper à tort. Elles sont
-    // FIGÉES ici : une troisième rougit.
+    // FIGÉES ici : une quatrième rougit — la liste en porte TROIS, l'ordinal compte les écarts.
     const ecarts: string[] = [];
     for (const e of registre) {
       const script = e.script ?? '';

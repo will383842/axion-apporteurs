@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**263 taches · 197.85 j estimes.**
+**264 taches · 198.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 101 | 78.85 | 21 |
+| 0 — Socle technique | 102 | 79.35 | 21 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -1559,6 +1559,16 @@ CE QUE CETTE TACHE NE FERME PAS, ET QUI EST LE VRAI SUJET. La famille `pr_fusion
 POURQUOI UNE TACHE DEDIEE PLUTOT QUE LA TACHE HISTORIQUE. Le precedent existe DEUX fois (PR #29 et PR #35 ont cite une tache deja `fusionnee` pour ce meme defaut) et la forge l'accepte. Mais la tache historique porte `sensible: [auth]`, ce qui classe la PR en risque ELEVE et exige QUATRE lentilles pour une correction de DEUX fichiers de prose — pendant que `main` est rouge et que la file est arretee. Une tache vivante, zone gouvernance, `sensible` vide, rend le regime a deux lentilles que le risque reel merite. Le classificateur mesure ce qu'il pretend mesurer ; c'est la tache empruntee qui mentait.
 
 **Tests.** `tests/unit/gouvernance/plan-state-frais.spec.ts`
+
+### GOV-093 — Le champ `schema` d'une tache et ses `paths` ne sont confrontes par RIEN, et aucun verbe ne sait ecrire ce champ
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-013`
+
+**Acceptation.** MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, la lentille `schema` de la PR #102 a constate que `GOV-063` porte `"schema": false` dans `docs/tasks.json` alors que ses `paths` nomment `packages/contracts/events.ts`. Aucune garde ne rougit : `gov:tasks` ne confronte pas `schema` aux `paths`, et `gov:pr` derive `toucheSchema` des FICHIERS DU DIFF et de `cheminsSchema`, jamais du champ du registre. Le bon comportement a donc ete obtenu ce jour-la par le diff, pas par le registre, et personne ne l aurait su si la lentille ne l avait pas cherche. SECOND VOLET, mesure dans la foulee : `reecrire-champ.mjs` REFUSE d ecrire `schema` (« n est pas un champ ecrivable de tasks.json » ; il ne reecrit que titre, acceptance, tests, sensible, deps, estimateDays) et `reclasser.mjs` ne le connait pas davantage. Le champ existe, il ment, et AUCUN verbe hors depot ne sait le remettre droit : il n est modifiable qu a la main, donc hors de toute trace. A LIVRER. (1) Une famille de `gov:tasks` confronte `schema` aux `paths` : une tache dont un `path` tombe sous un `cheminsSchema` (derive de la §7 de `docs/CHARTE-AGENTS.md`, JAMAIS recopie) et qui porte `schema: false` rougit en nommant le chemin fautif. (2) La RECIPROQUE est jugee aussi, et elle est plus delicate : une tache `schema: true` dont aucun `path` ne tombe sous `cheminsSchema` n est PAS forcement fautive (une tache peut engager le schema sans nommer le fichier), donc elle ne rougit pas — elle est IMPRIMEE, avec son compte, sous une rubrique qui dit pourquoi elle n est pas refusee. Un avertissement muet serait un vert qui ment. (3) Un temoin ROUGE vu rougir par famille, et un contre-temoin VERT par famille, dont un qui prouve qu une tache SANS `paths` ne rougit pas par vacuite. (4) `GOV-063` est remise droite par le meme mouvement, ou bien la garde la nomme et la tache qui la remettra droite est ouverte. (5) Le champ devient ECRIVABLE par un verbe hors depot, avec motif obligatoire et consignation au journal des reecritures — ou, si l equipe tranche l inverse, la raison de le laisser inecrivable est ecrite la ou le verbe refuse, pour que le prochain ne la redecouvre pas.
+
+**Tests.** `tests/unit/gouvernance/tasks-schema-et-paths.spec.ts`
 
 ## Phase 1 — Operationnel
 
