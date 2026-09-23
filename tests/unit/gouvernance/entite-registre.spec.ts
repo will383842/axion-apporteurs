@@ -1777,6 +1777,357 @@ describe('REQ-GOV-031 — les exemptions de révision, et ce qui les empêche d�
 });
 
 /**
+ * ── LA TROISIÈME CAUSE D'UNE RÉVISION NON LUE : UN `diff` NUL SERVI PAR LA FORGE ──────────────
+ *
+ * 🔴 CE QUI A ÉTÉ MESURÉ LE 2026-09-23, sur la PR #102 de ce dépôt.
+ * `pnpm gov:entite --corps-publie 102` rendait INDÉTERMINÉ (2) sur `revisions_non_lues` — « la
+ * forge annonce 8 révision(s) du corps et 6 ont été lues » — et la porte A échouait sur cette
+ * étape. Le rejeu direct de la forge,
+ * `gh api graphql … pullRequest(number:102){userContentEdits(first:100)}`, rend **autant de
+ * nœuds qu'elle en annonce** : la pagination fonctionne, `PAGES_MAX` n'est pas atteint. DEUX de
+ * ces nœuds portent un `editedAt` et un `diff` **NUL** — `2026-09-23T00:21:32Z` et
+ * `2026-09-23T00:21:56Z`. `assemblerLecture` les écartait par
+ * `if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue`, et l'écart
+ * annoncé/lu faisait tomber le verdict.
+ *
+ * ⚠️ LE DÉFAUT N'ÉTAIT PAS L'ÉCART — IL ÉTAIT DANS LE REMÈDE. Le message nommait deux causes et
+ * deux remèdes, et **aucun des deux ne s'appliquait** :
+ *
+ *   (a) « rien à corriger dans ce dépôt, relance la garde » — la réponse de la forge est STABLE,
+ *       les deux `diff` nuls le sont à chaque appel, mesuré trois fois de suite ;
+ *   (b) « relève `PAGES_MAX` » — une seule page avait été lue, la borne n'était pas en cause.
+ *
+ * **Un remède faux est pire qu'un remède absent** : il envoie le lecteur rejouer une commande qui
+ * ne changera rien. C'est exactement ce qui s'est passé le jour de la mesure.
+ *
+ * 🔑 LA TROISIÈME CAUSE, que le docblock de la pagination n'avait pas prévue : la forge sert
+ * `diff: null` quand l'édition a produit un corps **VIDE** ou un corps **INCHANGÉ**. Les deux
+ * révisions ci-dessus sont exactement l'une et l'autre. Et la portée est ce qui rendait la tâche
+ * urgente : l'historique d'édition d'une forge ne se dé-publie pas, `gov:entite --corps-publie`
+ * tourne sur CHAQUE PR — une PR dont le corps a été vidé une fois, ou re-posté à l'identique une
+ * fois, ne repasserait **PLUS JAMAIS** la porte A.
+ *
+ * LE CHEMIN DE SORTIE réutilise le mécanisme déjà conçu pour l'irréparable, et il est plus étroit
+ * que la forme d'origine ne le laisserait croire : une exemption dont l'`empreinte` est ABSENTE
+ * absout LA RÉVISION entière — mais seulement une révision ILLISIBLE. Une révision dont la forge
+ * sert le `diff` est LUE, donc jugée, donc il n'y a rien à y absoudre.
+ *
+ * ⛔ ET LE REFUS RESTE LE DÉFAUT. Sans ligne au registre, une révision illisible laisse le verdict
+ * INDÉTERMINÉ. Une révision illisible n'est JAMAIS réputée propre d'office : ce serait rendre vert
+ * ce qu'on n'a pas lu, c'est-à-dire écrire le défaut que cette garde existe pour refuser.
+ *
+ * ⛔ ET UN HORODATAGE ABSENT REFUSE SANS CHEMIN DE SORTIE. Une exemption s'apparie sur
+ * l'horodatage EXACT : sans lui on ne sait pas DÉSIGNER la révision qu'on absoudrait, et une
+ * ligne qui absoudrait « la révision sans horodatage » absoudrait aussi toutes les suivantes.
+ */
+describe('REQ-GOV-031 — une révision servie sans `diff` : nommée, bornée, et déclarable', () => {
+  const PR = 102;
+  /** Les deux horodatages MESURÉS sur la PR #102 le 2026-09-23 — l'un vide, l'autre inchangé. */
+  const VIDE = '2026-09-23T00:21:32Z';
+  const INCHANGE = '2026-09-23T00:21:56Z';
+  const LUE = '2026-09-23T00:23:04Z';
+
+  /**
+   * ⚠️ AUCUN DÉFAUT SUR CE QUE CES CAS FONT VARIER (RM-11). `illisibles`, `lues` et `annoncees`
+   * sont écrits à chaque appel : c'est précisément leur rapport qui se juge ici, et un paramètre
+   * par défaut sur l'un des trois transformerait « absent » en « présent » sans qu'on le voie.
+   */
+  const lecture = (arg: {
+    illisibles: (string | null)[];
+    lues: { horodatage: string; texte: string }[];
+    annoncees: number;
+    corpsCourant: string;
+  }): Extract<LectureDuCorps, { lu: true }> => ({
+    lu: true,
+    pr: PR,
+    corps: [
+      { origine: 'corps courant', horodatage: null, texte: arg.corpsCourant, revision: false },
+      ...arg.lues.map((r) => ({
+        origine: `révision du ${r.horodatage}`,
+        horodatage: r.horodatage,
+        texte: r.texte,
+        revision: true,
+      })),
+    ],
+    revisionsLues: arg.lues.length,
+    revisionsAnnoncees: arg.annoncees,
+    revisionsIllisibles: arg.illisibles,
+    // La forge a rendu la main d'elle-même : ce n'est PAS une lecture interrompue. Sans cette
+    // précision, deux causes seraient actives d'un coup et aucun de ces cas ne discriminerait.
+    lectureInachevee: false,
+  });
+
+  /**
+   * L'exemption de la forme RÉVISION ENTIÈRE : les mêmes exigences de forme que l'autre, moins
+   * l'empreinte — qui n'existe pas, puisqu'il n'y a pas de coordonnée à désigner. `definitive`
+   * n'y est pas un choix : une révision illisible l'est pour toujours.
+   */
+  const deRevision = (sur: string, pr = PR): Exemption => ({
+    pr,
+    revision: sur,
+    declaree: '2026-09-23',
+    par: 'banc d’essai',
+    motif:
+      'témoin du banc d’essai : la forge sert `diff: null` pour cette révision, son texte est ' +
+      'illisible et il ne le redeviendra pas.',
+    definitive: true,
+  });
+
+  it('REQ-GOV-031 — TÉMOIN ROUGE : une révision à `diff` nul SANS exemption laisse INDÉTERMINÉ', () => {
+    const v = jugerCorpsPublie(
+      lecture({
+        illisibles: [VIDE, INCHANGE],
+        lues: [{ horodatage: LUE, texte: 'rien à signaler' }],
+        annoncees: 3,
+        corpsCourant: 'rien à signaler',
+      })
+    );
+    // LE REFUS EST LE DÉFAUT : une révision qu'on n'a pas lue n'est pas réputée propre.
+    expect(v.code).toBe(2);
+    expect(v.code).not.toBe(0);
+    expect(v.fautes.map((f) => f.famille)).toContain('revisions_non_lues');
+    // UNE FAUTE PAR RÉVISION, et chacune porte SON horodatage : c'est la seule chose qui permet
+    // d'écrire la ligne de registre correspondante sans deviner.
+    for (const h of [VIDE, INCHANGE]) {
+      expect(
+        v.fautes.some((f) => f.message.includes(h)),
+        h
+      ).toBe(true);
+    }
+    const m = v.fautes.find((f) => f.message.includes(VIDE))!.message;
+    // LA CAUSE EST NOMMÉE, avec ce qui la produit…
+    expect(m).toContain('corps VIDE');
+    expect(m).toContain('INCHANGÉ');
+    // … le fait qu'elle est DÉFINITIVE…
+    expect(m).toContain('DÉFINITIF');
+    // … et le chemin de sortie, avec la forme exacte de la ligne à écrire.
+    expect(m).toContain('SANS `empreinte`');
+    expect(m).toContain(`revision="${VIDE}"`);
+  });
+
+  it('REQ-GOV-031 — LES DEUX FAUX REMÈDES ne sont plus servis pour cette cause-là', () => {
+    // 🔴 C'EST LE DÉFAUT MÊME DE CETTE TÂCHE. Le message nommait « relance la garde » et
+    // « relève PAGES_MAX » ; la réponse de la forge est STABLE et une seule page avait été lue.
+    // Un remède faux envoie le lecteur rejouer une commande qui ne changera rien.
+    const m = jugerCorpsPublie(
+      lecture({
+        illisibles: [VIDE],
+        lues: [],
+        annoncees: 1,
+        corpsCourant: 'rien à signaler',
+      })
+    ).fautes.find((f) => f.message.includes(VIDE))!.message;
+    expect(m).toContain('STABLE');
+    expect(m).not.toContain('relance la garde');
+    // Et surtout : ce message-ci ne renvoie PAS vers la borne de pagination, qui n'y est pour rien.
+    expect(m).not.toContain('PAGES_MAX');
+  });
+
+  it('REQ-GOV-031 — la cause « jamais servie » garde SON message, et il nomme encore `PAGES_MAX`', () => {
+    // CONTRE-TÉMOIN de la séparation : nommer une troisième cause ne doit pas effacer les deux
+    // qui existaient. Une révision que la forge n'a JAMAIS servie n'a pas le même remède qu'une
+    // révision servie sans `diff`, et les deux messages doivent rester distincts.
+    const v = jugerCorpsPublie(
+      lecture({ illisibles: [], lues: [], annoncees: 9, corpsCourant: 'rien' })
+    );
+    expect(v.code).toBe(2);
+    const m = v.fautes.find((f) => f.famille === 'revisions_non_lues')!.message;
+    expect(m).toContain('PAGES_MAX');
+    expect(m).not.toContain('corps VIDE');
+  });
+
+  it('REQ-GOV-031 — un `editedAt` ABSENT refuse SANS chemin de sortie, et le DIT', () => {
+    // Sans horodatage, aucune exemption ne peut s'apparier : on ne sait pas DÉSIGNER la révision
+    // qu'on absoudrait. Une ligne qui absoudrait « la révision sans horodatage » absoudrait aussi
+    // toutes les suivantes, c'est-à-dire tout ce qui reste à écrire.
+    const sans = lecture({
+      illisibles: [null],
+      lues: [],
+      annoncees: 1,
+      corpsCourant: 'rien à signaler',
+    });
+    const v = jugerCorpsPublie(sans);
+    expect(v.code).toBe(2);
+    const m = v.fautes.find((f) => f.famille === 'revisions_non_lues')!.message;
+    expect(m).toContain('AUCUN chemin de sortie');
+    // ET LE CONTRE-TÉMOIN QUI COMPTE : aucune ligne de registre ne la rend verte. Ni une
+    // exemption de révision bien formée sur un autre horodatage, ni sur celui d'une voisine.
+    for (const e of [deRevision(VIDE), deRevision(INCHANGE)]) {
+      expect(jugerCorpsPublie(sans, [e]).code, e.revision).not.toBe(0);
+    }
+  });
+
+  it('REQ-GOV-031 — CONTRE-TÉMOIN VERT : une révision illisible DÉCLARÉE passe, et sa voisine aussi', () => {
+    // Sans cette moitié-ci, les cas ci-dessus prouveraient seulement qu'on sait fabriquer une
+    // gate qu'on devra sauter : une PR au corps vidé une fois ne repasserait plus jamais.
+    const l = lecture({
+      illisibles: [VIDE, INCHANGE],
+      lues: [{ horodatage: LUE, texte: 'rien à signaler' }],
+      annoncees: 3,
+      corpsCourant: 'rien à signaler',
+    });
+    const v = jugerCorpsPublie(l, [deRevision(VIDE), deRevision(INCHANGE)]);
+    expect(v.fautes).toEqual([]);
+    expect(v.code).toBe(0);
+    // ET LE VERT LE DIT : `exemptionsServies` rend les deux lignes, parce que c'est cette
+    // liste-là qu'un humain relit pour savoir sur quoi le vert repose.
+    expect(exemptionsServies(l, [deRevision(VIDE), deRevision(INCHANGE)]).length).toBe(2);
+    // UNE SEULE des deux déclarée ne suffit PAS : l'autre reste illisible, donc non lue.
+    expect(jugerCorpsPublie(l, [deRevision(VIDE)]).code).toBe(2);
+  });
+
+  it('REQ-GOV-031 — CONTRE-TÉMOIN VERT : la même exemption ne couvre PAS une AUTRE PR', () => {
+    // Une exemption ne traverse jamais une PR : sinon une ligne écrite pour une PR fermée
+    // couvrirait tout ce qui reste à écrire ailleurs.
+    const ailleurs = jugerCorpsPublie(
+      {
+        ...lecture({
+          illisibles: [VIDE],
+          lues: [],
+          annoncees: 1,
+          corpsCourant: 'rien à signaler',
+        }),
+        pr: PR + 1,
+      },
+      [deRevision(VIDE, PR)]
+    );
+    expect(ailleurs.code).toBe(2);
+    expect(ailleurs.fautes.map((f) => f.famille)).toContain('revisions_non_lues');
+  });
+
+  it('REQ-GOV-031 — CONTRE-TÉMOIN VERT : le corps COURANT rougit toujours, exemption ou pas', () => {
+    // Le corps courant s'édite : il n'y a rien à excuser, et une exemption qui le couvrirait ne
+    // serait pas une dette déclarée mais une permission de publier.
+    const v = jugerCorpsPublie(
+      lecture({
+        illisibles: [VIDE],
+        lues: [],
+        annoncees: 1,
+        corpsCourant: `IBAN débiteur : ${IBAN_TEMOIN}`,
+      }),
+      [deRevision(VIDE)]
+    );
+    expect(v.code).toBe(1);
+    expect(v.fautes.map((f) => f.famille)).toContain('coordonnee_dans_le_corps_courant');
+  });
+
+  it('REQ-GOV-031 — une exemption de RÉVISION ne blanchit JAMAIS une révision LUE', () => {
+    // ⚠️ LA PASSOIRE QU'IL FALLAIT FERMER EN OUVRANT CETTE FORME. Absoudre « la révision
+    // entière » sur un texte que la forge nous a DONNÉ reviendrait à autoriser n'importe quelle
+    // coordonnée par une ligne de trois champs. La forme large ne vaut QUE pour l'illisible.
+    const v = jugerCorpsPublie(
+      lecture({
+        illisibles: [],
+        lues: [{ horodatage: LUE, texte: `IBAN : ${IBAN_TEMOIN}` }],
+        annoncees: 1,
+        corpsCourant: 'rien à signaler',
+      }),
+      [deRevision(LUE)]
+    );
+    expect(v.code).toBe(1);
+    expect(v.fautes.map((f) => f.famille)).toContain('coordonnee_dans_une_revision');
+    // Et la ligne qui n'a rien absous ROUGIT : elle n'est pas simplement ignorée.
+    expect(v.fautes.map((f) => f.famille)).toContain('exemption_sans_objet');
+  });
+
+  it('REQ-GOV-031 — TÉMOIN ROUGE : une exemption de révision MAL FORMÉE rougit', () => {
+    const base = lecture({
+      illisibles: [VIDE],
+      lues: [],
+      annoncees: 1,
+      corpsCourant: 'rien à signaler',
+    });
+    const cassees: [string, Exemption][] = [
+      ['motif trop court', { ...deRevision(VIDE), motif: 'illisible' }],
+      // `definitive` FAUX est refusé POUR CETTE FORME : une révision illisible l'est pour
+      // toujours, et prétendre qu'on retirera la ligne un jour serait un mensonge de plus dans
+      // un registre qui existe pour dire la vérité sur ce qui ne peut pas être réparé.
+      ['`definitive` faux', { ...deRevision(VIDE), definitive: false }],
+      ['aucun déclarant', { ...deRevision(VIDE), par: '   ' }],
+      ['aucune date de déclaration', { ...deRevision(VIDE), declaree: 'hier' }],
+      [
+        'horodatage qui n’est pas celui d’une révision',
+        { ...deRevision(VIDE), revision: '2026-09-23' },
+      ],
+    ];
+    for (const [quoi, e] of cassees) {
+      const v = jugerCorpsPublie(base, [e]);
+      expect(
+        v.fautes.map((f) => f.famille),
+        quoi
+      ).toContain('exemption_malformee');
+      expect(v.code, quoi).toBe(1);
+      // ET ELLE N'ABSOUT PAS : une ligne illisible qui absoudrait quand même rendrait le
+      // verdict indiscernable de celui d'une ligne saine.
+      expect(
+        v.fautes.map((f) => f.famille),
+        quoi
+      ).toContain('revisions_non_lues');
+    }
+    // CONTRE-TÉMOIN de la forme : une exemption de COORDONNÉE, elle, n'est pas soumise à
+    // `definitive` vrai — la forme large est la seule à l'exiger.
+    expect(
+      controlerRegistreExemptions([
+        { ...deRevision(VIDE), empreinte: empreinteDe(IBAN_TEMOIN), definitive: false },
+      ])
+    ).toEqual([]);
+  });
+
+  it('REQ-GOV-031 — TÉMOIN ROUGE : une exemption de révision sur un horodatage INCONNU rougit', () => {
+    // Une ligne qui n'absout plus rien est une autorisation ouverte sur un texte que personne
+    // n'a examiné. Elle ROUGIT, elle n'est pas silencieusement ignorée.
+    const v = jugerCorpsPublie(
+      lecture({
+        illisibles: [],
+        lues: [{ horodatage: LUE, texte: 'rien à signaler' }],
+        annoncees: 1,
+        corpsCourant: 'rien à signaler',
+      }),
+      [deRevision('2026-09-23T00:21:33Z')]
+    );
+    expect(v.code).toBe(1);
+    expect(v.fautes.map((f) => f.famille)).toContain('exemption_sans_objet');
+    expect(v.fautes[0]!.message).toContain('2026-09-23T00:21:33Z');
+  });
+
+  it('REQ-GOV-031 — `assemblerLecture` CLASSE les nœuds : lus, illisibles, sans horodatage', () => {
+    // La forme exacte que la forge a servie le 2026-09-23 sur la PR #102 : des nœuds complets,
+    // deux nœuds à `diff` nul, et — cas que la forge n'a pas servi ce jour-là mais que rien
+    // n'interdit — un nœud sans `editedAt`.
+    const noeuds: NoeudEdition[] = [
+      { editedAt: LUE, diff: 'un vrai diff' },
+      { editedAt: INCHANGE, diff: null },
+      { editedAt: VIDE, diff: null },
+      { editedAt: null, diff: null },
+    ];
+    const l = assemblerLecture(String(PR), 'corps courant', {
+      annoncees: 5,
+      noeuds,
+      inacheve: false,
+    }) as Extract<LectureDuCorps, { lu: true }>;
+    expect(l.revisionsLues).toBe(1);
+    expect(l.revisionsIllisibles).toEqual([INCHANGE, VIDE, null]);
+    // TÉMOIN POSITIF de la décomposition : lues + illisibles + jamais servies = annoncées.
+    expect(l.revisionsLues + l.revisionsIllisibles.length).toBe(noeuds.length);
+    // Et la révision LUE est la seule à entrer dans le texte jugé.
+    expect(l.corps.filter((c) => c.revision).map((c) => c.horodatage)).toEqual([LUE]);
+  });
+
+  it('REQ-GOV-031 — le registre du dépôt DÉCLARE ce que la PR #102 ne pourra jamais rendre lisible', () => {
+    // CE QUE CETTE PR POSE, et qui est la moitié utile du correctif : sans ces deux lignes, la
+    // PR #102 resterait INDÉTERMINÉE pour toujours. Le motif est relu par un tiers — c'est le
+    // seul contrôle qui existe sur une déclaration, et c'est pourquoi il est obligatoire.
+    const pr102 = exemptionsDuDepot().filter((e) => e.pr === 102);
+    expect(pr102.map((e) => e.revision).sort()).toEqual([VIDE, INCHANGE].sort());
+    for (const e of pr102) {
+      expect(e.empreinte, `PR #102 / ${e.revision} : forme RÉVISION ENTIÈRE`).toBeUndefined();
+      expect(e.definitive).toBe(true);
+    }
+    expect(controlerRegistreExemptions(pr102)).toEqual([]);
+  });
+});
+
+/**
  * ── `userContentEdits(first: 100)` — UNE GATE INSATISFIABLE EN GERME ──────────────────────────
  *
  * 🔴 CE QUE LA LENTILLE `securite` A MESURÉ le 2026-09-05, et elle apporte le contre-exemple
