@@ -933,7 +933,14 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // chiffrant — relu, pas deviné :
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(44);
+    // 🔧 44 → 48 par JUR-T01, ARBITRÉ et non subi : `scripts/gates/jur-grille-chiffree.ts` naît
+    // avec QUATRE sorties non nulles (plus deux `exit(0)`), déclarées plus haut avec `temoins: 0` —
+    // aucune n'a été vue rougir, et le registre le DIT au lieu de le taire. La Gate A de la PR 92 a
+    // rougi en le chiffrant — relu, pas deviné (run 35804660196) :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 48 to be 44
+    //
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(48);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
