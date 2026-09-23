@@ -351,12 +351,28 @@ export const PREUVE_DATEE = /(\d{4}-\d{2}-\d{2})\s*@\s*([0-9a-f]{7,40})/g;
  * LES FICHIERS SUIVIS DE CE DÉPÔT — la population qui décide de quel dépôt parle un chemin.
  *
  * Elle vient de `scripts/lot/fichiers-suivis.ts`, LA source du périmètre : cette lecture-là LÈVE
- * quand git ne répond pas, au lieu de rendre un tableau vide. Une population vide ferait de TOUT
- * chemin un chemin d'axionia — la garde resterait verte sur du code d'ici, ce qui est exactement
- * le défaut inverse de celui que cette tâche ferme.
+ * quand git ne répond pas, au lieu de rendre un tableau vide.
+ *
+ * 🔑 ET ICI, L'ENSEMBLE VIDE EST LE CÔTÉ STRICT — c'est ce qui rend le rattrapage légitime. Cette
+ * population ne sert qu'à RELÂCHER une exigence : un chemin reconnu comme étant d'ici n'a plus
+ * besoin d'un repère AFF-nn. Sans elle, TOUT chemin est réputé d'axionia et redemande son repère,
+ * c'est-à-dire le comportement d'avant GOV-048. Ne pas savoir ne fait donc perdre AUCUNE exigence :
+ * le défaut de lecture échoue FERMÉ, et il se DIT plutôt que de passer pour une mesure.
+ *
+ * ⚠️ Cette distinction compte : la même absence de périmètre, dans une garde qui s'en sert pour
+ * BALAYER, rendrait un vert sur zéro fichier — et là il faut refuser.
  */
 export function suivisDePartners(): ReadonlySet<string> {
-  return new Set(fichiersSuivis());
+  try {
+    return new Set(fichiersSuivis());
+  } catch (e) {
+    console.error(
+      `⚠ gov:sonde — le périmètre de CE dépôt est illisible (${(e as Error).message.split('\n')[0]}). ` +
+        `Aucun chemin ne sera reconnu comme étant d'ici : tout chemin cité avec sa ligne redemande ` +
+        `son repère AFF-nn, comme avant GOV-048. C'est le côté STRICT, et il est dit.`
+    );
+    return new Set();
+  }
 }
 
 /**
@@ -588,7 +604,7 @@ export function controler(e: Entrees): Faute[] {
   return fautes;
 }
 
-const FAMILLES = [
+export const FAMILLES = [
   'tableau_illisible',
   'affirmations_insuffisantes',
   'repere_double',

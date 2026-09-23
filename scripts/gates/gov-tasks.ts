@@ -310,7 +310,7 @@ export function controler(doc: unknown, schema: object, registre: Registre): Fau
 // Les familles d'attestation ne sont pas RETAPÉES ici : elles sont importées de leur module, qui
 // est aussi celui qui les produit. Une liste de familles recopiée à côté du code qui les émet
 // laisse `--prove` réclamer un témoin pour une famille morte, ou en oublier une vivante (RM-01).
-const FAMILLES = [
+export const FAMILLES = [
   'schema',
   'id_double',
   'dep_inconnue',

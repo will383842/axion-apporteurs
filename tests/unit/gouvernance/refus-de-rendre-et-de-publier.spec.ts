@@ -511,17 +511,27 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'câblera la gate en CI.',
     },
     'scripts/gates/perf-budgets.ts': {
-      total: 4,
-      porte: 4,
+      // ⚠️ `total` COMPTE CE QUE LA PR COURANTE AJOUTE, pas ce que le fichier porte. Les QUATRE
+      // sorties déclarées ici par la réconciliation de `gov-038` ont atterri : leur delta contre
+      // `origin/main` est retombé à zéro, et l'entrée était dormante. Le lot L0-02 en ajoute UNE,
+      // et c'est elle que ce champ déclare désormais — le cliquet a rougi en nommant l'écart
+      // (« 1 exits ajoutés, 4 déclarés »), il n'a pas été contourné, il a été lu.
+      total: 1,
+      porte: 1,
+      // ZÉRO, et ce n'est pas un oubli : ce compteur est confronté au tableau `REFUS` de CE
+      // fichier-ci, et le témoin du refus vit ailleurs.
       temoins: 0,
       raison:
-        'GOV-019 — budgets de performance. Quatre refus : registre illisible, budget dépassé, ' +
-        'mode inconnu, vue divergente. ⚠️ `fichiersDeSrc()` y rend `[]` si `src/` manque — la ' +
-        'variante affaiblie du patron que ce lot ferme ailleurs — invisible à la réciproque, au ' +
-        'témoin `ls-files` et aux trois `describe`, car elle ne balaie pas `git ls-files`. ' +
-        '⚠️ AUCUNE tâche du backlog ne porte cette dette : `GOV-019` LIVRE `perf-budgets`, elle ne ' +
-        'corrige pas son `if (!existsSync(racine)) return []`. Relevé par `mutation` — une dette ' +
-        'déclarée en prose sans porteur est une dette que personne ne reprendra.',
+        'Budgets de performance. La dette que cette entrée déclarait est FERMÉE : ' +
+        '`fichiersDeSrc()` rendait `[]` quand `src/` manquait, ce qui valait zéro violation donc ' +
+        'un vert, sur zéro fichier regardé — la septième occurrence de la famille que les PR #31 ' +
+        'et #33 avaient fermée six fois. Elle LÈVE désormais, et la garde REFUSE en nommant ' +
+        '`perimetre_absent` : c’est la sortie ajoutée que ce champ déclare. Le cas légitime — le ' +
+        'dossier existe et ne porte aucune violation — reste vert. Le témoin vit dans ' +
+        '`tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts` : il lance la ' +
+        'garde dans un dépôt jetable SANS `src/` et exige une sortie non nulle sans bannière ; ' +
+        'il porte en plus le témoin de FAMILLE, dérivé du disque, qui voit une occurrence neuve ' +
+        'dans une garde qui n’importe pas la primitive du périmètre.',
     },
     'scripts/gates/gov-conventions.ts': {
       total: 2,
@@ -916,7 +926,21 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // chiffrant — relu, pas deviné :
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(44);
+    //
+    // 🔧 44 → 41 par le lot L0-02 (GOV-046), ARBITRÉ et non subi, et c'est une BAISSE — la seule
+    // du registre, donc celle qui demande le plus d'explication. `perf-budgets.ts` déclarait
+    // QUATRE sorties ajoutées par la réconciliation de `gov-038` ; elles ont atterri, leur delta
+    // contre `origin/main` est retombé à zéro, et le champ ne dit plus ce que le fichier PORTE
+    // mais ce que la PR courante AJOUTE — ici UNE, le refus `perimetre_absent`. Le cliquet a
+    // rougi en nommant l'écart, dans les deux tests de ce bloc :
+    //
+    //     scripts/gates/perf-budgets.ts : 1 exits ajoutés, 4 déclarés
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 41 to be 44
+    //
+    // ⚠️ CE QUE CETTE BAISSE NE DIT PAS : elle ne dit pas que le dépôt a moins de sorties. Il en
+    // a une de PLUS. Elle dit que ce registre mesure un DELTA, pas un stock, et qu'une entrée
+    // dormante reprend la valeur de la PR qui la réveille.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(41);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.

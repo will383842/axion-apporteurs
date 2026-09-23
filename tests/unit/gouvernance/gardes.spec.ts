@@ -34,7 +34,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { FAMILLES_ATTESTATION } from '../../../scripts/lot/attestation';
+import { FAMILLES as FAMILLES_TASKS } from '../../../scripts/gates/gov-tasks';
 import { FAMILLES as FAMILLES_REQUIREMENTS } from '../../../scripts/gates/gov-requirements';
 
 function lancer(script: string, ...args: string[]): { code: number; sortie: string } {
@@ -58,7 +58,7 @@ const GARDES = [
     nom: 'gov:tasks',
     exigences: '',
     script: 'scripts/gates/gov-tasks.ts',
-    familles: 12 + FAMILLES_ATTESTATION.length,
+    familles: FAMILLES_TASKS.length,
   },
   // Le « 11 » qui vivait ici était TAPÉ, pour la raison que le commentaire ci-dessus regrette :
   // `gov-requirements.ts` avait des effets de bord au chargement, donc sa liste de familles n'était
