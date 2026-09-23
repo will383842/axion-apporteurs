@@ -1497,15 +1497,17 @@ if (process.argv.includes('--prove')) {
   /**
    * Pose une valeur dans le champ `Lot:` du corps. Comme `remplacer()`, la fonction VÉRIFIE que
    * la cible existe (RM-11) : si le champ disparaissait du gabarit, un témoin silencieusement
-   * inopérant vaudrait moins qu'un banc qui refuse.
+   * inopérant vaudrait moins qu'un banc qui refuse. Elle LÈVE au lieu de sortir en 1 : c'est la
+   * forme qu'emploient déjà `cheminsDe()` et les autres dérivations de fixture de ce bloc, et
+   * ajouter une sortie non nulle de plus à ce fichier serait une ligne de dette au registre des
+   * refus (`tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`) pour rien.
    */
   const poserLeLot = (corps: string, valeur: string): string => {
     if (!/^Lot:.*$/m.test(corps)) {
-      console.error(
-        `❌ gov:pr --prove — le gabarit ne porte plus de champ \`Lot:\` : les témoins de GOV-096 ` +
+      throw new Error(
+        `gov:pr --prove — le gabarit ne porte plus de champ \`Lot:\` : les témoins de GOV-096 ` +
           `ne peuvent plus en être dérivés.`
       );
-      process.exit(1);
     }
     return corps.replace(/^Lot:.*$/m, `Lot: ${valeur}`);
   };
