@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `87e235a` — 2026-09-23T04:50:19+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #102 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #88 (un conflit avec `main`) · 4. #91 (un conflit avec `main`) · 5. #92 (un conflit avec `main`) · 6. #93 (un conflit avec `main`) · 7. #99 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #102 (rien) · 2. #91 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) · 5. #92 (un conflit avec `main`) · 6. #93 (un conflit avec `main`) · 7. #99 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) |
 | Où en est la phase ? | phase 0 — 20/103 tâches, reste 62.60 j |
-| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Le prochain pas | fusionner #102, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #112 — 2026-09-23 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 102 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,10 +64,10 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #102 — docs(GOV-063): ADR 0018 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #102 — docs(GOV-063): ADR 0018 tranche l'homonymie, le nom gov:check est retire des deux cotes | `t/gov-check-homonymie` | rien — fusionnable maintenant |
+| 2 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
 | 5 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
 | 6 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
 | 7 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
@@ -93,6 +93,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-23). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
 
 ## Prochain pas
+
+**Fusionner #102** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
 
 **SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 44 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 

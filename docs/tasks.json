@@ -2972,7 +2972,9 @@
         "tests/unit/integration/recherche-entreprises-repli.spec.ts",
         "docs/gates.json",
         ".github/workflows/nightly.yml",
-        "src/server/securite/rate-limit.ts"
+        "src/server/securite/rate-limit.ts",
+        "src/lib/env.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
