@@ -628,7 +628,7 @@ const EXEMPTS = [
 /**
  * 🔴 RECONCILIATION : cette garde est arrivee de `gov-038` avec le patron que la PR #31 a ferme
  * pour les CINQ autres — `try/catch { return [] }` sur `git ls-files`. Elle N'EST PAS ENTREE EN
- * CONFLIT : un fichier ajoute d'UN SEUL cote ne se confronte a rien, et `gov:check` l'appelle
+ * CONFLIT : un fichier ajoute d'UN SEUL cote ne se confronte a rien, et la chaine l'appelle
  * desormais dans sa chaine bloquante.
  * *Le merge ne protege que ce que les DEUX branches ont touche. Un correctif qu'une branche n'a
  * pas vu passer rentre par la porte qu'aucune garde ne surveille.*

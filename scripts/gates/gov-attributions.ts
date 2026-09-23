@@ -1055,7 +1055,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
     id: 'GOV-000',
     nature: 'contexte',
     raison:
-      'historique : l’en-tête raconte que la tâche d’amorçage déclarait l’entrée gov:check du registre ' +
+      'historique : l’en-tête raconte que la tâche d’amorçage déclarait l’entrée des termes interdits ' +
       'sans que son script existe ; le fichier appartient à la tâche qui l’a livré.',
   },
 ];
@@ -1089,7 +1089,7 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   {
     tache: 'GOV-000',
     lieu: 'gate',
-    ou: 'docs/gates.json:gov:check (scripts/gates/gov-check.ts)',
+    ou: 'docs/gates.json:gov:termes-interdits (scripts/gates/gov-check.ts)',
     n: 1,
   },
   {
