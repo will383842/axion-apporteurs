@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**266 taches · 199.35 j estimes.**
+**267 taches · 200.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 104 | 80.35 | 21 |
+| 0 — Socle technique | 105 | 81.35 | 21 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -1589,6 +1589,59 @@ Couvre : `REQ-GOV-031`, `REQ-GOV-012`
 **Acceptation.** MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, la lentille `mutation` de la PR #112 a retire du banc de `gov:entite --corps-publie --prove` les temoins des causes NEUVES de la famille `revisions_non_lues`. Le banc est sorti en ZERO et a imprime, mot pour mot, que ses six familles rougissent chacune sur son temoin. ⚠️ DEUX PRECISIONS, sans lesquelles QUI REJOUE CETTE PHRASE N AURA RIEN MESURE, et la seconde s est confirmee toute seule au premier essai. (a) Le temoin qui PORTE la mesure est celui de la revision illisible SANS exemption ; celui de la revision illisible ABSOUTE est un CONTRE-temoin, et le retirer ne fait varier qu un compte de contre-temoins que rien ne compare a rien — la porte A reste a ZERO et reimprime ses six familles, ce qui RESSEMBLE a la reproduction sans en etre une. (b) GOV-092 introduit DEUX causes, pas trois, et la famille en porte QUATRE au total : la quatrieme, la lecture interrompue, est deja gardee par un bloc de consommation DEDIE — neutralisee, la porte A rougit en la nommant. Le remede de cette tache existe donc deja, applique a la main a UNE cause sur quatre, et c est l argument le plus fort en sa faveur. LE BANC DE PORTE A NE SAIT PAS QU IL A CESSE DE MESURER LA CAUSE QUE LA PR EXISTE POUR FERMER. La cause est structurelle et vaut pour tout le depot : le garde-fou de non-vacuite (`sansTemoin`) est au grain de la FAMILLE, or GOV-092 a introduit DEUX causes disjointes DANS la famille `revisions_non_lues`, qui en porte QUATRE au total. Une famille qui garde un seul temoin sur quatre causes reste couverte aux yeux du garde-fou. C EST EXACTEMENT LA FORME DU DEFAUT QUE GOV-092 FERME — un controle qui se tait au lieu de rougir — applique au banc qui prouve GOV-092. A LIVRER. (1) Le grain de la non-vacuite descend de la FAMILLE a la CAUSE : chacun des QUATRE messages distincts que cette famille sait emettre porte son temoin, et le banc REFUSE — sortie non nulle nommant la cause — si l un d eux n a pas de temoin. (2) Le compte des causes se DERIVE du code qui les emet, jamais d une liste tapee a cote : une liste tapee redevient fausse au prochain message ajoute, sans que rien ne le signale, et c est la faute que RM-01 existe pour empecher. (3) La sortie IMPRIME le compte des causes et celui des temoins, cote a cote : un banc qui dit « six familles » quand il en mesure cinq est un vert qui ment, et le lecteur doit pouvoir voir l ecart sans relire le code. (4) Le mutant de la mesure d ouverture est REJOUE et vu rougir : retirer un temoin d une cause neuve fait desormais sortir le banc en non nul en NOMMANT la cause orpheline. (5) Un contre-temoin VERT prouve qu un banc complet passe toujours, et un second qu une famille a cause UNIQUE n est pas rendue plus exigeante par le changement de grain. (6) Le balayage dit combien de familles du depot portent plusieurs causes : si d autres gardes sont dans le meme cas, elles sont NOMMEES avec leur compte, et la tache qui les traitera est ouverte — les fermer toutes ici serait un perimetre que personne n a mesure.
 
 **Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
+
+### GOV-090 — La table des chemins reserves etiquette des VUES et laisse deux SOURCES ouvertes, et une garde prescrit un outil par un chemin irresolvable
+
+`1 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-010`, `REQ-GOV-032`, `REQ-GOV-008`
+
+**Acceptation.** DEUX DEFAUTS D'UNE MEME FAMILLE : un registre qui AFFIRME une protection qu'il n'exerce pas. Mesures a rejouer, jamais a recopier.
+
+=== DEFAUT A — LA TABLE ETIQUETTE DES VUES ET LAISSE DES SOURCES OUVERTES ===
+
+MESURE 1. La case 7 de la definition de termine exige `docs/PLAN-STATE.md` regenere sur CHAQUE PR ; la §7 de `docs/CHARTE-AGENTS.md` exige le label `role:gardien-spec` sur toute PR qui le modifie. Consequence : 34 PR fusionnees depuis la #26 portent ce label, soit 34 sur 34.
+
+MESURE 2, ET ELLE CORRIGE LE DIAGNOSTIC EVIDENT. Retirer la ligne PLAN-STATE ne change le label que sur 5 PR sur 34 : 29 le portent AUSSI pour `docs/tasks.json`, une VRAIE source, reecrite par `lot:cloture` sur presque chaque PR. Le label resterait muet a 85 %. Ecrire cela dans l'ADR est obligatoire : sans cette phrase, la PR se lira comme ayant regle un probleme qu'elle n'a pas regle.
+
+MESURE 3. `docs/PLAN-STATE.md` n'est PAS la seule vue de la table : `docs/REQUIREMENTS.md` en est une aussi (son en-tete le declare, `gov:requirements --verifie-rendu` la garde) et elle est ligne 2 de la meme table. L'argument « la table ne reserve pas les vues » est donc faux.
+
+MESURE 4, LE VRAI DEFAUT. Quatre registres de « reserve » se contredisent : §7 de la charte, CONVENTIONS §8, `.github/CODEOWNERS` et le `deny` de `.claude/settings.json`. `docs/requirements.json`, SOURCE des exigences, n'est reservee par AUCUN des quatre — pendant que sa vue generee l'est quatre fois. La table protege l'ombre et laisse le corps ouvert. `docs/gates.json` n'est reservee que par le `deny`. Et `CODEOWNERS` porte un attrape-tout au meme proprietaire : il est mecaniquement INERTE partout, la charte le dit deja pour un fichier et ne le generalise pas.
+
+MESURE 5. Le label n'a JAMAIS ete le filet sur les rubriques exemptees : le `deny` de `.claude/settings.json` interdit deja Write et Edit de `docs/PLAN-STATE.md` a tout agent en session. Le label n'ajoute rien que le `deny` ne fasse.
+
+MESURE 6, CELLE QUI TRANCHE. REQ-GOV-010 — l'exigence que la §7 cite comme sa propre gate — attribue PLAN-STATE a l'ORCHESTRATEUR, la table lui met `role:gardien-spec` ; et la REQ ne nomme pas `docs/tasks.json`. La table contredit la REQ qu'elle pretend armer, sur les deux lignes qui posent 100 % des labels. ATTENTION : la question du NOM de l'orchestrateur est deja donnee a GOV-023 par la charte §4 — NE PAS la rouvrir.
+
+ACCEPTATION A. La §7 cesse de pretendre designer un proprietaire de FICHIER et devient la table des SOURCES.
+  (a) `docs/PLAN-STATE.md` et `docs/REQUIREMENTS.md` en sortent comme chemins etiquetes. Motif, et c'est le motif de l'ADR : un label repond a « qui repond de ce texte », et PERSONNE ne repond d'une vue — une vue a un generateur et un mode de verification, et sa derive est deja un rouge nomme. Ce n'est pas retirer une regle pour faire taire un rouge : c'est refuser d'appeler proprietaire quelqu'un qui n'a rien ecrit.
+  (b) `docs/requirements.json` et `docs/gates.json` y ENTRENT. Le changement est ainsi net-neutre a legerement plus strict : deux lignes sortent, deux entrent, et la source des exigences cesse d'etre ouverte.
+  (c) LE TROU SE FERME LA OU IL VIT, pas par un label. `plan-state:verifier` abandonne aujourd'hui des rubriques entieres sous l'intitule NON COMPARE, alors que REQ-GOV-032 exige qu'une vue generee sorte en 1 des qu'elle differe de sa source D'UN SEUL OCTET — la non-conformite est mesuree contre une REQ ACTIVE. La rubrique exemptee n'est plus abandonnee : elle est comparee sur ce qui NE VIENT PAS de la forge, le generateur sachant deja par rubrique quelles valeurs de forge il a lues. Nouvelle famille, VUE ROUGIR, plus un contre-temoin vert.
+  (d) REPLI DECLARE, a annoncer dans la PR : si le rendu frais d'une rubrique exemptee n'est pas disponible au moment de la comparaison, comparer la FORME (nombre de lignes, aucune puce, aucun chevron, aucun titre) contre la forme rendue — la grammaire est deja fixe. Dire dans la PR laquelle des deux a ete livree.
+
+=== DEFAUT B — UNE GARDE PRESCRIT UN OUTIL PAR UN CHEMIN IRRESOLVABLE ===
+
+MESURE 7. Onze citations portent le prefixe `outils/` : SIX sous `scripts/`, DEUX sous `docs/journal/`, TROIS sous `tests/`. Une seule dit que l'outil vit hors du depot. QUATRE sont imprimees a un humain dans un message rouge. Le dossier `outils/` n'existe pas dans le depot : les verbes vivent dans un dossier FRERE. Un lecteur resout le chemin depuis la racine du depot, ne trouve rien, et conclut que l'outil n'existe pas — c'est arrive, et la conclusion fausse a ete publiee.
+
+MESURE 8, LE FAIT LE PLUS PORTEUR. Un temoin EPINGLE DEJA la forme fausse : `perimetre-des-gardes-derive-du-disque.spec.ts` exige que le message rouge CONTIENNE le chemin irresolvable. Quelle que soit la voie retenue, ce temoin doit bouger dans le MEME commit, sinon il VERDIT sur le defaut. Un temoin ecrit pour passer, pas pour mesurer.
+
+MESURE 9. Vingt-quatre citations de plus nomment un verbe SANS aucun chemin. Elles ne mentent pas, mais ne permettent pas de trouver l'outil.
+
+ACCEPTATION B. La voie « faire entrer les verbes au depot » est REFUSEE pour une raison MECANIQUE, a ecrire dans l'ADR avec son mecanisme exact : `.claude/settings.json` porte `Bash(node scripts/*)` et `Bash(pnpm *)` en ALLOW, et le `deny` ne lie que Write et Edit. Faire entrer les verbes sous `scripts/` placerait un ecrivain qui contourne le `deny` A L'INTERIEUR de l'allow-list. Ce n'est pas un risque, c'est une defaite mecanique de la protection.
+  (e) UN QUALIFIANT DECLARE, au meme rang que `axionia/`, `ops/` et `partners/` : la boite a outils cesse d'etre `outils/` — un mot qui RESSEMBLE a un dossier du depot — et devient `hors-depot/`, qui ne peut pas etre confondu. REQ-GOV-008 pose deja la regle (« toute reference croisee est qualifiee par depot … reference non qualifiee → rouge ») : elle existe, elle est active, son perimetre s'arrete au corpus des ADR. C'est la forme que la maison connait : une regle ecrite pour la PROSE ne s'applique pas a la SYNTAXE.
+  (f) UNE SEULE ECRITURE, LES AUTRES DERIVENT (RM-01) : un rendu unique, exporte par le fichier qui porte deja la seule citation correcte, appele par les quatre messages rouges.
+  (g) LE TEMOIN ROUGIT SUR LA FAMILLE, pas sur une ligne : un balayage de `git ls-files` refuse toute citation d'un verbe connu ecrite en chemin relatif au depot, hors du rendu unique. Contre-temoin : la forme qualifiee reste verte. VU rougir, message verbatim au bloc ROUGE.
+  (h) LE PERIMETRE EST DIT AU LIEU D'ETRE SUPPOSE — c'est le coeur de l'arbitrage : une garde dont le perimetre est `git ls-files` NE PEUT PAS voir l'outillage qui ecrit le registre. L'ADR l'ecrit comme une surface non gardee, NOMMEE ET DATEE. Le depot porte la seule chose qu'il PEUT porter : un inventaire declare des douze verbes, avec une garde qui rougit quand le depot cite un verbe ABSENT de l'inventaire (mode de panne deja survenu : un message conseillait un verbe qui refuse le geste).
+  (i) LA LIMITE EST ECRITE A VOIX HAUTE : cet inventaire est une COPIE de ce qui vit dehors, et une copie que rien ne confronte DERIVE. Elle porte donc sa date de mesure, et l'ADR la porte comme dette residuelle. Pretendre que c'est une garde serait exactement la faute du label muet.
+
+=== CE QUE CETTE TACHE NE FERME PAS, ET QUI EST VERSE AILLEURS ===
+
+Le label reste muet a 85 % apres ce geste : le dis-mutiser demande un discriminant — le label n'est du que sur une edition A LA MAIN, pas sur un rendu canonique ecrit par son geste sanctionne. Tache separee. Et un `paths` declare qui ne resout pas n'est controle par personne : la garde des orphelins va FICHIER vers CHEMIN et ne prend jamais un chemin declare en entree. Tache separee, car le discriminant n'est pas l'existence mais le MOMENT — 189 taches `a_faire` declarent legitimement des chemins a creer.
+
+=== PIEGE DE PERIMETRE, MESURE ===
+
+Seuls `scripts/`, `src/` et `tests/` sont confrontes par la famille des fichiers hors `paths`. Les entrees `docs/` de cette tache sont declarees par honnetete, pas par necessite de garde — ce qui est une illustration de plus du defaut A.
+
+**Tests.** `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` · `tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts` · `tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts`
 
 ## Phase 1 — Operationnel
 

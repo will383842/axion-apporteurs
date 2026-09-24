@@ -61,6 +61,7 @@
  */
 
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+import { outilHorsDepot } from '../lot/chemins-de-tache';
 import { existsSync, readFileSync } from 'node:fs';
 
 // ── le vocabulaire des décisions, partagé avec le registre et son test ───────────────────────
@@ -500,8 +501,12 @@ export function controler(vue: Vue): Faute[] {
         `nulle part. Tant qu'elle n'y est pas, PERSONNE ne lui demande jamais si quelqu'un ` +
         `l'appelle : le trou s'exempte lui-même, et cette garde-ci sortait en zéro pendant que ` +
         `deux gardes réelles y vivaient (mesure du 2026-09-17). Inscrivez son entrée au registre ` +
-        `par \`outils/ajouter-entree.mjs\`, le seul verbe qui CRÉE une entrée (\`reecrire-champ\` ` +
-        `et \`poser-champ\` refusent une entrée absente) — ou retirez le fichier.`,
+        `par ${outilHorsDepot('ajouter-entree.mjs')}, le seul verbe qui CRÉE une entrée ` +
+        // ⚠️ Ces deux-ci sont NOMMÉS, pas prescrits : ils REFUSENT une entrée absente. Ils restent
+        // en nom nu, et c'est le témoin qui l'exige — `perimetre-des-gardes-derive-du-disque.spec.ts`
+        // distingue le verbe PRESCRIT (qualifié, donc résolvable) de ceux qu'on cite pour dire de ne
+        // PAS les prendre. Les qualifier tous les trois rendrait ce témoin incapable de les séparer.
+        '(`reecrire-champ` et `poser-champ` refusent une entrée absente) — ou retirez le fichier.',
     });
   }
   const appelants = [...vue.workflows.map((w) => w.source), vue.hooks].join('\n');
