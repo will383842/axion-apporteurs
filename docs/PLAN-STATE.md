@@ -92,7 +92,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0011-une-seule-implementation-des-listes-d-etats.md` — partners/ADR-0011 — Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture · `docs/adr/0018-un-nom-une-garde-gov-check-retire-des-deux-cotes.md` — partners/ADR-0018 — Un nom, une garde : `gov:check` est retiré des deux côtés · `docs/adr/0019-un-label-designe-une-source-jamais-une-vue.md` — partners/ADR-0019 — un label de rôle désigne une SOURCE, jamais une vue dérivée
+`docs/adr/0011-une-seule-implementation-des-listes-d-etats.md` — partners/ADR-0011 — Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture · `docs/adr/0018-un-nom-une-garde-gov-check-retire-des-deux-cotes.md` — partners/ADR-0018 — Un nom, une garde : `gov:check` est retiré des deux côtés
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
@@ -120,9 +120,12 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 réservable ? Non — un label répond à « qui répond de ce texte ? », et personne ne répond d'une vue,
 qui a un générateur et un mode de vérification. La table du §7 de `docs/CHARTE-AGENTS.md` devient
 celle des SOURCES : `docs/PLAN-STATE.md` et `docs/REQUIREMENTS.md` en sortent comme chemins
-étiquetés, `docs/requirements.json` et `docs/gates.json` y entrent — elles n'étaient réservées par
-aucun des quatre registres de réserve, pendant que leurs vues l'étaient. Deux lignes sortent, deux
-entrent. Le trou `NON COMPARÉ` de `pnpm plan-state:verifier` se rétrécit là où il vit : l'attribution
+étiquetés, `docs/requirements.json` et `docs/gates.json` y entrent. Mesuré sur `origin/main`, et les
+deux sources n'étaient pas logées à la même enseigne : `docs/requirements.json` n'était réservée par
+**aucun** des quatre registres ; `docs/gates.json`, elle, était déjà au `deny` de
+`.claude/settings.json`, mais dans aucun des trois registres documentaires. Côté vues, l'écart est
+le même : `docs/REQUIREMENTS.md` était réservée par les quatre, `docs/GATES.md` par aucun. Deux
+lignes sortent, deux entrent. Le trou `NON COMPARÉ` de `pnpm plan-state:verifier` se rétrécit là où il vit : l'attribution
 des lectures de la forge descend de la rubrique à la LIGNE, la comparaison se fait par PRÉSENCE et
 non par position, et les proses invariantes SORTENT des branches que la forge décide — sans quoi
 elles restent exemptées par leur seule présence. Les cinq rubriques exemptées sont converties,
