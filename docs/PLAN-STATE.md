@@ -7,26 +7,26 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `954fe5a` — 2026-09-23T08:51:22+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #99 (rien) · 2. #113 (rien) · 3. #116 (rien) · 4. #114 (un contrôle requis rouge ou une revue manquante) · 5. #118 (un contrôle requis rouge ou une revue manquante) · 6. #82 (un conflit avec `main`) · 7. #88 (un conflit avec `main`) · 8. #91 (un conflit avec `main`) · 9. #92 (un conflit avec `main`) · 10. #93 (un conflit avec `main`) |
-| Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) |
-| Où en est la phase ? | phase 0 — 21/105 tâches, reste 63.10 j |
-| Le prochain pas | fusionner #99, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Où est `main` ? | `6d727b0` — 2026-09-24T23:53:27+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #88 (un conflit avec `main`) · 3. #91 (un conflit avec `main`) · 4. #92 (un conflit avec `main`) · 5. #93 (un conflit avec `main`) · 6. #99 (un conflit avec `main`) · 7. #114 (un conflit avec `main`) · 8. #116 (un conflit avec `main`) · 9. #118 (un conflit avec `main`) |
+| Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
+| Où en est la phase ? | phase 0 — 21/106 tâches, reste 64.10 j |
+| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #118 — 2026-09-23 |
 
-**Ce qu’on tape maintenant.** `gh pr view 99 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-21/105 tâches terminées · reste 63.10 j estimés.
+21/106 tâches terminées · reste 64.10 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 205 | JUR-T02, QA-T08, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13 … |
+| `a_faire` | 206 | JUR-T02, QA-T08, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13 … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -64,16 +64,15 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | rien — fusionnable maintenant |
-| 2 | #113 — feat(GOV-090): un label designe une SOURCE, jamais une vue, et un verbe hors depot se cite hors-depot/ | `t/gov-label-et-outils` | rien — fusionnable maintenant |
-| 3 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | rien — fusionnable maintenant |
-| 4 | #114 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure | `t/lot-L0-02` | un contrôle requis rouge ou une revue manquante |
-| 5 | #118 — feat(GOV-096): le champ Lot: du gabarit resout les taches d une PR de lot | `t/gov-096-gov-pr-lit-le-lot` | un contrôle requis rouge ou une revue manquante |
-| 6 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 7 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
-| 8 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 9 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
-| 10 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #114 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure | `t/lot-L0-02` | un conflit avec `main` — à résoudre avant tout |
+| 8 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un conflit avec `main` — à résoudre avant tout |
+| 9 | #118 — feat(GOV-096): le champ Lot: du gabarit resout les taches d une PR de lot | `t/gov-096-gov-pr-lit-le-lot` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -86,24 +85,25 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 | QA-T08 — Logger pino structuré, redaction PII, Sentry, notify | A05 | #70 | `a_faire` |
 | QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
 | GOV-092 — Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux | A03 | #111 | `a_faire` |
+| GOV-090 — La table des chemins reserves etiquette des VUES et laisse deux SOURCES ouvertes, et une garde prescrit un outil par un chemin irresolvable | A02 | #106 | `a_faire` |
 
 ⚠️ **41 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, SEC-10, DM-01, DM-02, QA-T02, QA-T03, SEC-07, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-059, GOV-077, GOV-089, GOV-088, GOV-091 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
 ## Décisions du jour
 
-`docs/adr/0011-une-seule-implementation-des-listes-d-etats.md` — partners/ADR-0011 — Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture · `docs/adr/0017-revendication-derivee-de-la-forge.md` — partners/ADR-0017 — La revendication d'une tâche se dérive de la forge, pas du fichier de la branche · `docs/adr/0018-un-nom-une-garde-gov-check-retire-des-deux-cotes.md` — partners/ADR-0018 — Un nom, une garde : `gov:check` est retiré des deux côtés · `docs/adr/0020-le-champ-lot-declare-les-taches-d-une-pr-de-lot.md` — partners/ADR-0020 — Une PR de lot déclare ses tâches dans un champ `Lot:`, et la garde le croit exactement autant que le titre
+Aucun ADR daté du 2026-09-24 (jour du dernier atterrissage).
 
-Dérivé de `git log` sur `docs/adr/`, jour du dernier atterrissage (2026-09-23). Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`.
+Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
 
-**Fusionner #99** — elle est en tête de file et ne bloque sur rien. Lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.
+**SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 46 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
-**SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 45 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `954fe5a` (2026-09-23T08:51:22+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `6d727b0` (2026-09-24T23:53:27+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -168,6 +168,62 @@ imports nommés d'un module natif sont créés à ce moment-là et prennent la v
 mandataire IMPRIME ce qu'il injecte, sur la sortie d'erreur : sans cette ligne, on ne distingue pas
 « l'injection n'a rien changé » de « l'injection n'a pas eu lieu », et c'est précisément la
 confusion qui a coûté un tour.
+
+### PR #113 — 2026-09-23 — feat(GOV-090): un label designe une SOURCE, jamais une vue, et un verbe hors depot se cite hors-depot/
+
+**Fait.** `partners/ADR-0019` tranche une question que rien ne tranchait : une vue dérivée est-elle
+réservable ? Non — un label répond à « qui répond de ce texte ? », et personne ne répond d'une vue,
+qui a un générateur et un mode de vérification. La table du §7 de `docs/CHARTE-AGENTS.md` devient
+celle des SOURCES : `docs/PLAN-STATE.md` et `docs/REQUIREMENTS.md` en sortent comme chemins
+étiquetés, `docs/requirements.json` et `docs/gates.json` y entrent. Mesuré sur `origin/main`, et les
+deux sources n'étaient pas logées à la même enseigne : `docs/requirements.json` n'était réservée par
+**aucun** des quatre registres ; `docs/gates.json`, elle, était déjà au `deny` de
+`.claude/settings.json`, mais dans aucun des trois registres documentaires. Côté vues, l'écart est
+le même : `docs/REQUIREMENTS.md` était réservée par les quatre, `docs/GATES.md` par aucun. Deux
+lignes sortent, deux entrent. Le trou `NON COMPARÉ` de `pnpm plan-state:verifier` se rétrécit là où il vit : l'attribution
+des lectures de la forge descend de la rubrique à la LIGNE, la comparaison se fait par PRÉSENCE et
+non par position, et les proses invariantes SORTENT des branches que la forge décide — sans quoi
+elles restent exemptées par leur seule présence. Les cinq rubriques exemptées sont converties,
+aucune ne reste sous `NON CONVERTI`, et le vert imprime désormais son DÉNOMINATEUR. Ce qui demeure
+libre est écrit en toutes lettres dans l'ADR plutôt que déduit : le contenu d'une ligne nourrie par
+la forge — au premier rang le numéro de la PR en tête de file, dans la rubrique « Prochain pas » que
+le release-manager lit sous RM-09. Enfin `hors-depot/` devient un qualifiant de référence croisée au même rang que
+`axionia/`, `ops/` et `partners/` — une seule écriture, `outilHorsDepot()`, que les messages rouges
+dérivent, et un balayage de `git ls-files` qui refuse toute citation d'un verbe connu écrite en
+chemin relatif au dépôt.
+
+**Reste.** Le label reste muet sur la grande majorité des demandes de fusion, par `docs/tasks.json` ;
+`partners/ADR-0019` porte cette mesure et refuse de laisser croire qu'il a réglé le problème. Les
+dettes sont nommées et datées dans l'ADR plutôt que gardées : l'inventaire des verbes hors dépôt est
+une COPIE de ce qui vit dehors, et une copie que rien ne confronte dérive ; une garde dont le
+périmètre est `git ls-files` ne peut pas voir l'outillage qui écrit le registre ; le balayage ne
+voit que les VERBES, pas les documents du dossier hors dépôt ; `cheminsReservesDeLaCharte()` dans
+`scripts/gates/gov-agents.ts` est le second lecteur de la première colonne du §7 et garde l'ordre
+fautif — inerte, hors `paths`, dit plutôt que corrigé en douce. Et `.claude/settings.json` ne met
+PAS `docs/requirements.json` en `deny` : le code et l'ADR l'affirmaient, c'est mesuré faux sur
+`main`, et les deux textes disent désormais ce que le `deny` refuse réellement — la protection
+manquante appartient au lot `--settings` surchargé. `GOV-090` reste
+`a_faire` au registre — sa clôture appartient au geste de clôture, pas à cette entrée. Et la branche
+est restée seize commits en avance sans jamais ouvrir de demande de fusion : `GOV-047`, qui porte
+`pnpm prevol`, n'est toujours pas livrée, donc le pré-vol de ce dépôt reste une suite de commandes
+tapées à la main.
+
+**Appris.** Deux faits mesurés cette nuit. Le premier : une branche abandonnée peut porter une tâche
+qui n'existe dans AUCUNE révision de `main` — `GOV-090` a été vérifiée absente sur cinq shas. Le
+registre ne l'avait jamais vue, et rien ne le signalait : ni la forge, ni les vues, ni `gov:etat`,
+parce qu'une tâche qu'on n'a jamais versée ne manque à personne. Le second, plus utile encore :
+résoudre un conflit de journal du côté de `main` REND au fichier les corrections que la branche y
+avait faites. Deux citations que la branche avait écrites `hors-depot/` sont revenues à la forme
+`outils/` par la résolution elle-même. **Le témoin de la famille n'en a vu qu'UNE**, et son propre
+verbatim le dit — `expected [ Array(1) ] to deeply equal []`, un seul élément. C'est le fait le plus
+utile de la nuit, parce qu'il dit le périmètre de la garde : elle ne cherche que le préfixe fautif
+suivi d'un VERBE de `VERBES_HORS_DEPOT`, et la seconde citation nommait un DOCUMENT du dossier hors
+dépôt — `DETTE-DES-SUCCEDANES.md` —, pas un verbe. Elle a donc été corrigée à la main, **invisible à
+toute garde**. C'est la faute que `partners/ADR-0019` refuse en toutes lettres, commise dans la PR
+qui la refuse : elle est nommée plutôt que tue, et elle est au « Reste à faire » de l'ADR. Une
+résolution de conflit n'est pas une fusion de deux textes : c'est un CHOIX, et le côté qu'on choisit
+efface l'autre en silence. Une garde le dit — dans les limites de ce qu'elle balaye, et il faut
+savoir lesquelles.
 
 ### PR #112 — 2026-09-23 — fix(GOV-092): une revision servie sans `diff` bloque la porte A, et les deux remedes nommes sont faux
 
@@ -272,35 +328,7 @@ une exemption mal formée absolvait quand même sa cible, ici comme du côté de
 Une ligne illisible qui absout reste indiscernable d'une ligne saine, puisque le verdict est le même
 des deux côtés.
 
-### PR #109 — 2026-09-22 — chore(GOV-091): l'entrée de journal de la PR 108 manquait — main était rouge sans elle
-
-**Fait.** L'entrée de journal de la PR 108, absente à sa fusion, est écrite ici, dérivée du corps de
-la PR et de son diff. `pnpm gov:etat` repasse d'un défaut (`pr_fusionnee_sans_journal`,
-REQ-GOV-023) à neuf familles évaluées sur neuf, et les deux spécifications qui rougissaient pour
-cette seule cause — `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` — redeviennent
-vertes. Cette PR porte aussi sa PROPRE entrée : sans elle, sa fusion reproduirait le défaut qu'elle
-répare.
-
-**Reste.** Le défaut structurel n'est pas fermé ici, et il n'appartient pas au documentaliste :
-`pr_fusionnee_sans_journal` ne peut pas rougir AVANT la fusion, son prédicat étant que la PR est
-fusionnée. Aucune garde d'avant-fusion ne l'exige : `gov:pr` ne lit jamais `docs/journal/`, et la
-seule mention du dossier dans son code est le contre-témoin qui grave ce choix. La seule victime
-possible est donc `main`. GOV-052 porte ce remède au registre, et GOV-073 passe avant elle ou avec
-elle, sous peine d'une cinquième grammaire d'entrée de journal. GOV-088 reste `a_faire` au registre
-alors que sa PR est fusionnée : c'est la dette de clôture de lot, déjà connue.
-
-**Appris.** Le rouge d'une garde qui interroge la forge n'appartient à aucune branche : les deux
-spécifications rougissaient sur TOUTE branche sans qu'aucune n'ait changé une ligne, et un seul
-fichier de documentation les rend vertes. Mesuré au passage : `pnpm gov:etat` sans `--now`
-n'évalue que huit familles sur neuf et sort 0 en le DISANT — un vert local obtenu sans l'instant
-est plus faible que celui de la porte A, qui le donne. Mesuré aussi, et c'est un coût qu'on paie
-sans le voir : cette PR a d'abord cité la tâche HISTORIQUE qui déclare `docs/journal/`, laquelle
-porte `sensible: [auth]` ; `gov:pr` classait alors deux fichiers de prose en « risque élevé, 4
-lentilles exigées ». Versée en tâche dédiée à `sensible` vide, la même PR rend « risque ordinaire,
-2 lentilles ». Le classificateur mesurait bien ce qu'il annonce : c'est la tâche empruntée qui
-mentait sur la nature du geste, et le prix se payait en relectures pendant que `main` était rouge.
-
-… 40 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 41 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

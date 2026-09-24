@@ -61,6 +61,90 @@ export type TacheDeLot = {
   tests?: Record<string, string[]> | null;
 };
 
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * LES VERBES D'ECRITURE DU REGISTRE — NOMMES ICI, ET NULLE PART AILLEURS.
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ces douze verbes sont la SEULE voie d'ecriture sanctionnee de `docs/tasks.json`,
+ * `docs/requirements.json` et `docs/gates.json`. Ils ne vivent PAS dans ce depot, et c'est une
+ * decision, pas un oubli : `partners/ADR-0019` la porte. Le motif, mesure : `.claude/settings.json`
+ * porte en `allow` `Bash(node scripts/*)` et `Bash(pnpm *)`. Les faire entrer sous `scripts/`
+ * placerait un ecrivain qui CONTOURNE le `deny` a l'interieur de l'allow-list, en un seul geste.
+ *
+ * ⚠️ CE QUE LE `deny` COUVRE REELLEMENT — ET IL NE COUVRE PAS LES TROIS. Cette phrase disait
+ * « que `.claude/settings.json` met en `deny` sur Write et Edit », des trois fichiers. FAUX pour
+ * l'un d'eux, et c'est une lentille qui l'a mesure sur `main` : le `deny` porte
+ * `docs/PLAN-STATE.md`, `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/tasks.json`,
+ * `docs/gates.json` et `.claude/settings.json` — PAS `docs/requirements.json`. La SOURCE des
+ * exigences reste ouverte a l'ecriture pendant que sa VUE est fermee : c'est le defaut meme que
+ * cette tache repare au §7, affirme ici par le code qui le repare. Le correctif du `deny`
+ * appartient au lot `--settings` surcharge (`partners/ADR-0019`, « Reste a faire ») ; ce
+ * commentaire, lui, cesse d'affirmer une protection qui n'existe pas.
+ *
+ * ⚠️ ET LE `deny` EST UN REGISTRE DECLARE, PAS UNE BARRIERE UNIVERSELLE : il n'arrete une frappe
+ * que dans une session dont le repertoire de projet est CETTE racine. Rien ici ne peut le
+ * verifier, et ce commentaire ne le promet donc pas.
+ *
+ * ⚠️ POURQUOI UN QUALIFIANT, ET PAS UN CHEMIN. Onze citations de ce depot les nommaient
+ * `outils/<verbe>.mjs` — une forme qui se lit comme un dossier de CE depot. Un lecteur dans un
+ * arbre lie la resout depuis la racine, ne trouve rien, et conclut que l'outil N'EXISTE PAS :
+ * cette conclusion fausse a ete publiee. « Le fichier n'est pas la ou on le nomme » et « le
+ * fichier n'existe pas » sont deux constats differents, et le second arrete un agent.
+ *
+ * REQ-GOV-008 tranchait deja le cas sans qu'on l'y lise : « toute reference croisee est QUALIFIEE
+ * PAR DEPOT (`axionia/ADR-0014`, `ops/ADR-0050`, `partners/ADR-0003`) ; reference non qualifiee →
+ * rouge ». `hors-depot/` entre au meme rang que ces trois-la. La regle etait ecrite pour la PROSE
+ * des ADR ; elle vaut pour toute reference qui sort du depot.
+ *
+ * ⚠️ CE QUE CET INVENTAIRE EST, ET CE QU'IL N'EST PAS. C'est une COPIE datee de ce qui vit
+ * dehors, pas une garde : rien dans ce depot ne peut confronter cette liste au dossier reel, et
+ * une copie que rien ne confronte DERIVE. Elle est donc declaree avec sa date et le chemin
+ * mesure, et `partners/ADR-0019` la porte comme dette residuelle. Ce qu'elle garde vraiment est
+ * plus etroit, et c'est deja beaucoup : une citation qui nomme un verbe ABSENT de cette liste
+ * rougit. C'est le defaut qui s'est reellement produit — `garde_hors_registre` conseillait
+ * `reecrire-champ.mjs`, qui REFUSE une entree absente (corrige le 2026-09-18).
+ *
+ * MESURE : 12 verbes, lus le 2026-09-22 dans
+ * `C:/Users/willi/Documents/Projets/_REPRISE-AXION-APPORTEURS/outils/`.
+ */
+export const QUALIFIANT_HORS_DEPOT = 'hors-depot';
+
+/** Les douze verbes, tels que le dossier hors depot les porte. */
+export const VERBES_HORS_DEPOT: readonly string[] = [
+  'ajouter-entree.mjs',
+  'ajouter-path.mjs',
+  'batterie.mjs',
+  'empreinte-des-outils.mjs',
+  'fusionner-registre.mjs',
+  'outils-backlog.mjs',
+  'poser-champ.mjs',
+  'reclasser.mjs',
+  'reecrire-champ.mjs',
+  'rendre-resultat-lot.mjs',
+  'retirer-path.mjs',
+  'verser-tache.mjs',
+];
+
+/**
+ * LE RENDU UNIQUE d'une citation de verbe (RM-01). Tout message, tout commentaire et tout document
+ * qui nomme un verbe passe par ici : sans rendu unique, la douzieme citation repart en chemin
+ * relatif au depot, et c'est exactement ce qui s'est produit onze fois.
+ *
+ * Il REFUSE un verbe hors inventaire plutot que de le rendre : un message qui conseille un geste
+ * inexistant est un piege poli — on le suit, il refuse, et le trou reste ouvert.
+ */
+export function outilHorsDepot(verbe: string): string {
+  if (!VERBES_HORS_DEPOT.includes(verbe)) {
+    throw new Error(
+      `outilHorsDepot : « ${verbe} » n'est pas un verbe de l'inventaire hors depot ` +
+        `(${VERBES_HORS_DEPOT.join(', ')}). Un message qui nomme un geste inexistant est pire ` +
+        `que pas de message : ajoute le verbe a VERBES_HORS_DEPOT, ou nomme-en un autre.`
+    );
+  }
+  return `\`${QUALIFIANT_HORS_DEPOT}/${verbe}\``;
+}
+
 /** Une entree de l'exclusion : le chemin, le motif, et l'ADR qui l'autorise (ou `null`). */
 export type RegistreExclu = {
   chemin: string;
@@ -75,8 +159,8 @@ export type RegistreExclu = {
  * ────────────────────────────────────────────────────────────────────────────
  *
  * `docs/gates.json` est un registre APPEND-ONLY : chaque PR y verse SA ligne, indexee par son
- * propre `id`, par l'outil hors depot (`outils/reecrire-champ.mjs`). Deux taches qui y ecrivent ne
- * se marchent pas dessus — le conflit de rebase est mecanique, pas semantique.
+ * propre `id`, par le verbe hors depot `hors-depot/reecrire-champ.mjs`. Deux taches qui y ecrivent
+ * ne se marchent pas dessus — le conflit de rebase est mecanique, pas semantique.
  *
  * Une disjonction STRICTE sur ce fichier sterilise le composeur : 33 taches de la phase 0 le
  * portent dans leurs `paths`, et la chaine se serialise pour un fichier dont chaque tache ajoute
@@ -94,9 +178,9 @@ export const REGISTRES_APPEND_ONLY: readonly RegistreExclu[] = [
     chemin: 'docs/gates.json',
     motif:
       'registre append-only : chaque PR y verse SA ligne, indexee par son propre `id`, par ' +
-      '`outils/reecrire-champ.mjs`. Le conflit de rebase y est mecanique, jamais semantique — deux ' +
-      'taches qui y ecrivent ne se marchent pas dessus. Exclu du test de collision de lot par ' +
-      "l'acceptance de GOV-056, livrable (3), 2026-09-16.",
+      `${outilHorsDepot('reecrire-champ.mjs')}. Le conflit de rebase y est mecanique, jamais ` +
+      'semantique — deux taches qui y ecrivent ne se marchent pas dessus. Exclu du test de ' +
+      "collision de lot par l'acceptance de GOV-056, livrable (3), 2026-09-16.",
     adr: null,
   },
 ];
@@ -272,4 +356,50 @@ export function specificationsOrphelines(
   const revendiquees = new Set<string>();
   for (const t of taches) for (const c of cheminsDeLaTache(t)) revendiquees.add(c);
   return specificationsSuivies.filter((f) => !revendiquees.has(f)).sort();
+}
+
+/** Une section d'un document, du titre `debut` (inclus) jusqu'au titre `fin` (exclu). */
+function section(texte: string, debut: string, fin: string): string {
+  const d = texte.indexOf(debut);
+  if (d < 0) return '';
+  const f = texte.indexOf(fin, d + debut.length);
+  return texte.slice(d, f < 0 ? undefined : f);
+}
+
+/**
+ * Le tableau des chemins réservés du §7, LU dans la charte : la règle et sa vue sont le même
+ * texte. Une ligne dont la colonne « label » vaut `—` est une ligne qu'AUCUN label n'ouvre
+ * (`.claude/**` : aucun agent en session n'a le droit de l'écrire) ; elle ne se contrôle pas ici.
+ * Les chemins du schéma portent le label `schema` : ils ont leur propre famille, avec
+ * l'approbation qui va avec, et sont donc écartés de cette boucle.
+ */
+export function cheminsReserves(charte: string): { chemins: string[]; label: string }[] {
+  const out: { chemins: string[]; label: string }[] = [];
+  for (const ligne of section(charte, '## 7.', '## 8.').split('\n')) {
+    if (!ligne.startsWith('|')) continue;
+    const cellules = ligne
+      .split('|')
+      .slice(1, -1)
+      .map((c) => c.trim());
+    if (cellules.length < 4) continue;
+    const label = cellules[2]!.replace(/`/g, '').trim();
+    if (!/^(role:[a-z-]+|schema)$/.test(label)) continue;
+    if (label === 'schema') continue;
+    // ⚠️ LES PARENTHÈSES SE RETIRENT AVANT LE DÉCOUPAGE, ET C'EST L'ORDRE QUI COMPTE.
+    // La virgule sépare les chemins. Tant que le découpage passait d'abord, une virgule posée
+    // DANS une parenthèse explicative coupait la cellule en deux morceaux dont aucun n'était un
+    // chemin : la ligne cessait silencieusement de garder son fichier, et le retrait des
+    // parenthèses — qui suivait — ne trouvait plus de paire à retirer. Mesuré le 2026-09-22 en
+    // écrivant les deux lignes de `partners/ADR-0019` : `docs/requirements.json` rendait
+    // `["docs/requirements.json (source ; ... en est la VUE", "non réservée)"]`, soit ZERO chemin
+    // gardé, sans aucun rouge. Un tableau LU par une garde est du code : il a une grammaire, et
+    // une grammaire qui dépend de l'ordre de deux nettoyages est un piège à la première écriture.
+    const chemins = cellules[0]!
+      .replace(/\([^)]*\)/g, '')
+      .split(',')
+      .map((c) => c.replace(/`/g, '').replace(/\*\*/g, '').trim())
+      .filter(Boolean);
+    if (chemins.length > 0) out.push({ chemins, label });
+  }
+  return out;
 }
