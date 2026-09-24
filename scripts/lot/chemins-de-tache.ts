@@ -67,11 +67,24 @@ export type TacheDeLot = {
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Ces douze verbes sont la SEULE voie d'ecriture sanctionnee de `docs/tasks.json`,
- * `docs/requirements.json` et `docs/gates.json` — que `.claude/settings.json` met en `deny` sur
- * `Write` et `Edit`. Ils ne vivent PAS dans ce depot, et c'est une decision, pas un oubli :
- * `partners/ADR-0019` la porte. Le motif, mesure : `.claude/settings.json` porte en `allow`
- * `Bash(node scripts/*)` et `Bash(pnpm *)`. Les faire entrer sous `scripts/` placerait un
- * ecrivain qui CONTOURNE le `deny` a l'interieur de l'allow-list, en un seul geste.
+ * `docs/requirements.json` et `docs/gates.json`. Ils ne vivent PAS dans ce depot, et c'est une
+ * decision, pas un oubli : `partners/ADR-0019` la porte. Le motif, mesure : `.claude/settings.json`
+ * porte en `allow` `Bash(node scripts/*)` et `Bash(pnpm *)`. Les faire entrer sous `scripts/`
+ * placerait un ecrivain qui CONTOURNE le `deny` a l'interieur de l'allow-list, en un seul geste.
+ *
+ * ⚠️ CE QUE LE `deny` COUVRE REELLEMENT — ET IL NE COUVRE PAS LES TROIS. Cette phrase disait
+ * « que `.claude/settings.json` met en `deny` sur Write et Edit », des trois fichiers. FAUX pour
+ * l'un d'eux, et c'est une lentille qui l'a mesure sur `main` : le `deny` porte
+ * `docs/PLAN-STATE.md`, `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/tasks.json`,
+ * `docs/gates.json` et `.claude/settings.json` — PAS `docs/requirements.json`. La SOURCE des
+ * exigences reste ouverte a l'ecriture pendant que sa VUE est fermee : c'est le defaut meme que
+ * cette tache repare au §7, affirme ici par le code qui le repare. Le correctif du `deny`
+ * appartient au lot `--settings` surcharge (`partners/ADR-0019`, « Reste a faire ») ; ce
+ * commentaire, lui, cesse d'affirmer une protection qui n'existe pas.
+ *
+ * ⚠️ ET LE `deny` EST UN REGISTRE DECLARE, PAS UNE BARRIERE UNIVERSELLE : il n'arrete une frappe
+ * que dans une session dont le repertoire de projet est CETTE racine. Rien ici ne peut le
+ * verifier, et ce commentaire ne le promet donc pas.
  *
  * ⚠️ POURQUOI UN QUALIFIANT, ET PAS UN CHEMIN. Onze citations de ce depot les nommaient
  * `outils/<verbe>.mjs` — une forme qui se lit comme un dossier de CE depot. Un lecteur dans un

@@ -24,6 +24,16 @@
  * affiche la forge sans l'avoir déclarée ferait rougir le dépôt à chaque PR ouverte, et un faux
  * rouge quotidien se fait désarmer en un jour. Le vert IMPRIME les deux populations. Le dernier
  * témoin de ce fichier garde cette promesse-là : le complément est DIT, jamais sous-entendu.
+ *
+ * ⚠️ LE PREMIER TOUR S'EST ARRÊTÉ TROP TÔT, ET CE SONT DEUX LENTILLES QUI L'ONT MESURÉ. Il
+ * convertissait DEUX rubriques sur cinq, et le vert n'imprimait qu'un numérateur — « 1 ligne
+ * comparée », seul des quatre compteurs de cette sortie à ne pas porter sa population. Pire : une
+ * prose INVARIANTE posée à l'intérieur d'une branche que la forge décide est exemptée par sa
+ * seule PRÉSENCE. La doctrine d'ordre de fusion (RM-09) vivait ainsi dans le `else` de
+ * `forge.file()` : réécrivable à la main sans rouge, dans une rubrique que le vert ne listait
+ * même pas comme non convertie. La règle d'exemption était juste ; c'est la façon d'ÉCRIRE le
+ * générateur qui devait changer — une prose invariante sort de la branche. Les cinq rubriques
+ * sont converties, et les trois derniers témoins de ce fichier gardent ce second tour.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -90,16 +100,83 @@ describe('REQ-GOV-032 — dans une rubrique exemptée, ce qui ne lit pas la forg
     expect(sortie).toContain('✅');
   });
 
-  it('REQ-GOV-032 — le vert COMPTE les lignes gagnées, et NOMME les rubriques non converties', () => {
+  it('REQ-GOV-032 — « File de fusion » : la doctrine RM-09 est COMPARÉE, elle aussi', () => {
+    // ⚠️ LA RUBRIQUE ÉTAIT « CONVERTIE » ET SA DOCTRINE RESTAIT LIBRE — mesuré par la lentille
+    // `mutation` au premier tour de GOV-090. La ligne qui fixe l'ORDRE de fusion (RM-09) était
+    // émise DANS la branche que `forge.file()` décide : exemptée par sa PRÉSENCE, elle se
+    // réécrivait à la main sans aucun rouge, et le vert ne la nommait même pas — la rubrique ne
+    // figurait pas parmi les non converties. Le générateur l'émet désormais SANS CONDITION, hors
+    // des deux branches, donc elle est comparée octet par octet.
+    //
+    // POURQUOI CETTE LIGNE-LÀ PLUTÔT QU'UNE AUTRE : c'est la doctrine que A04 lit pour choisir la
+    // fusion suivante. Le NUMÉRO en tête de file vient de la forge et reste libre ; la RÈGLE qui
+    // dit comment on s'en sert, non.
+    const vue = rendreDansUnBac('PLAN-STATE-doctrine-file.md');
+    const avant = readFileSync(vue, 'utf8');
+    const cible = 'Ordre : la plus prête d’abord.';
+    expect(
+      avant.includes(cible),
+      "la doctrine d'ordre n'est plus émise sans condition : ce témoin ne mesure plus rien"
+    ).toBe(true);
+    writeFileSync(vue, avant.replace(cible, 'Ordre : celle que je choisis d’abord.'));
+
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
+    expect(
+      code,
+      `la doctrine d'ordre de fusion réécrite à la main est restée verte : ${sortie}`
+    ).toBe(1);
+    expect(sortie).toContain('vue_perimee');
+    expect(sortie).toContain('File de fusion');
+  });
+
+  it('REQ-GOV-032 — « Prochain pas » : la tâche suivante et sa doctrine sont COMPARÉES', () => {
+    // C'EST LA RUBRIQUE QUE L'ATTAQUE VISE, et c'est pour elle que ce témoin existe. Elle était
+    // exemptée EN BLOC parce qu'elle lit `forge.file()` pour nommer la PR en tête de file — donc
+    // la LIGNE DE TÂCHE, qui ne se dérive que de `docs/tasks.json`, était libre elle aussi. Une
+    // PR qui ne touche que `docs/` pouvait régénérer la vue puis réécrire ce paragraphe.
+    // Ce qui reste libre après ce témoin est nommé dans `partners/ADR-0019` : le numéro de la PR
+    // en tête de file, qui EST une valeur de la forge et ne peut pas être comparé sans mesurer la
+    // forge au lieu de la vue.
+    const vue = rendreDansUnBac('PLAN-STATE-prochain-pas.md');
+    const avant = readFileSync(vue, 'utf8');
+    const cible = 'Deux pas, jamais un seul';
+    expect(
+      avant.includes(cible),
+      "la doctrine de « Prochain pas » n'est plus émise sans condition : ce témoin ne mesure plus rien"
+    ).toBe(true);
+    writeFileSync(vue, avant.replace(cible, 'Un seul pas suffit'));
+
+    const { code, sortie } = lancerPlan('--verifier', '--out', vue);
+    expect(
+      code,
+      `la doctrine de « Prochain pas » réécrite à la main est restée verte : ${sortie}`
+    ).toBe(1);
+    expect(sortie).toContain('vue_perimee');
+    expect(sortie).toContain('Prochain pas');
+  });
+
+  it('REQ-GOV-032 — le vert COMPTE les lignes gagnées SUR LEUR POPULATION, et nomme le reste', () => {
     const vue = rendreDansUnBac('PLAN-STATE-compte.md');
     const { code, sortie } = lancerPlan('--verifier', '--out', vue);
     expect(code).toBe(0);
 
+    // ⚠️ UN COMPTEUR SANS DÉNOMINATEUR MENT PAR OMISSION, et c'est la lentille `mutation` qui
+    // l'a dit : « 1 ligne comparée » se lit comme un succès alors qu'il dit 1 sur 24. Les trois
+    // autres compteurs de ce vert portaient leur population ; celui-ci était le seul à ne pas
+    // en porter. Ce témoin exige les DEUX nombres, et que le numérateur ne dépasse jamais le
+    // dénominateur — un rapport qui peut valoir 25/24 n'est plus une mesure.
+    const m =
+      /(\d+) ligne\(s\) non vide\(s\) COMPARÉE\(S\) sur (\d+) À L'INTÉRIEUR des rubriques exemptées/.exec(
+        sortie
+      );
+    expect(
+      m,
+      `le vert ne rend plus son compte de lignes gagnées sur sa population : ${sortie}`
+    ).not.toBeNull();
     // PLANCHER. Un compteur dérivé qui rendrait zéro se lirait comme « rien à comparer », et la
     // garde entière serait inerte en restant verte. On exige un gain STRICTEMENT positif.
-    const m = /(\d+) ligne\(s\) COMPARÉE\(S\) À L'INTÉRIEUR des rubriques exemptées/.exec(sortie);
-    expect(m, `le vert ne rend plus son compte de lignes gagnées : ${sortie}`).not.toBeNull();
     expect(Number(m![1])).toBeGreaterThan(0);
+    expect(Number(m![2])).toBeGreaterThanOrEqual(Number(m![1]));
 
     // LE COMPLÉMENT EST DIT, PAS SUPPOSÉ (même règle que le périmètre de `gov:trace`, GOV-043).
     // Tant qu'il reste des rubriques non converties, le vert doit les NOMMER — sinon il laisse

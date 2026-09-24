@@ -568,14 +568,21 @@ lignes.push('');
 // Ces prose-ci ne contiennent aucune valeur de la forge, et on les avait donc laissées COMPARÉES.
 // Faux : c'est leur PRÉSENCE qui dépend de la forge. `forge.file()` décide de la branche, donc
 // sous une forge sans PR ouverte la vue porte « Aucune PR ouverte », et sous une forge qui en a
-// elle porte le tableau et sa phrase d'ordre. Une vue rendue sous A et jugée sous B rougissait.
-// La lecture est donc RAPPELÉE dans chaque ligne que la branche émet, en-têtes de tableau
-// compris : dans cette rubrique, TOUT dépend de la forge, et le vert le dit en n'en comparant
-// aucune. Le gain de GOV-090 est ailleurs — sur les lignes émises SANS condition.
+// elle porte le tableau. Une vue rendue sous A et jugée sous B rougissait. La lecture est donc
+// RAPPELÉE dans chaque ligne que la branche émet, en-têtes de tableau compris.
+//
+// ⚠️ ET LA CONCLUSION QU'ON EN AVAIT TIRÉE ÉTAIT TROP LARGE — c'est la lentille `mutation` qui
+// l'a mesuré : « dans cette rubrique, TOUT dépend de la forge » était vrai de ce que les deux
+// branches écrivaient, pas de ce qu'elles DEVAIENT écrire. La doctrine d'ordre (RM-09) ne dépend
+// d'aucune PR : elle vivait dans la branche par accident de rédaction, et s'y trouvait donc
+// exemptée par sa PRÉSENCE — réécrivable à la main sans un rouge, sur la rubrique que A04 lit
+// pour choisir la fusion suivante, et sans même figurer parmi les rubriques « non converties ».
+// Le remède n'est pas d'assouplir la règle d'exemption : c'est de SORTIR la doctrine de la
+// branche. Une prose invariante s'écrit hors du `if` ; elle devient comparée par construction.
 if (!forge.file().length) {
   pousser(() => {
     forge.file();
-    return 'Aucune PR ouverte. **Une fusion à la fois** (RM-09) : la file se réserve avant `gh pr update-branch`, jamais après.';
+    return 'Aucune PR ouverte.';
   });
 } else {
   pousser(() => {
@@ -592,12 +599,13 @@ if (!forge.file().length) {
       return `| ${i + 1} | #${p.number} — ${p.title} | \`${p.headRefName}\` | ${p.bloque} |`;
     });
   });
-  lignes.push('');
-  pousser(() => {
-    forge.file();
-    return 'Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.';
-  });
 }
+lignes.push('');
+// ÉMISE SANS CONDITION, SOUS LES DEUX BRANCHES : ne lit rien de la forge, donc COMPARÉE.
+pousser(
+  () =>
+    'Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.'
+);
 lignes.push('');
 
 // ── Revendications (REQ-GOV-007) ────────────────────────────────────────────
@@ -699,18 +707,28 @@ lignes.push('');
     }))
     .filter((a) => a.jour !== '' && a.jour === jourMain)
     .sort((a, b) => a.fichier.localeCompare(b.fichier));
+  // RUBRIQUE CONVERTIE (GOV-090, second tour) : chaque ligne passe par `pousser`, et la lecture
+  // de la forge est RAPPELÉE dans celles qui l'affichent. La population du jour dépend de
+  // `forge.dateMain()` par sa valeur ET par sa présence ; la doctrine, elle, n'en dépend pas et
+  // sort donc de la branche — c'est la seule façon de la faire comparer.
   if (!decisionsDuJour.length) {
-    lignes.push(
-      `Aucun ADR daté du ${jourMain || '?'} (jour du dernier atterrissage). Les décisions de Will, elles, vivent au registre \`docs/DECISIONS.md\`, tranchées ou tenues par une hypothèse datée.`
-    );
+    pousser(() => {
+      forge.dateMain();
+      return `Aucun ADR daté du ${jourMain || '?'} (jour du dernier atterrissage).`;
+    });
   } else {
     // Une seule ligne, sans puce : une zone exemptée n'ouvre ni liste ni citation (`horsDeSaZone`).
-    lignes.push(decisionsDuJour.map((a) => `\`docs/adr/${a.fichier}\` — ${a.titre}`).join(' · '));
-    lignes.push('');
-    lignes.push(
-      `Dérivé de \`git log\` sur \`docs/adr/\`, jour du dernier atterrissage (${jourMain}). Une décision de Will n’est pas un ADR : elle vit au registre \`docs/DECISIONS.md\`.`
-    );
+    pousser(() => {
+      forge.dateMain();
+      return decisionsDuJour.map((a) => `\`docs/adr/${a.fichier}\` — ${a.titre}`).join(' · ');
+    });
   }
+  lignes.push('');
+  // ÉMISE SANS CONDITION : ne lit rien de la forge, donc COMPARÉE octet par octet.
+  pousser(
+    () =>
+      'Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.'
+  );
 }
 lignes.push('');
 
@@ -731,22 +749,41 @@ lignes.push('');
   const prete = forge.file().find((p) => p.rang === 1);
   // Deux paragraphes, sans numéro : une zone exemptée n'ouvre pas de liste (`horsDeSaZone`), et la
   // ligne de la tâche ne porte plus un rang qui dépendait de la forge.
+  //
+  // ⚠️ C'EST LA RUBRIQUE QUE A04 LIT POUR CHOISIR LA FUSION SUIVANTE (RM-09), et elle était
+  // exemptée EN BLOC parce qu'UNE de ses lignes nomme la PR en tête de file. Les deux autres ne
+  // lisent que `docs/tasks.json` : elles sont désormais émises hors de toute branche que la forge
+  // décide, donc COMPARÉES. Ce qui reste libre est exactement le NUMÉRO de la PR prête — une
+  // valeur de la forge, que la comparer reviendrait à mesurer. `partners/ADR-0019` le nomme.
   if (prete) {
-    lignes.push(
-      `**Fusionner #${prete.number}** — elle est en tête de file et ne bloque sur rien. Lire \`mergeStateStatus\` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage.`
-    );
+    pousser(() => {
+      forge.file();
+      return `**Fusionner #${prete.number}** — elle est en tête de file et ne bloque sur rien.`;
+    });
+    lignes.push('');
   }
+  // LA BRANCHE NE DÉPEND QUE DU REGISTRE (`suivante` se dérive de `docs/tasks.json` seul) : les
+  // deux proses sont donc comparables, celle qui nomme la tâche comme celle qui dit qu'il n'y en a
+  // pas. C'était `else if (!prete)` — un `prete` qui vient de la forge rendait la seconde
+  // conditionnelle à la forge, et libre avec elle.
   if (suivante) {
-    if (prete) lignes.push('');
-    lignes.push(
-      `**${suivante.id}** — ${suivante.titre} (${suivante.estimateDays} j` +
+    pousser(
+      () =>
+        `**${suivante.id}** — ${suivante.titre} (${suivante.estimateDays} j` +
         `${surLeChemin.has(suivante.id) ? ', **sur le chemin critique**' : ''}) : ${eligibles.length} tâche(s) éligible(s) en tout. \`pnpm lot:composer\` compose le lot.`
     );
-  } else if (!prete) {
-    lignes.push(
-      'Aucune tâche éligible en phase courante : toutes les candidates attendent une dépendance, un tiers ou un arbitrage de Will. Voir « Bloquées » et « Questions ouvertes ».'
+  } else {
+    pousser(
+      () =>
+        'Aucune tâche éligible en phase courante : toutes les candidates attendent une dépendance, un tiers ou un arbitrage de Will. Voir « Bloquées » et « Questions ouvertes ».'
     );
   }
+  lignes.push('');
+  // ÉMISE SANS CONDITION : la DOCTRINE du pas suivant, comparée octet par octet.
+  pousser(
+    () =>
+      'Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.'
+  );
 }
 lignes.push('');
 
@@ -757,12 +794,15 @@ lignes.push('');
 // ce fichier est généré AVANT la fusion qui le porte, donc son SHA a toujours un atterrissage de
 // retard. C'est pourquoi `gov:etat` garde la fraîcheur par la DATE du commit de PLAN-STATE, jamais
 // par le SHA écrit dedans — et c'est pourquoi la phrase le dit, plutôt que de laisser croire.
-lignes.push(
-  `\`origin/main\` = \`${forge.shaMain() || '?'}\` (${forge.dateMain() || '?'}). Vérifier \`x-partners-build-sha\` avant toute nouvelle fusion.`
+pousser(
+  () =>
+    `\`origin/main\` = \`${forge.shaMain() || '?'}\` (${forge.dateMain() || '?'}). Vérifier \`x-partners-build-sha\` avant toute nouvelle fusion.`
 );
 lignes.push('');
-lignes.push(
-  'Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.'
+// ÉMISE SANS CONDITION : ne lit rien de la forge, donc COMPARÉE octet par octet.
+pousser(
+  () =>
+    'Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.'
 );
 lignes.push('');
 
@@ -1134,13 +1174,26 @@ function comparer(
   rubriques: Etage;
   reprise: Etage;
   mesuresConfrontees: string[];
-  lignesDansExemptees: { comparees: number };
+  lignesDansExemptees: { comparees: number; total: number };
   rubriquesNonConverties: string[];
 } {
   const ecarts: Ecart[] = [];
   const rubriques: Etage = { comparees: 0, exemptees: [] };
-  /** Les lignes COMPARÉES à l'intérieur d'une rubrique exemptée — le gain de GOV-090, compté. */
-  const lignesDansExemptees = { comparees: 0 };
+  /**
+   * LE GAIN DE GOV-090, COMPTÉ SUR SA POPULATION — ET LES DEUX NOMBRES SORTENT ENSEMBLE.
+   *
+   * `comparees` : les lignes non vides d'une rubrique exemptée que le vérificateur confronte
+   * réellement. `total` : toutes les lignes non vides des rubriques exemptées, converties ou non.
+   * Le premier tour de GOV-090 n'imprimait que le numérateur — seul des quatre compteurs de ce
+   * vert à ne pas porter sa population. « 1 ligne comparée » se lit comme un succès alors qu'il ne
+   * dit rien du reste : un compteur sans dénominateur ment par omission. Le rendre ne coûte rien,
+   * et ne pas le rendre a coûté un refus de lentille.
+   *
+   * ⚠️ CE DÉNOMINATEUR N'EST PAS UNE CONSTANTE et ne se recopie dans aucun document : « File de
+   * fusion » écrit une ligne par PR ouverte, donc la population bouge avec la forge. C'est un
+   * nombre qu'on IMPRIME, jamais un nombre qu'on tient à jour.
+   */
+  const lignesDansExemptees = { comparees: 0, total: 0 };
   /** Les rubriques exemptées dont toutes les lignes n'ont pas encore de provenance. */
   const rubriquesNonConverties: string[] = [];
   const reprise: Etage = { comparees: 0, exemptees: [] };
@@ -1263,6 +1316,10 @@ function comparer(
       // sans l'avoir déclarée ferait rougir le dépôt à chaque PR ouverte — un faux rouge
       // quotidien se fait désarmer en un jour, et on aurait perdu la garde ET le temps.
       // Le vert IMPRIME les deux populations : ce qui est converti, et ce qui ne l'est pas.
+      // LA POPULATION EST COMPTÉE AVANT TOUTE CONDITION : c'est elle le dénominateur, et il ne
+      // doit dépendre ni de la conversion de la rubrique ni de la présence de celle-ci sur le
+      // disque. Un dénominateur qui suivrait le numérateur ne mesurerait plus rien.
+      lignesDansExemptees.total += r.corps.split('\n').filter((l) => l !== '').length;
       if (surPlace) {
         const lA = r.corps.split('\n');
         const surDisqueLignes = new Set(surPlace.corps.split('\n'));
@@ -1484,8 +1541,9 @@ if (!LANCE_EN_SCRIPT) {
           `${rubriques.comparees} rubrique(s) comparée(s) octet par octet sur ${rubriques.comparees + rubriques.exemptees.length}, ` +
           `${reprise.comparees} ligne(s) du bloc de reprise CONFRONTÉES sur ${reprise.comparees + reprise.exemptees.length}, ` +
           `${mesuresConfrontees.length}/${MESURES_ATTENDUES.length} mesure(s) du domaine CONFRONTÉES, ` +
-          `${lignesDansExemptees.comparees} ligne(s) COMPARÉE(S) À L'INTÉRIEUR des rubriques exemptées ` +
-          `(GOV-090 — elles ne lisent rien de la forge).`
+          `${lignesDansExemptees.comparees} ligne(s) non vide(s) COMPARÉE(S) sur ${lignesDansExemptees.total} ` +
+          `À L'INTÉRIEUR des rubriques exemptées (GOV-090 — une ligne comptée au dénominateur et pas ` +
+          `au numérateur porte une valeur de la forge, ou vit dans une rubrique non convertie).`
       );
       // LE COMPLÉMENT EST NOMMÉ, JAMAIS SOUS-ENTENDU : une rubrique non convertie est
       // entièrement libre, et le vert doit le DIRE plutôt que de laisser croire à une

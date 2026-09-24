@@ -362,9 +362,15 @@ modifier change ce que la garde exige.
 > ⚠️ **Aucune virgule dans la première colonne hors d'une liste de chemins.** Elle sépare les
 > chemins : une virgule posée dans une parenthèse explicative coupait la cellule en deux faux
 > chemins, et le vrai chemin cessait d'être gardé SANS que rien ne rougisse. Mesuré le 2026-09-22
-> en écrivant les deux lignes de `partners/ADR-0019`. Le lecteur retire désormais les parenthèses
-> AVANT de découper (`cheminsReserves`), et un témoin le tient — mais la règle reste : une
-> parenthèse explicative se ponctue au tiret.
+> en écrivant les deux lignes de `partners/ADR-0019`.
+>
+> ⚠️ **DEUX lecteurs lisent cette colonne, et un seul est réparé.** `cheminsReserves()`
+> (`scripts/lot/chemins-de-tache.ts`, lu par `gov:pr`) retire désormais les parenthèses AVANT de
+> découper, et un témoin de `gov:pr --prove` le tient. `cheminsReservesDeLaCharte()`
+> (`scripts/gates/gov-agents.ts`, lu par `gov:agents`) **découpe d'abord** : sans effet aujourd'hui,
+> parce qu'aucune ligne ci-dessous ne porte de virgule en parenthèse. C'est donc une règle de prose
+> qui tient un défaut de code — dette nommée au « Reste à faire » de `partners/ADR-0019`. **La règle
+> reste : une parenthèse explicative se ponctue au tiret.**
 
 **CE TABLEAU EST CELUI DES SOURCES, ET C'EST `partners/ADR-0019` QUI L'A TRANCHÉ (2026-09-22).**
 Un label répond à une seule question : *qui répond de ce texte ?* **Personne ne répond d'une vue
@@ -373,6 +379,14 @@ dérivée** — une vue a un générateur et un `--verifier`, et sa dérive est 
 `docs/requirements.json` — la **source** des 355 exigences — n'y figurait pas : le tableau
 protégeait deux ombres et laissait deux corps ouverts. Les deux vues sortent, les deux sources
 entrent ; l'ADR porte la mesure et ce que le geste ne règle PAS.
+
+⚠️ **Le label n'était pas une barrière, et il ne faut pas lire son retrait comme la levée d'une.**
+La famille `fichier_reserve_sans_label` vérifie qu'une PR PORTE un label — que son auteur lui pose
+lui-même, `gh pr create --label` et `gh label` étant tous deux en `allow`. C'est une déclaration
+d'imputation. Symétriquement, `plan-state:verifier` ne compare pas tout : ce qu'il couvre et ce
+qu'il laisse libre est écrit dans `partners/ADR-0019`, sous « Ce que `plan-state:verifier` couvre,
+et ce qu'il ne couvre pas », avec l'attaque qui reste possible. Les deux phrases se lisent
+ensemble, ou aucune des deux ne dit la vérité.
 
 Les lignes A01 suivent `docs/CONVENTIONS.md` §8, aux deux mouvements de l'ADR près. La ligne
 `config/exemptions-corps-publie.json` est venue avec `partners/ADR-0010` : elle ne vient pas des
