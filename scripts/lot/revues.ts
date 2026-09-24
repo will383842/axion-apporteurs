@@ -129,7 +129,20 @@ export const ASSOCIATIONS_HABILITEES: ReadonlySet<string> = new Set([
 export const LENTILLE_SIMPLICITE = 'simplicite';
 export const LENTILLE_SCHEMA = 'schema';
 export const LENTILLE_MUTATION = 'mutation';
-const DEUX_PREMIERES = ['exactitude', 'securite'];
+
+/**
+ * LA LENTILLE DONT LA MATIÈRE EST LA PROSE : son accord ne survit à aucune réécriture (GOV-095,
+ * voir `accordSurvit` plus bas).
+ *
+ * 🔴 ELLE EST DÉCLARÉE ICI, ET NON À CÔTÉ DE LA RÈGLE DE SURVIE. Le littéral était écrit DEUX fois
+ * — dans `DEUX_PREMIERES` et dans la règle — et la lentille `securite` l'a relevé : renommer l'un
+ * faisait cesser l'autre de mordre, dans le sens PERMISSIF. Une seule source, et elle précède ses
+ * deux lecteurs : `DEUX_PREMIERES` est évalué au chargement du module, une déclaration plus bas
+ * le ferait tomber en zone morte temporelle.
+ */
+export const LENTILLE_DE_LA_PROSE = 'exactitude';
+
+const DEUX_PREMIERES = [LENTILLE_DE_LA_PROSE, 'securite'];
 
 /**
  * LA LIGNE QUI TRANCHE — ET UNE CITATION N'EN EST PAS UNE.
@@ -251,8 +264,9 @@ export type Verdict = {
  *
  *   1. L n'est pas `exactitude` — cette lentille juge la PROSE, c'est sa matière, et son accord
  *      ne survit donc à aucun commit ;
- *   2. ET l'ensemble des fichiers changés entre C et T est VIDE, ou entièrement contenu sous
- *      `docs/journal/`.
+ *   2. ET l'ensemble des fichiers changés entre C et T est VIDE, ou n'est fait que d'ENTRÉES du
+ *      journal — le préfixe `docs/journal/`, son mode d'emploi EXCLU : voir
+ *      `CONFIGURATION_DU_DOSSIER`, qui dit pourquoi ce fichier-là ne juge pas rien.
  *
  * ⚠️ C'EST UNE GARDE RENDUE PLUS PERMISSIVE, et c'est l'objection la plus forte qu'on puisse lui
  * opposer. La réponse tient en un point : TOUT CAS AMBIGU ÉCHOUE FERMÉ, et chacun a son témoin
@@ -265,7 +279,12 @@ export type Verdict = {
  *     `paths`. Ce sont des sources, pas de la prose ;
  *   — une vue dérivée (`docs/PLAN-STATE.md`, `docs/TASKS.md`…) : PÉRIMÉ. Si une vue a changé,
  *     sa source a changé ;
- *   — un ADR, `docs/CONVENTIONS.md`, n'importe quel document normatif : PÉRIMÉ.
+ *   — un ADR, `docs/CONVENTIONS.md`, n'importe quel document normatif : PÉRIMÉ ;
+ *   — `docs/journal/README.md` : PÉRIMÉ, bien qu'il soit sous le préfixe. Il porte le PLANCHER
+ *     dont deux gardes bloquantes dérivent leur nombre — c'est une configuration, pas une entrée.
+ *
+ * 🔑 LE PRÉFIXE DÉSIGNE UNE ENTRÉE, PAS UN DOSSIER, et cette précision-là a coûté une revue :
+ * `CONFIGURATION_DU_DOSSIER` porte la mesure et l'attaque.
  *
  * 🔑 ET AUCUN DE CES QUATRE CAS N'EST ÉNUMÉRÉ DANS LE CODE. La liste blanche est UN SEUL préfixe ;
  * tout le reste périme par construction. Une liste noire de documents normatifs laisserait passer
@@ -277,8 +296,39 @@ export type Verdict = {
 /** Le SEUL préfixe sous lequel un changement ne juge aucun code : une entrée de journal par PR. */
 export const CHEMIN_DU_JOURNAL = 'docs/journal/';
 
-/** La lentille dont la MATIÈRE est la prose : son accord ne survit à aucune réécriture. */
-export const LENTILLE_DE_LA_PROSE = 'exactitude';
+/**
+ * ⛔ LE PRÉFIXE DÉSIGNE UNE ENTRÉE, PAS UN DOSSIER — et la prémisse était fausse d'un fichier.
+ *
+ * 🔴 LE DÉFAUT, MESURÉ PAR LA LENTILLE `securite` SUR LA TÊTE PRÉCÉDENTE DE CETTE PR. Le dossier
+ * `docs/journal/` ne contient pas QUE de la prose : il contient aussi son propre mode d'emploi, et
+ * ce mode d'emploi porte la ligne du PLANCHER — le numéro de PR sous lequel aucune tâche n'a
+ * besoin d'être attestée. DEUX gardes bloquantes de `gate-a` en DÉRIVENT ce nombre, et rien ne le
+ * borne :
+ *
+ *   — `gov:attributions` (`scripts/gates/gov-attributions.ts`) : le plancher est L'INTERRUPTEUR du
+ *     journal, il EXEMPTE des tâches de toute attestation de lot (exemption `lot_sous_plancher`) ;
+ *   — `gov:etat` (`scripts/gates/gov-etat.ts`) : sous le plancher, « PR fusionnée sans entrée de
+ *     journal » se tait.
+ *
+ * L'ATTAQUE, DE BOUT EN BOUT. Accords posés au commit C, puis une tête T qui ne change QUE ce
+ * nombre — forme toujours valide au regard de la ligne que les deux gardes lisent. Les deux gardes
+ * s'éteignent, `securite`, `simplicite`, `schema` et `mutation` SURVIVENT, la case se coche, et le
+ * `detail` publié affirme « le delta ne juge aucun code » : une phrase calculée et fausse.
+ *
+ * LE REMÈDE N'EST PAS UNE LISTE NOIRE — la doctrine d'un seul préfixe tient (voir plus haut).
+ * C'est que le README d'un dossier est sa CONFIGURATION, pas son contenu : c'est vrai de tout
+ * dossier, ce n'est pas une exception qu'on énumère. Il périme donc, à n'importe quelle profondeur
+ * sous le préfixe, et quelle que soit sa casse — un système de fichiers insensible à la casse sert
+ * le même fichier sous les trois formes, et le sens de cette insensibilité-ci est le sens FERMÉ.
+ *
+ * ⚠️ CE QUI RESTE À SURVEILLER, ET QUI SE MESURE PAR UNE COMMANDE, jamais par une lecture : si un
+ * jour une garde dérive quoi que ce soit d'un AUTRE fichier de ce dossier, ce fichier n'est plus
+ * une entrée non plus, et sa place est ici. La question se rejoue ainsi :
+ *
+ *     for f in $(git ls-tree -r --name-only HEAD docs/journal/); do git grep -n -F "$f" HEAD \
+ *       -- scripts .github src; done
+ */
+export const CONFIGURATION_DU_DOSSIER = 'README.md';
 
 /** Un accord survit, ou il périme — et dans les deux cas on sait DIRE pourquoi. */
 export type Survie =
@@ -304,9 +354,20 @@ export type Peremption = {
   fichiers: string[] | null;
 };
 
-/** Un chemin est-il sous le journal ? Un segment `..` disqualifie : on ne remonte pas d'un préfixe. */
+/**
+ * Un chemin est-il une ENTRÉE du journal ? Trois conditions, et chacune a son témoin :
+ *
+ *   — le préfixe se lit au DÉBUT du chemin (`startsWith`), jamais n'importe où dedans : sans quoi
+ *     `src/docs/journal/note.ts` — du code produit — passerait pour de la prose ;
+ *   — aucun segment `..` : on ne remonte pas d'un préfixe ;
+ *   — le fichier n'est pas la CONFIGURATION du dossier. Voir `CONFIGURATION_DU_DOSSIER`.
+ */
 function sousLeJournal(f: string): boolean {
-  return f.startsWith(CHEMIN_DU_JOURNAL) && !f.split('/').includes('..');
+  if (!f.startsWith(CHEMIN_DU_JOURNAL)) return false;
+  const segments = f.split('/');
+  if (segments.includes('..')) return false;
+  const nom = segments[segments.length - 1] ?? '';
+  return nom.toLowerCase() !== CONFIGURATION_DU_DOSSIER.toLowerCase();
 }
 
 /**
@@ -338,8 +399,12 @@ export function accordSurvit(lentille: string, fichiers: readonly string[] | nul
     return {
       survit: false,
       fichiers: [...fichiers],
+      // « hors de `docs/journal/` » serait une phrase calculée et FAUSSE depuis que le mode
+      // d'emploi du dossier périme : il est SOUS le préfixe, et il ne juge pas rien. Le motif dit
+      // donc ce que la règle mesure vraiment — ce qui n'est pas une ENTRÉE — et le nomme.
       motif:
-        `${dehors.length} fichier(s) changé(s) hors de \`${CHEMIN_DU_JOURNAL}\` : ` +
+        `${dehors.length} fichier(s) changé(s) qui ne sont pas des entrées de ` +
+        `\`${CHEMIN_DU_JOURNAL}\` : ` +
         dehors.join(', '),
     };
   }
@@ -352,11 +417,17 @@ export function accordSurvit(lentille: string, fichiers: readonly string[] | nul
  * fusionné ». Elle échoue FERMÉ — toute erreur rend `null`, jamais une liste vide, qui se lirait
  * « rien n'a changé ».
  *
- * ⚠️ `--no-renames` EST DÉLIBÉRÉ, et c'est le sens conservateur. Avec la détection de renommage —
- * active par défaut depuis git 2.9 — un fichier SORTI de `docs/journal/` ne serait rendu que par
- * sa destination, et l'accord survivrait à un déplacement hors du journal. Sans elle, les DEUX
- * chemins sont rendus, et la règle voit le fichier partir. Témoin : « un RENOMMAGE rend ses DEUX
- * chemins ».
+ * ⚠️ `--no-renames` EST DÉLIBÉRÉ, et il ferme DEUX sens, pas un. Avec la détection de renommage —
+ * active par défaut depuis git 2.9 — un renommage n'est rendu que par sa DESTINATION :
+ *
+ *   — un fichier SORTI du journal ne serait rendu que par sa destination hors du journal : la
+ *     règle verrait le fichier arriver, jamais partir ;
+ *   — et c'est l'autre sens qui MORD VRAIMENT : `docs/CONVENTIONS.md` déplacé VERS
+ *     `docs/journal/x.md` ne serait rendu que par `docs/journal/x.md`, donc « entièrement sous le
+ *     journal », donc l'accord SURVIVRAIT À LA SUPPRESSION D'UN DOCUMENT NORMATIF.
+ *
+ * Sans la détection, les DEUX chemins sont rendus dans les deux cas. Témoin : « un RENOMMAGE rend
+ * ses DEUX chemins ».
  *
  * `-z` parce que `git` CITE les chemins non-ASCII (`"docs/journal/\303\251.md"`) : un chemin cité
  * ne commencerait plus par le préfixe du journal et se lirait « hors journal » — fermé, donc sans
@@ -395,7 +466,10 @@ export function direLaSurvivance(s: Survivance): string {
     `${s.tete.slice(0, 7)} : ` +
     (s.fichiers.length === 0
       ? 'les deux arbres sont identiques, aucun fichier ne les sépare'
-      : `le delta est entièrement sous \`${CHEMIN_DU_JOURNAL}\` — ${s.fichiers.join(', ')}`)
+      : // « entièrement sous `docs/journal/` » serait plus large que ce qui a été mesuré : le
+        // mode d'emploi du dossier y est aussi, et lui périme. La phrase dit ce qui a été
+        // vérifié — des ENTRÉES — et les nomme toutes, pour qu'on puisse la contester.
+        `le delta n’est fait que d’entrées de \`${CHEMIN_DU_JOURNAL}\` — ${s.fichiers.join(', ')}`)
   );
 }
 

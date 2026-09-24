@@ -41,7 +41,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 
@@ -176,6 +176,90 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
     expect(LECTEUR.accordSurvit('securite', ['docs/journal/../tasks.json']).survit).toBe(false);
     expect(LECTEUR.accordSurvit('securite', ['docs/journalier/note.md']).survit).toBe(false);
   });
+
+  it('REQ-GOV-011 · le préfixe se lit au DÉBUT du chemin, jamais n’importe où dedans', () => {
+    // 🔴 MESURÉ PAR LA LENTILLE `mutation` : `includes` à la place de `startsWith` survivait aux
+    // 229 témoins du périmètre, et faisait SURVIVRE `src/docs/journal/note.ts` — du code produit.
+    // Le code livré refuse ces chemins ; aucun témoin ne le fixait.
+    for (const f of [
+      'src/docs/journal/note.ts',
+      'packages/docs/journal/2026-09.md',
+      'scripts/lot/docs/journal/x.ts',
+    ]) {
+      expect(LECTEUR.accordSurvit('securite', [f]).survit, f).toBe(false);
+    }
+  });
+
+  // ── le préfixe désigne une ENTRÉE, pas un DOSSIER ─────────────────────────
+
+  it('REQ-GOV-011 · le README du journal PÉRIME : c’est la CONFIGURATION du dossier, pas une entrée', () => {
+    const s = LECTEUR.accordSurvit('securite', [
+      `${LECTEUR.CHEMIN_DU_JOURNAL}${LECTEUR.CONFIGURATION_DU_DOSSIER}`,
+    ]);
+    expect(s.survit).toBe(false);
+    if (s.survit) return;
+    expect(s.motif).toContain(LECTEUR.CONFIGURATION_DU_DOSSIER);
+  });
+
+  it('REQ-GOV-011 · LA PRÉMISSE, MESURÉE : deux gardes bloquantes désignent ce README PAR SON NOM', () => {
+    // POURQUOI l'exclusion existe, mesuré plutôt que cru. Ce fichier porte la ligne du PLANCHER du
+    // journal, et DEUX gardes bloquantes de `gate-a` en DÉRIVENT le nombre : `gov:attributions`
+    // (le plancher EXEMPTE des tâches de toute attestation de lot — `lot_sous_plancher`) et
+    // `gov:etat` (il fait taire `pr_fusionnee_sans_journal`). Un commit qui ne changerait QUE ce
+    // nombre éteindrait les deux pendant que les accords de `securite`, `simplicite`, `schema` et
+    // `mutation` survivraient — et le `detail` publié affirmerait « le delta ne juge aucun code ».
+    // Le nombre du plancher n'est PAS recopié ici (RM-01) : ce témoin ne lit que le NOM du fichier.
+    const readme = `${LECTEUR.CHEMIN_DU_JOURNAL}${LECTEUR.CONFIGURATION_DU_DOSSIER}`;
+    for (const garde of ['scripts/gates/gov-attributions.ts', 'scripts/gates/gov-etat.ts']) {
+      // `.includes()` plutôt que `toContain` : le refus dirait sinon le fichier ENTIER, et un
+      // rouge illisible est un rouge qu'on apprend à survoler.
+      expect(readFileSync(garde, 'utf8').includes(readme), `${garde} ne cite pas ${readme}`).toBe(
+        true
+      );
+    }
+  });
+
+  it('REQ-GOV-011 · le README périme quelle que soit sa CASSE et à n’importe quelle profondeur', () => {
+    // Un système de fichiers insensible à la casse — celui de cette machine — sert le MÊME fichier
+    // sous les trois formes. Le sens de cette insensibilité-ci est le sens FERMÉ : elle périme
+    // davantage, jamais moins.
+    for (const f of [
+      'docs/journal/readme.md',
+      'docs/journal/ReadMe.MD',
+      'docs/journal/2026-10/README.md',
+    ]) {
+      expect(LECTEUR.accordSurvit('securite', [f]).survit, f).toBe(false);
+    }
+  });
+
+  it('REQ-GOV-011 · CONTRE-TÉMOIN : une ENTRÉE du même dossier survit, et un README dans le même delta périme tout', () => {
+    // Sans ce contre-témoin, périmer TOUT `docs/journal/` — c'est-à-dire annuler la tâche —
+    // passerait les trois témoins ci-dessus.
+    expect(LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md']).survit).toBe(true);
+    expect(
+      LECTEUR.accordSurvit('securite', [
+        'docs/journal/2026-09-pr-116.md',
+        `${LECTEUR.CHEMIN_DU_JOURNAL}${LECTEUR.CONFIGURATION_DU_DOSSIER}`,
+      ]).survit
+    ).toBe(false);
+  });
+
+  it('REQ-GOV-011 · la lentille de la PROSE a UNE seule source : celle qu’exige tout risque est celle qui ne survit à rien', () => {
+    // 🔴 LA PANNE QUE CE TÉMOIN FERME, relevée par la lentille `securite` : le littéral
+    // `exactitude` était écrit DEUX fois — dans la liste des lentilles exigées et dans la règle de
+    // survie. Renommer l'un faisait cesser l'autre de mordre, et le sens de la panne est
+    // PERMISSIF : la lentille qui juge la prose survivrait à une réécriture de prose.
+    for (const risque of [
+      { niveau: 'ordinaire', schema: false, raisons: [] },
+      { niveau: 'eleve', schema: false, raisons: [] },
+      { niveau: 'eleve', schema: true, raisons: [] },
+    ] as LECTEUR.Risque[]) {
+      expect(LECTEUR.lentillesExigees(risque).toutes, JSON.stringify(risque)).toContain(
+        LECTEUR.LENTILLE_DE_LA_PROSE
+      );
+    }
+    expect(LECTEUR.accordSurvit(LECTEUR.LENTILLE_DE_LA_PROSE, []).survit).toBe(false);
+  });
 });
 
 // ── la MESURE, sur un vrai dépôt git ────────────────────────────────────────
@@ -245,6 +329,32 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
     expect(LECTEUR.fichiersEntre(c, t, dir)?.sort()).toEqual([
       'docs/CONVENTIONS.md',
       'docs/journal/a.md',
+    ]);
+    expect(LECTEUR.accordSurvit('securite', LECTEUR.fichiersEntre(c, t, dir)).survit).toBe(false);
+  });
+
+  it('REQ-GOV-011 · un renommage VERS le journal rend AUSSI ses deux chemins — le sens qui mord', () => {
+    // `--no-renames` ferme DEUX sens, et la prose n'en nommait qu'un. Celui-ci est le plus grave :
+    // avec la détection de renommage, un document NORMATIF déplacé vers `docs/journal/` ne serait
+    // rendu que par sa destination — donc « entièrement sous le journal » — et l'accord
+    // survivrait à la SUPPRESSION de ce document.
+    const dir = depotJetable();
+    const c = ecrireEtCommiter(dir, { 'docs/CONVENTIONS.md': 'la regle\n' }, 'chore: socle');
+    // `git mv` ne crée pas le dossier de destination : il refuse, et le refus dirait « Command
+    // failed » sans dire quoi. Le dossier se pose avant.
+    mkdirSync(join(dir, 'docs/journal'), { recursive: true });
+    execFileSync('git', ['mv', 'docs/CONVENTIONS.md', 'docs/journal/2026-09-pr-116.md'], {
+      cwd: dir,
+      stdio: 'ignore',
+    });
+    execFileSync('git', ['commit', '-m', 'chore: deplacer vers le journal'], {
+      cwd: dir,
+      stdio: 'ignore',
+    });
+    const t = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+    expect(LECTEUR.fichiersEntre(c, t, dir)?.sort()).toEqual([
+      'docs/CONVENTIONS.md',
+      'docs/journal/2026-09-pr-116.md',
     ]);
     expect(LECTEUR.accordSurvit('securite', LECTEUR.fichiersEntre(c, t, dir)).survit).toBe(false);
   });
@@ -346,6 +456,53 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
       'simplicite',
     ]);
     expect(lecture.coche).toBe(false);
+  });
+
+  it('REQ-GOV-013 · un delta qui touche le README du journal périme les QUATRE lentilles', () => {
+    // L'attaque, de bout en bout : une tête qui ne change QUE le nombre du plancher éteindrait
+    // `gov:attributions` et `gov:etat` pendant que trois accords survivraient — et le `detail`
+    // publié affirmerait « le delta ne juge aucun code ». Il le dit désormais du delta entier.
+    const readme = `${LECTEUR.CHEMIN_DU_JOURNAL}${LECTEUR.CONFIGURATION_DU_DOSSIER}`;
+    const lecture = lireAvecDelta(tourComplet(ACCORD), [readme]);
+    expect(lecture.survivantes).toEqual([]);
+    expect(lecture.perimees.map((v) => v.lentille).sort()).toEqual([
+      'exactitude',
+      'mutation',
+      'securite',
+      'simplicite',
+    ]);
+    expect(lecture.coche).toBe(false);
+    expect(lecture.detail).toContain(readme);
+    expect(lecture.detail).not.toContain('SURVIT');
+  });
+
+  it('REQ-GOV-013 · « Relecteur ≠ auteur » est INDÉPENDANTE de la survie : un accord survivant ne lave aucune relecture par l’auteur', () => {
+    // 🔴 L'ADJACENCE MESURÉE PAR LA LENTILLE `mutation` : `survivantes` est désormais dans la
+    // portée lexicale d'où `auteurSeRelit` est calculé. Un filtre `&& !survivantes.some(...)`
+    // laissait les 229 témoins du périmètre verts, `relecteur_est_auteur` de `gov:pr --prove`
+    // comprise, et cochait la case de DoD sur une PR relue par son propre auteur.
+    // Ici TOUS les accords de l'auteur survivent : c'est le seul cas où le filtre mordrait.
+    const revues = [
+      avis('A02', 'exactitude', TETE),
+      avis('A09', 'securite', ACCORD),
+      avis('A09', 'simplicite', ACCORD),
+      avis('A10', 'mutation', ACCORD),
+    ];
+    const lecture = LECTEUR.lireRevues({
+      revues,
+      risque: ELEVE,
+      tete: TETE,
+      auteurPoste: 'A09',
+      fichiersEntre: () => ['docs/journal/2026-09-pr-116.md'],
+    });
+    expect(lecture.survivantes.map((s) => s.lentille).sort()).toEqual([
+      'mutation',
+      'securite',
+      'simplicite',
+    ]);
+    expect(lecture.auteurSeRelit.map((v) => v.lentille).sort()).toEqual(['securite', 'simplicite']);
+    expect(lecture.coche).toBe(false);
+    expect(lecture.raisons.some((r) => r.includes('A09'))).toBe(true);
   });
 
   it('REQ-GOV-013 · la péremption DIT son motif et les fichiers qui l’ont causée', () => {
