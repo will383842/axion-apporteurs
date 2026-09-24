@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `954fe5a` — 2026-09-23T08:51:22+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #99 (rien) · 2. #113 (rien) · 3. #114 (un contrôle requis rouge ou une revue manquante) · 4. #116 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) · 6. #88 (un conflit avec `main`) · 7. #91 (un conflit avec `main`) · 8. #92 (un conflit avec `main`) · 9. #93 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #99 (rien) · 2. #113 (rien) · 3. #116 (rien) · 4. #114 (un contrôle requis rouge ou une revue manquante) · 5. #118 (un contrôle requis rouge ou une revue manquante) · 6. #82 (un conflit avec `main`) · 7. #88 (un conflit avec `main`) · 8. #91 (un conflit avec `main`) · 9. #92 (un conflit avec `main`) · 10. #93 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) |
 | Où en est la phase ? | phase 0 — 21/105 tâches, reste 63.10 j |
 | Le prochain pas | fusionner #99, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
@@ -66,13 +66,14 @@ Reste sur ce chemin : **14.50 j**.
 | --- | --- | --- | --- |
 | 1 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | rien — fusionnable maintenant |
 | 2 | #113 — feat(GOV-090): un label designe une SOURCE, jamais une vue, et un verbe hors depot se cite hors-depot/ | `t/gov-label-et-outils` | rien — fusionnable maintenant |
-| 3 | #114 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure | `t/lot-L0-02` | un contrôle requis rouge ou une revue manquante |
-| 4 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un contrôle requis rouge ou une revue manquante |
-| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
-| 7 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 8 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
-| 9 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | rien — fusionnable maintenant |
+| 4 | #114 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure | `t/lot-L0-02` | un contrôle requis rouge ou une revue manquante |
+| 5 | #118 — feat(GOV-096): le champ Lot: du gabarit resout les taches d une PR de lot | `t/gov-096-gov-pr-lit-le-lot` | un contrôle requis rouge ou une revue manquante |
+| 6 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 8 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 9 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 10 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -117,35 +118,52 @@ JUGE : `x.commit !== entree.tete` suffisait a perimer. Toute tete de plus perima
 accords exiges, meme quand `git diff` entre les deux etait vide. Un accord rendu sur la lentille L
 au commit C survit desormais a la tete T si, et seulement si, L n'est pas `exactitude` — cette
 lentille juge la prose, c'est sa matiere — ET que l'ensemble des fichiers changes entre C et T est
-vide, ou entierement contenu sous `docs/journal/`. La DECISION est pure (`accordSurvit`), la MESURE
-est `git` (`fichiersEntre`), sur le modele d'`estAncetreDe` juste au-dessus. Et parce que cette
-garde devient PLUS PERMISSIVE, elle DIT chaque fois qu'elle l'a ete : `pnpm gov:pr --pr` imprime le
-poste, la lentille, le sha de l'accord, le sha de la tete et LA LISTE DES FICHIERS qui les separent,
-et la phrase publiee au corps de la PR cesse d'affirmer que tout a ete juge sur la tete. Une survie
-silencieuse serait une permission inauditable.
+vide, ou n'est fait que d'ENTREES du journal : le prefixe `docs/journal/`, son MODE D'EMPLOI EXCLU.
+La DECISION est pure (`accordSurvit`), la MESURE est `git` (`fichiersEntre`), sur le modele
+d'`estAncetreDe` juste au-dessus. Et parce que cette garde devient PLUS PERMISSIVE, elle DIT chaque
+fois qu'elle l'a ete : `pnpm gov:pr --pr` imprime le poste, la lentille, le sha de l'accord, le sha
+de la tete et LA LISTE DES FICHIERS qui les separent, et la phrase publiee au corps de la PR cesse
+d'affirmer que tout a ete juge sur la tete. Une survie silencieuse serait une permission
+inauditable.
 
 **Reste.** L'ADR appartient a l'architecte, pas a cette PR : la regle de survie est une decision de
 conception, et trois alternatives ont ete ecartees — perimer toujours, une liste NOIRE de documents
 normatifs, un prefixe par dossier repute inoffensif. Le pas 5 de `docs/PROTOCOLE-FUSION.md` la porte
-en attendant, avec ses cas fermes. Second reste, mesure et assume : la survie ne se declenche que si
-le clone porte le commit de l'accord ; en integration continue c'est acquis (`fetch-depth: 0` sur
-les deux workflows), sur un clone superficiel la garde echoue FERME, donc exactement comme avant.
+en attendant, avec ses cas fermes. Deuxieme reste, mesure : la survie ne se declenche que si le
+clone porte le commit de l'accord ; l'unique `checkout` de `gate-a` porte `fetch-depth: 0`
+(`.github/workflows/ci.yml`), le premier des deux `checkout` de `.github/workflows/nightly.yml`
+aussi, le second — celui du travail `lecons-fraiches` — NON. Sans effet a ce jour : ce travail-la ne
+lance que `gov:lecons`, qui ne lit aucun accord. Sur un clone superficiel, la garde echoue FERME,
+donc exactement comme avant. Troisieme reste, releve par la lentille `securite` et NON traite ici :
+le litteral `securite` est encore ecrit deux fois dans `scripts/lot/revues.ts` — dans la liste des
+lentilles exigees et dans le message qui dit que le refus de cette lentille bloque a lui seul ;
+renommer l'un ferait cesser l'autre de mordre. Quatrieme reste, nomme et assume : l'impression
+console des accords survivants par `gov:pr` n'a pas de temoin ; le canal qui compte, le `detail`
+publie au corps de la PR, en a un.
 
-**Appris.** UNE GARDE QU'ON REND PLUS PERMISSIVE NE SE DEFEND PAS PAR SON INTENTION, ELLE SE DEFEND
-PAR SA LISTE BLANCHE ET PAR SA SORTIE. Deux gestes, et aucun des deux n'est cosmetique. Premier
-geste : la liste blanche est UN SEUL prefixe, et rien n'enumere ce qui perime. `docs/tasks.json`,
-`docs/requirements.json`, les vues derivees, les ADR, `docs/CONVENTIONS.md`, le dossier qui sera
-cree demain — tous periment par construction, parce qu'ils ne sont pas sous le prefixe. Une liste
-NOIRE aurait laisse passer le prochain, et l'oubli y aurait fait relire MOINS au lieu de plus.
-Second geste : tout cas ambigu echoue FERME et le DIT. Un diff que `git` ne peut pas calculer rend
-`null`, jamais une liste vide — une liste vide se lirait « rien n'a change ». Corollaire mesure en
-ecrivant la mesure : `git diff --name-only` detecte les renommages depuis la version 2.9, si bien
-qu'un fichier SORTI de `docs/journal/` n'aurait ete rendu que par sa destination et aurait survecu ;
-`--no-renames` rend les DEUX chemins, et c'est le sens conservateur. Enfin, la mesure qui ouvre la
-tache ne peut pas devenir un temoin : les deux commits de la PR 102 qui l'etablissent ont ete
-ecrases a la fusion, ne sont ancetres de rien, et un clone neuf ne les porte pas. Les temoins de la
-mesure construisent donc chacun un vrai depot git jetable ; un temoin qui aurait cite ces sha aurait
-rougi en integration continue pour une raison qui n'est pas la sienne.
+**Appris.** UNE LISTE BLANCHE PAR PREFIXE DE DOSSIER EST FAUSSE D'UN FICHIER DES QUE LE DOSSIER
+PORTE SA PROPRE CONFIGURATION. La doctrine tient — un seul prefixe, rien d'enumere, un oubli fait
+relire PLUS et jamais MOINS — mais sa premisse ne tenait pas : `docs/journal/` ne contient pas que
+de la prose, il contient aussi son mode d'emploi, et ce mode d'emploi porte le PLANCHER. Deux gardes
+bloquantes de `gate-a` en DERIVENT ce nombre : `gov:attributions`, pour qui le plancher EXEMPTE des
+taches de toute attestation de lot, et `gov:etat`, pour qui il fait taire la faute
+`pr_fusionnee_sans_journal`. Une tete qui ne change QUE ce nombre eteint les deux pendant que les
+accords survivent, et la phrase publiee affirme alors que le delta ne juge aucun code : une phrase
+calculee et FAUSSE, la pire espece, parce que personne ne la met en doute. Le remede n'est pas une
+liste noire : c'est que le prefixe designe l'ENTREE et non le DOSSIER — le README d'un dossier est
+sa configuration, ce qui est vrai de tout dossier et ne s'enumere donc pas. La question se repose
+pour tout dossier qu'on met en liste blanche, et elle se repond par une COMMANDE, jamais par une
+lecture : quel fichier de ce dossier une garde cite-t-elle par son nom. Deuxieme chose apprise, du
+meme ordre : `--no-renames` ferme DEUX sens et non un. Le sens qui mord vraiment n'est pas le
+fichier SORTI du journal, c'est le document normatif DEPLACE VERS le journal — avec la detection de
+renommage, `docs/CONVENTIONS.md` deplace vers `docs/journal/x.md` ne serait rendu que par sa
+destination, donc lu comme entierement sous le journal, et l'accord survivrait a la SUPPRESSION d'un
+document normatif. Troisieme chose apprise, sur la maniere de raconter une garde : une famille de
+`--prove` peut rougir pour une raison qui n'est pas celle qu'on lui prete. Le temoin de
+`lentille_perimee` pose un `commit_id` de zeros sur TOUTES les revues ; mutant pose, `fichiersEntre`
+echouant OUVERT, `gov:pr --prove` reste VERT. La famille rougit par l'exception `exactitude`, pas
+par l'echec ferme — lequel est bien couvert, mais par le temoin unitaire. Ce qu'une garde protege se
+mesure en la cassant, jamais en lisant son intention.
 
 ### PR #112 — 2026-09-23 — fix(GOV-092): une revision servie sans `diff` bloque la porte A, et les deux remedes nommes sont faux
 

@@ -140,15 +140,25 @@ Un accord rendu sur la lentille L au commit C survit désormais à la tête T **
 
 1. **L n'est pas `exactitude`** — cette lentille juge la prose, c'est sa matière, et son accord ne
    survit à aucun commit ;
-2. **ET** l'ensemble des fichiers changés entre C et T est **vide**, ou **entièrement contenu sous
-   `docs/journal/`**.
+2. **ET** l'ensemble des fichiers changés entre C et T est **vide**, ou n'est fait que d'**entrées**
+   du journal — le préfixe `docs/journal/`, **son mode d'emploi exclu**.
+
+⛔ **LE PRÉFIXE DÉSIGNE UNE ENTRÉE, PAS UN DOSSIER — et `docs/journal/README.md` n'est pas une
+entrée.** Ce fichier porte la ligne du **plancher**, et deux gardes bloquantes de `gate-a` en
+**dérivent** le nombre : `gov:attributions`, pour qui le plancher **exempte** des tâches de toute
+attestation de lot, et `gov:etat`, pour qui il fait taire « PR fusionnée sans entrée de journal ».
+Une tête qui ne changerait **que ce nombre** éteindrait les deux pendant que les accords de
+`securite`, `simplicite`, `schema` et `mutation` survivraient — et la phrase publiée affirmerait que
+le delta ne juge aucun code. Le README d'un dossier est sa **configuration**, pas son contenu : il
+périme, à n'importe quelle profondeur sous le préfixe et quelle que soit sa casse.
 
 Tout le reste périme, et **chaque cas ambigu échoue fermé** : un diff que `git` ne peut pas calculer
 (commit absent du clone) périme et le refus le dit ; `docs/tasks.json` et `docs/requirements.json`
 périment, parce que la garde y **lit** `zone`, `sensible`, `schema` et `paths` — ce sont des sources,
 pas de la prose ; une vue dérivée périme, parce que si la vue a changé sa source a changé ; un ADR ou
-tout autre document normatif périme. Rien de tout cela n'est énuméré dans le code : la liste blanche
-est **un seul préfixe**, et tout ce qui n'y est pas périme par construction.
+tout autre document normatif périme. Aucun de ces cas n'est énuméré dans le code : la liste blanche
+est **un seul préfixe**, une seule exclusion nommée, et tout ce qui n'y est pas périme par
+construction.
 
 **Ce pas ne se lit donc plus à l'œil.** `pnpm gov:pr --pr <n>` **imprime** chaque accord qui survit —
 le poste, la lentille, le sha de l'accord, le sha de la tête, et la liste des fichiers qui les
