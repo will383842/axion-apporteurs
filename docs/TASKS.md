@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 110 | 84.35 | 21 |
+| 0 — Socle technique | 110 | 84.35 | 33 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -462,7 +462,7 @@ Couvre : `REQ-SEC-016`, `REQ-SEC-035`
 
 **Tests.** `tests/unit/securite/rate-famille.spec.ts`
 
-### QA-T08 — Logger pino structuré, redaction PII, Sentry, notify
+### QA-T08 — Logger pino structuré, redaction PII, Sentry, notify ✅ **fusionnee**
 
 `1 j` · zone `qualite` · sensible : espace, rgpd · depend de `QA-T01`, `DM-01`
 
@@ -552,7 +552,7 @@ Couvre : `REQ-CPL-022`
 
 **Tests.** `tests/unit/qualite/red-first.spec.ts`
 
-### SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma
+### SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma ✅ **fusionnee**
 
 `1 j` · zone `securite` · sensible : rgpd · depend de `DM-02`, `SEC-01`
 
@@ -792,7 +792,7 @@ Couvre : `REQ-INT-024`
 
 **Tests.** `tests/unit/integration/notif-sans-pii.spec.ts`
 
-### DM-06 — Entité Apporteur : statut enum + matrice, snapshot candidature/score, codeParrainage, JetonDepot, `isTest`, `IdentitesFacturation
+### DM-06 — Entité Apporteur : statut enum + matrice, snapshot candidature/score, codeParrainage, JetonDepot, `isTest`, `IdentitesFacturation ✅ **fusionnee**
 
 `1 j` · zone `domaine` · `schema` · sensible : auth · depend de `DM-01`, `DM-02` · decisions `DEC-DM-013`
 
@@ -802,7 +802,7 @@ Couvre : `REQ-CPL-005`, `REQ-CPL-020`, `REQ-CPL-027`, `REQ-DM-010`, `REQ-DM-011`
 
 **Tests.** `tests/unit/domaine/apporteur-identites-facturation.spec.ts` · `tests/unit/domaine/apporteur-population-is-test.spec.ts` · `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` · `tests/unit/domaine/apporteur-activite.spec.ts` · `tests/integration/apporteur-jeton-depot.spec.ts` · `tests/unit/domaine/apporteur-identifiants.spec.ts` · `tests/unit/domaine/apporteur-score-fige.spec.ts` · `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts`
 
-### JUR-T01 — Gabarit de contrat v1 complet
+### JUR-T01 — Gabarit de contrat v1 complet ✅ **fusionnee**
 
 `0.5 j` · zone `juridique` · depend de `CPL-T01`
 
@@ -994,7 +994,7 @@ Couvre : `REQ-GOV-012`
 
 **Tests.** `tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts`
 
-### GOV-047 — Six porteurs ordonnent une commande qui n'existe pas, dont un qui l'injecte dans chaque prompt
+### GOV-047 — Six porteurs ordonnent une commande qui n'existe pas, dont un qui l'injecte dans chaque prompt ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-000`
 
@@ -1570,7 +1570,7 @@ Couvre : `REQ-GOV-013`
 
 **Tests.** `tests/unit/gouvernance/tasks-schema-et-paths.spec.ts`
 
-### GOV-092 — Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux
+### GOV-092 — Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1590,7 +1590,7 @@ Couvre : `REQ-GOV-031`, `REQ-GOV-012`
 
 **Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
 
-### GOV-095 — Un accord de lentille survit a un commit qui ne touche que le journal
+### GOV-095 — Un accord de lentille survit a un commit qui ne touche que le journal ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1600,7 +1600,7 @@ Couvre : `REQ-GOV-011`, `REQ-GOV-013`
 
 **Tests.** `tests/unit/gouvernance/accord-survit-au-journal.spec.ts`
 
-### GOV-096 — `gov:pr` ne sait pas lire une PR de LOT : le titre ne nomme qu une tache, `t.pr` n est ecrit qu apres la fusion, et aucune PR de lot n est fusionnable
+### GOV-096 — `gov:pr` ne sait pas lire une PR de LOT : le titre ne nomme qu une tache, `t.pr` n est ecrit qu apres la fusion, et aucune PR de lot n est fusionnable ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1610,7 +1610,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-007`
 
 **Tests.** `tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts`
 
-### GOV-090 — La table des chemins reserves etiquette des VUES et laisse deux SOURCES ouvertes, et une garde prescrit un outil par un chemin irresolvable
+### GOV-090 — La table des chemins reserves etiquette des VUES et laisse deux SOURCES ouvertes, et une garde prescrit un outil par un chemin irresolvable ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · aucune dependance
 
@@ -1663,7 +1663,7 @@ Seuls `scripts/`, `src/` et `tests/` sont confrontes par la famille des fichiers
 
 **Tests.** `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` · `tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts` · `tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts`
 
-### GOV-098 — Inscrire au plan la décision W15 de Will (2026-09-25) : lignées, changement de parrain, statistiques, secteur, bibliothèque, outils de console
+### GOV-098 — Inscrire au plan la décision W15 de Will (2026-09-25) : lignées, changement de parrain, statistiques, secteur, bibliothèque, outils de console ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1673,7 +1673,7 @@ Couvre : `REQ-GOV-015`
 
 **Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 
-### GOV-097 — Quatre lentilles seulement pour l argent, la securite et les donnees, deux pour le reste ; une inexactitude de prose n est plus un motif de refus
+### GOV-097 — Quatre lentilles seulement pour l argent, la securite et les donnees, deux pour le reste ; une inexactitude de prose n est plus un motif de refus ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1683,7 +1683,7 @@ Couvre : `REQ-GOV-011`
 
 **Tests.** `tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts`
 
-### GOV-099 — Cadrage de DM-06 : sourceCanal transporté figé, IBAN hors de DM-06, glossaire des enums d'apporteur
+### GOV-099 — Cadrage de DM-06 : sourceCanal transporté figé, IBAN hors de DM-06, glossaire des enums d'apporteur ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
