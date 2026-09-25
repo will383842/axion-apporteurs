@@ -16,7 +16,7 @@
 
 **321 exigences actives · 67 réputées testées · 67 couvertes · 0 orphelines.**
 
-267 tâches, dont 60 livrées · 67 fichiers de test exécutés par `vitest` sur 67 présents.
+268 tâches, dont 60 livrées · 68 fichiers de test exécutés par `vitest` sur 68 présents.
 
 ## Exigences réputées testées
 
@@ -43,7 +43,7 @@
 | `REQ-GOV-003` | `GOV-003`, `GOV-005`, `GOV-025`, `GOV-028`, `GOV-037`, `GOV-071`, `GOV-074`, `GOV-084` | `tests/unit/gouvernance/attributions-resolvent.spec.ts`, `tests/unit/gouvernance/citation-json-vs-prose.spec.ts`, `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | couverte |
 | `REQ-GOV-004` | `GOV-004`, `GOV-048` | `tests/unit/gouvernance/affirmations-verifiees.spec.ts` | couverte |
 | `REQ-GOV-006` | `GOV-008`, `GOV-032`, `GOV-060` | `tests/unit/gouvernance/plan-state-frais.spec.ts` | couverte |
-| `REQ-GOV-007` | `GOV-008`, `GOV-059` | `tests/unit/gouvernance/revendication-par-branche.spec.ts`, `tests/unit/gouvernance/une-tache-un-owner.spec.ts` | couverte |
+| `REQ-GOV-007` | `GOV-008`, `GOV-059`, `GOV-096` | `tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts`, `tests/unit/gouvernance/revendication-par-branche.spec.ts`, `tests/unit/gouvernance/une-tache-un-owner.spec.ts` | couverte |
 | `REQ-GOV-008` | `GOV-009`, `GOV-038`, `GOV-058`, `GOV-063`, `GOV-070`, `GOV-090` | `tests/unit/gouvernance/adr-index-derive.spec.ts`, `tests/unit/gouvernance/attestation-inter-depot.spec.ts`, `tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts`, `tests/unit/gouvernance/un-nom-une-garde.spec.ts` | couverte |
 | `REQ-GOV-009` | `GOV-010`, `GOV-022`, `GOV-070` | `tests/unit/gouvernance/adr-assertion-existe.spec.ts` | couverte |
 | `REQ-GOV-010` | `GOV-007`, `GOV-023`, `GOV-024`, `GOV-062`, `GOV-090` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/fiches-agents.spec.ts`, `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts`, `tests/unit/gouvernance/revues-lecteur-unique.spec.ts` | couverte |
@@ -55,7 +55,7 @@
 | `REQ-GOV-016` | `GOV-006`, `GOV-088` | `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
 | `REQ-GOV-017` | `GOV-013`, `GOV-071` | `tests/unit/gouvernance/lexique.spec.ts` | couverte |
 | `REQ-GOV-018` | `GOV-014`, `GOV-031` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |
-| `REQ-GOV-021` | `GOV-017a`, `GOV-017b`, `GOV-024`, `GOV-027`, `GOV-037`, `GOV-041`, `GOV-049`, `GOV-050`, `GOV-056`, `GOV-057`, `GOV-074`, `GOV-075`, `GOV-078`, `GOV-080`, `GOV-081`, `GOV-084`, `GOV-086`, `GOV-087` | `tests/unit/gouvernance/attributions-resolvent.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts`, `tests/unit/gouvernance/paths-derives.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
+| `REQ-GOV-021` | `GOV-017a`, `GOV-017b`, `GOV-024`, `GOV-027`, `GOV-037`, `GOV-041`, `GOV-049`, `GOV-050`, `GOV-056`, `GOV-057`, `GOV-074`, `GOV-075`, `GOV-078`, `GOV-080`, `GOV-081`, `GOV-084`, `GOV-086`, `GOV-087`, `GOV-096` | `tests/unit/gouvernance/attributions-resolvent.spec.ts`, `tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts`, `tests/unit/gouvernance/composeur-et-fichiers-d-une-pr.spec.ts`, `tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts`, `tests/unit/gouvernance/paths-derives.spec.ts`, `tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`, `tests/unit/gouvernance/vues-derivees.spec.ts` | couverte |
 | `REQ-GOV-022` | `GOV-015` | `tests/unit/gouvernance/fiches-tiers.spec.ts` | couverte |
 | `REQ-GOV-023` | `GOV-008`, `GOV-018`, `GOV-052`, `GOV-073`, `GOV-091` | `tests/unit/gouvernance/plan-state-frais.spec.ts`, `tests/unit/gouvernance/regles-maison.spec.ts` | couverte |
 | `REQ-GOV-024` | `GOV-018`, `GOV-026`, `GOV-045`, `GOV-060`, `GOV-068`, `GOV-073`, `GOV-081` | `tests/unit/gouvernance/regles-maison.spec.ts` | couverte |
@@ -470,6 +470,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/gardes-transposees.spec.ts` | oui | `REQ-GOV-018`, `REQ-GOV-029` |
 | `tests/unit/gouvernance/gardes.spec.ts` | oui | `REQ-GOV-001`, `REQ-GOV-003`, `REQ-GOV-015`, `REQ-GOV-031` |
 | `tests/unit/gouvernance/glossaire-enums.spec.ts` | oui | `REQ-DM-003`, `REQ-DM-038`, `REQ-GOV-016`, `REQ-JUR-027` |
+| `tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts` | oui | `REQ-GOV-007`, `REQ-GOV-021` |
 | `tests/unit/gouvernance/identifiants-nus-positions-limites.spec.ts` | oui | `REQ-GOV-003` |
 | `tests/unit/gouvernance/integration-livrable.spec.ts` | oui | — |
 | `tests/unit/gouvernance/inventaire-prouve.spec.ts` | oui | `REQ-GOV-026` |

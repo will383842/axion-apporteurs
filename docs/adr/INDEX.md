@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**19 ADR · 12 `propose`, 7 `accepte`, 0 `remplace`.**
+**20 ADR · 12 `propose`, 8 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -30,3 +30,4 @@
 | [`partners/ADR-0017`](0017-revendication-derivee-de-la-forge.md) | La revendication d'une tâche se dérive de la forge, pas du fichier de la branche | `accepte` | 2026-09-21 | GOV-059 |
 | [`partners/ADR-0018`](0018-un-nom-une-garde-gov-check-retire-des-deux-cotes.md) | Un nom, une garde : `gov:check` est retiré des deux côtés | `accepte` | 2026-09-22 | GOV-063 |
 | [`partners/ADR-0019`](0019-un-label-designe-une-source-jamais-une-vue.md) | un label de rôle désigne une SOURCE, jamais une vue dérivée | `accepte` | 2026-09-22 | GOV-090 |
+| [`partners/ADR-0020`](0020-le-champ-lot-declare-les-taches-d-une-pr-de-lot.md) | Une PR de lot déclare ses tâches dans un champ `Lot:`, et la garde le croit exactement autant que le titre | `accepte` | 2026-09-23 | GOV-096 |
