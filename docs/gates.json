@@ -310,9 +310,12 @@
       "phase": 0,
       "script": "scripts/gates/schema-pii.ts",
       "tache": "SEC-08",
-      "verifie": "aucune colonne ip sans suffixe Hash ; toute PII est ecrite via encryptPii (AAD), jamais en direct",
+      "alias": [
+        "securite:schema-pii"
+      ],
+      "verifie": "SCHEMA (prisma/schema.prisma, lecteur unique scripts/lot/lecteur-prisma.ts) : toute colonne dont le nom ou le @map porte un segment du lexique unique des champs de personne (src/domain/donnees-personnelles/champs.ts) est un bloc ...Chiffre de type Bytes ou une empreinte ...Hash de type String ; une adresse reseau n'est jamais chiffree, son empreinte seule ; siretHash est reconnu par les types d'empreinte de pii.ts. CHEMINS D'ECRITURE (tout fichier suivi sous src/ que TypeScript analyse, hors src/server/securite/pii.ts qui est la primitive) : une propriete ...Chiffre ne recoit que true, false ou null (un bloc ne nait que de colonnesPii, qui chiffre en AES-256-GCM avec AAD = modele, champ et identifiant de ligne) ; sous data, create ou update, une empreinte ne recoit que l'appel de empreinteRecherche ou empreinteAdresseReseau (ou null), et aucun autre champ de personne n'est ecrit. Familles : schema_illisible, perimetre_vide, colonne_personnelle_en_clair, adresse_reseau_chiffree, forme_de_colonne, source_illisible, chiffre_hors_primitive, empreinte_hors_primitive, champ_personnel_en_clair. CE QU'ELLE NE TIENT PAS : une cle calculee, le SQL brut, une colonne Json, un objet construit hors du litteral de l'appel puis passe en data, tout ce qui vit hors de src/. Le vert imprime les champs du schema, les fichiers et les sites d'ecriture confrontes",
       "fixtureRouge": "declarer createdIp String? dans le schema",
-      "preuveRouge": null
+      "preuveRouge": "pnpm securite:schema-pii:prove - 9 familles rougissent sur 17 temoins, 4 contre-temoins verts ; vues INJECTEES (RM-11). Binaire sur le depot (SEC-08, 2026-09-25) : createdIp String? pose dans le modele Evenement -> exit 1, [colonne_personnelle_en_clair] Evenement.createdIp ; un fichier suivi src/ ecrivant data: { emailChiffre: Buffer.from(e) } -> exit 1, [chiffre_hors_primitive] nommant le champ ; depot intact -> exit 0, 8 champs, 31 fichiers, 0 site. Garde mutee (chiffre admis partout) -> le temoin a deux faces de tests/unit/securite/chiffrement-avec-aad.spec.ts rougit. Rouge constate par: A05"
     },
     {
       "id": "partners:journal:immutable",

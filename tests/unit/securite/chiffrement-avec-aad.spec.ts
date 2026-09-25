@@ -128,7 +128,8 @@ describe('REQ-SEC-024 — les clés viennent de SEC-01, une par usage', () => {
       expect(e, attendu).toBeInstanceOf(CleInvalidePii);
       expect(String((e as Error).message)).toContain(attendu);
       for (const v of Object.values(env)) {
-        if (v !== undefined && v.length >= 32) expect(String((e as Error).message)).not.toContain(v);
+        if (v !== undefined && v.length >= 32)
+          expect(String((e as Error).message)).not.toContain(v);
       }
     }
   });
@@ -149,7 +150,8 @@ describe('REQ-SEC-024 — chiffrement AES-256-GCM, bloc lié à sa ligne et à s
     );
     expect(e).toMatchObject({ motif: 'echec_authentification', ...LIGNE_B });
     const message = String((e as Error).message);
-    for (const nomme of [LIGNE_B.modele, LIGNE_B.champ, LIGNE_B.id]) expect(message).toContain(nomme);
+    for (const nomme of [LIGNE_B.modele, LIGNE_B.champ, LIGNE_B.id])
+      expect(message).toContain(nomme);
     expect(message).not.toContain(CLAIR);
   });
 
@@ -295,9 +297,9 @@ describe('REQ-SEC-024 — le chemin d’écriture : colonnesPii ne rend que des 
     );
     expect(colonnes).toMatchObject({ emailChiffre: null, emailHash: null });
     expect(Object.keys(colonnes)).not.toContain('telephoneChiffre');
-    expect(erreurDe(() => colonnesPii({ modele: 'Contact', id: '' }, { nom: 'x' }, CLES))).toMatchObject(
-      { motif: 'ligne_incomplete' }
-    );
+    expect(
+      erreurDe(() => colonnesPii({ modele: 'Contact', id: '' }, { nom: 'x' }, CLES))
+    ).toMatchObject({ motif: 'ligne_incomplete' });
   });
 });
 
@@ -306,7 +308,12 @@ describe('REQ-SEC-024 — empreintes de recherche HMAC (emailHash, phoneHash, ib
     for (const ecrit of [CLAIR, '  Alice@Example.ORG\n']) {
       expect(empreinteRecherche('courriel', ecrit, CLES)).toBe(EMPREINTE_COURRIEL);
     }
-    for (const ecrit of ['06 39 98 12 34', '06.39.98.12.34', '+33 6 39 98 12 34', '0033639981234']) {
+    for (const ecrit of [
+      '06 39 98 12 34',
+      '06.39.98.12.34',
+      '+33 6 39 98 12 34',
+      '0033639981234',
+    ]) {
       expect(empreinteRecherche('telephone', ecrit, CLES), ecrit).toBe(EMPREINTE_TELEPHONE);
     }
   });
