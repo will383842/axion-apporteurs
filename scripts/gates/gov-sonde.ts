@@ -52,8 +52,9 @@ import {
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
-import { execFileSync } from 'node:child_process';
 import { fichiersSuivis } from '../lot/fichiers-suivis';
+// LA seule question « ce sha désigne-t-il un commit d'ici ? » du dépôt — `gov-sonde` ne la repose pas.
+import { objetLisible } from './gov-pr';
 
 const CHEMIN_AFFIRMATIONS = 'docs/AFFIRMATIONS-AXIONIA.md';
 const CHEMIN_DECISIONS = 'docs/DECISIONS.md';
@@ -67,8 +68,12 @@ const TITRE_TABLEAU = '## 2. Tableau des affirmations';
 const ENTETE = ['Repère', 'Affirmation', 'Verdict', "Où je l'ai vérifiée", 'Vérifié le'];
 const VERDICTS = ['vérifiée', 'FAUSSE', 'partielle', 'non vérifiable'];
 
-/** `AAAA-MM-JJ @ <SHA court>` — la date SEULE ne dit pas contre quoi la ligne a été rejouée. */
-const DATE_ET_SHA = /^\d{4}-\d{2}-\d{2}\s*@\s*[0-9a-f]{7,40}$/;
+/**
+ * `AAAA-MM-JJ @ <SHA court>` — la date SEULE ne dit pas contre quoi la ligne a été rejouée.
+ * C'est la SEULE écriture de cette grammaire : `PREUVE_DATEE` (les sources) en dérive, pour que
+ * durcir l'une durcisse l'autre (motif `simplicite` sur la PR 114).
+ */
+const DATE_ET_SHA = /^(\d{4}-\d{2}-\d{2})\s*@\s*([0-9a-f]{7,40})$/;
 /** Un chemin de fichier suivi d'un numéro de ligne : une affirmation LOCALISÉE. */
 const CHEMIN_LIGNE =
   /[A-Za-z0-9_.[\]@-]+(?:\/[A-Za-z0-9_.[\]@-]+)*\.(?:ts|tsx|prisma|sql|sh|json|md|yml):\d+/g;
@@ -333,10 +338,37 @@ function nettoyerVerdict(cellule: string): string {
  * s'il est un fichier SUIVI de CE dépôt. Tout le reste parle d'ailleurs — c'est-à-dire d'axionia,
  * le seul autre dépôt que ce registre connaisse.
  */
-export type DepotDuChemin = 'partners' | 'axionia';
+export type DepotDuChemin = 'partners' | 'axionia' | 'ambigu';
 
-export function depotDuChemin(chemin: string, suivis: ReadonlySet<string>): DepotDuChemin {
-  return suivis.has(chemin) ? 'partners' : 'axionia';
+/** La qualification EXPLICITE d'un chemin de CE dépôt : `partners/prisma/schema.prisma:12`. */
+export const QUALIFICATION_PARTNERS = 'partners/';
+
+/**
+ * 🔴 UN CHEMIN DES DEUX CÔTÉS N'EST PAS D'ICI PAR DÉFAUT (motif `securite` sur la PR 114).
+ *
+ * La première version classait « partners » tout chemin SUIVI ici. Or 19 chemins le sont dans LES
+ * DEUX dépôts — `prisma/schema.prisma`, `src/proxy.ts`, `package.json`… — et le premier est le
+ * modèle d'argent d'axionia (AFF-01, AFF-02, AFF-05). Une affirmation sur axionia citant
+ * `prisma/schema.prisma:9999` s'absolvait alors avec N'IMPORTE QUEL sha d'ici. Échec OUVERT.
+ *
+ * Trois réponses, donc :
+ *   — `partners/<chemin suivi ici>` : QUALIFIÉ, d'ici, prouvé par l'historique d'ici ;
+ *   — suivi ici ET absent d'axionia, établi sur son arbre : d'ici ;
+ *   — suivi ici et présent dans axionia, OU axionia hors de portée (`null`, le mode CI) : AMBIGU,
+ *     et l'ambiguïté se tranche du côté STRICT — le repère AFF-nn reste exigé.
+ * Ne pas savoir ne fait perdre aucune exigence : c'est `null` qui rend ambigu, jamais l'inverse.
+ */
+export function depotDuChemin(
+  chemin: string,
+  suivis: ReadonlySet<string>,
+  existeDansAxionia: ((chemin: string) => boolean) | null
+): DepotDuChemin {
+  if (chemin.startsWith(QUALIFICATION_PARTNERS)) {
+    return suivis.has(chemin.slice(QUALIFICATION_PARTNERS.length)) ? 'partners' : 'axionia';
+  }
+  if (!suivis.has(chemin)) return 'axionia';
+  if (existeDansAxionia === null || existeDansAxionia(chemin)) return 'ambigu';
+  return 'partners';
 }
 
 /**
@@ -345,7 +377,7 @@ export function depotDuChemin(chemin: string, suivis: ReadonlySet<string>): Depo
  * Partners, sinon la « preuve » ne désigne rien et vaut la date seule, qui ne dit contre QUOI la
  * ligne a été rejouée.
  */
-export const PREUVE_DATEE = /(\d{4}-\d{2}-\d{2})\s*@\s*([0-9a-f]{7,40})/g;
+export const PREUVE_DATEE = new RegExp(DATE_ET_SHA.source.slice(1, -1), 'g');
 
 /**
  * LES FICHIERS SUIVIS DE CE DÉPÔT — la population qui décide de quel dépôt parle un chemin.
@@ -375,22 +407,6 @@ export function suivisDePartners(): ReadonlySet<string> {
   }
 }
 
-/**
- * Le SHA résout-il dans l'historique de CE dépôt ? Une preuve datée dont le SHA ne désigne aucun
- * commit d'ici ne prouve rien : elle vaut la date seule, qui ne dit pas contre QUOI la ligne a été
- * rejouée — c'est le défaut que `date_ou_sha_manquant` ferme déjà pour le tableau.
- */
-export function shaResout(sha: string): boolean {
-  try {
-    execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], {
-      stdio: ['ignore', 'ignore', 'ignore'],
-    });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /** Les SHA cités par un texte comme preuve datée. */
 export function shaDesPreuvesDatees(texte: string): string[] {
   PREUVE_DATEE.lastIndex = 0;
@@ -409,9 +425,35 @@ export type Entrees = {
    * — dérivée du disque, passée en entrée pour qu'un témoin puisse la feindre sans toucher à git.
    */
   suivisDePartners: ReadonlySet<string>;
+  /**
+   * Le chemin existe-t-il AUSSI dans axionia ? `null` quand l'arbre voisin est hors de portée :
+   * tout chemin d'ici est alors AMBIGU, et l'ambiguïté garde l'exigence (motif `securite`, PR 114).
+   */
+  existeDansAxionia: ((chemin: string) => boolean) | null;
   /** Vrai si le SHA résout dans l'historique de CE dépôt. Injectée pour la même raison. */
   shaResout: (sha: string) => boolean;
 };
+
+/**
+ * LES ENTRÉES DU DÉPÔT RÉEL — le SEUL endroit où les prédicats de la garde sont BRANCHÉS.
+ *
+ * Motif `mutation` sur la PR 114 : `shaResout: () => true` dans l'appel du mode normal laissait
+ * spec et `--prove` verts, parce que les deux branchaient le prédicat chacun de leur côté. Le mode
+ * normal, `--prove` et le témoin de bout en bout passent tous par ici.
+ */
+export function entreesDuDepot(
+  lu: Pick<Entrees, 'affirmations' | 'decisions' | 'sources'>,
+  racineAxionia: string | null
+): Entrees {
+  return {
+    ...lu,
+    racineAxionia,
+    suivisDePartners: suivisDePartners(),
+    existeDansAxionia:
+      racineAxionia === null ? null : (chemin) => existsSync(join(racineAxionia, chemin)),
+    shaResout: objetLisible,
+  };
+}
 
 export function controler(e: Entrees): Faute[] {
   const fautes: Faute[] = [];
@@ -536,7 +578,8 @@ export function controler(e: Entrees): Faute[] {
     const shaOfferts = shaDesPreuvesDatees(s.texte);
     for (const jeton of jetonsChemin(s.texte)) {
       const chemin = jeton.slice(0, jeton.lastIndexOf(':'));
-      if (depotDuChemin(chemin, e.suivisDePartners) === 'partners') {
+      const depot = depotDuChemin(chemin, e.suivisDePartners, e.existeDansAxionia);
+      if (depot === 'partners') {
         // UNE AFFIRMATION SUR DU CODE DE PARTNERS SE PROUVE PAR L'HISTORIQUE DE PARTNERS. Le
         // tableau des affirmations déclare un objet unique — le dépôt axionia — et y inscrire du
         // code d'ici rendrait son en-tête faux. Le refus est DISTINCT et NOMMÉ : il ne renvoie pas
@@ -562,7 +605,12 @@ export function controler(e: Entrees): Faute[] {
           'source_axionia_sans_repere',
           `${s.id} localise une affirmation dans du code (« ${jeton} ») sans qu'aucune ligne de ` +
             `${CHEMIN_AFFIRMATIONS} §2 ne la porte. Une source qui cite un chemin ET une ligne affirme un ` +
-            `FAIT : il lui faut une date et un SHA, donc un repère AFF-nn.`
+            `FAIT : il lui faut une date et un SHA, donc un repère AFF-nn.` +
+            (depot === 'ambigu'
+              ? ` Ce chemin est suivi ICI mais ${e.existeDansAxionia === null ? "axionia est hors de portée : rien ne dit qu'il n'y est pas aussi" : 'il existe AUSSI dans axionia'} — ` +
+                `AMBIGU, donc tranché du côté strict. S'il parle de CE dépôt, qualifie-le ` +
+                `« ${QUALIFICATION_PARTNERS}${chemin} » et date-le d'un SHA d'ici.`
+              : '')
         );
       }
     }
@@ -705,14 +753,7 @@ if (LANCE_EN_SCRIPT) {
   if (process.argv.includes('--prove')) {
     const factice = arbreFactice();
     try {
-      const base: Entrees = {
-        affirmations,
-        decisions,
-        sources,
-        racineAxionia: factice,
-        suivisDePartners: suivisDePartners(),
-        shaResout,
-      };
+      const base: Entrees = entreesDuDepot({ affirmations, decisions, sources }, factice);
       const dejaFautif = controler(base);
       if (dejaFautif.length > 0) {
         console.error(
@@ -862,6 +903,41 @@ if (LANCE_EN_SCRIPT) {
           }),
         },
         {
+          // Motif `securite` sur la PR 114 : un chemin AMBIGU — suivi ici, présent dans l'arbre
+          // d'axionia (le factice porte `prisma/schema.prisma`) — cité pour axionia avec un sha
+          // d'ICI qui RÉSOUT. Il ne s'absout pas : le repère AFF-nn reste exigé.
+          famille: 'source_axionia_sans_repere',
+          defaut: () => ({
+            ...base,
+            sources: [
+              ...sources,
+              {
+                id: 'REQ-TEMOIN-004',
+                texte: `chez axionia le champ est HT (${SCHEMA}:9999), rejoué 2026-09-25 @ abc1234`,
+              },
+            ],
+            suivisDePartners: new Set([...base.suivisDePartners, SCHEMA]),
+            // Le sha RÉSOUT, par construction : ce n'est pas lui qui doit faire rougir.
+            shaResout: () => true,
+          }),
+        },
+        {
+          // Motif `mutation` sur la PR 114 : la preuve datée passe par le prédicat BRANCHÉ par
+          // `entreesDuDepot`, pas par un prédicat feint — un sha qui ne résout pas ICI rougit.
+          famille: 'source_partners_sans_preuve_datee',
+          defaut: () => ({
+            ...base,
+            sources: [
+              ...sources,
+              {
+                id: 'REQ-TEMOIN-005',
+                texte: `le refus vit dans ${QUALIFICATION_PARTNERS}scripts/lot/cloture.ts:120 (2026-09-25 @ 0000000)`,
+              },
+            ],
+            suivisDePartners: new Set([...base.suivisDePartners, 'scripts/lot/cloture.ts']),
+          }),
+        },
+        {
           famille: 'sonde_dementie',
           defaut: () => ({
             ...base,
@@ -972,14 +1048,9 @@ if (LANCE_EN_SCRIPT) {
     process.exit(1);
   }
 
-  const fautes = controler({
-    affirmations,
-    decisions,
-    sources,
-    racineAxionia: axioniaDispo ? RACINE_PAR_DEFAUT : null,
-    suivisDePartners: suivisDePartners(),
-    shaResout,
-  });
+  const fautes = controler(
+    entreesDuDepot({ affirmations, decisions, sources }, axioniaDispo ? RACINE_PAR_DEFAUT : null)
+  );
 
   if (fautes.length === 0) {
     const { lignes } = extraireTableau(affirmations);

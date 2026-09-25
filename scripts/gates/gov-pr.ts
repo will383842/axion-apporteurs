@@ -336,15 +336,6 @@ export type Depot = {
 // laissait les cinq copies se taire en se trompant.
 const LIVREES = LIVREE_DERIVEE;
 
-// Une garde qui lit un statut ne tourne pas sur un barème incomplet sans le dire.
-{
-  const ecarts = verifierExhaustivite();
-  if (ecarts.length > 0) {
-    console.error('❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :');
-    ecarts.forEach((e) => console.error('   ' + e));
-    process.exit(1);
-  }
-}
 function phaseCourante(): number {
   const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as {
     taches: { phase: number; statut: string }[];
@@ -1232,7 +1223,7 @@ function prDepuisLaForge(r: {
 }
 
 /** Ce sha désigne-t-il un commit que CE clone peut lire ? Aucune sortie, aucun effet. */
-function objetLisible(sha: string): boolean {
+export function objetLisible(sha: string): boolean {
   try {
     execFileSync('git', ['cat-file', '-e', `${sha}^{commit}`], { stdio: 'ignore' });
     return true;
@@ -1424,6 +1415,18 @@ const LANCE_EN_SCRIPT = /[\\/]gates[\\/]gov-pr(\.ts)?$/.test(process.argv[1] ?? 
 
 // ── le corps EXÉCUTABLE, sous le garde-fou d'import ──────────────────────────
 if (LANCE_EN_SCRIPT) {
+  // Une garde qui lit un statut ne tourne pas sur un barème incomplet sans le dire.
+  // ⚠️ SOUS le garde-fou, et non au chargement du module : `gov-sonde.ts` importe `objetLisible`
+  // d'ici, et lancée hors de la racine (le bac de sable de `affirmations-verifiees.spec.ts`) elle
+  // mourait sur `ENOENT scripts/lot/tasks.schema.json` — une vérification de CETTE garde.
+  {
+    const ecarts = verifierExhaustivite();
+    if (ecarts.length > 0) {
+      console.error('❌ scripts/lot/avancement.ts a dérivé de scripts/lot/tasks.schema.json :');
+      ecarts.forEach((e) => console.error('   ' + e));
+      process.exit(1);
+    }
+  }
   if (process.argv.includes('--prove')) {
     const depot = lireDepot();
 

@@ -27,11 +27,16 @@ import { execFileSync } from 'node:child_process';
 import {
   controler,
   depotDuChemin,
+  entreesDuDepot,
   shaDesPreuvesDatees,
   suivisDePartners,
-  shaResout,
   type Entrees,
 } from '../../../scripts/gates/gov-sonde';
+import { objetLisible } from '../../../scripts/gates/gov-pr';
+
+/** Le texte d'un source SANS ses commentaires : la prose qui raconte un défaut n'est pas le défaut. */
+const sansCommentaires = (texte: string): string =>
+  texte.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 
 const affirmations = readFileSync('docs/AFFIRMATIONS-AXIONIA.md', 'utf8');
 const decisions = readFileSync('docs/DECISIONS.md', 'utf8');
@@ -46,15 +51,21 @@ const TETE = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).tr
 
 /**
  * Un univers minimal : le tableau réel, aucune source, aucun arbre voisin. Les sondes ne sont pas
- * rejouées (`racineAxionia: null`), ce qui est le mode CI et le mode de ce test.
+ * rejouées (`racineAxionia: null`). Par défaut, axionia est CONNU et ne porte aucun des chemins
+ * cités — c'est ce qui rend un chemin d'ici non ambigu ; le troisième argument le feint autrement.
  */
-function univers(sources: { id: string; texte: string }[], suivis: string[] = []): Entrees {
+function univers(
+  sources: { id: string; texte: string }[],
+  suivis: string[] = [],
+  existeDansAxionia: ((chemin: string) => boolean) | null = () => false
+): Entrees {
   return {
     affirmations,
     decisions,
     sources,
     racineAxionia: null,
     suivisDePartners: new Set(suivis),
+    existeDansAxionia,
     shaResout: (sha) => sha === 'abc1234',
   };
 }
@@ -142,11 +153,92 @@ describe('gov:sonde — la garde distingue les deux dépôts (GOV-048)', () => {
       suivis.size,
       'la population des fichiers suivis est vide : git n’a rien rendu'
     ).toBeGreaterThan(0);
-    expect(depotDuChemin('scripts/gates/gov-sonde.ts', suivis)).toBe('partners');
-    expect(depotDuChemin('src/server/inconnu.ts', suivis)).toBe('axionia');
+    const absent = () => false;
+    expect(depotDuChemin('scripts/gates/gov-sonde.ts', suivis, absent)).toBe('partners');
+    expect(depotDuChemin('src/server/inconnu.ts', suivis, absent)).toBe('axionia');
     // ⚠️ Un chemin qui COMMENCE comme un chemin d'ici n'est pas d'ici pour autant : c'est le
     // défaut de la comparaison par préfixe, et la dérivation par le disque ne l'a pas.
-    expect(depotDuChemin('scripts/gates/inexistant.ts', suivis)).toBe('axionia');
+    expect(depotDuChemin('scripts/gates/inexistant.ts', suivis, absent)).toBe('axionia');
+    // Un chemin des DEUX côtés — ou dont on ne sait pas s'il est aussi là-bas — est AMBIGU ; la
+    // qualification explicite `partners/` est la seule à le trancher du côté d'ici.
+    expect(depotDuChemin('prisma/schema.prisma', suivis, () => true)).toBe('ambigu');
+    expect(depotDuChemin('prisma/schema.prisma', suivis, null)).toBe('ambigu');
+    expect(depotDuChemin('partners/prisma/schema.prisma', suivis, () => true)).toBe('partners');
+  });
+
+  it('REQ-GOV-004 — un chemin AMBIGU cité pour axionia ne s’absout PAS par un sha de Partners', () => {
+    // 🔴 Motif `securite` sur 9ffb450, rejoué tel quel : 19 chemins sont suivis dans LES DEUX
+    // dépôts, dont `prisma/schema.prisma` — le modèle d'argent d'axionia (AFF-01, AFF-02, AFF-05).
+    // Classé « partners » parce qu'il est suivi ICI, il rendait `[]` avec n'importe quel sha d'ici,
+    // là où il rendait `source_axionia_sans_repere` avant ce lot. Échec OUVERT.
+    const texte =
+      'chez axionia le champ commissionCents est HT (prisma/schema.prisma:9999), rejoué 2026-09-25 @ abc1234';
+    const deuxCotes = (c: string) => c === 'prisma/schema.prisma';
+    for (const existe of [deuxCotes, null]) {
+      expect(
+        familles(univers([{ id: 'REQ-TEMOIN-015', texte }], ['prisma/schema.prisma'], existe)),
+        `axionia ${existe === null ? 'hors de portée' : 'porte le même chemin'} : l’exigence a été relâchée`
+      ).toContain('source_axionia_sans_repere');
+    }
+    // CONTRE-TÉMOIN : qualifié `partners/`, avec un sha qui résout ICI, il est d'ici et passe…
+    expect(
+      familles(
+        univers(
+          [
+            {
+              id: 'REQ-TEMOIN-016',
+              texte: 'le modèle vit dans partners/prisma/schema.prisma:12 (2026-09-25 @ abc1234)',
+            },
+          ],
+          ['prisma/schema.prisma'],
+          deuxCotes
+        )
+      )
+    ).toEqual([]);
+    // … et sans preuve qui résout, il rougit de SON refus, pas de celui d'axionia.
+    expect(
+      familles(
+        univers(
+          [{ id: 'REQ-TEMOIN-017', texte: 'le modèle vit dans partners/prisma/schema.prisma:12' }],
+          ['prisma/schema.prisma'],
+          deuxCotes
+        )
+      )
+    ).toEqual(['source_partners_sans_preuve_datee']);
+  });
+
+  it('REQ-GOV-004 — DE BOUT EN BOUT : les entrées BRANCHÉES du dépôt refusent un sha qui ne résout pas', () => {
+    // Motif `mutation` sur 9ffb450 : `shaResout: () => true` posé dans l'appel RÉEL laissait spec
+    // et `--prove` verts — ils branchaient chacun leur prédicat. `entreesDuDepot` est le seul
+    // branchement, celui du mode normal ; on le prend tel quel et on ne remplace que les sources.
+    const lu = { affirmations, decisions };
+    const jeton = 'partners/scripts/gates/gov-sonde.ts:1';
+    const avec = (sha: string) =>
+      controler(
+        entreesDuDepot(
+          { ...lu, sources: [{ id: 'T-018', texte: `${jeton} (2026-09-25 @ ${sha})` }] },
+          null
+        )
+      ).map((f) => f.famille);
+    expect(avec('0000000'), 'un sha qui ne désigne AUCUN commit d’ici a été accepté').toEqual([
+      'source_partners_sans_preuve_datee',
+    ]);
+    // CONTRE-TÉMOIN : la tête d'ici résout, et le même jeton passe — le prédicat n'est pas `() => false`.
+    expect(avec(TETE)).toEqual([]);
+  });
+
+  it('REQ-GOV-004 — une seule source pour « ce sha résout-il » et pour la grammaire « date @ sha »', () => {
+    // 🔴 Motif `simplicite` sur 9ffb450 : `shaResout` recopiait `objetLisible` de `gov-pr.ts`, et
+    // `PREUVE_DATEE` retapait `DATE_ET_SHA`. Durcir l'une laissait l'autre accepter l'ancien.
+    const source = sansCommentaires(readFileSync('scripts/gates/gov-sonde.ts', 'utf8'));
+    expect(source, 'gov-sonde interroge git lui-même au lieu de `objetLisible`').not.toContain(
+      'cat-file'
+    );
+    expect(source).toMatch(/import\s*\{[^}]*objetLisible[^}]*\}\s*from\s*'\.\/gov-pr'/);
+    expect(
+      source.split('[0-9a-f]{7,40}').length - 1,
+      'la grammaire « AAAA-MM-JJ @ sha » est écrite plus d’une fois dans gov-sonde.ts'
+    ).toBe(1);
   });
 
   it('REQ-GOV-004 — la preuve datée se lit, et le SHA de la tête RÉSOUT vraiment', () => {
@@ -154,10 +246,10 @@ describe('gov:sonde — la garde distingue les deux dépôts (GOV-048)', () => {
       shaDesPreuvesDatees('mesuré le 2026-09-12 @ ad53f14, puis 2026-09-13 @ deadbee')
     ).toEqual(['ad53f14', 'deadbee']);
     expect(shaDesPreuvesDatees('mesuré le 2026-09-12, sans sha')).toEqual([]);
-    // L'oracle est git, appelé ici : `shaResout` n'est pas un prédicat de forme.
+    // L'oracle est git, appelé ici : `objetLisible` n'est pas un prédicat de forme.
     const tete = /^[0-9a-f]{40}$/.test(TETE) ? TETE : null;
-    if (tete) expect(shaResout(tete)).toBe(true);
-    expect(shaResout('0000000000000000000000000000000000000000')).toBe(false);
+    if (tete) expect(objetLisible(tete)).toBe(true);
+    expect(objetLisible('0000000000000000000000000000000000000000')).toBe(false);
   });
 
   it('REQ-GOV-004 — sur les sources RÉELLES, AFF-47 couvre toujours REQ-JUR-024', () => {
@@ -181,7 +273,9 @@ describe('gov:sonde — la garde distingue les deux dépôts (GOV-048)', () => {
       sources,
       racineAxionia: null,
       suivisDePartners: suivisDePartners(),
-      shaResout,
+      // Le mode CI : axionia hors de portée, donc TOUT chemin d'ici est ambigu — le côté strict.
+      existeDansAxionia: null,
+      shaResout: objetLisible,
     });
     expect(
       fautes.map((f) => `[${f.famille}] ${f.message}`),
