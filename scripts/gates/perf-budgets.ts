@@ -78,8 +78,8 @@
  * même temps que la première route — c'est-à-dire le jour où ils mesurent quelque chose.
  */
 
-import { readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
 const CHEMIN_BUDGETS = 'perf/budgets.json';
 const CHEMIN_LIGHTHOUSERC = 'lighthouserc.json';
@@ -480,19 +480,27 @@ export function controler(vue: Vue): Faute[] {
 
 // ── les vues ──────────────────────────────────────────────────────────────────────────────────
 
-/** Tous les fichiers sous `src/` — la liste que `routesDeLEspace` juge. */
-function fichiersDeSrc(racine = 'src'): string[] {
-  if (!existsSync(racine)) return [];
-  const out: string[] = [];
-  for (const e of readdirSync(racine, { withFileTypes: true })) {
-    const chemin = join(racine, e.name).split('\\').join('/');
-    if (e.isDirectory()) out.push(...fichiersDeSrc(chemin));
-    else out.push(chemin);
-  }
-  return out;
+/**
+ * LE PÉRIMÈTRE DE CETTE GARDE N'EST PAS UNE LISTE VIDE (GOV-046, REQ-GOV-012).
+ *
+ * 🔴 CE FICHIER PORTAIT `if (!existsSync(racine)) return []`, et c'était la SEPTIÈME occurrence
+ * d'une famille fermée ailleurs : cinq gardes par la PR 31, `gov-conventions.ts` par la PR 33.
+ * Une racine absente rendait une liste VIDE, donc zéro violation, donc VERT.
+ *
+ * Elle se ferme comme les six autres : par `fichiersSuivisOuRefus`, la source unique du périmètre,
+ * qui REFUSE (`perimetre_illisible`, `perimetre_entame`) plutôt que de rendre vide. Un premier
+ * correctif recréait ici sa propre classe d'erreur, sa descente de dossiers et son refus imprimé —
+ * une sixième copie du patron que `scripts/lot/fichiers-suivis.ts` existe pour ne plus recopier
+ * (motif `simplicite` sur la PR 114). Cette fonction ne fait plus que FILTRER un périmètre établi :
+ * qu'aucun fichier suivi ne vive sous `src/` est alors une RÉPONSE, pas une abstention.
+ */
+export function fichiersDeSrc(suivis: readonly string[], racine = 'src'): string[] {
+  return suivis.filter((f) => f.startsWith(`${racine}/`));
 }
 
 function lireVue(): Vue {
+  // Le périmètre d'abord : son refus porte alors SON nom, au lieu d'un fichier introuvable muet.
+  const fichiers = fichiersDeSrc(fichiersSuivisOuRefus('perf:budgets'));
   for (const c of [CHEMIN_BUDGETS, CHEMIN_LIGHTHOUSERC, CHEMIN_REGISTRE]) {
     if (!existsSync(c)) {
       console.error(
@@ -505,7 +513,7 @@ function lireVue(): Vue {
     budgets: readFileSync(CHEMIN_BUDGETS, 'utf8'),
     lighthouserc: readFileSync(CHEMIN_LIGHTHOUSERC, 'utf8'),
     registre: texteDeLExigence(readFileSync(CHEMIN_REGISTRE, 'utf8')),
-    fichiers: fichiersDeSrc(),
+    fichiers,
     ci: existsSync(CHEMIN_CI) ? readFileSync(CHEMIN_CI, 'utf8') : '',
   };
 }
