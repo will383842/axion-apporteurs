@@ -5,10 +5,10 @@
  * `apporteur-matrice-et-statuts.spec.ts` — DM-06 : le statut d'apporteur est un ENUM, ses
  * transitions une MATRICE explicite, et `actif` / `dormant` ne sont PAS des statuts.
  *
- * TÉMOIN À DEUX FACES (acceptance, point 7). Face rouge : une transition absente de la matrice est
- * refusée et l'erreur la NOMME (`de -> vers`). Face verte : chaque transition déclarée passe.
- * Le balayage est EXHAUSTIF — les 81 couples (de, vers) —, pour qu'une transition ne soit jamais
- * autorisée par omission.
+ * TÉMOIN À DEUX FACES (acceptance, point 7). Face rouge : un couple (état, événement) absent de la
+ * matrice est refusé et l'erreur le NOMME (`de × evenement`). Face verte : chaque couple déclaré
+ * passe. Le balayage est EXHAUSTIF — 9 statuts × les événements —, pour qu'une transition ne soit
+ * jamais autorisée par omission (CONVENTIONS §2 : matrice `from × événement → to`).
  *
  * Les vocabulaires sont confrontés à leurs DEUX sources : le texte de REQ-DM-011 (lu dans
  * `docs/requirements.json`) et l'enum du schéma Prisma (lu par le lecteur unique).
@@ -18,9 +18,12 @@ import { readFileSync } from 'node:fs';
 import { lireSchemaPrisma, type ModelePrisma } from '../../../scripts/lot/lecteur-prisma';
 import { texteDeLaReq } from '../../../scripts/gates/schema-enums';
 import {
+  EVENEMENTS_APPORTEUR,
   MOTIFS_RESILIATION,
   STATUTS_APPORTEUR,
+  estEvenementApporteur,
   estStatutApporteur,
+  type EvenementApporteur,
   type StatutApporteur,
 } from '../../../src/domain/apporteur/statut';
 import {
@@ -93,73 +96,102 @@ describe('REQ-DM-011 — le statut d’apporteur est un enum à neuf valeurs, le
   });
 });
 
-describe('REQ-DM-011 — la matrice de transitions : ce qui n’y est pas est refusé', () => {
-  it('REQ-DM-011 : la matrice a une ligne pour chacun des neuf statuts, et ne nomme que des statuts', () => {
+describe('REQ-DM-011 — la matrice état × événement : ce qui n’y est pas est refusé', () => {
+  // Les flèches attendues, écrites ICI et non relues dans le module jugé : un événement par
+  // flèche, et le statut d'arrivée de chacune (CONVENTIONS §2, `from × événement → to`).
+  const ATTENDUES: readonly [StatutApporteur, EvenementApporteur, StatutApporteur][] = [
+    ['candidat', 'retenir', 'retenu'],
+    ['candidat', 'mettre_en_vivier', 'vivier'],
+    ['candidat', 'refuser', 'refuse'],
+    ['vivier', 'retenir', 'retenu'],
+    ['vivier', 'refuser', 'refuse'],
+    ['retenu', 'ouvrir_kyc', 'kyc_en_cours'],
+    ['kyc_en_cours', 'valider_kyc', 'pret_a_signer'],
+    ['pret_a_signer', 'signer', 'signe'],
+    ['signe', 'suspendre', 'suspendu'],
+    ['signe', 'resilier', 'resilie'],
+    ['suspendu', 'lever_suspension', 'signe'],
+    ['suspendu', 'resilier', 'resilie'],
+  ];
+  const motifDe = (e: EvenementApporteur) => (e === 'resilier' ? 'ordinaire_axion' : null);
+
+  it('REQ-DM-011 : les événements forment une liste fermée, un nom par flèche, sans doublon', () => {
+    expect([...EVENEMENTS_APPORTEUR].sort()).toEqual(
+      [...new Set(ATTENDUES.map((a) => a[1]))].sort()
+    );
+    expect(new Set(EVENEMENTS_APPORTEUR).size).toBe(EVENEMENTS_APPORTEUR.length);
+  });
+
+  it('REQ-DM-011 : la matrice a une ligne par statut, et ne nomme que des événements et des statuts', () => {
     expect(Object.keys(TRANSITIONS_APPORTEUR).sort()).toEqual([...STATUTS_APPORTEUR].sort());
-    for (const cibles of Object.values(TRANSITIONS_APPORTEUR)) {
-      for (const c of cibles) expect(estStatutApporteur(c), c).toBe(true);
+    for (const ligne of Object.values(TRANSITIONS_APPORTEUR)) {
+      for (const [evenement, cible] of Object.entries(ligne)) {
+        expect(estEvenementApporteur(evenement), evenement).toBe(true);
+        expect(estStatutApporteur(cible as string), String(cible)).toBe(true);
+      }
     }
   });
 
-  it('REQ-DM-011 : face ROUGE — une transition absente est refusée, et l’erreur la NOMME', () => {
-    const e = levee(() => transitionner({ de: 'signe', vers: 'candidat', motif: null }));
+  it('REQ-DM-011 : face ROUGE — un couple (état, événement) absent est refusé, et l’erreur le NOMME', () => {
+    const e = levee(() => transitionner({ de: 'signe', evenement: 'retenir', motif: null }));
     expect(e.code).toBe('transition_refusee');
-    expect(e.message).toContain('signe -> candidat');
+    expect(e.message).toContain('signe × retenir');
   });
 
-  it('REQ-DM-011 : face VERTE — une transition déclarée passe et rend sa cible', () => {
-    expect(transitionner({ de: 'candidat', vers: 'retenu', motif: null })).toEqual({
+  it('REQ-DM-011 : face VERTE — un couple déclaré passe et rend son statut d’arrivée', () => {
+    expect(transitionner({ de: 'candidat', evenement: 'retenir', motif: null })).toEqual({
       statut: 'retenu',
       resiliationMotif: null,
     });
   });
 
-  it('REQ-DM-011 : balayage des 81 couples — passe si et seulement si la matrice le déclare', () => {
-    let declarees = 0;
+  it('REQ-DM-011 : balayage des 9 × |événements| cellules — passe si et seulement si attendue', () => {
+    let passees = 0;
     for (const de of STATUTS_APPORTEUR) {
-      for (const vers of STATUTS_APPORTEUR) {
-        const permis = (TRANSITIONS_APPORTEUR[de] as readonly StatutApporteur[]).includes(vers);
-        const motif = vers === 'resilie' ? 'ordinaire_axion' : null;
-        if (permis) {
-          declarees += 1;
-          expect(transitionner({ de, vers, motif }).statut).toBe(vers);
+      for (const evenement of EVENEMENTS_APPORTEUR) {
+        const attendue = ATTENDUES.find((a) => a[0] === de && a[1] === evenement);
+        const demande = { de, evenement, motif: motifDe(evenement) } as const;
+        if (attendue !== undefined) {
+          passees += 1;
+          expect(transitionner(demande).statut, `${de} × ${evenement}`).toBe(attendue[2]);
         } else {
-          expect(levee(() => transitionner({ de, vers, motif })).message).toContain(
-            `${de} -> ${vers}`
-          );
+          expect(levee(() => transitionner(demande)).message).toContain(`${de} × ${evenement}`);
         }
       }
     }
-    // Ni vide (tout refusé) ni pleine (tout permis) : les deux seraient une matrice par omission.
-    expect(declarees).toBeGreaterThan(0);
-    expect(declarees).toBeLessThan(81);
+    expect(passees).toBe(ATTENDUES.length);
   });
 
-  it('REQ-DM-011 : `resilie` est sans issue, et un statut ne transitionne jamais vers lui-même', () => {
-    expect(TRANSITIONS_APPORTEUR.resilie).toEqual([]);
-    for (const s of STATUTS_APPORTEUR) {
-      expect(TRANSITIONS_APPORTEUR[s] as readonly string[], s).not.toContain(s);
-    }
+  it('REQ-DM-011 : `refuse` et `resilie` sont sans issue', () => {
+    expect(TRANSITIONS_APPORTEUR.refuse).toEqual({});
+    expect(TRANSITIONS_APPORTEUR.resilie).toEqual({});
   });
 
-  it('REQ-DM-011 : la résiliation EXIGE un motif, et une autre transition n’en porte aucun', () => {
-    expect(levee(() => transitionner({ de: 'signe', vers: 'resilie', motif: null })).code).toBe(
-      'motif_requis'
-    );
+  it('REQ-DM-011 : `resilier` EXIGE un motif, et un autre événement n’en porte aucun', () => {
     expect(
-      levee(() => transitionner({ de: 'candidat', vers: 'retenu', motif: 'manquement_grave' })).code
+      levee(() => transitionner({ de: 'signe', evenement: 'resilier', motif: null })).code
+    ).toBe('motif_requis');
+    expect(
+      levee(() =>
+        transitionner({ de: 'candidat', evenement: 'retenir', motif: 'manquement_grave' })
+      ).code
     ).toBe('motif_interdit');
-    expect(transitionner({ de: 'suspendu', vers: 'resilie', motif: 'manquement_grave' })).toEqual({
-      statut: 'resilie',
-      resiliationMotif: 'manquement_grave',
-    });
+    expect(
+      transitionner({ de: 'suspendu', evenement: 'resilier', motif: 'manquement_grave' })
+    ).toEqual({ statut: 'resilie', resiliationMotif: 'manquement_grave' });
   });
 
-  it('REQ-DM-011 : une valeur hors vocabulaire est refusée à l’entrée, jamais comparée', () => {
-    const e = levee(() =>
-      transitionner({ de: 'actif' as StatutApporteur, vers: 'signe', motif: null })
-    );
-    expect(e.code).toBe('statut_inconnu');
+  it('REQ-DM-011 : un statut ou un événement hors vocabulaire est refusé à l’entrée', () => {
+    expect(
+      levee(() =>
+        transitionner({ de: 'actif' as StatutApporteur, evenement: 'signer', motif: null })
+      ).code
+    ).toBe('statut_inconnu');
+    expect(
+      levee(() =>
+        transitionner({ de: 'signe', evenement: 'reactiver' as EvenementApporteur, motif: null })
+      ).code
+    ).toBe('evenement_inconnu');
   });
 });
 

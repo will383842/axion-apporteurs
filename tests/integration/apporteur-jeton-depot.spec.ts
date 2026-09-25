@@ -4,7 +4,8 @@
  *
  * Ce que le domaine promet, la BASE le tient aussi, contre un client qui passerait par du SQL brut :
  *   — l'empreinte d'un jeton est UNIQUE et a la forme d'un SHA-256 hexadécimal ;
- *   — un jeton révoqué ne se réactive pas : remettre `revoque_at` à nul, ou le déplacer, est refusé
+ *   — un jeton révoqué ne se réactive pas : sa ligne est GELÉE (tout `UPDATE` et tout `DELETE`
+ *     refusés), une empreinte ne change jamais, même sur un jeton actif, et `TRUNCATE` est refusé —
  *     par le déclencheur `jetons_depot_revocation_definitive`, qui se nomme ;
  *   — le code de parrainage est UNIQUE et a la forme `AX` + 6 caractères Crockford base32.
  *
@@ -132,6 +133,53 @@ describe('REQ-DM-012 — le jeton de dépôt en base', () => {
     expect(suppression).toContain('jetons_depot_revocation_definitive');
     const relu = await base.prisma.jetonDepot.findUniqueOrThrow({ where: { id: j.id } });
     expect(relu.revoqueAt?.getTime()).toBe(creeAt.getTime());
+  });
+});
+
+describe('REQ-DM-012 — une ligne révoquée est gelée, une empreinte ne change jamais', () => {
+  it('REQ-DM-012 : face ROUGE — changer l’empreinte d’un jeton révoqué puis réinsérer l’ancienne est refusé', async () => {
+    const id = await apporteur('AX0000C1');
+    const j = await jeton(id, 'jeton-gele');
+    await base.prisma.jetonDepot.update({ where: { id: j.id }, data: { revoqueAt: creeAt } });
+    const autre = empreinteJetonDepot('empreinte-de-remplacement');
+    const m = await refus(
+      base.prisma.$executeRawUnsafe(
+        'UPDATE jetons_depot SET token_hash = $2 WHERE id = $1::uuid',
+        j.id,
+        autre
+      )
+    );
+    expect(m).toContain('jetons_depot_revocation_definitive');
+    // L'empreinte d'origine reste occupée : la réinsérer se heurte à l'unicité.
+    expect(await refus(jeton(id, 'jeton-gele'))).toMatch(/Unique constraint|token_hash/);
+  });
+
+  it('REQ-DM-012 : face ROUGE — tout UPDATE d’une ligne révoquée est refusé, dernier usage compris', async () => {
+    const id = await apporteur('AX0000C2');
+    const j = await jeton(id, 'jeton-gele-2');
+    await base.prisma.jetonDepot.update({ where: { id: j.id }, data: { revoqueAt: creeAt } });
+    const m = await refus(
+      base.prisma.jetonDepot.update({ where: { id: j.id }, data: { dernierUsageAt: creeAt } })
+    );
+    expect(m).toContain('jetons_depot_revocation_definitive');
+  });
+
+  it('REQ-DM-012 : face ROUGE — l’empreinte d’un jeton ACTIF ne change pas non plus', async () => {
+    const id = await apporteur('AX0000C3');
+    const j = await jeton(id, 'jeton-actif-fige');
+    const m = await refus(
+      base.prisma.jetonDepot.update({
+        where: { id: j.id },
+        data: { tokenHash: empreinteJetonDepot('autre-clair') },
+      })
+    );
+    expect(m).toContain('jetons_depot_revocation_definitive');
+  });
+
+  it('REQ-DM-012 : face ROUGE — TRUNCATE est refusé, il effacerait d’un coup toutes les révocations', async () => {
+    const m = await refus(base.prisma.$executeRawUnsafe('TRUNCATE jetons_depot'));
+    expect(m).toContain('jetons_depot_revocation_definitive');
+    expect(await base.prisma.jetonDepot.count()).toBeGreaterThan(0);
   });
 });
 

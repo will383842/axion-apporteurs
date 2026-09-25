@@ -10,6 +10,7 @@
  * Aucun défaut sur ce que le test fait varier (RM-11) : chaque octet d'aléa est écrit.
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import {
   ALPHABET_CROCKFORD,
   ErreurJetonDepot,
@@ -21,6 +22,7 @@ import {
   jetonDepotActif,
   nouveauJetonDepot,
   revoquerJetonDepot,
+  sourceAleatoireSysteme,
 } from '../../../src/domain/apporteur/identifiants';
 import * as identifiants from '../../../src/domain/apporteur/identifiants';
 
@@ -66,6 +68,19 @@ describe('REQ-DM-012 — le code de parrainage : lisible, unique, non énumérab
   it('REQ-DM-012 : extrêmes — tout à zéro et tout à un rendent les deux bornes de l’alphabet', () => {
     expect(genererCodeParrainage(source(octets(0, 0, 0, 0)))).toBe('AX000000');
     expect(genererCodeParrainage(source(octets(0xff, 0xff, 0xff, 0xff)))).toBe('AXZZZZZZ');
+  });
+
+  it('REQ-DM-012 : la source de PRODUCTION est cryptographique et n’est pas constante', () => {
+    // Deux tirages de 30 bits identiques : une chance sur 2^30. Dix tirages tous égaux : aucune.
+    const codes = new Set(
+      Array.from({ length: 10 }, () => genererCodeParrainage(sourceAleatoireSysteme))
+    );
+    expect(codes.size).toBeGreaterThan(1);
+    for (const c of codes) expect(estCodeParrainage(c)).toBe(true);
+    const a = sourceAleatoireSysteme(OCTETS_JETON_DEPOT);
+    const b = sourceAleatoireSysteme(OCTETS_JETON_DEPOT);
+    expect(a).toHaveLength(OCTETS_JETON_DEPOT);
+    expect(Buffer.from(a).equals(Buffer.from(b))).toBe(false);
   });
 
   it('REQ-DM-012 : une source d’aléa qui rend un autre nombre d’octets est refusée', () => {
@@ -142,5 +157,26 @@ describe('REQ-DM-012 — le jeton de dépôt : une empreinte stockée, une révo
   it('REQ-DM-012 : le module n’offre AUCUN chemin de réactivation', () => {
     const noms = Object.keys(identifiants);
     expect(noms.filter((n) => /reactiv|restaur|annulerRevocation/i.test(n))).toEqual([]);
+  });
+});
+
+describe('REQ-DM-012 — la migration arme la base contre la réactivation (lecture statique)', () => {
+  // Le comportement se prouve en base réelle (`tests/integration/apporteur-jeton-depot.spec.ts`) ;
+  // cette lecture rougit AUSSI sans démon Docker, sur le SQL tel qu'il sera appliqué.
+  const sql = readFileSync('prisma/migrations/20260925000000_apporteur/migration.sql', 'utf8');
+
+  it('REQ-DM-012 : un déclencheur de LIGNE couvre UPDATE et DELETE sur jetons_depot', () => {
+    expect(sql).toMatch(
+      /CREATE TRIGGER jetons_depot_revocation_definitive BEFORE UPDATE OR DELETE ON "jetons_depot"\s+FOR EACH ROW/
+    );
+  });
+
+  it('REQ-DM-012 : un déclencheur d’INSTRUCTION refuse TRUNCATE sur jetons_depot', () => {
+    expect(sql).toMatch(/BEFORE TRUNCATE ON "jetons_depot"\s+FOR EACH STATEMENT/);
+  });
+
+  it('REQ-DM-012 : la fonction gèle la ligne révoquée et fige l’empreinte', () => {
+    expect(sql).toMatch(/OLD\."revoque_at" IS NOT NULL THEN/);
+    expect(sql).toMatch(/NEW\."token_hash" IS DISTINCT FROM OLD\."token_hash"/);
   });
 });
