@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `fb5b3da` — 2026-09-25T20:02:03+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #92 (un contrôle requis rouge ou une revue manquante) · 3. #93 (un contrôle requis rouge ou une revue manquante) · 4. #126 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
+| Où est `main` ? | `48b14b6` — 2026-09-25T21:08:41+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #91 (un conflit avec `main`) · 3. #93 (un conflit avec `main`) · 4. #126 (un conflit avec `main`) · 5. #128 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
@@ -64,11 +64,11 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
-| 2 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
-| 3 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 4 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un contrôle requis rouge ou une revue manquante |
-| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #128 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees | `t/dm-06` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -99,7 +99,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `fb5b3da` (2026-09-25T20:02:03+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `48b14b6` (2026-09-25T21:08:41+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -119,9 +119,9 @@ d'écriture : il rend l'identifiant lié, les blocs de suffixe `Chiffre` et les 
 `emailHash`, `phoneHash`, `ibanHash`. `empreinteRecherche` fait un HMAC sous `PII_HASH_KEY` pour
 le courriel, le téléphone, l'IBAN (clé jugée par `cleIbanValide`) et le SIRET.
 `empreinteAdresseReseau` appelle `empreinteAdresse` de la frontière sous `IP_HASH_SALT`. La garde
-`securite:schema-pii` (alias `G-SEC-SCHEMA-PII`, câblée en CI avec son `:prove`, 9 familles,
-17 témoins, 4 contre-témoins) refuse deux choses : une colonne de personne en clair dans le
-schéma, et un bloc ou une empreinte écrits hors de `pii.ts`. 23 tests. Huit défauts injectés un à
+`securite:schema-pii` (alias `G-SEC-SCHEMA-PII`, câblée en CI avec son `:prove`, 10 familles,
+21 témoins, 5 contre-témoins) refuse deux choses : une colonne de personne en clair dans le
+schéma, et un bloc ou une empreinte écrits hors de `pii.ts`. 24 tests. Huit défauts injectés un à
 un ont chacun fait rougir leur contrôle.
 
 **Reste.** Aucun modèle de personne n'existe encore : DM-06 et DM-07 poseront les premières
@@ -141,6 +141,29 @@ l'identifiant est donc le nom de commande, et l'ancien nom `G-SEC-...` passe en 
 qui balaie les fichiers suivis s'inscrit aussi dans les deux registres de
 `refus-de-rendre-et-de-publier.spec.ts` (sorties déclarées, gardes qui balaient), et établit son
 périmètre avant de lire quoi que ce soit.
+
+**Relecture.** La tête `a7e647a` a été refusée par `securite` (revue 5321613521, veto rgpd) et
+par `simplicite` (5321613688). `securite` : la garde remontait d'un littéral jusqu'à `data` sans
+traverser un ternaire, un ET logique ni un étalement. Ainsi
+`data: { ...(ip ? { ipHash: ip } : {}) }` et `data: { ...(e && { emailHash: e }) }` sortaient en
+0. La garde DESCEND désormais depuis la valeur de la clé d'écriture : objets, tableaux,
+étalements, ternaires sur leurs deux branches, `&&`, `||`, `??`, parenthèses, `as`, `satisfies`,
+`!`. Elle juge une valeur protégée sur chacune de ces branches. Les clés d'écriture comprennent
+aussi `createMany`, `updateMany`, `upsert` et `connectOrCreate`. Un champ protégé posé sous la clé
+dans une forme qu'elle ne descend pas (un appel, une fonction) rougit la nouvelle famille
+`ecriture_non_jugee`, en échec fermé. Seuls les arguments d'une fonction de `pii.ts` en sont
+exemptés. Les deux scénarios du relecteur, `??`, `satisfies`, un objet imbriqué conditionnel et
+une fonction immédiate sont des témoins. Un producteur dans un ternaire est un contre-témoin, et il
+était un faux positif avant. Couper une branche de la descente fait rougir `--prove`.
+`simplicite` : le test retapait l'expression de `HASH_HEX_64` ; il l'importe. Mutée en 63
+caractères, la copie restait verte et l'import rougit. L'alias `segments` est retiré. Dette
+laissée : `empreinteAdresseReseau` ne normalise pas son entrée. Elle attend le sujet que rend
+`adresseDuClient` (une IPv4, ou le /64 d'une IPv6), et une IPv6 complète passée par erreur serait
+hachée entière. La normaliser demande d'accepter la forme /64 et d'ajouter un motif de refus : cela
+reviendra au premier appelant (DM-07). Le lexique ne reconnaît pas `remoteAddr` : cela relève du
+propriétaire de `champs.ts`. Le registre `docs/gates.json` (champs `verifie` et `preuveRouge`,
+réécrits par `hors-depot/reecrire-champ.mjs`) et sa vue `docs/GATES.md` décrivent la nouvelle
+portée : sept clés d'écriture, 10 familles, 21 témoins, 5 contre-témoins.
 
 ### PR #124 — 2026-09-25 — chore(GOV-099): cadrage de DM-06 — sourceCanal transporte, IBAN hors DM-06, glossaire
 
