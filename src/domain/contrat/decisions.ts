@@ -59,7 +59,11 @@ export function lignesDuRegistre(md: string): LigneDeDecision[] {
       id: id[1]!,
       texte: normaliser(brute),
       tranchee,
-      avenant: brute.includes('**avenant**'),
+      // la CATÉGORIE de la ligne, pas un mot de sa prose : une cellule qui vaut `**avenant**`
+      avenant: brute
+        .split('|')
+        .slice(1, -1)
+        .some((c) => c.trim() === '**avenant**'),
     });
   }
   return lignes;
@@ -372,6 +376,104 @@ export const CONCORDANCES: readonly Concordance[] = [
     gabarit: ['ni à un statut ou à une réglementation professionnelle'],
     absents: [],
   },
+  // ── W15 (2026-09-25) : l'art. 4.6 amendé (al. 6) et complété (al. 8, correction du rattachement)
+  {
+    decision: 'W15',
+    article: '4.6',
+    alinea: 3,
+    registre: ['un seul niveau rémunéré, inchangé', 'contrat art. 4.6 al. 3'],
+    gabarit: ['un seul niveau'],
+    absents: [],
+  },
+  {
+    decision: 'W15',
+    article: '4.6',
+    alinea: 6,
+    registre: ["l'art. 4.6 al. 6 est amendé"],
+    gabarit: [
+      'la liste de ses filleuls directs',
+      '« en signature » ou « signé »',
+      'sort de la liste',
+    ],
+    absents: ['autre que le montant du parrainage qui lui revient'],
+  },
+  {
+    decision: 'W15',
+    article: '4.6',
+    alinea: null,
+    registre: ["clause de correction du rattachement ajoutée à l'art. 4.6"],
+    gabarit: ['Correction du rattachement', "ne vaut que pour l'avenir"],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W15-ART-4-6',
+    article: '4.6',
+    alinea: 6,
+    registre: [
+      "l'al. 6 autorise au parrain la liste de ses filleuls directs",
+      'une relation résiliée fait sortir le filleul de la liste',
+      'ni le motif, ni aucune mesure intermédiaire',
+    ],
+    gabarit: [
+      "réduite pour chacun au prénom, à l'initiale du nom et à l'état de son contrat",
+      'postérieures à sa dernière résiliation',
+      'sort de la liste',
+      'Ni le motif de la fin de la relation',
+      "ni aucune mesure prise à l'égard du filleul",
+      'aucun montant par filleul',
+    ],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W15-PARRAIN-A-DATE',
+    article: '4.6',
+    alinea: null,
+    registre: [
+      "Clause de correction du rattachement ajoutée à l'art. 4.6",
+      'erreur de rattachement',
+      'fraude ou auto-parrainage',
+      'départ ou résiliation du parrain',
+      "Aucun accord écrit du parrain d'origine",
+    ],
+    gabarit: [
+      'une erreur dans le rattachement initial',
+      'une fraude ou un auto-parrainage',
+      'le départ du parrain ou la résiliation de son contrat',
+      "restent acquises au parrain d'origine",
+      "L'accord du parrain d'origine n'est pas requis",
+    ],
+    absents: [],
+  },
+  {
+    decision: 'HYP-W15-EQUIPE',
+    article: '4.6',
+    alinea: 6,
+    registre: ["il suggère un encadrement que l'art. 4.6 al. 6 exclut"],
+    gabarit: ["n'emporte aucune fonction d'encadrement"],
+    absents: [],
+  },
+];
+
+/**
+ * Les références « art. N » du registre qui ne visent PAS le contrat, chacune prouvée par un
+ * fragment de sa ligne. Déclarées une à une, jamais par motif : une déclaration dont le fragment a
+ * quitté la ligne est périmée et rougit, pour qu'elle ne couvre pas une vraie référence au contrat.
+ */
+export type ReferenceHorsContrat = {
+  readonly decision: string;
+  readonly article: string;
+  /** Le fragment de la ligne qui dit quel texte l'article vise. */
+  readonly registre: string;
+  readonly vise: string;
+};
+
+export const REFERENCES_HORS_CONTRAT: readonly ReferenceHorsContrat[] = [
+  {
+    decision: 'HYP-W15-NOTES',
+    article: '15',
+    registre: "la fonction d'export art. 15 du module RGPD",
+    vise: 'art. 15 du RGPD (droit d’accès), pas l’art. 15 du contrat',
+  },
 ];
 
 export type Divergence = {
@@ -429,7 +531,9 @@ export function controlerConcordances(entree: {
   concordances: readonly Concordance[];
   divergences: readonly Divergence[];
   questions: readonly Question[];
+  horsContrat?: readonly ReferenceHorsContrat[];
 }): { fautes: FauteDeConcordance[]; ecarts: Ecart[] } {
+  const horsContrat = entree.horsContrat ?? REFERENCES_HORS_CONTRAT;
   const fautes: FauteDeConcordance[] = [];
   const ecarts: Ecart[] = [];
   const parId = new Map(entree.registre.map((l) => [l.id, l]));
@@ -538,9 +642,28 @@ export function controlerConcordances(entree: {
     }
   }
 
-  // 4. Toute référence d'article du registre a son ancrage.
+  // 4. Toute référence d'article du registre a son ancrage — sauf celles, déclarées, qui visent un
+  //    autre texte ; une déclaration dont le fragment a quitté sa ligne est périmée.
+  for (const h of horsContrat) {
+    const ligne = parId.get(h.decision);
+    if (ligne === undefined || !ligne.texte.includes(normaliser(h.registre))) {
+      fautes.push({
+        famille: 'hors_contrat_perimee',
+        message:
+          `${h.decision} — la référence hors contrat « art. ${h.article} » (${h.vise}) ne se lit plus ` +
+          `dans « ${h.registre} » : retire la déclaration ou relis-la avec le registre.`,
+      });
+    }
+  }
   for (const ligne of entree.registre) {
     for (const ref of referencesDArticle(ligne.texte)) {
+      const etrangere = horsContrat.some(
+        (h) =>
+          h.decision === ligne.id &&
+          h.article === ref.article &&
+          ligne.texte.includes(normaliser(h.registre))
+      );
+      if (etrangere) continue;
       const couverte = entree.concordances.some(
         (c) =>
           c.decision === ligne.id &&

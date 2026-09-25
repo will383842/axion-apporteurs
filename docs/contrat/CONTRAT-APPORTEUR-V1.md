@@ -319,13 +319,33 @@ apparaît en cours de contrat, le versement des sommes de parrainage est suspend
 vérification, dans les conditions de l'article 3.7 ; les sommes déjà acquises demeurent dues.**
 
 **Le parrainage n'emporte aucune fonction d'encadrement, d'animation, de formation ni de suivi. Le parrain
-ne dispose d'aucun pouvoir à l'égard du filleul, n'est tenu d'aucune obligation envers lui ni envers la
-Société à son sujet, et n'a accès à aucune donnée relative à l'activité du filleul autre que le montant du
-parrainage qui lui revient.**
+ne dispose d'aucun pouvoir à l'égard du filleul et n'est tenu d'aucune obligation envers lui ni envers la
+Société à son sujet.** Le parrain a accès, dans son espace en ligne, au montant du parrainage qui lui revient,
+présenté par mois et tous filleuls confondus, ainsi qu'à la liste de ses filleuls directs, réduite pour
+chacun au prénom, à l'initiale du nom et à l'état de son contrat : « en signature » ou « signé ». Cet état
+s'apprécie sur les seules versions du contrat du filleul postérieures à sa dernière résiliation, s'il y en a
+eu une ; l'envoi ou la signature d'un avenant ne le modifie pas. Le filleul dont la relation contractuelle a
+pris fin sort de la liste. **Le parrain n'a accès à aucune autre donnée relative au filleul : aucun montant
+par filleul, aucune donnée relative à son activité, aucune date qui lui soit propre, aucune information sur
+les personnes que le filleul a lui-même présentées. Ni le motif de la fin de la relation, ni aucune mesure
+prise à l'égard du filleul, qu'il s'agisse d'une suspension ou d'une vérification, ne sont portés à la connaissance
+du parrain.** La période de {{PARRAINAGE_MOIS}} mois prévue au premier alinéa lui est rappelée par un
+texte identique pour tous les parrains, sans date calculée.
 
 Le droit au parrainage suit le sort des commissions ordinaires : il subsiste après la fin du contrat de
 l'Apporteur pour les commissions du filleul acquises jusqu'au terme de la période de
 {{PARRAINAGE_MOIS}} mois, et prend fin avec le contrat du filleul.
+
+**Correction du rattachement.** La Société peut rattacher un filleul à un autre parrain pour l'un des seuls
+motifs suivants, limitativement énumérés : une erreur dans le rattachement initial ; une fraude ou un
+auto-parrainage, au sens du quatrième alinéa ; le départ du parrain ou la résiliation de son contrat. **Le
+changement prend effet à la date à laquelle la Société l'opère et ne vaut que pour l'avenir : les sommes de
+parrainage nées des commissions du filleul acquises avant cette date restent acquises au parrain d'origine ;
+pour les commissions acquises après cette date, elles reviennent au nouveau parrain, le septième alinéa
+cessant de s'appliquer au parrain d'origine, dans la limite de la période de {{PARRAINAGE_MOIS}} mois
+courant depuis la signature du contrat du filleul, qui n'est ni prolongée ni rouverte.** L'accord du parrain
+d'origine n'est pas requis. Le filleul, le parrain d'origine et le nouveau parrain en sont informés par
+courrier électronique, avec la date d'effet du changement.
 
 ---
 
@@ -855,7 +875,7 @@ dehors de ce cas.
 | `CL-ENCAISSEMENT` | 4.2, 4.3, 4.4 | Fait générateur, prorata TTC/TTC, définition de la commande, périmètre et cofinancement |
 | `CL-REPRISE` | 4.5 | Annulation d'un encaissement (toute cause sauf fait de la Société), remboursements, avoirs ; délai courant depuis l'annulation ; renvoi au 12.4 |
 | `CL-PARRAINAGE` | 4.6 al. 1 à 3 | Parrainage à un seul niveau, sur commandes signées du filleul |
-| `CL-IDENTITE-PARRAINAGE` | 4.6 al. 4 à 6 | Distinction parrain/filleul, absence de toute fonction d'encadrement, sort du parrainage après résiliation |
+| `CL-IDENTITE-PARRAINAGE` | 4.6 al. 4 à 8 | Distinction parrain/filleul, absence de toute fonction d'encadrement, liste des filleuls directs réduite à l'identité minimale et à l'état du contrat, sort du parrainage après résiliation, correction du rattachement sur motifs limitatifs et pour l'avenir |
 | `CL-AUTOFACTURATION` | 5.2 et annexe 2 | Mandat de facturation au sens de l'art. 289, I, 2 CGI, contestation à 30 jours, survie du mandat pour la queue de commissions |
 | `CL-VIGILANCE` | 6.2 à 6.6 | Attestation de vigilance URSSAF (L.8222-1, D.8222-5), garantie des informations, assurance datée, charge des cotisations et impositions, absence de travail dissimulé |
 | `CL-RGPD` | Article 7 | Rôles de responsable de traitement, information (art. 13 et 14), sécurité (art. 32), garantie renvoyée au 8.5 |

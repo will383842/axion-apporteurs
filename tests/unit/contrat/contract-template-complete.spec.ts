@@ -597,6 +597,71 @@ describe('REQ-JUR-003 — la liste noire du gabarit (P-4)', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// W15 (2026-09-25) : l'art. 4.6 porte DEUX clauses de plus. REQ-JUR-003 fige le compte des
+// identifiants à 22 (P-5 : une matière nouvelle élargit un libellé existant) — les deux clauses
+// sont donc annotées `CL-IDENTITE-PARRAINAGE`, dont la table de correspondance couvre al. 4 à 8.
+describe('REQ-JUR-003 — art. 4.6 amendé par W15 (HYP-W15-ART-4-6, HYP-W15-PARRAIN-A-DATE)', () => {
+  const alinea = (n: number): string =>
+    normaliser(unitesDuGabarit(gabarit()).get('4.6')!.alineas[n - 1] ?? '');
+
+  it('REQ-JUR-003 — al. 6 amendé : la liste des filleuls directs, réduite, et rien d’autre', () => {
+    const al6 = alinea(6);
+    for (const fragment of [
+      "n'emporte aucune fonction d'encadrement",
+      'la liste de ses filleuls directs',
+      'au prénom',
+      "à l'initiale du nom",
+      "à l'état de son contrat",
+      '« en signature » ou « signé »',
+      'postérieures à sa dernière résiliation',
+      'sort de la liste',
+      'aucun montant par filleul',
+      'aucune donnée relative à son activité',
+      'aucune date qui lui soit propre',
+      'les personnes que le filleul a lui-même présentées',
+      "ni aucune mesure prise à l'égard du filleul",
+      'suspension',
+      'vérification',
+      'texte identique pour tous les parrains',
+      '{{PARRAINAGE_MOIS}}',
+    ]) {
+      expect(al6, fragment).toContain(fragment);
+    }
+    // l'ancienne rédaction ne laissait voir que le montant : elle ne subsiste nulle part
+    expect(normaliser(gabarit())).not.toContain(
+      'autre que le montant du parrainage qui lui revient'
+    );
+  });
+
+  it('REQ-JUR-003 — nouvel alinéa : correction du rattachement, motifs limitatifs, effet futur', () => {
+    const al8 = alinea(8);
+    for (const fragment of [
+      'Correction du rattachement',
+      'rattacher un filleul à un autre parrain',
+      "pour l'un des seuls motifs suivants",
+      'une erreur dans le rattachement initial',
+      'une fraude ou un auto-parrainage',
+      'le départ du parrain ou la résiliation de son contrat',
+      "ne vaut que pour l'avenir",
+      "restent acquises au parrain d'origine",
+      "L'accord du parrain d'origine n'est pas requis",
+      "Le filleul, le parrain d'origine et le nouveau parrain en sont informés",
+    ]) {
+      expect(al8, fragment).toContain(fragment);
+    }
+    // motifs LIMITATIFS : aucune formule qui rouvrirait la liste
+    expect(al8).not.toMatch(/notamment|tout autre motif|par exemple|tel que/i);
+    // l'al. 8 est le dernier : aucun alinéa ne le suit dans l'art. 4.6
+    expect(unitesDuGabarit(gabarit()).get('4.6')!.alineas).toHaveLength(8);
+  });
+
+  it('REQ-JUR-003 — la table de correspondance rattache les deux clauses à CL-IDENTITE-PARRAINAGE', () => {
+    const ligne = tableDeCorrespondance(gabarit()).find((l) => l.id === 'CL-IDENTITE-PARRAINAGE');
+    expect(ligne?.articles).toBe('4.6 al. 4 à 8');
+  });
+});
+
 describe('REQ-JUR-003 — jur:grille-chiffree', () => {
   const annexe = (cellule: string) =>
     `## Annexe 1 — Grille\n\n| Palier | Commission |\n| --- | --- |\n| Essentielle | ${cellule} |\n\n## Annexe 2\n`;
@@ -717,6 +782,29 @@ describe('REQ-JUR-003 — les lecteurs du gabarit et du registre, sur leurs cas 
       ['W1', '2026-09-03', true],
       ['HYP-X', null, false],
     ]);
+  });
+
+  it('REQ-JUR-003 — « avenant » est une CATÉGORIE de cellule, pas un mot de la prose', () => {
+    const lignes = lignesDuRegistre(
+      '## 2. Hyp\n| HYP-P | un **avenant** envoyé ne change rien | paramètre | — |\n' +
+        '| HYP-A | objet | **avenant** | — |'
+    );
+    expect(lignes.map((l) => [l.id, l.avenant])).toEqual([
+      ['HYP-P', false],
+      ['HYP-A', true],
+    ]);
+  });
+
+  it('REQ-JUR-003 — une référence hors contrat déclarée se tait ; son fragment disparu, elle rougit', () => {
+    expect(concordances(registre()).fautes).toEqual([]);
+    const sansFragment = registre().map((l) =>
+      l.id === 'HYP-W15-NOTES'
+        ? { ...l, texte: l.texte.replace('du module RGPD', 'du contrat') }
+        : l
+    );
+    const r = concordances(sansFragment);
+    expect(r.fautes.map((f) => f.famille)).toContain('hors_contrat_perimee');
+    expect(r.fautes.map((f) => f.message).join('\n')).toContain("HYP-W15-NOTES cite l'art. 15");
   });
 
   it('REQ-JUR-003 — un texte sans table, sans annexe, sans colonne CPF se lit sans rien inventer', () => {
