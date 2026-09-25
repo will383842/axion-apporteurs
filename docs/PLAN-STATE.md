@@ -117,7 +117,7 @@ en bloquant, `SKIP_MIGRATE=1` n'est écrit que par elle et par le runbook de ret
 `HEALTHCHECK` interroge `readyz`. CPL-T22 : `pnpm red-first` en `gate-a` lance chaque fichier de
 test ajouté contre le code de la base, dans un arbre posé puis retiré. QA-T30 : Stryker sur
 `src/domain/**` dans le job `mutation` de la nuit ; première passe complète à 79,38 %, rupture
-alignée à 79, cible 80 déclarée ; `scripts/gates/mutation.ts` nomme chaque mutant non détecté.
+alignée à 79, cible 80 déclarée ; `scripts/mutation/rapport.ts` nomme chaque mutant non détecté.
 UX-P0-03 : `playwright.config.ts` et trois passes d'accessibilité dans `pnpm test`, sur les huit
 maquettes lues dans `VALIDATION.md`, iPhone sous WebKit et bureau sous Chromium, au premier plan.
 

@@ -79,7 +79,7 @@ jobs:
   # `lecons-fraiches` : le job des gates est rouge par construction tant que la phase -1 n est pas
   # sortie. Ici et pas en porte A : une passe complete du domaine ne tient pas dans une PR.
   # Le seuil est DECLARE dans `stryker.config.json` (`thresholds.break`) et TENU : sous lui, la passe
-  # sort en non nul, et chaque mutant non detecte est NOMME par `scripts/gates/mutation.ts`.
+  # sort en non nul, et chaque mutant non detecte est NOMME par `scripts/mutation/rapport.ts`.
   mutation:
     name: Mutation du domaine — seuil declare et tenu, survivants nommes
     runs-on: ubuntu-latest

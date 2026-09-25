@@ -36,7 +36,7 @@ import {
   decider,
   lireSeuil,
   type Rapport,
-} from '../../../scripts/gates/mutation';
+} from '../../../scripts/mutation/rapport';
 
 const RACINE = process.cwd();
 

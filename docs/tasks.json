@@ -1874,11 +1874,11 @@
         ".github/workflows/nightly.yml",
         "tests/unit/qualite/score-de-mutation.spec.ts",
         "docs/gates.json",
-        "scripts/gates/mutation.ts",
         "vitest.mutation.config.ts",
         "package.json",
         "pnpm-lock.yaml",
-        ".gitignore"
+        ".gitignore",
+        "scripts/mutation/rapport.ts"
       ],
       "schema": false,
       "sensible": [],

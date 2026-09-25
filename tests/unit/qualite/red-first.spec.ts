@@ -31,6 +31,7 @@ import {
   ID_REGISTRE,
   MARQUEUR,
   TEMOINS,
+  baseParDefaut,
   decider,
   justificationDe,
   type Execution,
@@ -222,12 +223,14 @@ describe('REQ-CPL-022 — le câblage', () => {
     expect(paquet.scripts[ID_REGISTRE]).toContain('scripts/gates/red-first.ts');
     expect(paquet.scripts[`${ID_REGISTRE}:prove`]).toContain('--prove');
     const lignes = ci.split('\n');
-    const appel = lignes.findIndex((l) =>
-      new RegExp(
-        `^\\s+run: pnpm ${ID_REGISTRE} --base "origin/\\$\\{\\{ github\\.base_ref \\}\\}"$`
-      ).test(l)
-    );
-    expect(appel, 'étape `pnpm red-first --base` absente de ci.yml').toBeGreaterThan(0);
+    // La commande est FERMÉE (`gardes-transposees.spec.ts`) : la base vient de `GITHUB_BASE_REF`,
+    // que GitHub pose sur `pull_request`, et `origin/main` ailleurs.
+    const appel = lignes.findIndex((l) => l.trim() === `run: pnpm ${ID_REGISTRE}`);
+    expect(appel, 'étape `pnpm red-first` absente de ci.yml').toBeGreaterThan(0);
+    expect(baseParDefaut('main')).toBe('origin/main');
+    expect(baseParDefaut('release')).toBe('origin/release');
+    expect(baseParDefaut(undefined)).toBe('origin/main');
+    expect(baseParDefaut('')).toBe('origin/main');
     expect(lignes[appel - 1]).toMatch(/if: github\.event_name == 'pull_request'/);
     expect(lignes.some((l) => l.trim() === `run: pnpm ${ID_REGISTRE}:prove`)).toBe(true);
     // L'étape ENTIÈRE, de son `- name:` au suivant : aucun `continue-on-error` n'y entre.

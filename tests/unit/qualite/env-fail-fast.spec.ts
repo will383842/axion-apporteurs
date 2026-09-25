@@ -4,20 +4,21 @@
  * env-fail-fast.spec.ts — QA-T04 : le démarrage RÉEL refuse un environnement incomplet.
  *
  * CE QUI EST JUGÉ, ET PAR QUOI.
- *  - REQ-QA-030 : le schéma de `src/lib/env.ts` porte TOUTES les variables — les secrets de SEC-01
- *    et la configuration (base, cache, puits de notifications). Une variable requise retirée fait
+ *  - REQ-QA-030 : le schéma de `src/lib/env.ts` porte TOUTES les variables — les secrets posés
+ *    avant cette tâche et la configuration (base, cache, puits de notifications). Une variable requise retirée fait
  *    sortir le démarrage en code non nul, et le démarrage jugé est celui de Next : `register()` de
  *    `src/instrumentation.ts`, lancé dans un vrai sous-processus, pas la fonction pure seule. Une
  *    fonction de refus qu'aucun démarrage n'appelle ne refuse rien.
  *  - REQ-QA-030 : `docs/env.md` est le RENDU du schéma. Il se régénère par `pnpm env:doc` ; ce
  *    fichier est la garde qui rougit s'il est périmé.
  *  - REQ-CPL-021 : hors production, `NOTIFY_SINK=true` est exigé au démarrage. « Production » est
- *    jugée par le prédicat du notifieur (`productionDeclaree`, QA-T08), importé, jamais réécrit.
+ *    jugée par le prédicat du notifieur (`productionDeclaree`, `src/lib/notify.ts`), importé, jamais réécrit.
  *
  * Les noms ne sont JAMAIS retapés ici : ils sont lus dans le schéma (RM-01). Toutes les valeurs de
  * secret sont tirées au hasard à l'exécution ; les URL désignent le poste local, sans mot de passe.
  *
- * HORS DE CE FICHIER : la double clé de rotation (`kid`, 24 h) de REQ-QA-030 appartient à QA-T13.
+ * HORS DE CE FICHIER : la double clé de rotation (`kid`, 24 h) de REQ-QA-030 a sa propre tâche,
+ * qui la livrera avec son test.
  */
 import { describe, it, expect, afterAll } from 'vitest';
 import { spawnSync } from 'node:child_process';

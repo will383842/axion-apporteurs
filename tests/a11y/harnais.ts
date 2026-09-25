@@ -4,9 +4,9 @@
  * Le harnais d'accessibilité et de mobile — UX-P0-03 (REQ-QA-016, REQ-UX-017, REQ-UX-018).
  *
  * LES SURFACES sont DÉRIVÉES du dépôt, jamais tapées :
- *  - les maquettes de UX-P0-02, lues dans les tableaux de `docs/maquettes/VALIDATION.md` — section
+ *  - les maquettes, lues dans les tableaux de `docs/maquettes/VALIDATION.md` — section
  *    « Espace apporteur » pour l'espace, « Console » pour la console ;
- *  - les routes réelles de la phase 0 (connexion, SEC-03 ; confidentialité, JUR-T04) quand elles
+ *  - les routes réelles de la phase 0 (connexion, confidentialité) quand elles
  *    existent. Absentes aujourd'hui, elles sont NOMMÉES dans chaque verdict. Présentes, elles le
  *    sont aussi, comme NON MESURÉES : le serveur de test arrive avec QA-T16.
  * DÉCISION DU 2026-09-16 (écrite dans `docs/gates.json`) : les trois passes ne BLOQUENT pas avant la

@@ -1,5 +1,5 @@
 /**
- * `pnpm red-first -- --base <ref>` — CPL-T22 (REQ-CPL-022) : les tests NOUVEAUX d'une PR, exécutés
+ * `pnpm red-first [--base <ref>]` — CPL-T22 (REQ-CPL-022) : les tests NOUVEAUX d'une PR, exécutés
  * contre le code de `main`, doivent ÉCHOUER.
  *
  * POURQUOI. RM-02 : une garde ne vaut que si on l'a vue rougir. Le bloc ROUGE/VERT d'une PR le
@@ -316,6 +316,17 @@ function juger(base: string): Decision {
   }
 }
 
+/**
+ * La base jugée sans `--base` : sur une PR, GitHub Actions pose `GITHUB_BASE_REF` (la branche visée) ;
+ * ailleurs, `origin/main`. La porte A appelle donc `pnpm red-first` nu : un argument calculé dans le
+ * YAML sortirait de la forme FERMÉE que `gardes-transposees.spec.ts` exige de toute commande.
+ */
+export function baseParDefaut(brancheVisee: string | undefined): string {
+  return brancheVisee !== undefined && brancheVisee !== ''
+    ? `origin/${brancheVisee}`
+    : 'origin/main';
+}
+
 function argument(nom: string): string | undefined {
   const i = process.argv.indexOf(nom);
   return i >= 0 ? process.argv[i + 1] : undefined;
@@ -330,7 +341,7 @@ const APPELE_DIRECTEMENT =
 if (APPELE_DIRECTEMENT) {
   const decision = process.argv.includes('--prove')
     ? prouver()
-    : juger(argument('--base') ?? 'origin/main');
+    : juger(argument('--base') ?? baseParDefaut(process.env.GITHUB_BASE_REF));
   (decision.code === 0 ? console.log : console.error)(decision.lignes.join('\n'));
   process.exit(decision.code);
 }

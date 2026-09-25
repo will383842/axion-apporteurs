@@ -765,7 +765,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'dans `REFUS`. Dette DÉCLARÉE.',
     },
     // ── QA-T30 : UNE sortie, à code VARIABLE ────────────────────────────────────────────────
-    'scripts/gates/mutation.ts': {
+    'scripts/mutation/rapport.ts': {
       total: 1,
       porte: 1,
       temoins: 0,
@@ -1056,7 +1056,7 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 56 to be 55
     //
-    // 🔧 56 → 57 par QA-T30 (même lot), ARBITRÉ et non subi : `scripts/gates/mutation.ts` naît avec
+    // 🔧 56 → 57 par QA-T30 (même lot), ARBITRÉ et non subi : `scripts/mutation/rapport.ts` naît avec
     // UNE sortie à code variable.
     expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(57);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre

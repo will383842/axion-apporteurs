@@ -8,7 +8,7 @@
  * fait rougir. La liste des specs est DÉRIVÉE du disque (`tests/e2e/**`), jamais tapée.
  *
  * REQ-UX-018 (et REQ-UX-017 pour l'espace) : zéro violation grave ou critique d'axe-core, sur le
- * profil iPhone et sur le bureau. Les surfaces sont celles du dépôt (les maquettes de UX-P0-02, et
+ * profil iPhone et sur le bureau. Les surfaces sont celles du dépôt (les maquettes validées, et
  * les routes réelles quand elles existent) ; la page-piège du bac d'essai fait rougir la passe en
  * NOMMANT la surface et le sélecteur fautif. Les maquettes ne BLOQUENT pas avant la phase 1
  * (décision du 2026-09-16, écrite dans `docs/gates.json`) : leurs fautes sont IMPRIMÉES.
