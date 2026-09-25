@@ -53,6 +53,7 @@ import {
   entreesDuDiff,
   fichierEnZoneSensible,
   OPTIONS_DU_DIFF,
+  direLaSurvivance,
   direLeRisque,
   fautesDesRevues,
   lentillesExigees,
@@ -70,6 +71,7 @@ import {
   type DemandeDeConcordance,
   type EntreeDeFichier,
   type ListeDesFichiers,
+  type MesuresDeSurvie,
   type RevueBrute,
   type Risque,
   type TacheDeLaPr,
@@ -125,6 +127,26 @@ const NB_CASES = 8;
 const AVIS_ECARTES: string[] = [];
 /** Les avis postés en commentaire d'issue (GOV-077) — dits, jamais comptés. */
 const AVIS_HORS_CANAL: string[] = [];
+/**
+ * LES ACCORDS QUI ONT SURVÉCU À LA TÊTE (GOV-095) — dits, et c'est la condition de la permission.
+ * Une garde qu'on rend plus permissive doit IMPRIMER chaque fois qu'elle a été permissive : sans
+ * cette liste, la survie est invisible, donc inauditable, et personne ne peut la contester.
+ */
+const ACCORDS_SURVIVANTS: string[] = [];
+
+/**
+ * Les lignes que `gov:pr` IMPRIME sur les accords survivants du dernier `controler()` — vide s'il
+ * n'y en a aucun. Une seule source pour la sortie et pour son témoin : retirer l'impression ou
+ * l'alimentation de la liste fait rougir `accord-survit-au-journal.spec.ts`.
+ */
+export function lignesDesAccordsSurvivants(): string[] {
+  if (ACCORDS_SURVIVANTS.length === 0) return [];
+  return [
+    `ℹ️  gov:pr — ${ACCORDS_SURVIVANTS.length} accord(s) rendus sur un AUTRE commit que la tête et ` +
+      `qui y SURVIVENT (GOV-095) — le delta ne juge aucun code. Conteste-les sans relire le code :`,
+    ...ACCORDS_SURVIVANTS.map((e) => `      ${e}`),
+  ];
+}
 /** Le saut de ligne, nomme : les fixtures decoupent des corps de PR. */
 const SAUT = String.fromCharCode(10);
 const TYPES_DE_TITRE = ['feat', 'fix', 'test', 'docs', 'chore', 'refactor', 'ci', 'perf'];
@@ -286,6 +308,8 @@ export type Pr = {
    * absente ou `null` → complétude inconnue → risque ÉLEVÉ.
    */
   liste?: ListeDesFichiers | null;
+  /** Témoins seulement : les mesures de la survie (GOV-095). Absentes en production (vrai `git`). */
+  mesures?: MesuresDeSurvie;
 };
 /**
  * ⚠️ `paths` ET `tests` FONT PARTIE DE LA PROJECTION, et leur absence rendrait la famille
@@ -474,6 +498,7 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
   const CHEMINS_SCHEMA = cheminsSchema(depot.charte);
   AVIS_ECARTES.length = 0;
   AVIS_HORS_CANAL.length = 0;
+  ACCORDS_SURVIVANTS.length = 0;
 
   // ---- structure du gabarit -------------------------------------------------
   for (const marqueur of MARQUEURS) {
@@ -903,6 +928,8 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     risque,
     tete: pr.tete ?? null,
     auteurPoste: auteur ? auteur[1]! : null,
+    numero: pr.numero ?? null,
+    ...(pr.mesures ?? {}),
   });
   const lues = lecture.verdicts.filter((v) => v.verdict === 'accepte');
   // Les lentilles EXIGÉES par le risque, hors mutation : deux sur une PR ordinaire, trois sinon.
@@ -927,12 +954,16 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
   }
   // Même doctrine pour un avis posté en COMMENTAIRE D'ISSUE (la PR 41) : dit, pas compté.
   AVIS_HORS_CANAL.push(...avisHorsCanal(pr.commentaires ?? null));
-  for (const v of lecture.perimees) {
+  // LA SURVIE EST DITE AVANT LA PÉREMPTION : c'est la seule sortie qui rende la permission
+  // contestable, et elle porte les cinq faits (poste, lentille, les deux sha, les fichiers).
+  ACCORDS_SURVIVANTS.push(...lecture.survivantes.map(direLaSurvivance));
+  for (const p of lecture.peremptions) {
     ajouter(
       'lentille_perimee',
-      `Revues — ${v.code} · ${v.lentille} a accepté sur ${v.commit.slice(0, 7)}, qui n'est pas la tête ` +
-        `${(pr.tete ?? '').slice(0, 7)} : le diff approuvé n'est pas le diff qui sera fusionné (pas 5 du ` +
-        `protocole de fusion). On retourne au pas 2.`
+      `Revues — ${p.verdict.code} · ${p.verdict.lentille} a accepté sur ` +
+        `${p.verdict.commit.slice(0, 7)}, qui n'est pas la tête ${(pr.tete ?? '').slice(0, 7)}, et ` +
+        `l'accord n'y survit PAS : ${p.motif}. Le diff approuvé n'est pas le diff qui sera fusionné ` +
+        `(pas 5 du protocole de fusion). On retourne au pas 2.`
     );
   }
   for (const v of lecture.auteurSeRelit) {
@@ -2678,6 +2709,7 @@ if (LANCE_EN_SCRIPT) {
     );
     AVIS_ECARTES.forEach((e) => console.log(`      ${e}`));
   }
+  lignesDesAccordsSurvivants().forEach((l) => console.log(l));
   if (fautes.length === 0) {
     console.log(`✅ gov:pr — ${portee}.`);
     if (pr === null) {

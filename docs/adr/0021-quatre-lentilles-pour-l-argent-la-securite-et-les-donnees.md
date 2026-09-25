@@ -108,7 +108,10 @@ motifs, et tout `Verdict: refuse` bloque. La règle tient dans la main de la len
 - **Le gain, calculé par le code et non à la main** (chaque tâche restante jugée en PR synthétique
   à une tâche sur ses `paths` ∪ `tests{}`) : sur les tâches `partners` restantes, **31 ordinaires
   avant** GOV-097 (registre de `3625f6c`) ; **43 sur 194 après** (49 sur 209 tous dépôts), sur le
-  registre de `32ea43d`, la règle « la sensibilité suit le fichier » comprise. Étendue à tout le
+  registre de `32ea43d`, la règle « la sensibilité suit le fichier » comprise ; **38 sur 195**
+  (44 sur 210) après la fusion de #116 (`e238abe`) : `revues.ts` y importe
+  `scripts/gates/gov-attributions.ts`, qui entre dans la garde des revues avec ses propres imports,
+  et cinq tâches qui le déclarent (GOV-073, GOV-074, GOV-075, GOV-081, GOV-084) montent. Étendue à tout le
   dépôt, cette règle donnait 24 sur 194 (27 sur 209) : c'est pourquoi elle ne lit que `src/`. Le spec `quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts` imprime la ligne
   `GOV-097 — tâches partners restantes : …` à chaque exécution : c'est elle qui fait foi, pas ce
   paragraphe.

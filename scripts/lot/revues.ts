@@ -70,6 +70,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { posix } from 'node:path';
 
+import { ANCRE_JOURNAL } from '../gates/gov-attributions';
 import { cheminsDeLaTache } from './chemins-de-tache';
 
 export const CHEMIN_AGENTS = 'docs/agents.json';
@@ -131,7 +132,20 @@ export const ASSOCIATIONS_HABILITEES: ReadonlySet<string> = new Set([
 export const LENTILLE_SIMPLICITE = 'simplicite';
 export const LENTILLE_SCHEMA = 'schema';
 export const LENTILLE_MUTATION = 'mutation';
-const DEUX_PREMIERES = ['exactitude', 'securite'];
+
+/**
+ * LA LENTILLE DONT LA MATIÈRE EST LA PROSE : son accord ne survit à aucune réécriture (GOV-095,
+ * voir `accordSurvit` plus bas).
+ *
+ * 🔴 ELLE EST DÉCLARÉE ICI, ET NON À CÔTÉ DE LA RÈGLE DE SURVIE. Le littéral était écrit DEUX fois
+ * — dans `DEUX_PREMIERES` et dans la règle — et la lentille `securite` l'a relevé : renommer l'un
+ * faisait cesser l'autre de mordre, dans le sens PERMISSIF. Une seule source, et elle précède ses
+ * deux lecteurs : `DEUX_PREMIERES` est évalué au chargement du module, une déclaration plus bas
+ * le ferait tomber en zone morte temporelle.
+ */
+export const LENTILLE_DE_LA_PROSE = 'exactitude';
+
+const DEUX_PREMIERES = [LENTILLE_DE_LA_PROSE, 'securite'];
 
 /**
  * LA LIGNE QUI TRANCHE — ET UNE CITATION N'EN EST PAS UNE.
@@ -234,6 +248,307 @@ export type Verdict = {
   compte: string;
 };
 
+/**
+ * ═══ UN ACCORD SURVIT À UN COMMIT QUI NE TOUCHE QUE LE JOURNAL (GOV-095) ══════════════════════
+ *
+ * 🔴 LE DÉFAUT, LU DANS CE FICHIER MÊME. La péremption comparait `x.commit !== entree.tete` : un
+ * accord était lié au SHA DE LA TÊTE, jamais au CODE JUGÉ. Tout commit de plus périmait donc TOUS
+ * les accords exigés, quel que soit ce qu'il change.
+ *
+ * LA MESURE QUI OUVRE LA RÈGLE — à rejouer, pas à recopier. Sur la branche
+ * `t/gov-check-homonymie` de la demande de fusion 102, `git diff --name-only 8ef35a3 8891d53` ne
+ * rend QUE `docs/journal/2026-09-pr-102.md` : une phrase de prose. Cette tête-là a pourtant périmé
+ * les accords de `securite`, de `schema` et de `mutation`, qu'il a fallu refaire sur un code
+ * identique au bit près. ⚠️ Ces deux sha ne sont cités par AUCUN témoin : la 102 a été écrasée à
+ * la fusion, ses commits de branche ne sont ancêtres de rien, et un clone neuf ne les porte pas.
+ *
+ * LA RÈGLE, ÉTROITE EXPRÈS. Un accord rendu sur la lentille L au commit C survit à la tête T si,
+ * ET SEULEMENT SI :
+ *
+ *   1. L n'est pas `exactitude` — cette lentille juge la PROSE, c'est sa matière, et son accord
+ *      ne survit donc à aucun commit ;
+ *   2. ET l'ensemble des fichiers changés entre C et T est VIDE, ou n'est fait que d'ENTRÉES PAR
+ *      PR du journal — la forme `docs/journal/AAAA-MM-pr-<n>.md` (`ENTREE_DU_JOURNAL`), et RIEN
+ *      d'autre du dossier : ni son mode d'emploi (`CONFIGURATION_DU_DOSSIER` dit pourquoi), ni le
+ *      fichier mensuel, ni un fichier de lot ; et cette entrée est celle de LA PR JUGÉE, dont
+ *      chaque titre ouvre SON entrée — voir `PrJugee`.
+ *
+ * ⚠️ C'EST UNE GARDE RENDUE PLUS PERMISSIVE, et c'est l'objection la plus forte qu'on puisse lui
+ * opposer. La réponse tient en un point : TOUT CAS AMBIGU ÉCHOUE FERMÉ, et chacun a son témoin
+ * dans `tests/unit/gouvernance/accord-survit-au-journal.spec.ts`.
+ *
+ *   — un diff que `git` ne peut pas calculer (commit inconnu du clone, sha malformé, `git` en
+ *     échec) : `null`, donc PÉRIMÉ, et le refus le DIT au lieu de laisser croire à un delta vide ;
+ *   — `docs/tasks.json` et `docs/requirements.json` : PÉRIMÉ. Ces fichiers CHANGENT LE
+ *     COMPORTEMENT DE CETTE GARDE — `risqueDeLaPr()` y lit `zone`, `sensible`, `schema` et
+ *     `paths`. Ce sont des sources, pas de la prose ;
+ *   — une vue dérivée (`docs/PLAN-STATE.md`, `docs/TASKS.md`…) : PÉRIMÉ. Si une vue a changé,
+ *     sa source a changé ;
+ *   — un ADR, `docs/CONVENTIONS.md`, n'importe quel document normatif : PÉRIMÉ ;
+ *   — `docs/journal/README.md` : PÉRIMÉ, bien qu'il soit sous le préfixe. Il porte le PLANCHER
+ *     dont deux gardes bloquantes dérivent leur nombre — c'est une configuration, pas une entrée ;
+ *   — tout AUTRE fichier du dossier qui n'a pas la forme d'une entrée par PR : PÉRIMÉ.
+ *
+ * 🔑 LE PRÉFIXE DÉSIGNE UNE ENTRÉE, PAS UN DOSSIER, et cette précision-là a coûté une revue :
+ * `CONFIGURATION_DU_DOSSIER` porte la mesure et l'attaque.
+ *
+ * 🔑 ET AUCUN DE CES CAS N'EST ÉNUMÉRÉ DANS LE CODE. La liste blanche est UNE SEULE forme ancrée ;
+ * tout le reste périme par construction. Une liste noire de documents normatifs laisserait passer
+ * le prochain dossier créé — c'est exactement le raisonnement des listes blanches de
+ * `CHEMINS_A_RISQUE_ORDINAIRE`, et il vaut ici à plus forte raison : là-bas un oubli fait relire
+ * DAVANTAGE, ici il ferait relire MOINS.
+ */
+
+/** Le dossier du journal. Seules ses ENTRÉES PAR PR (`ENTREE_DU_JOURNAL`) ne jugent aucun code. */
+export const CHEMIN_DU_JOURNAL = 'docs/journal/';
+
+/**
+ * ⛔ LE PRÉFIXE DÉSIGNE UNE ENTRÉE, PAS UN DOSSIER — et la prémisse était fausse d'un fichier.
+ *
+ * 🔴 LE DÉFAUT, MESURÉ PAR LA LENTILLE `securite` SUR LA TÊTE PRÉCÉDENTE DE CETTE PR. Le dossier
+ * `docs/journal/` ne contient pas QUE de la prose : il contient aussi son propre mode d'emploi, et
+ * ce mode d'emploi porte la ligne du PLANCHER — le numéro de PR sous lequel aucune tâche n'a
+ * besoin d'être attestée. DEUX gardes bloquantes de `gate-a` en DÉRIVENT ce nombre, et rien ne le
+ * borne :
+ *
+ *   — `gov:attributions` (`scripts/gates/gov-attributions.ts`) : le plancher est L'INTERRUPTEUR du
+ *     journal, il EXEMPTE des tâches de toute attestation de lot (exemption `lot_sous_plancher`) ;
+ *   — `gov:etat` (`scripts/gates/gov-etat.ts`) : sous le plancher, « PR fusionnée sans entrée de
+ *     journal » se tait.
+ *
+ * L'ATTAQUE, DE BOUT EN BOUT. Accords posés au commit C, puis une tête T qui ne change QUE ce
+ * nombre — forme toujours valide au regard de la ligne que les deux gardes lisent. Les deux gardes
+ * s'éteignent, `securite`, `simplicite`, `schema` et `mutation` SURVIVENT, la case se coche, et le
+ * `detail` publié affirme « le delta ne juge aucun code » : une phrase calculée et fausse.
+ *
+ * LE REMÈDE N'EST PAS UNE LISTE NOIRE. Un premier remède excluait ce seul fichier : il laissait
+ * survivre tout le reste du dossier, dont le fichier mensuel que `gov:attributions` lit aussi. Le
+ * remède tenu est une LISTE BLANCHE DE FORME (`ENTREE_DU_JOURNAL`) : ce README périme parce qu'il
+ * n'a pas la forme d'une entrée, à n'importe quelle profondeur et quelle que soit sa casse — sans
+ * qu'aucune ligne du code ne le nomme. Cette constante ne sert plus qu'à le DÉSIGNER aux témoins.
+ *
+ * ⚠️ CE QUI RESTE À SURVEILLER, ET QUI SE MESURE PAR UNE COMMANDE : si un jour une garde dérive
+ * une donnée d'une ENTRÉE par PR autre que son titre d'entrée, la forme ne suffit plus. Rejouer :
+ *
+ *     git grep -n -e "docs/journal" -- scripts .github src
+ */
+export const CONFIGURATION_DU_DOSSIER = 'README.md';
+
+/** Un accord survit, ou il périme — et dans les deux cas on sait DIRE pourquoi. */
+export type Survie =
+  | { survit: true; fichiers: string[] }
+  | { survit: false; motif: string; fichiers: string[] | null };
+
+/** Un accord qui a survécu à la tête : les cinq faits qu'un lecteur doit pouvoir contester. */
+export type Survivance = {
+  code: string;
+  lentille: string;
+  /** Le commit sur lequel l'accord a été rendu. */
+  commit: string;
+  /** La tête à laquelle il survit. */
+  tete: string;
+  /** Les fichiers changés entre les deux — tous des entrées par PR du journal, ou aucun. */
+  fichiers: string[];
+};
+
+/** Un accord périmé, avec le motif et les fichiers qui l'ont périmé (`null` : diff incalculable). */
+export type Peremption = {
+  verdict: Verdict;
+  motif: string;
+  fichiers: string[] | null;
+};
+
+/**
+ * ⛔ LA LISTE BLANCHE EST UNE FORME, PAS UNE EXCLUSION (second tour `securite`, revue 5307855596).
+ * Exclure le seul README laissait survivre tout AUTRE fichier du dossier — et `gov:attributions`
+ * lit TOUT fichier suivi de `docs/journal/` : le fichier MENSUEL (`2026-09.md`) porte les entrées
+ * d'autres PR, qui attestent leurs lots ; un fichier de lot, de données ou un sous-dossier n'est
+ * pas l'entrée d'UNE PR. En cas de doute on exclut : seule survit `docs/journal/AAAA-MM-pr-<n>.md`,
+ * au premier niveau, casse exacte. Tout le reste périme — y compris ce qui n'existe pas encore.
+ *
+ * Le motif est ANCRÉ aux deux bouts et DÉRIVÉ de `CHEMIN_DU_JOURNAL` (RM-01) : ni `includes`
+ * (`src/docs/journal/…` passerait), ni segment `..`, ni suffixe (`….md.bak`) ne s'y logent.
+ */
+export const ENTREE_DU_JOURNAL = new RegExp(
+  '^' +
+    CHEMIN_DU_JOURNAL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+    String.raw`\d{4}-\d{2}-pr-([1-9]\d*)\.md$`
+);
+
+/**
+ * La PR jugée, vue par la règle de survie : son NUMÉRO, et de quoi lire une entrée À LA TÊTE.
+ *
+ * ⛔ TROISIÈME TOUR `securite` : la forme ne suffit pas. `gov:attributions` coupe TOUT fichier du
+ * journal sur `COUPE_ETAT` et lit le numéro de chaque titre d'entrée comme l'attestation de CETTE
+ * PR-là — elle ne lie pas un titre « PR #N » au fichier `…-pr-N.md`. Deux chemins ouvraient donc
+ * l'attestation d'un AUTRE lot sous des accords survivants : réécrire l'entrée d'une autre PR, et
+ * ajouter un titre d'une autre PR dans la sienne. D'où deux conditions de plus, toutes deux en
+ * échec FERMÉ : le fichier est celui de la PR jugée (`numero` inconnu : rien ne survit), et chaque
+ * ligne de titre de niveau ≥ 2 qu'il porte à la tête ouvre SON entrée (`ANCRE_JOURNAL` + numéro,
+ * dérivé de la garde qui le lit). Une entrée illisible à la tête (supprimée, `git` en échec) : périmé.
+ */
+export type PrJugee = {
+  numero: number | null;
+  lire: (chemin: string) => string | null;
+};
+
+/** Le premier défaut d'une entrée au regard de la PR jugée, ou `null` si elle est bien la sienne. */
+function defautDEntree(f: string, pr: PrJugee): string | null {
+  const m = ENTREE_DU_JOURNAL.exec(f);
+  if (m === null) return `${f} n’est pas une entrée par PR de \`${CHEMIN_DU_JOURNAL}\``;
+  if (pr.numero === null) return `${f} : le numéro de la PR jugée est inconnu`;
+  if (Number(m[1]) !== pr.numero) return `${f} est l’entrée d’une autre PR que la #${pr.numero}`;
+  const texte = pr.lire(f);
+  if (texte === null) return `${f} est illisible à la tête`;
+  const titre = `${ANCRE_JOURNAL}${pr.numero} `;
+  // Coupé aussi sur un `\r` SEUL : `gov:etat` le fait, et un titre caché derrière lui passerait
+  // sinon pour la suite d'une ligne (dette `securite`, revue 5316791878).
+  const intrus = texte.split(/\r\n|\r|\n/).find((l) => /^#{2,}/.test(l) && !l.startsWith(titre));
+  return intrus === undefined
+    ? null
+    : `${f} porte un titre qui n’ouvre pas l’entrée de la #${pr.numero} : « ${intrus} »`;
+}
+
+/**
+ * LA DÉCISION, PURE — aucun `git`, aucun système de fichiers, chaque branche testable. C'est la
+ * même séparation que `estAncetreDe` plus haut : la mesure peut échouer, la règle non.
+ */
+export function accordSurvit(
+  lentille: string,
+  fichiers: readonly string[] | null,
+  pr: PrJugee
+): Survie {
+  if (fichiers === null) {
+    return {
+      survit: false,
+      fichiers: null,
+      motif:
+        'le diff entre le commit jugé et la tête n’a pas pu être mesuré (commit absent de ce ' +
+        'clone, sha malformé, ou `git` en échec) : on ne fait pas survivre un accord sur une ' +
+        'mesure qu’on n’a pas',
+    };
+  }
+  if (lentille === LENTILLE_DE_LA_PROSE) {
+    return {
+      survit: false,
+      fichiers: [...fichiers],
+      motif:
+        `la lentille ${LENTILLE_DE_LA_PROSE} juge la prose : c’est sa matière, et son accord ne ` +
+        'survit donc à aucun commit, journal compris',
+    };
+  }
+  const dehors = fichiers.map((f) => defautDEntree(f, pr)).filter((d): d is string => d !== null);
+  if (dehors.length > 0) {
+    return {
+      survit: false,
+      fichiers: [...fichiers],
+      // « hors de `docs/journal/` » serait une phrase calculée et FAUSSE depuis que le mode
+      // d'emploi du dossier périme : il est SOUS le préfixe, et il ne juge pas rien. Le motif dit
+      // donc ce que la règle mesure vraiment — ce qui n'est pas une ENTRÉE — et le nomme.
+      motif:
+        `${dehors.length} fichier(s) changé(s) qui ne sont pas l’entrée de la PR jugée : ` +
+        dehors.join(' ; '),
+    };
+  }
+  return { survit: true, fichiers: [...fichiers] };
+}
+
+/**
+ * Le texte d'un fichier À LA TÊTE, par `git show <tete>:<chemin>`. Échoue FERMÉ : toute erreur
+ * (fichier supprimé, commit absent, sha malformé) rend `null`, qui périme l'accord.
+ *
+ * 🔴 SEUL UN FICHIER ORDINAIRE SE LIT (veto `securite`, revue 5316791878). Pour un lien
+ * symbolique (mode 120000), `git show` rend la CIBLE du lien, pas le contenu que `gov:etat` et
+ * `gov:attributions` lisent en le suivant : une entrée devenue lien vers l'entrée d'une autre PR
+ * aurait fait survivre les accords. Le mode de CE SEUL objet est lu par `git cat-file
+ * --batch-check=%(objectmode)` — une consultation, pas une énumération de l'arbre : celle-ci
+ * n'appartient qu'à `fichiers-suivis.ts` (REQ-CPL-018). Tout autre mode que 100644 (lien,
+ * exécutable, sous-module), un objet absent ou un git qui ne connaît pas l'atome rendent `null`.
+ */
+export function contenuALaTete(tete: string, chemin: string, cwd?: string): string | null {
+  const t = tete.trim();
+  if (!/^[0-9a-f]{7,40}$/.test(t) || !ENTREE_DU_JOURNAL.test(chemin)) return null;
+  try {
+    const mode = execFileSync('git', ['cat-file', '--batch-check=%(objectmode)'], {
+      encoding: 'utf8',
+      input: `${t}:${chemin}\n`,
+      stdio: ['pipe', 'pipe', 'ignore'],
+      ...(cwd === undefined ? {} : { cwd }),
+    });
+    if (mode.trim() !== '100644') return null;
+    return execFileSync('git', ['show', `${t}:${chemin}`], {
+      encoding: 'utf8',
+      maxBuffer: 64e6,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      ...(cwd === undefined ? {} : { cwd }),
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * LA MESURE, séparée de la décision. `git diff --name-only` entre les deux ARBRES : la question
+ * n'est pas « que s'est-il passé entre les deux », c'est « le code jugé est-il celui qui sera
+ * fusionné ». Elle échoue FERMÉ — toute erreur rend `null`, jamais une liste vide, qui se lirait
+ * « rien n'a changé ».
+ *
+ * ⚠️ `--no-renames` EST DÉLIBÉRÉ, et il ferme DEUX sens, pas un. Avec la détection de renommage —
+ * active par défaut depuis git 2.9 — un renommage n'est rendu que par sa DESTINATION :
+ *
+ *   — un fichier SORTI du journal ne serait rendu que par sa destination hors du journal : la
+ *     règle verrait le fichier arriver, jamais partir ;
+ *   — et c'est l'autre sens qui MORD VRAIMENT : `docs/CONVENTIONS.md` déplacé VERS
+ *     `docs/journal/x.md` ne serait rendu que par `docs/journal/x.md`, donc « entièrement sous le
+ *     journal », donc l'accord SURVIVRAIT À LA SUPPRESSION D'UN DOCUMENT NORMATIF.
+ *
+ * Sans la détection, les DEUX chemins sont rendus dans les deux cas. Témoin : « un RENOMMAGE rend
+ * ses DEUX chemins ».
+ *
+ * `-z` parce que `git` CITE les chemins non-ASCII (`"docs/journal/\303\251.md"`) : un chemin cité
+ * ne commencerait plus par le préfixe du journal et se lirait « hors journal » — fermé, donc sans
+ * danger, mais pour la mauvaise raison. La forme NUL est la forme brute.
+ *
+ * `cwd` n'existe que pour le témoin, qui construit un VRAI dépôt git jetable : la mesure ne se
+ * prouve pas contre une simulation de `git`. Même précaution que le paramètre `chemin` de
+ * `codesDePoste`.
+ */
+export function fichiersEntre(accord: string, tete: string, cwd?: string): string[] | null {
+  const a = accord.trim();
+  const t = tete.trim();
+  if (!/^[0-9a-f]{7,40}$/.test(a) || !/^[0-9a-f]{7,40}$/.test(t)) return null;
+  try {
+    const sortie = execFileSync('git', ['diff', '--name-only', '--no-renames', '-z', a, t], {
+      encoding: 'utf8',
+      maxBuffer: 64e6,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      ...(cwd === undefined ? {} : { cwd }),
+    });
+    return sortie.split('\0').filter((f) => f !== '');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * LA PHRASE QUI REND UNE SURVIE CONTESTABLE, dérivée une seule fois (RM-01). Une survie
+ * silencieuse est invisible, donc inauditable : `gov:pr` l'imprime, et le corps publié la porte.
+ * Les cinq faits y sont — le poste, la lentille, les deux sha, et LA LISTE DES FICHIERS — pour
+ * qu'un lecteur puisse contester la survie sans relire le code.
+ */
+export function direLaSurvivance(s: Survivance): string {
+  return (
+    `${s.code} · ${s.lentille} a accepté sur ${s.commit.slice(0, 7)} et SURVIT à la tête ` +
+    `${s.tete.slice(0, 7)} : ` +
+    (s.fichiers.length === 0
+      ? 'les deux arbres sont identiques, aucun fichier ne les sépare'
+      : // « entièrement sous `docs/journal/` » serait plus large que ce qui a été mesuré : le
+        // mode d'emploi et le fichier mensuel y sont aussi, et ils périment. La phrase dit ce qui a
+        // été vérifié — des ENTRÉES PAR PR — et les nomme toutes, pour qu'on puisse la contester.
+        `le delta n’est fait que d’entrées par PR de \`${CHEMIN_DU_JOURNAL}\` — ${s.fichiers.join(', ')}`)
+  );
+}
+
 export type Lecture = {
   /** Les revues qui ont le droit de compter, et qui tranchent. */
   retenues: Revue[];
@@ -245,8 +560,16 @@ export type Lecture = {
   /** Les lentilles exigées sans aucun accord retenu. */
   manquantes: string[];
   refusees: Verdict[];
-  /** Les accords rendus sur une autre tête que celle qui sera fusionnée (pas 5 du protocole). */
+  /**
+   * Les accords rendus sur une autre tête que celle qui sera fusionnée (pas 5 du protocole) ET
+   * qui n'y survivent pas (GOV-095). PROJECTION de `peremptions`, jamais une seconde liste : deux
+   * listes de la même chose divergent, et c'est celle qui est lue qui n'a pas été corrigée (RM-01).
+   */
   perimees: Verdict[];
+  /** Les accords périmés AVEC leur motif et les fichiers qui l'ont causé (GOV-095). */
+  peremptions: Peremption[];
+  /** Les accords rendus sur une autre tête et qui y SURVIVENT — imprimés, jamais tus (GOV-095). */
+  survivantes: Survivance[];
   /** Les accords portés par le poste qui signe `Auteur:`. */
   auteurSeRelit: Verdict[];
   /** Vrai si au moins une revue retenue vient d'un compte ≠ de celui de l'auteur de la PR. */
@@ -281,6 +604,20 @@ export type Entree = {
   auteurCompte?: string | null;
   /** Les codes de poste connus. Par défaut : `docs/agents.json`. */
   codes?: ReadonlySet<string>;
+  /**
+   * LA MESURE DU DELTA entre le commit jugé et la tête (GOV-095) — `fichiersEntre` par défaut,
+   * c'est-à-dire le vrai `git` du clone courant. Injectable pour que les témoins fassent varier
+   * le delta SEUL, sans construire un dépôt par cas (RM-11 : ce que le test fait varier n'a
+   * jamais de valeur par défaut — le témoin le passe toujours).
+   */
+  fichiersEntre?: (accord: string, tete: string) => string[] | null;
+  /**
+   * Le NUMÉRO de la PR jugée (GOV-095, troisième tour `securite`) : seule SON entrée du journal
+   * laisse survivre un accord. Absent ou `null` : aucune entrée n'est la sienne, rien ne survit.
+   */
+  numero?: number | null;
+  /** Le texte d'un fichier À LA TÊTE — `contenuALaTete` par défaut. Injectable pour les témoins. */
+  lireALaTete?: (tete: string, chemin: string) => string | null;
 };
 
 let codesEnCache: ReadonlySet<string> | null = null;
@@ -1344,6 +1681,12 @@ export function lentilleDeLaRevue(
   return { code: m[1]!, lentille: m[2]!.toLowerCase() };
 }
 
+/**
+ * Les deux MESURES de la survie (GOV-095), injectables par un témoin qui traverse la garde ou le
+ * composeur ENTIERS. Absentes : le vrai `git` du clone — c'est le seul chemin de production.
+ */
+export type MesuresDeSurvie = Pick<Entree, 'fichiersEntre' | 'lireALaTete'>;
+
 export function lireRevues(entree: Entree): Lecture {
   const codes = entree.codes ?? codesDePoste();
   const exigees = [...lentillesExigees(entree.risque).toutes];
@@ -1390,10 +1733,41 @@ export function lireRevues(entree: Entree): Lecture {
   const accords = verdicts.filter((x) => x.verdict === 'accepte');
   const manquantes = exigees.filter((l) => !accords.some((x) => x.lentille === l));
   const refusees = verdicts.filter((x) => x.verdict === 'refuse');
-  const perimees =
-    entree.tete === null || entree.tete === ''
-      ? []
-      : accords.filter((x) => exigees.includes(x.lentille) && x.commit !== entree.tete);
+  /**
+   * LA PÉREMPTION JUGE LE CODE, PLUS LE SHA (GOV-095). Un accord rendu sur une autre tête n'est
+   * périmé que si le DELTA entre les deux le justifie ; voir `accordSurvit` pour la règle et pour
+   * la raison de chaque cas fermé. Le sens d'écriture est celui de la défense : on prouve la
+   * SURVIE, et tout le reste tombe dans `peremptions`.
+   */
+  const peremptions: Peremption[] = [];
+  const survivantes: Survivance[] = [];
+  if (entree.tete !== null && entree.tete !== '') {
+    const tete = entree.tete;
+    const mesurer = entree.fichiersEntre ?? fichiersEntre;
+    // Un accord par lentille, mais plusieurs peuvent porter le MÊME commit : on ne relance pas
+    // `git` pour une réponse déjà obtenue.
+    const deja = new Map<string, string[] | null>();
+    for (const x of accords) {
+      if (!exigees.includes(x.lentille) || x.commit === tete) continue;
+      if (!deja.has(x.commit)) deja.set(x.commit, mesurer(x.commit, tete));
+      const survie = accordSurvit(x.lentille, deja.get(x.commit) ?? null, {
+        numero: entree.numero ?? null,
+        lire: (f) => (entree.lireALaTete ?? contenuALaTete)(tete, f),
+      });
+      if (survie.survit) {
+        survivantes.push({
+          code: x.code,
+          lentille: x.lentille,
+          commit: x.commit,
+          tete,
+          fichiers: survie.fichiers,
+        });
+      } else {
+        peremptions.push({ verdict: x, motif: survie.motif, fichiers: survie.fichiers });
+      }
+    }
+  }
+  const perimees = peremptions.map((p) => p.verdict);
   const auteurSeRelit =
     entree.auteurPoste === null ? [] : accords.filter((x) => x.code === entree.auteurPoste);
   const comptesDistinctsDeLAuteur =
@@ -1413,10 +1787,16 @@ export function lireRevues(entree: Entree): Lecture {
   if (refusees.length > 0) {
     raisons.push(`en refus : ${refusees.map((x) => `${x.code} · ${x.lentille}`).join(', ')}`);
   }
-  if (perimees.length > 0) {
+  /**
+   * LA PÉREMPTION DIT SON MOTIF, UNE PAR UNE (GOV-095). « périmée sur une autre tête » ne dit plus
+   * rien depuis qu'une autre tête ne suffit PAS à périmer : ce qui manque au relecteur, c'est
+   * POURQUOI celle-ci n'a pas survécu — un diff incalculable ne se répare pas comme un
+   * `docs/tasks.json` au delta.
+   */
+  for (const p of peremptions) {
     raisons.push(
-      `périmée(s) sur une autre tête que ${tete7} : ` +
-        perimees.map((x) => `${x.lentille} (jugé ${x.commit.slice(0, 7)})`).join(', ')
+      `périmée : ${p.verdict.lentille} (jugé ${p.verdict.commit.slice(0, 7)}, tête ${tete7}) — ` +
+        p.motif
     );
   }
   if (auteurSeRelit.length > 0) {
@@ -1456,15 +1836,29 @@ export function lireRevues(entree: Entree): Lecture {
     perimees.length === 0 &&
     auteurSeRelit.length === 0;
 
-  const detail = coche
-    ? `les ${exigees.length} lentilles (${exigees.join(', ')}) ont accepté sur ${tete7} — ` +
-      `${direLeRisque(entree.risque)} — « Relecteur ≠ auteur » vérifiée au niveau du poste (${entree.auteurPoste} ne rend aucun de ces avis, ` +
-      `charte §6)` +
-      (comptesDistinctsDeLAuteur
-        ? ''
-        : `, et NON au niveau des comptes GitHub : toutes les revues retenues viennent du compte de ` +
-          `l’auteur, ce dépôt n’en a qu’un (W13)`)
-    : [direLeRisque(entree.risque), ...raisons].join(' · ');
+  /**
+   * LA SURVIE SE DIT DANS LES DEUX CAS, ET C'EST TOUT L'ENJEU (GOV-095). Sans cette phrase, le
+   * corps publierait « les 4 lentilles ont accepté sur <tête> » alors que trois d'entre elles ont
+   * jugé un AUTRE commit : une phrase calculée et fausse est pire qu'un compteur tapé à la main,
+   * parce que personne ne la met en doute. Une survie silencieuse est invisible, donc
+   * inauditable ; celle-ci se conteste sans relire le code.
+   */
+  const survie =
+    survivantes.length === 0
+      ? ''
+      : ` — dont ${survivantes.length} accord(s) rendus sur un autre commit, qui SURVIVENT parce ` +
+        `que le delta ne juge aucun code : ${survivantes.map(direLaSurvivance).join(' ; ')}`;
+
+  const detail =
+    (coche
+      ? `les ${exigees.length} lentilles (${exigees.join(', ')}) ont accepté sur ${tete7} — ` +
+        `${direLeRisque(entree.risque)} — « Relecteur ≠ auteur » vérifiée au niveau du poste (${entree.auteurPoste} ne rend aucun de ces avis, ` +
+        `charte §6)` +
+        (comptesDistinctsDeLAuteur
+          ? ''
+          : `, et NON au niveau des comptes GitHub : toutes les revues retenues viennent du compte de ` +
+            `l’auteur, ce dépôt n’en a qu’un (W13)`)
+      : [direLeRisque(entree.risque), ...raisons].join(' · ')) + survie;
 
   return {
     retenues,
@@ -1474,6 +1868,8 @@ export function lireRevues(entree: Entree): Lecture {
     manquantes,
     refusees,
     perimees,
+    peremptions,
+    survivantes,
     auteurSeRelit,
     comptesDistinctsDeLAuteur,
     coche,
