@@ -28,7 +28,7 @@
  * (`null !== true` aussi vrai, mais `null == false` faux) conclurait juste par hasard, et faux à la
  * première condition un peu différente.
  */
-import { estObjet } from './lire-yaml';
+import { estObjet } from '../../../scripts/lib/lire-yaml';
 
 /** Une valeur d'expression GitHub. Les objets n'en sont pas : un chemin qui en désigne un rend `null`. */
 export type ValeurGh = string | number | boolean | null;

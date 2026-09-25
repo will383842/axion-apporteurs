@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `3625f6c` — 2026-09-25T06:41:19+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #88 (rien) · 2. #92 (rien) · 3. #82 (un contrôle requis rouge ou une revue manquante) · 4. #114 (un contrôle requis rouge ou une revue manquante) · 5. #91 (un conflit avec `main`) · 6. #93 (un conflit avec `main`) · 7. #99 (un conflit avec `main`) · 8. #116 (un conflit avec `main`) |
+| Où est `main` ? | `047c730` — 2026-09-25T10:31:47+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #88 (un conflit avec `main`) · 3. #91 (un conflit avec `main`) · 4. #92 (un conflit avec `main`) · 5. #93 (un conflit avec `main`) · 6. #114 (un conflit avec `main`) · 7. #116 (un conflit avec `main`) · 8. #120 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/106 tâches, reste 64.10 j |
-| Le prochain pas | fusionner #88, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #118 — 2026-09-23 |
 
-**Ce qu’on tape maintenant.** `gh pr view 88 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,14 +64,14 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | rien — fusionnable maintenant |
-| 2 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | rien — fusionnable maintenant |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
-| 4 | #114 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure | `t/lot-L0-02` | un contrôle requis rouge ou une revue manquante |
-| 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
-| 7 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un conflit avec `main` — à résoudre avant tout |
-| 8 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #114 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure | `t/lot-L0-02` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un conflit avec `main` — à résoudre avant tout |
+| 8 | #120 — feat(GOV-097): quatre lentilles pour l'argent, la securite et les donnees, deux pour le reste | `t/gov-097-risque-reserve` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -96,15 +96,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #88** — elle est en tête de file et ne bloque sur rien.
-
 **SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 46 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `3625f6c` (2026-09-25T06:41:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `047c730` (2026-09-25T10:31:47+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -232,6 +230,25 @@ garde lexicale qui cherche un motif de code dans un fichier lit aussi le comment
 motif. Le docblock qui explique le défaut faisait rougir la garde qui le ferme, sur son propre
 texte. Les commentaires se retirent avant de compter.
 
+**Relecture.** La tête `9ffb450` a été refusée par quatre lentilles. `simplicite` relevait quatre
+mécanismes parallèles à un existant, tous fermés : `perf-budgets` établit son périmètre par
+`fichiersSuivisOuRefus` au lieu de recopier le patron (GOV-046) ; les formes voisines du linter
+dérivent leurs noms des listes de base, et les quatre modules ajoutés hors périmètre sont retirés
+(GOV-076) ; `gov-sonde` réutilise `objetLisible` de `gov-pr` et dérive sa preuve datée de
+`DATE_ET_SHA` (GOV-048) ; le couple état/opération ne juge plus que les tâches de ce dépôt, celles
+d'ailleurs restant à l'attestation, une faute pour une famille (GOV-086). `securite` relevait deux
+échecs ouverts, fermés : un chemin suivi des deux côtés, comme `prisma/schema.prisma`, est ambigu et
+redemande son repère AFF-nn tant qu'il n'est pas qualifié `partners/` (GOV-048) ; une entrée
+sensible supprimée du registre compte comme réécrite et exige la section Attaque (GOV-078).
+`exactitude` relevait que le déclencheur par zone n'imprimait ce qu'il avait confronté qu'en cas
+d'échec : la ligne sort désormais sur toute PR (GOV-078). `mutation` relevait cinq survivants, qui
+avaient une cause commune : la fonction pure était testée, son branchement ne l'était pas. Chacun a
+désormais un témoin qui passe par l'appel réel, et il a été vu rougir sous son mutant. En route,
+deux faits mesurés : importer `gov-pr` tuait tout processus lancé hors de la racine, parce que son
+contrôle d'exhaustivité tournait au chargement ; et un plancher de titres compté sur le texte brut
+comptait des `it(` cités dans la prose, 7 au lieu de 5, si bien qu'il fallait le compter hors
+commentaires avant de pouvoir le confronter à autre chose que zéro.
+
 ### PR #113 — 2026-09-23 — feat(GOV-090): un label designe une SOURCE, jamais une vue, et un verbe hors depot se cite hors-depot/
 
 **Fait.** `partners/ADR-0019` tranche une question que rien ne tranchait : une vue dérivée est-elle
@@ -288,7 +305,7 @@ résolution de conflit n'est pas une fusion de deux textes : c'est un CHOIX, et 
 efface l'autre en silence. Une garde le dit — dans les limites de ce qu'elle balaye, et il faut
 savoir lesquelles.
 
-… 42 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 43 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
