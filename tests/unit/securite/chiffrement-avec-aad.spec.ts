@@ -4,7 +4,7 @@
  * à leur champ ; les empreintes de recherche ; l'adresse réseau réduite à une empreinte tronquée ;
  * la garde de schéma et des chemins d'écriture (`scripts/gates/schema-pii.ts`).
  *
- * LES CLÉS VIENNENT DE SEC-01 : `clesPii` reçoit un environnement et le fait juger par
+ * LES CLÉS VIENNENT DU SCHÉMA DES SECRETS (`src/lib/env.ts`) : `clesPii` reçoit un environnement et le fait juger par
  * `lireEnvironnement` — l'environnement de test est DÉRIVÉ de `NOMS_DES_SECRETS`, jamais recopié.
  * Toutes ses valeurs sont des valeurs de TEST manifestes (« temoin-sec08-… », octets 0 à 31).
  *
@@ -46,7 +46,7 @@ import {
   type Vue,
 } from '../../../scripts/gates/schema-pii';
 
-// ── l'environnement de TEST, dérivé des noms de SEC-01 ───────────────────────────────────────────
+// ── l'environnement de TEST, dérivé des noms de src/lib/env.ts ───────────────────────────────────────────
 
 const CLE_HEX = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0')).join('');
 const valeurTemoin = (nom: string): string => `temoin-sec08-${nom.toLowerCase()}-`.padEnd(48, '0');
@@ -106,7 +106,7 @@ const DEBUT_IV = 5;
 const DEBUT_ETIQUETTE = 17;
 const DEBUT_CHIFFRE = 33;
 
-describe('REQ-SEC-024 — les clés viennent de SEC-01, une par usage', () => {
+describe('REQ-SEC-024 — les clés viennent du schéma des secrets, une par usage', () => {
   it('REQ-SEC-024 : la clé de chiffrement est PII_ENCRYPTION_KEY, son kid est kidDe(valeur), et les trois usages ont trois clés', () => {
     expect(hex(CLES.chiffrement.octets)).toBe(CLE_HEX);
     expect(CLES.chiffrement.kid).toBe(kidDe(CLE_HEX));
@@ -127,7 +127,7 @@ describe('REQ-SEC-024 — les clés viennent de SEC-01, une par usage', () => {
     );
   });
 
-  it('REQ-SEC-024 : un environnement que SEC-01 refuse ne donne aucune clé — absente, trop courte ou partagée', () => {
+  it('REQ-SEC-024 : un environnement que lireEnvironnement refuse ne donne aucune clé — absente, trop courte ou partagée', () => {
     const cas: [Record<string, string | undefined>, string][] = [
       [{ ...ENV, PII_HASH_KEY: undefined }, 'PII_HASH_KEY : absente'],
       [{ ...ENV, PII_ENCRYPTION_KEY: 'ab'.repeat(16) }, 'PII_ENCRYPTION_KEY'],

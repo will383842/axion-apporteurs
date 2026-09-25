@@ -11,7 +11,7 @@
  *   empreinte de recherche = HMAC-SHA256(PII_HASH_KEY, "partners.empreinte.v1" ␟ type ␟ normalisé), 64 hex
  *   adresse réseau         = `empreinteAdresse` de la frontière (HMAC-SHA256 sous IP_HASH_SALT, 16 hex)
  *
- * LES CLÉS VIENNENT DE SEC-01, ET DE LUI SEUL. `clesPii` fait juger l'environnement par
+ * LES CLÉS VIENNENT DU SCHÉMA DES SECRETS (`src/lib/env.ts`), ET DE LUI SEUL. `clesPii` fait juger l'environnement par
  * `lireEnvironnement` (présence, longueur, égalité entre secrets, préfixes) et n'en tire que trois
  * valeurs, une par usage, sans dérivation. `ClesPii` est MARQUÉ : aucune autre fonction ne sait en
  * fabriquer un, donc aucune primitive ci-dessous ne s'appelle sous une clé tapée dans le code.
@@ -93,7 +93,7 @@ export class EchecAuthentificationPii extends ErreurPii {
   }
 }
 
-/** Un environnement que SEC-01 refuse : jamais un repli, jamais une clé devinée. */
+/** Un environnement que `lireEnvironnement` refuse : jamais un repli, jamais une clé devinée. */
 export class CleInvalidePii extends ErreurPii {
   constructor(message: string) {
     super('cle_invalide', message);
@@ -103,7 +103,7 @@ export class CleInvalidePii extends ErreurPii {
 /** Une entrée hors forme : refusée par un motif nommé, sans que le message la porte. */
 export class EntreeRefuseePii extends ErreurPii {}
 
-// ── les clés : trois usages, trois secrets de SEC-01 ─────────────────────────────────────────────
+// ── les clés : trois usages, trois secrets de src/lib/env.ts ─────────────────────────────────────────────
 
 /** La clé de chiffrement : 32 octets, et son `kid` (`kidDe` de sa valeur hexadécimale). */
 export interface CleChiffrementPii {
@@ -121,14 +121,14 @@ export type ClesPii = {
 } & { readonly [marqueDesCles]: 'ClesPii' };
 
 /**
- * Les clés, tirées d'un environnement que SEC-01 a jugé en ENTIER. Un refus lève `CleInvalidePii`
+ * Les clés, tirées d'un environnement que `lireEnvironnement` a jugé en ENTIER. Un refus lève `CleInvalidePii`
  * qui nomme les variables et leurs motifs (`formaterRefus`), jamais une valeur.
  */
 export function clesPii(source: Readonly<Record<string, string | undefined>>): ClesPii {
   const lu = lireEnvironnement(source);
   if (!lu.ok) {
     throw new CleInvalidePii(
-      `environnement refusé par SEC-01 — ${lu.refus.map(formaterRefus).join(' ; ')}`
+      `environnement refusé par src/lib/env.ts — ${lu.refus.map(formaterRefus).join(' ; ')}`
     );
   }
   const { PII_ENCRYPTION_KEY, PII_HASH_KEY, IP_HASH_SALT } = lu.env;

@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `310cf0c` — 2026-09-25T19:18:06+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #92 (rien) · 2. #124 (un contrôle requis rouge ou une revue manquante) · 3. #126 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #93 (un conflit avec `main`) |
+| Où est `main` ? | `fb5b3da` — 2026-09-25T20:02:03+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #91 (un conflit avec `main`) · 3. #92 (un conflit avec `main`) · 4. #93 (un conflit avec `main`) · 5. #126 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/109 tâches, reste 66.10 j |
-| Le prochain pas | fusionner #92, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #126 — 2026-09-25 |
 
-**Ce qu’on tape maintenant.** `gh pr view 92 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,12 +64,11 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | rien — fusionnable maintenant |
-| 2 | #124 — chore(GOV-099): cadrage de DM-06 — sourceCanal transporte, IBAN hors DM-06, glossaire | `t/cadrage-dm-06` | un contrôle requis rouge ou une revue manquante |
-| 3 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un contrôle requis rouge ou une revue manquante |
-| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -94,15 +93,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #92** — elle est en tête de file et ne bloque sur rien.
-
 **SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 49 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `310cf0c` (2026-09-25T19:18:06+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `fb5b3da` (2026-09-25T20:02:03+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -131,7 +128,7 @@ un ont chacun fait rougir leur contrôle.
 colonnes, et la garde les jugera. L'IBAN de la pièce RIB (DM-11) passera par `colonnesPii`. La
 double clé de rotation (HYP-E1-24) appartient à QA-T04 et QA-T13. Le module client unique
 `src/server/db.ts`, que `journal-sans-pii.ts` attribue à SEC-08, n'est pas dans les chemins de la
-tâche et n'est pas posé. Le passage de l'ADR-0013 à `accepte` appartient à l'architecte.
+tâche et n'est pas posé. Le passage de `partners/ADR-0013` à `accepte` appartient à l'architecte.
 
 **Appris.** La branche du 19/09 recopiait la normalisation IPv6 de SEC-10 et le HMAC d'adresse de
 SEC-07, arrivés sur main après elle : une branche reprise se relit contre le main du jour, pas
