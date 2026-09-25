@@ -43,7 +43,7 @@ de ces signaux est présent :
 | Signal | D'où il vient | Pourquoi |
 | --- | --- | --- |
 | une tâche de la PR (titre, `pr`, `Lot:` ; tête **et** base) porte `sensible` non vide | le registre | `argent`, `attribution`, `auth`, `espace`, `rgpd` : c'est l'argent, la sécurité et les données |
-| … ou `sensible` **absent** | le registre | un champ absent ne prouve rien — conservé de l'ADR-0012 |
+| … ou `sensible` **absent** | le registre | un champ absent ne prouve rien — conservé de `partners/ADR-0012` |
 | … ou `schema: true` | le registre | la lentille `schema` de l'architecte |
 | … ou une `zone` de `ZONES_A_RISQUE_ELEVE` (`argent`, `securite`) | le registre | la zone compte seule, même à `sensible: []` |
 | … ou une `zone` absente, ou que `scripts/lot/tasks.schema.json` ne déclare pas | le schéma, **lu** (RM-01) | une valeur imprévue n'est rien prouvé |
