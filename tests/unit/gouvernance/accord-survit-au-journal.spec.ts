@@ -244,6 +244,36 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
     ).toBe(false);
   });
 
+  it('REQ-GOV-011 · la liste blanche est la FORME d’une entrée par PR : tout autre fichier du journal PÉRIME', () => {
+    // 🔴 LE DÉFAUT QUE CE TÉMOIN FERME, relevé par la lentille `securite` (revue 5307855596) : la
+    // liste blanche désignait le DOSSIER, et une exclusion nommée (le README) n'en retranchait
+    // qu'un fichier. Or `gov:attributions` lit TOUT fichier suivi de `docs/journal/` : le fichier
+    // MENSUEL porte des entrées d'autres PR, qui attestent leurs lots ; un fichier de lot, un
+    // fichier de données, un sous-dossier ne sont pas l'entrée de CETTE PR. En cas de doute, on
+    // exclut : seule survit la forme `docs/journal/AAAA-MM-pr-<n>.md`.
+    for (const f of [
+      'docs/journal/2026-09.md',
+      'docs/journal/2026-09-lot-L-1-04.md',
+      'docs/journal/plancher.json',
+      'docs/journal/notes.md',
+      'docs/journal/2026-10/2026-10-pr-1.md',
+      'docs/journal/2026-09-pr-116.md.bak',
+      'docs/journal/2026-09-pr-.md',
+      'docs/journal/2026-09-PR-116.md',
+      'docs/journal/x2026-09-pr-116.md',
+    ]) {
+      expect(LECTEUR.accordSurvit('securite', [f]).survit, f).toBe(false);
+    }
+  });
+
+  it('REQ-GOV-011 · CONTRE-TÉMOIN de la forme : des entrées par PR survivent, sauf pour `exactitude`', () => {
+    const entrees = ['docs/journal/2026-09-pr-116.md', 'docs/journal/2026-10-pr-1.md'];
+    for (const l of ['securite', 'simplicite', 'schema', 'mutation']) {
+      expect(LECTEUR.accordSurvit(l, entrees).survit, l).toBe(true);
+    }
+    expect(LECTEUR.accordSurvit(LECTEUR.LENTILLE_DE_LA_PROSE, entrees).survit).toBe(false);
+  });
+
   it('REQ-GOV-011 · la lentille de la PROSE a UNE seule source : celle qu’exige tout risque est celle qui ne survit à rien', () => {
     // 🔴 LA PANNE QUE CE TÉMOIN FERME, relevée par la lentille `securite` : le littéral
     // `exactitude` était écrit DEUX fois — dans la liste des lentilles exigées et dans la règle de
@@ -313,6 +343,62 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
     expect(LECTEUR.fichiersEntre(c, t, dir)).toEqual(['docs/journal/2026-09-pr-102.md']);
     // Et la chaîne entière : la mesure nourrit la décision, et l'accord SURVIT.
     expect(LECTEUR.accordSurvit('securite', LECTEUR.fichiersEntre(c, t, dir)).survit).toBe(true);
+  });
+
+  it('REQ-GOV-011 · L’ATTAQUE DU PLANCHER, de bout en bout : 27 → 9999 dans le README périme les accords', () => {
+    // Le scénario exact de la revue `securite` 5307855596, joué contre un vrai `git` : accords
+    // posés au commit C, puis une tête T qui ne change QUE le nombre du plancher. Deux gardes
+    // bloquantes s'éteindraient ; aucun accord ne doit survivre.
+    const dir = depotJetable();
+    const ligne = (n: number) =>
+      `# Le journal\n\nPlancher : le journal couvre les PR de numéro **> ${n}**.\n`;
+    const c = ecrireEtCommiter(
+      dir,
+      {
+        'scripts/lot/revues.ts': 'export const x = 1;\n',
+        'docs/journal/README.md': ligne(27),
+        'docs/journal/2026-09-pr-116.md': 'une entrée\n',
+      },
+      'chore: socle'
+    );
+    const t = ecrireEtCommiter(dir, { 'docs/journal/README.md': ligne(9999) }, 'docs: plancher');
+    const lecture = LECTEUR.lireRevues({
+      revues: tourComplet(c),
+      risque: ELEVE,
+      tete: t,
+      auteurPoste: 'A05',
+      fichiersEntre: (a, b) => LECTEUR.fichiersEntre(a, b, dir),
+    });
+    expect(lecture.survivantes).toEqual([]);
+    expect(lecture.perimees.map((v) => v.lentille).sort()).toEqual([
+      'exactitude',
+      'mutation',
+      'securite',
+      'simplicite',
+    ]);
+    expect(lecture.coche).toBe(false);
+
+    // CONTRE-TÉMOIN, même dépôt, même commit d'accord : une tête qui ne touche QUE l'entrée de la
+    // PR laisse survivre les trois lentilles hors prose, et périme `exactitude`.
+    execFileSync('git', ['checkout', '--quiet', c], { cwd: dir, stdio: 'ignore' });
+    const t2 = ecrireEtCommiter(
+      dir,
+      { 'docs/journal/2026-09-pr-116.md': 'une entrée corrigée\n' },
+      'docs: journal'
+    );
+    const lecture2 = LECTEUR.lireRevues({
+      revues: tourComplet(c),
+      risque: ELEVE,
+      tete: t2,
+      auteurPoste: 'A05',
+      fichiersEntre: (a, b) => LECTEUR.fichiersEntre(a, b, dir),
+    });
+    expect(lecture2.survivantes.map((v) => v.lentille).sort()).toEqual([
+      'mutation',
+      'securite',
+      'simplicite',
+    ]);
+    expect(lecture2.perimees.map((v) => v.lentille)).toEqual([LECTEUR.LENTILLE_DE_LA_PROSE]);
   });
 
   it('REQ-GOV-011 · un RENOMMAGE rend ses DEUX chemins : la source comme la destination', () => {

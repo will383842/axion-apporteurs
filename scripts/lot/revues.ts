@@ -264,9 +264,10 @@ export type Verdict = {
  *
  *   1. L n'est pas `exactitude` — cette lentille juge la PROSE, c'est sa matière, et son accord
  *      ne survit donc à aucun commit ;
- *   2. ET l'ensemble des fichiers changés entre C et T est VIDE, ou n'est fait que d'ENTRÉES du
- *      journal — le préfixe `docs/journal/`, son mode d'emploi EXCLU : voir
- *      `CONFIGURATION_DU_DOSSIER`, qui dit pourquoi ce fichier-là ne juge pas rien.
+ *   2. ET l'ensemble des fichiers changés entre C et T est VIDE, ou n'est fait que d'ENTRÉES PAR
+ *      PR du journal — la forme `docs/journal/AAAA-MM-pr-<n>.md` (`ENTREE_DU_JOURNAL`), et RIEN
+ *      d'autre du dossier : ni son mode d'emploi (`CONFIGURATION_DU_DOSSIER` dit pourquoi), ni le
+ *      fichier mensuel, ni un fichier de lot.
  *
  * ⚠️ C'EST UNE GARDE RENDUE PLUS PERMISSIVE, et c'est l'objection la plus forte qu'on puisse lui
  * opposer. La réponse tient en un point : TOUT CAS AMBIGU ÉCHOUE FERMÉ, et chacun a son témoin
@@ -281,19 +282,20 @@ export type Verdict = {
  *     sa source a changé ;
  *   — un ADR, `docs/CONVENTIONS.md`, n'importe quel document normatif : PÉRIMÉ ;
  *   — `docs/journal/README.md` : PÉRIMÉ, bien qu'il soit sous le préfixe. Il porte le PLANCHER
- *     dont deux gardes bloquantes dérivent leur nombre — c'est une configuration, pas une entrée.
+ *     dont deux gardes bloquantes dérivent leur nombre — c'est une configuration, pas une entrée ;
+ *   — tout AUTRE fichier du dossier qui n'a pas la forme d'une entrée par PR : PÉRIMÉ.
  *
  * 🔑 LE PRÉFIXE DÉSIGNE UNE ENTRÉE, PAS UN DOSSIER, et cette précision-là a coûté une revue :
  * `CONFIGURATION_DU_DOSSIER` porte la mesure et l'attaque.
  *
- * 🔑 ET AUCUN DE CES QUATRE CAS N'EST ÉNUMÉRÉ DANS LE CODE. La liste blanche est UN SEUL préfixe ;
+ * 🔑 ET AUCUN DE CES CAS N'EST ÉNUMÉRÉ DANS LE CODE. La liste blanche est UNE SEULE forme ancrée ;
  * tout le reste périme par construction. Une liste noire de documents normatifs laisserait passer
  * le prochain dossier créé — c'est exactement le raisonnement des listes blanches de
  * `CHEMINS_A_RISQUE_ORDINAIRE`, et il vaut ici à plus forte raison : là-bas un oubli fait relire
  * DAVANTAGE, ici il ferait relire MOINS.
  */
 
-/** Le SEUL préfixe sous lequel un changement ne juge aucun code : une entrée de journal par PR. */
+/** Le dossier du journal. Seules ses ENTRÉES PAR PR (`ENTREE_DU_JOURNAL`) ne jugent aucun code. */
 export const CHEMIN_DU_JOURNAL = 'docs/journal/';
 
 /**
@@ -315,18 +317,16 @@ export const CHEMIN_DU_JOURNAL = 'docs/journal/';
  * s'éteignent, `securite`, `simplicite`, `schema` et `mutation` SURVIVENT, la case se coche, et le
  * `detail` publié affirme « le delta ne juge aucun code » : une phrase calculée et fausse.
  *
- * LE REMÈDE N'EST PAS UNE LISTE NOIRE — la doctrine d'un seul préfixe tient (voir plus haut).
- * C'est que le README d'un dossier est sa CONFIGURATION, pas son contenu : c'est vrai de tout
- * dossier, ce n'est pas une exception qu'on énumère. Il périme donc, à n'importe quelle profondeur
- * sous le préfixe, et quelle que soit sa casse — un système de fichiers insensible à la casse sert
- * le même fichier sous les trois formes, et le sens de cette insensibilité-ci est le sens FERMÉ.
+ * LE REMÈDE N'EST PAS UNE LISTE NOIRE. Un premier remède excluait ce seul fichier : il laissait
+ * survivre tout le reste du dossier, dont le fichier mensuel que `gov:attributions` lit aussi. Le
+ * remède tenu est une LISTE BLANCHE DE FORME (`ENTREE_DU_JOURNAL`) : ce README périme parce qu'il
+ * n'a pas la forme d'une entrée, à n'importe quelle profondeur et quelle que soit sa casse — sans
+ * qu'aucune ligne du code ne le nomme. Cette constante ne sert plus qu'à le DÉSIGNER aux témoins.
  *
- * ⚠️ CE QUI RESTE À SURVEILLER, ET QUI SE MESURE PAR UNE COMMANDE, jamais par une lecture : si un
- * jour une garde dérive quoi que ce soit d'un AUTRE fichier de ce dossier, ce fichier n'est plus
- * une entrée non plus, et sa place est ici. La question se rejoue ainsi :
+ * ⚠️ CE QUI RESTE À SURVEILLER, ET QUI SE MESURE PAR UNE COMMANDE : si un jour une garde dérive
+ * une donnée d'une ENTRÉE par PR autre que son titre d'entrée, la forme ne suffit plus. Rejouer :
  *
- *     for f in $(git ls-tree -r --name-only HEAD docs/journal/); do git grep -n -F "$f" HEAD \
- *       -- scripts .github src; done
+ *     git grep -n -e "docs/journal" -- scripts .github src
  */
 export const CONFIGURATION_DU_DOSSIER = 'README.md';
 
@@ -343,7 +343,7 @@ export type Survivance = {
   commit: string;
   /** La tête à laquelle il survit. */
   tete: string;
-  /** Les fichiers changés entre les deux — tous sous `docs/journal/`, ou aucun. */
+  /** Les fichiers changés entre les deux — tous des entrées par PR du journal, ou aucun. */
   fichiers: string[];
 };
 
@@ -355,19 +355,24 @@ export type Peremption = {
 };
 
 /**
- * Un chemin est-il une ENTRÉE du journal ? Trois conditions, et chacune a son témoin :
+ * ⛔ LA LISTE BLANCHE EST UNE FORME, PAS UNE EXCLUSION (second tour `securite`, revue 5307855596).
+ * Exclure le seul README laissait survivre tout AUTRE fichier du dossier — et `gov:attributions`
+ * lit TOUT fichier suivi de `docs/journal/` : le fichier MENSUEL (`2026-09.md`) porte les entrées
+ * d'autres PR, qui attestent leurs lots ; un fichier de lot, de données ou un sous-dossier n'est
+ * pas l'entrée d'UNE PR. En cas de doute on exclut : seule survit `docs/journal/AAAA-MM-pr-<n>.md`,
+ * au premier niveau, casse exacte. Tout le reste périme — y compris ce qui n'existe pas encore.
  *
- *   — le préfixe se lit au DÉBUT du chemin (`startsWith`), jamais n'importe où dedans : sans quoi
- *     `src/docs/journal/note.ts` — du code produit — passerait pour de la prose ;
- *   — aucun segment `..` : on ne remonte pas d'un préfixe ;
- *   — le fichier n'est pas la CONFIGURATION du dossier. Voir `CONFIGURATION_DU_DOSSIER`.
+ * Le motif est ANCRÉ aux deux bouts et DÉRIVÉ de `CHEMIN_DU_JOURNAL` (RM-01) : ni `includes`
+ * (`src/docs/journal/…` passerait), ni segment `..`, ni suffixe (`….md.bak`) ne s'y logent.
  */
+export const ENTREE_DU_JOURNAL = new RegExp(
+  '^' +
+    CHEMIN_DU_JOURNAL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+    String.raw`\d{4}-\d{2}-pr-[1-9]\d*\.md$`
+);
+
 function sousLeJournal(f: string): boolean {
-  if (!f.startsWith(CHEMIN_DU_JOURNAL)) return false;
-  const segments = f.split('/');
-  if (segments.includes('..')) return false;
-  const nom = segments[segments.length - 1] ?? '';
-  return nom.toLowerCase() !== CONFIGURATION_DU_DOSSIER.toLowerCase();
+  return ENTREE_DU_JOURNAL.test(f);
 }
 
 /**
@@ -403,7 +408,7 @@ export function accordSurvit(lentille: string, fichiers: readonly string[] | nul
       // d'emploi du dossier périme : il est SOUS le préfixe, et il ne juge pas rien. Le motif dit
       // donc ce que la règle mesure vraiment — ce qui n'est pas une ENTRÉE — et le nomme.
       motif:
-        `${dehors.length} fichier(s) changé(s) qui ne sont pas des entrées de ` +
+        `${dehors.length} fichier(s) changé(s) qui ne sont pas des entrées par PR de ` +
         `\`${CHEMIN_DU_JOURNAL}\` : ` +
         dehors.join(', '),
     };
@@ -467,9 +472,9 @@ export function direLaSurvivance(s: Survivance): string {
     (s.fichiers.length === 0
       ? 'les deux arbres sont identiques, aucun fichier ne les sépare'
       : // « entièrement sous `docs/journal/` » serait plus large que ce qui a été mesuré : le
-        // mode d'emploi du dossier y est aussi, et lui périme. La phrase dit ce qui a été
-        // vérifié — des ENTRÉES — et les nomme toutes, pour qu'on puisse la contester.
-        `le delta n’est fait que d’entrées de \`${CHEMIN_DU_JOURNAL}\` — ${s.fichiers.join(', ')}`)
+        // mode d'emploi et le fichier mensuel y sont aussi, et ils périment. La phrase dit ce qui a
+        // été vérifié — des ENTRÉES PAR PR — et les nomme toutes, pour qu'on puisse la contester.
+        `le delta n’est fait que d’entrées par PR de \`${CHEMIN_DU_JOURNAL}\` — ${s.fichiers.join(', ')}`)
   );
 }
 
