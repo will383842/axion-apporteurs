@@ -295,6 +295,13 @@ jobs:
         run: pnpm journal:sans-pii
       - name: La garde du journal sait rougir
         run: pnpm journal:sans-pii:prove
+      # SEC-08, REQ-SEC-024. Aucune colonne de personne en clair dans le schema (chiffree ou
+      # empreinte seulement, adresse reseau par empreinte seule) et aucun bloc ni empreinte ecrit
+      # hors de src/server/securite/pii.ts. Le vert imprime les champs, fichiers et sites confrontes.
+      - name: Donnees personnelles chiffrees, schema et chemins d ecriture
+        run: pnpm securite:schema-pii
+      - name: La garde des donnees personnelles sait rougir
+        run: pnpm securite:schema-pii:prove
       # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
       # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
       # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le
