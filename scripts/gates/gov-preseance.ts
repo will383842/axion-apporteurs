@@ -16,7 +16,7 @@
  *   — tout identifiant `REQ-…` cité ici existe au registre : un arbitrage qui renvoie à une exigence
  *     absente n'arbitre rien ;
  *   — RM-02 appliqué au document lui-même : une garde que `docs/gates.json` déclare SANS `preuveRouge`
- *     ne peut pas être invoquée ici comme si elle rougissait. Le premier jet invoquait `gov:check`
+ *     ne peut pas être invoquée ici comme si elle rougissait. Le premier jet invoquait la garde des termes interdits
  *     comme preuve d'un contrôle de vocabulaire que ce script — absent du dépôt — ne fait pas. La
  *     citation se cherche ENTRE ACCENTS GRAVES : le registre porte des identifiants qui sont des mots
  *     français ordinaires (`inertie`, `mutation`, `frontiere`, `sante`), et les chercher en prose fait
@@ -331,7 +331,7 @@ if (process.argv.includes('--prove')) {
 
   /** L'identifiant d'une garde du registre qui n'a jamais été vue rougir. */
   const gardeSansPreuve =
-    [...base.gardes.entries()].find(([, p]) => p === null)?.[0] ?? 'gov:check';
+    [...base.gardes.entries()].find(([, p]) => p === null)?.[0] ?? 'gov:termes-interdits';
 
   const TEMOINS: { famille: string; defaut: () => Source }[] = [
     {

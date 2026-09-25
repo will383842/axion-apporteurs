@@ -41,7 +41,7 @@
  * spécifications qui lancent `gh` ont rendu la suite non déterministe le 2026-09-05 (`pnpm test`
  * a rendu 1, puis 0, puis 0 sur le même arbre). Une valeur dérivée d'une source non reproductible
  * n'est pas dérivée, elle est échantillonnée. La vérification en ligne vit dans un mode séparé,
- * `pnpm gov:attestation --en-ligne`, que ni `pnpm test` ni `pnpm gov:check` n'appellent.
+ * `pnpm gov:attestation --en-ligne`, que ni `pnpm test` ni `pnpm gov:partiel` n'appellent.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -450,13 +450,17 @@ describe('GOV-038 — aucun appelant ne recompose une référence de PR à la ma
     expect(porteurs).toEqual(['scripts/lot/attestation.ts']);
   });
 
-  it('le fichier de la gate en ligne existe et n’est appelé ni par `pnpm test` ni par `gov:check`', () => {
+  it('le fichier de la gate en ligne existe et n’est appelé ni par `pnpm test` ni par `gov:partiel`', () => {
     // Une vérification qui interroge la forge ne doit JAMAIS entrer dans la suite : elle rendrait
     // le verdict dépendant du réseau, d'un jeton et d'un quota (mesuré le 2026-09-05).
     const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
       scripts: Record<string, string>;
     };
-    expect(pkg.scripts['gov:check'] ?? '').not.toContain('attestation');
+    expect(
+      pkg.scripts['gov:partiel'],
+      'la chaîne a disparu ou changé de nom : sans cette ligne, le témoin deviendrait MUET'
+    ).toBeDefined();
+    expect(pkg.scripts['gov:partiel']!).not.toContain('attestation');
     expect(readFileSync(join('scripts', 'gates', 'gov-attestation.ts'), 'utf8')).toContain(
       '--en-ligne'
     );

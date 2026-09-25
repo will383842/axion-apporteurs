@@ -24,7 +24,7 @@ export { SCHEMA_VERSION };
 
 /**
  * Les SEPT types, dans l'ordre de REQ-INT-004. C'est la seule liste littérale de noms d'événements
- * du dépôt : la garde `gov:check` refuse tout nom d'événement littéral hors `packages/contracts`.
+ * du dépôt : la garde `gov:termes-interdits` refuse tout nom d'événement littéral hors `packages/contracts`.
  */
 export const TYPES_EVENEMENT = [
   'client.cree',
