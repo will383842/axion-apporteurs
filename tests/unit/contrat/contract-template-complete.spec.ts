@@ -647,6 +647,8 @@ describe('REQ-JUR-003 — art. 4.6 amendé par W15 (HYP-W15-ART-4-6, HYP-W15-PAR
       "restent acquises au parrain d'origine",
       "L'accord du parrain d'origine n'est pas requis",
       "Le filleul, le parrain d'origine et le nouveau parrain en sont informés",
+      'sans indication du motif',
+      "Une reprise opérée après la date d'effet sur une commission acquise avant cette date est imputée au parrain d'origine",
     ]) {
       expect(al8, fragment).toContain(fragment);
     }

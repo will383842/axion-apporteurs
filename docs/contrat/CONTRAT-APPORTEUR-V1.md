@@ -343,9 +343,11 @@ changement prend effet à la date à laquelle la Société l'opère et ne vaut q
 parrainage nées des commissions du filleul acquises avant cette date restent acquises au parrain d'origine ;
 pour les commissions acquises après cette date, elles reviennent au nouveau parrain, le septième alinéa
 cessant de s'appliquer au parrain d'origine, dans la limite de la période de {{PARRAINAGE_MOIS}} mois
-courant depuis la signature du contrat du filleul, qui n'est ni prolongée ni rouverte.** L'accord du parrain
-d'origine n'est pas requis. Le filleul, le parrain d'origine et le nouveau parrain en sont informés par
-courrier électronique, avec la date d'effet du changement.
+courant depuis la signature du contrat du filleul, qui n'est ni prolongée ni rouverte.** Une reprise
+opérée après la date d'effet sur une commission acquise avant cette date est imputée au parrain d'origine,
+comme la somme de parrainage qu'elle corrige. L'accord du parrain d'origine n'est pas requis. Le filleul, le
+parrain d'origine et le nouveau parrain en sont informés par courrier électronique, avec la date d'effet du
+changement et sans indication du motif.
 
 ---
 
