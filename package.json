@@ -116,10 +116,14 @@
     "prevol": "tsx scripts/prevol.ts",
     "env:doc": "tsx scripts/env/documenter.ts",
     "red-first": "tsx scripts/gates/red-first.ts",
-    "red-first:prove": "tsx scripts/gates/red-first.ts --prove"
+    "red-first:prove": "tsx scripts/gates/red-first.ts --prove",
+    "mutation": "bash scripts/gates/stryker.sh",
+    "mutation:prove": "tsx scripts/gates/mutation.ts --prove"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
     "@testcontainers/postgresql": "12.1.0",
     "@testcontainers/redis": "12.1.0",
     "@types/node": "^22.10.2",

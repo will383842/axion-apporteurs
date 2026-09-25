@@ -14,9 +14,9 @@
 #
 # CE QUI MANQUE ENCORE ICI. `docs/gates.json` décrit `gate-nightly` comme portant aussi : le
 # contrat réel de l'API gouv (INT-T09), les heartbeats (QA-T19), la réconciliation quotidienne
-# (INT-T08), le ZAP baseline (QA-T07 et QA-T19), l'audit de dépendances, Stryker complet (QA-T30),
-# le drill de restauration mensuel (QA-T12) et le drill de résilience trimestriel (QA-T27).
-# Aucun de ces contrôles n'existe encore. Chaque tâche citée ajoute SON job ici, au moment où elle
+# (INT-T08), le ZAP baseline (QA-T07 et QA-T19), l'audit de dépendances, le drill de restauration
+# mensuel (QA-T12) et le drill de résilience trimestriel (QA-T27). Aucun de ces contrôles n'existe
+# encore. Stryker complet (QA-T30) a le sien : le job `mutation`, plus bas. Chaque tâche citée ajoute SON job ici, au moment où elle
 # livre son contrôle — pas avant, pour ne pas poser un job vide qui verdit sans rien mesurer.
 # Est aussi à ouvrir : le REJEU des `fixtureRouge` (`scripts/gates/prove.sh <id>` : injecter la
 # fixture, attendre un rouge). `gates:prouvees` vérifie qu'une fixture est NOMMÉE, jamais qu'elle
@@ -74,3 +74,24 @@ jobs:
       # `lot:composer --now`, et un rouge qui depend de l heure du lancement ne se rejoue pas.
       - name: Les lecons sont consolidees depuis moins de 7 jours
         run: pnpm gov:lecons --now $(date -u +%F)
+
+  # QA-T30, REQ-QA-002 — Stryker sur `src/domain/**`. JOB SEPARE, pour la meme raison que
+  # `lecons-fraiches` : le job des gates est rouge par construction tant que la phase -1 n est pas
+  # sortie. Ici et pas en porte A : une passe complete du domaine ne tient pas dans une PR.
+  # Le seuil est DECLARE dans `stryker.config.json` (`thresholds.break`) et TENU : sous lui, la passe
+  # sort en non nul, et chaque mutant non detecte est NOMME par `scripts/gates/mutation.ts`.
+  mutation:
+    name: Mutation du domaine — seuil declare et tenu, survivants nommes
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # La preuve d abord : si le lecteur du rapport ne sait plus rougir, son verdict ne vaut rien.
+      - name: Le lecteur du rapport de mutation sait rougir
+        run: pnpm mutation:prove
+      - name: Stryker sur src/domain, seuil declare dans stryker.config.json
+        run: pnpm mutation

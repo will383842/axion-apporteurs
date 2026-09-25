@@ -764,6 +764,18 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'en 1 puis en 0 sur un dépôt git jetable dans la même spec ; ⛔ ce témoin d’effet ne vit pas ' +
         'dans `REFUS`. Dette DÉCLARÉE.',
     },
+    // ── QA-T30 : UNE sortie, à code VARIABLE ────────────────────────────────────────────────
+    'scripts/gates/mutation.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'QA-T30 — le lecteur du rapport de Stryker. `process.exit(decision.code)` : sortie TERMINALE à ' +
+        'code variable, commune au mode normal et à `--prove`. La décision est une fonction pure vue ' +
+        'rendre 1 sur chaque famille (score-de-mutation.spec.ts), et la chaîne entière (stryker.sh, ' +
+        'Stryker, ce lecteur) est vue sortir en non nul puis en 0 sur un projet jetable dans la même ' +
+        'spec ; ⛔ ce témoin d’effet ne vit pas dans `REFUS`. Dette DÉCLARÉE.',
+    },
   };
 
   it('REQ-GOV-032 — le compte DÉRIVÉ du diff égale le compte DÉCLARÉ, fichier par fichier', () => {
@@ -1044,7 +1056,9 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 56 to be 55
     //
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(56);
+    // 🔧 56 → 57 par QA-T30 (même lot), ARBITRÉ et non subi : `scripts/gates/mutation.ts` naît avec
+    // UNE sortie à code variable.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(57);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
