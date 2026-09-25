@@ -459,19 +459,22 @@ export function accordSurvit(
  * 🔴 SEUL UN FICHIER ORDINAIRE SE LIT (veto `securite`, revue 5316791878). Pour un lien
  * symbolique (mode 120000), `git show` rend la CIBLE du lien, pas le contenu que `gov:etat` et
  * `gov:attributions` lisent en le suivant : une entrée devenue lien vers l'entrée d'une autre PR
- * aurait fait survivre les accords. Le mode est lu par `git ls-tree` à la tête, et tout autre
- * mode que 100644 (lien, exécutable, sous-module) rend `null`.
+ * aurait fait survivre les accords. Le mode de CE SEUL objet est lu par `git cat-file
+ * --batch-check=%(objectmode)` — une consultation, pas une énumération de l'arbre : celle-ci
+ * n'appartient qu'à `fichiers-suivis.ts` (REQ-CPL-018). Tout autre mode que 100644 (lien,
+ * exécutable, sous-module), un objet absent ou un git qui ne connaît pas l'atome rendent `null`.
  */
 export function contenuALaTete(tete: string, chemin: string, cwd?: string): string | null {
   const t = tete.trim();
   if (!/^[0-9a-f]{7,40}$/.test(t) || !ENTREE_DU_JOURNAL.test(chemin)) return null;
   try {
-    const arbre = execFileSync('git', ['ls-tree', t, '--', chemin], {
+    const mode = execFileSync('git', ['cat-file', '--batch-check=%(objectmode)'], {
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
+      input: `${t}:${chemin}\n`,
+      stdio: ['pipe', 'pipe', 'ignore'],
       ...(cwd === undefined ? {} : { cwd }),
     });
-    if (!arbre.startsWith('100644 blob ')) return null;
+    if (mode.trim() !== '100644') return null;
     return execFileSync('git', ['show', `${t}:${chemin}`], {
       encoding: 'utf8',
       maxBuffer: 64e6,
