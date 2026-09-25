@@ -989,7 +989,14 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     //
     //     scripts/prevol.ts : 6 exits ajoutés, 4 déclarés
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 50 to be 48
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(50);
+    //
+    // 🔧 50 → 51 par SEC-08, ARBITRÉ et non subi. `scripts/gates/schema-pii.ts` naît avec UNE
+    // sortie à code variable. Le cliquet a rougi dans ses deux tests, dans l'ordre — l'identité
+    // en Gate A (run 36173435743), puis, la déclaration posée, le compte (`vitest -t`) :
+    //
+    //     scripts/gates/schema-pii.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 51 to be 50
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(51);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
