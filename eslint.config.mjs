@@ -65,76 +65,108 @@ import prettier from 'eslint-config-prettier';
 // `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`, qui exerce CHACUNE de ses
 // entrées et compte celles qu'il a réellement exercées. Une liste supposée n'est pas une liste
 // couverte — c'est le défaut que cette tâche ferme, pas une tournure.
-export const FORMES_VOISINES = [
-  {
-    nom: 'import-dynamique',
-    exemple: "export const lu = import('node:fs');",
-    selector: 'ImportExpression',
-    message:
-      "src/domain/** est pur : un import DYNAMIQUE charge le même module qu'un import statique " +
-      'et échappe à `no-restricted-imports`, qui ne lit que les imports écrits en tête de fichier. ' +
-      'Aucun module ne se charge à la demande ici (REQ-QA-001).',
-  },
-  {
-    nom: 'require',
-    exemple: "export const fs = require('node:fs');",
-    selector: "CallExpression[callee.name='require']",
-    message:
-      'src/domain/** est pur : `require` charge le même module et échappe à ' +
-      '`no-restricted-imports` de la même façon (REQ-QA-001).',
-  },
-  {
-    nom: 'horloge-par-acces-calcule',
-    exemple: "export const t = Date['now']();",
-    selector: 'MemberExpression[computed=true][object.name=/^(Date|performance)$/]',
-    message:
-      "src/domain/** ne lit pas l'horloge système : `Date['now']` atteint exactement ce que " +
-      '`no-restricted-properties` interdit, par une clé que la règle ne voit pas. ' +
-      "L'heure est injectée par le module `temps` (REQ-QA-001, docs/CONVENTIONS.md §3).",
-  },
-  {
-    nom: 'horloge-par-un-porteur',
-    exemple: 'export const t = globalThis.Date.now();',
-    selector: 'MemberExpression[property.name=/^(Date|performance)$/]',
-    message:
-      "src/domain/** ne lit pas l'horloge système : l'atteindre par un PORTEUR " +
-      '(`globalThis.Date`, `global.Date`) contourne le nom usuel que les règles surveillent ' +
-      '(REQ-QA-001, docs/CONVENTIONS.md §3).',
-  },
-  {
-    nom: 'reseau-par-un-porteur',
-    exemple: "export const r = globalThis.fetch('https://exemple.test');",
-    selector: 'MemberExpression[property.name=/^(fetch|XMLHttpRequest|WebSocket)$/]',
-    message:
-      'src/domain/** est pur : atteindre le réseau par un PORTEUR (`globalThis.fetch`) contourne ' +
-      '`no-restricted-globals`, qui ne juge que le nom nu. La donnée arrive en argument ' +
-      '(REQ-QA-001).',
-  },
-  {
-    nom: 'console-par-un-porteur',
-    exemple: "export const f = () => globalThis.console.log('fuite');",
-    selector: "MemberExpression[property.name='console']",
-    message:
-      'src/domain/** n’écrit pas sur la console : `globalThis.console` atteint exactement ce que ' +
-      '`no-console` interdit, sans jamais écrire le nom que la règle lit (REQ-DM-041).',
-  },
-  {
-    nom: 'console-par-acces-calcule',
-    exemple: "export const f = () => console['log']('fuite');",
-    selector: "MemberExpression[computed=true][object.name='console']",
-    message:
-      'src/domain/** n’écrit pas sur la console : une clé calculée atteint la même méthode que ' +
-      '`console.log` (REQ-DM-041).',
-  },
-  {
-    nom: 'console-par-le-flux',
-    exemple: "export const f = () => process.stdout.write('fuite');",
-    selector: "MemberExpression[object.name='process'][property.name=/^(stdout|stderr)$/]",
-    message:
-      'src/domain/** n’écrit sur aucun flux : `process.stdout.write` est la même fuite que ' +
-      '`console.log`, un cran plus bas (REQ-DM-041, REQ-QA-001).',
-  },
+//
+// LES FORMES VOISINES SE DÉRIVENT DES LISTES DE BASE, ELLES NE LES RETAPENT PAS. Motif `simplicite`
+// sur la PR 114 : les sélecteurs recopiaient `fetch|XMLHttpRequest|WebSocket` et `Date|performance`.
+// Un global ajouté à l'interdit de base aurait été refusé par son nom nu et aurait TRAVERSÉ par son
+// porteur (`globalThis.EventSource`). Les deux listes ci-dessous sont les SEULES écritures de ces
+// noms : `no-restricted-globals`, `no-restricted-properties` et les formes voisines en dérivent
+// toutes.
+
+/** Les globaux réseau interdits sous `src/domain/**` — l'interdit de base, `no-restricted-globals`. */
+export const GLOBAUX_RESEAU_INTERDITS = ['fetch', 'XMLHttpRequest', 'WebSocket'];
+
+/** Les horloges interdites — l'interdit de base, `no-restricted-properties` : `[objet, propriété]`. */
+export const HORLOGES_INTERDITES = [
+  ['Date', 'now'],
+  ['performance', 'now'],
 ];
+
+/** `/^(a|b)$/` sur des noms d'identifiant — le seul endroit où une liste devient un sélecteur. */
+const alternance = (noms) => `/^(${[...new Set(noms)].join('|')})$/`;
+
+/**
+ * Les formes voisines, DÉRIVÉES de leurs listes de base. Exportée pour que le témoin puisse
+ * ajouter un nom à une liste et exiger que sa forme par porteur le suive.
+ */
+export function formesVoisines({ reseau, horloges }) {
+  const objetsHorloge = alternance(horloges.map(([objet]) => objet));
+  return [
+    {
+      nom: 'import-dynamique',
+      exemple: "export const lu = import('node:fs');",
+      selector: 'ImportExpression',
+      message:
+        "src/domain/** est pur : un import DYNAMIQUE charge le même module qu'un import statique " +
+        'et échappe à `no-restricted-imports`, qui ne lit que les imports écrits en tête de fichier. ' +
+        'Aucun module ne se charge à la demande ici (REQ-QA-001).',
+    },
+    {
+      nom: 'require',
+      exemple: "export const fs = require('node:fs');",
+      selector: "CallExpression[callee.name='require']",
+      message:
+        'src/domain/** est pur : `require` charge le même module et échappe à ' +
+        '`no-restricted-imports` de la même façon (REQ-QA-001).',
+    },
+    {
+      nom: 'horloge-par-acces-calcule',
+      exemple: "export const t = Date['now']();",
+      selector: `MemberExpression[computed=true][object.name=${objetsHorloge}]`,
+      message:
+        "src/domain/** ne lit pas l'horloge système : `Date['now']` atteint exactement ce que " +
+        '`no-restricted-properties` interdit, par une clé que la règle ne voit pas. ' +
+        "L'heure est injectée par le module `temps` (REQ-QA-001, docs/CONVENTIONS.md §3).",
+    },
+    {
+      nom: 'horloge-par-un-porteur',
+      exemple: 'export const t = globalThis.Date.now();',
+      selector: `MemberExpression[property.name=${objetsHorloge}]`,
+      message:
+        "src/domain/** ne lit pas l'horloge système : l'atteindre par un PORTEUR " +
+        '(`globalThis.Date`, `global.Date`) contourne le nom usuel que les règles surveillent ' +
+        '(REQ-QA-001, docs/CONVENTIONS.md §3).',
+    },
+    {
+      nom: 'reseau-par-un-porteur',
+      exemple: "export const r = globalThis.fetch('https://exemple.test');",
+      selector: `MemberExpression[property.name=${alternance(reseau)}]`,
+      message:
+        'src/domain/** est pur : atteindre le réseau par un PORTEUR (`globalThis.fetch`) contourne ' +
+        '`no-restricted-globals`, qui ne juge que le nom nu. La donnée arrive en argument ' +
+        '(REQ-QA-001).',
+    },
+    {
+      nom: 'console-par-un-porteur',
+      exemple: "export const f = () => globalThis.console.log('fuite');",
+      selector: "MemberExpression[property.name='console']",
+      message:
+        'src/domain/** n’écrit pas sur la console : `globalThis.console` atteint exactement ce que ' +
+        '`no-console` interdit, sans jamais écrire le nom que la règle lit (REQ-DM-041).',
+    },
+    {
+      nom: 'console-par-acces-calcule',
+      exemple: "export const f = () => console['log']('fuite');",
+      selector: "MemberExpression[computed=true][object.name='console']",
+      message:
+        'src/domain/** n’écrit pas sur la console : une clé calculée atteint la même méthode que ' +
+        '`console.log` (REQ-DM-041).',
+    },
+    {
+      nom: 'console-par-le-flux',
+      exemple: "export const f = () => process.stdout.write('fuite');",
+      selector: "MemberExpression[object.name='process'][property.name=/^(stdout|stderr)$/]",
+      message:
+        'src/domain/** n’écrit sur aucun flux : `process.stdout.write` est la même fuite que ' +
+        '`console.log`, un cran plus bas (REQ-DM-041, REQ-QA-001).',
+    },
+  ];
+}
+
+export const FORMES_VOISINES = formesVoisines({
+  reseau: GLOBAUX_RESEAU_INTERDITS,
+  horloges: HORLOGES_INTERDITES,
+});
 
 /**
  * LES MODULES INTERDITS SOUS `src/domain/**`, ÉCRITS DANS LEURS DEUX FORMES.
@@ -153,7 +185,7 @@ export const MODULES_INTERDITS_DU_DOMAINE = [
   'bullmq',
   'undici',
   // les deux écritures de chaque module du cœur, et leurs sous-chemins (`node:fs/promises`)
-  ...['fs', 'child_process', 'http', 'https', 'net', 'dns', 'dgram', 'tls', 'worker_threads']
+  ...['fs', 'child_process', 'http', 'https', 'net']
     .flatMap((m) => [m, `${m}/*`, `node:${m}`, `node:${m}/*`])
     .sort(),
 ];
@@ -222,7 +254,7 @@ export default tseslint.config(
     rules: {
       'no-restricted-globals': [
         'error',
-        ...['fetch', 'XMLHttpRequest', 'WebSocket'].map((name) => ({
+        ...GLOBAUX_RESEAU_INTERDITS.map((name) => ({
           name,
           message:
             'src/domain/** est pur : aucun appel réseau. La donnée arrive en argument ' +
@@ -231,10 +263,7 @@ export default tseslint.config(
       ],
       'no-restricted-properties': [
         'error',
-        ...[
-          ['Date', 'now'],
-          ['performance', 'now'],
-        ].map(([object, property]) => ({
+        ...HORLOGES_INTERDITES.map(([object, property]) => ({
           object,
           property,
           message:

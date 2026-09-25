@@ -36,11 +36,20 @@ import {
   // qui divergerait au premier ajout et laisserait le test vert sur une forme que le linter
   // n'applique plus (RM-01). La forme du module est déclarée ci-dessous, et confrontée.
 } from '../../../eslint.config.mjs';
+// @ts-expect-error — même raison : le module est lu tel que le linter le lit.
+import * as configurationLue from '../../../eslint.config.mjs';
 
 /** Une forme voisine, telle que la configuration la déclare. */
 type FormeVoisine = { nom: string; exemple: string; selector: string; message: string };
 
 const FORMES_VOISINES = FORMES_LUES as FormeVoisine[];
+
+/** Le module entier, lu pour ses listes de BASE et la fonction qui en dérive les formes voisines. */
+const configuration = configurationLue as {
+  formesVoisines: (bases: { reseau: string[]; horloges: string[][] }) => unknown[];
+  GLOBAUX_RESEAU_INTERDITS: string[];
+  HORLOGES_INTERDITES: string[][];
+};
 
 /**
  * Le chemin sous lequel le bac d'essai est JUGÉ. `lintText` applique la configuration du CHEMIN
@@ -100,6 +109,65 @@ describe('src/domain — chaque interdit juge ses formes voisines (GOV-076)', ()
       `   ${exercees.length} forme(s) voisine(s) réellement exercée(s) : ${exercees.join(', ')}`
     );
     expect(exercees).toEqual(FORMES_VOISINES.map((f) => f.nom));
+  });
+
+  it('REQ-QA-001 — une forme voisine SUIT sa liste de base : un nom ajouté à l’interdit est couvert par son porteur', async () => {
+    // 🔴 Motif `simplicite` sur 9ffb450 : les sélecteurs voisins RETAPAIENT `fetch|XMLHttpRequest|
+    // WebSocket` et `Date|performance`. Un global ajouté à `no-restricted-globals` (EventSource)
+    // aurait été refusé par son nom nu et aurait TRAVERSÉ par `globalThis.EventSource`. Le témoin
+    // ajoute un nom à chaque liste de base, dérive les formes, et exige que le porteur rougisse.
+    const derive = configuration.formesVoisines;
+    expect(typeof derive, 'les formes voisines ne se dérivent pas de leurs listes de base').toBe(
+      'function'
+    );
+    const reseau = [...configuration.GLOBAUX_RESEAU_INTERDITS, 'EventSource'];
+    const horloges = [...configuration.HORLOGES_INTERDITES, ['Temporal', 'Now']];
+    const formes = derive({ reseau, horloges }) as FormeVoisine[];
+    const juge = new ESLint({
+      overrideConfigFile: true,
+      overrideConfig: {
+        rules: {
+          'no-restricted-syntax': [
+            'error',
+            ...formes.map(({ selector, message }) => ({ selector, message })),
+          ],
+        },
+      },
+    });
+    for (const ligne of [
+      "export const e = new globalThis.EventSource('/flux');",
+      'export const t = globalThis.Temporal.Now;',
+      "export const t = Temporal['Now'];",
+    ]) {
+      const [r] = await juge.lintText(`${ligne}\n`, { filePath: 'bac.js' });
+      expect(
+        (r?.messages ?? []).filter((m) => m.severity === 2).length,
+        `« ${ligne} » traverse alors que son nom est dans la liste de base`
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('REQ-QA-001 — chaque nom interdit par la configuration RÉELLE est refusé par son porteur', async () => {
+    // L'autre sens : pas sur une liste fabriquée, sur ce que le linter applique au domaine.
+    const regleDe = (await eslint.calculateConfigForFile(SOUS_LE_DOMAINE)).rules ?? {};
+    const globaux = (regleDe['no-restricted-globals'] as { name: string }[]).slice(1);
+    const objets = new Set(
+      (regleDe['no-restricted-properties'] as { object: string }[]).slice(1).map((p) => p.object)
+    );
+    expect(globaux.length, 'aucun global réseau interdit : le témoin serait vide').toBeGreaterThan(
+      0
+    );
+    expect(objets.size, 'aucune horloge interdite : le témoin serait vide').toBeGreaterThan(0);
+    for (const ligne of [
+      ...globaux.map(({ name }) => `export const x = globalThis.${name};`),
+      ...[...objets].map((o) => `export const x = globalThis.${o};`),
+      ...[...objets].map((o) => `export const x = ${o}['now'];`),
+    ]) {
+      expect(
+        (await regles(ligne, SOUS_LE_DOMAINE)).map((f) => f.regle),
+        `« ${ligne} » traverse sous ${SOUS_LE_DOMAINE}`
+      ).toContain('no-restricted-syntax');
+    }
   });
 
   it('REQ-QA-001 — un module du cœur importé SANS son préfixe est refusé comme avec', async () => {
