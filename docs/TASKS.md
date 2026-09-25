@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**268 taches · 201.35 j estimes.**
+**270 taches · 202.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 106 | 82.35 | 21 |
+| 0 — Socle technique | 108 | 83.35 | 21 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -1590,6 +1590,16 @@ Couvre : `REQ-GOV-031`, `REQ-GOV-012`
 
 **Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
 
+### GOV-095 — Un accord de lentille survit a un commit qui ne touche que le journal
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-011`, `REQ-GOV-013`
+
+**Acceptation.** LE DEFAUT, LU DANS LE CODE. `scripts/lot/revues.ts` lie un accord au SHA DE LA TETE et jamais au CODE JUGE : `accords.filter((x) => exigees.includes(x.lentille) && x.commit !== entree.tete)`. Tout commit de plus perime donc TOUS les accords exiges, quel que soit ce qu'il change. MESURE A REJOUER, pas a recopier, sur la branche `t/gov-check-homonymie` de la demande de fusion 102 : `git diff --name-only 8ef35a3 8891d53` ne rend QUE `docs/journal/2026-09-pr-102.md` — une phrase de prose du journal — et cette tete-la a pourtant perime les accords de `securite`, de `schema` et de `mutation`, qu'il a fallu refaire sur un code identique au bit pres. LA REGLE A LIVRER, ETROITE EXPRES. Un accord rendu par un poste sur la lentille L au commit C survit a la tete T si, ET SEULEMENT SI : (1) L n'est pas `exactitude` — cette lentille juge la prose, c'est sa matiere, son accord ne survit a aucune reecriture ; ET (2) l'ensemble des fichiers changes entre C et T est VIDE, ou entierement contenu sous `docs/journal/`. TOUT LE RESTE PERIME, ET CHAQUE CAS AMBIGU ECHOUE FERME : un diff que `git` ne peut pas calculer (commit inconnu du clone, sortie inattendue) perime et le refus DIT laquelle des deux extremites manque ; un delta qui touche `docs/tasks.json` ou `docs/requirements.json` perime, parce que ces fichiers CHANGENT LE COMPORTEMENT DE LA GARDE — `gov:pr` y lit `sensible`, `schema` et `paths` ; un delta qui touche une vue derivee ou un document normatif perime. La liste blanche est UN SEUL prefixe : rien n'enumere les documents normatifs, et c'est ce qui rend l'oubli impossible. CE QUE LA SORTIE DOIT DIRE. Une survie silencieuse est inauditable : quand un accord survit, `pnpm gov:pr --pr <n>` l'IMPRIME — le poste, la lentille, le sha de l'accord, le sha de la tete, et LA LISTE DES FICHIERS changes entre les deux — et la phrase publiee au corps de la demande de fusion cesse d'affirmer que tout a ete juge sur la tete. Un lecteur doit pouvoir contester la survie sans relire le code. ⚠️ CETTE GARDE DEVIENT PLUS PERMISSIVE : c'est l'objection que la lentille `securite` doit poser, et le travail est de rendre le refus impossible a formuler. La MESURE (`git`) est separee de la DECISION (pure), sur le modele de `estAncetreDe`. TEMOINS EXIGES, chacun vu rougir avant le code : un accord `securite` dont le seul delta est un fichier de `docs/journal/` SURVIT ; le MEME delta pour `exactitude` PERIME ; un delta qui touche `docs/tasks.json` PERIME ; un commit d'accord inconnu du depot PERIME et le refus le dit ; un depot git reel construit pour le temoin prouve que la MESURE elle-meme rend la liste attendue ; CONTRE-TEMOIN : un accord rendu sur la tete elle-meme coche sans qu'aucune survie soit imprimee, et `pnpm gov:pr:prove` reste vert sur ses familles, dont `lentille_perimee`.
+
+**Tests.** `tests/unit/gouvernance/accord-survit-au-journal.spec.ts`
+
 ### GOV-096 — `gov:pr` ne sait pas lire une PR de LOT : le titre ne nomme qu une tache, `t.pr` n est ecrit qu apres la fusion, et aucune PR de lot n est fusionnable
 
 `0.5 j` · zone `gouvernance` · aucune dependance
@@ -1652,6 +1662,16 @@ Le label reste muet a 85 % apres ce geste : le dis-mutiser demande un discrimina
 Seuls `scripts/`, `src/` et `tests/` sont confrontes par la famille des fichiers hors `paths`. Les entrees `docs/` de cette tache sont declarees par honnetete, pas par necessite de garde — ce qui est une illustration de plus du defaut A.
 
 **Tests.** `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` · `tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts` · `tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts`
+
+### GOV-097 — Quatre lentilles seulement pour l argent, la securite et les donnees, deux pour le reste ; une inexactitude de prose n est plus un motif de refus
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-011`
+
+**Acceptation.** DECISION DE WILL, proprietaire, du 2026-09-25, en reponse a « pourquoi c est si long ». MESURE QUI L OUVRE, rapportee avec la decision : sept fusions le 22/09, puis deux, une, une ; 156 des 207 taches restantes en risque ELEVE, donc relues par quatre lentilles, et chaque refus fait relire les quatre. (1) QUATRE LENTILLES SEULEMENT POUR L ARGENT, LA SECURITE ET LES DONNEES ; DEUX (exactitude + securite) POUR TOUT LE RESTE. `risqueDeLaPr()` (`scripts/lot/revues.ts`, la seule derivation, appelee par `gov:pr` et le composeur du corps) rend ELEVE si et seulement si l un de ces signaux est present : une tache de la PR (titre, `pr`, `Lot:` ; tete ET base) porte un `sensible` non vide ou ABSENT, `schema: true`, une `zone` argent ou securite, une `zone` absente ou inconnue du schema du registre ; le label `schema` ou un chemin de schema ; un fichier dans une zone sensible du code ; un fichier de la garde des revues, de la CI, d un dossier cache, de configuration a la racine ou de `config/` ; un diff vide, une liste incomplete, aucune tache resolue, un registre de base illisible (echec FERME, conserve). CE QUI CESSE D ELEVER : une zone hors {gouvernance, qualite} autre que argent et securite avec `sensible: []`, et un fichier de code produit hors zones sensibles. La liste des zones et des segments sensibles est une DONNEE nommee (`ZONES_A_RISQUE_ELEVE`, `SEGMENTS_DES_ZONES_SENSIBLES`, `DOSSIERS_DU_PROCESSUS`), les zones connues se LISENT dans `scripts/lot/tasks.schema.json` (RM-01), et `ZONES_SENSIBLES` quitte `gov-pr.ts` pour le lecteur unique. TEMOINS VUS ROUGES AVANT LE CODE : une tache `zone: espace, sensible: []` touchant `src/` est ORDINAIRE ; chaque zone du schema hors argent et securite est ordinaire ; le schema du registre appartient a la garde des revues. CONTRE-TEMOINS qui restent ELEVES : `sensible: [argent]` et chaque etiquette du schema, `zone: securite`, `zone: argent`, `sensible` absent, `zone` absente ou inconnue, `schema: true`, `.github/workflows/*`, `eslint.config.mjs` et la racine, `.claude/`, `config/`, chaque fichier de la garde des revues, les fichiers de code des zones sensibles, `prisma/`. `pnpm gov:pr:prove` sort en 0 et garde toutes ses familles. (2) UNE INEXACTITUDE DE PROSE (corps de PR, journal, ADR, commentaire, docblock) N EST PLUS UN MOTIF DE REFUS : c est une dette nommee dans la revue, corrigee au passage suivant. Un refus vise un defaut de code ou de test, ou une affirmation fausse qui porte sur la securite, l argent ou les donnees. Ecrit dans `docs/CHARTE-AGENTS.md` §6 et dans les interdits du poste A09 (`docs/agents.json`, fiche regeneree). ADR `partners/ADR-0021` : la decision, le cout mesure, ce qui reste a quatre lentilles et pourquoi, la limite declaree (les taches qui manipulent des donnees personnelles avec `sensible: []`), le retour arriere. Ligne au registre `docs/DECISIONS.md`.
+
+**Tests.** `tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts`
 
 ## Phase 1 — Operationnel
 
