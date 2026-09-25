@@ -45,6 +45,23 @@ describe('REQ-DM-035 — le snapshot de candidature, tel que le producteur l’�
     expect(ecarts).toEqual([]);
   });
 
+  it('REQ-DM-035 : le refus nomme le CHAMP en défaut, jamais une valeur de la charge', () => {
+    const marqueur = 'valeur-personnelle-a-ne-jamais-journaliser';
+    let message = '';
+    try {
+      snapshotDeCandidature({
+        ...PAYLOAD,
+        candidatureId: marqueur,
+        reponsesJson: { nom: marqueur },
+      });
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message).toContain('candidatureId');
+    expect(message).not.toContain(marqueur);
+    expect(message).not.toContain(String(PAYLOAD.scoreBaremeVersion));
+  });
+
   it('REQ-DM-035 : une charge incomplète est REFUSÉE — aucun champ n’est complété', () => {
     const incomplete = { ...PAYLOAD };
     delete incomplete.scoreBaremeVersion;

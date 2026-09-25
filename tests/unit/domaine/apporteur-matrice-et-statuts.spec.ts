@@ -24,6 +24,7 @@ import {
   estEvenementApporteur,
   estStatutApporteur,
   type EvenementApporteur,
+  type MotifResiliation,
   type StatutApporteur,
 } from '../../../src/domain/apporteur/statut';
 import {
@@ -181,6 +182,18 @@ describe('REQ-DM-011 — la matrice état × événement : ce qui n’y est pas 
     expect(
       transitionner({ de: 'suspendu', evenementApporteur: 'resilier', motif: 'manquement_grave' })
     ).toEqual({ statut: 'resilie', resiliationMotif: 'manquement_grave' });
+  });
+
+  it('REQ-DM-011 : un motif hors vocabulaire est refusé et NOMMÉ — le mot de la faute ne passe pas', () => {
+    const e = levee(() =>
+      transitionner({
+        de: 'signe',
+        evenementApporteur: 'resilier',
+        motif: 'faute' as MotifResiliation,
+      })
+    );
+    expect(e.code).toBe('motif_inconnu');
+    expect(e.message).toContain('faute');
   });
 
   it('REQ-DM-011 : un statut ou un événement hors vocabulaire est refusé à l’entrée', () => {

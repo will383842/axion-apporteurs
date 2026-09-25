@@ -10,6 +10,7 @@
  * Aucun défaut sur ce que le test fait varier (RM-11) : chaque octet d'aléa est écrit.
  */
 import { describe, it, expect } from 'vitest';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import {
   ALPHABET_CROCKFORD,
@@ -119,6 +120,13 @@ describe('REQ-DM-012 — le jeton de dépôt : une empreinte stockée, une révo
     });
     expect(enregistrement.tokenHash).toMatch(/^[0-9a-f]{64}$/);
     expect(JSON.stringify(enregistrement)).not.toContain(jeton);
+  });
+
+  it('REQ-DM-012 : le clair est EXACTEMENT les octets injectés, et l’empreinte leur SHA-256', () => {
+    const octetsEcrits = Uint8Array.from({ length: OCTETS_JETON_DEPOT }, (_, i) => i);
+    const { clair: jeton, enregistrement } = nouveauJetonDepot(source(octetsEcrits), creeAt);
+    expect(jeton).toBe(Buffer.from(octetsEcrits).toString('base64url'));
+    expect(enregistrement.tokenHash).toBe(createHash('sha256').update(jeton, 'utf8').digest('hex'));
   });
 
   it('REQ-DM-012 : le jeton et le code de parrainage sont deux identifiants distincts', () => {
