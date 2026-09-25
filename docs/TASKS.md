@@ -2277,6 +2277,8 @@ Couvre : `REQ-UX-009`
 
 Couvre : `REQ-ARG-035`, `REQ-EXT-029`, `REQ-UX-006`, `REQ-UX-030`, `REQ-UX-032`
 
+**Acceptation.** ÉCHÉANCE AGRÉGÉE DE « MES FILLEULS » (décision du 2026-09-25, par délégation de Will, HYP-W15-FILLEULS-VUE, W15) : l'échéance agrégée des 12 mois affichée par `/filleuls` N'EST PAS AFFICHÉE tant que MOINS DE DEUX filleuls sont dans leur fenêtre de parrainage — un agrégat calculé sur un seul filleul révèle sa date de signature ; à partir de deux, il ne permet plus d'isoler la date d'un filleul. ÉCHEC FERMÉ : un nombre de filleuls dans leur fenêtre illisible ou non calculable → aucune échéance, jamais une valeur par défaut. Tests : 0 filleul dans sa fenêtre → aucune échéance ; 1 filleul dans sa fenêtre → AUCUNE clé d'échéance dans le DTO ET aucune échéance à l'écran ; 2 filleuls dans leur fenêtre → l'échéance agrégée apparaît dans le DTO et à l'écran ; nombre illisible (témoin) → aucune échéance. Les autres points de la tâche (documents, relevés, autofactures, attestation, export RGPD, parrainage agrégé par mois, lien partageable, REQ-UX-006, REQ-UX-030, REQ-UX-032, REQ-EXT-029, REQ-ARG-035) restent à écrire en acceptance avant son attribution.
+
 ### UX-P2-05 — Paramètres console : grille lecture seule
 
 `0.75 j` · zone `espace` · sensible : espace · depend de `DM-03-P`, `DM-11`, `SEC-17`
