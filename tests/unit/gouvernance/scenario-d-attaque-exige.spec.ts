@@ -48,6 +48,9 @@ function tache(sur: Partial<Tache> = {}): Tache {
     paths: ['docs/tasks.json'],
     tests: null,
     empreinte: 'aaa',
+    // GOV-096 : la projection porte le statut ; une tâche ouverte, pour que le champ `Lot:` ne
+    // soit pas l'objet de ce fichier.
+    statut: 'a_faire',
   };
   return { ...base, ...sur };
 }

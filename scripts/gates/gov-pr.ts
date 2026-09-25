@@ -56,6 +56,7 @@ import {
   fautesDesRevues,
   lentillesExigees,
   lireRevues,
+  resoudreLeLot,
   risqueDeLaPr,
   tachesDeLaBase,
   touche,
@@ -72,7 +73,12 @@ import {
 } from '../lot/revues';
 // LE lecteur unique des chemins d'une tâche — `paths` ∪ `tests{}`. Le même que celui du composeur :
 // la garde du LOT et la garde de la PR ne peuvent plus diverger sur ce qu'une tâche déclare toucher.
-import { REGISTRES_APPEND_ONLY, cheminsDeLaTache } from '../lot/chemins-de-tache';
+import {
+  REGISTRES_APPEND_ONLY,
+  cheminsDeLaTache,
+  cheminsReserves,
+  outilHorsDepot,
+} from '../lot/chemins-de-tache';
 
 const CHEMIN_GABARIT = '.github/PULL_REQUEST_TEMPLATE.md';
 const CHEMIN_CODEOWNERS = '.github/CODEOWNERS';
@@ -93,11 +99,20 @@ const MARQUEURS = [
   'regle-maison:fin',
 ];
 
-/** Les champs que le corps d'une PR doit porter, remplis. */
+/**
+ * Les champs que le corps d'une PR doit porter, remplis.
+ *
+ * ⚠️ `Lot:` y figure mais N'EST PAS EXIGÉ REMPLI dans le corps d'une PR (GOV-096) : il est vide
+ * sur toute PR à une seule tâche, c'est-à-dire la très grande majorité, et l'exiger rendrait la
+ * garde insatisfiable pour tout le monde au profit d'une minorité. Ce que cette liste garde, c'est
+ * sa présence dans le GABARIT — un champ qui en disparaît disparaît de toutes les PR suivantes, et
+ * plus aucune PR de lot ne saurait déclarer ses tâches.
+ */
 const CHAMPS = [
   'Auteur:',
   'Relecteur:',
   'Couvre:',
+  'Lot:',
   'Rouge constaté par:',
   'Règle maison appliquée:',
 ];
@@ -295,6 +310,8 @@ export type Tache = {
    * `null` = l'empreinte n'a pas pu être calculée. Elle n'est alors jamais lue comme « inchangée ».
    */
   empreinte: string | null;
+  /** `null` si le champ manque — GOV-096 : on ne déduit pas « livrée » d'une absence. */
+  statut: string | null;
 };
 export type Depot = {
   gabarit: string;
@@ -357,6 +374,15 @@ const FAMILLES = [
   'fichier_reserve_sans_label',
   'fichier_hors_paths_des_taches',
   'schema_sans_label',
+  // le champ `Lot:` (GOV-096) — trois refus qui le bornent, plus sa forme
+  'lot_mal_forme',
+  'lot_tache_inconnue',
+  'lot_tache_livree',
+  // ⚠️ LE NOM EST CELUI QUE `gov:etat` DONNE DÉJÀ À CETTE RÈGLE (REQ-GOV-007), repris et non
+  // doublé : une seule règle, un seul nom (`partners/ADR-0011`). Les deux gardes l'observent sur
+  // deux populations disjointes — `gov:etat` compare les TITRES des PR ouvertes de la forge, ici
+  // on confronte le champ `pr` du registre à la seule PR jugée, sans aucun appel réseau.
+  'deux_pr_meme_tache',
   // la PR — évaluées seulement avec les revues (`--pr <numero>`)
   'aucune_revue',
   'lentilles_manquantes',
@@ -400,40 +426,6 @@ function postesDeLaCharte(charte: string): { code: string; fiche: string }[] {
   return out;
 }
 
-/**
- * Le tableau des chemins réservés du §7, LU dans la charte : la règle et sa vue sont le même
- * texte. Une ligne dont la colonne « label » vaut `—` est une ligne qu'AUCUN label n'ouvre
- * (`.claude/**` : aucun agent en session n'a le droit de l'écrire) ; elle ne se contrôle pas ici.
- * Les chemins du schéma portent le label `schema` : ils ont leur propre famille, avec
- * l'approbation qui va avec, et sont donc écartés de cette boucle.
- */
-function cheminsReserves(charte: string): { chemins: string[]; label: string }[] {
-  const out: { chemins: string[]; label: string }[] = [];
-  for (const ligne of section(charte, '## 7.', '## 8.').split('\n')) {
-    if (!ligne.startsWith('|')) continue;
-    const cellules = ligne
-      .split('|')
-      .slice(1, -1)
-      .map((c) => c.trim());
-    if (cellules.length < 4) continue;
-    const label = cellules[2]!.replace(/`/g, '').trim();
-    if (!/^(role:[a-z-]+|schema)$/.test(label)) continue;
-    if (label === 'schema') continue;
-    const chemins = cellules[0]!
-      .split(',')
-      .map((c) =>
-        c
-          .replace(/`/g, '')
-          .replace(/\(.*\)/g, '')
-          .replace(/\*\*/g, '')
-          .trim()
-      )
-      .filter(Boolean);
-    if (chemins.length > 0) out.push({ chemins, label });
-  }
-  return out;
-}
-
 function ordinalDeLaLentille(texte: string): string | null {
   const m = new RegExp(`\\b(${ORDINAUX.join('|')})\\s+lentille`, 'i').exec(texte);
   return m ? m[1]!.toLowerCase() : null;
@@ -450,6 +442,23 @@ function ordinalDeLaLentille(texte: string): string | null {
  * parce que la garde l'appelle à DEUX endroits : pour juger les revues, et pour IMPRIMER le risque
  * avant qu'on lance les lentilles (l'orchestrateur lit cette ligne pour en lancer deux ou quatre).
  */
+/**
+ * LE CHAMP `Lot:` DU CORPS, CONFRONTÉ AU REGISTRE (GOV-096). Fonction PURE du couple
+ * (dépôt, PR) : l'appeler deux fois rend deux fois la même chose, et c'est ce qui permet au
+ * contrôle et au calcul du risque de la consommer chacun sans se la passer de main en main.
+ */
+function lotDeLaPr(
+  depot: Depot,
+  pr: Pr
+): { ids: string[]; refus: { famille: string; message: string }[] } {
+  return resoudreLeLot({
+    corps: pr.corps,
+    numero: pr.numero ?? null,
+    taches: depot.taches,
+    livrees: LIVREES,
+  });
+}
+
 function risqueDePr(depot: Depot, pr: Pr): Risque {
   return risqueDeLaPr({
     titre: pr.titre,
@@ -460,6 +469,9 @@ function risqueDePr(depot: Depot, pr: Pr): Risque {
     fichiers: pr.fichiers,
     labels: pr.labels,
     charte: depot.charte,
+    // Une tâche `sensible` ou `schema: true` portée par une AUTRE tâche du lot que celle du titre
+    // serait invisible au risque sans cette ligne : la PR se relirait en ordinaire.
+    idsDuLot: lotDeLaPr(depot, pr).ids,
   });
 }
 
@@ -609,6 +621,14 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     );
   }
 
+  // ---- le champ `Lot:` (GOV-096) --------------------------------------------
+  // LU AVANT TOUT CE QUI DÉPEND DES TÂCHES DE LA PR : c'est lui qui les résout sur une PR de lot,
+  // dont le titre ne peut en nommer qu'une et dont le champ `pr` du registre n'est écrit
+  // qu'APRÈS la fusion. Ses trois refus entrent dans les fautes ; ses identifiants RETENUS —
+  // ceux-là seuls — élargissent la dérivation unique.
+  const lot = lotDeLaPr(depot, pr);
+  for (const r of lot.refus) ajouter(r.famille, r.message);
+
   const auteur = /^Auteur:\s*(A\d{2})\s*$/m.exec(pr.corps);
   const ligneRelecteur = /^Relecteur:\s*(.+)$/m.exec(pr.corps);
   const couvre = /^Couvre:\s*(REQ-[A-Z]+-\d+.*)$/m.exec(pr.corps);
@@ -704,7 +724,12 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
   // ["argent","attribution"] — la section Attaque n'etait donc exigee par PERSONNE sur une PR
   // qui porte deux taches sensibles. Meme divergence d'entree que tachesSchema, un champ plus
   // loin : le lecteur etait unique, son entree ne l'etait pas.
-  const tachesSensibles = tachesDeLaPr(depot.taches, pr.numero ?? null, titre ? titre[2]! : null);
+  const tachesSensibles = tachesDeLaPr(
+    depot.taches,
+    pr.numero ?? null,
+    titre ? titre[2]! : null,
+    lot.ids
+  );
   // `sensible: null` — le champ MANQUE — est traité comme sensible : un champ absent ne prouve rien.
   const estSensible = (t: Tache) => t.sensible === null || t.sensible.length > 0;
   // ── LE TROISIÈME DÉCLENCHEUR : la PR qui RÉÉCRIT l'entrée de registre d'une tâche sensible ──
@@ -775,8 +800,14 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
 
   // ---- les fichiers de la PR contre les `paths` de ses tâches (GOV-056, livrable 2) ----------
   // `tachesDeLaPr` est le MÊME lecteur que celui de la section Attaque et du discriminant `schema` :
-  // l'union des tâches portant `pr: <n>` et de celle que le titre nomme. On ne relit pas la forge.
-  const tachesCitees = tachesDeLaPr(depot.taches, pr.numero ?? null, titre ? titre[2]! : null);
+  // l'union des tâches portant `pr: <n>`, de celle que le titre nomme, et de celles que le champ
+  // `Lot:` déclare et que le registre a acceptées (GOV-096). On ne relit pas la forge.
+  const tachesCitees = tachesDeLaPr(
+    depot.taches,
+    pr.numero ?? null,
+    titre ? titre[2]! : null,
+    lot.ids
+  );
   const codeTouche = pr.fichiers.filter((f) => PERIMETRE_DU_CODE.some((p) => f.startsWith(p)));
   if (codeTouche.length > 0) {
     // ⚠️ ÉCHEC FERMÉ QUAND AUCUNE TÂCHE NE RÉSOUT. Une PR dont ni le titre ni le champ `pr` du
@@ -810,9 +841,14 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
             `${orphelins.join(', ')}. Tâche(s) citée(s) : ${tachesCitees.map((t) => t.id).join(', ')} — ` +
             `chemins déclarés (\`paths\` ∪ \`tests{}\`) : ${declares.join(', ') || '(aucun)'}. ` +
             `Mesuré le 2026-09-13 sur la PR 31 : dix fichiers dans ce cas, dont une spécification ` +
-            `promise par DEUX \`tests{}\`. Ajoute le chemin à la tâche par \`outils/ajouter-path.mjs\`, ` +
-            `ou sors le fichier du périmètre de cette PR — un fichier écrit hors de ce qu'on a ` +
-            `déclaré écrire, c'est un lot dont la disjonction ne veut plus rien dire.`
+            `promise par DEUX \`tests{}\`. ⚠️ SI CETTE PR EST UN LOT, LE REMÈDE N'EST PAS ` +
+            `${outilHorsDepot('ajouter-path.mjs')} : déclare les AUTRES tâches du lot dans le champ ` +
+            `\`Lot:\` du corps (GOV-096, mesuré sur la PR 114 — ajouter leurs chemins à la tâche du ` +
+            `titre écrirait qu'elle touche des fichiers qui appartiennent à d'autres tâches, et la ` +
+            `disjonction des lots se calcule sur ces mêmes \`paths\`). Sinon : ajoute le chemin à la ` +
+            `tâche par ${outilHorsDepot('ajouter-path.mjs')}, ou sors le fichier du périmètre de cette ` +
+            `PR — un fichier écrit hors de ce qu'on a déclaré écrire, c'est un lot dont la ` +
+            `disjonction ne veut plus rien dire.`
         );
       }
     }
@@ -938,7 +974,11 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
 // ── lecture du dépôt ─────────────────────────────────────────────────────────
 
 /** Une tâche telle que le registre la sert — champs absents compris. */
-type TacheBrute = TacheDeLaPr & { paths?: string[]; tests?: Record<string, string[]> | null };
+type TacheBrute = TacheDeLaPr & {
+  paths?: string[];
+  tests?: Record<string, string[]> | null;
+  statut?: string | null;
+};
 
 /**
  * LA PROJECTION D'UNE TÂCHE, UNE FOIS — pour le registre de la tête comme pour celui de la base
@@ -960,6 +1000,10 @@ function projeter(brutes: readonly TacheBrute[] | null): Tache[] | null {
     paths: t.paths ?? [],
     tests: t.tests ?? null,
     empreinte: empreinteDeLEntree(t),
+    // ⚠️ `statut` FAIT PARTIE DE LA PROJECTION (GOV-096) : sans lui, le refus « une PR ne rouvre
+    // pas une tâche livrée » lirait `undefined` sur chaque tâche et ne tirerait JAMAIS — le même
+    // défaut, exactement, que l'absence de `pr` a produit deux fois (voir `lireDepot()`).
+    statut: t.statut ?? null,
   }));
 }
 
@@ -1533,6 +1577,15 @@ if (LANCE_EN_SCRIPT) {
       // racine rend la PR élevée (décisions de l'orchestrateur du 2026-09-18 sur GOV-077) — ce sont
       // les témoins `AU_MILIEU` qui le prouvent.
       fichiers: cheminsDe('QA-T01').filter((f) => !f.startsWith(DOSSIER_CI) && f.includes('/')),
+      // ⚠️ LABEL AJOUTÉ PAR GOV-090 — RESSERREMENT ASSUMÉ, PAS UN AJUSTEMENT POUR TAIRE UN ROUGE.
+      // `partners/ADR-0019` fait entrer `docs/gates.json` au tableau du §7 : c'est une SOURCE
+      // (`docs/GATES.md` en est la vue), `.claude/settings.json` la met déjà en `deny` sur `Write`
+      // et `Edit`, et une de ses entrées peut porter `horsCi`, c'est-à-dire DISPENSER une garde de
+      // tourner en CI. QA-T01 la déclare dans ses `paths`, donc cette fixture la touche, donc elle
+      // doit porter le label — comme le devra toute PR réelle qui verse une entrée de registre.
+      // Elle reste ORDINAIRE : `role:gardien-spec` n'entre dans aucun des trois signaux de risque,
+      // et les témoins à deux lentilles qui suivent le prouvent.
+      labels: ['role:gardien-spec'],
       revues: [
         revue('A09 · exactitude\nVerdict: accepte\nles REQ citees sont couvertes'),
         revue('A09 · securite\nVerdict: accepte\nrien a signaler'),
@@ -1580,6 +1633,96 @@ if (LANCE_EN_SCRIPT) {
       const d = copieDepot();
       d.taches = d.taches.map((t) => (ids.includes(t.id) ? { ...t, pr: PR_R1 } : t));
       return d;
+    };
+
+    // ── GOV-096 : le champ `Lot:` ───────────────────────────────────────────────────────────────
+    /**
+     * Pose une valeur dans le champ `Lot:` du corps. Comme `remplacer()`, la fonction VÉRIFIE que
+     * la cible existe (RM-11) : si le champ disparaissait du gabarit, un témoin silencieusement
+     * inopérant vaudrait moins qu'un banc qui refuse. Elle LÈVE au lieu de sortir en 1 : c'est la
+     * forme qu'emploient déjà `cheminsDe()` et les autres dérivations de fixture de ce bloc, et
+     * ajouter une sortie non nulle de plus à ce fichier serait une ligne de dette au registre des
+     * refus (`tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts`) pour rien.
+     */
+    const poserLeLot = (corps: string, valeur: string): string => {
+      if (!/^Lot:.*$/m.test(corps)) {
+        throw new Error(
+          `gov:pr --prove — le gabarit ne porte plus de champ \`Lot:\` : les témoins de GOV-096 ` +
+            `ne peuvent plus en être dérivés.`
+        );
+      }
+      return corps.replace(/^Lot:.*$/m, `Lot: ${valeur}`);
+    };
+
+    /**
+     * DES TÂCHES DU REGISTRE QUI N'AJOUTENT RIEN D'AUTRE AU VERDICT QUE LEURS CHEMINS (RM-11 : un
+     * témoin ne fait varier qu'une chose). Ni `sensible`, ni `schema`, ni livrée, ni déjà rattachée
+     * à une PR ; et tous leurs chemins sous le périmètre du CODE, pour qu'aucune ne fasse monter le
+     * risque ou réclamer un label par un fichier de CI, de racine ou de schéma.
+     */
+    const compagnonsDeLot = (combien: number, saufId: string): Tache[] => {
+      const eligibles = depot.taches.filter((t) => {
+        if (t.id === saufId || t.pr !== null) return false;
+        if (t.statut === null || LIVREES.has(t.statut)) return false;
+        if (t.schema !== false) return false;
+        if (!Array.isArray(t.sensible) || t.sensible.length > 0) return false;
+        const chemins = cheminsDeLaTache(t);
+        return (
+          chemins.length > 0 && chemins.every((c) => PERIMETRE_DU_CODE.some((p) => c.startsWith(p)))
+        );
+      });
+      if (eligibles.length < combien) {
+        throw new Error(
+          `gov:pr --prove — ${eligibles.length} tâche(s) éligible(s) pour ${combien} compagnon(s) de ` +
+            `lot : le témoin de la PR de lot ne mesurerait plus rien.`
+        );
+      }
+      return eligibles.slice(0, combien);
+    };
+
+    /**
+     * LA PR DE LOT — LE DÉFAUT MESURÉ LE 2026-09-23 SUR LA PR #114, DANS SA PLUS PETITE FORME.
+     * Son titre nomme une tâche ; ses fichiers sont ceux de cette tâche PLUS ceux de deux autres
+     * tâches du registre. Sans le champ `Lot:`, les deux autres ne résolvent par rien et leurs
+     * fichiers sont refusés comme « hors des `paths` des tâches » ; avec lui, la PR est verte.
+     * Les deux faces sont livrées ensemble : sans le contre-témoin, on ne saurait pas si le champ
+     * RÉSOUT ou s'il a seulement fait taire la famille.
+     */
+    const PR_DE_LOT = (avecLeChamp: boolean): Pr => {
+      const compagnons = compagnonsDeLot(2, 'GOV-011');
+      const p = copiePr(PR_TEMOIN);
+      p.numero = PR_R1;
+      p.fichiers = [...PR_TEMOIN.fichiers, ...compagnons.flatMap((t) => cheminsDeLaTache(t))];
+      if (avecLeChamp) p.corps = poserLeLot(p.corps, compagnons.map((t) => t.id).join(', '));
+      return p;
+    };
+
+    /**
+     * LA PR ORDINAIRE, PLUS UNE TÂCHE SENSIBLE DÉCLARÉE PAR SON SEUL `Lot:` — refus d'`exactitude`
+     * sur #118 (review 5313211711). L'acceptance (8) de GOV-096 promet que le lot fait MONTER le
+     * risque et exiger la section Attaque ; muter `idsDuLot` ou `lot.ids` en `[]` laissait pourtant
+     * toute la preuve verte. Ici AUCUN fichier n'est ajouté : ni zone sensible, ni fichier produit,
+     * ni tâche du titre sensible. La seule chose qui peut élever cette PR est la tâche du `Lot:`.
+     */
+    const PR_DE_LOT_SENSIBLE = (): Pr => {
+      const sensible = depot.taches.find(
+        (t) =>
+          t.id !== 'QA-T01' &&
+          t.pr === null &&
+          t.statut !== null &&
+          !LIVREES.has(t.statut) &&
+          Array.isArray(t.sensible) &&
+          t.sensible.length > 0
+      );
+      if (sensible === undefined) {
+        throw new Error(
+          `gov:pr --prove — aucune tâche sensible ouverte au registre : le témoin du lot qui élève ` +
+            `le risque ne mesurerait plus rien.`
+        );
+      }
+      const p = copiePr(PR_ORDINAIRE);
+      p.corps = poserLeLot(p.corps, sensible.id);
+      return p;
     };
 
     type Temoin = { famille: string; defaut: () => [Depot, Pr | null] };
@@ -1693,8 +1836,38 @@ if (LANCE_EN_SCRIPT) {
         },
       },
       {
+        // GOV-096 (8) — LA MÊME FAMILLE PAR LE `Lot:` : la tâche sensible n'est ni dans le titre, ni
+        // liée par `pr`. Seul le champ la fait entrer dans `tachesSensibles`.
+        famille: 'attaque_absente',
+        defaut: () => {
+          const p = PR_DE_LOT_SENSIBLE();
+          p.corps = remplacerBloc(p.corps, 'attaque', '');
+          return [copieDepot(), p];
+        },
+      },
+      {
         famille: 'fichier_reserve_sans_label',
         defaut: () => [copieDepot(), { ...copiePr(PR_RESERVE), labels: [] }],
+      },
+      {
+        // LA GRAMMAIRE DE LA PREMIÈRE COLONNE, et c'est la garde qui se désarme elle-même —
+        // GOV-090, mesuré le 2026-09-22 en écrivant les deux lignes de `partners/ADR-0019`.
+        // La virgule sépare les chemins ; une virgule posée DANS une parenthèse explicative
+        // coupait la cellule en deux morceaux dont aucun n'était un chemin, et la ligne cessait
+        // de garder son fichier SANS QUE RIEN NE ROUGISSE. Le tableau est lu par le script : il a
+        // une grammaire, et une grammaire sans témoin se casse à la première écriture.
+        // Ce témoin écrit la ligne AVEC la virgule piégée et exige que le chemin reste gardé.
+        famille: 'fichier_reserve_sans_label',
+        defaut: () => [
+          {
+            ...copieDepot(),
+            charte: depot.charte.replace(
+              '| `docs/tasks.json` |',
+              '| `docs/tasks.json` (**source** — sa vue est `docs/TASKS.md`, non réservée) |'
+            ),
+          },
+          { ...copiePr(PR_RESERVE), labels: [] },
+        ],
       },
       {
         // GOV-056 (2) — LE DÉFAUT MESURÉ, DANS SA PLUS PETITE FORME. La PR 31 a modifié
@@ -1724,8 +1897,65 @@ if (LANCE_EN_SCRIPT) {
         ],
       },
       {
+        // GOV-096 — LE DÉFAUT DE LA PR #114 REJOUÉ : une PR de lot SANS son champ `Lot:`. Les
+        // fichiers des tâches compagnes ne sont déclarés par personne, faute de pouvoir résoudre.
+        famille: 'fichier_hors_paths_des_taches',
+        defaut: () => [copieDepot(), PR_DE_LOT(false)],
+      },
+      {
         famille: 'schema_sans_label',
         defaut: () => [copieDepot(), { ...copiePr(PR_SCHEMA), labels: [] }],
+      },
+      // ---- GOV-096 : les trois refus qui bornent le champ `Lot:`, plus sa forme
+      {
+        // Le SEUL séparateur est la virgule. Un espace entre deux identifiants en fait un seul
+        // jeton : la garde le NOMME au lieu de rendre une liste vide avec le code zéro (GOV-082).
+        famille: 'lot_mal_forme',
+        defaut: () => {
+          const p = copiePr(PR_TEMOIN);
+          const deux = compagnonsDeLot(2, 'GOV-011').map((t) => t.id);
+          p.corps = poserLeLot(p.corps, deux.join(' '));
+          return [copieDepot(), p];
+        },
+      },
+      {
+        famille: 'lot_tache_inconnue',
+        defaut: () => {
+          const p = copiePr(PR_TEMOIN);
+          p.corps = poserLeLot(p.corps, 'GOV-999');
+          return [copieDepot(), p];
+        },
+      },
+      {
+        // Une PR ne rouvre pas une tâche LIVRÉE. La tâche se dérive du registre : la taper la
+        // rendrait fausse le jour où elle changerait de statut.
+        famille: 'lot_tache_livree',
+        defaut: () => {
+          const livree = depot.taches.find((t) => t.statut !== null && LIVREES.has(t.statut));
+          if (!livree) {
+            throw new Error(
+              `gov:pr --prove — aucune tâche livrée au registre : le témoin de \`lot_tache_livree\` ` +
+                `ne mesure rien.`
+            );
+          }
+          const p = copiePr(PR_TEMOIN);
+          p.corps = poserLeLot(p.corps, livree.id);
+          return [copieDepot(), p];
+        },
+      },
+      {
+        // REQ-GOV-007 — deux PR ne se disputent pas une tâche. Ici par le REGISTRE : la tâche
+        // déclarée dans `Lot:` porte déjà un `pr`, et ce n'est pas celui de la PR qu'on juge.
+        famille: 'deux_pr_meme_tache',
+        defaut: () => {
+          const autre = compagnonsDeLot(1, 'GOV-011')[0]!;
+          const d = depotAvecPr([autre.id]);
+          const p = copiePr(PR_TEMOIN);
+          p.numero = PR_R1 + 1;
+          p.corps = poserLeLot(p.corps, autre.id);
+          p.tachesBase = d.taches;
+          return [d, p];
+        },
       },
       // ---- la PR, revues comprises
       {
@@ -1743,6 +1973,12 @@ if (LANCE_EN_SCRIPT) {
           p.revues = p.revues!.slice(0, 2);
           return [copieDepot(), p];
         },
+      },
+      {
+        // GOV-096 (8) — `risqueDeLaPr()` reçoit l'union : la PR ordinaire et ses DEUX lentilles, à
+        // laquelle le seul `Lot:` ajoute une tâche sensible, devient ÉLEVÉE et en exige quatre.
+        famille: 'lentilles_manquantes',
+        defaut: () => [copieDepot(), PR_DE_LOT_SENSIBLE()],
       },
       {
         // Une revue qui REFUSE n'est pas une lentille manquante : la distinguer est ce qui permet
@@ -2160,6 +2396,26 @@ if (LANCE_EN_SCRIPT) {
         // contre-témoin, une extraction qui rendrait tout renommage élevé passerait pour la règle.
         quoi: 'la PR ordinaire avec un document renommé à l’intérieur de docs/',
         cas: () => [depot, RENOMMAGE_AU_MILIEU('docs/ancien.md', 'docs/nouveau.md')],
+      },
+      {
+        // GOV-096 — LE CONTRE-TÉMOIN QUI PORTE LA CORRECTION, et l'autre face exacte du témoin
+        // `fichier_hors_paths_des_taches` ci-dessus : la MÊME PR de lot, avec son champ `Lot:`
+        // rempli. Elle doit être VERTE. Sans lui, on ne saurait pas si le champ RÉSOUT les tâches
+        // du lot ou s'il a seulement fait taire la famille.
+        quoi: 'une PR de LOT dont le champ `Lot:` déclare les autres tâches qu’elle livre',
+        cas: () => [depot, PR_DE_LOT(true)],
+      },
+      {
+        // GOV-096 — LE CONTRE-TÉMOIN DU CAS ORDINAIRE, et il garde le choix qui compte : `Lot:`
+        // VIDE laisse le comportement INCHANGÉ. C'est le cas de la très grande majorité des PR ;
+        // si le champ vide se mettait à exiger quoi que ce soit, toute PR à une seule tâche
+        // rougirait, et une gate que tout le monde doit contourner se fait retirer dans la semaine.
+        quoi: 'une PR dont le champ `Lot:` est présent et VIDE : comportement inchangé',
+        cas: () => {
+          const p = copiePr(PR_TEMOIN);
+          p.corps = poserLeLot(p.corps, '');
+          return [depot, p];
+        },
       },
       {
         // cas 1, l'autre face : la même PR SANS la tâche sensible. Si elle rougissait, le témoin du cas 1
