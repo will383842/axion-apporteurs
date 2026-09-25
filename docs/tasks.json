@@ -1941,7 +1941,8 @@
         "src/server/securite/pii.ts",
         "scripts/gates/schema-pii.ts",
         "tests/unit/securite/chiffrement-avec-aad.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -3173,7 +3174,8 @@
         "tests/unit/domaine/apporteur-identifiants.spec.ts",
         "tests/unit/domaine/apporteur-activite.spec.ts",
         "tests/unit/domaine/apporteur-population-is-test.spec.ts",
-        "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts"
+        "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts",
+        "scripts/gates/gov-attributions.ts"
       ],
       "schema": true,
       "sensible": [

@@ -1015,6 +1015,14 @@ export const CITATIONS_DECLAREES: Citation[] = [
     raison: 'historique : la seconde tâche qui a trouvé le même défaut, de son côté.',
   },
   {
+    ou: 'tests/fixtures/axionia/candidature-recue.json',
+    id: 'INT-T01b',
+    nature: 'contexte',
+    raison:
+      'la ligne `Source:` (RM-03) nomme la tâche qui a livré le PRODUCTEUR de cette copie ; ' +
+      'le fichier appartient à DM-06, qui le consomme.',
+  },
+  {
     ou: 'scripts/lot/corps-de-pr.ts',
     id: 'GOV-035',
     nature: 'contexte',

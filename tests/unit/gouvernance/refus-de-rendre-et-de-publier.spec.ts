@@ -616,6 +616,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'fonction pure vue rendre 1 (`decider()`, journal-charge-fermee.spec.ts) et le binaire est vu ' +
         'sortir en 0 sur le dépôt ; ⛔ aucun témoin d’EFFET du binaire en échec. Dette DÉCLARÉE.',
     },
+    // ── SEC-08 : UNE sortie, à code VARIABLE, comme DM-01 ───────────────────────────────────
+    'scripts/gates/schema-pii.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'SEC-08 — aucune donnée personnelle en clair, schéma et chemins d’écriture. ' +
+        '`process.exit(decision.code)` : sortie TERMINALE à code variable, commune au mode normal ' +
+        'et à `--prove`. La décision est une fonction pure vue rendre 1 (`decider()`, ' +
+        'chiffrement-avec-aad.spec.ts) ; le binaire a été vu sortir en 1 à la main sur deux fautes ' +
+        'posées dans le dépôt (colonne `createdIp`, écriture d’un `emailChiffre`), puis en 0 ; ' +
+        '⛔ aucun témoin d’EFFET du binaire en échec dans une spec. Dette DÉCLARÉE.',
+    },
     'scripts/gates/lexique-apporteurs.ts': {
       total: 2,
       porte: 2,
@@ -1033,6 +1046,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // 🔧 50 + 2 = 52 a la fusion de `main` (`f7ea7c3`) dans la branche de la PR 93 : GOV-047 (prevol,
     // cote `main`) et UX-P0-01 (les deux sorties de `ux-exhaustivite.ts`) ont incremente le MEME
     // cliquet chacun de son cote.
+    // 🔧 50 → 51 par SEC-08, ARBITRÉ et non subi. `scripts/gates/schema-pii.ts` naît avec UNE
+    // sortie à code variable. Le cliquet a rougi dans ses deux tests, dans l'ordre — l'identité
+    // en Gate A (run 36173435743), puis, la déclaration posée, le compte (`vitest -t`) :
+    //
+    //     scripts/gates/schema-pii.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 51 to be 50
     //
     // 🔧 50 + 4 = 54 a la fusion de `main` (`f7ea7c3`) dans cette branche : GOV-047 (prevol, cote
     // `main`) et JUR-T01 (les quatre sorties de `jur-grille-chiffree.ts`) ont incremente le MEME
@@ -1043,7 +1062,11 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // quatre sorties de `jur-grille-chiffree.ts`, cote `main`) et UX-P0-01 (les deux sorties de
     // `ux-exhaustivite.ts`) ont incremente le MEME cliquet chacun de son cote. Le nombre est
     // DERIVE de la somme des `total` du registre, qui porte les trois entrees.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(56);
+    // 🔧 54 + 1 = 55 a la fusion de `main` (`48b14b6`) dans `t/sec-08` : la sortie de SEC-08 et les
+    // quatre de JUR-T01 s'ajoutent, le registre porte les deux entrees.
+    // 🔧 55 + 2 = 57 a la fusion de `main` (`835d899`) dans la branche de la PR 93 : SEC-08 (une sortie,
+    // cote `main`) et UX-P0-01 (deux sorties) s additionnent ; le total est lu par `vitest -t`, pas devine.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(57);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -2103,6 +2126,8 @@ const GARDES_QUI_BALAIENT = [
   // DM-01 — `journal:sans-pii` cherche un second écrivain de la table `evenements` dans les fichiers
   // SUIVIS sous `src/` et `scripts/`.
   'scripts/gates/journal-sans-pii.ts',
+  // SEC-08 — `securite:schema-pii` juge les chemins d'écriture dans les fichiers SUIVIS sous `src/`.
+  'scripts/gates/schema-pii.ts',
   // DM-02 — `partners:migrations:additive` lit TOUTES les migrations SUIVIES, pas celles de la PR.
   'scripts/gates/migrations-additive.ts',
   // UX-P0-01 — `ux:exhaustivite` établit son périmètre par la primitive pour que les composants

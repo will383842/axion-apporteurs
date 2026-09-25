@@ -91,6 +91,8 @@
     "partners:migrations:additive:prove": "tsx scripts/gates/migrations-additive.ts --prove",
     "journal:sans-pii": "tsx scripts/gates/journal-sans-pii.ts",
     "journal:sans-pii:prove": "tsx scripts/gates/journal-sans-pii.ts --prove",
+    "securite:schema-pii": "tsx scripts/gates/schema-pii.ts",
+    "securite:schema-pii:prove": "tsx scripts/gates/schema-pii.ts --prove",
     "contracts:export": "tsx scripts/contracts/export.ts",
     "contracts:hash": "tsx scripts/contracts/export.ts --verifier",
     "gov:tasks:verifie-rendu": "tsx scripts/gates/gov-tasks.ts --verifie-rendu",
