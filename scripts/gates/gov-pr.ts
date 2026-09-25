@@ -194,21 +194,50 @@ export function empreinteDeLEntree(entree: unknown): string | null {
  * Sensible sur l'un OU l'autre côté : une PR qui RETIRE le marquage d'une tâche sensible est
  * exactement celle qu'il ne faut pas laisser passer sans scénario. Une empreinte absente d'un côté
  * n'est jamais lue comme « inchangée » — c'est le sens de défaillance FERMÉ.
+ *
+ * 🔴 ET LA SUPPRESSION EN EST UNE (motif `securite` sur la PR 114). Ne parcourir que la TÊTE ne
+ * voyait jamais une entrée sensible RETIRÉE du registre : c'est pourtant la forme la plus forte du
+ * retrait de marquage. Une tâche sensible sur la BASE et absente de la TÊTE est rendue ici — telle
+ * que la base la porte, avec son marquage — et `supprimee` le dit.
  */
 export function tachesReecritesEtSensibles(
   tete: readonly Tache[],
   base: readonly Tache[] | null
-): Tache[] {
+): (Tache & { supprimee: boolean })[] {
   if (base === null) return [];
   const parIdBase = new Map(base.map((t) => [t.id, t]));
+  const idsTete = new Set(tete.map((t) => t.id));
   const sensible = (t: Tache | undefined): boolean =>
     t !== undefined && (t.sensible === null || t.sensible.length > 0);
-  return tete.filter((t) => {
+  const reecrites = tete.filter((t) => {
     const avant = parIdBase.get(t.id);
     if (avant === undefined) return false; // une tâche VERSÉE n'est pas une tâche RÉÉCRITE
     if (!sensible(t) && !sensible(avant)) return false;
     return t.empreinte === null || avant.empreinte === null || t.empreinte !== avant.empreinte;
   });
+  const supprimees = base.filter((t) => !idsTete.has(t.id) && sensible(t));
+  return [
+    ...reecrites.map((t) => ({ ...t, supprimee: false })),
+    ...supprimees.map((t) => ({ ...t, supprimee: true })),
+  ];
+}
+
+/**
+ * CE QUE LE DÉCLENCHEUR PAR ZONE A CONFRONTÉ, en une ligne — imprimée sur TOUTE PR, verte ou rouge
+ * (GOV-078, livrable 1 ; motif `exactitude` sur la PR 114). Le déclencheur d'avant est resté mort
+ * des semaines parce que son vert était muet ; celui-ci dit sur combien de fichiers et de segments
+ * il a porté, contre quelles zones, et ce qui a répondu — ou que rien n'a répondu.
+ */
+export function direLesZones(fichiers: readonly string[]): string {
+  const segments = fichiers.reduce((n, f) => n + Math.max(f.split('/').length - 1, 0), 0);
+  const touchees = zonesSensiblesTouchees(fichiers);
+  return (
+    `déclencheur par zone : ${fichiers.length} fichier(s) lu(s), ${segments} segment(s) de ` +
+    `répertoire confronté(s) aux zones ${ZONES_SENSIBLES.join(', ')} → ` +
+    (touchees.length === 0
+      ? 'aucune zone touchée'
+      : `zone(s) touchée(s) : ${touchees.map((z) => `${z.sous}/ (${z.zone})`).join(' · ')}`)
+  );
 }
 
 export function zonesSensiblesTouchees(
@@ -760,7 +789,11 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
       if (reecrites.length > 0) {
         motifs.push(
           `entrée(s) de registre RÉÉCRITE(S) sur une tâche sensible : ${reecrites
-            .map((t) => `${t.id} (${t.sensible?.join(', ') ?? 'champ sensible absent'})`)
+            .map(
+              (t) =>
+                `${t.id} (${t.sensible?.join(', ') ?? 'champ sensible absent'}` +
+                `${t.supprimee ? ', entrée SUPPRIMÉE du registre' : ''})`
+            )
             .join(' · ')}`
         );
       }
@@ -969,6 +1002,10 @@ type TacheBrute = TacheDeLaPr & {
   paths?: string[];
   tests?: Record<string, string[]> | null;
   statut?: string | null;
+  // La PROSE n'est pas projetée, mais elle est dans l'empreinte (GOV-078) : elle est déclarée ici
+  // pour qu'un témoin puisse la réécrire sans passer par un transtypage.
+  titre?: string;
+  acceptance?: string | null;
 };
 
 /**
@@ -976,9 +1013,9 @@ type TacheBrute = TacheDeLaPr & {
  * (GOV-077). Deux projections divergeraient, et c'est la base qui dit si une PR a déclassé sa
  * propre tâche.
  */
-function projeter(brutes: readonly TacheBrute[]): Tache[];
-function projeter(brutes: readonly TacheBrute[] | null): Tache[] | null;
-function projeter(brutes: readonly TacheBrute[] | null): Tache[] | null {
+export function projeter(brutes: readonly TacheBrute[]): Tache[];
+export function projeter(brutes: readonly TacheBrute[] | null): Tache[] | null;
+export function projeter(brutes: readonly TacheBrute[] | null): Tache[] | null {
   if (brutes === null) return null;
   return brutes.map((t) => ({
     id: t.id,
@@ -1839,6 +1876,42 @@ if (LANCE_EN_SCRIPT) {
         },
       },
       {
+        // GOV-078 (2) — LA MÊME FAMILLE PAR LA RÉÉCRITURE, et par la PROJECTION RÉELLE : seule la
+        // prose d'une tâche sensible change entre la base et la tête. Les empreintes sont celles
+        // que `projeter()` calcule (motif `mutation`, G10 : une empreinte rendue constante ne
+        // voyait plus aucune réécriture, et aucun témoin ne passait par elle).
+        famille: 'attaque_absente',
+        defaut: () => {
+          const brut = (JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: TacheBrute[] })
+            .taches;
+          const cible = brut.find((t) => Array.isArray(t.sensible) && t.sensible.length > 0)!;
+          const d = copieDepot();
+          d.taches = projeter(
+            brut.map((t) =>
+              t.id === cible.id ? { ...t, acceptance: `${t.acceptance ?? ''} (réécrite)` } : t
+            )
+          );
+          const p = copiePr(PR_TEMOIN);
+          p.tachesBase = projeter(brut);
+          p.corps = remplacerBloc(p.corps, 'attaque', 'sans objet');
+          return [d, p];
+        },
+      },
+      {
+        // GOV-078 (2) — et la SUPPRESSION d'une entrée sensible, la forme la plus forte du retrait
+        // de marquage (motif `securite` sur la PR 114) : la tête ne la porte plus, la base si.
+        famille: 'attaque_absente',
+        defaut: () => {
+          const cible = depot.taches.find((t) => t.sensible !== null && t.sensible.length > 0)!;
+          const d = copieDepot();
+          d.taches = depot.taches.filter((t) => t.id !== cible.id);
+          const p = copiePr(PR_TEMOIN);
+          p.tachesBase = depot.taches;
+          p.corps = remplacerBloc(p.corps, 'attaque', 'sans objet');
+          return [d, p];
+        },
+      },
+      {
         // GOV-096 (8) — LA MÊME FAMILLE PAR LE `Lot:` : la tâche sensible n'est ni dans le titre, ni
         // liée par `pr`. Seul le champ la fait entrer dans `tachesSensibles`.
         famille: 'attaque_absente',
@@ -2246,6 +2319,17 @@ if (LANCE_EN_SCRIPT) {
       { quoi: "le dépôt tel qu'il est, sans PR", cas: () => [depot, null] },
       { quoi: 'une PR conforme, revues comprises', cas: () => [depot, PR_TEMOIN] },
       {
+        // Le socle des deux témoins de RÉÉCRITURE : la même PR, « sans objet », sur un registre
+        // INCHANGÉ, reste verte. Sans lui, ces témoins pourraient rougir par une autre branche du
+        // déclencheur, et une empreinte constante survivrait.
+        quoi: 'la PR conforme, Attaque « sans objet », registre inchangé',
+        cas: () => {
+          const p = copiePr(PR_TEMOIN);
+          p.corps = remplacerBloc(p.corps, 'attaque', 'sans objet');
+          return [depot, p];
+        },
+      },
+      {
         quoi: 'une PR `schema` avec son label et l’approbation de A02',
         cas: () => [depot, PR_SCHEMA],
       },
@@ -2550,6 +2634,8 @@ if (LANCE_EN_SCRIPT) {
   // LE RISQUE EST IMPRIMÉ DÈS QU'UNE PR EST CONNUE (GOV-077) : c'est cette ligne que l'orchestrateur
   // lit AVANT de lancer les lentilles — deux sur une PR ordinaire, quatre sur une PR élevée.
   if (pr !== null) console.log(`ℹ️  gov:pr — ${direLeRisque(risqueDePr(depot, pr))}.`);
+  // GOV-078 (1) — le déclencheur par zone DIT ce qu'il a confronté, vert ou rouge.
+  if (pr !== null) console.log(`ℹ️  gov:pr — ${direLesZones(pr.fichiers)}.`);
   if (AVIS_HORS_CANAL.length > 0) {
     console.log(
       `ℹ️  gov:pr — ${AVIS_HORS_CANAL.length} avis posté(s) en COMMENTAIRE D’ISSUE, qui ne comptent ` +

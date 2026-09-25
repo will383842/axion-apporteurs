@@ -23,10 +23,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
   controler,
+  direLesZones,
+  projeter,
   zonesSensiblesTouchees,
   tachesReecritesEtSensibles,
   empreinteDeLEntree,
@@ -80,6 +84,9 @@ function pr(sur: Partial<Pr>): Pr {
   };
   return { ...base, ...sur };
 }
+
+/** Un corps dont la section « Attaque » est déclarée SANS OBJET — le contournement à refuser. */
+const SANS_OBJET = ['<!-- attaque:debut -->', 'sans objet', '<!-- attaque:fin -->'].join('\n');
 
 /** Les messages de la famille `attaque_absente`, l'unité de mesure de ce fichier. */
 const attaque = (d: Depot, p: Pr): string[] =>
@@ -164,6 +171,107 @@ describe('gov:pr — le scénario d’attaque est exigé là où il manquait (GO
     const avant = tache({ sensible: ['argent'], empreinte: 'avant' });
     const apres = tache({ sensible: [], empreinte: 'apres' });
     expect(tachesReecritesEtSensibles([apres], [avant]).map((t) => t.id)).toEqual(['T-ARG-999']);
+  });
+
+  it('REQ-GOV-021 — SUPPRIMER l’entrée d’une tâche sensible est une réécriture, et elle exige le scénario', () => {
+    // 🔴 Motif `securite` sur 9ffb450, rejoué tel quel : base = [GOV-1, ARG-9 `argent`], tête =
+    // [GOV-1], registre dans le diff, corps « sans objet » → `attaque_absente` = 0. Retirer le
+    // marquage était vu ; supprimer l'entrée ENTIÈRE — la forme la plus forte du retrait — passait.
+    const gouv = tache({ id: 'GOV-1', sensible: [], zone: 'gouvernance', empreinte: 'g' });
+    const arg = tache({ id: 'ARG-9', empreinte: 'a' });
+    const messages = attaque(depot([gouv]), pr({ tachesBase: [gouv, arg], corps: SANS_OBJET }));
+    expect(
+      messages,
+      'une entrée sensible supprimée du registre n’exige aucun scénario'
+    ).toHaveLength(1);
+    expect(messages[0]).toContain('ARG-9');
+    expect(messages[0]).toContain('SUPPRIMÉE');
+    expect(messages[0]).toContain('argent');
+    // CONTRE-TÉMOIN : supprimer une tâche NON sensible n'exige rien.
+    const neutre = tache({ id: 'GOV-2', sensible: [], zone: 'gouvernance', empreinte: 'n' });
+    expect(attaque(depot([gouv]), pr({ tachesBase: [gouv, neutre], corps: SANS_OBJET }))).toEqual(
+      []
+    );
+  });
+
+  it('REQ-GOV-021 — par la projection RÉELLE : seule la prose change, le scénario est exigé', () => {
+    // Motif `mutation` (G10) sur 9ffb450 : l'empreinte de `projeter` rendue CONSTANTE laissait
+    // spec et `--prove` verts — les témoins posaient leurs empreintes à la main. Ici elles sont
+    // CALCULÉES par la projection que lit la garde, sur deux entrées qui ne diffèrent que par la prose.
+    const brute = {
+      id: 'T-ARG-999',
+      titre: 'une tâche d’argent',
+      sensible: ['argent'],
+      zone: 'argent',
+      paths: ['docs/tasks.json'],
+      acceptance: 'une prose',
+      statut: 'a_faire',
+    };
+    const base = projeter([brute]);
+    const tete = projeter([{ ...brute, acceptance: 'une AUTRE prose' }]);
+    const messages = attaque(depot(tete), pr({ tachesBase: base, corps: SANS_OBJET }));
+    expect(messages, 'la prose d’une tâche argent a changé et rien n’a été exigé').toHaveLength(1);
+    expect(messages[0]).toContain('T-ARG-999');
+    // CONTRE-TÉMOIN : la même entrée, inchangée, n'exige rien.
+    expect(attaque(depot(projeter([brute])), pr({ tachesBase: base, corps: SANS_OBJET }))).toEqual(
+      []
+    );
+  });
+
+  it('REQ-GOV-011 — le déclencheur par zone DIT ce qu’il a confronté, même quand rien ne répond', () => {
+    // Motif `exactitude` sur 9ffb450 : les zones confrontées ne sortaient QUE dans le message
+    // d'échec. Un déclencheur mort l'était resté des semaines parce que son vert était muet.
+    const rien = direLesZones(['docs/tasks.json', 'scripts/gates/gov-pr.ts']);
+    expect(rien).toContain('2 fichier(s)');
+    expect(rien).toContain('aucune zone touchée');
+    for (const z of ['commissions', 'attributions', 'auth', 'espace']) expect(rien).toContain(z);
+    // Un fichier sous le chemin réel d'une zone CHANGE la ligne : elle vient du même déclencheur.
+    expect(direLesZones(['src/lib/auth/session.ts'])).toContain('src/lib/auth/ (auth)');
+  });
+
+  it('REQ-GOV-011 — DE BOUT EN BOUT : la garde lancée sur une PR imprime la ligne du déclencheur', () => {
+    // Le branchement, pas la fonction : la garde est LANCÉE sur un événement `pull_request`
+    // (HEAD~1 → HEAD), et sa sortie doit porter la ligne, quel que soit son verdict.
+    const base = execFileSync('git', ['rev-parse', 'HEAD~1'], { encoding: 'utf8' }).trim();
+    const tete = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    const n = execFileSync('git', ['diff', '--name-only', `${base}...${tete}`], {
+      encoding: 'utf8',
+    })
+      .split('\n')
+      .filter(Boolean).length;
+    const dossier = mkdtempSync(join(tmpdir(), 'gov-078-evenement-'));
+    try {
+      const evenement = join(dossier, 'evenement.json');
+      writeFileSync(
+        evenement,
+        JSON.stringify({
+          pull_request: {
+            number: 999,
+            title: 'docs(GOV-078): un evenement de temoin',
+            body: '',
+            labels: [],
+            base: { sha: base },
+            head: { sha: tete },
+          },
+        }),
+        'utf8'
+      );
+      const r = spawnSync('npx', ['tsx', 'scripts/gates/gov-pr.ts'], {
+        encoding: 'utf8',
+        shell: true,
+        timeout: 300_000,
+        env: { ...process.env, GITHUB_EVENT_PATH: evenement },
+      });
+      const sortie = (r.stdout ?? '') + (r.stderr ?? '');
+      const ligne = sortie.split(/\r?\n/).find((l) => l.includes('déclencheur par zone'));
+      expect(
+        ligne,
+        `aucune ligne du déclencheur par zone :\n${sortie.slice(0, 1500)}`
+      ).toBeDefined();
+      expect(ligne).toContain(`${n} fichier(s)`);
+    } finally {
+      rmSync(dossier, { recursive: true, force: true });
+    }
   });
 
   it('REQ-GOV-021 — une tâche VERSÉE n’est pas une tâche réécrite', () => {
