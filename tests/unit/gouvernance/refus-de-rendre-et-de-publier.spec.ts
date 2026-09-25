@@ -464,6 +464,23 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'en fin de fichier ; les familles, elles, sont couvertes par `--prove` et par ' +
         'attributions-resolvent.spec.ts — un témoin d’effet prouve la famille qu’il injecte, jamais la gate.',
     },
+    'scripts/gates/jur-grille-chiffree.ts': {
+      total: 4,
+      porte: 4,
+      // ZÉRO, et ce zéro est le SUJET de l'inscription, pas un détail de comptabilité.
+      // REQ-GOV-032 veut que la dette soit CHIFFRÉE, pas seulement mentionnée : inscrire ce
+      // fichier rend l'omission lisible au lieu de la laisser rougir sans dire quoi. Les quatre
+      // refus de cette garde n'ont AUCUN témoin — personne ne les a vus rougir (RM-02). Le
+      // registre le DÉCLARE ; il ne le ferme pas. La tâche qui armera ces témoins fera passer
+      // ce compteur à 4, et le test du total suivra sans qu'on y touche.
+      temoins: 0,
+      raison:
+        'JUR-T01 — la grille chiffrée du contrat, livrée par le commit f7ce9e0. QUATRE sorties ' +
+        'non nulles (plus deux `exit(0)`), aucune vue rougir : la garde refuse un gabarit dont ' +
+        'la grille ne se dérive pas du registre, et rien ne prouve encore qu’elle sait refuser. ' +
+        'Inscrit ici pour que le manque soit CHIFFRÉ et cherchable, jamais pour le tenir pour ' +
+        'couvert.',
+    },
     'scripts/gates/gov-check.ts': {
       total: 1,
       porte: 1,
@@ -993,6 +1010,13 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // base 44, les branches sœurs #82, #93 et #92 déclarent respectivement 45, 46 et 48. Celle qui
     // atterrira après celle-ci lira SON propre rouge et l'arbitrera à son tour.
     //
+    // 🔧 44 → 48 par JUR-T01, ARBITRÉ et non subi : `scripts/gates/jur-grille-chiffree.ts` naît
+    // avec QUATRE sorties non nulles (plus deux `exit(0)`), déclarées plus haut avec `temoins: 0` —
+    // aucune n'a été vue rougir, et le registre le DIT au lieu de le taire. La Gate A de la PR 92 a
+    // rougi en le chiffrant — relu, pas deviné (run 35804660196) :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 48 to be 44
+    //
     // 🔧 40 → 44 par GOV-059 (suite), ARBITRÉ et non subi. `scripts/prevol.ts` naît avec QUATRE
     // sorties non nulles, dont trois sont des refus de CONCLURE. Le cliquet a rougi dans ses deux
     // tests, dans l'ordre — l'identité d'abord, le compte ensuite —, et les deux rouges ont été LUS
@@ -1020,11 +1044,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     //     scripts/prevol.ts : 6 exits ajoutés, 4 déclarés
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 50 to be 48
     //
-    // 🔧 50 + 2 = 52 a la fusion de `main` (`f7ea7c3`) dans cette branche : GOV-047 (prevol, cote
-    // `main`) et INT-T09 (les deux sorties de `aucun-annee-de-naissance.ts`) ont incremente le
-    // MEME cliquet chacun de son cote. Les deux recits sont conserves ; le nombre est DERIVE de la
+    // 🔧 50 + 4 = 54 a la fusion de `main` (`f7ea7c3`) dans cette branche : GOV-047 (prevol, cote
+    // `main`) et JUR-T01 (les quatre sorties de `jur-grille-chiffree.ts`) ont incremente le MEME
+    // cliquet chacun de son cote. Les deux recits sont conserves ; le nombre est DERIVE de la
     // somme des `total` du registre, qui porte les deux entrees.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(52);
+    //
+    // 🔧 54 + 2 = 56 a la fusion de `main` (`48b14b6`) dans cette branche : JUR-T01 (#92, les
+    // quatre sorties de `jur-grille-chiffree.ts`) a atterri avant INT-T09 (les deux sorties de
+    // `aucun-annee-de-naissance.ts`). Les deux recits sont conserves ; le nombre a ete LU, pas
+    // devine — le cliquet laisse a 54 a rougi sur la somme du registre :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 56 to be 54
+    //
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(56);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
