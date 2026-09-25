@@ -46,6 +46,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fichiersDeSrc } from '../../../scripts/gates/perf-budgets';
+import { sansCommentaires } from '../../../scripts/gates/gov-trace';
 
 /**
  * LE MOTIF DE LA FAMILLE : « un chemin absent rend une LISTE VIDE ».
@@ -63,17 +64,15 @@ function gardesSuivies(): string[] {
     .filter((f) => f.endsWith('.ts'));
 }
 
-/**
- * Le texte d'un fichier SANS ses commentaires.
+/*
+ * Le motif est cherché dans le texte SANS ses commentaires (`sansCommentaires`, importé de
+ * `gov-trace`, définition unique).
  *
  * ⚠️ MESURÉ AU PREMIER JET, et c'est la garde qui avait raison : le docblock qui RACONTE le défaut
  * cite `if (!existsSync(racine)) return []` en toutes lettres, et le motif le comptait comme une
  * occurrence. Une garde lexicale qui lit la prose condamne le texte qui décrit la protection —
  * exactement le piège que `refus-de-rendre-et-de-publier.spec.ts` a déjà payé sur le caractère `✅`.
  */
-function sansCommentaires(texte: string): string {
-  return texte.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-}
 
 /** Les occurrences du motif dans un texte, commentaires exclus. */
 function occurrences(texte: string): string[] {

@@ -33,10 +33,7 @@ import {
   type Entrees,
 } from '../../../scripts/gates/gov-sonde';
 import { objetLisible } from '../../../scripts/gates/gov-pr';
-
-/** Le texte d'un source SANS ses commentaires : la prose qui raconte un défaut n'est pas le défaut. */
-const sansCommentaires = (texte: string): string =>
-  texte.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+import { sansCommentaires } from '../../../scripts/gates/gov-trace';
 
 const affirmations = readFileSync('docs/AFFIRMATIONS-AXIONIA.md', 'utf8');
 const decisions = readFileSync('docs/DECISIONS.md', 'utf8');

@@ -1043,10 +1043,16 @@ export function plancherDeTitres(texte: string): number {
   // (motif `mutation` T3, PR 114), et un `it(` cité dans la PROSE d'un en-tête le gonflait — mesuré
   // sur `adr-assertion-existe.spec.ts` : 7 au texte brut, 5 cas réellement énumérés. Un plancher
   // qui dépasse le réel accuse ; il doit rester un plancher.
-  const sansCommentaires = texte
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-  return titresDeTest(sansCommentaires).length;
+  return titresDeTest(sansCommentaires(texte)).length;
+}
+
+/**
+ * Le texte d'un source SANS ses commentaires : la prose qui raconte un défaut n'est pas le défaut.
+ * UNE seule définition — deux spécifications la recopiaient octet pour octet (refus `simplicite`,
+ * PR 114, tour 2) ; elles l'importent désormais d'ici.
+ */
+export function sansCommentaires(texte: string): string {
+  return texte.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 }
 
 /** Pourquoi les titres d'un fichier n'ont pas pu être résolus. Deux causes, et elles diffèrent. */
