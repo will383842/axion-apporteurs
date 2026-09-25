@@ -38,6 +38,7 @@ import {
   type Pr,
   type Tache,
 } from '../../../scripts/gates/gov-pr';
+import { cheminsTouches, entreesDuDiff, OPTIONS_DU_DIFF } from '../../../scripts/lot/revues';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 
@@ -234,11 +235,16 @@ describe('gov:pr — le scénario d’attaque est exigé là où il manquait (GO
     // (HEAD~1 → HEAD), et sa sortie doit porter la ligne, quel que soit son verdict.
     const base = execFileSync('git', ['rev-parse', 'HEAD~1'], { encoding: 'utf8' }).trim();
     const tete = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-    const n = execFileSync('git', ['diff', '--name-only', `${base}...${tete}`], {
-      encoding: 'utf8',
-    })
-      .split('\n')
-      .filter(Boolean).length;
+    // Le compte attendu passe par l'extraction UNIQUE que la garde emploie — un renommage y compte
+    // pour sa source ET sa destination ; `--name-only` le compterait une fois (mesuré sur une fusion).
+    const n = cheminsTouches(
+      entreesDuDiff(
+        execFileSync('git', [...OPTIONS_DU_DIFF, `${base}...${tete}`], {
+          encoding: 'utf8',
+          maxBuffer: 64e6,
+        })
+      )
+    ).length;
     const dossier = mkdtempSync(join(tmpdir(), 'gov-078-evenement-'));
     try {
       const evenement = join(dossier, 'evenement.json');
