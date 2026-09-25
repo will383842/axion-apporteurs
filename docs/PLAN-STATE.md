@@ -7,7 +7,7 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `48b14b6` — 2026-09-25T21:08:41+02:00 |
+| Où est `main` ? | `1ca6592` — 2026-09-25T22:16:37+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #91 (un conflit avec `main`) · 3. #93 (un conflit avec `main`) · 4. #128 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
@@ -98,7 +98,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `48b14b6` (2026-09-25T21:08:41+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `1ca6592` (2026-09-25T22:16:37+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -168,6 +168,81 @@ contrainte `EXCLUDE USING gist` demande l'extension `btree_gist` et revient à l
 les identités ; l'effacement d'un apporteur passe par l'anonymisation, ses jetons révoqués étant
 indélébiles.
 
+### PR #126 — 2026-09-25 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema
+
+**Fait.** `src/server/securite/pii.ts` porte la primitive des données personnelles, au format de
+`partners/ADR-0013`. `clesPii(process.env)` fait juger l'environnement par `lireEnvironnement`
+(SEC-01) et rend trois clés, une par usage, dans un type marqué que nulle autre fonction ne
+fabrique. `encryptPii` et `decryptPii` chiffrent en AES-256-GCM, IV tiré à chaque appel, avec
+l'AAD `["partners.pii",1,modele,champ,id]` : un bloc déplacé vers une autre ligne, un autre champ
+ou un autre modèle échoue en nommant l'échec d'authentification. `colonnesPii` est le chemin
+d'écriture : il rend l'identifiant lié, les blocs de suffixe `Chiffre` et les empreintes
+`emailHash`, `phoneHash`, `ibanHash`. `empreinteRecherche` fait un HMAC sous `PII_HASH_KEY` pour
+le courriel, le téléphone, l'IBAN (clé jugée par `cleIbanValide`) et le SIRET.
+`empreinteAdresseReseau` appelle `empreinteAdresse` de la frontière sous `IP_HASH_SALT`. La garde
+`securite:schema-pii` (alias `G-SEC-SCHEMA-PII`, câblée en CI avec son `:prove`, 10 familles,
+32 témoins, 5 contre-témoins) refuse deux choses : une colonne de personne en clair dans le
+schéma, et un bloc ou une empreinte écrits hors de `pii.ts`. 24 tests. Huit défauts injectés un à
+un ont chacun fait rougir leur contrôle.
+
+**Reste.** Aucun modèle de personne n'existe encore : DM-06 et DM-07 poseront les premières
+colonnes, et la garde les jugera. L'IBAN de la pièce RIB (DM-11) passera par `colonnesPii`. La
+double clé de rotation (HYP-E1-24) appartient à QA-T04 et QA-T13. Le module client unique
+`src/server/db.ts`, que `journal-sans-pii.ts` attribue à SEC-08, n'est pas dans les chemins de la
+tâche et n'est pas posé. Le passage de `partners/ADR-0013` à `accepte` appartient à l'architecte.
+
+**Appris.** La branche du 19/09 recopiait la normalisation IPv6 de SEC-10 et le HMAC d'adresse de
+SEC-07, arrivés sur main après elle : une branche reprise se relit contre le main du jour, pas
+contre celui de sa naissance. Un type marqué ne se construit pas par un littéral sous la règle
+`consistent-type-assertions` : on type d'abord l'objet sans la marque, puis on l'affirme.
+`gates:prouvees` ne reconnaît une preuve que sous la forme `pnpm <garde>:prove`, suivie d'un tiret
+cadratin : un trait d'union simple la déclare non référencée. Une garde dont l'identifiant de
+registre diffère de son nom de commande grossit une dette figée par `un-nom-une-garde.spec.ts` :
+l'identifiant est donc le nom de commande, et l'ancien nom `G-SEC-...` passe en alias. Une garde
+qui balaie les fichiers suivis s'inscrit aussi dans les deux registres de
+`refus-de-rendre-et-de-publier.spec.ts` (sorties déclarées, gardes qui balaient), et établit son
+périmètre avant de lire quoi que ce soit.
+
+**Relecture.** La tête `a7e647a` a été refusée par `securite` (revue 5321613521, veto rgpd) et
+par `simplicite` (5321613688). `securite` : la garde remontait d'un littéral jusqu'à `data` sans
+traverser un ternaire, un ET logique ni un étalement. Ainsi
+`data: { ...(ip ? { ipHash: ip } : {}) }` et `data: { ...(e && { emailHash: e }) }` sortaient en
+0. La garde DESCEND désormais depuis la valeur de la clé d'écriture : objets, tableaux,
+étalements, ternaires sur leurs deux branches, `&&`, `||`, `??`, parenthèses, `as`, `satisfies`,
+`!`. Elle juge une valeur protégée sur chacune de ces branches. Les clés d'écriture comprennent
+aussi `createMany`, `updateMany`, `upsert` et `connectOrCreate`. Un champ protégé posé sous la clé
+dans une forme qu'elle ne descend pas (un appel, une fonction) rougit la nouvelle famille
+`ecriture_non_jugee`, en échec fermé. Seuls les arguments d'une fonction de `pii.ts` en sont
+exemptés. Les deux scénarios du relecteur, `??`, `satisfies`, un objet imbriqué conditionnel et
+une fonction immédiate sont des témoins. Un producteur dans un ternaire est un contre-témoin, et il
+était un faux positif avant. Couper une branche de la descente fait rougir `--prove`.
+`simplicite` : le test retapait l'expression de `HASH_HEX_64` ; il l'importe. Mutée en 63
+caractères, la copie restait verte et l'import rougit. L'alias `segments` est retiré. Dette
+laissée : `empreinteAdresseReseau` ne normalise pas son entrée. Elle attend le sujet que rend
+`adresseDuClient` (une IPv4, ou le /64 d'une IPv6), et une IPv6 complète passée par erreur serait
+hachée entière. La normaliser demande d'accepter la forme /64 et d'ajouter un motif de refus : cela
+reviendra au premier appelant (DM-07). Le lexique ne reconnaît pas `remoteAddr` : cela relève du
+propriétaire de `champs.ts`. Le registre `docs/gates.json` (champs `verifie` et `preuveRouge`,
+réécrits par `hors-depot/reecrire-champ.mjs`) et sa vue `docs/GATES.md` décrivent la nouvelle
+portée : sept clés d'écriture, 10 familles, 21 témoins, 5 contre-témoins.
+
+Second tour : `exactitude`, `securite` (veto levé) et `simplicite` acceptent la tête `2c2a6cf`, et
+`mutation` la refuse (5321838301). Cinq mutants de la garde survivaient. Chacun rendait admise une
+écriture de clair dans une colonne de suffixe Hash : tout appel pris pour un producteur, la clé
+`update` d'un `upsert` retirée, la branche fausse d'un ternaire en valeur ignorée, un ET logique en
+valeur toujours admis, et `||` ou `??` jugés sur leur seul opérande droit. Onze témoins les tuent,
+dans le spec comme au `--prove`, qui passe à 32 témoins. Le spec exige désormais la FAMILLE et plus
+seulement le code 1 : sans cela, `ecriture_non_jugee` masquait la coupure d'une branche de la
+descente. Dix mutants ont été rejoués sur le correctif, et chacun fait rougir le spec et le
+`--prove`. La règle de descente, écrite deux fois, n'est plus écrite qu'une fois (`issues`). La
+limite déclarée nomme aussi `Object.fromEntries` et les méthodes homonymes d'une fonction de
+`pii.ts`. Les champs `preuveRouge` et `verifie` sont réécrits par le même verbe. Les clés
+`createMany`, `updateMany`, `upsert` et `connectOrCreate` sont redondantes : en écriture Prisma
+imbriquée, elles vivent toujours sous une clé `data`, `create` ou `update`. Les retirer toutes les
+quatre est un mutant qui survit (rejoué), et c'est un mutant équivalent pour toute écriture posée
+dans l'appel. `main` a été refusionnée pour un conflit sur le cliquet des sorties déclarées (51 d'un
+côté, 54 de l'autre, 55 après la fusion).
+
 ### PR #124 — 2026-09-25 — chore(GOV-099): cadrage de DM-06 — sourceCanal transporte, IBAN hors DM-06, glossaire
 
 **Fait.** Les trois contradictions sur lesquelles le développeur de DM-06 avait rendu `stop` sont
@@ -189,33 +264,7 @@ glossaire : un enum que le glossaire énumère sans qu'il existe encore dans le 
 pas. Poser `StatutApporteur` et ses voisins au §4 AVANT DM-06 fait que la première migration de
 DM-06 sera jugée contre ces valeurs, au lieu d'en fixer elle-même le vocabulaire.
 
-### PR #122 — 2026-09-25 — chore(GOV-098): perimetre fonctionnel decide par Will le 2026-09-25 — lignees, parrain, statistiques, bibliotheque
-
-**Fait.** La décision de Will du 2026-09-25 est au registre : ligne `W15` en §1 de
-`docs/DECISIONS.md`, dix hypothèses `HYP-W15-*` en §2, treize exigences nouvelles (REQ-DM-044 à 047,
-REQ-UX-040 à 046, REQ-SEC-039 et 040) et REQ-UX-006 amendée — la liste des filleuls directs, réduite
-au prénom, à l'initiale du nom et à l'état du contrat, devient la seule exception à l'interdiction
-d'identité ; le montant reste agrégé par mois. Douze tâches versées par `hors-depot/verser-tache.mjs`
-(DM-26 à 29, UX-P2-08 et 09, UX-P3-07 à 12), plus GOV-098 qui porte la PR ; aucune n'est livrée ici.
-Le glossaire définit « lignée » et « équipe » ; `docs/ESPACE-ROUTES.md` rattache `/filleuls` à
-REQ-UX-041.
-
-**Reste.** Deux hypothèses `avenant` attendent Will avant le premier DocuSeal :
-`HYP-W15-ART-4-6` (la liste des filleuls face à l'art. 4.6 al. 6 du gabarit) et
-`HYP-W15-PARRAIN-A-DATE` (retirer au parrain d'origine les lignes futures n'a aucune base écrite
-dans l'art. 4.6 al. 1). DM-26 et UX-P2-09 portaient « NE PAS ARMER » tant qu'elles étaient ouvertes. **Will les a tranchées le 2026-09-25** (« fais selon tes recommandations ») : art. 4.6 al. 6 amendé — liste réduite à « en signature » et « signé », le filleul au contrat résilié sort de la liste — et clause de correction du rattachement à motifs limitatifs ; la rédaction est portée par l'acceptance de JUR-T01, le texte définitif reste soumis à la relecture de Will (JUR-T01b).
-Deux spécifications longues — `vues-derivees.spec.ts` et `refus-de-rendre-et-de-publier.spec.ts` —
-n'ont pas été jouées dans l'arbre local (plus de dix minutes sous 1,3 Go libres) : la CI les juge.
-
-Les lentilles `exactitude` et `securite` ont refusé `e57057d` : les états `signature_en_cours` et `termine` n'existaient dans aucune énumération (`StatutContrat` = `envoye|signe|remplace|resilie`), et le chemin d'export art. 15 des notes n'était pas nommé. Corrigé : table fermée dérivée du seul contrat courant, statut de l'apporteur filleul jamais lu, échec fermé ; notes jamais dans un écran de l'espace, incluses dans l'export art. 15 par la seule fonction d'export exemptée. Au tour suivant (`1467a95`), les deux lentilles ont refusé la « version courante », que rien ne définit : un avenant envoyé faisait repasser un filleul signé à « en signature ». La règle se dérive désormais de l'ensemble des versions ; l'échéance des 12 mois sur un filleul unique est nommée comme dette dans `HYP-W15-FILLEULS-VUE`. Cette dette est ensuite tranchée le 2026-09-25 par délégation de Will : l'échéance agrégée n'est pas affichée tant que moins de deux filleuls sont dans leur fenêtre (acceptance d'UX-P2-04). La lentille securite a refusé cette règle sur `4504684` (toute agrégation de dates vaut la date d'un filleul, et le seuil fuit) : l'échéance n'est plus affichée du tout, remplacée par un texte fixe, et une relation reprise se lit sur les versions postérieures à la dernière résiliation.
-
-**Appris.** `pnpm lot:paths` ne lit pas le champ `paths` d'une tâche : il dérive ses chemins de sa
-table manuelle, du registre des gardes, du champ `tests` et du drapeau `schema`. Une tâche versée
-sans `tests` ni `schema` le fait JETER (« n'a aucun chemin ») ; `hors-depot/verser-tache.mjs` ne le
-voit pas. Poser `tests` par `hors-depot/poser-champ.mjs` le lève. Et le code NAF que W15 demandait
-de capter était déjà stocké au dépôt (REQ-INT-021, REQ-DM-030) : seul le repli manuel le laissait nul.
-
-… 50 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 51 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
