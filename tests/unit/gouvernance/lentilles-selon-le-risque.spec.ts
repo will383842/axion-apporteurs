@@ -94,26 +94,25 @@ const ZONES_CONNUES = (
   }
 ).$defs.tache.properties.zone.enum;
 /**
- * LA SENSIBILITÉ SUIT LE FICHIER (GOV-097, refus `securite` du 2026-09-25) — oracle : un fichier
- * qu'une tâche haute du registre déclare, égal ou sous un répertoire déclaré hors de `docs/`, sauf
- * le registre append-only `docs/gates.json`.
+ * LA SENSIBILITÉ SUIT LE FICHIER DU CODE PRODUIT (GOV-097, refus `securite` du 2026-09-25) —
+ * oracle : un fichier sous `src/` qu'une tâche haute du registre déclare, égal ou sous un
+ * répertoire déclaré.
  */
 const DECLARES_PAR_LES_TACHES_HAUTES = registre()
   .filter((t) => tacheHaute(t, ZONES_CONNUES))
-  .flatMap((t) => cheminsDe(t))
-  .filter((c) => c !== 'docs/gates.json');
+  .flatMap((t) => cheminsDe(t));
 function declareParUneTacheHaute(x: string): boolean {
-  return DECLARES_PAR_LES_TACHES_HAUTES.some(
-    (c) => c === x || (c.endsWith('/') && !c.startsWith('docs/') && x.startsWith(c))
+  return (
+    x.startsWith('src/') &&
+    DECLARES_PAR_LES_TACHES_HAUTES.some((c) => c === x || (c.endsWith('/') && x.startsWith(c)))
   );
 }
 /**
- * La PR ordinaire de référence : les chemins de QA-T01 HORS `.github/`, hors de la racine
- * (décisions de l'orchestrateur du 2026-09-18 sur GOV-077) et hors des fichiers qu'une tâche
- * sensible déclare (GOV-097). Dérivés du registre (RM-03), jamais tapés.
+ * La PR ordinaire de référence : les chemins de QA-T01 HORS `.github/` et hors de la racine
+ * (décisions de l'orchestrateur du 2026-09-18 sur GOV-077). Dérivés du registre (RM-03), jamais tapés.
  */
 const FICHIERS_QA_T01 = CHEMINS_QA_T01.filter(
-  (f) => !CI_DE_QA_T01.includes(f) && !RACINE_DE_QA_T01.includes(f) && !declareParUneTacheHaute(f)
+  (f) => !CI_DE_QA_T01.includes(f) && !RACINE_DE_QA_T01.includes(f)
 );
 
 /**

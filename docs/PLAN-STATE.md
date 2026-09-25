@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `32ea43d` — 2026-09-25T11:47:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #120 (rien) · 2. #116 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #116 (un contrôle requis rouge ou une revue manquante) · 2. #120 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/107 tâches, reste 64.60 j |
-| Le prochain pas | fusionner #120, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #120 — 2026-09-25 |
 
-**Ce qu’on tape maintenant.** `gh pr view 120 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,8 +64,8 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #120 — feat(GOV-097): quatre lentilles pour l'argent, la securite et les donnees, deux pour le reste | `t/gov-097-risque-reserve` | rien — fusionnable maintenant |
-| 2 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un contrôle requis rouge ou une revue manquante |
+| 1 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un contrôle requis rouge ou une revue manquante |
+| 2 | #120 — feat(GOV-097): quatre lentilles pour l'argent, la securite et les donnees, deux pour le reste | `t/gov-097-risque-reserve` | un contrôle requis rouge ou une revue manquante |
 | 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 | 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
 | 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
@@ -94,8 +94,6 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
-
-**Fusionner #120** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 47 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -139,29 +137,28 @@ préfixe depuis la racine, et aucun fichier suivi du dépôt ne commençait par 
 disque ; la reprendre telle quelle pour le risque aurait fait passer tout le code produit à deux
 lentilles sans qu'aucun témoin ne rougisse. Le signal se lit maintenant par segments de chemin. —
 Le gain de la décision (1) est borné par le registre : mesuré par le code, 31 tâches `partners`
-restantes ordinaires avant, 43 au premier tour, 24 depuis la relecture ci-dessous ; la cause dominante de l'élevé est `sensible` non vide, que la
+restantes ordinaires avant, 43 après, relecture comprise ; la cause dominante de l'élevé est `sensible` non vide, que la
 décision garde. — `refs/stash` est PARTAGÉ entre les arbres de travail d'un même dépôt : un
 `git stash pop` lancé dans un arbre a tenté d'appliquer le remisage d'une autre session (refusé par
 git, rien d'appliqué). Ne jamais utiliser `git stash` dans un arbre de travail de ce dépôt.
 
 **Relecture.** Deux refus sur `11a0502`. `securite` (5316365953) : le code de sécurité déjà au
-dépôt redescendait à deux lentilles — `api-entrante.ts` (SEC-07, `auth`), l'attrape-tout
+dépôt redescendait à deux lentilles : `api-entrante.ts` (SEC-07, `auth`), l'attrape-tout
 `[...inconnu]/route.ts`, les deux `journal.ts` (DM-01, `rgpd`) ressortaient ordinaires sous
 `feat(INT-T11)`. Remède : la sensibilité suit le FICHIER. `fichiersDesTachesAElever()` rend élevé
-tout fichier du diff qu'une tâche quelconque du registre, base et tête, déclare (`paths` et `tests{}`,
-par `cheminsDeLaTache()`) si elle élèverait seule une PR ; la raison nomme le fichier et la tâche.
-Deux exclusions déclarées : les registres append-only (`docs/gates.json`) et un répertoire déclaré
-sous `docs/`, qui ne couvre pas ses fichiers (`docs/journal/`, `docs/adr/`). La liste des segments
-gagne `session`, `sessions`, `crypto`, `chiffrement`, `cloisonnement`, `middleware` ; aucun des
-250 fichiers suivis sous `docs/`, `scripts/`, `tests/`, `src/` n'y répond. `nuDuSegment()`, lecture
-unique de l'Attaque et du risque, retire désormais `[...x]`, `[[...x]]`, `@x`, `(.)x`, `(..)x`,
-`(...)x` répétés. `mutation` (5316513348) : la casse et la frontière répertoire/fichier de
-l'Attaque ont chacune leur témoin, vus rougir sous la mutation. Le prix, mesuré par le code : 24
-tâches `partners` restantes ordinaires sur 194 (43 au premier tour, 31 avant GOV-097). La baisse
-vient de tâches de gouvernance étiquetées `sensible` qui déclarent des scripts partagés
-(GOV-008 pour `scripts/plan-state/build.ts`, GOV-056 pour `scripts/gates/gov-attributions.ts`, SEC-02 pour
-le spec `refus-de-rendre-et-de-publier`). Limiter la propriété aux fichiers de `src/` garderait 43 :
-c'est une décision, pas prise ici.
+tout fichier du code produit (`src/`) qu'une tâche quelconque du registre, base et tête, déclare
+(`paths` et `tests{}`, par `cheminsDeLaTache()`) si elle élèverait seule une PR ; la raison nomme le
+fichier et la tâche. La liste des segments gagne `session`, `sessions`, `crypto`, `chiffrement`,
+`cloisonnement`, `middleware` ; aucun des 250 fichiers suivis sous `docs/`, `scripts/`, `tests/`,
+`src/` n'y répond. `nuDuSegment()`, lecture unique de l'Attaque et du risque, retire désormais
+`[...x]`, `[[...x]]`, `@x`, `(.)x`, `(..)x`, `(...)x` répétés. `mutation` (5316513348) : la casse
+et la frontière répertoire/fichier de l'Attaque ont chacune leur témoin, vus rougir sous la
+mutation. Pourquoi `src/` seul : étendue à tout le dépôt, la règle rendait 24 tâches `partners`
+ordinaires sur 194, moins que les 31 d'avant GOV-097, parce que des tâches de gouvernance portent
+`sensible` sur des scripts partagés (GOV-008 pour `scripts/plan-state/build.ts`, GOV-018 pour
+`scripts/gates/gov-lecons.ts`). Limitée au code produit, elle en rend 43 ; les scripts de contrôle
+gardent leurs propres signaux, et un `scripts/gates/*` hors de la garde reste ordinaire (dette déjà
+relevée par `securite`).
 
 ### PR #118 — 2026-09-23 — feat(GOV-096): le champ Lot: du gabarit resout les taches d une PR de lot
 

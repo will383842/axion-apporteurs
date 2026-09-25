@@ -70,7 +70,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { posix } from 'node:path';
 
-import { cheminsDeLaTache, REGISTRES_APPEND_ONLY } from './chemins-de-tache';
+import { cheminsDeLaTache } from './chemins-de-tache';
 
 export const CHEMIN_AGENTS = 'docs/agents.json';
 export const CHEMIN_CHARTE = 'docs/CHARTE-AGENTS.md';
@@ -736,9 +736,9 @@ export function resoudreLeLot<T extends TacheDeLaPr>(e: {
  *        — une `zone` de `ZONES_A_RISQUE_ELEVE`, ou une `zone` ABSENTE, ou une `zone` que le schéma
  *          du registre ne déclare pas (`zonesDuRegistre`) : une valeur imprévue n'est rien prouvé ;
  *   2. le label `schema`, ou un chemin de schéma (`toucheSchema`, dérivé de la charte §7) ;
- *   3. un fichier dans une zone sensible du code (`fichierEnZoneSensible`), ou un fichier qu'une
- *      tâche QUELCONQUE du registre, sensible, déclare (`fichiersDesTachesAElever`) : la
- *      sensibilité suit le fichier, pas seulement la tâche du titre ;
+ *   3. un fichier dans une zone sensible du code (`fichierEnZoneSensible`), ou un fichier du code
+ *      produit (`src/`) qu'une tâche QUELCONQUE du registre, sensible, déclare
+ *      (`fichiersDesTachesAElever`) : la sensibilité suit le fichier, pas seulement la tâche du titre ;
  *   4. un fichier du PROCESSUS (`fichierDuProcessus`) : la garde des revues, la CI, un dossier
  *      caché ou un fichier de configuration à la racine, `config/`. Ces fichiers peuvent désarmer
  *      les gardes elles-mêmes : c'est la sécurité du processus, et elle reste à quatre lentilles ;
@@ -998,6 +998,9 @@ function tacheAElever(t: TacheDeLaPr): string | null {
   return ecarts.length === 0 ? null : ecarts.join(', ');
 }
 
+/** Les racines du CODE PRODUIT, seul lu par `fichiersDesTachesAElever()` (voir sa raison). */
+export const RACINES_DU_CODE_PRODUIT: readonly string[] = ['src/'];
+
 /**
  * LES FICHIERS DU DIFF QU'UNE TÂCHE SENSIBLE DÉCLARE — LA SENSIBILITÉ SUIT LE FICHIER (refus
  * `securite` du 2026-09-25, motif 1). Une tâche QUELCONQUE du registre, de la BASE ou de la TÊTE
@@ -1008,18 +1011,21 @@ function tacheAElever(t: TacheDeLaPr): string | null {
  * UN FICHIER RÉPOND à un chemin déclaré ÉGAL, ou à un RÉPERTOIRE déclaré (`…/`) qui le contient
  * — l'attrape-tout `[...inconnu]/route.ts` est de SEC-07 par `src/app/api/integrations/axionia/`.
  *
- * ⚠️ DEUX EXCLUSIONS, DÉCLARÉES :
- *   — les registres append-only (`REGISTRES_APPEND_ONLY`, `docs/gates.json`) : chaque PR y verse
- *     sa ligne, et une tâche sensible sur deux les déclare ; les compter élèverait toute PR ;
- *   — un RÉPERTOIRE déclaré sous `docs/` ne couvre pas ses fichiers : `docs/journal/` (GOV-008) et
- *     `docs/adr/` (INT-T01a) reçoivent une entrée de CHAQUE PR. Un fichier de `docs/` déclaré
- *     NOMMÉMENT (`docs/rgpd/aipd.md`) élève toujours.
+ * ⚠️ SEULS LES FICHIERS DU CODE PRODUIT (`RACINES_DU_CODE_PRODUIT`, `src/`) sont lus ici — décision
+ * de l'orchestrateur du 2026-09-25, `partners/ADR-0021`. La décision de Will protège l'argent, la
+ * sécurité et les données du PRODUIT ; les scripts de contrôle sont protégés par leurs propres
+ * signaux (garde des revues, racine, dossiers cachés, `config/`), `prisma/` et `packages/contracts/`
+ * par le signal de schéma. Étendue à `scripts/` et `docs/`, la règle ramenait le gain sous son niveau
+ * d'avant GOV-097 (24 tâches ordinaires contre 31), à cause d'étiquettes `sensible` portées par des
+ * tâches de gouvernance (GOV-008 `auth` sur `scripts/plan-state/build.ts`). DETTE NOMMÉE : un
+ * `scripts/gates/*` hors de la fermeture de la garde reste ordinaire.
  */
 export function fichiersDesTachesAElever(
   fichiers: readonly string[],
   registres: readonly { ou: string; taches: readonly TacheDeLaPr[] }[]
 ): string[] {
-  const exclus = new Set(REGISTRES_APPEND_ONLY.map((r) => r.chemin));
+  const produit = fichiers.filter((f) => RACINES_DU_CODE_PRODUIT.some((r) => f.startsWith(r)));
+  if (produit.length === 0) return [];
   // fichier → « tâche (écart) » → les registres où elle le déclare : une tâche identique sur la
   // base et sur la tête ne s'écrit qu'une fois.
   const vus = new Map<string, Map<string, string[]>>();
@@ -1027,13 +1033,9 @@ export function fichiersDesTachesAElever(
     for (const t of taches) {
       const ecart = tacheAElever(t);
       if (ecart === null) continue;
-      const declares = cheminsDeLaTache({ ...t, paths: t.paths ?? [] }).filter(
-        (c) => c !== '' && !exclus.has(c)
-      );
-      for (const f of fichiers) {
-        const couvre = declares.some(
-          (c) => c === f || (c.endsWith('/') && !c.startsWith('docs/') && f.startsWith(c))
-        );
+      const declares = cheminsDeLaTache({ ...t, paths: t.paths ?? [] });
+      for (const f of produit) {
+        const couvre = declares.some((c) => c === f || (c.endsWith('/') && f.startsWith(c)));
         if (!couvre) continue;
         const parTache = vus.get(f) ?? new Map<string, string[]>();
         const qui = `${t.id} (${ecart})`;

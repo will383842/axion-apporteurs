@@ -332,12 +332,46 @@ describe('REQ-GOV-011 — GOV-097 : un fichier déclaré par une tâche sensible
   });
 
   it('REQ-GOV-011 · contre-témoin : un fichier que seule une tâche NEUTRE déclare reste ORDINAIRE', () => {
-    // `docs/gates.json` est déclaré par SEC-07 et DM-01, mais c'est un registre append-only ;
-    // `docs/journal/…` est couvert par le répertoire `docs/journal/` de GOV-008 (`auth`), et un
-    // répertoire déclaré sous `docs/` ne couvre pas ses fichiers — chaque PR y verse son entrée.
+    // `docs/gates.json` (déclaré par SEC-07 et DM-01) et `docs/journal/…` (sous le `docs/journal/`
+    // de GOV-008, `auth`) ne sont pas du code produit : la règle ne lit que `src/`.
     for (const f of ['src/server/mcp/serrure.ts', CODE_NEUTRE, DOC_NEUTRE, 'docs/gates.json']) {
       const r = reel([f]);
       expect(r.niveau, `${f} — ${r.raisons.join(' ; ')}`).toBe('ordinaire');
+    }
+  });
+
+  it('REQ-GOV-011 · contre-témoin : un script de `scripts/` qu’une tâche de GOUVERNANCE `sensible` déclare, hors de la garde des revues, reste ORDINAIRE — la règle ne lit que le code produit', () => {
+    // Dérivé du registre, jamais tapé : décision de l'orchestrateur du 2026-09-25 (ADR 0021). Les
+    // scripts de contrôle ont leurs propres signaux ; celui-ci, hors garde, est la DETTE nommée.
+    const garde = LECTEUR.cheminsDeLaGardeDesRevues();
+    const candidats = registre()
+      .filter((t) => t.zone === 'gouvernance' && (t.sensible ?? []).length > 0)
+      .flatMap((t) => (t.paths ?? []).map((f) => ({ id: t.id, f })))
+      .filter(
+        ({ f }) =>
+          f.startsWith('scripts/') &&
+          !f.endsWith('/') &&
+          !garde.includes(f) &&
+          !LECTEUR.fichierEnZoneSensible(f)
+      );
+    expect(
+      candidats.length,
+      'plus aucun script de gouvernance sensible hors garde'
+    ).toBeGreaterThan(0);
+    const { id, f } = candidats[0]!;
+    const r = reel([f]);
+    expect(r.niveau, `${f} (déclaré par ${id}) — ${r.raisons.join(' ; ')}`).toBe('ordinaire');
+  });
+
+  it('REQ-GOV-011 · `prisma/` et `packages/contracts/`, hors `src/`, restent ÉLEVÉS par le signal de schéma', () => {
+    for (const f of [
+      'packages/contracts/events.ts',
+      'prisma/migrations/20260919000000_socle_journal/migration.sql',
+      'prisma/seed.ts',
+    ]) {
+      const r = reel([f]);
+      expect(r.niveau, f).toBe('eleve');
+      expect(r.schema, f).toBe(true);
     }
   });
 

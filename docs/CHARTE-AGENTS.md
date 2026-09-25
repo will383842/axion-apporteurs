@@ -308,10 +308,14 @@ de schéma (§7) ; (3) un de ses fichiers est dans une **zone sensible du code**
 l'argent, la sécurité ou les données (`commission`, `attribution`, `auth`, `espace`, `securite`, `acces`,
 `donnees-personnelles`, `session`, `chiffrement`, `cloisonnement`, `middleware`…, la liste est
 `SEGMENTS_DES_ZONES_SENSIBLES` ; un segment se lit **nu**, débarrassé des décorations de routage de Next :
-`[...auth]`, `[[...auth]]`, `@auth`, `(.)auth` valent `auth`), ou un de ses fichiers est **déclaré** (`paths` ∪
-`tests{}`) par une tâche **quelconque** du registre, de la base ou de la tête, qui élèverait à elle seule
-une PR : **la sensibilité suit le fichier**, pas seulement la tâche du titre (hors registres append-only, et
-un répertoire déclaré sous `docs/` ne couvre pas ses fichiers) ; (4) un de ses fichiers appartient au
+`[...auth]`, `[[...auth]]`, `@auth`, `(.)auth` valent `auth`), ou un de ses fichiers du **code produit**
+(`src/`) est **déclaré** (`paths` ∪ `tests{}`) par une tâche **quelconque** du registre, de la base ou de la
+tête, qui élèverait à elle seule une PR : **la sensibilité suit le fichier**, pas seulement la tâche du titre.
+La règle ne lit que `src/` : la décision de Will protège l'argent, la sécurité et les données du produit ;
+les scripts de contrôle ont leurs propres signaux (garde des revues, CI, racine, processus), et l'étendre à
+`scripts/` et `docs/` ramenait le gain sous son niveau d'avant GOV-097 (24 tâches ordinaires contre 31) à
+cause d'étiquettes `sensible` portées par des tâches de gouvernance — dette nommée : un `scripts/gates/*`
+hors de la garde des revues reste ordinaire ; (4) un de ses fichiers appartient au
 **processus** : la garde des revues — ses trois racines (`scripts/lot/revues.ts`, `scripts/gates/gov-pr.ts`,
 `scripts/lot/corps-de-pr.ts`), la **fermeture transitive** de leurs imports, dérivée du disque, cette charte,
 `docs/agents.json` et le schéma du registre des tâches —, **`.github/`** et tout dossier caché **de la racine**, **toute la

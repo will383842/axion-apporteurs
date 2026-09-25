@@ -49,17 +49,22 @@ de ces signaux est présent :
 | … ou une `zone` absente, ou que `scripts/lot/tasks.schema.json` ne déclare pas | le schéma, **lu** (RM-01) | une valeur imprévue n'est rien prouvé |
 | le label `schema`, ou un chemin de schéma (charte §7) | la PR | inchangé |
 | un fichier dans une **zone sensible du code** | `SEGMENTS_DES_ZONES_SENSIBLES` | un segment du chemin, lu nu (`nuDuSegment()` retire `[...x]`, `[[...x]]`, `@x`, `(.)x`…), nomme l'argent, la sécurité ou les données |
-| un fichier **déclaré** (`paths` ∪ `tests{}`) par une tâche quelconque du registre, base ou tête, qui élèverait à elle seule | `fichiersDesTachesAElever()` | **la sensibilité suit le fichier**, pas seulement la tâche du titre : `api-entrante.ts` reste de SEC-07 sous `feat(INT-T11)` |
+| un fichier du **code produit** (`src/`) **déclaré** (`paths` ∪ `tests{}`) par une tâche quelconque du registre, base ou tête, qui élèverait à elle seule | `fichiersDesTachesAElever()`, `RACINES_DU_CODE_PRODUIT` | **la sensibilité suit le fichier**, pas seulement la tâche du titre : `api-entrante.ts` reste de SEC-07 sous `feat(INT-T11)` |
 | un fichier du **processus** : la garde des revues, un dossier caché de la racine (`.github/`, `.claude/`…), la racine, `config/` | `cheminsDeLaGardeDesRevues()`, `fichierDuProcessus()` | ces fichiers peuvent désarmer les gardes : c'est la sécurité du processus |
 | diff vide, liste incomplète, aucune tâche résolue, registre de base illisible | la forge, le registre | échec **fermé**, conservé |
 
 **Ce qui cesse d'élever** : une zone autre que l'argent et la sécurité (`espace`, `juridique`,
 `integration`, `domaine`, `console`, `devops`) avec `sensible: []`, et un fichier de code produit
 hors des zones sensibles qu'aucune tâche sensible ne déclare. La sensibilité suit aussi le fichier
-(refus `securite` du 2026-09-25 sur #120) : un fichier que déclare une tâche sensible du registre de
-base ou de tête élève toute PR qui le touche, quelle que soit la tâche de son titre — sauf les
-registres append-only (`docs/gates.json`) et les fichiers qu'un répertoire déclaré sous `docs/`
-couvrirait seulement (`docs/journal/`, `docs/adr/` reçoivent une entrée de chaque PR).
+(refus `securite` du 2026-09-25 sur #120) : un fichier du code produit (`src/`) que déclare une
+tâche sensible du registre de base ou de tête élève toute PR qui le touche, quelle que soit la tâche
+de son titre. La règle ne lit que `src/` (décision de l'orchestrateur du 2026-09-25) : la décision
+de Will protège l'argent, la sécurité et les données du PRODUIT ; les scripts de contrôle sont
+protégés par leurs propres signaux (garde des revues, CI, racine, processus), `prisma/` et
+`packages/contracts/` par le signal de schéma ; étendue à `scripts/` et `docs/`, la règle ramenait le
+gain sous son niveau d'avant GOV-097 (24 tâches ordinaires contre 31) à cause d'étiquettes
+`sensible` portées par des tâches de gouvernance. Dette nommée, comme la relevait la lentille
+`securite` : un `scripts/gates/*` hors de la fermeture de la garde des revues reste ordinaire.
 
 **Les listes sont des données nommées**, pas des conditions éparpillées : `ZONES_A_RISQUE_ELEVE`,
 `ZONES_SENSIBLES` (qui quitte `scripts/gates/gov-pr.ts` pour le lecteur unique : la section
@@ -102,11 +107,9 @@ motifs, et tout `Verdict: refuse` bloque. La règle tient dans la main de la len
 
 - **Le gain, calculé par le code et non à la main** (chaque tâche restante jugée en PR synthétique
   à une tâche sur ses `paths` ∪ `tests{}`) : sur les tâches `partners` restantes, **31 ordinaires
-  avant** GOV-097 (registre de `3625f6c`) ; au premier tour de relecture, 43 sur 194 (49 sur 209 tous
-  dépôts) ; depuis que la sensibilité suit le fichier, **24 sur 194** (27 sur 209), sur le registre
-  de `32ea43d`. La baisse vient de tâches de gouvernance étiquetées `sensible` (GOV-008 `auth`,
-  GOV-056 `attribution`, SEC-02) qui déclarent des scripts et des specs partagés
-  (`scripts/plan-state/build.ts`, `scripts/gates/gov-attributions.ts`…). Le spec `quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts` imprime la ligne
+  avant** GOV-097 (registre de `3625f6c`) ; **43 sur 194 après** (49 sur 209 tous dépôts), sur le
+  registre de `32ea43d`, la règle « la sensibilité suit le fichier » comprise. Étendue à tout le
+  dépôt, cette règle donnait 24 sur 194 (27 sur 209) : c'est pourquoi elle ne lit que `src/`. Le spec `quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts` imprime la ligne
   `GOV-097 — tâches partners restantes : …` à chaque exécution : c'est elle qui fait foi, pas ce
   paragraphe.
 - **Le gain de (1) est borné par le registre.** La cause dominante de l'élevé n'était pas la liste

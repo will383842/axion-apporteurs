@@ -52,7 +52,6 @@ import {
   cheminsTouches,
   entreesDuDiff,
   fichierEnZoneSensible,
-  fichiersDesTachesAElever,
   OPTIONS_DU_DIFF,
   direLeRisque,
   fautesDesRevues,
@@ -1589,16 +1588,7 @@ if (LANCE_EN_SCRIPT) {
       // Ses `paths` HORS `.github/` et hors de la RACINE : un fichier de CI ou de configuration à la
       // racine rend la PR élevée (décisions de l'orchestrateur du 2026-09-18 sur GOV-077) — ce sont
       // les témoins `AU_MILIEU` qui le prouvent.
-      // ⚠️ ET HORS DES FICHIERS QU'UNE TÂCHE SENSIBLE DÉCLARE (GOV-097, refus `securite` du
-      // 2026-09-25, motif 1) : QA-T01 partage `scripts/plan-state/build.ts` avec GOV-008 (`auth`),
-      // et la sensibilité suit le fichier. Filtrés par la MÊME fonction que le risque, jamais tapés :
-      // le témoin `SENSIBLE_PAR_SON_FICHIER` ci-dessous en remet un, et la PR monte.
-      fichiers: cheminsDe('QA-T01').filter(
-        (f) =>
-          !f.startsWith(DOSSIER_CI) &&
-          f.includes('/') &&
-          fichiersDesTachesAElever([f], [{ ou: 'base', taches: depot.taches }]).length === 0
-      ),
+      fichiers: cheminsDe('QA-T01').filter((f) => !f.startsWith(DOSSIER_CI) && f.includes('/')),
       // ⚠️ LABEL AJOUTÉ PAR GOV-090 — RESSERREMENT ASSUMÉ, PAS UN AJUSTEMENT POUR TAIRE UN ROUGE.
       // `partners/ADR-0019` fait entrer `docs/gates.json` au tableau du §7 : c'est une SOURCE
       // (`docs/GATES.md` en est la vue), `.claude/settings.json` la met déjà en `deny` sur `Write`
