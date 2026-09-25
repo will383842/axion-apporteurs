@@ -100,3 +100,109 @@ model Evenement {
 
   @@map("evenements")
 }
+
+// ── DM-06 : l'apporteur ─────────────────────────────────────────────────────
+
+/// Les neuf statuts STOCKÉS de l'apporteur (REQ-DM-011, `docs/GLOSSAIRE.md` §2). `actif` et
+/// `dormant` sont dérivés par `src/domain/apporteur/activite.ts`, jamais stockés (REQ-CPL-027).
+/// Les transitions permises vivent dans `src/domain/apporteur/matrice.ts`.
+enum StatutApporteur {
+  candidat
+  retenu
+  vivier
+  refuse
+  kyc_en_cours
+  pret_a_signer
+  signe
+  suspendu
+  resilie
+
+  @@map("statut_apporteur")
+}
+
+/// Les motifs de résiliation (REQ-DM-011). Le vocabulaire de la faute en est retiré.
+enum MotifResiliation {
+  ordinaire_apporteur
+  ordinaire_axion
+  manquement_grave
+
+  @@map("motif_resiliation")
+}
+
+/// Le régime de TVA d'une identité de facturation (REQ-ARG-033, `docs/GLOSSAIRE.md` §4).
+enum RegimeTva {
+  assujetti
+  franchise_293b
+
+  @@map("regime_tva")
+}
+
+/// L'apporteur d'affaires (DM-06). Aucune coordonnée ici : nom, courriel et téléphone sont des
+/// données chiffrées posées par la tâche du chiffrement ; l'IBAN vit dans la pièce `rib` du KYC
+/// (HYP-DM06-IBAN), jamais dans cette table ni dans `identites_facturation`.
+model Apporteur {
+  id               String            @id @default(uuid()) @db.Uuid
+  statut           StatutApporteur
+  /// Nul hors `resilie` ; exigé par la matrice pour y entrer.
+  resiliationMotif MotifResiliation? @map("resiliation_motif")
+  /// Public, lisible, non énumérable : `AX` + 6 caractères Crockford base32, 30 bits aléatoires
+  /// (REQ-DM-012, HYP-DM06-CODE-PARRAINAGE). Forme tenue par un CHECK en SQL brut.
+  codeParrainage   String            @unique @map("code_parrainage") @db.Char(8)
+  /// Exclu de tout agrégat d'argent, du lot, de la déclaration annuelle et de l'entonnoir
+  /// (REQ-CPL-020). Sans défaut : l'écrivain DIT si l'apporteur est de test.
+  isTest           Boolean           @map("is_test")
+
+  /// Surcharge manuelle du seuil de vérification prioritaire (REQ-DM-010). NULLE = le défaut,
+  /// DÉRIVÉ du palier par `seuilPrioritaire()` (HYP-D3) — aucun défaut littéral en base (RM-10).
+  seuilVerificationPrioritaire   Int?      @map("seuil_verification_prioritaire")
+  /// La trace de la surcharge : présente si et seulement si la surcharge l'est (CHECK en SQL brut).
+  seuilVerificationPrioritaireAt DateTime? @map("seuil_verification_prioritaire_at") @db.Timestamptz(3)
+
+  // Le snapshot de candidature, FIGÉ tel qu'axionia l'a émis (REQ-DM-035, REQ-QA-035).
+  candidatureId      String  @unique @map("candidature_id") @db.Uuid
+  reponsesJson       Json    @map("reponses_json")
+  scoreInitial       Int     @map("score_initial")
+  scorePartsJson     Json    @map("score_parts_json")
+  scoreBaremeVersion String  @map("score_bareme_version")
+  /// Chaîne transportée figée, jamais normalisée ; au-delà de la borne : nulle, jamais tronquée
+  /// (HYP-DM06-SOURCE-CANAL). La borne égale `SOURCE_CANAL_LONGUEUR_MAX`.
+  sourceCanal        String? @map("source_canal") @db.VarChar(512)
+  parrainCodeCapture String? @map("parrain_code_capture")
+
+  creeAt DateTime @map("cree_at") @db.Timestamptz(3)
+
+  jetonsDepot          JetonDepot[]
+  identitesFacturation IdentiteFacturation[]
+
+  @@map("apporteurs")
+}
+
+/// Un jeton de dépôt privé (REQ-DM-012). Seule l'EMPREINTE se stocke ; un jeton révoqué ne se
+/// réactive pas (déclencheur `jetons_depot_revocation_definitive`, SQL brut).
+model JetonDepot {
+  id             String    @id @default(uuid()) @db.Uuid
+  apporteurId    String    @map("apporteur_id") @db.Uuid
+  apporteur      Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  tokenHash      String    @unique @map("token_hash") @db.Char(64)
+  creeAt         DateTime  @map("cree_at") @db.Timestamptz(3)
+  revoqueAt      DateTime? @map("revoque_at") @db.Timestamptz(3)
+  dernierUsageAt DateTime? @map("dernier_usage_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@map("jetons_depot")
+}
+
+/// Une identité de facturation DATÉE, valable sur [debutAt, finAt) (REQ-CPL-005). Un relevé qui
+/// en chevauche deux produit deux autofactures. AUCUNE colonne de RIB ni d'IBAN (HYP-DM06-IBAN).
+model IdentiteFacturation {
+  id          String    @id @default(uuid()) @db.Uuid
+  apporteurId String    @map("apporteur_id") @db.Uuid
+  apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  siren       String    @db.Char(9)
+  regimeTva   RegimeTva @map("regime_tva")
+  debutAt     DateTime  @map("debut_at") @db.Timestamptz(3)
+  finAt       DateTime? @map("fin_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@map("identites_facturation")
+}

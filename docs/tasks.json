@@ -3177,7 +3177,8 @@
         "tests/unit/domaine/apporteur-identifiants.spec.ts",
         "tests/unit/domaine/apporteur-activite.spec.ts",
         "tests/unit/domaine/apporteur-population-is-test.spec.ts",
-        "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts"
+        "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts",
+        "scripts/gates/gov-attributions.ts"
       ],
       "schema": true,
       "sensible": [
