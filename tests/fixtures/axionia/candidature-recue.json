@@ -10,9 +10,7 @@
       "candidatureId": "270022c1-2cc8-4a05-ba5a-4e7584250470",
       "reponsesJson": {
         "ia": {
-          "outils": [
-            "chatgpt"
-          ],
+          "outils": ["chatgpt"],
           "utilise": true
         },
         "b2b": {
@@ -20,17 +18,13 @@
           "dejaVendu": true
         },
         "zone": {
-          "zones": [
-            "auvergne-rhone-alpes"
-          ],
+          "zones": ["auvergne-rhone-alpes"],
           "mobile": true
         },
         "statut": "auto_entrepreneur",
         "version": 1,
         "informatique": {
-          "usages": [
-            "crm"
-          ],
+          "usages": ["crm"],
           "utilise": true
         },
         "disponibilite": "immediate",

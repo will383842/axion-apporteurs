@@ -26,9 +26,7 @@ const depot = (deposeAt: number, confirmeAt: number | null): DepotPourActivite =
 
 describe('REQ-CPL-027 — `actif` : au moins un dépôt confirmé', () => {
   it('REQ-CPL-027 : aucun dépôt → ni actif', () => {
-    expect(
-      activite({ statut: 'signe', signeAt: ilYA(10) }, [], MAINTENANT, 60).actif
-    ).toBe(false);
+    expect(activite({ statut: 'signe', signeAt: ilYA(10) }, [], MAINTENANT, 60).actif).toBe(false);
   });
 
   it('REQ-CPL-027 : des dépôts NON confirmés seulement → pas actif', () => {
@@ -46,9 +44,9 @@ describe('REQ-CPL-027 — `actif` : au moins un dépôt confirmé', () => {
   });
 
   it('REQ-CPL-027 : la dérivation rend exactement deux indicateurs, rien d’autre', () => {
-    expect(Object.keys(activite({ statut: 'signe', signeAt: ilYA(1) }, [], MAINTENANT, 60)).sort()).toEqual(
-      ['actif', 'dormant']
-    );
+    expect(
+      Object.keys(activite({ statut: 'signe', signeAt: ilYA(1) }, [], MAINTENANT, 60)).sort()
+    ).toEqual(['actif', 'dormant']);
   });
 });
 
@@ -124,7 +122,9 @@ describe('REQ-CPL-027 — aucun littéral de dormance, aucun envoi déclenché p
       .filter((f) => /\.(ts|tsx)$/.test(f));
     const fautifs = suivis.filter((f) => {
       const t = readFileSync(f, 'utf8');
-      return /apporteur\/activite['"]/.test(t) && /lib\/notify|notify['"]|zeptomail|sendMail/i.test(t);
+      return (
+        /apporteur\/activite['"]/.test(t) && /lib\/notify|notify['"]|zeptomail|sendMail/i.test(t)
+      );
     });
     expect(fautifs).toEqual([]);
   });

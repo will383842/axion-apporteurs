@@ -46,14 +46,19 @@ describe('REQ-DM-035 — le snapshot de candidature, tel que le producteur l’�
   });
 
   it('REQ-DM-035 : une charge incomplète est REFUSÉE — aucun champ n’est complété', () => {
-    const { scoreBaremeVersion: _retire, ...incomplete } = PAYLOAD;
+    const incomplete = { ...PAYLOAD };
+    delete incomplete.scoreBaremeVersion;
     expect(() => snapshotDeCandidature(incomplete)).toThrow(/scoreBaremeVersion/);
   });
 });
 
 describe('REQ-DM-035 — `sourceCanal` : transportée figée, bornée, jamais tronquée', () => {
   it('REQ-DM-035 : stockée TELLE QUE REÇUE — ni casse, ni barre finale, ni requête retirées', () => {
-    for (const brute of ['/Devenir-Commercial-IA/Candidature/', '/candidature?utm_source=x&y=1', ' /espace ']) {
+    for (const brute of [
+      '/Devenir-Commercial-IA/Candidature/',
+      '/candidature?utm_source=x&y=1',
+      ' /espace ',
+    ]) {
       expect(snapshotDeCandidature(avecSource(brute)).snapshot.sourceCanal).toBe(brute);
     }
   });
@@ -72,6 +77,15 @@ describe('REQ-DM-035 — `sourceCanal` : transportée figée, bornée, jamais tr
     expect(r.ecarts).toEqual([{ code: 'source_canal_hors_borne', longueur: 513 }]);
     // L'écart se journalise : il ne doit pas transporter un seul caractère de la valeur.
     expect(JSON.stringify(r.ecarts)).not.toContain('Z');
+  });
+
+  it('REQ-DM-035 : la borne se compte en caractères, comme la colonne — pas en unités UTF-16', () => {
+    // 512 caractères hors plan de base : 1 024 unités UTF-16, et `varchar(512)` les accepte.
+    const astral = '\u{1F600}'.repeat(SOURCE_CANAL_LONGUEUR_MAX);
+    expect(snapshotDeCandidature(avecSource(astral)).snapshot.sourceCanal).toBe(astral);
+    const r = snapshotDeCandidature(avecSource(astral + '/'));
+    expect(r.snapshot.sourceCanal).toBeNull();
+    expect(r.ecarts).toEqual([{ code: 'source_canal_hors_borne', longueur: 513 }]);
   });
 
   it('REQ-DM-035 : absente (`null`) → nulle, sans écart', () => {

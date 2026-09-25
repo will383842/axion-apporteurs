@@ -51,7 +51,7 @@ describe('REQ-DM-012 — le code de parrainage : lisible, unique, non énumérab
     const vus = new Set([codeBase]);
     for (let bit = 0; bit < 30; bit += 1) {
       const o = octets(0, 0, 0, 0);
-      o[3 - Math.floor(bit / 8)]! |= 1 << bit % 8;
+      o[3 - Math.floor(bit / 8)]! |= 1 << (bit % 8);
       vus.add(genererCodeParrainage(source(o)));
     }
     expect(vus.size).toBe(31);
@@ -73,7 +73,17 @@ describe('REQ-DM-012 — le code de parrainage : lisible, unique, non énumérab
   });
 
   it('REQ-DM-012 : `estCodeParrainage` refuse I, L, O, U, la minuscule, un autre préfixe ou une autre longueur', () => {
-    for (const faux of ['AXI00000', 'AXL00000', 'AXO00000', 'AXU00000', 'ax000000', 'AB000000', 'AX00000', 'AX0000000', ' AX000000']) {
+    for (const faux of [
+      'AXI00000',
+      'AXL00000',
+      'AXO00000',
+      'AXU00000',
+      'ax000000',
+      'AB000000',
+      'AX00000',
+      'AX0000000',
+      ' AX000000',
+    ]) {
       expect(estCodeParrainage(faux), faux).toBe(false);
     }
   });

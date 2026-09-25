@@ -27,11 +27,9 @@ afterAll(async () => {
 });
 
 const creeAt = new Date(Date.UTC(2026, 8, 25, 10, 0));
-let rang = 0;
 
 /** Un apporteur minimal : chaque champ obligatoire est ÉCRIT (RM-11). */
 async function apporteur(codeParrainage: string): Promise<string> {
-  rang += 1;
   const a = await base.prisma.apporteur.create({
     data: {
       statut: 'signe',
@@ -91,7 +89,9 @@ describe('REQ-DM-012 — le jeton de dépôt en base', () => {
   it('REQ-DM-012 : une empreinte qui n’est pas un SHA-256 hexadécimal est refusée', async () => {
     const id = await apporteur('AX0000A2');
     const m = await refus(
-      base.prisma.jetonDepot.create({ data: { apporteurId: id, tokenHash: 'jeton-en-clair', creeAt } })
+      base.prisma.jetonDepot.create({
+        data: { apporteurId: id, tokenHash: 'jeton-en-clair', creeAt },
+      })
     );
     expect(m).toContain('jetons_depot_token_hash_hex');
   });
@@ -112,7 +112,10 @@ describe('REQ-DM-012 — le jeton de dépôt en base', () => {
     const j = await jeton(id, 'jeton-rouge');
     await base.prisma.jetonDepot.update({ where: { id: j.id }, data: { revoqueAt: creeAt } });
     const reactivation = await refus(
-      base.prisma.$executeRawUnsafe('UPDATE jetons_depot SET revoque_at = NULL WHERE id = $1::uuid', j.id)
+      base.prisma.$executeRawUnsafe(
+        'UPDATE jetons_depot SET revoque_at = NULL WHERE id = $1::uuid',
+        j.id
+      )
     );
     expect(reactivation).toContain('jetons_depot_revocation_definitive');
     const deplacement = await refus(
@@ -122,6 +125,11 @@ describe('REQ-DM-012 — le jeton de dépôt en base', () => {
       )
     );
     expect(deplacement).toContain('jetons_depot_revocation_definitive');
+    // Supprimer puis réinsérer la même empreinte serait une réactivation par un autre chemin.
+    const suppression = await refus(
+      base.prisma.$executeRawUnsafe('DELETE FROM jetons_depot WHERE id = $1::uuid', j.id)
+    );
+    expect(suppression).toContain('jetons_depot_revocation_definitive');
     const relu = await base.prisma.jetonDepot.findUniqueOrThrow({ where: { id: j.id } });
     expect(relu.revoqueAt?.getTime()).toBe(creeAt.getTime());
   });

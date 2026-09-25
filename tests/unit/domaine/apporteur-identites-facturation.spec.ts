@@ -132,7 +132,8 @@ describe('REQ-CPL-005 — le modèle IdentiteFacturation : daté, régime en enu
     for (const nom of ['IdentiteFacturation', 'Apporteur', 'JetonDepot']) {
       const m = schema.modeles.find((x) => x.nom === nom);
       expect(m, nom).toBeDefined();
-      for (const c of m!.champs) expect(`${nom}.${c.nom} ${c.colonne}`).not.toMatch(/rib|iban|bic/i);
+      for (const c of m!.champs)
+        expect(`${nom}.${c.nom} ${c.colonne}`).not.toMatch(/rib|iban|bic/i);
     }
   });
 });
