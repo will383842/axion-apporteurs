@@ -1466,8 +1466,14 @@
       "paths": [
         "src/lib/logger.ts",
         "src/lib/notify.ts",
-        "sentry.server.config.ts",
-        "tests/unit/qualite/journal-redige.spec.ts"
+        "tests/unit/qualite/journal-redige.spec.ts",
+        "src/lib/sentry.ts",
+        "src/instrumentation.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/qualite/journal-redige.bac.ts",
+        "src/lib/forme-iban.ts",
+        "scripts/gates/gov-entite.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1475,14 +1481,15 @@
         "rgpd"
       ],
       "deps": [
-        "QA-T01"
+        "QA-T01",
+        "DM-01"
       ],
       "reqs": [
         "REQ-QA-024"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 1,
       "statut": "a_faire",
       "owner": "A05",
       "lot": null,
@@ -3158,7 +3165,18 @@
         "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts",
         "tests/unit/domaine/apporteur-identites-facturation.spec.ts",
         "tests/unit/domaine/apporteur-score-fige.spec.ts",
-        "tests/integration/apporteur-jeton-depot.spec.ts"
+        "tests/integration/apporteur-jeton-depot.spec.ts",
+        "prisma/migrations/",
+        "src/domain/apporteur/identifiants.ts",
+        "src/domain/apporteur/activite.ts",
+        "src/domain/apporteur/identites-facturation.ts",
+        "src/domain/apporteur/population.ts",
+        "src/domain/apporteur/snapshot-candidature.ts",
+        "tests/fixtures/axionia/candidature-recue.json",
+        "tests/unit/domaine/apporteur-identifiants.spec.ts",
+        "tests/unit/domaine/apporteur-activite.spec.ts",
+        "tests/unit/domaine/apporteur-population-is-test.spec.ts",
+        "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -3191,16 +3209,18 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) Le statut d'apporteur est un ENUM {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec une MATRICE DE TRANSITIONS explicite : une transition absente de la matrice est refusee, jamais autorisee par omission (REQ-DM-011). Le motif de resiliation est un enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} ; le vocabulaire de la faute n'y figure pas. (2) Un apporteur porte DEUX identifiants distincts : un code de parrainage public, unique, lisible et NON ENUMERABLE (prefixe plus 6 caracteres tires au hasard), et un ou plusieurs jetons de depot {empreinte unique, date de creation, date de revocation eventuelle, dernier usage} (REQ-DM-012). Un jeton revoque ne se reactive pas. (3) `actif` et `dormant` sont DERIVES par fonction pure, JAMAIS STOCKES, et restent des indicateurs de console : AUCUN MESSAGE N'EST ENVOYE A UN APPORTEUR EN RAISON DE SON INACTIVITE (REQ-CPL-027). C'est une interdiction de produit, pas une preference d'ergonomie. (4) `isTest` est exclu de TOUS les agregats d'argent, du lot de paiement, de la declaration annuelle et de l'entonnoir (REQ-CPL-020) ; les identites de facturation sont DATEES, et un releve qui chevauche deux identites produit DEUX autofactures (REQ-CPL-005). (5) Le seuil de verification prioritaire est une colonne entiere au defaut derive du palier, surcharge manuelle tracee ; AUCUN DEPOT N'EST REFUSE POUR DEPASSEMENT DE SEUIL — au-dela, l'attribution porte simplement le drapeau de verification prioritaire (REQ-DM-010). (6) Le score de candidature est transporte FIGE depuis axionia et JAMAIS recalcule par Partners ; un test de parite sur fixtures exportees le prouve (REQ-DM-035, REQ-QA-035). (7) TEMOIN A DEUX FACES : une transition absente de la matrice est refusee et la nomme ; une transition declaree passe. Un depot au-dela du seuil est ACCEPTE et porte le drapeau, et le test verifie l'acceptation, pas seulement le drapeau. Un agregat d'argent calcule sur une population incluant `isTest` diverge du meme agregat sans, et le test nomme l'ecart en centimes.",
+      "acceptance": "TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) Le statut d'apporteur est un ENUM {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec une MATRICE DE TRANSITIONS explicite : une transition absente de la matrice est refusee, jamais autorisee par omission (REQ-DM-011). Le motif de resiliation est un enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} ; le vocabulaire de la faute n'y figure pas. (2) Un apporteur porte DEUX identifiants distincts : un code de parrainage public, unique, lisible et NON ENUMERABLE — prefixe `AX` puis 6 caracteres de l'alphabet Crockford base32 (sans I, L, O, U), 30 bits aleatoires (HYP-DM06-CODE-PARRAINAGE) —, et un ou plusieurs jetons de depot {empreinte unique, date de creation, date de revocation eventuelle, dernier usage} (REQ-DM-012). Un jeton revoque ne se reactive pas. (3) `actif` et `dormant` sont DERIVES par fonction pure, JAMAIS STOCKES ; la fonction de dormance RECOIT `DORMANCE_JOURS` EN PARAMETRE tant que la SSOT des seuils (JUR-T02) n'existe pas — jamais un litteral dans le code (RM-10) ; et restent des indicateurs de console : AUCUN MESSAGE N'EST ENVOYE A UN APPORTEUR EN RAISON DE SON INACTIVITE (REQ-CPL-027). C'est une interdiction de produit, pas une preference d'ergonomie. (4) `isTest` est exclu de TOUS les agregats d'argent, du lot de paiement, de la declaration annuelle et de l'entonnoir (REQ-CPL-020) ; les identites de facturation sont DATEES, et un releve qui chevauche deux identites produit DEUX autofactures (REQ-CPL-005). L'IBAN ET LA PIECE RIB NE SONT PAS DANS DM-06 : DM-06 cree `IdentitesFacturation` SANS AUCUNE colonne de RIB ni d'IBAN ; la reference a la piece RIB et sa relation a `PieceKyc` sont posees par DM-11, qui depend de DM-06 (HYP-DM06-IBAN). (5) Le seuil de verification prioritaire est une colonne entiere au defaut derive du palier, surcharge manuelle tracee ; DM-06 porte la COLONNE et son defaut ; le comportement du depot au-dela du seuil (accepte, drapeau pose) et son temoin appartiennent a DM-09, qui porte le depot (REQ-DM-010). (6) Le score de candidature est transporte FIGE depuis axionia et JAMAIS recalcule par Partners ; un test de parite sur la fixture du producteur reel `tests/fixtures/axionia/candidature-recue.json` (Source: INT-T01b) le prouve (REQ-DM-035, REQ-QA-035). `sourceCanal` est stockee TELLE QUE RECUE, longueur bornee (HYP-DM06-SOURCE-CANAL) : aucun enum de canal dans DM-06, la derivation appartient a EXT-T03. (7) TEMOIN A DEUX FACES : une transition absente de la matrice est refusee et la nomme ; une transition declaree passe. Une `sourceCanal` au-dela de la borne n'est pas tronquee : elle est stockee nulle et l'ecart est journalise en consignant sa LONGUEUR, jamais sa valeur. Un agregat d'argent calcule sur une population incluant `isTest` diverge du meme agregat sans, et le test nomme l'ecart en centimes.",
       "tests": {
         "REQ-CPL-005": [
           "tests/unit/domaine/apporteur-identites-facturation.spec.ts"
         ],
         "REQ-CPL-020": [
-          "tests/unit/domaine/apporteur-identites-facturation.spec.ts"
+          "tests/unit/domaine/apporteur-identites-facturation.spec.ts",
+          "tests/unit/domaine/apporteur-population-is-test.spec.ts"
         ],
         "REQ-CPL-027": [
-          "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts"
+          "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts",
+          "tests/unit/domaine/apporteur-activite.spec.ts"
         ],
         "REQ-DM-010": [
           "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts"
@@ -3209,10 +3229,12 @@
           "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts"
         ],
         "REQ-DM-012": [
-          "tests/integration/apporteur-jeton-depot.spec.ts"
+          "tests/integration/apporteur-jeton-depot.spec.ts",
+          "tests/unit/domaine/apporteur-identifiants.spec.ts"
         ],
         "REQ-DM-035": [
-          "tests/unit/domaine/apporteur-score-fige.spec.ts"
+          "tests/unit/domaine/apporteur-score-fige.spec.ts",
+          "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts"
         ],
         "REQ-QA-035": [
           "tests/unit/domaine/apporteur-score-fige.spec.ts"
@@ -3256,7 +3278,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "le gabarit reprend `CONTRAT-APPORTEUR-V1.md` **dans sa version corrigée par les cinq examens du 2026-09-03** (12 bloquants + 30 majeurs), annoté des identifiants `CL-*` ; `docs/DECISIONS.md` porte une valeur **tranchée et datée** pour chacune des lignes marquées `avenant` du registre (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ des 12 mois E.1-9). 🔴 **Complétée le 2026-09-03 (synthèse M-20 et P-4).** (1) **Six acceptations distinctes**, et la **note encadrée** qui les signale figure **dans le corps** sous chacun des articles 3.7, 4.5, 5.2, 7, 12 **et** 14 — le corps ne la portait que sous l'art. 14, et la mention « très apparente » de l'art. 48 CPC était renvoyée à une note **hors clause**. (2) La variable `{{APPORTEUR_QUALITE}}` est **alimentée depuis le statut d'exercice recueilli au KYC** (DM-11), jamais saisie à la main : la validité de la clause attributive dépend d'un fait — la qualité de commerçant des deux parties — qu'une part significative des 300 apporteurs (professions libérales, retraités en cumul, associations) ne remplira pas. (3) **Gate lexicale étendue au gabarit de contrat** (P-4 ; elle ne couvrait que `micro-copy/**`, `emails/apporteur/**`, `src/app/(espace)/**`), liste noire : `L.134-12`, `L.134-16`, « indemnité de fin de contrat », « indemnité de clientèle », « renonce », « renonciation » (hors le titre de l'art. 19, exclu nommément), « kit de vente ». C'est le seul moyen d'empêcher qu'une relecture future « améliore » l'art. 11.3 : **une renonciation par avance à un droit d'ordre public est sans effet**, et sa seule présence affaiblit rétrospectivement la portée des articles 1 et 2.",
+      "acceptance": "le gabarit reprend `CONTRAT-APPORTEUR-V1.md` **dans sa version corrigée par les cinq examens du 2026-09-03** (12 bloquants + 30 majeurs), annoté des identifiants `CL-*` ; `docs/DECISIONS.md` porte une valeur **tranchée et datée** pour chacune des lignes marquées `avenant` du registre (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ des 12 mois E.1-9). 🔴 **Complétée le 2026-09-03 (synthèse M-20 et P-4).** (1) **Six acceptations distinctes**, et la **note encadrée** qui les signale figure **dans le corps** sous chacun des articles 3.7, 4.5, 5.2, 7, 12 **et** 14 — le corps ne la portait que sous l'art. 14, et la mention « très apparente » de l'art. 48 CPC était renvoyée à une note **hors clause**. (2) La variable `{{APPORTEUR_QUALITE}}` est **alimentée depuis le statut d'exercice recueilli au KYC** (DM-11), jamais saisie à la main : la validité de la clause attributive dépend d'un fait — la qualité de commerçant des deux parties — qu'une part significative des 300 apporteurs (professions libérales, retraités en cumul, associations) ne remplira pas. (3) **Gate lexicale étendue au gabarit de contrat** (P-4 ; elle ne couvrait que `micro-copy/**`, `emails/apporteur/**`, `src/app/(espace)/**`), liste noire : `L.134-12`, `L.134-16`, « indemnité de fin de contrat », « indemnité de clientèle », « renonce », « renonciation » (hors le titre de l'art. 19, exclu nommément), « kit de vente ». C'est le seul moyen d'empêcher qu'une relecture future « améliore » l'art. 11.3 : **une renonciation par avance à un droit d'ordre public est sans effet**, et sa seule présence affaiblit rétrospectivement la portée des articles 1 et 2. 🔴 **Complétée le 2026-09-25 (décision W15 de Will, « fais selon tes recommandations »).** Le gabarit porte DEUX clauses de plus à l'art. 4.6, chacune annotée d'un identifiant CL-* et d'un test de présence : (a) **al. 6 amendé** (HYP-W15-ART-4-6) — le parrain voit la liste de ses filleuls DIRECTS réduite au prénom, à l'initiale du nom et à l'état de son contrat, « en signature » ou « signé » seulement, apprécié sur les versions du contrat postérieures à sa dernière résiliation (un avenant en cours de signature n'y changeant rien, une relation reprise étant lue sur ses seules versions nouvelles) ; un filleul dont la relation est résiliée sort de la liste — le parrain en apprend la fin, mais ni le motif ni aucune mesure intermédiaire prise à l'égard du filleul (suspension, vérification) ; aucune échéance ni date propre au filleul ; aucun montant par filleul, aucune donnée d'activité, aucun filleul de filleul. (b) **Nouvel alinéa de correction du rattachement** (HYP-W15-PARRAIN-A-DATE) — la Société peut rattacher un filleul à un autre parrain sur motif LIMITATIVEMENT énuméré : erreur de rattachement, fraude ou auto-parrainage, départ ou résiliation du parrain ; effet pour les commissions futures seulement, les sommes de parrainage déjà nées restant acquises au parrain d'origine ; les trois personnes sont informées ; aucun accord du parrain d'origine n'est requis. Le texte définitif de ces deux clauses reste soumis à la relecture de Will avant toute signature (JUR-T01b).",
       "tests": {
         "REQ-CPL-012": [
           "tests/unit/contrat/contract-template-complete.spec.ts"
@@ -4171,7 +4193,12 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13)."
+      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13). 🔴 **Complétée le 2026-09-25 (cadrage de DM-06, GOV-099).** DM-09 porte le TÉMOIN de REQ-DM-010 retiré de DM-06 : un dépôt au-delà du seuil de vérification prioritaire est ACCEPTÉ, horodaté et porte `verificationPrioritaire = true` ; le test vérifie l'acceptation, pas seulement le drapeau, et un témoin qui refuserait ce dépôt le fait rougir.",
+      "tests": {
+        "REQ-DM-010": [
+          "tests/unit/domaine/depot-au-dela-du-seuil.spec.ts"
+        ]
+      }
     },
     {
       "id": "DM-10-P",
@@ -4217,7 +4244,10 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-11"
+        "src/domaine/DM-11",
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "tests/unit/domaine/kyc-reference-piece-rib.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4230,7 +4260,8 @@
         "DM-03-P",
         "DM-06",
         "INT-T09",
-        "SEC-17"
+        "SEC-17",
+        "SEC-08"
       ],
       "reqs": [
         "REQ-CPL-004",
@@ -4255,7 +4286,12 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "se limite aux données KYC et à `PieceKyc.valideJusquAu` ; la règle de vigilance et le blocage du versement sont la propriété de JUR-T16 (`controlesVersement()`). 🔴 **Complétée le 2026-09-03 (synthèse A-10 et M-20).** (1) **`rc_pro` porte `expireAt NOT NULL`** et un rappel d'échéance annuel (contrat art. 6.4 : attestation à la signature puis à chaque échéance, information de toute résiliation de police sous 15 jours) — **sans être ajoutée à `piecesBloquantPaiement()` ni à `controlesVersement()`** : l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement. (2) Le KYC recueille et stocke le **statut d'exercice** de l'apporteur (`qualiteExercice`), qui alimente `{{APPORTEUR_QUALITE}}` du gabarit (JUR-T01) et la déclaration de l'art. 23 (« exercer sous un statut régulièrement déclaré l'autorisant à percevoir et à facturer les commissions », « ne faire l'objet ni d'une liquidation judiciaire ni d'une interdiction de gérer », M-29)."
+      "acceptance": "se limite aux données KYC et à `PieceKyc.valideJusquAu` ; la règle de vigilance et le blocage du versement sont la propriété de JUR-T16 (`controlesVersement()`). 🔴 **Complétée le 2026-09-03 (synthèse A-10 et M-20).** (1) **`rc_pro` porte `expireAt NOT NULL`** et un rappel d'échéance annuel (contrat art. 6.4 : attestation à la signature puis à chaque échéance, information de toute résiliation de police sous 15 jours) — **sans être ajoutée à `piecesBloquantPaiement()` ni à `controlesVersement()`** : l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement. (2) Le KYC recueille et stocke le **statut d'exercice** de l'apporteur (`qualiteExercice`), qui alimente `{{APPORTEUR_QUALITE}}` du gabarit (JUR-T01) et la déclaration de l'art. 23 (« exercer sous un statut régulièrement déclaré l'autorisant à percevoir et à facturer les commissions », « ne faire l'objet ni d'une liquidation judiciaire ni d'une interdiction de gérer », M-29). 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099, `HYP-DM06-IBAN`).** L'IBAN vit dans la pièce `rib` du KYC et nulle part ailleurs : chiffré par SEC-08 (`encryptPii` avec AAD égale à l'identifiant de la ligne), recherché par `ibanHash` ; **DM-11 pose, dans SA migration, la colonne de référence de `IdentitesFacturation` (créée par DM-06 sans elle) vers `PieceKyc` de type `rib`, et sa relation** ; la référence ne porte jamais l'IBAN. Tests : une identité de facturation référence une pièce `rib`, et une référence vers une pièce d'un autre type est refusée ; **aucune autre colonne du schéma ne porte un IBAN**, en clair ou chiffré (témoin : une colonne `iban` ajoutée ailleurs fait rougir le test).",
+      "tests": {
+        "REQ-CPL-005": [
+          "tests/unit/domaine/kyc-reference-piece-rib.spec.ts"
+        ]
+      }
     },
     {
       "id": "DM-12",
@@ -6512,7 +6548,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "PAS D'ÉCHÉANCE SUR « MES FILLEULS » (décision du 2026-09-25, par délégation de Will, HYP-W15-FILLEULS-VUE, W15) : l'échéance des 12 mois de la fenêtre de parrainage N'EST PAS AFFICHÉE sur `/filleuls` — ni par filleul, ni agrégée, ni conditionnée à un seuil : toute agrégation de dates (minimum, prochaine échéance) vaut exactement la date d'un filleul, et un seuil fuit le jour où il est franchi. À la place, un TEXTE FIXE, identique pour tous : « Vos gains de parrainage sur un filleul courent 12 mois à compter de la signature de son contrat », sans aucune date calculée. Tests : aucune clé ni valeur de date d'échéance dans le DTO de `/filleuls`, pour 0, 1, 2 et N filleuls ; deux fixtures qui ne diffèrent QUE par la date de signature d'un filleul donnent un DTO identique à l'octet près ; le texte fixe est le même pour tous les parrains. Les autres points de la tâche (documents, relevés, autofactures, attestation, export RGPD, parrainage agrégé par mois, lien partageable, REQ-UX-006, REQ-UX-030, REQ-UX-032, REQ-EXT-029, REQ-ARG-035) restent à écrire en acceptance avant son attribution."
     },
     {
       "id": "UX-P2-05",
@@ -7664,7 +7701,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création."
+      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création. 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099).** EXT-T03 porte la dérivation de `sourceCanal` — chaîne transportée figée par DM-06 (REQ-DM-035) — vers l'enum `CanalCandidature` (`site`, `linkedin`, `jobboard`, `saisie_console`, `autre`, glossaire §4) : une table de correspondance chemin → canal, côté Partners, en SSOT ; un chemin inconnu donne `autre` et est journalisé, jamais un canal deviné. Tests : chaque entrée de la table → son canal ; chemin inconnu → `autre` et une entrée de journal ; `sourceCanal` nulle → `autre` ; la valeur transportée n'est jamais modifiée par la dérivation. ⚠️ **Dette de cadrage, NON tranchée ici — à cadrer avant EXT-T03** : le producteur axionia émet aujourd'hui une **constante de chemin** pour `sourceCanal` ; `linkedin` et `jobboard` ne seront donc atteignables que par les paramètres `utm`, que DM-06 ne stocke pas. Tant que ce point n'est pas cadré, la table chemin → canal ne sait produire que `site`, `saisie_console` ou `autre`."
     },
     {
       "id": "EXT-T04",
@@ -10770,6 +10807,511 @@
       "owner": "A02"
     },
     {
+      "id": "GOV-098",
+      "titre": "Inscrire au plan la décision W15 de Will (2026-09-25) : lignées, changement de parrain, statistiques, secteur, bibliothèque, outils de console",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/DECISIONS.md",
+        "docs/requirements.json",
+        "docs/REQUIREMENTS.md",
+        "docs/GLOSSAIRE.md",
+        "docs/ESPACE-ROUTES.md",
+        "docs/tasks.json",
+        "docs/TASKS.md",
+        "docs/TRACABILITE.md",
+        "docs/paths-proposes.json",
+        "docs/PLAN-STATE.md",
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. (1) `docs/DECISIONS.md` porte la ligne W15 en §1 (tranchée le 2026-09-25, propriétaire Will) et dix lignes `HYP-W15-*` en §2, chacune avec sa réversibilité et, pour les deux lignes `avenant`, « premier DocuSeal » ; `pnpm gov:hypotheses` sort 0. (2) `docs/requirements.json` porte treize exigences nouvelles (REQ-DM-044 à 047, REQ-UX-040 à 046, REQ-SEC-039 et 040), chacune testable et citant W15, et REQ-UX-006 amendée par W15 : la liste minimale des filleuls directs devient la seule exception à l'interdiction d'identité ; `pnpm gov:requirements` et `pnpm gov:requirements:verifie-rendu` sortent 0. (3) Les douze tâches qui livrent W15 sont versées par le verbe hors dépôt `hors-depot/verser-tache.mjs`, jamais à la main ; `pnpm gov:tasks` sort 0. (4) Le glossaire définit « lignée » et « équipe », `docs/ESPACE-ROUTES.md` rattache `/filleuls` à REQ-UX-041. (5) Toutes les vues dérivées sont régénérées, `docs/PLAN-STATE.md` en dernier.",
+      "tests": {
+        "REQ-GOV-015": [
+          "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-26",
+      "titre": "Changement de parrain en console : admin seul, motif, journal chaîné, effet à date, refus du cycle et de l'auto-parrainage",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "prisma/schema.prisma",
+        "src/domain/parrainage/changement-de-parrain.ts",
+        "src/server/console/parrainage/changer-de-parrain.ts",
+        "tests/unit/domaine/changement-de-parrain.spec.ts",
+        "tests/integration/changement-de-parrain.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent",
+        "attribution",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-16",
+        "SEC-18",
+        "SEC-17",
+        "DM-01",
+        "JUR-T01"
+      ],
+      "reqs": [
+        "REQ-DM-044"
+      ],
+      "hyp": [
+        "HYP-W15-PARRAIN-A-DATE",
+        "HYP-W15-NOTIF-PARRAIN"
+      ],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE SENSIBLE — argent et attribution ; ELLE ÉCRIT LE SCHÉMA (historique daté du rattachement de parrainage). (1) L'action de console n'est permise qu'au rôle `admin` (matrice de SEC-17) ; tout autre rôle reçoit le refus, et le test joue `qualifieur` et `comptable`. (2) Le motif est choisi dans une LISTE FERMÉE — erreur de rattachement, fraude ou auto-parrainage, départ ou résiliation du parrain (clause de correction du rattachement, contrat art. 4.6 nouvel alinéa, HYP-W15-PARRAIN-A-DATE tranchée le 2026-09-25) — et porte une précision écrite ; motif hors liste, précision vide ou blanche → refus, aucun événement écrit. Aucun accord écrit du parrain d'origine n'est demandé. (3) L'action écrit UN événement au journal `Evenement` chaîné (ancien parrain, nouveau parrain, date d'effet, motif, auteur) ; la vérification de chaîne passe après l'action. (4) EFFET POUR LES LIGNES FUTURES SEULEMENT, les lignes déjà nées restant acquises au parrain d'origine : sur une fixture, une ligne `commission` du filleul acquise la veille de l'effet engendre sa ligne `parrainage` au profit du parrain d'origine, une ligne acquise le lendemain au profit du nouveau parrain ; une `reprise` d'une ligne d'avant l'effet suit le parrain d'origine ; la fenêtre `contratFilleulSigneAt + 12 mois` est inchangée. (5) REFUS NOMMÉS, journal inchangé : nouveau parrain = le filleul ; nouveau parrain = un descendant du filleul (cycle) ; nouveau parrain partageant un hash de SIRET, d'e-mail, de téléphone ou d'IBAN avec le filleul (règle de SEC-18, réutilisée, jamais recopiée). (6) Les e-mails suivent `HYP-W15-NOTIF-PARRAIN` : trois destinataires, ni motif ni montant ni identité d'un autre apporteur (assertion sur les gabarits). (7) Aucune ligne n'est jamais créée au second niveau (REQ-DM-023 reste vert). La clause elle-même est rédigée dans le gabarit par JUR-T01 : cette tâche n'arme pas en production avant la signature du premier contrat qui la porte.",
+      "tests": {
+        "REQ-DM-044": [
+          "tests/unit/domaine/changement-de-parrain.spec.ts",
+          "tests/integration/changement-de-parrain.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-27",
+      "titre": "Lignée et équipe : fonctions pures de lecture, deux niveaux, jamais appelées par le calcul des commissions",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domain/parrainage/lignee.ts",
+        "tests/unit/domaine/lignee.spec.ts",
+        "tests/unit/domaine/lignee-hors-du-calcul-des-commissions.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-16",
+        "DM-26"
+      ],
+      "reqs": [
+        "REQ-DM-045"
+      ],
+      "hyp": [
+        "HYP-W15-EQUIPE"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "(1) `lignee(a, t)` rend exactement les filleuls de `a` (niveau 1) et les filleuls de ceux-ci (niveau 2) à la date `t` : fixture à trois niveaux, le troisième est absent. (2) La date compte : une fixture avec un changement de parrain (DM-26) rend deux lignées différentes avant et après l'effet. (3) `equipe(a, t)` = `a` et sa lignée ; deux équipes qui se chevauchent sont rendues séparément, jamais fusionnées. (4) Fonctions pures, horloge injectée, aucune I/O (règle de `src/domain/**`). (5) GARDE STATIQUE, TÉMOIN À DEUX FACES : un fichier du calcul des commissions qui importe `lignee` ou `equipe` fait rougir la garde et la nomme ; le dépôt réel la fait sortir verte avec le compte des fichiers confrontés.",
+      "tests": {
+        "REQ-DM-045": [
+          "tests/unit/domaine/lignee.spec.ts",
+          "tests/unit/domaine/lignee-hors-du-calcul-des-commissions.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P2-08",
+      "titre": "Console : lignée d'un apporteur en liste et en arbre SVG, deux niveaux",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/app/(console)/console/apporteurs/lignee/",
+        "src/server/console/lignee.ts",
+        "tests/unit/console/lignee.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-27",
+        "SEC-17",
+        "UX-P1-12"
+      ],
+      "reqs": [
+        "REQ-UX-040"
+      ],
+      "hyp": [
+        "HYP-W15-EQUIPE"
+      ],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "(1) Depuis la fiche apporteur (UX-P1-12), la console affiche la lignée en LISTE et en ARBRE SVG rendu côté serveur, sans bibliothèque ; chaque nœud porte l'état du contrat et la date de rattachement. (2) Fixture à trois niveaux → exactement les niveaux 1 et 2 ; la liste et l'arbre portent le même ensemble d'apporteurs (comparaison des identifiants). (3) L'écran est dans la matrice des rôles ; retiré de la matrice → refus. `lecteur` → aucune clé d'identité dans le DTO. (4) Aucun montant du second niveau n'est présenté comme revenant à l'apporteur consulté. (5) axe-core : 0 violation serious ou critical ; poids de la route mesuré avant/après et collé dans la PR.",
+      "tests": {
+        "REQ-UX-040": [
+          "tests/unit/console/lignee.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P2-09",
+      "titre": "Mes filleuls : liste des filleuls directs, prénom, initiale et état du contrat, sans montant par filleul",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/(espace)/filleuls/",
+        "src/server/espace/filleuls.ts",
+        "tests/unit/espace/mes-filleuls-liste.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-16",
+        "SEC-05",
+        "UX-P2-04",
+        "JUR-T01"
+      ],
+      "reqs": [
+        "REQ-UX-041",
+        "REQ-UX-006"
+      ],
+      "hyp": [
+        "HYP-W15-FILLEULS-VUE",
+        "HYP-W15-ART-4-6"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE SENSIBLE — espace et données personnelles. (1) Toute lecture passe par `forApporteur` (SEC-05). (2) RÈGLE FERMÉE DES ÉTATS (REQ-UX-041, HYP-W15-ART-4-6 tranchée le 2026-09-25), dérivée de l'ENSEMBLE des versions du contrat du filleul, jamais d'une version « courante », lues dans l'ordre chronologique de leur création, seules comptant celles POSTÉRIEURES À LA DERNIÈRE `resilie` (toutes s'il n'y en a aucune) : dernière version `resilie` → le filleul SORT de la liste ; une `signe` parmi les versions comptées → `signe` ; versions comptées toutes `envoye` → `en_signature` ; aucune version → absent ; toute autre combinaison → ÉCHEC FERMÉ, filleul absent et écart journalisé côté console, jamais un libellé par défaut. Tests, une fixture par branche : AVENANT ENVOYÉ SUR UN CONTRAT SIGNÉ → « signé », élément identique à l'octet près avant et après l'envoi de l'avenant ; avenant jamais signé → « signé » indéfiniment, horloge avancée ; premier contrat envoyé jamais signé → « en signature » ; résiliation → absent ; combinaison incohérente → absent et écart journalisé ; RELATION REPRISE : {signe, resilie, envoye} → « en signature », {signe, resilie, signe} → « signé », {signe, resilie} → absent, avenant après la reprise → « signé ». Le statut d'apporteur du filleul (`suspendu`, `resilie`, gel, anomalie, sincérité) n'est JAMAIS lu : un filleul au contrat `signe` dont l'apporteur passe `suspendu` reste affiché « signé », élément byte-identique avant et après ; aucun DTO de l'espace ne porte de champ de statut d'apporteur ni les valeurs `resilie`, `remplace`, `suspendu` (témoin qui les porte → rouge). (3) CLÉS EXACTES de chaque élément du DTO de liste : `prenom`, `initialeNom`, `etatContrat` — rien d'autre ; un témoin portant une clé d'activité (`nbDepots`, `actif`, `derniereVente`, `lastSeenAt`) ou un montant fait rougir le test. (4) Fixture à deux niveaux → les filleuls des filleuls sont absents. (5) Deux filleuls au même état de contrat, l'un actif et l'autre non → éléments byte-identiques hors prénom et initiale. (6) Le montant de parrainage reste agrégé par mois, jamais ventilé par filleul (REQ-UX-006). (7) Le filleul d'un autre apporteur n'apparaît jamais ; son identifiant sur une route paramétrée rend le 404 byte-identique. L'alinéa amendé est rédigé dans le gabarit par JUR-T01 : cette tâche n'arme pas en production avant la signature du premier contrat qui le porte.",
+      "tests": {
+        "REQ-UX-041": [
+          "tests/unit/espace/mes-filleuls-liste.spec.ts"
+        ],
+        "REQ-UX-006": [
+          "tests/unit/espace/mes-filleuls-liste.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-28",
+      "titre": "Code NAF au dépôt : stocké depuis le client recherche-entreprises, complété après un repli manuel, jamais deviné",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domain/entreprise/code-naf.ts",
+        "src/server/jobs/completer-code-naf.ts",
+        "tests/unit/domaine/code-naf-au-depot.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-07",
+        "INT-T09"
+      ],
+      "reqs": [
+        "REQ-DM-046"
+      ],
+      "hyp": [
+        "HYP-W15-SECTEUR"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "(1) Sur chacune des fixtures ENREGISTRÉES d'INT-T09, le code NAF stocké sur l'attribution égale `activite_principale` de la fixture — jamais `activite_principale_naf25`, que REQ-INT-021 n'énumère pas. (2) Dépôt en repli manuel → code NAF nul ; le formulaire de dépôt ne porte aucun champ de code NAF. (3) La reprise, déclenchée à la fermeture du disjoncteur, complète les codes nuls par un nouvel appel au tiers (fixture) et n'écrase jamais un code déjà présent. (4) Un tiers qui ne rend pas le code laisse le champ nul (« non renseigné »), sans valeur par défaut. (5) TÉMOIN : une reprise qui écrirait une valeur par défaut fait rougir le test (4).",
+      "tests": {
+        "REQ-DM-046": [
+          "tests/unit/domaine/code-naf-au-depot.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-29",
+      "titre": "Agrégats de pilotage : candidatures, statuts, part d'actifs, CA et commissions par apporteur, lignée et équipe, secteur, séries mensuelles",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domain/statistiques/agregats.ts",
+        "src/domain/statistiques/nomenclature-naf.ts",
+        "tests/unit/domaine/statistiques.spec.ts",
+        "tests/unit/domaine/nomenclature-naf.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "CPL-T15",
+        "UX-P3-06",
+        "DM-21",
+        "DM-27",
+        "DM-28",
+        "DM-15"
+      ],
+      "reqs": [
+        "REQ-UX-042",
+        "REQ-DM-047"
+      ],
+      "hyp": [
+        "HYP-W15-EQUIPE",
+        "HYP-W15-SECTEUR"
+      ],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "acceptance": "FONCTIONS PURES, horloge injectée, montants en centimes HT. (1) Jeu de fixture à totaux connus : candidatures par canal et par période, apporteurs par statut, part d'actifs parmi les apporteurs sous contrat, CA et commissions par apporteur, par lignée et par équipe — chaque valeur égale la valeur attendue écrite dans le test. (2) `actif`/`dormant` viennent de la fonction de REQ-CPL-027 (UX-P3-06), importée, jamais recalculée : une garde rougit sur une seconde dérivation. (3) Équipes chevauchantes : leurs totaux ne sont jamais additionnés entre eux. (4) Séries mensuelles : un mois sans donnée vaut 0, jamais absent. (5) Secteur : la table rattache chacune des 88 divisions NAF rév. 2 à une section ; `70.10Z` → M/70 ; code nul → « non renseigné » ; la somme des secteurs égale le total non filtré.",
+      "tests": {
+        "REQ-UX-042": [
+          "tests/unit/domaine/statistiques.spec.ts"
+        ],
+        "REQ-DM-047": [
+          "tests/unit/domaine/nomenclature-naf.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-07",
+      "titre": "Console Statistiques : tableaux filtrables (période, canal, statut, secteur), tris réservés à la console",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/app/(console)/console/statistiques/",
+        "src/server/console/statistiques.ts",
+        "tests/unit/console/statistiques.spec.ts",
+        "tests/unit/console/tris-reserves-a-la-console.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-29",
+        "UX-P3-04",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-UX-042",
+        "REQ-UX-044",
+        "REQ-DM-047"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "(1) L'écran rend les indicateurs de DM-29 sur une période choisie, filtrables par canal, statut et secteur (section et division). (2) Les montants par apporteur ne sortent que pour les rôles que la matrice autorise ; `lecteur` → aucune clé de montant par apporteur dans le DTO. (3) TRIS RÉSERVÉS À LA CONSOLE : garde statique, témoin à deux faces — un fichier sous `src/app/(espace)/**` qui importe un module de statistiques fait rougir la garde et le nomme ; le dépôt réel sort vert avec le compte des fichiers confrontés. Le terme que REQ-GOV-017 bannit n'apparaît pas (`pnpm gov:lexique`). (4) axe-core 0 violation serious ou critical ; poids de la route mesuré avant/après, ≤ 75 KB gz.",
+      "tests": {
+        "REQ-UX-042": [
+          "tests/unit/console/statistiques.spec.ts"
+        ],
+        "REQ-UX-044": [
+          "tests/unit/console/tris-reserves-a-la-console.spec.ts"
+        ],
+        "REQ-DM-047": [
+          "tests/unit/console/statistiques.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-08",
+      "titre": "Graphiques de console en SVG maison : courbes et barres, alternative tabulaire, aucune bibliothèque de tracé",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/components/console/graphiques/",
+        "tests/unit/console/graphiques-svg.spec.ts",
+        "perf/budgets.json"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "UX-P3-07",
+        "GOV-019"
+      ],
+      "reqs": [
+        "REQ-UX-043"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "(1) Un composant maison rend, côté serveur, une courbe et un histogramme en `<svg>` ; sur une série de fixture, les coordonnées des points égalent les données (test de forme). (2) Chaque graphique porte une alternative tabulaire accessible ; axe-core 0 violation serious ou critical. (3) GARDE, TÉMOIN À DEUX FACES : une dépendance de tracé ajoutée à `package.json` (liste en configuration de la garde) la fait rougir et la nomme ; le `package.json` réel la fait sortir verte. (4) La route Statistiques a son entrée dans `perf/budgets.json` et tient ≤ 75 KB gz de First Load JS, chiffres avant/après collés dans la PR (REQ-GOV-028).",
+      "tests": {
+        "REQ-UX-043": [
+          "tests/unit/console/graphiques-svg.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-09",
+      "titre": "Export CSV de chaque tableau de console : sans coordonnées directes, journalisé, neutralisation des formules",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/server/console/export-csv.ts",
+        "tests/unit/console/export-csv.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "UX-P3-07",
+        "SEC-17",
+        "DM-01"
+      ],
+      "reqs": [
+        "REQ-SEC-040"
+      ],
+      "hyp": [
+        "HYP-W15-EXPORT"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE SENSIBLE — données personnelles. (1) Un seul exporteur sert tous les tableaux de console ; une garde dérive du disque la liste des tableaux et rougit sur un tableau sans export. (2) En-têtes exacts sur une fixture ; AUCUNE colonne d'e-mail, de téléphone, d'IBAN ni d'adresse — témoin : un tableau qui en déclare une fait rougir l'exporteur. (3) Cellule de texte `=1+1` neutralisée ; montant négatif laissé intact. (4) `lecteur` → refus. (5) Chaque export écrit un événement au journal chaîné (auteur, tableau, filtres, nombre de lignes), et le test relit le nombre de lignes.",
+      "tests": {
+        "REQ-SEC-040": [
+          "tests/unit/console/export-csv.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-10",
+      "titre": "Notes internes par apporteur en console : jamais servies à l'espace, journalisées, incluses dans l'export art. 15",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "prisma/schema.prisma",
+        "src/server/console/notes-internes.ts",
+        "src/app/(console)/console/apporteurs/notes/",
+        "tests/unit/console/notes-internes.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "UX-P1-12",
+        "SEC-17",
+        "SEC-05",
+        "DM-20"
+      ],
+      "reqs": [
+        "REQ-SEC-039"
+      ],
+      "hyp": [
+        "HYP-W15-NOTES"
+      ],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE SENSIBLE — données personnelles ; ELLE ÉCRIT LE SCHÉMA (modèle de note). (1) Création, modification et suppression réservées aux rôles de la matrice ; rôle absent → refus. (2) Chaque geste écrit un événement au journal chaîné. (3) GARDE STATIQUE, TÉMOIN À DEUX FACES : AUCUN écran ni DTO d'écran de l'espace ne porte une note — le modèle de note est inaccessible par `forApporteur`, et la garde rougit sur tout lecteur des notes autre que la console et la fonction d'export art. 15 du module RGPD (DM-20), seule exemptée et nommée dans la garde ; un DTO de l'espace portant une clé de note la fait rougir. (4) Aucune note n'entre dans un e-mail, une alerte Telegram, un score ni un déclencheur. (5) L'export d'accès art. 15 d'une fixture (DM-20), quel que soit le canal de la demande — y compris le téléchargement depuis l'espace (REQ-UX-030, REQ-JUR-025), qui ne sert que le fichier produit —, CONTIENT les notes, chacune horodatée et son auteur désigné par son rôle de console, jamais par son nom (HYP-W15-NOTES).",
+      "tests": {
+        "REQ-SEC-039": [
+          "tests/unit/console/notes-internes.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-11",
+      "titre": "Alertes de pilotage : baisse d'activité d'un apporteur ou d'une lignée, candidatures en attente, par les canaux existants",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/server/pilotage/alertes.ts",
+        "src/domain/pilotage/seuils.ts",
+        "tests/unit/pilotage/alertes-de-pilotage.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "INT-T14",
+        "UX-P1-10",
+        "UX-P3-06",
+        "DM-29"
+      ],
+      "reqs": [
+        "REQ-UX-045"
+      ],
+      "hyp": [
+        "HYP-W15-SEUILS-ALERTE"
+      ],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "(1) Les alertes passent par le bot de console d'INT-T14 (dédoublonnage, plafond horaire, aucune coordonnée) et par la table des notifications de console d'UX-P1-10 — aucun autre canal n'est créé. (2) Seuils lus en configuration ; fixture sous le seuil → une alerte, au-dessus → aucune. (3) L'activité se mesure sur les dépôts confirmés ; une règle lisant `lastSeenAt` ou `dernierUsageAt` fait rougir la garde de REQ-JUR-039. (4) ESPION SUR LES EXPÉDITEURS : aucun envoi n'a un apporteur pour destinataire, et aucun état d'apporteur ne change ; témoin : un envoi à l'apporteur fait rougir le test. (5) Le message Telegram ne porte qu'une catégorie, un compte et un identifiant technique.",
+      "tests": {
+        "REQ-UX-045": [
+          "tests/unit/pilotage/alertes-de-pilotage.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-12",
+      "titre": "Bibliothèque de documents : console (ajout, remplacement versionné, retrait, ciblage, publication datée) et affichage ciblé dans Ressources",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "prisma/schema.prisma",
+        "src/app/(console)/console/bibliotheque/",
+        "src/server/console/bibliotheque.ts",
+        "src/server/espace/documents-cibles.ts",
+        "tests/unit/console/bibliotheque.spec.ts",
+        "tests/integration/bibliotheque-cloisonnement.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "UX-P3-02",
+        "UX-P2-04",
+        "SEC-05",
+        "SEC-17",
+        "DM-11",
+        "JUR-T30"
+      ],
+      "reqs": [
+        "REQ-UX-046"
+      ],
+      "hyp": [
+        "HYP-W15-BIBLIOTHEQUE"
+      ],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE SENSIBLE — espace et données personnelles ; ELLE ÉCRIT LE SCHÉMA (document et versions). (1) Console : ajout, remplacement versionné (l'ancienne version conservée et plus jamais servie), retrait par dépublication, ciblage tous / un palier / un apporteur, date de publication ; chaque geste journalisé. (2) Espace, par `forApporteur` : un document ciblé sur un palier est visible de ce palier ; pour un autre apporteur, sa route rend le 404 byte-identique à un identifiant inexistant (test en boîte noire). (3) Publication datée de demain → invisible aujourd'hui (horloge injectée). (4) Fichier non PDF, jugé sur ses octets d'en-tête → refus ; stockage privé, URL signée courte. (5) Inventaire des ressources téléchargeables : aucun fichier de logo ni de charte (REQ-JUR-041) ; le terme que REQ-JUR-041 bannit n'apparaît nulle part (`pnpm gov:lexique`).",
+      "tests": {
+        "REQ-UX-046": [
+          "tests/unit/console/bibliotheque.spec.ts",
+          "tests/integration/bibliotheque-cloisonnement.spec.ts"
+        ]
+      }
+    },
+    {
       "id": "GOV-097",
       "titre": "Quatre lentilles seulement pour l argent, la securite et les donnees, deux pour le reste ; une inexactitude de prose n est plus un motif de refus",
       "phase": 0,
@@ -10802,6 +11344,41 @@
           "tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-099",
+      "titre": "Cadrage de DM-06 : sourceCanal transporté figé, IBAN hors de DM-06, glossaire des enums d'apporteur",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/DECISIONS.md",
+        "docs/requirements.json",
+        "docs/REQUIREMENTS.md",
+        "docs/GLOSSAIRE.md",
+        "docs/tasks.json",
+        "docs/TASKS.md",
+        "docs/TRACABILITE.md",
+        "docs/paths-proposes.json",
+        "docs/PLAN-STATE.md",
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "tests": {
+        "REQ-GOV-015": [
+          "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+        ]
+      },
+      "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le développeur de DM-06 a rendu `stop` sur trois contradictions ; les décisions prises le 2026-09-25 par l'orchestrateur, sur délégation de Will, sont inscrites : (1) REQ-DM-035 amendée — `sourceCanal` est une chaîne transportée figée ; la dérivation vers l'enum `CanalCandidature` et sa table chemin → canal appartiennent à EXT-T03 ; (2) le glossaire porte `RegimeTva`, `StatutApporteur`, `MotifResiliation` et `CanalCandidature` au §4, lus par `partners:schema:enums` ; (3) l'IBAN sort de DM-06 : il appartient à la pièce RIB du KYC (DM-11, SEC-08), `IdentitesFacturation` n'en porte qu'une référence (REQ-CPL-005 amendée) ; (4) format du code de parrainage (REQ-DM-012), `DORMANCE_JOURS` en paramètre, témoin du dépôt au-delà du seuil porté par DM-09 ; (5) `paths` de DM-06 complétés. Registres écrits par les verbes hors dépôt ; `gov:hypotheses`, `gov:tasks`, `gov:requirements`, `gov:identifiants`, `gov:attributions`, `gov:trace`, `partners:schema:enums` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier."
     }
   ]
 }
