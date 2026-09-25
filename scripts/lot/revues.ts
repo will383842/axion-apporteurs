@@ -703,48 +703,102 @@ export function resoudreLeLot<T extends TacheDeLaPr>(e: {
   return { ids, refus };
 }
 
-// ── LE RISQUE D'UNE PR, ET LES LENTILLES QU'IL EXIGE (GOV-077, levier 3 du 2026-09-18) ────────
+// ── LE RISQUE D'UNE PR, ET LES LENTILLES QU'IL EXIGE (GOV-077, puis GOV-097) ─────────────────
 
 /**
- * LA RELECTURE SE PROPORTIONNE AU RISQUE — décision de Will du 2026-09-18 (`docs/CHARTE-AGENTS.md`
- * §6, `partners/ADR-0012`). Jusqu'ici `lentillesExigees()` exigeait EN DUR quatre lentilles sur
- * toute PR, y compris sur une PR qui ne touche que la documentation d'une tâche de qualité.
+ * LA RELECTURE SE PROPORTIONNE AU RISQUE — décisions de Will du 2026-09-18 (`partners/ADR-0012`)
+ * puis du 2026-09-25 (`partners/ADR-0021`, GOV-097) : **quatre lentilles seulement pour l'argent,
+ * la sécurité et les données ; deux (`exactitude`, `securite`) pour tout le reste**.
  *
- * LA RÈGLE ÉCHOUE FERMÉ : l'ORDINAIRE se PROUVE, l'ÉLEVÉ est le DÉFAUT. Une PR n'est ordinaire que
- * si TOUTES ces conditions sont établies ; il suffit d'un fait manquant pour qu'elle soit élevée :
+ * POURQUOI LA RÈGLE A CHANGÉ. Celle du 2026-09-18 prouvait l'ordinaire par deux listes BLANCHES
+ * (zones `gouvernance`/`qualite`, chemins `docs/`/`scripts/`/`tests/`) : toute tâche d'une autre
+ * zone, et toute PR qui touchait `src/`, montait à quatre lentilles — et chaque refus fait relire
+ * les quatre (le coût mesuré est dans `partners/ADR-0021`, pas ici : un nombre vieillit). La
+ * décision retourne la question : on ne prouve plus qu'une PR est ANODINE, on cherche si elle
+ * touche l'argent, la sécurité ou les données.
  *
- *   1. au moins une tâche résolue (`tachesDeLaPr`, titre ∪ champ `pr`) ;
- *   2. le registre de BASE lisible ;
- *   3. chaque tâche résolue, lue sur la TÊTE et sur la BASE, est en zone `gouvernance` ou
- *      `qualite`, porte `sensible` PRÉSENT et VIDE, et `schema` qui n'est pas `true` — la plus
- *      haute l'emporte (`.some`, jamais la première ni la dernière) ;
- *   4. aucun label `schema` ;
- *   5. un diff NON VIDE, COMPLET (la forge plafonne sa liste sans erreur : voir `ListeDesFichiers`),
- *      dont chaque fichier est sous `docs/`, `scripts/` ou `tests/`, et n'appartient pas à la garde
- *      des revues (`cheminsDeLaGardeDesRevues`, fermeture transitive de ses imports). Un fichier
- *      RENOMMÉ ou COPIÉ compte par sa source ET sa destination (`cheminsTouches`).
+ * LA RÈGLE — ÉLEVÉ SI ET SEULEMENT SI L'UN DE CES SIGNAUX EST PRÉSENT :
  *
- * ⚠️ `.github/` N'Y EST PAS, et c'est une décision (orchestrateur, 2026-09-18, sur GOV-077) : les
- * workflows et `CODEOWNERS` gouvernent les gates et la propriété des chemins. Une PR qui affaiblit
- * la CI est exactement celle qu'on ne relit pas à deux lentilles. Conséquence assumée : une tâche
- * qui touche `.github/workflows/ci.yml` (QA-T01) se relit en élevé.
+ *   1. une tâche de la PR (`tachesDeLaPr`, titre ∪ champ `pr` ∪ `Lot:`), lue sur la TÊTE et sur la
+ *      BASE — la plus haute l'emporte —, porte :
+ *        — un `sensible` NON VIDE (argent, attribution, auth, espace, rgpd : l'argent, la sécurité
+ *          et les données), ou ABSENT : un champ absent ne prouve rien ;
+ *        — `schema: true` ;
+ *        — une `zone` de `ZONES_A_RISQUE_ELEVE`, ou une `zone` ABSENTE, ou une `zone` que le schéma
+ *          du registre ne déclare pas (`zonesDuRegistre`) : une valeur imprévue n'est rien prouvé ;
+ *   2. le label `schema`, ou un chemin de schéma (`toucheSchema`, dérivé de la charte §7) ;
+ *   3. un fichier dans une zone sensible du code (`fichierEnZoneSensible`) ;
+ *   4. un fichier du PROCESSUS (`fichierDuProcessus`) : la garde des revues, la CI, un dossier
+ *      caché ou un fichier de configuration à la racine, `config/`. Ces fichiers peuvent désarmer
+ *      les gardes elles-mêmes : c'est la sécurité du processus, et elle reste à quatre lentilles ;
+ *   5. un diff vide, une liste de fichiers incomplète (`listeIncomplete`), aucune tâche résolue,
+ *      un registre de base illisible — ÉCHEC FERMÉ : ce qu'on ne sait pas lire n'est pas ordinaire.
  *
- * ⚠️ LA RACINE N'Y EST PAS NON PLUS, SANS AUCUNE EXCEPTION (décisions (f) puis (g) de
- * l'orchestrateur, sur les dettes de la lentille `securite`) : `package.json`, `pnpm-lock.yaml`,
- * `vitest.config.*`, `eslint.config.*`, `tsconfig*.json`, `.npmrc`, `.gitattributes` gouvernent la
- * chaîne de contrôle, et `CLAUDE.md` ou `AGENTS.md` sont les instructions que CHAQUE agent charge,
- * relecteurs compris. Les énumérer laisserait passer le prochain ; la règle fermée est « toute la
- * racine ».
+ * CE QUI CESSE D'ÉLEVER : une zone autre que l'argent et la sécurité (`espace`, `juridique`,
+ * `integration`, `domaine`… avec `sensible: []`), et un fichier de code produit hors des zones
+ * sensibles.
  *
- * POURQUOI DES LISTES BLANCHES. Une liste noire de zones (« argent, securite ») laisse passer tout
- * le reste : mesuré le 2026-09-18, huit tâches vivantes manipulent des données personnelles avec
- * `sensible: []` (INT-T09, INT-T10, INT-T11, INT-T13, JUR-T09, UX-P1-07, UX-P3-03, EXT-T05), et
- * aucune n'est en zone `gouvernance` ou `qualite`. De même pour les chemins : un dossier neuf,
- * `config/exemptions-corps-publie.json` ou `.claude/settings.json` tombent en élevé sans que
- * personne ait eu à penser à eux.
+ * ⚠️ LIMITE DÉCLARÉE — LES DONNÉES SE LISENT PAR `sensible`, ET LE REGISTRE PEUT MENTIR PAR OMISSION.
+ * `partners/ADR-0012` avait mesuré huit tâches vivantes qui manipulent des données personnelles avec
+ * `sensible: []` (INT-T09, INT-T10, INT-T11, INT-T13, JUR-T09, UX-P1-07, UX-P3-03, EXT-T05) : la
+ * liste blanche de zones les rattrapait, cette règle ne les rattrape que si leurs fichiers tombent
+ * dans une zone sensible. Le remède est au registre (`rgpd` sur ces tâches), pas ici :
+ * `partners/ADR-0021` le nomme en dette.
  */
-export const ZONES_A_RISQUE_ORDINAIRE: readonly string[] = ['gouvernance', 'qualite'];
-export const CHEMINS_A_RISQUE_ORDINAIRE: readonly string[] = ['docs/', 'scripts/', 'tests/'];
+export const ZONES_A_RISQUE_ELEVE: readonly string[] = ['argent', 'securite'];
+
+/**
+ * LES ZONES SENSIBLES QUE REQ-GOV-011 NOMME pour la section « Attaque » (`commissions/**`,
+ * `attributions/**`, `auth/**`, plus `espace/**`). Elles vivaient dans `scripts/gates/gov-pr.ts` ;
+ * elles vivent ici parce que le risque les lit aussi, et deux copies divergent (RM-01).
+ */
+export const ZONES_SENSIBLES: readonly string[] = [
+  'commissions/',
+  'attributions/',
+  'auth/',
+  'espace/',
+];
+
+/**
+ * LES SEGMENTS DE CHEMIN QUI DÉSIGNENT L'ARGENT, LA SÉCURITÉ ET LES DONNÉES dans le code. Un fichier
+ * est en zone sensible si UN de ses segments — dossier, ou nom de fichier sans extension, en
+ * minuscules — en fait partie, à n'importe quelle profondeur : `src/server/auth/session.ts`,
+ * `src/app/(espace)/connexion/page.tsx`, `src/proxy.ts`.
+ *
+ * 🔴 POURQUOI DES SEGMENTS ET PAS DES PRÉFIXES. `ZONES_SENSIBLES` se lit en PRÉFIXE depuis la racine
+ * (`f.startsWith('auth/')`) : mesuré le 2026-09-25, aucun fichier suivi de ce dépôt ne commence par
+ * l'un d'eux — le code vit sous `src/`. Pris tel quel, le signal 3 n'aurait jamais rien élevé.
+ * Les segments de `ZONES_SENSIBLES` en DÉRIVENT, et le reste est ce que le code du dépôt et les
+ * `paths` du registre nomment pour l'argent (`commission`, `argent`, `grille`), la sécurité
+ * (`securite`, `acces`, `roles`, `proxy`, `env`, `webhooks`) et les données
+ * (`donnees-personnelles`, `pii`).
+ */
+export const SEGMENTS_DES_ZONES_SENSIBLES: readonly string[] = [
+  ...ZONES_SENSIBLES.map((z) => z.replace(/\/$/, '')),
+  '(espace)',
+  'commission',
+  'attribution',
+  'argent',
+  'grille',
+  'securite',
+  'acces',
+  'roles',
+  'proxy',
+  'env',
+  'webhooks',
+  'donnees-personnelles',
+  'pii',
+];
+
+/**
+ * LES DOSSIERS DU PROCESSUS, hors racine et hors dossiers cachés (qui le sont tous) : `config/`
+ * porte `config/exemptions-corps-publie.json`, le seul fichier du dépôt qui puisse ABSOUDRE un
+ * rouge bloquant (charte §7).
+ */
+export const DOSSIERS_DU_PROCESSUS: readonly string[] = ['config/'];
+
+/** Le schéma du registre des tâches — le risque y lit les zones déclarées, il est donc de la garde. */
+export const CHEMIN_SCHEMA_DES_TACHES = 'scripts/lot/tasks.schema.json';
 
 /**
  * LES RACINES DE LA GARDE DES REVUES : le lecteur unique et ses deux appelants.
@@ -767,13 +821,14 @@ let gardeEnCache: readonly string[] | null = null;
  * `scripts/lot/chemins-de-tache.ts` tournent dans `gov:pr`, et une PR qui les modifiait passait
  * ordinaire. La garde est donc la FERMETURE TRANSITIVE des imports relatifs de ses trois racines,
  * DÉRIVÉE du disque à chaque lecture — jamais tapée —, plus les deux documents que la garde lit
- * (la charte, le registre des postes).
+ * (la charte, le registre des postes) — plus le schéma du registre des tâches, que le risque lit
+ * pour savoir quelles zones existent (GOV-097).
  *
  * ÉCHEC FERMÉ : un import qui ne se résout pas LÈVE. Une garde dont on ne sait pas de quoi elle
  * est faite ne peut pas dire qu'une PR n'y touche pas.
- * LIMITE DÉCLARÉE : les fichiers LUS à l'exécution sans être importés (`scripts/lot/tasks.schema.json`
- * par `avancement.ts`, le gabarit de PR, `CODEOWNERS`) ne sont pas dans le graphe — le gabarit et
- * `CODEOWNERS` sont sous `.github/`, donc élevés ; le schéma du registre ne l'est pas.
+ * LIMITE DÉCLARÉE : les fichiers LUS à l'exécution sans être importés (le gabarit de PR,
+ * `CODEOWNERS`) ne sont pas dans le graphe — ils sont sous `.github/`, donc élevés. Le schéma du
+ * registre, lu par `avancement.ts` et par `zonesDuRegistre()`, y est ajouté nommément.
  */
 export function cheminsDeLaGardeDesRevues(): readonly string[] {
   if (gardeEnCache !== null) return gardeEnCache;
@@ -796,7 +851,7 @@ export function cheminsDeLaGardeDesRevues(): readonly string[] {
     vus.add(f);
     for (const m of readFileSync(f, 'utf8').matchAll(MOTIF_IMPORT)) pile.push(resoudre(f, m[1]!));
   }
-  gardeEnCache = [...vus, CHEMIN_CHARTE, CHEMIN_AGENTS];
+  gardeEnCache = [...vus, CHEMIN_CHARTE, CHEMIN_AGENTS, CHEMIN_SCHEMA_DES_TACHES];
   return gardeEnCache;
 }
 
@@ -843,20 +898,63 @@ export function tachesDeLaBase(ref: string): TacheDeLaPr[] | null {
   }
 }
 
-/** Pourquoi une tâche n'est pas ordinaire — `null` si elle l'est. Un champ absent n'est RIEN prouvé. */
-function tacheNonOrdinaire(t: TacheDeLaPr): string | null {
+let zonesEnCache: readonly string[] | null = null;
+
+/**
+ * LES ZONES QUE LE SCHÉMA DU REGISTRE DÉCLARE — lues, jamais tapées (RM-01). Échec FERMÉ : un
+ * schéma illisible, ou qui ne porte plus d'énumération de zones, LÈVE — on ne dit pas qu'une zone
+ * est ordinaire sans savoir quelles zones existent.
+ */
+export function zonesDuRegistre(): readonly string[] {
+  if (zonesEnCache !== null) return zonesEnCache;
+  const schema = JSON.parse(readFileSync(CHEMIN_SCHEMA_DES_TACHES, 'utf8')) as {
+    $defs?: { tache?: { properties?: { zone?: { enum?: unknown } } } };
+  };
+  const zones = schema.$defs?.tache?.properties?.zone?.enum;
+  if (!Array.isArray(zones) || zones.length === 0 || !zones.every((z) => typeof z === 'string')) {
+    throw new Error(
+      `${CHEMIN_SCHEMA_DES_TACHES} ne déclare plus l'énumération des zones : le risque d'aucune ` +
+        `PR ne peut être dit ordinaire.`
+    );
+  }
+  zonesEnCache = zones as string[];
+  return zonesEnCache;
+}
+
+/** Pourquoi une tâche élève le risque — `null` si elle ne l'élève pas. Un champ absent n'est RIEN prouvé. */
+function tacheAElever(t: TacheDeLaPr): string | null {
   const ecarts: string[] = [];
   if (typeof t.zone !== 'string') ecarts.push('champ `zone` absent');
-  else if (!ZONES_A_RISQUE_ORDINAIRE.includes(t.zone)) ecarts.push(`zone ${t.zone}`);
+  else if (ZONES_A_RISQUE_ELEVE.includes(t.zone)) ecarts.push(`zone ${t.zone}`);
+  else if (!zonesDuRegistre().includes(t.zone)) ecarts.push(`zone ${t.zone} inconnue du schéma`);
   if (!Array.isArray(t.sensible)) ecarts.push('champ `sensible` absent');
   else if (t.sensible.length > 0) ecarts.push(`sensible [${t.sensible.join(', ')}]`);
   if (t.schema === true) ecarts.push('schema: true');
   return ecarts.length === 0 ? null : ecarts.join(', ');
 }
 
-/** Un fichier hors code produit : sous l'un des préfixes admis — jamais à la racine (décision (g)). */
-function cheminOrdinaire(f: string): boolean {
-  return CHEMINS_A_RISQUE_ORDINAIRE.some((p) => f.startsWith(p));
+/** Les segments d'un chemin, en minuscules — le dernier sans son extension. */
+function segments(f: string): string[] {
+  const s = f.toLowerCase().split('/');
+  const dernier = s.pop() ?? '';
+  return [...s, dernier, dernier.replace(/\..*$/, '')];
+}
+
+/** Un fichier de l'argent, de la sécurité ou des données (`SEGMENTS_DES_ZONES_SENSIBLES`). */
+export function fichierEnZoneSensible(f: string): boolean {
+  return segments(f).some((s) => SEGMENTS_DES_ZONES_SENSIBLES.includes(s));
+}
+
+/**
+ * Un fichier du PROCESSUS : à la racine (sans exception, décision (g) de GOV-077 — `package.json`,
+ * les configurations d'outils, mais aussi `CLAUDE.md` et `AGENTS.md`, que chaque agent charge), sous
+ * un dossier caché (`.github/`, `.claude/`, `.husky/`…), ou sous `DOSSIERS_DU_PROCESSUS`. La garde
+ * des revues est jugée à part, par `cheminsDeLaGardeDesRevues()`.
+ */
+export function fichierDuProcessus(f: string): boolean {
+  return (
+    !f.includes('/') || f.startsWith('.') || DOSSIERS_DU_PROCESSUS.some((d) => f.startsWith(d))
+  );
 }
 
 /**
@@ -990,7 +1088,7 @@ export type EntreeDuRisque = {
 
 /**
  * LE RISQUE D'UNE PR — LA SEULE DÉRIVATION, appelée par `scripts/gates/gov-pr.ts` ET par
- * `scripts/lot/corps-de-pr.ts`. Voir `ZONES_A_RISQUE_ORDINAIRE` pour la règle et ses mesures.
+ * `scripts/lot/corps-de-pr.ts`. Voir `ZONES_A_RISQUE_ELEVE` pour la règle et ses limites.
  *
  * MONOTONIE : un renseignement de plus — une tâche, un fichier, la base — ne peut que faire MONTER
  * le risque. Les tâches résolues sont l'UNION de celles de la tête et de celles de la base.
@@ -1026,7 +1124,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
     for (const [ou, t] of versions) {
       if (t === undefined) continue;
       if (t.schema === true) tachesSchema = true;
-      const ecart = tacheNonOrdinaire(t);
+      const ecart = tacheAElever(t);
       if (ecart !== null) {
         ordinaire = false;
         raisons.push(`${idT} sur la ${ou} : ${ecart}`);
@@ -1040,10 +1138,15 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
   if (e.fichiers.length === 0) raisons.push('diff vide ou illisible');
   const incomplete = listeIncomplete(e.liste);
   if (incomplete !== null) raisons.push(incomplete);
-  const produit = e.fichiers.filter((f) => !cheminOrdinaire(f));
-  if (produit.length > 0) {
+  const sensibles = e.fichiers.filter(fichierEnZoneSensible);
+  if (sensibles.length > 0) {
+    raisons.push(`fichier(s) en zone sensible : ${sensibles.join(', ')}`);
+  }
+  const processus = e.fichiers.filter(fichierDuProcessus);
+  if (processus.length > 0) {
     raisons.push(
-      `fichier(s) hors ${CHEMINS_A_RISQUE_ORDINAIRE.join(', ')} : ${produit.join(', ')}`
+      `fichier(s) du processus (racine, dossier caché, ${DOSSIERS_DU_PROCESSUS.join(', ')}) : ` +
+        processus.join(', ')
     );
   }
   const chemins = cheminsDeLaGardeDesRevues();
@@ -1063,7 +1166,10 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
   return {
     niveau: 'ordinaire',
     schema: false,
-    raisons: [prouvees.join(', '), `${e.fichiers.length} fichier(s) hors code produit`],
+    raisons: [
+      prouvees.join(', '),
+      `${e.fichiers.length} fichier(s) hors zones sensibles et hors processus`,
+    ],
   };
 }
 

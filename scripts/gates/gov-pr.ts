@@ -58,6 +58,7 @@ import {
   resoudreLeLot,
   risqueDeLaPr,
   tachesDeLaBase,
+  ZONES_SENSIBLES,
   touche,
   tachesDeLaPr,
   jugerLesTetes,
@@ -127,8 +128,8 @@ const TYPES_DE_TITRE = ['feat', 'fix', 'test', 'docs', 'chore', 'refactor', 'ci'
 const ORDINAUX = ['première', 'deuxième', 'troisième', 'quatrième', 'cinquième'];
 // Les chemins qui exigent la lentille de schéma ne sont plus RECOPIÉS ici : ils se dérivent du §7
 // de la charte, par le lecteur unique — la même source que celle qui fait exiger le label (RM-01).
-/** Les zones que REQ-GOV-011 place sous revue adversariale documentée. */
-const ZONES_SENSIBLES = ['commissions/', 'attributions/', 'auth/', 'espace/'];
+// Les zones que REQ-GOV-011 place sous revue adversariale documentée (`ZONES_SENSIBLES`) vivent
+// dans le lecteur unique depuis GOV-097 : le risque d'une PR les lit aussi (RM-01).
 /**
  * LE PÉRIMÈTRE QUE LA FAMILLE `fichier_hors_paths_des_taches` CONFRONTE, ET POURQUOI IL S'ARRÊTE LÀ
  * (GOV-056, livrable 2).
@@ -1467,6 +1468,20 @@ if (process.argv.includes('--prove')) {
 
   /** cas 1 — un numéro de PR que le registre ne porte pas, posé sur les tâches que le cas choisit. */
   const PR_R1 = 9999;
+  /**
+   * GOV-097 — le dépôt où UNE tâche change de zone (et, s'il le faut, déclare un chemin de plus),
+   * sur la tête comme sur la base : seule la zone varie (RM-11).
+   */
+  const depotAvecZone = (id: string, zone: string, cheminsEnPlus: string[] = []): Depot => {
+    const d = copieDepot();
+    d.taches = d.taches.map((t) =>
+      t.id === id ? { ...t, zone, paths: [...t.paths, ...cheminsEnPlus] } : t
+    );
+    return d;
+  };
+  /** Un fichier de code produit hors de toute zone sensible (GOV-097). */
+  const CODE_NEUTRE = 'src/app/tableau/page.tsx';
+
   const depotAvecPr = (ids: string[]): Depot => {
     const d = copieDepot();
     d.taches = d.taches.map((t) => (ids.includes(t.id) ? { ...t, pr: PR_R1 } : t));
@@ -1960,6 +1975,15 @@ if (process.argv.includes('--prove')) {
       },
     },
     {
+      // GOV-097 — la PR ordinaire dont la tâche passe en zone `securite`, `sensible` toujours vide :
+      // la zone compte seule, quatre lentilles (décision de Will du 2026-09-25, partners/ADR-0021).
+      famille: 'lentilles_manquantes',
+      defaut: () => {
+        const d = depotAvecZone('QA-T01', 'securite');
+        return [d, { ...copiePr(PR_ORDINAIRE), tachesBase: d.taches }];
+      },
+    },
+    {
       // cas 6 quinquies (GOV-077) — le fichier de CI RENOMMÉ hors de `.github/` : sa source compte.
       famille: 'lentilles_manquantes',
       defaut: () => [
@@ -2243,6 +2267,18 @@ if (process.argv.includes('--prove')) {
       cas: () => {
         const d = depotAvecPr(['QA-T01', 'GOV-039']);
         return [d, { ...copiePr(PR_ORDINAIRE), numero: PR_R1, tachesBase: d.taches }];
+      },
+    },
+    {
+      // GOV-097 — l'autre face du témoin `securite` : une tâche de zone `espace`, `sensible` vide,
+      // qui touche du code produit hors des zones sensibles, se relit à DEUX lentilles. Sans ce
+      // contre-témoin, une règle qui élèverait encore tout `src/` passerait pour la décision.
+      quoi: 'une PR de zone espace, sensible vide, touchant du code produit neutre, deux lentilles',
+      cas: () => {
+        const d = depotAvecZone('QA-T01', 'espace', [CODE_NEUTRE]);
+        const p = copiePr(PR_ORDINAIRE);
+        p.fichiers = [...p.fichiers, CODE_NEUTRE];
+        return [d, { ...p, tachesBase: d.taches }];
       },
     },
   ];
