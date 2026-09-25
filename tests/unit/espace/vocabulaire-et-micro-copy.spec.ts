@@ -50,6 +50,7 @@ import {
   parametre,
   parametresDe,
   SOURCES_DU_DEPOT,
+  PARAMETRES_PERMIS,
   ECRAN_MES_ENTREPRISES,
   ROUTE_DU_DEPOT,
   type Vue,
@@ -201,6 +202,23 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
     expect(messages(vue)).toContain('/ecran-de-la-carte');
   });
 
+  it('REQ-UX-002 : la garde lit les fichiers SUIVIS et les composants, jamais une liste vide en silence', () => {
+    // Un fichier de micro-copie suivi neuf et un composant .tsx suivi, fabriqués : une vue qui ne
+    // lirait pas les fichiers suivis (ou pas les composants) ne rougirait ni sur l'un ni sur l'autre.
+    const neuf = 'src/content/micro-copy/espace/nouvel-ecran.ts';
+    const composant = 'src/app/(espace)/sentinelle/page.tsx';
+    const vue = vueDuDepot({
+      lire: (chemin) =>
+        chemin === composant
+          ? 'export const P = ({ t }: { t: string }) => <p dangerouslySetInnerHTML={{ __html: t }} />;'
+          : SOURCES_DU_DEPOT.lire(chemin),
+      suivis: () => [...SOURCES_DU_DEPOT.suivis(), neuf, composant],
+    });
+    expect([...new Set(familles(vue))].sort()).toEqual(['html_brut', 'micro_copie_non_lue']);
+    expect(messages(vue)).toContain(neuf);
+    expect(messages(vue)).toContain(`${composant}:1`);
+  });
+
   it('REQ-UX-002 : une valeur sans base contractuelle fait rougir la garde, qui la NOMME', () => {
     const base = vueDuDepot();
     const vue: Vue = {
@@ -293,6 +311,68 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
     );
     expect(familles(vue)).toEqual(['parametre_non_permis']);
     expect(messages(vue)).toContain('/aide');
+  });
+
+  /**
+   * Un contexte ÉTRANGER par fichier, choisi ici et non dérivé de la liste blanche : un paramètre
+   * permis ailleurs dans le même fichier doit y rougir. Élargir une entrée au fichier entier le
+   * laisserait passer. Un fichier nouveau dans la liste blanche fait échouer ce test.
+   */
+  const CONTEXTE_ETRANGER: Readonly<Record<string, readonly string[]>> = {
+    'espace/issues-depot.ts': ['TEXTES_DES_ISSUES', 'opposition_demarchage', 'quoiFaire'],
+    'espace/etats-vides.ts': ['ETATS_VIDES_ESPACE', '/plus', 'phrase'],
+    'espace/vocabulaire.ts': ['FORMULES', 'sansSuite'],
+  };
+
+  it('REQ-UX-002 : chaque paramètre permis rougit HORS de son contexte, dans le même fichier', () => {
+    const entrees = Object.entries(PARAMETRES_PERMIS).flatMap(([cle, noms]) =>
+      noms.map((nom) => [cle, nom] as const)
+    );
+    expect(entrees.length).toBeGreaterThanOrEqual(11);
+    for (const [cle, nom] of entrees) {
+      const fichier = cle.split(' › ')[0]!;
+      const etranger = CONTEXTE_ETRANGER[fichier];
+      expect([cle, etranger !== undefined]).toEqual([cle, true]);
+      const vue = avecTexte(vueDuDepot(), fichier, etranger!, `Texte témoin {${nom}}.`);
+      expect([cle, nom, familles(vue)]).toEqual([cle, nom, ['parametre_non_permis']]);
+      expect([cle, nom, messages(vue).includes(`{${nom}}`)]).toEqual([cle, nom, true]);
+    }
+  });
+
+  it('REQ-UX-002 : texte_calcule — un littéral qui écrit un texte dans une fonction rougit', () => {
+    const base = vueDuDepot();
+    const vocabulaire = 'src/content/micro-copy/espace/vocabulaire.ts';
+    const vue: Vue = {
+      ...base,
+      sourcesMicroCopie: [
+        ...base.sourcesMicroCopie.filter((f) => f.chemin !== vocabulaire),
+        {
+          chemin: vocabulaire,
+          contenu: "function reservee(): string {\n  return 'Déjà réservée';\n}\n",
+        },
+      ],
+    };
+    expect(familles(vue)).toEqual(['texte_calcule']);
+    expect(messages(vue)).toContain(
+      `${vocabulaire}:2 — le littéral « Déjà réservée » dans la fonction reservee`
+    );
+  });
+
+  it('REQ-UX-002 : texte_calcule — une concaténation dans une fonction hors liste blanche rougit', () => {
+    const base = vueDuDepot();
+    const vocabulaire = 'src/content/micro-copy/espace/vocabulaire.ts';
+    const vue: Vue = {
+      ...base,
+      sourcesMicroCopie: [
+        ...base.sourcesMicroCopie.filter((f) => f.chemin !== vocabulaire),
+        {
+          chemin: vocabulaire,
+          contenu: 'const aide = (nom: string): string => FORMULES.dejaReservee + nom;\n',
+        },
+      ],
+    };
+    expect(familles(vue)).toEqual(['texte_calcule']);
+    expect(messages(vue)).toContain(`${vocabulaire}:1 — une concaténation dans la fonction aide`);
   });
 
   it('REQ-UX-002 : contre-témoin — la date de fin, seule permise à la collision (REQ-SEC-022), reste verte', () => {

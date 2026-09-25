@@ -935,9 +935,12 @@ export function vueDuDepot(sources: Sources = SOURCES_DU_DEPOT): Vue {
     ecransConsole: ecransDeLaConsole(lire(CHEMIN_VALIDATION)),
     etatsVidesEspace: ETATS_VIDES_ESPACE,
     etatsVidesConsole: ETATS_VIDES_CONSOLE,
+    // Un composant suivi est lu par `lire` (qui rend '' pour un fichier absent) : la preuve peut
+    // ainsi injecter un composant sentinelle et vérifier qu'il est LU.
     composants: suivis
-      .filter((c) => EST_UN_COMPOSANT(c) && existsSync(c))
-      .map((chemin) => ({ chemin, contenu: lire(chemin) })),
+      .filter(EST_UN_COMPOSANT)
+      .map((chemin) => ({ chemin, contenu: lire(chemin) }))
+      .filter((f) => f.contenu !== ''),
     fichiersDeMicroCopie: suivis.filter(
       (c) => c.startsWith(RACINE_MICRO_COPIE) || c === 'messages/fr.json'
     ),
@@ -1017,6 +1020,9 @@ export function vueDeFixture(): Vue {
   };
 }
 
+const MICRO_COPIE_SENTINELLE = `${RACINE_MICRO_COPIE}sentinelle.ts`;
+const COMPOSANT_SENTINELLE = 'src/app/(espace)/sentinelle.tsx';
+
 /** Les sources d'une vue de fixture, pour prouver que `vueDuDepot` LIT le registre et la carte. */
 const SOURCES_DE_FIXTURE: Sources = {
   lire: (chemin) =>
@@ -1031,8 +1037,10 @@ const SOURCES_DE_FIXTURE: Sources = {
         ? '| `/ecran-sentinelle` | témoin |'
         : chemin === CHEMIN_VALIDATION
           ? '## Console\n| `console-sentinelle.html` | témoin |'
-          : '',
-  suivis: () => [],
+          : chemin === COMPOSANT_SENTINELLE
+            ? 'export const P = () => null;'
+            : '',
+  suivis: () => [MICRO_COPIE_SENTINELLE, COMPOSANT_SENTINELLE],
 };
 
 const COMPOSANT_FAUTIF = {
@@ -1212,6 +1220,34 @@ const TEMOINS: { famille: string; nomme: string; vue: () => Vue }[] = [
     }),
   },
   {
+    // La branche du littéral : un texte écrit dans une fonction, sans gabarit ni concaténation.
+    famille: 'texte_calcule',
+    nomme: 'le littéral « Déjà réservée » dans la fonction reservee',
+    vue: () => ({
+      ...vueDeFixture(),
+      sourcesMicroCopie: [
+        {
+          chemin: `${RACINE_ESPACE}fixture.ts`,
+          contenu: "function reservee(): string {\n  return 'Déjà réservée';\n}",
+        },
+      ],
+    }),
+  },
+  {
+    // La branche de la concaténation, dans une fonction HORS de la liste blanche.
+    famille: 'texte_calcule',
+    nomme: 'une concaténation dans la fonction aide',
+    vue: () => ({
+      ...vueDeFixture(),
+      sourcesMicroCopie: [
+        {
+          chemin: `${RACINE_ESPACE}fixture.ts`,
+          contenu: 'const aide = (nom: string): string => RAISON + nom;',
+        },
+      ],
+    }),
+  },
+  {
     famille: 'html_brut',
     nomme: `${COMPOSANT_FAUTIF.chemin}:1`,
     vue: () => ({
@@ -1289,6 +1325,16 @@ if (APPELE_DIRECTEMENT) {
       ['motifsDeRefus (registre, REQ-SEC-022)', lue.motifsDeRefus, ['motif_sentinelle']],
       [`ecransEspace (${CHEMIN_CARTE})`, lue.ecransEspace, ['/ecran-sentinelle']],
       [`ecransConsole (${CHEMIN_VALIDATION})`, lue.ecransConsole, ['console-sentinelle']],
+      [
+        'fichiersDeMicroCopie (fichiers suivis)',
+        lue.fichiersDeMicroCopie,
+        [MICRO_COPIE_SENTINELLE],
+      ],
+      [
+        'composants (fichiers .tsx suivis)',
+        lue.composants.map((c) => c.chemin),
+        [COMPOSANT_SENTINELLE],
+      ],
     ];
     for (const [quoi, obtenu, voulu] of attendu) {
       if (JSON.stringify(obtenu) !== JSON.stringify(voulu)) {
@@ -1305,7 +1351,7 @@ if (APPELE_DIRECTEMENT) {
     console.log(
       `✅ ux:exhaustivite — ${FAMILLES.length} familles rougissent chacune sur son témoin en nommant ` +
         `sa cible, ${CONTRE_TEMOINS.length} contre-témoins restent verts, la vue du dépôt lit ses ` +
-        `quatre sources — preuve faite.`
+        `six sources — preuve faite.`
     );
     for (const f of FAMILLES) console.log(`   • ${f.nom} — ${f.explication}`);
     process.exit(0);
