@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `310cf0c` — 2026-09-25T19:18:06+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #92 (rien) · 2. #124 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #91 (un conflit avec `main`) · 5. #93 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #92 (rien) · 2. #124 (un contrôle requis rouge ou une revue manquante) · 3. #126 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #93 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/109 tâches, reste 66.10 j |
 | Le prochain pas | fusionner #92, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #122 — 2026-09-25 |
+| Dernière entrée de journal | PR #126 — 2026-09-25 |
 
 **Ce qu’on tape maintenant.** `gh pr view 92 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -66,9 +66,10 @@ Reste sur ce chemin : **14.50 j**.
 | --- | --- | --- | --- |
 | 1 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | rien — fusionnable maintenant |
 | 2 | #124 — chore(GOV-099): cadrage de DM-06 — sourceCanal transporte, IBAN hors DM-06, glossaire | `t/cadrage-dm-06` | un contrôle requis rouge ou une revue manquante |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un contrôle requis rouge ou une revue manquante |
+| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -108,6 +109,38 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #126 — 2026-09-25 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema
+
+**Fait.** `src/server/securite/pii.ts` porte la primitive des données personnelles, au format de
+`partners/ADR-0013`. `clesPii(process.env)` fait juger l'environnement par `lireEnvironnement`
+(SEC-01) et rend trois clés, une par usage, dans un type marqué que nulle autre fonction ne
+fabrique. `encryptPii` et `decryptPii` chiffrent en AES-256-GCM, IV tiré à chaque appel, avec
+l'AAD `["partners.pii",1,modele,champ,id]` : un bloc déplacé vers une autre ligne, un autre champ
+ou un autre modèle échoue en nommant l'échec d'authentification. `colonnesPii` est le chemin
+d'écriture : il rend l'identifiant lié, les blocs de suffixe `Chiffre` et les empreintes
+`emailHash`, `phoneHash`, `ibanHash`. `empreinteRecherche` fait un HMAC sous `PII_HASH_KEY` pour
+le courriel, le téléphone, l'IBAN (clé jugée par `cleIbanValide`) et le SIRET.
+`empreinteAdresseReseau` appelle `empreinteAdresse` de la frontière sous `IP_HASH_SALT`. La garde
+`securite:schema-pii` (registre `G-SEC-SCHEMA-PII`, câblée en CI avec son `:prove`, 9 familles,
+17 témoins, 4 contre-témoins) refuse deux choses : une colonne de personne en clair dans le
+schéma, et un bloc ou une empreinte écrits hors de `pii.ts`. 23 tests. Huit défauts injectés un à
+un ont chacun fait rougir leur contrôle.
+
+**Reste.** Aucun modèle de personne n'existe encore : DM-06 et DM-07 poseront les premières
+colonnes, et la garde les jugera. L'IBAN de la pièce RIB (DM-11) passera par `colonnesPii`. La
+double clé de rotation (HYP-E1-24) appartient à QA-T04 et QA-T13. Le module client unique
+`src/server/db.ts`, que `journal-sans-pii.ts` attribue à SEC-08, n'est pas dans les chemins de la
+tâche et n'est pas posé. Le passage de l'ADR-0013 à `accepte` appartient à l'architecte.
+
+**Appris.** La branche du 19/09 recopiait la normalisation IPv6 de SEC-10 et le HMAC d'adresse de
+SEC-07, arrivés sur main après elle : une branche reprise se relit contre le main du jour, pas
+contre celui de sa naissance. Un type marqué ne se construit pas par un littéral sous la règle
+`consistent-type-assertions` : on type d'abord l'objet sans la marque, puis on l'affirme.
+`gates:prouvees` ne reconnaît une preuve que sous la forme `pnpm <garde>:prove`, suivie d'un tiret
+cadratin : un trait d'union simple la déclare non référencée. Une garde n'est vue câblée que si
+son identifiant, son script ou un alias figure dans le workflow : l'identifiant `G-SEC-...` exige
+l'alias du script pnpm.
 
 ### PR #122 — 2026-09-25 — chore(GOV-098): perimetre fonctionnel decide par Will le 2026-09-25 — lignees, parrain, statistiques, bibliotheque
 
@@ -188,78 +221,7 @@ monter GOV-073, GOV-074, GOV-075, GOV-081 et GOV-084 ; les scripts de contrôle
 gardent leurs propres signaux, et un `scripts/gates/*` hors de la garde reste ordinaire (dette déjà
 relevée par `securite`).
 
-### PR #118 — 2026-09-23 — feat(GOV-096): le champ Lot: du gabarit resout les taches d une PR de lot
-
-**Fait.** `gov:pr` ne savait pas lire une PR de LOT, qui est pourtant la forme NORMALE de ce dépôt
-(`docs/CONVENTIONS.md` §5, `partners/ADR-0007` : un lot, une branche, une PR, un commit par tâche).
-`tachesDeLaPr()` appariait une tâche à une PR sur `t.pr === <numéro>` OU sur l'identifiant du
-TITRE ; or le titre ne peut nommer qu'une tâche, et `t.pr` n'est écrit que par `pnpm lot:cloture`,
-dont l'invariant exige `fusion.atterri === true` — donc APRÈS la fusion. Les autres tâches d'un lot
-ne résolvaient par rien, leurs `paths` étaient invisibles, et AUCUNE PR de lot n'était fusionnable.
-Le gabarit porte désormais un champ `Lot:` à la section Identité, gardé par `CHAMPS` ;
-`tachesDeLaPr()` résout par l'UNION DES TROIS, et `risqueDeLaPr()` reçoit la même union, faute de
-quoi une tâche `sensible` ou `schema` portée par une autre tâche du lot que celle du titre
-n'exigerait ni section Attaque ni approbation de l'architecte. Quatre refus bornent le champ,
-chacun vu rougir sur son témoin, et un identifiant refusé n'élargit RIEN : identifiant inconnu du
-registre, identifiant déjà livré, identifiant rattaché à une AUTRE PR — famille `deux_pr_meme_tache`,
-NOM repris de `gov:etat` et non doublé (`partners/ADR-0011`) —, champ mal formé. `Lot:` vide ou
-absent laisse le comportement INCHANGÉ, et deux contre-témoins le gardent. Le message de
-`fichier_hors_paths_des_taches` cesse de prescrire, sur une PR de lot, le remède FAUX qu'il
-prescrivait. `partners/ADR-0020` porte l'argument : le niveau de confiance ne change pas, le titre
-étant déjà écrit par l'auteur et déjà cru par la garde.
-
-**Reste.** Cette PR doit fusionner APRÈS la PR #113 : l'ADR porte le numéro 0020, le 0019 est pris
-par #113 qui est ouverte, et `pnpm gov:adr` rougit ici sur `numero_non_consecutif` — et SEULEMENT
-sur cela, vérifié en posant temporairement le 0019 de la branche de #113 dans cet arbre. Le trou se
-referme par un `gh pr update-branch` une fois #113 atterrie. Le numéro n'a pas été pris à 0019
-exprès : deux PR qui proposent le même numéro rendent `main` rouge APRÈS COUP, et aucune garde ne le
-voit avant la fusion. — `scripts/lot/corps-de-pr.ts` ne remplit pas encore `Lot:` : l'auteur d'un lot
-écrit la ligne à la main, et la tâche qui l'automatiserait appartient à `lot:composer` (GOV-012).
-— Aucune garde ne confronte le champ `Lot:` aux COMMITS de la branche : une PR pourrait déclarer une
-tâche qu'elle ne livre pas, et s'ouvrir ses `paths` sans y écrire. C'est dit plutôt que supposé ;
-la garde qui le fermerait lirait `git log`, c'est-à-dire une troisième source de « quelles tâches
-cette PR porte », écartée par l'ADR. — Sur la PR #114 elle-même, trois fichiers restent orphelins
-après correction, et ils appartiennent au lead de ce lot. — #113 a atterri (`6d727b0`) : la
-contrainte d'ordre est levée, et sa garde `citation-d-outil-hors-depot` a fait requalifier en
-`hors-depot/` les trois citations de `ajouter-path.mjs` que cette PR portait. — Deux voies
-restent OUVERTES, nommées par `securite` et `mutation` et non fermées ici : `lot_tache_livree`
-et `deux_pr_meme_tache` ne lisent que le registre de TÊTE (une tâche remise à `a_faire` dans la
-branche passe), et `deux_pr_meme_tache` ne peut pas tirer quand le numéro de la PR est inconnu.
-
-**Relecture.** `exactitude` et `mutation` ont refusé la tête `9c0d62a` sur le même trou : la
-promesse (8) — le lot fait MONTER le risque et exiger la section Attaque — était tenue par le code
-et gardée par RIEN. Trois mutants survivaient (`idsDuLot` retiré de l'appel, l'union retirée de
-`risqueDeLaPr()`, `lot.ids` retiré de `tachesSensibles`). Le correctif ajoute à `--prove` la PR
-ordinaire à laquelle le SEUL `Lot:` ajoute une tâche sensible, sans un fichier de plus : elle doit
-rougir sur `lentilles_manquantes` et, section Attaque vidée, sur `attaque_absente`. Les trois
-mutants ont été rejoués un par un : chacun fait rougir son témoin.
-
-**Appris.** La preuve par l'effet a été jouée sur la tête réelle de la PR #114 (`a103318`), sortie
-dans un arbre de travail détaché, ce correctif posé dessus, la garde lancée pour de vrai : DOUZE
-fichiers orphelins deviennent TROIS, et les six tâches du lot résolvent. Deux choses en sortent, et
-la seconde est celle qui vaut d'être retenue.
-
-(1) La famille ne disparaît PAS, et c'est la bonne nouvelle. Les trois qui restent —
-`affirmations-verifiees.spec.ts`, `gardes.spec.ts`, `refus-de-rendre-et-de-publier.spec.ts` — sont
-écrits par la PR #114 et déclarés par AUCUNE de ses six tâches. C'est exactement ce que la famille
-existe pour dire, et l'un d'eux figurait déjà parmi les spécifications orphelines que GOV-056 avait
-nommées. Un correctif dont on attend qu'il rende un rouge VERT doit être mesuré sur ce qu'il rend
-RÉELLEMENT : « la famille doit disparaître » était l'attente, « elle passe de douze à trois » est la
-mesure, et l'écart est un fait sur le lot, pas un défaut du correctif.
-
-(2) Pour mesurer, il fallait un corps de PR portant `Lot:` sans TOUCHER au corps réel. Un mandataire
-`gh` posé en tête de `PATH` ne fonctionne PAS sous Node sur Windows : `execFileSync('gh', ...)` passe
-par `CreateProcess`, qui cherche `gh.exe` et n'applique PAS `PATHEXT` — un `gh.cmd` n'est jamais
-trouvé, et la vraie commande répond à sa place. Le rouge mesuré était alors IDENTIQUE au rouge
-d'avant, avec le message du correctif : de quoi conclure que le correctif ne fait rien. Ce qui
-marche : `NODE_OPTIONS="--require <preload.cjs>"`, où le préchargement remplace
-`require('child_process').execFileSync` AVANT que le graphe de modules ne soit instancié — les
-imports nommés d'un module natif sont créés à ce moment-là et prennent la version remplacée. Le
-mandataire IMPRIME ce qu'il injecte, sur la sortie d'erreur : sans cette ligne, on ne distingue pas
-« l'injection n'a rien changé » de « l'injection n'a pas eu lieu », et c'est précisément la
-confusion qui a coûté un tour.
-
-… 47 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 48 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
