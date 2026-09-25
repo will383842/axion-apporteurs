@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `48b14b6` — 2026-09-25T21:08:41+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #128 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) · 5. #126 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #126 (un contrôle requis rouge ou une revue manquante) · 4. #128 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
@@ -66,9 +66,9 @@ Reste sur ce chemin : **14.50 j**.
 | --- | --- | --- | --- |
 | 1 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
 | 2 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 3 | #128 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees | `t/dm-06` | un contrôle requis rouge ou une revue manquante |
-| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un contrôle requis rouge ou une revue manquante |
+| 4 | #128 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees | `t/dm-06` | un contrôle requis rouge ou une revue manquante |
+| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -120,7 +120,7 @@ d'écriture : il rend l'identifiant lié, les blocs de suffixe `Chiffre` et les 
 le courriel, le téléphone, l'IBAN (clé jugée par `cleIbanValide`) et le SIRET.
 `empreinteAdresseReseau` appelle `empreinteAdresse` de la frontière sous `IP_HASH_SALT`. La garde
 `securite:schema-pii` (alias `G-SEC-SCHEMA-PII`, câblée en CI avec son `:prove`, 10 familles,
-21 témoins, 5 contre-témoins) refuse deux choses : une colonne de personne en clair dans le
+32 témoins, 5 contre-témoins) refuse deux choses : une colonne de personne en clair dans le
 schéma, et un bloc ou une empreinte écrits hors de `pii.ts`. 24 tests. Huit défauts injectés un à
 un ont chacun fait rougir leur contrôle.
 
@@ -164,6 +164,23 @@ reviendra au premier appelant (DM-07). Le lexique ne reconnaît pas `remoteAddr`
 propriétaire de `champs.ts`. Le registre `docs/gates.json` (champs `verifie` et `preuveRouge`,
 réécrits par `hors-depot/reecrire-champ.mjs`) et sa vue `docs/GATES.md` décrivent la nouvelle
 portée : sept clés d'écriture, 10 familles, 21 témoins, 5 contre-témoins.
+
+Second tour : `exactitude`, `securite` (veto levé) et `simplicite` acceptent la tête `2c2a6cf`, et
+`mutation` la refuse (5321838301). Cinq mutants de la garde survivaient. Chacun rendait admise une
+écriture de clair dans une colonne de suffixe Hash : tout appel pris pour un producteur, la clé
+`update` d'un `upsert` retirée, la branche fausse d'un ternaire en valeur ignorée, un ET logique en
+valeur toujours admis, et `||` ou `??` jugés sur leur seul opérande droit. Onze témoins les tuent,
+dans le spec comme au `--prove`, qui passe à 32 témoins. Le spec exige désormais la FAMILLE et plus
+seulement le code 1 : sans cela, `ecriture_non_jugee` masquait la coupure d'une branche de la
+descente. Dix mutants ont été rejoués sur le correctif, et chacun fait rougir le spec et le
+`--prove`. La règle de descente, écrite deux fois, n'est plus écrite qu'une fois (`issues`). La
+limite déclarée nomme aussi `Object.fromEntries` et les méthodes homonymes d'une fonction de
+`pii.ts`. Les champs `preuveRouge` et `verifie` sont réécrits par le même verbe. Les clés
+`createMany`, `updateMany`, `upsert` et `connectOrCreate` sont redondantes : en écriture Prisma
+imbriquée, elles vivent toujours sous une clé `data`, `create` ou `update`. Les retirer toutes les
+quatre est un mutant qui survit (rejoué), et c'est un mutant équivalent pour toute écriture posée
+dans l'appel. `main` a été refusionnée pour un conflit sur le cliquet des sorties déclarées (51 d'un
+côté, 54 de l'autre, 55 après la fusion).
 
 ### PR #124 — 2026-09-25 — chore(GOV-099): cadrage de DM-06 — sourceCanal transporte, IBAN hors DM-06, glossaire
 
