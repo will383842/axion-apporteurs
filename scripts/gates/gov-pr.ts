@@ -1535,6 +1535,34 @@ if (process.argv.includes('--prove')) {
     return p;
   };
 
+  /**
+   * LA PR ORDINAIRE, PLUS UNE TÂCHE SENSIBLE DÉCLARÉE PAR SON SEUL `Lot:` — refus d'`exactitude`
+   * sur #118 (review 5313211711). L'acceptance (8) de GOV-096 promet que le lot fait MONTER le
+   * risque et exiger la section Attaque ; muter `idsDuLot` ou `lot.ids` en `[]` laissait pourtant
+   * toute la preuve verte. Ici AUCUN fichier n'est ajouté : ni zone sensible, ni fichier produit,
+   * ni tâche du titre sensible. La seule chose qui peut élever cette PR est la tâche du `Lot:`.
+   */
+  const PR_DE_LOT_SENSIBLE = (): Pr => {
+    const sensible = depot.taches.find(
+      (t) =>
+        t.id !== 'QA-T01' &&
+        t.pr === null &&
+        t.statut !== null &&
+        !LIVREES.has(t.statut) &&
+        Array.isArray(t.sensible) &&
+        t.sensible.length > 0
+    );
+    if (sensible === undefined) {
+      throw new Error(
+        `gov:pr --prove — aucune tâche sensible ouverte au registre : le témoin du lot qui élève ` +
+          `le risque ne mesurerait plus rien.`
+      );
+    }
+    const p = copiePr(PR_ORDINAIRE);
+    p.corps = poserLeLot(p.corps, sensible.id);
+    return p;
+  };
+
   type Temoin = { famille: string; defaut: () => [Depot, Pr | null] };
   const TEMOINS: Temoin[] = [
     // ---- structure
@@ -1634,6 +1662,16 @@ if (process.argv.includes('--prove')) {
       defaut: () => {
         const p = copiePr(PR_TEMOIN);
         p.numero = 31;
+        p.corps = remplacerBloc(p.corps, 'attaque', '');
+        return [copieDepot(), p];
+      },
+    },
+    {
+      // GOV-096 (8) — LA MÊME FAMILLE PAR LE `Lot:` : la tâche sensible n'est ni dans le titre, ni
+      // liée par `pr`. Seul le champ la fait entrer dans `tachesSensibles`.
+      famille: 'attaque_absente',
+      defaut: () => {
+        const p = PR_DE_LOT_SENSIBLE();
         p.corps = remplacerBloc(p.corps, 'attaque', '');
         return [copieDepot(), p];
       },
@@ -1763,6 +1801,12 @@ if (process.argv.includes('--prove')) {
         p.revues = p.revues!.slice(0, 2);
         return [copieDepot(), p];
       },
+    },
+    {
+      // GOV-096 (8) — `risqueDeLaPr()` reçoit l'union : la PR ordinaire et ses DEUX lentilles, à
+      // laquelle le seul `Lot:` ajoute une tâche sensible, devient ÉLEVÉE et en exige quatre.
+      famille: 'lentilles_manquantes',
+      defaut: () => [copieDepot(), PR_DE_LOT_SENSIBLE()],
     },
     {
       // Une revue qui REFUSE n'est pas une lentille manquante : la distinguer est ce qui permet
