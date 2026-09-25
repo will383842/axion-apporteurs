@@ -1709,7 +1709,15 @@
         "docker-entrypoint.sh",
         "tests/integration/sondes-de-vie.spec.ts",
         "tests/unit/qualite/env-fail-fast.spec.ts",
-        "tests/unit/securite/env-boot.spec.ts"
+        "tests/unit/securite/env-boot.spec.ts",
+        ".dockerignore",
+        ".env.example",
+        "docs/env.md",
+        "docs/runbooks/retour-arriere.md",
+        "scripts/env/documenter.ts",
+        "package.json",
+        "src/instrumentation.ts",
+        "src/server/sante/disponibilite.ts"
       ],
       "schema": true,
       "sensible": [],

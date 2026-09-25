@@ -69,7 +69,7 @@ interface Sortie {
 
 function demarrer(variables: Record<string, string>): Sortie {
   const debut = Date.now();
-  const env = { ...BASE, NEXT_RUNTIME: 'nodejs', ...variables };
+  const env: Record<string, string> = { ...BASE, NEXT_RUNTIME: 'nodejs', ...variables };
   const r = spawnSync(process.execPath, ['--import', 'tsx', DEMARRAGE], {
     cwd: RACINE,
     env: env as NodeJS.ProcessEnv,
@@ -90,8 +90,7 @@ function environnementComplet(): Record<string, string> {
     NOTIFY_SINK: 'true',
   };
   for (const nom of NOMS_DES_SECRETS) {
-    env[nom] =
-      nom === CLE_HEX ? randomBytes(32).toString('hex') : randomBytes(24).toString('hex');
+    env[nom] = nom === CLE_HEX ? randomBytes(32).toString('hex') : randomBytes(24).toString('hex');
   }
   return env;
 }
@@ -142,9 +141,10 @@ describe('REQ-QA-030 — le schéma porte toutes les variables, et le démarrage
     const horsSchema = [...lus]
       .filter(([n]) => !POSES_PAR_LE_RUNTIME.has(n) && !NOMS_DES_VARIABLES.includes(n))
       .map(([n, f]) => `${n} (${f})`);
-    expect(horsSchema, 'variables lues par le code et absentes du schéma de src/lib/env.ts').toEqual(
-      []
-    );
+    expect(
+      horsSchema,
+      'variables lues par le code et absentes du schéma de src/lib/env.ts'
+    ).toEqual([]);
   });
 
   it('REQ-QA-030 : environnement complet — le démarrage réel (register) va au bout et sort en 0', () => {
@@ -188,7 +188,10 @@ describe('REQ-QA-030 — le schéma porte toutes les variables, et le démarrage
     ];
     for (const [nom, v] of cas) {
       const refus = refusDe({ ...base, [nom]: v });
-      expect(refus.map((r) => r.variable), `${nom}=${JSON.stringify(v)}`).toEqual([nom]);
+      expect(
+        refus.map((r) => r.variable),
+        `${nom}=${JSON.stringify(v)}`
+      ).toEqual([nom]);
       expect(JSON.stringify(refus)).not.toContain(v.trim());
     }
     expect(refusDe({ ...base, DATABASE_URL: 'postgres://partners@localhost/partners' })).toEqual(

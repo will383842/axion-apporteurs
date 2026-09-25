@@ -134,7 +134,7 @@ describe('REQ-QA-019 — l’entrée de l’image migre en bloquant, et son éch
     const sondes = dockerfile.split(/\r?\n/).filter((l) => /^\s*HEALTHCHECK\b/.test(l));
     expect(sondes).toHaveLength(1);
     expect(sondes[0]).toContain('/api/readyz');
-    expect(dockerfile).not.toMatch(/HEALTHCHECK[^\n]*livez/);
+    expect(sondes[0]).not.toContain('livez');
     expect(dockerfile).toMatch(/^ENTRYPOINT \[.*docker-entrypoint\.sh.*\]$/m);
   });
 });

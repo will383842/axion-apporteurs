@@ -27,6 +27,7 @@ import { pathToFileURL } from 'node:url';
 import {
   MOTIFS_DE_REFUS,
   NOMS_DES_SECRETS,
+  NOMS_DES_VARIABLES,
   formaterRefus,
   kidDe,
   lireEnvironnement,
@@ -98,8 +99,16 @@ const boot = (variables: Record<string, string>): Sortie => lancer(BOOT, variabl
 /** 40 à 60 caractères hexadécimaux : jamais 32, jamais 64, pour qu'une longueur imprimée se voie. */
 const valeurAuHasard = (): string => randomBytes(randomInt(20, 31)).toString('hex');
 
+/**
+ * QA-T04 a étendu le schéma à la CONFIGURATION (base, cache, puits de notifications) : un jeu de
+ * secrets complet n'est un environnement complet qu'avec elle. Les URL désignent le poste local.
+ */
 function environnementComplet(): Record<string, string> {
-  const env: Record<string, string> = {};
+  const env: Record<string, string> = {
+    DATABASE_URL: 'postgresql://partners@localhost:5432/partners',
+    REDIS_URL: 'redis://localhost:6379',
+    NOTIFY_SINK: 'true',
+  };
   for (const nom of NOMS_DES_SECRETS) {
     env[nom] = nom === CLE_HEX ? randomBytes(32).toString('hex') : valeurAuHasard();
   }
@@ -156,7 +165,7 @@ describe('REQ-SEC-028 — la liste des secrets et sa source unique', () => {
     expect(NOMS_DES_SECRETS).toContain(CLE_HEX);
   });
 
-  it('REQ-SEC-028 : .env.example porte exactement les noms du schéma, dans les deux sens, sans aucune valeur', () => {
+  it('REQ-SEC-028 : .env.example porte exactement les noms du schéma (secrets et configuration, QA-T04), dans les deux sens, sans aucune valeur', () => {
     const lignes = readFileSync(join(RACINE, '.env.example'), 'utf8').split(/\r?\n/);
     const declarees = new Map<string, string>();
     const etrangeres: string[] = [];
@@ -168,8 +177,8 @@ describe('REQ-SEC-028 — la liste des secrets et sa source unique', () => {
     }
     expect(etrangeres, '.env.example ne porte que des commentaires et des lignes NOM=').toEqual([]);
     expect(declarees.size).toBeGreaterThan(0);
-    const horsExemple = NOMS_DES_SECRETS.filter((n) => !declarees.has(n));
-    const horsSchema = [...declarees.keys()].filter((n) => !NOMS_DES_SECRETS.includes(n));
+    const horsExemple = NOMS_DES_VARIABLES.filter((n) => !declarees.has(n));
+    const horsSchema = [...declarees.keys()].filter((n) => !NOMS_DES_VARIABLES.includes(n));
     expect(horsExemple, 'dans le schéma de src/lib/env.ts, absents de .env.example').toEqual([]);
     expect(horsSchema, 'dans .env.example, absents du schéma de src/lib/env.ts').toEqual([]);
     const valorisees = [...declarees].filter(([, v]) => v !== '').map(([n]) => n);
@@ -210,7 +219,7 @@ describe('REQ-SEC-028 — le boot, jugé par le code de sortie d’un sous-proce
     console.log(`boot complet : code ${s.code}, ${s.ms} ms — ${s.stdout.trim()}`);
     expect(s.stderr).toBe('');
     expect(s.code).toBe(0);
-    expect(s.stdout).toContain(`variables confrontees : ${NOMS_DES_SECRETS.length}`);
+    expect(s.stdout).toContain(`variables confrontees : ${Object.keys(env).length}`);
     expect(fuitesDans(s.stdout + s.stderr, env)).toEqual([]);
   });
 

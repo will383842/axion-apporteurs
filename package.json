@@ -113,7 +113,8 @@
     "format": "prettier --write .",
     "securite:rate-famille": "tsx scripts/gates/rate-famille.ts",
     "securite:rate-famille:prove": "tsx scripts/gates/rate-famille.ts --prove",
-    "prevol": "tsx scripts/prevol.ts"
+    "prevol": "tsx scripts/prevol.ts",
+    "env:doc": "tsx scripts/env/documenter.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

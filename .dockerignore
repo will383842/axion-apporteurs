@@ -1,0 +1,8 @@
+# Image d'Axion Partners (QA-T04) : ni les dépendances du poste, ni l'historique, ni les rendus.
+node_modules
+.git
+.next
+test-results
+coverage
+reports
+.stryker-tmp
