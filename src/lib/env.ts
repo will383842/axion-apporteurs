@@ -268,19 +268,19 @@ type NomDeVariable = keyof z.infer<typeof schemaEnvironnement>;
  * ne compile pas non plus.
  */
 const ROLES: Record<NomDeVariable, string> = {
-  SESSION_SECRET: 'signe les sessions de la console et de l’espace',
+  SESSION_SECRET: "signe les sessions de la console et de l'espace",
   MAGIC_LINK_SECRET: 'signe les liens de connexion envoyés par courriel',
-  DEPOSIT_TOKEN_SECRET: 'signe les jetons de dépôt d’un contact',
-  AXIONIA_WEBHOOK_SECRET: 'authentifie les webhooks reçus d’axionia',
-  AXIONIA_API_TOKEN: 'authentifie les appels de l’API entrante d’axionia',
+  DEPOSIT_TOKEN_SECRET: "signe les jetons de dépôt d'un contact",
+  AXIONIA_WEBHOOK_SECRET: "authentifie les webhooks reçus d'axionia",
+  AXIONIA_API_TOKEN: "authentifie les appels de l'API entrante d'axionia",
   DOCUSEAL_WEBHOOK_SECRET: 'authentifie les webhooks reçus de DocuSeal',
   PII_ENCRYPTION_KEY: 'chiffre les données personnelles (AES-256-GCM)',
-  IP_HASH_SALT: 'sale l’empreinte des adresses réseau',
+  IP_HASH_SALT: "sale l'empreinte des adresses réseau",
   PII_HASH_KEY: 'clé des empreintes de recherche des données personnelles',
   DATABASE_URL: 'la base Postgres ; `readyz` la sonde',
   REDIS_URL: 'le cache Redis ; `readyz` le sonde',
-  NOTIFY_SINK: 'retient toute notification dans le journal au lieu de l’envoyer',
-  PARTNERS_ENV: 'nom de l’environnement ; `production` avec `NODE_ENV=production` vaut production',
+  NOTIFY_SINK: "retient toute notification dans le journal au lieu de l'envoyer",
+  PARTNERS_ENV: "nom de l'environnement ; `production` avec `NODE_ENV=production` vaut production",
   LOG_LEVEL: 'niveau du journal (pino), `info` si absente',
   SENTRY_DSN: 'adresse de collecte des erreurs ; absente, rien ne part',
 };
@@ -322,14 +322,14 @@ export function documenterEnvironnement(): string {
       return `| \`${nom}\` | ${presenceDe(nom)} | ${regleDe(nom)} | ${ROLES[nom]} |`;
     });
   return [
-    '# Variables d’environnement — Axion Partners',
+    "# Variables d'environnement — Axion Partners",
     '',
     '> VUE GÉNÉRÉE depuis le schéma de `src/lib/env.ts` par `pnpm env:doc` — ne pas éditer à la main.',
     '> `tests/unit/qualite/env-fail-fast.spec.ts` rougit si ce fichier diffère du rendu.',
     '',
     'Toute variable requise absente, et toute valeur hors règle, fait refuser le démarrage en code',
     'non nul (`register()` de `src/instrumentation.ts`) ; le refus nomme la variable et un motif,',
-    'jamais la valeur. Aucune variable requise n’a de valeur par défaut. Une variable facultative',
+    "jamais la valeur. Aucune variable requise n'a de valeur par défaut. Une variable facultative",
     'posée est jugée comme les autres.',
     '',
     '## Secrets',
