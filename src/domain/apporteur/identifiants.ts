@@ -13,7 +13,7 @@
  * base refuse le sien (déclencheur `jetons_depot_revocation_definitive`).
  *
  * L'ALÉA EST INJECTÉ. Le domaine est pur (`docs/CONVENTIONS.md` §3) : il reçoit une source
- * `(n) => n octets`. En production, c'est `crypto.getRandomValues` ; en test, des octets écrits.
+ * `(n) => n octets`. En production, c'est `sourceAleatoireSysteme` ; en test, des octets écrits.
  */
 import { createHash } from 'node:crypto';
 import type { Instant } from '../temps/horloge';
@@ -32,6 +32,14 @@ export const OCTETS_CODE_PARRAINAGE = 4;
 export const OCTETS_JETON_DEPOT = 32;
 
 export type SourceAleatoire = (octets: number) => Uint8Array;
+
+/**
+ * LA source de production : `crypto.getRandomValues`, générateur cryptographique du moteur. Les
+ * appelants de production la passent ; les tests injectent des octets écrits. Tirer l'aléa n'est
+ * pas une I/O : le domaine reste rejouable dès qu'on lui passe une autre source.
+ */
+export const sourceAleatoireSysteme: SourceAleatoire = (octets) =>
+  globalThis.crypto.getRandomValues(new Uint8Array(octets));
 
 const FORME_CODE = new RegExp(
   `^${PREFIXE_CODE_PARRAINAGE}[${ALPHABET_CROCKFORD}]{${CARACTERES_CODE}}$`

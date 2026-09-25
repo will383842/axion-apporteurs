@@ -47,3 +47,27 @@ export function estStatutApporteur(valeur: string): valeur is StatutApporteur {
 export function estMotifResiliation(valeur: string): valeur is MotifResiliation {
   return (MOTIFS_RESILIATION as readonly string[]).includes(valeur);
 }
+
+/**
+ * Les événements de DOMAINE qui font changer le statut : un par flèche de la matrice
+ * (`matrice.ts`, CONVENTIONS §2 : `from × événement → to`). Ce ne sont ni des événements du
+ * contrat axionia ni des types du journal ; aucune colonne ne les écrit, ils n'entrent donc pas au
+ * glossaire tant qu'aucune ne le fera.
+ */
+export const EVENEMENTS_APPORTEUR = [
+  'retenir',
+  'mettre_en_vivier',
+  'refuser',
+  'ouvrir_kyc',
+  'valider_kyc',
+  'signer',
+  'suspendre',
+  'lever_suspension',
+  'resilier',
+] as const;
+
+export type EvenementApporteur = (typeof EVENEMENTS_APPORTEUR)[number];
+
+export function estEvenementApporteur(valeur: string): valeur is EvenementApporteur {
+  return (EVENEMENTS_APPORTEUR as readonly string[]).includes(valeur);
+}

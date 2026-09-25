@@ -118,20 +118,38 @@ ALTER TABLE "identites_facturation" ADD CONSTRAINT "identites_facturation_siren_
 ALTER TABLE "identites_facturation" ADD CONSTRAINT "identites_facturation_periode"
   CHECK ("fin_at" IS NULL OR "fin_at" > "debut_at");
 
+-- REQ-DM-012 : une révocation ne précède pas la création du jeton.
+ALTER TABLE "jetons_depot" ADD CONSTRAINT "jetons_depot_revocation_apres_creation"
+  CHECK ("revoque_at" IS NULL OR "revoque_at" >= "cree_at");
+
 -- REQ-DM-012 : un jeton révoqué ne se réactive pas. Le refus est celui de la BASE : un client qui
--- passe par du SQL brut s'y heurte aussi. Remettre `revoque_at` à nul ou le déplacer est refusé ;
--- SUPPRIMER un jeton révoqué aussi, sans quoi « supprimer puis réinsérer la même empreinte » le
--- réactiverait par un autre chemin. Révoquer un jeton actif et noter son dernier usage passent.
+-- passe par du SQL brut s'y heurte aussi. Trois chemins de réactivation, trois refus :
+--   — une ligne révoquée est GELÉE : tout UPDATE (remettre `revoque_at` à nul, le déplacer, changer
+--     l'empreinte pour libérer l'ancienne) et tout DELETE (supprimer puis réinsérer) sont refusés ;
+--   — l'empreinte ne change JAMAIS, même sur un jeton actif : une empreinte ne se corrige pas, on
+--     émet un autre jeton ;
+--   — TRUNCATE, qu'aucun déclencheur de ligne ne voit, est refusé par un déclencheur d'instruction
+--     (même forme que le journal, partners/ADR-0015).
+-- Révoquer un jeton actif et noter le dernier usage d'un jeton actif passent.
 CREATE FUNCTION jetons_depot_refuser_reactivation() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF OLD."revoque_at" IS NOT NULL AND (TG_OP = 'DELETE' OR NEW."revoque_at" IS DISTINCT FROM OLD."revoque_at") THEN
-    RAISE EXCEPTION 'jetons_depot_revocation_definitive : % refusé, un jeton révoqué ne se réactive pas (REQ-DM-012)', TG_OP;
+  IF TG_OP = 'TRUNCATE' THEN
+    RAISE EXCEPTION 'jetons_depot_revocation_definitive : TRUNCATE refusé, il effacerait les révocations (REQ-DM-012)';
+  END IF;
+  IF OLD."revoque_at" IS NOT NULL THEN
+    RAISE EXCEPTION 'jetons_depot_revocation_definitive : % refusé, un jeton révoqué est gelé (REQ-DM-012)', TG_OP;
   END IF;
   IF TG_OP = 'DELETE' THEN
     RETURN OLD;
+  END IF;
+  IF NEW."token_hash" IS DISTINCT FROM OLD."token_hash" THEN
+    RAISE EXCEPTION 'jetons_depot_revocation_definitive : l''empreinte d''un jeton ne change jamais (REQ-DM-012)';
   END IF;
   RETURN NEW;
 END;
 $$;
 CREATE TRIGGER jetons_depot_revocation_definitive BEFORE UPDATE OR DELETE ON "jetons_depot"
   FOR EACH ROW EXECUTE FUNCTION jetons_depot_refuser_reactivation();
+-- Un déclencheur de ligne ne voit pas TRUNCATE : sans celui d'instruction, `TRUNCATE jetons_depot` passe.
+CREATE TRIGGER jetons_depot_revocation_definitive_troncature BEFORE TRUNCATE ON "jetons_depot"
+  FOR EACH STATEMENT EXECUTE FUNCTION jetons_depot_refuser_reactivation();

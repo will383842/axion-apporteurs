@@ -133,13 +133,15 @@ describe('REQ-DM-011 — la matrice état × événement : ce qui n’y est pas 
   });
 
   it('REQ-DM-011 : face ROUGE — un couple (état, événement) absent est refusé, et l’erreur le NOMME', () => {
-    const e = levee(() => transitionner({ de: 'signe', evenement: 'retenir', motif: null }));
+    const e = levee(() =>
+      transitionner({ de: 'signe', evenementApporteur: 'retenir', motif: null })
+    );
     expect(e.code).toBe('transition_refusee');
     expect(e.message).toContain('signe × retenir');
   });
 
   it('REQ-DM-011 : face VERTE — un couple déclaré passe et rend son statut d’arrivée', () => {
-    expect(transitionner({ de: 'candidat', evenement: 'retenir', motif: null })).toEqual({
+    expect(transitionner({ de: 'candidat', evenementApporteur: 'retenir', motif: null })).toEqual({
       statut: 'retenu',
       resiliationMotif: null,
     });
@@ -150,7 +152,7 @@ describe('REQ-DM-011 — la matrice état × événement : ce qui n’y est pas 
     for (const de of STATUTS_APPORTEUR) {
       for (const evenement of EVENEMENTS_APPORTEUR) {
         const attendue = ATTENDUES.find((a) => a[0] === de && a[1] === evenement);
-        const demande = { de, evenement, motif: motifDe(evenement) } as const;
+        const demande = { de, evenementApporteur: evenement, motif: motifDe(evenement) } as const;
         if (attendue !== undefined) {
           passees += 1;
           expect(transitionner(demande).statut, `${de} × ${evenement}`).toBe(attendue[2]);
@@ -169,27 +171,31 @@ describe('REQ-DM-011 — la matrice état × événement : ce qui n’y est pas 
 
   it('REQ-DM-011 : `resilier` EXIGE un motif, et un autre événement n’en porte aucun', () => {
     expect(
-      levee(() => transitionner({ de: 'signe', evenement: 'resilier', motif: null })).code
+      levee(() => transitionner({ de: 'signe', evenementApporteur: 'resilier', motif: null })).code
     ).toBe('motif_requis');
     expect(
       levee(() =>
-        transitionner({ de: 'candidat', evenement: 'retenir', motif: 'manquement_grave' })
+        transitionner({ de: 'candidat', evenementApporteur: 'retenir', motif: 'manquement_grave' })
       ).code
     ).toBe('motif_interdit');
     expect(
-      transitionner({ de: 'suspendu', evenement: 'resilier', motif: 'manquement_grave' })
+      transitionner({ de: 'suspendu', evenementApporteur: 'resilier', motif: 'manquement_grave' })
     ).toEqual({ statut: 'resilie', resiliationMotif: 'manquement_grave' });
   });
 
   it('REQ-DM-011 : un statut ou un événement hors vocabulaire est refusé à l’entrée', () => {
     expect(
       levee(() =>
-        transitionner({ de: 'actif' as StatutApporteur, evenement: 'signer', motif: null })
+        transitionner({ de: 'actif' as StatutApporteur, evenementApporteur: 'signer', motif: null })
       ).code
     ).toBe('statut_inconnu');
     expect(
       levee(() =>
-        transitionner({ de: 'signe', evenement: 'reactiver' as EvenementApporteur, motif: null })
+        transitionner({
+          de: 'signe',
+          evenementApporteur: 'reactiver' as EvenementApporteur,
+          motif: null,
+        })
       ).code
     ).toBe('evenement_inconnu');
   });
