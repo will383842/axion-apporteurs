@@ -1,6 +1,6 @@
 /**
  * schema-pii.ts — aucune donnée personnelle en clair, ni dans le schéma ni sur un chemin d'écriture
- * (SEC-08 ; REQ-SEC-024). Registre : `G-SEC-SCHEMA-PII`, lancée par `pnpm securite:schema-pii`.
+ * (SEC-08 ; REQ-SEC-024). Registre : `securite:schema-pii` (alias `G-SEC-SCHEMA-PII`), son nom de commande.
  *
  * USAGE : pnpm securite:schema-pii         (échoue sur une colonne ou une écriture de personne en clair)
  *         pnpm securite:schema-pii:prove   (un témoin par famille, chacun vu rougir ; contre-témoins verts)
@@ -338,10 +338,12 @@ export function decider(vue: Vue): { code: 0 | 1; lignes: string[] } {
 
 // ── la vue du dépôt ──────────────────────────────────────────────────────────
 
+/** Le périmètre D'ABORD : hors de la racine ou sans `git`, le refus nomme `perimetre_illisible`. */
 export function vueDuDepot(): Vue {
+  const suivis = fichiersSuivisOuRefus('securite:schema-pii');
   return {
     schema: readFileSync(CHEMIN_SCHEMA, 'utf8'),
-    code: fichiersSuivisOuRefus('securite:schema-pii')
+    code: suivis
       .filter((chemin) => chemin.startsWith(RACINE_DU_CODE))
       .map((chemin) => ({ chemin, contenu: readFileSync(chemin, 'utf8') })),
   };

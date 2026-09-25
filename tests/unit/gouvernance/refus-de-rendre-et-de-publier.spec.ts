@@ -599,6 +599,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'fonction pure vue rendre 1 (`decider()`, journal-charge-fermee.spec.ts) et le binaire est vu ' +
         'sortir en 0 sur le dépôt ; ⛔ aucun témoin d’EFFET du binaire en échec. Dette DÉCLARÉE.',
     },
+    // ── SEC-08 : UNE sortie, à code VARIABLE, comme DM-01 ───────────────────────────────────
+    'scripts/gates/schema-pii.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'SEC-08 — aucune donnée personnelle en clair, schéma et chemins d’écriture. ' +
+        '`process.exit(decision.code)` : sortie TERMINALE à code variable, commune au mode normal ' +
+        'et à `--prove`. La décision est une fonction pure vue rendre 1 (`decider()`, ' +
+        'chiffrement-avec-aad.spec.ts) ; le binaire a été vu sortir en 1 à la main sur deux fautes ' +
+        'posées dans le dépôt (colonne `createdIp`, écriture d’un `emailChiffre`), puis en 0 ; ' +
+        '⛔ aucun témoin d’EFFET du binaire en échec dans une spec. Dette DÉCLARÉE.',
+    },
     'scripts/gates/lexique-apporteurs.ts': {
       total: 2,
       porte: 2,
@@ -2036,6 +2049,8 @@ const GARDES_QUI_BALAIENT = [
   // DM-01 — `journal:sans-pii` cherche un second écrivain de la table `evenements` dans les fichiers
   // SUIVIS sous `src/` et `scripts/`.
   'scripts/gates/journal-sans-pii.ts',
+  // SEC-08 — `securite:schema-pii` juge les chemins d'écriture dans les fichiers SUIVIS sous `src/`.
+  'scripts/gates/schema-pii.ts',
   // DM-02 — `partners:migrations:additive` lit TOUTES les migrations SUIVIES, pas celles de la PR.
   'scripts/gates/migrations-additive.ts',
   // GOV-046 — `perf:budgets` juge les routes des fichiers SUIVIS sous `src/`. Elle rendait `[]`
