@@ -52,6 +52,7 @@ import {
   referencePr,
   type Attestation,
 } from './attestation';
+import { outilHorsDepot } from './chemins-de-tache';
 
 export interface Tache {
   id: string;
@@ -160,7 +161,7 @@ export function controlerLePerimetre(
           `tâche de docs/tasks.json portant \`lot: "${lotId}"\`. La clôture n'écrit de statut que sur ` +
           'des entrées dont l’appartenance au lot a été VÉRIFIÉE ; une absence de périmètre n’est pas ' +
           'un périmètre vide, et encore moins une autorisation. Range les tâches du lot par ' +
-          '`outils/reclasser.mjs --lot` avant de clôturer.',
+          `${outilHorsDepot('reclasser.mjs')} --lot avant de clôturer.`,
       },
     ];
   }

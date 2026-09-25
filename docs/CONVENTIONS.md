@@ -106,12 +106,27 @@
 
 | Fichier                                      | Écrivain                                                             |
 | -------------------------------------------- | -------------------------------------------------------------------- |
-| `docs/PLAN-STATE.md`                         | **dérivé** (`pnpm plan-state:build`), commité par A01 seul            |
-| `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | `gardien-spec`, lot dédié avec `--settings` surchargé |
+| `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | `gardien-spec`, lot dédié avec `--settings` surchargé |
+| `docs/requirements.json`                     | `gardien-spec` — la **source** ; `docs/REQUIREMENTS.md` en est la VUE |
+| `docs/gates.json`                            | `gardien-spec` — la **source** ; `docs/GATES.md` en est la VUE        |
 | `docs/tasks.json`                            | `gardien-spec` / A01 (composition), jamais un développeur             |
 | `prisma/**`, `packages/contracts/**`         | PR `schema`, approbation `architecte` bloquante                       |
 | `docs/adr/**`                                | `architecte` accepte ; `documentaliste` indexe                        |
 | `.claude/settings.json`, `.claude/agents/**` | lot dédié GOV-000 / GOV-023 (`pnpm gov:agents`)                       |
+
+> ⚠️ **Les VUES ne sont pas réservées — `partners/ADR-0019`, 2026-09-22.** `docs/PLAN-STATE.md`,
+> `docs/REQUIREMENTS.md`, `docs/TASKS.md`, `docs/GATES.md`, `docs/TRACABILITE.md` et
+> `docs/adr/INDEX.md` sont **générées**. Un label répond à « qui répond de ce texte ? », et personne
+> ne répond d'une vue : elle a un générateur et un `--verifier`, et REQ-GOV-032 fait rougir sa
+> dérive. Ce sont les **sources** qui sont réservées — d'où l'entrée de `docs/requirements.json` et
+> de `docs/gates.json`, qui n'y étaient pas.
+>
+> ⚠️ **« À l'octet près » n'est vrai que de ce qu'un générateur écrit SANS lire hors du dépôt**, et
+> `docs/PLAN-STATE.md` en lit (`gh`, `origin/main`). Ce que son `--verifier` compare et ce qu'il
+> laisse libre est écrit en toutes lettres dans `partners/ADR-0019`, sous « Ce que
+> `plan-state:verifier` couvre, et ce qu'il ne couvre pas », avec l'attaque qui reste possible.
+> Une phrase de couverture qui arrondit vers le haut est le premier cran du registre qui affirme
+> une protection qu'il n'exerce pas.
 
 > ⚠️ Les sections **§9 à §11** sont ajoutées à la SUITE, jamais intercalées. Les §1, §3, §5 et §8 sont cités par leur
 > numéro depuis `partners/ADR-0007`, `partners/ADR-0008`, `docs/AFFIRMATIONS-AXIONIA.md`, `docs/CHARTE-AGENTS.md` et
