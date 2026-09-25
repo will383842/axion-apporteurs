@@ -69,6 +69,13 @@ export class ErreurTransitionApporteur extends Error {
   }
 }
 
+/**
+ * Une valeur REFUSÉE est nommée dans l'erreur, mais bornée : elle vient de l'appelant, et un
+ * message qui finit au journal ne recopie pas en entier une chaîne hostile.
+ */
+const LONGUEUR_NOMMEE_MAX = 64;
+const borne = (valeur: unknown): string => String(valeur).slice(0, LONGUEUR_NOMMEE_MAX);
+
 export interface DemandeTransition {
   readonly de: StatutApporteur;
   readonly evenementApporteur: EvenementApporteur;
@@ -88,9 +95,9 @@ export function transitionner(demande: DemandeTransition): StatutApresTransition
   // Le champ ne s'appelle pas du nom du journal : `journal:sans-pii` réserve ce mot nu à son
   // écrivain unique, et ces événements de domaine n'y écrivent rien.
   const { de, evenementApporteur: fait, motif } = demande;
-  if (!estStatutApporteur(de)) throw new ErreurTransitionApporteur('statut_inconnu', String(de));
+  if (!estStatutApporteur(de)) throw new ErreurTransitionApporteur('statut_inconnu', borne(de));
   if (!estEvenementApporteur(fait)) {
-    throw new ErreurTransitionApporteur('evenement_inconnu', String(fait));
+    throw new ErreurTransitionApporteur('evenement_inconnu', borne(fait));
   }
   const vers = TRANSITIONS_APPORTEUR[de][fait];
   const couple = `${de} × ${fait}`;
@@ -98,7 +105,7 @@ export function transitionner(demande: DemandeTransition): StatutApresTransition
   if (fait === 'resilier') {
     if (motif === null) throw new ErreurTransitionApporteur('motif_requis', couple);
     if (!estMotifResiliation(motif)) {
-      throw new ErreurTransitionApporteur('motif_inconnu', `${couple} : ${String(motif)}`);
+      throw new ErreurTransitionApporteur('motif_inconnu', `${couple} : ${borne(motif)}`);
     }
     return { statut: vers, resiliationMotif: motif };
   }
