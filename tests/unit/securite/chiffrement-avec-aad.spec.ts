@@ -416,21 +416,72 @@ describe('REQ-SEC-024 — garde de schéma et des chemins d’écriture (securit
   });
 
   it('REQ-SEC-024 : la garde DESCEND dans toute expression sous une clé d’écriture (ternaire, &&, ??, étalement, satisfies, objet imbriqué conditionnel) ; un producteur dans un ternaire reste vert', () => {
-    for (const [contenu, champ] of [
-      ['tx.contact.update({ where: { id }, data: { ...(ip ? { ipHash: ip } : {}) } });', 'ipHash'],
-      ['tx.contact.update({ where: { id }, data: { ...(e && { emailHash: e }) } });', 'emailHash'],
+    const E = 'empreinte_hors_primitive';
+    for (const [contenu, champ, famille] of [
       [
-        'tx.contact.update({ where: { id }, data: { ...(base ?? { emailHash: e }) } });',
-        'emailHash',
+        'tx.contact.update({ where: { id }, data: { ...(ip ? { ipHash: ip } : {}) } });',
+        'ipHash',
+        E,
       ],
-      ['tx.contact.create({ data: ({ id, ipHash: ip } satisfies Partial<C>) });', 'ipHash'],
-      ['tx.contact.create({ data: { id, emailHash: e ? e : null } });', 'emailHash'],
-      ['tx.contact.create({ data: { id, profil: f ? { email: e } : undefined } });', 'email'],
-      ['tx.contact.create({ data: (() => ({ id, ipHash: ip }))() });', 'ipHash'],
+      [
+        'tx.contact.update({ where: { id }, data: { ...(c ? {} : { ipHash: ip }) } });',
+        'ipHash',
+        E,
+      ],
+      [
+        'tx.contact.update({ where: { id }, data: { ...(e && { emailHash: e }) } });',
+        'emailHash',
+        E,
+      ],
+      [
+        'tx.contact.update({ where: { id }, data: { ...(b ?? { emailHash: e }) } });',
+        'emailHash',
+        E,
+      ],
+      [
+        'tx.contact.update({ where: { id }, data: { ...(b || { emailHash: e }) } });',
+        'emailHash',
+        E,
+      ],
+      ['tx.contact.create({ data: ({ id, ipHash: ip } satisfies Partial<C>) });', 'ipHash', E],
+      ['tx.contact.create({ data: { id, ipHash: ip } as C });', 'ipHash', E],
+      ['tx.contact.create({ data: { id, emailHash: email.toLowerCase() } });', 'emailHash', E],
+      [
+        "tx.contact.create({ data: { id, emailHash: ok ? empreinteRecherche('courriel', e, k) : e } });",
+        'emailHash',
+        E,
+      ],
+      ['tx.contact.create({ data: { id, emailHash: e ? e : null } });', 'emailHash', E],
+      ['tx.contact.create({ data: { id, emailHash: ok && e } });', 'emailHash', E],
+      ['tx.contact.create({ data: { id, emailHash: e || null } });', 'emailHash', E],
+      ['tx.contact.create({ data: { id, emailHash: e ?? null } });', 'emailHash', E],
+      [
+        'tx.contact.upsert({ where: { id }, create: { id }, update: { emailHash: email } });',
+        'emailHash',
+        E,
+      ],
+      [
+        "tx.contact.create({ data: { id, emailChiffre: empreinteRecherche('courriel', e, k) } });",
+        'emailChiffre',
+        'chiffre_hors_primitive',
+      ],
+      [
+        'tx.contact.create({ data: { id, profil: f ? { email: e } : undefined } });',
+        'email',
+        'champ_personnel_en_clair',
+      ],
+      [
+        'tx.contact.create({ data: (() => ({ id, ipHash: ip }))() });',
+        'ipHash',
+        'ecriture_non_jugee',
+      ],
     ] as const) {
-      const verdict = decider(vue(SCHEMA_SAIN, contenu));
-      expect(verdict.code, contenu).toBe(1);
-      expect(verdict.lignes.join('\n'), contenu).toContain(`\`${champ}\``);
+      const { fautes } = controler(vue(SCHEMA_SAIN, contenu));
+      expect(
+        fautes.map((f) => f.famille),
+        contenu
+      ).toEqual([famille]);
+      expect(fautes[0]!.message, contenu).toContain(`\`${champ}\``);
     }
     for (const contenu of [
       "tx.contact.update({ where: { id }, data: { ...(e ? { emailHash: empreinteRecherche('courriel', e, cles) } : {}) } });",
