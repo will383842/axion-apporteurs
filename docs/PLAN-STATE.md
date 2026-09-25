@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `835d899` — 2026-09-25T23:02:20+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #129 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 33/110 tâches, reste 58.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #128 — 2026-09-25 |
+| Dernière entrée de journal | PR #129 — 2026-09-25 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -66,7 +66,8 @@ Reste sur ce chemin : **13.50 j**.
 | --- | --- | --- | --- |
 | 1 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
 | 2 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #129 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee | `t/registre-fusionnees` | un contrôle requis rouge ou une revue manquante |
+| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -101,6 +102,14 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #129 — 2026-09-25 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee
+
+**Fait.** Douze tâches livrées par des PR fusionnées portaient encore `a_faire` : DM-06 (PR 128), SEC-08 (PR 126), GOV-099 (PR 124), GOV-098 (PR 122), GOV-097 (PR 120), GOV-096 (PR 118), GOV-095 (PR 116), GOV-090 (PR 113), GOV-092 (PR 112), GOV-047 (PR 99), JUR-T01 (PR 92), QA-T08 (PR 88). Elles passent `fusionnee` par `reclasser.mjs`, revendication constatée sur l'issue puis livraison constatée sur la forge, jamais à la main. La phase 0 passe de 21 à 33 tâches terminées sur 110.
+
+**Reste.** Les six tâches du lot de la PR 114 (GOV-082, GOV-046, GOV-048, GOV-076, GOV-078, GOV-086) restent `a_faire` : la branche de tête `t/lot-L0-02` porte une majuscule que le motif du schéma refuse, et cinq d'entre elles n'ont aucune issue. GOV-063 (PR 102) reste `a_faire` : sa dépendance GOV-061 ne l'est pas, et sa clause 2 est ouverte. La moitié datée de l'acceptance de JUR-T01 est portée par JUR-T01b. Le retard lui-même est l'objet de GOV-057 : le pas 8 du protocole ne sait pas clore une tâche livrée seule, hors de tout lot.
+
+**Appris.** `reclasser.mjs --fusionnee` vérifie que la PR est fusionnée et que le sha est son commit de fusion, mais ne confronte JAMAIS l'identifiant de la tâche au titre ni au champ `Lot:` de la PR : joué sur un arbre jetable, QA-T07 a été attestée par la PR 128 de DM-06, exit 0. Chaque couple de cette PR a donc été confronté à la main au titre de sa PR. Et l'option `--si-inchange` qu'on croyait exigée par ce verbe n'existe pas dans son source.
 
 ### PR #128 — 2026-09-25 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees
 
@@ -239,28 +248,7 @@ quatre est un mutant qui survit (rejoué), et c'est un mutant équivalent pour t
 dans l'appel. `main` a été refusionnée pour un conflit sur le cliquet des sorties déclarées (51 d'un
 côté, 54 de l'autre, 55 après la fusion).
 
-### PR #124 — 2026-09-25 — chore(GOV-099): cadrage de DM-06 — sourceCanal transporte, IBAN hors DM-06, glossaire
-
-**Fait.** Les trois contradictions sur lesquelles le développeur de DM-06 avait rendu `stop` sont
-levées au registre, par les décisions du 2026-09-25 prises par l'orchestrateur sur délégation de
-Will : `sourceCanal` devient une chaîne transportée figée (REQ-DM-035 amendée,
-`HYP-DM06-SOURCE-CANAL`), sa dérivation vers `CanalCandidature` passe à EXT-T03 ; l'IBAN sort de
-DM-06 pour la pièce RIB du KYC chiffrée par SEC-08 (REQ-CPL-005 amendée, `HYP-DM06-IBAN`, DM-11
-dépend de SEC-08) ; le glossaire porte `StatutApporteur`, `MotifResiliation`, `RegimeTva` et
-`CanalCandidature` au §4. Code de parrainage fixé (`HYP-DM06-CODE-PARRAINAGE`), `DORMANCE_JOURS`
-en paramètre, témoin du dépôt au-delà du seuil déplacé vers DM-09, `paths` et `tests` de DM-06
-complétés. GOV-099 porte la PR.
-
-**Reste.** DM-06 peut reprendre sur ce cadrage. EXT-T03 porte désormais la table chemin → canal
-et ses tests ; DM-09 porte le témoin de REQ-DM-010. La SSOT des seuils (JUR-T02) reste à écrire :
-d'ici là, `DORMANCE_JOURS` n'existe qu'en paramètre. La lentille exactitude a refusé `99cc471`-`2cefb8f` : DM-06 devait poser une référence vers `PieceKyc`, qui n'existe qu'avec DM-11, dépendante de DM-06. La référence à la pièce RIB part entièrement dans DM-11 ; DM-06 crée `IdentitesFacturation` sans colonne de RIB. Le journal de dépassement de `sourceCanal` consigne sa longueur, jamais sa valeur, et la dette « `linkedin`/`jobboard` seulement par `utm` » est nommée dans EXT-T03. Reste une dette : DM-11 écrit désormais le schéma (`prisma/schema.prisma` et `prisma/migrations/` dans ses `paths`) mais porte encore `schema: false`, champ qu'aucun verbe hors dépôt n'écrit ; `lot:paths` le signale dans `schemaContredit`, à corriger avant son attribution.
-
-**Appris.** `partners:schema:enums` ne confronte que les enums DÉCLARÉS par le schéma Prisma au
-glossaire : un enum que le glossaire énumère sans qu'il existe encore dans le schéma ne rougit
-pas. Poser `StatutApporteur` et ses voisins au §4 AVANT DM-06 fait que la première migration de
-DM-06 sera jugée contre ces valeurs, au lieu d'en fixer elle-même le vocabulaire.
-
-… 51 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 52 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
