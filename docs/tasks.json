@@ -3251,7 +3251,17 @@
         "scripts/gates/lexique-apporteurs.ts",
         "scripts/gates/jur-grille-chiffree.ts",
         "tests/unit/contrat/contract-template-complete.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/domain/contrat/decisions.ts",
+        "src/domain/contrat/gabarit.ts",
+        "src/domain/contrat/grille-chiffree.ts",
+        "src/domain/contrat/publication.ts",
+        "src/domain/contrat/variables.ts",
+        "src/domain/lexique/lexique-interdit.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "src/domain/registre/registre-decisions.ts",
+        "scripts/lot/registre-decisions.ts",
+        "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
       ],
       "schema": false,
       "sensible": [],

@@ -79,6 +79,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import {
   LEXIQUE_INTERDIT,
+  LISTE_NOIRE_GABARIT,
   MARQUEURS_DE_DENEGATION,
   FENETRE_DENEGATION,
   PORTEURS_DU_LEXIQUE,
@@ -175,6 +176,20 @@ export const MOTIFS: readonly Motif[] = [
 ];
 
 /**
+ * LE GABARIT DE CONTRAT (JUR-T01, acceptation point 3). Il n'entre dans AUCUNE portée du lexique :
+ * le contrat écrit « relation commerciale » et « agence commerciale », et le lexique le forcerait
+ * à réécrire des clauses figées (décision `W11`). Il reçoit à la place sa propre liste noire,
+ * ABSOLUE, importée de la SSOT (`LISTE_NOIRE_GABARIT`) : aucune dénégation, aucune citation ne
+ * l'exempte — seulement les chaînes verbatim que la SSOT nomme.
+ */
+export const MOTIF_GABARIT = {
+  nom: 'docs/contrat/**',
+  reg: /^docs\/contrat\/.+\.md$/,
+  attendu: true,
+  req: 'REQ-JUR-003',
+} as const;
+
+/**
  * La portée d'un fichier : la plus STRICTE de celles des motifs qui le prennent, ou `null` s'il
  * est hors périmètre. `apporteur` l'emporte sur `depot`, parce qu'elle contient ses familles.
  */
@@ -244,7 +259,7 @@ export type Vue = {
 };
 
 export type Faute = { famille: string; message: string };
-export type GenreExemption = 'denegation' | 'citation' | 'porteur' | 'exception';
+export type GenreExemption = 'denegation' | 'citation' | 'porteur' | 'exception' | 'chaine_nommee';
 export type Exemption = { genre: GenreExemption; chemin: string; ligne: number; forme: string };
 export type Rapport = { fautes: Faute[]; exemptions: Exemption[]; occurrences: number };
 
@@ -264,6 +279,10 @@ export const FAMILLES_STRUCTURELLES = [
 
 export const FAMILLES: { nom: string; explication: string }[] = [
   ...LEXIQUE_INTERDIT.map((f) => ({ nom: f.nom, explication: `${f.portee} — ${f.pourquoi}.` })),
+  {
+    nom: LISTE_NOIRE_GABARIT.nom,
+    explication: `${MOTIF_GABARIT.nom}, absolue — ${LISTE_NOIRE_GABARIT.pourquoi}.`,
+  },
   ...FAMILLES_STRUCTURELLES.map((f) => ({ nom: f.nom, explication: f.explication })),
 ];
 
@@ -344,6 +363,50 @@ export function analyserFichier(f: FichierVu, exceptions: readonly ExceptionLexi
   return { fautes, exemptions, occurrences };
 }
 
+const apostrophe = (s: string): string => s.replace(/’/g, "'");
+
+/**
+ * Le contrôle d'un fichier du gabarit de contrat : la liste noire, ABSOLUE. Une occurrence n'est
+ * exemptée que si elle tombe DANS l'une des chaînes verbatim que la SSOT nomme pour sa forme.
+ */
+export function analyserGabarit(f: FichierVu): Rapport {
+  const fautes: Faute[] = [];
+  const exemptions: Exemption[] = [];
+  let occurrences = 0;
+  f.contenu.split('\n').forEach((brute, i) => {
+    const ligne = apostrophe(brute);
+    for (const forme of LISTE_NOIRE_GABARIT.formes) {
+      const reg = motifDeLaForme(forme);
+      let m: RegExpExecArray | null;
+      while ((m = reg.exec(ligne)) !== null) {
+        occurrences += 1;
+        const debut = m.index;
+        const nommee = LISTE_NOIRE_GABARIT.chainesNommees.some((c) => {
+          if (c.forme !== forme) return false;
+          const texte = apostrophe(c.texte);
+          for (let j = ligne.indexOf(texte); j !== -1; j = ligne.indexOf(texte, j + 1)) {
+            if (debut >= j && debut < j + texte.length) return true;
+          }
+          return false;
+        });
+        if (nommee) {
+          exemptions.push({ genre: 'chaine_nommee', chemin: f.chemin, ligne: i + 1, forme });
+          continue;
+        }
+        fautes.push({
+          famille: LISTE_NOIRE_GABARIT.nom,
+          message:
+            `${f.chemin}:${i + 1} — « ${m[1] ?? forme} » dans le gabarit de contrat ` +
+            `[${LISTE_NOIRE_GABARIT.nom}, ${LISTE_NOIRE_GABARIT.reqs.join(' ')}]. La liste noire du ` +
+            `gabarit est ABSOLUE : ni la négation ni la citation ne l'exemptent. Pourquoi : ` +
+            `${LISTE_NOIRE_GABARIT.pourquoi}.`,
+        });
+      }
+    }
+  });
+  return { fautes, exemptions, occurrences };
+}
+
 export function controler(vue: Vue): Rapport {
   const fautes: Faute[] = [];
   const exemptions: Exemption[] = [];
@@ -381,7 +444,9 @@ export function controler(vue: Vue): Rapport {
   }
 
   for (const f of vue.fichiers) {
-    const r = analyserFichier(f, vue.exceptions);
+    const r = MOTIF_GABARIT.reg.test(f.chemin)
+      ? analyserGabarit(f)
+      : analyserFichier(f, vue.exceptions);
     fautes.push(...r.fautes);
     exemptions.push(...r.exemptions);
     occurrences += r.occurrences;
@@ -406,12 +471,14 @@ export function vueDuDepot(): Vue {
   const suivis = fichiersSuivis();
   const retenus = suivis.filter(
     (c) =>
-      (porteeDuFichier(c) !== null || (PORTEURS_DU_LEXIQUE as readonly string[]).includes(c)) &&
+      (porteeDuFichier(c) !== null ||
+        MOTIF_GABARIT.reg.test(c) ||
+        (PORTEURS_DU_LEXIQUE as readonly string[]).includes(c)) &&
       existsSync(c)
   );
   return {
     fichiers: retenus.map((chemin) => ({ chemin, contenu: readFileSync(chemin, 'utf8') })),
-    comptes: MOTIFS.map((m) => ({
+    comptes: [...MOTIFS, MOTIF_GABARIT].map((m) => ({
       motif: m.nom,
       nombre: suivis.filter((c) => m.reg.test(c)).length,
       attendu: m.attendu,
@@ -423,7 +490,7 @@ export function vueDuDepot(): Vue {
 // ── la fixture de la preuve (RM-11 : elle ne lit rien du dépôt) ───────────────
 
 /** Des comptes conformes : chaque motif attendu a une cible. La preuve ne juge que le texte. */
-const COMPTES_CONFORMES: CompteMotif[] = MOTIFS.map((m) => ({
+const COMPTES_CONFORMES: CompteMotif[] = [...MOTIFS, MOTIF_GABARIT].map((m) => ({
   motif: m.nom,
   nombre: m.attendu ? 1 : 0,
   attendu: m.attendu,
@@ -456,6 +523,13 @@ export const COURRIEL = (contenu: string): FichierVu => ({
   chemin: 'emails/apporteur/message.tsx',
   contenu,
 });
+export const CONTRAT = (contenu: string): FichierVu => ({
+  chemin: 'docs/contrat/CONTRAT-APPORTEUR-V1.md',
+  contenu,
+});
+
+/** L'article 19 du gabarit, VERBATIM : les deux seules chaînes où « renonciation » a sa place. */
+const ARTICLE_19 = LISTE_NOIRE_GABARIT.chainesNommees.map((c) => c.texte).join('\n\n');
 
 /**
  * La phrase de l'ADR « valeurs du monde réel », VERBATIM. C'est le contre-témoin le plus
@@ -546,11 +620,21 @@ const TEMOINS: { famille: string; quoi: string; vue: () => Vue }[] = [
       ]),
   },
   {
+    famille: LISTE_NOIRE_GABARIT.nom,
+    quoi: "un art. 11.3 « amélioré » qui renonce à l'indemnité de clientèle",
+    vue: () =>
+      vue([CONTRAT("**11.3** L'Apporteur renonce à l'indemnité de clientèle (L.134-12).")]),
+  },
+  {
     famille: 'perimetre_vide',
     quoi: 'un motif attendu qui ne balaie plus rien',
     vue: () => ({
       fichiers: [],
-      comptes: MOTIFS.map((m) => ({ motif: m.nom, nombre: 0, attendu: m.attendu })),
+      comptes: [...MOTIFS, MOTIF_GABARIT].map((m) => ({
+        motif: m.nom,
+        nombre: 0,
+        attendu: m.attendu,
+      })),
       exceptions: [],
     }),
   },
@@ -617,6 +701,19 @@ const CONTROLES_POSITIFS: { quoi: string; vue: () => Vue }[] = [
   {
     quoi: "un fichier hors périmètre ramené dans le périmètre — c'est bien la portée qui le sauvait",
     vue: () => vue([ADR('Le classement des apporteurs sera publié.')]),
+  },
+  {
+    quoi: "la phrase de l'art. 19 retouchée d'un mot : l'exemption est VERBATIM, pas « l'article 19 »",
+    vue: () =>
+      vue([
+        CONTRAT(
+          "Le fait de ne pas se prévaloir d'une stipulation ne vaut jamais renonciation à s'en prévaloir."
+        ),
+      ]),
+  },
+  {
+    quoi: 'une renonciation NIÉE dans le gabarit : la liste noire ne connaît pas la dénégation',
+    vue: () => vue([CONTRAT("**11.3** L'Apporteur ne renonce à aucune indemnité.")]),
   },
   {
     quoi: 'une citation devenue un libellé : les guillemets ne sauvent pas la micro-copy',
@@ -694,6 +791,12 @@ const CONTRE_TEMOINS: {
       ]),
     genre: 'denegation',
     minimumExemptions: 3,
+  },
+  {
+    quoi: "l'article 19 du gabarit, VERBATIM — titre et phrase",
+    vue: () => vue([CONTRAT(ARTICLE_19)]),
+    genre: 'chaine_nommee',
+    minimumExemptions: 2,
   },
   {
     quoi: 'une exception déclarée, justifiée, référencée et datée',
@@ -840,11 +943,13 @@ if (APPELE_DIRECTEMENT) {
     const parGenre = (g: GenreExemption): number =>
       rapport.exemptions.filter((e) => e.genre === g).length;
     console.log(
-      `✅ gov:lexique — ${vueReelle.fichiers.length} fichier(s) balayé(s) sur ${MOTIFS.length} motifs ` +
-        `[${detail}] ; ${LEXIQUE_INTERDIT.length} familles et ${FORMES_CONNUES.size} formes appliquées ; ` +
+      `✅ gov:lexique — ${vueReelle.fichiers.length} fichier(s) balayé(s) sur ${MOTIFS.length + 1} motifs ` +
+        `[${detail}] ; ${LEXIQUE_INTERDIT.length} familles et ${FORMES_CONNUES.size} formes appliquées, ` +
+        `plus la liste noire du gabarit (${LISTE_NOIRE_GABARIT.formes.length} formes, absolue) ; ` +
         `${rapport.occurrences} occurrence(s) vue(s), dont ${rapport.exemptions.length} exemptée(s) ` +
         `(dénégation : ${parGenre('denegation')}, citation : ${parGenre('citation')}, ` +
-        `porteur : ${parGenre('porteur')}, exception : ${parGenre('exception')}) ; aucun usage prescriptif.`
+        `porteur : ${parGenre('porteur')}, exception : ${parGenre('exception')}, ` +
+        `chaîne nommée : ${parGenre('chaine_nommee')}) ; aucun usage prescriptif.`
     );
     console.log(
       `   Seuls les fichiers SUIVIS par git sont lus : un fichier non suivi n'est lu par aucune garde.`

@@ -233,9 +233,9 @@
         "GATE-UX-JARGON",
         "gov:lexique"
       ],
-      "verifie": "liste noire IMPORTEE de la SSOT lexique-interdit.ts (REQ-JUR-037), jamais recopiee dans la gate ni dans GATES.md ; perimetre src/app/(espace)/**, emails/apporteur/**, micro-copy/**, src/content/micro-copy/espace/** (portee apporteur) et src/content/micro-copy/console/** (portee depot), et les ressources diffusees ; les exclusions declarees par la SSOT sont importees avec elle (etendue par UX-P0-01, JUR-T13 et JUR-T26)",
+      "verifie": "liste noire IMPORTEE de la SSOT lexique-interdit.ts (REQ-JUR-037), jamais recopiee dans la gate ni dans GATES.md ; perimetre src/app/(espace)/**, emails/apporteur/**, micro-copy/**, src/content/micro-copy/espace/** (portee apporteur) et src/content/micro-copy/console/** (portee depot), et les ressources diffusees ; les exclusions declarees par la SSOT sont importees avec elle (etendue par UX-P0-01, JUR-T13 et JUR-T26) ; etendue par JUR-T01 au gabarit de contrat docs/contrat/** (motif attendu), liste noire ABSOLUE LISTE_NOIRE_GABARIT de la meme SSOT — L.134-12, L.134-16, indemnite de fin de contrat, indemnite de clientele, renonce/renonciation et leurs flexions, kit de vente — sans exemption de negation ni de citation, sauf les deux chaines VERBATIM de l'art. 19 (titre et phrase) nommees par la SSOT",
       "fixtureRouge": "libelle factice 'objectif du mois' dans micro-copy",
-      "preuveRouge": "pnpm gov:lexique:prove — 12 familles rougissent chacune sur son temoin (dont jargon_interne, REQ-UX-003, ajoutee par UX-P0-01), 8 positions limites rougissent, 4 controles positifs rougissent, 13 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim"
+      "preuveRouge": "pnpm gov:lexique:prove — 13 familles rougissent chacune sur son temoin (dont gabarit_liste_noire, et jargon_interne, REQ-UX-003, ajoutee par UX-P0-01), 8 positions limites rougissent, 6 controles positifs rougissent (dont la phrase de l'art. 19 retouchee d'un mot et une renonciation NIEE dans le gabarit), 14 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim et l'art. 19 du gabarit verbatim. Temoin du binaire sur le depot (JUR-T01, 2026-09-19) : « L'Apporteur renonce a toute indemnite. » ajoute en tete de l'art. 11.3 du gabarit -> EXIT=1, « [gabarit_liste_noire] docs/contrat/CONTRAT-APPORTEUR-V1.md:530 — « renonce » dans le gabarit de contrat »"
     },
     {
       "id": "gate-a",
@@ -816,9 +816,9 @@
       "phase": 0,
       "script": "scripts/gates/jur-grille-chiffree.ts",
       "tache": "JUR-T01",
-      "verifie": "refus de publier un gabarit dont l'annexe 1 contient les mots forfait, bareme ou pourcentage SANS valeur numerique dans la meme cellule",
+      "verifie": "refus de publier un gabarit dont l'annexe 1 contient les mots forfait, bareme ou pourcentage SANS valeur numerique dans la meme cellule ; regle unique dans src/domain/contrat/grille-chiffree.ts, appliquee au gabarit SOURCE par ce script (fil tendu : les montants y sont des variables) et au gabarit RENDU par exigerGabaritPubliable (src/domain/contrat/publication.ts), la ou elle protege ; gabarit absent ou sans annexe 1 -> rouge. Limite declaree : cellules de tableau de l'annexe 1 seulement, et un chiffre sans rapport la satisfait",
       "fixtureRouge": "annexe temoin portant 'forfait' seul",
-      "preuveRouge": null
+      "preuveRouge": "npx tsx scripts/gates/jur-grille-chiffree.ts --prove — 4 temoins rougissent (forfait seul, bareme non publie, pourcentage du HT, gabarit sans annexe 1), 4 contre-temoins restent verts. Temoin du binaire sur le depot (JUR-T01, 2026-09-19) : cellule {{COM_AUDIT_FLASH}} remplacee par « forfait » -> EXIT=1, « [mot_sans_valeur] Annexe 1 — la cellule « forfait » nomme forfait sans valeur numerique »"
     },
     {
       "id": "GATE-JUR-VOCAB-PUBLIC",
@@ -834,9 +834,9 @@
       "phase": 0,
       "script": "tests/unit/contrat/contract-template-complete.spec.ts",
       "tache": "JUR-T01",
-      "verifie": "chaque identifiant de clause CL-* du gabarit v1 est present ; clause de competence et de loi, mandat d'autofacturation, cases d'acceptation distinctes",
+      "verifie": "les identifiants CL-* LUS dans REQ-JUR-003 (22) sont tous poses et la table de correspondance leur est alignee un pour un ; CL-SANCTION refuse ; toute {{VARIABLE}} a une source declaree (src/domain/contrat/variables.ts), celles de l'entite resolvent depuis config/entite.json (W1) sans valeur retapee, celles sans decision renvoient a une question declaree ; concordance avec docs/DECISIONS.md par ancrages (toute reference d'article du registre ancree, tout ecart declare, tout ecart declare perime rougit, toute ligne avenant non tranchee est une question ouverte, toute question tranchee est perimee) ; six acceptations distinctes sous 3.7, 4.5, 5.2, 7, 12, 14 (liste lue dans l'acceptation) ; clause 14 : loi, juridiction, art. 48 CPC et {{APPORTEUR_QUALITE}} (KYC, DM-11) dans le corps ; REQ-CPL-012 (30 j forme, 12 mois calcul, 15 j reponse), REQ-JUR-007 (aucune decheance), REQ-JUR-023 (financement effectif, colonne CPF) ; exigerGabaritPubliable refuse tant qu'une question est ouverte ou qu'une variable ne resout pas. Limite declaree : un ancrage est lexical, il ne prouve pas l'identite des sens",
       "fixtureRouge": "retirer une clause CL-* du gabarit",
-      "preuveRouge": null
+      "preuveRouge": "JUR-T01, 2026-09-19 : fixtureRouge sur le depot — « CL-SUSPENSION-VERIFICATION » retire du titre de l'art. 3 -> 3 cas rouges sur 50 : « expected [ 'CL-ANTI-REQUALIF', …(20) ] to deeply equal [ 'CL-ANTI-REQUALIF', …(21) ] » (identifiants exiges), la table de correspondance desalignee, et le gabarit tout resolu devenu non publiable (« expected [ Array(1) ] to deeply equal [] »). Avant le gabarit : 30 cas rouges sur ENOENT docs/contrat/CONTRAT-APPORTEUR-V1.md"
     },
     {
       "id": "GATE-JUR-SIGNATURE-AVANT-DEPOT",

@@ -43,142 +43,19 @@
  */
 
 import { readFileSync } from 'node:fs';
+import {
+  lireRegistre,
+  MOTIF_IDENTIFIANT,
+  type Decision,
+  type Motif,
+  type Registre,
+} from '../../src/domain/registre/registre-decisions';
+
+// La lecture PURE vit sous `src/domain/registre/` (PR #92, A09 · simplicite) : le domaine ne peut
+// pas importer `scripts/`, et elle y était recopiée. Elle est réexportée ici, inchangée.
+export { lireRegistre, MOTIF_IDENTIFIANT, type Decision, type Motif, type Registre };
 
 export const CHEMIN_REGISTRE = 'docs/DECISIONS.md';
-
-/**
- * Les quatre familles d'identifiants du registre : `HYP-*`, `DEC-*`, `W<n>`, `EXT-<n>[a]`.
- * Ce motif est la SEULE définition de « à quoi ressemble un identifiant de décision » ; il était
- * écrit deux fois, sous deux formes incompatibles (RM-01).
- */
-export const MOTIF_IDENTIFIANT = /^((?:HYP|DEC|W|EXT)-?[A-Z0-9][A-Za-z0-9-]*)/;
-
-/** Une date d'arbitrage : `2026-09-03`. La seule marque lisible par une machine (préambule du registre). */
-const MOTIF_DATE = /(\d{4}-\d{2}-\d{2})/;
-
-export type Motif = 'decision_bloquante_non_tranchee' | 'decision_sans_hypothese';
-
-export type Decision = {
-  /** L'identifiant CANONIQUE, tel qu'il est écrit en première cellule. */
-  id: string;
-  /** 1 = « sans valeur par défaut possible » · 2 = « hypothèse par défaut posée ». */
-  section: 1 | 2;
-  /** Date ISO de l'arbitrage de Will, ou `null`. */
-  trancheeLe: string | null;
-  /** Numéro de ligne (1-based) — ce qu'on cite à qui doit corriger le registre. */
-  ligne: number;
-};
-
-export interface Registre {
-  /** alias cité → identifiant canonique (§0). */
-  readonly alias: ReadonlyMap<string, string>;
-  /** identifiant canonique → décision (§1 et §2, lignes de TABLEAU seulement). */
-  readonly parId: ReadonlyMap<string, Decision>;
-  /** Tous les identifiants qu'une tâche peut légitimement citer : canoniques ∪ alias. */
-  readonly declarees: ReadonlySet<string>;
-  canonique(id: string): string;
-  decision(id: string): Decision | null;
-  estDeclaree(id: string): boolean;
-  /** Déclarée en §1 et non datée : aucune tâche qui la cite n'est composable. */
-  estBloquante(id: string): boolean;
-  /** Déclarée, et pas bloquante : le code peut avancer dessus. */
-  estCodable(id: string): boolean;
-  /** Pourquoi cette décision empêche de coder — ou `null` si elle ne l'empêche pas. */
-  motif(id: string): Motif | null;
-}
-
-/** Les cellules d'une ligne de tableau markdown, bords vides retirés. */
-function cellules(ligne: string): string[] {
-  const brut = ligne.trim();
-  if (!brut.startsWith('|')) return [];
-  const parts = brut.split('|');
-  parts.shift();
-  if (parts[parts.length - 1]?.trim() === '') parts.pop();
-  return parts.map((c) => c.trim());
-}
-
-/** Le décor markdown d'une cellule : gras, accents graves, espaces. Il ne porte aucun sens. */
-function nu(cellule: string): string {
-  return cellule.replace(/[*`]/g, '').trim();
-}
-
-/**
- * Lit le registre. Fonction PURE : elle prend le texte, jamais un chemin — de sorte que les
- * témoins et contre-témoins des tests portent sur des registres FEINTS, sans toucher au dépôt.
- */
-export function lireRegistre(texte: string): Registre {
-  const alias = new Map<string, string>();
-  const parId = new Map<string, Decision>();
-
-  let section = -1;
-  const lignes = texte.split('\n');
-
-  for (let i = 0; i < lignes.length; i++) {
-    const ligne = lignes[i]!;
-
-    const titre = /^## (\d+)\./.exec(ligne);
-    if (titre) {
-      section = Number(titre[1]);
-      continue;
-    }
-    if (section !== 0 && section !== 1 && section !== 2) continue;
-
-    const cs = cellules(ligne);
-    if (cs.length === 0) continue;
-
-    const premiere = nu(cs[0] ?? '');
-    const m = MOTIF_IDENTIFIANT.exec(premiere);
-    if (!m || !m[1]) continue; // en-tête, séparateur, ou ligne dont la première cellule est en prose
-    const id = m[1];
-
-    if (section === 0) {
-      // §0 : « Identifiant cité | Canonique | Où la correspondance est écrite »
-      const cible = MOTIF_IDENTIFIANT.exec(nu(cs[1] ?? ''));
-      if (cible && cible[1]) alias.set(id, cible[1]);
-      continue;
-    }
-
-    // §1 et §2 : la DATE d'arbitrage se lit à deux endroits, et un seul suffit.
-    //   — §1 : le marqueur `✅ *tranchée 2026-09-03*` dans la première cellule ;
-    //   — §2 : la colonne `Tranchée`, dernière du tableau.
-    const marqueurPremiere = /tranch/i.test(premiere) ? MOTIF_DATE.exec(premiere) : null;
-    const derniere = nu(cs[cs.length - 1] ?? '');
-    const marqueurDerniere =
-      cs.length > 1 && /^\d{4}-\d{2}-\d{2}$/.test(derniere) ? [derniere, derniere] : null;
-    const trancheeLe = marqueurPremiere?.[1] ?? marqueurDerniere?.[1] ?? null;
-
-    parId.set(id, { id, section: section as 1 | 2, trancheeLe, ligne: i + 1 });
-  }
-
-  const declarees = new Set<string>([...parId.keys(), ...alias.keys()]);
-
-  const canonique = (id: string): string => alias.get(id) ?? id;
-  const decision = (id: string): Decision | null => parId.get(canonique(id)) ?? null;
-  const estDeclaree = (id: string): boolean => declarees.has(id);
-  const estBloquante = (id: string): boolean => {
-    const d = decision(id);
-    return d !== null && d.section === 1 && d.trancheeLe === null;
-  };
-  const estCodable = (id: string): boolean =>
-    estDeclaree(id) && decision(id) !== null && !estBloquante(id);
-  const motif = (id: string): Motif | null => {
-    if (estBloquante(id)) return 'decision_bloquante_non_tranchee';
-    if (!estCodable(id)) return 'decision_sans_hypothese';
-    return null;
-  };
-
-  return {
-    alias,
-    parId,
-    declarees,
-    canonique,
-    decision,
-    estDeclaree,
-    estBloquante,
-    estCodable,
-    motif,
-  };
-}
 
 /** Lit le registre sur le disque. Le chemin est un paramètre pour que les bancs d'essai l'écartent. */
 export function chargerRegistre(chemin: string = CHEMIN_REGISTRE): Registre {
