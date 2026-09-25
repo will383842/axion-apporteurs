@@ -1471,7 +1471,9 @@
         "src/instrumentation.ts",
         "package.json",
         "pnpm-lock.yaml",
-        "tests/unit/qualite/journal-redige.bac.ts"
+        "tests/unit/qualite/journal-redige.bac.ts",
+        "src/lib/forme-iban.ts",
+        "scripts/gates/gov-entite.ts"
       ],
       "schema": false,
       "sensible": [
