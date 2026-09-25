@@ -939,6 +939,7 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     risque,
     tete: pr.tete ?? null,
     auteurPoste: auteur ? auteur[1]! : null,
+    numero: pr.numero ?? null,
   });
   const lues = lecture.verdicts.filter((v) => v.verdict === 'accepte');
   // Les lentilles EXIGÉES par le risque, hors mutation : deux sur une PR ordinaire, trois sinon.

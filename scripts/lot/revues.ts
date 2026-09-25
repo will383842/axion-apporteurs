@@ -70,6 +70,8 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { posix } from 'node:path';
 
+import { ANCRE_JOURNAL } from '../gates/gov-attributions';
+
 export const CHEMIN_AGENTS = 'docs/agents.json';
 export const CHEMIN_CHARTE = 'docs/CHARTE-AGENTS.md';
 
@@ -267,7 +269,8 @@ export type Verdict = {
  *   2. ET l'ensemble des fichiers changés entre C et T est VIDE, ou n'est fait que d'ENTRÉES PAR
  *      PR du journal — la forme `docs/journal/AAAA-MM-pr-<n>.md` (`ENTREE_DU_JOURNAL`), et RIEN
  *      d'autre du dossier : ni son mode d'emploi (`CONFIGURATION_DU_DOSSIER` dit pourquoi), ni le
- *      fichier mensuel, ni un fichier de lot.
+ *      fichier mensuel, ni un fichier de lot ; et cette entrée est celle de LA PR JUGÉE, dont
+ *      chaque titre ouvre SON entrée — voir `PrJugee`.
  *
  * ⚠️ C'EST UNE GARDE RENDUE PLUS PERMISSIVE, et c'est l'objection la plus forte qu'on puisse lui
  * opposer. La réponse tient en un point : TOUT CAS AMBIGU ÉCHOUE FERMÉ, et chacun a son témoin
@@ -368,18 +371,50 @@ export type Peremption = {
 export const ENTREE_DU_JOURNAL = new RegExp(
   '^' +
     CHEMIN_DU_JOURNAL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
-    String.raw`\d{4}-\d{2}-pr-[1-9]\d*\.md$`
+    String.raw`\d{4}-\d{2}-pr-([1-9]\d*)\.md$`
 );
 
-function sousLeJournal(f: string): boolean {
-  return ENTREE_DU_JOURNAL.test(f);
+/**
+ * La PR jugée, vue par la règle de survie : son NUMÉRO, et de quoi lire une entrée À LA TÊTE.
+ *
+ * ⛔ TROISIÈME TOUR `securite` : la forme ne suffit pas. `gov:attributions` coupe TOUT fichier du
+ * journal sur `COUPE_ETAT` et lit le numéro de chaque titre d'entrée comme l'attestation de CETTE
+ * PR-là — elle ne lie pas un titre « PR #N » au fichier `…-pr-N.md`. Deux chemins ouvraient donc
+ * l'attestation d'un AUTRE lot sous des accords survivants : réécrire l'entrée d'une autre PR, et
+ * ajouter un titre d'une autre PR dans la sienne. D'où deux conditions de plus, toutes deux en
+ * échec FERMÉ : le fichier est celui de la PR jugée (`numero` inconnu : rien ne survit), et chaque
+ * ligne de titre de niveau ≥ 2 qu'il porte à la tête ouvre SON entrée (`ANCRE_JOURNAL` + numéro,
+ * dérivé de la garde qui le lit). Une entrée illisible à la tête (supprimée, `git` en échec) : périmé.
+ */
+export type PrJugee = {
+  numero: number | null;
+  lire: (chemin: string) => string | null;
+};
+
+/** Le premier défaut d'une entrée au regard de la PR jugée, ou `null` si elle est bien la sienne. */
+function defautDEntree(f: string, pr: PrJugee): string | null {
+  const m = ENTREE_DU_JOURNAL.exec(f);
+  if (m === null) return `${f} n’est pas une entrée par PR de \`${CHEMIN_DU_JOURNAL}\``;
+  if (pr.numero === null) return `${f} : le numéro de la PR jugée est inconnu`;
+  if (Number(m[1]) !== pr.numero) return `${f} est l’entrée d’une autre PR que la #${pr.numero}`;
+  const texte = pr.lire(f);
+  if (texte === null) return `${f} est illisible à la tête`;
+  const titre = `${ANCRE_JOURNAL}${pr.numero} `;
+  const intrus = texte.split('\n').find((l) => /^#{2,}/.test(l) && !l.startsWith(titre));
+  return intrus === undefined
+    ? null
+    : `${f} porte un titre qui n’ouvre pas l’entrée de la #${pr.numero} : « ${intrus} »`;
 }
 
 /**
  * LA DÉCISION, PURE — aucun `git`, aucun système de fichiers, chaque branche testable. C'est la
  * même séparation que `estAncetreDe` plus haut : la mesure peut échouer, la règle non.
  */
-export function accordSurvit(lentille: string, fichiers: readonly string[] | null): Survie {
+export function accordSurvit(
+  lentille: string,
+  fichiers: readonly string[] | null,
+  pr: PrJugee
+): Survie {
   if (fichiers === null) {
     return {
       survit: false,
@@ -399,7 +434,7 @@ export function accordSurvit(lentille: string, fichiers: readonly string[] | nul
         'survit donc à aucun commit, journal compris',
     };
   }
-  const dehors = fichiers.filter((f) => !sousLeJournal(f));
+  const dehors = fichiers.map((f) => defautDEntree(f, pr)).filter((d): d is string => d !== null);
   if (dehors.length > 0) {
     return {
       survit: false,
@@ -408,12 +443,30 @@ export function accordSurvit(lentille: string, fichiers: readonly string[] | nul
       // d'emploi du dossier périme : il est SOUS le préfixe, et il ne juge pas rien. Le motif dit
       // donc ce que la règle mesure vraiment — ce qui n'est pas une ENTRÉE — et le nomme.
       motif:
-        `${dehors.length} fichier(s) changé(s) qui ne sont pas des entrées par PR de ` +
-        `\`${CHEMIN_DU_JOURNAL}\` : ` +
-        dehors.join(', '),
+        `${dehors.length} fichier(s) changé(s) qui ne sont pas l’entrée de la PR jugée : ` +
+        dehors.join(' ; '),
     };
   }
   return { survit: true, fichiers: [...fichiers] };
+}
+
+/**
+ * Le texte d'un fichier À LA TÊTE, par `git show <tete>:<chemin>`. Échoue FERMÉ : toute erreur
+ * (fichier supprimé, commit absent, sha malformé) rend `null`, qui périme l'accord.
+ */
+export function contenuALaTete(tete: string, chemin: string, cwd?: string): string | null {
+  const t = tete.trim();
+  if (!/^[0-9a-f]{7,40}$/.test(t) || !ENTREE_DU_JOURNAL.test(chemin)) return null;
+  try {
+    return execFileSync('git', ['show', `${t}:${chemin}`], {
+      encoding: 'utf8',
+      maxBuffer: 64e6,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      ...(cwd === undefined ? {} : { cwd }),
+    });
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -540,6 +593,13 @@ export type Entree = {
    * jamais de valeur par défaut — le témoin le passe toujours).
    */
   fichiersEntre?: (accord: string, tete: string) => string[] | null;
+  /**
+   * Le NUMÉRO de la PR jugée (GOV-095, troisième tour `securite`) : seule SON entrée du journal
+   * laisse survivre un accord. Absent ou `null` : aucune entrée n'est la sienne, rien ne survit.
+   */
+  numero?: number | null;
+  /** Le texte d'un fichier À LA TÊTE — `contenuALaTete` par défaut. Injectable pour les témoins. */
+  lireALaTete?: (tete: string, chemin: string) => string | null;
 };
 
 let codesEnCache: ReadonlySet<string> | null = null;
@@ -1443,7 +1503,10 @@ export function lireRevues(entree: Entree): Lecture {
     for (const x of accords) {
       if (!exigees.includes(x.lentille) || x.commit === tete) continue;
       if (!deja.has(x.commit)) deja.set(x.commit, mesurer(x.commit, tete));
-      const survie = accordSurvit(x.lentille, deja.get(x.commit) ?? null);
+      const survie = accordSurvit(x.lentille, deja.get(x.commit) ?? null, {
+        numero: entree.numero ?? null,
+        lire: (f) => (entree.lireALaTete ?? contenuALaTete)(tete, f),
+      });
       if (survie.survit) {
         survivantes.push({
           code: x.code,

@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `32ea43d` — 2026-09-25T11:47:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #120 (rien) · 2. #82 (un conflit avec `main`) · 3. #88 (un conflit avec `main`) · 4. #91 (un conflit avec `main`) · 5. #92 (un conflit avec `main`) · 6. #93 (un conflit avec `main`) · 7. #116 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #116 (un contrôle requis rouge ou une revue manquante) · 2. #120 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/107 tâches, reste 64.60 j |
-| Le prochain pas | fusionner #120, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #118 — 2026-09-23 |
 
-**Ce qu’on tape maintenant.** `gh pr view 120 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,13 +64,13 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #120 — feat(GOV-097): quatre lentilles pour l'argent, la securite et les donnees, deux pour le reste | `t/gov-097-risque-reserve` | rien — fusionnable maintenant |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
-| 7 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un contrôle requis rouge ou une revue manquante |
+| 2 | #120 — feat(GOV-097): quatre lentilles pour l'argent, la securite et les donnees, deux pour le reste | `t/gov-097-risque-reserve` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -94,8 +94,6 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
-
-**Fusionner #120** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 47 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -248,6 +246,14 @@ survivre. Contre-temoin : une tete qui ne touche que `docs/journal/2026-09-pr-11
 survivre `securite`, `simplicite` et `mutation`, et perime `exactitude`. Les trois dettes de
 `mutation` (prefixe lu au debut, relecture par l'auteur independante de la survie, lentille de la
 prose derivee d'une seule source) etaient fermees par `ed91983`.
+
+Troisieme tour, sur la faille nommee au deuxieme : `gov:attributions` lit le numero de chaque titre
+d'entree de tout fichier du journal, sans le lier au nom du fichier. Une tete qui ne touche que
+`2026-09-pr-102.md`, ou qui ajoute un titre d'entree de la PR 999 dans `2026-09-pr-116.md`,
+attesterait un autre lot sous des accords survivants. La survie exige desormais le NUMERO de la PR
+jugee : seul son fichier est admis, et chaque titre de niveau 2 ou plus qu'il porte a la tete doit
+ouvrir son entree. Numero inconnu, entree illisible a la tete : echec ferme. Les deux temoins ont
+ete vus rouges (`expected true to be false`) avant le code.
 
 ### PR #114 — 2026-09-23 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure
 

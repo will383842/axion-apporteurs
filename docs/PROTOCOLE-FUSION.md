@@ -140,8 +140,12 @@ Un accord rendu sur la lentille L au commit C survit désormais à la tête T **
 
 1. **L n'est pas `exactitude`** — cette lentille juge la prose, c'est sa matière, et son accord ne
    survit à aucun commit ;
-2. **ET** l'ensemble des fichiers changés entre C et T est **vide**, ou n'est fait que d'**entrées
-   par PR** du journal — la forme `docs/journal/AAAA-MM-pr-<n>.md`, **et rien d'autre du dossier**.
+2. **ET** l'ensemble des fichiers changés entre C et T est **vide**, ou n'est fait que de
+   **l'entrée de la PR jugée** — `docs/journal/AAAA-MM-pr-<son numéro>.md`, dont chaque titre de
+   niveau 2 ou plus ouvre **son** entrée (`## PR #<son numéro> — …`), **et rien d'autre du dossier**.
+   `gov:attributions` lit le numéro de chaque titre comme l'attestation de cette PR-là, sans le lier
+   au nom du fichier : l'entrée d'une autre PR, ou un titre d'une autre PR dans la sienne,
+   attesterait un autre lot, et périme donc les accords.
 
 ⛔ **LE PRÉFIXE DÉSIGNE UNE ENTRÉE, PAS UN DOSSIER — et `docs/journal/README.md` n'est pas une
 entrée.** Ce fichier porte la ligne du **plancher**, et deux gardes bloquantes de `gate-a` en

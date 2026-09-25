@@ -60,6 +60,11 @@ import * as LECTEUR from '../../../scripts/lot/revues';
 const TETE = '954fe5a4b5c6d7e8f90123456789abcdef012345';
 const ACCORD = '8ef35a3b0c1d2e3f405162738495a6b7c8d9e0f1';
 
+/** La PR jugée, son entrée, et le texte de cette entrée à la tête : un seul titre, le sien. */
+const NUMERO = 116;
+const TEXTE_ENTREE = '## PR #116 — 2026-09-23 — un titre\n\n**Fait.** une phrase.\n';
+const PR116 = { numero: NUMERO, lire: (_chemin: string): string | null => TEXTE_ENTREE };
+
 /** Le risque ÉLEVÉ : quatre lentilles exigées, dont `exactitude` et `securite`. */
 const ELEVE: LECTEUR.Risque = {
   niveau: 'eleve',
@@ -100,6 +105,8 @@ function lireAvecDelta(revues: RevueBrute[], fichiers: string[] | null) {
     tete: TETE,
     auteurPoste: 'A05',
     fichiersEntre: () => fichiers,
+    numero: NUMERO,
+    lireALaTete: () => TEXTE_ENTREE,
   });
 }
 
@@ -107,40 +114,41 @@ function lireAvecDelta(revues: RevueBrute[], fichiers: string[] | null) {
 
 describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () => {
   it('REQ-GOV-011 · `securite` survit à un delta entièrement sous docs/journal/', () => {
-    const s = LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-102.md']);
+    const s = LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md'], PR116);
     expect(s.survit).toBe(true);
   });
 
   it('REQ-GOV-011 · `exactitude` NE survit PAS au MÊME delta : la prose est sa matière', () => {
     // Le même delta, à la virgule près, que le témoin précédent. Seule la lentille varie (RM-11).
-    const s = LECTEUR.accordSurvit('exactitude', ['docs/journal/2026-09-pr-102.md']);
+    const s = LECTEUR.accordSurvit('exactitude', ['docs/journal/2026-09-pr-116.md'], PR116);
     expect(s.survit).toBe(false);
     if (s.survit) return;
     expect(s.motif).toContain('exactitude');
   });
 
   it('REQ-GOV-011 · un delta VIDE laisse survivre toute lentille sauf `exactitude`', () => {
-    expect(LECTEUR.accordSurvit('mutation', []).survit).toBe(true);
-    expect(LECTEUR.accordSurvit('exactitude', []).survit).toBe(false);
+    expect(LECTEUR.accordSurvit('mutation', [], PR116).survit).toBe(true);
+    expect(LECTEUR.accordSurvit('exactitude', [], PR116).survit).toBe(false);
   });
 
   it('REQ-GOV-011 · `docs/tasks.json` PÉRIME : la garde y lit sensible, schema et paths', () => {
-    const s = LECTEUR.accordSurvit('securite', [
-      'docs/journal/2026-09-pr-102.md',
-      'docs/tasks.json',
-    ]);
+    const s = LECTEUR.accordSurvit(
+      'securite',
+      ['docs/journal/2026-09-pr-116.md', 'docs/tasks.json'],
+      PR116
+    );
     expect(s.survit).toBe(false);
     if (s.survit) return;
     expect(s.motif).toContain('docs/tasks.json');
   });
 
   it('REQ-GOV-011 · `docs/requirements.json` PÉRIME, au même titre', () => {
-    expect(LECTEUR.accordSurvit('securite', ['docs/requirements.json']).survit).toBe(false);
+    expect(LECTEUR.accordSurvit('securite', ['docs/requirements.json'], PR116).survit).toBe(false);
   });
 
   it('REQ-GOV-011 · une VUE DÉRIVÉE périme : si la vue a changé, sa source a changé', () => {
     for (const vue of ['docs/PLAN-STATE.md', 'docs/TASKS.md', 'docs/TRACABILITE.md']) {
-      expect(LECTEUR.accordSurvit('securite', [vue]).survit, vue).toBe(false);
+      expect(LECTEUR.accordSurvit('securite', [vue], PR116).survit, vue).toBe(false);
     }
   });
 
@@ -153,19 +161,19 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
       'docs/REGLES-MAISON.md',
       'docs/un-dossier-qui-n-existe-pas-encore/note.md',
     ]) {
-      expect(LECTEUR.accordSurvit('securite', [doc]).survit, doc).toBe(false);
+      expect(LECTEUR.accordSurvit('securite', [doc], PR116).survit, doc).toBe(false);
     }
   });
 
   it('REQ-GOV-011 · le code produit périme, évidemment — et le motif le NOMME', () => {
-    const s = LECTEUR.accordSurvit('securite', ['scripts/lot/revues.ts']);
+    const s = LECTEUR.accordSurvit('securite', ['scripts/lot/revues.ts'], PR116);
     expect(s.survit).toBe(false);
     if (s.survit) return;
     expect(s.motif).toContain('scripts/lot/revues.ts');
   });
 
   it('REQ-GOV-011 · ÉCHEC FERMÉ : un delta incalculable (`null`) périme, et le refus le dit', () => {
-    const s = LECTEUR.accordSurvit('securite', null);
+    const s = LECTEUR.accordSurvit('securite', null, PR116);
     expect(s.survit).toBe(false);
     if (s.survit) return;
     expect(s.fichiers).toBeNull();
@@ -173,8 +181,10 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
   });
 
   it('REQ-GOV-011 · un chemin qui REMONTE hors du journal ne passe pas pour du journal', () => {
-    expect(LECTEUR.accordSurvit('securite', ['docs/journal/../tasks.json']).survit).toBe(false);
-    expect(LECTEUR.accordSurvit('securite', ['docs/journalier/note.md']).survit).toBe(false);
+    expect(LECTEUR.accordSurvit('securite', ['docs/journal/../tasks.json'], PR116).survit).toBe(
+      false
+    );
+    expect(LECTEUR.accordSurvit('securite', ['docs/journalier/note.md'], PR116).survit).toBe(false);
   });
 
   it('REQ-GOV-011 · le préfixe se lit au DÉBUT du chemin, jamais n’importe où dedans', () => {
@@ -186,16 +196,18 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
       'packages/docs/journal/2026-09.md',
       'scripts/lot/docs/journal/x.ts',
     ]) {
-      expect(LECTEUR.accordSurvit('securite', [f]).survit, f).toBe(false);
+      expect(LECTEUR.accordSurvit('securite', [f], PR116).survit, f).toBe(false);
     }
   });
 
   // ── le préfixe désigne une ENTRÉE, pas un DOSSIER ─────────────────────────
 
   it('REQ-GOV-011 · le README du journal PÉRIME : c’est la CONFIGURATION du dossier, pas une entrée', () => {
-    const s = LECTEUR.accordSurvit('securite', [
-      `${LECTEUR.CHEMIN_DU_JOURNAL}${LECTEUR.CONFIGURATION_DU_DOSSIER}`,
-    ]);
+    const s = LECTEUR.accordSurvit(
+      'securite',
+      [`${LECTEUR.CHEMIN_DU_JOURNAL}${LECTEUR.CONFIGURATION_DU_DOSSIER}`],
+      PR116
+    );
     expect(s.survit).toBe(false);
     if (s.survit) return;
     expect(s.motif).toContain(LECTEUR.CONFIGURATION_DU_DOSSIER);
@@ -228,19 +240,25 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
       'docs/journal/ReadMe.MD',
       'docs/journal/2026-10/README.md',
     ]) {
-      expect(LECTEUR.accordSurvit('securite', [f]).survit, f).toBe(false);
+      expect(LECTEUR.accordSurvit('securite', [f], PR116).survit, f).toBe(false);
     }
   });
 
   it('REQ-GOV-011 · CONTRE-TÉMOIN : une ENTRÉE du même dossier survit, et un README dans le même delta périme tout', () => {
     // Sans ce contre-témoin, périmer TOUT `docs/journal/` — c'est-à-dire annuler la tâche —
     // passerait les trois témoins ci-dessus.
-    expect(LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md']).survit).toBe(true);
+    expect(LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md'], PR116).survit).toBe(
+      true
+    );
     expect(
-      LECTEUR.accordSurvit('securite', [
-        'docs/journal/2026-09-pr-116.md',
-        `${LECTEUR.CHEMIN_DU_JOURNAL}${LECTEUR.CONFIGURATION_DU_DOSSIER}`,
-      ]).survit
+      LECTEUR.accordSurvit(
+        'securite',
+        [
+          'docs/journal/2026-09-pr-116.md',
+          `${LECTEUR.CHEMIN_DU_JOURNAL}${LECTEUR.CONFIGURATION_DU_DOSSIER}`,
+        ],
+        PR116
+      ).survit
     ).toBe(false);
   });
 
@@ -262,16 +280,59 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
       'docs/journal/2026-09-PR-116.md',
       'docs/journal/x2026-09-pr-116.md',
     ]) {
-      expect(LECTEUR.accordSurvit('securite', [f]).survit, f).toBe(false);
+      expect(LECTEUR.accordSurvit('securite', [f], PR116).survit, f).toBe(false);
     }
   });
 
   it('REQ-GOV-011 · CONTRE-TÉMOIN de la forme : des entrées par PR survivent, sauf pour `exactitude`', () => {
-    const entrees = ['docs/journal/2026-09-pr-116.md', 'docs/journal/2026-10-pr-1.md'];
+    const entrees = ['docs/journal/2026-09-pr-116.md', 'docs/journal/2026-10-pr-116.md'];
     for (const l of ['securite', 'simplicite', 'schema', 'mutation']) {
-      expect(LECTEUR.accordSurvit(l, entrees).survit, l).toBe(true);
+      expect(LECTEUR.accordSurvit(l, entrees, PR116).survit, l).toBe(true);
     }
-    expect(LECTEUR.accordSurvit(LECTEUR.LENTILLE_DE_LA_PROSE, entrees).survit).toBe(false);
+    expect(LECTEUR.accordSurvit(LECTEUR.LENTILLE_DE_LA_PROSE, entrees, PR116).survit).toBe(false);
+  });
+
+  it('REQ-GOV-011 · l’entrée d’une AUTRE PR périme : seule survit celle de la PR jugée', () => {
+    // 🔴 LA FAILLE QUE CE TÉMOIN FERME : `gov:attributions` lit chaque titre « PR #<n> » de tout
+    // fichier du journal comme l'attestation de la PR n. Réécrire l'entrée de la PR 102 depuis la
+    // PR 116 change ce qui atteste le lot de la 102 : ce n'est pas de la prose de CETTE PR.
+    const s = LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-102.md'], PR116);
+    expect(s.survit).toBe(false);
+    const lecture = lireAvecDelta(tourComplet(ACCORD), ['docs/journal/2026-09-pr-102.md']);
+    expect(lecture.survivantes).toEqual([]);
+    expect(lecture.coche).toBe(false);
+    // Et sans numéro de PR, aucune entrée ne peut être la sienne : échec FERMÉ.
+    expect(
+      LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md'], {
+        numero: null,
+        lire: () => TEXTE_ENTREE,
+      }).survit
+    ).toBe(false);
+  });
+
+  it('REQ-GOV-011 · un titre d’entrée d’une AUTRE PR dans l’entrée de la PR jugée périme', () => {
+    // 🔴 LA MÊME FAILLE PAR L'INTÉRIEUR : `gov:attributions` ne lie pas un titre « PR #N » au
+    // fichier `…-pr-N.md` — elle coupe TOUT fichier du journal sur « ## » et lit le numéro du
+    // titre. Un « ## PR #999 — » ajouté dans l'entrée de la 116 attesterait le lot de la 999.
+    for (const titre of [
+      '## PR #999 — 2026-09-25 — un faux',
+      '## PR #1160 — 2026-09-25 — un préfixe du bon numéro',
+      '### PR #999 — 2026-09-25 — un niveau de plus',
+      '## une section sans numéro',
+    ]) {
+      const s = LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md'], {
+        numero: NUMERO,
+        lire: () => `${TEXTE_ENTREE}\n${titre}\n`,
+      });
+      expect(s.survit, titre).toBe(false);
+    }
+    // Une entrée devenue illisible à la tête (supprimée, `git` en échec) : échec FERMÉ.
+    expect(
+      LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md'], {
+        numero: NUMERO,
+        lire: () => null,
+      }).survit
+    ).toBe(false);
   });
 
   it('REQ-GOV-011 · la lentille de la PROSE a UNE seule source : celle qu’exige tout risque est celle qui ne survit à rien', () => {
@@ -288,7 +349,7 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
         LECTEUR.LENTILLE_DE_LA_PROSE
       );
     }
-    expect(LECTEUR.accordSurvit(LECTEUR.LENTILLE_DE_LA_PROSE, []).survit).toBe(false);
+    expect(LECTEUR.accordSurvit(LECTEUR.LENTILLE_DE_LA_PROSE, [], PR116).survit).toBe(false);
   });
 });
 
@@ -331,18 +392,23 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
       dir,
       {
         'scripts/lot/revues.ts': 'export const x = 1;\n',
-        'docs/journal/2026-09-pr-102.md': 'un neuvieme tour\n',
+        'docs/journal/2026-09-pr-116.md': 'un neuvieme tour\n',
       },
       'chore: socle'
     );
     const t = ecrireEtCommiter(
       dir,
-      { 'docs/journal/2026-09-pr-102.md': 'un tour de plus\n' },
+      { 'docs/journal/2026-09-pr-116.md': 'un tour de plus\n' },
       'fix: retirer l’ordinal non mesuré'
     );
-    expect(LECTEUR.fichiersEntre(c, t, dir)).toEqual(['docs/journal/2026-09-pr-102.md']);
+    expect(LECTEUR.fichiersEntre(c, t, dir)).toEqual(['docs/journal/2026-09-pr-116.md']);
     // Et la chaîne entière : la mesure nourrit la décision, et l'accord SURVIT.
-    expect(LECTEUR.accordSurvit('securite', LECTEUR.fichiersEntre(c, t, dir)).survit).toBe(true);
+    expect(
+      LECTEUR.accordSurvit('securite', LECTEUR.fichiersEntre(c, t, dir), {
+        numero: NUMERO,
+        lire: (f) => LECTEUR.contenuALaTete(t, f, dir),
+      }).survit
+    ).toBe(true);
   });
 
   it('REQ-GOV-011 · L’ATTAQUE DU PLANCHER, de bout en bout : 27 → 9999 dans le README périme les accords', () => {
@@ -368,6 +434,8 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
       tete: t,
       auteurPoste: 'A05',
       fichiersEntre: (a, b) => LECTEUR.fichiersEntre(a, b, dir),
+      numero: NUMERO,
+      lireALaTete: (t, f) => LECTEUR.contenuALaTete(t, f, dir),
     });
     expect(lecture.survivantes).toEqual([]);
     expect(lecture.perimees.map((v) => v.lentille).sort()).toEqual([
@@ -392,6 +460,8 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
       tete: t2,
       auteurPoste: 'A05',
       fichiersEntre: (a, b) => LECTEUR.fichiersEntre(a, b, dir),
+      numero: NUMERO,
+      lireALaTete: (t, f) => LECTEUR.contenuALaTete(t, f, dir),
     });
     expect(lecture2.survivantes.map((v) => v.lentille).sort()).toEqual([
       'mutation',
@@ -416,7 +486,9 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
       'docs/CONVENTIONS.md',
       'docs/journal/a.md',
     ]);
-    expect(LECTEUR.accordSurvit('securite', LECTEUR.fichiersEntre(c, t, dir)).survit).toBe(false);
+    expect(LECTEUR.accordSurvit('securite', LECTEUR.fichiersEntre(c, t, dir), PR116).survit).toBe(
+      false
+    );
   });
 
   it('REQ-GOV-011 · un renommage VERS le journal rend AUSSI ses deux chemins — le sens qui mord', () => {
@@ -442,7 +514,9 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
       'docs/CONVENTIONS.md',
       'docs/journal/2026-09-pr-116.md',
     ]);
-    expect(LECTEUR.accordSurvit('securite', LECTEUR.fichiersEntre(c, t, dir)).survit).toBe(false);
+    expect(LECTEUR.accordSurvit('securite', LECTEUR.fichiersEntre(c, t, dir), PR116).survit).toBe(
+      false
+    );
   });
 
   it('REQ-GOV-011 · ÉCHEC FERMÉ : un commit INCONNU du dépôt rend `null`, jamais une liste vide', () => {
@@ -465,7 +539,7 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
 
 describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, ce qui se dit', () => {
   it('REQ-GOV-013 · les trois lentilles hors `exactitude` survivent, la quatrième périme', () => {
-    const lecture = lireAvecDelta(tourComplet(ACCORD), ['docs/journal/2026-09-pr-102.md']);
+    const lecture = lireAvecDelta(tourComplet(ACCORD), ['docs/journal/2026-09-pr-116.md']);
     expect(lecture.survivantes.map((s) => s.lentille).sort()).toEqual([
       'mutation',
       'securite',
@@ -485,7 +559,7 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
       avis('A09', 'simplicite', ACCORD),
       avis('A10', 'mutation', ACCORD),
     ];
-    const lecture = lireAvecDelta(revues, ['docs/journal/2026-09-pr-102.md']);
+    const lecture = lireAvecDelta(revues, ['docs/journal/2026-09-pr-116.md']);
     expect(lecture.perimees).toEqual([]);
     expect(lecture.coche).toBe(true);
     expect(lecture.survivantes.map((s) => s.lentille).sort()).toEqual([
@@ -496,14 +570,14 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
   });
 
   it('REQ-GOV-013 · la survie est IMPRIMÉE : poste, lentille, les deux sha, et les fichiers', () => {
-    const lecture = lireAvecDelta(tourComplet(ACCORD), ['docs/journal/2026-09-pr-102.md']);
+    const lecture = lireAvecDelta(tourComplet(ACCORD), ['docs/journal/2026-09-pr-116.md']);
     const s = lecture.survivantes.find((x) => x.lentille === 'securite');
     expect(s).toBeDefined();
     if (s === undefined) return;
     expect(s.code).toBe('A09');
     expect(s.commit).toBe(ACCORD);
     expect(s.tete).toBe(TETE);
-    expect(s.fichiers).toEqual(['docs/journal/2026-09-pr-102.md']);
+    expect(s.fichiers).toEqual(['docs/journal/2026-09-pr-116.md']);
     // La PHRASE, dérivée une seule fois : c'est elle que `gov:pr` imprime. Un lecteur doit pouvoir
     // contester la survie sans relire le code — donc les cinq faits y sont.
     const ligne = LECTEUR.direLaSurvivance(s);
@@ -511,7 +585,7 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
     expect(ligne).toContain('securite');
     expect(ligne).toContain(ACCORD.slice(0, 7));
     expect(ligne).toContain(TETE.slice(0, 7));
-    expect(ligne).toContain('docs/journal/2026-09-pr-102.md');
+    expect(ligne).toContain('docs/journal/2026-09-pr-116.md');
   });
 
   it('REQ-GOV-013 · la survie entre AUSSI dans le `detail` publié au corps de la PR', () => {
@@ -523,15 +597,15 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
       avis('A09', 'simplicite', ACCORD),
       avis('A10', 'mutation', ACCORD),
     ];
-    const lecture = lireAvecDelta(revues, ['docs/journal/2026-09-pr-102.md']);
+    const lecture = lireAvecDelta(revues, ['docs/journal/2026-09-pr-116.md']);
     expect(lecture.coche).toBe(true);
     expect(lecture.detail).toContain('SURVIT');
-    expect(lecture.detail).toContain('docs/journal/2026-09-pr-102.md');
+    expect(lecture.detail).toContain('docs/journal/2026-09-pr-116.md');
   });
 
   it('REQ-GOV-013 · un delta qui touche `docs/tasks.json` périme les QUATRE lentilles', () => {
     const lecture = lireAvecDelta(tourComplet(ACCORD), [
-      'docs/journal/2026-09-pr-102.md',
+      'docs/journal/2026-09-pr-116.md',
       'docs/tasks.json',
     ]);
     expect(lecture.survivantes).toEqual([]);
@@ -580,6 +654,8 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
       tete: TETE,
       auteurPoste: 'A09',
       fichiersEntre: () => ['docs/journal/2026-09-pr-116.md'],
+      numero: NUMERO,
+      lireALaTete: () => TEXTE_ENTREE,
     });
     expect(lecture.survivantes.map((s) => s.lentille).sort()).toEqual([
       'mutation',
@@ -650,6 +726,8 @@ describe('REQ-GOV-013 — contre-témoins : la garde reste verte là où elle l�
         tete,
         auteurPoste: 'A05',
         fichiersEntre: () => [],
+        numero: NUMERO,
+        lireALaTete: () => TEXTE_ENTREE,
       });
       expect(lecture.coche, String(tete)).toBe(false);
       expect(lecture.survivantes, String(tete)).toEqual([]);
@@ -670,7 +748,7 @@ describe('REQ-GOV-013 — contre-témoins : la garde reste verte là où elle l�
         body: 'A09 · securite\n\nVerdict: refuse\n',
       },
     ];
-    const lecture = lireAvecDelta(revues, ['docs/journal/2026-09-pr-102.md']);
+    const lecture = lireAvecDelta(revues, ['docs/journal/2026-09-pr-116.md']);
     expect(lecture.survivantes).toEqual([]);
     expect(lecture.refusees.map((v) => v.lentille)).toEqual(['securite']);
     expect(lecture.coche).toBe(false);
@@ -687,7 +765,9 @@ describe('REQ-GOV-013 — contre-témoins : la garde reste verte là où elle l�
       risque: ordinaire,
       tete: TETE,
       auteurPoste: 'A05',
-      fichiersEntre: () => ['docs/journal/2026-09-pr-102.md'],
+      fichiersEntre: () => ['docs/journal/2026-09-pr-116.md'],
+      numero: NUMERO,
+      lireALaTete: () => TEXTE_ENTREE,
     });
     expect(lecture.coche).toBe(true);
     expect(lecture.survivantes).toEqual([]);
