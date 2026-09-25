@@ -633,7 +633,7 @@
       "phase": 0,
       "script": "tests/unit/securite/env-boot.spec.ts",
       "tache": "SEC-01",
-      "verifie": "boot en prod sans secret, ou avec un prefixe dev_ ou stub -> exit != 0 ; gitleaks (etendue par QA-T04)",
+      "verifie": "boot en prod sans secret, ou avec un prefixe dev_ ou stub -> exit != 0 ; gitleaks. Etendue par QA-T04 : le meme schema de src/lib/env.ts porte la CONFIGURATION (DATABASE_URL, REDIS_URL, NOTIFY_SINK, PARTNERS_ENV, LOG_LEVEL, SENTRY_DSN) ; hors production (predicat du notifieur), NOTIFY_SINK=true est exige (REQ-CPL-021) ; le demarrage reel de Next (register() de src/instrumentation.ts) juge l'environnement avant toute composition et sort en non nul sur toute variable requise absente (tests/unit/qualite/env-fail-fast.spec.ts) ; docs/env.md est le rendu du schema (pnpm env:doc) et la meme spec rougit s'il est perime",
       "fixtureRouge": "retirer un secret de l'environnement de test",
       "preuveRouge": "2026-09-18, A05, src/lib/env.ts sans controle d'egalite : FAIL tests/unit/securite/env-boot.spec.ts > REQ-SEC-028 : deux secrets égaux sont un refus à part entière — le boot sort en non nul et nomme les deux / AssertionError: expected +0 not to be +0 // Object.is equality (4 echecs sur 17 : deux et trois secrets egaux font sortir le boot en 0)"
     },
@@ -870,27 +870,27 @@
       "phase": 0,
       "script": "tests/a11y/axe.spec.ts",
       "tache": "UX-P0-03",
-      "verifie": "axe : 0 violation serious ou critical, profils iPhone et desktop, espace et console",
+      "verifie": "axe-core (tests/a11y/harnais.ts) : 0 violation serious ou critical, profils iPhone et bureau, espace et console ; la faute nomme la surface, le profil, le selecteur et la regle. NON BLOQUANTE AVANT LA PHASE 1 (decision du 2026-09-16) : sur les maquettes, une faute est IMPRIMEE comme dette, jamais tue, et la passe sort en 0 ; QA-T16 (phase 1) l'annule en rendant la passe bloquante sur les routes reelles. Les routes reelles de la phase 0 (connexion SEC-03, confidentialite JUR-T04) sont NOMMEES absentes dans chaque verdict ; presentes, elles sont nommees NON MESUREES jusqu'au serveur de test de QA-T16. Surfaces DERIVEES de docs/maquettes/VALIDATION.md (6 de l'espace, 2 de la console) ; profils iPhone 14 Pro (WebKit) et bureau (Chromium) lus dans playwright.config.ts (PROFILS_A11Y) ; chaque mesure au PREMIER PLAN (bringToFront puis visibilityState lu, compte imprime et confronte). La page-piege tests/a11y/bac/piege.html est BLOQUANTE : A11Y_BAC=1 l'ajoute a la passe du depot, qui sort alors en non nul",
       "fixtureRouge": "commiter une page-piege",
-      "preuveRouge": null
+      "preuveRouge": "tests/a11y/*.spec.ts vus ROUGES avant le harnais le 2026-09-26 (Failed to load url ../../playwright.config). Page-piege (bouton de 24 px, texte de 14 px a 2,17:1, bloc de 600 px) : chacune des trois passes rougit en la nommant, dans un test toujours joue ; A11Y_BAC=1 npx vitest run tests/a11y -> 3 fichiers en echec, 3 tests rouges nommant tests/a11y/bac/piege.html et button#bouton-24, main > p.contraste-faible, main > div.largeur-fixe ; sans A11Y_BAC -> 8 tests verts, 8 surfaces, 16 mesures au premier plan sur 16, 530 cibles mesurees. Rouge constate par: A05"
     },
     {
       "id": "GATE-UX-CIBLES",
       "phase": 0,
       "script": "tests/a11y/cibles.spec.ts",
       "tache": "UX-P0-03",
-      "verifie": "cibles tactiles >= 48 px dans l'espace, >= 44 px dans la console",
+      "verifie": "cibles interactives (liens, boutons, champs, roles interactifs) : 48 x 48 px CSS au moins dans l'espace (REQ-UX-017), 44 px sur mobile et 24 px sur le bureau dans la console (REQ-UX-018) ; corps de texte de l'espace (p, li, dd, blockquote porteurs de texte) a 18 px au moins et contraste d'au moins 4,5:1 sur son fond effectif ; le vert imprime le compte des cibles mesurees. NON BLOQUANTE AVANT LA PHASE 1 (decision du 2026-09-16) : sur les maquettes, une faute est IMPRIMEE comme dette, jamais tue, et la passe sort en 0 ; QA-T16 (phase 1) l'annule en rendant la passe bloquante sur les routes reelles. Les routes reelles de la phase 0 (connexion SEC-03, confidentialite JUR-T04) sont NOMMEES absentes dans chaque verdict ; presentes, elles sont nommees NON MESUREES jusqu'au serveur de test de QA-T16. Surfaces DERIVEES de docs/maquettes/VALIDATION.md (6 de l'espace, 2 de la console) ; profils iPhone 14 Pro (WebKit) et bureau (Chromium) lus dans playwright.config.ts (PROFILS_A11Y) ; chaque mesure au PREMIER PLAN (bringToFront puis visibilityState lu, compte imprime et confronte). La page-piege tests/a11y/bac/piege.html est BLOQUANTE : A11Y_BAC=1 l'ajoute a la passe du depot, qui sort alors en non nul. Dette mesuree le 2026-09-26 : deposer.html et mes-commissions.html portent un p.doux.petit a 16 px ; les deux maquettes de console portent des cibles de 21 px sur le bureau et des cases de 24 px sur mobile",
       "fixtureRouge": "commiter une page-piege a 32 px",
-      "preuveRouge": null
+      "preuveRouge": "tests/a11y/*.spec.ts vus ROUGES avant le harnais le 2026-09-26 (Failed to load url ../../playwright.config). Page-piege (bouton de 24 px, texte de 14 px a 2,17:1, bloc de 600 px) : chacune des trois passes rougit en la nommant, dans un test toujours joue ; A11Y_BAC=1 npx vitest run tests/a11y -> 3 fichiers en echec, 3 tests rouges nommant tests/a11y/bac/piege.html et button#bouton-24, main > p.contraste-faible, main > div.largeur-fixe ; sans A11Y_BAC -> 8 tests verts, 8 surfaces, 16 mesures au premier plan sur 16, 530 cibles mesurees. Rouge constate par: A05"
     },
     {
       "id": "GATE-UX-REFLOW",
       "phase": 0,
       "script": "tests/a11y/reflow.spec.ts",
       "tache": "UX-P0-03",
-      "verifie": "320 px et zoom 200 % sans defilement horizontal",
+      "verifie": "a 320 px de large, et au zoom de 200 % du profil (largeur divisee par deux, jamais sous 320 px) : aucun defilement horizontal ; la faute nomme la surface, la largeur, le debordement et l'element qui l'introduit. NON BLOQUANTE AVANT LA PHASE 1 (decision du 2026-09-16) : sur les maquettes, une faute est IMPRIMEE comme dette, jamais tue, et la passe sort en 0 ; QA-T16 (phase 1) l'annule en rendant la passe bloquante sur les routes reelles. Les routes reelles de la phase 0 (connexion SEC-03, confidentialite JUR-T04) sont NOMMEES absentes dans chaque verdict ; presentes, elles sont nommees NON MESUREES jusqu'au serveur de test de QA-T16. Surfaces DERIVEES de docs/maquettes/VALIDATION.md (6 de l'espace, 2 de la console) ; profils iPhone 14 Pro (WebKit) et bureau (Chromium) lus dans playwright.config.ts (PROFILS_A11Y) ; chaque mesure au PREMIER PLAN (bringToFront puis visibilityState lu, compte imprime et confronte). La page-piege tests/a11y/bac/piege.html est BLOQUANTE : A11Y_BAC=1 l'ajoute a la passe du depot, qui sort alors en non nul",
       "fixtureRouge": "commiter une page-piege a largeur fixe",
-      "preuveRouge": null
+      "preuveRouge": "tests/a11y/*.spec.ts vus ROUGES avant le harnais le 2026-09-26 (Failed to load url ../../playwright.config). Page-piege (bouton de 24 px, texte de 14 px a 2,17:1, bloc de 600 px) : chacune des trois passes rougit en la nommant, dans un test toujours joue ; A11Y_BAC=1 npx vitest run tests/a11y -> 3 fichiers en echec, 3 tests rouges nommant tests/a11y/bac/piege.html et button#bouton-24, main > p.contraste-faible, main > div.largeur-fixe ; sans A11Y_BAC -> 8 tests verts, 8 surfaces, 16 mesures au premier plan sur 16, 530 cibles mesurees. Rouge constate par: A05"
     },
     {
       "id": "GATE-UX-ETATS-VIDES",

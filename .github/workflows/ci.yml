@@ -337,6 +337,11 @@ jobs:
         run: pnpm red-first --base "origin/${{ github.base_ref }}"
       - name: La garde red-first sait rougir
         run: pnpm red-first:prove
+      # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
+      # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
+      # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
+      - name: Navigateurs des passes d accessibilite
+        run: pnpm a11y:navigateurs
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
       # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
       # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.

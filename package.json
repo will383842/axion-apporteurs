@@ -118,10 +118,13 @@
     "red-first": "tsx scripts/gates/red-first.ts",
     "red-first:prove": "tsx scripts/gates/red-first.ts --prove",
     "mutation": "bash scripts/gates/stryker.sh",
-    "mutation:prove": "tsx scripts/gates/mutation.ts --prove"
+    "mutation:prove": "tsx scripts/gates/mutation.ts --prove",
+    "a11y:navigateurs": "playwright install --with-deps chromium webkit"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
     "@stryker-mutator/core": "10.0.0",
     "@stryker-mutator/vitest-runner": "10.0.0",
     "@testcontainers/postgresql": "12.1.0",
