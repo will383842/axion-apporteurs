@@ -8966,7 +8966,8 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/perf-budgets.ts",
-        "tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts"
+        "tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -9024,7 +9025,8 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/gov-sonde.ts",
-        "tests/unit/gouvernance/sonde-distingue-les-deux-depots.spec.ts"
+        "tests/unit/gouvernance/sonde-distingue-les-deux-depots.spec.ts",
+        "tests/unit/gouvernance/affirmations-verifiees.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -10346,7 +10348,8 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/gov-tasks.ts",
-        "tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts"
+        "tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts",
+        "tests/unit/gouvernance/gardes.spec.ts"
       ],
       "schema": false,
       "sensible": [],
