@@ -10,7 +10,7 @@
 | Où est `main` ? | `310cf0c` — 2026-09-25T19:18:06+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #92 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #91 (un conflit avec `main`) · 4. #93 (un conflit avec `main`) · 5. #124 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
-| Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.10 j |
+| Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #124 — 2026-09-25 |
@@ -19,7 +19,7 @@
 
 ## Phase courante : 0
 
-21/110 tâches terminées · reste 66.10 j estimés.
+21/110 tâches terminées · reste 66.60 j estimés.
 
 ## Tâches
 
@@ -207,7 +207,7 @@ monter GOV-073, GOV-074, GOV-075, GOV-081 et GOV-084 ; les scripts de contrôle
 gardent leurs propres signaux, et un `scripts/gates/*` hors de la garde reste ordinaire (dette déjà
 relevée par `securite`).
 
-… 47 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 48 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

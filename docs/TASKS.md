@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**284 taches · 214.35 j estimes.**
+**284 taches · 214.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 110 | 83.85 | 21 |
+| 0 — Socle technique | 110 | 84.35 | 21 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -464,7 +464,7 @@ Couvre : `REQ-SEC-016`, `REQ-SEC-035`
 
 ### QA-T08 — Logger pino structuré, redaction PII, Sentry, notify
 
-`0.5 j` · zone `qualite` · sensible : espace, rgpd · depend de `QA-T01`
+`1 j` · zone `qualite` · sensible : espace, rgpd · depend de `QA-T01`, `DM-01`
 
 Couvre : `REQ-QA-024`
 
