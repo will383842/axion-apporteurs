@@ -24,9 +24,9 @@ const autreReel = { id: 'a-reel-2', isTest: false };
 const essai = { id: 'a-essai', isTest: true };
 
 const lignes: LigneDArgent[] = [
-  { apporteurId: reel.id, montantCents: 120_000 },
-  { apporteurId: autreReel.id, montantCents: 30_000 },
-  { apporteurId: essai.id, montantCents: 50_000 },
+  { apporteurId: reel.id, montantCents: 7 },
+  { apporteurId: autreReel.id, montantCents: 3 },
+  { apporteurId: essai.id, montantCents: 5 },
 ];
 
 describe('REQ-CPL-020 — la population réelle exclut `isTest`, et tout agrégat part d’elle', () => {
@@ -35,17 +35,17 @@ describe('REQ-CPL-020 — la population réelle exclut `isTest`, et tout agréga
     expect(populationReelle([essai])).toEqual([]);
   });
 
-  it('REQ-CPL-020 : TÉMOIN — l’agrégat brut et l’agrégat réel divergent de 50 000 centimes', () => {
+  it('REQ-CPL-020 : TÉMOIN — l’agrégat brut et l’agrégat réel divergent de 5 centimes', () => {
     const brut = lignes.reduce((s, l) => s + l.montantCents, 0);
     const horsTest = totalCentsHorsTest(lignes, [reel, autreReel, essai]);
-    expect(brut).toBe(200_000);
-    expect(horsTest).toBe(150_000);
-    expect(brut - horsTest).toBe(50_000);
+    expect(brut).toBe(15);
+    expect(horsTest).toBe(10);
+    expect(brut - horsTest).toBe(5);
   });
 
   it('REQ-CPL-020 : contre-témoin — sans apporteur de test, les deux agrégats sont égaux', () => {
     const sansEssai = lignes.filter((l) => l.apporteurId !== essai.id);
-    expect(totalCentsHorsTest(sansEssai, [reel, autreReel])).toBe(150_000);
+    expect(totalCentsHorsTest(sansEssai, [reel, autreReel])).toBe(10);
   });
 
   it('REQ-CPL-020 : une ligne dont l’apporteur est INCONNU est refusée — jamais comptée par défaut', () => {
@@ -59,7 +59,7 @@ describe('REQ-CPL-020 — la population réelle exclut `isTest`, et tout agréga
     expect((e as ErreurPopulation).message).toContain('inconnu');
   });
 
-  it('REQ-CPL-020 : un montant non entier est refusé (centimes entiers, REQ-DM-001)', () => {
+  it('REQ-CPL-020 : un montant non entier est refusé (des centimes entiers)', () => {
     expect(() => totalCentsHorsTest([{ apporteurId: reel.id, montantCents: 1.5 }], [reel])).toThrow(
       ErreurPopulation
     );
