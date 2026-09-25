@@ -20,7 +20,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
-import { lireEnvironnement } from '../../lib/env';
+import { lireDemarrage } from '../../lib/env';
 import { OPTIONS_DU_CLIENT } from '../securite/rate-limit';
 
 /** Les sous-systèmes jugés, dans l'ordre où la réponse les rend. */
@@ -131,7 +131,7 @@ export async function verifierDisponibilite(
       : Promise.resolve(false),
   ]);
   const verdicts: Record<SousSysteme, boolean> = {
-    environnement: lireEnvironnement(env).ok,
+    environnement: lireDemarrage(env).ok,
     base,
     cache,
     migrations,

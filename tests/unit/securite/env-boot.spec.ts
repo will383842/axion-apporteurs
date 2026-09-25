@@ -99,16 +99,8 @@ const boot = (variables: Record<string, string>): Sortie => lancer(BOOT, variabl
 /** 40 à 60 caractères hexadécimaux : jamais 32, jamais 64, pour qu'une longueur imprimée se voie. */
 const valeurAuHasard = (): string => randomBytes(randomInt(20, 31)).toString('hex');
 
-/**
- * QA-T04 a étendu le schéma à la CONFIGURATION (base, cache, puits de notifications) : un jeu de
- * secrets complet n'est un environnement complet qu'avec elle. Les URL désignent le poste local.
- */
 function environnementComplet(): Record<string, string> {
-  const env: Record<string, string> = {
-    DATABASE_URL: 'postgresql://partners@localhost:5432/partners',
-    REDIS_URL: 'redis://localhost:6379',
-    NOTIFY_SINK: 'true',
-  };
+  const env: Record<string, string> = {};
   for (const nom of NOMS_DES_SECRETS) {
     env[nom] = nom === CLE_HEX ? randomBytes(32).toString('hex') : valeurAuHasard();
   }
@@ -219,7 +211,7 @@ describe('REQ-SEC-028 — le boot, jugé par le code de sortie d’un sous-proce
     console.log(`boot complet : code ${s.code}, ${s.ms} ms — ${s.stdout.trim()}`);
     expect(s.stderr).toBe('');
     expect(s.code).toBe(0);
-    expect(s.stdout).toContain(`variables confrontees : ${Object.keys(env).length}`);
+    expect(s.stdout).toContain(`variables confrontees : ${NOMS_DES_SECRETS.length}`);
     expect(fuitesDans(s.stdout + s.stderr, env)).toEqual([]);
   });
 

@@ -107,8 +107,8 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 **Fait.** Lot de quatre tâches, un commit rouge puis un commit de code par tâche. QA-T04 :
 `src/lib/env.ts` étend le schéma de SEC-01 à la configuration (base, cache, puits de
 notifications, niveau de journal, collecte d'erreurs). Hors production, `NOTIFY_SINK=true` est
-exigé, par le prédicat du notifieur importé. `register()` juge l'environnement avant toute
-composition et sort en non nul. `docs/env.md` est le rendu du schéma (`pnpm env:doc`), comparé par
+exigé, par le prédicat du notifieur importé. `register()` juge tout l'environnement par `exigerDemarrage`
+avant toute composition et sort en non nul ; les secrets gardent leur lecteur de SEC-01. `docs/env.md` est le rendu du schéma (`pnpm env:doc`), comparé par
 `env-fail-fast.spec.ts`. `/api/livez` et `/api/readyz` vivent dans `src/server/sante/disponibilite.ts` :
 la sonde de disponibilité juge quatre sous-systèmes et ne nomme qu'eux. L'entrée de l'image migre
 en bloquant, `SKIP_MIGRATE=1` n'est écrit que par elle et par le runbook de retour arrière, et le
@@ -143,7 +143,11 @@ programme ; `dom.iterable` le rétablit. Et `vitest list --json` prend un CHEMIN
 avec un fichier de test à sa suite pour en sonder l'inclusion, il a écrasé ce fichier par la
 liste JSON, et le commit suivant l'a emporté sans que rien ne rougisse. C'est `red-first` qui
 l'a trahi, en rendant « aucune suite trouvée » au lieu d'une erreur de chargement ; la spec est
-restaurée depuis son commit de code.
+restaurée depuis son commit de code. Enfin, étendre le schéma que lisent d'autres porteurs change
+leur contrat : `lireEnvironnement` exigeait soudain la base et le puits de notifications de la
+frontière axionia et des clés de chiffrement, qui n'en ont pas besoin, et la Gate A l'a vu
+(`frontiere.spec.ts`, et le témoin sans démon du harnais, qui compte les fichiers verts). Les
+secrets gardent leur lecteur ; le démarrage a le sien, `lireDemarrage`.
 
 ### PR #129 — 2026-09-25 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee
 

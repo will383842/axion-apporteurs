@@ -34,7 +34,7 @@ import {
   NOMS_DES_VARIABLES,
   NOMS_FACULTATIFS,
   documenterEnvironnement,
-  lireEnvironnement,
+  lireDemarrage,
   type Refus,
 } from '../../../src/lib/env';
 import { productionDeclaree } from '../../../src/lib/notify';
@@ -97,7 +97,7 @@ function environnementComplet(): Record<string, string> {
 }
 
 const refusDe = (env: Record<string, string | undefined>): Refus[] => {
-  const r = lireEnvironnement(env);
+  const r = lireDemarrage(env);
   return r.ok ? [] : r.refus;
 };
 

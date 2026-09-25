@@ -65,8 +65,8 @@ let composition: Composition | undefined;
  */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
-  const { exigerEnvironnement } = await import('./lib/env');
-  exigerEnvironnement(process.env);
+  const { exigerDemarrage } = await import('./lib/env');
+  exigerDemarrage(process.env);
   composition = await composer(process.env);
 }
 

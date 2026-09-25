@@ -171,8 +171,6 @@ export const NOMS_FACULTATIFS: readonly string[] = Object.entries(schemaConfigur
   .filter(([nom, type]) => type.isOptional() && nom !== 'NOTIFY_SINK')
   .map(([nom]) => nom);
 
-const schemaEnvironnement = schemaSecrets.merge(schemaConfiguration);
-
 /** Le motif est construit ICI : le `message` d'une issue Zod peut porter la valeur reçue. */
 function motifDe(issue: z.ZodIssue): MotifDeRefus {
   if (issue.code === z.ZodIssueCode.custom && estMotif(issue.params?.motif)) {
@@ -184,12 +182,17 @@ function motifDe(issue: z.ZodIssue): MotifDeRefus {
   return 'format_invalide';
 }
 
-export type Lecture = { ok: true; env: Environnement } | { ok: false; refus: Refus[] };
+export type Lecture = { ok: true; env: Secrets } | { ok: false; refus: Refus[] };
+export type LectureDuDemarrage = { ok: true; env: Environnement } | { ok: false; refus: Refus[] };
 
-/** PURE : juge un environnement, n'écrit rien, ne sort pas. */
+/**
+ * PURE : juge les SECRETS d'un environnement (SEC-01), n'écrit rien, ne sort pas. Ses porteurs
+ * (`clesPii`, la frontière axionia) n'ont besoin que des secrets : leur imposer la configuration
+ * les ferait refuser un jeu de secrets valide.
+ */
 export function lireEnvironnement(source: Readonly<Record<string, string | undefined>>): Lecture {
   const refus: Refus[] = [];
-  const lu = schemaEnvironnement.safeParse(source);
+  const lu = schemaSecrets.safeParse(source);
   if (!lu.success) {
     for (const issue of lu.error.issues) {
       refus.push({ variable: String(issue.path[0]), motif: motifDe(issue) });
@@ -221,14 +224,33 @@ export function lireEnvironnement(source: Readonly<Record<string, string | undef
     }
   }
 
+  if (!lu.success || refus.length > 0) return { ok: false, refus };
+  return { ok: true, env: lu.data };
+}
+
+/**
+ * PURE : juge TOUT l'environnement du démarrage (QA-T04, REQ-QA-030) — les secrets par
+ * `lireEnvironnement`, puis la configuration, puis la règle du puits de notifications. Les refus
+ * des secrets viennent d'abord, dans leur ordre ; aucun n'est perdu.
+ */
+export function lireDemarrage(
+  source: Readonly<Record<string, string | undefined>>
+): LectureDuDemarrage {
+  const secrets = lireEnvironnement(source);
+  const refus: Refus[] = secrets.ok ? [] : [...secrets.refus];
+  const configuration = schemaConfiguration.safeParse(source);
+  if (!configuration.success) {
+    for (const issue of configuration.error.issues) {
+      refus.push({ variable: String(issue.path[0]), motif: motifDe(issue) });
+    }
+  }
   // REQ-CPL-021 : hors production, le puits de notifications est exigé. « Production » est le
   // prédicat du notifieur, importé — jamais une seconde écriture qui divergerait de lui.
   if (!productionDeclaree(source) && source.NOTIFY_SINK !== 'true') {
     refus.push({ variable: 'NOTIFY_SINK', motif: 'requise_hors_production' });
   }
-
-  if (!lu.success || refus.length > 0) return { ok: false, refus };
-  return { ok: true, env: lu.data };
+  if (!secrets.ok || !configuration.success || refus.length > 0) return { ok: false, refus };
+  return { ok: true, env: { ...secrets.env, ...configuration.data } };
 }
 
 /** Une ligne de refus : le nom, le motif, et pour une égalité les autres noms. Jamais la valeur. */
@@ -236,20 +258,40 @@ export function formaterRefus(r: Refus): string {
   return `${r.variable} : ${r.motif}${r.avec ? ` ${r.avec.join(', ')}` : ''}`;
 }
 
+/** Écrit les refus sur la sortie d'erreur, une ligne chacun, et sort en 1. Jamais la valeur. */
+function refuserLeDemarrage(entete: string, refus: readonly Refus[]): never {
+  process.stderr.write(`${entete}\n${refus.map((r) => `  ${formaterRefus(r)}\n`).join('')}`);
+  process.exit(1);
+}
+
 /**
- * Le boot : rend l'environnement jugé, ou écrit les refus sur la sortie d'erreur et sort en 1. N'est appelé
- * par personne à l'import.
+ * Le boot des SECRETS (SEC-01) : rend les secrets, ou écrit les refus sur la sortie d'erreur et sort
+ * en 1. N'est appelé par personne à l'import.
  */
 export function exigerEnvironnement(
   source: Readonly<Record<string, string | undefined>> = process.env
-): Environnement {
+): Secrets {
   const lu = lireEnvironnement(source);
   if (lu.ok) return lu.env;
-  process.stderr.write(
-    "Démarrage refusé : variables d'environnement en défaut (src/lib/env.ts, docs/env.md).\n" +
-      lu.refus.map((r) => `  ${formaterRefus(r)}\n`).join('')
+  return refuserLeDemarrage(
+    "Démarrage refusé : secrets d'environnement en défaut (src/lib/env.ts, .env.example).",
+    lu.refus
   );
-  process.exit(1);
+}
+
+/**
+ * Le DÉMARRAGE du serveur (QA-T04) : tout l'environnement, ou la sortie en 1. C'est ce que
+ * `register()` de `src/instrumentation.ts` appelle avant toute composition.
+ */
+export function exigerDemarrage(
+  source: Readonly<Record<string, string | undefined>> = process.env
+): Environnement {
+  const lu = lireDemarrage(source);
+  if (lu.ok) return lu.env;
+  return refuserLeDemarrage(
+    "Démarrage refusé : variables d'environnement en défaut (src/lib/env.ts, docs/env.md).",
+    lu.refus
+  );
 }
 
 /**
@@ -270,7 +312,7 @@ export function kidDe(valeur: string): string {
 /** Le chemin de la vue. Elle se régénère par `pnpm env:doc`, et `env-fail-fast.spec.ts` la compare. */
 export const CHEMIN_DOC_ENV = 'docs/env.md';
 
-type NomDeVariable = keyof z.infer<typeof schemaEnvironnement>;
+type NomDeVariable = keyof Environnement;
 
 /**
  * Le RÔLE de chaque variable, en une phrase. Le type exige une entrée par nom du schéma : une
