@@ -3258,7 +3258,10 @@
         "src/domain/contrat/publication.ts",
         "src/domain/contrat/variables.ts",
         "src/domain/lexique/lexique-interdit.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "src/domain/registre/registre-decisions.ts",
+        "scripts/lot/registre-decisions.ts",
+        "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
       ],
       "schema": false,
       "sensible": [],
