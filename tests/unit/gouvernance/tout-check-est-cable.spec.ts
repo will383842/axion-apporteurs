@@ -6,9 +6,10 @@
 // `pull_request` ne produise aucun check de PR. Le CONTENU de la gate est livre en partie par
 // QA-T01 — typecheck, ESLint en erreur, Prettier, Vitest et la couverture du domaine, juges par
 // `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` ; le harnais testcontainers tourne dans
-// l'etape Tests (`tests/unit/ci/integration-collectee-par-gate-a.spec.ts`). Le reste — semgrep
-// (QA-T07), audit, gitleaks, req:check, idor:check, lint de migration, size-limit (QA-T28) — n'est
-// pas encore livre. Le dire ici vaut mieux que le laisser croire : c'est la case cochee sans etre
+// l'etape Tests (`tests/unit/ci/integration-collectee-par-gate-a.spec.ts`) ; et semgrep est livre par
+// QA-T07, juge par `tests/unit/qualite/semgrep-regles-maison.spec.ts`. Le reste — audit, gitleaks,
+// req:check, idor:check, lint de migration, size-limit (QA-T28) — n'est pas encore livre. Le dire ici
+// vaut mieux que le laisser croire : c'est la case cochee sans etre
 // vraie que GOV-011 a trouvee seize fois le 2026-09-04.
 /**
  * `gov:depot-visibilite` — la visibilité décidée, le check requis câblé, et ce que la garde

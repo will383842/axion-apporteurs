@@ -455,7 +455,7 @@
       ".semgrep.yml",
       ".github/workflows/ci.yml",
       "docs/gates.json",
-      "scripts/gates/ast-prisma.ts",
+      "scripts/gates/semgrep.ts",
       "tests/unit/qualite/semgrep-regles-maison.spec.ts"
     ],
     "QA-T30": [
