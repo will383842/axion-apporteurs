@@ -1372,8 +1372,10 @@ export function fichiersDesTachesAElever(
       if (ecart === null) continue;
       const declares = cheminsDeLaTache({ ...t, paths: t.paths ?? [] });
       for (const f of produit) {
-        const couvre = declares.some((c) => c === f || (c.endsWith('/') && f.startsWith(c)));
-        if (!couvre) continue;
+        // LA règle « un chemin déclaré couvre un fichier » est `touche()` : fichier exact, ou
+        // répertoire AVEC ou SANS barre finale. La retaper avait perdu le second cas (refus
+        // `exactitude` et `simplicite` sur 82ba226 — ~90 tâches déclarent `src/app/X` sans barre).
+        if (!declares.some((c) => touche(c, [f]))) continue;
         const parTache = vus.get(f) ?? new Map<string, string[]>();
         const qui = `${t.id} (${ecart})`;
         parTache.set(qui, [...(parTache.get(qui) ?? []), ou]);

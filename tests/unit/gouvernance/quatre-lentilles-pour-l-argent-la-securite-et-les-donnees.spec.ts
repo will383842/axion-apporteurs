@@ -331,6 +331,22 @@ describe('REQ-GOV-011 — GOV-097 : un fichier déclaré par une tâche sensible
     expect(r.raisons.join(' ; ')).toContain('SEC-07');
   });
 
+  it('REQ-GOV-011 · un RÉPERTOIRE déclaré SANS barre finale couvre ses fichiers — la même règle que `touche()`', () => {
+    // Refus `exactitude` et `simplicite` sur 82ba226 : la correspondance était retapée et ne
+    // reconnaissait un répertoire qu'à sa barre finale ; ~90 tâches déclarent `src/app/X` sans elle.
+    const dossier = 'src/lib/zz-sans-barre';
+    const f = `${dossier}/page.tsx`;
+    expect(reel([f]).niveau, 'contre-témoin : personne ne déclare ce répertoire').toBe('ordinaire');
+    const tete = registre().map((t) =>
+      t.id === 'SEC-07' ? { ...t, paths: [...(t.paths ?? []), dossier] } : t
+    );
+    const r = reel([f], tete);
+    expect(r.niveau, r.raisons.join(' ; ')).toBe('eleve');
+    expect(r.raisons.join(' ; ')).toContain('SEC-07');
+    // Un préfixe de NOM n'est pas un répertoire : `src/lib/zz-sans-barre-autre.ts` n'est pas couvert.
+    expect(reel([`${dossier}-autre.ts`], tete).niveau).toBe('ordinaire');
+  });
+
   it('REQ-GOV-011 · contre-témoin : un fichier que seule une tâche NEUTRE déclare reste ORDINAIRE', () => {
     // `docs/gates.json` (déclaré par SEC-07 et DM-01) et `docs/journal/…` (sous le `docs/journal/`
     // de GOV-008, `auth`) ne sont pas du code produit : la règle ne lit que `src/`.
