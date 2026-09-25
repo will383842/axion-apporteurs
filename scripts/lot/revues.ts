@@ -748,34 +748,29 @@ export function resoudreLeLot<T extends TacheDeLaPr>(e: {
 export const ZONES_A_RISQUE_ELEVE: readonly string[] = ['argent', 'securite'];
 
 /**
- * LES ZONES SENSIBLES QUE REQ-GOV-011 NOMME pour la section « Attaque » (`commissions/**`,
- * `attributions/**`, `auth/**`, plus `espace/**`). Elles vivaient dans `scripts/gates/gov-pr.ts` ;
- * elles vivent ici parce que le risque les lit aussi, et deux copies divergent (RM-01).
+ * LES ZONES SENSIBLES QUE REQ-GOV-011 NOMME pour la section « Attaque » — PAR LEUR NOM, jamais par
+ * un préfixe de chemin. Elles vivaient dans `scripts/gates/gov-pr.ts` ; elles vivent ici parce que
+ * le risque les lit aussi, et deux copies divergent (RM-01).
+ *
+ * 🔴 LE DÉCLENCHEUR PAR ZONE A ÉTÉ MORT, mesuré le 2026-09-16 sur la PR 46 : il comparait le DÉBUT
+ * du chemin à `commissions/`, `attributions/`, `auth/`, `espace/`, et aucun fichier suivi ne
+ * commence par l'un d'eux — le code vit sous `src/`. GOV-078 l'a fait lire par SEGMENT ; la lecture
+ * est désormais `segmentsNommesTouches()`, ci-dessous, la même pour l'Attaque et pour le risque.
  */
-export const ZONES_SENSIBLES: readonly string[] = [
-  'commissions/',
-  'attributions/',
-  'auth/',
-  'espace/',
-];
+export const ZONES_SENSIBLES: readonly string[] = ['commissions', 'attributions', 'auth', 'espace'];
 
 /**
- * LES SEGMENTS DE CHEMIN QUI DÉSIGNENT L'ARGENT, LA SÉCURITÉ ET LES DONNÉES dans le code. Un fichier
- * est en zone sensible si UN de ses segments — dossier, ou nom de fichier sans extension, en
- * minuscules — en fait partie, à n'importe quelle profondeur : `src/server/auth/session.ts`,
- * `src/app/(espace)/connexion/page.tsx`, `src/proxy.ts`.
- *
- * 🔴 POURQUOI DES SEGMENTS ET PAS DES PRÉFIXES. `ZONES_SENSIBLES` se lit en PRÉFIXE depuis la racine
- * (`f.startsWith('auth/')`) : mesuré le 2026-09-25, aucun fichier suivi de ce dépôt ne commence par
- * l'un d'eux — le code vit sous `src/`. Pris tel quel, le signal 3 n'aurait jamais rien élevé.
- * Les segments de `ZONES_SENSIBLES` en DÉRIVENT, et le reste est ce que le code du dépôt et les
+ * LES SEGMENTS DE CHEMIN QUI DÉSIGNENT L'ARGENT, LA SÉCURITÉ ET LES DONNÉES dans le code — la liste
+ * du RISQUE (GOV-097). Elle DÉRIVE de `ZONES_SENSIBLES` et l'élargit de ce que le code du dépôt et les
  * `paths` du registre nomment pour l'argent (`commission`, `argent`, `grille`), la sécurité
- * (`securite`, `acces`, `roles`, `proxy`, `env`, `webhooks`) et les données
- * (`donnees-personnelles`, `pii`).
+ * (`securite`, `acces`, `roles`, `proxy`, `env`, `webhooks`) et les données (`donnees-personnelles`,
+ * `pii`). Lue par `segmentsNommesTouches()` fichier COMPRIS : `src/proxy.ts`, `src/lib/env.ts`.
+ *
+ * La section « Attaque » garde la liste étroite (`ZONES_SENSIBLES`, répertoires seuls) : l'élargir
+ * change ce que REQ-GOV-011 exige, et ce n'est pas la décision de Will du 2026-09-25.
  */
 export const SEGMENTS_DES_ZONES_SENSIBLES: readonly string[] = [
-  ...ZONES_SENSIBLES.map((z) => z.replace(/\/$/, '')),
-  '(espace)',
+  ...ZONES_SENSIBLES,
   'commission',
   'attribution',
   'argent',
@@ -789,6 +784,46 @@ export const SEGMENTS_DES_ZONES_SENSIBLES: readonly string[] = [
   'donnees-personnelles',
   'pii',
 ];
+
+/**
+ * Un segment de chemin, débarrassé de ce qui l'habille sans le nommer : les parenthèses d'un
+ * groupe de routes (`(espace)`), les crochets d'un segment dynamique (`[id]`) ; en minuscules.
+ */
+function nuDuSegment(segment: string): string {
+  return segment
+    .replace(/^[([]+/, '')
+    .replace(/[)\]]+$/, '')
+    .toLowerCase();
+}
+
+/**
+ * LA LECTURE PAR SEGMENT — UNE SEULE, pour la section « Attaque » (`zonesSensiblesTouchees`,
+ * `scripts/gates/gov-pr.ts`, liste `ZONES_SENSIBLES`) et pour le risque (`fichierEnZoneSensible`,
+ * liste `SEGMENTS_DES_ZONES_SENSIBLES`). Un segment répond s'il est, nu, dans `noms`, à n'importe
+ * quelle profondeur. `fichierCompris` : le dernier segment — le nom du fichier, avec et sans
+ * extension — est-il lu aussi ? Rend le chemin RÉEL jusqu'au segment qui a répondu (`sous`).
+ */
+export function segmentsNommesTouches(
+  fichiers: readonly string[],
+  noms: readonly string[],
+  { fichierCompris }: { fichierCompris: boolean }
+): { zone: string; sous: string }[] {
+  const vues = new Map<string, { zone: string; sous: string }>();
+  for (const f of fichiers) {
+    const segments = f.split('/');
+    const dernier = segments.length - 1;
+    for (let i = 0; i < segments.length; i++) {
+      if (i === dernier && !fichierCompris) continue;
+      const nu = nuDuSegment(segments[i]!);
+      const lus = i === dernier ? [nu, nu.replace(/\..*$/, '')] : [nu];
+      const zone = lus.find((l) => noms.includes(l));
+      if (zone === undefined) continue;
+      const sous = segments.slice(0, i + 1).join('/');
+      vues.set(sous, { zone, sous });
+    }
+  }
+  return [...vues.values()].sort((a, b) => a.sous.localeCompare(b.sous));
+}
 
 /**
  * LES DOSSIERS DU PROCESSUS, hors racine et hors dossiers cachés (qui le sont tous) : `config/`
@@ -933,16 +968,11 @@ function tacheAElever(t: TacheDeLaPr): string | null {
   return ecarts.length === 0 ? null : ecarts.join(', ');
 }
 
-/** Les segments d'un chemin, en minuscules — le dernier sans son extension. */
-function segments(f: string): string[] {
-  const s = f.toLowerCase().split('/');
-  const dernier = s.pop() ?? '';
-  return [...s, dernier, dernier.replace(/\..*$/, '')];
-}
-
 /** Un fichier de l'argent, de la sécurité ou des données (`SEGMENTS_DES_ZONES_SENSIBLES`). */
 export function fichierEnZoneSensible(f: string): boolean {
-  return segments(f).some((s) => SEGMENTS_DES_ZONES_SENSIBLES.includes(s));
+  return (
+    segmentsNommesTouches([f], SEGMENTS_DES_ZONES_SENSIBLES, { fichierCompris: true }).length > 0
+  );
 }
 
 /**

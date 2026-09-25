@@ -34,7 +34,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { FAMILLES_ATTESTATION } from '../../../scripts/lot/attestation';
+import { FAMILLES as FAMILLES_TASKS } from '../../../scripts/gates/gov-tasks';
 import { FAMILLES as FAMILLES_REQUIREMENTS } from '../../../scripts/gates/gov-requirements';
 
 function lancer(script: string, ...args: string[]): { code: number; sortie: string } {
@@ -49,16 +49,15 @@ const GARDES = [
     script: 'scripts/gates/gov-publication.ts',
     familles: 7,
   },
-  // Les 12 familles d'origine de `gov:tasks`, plus celles de l'attestation inter-dépôt (GOV-038).
-  // La seconde moitié est DÉRIVÉE de son module : recopier « 19 » ici aurait fait de ce fichier la
-  // deuxième source d'un même compte, et c'est le compte qui sert justement à détecter la perte
-  // silencieuse d'une famille. Le 12 reste écrit — il n'a pas de source importable, la liste vivant
-  // dans un script à effets de bord au chargement.
+  // Les familles de `gov:tasks`, y compris celles de l'attestation inter-dépôt (GOV-038) et du
+  // couple état/opération (GOV-086). Le compte ENTIER est DÉRIVÉ de `FAMILLES` : la liste est
+  // importable depuis que la garde vit sous `LANCE_EN_SCRIPT`, et un nombre tapé ici aurait fait de
+  // ce fichier la deuxième source d'un compte qui sert à détecter la perte silencieuse d'une famille.
   {
     nom: 'gov:tasks',
     exigences: '',
     script: 'scripts/gates/gov-tasks.ts',
-    familles: 12 + FAMILLES_ATTESTATION.length,
+    familles: FAMILLES_TASKS.length,
   },
   // Le « 11 » qui vivait ici était TAPÉ, pour la raison que le commentaire ci-dessus regrette :
   // `gov-requirements.ts` avait des effets de bord au chargement, donc sa liste de familles n'était

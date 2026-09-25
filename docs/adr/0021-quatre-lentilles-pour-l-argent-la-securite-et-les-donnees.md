@@ -59,15 +59,20 @@ hors des zones sensibles.
 **Les listes sont des données nommées**, pas des conditions éparpillées : `ZONES_A_RISQUE_ELEVE`,
 `ZONES_SENSIBLES` (qui quitte `scripts/gates/gov-pr.ts` pour le lecteur unique : la section
 « Attaque » et le risque la lisent tous deux), `SEGMENTS_DES_ZONES_SENSIBLES`, qui en dérive, et
-`DOSSIERS_DU_PROCESSUS`. Les zones connues se lisent dans le schéma du registre, qui entre à ce
+`DOSSIERS_DU_PROCESSUS`. **Une seule lecture par segment**, `segmentsNommesTouches()`
+(`scripts/lot/revues.ts`), sert les deux : la section « Attaque » (`zonesSensiblesTouchees()`,
+GOV-078) la lit sur `ZONES_SENSIBLES`, répertoires seuls ; le risque (`fichierEnZoneSensible()`) la
+lit sur `SEGMENTS_DES_ZONES_SENSIBLES`, nom de fichier compris — l'Attaque garde la liste étroite,
+parce que l'élargir changerait ce qu'exige REQ-GOV-011, et ce n'est pas la décision `W14`. Les zones connues se lisent dans le schéma du registre, qui entre à ce
 titre dans la garde des revues.
 
 ### Pourquoi des segments, et pas les préfixes de `ZONES_SENSIBLES`
 
-`ZONES_SENSIBLES` se lit en préfixe depuis la racine (`f.startsWith('auth/')`). Mesuré le
-2026-09-25 sur `3625f6c` : **aucun fichier suivi du dépôt ne commence par l'un d'eux** — le code vit
-sous `src/`. Repris tel quel, le signal « fichier en zone sensible » n'aurait jamais rien élevé, et
-toute PR de code produit à `sensible: []` serait passée à deux lentilles sans que rien ne rougisse.
+Sur `3625f6c`, `ZONES_SENSIBLES` se lisait en préfixe depuis la racine (`f.startsWith('auth/')`), et
+**aucun fichier suivi du dépôt ne commençait par l'un d'eux** — le code vit sous `src/`. Repris tel
+quel, le signal « fichier en zone sensible » n'aurait jamais rien élevé, et toute PR de code produit
+à `sensible: []` serait passée à deux lentilles sans que rien ne rougisse. GOV-078 (#114) a fait
+lire la section « Attaque » par segment en parallèle ; la fusion a réuni les deux lectures en une.
 Un segment se reconnaît à toute profondeur : `src/server/auth/session.ts`,
 `src/app/(espace)/connexion/page.tsx`, `src/domain/commission/calcul.ts`, `src/proxy.ts`,
 `src/lib/env.ts`.
@@ -113,6 +118,8 @@ motifs, et tout `Verdict: refuse` bloque. La règle tient dans la main de la len
 - **Garder la liste blanche de zones et n'ajouter que `src/` aux chemins ordinaires** : n'aurait rien
   déclassé — la zone suffisait à élever.
 - **Lire `ZONES_SENSIBLES` en préfixe** : inerte sur ce dépôt (voir ci-dessus).
+- **Élargir la section « Attaque » à `SEGMENTS_DES_ZONES_SENSIBLES`** : un changement de ce
+  qu'exige REQ-GOV-011, qui n'appartient pas à cette tâche.
 - **Descendre la garde des revues, la CI et la racine à deux lentilles** : c'est exactement la PR
   qui peut désarmer toutes les autres.
 - **Outiller (2) dans `gov:pr`** (un refus « de prose » qui ne bloquerait pas) : la garde ne sait
@@ -141,6 +148,6 @@ par la charte et l'entrée A09 de `docs/agents.json`.
 
 - Porter `rgpd` sur les tâches qui manipulent des données personnelles avec `sensible: []` — geste
   du `gardien-spec`, hors de cette tâche.
-- La section « Attaque » lit toujours `ZONES_SENSIBLES` **en préfixe** (`scripts/gates/gov-pr.ts`) :
-  inerte sur les fichiers de `src/`, elle ne s'exige que par `sensible`. La faire lire par segments
-  est un changement de REQ-GOV-011, hors de cette tâche.
+- La section « Attaque » lit par segment depuis GOV-078 (#114), mais sur la liste étroite
+  `ZONES_SENSIBLES` : `src/proxy.ts` ou `src/lib/env.ts` élèvent le risque sans l'exiger. L'aligner
+  sur `SEGMENTS_DES_ZONES_SENSIBLES` est un changement de REQ-GOV-011, hors de cette tâche.
