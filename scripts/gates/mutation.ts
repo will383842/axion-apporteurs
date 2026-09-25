@@ -31,7 +31,7 @@ export interface Mutant {
   mutatorName: string;
   replacement?: string;
   status: string;
-  location: { start: { line: number; column: number } };
+  location: { start: { line: number; column: number }; end?: { line: number; column: number } };
 }
 export interface Rapport {
   schemaVersion?: string;
