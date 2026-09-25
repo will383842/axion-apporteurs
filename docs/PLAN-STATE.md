@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `48b14b6` — 2026-09-25T21:08:41+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #126 (un contrôle requis rouge ou une revue manquante) · 4. #128 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
+| Où est `main` ? | `1ca6592` — 2026-09-25T22:16:37+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #91 (un conflit avec `main`) · 3. #93 (un conflit avec `main`) · 4. #128 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #126 — 2026-09-25 |
+| Dernière entrée de journal | PR #128 — 2026-09-25 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -64,11 +64,10 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
-| 2 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 3 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un contrôle requis rouge ou une revue manquante |
-| 4 | #128 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees | `t/dm-06` | un contrôle requis rouge ou une revue manquante |
-| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #128 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees | `t/dm-06` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -87,7 +86,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0020-le-champ-lot-declare-les-taches-d-une-pr-de-lot.md` — partners/ADR-0020 — Une PR de lot déclare ses tâches dans un champ `Lot:`, et la garde le croit exactement autant que le titre · `docs/adr/0021-quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.md` — partners/ADR-0021 — Quatre lentilles pour l'argent, la sécurité et les données, deux pour le reste ; la prose inexacte est une dette, pas un refus
+`docs/adr/0020-le-champ-lot-declare-les-taches-d-une-pr-de-lot.md` — partners/ADR-0020 — Une PR de lot déclare ses tâches dans un champ `Lot:`, et la garde le croit exactement autant que le titre · `docs/adr/0021-quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.md` — partners/ADR-0021 — Quatre lentilles pour l'argent, la sécurité et les données, deux pour le reste ; la prose inexacte est une dette, pas un refus
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
@@ -99,13 +98,75 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `48b14b6` (2026-09-25T21:08:41+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `1ca6592` (2026-09-25T22:16:37+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #128 — 2026-09-25 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees
+
+**Fait.** L'entité Apporteur existe : `StatutApporteur` (neuf valeurs), `MotifResiliation` et
+`RegimeTva` au schéma, tables `apporteurs`, `jetons_depot` et `identites_facturation` par une
+migration additive, CHECK de forme et déclencheur `jetons_depot_revocation_definitive` en SQL brut.
+Le domaine `src/domain/apporteur/` porte la matrice de transitions, le code de parrainage Crockford
+sur 30 bits, le jeton de dépôt (empreinte seule), `actif` et `dormant` dérivés avec la durée en
+paramètre, la population hors `isTest`, les autofactures par identité datée et le snapshot de
+candidature figé, en parité sur la fixture du producteur réel.
+
+**Reste.** La spec d'intégration `tests/integration/apporteur-jeton-depot.spec.ts` n'a tourné qu'en
+CI : pas de démon Docker sur le poste de l'auteur. Les effets de la résiliation (attributions,
+lignes, événements) et la trace nominative d'une surcharge de seuil ne sont pas ici. La matrice de
+transitions est dérivée du sens des statuts au glossaire §2 : une flèche manquante s'ajoute par la
+tâche qui la cite. `scripts/gates/gov-attributions.ts` est touché hors des `paths` de DM-06, pour
+déclarer en contexte la ligne `Source:` de la fixture.
+
+**Appris.** `gov:publication` lit tout `montantCents: NN` à deux chiffres ou plus comme un montant de
+grille, y compris dans un test : un témoin d'agrégat s'écrit avec des montants à un chiffre.
+`gov:attributions` lit la ligne `Source:` d'une fixture comme une attribution : nommer la tâche du
+producteur exige une déclaration `contexte` dans `CITATIONS_DECLAREES`.
+
+**Relecture.** L'architecte A02 a refusé la tête `9178314` (revue 5321833681) sur deux motifs, et
+`exactitude` et `securite`, qui acceptaient, relevaient des dettes voisines. (1) Le déclencheur ne
+comparait que `revoque_at` : changer l'empreinte d'un jeton révoqué puis réinsérer l'ancienne le
+réactivait, et `TRUNCATE` passait. Désormais une ligne révoquée est gelée (tout `UPDATE` et tout
+`DELETE` refusés), l'empreinte ne change jamais, même sur un jeton actif, un déclencheur
+d'instruction refuse `TRUNCATE`, et `CHECK revoque_at >= cree_at` est posé ; trois témoins
+d'intégration et une lecture statique de la migration, qui rougit sans Docker. (2) La matrice
+passe à la forme `statut x evenement -> statut` de CONVENTIONS §2 : liste fermée
+`EVENEMENTS_APPORTEUR`, un événement par flèche, flèches inchangées, balayage de 9 x 9 cellules.
+Le champ de la demande s'appelle `evenementApporteur` : `journal:sans-pii` réserve le mot nu du
+journal à son écrivain unique. Enfin la source d'aléa de production du code de parrainage est
+exportée (`sourceAleatoireSysteme`, sur `crypto.getRandomValues`), avec un test qui la prouve non
+constante.
+
+`mutation` a refusé la même tête (revue 5321894722) : aucun test ne fixait les flèches, le balayage
+lisait la matrice qu'il jugeait. Les couples attendus sont désormais écrits en littéraux dans la
+spec, confrontés dans les deux sens ; un motif hors vocabulaire est refusé (`motif_inconnu`) ; le
+jeton en clair est prouvé égal aux octets injectés et son empreinte à leur SHA-256 ; le refus d'une
+charge nomme le champ, jamais une valeur. Rejoué par le harnais du relecteur, adapté à la matrice
+réécrite : 15 mutants sur 15 tués, dont les cinq survivants d'avant.
+
+Tour 3 : A02, `exactitude` et `securite` acceptent `6e69616` ; `mutation` refuse (revue
+5322200613) et `gate-a` est rouge sur la couverture des branches (90 % sur
+`snapshot-candidature.ts`). Un témoin fixe désormais le refus d'une charge qui n'est pas un objet
+(`(racine)`), la couverture de `src/domain/apporteur/**` est à 100 %. La contrainte
+`jetons_depot_revocation_apres_creation` est lue par la spec statique et jouée en intégration. La
+lecture statique de la migration juge la FORME des branches du déclencheur (chaque condition
+suivie d'un RAISE) et leur ORDRE, et refuse une clause WHEN : les mutants qui ne rougissaient
+qu'en intégration rougissent sans Docker. La valeur refusée par la matrice est nommée et bornée à
+64 caractères ; plusieurs motifs hors liste sont essayés ; un espion prouve que la source de
+production délègue à `crypto.getRandomValues`. Onze mutants rejoués, onze tués.
+
+Dettes nommées, non traitées ici : aucune sortie depuis `kyc_en_cours` ni `pret_a_signer` hors
+l'avancée, car ni le glossaire §2 ni REQ-DM-011 n'en prévoient (un KYC abandonné reste bloqué ; à
+trancher avant la tâche qui la citera) ; `parrain_code_capture` reste sans borne, faute de valeur
+décidée ; le chevauchement d'identités de facturation n'est refusé que par le domaine, une
+contrainte `EXCLUDE USING gist` demande l'extension `btree_gist` et revient à la tâche qui écrit
+les identités ; l'effacement d'un apporteur passe par l'anonymisation, ses jetons révoqués étant
+indélébiles.
 
 ### PR #126 — 2026-09-25 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema
 
@@ -203,33 +264,7 @@ glossaire : un enum que le glossaire énumère sans qu'il existe encore dans le 
 pas. Poser `StatutApporteur` et ses voisins au §4 AVANT DM-06 fait que la première migration de
 DM-06 sera jugée contre ces valeurs, au lieu d'en fixer elle-même le vocabulaire.
 
-### PR #122 — 2026-09-25 — chore(GOV-098): perimetre fonctionnel decide par Will le 2026-09-25 — lignees, parrain, statistiques, bibliotheque
-
-**Fait.** La décision de Will du 2026-09-25 est au registre : ligne `W15` en §1 de
-`docs/DECISIONS.md`, dix hypothèses `HYP-W15-*` en §2, treize exigences nouvelles (REQ-DM-044 à 047,
-REQ-UX-040 à 046, REQ-SEC-039 et 040) et REQ-UX-006 amendée — la liste des filleuls directs, réduite
-au prénom, à l'initiale du nom et à l'état du contrat, devient la seule exception à l'interdiction
-d'identité ; le montant reste agrégé par mois. Douze tâches versées par `hors-depot/verser-tache.mjs`
-(DM-26 à 29, UX-P2-08 et 09, UX-P3-07 à 12), plus GOV-098 qui porte la PR ; aucune n'est livrée ici.
-Le glossaire définit « lignée » et « équipe » ; `docs/ESPACE-ROUTES.md` rattache `/filleuls` à
-REQ-UX-041.
-
-**Reste.** Deux hypothèses `avenant` attendent Will avant le premier DocuSeal :
-`HYP-W15-ART-4-6` (la liste des filleuls face à l'art. 4.6 al. 6 du gabarit) et
-`HYP-W15-PARRAIN-A-DATE` (retirer au parrain d'origine les lignes futures n'a aucune base écrite
-dans l'art. 4.6 al. 1). DM-26 et UX-P2-09 portaient « NE PAS ARMER » tant qu'elles étaient ouvertes. **Will les a tranchées le 2026-09-25** (« fais selon tes recommandations ») : art. 4.6 al. 6 amendé — liste réduite à « en signature » et « signé », le filleul au contrat résilié sort de la liste — et clause de correction du rattachement à motifs limitatifs ; la rédaction est portée par l'acceptance de JUR-T01, le texte définitif reste soumis à la relecture de Will (JUR-T01b).
-Deux spécifications longues — `vues-derivees.spec.ts` et `refus-de-rendre-et-de-publier.spec.ts` —
-n'ont pas été jouées dans l'arbre local (plus de dix minutes sous 1,3 Go libres) : la CI les juge.
-
-Les lentilles `exactitude` et `securite` ont refusé `e57057d` : les états `signature_en_cours` et `termine` n'existaient dans aucune énumération (`StatutContrat` = `envoye|signe|remplace|resilie`), et le chemin d'export art. 15 des notes n'était pas nommé. Corrigé : table fermée dérivée du seul contrat courant, statut de l'apporteur filleul jamais lu, échec fermé ; notes jamais dans un écran de l'espace, incluses dans l'export art. 15 par la seule fonction d'export exemptée. Au tour suivant (`1467a95`), les deux lentilles ont refusé la « version courante », que rien ne définit : un avenant envoyé faisait repasser un filleul signé à « en signature ». La règle se dérive désormais de l'ensemble des versions ; l'échéance des 12 mois sur un filleul unique est nommée comme dette dans `HYP-W15-FILLEULS-VUE`. Cette dette est ensuite tranchée le 2026-09-25 par délégation de Will : l'échéance agrégée n'est pas affichée tant que moins de deux filleuls sont dans leur fenêtre (acceptance d'UX-P2-04). La lentille securite a refusé cette règle sur `4504684` (toute agrégation de dates vaut la date d'un filleul, et le seuil fuit) : l'échéance n'est plus affichée du tout, remplacée par un texte fixe, et une relation reprise se lit sur les versions postérieures à la dernière résiliation.
-
-**Appris.** `pnpm lot:paths` ne lit pas le champ `paths` d'une tâche : il dérive ses chemins de sa
-table manuelle, du registre des gardes, du champ `tests` et du drapeau `schema`. Une tâche versée
-sans `tests` ni `schema` le fait JETER (« n'a aucun chemin ») ; `hors-depot/verser-tache.mjs` ne le
-voit pas. Poser `tests` par `hors-depot/poser-champ.mjs` le lève. Et le code NAF que W15 demandait
-de capter était déjà stocké au dépôt (REQ-INT-021, REQ-DM-030) : seul le repli manuel le laissait nul.
-
-… 50 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 51 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
