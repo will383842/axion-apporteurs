@@ -55,6 +55,8 @@ import type { RevueBrute } from '../../../scripts/lot/revues';
  * le message du chargeur au lieu du sien. RM-02 exige de voir la garde rougir POUR SA RAISON.
  */
 import * as LECTEUR from '../../../scripts/lot/revues';
+import * as GARDE from '../../../scripts/gates/gov-pr';
+import * as COMPOSEUR from '../../../scripts/lot/corps-de-pr';
 
 /** Une tête plausible, et un commit d'accord distinct : seul leur DELTA décide, jamais leur forme. */
 const TETE = '954fe5a4b5c6d7e8f90123456789abcdef012345';
@@ -195,6 +197,9 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
       'src/docs/journal/note.ts',
       'packages/docs/journal/2026-09.md',
       'scripts/lot/docs/journal/x.ts',
+      // La FORME exacte d'une entrée sous un préfixe étranger : seul l'ancre `^` la refuse.
+      'src/docs/journal/2026-09-pr-116.md',
+      'x/docs/journal/2026-09-pr-116.md',
     ]) {
       expect(LECTEUR.accordSurvit('securite', [f], PR116).survit, f).toBe(false);
     }
@@ -278,6 +283,7 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
       'docs/journal/2026-09-pr-116.md.bak',
       'docs/journal/2026-09-pr-.md',
       'docs/journal/2026-09-PR-116.md',
+      'docs/journal/2026-09-pr-0116.md',
       'docs/journal/x2026-09-pr-116.md',
     ]) {
       expect(LECTEUR.accordSurvit('securite', [f], PR116).survit, f).toBe(false);
@@ -302,12 +308,14 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
     expect(lecture.survivantes).toEqual([]);
     expect(lecture.coche).toBe(false);
     // Et sans numéro de PR, aucune entrée ne peut être la sienne : échec FERMÉ.
-    expect(
-      LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md'], {
-        numero: null,
-        lire: () => TEXTE_ENTREE,
-      }).survit
-    ).toBe(false);
+    const sansNumero = LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md'], {
+      numero: null,
+      lire: () => TEXTE_ENTREE,
+    });
+    expect(sansNumero.survit).toBe(false);
+    if (sansNumero.survit) return;
+    // Le motif DIT pourquoi : c'est le numéro qui manque, pas l'entrée qui diffère.
+    expect(sansNumero.motif).toContain('numéro de la PR jugée est inconnu');
   });
 
   it('REQ-GOV-011 · un titre d’entrée d’une AUTRE PR dans l’entrée de la PR jugée périme', () => {
@@ -510,6 +518,23 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
       'simplicite',
     ]);
     expect(lecture2.perimees.map((v) => v.lentille)).toEqual([LECTEUR.LENTILLE_DE_LA_PROSE]);
+  });
+
+  it('REQ-GOV-011 · ÉCHEC FERMÉ de la lecture à la tête : sha malformé ou commit inconnu rendent `null`', () => {
+    const dir = depotJetable();
+    ecrireEtCommiter(
+      dir,
+      { 'docs/journal/2026-09-pr-116.md': 'une entrée' + String.fromCharCode(10) },
+      'chore: socle'
+    );
+    expect(LECTEUR.contenuALaTete('pas-un-sha', 'docs/journal/2026-09-pr-116.md', dir)).toBeNull();
+    expect(
+      LECTEUR.contenuALaTete(
+        '0123456789abcdef0123456789abcdef01234567',
+        'docs/journal/2026-09-pr-116.md',
+        dir
+      )
+    ).toBeNull();
   });
 
   it('REQ-GOV-011 · un RENOMMAGE rend ses DEUX chemins : la source comme la destination', () => {
@@ -813,5 +838,114 @@ describe('REQ-GOV-013 — contre-témoins : la garde reste verte là où elle l�
     expect(lecture.coche).toBe(true);
     expect(lecture.survivantes).toEqual([]);
     expect(lecture.perimees).toEqual([]);
+  });
+});
+
+// ── la survie de BOUT EN BOUT : la garde `controler()` et le composeur du corps ─────────────
+//
+// 🔴 LA LENTILLE `mutation` (revue 5317022729) : retirer le numéro passé par `controler()`, celui
+// passé par le composeur, ou l'impression des accords survivants SURVIVAIT à tout — aucun témoin
+// ne traversait la garde ni le composeur avec un accord rendu hors tête. La survie livrée par
+// GOV-095 pouvait mourir en production sans qu'un rouge s'allume. Ces témoins passent par les
+// fonctions RÉELLES ; seules les deux mesures (`git`) sont injectées.
+
+/** Le tour que la survie laisse cocher : la prose rejugée sur la tête, le reste sur l'accord. */
+function tourSurvivant(): RevueBrute[] {
+  return [
+    avis('A09', 'exactitude', TETE),
+    avis('A09', 'securite', ACCORD),
+    avis('A09', 'simplicite', ACCORD),
+    avis('A10', 'mutation', ACCORD),
+  ];
+}
+
+const ENTREE_116 = 'docs/journal/2026-09-pr-116.md';
+
+/** Les deux mesures, injectées : le delta est la seule entrée de la PR, son texte est le sien. */
+function mesures(delta: string[]): LECTEUR.MesuresDeSurvie {
+  return { fichiersEntre: () => delta, lireALaTete: () => TEXTE_ENTREE };
+}
+
+function prJugee(delta: string[], numero: number | null = NUMERO): GARDE.Pr {
+  return {
+    numero,
+    titre: 'feat(GOV-095): un accord survit au journal',
+    corps: '',
+    labels: [],
+    fichiers: delta,
+    revues: tourSurvivant(),
+    tete: TETE,
+    tachesBase: null,
+    mesures: mesures(delta),
+  };
+}
+
+function depotReel(): GARDE.Depot {
+  return {
+    gabarit: readFileSync('.github/PULL_REQUEST_TEMPLATE.md', 'utf8'),
+    codeowners: readFileSync('.github/CODEOWNERS', 'utf8'),
+    charte: readFileSync('docs/CHARTE-AGENTS.md', 'utf8'),
+    architecte: readFileSync('.claude/agents/architecte.md', 'utf8'),
+    fiches: [],
+    taches: [],
+  };
+}
+
+const perimees = (p: GARDE.Pr) =>
+  GARDE.controler(depotReel(), p).filter((f) => f.famille === 'lentille_perimee');
+
+describe('REQ-GOV-013 — la survie traverse la garde et le composeur RÉELS', () => {
+  it('REQ-GOV-013 · `controler()` : un delta fait de la seule entrée de la PR ne périme rien, et la survie est IMPRIMÉE', () => {
+    expect(perimees(prJugee([ENTREE_116]))).toEqual([]);
+    // Le discriminant POSITIF : l'absence de faute ne suffit pas, la survie doit être DITE.
+    const lignes = GARDE.lignesDesAccordsSurvivants();
+    expect(lignes.length).toBe(4);
+    expect(lignes[0]).toContain('SURVIVENT');
+    expect(lignes.join('\n')).toContain('A09 · securite a accepté sur 8ef35a3 et SURVIT');
+    expect(lignes.join('\n')).toContain(ENTREE_116);
+  });
+
+  it('REQ-GOV-013 · CONTRE-TÉMOIN `controler()` : un delta de code périme, et la famille le dit', () => {
+    const fautes = perimees(prJugee(['scripts/lot/revues.ts']));
+    expect(fautes.length).toBe(3);
+    expect(GARDE.lignesDesAccordsSurvivants()).toEqual([]);
+  });
+
+  it('REQ-GOV-013 · `controler()` sans numéro de PR : rien ne survit', () => {
+    expect(perimees(prJugee([ENTREE_116], null)).length).toBe(3);
+  });
+
+  it('REQ-GOV-013 · le mode script de `gov:pr` IMPRIME les lignes des accords survivants', () => {
+    // La sortie console n'est pas atteignable sans `gh` : le témoin lit le bloc du mode script et
+    // exige qu'il imprime la MÊME source que celle éprouvée ci-dessus.
+    const source = readFileSync('scripts/gates/gov-pr.ts', 'utf8');
+    const script = source.slice(source.indexOf('if (LANCE_EN_SCRIPT) {'));
+    expect(
+      script.includes('lignesDesAccordsSurvivants().forEach((l) => console.log(l));'),
+      'le mode script de gov:pr n’imprime plus les accords survivants'
+    ).toBe(true);
+  });
+
+  it('REQ-GOV-013 · le composeur du corps coche la case sur une survie, et ne la coche pas sans le numéro', () => {
+    const juger = (pr: number) =>
+      COMPOSEUR.jugerCaseRevues({
+        titre: 'feat(GOV-095): x',
+        pr,
+        fichiers: [ENTREE_116],
+        liste: { source: 'complete' },
+        labels: [],
+        revues: tourSurvivant(),
+        taches: [],
+        tachesBase: null,
+        tete: TETE,
+        auteurPoste: 'A05',
+        auteurCompte: 'will383842',
+        mesures: mesures([ENTREE_116]),
+      });
+    const coche = juger(NUMERO);
+    expect(coche.marque, coche.detail).toBe('[x]');
+    expect(coche.detail).toContain('SURVIVENT');
+    // Une autre PR : l'entrée n'est pas la sienne, la case reste vide.
+    expect(juger(117).marque).toBe('[ ]');
   });
 });

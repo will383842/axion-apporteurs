@@ -1454,6 +1454,12 @@ export function lentilleDeLaRevue(
   return { code: m[1]!, lentille: m[2]!.toLowerCase() };
 }
 
+/**
+ * Les deux MESURES de la survie (GOV-095), injectables par un témoin qui traverse la garde ou le
+ * composeur ENTIERS. Absentes : le vrai `git` du clone — c'est le seul chemin de production.
+ */
+export type MesuresDeSurvie = Pick<Entree, 'fichiersEntre' | 'lireALaTete'>;
+
 export function lireRevues(entree: Entree): Lecture {
   const codes = entree.codes ?? codesDePoste();
   const exigees = [...lentillesExigees(entree.risque).toutes];

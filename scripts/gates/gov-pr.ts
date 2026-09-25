@@ -68,6 +68,7 @@ import {
   type DemandeDeConcordance,
   type EntreeDeFichier,
   type ListeDesFichiers,
+  type MesuresDeSurvie,
   type RevueBrute,
   type Risque,
   type TacheDeLaPr,
@@ -129,6 +130,20 @@ const AVIS_HORS_CANAL: string[] = [];
  * cette liste, la survie est invisible, donc inauditable, et personne ne peut la contester.
  */
 const ACCORDS_SURVIVANTS: string[] = [];
+
+/**
+ * Les lignes que `gov:pr` IMPRIME sur les accords survivants du dernier `controler()` — vide s'il
+ * n'y en a aucun. Une seule source pour la sortie et pour son témoin : retirer l'impression ou
+ * l'alimentation de la liste fait rougir `accord-survit-au-journal.spec.ts`.
+ */
+export function lignesDesAccordsSurvivants(): string[] {
+  if (ACCORDS_SURVIVANTS.length === 0) return [];
+  return [
+    `ℹ️  gov:pr — ${ACCORDS_SURVIVANTS.length} accord(s) rendus sur un AUTRE commit que la tête et ` +
+      `qui y SURVIVENT (GOV-095) — le delta ne juge aucun code. Conteste-les sans relire le code :`,
+    ...ACCORDS_SURVIVANTS.map((e) => `      ${e}`),
+  ];
+}
 /** Le saut de ligne, nomme : les fixtures decoupent des corps de PR. */
 const SAUT = String.fromCharCode(10);
 const TYPES_DE_TITRE = ['feat', 'fix', 'test', 'docs', 'chore', 'refactor', 'ci', 'perf'];
@@ -321,6 +336,8 @@ export type Pr = {
    * absente ou `null` → complétude inconnue → risque ÉLEVÉ.
    */
   liste?: ListeDesFichiers | null;
+  /** Témoins seulement : les mesures de la survie (GOV-095). Absentes en production (vrai `git`). */
+  mesures?: MesuresDeSurvie;
 };
 /**
  * ⚠️ `paths` ET `tests` FONT PARTIE DE LA PROJECTION, et leur absence rendrait la famille
@@ -940,6 +957,7 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     tete: pr.tete ?? null,
     auteurPoste: auteur ? auteur[1]! : null,
     numero: pr.numero ?? null,
+    ...(pr.mesures ?? {}),
   });
   const lues = lecture.verdicts.filter((v) => v.verdict === 'accepte');
   // Les lentilles EXIGÉES par le risque, hors mutation : deux sur une PR ordinaire, trois sinon.
@@ -2664,13 +2682,7 @@ if (LANCE_EN_SCRIPT) {
     );
     AVIS_ECARTES.forEach((e) => console.log(`      ${e}`));
   }
-  if (ACCORDS_SURVIVANTS.length > 0) {
-    console.log(
-      `ℹ️  gov:pr — ${ACCORDS_SURVIVANTS.length} accord(s) rendus sur un AUTRE commit que la tête et ` +
-        `qui y SURVIVENT (GOV-095) — le delta ne juge aucun code. Conteste-les sans relire le code :`
-    );
-    ACCORDS_SURVIVANTS.forEach((e) => console.log(`      ${e}`));
-  }
+  lignesDesAccordsSurvivants().forEach((l) => console.log(l));
   if (fautes.length === 0) {
     console.log(`✅ gov:pr — ${portee}.`);
     if (pr === null) {

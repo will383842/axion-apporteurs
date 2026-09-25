@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `32ea43d` — 2026-09-25T11:47:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #116 (un contrôle requis rouge ou une revue manquante) · 2. #120 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #120 (rien) · 2. #116 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #88 (un conflit avec `main`) · 5. #91 (un conflit avec `main`) · 6. #92 (un conflit avec `main`) · 7. #93 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/107 tâches, reste 64.60 j |
-| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Le prochain pas | fusionner #120, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #118 — 2026-09-23 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 120 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,8 +64,8 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un contrôle requis rouge ou une revue manquante |
-| 2 | #120 — feat(GOV-097): quatre lentilles pour l'argent, la securite et les donnees, deux pour le reste | `t/gov-097-risque-reserve` | un contrôle requis rouge ou une revue manquante |
+| 1 | #120 — feat(GOV-097): quatre lentilles pour l'argent, la securite et les donnees, deux pour le reste | `t/gov-097-risque-reserve` | rien — fusionnable maintenant |
+| 2 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un contrôle requis rouge ou une revue manquante |
 | 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 | 4 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
 | 5 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
@@ -94,6 +94,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #120** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 47 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -256,6 +258,12 @@ ouvrir son entree. Numero inconnu, entree illisible a la tete : echec ferme. Les
 ete vus rouges (`expected true to be false`) avant le code.
 
 Quatrième tour (veto `securite`, revue 5316791878) : une entrée devenue lien symbolique se lisait par sa cible, alors que `gov:etat` et `gov:attributions` suivent le lien. `contenuALaTete` n'admet plus qu'un fichier ordinaire (mode 100644, lu par `git ls-tree`) ; un titre caché derrière un retour chariot seul est vu, comme `gov:etat` le coupe. Deux témoins, vus rouges avant le correctif.
+
+Quatrieme tour, sur le refus de `mutation` (revue 5317022729) : quatre retraits survivaient a tout -
+l'ancre de debut de `ENTREE_DU_JOURNAL`, le numero passe par `controler()`, celui passe par le
+composeur, et l'impression des accords survivants. Chacun a desormais un temoin vu rouge sous son
+mutant, dont trois traversent la garde et le composeur reels avec les seules mesures `git` injectees
+(`MesuresDeSurvie`) ; les trois survivants equivalents sont tues aussi.
 
 ### PR #114 — 2026-09-23 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure
 
