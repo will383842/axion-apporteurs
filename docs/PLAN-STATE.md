@@ -8,9 +8,9 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `fb5b3da` — 2026-09-25T20:02:03+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #91 (un conflit avec `main`) · 3. #92 (un conflit avec `main`) · 4. #93 (un conflit avec `main`) · 5. #126 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #92 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #91 (un conflit avec `main`) · 5. #126 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
-| Où en est la phase ? | phase 0 — 21/109 tâches, reste 66.10 j |
+| Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #126 — 2026-09-25 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : 0
 
-21/109 tâches terminées · reste 66.10 j estimés.
+21/110 tâches terminées · reste 66.60 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 221 | JUR-T02, QA-T08, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13 … |
+| `a_faire` | 222 | JUR-T02, QA-T08, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13 … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -58,16 +58,16 @@ Reste sur ce chemin : **14.50 j**.
 
 ## Hypothèses par défaut appliquées
 
-57 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
+60 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
 
 ## File de fusion
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
+| 2 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
 | 5 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
@@ -93,7 +93,7 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 49 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 50 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
@@ -139,6 +139,27 @@ cadratin : un trait d'union simple la déclare non référencée. Une garde n'es
 son identifiant, son script ou un alias figure dans le workflow : l'identifiant `G-SEC-...` exige
 l'alias du script pnpm.
 
+### PR #124 — 2026-09-25 — chore(GOV-099): cadrage de DM-06 — sourceCanal transporte, IBAN hors DM-06, glossaire
+
+**Fait.** Les trois contradictions sur lesquelles le développeur de DM-06 avait rendu `stop` sont
+levées au registre, par les décisions du 2026-09-25 prises par l'orchestrateur sur délégation de
+Will : `sourceCanal` devient une chaîne transportée figée (REQ-DM-035 amendée,
+`HYP-DM06-SOURCE-CANAL`), sa dérivation vers `CanalCandidature` passe à EXT-T03 ; l'IBAN sort de
+DM-06 pour la pièce RIB du KYC chiffrée par SEC-08 (REQ-CPL-005 amendée, `HYP-DM06-IBAN`, DM-11
+dépend de SEC-08) ; le glossaire porte `StatutApporteur`, `MotifResiliation`, `RegimeTva` et
+`CanalCandidature` au §4. Code de parrainage fixé (`HYP-DM06-CODE-PARRAINAGE`), `DORMANCE_JOURS`
+en paramètre, témoin du dépôt au-delà du seuil déplacé vers DM-09, `paths` et `tests` de DM-06
+complétés. GOV-099 porte la PR.
+
+**Reste.** DM-06 peut reprendre sur ce cadrage. EXT-T03 porte désormais la table chemin → canal
+et ses tests ; DM-09 porte le témoin de REQ-DM-010. La SSOT des seuils (JUR-T02) reste à écrire :
+d'ici là, `DORMANCE_JOURS` n'existe qu'en paramètre. La lentille exactitude a refusé `99cc471`-`2cefb8f` : DM-06 devait poser une référence vers `PieceKyc`, qui n'existe qu'avec DM-11, dépendante de DM-06. La référence à la pièce RIB part entièrement dans DM-11 ; DM-06 crée `IdentitesFacturation` sans colonne de RIB. Le journal de dépassement de `sourceCanal` consigne sa longueur, jamais sa valeur, et la dette « `linkedin`/`jobboard` seulement par `utm` » est nommée dans EXT-T03. Reste une dette : DM-11 écrit désormais le schéma (`prisma/schema.prisma` et `prisma/migrations/` dans ses `paths`) mais porte encore `schema: false`, champ qu'aucun verbe hors dépôt n'écrit ; `lot:paths` le signale dans `schemaContredit`, à corriger avant son attribution.
+
+**Appris.** `partners:schema:enums` ne confronte que les enums DÉCLARÉS par le schéma Prisma au
+glossaire : un enum que le glossaire énumère sans qu'il existe encore dans le schéma ne rougit
+pas. Poser `StatutApporteur` et ses voisins au §4 AVANT DM-06 fait que la première migration de
+DM-06 sera jugée contre ces valeurs, au lieu d'en fixer elle-même le vocabulaire.
+
 ### PR #122 — 2026-09-25 — chore(GOV-098): perimetre fonctionnel decide par Will le 2026-09-25 — lignees, parrain, statistiques, bibliotheque
 
 **Fait.** La décision de Will du 2026-09-25 est au registre : ligne `W15` en §1 de
@@ -165,60 +186,7 @@ sans `tests` ni `schema` le fait JETER (« n'a aucun chemin ») ; `hors-depot/ve
 voit pas. Poser `tests` par `hors-depot/poser-champ.mjs` le lève. Et le code NAF que W15 demandait
 de capter était déjà stocké au dépôt (REQ-INT-021, REQ-DM-030) : seul le repli manuel le laissait nul.
 
-### PR #120 — 2026-09-25 — feat(GOV-097): quatre lentilles pour l'argent, la securite et les donnees, deux pour le reste
-
-**Fait.** Décision de Will du 2026-09-25 (`W14`, `partners/ADR-0021`). `risqueDeLaPr()` ne prouve
-plus qu'une PR est anodine par deux listes blanches : elle cherche des signaux. Élevé si une tâche
-porte `sensible` non vide ou absent, `schema: true`, une zone `argent`/`securite`, une zone absente
-ou inconnue du schéma du registre ; si la PR porte le label ou un chemin de schéma, un fichier en
-zone sensible du code, un fichier du processus (garde des revues, dossier caché, racine,
-`config/`) ; ou si le diff est vide, incomplet, sans tâche, sans base lisible. Une zone `espace`,
-`juridique`, `integration`, `domaine` ou une autre zone à `sensible: []` qui touche du code
-neutre se relit à deux lentilles. Fusion de `main` après #114 : une seule lecture par segment,
-`segmentsNommesTouches()` dans `scripts/lot/revues.ts`, sert la section « Attaque » (liste
-`ZONES_SENSIBLES`, répertoires seuls) et le risque (liste `SEGMENTS_DES_ZONES_SENSIBLES`, nom de
-fichier compris). La charte §6 et le poste A09 disent qu'une inexactitude de prose est une dette, pas un
-refus.
-
-**Reste.** Les tâches qui manipulent des données personnelles avec `sensible: []` passent à deux
-lentilles si leurs fichiers évitent les zones sensibles : le remède est de leur porter `rgpd` au
-registre (`gardien-spec`). La section « Attaque » lit par segment depuis #114, mais sur la liste
-étroite `ZONES_SENSIBLES` : `src/proxy.ts` élève le risque sans l'exiger ; l'élargir est un
-changement de REQ-GOV-011, hors de cette tâche. La règle (2) n'est outillée
-par rien : `gov:pr` bloque sur tout `Verdict: refuse`.
-
-**Appris.** `ZONES_SENSIBLES` (`commissions/`, `attributions/`, `auth/`, `espace/`) se lisait en
-préfixe depuis la racine, et aucun fichier suivi du dépôt ne commençait par l'un d'eux : le code vit sous
-`src/`. Une liste « de zones sensibles » peut donc être juste en mots et ne rien désigner sur le
-disque ; la reprendre telle quelle pour le risque aurait fait passer tout le code produit à deux
-lentilles sans qu'aucun témoin ne rougisse. Le signal se lit maintenant par segments de chemin. —
-Le gain de la décision (1) est borné par le registre : mesuré par le code, 31 tâches `partners`
-restantes ordinaires avant, 43 après, relecture comprise, 38 sur 195 depuis la fusion de #116 ; la cause dominante de l'élevé est `sensible` non vide, que la
-décision garde. — `refs/stash` est PARTAGÉ entre les arbres de travail d'un même dépôt : un
-`git stash pop` lancé dans un arbre a tenté d'appliquer le remisage d'une autre session (refusé par
-git, rien d'appliqué). Ne jamais utiliser `git stash` dans un arbre de travail de ce dépôt.
-
-**Relecture.** Deux refus sur `11a0502`. `securite` (5316365953) : le code de sécurité déjà au
-dépôt redescendait à deux lentilles : `api-entrante.ts` (SEC-07, `auth`), l'attrape-tout
-`[...inconnu]/route.ts`, les deux `journal.ts` (DM-01, `rgpd`) ressortaient ordinaires sous
-`feat(INT-T11)`. Remède : la sensibilité suit le FICHIER. `fichiersDesTachesAElever()` rend élevé
-tout fichier du code produit (`src/`) qu'une tâche quelconque du registre, base et tête, déclare
-(`paths` et `tests{}`, par `cheminsDeLaTache()`) si elle élèverait seule une PR ; la raison nomme le
-fichier et la tâche. La liste des segments gagne `session`, `sessions`, `crypto`, `chiffrement`,
-`cloisonnement`, `middleware` ; aucun des 250 fichiers suivis sous `docs/`, `scripts/`, `tests/`,
-`src/` n'y répond. `nuDuSegment()`, lecture unique de l'Attaque et du risque, retire désormais
-`[...x]`, `[[...x]]`, `@x`, `(.)x`, `(..)x`, `(...)x` répétés. `mutation` (5316513348) : la casse
-et la frontière répertoire/fichier de l'Attaque ont chacune leur témoin, vus rougir sous la
-mutation. Pourquoi `src/` seul : étendue à tout le dépôt, la règle rendait 24 tâches `partners`
-ordinaires sur 194, moins que les 31 d'avant GOV-097, parce que des tâches de gouvernance portent
-`sensible` sur des scripts partagés (GOV-008 pour `scripts/plan-state/build.ts`, GOV-018 pour
-`scripts/gates/gov-lecons.ts`). Limitée au code produit, elle en rend 43 ; 38 sur 195 après la fusion
-de #116, dont `revues.ts` importe `gov-attributions.ts`, qui entre dans la garde des revues et fait
-monter GOV-073, GOV-074, GOV-075, GOV-081 et GOV-084 ; les scripts de contrôle
-gardent leurs propres signaux, et un `scripts/gates/*` hors de la garde reste ordinaire (dette déjà
-relevée par `securite`).
-
-… 48 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 49 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
