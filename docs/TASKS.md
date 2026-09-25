@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**269 taches · 201.35 j estimes.**
+**270 taches · 201.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 107 | 82.35 | 21 |
+| 0 — Socle technique | 108 | 82.85 | 21 |
 | 1 — Operationnel | 61 | 47.50 | 0 |
 | 2 — Argent | 41 | 30.00 | 0 |
 | 3 — Pilotage et conformite | 21 | 17.75 | 0 |
@@ -1662,6 +1662,16 @@ Le label reste muet a 85 % apres ce geste : le dis-mutiser demande un discrimina
 Seuls `scripts/`, `src/` et `tests/` sont confrontes par la famille des fichiers hors `paths`. Les entrees `docs/` de cette tache sont declarees par honnetete, pas par necessite de garde — ce qui est une illustration de plus du defaut A.
 
 **Tests.** `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` · `tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts` · `tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts`
+
+### GOV-097 — Quatre lentilles seulement pour l argent, la securite et les donnees, deux pour le reste ; une inexactitude de prose n est plus un motif de refus
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-011`
+
+**Acceptation.** DECISION DE WILL, proprietaire, du 2026-09-25, en reponse a « pourquoi c est si long ». MESURE QUI L OUVRE, rapportee avec la decision : sept fusions le 22/09, puis deux, une, une ; 156 des 207 taches restantes en risque ELEVE, donc relues par quatre lentilles, et chaque refus fait relire les quatre. (1) QUATRE LENTILLES SEULEMENT POUR L ARGENT, LA SECURITE ET LES DONNEES ; DEUX (exactitude + securite) POUR TOUT LE RESTE. `risqueDeLaPr()` (`scripts/lot/revues.ts`, la seule derivation, appelee par `gov:pr` et le composeur du corps) rend ELEVE si et seulement si l un de ces signaux est present : une tache de la PR (titre, `pr`, `Lot:` ; tete ET base) porte un `sensible` non vide ou ABSENT, `schema: true`, une `zone` argent ou securite, une `zone` absente ou inconnue du schema du registre ; le label `schema` ou un chemin de schema ; un fichier dans une zone sensible du code ; un fichier de la garde des revues, de la CI, d un dossier cache, de configuration a la racine ou de `config/` ; un diff vide, une liste incomplete, aucune tache resolue, un registre de base illisible (echec FERME, conserve). CE QUI CESSE D ELEVER : une zone hors {gouvernance, qualite} autre que argent et securite avec `sensible: []`, et un fichier de code produit hors zones sensibles. La liste des zones et des segments sensibles est une DONNEE nommee (`ZONES_A_RISQUE_ELEVE`, `SEGMENTS_DES_ZONES_SENSIBLES`, `DOSSIERS_DU_PROCESSUS`), les zones connues se LISENT dans `scripts/lot/tasks.schema.json` (RM-01), et `ZONES_SENSIBLES` quitte `gov-pr.ts` pour le lecteur unique. TEMOINS VUS ROUGES AVANT LE CODE : une tache `zone: espace, sensible: []` touchant `src/` est ORDINAIRE ; chaque zone du schema hors argent et securite est ordinaire ; le schema du registre appartient a la garde des revues. CONTRE-TEMOINS qui restent ELEVES : `sensible: [argent]` et chaque etiquette du schema, `zone: securite`, `zone: argent`, `sensible` absent, `zone` absente ou inconnue, `schema: true`, `.github/workflows/*`, `eslint.config.mjs` et la racine, `.claude/`, `config/`, chaque fichier de la garde des revues, les fichiers de code des zones sensibles, `prisma/`. `pnpm gov:pr:prove` sort en 0 et garde toutes ses familles. (2) UNE INEXACTITUDE DE PROSE (corps de PR, journal, ADR, commentaire, docblock) N EST PLUS UN MOTIF DE REFUS : c est une dette nommee dans la revue, corrigee au passage suivant. Un refus vise un defaut de code ou de test, ou une affirmation fausse qui porte sur la securite, l argent ou les donnees. Ecrit dans `docs/CHARTE-AGENTS.md` §6 et dans les interdits du poste A09 (`docs/agents.json`, fiche regeneree). ADR `partners/ADR-0021` : la decision, le cout mesure, ce qui reste a quatre lentilles et pourquoi, la limite declaree (les taches qui manipulent des donnees personnelles avec `sensible: []`), le retour arriere. Ligne au registre `docs/DECISIONS.md`.
+
+**Tests.** `tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts`
 
 ## Phase 1 — Operationnel
 

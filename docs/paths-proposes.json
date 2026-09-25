@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 269,
+    "tachesCouvertes": 270,
     "pairesEnIntersection": 4287,
-    "cheminsDeclares": 782,
-    "cheminsDistincts": 503,
+    "cheminsDeclares": 783,
+    "cheminsDistincts": 504,
     "cheminsPartages": 99,
-    "tachesSansAucuneIntersection": 75,
+    "tachesSansAucuneIntersection": 76,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T06",
@@ -83,7 +83,8 @@
       "UX-P0-01b",
       "GOV-093",
       "GOV-095",
-      "GOV-096"
+      "GOV-096",
+      "GOV-097"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -1479,6 +1480,9 @@
       "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts",
       "tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts",
       "tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts"
+    ],
+    "GOV-097": [
+      "tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts"
     ]
   }
 }
