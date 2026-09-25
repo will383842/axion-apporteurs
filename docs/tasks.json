@@ -2767,7 +2767,10 @@
         "src/app/(espace)/connexion/",
         "prisma/schema.prisma",
         "tests/integration/lien-magique.spec.ts",
-        "tests/unit/securite/lien-magique-indistinction.spec.ts"
+        "tests/unit/securite/lien-magique-indistinction.spec.ts",
+        "src/server/auth/lien-magique-depot.ts",
+        "src/server/auth/durees.ts",
+        "src/domain/apporteur/acces-espace.ts"
       ],
       "schema": false,
       "sensible": [
