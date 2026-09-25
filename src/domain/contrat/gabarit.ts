@@ -184,15 +184,40 @@ export function texteRemis(texte: string): string {
   return i === -1 ? texte : lignes.slice(0, i).join('\n');
 }
 
+/**
+ * La forme d'une variable du gabarit, `{{NOM}}` — écrite UNE fois : le contrôle des déclarations
+ * (`variables.ts`), la liste des variables et le rendu la lisent ici. Une fabrique, pas une
+ * constante : une expression globale partagée porte un `lastIndex` que ses lecteurs se passeraient.
+ */
+export const motifDeVariable = (): RegExp => /\{\{([A-Z0-9_]+)\}\}/g;
+
 /** Les noms des variables `{{NOM}}`, sans doublon, dans l'ordre d'apparition. */
 export function variablesDuTexte(texte: string): string[] {
-  return [...new Set([...texte.matchAll(/\{\{([A-Z0-9_]+)\}\}/g)].map((m) => m[1]!))];
+  return [...new Set([...texte.matchAll(motifDeVariable())].map((m) => m[1]!))];
 }
 
-/** Substitue les variables pourvues ; une variable sans valeur reste écrite, donc visible. */
-export function rendre(texte: string, valeurs: Readonly<Record<string, string>>): string {
-  return texte.replace(/\{\{([A-Z0-9_]+)\}\}/g, (brut, nom: string) =>
-    Object.hasOwn(valeurs, nom) ? valeurs[nom]! : brut
+/** Une valeur telle qu'une source la livre : un champ KYC absent arrive `null` ou `undefined`. */
+export type ValeurLivree = string | null | undefined;
+
+/**
+ * Une valeur RÉSOLUE : une chaîne non vide une fois les blancs retirés, et qui n'est aucune des
+ * sentinelles « à renseigner » de ses sources. Tout le reste ne résout pas — échec FERMÉ : la
+ * variable reste écrite dans le rendu, et le refus de publication la nomme.
+ */
+export function valeurResolue(valeur: ValeurLivree, sentinelles: readonly string[]): string | null {
+  if (typeof valeur !== 'string') return null;
+  const nette = valeur.trim();
+  return nette === '' || sentinelles.includes(nette) ? null : valeur;
+}
+
+/** Substitue les variables RÉSOLUES ; une variable sans valeur résolue reste écrite, donc visible. */
+export function rendre(
+  texte: string,
+  valeurs: Readonly<Record<string, ValeurLivree>>,
+  sentinelles: readonly string[]
+): string {
+  return texte.replace(motifDeVariable(), (brut, nom: string) =>
+    Object.hasOwn(valeurs, nom) ? (valeurResolue(valeurs[nom], sentinelles) ?? brut) : brut
   );
 }
 

@@ -18,6 +18,7 @@
  * (la qualité de commerçant de l'apporteur, par exemple, dont dépend la validité de la clause
  * attributive de juridiction) ne se distinguerait pas d'une variable fausse.
  */
+import { valeurResolue, variablesDuTexte } from './gabarit';
 
 export type RenduEntite = 'tel-quel' | 'forme-developpee' | 'siren-par-trois';
 
@@ -109,8 +110,7 @@ export function controlerVariables(entree: {
   questions: readonly { readonly id: string }[];
 }): FauteDeVariable[] {
   const fautes: FauteDeVariable[] = [];
-  const employees = new Set<string>();
-  for (const m of entree.texte.matchAll(/\{\{([A-Z0-9_]+)\}\}/g)) employees.add(m[1]!);
+  const employees = new Set(variablesDuTexte(entree.texte));
   for (const nom of employees) {
     const source = sourceDe(nom, entree.paliers);
     if (source === null) {
@@ -160,7 +160,7 @@ export function valeurDEntite(
 ): Resolution {
   if (source.genre !== 'entite') return { manque: `source « ${source.genre} », pas l'entité` };
   const brute = lire(source.cle);
-  if (brute === undefined || brute.trim() === '' || brute === sentinelle) {
+  if (brute === undefined || valeurResolue(brute, [sentinelle]) === null) {
     return { manque: `${source.cle} n'est pas renseignée` };
   }
   if (source.rendu === 'forme-developpee') {

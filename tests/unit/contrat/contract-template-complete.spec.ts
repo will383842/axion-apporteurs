@@ -147,6 +147,7 @@ describe('REQ-JUR-003 — les identifiants de clause', () => {
       annexe2: annexe2(),
       valeurs: {},
       questionsOuvertes: [],
+      sentinelles: [SENTINELLE],
     });
     expect(motifs.join('\n')).toContain('CL-SUSPENSION-VERIFICATION');
   });
@@ -158,6 +159,7 @@ describe('REQ-JUR-003 — les identifiants de clause', () => {
       annexe2: annexe2(),
       valeurs: {},
       questionsOuvertes: [],
+      sentinelles: [SENTINELLE],
     });
     expect(motifs.join('\n')).toContain('CL-SANCTION');
   });
@@ -707,6 +709,7 @@ describe('REQ-JUR-003 — un gabarit incomplet ne peut pas être publié', () =>
       annexe2: annexe2(),
       valeurs: {},
       questionsOuvertes: QUESTIONS_POUR_WILL,
+      sentinelles: [SENTINELLE],
     };
     const motifs = motifsDeRefus(entree);
     expect(motifs.some((m) => m.includes('question'))).toBe(true);
@@ -715,7 +718,12 @@ describe('REQ-JUR-003 — un gabarit incomplet ne peut pas être publié', () =>
   });
 
   it('REQ-JUR-003 — tout résolu, aucune question : publiable ; une cellule « forfait » nue le rend refusé', () => {
-    const base = { gabarit: gabarit(), annexe2: annexe2(), questionsOuvertes: [] };
+    const base = {
+      gabarit: gabarit(),
+      annexe2: annexe2(),
+      questionsOuvertes: [],
+      sentinelles: [SENTINELLE],
+    };
     expect(motifsDeRefus({ ...base, valeurs: toutesPourvues('forfait 12') })).toEqual([]);
     expect(() =>
       exigerGabaritPubliable({ ...base, valeurs: toutesPourvues('forfait 12') })
@@ -724,13 +732,37 @@ describe('REQ-JUR-003 — un gabarit incomplet ne peut pas être publié', () =>
     expect(refus.join('\n')).toContain('forfait');
   });
 
+  it('REQ-JUR-003 — une valeur vide, nulle, blanche ou à la sentinelle ne résout pas : refus NOMMÉ', () => {
+    // A09 · securite, PR #92 : la clé présente suffisait, et l'art. 14 se rendait « en qualité
+    // de null » avec 0 motif. APPORTEUR_QUALITE fonde la validité de la clause attributive.
+    const base = {
+      gabarit: gabarit(),
+      annexe2: annexe2(),
+      questionsOuvertes: [],
+      sentinelles: [SENTINELLE],
+    };
+    for (const nom of ['APPORTEUR_QUALITE', 'SIEGE', 'CAPITAL', 'REPRESENTANT']) {
+      for (const vide of ['', '   ', null, undefined, SENTINELLE, ` ${SENTINELLE} `]) {
+        const valeurs = { ...toutesPourvues('forfait 12'), [nom]: vide };
+        const motifs = motifsDeRefus({ ...base, valeurs });
+        expect(motifs, `${nom} = ${JSON.stringify(vide)}`).toContain(
+          `variable non résolue {{${nom}}}`
+        );
+        expect(() => exigerGabaritPubliable({ ...base, valeurs })).toThrow(GabaritNonPubliable);
+      }
+    }
+    // CONTRE-TÉMOIN : la même entrée, toutes valeurs pourvues, reste publiable.
+    expect(motifsDeRefus({ ...base, valeurs: toutesPourvues('forfait 12') })).toEqual([]);
+  });
+
   it('REQ-JUR-003 — le texte remis s’arrête avant la table technique, et le rendu ne laisse aucune variable', () => {
     const remis = texteRemis(gabarit());
     expect(remis).not.toContain('Correspondance article');
     expect(remis).toContain('Annexe 1');
-    const rendu = rendre(remis, toutesPourvues('forfait 12'));
+    const rendu = rendre(remis, toutesPourvues('forfait 12'), [SENTINELLE]);
     expect(variablesDuTexte(rendu)).toEqual([]);
-    expect(rendre('{{A}} {{B}}', { A: 'x' })).toBe('x {{B}}');
+    expect(rendre('{{A}} {{B}}', { A: 'x' }, [SENTINELLE])).toBe('x {{B}}');
+    expect(rendre('{{A}}', { A: ` ${SENTINELLE}` }, [SENTINELLE])).toBe('{{A}}');
   });
 });
 
@@ -828,6 +860,7 @@ describe('REQ-JUR-003 — les lecteurs du gabarit et du registre, sur leurs cas 
       annexe2: annexe2(),
       valeurs: {},
       questionsOuvertes: [],
+      sentinelles: [SENTINELLE],
     });
     expect(motifs).toContain('table de correspondance des clauses absente');
     const horsTable = gabarit().replace('<!-- CL-DROIT -->', '<!-- CL-DROIT CL-INVENTEE -->');
@@ -836,6 +869,7 @@ describe('REQ-JUR-003 — les lecteurs du gabarit et du registre, sur leurs cas 
       annexe2: annexe2(),
       valeurs: {},
       questionsOuvertes: [],
+      sentinelles: [SENTINELLE],
     });
     expect(motifs2).toContain('clause CL-INVENTEE absente de la table de correspondance');
   });

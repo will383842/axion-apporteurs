@@ -8,7 +8,8 @@
  *   — tant qu'une question pour Will reste ouverte (`QUESTIONS_POUR_WILL`) ;
  *   — si un identifiant de la table de correspondance n'est pas posé, si un identifiant posé n'y
  *     figure pas, ou si une clause retirée est posée ;
- *   — si une variable reste sans valeur une fois le texte rendu ;
+ *   — si une variable reste sans valeur RÉSOLUE une fois le texte rendu : vide, nulle, blanche ou
+ *     à la sentinelle, elle ne résout pas, et le motif la nomme ;
  *   — si une cellule de l'annexe 1 rendue nomme un forfait, un barème ou un pourcentage sans chiffre.
  *
  * PUR : tout arrive en argument, sans valeur par défaut (RM-11).
@@ -20,13 +21,16 @@ import {
   tableDeCorrespondance,
   texteRemis,
   variablesDuTexte,
+  type ValeurLivree,
 } from './gabarit';
 import { fautesGrilleChiffree } from './grille-chiffree';
 
 export type EntreePublication = {
   readonly gabarit: string;
   readonly annexe2: string;
-  readonly valeurs: Readonly<Record<string, string>>;
+  readonly valeurs: Readonly<Record<string, ValeurLivree>>;
+  /** Les sentinelles « à renseigner » des sources, LUES dans leur registre (jamais retapées). */
+  readonly sentinelles: readonly string[];
   readonly questionsOuvertes: readonly { readonly id: string }[];
 };
 
@@ -53,7 +57,7 @@ export function motifsDeRefus(e: EntreePublication): string[] {
       motifs.push(`clause retirée ${id} posée`);
     else if (!table.includes(id)) motifs.push(`clause ${id} absente de la table de correspondance`);
   }
-  const rendu = rendre(`${texteRemis(e.gabarit)}\n${e.annexe2}`, e.valeurs);
+  const rendu = rendre(`${texteRemis(e.gabarit)}\n${e.annexe2}`, e.valeurs, e.sentinelles);
   for (const nom of variablesDuTexte(rendu)) motifs.push(`variable non résolue {{${nom}}}`);
   for (const f of fautesGrilleChiffree(rendu)) motifs.push(f.message);
   return motifs;
