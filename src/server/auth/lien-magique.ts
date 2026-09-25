@@ -9,6 +9,8 @@
  *     condition est portée par ce module (`conditionDeConsommation`) ; jamais un lire-puis-écrire.
  *  3. Seule l'empreinte du jeton est stockée : HMAC-SHA-256 sous le secret des liens, séparée par
  *     domaine, avec le `kid` de ce secret. Un accès en écriture à la base ne fabrique pas un lien.
+ *     La session ouverte suit la même règle sous SON secret (`SESSION_SECRET`) et SON domaine :
+ *     jamais la clé des empreintes de données personnelles.
  *
  * AUCUNE LECTURE D'ENVIRONNEMENT ET AUCUN CADRICIEL ICI : clés, horloge, compteurs, dépôts et envoi
  * entrent par des ports. L'action serveur les câble ; les tests les simulent.
@@ -24,6 +26,7 @@ const OCTETS_JETON = 32;
 /** 32 octets en base64url sans remplissage : 43 caractères, ni plus ni moins. */
 const FORME_JETON = /^[A-Za-z0-9_-]{43}$/;
 const DOMAINE_EMPREINTE = 'partners.lien.v1\u001f';
+const DOMAINE_SESSION = 'partners.session.v1\u001f';
 
 export function tirerJeton(): string {
   return randomBytes(OCTETS_JETON).toString('base64url');
@@ -31,6 +34,10 @@ export function tirerJeton(): string {
 
 export function empreinteDuJeton(jeton: string, secret: string): string {
   return createHmac('sha256', secret).update(`${DOMAINE_EMPREINTE}${jeton}`, 'utf8').digest('hex');
+}
+
+export function empreinteDeSession(jeton: string, secret: string): string {
+  return createHmac('sha256', secret).update(`${DOMAINE_SESSION}${jeton}`, 'utf8').digest('hex');
 }
 
 // ── les états rendus ─────────────────────────────────────────────────────────────────────────────
@@ -47,6 +54,8 @@ export interface ConfigurationDuLien {
   readonly kid: string;
   /** L'adresse publique du service : la seule origine d'une URL envoyée. */
   readonly urlPublique: string;
+  /** Le secret des sessions (SESSION_SECRET) et son `kid`. */
+  readonly session: { readonly secret: string; readonly kid: string };
 }
 
 export type CompteurDeLien = 'magic:ip' | 'magic:courriel';
@@ -58,11 +67,21 @@ export interface VerdictDeLimite {
 
 export interface NouveauLien {
   apporteurId: string;
-  jetonHash: string;
+  tokenHash: string;
   kid: string;
   creeAt: Date;
   expireAt: Date;
+}
+
+/** Une ligne de `sessions_espace` : l'empreinte du jeton de session, jamais le jeton. */
+export interface NouvelleSession {
+  apporteurId: string;
+  lienMagiqueId: string;
+  tokenHash: string;
+  kid: string;
   ipHash: string | null;
+  creeAt: Date;
+  expireAt: Date;
 }
 
 /** Tout ce qui dépend du compte : n'est appelé qu'APRÈS la réponse. */
@@ -134,7 +153,7 @@ export async function demanderLien(
               adresseHash,
               survenuAt: maintenant,
             })
-          : emettreLien(emailHash, adresseHash, maintenant, ports));
+          : emettreLien(emailHash, maintenant, ports));
       } catch {
         ports.emission.journaliser('travail_differe_echoue');
       }
@@ -148,7 +167,6 @@ export async function demanderLien(
 /** Le travail différé : tout ce qui dépend du compte. */
 async function emettreLien(
   emailHash: string,
-  adresseHash: string,
   maintenant: Date,
   { emission, configuration }: PortsDeDemande
 ): Promise<void> {
@@ -159,11 +177,10 @@ async function emettreLien(
   await emission.annulerLiensActifs(compte.id, maintenant);
   await emission.insererLien({
     apporteurId: compte.id,
-    jetonHash: empreinteDuJeton(jeton, configuration.secret),
+    tokenHash: empreinteDuJeton(jeton, configuration.secret),
     kid: configuration.kid,
     creeAt: maintenant,
     expireAt,
-    ipHash: adresseHash,
   });
   const a = await emission.adresseStockee(compte.id);
   await emission.envoyer({ a, url: `${configuration.urlPublique}/connexion/${jeton}`, expireAt });
@@ -173,31 +190,26 @@ async function emettreLien(
 
 /** La condition d'UNE écriture : le lien existe, n'est ni consommé, ni annulé, ni expiré. */
 export interface ConditionDeConsommation {
-  jetonHash: string;
+  tokenHash: string;
   consommeAt?: null;
   annuleAt?: null;
   expireAt?: { gt: Date };
 }
 
 export function conditionDeConsommation(
-  jetonHash: string,
+  tokenHash: string,
   maintenant: Date
 ): ConditionDeConsommation {
-  return { jetonHash, consommeAt: null, annuleAt: null, expireAt: { gt: maintenant } };
+  return { tokenHash, consommeAt: null, annuleAt: null, expireAt: { gt: maintenant } };
 }
 
 export interface TransactionDeConsommation {
   /** `updateMany` conditionnel : rend le nombre de lignes écrites. */
   consommer(condition: ConditionDeConsommation, donnees: { consommeAt: Date }): Promise<number>;
-  lireLien(jetonHash: string): Promise<{ id: string; apporteurId: string; kid: string } | null>;
+  lireLien(tokenHash: string): Promise<{ id: string; apporteurId: string; kid: string } | null>;
   statutApporteur(apporteurId: string): Promise<string | null>;
-  /** Ouvre une session neuve et rend son jeton. */
-  ouvrirSession(s: {
-    apporteurId: string;
-    lienMagiqueId: string;
-    adresseHash: string | null;
-    maintenant: Date;
-  }): Promise<string>;
+  /** Enregistre une session neuve. */
+  ouvrirSession(s: NouvelleSession): Promise<void>;
 }
 
 export interface PortsDeConsommation {
@@ -209,26 +221,31 @@ export interface PortsDeConsommation {
 const INVALIDE = { etat: 'lien_invalide' } as const;
 
 export async function consommerLien(
-  entree: { jeton: string; adresseHash: string | null },
+  entree: { jeton: string; ipHash: string | null },
   ports: PortsDeConsommation
 ): Promise<ResultatDeConsommation> {
   if (!FORME_JETON.test(entree.jeton)) return INVALIDE;
-  const jetonHash = empreinteDuJeton(entree.jeton, ports.configuration.secret);
+  const tokenHash = empreinteDuJeton(entree.jeton, ports.configuration.secret);
   const maintenant = ports.maintenant();
   return ports.transaction(async (tx) => {
-    const ecrites = await tx.consommer(conditionDeConsommation(jetonHash, maintenant), {
+    const ecrites = await tx.consommer(conditionDeConsommation(tokenHash, maintenant), {
       consommeAt: maintenant,
     });
     if (ecrites !== 1) return INVALIDE;
-    const lien = await tx.lireLien(jetonHash);
+    const lien = await tx.lireLien(tokenHash);
     if (lien === null || lien.kid !== ports.configuration.kid) return INVALIDE;
     const statut = await tx.statutApporteur(lien.apporteurId);
     if (statut === null || !peutOuvrirLEspace(statut)) return INVALIDE;
-    const jetonSession = await tx.ouvrirSession({
+    const jetonSession = tirerJeton();
+    const { secret, kid } = ports.configuration.session;
+    await tx.ouvrirSession({
       apporteurId: lien.apporteurId,
       lienMagiqueId: lien.id,
-      adresseHash: entree.adresseHash,
-      maintenant,
+      tokenHash: empreinteDeSession(jetonSession, secret),
+      kid,
+      ipHash: entree.ipHash,
+      creeAt: maintenant,
+      expireAt: new Date(maintenant.getTime() + DUREES_AUTH.sessionMs.valeur),
     });
     return { etat: 'ouverte', jetonSession };
   });
