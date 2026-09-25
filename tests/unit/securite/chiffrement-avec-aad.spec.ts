@@ -19,6 +19,7 @@
 
 import { createHash } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
+import { HASH_HEX_64 } from '../../../src/domain/evenement/charges';
 import { NOMS_DES_SECRETS, kidDe } from '../../../src/lib/env';
 import { cleIbanValide } from '../../../src/lib/forme-iban';
 import { empreinteAdresse } from '../../../src/server/integrations/axionia/api-entrante';
@@ -330,7 +331,7 @@ describe('REQ-SEC-024 — empreintes de recherche HMAC (emailHash, phoneHash, ib
 
   it('REQ-SEC-024 : une même chaîne donne deux empreintes selon son type ; l’empreinte a la forme HASH_HEX_64', () => {
     const quatorze = '11122233300044';
-    expect(empreinteRecherche('siret', quatorze, CLES)).toMatch(/^[0-9a-f]{64}$/);
+    expect(empreinteRecherche('siret', quatorze, CLES)).toMatch(HASH_HEX_64);
     expect(empreinteRecherche('courriel', `${quatorze}@example.org`, CLES)).not.toBe(
       empreinteRecherche('siret', quatorze, CLES)
     );
@@ -412,6 +413,33 @@ describe('REQ-SEC-024 — garde de schéma et des chemins d’écriture (securit
     }
     const sain = decider(vue(SCHEMA_SAIN, ECRITURE_SAINE));
     expect(sain.code, sain.lignes.join('\n')).toBe(0);
+  });
+
+  it('REQ-SEC-024 : la garde DESCEND dans toute expression sous une clé d’écriture (ternaire, &&, ??, étalement, satisfies, objet imbriqué conditionnel) ; un producteur dans un ternaire reste vert', () => {
+    for (const [contenu, champ] of [
+      ['tx.contact.update({ where: { id }, data: { ...(ip ? { ipHash: ip } : {}) } });', 'ipHash'],
+      ['tx.contact.update({ where: { id }, data: { ...(e && { emailHash: e }) } });', 'emailHash'],
+      [
+        'tx.contact.update({ where: { id }, data: { ...(base ?? { emailHash: e }) } });',
+        'emailHash',
+      ],
+      ['tx.contact.create({ data: ({ id, ipHash: ip } satisfies Partial<C>) });', 'ipHash'],
+      ['tx.contact.create({ data: { id, emailHash: e ? e : null } });', 'emailHash'],
+      ['tx.contact.create({ data: { id, profil: f ? { email: e } : undefined } });', 'email'],
+      ['tx.contact.create({ data: (() => ({ id, ipHash: ip }))() });', 'ipHash'],
+    ] as const) {
+      const verdict = decider(vue(SCHEMA_SAIN, contenu));
+      expect(verdict.code, contenu).toBe(1);
+      expect(verdict.lignes.join('\n'), contenu).toContain(`\`${champ}\``);
+    }
+    for (const contenu of [
+      "tx.contact.update({ where: { id }, data: { ...(e ? { emailHash: empreinteRecherche('courriel', e, cles) } : {}) } });",
+      "tx.contact.update({ where: { id }, data: { emailHash: e ? empreinteRecherche('courriel', e, cles) : null } });",
+      "tx.contact.create({ data: { id, ...colonnesPii({ modele: 'Contact', id }, { email: c.email }, cles) } });",
+    ]) {
+      const verdict = decider(vue(SCHEMA_SAIN, contenu));
+      expect(verdict.code, `${contenu}\n${verdict.lignes.join('\n')}`).toBe(0);
+    }
   });
 
   it('REQ-SEC-024 : le dépôt sort en zéro, et le vert imprime le compte des champs et des chemins d’écriture confrontés', () => {

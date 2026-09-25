@@ -15,15 +15,21 @@
  * LES CHEMINS D'ÉCRITURE : tout fichier suivi sous `src/` que le compilateur TypeScript lit, sauf
  * `src/server/securite/pii.ts`, qui EST la primitive. Une propriété `…Chiffre` n'y reçoit que
  * `true`, `false` ou `null` (une sélection, une purge) : un bloc ne naît que de `colonnesPii`, étalé.
- * Sous une clé d'écriture Prisma (`data`, `create`, `update`, à toute profondeur de littéral), une
- * empreinte de personne ou de REQ-SEC-024 (`emailHash`, `phoneHash`, `ibanHash`, `siretHash`,
- * `ipHash`…) ne reçoit que l'appel d'un producteur de `pii.ts` ou `null`, et aucun autre champ de
- * personne n'est écrit.
+ * Sous une clé d'écriture Prisma (`data`, `create`, `update`, `createMany`, `updateMany`, `upsert`,
+ * `connectOrCreate`), une empreinte de personne ou de REQ-SEC-024 (`emailHash`, `phoneHash`,
+ * `ibanHash`, `siretHash`, `ipHash`…) ne reçoit que l'appel d'un producteur de `pii.ts` ou `null`,
+ * et aucun autre champ de personne n'est écrit. La garde DESCEND dans la valeur de la clé : objets,
+ * tableaux, étalements, ternaires (deux branches), `&&` (opérande droit), `||` et `??` (deux
+ * opérandes), parenthèses, `as`, `satisfies`, `!` ; une valeur protégée est jugée sur chacune de
+ * ces branches. Un champ protégé posé sous la clé dans une forme qu'elle ne descend pas (un appel,
+ * une fonction…) rougit `ecriture_non_jugee` : échec FERMÉ. Seuls les arguments d'une fonction de
+ * `pii.ts` (qui reçoit, elle, les clairs) en sont exemptés.
  *
  * LIMITE DÉCLARÉE : une clé calculée (`[nom]: …`), une écriture par SQL brut, une colonne `Json`
- * qui porterait une personne, un objet construit hors du littéral de l'appel puis passé en `data`,
- * et tout ce qui vit hors de `src/` relèvent de la revue. La garde lit des NOMS ; elle ne suit pas
- * les valeurs.
+ * qui porterait une personne, un objet construit HORS de l'expression de la clé (une variable)
+ * puis passé ou étalé en `data`, une fonction locale qui porterait le nom d'un producteur, et tout
+ * ce qui vit hors de `src/` relèvent de la revue. La garde lit des NOMS ; elle ne suit pas les
+ * valeurs.
  * Le vert imprime le compte des champs, des fichiers et des sites d'écriture RÉELLEMENT confrontés.
  *
  * INVARIANT DE LA PREUVE (RM-11). `--prove` ne lit pas le dépôt : ses vues sont INJECTÉES.
@@ -33,8 +39,10 @@ import ts from 'typescript';
 import { segmentsDuNom, segmentsPersonnels } from '../../src/domain/donnees-personnelles/champs';
 import {
   TYPES_EMPREINTE,
+  colonnesPii,
   empreinteAdresseReseau,
   empreinteRecherche,
+  encryptPii,
 } from '../../src/server/securite/pii';
 import { ErreurLecturePrisma, lireSchemaPrisma } from '../lot/lecteur-prisma';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
@@ -44,10 +52,20 @@ const CHEMIN_SCHEMA = 'prisma/schema.prisma';
 const LA_PRIMITIVE = 'src/server/securite/pii.ts';
 const RACINE_DU_CODE = 'src/';
 const EXTENSION_ANALYSEE = /\.(?:[cm]?[jt]sx?)$/;
-/** Les clés d'argument sous lesquelles Prisma ÉCRIT (`upsert` : `create`, `update`). */
-const CLES_D_ECRITURE = new Set(['data', 'create', 'update']);
+/** Les clés d'argument sous lesquelles Prisma ÉCRIT, écritures imbriquées comprises. */
+const CLES_D_ECRITURE = new Set([
+  'data',
+  'create',
+  'update',
+  'createMany',
+  'updateMany',
+  'upsert',
+  'connectOrCreate',
+]);
 /** Les producteurs admis d'une empreinte, lus sur les fonctions elles-mêmes (identité). */
 const PRODUCTEURS = new Set([empreinteRecherche.name, empreinteAdresseReseau.name]);
+/** Les fonctions de la primitive : leurs arguments portent les clairs QU'ELLES chiffrent. */
+const FONCTIONS_DE_LA_PRIMITIVE = new Set([...PRODUCTEURS, colonnesPii.name, encryptPii.name]);
 /** Les segments qui font d'un `…Hash` une empreinte protégée : le lexique, et les types de pii.ts. */
 const SEGMENTS_TYPES = new Set<string>(TYPES_EMPREINTE);
 
@@ -67,7 +85,8 @@ export type Famille =
   | 'source_illisible'
   | 'chiffre_hors_primitive'
   | 'empreinte_hors_primitive'
-  | 'champ_personnel_en_clair';
+  | 'champ_personnel_en_clair'
+  | 'ecriture_non_jugee';
 
 export type Faute = { famille: Famille; message: string };
 
@@ -114,16 +133,20 @@ export const FAMILLES: { nom: Famille; explication: string }[] = [
     nom: 'champ_personnel_en_clair',
     explication: 'un champ de personne écrit en clair sous data/create/update.',
   },
+  {
+    nom: 'ecriture_non_jugee',
+    explication:
+      'un champ protégé sous une clé d’écriture, dans une forme que la garde ne descend pas (appel, fonction…) : échec fermé.',
+  },
 ];
 
-const segments = (nom: string): string[] => segmentsDuNom(nom);
-const dernier = (nom: string): string => segments(nom).at(-1) ?? '';
+const dernier = (nom: string): string => segmentsDuNom(nom).at(-1) ?? '';
 const estPersonnel = (nom: string): boolean => segmentsPersonnels(nom).length > 0;
 const estReseau = (nom: string): boolean =>
   segmentsPersonnels(nom).some((e) => e.categorie === 'reseau');
 const estEmpreinteProtegee = (nom: string): boolean =>
   dernier(nom) === 'hash' &&
-  (estPersonnel(nom) || segments(nom).some((s) => SEGMENTS_TYPES.has(s)));
+  (estPersonnel(nom) || segmentsDuNom(nom).some((s) => SEGMENTS_TYPES.has(s)));
 
 // ── le schéma ────────────────────────────────────────────────────────────────
 
@@ -148,30 +171,19 @@ const nomDePropriete = (p: ts.ObjectLiteralElementLike): string | null => {
     : null;
 };
 
-/** Vrai si le littéral est, à toute profondeur de littéral, la valeur d'une clé d'écriture. */
-function sousUneCleDEcriture(objet: ts.Node): boolean {
-  let n: ts.Node = objet;
-  for (;;) {
-    const p = n.parent;
-    if (p === undefined) return false;
-    if (ts.isPropertyAssignment(p)) {
-      const nom = ts.isIdentifier(p.name) || ts.isStringLiteral(p.name) ? p.name.text : '';
-      if (CLES_D_ECRITURE.has(nom)) return true;
-      n = p.parent;
-      continue;
-    }
-    if (
-      ts.isArrayLiteralExpression(p) ||
-      ts.isParenthesizedExpression(p) ||
-      ts.isAsExpression(p) ||
-      ts.isSatisfiesExpression(p) ||
-      ts.isObjectLiteralExpression(p)
-    ) {
-      n = p;
-      continue;
-    }
-    return false;
+/** Parenthèses, `as`, `satisfies`, `!` et `<T>x` ne changent pas la valeur : on les traverse. */
+function deballer(e: ts.Expression): ts.Expression {
+  let n = e;
+  while (
+    ts.isParenthesizedExpression(n) ||
+    ts.isAsExpression(n) ||
+    ts.isSatisfiesExpression(n) ||
+    ts.isNonNullExpression(n) ||
+    ts.isTypeAssertionExpression(n)
+  ) {
+    n = n.expression;
   }
+  return n;
 }
 
 const litteralAdmis = (e: ts.Expression): boolean =>
@@ -179,12 +191,77 @@ const litteralAdmis = (e: ts.Expression): boolean =>
   e.kind === ts.SyntaxKind.FalseKeyword ||
   e.kind === ts.SyntaxKind.NullKeyword;
 
-const appelDUnProducteur = (e: ts.Expression): boolean => {
-  if (!ts.isCallExpression(e)) return false;
+const nomAppele = (e: ts.CallExpression): string => {
   const c = e.expression;
-  const nom = ts.isIdentifier(c) ? c.text : ts.isPropertyAccessExpression(c) ? c.name.text : '';
-  return PRODUCTEURS.has(nom);
+  return ts.isIdentifier(c) ? c.text : ts.isPropertyAccessExpression(c) ? c.name.text : '';
 };
+
+const appelDUnProducteur = (e: ts.Expression): boolean =>
+  ts.isCallExpression(e) && PRODUCTEURS.has(nomAppele(e));
+
+/**
+ * Vrai si TOUTE valeur que l'expression peut prendre est admise : un littéral admis, ou (pour une
+ * empreinte) l'appel d'un producteur. Un ternaire est jugé sur ses deux branches ; `a || b` et
+ * `a ?? b` sur leurs deux opérandes ; `a && b` sur `b` seul (`a` n'en sort que faux : `''`, `0`,
+ * `false`, `null`, `undefined`, qui ne portent personne). Toute autre forme : non admise.
+ */
+function valeurAdmise(expression: ts.Expression, producteur: boolean): boolean {
+  const e = deballer(expression);
+  if (litteralAdmis(e) || (producteur && appelDUnProducteur(e))) return true;
+  if (ts.isConditionalExpression(e)) {
+    return valeurAdmise(e.whenTrue, producteur) && valeurAdmise(e.whenFalse, producteur);
+  }
+  if (ts.isBinaryExpression(e)) {
+    const op = e.operatorToken.kind;
+    if (op === ts.SyntaxKind.AmpersandAmpersandToken) return valeurAdmise(e.right, producteur);
+    if (op === ts.SyntaxKind.BarBarToken || op === ts.SyntaxKind.QuestionQuestionToken) {
+      return valeurAdmise(e.left, producteur) && valeurAdmise(e.right, producteur);
+    }
+  }
+  return false;
+}
+
+/**
+ * Les littéraux d'objet ATTEINTS depuis la valeur d'une clé d'écriture : la descente traverse les
+ * objets (valeurs de leurs propriétés et étalements), les tableaux, les ternaires (deux branches),
+ * `&&` (opérande droit), `||` et `??` (deux opérandes), les parenthèses, `as`, `satisfies` et `!`.
+ * Toute autre forme (appel, identifiant, accès…) est opaque : la descente s'y arrête.
+ */
+function atteindre(expression: ts.Expression, atteints: Set<ts.Node>): void {
+  const e = deballer(expression);
+  if (ts.isObjectLiteralExpression(e)) {
+    if (atteints.has(e)) return;
+    atteints.add(e);
+    for (const p of e.properties) {
+      if (ts.isPropertyAssignment(p)) atteindre(p.initializer, atteints);
+      else if (ts.isSpreadAssignment(p)) atteindre(p.expression, atteints);
+    }
+  } else if (ts.isArrayLiteralExpression(e)) {
+    for (const el of e.elements) atteindre(ts.isSpreadElement(el) ? el.expression : el, atteints);
+  } else if (ts.isConditionalExpression(e)) {
+    atteindre(e.whenTrue, atteints);
+    atteindre(e.whenFalse, atteints);
+  } else if (ts.isBinaryExpression(e)) {
+    const op = e.operatorToken.kind;
+    if (op === ts.SyntaxKind.AmpersandAmpersandToken) atteindre(e.right, atteints);
+    else if (op === ts.SyntaxKind.BarBarToken || op === ts.SyntaxKind.QuestionQuestionToken) {
+      atteindre(e.left, atteints);
+      atteindre(e.right, atteints);
+    }
+  }
+}
+
+/**
+ * Vrai si le nœud vit sous la valeur d'une clé d'écriture SANS y avoir été atteint, et hors des
+ * arguments d'un appel à la primitive (qui reçoit, elle, les clairs) : la garde ne sait pas le juger.
+ */
+function nonJugeSousUneCle(noeud: ts.Node, racines: ReadonlySet<ts.Node>): boolean {
+  for (let n = noeud.parent; n !== undefined; n = n.parent) {
+    if (ts.isCallExpression(n) && FONCTIONS_DE_LA_PRIMITIVE.has(nomAppele(n))) return false;
+    if (racines.has(n)) return true;
+  }
+  return false;
+}
 
 function fautesDEcriture(chemin: string, contenu: string): { fautes: Faute[]; sites: number } {
   const source = ts.createSourceFile(chemin, contenu, ts.ScriptTarget.Latest, true);
@@ -202,9 +279,23 @@ function fautesDEcriture(chemin: string, contenu: string): { fautes: Faute[]; si
   }
   const fautes: Faute[] = [];
   let sites = 0;
+  const racines = new Set<ts.Node>();
+  const atteints = new Set<ts.Node>();
+  const reperer = (noeud: ts.Node): void => {
+    if (ts.isPropertyAssignment(noeud)) {
+      const n = noeud.name;
+      if ((ts.isIdentifier(n) || ts.isStringLiteral(n)) && CLES_D_ECRITURE.has(n.text)) {
+        racines.add(noeud.initializer);
+        atteindre(noeud.initializer, atteints);
+      }
+    }
+    ts.forEachChild(noeud, reperer);
+  };
+  reperer(source);
   const visiter = (noeud: ts.Node): void => {
     if (ts.isObjectLiteralExpression(noeud)) {
-      const ecriture = sousUneCleDEcriture(noeud);
+      const ecriture = atteints.has(noeud);
+      const nonJuge = !ecriture && nonJugeSousUneCle(noeud, racines);
       for (const p of noeud.properties) {
         const nom = nomDePropriete(p);
         if (nom === null) continue;
@@ -213,7 +304,7 @@ function fautesDEcriture(chemin: string, contenu: string): { fautes: Faute[]; si
         const ici = `${chemin}:${ligne} — \`${nom}\``;
         if (dernier(nom) === 'chiffre') {
           sites++;
-          if (valeur === null || !litteralAdmis(valeur)) {
+          if (valeur === null || !valeurAdmise(valeur, false)) {
             fautes.push({
               famille: 'chiffre_hors_primitive',
               message: `${ici} reçoit une valeur hors de colonnesPii (pii.ts) : un clair peut y entrer.`,
@@ -221,7 +312,7 @@ function fautesDEcriture(chemin: string, contenu: string): { fautes: Faute[]; si
           }
         } else if (ecriture && estEmpreinteProtegee(nom)) {
           sites++;
-          if (valeur === null || !(litteralAdmis(valeur) || appelDUnProducteur(valeur))) {
+          if (valeur === null || !valeurAdmise(valeur, true)) {
             fautes.push({
               famille: 'empreinte_hors_primitive',
               message: `${ici} est écrit sans ${[...PRODUCTEURS].join(' ni ')} : la valeur n’est pas prouvée empreinte.`,
@@ -232,6 +323,12 @@ function fautesDEcriture(chemin: string, contenu: string): { fautes: Faute[]; si
           fautes.push({
             famille: 'champ_personnel_en_clair',
             message: `${ici} est un champ de personne écrit en clair ; passez par colonnesPii (pii.ts).`,
+          });
+        } else if (nonJuge && (estEmpreinteProtegee(nom) || estPersonnel(nom))) {
+          sites++;
+          fautes.push({
+            famille: 'ecriture_non_jugee',
+            message: `${ici} vit sous une clé d’écriture dans une forme que la garde ne descend pas (appel, fonction…) : non jugé, donc refusé.`,
           });
         }
       }
@@ -431,6 +528,24 @@ const TEMOINS: { famille: Famille; vue: () => Vue }[] = [
     vue: () =>
       vue(MODELE_SAIN, "tx.a.create({ data: { contact: { create: { 'telephone': t } } } });"),
   },
+  {
+    famille: 'empreinte_hors_primitive',
+    vue: () =>
+      vue(MODELE_SAIN, 'tx.c.update({ where: { id }, data: { ...(ip ? { ipHash: ip } : {}) } });'),
+  },
+  {
+    famille: 'empreinte_hors_primitive',
+    vue: () =>
+      vue(MODELE_SAIN, 'tx.c.update({ where: { id }, data: { ...(e && { emailHash: e }) } });'),
+  },
+  {
+    famille: 'champ_personnel_en_clair',
+    vue: () => vue(MODELE_SAIN, 'tx.c.create({ data: { id, profil: f ? { email: e } : null } });'),
+  },
+  {
+    famille: 'ecriture_non_jugee',
+    vue: () => vue(MODELE_SAIN, 'tx.c.create({ data: (() => ({ id, ipHash: ip }))() });'),
+  },
 ];
 
 const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
@@ -441,6 +556,14 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
       vue(
         colonne('nombreDeDepots Int'),
         'tx.a.create({ data: { nombreDeDepots: 1, hotel: h, siren: s } });'
+      ),
+  },
+  {
+    quoi: 'un producteur de pii.ts dans un ternaire, et un clair passé en argument à colonnesPii',
+    vue: () =>
+      vue(
+        MODELE_SAIN,
+        "tx.c.update({ where: { id }, data: { emailHash: e ? empreinteRecherche('courriel', e, k) : null, ...colonnesPii(l, { email: e }, k) } });"
       ),
   },
   {
