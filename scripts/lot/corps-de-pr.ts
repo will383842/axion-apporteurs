@@ -60,6 +60,7 @@ import {
   tachesDeLaPr,
   type EntreeDeFichier,
   type ListeDesFichiers,
+  type MesuresDeSurvie,
   type RevueBrute,
   type TacheDeLaPr,
   jugerLesTetes,
@@ -195,6 +196,8 @@ export function jugerCaseRevues(e: {
   tete: string;
   auteurPoste: string | null;
   auteurCompte: string | null;
+  /** Témoins seulement : les mesures de la survie. Absentes en production (vrai `git`). */
+  mesures?: MesuresDeSurvie;
 }): { marque: string; detail: string } {
   const lecture = lireRevues({
     revues: e.revues,
@@ -212,6 +215,10 @@ export function jugerCaseRevues(e: {
     tete: e.tete,
     auteurPoste: e.auteurPoste,
     auteurCompte: e.auteurCompte,
+    // GOV-095 — le MÊME numéro que la garde (`gov-pr.ts`) : sans lui, aucun accord ne survit ici
+    // alors que `gov:pr` coche, et la case publiée diverge de la garde.
+    numero: e.pr,
+    ...(e.mesures ?? {}),
   });
   return { marque: lecture.coche ? '[x]' : '[ ]', detail: lecture.detail };
 }

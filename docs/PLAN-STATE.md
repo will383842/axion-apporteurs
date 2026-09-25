@@ -7,26 +7,26 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `32ea43d` — 2026-09-25T11:47:49+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #120 (rien) · 2. #116 (un contrôle requis rouge ou une revue manquante) · 3. #122 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) · 5. #88 (un conflit avec `main`) · 6. #91 (un conflit avec `main`) · 7. #92 (un conflit avec `main`) · 8. #93 (un conflit avec `main`) |
+| Où est `main` ? | `f7ea7c3` — 2026-09-25T17:40:52+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #88 (un conflit avec `main`) · 3. #91 (un conflit avec `main`) · 4. #92 (un conflit avec `main`) · 5. #93 (un conflit avec `main`) · 6. #122 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
-| Où en est la phase ? | phase 0 — 21/107 tâches, reste 64.60 j |
-| Le prochain pas | fusionner #120, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Où en est la phase ? | phase 0 — 21/108 tâches, reste 65.10 j |
+| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #122 — 2026-09-25 |
 
-**Ce qu’on tape maintenant.** `gh pr view 120 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-21/107 tâches terminées · reste 64.60 j estimés.
+21/108 tâches terminées · reste 65.10 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 219 | JUR-T02, QA-T08, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13 … |
+| `a_faire` | 220 | JUR-T02, QA-T08, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13 … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -64,14 +64,12 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #120 — feat(GOV-097): quatre lentilles pour l'argent, la securite et les donnees, deux pour le reste | `t/gov-097-risque-reserve` | rien — fusionnable maintenant |
-| 2 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un contrôle requis rouge ou une revue manquante |
-| 3 | #122 — chore(GOV-098): perimetre fonctionnel decide par Will le 2026-09-25 — lignees, parrain, statistiques, bibliotheque | `t/perimetre-fonctionnel-2026-09-25` | un contrôle requis rouge ou une revue manquante |
-| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
-| 6 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 7 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
-| 8 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #122 — chore(GOV-098): perimetre fonctionnel decide par Will le 2026-09-25 — lignees, parrain, statistiques, bibliotheque | `t/perimetre-fonctionnel-2026-09-25` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -96,15 +94,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #120** — elle est en tête de file et ne bloque sur rien.
-
-**SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 47 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 48 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `32ea43d` (2026-09-25T11:47:49+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `f7ea7c3` (2026-09-25T17:40:52+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -207,75 +203,90 @@ mandataire IMPRIME ce qu'il injecte, sur la sortie d'erreur : sans cette ligne, 
 « l'injection n'a rien changé » de « l'injection n'a pas eu lieu », et c'est précisément la
 confusion qui a coûté un tour.
 
-### PR #114 — 2026-09-23 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure
+### PR #116 — 2026-09-23 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal
 
-**Fait.** Six tâches de gouvernance construites en séquence sur une seule branche, un commit par
-tâche, une seule demande de fusion. Elles ferment la même famille : une garde qui rend un verdict
-sur ce qu'elle n'a pas mesuré. GOV-082 — une énumération de titres de test qui rend une liste vide
-avec le code zéro n'est plus lue comme une réponse : l'énumérateur est injectable, le plancher est
-dérivé du texte du fichier, et trois états se nomment, dont le refus `titres_non_resolus` qui
-n'accuse aucun test. GOV-086 — `docs/tasks.json` porte à la fois l'état voulu et les écritures qui
-le produisent, et leur divergence était muette ; deux refus nommés la disent, dans les deux sens.
-GOV-048 — le dépôt dont parle un chemin se dérive des fichiers suivis au lieu d'être supposé, et une
-affirmation sur du code d'ici se prouve par un sha d'ici. GOV-078 — le déclencheur de la section
-d'attaque compare des segments de chemin réels, et une demande de fusion qui réécrit l'entrée de
-registre d'une tâche sensible l'exige désormais, l'empreinte de l'entrée entière étant confrontée
-entre la base et la tête. GOV-076 — huit formes voisines des interdits du domaine sont armées,
-déclarées une fois, dérivées dans la configuration du linter, et chacune est exercée. GOV-046 —
-`perf-budgets` refuse un périmètre absent, et le témoin de famille qui l'accompagne dérive sa
-population du disque au lieu de la dériver de la présence du correctif. Quatre gardes reçoivent leur
-garde-fou d'import, sans lequel leur propre spécification tue le worker de test. Suite unitaire sur
-la tête de la branche : 65 fichiers, 1700 verts, 1 sauté. `pnpm gov:partiel`, `pnpm typecheck`,
-`pnpm lint`, `npx prettier --check .` et `pnpm lot:paths:check` sortent en zéro.
+**Fait.** `scripts/lot/revues.ts` liait un accord de lentille au SHA DE LA TETE et jamais au CODE
+JUGE : `x.commit !== entree.tete` suffisait a perimer. Toute tete de plus perimait donc tous les
+accords exiges, meme quand `git diff` entre les deux etait vide. Un accord rendu sur la lentille L
+au commit C survit desormais a la tete T si, et seulement si, L n'est pas `exactitude` — cette
+lentille juge la prose, c'est sa matiere — ET que l'ensemble des fichiers changes entre C et T est
+vide, ou n'est fait que d'ENTREES PAR PR du journal : la forme `docs/journal/AAAA-MM-pr-<n>.md`,
+et rien d'autre du dossier.
+La DECISION est pure (`accordSurvit`), la MESURE est `git` (`fichiersEntre`), sur le modele
+d'`estAncetreDe` juste au-dessus. Et parce que cette garde devient PLUS PERMISSIVE, elle DIT chaque
+fois qu'elle l'a ete : `pnpm gov:pr --pr` imprime le poste, la lentille, le sha de l'accord, le sha
+de la tete et LA LISTE DES FICHIERS qui les separent, et la phrase publiee au corps de la PR cesse
+d'affirmer que tout a ete juge sur la tete. Une survie silencieuse serait une permission
+inauditable.
 
-**Reste.** GOV-058 est rendue en `stop`, et elle n'est pas dans ce lot : son acceptation demande
-d'écrire en ADR une règle d'arrêt que la charte et le protocole contredisent au nom d'une décision
-de Will postérieure de deux jours. Les deux autres décisions qu'elle nomme n'ont de contenu nulle
-part dans le dépôt, et elle demande un dossier d'ADR que REQ-GOV-008 interdit. Elle attend un
-arbitrage, pas un développeur. GOV-092 était déjà fusionnée à la base du lot et le registre la
-déclare encore `a_faire` : c'est `lot:cloture` qui le corrigera. Les six autres occurrences de la
-famille « chemin absent, liste vide » vivent dans des gardes que ce lot ne possède pas ; elles sont
-inscrites avec leur motif et le fichier qui les porte, et toute occurrence non déclarée rougit
-désormais. Les quatre lentilles ne sont pas passées : la relecture reste à faire.
+**Reste.** L'ADR appartient a l'architecte, pas a cette PR : la regle de survie est une decision de
+conception, et trois alternatives ont ete ecartees — perimer toujours, une liste NOIRE de documents
+normatifs, un prefixe par dossier repute inoffensif. Le pas 5 de `docs/PROTOCOLE-FUSION.md` la porte
+en attendant, avec ses cas fermes. Deuxieme reste, mesure : la survie ne se declenche que si le
+clone porte le commit de l'accord ; l'unique `checkout` de `gate-a` porte `fetch-depth: 0`
+(`.github/workflows/ci.yml`), le premier des deux `checkout` de `.github/workflows/nightly.yml`
+aussi, le second — celui du travail `lecons-fraiches` — NON. Sans effet a ce jour : ce travail-la ne
+lance que `gov:lecons`, qui ne lit aucun accord. Sur un clone superficiel, la garde echoue FERME,
+donc exactement comme avant. Troisieme reste, releve par la lentille `securite` et NON traite ici :
+le litteral `securite` est encore ecrit deux fois dans `scripts/lot/revues.ts` — dans la liste des
+lentilles exigees et dans le message qui dit que le refus de cette lentille bloque a lui seul ;
+renommer l'un ferait cesser l'autre de mordre. Quatrieme reste, nomme et assume : l'impression
+console des accords survivants par `gov:pr` n'a pas de temoin ; le canal qui compte, le `detail`
+publie au corps de la PR, en a un.
 
-**Appris.** Le premier fait est le plus cher, et il a coûté deux tâches avant d'être vu : quatre des
-six tâches ont été construites CODE D'ABORD, et leur rouge a été obtenu par mutation du correctif,
-pas par un test écrit avant lui. Les deux premières, elles, ont été vues rougir avant leur code — et
-c'est la même cause qui a produit les deux rouges, le module qui sort par `process.exit` à
-l'import. Une fois ce garde-fou posé, la tentation d'écrire le code d'abord n'a plus rien qui
-l'arrête : rien dans l'outillage ne distingue un rouge obtenu par mutation d'un rouge obtenu avant
-le code, et les deux s'écrivent pareil dans un corps de demande de fusion. Le second fait est
-mécanique et il a rougi deux fois : `npx prettier --write` REFORMATE une ligne que `tsc` venait de
-valider, et une directive `@ts-expect-error` posée au-dessus d'un import devient inerte quand
-prettier découpe cet import sur plusieurs lignes. Le contrôle de types se relance APRES le
-formatage, jamais avant. Troisième fait, mesuré sur ce lot : le registre des sorties déclarées de
-`refus-de-rendre-et-de-publier` compte un DELTA contre la branche cible, pas un stock. Une entrée
-dormante depuis que ses sorties ont atterri reprend la valeur de la demande de fusion qui la
-réveille, et son total global BAISSE pendant que le dépôt gagne une sortie. Quatrième fait : une
-garde lexicale qui cherche un motif de code dans un fichier lit aussi le commentaire qui RACONTE ce
-motif. Le docblock qui explique le défaut faisait rougir la garde qui le ferme, sur son propre
-texte. Les commentaires se retirent avant de compter.
+**Appris.** UNE LISTE BLANCHE PAR PREFIXE DE DOSSIER EST FAUSSE D'UN FICHIER DES QUE LE DOSSIER
+PORTE SA PROPRE CONFIGURATION. La doctrine tient — un seul prefixe, rien d'enumere, un oubli fait
+relire PLUS et jamais MOINS — mais sa premisse ne tenait pas : `docs/journal/` ne contient pas que
+de la prose, il contient aussi son mode d'emploi, et ce mode d'emploi porte le PLANCHER. Deux gardes
+bloquantes de `gate-a` en DERIVENT ce nombre : `gov:attributions`, pour qui le plancher EXEMPTE des
+taches de toute attestation de lot, et `gov:etat`, pour qui il fait taire la faute
+`pr_fusionnee_sans_journal`. Une tete qui ne change QUE ce nombre eteint les deux pendant que les
+accords survivent, et la phrase publiee affirme alors que le delta ne juge aucun code : une phrase
+calculee et FAUSSE, la pire espece, parce que personne ne la met en doute. Le remede n'est pas une
+liste noire, et exclure le seul README n'en etait qu'une d'un element : la liste blanche est la
+FORME d'une entree par PR, et tout le reste du dossier - fichier mensuel compris - perime. La question se repose
+pour tout dossier qu'on met en liste blanche, et elle se repond par une COMMANDE, jamais par une
+lecture : quel fichier de ce dossier une garde cite-t-elle par son nom. Deuxieme chose apprise, du
+meme ordre : `--no-renames` ferme DEUX sens et non un. Le sens qui mord vraiment n'est pas le
+fichier SORTI du journal, c'est le document normatif DEPLACE VERS le journal — avec la detection de
+renommage, `docs/CONVENTIONS.md` deplace vers `docs/journal/x.md` ne serait rendu que par sa
+destination, donc lu comme entierement sous le journal, et l'accord survivrait a la SUPPRESSION d'un
+document normatif. Troisieme chose apprise, sur la maniere de raconter une garde : une famille de
+`--prove` peut rougir pour une raison qui n'est pas celle qu'on lui prete. Le temoin de
+`lentille_perimee` pose un `commit_id` de zeros sur TOUTES les revues ; mutant pose, `fichiersEntre`
+echouant OUVERT, `gov:pr --prove` reste VERT. La famille rougit par l'exception `exactitude`, pas
+par l'echec ferme — lequel est bien couvert, mais par le temoin unitaire. Ce qu'une garde protege se
+mesure en la cassant, jamais en lisant son intention.
 
-**Relecture.** La tête `9ffb450` a été refusée par quatre lentilles. `simplicite` relevait quatre
-mécanismes parallèles à un existant, tous fermés : `perf-budgets` établit son périmètre par
-`fichiersSuivisOuRefus` au lieu de recopier le patron (GOV-046) ; les formes voisines du linter
-dérivent leurs noms des listes de base, et les quatre modules ajoutés hors périmètre sont retirés
-(GOV-076) ; `gov-sonde` réutilise `objetLisible` de `gov-pr` et dérive sa preuve datée de
-`DATE_ET_SHA` (GOV-048) ; le couple état/opération ne juge plus que les tâches de ce dépôt, celles
-d'ailleurs restant à l'attestation, une faute pour une famille (GOV-086). `securite` relevait deux
-échecs ouverts, fermés : un chemin suivi des deux côtés, comme `prisma/schema.prisma`, est ambigu et
-redemande son repère AFF-nn tant qu'il n'est pas qualifié `partners/` (GOV-048) ; une entrée
-sensible supprimée du registre compte comme réécrite et exige la section Attaque (GOV-078).
-`exactitude` relevait que le déclencheur par zone n'imprimait ce qu'il avait confronté qu'en cas
-d'échec : la ligne sort désormais sur toute PR (GOV-078). `mutation` relevait cinq survivants, qui
-avaient une cause commune : la fonction pure était testée, son branchement ne l'était pas. Chacun a
-désormais un témoin qui passe par l'appel réel, et il a été vu rougir sous son mutant. En route,
-deux faits mesurés : importer `gov-pr` tuait tout processus lancé hors de la racine, parce que son
-contrôle d'exhaustivité tournait au chargement ; et un plancher de titres compté sur le texte brut
-comptait des `it(` cités dans la prose, 7 au lieu de 5, si bien qu'il fallait le compter hors
-commentaires avant de pouvoir le confronter à autre chose que zéro.
+**Relecture.** La tete `23a7f1b` a ete refusee par `securite` (revue 5307855596) : le README du
+journal, qui porte le plancher lu par `gov:attributions` et `gov:etat`, etait dans la liste blanche.
+Un premier correctif (`ed91983`) excluait ce seul fichier ; ce tour-ci remplace l'exclusion par une
+liste blanche de FORME (`ENTREE_DU_JOURNAL`), parce que `gov:attributions` lit aussi le fichier
+mensuel, qui porte les entrees d'autres PR. Temoins : le scenario du plancher, de 27 a 9999, joue
+contre un vrai `git`, perime les quatre accords - vu rouge sous la regle d'origine, qui en laissait
+survivre trois ; et le fichier mensuel perime - vu rouge sous l'exclusion seule, qui le laissait
+survivre. Contre-temoin : une tete qui ne touche que `docs/journal/2026-09-pr-116.md` laisse
+survivre `securite`, `simplicite` et `mutation`, et perime `exactitude`. Les trois dettes de
+`mutation` (prefixe lu au debut, relecture par l'auteur independante de la survie, lentille de la
+prose derivee d'une seule source) etaient fermees par `ed91983`.
 
-… 44 entrée(s) plus ancienne(s) dans `docs/journal/`.
+Troisieme tour, sur la faille nommee au deuxieme : `gov:attributions` lit le numero de chaque titre
+d'entree de tout fichier du journal, sans le lier au nom du fichier. Une tete qui ne touche que
+`2026-09-pr-102.md`, ou qui ajoute un titre d'entree de la PR 999 dans `2026-09-pr-116.md`,
+attesterait un autre lot sous des accords survivants. La survie exige desormais le NUMERO de la PR
+jugee : seul son fichier est admis, et chaque titre de niveau 2 ou plus qu'il porte a la tete doit
+ouvrir son entree. Numero inconnu, entree illisible a la tete : echec ferme. Les deux temoins ont
+ete vus rouges (`expected true to be false`) avant le code.
+
+Quatrième tour (veto `securite`, revue 5316791878) : une entrée devenue lien symbolique se lisait par sa cible, alors que `gov:etat` et `gov:attributions` suivent le lien. `contenuALaTete` n'admet plus qu'un fichier ordinaire (mode 100644, lu par `git ls-tree`) ; un titre caché derrière un retour chariot seul est vu, comme `gov:etat` le coupe. Deux témoins, vus rouges avant le correctif.
+
+Quatrieme tour, sur le refus de `mutation` (revue 5317022729) : quatre retraits survivaient a tout -
+l'ancre de debut de `ENTREE_DU_JOURNAL`, le numero passe par `controler()`, celui passe par le
+composeur, et l'impression des accords survivants. Chacun a desormais un temoin vu rouge sous son
+mutant, dont trois traversent la garde et le composeur reels avec les seules mesures `git` injectees
+(`MesuresDeSurvie`) ; les trois survivants equivalents sont tues aussi.
+
+… 45 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
