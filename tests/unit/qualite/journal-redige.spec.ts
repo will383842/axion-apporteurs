@@ -31,7 +31,7 @@ import {
   register,
   traiterErreurDeRequete,
 } from '../../../src/instrumentation';
-import type { FabriqueDeTransport } from '../../../src/lib/sentry';
+import { filtrerPourSentry, type FabriqueDeTransport } from '../../../src/lib/sentry';
 import { IBANS_TEMOINS_ETRANGERS, cleIbanValide } from '../../../scripts/gates/gov-entite';
 
 const RACINE = join(__dirname, '..', '..', '..');
@@ -195,13 +195,14 @@ describe('REQ-QA-024 — les noms de champ : le VRAI lexique de DM-01, segments 
       'cookie',
       'signature',
     ];
-    expect(SEGMENTS_SECRETS).toEqual(expect.arrayContaining(attendues));
     const objet = Object.fromEntries(attendues.map((c) => [c, `fuite-${c}-zq`]));
     const { texte, sorties } = lancerLignes([{ msg: 'm', objet }]);
     const franchies = attendues.filter(
       (c) => sorties[0]?.[c] !== CAVIARDE || texte.includes(`fuite-${c}-`)
     );
     expect(franchies, 'clés secrètes non caviardées sur la ligne finale').toEqual([]);
+    // Le contre-contrôle : la liste de production CONTIENT au moins ces clés (elle peut en avoir plus).
+    expect(SEGMENTS_SECRETS).toEqual(expect.arrayContaining(attendues));
   });
 
   it('REQ-QA-024 : un segment n’est pas une sous-chaîne — nomenclature, hotel, hostname passent', () => {
@@ -557,6 +558,25 @@ describe('REQ-QA-024 — Sentry reçoit les erreurs par la même fonction de cav
     const derniere = capture.enveloppes.at(-1) ?? '';
     expect(derniere).not.toContain(IBAN_DU_MESSAGE);
     expect(derniere).toContain('"value":"virement [iban]"');
+  });
+
+  it('REQ-QA-024 : le filtre de beforeSend — trace_id, span_id, parent_span_id NOMMÉS gardent leur forme, le même hexadécimal ailleurs est scanné', () => {
+    // Le client choisit ses identifiants : l'essai de 200 enveloppes ci-dessus ne peut pas en poser
+    // un piégé. Ici, la fonction même que `beforeSend` applique reçoit des identifiants qu'un motif
+    // de valeur altérerait : un hexadécimal qui est un IBAN valide, un autre qui contient 0612345678.
+    const piege32 = hexQuiEstUnIban();
+    const piege16 = 'ab0612345678cdef';
+    const trace = { trace_id: piege32, span_id: piege16, parent_span_id: piege16 };
+    const filtre = filtrerPourSentry({
+      event_id: piege32,
+      message: `ids ${piege32} ${piege16}`,
+      contexts: { trace },
+    });
+    expect(filtre).toEqual({
+      event_id: piege32,
+      message: 'ids [iban] ab[telephone]cdef',
+      contexts: { trace },
+    });
   });
 
   it('REQ-QA-024 : DSN absent — aucun transport construit, rien ne part, une ligne le dit', async () => {
