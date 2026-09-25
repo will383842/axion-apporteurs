@@ -51,6 +51,7 @@ import {
   cheminsSchema,
   cheminsTouches,
   entreesDuDiff,
+  fichierEnZoneSensible,
   OPTIONS_DU_DIFF,
   direLaSurvivance,
   direLeRisque,
@@ -60,6 +61,8 @@ import {
   resoudreLeLot,
   risqueDeLaPr,
   tachesDeLaBase,
+  segmentsNommesTouches,
+  ZONES_SENSIBLES,
   touche,
   tachesDeLaPr,
   jugerLesTetes,
@@ -150,38 +153,9 @@ const TYPES_DE_TITRE = ['feat', 'fix', 'test', 'docs', 'chore', 'refactor', 'ci'
 const ORDINAUX = ['première', 'deuxième', 'troisième', 'quatrième', 'cinquième'];
 // Les chemins qui exigent la lentille de schéma ne sont plus RECOPIÉS ici : ils se dérivent du §7
 // de la charte, par le lecteur unique — la même source que celle qui fait exiger le label (RM-01).
-/**
- * Les zones que REQ-GOV-011 place sous revue adversariale documentée — PAR LEUR NOM, jamais par un
- * préfixe de chemin.
- *
- * 🔴 LE DÉCLENCHEUR PAR ZONE ÉTAIT MORT, mesuré le 2026-09-16 sur la PR 46. Il comparait le DÉBUT
- * du chemin d'un fichier à quatre préfixes de répertoire — `commissions/`, `attributions/`,
- * `auth/`, `espace/` — qui ne correspondent à AUCUN chemin du dépôt : zéro fichier suivi commence
- * par l'un d'eux, et zéro fichier suivi les contient même au milieu de son chemin. Il n'avait donc
- * jamais rien déclenché, et il n'aurait rien déclenché quand les répertoires réels seraient
- * apparus, parce que ceux-ci vivront sous `src/`.
- *
- * CE QUI EST COMPARÉ DÉSORMAIS : un SEGMENT de chemin, et non son début. `src/domain/commissions/`
- * comme `src/app/(espace)/` répondent ; `docs/commissions-et-prorata.md` ne répond pas — c'est un
- * fichier, pas une zone.
- */
-const ZONES_SENSIBLES = ['commissions', 'attributions', 'auth', 'espace'];
-
-/**
- * Un segment de chemin, débarrassé de ce qui l'habille sans le nommer : les parenthèses d'un
- * groupe de routes (`(espace)`), les crochets d'un segment dynamique (`[id]`).
- */
-function nuDuSegment(segment: string): string {
-  return segment.replace(/^[([]+/, '').replace(/[)\]]+$/, '');
-}
-
-/**
- * LES ZONES SENSIBLES RÉELLEMENT TOUCHÉES PAR UNE LISTE DE FICHIERS — écrit à un seul endroit, et
- * ce qu'il a confronté est IMPRIMÉ (GOV-078, livrable 1).
- *
- * Le répertoire rendu est le chemin RÉEL du dépôt, jusqu'au segment qui porte le nom de la zone :
- * la garde nomme donc `src/domain/commissions`, pas `commissions/`.
- */
+// Les zones que REQ-GOV-011 place sous revue adversariale documentée (`ZONES_SENSIBLES`) et la
+// lecture PAR SEGMENT qui les reconnaît (`segmentsNommesTouches`) vivent dans le lecteur unique
+// depuis GOV-097 : le risque d'une PR lit la même lecture, sur sa propre liste (RM-01).
 /**
  * L'EMPREINTE D'UNE ENTRÉE DE REGISTRE : un SHA-256 de son JSON à clés ORDONNÉES.
  *
@@ -262,21 +236,19 @@ export function direLesZones(fichiers: readonly string[]): string {
   );
 }
 
+/**
+ * LES ZONES SENSIBLES RÉELLEMENT TOUCHÉES PAR UNE LISTE DE FICHIERS — écrit à un seul endroit, et
+ * ce qu'il a confronté est IMPRIMÉ (GOV-078, livrable 1).
+ *
+ * Le répertoire rendu est le chemin RÉEL du dépôt, jusqu'au segment qui porte le nom de la zone :
+ * la garde nomme donc `src/domain/commissions`, pas `commissions/`.
+ */
 export function zonesSensiblesTouchees(
   fichiers: readonly string[]
 ): { zone: string; sous: string }[] {
-  const vues = new Map<string, { zone: string; sous: string }>();
-  for (const f of fichiers) {
-    const segments = f.split('/');
-    // Le dernier segment est le FICHIER : une zone est un répertoire, jamais un nom de fichier.
-    for (let i = 0; i < segments.length - 1; i++) {
-      const zone = nuDuSegment(segments[i]!);
-      if (!ZONES_SENSIBLES.includes(zone)) continue;
-      const sous = segments.slice(0, i + 1).join('/');
-      vues.set(sous, { zone, sous });
-    }
-  }
-  return [...vues.values()].sort((a, b) => a.sous.localeCompare(b.sous));
+  // Le dernier segment est le FICHIER : pour la section « Attaque », une zone est un répertoire,
+  // jamais un nom de fichier (`docs/commissions-et-prorata.md` ne répond pas).
+  return segmentsNommesTouches(fichiers, ZONES_SENSIBLES, { fichierCompris: false });
 }
 /**
  * LE PÉRIMÈTRE QUE LA FAMILLE `fichier_hors_paths_des_taches` CONFRONTE, ET POURQUOI IL S'ARRÊTE LÀ
@@ -1700,6 +1672,20 @@ if (LANCE_EN_SCRIPT) {
 
     /** cas 1 — un numéro de PR que le registre ne porte pas, posé sur les tâches que le cas choisit. */
     const PR_R1 = 9999;
+    /**
+     * GOV-097 — le dépôt où UNE tâche change de zone (et, s'il le faut, déclare un chemin de plus),
+     * sur la tête comme sur la base : seule la zone varie (RM-11).
+     */
+    const depotAvecZone = (id: string, zone: string, cheminsEnPlus: string[] = []): Depot => {
+      const d = copieDepot();
+      d.taches = d.taches.map((t) =>
+        t.id === id ? { ...t, zone, paths: [...t.paths, ...cheminsEnPlus] } : t
+      );
+      return d;
+    };
+    /** Un fichier de code produit hors de toute zone sensible (GOV-097). */
+    const CODE_NEUTRE = 'src/app/tableau/page.tsx';
+
     const depotAvecPr = (ids: string[]): Depot => {
       const d = copieDepot();
       d.taches = d.taches.map((t) => (ids.includes(t.id) ? { ...t, pr: PR_R1 } : t));
@@ -2242,6 +2228,35 @@ if (LANCE_EN_SCRIPT) {
         },
       },
       {
+        // GOV-097 (refus `securite` du 2026-09-25, motif 1) — la PR ordinaire, deux lentilles, qui
+        // touche un fichier que SEC-07 (`securite`, `sensible: [auth]`) déclare, et dont le NOM
+        // n'est dans aucune zone sensible : la sensibilité suit le fichier, quatre lentilles.
+        famille: 'lentilles_manquantes',
+        defaut: () => {
+          const f = cheminsDe('SEC-07').find(
+            (c) => c.startsWith('src/') && !c.endsWith('/') && !fichierEnZoneSensible(c)
+          );
+          if (f === undefined) {
+            throw new Error(
+              'gov:pr --prove — SEC-07 ne déclare plus de fichier de code hors zone sensible : le ' +
+                'témoin « la sensibilité suit le fichier » ne peut plus en dériver le sien.'
+            );
+          }
+          const p = copiePr(PR_ORDINAIRE);
+          p.fichiers = [...p.fichiers, f];
+          return [copieDepot(), p];
+        },
+      },
+      {
+        // GOV-097 — la PR ordinaire dont la tâche passe en zone `securite`, `sensible` toujours vide :
+        // la zone compte seule, quatre lentilles (décision de Will du 2026-09-25, partners/ADR-0021).
+        famille: 'lentilles_manquantes',
+        defaut: () => {
+          const d = depotAvecZone('QA-T01', 'securite');
+          return [d, { ...copiePr(PR_ORDINAIRE), tachesBase: d.taches }];
+        },
+      },
+      {
         // cas 6 quinquies (GOV-077) — le fichier de CI RENOMMÉ hors de `.github/` : sa source compte.
         famille: 'lentilles_manquantes',
         defaut: () => [
@@ -2542,6 +2557,18 @@ if (LANCE_EN_SCRIPT) {
         cas: () => {
           const d = depotAvecPr(['QA-T01', 'GOV-039']);
           return [d, { ...copiePr(PR_ORDINAIRE), numero: PR_R1, tachesBase: d.taches }];
+        },
+      },
+      {
+        // GOV-097 — l'autre face du témoin `securite` : une tâche de zone `espace`, `sensible` vide,
+        // qui touche du code produit hors des zones sensibles, se relit à DEUX lentilles. Sans ce
+        // contre-témoin, une règle qui élèverait encore tout `src/` passerait pour la décision.
+        quoi: 'une PR de zone espace, sensible vide, touchant du code produit neutre, deux lentilles',
+        cas: () => {
+          const d = depotAvecZone('QA-T01', 'espace', [CODE_NEUTRE]);
+          const p = copiePr(PR_ORDINAIRE);
+          p.fichiers = [...p.fichiers, CODE_NEUTRE];
+          return [d, { ...p, tachesBase: d.taches }];
         },
       },
     ];
