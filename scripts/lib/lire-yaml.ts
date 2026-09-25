@@ -8,7 +8,7 @@
  * lecture est sortie ici plutôt que recopiée une troisième fois. `gardes-transposees.spec.ts` en
  * porte encore une copie — dette écrite, pas refermée ici.
  *
- * Elle a quitté `tests/unit/ci/` pour `scripts/lib/` (GOV-047) quand un SCRIPT en a eu besoin à son
+ * Elle a quitté `tests/unit/ci/` pour `scripts/lib/` quand un SCRIPT en a eu besoin à son
  * tour : `scripts/prevol.ts` lisait le job `gate-a` avec ses propres expressions rationnelles, qui
  * prenaient un scalaire bloc `run: |` pour la commande `|`, tronquaient la liste au premier
  * commentaire en colonne 0 et jouaient une étape ancrée. Un script qui importe depuis `tests/`
