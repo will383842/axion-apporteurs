@@ -176,7 +176,7 @@ sans `tests` ni `schema` le fait JETER (« n'a aucun chemin ») ; `hors-depot/ve
 voit pas. Poser `tests` par `hors-depot/poser-champ.mjs` le lève. Et le code NAF que W15 demandait
 de capter était déjà stocké au dépôt (REQ-INT-021, REQ-DM-030) : seul le repli manuel le laissait nul.
 
-… 49 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 50 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

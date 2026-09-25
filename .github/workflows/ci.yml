@@ -247,6 +247,13 @@ jobs:
         run: pnpm gov:lexique
       - name: La garde du lexique sait rougir, et laisse passer la negation qui protege
         run: pnpm gov:lexique:prove
+      # JUR-T01 : l'annexe 1 du gabarit de contrat ne nomme jamais un forfait, un bareme ou un
+      # pourcentage sans valeur numerique. Sur le gabarit source les montants sont des variables :
+      # c'est un fil tendu ; la regle protege au rendu (exigerGabaritPubliable, src/domain/contrat).
+      - name: Grille du contrat — aucun forfait, bareme ou pourcentage sans chiffre dans l annexe 1
+        run: pnpm jur:grille-chiffree
+      - name: La garde de la grille chiffree sait rougir
+        run: pnpm jur:grille-chiffree:prove
       # UX-P0-02 : une tache d'ecran ne s'attribue pas avant que Will ait valide sa maquette
       # (docs/maquettes/VALIDATION.md). Le composeur l'appliquait seul, au moment de composer ;
       # une attribution faite a la main ne rougissait nulle part. La garde lit le tableau par ses
