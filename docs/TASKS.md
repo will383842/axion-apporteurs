@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 110 | 84.35 | 33 |
+| 0 — Socle technique | 110 | 84.35 | 35 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -752,7 +752,7 @@ Couvre : `REQ-SEC-023`, `REQ-UX-024`
 
 **Tests.** `tests/unit/securite/matrice-des-roles.spec.ts`
 
-### INT-T09 — Client recherche-entreprises : proxy, cache, limiteur, circuit-breaker, repli manuel, minimisation, fixtures enregistrées, contrat nightly
+### INT-T09 — Client recherche-entreprises : proxy, cache, limiteur, circuit-breaker, repli manuel, minimisation, fixtures enregistrées, contrat nightly ✅ **fusionnee**
 
 `1 j` · zone `integration` · depend de `GOV-015`, `SEC-10`
 
@@ -832,7 +832,7 @@ Couvre : `REQ-CPL-009`, `REQ-JUR-009`, `REQ-JUR-025`, `REQ-SEC-030`
 
 **Tests.** `tests/unit/juridique/registre-rgpd.spec.ts`
 
-### UX-P0-01 — Vocabulaire et micro-copy SSOT
+### UX-P0-01 — Vocabulaire et micro-copy SSOT ✅ **fusionnee**
 
 `0.5 j` · zone `espace` · sensible : attribution · depend de `GOV-006`
 

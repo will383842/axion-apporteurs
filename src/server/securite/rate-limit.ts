@@ -98,6 +98,61 @@ export const COMPTEURS = {
     ancre: 'par identité',
     verifieLe: '2026-09-19',
   },
+  // INT-T09 — le mandataire de recherche d'entreprises, un geste du dépôt.
+  //
+  // ⚠️ CE COMMENTAIRE A DIT LE CONTRAIRE JUSQU'AU 2026-09-23, et sa condition est levée : il
+  // annonçait que REQ-INT-020 et REQ-SEC-013 n'écrivaient ni la conduite sur panne après leur
+  // ancre, ni la limite sous la forme que la garde lit avant elle, et que `rate-famille` les
+  // refuserait « tant que le gardien de la spécification n'a pas amendé ces deux textes ». Il les
+  // a amendés, à VALEUR CONSTANTE : `5 / 1 s` et `120 / 86400 s` sont la mise en forme de ce que
+  // la prose disait déjà (« limiteur global 5 req/s », « par identité (120/j) »).
+  //
+  // 🔑 Et le chiffre manquant n'était PAS l'obstacle : `exigenceDuCompteur` rend `null` dès
+  // l'absence de `surPanne:` après l'ancre, et retombe sur la SENTINELLE hors dépôt quand la
+  // limite, elle, n'est chiffrée nulle part. `depot:entreprise-ip` est donc entré ici SANS qu'aucun
+  // plafond soit inventé, et la question de le chiffrer a été posée à Will plutôt que tranchée.
+  // ✅ Elle l'est depuis le 2026-09-23 : voir le plafond arbitré plus bas.
+  //
+  // Les conduites ci-dessous se dérivent des textes : la plus fermée pour le débit global et
+  // l'identité — `laisser-passer` y annulerait le plafond exactement quand il sert, et le parcours
+  // bascule de toute façon en saisie manuelle, donc le dépôt n'est jamais bloqué — et
+  // `laisser-passer` pour l'IP, où la sentinelle répond toujours « comme en panne » : `refuser` y
+  // bloquerait l'autocomplétion en permanence.
+  'depot:entreprise-global': {
+    prefixe: 'depot:',
+    limite: 5,
+    fenetreSecondes: 1,
+    surPanne: 'refuser',
+    source: 'REQ-INT-020',
+    ancre: 'limiteur global',
+    verifieLe: '2026-09-19',
+  },
+  'depot:entreprise-identite': {
+    prefixe: 'depot:',
+    limite: 120,
+    fenetreSecondes: 86_400,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-013',
+    ancre: 'par identité',
+    verifieLe: '2026-09-19',
+  },
+  // 🔑 Le plafond par IP a été ARBITRÉ le 2026-09-23 (`HYP-SEC-IP-AUTOCOMPLETION`), après avoir
+  // vécu à la sentinelle hors dépôt — c'est-à-dire sans opposer aucune limite. Trois mesures le
+  // bornent : le tiers plafonne déjà à 7 req/s par IP (25 200/h), donc 600/h est le contraignant ;
+  // une IP est partagée et le plafond par identité vaut 120/24 h, donc 600/h laisse cinq apporteurs
+  // consommer leur journée entière dans la même heure ; et le plafond voisin de REQ-SEC-016
+  // (20 / 10 min) garde un geste RARE, quand celui-ci garde une salve de frappe.
+  // ⚠️ Le nombre est un CHOIX borné par ces trois mesures, pas une dérivation. Réversible par
+  // paramètre, et le registre des décisions le dit.
+  'depot:entreprise-ip': {
+    prefixe: 'depot:',
+    limite: 600,
+    fenetreSecondes: 3600,
+    surPanne: 'laisser-passer',
+    source: 'REQ-SEC-013',
+    ancre: 'par hash IP',
+    verifieLe: '2026-09-19',
+  },
 } as const satisfies Readonly<Record<`${PrefixeDeFamille}${string}`, DeclarationDeCompteur>>;
 
 /** Une faute de frappe dans le nom d'un compteur ne compile pas. */

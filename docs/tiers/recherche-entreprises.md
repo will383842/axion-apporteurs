@@ -19,18 +19,20 @@ est décidé, motivé et tracé (REQ-DM-034).
 
 ## 2. Source officielle
 
-| Élément exigé par REQ-GOV-022 | État au 2026-09-03 |
+| Élément exigé par REQ-GOV-022 | État au 2026-09-19 |
 | --- | --- |
-| URL officielle | adresse exacte de la documentation publique **à relever**, non ouverte à ce jour — `A01` répartit la lecture |
-| Date de lecture | **à relever** — le lecteur désigné par `A01` date ici sa propre lecture |
-| Extrait cité | **à relever** — copié mot pour mot par le lecteur désigné par `A01` |
-| Exemple officiel | **à relever** — réponse d'exemple complète copiée telle quelle par le lecteur désigné par `A01` |
+| URL officielle | https://recherche-entreprises.api.gouv.fr/openapi.json — la documentation interactive publiée par le service (lue par `INT-T09`) |
+| Date de lecture | 2026-09-19, par `INT-T09` |
+| Extrait cité | « L'API accepte **au maximum 7 requêtes par seconde** par adresse IP. Une limite de 30 requêtes par seconde par ASN est aussi en place. » — « Lorsque la limite est dépassée, le serveur renvoie une réponse **HTTP 429 – Too Many Requests**. L'en-tête **`Retry-After`** indique le délai à respecter avant d'effectuer une nouvelle requête. » — « Il est recommandé d'inclure un en-tête **`User-Agent`** explicite et descriptif dans toutes les requêtes. » — `statut_diffusion` : « Toutes les unités légales diffusibles ont le statut de diffusion à "O". Les unités légales ayant fait l'objet d'une demande d'opposition ont le statut de diffusion à "P" pour diffusion partielle » — `per_page` : « limité à 25 » |
+| Exemple officiel | **à relever** — la documentation ne publie qu'un exemple par champ, pas de réponse complète ; le lecteur désigné par `A01` dit si l'on s'en contente |
 
-⚠️ **Cette rubrique est vide, et c'est le reste à faire de la tâche.** À y citer mot pour mot : la limite de
-débit annoncée, la sémantique de `etat_administratif`, celle de `statut_diffusion`, le contenu exact de
-`dirigeants`, et la politique de l'en-tête `Retry-After`. Une réponse d'exemple complète doit être collée
-ici : c'est elle, et non notre schéma, qui fait foi. Tant qu'elle manque, les fixtures de REQ-QA-028 sont
-enregistrées depuis l'API réelle mais **non confrontées** à une réponse publiée.
+⚠️ **Cette rubrique est incomplète.** Lu et cité le 2026-09-19 : la limite de débit, la politique de
+`Retry-After`, la sémantique de `statut_diffusion`, le contenu de `dirigeants` (personne physique : `nom`,
+`prenoms`, `annee_de_naissance`, `date_de_naissance`, `qualite`, `nationalite` ; personne morale : `siren`,
+`denomination`, `qualite`). La documentation ne dit rien de la sémantique de `etat_administratif` au niveau de
+l'unité légale — les réponses réelles enregistrées portent `A` et `C`. Tant qu'aucune réponse d'exemple
+complète n'est publiée, les fixtures de REQ-QA-028 sont enregistrées depuis l'API réelle mais **non
+confrontées** à une réponse publiée.
 
 ## 3. Données qui lui sont confiées
 
@@ -52,14 +54,16 @@ Ce que **nous** appliquons, et qui n'est pas ce que le tiers autorise :
 | Débit global sortant | 5 requêtes par seconde | REQ-INT-020, REQ-QA-028 |
 | Anti-rebond de l'autocomplétion | 300 ms | REQ-INT-020 |
 | Cache | 24 h | REQ-INT-020, REQ-SEC-013 |
-| Plafond par identité d'apporteur et par empreinte d'adresse réseau | valeur portée par la configuration, jamais par un fichier versionné | REQ-SEC-013 |
+| Plafond par identité d'apporteur | 120 par 24 h (compteur `depot:entreprise-identite` du registre SEC-10) | REQ-SEC-013 |
+| Plafond par empreinte d'adresse réseau | non chiffré par l'exigence : le compteur `depot:entreprise-ip` attend sa configuration | REQ-SEC-013 |
 | Paramètres d'appel | `minimal=true&include=siege,dirigeants` | REQ-INT-020 |
-| Coupe-circuit | armé sur échecs répétés | REQ-QA-028 |
+| Coupe-circuit | ouvert aussitôt sur un 429 jusqu'à l'échéance de `Retry-After` ; ouvert après 3 échecs consécutifs (délai, 5xx, réponse illisible) pour 30 s ; un seul essai à l'échéance — seuils choisis par `INT-T09`, qu'aucune exigence ne chiffre | REQ-QA-028 |
+| Délai d'attente d'un appel | 1,5 s — choisi par `INT-T09`, qu'aucune exigence ne chiffre | REQ-INT-020 |
 | `Retry-After` | respecté | REQ-INT-020 |
 
-Le quota réellement annoncé par le tiers est **à confirmer** par le lecteur désigné par `A01`, avant
-l'ouverture des dépôts. S'il se révèle inférieur à notre limite, c'est la nôtre qui change — et le test de
-contrat le dira avant les utilisateurs.
+Le quota annoncé par le tiers, lu le 2026-09-19 (rubrique 2) : 7 requêtes par seconde par adresse IP, 30 par
+ASN, et 3 caractères au moins par saisie (réponse d'erreur du service). Notre limite de 5 par seconde est en
+dessous. S'il baisse, c'est la nôtre qui change — et le contrat nocturne le dira avant les utilisateurs.
 
 ## 5. Mode dégradé — s'il tombe
 
@@ -90,9 +94,9 @@ contrat le dira avant les utilisateurs.
 
 | Question | Qui | Avant quoi |
 | --- | --- | --- |
-| Limite de débit annoncée, et conditions d'utilisation | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant l'ouverture des dépôts |
+| Conditions d'utilisation (la limite de débit est lue, rubrique 2) | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant l'ouverture des dépôts |
 | Réponse d'exemple officielle collée dans la rubrique 2 | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant l'écriture des fixtures de REQ-QA-028 |
-| Sémantique exacte de `etat_administratif` et de `statut_diffusion` | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant le contrôle de validité du numéro d'identification de REQ-ARG-016 |
+| Sémantique exacte de `etat_administratif` (celle de `statut_diffusion` est lue, rubrique 2) | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant le contrôle de validité du numéro d'identification de REQ-ARG-016 |
 | Localisation exacte du service | Will | ouverture des dépôts |
 
 ## 9. Référence à citer dans une fixture
