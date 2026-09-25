@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `48b14b6` — 2026-09-25T21:08:41+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #126 (un contrôle requis rouge ou une revue manquante) · 4. #128 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #91 (un conflit avec `main`) · 3. #93 (un conflit avec `main`) · 4. #128 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
@@ -64,11 +64,10 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
-| 2 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 3 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un contrôle requis rouge ou une revue manquante |
-| 4 | #128 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees | `t/dm-06` | un contrôle requis rouge ou une revue manquante |
-| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #128 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees | `t/dm-06` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -149,6 +148,17 @@ spec, confrontés dans les deux sens ; un motif hors vocabulaire est refusé (`m
 jeton en clair est prouvé égal aux octets injectés et son empreinte à leur SHA-256 ; le refus d'une
 charge nomme le champ, jamais une valeur. Rejoué par le harnais du relecteur, adapté à la matrice
 réécrite : 15 mutants sur 15 tués, dont les cinq survivants d'avant.
+
+Tour 3 : A02, `exactitude` et `securite` acceptent `6e69616` ; `mutation` refuse (revue
+5322200613) et `gate-a` est rouge sur la couverture des branches (90 % sur
+`snapshot-candidature.ts`). Un témoin fixe désormais le refus d'une charge qui n'est pas un objet
+(`(racine)`), la couverture de `src/domain/apporteur/**` est à 100 %. La contrainte
+`jetons_depot_revocation_apres_creation` est lue par la spec statique et jouée en intégration. La
+lecture statique de la migration juge la FORME des branches du déclencheur (chaque condition
+suivie d'un RAISE) et leur ORDRE, et refuse une clause WHEN : les mutants qui ne rougissaient
+qu'en intégration rougissent sans Docker. La valeur refusée par la matrice est nommée et bornée à
+64 caractères ; plusieurs motifs hors liste sont essayés ; un espion prouve que la source de
+production délègue à `crypto.getRandomValues`. Onze mutants rejoués, onze tués.
 
 Dettes nommées, non traitées ici : aucune sortie depuis `kyc_en_cours` ni `pret_a_signer` hors
 l'avancée, car ni le glossaire §2 ni REQ-DM-011 n'en prévoient (un KYC abandonné reste bloqué ; à
