@@ -2,12 +2,12 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 268,
-    "pairesEnIntersection": 4287,
-    "cheminsDeclares": 781,
-    "cheminsDistincts": 502,
-    "cheminsPartages": 99,
-    "tachesSansAucuneIntersection": 74,
+    "tachesCouvertes": 281,
+    "pairesEnIntersection": 4423,
+    "cheminsDeclares": 802,
+    "cheminsDistincts": 519,
+    "cheminsPartages": 100,
+    "tachesSansAucuneIntersection": 82,
     "listeDesTachesIsolees": [
       "QA-T08",
       "QA-T06",
@@ -34,7 +34,6 @@
       "JUR-T22",
       "GOV-022",
       "GOV-025",
-      "GOV-027",
       "GOV-028",
       "GOV-029",
       "GOV-039",
@@ -82,7 +81,16 @@
       "GOV-087",
       "UX-P0-01b",
       "GOV-093",
-      "GOV-096"
+      "GOV-096",
+      "DM-27",
+      "UX-P2-08",
+      "UX-P2-09",
+      "DM-28",
+      "DM-29",
+      "UX-P3-07",
+      "UX-P3-08",
+      "UX-P3-09",
+      "UX-P3-11"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -91,7 +99,7 @@
       },
       {
         "chemin": "prisma/schema.prisma",
-        "taches": 44
+        "taches": 47
       },
       {
         "chemin": ".github/workflows/ci.yml",
@@ -1475,6 +1483,53 @@
       "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts",
       "tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts",
       "tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts"
+    ],
+    "GOV-098": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "DM-26": [
+      "tests/unit/domaine/changement-de-parrain.spec.ts",
+      "tests/integration/changement-de-parrain.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "DM-27": [
+      "tests/unit/domaine/lignee.spec.ts",
+      "tests/unit/domaine/lignee-hors-du-calcul-des-commissions.spec.ts"
+    ],
+    "UX-P2-08": [
+      "tests/unit/console/lignee.spec.ts"
+    ],
+    "UX-P2-09": [
+      "tests/unit/espace/mes-filleuls-liste.spec.ts"
+    ],
+    "DM-28": [
+      "tests/unit/domaine/code-naf-au-depot.spec.ts"
+    ],
+    "DM-29": [
+      "tests/unit/domaine/statistiques.spec.ts",
+      "tests/unit/domaine/nomenclature-naf.spec.ts"
+    ],
+    "UX-P3-07": [
+      "tests/unit/console/statistiques.spec.ts",
+      "tests/unit/console/tris-reserves-a-la-console.spec.ts"
+    ],
+    "UX-P3-08": [
+      "tests/unit/console/graphiques-svg.spec.ts"
+    ],
+    "UX-P3-09": [
+      "tests/unit/console/export-csv.spec.ts"
+    ],
+    "UX-P3-10": [
+      "tests/unit/console/notes-internes.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "UX-P3-11": [
+      "tests/unit/pilotage/alertes-de-pilotage.spec.ts"
+    ],
+    "UX-P3-12": [
+      "tests/unit/console/bibliotheque.spec.ts",
+      "tests/integration/bibliotheque-cloisonnement.spec.ts",
+      "prisma/schema.prisma"
     ]
   }
 }

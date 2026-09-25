@@ -8,15 +8,15 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**268 taches · 200.85 j estimes.**
+**281 taches · 212.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 106 | 81.85 | 21 |
-| 1 — Operationnel | 61 | 47.50 | 0 |
-| 2 — Argent | 41 | 30.00 | 0 |
-| 3 — Pilotage et conformite | 21 | 17.75 | 0 |
+| 0 — Socle technique | 107 | 82.35 | 21 |
+| 1 — Operationnel | 62 | 48.00 | 0 |
+| 2 — Argent | 45 | 33.50 | 0 |
+| 3 — Pilotage et conformite | 28 | 25.25 | 0 |
 
 ## Phase -1 — Gouvernance (prealable bloquant)
 
@@ -1653,6 +1653,16 @@ Seuls `scripts/`, `src/` et `tests/` sont confrontes par la famille des fichiers
 
 **Tests.** `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` · `tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts` · `tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts`
 
+### GOV-098 — Inscrire au plan la décision W15 de Will (2026-09-25) : lignées, changement de parrain, statistiques, secteur, bibliothèque, outils de console
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-015`
+
+**Acceptation.** TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. (1) `docs/DECISIONS.md` porte la ligne W15 en §1 (tranchée le 2026-09-25, propriétaire Will) et dix lignes `HYP-W15-*` en §2, chacune avec sa réversibilité et, pour les deux lignes `avenant`, « premier DocuSeal » ; `pnpm gov:hypotheses` sort 0. (2) `docs/requirements.json` porte treize exigences nouvelles (REQ-DM-044 à 047, REQ-UX-040 à 046, REQ-SEC-039 et 040), chacune testable et citant W15, et REQ-UX-006 amendée par W15 : la liste minimale des filleuls directs devient la seule exception à l'interdiction d'identité ; `pnpm gov:requirements` et `pnpm gov:requirements:verifie-rendu` sortent 0. (3) Les douze tâches qui livrent W15 sont versées par le verbe hors dépôt `hors-depot/verser-tache.mjs`, jamais à la main ; `pnpm gov:tasks` sort 0. (4) Le glossaire définit « lignée » et « équipe », `docs/ESPACE-ROUTES.md` rattache `/filleuls` à REQ-UX-041. (5) Toutes les vues dérivées sont régénérées, `docs/PLAN-STATE.md` en dernier.
+
+**Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
+
 ## Phase 1 — Operationnel
 
 ### JUR-T01b — Contrat v1 arrêté par Will — **attente_externe**
@@ -2081,6 +2091,16 @@ Couvre : `REQ-UX-002`, `REQ-UX-003`
 
 **Tests.** `tests/unit/espace/libelles-d-etats.spec.ts`
 
+### DM-28 — Code NAF au dépôt : stocké depuis le client recherche-entreprises, complété après un repli manuel, jamais deviné
+
+`0.5 j` · zone `domaine` · sensible : attribution · depend de `DM-07`, `INT-T09` · decisions `HYP-W15-SECTEUR`
+
+Couvre : `REQ-DM-046`
+
+**Acceptation.** (1) Sur chacune des fixtures ENREGISTRÉES d'INT-T09, le code NAF stocké sur l'attribution égale `activite_principale` de la fixture — jamais `activite_principale_naf25`, que REQ-INT-021 n'énumère pas. (2) Dépôt en repli manuel → code NAF nul ; le formulaire de dépôt ne porte aucun champ de code NAF. (3) La reprise, déclenchée à la fermeture du disjoncteur, complète les codes nuls par un nouvel appel au tiers (fixture) et n'écrase jamais un code déjà présent. (4) Un tiers qui ne rend pas le code laisse le champ nul (« non renseigné »), sans valeur par défaut. (5) TÉMOIN : une reprise qui écrirait une valeur par défaut fait rougir le test (4).
+
+**Tests.** `tests/unit/domaine/code-naf-au-depot.spec.ts`
+
 ## Phase 2 — Argent
 
 ### JUR-T16 — Garde de versement `controlesVersement
@@ -2359,6 +2379,46 @@ Couvre : `REQ-GOV-021`, `REQ-DM-014`
 
 **Tests.** `tests/unit/gouvernance/mention-de-gate-resolue.spec.ts`
 
+### DM-26 — Changement de parrain en console : admin seul, motif, journal chaîné, effet à date, refus du cycle et de l'auto-parrainage
+
+`1.5 j` · zone `domaine` · `schema` · sensible : argent, attribution · depend de `DM-16`, `SEC-18`, `SEC-17`, `DM-01` · decisions `HYP-W15-PARRAIN-A-DATE`, `HYP-W15-NOTIF-PARRAIN`
+
+Couvre : `REQ-DM-044`
+
+**Acceptation.** TÂCHE SENSIBLE — argent et attribution ; ELLE ÉCRIT LE SCHÉMA (historique daté du rattachement de parrainage). (1) L'action de console n'est permise qu'au rôle `admin` (matrice de SEC-17) ; tout autre rôle reçoit le refus, et le test joue `qualifieur` et `comptable`. (2) Motif vide ou blanc → refus, aucun événement écrit. (3) L'action écrit UN événement au journal `Evenement` chaîné (ancien parrain, nouveau parrain, date d'effet, motif, auteur) ; la vérification de chaîne passe après l'action. (4) EFFET À DATE : sur une fixture, une ligne `commission` du filleul acquise la veille de l'effet engendre sa ligne `parrainage` au profit du parrain d'origine, une ligne acquise le lendemain au profit du nouveau parrain ; une `reprise` d'une ligne d'avant l'effet suit le parrain d'origine ; la fenêtre `contratFilleulSigneAt + 12 mois` est inchangée. (5) REFUS NOMMÉS, journal inchangé : nouveau parrain = le filleul ; nouveau parrain = un descendant du filleul (cycle) ; nouveau parrain partageant un hash de SIRET, d'e-mail, de téléphone ou d'IBAN avec le filleul (règle de SEC-18, réutilisée, jamais recopiée). (6) Les e-mails suivent `HYP-W15-NOTIF-PARRAIN` : trois destinataires, ni motif ni montant ni identité d'un autre apporteur (assertion sur les gabarits). (7) Aucune ligne n'est jamais créée au second niveau (REQ-DM-023 reste vert). NE PAS ARMER tant que `HYP-W15-PARRAIN-A-DATE` n'est pas tranchée : elle est `avenant`.
+
+**Tests.** `tests/unit/domaine/changement-de-parrain.spec.ts` · `tests/integration/changement-de-parrain.spec.ts`
+
+### DM-27 — Lignée et équipe : fonctions pures de lecture, deux niveaux, jamais appelées par le calcul des commissions
+
+`0.5 j` · zone `domaine` · sensible : attribution · depend de `DM-16`, `DM-26` · decisions `HYP-W15-EQUIPE`
+
+Couvre : `REQ-DM-045`
+
+**Acceptation.** (1) `lignee(a, t)` rend exactement les filleuls de `a` (niveau 1) et les filleuls de ceux-ci (niveau 2) à la date `t` : fixture à trois niveaux, le troisième est absent. (2) La date compte : une fixture avec un changement de parrain (DM-26) rend deux lignées différentes avant et après l'effet. (3) `equipe(a, t)` = `a` et sa lignée ; deux équipes qui se chevauchent sont rendues séparément, jamais fusionnées. (4) Fonctions pures, horloge injectée, aucune I/O (règle de `src/domain/**`). (5) GARDE STATIQUE, TÉMOIN À DEUX FACES : un fichier du calcul des commissions qui importe `lignee` ou `equipe` fait rougir la garde et la nomme ; le dépôt réel la fait sortir verte avec le compte des fichiers confrontés.
+
+**Tests.** `tests/unit/domaine/lignee.spec.ts` · `tests/unit/domaine/lignee-hors-du-calcul-des-commissions.spec.ts`
+
+### UX-P2-08 — Console : lignée d'un apporteur en liste et en arbre SVG, deux niveaux
+
+`1 j` · zone `console` · sensible : attribution, rgpd · depend de `DM-27`, `SEC-17`, `UX-P1-12` · decisions `HYP-W15-EQUIPE`
+
+Couvre : `REQ-UX-040`
+
+**Acceptation.** (1) Depuis la fiche apporteur (UX-P1-12), la console affiche la lignée en LISTE et en ARBRE SVG rendu côté serveur, sans bibliothèque ; chaque nœud porte l'état du contrat et la date de rattachement. (2) Fixture à trois niveaux → exactement les niveaux 1 et 2 ; la liste et l'arbre portent le même ensemble d'apporteurs (comparaison des identifiants). (3) L'écran est dans la matrice des rôles ; retiré de la matrice → refus. `lecteur` → aucune clé d'identité dans le DTO. (4) Aucun montant du second niveau n'est présenté comme revenant à l'apporteur consulté. (5) axe-core : 0 violation serious ou critical ; poids de la route mesuré avant/après et collé dans la PR.
+
+**Tests.** `tests/unit/console/lignee.spec.ts`
+
+### UX-P2-09 — Mes filleuls : liste des filleuls directs, prénom, initiale et état du contrat, sans montant par filleul
+
+`0.5 j` · zone `espace` · sensible : espace, rgpd · depend de `DM-16`, `SEC-05`, `UX-P2-04` · decisions `HYP-W15-FILLEULS-VUE`, `HYP-W15-ART-4-6`
+
+Couvre : `REQ-UX-041`, `REQ-UX-006`
+
+**Acceptation.** TÂCHE SENSIBLE — espace et données personnelles. (1) Toute lecture passe par `forApporteur` (SEC-05). (2) CLÉS EXACTES de chaque élément du DTO de liste : `prenom`, `initialeNom`, `etatContrat` — rien d'autre ; un témoin portant une clé d'activité (`nbDepots`, `actif`, `derniereVente`, `lastSeenAt`) ou un montant fait rougir le test. (3) Fixture à deux niveaux → les filleuls des filleuls sont absents. (4) Deux filleuls au même état de contrat, l'un actif et l'autre non → éléments byte-identiques hors prénom et initiale. (5) Le montant de parrainage reste agrégé par mois, jamais ventilé par filleul (REQ-UX-006). (6) Le filleul d'un autre apporteur n'apparaît jamais ; son identifiant sur une route paramétrée rend le 404 byte-identique. NE PAS ARMER tant que `HYP-W15-ART-4-6` n'est pas tranchée : elle est `avenant`.
+
+**Tests.** `tests/unit/espace/mes-filleuls-liste.spec.ts`
+
 ## Phase 3 — Pilotage et conformite
 
 ### T-ARG-030 — Export comptable équilibré
@@ -2496,4 +2556,74 @@ Couvre : `REQ-EXT-013`
 Couvre : `REQ-JUR-033`
 
 **Acceptation.** envoi à intervalle fixe, **contenu identique pour tous**, la fonction d'envoi ne reçoit aucun filtre d'activité (signature sans paramètre de date de dernier dépôt) ; désinscription ; « dormant » reste un indicateur de console.
+
+### DM-29 — Agrégats de pilotage : candidatures, statuts, part d'actifs, CA et commissions par apporteur, lignée et équipe, secteur, séries mensuelles
+
+`1.5 j` · zone `domaine` · sensible : argent · depend de `CPL-T15`, `UX-P3-06`, `DM-21`, `DM-27`, `DM-28`, `DM-15` · decisions `HYP-W15-EQUIPE`, `HYP-W15-SECTEUR`
+
+Couvre : `REQ-UX-042`, `REQ-DM-047`
+
+**Acceptation.** FONCTIONS PURES, horloge injectée, montants en centimes HT. (1) Jeu de fixture à totaux connus : candidatures par canal et par période, apporteurs par statut, part d'actifs parmi les apporteurs sous contrat, CA et commissions par apporteur, par lignée et par équipe — chaque valeur égale la valeur attendue écrite dans le test. (2) `actif`/`dormant` viennent de la fonction de REQ-CPL-027 (UX-P3-06), importée, jamais recalculée : une garde rougit sur une seconde dérivation. (3) Équipes chevauchantes : leurs totaux ne sont jamais additionnés entre eux. (4) Séries mensuelles : un mois sans donnée vaut 0, jamais absent. (5) Secteur : la table rattache chacune des 88 divisions NAF rév. 2 à une section ; `70.10Z` → M/70 ; code nul → « non renseigné » ; la somme des secteurs égale le total non filtré.
+
+**Tests.** `tests/unit/domaine/statistiques.spec.ts` · `tests/unit/domaine/nomenclature-naf.spec.ts`
+
+### UX-P3-07 — Console Statistiques : tableaux filtrables (période, canal, statut, secteur), tris réservés à la console
+
+`1 j` · zone `console` · sensible : argent, rgpd · depend de `DM-29`, `UX-P3-04`, `SEC-17`
+
+Couvre : `REQ-UX-042`, `REQ-UX-044`, `REQ-DM-047`
+
+**Acceptation.** (1) L'écran rend les indicateurs de DM-29 sur une période choisie, filtrables par canal, statut et secteur (section et division). (2) Les montants par apporteur ne sortent que pour les rôles que la matrice autorise ; `lecteur` → aucune clé de montant par apporteur dans le DTO. (3) TRIS RÉSERVÉS À LA CONSOLE : garde statique, témoin à deux faces — un fichier sous `src/app/(espace)/**` qui importe un module de statistiques fait rougir la garde et le nomme ; le dépôt réel sort vert avec le compte des fichiers confrontés. Le terme que REQ-GOV-017 bannit n'apparaît pas (`pnpm gov:lexique`). (4) axe-core 0 violation serious ou critical ; poids de la route mesuré avant/après, ≤ 75 KB gz.
+
+**Tests.** `tests/unit/console/statistiques.spec.ts` · `tests/unit/console/tris-reserves-a-la-console.spec.ts`
+
+### UX-P3-08 — Graphiques de console en SVG maison : courbes et barres, alternative tabulaire, aucune bibliothèque de tracé
+
+`1 j` · zone `console` · depend de `UX-P3-07`, `GOV-019`
+
+Couvre : `REQ-UX-043`
+
+**Acceptation.** (1) Un composant maison rend, côté serveur, une courbe et un histogramme en `<svg>` ; sur une série de fixture, les coordonnées des points égalent les données (test de forme). (2) Chaque graphique porte une alternative tabulaire accessible ; axe-core 0 violation serious ou critical. (3) GARDE, TÉMOIN À DEUX FACES : une dépendance de tracé ajoutée à `package.json` (liste en configuration de la garde) la fait rougir et la nomme ; le `package.json` réel la fait sortir verte. (4) La route Statistiques a son entrée dans `perf/budgets.json` et tient ≤ 75 KB gz de First Load JS, chiffres avant/après collés dans la PR (REQ-GOV-028).
+
+**Tests.** `tests/unit/console/graphiques-svg.spec.ts`
+
+### UX-P3-09 — Export CSV de chaque tableau de console : sans coordonnées directes, journalisé, neutralisation des formules
+
+`0.5 j` · zone `console` · sensible : rgpd · depend de `UX-P3-07`, `SEC-17`, `DM-01` · decisions `HYP-W15-EXPORT`
+
+Couvre : `REQ-SEC-040`
+
+**Acceptation.** TÂCHE SENSIBLE — données personnelles. (1) Un seul exporteur sert tous les tableaux de console ; une garde dérive du disque la liste des tableaux et rougit sur un tableau sans export. (2) En-têtes exacts sur une fixture ; AUCUNE colonne d'e-mail, de téléphone, d'IBAN ni d'adresse — témoin : un tableau qui en déclare une fait rougir l'exporteur. (3) Cellule de texte `=1+1` neutralisée ; montant négatif laissé intact. (4) `lecteur` → refus. (5) Chaque export écrit un événement au journal chaîné (auteur, tableau, filtres, nombre de lignes), et le test relit le nombre de lignes.
+
+**Tests.** `tests/unit/console/export-csv.spec.ts`
+
+### UX-P3-10 — Notes internes par apporteur en console : jamais servies à l'espace, journalisées, incluses dans l'export art. 15
+
+`1 j` · zone `console` · `schema` · sensible : rgpd · depend de `UX-P1-12`, `SEC-17`, `SEC-05`, `DM-20` · decisions `HYP-W15-NOTES`
+
+Couvre : `REQ-SEC-039`
+
+**Acceptation.** TÂCHE SENSIBLE — données personnelles ; ELLE ÉCRIT LE SCHÉMA (modèle de note). (1) Création, modification et suppression réservées aux rôles de la matrice ; rôle absent → refus. (2) Chaque geste écrit un événement au journal chaîné. (3) GARDE STATIQUE, TÉMOIN À DEUX FACES : le modèle de note est inaccessible par `forApporteur` ; un DTO de l'espace portant une clé de note fait rougir la garde. (4) Aucune note n'entre dans un e-mail, une alerte Telegram, un score ni un déclencheur. (5) L'export d'accès art. 15 d'une fixture (DM-20) contient la note.
+
+**Tests.** `tests/unit/console/notes-internes.spec.ts`
+
+### UX-P3-11 — Alertes de pilotage : baisse d'activité d'un apporteur ou d'une lignée, candidatures en attente, par les canaux existants
+
+`1 j` · zone `console` · sensible : rgpd · depend de `INT-T14`, `UX-P1-10`, `UX-P3-06`, `DM-29` · decisions `HYP-W15-SEUILS-ALERTE`
+
+Couvre : `REQ-UX-045`
+
+**Acceptation.** (1) Les alertes passent par le bot de console d'INT-T14 (dédoublonnage, plafond horaire, aucune coordonnée) et par la table des notifications de console d'UX-P1-10 — aucun autre canal n'est créé. (2) Seuils lus en configuration ; fixture sous le seuil → une alerte, au-dessus → aucune. (3) L'activité se mesure sur les dépôts confirmés ; une règle lisant `lastSeenAt` ou `dernierUsageAt` fait rougir la garde de REQ-JUR-039. (4) ESPION SUR LES EXPÉDITEURS : aucun envoi n'a un apporteur pour destinataire, et aucun état d'apporteur ne change ; témoin : un envoi à l'apporteur fait rougir le test. (5) Le message Telegram ne porte qu'une catégorie, un compte et un identifiant technique.
+
+**Tests.** `tests/unit/pilotage/alertes-de-pilotage.spec.ts`
+
+### UX-P3-12 — Bibliothèque de documents : console (ajout, remplacement versionné, retrait, ciblage, publication datée) et affichage ciblé dans Ressources
+
+`1.5 j` · zone `console` · `schema` · sensible : espace, rgpd · depend de `UX-P3-02`, `UX-P2-04`, `SEC-05`, `SEC-17`, `DM-11`, `JUR-T30` · decisions `HYP-W15-BIBLIOTHEQUE`
+
+Couvre : `REQ-UX-046`
+
+**Acceptation.** TÂCHE SENSIBLE — espace et données personnelles ; ELLE ÉCRIT LE SCHÉMA (document et versions). (1) Console : ajout, remplacement versionné (l'ancienne version conservée et plus jamais servie), retrait par dépublication, ciblage tous / un palier / un apporteur, date de publication ; chaque geste journalisé. (2) Espace, par `forApporteur` : un document ciblé sur un palier est visible de ce palier ; pour un autre apporteur, sa route rend le 404 byte-identique à un identifiant inexistant (test en boîte noire). (3) Publication datée de demain → invisible aujourd'hui (horloge injectée). (4) Fichier non PDF, jugé sur ses octets d'en-tête → refus ; stockage privé, URL signée courte. (5) Inventaire des ressources téléchargeables : aucun fichier de logo ni de charte (REQ-JUR-041) ; le terme que REQ-JUR-041 bannit n'apparaît nulle part (`pnpm gov:lexique`).
+
+**Tests.** `tests/unit/console/bibliotheque.spec.ts` · `tests/integration/bibliotheque-cloisonnement.spec.ts`
 

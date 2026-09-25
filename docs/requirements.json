@@ -1186,6 +1186,34 @@
       ]
     },
     {
+      "id": "REQ-SEC-039",
+      "domaine": "anti-abus-securite",
+      "texte": "La console porte des **notes internes** par apporteur, écrites et lues par les seuls rôles que la matrice autorise (REQ-SEC-023) ; chaque création, modification et suppression est un événement du journal chaîné. Elles ne sont **jamais servies à l'espace** (aucun accès par `forApporteur`, garde statique) ni reprises dans un e-mail ou une alerte (REQ-INT-024), et n'alimentent aucun score ni aucun déclencheur (REQ-JUR-039). Donnée personnelle de l'apporteur, elles figurent dans son export d'accès art. 15 (`HYP-W15-NOTES`). Décision W15 (6), 2026-09-25. Tests : aucun DTO de l'espace ne porte de clé de note (**vue rougir** sur un témoin) ; rôle absent de la matrice → refus ; l'export art. 15 d'une fixture contient la note ; journal vérifié.",
+      "source": "décision de Will du 2026-09-25, W15 (point 6)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 18,
+      "etape": 7,
+      "phase": 3,
+      "taches": [
+        "UX-P3-10"
+      ]
+    },
+    {
+      "id": "REQ-SEC-040",
+      "domaine": "anti-abus-securite",
+      "texte": "Chaque tableau de la console s'**exporte en CSV** : colonnes = celles affichées **moins** les coordonnées directes — e-mail, téléphone, IBAN, adresse (`HYP-W15-EXPORT`) ; action réservée par la matrice, `lecteur` exclu (glossaire, rôle `lecteur`) ; chaque export est un événement du journal chaîné (auteur, tableau, filtres, nombre de lignes) ; une cellule **de texte** commençant par `=`, `+`, `-` ou `@` est neutralisée (injection de formule). Décision W15 (6), 2026-09-25. Tests : export d'un tableau de fixture → en-têtes exacts, aucune colonne de coordonnée ; cellule de texte `=1+1` neutralisée, montant négatif intact ; `lecteur` → refus ; événement écrit avec le bon nombre de lignes.",
+      "source": "décision de Will du 2026-09-25, W15 (point 6)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": null,
+      "phase": 3,
+      "taches": [
+        "UX-P3-09"
+      ]
+    },
+    {
       "id": "REQ-ARG-001",
       "domaine": "argent",
       "texte": "Une ligne de commission `acquise` n'est créée que par un événement `paiement.recu` (status succeeded, amountCents > 0). `devis.signe` et `facture.emise` ne créent jamais de ligne `acquise` (ils créent/actualisent l'attendu `en_attente_encaissement`). _(source : tableaux-de-bord §2.3 ; fonctionnement R7 ; audit-attribution P6)_ **→ ABSORBÉE par REQ-DM-016** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-DM-016** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-DM-016.**",
@@ -2704,8 +2732,8 @@
     {
       "id": "REQ-UX-006",
       "domaine": "produit-ux",
-      "texte": "Aucune réponse serveur de l'espace apporteur ne contient l'identité (nom, e-mail, code, id) ni les montants d'un autre apporteur ; toute route paramétrée (/entreprises/:id, /commissions/:id, /documents/:id) répond 404 pour un id appartenant à un autre apporteur. 🔴 **« Mes filleuls » n'affiche QUE le montant de parrainage qui revient au parrain, agrégé par mois** (contrat art. 4.6 al. nouveau, M-12) : le parrainage n'emporte **aucune fonction d'encadrement, d'animation, de formation ni de suivi**, et le parrain **n'a accès à aucune donnée relative à l'activité du filleul** — ni nom, ni nombre de déclarations, ni état d'avancement, ni date de dernière vente, ni existence même d'une activité. Un écran qui ferait voir au parrain ce que fait son filleul est un écran de management, et c'est la lecture que l'écran produira devant un juge. Tests : assertion sur les **clés exactes** du DTO de parrainage (montant + mois, rien d'autre), **vue rougir** sur toute clé d'activité ; deux filleuls, l'un actif l'autre non → **DTO byte-identique** hors montant.",
-      "source": "R3 ; tableaux-de-bord §6.1 ; audit-outil §7 ; contrat art. 4.6 ; nouvelle (UX-08) ; synthèse du 2026-09-03, M-12",
+      "texte": "Aucune réponse serveur de l'espace apporteur ne contient l'identité (nom, e-mail, code, id) ni les montants d'un autre apporteur — **seule exception, décidée par Will le 2026-09-25 (W15)** : la liste de ses propres filleuls directs, réduite au prénom, à l'initiale du nom et à l'état du contrat (REQ-UX-041, `HYP-W15-FILLEULS-VUE`) ; toute route paramétrée (/entreprises/:id, /commissions/:id, /documents/:id) répond 404 pour un id appartenant à un autre apporteur. 🔴 **« Mes filleuls » n'affiche, en fait de montant, QUE le montant de parrainage qui revient au parrain, agrégé par mois — jamais un montant par filleul** (contrat art. 4.6 al. nouveau, M-12) : le parrainage n'emporte **aucune fonction d'encadrement, d'animation, de formation ni de suivi**, et le parrain **n'a accès à aucune donnée relative à l'activité du filleul** — ni nombre de déclarations, ni état d'avancement, ni date de dernière vente, ni `actif`/`dormant`, ni existence même d'une activité (le prénom, l'initiale et l'état du contrat sont des données d'identité et de relation, pas d'activité : lecture `HYP-W15-ART-4-6`). Un écran qui ferait voir au parrain ce que fait son filleul est un écran de management, et c'est la lecture que l'écran produira devant un juge. Tests : assertion sur les **clés exactes** du DTO de parrainage agrégé (montant + mois, rien d'autre) et de chaque élément de la liste des filleuls (prénom, initiale du nom, état du contrat, rien d'autre), **vue rougir** sur toute clé d'activité ; deux filleuls au même état de contrat, l'un actif l'autre non → **DTO byte-identique** hors montant, prénom et initiale.",
+      "source": "R3 ; tableaux-de-bord §6.1 ; audit-outil §7 ; contrat art. 4.6 ; nouvelle (UX-08) ; synthèse du 2026-09-03, M-12 ; amendée par la décision de Will du 2026-09-25, W15 (point 1)",
       "statut": "active",
       "remplaceePar": null,
       "module": 14,
@@ -2715,7 +2743,8 @@
         "DM-16",
         "SEC-05",
         "UX-P2-04",
-        "UX-P2-06"
+        "UX-P2-06",
+        "UX-P2-09"
       ]
     },
     {
@@ -3911,6 +3940,7 @@
         "GOV-022",
         "GOV-027",
         "GOV-060",
+        "GOV-098",
         "JUR-T01b"
       ]
     },
@@ -4678,6 +4708,105 @@
       ]
     },
     {
+      "id": "REQ-UX-040",
+      "domaine": "produit-ux",
+      "texte": "La console affiche, pour chaque apporteur, sa **lignée** (REQ-DM-045) : ses filleuls (premier niveau) et les filleuls de ses filleuls (second niveau), en **liste** et en **arbre** SVG, avec pour chacun son état de contrat et sa date de rattachement. La profondeur affichée est **deux, jamais plus**. L'écran est porté par la matrice des rôles (REQ-SEC-023) ; `lecteur` n'y voit aucune donnée d'identité (glossaire, rôle `lecteur`) ; aucun montant du second niveau n'est présenté comme revenant à l'apporteur consulté. Décision W15 (1) et (6), 2026-09-25. Tests : fixture à trois niveaux → la vue rend exactement les niveaux 1 et 2 ; la liste et l'arbre portent le même ensemble d'apporteurs ; écran absent de la matrice → refus ; `lecteur` → aucune clé d'identité dans le DTO.",
+      "source": "décision de Will du 2026-09-25, W15 (points 1 et 6)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 14,
+      "etape": 10,
+      "phase": 2,
+      "taches": [
+        "UX-P2-08"
+      ]
+    },
+    {
+      "id": "REQ-UX-041",
+      "domaine": "produit-ux",
+      "texte": "« Mes filleuls » affiche la **liste des filleuls directs** de l'apporteur connecté — pour chacun, **prénom, initiale du nom et état du contrat** (`HYP-W15-FILLEULS-VUE`) — et, séparément, le montant de parrainage **agrégé par mois** (REQ-UX-006). **Aucun montant par filleul**, aucune donnée d'activité (nombre de dépôts, `actif`/`dormant`, dernière vente, dernière connexion), **aucun filleul de filleul**, aucun e-mail, téléphone ni identifiant interne. Décision W15 (1), 2026-09-25. Tests : **clés exactes** de chaque élément du DTO de liste (`prenom`, `initialeNom`, `etatContrat`) ; fixture à deux niveaux → le second niveau est absent ; deux filleuls au même état de contrat, l'un actif et l'autre non → éléments byte-identiques hors prénom et initiale ; le filleul d'un autre apporteur n'apparaît jamais (REQ-SEC-009).",
+      "source": "décision de Will du 2026-09-25, W15 (point 1)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 14,
+      "etape": 10,
+      "phase": 2,
+      "taches": [
+        "UX-P2-09"
+      ]
+    },
+    {
+      "id": "REQ-UX-042",
+      "domaine": "produit-ux",
+      "texte": "L'écran **Statistiques** de la console rend, sur une période choisie : le nombre de **candidatures par canal** (REQ-CPL-015) ; le nombre d'**apporteurs par statut** (REQ-QA-004) ; la **part d'apporteurs actifs** parmi les apporteurs sous contrat, `actif`/`dormant` venant de la fonction de REQ-CPL-027 et n'étant recalculés nulle part ailleurs ; le **CA généré** et les **commissions** par apporteur, par lignée et par équipe (REQ-DM-045) ; et la **courbe mensuelle** de chacun de ces indicateurs. Les agrégats sont des fonctions pures du domaine, horloge injectée (REQ-CPL-013), montants en centimes HT (REQ-DM-001) ; les montants par apporteur sont réservés aux rôles que la matrice autorise, `lecteur` exclu (glossaire, rôle `lecteur`). Décision W15 (3), 2026-09-25. Tests : jeu de fixture à totaux connus → chaque indicateur égal à la valeur attendue ; équipes chevauchantes → leurs totaux ne sont jamais additionnés entre eux ; `lecteur` → aucune clé de montant par apporteur dans le DTO.",
+      "source": "décision de Will du 2026-09-25, W15 (point 3)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": 7,
+      "phase": 3,
+      "taches": [
+        "DM-29",
+        "UX-P3-07"
+      ]
+    },
+    {
+      "id": "REQ-UX-043",
+      "domaine": "produit-ux",
+      "texte": "Les graphiques de la console sont des **SVG produits par un composant maison**, rendus côté serveur, **sans bibliothèque de graphiques** ; chaque graphique porte une **alternative tabulaire** accessible (REQ-UX-018) ; la route qui les affiche tient le budget de REQ-GOV-028 (≤ 75 KB gz de First Load JS), mesuré à la main avant et après. Décision W15 (3), 2026-09-25. Tests : une garde rougit si une dépendance de tracé entre dans `package.json` (**vue rougir** sur un témoin) ; une série de fixture rend un `<svg>` dont les points égalent les données ; axe-core : 0 violation serious ou critical.",
+      "source": "décision de Will du 2026-09-25, W15 (point 3)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": null,
+      "phase": 3,
+      "taches": [
+        "UX-P3-08"
+      ]
+    },
+    {
+      "id": "REQ-UX-044",
+      "domaine": "produit-ux",
+      "texte": "Les **tris par volume** (CA, commissions, dépôts) et toute comparaison entre apporteurs n'existent **que dans la console** : aucun DTO de l'espace, aucun e-mail et aucune notification ne porte un rang, une position ou une comparaison (REQ-JUR-034, gate `jur:aucun-agregat-reseau`), et aucun texte destiné à un apporteur n'annonce un classement ou un challenge (REQ-JUR-012, REQ-JUR-037, REQ-UX-029). Le code de la console emploie « tri », jamais le terme que REQ-GOV-017 bannit. Décision W15 (3), 2026-09-25. Tests : aucun module de statistiques n'est importé sous `src/app/(espace)/**` (garde statique, **vue rougir** sur un témoin) ; un DTO de l'espace portant une clé `rang` fait rougir la gate.",
+      "source": "décision de Will du 2026-09-25, W15 (point 3)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": null,
+      "phase": 3,
+      "taches": [
+        "UX-P3-07"
+      ]
+    },
+    {
+      "id": "REQ-UX-045",
+      "domaine": "produit-ux",
+      "texte": "Les **alertes de pilotage** — baisse d'activité d'un apporteur ou d'une lignée, candidatures en attente au-delà d'un délai — passent **par les canaux d'alerte existants** : bot Telegram de console (REQ-INT-024 : dédoublonnage, plafond horaire, aucune coordonnée) et table des notifications de console (UX-P1-10) ; **aucun second canal**. L'activité se mesure sur les **dépôts confirmés**, jamais sur les connexions ni sur `lastSeenAt` (REQ-JUR-039) ; les seuils vivent en configuration (`HYP-W15-SEUILS-ALERTE`). Une alerte de pilotage **ne produit aucun message à l'apporteur** ni aucun changement de son état (REQ-CPL-027, REQ-JUR-033, REQ-JUR-042). Décision W15 (6), 2026-09-25. Tests : fixture sous le seuil → une alerte, au-dessus → aucune ; aucun envoi n'a un apporteur pour destinataire (espion sur les expéditeurs) ; une règle d'alerte lisant `lastSeenAt` fait rougir la garde de REQ-JUR-039.",
+      "source": "décision de Will du 2026-09-25, W15 (point 6)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": 7,
+      "phase": 3,
+      "taches": [
+        "UX-P3-11"
+      ]
+    },
+    {
+      "id": "REQ-UX-046",
+      "domaine": "produit-ux",
+      "texte": "La console tient une **bibliothèque de documents** mis à disposition des apporteurs : ajout, **remplacement versionné** (la version précédente est conservée et n'est plus servie), **retrait** (dépublication, la trace restant), **ciblage** (tous, un palier, un apporteur) et **date de publication**. Côté espace, un document apparaît dans « Ressources » (UX-P3-02) pour les seuls apporteurs ciblés, à partir de sa date de publication ; un document qui n'est pas ciblé sur l'apporteur connecté répond **404 byte-identique** à un identifiant inexistant (REQ-SEC-009, couche `forApporteur`, REQ-SEC-008). Les fichiers sont des **PDF** sur stockage privé servis par URL signée courte (REQ-SEC-026), sans logo ni charte (REQ-JUR-041), relus par Will avant publication (REQ-CPL-023) ; le vocabulaire est « documents de présentation », jamais le terme que REQ-JUR-041 bannit. Ajout, remplacement et retrait sont journalisés (`HYP-W15-BIBLIOTHEQUE`). Décision W15 (5), 2026-09-25. Tests : ciblage palier → visible pour ce palier, 404 pour un autre ; publication datée demain → invisible aujourd'hui ; remplacement → seule la dernière version est servie ; fichier non PDF (octets d'en-tête) → refus ; journal vérifié.",
+      "source": "décision de Will du 2026-09-25, W15 (point 5)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 7,
+      "etape": 6,
+      "phase": 3,
+      "taches": [
+        "UX-P3-12"
+      ]
+    },
+    {
       "id": "REQ-DM-041",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
       "texte": "Le payload d'un événement du journal est un schéma Zod **fermé** par type : identifiants, hashes, enums, montants, horodatages — **jamais** nom, e-mail, téléphone, IBAN, adresse ; gate `journal:sans-pii` ; après un effacement de tiers, `verifierChaine()` reste vrai. **Porteurs : `DM-01` et `DM-20`** — cette exigence fondait la gate `journal:sans-pii` (phase 0) sans qu'aucune tâche ne la cite : la gate existait sans porteur (corrigé le 2026-09-03).",
@@ -4690,6 +4819,63 @@
       "taches": [
         "DM-01",
         "DM-20"
+      ]
+    },
+    {
+      "id": "REQ-DM-044",
+      "domaine": "domaine-donnees",
+      "texte": "Le **changement de parrain** d'un filleul est une action de console réservée au rôle `admin` (REQ-SEC-023) : elle exige un **motif** non vide et écrit un événement au journal `Evenement` chaîné (ancien parrain, nouveau parrain, date d'effet, motif, auteur). Elle prend effet **à la date de l'action, sans rétroactivité** (`HYP-W15-PARRAIN-A-DATE`) : les lignes `parrainage` déjà nées restent au parrain d'origine ; une ligne `commission` du filleul acquise après la date d'effet engendre sa ligne `parrainage` au profit du nouveau parrain ; une ligne `reprise` suit le parrain de la ligne qu'elle reprend ; la fenêtre reste `contratFilleulSigneAt + 12 mois` (REQ-DM-023) et n'est jamais rouverte. Elle est **refusée**, sans aucun événement écrit, si elle crée un **cycle** (le nouveau parrain est le filleul lui-même ou l'un de ses descendants) ou un **auto-parrainage** au sens de REQ-SEC-031 (hash de SIRET, d'e-mail, de téléphone ou d'IBAN partagé). Les personnes prévenues suivent `HYP-W15-NOTIF-PARRAIN`. Décision W15 (2), 2026-09-25. Tests : ligne acquise la veille de l'effet → parrain d'origine, le lendemain → nouveau parrain ; reprise d'une ligne d'avant l'effet → parrain d'origine ; rôle `qualifieur` → refus ; motif vide → refus ; cycle, puis hash partagé → refus nommé et journal inchangé ; chaîne du journal vérifiée après l'action.",
+      "source": "décision de Will du 2026-09-25, W15 (point 2)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 14,
+      "etape": 10,
+      "phase": 2,
+      "taches": [
+        "DM-26"
+      ]
+    },
+    {
+      "id": "REQ-DM-045",
+      "domaine": "domaine-donnees",
+      "texte": "La **lignée** et l'**équipe** d'un apporteur sont **dérivées** de `Parrainage` par des fonctions pures, jamais stockées : `lignee(a, t)` = filleuls de `a` (premier niveau) et filleuls de ceux-ci (second niveau) à la date `t`, compte tenu des changements de parrain (REQ-DM-044) ; `equipe(a, t)` = `a` et `lignee(a, t)` (`HYP-W15-EQUIPE`). Ces fonctions ne servent qu'à la **lecture** (console, statistiques) : **aucun calcul de commission ne les appelle**, et aucune ligne n'est jamais créée au bénéfice d'un apporteur pour l'activité de son second niveau (REQ-DM-023, REQ-JUR-020, contrat art. 4.6 al. 3 — un réseau rémunéré sur plusieurs niveaux se rapproche d'un système multi-niveaux encadré, et ne s'ouvre pas sans avis juridique). Décision W15 (1), 2026-09-25. Tests : fixture à trois niveaux → `lignee` rend exactement les niveaux 1 et 2 ; changement de parrain entre deux dates → deux lignées différentes ; garde statique : aucun import de `lignee` ni d'`equipe` depuis le module de calcul des commissions, **vue rougir** sur un témoin qui l'importe.",
+      "source": "décision de Will du 2026-09-25, W15 (point 1)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 14,
+      "etape": 10,
+      "phase": 2,
+      "taches": [
+        "DM-27"
+      ]
+    },
+    {
+      "id": "REQ-DM-046",
+      "domaine": "domaine-donnees",
+      "texte": "Au dépôt, le code NAF (`activite_principale`, nomenclature NAF rév. 2) rendu par le client recherche-entreprises (REQ-INT-021) est **stocké sur l'attribution** (REQ-DM-030). Un dépôt fait en **repli manuel** (tiers indisponible, REQ-INT-020) porte un code NAF **nul — jamais deviné, jamais saisi par l'apporteur** ; il est complété par un nouvel appel au tiers après la fermeture du disjoncteur (`HYP-W15-SECTEUR`) et reste « non renseigné » tant que le tiers ne l'a pas rendu. Décision W15 (4), 2026-09-25. Tests : fixture enregistrée → code stocké égal à celui de la fixture ; repli manuel → code nul, puis complété par la reprise sur fixture ; le formulaire de dépôt ne porte aucun champ de code NAF.",
+      "source": "décision de Will du 2026-09-25, W15 (point 4)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 10,
+      "etape": 7,
+      "phase": 1,
+      "taches": [
+        "DM-28"
+      ]
+    },
+    {
+      "id": "REQ-DM-047",
+      "domaine": "domaine-donnees",
+      "texte": "Les statistiques de la console se **filtrent et se découpent par secteur d'activité** : **section** NAF (lettre A à U) et **division** (deux premiers chiffres), dérivées du code stocké (REQ-DM-046) par une fonction pure et une table de nomenclature versionnée (`HYP-W15-SECTEUR`) ; un code absent ou inconnu tombe dans « non renseigné », **jamais** dans un secteur deviné. Décision W15 (4), 2026-09-25. Tests : la table rattache chacune des 88 divisions à une section ; `70.10Z` → section M, division 70 ; code nul → « non renseigné » ; la somme des secteurs égale le total non filtré.",
+      "source": "décision de Will du 2026-09-25, W15 (point 4)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": 7,
+      "phase": 3,
+      "taches": [
+        "DM-29",
+        "UX-P3-07"
       ]
     },
     {
