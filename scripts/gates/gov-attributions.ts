@@ -919,6 +919,18 @@ export const DETTE_GATE_NON_RECIPROQUE: DetteGate[] = [
 
 /** Les mentions d'identifiants déclarées, chacune vue, nommée, comptée et justifiée. */
 export const CITATIONS_DECLAREES: Citation[] = [
+  // UX-P0-01 nomme sa VOISINE pour dire ce qui n'est PAS dans son périmètre. Retirer le nom rendrait
+  // la phrase inutilisable : un lecteur saurait qu'une chose est exclue, sans savoir qui la porte.
+  {
+    ou: 'docs/gates.json:ux:exhaustivite.verifie',
+    id: 'UX-P0-01b',
+    nature: 'contexte',
+    raison:
+      'la garde d’exhaustivité de UX-P0-01 nomme UX-P0-01b pour EXCLURE de son périmètre les ' +
+      'libellés d’états d’attribution, qui ne peuvent être écrits qu’une fois les états livrés. ' +
+      'Le fichier cité appartient à UX-P0-01 ; UX-P0-01b est nommée comme voisine, jamais comme ' +
+      'propriétaire.',
+  },
   // ⚠️ LA NÉGATION QUI PROTÈGE. `gov:tasks` interdit les identifiants SCINDÉS et les NOMME pour
   // dire lesquels. Une garde qui ferait rougir cette phrase forcerait à retirer la défense elle-même.
   {

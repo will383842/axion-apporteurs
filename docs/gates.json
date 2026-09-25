@@ -233,9 +233,9 @@
         "GATE-UX-JARGON",
         "gov:lexique"
       ],
-      "verifie": "liste noire IMPORTEE de la SSOT lexique-interdit.ts (REQ-JUR-037), jamais recopiee dans la gate ni dans GATES.md ; perimetre src/app/(espace)/**, emails/apporteur/**, micro-copy/** et les ressources diffusees ; les exclusions declarees par la SSOT sont importees avec elle (etendue par UX-P0-01, JUR-T13 et JUR-T26) ; etendue par JUR-T01 au gabarit de contrat docs/contrat/** (motif attendu), liste noire ABSOLUE LISTE_NOIRE_GABARIT de la meme SSOT — L.134-12, L.134-16, indemnite de fin de contrat, indemnite de clientele, renonce/renonciation et leurs flexions, kit de vente — sans exemption de negation ni de citation, sauf les deux chaines VERBATIM de l'art. 19 (titre et phrase) nommees par la SSOT",
+      "verifie": "liste noire IMPORTEE de la SSOT lexique-interdit.ts (REQ-JUR-037), jamais recopiee dans la gate ni dans GATES.md ; perimetre src/app/(espace)/**, emails/apporteur/**, micro-copy/**, src/content/micro-copy/espace/** (portee apporteur) et src/content/micro-copy/console/** (portee depot), et les ressources diffusees ; les exclusions declarees par la SSOT sont importees avec elle (etendue par UX-P0-01, JUR-T13 et JUR-T26) ; etendue par JUR-T01 au gabarit de contrat docs/contrat/** (motif attendu), liste noire ABSOLUE LISTE_NOIRE_GABARIT de la meme SSOT — L.134-12, L.134-16, indemnite de fin de contrat, indemnite de clientele, renonce/renonciation et leurs flexions, kit de vente — sans exemption de negation ni de citation, sauf les deux chaines VERBATIM de l'art. 19 (titre et phrase) nommees par la SSOT",
       "fixtureRouge": "libelle factice 'objectif du mois' dans micro-copy",
-      "preuveRouge": "pnpm gov:lexique:prove — 12 familles rougissent chacune sur son temoin (dont gabarit_liste_noire), 8 positions limites rougissent, 6 controles positifs rougissent (dont la phrase de l'art. 19 retouchee d'un mot et une renonciation NIEE dans le gabarit), 14 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim et l'art. 19 du gabarit verbatim. Temoin du binaire sur le depot (JUR-T01, 2026-09-19) : « L'Apporteur renonce a toute indemnite. » ajoute en tete de l'art. 11.3 du gabarit -> EXIT=1, « [gabarit_liste_noire] docs/contrat/CONTRAT-APPORTEUR-V1.md:530 — « renonce » dans le gabarit de contrat »"
+      "preuveRouge": "pnpm gov:lexique:prove — 13 familles rougissent chacune sur son temoin (dont gabarit_liste_noire, et jargon_interne, REQ-UX-003, ajoutee par UX-P0-01), 8 positions limites rougissent, 6 controles positifs rougissent (dont la phrase de l'art. 19 retouchee d'un mot et une renonciation NIEE dans le gabarit), 14 contre-temoins restent verts, dont la phrase de partners/ADR-0009 « valeurs du monde reel » verbatim et l'art. 19 du gabarit verbatim. Temoin du binaire sur le depot (JUR-T01, 2026-09-19) : « L'Apporteur renonce a toute indemnite. » ajoute en tete de l'art. 11.3 du gabarit -> EXIT=1, « [gabarit_liste_noire] docs/contrat/CONTRAT-APPORTEUR-V1.md:530 — « renonce » dans le gabarit de contrat »"
     },
     {
       "id": "gate-a",
@@ -350,13 +350,16 @@
       "preuveRouge": null
     },
     {
-      "id": "GATE-UX-EXHAUSTIVITE",
+      "id": "ux:exhaustivite",
       "phase": 1,
       "script": "scripts/gates/ux-exhaustivite.ts",
       "tache": "UX-P0-01",
-      "verifie": "chaque valeur d'enum d'affichage a un libelle et une phrase 'prochaine etape et par qui' ; switch avec branche never",
+      "alias": [
+        "GATE-UX-EXHAUSTIVITE"
+      ],
+      "verifie": "chaque valeur de IssueDepot a pastille, titre, pourquoi, quoi faire, action et mention d'horodatage (REQ-UX-002) ; l'enum est relu contre REQ-UX-002 dans les deux sens (valeur sans base contractuelle, categorie du contrat sans valeur) ; les refus sont exactement IssueDepot inter MotifRefusDepot (REQ-SEC-022) et aucun ne porte de parametre (ni qui ni quand) ; chaque ecran de docs/ESPACE-ROUTES.md et de la section Console de docs/maquettes/VALIDATION.md a un etat vide complet, celui de Mes entreprises mene au depot, toute action mene a une route de la carte (REQ-UX-019) ; aucun libelle en dur dans un composant .tsx, lu par l'arbre syntaxique TypeScript, et aucun HTML brut (dangerouslySetInnerHTML) ; TOUS les textes de src/content/micro-copy/espace/ (tout champ chaine, toute profondeur, libelles d'action compris) n'admettent un parametre {...} que dans la liste blanche de leur contexte (PARAMETRES_PERMIS : ni nom, ni date de depot, ni stade d'un autre apporteur, REQ-SEC-022), aucun chiffre en clair hors renvoi a un article (RM-10) ; un export qui n'est pas un texte (fonction hors UTILITAIRES_PERMIS, Map, Set, objet de classe) et une cle a parametre rougissent ; le SOURCE des modules est lu par l'arbre syntaxique : dans une fonction, ni gabarit a substitution, ni litteral qui ecrit un texte, ni concatenation hors utilitaire permis ; tout fichier de micro-copie est parcouru ou declare hors portee (MICRO_COPIE_HORS_PORTEE), sinon il rougit ; la vue du depot lit ses populations dans le registre, la carte et VALIDATION.md, jamais dans la micro-copie controlee. Les libelles d'etats d'attribution et leur phrase 'prochaine etape et par qui' relevent de UX-P0-01b",
       "fixtureRouge": "ajouter une valeur a l'enum sans libelle",
-      "preuveRouge": null
+      "preuveRouge": "pnpm ux:exhaustivite:prove — 17 familles rougissent chacune sur son temoin en nommant sa cible (valeur, ecran, chemin de texte ou fichier:ligne), 2 contre-temoins restent verts dont un composant qui lit la micro-copie, et la vue du depot lit ses six sources injectees, fichiers suivis et composants compris, et texte_calcule rougit sur ses trois branches (vu le 2026-09-25)"
     },
     {
       "id": "partners:rgpd:export-complet",
@@ -380,13 +383,16 @@
       "preuveRouge": null
     },
     {
-      "id": "aucun-annee-de-naissance",
+      "id": "securite:annee-naissance",
       "phase": 0,
       "script": "scripts/gates/aucun-annee-de-naissance.ts",
       "tache": "INT-T09",
-      "verifie": "ni colonne ni payload persiste annee_de_naissance (reponse de l'API recherche-entreprises minimisee au mapping)",
-      "fixtureRouge": "fixture de reponse portant le champ annee_de_naissance",
-      "preuveRouge": null
+      "alias": [
+        "aucun-annee-de-naissance"
+      ],
+      "verifie": "aucune annee de naissance ne traverse le mandataire recherche-entreprises, et la liste des dirigeants n'atteint jamais le navigateur : pour chacune des fixtures ENREGISTREES (>= 20, tests/fixtures/recherche-entreprises/), la reponse du tiers passe par le VRAI mandataire (autocompleterEntreprise) et par la vraie projection ; le rendu ne porte aucune cle de dirigeant, de naissance, de prenom, de nationalite ni de qualite, la fiche persistee aucune cle de naissance, de prenom ni de nationalite, et aucune des deux ne porte une valeur de personne du tiers (nom, prenoms, annee, mois de naissance, compares en valeur exacte). Limite declaree : un fil tendu sur des NOMS de cles et des valeurs EXACTES — une annee transformee ou un champ renomme sans segment interdit lui echappe ; ce qui tient la production est la defense a l'execution : le schema du tiers ne LIT ni l'annee ni le mois de naissance, et le rendu comme la fiche passent par des schemas Zod STRICTS a liste blanche (src/server/integrations/recherche-entreprises/schemas.ts). Le mode --reponse ne juge que les cles.",
+      "fixtureRouge": "une reponse de bac d'essai portant la liste des dirigeants, puis une portant une annee de naissance",
+      "preuveRouge": "pnpm securite:annee-naissance:prove — (INT-T09, 2026-09-19) 4 familles, 4 temoins derives du rendu reel d'une fixture enregistree, 1 contre-temoin : « 🔴 [cle_interdite] une réponse de bac portant la liste des dirigeants / [cle_interdite] bac (dirigeants) : champ `dirigeants` (.dirigeants) » ; « 🔴 [cle_interdite] une réponse de bac portant une année de naissance / [cle_interdite] bac (année) : champ `annee_de_naissance` (.suggestions[0].annee_de_naissance) » ; « 🔴 [valeur_de_personne] une année de naissance glissée sous un champ admis / … au champ .suggestions[0].codePostal » ; « 🔴 [perimetre_vide] 19 fixture(s) lue(s), il en faut au moins 20 » ; « 🟢 contre-témoin : les 22 fixtures enregistrées ». Binaire : `pnpm securite:annee-naissance -- --reponse <f>` sur chacune des deux reponses de bac sort en 1 et nomme le champ, `pnpm securite:annee-naissance` sur le depot sort en 0 (tests/unit/integration/recherche-entreprises-repli.spec.ts, REQ-SEC-013)"
     },
     {
       "id": "partners:money:conservation",
@@ -735,9 +741,9 @@
       "phase": 0,
       "script": "tests/integration/api-gouv.spec.ts",
       "tache": "INT-T09",
-      "verifie": "429 moque -> mode degrade sans 500 ; <= 5 requetes/s ; breaker ouvert -> repli sans reseau ; contrat nightly rejoue sur fixture reelle",
+      "verifie": "contre un tiers simule par un serveur HTTP LOCAL (127.0.0.1, aucun appel reseau reel) : 429, delai depasse, 5xx et reponse hors schema -> saisie manuelle, jamais une erreur ; Retry-After respecte (secondes et date HTTP) ; <= 5 requetes/s par le compteur `depot:entreprise-global` du registre de debit (src/server/securite/rate-limit.ts) ; disjoncteur ouvert -> aucune requete ne part, un seul essai en demi-ouvert ; cache 24 h ; requete minimale ; >= 20 fixtures enregistrees acceptees par le schema Zod ; fiche = exactement les champs de REQ-INT-021 (liste LUE dans docs/requirements.json) ; le contrat nocturne (job `contrat-api-gouv` de nightly.yml) nomme toute cle apparue ou disparue chez le tiers",
       "fixtureRouge": "faire rendre un 500 sur un 429",
-      "preuveRouge": null
+      "preuveRouge": "mutations (INT-T09, 2026-09-19), chacune vue rouge puis retiree : (1) la fixtureRouge — le mandataire leve sur un refus pour exces : « × REQ-INT-020 — 429 : saisie manuelle, pas une erreur ; Retry-After (secondes) tient le disjoncteur ouvert — Error: 500 : le tiers a refusé pour excès » ; (2) Retry-After ignore (pause fixe du disjoncteur) : meme test, « AssertionError: expected 'saisie_manuelle' to be 'autocompletion' » ; (3) compteur global court-circuite : « × REQ-QA-028 — six requêtes dans la même seconde : cinq partent, la sixième est refusée sans réseau — AssertionError: expected [ 'autocompletion', …(5) ] to deeply equal [ 'autocompletion', …(5) ] »"
     },
     {
       "id": "email-emetteur",

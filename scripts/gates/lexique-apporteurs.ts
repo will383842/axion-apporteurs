@@ -148,6 +148,24 @@ export const MOTIFS: readonly Motif[] = [
     attendu: false,
     req: 'REQ-JUR-037',
   },
+  // La micro-copie SSOT de l'espace (UX-P0-01) : lue par l'apporteur, donc la portée la plus
+  // stricte — REQ-UX-003 la vise en toutes lettres (« liste noire testée sur tous les fichiers de
+  // micro-copy »). ATTENDUE : si elle ne balaie plus rien, c'est la garde qui est débranchée.
+  {
+    nom: 'src/content/micro-copy/espace/**',
+    reg: /^src\/content\/micro-copy\/espace\/.+\.(ts|json)$/,
+    portee: 'apporteur',
+    attendu: true,
+    req: 'REQ-UX-003',
+  },
+  // Celle de la console : lue par Axion-IA seul, elle relève de la seule portée du dépôt.
+  {
+    nom: 'src/content/micro-copy/console/**',
+    reg: /^src\/content\/micro-copy\/console\/.+\.(ts|json)$/,
+    portee: 'depot',
+    attendu: true,
+    req: 'REQ-GOV-017',
+  },
   {
     nom: 'docs/adr/**',
     reg: /^docs\/adr\/.+\.md$/,
@@ -589,6 +607,17 @@ const TEMOINS: { famille: string; quoi: string; vue: () => Vue }[] = [
     famille: 'droit_social',
     quoi: 'un document mensuel intitulé comme un document de paie',
     vue: () => vue([COURRIEL('<h1>Votre bulletin de commission du mois de mars</h1>')]),
+  },
+  {
+    famille: 'jargon_interne',
+    quoi: 'le mot du schéma dans la micro-copie de l’espace (REQ-UX-003)',
+    vue: () =>
+      vue([
+        {
+          chemin: 'src/content/micro-copy/espace/temoin.ts',
+          contenu: "  titre: 'Votre attribution court jusqu’au {dateFin}',",
+        },
+      ]),
   },
   {
     famille: LISTE_NOIRE_GABARIT.nom,

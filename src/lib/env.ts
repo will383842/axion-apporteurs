@@ -100,6 +100,16 @@ export const schemaSecrets = z.object({
 
 export type Secrets = z.infer<typeof schemaSecrets>;
 
+/**
+ * Les CLÉS D'EMPREINTE, nommées ICI et nulle part ailleurs. Deux usages, deux clés (SEC-01) : la
+ * clé des empreintes de personnes et le sel des adresses. Un porteur qui n'a besoin que de l'une
+ * prend `CleDesPersonnes` : le moindre privilège est conservé SANS que les noms des secrets soient
+ * retapés hors de ce fichier, ce que REQ-SEC-028 interdit et que RM-01 appelle une recopie.
+ * Un nom qui disparaîtrait de `schemaSecrets` fait rougir `tsc` ici, pas chez le porteur.
+ */
+export type CleDesPersonnes = Pick<Secrets, 'PII_HASH_KEY'>;
+export type ClesDEmpreinte = CleDesPersonnes & Pick<Secrets, 'IP_HASH_SALT'>;
+
 /** Les noms, DÉRIVÉS du schéma, dans son ordre. */
 export const NOMS_DES_SECRETS: readonly string[] = Object.keys(schemaSecrets.shape);
 

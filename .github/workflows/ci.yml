@@ -263,6 +263,14 @@ jobs:
         run: pnpm gov:maquettes-validees
       - name: La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau
         run: pnpm gov:maquettes-validees:prove
+      # UX-P0-01 (REQ-UX-002, REQ-UX-019) : la micro-copie de l'espace est complete et elle est la
+      # seule — chaque issue de IssueDepot relue contre le registre, un etat vide par ecran de la
+      # carte des routes et de la console, aucun libelle en dur dans un composant. Elle IMPRIME ce
+      # qu'elle a confronte : « 0 composant » n'est pas « aucun defaut », la preuve le dit.
+      - name: Micro-copie — chaque issue et chaque ecran ont leur texte, aucun libelle en dur
+        run: pnpm ux:exhaustivite
+      - name: La garde de la micro-copie sait rougir, en nommant la valeur, l'ecran ou le fichier
+        run: pnpm ux:exhaustivite:prove
       # GOV-019, REQ-GOV-028. Elle ne MESURE aucun octet : elle tient les budgets en place et
       # refuse qu'une route naisse sans le sien. Elle IMPRIME son perimetre — « 0 route balayee »
       # n'est pas « aucun defaut », et elle le dit en toutes lettres. Pas de `continue-on-error` :

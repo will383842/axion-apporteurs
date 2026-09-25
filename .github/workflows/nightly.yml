@@ -75,6 +75,31 @@ jobs:
       - name: Les lecons sont consolidees depuis moins de 7 jours
         run: pnpm gov:lecons --now $(date -u +%F)
 
+  # INT-T09, REQ-QA-028 — le contrat de l API publique de recherche d entreprises, rejoue
+  # contre l API REELLE : les memes saisies que les fixtures enregistrees, par la meme fabrique
+  # d URL que la production. JOB SEPARE, pour la meme raison que `lecons-fraiches` : le job des
+  # gates prouvees est rouge par construction tant que la phase -1 n est pas sortie. Ce job est
+  # le seul endroit ou le depot appelle ce tiers ; il n est dans aucune Gate A, parce qu un tiers
+  # en panne ne doit pas bloquer une PR. Son echec EST l alerte : une derive de forme se lit, puis
+  # on reenregistre les fixtures — on n en retouche jamais une a la main (RM-03).
+  contrat-api-gouv:
+    name: Contrat nocturne — API recherche-entreprises
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      # La preuve d abord : la garde des annees de naissance sait rougir, puis elle juge les
+      # fixtures enregistrees — rejouees ici chaque nuit, et dans la Gate A par sa specification.
+      - name: La garde aucun-annee-de-naissance sait rougir
+        run: pnpm securite:annee-naissance:prove
+      - name: Aucune annee de naissance ne traverse le mandataire
+        run: pnpm securite:annee-naissance
+      - name: Contrat de forme contre l API reelle
+        run: pnpm integration:contrat-gouv
+
   # QA-T30, REQ-QA-002 — Stryker sur `src/domain/**`. JOB SEPARE, pour la meme raison que
   # `lecons-fraiches` : le job des gates est rouge par construction tant que la phase -1 n est pas
   # sortie. Ici et pas en porte A : une passe complete du domaine ne tient pas dans une PR.

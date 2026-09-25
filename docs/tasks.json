@@ -1490,11 +1490,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t08",
+      "pr": 88,
       "issue": 70,
       "attempts": 0,
       "motif": null,
@@ -1973,12 +1973,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/sec-08",
+      "pr": 126,
+      "issue": 65,
       "attempts": 0,
       "motif": null,
       "acceptance": "TACHE SENSIBLE — donnees personnelles. (1) Nom, adresse de courriel et telephone du tiers rencontre et de l'apporteur, ainsi que la coordonnee bancaire, sont chiffres en AES-256-GCM avec une donnee additionnelle authentifiee EGALE a l'identifiant de la ligne : un bloc chiffre deplace d'une ligne a une autre ne se dechiffre pas (REQ-SEC-024). (2) Les recherches et les comparaisons passent par des empreintes salees (`emailHash`, `phoneHash`, `ibanHash`, `siretHash`) ; aucune de ces empreintes n'est reversible, et AUCUNE ADRESSE RESEAU N'EST STOCKEE EN CLAIR. (3) LE SEL ET LA CLE VIENNENT DE SEC-01 : ils ne sont ni ecrits dans le code, ni derives d'une autre variable, ni partages entre deux usages. (4) LE CHIFFREMENT EST DANS LA COUCHE DE PERSISTANCE : un site d'appel ne peut pas ecrire un champ protege en clair, parce que le chemin d'ecriture ne le lui permet pas. (5) TEMOIN A DEUX FACES : une ligne chiffree dont on transpose le bloc vers une autre ligne echoue au dechiffrement et NOMME l'echec d'authentification ; la meme ligne a sa place se dechiffre et sort en zero. (6) TEMOIN A DEUX FACES sur la persistance : un chemin d'ecriture de bac d'essai qui tente d'ecrire un champ protege en clair est refuse et nomme le champ ; le chemin du depot sort en zero. (7) Le vert imprime le compte des champs et des chemins d'ecriture reellement confrontes.",
@@ -2994,7 +2994,10 @@
         "tests/integration/api-gouv.spec.ts",
         "tests/unit/integration/recherche-entreprises-repli.spec.ts",
         "docs/gates.json",
-        ".github/workflows/nightly.yml"
+        ".github/workflows/nightly.yml",
+        "src/server/securite/rate-limit.ts",
+        "src/lib/env.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -3012,12 +3015,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/int-t09",
+      "pr": 91,
+      "issue": 96,
       "attempts": 0,
       "motif": null,
       "acceptance": "DEPEND D'UN TIERS : l'API publique de recherche d'entreprises. Aucune cle, mais des quotas, et un REPLI MANUEL OBLIGATOIRE. (1) L'autocompletion passe par un mandataire SERVEUR : anti-rebond de 300 ms, requete minimale, cache de 24 h, limite globale de 5 requetes par seconde, et respect de l'en-tete de temporisation renvoye par le tiers (REQ-INT-020). (2) SUR PANNE DU TIERS — refus pour exces, delai depasse, erreur serveur — LE DEPOT BASCULE EN SAISIE MANUELLE de SIREN ou SIRET controlee, il ne se bloque pas : un parcours d'apporteur qui depend de la disponibilite d'un tiers est un parcours qui s'arrete quand le tiers s'arrete. Le disjoncteur ouvre, et l'etat ouvert est VISIBLE en console. (3) LE MANDATAIRE EST LIMITE PAR IDENTITE (120 par jour) ET PAR EMPREINTE D'ADRESSE, journalise, et SA REPONSE NE CONTIENT JAMAIS LA LISTE DES DIRIGEANTS (REQ-SEC-013) ; le serveur peut les conserver en base pour un signal interne, il ne les renvoie pas au navigateur. AUCUNE ANNEE DE NAISSANCE NE TRAVERSE, et une garde dediee le tient. (4) Le client est valide par schema contre des FIXTURES ENREGISTREES ET DATEES, au moins 20 cas, et un test de contrat NOCTURNE contre l'API reelle signale toute derive de forme (REQ-QA-028). Les fixtures viennent du producteur reel, jamais d'une main (regle maison n°3). (5) Les champs persistes sont exactement ceux que REQ-INT-021 enumere, et un test de forme refuse tout champ en trop. (6) TEMOIN A DEUX FACES : une reponse de bac d'essai portant une liste de dirigeants, puis une portant une annee de naissance, font sortir la garde en code non nul et nomment le champ ; les 20 fixtures enregistrees la font sortir en zero. (7) TEMOIN A DEUX FACES sur le repli : le tiers simule en refus pour exces fait basculer le parcours en saisie manuelle et le test le CONSTATE sur le rendu, pas sur un journal ; le tiers disponible rend l'autocompletion.",
@@ -3215,12 +3218,12 @@
       ],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/dm-06",
+      "pr": 128,
+      "issue": 127,
       "attempts": 0,
       "motif": null,
       "acceptance": "TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) Le statut d'apporteur est un ENUM {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec une MATRICE DE TRANSITIONS explicite : une transition absente de la matrice est refusee, jamais autorisee par omission (REQ-DM-011). Le motif de resiliation est un enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} ; le vocabulaire de la faute n'y figure pas. (2) Un apporteur porte DEUX identifiants distincts : un code de parrainage public, unique, lisible et NON ENUMERABLE — prefixe `AX` puis 6 caracteres de l'alphabet Crockford base32 (sans I, L, O, U), 30 bits aleatoires (HYP-DM06-CODE-PARRAINAGE) —, et un ou plusieurs jetons de depot {empreinte unique, date de creation, date de revocation eventuelle, dernier usage} (REQ-DM-012). Un jeton revoque ne se reactive pas. (3) `actif` et `dormant` sont DERIVES par fonction pure, JAMAIS STOCKES ; la fonction de dormance RECOIT `DORMANCE_JOURS` EN PARAMETRE tant que la SSOT des seuils (JUR-T02) n'existe pas — jamais un litteral dans le code (RM-10) ; et restent des indicateurs de console : AUCUN MESSAGE N'EST ENVOYE A UN APPORTEUR EN RAISON DE SON INACTIVITE (REQ-CPL-027). C'est une interdiction de produit, pas une preference d'ergonomie. (4) `isTest` est exclu de TOUS les agregats d'argent, du lot de paiement, de la declaration annuelle et de l'entonnoir (REQ-CPL-020) ; les identites de facturation sont DATEES, et un releve qui chevauche deux identites produit DEUX autofactures (REQ-CPL-005). L'IBAN ET LA PIECE RIB NE SONT PAS DANS DM-06 : DM-06 cree `IdentitesFacturation` SANS AUCUNE colonne de RIB ni d'IBAN ; la reference a la piece RIB et sa relation a `PieceKyc` sont posees par DM-11, qui depend de DM-06 (HYP-DM06-IBAN). (5) Le seuil de verification prioritaire est une colonne entiere au defaut derive du palier, surcharge manuelle tracee ; DM-06 porte la COLONNE et son defaut ; le comportement du depot au-dela du seuil (accepte, drapeau pose) et son temoin appartiennent a DM-09, qui porte le depot (REQ-DM-010). (6) Le score de candidature est transporte FIGE depuis axionia et JAMAIS recalcule par Partners ; un test de parite sur la fixture du producteur reel `tests/fixtures/axionia/candidature-recue.json` (Source: INT-T01b) le prouve (REQ-DM-035, REQ-QA-035). `sourceCanal` est stockee TELLE QUE RECUE, longueur bornee (HYP-DM06-SOURCE-CANAL) : aucun enum de canal dans DM-06, la derivation appartient a EXT-T03. (7) TEMOIN A DEUX FACES : une transition absente de la matrice est refusee et la nomme ; une transition declaree passe. Une `sourceCanal` au-dela de la borne n'est pas tronquee : elle est stockee nulle et l'ecart est journalise en consignant sa LONGUEUR, jamais sa valeur. Un agregat d'argent calcule sur une population incluant `isTest` diverge du meme agregat sans, et le test nomme l'ecart en centimes.",
@@ -3294,12 +3297,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/jur-t01",
+      "pr": 92,
+      "issue": 95,
       "attempts": 0,
       "motif": null,
       "acceptance": "le gabarit reprend `CONTRAT-APPORTEUR-V1.md` **dans sa version corrigée par les cinq examens du 2026-09-03** (12 bloquants + 30 majeurs), annoté des identifiants `CL-*` ; `docs/DECISIONS.md` porte une valeur **tranchée et datée** pour chacune des lignes marquées `avenant` du registre (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ des 12 mois E.1-9). 🔴 **Complétée le 2026-09-03 (synthèse M-20 et P-4).** (1) **Six acceptations distinctes**, et la **note encadrée** qui les signale figure **dans le corps** sous chacun des articles 3.7, 4.5, 5.2, 7, 12 **et** 14 — le corps ne la portait que sous l'art. 14, et la mention « très apparente » de l'art. 48 CPC était renvoyée à une note **hors clause**. (2) La variable `{{APPORTEUR_QUALITE}}` est **alimentée depuis le statut d'exercice recueilli au KYC** (DM-11), jamais saisie à la main : la validité de la clause attributive dépend d'un fait — la qualité de commerçant des deux parties — qu'une part significative des 300 apporteurs (professions libérales, retraités en cumul, associations) ne remplira pas. (3) **Gate lexicale étendue au gabarit de contrat** (P-4 ; elle ne couvrait que `micro-copy/**`, `emails/apporteur/**`, `src/app/(espace)/**`), liste noire : `L.134-12`, `L.134-16`, « indemnité de fin de contrat », « indemnité de clientèle », « renonce », « renonciation » (hors le titre de l'art. 19, exclu nommément), « kit de vente ». C'est le seul moyen d'empêcher qu'une relecture future « améliore » l'art. 11.3 : **une renonciation par avance à un droit d'ordre public est sans effet**, et sa seule présence affaiblit rétrospectivement la portée des articles 1 et 2. 🔴 **Complétée le 2026-09-25 (décision W15 de Will, « fais selon tes recommandations »).** Le gabarit porte DEUX clauses de plus à l'art. 4.6, chacune annotée d'un identifiant CL-* et d'un test de présence : (a) **al. 6 amendé** (HYP-W15-ART-4-6) — le parrain voit la liste de ses filleuls DIRECTS réduite au prénom, à l'initiale du nom et à l'état de son contrat, « en signature » ou « signé » seulement, apprécié sur les versions du contrat postérieures à sa dernière résiliation (un avenant en cours de signature n'y changeant rien, une relation reprise étant lue sur ses seules versions nouvelles) ; un filleul dont la relation est résiliée sort de la liste — le parrain en apprend la fin, mais ni le motif ni aucune mesure intermédiaire prise à l'égard du filleul (suspension, vérification) ; aucune échéance ni date propre au filleul ; aucun montant par filleul, aucune donnée d'activité, aucun filleul de filleul. (b) **Nouvel alinéa de correction du rattachement** (HYP-W15-PARRAIN-A-DATE) — la Société peut rattacher un filleul à un autre parrain sur motif LIMITATIVEMENT énuméré : erreur de rattachement, fraude ou auto-parrainage, départ ou résiliation du parrain ; effet pour les commissions futures seulement, les sommes de parrainage déjà nées restant acquises au parrain d'origine ; les trois personnes sont informées ; aucun accord du parrain d'origine n'est requis. Le texte définitif de ces deux clauses reste soumis à la relecture de Will avant toute signature (JUR-T01b).",
@@ -3426,7 +3429,12 @@
         "scripts/gates/ux-exhaustivite.ts",
         "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
         "docs/gates.json",
-        "scripts/gates/lexique-apporteurs.ts"
+        "scripts/gates/lexique-apporteurs.ts",
+        "src/domain/depot/issue-depot.ts",
+        "src/domain/lexique/lexique-interdit.ts",
+        "tests/unit/gouvernance/lexique.spec.ts",
+        "scripts/gates/gov-attributions.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -3443,12 +3451,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/ux-p0-01",
+      "pr": 93,
+      "issue": 97,
       "attempts": 0,
       "motif": null,
       "acceptance": "DECOUPEE LE 2026-09-16. La premiere redaction declarait une EXEMPTION au controle « aucune tache ne depend d'une tache de phase strictement superieure », au motif que les libelles d'etats d'attribution viennent de DM-07, qui est en phase 1. Cette exemption n'existe dans aucun registre, et elle n'y sera pas posee : une exemption est un trou PERMANENT, deux taches sont un fait. La premiere redaction le recommandait elle-meme. Cette tache-ci ne porte donc QUE ce qui est livrable des maintenant, et sa dependance a GOV-006 est sa seule dependance. A LIVRER. (1) La micro-copie de l'espace a une source unique : chaque libelle vit dans `messages/fr.json` ou sous `src/content/micro-copy/`, et nulle part ailleurs — aucun libelle en dur dans un composant. (2) Chaque issue possible d'un depot, telle que l'enum la declare, affiche un TITRE, un POURQUOI et un QUOI FAIRE, et dit explicitement si le depot est horodate au nom de l'apporteur (REQ-UX-002). L'enum est aligne un pour un sur les categories du contrat : une issue ajoutee au contrat sans son texte fait rougir. (3) CHAQUE ECRAN DE L'ESPACE ET DE LA CONSOLE A UN ETAT VIDE DECLARE — titre, phrase, action principale — et celui de la liste des entreprises guide vers le premier depot (REQ-UX-019). Un ecran sans etat vide declare est un ecran qui, le premier jour, ne dit rien a personne. (4) AUCUN TEXTE VU PAR UN APPORTEUR ne contient les mots que REQ-UX-003 refuse ; la liste est IMPORTEE de la source unique du lexique, jamais recopiee dans la garde. (5) TEMOIN A DEUX FACES : une valeur ajoutee a l'enum des issues sans son texte, un ecran sans etat vide declare, et un libelle en dur dans un composant font sortir la garde en code non nul, un cas par un, en NOMMANT la valeur, l'ecran ou le fichier ; la micro-copie du depot la fait sortir en zero, avec le compte des issues, des ecrans et des fichiers reellement confrontes. CE QUI N'EST PAS ICI : les libelles d'etats d'attribution, qui dependent de DM-07 — ils vivent en UX-P0-01b, phase 1.",
@@ -9088,13 +9096,18 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Mesure du 2026-09-12, RECTIFIEE DEUX FOIS PAR LA MEME LENTILLE. Premiere redaction : « quatre documents », dont un qui N'EXISTE PAS (`docs/PROMPTS/dev-partners.md`). Deuxieme : « cinq porteurs suivis par git », alors que le balayage qu'elle exige elle-meme, `git grep -l prevol`, rend NEUF fichiers. L'ECART EST LE SUJET DE LA TACHE. Sur ces neuf, SIX sont des porteurs reels : `.claude/agents/dev-partners.md`, `docs/agents.json` qui en est la source, `docs/CHARTE-AGENTS.md`, `docs/CONVENTIONS.md`, `docs/PROMPTS/developpeur.md`, et le plus mordant `scripts/lot/lot.workflow.js`, qui INJECTE la commande introuvable dans le prompt de chaque developpeur de lot. Les TROIS autres sont `docs/tasks.json` et ses vues derivees `docs/TASKS.md` et `docs/paths-proposes.json`, qui portent la chaine UNIQUEMENT PARCE QUE CETTE TACHE Y EST VERSEE : une tache qui se compte elle-meme fausse son propre balayage. Le balayage livre EXCLUT donc le backlog et ses vues derivees, et il le DIT dans son resume, avec les deux comptes. Le script n'existe pas : chaque agent qui suit sa fiche lance une commande introuvable. C'est la seule des trois clauses non tenues de GOV-000 qui MORD aujourd'hui. La tache livre `pnpm prevol` et le cable. IL NE DECLARE RIEN DE NEUF : la chaine qu'il enchaine se DERIVE de `docs/gates.json` et du script `gov:check` de `package.json` (RM-01) — une deuxieme declaration de « ce qui doit etre vert avant une PR » serait exactement la faute que ce lot passe sa vie a fermer. Il DIT ce qu'il a lance, et il REFUSE — sortie non nulle — plutot que de rendre vert un maillon qu'il n'a pas pu jouer. Une garde confronte les porteurs a l'existence du script, DANS LES DEUX SENS : un porteur qui ordonne une commande absente rougit, et le retrait du script rougit AVANT que le prochain agent ne le decouvre. Ce que la tache ne fait pas : elle ne rouvre pas GOV-000, dont les deux autres clauses restent a arbitrer.",
       "tests": {
         "REQ-GOV-013": [
           "tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts"
         ]
-      }
+      },
+      "issue": 98,
+      "owner": "A05",
+      "branch": "t/gov-047",
+      "pr": 99,
+      "motif": null
     },
     {
       "id": "GOV-048",
@@ -10683,7 +10696,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, `pnpm gov:entite --corps-publie 102` rend INDETERMINE (code 2) avec `revisions_non_lues` : « la forge annonce 7 revision(s) du corps et 5 ont ete lues », et la porte A echoue sur cette etape. Rejeu direct de la forge : la connexion `userContentEdits(first:100)` de la PR #102 rend **7 noeuds sur 7 annonces** — la pagination fonctionne et PAGES_MAX n est pas atteint — dont **DEUX portent un `editedAt` et un `diff` NUL** : `2026-09-23T00:21:32Z` et `2026-09-23T00:21:56Z`. `assemblerLecture` les ecarte par `if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue`, l ecart annonce/lu fait tomber le verdict en INDETERMINE. LE DEFAUT N EST PAS L ECART : IL EST DANS LE REMEDE. Le message nomme deux causes et deux remedes, et AUCUN des deux ne s applique. (a) « relance la garde » : la reponse est STABLE, les deux `diff` nuls le sont a chaque appel, mesure trois fois de suite. (b) « releve PAGES_MAX » : une seule page a ete lue, la borne n est pas en cause. Il existe donc une TROISIEME cause, que le docblock de la pagination n a pas prevue : la forge sert `diff: null` quand l edition produit un corps VIDE ou un corps INCHANGE, et les deux revisions ci-dessus sont exactement l une et l autre. PORTEE REELLE, et c est ce qui rend la tache urgente : une PR dont le corps a ete vide une fois, ou re-poste a l identique une fois, ne peut PLUS JAMAIS passer la porte A ; l historique d edition d une forge ne se de-publie pas, et `gov:entite --corps-publie` tourne sur CHAQUE PR. A LIVRER. (1) La troisieme cause est NOMMEE dans le message de `revisions_non_lues`, avec ce qui la produit et le fait qu elle est DEFINITIVE — un remede faux est pire qu un remede absent, il envoie le lecteur rejouer une commande qui ne changera rien, et c est exactement ce qui s est passe le jour de la mesure. (2) Un chemin de sortie EXISTE, et il reutilise le mecanisme deja concu pour l irreparable : `config/exemptions-corps-publie.json` porte un champ `definitive` dont le commentaire dit qu il existe « pour ce qui ne peut pas etre repare ». Une exemption dont l `empreinte` est ABSENTE absout LA REVISION entiere au lieu d une coordonnee ; `controlerRegistreExemptions` la valide avec les memes exigences de forme (motif d au moins 40 caracteres, declarant, date d declaration) et exige `definitive` vrai pour cette forme-la. (3) LE REFUS RESTE LE DEFAUT : sans ligne au registre, une revision illisible laisse le verdict INDETERMINE. Une revision illisible n est JAMAIS reputee propre d office — ce serait rendre vert ce qu on n a pas lu, ce que la garde existe precisement pour refuser. (4) Un horodatage ABSENT continue de refuser SANS chemin de sortie : sans lui aucune exemption ne peut s apparier, et absoudre une revision qu on ne sait pas designer absoudrait aussi toutes les suivantes. (5) Trois temoins ROUGES vus rougir : une revision a `diff` nul sans exemption ; une exemption de revision mal formee (motif trop court, ou `definitive` faux) ; une exemption qui designe un horodatage qui n est celui d aucune revision de la PR visee. Et trois contre-temoins VERTS : la revision exemptee passe ; la meme exemption ne couvre PAS une revision a `diff` nul d une AUTRE PR ; un corps courant porteur d une coordonnee rougit toujours, exemption ou pas. (6) La ligne de registre qui absout les deux revisions de la PR #102 est posee dans la meme PR, avec son motif : un corps vide et un corps re-poste a l identique ne portent aucun texte qui ne soit deja dans la revision voisine, elle-meme lue et jugee propre.",
       "tests": {
         "REQ-GOV-031": [
@@ -10691,7 +10704,10 @@
         ]
       },
       "issue": 111,
-      "owner": "A03"
+      "owner": "A03",
+      "branch": "t/gov-092",
+      "pr": 112,
+      "motif": null
     },
     {
       "id": "GOV-094",
@@ -10744,7 +10760,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "LE DEFAUT, LU DANS LE CODE. `scripts/lot/revues.ts` lie un accord au SHA DE LA TETE et jamais au CODE JUGE : `accords.filter((x) => exigees.includes(x.lentille) && x.commit !== entree.tete)`. Tout commit de plus perime donc TOUS les accords exiges, quel que soit ce qu'il change. MESURE A REJOUER, pas a recopier, sur la branche `t/gov-check-homonymie` de la demande de fusion 102 : `git diff --name-only 8ef35a3 8891d53` ne rend QUE `docs/journal/2026-09-pr-102.md` — une phrase de prose du journal — et cette tete-la a pourtant perime les accords de `securite`, de `schema` et de `mutation`, qu'il a fallu refaire sur un code identique au bit pres. LA REGLE A LIVRER, ETROITE EXPRES. Un accord rendu par un poste sur la lentille L au commit C survit a la tete T si, ET SEULEMENT SI : (1) L n'est pas `exactitude` — cette lentille juge la prose, c'est sa matiere, son accord ne survit a aucune reecriture ; ET (2) l'ensemble des fichiers changes entre C et T est VIDE, ou entierement contenu sous `docs/journal/`. TOUT LE RESTE PERIME, ET CHAQUE CAS AMBIGU ECHOUE FERME : un diff que `git` ne peut pas calculer (commit inconnu du clone, sortie inattendue) perime et le refus DIT laquelle des deux extremites manque ; un delta qui touche `docs/tasks.json` ou `docs/requirements.json` perime, parce que ces fichiers CHANGENT LE COMPORTEMENT DE LA GARDE — `gov:pr` y lit `sensible`, `schema` et `paths` ; un delta qui touche une vue derivee ou un document normatif perime. La liste blanche est UN SEUL prefixe : rien n'enumere les documents normatifs, et c'est ce qui rend l'oubli impossible. CE QUE LA SORTIE DOIT DIRE. Une survie silencieuse est inauditable : quand un accord survit, `pnpm gov:pr --pr <n>` l'IMPRIME — le poste, la lentille, le sha de l'accord, le sha de la tete, et LA LISTE DES FICHIERS changes entre les deux — et la phrase publiee au corps de la demande de fusion cesse d'affirmer que tout a ete juge sur la tete. Un lecteur doit pouvoir contester la survie sans relire le code. ⚠️ CETTE GARDE DEVIENT PLUS PERMISSIVE : c'est l'objection que la lentille `securite` doit poser, et le travail est de rendre le refus impossible a formuler. La MESURE (`git`) est separee de la DECISION (pure), sur le modele de `estAncetreDe`. TEMOINS EXIGES, chacun vu rougir avant le code : un accord `securite` dont le seul delta est un fichier de `docs/journal/` SURVIT ; le MEME delta pour `exactitude` PERIME ; un delta qui touche `docs/tasks.json` PERIME ; un commit d'accord inconnu du depot PERIME et le refus le dit ; un depot git reel construit pour le temoin prouve que la MESURE elle-meme rend la liste attendue ; CONTRE-TEMOIN : un accord rendu sur la tete elle-meme coche sans qu'aucune survie soit imprimee, et `pnpm gov:pr:prove` reste vert sur ses familles, dont `lentille_perimee`.",
       "tests": {
         "REQ-GOV-011": [
@@ -10753,7 +10769,12 @@
         "REQ-GOV-013": [
           "tests/unit/gouvernance/accord-survit-au-journal.spec.ts"
         ]
-      }
+      },
+      "issue": 117,
+      "owner": "A05",
+      "branch": "t/gov-095-accord-survit",
+      "pr": 116,
+      "motif": null
     },
     {
       "id": "GOV-096",
@@ -10778,7 +10799,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, `pnpm gov:pr -- --pr 114` rougit sur la famille `fichier_hors_paths_des_taches` en nommant douze fichiers de code « qu aucune de ses taches ne declare », et la PR #114 n est donc pas fusionnable. Or elle porte SIX taches (GOV-046, GOV-048, GOV-076, GOV-078, GOV-082, GOV-086) sur une branche, un commit par tache — la forme NORMALE que `docs/CONVENTIONS.md` §5 et `partners/ADR-0007` fixent : un lot, une branche, une PR. Neuf des douze fichiers nommes sont declares, par les CINQ AUTRES taches du lot. CAUSE MESUREE : `tachesDeLaPr()` (`scripts/lot/revues.ts`, appelee a deux endroits de `scripts/gates/gov-pr.ts`) apparie une tache a une PR sur `t.pr === <numero>` OU sur l identifiant du TITRE. Le titre d une PR de lot ne peut nommer qu UNE tache, et `t.pr` n est ecrit que par `pnpm lot:cloture`, dont l invariant exige `fusion.atterri === true` — donc APRES la fusion. Les cinq autres taches ne resolvent ni par l un ni par l autre. PORTEE : tant que ce defaut existe, AUCUNE PR de lot n est fusionnable, et le lot est la seule forme qui divise le cout du protocole de relecture. ⛔ LE CONTOURNEMENT QUE LA GARDE PROPOSE EST UN FAUX, et c est ce qui rend le defaut bloquant plutot que genant : son message prescrit d ajouter les douze chemins aux `paths` de la tache du TITRE par `hors-depot/ajouter-path.mjs`. Ce serait ecrire que cette tache touche des fichiers qui appartiennent a cinq autres taches — et la disjonction des lots se calcule sur ces memes `paths`. Le lead du lot a refuse de le faire, et il a eu raison. A LIVRER. (1) UN CHAMP `Lot:` dans le gabarit de PR, section Identite, a cote d `Auteur:`, `Relecteur:` et `Couvre:` : il porte les identifiants de tache separes par des VIRGULES, ou reste VIDE pour une PR a une seule tache. (2) `CHAMPS` de `gov-pr.ts` le garde comme les autres, pour que `champ_gabarit_absent` rougisse s il disparait du gabarit — mais il n est JAMAIS exige rempli dans le corps d une PR : l exiger rendrait la garde insatisfiable pour la tres grande majorite des PR. (3) `tachesDeLaPr()` resout desormais par l UNION DES TROIS : `t.pr === <numero>`, l identifiant du titre, les identifiants declares dans `Lot:`. La monotonie que son docblock nomme est preservee : un renseignement de plus ne peut que faire GROSSIR l ensemble, donc la garde obtient toujours un sur-ensemble de ce que le composeur du corps voit. (4) LE NIVEAU DE CONFIANCE NE CHANGE PAS, et c est l argument que l ADR doit porter : le TITRE est deja ecrit par l auteur de la PR et la garde le croit depuis le premier jour ; `Lot:` est exactement aussi fiable — meme auteur, meme corps, meme absence de contreseing — et il est EXPLICITE et AUDITABLE la ou le titre est implicite. (5) QUATRE REFUS, CHACUN AVEC SON TEMOIN VU ROUGIR, et un identifiant refuse n elargit RIEN (sens de defaillance ferme) : un identifiant inconnu du registre (`lot_tache_inconnue`) ; un identifiant deja livre, une PR ne rouvrant pas une tache livree (`lot_tache_livree`) ; un identifiant qui porte un `pr` DIFFERENT (`deux_pr_meme_tache` — le NOM que `gov:etat` donne deja a cette regle, REPRIS et non double, `partners/ADR-0011` : les deux gardes l observent sur deux populations disjointes, les TITRES des PR ouvertes de la forge d un cote, le champ `pr` du registre confronte a la seule PR jugee de l autre) ; un champ MAL FORME — separateur inattendu, virgule en trop (`lot_mal_forme`), jamais une liste vide silencieuse, ce qui est precisement GOV-082. (6) DEUX CONTRE-TEMOINS VERTS AU MOINS : `Lot:` vide ou absent laisse le comportement INCHANGE — c est le cas d aujourd hui et de la tres grande majorite des PR ; et la MEME PR de lot, champ rempli, sort en zero la ou elle rougissait sans lui — sans cette seconde face on ne saurait pas si le champ RESOUT les taches ou s il a seulement fait taire la famille. (7) Le message de `fichier_hors_paths_des_taches` cesse de prescrire le remede FAUX sur une PR de lot : il nomme `Lot:` avant `ajouter-path.mjs`. (8) `risqueDeLaPr()` recoit la meme union : sans elle, une tache `sensible` ou `schema: true` portee par une autre tache du lot que celle du titre n exigerait ni section Attaque ni approbation bloquante de l architecte.",
       "tests": {
         "REQ-GOV-021": [
@@ -10787,7 +10808,12 @@
         "REQ-GOV-007": [
           "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts"
         ]
-      }
+      },
+      "issue": 119,
+      "owner": "A05",
+      "branch": "t/gov-096-gov-pr-lit-le-lot",
+      "pr": 118,
+      "motif": null
     },
     {
       "id": "GOV-090",
@@ -10820,7 +10846,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "DEUX DEFAUTS D'UNE MEME FAMILLE : un registre qui AFFIRME une protection qu'il n'exerce pas. Mesures a rejouer, jamais a recopier.\n\n=== DEFAUT A — LA TABLE ETIQUETTE DES VUES ET LAISSE DES SOURCES OUVERTES ===\n\nMESURE 1. La case 7 de la definition de termine exige `docs/PLAN-STATE.md` regenere sur CHAQUE PR ; la §7 de `docs/CHARTE-AGENTS.md` exige le label `role:gardien-spec` sur toute PR qui le modifie. Consequence : 34 PR fusionnees depuis la #26 portent ce label, soit 34 sur 34.\n\nMESURE 2, ET ELLE CORRIGE LE DIAGNOSTIC EVIDENT. Retirer la ligne PLAN-STATE ne change le label que sur 5 PR sur 34 : 29 le portent AUSSI pour `docs/tasks.json`, une VRAIE source, reecrite par `lot:cloture` sur presque chaque PR. Le label resterait muet a 85 %. Ecrire cela dans l'ADR est obligatoire : sans cette phrase, la PR se lira comme ayant regle un probleme qu'elle n'a pas regle.\n\nMESURE 3. `docs/PLAN-STATE.md` n'est PAS la seule vue de la table : `docs/REQUIREMENTS.md` en est une aussi (son en-tete le declare, `gov:requirements --verifie-rendu` la garde) et elle est ligne 2 de la meme table. L'argument « la table ne reserve pas les vues » est donc faux.\n\nMESURE 4, LE VRAI DEFAUT. Quatre registres de « reserve » se contredisent : §7 de la charte, CONVENTIONS §8, `.github/CODEOWNERS` et le `deny` de `.claude/settings.json`. `docs/requirements.json`, SOURCE des exigences, n'est reservee par AUCUN des quatre — pendant que sa vue generee l'est quatre fois. La table protege l'ombre et laisse le corps ouvert. `docs/gates.json` n'est reservee que par le `deny`. Et `CODEOWNERS` porte un attrape-tout au meme proprietaire : il est mecaniquement INERTE partout, la charte le dit deja pour un fichier et ne le generalise pas.\n\nMESURE 5. Le label n'a JAMAIS ete le filet sur les rubriques exemptees : le `deny` de `.claude/settings.json` interdit deja Write et Edit de `docs/PLAN-STATE.md` a tout agent en session. Le label n'ajoute rien que le `deny` ne fasse.\n\nMESURE 6, CELLE QUI TRANCHE. REQ-GOV-010 — l'exigence que la §7 cite comme sa propre gate — attribue PLAN-STATE a l'ORCHESTRATEUR, la table lui met `role:gardien-spec` ; et la REQ ne nomme pas `docs/tasks.json`. La table contredit la REQ qu'elle pretend armer, sur les deux lignes qui posent 100 % des labels. ATTENTION : la question du NOM de l'orchestrateur est deja donnee a GOV-023 par la charte §4 — NE PAS la rouvrir.\n\nACCEPTATION A. La §7 cesse de pretendre designer un proprietaire de FICHIER et devient la table des SOURCES.\n  (a) `docs/PLAN-STATE.md` et `docs/REQUIREMENTS.md` en sortent comme chemins etiquetes. Motif, et c'est le motif de l'ADR : un label repond a « qui repond de ce texte », et PERSONNE ne repond d'une vue — une vue a un generateur et un mode de verification, et sa derive est deja un rouge nomme. Ce n'est pas retirer une regle pour faire taire un rouge : c'est refuser d'appeler proprietaire quelqu'un qui n'a rien ecrit.\n  (b) `docs/requirements.json` et `docs/gates.json` y ENTRENT. Le changement est ainsi net-neutre a legerement plus strict : deux lignes sortent, deux entrent, et la source des exigences cesse d'etre ouverte.\n  (c) LE TROU SE FERME LA OU IL VIT, pas par un label. `plan-state:verifier` abandonne aujourd'hui des rubriques entieres sous l'intitule NON COMPARE, alors que REQ-GOV-032 exige qu'une vue generee sorte en 1 des qu'elle differe de sa source D'UN SEUL OCTET — la non-conformite est mesuree contre une REQ ACTIVE. La rubrique exemptee n'est plus abandonnee : elle est comparee sur ce qui NE VIENT PAS de la forge, le generateur sachant deja par rubrique quelles valeurs de forge il a lues. Nouvelle famille, VUE ROUGIR, plus un contre-temoin vert.\n  (d) REPLI DECLARE, a annoncer dans la PR : si le rendu frais d'une rubrique exemptee n'est pas disponible au moment de la comparaison, comparer la FORME (nombre de lignes, aucune puce, aucun chevron, aucun titre) contre la forme rendue — la grammaire est deja fixe. Dire dans la PR laquelle des deux a ete livree.\n\n=== DEFAUT B — UNE GARDE PRESCRIT UN OUTIL PAR UN CHEMIN IRRESOLVABLE ===\n\nMESURE 7. Onze citations portent le prefixe `outils/` : SIX sous `scripts/`, DEUX sous `docs/journal/`, TROIS sous `tests/`. Une seule dit que l'outil vit hors du depot. QUATRE sont imprimees a un humain dans un message rouge. Le dossier `outils/` n'existe pas dans le depot : les verbes vivent dans un dossier FRERE. Un lecteur resout le chemin depuis la racine du depot, ne trouve rien, et conclut que l'outil n'existe pas — c'est arrive, et la conclusion fausse a ete publiee.\n\nMESURE 8, LE FAIT LE PLUS PORTEUR. Un temoin EPINGLE DEJA la forme fausse : `perimetre-des-gardes-derive-du-disque.spec.ts` exige que le message rouge CONTIENNE le chemin irresolvable. Quelle que soit la voie retenue, ce temoin doit bouger dans le MEME commit, sinon il VERDIT sur le defaut. Un temoin ecrit pour passer, pas pour mesurer.\n\nMESURE 9. Vingt-quatre citations de plus nomment un verbe SANS aucun chemin. Elles ne mentent pas, mais ne permettent pas de trouver l'outil.\n\nACCEPTATION B. La voie « faire entrer les verbes au depot » est REFUSEE pour une raison MECANIQUE, a ecrire dans l'ADR avec son mecanisme exact : `.claude/settings.json` porte `Bash(node scripts/*)` et `Bash(pnpm *)` en ALLOW, et le `deny` ne lie que Write et Edit. Faire entrer les verbes sous `scripts/` placerait un ecrivain qui contourne le `deny` A L'INTERIEUR de l'allow-list. Ce n'est pas un risque, c'est une defaite mecanique de la protection.\n  (e) UN QUALIFIANT DECLARE, au meme rang que `axionia/`, `ops/` et `partners/` : la boite a outils cesse d'etre `outils/` — un mot qui RESSEMBLE a un dossier du depot — et devient `hors-depot/`, qui ne peut pas etre confondu. REQ-GOV-008 pose deja la regle (« toute reference croisee est qualifiee par depot … reference non qualifiee → rouge ») : elle existe, elle est active, son perimetre s'arrete au corpus des ADR. C'est la forme que la maison connait : une regle ecrite pour la PROSE ne s'applique pas a la SYNTAXE.\n  (f) UNE SEULE ECRITURE, LES AUTRES DERIVENT (RM-01) : un rendu unique, exporte par le fichier qui porte deja la seule citation correcte, appele par les quatre messages rouges.\n  (g) LE TEMOIN ROUGIT SUR LA FAMILLE, pas sur une ligne : un balayage de `git ls-files` refuse toute citation d'un verbe connu ecrite en chemin relatif au depot, hors du rendu unique. Contre-temoin : la forme qualifiee reste verte. VU rougir, message verbatim au bloc ROUGE.\n  (h) LE PERIMETRE EST DIT AU LIEU D'ETRE SUPPOSE — c'est le coeur de l'arbitrage : une garde dont le perimetre est `git ls-files` NE PEUT PAS voir l'outillage qui ecrit le registre. L'ADR l'ecrit comme une surface non gardee, NOMMEE ET DATEE. Le depot porte la seule chose qu'il PEUT porter : un inventaire declare des douze verbes, avec une garde qui rougit quand le depot cite un verbe ABSENT de l'inventaire (mode de panne deja survenu : un message conseillait un verbe qui refuse le geste).\n  (i) LA LIMITE EST ECRITE A VOIX HAUTE : cet inventaire est une COPIE de ce qui vit dehors, et une copie que rien ne confronte DERIVE. Elle porte donc sa date de mesure, et l'ADR la porte comme dette residuelle. Pretendre que c'est une garde serait exactement la faute du label muet.\n\n=== CE QUE CETTE TACHE NE FERME PAS, ET QUI EST VERSE AILLEURS ===\n\nLe label reste muet a 85 % apres ce geste : le dis-mutiser demande un discriminant — le label n'est du que sur une edition A LA MAIN, pas sur un rendu canonique ecrit par son geste sanctionne. Tache separee. Et un `paths` declare qui ne resout pas n'est controle par personne : la garde des orphelins va FICHIER vers CHEMIN et ne prend jamais un chemin declare en entree. Tache separee, car le discriminant n'est pas l'existence mais le MOMENT — 189 taches `a_faire` declarent legitimement des chemins a creer.\n\n=== PIEGE DE PERIMETRE, MESURE ===\n\nSeuls `scripts/`, `src/` et `tests/` sont confrontes par la famille des fichiers hors `paths`. Les entrees `docs/` de cette tache sont declarees par honnetete, pas par necessite de garde — ce qui est une illustration de plus du defaut A.",
       "tests": {
         "REQ-GOV-010": [
@@ -10834,7 +10860,10 @@
         ]
       },
       "issue": 106,
-      "owner": "A02"
+      "owner": "A02",
+      "branch": "t/gov-label-et-outils",
+      "pr": 113,
+      "motif": null
     },
     {
       "id": "GOV-098",
@@ -10864,13 +10893,18 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. (1) `docs/DECISIONS.md` porte la ligne W15 en §1 (tranchée le 2026-09-25, propriétaire Will) et dix lignes `HYP-W15-*` en §2, chacune avec sa réversibilité et, pour les deux lignes `avenant`, « premier DocuSeal » ; `pnpm gov:hypotheses` sort 0. (2) `docs/requirements.json` porte treize exigences nouvelles (REQ-DM-044 à 047, REQ-UX-040 à 046, REQ-SEC-039 et 040), chacune testable et citant W15, et REQ-UX-006 amendée par W15 : la liste minimale des filleuls directs devient la seule exception à l'interdiction d'identité ; `pnpm gov:requirements` et `pnpm gov:requirements:verifie-rendu` sortent 0. (3) Les douze tâches qui livrent W15 sont versées par le verbe hors dépôt `hors-depot/verser-tache.mjs`, jamais à la main ; `pnpm gov:tasks` sort 0. (4) Le glossaire définit « lignée » et « équipe », `docs/ESPACE-ROUTES.md` rattache `/filleuls` à REQ-UX-041. (5) Toutes les vues dérivées sont régénérées, `docs/PLAN-STATE.md` en dernier.",
       "tests": {
         "REQ-GOV-015": [
           "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
         ]
-      }
+      },
+      "issue": 123,
+      "owner": "A01",
+      "branch": "t/perimetre-fonctionnel-2026-09-25",
+      "pr": 122,
+      "motif": null
     },
     {
       "id": "DM-26",
@@ -11367,13 +11401,18 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "DECISION DE WILL, proprietaire, du 2026-09-25, en reponse a « pourquoi c est si long ». MESURE QUI L OUVRE, rapportee avec la decision : sept fusions le 22/09, puis deux, une, une ; 156 des 207 taches restantes en risque ELEVE, donc relues par quatre lentilles, et chaque refus fait relire les quatre. (1) QUATRE LENTILLES SEULEMENT POUR L ARGENT, LA SECURITE ET LES DONNEES ; DEUX (exactitude + securite) POUR TOUT LE RESTE. `risqueDeLaPr()` (`scripts/lot/revues.ts`, la seule derivation, appelee par `gov:pr` et le composeur du corps) rend ELEVE si et seulement si l un de ces signaux est present : une tache de la PR (titre, `pr`, `Lot:` ; tete ET base) porte un `sensible` non vide ou ABSENT, `schema: true`, une `zone` argent ou securite, une `zone` absente ou inconnue du schema du registre ; le label `schema` ou un chemin de schema ; un fichier dans une zone sensible du code ; un fichier de la garde des revues, de la CI, d un dossier cache, de configuration a la racine ou de `config/` ; un diff vide, une liste incomplete, aucune tache resolue, un registre de base illisible (echec FERME, conserve). CE QUI CESSE D ELEVER : une zone hors {gouvernance, qualite} autre que argent et securite avec `sensible: []`, et un fichier de code produit hors zones sensibles. La liste des zones et des segments sensibles est une DONNEE nommee (`ZONES_A_RISQUE_ELEVE`, `SEGMENTS_DES_ZONES_SENSIBLES`, `DOSSIERS_DU_PROCESSUS`), les zones connues se LISENT dans `scripts/lot/tasks.schema.json` (RM-01), et `ZONES_SENSIBLES` quitte `gov-pr.ts` pour le lecteur unique. TEMOINS VUS ROUGES AVANT LE CODE : une tache `zone: espace, sensible: []` touchant `src/` est ORDINAIRE ; chaque zone du schema hors argent et securite est ordinaire ; le schema du registre appartient a la garde des revues. CONTRE-TEMOINS qui restent ELEVES : `sensible: [argent]` et chaque etiquette du schema, `zone: securite`, `zone: argent`, `sensible` absent, `zone` absente ou inconnue, `schema: true`, `.github/workflows/*`, `eslint.config.mjs` et la racine, `.claude/`, `config/`, chaque fichier de la garde des revues, les fichiers de code des zones sensibles, `prisma/`. `pnpm gov:pr:prove` sort en 0 et garde toutes ses familles. (2) UNE INEXACTITUDE DE PROSE (corps de PR, journal, ADR, commentaire, docblock) N EST PLUS UN MOTIF DE REFUS : c est une dette nommee dans la revue, corrigee au passage suivant. Un refus vise un defaut de code ou de test, ou une affirmation fausse qui porte sur la securite, l argent ou les donnees. Ecrit dans `docs/CHARTE-AGENTS.md` §6 et dans les interdits du poste A09 (`docs/agents.json`, fiche regeneree). ADR `partners/ADR-0021` : la decision, le cout mesure, ce qui reste a quatre lentilles et pourquoi, la limite declaree (les taches qui manipulent des donnees personnelles avec `sensible: []`), le retour arriere. Ligne au registre `docs/DECISIONS.md`.",
       "tests": {
         "REQ-GOV-011": [
           "tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts"
         ]
-      }
+      },
+      "issue": 121,
+      "owner": "A05",
+      "branch": "t/gov-097-risque-reserve",
+      "pr": 120,
+      "motif": null
     },
     {
       "id": "GOV-099",
@@ -11402,13 +11441,18 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "tests": {
         "REQ-GOV-015": [
           "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
         ]
       },
-      "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le développeur de DM-06 a rendu `stop` sur trois contradictions ; les décisions prises le 2026-09-25 par l'orchestrateur, sur délégation de Will, sont inscrites : (1) REQ-DM-035 amendée — `sourceCanal` est une chaîne transportée figée ; la dérivation vers l'enum `CanalCandidature` et sa table chemin → canal appartiennent à EXT-T03 ; (2) le glossaire porte `RegimeTva`, `StatutApporteur`, `MotifResiliation` et `CanalCandidature` au §4, lus par `partners:schema:enums` ; (3) l'IBAN sort de DM-06 : il appartient à la pièce RIB du KYC (DM-11, SEC-08), `IdentitesFacturation` n'en porte qu'une référence (REQ-CPL-005 amendée) ; (4) format du code de parrainage (REQ-DM-012), `DORMANCE_JOURS` en paramètre, témoin du dépôt au-delà du seuil porté par DM-09 ; (5) `paths` de DM-06 complétés. Registres écrits par les verbes hors dépôt ; `gov:hypotheses`, `gov:tasks`, `gov:requirements`, `gov:identifiants`, `gov:attributions`, `gov:trace`, `partners:schema:enums` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier."
+      "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le développeur de DM-06 a rendu `stop` sur trois contradictions ; les décisions prises le 2026-09-25 par l'orchestrateur, sur délégation de Will, sont inscrites : (1) REQ-DM-035 amendée — `sourceCanal` est une chaîne transportée figée ; la dérivation vers l'enum `CanalCandidature` et sa table chemin → canal appartiennent à EXT-T03 ; (2) le glossaire porte `RegimeTva`, `StatutApporteur`, `MotifResiliation` et `CanalCandidature` au §4, lus par `partners:schema:enums` ; (3) l'IBAN sort de DM-06 : il appartient à la pièce RIB du KYC (DM-11, SEC-08), `IdentitesFacturation` n'en porte qu'une référence (REQ-CPL-005 amendée) ; (4) format du code de parrainage (REQ-DM-012), `DORMANCE_JOURS` en paramètre, témoin du dépôt au-delà du seuil porté par DM-09 ; (5) `paths` de DM-06 complétés. Registres écrits par les verbes hors dépôt ; `gov:hypotheses`, `gov:tasks`, `gov:requirements`, `gov:identifiants`, `gov:attributions`, `gov:trace`, `partners:schema:enums` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier.",
+      "issue": 125,
+      "owner": "A01",
+      "branch": "t/cadrage-dm-06",
+      "pr": 124,
+      "motif": null
     }
   ]
 }

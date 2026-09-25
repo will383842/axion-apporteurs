@@ -9,9 +9,9 @@
 | --- | --- |
 | Où est `main` ? | `02a7949` — 2026-09-26T00:28:10+02:00 |
 | Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #130 (brouillon) |
-| Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
-| Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
-| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Qui tient quoi ? | QA-T07 (A05) |
+| Où en est la phase ? | phase 0 — 35/110 tâches, reste 57.10 j |
+| Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #130 — 2026-09-25 |
 
@@ -19,19 +19,19 @@
 
 ## Phase courante : 0
 
-21/110 tâches terminées · reste 66.60 j estimés.
+35/110 tâches terminées · reste 57.10 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 222 | JUR-T02, QA-T08, QA-T04, QA-T07, QA-T30, CPL-T22, SEC-08, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13 … |
+| `a_faire` | 208 | JUR-T02, QA-T04, QA-T07, QA-T30, CPL-T22, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 60 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
+| `fusionnee` | 74 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -39,9 +39,9 @@
 
 **20.75 j** sur 22 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → SEC-08 (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **14.50 j**.
+Reste sur ce chemin : **13.50 j**.
 
 ## Bloquées
 
@@ -58,7 +58,7 @@ Reste sur ce chemin : **14.50 j**.
 
 ## Hypothèses par défaut appliquées
 
-60 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
+61 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
 
 ## File de fusion
 
@@ -75,10 +75,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 | Tâche | Revendiquée par | Issue | Statut |
 | --- | --- | --- | --- |
-| QA-T08 — Logger pino structuré, redaction PII, Sentry, notify | A05 | #70 | `a_faire` |
 | QA-T07 — Gate sécurité : semgrep | A05 | #69 | `a_faire` |
-| GOV-092 — Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux | A03 | #111 | `a_faire` |
-| GOV-090 — La table des chemins reserves etiquette des VUES et laisse deux SOURCES ouvertes, et une garde prescrit un outil par un chemin irresolvable | A02 | #106 | `a_faire` |
 
 ⚠️ **41 revendication(s) périmée(s)** — GOV-007, GOV-018, GOV-008, GOV-002, GOV-004, GOV-009, GOV-010, GOV-011, GOV-012, GOV-015, INT-T01a, GOV-017b, GOV-020, GOV-023, QA-T00, QA-T01, SEC-01, SEC-02, SEC-10, DM-01, DM-02, QA-T02, QA-T03, SEC-07, UX-P0-02, CPL-T13, GOV-035, GOV-036, GOV-037, GOV-039, GOV-030, GOV-031, GOV-041, GOV-043, GOV-044, GOV-056, GOV-059, GOV-077, GOV-089, GOV-088, GOV-091 : leur issue porte encore un label `owner:` alors que la tâche est livrée. `pnpm lot:cloture` écrit `docs/tasks.json` mais n’efface pas les labels ; la dette appartient à GOV-012.
 
@@ -90,7 +87,7 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 50 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 40 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
@@ -146,6 +143,14 @@ avec un fichier de test à sa suite pour en sonder l'inclusion, il a écrasé ce
 liste JSON, et le commit suivant l'a emporté sans que rien ne rougisse. C'est `red-first` qui
 l'a trahi, en rendant « aucune suite trouvée » au lieu d'une erreur de chargement ; la spec est
 restaurée depuis son commit de code.
+
+### PR #129 — 2026-09-25 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee
+
+**Fait.** Quatorze tâches livrées par des PR fusionnées portaient encore `a_faire` : DM-06 (PR 128), SEC-08 (PR 126), GOV-099 (PR 124), GOV-098 (PR 122), GOV-097 (PR 120), GOV-096 (PR 118), GOV-095 (PR 116), GOV-090 (PR 113), GOV-092 (PR 112), GOV-047 (PR 99), JUR-T01 (PR 92), QA-T08 (PR 88), et les deux fusionnées pendant la revue, UX-P0-01 (PR 93) et INT-T09 (PR 91), ajoutées au tour de fusion de main. Elles passent `fusionnee` par `reclasser.mjs`, revendication constatée sur l'issue puis livraison constatée sur la forge, jamais à la main. La phase 0 passe de 21 à 35 tâches terminées sur 110.
+
+**Reste.** Les six tâches du lot de la PR 114 (GOV-082, GOV-046, GOV-048, GOV-076, GOV-078, GOV-086) restent `a_faire` : la branche de tête `t/lot-L0-02` porte une majuscule que le motif du schéma refuse, et cinq d'entre elles n'ont aucune issue. GOV-063 (PR 102) reste `a_faire` : sa dépendance GOV-061 ne l'est pas, et sa clause 2 est ouverte. La moitié datée de l'acceptance de JUR-T01 est portée par JUR-T01b. Le retard lui-même est l'objet de GOV-057 : le pas 8 du protocole ne sait pas clore une tâche livrée seule, hors de tout lot.
+
+**Appris.** `reclasser.mjs --fusionnee` vérifie que la PR est fusionnée et que le sha est son commit de fusion, mais ne confronte JAMAIS l'identifiant de la tâche au titre ni au champ `Lot:` de la PR : joué sur un arbre jetable, QA-T07 a été attestée par la PR 128 de DM-06, exit 0. Chaque couple de cette PR a donc été confronté à la main au titre de sa PR. Et l'option `--si-inchange` qu'on croyait exigée par ce verbe n'existe pas dans son source.
 
 ### PR #128 — 2026-09-25 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees
 
@@ -209,82 +214,7 @@ contrainte `EXCLUDE USING gist` demande l'extension `btree_gist` et revient à l
 les identités ; l'effacement d'un apporteur passe par l'anonymisation, ses jetons révoqués étant
 indélébiles.
 
-### PR #126 — 2026-09-25 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema
-
-**Fait.** `src/server/securite/pii.ts` porte la primitive des données personnelles, au format de
-`partners/ADR-0013`. `clesPii(process.env)` fait juger l'environnement par `lireEnvironnement`
-(SEC-01) et rend trois clés, une par usage, dans un type marqué que nulle autre fonction ne
-fabrique. `encryptPii` et `decryptPii` chiffrent en AES-256-GCM, IV tiré à chaque appel, avec
-l'AAD `["partners.pii",1,modele,champ,id]` : un bloc déplacé vers une autre ligne, un autre champ
-ou un autre modèle échoue en nommant l'échec d'authentification. `colonnesPii` est le chemin
-d'écriture : il rend l'identifiant lié, les blocs de suffixe `Chiffre` et les empreintes
-`emailHash`, `phoneHash`, `ibanHash`. `empreinteRecherche` fait un HMAC sous `PII_HASH_KEY` pour
-le courriel, le téléphone, l'IBAN (clé jugée par `cleIbanValide`) et le SIRET.
-`empreinteAdresseReseau` appelle `empreinteAdresse` de la frontière sous `IP_HASH_SALT`. La garde
-`securite:schema-pii` (alias `G-SEC-SCHEMA-PII`, câblée en CI avec son `:prove`, 10 familles,
-32 témoins, 5 contre-témoins) refuse deux choses : une colonne de personne en clair dans le
-schéma, et un bloc ou une empreinte écrits hors de `pii.ts`. 24 tests. Huit défauts injectés un à
-un ont chacun fait rougir leur contrôle.
-
-**Reste.** Aucun modèle de personne n'existe encore : DM-06 et DM-07 poseront les premières
-colonnes, et la garde les jugera. L'IBAN de la pièce RIB (DM-11) passera par `colonnesPii`. La
-double clé de rotation (HYP-E1-24) appartient à QA-T04 et QA-T13. Le module client unique
-`src/server/db.ts`, que `journal-sans-pii.ts` attribue à SEC-08, n'est pas dans les chemins de la
-tâche et n'est pas posé. Le passage de `partners/ADR-0013` à `accepte` appartient à l'architecte.
-
-**Appris.** La branche du 19/09 recopiait la normalisation IPv6 de SEC-10 et le HMAC d'adresse de
-SEC-07, arrivés sur main après elle : une branche reprise se relit contre le main du jour, pas
-contre celui de sa naissance. Un type marqué ne se construit pas par un littéral sous la règle
-`consistent-type-assertions` : on type d'abord l'objet sans la marque, puis on l'affirme.
-`gates:prouvees` ne reconnaît une preuve que sous la forme `pnpm <garde>:prove`, suivie d'un tiret
-cadratin : un trait d'union simple la déclare non référencée. Une garde dont l'identifiant de
-registre diffère de son nom de commande grossit une dette figée par `un-nom-une-garde.spec.ts` :
-l'identifiant est donc le nom de commande, et l'ancien nom `G-SEC-...` passe en alias. Une garde
-qui balaie les fichiers suivis s'inscrit aussi dans les deux registres de
-`refus-de-rendre-et-de-publier.spec.ts` (sorties déclarées, gardes qui balaient), et établit son
-périmètre avant de lire quoi que ce soit.
-
-**Relecture.** La tête `a7e647a` a été refusée par `securite` (revue 5321613521, veto rgpd) et
-par `simplicite` (5321613688). `securite` : la garde remontait d'un littéral jusqu'à `data` sans
-traverser un ternaire, un ET logique ni un étalement. Ainsi
-`data: { ...(ip ? { ipHash: ip } : {}) }` et `data: { ...(e && { emailHash: e }) }` sortaient en
-0. La garde DESCEND désormais depuis la valeur de la clé d'écriture : objets, tableaux,
-étalements, ternaires sur leurs deux branches, `&&`, `||`, `??`, parenthèses, `as`, `satisfies`,
-`!`. Elle juge une valeur protégée sur chacune de ces branches. Les clés d'écriture comprennent
-aussi `createMany`, `updateMany`, `upsert` et `connectOrCreate`. Un champ protégé posé sous la clé
-dans une forme qu'elle ne descend pas (un appel, une fonction) rougit la nouvelle famille
-`ecriture_non_jugee`, en échec fermé. Seuls les arguments d'une fonction de `pii.ts` en sont
-exemptés. Les deux scénarios du relecteur, `??`, `satisfies`, un objet imbriqué conditionnel et
-une fonction immédiate sont des témoins. Un producteur dans un ternaire est un contre-témoin, et il
-était un faux positif avant. Couper une branche de la descente fait rougir `--prove`.
-`simplicite` : le test retapait l'expression de `HASH_HEX_64` ; il l'importe. Mutée en 63
-caractères, la copie restait verte et l'import rougit. L'alias `segments` est retiré. Dette
-laissée : `empreinteAdresseReseau` ne normalise pas son entrée. Elle attend le sujet que rend
-`adresseDuClient` (une IPv4, ou le /64 d'une IPv6), et une IPv6 complète passée par erreur serait
-hachée entière. La normaliser demande d'accepter la forme /64 et d'ajouter un motif de refus : cela
-reviendra au premier appelant (DM-07). Le lexique ne reconnaît pas `remoteAddr` : cela relève du
-propriétaire de `champs.ts`. Le registre `docs/gates.json` (champs `verifie` et `preuveRouge`,
-réécrits par `hors-depot/reecrire-champ.mjs`) et sa vue `docs/GATES.md` décrivent la nouvelle
-portée : sept clés d'écriture, 10 familles, 21 témoins, 5 contre-témoins.
-
-Second tour : `exactitude`, `securite` (veto levé) et `simplicite` acceptent la tête `2c2a6cf`, et
-`mutation` la refuse (5321838301). Cinq mutants de la garde survivaient. Chacun rendait admise une
-écriture de clair dans une colonne de suffixe Hash : tout appel pris pour un producteur, la clé
-`update` d'un `upsert` retirée, la branche fausse d'un ternaire en valeur ignorée, un ET logique en
-valeur toujours admis, et `||` ou `??` jugés sur leur seul opérande droit. Onze témoins les tuent,
-dans le spec comme au `--prove`, qui passe à 32 témoins. Le spec exige désormais la FAMILLE et plus
-seulement le code 1 : sans cela, `ecriture_non_jugee` masquait la coupure d'une branche de la
-descente. Dix mutants ont été rejoués sur le correctif, et chacun fait rougir le spec et le
-`--prove`. La règle de descente, écrite deux fois, n'est plus écrite qu'une fois (`issues`). La
-limite déclarée nomme aussi `Object.fromEntries` et les méthodes homonymes d'une fonction de
-`pii.ts`. Les champs `preuveRouge` et `verifie` sont réécrits par le même verbe. Les clés
-`createMany`, `updateMany`, `upsert` et `connectOrCreate` sont redondantes : en écriture Prisma
-imbriquée, elles vivent toujours sous une clé `data`, `create` ou `update`. Les retirer toutes les
-quatre est un mutant qui survit (rejoué), et c'est un mutant équivalent pour toute écriture posée
-dans l'appel. `main` a été refusionnée pour un conflit sur le cliquet des sorties déclarées (51 d'un
-côté, 54 de l'autre, 55 après la fusion).
-
-… 52 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 55 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
