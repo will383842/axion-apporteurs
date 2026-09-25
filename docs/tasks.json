@@ -1878,7 +1878,8 @@
         "package.json",
         "pnpm-lock.yaml",
         ".gitignore",
-        "scripts/mutation/rapport.ts"
+        "scripts/mutation/rapport.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -1918,7 +1919,8 @@
         "tests/unit/qualite/red-first.spec.ts",
         "docs/gates.json",
         "scripts/gates/red-first.ts",
-        "package.json"
+        "package.json",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
