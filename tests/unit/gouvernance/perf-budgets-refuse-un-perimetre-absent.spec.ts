@@ -45,7 +45,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { fichiersDeSrc, RacineAbsente } from '../../../scripts/gates/perf-budgets';
+import { fichiersDeSrc } from '../../../scripts/gates/perf-budgets';
 
 /**
  * LE MOTIF DE LA FAMILLE : « un chemin absent rend une LISTE VIDE ».
@@ -132,26 +132,34 @@ const OCCURRENCES_DECLAREES: readonly { fichier: string; combien: number; motif:
 ];
 
 describe('perf:budgets — un périmètre absent est un REFUS, jamais une liste vide (GOV-046)', () => {
-  it('REQ-GOV-012 — la racine absente LÈVE, elle ne rend pas une liste vide', () => {
-    const nulle = join(tmpdir(), 'gov-046-cette-racine-n-existe-pas');
-    expect(() => fichiersDeSrc(nulle)).toThrow(RacineAbsente);
+  it('REQ-GOV-012 — le périmètre vient de la SOURCE UNIQUE, pas d’une descente maison', () => {
+    // 🔴 Motif `simplicite` sur 9ffb450 : le premier correctif recréait ICI le patron que
+    // `scripts/lot/fichiers-suivis.ts` centralise — une classe d'erreur, une descente de dossiers,
+    // un refus imprimé sous une famille propre. Une SIXIÈME copie du patron qu'on ferme, dans le
+    // commit même qui le ferme. La garde se ferme « comme les six autres » : par l'import.
+    const source = sansCommentaires(readFileSync('scripts/gates/perf-budgets.ts', 'utf8'));
+    expect(source, 'perf-budgets n’établit pas son périmètre par la source unique').toMatch(
+      /import\s*\{[^}]*fichiersSuivisOuRefus[^}]*\}\s*from\s*'\.\.\/lot\/fichiers-suivis'/
+    );
+    expect(source, 'perf-budgets descend encore les dossiers elle-même').not.toMatch(/readdirSync/);
+    expect(source, 'perf-budgets porte encore son refus maison').not.toContain('perimetre_absent');
   });
 
-  it('REQ-GOV-012 — CONTRE-TÉMOIN : un dossier qui EXISTE et ne porte aucune violation reste vert', () => {
+  it('REQ-GOV-012 — CONTRE-TÉMOIN : un périmètre établi sans fichier sous `src/` rend un résultat vide', () => {
     // C'est la distinction que la famille entière tient : « je n'ai rien trouvé » et « je n'ai
-    // rien regardé » ne rendent pas le même verdict.
-    const vide = mkdtempSync(join(tmpdir(), 'gov-046-vide-'));
-    try {
-      expect(fichiersDeSrc(vide)).toEqual([]);
-    } finally {
-      rmSync(vide, { recursive: true, force: true });
-    }
+    // rien regardé » ne rendent pas le même verdict. Le périmètre est ÉTABLI (git a répondu) ;
+    // qu'aucun fichier ne vive sous `src/` est une RÉPONSE, pas une abstention.
+    expect(fichiersDeSrc(['docs/a.md', 'scripts/b.ts'])).toEqual([]);
+    expect(fichiersDeSrc(['src/app/page.tsx', 'srcx/c.ts', 'docs/a.md'])).toEqual([
+      'src/app/page.tsx',
+    ]);
   });
 
-  it('REQ-GOV-012 — `perf:budgets` REFUSE, en NOMMANT le périmètre, quand `src/` manque', () => {
+  it('REQ-GOV-012 — `perf:budgets` REFUSE, en NOMMANT le périmètre, quand il ne peut pas l’établir', () => {
     const depot = mkdtempSync(join(tmpdir(), 'gov-046-depot-'));
     try {
-      // Un dépôt jetable qui porte tout ce que la garde lit SAUF `src/`.
+      // Un dépôt jetable SANS `.git` et SANS `src/` : la source unique ne peut pas établir le
+      // périmètre, et c'est SON refus — `perimetre_illisible` — que la garde doit porter.
       for (const f of ['config', 'docs', 'scripts', 'perf', '.github']) {
         cpSync(f, join(depot, f), { recursive: true });
       }
@@ -172,7 +180,7 @@ describe('perf:budgets — un périmètre absent est un REFUS, jamais une liste 
         r.status,
         `la garde a rendu un verdict sans `.concat('`src/` :\n', sortie.slice(0, 900))
       ).not.toBe(0);
-      expect(sortie).toContain('perimetre_absent');
+      expect(sortie).toContain('perimetre_illisible');
       // Aucune bannière de succès : c'est la propriété de sécurité de toute la famille.
       expect(sortie.split(/\r?\n/).filter((l) => l.trimStart().startsWith('✅'))).toEqual([]);
     } finally {
