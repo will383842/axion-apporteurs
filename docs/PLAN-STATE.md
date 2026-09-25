@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `48b14b6` — 2026-09-25T21:08:41+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #128 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) · 5. #126 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #126 (un contrôle requis rouge ou une revue manquante) · 4. #128 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
@@ -66,9 +66,9 @@ Reste sur ce chemin : **14.50 j**.
 | --- | --- | --- | --- |
 | 1 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
 | 2 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 3 | #128 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees | `t/dm-06` | un contrôle requis rouge ou une revue manquante |
-| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un contrôle requis rouge ou une revue manquante |
+| 4 | #128 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees | `t/dm-06` | un contrôle requis rouge ou une revue manquante |
+| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -136,12 +136,19 @@ réactivait, et `TRUNCATE` passait. Désormais une ligne révoquée est gelée (
 `DELETE` refusés), l'empreinte ne change jamais, même sur un jeton actif, un déclencheur
 d'instruction refuse `TRUNCATE`, et `CHECK revoque_at >= cree_at` est posé ; trois témoins
 d'intégration et une lecture statique de la migration, qui rougit sans Docker. (2) La matrice
-passe à la forme `statut × événement -> statut` de CONVENTIONS §2 : liste fermée
+passe à la forme `statut x evenement -> statut` de CONVENTIONS §2 : liste fermée
 `EVENEMENTS_APPORTEUR`, un événement par flèche, flèches inchangées, balayage de 9 x 9 cellules.
 Le champ de la demande s'appelle `evenementApporteur` : `journal:sans-pii` réserve le mot nu du
 journal à son écrivain unique. Enfin la source d'aléa de production du code de parrainage est
 exportée (`sourceAleatoireSysteme`, sur `crypto.getRandomValues`), avec un test qui la prouve non
 constante.
+
+`mutation` a refusé la même tête (revue 5321894722) : aucun test ne fixait les flèches, le balayage
+lisait la matrice qu'il jugeait. Les couples attendus sont désormais écrits en littéraux dans la
+spec, confrontés dans les deux sens ; un motif hors vocabulaire est refusé (`motif_inconnu`) ; le
+jeton en clair est prouvé égal aux octets injectés et son empreinte à leur SHA-256 ; le refus d'une
+charge nomme le champ, jamais une valeur. Rejoué par le harnais du relecteur, adapté à la matrice
+réécrite : 15 mutants sur 15 tués, dont les cinq survivants d'avant.
 
 Dettes nommées, non traitées ici : aucune sortie depuis `kyc_en_cours` ni `pret_a_signer` hors
 l'avancée, car ni le glossaire §2 ni REQ-DM-011 n'en prévoient (un KYC abandonné reste bloqué ; à
