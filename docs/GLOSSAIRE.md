@@ -122,6 +122,10 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `OrigineEntrepriseConnue` | `client`, `devis`, `demande_entrante`, `financeur`                                     | REQ-DM-029   |
 | `TypeReprise`          | `avoir`, `paiement_rembourse` (synonyme interdit : `payment_refund`)                       | REQ-DM-019   |
 | `ConsoleRole`          | `admin`, `qualifieur`, `comptable`, `lecteur`                                              | REQ-SEC-023  |
+| `StatutApporteur`      | `candidat`, `retenu`, `vivier`, `refuse`, `kyc_en_cours`, `pret_a_signer`, `signe`, `suspendu`, `resilie` — sens au §2 ; `actif` et `dormant` sont dérivés, jamais stockés | REQ-DM-011 |
+| `MotifResiliation`     | `ordinaire_apporteur`, `ordinaire_axion`, `manquement_grave` — colonne `resiliationMotif` | REQ-DM-011 |
+| `RegimeTva`            | `assujetti`, `franchise_293b` — historique daté, figé sur chaque autofacture | REQ-ARG-033 |
+| `CanalCandidature`     | `site`, `linkedin`, `jobboard`, `saisie_console`, `autre` — dérivé par EXT-T03 de `sourceCanal`, chaîne transportée figée ; chemin inconnu → `autre`, journalisé | REQ-DM-035, REQ-EXT-008 |
 | `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe`, `proposee` — **neuf valeurs**, celles de `scripts/lot/tasks.schema.json` ; `proposee` manquait ici depuis GOV-017a et rien ne l'attrapait | REQ-GOV-021 |
 | `TypeEvenementJournal` | `journal_ouvert` — la genèse du journal `evenements`, écrite par la première migration et portant l'algorithme de hachage ; ensuite, un type par transition journalisée, chacun à charge fermée sans donnée personnelle | REQ-DM-024, REQ-DM-041 |
 | `AgregatJournal`       | `attribution`, `apporteur`, `ligne_commission`, `releve`, `piece_kyc`, `contrat` — l'agrégat dont la transition s'écrit au journal, dans la même transaction ; l'événement le désigne par `agregatId`, jamais par une donnée de la personne | REQ-DM-024 |

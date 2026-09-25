@@ -3155,7 +3155,18 @@
         "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts",
         "tests/unit/domaine/apporteur-identites-facturation.spec.ts",
         "tests/unit/domaine/apporteur-score-fige.spec.ts",
-        "tests/integration/apporteur-jeton-depot.spec.ts"
+        "tests/integration/apporteur-jeton-depot.spec.ts",
+        "prisma/migrations/",
+        "src/domain/apporteur/identifiants.ts",
+        "src/domain/apporteur/activite.ts",
+        "src/domain/apporteur/identites-facturation.ts",
+        "src/domain/apporteur/population.ts",
+        "src/domain/apporteur/snapshot-candidature.ts",
+        "tests/fixtures/axionia/candidature-recue.json",
+        "tests/unit/domaine/apporteur-identifiants.spec.ts",
+        "tests/unit/domaine/apporteur-activite.spec.ts",
+        "tests/unit/domaine/apporteur-population-is-test.spec.ts",
+        "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts"
       ],
       "schema": true,
       "sensible": [
@@ -3188,16 +3199,18 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) Le statut d'apporteur est un ENUM {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec une MATRICE DE TRANSITIONS explicite : une transition absente de la matrice est refusee, jamais autorisee par omission (REQ-DM-011). Le motif de resiliation est un enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} ; le vocabulaire de la faute n'y figure pas. (2) Un apporteur porte DEUX identifiants distincts : un code de parrainage public, unique, lisible et NON ENUMERABLE (prefixe plus 6 caracteres tires au hasard), et un ou plusieurs jetons de depot {empreinte unique, date de creation, date de revocation eventuelle, dernier usage} (REQ-DM-012). Un jeton revoque ne se reactive pas. (3) `actif` et `dormant` sont DERIVES par fonction pure, JAMAIS STOCKES, et restent des indicateurs de console : AUCUN MESSAGE N'EST ENVOYE A UN APPORTEUR EN RAISON DE SON INACTIVITE (REQ-CPL-027). C'est une interdiction de produit, pas une preference d'ergonomie. (4) `isTest` est exclu de TOUS les agregats d'argent, du lot de paiement, de la declaration annuelle et de l'entonnoir (REQ-CPL-020) ; les identites de facturation sont DATEES, et un releve qui chevauche deux identites produit DEUX autofactures (REQ-CPL-005). (5) Le seuil de verification prioritaire est une colonne entiere au defaut derive du palier, surcharge manuelle tracee ; AUCUN DEPOT N'EST REFUSE POUR DEPASSEMENT DE SEUIL — au-dela, l'attribution porte simplement le drapeau de verification prioritaire (REQ-DM-010). (6) Le score de candidature est transporte FIGE depuis axionia et JAMAIS recalcule par Partners ; un test de parite sur fixtures exportees le prouve (REQ-DM-035, REQ-QA-035). (7) TEMOIN A DEUX FACES : une transition absente de la matrice est refusee et la nomme ; une transition declaree passe. Un depot au-dela du seuil est ACCEPTE et porte le drapeau, et le test verifie l'acceptation, pas seulement le drapeau. Un agregat d'argent calcule sur une population incluant `isTest` diverge du meme agregat sans, et le test nomme l'ecart en centimes.",
+      "acceptance": "TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) Le statut d'apporteur est un ENUM {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec une MATRICE DE TRANSITIONS explicite : une transition absente de la matrice est refusee, jamais autorisee par omission (REQ-DM-011). Le motif de resiliation est un enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} ; le vocabulaire de la faute n'y figure pas. (2) Un apporteur porte DEUX identifiants distincts : un code de parrainage public, unique, lisible et NON ENUMERABLE — prefixe `AX` puis 6 caracteres de l'alphabet Crockford base32 (sans I, L, O, U), 30 bits aleatoires (HYP-DM06-CODE-PARRAINAGE) —, et un ou plusieurs jetons de depot {empreinte unique, date de creation, date de revocation eventuelle, dernier usage} (REQ-DM-012). Un jeton revoque ne se reactive pas. (3) `actif` et `dormant` sont DERIVES par fonction pure, JAMAIS STOCKES ; la fonction de dormance RECOIT `DORMANCE_JOURS` EN PARAMETRE tant que la SSOT des seuils (JUR-T02) n'existe pas — jamais un litteral dans le code (RM-10) ; et restent des indicateurs de console : AUCUN MESSAGE N'EST ENVOYE A UN APPORTEUR EN RAISON DE SON INACTIVITE (REQ-CPL-027). C'est une interdiction de produit, pas une preference d'ergonomie. (4) `isTest` est exclu de TOUS les agregats d'argent, du lot de paiement, de la declaration annuelle et de l'entonnoir (REQ-CPL-020) ; les identites de facturation sont DATEES, et un releve qui chevauche deux identites produit DEUX autofactures (REQ-CPL-005). L'IBAN N'EST PAS DANS DM-06 : une identite de facturation porte une REFERENCE a la piece RIB du KYC (DM-11, chiffree par SEC-08), jamais l'IBAN (HYP-DM06-IBAN). (5) Le seuil de verification prioritaire est une colonne entiere au defaut derive du palier, surcharge manuelle tracee ; DM-06 porte la COLONNE et son defaut ; le comportement du depot au-dela du seuil (accepte, drapeau pose) et son temoin appartiennent a DM-09, qui porte le depot (REQ-DM-010). (6) Le score de candidature est transporte FIGE depuis axionia et JAMAIS recalcule par Partners ; un test de parite sur la fixture du producteur reel `tests/fixtures/axionia/candidature-recue.json` (Source: INT-T01b) le prouve (REQ-DM-035, REQ-QA-035). `sourceCanal` est stockee TELLE QUE RECUE, longueur bornee (HYP-DM06-SOURCE-CANAL) : aucun enum de canal dans DM-06, la derivation appartient a EXT-T03. (7) TEMOIN A DEUX FACES : une transition absente de la matrice est refusee et la nomme ; une transition declaree passe. Une `sourceCanal` au-dela de la borne n'est pas tronquee : elle est stockee nulle et l'ecart est journalise. Un agregat d'argent calcule sur une population incluant `isTest` diverge du meme agregat sans, et le test nomme l'ecart en centimes.",
       "tests": {
         "REQ-CPL-005": [
           "tests/unit/domaine/apporteur-identites-facturation.spec.ts"
         ],
         "REQ-CPL-020": [
-          "tests/unit/domaine/apporteur-identites-facturation.spec.ts"
+          "tests/unit/domaine/apporteur-identites-facturation.spec.ts",
+          "tests/unit/domaine/apporteur-population-is-test.spec.ts"
         ],
         "REQ-CPL-027": [
-          "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts"
+          "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts",
+          "tests/unit/domaine/apporteur-activite.spec.ts"
         ],
         "REQ-DM-010": [
           "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts"
@@ -3206,10 +3219,12 @@
           "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts"
         ],
         "REQ-DM-012": [
-          "tests/integration/apporteur-jeton-depot.spec.ts"
+          "tests/integration/apporteur-jeton-depot.spec.ts",
+          "tests/unit/domaine/apporteur-identifiants.spec.ts"
         ],
         "REQ-DM-035": [
-          "tests/unit/domaine/apporteur-score-fige.spec.ts"
+          "tests/unit/domaine/apporteur-score-fige.spec.ts",
+          "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts"
         ],
         "REQ-QA-035": [
           "tests/unit/domaine/apporteur-score-fige.spec.ts"
@@ -4168,7 +4183,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13)."
+      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13). 🔴 **Complétée le 2026-09-25 (cadrage de DM-06, GOV-099).** DM-09 porte le TÉMOIN de REQ-DM-010 retiré de DM-06 : un dépôt au-delà du seuil de vérification prioritaire est ACCEPTÉ, horodaté et porte `verificationPrioritaire = true` ; le test vérifie l'acceptation, pas seulement le drapeau, et un témoin qui refuserait ce dépôt le fait rougir."
     },
     {
       "id": "DM-10-P",
@@ -4227,7 +4242,8 @@
         "DM-03-P",
         "DM-06",
         "INT-T09",
-        "SEC-17"
+        "SEC-17",
+        "SEC-08"
       ],
       "reqs": [
         "REQ-CPL-004",
@@ -4252,7 +4268,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "se limite aux données KYC et à `PieceKyc.valideJusquAu` ; la règle de vigilance et le blocage du versement sont la propriété de JUR-T16 (`controlesVersement()`). 🔴 **Complétée le 2026-09-03 (synthèse A-10 et M-20).** (1) **`rc_pro` porte `expireAt NOT NULL`** et un rappel d'échéance annuel (contrat art. 6.4 : attestation à la signature puis à chaque échéance, information de toute résiliation de police sous 15 jours) — **sans être ajoutée à `piecesBloquantPaiement()` ni à `controlesVersement()`** : l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement. (2) Le KYC recueille et stocke le **statut d'exercice** de l'apporteur (`qualiteExercice`), qui alimente `{{APPORTEUR_QUALITE}}` du gabarit (JUR-T01) et la déclaration de l'art. 23 (« exercer sous un statut régulièrement déclaré l'autorisant à percevoir et à facturer les commissions », « ne faire l'objet ni d'une liquidation judiciaire ni d'une interdiction de gérer », M-29)."
+      "acceptance": "se limite aux données KYC et à `PieceKyc.valideJusquAu` ; la règle de vigilance et le blocage du versement sont la propriété de JUR-T16 (`controlesVersement()`). 🔴 **Complétée le 2026-09-03 (synthèse A-10 et M-20).** (1) **`rc_pro` porte `expireAt NOT NULL`** et un rappel d'échéance annuel (contrat art. 6.4 : attestation à la signature puis à chaque échéance, information de toute résiliation de police sous 15 jours) — **sans être ajoutée à `piecesBloquantPaiement()` ni à `controlesVersement()`** : l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement. (2) Le KYC recueille et stocke le **statut d'exercice** de l'apporteur (`qualiteExercice`), qui alimente `{{APPORTEUR_QUALITE}}` du gabarit (JUR-T01) et la déclaration de l'art. 23 (« exercer sous un statut régulièrement déclaré l'autorisant à percevoir et à facturer les commissions », « ne faire l'objet ni d'une liquidation judiciaire ni d'une interdiction de gérer », M-29). 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099, `HYP-DM06-IBAN`).** L'IBAN vit dans la pièce `rib` du KYC et nulle part ailleurs : chiffré par SEC-08 (`encryptPii` avec AAD égale à l'identifiant de la ligne), recherché par `ibanHash` ; `IdentitesFacturation` (DM-06) n'en porte qu'une référence. Test : aucune autre colonne du schéma ne porte un IBAN, en clair ou chiffré."
     },
     {
       "id": "DM-12",
@@ -7662,7 +7678,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création."
+      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création. 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099).** EXT-T03 porte la dérivation de `sourceCanal` — chaîne transportée figée par DM-06 (REQ-DM-035) — vers l'enum `CanalCandidature` (`site`, `linkedin`, `jobboard`, `saisie_console`, `autre`, glossaire §4) : une table de correspondance chemin → canal, côté Partners, en SSOT ; un chemin inconnu donne `autre` et est journalisé, jamais un canal deviné. Tests : chaque entrée de la table → son canal ; chemin inconnu → `autre` et une entrée de journal ; `sourceCanal` nulle → `autre` ; la valeur transportée n'est jamais modifiée par la dérivation."
     },
     {
       "id": "EXT-T04",
@@ -11305,6 +11321,41 @@
           "tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-099",
+      "titre": "Cadrage de DM-06 : sourceCanal transporté figé, IBAN hors de DM-06, glossaire des enums d'apporteur",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/DECISIONS.md",
+        "docs/requirements.json",
+        "docs/REQUIREMENTS.md",
+        "docs/GLOSSAIRE.md",
+        "docs/tasks.json",
+        "docs/TASKS.md",
+        "docs/TRACABILITE.md",
+        "docs/paths-proposes.json",
+        "docs/PLAN-STATE.md",
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "tests": {
+        "REQ-GOV-015": [
+          "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+        ]
+      },
+      "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le développeur de DM-06 a rendu `stop` sur trois contradictions ; les décisions prises le 2026-09-25 par l'orchestrateur, sur délégation de Will, sont inscrites : (1) REQ-DM-035 amendée — `sourceCanal` est une chaîne transportée figée ; la dérivation vers l'enum `CanalCandidature` et sa table chemin → canal appartiennent à EXT-T03 ; (2) le glossaire porte `RegimeTva`, `StatutApporteur`, `MotifResiliation` et `CanalCandidature` au §4, lus par `partners:schema:enums` ; (3) l'IBAN sort de DM-06 : il appartient à la pièce RIB du KYC (DM-11, SEC-08), `IdentitesFacturation` n'en porte qu'une référence (REQ-CPL-005 amendée) ; (4) format du code de parrainage (REQ-DM-012), `DORMANCE_JOURS` en paramètre, témoin du dépôt au-delà du seuil porté par DM-09 ; (5) `paths` de DM-06 complétés. Registres écrits par les verbes hors dépôt ; `gov:hypotheses`, `gov:tasks`, `gov:requirements`, `gov:identifiants`, `gov:attributions`, `gov:trace`, `partners:schema:enums` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier."
     }
   ]
 }
