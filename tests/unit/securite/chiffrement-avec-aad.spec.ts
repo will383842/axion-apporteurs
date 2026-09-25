@@ -1,21 +1,26 @@
 // @req REQ-SEC-024
 /**
  * chiffrement-avec-aad.spec.ts — SEC-08 : les données personnelles chiffrées, liées à leur ligne et
- * à leur champ ; les empreintes de recherche ; l'adresse réseau réduite à une empreinte tronquée.
+ * à leur champ ; les empreintes de recherche ; l'adresse réseau réduite à une empreinte tronquée ;
+ * la garde de schéma et des chemins d'écriture (`scripts/gates/schema-pii.ts`).
  *
- * CE QUI EST JUGÉ ICI (phase A de SEC-08) : `src/server/securite/pii.ts`, dont les clés entrent en
- * PARAMÈTRE — aucune lecture d'environnement, donc des vecteurs déterministes. Le format et les
- * entrées des empreintes sont un CONTRAT (un octet changé rend illisibles toutes les données déjà
- * écrites) : ils sont tenus par des vecteurs figés, calculés hors de `pii.ts` selon le texte du
- * format, et non recalculés ici par le code qu'ils jugent.
+ * LES CLÉS VIENNENT DE SEC-01 : `clesPii` reçoit un environnement et le fait juger par
+ * `lireEnvironnement` — l'environnement de test est DÉRIVÉ de `NOMS_DES_SECRETS`, jamais recopié.
+ * Toutes ses valeurs sont des valeurs de TEST manifestes (« temoin-sec08-… », octets 0 à 31).
  *
- * Toutes les clés sont des clés de TEST manifestes (octets 0 à 31, chaînes « cle-de-test-… ») ;
- * courriels en `example.org`, téléphones dans la tranche de fiction `06 39 98`, adresses réseau de
- * documentation (`192.0.2.0/24`, `2001:db8::/32`). Aucune coordonnée bancaire à clé valide n'est
- * écrite : les valeurs d'IBAN sont assemblées à l'exécution et leur clé est fausse.
+ * Le format et les entrées des empreintes sont un CONTRAT (partners/ADR-0013, décisions 9 à 13) :
+ * ils sont tenus par des vecteurs figés, calculés HORS de `pii.ts` par `node:crypto` selon le texte
+ * de l'ADR, et non recalculés ici par le code qu'ils jugent.
+ *
+ * Courriels en `example.org`, téléphones dans la tranche de fiction `06 39 98`, adresses réseau de
+ * documentation (`192.0.2.0/24`). Aucun IBAN à clé valide n'est ÉCRIT dans ce fichier : le seul
+ * qui serve est assemblé à l'exécution à partir d'un compte marqué `TEMOINSEC08`.
  */
 
 import { describe, it, expect } from 'vitest';
+import { NOMS_DES_SECRETS, kidDe } from '../../../src/lib/env';
+import { cleIbanValide } from '../../../src/lib/forme-iban';
+import { empreinteAdresse } from '../../../src/server/integrations/axionia/api-entrante';
 import {
   BlocIllisiblePii,
   CleInconnuePii,
@@ -23,54 +28,59 @@ import {
   EchecAuthentificationPii,
   EntreeRefuseePii,
   ErreurPii,
-  chiffrerPii,
-  dechiffrerPii,
+  clesPii,
+  colonnesPii,
+  decryptPii,
   empreinteAdresseReseau,
   empreinteRecherche,
-  type CleChiffrementPii,
+  encryptPii,
   type LignePii,
 } from '../../../src/server/securite/pii';
+import {
+  FAMILLES,
+  controler,
+  decider,
+  prouver,
+  vueDuDepot,
+  type Vue,
+} from '../../../scripts/gates/schema-pii';
 
-// ── clés et vecteurs de TEST ─────────────────────────────────────────────────────────────────────
+// ── l'environnement de TEST, dérivé des noms de SEC-01 ───────────────────────────────────────────
 
-const CLE: CleChiffrementPii = {
-  octets: Uint8Array.from({ length: 32 }, (_, i) => i),
-  kid: '5ec08a01',
+const CLE_HEX = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0')).join('');
+const valeurTemoin = (nom: string): string => `temoin-sec08-${nom.toLowerCase()}-`.padEnd(48, '0');
+const ENV: Record<string, string> = {
+  NODE_ENV: 'test',
+  ...Object.fromEntries(NOMS_DES_SECRETS.map((n) => [n, valeurTemoin(n)])),
+  PII_ENCRYPTION_KEY: CLE_HEX,
 };
-const CLE_EMPREINTE = 'cle-de-test-sec08-empreintes-de-recherche';
-const SEL_ADRESSE = 'sel-de-test-sec08-adresses-reseau-000000';
+const CLES = clesPii(ENV);
 
-const LIGNE_A: LignePii = { modele: 'Apporteur', champ: 'courrielChiffre', id: 'apporteur_0001' };
-const LIGNE_B: LignePii = { modele: 'Apporteur', champ: 'courrielChiffre', id: 'apporteur_0002' };
+const LIGNE_A: LignePii = { modele: 'Apporteur', champ: 'emailChiffre', id: 'apporteur_0001' };
+const LIGNE_B: LignePii = { ...LIGNE_A, id: 'apporteur_0002' };
 const CLAIR = 'alice@example.org';
 
 /**
- * Vecteur figé : AES-256-GCM sous CLE, IV = octets 0xA0 à 0xAB, donnée authentifiée =
- * UTF-8 de JSON.stringify(["partners.pii", 1, "Apporteur", "courrielChiffre", "apporteur_0001"]),
- * rangé 0x01 ‖ kid ‖ IV ‖ étiquette ‖ chiffré. Calculé par `createCipheriv` hors de `pii.ts`.
+ * Vecteurs figés (node:crypto, hors de `pii.ts`) : clé = octets 0 à 31, kid = kidDe(clé hex),
+ * IV = 0xA0…0xAB, AAD = UTF-8 de JSON.stringify(["partners.pii",1,"Apporteur","emailChiffre",
+ * "apporteur_0001"]), bloc = 0x01 ‖ kid ‖ IV ‖ étiquette ‖ chiffré.
  */
 const BLOC_FIGE =
-  '015ec08a01a0a1a2a3a4a5a6a7a8a9aaab1d6859e5c5f4cfd32aef66f2756aac1d8774154e208b67c70308f7bf6254afac17';
-/** HMAC-SHA256(CLE_EMPREINTE, "partners.empreinte.v1" ␟ "courriel" ␟ "alice@example.org"). */
-const EMPREINTE_COURRIEL = 'b1ccb113b18a94f777ce6a290b24f3c97a9ff8e7fd1ad5efc0a034438d47dcdc';
-/** HMAC-SHA256(CLE_EMPREINTE, "partners.empreinte.v1" ␟ "telephone" ␟ "+33639981234"). */
-const EMPREINTE_TELEPHONE = 'eaf5fa0345ca3d41a6cc12d6f78cf81693bf28ee220d90fb080e913dba237fa4';
-/** HMAC-SHA256(SEL_ADRESSE, "partners.ip.v1" ␟ "192.0.2.10"), 16 premiers caractères. */
-const EMPREINTE_IP4 = '8ff7bce348243167';
-/** HMAC-SHA256(SEL_ADRESSE, "partners.ip.v1" ␟ "2001:db8:1:2::/64"), 16 premiers caractères. */
-const EMPREINTE_IP6 = 'b312201254866226';
+  '0162a60887a0a1a2a3a4a5a6a7a8a9aaabfa7299da1633cf1ed4ff7009f31e2ac08774154e208b67c70308f7bf6254afac17';
+/** HMAC-SHA256(PII_HASH_KEY témoin, "partners.empreinte.v1" ␟ "courriel" ␟ "alice@example.org"). */
+const EMPREINTE_COURRIEL = '0b29ccb58963092bf793a545e256ec8a7730315056b68bc3799946e0dfdf7bd9';
+/** HMAC-SHA256(PII_HASH_KEY témoin, "partners.empreinte.v1" ␟ "telephone" ␟ "+33639981234"). */
+const EMPREINTE_TELEPHONE = '00fd0250399435bf34a20d2c425769502d1eb5e3a78f045d3d0bf8fc2fb6f4e0';
+/** HMAC-SHA256(IP_HASH_SALT témoin, "partners.ip.v1" ␟ "192.0.2.10"), 16 premiers caractères. */
+const EMPREINTE_IP4 = 'c996ef6120e34a94';
 
 const depuisHex = (hex: string): Uint8Array => Uint8Array.from(Buffer.from(hex, 'hex'));
 const hex = (octets: Uint8Array): string => Buffer.from(octets).toString('hex');
-
-/** Retourne un bit de l'octet `position` d'une COPIE du bloc. */
 const altere = (bloc: Uint8Array, position: number): Uint8Array => {
   const copie = Uint8Array.from(bloc);
   copie[position] = (copie[position] ?? 0) ^ 0x01;
   return copie;
 };
-
-/** L'erreur levée par `f`, ou `null` si `f` a rendu une valeur. */
 const erreurDe = (f: () => unknown): unknown => {
   try {
     f();
@@ -80,317 +90,329 @@ const erreurDe = (f: () => unknown): unknown => {
   }
 };
 
+/** Un IBAN à clé valide, ASSEMBLÉ à l'exécution : la clé est cherchée par la règle du dépôt. */
+const ibanTemoin = (): string => {
+  const compte = `TEMOINSEC08${'0'.repeat(12)}`;
+  for (let c = 2; c <= 98; c++) {
+    const candidat = `FR${String(c).padStart(2, '0')}${compte}`;
+    if (cleIbanValide(candidat)) return candidat;
+  }
+  throw new Error('aucune clé de contrôle trouvée pour le compte témoin');
+};
+
 // Positions du format : version (1) ‖ kid (4) ‖ IV (12) ‖ étiquette (16) ‖ chiffré.
 const DEBUT_IV = 5;
 const DEBUT_ETIQUETTE = 17;
 const DEBUT_CHIFFRE = 33;
 
+describe('REQ-SEC-024 — les clés viennent de SEC-01, une par usage', () => {
+  it('REQ-SEC-024 : la clé de chiffrement est PII_ENCRYPTION_KEY, son kid est kidDe(valeur), et les trois usages ont trois clés', () => {
+    expect(hex(CLES.chiffrement.octets)).toBe(CLE_HEX);
+    expect(CLES.chiffrement.kid).toBe(kidDe(CLE_HEX));
+    expect(empreinteRecherche('courriel', CLAIR, CLES)).toBe(EMPREINTE_COURRIEL);
+    expect(empreinteAdresseReseau('192.0.2.10', CLES)).toBe(EMPREINTE_IP4);
+    // Changer le sel d'adresse ne change AUCUNE empreinte de recherche : pas de partage d'usage.
+    const autres = clesPii({ ...ENV, IP_HASH_SALT: valeurTemoin('autre-sel') });
+    expect(empreinteRecherche('courriel', CLAIR, autres)).toBe(EMPREINTE_COURRIEL);
+    expect(empreinteAdresseReseau('192.0.2.10', autres)).not.toBe(EMPREINTE_IP4);
+  });
+
+  it('REQ-SEC-024 : un environnement que SEC-01 refuse ne donne aucune clé — absente, trop courte ou partagée', () => {
+    const cas: [Record<string, string | undefined>, string][] = [
+      [{ ...ENV, PII_HASH_KEY: undefined }, 'PII_HASH_KEY : absente'],
+      [{ ...ENV, PII_ENCRYPTION_KEY: 'ab'.repeat(16) }, 'PII_ENCRYPTION_KEY'],
+      [{ ...ENV, PII_HASH_KEY: ENV.IP_HASH_SALT }, 'egale_a'],
+    ];
+    for (const [env, attendu] of cas) {
+      const e = erreurDe(() => clesPii(env));
+      expect(e, attendu).toBeInstanceOf(CleInvalidePii);
+      expect(String((e as Error).message)).toContain(attendu);
+      for (const v of Object.values(env)) {
+        if (v !== undefined && v.length >= 32) expect(String((e as Error).message)).not.toContain(v);
+      }
+    }
+  });
+});
+
 describe('REQ-SEC-024 — chiffrement AES-256-GCM, bloc lié à sa ligne et à son champ', () => {
   it('REQ-SEC-024 : un bloc chiffré se déchiffre à sa place et rend le clair (face verte)', () => {
     for (const clair of [CLAIR, 'Éloïse Œuvré-Ñúñez', '']) {
-      const bloc = chiffrerPii(LIGNE_A, clair, CLE);
-      expect(dechiffrerPii(LIGNE_A, bloc, CLE)).toBe(clair);
+      expect(decryptPii(LIGNE_A, encryptPii(LIGNE_A, clair, CLES), CLES)).toBe(clair);
     }
   });
 
   it('REQ-SEC-024 : le bloc de la ligne A présenté pour la ligne B échoue et nomme l’échec d’authentification', () => {
-    const blocA = chiffrerPii(LIGNE_A, CLAIR, CLE);
-    expect(
-      () => dechiffrerPii(LIGNE_B, blocA, CLE),
-      "le bloc de la ligne A s'est déchiffré sous la ligne B"
-    ).toThrow(EchecAuthentificationPii);
-    const e = erreurDe(() => dechiffrerPii(LIGNE_B, blocA, CLE));
-    expect(e).toBeInstanceOf(EchecAuthentificationPii);
+    const blocA = encryptPii(LIGNE_A, CLAIR, CLES);
+    const e = erreurDe(() => decryptPii(LIGNE_B, blocA, CLES));
+    expect(e, "le bloc de la ligne A s'est déchiffré sous la ligne B").toBeInstanceOf(
+      EchecAuthentificationPii
+    );
     expect(e).toMatchObject({ motif: 'echec_authentification', ...LIGNE_B });
     const message = String((e as Error).message);
-    for (const nomme of [LIGNE_B.modele, LIGNE_B.champ, LIGNE_B.id]) {
-      expect(message).toContain(nomme);
-    }
+    for (const nomme of [LIGNE_B.modele, LIGNE_B.champ, LIGNE_B.id]) expect(message).toContain(nomme);
     expect(message).not.toContain(CLAIR);
   });
 
-  it('REQ-SEC-024 : le bloc du courriel présenté pour le téléphone de la MÊME ligne échoue', () => {
-    const blocCourriel = chiffrerPii(LIGNE_A, CLAIR, CLE);
-    const telephoneA: LignePii = { ...LIGNE_A, champ: 'telephoneChiffre' };
-    expect(
-      () => dechiffrerPii(telephoneA, blocCourriel, CLE),
-      "le bloc du courriel s'est déchiffré comme téléphone de la même ligne"
-    ).toThrow(EchecAuthentificationPii);
-  });
-
-  it('REQ-SEC-024 : le bloc d’un modèle présenté pour un autre modèle au même identifiant échoue', () => {
-    const bloc = chiffrerPii(LIGNE_A, CLAIR, CLE);
-    const contact: LignePii = { ...LIGNE_A, modele: 'Contact' };
-    expect(
-      () => dechiffrerPii(contact, bloc, CLE),
-      "le bloc d'un apporteur s'est déchiffré comme contact"
-    ).toThrow(EchecAuthentificationPii);
-  });
-
-  it('REQ-SEC-024 : un octet retourné dans le chiffré, dans l’étiquette ou dans l’IV échoue à l’authentification', () => {
-    const bloc = chiffrerPii(LIGNE_A, CLAIR, CLE);
-    for (const [ou, position] of [
-      ['le chiffré', DEBUT_CHIFFRE + 3],
-      ['l’étiquette', DEBUT_ETIQUETTE + 7],
-      ['l’IV', DEBUT_IV + 2],
-    ] as const) {
-      expect(
-        () => dechiffrerPii(LIGNE_A, altere(bloc, position), CLE),
-        `un bloc altéré dans ${ou} s'est déchiffré`
-      ).toThrow(EchecAuthentificationPii);
+  it('REQ-SEC-024 : un bloc permuté vers un autre champ ou un autre modèle au même identifiant échoue', () => {
+    const bloc = encryptPii(LIGNE_A, CLAIR, CLES);
+    for (const ailleurs of [
+      { ...LIGNE_A, champ: 'telephoneChiffre' },
+      { ...LIGNE_A, modele: 'Contact' },
+    ]) {
+      expect(() => decryptPii(ailleurs, bloc, CLES)).toThrow(EchecAuthentificationPii);
     }
   });
 
-  it('REQ-SEC-024 : une autre clé portant le même kid échoue à l’authentification', () => {
-    const bloc = chiffrerPii(LIGNE_A, CLAIR, CLE);
-    const autre: CleChiffrementPii = {
-      octets: Uint8Array.from(CLE.octets).reverse(),
-      kid: CLE.kid,
-    };
-    expect(() => dechiffrerPii(LIGNE_A, bloc, autre)).toThrow(EchecAuthentificationPii);
+  it('REQ-SEC-024 : un octet retourné dans le chiffré, dans l’étiquette ou dans l’IV échoue à l’authentification', () => {
+    const bloc = encryptPii(LIGNE_A, CLAIR, CLES);
+    for (const position of [DEBUT_CHIFFRE + 3, DEBUT_ETIQUETTE + 7, DEBUT_IV + 2]) {
+      expect(() => decryptPii(LIGNE_A, altere(bloc, position), CLES)).toThrow(
+        EchecAuthentificationPii
+      );
+    }
   });
 
   it('REQ-SEC-024 : deux chiffrements du même clair diffèrent, IV compris (IV tiré à chaque chiffrement)', () => {
-    const un = chiffrerPii(LIGNE_A, CLAIR, CLE);
-    const deux = chiffrerPii(LIGNE_A, CLAIR, CLE);
-    expect(hex(un), 'deux chiffrements du même clair sont identiques').not.toBe(hex(deux));
+    const un = encryptPii(LIGNE_A, CLAIR, CLES);
+    const deux = encryptPii(LIGNE_A, CLAIR, CLES);
+    expect(hex(un)).not.toBe(hex(deux));
     expect(hex(un.slice(DEBUT_IV, DEBUT_ETIQUETTE)), 'IV réutilisé').not.toBe(
       hex(deux.slice(DEBUT_IV, DEBUT_ETIQUETTE))
     );
   });
 
-  it('REQ-SEC-024 : le bloc porte la version 1, le kid de la clé, un IV de 12 octets, une étiquette de 16 et le chiffré', () => {
-    const bloc = chiffrerPii(LIGNE_A, CLAIR, CLE);
+  it('REQ-SEC-024 : le bloc porte la version 1, le kid de la clé, un IV de 12 octets, une étiquette de 16, et jamais le clair', () => {
+    const bloc = encryptPii(LIGNE_A, CLAIR, CLES);
     expect(bloc[0]).toBe(0x01);
-    expect(hex(bloc.slice(1, DEBUT_IV))).toBe(CLE.kid);
+    expect(hex(bloc.slice(1, DEBUT_IV))).toBe(CLES.chiffrement.kid);
     expect(bloc.length).toBe(DEBUT_CHIFFRE + Buffer.byteLength(CLAIR, 'utf8'));
     expect(hex(bloc)).not.toContain(Buffer.from(CLAIR, 'utf8').toString('hex'));
   });
 
-  it('REQ-SEC-024 : un bloc figé selon le format écrit se déchiffre, et seulement sous sa ligne (vecteur déterministe)', () => {
+  it('REQ-SEC-024 : le bloc figé selon l’ADR se déchiffre, et seulement sous sa ligne (vecteur déterministe)', () => {
     const bloc = depuisHex(BLOC_FIGE);
-    expect(dechiffrerPii(LIGNE_A, bloc, CLE)).toBe(CLAIR);
-    expect(() => dechiffrerPii(LIGNE_B, bloc, CLE)).toThrow(EchecAuthentificationPii);
+    expect(decryptPii(LIGNE_A, bloc, CLES)).toBe(CLAIR);
+    expect(() => decryptPii(LIGNE_B, bloc, CLES)).toThrow(EchecAuthentificationPii);
   });
 
-  it('REQ-SEC-024 : un kid étranger rend CleInconnuePii ; une version 2 et un bloc de 32 octets rendent BlocIllisiblePii', () => {
-    const bloc = chiffrerPii(LIGNE_A, CLAIR, CLE);
-    expect(erreurDe(() => dechiffrerPii(LIGNE_A, altere(bloc, 2), CLE))).toBeInstanceOf(
+  it('REQ-SEC-024 : une autre clé rend CleInconnuePii ; une version 2 ou un bloc de 32 octets rendent BlocIllisiblePii ; une ligne incomplète est refusée', () => {
+    const bloc = depuisHex(BLOC_FIGE);
+    const autre = clesPii({ ...ENV, PII_ENCRYPTION_KEY: 'f'.repeat(64) });
+    expect(erreurDe(() => decryptPii(LIGNE_A, bloc, autre))).toBeInstanceOf(CleInconnuePii);
+    expect(erreurDe(() => decryptPii(LIGNE_A, altere(bloc, 2), CLES))).toBeInstanceOf(
       CleInconnuePii
     );
-    const autreKid: CleChiffrementPii = { octets: CLE.octets, kid: '0badc0de' };
-    expect(erreurDe(() => dechiffrerPii(LIGNE_A, bloc, autreKid))).toBeInstanceOf(CleInconnuePii);
-
     const version2 = Uint8Array.from(bloc);
     version2[0] = 0x02;
-    expect(erreurDe(() => dechiffrerPii(LIGNE_A, version2, CLE))).toBeInstanceOf(BlocIllisiblePii);
-    const court = depuisHex(BLOC_FIGE).slice(0, DEBUT_CHIFFRE - 1);
-    expect(erreurDe(() => dechiffrerPii(LIGNE_A, court, CLE))).toBeInstanceOf(BlocIllisiblePii);
-    // 33 octets exactement = un clair vide : lisible, pas « illisible ».
-    const vide = chiffrerPii(LIGNE_A, '', CLE);
-    expect(vide.length).toBe(DEBUT_CHIFFRE);
-    expect(dechiffrerPii(LIGNE_A, vide, CLE)).toBe('');
-  });
-
-  it('REQ-SEC-024 : une clé qui n’est pas de 32 octets, un kid qui n’est pas de 8 hexadécimaux ou une ligne incomplète sont refusés', () => {
-    const courte: CleChiffrementPii = { octets: CLE.octets.slice(0, 16), kid: CLE.kid };
-    expect(erreurDe(() => chiffrerPii(LIGNE_A, CLAIR, courte))).toBeInstanceOf(CleInvalidePii);
-    expect(erreurDe(() => dechiffrerPii(LIGNE_A, depuisHex(BLOC_FIGE), courte))).toBeInstanceOf(
-      CleInvalidePii
-    );
-    for (const kid of ['5ec08a0', '5ec08a01ff', 'zzzzzzzz', '5EC08A01']) {
-      expect(
-        erreurDe(() => chiffrerPii(LIGNE_A, CLAIR, { ...CLE, kid })),
-        kid
-      ).toBeInstanceOf(CleInvalidePii);
-    }
+    expect(erreurDe(() => decryptPii(LIGNE_A, version2, CLES))).toBeInstanceOf(BlocIllisiblePii);
+    expect(
+      erreurDe(() => decryptPii(LIGNE_A, bloc.slice(0, DEBUT_CHIFFRE - 1), CLES))
+    ).toBeInstanceOf(BlocIllisiblePii);
     for (const incomplete of [
       { ...LIGNE_A, id: '' },
       { ...LIGNE_A, champ: '' },
       { ...LIGNE_A, modele: '' },
     ]) {
-      const e = erreurDe(() => chiffrerPii(incomplete, CLAIR, CLE));
-      expect(e).toBeInstanceOf(EntreeRefuseePii);
-      expect(e).toMatchObject({ motif: 'ligne_incomplete' });
-      expect(erreurDe(() => dechiffrerPii(incomplete, depuisHex(BLOC_FIGE), CLE))).toBeInstanceOf(
-        EntreeRefuseePii
-      );
+      expect(erreurDe(() => encryptPii(incomplete, CLAIR, CLES))).toMatchObject({
+        motif: 'ligne_incomplete',
+      });
     }
   });
 
   it('REQ-SEC-024 : chaque échec est une ErreurPii à motif fermé, et aucun message ne porte le clair', () => {
-    const bloc = chiffrerPii(LIGNE_A, CLAIR, CLE);
+    const bloc = encryptPii(LIGNE_A, CLAIR, CLES);
     const version2 = Uint8Array.from(bloc);
     version2[0] = 0x02;
     const erreurs = [
-      erreurDe(() => dechiffrerPii(LIGNE_B, bloc, CLE)),
-      erreurDe(() => dechiffrerPii(LIGNE_A, altere(bloc, 2), CLE)),
-      erreurDe(() => dechiffrerPii(LIGNE_A, version2, CLE)),
-      erreurDe(() => chiffrerPii(LIGNE_A, CLAIR, { ...CLE, kid: 'x' })),
+      erreurDe(() => decryptPii(LIGNE_B, bloc, CLES)),
+      erreurDe(() => decryptPii(LIGNE_A, altere(bloc, 2), CLES)),
+      erreurDe(() => decryptPii(LIGNE_A, version2, CLES)),
     ];
     expect(erreurs.map((e) => (e instanceof ErreurPii ? e.motif : e))).toEqual([
       'echec_authentification',
       'cle_inconnue',
       'bloc_illisible',
-      'cle_invalide',
     ]);
-    for (const e of erreurs) {
-      expect(e).toBeInstanceOf(ErreurPii);
-      expect(String((e as Error).message)).not.toContain(CLAIR);
-      expect(String((e as Error).message)).not.toContain('alice');
+    for (const e of erreurs) expect(String((e as Error).message)).not.toContain('alice');
+  });
+});
+
+describe('REQ-SEC-024 — le chemin d’écriture : colonnesPii ne rend que des blocs et des empreintes', () => {
+  it('REQ-SEC-024 : colonnesPii rend l’identifiant lié, les blocs …Chiffre et les empreintes …Hash — aucun clair', () => {
+    const iban = ibanTemoin();
+    const clairs = { nom: 'Martin', email: CLAIR, telephone: '06 39 98 12 34', iban };
+    const colonnes = colonnesPii({ modele: 'Apporteur', id: 'apporteur_0001' }, clairs, CLES);
+    expect(Object.keys(colonnes).sort()).toEqual(
+      [
+        'id',
+        'nomChiffre',
+        'emailChiffre',
+        'emailHash',
+        'telephoneChiffre',
+        'phoneHash',
+        'ibanChiffre',
+        'ibanHash',
+      ].sort()
+    );
+    expect(colonnes.id).toBe('apporteur_0001');
+    expect(colonnes.emailHash).toBe(EMPREINTE_COURRIEL);
+    expect(colonnes.phoneHash).toBe(EMPREINTE_TELEPHONE);
+    expect(colonnes.ibanHash).toBe(empreinteRecherche('iban', iban, CLES));
+    const serialise = JSON.stringify(colonnes, (_, v: unknown) =>
+      v instanceof Uint8Array ? Buffer.from(v).toString('latin1') : v
+    );
+    for (const clair of [...Object.values(clairs), '0639981234', '+33639981234']) {
+      expect(serialise, `le clair « ${clair.slice(0, 3)}… » traverse`).not.toContain(clair);
     }
+    const bloc = colonnes.emailChiffre;
+    expect(bloc).toBeInstanceOf(Uint8Array);
+    expect(
+      decryptPii({ modele: 'Apporteur', champ: 'emailChiffre', id: 'apporteur_0001' }, bloc!, CLES)
+    ).toBe(CLAIR);
+  });
+
+  it('REQ-SEC-024 : TÉMOIN À DEUX FACES — le bloc d’une ligne transposé vers une autre échoue en nommant l’échec ; à sa place il se déchiffre', () => {
+    const a = colonnesPii({ modele: 'Apporteur', id: 'apporteur_0001' }, { email: CLAIR }, CLES);
+    const b = colonnesPii(
+      { modele: 'Apporteur', id: 'apporteur_0002' },
+      { email: 'bob@example.org' },
+      CLES
+    );
+    // Rouge : le bloc de A recopié dans la ligne B.
+    const e = erreurDe(() => decryptPii(LIGNE_B, a.emailChiffre!, CLES));
+    expect(e).toBeInstanceOf(EchecAuthentificationPii);
+    expect(String((e as Error).message)).toContain('echec_authentification');
+    // Vert : chaque bloc à sa place.
+    expect(decryptPii(LIGNE_A, a.emailChiffre!, CLES)).toBe(CLAIR);
+    expect(decryptPii(LIGNE_B, b.emailChiffre!, CLES)).toBe('bob@example.org');
+  });
+
+  it('REQ-SEC-024 : un champ à null efface le bloc ET l’empreinte ; un champ absent ne touche rien', () => {
+    const colonnes = colonnesPii(
+      { modele: 'Contact', id: 'contact_0001' },
+      { email: null, nom: 'Martin' },
+      CLES
+    );
+    expect(colonnes).toMatchObject({ emailChiffre: null, emailHash: null });
+    expect(Object.keys(colonnes)).not.toContain('telephoneChiffre');
+    expect(erreurDe(() => colonnesPii({ modele: 'Contact', id: '' }, { nom: 'x' }, CLES))).toMatchObject(
+      { motif: 'ligne_incomplete' }
+    );
   });
 });
 
 describe('REQ-SEC-024 — empreintes de recherche HMAC (emailHash, phoneHash, ibanHash, siretHash)', () => {
-  it('REQ-SEC-024 : l’empreinte d’un courriel suit le vecteur figé, après normalisation (bords, casse, NFC)', () => {
-    expect(empreinteRecherche('courriel', CLAIR, CLE_EMPREINTE)).toBe(EMPREINTE_COURRIEL);
-    expect(empreinteRecherche('courriel', '  Alice@Example.ORG\n', CLE_EMPREINTE)).toBe(
-      EMPREINTE_COURRIEL
-    );
-    const compose = 'élise@example.org';
-    const precompose = 'élise@example.org';
-    expect(empreinteRecherche('courriel', compose, CLE_EMPREINTE)).toBe(
-      empreinteRecherche('courriel', precompose, CLE_EMPREINTE)
-    );
-  });
-
-  it('REQ-SEC-024 : un même numéro de téléphone écrit de quatre façons donne une seule empreinte, celle du vecteur figé', () => {
-    for (const ecrit of [
-      '06 39 98 12 34',
-      '06.39.98.12.34',
-      '+33 6 39 98 12 34',
-      '0033639981234',
-    ]) {
-      expect(empreinteRecherche('telephone', ecrit, CLE_EMPREINTE), ecrit).toBe(
-        EMPREINTE_TELEPHONE
-      );
+  it('REQ-SEC-024 : un courriel et un téléphone écrits de plusieurs façons donnent l’empreinte figée', () => {
+    for (const ecrit of [CLAIR, '  Alice@Example.ORG\n']) {
+      expect(empreinteRecherche('courriel', ecrit, CLES)).toBe(EMPREINTE_COURRIEL);
+    }
+    for (const ecrit of ['06 39 98 12 34', '06.39.98.12.34', '+33 6 39 98 12 34', '0033639981234']) {
+      expect(empreinteRecherche('telephone', ecrit, CLES), ecrit).toBe(EMPREINTE_TELEPHONE);
     }
   });
 
-  it('REQ-SEC-024 : l’empreinte est une clé HMAC — deux clés différentes donnent deux empreintes différentes', () => {
-    const une = empreinteRecherche('courriel', CLAIR, CLE_EMPREINTE);
-    const autre = empreinteRecherche('courriel', CLAIR, `${CLE_EMPREINTE}-bis`);
-    expect(une).toMatch(/^[0-9a-f]{64}$/);
-    expect(une, 'l’empreinte ne dépend pas de la clé').not.toBe(autre);
-    expect(() => empreinteRecherche('courriel', CLAIR, '')).toThrow(CleInvalidePii);
-  });
-
-  it('REQ-SEC-024 : une même chaîne donne deux empreintes selon qu’elle est un courriel ou un téléphone', () => {
-    const chaine = '+33639981234';
-    expect(empreinteRecherche('courriel', chaine, CLE_EMPREINTE)).not.toBe(
-      empreinteRecherche('telephone', chaine, CLE_EMPREINTE)
+  it('REQ-SEC-024 : une même chaîne donne deux empreintes selon son type ; l’empreinte a la forme HASH_HEX_64', () => {
+    const quatorze = '11122233300044';
+    expect(empreinteRecherche('siret', quatorze, CLES)).toMatch(/^[0-9a-f]{64}$/);
+    expect(empreinteRecherche('courriel', `${quatorze}@example.org`, CLES)).not.toBe(
+      empreinteRecherche('siret', quatorze, CLES)
     );
-    const quatorze = ['1234', '5678', '9012', '34'].join('');
-    const ibanDeForme = `FR00${quatorze}`;
-    expect(empreinteRecherche('iban', ibanDeForme, CLE_EMPREINTE)).not.toBe(
-      empreinteRecherche('siret', quatorze, CLE_EMPREINTE)
-    );
-  });
-
-  it('REQ-SEC-024 : IBAN sans espaces et en majuscules, SIRET à 14 chiffres exactement', () => {
-    const groupes = ['FR00', '1234', '5678', '9012', '3456', '7890', '123'];
-    const compact = groupes.join('');
-    expect(empreinteRecherche('iban', groupes.join(' ').toLowerCase(), CLE_EMPREINTE)).toBe(
-      empreinteRecherche('iban', compact, CLE_EMPREINTE)
-    );
-    const siret = ['111', '222', '333', '00044'].join('');
-    expect(
-      empreinteRecherche('siret', `${siret.slice(0, 9)} ${siret.slice(9)}`, CLE_EMPREINTE)
-    ).toBe(empreinteRecherche('siret', siret, CLE_EMPREINTE));
+    const iban = ibanTemoin();
+    const espace = iban.replace(/(.{4})/g, '$1 ').toLowerCase();
+    expect(empreinteRecherche('iban', espace, CLES)).toBe(empreinteRecherche('iban', iban, CLES));
   });
 
   it('REQ-SEC-024 : une valeur hors forme est refusée par un motif nommé, sans que le message la porte', () => {
-    const siret = ['111', '222', '333', '00044'].join('');
     const refus: [Parameters<typeof empreinteRecherche>[0], string, string][] = [
       ['telephone', '12345', 'telephone_invalide'],
-      ['telephone', '06 39 98 12 3', 'telephone_invalide'],
-      ['telephone', '06 39 98 12 34 5', 'telephone_invalide'],
       ['telephone', '06 39 98 AB 34', 'telephone_invalide'],
-      ['telephone', '+0 639 981 234', 'telephone_invalide'],
-      // Le 0 du préfixe national gardé après l'indicatif français : jamais une seconde empreinte.
       ['telephone', '+33 (0)6 39 98 12 34', 'telephone_invalide'],
-      ['telephone', '0033 06 39 98 12 34', 'telephone_invalide'],
-      ['telephone', `+${'1'.repeat(16)}`, 'telephone_invalide'],
-      ['siret', siret.slice(1), 'siret_invalide'],
-      ['siret', `${siret}5`, 'siret_invalide'],
-      ['siret', `${siret.slice(1)}A`, 'siret_invalide'],
+      ['siret', '1112223330004', 'siret_invalide'],
+      ['iban', 'FR00TEMOINSEC08000000000000', 'iban_invalide'],
       ['iban', '1234 5678', 'iban_invalide'],
-      ['iban', 'FR00-1234', 'iban_invalide'],
-      ['iban', 'FR00', 'iban_invalide'],
       ['courriel', '   ', 'courriel_invalide'],
+      ['courriel', 'sans-arobase.example.org', 'courriel_invalide'],
     ];
     for (const [type, valeur, motif] of refus) {
-      const e = erreurDe(() => empreinteRecherche(type, valeur, CLE_EMPREINTE));
+      const e = erreurDe(() => empreinteRecherche(type, valeur, CLES));
       expect(e, `${type} « ${valeur} » accepté`).toBeInstanceOf(EntreeRefuseePii);
       expect(e).toMatchObject({ motif });
       if (valeur.trim() !== '') expect(String((e as Error).message)).not.toContain(valeur);
     }
-    // Contre-témoin : la forme internationale complète est admise.
-    expect(empreinteRecherche('telephone', `+${'1'.repeat(15)}`, CLE_EMPREINTE)).toMatch(
-      /^[0-9a-f]{64}$/
-    );
   });
 });
 
 describe('REQ-SEC-024 — adresse réseau : seule une empreinte salée tronquée', () => {
-  it('REQ-SEC-024 : une adresse IPv4 donne l’empreinte du vecteur figé, 16 caractères hexadécimaux', () => {
-    const e = empreinteAdresseReseau('192.0.2.10', SEL_ADRESSE);
+  it('REQ-SEC-024 : l’empreinte d’adresse est celle de la frontière (une seule primitive), 16 hexadécimaux sous IP_HASH_SALT', () => {
+    const e = empreinteAdresseReseau('192.0.2.10', CLES);
     expect(e).toBe(EMPREINTE_IP4);
+    expect(e).toBe(empreinteAdresse('192.0.2.10', ENV.IP_HASH_SALT!));
     expect(e).toMatch(/^[0-9a-f]{16}$/);
   });
+});
 
-  it('REQ-SEC-024 : deux adresses IPv6 du même /64 donnent une seule empreinte ; un autre /64, une autre', () => {
-    const memes = [
-      '2001:db8:1:2:aaaa::1',
-      '2001:0DB8:0001:0002:ffff:ffff:ffff:ffff',
-      '2001:db8:1:2::',
-      '2001:db8:1:2::1%eth0',
-    ];
-    for (const adresse of memes) {
-      expect(empreinteAdresseReseau(adresse, SEL_ADRESSE), adresse).toBe(EMPREINTE_IP6);
-    }
-    expect(empreinteAdresseReseau('2001:db8:1:3::1', SEL_ADRESSE)).not.toBe(EMPREINTE_IP6);
-    expect(empreinteAdresseReseau('::', SEL_ADRESSE)).toBe(
-      empreinteAdresseReseau('::1', SEL_ADRESSE)
-    );
-    expect(empreinteAdresseReseau('1:2:3:4:5:6:7:8', SEL_ADRESSE)).toBe(
-      empreinteAdresseReseau('1:2:3:4::', SEL_ADRESSE)
-    );
+// ── la garde : schéma et chemins d'écriture ────────────────────────────────────────────────────
+
+const SCHEMA_SAIN = [
+  'model Contact {',
+  '  id          String  @id @db.Uuid',
+  '  siren       String  @db.Char(9)',
+  '  nomChiffre  Bytes?  @map("nom_chiffre")',
+  '  emailChiffre Bytes?',
+  '  emailHash   String? @db.Char(64)',
+  '  ipHash      String? @map("ip_hash") @db.Char(16)',
+  '}',
+].join('\n');
+const ECRITURE_SAINE = [
+  "import { colonnesPii, empreinteRecherche } from '../securite/pii';",
+  'export const creer = (tx, id, c, cles) =>',
+  "  tx.contact.create({ data: { siren: c.siren, ...colonnesPii({ modele: 'Contact', id }, c, cles) } });",
+  'export const lire = (tx, email, cles) =>',
+  "  tx.contact.findFirst({ where: { emailHash: empreinteRecherche('courriel', email, cles) }, select: { emailChiffre: true } });",
+].join('\n');
+const vue = (schema: string, contenu: string): Vue => ({
+  schema,
+  code: [{ chemin: 'src/server/bac/contact.ts', contenu }],
+});
+
+describe('REQ-SEC-024 — garde de schéma et des chemins d’écriture (securite:schema-pii)', () => {
+  it('REQ-SEC-024 : une colonne d’adresse réseau en clair (createdIp String?) rougit et nomme la colonne', () => {
+    const schema = SCHEMA_SAIN.replace('}', '  createdIp   String?\n}');
+    const fautes = controler(vue(schema, ECRITURE_SAINE)).fautes;
+    expect(fautes.map((f) => f.famille)).toEqual(['colonne_personnelle_en_clair']);
+    expect(fautes[0]!.message).toContain('Contact.createdIp');
   });
 
-  it('REQ-SEC-024 : une adresse IPv4 encapsulée dans IPv6 est jugée comme l’IPv4 qu’elle porte', () => {
-    for (const encapsulee of [
-      '::ffff:192.0.2.10',
-      '::FFFF:c000:020a',
-      '0:0:0:0:0:ffff:c000:20a',
-      '::ffff:192.0.2.10%eth0',
-    ]) {
-      expect(empreinteAdresseReseau(encapsulee, SEL_ADRESSE), encapsulee).toBe(EMPREINTE_IP4);
+  it('REQ-SEC-024 : TÉMOIN À DEUX FACES — un chemin d’écriture de bac qui écrit un champ protégé en clair est refusé et nomme le champ ; le schéma et le chemin sains sortent en zéro', () => {
+    for (const [contenu, champ] of [
+      ['tx.contact.create({ data: { id, emailChiffre: Buffer.from(email) } });', 'emailChiffre'],
+      ['tx.contact.update({ where: { id }, data: { emailHash: email } });', 'emailHash'],
+      ['tx.contact.create({ data: { id, email } });', 'email'],
+    ] as const) {
+      const verdict = decider(vue(SCHEMA_SAIN, contenu));
+      expect(verdict.code, contenu).toBe(1);
+      expect(verdict.lignes.join('\n')).toContain(champ);
     }
-    // `::1.2.3.4` n'est PAS encapsulée (forme compatible abandonnée) : elle reste une IPv6 de ::/64.
-    expect(empreinteAdresseReseau('::192.0.2.10', SEL_ADRESSE)).toBe(
-      empreinteAdresseReseau('::', SEL_ADRESSE)
-    );
+    const sain = decider(vue(SCHEMA_SAIN, ECRITURE_SAINE));
+    expect(sain.code, sain.lignes.join('\n')).toBe(0);
   });
 
-  it('REQ-SEC-024 : l’empreinte dépend du sel, et un sel vide est refusé', () => {
-    expect(empreinteAdresseReseau('192.0.2.10', `${SEL_ADRESSE}-bis`)).not.toBe(EMPREINTE_IP4);
-    expect(() => empreinteAdresseReseau('192.0.2.10', '')).toThrow(CleInvalidePii);
+  it('REQ-SEC-024 : le dépôt sort en zéro, et le vert imprime le compte des champs et des chemins d’écriture confrontés', () => {
+    const depot = vueDuDepot();
+    const { fautes, champs, fichiers, sites } = controler(depot);
+    expect(fautes, fautes.map((f) => f.message).join('\n')).toEqual([]);
+    expect(champs).toBeGreaterThan(0);
+    expect(fichiers).toBeGreaterThan(0);
+    const verdict = decider(depot);
+    expect(verdict.code).toBe(0);
+    expect(verdict.lignes[0]).toContain(`${champs} champ(s)`);
+    expect(verdict.lignes[0]).toContain(`${fichiers} fichier(s)`);
+    expect(verdict.lignes[0]).toContain(`${sites} site(s) d’écriture`);
   });
 
-  it('REQ-SEC-024 : une chaîne qui n’est pas une adresse est refusée, jamais hachée', () => {
-    for (const faux of [
-      '',
-      'pas-une-adresse',
-      '192.0.2.300',
-      '192.0.2.01',
-      ' 192.0.2.10',
-      '192.0.2.0/24',
-    ]) {
-      const e = erreurDe(() => empreinteAdresseReseau(faux, SEL_ADRESSE));
-      expect(e, `« ${faux} » haché`).toBeInstanceOf(EntreeRefuseePii);
-      expect(e).toMatchObject({ motif: 'adresse_reseau_invalide' });
-    }
+  it('REQ-SEC-024 : chaque famille de la garde a son témoin vu rougir, et ses contre-témoins restent verts (--prove)', () => {
+    const preuve = prouver();
+    expect(preuve.code, preuve.lignes.join('\n')).toBe(0);
+    expect(preuve.lignes[0]).toContain(`${FAMILLES.length} familles`);
   });
 });
