@@ -1,21 +1,22 @@
-// Schéma Prisma — Axion Partners.
+// Schéma Prisma — Axion Partners. Socle posé par DM-01 (partners/ADR-0015).
 //
-// CE QUE CE FICHIER PORTE AUJOURD'HUI, ET POURQUOI SI PEU. GOV-006 ne livre pas le modèle de
-// données : c'est l'objet de DM-01 et DM-02, en phase 0. Ce qu'elle livre, c'est le VOCABULAIRE —
-// REQ-GOV-016 : « toute colonne `statut|status|etat|type|palier|priorite` de type `String` →
-// rouge ; toute valeur d'enum absente du glossaire → rouge ». Une garde a besoin d'un sujet : ce
-// fichier est le sujet, et les deux enums ci-dessous sont ceux que l'acceptation de GOV-006 nomme
-// (les treize états d'attribution, le rôle `qualifieur`). Les modèles viendront s'y poser.
+// LES CONVENTIONS QUE CE FICHIER FIXE POUR TOUT LE DÉPÔT (docs/CONVENTIONS.md §1 à §3).
+//   — Tables, colonnes ET enums en snake_case côté Postgres, par `@map` / `@@map` : le code ne
+//     voit jamais le snake_case, la base ne voit jamais le camelCase.
+//   — Identifiant d'agrégat : `String @id @default(uuid()) @db.Uuid`.
+//   — Horodatage : `DateTime @db.Timestamptz(3)`, nom suffixé `At`, toujours en UTC.
+//   — Montant : `Int`, en centimes HT signés, nom suffixé `Cents` ; jamais `Float` ni `Decimal`
+//     (REQ-DM-001).
+//   — Vocabulaire : un enum, jamais une `String` (REQ-DM-038, RM-04). Chaque valeur figure dans
+//     `docs/GLOSSAIRE.md` : `pnpm partners:schema:enums` le vérifie dans les deux sens.
+//   — Un enum n'entre ici qu'avec la colonne qui l'écrit : un vocabulaire que personne n'écrit
+//     est déjà tenu par le glossaire, et n'a rien à faire dans la base.
 //
-// LA RÈGLE QUI TIENT CE FICHIER (RM-04). Un vocabulaire est un enum, jamais une `String`. La
-// raison n'est pas esthétique : côté axionia, une colonne de statut en chaîne libre a laissé un
-// seed écrire « valide » là où le code lisait « validee », et deux indicateurs Qualiopi sont
-// passés au rouge pour ça. Le type attrape ce qu'aucune relecture ne voit.
-//
-// DÉRIVATION (RM-01). Les valeurs ci-dessous ne sont pas libres : `pnpm partners:schema:enums`
-// vérifie que chacune figure dans `docs/GLOSSAIRE.md`, et que tout enum que le glossaire ÉNUMÈRE
-// a exactement ces valeurs-là. Ajouter une valeur ici sans l'ajouter au glossaire rougit ; l'y
-// ajouter sans passer par le `gardien-spec` n'est pas permis (`docs/CONVENTIONS.md` §8).
+// LE JOURNAL `Evenement` (REQ-DM-024, REQ-DM-041). Append-only et chaîné : `selfHash` =
+// SHA-256(prevHash + forme canonique de l'enregistrement). Le refus de toute modification est
+// celui de la BASE — déclencheurs posés en SQL brut par la première migration, que Prisma ne
+// modélise pas. Aucune colonne hachée ne porte de `@default` : un défaut transformerait un oubli
+// d'écriture en valeur silencieuse, sur une table qu'on ne peut plus corriger.
 
 generator client {
   provider = "prisma-client-js"
@@ -25,6 +26,12 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// POURQUOI UN VOCABULAIRE EST UN ENUM. Côté axionia, une colonne de statut en chaîne libre a laissé
+// un seed écrire « valide » là où le code lisait « validee », et deux indicateurs Qualiopi sont
+// passés au rouge pour ça. Le type attrape ce qu'aucune relecture ne voit. Les valeurs ne sont pas
+// libres : ajouter une valeur ici sans l'ajouter au glossaire rougit ; l'y ajouter sans passer par
+// le `gardien-spec` n'est pas permis (`docs/CONVENTIONS.md` §8).
 
 /// Les treize états d'attribution (REQ-DM-006, `docs/GLOSSAIRE.md` §1). Sept d'entre eux occupent
 /// le SIREN : la liste n'est PAS reprise ici, elle vit dans `src/domain/attribution/etats.ts`
@@ -43,6 +50,8 @@ enum EtatAttribution {
   perimee
   expiree
   annulee
+
+  @@map("etat_attribution")
 }
 
 /// Les quatre rôles de la console (REQ-SEC-023, `docs/GLOSSAIRE.md` §7). L'identifiant est
@@ -52,4 +61,148 @@ enum ConsoleRole {
   qualifieur
   comptable
   lecteur
+
+  @@map("console_role")
+}
+
+/// Un type = une charge fermée dans `src/domain/evenement/charges.ts` (REQ-DM-041). La genèse du
+/// journal est l'événement de type `journal_ouvert` que la première migration écrit.
+enum TypeEvenementJournal {
+  journal_ouvert
+
+  @@map("type_evenement_journal")
+}
+
+/// Les agrégats dont une transition s'écrit au journal — la liste de REQ-DM-024.
+enum AgregatJournal {
+  attribution
+  apporteur
+  ligne_commission
+  releve
+  piece_kyc
+  contrat
+
+  @@map("agregat_journal")
+}
+
+/// Le journal. Chaîne GLOBALE et linéaire : `prevHash` unique interdit la bifurcation et une
+/// seconde genèse ; l'écrivain sérialise par un verrou consultatif (partners/ADR-0015, décision 3).
+/// Toute colonne ajoutée plus tard est HORS hachage et le dit, ou exige un nouvel algorithme.
+model Evenement {
+  id        BigInt               @id @default(autoincrement())
+  type      TypeEvenementJournal
+  agregat   AgregatJournal?
+  agregatId String?              @map("agregat_id") @db.Uuid
+  survenuAt DateTime             @map("survenu_at") @db.Timestamptz(3)
+  charge    Json
+  prevHash  String               @unique @map("prev_hash") @db.Char(64)
+  selfHash  String               @unique @map("self_hash") @db.Char(64)
+
+  @@map("evenements")
+}
+
+// ── DM-06 : l'apporteur ─────────────────────────────────────────────────────
+
+/// Les neuf statuts STOCKÉS de l'apporteur (REQ-DM-011, `docs/GLOSSAIRE.md` §2). `actif` et
+/// `dormant` sont dérivés par `src/domain/apporteur/activite.ts`, jamais stockés (REQ-CPL-027).
+/// Les transitions permises vivent dans `src/domain/apporteur/matrice.ts`.
+enum StatutApporteur {
+  candidat
+  retenu
+  vivier
+  refuse
+  kyc_en_cours
+  pret_a_signer
+  signe
+  suspendu
+  resilie
+
+  @@map("statut_apporteur")
+}
+
+/// Les motifs de résiliation (REQ-DM-011). Le vocabulaire de la faute en est retiré.
+enum MotifResiliation {
+  ordinaire_apporteur
+  ordinaire_axion
+  manquement_grave
+
+  @@map("motif_resiliation")
+}
+
+/// Le régime de TVA d'une identité de facturation (REQ-ARG-033, `docs/GLOSSAIRE.md` §4).
+enum RegimeTva {
+  assujetti
+  franchise_293b
+
+  @@map("regime_tva")
+}
+
+/// L'apporteur d'affaires (DM-06). Aucune coordonnée ici : nom, courriel et téléphone sont des
+/// données chiffrées posées par la tâche du chiffrement ; l'IBAN vit dans la pièce `rib` du KYC
+/// (HYP-DM06-IBAN), jamais dans cette table ni dans `identites_facturation`.
+model Apporteur {
+  id               String            @id @default(uuid()) @db.Uuid
+  statut           StatutApporteur
+  /// Nul hors `resilie` ; exigé par la matrice pour y entrer.
+  resiliationMotif MotifResiliation? @map("resiliation_motif")
+  /// Public, lisible, non énumérable : `AX` + 6 caractères Crockford base32, 30 bits aléatoires
+  /// (REQ-DM-012, HYP-DM06-CODE-PARRAINAGE). Forme tenue par un CHECK en SQL brut.
+  codeParrainage   String            @unique @map("code_parrainage") @db.Char(8)
+  /// Exclu de tout agrégat d'argent, du lot, de la déclaration annuelle et de l'entonnoir
+  /// (REQ-CPL-020). Sans défaut : l'écrivain DIT si l'apporteur est de test.
+  isTest           Boolean           @map("is_test")
+
+  /// Surcharge manuelle du seuil de vérification prioritaire (REQ-DM-010). NULLE = le défaut,
+  /// DÉRIVÉ du palier par `seuilPrioritaire()` (HYP-D3) — aucun défaut littéral en base (RM-10).
+  seuilVerificationPrioritaire   Int?      @map("seuil_verification_prioritaire")
+  /// La trace de la surcharge : présente si et seulement si la surcharge l'est (CHECK en SQL brut).
+  seuilVerificationPrioritaireAt DateTime? @map("seuil_verification_prioritaire_at") @db.Timestamptz(3)
+
+  // Le snapshot de candidature, FIGÉ tel qu'axionia l'a émis (REQ-DM-035, REQ-QA-035).
+  candidatureId      String  @unique @map("candidature_id") @db.Uuid
+  reponsesJson       Json    @map("reponses_json")
+  scoreInitial       Int     @map("score_initial")
+  scorePartsJson     Json    @map("score_parts_json")
+  scoreBaremeVersion String  @map("score_bareme_version")
+  /// Chaîne transportée figée, jamais normalisée ; au-delà de la borne : nulle, jamais tronquée
+  /// (HYP-DM06-SOURCE-CANAL). La borne égale `SOURCE_CANAL_LONGUEUR_MAX`.
+  sourceCanal        String? @map("source_canal") @db.VarChar(512)
+  parrainCodeCapture String? @map("parrain_code_capture")
+
+  creeAt DateTime @map("cree_at") @db.Timestamptz(3)
+
+  jetonsDepot          JetonDepot[]
+  identitesFacturation IdentiteFacturation[]
+
+  @@map("apporteurs")
+}
+
+/// Un jeton de dépôt privé (REQ-DM-012). Seule l'EMPREINTE se stocke ; un jeton révoqué ne se
+/// réactive pas (déclencheur `jetons_depot_revocation_definitive`, SQL brut).
+model JetonDepot {
+  id             String    @id @default(uuid()) @db.Uuid
+  apporteurId    String    @map("apporteur_id") @db.Uuid
+  apporteur      Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  tokenHash      String    @unique @map("token_hash") @db.Char(64)
+  creeAt         DateTime  @map("cree_at") @db.Timestamptz(3)
+  revoqueAt      DateTime? @map("revoque_at") @db.Timestamptz(3)
+  dernierUsageAt DateTime? @map("dernier_usage_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@map("jetons_depot")
+}
+
+/// Une identité de facturation DATÉE, valable sur [debutAt, finAt) (REQ-CPL-005). Un relevé qui
+/// en chevauche deux produit deux autofactures. AUCUNE colonne de RIB ni d'IBAN (HYP-DM06-IBAN).
+model IdentiteFacturation {
+  id          String    @id @default(uuid()) @db.Uuid
+  apporteurId String    @map("apporteur_id") @db.Uuid
+  apporteur   Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  siren       String    @db.Char(9)
+  regimeTva   RegimeTva @map("regime_tva")
+  debutAt     DateTime  @map("debut_at") @db.Timestamptz(3)
+  finAt       DateTime? @map("fin_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@map("identites_facturation")
 }

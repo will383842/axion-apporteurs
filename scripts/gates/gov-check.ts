@@ -1,14 +1,18 @@
 /**
  * gov-check.ts — la garde des TERMES INTERDITS (GOV-030 ; REQ-DM-003, REQ-INT-004).
  *
- * USAGE : npx tsx scripts/gates/gov-check.ts           (juge le dépôt réel ; sort 1 sur faute)
- *         npx tsx scripts/gates/gov-check.ts --prove   (chaque témoin ROUGE, chaque contre-témoin
- *                                                       VERT, sur une FIXTURE)
+ * USAGE : pnpm gov:termes-interdits          (juge le dépôt réel ; sort 1 sur faute)
+ *         pnpm gov:termes-interdits:prove    (chaque témoin ROUGE, chaque contre-témoin VERT, sur
+ *                                             une FIXTURE)
  *
- * `docs/gates.json` déclarait depuis GOV-000 une entrée `gov:check` dont ce script n'existait pas,
- * pendant que des documents disaient « `gov:check` rougit sur … ». Le même nom désigne aussi, dans
- * `package.json`, une CHAÎNE de gardes : ce fichier livre la garde que le registre décrit, et laisse
- * l'homonymie à un ADR (acceptation de GOV-030).
+ * ⚠️ CETTE GARDE S'EST APPELÉE `gov:check` AU REGISTRE — nom que GOV-000 y avait inscrit des mois
+ * avant que ce script existe —, ET CE NOM DÉSIGNAIT AUSSI une CHAÎNE de dix-sept gardes dans
+ * `package.json` qui ne la contenait pas. Elle imprimait `gov:check` dans son
+ * rouge : un développeur a lu ce rouge, lancé la chaîne, obtenu dix-sept verts, et conclu à un aléa
+ * de CI — pendant qu'un synonyme interdit montait jusqu'à une PR. `partners/ADR-0018` a retiré le
+ * nom des DEUX côtés : l'entrée du registre porte `gov:termes-interdits`, qui EST la commande, et
+ * tout ce que cette garde imprime en DÉRIVE (`ID_REGISTRE`). Un nom ambigu se retire, il ne se
+ * réattribue pas : `pnpm gov:check` n'existe plus et échoue bruyamment au lieu de rendre des verts.
  *
  * ── CE QU'ELLE TIENT, ET D'OÙ CHAQUE VALEUR EST LUE (RM-01) ─────────────────────────────────
  *
@@ -65,7 +69,7 @@
  *
  * ── LA PREUVE : SA POPULATION VIENT DU REGISTRE, SA DÉCISION EST UNE FONCTION PURE ───────────
  *
- * Le champ `verifie` de l'entrée `gov:check` énumère les familles, les refus, les extensions qui
+ * Le champ `verifie` de l'entrée `gov:termes-interdits` énumère les familles, les refus, les extensions qui
  * citent et l'identifiant de CHAQUE témoin. `decisionDeLaPreuve` confronte le code à cette
  * population dans les deux sens, n'accorde une clé qu'au témoin qui MORD (sa famille et son refus),
  * et rend le code de sortie ; `decisionDeLaGarde` fait de même pour le dépôt. La ligne de commande
@@ -180,7 +184,7 @@ const CHEMIN_REGISTRE = join(
   'docs',
   'gates.json'
 );
-const ID_REGISTRE = 'gov:check';
+export const ID_REGISTRE = 'gov:termes-interdits';
 
 /** Un fichier suivi dont le contenu est ce texte, encodé en UTF-8 — la forme des fixtures. */
 export function fichierTexte(chemin: string, texte: string): FichierVu {
@@ -205,7 +209,8 @@ export function typesEvenementDeLaReq(texte: string): string[] {
 
 /**
  * LES RACINES QUE LA GARDE JUGE, lues dans l'en-tête de `docs/GLOSSAIRE.md` : « tout synonyme
- * interdit trouvé dans `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` → rouge (`gov:check`) ».
+ * interdit trouvé dans `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` → rouge
+ * (`gov:termes-interdits`) ».
  * Les séparateurs admettent `>` et les fins de ligne : la clause est écrite en citation Markdown.
  */
 export function racinesDuGlossaire(glossaire: string): string[] {
@@ -698,7 +703,7 @@ export function controler(vue: Vue): Faute[] {
  * sous-module est un dossier) garde son erreur : sous une racine, `examiner` le refuse en le nommant.
  */
 export function vueDuDepot(): Vue {
-  const fichiers = fichiersSuivisOuRefus('gov:check').map((chemin): FichierVu => {
+  const fichiers = fichiersSuivisOuRefus(ID_REGISTRE).map((chemin): FichierVu => {
     try {
       return { chemin, octets: readFileSync(chemin) };
     } catch (e) {
@@ -720,7 +725,7 @@ export function vueDuDepot(): Vue {
 type Population = { familles: string[]; refus: string[]; citent: string[]; temoins: string[] };
 
 /**
- * La population que `--prove` doit couvrir, LUE dans le champ `verifie` de l'entrée `gov:check` :
+ * La population que `--prove` doit couvrir, LUE dans le champ `verifie` de l'entrée du registre :
  * familles, refus de conclure, extensions qui citent, et l'identifiant de chaque témoin. Une liste
  * muette est un REFUS.
  */
@@ -771,12 +776,20 @@ const REQ_INT_004_FIXTURE =
 /**
  * Les TOURNURES de `docs/GLOSSAIRE.md` que la garde doit savoir lire, au plus court. Ses racines et
  * ses modèles refusés sont assérés ÉGAUX à ceux du glossaire réel par `termes-interdits.spec.ts`.
+ *
+ * §5 porte DEUX blocs de synonymes, et c'est voulu : le glossaire réel en porte deux depuis le
+ * 2026-09-22. Le premier est SEC — trois champs d'enveloppe dont le registre ne réclame le jeton
+ * pour aucun autre rôle. Le second est SOUS CONDITION — `eventId` et `eventType`, que le même §5
+ * épelle comme les colonnes de `EvenementRecu` (REQ-DM-036, tâche SEC-06), et `schemaVersion`, que
+ * REQ-QA-007 réclame : un jeton attribué AUSSI à un autre rôle ne peut pas porter un interdit sec.
+ * La table de réception, au-dessus, épelle ces colonnes : elle est ici pour que le contre-témoin de
+ * la colonne Prisma soit jugé contre un glossaire qui la prescrit réellement.
  */
 const GLOSSAIRE_FIXTURE = [
   '# Glossaire — Axion Partners',
   '',
   '> Gate `glossaire-enums.spec.ts` : tout synonyme interdit trouvé dans `prisma/**`, `src/**`,',
-  '> `messages/**`, `docs/adr/**` → rouge (`gov:check`).',
+  '> `messages/**`, `docs/adr/**` → rouge (`gov:termes-interdits`).',
   '',
   '## 1. Attribution',
   '',
@@ -792,10 +805,13 @@ const GLOSSAIRE_FIXTURE = [
   'Table de réception : `{source enum {axionia, docuseal}, eventId unique par source,',
   'eventType, payloadHash}` (REQ-DM-036).',
   '',
-  'Synonymes interdits : `eventId`, `eventType`, `schemaVersion` — la forme camelCase des champs',
-  "d'enveloppe ; `payment.received`, `refund.issued`, `invoice.issued`, `devis.signed`,",
-  "`client.created` ; `Invoice`, `Refund`, `PaymentScheduleProfile` — des modèles supprimés d'axionia",
-  "qu'aucun événement ne référence.",
+  'Synonymes interdits : `occurredAt`, `emittedAt`, `subjectRef` ; `payment.received`,',
+  '`refund.issued`, `invoice.issued`, `devis.signed`, `client.created` ; `Invoice`, `Refund`,',
+  "`PaymentScheduleProfile` — des modèles supprimés d'axionia qu'aucun événement ne référence.",
+  '',
+  "Synonymes interdits : `eventId` dans l'enveloppe de fil, `eventType` dans l'enveloppe de fil,",
+  "`schemaVersion` dans l'enveloppe de fil — trois jetons que le registre attribue AUSSI à un autre",
+  "rôle, donc trois interdits que la garde n'exerce pas et qu'elle imprime.",
   '',
   '## 7. Rôles console',
   '',
@@ -1089,6 +1105,17 @@ export const TEMOINS: Temoin[] = [
     quoi: '`qualificateur` employé comme un rôle',
     vue: () => avec('src/server/roles.ts', "const role = 'qualificateur';"),
   },
+  {
+    // LA FACE ROUGE DE L'ARBITRAGE DU 2026-09-22 (GOV-088, docs/GLOSSAIRE.md §5). Sa face verte est
+    // le contre-témoin de la colonne Prisma de `EvenementRecu`, plus bas : l'une ne vaut que par
+    // l'autre. `occurredAt` est un champ d'enveloppe (REQ-INT-003) dont AUCUNE autre exigence ne
+    // réclame le jeton — c'est ce qui lui laisse un interdit SEC là où `eventId` n'en porte plus.
+    id: 'enveloppe_camelcase_hors_contrat',
+    famille: 'synonyme_interdit_du_glossaire',
+    quoi: "un champ d'enveloppe en camelCase dont le registre ne réclame le jeton pour rien d'autre",
+    vue: () =>
+      avec('src/server/integrations/emetteur.ts', 'const enveloppe = { occurredAt: quand };'),
+  },
 ];
 
 type ContreTemoin = { quoi: string; vue: () => Vue };
@@ -1203,6 +1230,19 @@ export const CONTRE_TEMOINS: ContreTemoin[] = [
   {
     quoi: 'le terme canonique que le glossaire prescrit',
     vue: () => avec('src/server/roles.ts', "const role = 'qualifieur';"),
+  },
+  {
+    // LA FACE VERTE DE L'ARBITRAGE DU 2026-09-22 (docs/GLOSSAIRE.md §5). Ni commentaire ni accent
+    // grave : ce fichier est vert parce que l'interdit est ÉTROIT, jamais parce qu'on l'a exempté.
+    // C'est la colonne que SEC-06 écrira, dans la casse que `docs/CONVENTIONS.md` §1 impose au
+    // stockage. Sa face rouge — un champ d'enveloppe en camelCase — est tenue par
+    // `termes-interdits.spec.ts`, qui juge les deux faces contre le glossaire RÉEL.
+    quoi: "la colonne Prisma de `EvenementRecu`, telle que REQ-DM-036 et §5 du glossaire l'épellent",
+    vue: () =>
+      avec(
+        'prisma/schema.prisma',
+        'model EvenementRecu {\n' + '  eventId   String @unique\n' + '  eventType String\n' + '}\n'
+      ),
   },
 ];
 
@@ -1366,7 +1406,7 @@ export function decisionDeLaPreuve(entrees: EntreesDeLaPreuve): Decision {
   return {
     code: 0,
     lignes: [
-      `✅ gov:check — les ${population.familles.length} familles, les ${population.refus.length} refus ` +
+      `✅ ${ID_REGISTRE} — les ${population.familles.length} familles, les ${population.refus.length} refus ` +
         `et les ${population.temoins.length} témoins que docs/gates.json énumère rougissent chacun ; ` +
         `ses ${population.citent.length} extensions qui citent sont celles de la table ; ` +
         `les ${entrees.contreTemoins.length} contre-témoins restent verts.`,
@@ -1394,9 +1434,9 @@ export function decisionDeLaGarde(vue: Vue): Decision {
 
   const lignes: string[] =
     fautes.length === 0
-      ? ['✅ gov:check — aucun terme interdit dans les fichiers lus.']
+      ? [`✅ ${ID_REGISTRE} — aucun terme interdit dans les fichiers lus.`]
       : [
-          `❌ gov:check — ${fautes.length} faute(s) :`,
+          `❌ ${ID_REGISTRE} — ${fautes.length} faute(s) :`,
           '',
           ...fautes.slice(0, 30).map((f) => `   [${f.famille}] ${f.message}`),
           ...(fautes.length > 30 ? [`   … et ${fautes.length - 30} autre(s).`] : []),

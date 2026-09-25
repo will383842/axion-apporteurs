@@ -919,6 +919,18 @@ export const DETTE_GATE_NON_RECIPROQUE: DetteGate[] = [
 
 /** Les mentions d'identifiants déclarées, chacune vue, nommée, comptée et justifiée. */
 export const CITATIONS_DECLAREES: Citation[] = [
+  // UX-P0-01 nomme sa VOISINE pour dire ce qui n'est PAS dans son périmètre. Retirer le nom rendrait
+  // la phrase inutilisable : un lecteur saurait qu'une chose est exclue, sans savoir qui la porte.
+  {
+    ou: 'docs/gates.json:ux:exhaustivite.verifie',
+    id: 'UX-P0-01b',
+    nature: 'contexte',
+    raison:
+      'la garde d’exhaustivité de UX-P0-01 nomme UX-P0-01b pour EXCLURE de son périmètre les ' +
+      'libellés d’états d’attribution, qui ne peuvent être écrits qu’une fois les états livrés. ' +
+      'Le fichier cité appartient à UX-P0-01 ; UX-P0-01b est nommée comme voisine, jamais comme ' +
+      'propriétaire.',
+  },
   // ⚠️ LA NÉGATION QUI PROTÈGE. `gov:tasks` interdit les identifiants SCINDÉS et les NOMME pour
   // dire lesquels. Une garde qui ferait rougir cette phrase forcerait à retirer la défense elle-même.
   {
@@ -1003,6 +1015,14 @@ export const CITATIONS_DECLAREES: Citation[] = [
     raison: 'historique : la seconde tâche qui a trouvé le même défaut, de son côté.',
   },
   {
+    ou: 'tests/fixtures/axionia/candidature-recue.json',
+    id: 'INT-T01b',
+    nature: 'contexte',
+    raison:
+      'la ligne `Source:` (RM-03) nomme la tâche qui a livré le PRODUCTEUR de cette copie ; ' +
+      'le fichier appartient à DM-06, qui le consomme.',
+  },
+  {
     ou: 'scripts/lot/corps-de-pr.ts',
     id: 'GOV-035',
     nature: 'contexte',
@@ -1055,7 +1075,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
     id: 'GOV-000',
     nature: 'contexte',
     raison:
-      'historique : l’en-tête raconte que la tâche d’amorçage déclarait l’entrée gov:check du registre ' +
+      'historique : l’en-tête raconte que la tâche d’amorçage déclarait l’entrée des termes interdits ' +
       'sans que son script existe ; le fichier appartient à la tâche qui l’a livré.',
   },
 ];
@@ -1089,7 +1109,7 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   {
     tache: 'GOV-000',
     lieu: 'gate',
-    ou: 'docs/gates.json:gov:check (scripts/gates/gov-check.ts)',
+    ou: 'docs/gates.json:gov:termes-interdits (scripts/gates/gov-check.ts)',
     n: 1,
   },
   {
@@ -1180,7 +1200,7 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   // fichier ». Leur `tests{}` promettait `preseance.spec.ts`, `affirmations-verifiees.spec.ts`,
   // `adr-index-derive.spec.ts`, `fiches-tiers.spec.ts` — un NOM NU, qui ne résout aucun fichier du
   // dépôt : les quatre spécifications passaient pour portées par personne, et les quatre mentions
-  // pour orphelines. Les promesses portent désormais le chemin complet (`outils/reecrire-champ.mjs`),
+  // pour orphelines. Les promesses portent désormais le chemin complet (`hors-depot/reecrire-champ.mjs`),
   // et les sites se referment d'eux-mêmes.
   //   - GOV-002 · tests/unit/gouvernance/preseance.spec.ts            (n: 2)
   //   - GOV-004 · tests/unit/gouvernance/affirmations-verifiees.spec.ts (n: 1)

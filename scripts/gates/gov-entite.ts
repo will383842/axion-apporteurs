@@ -58,6 +58,13 @@ import {
   type Registre,
 } from '../../src/config/entite';
 import { entreesSuiviesOuRefus, type EntreeSuivie } from '../lot/fichiers-suivis';
+import {
+  CODES_PAYS,
+  FORME_IBAN,
+  PAYS_ISO,
+  PLANCHER_DE_REGIONS,
+  cleIbanValide,
+} from '../../src/lib/forme-iban';
 
 const CHEMIN_REGISTRE = 'config/entite.json';
 const CHEMIN_DECISIONS = 'docs/DECISIONS.md';
@@ -89,6 +96,7 @@ export const FAMILLES = [
   'source_illisible',
   'valeur_recopiee',
   'coordonnee_en_clair',
+  'aucune_reference_publique',
   'contenu_illisible',
   'contenu_publie_non_lu',
   'point_de_sortie_sans_refus',
@@ -188,7 +196,50 @@ export const LIMITE_DE_LA_FORME =
   'une valeur masquée ou à clé fausse ; encodée (base64, hexadécimal, entité HTML, pourcentage, quoted-printable, ' +
   "échappement JSON, flux de PDF ou contenu compressé qui forment de l'UTF-8 valide) ; coupée ou espacée autrement " +
   "(saut de ligne, tabulation, deux espaces, point, caractère invisible, groupes d'une autre longueur) ; écrite en " +
-  "pleine chasse ou en homoglyphes ; portée par le NOM d'un fichier. Cette liste n'est pas close.";
+  "pleine chasse ou en homoglyphes ; portée par le NOM d'un fichier. Côté numéros PUBLICS, deux " +
+  'angles morts de plus, nommés le 2026-09-22 et identiques avant comme après ce lot : la forme ' +
+  'de TVA est sensible à la CASSE, donc une TVA hors capitales lui échappe — seule ' +
+  '`valeur_recopiee` la rattrape ; et un groupe de chiffres PLUS LONG que la fenêtre attendue ' +
+  "n'ouvre aucune frontière de mot, donc n'est pas apparié. Cette liste n'est pas close.";
+
+/**
+ * DE QUI LES NUMÉROS PUBLICS SONT CHERCHÉS — la SOURCE UNIQUE de cette portée : imprimée dans
+ * chaque vert, citée sans recopie par le `verifie` de `docs/gates.json`, et son texte attendu est
+ * écrit dans le banc d'essai.
+ *
+ * 🔴 POURQUOI ELLE EXISTE, ET CE QUE SON ABSENCE A COÛTÉ. Mesuré le 2026-09-22 sur `t/int-t09` :
+ * la garde rendait **452 défauts, dont 448 portaient sur des entreprises TIERCES** — DANONE, la
+ * SNCF, EDF, des communes — rendues par l'API publique `recherche-entreprises` et enregistrées
+ * comme fixtures (RM-03 : une fixture vient du producteur réel). **4 seulement étaient justes** :
+ * le SIREN et le SIRET de l'entité, en dur dans un fichier suivi d'un dépôt PUBLIC.
+ *
+ * Le symptôme dit tout : **la garde demandait de déplacer le SIREN de DANONE dans
+ * `config/entite.json`**. Un registre d'entité sommé de porter l'identité d'un tiers est la preuve
+ * que le prédicat ne disait pas ce que la règle dit. `FORME_SIREN` refusait un numéro parce qu'il
+ * SUIT le mot `siren`/`siret`, sans regarder DE QUI il s'agit — alors que le seul motif écrit pour
+ * chercher un numéro public dans un fichier de code est RM-01, source unique de l'identité de LA
+ * SOCIÉTÉ (exclusion (1) de `coordonneesDe`). Le motif parlait des nôtres, le code attrapait tout
+ * le monde.
+ *
+ * 🔑 CE QUI SE RÈGLE ICI EST UN PRÉDICAT, PAS UN PÉRIMÈTRE DE FICHIERS. Reclasser la fixture —
+ * la sortir de `estCode` — était la réponse qui vient en premier et la pire : `valeur_recopiee`
+ * est gardée par le MÊME `estCode`, si bien que NOS identifiants seraient redevenus légitimes
+ * dans une fixture. Le remède aurait rouvert exactement la porte que la garde existe pour tenir.
+ * La distinction se lit donc sur la VALEUR, et « les nôtres » se DÉRIVE du registre.
+ */
+export const PORTEE_DES_NUMEROS_PUBLICS =
+  'Portée déclarée : un IBAN et un BIC sont des SECRETS, refusés dans TOUT fichier suivi, quel ' +
+  "qu'en soit le porteur — divulgués, ils ne se reprennent pas. Un SIREN, un SIRET et un numéro " +
+  'de TVA sont PUBLICS : ils ne sont refusés que dans un fichier de CODE, et seulement si ce sont ' +
+  "ceux de l'entité ; la liste des nôtres est DÉRIVÉE de `config/entite.json` (RM-01), jamais " +
+  "devinée ni recopiée, et c'est la même que celle de `valeur_recopiee`. Le numéro d'un TIERS " +
+  "enregistré depuis une API publique n'est donc pas un défaut : c'est la donnée LUE, et ce dépôt " +
+  "n'a pas de source unique de l'identité d'un tiers. ⚠️ Et la cécité qui va avec n'est pas " +
+  'seulement rendue visible, elle est REFUSÉE : un registre qui ne donne aucun identifiant ' +
+  "qu'une forme publique sache apparier fait ROUGIR la garde (`aucune_reference_publique`) au " +
+  "lieu de rendre un vert — ne pas avoir de référence n'est pas avoir vérifié. Le compte imprimé " +
+  'ci-dessus ne compte donc QUE les identifiants APPARIABLES, jamais les entrées du registre : il ' +
+  "ne peut pas être non nul pendant que rien n'est cherché, ni nul dans un vert.";
 
 /**
  * La première ligne d'un POINTEUR Git LFS, sous les trois en-têtes que Git LFS accepte. Ancrée au
@@ -303,145 +354,9 @@ export function estExemplePlausible(v: string): boolean {
   return false;
 }
 
-/**
- * Le code PAYS qui ouvre un IBAN et qui occupe les 5ᵉ et 6ᵉ caractères d'un BIC.
- * Déclaré AVANT les deux formes qui s'en servent : un `const` référencé plus haut que sa
- * déclaration lève à l'exécution, et la garde ne serait pas « fausse », elle serait MORTE.
- *
- * 🔑 RM-01 APPLIQUÉ À UNE CONSTANTE : la liste se DÉRIVE. La source est la table des RÉGIONS de
- * l'ICU du runtime (CLDR) — la donnée qui sert à afficher un nom de pays, versionnée avec Node,
- * jamais recopiée ici.
- *
- * ⚠️ CE QUE LA DÉRIVATION REND, EXACTEMENT : les codes de région CLDR à deux lettres. C'est un
- * SUR-ENSEMBLE des codes ISO 3166-1 attribués — y entrent aussi des macro-régions (`EU`, `UN`),
- * des codes réservés ou retirés (`AC`, `TA`, `SU`, `YU`), des pseudo-régions (`XA`, `XB`, `ZZ`) et
- * un code attribué par l'utilisateur (`XK`, le Kosovo, qui émet des IBAN). Les codes en trop ne
- * sont pas un danger : ce n'est pas la forme qui décide, c'est `cleIbanValide`. Le code pays garde
- * son rôle — il empêche `[A-Za-z]{2}` d'ouvrir la forme à n'importe quel identifiant.
- *
- * ⚠️ ET ELLE REFUSE PLUTÔT QUE DE RÉTRÉCIR. Une source infirme — ICU réduit, `Intl.DisplayNames`
- * absent — rendrait une liste courte ou vide, donc une forme d'IBAN qui ne reconnaît plus rien, donc
- * un `✅` sur un dépôt qui fuit. « Je n'ai rien trouvé » et « je n'ai rien regardé » sont deux
- * phrases différentes, et une seule autorise à publier. `codesDeRegion` LÈVE sous le plancher, au
- * chargement du module, avant tout verdict.
- *
- * LES TÉMOINS vivent dans `tests/unit/gouvernance/entite-registre.spec.ts`, sous REQ-GOV-031.
- */
-
-/** Sous ce nombre de régions, la source n'est pas « pauvre » : elle est illisible. */
-const PLANCHER_DE_REGIONS = 200;
-
-/** La source des codes pays n'a pas pu être établie. Ce n'est pas une liste courte : c'est rien. */
-export class SourcePaysIllisible extends Error {
-  constructor(motif: string) {
-    super(motif);
-    this.name = 'SourcePaysIllisible';
-  }
-}
-
-/** Le nom d'une région ; une paire de lettres que la source ne connaît pas se rend elle-même. */
-type LecteurDeRegion = (code: string) => string | undefined;
-
-function lecteurDeRegionDuRuntime(): LecteurDeRegion {
-  if (typeof Intl.DisplayNames !== 'function') {
-    throw new SourcePaysIllisible(
-      '`Intl.DisplayNames` est absent de ce runtime : la table des régions est INTROUVABLE. ' +
-        'La garde refuse de dériver une liste vide, qui ferait reconnaître ZÉRO IBAN.'
-    );
-  }
-  const noms = new Intl.DisplayNames(['fr'], { type: 'region' });
-  // Un seul chemin pour « pas une région » : `of()` rend le code lui-même.
-  return (code) => noms.of(code);
-}
-
-/**
- * Les codes de région à deux lettres, DÉRIVÉS de la source et jamais tapés. Le lecteur est
- * injectable pour que le REFUS soit éprouvable : une source qui ne connaît rien doit LEVER.
- */
-export function codesDeRegion(lire: LecteurDeRegion = lecteurDeRegionDuRuntime()): string[] {
-  const A = 'A'.charCodeAt(0);
-  const codes: string[] = [];
-  for (let i = 0; i < 26; i++) {
-    for (let j = 0; j < 26; j++) {
-      const code = String.fromCharCode(A + i, A + j);
-      // Une région connue porte un NOM ; une paire de lettres non attribuée se rend elle-même.
-      if (lire(code) !== code) codes.push(code);
-    }
-  }
-  if (codes.length < PLANCHER_DE_REGIONS) {
-    throw new SourcePaysIllisible(
-      `la source ne connaît que ${codes.length} région(s), sous le plancher de ` +
-        `${PLANCHER_DE_REGIONS}. Une liste de codes pays amputée n'est pas une garde plus étroite : ` +
-        "c'est une forme d'IBAN qui ne reconnaît plus rien, donc un vert sur un dépôt PUBLIC."
-    );
-  }
-  return codes;
-}
-
-/** Les codes réellement dérivés — leur nombre est imprimé : la garde DIT ce qu'elle a lu. */
-const CODES_PAYS = codesDeRegion();
-
-const PAYS_ISO = `(?:${CODES_PAYS.join('|')})`;
-
-/**
- * Un IBAN : un code PAYS, deux chiffres de contrôle, puis 11 à 30 caractères alphanumériques.
- *
- * ⚠️ LA CASSE, COMME LES ESPACES. La forme n'acceptait que les MAJUSCULES : `fr7630006000…`
- * passait partout, `docs/` compris, et `PARTNERS_IBAN_DEBITEUR=<iban minuscule>` dans
- * `.env.example` aussi. La question de la casse avait été posée et tranchée pour le BIC, jamais
- * reportée ici — c'est le défaut typique d'une correction qui s'arrête au cas qui l'a motivée.
- * Un IBAN se copie tel qu'il est affiché, et un relevé n'impose pas la casse.
- *
- * ⚠️ ET LE CODE PAYS EST CE QUI REND LA CASSE TENABLE. Sans lui, accepter les minuscules a fait
- * reconnaître n'importe quel identifiant hexadécimal de 24 caractères —
- * `FC294892B7AA455D2398C4B6`, dans une fixture suivie depuis la PR #28 — et la garde a rougi sur
- * un dépôt PROPRE. Un faux positif dans une garde de publication coûte aussi cher qu'un faux
- * négatif : c'est lui qui la fait désarmer.
- *
- * La valeur est remontée en MAJUSCULES avant d'être signalée, pour qu'un même compte écrit de
- * deux façons ne compte pas deux fois.
- */
-const FORME_IBAN = new RegExp(
-  `\\b(${PAYS_ISO}\\d{2}(?:[ ]?[A-Za-z0-9]{4}){2,7}(?:[ ]?[A-Za-z0-9]{1,4})?)\\b`,
-  'gi'
-);
-
-/**
- * LA CLÉ DE CONTRÔLE — ce qui distingue un IBAN d'une chaîne qui lui ressemble.
- *
- * Le code pays a fermé `FC29…`, mais pas `DE72D8B01D…` ni `AE77F99D…` : `DE` et `AE` SONT des
- * codes pays, et ces deux-là sont des identifiants hexadécimaux d'une fixture suivie. Empiler des
- * heuristiques de forme ne ferme jamais cette classe — il y aura toujours un identifiant dont les
- * deux premières lettres font un pays.
- *
- * La norme, elle, tranche : un IBAN porte deux chiffres de contrôle, et le nombre obtenu en
- * déplaçant ses quatre premiers caractères à la fin puis en remplaçant chaque lettre par son rang
- * (A = 10 … Z = 35) vaut 1 modulo 97. Aucune des chaînes qui nous gênaient ne le vérifie ; le
- * témoin de la garde et les IBAN réels le vérifient tous.
- *
- * CE QUE ÇA COÛTE, ET QUI EST ASSUMÉ : un IBAN dont la clé est fausse n'est plus vu. Une faute de
- * frappe n'autorise aucun prélèvement, et un IBAN copié depuis un relevé est toujours valide.
- *
- * ⚠️ MAIS LE RÉSIDU RÉEL N'EST PAS LA FAUTE DE FRAPPE, C'EST L'IBAN PARTIELLEMENT MASQUÉ.
- * `FR76 3000 6000 01•• •••• •••0 189` a une clé fausse, donc il passe — et il divulgue pourtant
- * encore la banque, le guichet et l'essentiel du numéro de compte. Une personne qui masque quatre
- * caractères avant de coller un RIB dans un ticket **croira s'être protégée**, et cette garde ne
- * la contredira pas. C'est une limite ASSUMÉE, pas un oubli : la couvrir demanderait de renoncer
- * à la clé, donc de rougir sur un dépôt propre — ce qui fait désarmer la garde. Elle est EXPLIQUÉE
- * ici, pour celui qui voudra « renforcer » la forme dans six mois ; elle est DITE dans
- * `LIMITE_DE_LA_FORME`, imprimée dans chaque vert, pour celui qui décidera de ne pas re-vérifier.
- */
-export function cleIbanValide(valeur: string): boolean {
-  const s = valeur.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (s.length < 15 || s.length > 34) return false;
-  const reorganise = s.slice(4) + s.slice(0, 4);
-  let reste = 0;
-  for (const c of reorganise) {
-    const chiffres = /[0-9]/.test(c) ? c : (c.charCodeAt(0) - 55).toString();
-    for (const d of chiffres) reste = (reste * 10 + Number(d)) % 97;
-  }
-  return reste === 1;
-}
+// La règle de forme d'un IBAN (codes pays dérivés, forme, clé mod 97) vit dans
+// `src/lib/forme-iban.ts`, partagée avec le journal applicatif (PR 88). Réexportée pour les témoins.
+export { SourcePaysIllisible, codesDeRegion, cleIbanValide } from '../../src/lib/forme-iban';
 /** Un numéro de TVA intracommunautaire français. */
 const FORME_TVA_FR = /\b(FR[0-9A-Z]{2}\d{9})\b/g;
 /**
@@ -518,6 +433,22 @@ const FORME_BIC = new RegExp(
 
 /** Un SIREN ou un SIRET, reconnu à son mot-clé : neuf chiffres nus sont trop souvent autre chose. */
 const FORME_SIREN = /\bsire[tn]\b[^\n]{0,24}?\b(\d{9,14})\b/gi;
+
+/**
+ * LES FORMES PUBLIQUES — la SEULE liste de ce qui, ici, cherche un numéro PUBLIC.
+ *
+ * Elle est lue à DEUX endroits qui doivent dire la même chose, sans quoi le compte annoncé dans
+ * le vert décrirait une surveillance qui n'existe pas (RM-01) :
+ *   — `coordonneesDe`, qui les ajoute aux formes de SECRET quand elle juge du CODE ;
+ *   — `identifiantsApparriables`, qui s'en sert pour savoir quels identifiants du registre ces
+ *     formes savent effectivement apparier — donc ce que le vert a le droit de compter, et ce
+ *     dont l'absence est un REFUS.
+ *
+ * Ajouter une forme publique ici la met en service ET la fait compter, du même geste. Une
+ * seconde liste tapée ailleurs divergerait, et c'est toujours celle qui garde qui reste en
+ * arrière.
+ */
+const FORMES_PUBLIQUES = [FORME_TVA_FR, FORME_SIREN];
 
 /**
  * Une coordonnée en clair dans un fichier — et les DEUX exclusions que le contrôle assume.
@@ -644,11 +575,116 @@ function coordonneeLegitimeAuRegistre(_valeur: string, formeEstIban: boolean): b
   return !formeEstIban;
 }
 
-export function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = ''): string[] {
+/**
+ * « LES NÔTRES » — les identifiants que le registre ARRÊTE, et la SEULE liste qui les dit.
+ *
+ * Elle est lue par les DEUX familles qui jugent une valeur de l'entité : `valeur_recopiee`, qui
+ * refuse qu'un fichier de code la RETAPE, et l'arme publique de `coordonnee_en_clair`, qui ne
+ * refuse un SIREN, un SIRET ou une TVA que s'ils sont les nôtres. Une seule liste, une seule
+ * façon de la lire (RM-01) : sans quoi l'une absoudrait ce que l'autre refuse, et la divergence
+ * ne se verrait que le jour où elle coûte.
+ *
+ * Les champs à la sentinelle et les valeurs trop courtes sont écartés : il n'y a rien à protéger
+ * d'une valeur que le registre n'a pas encore arrêtée, et un fragment court ferait rougir des
+ * fichiers au hasard — c'est-à-dire ferait désarmer la garde.
+ */
+export function identifiantsDuRegistre(
+  registre: Registre
+): { champ: (typeof CHAMPS)[number]; v: string }[] {
+  return CHAMPS.filter((c) => c.identifiant)
+    .map((c) => ({ champ: c, v: valeur(registre, c.cle) }))
+    .filter((x): x is { champ: (typeof CHAMPS)[number]; v: string } => typeof x.v === 'string')
+    .filter((x) => !estSentinelle(x.v) && x.v.length >= 6);
+}
+
+/**
+ * Ce numéro est-il L'UN DES NÔTRES ? Par CONTENANCE, et non par égalité : `20407031100017`
+ * contient `204070311` — un SIRET porte le SIREN de son entité, et c'est la forme sous laquelle
+ * un registre d'entreprises rend nos propres coordonnées. C'est aussi, exactement, la façon dont
+ * `valeur_recopiee` compare (`contenu.includes(v)`) : les deux familles lisent la même liste de
+ * la même façon, ou elles finissent par ne plus dire la même chose.
+ */
+export function estUnDesNotres(numero: string, notres: readonly string[]): boolean {
+  const n = numero.toUpperCase();
+  return notres.some((v) => n.includes(v.toUpperCase()));
+}
+
+/**
+ * LES IDENTIFIANTS QUE LES FORMES PUBLIQUES SAVENT APPARIER — et la seule chose que le vert a le
+ * droit de compter.
+ *
+ * 🔴 CE QUI A ÉTÉ MESURÉ LE 2026-09-22, PAR DEUX LENTILLES INDÉPENDAMMENT. La première version
+ * comptait TOUS les champs `identifiant: true`, dont `domaines.servi` — `apporteurs.axion-ia.com`,
+ * qu'aucune forme publique ne peut apparier — et les deux secrets le jour où ils seraient posés.
+ * Avec le SIREN, le SIRET et la TVA à la sentinelle, le vert imprimait donc
+ * « 1 identifiant(s) du registre confronté(s) » pendant que **ZÉRO** numéro public était cherché.
+ * La phrase de `PORTEE_DES_NUMEROS_PUBLICS` qui justifiait ce compte était fausse dans le seul
+ * cas où elle servait.
+ *
+ * 🔑 L'APPARIABILITÉ SE DÉRIVE DES FORMES, ELLE NE SE TAPE PAS. Écrire ici « siren, siret, tva »
+ * serait une seconde liste, et c'est toujours celle qui garde qui reste en arrière (RM-01). On
+ * demande donc aux FORMES elles-mêmes, sur une sonde minimale : si aucune ne retrouve la valeur,
+ * la garde ne saura jamais la reconnaître dans un fichier, et la compter reviendrait à annoncer
+ * une surveillance qui n'existe pas. Neutraliser une forme publique fait donc tomber le compte —
+ * et le compte à zéro est un REFUS.
+ *
+ * ⚠️ `identifiantsDuRegistre` reste la liste COMPLÈTE, et c'est voulu : `valeur_recopiee` ne
+ * dépend d'aucune forme — elle compare le contenu brut — et la recopie du domaine servi est une
+ * faute à part entière. Les deux listes ne divergent pas, la seconde est DÉRIVÉE de la première.
+ */
+export function identifiantsApparriables(
+  registre: Registre
+): { champ: (typeof CHAMPS)[number]; v: string }[] {
+  return identifiantsDuRegistre(registre).filter((x) => estApparriableParUneFormePublique(x.v));
+}
+
+/**
+ * Une forme publique saurait-elle retrouver cette valeur ? La sonde porte le mot-clé que
+ * `FORME_SIREN` exige ; `FORME_TVA_FR`, qui n'en a pas besoin, l'ignore. On ne vérifie pas que la
+ * forme « matche quelque part » mais qu'elle rend BIEN CETTE VALEUR — sans quoi un mot-clé qui
+ * capturerait autre chose dans la sonde ferait passer n'importe quoi pour appariable.
+ */
+export function estApparriableParUneFormePublique(v: string): boolean {
+  const sonde = normaliserEspaces(`siren ${v}`);
+  return FORMES_PUBLIQUES.some((forme) => {
+    forme.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = forme.exec(sonde)) !== null) {
+      if (estUnDesNotres((m[1] ?? '').replace(/\s/g, ''), [v])) return true;
+    }
+    return false;
+  });
+}
+
+export function coordonneesDe(contenu: string, dansDuCode: false, chemin?: string): string[];
+export function coordonneesDe(
+  contenu: string,
+  dansDuCode: boolean,
+  chemin: string,
+  identifiantsDeLEntite: readonly string[]
+): string[];
+export function coordonneesDe(
+  contenu: string,
+  dansDuCode: boolean,
+  chemin = '',
+  identifiantsDeLEntite?: readonly string[]
+): string[] {
+  // Une liste absente rendrait un vert SILENCIEUX sur nos propres numéros, dans une garde de
+  // publication : le sens dangereux de l'erreur. Elle lève, comme `ibanAvecSeparateur` lève sur
+  // une entrée qu'elle ne sait pas juger — une réparation silencieuse ferait passer le défaut
+  // pour un succès. Le type l'interdit déjà à la compilation ; ceci tient le reste.
+  if (dansDuCode && identifiantsDeLEntite === undefined) {
+    throw new Error(
+      'coordonneesDe attend la liste des identifiants de l’entité pour juger du CODE : sans elle ' +
+        'elle ne sait pas distinguer un numéro PUBLIC qui est le nôtre — refusé — de celui d’un ' +
+        'TIERS — lu, donc légitime. Passe `identifiantsDuRegistre(registre).map((x) => x.v)`.'
+    );
+  }
+  const notres = identifiantsDeLEntite ?? [];
   const trouvees: string[] = [];
   const texte = normaliserEspaces(contenu);
   const formes = dansDuCode
-    ? [FORME_IBAN, FORME_BIC, FORME_TVA_FR, FORME_SIREN]
+    ? [FORME_IBAN, FORME_BIC, ...FORMES_PUBLIQUES]
     : [FORME_IBAN, FORME_BIC];
   const tolereUnBouchon = estFichierDeTest(chemin);
   for (const forme of formes) {
@@ -662,6 +698,17 @@ export function coordonneesDe(contenu: string, dansDuCode: boolean, chemin = '')
         // La clé de contrôle, et non une heuristique de plus : c'est elle qui sépare un IBAN
         // d'un identifiant hexadécimal dont les deux premières lettres font un code pays.
         if (!cleIbanValide(brut)) continue;
+      }
+      // 🔑 « LES NÔTRES » CONTRE « LES TIERS » — `PORTEE_DES_NUMEROS_PUBLICS`.
+      // Un numéro PUBLIC n'est refusé que s'il est LE NÔTRE. Le motif de ce refus est RM-01,
+      // source unique de l'identité de la Société : il n'existe pas de source unique de
+      // l'identité d'un tiers dans ce dépôt, donc rien à dériver, donc rien à refuser. Le SIREN
+      // de DANONE enregistré par un mandataire d'API publique est la donnée LUE, pas une
+      // identité recopiée — et lui réclamer une place dans `config/entite.json` était le
+      // symptôme. Un IBAN, lui, ne passe pas par ici : c'est un SECRET, refusé quel qu'en soit
+      // le porteur, et c'est la moitié de la garde qu'on oublie.
+      if (FORMES_PUBLIQUES.includes(forme) && !estUnDesNotres(brut, notres)) {
+        continue;
       }
       // 🔴 L'EXCUSE « ÇA RESSEMBLE À UN EXEMPLE » NE VAUT QUE DANS UN FICHIER DE TEST.
       // Elle s'appliquait partout, et `estExemplePlausible` rend `true` dès SIX chiffres
@@ -774,10 +821,52 @@ export function controler(u: Univers): Faute[] {
   }
 
   // ── Ce qui fuit dans les fichiers ───────────────────────────────────────────────────────────
-  const identifiants = CHAMPS.filter((c) => c.identifiant)
-    .map((c) => ({ champ: c, v: valeur(u.registre, c.cle) }))
-    .filter((x): x is { champ: (typeof CHAMPS)[number]; v: string } => typeof x.v === 'string')
-    .filter((x) => !estSentinelle(x.v) && x.v.length >= 6);
+  // UNE seule liste pour les deux familles qui jugent une valeur de l'entité (RM-01) : celle qui
+  // refuse la RECOPIE, et l'arme publique de `coordonnee_en_clair` qui ne refuse un numéro public
+  // que s'il est le nôtre.
+  const identifiants = identifiantsDuRegistre(u.registre);
+  const apparriables = identifiantsApparriables(u.registre);
+  const notres = apparriables.map((x) => x.v);
+
+  // 🔴 NE PAS AVOIR DE RÉFÉRENCE N'EST PAS AVOIR VÉRIFIÉ — la régression mesurée le 2026-09-22.
+  //
+  // En faisant dépendre l'arme PUBLIQUE du registre, on a unifié la SOURCE des deux familles —
+  // c'était le geste juste — mais on a aussi unifié leur MODE DE PANNE : registre sans référence
+  // ⇒ plus rien n'est cherché, EN SILENCE. Avant, l'arme publique ne dépendait pas du registre ;
+  // dans cet état, elle attrapait encore nos numéros. Mesuré sur le dépôt réel, décision W1
+  // rouverte et son bloc à la sentinelle — un état parfaitement LÉGITIME (`valeur_sans_decision`
+  // l'exige dans ce sens-là) — nos trois identifiants posés en clair dans un fichier suivi :
+  //   · gate d'avant  → ❌ 3 défaut(s), le fichier NOMMÉ, exit 1
+  //   · gate d'après  → ✅ conforme, exit 0
+  //
+  // Le refus est une FAMILLE et non une levée, et ce n'est pas cosmétique. `coordonneesDe` LÈVE
+  // quand on lui demande de juger du code sans la liste : c'est une erreur de PROGRAMMATION, un
+  // appelant a oublié un argument. Ici, c'est un fait sur l'UNIVERS JUGÉ — donc un verdict, donc
+  // le canal de refus, exactement comme `source_illisible`. Une levée sortirait du canal, ne
+  // s'imprimerait pas avec les autres, n'aurait pas de témoin dans `--prove`, et créerait le
+  // défaut même que GOV-067 existe pour fermer.
+  //
+  // ⚠️ ET ELLE NE ROUGIT PAS SUR L'ÉTAT NORMAL DE LA PHASE 0, c'est mesuré et non supposé :
+  // `entite.siren`, `entite.siret` et `entite.tvaIntracommunautaire` sont RENSEIGNÉS au registre,
+  // attestés par W1 tranchée le 2026-09-03. Ce qui vaut la sentinelle aujourd'hui, ce sont les
+  // deux champs SECRETS et cinq champs non tranchés — dont aucun n'est appariable par une forme
+  // publique, donc aucun n'entrait dans ce compte. `partners/ADR-0009` dit « les phases 0 à 3 se
+  // codent contre la sentinelle » des champs secrets et non tranchés ; il ne dit pas que
+  // l'identité PUBLIQUE de la Société reste indéfinie, et elle ne l'est pas.
+  if (apparriables.length === 0) {
+    ajouter(
+      'aucune_reference_publique',
+      `\`${CHEMIN_REGISTRE}\` ne donne AUCUN identifiant qu'une forme publique sache apparier ` +
+        `(SIREN, SIRET, TVA) : ils valent la sentinelle, ou la décision qui les arrête a été ` +
+        `rouverte. L'arme publique de \`coordonnee_en_clair\` n'a donc plus de cible, et ` +
+        `\`valeur_recopiee\` non plus : elles ne cherchent RIEN. Dans un dépôt PUBLIC ` +
+        `(REQ-GOV-031), rendre un vert ici dirait « aucun de nos numéros ne fuit » alors que la ` +
+        `phrase exacte est « je ne sais plus lesquels sont les nôtres » — et les deux ne ` +
+        `s'écrivent pas de la même couleur. Reporte les valeurs de la décision qui les arrête, ` +
+        `ou retranche-la. ${identifiants.length} identifiant(s) non sentinelle au registre, ` +
+        `0 appariable.`
+    );
+  }
 
   for (const fichier of u.fichiers) {
     // Ce que la garde ne sait pas lire EN ENTIER, elle ne le juge pas sur ses seules suites ASCII :
@@ -838,7 +927,7 @@ export function controler(u: Univers): Faute[] {
     const exemptDeCoordonnee = estExemptDe(fichier.chemin, 'coordonnee');
     for (const coordonnee of exemptDeCoordonnee
       ? []
-      : coordonneesDe(fichier.contenu, code, fichier.chemin)) {
+      : coordonneesDe(fichier.contenu, code, fichier.chemin, notres)) {
       ajouter(
         'coordonnee_en_clair',
         `${fichier.chemin} — coordonnée en clair « ${coordonnee} ». Ces valeurs vivent dans ` +
@@ -943,14 +1032,41 @@ export function controler(u: Univers): Faute[] {
  * en 2³² essais, ce qui laisserait absoudre une AUTRE coordonnée que celle qu'on a examinée.
  * Résidu assumé : une empreinte est un oracle de vérification pour qui aurait déjà la valeur en
  * main — ce qui est sans objet ici, puisque le seul motif recevable est une valeur fabriquée.
+ *
+ * ── LA SECONDE FORME, OUVERTE LE 2026-09-23 (GOV-092) : `empreinte` ABSENTE ───────────────────
+ *
+ * Une exemption SANS empreinte absout LA RÉVISION ENTIÈRE, et non une coordonnée. Elle existe
+ * pour un cas précis, et pour lui seul : une révision que la forge ANNONCE, dont elle donne
+ * l'horodatage, et dont elle sert un `diff` NUL — ce qu'elle fait quand l'édition a produit un
+ * corps VIDE ou un corps INCHANGÉ. Il n'y a alors aucune coordonnée à désigner, puisqu'il n'y a
+ * aucun texte : exiger une empreinte rendrait la sortie impossible, donc la garde insatisfiable
+ * sur cette PR POUR TOUJOURS — l'historique d'édition d'une forge ne se dé-publie pas.
+ *
+ * ⚠️ ET ELLE EST PLUS ÉTROITE QU'ELLE N'EN A L'AIR, sans quoi elle serait la passoire que tout
+ * ce registre existe pour éviter. Elle ne vaut QUE pour une révision ILLISIBLE : une révision
+ * dont la forge sert le `diff` est LUE, donc jugée coordonnée par coordonnée, et une ligne sans
+ * empreinte n'y absout rien — elle y rougit en `exemption_sans_objet`. Absoudre « la révision
+ * entière » d'un texte qu'on a sous les yeux reviendrait à autoriser n'importe quelle coordonnée
+ * par une ligne de trois champs.
+ *
+ * ⚠️ `definitive` Y EST EXIGÉ VRAI. Pour la forme à empreinte, le champ décrit un fait ; ici il
+ * en décrit un qui n'admet pas d'autre valeur — un `diff` nul ne redeviendra pas un texte, et
+ * déclarer un report sur ce qui ne se referme jamais serait un mensonge de plus dans un registre
+ * qui existe pour dire la vérité sur ce qui ne peut pas être réparé.
  */
 export type Exemption = {
   /** Le numéro de la PR. Une exemption ne traverse jamais une PR. */
   pr: number;
   /** L'horodatage EXACT de la révision, tel que `userContentEdits` le rend. */
   revision: string;
-  /** SHA-256 complet de la coordonnée normalisée. JAMAIS la valeur. */
-  empreinte: string;
+  /**
+   * SHA-256 complet de la coordonnée normalisée. JAMAIS la valeur.
+   *
+   * ABSENTE, elle change le grain de ce que la ligne absout : la RÉVISION entière au lieu d'une
+   * coordonnée — et seulement une révision ILLISIBLE, celle dont la forge sert un `diff` nul.
+   * C'est la seule situation où il n'y a rien à empreindre, faute de texte.
+   */
+  empreinte?: string;
   /** La date à laquelle l'exemption a été déclarée — une exception sans date ne se relit pas. */
   declaree: string;
   /** Qui la déclare. Une exception sans propriétaire n'est réclamée par personne. */
@@ -992,9 +1108,17 @@ export function controlerRegistreExemptions(exemptions: Exemption[]): Faute[] {
     ) {
       manques.push("`revision` doit être l'horodatage ISO EXACT rendu par `userContentEdits`");
     }
-    if (typeof e.empreinte !== 'string' || !/^[0-9a-f]{64}$/.test(e.empreinte)) {
+    // DEUX FORMES, ET C'EST L'ABSENCE D'EMPREINTE QUI LES SÉPARE — pas un champ « type » qu'il
+    // faudrait tenir d'accord avec le reste de la ligne. La forme large est celle de la révision
+    // ILLISIBLE (GOV-092) : il n'y a rien à empreindre quand la forge n'a servi aucun texte.
+    const formeRevisionEntiere = e.empreinte === undefined;
+    if (
+      !formeRevisionEntiere &&
+      (typeof e.empreinte !== 'string' || !/^[0-9a-f]{64}$/.test(e.empreinte))
+    ) {
       manques.push(
-        '`empreinte` doit être un SHA-256 COMPLET en minuscules — tronquée, elle se collisionne'
+        '`empreinte` doit être un SHA-256 COMPLET en minuscules — tronquée, elle se collisionne ' +
+          '; ABSENTE, elle absout la RÉVISION entière, ce qui ne vaut que pour une révision illisible'
       );
     }
     if (typeof e.declaree !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(e.declaree)) {
@@ -1007,6 +1131,15 @@ export function controlerRegistreExemptions(exemptions: Exemption[]): Faute[] {
     }
     if (typeof e.definitive !== 'boolean')
       manques.push('`definitive` doit dire si l’exemption se refermera');
+    // ET POUR LA FORME LARGE, IL DOIT DIRE VRAI. Une révision servie sans `diff` ne redeviendra
+    // pas un texte : déclarer un report sur ce qui ne se referme jamais ferait relire cette
+    // ligne, un jour, comme une dette qu'on aurait oublié de solder.
+    else if (formeRevisionEntiere && !e.definitive) {
+      manques.push(
+        '`definitive` doit valoir `true` pour une exemption SANS empreinte : une révision servie ' +
+          'sans `diff` est illisible pour toujours, et cette ligne-là ne se refermera jamais'
+      );
+    }
     if (manques.length > 0) {
       fautes.push({
         famille: 'exemption_malformee',
@@ -1016,7 +1149,9 @@ export function controlerRegistreExemptions(exemptions: Exemption[]): Faute[] {
       });
       continue;
     }
-    const cle = `${e.pr}@${e.revision}@${e.empreinte}`;
+    // ⚠️ La forme large entre dans la MÊME clé de doublon, par un jeton qui ne peut pas être une
+    // empreinte : sans lui, deux lignes sans empreinte sur la même révision passeraient.
+    const cle = `${e.pr}@${e.revision}@${e.empreinte ?? 'REVISION-ENTIERE'}`;
     if (vues.has(cle)) {
       fautes.push({
         famille: 'exemption_malformee',
@@ -1064,6 +1199,22 @@ export type LectureDuCorps =
       corps: CorpsPublie[];
       revisionsLues: number;
       revisionsAnnoncees: number;
+      /**
+       * LES RÉVISIONS QUE LA FORGE A SERVIES ET QU'ON N'A PAS PU LIRE — une entrée par
+       * révision : son horodatage quand la forge l'a donné, `null` quand elle ne l'a pas donné.
+       *
+       * 🔴 POURQUOI CE CHAMP EXISTE (GOV-092, mesuré le 2026-09-23 sur la PR #102). Ces
+       * révisions-là étaient indiscernables de celles que la pagination n'avait jamais
+       * atteintes : elles disparaissaient toutes dans le même écart annoncé/lu, sous le même
+       * message, avec les deux mêmes remèdes — dont aucun ne s'appliquait. Les distinguer est
+       * tout le correctif : la cause a son nom, son message et son remède, et une lecture
+       * partielle par la borne garde les siens.
+       *
+       * ⚠️ CE N'EST PAS UNE LISTE DE RÉVISIONS PROPRES. Une entrée ici veut dire « annoncée,
+       * servie, ILLISIBLE » — donc non lue, donc non réputée propre. Elle ne devient verte que
+       * par une ligne du registre, et un `null` ne le devient jamais.
+       */
+      revisionsIllisibles: (string | null)[];
       /**
        * VRAI quand on a CESSÉ de lire avant la fin — borne de pagination atteinte, ou curseur
        * qui n'avance pas. 🔴 Ce champ manquait, et son absence a laissé survivre un mutant le
@@ -1115,6 +1266,17 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
   const fautes: Faute[] = [...controlerRegistreExemptions(exemptions)];
   /** Les exemptions RÉELLEMENT servies : ce qui reste est sans objet, donc rouge. */
   const servies = new Set<Exemption>();
+  /**
+   * UNE LIGNE MAL FORMÉE N'ABSOUT RIEN, et elle ne rougit qu'une fois. Sans cette règle, un
+   * motif vide ou un `definitive` faux laisserait la ligne couvrir sa cible tout en étant
+   * déclarée illisible : le verdict resterait 1, donc indiscernable de celui d'une ligne saine,
+   * et c'est exactement le défaut que la lentille `mutation` avait relevé le 2026-09-05 sur
+   * l'empreinte tronquée. Elle n'est PAS reportée en plus comme « sans objet » : deux messages
+   * pour une même ligne feraient chercher deux problèmes là où il n'y en a qu'un.
+   */
+  const bienFormees = new Set(
+    exemptions.filter((e) => controlerRegistreExemptions([e]).length === 0)
+  );
 
   if (!lecture.lu) {
     fautes.push({
@@ -1146,20 +1308,94 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
     });
   }
 
-  if (lecture.revisionsAnnoncees > lecture.revisionsLues) {
+  // ── L'ÉCART ANNONCÉ/LU SE DÉCOMPOSE — TROIS CAUSES, TROIS REMÈDES ──────────────────────────
+  //
+  // 🔴 CE QUI A ÉTÉ MESURÉ LE 2026-09-23 SUR LA PR #102 (GOV-092), et c'est le défaut que ce
+  // bloc referme. Le message d'ici nommait DEUX causes et DEUX remèdes, et sur cette PR-là
+  // AUCUN des deux ne s'appliquait : la réponse de la forge est STABLE (« relance la garde » ne
+  // changeait rien, mesuré trois fois de suite) et une seule page avait été lue (« relève
+  // PAGES_MAX » visait une borne hors de cause). **Un remède faux est pire qu'un remède
+  // absent** : il envoie le lecteur rejouer une commande qui ne changera rien — c'est
+  // exactement ce qui s'est passé le jour de la mesure.
+  //
+  // 🔑 LE MÊME ÉCART RECOUVRAIT TROIS SITUATIONS QU'IL FAUT SÉPARER POUR POUVOIR EN SORTIR :
+  //   — servie, horodatée, `diff` NUL → illisible, DÉFINITIVE, déclarable au registre ;
+  //   — servie sans `editedAt` → illisible, DÉFINITIVE, et SANS chemin de sortie ;
+  //   — jamais servie → la borne de pagination, ou une forge qui sert moins qu'elle n'annonce.
+  //
+  // ⛔ ET LE REFUS RESTE LE DÉFAUT DANS LES TROIS CAS. Nommer une cause ne la rend pas verte.
+  const absoutes = new Set<string>();
+  const illisiblesNonAbsoutes: string[] = [];
+  let illisiblesSansHorodatage = 0;
+  for (const h of lecture.revisionsIllisibles) {
+    if (h === null) {
+      illisiblesSansHorodatage += 1;
+      continue;
+    }
+    // L'exemption de la forme LARGE, et elle seule : `empreinte` absente. Une ligne à empreinte
+    // désigne une coordonnée, or il n'y a ici aucun texte où la chercher.
+    const couverte = exemptions.find(
+      (e) =>
+        bienFormees.has(e) && e.pr === lecture.pr && e.revision === h && e.empreinte === undefined
+    );
+    if (couverte !== undefined) {
+      servies.add(couverte);
+      absoutes.add(h);
+    } else illisiblesNonAbsoutes.push(h);
+  }
+
+  for (const h of illisiblesNonAbsoutes) {
     fautes.push({
       famille: 'revisions_non_lues',
       message:
-        `La forge annonce ${lecture.revisionsAnnoncees} révision(s) du corps et ${lecture.revisionsLues} ` +
-        `ont été lues. Les révisions non lues ne sont PAS réputées propres : le défaut mesuré sur la ` +
+        `PR #${lecture.pr} — révision du ${h} : la forge l'ANNONCE et en donne l'horodatage, mais ` +
+        `son \`diff\` est NUL. Elle sert \`diff: null\` quand l'édition a produit un corps VIDE ou ` +
+        `un corps INCHANGÉ — mesuré sur la PR #102 le 2026-09-23, l'un et l'autre cas. Ce n'est ni ` +
+        `une panne ni une borne : la réponse de la forge est STABLE, la relire n'y changera rien, ` +
+        `et la pagination n'y est pour rien. C'est DÉFINITIF — l'historique d'édition d'une forge ` +
+        `ne se dé-publie pas. Le texte de cette révision est donc ILLISIBLE, et une révision ` +
+        `illisible n'est PAS réputée propre : INDÉTERMINÉ (2). LE SEUL CHEMIN DE SORTIE, et c'est ` +
+        `celui de tout irréparable dans ce dépôt : déclare-la dans \`${CHEMIN_EXEMPTIONS}\` avec ` +
+        `pr=${lecture.pr}, revision="${h}", SANS \`empreinte\` — son absence absout LA RÉVISION ` +
+        `ENTIÈRE au lieu d'une coordonnée, ce qui ne vaut que parce qu'il n'y a aucun texte à ` +
+        `désigner —, \`definitive\` à \`true\`, et un motif qui dit pourquoi cette révision ne ` +
+        `porte rien que sa voisine, elle-même lue et jugée, ne porte déjà.`,
+    });
+  }
+
+  if (illisiblesSansHorodatage > 0) {
+    fautes.push({
+      famille: 'revisions_non_lues',
+      message:
+        `PR #${lecture.pr} — la forge a servi ${illisiblesSansHorodatage} révision(s) SANS ` +
+        `\`editedAt\` : quel que soit leur texte, on ne sait pas les DÉSIGNER. Celles-là n'ont AUCUN ` +
+        `chemin de sortie, et c'est voulu : une exemption s'apparie sur l'horodatage EXACT. Une ` +
+        `ligne qui absoudrait « la révision sans horodatage » absoudrait aussi toutes les ` +
+        `suivantes, c'est-à-dire tout ce qui reste à écrire. INDÉTERMINÉ (2), sans remède ici.`,
+    });
+  }
+
+  // CE QUE LA FORGE N'A JAMAIS SERVI : l'écart qui reste une fois les servies décomptées. C'est
+  // la seule part que la borne de pagination explique — et la seule que relever `PAGES_MAX`
+  // répare. La borner à zéro évite qu'une forge annonçant MOINS qu'elle ne sert rende négatif.
+  const jamaisServies = Math.max(
+    0,
+    lecture.revisionsAnnoncees - lecture.revisionsLues - lecture.revisionsIllisibles.length
+  );
+  if (jamaisServies > 0) {
+    fautes.push({
+      famille: 'revisions_non_lues',
+      message:
+        `La forge annonce ${lecture.revisionsAnnoncees} révision(s) du corps, ${lecture.revisionsLues} ` +
+        `ont été lues, et ${jamaisServies} n'ont JAMAIS été servies — elles ne figurent dans aucune ` +
+        `page reçue. Les révisions non lues ne sont PAS réputées propres : le défaut mesuré sur la ` +
         `PR #31 vivait dans des révisions, pas dans le corps courant. La requête EST paginée ` +
-        `(${EDITIONS_PAR_PAGE} par page, ${PAGES_MAX} pages au plus) ; il reste donc DEUX causes, et ` +
-        `elles n'ont pas le même remède. (a) Une révision servie sans \`diff\` ou sans \`editedAt\` : la ` +
-        `forge n'en donne ni le texte ni l'horodatage, et sans horodatage aucune exemption ne peut ` +
-        `s'y apparier — rien à corriger dans ce dépôt, relance la garde. (b) La borne de ` +
-        `${PAGES_MAX * EDITIONS_PAR_PAGE} révision(s) atteinte, ce que le nombre lu rend visible : relève ` +
-        `\`PAGES_MAX\` dans \`scripts/gates/gov-entite.ts\`. Elle existe pour qu'un curseur qui n'avance ` +
-        `pas ne fasse pas tourner la CI sans fin, pas pour limiter ce qui est examiné.`,
+        `(${EDITIONS_PAR_PAGE} par page, ${PAGES_MAX} pages au plus) : la cause est la borne de ` +
+        `${PAGES_MAX * EDITIONS_PAR_PAGE} révision(s), ou une forge qui sert moins qu'elle n'annonce. ` +
+        `Relève \`PAGES_MAX\` dans \`scripts/gates/gov-entite.ts\` si une PR dépasse réellement cette ` +
+        `borne ; elle existe pour qu'un curseur qui n'avance pas ne fasse pas tourner la CI sans ` +
+        `fin, pas pour limiter ce qui est examiné. ⚠️ Ce message ne couvre PAS une révision servie ` +
+        `sans \`diff\` : cette cause-là porte son propre message et son propre remède.`,
     });
   }
 
@@ -1172,7 +1408,11 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
       // écrire.
       const couverte = c.revision
         ? exemptions.find(
-            (e) => e.pr === lecture.pr && e.revision === c.horodatage && e.empreinte === empreinte
+            (e) =>
+              bienFormees.has(e) &&
+              e.pr === lecture.pr &&
+              e.revision === c.horodatage &&
+              e.empreinte === empreinte
           )
         : undefined;
       if (couverte !== undefined) {
@@ -1203,20 +1443,34 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
   // n'existe pas, ou bien le contenu de la révision ne porte plus cette coordonnée-là. Dans les
   // deux cas, la ligne est une autorisation ouverte sur un texte qu'on n'a pas examiné — c'est
   // exactement ce qu'on refuse. Elle ROUGIT, elle n'absout pas.
-  // ⚠️ Le contrôle n'a de sens que si TOUTES les révisions ont été lues : sur une lecture
-  // partielle, une exemption « sans objet » peut simplement viser une révision non paginée.
-  if (lecture.revisionsAnnoncees <= lecture.revisionsLues) {
+  // ⚠️ Le contrôle n'a de sens que si TOUTE la matière a été VUE : sur une lecture partielle,
+  // une exemption « sans objet » peut simplement viser une révision non paginée. « Vue » inclut
+  // ici les révisions illisibles ABSOUTES — on sait exactement ce qu'elles sont, et une ligne
+  // qui ne correspond à aucune d'elles ne correspond à rien (GOV-092).
+  const touteLaMatiereEstVue =
+    jamaisServies === 0 && illisiblesSansHorodatage === 0 && illisiblesNonAbsoutes.length === 0;
+  if (touteLaMatiereEstVue) {
     for (const e of exemptions) {
-      if (e.pr !== lecture.pr || servies.has(e)) continue;
+      // Une ligne MAL FORMÉE a déjà son message : la redire « sans objet » ferait chercher
+      // deux problèmes là où il n'y en a qu'un.
+      if (e.pr !== lecture.pr || servies.has(e) || !bienFormees.has(e)) continue;
       fautes.push({
         famille: 'exemption_sans_objet',
         message:
-          `\`${CHEMIN_EXEMPTIONS}\` — l'exemption PR #${e.pr} / révision ${e.revision} / empreinte ` +
-          `${e.empreinte.slice(0, 12)}… n'a RIEN absous : aucune révision lue ne porte cette ` +
-          `coordonnée à cet horodatage. Ou la révision n'existe pas, ou son contenu a changé de ` +
-          `sens. Une exemption qui ne correspond plus à ce qu'elle couvrait est une autorisation ` +
-          `ouverte sur un texte que personne n'a examiné : retire-la, ou redéclare-la sur ce que ` +
-          `la garde signale aujourd'hui.`,
+          e.empreinte === undefined
+            ? `\`${CHEMIN_EXEMPTIONS}\` — l'exemption PR #${e.pr} / révision ${e.revision} (forme ` +
+              `RÉVISION ENTIÈRE, sans empreinte) n'a RIEN absous : aucune révision ILLISIBLE de ` +
+              `cette PR ne porte cet horodatage. Ou la révision n'existe pas, ou la forge en sert ` +
+              `désormais le \`diff\` — et dans ce cas son texte est LU, donc jugé coordonnée par ` +
+              `coordonnée, donc il n'y a plus rien à y absoudre. Cette forme-là ne blanchit ` +
+              `JAMAIS une révision lue : ce serait autoriser n'importe quel texte par une ligne ` +
+              `de trois champs. Retire-la.`
+            : `\`${CHEMIN_EXEMPTIONS}\` — l'exemption PR #${e.pr} / révision ${e.revision} / empreinte ` +
+              `${e.empreinte.slice(0, 12)}… n'a RIEN absous : aucune révision lue ne porte cette ` +
+              `coordonnée à cet horodatage. Ou la révision n'existe pas, ou son contenu a changé de ` +
+              `sens. Une exemption qui ne correspond plus à ce qu'elle couvrait est une autorisation ` +
+              `ouverte sur un texte que personne n'a examiné : retire-la, ou redéclare-la sur ce que ` +
+              `la garde signale aujourd'hui.`,
       });
     }
   }
@@ -1233,10 +1487,23 @@ export function jugerCorpsPublie(lecture: LectureDuCorps, exemptions: Exemption[
 export function exemptionsServies(lecture: LectureDuCorps, exemptions: Exemption[]): Exemption[] {
   if (!lecture.lu) return [];
   const servies: Exemption[] = [];
+  // MÊME RÈGLE QUE LE VERDICT : une ligne mal formée n'absout rien, donc elle n'a rien servi.
+  // Deux appariements qui divergeraient feraient dire au vert autre chose que ce qu'il juge.
+  const candidates = exemptions.filter((e) => controlerRegistreExemptions([e]).length === 0);
+  // LA FORME LARGE D'ABORD, sur les révisions ILLISIBLES et elles seules (GOV-092). Un vert qui
+  // repose sur elle doit la NOMMER : une exemption invisible est une exemption qu'on ne relit
+  // jamais, et qui redevient en quelques semaines l'absence de garde qu'elle remplace.
+  for (const h of lecture.revisionsIllisibles) {
+    if (h === null) continue;
+    const e = candidates.find(
+      (x) => x.pr === lecture.pr && x.revision === h && x.empreinte === undefined
+    );
+    if (e !== undefined && !servies.includes(e)) servies.push(e);
+  }
   for (const c of lecture.corps) {
     if (!c.revision) continue;
     for (const coordonnee of coordonneesDe(c.texte, false)) {
-      const e = exemptions.find(
+      const e = candidates.find(
         (x) =>
           x.pr === lecture.pr &&
           x.revision === c.horodatage &&
@@ -1266,6 +1533,37 @@ export function exemptionsServies(lecture: LectureDuCorps, exemptions: Exemption
  * verdict SANS remède en verdict AVEC remède. Une coordonnée en deuxième page rendait 2 (« je
  * n'ai pas tout lu », rien à faire) ; elle rend maintenant 1, nommée et datée, donc changeable
  * ou déclarable. C'est la différence entre une gate qu'on répare et une gate qu'on saute.
+ *
+ * ── AJOUT DU 2026-09-23 (GOV-092) : CE QUE CE RAISONNEMENT N'AVAIT PAS PRÉVU ──────────────────
+ *
+ * ⚠️ Rien de ce qui précède n'est retiré : la mesure du 2026-09-05 est exacte, et la pagination
+ * a bien fermé la cause qu'elle visait. Ce qui suit la COMPLÈTE, parce que le même écart
+ * annoncé/lu recouvrait une troisième cause que le diagnostic d'alors rangeait, à tort, dans
+ * « rien à corriger dans ce dépôt, relance la garde ».
+ *
+ * 🔴 MESURÉ SUR LA PR #102 LE 2026-09-23. `pnpm gov:entite --corps-publie 102` rendait
+ * INDÉTERMINÉ (2) sur `revisions_non_lues`. Le rejeu direct de `userContentEdits(first:100)`
+ * rend AUTANT de nœuds que la forge en annonce : la pagination fonctionne, `PAGES_MAX` n'est
+ * pas atteint, une seule page suffit. Mais deux de ces nœuds portent un `editedAt` et un `diff`
+ * **NUL** — `2026-09-23T00:21:32Z` et `2026-09-23T00:21:56Z`. La forge sert `diff: null` quand
+ * l'édition a produit un corps **VIDE** ou un corps **INCHANGÉ**, et ces deux-là sont l'un et
+ * l'autre cas.
+ *
+ * 🔴 ET LE DÉFAUT N'ÉTAIT PAS L'ÉCART, IL ÉTAIT DANS LE REMÈDE. Le message nommait deux causes
+ * et deux remèdes, et aucun des deux ne s'appliquait : la réponse de la forge est STABLE (trois
+ * appels de suite, les mêmes `diff` nuls), et la borne n'était pas en jeu. **Un remède faux est
+ * pire qu'un remède absent** — il envoie le lecteur rejouer une commande qui ne changera rien,
+ * ce qui est exactement ce qui s'est passé le jour de la mesure.
+ *
+ * 🔑 ET LA PORTÉE EST CE QUI RENDAIT LA CHOSE URGENTE : l'historique d'édition ne se dé-publie
+ * pas et `--corps-publie` tourne sur CHAQUE PR, donc une PR dont le corps a été vidé une fois,
+ * ou re-posté à l'identique une fois, ne repassait PLUS JAMAIS la porte A. C'est la gate
+ * insatisfiable que ce fichier entier existe pour éviter, réapparue par une autre porte.
+ *
+ * LE CORRECTIF EST DANS `assemblerLecture` (qui CLASSE au lieu d'écarter) et dans
+ * `jugerCorpsPublie` (qui décompose l'écart en trois causes nommées). La sortie réutilise le
+ * registre : une exemption sans `empreinte` absout LA RÉVISION entière — et seulement une
+ * révision illisible.
  */
 export const EDITIONS_PAR_PAGE = 100;
 
@@ -1365,12 +1663,32 @@ export function assemblerLecture(
     },
   ];
   let lues = 0;
+  /**
+   * 🔴 CE QUI MANQUAIT ICI JUSQU'AU 2026-09-23 (GOV-092) : ces nœuds-là étaient `continue`, et
+   * rien ne disait qu'ils avaient EXISTÉ. Ils retombaient dans l'écart annoncé/lu, avec les
+   * révisions que la pagination n'avait jamais atteintes — même message, mêmes remèdes, et sur
+   * la PR #102 aucun des deux ne s'appliquait. On les CLASSE désormais, parce qu'une révision
+   * servie-et-illisible et une révision jamais servie ne se réparent pas de la même façon.
+   *
+   * ⚠️ CE N'EST PAS UNE LISTE DE RÉVISIONS PROPRES. Elles restent comptées dans `annoncees` et
+   * hors de `revisionsLues` : le verdict les refuse, et seule une ligne du registre les absout.
+   */
+  const illisibles: (string | null)[] = [];
   for (const n of editions.noeuds) {
-    // Un `diff` nul n'est pas une révision propre : c'est une révision qu'on n'a PAS lue. Elle
-    // reste comptée dans `annoncees`, et l'écart fait tomber le verdict en INDÉTERMINÉ.
-    // Un horodatage nul aussi : sans lui, aucune exemption ne peut s'apparier à cette révision,
-    // donc on ne peut ni l'absoudre ni prétendre l'avoir examinée.
-    if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue;
+    // Un horodatage nul est le cas SANS SORTIE : sans lui, aucune exemption ne peut s'apparier à
+    // cette révision, donc on ne peut ni l'absoudre ni prétendre l'avoir examinée. Il est
+    // enregistré comme `null`, et c'est le verdict qui en tire la conséquence.
+    if (typeof n.editedAt !== 'string') {
+      illisibles.push(null);
+      continue;
+    }
+    // Un `diff` nul n'est pas une révision propre : c'est une révision qu'on n'a PAS lue. La
+    // forge le sert quand l'édition a produit un corps VIDE ou un corps INCHANGÉ ; c'est
+    // définitif, et le seul chemin de sortie est une ligne de registre sur cet horodatage.
+    if (typeof n.diff !== 'string') {
+      illisibles.push(n.editedAt);
+      continue;
+    }
     lues += 1;
     corps.push({
       origine: `PR #${numero} — révision du ${n.editedAt}`,
@@ -1385,6 +1703,7 @@ export function assemblerLecture(
     corps,
     revisionsLues: lues,
     revisionsAnnoncees: editions.annoncees,
+    revisionsIllisibles: illisibles,
     lectureInachevee: editions.inacheve,
   };
 }
@@ -1566,6 +1885,8 @@ function prouverCorpsPublie(): number {
     // La forge a rendu la main d'elle-même : ce n'est PAS une lecture interrompue. Les
     // témoins qui rougissent le font sur l'écart annoncé/lu, et lui seul (RM-11).
     lectureInachevee: false,
+    // Aucune révision illisible : ce témoin ne fait pas varier cette dimension-là.
+    revisionsIllisibles: [],
   });
   /**
    * Une exemption BIEN formée pour le témoin donné — construite, jamais recopiée.
@@ -1589,6 +1910,43 @@ function prouverCorpsPublie(): number {
     motif:
       "témoin de la preuve hors ligne : cette valeur est construite à chaque exécution, elle n'a " +
       'jamais été publiée nulle part, et il n’y a donc rien à révoquer.',
+    definitive: true,
+  });
+
+  /**
+   * ── LA TROISIÈME CAUSE, ÉPROUVÉE ICI AUSSI (GOV-092) ──────────────────────────────────────
+   *
+   * Une lecture qui porte des révisions ILLISIBLES : annoncées, servies, et sans texte. C'est
+   * `--corps-publie --prove` qui est l'étape de Gate A — un témoin qui ne tiendrait que
+   * `pnpm test` ne garderait pas la CI.
+   *
+   * ⚠️ AUCUN DÉFAUT SUR CE QUE CES TÉMOINS FONT VARIER (RM-11) : `annoncees` est DÉRIVÉ du
+   * nombre d'illisibles, donc l'écart annoncé/lu n'est jamais une seconde cause active. Un
+   * témoin qui bouge pour deux raisons ne discrimine rien.
+   */
+  const HORODATAGE_ILLISIBLE = '2026-01-02T07:07:07Z';
+  const illisible = (illisibles: (string | null)[]): Extract<LectureDuCorps, { lu: true }> => ({
+    lu: true,
+    pr: PR_TEMOIN,
+    corps: [
+      { origine: 'témoin — corps courant', horodatage: null, texte: 'propre', revision: false },
+    ],
+    revisionsLues: 0,
+    revisionsAnnoncees: illisibles.length,
+    lectureInachevee: false,
+    revisionsIllisibles: illisibles,
+  });
+
+  /** L'exemption de la forme LARGE : les mêmes exigences, moins l'empreinte — il n'y a pas de
+   * texte à empreindre. `definitive` y est vrai parce qu'un `diff` nul l'est pour toujours. */
+  const deRevision = (sur: string): Exemption => ({
+    pr: PR_TEMOIN,
+    revision: sur,
+    declaree: '2026-09-23',
+    par: 'témoin de `--corps-publie --prove`',
+    motif:
+      'témoin de la preuve hors ligne : la forge sert `diff: null` pour cette révision, son ' +
+      'texte est illisible et il ne le redeviendra pas.',
     definitive: true,
   });
 
@@ -1638,6 +1996,8 @@ function prouverCorpsPublie(): number {
         revisionsLues: 1,
         revisionsAnnoncees: 1,
         lectureInachevee: false,
+        // Aucune révision illisible : ce témoin ne fait pas varier cette dimension-là.
+        revisionsIllisibles: [],
       },
       attendu: 1,
     },
@@ -1701,6 +2061,8 @@ function prouverCorpsPublie(): number {
         revisionsLues: 2,
         revisionsAnnoncees: 2,
         lectureInachevee: false,
+        // Aucune révision illisible : ce témoin ne fait pas varier cette dimension-là.
+        revisionsIllisibles: [],
       },
       exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
       attendu: 1,
@@ -1780,8 +2142,53 @@ function prouverCorpsPublie(): number {
         // FAUX à dessein : ce témoin doit rougir sur l'ÉCART, pas sur l'interruption.
         // Deux causes actives d'un coup, et il ne discriminerait plus ni l'une ni l'autre.
         lectureInachevee: false,
+        // Aucune révision illisible : ce témoin ne fait pas varier cette dimension-là.
+        revisionsIllisibles: [],
       },
       attendu: 2,
+    },
+    {
+      // LA TROISIÈME CAUSE (GOV-092, mesurée sur la PR #102 le 2026-09-23) : la forge ANNONCE
+      // la révision, en donne l'horodatage, et en sert un `diff` NUL — corps vidé, ou re-posté
+      // à l'identique. Sans ligne au registre, elle n'est PAS réputée propre.
+      famille: 'revisions_non_lues',
+      lecture: illisible([HORODATAGE_ILLISIBLE]),
+      attendu: 2,
+    },
+    {
+      // SANS `editedAt`, IL N'Y A AUCUN CHEMIN DE SORTIE, et c'est voulu : une exemption
+      // s'apparie sur l'horodatage EXACT, donc sans lui on ne sait pas DÉSIGNER la révision
+      // qu'on absoudrait. Le témoin porte une exemption BIEN formée sur l'autre horodatage :
+      // c'est ce qui prouve que ce n'est pas l'absence de registre qui le fait rougir.
+      famille: 'revisions_non_lues',
+      lecture: illisible([null]),
+      exemptions: [deRevision(HORODATAGE_ILLISIBLE)],
+      attendu: 2,
+    },
+    {
+      // UNE EXEMPTION DE RÉVISION MAL FORMÉE. `definitive` faux est refusé POUR CETTE FORME : un
+      // `diff` nul ne redeviendra pas un texte, et annoncer un report sur ce qui ne se referme
+      // jamais ferait relire cette ligne un jour comme une dette oubliée.
+      famille: 'exemption_malformee',
+      lecture: illisible([HORODATAGE_ILLISIBLE]),
+      exemptions: [{ ...deRevision(HORODATAGE_ILLISIBLE), definitive: false }],
+      attendu: 1,
+    },
+    {
+      // ⚠️ LA PASSOIRE QU'IL FALLAIT FERMER EN OUVRANT LA FORME LARGE : elle ne blanchit JAMAIS
+      // une révision LUE. Absoudre « la révision entière » d'un texte que la forge nous a DONNÉ
+      // reviendrait à autoriser n'importe quelle coordonnée par une ligne de trois champs.
+      famille: 'coordonnee_dans_une_revision',
+      lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
+      exemptions: [deRevision(HORODATAGE)],
+      attendu: 1,
+    },
+    {
+      // … et la ligne qui n'a rien absous ROUGIT, elle n'est pas silencieusement ignorée.
+      famille: 'exemption_sans_objet',
+      lecture: corps('aucune coordonnée dans cette révision', true),
+      exemptions: [deRevision(HORODATAGE_ILLISIBLE)],
+      attendu: 1,
     },
   ];
 
@@ -1795,6 +2202,20 @@ function prouverCorpsPublie(): number {
       quoi: 'une révision DÉCLARÉE, dont l’exemption s’apparie sur les TROIS clés',
       lecture: corps(`IBAN : ${IBAN_TEMOIN}`, true),
       exemptions: [exemptionPour(IBAN_TEMOIN, HORODATAGE, PR_TEMOIN)],
+    },
+    {
+      // LA MOITIÉ UTILE DE GOV-092 : sans elle, une PR dont le corps a été vidé une fois ne
+      // repasserait PLUS JAMAIS la porte A, et on apprendrait à sauter l'étape.
+      quoi: 'une révision ILLISIBLE déclarée au registre, sans empreinte — il n’y a aucun texte',
+      lecture: illisible([HORODATAGE_ILLISIBLE]),
+      exemptions: [deRevision(HORODATAGE_ILLISIBLE)],
+    },
+    {
+      // Une exemption de la forme LARGE écrite pour une AUTRE PR ne traverse pas, et ne rougit
+      // pas ici : elle n'a simplement pas été examinée sur cette PR-ci.
+      quoi: 'une exemption de révision d’une AUTRE PR : elle ne traverse pas, et ne rougit pas',
+      lecture: corps('rien à signaler'),
+      exemptions: [{ ...deRevision(HORODATAGE_ILLISIBLE), pr: PR_TEMOIN + 1 }],
     },
     {
       // Une exemption d'une AUTRE PR n'absout rien ici, et ne compte pas non plus comme sans
@@ -2552,6 +2973,24 @@ function prouver(): number {
       }),
     },
     {
+      // 🔴 LA RÉGRESSION MESURÉE LE 2026-09-22, ET SON TÉMOIN EN PORTE A.
+      // Les trois identifiants publics à la sentinelle — l'état d'une décision ROUVERTE, donc
+      // légitime — et un fichier de code qui porte le SIREN du registre. Sans ce témoin, la
+      // garde rend un vert pendant que les DEUX familles ont perdu leur cible. Le domaine servi
+      // reste au registre : le refus ne dit pas « le registre est vide », il dit « aucun
+      // identifiant APPARIABLE ».
+      famille: 'aucune_reference_publique',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'src/facturation/entete.ts',
+          contenu: `export const SIREN_EMETTEUR = '${REGISTRE_TEMOIN.entite.siren}';\n`,
+        });
+        u.registre.entite.siren = SENTINELLE;
+        u.registre.entite.siret = SENTINELLE;
+        u.registre.entite.tvaIntracommunautaire = SENTINELLE;
+      }),
+    },
+    {
       famille: 'point_de_sortie_sans_refus',
       univers: muter((u) => {
         u.fichiers.push({
@@ -2633,24 +3072,56 @@ function prouver(): number {
       }),
     });
   }
+  // ── « LES NÔTRES » CONTRE « LES TIERS » — LES DEUX FACES, DANS LE MODE DE PREUVE ──────────
+  //
+  // 🔴 CES DEUX TÉMOINS ONT CHANGÉ DE PORTEUR LE 2026-09-22, ET C'EST LE CORRECTIF LUI-MÊME.
+  // Ils exerçaient `TVA_TEMOIN_TIERS` et `SIREN_TEMOIN_TIERS` — les numéros d'un TIERS — et
+  // tenaient donc vert, à l'étape même de Gate A, le défaut mesuré sur `t/int-t09` : 448 refus
+  // sur 452 portaient sur des entreprises tierces rendues par une API publique. Le motif écrit
+  // de ce refus est RM-01, source unique de l'identité de LA SOCIÉTÉ : le porteur du témoin doit
+  // donc être NOUS. Les numéros de tiers, eux, deviennent des CONTRE-témoins, plus bas.
   TEMOINS.push({
-    // La TVA d'un TIERS, dans du CODE : elle doit être lue, jamais portée.
+    // NOTRE TVA, dans du CODE : elle doit être lue, jamais portée.
     famille: 'coordonnee_en_clair',
     univers: muter((u) => {
       u.fichiers.push({
-        chemin: 'src/facturation/fournisseur.ts',
-        contenu: `export const TVA_FOURNISSEUR = '${TVA_TEMOIN_TIERS}';\n`,
+        chemin: 'src/facturation/entete.ts',
+        contenu: `export const TVA_EMETTEUR = '${REGISTRE_TEMOIN.entite.tvaIntracommunautaire}';\n`,
       });
     }),
   });
   TEMOINS.push({
-    // Le SIREN d'un TIERS, dans du CODE. Le mot-clé est exigé : neuf chiffres nus sont trop
-    // souvent autre chose, et une forme nue produirait le bruit qui fait désarmer une garde.
+    // NOTRE SIREN, dans du CODE. Le mot-clé est exigé pour cette famille : neuf chiffres nus sont
+    // trop souvent autre chose, et une forme nue produirait le bruit qui fait désarmer une garde.
+    // Le numéro nu reste attrapé par `valeur_recopiee`, qui compare au registre sans mot-clé.
     famille: 'coordonnee_en_clair',
     univers: muter((u) => {
       u.fichiers.push({
         chemin: 'src/apporteur/structure.ts',
-        contenu: `export const structure = { siren: '${SIREN_TEMOIN_TIERS}' };\n`,
+        contenu: `export const structure = { siren: '${REGISTRE_TEMOIN.entite.siren}' };\n`,
+      });
+    }),
+  });
+  TEMOINS.push({
+    // ⚠️ LA CONTRAINTE ABSOLUE DU CORRECTIF, TENUE PAR UN TÉMOIN : nos propres identifiants
+    // n'ont rien à faire en dur MÊME DANS UNE FIXTURE. Un dépôt PUBLIC ne fait aucune différence
+    // entre un fichier de test et un autre. C'est le seul des 24 fichiers mesurés le 2026-09-22
+    // où la garde avait raison, et c'est ce que le remède ne devait surtout pas taire.
+    famille: 'valeur_recopiee',
+    univers: muter((u) => {
+      u.fichiers.push({
+        chemin: 'tests/fixtures/recherche-entreprises/21-organisme-de-formation.json',
+        contenu: `{ "siren": "${REGISTRE_TEMOIN.entite.siren}", "siret": "${REGISTRE_TEMOIN.entite.siret}" }\n`,
+      });
+    }),
+  });
+  TEMOINS.push({
+    // La même fixture, la même famille publique : notre SIRET, qui CONTIENT notre SIREN.
+    famille: 'coordonnee_en_clair',
+    univers: muter((u) => {
+      u.fichiers.push({
+        chemin: 'tests/fixtures/recherche-entreprises/21-organisme-de-formation.json',
+        contenu: `{ "siret": "${REGISTRE_TEMOIN.entite.siret}" }\n`,
       });
     }),
   });
@@ -2721,6 +3192,28 @@ function prouver(): number {
         u.fichiers.push({
           chemin: 'docs/spec/tiers.md',
           contenu: `Le fournisseur porte la TVA ${TVA_TEMOIN_TIERS} et le SIREN ${SIREN_TEMOIN_TIERS}.\n`,
+        });
+      }),
+    },
+    {
+      // LA SECONDE FACE, et elle compte autant que la première : sans elle, on aurait ouvert une
+      // porte au lieu d'affiner une règle. Un mandataire d'API publique ENREGISTRE ce que le
+      // tiers lui rend ; c'est la donnée LUE. Il n'existe pas de source unique de l'identité de
+      // DANONE dans ce dépôt — et c'est bien ce que la garde réclamait avant le 2026-09-22.
+      quoi: 'le SIREN et la TVA d’un TIERS dans un fichier de CODE — la donnée lue, pas une identité recopiée',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'src/server/integrations/recherche-entreprises/cas-enregistres.ts',
+          contenu: `export const cas = { siren: '${SIREN_TEMOIN_TIERS}', tva: '${TVA_TEMOIN_TIERS}' };\n`,
+        });
+      }),
+    },
+    {
+      quoi: 'le SIREN d’un TIERS enregistré comme FIXTURE depuis le producteur réel (RM-03)',
+      univers: muter((u) => {
+        u.fichiers.push({
+          chemin: 'tests/fixtures/recherche-entreprises/01-raison-sociale-exacte.json',
+          contenu: `{ "siren": "${SIREN_TEMOIN_TIERS}", "tva": "${TVA_TEMOIN_TIERS}" }\n`,
         });
       }),
     },
@@ -2813,7 +3306,10 @@ function prouver(): number {
   console.log(
     `   ${Object.keys(IBANS_TEMOINS_ETRANGERS).length} IBAN NON français rougissent aussi ` +
       `(${Object.keys(IBANS_TEMOINS_ETRANGERS).join(', ')}) : une fixture mono-pays ne prouve rien ` +
-      `de \`PAYS_ISO\`. Une TVA et un SIREN de TIERS rougissent dans du CODE, et restent verts en prose.`
+      `de \`PAYS_ISO\`. NOTRE TVA et NOTRE SIREN rougissent dans du CODE — fixture comprise, où ` +
+      `\`valeur_recopiee\` les attrape aussi ; ceux d'un TIERS restent verts en prose comme dans ` +
+      `un enregistrement d'API publique, SAUF s'ils contiennent l'un des nôtres. Et un registre ` +
+      `sans aucun identifiant appariable ROUGIT (\`aucune_reference_publique\`) au lieu de verdir.`
   );
   return 0;
 }
@@ -2916,10 +3412,17 @@ if (APPELE_DIRECTEMENT) {
     // regarde pas », et rien ne les sépare. On dit donc TOUJOURS ce qui a été lu.
     if (lecture.lu) {
       const courant = lecture.corps.find((c) => !c.revision);
+      // ⚠️ LES ILLISIBLES SONT DITES À PART (GOV-092). Elles sont la différence entre le compte
+      // annoncé et le compte lu, et tant qu'elles restaient muettes le lecteur n'avait aucun
+      // moyen de savoir si l'écart venait de la forge ou de la borne de pagination.
+      const illisibles = lecture.revisionsIllisibles.length;
       console.log(
         `   lu : corps courant ${courant?.texte.length ?? 0} octet(s), ` +
-          `${lecture.revisionsLues}/${lecture.revisionsAnnoncees} révision(s) d'édition, ` +
-          `${lecture.corps.reduce((n, c) => n + c.texte.length, 0)} octet(s) au total.`
+          `${lecture.revisionsLues}/${lecture.revisionsAnnoncees} révision(s) d'édition` +
+          (illisibles > 0
+            ? ` (dont ${illisibles} servie(s) sans \`diff\` ou sans \`editedAt\`, donc ILLISIBLE(S))`
+            : '') +
+          `, ${lecture.corps.reduce((n, c) => n + c.texte.length, 0)} octet(s) au total.`
       );
     }
 
@@ -2941,8 +3444,15 @@ if (APPELE_DIRECTEMENT) {
             `referment jamais (\`${CHEMIN_EXEMPTIONS}\`).`
         );
         for (const e of servies) {
+          // La forme large se DIT comme telle : « RÉVISION ENTIÈRE » n'est pas la même dette
+          // qu'une coordonnée nommée, et un lecteur qui relit ce vert doit pouvoir les séparer
+          // sans ouvrir le registre.
+          const grain =
+            e.empreinte === undefined
+              ? 'RÉVISION ENTIÈRE (illisible, `diff` nul)'
+              : `empreinte ${e.empreinte.slice(0, 12)}…`;
           console.log(
-            `      • PR #${e.pr}, révision ${e.revision}, empreinte ${e.empreinte.slice(0, 12)}… — ` +
+            `      • PR #${e.pr}, révision ${e.revision}, ${grain} — ` +
               `déclarée le ${e.declaree} par ${e.par}${e.definitive ? ' (DÉFINITIVE)' : ''}\n` +
               `        ${e.motif}`
           );
@@ -2990,8 +3500,11 @@ if (APPELE_DIRECTEMENT) {
         `${arretes} arrêté(s) et attesté(s) par leur ligne de décision, ${attente.length} à la ` +
         `sentinelle, ${secrets.length} secret(s) qui ne prennent jamais d'autre valeur ici. ` +
         `${univers.fichiers.length} fichier(s) suivi(s) lu(s) en entier, ${CODES_PAYS.length} codes ` +
-        `de région dérivés de l'ICU du runtime : aucune coordonnée reconnue par la forme, aucune ` +
-        `valeur recopiée, aucun point de sortie sans refus.\n   ⚠️ ${LIMITE_DE_LA_FORME}`
+        `de région dérivés de l'ICU du runtime, ` +
+        `${identifiantsApparriables(univers.registre).length} identifiant(s) du registre confronté(s) ` +
+        `à chacun : aucune coordonnée reconnue par la forme, aucune ` +
+        `valeur recopiée, aucun point de sortie sans refus.\n   ⚠️ ${LIMITE_DE_LA_FORME}` +
+        `\n   ⚠️ ${PORTEE_DES_NUMEROS_PUBLICS}`
     );
     console.log(
       `   ⚠️ Cette garde n'AUTORISE pas la mise en service pour autant : ` +

@@ -135,7 +135,7 @@ function shaResout(jeton: string): boolean {
   if (!FORME_SHA.test(jeton)) return false;
   const memo = shasResolus.get(jeton);
   if (memo !== undefined) return memo;
-  let ok = false;
+  let ok: boolean;
   try {
     execFileSync('git', ['rev-parse', '--verify', '--quiet', `${jeton}^{commit}`], {
       stdio: 'pipe',
@@ -159,7 +159,7 @@ function shaResout(jeton: string): boolean {
  */
 function shasParPortee(): Record<string, string[]> {
   const out: Record<string, string[]> = {};
-  let journal = '';
+  let journal: string;
   try {
     journal = execFileSync('git', ['log', '--format=%H%x09%s'], { encoding: 'utf8' });
   } catch {

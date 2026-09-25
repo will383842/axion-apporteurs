@@ -34,7 +34,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { FAMILLES_ATTESTATION } from '../../../scripts/lot/attestation';
+import { FAMILLES as FAMILLES_TASKS } from '../../../scripts/gates/gov-tasks';
 import { FAMILLES as FAMILLES_REQUIREMENTS } from '../../../scripts/gates/gov-requirements';
 
 function lancer(script: string, ...args: string[]): { code: number; sortie: string } {
@@ -43,16 +43,21 @@ function lancer(script: string, ...args: string[]): { code: number; sortie: stri
 }
 
 const GARDES = [
-  { nom: 'gov:publication', script: 'scripts/gates/gov-publication.ts', familles: 7 },
-  // Les 12 familles d'origine de `gov:tasks`, plus celles de l'attestation inter-dépôt (GOV-038).
-  // La seconde moitié est DÉRIVÉE de son module : recopier « 19 » ici aurait fait de ce fichier la
-  // deuxième source d'un même compte, et c'est le compte qui sert justement à détecter la perte
-  // silencieuse d'une famille. Le 12 reste écrit — il n'a pas de source importable, la liste vivant
-  // dans un script à effets de bord au chargement.
+  {
+    nom: 'gov:publication',
+    exigences: 'REQ-GOV-031 — ',
+    script: 'scripts/gates/gov-publication.ts',
+    familles: 7,
+  },
+  // Les familles de `gov:tasks`, y compris celles de l'attestation inter-dépôt (GOV-038) et du
+  // couple état/opération (GOV-086). Le compte ENTIER est DÉRIVÉ de `FAMILLES` : la liste est
+  // importable depuis que la garde vit sous `LANCE_EN_SCRIPT`, et un nombre tapé ici aurait fait de
+  // ce fichier la deuxième source d'un compte qui sert à détecter la perte silencieuse d'une famille.
   {
     nom: 'gov:tasks',
+    exigences: '',
     script: 'scripts/gates/gov-tasks.ts',
-    familles: 12 + FAMILLES_ATTESTATION.length,
+    familles: FAMILLES_TASKS.length,
   },
   // Le « 11 » qui vivait ici était TAPÉ, pour la raison que le commentaire ci-dessus regrette :
   // `gov-requirements.ts` avait des effets de bord au chargement, donc sa liste de familles n'était
@@ -60,20 +65,29 @@ const GARDES = [
   // source, et l'ajout de cinq familles n'a plus à être recopié dans un second fichier (RM-01).
   {
     nom: 'gov:requirements',
+    exigences: 'REQ-GOV-001 — ',
     script: 'scripts/gates/gov-requirements.ts',
     familles: FAMILLES_REQUIREMENTS.length,
   },
-  { nom: 'gov:hypotheses', script: 'scripts/gates/gov-hypotheses.ts', familles: 10 },
+  {
+    nom: 'gov:hypotheses',
+    exigences: 'REQ-GOV-015 · REQ-GOV-003 — ',
+    script: 'scripts/gates/gov-hypotheses.ts',
+    familles: 10,
+  },
 ];
+// `exigences` : ce que le témoin `--prove` de la garde prouve, écrit dans le TITRE du `it()`
+// (REQ-QA-014 : l'identifiant dans le titre du test lui-même, pas dans son `describe`). Le titre
+// est un gabarit : l'identifiant s'y lit RÉSOLU, par vitest.
 
-describe.each(GARDES)('$nom', ({ script, familles }) => {
+describe.each(GARDES)('$nom', ({ script, familles, exigences }) => {
   it('est verte sur l’état du dépôt', () => {
     const { code, sortie } = lancer(script);
     expect(sortie).toContain('✅');
     expect(code).toBe(0);
   });
 
-  it(`sait rougir : ses ${familles} familles ont chacune un témoin`, () => {
+  it(`${exigences}sait rougir : ses ${familles} familles ont chacune un témoin`, () => {
     const { code, sortie } = lancer(script, '--prove');
     expect(code).toBe(0);
     expect(sortie).toContain(`Les ${familles} familles rougissent`);
@@ -118,7 +132,7 @@ describe("gov:identifiants — citer n'est pas se servir", () => {
     expect(code).toBe(0);
   });
 
-  it('sait rougir : 3 témoins et 10 contre-témoins', () => {
+  it('REQ-GOV-003 — sait rougir : 3 témoins et 10 contre-témoins', () => {
     // Les contre-témoins comptent autant que les témoins ici : la garde a d'abord rougi sur
     // CINQ occurrences qui étaient sa propre documentation (« conforme à D3 » cité comme
     // contre-exemple), et sur les quinze codes de poste des agents (A01…A15).

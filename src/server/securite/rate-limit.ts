@@ -1,0 +1,527 @@
+/**
+ * Les compteurs de débit, et leur conduite quand le cache tombe. (SEC-10, REQ-SEC-016)
+ *
+ * UN COMPTEUR N'EXISTE QUE DÉCLARÉ ICI. `COMPTEURS` est le registre unique : un compteur écrit
+ * ailleurs, sous un nom calculé ou sous un préfixe hors des cinq familles fait rougir
+ * `scripts/gates/rate-famille.ts`. Chaque déclaration porte sa conduite sur panne, REQUISE par
+ * le type — aucun `?`, aucun défaut : un prédicat optionnel à défaut ouvert échoue ouvert, et
+ * c'est ce que cette bibliothèque ferme. La garde la revérifie, parce qu'un type se contourne.
+ *
+ * LE SUJET D'UN COMPTEUR EST UNE EMPREINTE, jamais une valeur. Une adresse de courriel ou une
+ * adresse réseau en clair dans une clé du cache est une donnée personnelle hors de la base ; le
+ * type marqué l'empêche, le constructeur la refuse. Ce module ne hache rien.
+ *
+ * UNE PANNE EST RAPIDE, SUIT LA CONDUITE DÉCLARÉE, ET SE DIT. Le client est bâti sans file hors
+ * ligne, sans nouvelle tentative et avec des délais bornés : un cache tombé rend une erreur, il ne
+ * suspend pas la requête. Le verdict porte `panne: true` et son motif, et chaque panne est signalée
+ * par son PRÉFIXE seul — la clé porte l'empreinte, elle ne sort pas.
+ *
+ * LES LIMITES SONT CELLES DES EXIGENCES, avec leur source. Une limite qu'aucune exigence ne chiffre
+ * ne s'invente pas : elle attend sa configuration, et en attendant le compteur refuse.
+ */
+
+import { randomUUID } from 'node:crypto';
+import Redis, { type RedisOptions } from 'ioredis';
+
+// ── Le vocabulaire fermé ────────────────────────────────────────────────────────────────────────
+
+/** Les cinq familles de REQ-SEC-016. Un sixième préfixe passe par l'exigence, pas par ce fichier. */
+export const PREFIXES_DE_FAMILLE = ['magic:', 'depot:', 'verif:', 'webhook:', 'auth:'] as const;
+export type PrefixeDeFamille = (typeof PREFIXES_DE_FAMILLE)[number];
+
+/** Les deux conduites possibles quand le cache ne répond pas. Il n'y en a pas de troisième. */
+export const CONDUITES_SUR_PANNE = ['refuser', 'laisser-passer'] as const;
+export type ConduiteSurPanne = (typeof CONDUITES_SUR_PANNE)[number];
+
+/**
+ * La marque d'une limite qu'aucune exigence ne chiffre : elle attend une configuration. Tant
+ * qu'aucune ne la fournit, le compteur répond comme en panne, sous sa conduite déclarée, avec le
+ * motif `limite_non_configuree`. Une limite qui n'est écrite nulle part ne s'invente pas ici.
+ */
+export const LIMITE_HORS_DEPOT = 'hors-depot' as const;
+
+export interface DeclarationDeCompteur {
+  readonly prefixe: PrefixeDeFamille;
+  readonly limite: number | typeof LIMITE_HORS_DEPOT;
+  readonly fenetreSecondes: number | typeof LIMITE_HORS_DEPOT;
+  readonly surPanne: ConduiteSurPanne;
+  readonly source: `REQ-${string}`;
+  /**
+   * Le segment du texte de l'exigence qui DÉSIGNE ce compteur. La garde y lit la limite, la
+   * fenêtre et la conduite exigées, et les confronte à la déclaration.
+   */
+  readonly ancre: string;
+  /** RM-10 : la date (AAAA-MM-JJ) à laquelle la valeur a été confrontée à sa source. */
+  readonly verifieLe: `${number}-${number}-${number}`;
+}
+
+// ── Le registre ─────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Le registre unique. Le nom d'un compteur commence par son préfixe ; la clé du cache est
+ * `${nom}:${sujet}`, rien d'autre.
+ */
+export const COMPTEURS = {
+  'magic:ip': {
+    prefixe: 'magic:',
+    limite: 10,
+    fenetreSecondes: 900,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-002',
+    ancre: 'par hash IP',
+    verifieLe: '2026-09-19',
+  },
+  'magic:courriel': {
+    prefixe: 'magic:',
+    limite: 5,
+    fenetreSecondes: 900,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-002',
+    ancre: 'par email',
+    verifieLe: '2026-09-19',
+  },
+  'depot:ip': {
+    prefixe: 'depot:',
+    limite: 20,
+    fenetreSecondes: 600,
+    surPanne: 'laisser-passer',
+    source: 'REQ-SEC-016',
+    ancre: 'par hash IP',
+    verifieLe: '2026-09-19',
+  },
+  'depot:identite': {
+    prefixe: 'depot:',
+    limite: LIMITE_HORS_DEPOT,
+    fenetreSecondes: LIMITE_HORS_DEPOT,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-016',
+    ancre: 'par identité',
+    verifieLe: '2026-09-19',
+  },
+  // INT-T09 — le mandataire de recherche d'entreprises, un geste du dépôt.
+  //
+  // ⚠️ CE COMMENTAIRE A DIT LE CONTRAIRE JUSQU'AU 2026-09-23, et sa condition est levée : il
+  // annonçait que REQ-INT-020 et REQ-SEC-013 n'écrivaient ni la conduite sur panne après leur
+  // ancre, ni la limite sous la forme que la garde lit avant elle, et que `rate-famille` les
+  // refuserait « tant que le gardien de la spécification n'a pas amendé ces deux textes ». Il les
+  // a amendés, à VALEUR CONSTANTE : `5 / 1 s` et `120 / 86400 s` sont la mise en forme de ce que
+  // la prose disait déjà (« limiteur global 5 req/s », « par identité (120/j) »).
+  //
+  // 🔑 Et le chiffre manquant n'était PAS l'obstacle : `exigenceDuCompteur` rend `null` dès
+  // l'absence de `surPanne:` après l'ancre, et retombe sur la SENTINELLE hors dépôt quand la
+  // limite, elle, n'est chiffrée nulle part. `depot:entreprise-ip` est donc entré ici SANS qu'aucun
+  // plafond soit inventé, et la question de le chiffrer a été posée à Will plutôt que tranchée.
+  // ✅ Elle l'est depuis le 2026-09-23 : voir le plafond arbitré plus bas.
+  //
+  // Les conduites ci-dessous se dérivent des textes : la plus fermée pour le débit global et
+  // l'identité — `laisser-passer` y annulerait le plafond exactement quand il sert, et le parcours
+  // bascule de toute façon en saisie manuelle, donc le dépôt n'est jamais bloqué — et
+  // `laisser-passer` pour l'IP, où la sentinelle répond toujours « comme en panne » : `refuser` y
+  // bloquerait l'autocomplétion en permanence.
+  'depot:entreprise-global': {
+    prefixe: 'depot:',
+    limite: 5,
+    fenetreSecondes: 1,
+    surPanne: 'refuser',
+    source: 'REQ-INT-020',
+    ancre: 'limiteur global',
+    verifieLe: '2026-09-19',
+  },
+  'depot:entreprise-identite': {
+    prefixe: 'depot:',
+    limite: 120,
+    fenetreSecondes: 86_400,
+    surPanne: 'refuser',
+    source: 'REQ-SEC-013',
+    ancre: 'par identité',
+    verifieLe: '2026-09-19',
+  },
+  // 🔑 Le plafond par IP a été ARBITRÉ le 2026-09-23 (`HYP-SEC-IP-AUTOCOMPLETION`), après avoir
+  // vécu à la sentinelle hors dépôt — c'est-à-dire sans opposer aucune limite. Trois mesures le
+  // bornent : le tiers plafonne déjà à 7 req/s par IP (25 200/h), donc 600/h est le contraignant ;
+  // une IP est partagée et le plafond par identité vaut 120/24 h, donc 600/h laisse cinq apporteurs
+  // consommer leur journée entière dans la même heure ; et le plafond voisin de REQ-SEC-016
+  // (20 / 10 min) garde un geste RARE, quand celui-ci garde une salve de frappe.
+  // ⚠️ Le nombre est un CHOIX borné par ces trois mesures, pas une dérivation. Réversible par
+  // paramètre, et le registre des décisions le dit.
+  'depot:entreprise-ip': {
+    prefixe: 'depot:',
+    limite: 600,
+    fenetreSecondes: 3600,
+    surPanne: 'laisser-passer',
+    source: 'REQ-SEC-013',
+    ancre: 'par hash IP',
+    verifieLe: '2026-09-19',
+  },
+} as const satisfies Readonly<Record<`${PrefixeDeFamille}${string}`, DeclarationDeCompteur>>;
+
+/** Une faute de frappe dans le nom d'un compteur ne compile pas. */
+export type NomDeCompteur = keyof typeof COMPTEURS;
+
+// ── Le sujet : une empreinte, jamais une valeur ─────────────────────────────────────────────────
+
+declare const marqueDeSujet: unique symbol;
+export type SujetDeCompteur = string & { readonly [marqueDeSujet]: 'SujetDeCompteur' };
+
+const EMPREINTE = /^(?:[0-9a-f]{16}|[0-9a-f]{64})$/;
+
+/**
+ * Le seul constructeur d'un sujet : 16 ou 64 hexadécimaux minuscules. Le refus ne recopie JAMAIS
+ * la valeur reçue — si c'était un courriel, le message d'erreur le ferait fuir dans les journaux.
+ */
+export function sujetDepuisEmpreinte(hex: string): SujetDeCompteur {
+  if (!EMPREINTE.test(hex)) {
+    throw new Error(
+      'sujet_non_empreinte : le sujet d’un compteur est une empreinte de 16 ou 64 hexadécimaux ' +
+        'minuscules ; une valeur en clair n’entre jamais dans une clé du cache'
+    );
+  }
+  return hex as SujetDeCompteur;
+}
+
+// ── Le magasin : un port ────────────────────────────────────────────────────────────────────────
+
+export interface ResultatDuMagasin {
+  readonly admis: boolean;
+  /** Le nombre d'entrées dans la fenêtre APRÈS l'appel. */
+  readonly compte: number;
+  /** L'horodatage (ms) de l'entrée la plus ancienne de la fenêtre, `null` si elle est vide. */
+  readonly plusAncienMs: number | null;
+}
+
+/**
+ * Fenêtre glissante par journal : retirer ce qui est sorti de la fenêtre, compter, ajouter le
+ * membre SEULEMENT s'il reste de la place, renouveler l'expiration. Un refus n'ajoute rien.
+ */
+export type ConsommerDuMagasin = (
+  cle: string,
+  maintenantMs: number,
+  fenetreMs: number,
+  limite: number,
+  membre: string
+) => Promise<ResultatDuMagasin>;
+
+/**
+ * Le magasin, OPAQUE. Sa fonction d'écriture n'est pas une propriété : elle vit dans une table
+ * privée de ce module, et seul `limiter` l'appelle. Un magasin réel entre les mains d'un autre
+ * module ne peut donc pas écrire une clé libre — un compteur hors du registre, une valeur en
+ * clair, une clé sans conduite sur panne.
+ */
+declare const marqueDeMagasin: unique symbol;
+export interface MagasinDeCompteurs {
+  readonly [marqueDeMagasin]: 'MagasinDeCompteurs';
+}
+
+const ECRIVAINS = new WeakMap<object, ConsommerDuMagasin>();
+
+function enregistrer<T extends object>(magasin: T, consommer: ConsommerDuMagasin): T {
+  ECRIVAINS.set(Object.freeze(magasin), consommer);
+  return magasin;
+}
+
+/**
+ * DÉFENSE EN PROFONDEUR : une fabrique qui accepte une fonction d'écriture arbitraire peut bâtir un
+ * magasin qui admet tout. Elle REFUSE donc de s'exécuter hors des tests, quoi que la garde de
+ * famille ait vu ou pas vu des chemins par lesquels on l'atteint.
+ */
+function enContexteDeTest(): boolean {
+  return process.env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+}
+
+function exigerUnContexteDeTest(fabrique: string): void {
+  if (enContexteDeTest()) return;
+  throw new Error(
+    `fabrique_hors_tests : ${fabrique} ne fabrique un magasin que sous les tests ; en production, ` +
+      'le seul magasin est celui du registre'
+  );
+}
+
+/** Un magasin bâti sur une fonction d'écriture fournie : les témoins, et le magasin en mémoire. */
+export function magasinDepuis(consommer: ConsommerDuMagasin): MagasinDeCompteurs {
+  exigerUnContexteDeTest('magasinDepuis');
+  return enregistrer({}, consommer) as unknown as MagasinDeCompteurs;
+}
+
+export interface MagasinEnPanne {
+  readonly magasin: MagasinDeCompteurs;
+  /** Le nombre d'écritures qu'il a reçues, et toutes ont levé. */
+  appels(): number;
+}
+
+/**
+ * Un magasin qui LÈVE à chaque écriture, et qui les compte. Il rend la conduite déclarée de chaque
+ * compteur — donc un compteur `laisser-passer` y ADMET TOUT. C'est pourquoi il ne se construit,
+ * comme toute fabrique, que sous les tests.
+ */
+export function magasinEnPanne(): MagasinEnPanne {
+  exigerUnContexteDeTest('magasinEnPanne');
+  let appels = 0;
+  const magasin = enregistrer({}, () => {
+    appels += 1;
+    return Promise.reject(new Error('cache indisponible (magasin en panne)'));
+  }) as unknown as MagasinDeCompteurs;
+  return { magasin, appels: () => appels };
+}
+
+/**
+ * Le même algorithme, ATOMIQUE : un script exécuté d'un seul tenant par le cache. Une suite de
+ * commandes envoyées l'une après l'autre laisse deux requêtes concurrentes lire le même compte.
+ */
+const SCRIPT_FENETRE_GLISSANTE = `
+local cle = KEYS[1]
+local maintenant = tonumber(ARGV[1])
+local fenetre = tonumber(ARGV[2])
+local limite = tonumber(ARGV[3])
+redis.call('ZREMRANGEBYSCORE', cle, '-inf', maintenant - fenetre)
+local compte = redis.call('ZCARD', cle)
+local admis = 0
+if compte < limite then
+  redis.call('ZADD', cle, maintenant, ARGV[4])
+  compte = compte + 1
+  admis = 1
+end
+redis.call('PEXPIRE', cle, fenetre)
+local plusAncien = redis.call('ZRANGE', cle, 0, 0, 'WITHSCORES')
+return {admis, compte, plusAncien[2] or '-1'}
+`;
+
+/**
+ * Les options qui rendent une panne RAPIDE. Par défaut, le client retente sans fin et met les
+ * commandes en file hors ligne : un cache tombé ne rend alors pas d'erreur, il suspend la requête,
+ * ce qui est pire que les deux conduites. Le pire cas est un serveur qui accepte puis se tait : la
+ * connexion (`connectTimeout`) puis la vérification d'état (`commandTimeout`) s'ajoutent, et les
+ * commandes d'identification du client, qui en ajouteraient une troisième, ne sont pas envoyées.
+ */
+export const OPTIONS_DU_CLIENT = {
+  lazyConnect: true,
+  enableOfflineQueue: false,
+  maxRetriesPerRequest: 0,
+  connectTimeout: 300,
+  commandTimeout: 500,
+  disableClientInfo: true,
+  retryStrategy: () => null,
+} as const satisfies RedisOptions;
+
+export interface MagasinRedis extends MagasinDeCompteurs {
+  fermer(): void;
+}
+
+/**
+ * Une `REDIS_URL` que le client ne sait pas lire. Le refus est NOMMÉ et ne porte ni la valeur ni
+ * l'erreur d'origine : celle-ci recopie l'URL entière, mot de passe compris.
+ */
+function adresseIllisible(): Error {
+  return new Error(
+    'redis_url_illisible : REDIS_URL ne se lit pas comme une adresse de cache (valeur non recopiée)'
+  );
+}
+
+/**
+ * Le magasin réel. Aucune connexion n'est ouverte à la construction : la première se fait au
+ * premier appel, et une connexion perdue se rouvre à l'appel suivant — jamais en tâche de fond.
+ */
+export function creerMagasinRedis(url: string, options: RedisOptions): MagasinRedis {
+  exigerUnContexteDeTest('creerMagasinRedis');
+  return ouvrirMagasinRedis(url, options);
+}
+
+/** Le magasin Redis du registre : le seul que la production construit, par `REDIS_URL`. */
+function ouvrirMagasinRedis(url: string, options: RedisOptions): MagasinRedis {
+  let client: Redis;
+  try {
+    client = new Redis(url, options);
+  } catch {
+    throw adresseIllisible();
+  }
+  // Chaque panne est déjà signalée, par son préfixe, au verdict qui la subit. Sans écouteur, le
+  // client imprimerait en plus la sienne, avec l'adresse du cache, à chaque tentative.
+  client.on('error', () => undefined);
+  let connexion: Promise<void> | null = null;
+
+  // La connexion échoue à la PREMIÈRE erreur. Contre un serveur qui accepte puis se tait, la
+  // promesse du client n'aboutit qu'à la fermeture du socket par le pair — c'est-à-dire jamais.
+  const pret = async (): Promise<void> => {
+    if (client.status === 'wait' || client.status === 'end') {
+      let echec: (e: Error) => void = () => undefined;
+      connexion ??= new Promise<void>((resoudre, rejeter) => {
+        echec = rejeter;
+        client.once('error', echec);
+        client.connect().then(resoudre, rejeter);
+      }).finally(() => {
+        client.removeListener('error', echec);
+        connexion = null;
+      });
+    }
+    if (connexion !== null) await connexion;
+  };
+
+  const consommer: ConsommerDuMagasin = async (cle, maintenantMs, fenetreMs, limite, membre) => {
+    await pret();
+    const brut = await client.eval(
+      SCRIPT_FENETRE_GLISSANTE,
+      1,
+      cle,
+      maintenantMs,
+      fenetreMs,
+      limite,
+      membre
+    );
+    if (!Array.isArray(brut) || brut.length !== 3) {
+      throw new Error('rate-limit : réponse du cache illisible');
+    }
+    const plusAncien = Number(brut[2]);
+    return {
+      admis: Number(brut[0]) === 1,
+      compte: Number(brut[1]),
+      plusAncienMs: plusAncien < 0 ? null : plusAncien,
+    };
+  };
+  const magasin = {
+    fermer() {
+      client.disconnect();
+    },
+  };
+  return enregistrer(magasin, consommer) as unknown as MagasinRedis;
+}
+
+/** Le magasin d'un processus sans `REDIS_URL` : chaque appel est une panne, jamais un plantage. */
+const MAGASIN_SANS_ADRESSE = enregistrer({}, () =>
+  Promise.reject(new Error('rate-limit : REDIS_URL absente'))
+) as unknown as MagasinDeCompteurs;
+
+/** Le magasin d'une `REDIS_URL` illisible : une panne aussi, et le refus ne porte pas la valeur. */
+const MAGASIN_ADRESSE_ILLISIBLE = enregistrer({}, () =>
+  Promise.reject(adresseIllisible())
+) as unknown as MagasinDeCompteurs;
+
+let magasinDuProcessus: MagasinRedis | null = null;
+
+/** `REDIS_URL` est lue au premier appel, jamais à l'import. */
+function magasinParDefaut(): MagasinDeCompteurs {
+  if (magasinDuProcessus !== null) return magasinDuProcessus;
+  const url = process.env.REDIS_URL;
+  if (url === undefined || url === '') return MAGASIN_SANS_ADRESSE;
+  try {
+    magasinDuProcessus = ouvrirMagasinRedis(url, OPTIONS_DU_CLIENT);
+  } catch {
+    return MAGASIN_ADRESSE_ILLISIBLE;
+  }
+  return magasinDuProcessus;
+}
+
+// ── Le verdict ──────────────────────────────────────────────────────────────────────────────────
+
+export type MotifDeVerdict =
+  'admis' | 'limite_atteinte' | 'cache_indisponible' | 'limite_non_configuree';
+
+export interface VerdictDeLimite {
+  readonly autorise: boolean;
+  readonly restant: number;
+  /** Quand une place se libère (ms), si l'appel est refusé par la limite ; `null` sinon. */
+  readonly repriseAt: number | null;
+  /** L'appelant distingue « trop de tentatives » de « le compteur est aveugle ». */
+  readonly panne: boolean;
+  readonly motif: MotifDeVerdict;
+}
+
+export interface SignalDePanne {
+  readonly prefixe: string;
+  readonly motif: 'cache_indisponible' | 'limite_non_configuree';
+}
+
+export type Signaleur = (signal: SignalDePanne) => void;
+
+/** Le puits de phase 0 : une ligne JSON sur la sortie d'erreur. Le préfixe, jamais la clé. */
+export const signalerSurStderr: Signaleur = (signal) => {
+  process.stderr.write(
+    `${JSON.stringify({ signal: 'rate_limit_panne', prefixe: signal.prefixe, motif: signal.motif })}\n`
+  );
+};
+
+/**
+ * La conduite d'une déclaration, lue en ÉCHEC FERMÉ : tout ce qui n'est pas exactement
+ * `laisser-passer` refuse — y compris une conduite absente qu'un cast aurait fait passer.
+ */
+export function conduiteSurPanne(declaration: { readonly surPanne?: unknown }): ConduiteSurPanne {
+  return declaration.surPanne === 'laisser-passer' ? 'laisser-passer' : 'refuser';
+}
+
+function enPanne(
+  declaration: DeclarationDeCompteur,
+  motif: SignalDePanne['motif'],
+  signaler: Signaleur
+): VerdictDeLimite {
+  signaler({ prefixe: declaration.prefixe, motif });
+  return {
+    autorise: conduiteSurPanne(declaration) === 'laisser-passer',
+    restant: 0,
+    repriseAt: null,
+    panne: true,
+    motif,
+  };
+}
+
+/**
+ * La marque du magasin par défaut. Un paramètre omis (ou `undefined`) prend cette valeur : c'est
+ * ce qui distingue, à l'exécution, le magasin du registre d'un magasin INJECTÉ par l'appelant.
+ */
+const MAGASIN_DU_REGISTRE = enregistrer({}, () =>
+  Promise.reject(new Error('rate-limit : la marque du magasin par défaut ne s’écrit pas'))
+) as unknown as MagasinDeCompteurs;
+
+/**
+ * Compte un appel du sujet sous le compteur nommé. L'heure est un PARAMÈTRE : ce module ne lit
+ * aucune horloge. Toute panne du magasin — levée, délai, réponse illisible, adresse absente —
+ * rend la conduite déclarée du compteur, avec `panne: true`.
+ *
+ * DÉFENSE EN PROFONDEUR : hors des tests, un magasin ou un signaleur fourni par l'appelant est
+ * REFUSÉ (`injection_hors_tests`). En production, seuls le magasin et le signaleur du registre
+ * servent, quel que soit le chemin par lequel on a atteint cette fonction.
+ */
+export async function limiter(
+  nom: NomDeCompteur,
+  sujet: SujetDeCompteur,
+  maintenantMs: number,
+  magasinFourni: MagasinDeCompteurs = MAGASIN_DU_REGISTRE,
+  signaler: Signaleur = signalerSurStderr
+): Promise<VerdictDeLimite> {
+  if (
+    (magasinFourni !== MAGASIN_DU_REGISTRE || signaler !== signalerSurStderr) &&
+    !enContexteDeTest()
+  ) {
+    throw new Error(
+      'injection_hors_tests : hors des tests, limiter ne reçoit ni magasin ni signaleur ; ' +
+        'ceux du registre servent seuls'
+    );
+  }
+  const magasin = magasinFourni === MAGASIN_DU_REGISTRE ? magasinParDefaut() : magasinFourni;
+  const declaration: DeclarationDeCompteur = COMPTEURS[nom];
+  // Revérifié à l'exécution : un cast ferait entrer n'importe quelle chaîne dans la clé.
+  const empreinte = sujetDepuisEmpreinte(sujet);
+  const { limite, fenetreSecondes } = declaration;
+  if (limite === LIMITE_HORS_DEPOT || fenetreSecondes === LIMITE_HORS_DEPOT) {
+    return enPanne(declaration, 'limite_non_configuree', signaler);
+  }
+  const fenetreMs = fenetreSecondes * 1000;
+  const consommer = ECRIVAINS.get(magasin);
+  if (consommer === undefined) return enPanne(declaration, 'cache_indisponible', signaler);
+  let resultat: ResultatDuMagasin;
+  try {
+    resultat = await consommer(
+      `${nom}:${empreinte}`,
+      maintenantMs,
+      fenetreMs,
+      limite,
+      randomUUID()
+    );
+  } catch {
+    return enPanne(declaration, 'cache_indisponible', signaler);
+  }
+  return {
+    autorise: resultat.admis,
+    restant: Math.max(0, limite - resultat.compte),
+    repriseAt: resultat.admis ? null : (resultat.plusAncienMs ?? maintenantMs) + fenetreMs,
+    panne: false,
+    motif: resultat.admis ? 'admis' : 'limite_atteinte',
+  };
+}

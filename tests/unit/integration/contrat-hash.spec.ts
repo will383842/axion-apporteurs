@@ -5,7 +5,7 @@
  * @req REQ-INT-004
  * @req REQ-INT-029
  * @req REQ-QA-007
- * @req REQ-GOV-020
+ * @req REQ-GOV-020 → REQ-QA-007
  *
  * C'est le test que `docs/tasks.json` déclare pour INT-T01a sur ses cinq exigences, et le script
  * que `docs/gates.json` inscrit sous la garde `partners:contrat:hash`.

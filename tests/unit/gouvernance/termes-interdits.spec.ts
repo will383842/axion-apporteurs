@@ -1,14 +1,17 @@
 // @req REQ-DM-003
 // @req REQ-INT-004
+// @req REQ-GOV-016
+// @req REQ-INT-003
+// @req REQ-DM-036
 /**
- * `termes-interdits.spec.ts` — le contrôle de la garde `gov:check` (GOV-030).
+ * `termes-interdits.spec.ts` — le contrôle de la garde `gov:termes-interdits` (GOV-030, puis GOV-088).
  *
  * CE QU'IL EXERCE :
  *   1. les DÉRIVATIONS (RM-01) : types, modèles refusés, synonymes et racines se LISENT dans leurs
  *      sources, et les fixtures de la preuve sont assérées ÉGALES aux sources réelles ;
  *   2. la famille `liste_litterale_d_etats` (REQ-DM-003, `partners/ADR-0011`) : une seule
  *      implémentation, une portée qui est une RACINE et jamais une extension, une lecture confrontée
- *      à git, et la conclusion « hors famille » de `gov:check` dérivée du même prédicat ;
+ *      à git, et la conclusion « hors famille » de la garde dérivée du même prédicat ;
  *   3. ce que les deux gardes ont RÉELLEMENT LU — chemin, et contenu PAR EMPREINTE — confronté à une
  *      lecture indépendante (`git ls-files`, octets relus sur le disque dans le test), sur une population
  *      générée, sur le dépôt réel et sur des dépôts jetables, jusqu'à la DERNIÈRE ligne d'un fichier de
@@ -16,7 +19,12 @@
  *   4. la LIGNE : LF la termine, et toute autre fin de ligne qu'un consommateur coupe est refusée ;
  *      l'exemption de citation se lit sur la DERNIÈRE extension du nom ;
  *   5. les DÉCISIONS de `--prove` et de la garde, fonctions pures : la population (familles, refus,
- *      extensions qui citent, témoins) vient du SEUL registre, et chaque retrait y est nommé.
+ *      extensions qui citent, témoins) vient du SEUL registre, et chaque retrait y est nommé ;
+ *   6. GOV-088 — L'ARBITRAGE DE `docs/GLOSSAIRE.md` §5 : un jeton que le registre attribue AUSSI à
+ *      un autre rôle ne porte pas un interdit SEC (REQ-GOV-016, le glossaire est la source du
+ *      vocabulaire), et les deux faces de cet arbitrage sont jugées contre le glossaire RÉEL — la
+ *      forme camelCase d'un champ d'enveloppe rougit (REQ-INT-003), la colonne de `EvenementRecu`
+ *      reste verte (REQ-DM-036).
  * Les cas que `TEMOINS` et `CONTRE_TEMOINS` portent ne sont pas restatés : `decisionDeLaPreuve` les
  * juge, et elle est exercée ici.
  */
@@ -27,6 +35,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import {
+  ID_REGISTRE,
   controler,
   examiner,
   fichierTexte,
@@ -133,7 +142,7 @@ function perimetreAttendu(fichiers: Map<string, Uint8Array>, racines: readonly s
   };
 }
 
-/** Les racines de `gov:check` sur un glossaire donné — l'oracle du test. */
+/** Les racines de la garde sur un glossaire donné — l'oracle du test. */
 const racinesDeLaGarde = (glossaire: string): string[] => [
   ...racinesDuGlossaire(glossaire),
   RACINE_CONTRATS,
@@ -204,7 +213,7 @@ function gros(derniere: string): string {
 }
 
 /**
- * F6' — lancé depuis la racine d'un dépôt : la vue de `gov:check`, le texte que la garde a PARCOURU
+ * F6' — lancé depuis la racine d'un dépôt : la vue de la garde, le texte qu'elle a PARCOURU
  * et la lecture de `partners:schema:enums` sont confrontés, fichier par fichier et PAR EMPREINTE, aux
  * octets que le disque rend à ce test.
  */
@@ -297,7 +306,7 @@ describe('REQ-DM-003 — la famille des listes d’états a UNE SEULE implément
     { chemin: 'src/server/x.ts', contenu: "if (s === 'provisoire' || s === 'active') return;" },
   ];
 
-  it('REQ-DM-003 : gov:check ne porte PLUS la famille des listes d’états — ni dans FAMILLES, ni au verdict', () => {
+  it('REQ-DM-003 : gov:termes-interdits ne porte PLUS la famille des listes d’états — ni dans FAMILLES, ni au verdict', () => {
     expect(FAMILLES.map((f) => f.nom)).not.toContain('liste_litterale_d_etats');
     for (const e of ENTREES) {
       expect(familles(avecFichier(e.chemin, e.contenu)), e.chemin).not.toContain(
@@ -397,7 +406,7 @@ describe('REQ-DM-003 — la famille des listes d’états a UNE SEULE implément
     }
   }, 180_000);
 
-  it('REQ-DM-003 : la conclusion « hors famille » de gov:check dérive du prédicat de la famille', () => {
+  it('REQ-DM-003 : la conclusion « hors famille » de gov:termes-interdits dérive du prédicat de la famille', () => {
     // Le dépôt réel, et une vue dont les racines couvrent chaque racine de la famille et d'autres :
     // une liste de racines retapée coïnciderait avec la première, pas avec la seconde.
     const synthetique: Vue = {
@@ -452,6 +461,70 @@ describe('GOV-030 — les sources, et les fixtures ÉGALES aux sources réelles'
         .filter((s) => s.exerce)
         .map((s) => s.terme)
     ).toEqual(expect.arrayContaining(['qualificateur', 'payment.received']));
+  });
+
+  /**
+   * L'ARBITRAGE DU 2026-09-22, ASSÉRÉ SUR LE GLOSSAIRE RÉEL — et pas seulement sur la fixture.
+   *
+   * §5 prescrivait `eventId` et `eventType` comme les colonnes de `EvenementRecu` (REQ-DM-036,
+   * tâche SEC-06) dans son premier paragraphe, puis les rangeait parmi les interdits SECS : la
+   * garde aurait rougi sur la colonne que l'exigence épelle. La règle retenue, écrite en §5, vaut
+   * pour tout
+   * terme : un jeton que le registre attribue AUSSI à un autre rôle ne peut pas porter un interdit
+   * sec — il devient un interdit sous condition, que la garde n'exerce pas et qu'elle IMPRIME.
+   * Sans cette assertion, une réécriture du §5 réarmerait le piège sans rien faire rougir.
+   */
+  it('REQ-GOV-016, REQ-INT-004 : le glossaire réel n’interdit SEC que les jetons qu’aucun autre rôle ne réclame', () => {
+    const reel = vueDuDepot();
+    const etat = (terme: string): boolean | undefined =>
+      synonymesDuGlossaire(reel.glossaire).find((s) => s.terme === terme)?.exerce;
+
+    // Trois champs d'enveloppe (REQ-INT-003) dont le registre ne réclame le jeton nulle part
+    // ailleurs : l'interdit y reste SEC, et la garde le tient.
+    for (const libre of ['occurredAt', 'emittedAt', 'subjectRef']) {
+      expect(etat(libre), `${libre} doit rester un interdit SEC`).toBe(true);
+    }
+    // Trois jetons réclamés ailleurs : `eventId` et `eventType` par le §5 lui-même comme colonnes
+    // de `EvenementRecu`, `schemaVersion` par REQ-QA-007. Interdits SOUS CONDITION.
+    for (const reclame of ['eventId', 'eventType', 'schemaVersion']) {
+      expect(etat(reclame), `${reclame} ne peut pas porter un interdit SEC`).toBe(false);
+    }
+    // Non exercé n'est pas tu : la garde imprime ce qu'elle n'exerce pas.
+    expect(decisionDeLaGarde(reel).lignes.join('\n')).toMatch(/NON exercé[^\n]*eventId/);
+  });
+
+  /**
+   * LES DEUX FACES, sur le glossaire RÉEL et sans aucune exemption de citation : le `.prisma` et le
+   * `.ts` de ces deux vues ne portent ni commentaire ni accent grave. Le vert vient de l'étroitesse
+   * de l'interdit, jamais d'une amnistie. La face rouge est celle que le correctif devait garder ;
+   * la face verte est la ligne exacte que SEC-06 écrira.
+   */
+  it('REQ-INT-003, REQ-DM-036 : rouge sur un champ d’enveloppe camelCase, vert sur la colonne de la table de réception', () => {
+    const surLeGlossaireReel = (chemin: string, contenu: string): Vue => ({
+      ...VUE_CONFORME,
+      glossaire: vueDuDepot().glossaire,
+      fichiers: [...VUE_CONFORME.fichiers, fichierTexte(chemin, contenu)],
+    });
+
+    const enveloppe = controler(
+      surLeGlossaireReel(
+        'src/server/integrations/emetteur.ts',
+        'const enveloppe = { occurredAt: quand, emittedAt: quand, subjectRef: ref };'
+      )
+    );
+    expect(enveloppe.map((f) => f.famille)).toEqual([
+      'synonyme_interdit_du_glossaire',
+      'synonyme_interdit_du_glossaire',
+      'synonyme_interdit_du_glossaire',
+    ]);
+
+    const colonne = controler(
+      surLeGlossaireReel(
+        'prisma/schema.prisma',
+        'model EvenementRecu {\n  eventId   String @unique\n  eventType String\n}\n'
+      )
+    );
+    expect(colonne).toEqual([]);
   });
 
   it('REQ-INT-004 : le contrat du dépôt et l’exigence disent la même chose', () => {
@@ -675,10 +748,10 @@ describe('GOV-030 — la preuve : population du SEUL registre, décision PURE', 
   const registre = (): string => readFileSync('docs/gates.json', 'utf8');
   const entrees = () => entreesDeLaPreuve(registre());
 
-  /** Le registre réel, amputé d'un nom dans UNE liste du champ `verifie` de `gov:check`. */
+  /** Le registre réel, amputé d'un nom dans UNE liste du champ `verifie` de l'entrée jugée. */
   function registreAmpute(etiquette: string, nom: string): string {
     const r = JSON.parse(registre()) as { gates: { id: string; verifie: string }[] };
-    const entree = r.gates.find((g) => g.id === 'gov:check')!;
+    const entree = r.gates.find((g) => g.id === ID_REGISTRE)!;
     const avant = entree.verifie;
     entree.verifie = avant.replace(
       new RegExp(`(${etiquette}\\s*:\\s*)([a-z0-9_,\\s]+?)(\\s*(?:;|$))`),
@@ -764,12 +837,12 @@ describe('GOV-030 — la preuve : population du SEUL registre, décision PURE', 
   });
 
   it('un registre muet, en double ou illisible est un REFUS, jamais une population vide', () => {
-    const muet = JSON.stringify({ gates: [{ id: 'gov:check', verifie: 'termes interdits' }] });
+    const muet = JSON.stringify({ gates: [{ id: ID_REGISTRE, verifie: 'termes interdits' }] });
     expect(() => populationDuRegistre(muet)).toThrow(/ne nomme aucun/);
     const double = JSON.stringify({
       gates: [
-        { id: 'gov:check', verifie: 'x' },
-        { id: 'gov:check', verifie: 'y' },
+        { id: ID_REGISTRE, verifie: 'x' },
+        { id: ID_REGISTRE, verifie: 'y' },
       ],
     });
     expect(() => populationDuRegistre(double)).toThrow(/2 entrée/);

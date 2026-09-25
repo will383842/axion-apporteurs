@@ -291,23 +291,46 @@ sur les deux cas.
 fait-il exactement ce que disent les REQ citées, ni plus ni moins), `securite` (cloisonnement, défaut = refus,
 404 byte-identique, PII, journal, idempotence, absence d'oracle), `simplicite` (dérivation depuis une source
 unique, aucune duplication, nommage français conforme). **Combien de lentilles une PR reçoit dépend de son
-risque** — décision de Will du 2026-09-18, consignée par `partners/ADR-0012`. Le risque est dérivé par
+risque** — décision de Will du 2026-09-18, consignée par `partners/ADR-0012`, resserrée par sa décision du
+2026-09-25 (`partners/ADR-0021`, GOV-097) : **quatre lentilles seulement pour l'argent, la sécurité et les
+données ; deux pour tout le reste**. Le risque est dérivé par
 `risqueDeLaPr()` (`scripts/lot/revues.ts`), **la seule dérivation**, appelée par `gov:pr` et par le composeur
 du corps de PR ; `pnpm gov:pr --pr <numéro>` l'imprime avec ses raisons, et c'est cette ligne qu'on lit avant
 de lancer les lentilles.
 
-L'ordinaire se **prouve**, l'élevé est le défaut. Une PR est de risque **ordinaire** si et seulement si :
-(1) au moins une tâche est résolue, par le titre ou par le champ `pr` ; (2) le registre des tâches de la base
-est lisible ; (3) chaque tâche résolue, lue sur la tête **et** sur la base, est en zone `gouvernance` ou
-`qualite`, porte un champ `sensible` présent et vide, et n'est pas `schema: true` ; (4) la PR ne porte pas le
-label `schema` ; (5) le diff n'est pas vide, sa liste est **complète** (la forge plafonne la sienne sans
-erreur : une liste plus courte que le nombre de fichiers annoncé par la PR, ou au plafond, ne prouve rien),
-et chacun de ses fichiers est sous `docs/`, `scripts/` ou `tests/` — **jamais sous `.github/`, jamais à la
+L'élevé se **cherche**, par signaux ; et ce qu'on ne sait pas lire est élevé. Une PR est de risque **élevé**
+si et seulement si l'un de ces signaux est présent — sinon elle est **ordinaire** :
+(1) une tâche de la PR — résolue par le titre, le champ `pr` ou le champ `Lot:`, lue sur la tête **et** sur la
+base — porte un champ `sensible` **non vide** (`argent`, `attribution`, `auth`, `espace`, `rgpd` : l'argent, la
+sécurité et les données) ou **absent**, ou `schema: true`, ou une zone `argent` ou `securite`, ou une zone
+**absente** ou que le schéma du registre ne déclare pas ; (2) la PR porte le label `schema`, ou touche un chemin
+de schéma (§7) ; (3) un de ses fichiers est dans une **zone sensible du code** — un segment de son chemin nomme
+l'argent, la sécurité ou les données (`commission`, `attribution`, `auth`, `espace`, `securite`, `acces`,
+`donnees-personnelles`, `session`, `chiffrement`, `cloisonnement`, `middleware`…, la liste est
+`SEGMENTS_DES_ZONES_SENSIBLES` ; un segment se lit **nu**, débarrassé des décorations de routage de Next :
+`[...auth]`, `[[...auth]]`, `@auth`, `(.)auth` valent `auth`), ou un de ses fichiers du **code produit**
+(`src/`) est **déclaré** (`paths` ∪ `tests{}`) par une tâche **quelconque** du registre, de la base ou de la
+tête, qui élèverait à elle seule une PR : **la sensibilité suit le fichier**, pas seulement la tâche du titre.
+La règle ne lit que `src/` : la décision de Will protège l'argent, la sécurité et les données du produit ;
+les scripts de contrôle ont leurs propres signaux (garde des revues, CI, racine, processus), et l'étendre à
+`scripts/` et `docs/` ramenait le gain sous son niveau d'avant GOV-097 (24 tâches ordinaires contre 31) à
+cause d'étiquettes `sensible` portées par des tâches de gouvernance — dette nommée : un `scripts/gates/*`
+hors de la garde des revues reste ordinaire ; (4) un de ses fichiers appartient au
+**processus** : la garde des revues — ses trois racines (`scripts/lot/revues.ts`, `scripts/gates/gov-pr.ts`,
+`scripts/lot/corps-de-pr.ts`), la **fermeture transitive** de leurs imports, dérivée du disque, cette charte,
+`docs/agents.json` et le schéma du registre des tâches —, **`.github/`** et tout dossier caché **de la racine**, **toute la
 racine**, documents compris (`package.json`, les configurations d'outils, mais aussi `CLAUDE.md` et
-`AGENTS.md`, que chaque agent charge) —, hors de la garde des revues : ses trois racines
-(`scripts/lot/revues.ts`, `scripts/gates/gov-pr.ts`, `scripts/lot/corps-de-pr.ts`), la **fermeture
-transitive** de leurs imports, dérivée du disque, cette charte et `docs/agents.json`. Un fichier **renommé
-ou copié** compte par sa source ET sa destination. Sinon elle est de risque **élevé**.
+`AGENTS.md`, que chaque agent charge), et `config/`. Ces fichiers peuvent désarmer les gardes elles-mêmes :
+c'est la sécurité du processus ; (5) le diff est vide, sa liste est **incomplète** (la forge plafonne la sienne
+sans erreur : une liste plus courte que le nombre de fichiers annoncé par la PR, ou au plafond, ne prouve
+rien), aucune tâche n'est résolue, ou le registre de la base est illisible. Un fichier **renommé ou copié**
+compte par sa source ET sa destination.
+
+**Ce qui ne rend plus une PR élevée** depuis GOV-097 : une zone autre que l'argent et la sécurité (`espace`,
+`juridique`, `integration`, `domaine`…) avec `sensible: []`, et un fichier de code produit hors des zones
+sensibles qu'aucune tâche sensible ne déclare. ⚠️ Les données se lisent par `sensible` : une tâche qui manipule des données personnelles avec
+`sensible: []` passe à deux lentilles. C'est une **erreur du registre**, qui se corrige en y portant `rgpd`
+(`partners/ADR-0021`, limite déclarée).
 
 | Risque | Lentilles exigées |
 | --- | --- |
@@ -317,6 +340,17 @@ ou copié** compte par sa source ET sa destination. Sinon elle est de risque **�
 Un même poste apparaît plusieurs fois dans `Relecteur:` : ce sont des **lectures** distinctes, pas des postes
 distincts — la règle porte sur les lentilles, jamais sur l'unicité des codes. Y déclarer plus de lentilles que
 le risque n'en exige est admis.
+
+**Ce qui est un refus, ce qui est une dette** (décision de Will du 2026-09-25, `partners/ADR-0021`). Un refus
+vise un **défaut de code ou de test** — une REQ non couverte, du code au-delà du périmètre, un test qui ne
+peut pas rougir, un cloisonnement ouvert —, ou une **affirmation fausse qui porte sur la sécurité, l'argent ou
+les données**, où qu'elle soit écrite. Une inexactitude de **prose** — corps de PR, entrée de journal, ADR,
+commentaire, docblock — qui ne porte sur aucun des trois **n'est pas un motif de refus** : la lentille rend
+`Verdict: accepte` et nomme l'inexactitude dans sa revue comme une **dette**, avec le fichier et la ligne ; elle
+se corrige au passage suivant sur ce fichier. C'est d'abord la règle de la lentille `exactitude`, qui
+confronte le code aux REQ. ⚠️ `gov:pr` ne distingue pas les motifs : **tout** `Verdict: refuse` bloque. La règle
+tient donc dans la main de la lentille, pas dans la garde — refuser pour une prose hors de ces trois domaines
+est une faute de la lentille, pas un refus que la garde saurait déclasser.
 
 **La troisième lentille sur une PR `schema`.** Toute PR touchant `prisma/**` ou `packages/contracts/**` porte
 le label `schema`. Sur cette PR, **A02 remplace la lentille `simplicite`** et son approbation est
@@ -359,14 +393,45 @@ Une PR qui modifie un chemin réservé **sans porter le label du poste** rougit 
 le code de poste, lui, va dans le champ `Auteur:`. **Ce tableau est lu par le script**, ligne par ligne : le
 modifier change ce que la garde exige.
 
-Les six premières lignes sont exactement les six lignes de `docs/CONVENTIONS.md` §8, sans ajout ni retrait. La **septième** est venue avec `partners/ADR-0010` : elle ne vient pas des `CONVENTIONS`,
-et elle est écrite ici parce qu'un registre qui peut ABSOUDRE une gate bloquante doit passer
-devant un relecteur comme une décision, pas comme une ligne de configuration :
+> ⚠️ **Aucune virgule dans la première colonne hors d'une liste de chemins.** Elle sépare les
+> chemins : une virgule posée dans une parenthèse explicative coupait la cellule en deux faux
+> chemins, et le vrai chemin cessait d'être gardé SANS que rien ne rougisse. Mesuré le 2026-09-22
+> en écrivant les deux lignes de `partners/ADR-0019`.
+>
+> ⚠️ **DEUX lecteurs lisent cette colonne, et un seul est réparé.** `cheminsReserves()`
+> (`scripts/lot/chemins-de-tache.ts`, lu par `gov:pr`) retire désormais les parenthèses AVANT de
+> découper, et un témoin de `gov:pr --prove` le tient. `cheminsReservesDeLaCharte()`
+> (`scripts/gates/gov-agents.ts`, lu par `gov:agents`) **découpe d'abord** : sans effet aujourd'hui,
+> parce qu'aucune ligne ci-dessous ne porte de virgule en parenthèse. C'est donc une règle de prose
+> qui tient un défaut de code — dette nommée au « Reste à faire » de `partners/ADR-0019`. **La règle
+> reste : une parenthèse explicative se ponctue au tiret.**
+
+**CE TABLEAU EST CELUI DES SOURCES, ET C'EST `partners/ADR-0019` QUI L'A TRANCHÉ (2026-09-22).**
+Un label répond à une seule question : *qui répond de ce texte ?* **Personne ne répond d'une vue
+dérivée** — une vue a un générateur et un `--verifier`, et sa dérive est déjà un rouge nommé
+(REQ-GOV-032). `docs/PLAN-STATE.md` et `docs/REQUIREMENTS.md` y figuraient pourtant, et
+`docs/requirements.json` — la **source** des 355 exigences — n'y figurait pas : le tableau
+protégeait deux ombres et laissait deux corps ouverts. Les deux vues sortent, les deux sources
+entrent ; l'ADR porte la mesure et ce que le geste ne règle PAS.
+
+⚠️ **Le label n'était pas une barrière, et il ne faut pas lire son retrait comme la levée d'une.**
+La famille `fichier_reserve_sans_label` vérifie qu'une PR PORTE un label — que son auteur lui pose
+lui-même, `gh pr create --label` et `gh label` étant tous deux en `allow`. C'est une déclaration
+d'imputation. Symétriquement, `plan-state:verifier` ne compare pas tout : ce qu'il couvre et ce
+qu'il laisse libre est écrit dans `partners/ADR-0019`, sous « Ce que `plan-state:verifier` couvre,
+et ce qu'il ne couvre pas », avec l'attaque qui reste possible. Les deux phrases se lisent
+ensemble, ou aucune des deux ne dit la vérité.
+
+Les lignes A01 suivent `docs/CONVENTIONS.md` §8, aux deux mouvements de l'ADR près. La ligne
+`config/exemptions-corps-publie.json` est venue avec `partners/ADR-0010` : elle ne vient pas des
+`CONVENTIONS`, et elle est écrite ici parce qu'un registre qui peut ABSOUDRE une gate bloquante
+doit passer devant un relecteur comme une décision, pas comme une ligne de configuration :
 
 | Chemin réservé | Poste | Label exigé | Où la règle est écrite |
 | --- | --- | --- | --- |
-| `docs/PLAN-STATE.md` (**dérivé**) | A01 commite, `pnpm plan-state:build` produit | `role:gardien-spec` | `docs/CONVENTIONS.md` §8 |
-| `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | A01 | `role:gardien-spec` | `docs/CONVENTIONS.md` §8, lot dédié avec `--settings` surchargé |
+| `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | A01 | `role:gardien-spec` | `docs/CONVENTIONS.md` §8, lot dédié avec `--settings` surchargé |
+| `docs/requirements.json` (**source** — `docs/REQUIREMENTS.md` en est la VUE — non réservée) | A01 | `role:gardien-spec` | `partners/ADR-0019` ; `docs/CONVENTIONS.md` §8 |
+| `docs/gates.json` (**source** — `docs/GATES.md` en est la VUE — non réservée) | A01, par le verbe `hors-depot/ajouter-entree.mjs` | `role:gardien-spec` | `partners/ADR-0019` ; `.claude/settings.json` porte déjà `deny` sur `Write` et `Edit` de ce fichier |
 | `docs/tasks.json` | A01 (composition), jamais un développeur | `role:gardien-spec` | `docs/CONVENTIONS.md` §8 |
 | `prisma/**`, `packages/contracts/**` | A02, approbation bloquante | `schema` | `docs/CONVENTIONS.md` §5 et §8 ; `.github/CODEOWNERS` |
 | `docs/adr/**` | A02 accepte, A03 indexe | `role:architecte` | `docs/CONVENTIONS.md` §8 |

@@ -1,0 +1,735 @@
+/**
+ * lecteur-prisma.ts — LE lecteur du schéma Prisma et du SQL des migrations (DM-02).
+ *
+ * POURQUOI UN LECTEUR, ET POURQUOI UN SEUL. Les gardes de schéma découpaient un modèle par
+ * `/model\s+(\w+)\s*\{([^}]*)\}/` : la PREMIÈRE `}` fermait le modèle, même dans un commentaire
+ * `// }` ou une chaîne `@default("}")`, et tous les champs suivants échappaient au contrôle — un
+ * échec OUVERT, vert sur ce qu'il n'avait pas lu. Chaque garde qui relit le schéma à sa façon
+ * refait ce défaut à sa façon (RM-01) : il n'y a donc qu'un lecteur, et les gardes l'importent.
+ *
+ * CE QU'IL FAIT. Il retire commentaires et littéraux EN PRÉSERVANT les numéros de ligne, puis ferme
+ * chaque bloc sur SON accolade (profondeur). Tout ce qu'il ne sait pas lire, il le REFUSE en
+ * nommant la ligne (`ErreurLecturePrisma`) : accolade non appariée, chaîne non terminée, ligne de
+ * modèle qui n'est ni un champ ni un attribut de bloc. Jamais « 0 modèle, vert ».
+ *
+ * IL PORTE AUSSI LE PRÉDICAT DE TYPE des deux gardes de schéma (`natifDuType`, `typeReel`,
+ * `estDuGenreColonne`) : lire proprement un `Unsupported("text")` ne sert à rien si la garde
+ * décide ensuite sur une liste d'orthographes Prisma — ni si, une fois la colonne lue EN BASE,
+ * elle décide sur le LIBELLÉ d'`information_schema` plutôt que sur ce que le catalogue dit du
+ * type. Voir les commentaires de `natifDuType` et de `typeReel` : ce sont deux tours de la
+ * MÊME faute, et la seconde vivait dans l'ombre de la première.
+ *
+ * POURQUOI IL N'EST PAS SOUS `scripts/gates/`. Tout fichier suivi de ce dossier doit être une garde
+ * inscrite au registre : une bibliothèque y rougirait `garde_hors_registre`.
+ *
+ * AUCUNE DÉPENDANCE. `Prisma.dmmf` ne voit ni les commentaires ni le SQL brut des migrations — et
+ * c'est précisément ce que les gardes jugent.
+ */
+
+/** Le texte ne se lit pas : la garde qui l'appelle ne rend pas de verdict sur lui. */
+export class ErreurLecturePrisma extends Error {
+  readonly ligne: number;
+  constructor(ligne: number, motif: string) {
+    super(`ligne ${ligne} — ${motif}`);
+    this.name = 'ErreurLecturePrisma';
+    this.ligne = ligne;
+  }
+}
+
+export type ChampPrisma = {
+  nom: string;
+  /** La valeur de `@map("…")` si présente, sinon le nom. */
+  colonne: string;
+  /** Le type tel qu'écrit, argument compris (`Unsupported("numeric")`), sans `[]` ni `?`. */
+  type: string;
+  optionnel: boolean;
+  liste: boolean;
+  /** Les attributs de champ, tels qu'écrits : `@id`, `@map("x")`, `@db.Uuid`… */
+  attributs: string[];
+  ligne: number;
+};
+
+export type ModelePrisma = {
+  nom: string;
+  /** La valeur de `@@map("…")` si présente, sinon le nom. */
+  table: string;
+  ligne: number;
+  champs: ChampPrisma[];
+};
+
+export type EnumPrisma = {
+  nom: string;
+  /** La valeur de `@@map("…")` si présente, sinon le nom. */
+  typeSql: string;
+  valeurs: string[];
+  ligne: number;
+};
+
+export type SchemaPrisma = { modeles: ModelePrisma[]; enums: EnumPrisma[] };
+
+// ── le type d'une colonne, tel que POSTGRES le voit ──────────────────────────
+
+/**
+ * LE TYPE NATIF d'une colonne déclarée `Unsupported("…")` — l'argument, délimiteurs et espaces
+ * retirés —, ou `undefined` quand le type est un scalaire Prisma, un enum ou une relation.
+ *
+ * 🔴 POURQUOI IL EST ICI, ET POURQUOI IL N'Y EN A QU'UN. `Unsupported("…")` est la porte par
+ * laquelle une colonne entre dans le schéma SANS que Prisma la modélise : son type n'a plus
+ * d'orthographe Prisma, seulement celle de PostgreSQL. Une garde qui décide sur une LISTE
+ * D'ORTHOGRAPHES Prisma (`new Set(['String', 'Json'])`) ne la voit pas — et pire, elle la COMPTE
+ * puis la déclare conforme. Mesuré le 2026-09-22 sur DM-02 : `statut Unsupported("text")` posé au
+ * milieu d'un modèle faisait passer `partners:schema:enums` de 8 à 9 champs « jugés », en exit 0,
+ * sur exactement la faute que REQ-DM-038 interdit. `schema-cents.ts` fermait déjà la même évasion
+ * de son côté : la classe était connue, elle n'était fermée que d'un côté. Les deux gardes
+ * dérivent donc leur prédicat d'ICI (RM-01), au lieu d'en écrire chacune une copie.
+ */
+export function natifDuType(type: string): string | undefined {
+  const argument = /^Unsupported\((.*)\)$/.exec(type)?.[1];
+  if (argument === undefined) return undefined;
+  return argument
+    .trim()
+    .replace(/^(["'])([\s\S]*)\1$/, '$2')
+    .trim();
+}
+
+/**
+ * UN GENRE DE TYPE — la question « ce type peut-il faire ÇA ? », jamais « comment s'écrit-il ? ».
+ * `scalaires` énumère les types PRISMA qui en relèvent ; `natif` est le motif que satisfait le
+ * type POSTGRES d'un `Unsupported(…)`, ou d'une colonne posée en SQL brut. Deux vocabulaires
+ * (`schema-cents` : ce qui arrondit ; `schema-enums` : ce qui porte une chaîne libre), un seul
+ * mécanisme de décision.
+ */
+export type GenreDeType = {
+  scalaires: readonly string[];
+  natif: RegExp;
+  /**
+   * Les CATÉGORIES de `pg_type` qui relèvent du genre, quand le catalogue les donne
+   * (`typcategory`). Un motif de noms ne connaît que les types qu'on lui a écrits ; la catégorie
+   * est le FAIT que PostgreSQL attache au type.
+   *
+   * CE QU'ELLE RATTRAPE, ET CE QU'ELLE NE RATTRAPE PAS — mesuré en la retirant du genre le
+   * 2026-09-22. Pas `citext` : il était bien inscrit dans le motif de `GENRE_CHAINE_LIBRE`, et
+   * dès lors qu'on lit `typname` au lieu du libellé, son NOM suffit. Ce qu'elle rattrape, c'est
+   * le type d'extension QUE PERSONNE N'A LISTÉ — sans elle, le témoin `un_type_d_extension` du
+   * test unitaire sort `undefined`. PostgreSQL le range, lui, en catégorie `S`, et cette
+   * catégorie-là ne s'écrit pas au fil des extensions qu'on installe.
+   *
+   * ⚠️ ELLE N'EST PAS UNIVERSELLE, ET C'EST POURQUOI ELLE EST OPTIONNELLE. `GENRE_FLOTTANT` n'en
+   * porte aucune : la catégorie `N` couvre aussi les entiers, que REQ-DM-001 EXIGE. Un genre qui
+   * décrit un SOUS-ENSEMBLE d'une catégorie ne peut pas s'appuyer sur elle — la limite qui en
+   * découle est nommée dans `docs/gates.json`, entrée `partners:schema:cents`.
+   */
+  categories?: readonly string[];
+};
+
+/** Un type POSTGRES relève-t-il du genre ? C'est la seule question quand Prisma ne modélise rien. */
+export function estDuGenreNatif(natif: string, genre: GenreDeType): boolean {
+  return genre.natif.test(natif);
+}
+
+/**
+ * Un type de CHAMP PRISMA relève-t-il du genre ? Un `Unsupported(…)` se juge sur son natif — sans
+ * quoi la garde ne juge que les colonnes que Prisma veut bien nommer.
+ */
+export function estDuGenre(type: string, genre: GenreDeType): boolean {
+  const natif = natifDuType(type);
+  return natif === undefined ? genre.scalaires.includes(type) : estDuGenreNatif(natif, genre);
+}
+
+// ── ce que POSTGRES fait de la colonne, lu au catalogue ──────────────────────
+
+/**
+ * UNE LIGNE DE `pg_type`, telle que PostgreSQL la tient. Les identifiants voyagent en TEXTE : un
+ * `oid` est un entier non signé de 32 bits, et le lire en nombre JavaScript ne servirait qu'à le
+ * comparer — on ne fait que le suivre.
+ */
+export type TypePg = {
+  /** `pg_type.oid`. */
+  oid: string;
+  /** `typname` — le nom RÉEL du type : `text`, `_text` pour un tableau de texte, `citext`… */
+  nom: string;
+  /** Le schéma du type (`pg_namespace.nspname`) : `pg_catalog` pour les types livrés. */
+  schema: string;
+  /** `typtype` : `b`ase, `d`omaine, `e`num, `c`omposite, `r`ange, `m`ultirange, `p`seudo. */
+  genre: string;
+  /** `typcategory` : `S`tring, `N`umeric, `A`rray, `E`num, `D`atetime, `B`oolean, `U`ser… */
+  categorie: string;
+  /** `typelem` — le type des ÉLÉMENTS, quand la catégorie est `A` ; `'0'` sinon. */
+  element: string;
+  /** `typbasetype` — le type SOUS le domaine, quand le genre est `d` ; `'0'` sinon. */
+  base: string;
+};
+
+/** Le type que PostgreSQL donne RÉELLEMENT à une colonne, déplié. */
+export type TypeReel = {
+  /** Le nom du type porté par la colonne, ou par CHAQUE ÉLÉMENT si elle porte un tableau. */
+  nom: string;
+  /** Le schéma de ce type. */
+  schema: string;
+  /** Sa catégorie `pg_type.typcategory`. */
+  categorie: string;
+  /** La colonne porte-t-elle un TABLEAU de ce type ? */
+  tableau: boolean;
+};
+
+/**
+ * LE TYPE RÉEL D'UNE COLONNE — ce que PostgreSQL en fait, jamais le libellé qu'une vue en imprime.
+ *
+ * 🔴 POURQUOI PAS `information_schema.columns.data_type`, ET POURQUOI PAS NON PLUS `udt_name`.
+ * `data_type` REPLIE des familles entières : tout tableau y devient `ARRAY`, tout type
+ * d'extension `USER-DEFINED`. Mesuré le 2026-09-22 sur DM-02 : une migration de quatre lignes
+ * (`CREATE EXTENSION citext`, une colonne `statut_liste TEXT[]`, une colonne `statut_ci citext`,
+ * une table dans un schéma `metier`) faisait passer les colonnes jugées de 19 à 21 — LUES,
+ * COMPTÉES et ABSOUTES, en exit 0, sans qu'une ligne de garde ou de test ait été touchée. C'était
+ * la MÊME faute que la liste d'orthographes Prisma du tour précédent, déplacée d'un cran : on
+ * avait cessé de décider sur une orthographe Prisma pour décider sur un libellé Postgres.
+ * `udt_name` dit le type réel et marque le tableau d'un préfixe `_` — mais c'est une CONVENTION de
+ * nom, et surtout il ne déplie pas un DOMAINE placé SOUS un tableau (il rend `_motif_libre`, que
+ * plus aucun prédicat ne reconnaît).
+ *
+ * La source est donc `pg_attribute.atttypid` — l'identifiant du type que PostgreSQL a donné à la
+ * colonne —, et le dépliage se fait par les RELATIONS du catalogue lui-même : `typtype = 'd'` mène
+ * au `typbasetype`, `typcategory = 'A'` mène au `typelem` et lève `tableau`. On s'arrête sur le
+ * premier type qui n'est ni un domaine ni un tableau. Un renvoi circulaire ne fait pas tourner la
+ * résolution sans fin : chaque identifiant n'est suivi qu'une fois.
+ *
+ * `undefined` quand le catalogue ne porte pas l'identifiant : un type qu'on ne sait pas résoudre
+ * n'est PAS un vert, et l'appelant doit le NOMMER — c'est la règle de cette maison sur tout ce qui
+ * n'a pas été lu.
+ */
+export function typeReel(
+  oid: string,
+  catalogue: ReadonlyMap<string, TypePg>
+): TypeReel | undefined {
+  let t = catalogue.get(oid);
+  if (t === undefined) return undefined;
+  let tableau = false;
+  const suivis = new Set<string>();
+  while (!suivis.has(t.oid)) {
+    suivis.add(t.oid);
+    let suivant: TypePg | undefined;
+    if (t.genre === 'd' && t.base !== '0') suivant = catalogue.get(t.base);
+    else if (t.categorie === 'A' && t.element !== '0') {
+      tableau = true;
+      suivant = catalogue.get(t.element);
+    }
+    if (suivant === undefined) break;
+    t = suivant;
+  }
+  return { nom: t.nom, schema: t.schema, categorie: t.categorie, tableau };
+}
+
+/**
+ * LE TYPE D'UNE COLONNE À JUGER, d'où qu'elle vienne — du schéma Prisma, ou du catalogue d'une
+ * base migrée. Les deux gardes de schéma partagent cette forme, et la QUESTION de genre ne se pose
+ * qu'ici (`estDuGenreColonne`) : elle était posée deux fois, mot pour mot, dans chacune d'elles.
+ */
+export type TypeDeColonne = {
+  /**
+   * Le type tel qu'écrit côté Prisma (`Int`, `Unsupported("numeric")`), ou le nom du type
+   * POSTGRES réel quand la colonne est lue au catalogue. Un TABLEAU porte le type de ses
+   * ÉLÉMENTS : le tableau se dit par `tableau`, pas par le nom.
+   */
+  type: string;
+  /** `type` est-il déjà un type PostgreSQL (colonne lue au catalogue, ou natif d'un `Unsupported`) ? */
+  natif: boolean;
+  /**
+   * La colonne porte-t-elle un TABLEAU de ce type ? Le tableau d'un type fautif est FAUTIF : un
+   * `text[]` qui porte un nom de vocabulaire laisse écrire exactement les mêmes chaînes libres
+   * qu'un `text`, et un `numeric[]` arrondit autant qu'un `numeric`.
+   */
+  tableau?: boolean;
+  /** `pg_type.typcategory`, quand la colonne vient du catalogue ; Prisma n'en dit rien. */
+  categorie?: string;
+};
+
+/**
+ * LE GENRE D'UNE COLONNE — l'unique aiguillage entre « ce type est déjà du PostgreSQL » et « c'est
+ * un type Prisma ». Les deux gardes portaient ce ternaire recopié mot pour mot (RM-01) : elles
+ * avaient extrait les deux FEUILLES et laissé la DÉCISION en double.
+ */
+export function estDuGenreColonne(c: TypeDeColonne, genre: GenreDeType): boolean {
+  if (c.categorie !== undefined && genre.categories?.includes(c.categorie) === true) return true;
+  return c.natif ? estDuGenreNatif(c.type, genre) : estDuGenre(c.type, genre);
+}
+
+/** Le type tel qu'une faute le NOMME : un tableau se dit `[]`, sinon le message mentirait. */
+export function typeAffiche(c: TypeDeColonne): string {
+  return c.tableau === true ? `${c.type}[]` : c.type;
+}
+
+// ── positions et lignes ──────────────────────────────────────────────────────
+
+const LF = '\n';
+
+/** Le numéro de ligne (base 1) d'une position : on compte les LF qui la précèdent. */
+function ligneA(texte: string, position: number): number {
+  let n = 1;
+  for (let i = 0; i < position && i < texte.length; i++) if (texte[i] === LF) n++;
+  return n;
+}
+
+// ── le masquage Prisma ───────────────────────────────────────────────────────
+
+/**
+ * Deux vues du schéma, de même longueur et de mêmes lignes que l'original :
+ *   — `sansCommentaires` : commentaires (`//`, `///`) blanchis, chaînes conservées ;
+ *   — `neutre` : commentaires ET chaînes blanchis — la vue sur laquelle on lit la STRUCTURE.
+ * Une chaîne Prisma ne franchit pas une ligne : elle lève si elle n'est pas fermée avant.
+ */
+export function masquerPrisma(texte: string): { sansCommentaires: string; neutre: string } {
+  let sansCommentaires = '';
+  let neutre = '';
+  let i = 0;
+  while (i < texte.length) {
+    const c = texte[i]!;
+    if (c === '/' && texte[i + 1] === '/') {
+      while (i < texte.length && texte[i] !== LF) {
+        sansCommentaires += ' ';
+        neutre += ' ';
+        i++;
+      }
+      continue;
+    }
+    if (c === '"') {
+      const debut = i;
+      sansCommentaires += c;
+      neutre += ' ';
+      i++;
+      let ferme = false;
+      while (i < texte.length) {
+        const d = texte[i]!;
+        if (d === LF) break;
+        if (d === '\\' && i + 1 < texte.length && texte[i + 1] !== LF) {
+          sansCommentaires += d + texte[i + 1]!;
+          neutre += '  ';
+          i += 2;
+          continue;
+        }
+        sansCommentaires += d;
+        neutre += ' ';
+        i++;
+        if (d === '"') {
+          ferme = true;
+          break;
+        }
+      }
+      if (!ferme) throw new ErreurLecturePrisma(ligneA(texte, debut), 'chaîne non terminée');
+      continue;
+    }
+    sansCommentaires += c;
+    neutre += c;
+    i++;
+  }
+  return { sansCommentaires, neutre };
+}
+
+/** La première chaîne `"…"` d'un texte, déséchappée ; `undefined` s'il n'y en a pas. */
+function premiereChaine(texte: string): string | undefined {
+  const m = /"((?:[^"\\]|\\.)*)"/.exec(texte);
+  return m ? m[1]!.replace(/\\(.)/g, '$1') : undefined;
+}
+
+// ── les blocs ────────────────────────────────────────────────────────────────
+
+type Bloc = { genre: string; nom: string; ligne: number; ouvre: number; ferme: number };
+
+const EN_TETE = /^\s*(model|enum|view|type|generator|datasource)\s+([A-Za-z_]\w*)\s*$/;
+
+/**
+ * Les blocs de premier niveau, chacun fermé sur SON accolade. Tout texte hors bloc qui n'est pas
+ * l'en-tête du bloc suivant est refusé : un champ égaré entre deux modèles ne serait jugé par personne.
+ */
+function blocs(texte: string, neutre: string): Bloc[] {
+  const sortie: Bloc[] = [];
+  let profondeur = 0;
+  let finPrecedente = 0;
+  let courant: { genre: string; nom: string; ligne: number; ouvre: number } | undefined;
+  for (let i = 0; i < neutre.length; i++) {
+    const c = neutre[i]!;
+    if (c === '{') {
+      if (profondeur === 0) {
+        const entete = neutre.slice(finPrecedente, i);
+        const m = EN_TETE.exec(entete);
+        if (!m) {
+          const decalage = entete.search(/\S/);
+          throw new ErreurLecturePrisma(
+            ligneA(texte, decalage === -1 ? i : finPrecedente + decalage),
+            'accolade ouvrante sans en-tête de bloc reconnu (model, enum, view, type, generator, datasource)'
+          );
+        }
+        const debutMot = finPrecedente + entete.indexOf(m[1]!);
+        courant = { genre: m[1]!, nom: m[2]!, ligne: ligneA(texte, debutMot), ouvre: i };
+      }
+      profondeur++;
+    } else if (c === '}') {
+      if (profondeur === 0) {
+        throw new ErreurLecturePrisma(ligneA(texte, i), 'accolade fermante sans ouvrante');
+      }
+      profondeur--;
+      if (profondeur === 0) {
+        sortie.push({ ...courant!, ferme: i });
+        courant = undefined;
+        finPrecedente = i + 1;
+      }
+    }
+  }
+  if (profondeur > 0) {
+    throw new ErreurLecturePrisma(
+      ligneA(texte, courant!.ouvre),
+      `accolade ouvrante du bloc « ${courant!.nom} » jamais fermée`
+    );
+  }
+  const reste = neutre.slice(finPrecedente);
+  const decalage = reste.search(/\S/);
+  if (decalage !== -1) {
+    throw new ErreurLecturePrisma(
+      ligneA(texte, finPrecedente + decalage),
+      'texte hors de tout bloc : il ne serait jugé par personne'
+    );
+  }
+  return sortie;
+}
+
+/**
+ * Les LIGNES LOGIQUES d'un corps de bloc : coupées sur LF hors parenthèses et crochets, pour qu'un
+ * attribut écrit sur plusieurs lignes (`@@index([\n a,\n b\n])`) reste une seule ligne.
+ */
+function lignesLogiques(
+  texte: string,
+  neutre: string,
+  sansCommentaires: string,
+  debut: number,
+  fin: number
+): { neutre: string; brut: string; ligne: number }[] {
+  const sortie: { neutre: string; brut: string; ligne: number }[] = [];
+  let profondeur = 0;
+  let depart = debut;
+  const pousser = (jusqua: number): void => {
+    const n = neutre.slice(depart, jusqua);
+    const decalage = n.search(/\S/);
+    if (decalage !== -1) {
+      sortie.push({
+        neutre: n.trim(),
+        brut: sansCommentaires.slice(depart + decalage, jusqua).trim(),
+        ligne: ligneA(texte, depart + decalage),
+      });
+    }
+  };
+  for (let i = debut; i < fin; i++) {
+    const c = neutre[i]!;
+    if (c === '(' || c === '[' || c === '{') profondeur++;
+    else if (c === ')' || c === ']' || c === '}') profondeur = Math.max(0, profondeur - 1);
+    else if (c === LF && profondeur === 0) {
+      pousser(i);
+      depart = i + 1;
+    }
+  }
+  pousser(fin);
+  return sortie;
+}
+
+/**
+ * Les attributs d'une fin de ligne (`@id @map("x") @db.Uuid`), lus sur la vue neutre pour la
+ * structure et rendus depuis la vue brute. Lève si autre chose qu'un attribut s'y trouve.
+ */
+function attributs(neutre: string, brut: string, ligne: number, ou: string): string[] {
+  const sortie: string[] = [];
+  let i = 0;
+  while (i < neutre.length) {
+    if (/\s/.test(neutre[i]!)) {
+      i++;
+      continue;
+    }
+    const m = /^@@?[A-Za-z_][\w.]*/.exec(neutre.slice(i));
+    if (!m) {
+      throw new ErreurLecturePrisma(
+        ligne,
+        `${ou} : « ${brut.slice(i).trim()} » n'est ni un type ni un attribut — la ligne ne se lit pas`
+      );
+    }
+    let j = i + m[0].length;
+    if (neutre[j] === '(') {
+      let profondeur = 0;
+      for (; j < neutre.length; j++) {
+        if (neutre[j] === '(') profondeur++;
+        else if (neutre[j] === ')' && --profondeur === 0) break;
+      }
+      j++;
+    }
+    sortie.push(brut.slice(i, j));
+    i = j;
+  }
+  return sortie;
+}
+
+const CHAMP = /^([A-Za-z_]\w*)\s+([A-Za-z_]\w*)/;
+
+function lireChamp(
+  l: { neutre: string; brut: string; ligne: number },
+  modele: string
+): ChampPrisma {
+  const m = CHAMP.exec(l.neutre);
+  if (!m) {
+    throw new ErreurLecturePrisma(
+      l.ligne,
+      `modèle « ${modele} » : « ${l.brut} » n'est ni un champ ni un attribut de bloc`
+    );
+  }
+  let j = m[0].length;
+  let type = m[2]!;
+  if (l.neutre[j] === '(') {
+    const fin = l.neutre.indexOf(')', j);
+    if (fin === -1) {
+      throw new ErreurLecturePrisma(
+        l.ligne,
+        `modèle « ${modele} » : type « ${m[2]}( » jamais fermé`
+      );
+    }
+    type += l.brut.slice(j, fin + 1);
+    j = fin + 1;
+  }
+  let liste = false;
+  let optionnel = false;
+  if (l.neutre.startsWith('[]', j)) {
+    liste = true;
+    j += 2;
+  }
+  if (l.neutre[j] === '?') {
+    optionnel = true;
+    j++;
+  }
+  const attrs = attributs(
+    l.neutre.slice(j),
+    l.brut.slice(j),
+    l.ligne,
+    `modèle « ${modele} », champ « ${m[1]} »`
+  );
+  const map = attrs.find((a) => a.startsWith('@map('));
+  return {
+    nom: m[1]!,
+    colonne: (map && premiereChaine(map)) ?? m[1]!,
+    type,
+    optionnel,
+    liste,
+    attributs: attrs,
+    ligne: l.ligne,
+  };
+}
+
+/**
+ * Le schéma LU. Lève `ErreurLecturePrisma` en nommant la ligne sur tout ce qu'il ne sait pas lire.
+ * `view` et `type` (types composites) se lisent comme des modèles : leurs champs sont jugés aussi.
+ */
+export function lireSchemaPrisma(texte: string): SchemaPrisma {
+  const { sansCommentaires, neutre } = masquerPrisma(texte);
+  const modeles: ModelePrisma[] = [];
+  const enums: EnumPrisma[] = [];
+  for (const b of blocs(texte, neutre)) {
+    if (b.genre === 'generator' || b.genre === 'datasource') continue;
+    const lignes = lignesLogiques(texte, neutre, sansCommentaires, b.ouvre + 1, b.ferme);
+    const blocMap = (l: { neutre: string; brut: string }): string | undefined =>
+      l.neutre.startsWith('@@map') ? premiereChaine(l.brut) : undefined;
+    if (b.genre === 'enum') {
+      const valeurs: string[] = [];
+      let typeSql = b.nom;
+      for (const l of lignes) {
+        if (l.neutre.startsWith('@@')) {
+          attributs(l.neutre, l.brut, l.ligne, `enum « ${b.nom} »`);
+          typeSql = blocMap(l) ?? typeSql;
+          continue;
+        }
+        const v = /^[A-Za-z_]\w*/.exec(l.neutre);
+        if (!v) {
+          throw new ErreurLecturePrisma(
+            l.ligne,
+            `enum « ${b.nom} » : « ${l.brut} » n'est pas une valeur`
+          );
+        }
+        attributs(
+          l.neutre.slice(v[0].length),
+          l.brut.slice(v[0].length),
+          l.ligne,
+          `enum « ${b.nom} », valeur « ${v[0]} »`
+        );
+        valeurs.push(v[0]);
+      }
+      enums.push({ nom: b.nom, typeSql, valeurs, ligne: b.ligne });
+      continue;
+    }
+    const champs: ChampPrisma[] = [];
+    let table = b.nom;
+    for (const l of lignes) {
+      if (l.neutre.startsWith('@@')) {
+        attributs(l.neutre, l.brut, l.ligne, `modèle « ${b.nom} »`);
+        table = blocMap(l) ?? table;
+        continue;
+      }
+      champs.push(lireChamp(l, b.nom));
+    }
+    modeles.push({ nom: b.nom, table, ligne: b.ligne, champs });
+  }
+  return { modeles, enums };
+}
+
+// ── le SQL des migrations ────────────────────────────────────────────────────
+
+export type JetonSql = {
+  /**
+   * `mot` : mot-clé ou identifiant nu ; `identifiant` : `"…"` ; `litteral` : `'…'` ;
+   * `corps` : `$tag$…$tag$` ; `nombre` ; `symbole`.
+   */
+  type: 'mot' | 'identifiant' | 'litteral' | 'corps' | 'nombre' | 'symbole';
+  /** Le contenu : déséchappé pour un identifiant ou un littéral, intérieur du corps pour un `$$`. */
+  valeur: string;
+  ligne: number;
+};
+
+export type InstructionSql = { ligne: number; jetons: JetonSql[]; texte: string };
+
+const SYMBOLES_DOUBLES = ['::', '<>', '!=', '>=', '<=', '||', '->'];
+
+/**
+ * Les instructions d'une migration. Commentaires `--` et `/* … *\/` (IMBRIQUÉS, comme en
+ * PostgreSQL) retirés ; littéraux `'…'` (avec `''`), `E'…'` (avec `\\`), identifiants `"…"` (avec
+ * `""`) et corps `$tag$…$tag$` reconnus comme tels — leurs mots ne comptent pas comme du SQL ; découpe
+ * sur `;` hors littéraux. Lève en nommant la ligne sur un littéral, un corps ou un commentaire non
+ * terminé. `ligneDeDepart` sert à relire un corps en gardant les lignes du fichier.
+ */
+export function lireMigrationSql(texte: string, ligneDeDepart = 1): InstructionSql[] {
+  const instructions: InstructionSql[] = [];
+  let jetons: JetonSql[] = [];
+  let debutInstruction = -1;
+  let ligne = ligneDeDepart;
+  let i = 0;
+  const avancer = (jusqua: number): void => {
+    for (; i < jusqua; i++) if (texte[i] === LF) ligne++;
+  };
+  const clore = (fin: number): void => {
+    if (jetons.length > 0) {
+      instructions.push({
+        ligne: jetons[0]!.ligne,
+        jetons,
+        texte: texte.slice(debutInstruction, fin).trim(),
+      });
+    }
+    jetons = [];
+    debutInstruction = -1;
+  };
+  const pousser = (type: JetonSql['type'], valeur: string, debut: number, fin: number): void => {
+    if (debutInstruction === -1) debutInstruction = debut;
+    jetons.push({ type, valeur, ligne });
+    avancer(fin);
+  };
+  while (i < texte.length) {
+    const c = texte[i]!;
+    const reste = texte.slice(i, i + 2);
+    if (/\s/.test(c)) {
+      avancer(i + 1);
+      continue;
+    }
+    if (reste === '--') {
+      const fin = texte.indexOf(LF, i);
+      avancer(fin === -1 ? texte.length : fin);
+      continue;
+    }
+    if (reste === '/*') {
+      const debut = ligne;
+      let profondeur = 0;
+      let j = i;
+      for (; j < texte.length; j++) {
+        if (texte.startsWith('/*', j)) {
+          profondeur++;
+          j++;
+        } else if (texte.startsWith('*/', j)) {
+          profondeur--;
+          j++;
+          if (profondeur === 0) break;
+        }
+      }
+      if (profondeur > 0) throw new ErreurLecturePrisma(debut, 'commentaire /* non terminé');
+      avancer(j + 1);
+      continue;
+    }
+    if (c === ';') {
+      clore(i);
+      avancer(i + 1);
+      continue;
+    }
+    const echappe = (c === 'E' || c === 'e') && texte[i + 1] === "'";
+    if (c === "'" || echappe) {
+      const debut = i;
+      let j = echappe ? i + 2 : i + 1;
+      let valeur = '';
+      let ferme = false;
+      while (j < texte.length) {
+        const d = texte[j]!;
+        if (echappe && d === '\\' && j + 1 < texte.length) {
+          valeur += texte[j + 1]!;
+          j += 2;
+          continue;
+        }
+        if (d === "'") {
+          if (texte[j + 1] === "'") {
+            valeur += "'";
+            j += 2;
+            continue;
+          }
+          ferme = true;
+          j++;
+          break;
+        }
+        valeur += d;
+        j++;
+      }
+      if (!ferme) throw new ErreurLecturePrisma(ligne, "littéral '…' non terminé");
+      pousser('litteral', valeur, debut, j);
+      continue;
+    }
+    if (c === '"') {
+      const debut = i;
+      let j = i + 1;
+      let valeur = '';
+      let ferme = false;
+      while (j < texte.length) {
+        if (texte[j] === '"') {
+          if (texte[j + 1] === '"') {
+            valeur += '"';
+            j += 2;
+            continue;
+          }
+          ferme = true;
+          j++;
+          break;
+        }
+        valeur += texte[j]!;
+        j++;
+      }
+      if (!ferme) throw new ErreurLecturePrisma(ligne, 'identifiant "…" non terminé');
+      pousser('identifiant', valeur, debut, j);
+      continue;
+    }
+    const dollar = /^\$([A-Za-z_][A-Za-z0-9_]*)?\$/.exec(texte.slice(i, i + 80));
+    if (dollar) {
+      const balise = dollar[0];
+      const fin = texte.indexOf(balise, i + balise.length);
+      if (fin === -1) throw new ErreurLecturePrisma(ligne, `corps ${balise}…${balise} non terminé`);
+      pousser('corps', texte.slice(i + balise.length, fin), i, fin + balise.length);
+      continue;
+    }
+    const motSql = /^[A-Za-z_\u0080-￿][\w$\u0080-￿]*/.exec(texte.slice(i, i + 256));
+    if (motSql) {
+      pousser('mot', motSql[0], i, i + motSql[0].length);
+      continue;
+    }
+    const nombre = /^\d+(?:\.\d+)?/.exec(texte.slice(i, i + 64));
+    if (nombre) {
+      pousser('nombre', nombre[0], i, i + nombre[0].length);
+      continue;
+    }
+    const double = SYMBOLES_DOUBLES.find((s) => texte.startsWith(s, i));
+    pousser('symbole', double ?? c, i, i + (double ?? c).length);
+  }
+  clore(texte.length);
+  return instructions;
+}

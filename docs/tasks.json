@@ -1270,7 +1270,19 @@
         ".github/workflows/ci.yml",
         "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
         "docs/gates.json",
-        "tests/unit/gouvernance/tout-check-est-cable.spec.ts"
+        "tests/unit/gouvernance/tout-check-est-cable.spec.ts",
+        "eslint.config.mjs",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/domaine/etats-occupants.spec.ts",
+        "scripts/gates/perf-budgets.ts",
+        "scripts/gates/gov-inventaire.ts",
+        "scripts/gates/gov-sonde.ts",
+        "scripts/plan-state/build.ts",
+        "tests/unit/gouvernance/corps-de-pr-couvre.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -1285,11 +1297,11 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
+      "branch": "t/qa-t01",
+      "pr": 59,
       "issue": 56,
       "attempts": 0,
       "motif": null,
@@ -1316,7 +1328,11 @@
         "src/lib/env.ts",
         ".env.example",
         "tests/unit/securite/env-boot.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md",
+        "docs/adr/INDEX.md"
       ],
       "schema": false,
       "sensible": [],
@@ -1329,12 +1345,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/sec-01",
+      "pr": 73,
+      "issue": 60,
       "attempts": 0,
       "motif": null,
       "acceptance": "TROISIEME TACHE LA PLUS BLOQUANTE DE LA PHASE (17 descendants). (1) `src/lib/env.ts` valide au demarrage, par un schema ferme, les SEPT secrets que REQ-SEC-028 enumere plus le sel de hachage d'adresse, chacun d'au moins 32 octets (64 caracteres hexadecimaux pour la cle de chiffrement). (2) AUCUNE valeur par defaut, AUCUN repli silencieux : une variable absente, trop courte, ou EGALE a une autre des huit fait echouer le demarrage avec un code de sortie non nul en moins de 60 s ; le message NOMME la variable et n'imprime ni sa valeur, ni un prefixe de sa valeur, ni sa longueur exacte. (3) L'EGALITE DE DEUX SECRETS EST UN REFUS A PART ENTIERE : huit noms qui pointent une meme valeur sont un seul secret, et c'est exactement ce que le mot « distincts » de REQ-SEC-028 interdit. Le controle se fait sur des empreintes, jamais en comparant les valeurs en clair dans un message. (4) `.env.example` porte les huit noms et aucune valeur utilisable ; il est DERIVE du schema, et une variable ajoutee au schema sans l'etre au fichier fait rougir (RM-01). (5) TEMOIN A DEUX FACES : un environnement de bac d'essai prive d'une des huit variables, puis un ou deux d'entre elles rendues egales, fait sortir le boot en code non nul et nomme la variable en cause ; l'environnement complet et distinct le fait sortir en zero, sans qu'aucun secret n'apparaisse dans la sortie. (6) La liste des huit vit a UN SEUL endroit du code ; `docs/gates.json` la cite sans la recopier.",
@@ -1351,10 +1367,18 @@
       "repo": "partners",
       "zone": "securite",
       "paths": [
-        "src/middleware.ts",
         "next.config.ts",
         "tests/unit/securite/headers.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/proxy.ts",
+        "src/server/securite/entetes.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/unit/securite/env-boot.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1369,12 +1393,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/sec-02",
+      "pr": 74,
+      "issue": 66,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) Toute reponse HTTP de Partners porte une politique de securite de contenu construite AUTOUR D'UN NONCE renouvele a chaque requete, `frame-ancestors 'none'`, `strict-dynamic`, un `connect-src` restreint aux origines que le code appelle reellement, plus HSTS avec preload, `X-Content-Type-Options`, `Referrer-Policy: strict-origin-when-cross-origin` et une `Permissions-Policy` restrictive (REQ-SEC-029). (2) AUCUNE tolerance en ligne : ni script ni style en ligne sans nonce ; si un composant en exige un, il porte le nonce, il ne fait pas lever la politique. (3) LE NONCE EST UNIQUE PAR REPONSE : deux requetes sur la meme route rendent deux nonces differents, et le nonce n'est jamais rendu dans une page mise en cache. (4) TEMOIN A DEUX FACES : une copie de travail de la couche d'en-tetes privee d'une seule directive, puis rendant deux fois le meme nonce, fait sortir la garde en code non nul et nomme la directive ou la repetition ; la couche du depot la fait sortir en zero, et le vert imprime le compte des routes reellement confrontees. (5) Le controle ne lit pas une liste tapee de routes : il DERIVE la liste des routes du disque, faute de quoi une route neuve echapperait a la mesure en silence.",
@@ -1394,7 +1418,14 @@
         "src/server/securite/rate-limit.ts",
         "scripts/gates/rate-famille.ts",
         "tests/unit/securite/rate-famille.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/server/securite/pot-de-miel.ts",
+        "src/server/securite/adresse-du-client.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        ".github/workflows/ci.yml",
+        "tests/unit/securite/temoins/e76s-fauted.ts.txt"
       ],
       "schema": false,
       "sensible": [],
@@ -1408,12 +1439,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/sec-10",
+      "pr": 76,
+      "issue": 71,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) Les compteurs de limitation vivent sous les prefixes `magic:`, `depot:`, `verif:`, `webhook:`, `auth:`, et CHACUN declare sa conduite en cas de panne du cache : le depot est limite a 20 / 10 min par empreinte d'adresse avec `surPanne: laisser-passer`, le compteur par identite declare `surPanne: refuser` (REQ-SEC-016). (2) GARDE DE FAMILLE : un compteur ajoute sous l'un des cinq prefixes SANS declarer sa conduite sur panne est refuse — un predicat ouvert echoue ouvert, et c'est precisement ce qu'on ferme ici. (3) Le honeypot repond en succes silencieux et journalise l'identifiant d'apporteur SANS la valeur saisie ; l'accuse de depot n'est emis que si la ligne existe reellement (REQ-SEC-035). Aucun message, aucun code de reponse, aucun delai ne distingue le chemin honeypot du chemin nominal. (4) TEMOIN A DEUX FACES : une copie de travail ou un compteur neuf omet sa conduite sur panne, et une ou le cache est indisponible, font sortir la garde en code non nul et nomment le prefixe ; le code du depot la fait sortir en zero, et le vert imprime le compte des compteurs reellement confrontes. (5) Le detail des representations d'evitement ne s'ecrit pas ici : il vit hors depot, et cette acceptance ne le nomme pas.",
@@ -1435,8 +1466,14 @@
       "paths": [
         "src/lib/logger.ts",
         "src/lib/notify.ts",
-        "sentry.server.config.ts",
-        "tests/unit/qualite/journal-redige.spec.ts"
+        "tests/unit/qualite/journal-redige.spec.ts",
+        "src/lib/sentry.ts",
+        "src/instrumentation.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/qualite/journal-redige.bac.ts",
+        "src/lib/forme-iban.ts",
+        "scripts/gates/gov-entite.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1444,20 +1481,21 @@
         "rgpd"
       ],
       "deps": [
-        "QA-T01"
+        "QA-T01",
+        "DM-01"
       ],
       "reqs": [
         "REQ-QA-024"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "estimateDays": 1,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/qa-t08",
+      "pr": 88,
+      "issue": 70,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) Tous les journaux applicatifs sont des lignes JSON structurees (pino) portant `requestId`, empreinte d'identifiant d'apporteur, `eventId` et `jobName` quand ils existent (REQ-QA-024). (2) LA REDACTION EST DANS LE JOURNALISEUR, PAS DANS LES APPELANTS : nom, prenom, telephone et adresse de courriel du contact rencontre, coordonnee bancaire et jeton de lien de depot sont remplaces au niveau du serialiseur ; aucun site d'appel n'a a y penser, parce qu'un site d'appel qui oublie est la regle et non l'exception. (3) Sentry recoit les erreurs avec le meme filtre, et le canal de notification refuse de partir hors production sans `NOTIFY_SINK=true` (impose par le hook d'environnement du depot). (4) TEMOIN A DEUX FACES : un journal de bac d'essai auquel on passe un objet portant chacun des champs proteges fait sortir la garde en code non nul tant que la redaction n'est pas posee, et NOMME le champ qui a franchi ; apres correctif, le meme objet fait sortir la garde en zero et la sortie ne contient aucune des valeurs passees. (5) Le vert imprime le compte des champs reellement confrontes ; « aucun champ en clair » sans le compte se lirait comme une absence prouvee.",
@@ -1481,7 +1519,20 @@
         "tests/integration/journal.spec.ts",
         "tests/unit/domaine/schema-centimes.spec.ts",
         "tests/unit/domaine/journal-charge-fermee.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/domain/evenement/canonique.ts",
+        "src/domain/evenement/charges.ts",
+        "src/domain/donnees-personnelles/champs.ts",
+        "src/server/evenement/journal.ts",
+        "tests/integration/harnais.ts",
+        "tests/unit/domaine/journal-chaine.spec.ts",
+        "vitest.config.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".github/workflows/ci.yml",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "docs/GLOSSAIRE.md",
+        "docs/adr/0015-journal-evenement-chaine-immuable.md"
       ],
       "schema": false,
       "sensible": [
@@ -1501,12 +1552,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/dm-01",
+      "pr": 75,
+      "issue": 62,
       "attempts": 0,
       "motif": null,
       "acceptance": "DEUXIEME TACHE LA PLUS BLOQUANTE DE LA PHASE (19 descendants) ET PREMIERE ECRITURE DU SCHEMA — elle porte le label `schema`, l'approbation bloquante prevue par la charte, et elle est SEULE de sa famille dans son lot (une seule tache qui ecrit `prisma/schema.prisma` par lot, jamais deux). (1) Le socle du schema Partners existe, avec sa premiere migration. Toute colonne monetaire est un entier en centimes, HT, signee, suffixee `Cents` : aucune colonne a virgule flottante ni decimale, aucune valeur en euros (REQ-DM-001). Toute colonne dont le nom porte statut, type, motif, resultat, etat, origine, kind ou palier est un enum, jamais une chaine libre (REQ-DM-038). (2) LE JOURNAL `Evenement` EST APPEND-ONLY ET CHAINE : `prevHash`, `selfHash` calcule sur la charge canonique, et un declencheur de base REFUSE toute mise a jour et toute suppression (REQ-DM-024, REQ-JUR-026, REQ-SEC-027). Le refus est celui de la BASE, pas celui du code : un client qui contourne la couche applicative se heurte quand meme au declencheur. (3) LA CHARGE D'UN EVENEMENT EST UN SCHEMA FERME PAR TYPE — identifiants, empreintes, enums, montants, horodatages — et JAMAIS un nom, une adresse de courriel, un telephone, une coordonnee bancaire ou une adresse postale (REQ-DM-041). (4) APRES UN EFFACEMENT DE TIERS, LA CHAINE RESTE VERIFIABLE : c'est la consequence directe de (3), et elle se prouve, elle ne se postule pas. (5) TEMOIN A DEUX FACES, en base reelle : une tentative de mise a jour et une tentative de suppression d'une ligne du journal echouent toutes deux et nomment le declencheur ; une insertion nominale reussit, et `verifierChaine()` sort en zero sur la base ainsi remplie. (6) TEMOIN A DEUX FACES sur la charge : une charge de bac d'essai portant un champ interdit fait sortir la garde `journal:sans-pii` en code non nul et nomme le champ ; les charges du depot la font sortir en zero, avec le compte des types reellement confrontes.",
@@ -1542,7 +1593,14 @@
         "scripts/gates/schema-cents.ts",
         "tests/unit/domaine/gardes-de-schema.spec.ts",
         "tests/integration/index-partiels.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "scripts/lot/lecteur-prisma.ts",
+        "scripts/gates/migrations-additive.ts",
+        "package.json",
+        ".github/workflows/ci.yml",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "tests/unit/domaine/schema-centimes.spec.ts",
+        "docs/adr/0011-une-seule-implementation-des-listes-d-etats.md"
       ],
       "schema": false,
       "sensible": [],
@@ -1559,12 +1617,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/dm-02",
+      "pr": 84,
+      "issue": 63,
       "attempts": 0,
       "motif": null,
       "acceptance": "ELLE ABSORBE LA DETTE MESUREE LE 2026-09-16 SUR LA GARDE DE SCHEMA ET D'ENUMS (decision du gardien-spec : une tache neuve aurait duplique le porteur — `partners:schema:enums` et `partners:schema:cents` sont deja attribuees ici). Estimation relevee de 0,5 a 1,5 j pour cette raison. ETAT MESURE : `scripts/gates/schema-enums.ts` est la seule implementation depuis partners/ADR-0011, et elle lit Prisma et le code par des motifs qui MANQUENT des declarations valides — un modele lu jusqu'a la premiere accolade fermante meme rencontree dans un commentaire, et tous les champs suivants echappent a REQ-DM-038 ; une enumeration d'etats ecrite sur plusieurs lignes et des membres d'enum non entoures de guillemets ne sont pas vus, parce que la recherche se fait ligne a ligne ; invoquee sans extension, la garde sort en zero sans rien ecrire. Le schema reel arrive avec DM-01 : la garde doit etre juste AVANT d'avoir quelque chose a juger. A LIVRER. (1) La lecture de `prisma/schema.prisma` ne se fait plus ligne a ligne : commentaires et chaines sont retires AVANT le decoupage des modeles, et un modele se ferme sur sa vraie accolade. (2) Une garde invoquee sur un perimetre VIDE ne sort pas en zero en silence : elle imprime le perimetre et son compte, et « 0 fichier balaye » ne se lit pas comme « aucun defaut ». (3) Les cinq controles que le registre annonce s'arment : entiers en centimes (REQ-DM-001), vocabulaires en enums (REQ-DM-038, REQ-JUR-027), index unique PARTIEL sur l'attribution occupante ecrit en SQL brut et verifie en lisant le catalogue d'index APRES le deploiement des migrations (REQ-DM-003), migrations additives sans suppression de colonne ni changement destructif d'enum sans decision ecrite (REQ-DM-037). (4) TEMOIN A DEUX FACES pour CHACUN des cinq : une copie de travail du schema portant le defaut — une colonne monetaire a virgule flottante, un vocabulaire en chaine libre, un champ place apres une accolade commentee, un index unique total la ou l'exigence demande un partiel, une migration qui supprime une colonne — fait sortir la garde en code non nul et nomme le modele et le champ ; le schema du depot la fait sortir en zero. (5) Le vert imprime le compte des modeles et des champs REELLEMENT confrontes.",
@@ -1597,7 +1655,13 @@
         "tests/integration/harnais-testcontainers.spec.ts",
         "vitest.config.ts",
         ".github/workflows/ci.yml",
-        "docs/gates.json"
+        "docs/gates.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/setup.ts",
+        "tests/unit/gouvernance/tout-check-est-cable.spec.ts",
+        "tests/unit/ci/integration-collectee-par-gate-a.spec.ts",
+        "tests/integration/rate-limit-redis.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1613,18 +1677,20 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/qa-t02",
+      "pr": 86,
+      "issue": 68,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) Les tests d'integration tournent sur un Postgres 16 avec pgvector et un cache ephemeres, montes par testcontainers, schema migre par `prisma migrate deploy` ; l'isolation se fait par transaction ou par base par fichier (REQ-QA-006). (2) AUCUN TEST NE DEPEND D'UN FICHIER D'ENVIRONNEMENT PARTAGE : les identifiants de connexion viennent du conteneur, jamais d'un `.env` du poste ; un test qui lit une variable d'environnement partagee est refuse. (3) LE HARNAIS DIT CE QU'IL NE PEUT PAS FAIRE : si le demon de conteneurs est indisponible, la suite d'integration ECHOUE explicitement avec un message qui le nomme — elle ne se saute pas en silence. Un test saute a l'air d'avoir mesure et n'a rien mesure. (4) TEMOIN A DEUX FACES : sans demon disponible, `pnpm test:integration` sort en code non nul avec le motif nomme ; avec demon disponible, la meme commande sort en zero et imprime le compte des fichiers d'integration reellement executes. (5) L'etape de Gate A qui lance ce harnais ne porte pas de tolerance d'echec.",
       "tests": {
         "REQ-QA-006": [
-          "tests/integration/harnais-testcontainers.spec.ts"
+          "tests/integration/harnais-testcontainers.spec.ts",
+          "tests/unit/ci/integration-collectee-par-gate-a.spec.ts",
+          "tests/integration/rate-limit-redis.spec.ts"
         ]
       }
     },
@@ -1691,11 +1757,30 @@
       "repo": "partners",
       "zone": "qualite",
       "paths": [
-        "scripts/gates/req-check.ts",
-        "docs/requirements.json",
         ".github/workflows/ci.yml",
         "tests/unit/qualite/req-check.spec.ts",
-        "scripts/gates/gov-trace.ts"
+        "scripts/gates/gov-trace.ts",
+        "package.json",
+        "docs/gates.json",
+        "scripts/lot/titres-ecrits.ts",
+        "tests/unit/ci/lire-yaml.ts",
+        "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
+        "tests/unit/gouvernance/gardes.spec.ts",
+        "tests/unit/gouvernance/affirmations-verifiees.spec.ts",
+        "tests/unit/gouvernance/fiches-tiers.spec.ts",
+        "tests/unit/gouvernance/paths-derives.spec.ts",
+        "tests/unit/gouvernance/tout-check-est-cable.spec.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts",
+        "tests/unit/gouvernance/verrou-de-phase.spec.ts",
+        "tests/unit/gouvernance/corps-de-pr-couvre.spec.ts",
+        "tests/unit/gouvernance/attributions-resolvent.spec.ts",
+        "tests/unit/gouvernance/attestation-inter-depot.spec.ts",
+        "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts",
+        "tests/unit/gouvernance/glossaire-enums.spec.ts",
+        "tests/unit/gouvernance/tracabilite.spec.ts",
+        "tests/unit/integration/contrat-hash.spec.ts",
+        "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -1708,16 +1793,16 @@
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "estimateDays": 1,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/qa-t03",
+      "pr": 81,
+      "issue": 80,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`req:check` vérifie la PAIRE (tâche, REQ) → test nommé existant, annoté, vert.",
+      "acceptance": "(1) `pnpm req:check` est la garde `req:check` DEJA inscrite (`scripts/gates/gov-trace.ts`, alias `gov:trace`), lancee avec les RESULTATS de la passe de tests (`--resultats test-results/vitest.json`, ecrits par `pnpm test`) : aucun second script, aucune seconde matrice. (2) PAIRE ANNOTEE DES DEUX FORMES : pour chaque paire (tache, REQ active) dont le fichier promis existe, le fichier porte `@req <REQ>` dans son premier bloc de commentaire ET au moins un titre de `it()` contenant l'identifiant ; REQ-QA-014 dit « et », la garde acceptait « ou ». (3) PAIRE VERTE : au moins un de ces tests a le statut `passed` dans les resultats — saute, `todo`, en echec ou absent ne couvre rien ; une promesse `#titre` exige CE test-la vert. (4) Une annotation `@req` qui nomme une exigence ABSORBEE sans porter son renvoi `→ REQ-…` sur la meme ligne est refusee, comme un titre. (5) Resultats absents, illisibles ou perimes (un fichier que la configuration execute et que les resultats ne portent pas) : rouge nomme, jamais un vert ; sans `--resultats`, `gov:trace` DIT que le vert n'est pas juge. (6) Gate A lance `pnpm req:check` juste apres l'etape « Tests », sans tolerance d'echec. (7) TEMOIN A DEUX FACES : chaque famille neuve a son temoin dans `gov:trace --prove` et un contre-temoin vert ; le depot reel sort en 0 apres mise en conformite des specs livrees, et le vert imprime le nombre de paires confrontees ET le nombre de paires vertes.",
       "tests": {
         "REQ-QA-014": [
           "tests/unit/qualite/req-check.spec.ts"
@@ -1752,11 +1837,11 @@
       "externe": null,
       "estimateDays": 0.5,
       "statut": "a_faire",
-      "owner": null,
+      "owner": "A05",
       "lot": null,
       "branch": null,
       "pr": null,
-      "issue": null,
+      "issue": 69,
       "attempts": 0,
       "motif": null,
       "acceptance": "(1) `.semgrep.yml` porte les regles publiques retenues ET les regles maison, chaque regle maison ayant SON test — une regle sans test est une regle qu'on croit active. (2) La regle maison qui compte le plus ici interdit l'usage direct du client de base hors de la couche d'acces cloisonnee pour les modeles cloisonnes (REQ-QA-011) : c'est elle qui rend SEC-05 verifiable, et elle est ecrite ici meme si la couche n'existe pas encore — une regle qui attend son code est une garde, une regle ecrite apres coup est un constat. (3) L'etape de Gate A qui lance semgrep ne porte pas de tolerance d'echec (REQ-QA-013), et la version de l'outil est epinglee. (4) TEMOIN A DEUX FACES : un fichier de bac d'essai qui enfreint chaque regle maison, un par un, fait sortir semgrep en code non nul et nomme la regle ; le depot reel le fait sortir en zero, et le vert imprime le compte des regles reellement exercees, jamais la longueur de la liste declaree. (5) Une regle desactivee par un commentaire en ligne est refusee : le perimetre ne se retrecit pas fichier par fichier.",
@@ -1856,7 +1941,8 @@
         "src/server/securite/pii.ts",
         "scripts/gates/schema-pii.ts",
         "tests/unit/securite/chiffrement-avec-aad.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1872,12 +1958,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/sec-08",
+      "pr": 126,
+      "issue": 65,
       "attempts": 0,
       "motif": null,
       "acceptance": "TACHE SENSIBLE — donnees personnelles. (1) Nom, adresse de courriel et telephone du tiers rencontre et de l'apporteur, ainsi que la coordonnee bancaire, sont chiffres en AES-256-GCM avec une donnee additionnelle authentifiee EGALE a l'identifiant de la ligne : un bloc chiffre deplace d'une ligne a une autre ne se dechiffre pas (REQ-SEC-024). (2) Les recherches et les comparaisons passent par des empreintes salees (`emailHash`, `phoneHash`, `ibanHash`, `siretHash`) ; aucune de ces empreintes n'est reversible, et AUCUNE ADRESSE RESEAU N'EST STOCKEE EN CLAIR. (3) LE SEL ET LA CLE VIENNENT DE SEC-01 : ils ne sont ni ecrits dans le code, ni derives d'une autre variable, ni partages entre deux usages. (4) LE CHIFFREMENT EST DANS LA COUCHE DE PERSISTANCE : un site d'appel ne peut pas ecrire un champ protege en clair, parce que le chemin d'ecriture ne le lui permet pas. (5) TEMOIN A DEUX FACES : une ligne chiffree dont on transpose le bloc vers une autre ligne echoue au dechiffrement et NOMME l'echec d'authentification ; la meme ligne a sa place se dechiffre et sort en zero. (6) TEMOIN A DEUX FACES sur la persistance : un chemin d'ecriture de bac d'essai qui tente d'ecrire un champ protege en clair est refuse et nomme le champ ; le chemin du depot sort en zero. (7) Le vert imprime le compte des champs et des chemins d'ecriture reellement confrontes.",
@@ -2635,7 +2721,8 @@
         "src/server/integrations/axionia/api-entrante.ts",
         "src/app/api/integrations/axionia/",
         "tests/integration/frontiere.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "tests/integration/harnais-testcontainers.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -2651,12 +2738,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/sec-07",
+      "pr": 90,
+      "issue": 94,
       "attempts": 0,
       "motif": null,
       "acceptance": "TACHE SENSIBLE — authentification. (1) Les routes appelees par axionia repondent 404 — jamais 401 — sans jeton porteur dedie d'au moins 32 octets, compare en temps constant ; elles sont restreintes par une liste d'adresses autorisees, limitees a 60 appels par minute, et chaque appel est journalise (REQ-SEC-012). 404 PLUTOT QUE 401 : un 401 confirme que la route existe. (2) La route d'interrogation d'attribution rend une reponse MINIMALE — un statut parmi libre, attribuee ou cliente, une echeance eventuelle — et NE REND NI NOM NI ADRESSE DE COURRIEL D'APPORTEUR (REQ-INT-014). Ce qui n'est pas dans la reponse ne peut pas fuir. (3) La reponse est IDENTIQUE en forme et en temps pour un SIREN inconnu et pour un SIREN libre : une difference mesurable est un oracle d'enumeration. (4) TEMOIN A DEUX FACES : un appel sans jeton, puis avec un jeton faux, puis depuis une adresse hors liste, rendent 404 et n'apparaissent dans aucune reponse sous une autre forme ; l'appel autorise rend 200 avec exactement les champs que le contrat declare, et un test de forme refuse tout champ en trop. (5) Le vert imprime le compte des routes reellement confrontees.",
@@ -2892,7 +2979,10 @@
         "tests/integration/api-gouv.spec.ts",
         "tests/unit/integration/recherche-entreprises-repli.spec.ts",
         "docs/gates.json",
-        ".github/workflows/nightly.yml"
+        ".github/workflows/nightly.yml",
+        "src/server/securite/rate-limit.ts",
+        "src/lib/env.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -2910,12 +3000,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/int-t09",
+      "pr": 91,
+      "issue": 96,
       "attempts": 0,
       "motif": null,
       "acceptance": "DEPEND D'UN TIERS : l'API publique de recherche d'entreprises. Aucune cle, mais des quotas, et un REPLI MANUEL OBLIGATOIRE. (1) L'autocompletion passe par un mandataire SERVEUR : anti-rebond de 300 ms, requete minimale, cache de 24 h, limite globale de 5 requetes par seconde, et respect de l'en-tete de temporisation renvoye par le tiers (REQ-INT-020). (2) SUR PANNE DU TIERS — refus pour exces, delai depasse, erreur serveur — LE DEPOT BASCULE EN SAISIE MANUELLE de SIREN ou SIRET controlee, il ne se bloque pas : un parcours d'apporteur qui depend de la disponibilite d'un tiers est un parcours qui s'arrete quand le tiers s'arrete. Le disjoncteur ouvre, et l'etat ouvert est VISIBLE en console. (3) LE MANDATAIRE EST LIMITE PAR IDENTITE (120 par jour) ET PAR EMPREINTE D'ADRESSE, journalise, et SA REPONSE NE CONTIENT JAMAIS LA LISTE DES DIRIGEANTS (REQ-SEC-013) ; le serveur peut les conserver en base pour un signal interne, il ne les renvoie pas au navigateur. AUCUNE ANNEE DE NAISSANCE NE TRAVERSE, et une garde dediee le tient. (4) Le client est valide par schema contre des FIXTURES ENREGISTREES ET DATEES, au moins 20 cas, et un test de contrat NOCTURNE contre l'API reelle signale toute derive de forme (REQ-QA-028). Les fixtures viennent du producteur reel, jamais d'une main (regle maison n°3). (5) Les champs persistes sont exactement ceux que REQ-INT-021 enumere, et un test de forme refuse tout champ en trop. (6) TEMOIN A DEUX FACES : une reponse de bac d'essai portant une liste de dirigeants, puis une portant une annee de naissance, font sortir la garde en code non nul et nomment le champ ; les 20 fixtures enregistrees la font sortir en zero. (7) TEMOIN A DEUX FACES sur le repli : le tiers simule en refus pour exces fait basculer le parcours en saisie manuelle et le test le CONSTATE sur le rendu, pas sur un journal ; le tiers disponible rend l'autocompletion.",
@@ -3076,7 +3166,19 @@
         "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts",
         "tests/unit/domaine/apporteur-identites-facturation.spec.ts",
         "tests/unit/domaine/apporteur-score-fige.spec.ts",
-        "tests/integration/apporteur-jeton-depot.spec.ts"
+        "tests/integration/apporteur-jeton-depot.spec.ts",
+        "prisma/migrations/",
+        "src/domain/apporteur/identifiants.ts",
+        "src/domain/apporteur/activite.ts",
+        "src/domain/apporteur/identites-facturation.ts",
+        "src/domain/apporteur/population.ts",
+        "src/domain/apporteur/snapshot-candidature.ts",
+        "tests/fixtures/axionia/candidature-recue.json",
+        "tests/unit/domaine/apporteur-identifiants.spec.ts",
+        "tests/unit/domaine/apporteur-activite.spec.ts",
+        "tests/unit/domaine/apporteur-population-is-test.spec.ts",
+        "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts",
+        "scripts/gates/gov-attributions.ts"
       ],
       "schema": true,
       "sensible": [
@@ -3101,24 +3203,26 @@
       ],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/dm-06",
+      "pr": 128,
+      "issue": 127,
       "attempts": 0,
       "motif": null,
-      "acceptance": "TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) Le statut d'apporteur est un ENUM {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec une MATRICE DE TRANSITIONS explicite : une transition absente de la matrice est refusee, jamais autorisee par omission (REQ-DM-011). Le motif de resiliation est un enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} ; le vocabulaire de la faute n'y figure pas. (2) Un apporteur porte DEUX identifiants distincts : un code de parrainage public, unique, lisible et NON ENUMERABLE (prefixe plus 6 caracteres tires au hasard), et un ou plusieurs jetons de depot {empreinte unique, date de creation, date de revocation eventuelle, dernier usage} (REQ-DM-012). Un jeton revoque ne se reactive pas. (3) `actif` et `dormant` sont DERIVES par fonction pure, JAMAIS STOCKES, et restent des indicateurs de console : AUCUN MESSAGE N'EST ENVOYE A UN APPORTEUR EN RAISON DE SON INACTIVITE (REQ-CPL-027). C'est une interdiction de produit, pas une preference d'ergonomie. (4) `isTest` est exclu de TOUS les agregats d'argent, du lot de paiement, de la declaration annuelle et de l'entonnoir (REQ-CPL-020) ; les identites de facturation sont DATEES, et un releve qui chevauche deux identites produit DEUX autofactures (REQ-CPL-005). (5) Le seuil de verification prioritaire est une colonne entiere au defaut derive du palier, surcharge manuelle tracee ; AUCUN DEPOT N'EST REFUSE POUR DEPASSEMENT DE SEUIL — au-dela, l'attribution porte simplement le drapeau de verification prioritaire (REQ-DM-010). (6) Le score de candidature est transporte FIGE depuis axionia et JAMAIS recalcule par Partners ; un test de parite sur fixtures exportees le prouve (REQ-DM-035, REQ-QA-035). (7) TEMOIN A DEUX FACES : une transition absente de la matrice est refusee et la nomme ; une transition declaree passe. Un depot au-dela du seuil est ACCEPTE et porte le drapeau, et le test verifie l'acceptation, pas seulement le drapeau. Un agregat d'argent calcule sur une population incluant `isTest` diverge du meme agregat sans, et le test nomme l'ecart en centimes.",
+      "acceptance": "TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) Le statut d'apporteur est un ENUM {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec une MATRICE DE TRANSITIONS explicite : une transition absente de la matrice est refusee, jamais autorisee par omission (REQ-DM-011). Le motif de resiliation est un enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} ; le vocabulaire de la faute n'y figure pas. (2) Un apporteur porte DEUX identifiants distincts : un code de parrainage public, unique, lisible et NON ENUMERABLE — prefixe `AX` puis 6 caracteres de l'alphabet Crockford base32 (sans I, L, O, U), 30 bits aleatoires (HYP-DM06-CODE-PARRAINAGE) —, et un ou plusieurs jetons de depot {empreinte unique, date de creation, date de revocation eventuelle, dernier usage} (REQ-DM-012). Un jeton revoque ne se reactive pas. (3) `actif` et `dormant` sont DERIVES par fonction pure, JAMAIS STOCKES ; la fonction de dormance RECOIT `DORMANCE_JOURS` EN PARAMETRE tant que la SSOT des seuils (JUR-T02) n'existe pas — jamais un litteral dans le code (RM-10) ; et restent des indicateurs de console : AUCUN MESSAGE N'EST ENVOYE A UN APPORTEUR EN RAISON DE SON INACTIVITE (REQ-CPL-027). C'est une interdiction de produit, pas une preference d'ergonomie. (4) `isTest` est exclu de TOUS les agregats d'argent, du lot de paiement, de la declaration annuelle et de l'entonnoir (REQ-CPL-020) ; les identites de facturation sont DATEES, et un releve qui chevauche deux identites produit DEUX autofactures (REQ-CPL-005). L'IBAN ET LA PIECE RIB NE SONT PAS DANS DM-06 : DM-06 cree `IdentitesFacturation` SANS AUCUNE colonne de RIB ni d'IBAN ; la reference a la piece RIB et sa relation a `PieceKyc` sont posees par DM-11, qui depend de DM-06 (HYP-DM06-IBAN). (5) Le seuil de verification prioritaire est une colonne entiere au defaut derive du palier, surcharge manuelle tracee ; DM-06 porte la COLONNE et son defaut ; le comportement du depot au-dela du seuil (accepte, drapeau pose) et son temoin appartiennent a DM-09, qui porte le depot (REQ-DM-010). (6) Le score de candidature est transporte FIGE depuis axionia et JAMAIS recalcule par Partners ; un test de parite sur la fixture du producteur reel `tests/fixtures/axionia/candidature-recue.json` (Source: INT-T01b) le prouve (REQ-DM-035, REQ-QA-035). `sourceCanal` est stockee TELLE QUE RECUE, longueur bornee (HYP-DM06-SOURCE-CANAL) : aucun enum de canal dans DM-06, la derivation appartient a EXT-T03. (7) TEMOIN A DEUX FACES : une transition absente de la matrice est refusee et la nomme ; une transition declaree passe. Une `sourceCanal` au-dela de la borne n'est pas tronquee : elle est stockee nulle et l'ecart est journalise en consignant sa LONGUEUR, jamais sa valeur. Un agregat d'argent calcule sur une population incluant `isTest` diverge du meme agregat sans, et le test nomme l'ecart en centimes.",
       "tests": {
         "REQ-CPL-005": [
           "tests/unit/domaine/apporteur-identites-facturation.spec.ts"
         ],
         "REQ-CPL-020": [
-          "tests/unit/domaine/apporteur-identites-facturation.spec.ts"
+          "tests/unit/domaine/apporteur-identites-facturation.spec.ts",
+          "tests/unit/domaine/apporteur-population-is-test.spec.ts"
         ],
         "REQ-CPL-027": [
-          "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts"
+          "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts",
+          "tests/unit/domaine/apporteur-activite.spec.ts"
         ],
         "REQ-DM-010": [
           "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts"
@@ -3127,10 +3231,12 @@
           "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts"
         ],
         "REQ-DM-012": [
-          "tests/integration/apporteur-jeton-depot.spec.ts"
+          "tests/integration/apporteur-jeton-depot.spec.ts",
+          "tests/unit/domaine/apporteur-identifiants.spec.ts"
         ],
         "REQ-DM-035": [
-          "tests/unit/domaine/apporteur-score-fige.spec.ts"
+          "tests/unit/domaine/apporteur-score-fige.spec.ts",
+          "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts"
         ],
         "REQ-QA-035": [
           "tests/unit/domaine/apporteur-score-fige.spec.ts"
@@ -3150,7 +3256,17 @@
         "scripts/gates/lexique-apporteurs.ts",
         "scripts/gates/jur-grille-chiffree.ts",
         "tests/unit/contrat/contract-template-complete.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "src/domain/contrat/decisions.ts",
+        "src/domain/contrat/gabarit.ts",
+        "src/domain/contrat/grille-chiffree.ts",
+        "src/domain/contrat/publication.ts",
+        "src/domain/contrat/variables.ts",
+        "src/domain/lexique/lexique-interdit.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "src/domain/registre/registre-decisions.ts",
+        "scripts/lot/registre-decisions.ts",
+        "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -3166,15 +3282,15 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/jur-t01",
+      "pr": 92,
+      "issue": 95,
       "attempts": 0,
       "motif": null,
-      "acceptance": "le gabarit reprend `CONTRAT-APPORTEUR-V1.md` **dans sa version corrigée par les cinq examens du 2026-09-03** (12 bloquants + 30 majeurs), annoté des identifiants `CL-*` ; `docs/DECISIONS.md` porte une valeur **tranchée et datée** pour chacune des lignes marquées `avenant` du registre (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ des 12 mois E.1-9). 🔴 **Complétée le 2026-09-03 (synthèse M-20 et P-4).** (1) **Six acceptations distinctes**, et la **note encadrée** qui les signale figure **dans le corps** sous chacun des articles 3.7, 4.5, 5.2, 7, 12 **et** 14 — le corps ne la portait que sous l'art. 14, et la mention « très apparente » de l'art. 48 CPC était renvoyée à une note **hors clause**. (2) La variable `{{APPORTEUR_QUALITE}}` est **alimentée depuis le statut d'exercice recueilli au KYC** (DM-11), jamais saisie à la main : la validité de la clause attributive dépend d'un fait — la qualité de commerçant des deux parties — qu'une part significative des 300 apporteurs (professions libérales, retraités en cumul, associations) ne remplira pas. (3) **Gate lexicale étendue au gabarit de contrat** (P-4 ; elle ne couvrait que `micro-copy/**`, `emails/apporteur/**`, `src/app/(espace)/**`), liste noire : `L.134-12`, `L.134-16`, « indemnité de fin de contrat », « indemnité de clientèle », « renonce », « renonciation » (hors le titre de l'art. 19, exclu nommément), « kit de vente ». C'est le seul moyen d'empêcher qu'une relecture future « améliore » l'art. 11.3 : **une renonciation par avance à un droit d'ordre public est sans effet**, et sa seule présence affaiblit rétrospectivement la portée des articles 1 et 2.",
+      "acceptance": "le gabarit reprend `CONTRAT-APPORTEUR-V1.md` **dans sa version corrigée par les cinq examens du 2026-09-03** (12 bloquants + 30 majeurs), annoté des identifiants `CL-*` ; `docs/DECISIONS.md` porte une valeur **tranchée et datée** pour chacune des lignes marquées `avenant` du registre (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ des 12 mois E.1-9). 🔴 **Complétée le 2026-09-03 (synthèse M-20 et P-4).** (1) **Six acceptations distinctes**, et la **note encadrée** qui les signale figure **dans le corps** sous chacun des articles 3.7, 4.5, 5.2, 7, 12 **et** 14 — le corps ne la portait que sous l'art. 14, et la mention « très apparente » de l'art. 48 CPC était renvoyée à une note **hors clause**. (2) La variable `{{APPORTEUR_QUALITE}}` est **alimentée depuis le statut d'exercice recueilli au KYC** (DM-11), jamais saisie à la main : la validité de la clause attributive dépend d'un fait — la qualité de commerçant des deux parties — qu'une part significative des 300 apporteurs (professions libérales, retraités en cumul, associations) ne remplira pas. (3) **Gate lexicale étendue au gabarit de contrat** (P-4 ; elle ne couvrait que `micro-copy/**`, `emails/apporteur/**`, `src/app/(espace)/**`), liste noire : `L.134-12`, `L.134-16`, « indemnité de fin de contrat », « indemnité de clientèle », « renonce », « renonciation » (hors le titre de l'art. 19, exclu nommément), « kit de vente ». C'est le seul moyen d'empêcher qu'une relecture future « améliore » l'art. 11.3 : **une renonciation par avance à un droit d'ordre public est sans effet**, et sa seule présence affaiblit rétrospectivement la portée des articles 1 et 2. 🔴 **Complétée le 2026-09-25 (décision W15 de Will, « fais selon tes recommandations »).** Le gabarit porte DEUX clauses de plus à l'art. 4.6, chacune annotée d'un identifiant CL-* et d'un test de présence : (a) **al. 6 amendé** (HYP-W15-ART-4-6) — le parrain voit la liste de ses filleuls DIRECTS réduite au prénom, à l'initiale du nom et à l'état de son contrat, « en signature » ou « signé » seulement, apprécié sur les versions du contrat postérieures à sa dernière résiliation (un avenant en cours de signature n'y changeant rien, une relation reprise étant lue sur ses seules versions nouvelles) ; un filleul dont la relation est résiliée sort de la liste — le parrain en apprend la fin, mais ni le motif ni aucune mesure intermédiaire prise à l'égard du filleul (suspension, vérification) ; aucune échéance ni date propre au filleul ; aucun montant par filleul, aucune donnée d'activité, aucun filleul de filleul. (b) **Nouvel alinéa de correction du rattachement** (HYP-W15-PARRAIN-A-DATE) — la Société peut rattacher un filleul à un autre parrain sur motif LIMITATIVEMENT énuméré : erreur de rattachement, fraude ou auto-parrainage, départ ou résiliation du parrain ; effet pour les commissions futures seulement, les sommes de parrainage déjà nées restant acquises au parrain d'origine ; les trois personnes sont informées ; aucun accord du parrain d'origine n'est requis. Le texte définitif de ces deux clauses reste soumis à la relecture de Will avant toute signature (JUR-T01b).",
       "tests": {
         "REQ-CPL-012": [
           "tests/unit/contrat/contract-template-complete.spec.ts"
@@ -3298,7 +3414,12 @@
         "scripts/gates/ux-exhaustivite.ts",
         "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
         "docs/gates.json",
-        "scripts/gates/lexique-apporteurs.ts"
+        "scripts/gates/lexique-apporteurs.ts",
+        "src/domain/depot/issue-depot.ts",
+        "src/domain/lexique/lexique-interdit.ts",
+        "tests/unit/gouvernance/lexique.spec.ts",
+        "scripts/gates/gov-attributions.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -3315,12 +3436,12 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/ux-p0-01",
+      "pr": 93,
+      "issue": 97,
       "attempts": 0,
       "motif": null,
       "acceptance": "DECOUPEE LE 2026-09-16. La premiere redaction declarait une EXEMPTION au controle « aucune tache ne depend d'une tache de phase strictement superieure », au motif que les libelles d'etats d'attribution viennent de DM-07, qui est en phase 1. Cette exemption n'existe dans aucun registre, et elle n'y sera pas posee : une exemption est un trou PERMANENT, deux taches sont un fait. La premiere redaction le recommandait elle-meme. Cette tache-ci ne porte donc QUE ce qui est livrable des maintenant, et sa dependance a GOV-006 est sa seule dependance. A LIVRER. (1) La micro-copie de l'espace a une source unique : chaque libelle vit dans `messages/fr.json` ou sous `src/content/micro-copy/`, et nulle part ailleurs — aucun libelle en dur dans un composant. (2) Chaque issue possible d'un depot, telle que l'enum la declare, affiche un TITRE, un POURQUOI et un QUOI FAIRE, et dit explicitement si le depot est horodate au nom de l'apporteur (REQ-UX-002). L'enum est aligne un pour un sur les categories du contrat : une issue ajoutee au contrat sans son texte fait rougir. (3) CHAQUE ECRAN DE L'ESPACE ET DE LA CONSOLE A UN ETAT VIDE DECLARE — titre, phrase, action principale — et celui de la liste des entreprises guide vers le premier depot (REQ-UX-019). Un ecran sans etat vide declare est un ecran qui, le premier jour, ne dit rien a personne. (4) AUCUN TEXTE VU PAR UN APPORTEUR ne contient les mots que REQ-UX-003 refuse ; la liste est IMPORTEE de la source unique du lexique, jamais recopiee dans la garde. (5) TEMOIN A DEUX FACES : une valeur ajoutee a l'enum des issues sans son texte, un ecran sans etat vide declare, et un libelle en dur dans un composant font sortir la garde en code non nul, un cas par un, en NOMMANT la valeur, l'ecran ou le fichier ; la micro-copie du depot la fait sortir en zero, avec le compte des issues, des ecrans et des fichiers reellement confrontes. CE QUI N'EST PAS ICI : les libelles d'etats d'attribution, qui dependent de DM-07 — ils vivent en UX-P0-01b, phase 1.",
@@ -3347,7 +3468,11 @@
         "docs/ESPACE-ROUTES.md",
         "scripts/gates/maquettes-validees.ts",
         "tests/unit/espace/maquettes-validees.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        ".github/workflows/ci.yml",
+        "package.json",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "scripts/lot/composer.ts"
       ],
       "schema": false,
       "sensible": [
@@ -3365,12 +3490,12 @@
       ],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/ux-p0-02",
+      "pr": 79,
+      "issue": 77,
       "attempts": 0,
       "motif": null,
       "acceptance": "`docs/maquettes/<ecran>.html` + `docs/maquettes/VALIDATION.md` (écran · date · validé par Will) ; `docs/ESPACE-ROUTES.md` (route · écran · onglet · REQ · maquette ; HYP-E1-10 : un champ sur `/`, résultat `/entreprise?q=`, onglets Accueil · Mes entreprises · Mes commissions · Plus).",
@@ -3534,7 +3659,7 @@
     },
     {
       "id": "CPL-T13",
-      "titre": "Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle D3 en fonction pure",
+      "titre": "Module `temps` : Clock injectable, Europe/Paris, calendrier fériés FR, SLA commun, règle HYP-D3 en fonction pure",
       "phase": 0,
       "repo": "partners",
       "zone": "gouvernance",
@@ -3542,7 +3667,10 @@
         "src/domain/temps/",
         "src/domain/attribution/seuil-prioritaire.ts",
         "tests/unit/domaine/temps-horloge-et-feries.spec.ts",
-        "tests/unit/domaine/seuil-prioritaire.spec.ts"
+        "tests/unit/domaine/seuil-prioritaire.spec.ts",
+        "src/lib/horloge.ts",
+        "tests/setup.ts",
+        "docs/adr/0014-temps-paris-jours-ouvres.md"
       ],
       "schema": false,
       "sensible": [],
@@ -3558,16 +3686,16 @@
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 1,
-      "statut": "a_faire",
-      "owner": null,
+      "estimateDays": 1.5,
+      "statut": "fusionnee",
+      "owner": "A05",
       "lot": null,
-      "branch": null,
-      "pr": null,
-      "issue": null,
+      "branch": "t/cpl-t13",
+      "pr": 78,
+      "issue": 67,
       "attempts": 0,
       "motif": null,
-      "acceptance": "`seuilPrioritaire()` = `min(palierConfiance, capaciteRestante)` ; `surchargeManuelle > 0` remplace le min ; une seule fonction pure, consommée par DM-09 et UX-P1-07.",
+      "acceptance": "(1) HORLOGE INJECTEE (REQ-QA-027, pour sa part « le domaine recoit une Clock ») : `Horloge { maintenant(): Instant }`, `Instant` = millisecondes UTC entieres ; `horlogeFigee()` dans le domaine ; `horlogeSysteme` HORS du domaine (`src/lib/horloge.ts`), seul lieu qui lit l'heure de la machine ; aucun fichier de `src/domain/temps/` ne nomme `Date`, `Intl`, `performance`, `process` ni `globalThis` (temoin propre, plus strict que le lint). (2) PARIS (REQ-CPL-013) : conversion instant <-> date et heure legales d'Europe/Paris par la regle europeenne (dernier dimanche de mars et d'octobre, 01:00 UTC), bornee aux annees civiles de Paris 1996-2099 (de 1995-12-31T23:00Z inclus a 2099-12-31T23:00Z exclu), hors bornes levee nommee ; heure locale inexistante (printemps) : decalee apres le saut ; heure ambigue (automne) : premiere occurrence ; le test confronte CHAQUE heure de 2026 a 2040 a `Intl.DateTimeFormat`, oracle qui vit dans le test, jamais dans le domaine. (3) FERIES FR VERSIONNES : calendrier metropolitain portant version et source (Code du travail L3133-1), Paques calculee, onze jours, attribut « chome » par jour ; jour ouvre = lundi a vendredi hors ferie chome ; oracles cites (liste officielle 2026, dates de Paques) ; 29 fevrier (2000, 2028) et changements d'heure testes. (4) SLA (REQ-UX-022, REQ-UX-028) : `echeanceOuvree(debut, heures)` et `heuresOuvreesEcoulees(debut, fin)` comptent les heures civiles de Paris passees dans des jours ouvres ; un depart hors jour ouvre compte a partir du debut du jour ouvre suivant ; l'echeance est exclusive ; 48 h ouvrees et 2 jours ouvres sont la MEME fonction. (5) CAPACITE ET D3 (REQ-CPL-026, HYP-D3) : `capaciteSurPeriode` = somme, sur les jours ouvres de la periode, des qualifieurs non absents multipliee par la capacite par qualifieur et par jour ; `seuilPrioritaire({ palierConfiance, capaciteRestante, surchargeManuelle })` = `surchargeManuelle` si elle est > 0, sinon `min(palierConfiance, capaciteRestante)`, jamais un plafond ; entiers >= 0 sinon levee nommee ; une seule fonction pure, consommee par DM-09 et UX-P1-07. (6) 100 % lignes et branches sur `src/domain/**`, sans directive d'exclusion ; les crons (« tout ce qui est du a l'instant t », releve unique) restent a DM-13 et T-ARG-015.",
       "tests": {
         "REQ-CPL-013": [
           "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
@@ -3579,10 +3707,10 @@
           "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
         ],
         "REQ-UX-022": [
-          "tests/unit/domaine/seuil-prioritaire.spec.ts"
+          "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
         ],
         "REQ-UX-028": [
-          "tests/unit/domaine/seuil-prioritaire.spec.ts"
+          "tests/unit/domaine/temps-horloge-et-feries.spec.ts"
         ]
       }
     },
@@ -4082,7 +4210,12 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13)."
+      "acceptance": "le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13). 🔴 **Complétée le 2026-09-25 (cadrage de DM-06, GOV-099).** DM-09 porte le TÉMOIN de REQ-DM-010 retiré de DM-06 : un dépôt au-delà du seuil de vérification prioritaire est ACCEPTÉ, horodaté et porte `verificationPrioritaire = true` ; le test vérifie l'acceptation, pas seulement le drapeau, et un témoin qui refuserait ce dépôt le fait rougir.",
+      "tests": {
+        "REQ-DM-010": [
+          "tests/unit/domaine/depot-au-dela-du-seuil.spec.ts"
+        ]
+      }
     },
     {
       "id": "DM-10-P",
@@ -4128,7 +4261,10 @@
       "repo": "partners",
       "zone": "domaine",
       "paths": [
-        "src/domaine/DM-11"
+        "src/domaine/DM-11",
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "tests/unit/domaine/kyc-reference-piece-rib.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -4141,7 +4277,8 @@
         "DM-03-P",
         "DM-06",
         "INT-T09",
-        "SEC-17"
+        "SEC-17",
+        "SEC-08"
       ],
       "reqs": [
         "REQ-CPL-004",
@@ -4166,7 +4303,12 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "se limite aux données KYC et à `PieceKyc.valideJusquAu` ; la règle de vigilance et le blocage du versement sont la propriété de JUR-T16 (`controlesVersement()`). 🔴 **Complétée le 2026-09-03 (synthèse A-10 et M-20).** (1) **`rc_pro` porte `expireAt NOT NULL`** et un rappel d'échéance annuel (contrat art. 6.4 : attestation à la signature puis à chaque échéance, information de toute résiliation de police sous 15 jours) — **sans être ajoutée à `piecesBloquantPaiement()` ni à `controlesVersement()`** : l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement. (2) Le KYC recueille et stocke le **statut d'exercice** de l'apporteur (`qualiteExercice`), qui alimente `{{APPORTEUR_QUALITE}}` du gabarit (JUR-T01) et la déclaration de l'art. 23 (« exercer sous un statut régulièrement déclaré l'autorisant à percevoir et à facturer les commissions », « ne faire l'objet ni d'une liquidation judiciaire ni d'une interdiction de gérer », M-29)."
+      "acceptance": "se limite aux données KYC et à `PieceKyc.valideJusquAu` ; la règle de vigilance et le blocage du versement sont la propriété de JUR-T16 (`controlesVersement()`). 🔴 **Complétée le 2026-09-03 (synthèse A-10 et M-20).** (1) **`rc_pro` porte `expireAt NOT NULL`** et un rappel d'échéance annuel (contrat art. 6.4 : attestation à la signature puis à chaque échéance, information de toute résiliation de police sous 15 jours) — **sans être ajoutée à `piecesBloquantPaiement()` ni à `controlesVersement()`** : l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement. (2) Le KYC recueille et stocke le **statut d'exercice** de l'apporteur (`qualiteExercice`), qui alimente `{{APPORTEUR_QUALITE}}` du gabarit (JUR-T01) et la déclaration de l'art. 23 (« exercer sous un statut régulièrement déclaré l'autorisant à percevoir et à facturer les commissions », « ne faire l'objet ni d'une liquidation judiciaire ni d'une interdiction de gérer », M-29). 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099, `HYP-DM06-IBAN`).** L'IBAN vit dans la pièce `rib` du KYC et nulle part ailleurs : chiffré par SEC-08 (`encryptPii` avec AAD égale à l'identifiant de la ligne), recherché par `ibanHash` ; **DM-11 pose, dans SA migration, la colonne de référence de `IdentitesFacturation` (créée par DM-06 sans elle) vers `PieceKyc` de type `rib`, et sa relation** ; la référence ne porte jamais l'IBAN. Tests : une identité de facturation référence une pièce `rib`, et une référence vers une pièce d'un autre type est refusée ; **aucune autre colonne du schéma ne porte un IBAN**, en clair ou chiffré (témoin : une colonne `iban` ajoutée ailleurs fait rougir le test).",
+      "tests": {
+        "REQ-CPL-005": [
+          "tests/unit/domaine/kyc-reference-piece-rib.spec.ts"
+        ]
+      }
     },
     {
       "id": "DM-12",
@@ -5637,7 +5779,7 @@
     },
     {
       "id": "DM-15",
-      "titre": "Résolution des encaissements et reprises : `paiement.recu` → acquise au prorata ; `avoir.emis`/`facture.annulee` → recalcul de l'attendu ; `paiement.rembourse` → reprise ; blocage `siren_manquant`/`ba",
+      "titre": "Résolution des encaissements et reprises : `paiement.recu` → acquise au prorata ; `avoir.emis`/`facture.annulee` → recalcul de l'attendu ; `paiement.rembourse` → reprise ; blocage `non_resolue`/`ba",
       "phase": 2,
       "repo": "partners",
       "zone": "domaine",
@@ -6423,7 +6565,8 @@
       "pr": null,
       "issue": null,
       "attempts": 0,
-      "motif": null
+      "motif": null,
+      "acceptance": "PAS D'ÉCHÉANCE SUR « MES FILLEULS » (décision du 2026-09-25, par délégation de Will, HYP-W15-FILLEULS-VUE, W15) : l'échéance des 12 mois de la fenêtre de parrainage N'EST PAS AFFICHÉE sur `/filleuls` — ni par filleul, ni agrégée, ni conditionnée à un seuil : toute agrégation de dates (minimum, prochaine échéance) vaut exactement la date d'un filleul, et un seuil fuit le jour où il est franchi. À la place, un TEXTE FIXE, identique pour tous : « Vos gains de parrainage sur un filleul courent 12 mois à compter de la signature de son contrat », sans aucune date calculée. Tests : aucune clé ni valeur de date d'échéance dans le DTO de `/filleuls`, pour 0, 1, 2 et N filleuls ; deux fixtures qui ne diffèrent QUE par la date de signature d'un filleul donnent un DTO identique à l'octet près ; le texte fixe est le même pour tous les parrains. Les autres points de la tâche (documents, relevés, autofactures, attestation, export RGPD, parrainage agrégé par mois, lien partageable, REQ-UX-006, REQ-UX-030, REQ-UX-032, REQ-EXT-029, REQ-ARG-035) restent à écrire en acceptance avant son attribution."
     },
     {
       "id": "UX-P2-05",
@@ -7575,7 +7718,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création."
+      "acceptance": "enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création. 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099).** EXT-T03 porte la dérivation de `sourceCanal` — chaîne transportée figée par DM-06 (REQ-DM-035) — vers l'enum `CanalCandidature` (`site`, `linkedin`, `jobboard`, `saisie_console`, `autre`, glossaire §4) : une table de correspondance chemin → canal, côté Partners, en SSOT ; un chemin inconnu donne `autre` et est journalisé, jamais un canal deviné. Tests : chaque entrée de la table → son canal ; chemin inconnu → `autre` et une entrée de journal ; `sourceCanal` nulle → `autre` ; la valeur transportée n'est jamais modifiée par la dérivation. ⚠️ **Dette de cadrage, NON tranchée ici — à cadrer avant EXT-T03** : le producteur axionia émet aujourd'hui une **constante de chemin** pour `sourceCanal` ; `linkedin` et `jobboard` ne seront donc atteignables que par les paramètres `utm`, que DM-06 ne stocke pas. Tant que ce point n'est pas cadré, la table chemin → canal ne sait produire que `site`, `saisie_console` ou `autre`."
     },
     {
       "id": "EXT-T04",
@@ -8159,7 +8302,6 @@
           "tests/unit/gouvernance/revues-lecteur-unique.spec.ts"
         ],
         "REQ-GOV-011": [
-          "tests/unit/gouvernance/corps-de-pr-couvre.spec.ts",
           "tests/unit/gouvernance/revues-lecteur-unique.spec.ts"
         ]
       }
@@ -8881,7 +9023,8 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/perf-budgets.ts",
-        "tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts"
+        "tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -8910,7 +9053,16 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/prevol.ts",
-        "tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts"
+        "scripts/gates/gov-etat.ts",
+        "tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "docs/CONVENTIONS.md",
+        "scripts/lib/lire-yaml.ts",
+        "tests/unit/ci/lire-yaml.ts",
+        "tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts",
+        "tests/unit/ci/condition-de-job.ts",
+        "tests/unit/gouvernance/revendication-par-branche.spec.ts",
+        "tests/unit/qualite/req-check.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -8923,13 +9075,18 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 0.5,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "Mesure du 2026-09-12, RECTIFIEE DEUX FOIS PAR LA MEME LENTILLE. Premiere redaction : « quatre documents », dont un qui N'EXISTE PAS (`docs/PROMPTS/dev-partners.md`). Deuxieme : « cinq porteurs suivis par git », alors que le balayage qu'elle exige elle-meme, `git grep -l prevol`, rend NEUF fichiers. L'ECART EST LE SUJET DE LA TACHE. Sur ces neuf, SIX sont des porteurs reels : `.claude/agents/dev-partners.md`, `docs/agents.json` qui en est la source, `docs/CHARTE-AGENTS.md`, `docs/CONVENTIONS.md`, `docs/PROMPTS/developpeur.md`, et le plus mordant `scripts/lot/lot.workflow.js`, qui INJECTE la commande introuvable dans le prompt de chaque developpeur de lot. Les TROIS autres sont `docs/tasks.json` et ses vues derivees `docs/TASKS.md` et `docs/paths-proposes.json`, qui portent la chaine UNIQUEMENT PARCE QUE CETTE TACHE Y EST VERSEE : une tache qui se compte elle-meme fausse son propre balayage. Le balayage livre EXCLUT donc le backlog et ses vues derivees, et il le DIT dans son resume, avec les deux comptes. Le script n'existe pas : chaque agent qui suit sa fiche lance une commande introuvable. C'est la seule des trois clauses non tenues de GOV-000 qui MORD aujourd'hui. La tache livre `pnpm prevol` et le cable. IL NE DECLARE RIEN DE NEUF : la chaine qu'il enchaine se DERIVE de `docs/gates.json` et du script `gov:check` de `package.json` (RM-01) — une deuxieme declaration de « ce qui doit etre vert avant une PR » serait exactement la faute que ce lot passe sa vie a fermer. Il DIT ce qu'il a lance, et il REFUSE — sortie non nulle — plutot que de rendre vert un maillon qu'il n'a pas pu jouer. Une garde confronte les porteurs a l'existence du script, DANS LES DEUX SENS : un porteur qui ordonne une commande absente rougit, et le retrait du script rougit AVANT que le prochain agent ne le decouvre. Ce que la tache ne fait pas : elle ne rouvre pas GOV-000, dont les deux autres clauses restent a arbitrer.",
       "tests": {
         "REQ-GOV-013": [
           "tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts"
         ]
-      }
+      },
+      "issue": 98,
+      "owner": "A05",
+      "branch": "t/gov-047",
+      "pr": 99,
+      "motif": null
     },
     {
       "id": "GOV-048",
@@ -8939,7 +9096,8 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/gov-sonde.ts",
-        "tests/unit/gouvernance/sonde-distingue-les-deux-depots.spec.ts"
+        "tests/unit/gouvernance/sonde-distingue-les-deux-depots.spec.ts",
+        "tests/unit/gouvernance/affirmations-verifiees.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -9283,7 +9441,10 @@
       "paths": [
         ".github/workflows/ci.yml",
         "scripts/gates/gov-etat.ts",
-        "tests/unit/gouvernance/revendication-par-branche.spec.ts"
+        "tests/unit/gouvernance/revendication-par-branche.spec.ts",
+        "scripts/gates/gov-pr.ts",
+        "tests/unit/ci/condition-de-job.ts",
+        "tests/unit/gouvernance/gardes-transposees.spec.ts"
       ],
       "schema": false,
       "sensible": [
@@ -9297,7 +9458,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "PRIORITAIRE : c'est le plafond de parallelisme de toute la phase 0. La revendication d'une tache vit PAR BRANCHE dans `docs/tasks.json`, mais `gov:etat` lit les demandes de fusion ouvertes GLOBALEMENT. Chaque branche doit donc porter les N revendications, et la N+1e demande rougit les N autres — cout de synchronisation en carre du nombre de branches. AGGRAVANT MESURE : `gov:etat` s'execute AVANT lint, format, typecheck et test dans la porte A, si bien qu'un rouge venu d'une AUTRE branche laisse ces etapes en « sautees » — elles ont l'air d'avoir mesure et n'ont rien mesure. C'est le pire des deux defauts : le premier coute du temps, le second rend un vert qui ment. A livrer : (1) la revendication se DERIVE au lieu de se recopier par branche, ou le lecteur des demandes ouvertes se restreint a la branche jugee — l'un ou l'autre, jamais les deux a moitie ; (2) les etapes de mesure s'executent MEME quand `gov:etat` rougit, ou bien leur saut est rendu VISIBLE comme un echec et non comme un succes. TEMOIN A DEUX FACES : trois branches ouvertes simultanement, chacune revendiquant sa seule tache, sortent toutes les trois en zero ; une quatrieme branche qui revendique une tache deja prise fait sortir la garde en code non nul et NOMME la branche concurrente, sans rougir les trois autres.",
       "tests": {
         "REQ-GOV-007": [
@@ -9306,7 +9467,12 @@
         "REQ-QA-013": [
           "tests/unit/gouvernance/revendication-par-branche.spec.ts"
         ]
-      }
+      },
+      "issue": 87,
+      "owner": "A05",
+      "branch": "t/gov-059-suite",
+      "pr": 100,
+      "motif": null
     },
     {
       "id": "GOV-060",
@@ -9433,8 +9599,23 @@
         "package.json",
         "docs/gates.json",
         "scripts/gates/gov-check.ts",
-        "docs/adr/partners/",
-        "tests/unit/gouvernance/un-nom-une-garde.spec.ts"
+        "tests/unit/gouvernance/un-nom-une-garde.spec.ts",
+        "scripts/gates/gov-agents.ts",
+        "scripts/gates/gov-attestation.ts",
+        "scripts/gates/gov-attributions.ts",
+        "scripts/gates/gov-conventions.ts",
+        "scripts/gates/gov-preseance.ts",
+        "scripts/reprise.ts",
+        "scripts/lot/attestation.ts",
+        "tests/unit/gouvernance/attestation-inter-depot.spec.ts",
+        "tests/unit/gouvernance/attributions-resolvent.spec.ts",
+        "tests/unit/gouvernance/termes-interdits.spec.ts",
+        "docs/adr/0018-un-nom-une-garde-gov-check-retire-des-deux-cotes.md",
+        "docs/adr/0011-une-seule-implementation-des-listes-d-etats.md",
+        ".github/workflows/ci.yml",
+        "docs/AFFIRMATIONS-AXIONIA.md",
+        "docs/GLOSSAIRE.md",
+        "packages/contracts/events.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -9948,7 +10129,7 @@
       "hyp": [],
       "externe": null,
       "estimateDays": 1,
-      "statut": "a_faire",
+      "statut": "fusionnee",
       "acceptance": "PRIORITAIRE : ce defaut fausse le tour de lentilles de TOUTE la phase 0. QUATRE FAITS. (1) La sortie imprime « Vues : (aucune) » DANS LES DEUX CAS — quand aucune revue n'a ete lue, et quand toutes les revues lues REFUSENT. Ce sont deux etats opposes ; les rendre identiques rend le second invisible. (2) Un avis pose au mauvais endroit — en commentaire d'issue plutot que comme revue — n'est signale NULLE PART : les avis de lentille de la PR 41 ont ainsi compte pour zero. (3) La phrase « un refus de la lentille securite vaut veto » cite REQ-GOV-011, qui ne parle pas de veto : la machine et le texte doivent dire la meme chose. (4) LEVIER 3, decision de Will du 2026-09-18 : la relecture est proportionnee au risque, et lentillesExigees() exige en dur quatre lentilles. A LIVRER : les trois etats — aucune revue, toutes refusent, verdicts mixtes — nommes par des FAMILLES de faute distinctes (sortie non nulle dans les deux premiers) ; un avis hors canal signale sans etre compte ; le message de veto dit la charte §6 (securite bloque seule sur toute PR ; scenario d'attaque seulement sur tache sensible) ; UNE fonction risqueDeLaPr() dans scripts/lot/revues.ts, appelee par gov-pr.ts ET corps-de-pr.ts, rend ORDINAIRE seulement si TOUT est prouve — au moins une tache resolue (titre union champ pr), registre de base lisible, chaque tache resolue lue sur la tete ET la base en zone gouvernance ou qualite avec sensible present et vide et schema faux, aucun label schema, diff non vide et COMPLET (liste de la forge comparee a changed_files, plafond 3000) dont chaque fichier est sous docs/, scripts/ ou tests/ (jamais .github/, jamais la racine, documents compris, decisions de l'orchestrateur du 2026-09-18), un fichier renomme ou copie comptant par sa source ET sa destination, et hors de la garde des revues (revues.ts, gov-pr.ts, corps-de-pr.ts, la fermeture transitive de leurs imports derivee du disque, docs/CHARTE-AGENTS.md, docs/agents.json) — et ELEVE sinon ; ELEVE exige exactitude, securite, simplicite ou schema, mutation ; ORDINAIRE exige exactitude et securite ; gov:pr imprime le risque et ses raisons ; charte §6, CONVENTIONS §5, PROTOCOLE-FUSION pas 2, case 3 du gabarit et partners/ADR-0012 le disent dans le meme diff. TEMOINS : sans revue puis avec quatre refus, deux sorties et deux familles differentes, quatre accords sortent en zero. Sur le registre REEL : une PR dont la tache sensible est AU MILIEU de trois taches resolues, exactitude et securite acceptees, rougit lentilles_manquantes, et la meme sans elle sort en zero ; une tache rendue ordinaire sur la tete mais pas sur la base reste ELEVEE ; sensible absent, base illisible, diff vide, fichier de la garde au milieu du diff, fichier .github/workflows/ci.yml, package.json ou CLAUDE.md au milieu du diff, module importe indirectement par la garde, liste de la forge tronquee, chemin non ASCII sous prisma/ lu par le diff local, fichier renomme de .github/ ou de prisma/ vers docs/ donnent ELEVE, le second exigeant aussi le label schema ; toute tache du registre est classee, les deux classes comptees et imprimees, plancher superieur a zero pour chacune ; le composeur du corps, exerce par sa fonction pure, ne coche pas la case 3 la ou la garde exige quatre lentilles.",
       "tests": {
         "REQ-GOV-011": [
@@ -9960,7 +10141,10 @@
         ]
       },
       "issue": 57,
-      "owner": "A05"
+      "owner": "A05",
+      "branch": "t/gov-077",
+      "pr": 64,
+      "motif": null
     },
     {
       "id": "GOV-078",
@@ -10235,7 +10419,8 @@
       "zone": "gouvernance",
       "paths": [
         "scripts/gates/gov-tasks.ts",
-        "tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts"
+        "tests/unit/gouvernance/un-etat-cible-porte-son-operation.spec.ts",
+        "tests/unit/gouvernance/gardes.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -10328,6 +10513,925 @@
           "tests/unit/espace/libelles-d-etats.spec.ts"
         ]
       }
+    },
+    {
+      "id": "GOV-089",
+      "titre": "Un numero PUBLIC se juge a son PORTEUR, pas a son mot-cle : la garde d'entite sur-attrape 448 defauts sur 452",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-entite.ts",
+        "docs/gates.json",
+        "tests/unit/gouvernance/entite-registre.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-031",
+        "REQ-CPL-001"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Sur la branche qui enregistre les fixtures de l'API publique d'entreprises, `gov:entite` rend 452 defauts : 450 `coordonnee_en_clair` et 2 `valeur_recopiee`, sur 418 identifiants distincts et 24 fichiers. 416 de ces identifiants sont ceux d'entreprises TIERCES rendues par l'API — DANONE, la SNCF, EDF, des communes. DEUX seulement sont les notres. La garde demande donc aujourd'hui de deplacer le SIREN de DANONE dans `config/entite.json` : c'est le symptome, il vaut mieux qu'une demonstration.\n\nDEUX REGIMES DIFFERENTS, EXPLICITES DANS LA SOURCE ET DANS LE CHAMP `verifie` DU REGISTRE : IBAN et BIC sont des SECRETS, refuses PARTOUT, dans tout fichier suivi ; SIREN, SIRET et TVA sont des donnees PUBLIQUES, refusees uniquement dans un fichier de code, au seul motif de RM-01 — source unique de l'identite de la Societe, famille `valeur_recopiee`, POUR LES NOTRES. Le motif parlait des notres ; le code attrapait tout le monde.\n\nLA VOIE DE SORTIE EVIDENTE N'EXISTE PAS, ET C'EST MESURE : la garde ne regarde pas si le numero est vrai, seulement s'il suit le mot `siren`/`siret`. Un identifiant fabrique a cle de Luhn juste est refuse exactement comme le reel. Substituer les identifiants DETRUIRAIT la valeur probante des fixtures SANS rendre la garde verte. Et le mecanisme d'exemption ne sait pas dire la bonne chose : `coordonnee` IMPLIQUE `recopie`, donc toute exemption assez large pour taire la famille publique tait aussi les deux vrais defauts. Impasse mesuree, pas opinion.\n\nATTENTION AU REMEDE EVIDENT ET FAUX : reclasser la fixture hors du predicat « fichier de code » desarmerait AUSSI `valeur_recopiee`, qui est gardee par LE MEME predicat — ca rouvrirait la porte que la garde existe pour tenir. Le defaut n'est pas dans le perimetre de fichiers, il est dans le PREDICAT.\n\nACCEPTATION — LE REGIME SE LIT SUR LA VALEUR, PAS SUR LE NOM DU FICHIER.\n  (a) Un SIREN/SIRET/TVA n'est refuse dans un fichier de code QUE S'IL EST LE NOTRE, et « les notres » est DERIVE de `config/entite.json` par une fonction unique que la famille `valeur_recopiee` et l'arme publique de `coordonnee_en_clair` lisent TOUTES LES DEUX, de la meme facon.\n  (b) CONTRAINTE ABSOLUE : `valeur_recopiee` reste actif JUSQUE DANS UNE FIXTURE. Nos identifiants n'ont rien a faire en dur, meme la. Temoin a deux faces DANS LE MEME FICHIER, meme mot-cle, meme forme : seule change l'identite du porteur.\n  (c) Le regime du SECRET est INTACT : un IBAN rougit dans une fixture de tiers.\n  (d) La fonction qui juge du code sans savoir qui est « nous » LEVE, au lieu de rendre un vert silencieux.\n  (e) La PORTEE est declaree a UN SEUL endroit, citee sans recopie par `docs/gates.json`, et IMPRIMEE a chaque vert — avec le COMPTE des identifiants du registre reellement confrontes. Sans ce compte, un registre entierement a la sentinelle rendrait un vert qui ne cherche AUCUN numero public : une garde derivee est aveugle deux fois, par sa source et par son filtre.\n  (f) Compte avant/apres mesure sur le depot reel, et AUCUN vrai defaut tu.\n\nCE QUE CETTE TACHE VA DECOUVRIR, ET QUI EST LE PLUS INSTRUCTIF : les temoins existants du mode de preuve exercent le MAUVAIS PORTEUR — ils exigent un ROUGE sur le SIREN et la TVA d'un TIERS dans du code, c'est-a-dire qu'ils GRAVENT la sur-attrape en porte A. Une garde vue rougir (RM-02) ne dit rien si elle a ete vue rougir sur le MAUVAIS CAS. Quand un correctif oblige a inverser un temoin existant, c'est le signe que le temoin, et pas seulement le code, portait la faute. La ligne finale imprimee par le mode de preuve affirme elle aussi le comportement fautif : un vert qui commente son propre comportement est une affirmation a maintenir comme du code.\n\nHORS PERIMETRE, A SIGNALER SANS CORRIGER : REQ-GOV-031 est TRONQUEE dans `docs/requirements.json` — elle dit « Trois categories n'y entrent jamais : » et s'arrete la. C'est l'exigence dont cette garde et deux autres derivent tout leur mandat, et elle ne dit pas ce qu'elle interdit. Et le seul vrai defaut restant — nos SIREN/SIRET en dur dans une fixture d'un depot PUBLIC — est un changement d'intention de test (re-enregistrement sur un organisme de formation tiers), pas le sujet de celle-ci.\n\nCOLLISION DE CHEMIN CONNUE : `tests/unit/gouvernance/entite-registre.spec.ts` figure aussi dans les `paths` de GOV-067. Les deux taches ne doivent pas etre composees dans le meme lot.",
+      "tests": {
+        "REQ-GOV-031": [
+          "tests/unit/gouvernance/entite-registre.spec.ts"
+        ],
+        "REQ-CPL-001": [
+          "tests/unit/gouvernance/entite-registre.spec.ts"
+        ]
+      },
+      "issue": 105,
+      "owner": "A05",
+      "branch": "t/gov-entite-tiers",
+      "pr": 107,
+      "motif": null
+    },
+    {
+      "id": "GOV-088",
+      "titre": "Le glossaire interdit en l.149 la forme qu'il prescrit en l.126, et un .ts ne peut pas citer un terme interdit",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/GLOSSAIRE.md",
+        "scripts/gates/gov-check.ts",
+        "tests/unit/gouvernance/termes-interdits.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-016",
+        "REQ-INT-003",
+        "REQ-INT-004",
+        "REQ-DM-036"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a refaire avant d'ecrire une ligne. `docs/GLOSSAIRE.md` l.126 PRESCRIT la colonne `eventId` de la table `EvenementRecu` (texte repris mot pour mot par REQ-DM-036) et l.149 range cette MEME forme parmi les synonymes interdits, au motif que l'enveloppe de fil est en snake_case (ADR-0008). La garde lit `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` et n'y exempte que les commentaires de .md/.sql/.prisma.\n\nLE PIEGE N'EST PAS DECLENCHE, IL EST ARME : `grep -rn eventId prisma/ src/ messages/ docs/adr/` rend ZERO ligne, et `EvenementRecu` n'existe dans aucun schema. La tache qui le creera est SEC-06. Ce jour-la le developpeur ecrira la colonne que la REQ epelle, et la garde rougira sur le glossaire, sans le contexte.\n\nCE QUI EST DEJA TRANCHE ET NE SE RE-TRANCHE PAS : `docs/PRESEANCE.md` §2 ligne 7 donne le GLOSSAIRE gagnant contre tout autre document sur un terme et ses synonymes interdits, y compris contre le texte litteral d'une REQ et contre CONVENTIONS §1. Verifie en fait : `gov:conventions` reste VERT sur une forme snake_case dans du TypeScript.\n\nACCEPTATION A — L'INTERDIT DEVIENT AUSSI ETROIT QUE SON INTENTION, SANS S'AFFAIBLIR. Les deux lignes parlent de deux objets differents : l.126 une COLONNE Prisma (camelCase, CONVENTIONS §1), l.149 un CHAMP D'ENVELOPPE de fil (snake_case, ADR-0008). Le remede porte sur une FAMILLE et non sur le cas nomme, et se derive d'un critere MESURABLE du registre. REFUSES d'avance : renommer la colonne pour faire taire la garde ; exempter `prisma/**` en bloc ; une exemption par chemin nommant `EvenementRecu`.\n  (a) VERT provoque : `model EvenementRecu { eventId String @unique ; eventType String }` dans `prisma/schema.prisma` passe, et passe par ETROITESSE de l'interdit, non par exemption (ni commentaire ni accent grave dans la vue).\n  (b) ROUGE provoque : un champ d'enveloppe en camelCase jamais reclame ailleurs rougit et NOMME le fichier et la ligne.\n  (c) LE COMPTE DES INTERDITS EXERCES NE BAISSE PAS DE LA SEULE SOUSTRACTION : tout jeton qui cesse d'etre exerce est nomme, et tout jeton qui le DEVIENT l'est aussi. Un interdit devenu conditionnel par accident de ponctuation est un interdit mort que cette tache doit rendre visible.\n  (d) CE QUI GARDE REELLEMENT LA CASSE DE L'ENVELOPPE est ecrit au glossaire : l'egalite champ par champ ET DANS L'ORDRE entre la liste close du contrat et les noms de REQ-INT-003. Une liste fermee comparee par egalite voit une casse fausse ; un balayage de jeton ne voit qu'un mot.\n\nACCEPTATION B — UN FICHIER .ts N'A AUCUNE EXEMPTION DE CITATION. La garde n'exempte que .md, .sql et .prisma : on ne peut pas ecrire un terme interdit dans un commentaire TypeScript, meme pour expliquer pourquoi il est interdit. Consequence mesuree : les commentaires du depot PARAPHRASENT, le contournement n'est ecrit nulle part, et chaque agent le redecouvre.\n  (e) TRANCHER ET ECRIRE LA DECISION, avec sa mesure. Si un marqueur de citation est pose, il doit etre IMPOSSIBLE de s'en servir pour taire un usage reel, et cette impossibilite se PROVOQUE, elle ne s'affirme pas. Si le marqueur est refuse, la limite est NOMMEE au glossaire avec son proprietaire et la tache qui la levera — une limite nommee n'est pas du folklore, une paraphrase sans adresse l'est.\n\nSOURCE UNIQUE (RM-01) : la regle nouvelle est ecrite UNE fois, au glossaire. `gov-check.ts` porte une fixture qui reproduit le glossaire, et `termes-interdits.spec.ts` assere que ses racines et ses modeles refuses sont EGAUX a ceux du glossaire reel : on ne touche pas l'un sans l'autre, c'est voulu, et ca ne se contourne pas.\n\nHORS PERIMETRE, A SIGNALER SANS CORRIGER : REQ-DM-036 s'epelle elle-meme avec un synonyme interdit (`WebhookRecu`, `type`) la ou le glossaire impose `EvenementRecu` et `eventType` ; et le §5 porte encore un avertissement perime disant qu'aucune garde ne lit ce paragraphe.",
+      "tests": {
+        "REQ-GOV-016": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ],
+        "REQ-INT-003": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ],
+        "REQ-INT-004": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ],
+        "REQ-DM-036": [
+          "tests/unit/gouvernance/termes-interdits.spec.ts"
+        ]
+      },
+      "issue": 104,
+      "owner": "A01",
+      "branch": "t/glossaire-enveloppe",
+      "pr": 108,
+      "motif": null
+    },
+    {
+      "id": "GOV-091",
+      "titre": "L'entree de journal de la PR 108 manque : main est rouge, et deux tests de gouvernance rougissent sur TOUTES les branches",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-023"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. La PR #108 (GOV-088) a ete fusionnee sur `main` SANS son entree de journal : `git show <sha>:docs/journal/2026-09.md | grep 'PR #108'` ne rend rien, et aucun des fichiers du squash n'est sous `docs/journal/`. Consequence : `pnpm gov:etat` rend 1 defaut sur 9 familles (`pr_fusionnee_sans_journal`, REQ-GOV-023), et la porte A sur `main` echoue a l'etape Tests sur DEUX fichiers — `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` — pour UNE SEULE cause racine.\n\nPOURQUOI C'EST BLOQUANT ET PAS COSMETIQUE. Ces deux tests interrogent la FORGE VIVANTE, pas le diff : ils rougissent donc sur TOUTES les branches, pas seulement sur `main`. Tant que l'entree n'est pas posee, AUCUNE PR ne peut atterrir. C'est la meme forme que la revendication manquante du 2026-09-22 au matin, qui rougissait elle aussi partout a la fois.\n\nACCEPTATION.\n  (a) L'entree `## PR #108 — <date> — <titre>` est posee dans `docs/journal/2026-09.md`, a sa place antechronologique, avec les champs que `docs/journal/README.md` prescrit. Son contenu est DERIVE du corps de la PR #108 et de son diff — rien d'invente, rien de reformule a l'estime.\n  (b) LA PR PORTE SA PROPRE ENTREE. Sans elle, sa fusion reproduit exactement le defaut qu'elle repare, et `main` redevient rouge. Ordre : ouvrir la PR, lire son numero, ajouter son entree, pousser.\n  (c) ROUGE VERBATIM : le message d'echec de la porte A sur `main` est colle au corps, tel quel, avec le numero de run.\n  (d) VERT : `pnpm gov:etat --now <ISO>` rend `9 familles evaluees sur 9`, et les fichiers de spec concernes repassent verts.\n  (e) ⚠️ `journal:sans-pii` reste vert : aucune donnee personnelle, et jamais le nom du delegue a la protection des donnees.\n\nCE QUE CETTE TACHE NE FERME PAS, ET QUI EST LE VRAI SUJET. La famille `pr_fusionnee_sans_journal` NE PEUT PAS rougir avant la fusion : son predicat est « la PR est fusionnee ». `scripts/gates/gov-pr.ts` ne lit JAMAIS `docs/journal/` — ses seules occurrences du mot sont un commentaire d'intention et un contre-temoin qui GRAVE le choix de ne pas le juger. Le controle d'avant-fusion etait donc vert, et l'aurait ete quoi qu'il arrive. AUCUNE garde n'exige l'entree pendant qu'on peut encore l'ajouter, et la seule victime possible est `main`. Le remede est GOV-052, dont l'acceptation exige que GOV-073 passe avant elle ou avec elle (quatre lecteurs, quatre grammaires d'entree de journal) — sinon GOV-052 ecrit une cinquieme redaction en prose de la meme regle. ⛔ NE PAS accrocher ce correctif a GOV-052 : ca la marquerait delivree alors que le trou resterait ouvert.\n\nPOURQUOI UNE TACHE DEDIEE PLUTOT QUE LA TACHE HISTORIQUE. Le precedent existe DEUX fois (PR #29 et PR #35 ont cite une tache deja `fusionnee` pour ce meme defaut) et la forge l'accepte. Mais la tache historique porte `sensible: [auth]`, ce qui classe la PR en risque ELEVE et exige QUATRE lentilles pour une correction de DEUX fichiers de prose — pendant que `main` est rouge et que la file est arretee. Une tache vivante, zone gouvernance, `sensible` vide, rend le regime a deux lentilles que le risque reel merite. Le classificateur mesure ce qu'il pretend mesurer ; c'est la tache empruntee qui mentait.",
+      "tests": {
+        "REQ-GOV-023": [
+          "tests/unit/gouvernance/plan-state-frais.spec.ts"
+        ]
+      },
+      "issue": 110,
+      "owner": "A03",
+      "branch": "t/journal-108",
+      "pr": 109,
+      "motif": null
+    },
+    {
+      "id": "GOV-093",
+      "titre": "Le champ `schema` d'une tache et ses `paths` ne sont confrontes par RIEN, et aucun verbe ne sait ecrire ce champ",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-tasks.ts",
+        "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, la lentille `schema` de la PR #102 a constate que `GOV-063` porte `\"schema\": false` dans `docs/tasks.json` alors que ses `paths` nomment `packages/contracts/events.ts`. Aucune garde ne rougit : `gov:tasks` ne confronte pas `schema` aux `paths`, et le CHAMP, lui, est bel et bien lu : le decideur de `scripts/lot/revues.ts` ouvre sa decision par `if (entree.tachesSchema) return true;` — le NOM plutot que le numero de ligne, qui pourrit au premier commit et qui obligerait, selon `gov:sonde`, a poser un repere date et signe pour une affirmation du depot LUI-MEME, et `tachesSchema` vaut `t.schema === true`. ⚠️ CETTE PHRASE A DIT L INVERSE jusqu au 2026-09-23 — elle affirmait que `gov:pr` derive `toucheSchema` des seuls fichiers du diff et de `cheminsSchema`, jamais du registre. La lentille `schema` l a mesuree fausse, et la rectification AGGRAVE la tache au lieu de l alleger : le champ n est pas inerte, c est une entree du discriminant, et un `schema: true` force la lentille a lui seul. Ce qui reste vrai, et qui est le sujet : RIEN ne confronte le champ aux `paths`. Le bon comportement a donc ete obtenu ce jour-la par le diff, pas par le registre, et personne ne l aurait su si la lentille ne l avait pas cherche. SECOND VOLET, mesure dans la foulee : `reecrire-champ.mjs` REFUSE d ecrire `schema` (« n est pas un champ ecrivable de tasks.json » ; il ne reecrit que titre, acceptance, tests, sensible, deps, estimateDays) et `reclasser.mjs` ne le connait pas davantage. Le champ existe, il ment, et AUCUN verbe hors depot ne sait le remettre droit : il n est modifiable qu a la main, donc hors de toute trace. A LIVRER. (1) Une famille de `gov:tasks` confronte `schema` aux `paths` : une tache dont un `path` tombe sous un `cheminsSchema` (derive de la §7 de `docs/CHARTE-AGENTS.md`, JAMAIS recopie) et qui porte `schema: false` rougit en nommant le chemin fautif. (2) La RECIPROQUE est jugee aussi, et elle est plus delicate : une tache `schema: true` dont aucun `path` ne tombe sous `cheminsSchema` n est PAS forcement fautive (une tache peut engager le schema sans nommer le fichier), donc elle ne rougit pas — elle est IMPRIMEE, avec son compte, sous une rubrique qui dit pourquoi elle n est pas refusee. Un avertissement muet serait un vert qui ment. (3) Un temoin ROUGE vu rougir par famille, et un contre-temoin VERT par famille, dont un qui prouve qu une tache SANS `paths` ne rougit pas par vacuite. (4) LA POPULATION EST DE SEPT, PAS D UNE, et elle a ete mesuree sur les 266 taches du registre : `DM-01` (deja FUSIONNEE, `prisma/schema.prisma` et `prisma/migrations/`), `QA-T06`, `DM-03-P`, `SEC-06`, `SEC-03`, `SEC-04` et `GOV-063` portent un chemin de schema avec `schema` non vrai. La reciproque en compte SIX : `INT-T01b`, `INT-T03`, `INT-T05`, `GOV-042`, `GOV-049`, `GOV-050` declarent `schema: true` sans aucun chemin de schema — et celles-la ne sont PAS forcement fautives, d ou le traitement separe du livrable (2). Les sept sont remises droites par le meme mouvement, ou bien la garde les NOMME et la tache qui les remettra droites est ouverte. ⚠️ Que `DM-01` soit deja fusionnee dit le prix de l attente : une tache close porte deja le champ faux. (5) Le champ devient ECRIVABLE par un verbe hors depot, avec motif obligatoire et consignation au journal des reecritures — ou, si l equipe tranche l inverse, la raison de le laisser inecrivable est ecrite la ou le verbe refuse, pour que le prochain ne la redecouvre pas.",
+      "tests": {
+        "REQ-GOV-013": [
+          "tests/unit/gouvernance/tasks-schema-et-paths.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-092",
+      "titre": "Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-entite.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts",
+        "config/exemptions-corps-publie.json"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-031",
+        "REQ-CPL-001"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, `pnpm gov:entite --corps-publie 102` rend INDETERMINE (code 2) avec `revisions_non_lues` : « la forge annonce 7 revision(s) du corps et 5 ont ete lues », et la porte A echoue sur cette etape. Rejeu direct de la forge : la connexion `userContentEdits(first:100)` de la PR #102 rend **7 noeuds sur 7 annonces** — la pagination fonctionne et PAGES_MAX n est pas atteint — dont **DEUX portent un `editedAt` et un `diff` NUL** : `2026-09-23T00:21:32Z` et `2026-09-23T00:21:56Z`. `assemblerLecture` les ecarte par `if (typeof n.diff !== 'string' || typeof n.editedAt !== 'string') continue`, l ecart annonce/lu fait tomber le verdict en INDETERMINE. LE DEFAUT N EST PAS L ECART : IL EST DANS LE REMEDE. Le message nomme deux causes et deux remedes, et AUCUN des deux ne s applique. (a) « relance la garde » : la reponse est STABLE, les deux `diff` nuls le sont a chaque appel, mesure trois fois de suite. (b) « releve PAGES_MAX » : une seule page a ete lue, la borne n est pas en cause. Il existe donc une TROISIEME cause, que le docblock de la pagination n a pas prevue : la forge sert `diff: null` quand l edition produit un corps VIDE ou un corps INCHANGE, et les deux revisions ci-dessus sont exactement l une et l autre. PORTEE REELLE, et c est ce qui rend la tache urgente : une PR dont le corps a ete vide une fois, ou re-poste a l identique une fois, ne peut PLUS JAMAIS passer la porte A ; l historique d edition d une forge ne se de-publie pas, et `gov:entite --corps-publie` tourne sur CHAQUE PR. A LIVRER. (1) La troisieme cause est NOMMEE dans le message de `revisions_non_lues`, avec ce qui la produit et le fait qu elle est DEFINITIVE — un remede faux est pire qu un remede absent, il envoie le lecteur rejouer une commande qui ne changera rien, et c est exactement ce qui s est passe le jour de la mesure. (2) Un chemin de sortie EXISTE, et il reutilise le mecanisme deja concu pour l irreparable : `config/exemptions-corps-publie.json` porte un champ `definitive` dont le commentaire dit qu il existe « pour ce qui ne peut pas etre repare ». Une exemption dont l `empreinte` est ABSENTE absout LA REVISION entiere au lieu d une coordonnee ; `controlerRegistreExemptions` la valide avec les memes exigences de forme (motif d au moins 40 caracteres, declarant, date d declaration) et exige `definitive` vrai pour cette forme-la. (3) LE REFUS RESTE LE DEFAUT : sans ligne au registre, une revision illisible laisse le verdict INDETERMINE. Une revision illisible n est JAMAIS reputee propre d office — ce serait rendre vert ce qu on n a pas lu, ce que la garde existe precisement pour refuser. (4) Un horodatage ABSENT continue de refuser SANS chemin de sortie : sans lui aucune exemption ne peut s apparier, et absoudre une revision qu on ne sait pas designer absoudrait aussi toutes les suivantes. (5) Trois temoins ROUGES vus rougir : une revision a `diff` nul sans exemption ; une exemption de revision mal formee (motif trop court, ou `definitive` faux) ; une exemption qui designe un horodatage qui n est celui d aucune revision de la PR visee. Et trois contre-temoins VERTS : la revision exemptee passe ; la meme exemption ne couvre PAS une revision a `diff` nul d une AUTRE PR ; un corps courant porteur d une coordonnee rougit toujours, exemption ou pas. (6) La ligne de registre qui absout les deux revisions de la PR #102 est posee dans la meme PR, avec son motif : un corps vide et un corps re-poste a l identique ne portent aucun texte qui ne soit deja dans la revision voisine, elle-meme lue et jugee propre.",
+      "tests": {
+        "REQ-GOV-031": [
+          "tests/unit/gouvernance/entite-registre.spec.ts"
+        ]
+      },
+      "issue": 111,
+      "owner": "A03",
+      "branch": "t/gov-092",
+      "pr": 112,
+      "motif": null
+    },
+    {
+      "id": "GOV-094",
+      "titre": "La non-vacuite d un banc de preuve est au grain de la FAMILLE : retirer un temoin d une cause NEUVE laisse le banc vert et bavard",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-entite.ts",
+        "tests/unit/gouvernance/entite-registre.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-031",
+        "REQ-GOV-012"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, la lentille `mutation` de la PR #112 a retire du banc de `gov:entite --corps-publie --prove` les temoins des causes NEUVES de la famille `revisions_non_lues`. Le banc est sorti en ZERO et a imprime, mot pour mot, que ses six familles rougissent chacune sur son temoin. ⚠️ DEUX PRECISIONS, sans lesquelles QUI REJOUE CETTE PHRASE N AURA RIEN MESURE, et la seconde s est confirmee toute seule au premier essai. (a) Le temoin qui PORTE la mesure est celui de la revision illisible SANS exemption ; celui de la revision illisible ABSOUTE est un CONTRE-temoin, et le retirer ne fait varier qu un compte de contre-temoins que rien ne compare a rien — la porte A reste a ZERO et reimprime ses six familles, ce qui RESSEMBLE a la reproduction sans en etre une. (b) GOV-092 introduit DEUX causes, pas trois, et la famille en porte QUATRE au total : la quatrieme, la lecture interrompue, est deja gardee par un bloc de consommation DEDIE — neutralisee, la porte A rougit en la nommant. Le remede de cette tache existe donc deja, applique a la main a UNE cause sur quatre, et c est l argument le plus fort en sa faveur. LE BANC DE PORTE A NE SAIT PAS QU IL A CESSE DE MESURER LA CAUSE QUE LA PR EXISTE POUR FERMER. La cause est structurelle et vaut pour tout le depot : le garde-fou de non-vacuite (`sansTemoin`) est au grain de la FAMILLE, or GOV-092 a introduit DEUX causes disjointes DANS la famille `revisions_non_lues`, qui en porte QUATRE au total. Une famille qui garde un seul temoin sur quatre causes reste couverte aux yeux du garde-fou. C EST EXACTEMENT LA FORME DU DEFAUT QUE GOV-092 FERME — un controle qui se tait au lieu de rougir — applique au banc qui prouve GOV-092. A LIVRER. (1) Le grain de la non-vacuite descend de la FAMILLE a la CAUSE : chacun des QUATRE messages distincts que cette famille sait emettre porte son temoin, et le banc REFUSE — sortie non nulle nommant la cause — si l un d eux n a pas de temoin. (2) Le compte des causes se DERIVE du code qui les emet, jamais d une liste tapee a cote : une liste tapee redevient fausse au prochain message ajoute, sans que rien ne le signale, et c est la faute que RM-01 existe pour empecher. (3) La sortie IMPRIME le compte des causes et celui des temoins, cote a cote : un banc qui dit « six familles » quand il en mesure cinq est un vert qui ment, et le lecteur doit pouvoir voir l ecart sans relire le code. (4) Le mutant de la mesure d ouverture est REJOUE et vu rougir : retirer un temoin d une cause neuve fait desormais sortir le banc en non nul en NOMMANT la cause orpheline. (5) Un contre-temoin VERT prouve qu un banc complet passe toujours, et un second qu une famille a cause UNIQUE n est pas rendue plus exigeante par le changement de grain. (6) Le balayage dit combien de familles du depot portent plusieurs causes : si d autres gardes sont dans le meme cas, elles sont NOMMEES avec leur compte, et la tache qui les traitera est ouverte — les fermer toutes ici serait un perimetre que personne n a mesure.",
+      "tests": {
+        "REQ-GOV-031": [
+          "tests/unit/gouvernance/entite-registre.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-095",
+      "titre": "Un accord de lentille survit a un commit qui ne touche que le journal",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/revues.ts",
+        "scripts/gates/gov-pr.ts",
+        "tests/unit/gouvernance/accord-survit-au-journal.spec.ts",
+        "docs/PROTOCOLE-FUSION.md",
+        "scripts/lot/corps-de-pr.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-011",
+        "REQ-GOV-013"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "LE DEFAUT, LU DANS LE CODE. `scripts/lot/revues.ts` lie un accord au SHA DE LA TETE et jamais au CODE JUGE : `accords.filter((x) => exigees.includes(x.lentille) && x.commit !== entree.tete)`. Tout commit de plus perime donc TOUS les accords exiges, quel que soit ce qu'il change. MESURE A REJOUER, pas a recopier, sur la branche `t/gov-check-homonymie` de la demande de fusion 102 : `git diff --name-only 8ef35a3 8891d53` ne rend QUE `docs/journal/2026-09-pr-102.md` — une phrase de prose du journal — et cette tete-la a pourtant perime les accords de `securite`, de `schema` et de `mutation`, qu'il a fallu refaire sur un code identique au bit pres. LA REGLE A LIVRER, ETROITE EXPRES. Un accord rendu par un poste sur la lentille L au commit C survit a la tete T si, ET SEULEMENT SI : (1) L n'est pas `exactitude` — cette lentille juge la prose, c'est sa matiere, son accord ne survit a aucune reecriture ; ET (2) l'ensemble des fichiers changes entre C et T est VIDE, ou entierement contenu sous `docs/journal/`. TOUT LE RESTE PERIME, ET CHAQUE CAS AMBIGU ECHOUE FERME : un diff que `git` ne peut pas calculer (commit inconnu du clone, sortie inattendue) perime et le refus DIT laquelle des deux extremites manque ; un delta qui touche `docs/tasks.json` ou `docs/requirements.json` perime, parce que ces fichiers CHANGENT LE COMPORTEMENT DE LA GARDE — `gov:pr` y lit `sensible`, `schema` et `paths` ; un delta qui touche une vue derivee ou un document normatif perime. La liste blanche est UN SEUL prefixe : rien n'enumere les documents normatifs, et c'est ce qui rend l'oubli impossible. CE QUE LA SORTIE DOIT DIRE. Une survie silencieuse est inauditable : quand un accord survit, `pnpm gov:pr --pr <n>` l'IMPRIME — le poste, la lentille, le sha de l'accord, le sha de la tete, et LA LISTE DES FICHIERS changes entre les deux — et la phrase publiee au corps de la demande de fusion cesse d'affirmer que tout a ete juge sur la tete. Un lecteur doit pouvoir contester la survie sans relire le code. ⚠️ CETTE GARDE DEVIENT PLUS PERMISSIVE : c'est l'objection que la lentille `securite` doit poser, et le travail est de rendre le refus impossible a formuler. La MESURE (`git`) est separee de la DECISION (pure), sur le modele de `estAncetreDe`. TEMOINS EXIGES, chacun vu rougir avant le code : un accord `securite` dont le seul delta est un fichier de `docs/journal/` SURVIT ; le MEME delta pour `exactitude` PERIME ; un delta qui touche `docs/tasks.json` PERIME ; un commit d'accord inconnu du depot PERIME et le refus le dit ; un depot git reel construit pour le temoin prouve que la MESURE elle-meme rend la liste attendue ; CONTRE-TEMOIN : un accord rendu sur la tete elle-meme coche sans qu'aucune survie soit imprimee, et `pnpm gov:pr:prove` reste vert sur ses familles, dont `lentille_perimee`.",
+      "tests": {
+        "REQ-GOV-011": [
+          "tests/unit/gouvernance/accord-survit-au-journal.spec.ts"
+        ],
+        "REQ-GOV-013": [
+          "tests/unit/gouvernance/accord-survit-au-journal.spec.ts"
+        ]
+      },
+      "issue": 117,
+      "owner": "A05",
+      "branch": "t/gov-095-accord-survit",
+      "pr": 116,
+      "motif": null
+    },
+    {
+      "id": "GOV-096",
+      "titre": "`gov:pr` ne sait pas lire une PR de LOT : le titre ne nomme qu une tache, `t.pr` n est ecrit qu apres la fusion, et aucune PR de lot n est fusionnable",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/gates/gov-pr.ts",
+        "scripts/lot/revues.ts",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts",
+        "docs/adr/0020-le-champ-lot-declare-les-taches-d-une-pr-de-lot.md"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-021",
+        "REQ-GOV-007"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "MESURE QUI OUVRE LA TACHE, a rejouer et non a recopier. Le 2026-09-23, `pnpm gov:pr -- --pr 114` rougit sur la famille `fichier_hors_paths_des_taches` en nommant douze fichiers de code « qu aucune de ses taches ne declare », et la PR #114 n est donc pas fusionnable. Or elle porte SIX taches (GOV-046, GOV-048, GOV-076, GOV-078, GOV-082, GOV-086) sur une branche, un commit par tache — la forme NORMALE que `docs/CONVENTIONS.md` §5 et `partners/ADR-0007` fixent : un lot, une branche, une PR. Neuf des douze fichiers nommes sont declares, par les CINQ AUTRES taches du lot. CAUSE MESUREE : `tachesDeLaPr()` (`scripts/lot/revues.ts`, appelee a deux endroits de `scripts/gates/gov-pr.ts`) apparie une tache a une PR sur `t.pr === <numero>` OU sur l identifiant du TITRE. Le titre d une PR de lot ne peut nommer qu UNE tache, et `t.pr` n est ecrit que par `pnpm lot:cloture`, dont l invariant exige `fusion.atterri === true` — donc APRES la fusion. Les cinq autres taches ne resolvent ni par l un ni par l autre. PORTEE : tant que ce defaut existe, AUCUNE PR de lot n est fusionnable, et le lot est la seule forme qui divise le cout du protocole de relecture. ⛔ LE CONTOURNEMENT QUE LA GARDE PROPOSE EST UN FAUX, et c est ce qui rend le defaut bloquant plutot que genant : son message prescrit d ajouter les douze chemins aux `paths` de la tache du TITRE par `hors-depot/ajouter-path.mjs`. Ce serait ecrire que cette tache touche des fichiers qui appartiennent a cinq autres taches — et la disjonction des lots se calcule sur ces memes `paths`. Le lead du lot a refuse de le faire, et il a eu raison. A LIVRER. (1) UN CHAMP `Lot:` dans le gabarit de PR, section Identite, a cote d `Auteur:`, `Relecteur:` et `Couvre:` : il porte les identifiants de tache separes par des VIRGULES, ou reste VIDE pour une PR a une seule tache. (2) `CHAMPS` de `gov-pr.ts` le garde comme les autres, pour que `champ_gabarit_absent` rougisse s il disparait du gabarit — mais il n est JAMAIS exige rempli dans le corps d une PR : l exiger rendrait la garde insatisfiable pour la tres grande majorite des PR. (3) `tachesDeLaPr()` resout desormais par l UNION DES TROIS : `t.pr === <numero>`, l identifiant du titre, les identifiants declares dans `Lot:`. La monotonie que son docblock nomme est preservee : un renseignement de plus ne peut que faire GROSSIR l ensemble, donc la garde obtient toujours un sur-ensemble de ce que le composeur du corps voit. (4) LE NIVEAU DE CONFIANCE NE CHANGE PAS, et c est l argument que l ADR doit porter : le TITRE est deja ecrit par l auteur de la PR et la garde le croit depuis le premier jour ; `Lot:` est exactement aussi fiable — meme auteur, meme corps, meme absence de contreseing — et il est EXPLICITE et AUDITABLE la ou le titre est implicite. (5) QUATRE REFUS, CHACUN AVEC SON TEMOIN VU ROUGIR, et un identifiant refuse n elargit RIEN (sens de defaillance ferme) : un identifiant inconnu du registre (`lot_tache_inconnue`) ; un identifiant deja livre, une PR ne rouvrant pas une tache livree (`lot_tache_livree`) ; un identifiant qui porte un `pr` DIFFERENT (`deux_pr_meme_tache` — le NOM que `gov:etat` donne deja a cette regle, REPRIS et non double, `partners/ADR-0011` : les deux gardes l observent sur deux populations disjointes, les TITRES des PR ouvertes de la forge d un cote, le champ `pr` du registre confronte a la seule PR jugee de l autre) ; un champ MAL FORME — separateur inattendu, virgule en trop (`lot_mal_forme`), jamais une liste vide silencieuse, ce qui est precisement GOV-082. (6) DEUX CONTRE-TEMOINS VERTS AU MOINS : `Lot:` vide ou absent laisse le comportement INCHANGE — c est le cas d aujourd hui et de la tres grande majorite des PR ; et la MEME PR de lot, champ rempli, sort en zero la ou elle rougissait sans lui — sans cette seconde face on ne saurait pas si le champ RESOUT les taches ou s il a seulement fait taire la famille. (7) Le message de `fichier_hors_paths_des_taches` cesse de prescrire le remede FAUX sur une PR de lot : il nomme `Lot:` avant `ajouter-path.mjs`. (8) `risqueDeLaPr()` recoit la meme union : sans elle, une tache `sensible` ou `schema: true` portee par une autre tache du lot que celle du titre n exigerait ni section Attaque ni approbation bloquante de l architecte.",
+      "tests": {
+        "REQ-GOV-021": [
+          "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts"
+        ],
+        "REQ-GOV-007": [
+          "tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts"
+        ]
+      },
+      "issue": 119,
+      "owner": "A05",
+      "branch": "t/gov-096-gov-pr-lit-le-lot",
+      "pr": 118,
+      "motif": null
+    },
+    {
+      "id": "GOV-090",
+      "titre": "La table des chemins reserves etiquette des VUES et laisse deux SOURCES ouvertes, et une garde prescrit un outil par un chemin irresolvable",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/adr/",
+        "docs/CHARTE-AGENTS.md",
+        "docs/CONVENTIONS.md",
+        "scripts/plan-state/build.ts",
+        "scripts/gates/gov-pr.ts",
+        "scripts/gates/gov-attributions.ts",
+        "scripts/gates/gov-conventions.ts",
+        "scripts/lot/chemins-de-tache.ts",
+        "scripts/lot/cloture.ts",
+        "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts",
+        "tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts",
+        "tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-010",
+        "REQ-GOV-032",
+        "REQ-GOV-008"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "fusionnee",
+      "acceptance": "DEUX DEFAUTS D'UNE MEME FAMILLE : un registre qui AFFIRME une protection qu'il n'exerce pas. Mesures a rejouer, jamais a recopier.\n\n=== DEFAUT A — LA TABLE ETIQUETTE DES VUES ET LAISSE DES SOURCES OUVERTES ===\n\nMESURE 1. La case 7 de la definition de termine exige `docs/PLAN-STATE.md` regenere sur CHAQUE PR ; la §7 de `docs/CHARTE-AGENTS.md` exige le label `role:gardien-spec` sur toute PR qui le modifie. Consequence : 34 PR fusionnees depuis la #26 portent ce label, soit 34 sur 34.\n\nMESURE 2, ET ELLE CORRIGE LE DIAGNOSTIC EVIDENT. Retirer la ligne PLAN-STATE ne change le label que sur 5 PR sur 34 : 29 le portent AUSSI pour `docs/tasks.json`, une VRAIE source, reecrite par `lot:cloture` sur presque chaque PR. Le label resterait muet a 85 %. Ecrire cela dans l'ADR est obligatoire : sans cette phrase, la PR se lira comme ayant regle un probleme qu'elle n'a pas regle.\n\nMESURE 3. `docs/PLAN-STATE.md` n'est PAS la seule vue de la table : `docs/REQUIREMENTS.md` en est une aussi (son en-tete le declare, `gov:requirements --verifie-rendu` la garde) et elle est ligne 2 de la meme table. L'argument « la table ne reserve pas les vues » est donc faux.\n\nMESURE 4, LE VRAI DEFAUT. Quatre registres de « reserve » se contredisent : §7 de la charte, CONVENTIONS §8, `.github/CODEOWNERS` et le `deny` de `.claude/settings.json`. `docs/requirements.json`, SOURCE des exigences, n'est reservee par AUCUN des quatre — pendant que sa vue generee l'est quatre fois. La table protege l'ombre et laisse le corps ouvert. `docs/gates.json` n'est reservee que par le `deny`. Et `CODEOWNERS` porte un attrape-tout au meme proprietaire : il est mecaniquement INERTE partout, la charte le dit deja pour un fichier et ne le generalise pas.\n\nMESURE 5. Le label n'a JAMAIS ete le filet sur les rubriques exemptees : le `deny` de `.claude/settings.json` interdit deja Write et Edit de `docs/PLAN-STATE.md` a tout agent en session. Le label n'ajoute rien que le `deny` ne fasse.\n\nMESURE 6, CELLE QUI TRANCHE. REQ-GOV-010 — l'exigence que la §7 cite comme sa propre gate — attribue PLAN-STATE a l'ORCHESTRATEUR, la table lui met `role:gardien-spec` ; et la REQ ne nomme pas `docs/tasks.json`. La table contredit la REQ qu'elle pretend armer, sur les deux lignes qui posent 100 % des labels. ATTENTION : la question du NOM de l'orchestrateur est deja donnee a GOV-023 par la charte §4 — NE PAS la rouvrir.\n\nACCEPTATION A. La §7 cesse de pretendre designer un proprietaire de FICHIER et devient la table des SOURCES.\n  (a) `docs/PLAN-STATE.md` et `docs/REQUIREMENTS.md` en sortent comme chemins etiquetes. Motif, et c'est le motif de l'ADR : un label repond a « qui repond de ce texte », et PERSONNE ne repond d'une vue — une vue a un generateur et un mode de verification, et sa derive est deja un rouge nomme. Ce n'est pas retirer une regle pour faire taire un rouge : c'est refuser d'appeler proprietaire quelqu'un qui n'a rien ecrit.\n  (b) `docs/requirements.json` et `docs/gates.json` y ENTRENT. Le changement est ainsi net-neutre a legerement plus strict : deux lignes sortent, deux entrent, et la source des exigences cesse d'etre ouverte.\n  (c) LE TROU SE FERME LA OU IL VIT, pas par un label. `plan-state:verifier` abandonne aujourd'hui des rubriques entieres sous l'intitule NON COMPARE, alors que REQ-GOV-032 exige qu'une vue generee sorte en 1 des qu'elle differe de sa source D'UN SEUL OCTET — la non-conformite est mesuree contre une REQ ACTIVE. La rubrique exemptee n'est plus abandonnee : elle est comparee sur ce qui NE VIENT PAS de la forge, le generateur sachant deja par rubrique quelles valeurs de forge il a lues. Nouvelle famille, VUE ROUGIR, plus un contre-temoin vert.\n  (d) REPLI DECLARE, a annoncer dans la PR : si le rendu frais d'une rubrique exemptee n'est pas disponible au moment de la comparaison, comparer la FORME (nombre de lignes, aucune puce, aucun chevron, aucun titre) contre la forme rendue — la grammaire est deja fixe. Dire dans la PR laquelle des deux a ete livree.\n\n=== DEFAUT B — UNE GARDE PRESCRIT UN OUTIL PAR UN CHEMIN IRRESOLVABLE ===\n\nMESURE 7. Onze citations portent le prefixe `outils/` : SIX sous `scripts/`, DEUX sous `docs/journal/`, TROIS sous `tests/`. Une seule dit que l'outil vit hors du depot. QUATRE sont imprimees a un humain dans un message rouge. Le dossier `outils/` n'existe pas dans le depot : les verbes vivent dans un dossier FRERE. Un lecteur resout le chemin depuis la racine du depot, ne trouve rien, et conclut que l'outil n'existe pas — c'est arrive, et la conclusion fausse a ete publiee.\n\nMESURE 8, LE FAIT LE PLUS PORTEUR. Un temoin EPINGLE DEJA la forme fausse : `perimetre-des-gardes-derive-du-disque.spec.ts` exige que le message rouge CONTIENNE le chemin irresolvable. Quelle que soit la voie retenue, ce temoin doit bouger dans le MEME commit, sinon il VERDIT sur le defaut. Un temoin ecrit pour passer, pas pour mesurer.\n\nMESURE 9. Vingt-quatre citations de plus nomment un verbe SANS aucun chemin. Elles ne mentent pas, mais ne permettent pas de trouver l'outil.\n\nACCEPTATION B. La voie « faire entrer les verbes au depot » est REFUSEE pour une raison MECANIQUE, a ecrire dans l'ADR avec son mecanisme exact : `.claude/settings.json` porte `Bash(node scripts/*)` et `Bash(pnpm *)` en ALLOW, et le `deny` ne lie que Write et Edit. Faire entrer les verbes sous `scripts/` placerait un ecrivain qui contourne le `deny` A L'INTERIEUR de l'allow-list. Ce n'est pas un risque, c'est une defaite mecanique de la protection.\n  (e) UN QUALIFIANT DECLARE, au meme rang que `axionia/`, `ops/` et `partners/` : la boite a outils cesse d'etre `outils/` — un mot qui RESSEMBLE a un dossier du depot — et devient `hors-depot/`, qui ne peut pas etre confondu. REQ-GOV-008 pose deja la regle (« toute reference croisee est qualifiee par depot … reference non qualifiee → rouge ») : elle existe, elle est active, son perimetre s'arrete au corpus des ADR. C'est la forme que la maison connait : une regle ecrite pour la PROSE ne s'applique pas a la SYNTAXE.\n  (f) UNE SEULE ECRITURE, LES AUTRES DERIVENT (RM-01) : un rendu unique, exporte par le fichier qui porte deja la seule citation correcte, appele par les quatre messages rouges.\n  (g) LE TEMOIN ROUGIT SUR LA FAMILLE, pas sur une ligne : un balayage de `git ls-files` refuse toute citation d'un verbe connu ecrite en chemin relatif au depot, hors du rendu unique. Contre-temoin : la forme qualifiee reste verte. VU rougir, message verbatim au bloc ROUGE.\n  (h) LE PERIMETRE EST DIT AU LIEU D'ETRE SUPPOSE — c'est le coeur de l'arbitrage : une garde dont le perimetre est `git ls-files` NE PEUT PAS voir l'outillage qui ecrit le registre. L'ADR l'ecrit comme une surface non gardee, NOMMEE ET DATEE. Le depot porte la seule chose qu'il PEUT porter : un inventaire declare des douze verbes, avec une garde qui rougit quand le depot cite un verbe ABSENT de l'inventaire (mode de panne deja survenu : un message conseillait un verbe qui refuse le geste).\n  (i) LA LIMITE EST ECRITE A VOIX HAUTE : cet inventaire est une COPIE de ce qui vit dehors, et une copie que rien ne confronte DERIVE. Elle porte donc sa date de mesure, et l'ADR la porte comme dette residuelle. Pretendre que c'est une garde serait exactement la faute du label muet.\n\n=== CE QUE CETTE TACHE NE FERME PAS, ET QUI EST VERSE AILLEURS ===\n\nLe label reste muet a 85 % apres ce geste : le dis-mutiser demande un discriminant — le label n'est du que sur une edition A LA MAIN, pas sur un rendu canonique ecrit par son geste sanctionne. Tache separee. Et un `paths` declare qui ne resout pas n'est controle par personne : la garde des orphelins va FICHIER vers CHEMIN et ne prend jamais un chemin declare en entree. Tache separee, car le discriminant n'est pas l'existence mais le MOMENT — 189 taches `a_faire` declarent legitimement des chemins a creer.\n\n=== PIEGE DE PERIMETRE, MESURE ===\n\nSeuls `scripts/`, `src/` et `tests/` sont confrontes par la famille des fichiers hors `paths`. Les entrees `docs/` de cette tache sont declarees par honnetete, pas par necessite de garde — ce qui est une illustration de plus du defaut A.",
+      "tests": {
+        "REQ-GOV-010": [
+          "tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts"
+        ],
+        "REQ-GOV-032": [
+          "tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts"
+        ],
+        "REQ-GOV-008": [
+          "tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts"
+        ]
+      },
+      "issue": 106,
+      "owner": "A02",
+      "branch": "t/gov-label-et-outils",
+      "pr": 113,
+      "motif": null
+    },
+    {
+      "id": "GOV-098",
+      "titre": "Inscrire au plan la décision W15 de Will (2026-09-25) : lignées, changement de parrain, statistiques, secteur, bibliothèque, outils de console",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/DECISIONS.md",
+        "docs/requirements.json",
+        "docs/REQUIREMENTS.md",
+        "docs/GLOSSAIRE.md",
+        "docs/ESPACE-ROUTES.md",
+        "docs/tasks.json",
+        "docs/TASKS.md",
+        "docs/TRACABILITE.md",
+        "docs/paths-proposes.json",
+        "docs/PLAN-STATE.md",
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. (1) `docs/DECISIONS.md` porte la ligne W15 en §1 (tranchée le 2026-09-25, propriétaire Will) et dix lignes `HYP-W15-*` en §2, chacune avec sa réversibilité et, pour les deux lignes `avenant`, « premier DocuSeal » ; `pnpm gov:hypotheses` sort 0. (2) `docs/requirements.json` porte treize exigences nouvelles (REQ-DM-044 à 047, REQ-UX-040 à 046, REQ-SEC-039 et 040), chacune testable et citant W15, et REQ-UX-006 amendée par W15 : la liste minimale des filleuls directs devient la seule exception à l'interdiction d'identité ; `pnpm gov:requirements` et `pnpm gov:requirements:verifie-rendu` sortent 0. (3) Les douze tâches qui livrent W15 sont versées par le verbe hors dépôt `hors-depot/verser-tache.mjs`, jamais à la main ; `pnpm gov:tasks` sort 0. (4) Le glossaire définit « lignée » et « équipe », `docs/ESPACE-ROUTES.md` rattache `/filleuls` à REQ-UX-041. (5) Toutes les vues dérivées sont régénérées, `docs/PLAN-STATE.md` en dernier.",
+      "tests": {
+        "REQ-GOV-015": [
+          "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+        ]
+      },
+      "issue": 123,
+      "owner": "A01",
+      "branch": "t/perimetre-fonctionnel-2026-09-25",
+      "pr": 122,
+      "motif": null
+    },
+    {
+      "id": "DM-26",
+      "titre": "Changement de parrain en console : admin seul, motif, journal chaîné, effet à date, refus du cycle et de l'auto-parrainage",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "prisma/schema.prisma",
+        "src/domain/parrainage/changement-de-parrain.ts",
+        "src/server/console/parrainage/changer-de-parrain.ts",
+        "tests/unit/domaine/changement-de-parrain.spec.ts",
+        "tests/integration/changement-de-parrain.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "argent",
+        "attribution",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-16",
+        "SEC-18",
+        "SEC-17",
+        "DM-01",
+        "JUR-T01"
+      ],
+      "reqs": [
+        "REQ-DM-044"
+      ],
+      "hyp": [
+        "HYP-W15-PARRAIN-A-DATE",
+        "HYP-W15-NOTIF-PARRAIN"
+      ],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE SENSIBLE — argent et attribution ; ELLE ÉCRIT LE SCHÉMA (historique daté du rattachement de parrainage). (1) L'action de console n'est permise qu'au rôle `admin` (matrice de SEC-17) ; tout autre rôle reçoit le refus, et le test joue `qualifieur` et `comptable`. (2) Le motif est choisi dans une LISTE FERMÉE — erreur de rattachement, fraude ou auto-parrainage, départ ou résiliation du parrain (clause de correction du rattachement, contrat art. 4.6 nouvel alinéa, HYP-W15-PARRAIN-A-DATE tranchée le 2026-09-25) — et porte une précision écrite ; motif hors liste, précision vide ou blanche → refus, aucun événement écrit. Aucun accord écrit du parrain d'origine n'est demandé. (3) L'action écrit UN événement au journal `Evenement` chaîné (ancien parrain, nouveau parrain, date d'effet, motif, auteur) ; la vérification de chaîne passe après l'action. (4) EFFET POUR LES LIGNES FUTURES SEULEMENT, les lignes déjà nées restant acquises au parrain d'origine : sur une fixture, une ligne `commission` du filleul acquise la veille de l'effet engendre sa ligne `parrainage` au profit du parrain d'origine, une ligne acquise le lendemain au profit du nouveau parrain ; une `reprise` d'une ligne d'avant l'effet suit le parrain d'origine ; la fenêtre `contratFilleulSigneAt + 12 mois` est inchangée. (5) REFUS NOMMÉS, journal inchangé : nouveau parrain = le filleul ; nouveau parrain = un descendant du filleul (cycle) ; nouveau parrain partageant un hash de SIRET, d'e-mail, de téléphone ou d'IBAN avec le filleul (règle de SEC-18, réutilisée, jamais recopiée). (6) Les e-mails suivent `HYP-W15-NOTIF-PARRAIN` : trois destinataires, ni motif ni montant ni identité d'un autre apporteur (assertion sur les gabarits). (7) Aucune ligne n'est jamais créée au second niveau (REQ-DM-023 reste vert). La clause elle-même est rédigée dans le gabarit par JUR-T01 : cette tâche n'arme pas en production avant la signature du premier contrat qui la porte.",
+      "tests": {
+        "REQ-DM-044": [
+          "tests/unit/domaine/changement-de-parrain.spec.ts",
+          "tests/integration/changement-de-parrain.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-27",
+      "titre": "Lignée et équipe : fonctions pures de lecture, deux niveaux, jamais appelées par le calcul des commissions",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domain/parrainage/lignee.ts",
+        "tests/unit/domaine/lignee.spec.ts",
+        "tests/unit/domaine/lignee-hors-du-calcul-des-commissions.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-16",
+        "DM-26"
+      ],
+      "reqs": [
+        "REQ-DM-045"
+      ],
+      "hyp": [
+        "HYP-W15-EQUIPE"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "(1) `lignee(a, t)` rend exactement les filleuls de `a` (niveau 1) et les filleuls de ceux-ci (niveau 2) à la date `t` : fixture à trois niveaux, le troisième est absent. (2) La date compte : une fixture avec un changement de parrain (DM-26) rend deux lignées différentes avant et après l'effet. (3) `equipe(a, t)` = `a` et sa lignée ; deux équipes qui se chevauchent sont rendues séparément, jamais fusionnées. (4) Fonctions pures, horloge injectée, aucune I/O (règle de `src/domain/**`). (5) GARDE STATIQUE, TÉMOIN À DEUX FACES : un fichier du calcul des commissions qui importe `lignee` ou `equipe` fait rougir la garde et la nomme ; le dépôt réel la fait sortir verte avec le compte des fichiers confrontés.",
+      "tests": {
+        "REQ-DM-045": [
+          "tests/unit/domaine/lignee.spec.ts",
+          "tests/unit/domaine/lignee-hors-du-calcul-des-commissions.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P2-08",
+      "titre": "Console : lignée d'un apporteur en liste et en arbre SVG, deux niveaux",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/app/(console)/console/apporteurs/lignee/",
+        "src/server/console/lignee.ts",
+        "tests/unit/console/lignee.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-27",
+        "SEC-17",
+        "UX-P1-12"
+      ],
+      "reqs": [
+        "REQ-UX-040"
+      ],
+      "hyp": [
+        "HYP-W15-EQUIPE"
+      ],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "(1) Depuis la fiche apporteur (UX-P1-12), la console affiche la lignée en LISTE et en ARBRE SVG rendu côté serveur, sans bibliothèque ; chaque nœud porte l'état du contrat et la date de rattachement. (2) Fixture à trois niveaux → exactement les niveaux 1 et 2 ; la liste et l'arbre portent le même ensemble d'apporteurs (comparaison des identifiants). (3) L'écran est dans la matrice des rôles ; retiré de la matrice → refus. `lecteur` → aucune clé d'identité dans le DTO. (4) Aucun montant du second niveau n'est présenté comme revenant à l'apporteur consulté. (5) axe-core : 0 violation serious ou critical ; poids de la route mesuré avant/après et collé dans la PR.",
+      "tests": {
+        "REQ-UX-040": [
+          "tests/unit/console/lignee.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P2-09",
+      "titre": "Mes filleuls : liste des filleuls directs, prénom, initiale et état du contrat, sans montant par filleul",
+      "phase": 2,
+      "repo": "partners",
+      "zone": "espace",
+      "paths": [
+        "src/app/(espace)/filleuls/",
+        "src/server/espace/filleuls.ts",
+        "tests/unit/espace/mes-filleuls-liste.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-16",
+        "SEC-05",
+        "UX-P2-04",
+        "JUR-T01"
+      ],
+      "reqs": [
+        "REQ-UX-041",
+        "REQ-UX-006"
+      ],
+      "hyp": [
+        "HYP-W15-FILLEULS-VUE",
+        "HYP-W15-ART-4-6"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE SENSIBLE — espace et données personnelles. (1) Toute lecture passe par `forApporteur` (SEC-05). (2) RÈGLE FERMÉE DES ÉTATS (REQ-UX-041, HYP-W15-ART-4-6 tranchée le 2026-09-25), dérivée de l'ENSEMBLE des versions du contrat du filleul, jamais d'une version « courante », lues dans l'ordre chronologique de leur création, seules comptant celles POSTÉRIEURES À LA DERNIÈRE `resilie` (toutes s'il n'y en a aucune) : dernière version `resilie` → le filleul SORT de la liste ; une `signe` parmi les versions comptées → `signe` ; versions comptées toutes `envoye` → `en_signature` ; aucune version → absent ; toute autre combinaison → ÉCHEC FERMÉ, filleul absent et écart journalisé côté console, jamais un libellé par défaut. Tests, une fixture par branche : AVENANT ENVOYÉ SUR UN CONTRAT SIGNÉ → « signé », élément identique à l'octet près avant et après l'envoi de l'avenant ; avenant jamais signé → « signé » indéfiniment, horloge avancée ; premier contrat envoyé jamais signé → « en signature » ; résiliation → absent ; combinaison incohérente → absent et écart journalisé ; RELATION REPRISE : {signe, resilie, envoye} → « en signature », {signe, resilie, signe} → « signé », {signe, resilie} → absent, avenant après la reprise → « signé ». Le statut d'apporteur du filleul (`suspendu`, `resilie`, gel, anomalie, sincérité) n'est JAMAIS lu : un filleul au contrat `signe` dont l'apporteur passe `suspendu` reste affiché « signé », élément byte-identique avant et après ; aucun DTO de l'espace ne porte de champ de statut d'apporteur ni les valeurs `resilie`, `remplace`, `suspendu` (témoin qui les porte → rouge). (3) CLÉS EXACTES de chaque élément du DTO de liste : `prenom`, `initialeNom`, `etatContrat` — rien d'autre ; un témoin portant une clé d'activité (`nbDepots`, `actif`, `derniereVente`, `lastSeenAt`) ou un montant fait rougir le test. (4) Fixture à deux niveaux → les filleuls des filleuls sont absents. (5) Deux filleuls au même état de contrat, l'un actif et l'autre non → éléments byte-identiques hors prénom et initiale. (6) Le montant de parrainage reste agrégé par mois, jamais ventilé par filleul (REQ-UX-006). (7) Le filleul d'un autre apporteur n'apparaît jamais ; son identifiant sur une route paramétrée rend le 404 byte-identique. L'alinéa amendé est rédigé dans le gabarit par JUR-T01 : cette tâche n'arme pas en production avant la signature du premier contrat qui le porte.",
+      "tests": {
+        "REQ-UX-041": [
+          "tests/unit/espace/mes-filleuls-liste.spec.ts"
+        ],
+        "REQ-UX-006": [
+          "tests/unit/espace/mes-filleuls-liste.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-28",
+      "titre": "Code NAF au dépôt : stocké depuis le client recherche-entreprises, complété après un repli manuel, jamais deviné",
+      "phase": 1,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domain/entreprise/code-naf.ts",
+        "src/server/jobs/completer-code-naf.ts",
+        "tests/unit/domaine/code-naf-au-depot.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "attribution"
+      ],
+      "deps": [
+        "DM-07",
+        "INT-T09"
+      ],
+      "reqs": [
+        "REQ-DM-046"
+      ],
+      "hyp": [
+        "HYP-W15-SECTEUR"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "(1) Sur chacune des fixtures ENREGISTRÉES d'INT-T09, le code NAF stocké sur l'attribution égale `activite_principale` de la fixture — jamais `activite_principale_naf25`, que REQ-INT-021 n'énumère pas. (2) Dépôt en repli manuel → code NAF nul ; le formulaire de dépôt ne porte aucun champ de code NAF. (3) La reprise, déclenchée à la fermeture du disjoncteur, complète les codes nuls par un nouvel appel au tiers (fixture) et n'écrase jamais un code déjà présent. (4) Un tiers qui ne rend pas le code laisse le champ nul (« non renseigné »), sans valeur par défaut. (5) TÉMOIN : une reprise qui écrirait une valeur par défaut fait rougir le test (4).",
+      "tests": {
+        "REQ-DM-046": [
+          "tests/unit/domaine/code-naf-au-depot.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "DM-29",
+      "titre": "Agrégats de pilotage : candidatures, statuts, part d'actifs, CA et commissions par apporteur, lignée et équipe, secteur, séries mensuelles",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "domaine",
+      "paths": [
+        "src/domain/statistiques/agregats.ts",
+        "src/domain/statistiques/nomenclature-naf.ts",
+        "tests/unit/domaine/statistiques.spec.ts",
+        "tests/unit/domaine/nomenclature-naf.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent"
+      ],
+      "deps": [
+        "CPL-T15",
+        "UX-P3-06",
+        "DM-21",
+        "DM-27",
+        "DM-28",
+        "DM-15"
+      ],
+      "reqs": [
+        "REQ-UX-042",
+        "REQ-DM-047"
+      ],
+      "hyp": [
+        "HYP-W15-EQUIPE",
+        "HYP-W15-SECTEUR"
+      ],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "acceptance": "FONCTIONS PURES, horloge injectée, montants en centimes HT. (1) Jeu de fixture à totaux connus : candidatures par canal et par période, apporteurs par statut, part d'actifs parmi les apporteurs sous contrat, CA et commissions par apporteur, par lignée et par équipe — chaque valeur égale la valeur attendue écrite dans le test. (2) `actif`/`dormant` viennent de la fonction de REQ-CPL-027 (UX-P3-06), importée, jamais recalculée : une garde rougit sur une seconde dérivation. (3) Équipes chevauchantes : leurs totaux ne sont jamais additionnés entre eux. (4) Séries mensuelles : un mois sans donnée vaut 0, jamais absent. (5) Secteur : la table rattache chacune des 88 divisions NAF rév. 2 à une section ; `70.10Z` → M/70 ; code nul → « non renseigné » ; la somme des secteurs égale le total non filtré.",
+      "tests": {
+        "REQ-UX-042": [
+          "tests/unit/domaine/statistiques.spec.ts"
+        ],
+        "REQ-DM-047": [
+          "tests/unit/domaine/nomenclature-naf.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-07",
+      "titre": "Console Statistiques : tableaux filtrables (période, canal, statut, secteur), tris réservés à la console",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/app/(console)/console/statistiques/",
+        "src/server/console/statistiques.ts",
+        "tests/unit/console/statistiques.spec.ts",
+        "tests/unit/console/tris-reserves-a-la-console.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "argent",
+        "rgpd"
+      ],
+      "deps": [
+        "DM-29",
+        "UX-P3-04",
+        "SEC-17"
+      ],
+      "reqs": [
+        "REQ-UX-042",
+        "REQ-UX-044",
+        "REQ-DM-047"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "(1) L'écran rend les indicateurs de DM-29 sur une période choisie, filtrables par canal, statut et secteur (section et division). (2) Les montants par apporteur ne sortent que pour les rôles que la matrice autorise ; `lecteur` → aucune clé de montant par apporteur dans le DTO. (3) TRIS RÉSERVÉS À LA CONSOLE : garde statique, témoin à deux faces — un fichier sous `src/app/(espace)/**` qui importe un module de statistiques fait rougir la garde et le nomme ; le dépôt réel sort vert avec le compte des fichiers confrontés. Le terme que REQ-GOV-017 bannit n'apparaît pas (`pnpm gov:lexique`). (4) axe-core 0 violation serious ou critical ; poids de la route mesuré avant/après, ≤ 75 KB gz.",
+      "tests": {
+        "REQ-UX-042": [
+          "tests/unit/console/statistiques.spec.ts"
+        ],
+        "REQ-UX-044": [
+          "tests/unit/console/tris-reserves-a-la-console.spec.ts"
+        ],
+        "REQ-DM-047": [
+          "tests/unit/console/statistiques.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-08",
+      "titre": "Graphiques de console en SVG maison : courbes et barres, alternative tabulaire, aucune bibliothèque de tracé",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/components/console/graphiques/",
+        "tests/unit/console/graphiques-svg.spec.ts",
+        "perf/budgets.json"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [
+        "UX-P3-07",
+        "GOV-019"
+      ],
+      "reqs": [
+        "REQ-UX-043"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "(1) Un composant maison rend, côté serveur, une courbe et un histogramme en `<svg>` ; sur une série de fixture, les coordonnées des points égalent les données (test de forme). (2) Chaque graphique porte une alternative tabulaire accessible ; axe-core 0 violation serious ou critical. (3) GARDE, TÉMOIN À DEUX FACES : une dépendance de tracé ajoutée à `package.json` (liste en configuration de la garde) la fait rougir et la nomme ; le `package.json` réel la fait sortir verte. (4) La route Statistiques a son entrée dans `perf/budgets.json` et tient ≤ 75 KB gz de First Load JS, chiffres avant/après collés dans la PR (REQ-GOV-028).",
+      "tests": {
+        "REQ-UX-043": [
+          "tests/unit/console/graphiques-svg.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-09",
+      "titre": "Export CSV de chaque tableau de console : sans coordonnées directes, journalisé, neutralisation des formules",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/server/console/export-csv.ts",
+        "tests/unit/console/export-csv.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "UX-P3-07",
+        "SEC-17",
+        "DM-01"
+      ],
+      "reqs": [
+        "REQ-SEC-040"
+      ],
+      "hyp": [
+        "HYP-W15-EXPORT"
+      ],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE SENSIBLE — données personnelles. (1) Un seul exporteur sert tous les tableaux de console ; une garde dérive du disque la liste des tableaux et rougit sur un tableau sans export. (2) En-têtes exacts sur une fixture ; AUCUNE colonne d'e-mail, de téléphone, d'IBAN ni d'adresse — témoin : un tableau qui en déclare une fait rougir l'exporteur. (3) Cellule de texte `=1+1` neutralisée ; montant négatif laissé intact. (4) `lecteur` → refus. (5) Chaque export écrit un événement au journal chaîné (auteur, tableau, filtres, nombre de lignes), et le test relit le nombre de lignes.",
+      "tests": {
+        "REQ-SEC-040": [
+          "tests/unit/console/export-csv.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-10",
+      "titre": "Notes internes par apporteur en console : jamais servies à l'espace, journalisées, incluses dans l'export art. 15",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "prisma/schema.prisma",
+        "src/server/console/notes-internes.ts",
+        "src/app/(console)/console/apporteurs/notes/",
+        "tests/unit/console/notes-internes.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "UX-P1-12",
+        "SEC-17",
+        "SEC-05",
+        "DM-20"
+      ],
+      "reqs": [
+        "REQ-SEC-039"
+      ],
+      "hyp": [
+        "HYP-W15-NOTES"
+      ],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE SENSIBLE — données personnelles ; ELLE ÉCRIT LE SCHÉMA (modèle de note). (1) Création, modification et suppression réservées aux rôles de la matrice ; rôle absent → refus. (2) Chaque geste écrit un événement au journal chaîné. (3) GARDE STATIQUE, TÉMOIN À DEUX FACES : AUCUN écran ni DTO d'écran de l'espace ne porte une note — le modèle de note est inaccessible par `forApporteur`, et la garde rougit sur tout lecteur des notes autre que la console et la fonction d'export art. 15 du module RGPD (DM-20), seule exemptée et nommée dans la garde ; un DTO de l'espace portant une clé de note la fait rougir. (4) Aucune note n'entre dans un e-mail, une alerte Telegram, un score ni un déclencheur. (5) L'export d'accès art. 15 d'une fixture (DM-20), quel que soit le canal de la demande — y compris le téléchargement depuis l'espace (REQ-UX-030, REQ-JUR-025), qui ne sert que le fichier produit —, CONTIENT les notes, chacune horodatée et son auteur désigné par son rôle de console, jamais par son nom (HYP-W15-NOTES).",
+      "tests": {
+        "REQ-SEC-039": [
+          "tests/unit/console/notes-internes.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-11",
+      "titre": "Alertes de pilotage : baisse d'activité d'un apporteur ou d'une lignée, candidatures en attente, par les canaux existants",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "src/server/pilotage/alertes.ts",
+        "src/domain/pilotage/seuils.ts",
+        "tests/unit/pilotage/alertes-de-pilotage.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "INT-T14",
+        "UX-P1-10",
+        "UX-P3-06",
+        "DM-29"
+      ],
+      "reqs": [
+        "REQ-UX-045"
+      ],
+      "hyp": [
+        "HYP-W15-SEUILS-ALERTE"
+      ],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "acceptance": "(1) Les alertes passent par le bot de console d'INT-T14 (dédoublonnage, plafond horaire, aucune coordonnée) et par la table des notifications de console d'UX-P1-10 — aucun autre canal n'est créé. (2) Seuils lus en configuration ; fixture sous le seuil → une alerte, au-dessus → aucune. (3) L'activité se mesure sur les dépôts confirmés ; une règle lisant `lastSeenAt` ou `dernierUsageAt` fait rougir la garde de REQ-JUR-039. (4) ESPION SUR LES EXPÉDITEURS : aucun envoi n'a un apporteur pour destinataire, et aucun état d'apporteur ne change ; témoin : un envoi à l'apporteur fait rougir le test. (5) Le message Telegram ne porte qu'une catégorie, un compte et un identifiant technique.",
+      "tests": {
+        "REQ-UX-045": [
+          "tests/unit/pilotage/alertes-de-pilotage.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "UX-P3-12",
+      "titre": "Bibliothèque de documents : console (ajout, remplacement versionné, retrait, ciblage, publication datée) et affichage ciblé dans Ressources",
+      "phase": 3,
+      "repo": "partners",
+      "zone": "console",
+      "paths": [
+        "prisma/schema.prisma",
+        "src/app/(console)/console/bibliotheque/",
+        "src/server/console/bibliotheque.ts",
+        "src/server/espace/documents-cibles.ts",
+        "tests/unit/console/bibliotheque.spec.ts",
+        "tests/integration/bibliotheque-cloisonnement.spec.ts"
+      ],
+      "schema": true,
+      "sensible": [
+        "espace",
+        "rgpd"
+      ],
+      "deps": [
+        "UX-P3-02",
+        "UX-P2-04",
+        "SEC-05",
+        "SEC-17",
+        "DM-11",
+        "JUR-T30"
+      ],
+      "reqs": [
+        "REQ-UX-046"
+      ],
+      "hyp": [
+        "HYP-W15-BIBLIOTHEQUE"
+      ],
+      "externe": null,
+      "estimateDays": 1.5,
+      "statut": "a_faire",
+      "acceptance": "TÂCHE SENSIBLE — espace et données personnelles ; ELLE ÉCRIT LE SCHÉMA (document et versions). (1) Console : ajout, remplacement versionné (l'ancienne version conservée et plus jamais servie), retrait par dépublication, ciblage tous / un palier / un apporteur, date de publication ; chaque geste journalisé. (2) Espace, par `forApporteur` : un document ciblé sur un palier est visible de ce palier ; pour un autre apporteur, sa route rend le 404 byte-identique à un identifiant inexistant (test en boîte noire). (3) Publication datée de demain → invisible aujourd'hui (horloge injectée). (4) Fichier non PDF, jugé sur ses octets d'en-tête → refus ; stockage privé, URL signée courte. (5) Inventaire des ressources téléchargeables : aucun fichier de logo ni de charte (REQ-JUR-041) ; le terme que REQ-JUR-041 bannit n'apparaît nulle part (`pnpm gov:lexique`).",
+      "tests": {
+        "REQ-UX-046": [
+          "tests/unit/console/bibliotheque.spec.ts",
+          "tests/integration/bibliotheque-cloisonnement.spec.ts"
+        ]
+      }
+    },
+    {
+      "id": "GOV-097",
+      "titre": "Quatre lentilles seulement pour l argent, la securite et les donnees, deux pour le reste ; une inexactitude de prose n est plus un motif de refus",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/revues.ts",
+        "scripts/gates/gov-pr.ts",
+        "tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts",
+        "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts",
+        "docs/CHARTE-AGENTS.md",
+        "docs/agents.json",
+        ".claude/agents/relecteur.md",
+        "docs/adr/0021-quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.md",
+        "docs/DECISIONS.md"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-011"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "acceptance": "DECISION DE WILL, proprietaire, du 2026-09-25, en reponse a « pourquoi c est si long ». MESURE QUI L OUVRE, rapportee avec la decision : sept fusions le 22/09, puis deux, une, une ; 156 des 207 taches restantes en risque ELEVE, donc relues par quatre lentilles, et chaque refus fait relire les quatre. (1) QUATRE LENTILLES SEULEMENT POUR L ARGENT, LA SECURITE ET LES DONNEES ; DEUX (exactitude + securite) POUR TOUT LE RESTE. `risqueDeLaPr()` (`scripts/lot/revues.ts`, la seule derivation, appelee par `gov:pr` et le composeur du corps) rend ELEVE si et seulement si l un de ces signaux est present : une tache de la PR (titre, `pr`, `Lot:` ; tete ET base) porte un `sensible` non vide ou ABSENT, `schema: true`, une `zone` argent ou securite, une `zone` absente ou inconnue du schema du registre ; le label `schema` ou un chemin de schema ; un fichier dans une zone sensible du code ; un fichier de la garde des revues, de la CI, d un dossier cache, de configuration a la racine ou de `config/` ; un diff vide, une liste incomplete, aucune tache resolue, un registre de base illisible (echec FERME, conserve). CE QUI CESSE D ELEVER : une zone hors {gouvernance, qualite} autre que argent et securite avec `sensible: []`, et un fichier de code produit hors zones sensibles. La liste des zones et des segments sensibles est une DONNEE nommee (`ZONES_A_RISQUE_ELEVE`, `SEGMENTS_DES_ZONES_SENSIBLES`, `DOSSIERS_DU_PROCESSUS`), les zones connues se LISENT dans `scripts/lot/tasks.schema.json` (RM-01), et `ZONES_SENSIBLES` quitte `gov-pr.ts` pour le lecteur unique. TEMOINS VUS ROUGES AVANT LE CODE : une tache `zone: espace, sensible: []` touchant `src/` est ORDINAIRE ; chaque zone du schema hors argent et securite est ordinaire ; le schema du registre appartient a la garde des revues. CONTRE-TEMOINS qui restent ELEVES : `sensible: [argent]` et chaque etiquette du schema, `zone: securite`, `zone: argent`, `sensible` absent, `zone` absente ou inconnue, `schema: true`, `.github/workflows/*`, `eslint.config.mjs` et la racine, `.claude/`, `config/`, chaque fichier de la garde des revues, les fichiers de code des zones sensibles, `prisma/`. `pnpm gov:pr:prove` sort en 0 et garde toutes ses familles. (2) UNE INEXACTITUDE DE PROSE (corps de PR, journal, ADR, commentaire, docblock) N EST PLUS UN MOTIF DE REFUS : c est une dette nommee dans la revue, corrigee au passage suivant. Un refus vise un defaut de code ou de test, ou une affirmation fausse qui porte sur la securite, l argent ou les donnees. Ecrit dans `docs/CHARTE-AGENTS.md` §6 et dans les interdits du poste A09 (`docs/agents.json`, fiche regeneree). ADR `partners/ADR-0021` : la decision, le cout mesure, ce qui reste a quatre lentilles et pourquoi, la limite declaree (les taches qui manipulent des donnees personnelles avec `sensible: []`), le retour arriere. Ligne au registre `docs/DECISIONS.md`.",
+      "tests": {
+        "REQ-GOV-011": [
+          "tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts"
+        ]
+      },
+      "issue": 121,
+      "owner": "A05",
+      "branch": "t/gov-097-risque-reserve",
+      "pr": 120,
+      "motif": null
+    },
+    {
+      "id": "GOV-099",
+      "titre": "Cadrage de DM-06 : sourceCanal transporté figé, IBAN hors de DM-06, glossaire des enums d'apporteur",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "docs/DECISIONS.md",
+        "docs/requirements.json",
+        "docs/REQUIREMENTS.md",
+        "docs/GLOSSAIRE.md",
+        "docs/tasks.json",
+        "docs/TASKS.md",
+        "docs/TRACABILITE.md",
+        "docs/paths-proposes.json",
+        "docs/PLAN-STATE.md",
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-015"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 0.5,
+      "statut": "fusionnee",
+      "tests": {
+        "REQ-GOV-015": [
+          "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+        ]
+      },
+      "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le développeur de DM-06 a rendu `stop` sur trois contradictions ; les décisions prises le 2026-09-25 par l'orchestrateur, sur délégation de Will, sont inscrites : (1) REQ-DM-035 amendée — `sourceCanal` est une chaîne transportée figée ; la dérivation vers l'enum `CanalCandidature` et sa table chemin → canal appartiennent à EXT-T03 ; (2) le glossaire porte `RegimeTva`, `StatutApporteur`, `MotifResiliation` et `CanalCandidature` au §4, lus par `partners:schema:enums` ; (3) l'IBAN sort de DM-06 : il appartient à la pièce RIB du KYC (DM-11, SEC-08), `IdentitesFacturation` n'en porte qu'une référence (REQ-CPL-005 amendée) ; (4) format du code de parrainage (REQ-DM-012), `DORMANCE_JOURS` en paramètre, témoin du dépôt au-delà du seuil porté par DM-09 ; (5) `paths` de DM-06 complétés. Registres écrits par les verbes hors dépôt ; `gov:hypotheses`, `gov:tasks`, `gov:requirements`, `gov:identifiants`, `gov:attributions`, `gov:trace`, `partners:schema:enums` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier.",
+      "issue": 125,
+      "owner": "A01",
+      "branch": "t/cadrage-dm-06",
+      "pr": 124,
+      "motif": null
     }
   ]
 }

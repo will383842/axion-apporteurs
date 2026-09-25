@@ -3,10 +3,27 @@
 > Livré par **GOV-006** (REQ-GOV-016, REQ-JUR-027, REQ-DM-038). Un terme canonique par concept, ses synonymes
 > **interdits**, l'enum Prisma qui le porte et la REQ source. Gate `glossaire-enums.spec.ts` : toute colonne de
 > vocabulaire en `String` → rouge ; toute valeur d'enum absente d'ici → rouge ; tout synonyme interdit trouvé dans
-> `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` → rouge (`gov:check`).
+> `prisma/**`, `src/**`, `messages/**`, `docs/adr/**` → rouge (`gov:termes-interdits`).
 >
 > Règle : les listes ci-dessous sont **dérivées** des REQ citées (RM-01). Si une REQ change, ce fichier est régénéré
 > par le `gardien-spec` ; personne n'y ajoute une valeur « en passant ».
+>
+> **Citer un terme interdit : où c'est possible, et où ça ne l'est pas.** L'exemption de citation de `gov:termes-interdits` se
+> lit sur la **dernière** extension du nom, et trois grammaires seulement l'accordent : `.md` (prose), `.sql` et
+> `.prisma` (dans un commentaire). **Un fichier `.ts` n'en a aucune** — et c'est la plus grosse population du
+> périmètre : 26 des 49 fichiers lus au 2026-09-22. On n'y écrit donc pas un terme interdit, même pour expliquer
+> pourquoi il l'est. **La règle est de le nommer par son rôle ET de donner l'adresse de la ligne qui le porte**
+> (« les deux modèles qu'`AFF-01` déclare disparus, `docs/GLOSSAIRE.md` §5 »), jamais une paraphrase sans adresse :
+> c'est une paraphrase sans adresse qui a rendu l'en-tête de `packages/contracts/events.ts` illisible — « l'un n'a
+> jamais eu de modèle et l'autre est une valeur d'enum » ne dit pas lequel est lequel. Le contournement cessait
+> d'être écrit nulle part, et chaque agent le redécouvrait : il est écrit ici.
+>
+> **Pourquoi aucun marqueur de citation n'est posé en `.ts`, et à qui appartient la levée.** Un marqueur a été
+> essayé, puis REFUSÉ **sur mesure**, le 2026-09-22 : en ajoutant `ts` aux grammaires qui citent, une même ligne
+> portant un usage RÉEL et exécuté passe de ROUGE à VERT dès qu'une URL apparaît plus tôt sur cette ligne, parce
+> que le `//` de `https://` y ouvre une zone de commentaire. Un marqueur qui peut taire un vrai défaut n'est pas un
+> marqueur. La grammaire qui saurait distinguer une chaîne d'un commentaire est le livrable de **GOV-069** ; tant
+> qu'elle n'existe pas, l'absence d'exemption en `.ts` est une limite **nommée**, pas un oubli.
 
 ## 1. Attribution — 13 états (`EtatAttribution`, REQ-DM-006)
 
@@ -105,7 +122,13 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `OrigineEntrepriseConnue` | `client`, `devis`, `demande_entrante`, `financeur`                                     | REQ-DM-029   |
 | `TypeReprise`          | `avoir`, `paiement_rembourse` (synonyme interdit : `payment_refund`)                       | REQ-DM-019   |
 | `ConsoleRole`          | `admin`, `qualifieur`, `comptable`, `lecteur`                                              | REQ-SEC-023  |
+| `StatutApporteur`      | `candidat`, `retenu`, `vivier`, `refuse`, `kyc_en_cours`, `pret_a_signer`, `signe`, `suspendu`, `resilie` — sens au §2 ; `actif` et `dormant` sont dérivés, jamais stockés | REQ-DM-011 |
+| `MotifResiliation`     | `ordinaire_apporteur`, `ordinaire_axion`, `manquement_grave` — colonne `resiliationMotif` | REQ-DM-011 |
+| `RegimeTva`            | `assujetti`, `franchise_293b` — historique daté, figé sur chaque autofacture | REQ-ARG-033 |
+| `CanalCandidature`     | `site`, `linkedin`, `jobboard`, `saisie_console`, `autre` — dérivé par EXT-T03 de `sourceCanal`, chaîne transportée figée ; chemin inconnu → `autre`, journalisé | REQ-DM-035, REQ-EXT-008 |
 | `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe`, `proposee` — **neuf valeurs**, celles de `scripts/lot/tasks.schema.json` ; `proposee` manquait ici depuis GOV-017a et rien ne l'attrapait | REQ-GOV-021 |
+| `TypeEvenementJournal` | `journal_ouvert` — la genèse du journal `evenements`, écrite par la première migration et portant l'algorithme de hachage ; ensuite, un type par transition journalisée, chacun à charge fermée sans donnée personnelle | REQ-DM-024, REQ-DM-041 |
+| `AgregatJournal`       | `attribution`, `apporteur`, `ligne_commission`, `releve`, `piece_kyc`, `contrat` — l'agrégat dont la transition s'écrit au journal, dans la même transaction ; l'événement le désigne par `agregatId`, jamais par une donnée de la personne | REQ-DM-024 |
 
 > ⚠️ **La légende d'avancement de REQ-GOV-026 n'est PAS un enum de colonne**, et n'a donc pas de
 > ligne dans ce tableau. Ses sept états — `specifie`, `code`, `teste`, `revu`, `fusionne`,
@@ -144,11 +167,48 @@ producer, subject_ref, sequence, payload}`. C'est un écart ASSUMÉ à `docs/CON
 le §1 exempte nommément. Le camelCase et les suffixes `…Cents` / `…At` restent la règle **dans le payload** et
 partout ailleurs dans le code.
 
-Synonymes interdits : `eventId`, `eventType`, `schemaVersion`, `occurredAt`, `emittedAt`, `subjectRef` — la
-forme camelCase des champs d'enveloppe ; `payment.received`, `refund.paid`, `refund.issued`, `invoice.issued`,
-`invoice.cancelled`, `avoir.issued`, `devis.signed`, `candidature.submitted`, `client.created`,
-`client.updated` ; `Invoice`, `Refund`, `PaymentScheduleProfile` — des modèles supprimés d'axionia qu'aucun
-événement ne référence.
+Synonymes interdits : `occurredAt`, `emittedAt`, `subjectRef` ; `payment.received`, `refund.paid`,
+`refund.issued`, `invoice.issued`, `invoice.cancelled`, `avoir.issued`, `devis.signed`,
+`candidature.submitted`, `client.created`, `client.updated` ; `Invoice`, `Refund`,
+`PaymentScheduleProfile` — des modèles supprimés d'axionia qu'aucun événement ne référence.
+
+Synonymes interdits : `eventId` dans l'enveloppe de fil, `eventType` dans l'enveloppe de fil,
+`schemaVersion` dans l'enveloppe de fil — trois jetons que le registre attribue AUSSI à un autre
+rôle, donc trois interdits que la garde n'exerce pas et qu'elle imprime.
+
+> ⚠️ **L'INTERDIT CI-DESSUS A RANGÉ, JUSQU'AU 2026-09-22, PARMI LES INTERDITS SECS LA FORME EXACTE QUE
+> CE MÊME §5 PRESCRIT DANS SON PREMIER PARAGRAPHE.** `eventId` et `eventType` y étaient refusés sans
+> condition, alors que le paragraphe de `EvenementRecu` les épelle comme les colonnes de la table
+> (REQ-DM-036). Le piège était **armé**, pas déclenché : au 2026-09-22, aucun des six jetons
+> n'apparaissait dans `prisma/`, `src/`, `messages/`, `docs/adr/` ni `packages/contracts/`. La tâche
+> qui allait le déclencher est **SEC-06** (`a_faire`, REQ-DM-036) : son développeur aurait écrit la
+> colonne que l'exigence épelle, vu `pnpm gov:termes-interdits` rougir sur le glossaire, et n'aurait
+> eu sous les yeux ni ce raisonnement ni de quoi trancher.
+>
+> **Ce qui a été tranché.** Les deux lignes parlent de deux objets différents : une **colonne de
+> stockage interne**, camelCase par `docs/CONVENTIONS.md` §1, et un **champ de l'enveloppe de fil**,
+> snake_case par REQ-INT-003 et `partners/ADR-0008`. L'interdit visait le second et attrapait le
+> premier : juste dans son intention, trop large dans sa forme. Il n'est pas affaibli, il est ramené
+> à son intention, par une règle qui vaut pour **tout** terme de ce fichier et pas pour ce cas-ci —
+> **un jeton que le registre attribue AUSSI à un autre rôle ne peut pas porter un interdit SEC** : il
+> devient un interdit sous condition, que la garde n'exerce pas et qu'elle **imprime**, plutôt qu'un
+> rouge qu'on apprendra à contourner. Mesure du 2026-09-22, faite dans `docs/requirements.json` et
+> dans ce fichier : `eventId` est attribué par sept exigences (REQ-DM-016, REQ-DM-036, REQ-SEC-011,
+> REQ-ARG-002, REQ-ARG-027, REQ-QA-008, REQ-QA-024) **et** par §5 lui-même ; `schemaVersion` par
+> trois (REQ-ARG-003, REQ-QA-007, REQ-QA-009) ; `eventType` par §5 lui-même. Les trois autres —
+> `occurredAt`, `emittedAt`, `subjectRef` — ne sont réclamés nulle part ailleurs : leur interdit
+> reste SEC, et la garde le tient.
+>
+> **Ce qui garde réellement la casse de l'enveloppe** n'est pas cette liste de jetons, et ne l'a
+> jamais été : c'est l'égalité, champ par champ et **dans l'ordre**, entre `CHAMPS_ENVELOPPE`
+> (`packages/contracts/enveloppe.ts`) et les neuf noms que REQ-INT-003 épelle. Une liste fermée
+> comparée par égalité voit une casse fausse ; un balayage de jeton ne voit qu'un mot, et ne saura
+> jamais dire si ce mot est une colonne ou un champ de fil.
+>
+> ⚠️ **Effet de bord mesuré, et réparé au passage.** `subjectRef` n'était **pas** exercé avant ce
+> jour : le tiret cadratin qui suivait le dernier jeton de la liste en faisait, aux yeux de la garde,
+> un interdit « sous condition » — sans que personne l'ait voulu, et sans que rien le dise. Le compte
+> des synonymes exercés passe donc de **37 à 35**, et non de 37 à 34.
 
 > ⚠️ **CE PARAGRAPHE DISAIT L'INVERSE JUSQU'AU 2026-09-04, en citant `events.ts` comme sa source.** Il
 > annonçait **onze** types et une enveloppe **camelCase**, et rangeait `event_id` / `event_type` parmi les
@@ -206,3 +266,5 @@ de fusion — corrigé par B-REQ-6), `reviewer`, `reader`, `viewer`.
 | entreprise connue       | SIREN présent chez axionia (client, devis, demande entrante, financeur) — antériorité         | déjà cliente (côté apporteur : « non disponible ») |
 | lien de dépôt privé     | Jeton de dépôt (patron `EmargementToken`) permettant un dépôt sans session ; ≠ code de parrainage public | lien magique (réservé à la connexion) |
 | code de parrainage      | Code public partageable ; capture `parrainCodeCapture` à la candidature                       | code promo, affiliation                    |
+| lignée                  | Filleuls d'un apporteur (premier niveau) et filleuls de ceux-ci (second niveau), dérivés de `Parrainage`, jamais stockés ; lecture seule, console (REQ-DM-045, W15). Le second niveau n'est jamais rémunéré | downline, réseau de vente |
+| équipe                  | Un apporteur et sa lignée ; les équipes se chevauchent, leurs totaux ne s'additionnent pas (`HYP-W15-EQUIPE`). Terme de **console seulement**, jamais montré à un apporteur | groupe de vente |

@@ -41,7 +41,7 @@
  * spécifications qui lancent `gh` ont rendu la suite non déterministe le 2026-09-05 (`pnpm test`
  * a rendu 1, puis 0, puis 0 sur le même arbre). Une valeur dérivée d'une source non reproductible
  * n'est pas dérivée, elle est échantillonnée. La vérification en ligne vit dans un mode séparé,
- * `pnpm gov:attestation --en-ligne`, que ni `pnpm test` ni `pnpm gov:check` n'appellent.
+ * `pnpm gov:attestation --en-ligne`, que ni `pnpm test` ni `pnpm gov:partiel` n'appellent.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -83,7 +83,7 @@ const familles = (t: TacheAttestable, livree: boolean): string[] =>
   controlerAttestation(t, livree).map((f) => f.famille);
 
 describe('GOV-038 — les sept familles de l’attestation inter-dépôt (REQ-GOV-026)', () => {
-  it('attestation_absente : une tâche `axionia` livrée sans rien qui prouve sa livraison', () => {
+  it('REQ-GOV-026 — attestation_absente : une tâche `axionia` livrée sans rien qui prouve sa livraison', () => {
     const f = controlerAttestation(
       tache({ id: 'INT-T01b', repo: 'axionia', statut: 'fusionnee', pr: null, attestation: null }),
       true
@@ -292,7 +292,7 @@ describe('GOV-038 — les contre-témoins : ce que la garde doit LAISSER PASSER 
     ).toEqual([]);
   });
 
-  it('une tâche `axionia` LIVRÉE avec son attestation et sans `pr` nu — la forme que GOV-038 pose', () => {
+  it('REQ-GOV-025 — une tâche `axionia` LIVRÉE avec son attestation et sans `pr` nu — la forme que GOV-038 pose', () => {
     expect(
       familles(
         tache({
@@ -317,7 +317,7 @@ describe('GOV-038 — le rendu est qualifié par dépôt (REQ-GOV-008)', () => {
     ).toBe('PR#31');
   });
 
-  it('une PR d’AILLEURS se lit `will383842/axion-ia#998 (…)`, jamais `PR#998`', () => {
+  it('REQ-GOV-008 — une PR d’AILLEURS se lit `will383842/axion-ia#998 (…)`, jamais `PR#998`', () => {
     const rendu = referencePr(
       tache({
         id: 'INT-T01b',
@@ -450,13 +450,17 @@ describe('GOV-038 — aucun appelant ne recompose une référence de PR à la ma
     expect(porteurs).toEqual(['scripts/lot/attestation.ts']);
   });
 
-  it('le fichier de la gate en ligne existe et n’est appelé ni par `pnpm test` ni par `gov:check`', () => {
+  it('le fichier de la gate en ligne existe et n’est appelé ni par `pnpm test` ni par `gov:partiel`', () => {
     // Une vérification qui interroge la forge ne doit JAMAIS entrer dans la suite : elle rendrait
     // le verdict dépendant du réseau, d'un jeton et d'un quota (mesuré le 2026-09-05).
     const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
       scripts: Record<string, string>;
     };
-    expect(pkg.scripts['gov:check'] ?? '').not.toContain('attestation');
+    expect(
+      pkg.scripts['gov:partiel'],
+      'la chaîne a disparu ou changé de nom : sans cette ligne, le témoin deviendrait MUET'
+    ).toBeDefined();
+    expect(pkg.scripts['gov:partiel']!).not.toContain('attestation');
     expect(readFileSync(join('scripts', 'gates', 'gov-attestation.ts'), 'utf8')).toContain(
       '--en-ligne'
     );
