@@ -262,3 +262,5 @@ de fusion — corrigé par B-REQ-6), `reviewer`, `reader`, `viewer`.
 | entreprise connue       | SIREN présent chez axionia (client, devis, demande entrante, financeur) — antériorité         | déjà cliente (côté apporteur : « non disponible ») |
 | lien de dépôt privé     | Jeton de dépôt (patron `EmargementToken`) permettant un dépôt sans session ; ≠ code de parrainage public | lien magique (réservé à la connexion) |
 | code de parrainage      | Code public partageable ; capture `parrainCodeCapture` à la candidature                       | code promo, affiliation                    |
+| lignée                  | Filleuls d'un apporteur (premier niveau) et filleuls de ceux-ci (second niveau), dérivés de `Parrainage`, jamais stockés ; lecture seule, console (REQ-DM-045, W15). Le second niveau n'est jamais rémunéré | downline, réseau de vente |
+| équipe                  | Un apporteur et sa lignée ; les équipes se chevauchent, leurs totaux ne s'additionnent pas (`HYP-W15-EQUIPE`). Terme de **console seulement**, jamais montré à un apporteur | groupe de vente |
