@@ -400,7 +400,9 @@ function defautDEntree(f: string, pr: PrJugee): string | null {
   const texte = pr.lire(f);
   if (texte === null) return `${f} est illisible à la tête`;
   const titre = `${ANCRE_JOURNAL}${pr.numero} `;
-  const intrus = texte.split('\n').find((l) => /^#{2,}/.test(l) && !l.startsWith(titre));
+  // Coupé aussi sur un `\r` SEUL : `gov:etat` le fait, et un titre caché derrière lui passerait
+  // sinon pour la suite d'une ligne (dette `securite`, revue 5316791878).
+  const intrus = texte.split(/\r\n|\r|\n/).find((l) => /^#{2,}/.test(l) && !l.startsWith(titre));
   return intrus === undefined
     ? null
     : `${f} porte un titre qui n’ouvre pas l’entrée de la #${pr.numero} : « ${intrus} »`;
@@ -453,11 +455,23 @@ export function accordSurvit(
 /**
  * Le texte d'un fichier À LA TÊTE, par `git show <tete>:<chemin>`. Échoue FERMÉ : toute erreur
  * (fichier supprimé, commit absent, sha malformé) rend `null`, qui périme l'accord.
+ *
+ * 🔴 SEUL UN FICHIER ORDINAIRE SE LIT (veto `securite`, revue 5316791878). Pour un lien
+ * symbolique (mode 120000), `git show` rend la CIBLE du lien, pas le contenu que `gov:etat` et
+ * `gov:attributions` lisent en le suivant : une entrée devenue lien vers l'entrée d'une autre PR
+ * aurait fait survivre les accords. Le mode est lu par `git ls-tree` à la tête, et tout autre
+ * mode que 100644 (lien, exécutable, sous-module) rend `null`.
  */
 export function contenuALaTete(tete: string, chemin: string, cwd?: string): string | null {
   const t = tete.trim();
   if (!/^[0-9a-f]{7,40}$/.test(t) || !ENTREE_DU_JOURNAL.test(chemin)) return null;
   try {
+    const arbre = execFileSync('git', ['ls-tree', t, '--', chemin], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      ...(cwd === undefined ? {} : { cwd }),
+    });
+    if (!arbre.startsWith('100644 blob ')) return null;
     return execFileSync('git', ['show', `${t}:${chemin}`], {
       encoding: 'utf8',
       maxBuffer: 64e6,

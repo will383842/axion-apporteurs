@@ -326,6 +326,14 @@ describe('REQ-GOV-011 — la décision de survie, séparée de la mesure', () =>
       });
       expect(s.survit, titre).toBe(false);
     }
+    // Un titre CACHÉ derrière un retour chariot seul (`\r`) : `gov:etat` coupe aussi sur `\r`, la
+    // règle de survie doit donc le voir (dette relevée par `securite`, revue 5316791878).
+    expect(
+      LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md'], {
+        numero: NUMERO,
+        lire: () => `${TEXTE_ENTREE}\rsuite\r## PR #999 — 2026-09-25 — caché\n`,
+      }).survit
+    ).toBe(false);
     // Une entrée devenue illisible à la tête (supprimée, `git` en échec) : échec FERMÉ.
     expect(
       LECTEUR.accordSurvit('securite', ['docs/journal/2026-09-pr-116.md'], {
@@ -386,6 +394,39 @@ function ecrireEtCommiter(dir: string, fichiers: Record<string, string>, message
 }
 
 describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
+  it('REQ-GOV-011 · une entrée devenue LIEN SYMBOLIQUE est illisible : seul un fichier ordinaire se lit', () => {
+    // 🔴 VETO `securite` (revue 5316791878) : `git show tête:chemin` d'un mode 120000 rend la CIBLE
+    // du lien, pas le contenu que `gov:etat` et `gov:attributions` lisent en suivant le lien. Le
+    // lien est posé dans l'INDEX (`--cacheinfo 120000`) : même objet que sur Linux, sans dépendre
+    // du droit de créer un lien sur le système de fichiers de la machine.
+    const dir = depotJetable();
+    ecrireEtCommiter(
+      dir,
+      {
+        'docs/journal/2026-09-pr-116.md': `${TEXTE_ENTREE}\n`,
+        'docs/journal/2026-09-pr-999.md': '## PR #999 — 2026-09-25 — une entrée étrangère\n',
+      },
+      'chore: socle'
+    );
+    const ordinaire = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' });
+    expect(LECTEUR.contenuALaTete(ordinaire.trim(), 'docs/journal/2026-09-pr-116.md', dir)).toBe(
+      `${TEXTE_ENTREE}\n`
+    );
+    const cible = execFileSync('git', ['hash-object', '-w', '--stdin'], {
+      cwd: dir,
+      encoding: 'utf8',
+      input: '2026-09-pr-999.md',
+    }).trim();
+    execFileSync(
+      'git',
+      ['update-index', '--cacheinfo', `120000,${cible},docs/journal/2026-09-pr-116.md`],
+      { cwd: dir, stdio: 'ignore' }
+    );
+    execFileSync('git', ['commit', '-m', 'chore: lien'], { cwd: dir, stdio: 'ignore' });
+    const lien = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: dir, encoding: 'utf8' }).trim();
+    expect(LECTEUR.contenuALaTete(lien, 'docs/journal/2026-09-pr-116.md', dir)).toBeNull();
+  });
+
   it('REQ-GOV-011 · un commit qui ne touche que le journal rend EXACTEMENT ce fichier', () => {
     const dir = depotJetable();
     const c = ecrireEtCommiter(

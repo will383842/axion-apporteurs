@@ -255,6 +255,8 @@ jugee : seul son fichier est admis, et chaque titre de niveau 2 ou plus qu'il po
 ouvrir son entree. Numero inconnu, entree illisible a la tete : echec ferme. Les deux temoins ont
 ete vus rouges (`expected true to be false`) avant le code.
 
+Quatrième tour (veto `securite`, revue 5316791878) : une entrée devenue lien symbolique se lisait par sa cible, alors que `gov:etat` et `gov:attributions` suivent le lien. `contenuALaTete` n'admet plus qu'un fichier ordinaire (mode 100644, lu par `git ls-tree`) ; un titre caché derrière un retour chariot seul est vu, comme `gov:etat` le coupe. Deux témoins, vus rouges avant le correctif.
+
 ### PR #114 — 2026-09-23 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure
 
 **Fait.** Six tâches de gouvernance construites en séquence sur une seule branche, un commit par
