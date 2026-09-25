@@ -1466,8 +1466,14 @@
       "paths": [
         "src/lib/logger.ts",
         "src/lib/notify.ts",
-        "sentry.server.config.ts",
-        "tests/unit/qualite/journal-redige.spec.ts"
+        "tests/unit/qualite/journal-redige.spec.ts",
+        "src/lib/sentry.ts",
+        "src/instrumentation.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/unit/qualite/journal-redige.bac.ts",
+        "src/lib/forme-iban.ts",
+        "scripts/gates/gov-entite.ts"
       ],
       "schema": false,
       "sensible": [
@@ -1475,14 +1481,15 @@
         "rgpd"
       ],
       "deps": [
-        "QA-T01"
+        "QA-T01",
+        "DM-01"
       ],
       "reqs": [
         "REQ-QA-024"
       ],
       "hyp": [],
       "externe": null,
-      "estimateDays": 0.5,
+      "estimateDays": 1,
       "statut": "a_faire",
       "owner": "A05",
       "lot": null,
