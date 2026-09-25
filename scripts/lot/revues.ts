@@ -70,6 +70,8 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { posix } from 'node:path';
 
+import { cheminsDeLaTache, REGISTRES_APPEND_ONLY } from './chemins-de-tache';
+
 export const CHEMIN_AGENTS = 'docs/agents.json';
 export const CHEMIN_CHARTE = 'docs/CHARTE-AGENTS.md';
 
@@ -367,6 +369,13 @@ export type TacheDeLaPr = {
    * la tâche reste confrontée aux deux autres refus, l'inconnue et le `pr` divergent.
    */
   statut?: string | null;
+  /**
+   * Les fichiers que la tâche DÉCLARE (`paths` ∪ `tests{}`, lus par `cheminsDeLaTache()`). Ajoutés
+   * par GOV-097 : la sensibilité suit le FICHIER — un fichier déclaré par une tâche sensible élève
+   * la PR qui le touche, quelle que soit la tâche de son titre (`fichiersDesTachesAElever`).
+   */
+  paths?: string[];
+  tests?: Record<string, string[]> | null;
 };
 
 /**
@@ -727,7 +736,9 @@ export function resoudreLeLot<T extends TacheDeLaPr>(e: {
  *        — une `zone` de `ZONES_A_RISQUE_ELEVE`, ou une `zone` ABSENTE, ou une `zone` que le schéma
  *          du registre ne déclare pas (`zonesDuRegistre`) : une valeur imprévue n'est rien prouvé ;
  *   2. le label `schema`, ou un chemin de schéma (`toucheSchema`, dérivé de la charte §7) ;
- *   3. un fichier dans une zone sensible du code (`fichierEnZoneSensible`) ;
+ *   3. un fichier dans une zone sensible du code (`fichierEnZoneSensible`), ou un fichier qu'une
+ *      tâche QUELCONQUE du registre, sensible, déclare (`fichiersDesTachesAElever`) : la
+ *      sensibilité suit le fichier, pas seulement la tâche du titre ;
  *   4. un fichier du PROCESSUS (`fichierDuProcessus`) : la garde des revues, la CI, un dossier
  *      caché ou un fichier de configuration à la racine, `config/`. Ces fichiers peuvent désarmer
  *      les gardes elles-mêmes : c'est la sécurité du processus, et elle reste à quatre lentilles ;
@@ -783,17 +794,35 @@ export const SEGMENTS_DES_ZONES_SENSIBLES: readonly string[] = [
   'webhooks',
   'donnees-personnelles',
   'pii',
+  // Refus `securite` du 2026-09-25 (motif 1) : les fichiers FUTURS de session, de chiffrement, du
+  // cloisonnement de RM-05 et le middleware de Next ressortaient ordinaires par leur seul nom.
+  'session',
+  'sessions',
+  'crypto',
+  'chiffrement',
+  'cloisonnement',
+  'middleware',
 ];
 
 /**
- * Un segment de chemin, débarrassé de ce qui l'habille sans le nommer : les parenthèses d'un
- * groupe de routes (`(espace)`), les crochets d'un segment dynamique (`[id]`) ; en minuscules.
+ * LES DÉCORATIONS DE SEGMENT DU ROUTEUR DE NEXT, en tête : slot `@x`, interceptions `(.)x`,
+ * `(..)x`, `(...)x` — répétées, `(..)(..)x` —, attrape-tout `[...x]` et `[[...x]]`, dynamique
+ * `[x]`, groupe `(x)`. L'interception passe AVANT le groupe : `(.)` n'ouvre pas un groupe.
  */
-function nuDuSegment(segment: string): string {
-  return segment
-    .replace(/^[([]+/, '')
-    .replace(/[)\]]+$/, '')
-    .toLowerCase();
+const DECORATIONS_DE_TETE = /^(?:@|\(\.{1,3}\)|\[{1,2}(?:\.{3})?|\()+/;
+const DECORATIONS_DE_QUEUE = /[)\]]+$/;
+
+/**
+ * Un segment de chemin, débarrassé de ce qui l'habille sans le nommer (`DECORATIONS_DE_TETE`, puis
+ * les `)` et `]` de queue) ; en minuscules. L'UNIQUE endroit : l'Attaque et le risque le lisent
+ * tous deux par `segmentsNommesTouches()`.
+ *
+ * 🔴 IL NE RETIRAIT QUE `(`/`[` EN TÊTE (refus `securite` du 2026-09-25, motif 2) : `[...auth]`,
+ * `[[...auth]]`, `@auth` et `(.)auth` ressortaient ordinaires, et la section « Attaque » ne les
+ * voyait pas, alors que `[auth]` était élevé.
+ */
+export function nuDuSegment(segment: string): string {
+  return segment.toLowerCase().replace(DECORATIONS_DE_TETE, '').replace(DECORATIONS_DE_QUEUE, '');
 }
 
 /**
@@ -815,7 +844,8 @@ export function segmentsNommesTouches(
     for (let i = 0; i < segments.length; i++) {
       if (i === dernier && !fichierCompris) continue;
       const nu = nuDuSegment(segments[i]!);
-      const lus = i === dernier ? [nu, nu.replace(/\..*$/, '')] : [nu];
+      // Le nom de fichier se lit aussi SANS son extension, redénudé : `[...auth].ts` → `auth`.
+      const lus = i === dernier ? [nu, nuDuSegment(nu.replace(/\..*$/, ''))] : [nu];
       const zone = lus.find((l) => noms.includes(l));
       if (zone === undefined) continue;
       const sous = segments.slice(0, i + 1).join('/');
@@ -966,6 +996,56 @@ function tacheAElever(t: TacheDeLaPr): string | null {
   else if (t.sensible.length > 0) ecarts.push(`sensible [${t.sensible.join(', ')}]`);
   if (t.schema === true) ecarts.push('schema: true');
   return ecarts.length === 0 ? null : ecarts.join(', ');
+}
+
+/**
+ * LES FICHIERS DU DIFF QU'UNE TÂCHE SENSIBLE DÉCLARE — LA SENSIBILITÉ SUIT LE FICHIER (refus
+ * `securite` du 2026-09-25, motif 1). Une tâche QUELCONQUE du registre, de la BASE ou de la TÊTE
+ * (union, sens fermé : la tête peut RETIRER un chemin d'une tâche sensible, la base le garde), qui
+ * élèverait à elle seule une PR (`tacheAElever`) rend élevé tout fichier du diff qu'elle déclare
+ * (`cheminsDeLaTache`) : `api-entrante.ts` reste de SEC-07 sous le titre `feat(INT-T11)`.
+ *
+ * UN FICHIER RÉPOND à un chemin déclaré ÉGAL, ou à un RÉPERTOIRE déclaré (`…/`) qui le contient
+ * — l'attrape-tout `[...inconnu]/route.ts` est de SEC-07 par `src/app/api/integrations/axionia/`.
+ *
+ * ⚠️ DEUX EXCLUSIONS, DÉCLARÉES :
+ *   — les registres append-only (`REGISTRES_APPEND_ONLY`, `docs/gates.json`) : chaque PR y verse
+ *     sa ligne, et une tâche sensible sur deux les déclare ; les compter élèverait toute PR ;
+ *   — un RÉPERTOIRE déclaré sous `docs/` ne couvre pas ses fichiers : `docs/journal/` (GOV-008) et
+ *     `docs/adr/` (INT-T01a) reçoivent une entrée de CHAQUE PR. Un fichier de `docs/` déclaré
+ *     NOMMÉMENT (`docs/rgpd/aipd.md`) élève toujours.
+ */
+export function fichiersDesTachesAElever(
+  fichiers: readonly string[],
+  registres: readonly { ou: string; taches: readonly TacheDeLaPr[] }[]
+): string[] {
+  const exclus = new Set(REGISTRES_APPEND_ONLY.map((r) => r.chemin));
+  // fichier → « tâche (écart) » → les registres où elle le déclare : une tâche identique sur la
+  // base et sur la tête ne s'écrit qu'une fois.
+  const vus = new Map<string, Map<string, string[]>>();
+  for (const { ou, taches } of registres) {
+    for (const t of taches) {
+      const ecart = tacheAElever(t);
+      if (ecart === null) continue;
+      const declares = cheminsDeLaTache({ ...t, paths: t.paths ?? [] }).filter(
+        (c) => c !== '' && !exclus.has(c)
+      );
+      for (const f of fichiers) {
+        const couvre = declares.some(
+          (c) => c === f || (c.endsWith('/') && !c.startsWith('docs/') && f.startsWith(c))
+        );
+        if (!couvre) continue;
+        const parTache = vus.get(f) ?? new Map<string, string[]>();
+        const qui = `${t.id} (${ecart})`;
+        parTache.set(qui, [...(parTache.get(qui) ?? []), ou]);
+        vus.set(f, parTache);
+      }
+    }
+  }
+  return [...vus].map(
+    ([f, parTache]) =>
+      `${f} ← ${[...parTache].map(([qui, ou]) => `${qui} sur la ${ou.join(' et la ')}`).join(', ')}`
+  );
 }
 
 /** Un fichier de l'argent, de la sécurité ou des données (`SEGMENTS_DES_ZONES_SENSIBLES`). */
@@ -1137,7 +1217,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
     ),
   ];
   if (ids.length === 0) {
-    raisons.push('aucune tâche résolue (ni par le titre, ni par le champ `pr`)');
+    raisons.push('aucune tâche résolue (ni par le titre, ni par le champ `pr`, ni par `Lot:`)');
   }
   if (e.tachesBase === null) raisons.push('registre de base illisible');
 
@@ -1172,6 +1252,13 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
   if (sensibles.length > 0) {
     raisons.push(`fichier(s) en zone sensible : ${sensibles.join(', ')}`);
   }
+  const declares = fichiersDesTachesAElever(e.fichiers, [
+    { ou: 'base', taches: e.tachesBase ?? [] },
+    { ou: 'tête', taches: e.taches },
+  ]);
+  if (declares.length > 0) {
+    raisons.push(`fichier(s) déclaré(s) par une tâche sensible : ${declares.join(' ; ')}`);
+  }
   const processus = e.fichiers.filter(fichierDuProcessus);
   if (processus.length > 0) {
     raisons.push(
@@ -1198,7 +1285,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
     schema: false,
     raisons: [
       prouvees.join(', '),
-      `${e.fichiers.length} fichier(s) hors zones sensibles et hors processus`,
+      `${e.fichiers.length} fichier(s) hors zones sensibles, hors tâches sensibles et hors processus`,
     ],
   };
 }

@@ -73,11 +73,47 @@ const CI_DE_QA_T01 = CHEMINS_QA_T01.filter((f) => f.startsWith('.github/'));
  */
 const RACINE_DE_QA_T01 = CHEMINS_QA_T01.filter((f) => !f.includes('/'));
 /**
- * La PR ordinaire de référence : les chemins de QA-T01 HORS `.github/` et hors de la racine
- * (décisions de l'orchestrateur du 2026-09-18 sur GOV-077). Dérivés du registre (RM-03), jamais tapés.
+ * Une tâche qui élèverait à elle seule une PR — ORACLE écrit ici depuis la règle de la charte §6,
+ * pas depuis le code : `sensible` non vide ou absent, `schema: true`, zone `argent`/`securite`,
+ * absente ou inconnue du schéma du registre.
+ */
+function tacheHaute(t: TacheBrute, zonesConnues: readonly string[]): boolean {
+  return !(
+    typeof t.zone === 'string' &&
+    t.zone !== 'argent' &&
+    t.zone !== 'securite' &&
+    zonesConnues.includes(t.zone) &&
+    Array.isArray(t.sensible) &&
+    t.sensible.length === 0 &&
+    t.schema !== true
+  );
+}
+const ZONES_CONNUES = (
+  JSON.parse(readFileSync('scripts/lot/tasks.schema.json', 'utf8')) as {
+    $defs: { tache: { properties: { zone: { enum: string[] } } } };
+  }
+).$defs.tache.properties.zone.enum;
+/**
+ * LA SENSIBILITÉ SUIT LE FICHIER (GOV-097, refus `securite` du 2026-09-25) — oracle : un fichier
+ * qu'une tâche haute du registre déclare, égal ou sous un répertoire déclaré hors de `docs/`, sauf
+ * le registre append-only `docs/gates.json`.
+ */
+const DECLARES_PAR_LES_TACHES_HAUTES = registre()
+  .filter((t) => tacheHaute(t, ZONES_CONNUES))
+  .flatMap((t) => cheminsDe(t))
+  .filter((c) => c !== 'docs/gates.json');
+function declareParUneTacheHaute(x: string): boolean {
+  return DECLARES_PAR_LES_TACHES_HAUTES.some(
+    (c) => c === x || (c.endsWith('/') && !c.startsWith('docs/') && x.startsWith(c))
+  );
+}
+/**
+ * La PR ordinaire de référence : les chemins de QA-T01 HORS `.github/`, hors de la racine
+ * (décisions de l'orchestrateur du 2026-09-18 sur GOV-077) et hors des fichiers qu'une tâche
+ * sensible déclare (GOV-097). Dérivés du registre (RM-03), jamais tapés.
  */
 const FICHIERS_QA_T01 = CHEMINS_QA_T01.filter(
-  (f) => !CI_DE_QA_T01.includes(f) && !RACINE_DE_QA_T01.includes(f)
+  (f) => !CI_DE_QA_T01.includes(f) && !RACINE_DE_QA_T01.includes(f) && !declareParUneTacheHaute(f)
 );
 
 /**
@@ -730,6 +766,12 @@ describe('REQ-GOV-011 — cas 9 : toute tâche du registre réel est classée, l
       'webhooks',
       'donnees-personnelles',
       'pii',
+      'session',
+      'sessions',
+      'crypto',
+      'chiffrement',
+      'cloisonnement',
+      'middleware',
     ]);
     const enZoneSensible = (x: string): boolean => {
       const s = x.toLowerCase().split('/');
@@ -741,18 +783,13 @@ describe('REQ-GOV-011 — cas 9 : toute tâche du registre réel est classée, l
     const oracle = (t: TacheBrute): boolean => {
       const f = cheminsDe(t);
       return (
-        typeof t.zone === 'string' &&
-        t.zone !== 'argent' &&
-        t.zone !== 'securite' &&
-        zonesConnues.includes(t.zone) &&
-        Array.isArray(t.sensible) &&
-        t.sensible.length === 0 &&
-        t.schema !== true &&
+        !tacheHaute(t, zonesConnues) &&
         f.length > 0 &&
         f.every(
           (x) =>
             !enZoneSensible(x) &&
             !duProcessus(x) &&
+            !declareParUneTacheHaute(x) &&
             !x.startsWith('prisma/') &&
             !x.startsWith('packages/contracts/')
         )

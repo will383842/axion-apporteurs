@@ -33,6 +33,7 @@ import { readFileSync } from 'node:fs';
 import * as LECTEUR from '../../../scripts/lot/revues';
 import { cheminsDeLaTache } from '../../../scripts/lot/chemins-de-tache';
 import { LIVREE } from '../../../scripts/lot/avancement';
+import { zonesSensiblesTouchees } from '../../../scripts/gates/gov-pr';
 
 type TacheBrute = {
   id: string;
@@ -269,6 +270,167 @@ describe('REQ-GOV-011 — GOV-097 : ce qui reste à QUATRE lentilles, par les fi
     ).toBe('eleve');
     expect(LECTEUR.risqueDeLaPr({ ...base, titre: 'feat(ZZ-INCONNUE): x' }).niveau).toBe('eleve');
     expect(LECTEUR.risqueDeLaPr({ ...base, tachesBase: null }).niveau).toBe('eleve');
+  });
+});
+
+/**
+ * LA SENSIBILITÉ SUIT LE FICHIER, PAS SEULEMENT LA TÂCHE DE LA PR (refus `securite` du 2026-09-25,
+ * motif 1, revue 5316365953). Les cas sont ceux de la sonde de la lentille, sur le registre RÉEL :
+ * `api-entrante.ts` appartient à SEC-07 (`securite`, `sensible: [auth]`), et une PR titrée
+ * `feat(INT-T11)` (`integration`, `sensible: []`) qui le modifiait ressortait ORDINAIRE.
+ */
+describe('REQ-GOV-011 — GOV-097 : un fichier déclaré par une tâche sensible élève la PR, quelle que soit la tâche du titre', () => {
+  const reel = (
+    fichiers: string[],
+    tete: TacheBrute[] = registre(),
+    base: TacheBrute[] | null = registre()
+  ) =>
+    LECTEUR.risqueDeLaPr({
+      titre: 'feat(INT-T11): x',
+      pr: null,
+      taches: tete,
+      tachesBase: base,
+      fichiers,
+      labels: [],
+      liste: { source: 'complete' },
+    });
+
+  it('REQ-GOV-011 · le code de sécurité DÉJÀ au dépôt (SEC-07, DM-01) sous `feat(INT-T11)` est ÉLEVÉ, et la raison nomme le fichier et sa tâche', () => {
+    const cas: [string[], string][] = [
+      [['src/server/integrations/axionia/api-entrante.ts', 'docs/tasks.json'], 'SEC-07'],
+      [['src/app/api/integrations/axionia/[...inconnu]/route.ts'], 'SEC-07'],
+      [['src/domain/evenement/journal.ts', 'src/server/evenement/journal.ts'], 'DM-01'],
+    ];
+    for (const [fichiers, proprietaire] of cas) {
+      const r = reel(fichiers);
+      const raisons = r.raisons.join(' ; ');
+      expect(r.niveau, `${fichiers.join(', ')} — ${raisons}`).toBe('eleve');
+      expect(raisons).toContain(fichiers[0]);
+      expect(raisons).toContain(proprietaire);
+    }
+  });
+
+  it('REQ-GOV-011 · la BASE fait foi : la tête qui RETIRE le chemin de SEC-07 ne rend pas le fichier ordinaire', () => {
+    const f = 'src/server/integrations/axionia/api-entrante.ts';
+    const tete = registre().map((t) =>
+      t.id === 'SEC-07' ? { ...t, paths: (t.paths ?? []).filter((p) => p !== f) } : t
+    );
+    const r = reel([f], tete);
+    expect(r.niveau, r.raisons.join(' ; ')).toBe('eleve');
+    expect(r.raisons.join(' ; ')).toContain('SEC-07');
+  });
+
+  it('REQ-GOV-011 · la TÊTE compte aussi : un chemin AJOUTÉ à une tâche sensible sur la tête élève (union, sens fermé)', () => {
+    const f = 'src/lib/neutre/nouveau.ts';
+    expect(reel([f]).niveau, 'contre-témoin : personne ne déclare ce fichier').toBe('ordinaire');
+    const tete = registre().map((t) =>
+      t.id === 'SEC-07' ? { ...t, paths: [...(t.paths ?? []), f] } : t
+    );
+    const r = reel([f], tete);
+    expect(r.niveau).toBe('eleve');
+    expect(r.raisons.join(' ; ')).toContain('SEC-07');
+  });
+
+  it('REQ-GOV-011 · contre-témoin : un fichier que seule une tâche NEUTRE déclare reste ORDINAIRE', () => {
+    // `docs/gates.json` est déclaré par SEC-07 et DM-01, mais c'est un registre append-only ;
+    // `docs/journal/…` est couvert par le répertoire `docs/journal/` de GOV-008 (`auth`), et un
+    // répertoire déclaré sous `docs/` ne couvre pas ses fichiers — chaque PR y verse son entrée.
+    for (const f of ['src/server/mcp/serrure.ts', CODE_NEUTRE, DOC_NEUTRE, 'docs/gates.json']) {
+      const r = reel([f]);
+      expect(r.niveau, `${f} — ${r.raisons.join(' ; ')}`).toBe('ordinaire');
+    }
+  });
+
+  it('REQ-GOV-011 · les fichiers FUTURS de session, de chiffrement, de cloisonnement et le middleware sont ÉLEVÉS par leur nom', () => {
+    for (const f of [
+      'src/lib/session.ts',
+      'src/server/sessions/x.ts',
+      'src/lib/crypto.ts',
+      'src/lib/chiffrement/aead.ts',
+      'src/server/cloisonnement/forApporteur.ts',
+      'src/middleware.ts',
+      'src/middleware',
+    ]) {
+      const r = reel([f]);
+      expect(r.niveau, f).toBe('eleve');
+      expect(r.raisons.join(' ; ')).toContain(f);
+    }
+  });
+});
+
+/**
+ * LES DÉCORATIONS DE SEGMENT DE NEXT.JS NE CACHENT PAS UNE ZONE (refus `securite` du 2026-09-25,
+ * motif 2). `[auth]` était élevé ; `[...auth]`, `[[...auth]]`, `@auth` et les interceptions ne
+ * l'étaient pas — ni pour le risque, ni pour la section « Attaque ».
+ */
+describe('REQ-GOV-011 — GOV-097 : un segment décoré se lit nu, pour le risque ET pour l’Attaque', () => {
+  const DECORES = [
+    'src/app/[...auth]/x.ts',
+    'src/app/[[...auth]]/x.ts',
+    'src/app/@auth/x.ts',
+    'src/app/(.)auth/x.ts',
+    'src/app/(..)auth/x.ts',
+    'src/app/(...)auth/x.ts',
+    'src/app/(..)(..)auth/x.ts',
+    'src/app/(groupe)/[AUTH]/x.ts',
+  ];
+
+  it('REQ-GOV-011 · chaque décoration de `auth` rend la PR ÉLEVÉE', () => {
+    for (const f of DECORES) {
+      const r = risque(ESPACE_VIDE, [DOC_NEUTRE, f, CODE_NEUTRE]);
+      expect(r.niveau, f).toBe('eleve');
+      expect(r.raisons.join(' ; ')).toContain(f);
+    }
+  });
+
+  it('REQ-GOV-011 · la section « Attaque » lit la même zone `auth` sous chaque décoration', () => {
+    for (const f of DECORES) {
+      const zones = LECTEUR.segmentsNommesTouches([f], LECTEUR.ZONES_SENSIBLES, {
+        fichierCompris: false,
+      }).map((z) => z.zone);
+      expect(zones, f).toEqual(['auth']);
+    }
+  });
+
+  it('REQ-GOV-011 · un nom de fichier décoré est lu nu aussi (`[...auth].ts`)', () => {
+    expect(risque(ESPACE_VIDE, ['src/app/[...auth].ts']).niveau).toBe('eleve');
+  });
+
+  it('REQ-GOV-011 · la CASSE ne cache pas une zone : `Auth/`, `Proxy.ts` — pour le risque ET pour l’Attaque', () => {
+    for (const f of [
+      'src/components/Auth/bouton.tsx',
+      'src/lib/Proxy.ts',
+      'src/app/[...AUTH]/x.ts',
+    ]) {
+      expect(risque(ESPACE_VIDE, [f]).niveau, f).toBe('eleve');
+    }
+    expect(zonesSensiblesTouchees(['src/components/Auth/bouton.tsx']).map((z) => z.zone)).toEqual([
+      'auth',
+    ]);
+    expect(zonesSensiblesTouchees(['src/app/@Auth/x.ts']).map((z) => z.zone)).toEqual(['auth']);
+  });
+
+  it('REQ-GOV-011 · un NOM DE FICHIER élève le risque, mais l’Attaque ne lit que les RÉPERTOIRES (`src/lib/auth.ts`)', () => {
+    // Le comportement voulu, dans les deux sens : le risque lit le nom du fichier
+    // (`fichierCompris: true`), la section « Attaque » ne le lit pas (`fichierCompris: false`).
+    expect(risque(ESPACE_VIDE, ['src/lib/auth.ts']).niveau).toBe('eleve');
+    expect(zonesSensiblesTouchees(['src/lib/auth.ts'])).toEqual([]);
+    expect(zonesSensiblesTouchees(['src/lib/[...auth].ts'])).toEqual([]);
+    expect(zonesSensiblesTouchees(['src/lib/auth/x.ts'])).toEqual([
+      { zone: 'auth', sous: 'src/lib/auth' },
+    ]);
+  });
+
+  it('REQ-GOV-011 · contre-témoin : une décoration autour d’un nom NEUTRE reste ORDINAIRE', () => {
+    for (const f of [
+      'src/app/[id]/page.tsx',
+      'src/app/[...slug]/page.tsx',
+      'src/app/@modal/(.)photo/page.tsx',
+      'src/app/(marketing)/authentique/page.tsx',
+    ]) {
+      const r = risque(ESPACE_VIDE, [f]);
+      expect(r.niveau, `${f} — ${r.raisons.join(' ; ')}`).toBe('ordinaire');
+    }
   });
 });
 

@@ -48,13 +48,18 @@ de ces signaux est présent :
 | … ou une `zone` de `ZONES_A_RISQUE_ELEVE` (`argent`, `securite`) | le registre | la zone compte seule, même à `sensible: []` |
 | … ou une `zone` absente, ou que `scripts/lot/tasks.schema.json` ne déclare pas | le schéma, **lu** (RM-01) | une valeur imprévue n'est rien prouvé |
 | le label `schema`, ou un chemin de schéma (charte §7) | la PR | inchangé |
-| un fichier dans une **zone sensible du code** | `SEGMENTS_DES_ZONES_SENSIBLES` | un segment du chemin nomme l'argent, la sécurité ou les données |
-| un fichier du **processus** : la garde des revues, un dossier caché (`.github/`, `.claude/`…), la racine, `config/` | `cheminsDeLaGardeDesRevues()`, `fichierDuProcessus()` | ces fichiers peuvent désarmer les gardes : c'est la sécurité du processus |
+| un fichier dans une **zone sensible du code** | `SEGMENTS_DES_ZONES_SENSIBLES` | un segment du chemin, lu nu (`nuDuSegment()` retire `[...x]`, `[[...x]]`, `@x`, `(.)x`…), nomme l'argent, la sécurité ou les données |
+| un fichier **déclaré** (`paths` ∪ `tests{}`) par une tâche quelconque du registre, base ou tête, qui élèverait à elle seule | `fichiersDesTachesAElever()` | **la sensibilité suit le fichier**, pas seulement la tâche du titre : `api-entrante.ts` reste de SEC-07 sous `feat(INT-T11)` |
+| un fichier du **processus** : la garde des revues, un dossier caché de la racine (`.github/`, `.claude/`…), la racine, `config/` | `cheminsDeLaGardeDesRevues()`, `fichierDuProcessus()` | ces fichiers peuvent désarmer les gardes : c'est la sécurité du processus |
 | diff vide, liste incomplète, aucune tâche résolue, registre de base illisible | la forge, le registre | échec **fermé**, conservé |
 
 **Ce qui cesse d'élever** : une zone autre que l'argent et la sécurité (`espace`, `juridique`,
 `integration`, `domaine`, `console`, `devops`) avec `sensible: []`, et un fichier de code produit
-hors des zones sensibles.
+hors des zones sensibles qu'aucune tâche sensible ne déclare. La sensibilité suit aussi le fichier
+(refus `securite` du 2026-09-25 sur #120) : un fichier que déclare une tâche sensible du registre de
+base ou de tête élève toute PR qui le touche, quelle que soit la tâche de son titre — sauf les
+registres append-only (`docs/gates.json`) et les fichiers qu'un répertoire déclaré sous `docs/`
+couvrirait seulement (`docs/journal/`, `docs/adr/` reçoivent une entrée de chaque PR).
 
 **Les listes sont des données nommées**, pas des conditions éparpillées : `ZONES_A_RISQUE_ELEVE`,
 `ZONES_SENSIBLES` (qui quitte `scripts/gates/gov-pr.ts` pour le lecteur unique : la section
@@ -95,10 +100,13 @@ motifs, et tout `Verdict: refuse` bloque. La règle tient dans la main de la len
 
 ## Conséquences
 
-- **Le gain, calculé par le code et non à la main** (registre de `3625f6c`, chaque tâche restante
-  jugée en PR synthétique à une tâche sur ses `paths` ∪ `tests{}`) : sur les tâches `partners`
-  restantes, **31 ordinaires avant, 43 après** ; tous dépôts confondus, **31 avant, 49 après** sur
-  208. Le spec `quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts` imprime la ligne
+- **Le gain, calculé par le code et non à la main** (chaque tâche restante jugée en PR synthétique
+  à une tâche sur ses `paths` ∪ `tests{}`) : sur les tâches `partners` restantes, **31 ordinaires
+  avant** GOV-097 (registre de `3625f6c`) ; au premier tour de relecture, 43 sur 194 (49 sur 209 tous
+  dépôts) ; depuis que la sensibilité suit le fichier, **24 sur 194** (27 sur 209), sur le registre
+  de `32ea43d`. La baisse vient de tâches de gouvernance étiquetées `sensible` (GOV-008 `auth`,
+  GOV-056 `attribution`, SEC-02) qui déclarent des scripts et des specs partagés
+  (`scripts/plan-state/build.ts`, `scripts/gates/gov-attributions.ts`…). Le spec `quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts` imprime la ligne
   `GOV-097 — tâches partners restantes : …` à chaque exécution : c'est elle qui fait foi, pas ce
   paragraphe.
 - **Le gain de (1) est borné par le registre.** La cause dominante de l'élevé n'était pas la liste

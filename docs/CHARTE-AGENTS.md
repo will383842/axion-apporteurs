@@ -306,10 +306,15 @@ sécurité et les données) ou **absent**, ou `schema: true`, ou une zone `argen
 **absente** ou que le schéma du registre ne déclare pas ; (2) la PR porte le label `schema`, ou touche un chemin
 de schéma (§7) ; (3) un de ses fichiers est dans une **zone sensible du code** — un segment de son chemin nomme
 l'argent, la sécurité ou les données (`commission`, `attribution`, `auth`, `espace`, `securite`, `acces`,
-`donnees-personnelles`…, la liste est `SEGMENTS_DES_ZONES_SENSIBLES`) ; (4) un de ses fichiers appartient au
+`donnees-personnelles`, `session`, `chiffrement`, `cloisonnement`, `middleware`…, la liste est
+`SEGMENTS_DES_ZONES_SENSIBLES` ; un segment se lit **nu**, débarrassé des décorations de routage de Next :
+`[...auth]`, `[[...auth]]`, `@auth`, `(.)auth` valent `auth`), ou un de ses fichiers est **déclaré** (`paths` ∪
+`tests{}`) par une tâche **quelconque** du registre, de la base ou de la tête, qui élèverait à elle seule
+une PR : **la sensibilité suit le fichier**, pas seulement la tâche du titre (hors registres append-only, et
+un répertoire déclaré sous `docs/` ne couvre pas ses fichiers) ; (4) un de ses fichiers appartient au
 **processus** : la garde des revues — ses trois racines (`scripts/lot/revues.ts`, `scripts/gates/gov-pr.ts`,
 `scripts/lot/corps-de-pr.ts`), la **fermeture transitive** de leurs imports, dérivée du disque, cette charte,
-`docs/agents.json` et le schéma du registre des tâches —, **`.github/`** et tout dossier caché, **toute la
+`docs/agents.json` et le schéma du registre des tâches —, **`.github/`** et tout dossier caché **de la racine**, **toute la
 racine**, documents compris (`package.json`, les configurations d'outils, mais aussi `CLAUDE.md` et
 `AGENTS.md`, que chaque agent charge), et `config/`. Ces fichiers peuvent désarmer les gardes elles-mêmes :
 c'est la sécurité du processus ; (5) le diff est vide, sa liste est **incomplète** (la forge plafonne la sienne
@@ -319,7 +324,7 @@ compte par sa source ET sa destination.
 
 **Ce qui ne rend plus une PR élevée** depuis GOV-097 : une zone autre que l'argent et la sécurité (`espace`,
 `juridique`, `integration`, `domaine`…) avec `sensible: []`, et un fichier de code produit hors des zones
-sensibles. ⚠️ Les données se lisent par `sensible` : une tâche qui manipule des données personnelles avec
+sensibles qu'aucune tâche sensible ne déclare. ⚠️ Les données se lisent par `sensible` : une tâche qui manipule des données personnelles avec
 `sensible: []` passe à deux lentilles. C'est une **erreur du registre**, qui se corrige en y portant `rgpd`
 (`partners/ADR-0021`, limite déclarée).
 
