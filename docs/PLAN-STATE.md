@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `fb5b3da` — 2026-09-25T20:02:03+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #92 (un contrôle requis rouge ou une revue manquante) · 2. #93 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #91 (un conflit avec `main`) · 5. #126 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #92 (un contrôle requis rouge ou une revue manquante) · 3. #93 (un contrôle requis rouge ou une revue manquante) · 4. #126 (un contrôle requis rouge ou une revue manquante) · 5. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
@@ -64,11 +64,11 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
-| 2 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 5 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
+| 2 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un contrôle requis rouge ou une revue manquante |
+| 3 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
+| 4 | #126 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema | `t/sec-08` | un contrôle requis rouge ou une revue manquante |
+| 5 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -119,7 +119,7 @@ d'écriture : il rend l'identifiant lié, les blocs de suffixe `Chiffre` et les 
 `emailHash`, `phoneHash`, `ibanHash`. `empreinteRecherche` fait un HMAC sous `PII_HASH_KEY` pour
 le courriel, le téléphone, l'IBAN (clé jugée par `cleIbanValide`) et le SIRET.
 `empreinteAdresseReseau` appelle `empreinteAdresse` de la frontière sous `IP_HASH_SALT`. La garde
-`securite:schema-pii` (registre `G-SEC-SCHEMA-PII`, câblée en CI avec son `:prove`, 9 familles,
+`securite:schema-pii` (alias `G-SEC-SCHEMA-PII`, câblée en CI avec son `:prove`, 9 familles,
 17 témoins, 4 contre-témoins) refuse deux choses : une colonne de personne en clair dans le
 schéma, et un bloc ou une empreinte écrits hors de `pii.ts`. 23 tests. Huit défauts injectés un à
 un ont chacun fait rougir leur contrôle.
@@ -135,9 +135,12 @@ SEC-07, arrivés sur main après elle : une branche reprise se relit contre le m
 contre celui de sa naissance. Un type marqué ne se construit pas par un littéral sous la règle
 `consistent-type-assertions` : on type d'abord l'objet sans la marque, puis on l'affirme.
 `gates:prouvees` ne reconnaît une preuve que sous la forme `pnpm <garde>:prove`, suivie d'un tiret
-cadratin : un trait d'union simple la déclare non référencée. Une garde n'est vue câblée que si
-son identifiant, son script ou un alias figure dans le workflow : l'identifiant `G-SEC-...` exige
-l'alias du script pnpm.
+cadratin : un trait d'union simple la déclare non référencée. Une garde dont l'identifiant de
+registre diffère de son nom de commande grossit une dette figée par `un-nom-une-garde.spec.ts` :
+l'identifiant est donc le nom de commande, et l'ancien nom `G-SEC-...` passe en alias. Une garde
+qui balaie les fichiers suivis s'inscrit aussi dans les deux registres de
+`refus-de-rendre-et-de-publier.spec.ts` (sorties déclarées, gardes qui balaient), et établit son
+périmètre avant de lire quoi que ce soit.
 
 ### PR #124 — 2026-09-25 — chore(GOV-099): cadrage de DM-06 — sourceCanal transporte, IBAN hors DM-06, glossaire
 
