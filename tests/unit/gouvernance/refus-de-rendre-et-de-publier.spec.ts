@@ -709,12 +709,14 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       temoins: 0,
       raison:
         'GOV-047 — le pré-vol local, dérivé du job `gate-a` de `ci.yml`. SIX sorties : `ci.yml` ' +
-        'absent, job `gate-a` introuvable, aucun bloc `steps:`, aucune étape jouable dérivée, ' +
-        'substitution de shell non tolérée, et le verdict final. Les cinq premières sont des ' +
+        'absent, job `gate-a` introuvable (ou `ci.yml` refusé par l’analyseur YAML partagé : ancre, ' +
+        'alias), aucun bloc `steps:`, aucune étape jouable dérivée, substitution de shell non ' +
+        'tolérée (ou `run:` de plusieurs lignes), et le verdict final. Les cinq premières sont des ' +
         'REFUS DE CONCLURE (échec fermé) : sans la liste des étapes, un pré-vol ne mesure rien et ' +
         'son silence se lirait « rien à vérifier ». Les six sont exercées sur le binaire par ' +
         '`tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts` — un dépôt jetable où `ci.yml` ' +
-        'est absent, un autre où seul un AUTRE job existe, un autre vidé de son `steps:`, un ' +
+        'est absent, un autre où seul un AUTRE job existe, un autre dont une étape porte une ' +
+        'ancre, un autre vidé de son `steps:`, un autre à `run:` multiligne, un ' +
         'autre dont toutes les étapes sont écartées, un autre porteur d’une substitution sous ' +
         'chacune de ses quatre écritures, un dernier où une étape rougit : sortie 1 à chaque ' +
         'fois, la cause NOMMÉE, et deux contre-témoins en 0 — l’arbre sain, et la substitution ' +

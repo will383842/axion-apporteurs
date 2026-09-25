@@ -41,7 +41,7 @@
  *      côté, et les deux sont exercées.
  *
  * Ce fichier est le TROISIÈME lecteur de `ci.yml` du dépôt, pas un quatrième : la dette RM-07 est
- * connue, et le témoin réemploie `tests/unit/ci/lire-yaml.ts`, le vrai analyseur YAML partagé, au
+ * connue, et le témoin réemploie `scripts/lib/lire-yaml.ts`, le vrai analyseur YAML partagé, au
  * lieu d'ajouter un cinquième découpage au ruban adhésif.
  */
 
@@ -50,7 +50,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { estObjet, lireYaml } from '../ci/lire-yaml';
+import { estObjet, lireYaml } from '../../../scripts/lib/lire-yaml';
 import {
   CONTEXTES_FUSIONNES,
   CONTEXTES_MESURES,

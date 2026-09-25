@@ -74,6 +74,8 @@ const suivis = fichiersSuivis();
 const lire = (chemin: string): string => readFileSync(chemin, 'utf8');
 const surLeDepot = (scriptsDeclares = Object.keys(paquet.scripts)) =>
   balayer(suivis, lire, scriptsDeclares, MOI);
+/** La porte A du VRAI `ci.yml`, lue une fois : la lecture est asynchrone, un `describe` ne l'est pas. */
+const PORTE_A_REELLE = await etapesDeLaPorteA(readFileSync(CI, 'utf8'));
 
 /**
  * LES SEPT PRESCRIPTEURS, TELS QUE `git grep -l prevol` PUIS LE BALAYAGE LES RENDENT. Cette liste
@@ -290,9 +292,14 @@ describe('REQ-GOV-013 — la confrontation joue DANS LES DEUX SENS', () => {
   });
 });
 
-// ── il REFUSE — les quatre sorties non nulles, sur le binaire ─────────────────
+// ── il REFUSE — des sorties non nulles, sur le binaire ────────────────────────
 
-describe('REQ-GOV-013 — il REFUSE : quatre sorties non nulles, chacune sur son témoin', () => {
+/**
+ * Le COMPTE des sorties non nulles de `scripts/prevol.ts` ne s'écrit pas ici : il est déclaré au
+ * registre des refus (`refus-de-rendre-et-de-publier.spec.ts`, entrée `scripts/prevol.ts`), qui le
+ * confronte au fichier. Ce bloc en exerce une partie ; les autres ont leur bloc plus bas.
+ */
+describe('REQ-GOV-013 — il REFUSE : des sorties non nulles, chacune sur son témoin', () => {
   it('REQ-GOV-013 — `ci.yml` ABSENT : sortie 1, et le refus nomme le fichier manquant', () => {
     const { code, sortie } = lancer(jetable({}));
     expect(code).toBe(1);
@@ -313,7 +320,7 @@ describe('REQ-GOV-013 — il REFUSE : quatre sorties non nulles, chacune sur son
     expect(sortie).not.toContain('PRÉ-VOL VERT');
   });
 
-  // ⚠️ La substitution de shell inconnue — la troisième des sorties déclarées — a son propre
+  // ⚠️ La substitution de shell inconnue — une des sorties déclarées au registre — a son propre
   // bloc plus bas : elle n'est plus jugée sur UNE forme, mais sur les quatre écritures que
   // `/bin/sh` substitue. La garder ici en plus l'aurait doublée (RM-07).
 
@@ -328,7 +335,7 @@ describe('REQ-GOV-013 — il REFUSE : quatre sorties non nulles, chacune sur son
     expect(sortie).toContain('Une etape qui echoue');
   });
 
-  it('un arbre SAIN sort en 0 : sans ce contre-témoin, les quatre refus ne prouvent rien', () => {
+  it('un arbre SAIN sort en 0 : sans ce contre-témoin, les refus ci-dessus ne prouvent rien', () => {
     const dossier = jetable({
       'docs/CONSIGNE.md': `avant de pousser : \`pnpm ${NOM_DU_SCRIPT}\``,
       [CI]: ciAUneEtape('Une etape verte', 'node -e 0'),
@@ -450,8 +457,8 @@ describe('REQ-GOV-013 — la dérivation REFUSE au lieu de se taire, et sait de 
     expect(sortie).not.toContain('PRÉ-VOL VERT');
   });
 
-  it('REQ-GOV-013 — un AUTRE job placé avant `gate-a` ne fournit aucune étape', () => {
-    const { jouees } = etapesDeLaPorteA(
+  it('REQ-GOV-013 — un AUTRE job placé avant `gate-a` ne fournit aucune étape', async () => {
+    const { jouees } = await etapesDeLaPorteA(
       ciAPlusieursJobs([
         { job: 'un-autre-job', etapes: [{ nom: 'Etape d un autre job', commande: 'node -e 0' }] },
         { job: 'gate-a', etapes: [{ nom: 'Etape de gate-a', commande: 'node -e 0' }] },
@@ -460,8 +467,8 @@ describe('REQ-GOV-013 — la dérivation REFUSE au lieu de se taire, et sait de 
     expect(jouees.map((e) => e.nom)).toEqual(['Etape de gate-a']);
   });
 
-  it('REQ-GOV-013 — et le corps du job s’arrête au job SUIVANT : ce qui le suit n’est pas à lui', () => {
-    const { jouees } = etapesDeLaPorteA(
+  it('REQ-GOV-013 — et le corps du job s’arrête au job SUIVANT : ce qui le suit n’est pas à lui', async () => {
+    const { jouees } = await etapesDeLaPorteA(
       ciAPlusieursJobs([
         { job: 'gate-a', etapes: [{ nom: 'Etape de gate-a', commande: 'node -e 0' }] },
         { job: 'un-autre-job', etapes: [{ nom: 'Etape d un autre job', commande: 'node -e 0' }] },
@@ -511,8 +518,98 @@ describe('REQ-GOV-013 — la dérivation REFUSE au lieu de se taire, et sait de 
   });
 });
 
+/**
+ * TROIS FORMES DE YAML VALIDE QUE LE LECTEUR MAISON LISAIT DE TRAVERS (lentille `simplicite`, revue
+ * 5289774705, mesurées dans des dépôts jetables). Chacune a été vue ROUGE sur ce lecteur, avant que
+ * `ci.yml` ne soit lu par l'analyseur partagé `scripts/lib/lire-yaml.ts`. Chaque témoin porte un
+ * discriminant POSITIF : « il a rougi » ne suffit pas, il faut qu'il ait rougi pour la BONNE cause.
+ */
+describe('REQ-GOV-013 — `ci.yml` est lu par un analyseur YAML, pas par des expressions rationnelles', () => {
+  it('REQ-GOV-013 — un scalaire bloc `run: |` d’une ligne est LU, pas pris pour la commande `|`', async () => {
+    const { jouees } = await etapesDeLaPorteA(
+      [
+        'jobs:',
+        '  gate-a:',
+        '    steps:',
+        '      - name: Une etape en bloc',
+        '        run: |',
+        '          node -e 0',
+        '',
+      ].join('\n')
+    );
+    expect(jouees).toEqual([{ nom: 'Une etape en bloc', commande: 'node -e 0' }]);
+  });
+
+  it('REQ-GOV-013 — un scalaire bloc de PLUSIEURS lignes est REFUSÉ et nommé, jamais joué', () => {
+    // Le lecteur maison déclarait l'étape jouée, jetait son corps, et rougissait sur « | était
+    // inattendu » : un rouge qui nomme la mauvaise cause. `spawnSync(…, { shell: true })` ne joue
+    // pas un corps multiligne comme `bash -e` le joue en CI : on refuse au lieu de deviner.
+    const dossier = jetable({
+      ...CONSIGNE,
+      [CI]: [
+        'jobs:',
+        '  gate-a:',
+        '    steps:',
+        '      - name: Une etape multiligne',
+        '        run: |',
+        `          ${LAISSE_UNE_TRACE}`,
+        '          node -e "process.exit(7)"',
+        '',
+      ].join('\n'),
+    });
+    const { code, sortie } = lancer(dossier);
+    expect(code).toBe(1);
+    expect(sortie).toContain('Une etape multiligne');
+    expect(sortie).toContain('plusieurs lignes');
+    expect(existsSync(join(dossier, 'trace.txt'))).toBe(false);
+    expect(sortie).not.toContain('PRÉ-VOL VERT');
+  });
+
+  it('REQ-GOV-013 — un commentaire en colonne 0 entre deux étapes ne TRONQUE pas la liste', async () => {
+    // Le lecteur maison bornait le job à la première ligne indentée de moins de quatre espaces : le
+    // commentaire l'arrêtait, et les étapes suivantes disparaissaient sans un mot.
+    const { jouees } = await etapesDeLaPorteA(
+      [
+        'jobs:',
+        '  gate-a:',
+        '    steps:',
+        '      - name: Avant le commentaire',
+        '        run: node -e 0',
+        '# un commentaire en colonne 0',
+        '      - name: Apres le commentaire',
+        '        run: node -e 0',
+        '',
+      ].join('\n')
+    );
+    expect(jouees.map((e) => e.nom)).toEqual(['Avant le commentaire', 'Apres le commentaire']);
+  });
+
+  it('REQ-GOV-013 — une ANCRE YAML est REFUSÉE : sortie 1, et rien ne tourne', () => {
+    // Une ancre est ce qui permet à `<<: *desarme` de faire porter à une étape une clé écrite
+    // ailleurs ; `aucune-gate-en-continue-on-error.spec.ts` la traite comme une menace vivante sur
+    // ce fichier. Posée sur l'étape elle-même, le lecteur maison ne la voyait pas, et JOUAIT l'étape.
+    const dossier = jetable({
+      ...CONSIGNE,
+      [CI]: [
+        'jobs:',
+        '  gate-a:',
+        '    steps:',
+        '      - &etape',
+        '        name: Etape ancree',
+        `        run: ${LAISSE_UNE_TRACE}`,
+        '',
+      ].join('\n'),
+    });
+    const { code, sortie } = lancer(dossier);
+    expect(code).toBe(1);
+    expect(sortie).toContain('ancre');
+    expect(existsSync(join(dossier, 'trace.txt'))).toBe(false);
+    expect(sortie).not.toContain('PRÉ-VOL VERT');
+  });
+});
+
 describe('REQ-GOV-013 — une substitution de shell ÉCHOUE FERMÉ, quelle qu’en soit la forme', () => {
-  // `spawnSync(…, { shell: true })` vaut `/bin/sh` sur Linux et macOS. TROIS écritures y
+  // `spawnSync(…, { shell: true })` vaut `/bin/sh` sur Linux et macOS. Plusieurs écritures y
   // substituent — `$(…)`, l'accent grave, `$VAR` / `${…}` —, et le filtre n'en connaissait
   // qu'UNE. Ici on n'énumère pas les formes dans le script : on refuse tout `$` et tout accent
   // grave qui survit au remplacement de la seule substitution tolérée. Énumérer, c'est oublier.
@@ -551,9 +648,9 @@ describe('REQ-GOV-013 — une substitution de shell ÉCHOUE FERMÉ, quelle qu’
 // ── il DIT ce qu'il a dérivé ──────────────────────────────────────────────────
 
 describe('REQ-GOV-013 — il DIT ce qu’il joue, ce qu’il écarte, et pourquoi', () => {
-  const { jouees, ecartees } = etapesDeLaPorteA(readFileSync(CI, 'utf8'));
+  const { jouees, ecartees } = PORTE_A_REELLE;
 
-  it('REQ-GOV-013 — la liste est LUE dans `ci.yml` : chaque étape jouée y a son `run:`', () => {
+  it('REQ-GOV-013 — la liste est LUE dans `ci.yml` : chaque étape jouée y a son `run:`', async () => {
     const texte = readFileSync(CI, 'utf8');
     expect(jouees.length).toBeGreaterThan(0);
     // La dérivation se prouve par le renversement : une étape retirée de `ci.yml` disparaît de la
@@ -561,7 +658,7 @@ describe('REQ-GOV-013 — il DIT ce qu’il joue, ce qu’il écarte, et pourquo
     // le vert qui mentirait le jour où une garde entre en CI.
     const sansLint = texte.replace('      - name: Lint\n        run: pnpm lint\n', '');
     expect(sansLint).not.toBe(texte);
-    expect(etapesDeLaPorteA(sansLint).jouees.length).toBe(jouees.length - 1);
+    expect((await etapesDeLaPorteA(sansLint)).jouees.length).toBe(jouees.length - 1);
   });
 
   it('REQ-GOV-013 — chaque étape ÉCARTÉE porte son motif : une étape tue redevient une étape oubliée', () => {
@@ -623,7 +720,7 @@ describe('REQ-GOV-013 — il DIT ce qu’il joue, ce qu’il écarte, et pourquo
 // ── un rouge de banc absent ne se lit pas comme un rouge de test ──────────────
 
 describe('REQ-GOV-013 — un rouge qui nomme la mauvaise cause coûte plus cher qu’un rouge absent', () => {
-  const { jouees } = etapesDeLaPorteA(readFileSync(CI, 'utf8'));
+  const { jouees } = PORTE_A_REELLE;
   const scriptsDeLaSuite = scriptsQuiLancentLaSuite(paquet.scripts);
   const etapesDeLaSuite = etapesQuiLancentLaSuite(jouees, scriptsDeLaSuite);
   const banc = fichiersDeBanc(suivis, lire);

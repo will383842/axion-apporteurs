@@ -12,7 +12,8 @@
  *
  * ── CE QU'IL EXÉCUTE, ET POURQUOI IL NE LE RECOPIE PAS ──────────────────────────────────────
  *
- * La liste des étapes est LUE dans `.github/workflows/ci.yml`, job `gate-a`, dans son ordre. Une
+ * La liste des étapes est LUE dans `.github/workflows/ci.yml`, job `gate-a`, dans son ordre, par
+ * l'analyseur YAML partagé du dépôt (`scripts/lib/lire-yaml.ts`) — pas par un découpage maison. Une
  * liste tenue ici en aurait fait une seconde source : le jour où une garde entre en CI, le pré-vol
  * cesserait de la voir, en silence, et rendrait un vert qui ment. Le seul ordre qui vaille est
  * celui de la porte A, y compris son ordre le plus RÉCENT (REQ-QA-013 : lint, format, typecheck,
@@ -50,7 +51,8 @@
  * courant. Tout AUTRE `$` et tout accent grave rougit au lieu d'être deviné : exécuter à l'aveugle
  * la commande qu'on n'a pas comprise est la manière connue de rendre un vert sans mesure. Le
  * filtre n'ÉNUMÈRE pas les formes — il n'en connaissait qu'une, `$(…)`, quand `/bin/sh` en
- * substitue quatre, et les trois autres passaient. Énumérer, c'est en oublier une.
+ * substitue quatre, et les trois autres passaient. Énumérer, c'est en oublier une. Un `run:` de
+ * PLUSIEURS lignes échoue fermé de même : la CI le joue sous `bash -e`, le shell local autrement.
  *
  * ── CE QUE LE PRÉ-VOL FAIT EN PLUS, ET QUE LA CI NE PEUT PAS FAIRE ──────────────────────────
  *
@@ -117,6 +119,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { posix, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { estObjet, lireYaml } from './lib/lire-yaml';
 import { fichiersSuivisOuRefus } from './lot/fichiers-suivis';
 
 export const CI = '.github/workflows/ci.yml';
@@ -440,67 +443,76 @@ export function causeProbable(
 // ── la lecture de `ci.yml` ────────────────────────────────────────────────────
 
 /**
- * Le job `${JOB_DE_LA_PORTE_A}` de `ci.yml`, découpé en étapes — et TROIS refus plutôt qu'un
- * silence.
+ * Le job `${JOB_DE_LA_PORTE_A}` de `ci.yml`, découpé en étapes — et des refus plutôt qu'un silence.
  *
- * 🔴 CE QUE CETTE FONCTION A FAIT DE FAUX, MESURÉ LE 2026-09-23 DANS DES DÉPÔTS JETABLES. Elle
- * prenait le PREMIER bloc `steps:` du fichier, quel que fût le job, et le lisait jusqu'à la FIN
- * du fichier ; et elle exigeait une séquence à SIX espaces sans jamais refuser quand elle n'en
- * trouvait aucune. D'où deux verts qui mentaient :
- *   — un `ci.yml` valide dont la séquence est à la même indentation que sa clé rendait ZÉRO
- *     étape, puis « ✅ PRÉ-VOL VERT », code 0. C'est le « vert là où la CI rougit » que l'en-tête
- *     de ce fichier promet d'empêcher ;
- *   — un job placé AVANT `${JOB_DE_LA_PORTE_A}` fournissait ses étapes à `lancer()`, qui les
- *     passe à `spawnSync(…, { shell: true })` — sur la machine du relecteur venu lancer
- *     `pnpm prevol` avant de lire le diff.
+ * `ci.yml` est lu par L'analyseur YAML partagé du dépôt (`scripts/lib/lire-yaml.ts`, fondé sur celui
+ * que Prettier embarque), jamais par des expressions rationnelles. Le job se trouve par son NOM,
+ * `workflow.jobs['${JOB_DE_LA_PORTE_A}'].steps` : il ne peut rendre les étapes d'aucun autre job,
+ * il ne déborde sur rien, et il n'a pas d'indentation à supposer.
  *
- * Ce qui les ferme, et qu'on ne peut pas obtenir d'un commentaire :
- *   — le job est trouvé par son NOM, et son corps s'arrête à la clé suivante de même niveau ;
- *   — l'indentation de la séquence est LUE dans le fichier, jamais supposée (RM-01) ;
- *   — une dérivation qui rend zéro étape JOUABLE REFUSE. « Je n'ai rien trouvé à jouer » et
- *     « tout est vert » sont deux phrases différentes, et une seule des deux autorise à pousser.
+ * 🔴 CE QUE LE LECTEUR PRÉCÉDENT A FAIT DE FAUX, MESURÉ DANS DES DÉPÔTS JETABLES. Il découpait le
+ * texte à coups d'expressions rationnelles, et chaque correction en ajoutait une :
+ *   — le 2026-09-23 (lentille `securite`) : le PREMIER bloc `steps:` venu, lu jusqu'à la fin du
+ *     fichier, et une séquence à SIX espaces supposée — d'où les étapes d'un AUTRE job passées à
+ *     `spawnSync(…, { shell: true })`, et un `ci.yml` valide qui rendait zéro étape puis VERT ;
+ *   — le 2026-09-24 (lentille `simplicite`) : un scalaire bloc `run: |` capturé comme la commande
+ *     `|`, un commentaire en colonne 0 qui TRONQUAIT la liste en silence (il passait pour la fin
+ *     du job), et une ancre posée sur une étape que le lecteur ignorait avant de JOUER l'étape.
+ * Un arbre analysé ne pose aucune de ces questions. Ce qui reste à décider se décide ici :
+ *   — un fichier que l'analyseur refuse (ancre, alias, étiquette, clé de fusion, clé en double)
+ *     REFUSE le pré-vol, avec le motif de l'analyseur ;
+ *   — un `run:` de PLUSIEURS lignes REFUSE : la CI le joue sous `bash -e`, `spawnSync(…, { shell:
+ *     true })` ne le joue pas ainsi, et deviner l'écart est exactement ce que ce script s'interdit ;
+ *   — une dérivation qui rend zéro étape JOUABLE REFUSE. « Je n'ai rien trouvé à jouer » et « tout
+ *     est vert » sont deux phrases différentes, et une seule des deux autorise à pousser.
  */
-export function etapesDeLaPorteA(texte: string): { jouees: Etape[]; ecartees: Ecarte[] } {
-  const ancre = `\n  ${JOB_DE_LA_PORTE_A}:\n`;
-  const debutDuJob = texte.indexOf(ancre);
-  if (debutDuJob < 0) {
+export async function etapesDeLaPorteA(
+  texte: string
+): Promise<{ jouees: Etape[]; ecartees: Ecarte[] }> {
+  let workflow: unknown = null;
+  let illisible: string | null = null;
+  try {
+    workflow = await lireYaml(texte);
+  } catch (e) {
+    illisible = e instanceof Error ? e.message : String(e);
+  }
+  const jobs = estObjet(workflow) && estObjet(workflow.jobs) ? workflow.jobs : {};
+  const job = jobs[JOB_DE_LA_PORTE_A];
+  if (!estObjet(job)) {
     console.error(
-      `❌ prevol — \`${CI}\` : aucun job \`${JOB_DE_LA_PORTE_A}\` trouvé. Jouer les étapes du ` +
-        `premier job venu reviendrait à mesurer autre chose que la porte A — et à lancer sa ` +
-        `commande sur cette machine.`
+      illisible !== null
+        ? `❌ prevol — \`${CI}\` : l'analyseur YAML partagé le REFUSE (${illisible}). Une ancre ` +
+            `ou un alias ferait porter à une étape une clé écrite ailleurs : on ne devine pas ` +
+            `laquelle avant de la passer au shell.`
+        : `❌ prevol — \`${CI}\` : aucun job \`${JOB_DE_LA_PORTE_A}\` trouvé. Jouer les étapes du ` +
+            `premier job venu reviendrait à mesurer autre chose que la porte A — et à lancer sa ` +
+            `commande sur cette machine.`
     );
     process.exit(1);
   }
-  // Le corps du job s'arrête à la première ligne moins indentée que lui : le job SUIVANT, ou la
-  // clé de premier niveau qui suit `jobs:`. Sans cette borne, `slice()` allait jusqu'à la fin.
-  const apresLAncre = texte.slice(debutDuJob + ancre.length);
-  const finDuJob = apresLAncre.search(/^ {0,3}\S/m);
-  const corpsDuJob = finDuJob < 0 ? apresLAncre : apresLAncre.slice(0, finDuJob);
-
-  const cleDesEtapes = /^[ \t]+steps:[ \t]*$/m.exec(corpsDuJob);
-  if (cleDesEtapes === null) {
+  // Une clé `steps:` sans valeur est une séquence VIDE, pas une clé absente : elle tombe sur le
+  // refus « aucune étape jouable » plus bas, qui dit ce qu'il a lu.
+  const etapes = job.steps ?? (Object.hasOwn(job, 'steps') ? [] : undefined);
+  if (!Array.isArray(etapes)) {
     console.error(
       `❌ prevol — \`${CI}\` : aucun bloc \`steps:\` de job trouvé. La porte A n'a pas de source.`
     );
     process.exit(1);
   }
-  const corps = corpsDuJob.slice(cleDesEtapes.index + cleDesEtapes[0].length);
-  // L'indentation de la séquence est celle de son PREMIER tiret, lue là où elle est écrite. Un
-  // `6` tapé ici était une seconde source : le jour où `ci.yml` change de retrait, il rendait une
-  // liste vide — et une liste vide ne rougissait pas.
-  const tiret = /^([ \t]*)- /m.exec(corps);
-  const blocs = tiret === null ? [] : corps.split(new RegExp(`^${tiret[1]!}- `, 'm')).slice(1);
 
+  const texteDe = (v: unknown): string | undefined =>
+    typeof v === 'string' ? v.trim() : undefined;
   const jouees: Etape[] = [];
   const ecartees: Ecarte[] = [];
-  for (const bloc of blocs) {
-    const run = /^[ \t]*run:[ \t]*(.+)$/m.exec(bloc)?.[1]?.trim();
+  for (const etape of etapes) {
+    const champs = estObjet(etape) ? etape : {};
+    const run = texteDe(champs.run);
+    const uses = texteDe(champs.uses);
     // Une étape de `ci.yml` n'est pas tenue de porter un `name:` : on la désigne alors par ce qui
     // l'identifie vraiment — son `uses:` ou son `run:`. Un tiret ne se retrouve pas dans le fichier.
     const nom =
-      /^name:[ \t]*(.+)$/m.exec(bloc)?.[1]?.trim() ??
-      /^(uses:.+)$/m.exec(bloc)?.[1]?.trim() ??
-      (run !== undefined ? `run: ${run}` : '—');
+      texteDe(champs.name) ??
+      (uses !== undefined ? `uses: ${uses}` : run !== undefined ? `run: ${run}` : '—');
     if (run === undefined) {
       ecartees.push({ nom, motif: "ce n'est pas un `run:` — GitHub l'exécute, pas le shell" });
       continue;
@@ -509,7 +521,7 @@ export function etapesDeLaPorteA(texte: string): { jouees: Etape[]; ecartees: Ec
       ecartees.push({ nom, motif: 'le worktree est déjà installé (`docs/CONVENTIONS.md` §7)' });
       continue;
     }
-    if (/^[ \t]*if:/m.test(bloc)) {
+    if (Object.hasOwn(champs, 'if')) {
       ecartees.push({
         nom,
         motif: 'porte un `if:` qui dépend du contexte de la PR, absent en local',
@@ -522,14 +534,21 @@ export function etapesDeLaPorteA(texte: string): { jouees: Etape[]; ecartees: Ec
     // ÉCHEC FERMÉ, ET SANS ÉNUMÉRER LES FORMES. `lancer()` passe cette chaîne à
     // `spawnSync(…, { shell: true })`, c'est-à-dire à `/bin/sh` sous Linux et macOS, où QUATRE
     // écritures substituent : `$(…)`, l'accent grave, `$VAR` et `${…}`. Filtrer sur `$(` seul —
-    // ce que faisait la version précédente — en laissait passer trois. On ne liste donc pas ce
+    // ce que faisait une version précédente — en laissait passer trois. On ne liste donc pas ce
     // qu'on refuse : on refuse tout `$` et tout accent grave qui SURVIT au remplacement de la
     // seule substitution tolérée. Énumérer les formes, c'est en oublier une.
-    if (/[$`]/.test(commande)) {
+    // Et un corps de PLUSIEURS lignes, que le shell local ne joue pas comme `bash -e` en CI.
+    const substitution = /[$`]/.test(commande);
+    if (substitution || commande.includes('\n')) {
       console.error(
-        `❌ prevol — l'étape « ${nom} » porte une substitution de shell que ce script ne sait pas lire :\n` +
+        `❌ prevol — l'étape « ${nom} » porte ${
+          substitution
+            ? 'une substitution de shell'
+            : 'un `run:` de plusieurs lignes, que la CI joue sous `bash -e` et le shell local autrement,'
+        } que ce script ne sait pas lire :\n` +
           `   ${run}\n` +
-          `   Une seule est tolérée (${SUBSTITUTION_TOLEREE}). Ajoute la tienne ici plutôt que de la deviner.`
+          `   Une seule substitution est tolérée (${SUBSTITUTION_TOLEREE}), et une seule ligne. ` +
+          'Ajoute la forme ici plutôt que de la deviner.'
       );
       process.exit(1);
     }
@@ -541,7 +560,7 @@ export function etapesDeLaPorteA(texte: string): { jouees: Etape[]; ecartees: Ec
   if (jouees.length === 0) {
     console.error(
       `❌ prevol — \`${CI}\`, job \`${JOB_DE_LA_PORTE_A}\` : AUCUNE étape jouable dérivée ` +
-        `(${blocs.length} étape(s) lue(s), ${ecartees.length} écartée(s)). Sans étape, ce ` +
+        `(${etapes.length} étape(s) lue(s), ${ecartees.length} écartée(s)). Sans étape, ce ` +
         `pré-vol ne mesure rien, et son vert se lirait « la porte A ne découvrira rien ».`
     );
     process.exit(1);
@@ -569,12 +588,13 @@ export function retoursChariot(vues: string[] = VUES): string[] {
 
 const APPELE_DIRECTEMENT = /prevol\.ts$/.test(process.argv[1] ?? '');
 
-if (APPELE_DIRECTEMENT) {
+/** La course. Asynchrone parce que la lecture de `ci.yml` l'est ; une levée imprévue sort en 1. */
+async function courir(): Promise<void> {
   if (!existsSync(CI)) {
     console.error(`❌ prevol — \`${CI}\` est absent : le pré-vol n'a pas de source d'étapes.`);
     process.exit(1);
   }
-  const { jouees, ecartees } = etapesDeLaPorteA(readFileSync(CI, 'utf8'));
+  const { jouees, ecartees } = await etapesDeLaPorteA(readFileSync(CI, 'utf8'));
   const toutes = [...RENDUS, ...jouees];
 
   const paquet = JSON.parse(readFileSync('package.json', 'utf8')) as {
@@ -671,3 +691,5 @@ if (APPELE_DIRECTEMENT) {
   }
   process.exit(1);
 }
+
+if (APPELE_DIRECTEMENT) void courir();

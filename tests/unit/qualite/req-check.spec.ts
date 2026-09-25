@@ -27,7 +27,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import * as LECTURE from '../../../scripts/lot/titres-ecrits';
-import { estObjet, lireYaml } from '../ci/lire-yaml';
+import { estObjet, lireYaml } from '../../../scripts/lib/lire-yaml';
 
 const TRACE = 'scripts/gates/gov-trace.ts';
 const CI = '.github/workflows/ci.yml';
