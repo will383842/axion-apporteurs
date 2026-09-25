@@ -40,6 +40,12 @@
  * `GOV-013`, et une garde ne s'élargit pas en passant. Elles s'ajouteront à cette constante par
  * leurs tâches (`JUR-T29`, `UX-P3-02`) sans que la gate change d'une ligne — c'est précisément ce
  * que l'import garantit.
+ *
+ * CE QUI EST ENTRÉ DEPUIS. UX-P0-01 a ajouté la famille `jargon_interne` (REQ-UX-003 : les mots
+ * du schéma et du calcul dans ce que lit l'apporteur) et, à `subordination`, « faute »
+ * (REQ-JUR-031) et « équipe », que la charte relationnelle range avec « votre manager » dans ce
+ * qu'on n'écrit jamais. La gate n'a reçu que le témoin de la nouvelle famille et le périmètre de
+ * `src/content/micro-copy/` : aucun terme n'y a été recopié.
  */
 
 /**
@@ -175,8 +181,11 @@ export const LEXIQUE_INTERDIT = [
   {
     nom: 'subordination',
     portee: 'apporteur',
-    reqs: ['REQ-JUR-037'],
-    pourquoi: 'manager, sanction et avertissement sont le troisième pouvoir — celui de sanctionner',
+    reqs: ['REQ-JUR-037', 'REQ-JUR-031'],
+    pourquoi:
+      'manager, sanction et avertissement sont le troisième pouvoir — celui de sanctionner ; ' +
+      "« faute » en est le vocabulaire (REQ-JUR-031 l'exclut en toutes lettres) et « équipe » " +
+      "range l'apporteur dans une hiérarchie qui n'existe pas",
     formes: [
       'votre manager',
       'votre responsable',
@@ -186,6 +195,10 @@ export const LEXIQUE_INTERDIT = [
       'sanctions',
       'avertissement',
       'avertissements',
+      'faute',
+      'fautes',
+      'équipe',
+      'équipes',
     ],
     aDireALaPlace: null,
   },
@@ -217,6 +230,18 @@ export const LEXIQUE_INTERDIT = [
       'primes',
     ],
     aDireALaPlace: 'relevé de commissions',
+  },
+  {
+    nom: 'jargon_interne',
+    portee: 'apporteur',
+    reqs: ['REQ-UX-003'],
+    pourquoi:
+      "les mots du schéma et du calcul n'ont pas leur place dans ce que lit l'apporteur : le droit " +
+      "se dit par sa date de fin, l'entreprise par son nom, la commission par son montant " +
+      '(ajoutée par UX-P0-01 ; « quota », « strike » et « commercial », que REQ-UX-003 refuse aussi, ' +
+      'sont tenus par leurs familles)',
+    formes: ['attribution', 'attributions', 'SIREN', 'prorata'],
+    aDireALaPlace: null,
   },
 ] as const satisfies readonly FamilleInterdite[];
 
