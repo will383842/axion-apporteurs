@@ -159,6 +159,13 @@ export type FichierTest = {
   titresStatiques: string[];
   /** Les titres tels qu'ils sont RÉSOLUS par vitest, ou `null` si la résolution a échoué. */
   titresResolus: string[] | null;
+  /**
+   * POURQUOI ils n'ont pas été résolus, quand `titresResolus` vaut `null` (GOV-082). `undefined` =
+   * la résolution n'a pas été demandée pour ce fichier. Les deux causes ne se confondent plus :
+   * un énumérateur qui ÉCHOUE se relance, un énumérateur qui rend le VIDE avec le code zéro est
+   * STABLE — le relancer ne changera rien, et le dire évite au lecteur de rejouer pour rien.
+   */
+  motifNonResolus?: MotifNonResolus;
   /** Les exigences citées : annotations `@req` et identifiants dans les titres. */
   reqsCitees: string[];
   /** Les titres des TESTS eux-mêmes (`it`, `test`), sans les `describe` — REQ-QA-014, QA-T03. */
@@ -506,7 +513,14 @@ function juger(u: Univers): Jugement {
               'titres_non_resolus',
               `${t.id} promet un titre précis dans ${f.chemin} (« ${titre} ») et les titres de ce ` +
                 `fichier n'ont pas pu être résolus : la promesse n'est PAS vérifiée. ` +
-                `Le contrôle ne se déclare pas vert sur ce qu'il n'a pas pu lire.`
+                `Le contrôle ne se déclare pas vert sur ce qu'il n'a pas pu lire. ` +
+                (f.motifNonResolus === 'vide_incoherent'
+                  ? `Cause : l'énumération a rendu une liste VIDE — ou partielle, sous le nombre de ` +
+                    `titres que le TEXTE du fichier porte — avec le code zéro. Cette réponse est STABLE — la relancer ne ` +
+                    `changera rien. Elle dépend du lanceur par lequel gov:trace est invoquée : ` +
+                    `relance-la par \`pnpm gov:trace\`, jamais par le binaire du transpileur seul.`
+                  : `Cause : l'énumération a ÉCHOUÉ (code non nul, ou sortie illisible) — souvent ` +
+                    `un fichier de test qui ne se charge pas. Lis son erreur de chargement.`)
             );
           } else if (!f.titresResolus.some((x) => nomPorteLaPromesse(x, titre))) {
             titreIntrouvable = true;
@@ -981,56 +995,150 @@ export function reqsCitees(texte: string): string[] {
  * et c'est exactement là que se cache une promesse périmée (« ses 11 familles » pour un fichier
  * qui en annonce 12).
  */
-function titresResolus(cibles: string[]): { titres: Map<string, string[]>; echecs: string[] } {
+/** Ce qu'un énumérateur rend pour un lot de fichiers : a-t-il répondu, et avec quoi. */
+export type Enumeration = { ok: boolean; entrees: { name: string; file: string }[] };
+
+/** Une façon d'énumérer les cas d'une suite. INJECTABLE, pour que les deux faces se jouent. */
+export type Enumerateur = (fichiers: string[]) => Enumeration;
+
+/**
+ * L'énumérateur RÉEL : un processus enfant `vitest list --json`.
+ *
+ * ⚠️ IL PEUT RENDRE LE VIDE AVEC LE CODE ZÉRO, et c'est tout l'objet de GOV-082. Selon le lanceur
+ * par lequel `gov:trace` est elle-même invoquée — binaire du transpileur avec chemin explicite,
+ * variable d'environnement équivalente, lanceur de paquets —, l'enfant rend soit la liste, soit
+ * `[]` avec `status: 0`. Les deux réponses sont bien formées ; une seule dit quelque chose.
+ */
+export const enumererParVitest: Enumerateur = (fichiers) => {
+  const r = spawnSync('npx', ['vitest', 'list', ...fichiers, '--json'], {
+    encoding: 'utf8',
+    shell: true,
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: 300_000,
+  });
+  const brut = r.stdout ?? '';
+  const debut = brut.indexOf('[');
+  if (r.status !== 0 || debut < 0) return { ok: false, entrees: [] };
+  try {
+    return {
+      ok: true,
+      entrees: JSON.parse(brut.slice(debut)) as { name: string; file: string }[],
+    };
+  } catch {
+    return { ok: false, entrees: [] };
+  }
+};
+
+/**
+ * LE PLANCHER D'UN FICHIER, DÉRIVÉ DE SON TEXTE — jamais tapé (RM-10, RM-01).
+ *
+ * C'est le nombre d'ouvertures de `it()` / `test()` que le DISQUE porte. Un fichier qui en écrit
+ * deux et dont l'énumération rend ZÉRO cas n'a pas été lu : il a été manqué. La valeur ne vit
+ * qu'ici, et elle se recompte par la même lecture que `gov:trace` utilise partout ailleurs
+ * (`scripts/lot/titres-ecrits.ts`) — une seconde lecture divergerait, et la plus récente serait
+ * la plus pauvre.
+ */
+export function plancherDeTitres(texte: string): number {
+  // SANS LES COMMENTAIRES : le plancher est confronté à tout compte inférieur, pas seulement à zéro
+  // (motif `mutation` T3, PR 114), et un `it(` cité dans la PROSE d'un en-tête le gonflait — mesuré
+  // sur `adr-assertion-existe.spec.ts` : 7 au texte brut, 5 cas réellement énumérés. Un plancher
+  // qui dépasse le réel accuse ; il doit rester un plancher.
+  return titresDeTest(sansCommentaires(texte)).length;
+}
+
+/**
+ * Le texte d'un source SANS ses commentaires : la prose qui raconte un défaut n'est pas le défaut.
+ * UNE seule définition — deux spécifications la recopiaient octet pour octet (refus `simplicite`,
+ * PR 114, tour 2) ; elles l'importent désormais d'ici.
+ */
+export function sansCommentaires(texte: string): string {
+  return texte.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
+
+/** Pourquoi les titres d'un fichier n'ont pas pu être résolus. Deux causes, et elles diffèrent. */
+export const MOTIFS_NON_RESOLUS = ['echec', 'vide_incoherent'] as const;
+export type MotifNonResolus = (typeof MOTIFS_NON_RESOLUS)[number];
+
+/** Une cible dont l'énumération a rendu le VIDE alors que le disque porte des titres. */
+export type Incoherence = { chemin: string; plancher: number };
+
+/**
+ * Les noms de test RÉSOLUS. C'est la seule source qui connaisse les gabarits :
+ * `describe.each(GARDES)` avec un titre en `ses ${familles} familles` ne s'évalue pas à la lecture,
+ * et c'est exactement là que se cache une promesse périmée (« ses 11 familles » pour un fichier
+ * qui en annonce 12).
+ *
+ * 🔴 TROIS ÉTATS, ET ILS SE NOMMENT (GOV-082). Jusqu'au 2026-09-16 ils se lisaient tous les trois
+ * pareil, et le troisième ACCUSAIT :
+ *
+ *   1. l'énumération a rendu des titres            → `titres` porte la liste ;
+ *   2. elle a rendu ZÉRO titre alors que le disque en porte → `incoherents`, jamais `titres` ;
+ *   3. elle a échoué (code non nul, sortie illisible)      → `echecs`.
+ *
+ * Le deuxième état est le défaut : `[]` rangé comme une réponse se lisait « résolu, aucun titre ne
+ * correspond », d'où 53 `test_promis_absent` FABRIQUÉES sur un dépôt où rien ne manquait. Une garde
+ * qui échoue FERMÉ est pire qu'une garde qui échoue ouvert : elle rend un rouge qui A L'AIR d'un
+ * résultat, avec des lignes nominatives, et fait perdre une journée au lecteur suivant.
+ *
+ * LE PLANCHER EST DÉRIVÉ, JAMAIS TAPÉ : `plancherDe` rend ce que le TEXTE du fichier contient.
+ * La garde ne SUPPOSE donc plus que le lanceur répond — elle le VÉRIFIE contre le disque.
+ */
+export function titresResolus(
+  cibles: string[],
+  plancherDe: (chemin: string) => number,
+  enumerer: Enumerateur = enumererParVitest
+): {
+  titres: Map<string, string[]>;
+  echecs: string[];
+  incoherents: Incoherence[];
+  enumeres: number;
+} {
   const titres = new Map<string, string[]>();
   const echecs: string[] = [];
-  if (cibles.length === 0) return { titres, echecs };
+  const incoherents: Incoherence[] = [];
+  if (cibles.length === 0) return { titres, echecs, incoherents, enumeres: 0 };
 
-  const lancer = (
-    fichiers: string[]
-  ): { ok: boolean; entrees: { name: string; file: string }[] } => {
-    const r = spawnSync('npx', ['vitest', 'list', ...fichiers, '--json'], {
-      encoding: 'utf8',
-      shell: true,
-      maxBuffer: 64 * 1024 * 1024,
-      timeout: 300_000,
-    });
-    const brut = r.stdout ?? '';
-    const debut = brut.indexOf('[');
-    if (r.status !== 0 || debut < 0) return { ok: false, entrees: [] };
-    try {
-      return {
-        ok: true,
-        entrees: JSON.parse(brut.slice(debut)) as { name: string; file: string }[],
-      };
-    } catch {
-      return { ok: false, entrees: [] };
-    }
-  };
-
+  /**
+   * Range ce qu'une énumération a rendu, puis CONFRONTE le compte au plancher du disque. Une cible
+   * dont l'énumération n'a rien rendu alors que son texte porte des titres ne va PAS dans `titres` :
+   * elle va dans `incoherents`, et l'appelant la traitera comme non lue.
+   */
   const ranger = (entrees: { name: string; file: string }[], attendus: string[]) => {
-    for (const c of attendus) titres.set(c, titres.get(c) ?? []);
+    const vus = new Map<string, string[]>();
+    for (const c of attendus) vus.set(c, []);
     for (const e of entrees) {
       const rel = posix.relative(process.cwd().replace(/\\/g, '/'), e.file.replace(/\\/g, '/'));
-      if (!titres.has(rel)) titres.set(rel, []);
-      titres.get(rel)!.push(e.name);
+      if (!vus.has(rel)) vus.set(rel, []);
+      vus.get(rel)!.push(e.name);
+    }
+    for (const [chemin, liste] of vus) {
+      const plancher = plancherDe(chemin);
+      // SOUS le plancher, et non seulement à ZÉRO (motif `mutation` T3 sur la PR 114) : un lanceur
+      // qui rend UN titre sur deux n'a pas lu le fichier, il l'a entamé — et la liste partielle se
+      // lisait comme complète, donc accusait les titres manquants.
+      if (liste.length < plancher) {
+        incoherents.push({ chemin, plancher });
+        continue;
+      }
+      titres.set(chemin, [...(titres.get(chemin) ?? []), ...liste]);
     }
   };
 
-  const lot = lancer(cibles);
+  const lot = enumerer(cibles);
   if (lot.ok) {
     ranger(lot.entrees, cibles);
-    return { titres, echecs };
+  } else {
+    // Un seul fichier qui ne se charge pas fait échouer la collecte ENTIÈRE — souvent un fichier
+    // qu'un autre agent est en train d'écrire. On retombe alors sur un appel par fichier, pour
+    // n'accuser que celui qui pèche.
+    for (const c of cibles) {
+      const un = enumerer([c]);
+      if (un.ok) ranger(un.entrees, [c]);
+      else echecs.push(c);
+    }
   }
-  // Un seul fichier qui ne se charge pas fait échouer la collecte ENTIÈRE — souvent un fichier
-  // qu'un autre agent est en train d'écrire. On retombe alors sur un appel par fichier, pour
-  // n'accuser que celui qui pèche.
-  for (const c of cibles) {
-    const un = lancer([c]);
-    if (un.ok) ranger(un.entrees, [c]);
-    else echecs.push(c);
-  }
-  return { titres, echecs };
+  const enumeres = [...titres.values()].reduce((a, l) => a + l.length, 0);
+  return { titres, echecs, incoherents, enumeres };
 }
 
 /**
@@ -1155,7 +1263,21 @@ function lirePr(): { pr: PullRequest[] | null; indisponible: string | null } {
  * d'AUCUN appel réseau. Le rendre facultatif par construction vaut mieux que le rendre facultatif
  * par convention.
  */
-function chargerUnivers(avecPr: boolean): Univers {
+/**
+ * Le nombre de titres que l'énumération a RÉELLEMENT rendus, sur la passe en cours (GOV-082).
+ * Il est imprimé tel quel : un compteur qu'on n'imprime pas ne prouve rien, et c'est ce compteur
+ * qui distingue « j'ai lu, il n'y avait rien » de « je n'ai rien lu ».
+ */
+let titresEnumeres = 0;
+
+/**
+ * LA LECTURE DU DÉPÔT — celle du mode normal. L'énumérateur est injectable pour que le témoin passe
+ * par CE branchement et non par la seule fonction pure (motif `mutation` T3/T5 sur la PR 114).
+ */
+export function chargerUnivers(
+  avecPr: boolean,
+  enumerer: Enumerateur = enumererParVitest
+): Univers {
   for (const f of [CHEMIN_REGISTRE, CHEMIN_TACHES, CHEMIN_VITEST]) {
     if (!existsSync(f)) {
       console.error(`❌ gov:trace — ${f} est introuvable.`);
@@ -1171,8 +1293,11 @@ function chargerUnivers(avecPr: boolean): Univers {
   const exclus = exclude.map(globVersRegex);
   const candidats = fichiersDeTest();
 
+  // Le plancher de chaque fichier, compté sur le texte qu'on lit ICI — une seule lecture (GOV-082).
+  const plancherDe = new Map<string, number>();
   const fichiers: FichierTest[] = candidats.map((chemin) => {
     const texte = readFileSync(chemin, 'utf8');
+    plancherDe.set(chemin, plancherDeTitres(texte));
     const execute = inclus.some((m) => m.test(chemin)) && !exclus.some((m) => m.test(chemin));
     return {
       chemin,
@@ -1207,14 +1332,31 @@ function chargerUnivers(avecPr: boolean): Univers {
       }
     }
   }
-  const { titres, echecs } = titresResolus([...besoins].sort());
+  // LE PLANCHER VIENT DU DISQUE, fichier par fichier : compté par la lecture ci-dessus, pas une
+  // valeur tapée ni une seconde lecture. Sans lui, la garde SUPPOSE que le lanceur a répondu (GOV-082).
+  const { titres, echecs, incoherents, enumeres } = titresResolus(
+    [...besoins].sort(),
+    (chemin) => plancherDe.get(chemin) ?? 0,
+    enumerer
+  );
+  titresEnumeres = enumeres;
   for (const [chemin, liste] of titres) {
     const f = parChemin.get(chemin);
     if (f) f.titresResolus = liste;
   }
   for (const e of echecs) {
     const f = parChemin.get(e);
-    if (f) f.titresResolus = null;
+    if (f) {
+      f.titresResolus = null;
+      f.motifNonResolus = 'echec';
+    }
+  }
+  for (const i of incoherents) {
+    const f = parChemin.get(i.chemin);
+    if (f) {
+      f.titresResolus = null;
+      f.motifNonResolus = 'vide_incoherent';
+    }
   }
 
   const { pr, indisponible } = avecPr ? lirePr() : { pr: null, indisponible: PR_NON_CONSULTEE };
@@ -1236,10 +1378,14 @@ function chargerUnivers(avecPr: boolean): Univers {
 function direLesSources(u: Univers): void {
   const executes = u.fichiers.filter((f) => f.execute);
   const resolus = u.fichiers.filter((f) => f.titresResolus !== null);
+  // GOV-082 — LE COMPTE IMPRIMÉ EST CELUI DES TITRES RÉELLEMENT ÉNUMÉRÉS, jamais la longueur d'une
+  // liste déclarée : c'est le seul nombre qui distingue « j'ai lu et il n'y avait rien » de
+  // « je n'ai rien lu », et le second passait pour le premier.
   console.log(
     `   sources — registre : lu ✓ (${u.exigences.length} exigences) · ` +
       `backlog : lu ✓ (${u.taches.length} tâches) · ` +
-      `disque : lu ✓ (${executes.length} fichiers exécutés, ${resolus.length} aux titres résolus)`
+      `disque : lu ✓ (${executes.length} fichiers exécutés, ${resolus.length} aux titres résolus, ` +
+      `${titresEnumeres} titres énumérés)`
   );
   // GOV-038. Ce qui n'a PAS été confronté au disque, et pourquoi. Une garde qui saute des lignes en
   // silence apprend au lecteur que son vert couvre tout ; celle-ci compte ce qu'elle n'a pas pu
@@ -1440,7 +1586,24 @@ function rendusDe(u: Univers): Record<string, ResultatTest[]> {
 const iOut = process.argv.indexOf('--out');
 const CHEMIN_VUE = iOut >= 0 ? (process.argv[iOut + 1] ?? VUE_PAR_DEFAUT) : VUE_PAR_DEFAUT;
 
-if (process.argv.includes('--prove')) {
+/**
+ * VRAI quand ce fichier est LANCÉ, faux quand il est IMPORTÉ (GOV-082).
+ *
+ * 🔴 SANS CE GARDE-FOU, CE MODULE EST INTESTABLE, et le journal de la PR 52 l'avait déjà mesuré
+ * ailleurs : « un module de garde importé par sa propre spécification tue le worker `vitest` au
+ * premier `process.exit` — la suite entière sort en `no tests` sur le refus
+ * `process.exit unexpectedly` du worker ». C'est ce qui s'est produit au premier jet de
+ * `une-liste-vide-n-est-pas-une-reponse.spec.ts` : `chargerUnivers` partait à l'import, la garde
+ * rougissait sur l'état du dépôt et emportait la suite AVANT le premier `it`.
+ *
+ * ⚠️ Et une lecture qu'on ne peut pas importer finit RECOPIÉE (`scripts/lot/titres-ecrits.ts` le
+ * dit de sa propre histoire). GOV-082 exige que les DEUX faces de l'énumérateur soient jouées :
+ * sans import, la seconde face — celle qui rend le vide avec le code zéro — ne se joue pas, et
+ * c'est très exactement la face qui n'avait jamais été jouée.
+ */
+const LANCE_EN_SCRIPT = /[\\/]gates[\\/]gov-trace(\.ts)?$/.test(process.argv[1] ?? '');
+
+if (LANCE_EN_SCRIPT && process.argv.includes('--prove')) {
   const base = universFixture();
   const fautesBase = [...controler(base), ...verifierVue(base, rendreVue(base), 'fixture')];
   if (fautesBase.length > 0) {
@@ -1955,94 +2118,99 @@ if (process.argv.includes('--prove')) {
   process.exit(0);
 }
 
-const univers = chargerUnivers(
-  !process.argv.includes('--render') && !process.argv.includes('--verifier')
-);
+// ── le corps EXÉCUTABLE, sous le garde-fou d'import (GOV-082) ────────────────
+if (LANCE_EN_SCRIPT) {
+  const univers = chargerUnivers(
+    !process.argv.includes('--render') && !process.argv.includes('--verifier')
+  );
 
-if (process.argv.includes('--sources')) {
-  console.log('gov:trace — état des quatre sources :');
-  direLesSources(univers);
-  direLePerimetre(univers);
-  process.exit(0);
-}
+  if (process.argv.includes('--sources')) {
+    console.log('gov:trace — état des quatre sources :');
+    direLesSources(univers);
+    direLePerimetre(univers);
+    process.exit(0);
+  }
 
-if (process.argv.includes('--render')) {
-  // ⚠️ ON CONTRÔLE AVANT D'ÉCRIRE, comme `gov-requirements.ts` le fait déjà.
-  //
-  // Sans ce refus, cette vue PROPAGE les fautes qu'elle est censée dénoncer : une attribution
-  // fausse fait rougir la garde en `vue_divergente`, et le geste que ce rouge PRESCRIT —
-  // `pnpm gov:trace --render` — réécrit la matrice avec la fausse attribution dedans, après quoi
-  // tout est vert. Mesuré par la lentille `mutation` le 2026-09-05 : un titre légitime
-  // relabellisé, puis `--render`, et la matrice inscrit la fausse attribution comme « couverte »
-  // sans qu'aucune garde ne rougisse.
-  //
-  // L'asymétrie entre les deux générateurs frères était le vrai défaut, et elle se voyait à
-  // vingt lignes de distance dans deux fichiers voisins.
-  const fautesAvantRendu = controler(univers);
-  if (fautesAvantRendu.length > 0) {
-    console.error(
-      `❌ Refus de rendre une matrice dont les sources sont fautives (${fautesAvantRendu.length}). ` +
-        'Lance `pnpm gov:trace` : corrige la SOURCE, ne regénère pas la VUE par-dessus.'
+  if (process.argv.includes('--render')) {
+    // ⚠️ ON CONTRÔLE AVANT D'ÉCRIRE, comme `gov-requirements.ts` le fait déjà.
+    //
+    // Sans ce refus, cette vue PROPAGE les fautes qu'elle est censée dénoncer : une attribution
+    // fausse fait rougir la garde en `vue_divergente`, et le geste que ce rouge PRESCRIT —
+    // `pnpm gov:trace --render` — réécrit la matrice avec la fausse attribution dedans, après quoi
+    // tout est vert. Mesuré par la lentille `mutation` le 2026-09-05 : un titre légitime
+    // relabellisé, puis `--render`, et la matrice inscrit la fausse attribution comme « couverte »
+    // sans qu'aucune garde ne rougisse.
+    //
+    // L'asymétrie entre les deux générateurs frères était le vrai défaut, et elle se voyait à
+    // vingt lignes de distance dans deux fichiers voisins.
+    const fautesAvantRendu = controler(univers);
+    if (fautesAvantRendu.length > 0) {
+      console.error(
+        `❌ Refus de rendre une matrice dont les sources sont fautives (${fautesAvantRendu.length}). ` +
+          'Lance `pnpm gov:trace` : corrige la SOURCE, ne regénère pas la VUE par-dessus.'
+      );
+      for (const f of fautesAvantRendu.slice(0, 5)) console.error(`   [${f.famille}] ${f.message}`);
+      process.exit(1);
+    }
+    writeFileSync(CHEMIN_VUE, rendreVue(univers));
+    // ⚠️ CETTE LIGNE RECOPIAIT LA RÈGLE au lieu de l'appeler — `e.statut === 'active' && e.taches.some(…)`
+    // écrit une seconde fois à côté de `reputeeTestee()`. Mesuré le 2026-09-05 en éprouvant la
+    // livraison d'`INT-T01b` : la console annonçait « 41 réputées testées » pendant que la VUE
+    // qu'elle venait d'écrire en portait 31, dans la même sortie, à deux lignes d'intervalle. Les
+    // deux copies avaient divergé au premier raffinement de la règle (RM-01). Elle est APPELÉE.
+    const parTacheDuRendu = new Map(univers.taches.map((t) => [t.id, t]));
+    const testees = univers.exigences.filter((e) => reputeeTestee(e, parTacheDuRendu));
+    console.log(
+      `✅ gov:trace — ${CHEMIN_VUE} rendu depuis ${CHEMIN_REGISTRE}, ${CHEMIN_TACHES} et le disque.`
     );
-    for (const f of fautesAvantRendu.slice(0, 5)) console.error(`   [${f.famille}] ${f.message}`);
-    process.exit(1);
+    console.log(
+      `   ${univers.exigences.length} exigences, dont ${testees.length} réputées testées.`
+    );
+    direLesSources(univers);
+    process.exit(0);
   }
-  writeFileSync(CHEMIN_VUE, rendreVue(univers));
-  // ⚠️ CETTE LIGNE RECOPIAIT LA RÈGLE au lieu de l'appeler — `e.statut === 'active' && e.taches.some(…)`
-  // écrit une seconde fois à côté de `reputeeTestee()`. Mesuré le 2026-09-05 en éprouvant la
-  // livraison d'`INT-T01b` : la console annonçait « 41 réputées testées » pendant que la VUE
-  // qu'elle venait d'écrire en portait 31, dans la même sortie, à deux lignes d'intervalle. Les
-  // deux copies avaient divergé au premier raffinement de la règle (RM-01). Elle est APPELÉE.
-  const parTacheDuRendu = new Map(univers.taches.map((t) => [t.id, t]));
-  const testees = univers.exigences.filter((e) => reputeeTestee(e, parTacheDuRendu));
-  console.log(
-    `✅ gov:trace — ${CHEMIN_VUE} rendu depuis ${CHEMIN_REGISTRE}, ${CHEMIN_TACHES} et le disque.`
-  );
-  console.log(`   ${univers.exigences.length} exigences, dont ${testees.length} réputées testées.`);
-  direLesSources(univers);
-  process.exit(0);
-}
 
-if (process.argv.includes('--verifier')) {
+  if (process.argv.includes('--verifier')) {
+    const surDisque = existsSync(CHEMIN_VUE) ? readFileSync(CHEMIN_VUE, 'utf8') : null;
+    const fautes = verifierVue(univers, surDisque, CHEMIN_VUE);
+    if (fautes.length > 0) {
+      console.error(`❌ gov:trace — ${fautes[0]!.message}`);
+      process.exit(1);
+    }
+    console.log(`✅ gov:trace — ${CHEMIN_VUE} est égal à ce que ses sources produisent.`);
+    process.exit(0);
+  }
+
+  // ── mode normal ──────────────────────────────────────────────────────────────
   const surDisque = existsSync(CHEMIN_VUE) ? readFileSync(CHEMIN_VUE, 'utf8') : null;
-  const fautes = verifierVue(univers, surDisque, CHEMIN_VUE);
-  if (fautes.length > 0) {
-    console.error(`❌ gov:trace — ${fautes[0]!.message}`);
-    process.exit(1);
+  const fautes = [...controler(univers), ...verifierVue(univers, surDisque, CHEMIN_VUE)];
+
+  if (fautes.length === 0) {
+    const testees = univers.exigences.filter((e) =>
+      reputeeTestee(e, new Map(univers.taches.map((t) => [t.id, t])))
+    );
+    console.log(
+      `✅ gov:trace — la matrice est cohérente : ${testees.length} exigences réputées testées, toutes citées par un test exécuté.`
+    );
+    direLesSources(univers);
+    direLePerimetre(univers);
+    direLesPaires(univers);
+    process.exit(0);
   }
-  console.log(`✅ gov:trace — ${CHEMIN_VUE} est égal à ce que ses sources produisent.`);
-  process.exit(0);
-}
 
-// ── mode normal ──────────────────────────────────────────────────────────────
-const surDisque = existsSync(CHEMIN_VUE) ? readFileSync(CHEMIN_VUE, 'utf8') : null;
-const fautes = [...controler(univers), ...verifierVue(univers, surDisque, CHEMIN_VUE)];
-
-if (fautes.length === 0) {
-  const testees = univers.exigences.filter((e) =>
-    reputeeTestee(e, new Map(univers.taches.map((t) => [t.id, t])))
-  );
-  console.log(
-    `✅ gov:trace — la matrice est cohérente : ${testees.length} exigences réputées testées, toutes citées par un test exécuté.`
-  );
+  const parFamille = new Map<string, Faute[]>();
+  for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
+  console.error(`❌ gov:trace — ${fautes.length} rupture(s) de traçabilité :\n`);
+  for (const famille of FAMILLES) {
+    const liste = parFamille.get(famille);
+    if (!liste) continue;
+    console.error(`   ── ${famille} (${liste.length})`);
+    liste.slice(0, 15).forEach((f) => console.error(`      ${f.message}`));
+    if (liste.length > 15) console.error(`      … et ${liste.length - 15} autre(s).`);
+  }
+  console.error('');
   direLesSources(univers);
   direLePerimetre(univers);
   direLesPaires(univers);
-  process.exit(0);
+  process.exit(1);
 }
-
-const parFamille = new Map<string, Faute[]>();
-for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
-console.error(`❌ gov:trace — ${fautes.length} rupture(s) de traçabilité :\n`);
-for (const famille of FAMILLES) {
-  const liste = parFamille.get(famille);
-  if (!liste) continue;
-  console.error(`   ── ${famille} (${liste.length})`);
-  liste.slice(0, 15).forEach((f) => console.error(`      ${f.message}`));
-  if (liste.length > 15) console.error(`      … et ${liste.length - 15} autre(s).`);
-}
-console.error('');
-direLesSources(univers);
-direLePerimetre(univers);
-direLesPaires(univers);
-process.exit(1);

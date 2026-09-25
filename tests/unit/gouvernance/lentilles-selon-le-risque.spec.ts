@@ -3,10 +3,16 @@
  * lentilles-selon-le-risque.spec.ts — la relecture d'une PR se proportionne à son RISQUE
  * (GOV-077, levier 3 de Will du 2026-09-18, REQ-GOV-011).
  *
- * LA DÉCISION. Une PR de risque ORDINAIRE — gouvernance ou qualité, aucune donnée sensible, aucun
- * code produit — se relit par deux lentilles, `exactitude` et `securite` (qui garde son veto). Une
- * PR de risque ÉLEVÉ garde les quatre : `exactitude`, `securite`, `simplicite` ou `schema`, et
- * `mutation`. Jusqu'ici `lentillesExigees()` exigeait les quatre EN DUR.
+ * LA DÉCISION. Une PR de risque ORDINAIRE se relit par deux lentilles, `exactitude` et `securite`
+ * (qui garde son veto). Une PR de risque ÉLEVÉ garde les quatre : `exactitude`, `securite`,
+ * `simplicite` ou `schema`, et `mutation`. Jusqu'ici `lentillesExigees()` exigeait les quatre EN DUR.
+ *
+ * ⚠️ GOV-097 (décision de Will du 2026-09-25, `partners/ADR-0021`) a changé la FRONTIÈRE : l'élevé
+ * est désormais réservé à l'argent, à la sécurité et aux données, et à la sécurité du processus
+ * (garde des revues, CI, racine). Les témoins de ce fichier qui reposaient sur l'ancienne liste
+ * blanche (zones `gouvernance`/`qualite`, chemins `docs/`/`scripts/`/`tests/`) sont réécrits sur la
+ * nouvelle règle ; la nouvelle a son propre fichier,
+ * `quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts`.
  *
  * LA FAUTE QUE CE FICHIER GARDE N'EXISTE PAS AVANT LE CORRECTIF — elle est ce que le correctif
  * PEUT introduire : une PR qui porte une tâche sensible et passe avec deux lentilles. La règle
@@ -66,6 +72,41 @@ const CI_DE_QA_T01 = CHEMINS_QA_T01.filter((f) => f.startsWith('.github/'));
  * la chaîne de contrôle, ils font monter le risque (décision de l'orchestrateur du 2026-09-18).
  */
 const RACINE_DE_QA_T01 = CHEMINS_QA_T01.filter((f) => !f.includes('/'));
+/**
+ * Une tâche qui élèverait à elle seule une PR — ORACLE écrit ici depuis la règle de la charte §6,
+ * pas depuis le code : `sensible` non vide ou absent, `schema: true`, zone `argent`/`securite`,
+ * absente ou inconnue du schéma du registre.
+ */
+function tacheHaute(t: TacheBrute, zonesConnues: readonly string[]): boolean {
+  return !(
+    typeof t.zone === 'string' &&
+    t.zone !== 'argent' &&
+    t.zone !== 'securite' &&
+    zonesConnues.includes(t.zone) &&
+    Array.isArray(t.sensible) &&
+    t.sensible.length === 0 &&
+    t.schema !== true
+  );
+}
+const ZONES_CONNUES = (
+  JSON.parse(readFileSync('scripts/lot/tasks.schema.json', 'utf8')) as {
+    $defs: { tache: { properties: { zone: { enum: string[] } } } };
+  }
+).$defs.tache.properties.zone.enum;
+/**
+ * LA SENSIBILITÉ SUIT LE FICHIER DU CODE PRODUIT (GOV-097, refus `securite` du 2026-09-25) —
+ * oracle : un fichier sous `src/` qu'une tâche haute du registre déclare, égal ou sous un
+ * répertoire déclaré.
+ */
+const DECLARES_PAR_LES_TACHES_HAUTES = registre()
+  .filter((t) => tacheHaute(t, ZONES_CONNUES))
+  .flatMap((t) => cheminsDe(t));
+function declareParUneTacheHaute(x: string): boolean {
+  return (
+    x.startsWith('src/') &&
+    DECLARES_PAR_LES_TACHES_HAUTES.some((c) => c === x || (c.endsWith('/') && x.startsWith(c)))
+  );
+}
 /**
  * La PR ordinaire de référence : les chemins de QA-T01 HORS `.github/` et hors de la racine
  * (décisions de l'orchestrateur du 2026-09-18 sur GOV-077). Dérivés du registre (RM-03), jamais tapés.
@@ -237,11 +278,15 @@ describe('REQ-GOV-011 — cas 2 à 5 : ce que la PR porte comme tâche décide s
     expect(r.raisons.join(' ; ')).toContain('securite');
   });
 
-  it('REQ-GOV-011 · cas 3 : une PR INT-T13 (contacts à qualifier, sensible vide) est élevée par sa zone', () => {
+  it('REQ-GOV-011 · cas 3 : une PR INT-T13 (zone integration, sensible vide) est ORDINAIRE depuis GOV-097 — la limite déclarée de partners/ADR-0021', () => {
+    // Avant GOV-097, la zone `integration` l'élevait seule. La décision du 2026-09-25 réserve les
+    // quatre lentilles à l'argent, à la sécurité et aux données, et les données se lisent par
+    // `sensible` : une tâche de données à `sensible: []` passe donc à deux lentilles. C'est la
+    // limite que l'ADR nomme, et dont le remède est au registre (`rgpd`), pas dans le code.
+    expect(tache(registre(), 'INT-T13').zone).toBe('integration');
     expect(tache(registre(), 'INT-T13').sensible).toEqual([]);
     const r = risque({ titre: 'feat(INT-T13): x', fichiers: NEUTRES });
-    expect(r.niveau).toBe('eleve');
-    expect(r.raisons.join(' ; ')).toContain('INT-T13');
+    expect(r.niveau, r.raisons.join(' ; ')).toBe('ordinaire');
   });
 
   it('REQ-GOV-011 · cas 4 : un champ `sensible` ABSENT ou une `zone` ABSENTE rendent la PR élevée', () => {
@@ -690,16 +735,63 @@ describe('REQ-GOV-011 — cas 9 : toute tâche du registre réel est classée, l
     // indépendant, écrit ici à partir de la règle de la charte §6 et non du code, doit trouver
     // EXACTEMENT les mêmes tâches ordinaires. Ses listes sont tapées exprès : leur divergence
     // d'avec `scripts/lot/revues.ts` est le signal que ce témoin existe pour donner.
-    const garde = new Set([...fermetureDesImports(), 'docs/CHARTE-AGENTS.md', 'docs/agents.json']);
+    // Réécrit par GOV-097 sur la règle du 2026-09-25 : l'élevé se cherche, par signaux.
+    const garde = new Set([
+      ...fermetureDesImports(),
+      'docs/CHARTE-AGENTS.md',
+      'docs/agents.json',
+      'scripts/lot/tasks.schema.json',
+    ]);
+    const zonesConnues = (
+      JSON.parse(readFileSync('scripts/lot/tasks.schema.json', 'utf8')) as {
+        $defs: { tache: { properties: { zone: { enum: string[] } } } };
+      }
+    ).$defs.tache.properties.zone.enum;
+    const MOTS_SENSIBLES = new Set([
+      'commissions',
+      'attributions',
+      'auth',
+      'espace',
+      '(espace)',
+      'commission',
+      'attribution',
+      'argent',
+      'grille',
+      'securite',
+      'acces',
+      'roles',
+      'proxy',
+      'env',
+      'webhooks',
+      'donnees-personnelles',
+      'pii',
+      'session',
+      'sessions',
+      'crypto',
+      'chiffrement',
+      'cloisonnement',
+      'middleware',
+    ]);
+    const enZoneSensible = (x: string): boolean => {
+      const s = x.toLowerCase().split('/');
+      const dernier = s.pop()!;
+      return [...s, dernier, dernier.replace(/\..*$/, '')].some((m) => MOTS_SENSIBLES.has(m));
+    };
+    const duProcessus = (x: string): boolean =>
+      !x.includes('/') || x.startsWith('.') || x.startsWith('config/') || garde.has(x);
     const oracle = (t: TacheBrute): boolean => {
       const f = cheminsDe(t);
       return (
-        (t.zone === 'gouvernance' || t.zone === 'qualite') &&
-        Array.isArray(t.sensible) &&
-        t.sensible.length === 0 &&
-        t.schema !== true &&
+        !tacheHaute(t, zonesConnues) &&
         f.length > 0 &&
-        f.every((x) => /^(docs|scripts|tests)\//.test(x) && !garde.has(x))
+        f.every(
+          (x) =>
+            !enZoneSensible(x) &&
+            !duProcessus(x) &&
+            !declareParUneTacheHaute(x) &&
+            !x.startsWith('prisma/') &&
+            !x.startsWith('packages/contracts/')
+        )
       );
     };
     const parLeCode = (liste: TacheBrute[]) =>
@@ -715,7 +807,7 @@ describe('REQ-GOV-011 — cas 9 : toute tâche du registre réel est classée, l
     expect(ordinairesVivantes).toBeGreaterThan(0);
   });
 
-  it('REQ-GOV-011 · chaque zone de l’enum hors gouvernance et qualite rend la PR élevée, même sensible vide', () => {
+  it('REQ-GOV-011 · seules les zones argent et securite de l’enum rendent la PR élevée à sensible vide (GOV-097)', () => {
     const schema = JSON.parse(readFileSync('scripts/lot/tasks.schema.json', 'utf8')) as {
       $defs: { tache: { properties: { zone: { enum: string[] } } } };
     };
@@ -729,7 +821,7 @@ describe('REQ-GOV-011 — cas 9 : toute tâche du registre réel est classée, l
         tachesBase: T,
         fichiers: ['docs/x.md'],
       });
-      const attendu = zone === 'gouvernance' || zone === 'qualite' ? 'ordinaire' : 'eleve';
+      const attendu = zone === 'argent' || zone === 'securite' ? 'eleve' : 'ordinaire';
       expect(r.niveau, `zone ${zone}`).toBe(attendu);
     }
   });
