@@ -49,11 +49,10 @@ const GARDES = [
     script: 'scripts/gates/gov-publication.ts',
     familles: 7,
   },
-  // Les 12 familles d'origine de `gov:tasks`, plus celles de l'attestation inter-dépôt (GOV-038).
-  // La seconde moitié est DÉRIVÉE de son module : recopier « 19 » ici aurait fait de ce fichier la
-  // deuxième source d'un même compte, et c'est le compte qui sert justement à détecter la perte
-  // silencieuse d'une famille. Le 12 reste écrit — il n'a pas de source importable, la liste vivant
-  // dans un script à effets de bord au chargement.
+  // Les familles de `gov:tasks`, y compris celles de l'attestation inter-dépôt (GOV-038) et du
+  // couple état/opération (GOV-086). Le compte ENTIER est DÉRIVÉ de `FAMILLES` : la liste est
+  // importable depuis que la garde vit sous `LANCE_EN_SCRIPT`, et un nombre tapé ici aurait fait de
+  // ce fichier la deuxième source d'un compte qui sert à détecter la perte silencieuse d'une famille.
   {
     nom: 'gov:tasks',
     exigences: '',

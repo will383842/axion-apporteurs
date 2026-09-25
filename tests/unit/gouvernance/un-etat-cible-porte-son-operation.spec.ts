@@ -110,6 +110,34 @@ describe('gov:tasks — un état cible porte l’opération qui y mène (GOV-086
     expect(f!.message).toContain('branch');
   });
 
+  it('REQ-GOV-026 — le SECOND SENS sur `pr` SEUL : la fixture ne porte aucune autre écriture', () => {
+    // Motif `mutation` (K4) : une fixture qui porte AUSSI une branche masque l'écriture qu'on
+    // retirerait de la liste. Ici `pr` est la seule, et elle doit suffire à rougir.
+    expect(familles([tache({ statut: 'a_faire', pr: 7 })])).toEqual(['operation_sans_effet']);
+  });
+
+  it('REQ-GOV-026 — UNE faute, UNE famille : hors dépôt, c’est l’attestation qui juge, pas le couple', () => {
+    // 🔴 Motif `simplicite` sur 9ffb450 : pour une tâche d'un AUTRE dépôt, la même faute rougissait
+    // deux fois sous deux noms et deux remèdes — `attestation_absente` ET
+    // `etat_cible_sans_operation` pour une livraison sans trace, `attestation_sans_livraison` ET
+    // `operation_sans_effet` pour une attestation sans livraison. Le côté nouveau est CE dépôt.
+    const attestation = {
+      pr: 998,
+      sha: '41d71a79392bc6aa1a3f60e7853fa5715e076b79',
+      fusionneeAt: '2026-09-05T11:04:48Z',
+    };
+    expect(familles([tache({ repo: 'axionia', statut: 'deployee', owner: 'A01' })])).toEqual([
+      'attestation_absente',
+    ]);
+    expect(familles([tache({ repo: 'axionia', statut: 'a_faire', attestation })])).toEqual([
+      'attestation_sans_livraison',
+    ]);
+    // Et ICI, c'est le couple qui juge, seul — la famille nouvelle garde son terrain.
+    expect(familles([tache({ statut: 'deployee', owner: 'A01' })])).toEqual([
+      'etat_cible_sans_operation',
+    ]);
+  });
+
   it('REQ-GOV-021 — l’état COMPLET reste vert : une livraison locale avec son `pr` et sa branche', () => {
     expect(
       familles([tache({ statut: 'fusionnee', owner: 'A01', pr: 112, branch: 't/gov-999' })])
@@ -147,6 +175,10 @@ describe('gov:tasks — un état cible porte l’opération qui y mène (GOV-086
     ];
     const couples = couplesEtatOperation(taches);
     expect(couples).toHaveLength(taches.length);
+    // Une tâche d'un autre dépôt n'est PAS un couple : son attestation la juge (une seule famille).
+    expect(
+      couplesEtatOperation([...taches, tache({ id: 'GOV-903', repo: 'axionia' })])
+    ).toHaveLength(taches.length);
     expect(couples.find((c) => c.id === 'GOV-901')!.operations).toContain('pr');
     expect(couples.find((c) => c.id === 'GOV-902')!.operations).toEqual([]);
   });
@@ -167,7 +199,10 @@ describe('gov:tasks — un état cible porte l’opération qui y mène (GOV-086
       (f) => f.famille === 'etat_cible_sans_operation' || f.famille === 'operation_sans_effet'
     );
     expect(fautes.map((f) => f.message)).toEqual([]);
-    // Le compte des couples confrontés est celui des tâches : aucune n'est sautée en silence.
-    expect(couplesEtatOperation(doc.taches)).toHaveLength(doc.taches.length);
+    // Le compte des couples confrontés est celui des tâches de CE dépôt : aucune n'est sautée en
+    // silence, et celles d'ailleurs sont jugées par leur attestation.
+    expect(couplesEtatOperation(doc.taches)).toHaveLength(
+      doc.taches.filter((t) => t.repo === 'partners').length
+    );
   });
 });

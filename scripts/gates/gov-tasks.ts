@@ -35,7 +35,12 @@ import { execFileSync } from 'node:child_process';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 import { chargerRegistre, CHEMIN_REGISTRE, type Registre } from '../lot/registre-decisions';
-import { FAMILLES_ATTESTATION, controlerAttestation, type Attestation } from '../lot/attestation';
+import {
+  DEPOT_LOCAL,
+  FAMILLES_ATTESTATION,
+  controlerAttestation,
+  type Attestation,
+} from '../lot/attestation';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
@@ -104,14 +109,19 @@ const LIVREE = LIVREE_DERIVEE;
 
 // ── un état cible porte l'opération qui y mène (GOV-086, REQ-GOV-026) ────────
 /**
- * LES ÉCRITURES QUI PRODUISENT UN ÉTAT, et rien d'autre. `pnpm lot:cloture` les pose dans le même
- * geste que le `statut` : `pr` pour une livraison de CE dépôt, `attestation` pour une livraison
- * d'ailleurs (`scripts/lot/attestation.ts`), `branch` pour le travail en vol.
+ * LES ÉCRITURES QUI PRODUISENT UN ÉTAT DE CE DÉPÔT, et rien d'autre. `pnpm lot:cloture` les pose
+ * dans le même geste que le `statut` : `pr` pour une livraison, `branch` pour le travail en vol.
+ *
+ * 🔴 PAS `attestation`, et c'est le motif `simplicite` de la PR 114 : une livraison d'AILLEURS est
+ * déjà jugée, dans les deux sens, par `controlerAttestation` (`attestation_absente`,
+ * `attestation_sans_livraison`), et une attestation sur une tâche d'ici par
+ * `attestation_hors_sujet`. La compter ici faisait rougir la même faute deux fois, sous deux noms
+ * et deux remèdes. Une faute, une famille : le couple ne juge que CE dépôt.
  *
  * `owner` n'en est PAS : prendre une tâche n'est pas une écriture d'état — trois tâches « à faire »
  * en portent un aujourd'hui, légitimement, et les compter ici ferait rougir la revendication.
  */
-export const ECRITURES_D_ETAT = ['pr', 'branch', 'attestation'] as const;
+export const ECRITURES_D_ETAT = ['pr', 'branch'] as const;
 
 /**
  * Les statuts qu'AUCUNE de ces écritures ne peut avoir produits : personne n'a encore pris la
@@ -128,20 +138,22 @@ export const AVANT_TOUTE_ECRITURE: ReadonlySet<string> = new Set(['proposee', 'a
 export type Couple = { id: string; statut: string; operations: string[] };
 
 /**
- * LES COUPLES, POUR TOUTES LES TÂCHES — la population que le contrôle confronte, et qu'il COMPTE.
+ * LES COUPLES DE CE DÉPÔT — la population que le contrôle confronte, et qu'il COMPTE.
  *
- * Aucune tâche n'en est exclue : un contrôle dont la population se restreint ne voit pas ce qu'il
- * a sauté, et c'est par là que la divergence reste muette. Le compte rendu ici est celui qui
- * s'imprime : il vaut le nombre de tâches, ou la garde a sauté quelqu'un.
+ * Les tâches d'un AUTRE dépôt n'en sont pas : leur couple (statut, attestation) est confronté par
+ * `controlerAttestation`, et les confronter ici doublait chaque faute. Aucune tâche d'ICI n'est
+ * exclue ; le compte rendu est celui qui s'imprime, et il vaut le nombre de tâches de ce dépôt.
  */
 export function couplesEtatOperation(taches: Tache[]): Couple[] {
-  return taches.map((t) => ({
-    id: t.id,
-    statut: t.statut,
-    operations: ECRITURES_D_ETAT.filter(
-      (champ) => (t as unknown as Record<string, unknown>)[champ] != null
-    ),
-  }));
+  return taches
+    .filter((t) => t.repo === DEPOT_LOCAL)
+    .map((t) => ({
+      id: t.id,
+      statut: t.statut,
+      operations: ECRITURES_D_ETAT.filter(
+        (champ) => (t as unknown as Record<string, unknown>)[champ] != null
+      ),
+    }));
 }
 
 // ── les contrôles ────────────────────────────────────────────────────────────
@@ -936,12 +948,14 @@ if (LANCE_EN_SCRIPT) {
     console.log(`   ${parPhase.join('  ·  ')}`);
     // GOV-086 — LE COMPTE DES COUPLES RÉELLEMENT CONFRONTÉS. Un contrôle qui ne dit pas sur
     // combien il a porté laisse croire qu'il a tout vu ; celui-ci le compte, et le compte vaut
-    // le nombre de tâches ou la garde en a sauté.
+    // le nombre de tâches de CE dépôt ou la garde en a sauté.
     const couples = couplesEtatOperation(doc.taches);
     const avecOperation = couples.filter((c) => c.operations.length > 0).length;
     console.log(
-      `   ${couples.length} couple(s) (état voulu, écritures qui le produisent) confronté(s), ` +
-        `dont ${avecOperation} porteur(s) d'au moins une écriture parmi ${ECRITURES_D_ETAT.join(', ')}.`
+      `   ${couples.length} couple(s) (état voulu, écritures qui le produisent) confronté(s) pour ` +
+        `${DEPOT_LOCAL}, dont ${avecOperation} porteur(s) d'au moins une écriture parmi ` +
+        `${ECRITURES_D_ETAT.join(', ')} ; les ${doc.taches.length - couples.length} autre(s) sont ` +
+        `jugées par leur attestation.`
     );
     process.exit(0);
   }
