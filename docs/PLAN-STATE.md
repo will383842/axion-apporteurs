@@ -13,7 +13,7 @@
 | Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #130 — 2026-09-26 |
+| Dernière entrée de journal | PR #130 — 2026-09-25 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -104,7 +104,7 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
-### PR #130 — 2026-09-26 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y
+### PR #130 — 2026-09-25 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y
 
 **Fait.** Lot de quatre tâches, un commit rouge puis un commit de code par tâche. QA-T04 :
 `src/lib/env.ts` étend le schéma de SEC-01 à la configuration (base, cache, puits de

@@ -67,7 +67,7 @@ describe('REQ-QA-002 — la configuration de Stryker', () => {
   it('REQ-QA-002 : Stryker ne mute que src/domain/**, déclare un seuil de rupture, et vise 80 au moins', () => {
     expect(config.mutate.length).toBeGreaterThan(0);
     for (const m of config.mutate) expect(m.replace(/^!/, '')).toMatch(/^src\/domain\//);
-    // Le seuil de RUPTURE est ALIGNÉ SUR LA MESURE (79,38 % le 2026-09-26, rapport de la première
+    // Le seuil de RUPTURE est ALIGNÉ SUR LA MESURE (79,38 % le 2026-09-25, rapport de la première
     // passe complète) : un seuil au-dessus de la mesure rougirait chaque nuit sur une dette que
     // personne n'a créée, et finirait désarmé (RM-02). La CIBLE, elle, est 80 : `thresholds.low`.
     // La rupture ne descend jamais sous la mesure, et ne dépasse jamais la cible.

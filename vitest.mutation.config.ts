@@ -12,7 +12,7 @@ import base from './vitest.config';
  * (préparation, délais, parallélisme) est hérité, jamais recopié.
  *
  * CE QUI EST ÉCARTÉ, NOMMÉ, parce que cela ne juge pas le COMPORTEMENT du domaine et échoue sur le
- * bac à sable de Stryker — chacun vu rougir à blanc le 2026-09-25 ou le 2026-09-26, un par passe :
+ * bac à sable de Stryker — chacun vu rougir à blanc le 2026-09-25, un par passe :
  *  - `journal-charge-fermee.spec.ts`, `gardes-de-schema.spec.ts` et `schema-centimes.spec.ts`
  *    ENTIERS : ils jugent des GARDES (`journal:sans-pii`, `partners:schema:enums`,
  *    `partners:schema:cents` et leurs voisines), qui lisent les fichiers SUIVIS
@@ -26,7 +26,7 @@ import base from './vitest.config';
  * régulière : le point tient lieu de l'apostrophe typographique.
  *
  * ⚠️ Stryker tourne en BAC À SABLE, jamais en place : une passe en place interrompue laisse
- * l'instrumentation dans l'arbre de travail — mesuré le 2026-09-26, 220 fichiers suivis réécrits.
+ * l'instrumentation dans l'arbre de travail — mesuré le 2026-09-25, 220 fichiers suivis réécrits.
  */
 const ECARTES = [
   'aucun fichier de src/domain/temps/ ne nomme Date',
