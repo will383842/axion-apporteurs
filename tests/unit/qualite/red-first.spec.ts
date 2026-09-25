@@ -15,7 +15,15 @@
  */
 import { describe, it, expect, afterAll } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
@@ -134,7 +142,12 @@ describe('REQ-CPL-022 — la décision', () => {
 
 describe('REQ-CPL-022 — le binaire, sur un dépôt git jetable', () => {
   const DEPOT = mkdtempSync(join(tmpdir(), 'cplt22-'));
-  afterAll(() => rmSync(DEPOT, { recursive: true, force: true }));
+  // Le lien vers les dépendances du dépôt d'abord, et lui seul : un effacement récursif qui le
+  // suivrait viderait `node_modules`. On ne détruit que ce qu'on a posé.
+  afterAll(() => {
+    unlinkSync(join(DEPOT, 'node_modules'));
+    rmSync(DEPOT, { recursive: true, force: true });
+  });
 
   const git = (...args: string[]) =>
     execFileSync('git', args, { cwd: DEPOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });

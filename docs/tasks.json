@@ -1911,7 +1911,9 @@
         ".github/workflows/red-first.yml",
         ".github/workflows/ci.yml",
         "tests/unit/qualite/red-first.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "scripts/gates/red-first.ts",
+        "package.json"
       ],
       "schema": false,
       "sensible": [],

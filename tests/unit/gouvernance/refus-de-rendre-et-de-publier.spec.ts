@@ -752,6 +752,18 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'TOLÉRÉE qui doit traverser le filtre. Le mutant « le verdict imprime le rouge puis rend ' +
         '0 » a été posé et tué le 2026-09-22.',
     },
+    // ── CPL-T22 : UNE sortie, à code VARIABLE ───────────────────────────────────────────────
+    'scripts/gates/red-first.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'CPL-T22 — les tests nouveaux d’une PR rougissent contre sa base. `process.exit(decision.code)` : ' +
+        'sortie TERMINALE à code variable, commune au mode normal et à `--prove`. La décision est une ' +
+        'fonction pure vue rendre 1 sur chaque famille (red-first.spec.ts), et le binaire est vu sortir ' +
+        'en 1 puis en 0 sur un dépôt git jetable dans la même spec ; ⛔ ce témoin d’effet ne vit pas ' +
+        'dans `REFUS`. Dette DÉCLARÉE.',
+    },
   };
 
   it('REQ-GOV-032 — le compte DÉRIVÉ du diff égale le compte DÉCLARÉ, fichier par fichier', () => {
@@ -1027,7 +1039,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // somme des `total` du registre, qui porte les deux entrees.
     // 🔧 54 + 1 = 55 a la fusion de `main` (`48b14b6`) dans `t/sec-08` : la sortie de SEC-08 et les
     // quatre de JUR-T01 s'ajoutent, le registre porte les deux entrees.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(55);
+    // 🔧 55 → 56 par CPL-T22 (lot L0-03), ARBITRÉ et non subi. `scripts/gates/red-first.ts` naît
+    // avec UNE sortie à code variable. Lu par `vitest -t "process.exit"`, relu et non deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 56 to be 55
+    //
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(56);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.

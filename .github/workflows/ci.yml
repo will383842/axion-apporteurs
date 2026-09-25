@@ -325,6 +325,18 @@ jobs:
         run: pnpm format:check
       - name: Typecheck
         run: pnpm typecheck
+      # CPL-T22, REQ-CPL-022. Les tests NOUVEAUX de la PR, lances contre le code de sa base, doivent
+      # ECHOUER : un test deja vert sur main ne prouve rien de ce que la PR ajoute (RM-02). La garde
+      # pose un arbre de la base a cote, y copie les tests de la PR, les lance un par un, puis retire
+      # l arbre. Seule sortie : `@no-red-first:` suivi d une justification, IMPRIMEE. Sur `push`, il
+      # n y a pas de PR a juger : l etape ne tourne que sur `pull_request`. Ici, et pas dans un
+      # workflow a part : seul `gate-a` est un check requis, et une garde qui ne bloque rien ne garde
+      # rien. Avant `Tests`, pour que son rouge se lise avant celui de la suite.
+      - name: red-first — les tests nouveaux de la PR rougissent contre sa base
+        if: github.event_name == 'pull_request'
+        run: pnpm red-first --base "origin/${{ github.base_ref }}"
+      - name: La garde red-first sait rougir
+        run: pnpm red-first:prove
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
       # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
       # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
