@@ -17,6 +17,7 @@
  * qui serve est assemblé à l'exécution à partir d'un compte marqué `TEMOINSEC08`.
  */
 
+import { createHash } from 'node:crypto';
 import { describe, it, expect } from 'vitest';
 import { NOMS_DES_SECRETS, kidDe } from '../../../src/lib/env';
 import { cleIbanValide } from '../../../src/lib/forme-iban';
@@ -115,6 +116,15 @@ describe('REQ-SEC-024 — les clés viennent de SEC-01, une par usage', () => {
     const autres = clesPii({ ...ENV, IP_HASH_SALT: valeurTemoin('autre-sel') });
     expect(empreinteRecherche('courriel', CLAIR, autres)).toBe(EMPREINTE_COURRIEL);
     expect(empreinteAdresseReseau('192.0.2.10', autres)).not.toBe(EMPREINTE_IP4);
+  });
+
+  it('REQ-SEC-024 : pas d’oracle sans la clé — l’empreinte n’est pas un SHA-256 nu, et elle change avec PII_HASH_KEY', () => {
+    const nu = createHash('sha256').update('+33639981234', 'utf8').digest('hex');
+    expect(empreinteRecherche('telephone', '06 39 98 12 34', CLES)).not.toBe(nu);
+    const autreCle = clesPii({ ...ENV, PII_HASH_KEY: valeurTemoin('autre-cle') });
+    expect(empreinteRecherche('telephone', '06 39 98 12 34', autreCle)).not.toBe(
+      empreinteRecherche('telephone', '06 39 98 12 34', CLES)
+    );
   });
 
   it('REQ-SEC-024 : un environnement que SEC-01 refuse ne donne aucune clé — absente, trop courte ou partagée', () => {
