@@ -809,23 +809,31 @@ describe('REQ-JUR-003 — les lecteurs du gabarit et du registre, sur leurs cas 
   });
 
   it('REQ-JUR-003 — le registre se lit ligne à ligne, une rangée vide ne produit rien', () => {
+    // Le lecteur UNIQUE du registre (GOV-027) : « ✅ *Tranchée le …* » rend sa date, comme
+    // « ✅ *tranchée …* » — l'ancien doublon de ce module rendait `null` sur la première forme.
     const lignes = lignesDuRegistre(
-      '## 1. Titre\n\n|\n| **W1** ✅ *tranchée 2026-09-03* | x | **avenant** |\n## 2. Hyp\n| HYP-X | y | — |'
+      '## 1. Titre\n\n|\n| **W1** ✅ *tranchée 2026-09-03* | x | y |\n' +
+        '| **W16** ✅ *Tranchée le 2026-09-30* | x | y |\n' +
+        '## 2. Hyp\n| HYP-X | y | z | paramètre | 1 | — | — |'
     );
     expect(lignes.map((l) => [l.id, l.tranchee, l.avenant])).toEqual([
-      ['W1', '2026-09-03', true],
+      ['W1', '2026-09-03', false],
+      ['W16', '2026-09-30', false],
       ['HYP-X', null, false],
     ]);
   });
 
   it('REQ-JUR-003 — « avenant » est une CATÉGORIE de cellule, pas un mot de la prose', () => {
+    // La colonne « Réversibilité » de la §2, lue comme `gov:hypotheses` la lit : emphase retirée.
     const lignes = lignesDuRegistre(
-      '## 2. Hyp\n| HYP-P | un **avenant** envoyé ne change rien | paramètre | — |\n' +
-        '| HYP-A | objet | **avenant** | — |'
+      '## 2. Hyp\n| HYP-P | un **avenant** envoyé ne change rien | d | paramètre | 2 | — | — |\n' +
+        '| HYP-A | objet | d | **avenant** | 2 | premier DocuSeal | — |\n' +
+        '| HYP-B | objet | d | avenant | 2 | premier DocuSeal | 2026-09-25 |'
     );
-    expect(lignes.map((l) => [l.id, l.avenant])).toEqual([
-      ['HYP-P', false],
-      ['HYP-A', true],
+    expect(lignes.map((l) => [l.id, l.avenant, l.tranchee])).toEqual([
+      ['HYP-P', false, null],
+      ['HYP-A', true, null],
+      ['HYP-B', true, '2026-09-25'],
     ]);
   });
 

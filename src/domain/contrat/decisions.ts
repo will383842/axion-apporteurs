@@ -20,6 +20,7 @@
  *
  * PUR : le registre et le gabarit arrivent en texte.
  */
+import { lireRegistre } from '../registre/registre-decisions';
 import { clausesPosees, normaliser, paliersDeLAnnexe1, unitesDuGabarit } from './gabarit';
 
 // ── le registre, lu ──────────────────────────────────────────────────────────────────────────
@@ -30,43 +31,23 @@ export type LigneDeDecision = {
   readonly texte: string;
   /** La date ISO de l'arbitrage de Will, ou `null`. */
   readonly tranchee: string | null;
-  /** Vrai si la ligne est marquée `**avenant**` : elle touche le contrat signé. */
+  /** Vrai si sa réversibilité est `avenant` : elle touche le contrat signé. */
   readonly avenant: boolean;
 };
 
-/** Les lignes des sections 1 (« sans valeur par défaut ») et 2 (« hypothèses ») du registre. */
+/**
+ * Les lignes des sections 1 (« sans valeur par défaut ») et 2 (« hypothèses ») du registre, LUES
+ * par le lecteur unique (GOV-027) — ce module n'en découpe aucune (A09 · simplicite, PR #92). Il
+ * n'ajoute que ce que les ancrages consomment : le texte normalisé, et la catégorie `avenant` lue
+ * dans la colonne « Réversibilité » que le lecteur rend.
+ */
 export function lignesDuRegistre(md: string): LigneDeDecision[] {
-  const lignes: LigneDeDecision[] = [];
-  let section = 0;
-  for (const brute of md.split(/\r?\n/)) {
-    const titre = /^## (\d+)\./.exec(brute);
-    if (titre !== null) {
-      section = Number(titre[1]);
-      continue;
-    }
-    if ((section !== 1 && section !== 2) || !brute.startsWith('|')) continue;
-    const cellules = brute
-      .split('|')
-      .slice(1, -1)
-      .map((c) => normaliser(c));
-    const id = /^([A-Z][A-Za-z0-9-]*)/.exec(cellules[0] ?? '');
-    if (id === null || id[1] === 'Id' || /^-+$/.test(cellules[0]!)) continue;
-    const tranchee =
-      section === 1
-        ? (/tranchée (\d{4}-\d{2}-\d{2})/.exec(cellules[0]!)?.[1] ?? null)
-        : (/^(\d{4}-\d{2}-\d{2})$/.exec(cellules[cellules.length - 1]!)?.[1] ?? null);
-    lignes.push({
-      id: id[1]!,
-      texte: normaliser(brute),
-      tranchee,
-      // la CATÉGORIE de la ligne, pas un mot de sa prose : une cellule qui vaut `**avenant**`
-      avenant: brute
-        .split('|')
-        .slice(1, -1)
-        .some((c) => c.trim() === '**avenant**'),
-    });
-  }
-  return lignes;
+  return [...lireRegistre(md).parId.values()].map((d) => ({
+    id: d.id,
+    texte: normaliser(d.brute),
+    tranchee: d.trancheeLe,
+    avenant: d.reversibilite === 'avenant',
+  }));
 }
 
 export type ReferenceDArticle = { readonly article: string; readonly alinea: number | null };
