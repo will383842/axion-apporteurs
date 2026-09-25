@@ -111,7 +111,8 @@
     "securite:rate-famille:prove": "tsx scripts/gates/rate-famille.ts --prove",
     "securite:annee-naissance": "tsx scripts/gates/aucun-annee-de-naissance.ts",
     "securite:annee-naissance:prove": "tsx scripts/gates/aucun-annee-de-naissance.ts --prove",
-    "integration:contrat-gouv": "tsx src/server/integrations/recherche-entreprises/derive-nocturne.ts"
+    "integration:contrat-gouv": "tsx src/server/integrations/recherche-entreprises/derive-nocturne.ts",
+    "prevol": "tsx scripts/prevol.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
