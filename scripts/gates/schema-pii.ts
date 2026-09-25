@@ -27,8 +27,10 @@
  *
  * LIMITE DÉCLARÉE : une clé calculée (`[nom]: …`), une écriture par SQL brut, une colonne `Json`
  * qui porterait une personne, un objet construit HORS de l'expression de la clé (une variable)
- * puis passé ou étalé en `data`, une fonction locale qui porterait le nom d'un producteur, et tout
- * ce qui vit hors de `src/` relèvent de la revue. La garde lit des NOMS ; elle ne suit pas les
+ * puis passé ou étalé en `data`, des clés qui ne sont pas des propriétés littérales
+ * (`Object.fromEntries`, `Object.assign` d'une variable), une fonction locale ou une méthode
+ * homonyme d'une fonction de `pii.ts` (`aide.colonnesPii(…)`, admise ou exemptée par son seul nom),
+ * et tout ce qui vit hors de `src/` relèvent de la revue. La garde lit des NOMS ; elle ne suit pas les
  * valeurs.
  * Le vert imprime le compte des champs, des fichiers et des sites d'écriture RÉELLEMENT confrontés.
  *
@@ -200,53 +202,45 @@ const appelDUnProducteur = (e: ts.Expression): boolean =>
   ts.isCallExpression(e) && PRODUCTEURS.has(nomAppele(e));
 
 /**
- * Vrai si TOUTE valeur que l'expression peut prendre est admise : un littéral admis, ou (pour une
- * empreinte) l'appel d'un producteur. Un ternaire est jugé sur ses deux branches ; `a || b` et
- * `a ?? b` sur leurs deux opérandes ; `a && b` sur `b` seul (`a` n'en sort que faux : `''`, `0`,
- * `false`, `null`, `undefined`, qui ne portent personne). Toute autre forme : non admise.
+ * LA règle de descente, écrite une fois : les expressions dont la valeur peut SORTIR de `e`.
+ * Un ternaire rend ses deux branches ; `a || b` et `a ?? b` leurs deux opérandes ; `a && b` rend
+ * `b` seul (`a` n'en sort que faux : `''`, `0`, `false`, `null`, `undefined`, qui ne portent
+ * personne) ; parenthèses, `as`, `satisfies`, `!` et `<T>x` sont traversés. Toute autre forme
+ * (appel, identifiant, accès, littéral…) est une issue, rendue telle quelle.
  */
-function valeurAdmise(expression: ts.Expression, producteur: boolean): boolean {
+function issues(expression: ts.Expression): ts.Expression[] {
   const e = deballer(expression);
-  if (litteralAdmis(e) || (producteur && appelDUnProducteur(e))) return true;
-  if (ts.isConditionalExpression(e)) {
-    return valeurAdmise(e.whenTrue, producteur) && valeurAdmise(e.whenFalse, producteur);
-  }
+  if (ts.isConditionalExpression(e)) return [...issues(e.whenTrue), ...issues(e.whenFalse)];
   if (ts.isBinaryExpression(e)) {
     const op = e.operatorToken.kind;
-    if (op === ts.SyntaxKind.AmpersandAmpersandToken) return valeurAdmise(e.right, producteur);
+    if (op === ts.SyntaxKind.AmpersandAmpersandToken) return issues(e.right);
     if (op === ts.SyntaxKind.BarBarToken || op === ts.SyntaxKind.QuestionQuestionToken) {
-      return valeurAdmise(e.left, producteur) && valeurAdmise(e.right, producteur);
+      return [...issues(e.left), ...issues(e.right)];
     }
   }
-  return false;
+  return [e];
 }
 
+/** Vrai si CHAQUE issue est un littéral admis ou (pour une empreinte) l'appel d'un producteur. */
+const valeurAdmise = (e: ts.Expression, producteur: boolean): boolean =>
+  issues(e).every((i) => litteralAdmis(i) || (producteur && appelDUnProducteur(i)));
+
 /**
- * Les littéraux d'objet ATTEINTS depuis la valeur d'une clé d'écriture : la descente traverse les
- * objets (valeurs de leurs propriétés et étalements), les tableaux, les ternaires (deux branches),
- * `&&` (opérande droit), `||` et `??` (deux opérandes), les parenthèses, `as`, `satisfies` et `!`.
- * Toute autre forme (appel, identifiant, accès…) est opaque : la descente s'y arrête.
+ * Les littéraux d'objet ATTEINTS depuis la valeur d'une clé d'écriture : par les `issues` de
+ * chaque expression, puis dans les objets (valeurs de leurs propriétés et étalements) et les
+ * tableaux. Une issue opaque (appel, identifiant…) arrête la descente.
  */
 function atteindre(expression: ts.Expression, atteints: Set<ts.Node>): void {
-  const e = deballer(expression);
-  if (ts.isObjectLiteralExpression(e)) {
-    if (atteints.has(e)) return;
-    atteints.add(e);
-    for (const p of e.properties) {
-      if (ts.isPropertyAssignment(p)) atteindre(p.initializer, atteints);
-      else if (ts.isSpreadAssignment(p)) atteindre(p.expression, atteints);
-    }
-  } else if (ts.isArrayLiteralExpression(e)) {
-    for (const el of e.elements) atteindre(ts.isSpreadElement(el) ? el.expression : el, atteints);
-  } else if (ts.isConditionalExpression(e)) {
-    atteindre(e.whenTrue, atteints);
-    atteindre(e.whenFalse, atteints);
-  } else if (ts.isBinaryExpression(e)) {
-    const op = e.operatorToken.kind;
-    if (op === ts.SyntaxKind.AmpersandAmpersandToken) atteindre(e.right, atteints);
-    else if (op === ts.SyntaxKind.BarBarToken || op === ts.SyntaxKind.QuestionQuestionToken) {
-      atteindre(e.left, atteints);
-      atteindre(e.right, atteints);
+  for (const e of issues(expression)) {
+    if (ts.isObjectLiteralExpression(e)) {
+      if (atteints.has(e)) continue;
+      atteints.add(e);
+      for (const p of e.properties) {
+        if (ts.isPropertyAssignment(p)) atteindre(p.initializer, atteints);
+        else if (ts.isSpreadAssignment(p)) atteindre(p.expression, atteints);
+      }
+    } else if (ts.isArrayLiteralExpression(e)) {
+      for (const el of e.elements) atteindre(ts.isSpreadElement(el) ? el.expression : el, atteints);
     }
   }
 }
@@ -545,6 +539,31 @@ const TEMOINS: { famille: Famille; vue: () => Vue }[] = [
   {
     famille: 'ecriture_non_jugee',
     vue: () => vue(MODELE_SAIN, 'tx.c.create({ data: (() => ({ id, ipHash: ip }))() });'),
+  },
+  // Chaque témoin ci-dessous rend « admise » une écriture de clair sous un mutant précis de la
+  // garde (revue mutation 5321838301) : le nom du producteur, la clé `update`, chaque branche.
+  ...[
+    'tx.c.create({ data: { id, emailHash: email.toLowerCase() } });',
+    'tx.c.upsert({ where: { id }, create: { id }, update: { emailHash: email } });',
+    "tx.c.create({ data: { id, emailHash: ok ? empreinteRecherche('courriel', e, k) : e } });",
+    'tx.c.create({ data: { id, emailHash: ok && e } });',
+    'tx.c.create({ data: { id, emailHash: e || null } });',
+    'tx.c.create({ data: { id, emailHash: e ?? null } });',
+    'tx.c.update({ where: { id }, data: { ...(c ? {} : { emailHash: e }) } });',
+    'tx.c.update({ where: { id }, data: { ...(b || { emailHash: e }) } });',
+    'tx.c.update({ where: { id }, data: { ...(b ?? { emailHash: e }) } });',
+    'tx.c.create({ data: { id, ipHash: ip } as C });',
+  ].map((contenu) => ({
+    famille: 'empreinte_hors_primitive' as const,
+    vue: () => vue(MODELE_SAIN, contenu),
+  })),
+  {
+    famille: 'chiffre_hors_primitive',
+    vue: () =>
+      vue(
+        MODELE_SAIN,
+        "tx.c.create({ data: { emailChiffre: empreinteRecherche('courriel', e, k) } });"
+      ),
   },
 ];
 
