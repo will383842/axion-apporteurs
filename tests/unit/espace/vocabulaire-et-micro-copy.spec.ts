@@ -21,7 +21,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { FORMULES } from '../../../src/content/micro-copy/espace/vocabulaire';
 import {
   ISSUES_DEPOT,
   ISSUES_DE_REFUS,
@@ -45,6 +46,8 @@ import {
   ecransDeLEspace,
   ecransDeLaConsole,
   libellesEnDur,
+  textesDeLEspace,
+  SOURCES_DU_DEPOT,
   ECRAN_MES_ENTREPRISES,
   ROUTE_DU_DEPOT,
   type Vue,
@@ -159,10 +162,41 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
   });
 
   it('REQ-UX-002 : une valeur ajoutée à l’enum sans son texte fait rougir la garde, qui la NOMME', () => {
+    // Le témoin ne diffère de la référence QUE par le texte absent : l'issue est au contrat et a
+    // son horodatage — sans quoi il rougirait pour une autre raison et ne prouverait rien du texte.
     const base = vueDuDepot();
-    const vue: Vue = { ...base, issuesDeLEnum: [...base.issuesDeLEnum, 'issue_temoin'] };
-    expect(familles(vue)).toContain('issue_sans_texte');
-    expect(messages(vue)).toContain('issue_temoin');
+    const vue: Vue = {
+      ...base,
+      issuesDeLEnum: [...base.issuesDeLEnum, 'issue_temoin'],
+      issuesDuContrat: [...base.issuesDuContrat, 'issue_temoin'],
+      horodatages: { ...base.horodatages, issue_temoin: 'rien_a_votre_nom' },
+    };
+    expect(familles(vue)).toEqual(['issue_sans_texte']);
+    expect(messages(vue)).toContain('IssueDepot.issue_temoin — il lui manque tout son texte');
+  });
+
+  it('REQ-UX-002 REQ-UX-019 : la garde lit le registre et la carte, jamais la micro-copie qu’elle contrôle', () => {
+    // Des sources injectées qui diffèrent du dépôt d'UNE issue au contrat et d'UN écran à la carte :
+    // une vue qui lirait sa population dans la micro-copie (ou dans l'enum) ne les verrait pas.
+    const registre = JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as Registre;
+    for (const e of registre.exigences) {
+      if (e.id === 'REQ-UX-002')
+        e.texte = e.texte.replace('`gele`,', '`gele`, `issue_du_registre`,');
+    }
+    const carte = `${readFileSync('docs/ESPACE-ROUTES.md', 'utf8')}\n| \`/ecran-de-la-carte\` | témoin |\n`;
+    const lire = (chemin: string): string =>
+      chemin === 'docs/requirements.json'
+        ? JSON.stringify(registre)
+        : chemin === 'docs/ESPACE-ROUTES.md'
+          ? carte
+          : readFileSync(chemin, 'utf8');
+    const vue = vueDuDepot({ ...SOURCES_DU_DEPOT, lire });
+    expect([...new Set(familles(vue))].sort()).toEqual([
+      'ecran_sans_etat_vide',
+      'issue_du_contrat_sans_valeur',
+    ]);
+    expect(messages(vue)).toContain('issue_du_registre');
+    expect(messages(vue)).toContain('/ecran-de-la-carte');
   });
 
   it('REQ-UX-002 : une valeur sans base contractuelle fait rougir la garde, qui la NOMME', () => {
@@ -203,6 +237,391 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
     const vue: Vue = { ...base, refusDeclares: [...base.refusDeclares, 'gele'] };
     expect(familles(vue)).toContain('refus_mal_declare');
     expect(messages(vue)).toContain('gele');
+  });
+});
+
+// ── 1 bis. REQ-UX-002 : ni qui ni quand, dans TOUS les textes de l'espace ───────
+
+/**
+ * Pose `valeur` au bout de `chemin` dans la micro-copie de l'espace que la vue porte — une COPIE :
+ * la source n'est jamais touchée. C'est ainsi qu'on injecte un texte piégé là où un écran le lirait.
+ */
+function avecTexte(base: Vue, fichier: string, chemin: readonly string[], valeur: string): Vue {
+  const poser = (o: unknown, reste: readonly string[]): Record<string, unknown> => {
+    const copie: Record<string, unknown> = { ...(o ?? {}) };
+    const [tete, ...suite] = reste;
+    copie[tete!] = suite.length === 0 ? valeur : poser(copie[tete!], suite);
+    return copie;
+  };
+  return { ...base, microCopieEspace: poser(base.microCopieEspace, [fichier, ...chemin]) };
+}
+
+describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que son contexte permet', () => {
+  it('REQ-UX-002 : la collision au dépôt (en_attente) qui nomme et date l’autre apporteur rougit', () => {
+    const vue = avecTexte(
+      vueDuDepot(),
+      'espace/issues-depot.ts',
+      ['TEXTES_DES_ISSUES', 'en_attente', 'pourquoi'],
+      'Cette entreprise est déjà réservée par {nomAutreApporteur} depuis le {dateDepotAutre}.'
+    );
+    expect(familles(vue)).toContain('parametre_non_permis');
+    expect(messages(vue)).toContain('en_attente');
+    expect(messages(vue)).toContain('{nomAutreApporteur}');
+    expect(messages(vue)).toContain('{dateDepotAutre}');
+  });
+
+  it('REQ-UX-002 : un libellé d’ACTION qui nomme l’autre apporteur rougit aussi', () => {
+    const vue = avecTexte(
+      vueDuDepot(),
+      'espace/issues-depot.ts',
+      ['TEXTES_DES_ISSUES', 'etablissement_cesse', 'actionSecondaire', 'libelle'],
+      'Voir le dépôt de {autreApporteur}'
+    );
+    expect(familles(vue)).toContain('parametre_non_permis');
+    expect(messages(vue)).toContain('etablissement_cesse › actionSecondaire › libelle');
+    expect(messages(vue)).toContain('{autreApporteur}');
+  });
+
+  it('REQ-UX-002 : la saisie reflétée {recherche} n’est permise que sur l’écran de recherche', () => {
+    const vue = avecTexte(
+      vueDuDepot(),
+      'espace/etats-vides.ts',
+      ['ETATS_VIDES_ESPACE', '/aide', 'phrase'],
+      'Vous avez cherché « {recherche} ».'
+    );
+    expect(familles(vue)).toEqual(['parametre_non_permis']);
+    expect(messages(vue)).toContain('/aide');
+  });
+
+  it('REQ-UX-002 : contre-témoin — la date de fin, seule permise à la collision (REQ-SEC-022), reste verte', () => {
+    const vue = avecTexte(
+      vueDuDepot(),
+      'espace/issues-depot.ts',
+      ['TEXTES_DES_ISSUES', 'en_attente', 'pourquoi'],
+      'Cette entreprise est déjà réservée pour un autre apporteur jusqu’au {dateFin}.'
+    );
+    expect(familles(vue)).toEqual([]);
+    expect(familles(vueDuDepot())).toEqual([]);
+  });
+
+  it('REQ-UX-002 : un délai écrit en clair à la place de son paramètre rougit (RM-10)', () => {
+    const vue = avecTexte(
+      vueDuDepot(),
+      'espace/etats-vides.ts',
+      ['ETATS_VIDES_ESPACE', '/aide', 'phrase'],
+      'Vous pouvez écrire à Axion-IA quand vous le souhaitez. Axion-IA vous répond sous 48 heures.'
+    );
+    expect(familles(vue)).toEqual(['valeur_en_clair']);
+    expect(messages(vue)).toContain('/aide');
+    expect(messages(vue)).toContain('« 48 »');
+  });
+
+  it('REQ-UX-002 : un fichier de micro-copie de l’espace que la garde ne lit pas rougit, nommé', () => {
+    const base = vueDuDepot();
+    const nouveau = 'src/content/micro-copy/espace/nouvel-ecran.ts';
+    const vue: Vue = { ...base, fichiersDeMicroCopie: [...base.fichiersDeMicroCopie, nouveau] };
+    expect(familles(vue)).toEqual(['micro_copie_non_lue']);
+    expect(messages(vue)).toContain(nouveau);
+  });
+
+  it('REQ-UX-002 : un texte injecté en HTML brut dans un composant rougit — la saisie reste un nœud texte', () => {
+    const chemin = 'src/app/(espace)/entreprise/page.tsx';
+    const contenu = [
+      "import { ETATS_VIDES_ESPACE } from '@/content/micro-copy/espace/etats-vides';",
+      "const e = ETATS_VIDES_ESPACE['/entreprise?q=']!;",
+      'export const P = () => <p dangerouslySetInnerHTML={{ __html: e.phrase }} />;',
+    ].join('\n');
+    const vue: Vue = { ...vueDuDepot(), composants: [{ chemin, contenu }] };
+    expect(familles(vue)).toEqual(['html_brut']);
+    expect(messages(vue)).toContain(`${chemin}:3`);
+  });
+});
+
+// ── 1 ter. REQ-UX-002 : le snapshot des libellés, sans date, sans nom, sans UUID ─
+
+/** Les marques et les noms d'écran qui portent une capitale en milieu de phrase — rien d'autre. */
+const CAPITALES_ADMISES = new Set(['Axion-IA', 'Société', 'OPCO', 'RIB', 'Mes']);
+const DATE_LITTERALE =
+  /\b\d{1,2}(er)?\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}\b/i;
+const UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i;
+const COURRIEL = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
+
+/**
+ * Ce qu'un libellé du snapshot révèle et ne doit pas révéler : une date écrite, un UUID, une
+ * adresse, ou un nom propre — une capitale en milieu de phrase, hors des marques admises. Les
+ * paramètres `{…}` hors liste blanche sont jugés par la garde (famille `parametre_non_permis`).
+ */
+function fuites(lignes: readonly { chemin: string; texte: string }[]): string[] {
+  const trouvees: string[] = [];
+  for (const { chemin, texte: brut } of lignes) {
+    // Un paramètre `{…}` n'est pas un nom : il est jugé par la liste blanche de la garde.
+    const texte = brut.replace(/\{[^}]*\}/g, '{}');
+    for (const [nom, motif] of [
+      ['une date', DATE_LITTERALE],
+      ['un UUID', UUID],
+      ['une adresse', COURRIEL],
+    ] as const) {
+      if (motif.test(texte)) trouvees.push(`${chemin} — ${nom} : « ${texte} »`);
+    }
+    for (const m of texte.matchAll(/\p{Lu}[\p{L}\p{M}'’-]*/gu)) {
+      const avant = texte.slice(0, m.index).trimEnd();
+      const enTete = avant === '' || /[.!?:;«—]$/.test(avant);
+      if (!enTete && !CAPITALES_ADMISES.has(m[0])) {
+        trouvees.push(`${chemin} — un nom propre (« ${m[0]} ») : « ${texte} »`);
+      }
+    }
+  }
+  return trouvees;
+}
+
+describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans nom, sans UUID', () => {
+  it('REQ-UX-002 : le snapshot de TOUS les libellés rendus (tout champ chaîne, toute profondeur)', () => {
+    const lignes = textesDeLEspace(vueDuDepot());
+    expect(lignes.length).toBeGreaterThanOrEqual(100);
+    expect(lignes.map((l) => `${l.chemin} : ${l.texte}`).join('\n')).toMatchInlineSnapshot(`
+      "espace/issues-depot.ts › MENTIONS_HORODATAGE › a_votre_nom : Enregistré à votre nom le {dateEnregistrement}.
+      espace/issues-depot.ts › MENTIONS_HORODATAGE › rien_a_votre_nom : Rien n'est enregistré à votre nom.
+      espace/issues-depot.ts › MENTIONS_HORODATAGE › a_la_reception : Enregistré sur votre téléphone — l'heure retenue est celle de la réception par Axion-IA.
+      espace/issues-depot.ts › MENTION_DU_REFUS : Ce refus n'a aucune autre conséquence pour vous et n'est pas un manquement.
+      espace/issues-depot.ts › CONTESTATION_ECRITE › libelle : Contester ce refus par écrit
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › enregistree › pastille : Enregistré
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › enregistree › titre : C'est enregistré à votre nom
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › enregistree › pourquoi : Cette entreprise n'était réservée pour aucun autre apporteur.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › enregistree › quoiFaire : Axion-IA appelle {contact} avant le {dateAppel}. Rien à faire de votre côté : chaque étape s'affiche dans Mes entreprises.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › enregistree › actionPrincipale › libelle : Déposer une autre entreprise
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › enregistree › actionPrincipale › route : /deposer
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › enregistree › actionSecondaire › libelle : Voir Mes entreprises
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › enregistree › actionSecondaire › route : /mes-entreprises
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire › pastille : Enregistré
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire › titre : C'est enregistré à votre nom
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire › pourquoi : Axion-IA souhaite échanger avec vous avant d'appeler l'entreprise. Cela ne dit rien de votre dépôt.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire › quoiFaire : Axion-IA essaiera de vous joindre d'ici le {dateAppel}. Si vous n'êtes pas disponible, rien ne change : votre dépôt garde son heure d'enregistrement et continue normalement.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire › actionPrincipale › libelle : Déposer une autre entreprise
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire › actionPrincipale › route : /deposer
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire › actionSecondaire › libelle : Voir Mes entreprises
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire › actionSecondaire › route : /mes-entreprises
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › pastille : En attente
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › titre : Enregistré en attente
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › pourquoi : Cette entreprise est déjà réservée pour un autre apporteur. Votre dépôt attend, avec son heure d’envoi.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › quoiFaire : Si ce droit prend fin, votre dépôt prend la suite, à l'heure où vous l'avez envoyé. Rien à faire de votre côté : vous serez prévenu.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionPrincipale › libelle : Déposer une autre entreprise
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionPrincipale › route : /deposer
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionSecondaire › libelle : Voir Mes entreprises
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › actionSecondaire › route : /mes-entreprises
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › pastille : Pas enregistré
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › titre : Pas enregistré : l'attente est complète
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › pourquoi : Cette entreprise est déjà réservée pour un autre apporteur, et l'attente prévue par le contrat est complète (article 3.3 bis).
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › quoiFaire : Rien à faire. Vous pourrez la vérifier à nouveau plus tard.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › actionPrincipale › libelle : Retour à l'accueil
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › actionPrincipale › route : /
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › actionSecondaire › libelle : Déposer une autre entreprise
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › file_complete › actionSecondaire › route : /deposer
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_client › pastille : Pas enregistré
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_client › titre : Pas enregistré : entreprise déjà connue de la Société
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_client › pourquoi : Axion-IA était déjà en relation avec cette entreprise avant votre dépôt (contrat, article 3.3).
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_client › quoiFaire : Rien à faire.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_client › actionPrincipale › libelle : Retour à l'accueil
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_client › actionPrincipale › route : /
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_client › actionSecondaire › libelle : Déposer une autre entreprise
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_client › actionSecondaire › route : /deposer
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_devis › pastille : Pas enregistré
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_devis › titre : Pas enregistré : entreprise déjà connue de la Société
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_devis › pourquoi : Axion-IA était déjà en relation avec cette entreprise avant votre dépôt (contrat, article 3.3).
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_devis › quoiFaire : Rien à faire.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_devis › actionPrincipale › libelle : Retour à l'accueil
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_devis › actionPrincipale › route : /
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_devis › actionSecondaire › libelle : Déposer une autre entreprise
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › anteriorite_devis › actionSecondaire › route : /deposer
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › etablissement_cesse › pastille : Pas enregistré
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › etablissement_cesse › titre : Pas enregistré : cet établissement est fermé
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › etablissement_cesse › pourquoi : Le registre public des entreprises indique que cet établissement a cessé son activité (contrat, article 3.3 bis).
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › etablissement_cesse › quoiFaire : Si l'entreprise a déménagé, sa nouvelle adresse est un autre établissement : vous pouvez le chercher.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › etablissement_cesse › actionPrincipale › libelle : Retour à l'accueil
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › etablissement_cesse › actionPrincipale › route : /
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › etablissement_cesse › actionSecondaire › libelle : Chercher un autre établissement
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › etablissement_cesse › actionSecondaire › route : /entreprise?q=
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › entreprise_hors_perimetre › pastille : Pas enregistré
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › entreprise_hors_perimetre › titre : Pas enregistré : cette structure est hors du contrat
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › entreprise_hors_perimetre › pourquoi : Le contrat met à part les administrations, les organismes qui financent la formation et les organismes de formation qui travaillent avec Axion-IA (article 3.3 bis).
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › entreprise_hors_perimetre › quoiFaire : Rien à faire. La liste des structures mises à part peut être consultée.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › entreprise_hors_perimetre › actionPrincipale › libelle : Retour à l'accueil
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › entreprise_hors_perimetre › actionPrincipale › route : /
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › entreprise_hors_perimetre › actionSecondaire › libelle : Voir la liste des structures mises à part
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › opposition_demarchage › pastille : Pas enregistré
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › opposition_demarchage › titre : Pas enregistré : l'entreprise ne souhaite pas être sollicitée
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › opposition_demarchage › pourquoi : Cette entreprise a demandé à ne pas recevoir de sollicitations (contrat, article 3.3 bis).
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › opposition_demarchage › quoiFaire : Rien à faire.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › opposition_demarchage › actionPrincipale › libelle : Retour à l'accueil
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › opposition_demarchage › actionPrincipale › route : /
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › opposition_demarchage › actionSecondaire › libelle : Déposer une autre entreprise
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › opposition_demarchage › actionSecondaire › route : /deposer
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › gele › pastille : Pas enregistré
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › gele › titre : Pas enregistré : vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › gele › pourquoi : Vos nouveaux dépôts sont suspendus depuis le {dateSuspension}. Le courrier électronique reçu ce jour-là en donne la raison et vous dit comment nous répondre.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › gele › quoiFaire : Vous pouvez répondre à ce courrier, ou écrire à Axion-IA. Vos entreprises déjà déposées ne changent pas.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › gele › actionPrincipale › libelle : Écrire à Axion-IA
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › gele › actionPrincipale › route : /aide
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › gele › actionSecondaire › libelle : Retour à l'accueil
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › gele › actionSecondaire › route : /
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › captcha › pastille : En attente
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › captcha › titre : Encore une petite vérification
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › captcha › pourquoi : Pour protéger le service des envois automatiques, nous vérifions que c'est bien vous.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › captcha › quoiFaire : Votre saisie est gardée : rien à retaper.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › captcha › actionPrincipale › libelle : Envoyer le dépôt
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › pastille : En attente
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › titre : Enregistré sur votre téléphone
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › pourquoi : Pas de réseau.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › quoiFaire : Il part tout seul dès le retour du réseau ; le téléphone de {contact} vous sera alors demandé. S'il n'est pas parti le {dateEffacement}, il s'efface de ce téléphone.
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › libelle : Retour à l'accueil
+      espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne › actionPrincipale › route : /
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › titre : Bienvenue dans votre espace
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › phrase : Quand vous rencontrez une entreprise qui pourrait former ses salariés, vous pouvez taper son nom ci-dessous. Vous vérifiez qu'elle est libre, vous dites qui vous avez rencontré, et Axion-IA l'appelle. Si elle signe, vous touchez une commission.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › action › libelle : Vérifier
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › / › action › route : /entreprise?q=
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › titre : Vos entreprises apparaîtront ici
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › phrase : Quand vous déposez une entreprise, chaque étape s'affiche ici : l'appel d'Axion-IA, le rendez-vous, la signature.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › action › libelle : Déposer une entreprise
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-entreprises › action › route : /deposer
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › titre : Pas encore de commission
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › phrase : Elles apparaissent ici quand une entreprise que vous avez déposée signe, puis quand elle paie. Vous verrez alors ce que vous touchez, quand, et d'où vient chaque montant.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › action › libelle : Retour à l'accueil
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /mes-commissions › action › route : /
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /plus › titre : Le reste de votre espace
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /plus › phrase : Vos documents, votre conformité, votre profil, les ressources et l'aide se trouvent ici.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /plus › action › libelle : Retour à l'accueil
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /plus › action › route : /
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /entreprise?q= › titre : Aucune entreprise trouvée
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /entreprise?q= › phrase : Pour « {recherche} ». Vous pouvez essayer avec moins de mots, ou seulement le nom. Vous pouvez aussi donner son nom, sa ville et son code postal : Axion-IA la retrouvera.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /entreprise?q= › action › libelle : Je ne trouve pas l'entreprise
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /entreprise?q= › action › route : /deposer
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /deposer › titre : Déposer une entreprise
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /deposer › phrase : Dès que vous tapez son nom, les entreprises s'affichent sous le champ.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /deposer › action › libelle : Envoyer le dépôt
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /d/<jeton> › titre : Déposer une entreprise
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /d/<jeton> › phrase : Ce lien sert seulement à déposer une entreprise. Dès que vous tapez son nom, les entreprises s'affichent sous le champ.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /d/<jeton> › action › libelle : Envoyer le dépôt
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /documents › titre : Aucun document pour le moment
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /documents › phrase : Votre contrat, chaque relevé de commissions, chaque autofacture et le récapitulatif annuel des commissions versées apparaîtront ici.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /documents › action › libelle : Retour à l'accueil
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /documents › action › route : /
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /filleuls › titre : Pas encore de montant de parrainage
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /filleuls › phrase : Si vous le souhaitez, vous pouvez partager votre lien de parrainage. Le montant qui vous en revient s'affichera ici, mois par mois.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /filleuls › action › libelle : Partager mon lien de parrainage
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /conformite › titre : Aucune pièce déposée
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /conformite › phrase : Chaque pièce s’affiche ici avec son état, et ce qu’elle change pour vos versements. Vous pouvez les envoyer quand vous le souhaitez.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /conformite › action › libelle : Envoyer une pièce
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil › titre : Votre profil
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil › phrase : Votre adresse électronique, votre RIB et vos préférences de notification se règlent ici.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /profil › action › libelle : Modifier mon profil
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /activite › titre : Rien à afficher pour le moment
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /activite › phrase : Vos entreprises déposées et vos commissions s'afficheront ici, en chiffres simples.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /activite › action › libelle : Retour à l'accueil
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /activite › action › route : /
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /ressources › titre : Aucune ressource pour le moment
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /ressources › phrase : Des documents mis à votre disposition, à consulter librement, apparaîtront ici.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /ressources › action › libelle : Retour à l'accueil
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /ressources › action › route : /
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide › titre : Aucune conversation
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide › phrase : Vous pouvez écrire à Axion-IA quand vous le souhaitez. Axion-IA vous répond sous {delaiDeReponse}.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide › action › libelle : Écrire à Axion-IA
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion › titre : Se connecter
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion › phrase : Votre adresse électronique suffit : si elle est connue, un lien de connexion vous est envoyé.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion › action › libelle : Recevoir un lien de connexion
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › titre : Ce lien a déjà servi
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › phrase : Un lien de connexion ne sert qu’une fois. Un nouveau lien peut vous être envoyé.
+      espace/etats-vides.ts › ETATS_VIDES_ESPACE › /connexion/<jeton> › action › libelle : M'envoyer un nouveau lien
+      espace/vocabulaire.ts › FORMULES › droitACommissionJusquau : Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.
+      espace/vocabulaire.ts › FORMULES › dejaReservee : déjà réservée pour un autre apporteur
+      espace/vocabulaire.ts › FORMULES › finDuDroit : si ce droit prend fin
+      espace/vocabulaire.ts › FORMULES › sansSuite : Sans suite
+      espace/vocabulaire.ts › FORMULES › depotsSuspendus : vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA
+      espace/vocabulaire.ts › FORMULES › courrierDeSuspension : Le courrier électronique du {dateCourrier} en donne la raison et vous dit comment nous répondre.
+      espace/vocabulaire.ts › FORMULES › raisonDuCourrier : en donne la raison et vous dit comment nous répondre.
+      espace/vocabulaire.ts › FORMULES › assuranceManquante : rien ne change pour vos versements
+      espace/vocabulaire.ts › FORMULES › reprise : Reprise
+      espace/vocabulaire.ts › FORMULES › reglementAttenduDeLEntreprise : Règlement attendu de l'entreprise
+      espace/vocabulaire.ts › FORMULES › reglementAttenduDeLOpco : Règlement attendu de l'OPCO de l'entreprise
+      espace/vocabulaire.ts › FORMULES › limiteDeVerification : La vérification est limitée à {limiteParJour} par jour, pour protéger les informations des entreprises. Le dépôt, lui, reste ouvert.
+      espace/vocabulaire.ts › FORMULES › contratPret : Votre contrat est prêt. Une fois signé, vous pourrez, si vous le souhaitez, déposer des entreprises.
+      espace/vocabulaire.ts › FORMULES › pieceManquanteAvantContrat : Il manque une pièce pour préparer votre contrat
+      espace/vocabulaire.ts › FORMULES › releveParCourrierElectronique : Chaque relevé vous est envoyé par courrier électronique ; il indique les mentions à reporter sur votre facture.
+      espace/vocabulaire.ts › FORMULES › numeroDEntreprise : numéro d'entreprise
+      espace/vocabulaire.ts › FORMULES › rienAFaire : Rien à faire de votre côté
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › retourAccueil › libelle : Retour à l'accueil
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › retourAccueil › route : /
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › envoyerLeDepot › libelle : Envoyer le dépôt
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › deposerUneEntreprise › libelle : Déposer une entreprise
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › deposerUneEntreprise › route : /deposer
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › ecrireAAxionIA › libelle : Écrire à Axion-IA
+      espace/vocabulaire.ts › ACTIONS_COMMUNES › ecrireAAxionIA › route : /aide
+      espace/vocabulaire.ts › NAVIGATION_AVANT_SIGNATURE › 0 : Ma conformité
+      espace/vocabulaire.ts › NAVIGATION_AVANT_SIGNATURE › 1 : Mon contrat"
+    `);
+  });
+
+  it('REQ-UX-002 : aucun libellé du snapshot ne porte de date, de nom, d’UUID ni de paramètre hors liste', () => {
+    expect(fuites(textesDeLEspace(vueDuDepot()))).toEqual([]);
+    expect(familles(vueDuDepot())).toEqual([]);
+  });
+
+  it('REQ-UX-002 : témoin — un libellé piégé (nom, date, UUID) est vu par la lecture du snapshot', () => {
+    const piege = {
+      chemin: 'espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente › pourquoi',
+      texte:
+        'Déjà réservée par Jean Dupont depuis le 12 mars, dossier 3f2a9c1e-0b4d-4c8e-9a1f-2b3c4d5e6f70.',
+    };
+    const vues = fuites([piege]);
+    expect(vues.some((v) => v.includes('une date'))).toBe(true);
+    expect(vues.some((v) => v.includes('un UUID'))).toBe(true);
+    expect(vues.some((v) => v.includes('« Jean »'))).toBe(true);
+    expect(vues.some((v) => v.includes('« Dupont »'))).toBe(true);
+  });
+});
+
+// ── 1 quater. une formule, un libellé d'action : écrits UNE fois (RM-01) ─────────
+
+describe('REQ-UX-002 REQ-UX-019 — une formule ou un libellé d’action s’écrit une seule fois', () => {
+  const DOSSIER = 'src/content/micro-copy/espace';
+  const sources = readdirSync(DOSSIER)
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => ({ fichier: f, contenu: readFileSync(`${DOSSIER}/${f}`, 'utf8') }));
+  /** Les libellés d'action, lus dans la micro-copie elle-même — jamais retapés ici. */
+  const libellesDAction = [
+    ...Object.values(TEXTES_DES_ISSUES).flatMap((t) => [t.actionPrincipale, t.actionSecondaire]),
+    ...Object.values(ETATS_VIDES_ESPACE).map((e) => e.action),
+    CONTESTATION_ECRITE,
+  ].flatMap((a) => (a === null ? [] : [a.libelle]));
+
+  it('REQ-UX-019 : chaque libellé d’action de l’espace est écrit dans UN seul littéral', () => {
+    const libelles = [...new Set(libellesDAction)];
+    expect(libelles.length).toBeGreaterThanOrEqual(10);
+    for (const libelle of libelles) {
+      const fois = sources
+        .map(
+          (s) =>
+            s.contenu.split(`'${libelle}'`).length - 1 + s.contenu.split(`"${libelle}"`).length - 1
+        )
+        .reduce((a, b) => a + b, 0);
+      expect([libelle, fois]).toEqual([libelle, 1]);
+    }
+  });
+
+  it('REQ-UX-002 : une formule de FORMULES n’est retapée dans aucun autre fichier de l’espace', () => {
+    // Au mot entier, sans égard à la capitale : « Reprise » n'est pas retapée dans « entreprise »,
+    // mais « Déjà réservée » en tête de phrase est bien la formule « déjà réservée » retapée.
+    const echapper = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const formules = Object.values(FORMULES).flatMap((f) =>
+      f
+        .split(/\{[^}]*\}/)
+        .map((morceau) => morceau.trim())
+        .filter((morceau) => /\p{L}{3}/u.test(morceau))
+    );
+    for (const s of sources.filter((x) => x.fichier !== 'vocabulaire.ts')) {
+      for (const f of formules) {
+        const retapee = new RegExp(`(?<!\\p{L})${echapper(f)}(?!\\p{L})`, 'iu').test(s.contenu);
+        expect([s.fichier, f, retapee]).toEqual([s.fichier, f, false]);
+      }
+    }
   });
 });
 
@@ -368,6 +787,33 @@ describe('REQ-UX-003 — aucun texte vu par un apporteur ne porte les mots refus
         },
       ]);
       expect([t, controlerLexique(vue).fautes.length > 0]).toEqual([t, true]);
+    }
+  });
+
+  it('REQ-UX-003 : chaque forme ajoutée par UX-P0-01, écrite ici en littéral, est refusée', () => {
+    // Écrites ICI, indépendamment de la liste de production : retirer une forme de
+    // `lexique-interdit.ts` doit rougir. `motifDeLaForme` borne au mot entier — le singulier ne
+    // couvre pas le pluriel, d'où les deux formes de chaque mot.
+    const AJOUTEES = [
+      'faute',
+      'fautes',
+      'équipe',
+      'équipes',
+      'attribution',
+      'attributions',
+      'SIREN',
+      'prorata',
+    ];
+    const formes = toutesLesFormes() as readonly string[];
+    for (const mot of AJOUTEES) {
+      expect([mot, formes.includes(mot)]).toEqual([mot, true]);
+      const vue = vueDeFixture([
+        {
+          chemin: 'src/content/micro-copy/espace/etats-vides.ts',
+          contenu: `  phrase: 'Voici le mot ${mot} au milieu',`,
+        },
+      ]);
+      expect([mot, controlerLexique(vue).fautes.length > 0]).toEqual([mot, true]);
     }
   });
 

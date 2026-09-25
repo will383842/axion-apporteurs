@@ -13,8 +13,9 @@
  */
 import { TERMES_CANONIQUES } from '../../../domain/lexique/lexique-interdit';
 import type { EtatVide } from '../types';
+import { ACTIONS_COMMUNES } from './vocabulaire';
 
-const RETOUR_ACCUEIL = { libelle: "Retour à l'accueil", route: '/' } as const;
+const RETOUR_ACCUEIL = ACTIONS_COMMUNES.retourAccueil;
 
 export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
   '/': {
@@ -27,7 +28,7 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
     titre: 'Vos entreprises apparaîtront ici',
     phrase:
       "Quand vous déposez une entreprise, chaque étape s'affiche ici : l'appel d'Axion-IA, le rendez-vous, la signature.",
-    action: { libelle: 'Déposer une entreprise', route: '/deposer' },
+    action: ACTIONS_COMMUNES.deposerUneEntreprise,
   },
   '/mes-commissions': {
     titre: 'Pas encore de commission',
@@ -48,15 +49,15 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
     action: { libelle: "Je ne trouve pas l'entreprise", route: '/deposer' },
   },
   '/deposer': {
-    titre: 'Déposer une entreprise',
+    titre: ACTIONS_COMMUNES.deposerUneEntreprise.libelle,
     phrase: "Dès que vous tapez son nom, les entreprises s'affichent sous le champ.",
-    action: { libelle: 'Envoyer le dépôt', route: null },
+    action: ACTIONS_COMMUNES.envoyerLeDepot,
   },
   '/d/<jeton>': {
-    titre: 'Déposer une entreprise',
+    titre: ACTIONS_COMMUNES.deposerUneEntreprise.libelle,
     phrase:
       "Ce lien sert seulement à déposer une entreprise. Dès que vous tapez son nom, les entreprises s'affichent sous le champ.",
-    action: { libelle: 'Envoyer le dépôt', route: null },
+    action: ACTIONS_COMMUNES.envoyerLeDepot,
   },
   '/documents': {
     titre: 'Aucun document pour le moment',
@@ -95,7 +96,7 @@ export const ETATS_VIDES_ESPACE: Readonly<Record<string, EtatVide>> = {
     titre: 'Aucune conversation',
     phrase:
       'Vous pouvez écrire à Axion-IA quand vous le souhaitez. Axion-IA vous répond sous {delaiDeReponse}.',
-    action: { libelle: 'Écrire à Axion-IA', route: null },
+    action: { ...ACTIONS_COMMUNES.ecrireAAxionIA, route: null },
   },
   '/connexion': {
     titre: 'Se connecter',

@@ -21,15 +21,27 @@
  * Les seuils sont des paramètres `{…}` : leur valeur vient de sa source unique (RM-10).
  */
 
+import type { ActionEcran } from '../types';
+
+/**
+ * Une formule s'écrit en minuscule quand elle entre au milieu d'une phrase ; `enTete` lui rend sa
+ * capitale quand elle l'ouvre. Ainsi la formule reste UNE chaîne, quelle que soit sa place.
+ */
+export const enTete = (formule: string): string =>
+  formule.charAt(0).toLocaleUpperCase('fr') + formule.slice(1);
+
+/** Ce que dit le courrier de suspension — la fin de phrase que deux textes partagent. */
+const RAISON_DU_COURRIER = 'en donne la raison et vous dit comment nous répondre.';
+
 export const FORMULES = {
   droitACommissionJusquau:
     "Votre droit à commission sur cette entreprise court jusqu'au {dateFin}.",
-  dejaReservee: 'Déjà réservée pour un autre apporteur',
+  dejaReservee: 'déjà réservée pour un autre apporteur',
   finDuDroit: 'si ce droit prend fin',
   sansSuite: 'Sans suite',
-  depotsSuspendus: "Vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA.",
-  courrierDeSuspension:
-    'Le courrier électronique du {dateCourrier} en donne la raison et vous dit comment nous répondre.',
+  depotsSuspendus: "vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA",
+  courrierDeSuspension: `Le courrier électronique du {dateCourrier} ${RAISON_DU_COURRIER}`,
+  raisonDuCourrier: RAISON_DU_COURRIER,
   assuranceManquante: 'rien ne change pour vos versements',
   reprise: 'Reprise',
   reglementAttenduDeLEntreprise: "Règlement attendu de l'entreprise",
@@ -42,8 +54,19 @@ export const FORMULES = {
   releveParCourrierElectronique:
     'Chaque relevé vous est envoyé par courrier électronique ; il indique les mentions à reporter sur votre facture.',
   numeroDEntreprise: "numéro d'entreprise",
-  rienAFaire: 'Rien à faire de votre côté.',
+  rienAFaire: 'Rien à faire de votre côté',
 } as const;
+
+/**
+ * Les actions que plusieurs écrans partagent : leur libellé s'écrit ICI, une fois. Un écran qui
+ * mène ailleurs avec le même libellé reprend l'action et ne change que sa route.
+ */
+export const ACTIONS_COMMUNES = {
+  retourAccueil: { libelle: "Retour à l'accueil", route: '/' },
+  envoyerLeDepot: { libelle: 'Envoyer le dépôt', route: null },
+  deposerUneEntreprise: { libelle: 'Déposer une entreprise', route: '/deposer' },
+  ecrireAAxionIA: { libelle: 'Écrire à Axion-IA', route: '/aide' },
+} as const satisfies Readonly<Record<string, ActionEcran>>;
 
 /** Les deux seules entrées de l'espace avant la signature du contrat. */
 export const NAVIGATION_AVANT_SIGNATURE = ['Ma conformité', 'Mon contrat'] as const;

@@ -19,6 +19,7 @@ import {
   type IssueDepot,
 } from '../../../domain/depot/issue-depot';
 import type { ActionEcran, TexteIssue } from '../types';
+import { ACTIONS_COMMUNES, FORMULES, enTete } from './vocabulaire';
 
 /** Ce que l'issue dit de l'heure retenue — la phrase de `a_la_reception` est celle de REQ-UX-013. */
 export const MENTIONS_HORODATAGE: { readonly [H in Horodatage]: string } = {
@@ -48,7 +49,7 @@ const VOIR_MES_ENTREPRISES: ActionEcran = {
   libelle: 'Voir Mes entreprises',
   route: '/mes-entreprises',
 };
-const RETOUR_ACCUEIL: ActionEcran = { libelle: "Retour à l'accueil", route: '/' };
+const RETOUR_ACCUEIL: ActionEcran = ACTIONS_COMMUNES.retourAccueil;
 
 /** Les deux antériorités partagent UN libellé (REQ-UX-002) : l'apporteur ne sait pas laquelle. */
 const DEJA_CONNUE: TexteIssue = {
@@ -66,8 +67,7 @@ export const TEXTES_DES_ISSUES: { readonly [I in IssueDepot]: TexteIssue } = {
     pastille: 'Enregistré',
     titre: "C'est enregistré à votre nom",
     pourquoi: "Cette entreprise n'était réservée pour aucun autre apporteur.",
-    quoiFaire:
-      "Axion-IA appelle {contact} avant le {dateAppel}. Rien à faire de votre côté : chaque étape s'affiche dans Mes entreprises.",
+    quoiFaire: `Axion-IA appelle {contact} avant le {dateAppel}. ${FORMULES.rienAFaire} : chaque étape s'affiche dans Mes entreprises.`,
     actionPrincipale: DEPOSER_UNE_AUTRE,
     actionSecondaire: VOIR_MES_ENTREPRISES,
   },
@@ -84,18 +84,15 @@ export const TEXTES_DES_ISSUES: { readonly [I in IssueDepot]: TexteIssue } = {
   en_attente: {
     pastille: 'En attente',
     titre: 'Enregistré en attente',
-    pourquoi:
-      'Cette entreprise est déjà réservée pour un autre apporteur. Votre dépôt attend, avec son heure d’envoi.',
-    quoiFaire:
-      "Si ce droit prend fin, votre dépôt prend la suite, à l'heure où vous l'avez envoyé. Rien à faire de votre côté : vous serez prévenu.",
+    pourquoi: `Cette entreprise est ${FORMULES.dejaReservee}. Votre dépôt attend, avec son heure d’envoi.`,
+    quoiFaire: `${enTete(FORMULES.finDuDroit)}, votre dépôt prend la suite, à l'heure où vous l'avez envoyé. ${FORMULES.rienAFaire} : vous serez prévenu.`,
     actionPrincipale: DEPOSER_UNE_AUTRE,
     actionSecondaire: VOIR_MES_ENTREPRISES,
   },
   file_complete: {
     pastille: 'Pas enregistré',
     titre: "Pas enregistré : l'attente est complète",
-    pourquoi:
-      "Cette entreprise est déjà réservée pour un autre apporteur, et l'attente prévue par le contrat est complète (article 3.3 bis).",
+    pourquoi: `Cette entreprise est ${FORMULES.dejaReservee}, et l'attente prévue par le contrat est complète (article 3.3 bis).`,
     quoiFaire: 'Rien à faire. Vous pourrez la vérifier à nouveau plus tard.',
     actionPrincipale: RETOUR_ACCUEIL,
     actionSecondaire: DEPOSER_UNE_AUTRE,
@@ -132,13 +129,11 @@ export const TEXTES_DES_ISSUES: { readonly [I in IssueDepot]: TexteIssue } = {
   },
   gele: {
     pastille: 'Pas enregistré',
-    titre:
-      "Pas enregistré : vos nouveaux dépôts sont suspendus le temps d'un échange avec Axion-IA",
-    pourquoi:
-      'Vos nouveaux dépôts sont suspendus depuis le {dateSuspension}. Le courrier électronique reçu ce jour-là en donne la raison et vous dit comment nous répondre.',
+    titre: `Pas enregistré : ${FORMULES.depotsSuspendus}`,
+    pourquoi: `Vos nouveaux dépôts sont suspendus depuis le {dateSuspension}. Le courrier électronique reçu ce jour-là ${FORMULES.raisonDuCourrier}`,
     quoiFaire:
       'Vous pouvez répondre à ce courrier, ou écrire à Axion-IA. Vos entreprises déjà déposées ne changent pas.',
-    actionPrincipale: { libelle: 'Écrire à Axion-IA', route: '/aide' },
+    actionPrincipale: ACTIONS_COMMUNES.ecrireAAxionIA,
     actionSecondaire: RETOUR_ACCUEIL,
   },
   captcha: {
@@ -147,7 +142,7 @@ export const TEXTES_DES_ISSUES: { readonly [I in IssueDepot]: TexteIssue } = {
     pourquoi:
       "Pour protéger le service des envois automatiques, nous vérifions que c'est bien vous.",
     quoiFaire: 'Votre saisie est gardée : rien à retaper.',
-    actionPrincipale: { libelle: 'Envoyer le dépôt', route: null },
+    actionPrincipale: ACTIONS_COMMUNES.envoyerLeDepot,
     actionSecondaire: null,
   },
   brouillon_hors_ligne: {

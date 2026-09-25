@@ -21,6 +21,14 @@
  *     carte connaît.
  *   — La SOURCE UNIQUE : aucun libellé en dur dans un composant `.tsx`, lu par l'arbre syntaxique
  *     de TypeScript et non par une expression régulière.
+ *   — NI QUI NI QUAND, dans TOUS les textes de l'espace (REQ-UX-002, REQ-SEC-022). La garde parcourt
+ *     chaque fichier de `src/content/micro-copy/espace/` — tout champ chaîne, à toute profondeur,
+ *     libellés d'action compris — et n'y admet un paramètre `{…}` que s'il figure dans la liste
+ *     blanche de son contexte (`PARAMETRES_PERMIS`) : `{nomAutreApporteur}` dans la collision au
+ *     dépôt rougit. Un fichier de l'espace que la garde ne parcourt pas rougit aussi. Aucun chiffre
+ *     écrit en clair (hors renvoi à un article du contrat) : un délai ou un seuil est un paramètre
+ *     (RM-10). Et aucun composant n'injecte de HTML brut : un paramètre qui reflète une saisie
+ *     (`{recherche}`) est rendu en nœud texte, que React échappe.
  *
  * CE QU'ELLE NE TIENT PAS — LA LIMITE EXACTE, ÉCRITE. C'est un fil de déclenchement, pas une
  * preuve. La famille `libelle_en_dur` voit le texte entre deux balises, un littéral chaîne placé
@@ -47,16 +55,16 @@ import {
   ISSUES_DE_REFUS,
   HORODATAGE_DE_L_ISSUE,
 } from '../../src/domain/depot/issue-depot';
-import {
-  TEXTES_DES_ISSUES,
-  MENTIONS_HORODATAGE,
-  MENTION_DU_REFUS,
-  CONTESTATION_ECRITE,
-} from '../../src/content/micro-copy/espace/issues-depot';
-import { ETATS_VIDES_ESPACE } from '../../src/content/micro-copy/espace/etats-vides';
+import * as ISSUES_DE_L_ESPACE from '../../src/content/micro-copy/espace/issues-depot';
+import * as ETATS_VIDES_DE_L_ESPACE from '../../src/content/micro-copy/espace/etats-vides';
+import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vocabulaire';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
+
+const { TEXTES_DES_ISSUES, MENTIONS_HORODATAGE, MENTION_DU_REFUS, CONTESTATION_ECRITE } =
+  ISSUES_DE_L_ESPACE;
+const { ETATS_VIDES_ESPACE } = ETATS_VIDES_DE_L_ESPACE;
 
 // ── les sources ─────────────────────────────────────────────────────────────────
 
@@ -64,6 +72,50 @@ const CHEMIN_REGISTRE = 'docs/requirements.json';
 const CHEMIN_CARTE = 'docs/ESPACE-ROUTES.md';
 const CHEMIN_VALIDATION = 'docs/maquettes/VALIDATION.md';
 const RACINE_MICRO_COPIE = 'src/content/micro-copy/';
+const RACINE_ESPACE = `${RACINE_MICRO_COPIE}espace/`;
+
+/**
+ * Les modules de l'espace, parcourus EN ENTIER (chaque export, chaque champ chaîne). La clé est le
+ * chemin sous `src/content/micro-copy/` ; un fichier suivi sous `espace/` absent d'ici rougit
+ * (`micro_copie_non_lue`) : la population n'est pas une liste de champs tapée, et elle ne peut pas
+ * perdre un fichier en silence.
+ */
+const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
+  'espace/issues-depot.ts': ISSUES_DE_L_ESPACE,
+  'espace/etats-vides.ts': ETATS_VIDES_DE_L_ESPACE,
+  'espace/vocabulaire.ts': VOCABULAIRE_DE_L_ESPACE,
+};
+
+/**
+ * La LISTE BLANCHE des paramètres, par contexte : un texte de l'espace ne porte un `{…}` que si son
+ * chemin (ou un chemin qui le contient) le permet ici. Tout autre paramètre rougit — c'est ainsi
+ * qu'un nom, une date de dépôt ou un stade d'un AUTRE apporteur n'atteint pas un écran (REQ-SEC-022).
+ * Chaque entrée dit POURQUOI la valeur appartient à celui qui la lit. Un refus n'y figure jamais :
+ * il ne dit ni qui ni quand (REQ-UX-002).
+ */
+export const PARAMETRES_PERMIS: Readonly<Record<string, readonly string[]>> = {
+  // La date de SON dépôt.
+  'espace/issues-depot.ts › MENTIONS_HORODATAGE › a_votre_nom': ['dateEnregistrement'],
+  // Le contact qu'il a lui-même donné, et l'échéance de l'appel de SON dépôt.
+  'espace/issues-depot.ts › TEXTES_DES_ISSUES › enregistree': ['contact', 'dateAppel'],
+  'espace/issues-depot.ts › TEXTES_DES_ISSUES › prioritaire': ['dateAppel'],
+  // La collision au dépôt : seule la date de fin est autorisée (REQ-SEC-022).
+  'espace/issues-depot.ts › TEXTES_DES_ISSUES › en_attente': ['dateFin'],
+  // SA propre suspension.
+  'espace/issues-depot.ts › TEXTES_DES_ISSUES › gele': ['dateSuspension'],
+  // SON brouillon : le contact qu'il a saisi, et la date où son téléphone l'effacera.
+  'espace/issues-depot.ts › TEXTES_DES_ISSUES › brouillon_hors_ligne': [
+    'contact',
+    'dateEffacement',
+  ],
+  // Le reflet de SA saisie — rendu en nœud texte seulement (famille `html_brut`).
+  'espace/etats-vides.ts › ETATS_VIDES_ESPACE › /entreprise?q=': ['recherche'],
+  // Un délai, venu de sa source unique (RM-10).
+  'espace/etats-vides.ts › ETATS_VIDES_ESPACE › /aide': ['delaiDeReponse'],
+  'espace/vocabulaire.ts › FORMULES › droitACommissionJusquau': ['dateFin'],
+  'espace/vocabulaire.ts › FORMULES › courrierDeSuspension': ['dateCourrier'],
+  'espace/vocabulaire.ts › FORMULES › limiteDeVerification': ['limiteParJour'],
+};
 
 /**
  * L'écran « Mes entreprises » et la route du dépôt, tels que la carte les écrit. Ce sont les deux
@@ -266,6 +318,36 @@ export function libellesEnDur(chemin: string, contenu: string): LibelleEnDur[] {
   return trouves;
 }
 
+/**
+ * Les composants qui injectent du HTML brut (`dangerouslySetInnerHTML`) : un paramètre qui reflète
+ * une saisie (`{recherche}`) n'est échappé que rendu en nœud texte.
+ */
+export function htmlBrut(chemin: string, contenu: string): LibelleEnDur[] {
+  const source = ts.createSourceFile(
+    chemin,
+    contenu,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TSX
+  );
+  const trouves: LibelleEnDur[] = [];
+  const visiter = (n: ts.Node): void => {
+    if (ts.isJsxAttribute(n) && n.name.getText(source) === 'dangerouslySetInnerHTML') {
+      const ligne = source.getLineAndCharacterOfPosition(n.getStart(source)).line + 1;
+      trouves.push({
+        ligne,
+        message:
+          `${chemin}:${ligne} — dangerouslySetInnerHTML injecte du HTML brut. Un texte de la ` +
+          `micro-copie, et surtout le reflet d'une saisie ({recherche}), est rendu en nœud texte, ` +
+          `que React échappe : injecté en HTML, il devient une porte ouverte.`,
+      });
+    }
+    ts.forEachChild(n, visiter);
+  };
+  visiter(source);
+  return trouves;
+}
+
 // ── la vue et le contrôle ───────────────────────────────────────────────────────
 
 export type FichierVu = { chemin: string; contenu: string };
@@ -286,7 +368,36 @@ export type Vue = {
   etatsVidesConsole: Readonly<Record<string, EtatVide | undefined>>;
   composants: readonly FichierVu[];
   fichiersDeMicroCopie: readonly string[];
+  /** Les modules de l'espace, parcourus en entier : chemin sous la micro-copie → module. */
+  microCopieEspace: Readonly<Record<string, unknown>>;
+  parametresPermis: Readonly<Record<string, readonly string[]>>;
 };
+
+/** Un texte de l'espace et son chemin : `fichier › export › clé › … › champ`. */
+export type TexteLu = { chemin: string; texte: string };
+
+function parcourir(chemin: string, valeur: unknown): TexteLu[] {
+  if (typeof valeur === 'string') return [{ chemin, texte: valeur }];
+  if (valeur === null || typeof valeur !== 'object') return [];
+  return Object.entries(valeur).flatMap(([cle, v]) => parcourir(`${chemin} › ${cle}`, v));
+}
+
+/** TOUS les textes de l'espace : tout champ chaîne, à toute profondeur, de chaque module lu. */
+export function textesDeLEspace(vue: Vue): TexteLu[] {
+  return Object.entries(vue.microCopieEspace).flatMap(([fichier, m]) => parcourir(fichier, m));
+}
+
+/** Les paramètres que le contexte d'un texte permet : ceux de chaque entrée qui le contient. */
+function permisPour(chemin: string, permis: Vue['parametresPermis']): Set<string> {
+  return new Set(
+    Object.entries(permis)
+      .filter(([cle]) => chemin === cle || chemin.startsWith(`${cle} › `))
+      .flatMap(([, noms]) => noms)
+  );
+}
+
+/** Un renvoi au contrat (« article 3.3 bis ») : le seul chiffre qu'un texte écrit en clair. */
+const RENVOI_A_UN_ARTICLE = /\barticles?\s+\d+(?:\.\d+)*/giu;
 
 export type Faute = { famille: string; message: string };
 export type Rapport = { fautes: Faute[] };
@@ -338,6 +449,24 @@ export const FAMILLES = [
   {
     nom: 'libelle_en_dur',
     explication: 'un libellé écrit dans un composant au lieu de la micro-copie.',
+  },
+  {
+    nom: 'parametre_non_permis',
+    explication:
+      "un paramètre {…} hors de la liste blanche de son contexte, dans n'importe quel texte de l'espace (REQ-SEC-022).",
+  },
+  {
+    nom: 'micro_copie_non_lue',
+    explication: "un fichier de micro-copie de l'espace que la garde ne parcourt pas.",
+  },
+  {
+    nom: 'valeur_en_clair',
+    explication:
+      "un chiffre écrit en clair dans un texte de l'espace (hors renvoi à un article) : un délai ou un seuil est un paramètre (RM-10).",
+  },
+  {
+    nom: 'html_brut',
+    explication: 'un composant qui injecte du HTML brut (dangerouslySetInnerHTML).',
   },
 ] as const;
 
@@ -522,9 +651,48 @@ export function controler(vue: Vue): Rapport {
     }
   }
 
-  // La source unique : aucun libellé dans un composant.
+  // La source unique : aucun libellé dans un composant, aucun HTML brut.
   for (const f of vue.composants) {
     for (const l of libellesEnDur(f.chemin, f.contenu)) ajouter('libelle_en_dur', l.message);
+    for (const l of htmlBrut(f.chemin, f.contenu)) ajouter('html_brut', l.message);
+  }
+
+  // Chaque fichier de l'espace est parcouru : aucun ne peut échapper à la liste blanche.
+  for (const f of vue.fichiersDeMicroCopie.filter((c) => c.startsWith(RACINE_ESPACE))) {
+    if (!(f.slice(RACINE_MICRO_COPIE.length) in vue.microCopieEspace)) {
+      ajouter(
+        'micro_copie_non_lue',
+        `${f} — ce fichier de l'espace n'est pas parcouru par la garde : ses textes, lus par un ` +
+          `apporteur, échappent à la liste blanche des paramètres. À ajouter à ` +
+          `MICRO_COPIE_DE_L_ESPACE dans scripts/gates/ux-exhaustivite.ts.`
+      );
+    }
+  }
+
+  // NI QUI NI QUAND : tout texte de l'espace, tout paramètre, jugé par la liste blanche.
+  for (const { chemin, texte } of textesDeLEspace(vue)) {
+    const permis = permisPour(chemin, vue.parametresPermis);
+    for (const m of texte.matchAll(/\{([^}]*)\}/g)) {
+      if (!permis.has(m[1]!)) {
+        ajouter(
+          'parametre_non_permis',
+          `${chemin} — le paramètre ${m[0]} n'est pas permis dans ce contexte (permis : ` +
+            `${[...permis].map((p) => `{${p}}`).join(', ') || 'aucun'}). Un texte de l'espace ne dit ` +
+            `ni le nom, ni la date de dépôt, ni le stade d'un autre apporteur (REQ-SEC-022) ; un ` +
+            `paramètre légitime s'ajoute à PARAMETRES_PERMIS, avec sa raison.`
+        );
+      }
+    }
+    const nu = texte.replace(RENVOI_A_UN_ARTICLE, '').replace(/\{[^}]*\}/g, '');
+    const chiffre = /\d+/.exec(nu);
+    if (chiffre) {
+      ajouter(
+        'valeur_en_clair',
+        `${chemin} — « ${chiffre[0]} » est écrit en clair. Un délai, un seuil ou une date est un ` +
+          `paramètre {…} dont la valeur vient de sa source unique (RM-10) : le chiffre recopié ici ` +
+          `divergera de celui qu'on applique.`
+      );
+    }
   }
 
   return { fautes };
@@ -534,41 +702,59 @@ export function controler(vue: Vue): Rapport {
 
 type Registre = { exigences: { id: string; texte: string }[] };
 
-function texteDuRegistre(id: string): string {
-  if (!existsSync(CHEMIN_REGISTRE)) return '';
-  const registre = JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as Registre;
-  return registre.exigences.find((e) => e.id === id)?.texte ?? '';
-}
+/**
+ * Ce que la vue lit sur le disque — injectable, pour qu'un test PROUVE que la population attendue
+ * vient du registre et de la carte, et jamais de la micro-copie qu'elle contrôle.
+ */
+export type Sources = {
+  lire: (chemin: string) => string;
+  suivis: () => readonly string[];
+};
 
 const lireOuVide = (chemin: string): string =>
   existsSync(chemin) ? readFileSync(chemin, 'utf8') : '';
+
+export const SOURCES_DU_DEPOT: Sources = {
+  lire: lireOuVide,
+  suivis: () => fichiersSuivisOuRefus('ux:exhaustivite'),
+};
+
+function texteDuRegistre(id: string, lire: Sources['lire']): string {
+  const brut = lire(CHEMIN_REGISTRE);
+  if (brut === '') return '';
+  const registre = JSON.parse(brut) as Registre;
+  return registre.exigences.find((e) => e.id === id)?.texte ?? '';
+}
 
 /** Un composant : un `.tsx` suivi sous `src/` ou `emails/`, hors de la micro-copie elle-même. */
 const EST_UN_COMPOSANT = (c: string): boolean =>
   /^(src|emails)\/.+\.tsx$/.test(c) && !c.startsWith(RACINE_MICRO_COPIE);
 
-export function vueDuDepot(): Vue {
-  const suivis = fichiersSuivisOuRefus('ux:exhaustivite');
+export function vueDuDepot(sources: Sources = SOURCES_DU_DEPOT): Vue {
+  const { lire } = sources;
+  const suivis = sources.suivis();
   return {
     issuesDeLEnum: ISSUES_DEPOT,
-    issuesDuContrat: issuesDuContrat(texteDuRegistre('REQ-UX-002')),
-    motifsDeRefus: motifsDeRefus(texteDuRegistre('REQ-SEC-022')),
+    issuesDuContrat: issuesDuContrat(texteDuRegistre('REQ-UX-002', lire)),
+    motifsDeRefus: motifsDeRefus(texteDuRegistre('REQ-SEC-022', lire)),
     refusDeclares: ISSUES_DE_REFUS,
     textesDesIssues: TEXTES_DES_ISSUES,
     horodatages: HORODATAGE_DE_L_ISSUE,
     mentionsHorodatage: MENTIONS_HORODATAGE,
     mentionDuRefus: MENTION_DU_REFUS,
     contestation: CONTESTATION_ECRITE,
-    ecransEspace: ecransDeLEspace(lireOuVide(CHEMIN_CARTE)),
-    ecransConsole: ecransDeLaConsole(lireOuVide(CHEMIN_VALIDATION)),
+    ecransEspace: ecransDeLEspace(lire(CHEMIN_CARTE)),
+    ecransConsole: ecransDeLaConsole(lire(CHEMIN_VALIDATION)),
     etatsVidesEspace: ETATS_VIDES_ESPACE,
     etatsVidesConsole: ETATS_VIDES_CONSOLE,
     composants: suivis
       .filter((c) => EST_UN_COMPOSANT(c) && existsSync(c))
-      .map((chemin) => ({ chemin, contenu: readFileSync(chemin, 'utf8') })),
+      .map((chemin) => ({ chemin, contenu: lire(chemin) })),
     fichiersDeMicroCopie: suivis.filter(
       (c) => c.startsWith(RACINE_MICRO_COPIE) || c === 'messages/fr.json'
     ),
+    microCopieEspace: MICRO_COPIE_DE_L_ESPACE,
+    parametresPermis: PARAMETRES_PERMIS,
   };
 }
 
@@ -609,9 +795,34 @@ export function vueDeFixture(): Vue {
     },
     etatsVidesConsole: { file: V('File vide') },
     composants: [],
-    fichiersDeMicroCopie: [],
+    fichiersDeMicroCopie: [`${RACINE_ESPACE}fixture.ts`],
+    microCopieEspace: {
+      'espace/fixture.ts': {
+        ISSUES: { acceptee: { titre: 'Accepté le {date}', action: { libelle: 'Voir' } } },
+        RENVOI: 'Refusé (contrat, article 3.3 bis).',
+      },
+    },
+    parametresPermis: { 'espace/fixture.ts › ISSUES › acceptee': ['date'] },
   };
 }
+
+/** Les sources d'une vue de fixture, pour prouver que `vueDuDepot` LIT le registre et la carte. */
+const SOURCES_DE_FIXTURE: Sources = {
+  lire: (chemin) =>
+    chemin === CHEMIN_REGISTRE
+      ? JSON.stringify({
+          exigences: [
+            { id: 'REQ-UX-002', texte: 'Issues ) : `sentinelle_du_registre`. Les valeurs.' },
+            { id: 'REQ-SEC-022', texte: 'Valeurs : `motif_sentinelle`. **Le refus' },
+          ],
+        })
+      : chemin === CHEMIN_CARTE
+        ? '| `/ecran-sentinelle` | témoin |'
+        : chemin === CHEMIN_VALIDATION
+          ? '## Console\n| `console-sentinelle.html` | témoin |'
+          : '',
+  suivis: () => [],
+};
 
 const COMPOSANT_FAUTIF = {
   chemin: 'src/app/(espace)/temoin.tsx',
@@ -646,6 +857,8 @@ const TEMOINS: { famille: string; nomme: string; vue: () => Vue }[] = [
         ...v,
         issuesDeLEnum: [...v.issuesDeLEnum, 'muette'],
         issuesDuContrat: [...v.issuesDuContrat, 'muette'],
+        // Son horodatage est là : elle ne diffère de la fixture QUE par le texte absent.
+        horodatages: { ...v.horodatages, muette: 'non' },
       };
     },
   },
@@ -729,6 +942,57 @@ const TEMOINS: { famille: string; nomme: string; vue: () => Vue }[] = [
     nomme: `${COMPOSANT_FAUTIF.chemin}:1`,
     vue: () => ({ ...vueDeFixture(), composants: [COMPOSANT_FAUTIF] }),
   },
+  {
+    // Le scénario du relecteur : un libellé d'ACTION qui nomme l'autre apporteur.
+    famille: 'parametre_non_permis',
+    nomme: 'espace/fixture.ts › ISSUES › collision › action › libelle',
+    vue: () => ({
+      ...vueDeFixture(),
+      microCopieEspace: {
+        'espace/fixture.ts': {
+          ISSUES: {
+            collision: {
+              titre: 'Réservée pour un autre apporteur',
+              action: { libelle: 'Voir le dépôt de {nomAutreApporteur}' },
+            },
+          },
+        },
+      },
+    }),
+  },
+  {
+    famille: 'micro_copie_non_lue',
+    nomme: `${RACINE_ESPACE}oublie.ts`,
+    vue: () => {
+      const v = vueDeFixture();
+      return {
+        ...v,
+        fichiersDeMicroCopie: [...v.fichiersDeMicroCopie, `${RACINE_ESPACE}oublie.ts`],
+      };
+    },
+  },
+  {
+    famille: 'valeur_en_clair',
+    nomme: '« 48 »',
+    vue: () => ({
+      ...vueDeFixture(),
+      microCopieEspace: { 'espace/fixture.ts': { AIDE: 'Réponse sous 48 heures.' } },
+    }),
+  },
+  {
+    famille: 'html_brut',
+    nomme: `${COMPOSANT_FAUTIF.chemin}:1`,
+    vue: () => ({
+      ...vueDeFixture(),
+      composants: [
+        {
+          chemin: COMPOSANT_FAUTIF.chemin,
+          contenu:
+            'export const P = ({ t }: { t: string }) => <p dangerouslySetInnerHTML={{ __html: t }} />;',
+        },
+      ],
+    }),
+  },
 ];
 
 /** Les contre-témoins : ils doivent rester verts, et l'un d'eux CONFRONTE un composant réel. */
@@ -736,7 +1000,7 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
   {
     // Elle porte un paramètre dans une issue qui N'EST PAS un refus (la date de son propre dépôt) :
     // c'est ce qui prouve que `refus_incomplet` vise le refus, pas le paramètre en soi.
-    quoi: 'la fixture conforme, dont un paramètre dans une issue qui n’est pas un refus',
+    quoi: 'la fixture conforme : un paramètre PERMIS dans son contexte, un renvoi à un article',
     vue: vueDeFixture,
   },
   {
@@ -785,12 +1049,31 @@ if (APPELE_DIRECTEMENT) {
       if (r.fautes.length > 0)
         echouer(`❌ Faux positif sur « ${c.quoi} » :\n   ${r.fautes[0]!.message}`);
     }
+    // La vue du dépôt LIT ses populations attendues — registre, carte, section Console — et ne les
+    // prend jamais dans la micro-copie ni dans l'enum qu'elle contrôle.
+    const lue = vueDuDepot(SOURCES_DE_FIXTURE);
+    const attendu: [string, readonly string[], string[]][] = [
+      ['issuesDuContrat (registre, REQ-UX-002)', lue.issuesDuContrat, ['sentinelle_du_registre']],
+      ['motifsDeRefus (registre, REQ-SEC-022)', lue.motifsDeRefus, ['motif_sentinelle']],
+      [`ecransEspace (${CHEMIN_CARTE})`, lue.ecransEspace, ['/ecran-sentinelle']],
+      [`ecransConsole (${CHEMIN_VALIDATION})`, lue.ecransConsole, ['console-sentinelle']],
+    ];
+    for (const [quoi, obtenu, voulu] of attendu) {
+      if (JSON.stringify(obtenu) !== JSON.stringify(voulu)) {
+        echouer(
+          `❌ vueDuDepot ne lit pas sa source pour ${quoi} : attendu ${JSON.stringify(voulu)}, ` +
+            `obtenu ${JSON.stringify(obtenu)}. Une garde qui lit sa population dans ce qu'elle ` +
+            `contrôle ne garde plus rien.`
+        );
+      }
+    }
     if (libellesEnDur(COMPOSANT_PROPRE.chemin, COMPOSANT_PROPRE.contenu).length !== 0) {
       echouer('❌ Le composant propre rougit : la lecture de l’arbre syntaxique est trop large.');
     }
     console.log(
       `✅ ux:exhaustivite — ${FAMILLES.length} familles rougissent chacune sur son témoin en nommant ` +
-        `sa cible, ${CONTRE_TEMOINS.length} contre-témoins restent verts — preuve faite.`
+        `sa cible, ${CONTRE_TEMOINS.length} contre-témoins restent verts, la vue du dépôt lit ses ` +
+        `quatre sources — preuve faite.`
     );
     for (const f of FAMILLES) console.log(`   • ${f.nom} — ${f.explication}`);
     process.exit(0);
