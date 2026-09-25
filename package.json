@@ -77,6 +77,8 @@
     "gov:etat:prove": "tsx scripts/gates/gov-etat.ts --prove",
     "gov:lexique": "tsx scripts/gates/lexique-apporteurs.ts",
     "gov:lexique:prove": "tsx scripts/gates/lexique-apporteurs.ts --prove",
+    "ux:exhaustivite": "tsx scripts/gates/ux-exhaustivite.ts",
+    "ux:exhaustivite:prove": "tsx scripts/gates/ux-exhaustivite.ts --prove",
     "jur:grille-chiffree": "tsx scripts/gates/jur-grille-chiffree.ts",
     "jur:grille-chiffree:prove": "tsx scripts/gates/jur-grille-chiffree.ts --prove",
     "gov:maquettes-validees": "tsx scripts/gates/maquettes-validees.ts",
