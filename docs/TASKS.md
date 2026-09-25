@@ -1699,7 +1699,7 @@ Couvre : `REQ-GOV-015`
 
 Couvre : `REQ-GOV-015`
 
-**Acceptation.** TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le cadrage décidé par l'architecte le 2026-09-26, sur délégation de Will, est inscrit : (1) SEC-03 et SEC-04 passent `schema: true` — SEC-03 crée `liens_magiques` et `sessions_espace` dans une même migration, SEC-04 étendra `sessions_espace` ; leurs `paths` portent `prisma/migrations/`, et ceux de SEC-03 les modules de durées, de dépôt du lien et d'accès à l'espace ; (2) l'empreinte des jetons d'authentification est un HMAC-SHA-256 sous le secret de l'usage, à domaine séparé, `kid` stocké : décision 14 de partners/ADR-0013, `docs/adr/INDEX.md` régénéré ; (3) `HYP-SEC03-ACCES` est inscrite au registre des décisions : l'espace est ouvert aux statuts `signe` et `suspendu` (REQ-SEC-032), `resilie` en lecture seule par SEC-19, `kyc_en_cours` et `pret_a_signer` fermés ; (4) les points (1) et (5) de l'acceptance de SEC-03 disent l'empreinte HMAC et la table des sessions. Registres écrits par les verbes hors dépôt ; `gov:tasks`, `gov:hypotheses`, `gov:attributions`, `gov:identifiants`, `gov:trace:verifier`, `lot:paths:check` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier.
+**Acceptation.** TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le cadrage décidé par l'architecte le 2026-09-26, sur délégation de Will, est inscrit : (1) SEC-03 et SEC-04 passent `schema: true` — SEC-03 crée `liens_magiques` et `sessions_espace` dans une même migration, SEC-04 étendra `sessions_espace` ; leurs `paths` portent `prisma/migrations/`, et ceux de SEC-03 les modules de durées, de dépôt du lien et d'accès à l'espace ; (2) l'empreinte des jetons d'authentification est un HMAC-SHA-256 sous le secret de l'usage, à domaine séparé, `kid` stocké : décision 14 de partners/ADR-0013, `docs/adr/INDEX.md` régénéré ; (3) `HYP-SEC03-ACCES` est inscrite au registre des décisions : l'espace est ouvert aux statuts `signe` et `suspendu` (REQ-SEC-032), `resilie` en lecture seule par SEC-19, `candidat`, `retenu`, `vivier`, `refuse`, `kyc_en_cours` et `pret_a_signer` fermés ; (4) les points (1) et (5) de l'acceptance de SEC-03 disent l'empreinte HMAC et la table des sessions. Sur décision du coordinateur du 2026-09-26, prise sur délégation de Will : (5) REQ-SEC-001 dit l'empreinte HMAC-SHA-256 de la décision 14 ; (6) la ligne `suspendu` du glossaire dit l'accès à l'espace maintenu et les nouveaux dépôts refusés, en citant `HYP-SEC03-ACCES` ; (7) DM-11 passe `schema: true`, dette nommée par la PR 124. Registres écrits par les verbes hors dépôt ; `gov:tasks`, `gov:hypotheses`, `gov:attributions`, `gov:identifiants`, `gov:trace:verifier`, `lot:paths:check` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier.
 
 **Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 
@@ -1807,7 +1807,7 @@ Couvre : `REQ-DM-028`, `REQ-DM-029`, `REQ-SEC-022`
 
 ### DM-11 — Contrat versionné
 
-`1.5 j` · zone `domaine` · sensible : argent, attribution, espace, rgpd · depend de `DM-03-P`, `DM-06`, `INT-T09`, `SEC-17`, `SEC-08` · decisions `HYP-RESIDENCE`
+`1.5 j` · zone `domaine` · `schema` · sensible : argent, attribution, espace, rgpd · depend de `DM-03-P`, `DM-06`, `INT-T09`, `SEC-17`, `SEC-08` · decisions `HYP-RESIDENCE`
 
 Couvre : `REQ-CPL-004`, `REQ-CPL-005`, `REQ-DM-013`, `REQ-DM-027`, `REQ-JUR-018`, `REQ-JUR-022`, `REQ-JUR-029`, `REQ-SEC-026`
 

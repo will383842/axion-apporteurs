@@ -634,7 +634,7 @@
     {
       "id": "REQ-SEC-001",
       "domaine": "anti-abus-securite",
-      "texte": "Le lien magique de connexion a un TTL de 15 minutes, est à usage unique (consommation atomique `updateMany` conditionnelle), n'est stocké qu'en hash SHA-256, et la réponse au formulaire est identique que l'email existe ou non.",
+      "texte": "Le lien magique de connexion a un TTL de 15 minutes, est à usage unique (consommation atomique `updateMany` conditionnelle), n'est stocké qu'en empreinte HMAC-SHA-256 sous `MAGIC_LINK_SECRET`, domaine séparé, `kid` stocké (partners/ADR-0013 décision 14), et la réponse au formulaire est identique que l'email existe ou non.",
       "source": "tableaux-de-bord §1 B8 ; patron `src/server/formateur/magic-link.ts` et `auth.actions.ts` (précision nouvelle)",
       "statut": "active",
       "remplaceePar": null,

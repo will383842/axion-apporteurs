@@ -171,7 +171,7 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
 
 ### anti-abus-securite
 
-- **REQ-SEC-001** — Le lien magique de connexion a un TTL de 15 minutes, est à usage unique (consommation atomique `updateMany` conditionnelle), n'est stocké qu'en hash SHA-256, et la réponse au formulaire est identique que l'email existe ou non.
+- **REQ-SEC-001** — Le lien magique de connexion a un TTL de 15 minutes, est à usage unique (consommation atomique `updateMany` conditionnelle), n'est stocké qu'en empreinte HMAC-SHA-256 sous `MAGIC_LINK_SECRET`, domaine séparé, `kid` stocké (partners/ADR-0013 décision 14), et la réponse au formulaire est identique que l'email existe ou non.
   <br>_phase 0 · tâches : `SEC-03`_ · _source : tableaux-de-bord §1 B8 ; patron `src/server/formateur/magic-link.ts` et `auth.actions.ts` (précision nouvelle)_
 - **REQ-SEC-002** — La demande de lien magique est limitée à 10 / 15 min par hash IP et 5 / 15 min par email, avec `surPanne: refuser` ; le message générique explique la suspension sans révéler l'existence du compte.
   <br>_module 21 · étape 12 · phase 0 · tâches : `SEC-03`_ · _source : nouvelle (patron `auth.actions.ts`)_
