@@ -27,7 +27,9 @@
 // @req REQ-GOV-012
 import { describe, it, expect } from 'vitest';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import {
+  chargerUnivers,
   controler,
   titresResolus,
   plancherDeTitres,
@@ -103,6 +105,66 @@ describe('gov:trace — une liste vide rendue avec le code zéro n’est pas une
     expect(r.incoherents.map((i) => i.chemin)).toEqual([CIBLE]);
     expect(r.incoherents[0]!.plancher).toBe(plancherDeTitres(TEXTE_DE_LA_CIBLE));
     expect(r.enumeres).toBe(0);
+  });
+
+  it('REQ-GOV-012 — une énumération PARTIELLE, sous le plancher du disque, est un refus aussi', () => {
+    // Dette `exactitude` devenue motif `mutation` (T3) sur 9ffb450 : le plancher n'était confronté
+    // qu'à ZÉRO. Un lanceur qui rend UN titre sur deux passait pour une réponse complète.
+    const unSurDeux: Enumerateur = (fichiers) => ({
+      ok: true,
+      entrees: fichiers.map((f) => ({
+        name: 'la famille > un autre',
+        file: `${process.cwd()}/${f}`,
+      })),
+    });
+    const r = titresResolus([CIBLE], plancherDe, unSurDeux);
+    expect(r.titres.has(CIBLE), 'une liste partielle a été rangée comme RÉSOLUE').toBe(false);
+    expect(r.incoherents).toEqual([
+      { chemin: CIBLE, plancher: plancherDeTitres(TEXTE_DE_LA_CIBLE) },
+    ]);
+  });
+
+  it('REQ-GOV-012 — DE BOUT EN BOUT : la lecture RÉELLE du dépôt nomme `vide_incoherent`, plancher compris', () => {
+    // Motif `mutation` (T3, T5) sur 9ffb450 : la fonction pure était exercée, son BRANCHEMENT dans
+    // la lecture du dépôt ne l'était pas. Le plancher réel remplacé par 0, ou la boucle qui nomme
+    // `vide_incoherent` retirée, laissaient tout vert. Ici c'est `chargerUnivers` — la lecture que
+    // le mode normal fait — qui reçoit l'énumérateur, et le motif EXACT est exigé.
+    const plancherDuDisque = (f: string): number => plancherDeTitres(readFileSync(f, 'utf8'));
+    const partiel: Enumerateur = (fichiers) => ({
+      ok: true,
+      entrees: fichiers.flatMap((f) =>
+        Array.from({ length: Math.max(plancherDuDisque(f) - 1, 0) }, (_, i) => ({
+          name: `titre partiel ${i}`,
+          file: `${process.cwd().replace(/\\/g, '/')}/${f}`,
+        }))
+      ),
+    });
+    for (const [nom, enumerer] of [
+      ['vide et content', enumerateurVideEtContent],
+      ['partiel', partiel],
+    ] as const) {
+      const nonLus = chargerUnivers(false, enumerer).fichiers.filter(
+        (f) => f.motifNonResolus !== undefined
+      );
+      expect(nonLus.length, `${nom} : aucun fichier n’a été refusé`).toBeGreaterThan(0);
+      expect(
+        [...new Set(nonLus.map((f) => f.motifNonResolus))],
+        `${nom} : la cause n’est pas nommée EXACTEMENT`
+      ).toEqual(['vide_incoherent']);
+    }
+    // CONTRE-TÉMOIN : un énumérateur qui rend AU MOINS le plancher ne fait refuser personne.
+    const complet: Enumerateur = (fichiers) => ({
+      ok: true,
+      entrees: fichiers.flatMap((f) =>
+        Array.from({ length: plancherDuDisque(f) }, (_, i) => ({
+          name: `titre ${i}`,
+          file: `${process.cwd().replace(/\\/g, '/')}/${f}`,
+        }))
+      ),
+    });
+    expect(
+      chargerUnivers(false, complet).fichiers.filter((f) => f.motifNonResolus !== undefined)
+    ).toEqual([]);
   });
 
   it('REQ-GOV-012 — un énumérateur qui ÉCHOUE est un refus DISTINCT de la liste vide', () => {

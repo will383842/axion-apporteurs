@@ -515,8 +515,8 @@ function juger(u: Univers): Jugement {
                 `fichier n'ont pas pu être résolus : la promesse n'est PAS vérifiée. ` +
                 `Le contrôle ne se déclare pas vert sur ce qu'il n'a pas pu lire. ` +
                 (f.motifNonResolus === 'vide_incoherent'
-                  ? `Cause : l'énumération a rendu une liste VIDE avec le code zéro, alors que le ` +
-                    `TEXTE du fichier porte des titres. Cette réponse est STABLE — la relancer ne ` +
+                  ? `Cause : l'énumération a rendu une liste VIDE — ou partielle, sous le nombre de ` +
+                    `titres que le TEXTE du fichier porte — avec le code zéro. Cette réponse est STABLE — la relancer ne ` +
                     `changera rien. Elle dépend du lanceur par lequel gov:trace est invoquée : ` +
                     `relance-la par \`pnpm gov:trace\`, jamais par le binaire du transpileur seul.`
                   : `Cause : l'énumération a ÉCHOUÉ (code non nul, ou sortie illisible) — souvent ` +
@@ -1039,7 +1039,14 @@ export const enumererParVitest: Enumerateur = (fichiers) => {
  * la plus pauvre.
  */
 export function plancherDeTitres(texte: string): number {
-  return titresDeTest(texte).length;
+  // SANS LES COMMENTAIRES : le plancher est confronté à tout compte inférieur, pas seulement à zéro
+  // (motif `mutation` T3, PR 114), et un `it(` cité dans la PROSE d'un en-tête le gonflait — mesuré
+  // sur `adr-assertion-existe.spec.ts` : 7 au texte brut, 5 cas réellement énumérés. Un plancher
+  // qui dépasse le réel accuse ; il doit rester un plancher.
+  const sansCommentaires = texte
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  return titresDeTest(sansCommentaires).length;
 }
 
 /** Pourquoi les titres d'un fichier n'ont pas pu être résolus. Deux causes, et elles diffèrent. */
@@ -1100,7 +1107,10 @@ export function titresResolus(
     }
     for (const [chemin, liste] of vus) {
       const plancher = plancherDe(chemin);
-      if (liste.length === 0 && plancher > 0) {
+      // SOUS le plancher, et non seulement à ZÉRO (motif `mutation` T3 sur la PR 114) : un lanceur
+      // qui rend UN titre sur deux n'a pas lu le fichier, il l'a entamé — et la liste partielle se
+      // lisait comme complète, donc accusait les titres manquants.
+      if (liste.length < plancher) {
         incoherents.push({ chemin, plancher });
         continue;
       }
@@ -1254,7 +1264,14 @@ function lirePr(): { pr: PullRequest[] | null; indisponible: string | null } {
  */
 let titresEnumeres = 0;
 
-function chargerUnivers(avecPr: boolean): Univers {
+/**
+ * LA LECTURE DU DÉPÔT — celle du mode normal. L'énumérateur est injectable pour que le témoin passe
+ * par CE branchement et non par la seule fonction pure (motif `mutation` T3/T5 sur la PR 114).
+ */
+export function chargerUnivers(
+  avecPr: boolean,
+  enumerer: Enumerateur = enumererParVitest
+): Univers {
   for (const f of [CHEMIN_REGISTRE, CHEMIN_TACHES, CHEMIN_VITEST]) {
     if (!existsSync(f)) {
       console.error(`❌ gov:trace — ${f} est introuvable.`);
@@ -1270,8 +1287,11 @@ function chargerUnivers(avecPr: boolean): Univers {
   const exclus = exclude.map(globVersRegex);
   const candidats = fichiersDeTest();
 
+  // Le plancher de chaque fichier, compté sur le texte qu'on lit ICI — une seule lecture (GOV-082).
+  const plancherDe = new Map<string, number>();
   const fichiers: FichierTest[] = candidats.map((chemin) => {
     const texte = readFileSync(chemin, 'utf8');
+    plancherDe.set(chemin, plancherDeTitres(texte));
     const execute = inclus.some((m) => m.test(chemin)) && !exclus.some((m) => m.test(chemin));
     return {
       chemin,
@@ -1306,11 +1326,12 @@ function chargerUnivers(avecPr: boolean): Univers {
       }
     }
   }
-  // LE PLANCHER VIENT DU DISQUE, fichier par fichier : le texte qu'on vient de lire, pas une
-  // valeur tapée. Sans lui, la garde SUPPOSE que le lanceur a répondu (GOV-082).
-  const texteDe = new Map(fichiers.map((f) => [f.chemin, readFileSync(f.chemin, 'utf8')]));
-  const { titres, echecs, incoherents, enumeres } = titresResolus([...besoins].sort(), (chemin) =>
-    plancherDeTitres(texteDe.get(chemin) ?? '')
+  // LE PLANCHER VIENT DU DISQUE, fichier par fichier : compté par la lecture ci-dessus, pas une
+  // valeur tapée ni une seconde lecture. Sans lui, la garde SUPPOSE que le lanceur a répondu (GOV-082).
+  const { titres, echecs, incoherents, enumeres } = titresResolus(
+    [...besoins].sort(),
+    (chemin) => plancherDe.get(chemin) ?? 0,
+    enumerer
   );
   titresEnumeres = enumeres;
   for (const [chemin, liste] of titres) {
