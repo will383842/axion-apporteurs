@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**321 exigences actives · 67 réputées testées · 67 couvertes · 0 orphelines.**
+**334 exigences actives · 67 réputées testées · 67 couvertes · 0 orphelines.**
 
-270 tâches, dont 60 livrées · 77 fichiers de test exécutés par `vitest` sur 77 présents.
+283 tâches, dont 60 livrées · 77 fichiers de test exécutés par `vitest` sur 77 présents.
 
 ## Exigences réputées testées
 
@@ -51,7 +51,7 @@
 | `REQ-GOV-012` | `GOV-007`, `GOV-044`, `GOV-045`, `GOV-046`, `GOV-054`, `GOV-061`, `GOV-063`, `GOV-067`, `GOV-082`, `GOV-083`, `GOV-094` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts`, `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts`, `tests/unit/gouvernance/un-nom-une-garde.spec.ts`, `tests/unit/gouvernance/une-liste-vide-n-est-pas-une-reponse.spec.ts` | couverte |
 | `REQ-GOV-013` | `GOV-007`, `GOV-047`, `GOV-058`, `GOV-077`, `GOV-093`, `GOV-095` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/accord-survit-au-journal.spec.ts`, `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts`, `tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts` | couverte |
 | `REQ-GOV-014` | `GOV-000`, `GOV-012`, `GOV-057` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
-| `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `GOV-060`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
+| `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `GOV-060`, `GOV-098`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-016` | `GOV-006`, `GOV-088` | `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
 | `REQ-GOV-017` | `GOV-013`, `GOV-071` | `tests/unit/gouvernance/lexique.spec.ts` | couverte |
 | `REQ-GOV-018` | `GOV-014`, `GOV-031` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |
@@ -179,6 +179,10 @@
 | `REQ-DM-040` | -1 | `DM-04`, `INT-T01b` | `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts`, `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
 | `REQ-DM-042` | 1 | `DM-13`, `DM-24` | — |
 | `REQ-DM-043` | 1 | `DM-25` | — |
+| `REQ-DM-044` | 2 | `DM-26` | `tests/integration/changement-de-parrain.spec.ts`, `tests/unit/domaine/changement-de-parrain.spec.ts` |
+| `REQ-DM-045` | 2 | `DM-27` | `tests/unit/domaine/lignee-hors-du-calcul-des-commissions.spec.ts`, `tests/unit/domaine/lignee.spec.ts` |
+| `REQ-DM-046` | 1 | `DM-28` | `tests/unit/domaine/code-naf-au-depot.spec.ts` |
+| `REQ-DM-047` | 3 | `DM-29`, `UX-P3-07` | `tests/unit/console/statistiques.spec.ts`, `tests/unit/console/tris-reserves-a-la-console.spec.ts`, `tests/unit/domaine/nomenclature-naf.spec.ts`, `tests/unit/domaine/statistiques.spec.ts` |
 | `REQ-EXT-001` | 1 | `EXT-T01` | — |
 | `REQ-EXT-002` | 1 | `EXT-T01` | — |
 | `REQ-EXT-003` | 1 | `EXT-T01`, `EXT-T02a` | — |
@@ -315,12 +319,14 @@
 | `REQ-SEC-036` | 1 | `SEC-14` | — |
 | `REQ-SEC-037` | 1 | `SEC-21` | — |
 | `REQ-SEC-038` | 1 | `SEC-14`, `SEC-15`, `SEC-28` | — |
+| `REQ-SEC-039` | 3 | `UX-P3-10` | `tests/unit/console/notes-internes.spec.ts` |
+| `REQ-SEC-040` | 3 | `UX-P3-09` | `tests/unit/console/export-csv.spec.ts` |
 | `REQ-UX-001` | 1 | `UX-P1-01`, `UX-P1-02` | — |
 | `REQ-UX-002` | 0 | `DM-25`, `SEC-12`, `UX-P0-01`, `UX-P0-01b`, `UX-P1-02`, `UX-P3-05` | `tests/unit/espace/libelles-d-etats.spec.ts`, `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts` |
 | `REQ-UX-003` | 0 | `UX-P0-01`, `UX-P0-01b`, `UX-P1-10`, `UX-P3-02` | `tests/unit/espace/libelles-d-etats.spec.ts`, `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts` |
 | `REQ-UX-004` | 1 | `UX-P1-05` | — |
 | `REQ-UX-005` | 2 | `UX-P2-01`, `UX-P2-06` | — |
-| `REQ-UX-006` | 0 | `DM-16`, `SEC-05`, `UX-P2-04`, `UX-P2-06` | `tests/integration/idor.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
+| `REQ-UX-006` | 0 | `DM-16`, `SEC-05`, `UX-P2-04`, `UX-P2-06`, `UX-P2-09` | `tests/integration/idor.spec.ts`, `tests/unit/espace/mes-filleuls-liste.spec.ts`, `tests/unit/securite/acces-scope.spec.ts` |
 | `REQ-UX-007` | 1 | `SEC-16`, `UX-P1-01` | — |
 | `REQ-UX-009` | 2 | `UX-P2-02` | — |
 | `REQ-UX-010` | 2 | `UX-P2-01` | — |
@@ -348,6 +354,13 @@
 | `REQ-UX-037` | 1 | `UX-P1-13` | — |
 | `REQ-UX-038` | 1 | `DM-13`, `UX-P1-10` | — |
 | `REQ-UX-039` | 1 | `SEC-12`, `UX-P1-02`, `UX-P1-15` | — |
+| `REQ-UX-040` | 2 | `UX-P2-08` | `tests/unit/console/lignee.spec.ts` |
+| `REQ-UX-041` | 2 | `UX-P2-09` | `tests/unit/espace/mes-filleuls-liste.spec.ts` |
+| `REQ-UX-042` | 3 | `DM-29`, `UX-P3-07` | `tests/unit/console/statistiques.spec.ts`, `tests/unit/console/tris-reserves-a-la-console.spec.ts`, `tests/unit/domaine/nomenclature-naf.spec.ts`, `tests/unit/domaine/statistiques.spec.ts` |
+| `REQ-UX-043` | 3 | `UX-P3-08` | `tests/unit/console/graphiques-svg.spec.ts` |
+| `REQ-UX-044` | 3 | `UX-P3-07` | `tests/unit/console/statistiques.spec.ts`, `tests/unit/console/tris-reserves-a-la-console.spec.ts` |
+| `REQ-UX-045` | 3 | `UX-P3-11` | `tests/unit/pilotage/alertes-de-pilotage.spec.ts` |
+| `REQ-UX-046` | 3 | `UX-P3-12` | `tests/integration/bibliotheque-cloisonnement.spec.ts`, `tests/unit/console/bibliotheque.spec.ts` |
 
 ## Exigences absorbées — le texte en vigueur est celui de la survivante
 
@@ -400,18 +413,18 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 4 | 15 | 3 |
 | 5 | 15 | 3 |
 | 6 | 1 | 1 |
-| 7 | 1 | 0 |
+| 7 | 2 | 0 |
 | 8 | 13 | 2 |
 | 9 | 36 | 8 |
-| 10 | 6 | 0 |
+| 10 | 7 | 0 |
 | 11 | 5 | 1 |
 | 12 | 13 | 3 |
 | 13 | 32 | 4 |
-| 14 | 13 | 0 |
+| 14 | 17 | 0 |
 | 15 | 23 | 3 |
 | 16 | 8 | 1 |
-| 17 | 15 | 2 |
-| 18 | 3 | 0 |
+| 17 | 21 | 2 |
+| 18 | 4 | 0 |
 | 19 | 1 | 0 |
 | 20 | 3 | 0 |
 | 21 | 11 | 0 |
@@ -423,11 +436,11 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 3 | 1 | 0 |
 | 4 | 16 | 3 |
 | 5 | 17 | 3 |
-| 6 | 2 | 1 |
-| 7 | 52 | 8 |
+| 6 | 3 | 1 |
+| 7 | 57 | 8 |
 | 8 | 12 | 3 |
 | 9 | 23 | 6 |
-| 10 | 63 | 8 |
+| 10 | 67 | 8 |
 | 11 | 30 | 4 |
 | 12 | 14 | 0 |
 
