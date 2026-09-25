@@ -1067,7 +1067,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
     id: 'GOV-000',
     nature: 'contexte',
     raison:
-      'historique : l’en-tête raconte que la tâche d’amorçage déclarait l’entrée gov:check du registre ' +
+      'historique : l’en-tête raconte que la tâche d’amorçage déclarait l’entrée des termes interdits ' +
       'sans que son script existe ; le fichier appartient à la tâche qui l’a livré.',
   },
 ];
@@ -1101,7 +1101,7 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   {
     tache: 'GOV-000',
     lieu: 'gate',
-    ou: 'docs/gates.json:gov:check (scripts/gates/gov-check.ts)',
+    ou: 'docs/gates.json:gov:termes-interdits (scripts/gates/gov-check.ts)',
     n: 1,
   },
   {
@@ -1192,7 +1192,7 @@ export const DETTE_GABARIT_LIVREE: DetteGabaritLivree[] = [
   // fichier ». Leur `tests{}` promettait `preseance.spec.ts`, `affirmations-verifiees.spec.ts`,
   // `adr-index-derive.spec.ts`, `fiches-tiers.spec.ts` — un NOM NU, qui ne résout aucun fichier du
   // dépôt : les quatre spécifications passaient pour portées par personne, et les quatre mentions
-  // pour orphelines. Les promesses portent désormais le chemin complet (`outils/reecrire-champ.mjs`),
+  // pour orphelines. Les promesses portent désormais le chemin complet (`hors-depot/reecrire-champ.mjs`),
   // et les sites se referment d'eux-mêmes.
   //   - GOV-002 · tests/unit/gouvernance/preseance.spec.ts            (n: 2)
   //   - GOV-004 · tests/unit/gouvernance/affirmations-verifiees.spec.ts (n: 1)

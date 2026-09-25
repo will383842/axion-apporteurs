@@ -32,7 +32,7 @@
  * suite non déterministe — mesuré le 2026-09-05 sur cet arbre, `pnpm test` a rendu 1, puis 0, puis 0
  * sans qu'une ligne ait changé. Une valeur dérivée d'une source non reproductible n'est pas dérivée,
  * elle est ÉCHANTILLONNÉE. La vérification en ligne existe, et elle est dans un mode SÉPARÉ :
- * `scripts/gates/gov-attestation.ts --en-ligne`, jamais appelé par `pnpm test` ni par `pnpm gov:check`.
+ * `scripts/gates/gov-attestation.ts --en-ligne`, jamais appelé par `pnpm test` ni par `pnpm gov:partiel`.
  */
 
 /**
