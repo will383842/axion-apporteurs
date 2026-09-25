@@ -1,0 +1,32 @@
+{
+  "Source": "gh api repos/will383842/axion-apporteurs/issues/41/comments --paginate, enregistre le 2026-09-18. PROJECTION appliquee a la capture, et elle seule : de chaque commentaire sont conserves id, user.login, author_association, created_at, et de body la PREMIERE ligne (« A<nn> · <lentille> ») puis TOUTE ligne portant le mot Verdict, verbatim et dans l ordre — la meme projection que revues-pr-31.json. Le 2026-09-14 la PR 41 portait ces avis en COMMENTAIRES D ISSUE et zero revue : ils ne comptaient pour rien, et rien ne le disait (GOV-077).",
+  "commentaires": [
+    {
+      "id": 5660533020,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "created_at": "2026-09-14T07:28:59Z",
+      "body": "A09 · simplicite\nVerdict: refuse"
+    },
+    {
+      "id": 5660610786,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "created_at": "2026-09-14T07:36:46Z",
+      "body": "A09 · securite\nVerdict: refuse"
+    },
+    {
+      "id": 5660626573,
+      "user": {
+        "login": "will383842"
+      },
+      "author_association": "OWNER",
+      "created_at": "2026-09-14T07:38:23Z",
+      "body": "A09 · exactitude\nVerdict: refuse"
+    }
+  ]
+}

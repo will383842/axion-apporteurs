@@ -52,6 +52,9 @@ import {
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
+import { fichiersSuivis } from '../lot/fichiers-suivis';
+// LA seule question « ce sha désigne-t-il un commit d'ici ? » du dépôt — `gov-sonde` ne la repose pas.
+import { objetLisible } from './gov-pr';
 
 const CHEMIN_AFFIRMATIONS = 'docs/AFFIRMATIONS-AXIONIA.md';
 const CHEMIN_DECISIONS = 'docs/DECISIONS.md';
@@ -65,8 +68,12 @@ const TITRE_TABLEAU = '## 2. Tableau des affirmations';
 const ENTETE = ['Repère', 'Affirmation', 'Verdict', "Où je l'ai vérifiée", 'Vérifié le'];
 const VERDICTS = ['vérifiée', 'FAUSSE', 'partielle', 'non vérifiable'];
 
-/** `AAAA-MM-JJ @ <SHA court>` — la date SEULE ne dit pas contre quoi la ligne a été rejouée. */
-const DATE_ET_SHA = /^\d{4}-\d{2}-\d{2}\s*@\s*[0-9a-f]{7,40}$/;
+/**
+ * `AAAA-MM-JJ @ <SHA court>` — la date SEULE ne dit pas contre quoi la ligne a été rejouée.
+ * C'est la SEULE écriture de cette grammaire : `PREUVE_DATEE` (les sources) en dérive, pour que
+ * durcir l'une durcisse l'autre (motif `simplicite` sur la PR 114).
+ */
+const DATE_ET_SHA = /^(\d{4}-\d{2}-\d{2})\s*@\s*([0-9a-f]{7,40})$/;
 /** Un chemin de fichier suivi d'un numéro de ligne : une affirmation LOCALISÉE. */
 const CHEMIN_LIGNE =
   /[A-Za-z0-9_.[\]@-]+(?:\/[A-Za-z0-9_.[\]@-]+)*\.(?:ts|tsx|prisma|sql|sh|json|md|yml):\d+/g;
@@ -131,7 +138,7 @@ function dansArbre(racine: string, relatif: string, motif: RegExp, extensions: s
     }
     for (const e of entrees) {
       const p = join(courant, e);
-      let estDossier = false;
+      let estDossier: boolean;
       try {
         estDossier = statSync(p).isDirectory();
       } catch {
@@ -312,16 +319,143 @@ function nettoyerVerdict(cellule: string): string {
   return cellule.replace(/\*\*/g, '').split('—')[0]?.trim() ?? '';
 }
 
+// ── de quel dépôt parle un chemin (GOV-048) ──────────────────────────────────
+/**
+ * 🔴 LA GARDE ÉTAIT TROP LARGE D'UN DÉPÔT, et la mesure est du 2026-09-12 : le versement des tâches
+ * GOV-041 à GOV-047 a fait rougir `source_axionia_sans_repere` SEPT fois, sur des chemins qui sont
+ * TOUS ceux de Partners — `scripts/lot/cloture.ts`, `scripts/lot/revues.ts`,
+ * `scripts/gates/perf-budgets.ts`, `docs/CHARTE-AGENTS.md`, `docs/CONVENTIONS.md`,
+ * `docs/PROMPTS/developpeur.md`. La garde exigeait pour chacun un repère AFF-nn de
+ * `docs/AFFIRMATIONS-AXIONIA.md`, dont l'en-tête déclare pourtant un objet UNIQUE : « Dépôt
+ * axionia, branche main, commit ad53f14a… ». Y inscrire du code de Partners aurait rendu cet
+ * en-tête FAUX.
+ *
+ * LE CONTOURNEMENT PRIS CE JOUR-LÀ, et c'est pourquoi cette tâche existe : les sept numéros de
+ * ligne ont été RETIRÉS des acceptances plutôt qu'inscrits au mauvais registre. Le fait reste vrai
+ * et localisable, la précision est perdue.
+ *
+ * LA DISTINCTION SE DÉRIVE DU DISQUE, jamais d'une liste de préfixes : un chemin est de Partners
+ * s'il est un fichier SUIVI de CE dépôt. Tout le reste parle d'ailleurs — c'est-à-dire d'axionia,
+ * le seul autre dépôt que ce registre connaisse.
+ */
+export type DepotDuChemin = 'partners' | 'axionia' | 'ambigu';
+
+/** La qualification EXPLICITE d'un chemin de CE dépôt : `partners/prisma/schema.prisma:12`. */
+export const QUALIFICATION_PARTNERS = 'partners/';
+
+/**
+ * 🔴 UN CHEMIN DES DEUX CÔTÉS N'EST PAS D'ICI PAR DÉFAUT (motif `securite` sur la PR 114).
+ *
+ * La première version classait « partners » tout chemin SUIVI ici. Or 19 chemins le sont dans LES
+ * DEUX dépôts — `prisma/schema.prisma`, `src/proxy.ts`, `package.json`… — et le premier est le
+ * modèle d'argent d'axionia (AFF-01, AFF-02, AFF-05). Une affirmation sur axionia citant
+ * `prisma/schema.prisma:9999` s'absolvait alors avec N'IMPORTE QUEL sha d'ici. Échec OUVERT.
+ *
+ * Trois réponses, donc :
+ *   — `partners/<chemin suivi ici>` : QUALIFIÉ, d'ici, prouvé par l'historique d'ici ;
+ *   — suivi ici ET absent d'axionia, établi sur son arbre : d'ici ;
+ *   — suivi ici et présent dans axionia, OU axionia hors de portée (`null`, le mode CI) : AMBIGU,
+ *     et l'ambiguïté se tranche du côté STRICT — le repère AFF-nn reste exigé.
+ * Ne pas savoir ne fait perdre aucune exigence : c'est `null` qui rend ambigu, jamais l'inverse.
+ */
+export function depotDuChemin(
+  chemin: string,
+  suivis: ReadonlySet<string>,
+  existeDansAxionia: ((chemin: string) => boolean) | null
+): DepotDuChemin {
+  if (chemin.startsWith(QUALIFICATION_PARTNERS)) {
+    return suivis.has(chemin.slice(QUALIFICATION_PARTNERS.length)) ? 'partners' : 'axionia';
+  }
+  if (!suivis.has(chemin)) return 'axionia';
+  if (existeDansAxionia === null || existeDansAxionia(chemin)) return 'ambigu';
+  return 'partners';
+}
+
+/**
+ * UNE PREUVE DATÉE DE CE DÉPÔT : `AAAA-MM-JJ @ <sha>`, la même forme que la cinquième colonne du
+ * tableau des affirmations. La forme ne suffit pas — le SHA doit RÉSOUDRE dans l'historique de
+ * Partners, sinon la « preuve » ne désigne rien et vaut la date seule, qui ne dit contre QUOI la
+ * ligne a été rejouée.
+ */
+export const PREUVE_DATEE = new RegExp(DATE_ET_SHA.source.slice(1, -1), 'g');
+
+/**
+ * LES FICHIERS SUIVIS DE CE DÉPÔT — la population qui décide de quel dépôt parle un chemin.
+ *
+ * Elle vient de `scripts/lot/fichiers-suivis.ts`, LA source du périmètre : cette lecture-là LÈVE
+ * quand git ne répond pas, au lieu de rendre un tableau vide.
+ *
+ * 🔑 ET ICI, L'ENSEMBLE VIDE EST LE CÔTÉ STRICT — c'est ce qui rend le rattrapage légitime. Cette
+ * population ne sert qu'à RELÂCHER une exigence : un chemin reconnu comme étant d'ici n'a plus
+ * besoin d'un repère AFF-nn. Sans elle, TOUT chemin est réputé d'axionia et redemande son repère,
+ * c'est-à-dire le comportement d'avant GOV-048. Ne pas savoir ne fait donc perdre AUCUNE exigence :
+ * le défaut de lecture échoue FERMÉ, et il se DIT plutôt que de passer pour une mesure.
+ *
+ * ⚠️ Cette distinction compte : la même absence de périmètre, dans une garde qui s'en sert pour
+ * BALAYER, rendrait un vert sur zéro fichier — et là il faut refuser.
+ */
+export function suivisDePartners(): ReadonlySet<string> {
+  try {
+    return new Set(fichiersSuivis());
+  } catch (e) {
+    console.error(
+      `⚠ gov:sonde — le périmètre de CE dépôt est illisible (${(e as Error).message.split('\n')[0]}). ` +
+        `Aucun chemin ne sera reconnu comme étant d'ici : tout chemin cité avec sa ligne redemande ` +
+        `son repère AFF-nn, comme avant GOV-048. C'est le côté STRICT, et il est dit.`
+    );
+    return new Set();
+  }
+}
+
+/** Les SHA cités par un texte comme preuve datée. */
+export function shaDesPreuvesDatees(texte: string): string[] {
+  PREUVE_DATEE.lastIndex = 0;
+  return [...texte.matchAll(PREUVE_DATEE)].map((m) => m[2]!);
+}
+
 // ── le contrôle ──────────────────────────────────────────────────────────────
 
-type Entrees = {
+export type Entrees = {
   affirmations: string;
   decisions: string;
   sources: { id: string; texte: string }[];
   racineAxionia: string | null;
+  /**
+   * Les fichiers SUIVIS de CE dépôt. C'est la population qui décide de quel dépôt parle un chemin
+   * — dérivée du disque, passée en entrée pour qu'un témoin puisse la feindre sans toucher à git.
+   */
+  suivisDePartners: ReadonlySet<string>;
+  /**
+   * Le chemin existe-t-il AUSSI dans axionia ? `null` quand l'arbre voisin est hors de portée :
+   * tout chemin d'ici est alors AMBIGU, et l'ambiguïté garde l'exigence (motif `securite`, PR 114).
+   */
+  existeDansAxionia: ((chemin: string) => boolean) | null;
+  /** Vrai si le SHA résout dans l'historique de CE dépôt. Injectée pour la même raison. */
+  shaResout: (sha: string) => boolean;
 };
 
-function controler(e: Entrees): Faute[] {
+/**
+ * LES ENTRÉES DU DÉPÔT RÉEL — le SEUL endroit où les prédicats de la garde sont BRANCHÉS.
+ *
+ * Motif `mutation` sur la PR 114 : `shaResout: () => true` dans l'appel du mode normal laissait
+ * spec et `--prove` verts, parce que les deux branchaient le prédicat chacun de leur côté. Le mode
+ * normal, `--prove` et le témoin de bout en bout passent tous par ici.
+ */
+export function entreesDuDepot(
+  lu: Pick<Entrees, 'affirmations' | 'decisions' | 'sources'>,
+  racineAxionia: string | null
+): Entrees {
+  return {
+    ...lu,
+    racineAxionia,
+    suivisDePartners: suivisDePartners(),
+    existeDansAxionia:
+      racineAxionia === null ? null : (chemin) => existsSync(join(racineAxionia, chemin)),
+    shaResout: objetLisible,
+  };
+}
+
+export function controler(e: Entrees): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
 
@@ -439,7 +573,30 @@ function controler(e: Entrees): Faute[] {
 
   const ancresDuTableau = jetonsChemin(e.affirmations);
   for (const s of e.sources) {
+    // Les SHA que CETTE source offre en preuve, lus une seule fois : une source cite souvent
+    // plusieurs chemins et une seule preuve datée, qui les couvre tous.
+    const shaOfferts = shaDesPreuvesDatees(s.texte);
     for (const jeton of jetonsChemin(s.texte)) {
+      const chemin = jeton.slice(0, jeton.lastIndexOf(':'));
+      const depot = depotDuChemin(chemin, e.suivisDePartners, e.existeDansAxionia);
+      if (depot === 'partners') {
+        // UNE AFFIRMATION SUR DU CODE DE PARTNERS SE PROUVE PAR L'HISTORIQUE DE PARTNERS. Le
+        // tableau des affirmations déclare un objet unique — le dépôt axionia — et y inscrire du
+        // code d'ici rendrait son en-tête faux. Le refus est DISTINCT et NOMMÉ : il ne renvoie pas
+        // le lecteur vers un registre qui n'a rien à voir.
+        if (!shaOfferts.some((sha) => e.shaResout(sha))) {
+          ajouter(
+            'source_partners_sans_preuve_datee',
+            `${s.id} cite « ${jeton} », un fichier SUIVI de CE dépôt, avec son numéro de ligne — ` +
+              `donc un FAIT localisé — sans preuve datée de l'historique de Partners. Un numéro de ` +
+              `ligne se périme au premier correctif : écris « AAAA-MM-JJ @ <sha> » dans la même ` +
+              `source, avec un SHA qui résout ICI. Le tableau ${CHEMIN_AFFIRMATIONS} n'est PAS le ` +
+              `bon registre : son en-tête déclare le dépôt axionia, et y inscrire ce chemin le ` +
+              `rendrait faux.`
+          );
+        }
+        continue;
+      }
       const couverte = ancresDuTableau.some(
         (a) => a === jeton || a.endsWith('/' + jeton) || jeton.endsWith('/' + a)
       );
@@ -448,7 +605,12 @@ function controler(e: Entrees): Faute[] {
           'source_axionia_sans_repere',
           `${s.id} localise une affirmation dans du code (« ${jeton} ») sans qu'aucune ligne de ` +
             `${CHEMIN_AFFIRMATIONS} §2 ne la porte. Une source qui cite un chemin ET une ligne affirme un ` +
-            `FAIT : il lui faut une date et un SHA, donc un repère AFF-nn.`
+            `FAIT : il lui faut une date et un SHA, donc un repère AFF-nn.` +
+            (depot === 'ambigu'
+              ? ` Ce chemin est suivi ICI mais ${e.existeDansAxionia === null ? "axionia est hors de portée : rien ne dit qu'il n'y est pas aussi" : 'il existe AUSSI dans axionia'} — ` +
+                `AMBIGU, donc tranché du côté strict. S'il parle de CE dépôt, qualifie-le ` +
+                `« ${QUALIFICATION_PARTNERS}${chemin} » et date-le d'un SHA d'ici.`
+              : '')
         );
       }
     }
@@ -490,7 +652,7 @@ function controler(e: Entrees): Faute[] {
   return fautes;
 }
 
-const FAMILLES = [
+export const FAMILLES = [
   'tableau_illisible',
   'affirmations_insuffisantes',
   'repere_double',
@@ -501,355 +663,421 @@ const FAMILLES = [
   'acceptation_non_couverte',
   'invalidee_absente_du_registre',
   'source_axionia_sans_repere',
+  'source_partners_sans_preuve_datee',
   'sonde_dementie',
 ];
 
 // ── entrées ──────────────────────────────────────────────────────────────────
 
-for (const f of [CHEMIN_AFFIRMATIONS, CHEMIN_DECISIONS, CHEMIN_REGISTRE, CHEMIN_TACHES]) {
-  if (!existsSync(f)) {
-    console.error(`❌ gov:sonde — ${f} est introuvable.`);
+/**
+ * VRAI quand ce fichier est LANCÉ, faux quand il est IMPORTÉ (GOV-048).
+ *
+ * Sans ce garde-fou, la spécification de cette garde ne peut pas l'importer : le corps exécutable
+ * partait à l’import, lisait les quatre sources du dépôt et sortait par `process.exit` — ce qui
+ * tue le worker `vitest` avant le premier `it`. Une lecture qu’on ne peut pas importer finit
+ * recopiée, et la copie est toujours la plus pauvre.
+ *
+ * ⚠️ LES DEUX SÉPARATEURS : `process.argv[1]` porte le chemin natif, et sous Windows il n'y a pas
+ * une seule barre oblique dedans.
+ */
+const LANCE_EN_SCRIPT = /[\\/]gates[\\/]gov-sonde(\.ts)?$/.test(process.argv[1] ?? '');
+
+// ── le corps EXÉCUTABLE, sous le garde-fou d'import ──────────────────────────
+if (LANCE_EN_SCRIPT) {
+  for (const f of [CHEMIN_AFFIRMATIONS, CHEMIN_DECISIONS, CHEMIN_REGISTRE, CHEMIN_TACHES]) {
+    if (!existsSync(f)) {
+      console.error(`❌ gov:sonde — ${f} est introuvable.`);
+      process.exit(1);
+    }
+  }
+
+  const affirmations = readFileSync(CHEMIN_AFFIRMATIONS, 'utf8');
+  const decisions = readFileSync(CHEMIN_DECISIONS, 'utf8');
+  const exigences = (
+    JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as {
+      exigences: { id: string; source: string }[];
+    }
+  ).exigences;
+  const taches = (
+    JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as {
+      taches: { id: string; acceptance: string | null }[];
+    }
+  ).taches;
+
+  const sources: { id: string; texte: string }[] = [
+    ...exigences.map((x) => ({ id: x.id, texte: x.source ?? '' })),
+    ...taches.map((t) => ({ id: t.id, texte: t.acceptance ?? '' })),
+  ];
+
+  const RACINE_PAR_DEFAUT = process.env.AXIONIA_REPO ?? join('..', 'Axion-IA', 'axionia');
+  const axioniaDispo = existsSync(join(RACINE_PAR_DEFAUT, SCHEMA));
+
+  // ── mode --prove ─────────────────────────────────────────────────────────────
+
+  /** Un arbre d'axionia SYNTHÉTIQUE : la preuve ne dépend pas de la présence du dépôt voisin. */
+  function arbreFactice(): string {
+    const racine = mkdtempSync(join(tmpdir(), 'gov-sonde-'));
+    const poser = (relatif: string, contenu: string): void => {
+      const p = join(racine, relatif);
+      mkdirSync(dirname(p), { recursive: true });
+      writeFileSync(p, contenu, 'utf8');
+    };
+    poser(
+      SCHEMA,
+      [
+        'model CrmSyncOutbox {',
+        '}',
+        'model DocusealWebhookEvent {',
+        '}',
+        'model EmargementToken {',
+        '}',
+        'model TrainerStatement {',
+        '}',
+        '',
+      ].join('\n')
+    );
+    poser(
+      join(MIGRATIONS, '20260721120000_x', 'migration.sql'),
+      'CREATE UNIQUE INDEX "emargement_token_enrollment_actif"\n'
+    );
+    poser(
+      join(MIGRATIONS, '20260730090000_y', 'migration.sql'),
+      'CREATE UNIQUE INDEX "document_signature_token_actif"\n'
+    );
+    poser(join(MIGRATIONS, '20260516142017_z', 'migration.sql'), "DEFAULT 'Axion-IA OÜ'\n");
+    poser(PRICING, 'export const COMMERCIAL_COMMISSIONS = [];\n');
+    poser(SCORING, 'export const SCORE_POIDS = {} as const;\n');
+    return racine;
+  }
+
+  if (process.argv.includes('--prove')) {
+    const factice = arbreFactice();
+    try {
+      const base: Entrees = entreesDuDepot({ affirmations, decisions, sources }, factice);
+      const dejaFautif = controler(base);
+      if (dejaFautif.length > 0) {
+        console.error(
+          `❌ La preuve part d'un état DÉJÀ fautif (${dejaFautif.length}) — corrige d'abord :`
+        );
+        dejaFautif.slice(0, 5).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
+        process.exit(1);
+      }
+
+      /** Remplace la première ligne du tableau §2 qui porte `repere` par `remplacement`. */
+      const remplacerLigne = (
+        texte: string,
+        repere: string,
+        remplacement: (l: string) => string
+      ): string =>
+        texte
+          .split('\n')
+          .map((l) => (l.trimStart().startsWith(`| ${repere} `) ? remplacement(l) : l))
+          .join('\n');
+
+      const TEMOINS: { famille: string; defaut: () => Entrees }[] = [
+        {
+          famille: 'tableau_illisible',
+          defaut: () => ({
+            ...base,
+            affirmations: affirmations.replace(
+              '| Repère | Affirmation | Verdict |',
+              '| Repere | Affirmation |'
+            ),
+          }),
+        },
+        {
+          famille: 'affirmations_insuffisantes',
+          defaut: () => {
+            const l = affirmations.split('\n');
+            const debut = l.findIndex((x) => x.trim() === TITRE_TABLEAU);
+            let gardees = 0;
+            return {
+              ...base,
+              affirmations: l
+                .filter((x, i) => {
+                  if (i <= debut + 2 || !x.trimStart().startsWith('| AFF-')) return true;
+                  gardees++;
+                  return gardees <= 5;
+                })
+                .join('\n'),
+            };
+          },
+        },
+        {
+          famille: 'repere_double',
+          defaut: () => {
+            const l = affirmations.split('\n');
+            const i = l.findIndex((x) => x.trimStart().startsWith('| AFF-01 '));
+            return {
+              ...base,
+              affirmations: [...l.slice(0, i + 1), l[i] as string, ...l.slice(i + 1)].join('\n'),
+            };
+          },
+        },
+        {
+          famille: 'verdict_inconnu',
+          defaut: () => ({
+            ...base,
+            affirmations: remplacerLigne(affirmations, 'AFF-01', (l) =>
+              l.replace('**FAUSSE**', '**douteuse**')
+            ),
+          }),
+        },
+        {
+          famille: 'preuve_sans_ancre',
+          defaut: () => ({
+            ...base,
+            affirmations: remplacerLigne(affirmations, 'AFF-07', (l) => {
+              const c = decouper(l);
+              c[3] = 'je crois me souvenir que oui';
+              return `| ${c.join(' | ')} |`;
+            }),
+          }),
+        },
+        {
+          famille: 'date_ou_sha_manquant',
+          defaut: () => ({
+            ...base,
+            affirmations: remplacerLigne(affirmations, 'AFF-01', (l) =>
+              l.replace('2026-09-03 @ ad53f14a', '2026-09-03')
+            ),
+          }),
+        },
+        {
+          famille: 'barre_non_echappee',
+          defaut: () => ({
+            ...base,
+            affirmations: remplacerLigne(affirmations, 'AFF-07', (l) =>
+              l.replace('**vérifiée**', '**vérifiée** `a | b`')
+            ),
+          }),
+        },
+        {
+          famille: 'acceptation_non_couverte',
+          defaut: () => ({
+            ...base,
+            affirmations: affirmations
+              .split('\n')
+              .filter((l) => !l.trimStart().startsWith('| AFF-46 '))
+              .join('\n'),
+          }),
+        },
+        {
+          famille: 'invalidee_absente_du_registre',
+          defaut: () => ({
+            ...base,
+            decisions: decisions
+              .split('\n')
+              .filter((l) => !/`Refund`/.test(l))
+              .join('\n'),
+          }),
+        },
+        {
+          famille: 'source_axionia_sans_repere',
+          defaut: () => ({
+            ...base,
+            sources: [
+              ...sources,
+              {
+                id: 'REQ-TEMOIN-001',
+                texte: 'affirmation lue dans src/server/inconnu.ts:42, jamais datée',
+              },
+            ],
+          }),
+        },
+        {
+          // GOV-048 — LE SECOND SENS : un chemin de CE dépôt cité avec sa ligne, sans preuve
+          // datée d'ICI. Le refus est distinct de `source_axionia_sans_repere` : il ne renvoie
+          // pas vers le tableau des affirmations, qui parle d'un autre dépôt.
+          famille: 'source_partners_sans_preuve_datee',
+          defaut: () => ({
+            ...base,
+            sources: [
+              ...sources,
+              {
+                id: 'REQ-TEMOIN-003',
+                texte: 'le refus vit dans scripts/lot/cloture.ts:120, jamais daté',
+              },
+            ],
+            suivisDePartners: new Set([...base.suivisDePartners, 'scripts/lot/cloture.ts']),
+          }),
+        },
+        {
+          // Motif `securite` sur la PR 114 : un chemin AMBIGU — suivi ici, présent dans l'arbre
+          // d'axionia (le factice porte `prisma/schema.prisma`) — cité pour axionia avec un sha
+          // d'ICI qui RÉSOUT. Il ne s'absout pas : le repère AFF-nn reste exigé.
+          famille: 'source_axionia_sans_repere',
+          defaut: () => ({
+            ...base,
+            sources: [
+              ...sources,
+              {
+                id: 'REQ-TEMOIN-004',
+                texte: `chez axionia le champ est HT (${SCHEMA}:9999), rejoué 2026-09-25 @ abc1234`,
+              },
+            ],
+            suivisDePartners: new Set([...base.suivisDePartners, SCHEMA]),
+            // Le sha RÉSOUT, par construction : ce n'est pas lui qui doit faire rougir.
+            shaResout: () => true,
+          }),
+        },
+        {
+          // Motif `mutation` sur la PR 114 : la preuve datée passe par le prédicat BRANCHÉ par
+          // `entreesDuDepot`, pas par un prédicat feint — un sha qui ne résout pas ICI rougit.
+          famille: 'source_partners_sans_preuve_datee',
+          defaut: () => ({
+            ...base,
+            sources: [
+              ...sources,
+              {
+                id: 'REQ-TEMOIN-005',
+                texte: `le refus vit dans ${QUALIFICATION_PARTNERS}scripts/lot/cloture.ts:120 (2026-09-25 @ 0000000)`,
+              },
+            ],
+            suivisDePartners: new Set([...base.suivisDePartners, 'scripts/lot/cloture.ts']),
+          }),
+        },
+        {
+          famille: 'sonde_dementie',
+          defaut: () => ({
+            ...base,
+            affirmations: remplacerLigne(affirmations, 'AFF-01', (l) =>
+              l.replace('**FAUSSE**', '**vérifiée**')
+            ),
+          }),
+        },
+      ];
+
+      const prouvees = new Set<string>();
+      for (const t of TEMOINS) {
+        const f = controler(t.defaut());
+        if (!f.some((x) => x.famille === t.famille)) {
+          console.error(
+            `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille ` +
+              `(${f.length} faute(s) d'autres familles). Le contrôle ne couvre pas ce qu'il prétend couvrir.`
+          );
+          process.exit(1);
+        }
+        prouvees.add(t.famille);
+      }
+      const sansTemoin = FAMILLES.filter((f) => !prouvees.has(f));
+      if (sansTemoin.length > 0) {
+        console.error(`❌ Famille(s) de contrôle sans témoin : ${sansTemoin.join(', ')}.`);
+        process.exit(1);
+      }
+
+      /** Ce qui RESSEMBLE à une faute sans en être une. Une garde qui rougit là-dessus est inutilisable. */
+      const CONTRE_TEMOINS: { quoi: string; cas: () => Entrees; famille: string }[] = [
+        {
+          quoi: 'une barre ÉCHAPPÉE entre accents graves',
+          famille: 'barre_non_echappee',
+          cas: () => ({
+            ...base,
+            affirmations: remplacerLigne(affirmations, 'AFF-07', (l) =>
+              l.replace('**vérifiée**', '**vérifiée** `a \\| b`')
+            ),
+          }),
+        },
+        {
+          quoi: 'une source qui DÉSIGNE un fichier sans en affirmer le contenu',
+          famille: 'source_axionia_sans_repere',
+          cas: () => ({
+            ...base,
+            sources: [
+              ...sources,
+              { id: 'REQ-TEMOIN-002', texte: 'nouvelle (patron `src/env.ts`, `next.config.ts`)' },
+            ],
+          }),
+        },
+        {
+          quoi: "une preuve d'ABSENCE, qui n'a aucune ligne où se lire",
+          famille: 'preuve_sans_ancre',
+          cas: () => ({
+            ...base,
+            affirmations: remplacerLigne(affirmations, 'AFF-07', (l) => {
+              const c = decouper(l);
+              c[3] = 'Zéro occurrence dans `axionia/src/**`';
+              return `| ${c.join(' | ')} |`;
+            }),
+          }),
+        },
+        {
+          quoi: 'un dépôt voisin hors de portée : les sondes ne sont pas rejouées, elles ne mentent pas',
+          famille: 'sonde_dementie',
+          cas: () => ({ ...base, racineAxionia: null }),
+        },
+        {
+          quoi: 'un verdict « partielle » : la sonde le mesure, elle ne le contredit jamais',
+          famille: 'sonde_dementie',
+          cas: () => ({ ...base, affirmations: remplacerLigne(affirmations, 'AFF-30', (l) => l) }),
+        },
+      ];
+
+      for (const ct of CONTRE_TEMOINS) {
+        const f = controler(ct.cas()).filter((x) => x.famille === ct.famille);
+        if (f.length > 0) {
+          console.error(
+            `❌ Contre-témoin ROUGE — ${ct.quoi} : la garde rougit sur ce qui est légitime.`
+          );
+          f.slice(0, 3).forEach((x) => console.error(`   [${x.famille}] ${x.message}`));
+          process.exit(1);
+        }
+      }
+
+      console.log(
+        `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+      );
+      console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
+      console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts :`);
+      console.log(`   ${CONTRE_TEMOINS.map((c) => '· ' + c.quoi).join('\n   ')}`);
+      process.exit(0);
+    } finally {
+      rmSync(factice, { recursive: true, force: true });
+    }
+  }
+
+  // ── mode normal ──────────────────────────────────────────────────────────────
+
+  const exigerAxionia = process.argv.includes('--exiger-axionia');
+  if (exigerAxionia && !axioniaDispo) {
+    console.error(
+      `❌ gov:sonde --exiger-axionia — l'arbre d'axionia est hors de portée (${RACINE_PAR_DEFAUT}). ` +
+        `Pose AXIONIA_REPO sur le chemin du dépôt voisin, ou lance la garde sans ce drapeau en sachant ` +
+        `que les ${SONDES.length} sondes ne seront PAS rejouées.`
+    );
     process.exit(1);
   }
-}
 
-const affirmations = readFileSync(CHEMIN_AFFIRMATIONS, 'utf8');
-const decisions = readFileSync(CHEMIN_DECISIONS, 'utf8');
-const exigences = (
-  JSON.parse(readFileSync(CHEMIN_REGISTRE, 'utf8')) as {
-    exigences: { id: string; source: string }[];
-  }
-).exigences;
-const taches = (
-  JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as {
-    taches: { id: string; acceptance: string | null }[];
-  }
-).taches;
-
-const sources: { id: string; texte: string }[] = [
-  ...exigences.map((x) => ({ id: x.id, texte: x.source ?? '' })),
-  ...taches.map((t) => ({ id: t.id, texte: t.acceptance ?? '' })),
-];
-
-const RACINE_PAR_DEFAUT = process.env.AXIONIA_REPO ?? join('..', 'Axion-IA', 'axionia');
-const axioniaDispo = existsSync(join(RACINE_PAR_DEFAUT, SCHEMA));
-
-// ── mode --prove ─────────────────────────────────────────────────────────────
-
-/** Un arbre d'axionia SYNTHÉTIQUE : la preuve ne dépend pas de la présence du dépôt voisin. */
-function arbreFactice(): string {
-  const racine = mkdtempSync(join(tmpdir(), 'gov-sonde-'));
-  const poser = (relatif: string, contenu: string): void => {
-    const p = join(racine, relatif);
-    mkdirSync(dirname(p), { recursive: true });
-    writeFileSync(p, contenu, 'utf8');
-  };
-  poser(
-    SCHEMA,
-    [
-      'model CrmSyncOutbox {',
-      '}',
-      'model DocusealWebhookEvent {',
-      '}',
-      'model EmargementToken {',
-      '}',
-      'model TrainerStatement {',
-      '}',
-      '',
-    ].join('\n')
+  const fautes = controler(
+    entreesDuDepot({ affirmations, decisions, sources }, axioniaDispo ? RACINE_PAR_DEFAUT : null)
   );
-  poser(
-    join(MIGRATIONS, '20260721120000_x', 'migration.sql'),
-    'CREATE UNIQUE INDEX "emargement_token_enrollment_actif"\n'
-  );
-  poser(
-    join(MIGRATIONS, '20260730090000_y', 'migration.sql'),
-    'CREATE UNIQUE INDEX "document_signature_token_actif"\n'
-  );
-  poser(join(MIGRATIONS, '20260516142017_z', 'migration.sql'), "DEFAULT 'Axion-IA OÜ'\n");
-  poser(PRICING, 'export const COMMERCIAL_COMMISSIONS = [];\n');
-  poser(SCORING, 'export const SCORE_POIDS = {} as const;\n');
-  return racine;
-}
 
-if (process.argv.includes('--prove')) {
-  const factice = arbreFactice();
-  try {
-    const base: Entrees = { affirmations, decisions, sources, racineAxionia: factice };
-    const dejaFautif = controler(base);
-    if (dejaFautif.length > 0) {
-      console.error(
-        `❌ La preuve part d'un état DÉJÀ fautif (${dejaFautif.length}) — corrige d'abord :`
-      );
-      dejaFautif.slice(0, 5).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
-      process.exit(1);
-    }
-
-    /** Remplace la première ligne du tableau §2 qui porte `repere` par `remplacement`. */
-    const remplacerLigne = (
-      texte: string,
-      repere: string,
-      remplacement: (l: string) => string
-    ): string =>
-      texte
-        .split('\n')
-        .map((l) => (l.trimStart().startsWith(`| ${repere} `) ? remplacement(l) : l))
-        .join('\n');
-
-    const TEMOINS: { famille: string; defaut: () => Entrees }[] = [
-      {
-        famille: 'tableau_illisible',
-        defaut: () => ({
-          ...base,
-          affirmations: affirmations.replace(
-            '| Repère | Affirmation | Verdict |',
-            '| Repere | Affirmation |'
-          ),
-        }),
-      },
-      {
-        famille: 'affirmations_insuffisantes',
-        defaut: () => {
-          const l = affirmations.split('\n');
-          const debut = l.findIndex((x) => x.trim() === TITRE_TABLEAU);
-          let gardees = 0;
-          return {
-            ...base,
-            affirmations: l
-              .filter((x, i) => {
-                if (i <= debut + 2 || !x.trimStart().startsWith('| AFF-')) return true;
-                gardees++;
-                return gardees <= 5;
-              })
-              .join('\n'),
-          };
-        },
-      },
-      {
-        famille: 'repere_double',
-        defaut: () => {
-          const l = affirmations.split('\n');
-          const i = l.findIndex((x) => x.trimStart().startsWith('| AFF-01 '));
-          return {
-            ...base,
-            affirmations: [...l.slice(0, i + 1), l[i] as string, ...l.slice(i + 1)].join('\n'),
-          };
-        },
-      },
-      {
-        famille: 'verdict_inconnu',
-        defaut: () => ({
-          ...base,
-          affirmations: remplacerLigne(affirmations, 'AFF-01', (l) =>
-            l.replace('**FAUSSE**', '**douteuse**')
-          ),
-        }),
-      },
-      {
-        famille: 'preuve_sans_ancre',
-        defaut: () => ({
-          ...base,
-          affirmations: remplacerLigne(affirmations, 'AFF-07', (l) => {
-            const c = decouper(l);
-            c[3] = 'je crois me souvenir que oui';
-            return `| ${c.join(' | ')} |`;
-          }),
-        }),
-      },
-      {
-        famille: 'date_ou_sha_manquant',
-        defaut: () => ({
-          ...base,
-          affirmations: remplacerLigne(affirmations, 'AFF-01', (l) =>
-            l.replace('2026-09-03 @ ad53f14a', '2026-09-03')
-          ),
-        }),
-      },
-      {
-        famille: 'barre_non_echappee',
-        defaut: () => ({
-          ...base,
-          affirmations: remplacerLigne(affirmations, 'AFF-07', (l) =>
-            l.replace('**vérifiée**', '**vérifiée** `a | b`')
-          ),
-        }),
-      },
-      {
-        famille: 'acceptation_non_couverte',
-        defaut: () => ({
-          ...base,
-          affirmations: affirmations
-            .split('\n')
-            .filter((l) => !l.trimStart().startsWith('| AFF-46 '))
-            .join('\n'),
-        }),
-      },
-      {
-        famille: 'invalidee_absente_du_registre',
-        defaut: () => ({
-          ...base,
-          decisions: decisions
-            .split('\n')
-            .filter((l) => !/`Refund`/.test(l))
-            .join('\n'),
-        }),
-      },
-      {
-        famille: 'source_axionia_sans_repere',
-        defaut: () => ({
-          ...base,
-          sources: [
-            ...sources,
-            {
-              id: 'REQ-TEMOIN-001',
-              texte: 'affirmation lue dans src/server/inconnu.ts:42, jamais datée',
-            },
-          ],
-        }),
-      },
-      {
-        famille: 'sonde_dementie',
-        defaut: () => ({
-          ...base,
-          affirmations: remplacerLigne(affirmations, 'AFF-01', (l) =>
-            l.replace('**FAUSSE**', '**vérifiée**')
-          ),
-        }),
-      },
-    ];
-
-    const prouvees = new Set<string>();
-    for (const t of TEMOINS) {
-      const f = controler(t.defaut());
-      if (!f.some((x) => x.famille === t.famille)) {
-        console.error(
-          `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille ` +
-            `(${f.length} faute(s) d'autres familles). Le contrôle ne couvre pas ce qu'il prétend couvrir.`
-        );
-        process.exit(1);
-      }
-      prouvees.add(t.famille);
-    }
-    const sansTemoin = FAMILLES.filter((f) => !prouvees.has(f));
-    if (sansTemoin.length > 0) {
-      console.error(`❌ Famille(s) de contrôle sans témoin : ${sansTemoin.join(', ')}.`);
-      process.exit(1);
-    }
-
-    /** Ce qui RESSEMBLE à une faute sans en être une. Une garde qui rougit là-dessus est inutilisable. */
-    const CONTRE_TEMOINS: { quoi: string; cas: () => Entrees; famille: string }[] = [
-      {
-        quoi: 'une barre ÉCHAPPÉE entre accents graves',
-        famille: 'barre_non_echappee',
-        cas: () => ({
-          ...base,
-          affirmations: remplacerLigne(affirmations, 'AFF-07', (l) =>
-            l.replace('**vérifiée**', '**vérifiée** `a \\| b`')
-          ),
-        }),
-      },
-      {
-        quoi: 'une source qui DÉSIGNE un fichier sans en affirmer le contenu',
-        famille: 'source_axionia_sans_repere',
-        cas: () => ({
-          ...base,
-          sources: [
-            ...sources,
-            { id: 'REQ-TEMOIN-002', texte: 'nouvelle (patron `src/env.ts`, `next.config.ts`)' },
-          ],
-        }),
-      },
-      {
-        quoi: "une preuve d'ABSENCE, qui n'a aucune ligne où se lire",
-        famille: 'preuve_sans_ancre',
-        cas: () => ({
-          ...base,
-          affirmations: remplacerLigne(affirmations, 'AFF-07', (l) => {
-            const c = decouper(l);
-            c[3] = 'Zéro occurrence dans `axionia/src/**`';
-            return `| ${c.join(' | ')} |`;
-          }),
-        }),
-      },
-      {
-        quoi: 'un dépôt voisin hors de portée : les sondes ne sont pas rejouées, elles ne mentent pas',
-        famille: 'sonde_dementie',
-        cas: () => ({ ...base, racineAxionia: null }),
-      },
-      {
-        quoi: 'un verdict « partielle » : la sonde le mesure, elle ne le contredit jamais',
-        famille: 'sonde_dementie',
-        cas: () => ({ ...base, affirmations: remplacerLigne(affirmations, 'AFF-30', (l) => l) }),
-      },
-    ];
-
-    for (const ct of CONTRE_TEMOINS) {
-      const f = controler(ct.cas()).filter((x) => x.famille === ct.famille);
-      if (f.length > 0) {
-        console.error(
-          `❌ Contre-témoin ROUGE — ${ct.quoi} : la garde rougit sur ce qui est légitime.`
-        );
-        f.slice(0, 3).forEach((x) => console.error(`   [${x.famille}] ${x.message}`));
-        process.exit(1);
-      }
-    }
-
+  if (fautes.length === 0) {
+    const { lignes } = extraireTableau(affirmations);
     console.log(
-      `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+      `✅ gov:sonde — ${lignes.length} affirmations datées et rattachées à un SHA, ${INVALIDEES.length} invalidées au registre.`
     );
-    console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
-    console.log(`   ${CONTRE_TEMOINS.length} contre-témoins restent verts :`);
-    console.log(`   ${CONTRE_TEMOINS.map((c) => '· ' + c.quoi).join('\n   ')}`);
+    if (axioniaDispo) {
+      console.log(
+        `   ${SONDES.length} sondes rejouées contre ${RACINE_PAR_DEFAUT} : aucun fait n'a bougé.`
+      );
+    } else {
+      console.log(
+        `   ⚠️  Les ${SONDES.length} sondes n'ont PAS été rejouées : le dépôt voisin est hors de portée ` +
+          `(${RACINE_PAR_DEFAUT}). La forme, les dates, les SHA, l'acceptation et le registre le sont, eux.\n` +
+          `   Pour rejouer le code : AXIONIA_REPO=<chemin> pnpm gov:sonde --exiger-axionia`
+      );
+    }
     process.exit(0);
-  } finally {
-    rmSync(factice, { recursive: true, force: true });
   }
-}
 
-// ── mode normal ──────────────────────────────────────────────────────────────
-
-const exigerAxionia = process.argv.includes('--exiger-axionia');
-if (exigerAxionia && !axioniaDispo) {
-  console.error(
-    `❌ gov:sonde --exiger-axionia — l'arbre d'axionia est hors de portée (${RACINE_PAR_DEFAUT}). ` +
-      `Pose AXIONIA_REPO sur le chemin du dépôt voisin, ou lance la garde sans ce drapeau en sachant ` +
-      `que les ${SONDES.length} sondes ne seront PAS rejouées.`
-  );
+  const parFamille = new Map<string, Faute[]>();
+  for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
+  console.error(`❌ gov:sonde — ${fautes.length} affirmation(s) ou source(s) en défaut :\n`);
+  for (const [famille, liste] of parFamille) {
+    console.error(`   ── ${famille} (${liste.length})`);
+    liste.slice(0, 12).forEach((f) => console.error(`      ${f.message}`));
+    if (liste.length > 12) console.error(`      … et ${liste.length - 12} autre(s).`);
+  }
   process.exit(1);
 }
-
-const fautes = controler({
-  affirmations,
-  decisions,
-  sources,
-  racineAxionia: axioniaDispo ? RACINE_PAR_DEFAUT : null,
-});
-
-if (fautes.length === 0) {
-  const { lignes } = extraireTableau(affirmations);
-  console.log(
-    `✅ gov:sonde — ${lignes.length} affirmations datées et rattachées à un SHA, ${INVALIDEES.length} invalidées au registre.`
-  );
-  if (axioniaDispo) {
-    console.log(
-      `   ${SONDES.length} sondes rejouées contre ${RACINE_PAR_DEFAUT} : aucun fait n'a bougé.`
-    );
-  } else {
-    console.log(
-      `   ⚠️  Les ${SONDES.length} sondes n'ont PAS été rejouées : le dépôt voisin est hors de portée ` +
-        `(${RACINE_PAR_DEFAUT}). La forme, les dates, les SHA, l'acceptation et le registre le sont, eux.\n` +
-        `   Pour rejouer le code : AXIONIA_REPO=<chemin> pnpm gov:sonde --exiger-axionia`
-    );
-  }
-  process.exit(0);
-}
-
-const parFamille = new Map<string, Faute[]>();
-for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
-console.error(`❌ gov:sonde — ${fautes.length} affirmation(s) ou source(s) en défaut :\n`);
-for (const [famille, liste] of parFamille) {
-  console.error(`   ── ${famille} (${liste.length})`);
-  liste.slice(0, 12).forEach((f) => console.error(`      ${f.message}`));
-  if (liste.length > 12) console.error(`      … et ${liste.length - 12} autre(s).`);
-}
-process.exit(1);

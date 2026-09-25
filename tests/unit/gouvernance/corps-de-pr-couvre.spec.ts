@@ -1,5 +1,4 @@
 // @req REQ-GOV-032
-// @req REQ-GOV-011
 /**
  * corps-de-pr-couvre.spec.ts — le champ `Couvre:` du corps de PR se DÉRIVE (REQ-GOV-032).
  *
@@ -88,7 +87,7 @@ describe('REQ-GOV-032 — le champ `Couvre:` est DÉRIVÉ des tâches de la PR',
 
   it('REQ-GOV-032 · TÉMOIN : la ligne tapée de la PR 31 fait ÉCHOUER le rendu, et nomme les deux en trop', () => {
     const tapee = `Couvre: ${[...DERIVEES, ...EN_TROP].join(', ')}`;
-    let message = '';
+    let message: string;
     try {
       rendre(gabaritAvec(tapee), { COUVRE: DERIVEES.join(', ') });
       throw new Error('le rendu a RÉUSSI sur une ligne `Couvre:` divergente');

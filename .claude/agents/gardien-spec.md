@@ -85,6 +85,6 @@ Tenir le registre des exigences, celui des décisions, le glossaire et la prés�
 
 - **Outils** : Read, Write, Edit, Grep, Glob, Bash
 - **Écrit ?** oui
-- **Chemins réservés** (label `role:gardien-spec`) : `docs/PLAN-STATE.md`, `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md`, `docs/tasks.json`
+- **Chemins réservés** (label `role:gardien-spec`) : `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md`, `docs/requirements.json`, `docs/gates.json`, `docs/tasks.json`
 
 <!-- agents:fin -->

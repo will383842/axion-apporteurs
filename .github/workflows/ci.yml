@@ -20,6 +20,39 @@ on:
 jobs:
   gate-a:
     runs-on: ubuntu-latest
+    # ⚠️ LA SEULE CHOSE QUE CE JOB N'A RIEN A MESURER : une demande de fusion DEJA FUSIONNEE.
+    # Le runbook fait cocher la huitieme case de la definition de termine APRES
+    # `gh pr merge --delete-branch`. Cette edition du corps relance `pull_request: edited`, la tete
+    # n'est plus une branche, et `gov:pr` — etape 26 sur 71 — echouait sur `git diff base...tete` :
+    # 45 etapes restaient en « skipped », dont Lint, Format, Typecheck, Tests, `req:check` et
+    # `gov:etat`. Elles avaient l'air d'avoir mesure et n'avaient rien mesure. C'est la pathologie
+    # que GOV-059 vient de fermer un cran plus bas, par l'ORDRE des etapes ; ici elle se produisait
+    # A CHAQUE demande de fusion, par construction. Un bruit qu'on apprend a ignorer finit par
+    # cacher un vrai rouge.
+    #
+    # LA CONDITION EST LA PLUS ETROITE QUI FERME CE CAS, et pas une de plus :
+    #   — elle ne regarde PAS `github.event.action` : ecarter `edited` tuerait la raison d'etre du
+    #     declencheur, juste au-dessus (corriger un titre refuse par `gov:pr` doit relancer la
+    #     mesure, PR 26) ;
+    #   — elle ne regarde PAS `github.event_name` : sur `push`, `github.event.pull_request` est
+    #     absent, la propriete rend `null`, et GitHub compare en NOMBRES des operandes de types
+    #     differents (`null` -> 0, `true` -> 1). `null != true` est donc VRAI et la porte A tourne
+    #     sur main comme avant. Ajouter `github.event_name != 'pull_request' ||` n'ecarterait pas un
+    #     run de plus : ce serait une seconde ecriture de la meme regle, donc une divergence a venir
+    #     (RM-01) ;
+    #   — une demande de fusion OUVERTE dont on edite le corps porte `merged: false` : elle reste
+    #     mesuree, et c'est exige par le temoin.
+    # Le seul run ecarte est celui dont il n'y a plus rien a lire. Le diff FUSIONNE, lui, n'est pas
+    # perdu : il change de porte, et se mesure au run `push: main` du meme sha.
+    #
+    # Ce `if:` est au JOB, pas aux etapes : un job saute se lit « skipped » sans aucun rouge, alors
+    # que 71 etapes sautees une par une afficheraient exactement l'image qu'on retire d'ici.
+    #
+    # TEMOIN : `tests/unit/gouvernance/revendication-par-branche.spec.ts`, qui EVALUE cette
+    # expression contre cinq contextes d'evenement au lieu d'en chercher le texte, et qui exige la
+    # meme garde de TOUT job de TOUT workflow declenche par `pull_request` — en suivant `needs:`,
+    # pour qu'un job neuf qui reprendrait ces etapes ne puisse pas s'y soustraire en silence.
+    if: ${{ github.event.pull_request.merged != true }}
     # EXPLICITES, et ce n'est pas de la ceinture-bretelles. `gov:entite:corps` est BLOQUANTE et
     # rend 2 (donc echoue) quand elle ne peut pas lire. Le defaut de `GITHUB_TOKEN` se configure
     # au niveau du depot ou de l'organisation : le jour ou quelqu'un le passe en restreint, la
@@ -159,18 +192,6 @@ jobs:
         run: pnpm gov:attributions
       - name: La garde des attributions sait rougir, et laisse passer la citation legitime
         run: pnpm gov:attributions:prove
-      # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,
-      # elle ECHOUE en nommant les cinq familles non evaluees — et c est voulu : une gate verte
-      # parce qu elle n a pas pu lire est pire que pas de gate. Constate en CI le 2026-09-04,
-      # premier run de cette etape : « gh: To use GitHub CLI in a GitHub Actions workflow, set the
-      # GH_TOKEN environment variable ». La reponse n est PAS `--hors-ligne`, qui abandonnerait les
-      # cinq familles en silence : c est de lui donner le jeton pour qu elle fasse son travail.
-      - name: Etat vivant — fraicheur, verrou d owner, journal
-        run: pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: La garde de l etat vivant sait rougir
-        run: pnpm gov:etat:prove
       - name: contracts:hash — le contrat est derive, et son empreinte le tient
         run: pnpm contracts:hash
       - name: La garde de PR sait rougir
@@ -188,21 +209,31 @@ jobs:
         run: pnpm partners:schema:enums
       - name: La garde du vocabulaire sait rougir
         run: pnpm partners:schema:enums:prove
+      # DM-02, REQ-DM-001. Tout montant est un Int en centimes suffixe Cents ; aucun Float ni
+      # Decimal, quel que soit le nom. Le schema se lit par le lecteur unique : un modele se ferme
+      # sur SON accolade, un champ apres un commentaire ne s echappe pas.
+      - name: Centimes — aucun flottant, montants en Cents
+        run: pnpm partners:schema:cents
+      - name: La garde des centimes sait rougir
+        run: pnpm partners:schema:cents:prove
+      # DM-02, REQ-DM-037. Les migrations sont additives : toutes les migrations suivies sont lues,
+      # pas celles de la PR. Seule absolution : une ADR acceptee citee en premiere ligne, et la
+      # faute absoute est IMPRIMEE.
+      - name: Migrations additives
+        run: pnpm partners:migrations:additive
+      - name: La garde des migrations sait rougir
+        run: pnpm partners:migrations:additive:prove
       # GOV-030 : la garde des TERMES INTERDITS que des documents invoquaient sans qu'elle existe
       # (`docs/GLOSSAIRE.md`, `docs/CONVENTIONS.md` §2, RM-01 et RM-06, `packages/contracts/events.ts`,
       # REQ-GOV-001, `docs/GATES.md`). BLOQUANTE : pas de `continue-on-error` — la famille
       # `lint_non_bloquant` de `gov:conventions` le refuse, et une gate qui ne bloque rien ne garde rien.
       #
-      # ⚠️ APPELEE PAR UN NOM NEUTRE, ET NON PAR `pnpm gov:check` — ce n'est pas une coquetterie.
-      # Le nom `gov:check` designe DEUX choses dans ce depot : l'entree de `docs/gates.json` (cette
-      # garde-ci) et une CHAINE de gardes declaree dans `package.json`. Ecrire `pnpm gov:check`
-      # ici lancerait la chaine, PAS la garde — et satisferait quand meme la famille
-      # `garde_ecrite_jamais_appelee`, qui cherche l'identifiant OU le chemin.
-      # Le script `gov:termes-interdits` lance la garde elle-meme (`package.json`) : la commande
-      # reste sous la forme FERMEE `pnpm <script>` que GOV-031 exige de tout YAML suivi — `npx`
-      # peut resoudre un paquet hors du verrou. Et ce nom NEUF ne touche pas `gov:check` : il
-      # evite de trancher l'homonymie, que l'acceptation de GOV-030 renvoie a un ADR (« le choix
-      # … se tranche par un ADR, pas dans la PR »).
+      # `partners/ADR-0018` a tranche l'homonymie : l'identifiant de cette garde au registre EST la
+      # commande ecrite ci-dessous. Ces deux lignes `run:` sont donc ce que `gov:conventions` lit
+      # pour conclure que la garde est APPELEE — la reconnaissance ne tient plus au litteral d'un
+      # COMMENTAIRE, et le present commentaire peut disparaitre sans rien casser. La forme reste
+      # FERMEE `pnpm <script>`, que GOV-031 exige de tout YAML suivi : `npx` resoudrait un paquet
+      # hors du verrou.
       - name: Termes interdits — nomenclature, modeles d axionia et synonymes
         run: pnpm gov:termes-interdits
       - name: La garde des termes interdits sait rougir
@@ -216,6 +247,15 @@ jobs:
         run: pnpm gov:lexique
       - name: La garde du lexique sait rougir, et laisse passer la negation qui protege
         run: pnpm gov:lexique:prove
+      # UX-P0-02 : une tache d'ecran ne s'attribue pas avant que Will ait valide sa maquette
+      # (docs/maquettes/VALIDATION.md). Le composeur l'appliquait seul, au moment de composer ;
+      # une attribution faite a la main ne rougissait nulle part. La garde lit le tableau par ses
+      # en-tetes, refuse une validation ecrite a moitie ou par un autre que Will, et IMPRIME les
+      # taches d'ecran qu'elle ecarte.
+      - name: Maquettes — aucune tache d'ecran attribuee sans validation de Will
+        run: pnpm gov:maquettes-validees
+      - name: La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau
+        run: pnpm gov:maquettes-validees:prove
       # GOV-019, REQ-GOV-028. Elle ne MESURE aucun octet : elle tient les budgets en place et
       # refuse qu'une route naisse sans le sien. Elle IMPRIME son perimetre — « 0 route balayee »
       # n'est pas « aucun defaut », et elle le dit en toutes lettres. Pas de `continue-on-error` :
@@ -226,6 +266,14 @@ jobs:
         run: pnpm perf:budgets:prove
       - name: Les budgets sur le disque sont le rendu de leur exigence
         run: pnpm perf:budgets:verifier
+      # SEC-10, REQ-SEC-016. Tout compteur de debit est declare au registre unique, sous l un des
+      # cinq prefixes, avec sa conduite sur panne REQUISE ; la garde EXECUTE chaque compteur contre
+      # un cache qui leve et confronte le verdict a la conduite declaree. Le vert imprime les
+      # compteurs confrontes, les fichiers lus et les appels vus. Pas de continue-on-error.
+      - name: Compteurs de debit — conduite sur panne declaree et executee, famille close
+        run: pnpm securite:rate-famille
+      - name: La garde des compteurs de debit sait rougir
+        run: pnpm securite:rate-famille:prove
       # GOV-014, REQ-GOV-018 + REQ-GOV-029. Les six gardes d'axionia retenues. Trois de ses cinq
       # perimetres sont VIDES aujourd'hui, et elle les IMPRIME avec leur motif et la tache qui les
       # ouvrira — c'est ce qui separe une garde differee d'une garde oubliee.
@@ -233,6 +281,13 @@ jobs:
         run: pnpm gov:conventions
       - name: La garde des conventions sait rougir
         run: pnpm gov:conventions:prove
+      # DM-01, REQ-DM-041. La charge d un evenement du journal ne porte aucune donnee personnelle :
+      # le journal est append-only, une donnee personnelle qui y entrerait ne s effacerait jamais.
+      # La garde juge les schemas Zod eux-memes et imprime le compte des types et champs confrontes.
+      - name: Journal sans donnee personnelle
+        run: pnpm journal:sans-pii
+      - name: La garde du journal sait rougir
+        run: pnpm journal:sans-pii:prove
       # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
       # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
       # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le
@@ -245,9 +300,9 @@ jobs:
       # le bundle n'y rougit, et la documentation du depot a affirme le contraire pendant des
       # mois. Une gate qui ne bloque rien ne garde rien.
       #
-      # CE QUE CHACUNE NE MESURE PAS n'est pas recopie ici : les avertissements toleres et les
-      # fichiers qui les portent sont nommes dans `eslint.config.mjs`, les fichiers hors format
-      # dans `.prettierignore`, chacun avec son motif. Et chaque etape reste EXACTEMENT
+      # CE QUE CHACUNE NE MESURE PAS n'est pas recopie ici : depuis QA-T01, aucun avertissement
+      # n'est tolere (`eslint . --max-warnings 0`, aucune regle en `warn`) ; les fichiers hors format
+      # sont dans `.prettierignore`, chacun avec son motif. Et chaque etape reste EXACTEMENT
       # `run: pnpm lint` / `run: pnpm format:check`, sans `if:` ni `||` :
       # `gardes-transposees.spec.ts` juge l'acte de l'etape, pas l'absence d'un mot.
       - name: Lint
@@ -256,7 +311,7 @@ jobs:
         run: pnpm format:check
       - name: Typecheck
         run: pnpm typecheck
-      # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessus :
+      # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
       # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
       # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
       # Sans le jeton ici, la suite rougissait sur deux tests qui ne disaient rien du code.
@@ -264,3 +319,28 @@ jobs:
         run: pnpm test
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # QA-T03, REQ-QA-014. LA MEME garde que "Matrice de tracabilite" plus haut (`gov-trace.ts`),
+      # relancee ICI avec les RESULTATS que `pnpm test` vient d ecrire (`test-results/vitest.json`) :
+      # c est la seule passe qui sache qu un test est VERT, et pas seulement ecrit. Juste apres
+      # "Tests", sans `if:` ni tolerance d echec : des resultats absents, illisibles ou partiels la
+      # font rougir. L etape d avant les tests reste, pour le retour rapide. Le jeton sert la source
+      # PR, facultative, comme plus haut.
+      - name: req:check — chaque paire (tache, REQ) a son test annote et VERT
+        run: pnpm req:check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # GOV-059, REQ-QA-013. `gov:etat` vient APRES toutes les etapes de mesure. Elle lit l etat
+      # GLOBAL de la forge : un rouge venu d une AUTRE demande de fusion faisait « sauter » lint,
+      # format, typecheck et tests, qui avaient l air d avoir mesure et n avaient rien mesure.
+      # `gov:etat` LIT GitHub (PR ouvertes, labels de revendication, PR fusionnees). Sans jeton,
+      # elle ECHOUE en nommant les cinq familles non evaluees — et c est voulu : une gate verte
+      # parce qu elle n a pas pu lire est pire que pas de gate. Constate en CI le 2026-09-04,
+      # premier run de cette etape : « gh: To use GitHub CLI in a GitHub Actions workflow, set the
+      # GH_TOKEN environment variable ». La reponse n est PAS `--hors-ligne`, qui abandonnerait les
+      # cinq familles en silence : c est de lui donner le jeton pour qu elle fasse son travail.
+      - name: Etat vivant — fraicheur, verrou d owner, journal
+        run: pnpm gov:etat --now "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: La garde de l etat vivant sait rougir
+        run: pnpm gov:etat:prove

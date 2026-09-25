@@ -1,3 +1,4 @@
+// @req REQ-GOV-004
 /**
  * Les affirmations sur le code d'axionia, exercées comme des tests — GOV-004, REQ-GOV-004.
  *
@@ -27,6 +28,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { FAMILLES as FAMILLES_SONDE } from '../../../scripts/gates/gov-sonde';
 
 const SCRIPT = 'scripts/gates/gov-sonde.ts';
 const AFFIRMATIONS = 'docs/AFFIRMATIONS-AXIONIA.md';
@@ -36,8 +38,14 @@ const TACHES = 'docs/tasks.json';
 
 /** L'acceptation de GOV-004 : « ≥ 25 affirmations avec "vérifié le" ». */
 const MINIMUM_AFFIRMATIONS = 25;
-/** Les onze familles de règle de `gov:sonde`. Le nombre est l'invariant que `--prove` annonce. */
-const FAMILLES = 11;
+/**
+ * Les familles de règle de `gov:sonde`. Le nombre est l'invariant que `--prove` annonce — et il
+ * se DÉRIVE de la garde depuis GOV-048, au lieu d'être tapé ici : `gov-sonde.ts` porte désormais
+ * son garde-fou d'import, donc sa liste est lisible, et une famille ajoutée n'a plus à être
+ * recopiée dans un second fichier (RM-01). Le « 11 » qui vivait ici est ce qui a rougi au premier
+ * ajout — un compte tapé à côté de la liste qui le produit ne survit pas à cette liste.
+ */
+const FAMILLES = FAMILLES_SONDE.length;
 /** `AAAA-MM-JJ @ <SHA court>` : la date seule ne dit pas CONTRE QUOI la ligne a été rejouée. */
 const DATE_ET_SHA = /^\d{4}-\d{2}-\d{2}\s*@\s*[0-9a-f]{7,40}$/;
 
@@ -160,7 +168,7 @@ describe('REQ-GOV-004 — les cinq affirmations invalidées figurent au registre
     }
   );
 
-  it('les cinq sont bien cinq — ni quatre par fusion, ni six par ajout silencieux', () => {
+  it('REQ-GOV-004 — les cinq sont bien cinq — ni quatre par fusion, ni six par ajout silencieux', () => {
     const trouvees = CINQ_INVALIDEES.filter(({ motif }) =>
       lignesRegistre.some((l) => motif.test(l) && l.includes('FAUSSE'))
     );

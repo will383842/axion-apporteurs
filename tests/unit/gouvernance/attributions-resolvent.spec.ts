@@ -139,7 +139,7 @@ describe('REQ-GOV-021 — sur le dépôt réel, la garde lit ses sources EN ENTI
     expect(s.plancherJournal).toBe(Number(plancher![1]));
   });
 
-  it('le dépôt tel qu’il est ne porte aucune attribution rompue', () => {
+  it('REQ-GOV-021 — le dépôt tel qu’il est ne porte aucune attribution rompue', () => {
     const { fautes } = analyser(chargerSources(fichiersSuivis()));
     expect(fautes.map((f) => `[${f.famille}] ${f.message}`)).toEqual([]);
   });
@@ -1280,13 +1280,13 @@ describe('REQ-GOV-021 — la garde ne lit QUE des sources suivies, et refuse en 
 });
 
 describe('REQ-GOV-021 — la garde est CÂBLÉE', () => {
-  it('`gov:attributions` et sa preuve existent, sont dans la chaîne `gov:check` et dans la CI', () => {
+  it('`gov:attributions` et sa preuve existent, sont dans la chaîne `gov:partiel` et dans la CI', () => {
     const pkg = JSON.parse(lireReel('package.json')) as { scripts: Record<string, string> };
     expect(pkg.scripts['gov:attributions']).toBe('tsx scripts/gates/gov-attributions.ts');
     expect(pkg.scripts['gov:attributions:prove']).toBe(
       'tsx scripts/gates/gov-attributions.ts --prove'
     );
-    expect(pkg.scripts['gov:check']).toContain('pnpm gov:attributions');
+    expect(pkg.scripts['gov:partiel']).toContain('pnpm gov:attributions');
     const ci = lireReel('.github/workflows/ci.yml');
     expect(ci, 'la garde n’est pas câblée en Gate A').toContain('pnpm gov:attributions');
     expect(

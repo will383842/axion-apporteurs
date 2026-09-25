@@ -78,8 +78,8 @@
  * même temps que la première route — c'est-à-dire le jour où ils mesurent quelque chose.
  */
 
-import { readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
 
 const CHEMIN_BUDGETS = 'perf/budgets.json';
 const CHEMIN_LIGHTHOUSERC = 'lighthouserc.json';
@@ -142,6 +142,19 @@ export type Vue = {
 };
 
 type Entree = { name?: string; path?: string; limit?: string; gzip?: boolean };
+
+/**
+ * `lighthouserc.json` tel que `rendreLighthouserc` le produit : la forme que la garde LIT (chaque
+ * niveau optionnel, un fichier tronqué se juge au lieu de faire planter) et que ses témoins FONT
+ * VARIER. Un type plutôt que `any` : une mutation qui viserait un chemin que le rendu n'a pas ne
+ * compile plus.
+ */
+export type Lighthouserc = {
+  ci: {
+    collect: { numberOfRuns: number; settings: Record<string, unknown> };
+    assert: { assertions: Record<string, [string, { maxNumericValue: number }]> };
+  };
+};
 type Budgets = { sizeLimit?: Entree[] };
 
 // ── dérivation : les seuils se LISENT dans le registre, ils ne sont jamais tapés (RM-01) ──────
@@ -321,9 +334,9 @@ export function controler(vue: Vue): Faute[] {
       },
     ];
   }
-  let lhrc: Record<string, any>;
+  let lhrc: { ci?: Partial<Lighthouserc['ci']> };
   try {
-    lhrc = JSON.parse(vue.lighthouserc) as Record<string, any>;
+    lhrc = JSON.parse(vue.lighthouserc) as { ci?: Partial<Lighthouserc['ci']> };
   } catch (e) {
     return [
       {
@@ -467,19 +480,27 @@ export function controler(vue: Vue): Faute[] {
 
 // ── les vues ──────────────────────────────────────────────────────────────────────────────────
 
-/** Tous les fichiers sous `src/` — la liste que `routesDeLEspace` juge. */
-function fichiersDeSrc(racine = 'src'): string[] {
-  if (!existsSync(racine)) return [];
-  const out: string[] = [];
-  for (const e of readdirSync(racine, { withFileTypes: true })) {
-    const chemin = join(racine, e.name).split('\\').join('/');
-    if (e.isDirectory()) out.push(...fichiersDeSrc(chemin));
-    else out.push(chemin);
-  }
-  return out;
+/**
+ * LE PÉRIMÈTRE DE CETTE GARDE N'EST PAS UNE LISTE VIDE (GOV-046, REQ-GOV-012).
+ *
+ * 🔴 CE FICHIER PORTAIT `if (!existsSync(racine)) return []`, et c'était la SEPTIÈME occurrence
+ * d'une famille fermée ailleurs : cinq gardes par la PR 31, `gov-conventions.ts` par la PR 33.
+ * Une racine absente rendait une liste VIDE, donc zéro violation, donc VERT.
+ *
+ * Elle se ferme comme les six autres : par `fichiersSuivisOuRefus`, la source unique du périmètre,
+ * qui REFUSE (`perimetre_illisible`, `perimetre_entame`) plutôt que de rendre vide. Un premier
+ * correctif recréait ici sa propre classe d'erreur, sa descente de dossiers et son refus imprimé —
+ * une sixième copie du patron que `scripts/lot/fichiers-suivis.ts` existe pour ne plus recopier
+ * (motif `simplicite` sur la PR 114). Cette fonction ne fait plus que FILTRER un périmètre établi :
+ * qu'aucun fichier suivi ne vive sous `src/` est alors une RÉPONSE, pas une abstention.
+ */
+export function fichiersDeSrc(suivis: readonly string[], racine = 'src'): string[] {
+  return suivis.filter((f) => f.startsWith(`${racine}/`));
 }
 
 function lireVue(): Vue {
+  // Le périmètre d'abord : son refus porte alors SON nom, au lieu d'un fichier introuvable muet.
+  const fichiers = fichiersDeSrc(fichiersSuivisOuRefus('perf:budgets'));
   for (const c of [CHEMIN_BUDGETS, CHEMIN_LIGHTHOUSERC, CHEMIN_REGISTRE]) {
     if (!existsSync(c)) {
       console.error(
@@ -492,7 +513,7 @@ function lireVue(): Vue {
     budgets: readFileSync(CHEMIN_BUDGETS, 'utf8'),
     lighthouserc: readFileSync(CHEMIN_LIGHTHOUSERC, 'utf8'),
     registre: texteDeLExigence(readFileSync(CHEMIN_REGISTRE, 'utf8')),
-    fichiers: fichiersDeSrc(),
+    fichiers,
     ci: existsSync(CHEMIN_CI) ? readFileSync(CHEMIN_CI, 'utf8') : '',
   };
 }
@@ -585,8 +606,8 @@ function prouver(): number {
     b.sizeLimit.push(entree);
     return { ...v, budgets: JSON.stringify(b, null, 2) };
   };
-  const muterLhrc = (v: Vue, muter: (c: Record<string, any>) => void): Vue => {
-    const c = JSON.parse(v.lighthouserc) as Record<string, any>;
+  const muterLhrc = (v: Vue, muter: (c: Lighthouserc) => void): Vue => {
+    const c = JSON.parse(v.lighthouserc) as Lighthouserc;
     muter(c);
     return { ...v, lighthouserc: `${JSON.stringify(c, null, 2)}\n` };
   };
@@ -667,7 +688,7 @@ function prouver(): number {
       famille: 'seuil_divergent',
       defaut: () =>
         muterLhrc(vue, (c) => {
-          c.ci.assert.assertions[AUDIT_LCP][1].maxNumericValue = 2500;
+          c.ci.assert.assertions[AUDIT_LCP]![1].maxNumericValue = 2500;
         }),
     },
     {
@@ -681,7 +702,7 @@ function prouver(): number {
       famille: 'lhci_non_bloquant',
       defaut: () =>
         muterLhrc(vue, (c) => {
-          c.ci.assert.assertions[AUDIT_CLS][0] = 'warn';
+          c.ci.assert.assertions[AUDIT_CLS]![0] = 'warn';
         }),
     },
     {

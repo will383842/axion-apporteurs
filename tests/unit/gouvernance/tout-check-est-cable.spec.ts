@@ -3,12 +3,13 @@
 //
 // REQ-QA-013 n'est couverte ici QUE par sa moitie BLOQUANTE : que le check requis de `main` soit
 // celui que `ci.yml` produit reellement, et qu'un workflow qui ne se declenche pas sur
-// `pull_request` ne produise aucun check de PR. Le CONTENU de la gate — ESLint, Prettier,
-// couverture, testcontainers, semgrep, audit, gitleaks, req:check, idor:check, lint de migration,
-// size-limit — n'est livre par AUCUNE tache de la phase -1 : il revient a QA-T01, QA-T07 et
-// QA-T28, qui portent deja l'exigence. `pnpm gov:trace` le redira quand elles entreront.
-// Le dire ici vaut mieux que le laisser croire : c'est la case cochee sans etre vraie que
-// GOV-011 a trouvee seize fois le 2026-09-04.
+// `pull_request` ne produise aucun check de PR. Le CONTENU de la gate est livre en partie par
+// QA-T01 — typecheck, ESLint en erreur, Prettier, Vitest et la couverture du domaine, juges par
+// `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` ; le harnais testcontainers tourne dans
+// l'etape Tests (`tests/unit/ci/integration-collectee-par-gate-a.spec.ts`). Le reste — semgrep
+// (QA-T07), audit, gitleaks, req:check, idor:check, lint de migration, size-limit (QA-T28) — n'est
+// pas encore livre. Le dire ici vaut mieux que le laisser croire : c'est la case cochee sans etre
+// vraie que GOV-011 a trouvee seize fois le 2026-09-04.
 /**
  * `gov:depot-visibilite` — la visibilité décidée, le check requis câblé, et ce que la garde
  * AVOUE ne pas avoir pu lire.
@@ -97,7 +98,7 @@ describe('REQ-GOV-014 — chaque famille rougit sur son témoin', () => {
     expect(familles({ ...VUE_CONFORME, visibilite: 'PRIVATE' })).toEqual(['visibilite_inattendue']);
   });
 
-  it('check_requis_absent — `gate-a` n’est plus exigé par la protection de `main`', () => {
+  it('REQ-QA-013 — check_requis_absent — `gate-a` n’est plus exigé par la protection de `main`', () => {
     const protection = structuredClone(VUE_CONFORME.protection as Protection);
     protection.required_status_checks = { strict: true, contexts: [] };
     expect(familles({ ...VUE_CONFORME, protection })).toContain('check_requis_absent');

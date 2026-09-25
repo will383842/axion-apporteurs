@@ -19,7 +19,8 @@ Sur `main`, `scripts/gates/schema-enums.ts` (GOV-006, `partners:schema:enums`) p
 `liste_litterale_d_etats` au seuil de TROIS noms d'états sur une ligne, et un contre-témoin exécutable y
 déclare légitime la comparaison booléenne à deux états.
 
-Le registre prêtait la même famille à `gov:check`, que GOV-030 écrit. L'y écrire au seuil de DEUX
+Le registre prêtait la même famille à la garde des termes interdits, que GOV-030 écrit
+(`gov:check` à l'époque ; `gov:termes-interdits` depuis `partners/ADR-0018`). L'y écrire au seuil de DEUX
 donnait deux gardes, dans le même job `gate-a`, aux verdicts **opposés** sur la même entrée : la
 comparaison que GOV-006 déclare légitime est exactement celle que GOV-030 condamnait. Toutes deux
 restaient vertes tant que le code ne porte aucune comparaison de ce genre : la divergence était
@@ -84,7 +85,7 @@ formes portent la même propriété.
 ## Ce qui le vérifie
 
 - **Assertion** — `tests/unit/gouvernance/termes-interdits.spec.ts` ·
-  `it('REQ-DM-003 : gov:check ne porte PLUS la famille des listes d’états — ni dans FAMILLES, ni au verdict')` :
+  `it('REQ-DM-003 : gov:termes-interdits ne porte PLUS la famille des listes d’états — ni dans FAMILLES, ni au verdict')` :
   réintroduire la famille dans `gov-check.ts` fait rougir ce contrôle.
 - **Assertion** — `tests/unit/gouvernance/termes-interdits.spec.ts` ·
   `it('REQ-DM-003 : sa portée est une racine, jamais une extension — et tout fichier de la portée est jugé')` :
@@ -95,6 +96,29 @@ formes portent la même propriété.
 - **Assertion** — `tests/unit/gouvernance/glossaire-enums.spec.ts` ·
   `it('liste_litterale_d_etats — la SOURCE unique, elle, a le droit de la porter')` : le contre-témoin
   qui empêche la garde d'interdire la solution qu'elle exige.
+
+## Amendement — DM-02, 2026-09-19 : l'unité est le GROUPE, et la règle porte sur le code
+
+Mesuré sur la garde de GOV-030 : l'unité « ligne » échouait OUVERT. Une liste d'états écrite sur
+plusieurs lignes (`[\n 'provisoire',\n 'active'\n]`), des membres sans guillemets
+(`enum X { provisoire, active }`) et une clause SQL coupée (`IN (\n'signee',\n'convertie')`) sortaient
+en 0. La décision 2 se lit désormais ainsi :
+
+1. **L'unité de détection est le plus petit groupe parenthésé** (`()`, `[]`, `{}`) après retrait des
+   commentaires ; on compte ses membres DIRECTS, chaînes ou identifiants nus. Le groupe rougit s'il
+   nomme au moins deux états occupants et si l'ensemble de ses noms d'états n'est pas l'enum
+   `EtatAttribution` COMPLET (un `switch` exhaustif sur les treize n'est pas une liste d'occupants).
+2. **La règle porte sur le CODE, pas sur les commentaires.** Un commentaire qui cite deux états
+   n'implémente rien : il ne rougit plus. Le code écrit à côté de lui, si.
+3. **La projection exacte est légitime par RÈGLE, pas par chemin.** Dans `prisma/migrations/**`, et là
+   seulement : le `CREATE TYPE "etat_attribution" AS ENUM (…)` aux treize valeurs, et une clause dont la
+   liste est EXACTEMENT `clauseEtatsOccupants()`. Aucune exemption de chemin n'est ajoutée à
+   `PORTEURS_LEGITIMES`.
+
+Vérifié par `tests/unit/domaine/gardes-de-schema.spec.ts` ·
+`it('REQ-JUR-027 → REQ-DM-038 : une liste sur plusieurs lignes rougit')`,
+`it('REQ-JUR-027 → REQ-DM-038 : un commentaire qui cite deux états ne rougit plus, le code à côté si')` et
+`it('REQ-JUR-027 → REQ-DM-038 : la projection exacte est légitime par RÈGLE — en migration, et là seulement')`.
 
 ## Reste à faire
 

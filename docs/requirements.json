@@ -143,8 +143,8 @@
     {
       "id": "REQ-DM-010",
       "domaine": "domaine-donnees",
-      "texte": "`Apporteur.seuilVerificationPrioritaire` est une colonne Int (défaut dérivé du palier, surcharge manuelle tracée) ; aucun dépôt n'est refusé pour dépassement de seuil — au-delà, l'attribution porte `verificationPrioritaire = true`.",
-      "source": "outil §1.1, D3",
+      "texte": "`Apporteur.seuilVerificationPrioritaire` est une colonne Int (défaut dérivé du palier, surcharge manuelle tracée) ; aucun dépôt n'est refusé pour dépassement de seuil — au-delà, l'attribution est acceptée, horodatée, opposable, et porte `verificationPrioritaire = true` ; au-delà d'un second seuil de dépôts sur 24 h pour une même identité (valeur en configuration, hors de ce dépôt public : REQ-GOV-031), chaque dépôt supplémentaire exige un `captcha` et est accepté de la même façon (issue `captcha` de REQ-UX-002), jamais refusé.",
+      "source": "outil §1.1, D3 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": 9,
@@ -206,8 +206,8 @@
     {
       "id": "REQ-DM-014",
       "domaine": "domaine-donnees",
-      "texte": "La grille de commission est une entité versionnée GrilleCommission {version, contenuJson, hash, publieeAt} dont le contenu est DÉRIVÉ par export de `COMMERCIAL_COMMISSIONS` (axionia) et jamais retapé ; Contrat, Attribution et LigneCommission référencent une version ; le montant d'une ligne ne change jamais après publication d'une nouvelle grille.",
-      "source": "plan D3 ; outil §6.2 ; nouvelle (F-DM-09)",
+      "texte": "La grille de commission a une seule source, `axionia/src/content/pricing.ts` (`COMMERCIAL_COMMISSIONS`) ; un script d'export en produit `commissions.v<N>.json` et le hash SHA-256 de son JSON canonique ; Partners stocke chaque version dans l'entité versionnée GrilleCommission {version, contenuJson, hash, publieeAt}, dont le contenu est DÉRIVÉ de cet export et jamais retapé ; Contrat, Attribution et LigneCommission référencent une version ; l'écran Paramètres l'affiche en lecture seule (version, date, diff) ; le montant d'une ligne ne change jamais après publication d'une nouvelle grille ; gate des deux côtés : hash embarqué = hash recalculé depuis `pricing.ts`, sinon rouge.",
+      "source": "plan D3 ; outil §6.2 ; nouvelle (F-DM-09) ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -222,8 +222,8 @@
     {
       "id": "REQ-DM-015",
       "domaine": "domaine-donnees",
-      "texte": "Le calcul de commission est une fonction pure (grilleVersion, activite: ActiviteFacturation, jours: number|null, montantHtCents) → {montantCents} | {bloque: motif} couvrant les 5 valeurs d'ActiviteFacturation ; un cas sans barème produit le blocage « barème indéfini », jamais 0 ni une exception (statut `bloquee`, `motifBlocage = a_qualifier`, libellé apporteur « Prestation hors grille de commissions » — cf. REQ-ARG-017 et l'arbitrage l. 410). 🔴 **Le forfait est dû UNE FOIS par commande portant le palier : `flat = flatEur × 100`, JAMAIS multiplié par les journées** — la durée est déjà portée par le palier lui-même (un palier de deux journées porte deja le forfait des deux journées dans la grille publiée). Multiplier une seconde fois par `jours` double la commission sur tous les paliers pluri-journées ; `jours` n'entre dans aucun forfait et ne sert qu'à identifier le palier. `percent` = `round(percent × montantHtCents / 100)`. Test frontière **vu rougir avant correction** : palier forfaitaire appelé avec `jours = 2` → montant simple, jamais doublé.",
-      "source": "audit-attribution §3.3 ; pricing.ts ; annexe 1 du contrat, chapeau ; nouvelle (F-DM-08) ; synthèse des cinq examens du 2026-09-03, A-2",
+      "texte": "Le calcul de commission est une fonction pure (grilleVersion, activite: ActiviteFacturation, jours: number|null, montantHtCents) → {montantCents} | {bloque: motif} couvrant les 5 valeurs d'ActiviteFacturation ; un cas sans barème — une forme `scale` ou une entrée introuvable dans la grille — produit le blocage « barème indéfini », jamais 0 ni une exception (statut `bloquee`, `motifBlocage = a_qualifier`, libellé apporteur « Prestation hors grille de commissions » — cf. REQ-ARG-017 et l'arbitrage l. 410). 🔴 **Le forfait est dû UNE FOIS par commande portant le palier : `flat = flatEur × 100`, JAMAIS multiplié par les journées** — la durée est déjà portée par le palier lui-même (un palier de deux journées porte deja le forfait des deux journées dans la grille publiée). Multiplier une seconde fois par `jours` double la commission sur tous les paliers pluri-journées ; `jours` n'entre dans aucun forfait et ne sert qu'à identifier le palier. `percent` = `round(percent × montantHtCents / 100)`. Test frontière **vu rougir avant correction** : palier forfaitaire appelé avec `jours = 2` → montant simple, jamais doublé.",
+      "source": "audit-attribution §3.3 ; pricing.ts ; annexe 1 du contrat, chapeau ; nouvelle (F-DM-08) ; synthèse des cinq examens du 2026-09-03, A-2 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": 13,
@@ -236,8 +236,8 @@
     {
       "id": "REQ-DM-016",
       "domaine": "domaine-donnees",
-      "texte": "Une ligne `acquise` naît uniquement d'un événement `paiement.recu` de statut `succeeded`, idempotent sur (source, eventId) ; unicité (paymentId, attributionId, type) ; aucun autre déclencheur (ni devis signé, ni facture émise) ne crée une ligne acquise.",
-      "source": "tableaux-de-bord §2.3 ; fonctionnement R7 ; audit-attribution P6",
+      "texte": "Une ligne `acquise` naît uniquement d'un événement `paiement.recu` de statut `succeeded` et de montant > 0, idempotent sur (source, eventId) ; `devis.signe` crée les lignes `prevue`, et `facture.emise` en actualise l'attendu ; aucun autre déclencheur (ni devis signé, ni facture émise) ne crée une ligne acquise ; unicité en base (paymentId, lignePrevueId) pour le type commission.",
+      "source": "tableaux-de-bord §2.3 ; fonctionnement R7 ; audit-attribution P6 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -308,8 +308,8 @@
     {
       "id": "REQ-DM-021",
       "domaine": "domaine-donnees",
-      "texte": "La résolution d'un encaissement cherche l'attribution occupante du `beneficiarySiren` fourni par axionia, sinon un RattachementManuel actif ; un encaissement sans SIREN bénéficiaire ou sans facture crée une ligne `bloquee` motif `siren_manquant` et une Anomalie — jamais un silence.",
-      "source": "fonctionnement R13 ; tableaux-de-bord B11 ; anti-abus F12 ; nouvelle (F-DM-04)",
+      "texte": "La résolution d'un encaissement cherche l'attribution occupante du `siren` du client bénéficiaire résolu par axionia (facture ?? session ?? enrollment ?? dossier ; jamais le SIRET du destinataire ou du payeur), sinon un RattachementManuel actif ; un événement sans `siren`, sans clientId ou sans facture est accepté, crée une ligne `bloquee` motif `non_resolue` (enum `MotifBlocage`, REQ-ARG-017) et une Anomalie visible en console — jamais un silence, jamais un rejet.",
+      "source": "fonctionnement R13 ; tableaux-de-bord B11 ; anti-abus F12 ; nouvelle (F-DM-04) ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -456,8 +456,8 @@
     {
       "id": "REQ-DM-031",
       "domaine": "domaine-donnees",
-      "texte": "Les coordonnées du contact rencontré sont chiffrées (nom, téléphone, email) et doublées de hashes HMAC déterministes (email, téléphone) pour la détection et le droit d'accès ; `purgeContactAt` est calculé et exécuté par cron, qui écrit un événement.",
-      "source": "audit-attribution P8 ; outil §5 étape 12 ; nouvelle (F-DM-25)",
+      "texte": "Les coordonnées du contact rencontré (nom, téléphone, email) sont chiffrées au repos (algorithme et AAD : REQ-SEC-024) et doublées de hashes HMAC déterministes (email, téléphone) pour la détection et le droit d'accès ; `purgeContactAt` est calculé depuis la SSOT `retention.ts` et exécuté par un cron qui écrit un événement ; le SIREN et l'horodatage sont conservés ; un test prouve la purge (au-delà : absente ; en deçà : présente).",
+      "source": "audit-attribution P8 ; outil §5 étape 12 ; nouvelle (F-DM-25) ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -539,6 +539,7 @@
       "etape": 5,
       "phase": 0,
       "taches": [
+        "GOV-088",
         "SEC-06"
       ]
     },
@@ -736,8 +737,8 @@
     {
       "id": "REQ-SEC-008",
       "domaine": "anti-abus-securite",
-      "texte": "Toute lecture ou écriture de l'espace apporteur passe par une couche d'accès qui injecte l'`apporteurId` de la session dans le `where` ; aucun import direct de `prisma` sous `src/app/(espace)/**` et `src/server/espace/**`.",
-      "source": "tableaux-de-bord §6.1 ; audit-outil §7",
+      "texte": "Toute lecture ou écriture de l'espace apporteur passe par `scopedPrisma(apporteurId)`, qui injecte l'`apporteurId` de la session dans tout `where` des modèles cloisonnés ; aucun import direct de `prisma` sous `src/app/(espace)/**` et `src/server/espace/**` ; une règle semgrep, vue rougir sur un témoin, interdit `prisma` brut hors `src/server/scope/**` pour ces modèles.",
+      "source": "tableaux-de-bord §6.1 ; audit-outil §7 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": 8,
@@ -765,8 +766,8 @@
     {
       "id": "REQ-SEC-010",
       "domaine": "anti-abus-securite",
-      "texte": "Les webhooks entrants d'axionia sont signés HMAC-SHA256 sur `t.rawBody` avec un secret dédié, tolérance 300 s, comparaison en temps constant, corps ≤ 128 Ko lu en `text()` ; échec → 401 et alerte de sécurité plafonnée.",
-      "source": "audit-outil §2.3 (précisé par `webhook-signature.ts`)",
+      "texte": "Tout webhook entrant est signé HMAC-SHA256 avec un secret dédié par source, tolérance 300 s, comparaison en temps constant, sans aucun repli en clair : celui d'axionia sur `<timestamp_unix>.<corps exact>` (en-têtes X-Axionia-Timestamp / X-Axionia-Signature), celui de DocuSeal selon REQ-SEC-034 ; corps ≤ 128 Ko lu en `text()` ; signature absente, invalide ou hors fenêtre → 401 et alerte de sécurité plafonnée ; l'événement accepté est persisté selon REQ-DM-036 avant tout traitement.",
+      "source": "audit-outil §2.3 (précisé par `webhook-signature.ts`) ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -1115,8 +1116,8 @@
     {
       "id": "REQ-SEC-034",
       "domaine": "anti-abus-securite",
-      "texte": "Le webhook DocuSeal est vérifié en HMAC strict avec timestamp (sans fallback secret en clair), dédupliqué par outbox, et le `metadata.apporteurId` est confronté à la soumission émise ; le PDF est récupéré par l'API et son SHA-256 stocké puis recomparé à chaque téléchargement.",
-      "source": "audit-outil §6.2 ; patron `src/lib/docuseal.ts`",
+      "texte": "Le webhook DocuSeal est vérifié en HMAC strict `<ts>.<hex64>` avec tolérance 300 s et sans repli en clair ; il est dédupliqué par WebhookRecu (clé (event_type, submission_id, timestamp)) ; le `metadata.apporteurId` est confronté à la soumission émise ; au `submission.completed`, le PDF signé et l'audit trail sont téléchargés immédiatement par l'API (le payload peut être incomplet, rejeu 48 h), stockés, et leur SHA-256 est persisté avec signeAt et gabaritVersion puis recomparé à chaque téléchargement.",
+      "source": "audit-outil §6.2 ; patron `src/lib/docuseal.ts` ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": 5,
@@ -1185,6 +1186,34 @@
       ]
     },
     {
+      "id": "REQ-SEC-039",
+      "domaine": "anti-abus-securite",
+      "texte": "La console porte des **notes internes** par apporteur, écrites et lues par les seuls rôles que la matrice autorise (REQ-SEC-023) ; chaque création, modification et suppression est un événement du journal chaîné. Elles ne sont **jamais affichées dans l'interface de l'espace ni portées par un DTO d'écran de l'espace** (aucun accès par `forApporteur`, garde statique), ni reprises dans un e-mail ou une alerte (REQ-INT-024), et n'alimentent aucun score ni aucun déclencheur (REQ-JUR-039). Donnée personnelle de l'apporteur, elles **sont incluses dans la réponse au droit d'accès** (export art. 15, REQ-UX-030, REQ-JUR-025), quel que soit le canal de la demande — Will en a été averti (`HYP-W15-NOTES`) : le **seul** chemin qui les lit hors de la console est la fonction d'export art. 15 du module RGPD (DM-20), **nommément exemptée** par la garde statique ; l'espace ne fait que servir le fichier produit, jamais un DTO de note. Chaque note y figure **horodatée**, son auteur désigné par son **rôle de console** (`ConsoleRole`), jamais par son nom. Décision W15 (6), 2026-09-25. Tests : aucun écran ni DTO d'écran de l'espace ne porte de note (**vue rougir** sur un témoin) ; la garde rougit sur tout lecteur des notes autre que la console et la fonction d'export exemptée ; rôle absent de la matrice → refus ; l'export art. 15 d'une fixture contient la note, horodatée, avec le rôle de son auteur et sans son nom ; journal vérifié.",
+      "source": "décision de Will du 2026-09-25, W15 (point 6)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 18,
+      "etape": 7,
+      "phase": 3,
+      "taches": [
+        "UX-P3-10"
+      ]
+    },
+    {
+      "id": "REQ-SEC-040",
+      "domaine": "anti-abus-securite",
+      "texte": "Chaque tableau de la console s'**exporte en CSV** : colonnes = celles affichées **moins** les coordonnées directes — e-mail, téléphone, IBAN, adresse (`HYP-W15-EXPORT`) ; action réservée par la matrice, `lecteur` exclu (glossaire, rôle `lecteur`) ; chaque export est un événement du journal chaîné (auteur, tableau, filtres, nombre de lignes) ; une cellule **de texte** commençant par `=`, `+`, `-` ou `@` est neutralisée (injection de formule). Décision W15 (6), 2026-09-25. Tests : export d'un tableau de fixture → en-têtes exacts, aucune colonne de coordonnée ; cellule de texte `=1+1` neutralisée, montant négatif intact ; `lecteur` → refus ; événement écrit avec le bon nombre de lignes.",
+      "source": "décision de Will du 2026-09-25, W15 (point 6)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": null,
+      "phase": 3,
+      "taches": [
+        "UX-P3-09"
+      ]
+    },
+    {
       "id": "REQ-ARG-001",
       "domaine": "argent",
       "texte": "Une ligne de commission `acquise` n'est créée que par un événement `paiement.recu` (status succeeded, amountCents > 0). `devis.signe` et `facture.emise` ne créent jamais de ligne `acquise` (ils créent/actualisent l'attendu `en_attente_encaissement`). _(source : tableaux-de-bord §2.3 ; fonctionnement R7 ; audit-attribution P6)_ **→ ABSORBÉE par REQ-DM-016** (annexe de dédoublonnage, fusion appliquée par GOV-001, 2026-09-03) : **le texte en vigueur est celui de REQ-DM-016** ; l'identifiant est conservé — et non supprimé — pour que les tâches qui le citent continuent de résoudre. **→ voir REQ-DM-016.**",
@@ -1218,8 +1247,8 @@
     {
       "id": "REQ-ARG-003",
       "domaine": "argent",
-      "texte": "Rejeu : rejouer dans l'ordre l'intégralité des événements reçus sur une base vide reproduit un registre identique (mêmes montants, mêmes statuts, même hash de registre).",
-      "source": "nouvelle (audit-outil §2.3 « rejouables »)",
+      "texte": "Rejeu : l'état des commissions est recalculable depuis WebhookRecu ; rejouer dans l'ordre l'intégralité des événements reçus sur une base vide reproduit un registre identique (mêmes montants, mêmes statuts, même hash de registre — golden) ; toute permutation des événements d'un même dossier produit le même état final (property-based, garanti par `en_attente_dependance`, REQ-INT-011) ; un événement bien formé dont la schemaVersion est inconnue est conservé en `held` et alerté, jamais perdu.",
+      "source": "nouvelle (audit-outil §2.3 « rejouables ») ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -1410,8 +1439,8 @@
     {
       "id": "REQ-ARG-016",
       "domaine": "argent",
-      "texte": "🔴 **Trois contrôles bloquants, et TROIS SEULEMENT** (réécrite le 2026-09-03, A-4 et A-5, sur l'article 5.4 réécrit) : SIREN vérifié valide et actif, coordonnées bancaires valides **au nom de l'apporteur** (IBAN checksum + titulaire), et attestation de vigilance **lorsque le cumul atteint le seuil légal** des articles L.8222-1 et D.8222-5 C. trav. (`SEUIL_VIGILANCE`, 500 000 cents HT, SSOT). **Aucune autre pièce et aucun autre motif ne peuvent différer un versement** : ni l'absence d'attestation RC pro (REQ-DM-027), ni un défaut de rattachement d'un encaissement, ni l'absence de palier à la grille (annexe 1, A1.7 / REQ-EXT-025) ne le diffèrent au-delà de soixante jours (REQ-ARG-034). 🔴 **L'absence de mandat d'autofacturation ne bloque plus rien** : elle produit un relevé **payable sur facture de l'apporteur**, jamais un relevé `bloque` motif `mandat_non_signe` (REQ-ARG-018, REQ-ARG-035) — ce blocage se déclenchait à la fin de **chaque** contrat, avec une créance impayée d'un côté et une TVA non déductible de l'autre. Le régime TVA déclaré reste requis pour **émettre** une autofacture (REQ-ARG-018) et non pour payer. Tout échec des trois contrôles produit un relevé `bloque` avec motif enum visible par l'apporteur et aucun virement. Tests : mandat absent → relevé **`a_payer` sur facture de l'apporteur** (vu rougir sur `bloque`) ; RC pro périmée → payé ; vigilance absente sous le seuil → payé ; vigilance absente au seuil → bloqué.",
-      "source": "audit-outil §6.1, §6.3 ; tableaux-de-bord §2.8 ; R10 ; ARG-19 ; contrat art. 5.4 et annexe 2.5 ; synthèse du 2026-09-03, A-4 et A-5",
+      "texte": "🔴 **Trois contrôles bloquants, et TROIS SEULEMENT** (réécrite le 2026-09-03, A-4 et A-5, sur l'article 5.4 réécrit) : SIREN vérifié valide et actif, coordonnées bancaires valides **au nom de l'apporteur** (IBAN checksum + titulaire), et attestation de vigilance **lorsque le cumul atteint le seuil légal** des articles L.8222-1 et D.8222-5 C. trav. (`SEUIL_VIGILANCE`, 500 000 cents HT, SSOT). **Aucune autre pièce et aucun autre motif ne peuvent différer un versement** : ni l'absence d'attestation RC pro (REQ-DM-027), ni un défaut de rattachement d'un encaissement, ni l'absence de palier à la grille (annexe 1, A1.7 / REQ-EXT-025) ne le diffèrent au-delà de soixante jours (REQ-ARG-034). 🔴 **L'absence de mandat d'autofacturation ne bloque plus rien** : elle produit un relevé **payable sur facture de l'apporteur**, jamais un relevé `bloque` motif `mandat_non_signe` (REQ-ARG-018, REQ-ARG-035) — ce blocage se déclenchait à la fin de **chaque** contrat, avec une créance impayée d'un côté et une TVA non déductible de l'autre. Le régime TVA déclaré reste requis pour **émettre** une autofacture (REQ-ARG-018) et non pour payer. Les trois contrôles sont rendus par la fonction pure `piecesBloquantPaiement` (REQ-DM-027) ; tout échec produit un relevé `bloque` avec un motif de l'enum `MotifBlocage` (REQ-ARG-017), visible par l'apporteur avec l'action qui le lève, aucune ligne ne passe `a_payer` et aucun virement n'est émis. Tests : mandat absent → relevé **`a_payer` sur facture de l'apporteur** (vu rougir sur `bloque`) ; RC pro périmée → payé ; vigilance absente sous le seuil → payé ; vigilance absente au seuil → bloqué.",
+      "source": "audit-outil §6.1, §6.3 ; tableaux-de-bord §2.8 ; R10 ; ARG-19 ; contrat art. 5.4 et annexe 2.5 ; synthèse du 2026-09-03, A-4 et A-5 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": 4,
@@ -1535,8 +1564,8 @@
     {
       "id": "REQ-ARG-024",
       "domaine": "argent",
-      "texte": "DAS2 : cumul par bénéficiaire (SIRET apporteur) et par année civile des montants TTC effectivement VERSÉS (`paidAt` bancaire des lots rapprochés) ; export annuel (identité, SIRET, adresse, nature « commissions », montant) pour tout bénéficiaire ≥ seuil paramétré ; le seuil n'a pas de valeur par défaut valide.",
-      "source": "audit-outil §3.3, §6.3, D9 ; ARG-20",
+      "texte": "DAS2 : cumul par bénéficiaire (SIRET apporteur) et par année civile des montants TTC effectivement VERSÉS (lignes `payee`, date bancaire des lots rapprochés) ; export annuel (identité, SIRET, adresse, nature « commissions », montant) pour tout bénéficiaire ≥ `DAS2_SEUIL_CENTS`, valeur unique de la SSOT de REQ-JUR-015 (240 000, BOFiP ACTU-2024-00154), marquée HYP-D9 jusqu'à confirmation de l'expert-comptable ; test frontière 2 399,99 / 2 400,00.",
+      "source": "audit-outil §3.3, §6.3, D9 ; ARG-20 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": 16,
@@ -1756,6 +1785,7 @@
       "etape": 5,
       "phase": -1,
       "taches": [
+        "GOV-088",
         "INT-T01a"
       ]
     },
@@ -1772,6 +1802,7 @@
       "taches": [
         "GOV-030",
         "GOV-069",
+        "GOV-088",
         "INT-T01a",
         "INT-T05"
       ]
@@ -2701,8 +2732,8 @@
     {
       "id": "REQ-UX-006",
       "domaine": "produit-ux",
-      "texte": "Aucune réponse serveur de l'espace apporteur ne contient l'identité (nom, e-mail, code, id) ni les montants d'un autre apporteur ; toute route paramétrée (/entreprises/:id, /commissions/:id, /documents/:id) répond 404 pour un id appartenant à un autre apporteur. 🔴 **« Mes filleuls » n'affiche QUE le montant de parrainage qui revient au parrain, agrégé par mois** (contrat art. 4.6 al. nouveau, M-12) : le parrainage n'emporte **aucune fonction d'encadrement, d'animation, de formation ni de suivi**, et le parrain **n'a accès à aucune donnée relative à l'activité du filleul** — ni nom, ni nombre de déclarations, ni état d'avancement, ni date de dernière vente, ni existence même d'une activité. Un écran qui ferait voir au parrain ce que fait son filleul est un écran de management, et c'est la lecture que l'écran produira devant un juge. Tests : assertion sur les **clés exactes** du DTO de parrainage (montant + mois, rien d'autre), **vue rougir** sur toute clé d'activité ; deux filleuls, l'un actif l'autre non → **DTO byte-identique** hors montant.",
-      "source": "R3 ; tableaux-de-bord §6.1 ; audit-outil §7 ; contrat art. 4.6 ; nouvelle (UX-08) ; synthèse du 2026-09-03, M-12",
+      "texte": "Aucune réponse serveur de l'espace apporteur ne contient l'identité (nom, e-mail, code, id) ni les montants d'un autre apporteur — **seule exception, décidée par Will le 2026-09-25 (W15)** : la liste de ses propres filleuls directs, réduite au prénom, à l'initiale du nom et à l'état de son contrat, `en_signature` ou `signe`, dérivé de l'ensemble des versions par la règle fermée de REQ-UX-041 — un avenant envoyé ne change rien, une relation résiliée fait sortir le filleul de la liste, et le statut de l'apporteur filleul (`suspendu` compris) n'est jamais lu (`HYP-W15-FILLEULS-VUE`) ; toute route paramétrée (/entreprises/:id, /commissions/:id, /documents/:id) répond 404 pour un id appartenant à un autre apporteur. 🔴 **« Mes filleuls » n'affiche, en fait de montant, QUE le montant de parrainage qui revient au parrain, agrégé par mois — jamais un montant par filleul** (contrat art. 4.6 al. nouveau, M-12) : le parrainage n'emporte **aucune fonction d'encadrement, d'animation, de formation ni de suivi**, et le parrain **n'a accès à aucune donnée relative à l'activité du filleul** — ni nombre de déclarations, ni état d'avancement, ni date de dernière vente, ni `actif`/`dormant`, ni existence même d'une activité (la liste des filleuls directs est autorisée par l'art. 4.6 al. 6 amendé, `HYP-W15-ART-4-6` tranchée le 2026-09-25). Un écran qui ferait voir au parrain ce que fait son filleul est un écran de management, et c'est la lecture que l'écran produira devant un juge. Tests : assertion sur les **clés exactes** du DTO de parrainage agrégé (montant + mois, rien d'autre) et de chaque élément de la liste des filleuls (prénom, initiale du nom, état du contrat, rien d'autre), **vue rougir** sur toute clé d'activité et sur toute clé de statut d'apporteur ; deux filleuls au même état de contrat, l'un actif l'autre non → **DTO byte-identique** hors montant, prénom et initiale.",
+      "source": "R3 ; tableaux-de-bord §6.1 ; audit-outil §7 ; contrat art. 4.6 ; nouvelle (UX-08) ; synthèse du 2026-09-03, M-12 ; amendée par la décision de Will du 2026-09-25, W15 (point 1)",
       "statut": "active",
       "remplaceePar": null,
       "module": 14,
@@ -2712,7 +2743,8 @@
         "DM-16",
         "SEC-05",
         "UX-P2-04",
-        "UX-P2-06"
+        "UX-P2-06",
+        "UX-P2-09"
       ]
     },
     {
@@ -3102,8 +3134,8 @@
     {
       "id": "REQ-UX-033",
       "domaine": "produit-ux",
-      "texte": "Le bundle First Load JS de chaque route de l'espace apporteur est ≤ 75 KB gz et mesuré à la main avant/après dans la PR qui l'introduit ; LCP ≤ 1 800 ms et CLS = 0 sur profil 4G lente.",
-      "source": "AGENTS.md ; tableaux-de-bord §6.2 ; audit-outil §12.3 point 6",
+      "texte": "Le bundle First Load JS de chaque route de l'espace apporteur est ≤ 75 KB gz — budget absolu, `size-limit` bloquant en CI dès le squelette (REQ-GOV-028), et mesure à la main avant/après consignée dans toute PR qui touche une route ; LHCI lab mobile (profil 4G lente) sur les 6 routes clés : LCP ≤ 1 800 ms, CLS = 0, INP ≤ 100 ms ; accessibilité selon REQ-UX-017.",
+      "source": "AGENTS.md ; tableaux-de-bord §6.2 ; audit-outil §12.3 point 6 ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": 8,
@@ -3759,7 +3791,8 @@
       "phase": -1,
       "taches": [
         "GOV-008",
-        "GOV-059"
+        "GOV-059",
+        "GOV-096"
       ]
     },
     {
@@ -3777,7 +3810,8 @@
         "GOV-038",
         "GOV-058",
         "GOV-063",
-        "GOV-070"
+        "GOV-070",
+        "GOV-090"
       ]
     },
     {
@@ -3810,7 +3844,8 @@
         "GOV-007",
         "GOV-023",
         "GOV-024",
-        "GOV-062"
+        "GOV-062",
+        "GOV-090"
       ]
     },
     {
@@ -3829,7 +3864,9 @@
         "GOV-024",
         "GOV-058",
         "GOV-077",
-        "GOV-078"
+        "GOV-078",
+        "GOV-095",
+        "GOV-097"
       ]
     },
     {
@@ -3852,7 +3889,8 @@
         "GOV-063",
         "GOV-067",
         "GOV-082",
-        "GOV-083"
+        "GOV-083",
+        "GOV-094"
       ]
     },
     {
@@ -3869,14 +3907,16 @@
         "GOV-007",
         "GOV-047",
         "GOV-058",
-        "GOV-077"
+        "GOV-077",
+        "GOV-093",
+        "GOV-095"
       ]
     },
     {
       "id": "REQ-GOV-014",
       "domaine": "gouvernance-agents",
-      "texte": "`docs/PROTOCOLE-FUSION.md` : une fusion à la fois sur `main`, historique linéaire (squash ou `--ff-only`), créneau réservé dans PLAN-STATE AVANT `update-branch`, `mergeStateStatus` lu et fusion exécutée dans le même appel, atterrissage vérifié par l'en-tête `x-partners-build-sha` avant la fusion suivante. Gate : aucun workflow ne pousse sur `main` (transposition de `aucun-workflow-ne-pousse-sur-main.spec.ts`) ; `main` protégée exige les gates A/B/D.",
-      "source": "mémoire deploy-famine-cancel-in-progress ; la-file-de-fusion-se-reserve-avant-l-update-branch",
+      "texte": "`docs/PROTOCOLE-FUSION.md` : une fusion à la fois sur `main`, historique linéaire (squash ou `--ff-only`), créneau réservé dans PLAN-STATE AVANT `update-branch`, `mergeStateStatus` lu et fusion exécutée dans le même appel, atterrissage vérifié par `pnpm deploy:verify` (en-tête `x-partners-build-sha` == SHA fusionné) avant la fusion suivante ; aucune `concurrency` GitHub avec cancel-in-progress sur le workflow de déploiement. Gate : aucun workflow ne pousse sur `main` (transposition de `aucun-workflow-ne-pousse-sur-main.spec.ts`) ; `main` protégée exige les gates A/B/D.",
+      "source": "mémoire deploy-famine-cancel-in-progress ; la-file-de-fusion-se-reserve-avant-l-update-branch ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
       "module": null,
@@ -3903,6 +3943,7 @@
         "GOV-022",
         "GOV-027",
         "GOV-060",
+        "GOV-098",
         "JUR-T01b"
       ]
     },
@@ -3917,7 +3958,8 @@
       "etape": 10,
       "phase": -1,
       "taches": [
-        "GOV-006"
+        "GOV-006",
+        "GOV-088"
       ]
     },
     {
@@ -4006,7 +4048,8 @@
         "GOV-081",
         "GOV-084",
         "GOV-086",
-        "GOV-087"
+        "GOV-087",
+        "GOV-096"
       ]
     },
     {
@@ -4037,7 +4080,8 @@
         "GOV-008",
         "GOV-018",
         "GOV-052",
-        "GOV-073"
+        "GOV-073",
+        "GOV-091"
       ]
     },
     {
@@ -4173,6 +4217,8 @@
       "phase": -1,
       "taches": [
         "CPL-T01",
+        "GOV-089",
+        "GOV-092",
         "T-ARG-018"
       ]
     },
@@ -4665,6 +4711,105 @@
       ]
     },
     {
+      "id": "REQ-UX-040",
+      "domaine": "produit-ux",
+      "texte": "La console affiche, pour chaque apporteur, sa **lignée** (REQ-DM-045) : ses filleuls (premier niveau) et les filleuls de ses filleuls (second niveau), en **liste** et en **arbre** SVG, avec pour chacun son état de contrat et sa date de rattachement. La profondeur affichée est **deux, jamais plus**. L'écran est porté par la matrice des rôles (REQ-SEC-023) ; `lecteur` n'y voit aucune donnée d'identité (glossaire, rôle `lecteur`) ; aucun montant du second niveau n'est présenté comme revenant à l'apporteur consulté. Décision W15 (1) et (6), 2026-09-25. Tests : fixture à trois niveaux → la vue rend exactement les niveaux 1 et 2 ; la liste et l'arbre portent le même ensemble d'apporteurs ; écran absent de la matrice → refus ; `lecteur` → aucune clé d'identité dans le DTO.",
+      "source": "décision de Will du 2026-09-25, W15 (points 1 et 6)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 14,
+      "etape": 10,
+      "phase": 2,
+      "taches": [
+        "UX-P2-08"
+      ]
+    },
+    {
+      "id": "REQ-UX-041",
+      "domaine": "produit-ux",
+      "texte": "« Mes filleuls » affiche la **liste des filleuls directs** de l'apporteur connecté — pour chacun, **prénom, initiale du nom et état du contrat** — `etatContrat` ∈ {`en_signature`, `signe`} — selon une **règle fermée** dérivée de l'**ENSEMBLE des versions** du contrat du filleul (`StatutContrat`, REQ-DM-013), jamais d'une version « courante ». Les versions sont lues dans l'**ordre chronologique de leur création** ; seules comptent les versions **postérieures à la dernière `resilie`** (toutes, s'il n'y en a aucune) — c'est ce qui règle une **relation reprise** après résiliation : (a) la **dernière** version est une `resilie` → le filleul **sort de la liste** ; (b) une version `signe` existe parmi les versions comptées → `signe` (« signé ») — un avenant `envoye` et jamais signé (REQ-CPL-028) ne change RIEN, un avenant signé non plus ; (c) les versions comptées sont toutes `envoye`, aucune `signe` → `en_signature` (« en signature ») ; (d) aucune version → absent ; (e) toute autre combinaison (versions comptées `remplace` sans `signe`…) → **échec fermé** : le filleul n'apparaît pas et l'écart est journalisé côté console, jamais un libellé par défaut. Le **statut de l'apporteur filleul** (`StatutApporteur`, REQ-DM-011 — dont `pret_a_signer`, `suspendu`, `resilie`), son gel, ses anomalies et ses signaux de sincérité **n'entrent jamais dans le calcul ni dans le DTO** : une suspension ou sa levée ne change rien à ce que voit le parrain (`HYP-W15-FILLEULS-VUE` ; contrat art. 4.6 al. 6 amendé, `HYP-W15-ART-4-6` tranchée le 2026-09-25) — et, séparément, le montant de parrainage **agrégé par mois** (REQ-UX-006). **Aucun montant par filleul**, aucune donnée d'activité (nombre de dépôts, `actif`/`dormant`, dernière vente, dernière connexion), **aucun filleul de filleul**, aucun e-mail, téléphone ni identifiant interne. Décision W15 (1), 2026-09-25. Tests : chaque branche de la règle (a) à (e), l'une par une fixture ; relation reprise : {`signe`, `resilie`, `envoye`} → « en signature », {`signe`, `resilie`, `signe`} → « signé », {`signe`, `resilie`} → absent, avenant signé ou envoyé après la reprise → « signé » ; **avenant envoyé sur un contrat signé → « signé », DTO identique à l'octet près avant et après l'envoi de l'avenant** ; avenant jamais signé → « signé » indéfiniment (horloge avancée) ; premier contrat envoyé et jamais signé → « en signature » ; résiliation → absent ; combinaison incohérente → absent et écart journalisé ; filleul au contrat `signe` dont l'apporteur est `suspendu` → affiché « signé », DTO byte-identique à celui d'avant la suspension ; `resilie` → absent ; aucun DTO de l'espace ne porte de champ de statut d'apporteur ni les valeurs `resilie`, `remplace`, `suspendu` (**vue rougir** sur un témoin) ; **clés exactes** de chaque élément du DTO de liste (`prenom`, `initialeNom`, `etatContrat`) ; fixture à deux niveaux → le second niveau est absent ; deux filleuls au même état de contrat, l'un actif et l'autre non → éléments byte-identiques hors prénom et initiale ; le filleul d'un autre apporteur n'apparaît jamais (REQ-SEC-009).",
+      "source": "décision de Will du 2026-09-25, W15 (point 1) ; tranchée par Will le 2026-09-25 (HYP-W15-ART-4-6)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 14,
+      "etape": 10,
+      "phase": 2,
+      "taches": [
+        "UX-P2-09"
+      ]
+    },
+    {
+      "id": "REQ-UX-042",
+      "domaine": "produit-ux",
+      "texte": "L'écran **Statistiques** de la console rend, sur une période choisie : le nombre de **candidatures par canal** (REQ-CPL-015) ; le nombre d'**apporteurs par statut** (REQ-QA-004) ; la **part d'apporteurs actifs** parmi les apporteurs sous contrat, `actif`/`dormant` venant de la fonction de REQ-CPL-027 et n'étant recalculés nulle part ailleurs ; le **CA généré** et les **commissions** par apporteur, par lignée et par équipe (REQ-DM-045) ; et la **courbe mensuelle** de chacun de ces indicateurs. Les agrégats sont des fonctions pures du domaine, horloge injectée (REQ-CPL-013), montants en centimes HT (REQ-DM-001) ; les montants par apporteur sont réservés aux rôles que la matrice autorise, `lecteur` exclu (glossaire, rôle `lecteur`). Décision W15 (3), 2026-09-25. Tests : jeu de fixture à totaux connus → chaque indicateur égal à la valeur attendue ; équipes chevauchantes → leurs totaux ne sont jamais additionnés entre eux ; `lecteur` → aucune clé de montant par apporteur dans le DTO.",
+      "source": "décision de Will du 2026-09-25, W15 (point 3)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": 7,
+      "phase": 3,
+      "taches": [
+        "DM-29",
+        "UX-P3-07"
+      ]
+    },
+    {
+      "id": "REQ-UX-043",
+      "domaine": "produit-ux",
+      "texte": "Les graphiques de la console sont des **SVG produits par un composant maison**, rendus côté serveur, **sans bibliothèque de graphiques** ; chaque graphique porte une **alternative tabulaire** accessible (REQ-UX-018) ; la route qui les affiche tient le budget de REQ-GOV-028 (≤ 75 KB gz de First Load JS), mesuré à la main avant et après. Décision W15 (3), 2026-09-25. Tests : une garde rougit si une dépendance de tracé entre dans `package.json` (**vue rougir** sur un témoin) ; une série de fixture rend un `<svg>` dont les points égalent les données ; axe-core : 0 violation serious ou critical.",
+      "source": "décision de Will du 2026-09-25, W15 (point 3)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": null,
+      "phase": 3,
+      "taches": [
+        "UX-P3-08"
+      ]
+    },
+    {
+      "id": "REQ-UX-044",
+      "domaine": "produit-ux",
+      "texte": "Les **tris par volume** (CA, commissions, dépôts) et toute comparaison entre apporteurs n'existent **que dans la console** : aucun DTO de l'espace, aucun e-mail et aucune notification ne porte un rang, une position ou une comparaison (REQ-JUR-034, gate `jur:aucun-agregat-reseau`), et aucun texte destiné à un apporteur n'annonce un classement ou un challenge (REQ-JUR-012, REQ-JUR-037, REQ-UX-029). Le code de la console emploie « tri », jamais le terme que REQ-GOV-017 bannit. Décision W15 (3), 2026-09-25. Tests : aucun module de statistiques n'est importé sous `src/app/(espace)/**` (garde statique, **vue rougir** sur un témoin) ; un DTO de l'espace portant une clé `rang` fait rougir la gate.",
+      "source": "décision de Will du 2026-09-25, W15 (point 3)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": null,
+      "phase": 3,
+      "taches": [
+        "UX-P3-07"
+      ]
+    },
+    {
+      "id": "REQ-UX-045",
+      "domaine": "produit-ux",
+      "texte": "Les **alertes de pilotage** — baisse d'activité d'un apporteur ou d'une lignée, candidatures en attente au-delà d'un délai — passent **par les canaux d'alerte existants** : bot Telegram de console (REQ-INT-024 : dédoublonnage, plafond horaire, aucune coordonnée) et table des notifications de console (UX-P1-10) ; **aucun second canal**. L'activité se mesure sur les **dépôts confirmés**, jamais sur les connexions ni sur `lastSeenAt` (REQ-JUR-039) ; les seuils vivent en configuration (`HYP-W15-SEUILS-ALERTE`). Une alerte de pilotage **ne produit aucun message à l'apporteur** ni aucun changement de son état (REQ-CPL-027, REQ-JUR-033, REQ-JUR-042). Décision W15 (6), 2026-09-25. Tests : fixture sous le seuil → une alerte, au-dessus → aucune ; aucun envoi n'a un apporteur pour destinataire (espion sur les expéditeurs) ; une règle d'alerte lisant `lastSeenAt` fait rougir la garde de REQ-JUR-039.",
+      "source": "décision de Will du 2026-09-25, W15 (point 6)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": 7,
+      "phase": 3,
+      "taches": [
+        "UX-P3-11"
+      ]
+    },
+    {
+      "id": "REQ-UX-046",
+      "domaine": "produit-ux",
+      "texte": "La console tient une **bibliothèque de documents** mis à disposition des apporteurs : ajout, **remplacement versionné** (la version précédente est conservée et n'est plus servie), **retrait** (dépublication, la trace restant), **ciblage** (tous, un palier, un apporteur) et **date de publication**. Côté espace, un document apparaît dans « Ressources » (UX-P3-02) pour les seuls apporteurs ciblés, à partir de sa date de publication ; un document qui n'est pas ciblé sur l'apporteur connecté répond **404 byte-identique** à un identifiant inexistant (REQ-SEC-009, couche `forApporteur`, REQ-SEC-008). Les fichiers sont des **PDF** sur stockage privé servis par URL signée courte (REQ-SEC-026), sans logo ni charte (REQ-JUR-041), relus par Will avant publication (REQ-CPL-023) ; le vocabulaire est « documents de présentation », jamais le terme que REQ-JUR-041 bannit. Ajout, remplacement et retrait sont journalisés (`HYP-W15-BIBLIOTHEQUE`). Décision W15 (5), 2026-09-25. Tests : ciblage palier → visible pour ce palier, 404 pour un autre ; publication datée demain → invisible aujourd'hui ; remplacement → seule la dernière version est servie ; fichier non PDF (octets d'en-tête) → refus ; journal vérifié.",
+      "source": "décision de Will du 2026-09-25, W15 (point 5)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 7,
+      "etape": 6,
+      "phase": 3,
+      "taches": [
+        "UX-P3-12"
+      ]
+    },
+    {
       "id": "REQ-DM-041",
       "domaine": "Annexe — passe de dédoublonnage (à appliquer par le Gardien du spec, GOV-001)",
       "texte": "Le payload d'un événement du journal est un schéma Zod **fermé** par type : identifiants, hashes, enums, montants, horodatages — **jamais** nom, e-mail, téléphone, IBAN, adresse ; gate `journal:sans-pii` ; après un effacement de tiers, `verifierChaine()` reste vrai. **Porteurs : `DM-01` et `DM-20`** — cette exigence fondait la gate `journal:sans-pii` (phase 0) sans qu'aucune tâche ne la cite : la gate existait sans porteur (corrigé le 2026-09-03).",
@@ -4677,6 +4822,63 @@
       "taches": [
         "DM-01",
         "DM-20"
+      ]
+    },
+    {
+      "id": "REQ-DM-044",
+      "domaine": "domaine-donnees",
+      "texte": "Le **changement de parrain** d'un filleul est une action de console réservée au rôle `admin` (REQ-SEC-023) : elle exige un **motif** choisi dans une **liste fermée** — `erreur_rattachement`, `fraude_ou_auto_parrainage`, `depart_ou_resiliation_du_parrain` (clause de correction du rattachement, contrat art. 4.6 nouvel alinéa, `HYP-W15-PARRAIN-A-DATE` tranchée le 2026-09-25) —, accompagné d'une précision écrite non vide, et écrit un événement au journal `Evenement` chaîné (ancien parrain, nouveau parrain, date d'effet, motif, auteur). Elle prend effet **à la date de l'action, pour les lignes futures seulement** : les lignes `parrainage` déjà nées restent **acquises** au parrain d'origine ; aucun accord écrit du parrain d'origine n'est requis ; une ligne `commission` du filleul acquise après la date d'effet engendre sa ligne `parrainage` au profit du nouveau parrain ; une ligne `reprise` suit le parrain de la ligne qu'elle reprend ; la fenêtre reste `contratFilleulSigneAt + 12 mois` (REQ-DM-023) et n'est jamais rouverte. Elle est **refusée**, sans aucun événement écrit, si elle crée un **cycle** (le nouveau parrain est le filleul lui-même ou l'un de ses descendants) ou un **auto-parrainage** au sens de REQ-SEC-031 (hash de SIRET, d'e-mail, de téléphone ou d'IBAN partagé). Les personnes prévenues suivent `HYP-W15-NOTIF-PARRAIN`. Décision W15 (2), 2026-09-25. Tests : ligne acquise la veille de l'effet → parrain d'origine, le lendemain → nouveau parrain ; reprise d'une ligne d'avant l'effet → parrain d'origine ; rôle `qualifieur` → refus ; motif absent de la liste fermée, ou précision vide → refus ; cycle, puis hash partagé → refus nommé et journal inchangé ; chaîne du journal vérifiée après l'action.",
+      "source": "décision de Will du 2026-09-25, W15 (point 2) ; tranchée par Will le 2026-09-25 (HYP-W15-PARRAIN-A-DATE)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 14,
+      "etape": 10,
+      "phase": 2,
+      "taches": [
+        "DM-26"
+      ]
+    },
+    {
+      "id": "REQ-DM-045",
+      "domaine": "domaine-donnees",
+      "texte": "La **lignée** et l'**équipe** d'un apporteur sont **dérivées** de `Parrainage` par des fonctions pures, jamais stockées : `lignee(a, t)` = filleuls de `a` (premier niveau) et filleuls de ceux-ci (second niveau) à la date `t`, compte tenu des changements de parrain (REQ-DM-044) ; `equipe(a, t)` = `a` et `lignee(a, t)` (`HYP-W15-EQUIPE`). Ces fonctions ne servent qu'à la **lecture** (console, statistiques) : **aucun calcul de commission ne les appelle**, et aucune ligne n'est jamais créée au bénéfice d'un apporteur pour l'activité de son second niveau (REQ-DM-023, REQ-JUR-020, contrat art. 4.6 al. 3 — un réseau rémunéré sur plusieurs niveaux se rapproche d'un système multi-niveaux encadré, et ne s'ouvre pas sans avis juridique). Décision W15 (1), 2026-09-25. Tests : fixture à trois niveaux → `lignee` rend exactement les niveaux 1 et 2 ; changement de parrain entre deux dates → deux lignées différentes ; garde statique : aucun import de `lignee` ni d'`equipe` depuis le module de calcul des commissions, **vue rougir** sur un témoin qui l'importe.",
+      "source": "décision de Will du 2026-09-25, W15 (point 1)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 14,
+      "etape": 10,
+      "phase": 2,
+      "taches": [
+        "DM-27"
+      ]
+    },
+    {
+      "id": "REQ-DM-046",
+      "domaine": "domaine-donnees",
+      "texte": "Au dépôt, le code NAF (`activite_principale`, nomenclature NAF rév. 2) rendu par le client recherche-entreprises (REQ-INT-021) est **stocké sur l'attribution** (REQ-DM-030). Un dépôt fait en **repli manuel** (tiers indisponible, REQ-INT-020) porte un code NAF **nul — jamais deviné, jamais saisi par l'apporteur** ; il est complété par un nouvel appel au tiers après la fermeture du disjoncteur (`HYP-W15-SECTEUR`) et reste « non renseigné » tant que le tiers ne l'a pas rendu. Décision W15 (4), 2026-09-25. Tests : fixture enregistrée → code stocké égal à celui de la fixture ; repli manuel → code nul, puis complété par la reprise sur fixture ; le formulaire de dépôt ne porte aucun champ de code NAF.",
+      "source": "décision de Will du 2026-09-25, W15 (point 4)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 10,
+      "etape": 7,
+      "phase": 1,
+      "taches": [
+        "DM-28"
+      ]
+    },
+    {
+      "id": "REQ-DM-047",
+      "domaine": "domaine-donnees",
+      "texte": "Les statistiques de la console se **filtrent et se découpent par secteur d'activité** : **section** NAF (lettre A à U) et **division** (deux premiers chiffres), dérivées du code stocké (REQ-DM-046) par une fonction pure et une table de nomenclature versionnée (`HYP-W15-SECTEUR`) ; un code absent ou inconnu tombe dans « non renseigné », **jamais** dans un secteur deviné. Décision W15 (4), 2026-09-25. Tests : la table rattache chacune des 88 divisions à une section ; `70.10Z` → section M, division 70 ; code nul → « non renseigné » ; la somme des secteurs égale le total non filtré.",
+      "source": "décision de Will du 2026-09-25, W15 (point 4)",
+      "statut": "active",
+      "remplaceePar": null,
+      "module": 17,
+      "etape": 7,
+      "phase": 3,
+      "taches": [
+        "DM-29",
+        "UX-P3-07"
       ]
     },
     {
@@ -5313,7 +5515,10 @@
         "GOV-065",
         "GOV-066",
         "GOV-067",
-        "GOV-068"
+        "GOV-068",
+        "GOV-089",
+        "GOV-092",
+        "GOV-094"
       ]
     },
     {
@@ -5334,7 +5539,8 @@
         "GOV-072",
         "GOV-079",
         "GOV-085",
-        "GOV-087"
+        "GOV-087",
+        "GOV-090"
       ]
     },
     {

@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**11 ADR · 8 `propose`, 3 `accepte`, 0 `remplace`.**
+**21 ADR · 13 `propose`, 8 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -22,3 +22,13 @@
 | [`partners/ADR-0009`](0009-valeurs-du-monde-reel.md) | Une valeur que seul Will connaît est une CONFIGURATION, pas un blocage de plan | `accepte` | 2026-09-05 | CPL-T01 |
 | [`partners/ADR-0010`](0010-une-gate-bloquante-et-sa-dette-declaree.md) | Une gate bloquante dont l'exception s'écrit, plutôt qu'une gate qu'on n'exécute pas | `propose` | 2026-09-05 | CPL-T01 |
 | [`partners/ADR-0011`](0011-une-seule-implementation-des-listes-d-etats.md) | Les listes d'états occupants ont UNE implémentation, et son discriminant est la couverture | `propose` | 2026-09-14 | GOV-030 |
+| [`partners/ADR-0012`](0012-relecture-proportionnee-au-risque.md) | La relecture d'une PR se proportionne à son risque, et l'ordinaire se prouve | `propose` | 2026-09-18 | GOV-077 |
+| [`partners/ADR-0013`](0013-secrets-et-donnees-personnelles-chiffrees.md) | Secrets et données personnelles chiffrées | `propose` | 2026-09-18 | SEC-01 |
+| [`partners/ADR-0014`](0014-temps-paris-jours-ouvres.md) | Le temps du métier : horloge injectée, heure de Paris calculée, jours ouvrés versionnés | `propose` | 2026-09-19 | CPL-T13 |
+| [`partners/ADR-0015`](0015-journal-evenement-chaine-immuable.md) | Le journal Evenement : chaîné, refusé à toute modification par la base, sans donnée personnelle | `accepte` | 2026-09-19 | DM-01 |
+| [`partners/ADR-0016`](0016-deux-arbitrages-du-2026-09-03-dates-dans-l-annexe-des-fusions.md) | Deux arbitrages du 2026-09-03 datés dans l'annexe des fusions : la date de référence d'une commande et les trois contrôles de versement | `propose` | 2026-09-19 | — aucune tâche ouverte ne porte la résorption des dettes de texte décidé ; la dette avait été déclarée par GOV-039 |
+| [`partners/ADR-0017`](0017-revendication-derivee-de-la-forge.md) | La revendication d'une tâche se dérive de la forge, pas du fichier de la branche | `accepte` | 2026-09-21 | GOV-059 |
+| [`partners/ADR-0018`](0018-un-nom-une-garde-gov-check-retire-des-deux-cotes.md) | Un nom, une garde : `gov:check` est retiré des deux côtés | `accepte` | 2026-09-22 | GOV-063 |
+| [`partners/ADR-0019`](0019-un-label-designe-une-source-jamais-une-vue.md) | un label de rôle désigne une SOURCE, jamais une vue dérivée | `accepte` | 2026-09-22 | GOV-090 |
+| [`partners/ADR-0020`](0020-le-champ-lot-declare-les-taches-d-une-pr-de-lot.md) | Une PR de lot déclare ses tâches dans un champ `Lot:`, et la garde le croit exactement autant que le titre | `accepte` | 2026-09-23 | GOV-096 |
+| [`partners/ADR-0021`](0021-quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.md) | Quatre lentilles pour l'argent, la sécurité et les données, deux pour le reste ; la prose inexacte est une dette, pas un refus | `propose` | 2026-09-25 | GOV-097 |

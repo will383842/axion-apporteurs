@@ -27,12 +27,12 @@
 //
 // ── CE QU'IL RESTE, ET SOUS QUEL RÉGIME ─────────────────────────────────────────────────────
 //
-// Après ce correctif, `eslint .` sort en 0 sur le dépôt, avec des AVERTISSEMENTS comptés — leur
-// nombre se lit dans la sortie de `pnpm lint`, il n'est pas recopié ici. Ils sont posés en `warn`
-// et non éteints, et SEULEMENT dans les fichiers nommés par les deux blocs de dette, un par règle,
-// posés juste avant `prettier` : un fichier neuf reçoit les deux règles en `error`. Les corriger
-// sort du périmètre de GOV-031 (charte A11 : un manque devient une tâche, jamais un correctif glissé
-// dans le lot en cours) — la tâche qui les remonte en `error` reste à ouvrir par A01.
+// GOV-031 avait laissé 13 AVERTISSEMENTS comptés (6 `no-explicit-any`, 7 `no-useless-assignment`),
+// tolérés en `warn` dans deux blocs de dette qui nommaient leurs 7 fichiers un par un. QA-T01 les a
+// CORRIGÉS À LA SOURCE et a retiré les deux blocs : `eslint .` sort en 0 sur le dépôt sans un seul
+// avertissement, et chaque règle y rend en `error`. Zéro obtenu en éteignant une règle mesurerait la
+// règle éteinte ; `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` plante une faute de
+// chacune aux 7 chemins de l'ancienne dette et exige une ERREUR.
 //
 // UNE DÉROGATION VIT ICI, ET NULLE PART AILLEURS. Une règle éteinte est une entrée d'un bloc
 // `files:`, un fichier ignoré une entrée d'`ignores`, et le motif de chacune est le commentaire
@@ -49,6 +49,146 @@ import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
+
+// ── LES FORMES VOISINES DES INTERDITS DU DOMAINE (GOV-076, REQ-QA-001) ──────────────────────
+//
+// CHAQUE INTERDIT NE JUGEAIT QU'UNE SEULE FORME, et les formes voisines traversaient : un import
+// de module écrit sans son préfixe, un import dynamique, une horloge système atteinte autrement
+// que par son nom usuel, une écriture sur la console atteinte par un autre chemin.
+//
+// CE N'EST PAS UNE DETTE DE STYLE. REQ-QA-001 fait de la PURETÉ de `src/domain/**` la condition du
+// calcul de commission (DM-04) et de l'horloge injectable (CPL-T13). Un domaine qui lit l'heure de
+// la machine rend un résultat différent selon le jour où on le rejoue, et c'est un registre
+// d'argent qu'on ne peut plus reconstituer. À fermer AVANT le premier code de domaine de la phase 0.
+//
+// LA LISTE EST EXPORTÉE, ET C'EST EXPRÈS : elle est IMPRIMÉE par
+// `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`, qui exerce CHACUNE de ses
+// entrées et compte celles qu'il a réellement exercées. Une liste supposée n'est pas une liste
+// couverte — c'est le défaut que cette tâche ferme, pas une tournure.
+//
+// LES FORMES VOISINES SE DÉRIVENT DES LISTES DE BASE, ELLES NE LES RETAPENT PAS. Motif `simplicite`
+// sur la PR 114 : les sélecteurs recopiaient `fetch|XMLHttpRequest|WebSocket` et `Date|performance`.
+// Un global ajouté à l'interdit de base aurait été refusé par son nom nu et aurait TRAVERSÉ par son
+// porteur (`globalThis.EventSource`). Les deux listes ci-dessous sont les SEULES écritures de ces
+// noms : `no-restricted-globals`, `no-restricted-properties` et les formes voisines en dérivent
+// toutes.
+
+/** Les globaux réseau interdits sous `src/domain/**` — l'interdit de base, `no-restricted-globals`. */
+export const GLOBAUX_RESEAU_INTERDITS = ['fetch', 'XMLHttpRequest', 'WebSocket'];
+
+/** Les horloges interdites — l'interdit de base, `no-restricted-properties` : `[objet, propriété]`. */
+export const HORLOGES_INTERDITES = [
+  ['Date', 'now'],
+  ['performance', 'now'],
+];
+
+/** `/^(a|b)$/` sur des noms d'identifiant — le seul endroit où une liste devient un sélecteur. */
+const alternance = (noms) => `/^(${[...new Set(noms)].join('|')})$/`;
+
+/**
+ * Les formes voisines, DÉRIVÉES de leurs listes de base. Exportée pour que le témoin puisse
+ * ajouter un nom à une liste et exiger que sa forme par porteur le suive.
+ */
+export function formesVoisines({ reseau, horloges }) {
+  const objetsHorloge = alternance(horloges.map(([objet]) => objet));
+  return [
+    {
+      nom: 'import-dynamique',
+      exemple: "export const lu = import('node:fs');",
+      selector: 'ImportExpression',
+      message:
+        "src/domain/** est pur : un import DYNAMIQUE charge le même module qu'un import statique " +
+        'et échappe à `no-restricted-imports`, qui ne lit que les imports écrits en tête de fichier. ' +
+        'Aucun module ne se charge à la demande ici (REQ-QA-001).',
+    },
+    {
+      nom: 'require',
+      exemple: "export const fs = require('node:fs');",
+      selector: "CallExpression[callee.name='require']",
+      message:
+        'src/domain/** est pur : `require` charge le même module et échappe à ' +
+        '`no-restricted-imports` de la même façon (REQ-QA-001).',
+    },
+    {
+      nom: 'horloge-par-acces-calcule',
+      exemple: "export const t = Date['now']();",
+      selector: `MemberExpression[computed=true][object.name=${objetsHorloge}]`,
+      message:
+        "src/domain/** ne lit pas l'horloge système : `Date['now']` atteint exactement ce que " +
+        '`no-restricted-properties` interdit, par une clé que la règle ne voit pas. ' +
+        "L'heure est injectée par le module `temps` (REQ-QA-001, docs/CONVENTIONS.md §3).",
+    },
+    {
+      nom: 'horloge-par-un-porteur',
+      exemple: 'export const t = globalThis.Date.now();',
+      selector: `MemberExpression[property.name=${objetsHorloge}]`,
+      message:
+        "src/domain/** ne lit pas l'horloge système : l'atteindre par un PORTEUR " +
+        '(`globalThis.Date`, `global.Date`) contourne le nom usuel que les règles surveillent ' +
+        '(REQ-QA-001, docs/CONVENTIONS.md §3).',
+    },
+    {
+      nom: 'reseau-par-un-porteur',
+      exemple: "export const r = globalThis.fetch('https://exemple.test');",
+      selector: `MemberExpression[property.name=${alternance(reseau)}]`,
+      message:
+        'src/domain/** est pur : atteindre le réseau par un PORTEUR (`globalThis.fetch`) contourne ' +
+        '`no-restricted-globals`, qui ne juge que le nom nu. La donnée arrive en argument ' +
+        '(REQ-QA-001).',
+    },
+    {
+      nom: 'console-par-un-porteur',
+      exemple: "export const f = () => globalThis.console.log('fuite');",
+      selector: "MemberExpression[property.name='console']",
+      message:
+        'src/domain/** n’écrit pas sur la console : `globalThis.console` atteint exactement ce que ' +
+        '`no-console` interdit, sans jamais écrire le nom que la règle lit (REQ-DM-041).',
+    },
+    {
+      nom: 'console-par-acces-calcule',
+      exemple: "export const f = () => console['log']('fuite');",
+      selector: "MemberExpression[computed=true][object.name='console']",
+      message:
+        'src/domain/** n’écrit pas sur la console : une clé calculée atteint la même méthode que ' +
+        '`console.log` (REQ-DM-041).',
+    },
+    {
+      nom: 'console-par-le-flux',
+      exemple: "export const f = () => process.stdout.write('fuite');",
+      selector: "MemberExpression[object.name='process'][property.name=/^(stdout|stderr)$/]",
+      message:
+        'src/domain/** n’écrit sur aucun flux : `process.stdout.write` est la même fuite que ' +
+        '`console.log`, un cran plus bas (REQ-DM-041, REQ-QA-001).',
+    },
+  ];
+}
+
+export const FORMES_VOISINES = formesVoisines({
+  reseau: GLOBAUX_RESEAU_INTERDITS,
+  horloges: HORLOGES_INTERDITES,
+});
+
+/**
+ * LES MODULES INTERDITS SOUS `src/domain/**`, ÉCRITS DANS LEURS DEUX FORMES.
+ *
+ * Un module du cœur de node s'importe avec son préfixe (`node:fs`) ou sans (`fs`) : les deux
+ * chargent le MÊME module, et la liste d'origine ne nommait que la première. La forme sans préfixe
+ * est la forme voisine la plus banale de toutes, et elle traversait.
+ */
+export const MODULES_INTERDITS_DU_DOMAINE = [
+  '@prisma/*',
+  'next',
+  'next/*',
+  '*/prisma',
+  'ioredis',
+  'redis',
+  'bullmq',
+  'undici',
+  // les deux écritures de chaque module du cœur, et leurs sous-chemins (`node:fs/promises`)
+  ...['fs', 'child_process', 'http', 'https', 'net']
+    .flatMap((m) => [m, `${m}/*`, `node:${m}`, `node:${m}/*`])
+    .sort(),
+];
 
 export default tseslint.config(
   {
@@ -103,8 +243,34 @@ export default tseslint.config(
     // `src/domain/**` est PUR : aucune I/O, aucune horloge, aucun accès à la base. L'horloge est
     // injectée par le module `temps` (`docs/CONVENTIONS.md` §3) — sans quoi un test qui dépend de
     // la minute où il tourne ne se rejoue pas.
+    //
+    // REQ-QA-001 (QA-T01) nomme ce que le lint BLOQUANT refuse ici : « ni Prisma, ni Redis, ni
+    // fetch, ni new Date() » — la base, le cache, le réseau et l'horloge système, chacun par son nom
+    // usuel. Le témoin qui lance `pnpm lint` sur une ligne fautive par interdit est
+    // `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`. Les FORMES VOISINES — import sans
+    // préfixe `'fs'`, `import()` dynamique, `globalThis.fetch`, `Date['now']` — ne sont PAS fermées
+    // ici : c'est GOV-076 qui les ferme.
     files: ['src/domain/**/*.ts'],
     rules: {
+      'no-restricted-globals': [
+        'error',
+        ...GLOBAUX_RESEAU_INTERDITS.map((name) => ({
+          name,
+          message:
+            'src/domain/** est pur : aucun appel réseau. La donnée arrive en argument ' +
+            '(REQ-QA-001, docs/CONVENTIONS.md §3).',
+        })),
+      ],
+      'no-restricted-properties': [
+        'error',
+        ...HORLOGES_INTERDITES.map(([object, property]) => ({
+          object,
+          property,
+          message:
+            "src/domain/** ne lit pas l'horloge système : l'heure est injectée par le module " +
+            '`temps` (REQ-QA-001, docs/CONVENTIONS.md §3).',
+        })),
+      ],
       'no-restricted-syntax': [
         'error',
         {
@@ -113,16 +279,23 @@ export default tseslint.config(
             "`new Date()` est interdit sous src/domain : l'horloge est injectée par le module " +
             '`temps` (docs/CONVENTIONS.md §3). Un domaine qui lit l’heure ne se rejoue pas.',
         },
+        // GOV-076 — les FORMES VOISINES, DÉRIVÉES de la liste exportée en tête de ce fichier et
+        // jamais retapées ici : une seconde écriture de la même liste divergerait au premier ajout,
+        // et c'est la copie qui serait lue.
+        ...FORMES_VOISINES.map(({ selector, message }) => ({ selector, message })),
       ],
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
-              group: ['@prisma/*', 'next', 'next/*', 'node:fs', 'node:child_process', '*/prisma'],
+              // GOV-076 — les deux écritures de chaque module, DÉRIVÉES en tête de ce fichier.
+              group: MODULES_INTERDITS_DU_DOMAINE,
               message:
-                'src/domain/** est pur : aucune I/O, aucun accès base, aucun couplage au cadre ' +
-                'applicatif (docs/CONVENTIONS.md §3).',
+                'src/domain/** est pur : aucune I/O, aucun accès base, aucun cache, aucun appel ' +
+                'réseau, aucun couplage au cadre applicatif (REQ-QA-001, docs/CONVENTIONS.md §3). ' +
+                '⚠️ Un module du cœur de node s’importe AVEC ou SANS son préfixe `node:` — les deux ' +
+                'chargent le même module, et les deux sont interdits ici.',
             },
           ],
         },
@@ -173,42 +346,6 @@ export default tseslint.config(
       // retours arrière (`\x08`) de la sortie d'un outil avant de la lire. Le caractère de contrôle
       // est ce qu'on cherche à supprimer : `no-control-regex` y interdirait le nettoyage lui-même.
       'no-control-regex': 'off',
-    },
-  },
-
-  {
-    // ── LA DETTE, COMPTÉE ET VISIBLE, JAMAIS ÉTEINTE ────────────────────────────────────────
-    // Les listes sont celles que `eslint . -f json` rendait le 2026-09-14, UNE PAR RÈGLE, et le
-    // compte se lit dans `pnpm lint`, jamais ici. Nommer les fichiers un par un, et pas `scripts/**`,
-    // c'est ce qui garde le rouge pour tout code NEUF : un `any` posé dans un fichier qui n'est pas
-    // dans la liste de sa règle fait échouer le lint. `gardes-transposees.spec.ts` exige qu'une
-    // règle tolérée en `warn` rende ENCORE un avertissement dans chaque fichier où elle l'est : un
-    // fichier corrigé qui reste ici fait rougir la suite, et les listes ne peuvent que rétrécir. La
-    // tâche qui les remonte en `error` est à ouvrir par A01 (charte A11 : un manque constaté
-    // devient une TÂCHE).
-    files: [
-      'scripts/gates/perf-budgets.ts',
-      'tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts',
-    ],
-    rules: {
-      // Des `any` réels dans ces fichiers : `warn` les COMPTE à chaque exécution, `off` les ferait
-      // disparaître de la sortie de `pnpm lint`.
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
-
-  {
-    files: [
-      'scripts/gates/gov-inventaire.ts',
-      'scripts/gates/gov-sonde.ts',
-      'scripts/plan-state/build.ts',
-      'tests/unit/gouvernance/corps-de-pr-couvre.spec.ts',
-      'tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts',
-    ],
-    rules: {
-      // Des affectations inutiles réelles dans ces fichiers, que le socle d'eslint 10 a ajoutées :
-      // même régime que les `any`, comptées à chaque exécution et jamais éteintes.
-      'no-useless-assignment': 'warn',
     },
   },
 

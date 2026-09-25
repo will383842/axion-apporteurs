@@ -1,6 +1,6 @@
 // @req REQ-DM-003
 // @req REQ-GOV-016
-// @req REQ-JUR-027
+// @req REQ-JUR-027 → REQ-DM-038
 //
 // REQ-JUR-027 est ABSORBÉE par REQ-DM-038 (annexe de dédoublonnage, GOV-001) : le texte en
 // vigueur est celui de REQ-DM-038 — « toute colonne dont le nom contient statut, type, motif,

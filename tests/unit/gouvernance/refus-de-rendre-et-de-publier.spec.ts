@@ -45,7 +45,6 @@ import {
 } from '../../../scripts/gates/gov-attributions';
 import {
   CHEMIN_ANNEXE,
-  DETTE_TEXTE_DECIDE,
   fusionsDecidees,
   marqueursDe,
 } from '../../../scripts/gates/gov-requirements';
@@ -367,7 +366,7 @@ describe('REQ-GOV-032 — le refus du composeur SORT, il ne se contente pas de l
       Tests  553 passed (553)
 `
     );
-    let code = -1;
+    let code: number;
     let stderr = '';
     try {
       execFileSync(
@@ -487,6 +486,20 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // déclarer le refus, dire pourquoi, assumer le total. Les témoins sont déclarés à ZÉRO :
     // c'est une DETTE ÉCRITE, pas une preuve. *Un compteur de témoins qu'on gonfle pour se donner
     // raison vaut moins qu'un zéro assumé.*
+    // ── SEC-10 : UNE sortie, à code VARIABLE, comme GOV-037 ──────────────────────────────────
+    'scripts/gates/rate-famille.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO ici, comme `gov-check.ts` : ses témoins d'effet vivent dans
+      // `tests/unit/securite/rate-famille.spec.ts`, pas dans le tableau `REFUS` de CE fichier.
+      temoins: 0,
+      raison:
+        'SEC-10 — la garde de famille des compteurs de débit. UNE sortie, `process.exit(code)`, ' +
+        'commune au contrôle et à `--prove` : 0 si aucune faute, 1 sur une faute, 2 si la garde ' +
+        'a levé. Éprouvée sur le binaire par deux témoins d’EFFET de `rate-famille.spec.ts` (une ' +
+        'copie de travail sans conduite sur panne, une qui laisse passer en panne : sortie 1, ' +
+        'préfixe nommé) et un contre-témoin (le dépôt : sortie 0).',
+    },
     'scripts/gates/gov-attestation.ts': {
       total: 3,
       porte: 3,
@@ -503,12 +516,11 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       temoins: 0,
       raison:
         'GOV-019 — budgets de performance. Quatre refus : registre illisible, budget dépassé, ' +
-        'mode inconnu, vue divergente. ⚠️ `fichiersDeSrc()` y rend `[]` si `src/` manque — la ' +
-        'variante affaiblie du patron que ce lot ferme ailleurs — invisible à la réciproque, au ' +
-        'témoin `ls-files` et aux trois `describe`, car elle ne balaie pas `git ls-files`. ' +
-        '⚠️ AUCUNE tâche du backlog ne porte cette dette : `GOV-019` LIVRE `perf-budgets`, elle ne ' +
-        'corrige pas son `if (!existsSync(racine)) return []`. Relevé par `mutation` — une dette ' +
-        'déclarée en prose sans porteur est une dette que personne ne reprendra.',
+        'mode inconnu, vue divergente. La dette que cette entrée déclarait est FERMÉE par GOV-046 : ' +
+        '`fichiersDeSrc()` rendait `[]` si `src/` manquait — zéro violation, donc un vert sur zéro ' +
+        'fichier regardé. Le périmètre vient désormais de `fichiersSuivisOuRefus`, la source unique, ' +
+        'et la garde est DÉCLARÉE dans `GARDES_QUI_BALAIENT` : ses refus `perimetre_illisible` sont ' +
+        'ceux de la primitive, sans sortie ajoutée ici — le total de cette entrée ne bouge donc pas.',
     },
     'scripts/gates/gov-conventions.ts': {
       total: 2,
@@ -577,11 +589,44 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       temoins: 1,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE, mesurée par `mutation` au 12e tour.',
     },
+    'scripts/gates/journal-sans-pii.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'DM-01 — la charge du journal sans donnée personnelle. `process.exit(decision.code)` : sortie ' +
+        'TERMINALE à code variable, commune au mode normal et à `--prove`. La décision est une ' +
+        'fonction pure vue rendre 1 (`decider()`, journal-charge-fermee.spec.ts) et le binaire est vu ' +
+        'sortir en 0 sur le dépôt ; ⛔ aucun témoin d’EFFET du binaire en échec. Dette DÉCLARÉE.',
+    },
     'scripts/gates/lexique-apporteurs.ts': {
       total: 2,
       porte: 2,
       temoins: 0,
       raison: '⛔ AUCUN témoin d’effet. Dette DÉCLARÉE.',
+    },
+    // ── DM-02 : deux gardes NEUVES, deux sorties chacune ────────────────────────────────────
+    'scripts/gates/schema-cents.ts': {
+      total: 2,
+      porte: 2,
+      // ZÉRO ici : les témoins d'EFFET vivent dans `tests/unit/domaine/gardes-de-schema.spec.ts`.
+      temoins: 0,
+      raison:
+        'DM-02 — REQ-DM-001, montants en centimes. Deux `process.exit(1)` : le `--prove` qui voit ' +
+        'un témoin rester vert, et la sortie terminale sur faute. Témoins d’EFFET sur le binaire ' +
+        'dans gardes-de-schema.spec.ts : invoquée SANS extension sur le dépôt, elle imprime son ' +
+        'périmètre et juge ; une copie renommée ne s’exécute pas.',
+    },
+    'scripts/gates/migrations-additive.ts': {
+      total: 2,
+      porte: 2,
+      temoins: 0,
+      raison:
+        'DM-02 — REQ-DM-037, migrations additives. Deux `process.exit(1)` : le `--prove` qui voit ' +
+        'un témoin rester vert, et la sortie terminale sur faute non absoute. Témoins d’EFFET dans ' +
+        'gardes-de-schema.spec.ts : un dépôt jetable dont la migration du MILIEU supprime une ' +
+        'colonne sort en 1 en la nommant, le même absous par une ADR acceptée sort en 0 en ' +
+        'IMPRIMANT l’absolution, un dépôt sans migration sort en 1 (`perimetre_vide`).',
     },
     'scripts/gates/gov-entite.ts': {
       total: 6,
@@ -626,6 +671,56 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'Ce qui reste vrai est un argument de COÛT (l’un rougit hors ligne, l’autre appelle la ' +
         'forge), pas de couverture. *Redondance ≠ trou — et une maxime fausse devient une doctrine, ' +
         'qu’on ne remesure jamais.*',
+    },
+    // ── UX-P0-02 : UNE sortie, à code VARIABLE ──────────────────────────────────────────────
+    'scripts/gates/maquettes-validees.ts': {
+      total: 1,
+      porte: 1,
+      // ZÉRO ici : les témoins d'EFFET de cette sortie vivent dans
+      // `tests/unit/espace/maquettes-validees.spec.ts`, pas dans le tableau `REFUS` de ce fichier.
+      temoins: 0,
+      raison:
+        'UX-P0-02 — aucune tâche d’écran attribuée sans maquette validée par Will. UNE sortie, ' +
+        "`process.exit(process.argv.includes('--prove') ? prouver() : juger())`, TERMINALE, à code " +
+        'variable : 0 quand la garde passe, 1 sur la première faute. Témoins d’EFFET sur le binaire, ' +
+        'dans maquettes-validees.spec.ts : un arbre jetable où une tâche d’écran est attribuée sans ' +
+        'validation sort en 1 en NOMMANT la tâche, le même arbre corrigé sort en 0, et le dépôt réel ' +
+        'comme `--prove` sortent en 0.',
+    },
+    // ── GOV-047 : le PRÉ-VOL, six refus dont cinq sont des refus de MESURER ─────────────────
+    // Ce fichier n'est pas une garde de CI : c'est l'outil que `docs/CONVENTIONS.md` §7 impose
+    // avant de pousser. Cinq de ses six sorties refusent de CONCLURE — `ci.yml` absent, job
+    // `gate-a` introuvable, pas de bloc `steps:`, aucune étape jouable, substitution de shell
+    // inconnue — parce qu'un pré-vol qui devine la liste des étapes rend un vert sans mesure, ce
+    // qui est pire que pas de pré-vol du tout. La sixième est son verdict.
+    // 🔧 Écrit d'abord sous l'étiquette GOV-059 par méconnaissance du backlog : `scripts/prevol.ts`
+    // est déclaré par GOV-047 depuis l'origine, avec son test. Remis sous sa tâche.
+    'scripts/prevol.ts': {
+      total: 6,
+      porte: 6,
+      // ZÉRO, ET CE N'EST PLUS LA MÊME DETTE : ce compteur ne compte que les témoins qui vivent
+      // dans CE fichier (cf. `TEMOINS_D_EFFET` plus bas), comme pour `gov-check.ts`. Les six
+      // sorties sont exercées sur le BINAIRE, dans des dépôts jetables, par le banc que la
+      // version précédente de cette entrée réclamait en toutes lettres :
+      // `tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts` (GOV-047). C'est la SEULE
+      // lecture de ce fait dans ce fichier : le récit du cliquet, plus bas, y renvoie au lieu
+      // d'en donner une seconde.
+      temoins: 0,
+      raison:
+        'GOV-047 — le pré-vol local, dérivé du job `gate-a` de `ci.yml`. SIX sorties : `ci.yml` ' +
+        'absent, job `gate-a` introuvable (ou `ci.yml` refusé par l’analyseur YAML partagé : ancre, ' +
+        'alias), aucun bloc `steps:`, aucune étape jouable dérivée, substitution de shell non ' +
+        'tolérée (ou `run:` de plusieurs lignes), et le verdict final. Les cinq premières sont des ' +
+        'REFUS DE CONCLURE (échec fermé) : sans la liste des étapes, un pré-vol ne mesure rien et ' +
+        'son silence se lirait « rien à vérifier ». Les six sont exercées sur le binaire par ' +
+        '`tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts` — un dépôt jetable où `ci.yml` ' +
+        'est absent, un autre où seul un AUTRE job existe, un autre dont une étape porte une ' +
+        'ancre, un autre vidé de son `steps:`, un autre à `run:` multiligne, un ' +
+        'autre dont toutes les étapes sont écartées, un autre porteur d’une substitution sous ' +
+        'chacune de ses quatre écritures, un dernier où une étape rougit : sortie 1 à chaque ' +
+        'fois, la cause NOMMÉE, et deux contre-témoins en 0 — l’arbre sain, et la substitution ' +
+        'TOLÉRÉE qui doit traverser le filtre. Le mutant « le verdict imprime le rouge puis rend ' +
+        '0 » a été posé et tué le 2026-09-22.',
     },
   };
 
@@ -822,7 +917,66 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // Déclarer un nombre « au cas où » donnerait le nombre sans la lecture, c'est-à-dire exactement
     // ce que ce cliquet interdit :
     // *le total ne bouge pas sans qu'on l'écrive, et on ne l'écrit pas sans l'avoir lu.*
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(37);
+    // 🔧 37 → 38 par UX-P0-02, ARBITRÉ et non subi. `scripts/gates/maquettes-validees.ts` naît
+    // avec UNE sortie non nulle, terminale et à code variable. Lu en Gate A, dans l'ordre — d'abord
+    // l'identité (run 35435390710), puis, la déclaration posée, le compte (run 35436969947) :
+    //
+    //     scripts/gates/maquettes-validees.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 38 to be 37
+    //
+    // La sortie est vue en 1 puis en 0 sur un arbre jetable (maquettes-validees.spec.ts).
+    // 🔧 38 → 39 par DM-01, SECONDE à atterrir après UX-P0-02 (elle déclare la SOMME), ARBITRÉ et non subi : `scripts/gates/journal-sans-pii.ts` naît avec UNE
+    // sortie à code variable. Le cliquet a rougi en la nommant — relu, pas deviné :
+    //
+    //     scripts/gates/journal-sans-pii.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //
+    // 🔧 39 → 40 par SEC-10, ARBITRÉ et non subi. Le cliquet a rougi en NOMMANT le fichier :
+    //
+    //     scripts/gates/rate-famille.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
+    //
+    // Une sortie à code variable, `process.exit(code)`, vue en 1 et en 0 sur le binaire. UX-P0-02
+    // (#79) a atterri d'abord et pris le 38 ; au rebase, le compte a rougi, relu et non deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 39 to be 38
+    //
+    // DM-01 (#75) a ensuite atterri avec sa propre sortie et pris le 39 ; à la fusion de `main`
+    // dans cette branche, le compte a rougi de nouveau, relu et non deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 40 to be 39
+    //
+    // 🔧 40 → 44 par DM-02, ARBITRÉ et non subi : deux gardes NEUVES, `schema-cents.ts` et
+    // `migrations-additive.ts`, deux sorties chacune (le `--prove` qui voit un témoin rester vert,
+    // la sortie terminale sur faute), déclarées plus haut. La Gate A de la PR 84 a rougi en le
+    // chiffrant — relu, pas deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
+    // 🔧 40 → 44 par GOV-059 (suite), ARBITRÉ et non subi. `scripts/prevol.ts` naît avec QUATRE
+    // sorties non nulles, dont trois sont des refus de CONCLURE. Le cliquet a rougi dans ses deux
+    // tests, dans l'ordre — l'identité d'abord, le compte ensuite —, et les deux rouges ont été LUS
+    // avant d'écrire le nombre (`pnpm prevol`, puis `vitest -t "pas seulement"`) :
+    //
+    //     scripts/prevol.ts ajoute 4 `process.exit(1)` et n’est PAS déclaré ici
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
+    //
+    // ⚠️ C'est le premier fichier déclaré ici qui ne soit PAS une garde de Gate A. Ce qu'il en
+    // est de ses TÉMOINS ne se lit qu'à son entrée du registre, plus haut — une seconde lecture
+    // ici a vécu le temps d'un commit et disait l'inverse de celle-là.
+    //
+    // 🔧 44 + 4 a la fusion de `main` dans cette branche. DM-02 et GOV-047 ont incremente le
+    // MEME cliquet chacun de son cote, et tous deux de 40 a 44 — la coincidence des nombres
+    // rendait le conflit trompeur : garder un seul cote donnait un total qui a l'air juste.
+    // Les deux recits sont conserves, et le nombre ci-dessous est DERIVE de la somme des
+    // `total` du registre, verifiee avant d'etre ecrite.
+    //
+    // 🔧 48 → 50 au tour de correction de la PR 99 : la lentille `securite` a mesuré que la
+    // dérivation de `ci.yml` SE TAISAIT au lieu de refuser (zéro étape → « PRÉ-VOL VERT », code
+    // 0) et qu'elle lisait le premier bloc `steps:` venu, fût-il d'un autre job. Les deux refus
+    // qui les ferment sont NEUFS, et le cliquet a rougi dans ses deux tests avant que le nombre
+    // ne soit écrit — relus, pas devinés :
+    //
+    //     scripts/prevol.ts : 6 exits ajoutés, 4 déclarés
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 50 to be 48
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(50);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -962,7 +1116,7 @@ describe('REQ-CPL-018 — `--corps-publie` : le verdict SORT, il ne se contente 
    */
   it('REQ-CPL-018 — TÉMOIN D’EFFET : un corps NON LU sort en 2, il n’est jamais déclaré propre', () => {
     const PR_INEXISTANTE = 999999;
-    let code = -1;
+    let code: number;
     let sortie = '';
     try {
       execFileSync(
@@ -1283,12 +1437,14 @@ const VARIABLES_DE_PRODUCTION = [
  * un seul apparié.*
  */
 function environnementDeProduction(): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = {};
+  // Pas `NodeJS.ProcessEnv` à la construction : `next` y déclare `NODE_ENV` obligatoire
+  // (next/types/global.d.ts), et cet environnement ne le porte que si la production le pose.
+  const env: Record<string, string> = {};
   for (const v of VARIABLES_DE_PRODUCTION) {
     const val = process.env[v];
     if (val !== undefined) env[v] = val;
   }
-  return env;
+  return env as NodeJS.ProcessEnv;
 }
 
 function lancerLaGate(
@@ -1483,15 +1639,13 @@ const GATES_A_TEMOIN_D_EFFET = [
             for (const m of marqueursDe(f.decide)) e.texte = e.texte.split(m).join('(retiré)');
           }),
       },
-      {
-        famille: 'dette_texte_decide_perimee',
-        appliquer: (depot: string) =>
-          surLesExigencesDuBac(depot, (ex) => {
-            const d = DETTE_TEXTE_DECIDE[Math.floor(DETTE_TEXTE_DECIDE.length / 2)]!;
-            const e = ex.find((x) => x.id === d.survivante)!;
-            e.texte = `${e.texte} ${d.marqueurs.map((m) => '`' + m + '`').join(' ')}`;
-          }),
-      },
+      // ⚠️ `dette_texte_decide_perimee` n'a PLUS de témoin par le binaire, et ce n'est pas un oubli.
+      // Le registre `DETTE_TEXTE_DECIDE` est VIDE depuis le 2026-09-19 (les 25 clauses résorbées,
+      // sur décision de Will) : cette famille ne rougit que sur une dette DÉCLARÉE, et aucune
+      // donnée du bac ne peut en déclarer une — le binaire lit le registre dans son propre code.
+      // Son témoin d'appelant passe par `modeNormal()`, la fonction que le binaire exécute, avec
+      // une dette fabriquée : `titres-de-test-resolvent.spec.ts`, « le mode NORMAL sort en 1 et
+      // NOMME `dette_texte_decide_perimee` sur une dette fabriquée ».
     ],
   },
   {
@@ -1879,6 +2033,14 @@ const GARDES_QUI_BALAIENT = [
   // GOV-030 (`partners/ADR-0011`) — `partners:schema:enums` lit sa portée dans les fichiers SUIVIS,
   // quelle que soit leur extension.
   'scripts/gates/schema-enums.ts',
+  // DM-01 — `journal:sans-pii` cherche un second écrivain de la table `evenements` dans les fichiers
+  // SUIVIS sous `src/` et `scripts/`.
+  'scripts/gates/journal-sans-pii.ts',
+  // DM-02 — `partners:migrations:additive` lit TOUTES les migrations SUIVIES, pas celles de la PR.
+  'scripts/gates/migrations-additive.ts',
+  // GOV-046 — `perf:budgets` juge les routes des fichiers SUIVIS sous `src/`. Elle rendait `[]`
+  // quand `src/` manquait ; elle établit désormais son périmètre par la source unique.
+  'scripts/gates/perf-budgets.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {

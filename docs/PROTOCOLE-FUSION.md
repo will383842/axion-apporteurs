@@ -82,9 +82,10 @@ changé.
 
 **Ce qu'on lit.** Vert. C'est le seul moment où les revues existent : l'événement `pull_request` de la
 CI n'en porte aucune, donc `gate-a` ne peut pas les juger (`docs/CHARTE-AGENTS.md` §8). Sont vérifiés
-ici : trois lentilles distinctes, l'avis de mutation, l'auteur qui ne s'auto-approuve pas, les sept
-premières cases de la DoD, le bloc ROUGE/VERT, et la section « Attaque » si la tâche est `sensible` —
-où le refus de la lentille `securite` vaut **veto**, à lui seul.
+ici : les lentilles qu'exige le risque imprimé par `gov:pr` (deux sur une PR ordinaire, trois plus l'avis
+de mutation sur une PR élevée — `docs/CHARTE-AGENTS.md` §6), l'auteur qui ne s'auto-approuve pas, les
+sept premières cases de la DoD, le bloc ROUGE/VERT, et la section « Attaque » si la tâche est
+`sensible`. Sur toute PR, le refus de la lentille `securite` vaut **veto**, à lui seul.
 
 ### Pas 3 — Les gates, sur le commit qui sera fusionné
 
@@ -123,9 +124,50 @@ décalage. **Un contrôle qui interroge la source qu'il est censé contrôler ne
 `git ls-remote` passe par le protocole git et non par l'API : c'est un chemin réellement distinct.
 
 **Ce qu'on lit.** L'empreinte de tête est celle qui portait les approbations du pas 2. Si elle a
-changé depuis, les revues portent sur autre chose : on retourne au pas 2. A04 est privé d'écriture,
-donc il ne peut pas retoucher ce qu'il fusionne ; quand A12 le supplée, cette propriété n'est plus
-tenue par l'outillage — elle est tenue par **ce pas**.
+changé depuis, les revues portent **peut-être** sur autre chose, et `pnpm gov:pr --pr <n>` tranche :
+voir l'exception ci-dessous. A04 est privé d'écriture, donc il ne peut pas retoucher ce qu'il
+fusionne ; quand A12 le supplée, cette propriété n'est plus tenue par l'outillage — elle est tenue
+par **ce pas**.
+
+⚠️ **L'EXCEPTION, ÉTROITE EXPRÈS (GOV-095) : un accord survit à un commit qui ne touche que le
+journal.** Jusqu'au 2026-09-23, un accord était lié au **sha de la tête**, jamais au **code jugé** :
+toute tête de plus périmait tous les accords exigés, y compris quand `git diff` entre les deux était
+vide. Mesuré sur la demande de fusion #102 — `git diff --name-only 8ef35a3 8891d53` ne rend que
+`docs/journal/2026-09-pr-102.md`, une phrase de prose, et cette tête-là a pourtant périmé `securite`,
+`schema` et `mutation`, qu'il a fallu refaire sur un code identique au bit près.
+
+Un accord rendu sur la lentille L au commit C survit désormais à la tête T **si, et seulement si** :
+
+1. **L n'est pas `exactitude`** — cette lentille juge la prose, c'est sa matière, et son accord ne
+   survit à aucun commit ;
+2. **ET** l'ensemble des fichiers changés entre C et T est **vide**, ou n'est fait que de
+   **l'entrée de la PR jugée** — `docs/journal/AAAA-MM-pr-<son numéro>.md`, dont chaque titre de
+   niveau 2 ou plus ouvre **son** entrée (`## PR #<son numéro> — …`), **et rien d'autre du dossier**.
+   `gov:attributions` lit le numéro de chaque titre comme l'attestation de cette PR-là, sans le lier
+   au nom du fichier : l'entrée d'une autre PR, ou un titre d'une autre PR dans la sienne,
+   attesterait un autre lot, et périme donc les accords.
+
+⛔ **LE PRÉFIXE DÉSIGNE UNE ENTRÉE, PAS UN DOSSIER — et `docs/journal/README.md` n'est pas une
+entrée.** Ce fichier porte la ligne du **plancher**, et deux gardes bloquantes de `gate-a` en
+**dérivent** le nombre : `gov:attributions`, pour qui le plancher **exempte** des tâches de toute
+attestation de lot, et `gov:etat`, pour qui il fait taire « PR fusionnée sans entrée de journal ».
+Une tête qui ne changerait **que ce nombre** éteindrait les deux pendant que les accords de
+`securite`, `simplicite`, `schema` et `mutation` survivraient — et la phrase publiée affirmerait que
+le delta ne juge aucun code. Exclure ce seul fichier ne suffisait pas : `gov:attributions` lit
+**tout** fichier du dossier, dont le fichier mensuel qui porte les entrées d'autres PR. La liste
+blanche est donc une **forme** — l'entrée d'une PR —, et tout le reste du dossier périme.
+
+Tout le reste périme, et **chaque cas ambigu échoue fermé** : un diff que `git` ne peut pas calculer
+(commit absent du clone) périme et le refus le dit ; `docs/tasks.json` et `docs/requirements.json`
+périment, parce que la garde y **lit** `zone`, `sensible`, `schema` et `paths` — ce sont des sources,
+pas de la prose ; une vue dérivée périme, parce que si la vue a changé sa source a changé ; un ADR ou
+tout autre document normatif périme. Aucun de ces cas n'est énuméré dans le code : la liste blanche
+est **une seule forme ancrée**, et tout ce qui n'y est pas périme par construction.
+
+**Ce pas ne se lit donc plus à l'œil.** `pnpm gov:pr --pr <n>` **imprime** chaque accord qui survit —
+le poste, la lentille, le sha de l'accord, le sha de la tête, et la liste des fichiers qui les
+séparent. Une survie qu'on ne peut pas contester sans relire le code serait une permission
+silencieuse ; celle-là se conteste sur sa seule ligne de sortie.
 
 ### Pas 6 — Lire l'état et fusionner dans le MÊME appel
 

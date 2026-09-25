@@ -1,3 +1,5 @@
+// @req REQ-GOV-021
+// @req REQ-GOV-025
 /**
  * Ce que GOV-017b livre — `scripts/lot/paths-proposes.ts` — n'était porté par AUCUNE assertion :
  * la tâche n'avait pas de `tests{}`, et le schéma du backlog l'exige de toute tâche `fusionnee`.
@@ -37,7 +39,7 @@ function lancer(...args: string[]): { code: number; sortie: string } {
 }
 
 describe('REQ-GOV-021 / REQ-GOV-025 — les paths du backlog sont DÉRIVÉS, et la vue le prouve', () => {
-  it('la vue commitée est à jour : `--check` est vert sur le dépôt', () => {
+  it('REQ-GOV-021 — la vue commitée est à jour : `--check` est vert sur le dépôt', () => {
     const { code, sortie } = lancer('--check');
     expect(sortie).toContain('à jour');
     expect(code).toBe(0);

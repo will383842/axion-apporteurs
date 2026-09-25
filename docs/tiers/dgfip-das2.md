@@ -16,11 +16,13 @@ L'export porte, pour chaque bénéficiaire au-dessus du seuil de l'article 240 d
 l'identité, le numéro d'établissement, l'adresse, la nature « commissions » et le montant. Un apporteur
 marqué `isTest` en est exclu (REQ-CPL-020).
 
-⚠️ **Le seuil n'a aujourd'hui aucune valeur.** REQ-ARG-024 se termine par « le seuil n'a pas de valeur par
-défaut valide » : la source unique de vérité prévue par RM-10 et REQ-JUR-015 existe, mais elle reste
-**vide** tant que la valeur, sa source et sa date n'y sont pas posées. Aucun cumul n'est donc calculable, et
-la ligne `HYP-D9` du registre — de réversibilité `avenant` — ne fournit pas un défaut mobilisable ici. La
-valeur est **à confirmer** par Will, sur avis de l'expert-comptable.
+⚠️ **Le seuil n'a pas encore de valeur dans le code.** Depuis le 2026-09-19, REQ-ARG-024 renvoie à
+`DAS2_SEUIL_CENTS`, valeur unique de la source unique de vérité de REQ-JUR-015 (240 000 cents, BOFiP
+ACTU-2024-00154), marquée `HYP-D9` jusqu'à confirmation de l'expert-comptable : c'est le texte décidé par
+l'annexe de dédoublonnage, remis dans le registre sur décision de Will. Jusque-là, l'exigence se terminait
+par « le seuil n'a pas de valeur par défaut valide ». La source unique de vérité prévue par RM-10 reste
+**vide** tant que la valeur, sa source et sa date n'y sont pas posées : aucun cumul n'est donc calculable
+aujourd'hui. La valeur reste **à confirmer** par Will, sur avis de l'expert-comptable.
 
 ## 2. Source officielle
 

@@ -1,0 +1,3386 @@
+<!doctype html>
+<html lang="fr" data-theme="auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Maquette — File de qualification · Axion Partners</title>
+    <style>
+      /* charte:debut — bloc commun aux maquettes (console) : ne pas modifier ici seul, le propager aux autres fichiers */
+      :root {
+        color-scheme: light;
+        --fond: #f6f7f9;
+        --surface: #ffffff;
+        --surface-2: #e6e9ee;
+        --texte: #1a1d23;
+        --texte-doux: #4a5261;
+        --bord: #737c8a;
+        --primaire: #1f4e8c;
+        --sur-primaire: #ffffff;
+        --lien: #1f4e8c;
+        --ok-fond: #e2f2e7;
+        --ok-texte: #1b5e34;
+        --attente-fond: #fdf0d5;
+        --attente-texte: #704000;
+        --bloque-fond: #fbe6e6;
+        --bloque-texte: #8f1d1d;
+        --info-fond: #e3ecf8;
+        --info-texte: #12427a;
+        --neutre-fond: #eceef2;
+        --neutre-texte: #4a5261;
+        --focus: #b34700;
+        --atelier-fond: #e4ded3;
+        --atelier-surface: #ffffff;
+        --atelier-texte: #1c1917;
+        --atelier-doux: #57534e;
+        --atelier-lien: #a8390b;
+        --atelier-bord: #a39a8f;
+        --atelier-fond-bouton: #ffffff;
+        --atelier-alerte-fond: #fff1d6;
+        --atelier-alerte-texte: #6e3b00;
+        --cadre: #1b1f24;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        font:
+          18px/1.5 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+        background: var(--atelier-fond);
+        color: var(--atelier-texte);
+      }
+      a {
+        color: var(--atelier-lien);
+      }
+      :focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+      .evitement {
+        position: absolute;
+        left: 8px;
+        top: -80px;
+        background: var(--atelier-surface);
+        padding: 12px 16px;
+        z-index: 10;
+        min-height: 48px;
+      }
+      .evitement:focus {
+        top: 8px;
+      }
+      .atelier-tete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 24px;
+        padding: 12px 20px;
+        background: var(--atelier-surface);
+        border-bottom: 1px solid var(--atelier-bord);
+      }
+      .atelier-tete h1 {
+        font-size: 24px;
+        margin: 0;
+        line-height: 1.25;
+      }
+      .atelier-tete h1 small {
+        display: block;
+        font-size: 18px;
+        font-weight: 400;
+        color: var(--atelier-doux);
+      }
+      .atelier-tete .fil a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+        font-weight: 600;
+      }
+      .fictif {
+        margin: 0;
+        padding: 6px 12px;
+        border-radius: 8px;
+        background: var(--atelier-alerte-fond);
+        color: var(--atelier-alerte-texte);
+        font-weight: 600;
+      }
+      .reglages {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-left: auto;
+      }
+      .reglages button {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 0 14px;
+        font: inherit;
+        border-radius: 10px;
+        border: 2px solid var(--atelier-bord);
+        background: var(--atelier-fond-bouton);
+        color: var(--atelier-texte);
+        cursor: pointer;
+      }
+      .reglages button[aria-pressed='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+        border-color: var(--atelier-texte);
+      }
+      .atelier {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(280px, 380px);
+        min-height: calc(100vh - 90px);
+      }
+      .etats {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .scene {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .notes {
+        grid-column: 3;
+        grid-row: 1;
+      }
+      .etats {
+        background: var(--atelier-surface);
+        border-right: 1px solid var(--atelier-bord);
+        padding: 12px;
+        overflow-y: auto;
+      }
+      .etats h2,
+      .notes h2.notes-titre {
+        font-size: 18px;
+        margin: 4px 4px 8px;
+        text-transform: none;
+      }
+      .etats ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .etats .groupe {
+        margin: 12px 4px 4px;
+        font-weight: 700;
+        color: var(--atelier-doux);
+      }
+      .etats a {
+        display: flex;
+        align-items: center;
+        min-height: 48px;
+        padding: 6px 12px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--atelier-texte);
+      }
+      .etats a[aria-current='true'] {
+        background: var(--atelier-texte);
+        color: var(--atelier-surface);
+        font-weight: 700;
+      }
+      .scene {
+        position: relative;
+        overflow: hidden;
+        touch-action: none;
+        cursor: grab;
+        background-color: var(--atelier-fond);
+        background-image: radial-gradient(var(--atelier-bord) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+      .scene.glisse {
+        cursor: grabbing;
+      }
+      .plateau {
+        display: flex;
+        justify-content: center;
+        transform-origin: 50% 0;
+        padding: 24px;
+        will-change: transform;
+      }
+      .telephone {
+        position: relative;
+        flex: none;
+        margin: 0;
+        width: var(--largeur, 390px);
+        height: var(--hauteur, 844px);
+        border: 12px solid var(--cadre);
+        border-radius: 44px;
+        overflow: hidden;
+        background: var(--fond);
+        color: var(--texte);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        container-type: inline-size;
+        cursor: auto;
+      }
+      .telephone.bureau {
+        border-width: 10px;
+        border-radius: 12px;
+      }
+      .notes {
+        background: var(--atelier-surface);
+        border-left: 1px solid var(--atelier-bord);
+        padding: 16px 20px;
+        overflow-y: auto;
+      }
+      .note h2 {
+        font-size: 22px;
+        margin: 0 0 8px;
+      }
+      .note h3 {
+        font-size: 18px;
+        margin: 16px 0 4px;
+      }
+      .note p,
+      .note li {
+        margin: 0 0 8px;
+      }
+      .note ul {
+        padding-left: 22px;
+        margin: 0 0 8px;
+      }
+      .note code {
+        font-size: 16px;
+        background: var(--atelier-fond);
+        padding: 1px 4px;
+        border-radius: 4px;
+        overflow-wrap: anywhere;
+      }
+      .note .req {
+        color: var(--atelier-doux);
+      }
+      .js .ecran[hidden],
+      .js .note[hidden] {
+        display: none;
+      }
+      .sans-js-titre {
+        display: none;
+      }
+      html:not(.js) .ecran {
+        margin-bottom: 32px;
+      }
+      html:not(.js) .sans-js-titre {
+        display: block;
+        font-weight: 700;
+        padding: 8px 16px;
+      }
+      @media (max-width: 1100px) {
+        .atelier {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .etats,
+        .scene,
+        .notes {
+          grid-column: auto;
+          grid-row: auto;
+        }
+        .etats {
+          border-right: 0;
+          border-bottom: 1px solid var(--atelier-bord);
+        }
+        .etats ul {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+        .etats .groupe {
+          width: 100%;
+        }
+        .notes {
+          border-left: 0;
+          border-top: 1px solid var(--atelier-bord);
+        }
+        .scene {
+          min-height: 70vh;
+        }
+      }
+      @media (max-width: 640px) {
+        .reglages .zoom {
+          display: none;
+        }
+        .scene {
+          background-image: none;
+          cursor: auto;
+          touch-action: auto;
+          min-height: 0;
+        }
+        .plateau {
+          padding: 0;
+          transform: none !important;
+        }
+        .telephone,
+        .telephone.bureau {
+          width: 100% !important;
+          height: auto !important;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .telephone .app {
+          height: auto;
+        }
+        .telephone .defile {
+          overflow: visible;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+        }
+      }
+
+      .telephone {
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background: var(--fond);
+        color: var(--texte);
+      }
+      .ico {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .c-tete {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 20px;
+        padding: 6px 20px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--surface-2);
+      }
+      .c-marque {
+        font-weight: 800;
+      }
+      .c-nav {
+        display: flex;
+        gap: 4px;
+      }
+      .c-nav a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        color: var(--texte);
+        text-decoration: none;
+      }
+      .c-nav a[aria-current='page'] {
+        background: var(--info-fond);
+        color: var(--info-texte);
+        font-weight: 700;
+      }
+      .c-qui {
+        margin-left: auto;
+        color: var(--texte-doux);
+      }
+      .defile {
+        flex: 1;
+        overflow: auto;
+        padding: 16px 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .defile > * {
+        margin: 0;
+      }
+      h2.c-titre {
+        font-size: 24px;
+        margin: 0;
+      }
+      h3 {
+        font-size: 18px;
+        margin: 0;
+      }
+      p {
+        margin: 0;
+      }
+      .doux {
+        color: var(--texte-doux);
+      }
+      .fort {
+        font-weight: 700;
+      }
+      .rangee {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+      }
+      .ecarte {
+        justify-content: space-between;
+      }
+      .carte {
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 10px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .ok {
+        --t: var(--ok-texte);
+        --f: var(--ok-fond);
+      }
+      .attente {
+        --t: var(--attente-texte);
+        --f: var(--attente-fond);
+      }
+      .bloque {
+        --t: var(--bloque-texte);
+        --f: var(--bloque-fond);
+      }
+      .info {
+        --t: var(--info-texte);
+        --f: var(--info-fond);
+      }
+      .neutre {
+        --t: var(--neutre-texte);
+        --f: var(--neutre-fond);
+      }
+      .pastille {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 10px 2px 6px;
+        border-radius: 999px;
+        background: var(--f);
+        color: var(--t);
+        font-weight: 700;
+        font-size: 15px;
+        white-space: nowrap;
+      }
+      .pastille .ico {
+        width: 16px;
+        height: 16px;
+      }
+      .encart {
+        background: var(--f);
+        border-left: 5px solid var(--t);
+        border-radius: 8px;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .encart-titre {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        font-weight: 800;
+        color: var(--t);
+      }
+      .encart a:not(.c-bouton) {
+        color: var(--lien);
+        font-weight: 700;
+      }
+      .encart p a,
+      .carte p a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .c-bouton {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        min-width: 44px;
+        padding: 6px 16px;
+        border-radius: 8px;
+        border: 2px solid var(--primaire);
+        background: var(--primaire);
+        color: var(--sur-primaire);
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .c-bouton.second {
+        background: var(--surface);
+        color: var(--lien);
+      }
+      .c-bouton.danger {
+        background: var(--surface);
+        color: var(--bloque-texte);
+        border-color: var(--bloque-texte);
+      }
+      .c-bouton.inactif {
+        background: var(--surface-2);
+        color: var(--texte-doux);
+        border: 2px dashed var(--bord);
+        cursor: not-allowed;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--surface);
+        border: 1px solid var(--surface-2);
+        border-radius: 10px;
+      }
+      caption {
+        text-align: left;
+        font-weight: 700;
+        padding: 0 0 8px;
+      }
+      th,
+      td {
+        text-align: left;
+        vertical-align: top;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--surface-2);
+      }
+      th {
+        font-size: 15px;
+        color: var(--texte-doux);
+        font-weight: 700;
+      }
+      td.nombre,
+      th.nombre {
+        text-align: right;
+        white-space: nowrap;
+      }
+      tr.ouverte > td {
+        background: var(--info-fond);
+      }
+      tr.retard > td:first-child {
+        box-shadow: inset 5px 0 0 var(--bloque-texte);
+      }
+      td a {
+        color: var(--lien);
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+      }
+      .fiche {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 16px;
+      }
+      .champ {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .champ > span.etiquette,
+      legend {
+        font-weight: 700;
+      }
+      fieldset {
+        border: 1px solid var(--surface-2);
+        border-radius: 8px;
+        padding: 8px 12px 12px;
+        margin: 0;
+      }
+      .champ input,
+      .champ textarea,
+      .champ select {
+        min-height: 44px;
+        padding: 8px 10px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--texte);
+        font: inherit;
+        width: 100%;
+      }
+      .champ.erreur input,
+      .champ.erreur select,
+      .champ.erreur textarea {
+        border-color: var(--bloque-texte);
+        border-width: 3px;
+      }
+      .message-erreur {
+        color: var(--bloque-texte);
+        font-weight: 700;
+      }
+      .choix {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .choix label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 12px 0 4px;
+        border: 2px solid var(--bord);
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+      }
+      .choix input {
+        width: 24px;
+        height: 24px;
+        margin: 0 0 0 6px;
+        accent-color: var(--primaire);
+      }
+      .choix label.coche {
+        border-color: var(--primaire);
+        background: var(--info-fond);
+        font-weight: 700;
+      }
+      .etapes {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .etapes li {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--neutre-fond);
+        color: var(--neutre-texte);
+        font-weight: 600;
+      }
+      .etapes li.fait {
+        background: var(--ok-fond);
+        color: var(--ok-texte);
+      }
+      .etapes li.courant {
+        background: var(--primaire);
+        color: var(--sur-primaire);
+        font-weight: 800;
+      }
+      .definition {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 12px;
+        margin: 0;
+      }
+      .definition dt {
+        color: var(--texte-doux);
+      }
+      .definition dd {
+        margin: 0;
+        font-weight: 600;
+      }
+      .squelette {
+        border-radius: 8px;
+        background: var(--surface-2);
+      }
+      .dialogue {
+        border: 2px solid var(--texte);
+        border-radius: 12px;
+        background: var(--surface);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-width: 560px;
+        align-self: center;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .mono {
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        font-size: 15px;
+        overflow-wrap: anywhere;
+      }
+      @container (max-width: 760px) {
+        .fiche {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .c-qui {
+          margin-left: 0;
+        }
+        table,
+        thead,
+        tbody,
+        tr,
+        th,
+        td,
+        caption {
+          display: block;
+        }
+        thead {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+        }
+        tr {
+          border-bottom: 2px solid var(--surface-2);
+          padding: 6px 0;
+        }
+        td {
+          border: 0;
+          padding: 4px 12px;
+        }
+        td[data-col]::before {
+          content: attr(data-col) ' : ';
+          color: var(--texte-doux);
+          font-weight: 700;
+        }
+        td.nombre {
+          text-align: left;
+        }
+      }
+
+      /* charte:fin */
+    </style>
+  </head>
+  <body>
+    <a class="evitement" href="#telephone">Aller à l'écran maquetté</a>
+    <header class="atelier-tete">
+      <p class="fil"><a href="index.html">← Toutes les maquettes</a></p>
+      <h1>
+        File de qualification<small
+          >Console · tâches UX-P1-07 et UX-P1-06 · REQ-UX-021, REQ-UX-022, REQ-UX-018,
+          REQ-UX-039</small
+        >
+      </h1>
+      <p class="fictif">Données fictives : aucune entreprise, personne ni numéro réels.</p>
+      <div class="reglages" role="group" aria-label="Réglages de la maquette">
+        <button type="button" data-largeur="1280" aria-pressed="true">Bureau 1280</button>
+        <button type="button" data-largeur="1024" aria-pressed="false">1024</button>
+        <button type="button" data-largeur="390" data-hauteur="844" aria-pressed="false">
+          Téléphone 390
+        </button>
+        <button type="button" class="zoom" id="zoom-moins" aria-label="Dézoomer">−</button>
+        <button type="button" class="zoom" id="zoom-ajuster" aria-label="Ajuster à la fenêtre">
+          <span id="zoom-valeur">100 %</span>
+        </button>
+        <button type="button" class="zoom" id="zoom-plus" aria-label="Zoomer">+</button>
+      </div>
+    </header>
+    <main class="atelier">
+      <div
+        class="scene"
+        id="scene"
+        tabindex="0"
+        aria-label="Plan de travail : glisser hors du cadre pour déplacer, flèches du clavier pour déplacer, plus et moins pour zoomer, zéro pour ajuster"
+      >
+        <div class="plateau" id="plateau">
+          <div
+            class="telephone bureau"
+            id="telephone"
+            tabindex="-1"
+            data-hauteur="820"
+            style="--largeur: 1280px; --hauteur: 820px"
+          >
+            <section class="ecran" id="etat-nominal" aria-label="État : File et fiche ouverte">
+              <p class="sans-js-titre">État : File et fiche ouverte</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <h2 class="c-titre">File de qualification</h2>
+                  <div class="encart bloque" role="group" aria-label="Alertes">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 3l10 18H2z" />
+                        <path d="M12 10v5M12 18v.5" /></svg
+                      >2 alertes
+                    </p>
+                    <ul style="margin: 0; padding-left: 20px">
+                      <li>1 dépôt a dépassé le délai de 48 h ouvrées (Atelier Fictif Lumière).</li>
+                      <li>
+                        1 contestation attend une réponse depuis 14 jours : réponse due demain.
+                      </li>
+                    </ul>
+                  </div>
+                  <table>
+                    <caption>
+                      Dépôts à qualifier : 6 · tri fixe, vérification prioritaire puis ancienneté
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Priorité</th>
+                        <th scope="col">Entreprise</th>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">À qualifier depuis</th>
+                        <th scope="col">Délai de 48 h ouvrées</th>
+                        <th scope="col">Appels</th>
+                        <th scope="col">À regarder</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="ouverte retard">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Atelier Fictif Lumière</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 001</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 09:12</td>
+                        <td data-col="Délai">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >Dépassé de 3 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">2 · prochaine 19/09 14:00</td>
+                        <td data-col="À regarder">Contact générique</td>
+                      </tr>
+                      <tr>
+                        <td colspan="7">
+                          <div class="carte" aria-label="Fiche de qualification">
+                            <div class="rangee ecarte">
+                              <h3>Atelier Fictif Lumière · Voiron (38)</h3>
+                              <span class="pastille info"
+                                ><svg
+                                  class="ico"
+                                  viewBox="0 0 24 24"
+                                  aria-hidden="true"
+                                  focusable="false"
+                                >
+                                  <path
+                                    d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                  /></svg
+                                >Vérification prioritaire : appeler l’apporteur d’abord</span
+                              >
+                            </div>
+                            <div class="fiche">
+                              <div
+                                class="pile"
+                                style="display: flex; flex-direction: column; gap: 10px"
+                              >
+                                <dl class="definition">
+                                  <dt>Personne rencontrée</dt>
+                                  <dd>Claire Exemple, gérante</dd>
+                                  <dt>Déposé par</dt>
+                                  <dd>Michel Exemple · 06 39 98 00 42</dd>
+                                  <dt>Déposé le</dt>
+                                  <dd>17/09/2026 09:12</dd>
+                                  <dt>Contexte</dt>
+                                  <dd>
+                                    « Rencontrée au salon de Voiron, parle d’un projet sur les
+                                    outils numériques »
+                                  </dd>
+                                </dl>
+                                <div class="rangee">
+                                  <a class="c-bouton" href="tel:+33639981234"
+                                    ><svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path
+                                        d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                      /></svg
+                                    >Appeler Claire Exemple</a
+                                  ><a class="c-bouton second" href="tel:+33639980042"
+                                    ><svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path
+                                        d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                      /></svg
+                                    >Appeler l’apporteur</a
+                                  >
+                                </div>
+                                <p class="doux">
+                                  Appels : 2 (17/09 14:20, 18/09 10:05) · prochain prévu 19/09 14:00
+                                </p>
+
+                                <div class="encart attente">
+                                  <p class="encart-titre">
+                                    <svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path d="M12 3l10 18H2z" />
+                                      <path d="M12 10v5M12 18v.5" /></svg
+                                    >À regarder
+                                  </p>
+                                  <p>Contact générique : le numéro donné est celui du standard.</p>
+                                </div>
+                              </div>
+                              <form
+                                class="pile"
+                                style="display: flex; flex-direction: column; gap: 10px"
+                                action="#etat-enregistre"
+                                aria-label="Qualifier"
+                              >
+                                <fieldset>
+                                  <legend>Réponse de l’entreprise</legend>
+                                  <div class="choix">
+                                    <label class="coche"
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                        checked
+                                      />Confirmé</label
+                                    ><label
+                                      ><input type="radio" name="Réponse de l’entreprise" />Non
+                                      confirmé</label
+                                    ><label
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                      />Injoignable</label
+                                    ><label
+                                      ><input type="radio" name="Réponse de l’entreprise" />Ne se
+                                      souvient pas</label
+                                    >
+                                  </div>
+                                </fieldset>
+
+                                <fieldset>
+                                  <legend>Suite</legend>
+                                  <div class="choix">
+                                    <label class="coche"
+                                      ><input type="radio" name="Suite" checked />Rendez-vous</label
+                                    ><label><input type="radio" name="Suite" />Rappeler</label
+                                    ><label><input type="radio" name="Suite" />Perdue</label>
+                                  </div>
+                                </fieldset>
+                                <label class="champ"
+                                  ><span class="etiquette">Date et heure du rendez-vous</span
+                                  ><input type="text" value="24/09/2026 10:00"
+                                /></label>
+                                <p class="doux">
+                                  L’apporteur verra : « Rendez-vous le 24 septembre ».
+                                </p>
+                                <button class="c-bouton" type="submit">
+                                  Enregistrer la qualification
+                                </button>
+                              </form>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage des Essais Fictifs</a><br /><span
+                            class="doux"
+                            >Moirans (38) · <span class="mono">999 000 002</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 08:40</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 9 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Transports Fictifs du Val</a><br /><span
+                            class="doux"
+                            >Voreppe (38) · <span class="mono">999 000 004</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 16:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 6 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">1 · prochaine 19/09 11:00</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage de la Démo</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 005</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">18/09 10:42</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 23 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Menuiserie Imaginaire</a><br /><span class="doux"
+                            >Grenoble (38) · <span class="mono">999 000 006</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 15:30</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 28 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Imprimerie Pour-le-Test</a><br /><span
+                            class="doux"
+                            >Lyon (69) · <span class="mono">999 000 007</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">19/09 08:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 45 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <section
+              class="ecran"
+              id="etat-lien-interet"
+              aria-label="État : Fiche : relation déclarée"
+            >
+              <p class="sans-js-titre">État : Fiche : relation déclarée</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <h2 class="c-titre">File de qualification</h2>
+                  <table>
+                    <caption>
+                      Dépôts à qualifier : 6 · tri fixe, vérification prioritaire puis ancienneté
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Priorité</th>
+                        <th scope="col">Entreprise</th>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">À qualifier depuis</th>
+                        <th scope="col">Délai de 48 h ouvrées</th>
+                        <th scope="col">Appels</th>
+                        <th scope="col">À regarder</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="ouverte retard">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Atelier Fictif Lumière</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 001</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 09:12</td>
+                        <td data-col="Délai">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >Dépassé de 3 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">2 · prochaine 19/09 14:00</td>
+                        <td data-col="À regarder">Contact générique</td>
+                      </tr>
+                      <tr>
+                        <td colspan="7">
+                          <div class="carte" aria-label="Fiche de qualification">
+                            <div class="rangee ecarte">
+                              <h3>Atelier Fictif Lumière · Voiron (38)</h3>
+                              <span class="pastille info"
+                                ><svg
+                                  class="ico"
+                                  viewBox="0 0 24 24"
+                                  aria-hidden="true"
+                                  focusable="false"
+                                >
+                                  <path
+                                    d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                  /></svg
+                                >Vérification prioritaire : appeler l’apporteur d’abord</span
+                              >
+                            </div>
+                            <div class="fiche">
+                              <div
+                                class="pile"
+                                style="display: flex; flex-direction: column; gap: 10px"
+                              >
+                                <dl class="definition">
+                                  <dt>Personne rencontrée</dt>
+                                  <dd>Claire Exemple, gérante</dd>
+                                  <dt>Déposé par</dt>
+                                  <dd>Michel Exemple · 06 39 98 00 42</dd>
+                                  <dt>Déposé le</dt>
+                                  <dd>17/09/2026 09:12</dd>
+                                  <dt>Contexte</dt>
+                                  <dd>
+                                    « Rencontrée au salon de Voiron, parle d’un projet sur les
+                                    outils numériques »
+                                  </dd>
+                                </dl>
+                                <div class="rangee">
+                                  <a class="c-bouton" href="tel:+33639981234"
+                                    ><svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path
+                                        d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                      /></svg
+                                    >Appeler Claire Exemple</a
+                                  ><a class="c-bouton second" href="tel:+33639980042"
+                                    ><svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path
+                                        d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                      /></svg
+                                    >Appeler l’apporteur</a
+                                  >
+                                </div>
+                                <p class="doux">
+                                  Appels : 2 (17/09 14:20, 18/09 10:05) · prochain prévu 19/09 14:00
+                                </p>
+                                <div class="encart info">
+                                  <p class="encart-titre">
+                                    <svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <circle cx="12" cy="12" r="9" />
+                                      <path d="M12 11v6M12 7.5v.5" /></svg
+                                    >Relation déclarée par l’apporteur
+                                  </p>
+                                  <p>
+                                    « C’est un client de mon cabinet. » Information seulement : sans
+                                    effet sur la qualification.
+                                  </p>
+                                </div>
+                                <div class="encart attente">
+                                  <p class="encart-titre">
+                                    <svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path d="M12 3l10 18H2z" />
+                                      <path d="M12 10v5M12 18v.5" /></svg
+                                    >À regarder
+                                  </p>
+                                  <p>Contact générique : le numéro donné est celui du standard.</p>
+                                </div>
+                              </div>
+                              <form
+                                class="pile"
+                                style="display: flex; flex-direction: column; gap: 10px"
+                                action="#etat-enregistre"
+                                aria-label="Qualifier"
+                              >
+                                <fieldset>
+                                  <legend>Réponse de l’entreprise</legend>
+                                  <div class="choix">
+                                    <label class="coche"
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                        checked
+                                      />Confirmé</label
+                                    ><label
+                                      ><input type="radio" name="Réponse de l’entreprise" />Non
+                                      confirmé</label
+                                    ><label
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                      />Injoignable</label
+                                    ><label
+                                      ><input type="radio" name="Réponse de l’entreprise" />Ne se
+                                      souvient pas</label
+                                    >
+                                  </div>
+                                </fieldset>
+
+                                <fieldset>
+                                  <legend>Suite</legend>
+                                  <div class="choix">
+                                    <label class="coche"
+                                      ><input type="radio" name="Suite" checked />Rendez-vous</label
+                                    ><label><input type="radio" name="Suite" />Rappeler</label
+                                    ><label><input type="radio" name="Suite" />Perdue</label>
+                                  </div>
+                                </fieldset>
+                                <label class="champ"
+                                  ><span class="etiquette">Date et heure du rendez-vous</span
+                                  ><input type="text" value="24/09/2026 10:00"
+                                /></label>
+                                <p class="doux">
+                                  L’apporteur verra : « Rendez-vous le 24 septembre ».
+                                </p>
+                                <button class="c-bouton" type="submit">
+                                  Enregistrer la qualification
+                                </button>
+                              </form>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage des Essais Fictifs</a><br /><span
+                            class="doux"
+                            >Moirans (38) · <span class="mono">999 000 002</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 08:40</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 9 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Transports Fictifs du Val</a><br /><span
+                            class="doux"
+                            >Voreppe (38) · <span class="mono">999 000 004</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 16:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 6 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">1 · prochaine 19/09 11:00</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage de la Démo</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 005</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">18/09 10:42</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 23 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Menuiserie Imaginaire</a><br /><span class="doux"
+                            >Grenoble (38) · <span class="mono">999 000 006</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 15:30</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 28 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Imprimerie Pour-le-Test</a><br /><span
+                            class="doux"
+                            >Lyon (69) · <span class="mono">999 000 007</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">19/09 08:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 45 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <section
+              class="ecran"
+              id="etat-erreur-date"
+              aria-label="État : Fiche : il manque la date"
+            >
+              <p class="sans-js-titre">État : Fiche : il manque la date</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <h2 class="c-titre">File de qualification</h2>
+                  <table>
+                    <caption>
+                      Dépôts à qualifier : 6 · tri fixe, vérification prioritaire puis ancienneté
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Priorité</th>
+                        <th scope="col">Entreprise</th>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">À qualifier depuis</th>
+                        <th scope="col">Délai de 48 h ouvrées</th>
+                        <th scope="col">Appels</th>
+                        <th scope="col">À regarder</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="ouverte retard">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Atelier Fictif Lumière</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 001</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 09:12</td>
+                        <td data-col="Délai">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >Dépassé de 3 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">2 · prochaine 19/09 14:00</td>
+                        <td data-col="À regarder">Contact générique</td>
+                      </tr>
+                      <tr>
+                        <td colspan="7">
+                          <div class="carte" aria-label="Fiche de qualification">
+                            <div class="rangee ecarte">
+                              <h3>Atelier Fictif Lumière · Voiron (38)</h3>
+                              <span class="pastille info"
+                                ><svg
+                                  class="ico"
+                                  viewBox="0 0 24 24"
+                                  aria-hidden="true"
+                                  focusable="false"
+                                >
+                                  <path
+                                    d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                  /></svg
+                                >Vérification prioritaire : appeler l’apporteur d’abord</span
+                              >
+                            </div>
+                            <div class="fiche">
+                              <div
+                                class="pile"
+                                style="display: flex; flex-direction: column; gap: 10px"
+                              >
+                                <dl class="definition">
+                                  <dt>Personne rencontrée</dt>
+                                  <dd>Claire Exemple, gérante</dd>
+                                  <dt>Déposé par</dt>
+                                  <dd>Michel Exemple · 06 39 98 00 42</dd>
+                                  <dt>Déposé le</dt>
+                                  <dd>17/09/2026 09:12</dd>
+                                  <dt>Contexte</dt>
+                                  <dd>
+                                    « Rencontrée au salon de Voiron, parle d’un projet sur les
+                                    outils numériques »
+                                  </dd>
+                                </dl>
+                                <div class="rangee">
+                                  <a class="c-bouton" href="tel:+33639981234"
+                                    ><svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path
+                                        d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                      /></svg
+                                    >Appeler Claire Exemple</a
+                                  ><a class="c-bouton second" href="tel:+33639980042"
+                                    ><svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path
+                                        d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                      /></svg
+                                    >Appeler l’apporteur</a
+                                  >
+                                </div>
+                                <p class="doux">
+                                  Appels : 2 (17/09 14:20, 18/09 10:05) · prochain prévu 19/09 14:00
+                                </p>
+
+                                <div class="encart attente">
+                                  <p class="encart-titre">
+                                    <svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path d="M12 3l10 18H2z" />
+                                      <path d="M12 10v5M12 18v.5" /></svg
+                                    >À regarder
+                                  </p>
+                                  <p>Contact générique : le numéro donné est celui du standard.</p>
+                                </div>
+                              </div>
+                              <form
+                                class="pile"
+                                style="display: flex; flex-direction: column; gap: 10px"
+                                action="#etat-enregistre"
+                                aria-label="Qualifier"
+                              >
+                                <fieldset>
+                                  <legend>Réponse de l’entreprise</legend>
+                                  <div class="choix">
+                                    <label class="coche"
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                        checked
+                                      />Confirmé</label
+                                    ><label
+                                      ><input type="radio" name="Réponse de l’entreprise" />Non
+                                      confirmé</label
+                                    ><label
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                      />Injoignable</label
+                                    ><label
+                                      ><input type="radio" name="Réponse de l’entreprise" />Ne se
+                                      souvient pas</label
+                                    >
+                                  </div>
+                                </fieldset>
+
+                                <fieldset>
+                                  <legend>Suite</legend>
+                                  <div class="choix">
+                                    <label class="coche"
+                                      ><input type="radio" name="Suite" checked />Rendez-vous</label
+                                    ><label><input type="radio" name="Suite" />Rappeler</label
+                                    ><label><input type="radio" name="Suite" />Perdue</label>
+                                  </div>
+                                </fieldset>
+                                <label class="champ erreur"
+                                  ><span class="etiquette">Date et heure du rendez-vous</span
+                                  ><input type="text" value="" aria-invalid="true" /><span
+                                    class="message-erreur"
+                                    >Une date est nécessaire pour un rendez-vous.</span
+                                  ></label
+                                >
+                                <p class="doux">
+                                  L’apporteur verra : « Rendez-vous le 24 septembre ».
+                                </p>
+                                <button class="c-bouton" type="submit">
+                                  Enregistrer la qualification
+                                </button>
+                              </form>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage des Essais Fictifs</a><br /><span
+                            class="doux"
+                            >Moirans (38) · <span class="mono">999 000 002</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 08:40</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 9 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Transports Fictifs du Val</a><br /><span
+                            class="doux"
+                            >Voreppe (38) · <span class="mono">999 000 004</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 16:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 6 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">1 · prochaine 19/09 11:00</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage de la Démo</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 005</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">18/09 10:42</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 23 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Menuiserie Imaginaire</a><br /><span class="doux"
+                            >Grenoble (38) · <span class="mono">999 000 006</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 15:30</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 28 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Imprimerie Pour-le-Test</a><br /><span
+                            class="doux"
+                            >Lyon (69) · <span class="mono">999 000 007</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">19/09 08:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 45 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-non-confirme" aria-label="État : Fiche : non confirmé">
+              <p class="sans-js-titre">État : Fiche : non confirmé</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <h2 class="c-titre">File de qualification</h2>
+                  <table>
+                    <caption>
+                      Dépôts à qualifier : 6 · tri fixe, vérification prioritaire puis ancienneté
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Priorité</th>
+                        <th scope="col">Entreprise</th>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">À qualifier depuis</th>
+                        <th scope="col">Délai de 48 h ouvrées</th>
+                        <th scope="col">Appels</th>
+                        <th scope="col">À regarder</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="ouverte retard">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Atelier Fictif Lumière</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 001</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 09:12</td>
+                        <td data-col="Délai">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >Dépassé de 3 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">2 · prochaine 19/09 14:00</td>
+                        <td data-col="À regarder">Contact générique</td>
+                      </tr>
+                      <tr>
+                        <td colspan="7">
+                          <div class="carte" aria-label="Fiche de qualification">
+                            <div class="rangee ecarte">
+                              <h3>Atelier Fictif Lumière · Voiron (38)</h3>
+                              <span class="pastille info"
+                                ><svg
+                                  class="ico"
+                                  viewBox="0 0 24 24"
+                                  aria-hidden="true"
+                                  focusable="false"
+                                >
+                                  <path
+                                    d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                  /></svg
+                                >Vérification prioritaire : appeler l’apporteur d’abord</span
+                              >
+                            </div>
+                            <div class="fiche">
+                              <div
+                                class="pile"
+                                style="display: flex; flex-direction: column; gap: 10px"
+                              >
+                                <dl class="definition">
+                                  <dt>Personne rencontrée</dt>
+                                  <dd>Claire Exemple, gérante</dd>
+                                  <dt>Déposé par</dt>
+                                  <dd>Michel Exemple · 06 39 98 00 42</dd>
+                                  <dt>Déposé le</dt>
+                                  <dd>17/09/2026 09:12</dd>
+                                  <dt>Contexte</dt>
+                                  <dd>
+                                    « Rencontrée au salon de Voiron, parle d’un projet sur les
+                                    outils numériques »
+                                  </dd>
+                                </dl>
+                                <div class="rangee">
+                                  <a class="c-bouton" href="tel:+33639981234"
+                                    ><svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path
+                                        d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                      /></svg
+                                    >Appeler Claire Exemple</a
+                                  ><a class="c-bouton second" href="tel:+33639980042"
+                                    ><svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path
+                                        d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                      /></svg
+                                    >Appeler l’apporteur</a
+                                  >
+                                </div>
+                                <p class="doux">
+                                  Appels : 2 (17/09 14:20, 18/09 10:05) · prochain prévu 19/09 14:00
+                                </p>
+
+                                <div class="encart attente">
+                                  <p class="encart-titre">
+                                    <svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path d="M12 3l10 18H2z" />
+                                      <path d="M12 10v5M12 18v.5" /></svg
+                                    >À regarder
+                                  </p>
+                                  <p>Contact générique : le numéro donné est celui du standard.</p>
+                                </div>
+                              </div>
+                              <form
+                                class="pile"
+                                style="display: flex; flex-direction: column; gap: 10px"
+                                action="#etat-enregistre"
+                                aria-label="Qualifier"
+                              >
+                                <fieldset>
+                                  <legend>Réponse de l’entreprise</legend>
+                                  <div class="choix">
+                                    <label
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                      />Confirmé</label
+                                    ><label class="coche"
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                        checked
+                                      />Non confirmé</label
+                                    ><label
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                      />Injoignable</label
+                                    ><label
+                                      ><input type="radio" name="Réponse de l’entreprise" />Ne se
+                                      souvient pas</label
+                                    >
+                                  </div>
+                                </fieldset>
+                                <div class="encart bloque">
+                                  <p class="encart-titre">
+                                    <svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path d="M12 3l10 18H2z" />
+                                      <path d="M12 10v5M12 18v.5" /></svg
+                                    >« Non confirmé » arrête le suivi
+                                  </p>
+                                  <p>
+                                    La suite est forcée sur « Perdue », motif « non confirmé ».
+                                    L’apporteur est informé par courrier électronique, en termes
+                                    neutres. Selon le contrat (article 3.7), cela peut mettre ses
+                                    dépôts en pause.
+                                  </p>
+                                </div>
+
+                                <fieldset>
+                                  <legend>Suite</legend>
+                                  <div class="choix">
+                                    <label class="coche"
+                                      ><input type="radio" name="Suite" checked />Perdue</label
+                                    >
+                                  </div>
+                                </fieldset>
+                                <label class="champ"
+                                  ><span class="etiquette">Motif</span
+                                  ><select disabled>
+                                    <option>Non confirmé</option>
+                                  </select></label
+                                >
+                                <p class="doux">L’apporteur verra : « Non confirmée ».</p>
+                                <button class="c-bouton" type="submit">
+                                  Enregistrer la qualification
+                                </button>
+                              </form>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage des Essais Fictifs</a><br /><span
+                            class="doux"
+                            >Moirans (38) · <span class="mono">999 000 002</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 08:40</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 9 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Transports Fictifs du Val</a><br /><span
+                            class="doux"
+                            >Voreppe (38) · <span class="mono">999 000 004</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 16:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 6 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">1 · prochaine 19/09 11:00</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage de la Démo</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 005</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">18/09 10:42</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 23 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Menuiserie Imaginaire</a><br /><span class="doux"
+                            >Grenoble (38) · <span class="mono">999 000 006</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 15:30</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 28 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Imprimerie Pour-le-Test</a><br /><span
+                            class="doux"
+                            >Lyon (69) · <span class="mono">999 000 007</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">19/09 08:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 45 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <section
+              class="ecran"
+              id="etat-enregistre"
+              aria-label="État : Qualification enregistrée"
+            >
+              <p class="sans-js-titre">État : Qualification enregistrée</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <div class="encart ok" role="status">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" /></svg
+                      >Qualification enregistrée : Atelier Fictif Lumière
+                    </p>
+                    <p>
+                      L’apporteur voit maintenant : « Rendez-vous le 24 septembre ».
+                      <a href="#">Annuler (30 s)</a>
+                    </p>
+                  </div>
+                  <h2 class="c-titre">File de qualification</h2>
+                  <table>
+                    <caption>
+                      Dépôts à qualifier : 6 · tri fixe, vérification prioritaire puis ancienneté
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Priorité</th>
+                        <th scope="col">Entreprise</th>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">À qualifier depuis</th>
+                        <th scope="col">Délai de 48 h ouvrées</th>
+                        <th scope="col">Appels</th>
+                        <th scope="col">À regarder</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="retard">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Atelier Fictif Lumière</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 001</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 09:12</td>
+                        <td data-col="Délai">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >Dépassé de 3 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">2 · prochaine 19/09 14:00</td>
+                        <td data-col="À regarder">Contact générique</td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage des Essais Fictifs</a><br /><span
+                            class="doux"
+                            >Moirans (38) · <span class="mono">999 000 002</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 08:40</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 9 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Transports Fictifs du Val</a><br /><span
+                            class="doux"
+                            >Voreppe (38) · <span class="mono">999 000 004</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 16:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 6 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">1 · prochaine 19/09 11:00</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage de la Démo</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 005</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">18/09 10:42</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 23 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Menuiserie Imaginaire</a><br /><span class="doux"
+                            >Grenoble (38) · <span class="mono">999 000 006</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 15:30</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 28 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Imprimerie Pour-le-Test</a><br /><span
+                            class="doux"
+                            >Lyon (69) · <span class="mono">999 000 007</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">19/09 08:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 45 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-vide" aria-label="État : File vide">
+              <p class="sans-js-titre">État : File vide</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <h2 class="c-titre">File de qualification</h2>
+                  <div class="carte">
+                    <h3>Aucun dépôt à qualifier</h3>
+                    <p>
+                      Les nouveaux dépôts arrivent ici, triés automatiquement. Les contestations en
+                      attente sont dans <a href="#">Contestations</a>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-chargement" aria-label="État : Chargement">
+              <p class="sans-js-titre">État : Chargement</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <h2 class="c-titre">File de qualification</h2>
+                  <div aria-busy="true" style="display: flex; flex-direction: column; gap: 8px">
+                    <p role="status" class="doux">Chargement de la file…</p>
+                    <div class="squelette" style="height: 44px"></div>
+                    <div class="squelette" style="height: 44px"></div>
+                    <div class="squelette" style="height: 44px"></div>
+                    <div class="squelette" style="height: 44px"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-erreur" aria-label="État : Enregistrement échoué">
+              <p class="sans-js-titre">État : Enregistrement échoué</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                  </nav>
+                  <span class="c-qui">Sophie Démo · <b>qualifieur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <div class="encart bloque" role="alert">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 3l10 18H2z" />
+                        <path d="M12 10v5M12 18v.5" /></svg
+                      >La qualification n’a pas été enregistrée
+                    </p>
+                    <p>
+                      Le serveur n’a pas répondu. Votre saisie est conservée dans la fiche : rien à
+                      retaper.
+                    </p>
+                    <p><button class="c-bouton" type="button">Réessayer</button></p>
+                  </div>
+                  <table>
+                    <caption>
+                      Dépôts à qualifier : 6 · tri fixe, vérification prioritaire puis ancienneté
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Priorité</th>
+                        <th scope="col">Entreprise</th>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">À qualifier depuis</th>
+                        <th scope="col">Délai de 48 h ouvrées</th>
+                        <th scope="col">Appels</th>
+                        <th scope="col">À regarder</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="ouverte retard">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Atelier Fictif Lumière</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 001</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 09:12</td>
+                        <td data-col="Délai">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >Dépassé de 3 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">2 · prochaine 19/09 14:00</td>
+                        <td data-col="À regarder">Contact générique</td>
+                      </tr>
+                      <tr>
+                        <td colspan="7">
+                          <div class="carte" aria-label="Fiche de qualification">
+                            <div class="rangee ecarte">
+                              <h3>Atelier Fictif Lumière · Voiron (38)</h3>
+                              <span class="pastille info"
+                                ><svg
+                                  class="ico"
+                                  viewBox="0 0 24 24"
+                                  aria-hidden="true"
+                                  focusable="false"
+                                >
+                                  <path
+                                    d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                  /></svg
+                                >Vérification prioritaire : appeler l’apporteur d’abord</span
+                              >
+                            </div>
+                            <div class="fiche">
+                              <div
+                                class="pile"
+                                style="display: flex; flex-direction: column; gap: 10px"
+                              >
+                                <dl class="definition">
+                                  <dt>Personne rencontrée</dt>
+                                  <dd>Claire Exemple, gérante</dd>
+                                  <dt>Déposé par</dt>
+                                  <dd>Michel Exemple · 06 39 98 00 42</dd>
+                                  <dt>Déposé le</dt>
+                                  <dd>17/09/2026 09:12</dd>
+                                  <dt>Contexte</dt>
+                                  <dd>
+                                    « Rencontrée au salon de Voiron, parle d’un projet sur les
+                                    outils numériques »
+                                  </dd>
+                                </dl>
+                                <div class="rangee">
+                                  <a class="c-bouton" href="tel:+33639981234"
+                                    ><svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path
+                                        d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                      /></svg
+                                    >Appeler Claire Exemple</a
+                                  ><a class="c-bouton second" href="tel:+33639980042"
+                                    ><svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path
+                                        d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                                      /></svg
+                                    >Appeler l’apporteur</a
+                                  >
+                                </div>
+                                <p class="doux">
+                                  Appels : 2 (17/09 14:20, 18/09 10:05) · prochain prévu 19/09 14:00
+                                </p>
+
+                                <div class="encart attente">
+                                  <p class="encart-titre">
+                                    <svg
+                                      class="ico"
+                                      viewBox="0 0 24 24"
+                                      aria-hidden="true"
+                                      focusable="false"
+                                    >
+                                      <path d="M12 3l10 18H2z" />
+                                      <path d="M12 10v5M12 18v.5" /></svg
+                                    >À regarder
+                                  </p>
+                                  <p>Contact générique : le numéro donné est celui du standard.</p>
+                                </div>
+                              </div>
+                              <form
+                                class="pile"
+                                style="display: flex; flex-direction: column; gap: 10px"
+                                action="#etat-enregistre"
+                                aria-label="Qualifier"
+                              >
+                                <fieldset>
+                                  <legend>Réponse de l’entreprise</legend>
+                                  <div class="choix">
+                                    <label class="coche"
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                        checked
+                                      />Confirmé</label
+                                    ><label
+                                      ><input type="radio" name="Réponse de l’entreprise" />Non
+                                      confirmé</label
+                                    ><label
+                                      ><input
+                                        type="radio"
+                                        name="Réponse de l’entreprise"
+                                      />Injoignable</label
+                                    ><label
+                                      ><input type="radio" name="Réponse de l’entreprise" />Ne se
+                                      souvient pas</label
+                                    >
+                                  </div>
+                                </fieldset>
+
+                                <fieldset>
+                                  <legend>Suite</legend>
+                                  <div class="choix">
+                                    <label class="coche"
+                                      ><input type="radio" name="Suite" checked />Rendez-vous</label
+                                    ><label><input type="radio" name="Suite" />Rappeler</label
+                                    ><label><input type="radio" name="Suite" />Perdue</label>
+                                  </div>
+                                </fieldset>
+                                <label class="champ"
+                                  ><span class="etiquette">Date et heure du rendez-vous</span
+                                  ><input type="text" value="24/09/2026 10:00"
+                                /></label>
+                                <p class="doux">
+                                  L’apporteur verra : « Rendez-vous le 24 septembre ».
+                                </p>
+                                <button class="c-bouton" type="submit">
+                                  Enregistrer la qualification
+                                </button>
+                              </form>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage des Essais Fictifs</a><br /><span
+                            class="doux"
+                            >Moirans (38) · <span class="mono">999 000 002</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 08:40</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 9 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Transports Fictifs du Val</a><br /><span
+                            class="doux"
+                            >Voreppe (38) · <span class="mono">999 000 004</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 16:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 6 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">1 · prochaine 19/09 11:00</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage de la Démo</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 005</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">18/09 10:42</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 23 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Menuiserie Imaginaire</a><br /><span class="doux"
+                            >Grenoble (38) · <span class="mono">999 000 006</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 15:30</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 28 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Imprimerie Pour-le-Test</a><br /><span
+                            class="doux"
+                            >Lyon (69) · <span class="mono">999 000 007</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">19/09 08:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 45 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <section class="ecran" id="etat-lecteur" aria-label="État : Rôle lecteur">
+              <p class="sans-js-titre">État : Rôle lecteur</p>
+              <div class="app">
+                <header class="c-tete">
+                  <span class="c-marque">Console Axion Partners</span>
+                  <nav class="c-nav" aria-label="Console">
+                    <a href="file-qualification.html#etat-nominal" aria-current="page"
+                      >Qualification</a
+                    ><a href="lot-paiement.html#etat-brouillon">Lots de paiement</a>
+                  </nav>
+                  <span class="c-qui">Luc Lecteur-Exemple · <b>lecteur</b></span>
+                </header>
+                <div class="defile" tabindex="0" role="region" aria-label="Qualification">
+                  <div class="encart info">
+                    <p class="encart-titre">
+                      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V8a4 4 0 018 0v3" /></svg
+                      >Consultation seule
+                    </p>
+                    <p>
+                      Votre rôle (lecteur) permet de voir la file, pas de qualifier. Pour qualifier,
+                      un administrateur ajoute le rôle qualifieur à votre compte.
+                    </p>
+                  </div>
+                  <h2 class="c-titre">File de qualification</h2>
+                  <table>
+                    <caption>
+                      Dépôts à qualifier : 6 · tri fixe, vérification prioritaire puis ancienneté
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Priorité</th>
+                        <th scope="col">Entreprise</th>
+                        <th scope="col">Apporteur</th>
+                        <th scope="col">À qualifier depuis</th>
+                        <th scope="col">Délai de 48 h ouvrées</th>
+                        <th scope="col">Appels</th>
+                        <th scope="col">À regarder</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr class="retard">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Atelier Fictif Lumière</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 001</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 09:12</td>
+                        <td data-col="Délai">
+                          <span class="pastille bloque"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path d="M12 3l10 18H2z" />
+                              <path d="M12 10v5M12 18v.5" /></svg
+                            >Dépassé de 3 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">2 · prochaine 19/09 14:00</td>
+                        <td data-col="À regarder">Contact générique</td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité">
+                          <span class="pastille info"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <path
+                                d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"
+                              /></svg
+                            >Prioritaire</span
+                          >
+                        </td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage des Essais Fictifs</a><br /><span
+                            class="doux"
+                            >Moirans (38) · <span class="mono">999 000 002</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 08:40</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 9 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Transports Fictifs du Val</a><br /><span
+                            class="doux"
+                            >Voreppe (38) · <span class="mono">999 000 004</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Michel Exemple</td>
+                        <td data-col="À qualifier depuis">17/09 16:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille attente"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 6 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">1 · prochaine 19/09 11:00</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Garage de la Démo</a><br /><span class="doux"
+                            >Voiron (38) · <span class="mono">999 000 005</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">18/09 10:42</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 23 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Menuiserie Imaginaire</a><br /><span class="doux"
+                            >Grenoble (38) · <span class="mono">999 000 006</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Jeanne Fictive</td>
+                        <td data-col="À qualifier depuis">18/09 15:30</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 28 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                      <tr class="">
+                        <td data-col="Priorité"><span class="doux">—</span></td>
+                        <td data-col="Entreprise">
+                          <a href="#etat-nominal">Imprimerie Pour-le-Test</a><br /><span
+                            class="doux"
+                            >Lyon (69) · <span class="mono">999 000 007</span></span
+                          >
+                        </td>
+                        <td data-col="Apporteur">Paul Témoin</td>
+                        <td data-col="À qualifier depuis">19/09 08:05</td>
+                        <td data-col="Délai">
+                          <span class="pastille ok"
+                            ><svg
+                              class="ico"
+                              viewBox="0 0 24 24"
+                              aria-hidden="true"
+                              focusable="false"
+                            >
+                              <circle cx="12" cy="12" r="9" />
+                              <path d="M12 7v5l3.5 2" /></svg
+                            >Reste 45 h</span
+                          >
+                        </td>
+                        <td data-col="Appels">0</td>
+                        <td data-col="À regarder"><span class="doux">—</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+      <nav class="etats" aria-label="États de l'écran">
+        <h2>États</h2>
+        <p class="groupe">Au quotidien</p>
+        <ul>
+          <li><a href="#etat-nominal">File et fiche ouverte</a></li>
+          <li><a href="#etat-lien-interet">Fiche : relation déclarée</a></li>
+        </ul>
+        <p class="groupe">Validation</p>
+        <ul>
+          <li><a href="#etat-erreur-date">Fiche : il manque la date</a></li>
+          <li><a href="#etat-non-confirme">Fiche : non confirmé</a></li>
+        </ul>
+        <p class="groupe">Après l’enregistrement</p>
+        <ul>
+          <li><a href="#etat-enregistre">Qualification enregistrée</a></li>
+          <li><a href="#etat-vide">File vide</a></li>
+        </ul>
+        <p class="groupe">Techniques</p>
+        <ul>
+          <li><a href="#etat-chargement">Chargement</a></li>
+          <li><a href="#etat-erreur">Enregistrement échoué</a></li>
+        </ul>
+        <p class="groupe">Droits</p>
+        <ul>
+          <li><a href="#etat-lecteur">Rôle lecteur</a></li>
+        </ul>
+      </nav>
+      <aside class="notes" aria-label="Notes de conception">
+        <h2 class="notes-titre">Notes pour la relecture</h2>
+        <section class="note" data-pour="etat-nominal">
+          <h2>File et fiche ouverte</h2>
+          <p>
+            <b>Le geste principal</b> : ouvrir la ligne du haut, appeler, cocher deux réponses, une
+            date, enregistrer. Mimé : <b>6 interactions en comptant le bouton d’appel</b> (ouvrir,
+            appeler, réponse, suite, date, enregistrer),
+            <b>environ 60 secondes hors durée de l’appel</b> (REQ-UX-021 : 6 au plus).
+          </p>
+          <ul>
+            <li>
+              Tri <b>fixe</b> : vérification prioritaire d’abord, puis
+              <code>aQualifierDepuis</code> croissant (REQ-UX-022). Aucune autre colonne ne trie.
+            </li>
+            <li>
+              Délai de 48 h ouvrées, fériés compris, compté depuis <code>aQualifierDepuis</code>,
+              jamais depuis le dépôt. C’est l’engagement d’Axion-IA, pas une mesure de l’apporteur.
+            </li>
+            <li>
+              « À regarder » : seulement les signaux qui décrivent
+              <b>ce qui est déposé</b> (REQ-SEC-017). Ni rythme, ni heure, ni lieu.
+            </li>
+            <li>Aucun compteur de mises en demeure ou de suspensions (REQ-UX-036).</li>
+          </ul>
+          <p>
+            Numéros d’entreprise fictifs, invalides au contrôle de Luhn. Téléphones dans la plage
+            réservée à la fiction.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-lien-interet">
+          <h2>Fiche : relation déclarée</h2>
+          <p>
+            La case facultative du dépôt (REQ-UX-039) : visible ici, en <b>information</b>. Jamais
+            une alerte, jamais un signal, jamais une entrée du score.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-erreur-date">
+          <h2>Fiche : il manque la date</h2>
+          <p>
+            Validation conditionnelle (REQ-UX-021) : date exigée pour « Rendez-vous » et « Rappeler
+            », motif exigé pour « Perdue ». Le message dit quoi faire, sous le champ.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-non-confirme">
+          <h2>Fiche : non confirmé</h2>
+          <p>
+            « Non confirmé » force « Perdue » et le motif <code>non_confirme</code> (REQ-UX-021).
+            L’encart dit la conséquence <b>avant</b> l’enregistrement.
+          </p>
+          <p>
+            <b>À vérifier avec la fiche juriste</b> : la phrase « peut mettre ses dépôts en pause »
+            suit REQ-DM-033 ; la règle exacte (dès la première, ou au-delà d’un nombre) n’est pas
+            lisible dans les exigences.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-enregistre">
+          <h2>Qualification enregistrée</h2>
+          <p>
+            Retour immédiat : ce qui a été écrit, ce que l’apporteur voit, et une annulation courte
+            en cas d’erreur de clic.
+          </p>
+        </section>
+        <section class="note" data-pour="etat-vide">
+          <h2>File vide</h2>
+          <p>État vide déclaré (REQ-UX-019) : titre, phrase, action.</p>
+        </section>
+        <section class="note" data-pour="etat-chargement">
+          <h2>Chargement</h2>
+          <p>Hauteur des lignes réservée.</p>
+        </section>
+        <section class="note" data-pour="etat-erreur">
+          <h2>Enregistrement échoué</h2>
+          <p>
+            Pourquoi, ce qui est gardé, un geste. Un second envoi ne crée pas une seconde
+            qualification (append-only, idempotent).
+          </p>
+        </section>
+        <section class="note" data-pour="etat-lecteur">
+          <h2>Rôle lecteur</h2>
+          <p>
+            Matrice écran × rôle × action (REQ-SEC-023) : le lecteur voit, sans téléphone de
+            l’apporteur ni bouton d’enregistrement. Le refus dit pourquoi et qui peut changer le
+            rôle.
+          </p>
+        </section>
+      </aside>
+    </main>
+    <script>
+      (function () {
+        var racine = document.documentElement;
+        racine.classList.add('js');
+        var ecrans = Array.prototype.slice.call(document.querySelectorAll('.ecran'));
+        var notes = Array.prototype.slice.call(document.querySelectorAll('.note'));
+        var liens = Array.prototype.slice.call(document.querySelectorAll('.etats a'));
+        var scene = document.getElementById('scene');
+        var plateau = document.getElementById('plateau');
+        var tel = document.getElementById('telephone');
+        var etat = { x: 0, y: 0, s: 1 };
+        function appliquer() {
+          plateau.style.transform =
+            'translate(' + etat.x + 'px,' + etat.y + 'px) scale(' + etat.s + ')';
+          var z = document.getElementById('zoom-valeur');
+          if (z) z.textContent = Math.round(etat.s * 100) + ' %';
+        }
+        function montrer(id, pousser) {
+          var cible = document.getElementById(id) ? id : ecrans[0].id;
+          ecrans.forEach(function (el) {
+            el.hidden = el.id !== cible;
+          });
+          notes.forEach(function (el) {
+            el.hidden = el.getAttribute('data-pour') !== cible;
+          });
+          liens.forEach(function (a) {
+            if (a.getAttribute('href') === '#' + cible) a.setAttribute('aria-current', 'true');
+            else a.removeAttribute('aria-current');
+          });
+          if (pousser) history.replaceState(null, '', '#' + cible);
+          var d = document.querySelector('#' + cible + ' .defile');
+          if (d) d.scrollTop = 0;
+        }
+        liens.forEach(function (a) {
+          a.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            montrer(a.getAttribute('href').slice(1), true);
+            if (window.matchMedia('(max-width: 1100px)').matches)
+              scene.scrollIntoView({ block: 'start' });
+          });
+        });
+        window.addEventListener('hashchange', function () {
+          montrer(location.hash.slice(1), false);
+        });
+        montrer(location.hash.slice(1), false);
+        // Thème : automatique → clair → sombre (sans réseau, mémorisé sur ce poste seulement).
+        var bTheme = document.getElementById('theme');
+        var themes = ['auto', 'clair', 'sombre'];
+        var noms = { auto: 'automatique', clair: 'clair', sombre: 'sombre' };
+        function poserTheme(t) {
+          racine.setAttribute('data-theme', t);
+          if (bTheme) bTheme.textContent = 'Thème : ' + noms[t];
+          try {
+            localStorage.setItem('maquettes-theme', t);
+          } catch (x) {}
+        }
+        if (bTheme) {
+          var mem = null;
+          try {
+            mem = localStorage.getItem('maquettes-theme');
+          } catch (x) {}
+          poserTheme(themes.indexOf(mem) >= 0 ? mem : 'auto');
+          bTheme.addEventListener('click', function () {
+            poserTheme(themes[(themes.indexOf(racine.getAttribute('data-theme')) + 1) % 3]);
+          });
+        }
+        // Largeur du cadre.
+        Array.prototype.slice
+          .call(document.querySelectorAll('[data-largeur]'))
+          .forEach(function (b, i, tous) {
+            b.addEventListener('click', function () {
+              tel.style.setProperty('--largeur', b.getAttribute('data-largeur') + 'px');
+              tel.style.setProperty(
+                '--hauteur',
+                (b.getAttribute('data-hauteur') || tel.getAttribute('data-hauteur')) + 'px'
+              );
+              tous.forEach(function (o) {
+                o.setAttribute('aria-pressed', String(o === b));
+              });
+              ajuster();
+            });
+          });
+        // Pan et zoom.
+        function borner(s) {
+          return Math.min(2.5, Math.max(0.3, s));
+        }
+        function ajuster() {
+          var l = tel.offsetWidth + 48,
+            h = tel.offsetHeight + 48;
+          var s = Math.min(1, scene.clientWidth / l, Math.max(0.3, (scene.clientHeight || h) / h));
+          etat = { x: 0, y: 0, s: borner(s) };
+          appliquer();
+        }
+        var bm = document.getElementById('zoom-moins'),
+          bp = document.getElementById('zoom-plus'),
+          br = document.getElementById('zoom-ajuster');
+        if (bm)
+          bm.addEventListener('click', function () {
+            etat.s = borner(etat.s / 1.2);
+            appliquer();
+          });
+        if (bp)
+          bp.addEventListener('click', function () {
+            etat.s = borner(etat.s * 1.2);
+            appliquer();
+          });
+        if (br) br.addEventListener('click', ajuster);
+        var tire = null;
+        scene.addEventListener('pointerdown', function (ev) {
+          if (ev.target.closest('.telephone') && !ev.altKey) return;
+          if (window.matchMedia('(max-width: 640px)').matches) return;
+          tire = { x: ev.clientX - etat.x, y: ev.clientY - etat.y };
+          scene.classList.add('glisse');
+          scene.setPointerCapture(ev.pointerId);
+        });
+        scene.addEventListener('pointermove', function (ev) {
+          if (!tire) return;
+          etat.x = ev.clientX - tire.x;
+          etat.y = ev.clientY - tire.y;
+          appliquer();
+        });
+        scene.addEventListener('pointerup', function () {
+          tire = null;
+          scene.classList.remove('glisse');
+        });
+        scene.addEventListener(
+          'wheel',
+          function (ev) {
+            if (!ev.ctrlKey) return;
+            ev.preventDefault();
+            etat.s = borner(etat.s * (ev.deltaY < 0 ? 1.1 : 1 / 1.1));
+            appliquer();
+          },
+          { passive: false }
+        );
+        scene.addEventListener('keydown', function (ev) {
+          if (ev.target !== scene) return;
+          var pas = 40,
+            k = ev.key;
+          if (k === 'ArrowLeft') etat.x += pas;
+          else if (k === 'ArrowRight') etat.x -= pas;
+          else if (k === 'ArrowUp') etat.y += pas;
+          else if (k === 'ArrowDown') etat.y -= pas;
+          else if (k === '+' || k === '=') etat.s = borner(etat.s * 1.2);
+          else if (k === '-') etat.s = borner(etat.s / 1.2);
+          else if (k === '0') {
+            ajuster();
+            return;
+          } else return;
+          ev.preventDefault();
+          appliquer();
+        });
+        if (!window.matchMedia('(max-width: 640px)').matches) ajuster();
+      })();
+    </script>
+  </body>
+</html>

@@ -69,6 +69,7 @@
 | Corps de PR      | Gabarit 8 cases (REQ-GOV-013) : REQ · tests par REQ vus rougir (bloc ROUGE/VERT verbatim) · relecteur ≠ auteur · ADR si décision · glossaire/enum à jour · mesure bundle avant/après si route UI · PLAN-STATE (dérivé) · fusion + atterrissage · **section « Attaque »** si `commissions/**\|attributions/**\|auth/**\|espace/**` · **Règle maison appliquée : RM-nn** |
 | Fusion           | squash + `required_linear_history` ; une à la fois ; `mergeStateStatus` lu et `gh pr merge --squash --delete-branch` dans le **même** appel ; jamais `--auto`, jamais `--force` |
 | Schéma           | Toute PR `schema` a A02 (`architecte`) en troisième relecteur, approbation bloquante ; CODEOWNERS `prisma/** @A02` |
+| Relecture        | Les lentilles qu'exige le **risque** de la PR, dérivé par `risqueDeLaPr()` (`scripts/lot/revues.ts`) et imprimé par `pnpm gov:pr --pr <n>` : élevé → `exactitude`, `securite`, `simplicite` (ou `schema`), `mutation` ; ordinaire → `exactitude`, `securite`. Le refus de `securite` bloque à lui seul sur toute PR (`docs/CHARTE-AGENTS.md` §6, `partners/ADR-0012`) |
 
 ## 6. Tests et gates
 
@@ -95,7 +96,22 @@
 - Worktrees : **jamais de jonction `node_modules`** dans un worktree ; `pnpm install --offline --frozen-lockfile`
   depuis le store partagé ; `ln -s` sous Git Bash copie au lieu de lier (`ls -ld` avant de dire « lié »).
 - **Les hooks locaux ne font pas foi** : husky n'est pas fiable en worktree ; le pré-vol est `pnpm prevol`
-  (typecheck, lint, format, `gov:*`, `req:check`, `use-client:check`) ; la CI est la seule vérité.
+  (`scripts/prevol.ts`). Il rend les vues — `docs/PLAN-STATE.md` en **dernier**, il lit les trois autres — puis rejoue
+  les étapes du job `gate-a` de `.github/workflows/ci.yml` **dans leur ordre**, liste LUE là-bas et jamais recopiée ici
+  (RM-01) ; `pnpm prevol --liste` l'imprime, avec les étapes qu'il écarte et le motif de chacune. La justification
+  `// use-client:` y est tenue par `gov:conventions` (famille `use_client_sans_motif`) : il n'a jamais existé de
+  commande `use-client:check`. La CI reste la seule vérité.
+  ⚠️ **La liste se lit dans `ci.yml`, jamais dans la chaîne `gov:partiel` de `package.json`** : cette chaîne-là
+  n'enchaîne qu'une **part** des gardes que `gate-a` joue — son nom le dit —, et `gov:termes-interdits`, bloquante en
+  CI, n'en fait pas partie (mesuré le 2026-09-22). Les deux comptes ne s'écrivent pas ici : `pnpm prevol --liste` rend
+  celui de `gate-a`, `package.json` porte la chaîne, et un total posé à côté d'une liste redevient faux au premier
+  maillon ajouté. L'homonymie `gov:check` — le même nom pour cette chaîne et pour la garde des termes interdits — est
+  tranchée par `partners/ADR-0018` : le nom est retiré des **deux** côtés, il ne se tape plus.
+  Il balaie aussi les fichiers suivis qui **prescrivent** `pnpm prevol` et les confronte à `package.json` dans les deux
+  sens (REQ-GOV-013) ; le backlog et ses vues rendues sont écartés et nommés, avec les **deux comptes** —
+  une tâche qui se compte elle-même fausse son propre balayage. Et **sans démon Docker il le DIT** : le rouge de
+  `tests/integration/**` est alors une absence de banc, pas un test cassé — un rouge qui nomme la mauvaise cause
+  coûte plus cher qu'un rouge absent.
 - `cwd` ne survit pas à l'appel suivant : tout appel qui écrit commence par `cd <chemin absolu du worktree> && git branch --show-current`.
 - Côté axionia (`dev-axionia`) : lire `axionia/AGENTS.md` ; pré-vol des quatre gardes CI invisibles en local (export
   sync dans `use server`, `// use-client:` deux-points collé, isolation content-gen, commitlint 100) ; la fusion n'est
@@ -105,12 +121,27 @@
 
 | Fichier                                      | Écrivain                                                             |
 | -------------------------------------------- | -------------------------------------------------------------------- |
-| `docs/PLAN-STATE.md`                         | **dérivé** (`pnpm plan-state:build`), commité par A01 seul            |
-| `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | `gardien-spec`, lot dédié avec `--settings` surchargé |
+| `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` | `gardien-spec`, lot dédié avec `--settings` surchargé |
+| `docs/requirements.json`                     | `gardien-spec` — la **source** ; `docs/REQUIREMENTS.md` en est la VUE |
+| `docs/gates.json`                            | `gardien-spec` — la **source** ; `docs/GATES.md` en est la VUE        |
 | `docs/tasks.json`                            | `gardien-spec` / A01 (composition), jamais un développeur             |
 | `prisma/**`, `packages/contracts/**`         | PR `schema`, approbation `architecte` bloquante                       |
 | `docs/adr/**`                                | `architecte` accepte ; `documentaliste` indexe                        |
 | `.claude/settings.json`, `.claude/agents/**` | lot dédié GOV-000 / GOV-023 (`pnpm gov:agents`)                       |
+
+> ⚠️ **Les VUES ne sont pas réservées — `partners/ADR-0019`, 2026-09-22.** `docs/PLAN-STATE.md`,
+> `docs/REQUIREMENTS.md`, `docs/TASKS.md`, `docs/GATES.md`, `docs/TRACABILITE.md` et
+> `docs/adr/INDEX.md` sont **générées**. Un label répond à « qui répond de ce texte ? », et personne
+> ne répond d'une vue : elle a un générateur et un `--verifier`, et REQ-GOV-032 fait rougir sa
+> dérive. Ce sont les **sources** qui sont réservées — d'où l'entrée de `docs/requirements.json` et
+> de `docs/gates.json`, qui n'y étaient pas.
+>
+> ⚠️ **« À l'octet près » n'est vrai que de ce qu'un générateur écrit SANS lire hors du dépôt**, et
+> `docs/PLAN-STATE.md` en lit (`gh`, `origin/main`). Ce que son `--verifier` compare et ce qu'il
+> laisse libre est écrit en toutes lettres dans `partners/ADR-0019`, sous « Ce que
+> `plan-state:verifier` couvre, et ce qu'il ne couvre pas », avec l'attaque qui reste possible.
+> Une phrase de couverture qui arrondit vers le haut est le premier cran du registre qui affirme
+> une protection qu'il n'exerce pas.
 
 > ⚠️ Les sections **§9 à §11** sont ajoutées à la SUITE, jamais intercalées. Les §1, §3, §5 et §8 sont cités par leur
 > numéro depuis `partners/ADR-0007`, `partners/ADR-0008`, `docs/AFFIRMATIONS-AXIONIA.md`, `docs/CHARTE-AGENTS.md` et
