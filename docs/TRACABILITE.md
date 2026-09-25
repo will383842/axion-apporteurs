@@ -16,7 +16,7 @@
 
 **334 exigences actives · 67 réputées testées · 67 couvertes · 0 orphelines.**
 
-284 tâches, dont 60 livrées · 81 fichiers de test exécutés par `vitest` sur 81 présents.
+284 tâches, dont 60 livrées · 82 fichiers de test exécutés par `vitest` sur 82 présents.
 
 ## Exigences réputées testées
 
@@ -526,6 +526,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | oui | `REQ-INT-020`, `REQ-SEC-013`, `REQ-UX-020` |
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |
 | `tests/unit/qualite/req-check.spec.ts` | oui | `REQ-QA-014` |
+| `tests/unit/securite/chiffrement-avec-aad.spec.ts` | oui | `REQ-SEC-024` |
 | `tests/unit/securite/env-boot.spec.ts` | oui | `REQ-SEC-028` |
 | `tests/unit/securite/headers.spec.ts` | oui | `REQ-SEC-029` |
 | `tests/unit/securite/rate-famille.spec.ts` | oui | `REQ-SEC-002`, `REQ-SEC-016`, `REQ-SEC-035` |

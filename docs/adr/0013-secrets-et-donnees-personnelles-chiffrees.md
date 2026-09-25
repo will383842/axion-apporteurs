@@ -132,12 +132,27 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
 - **Assertion** — `tests/unit/securite/env-boot.spec.ts` ·
   `it('REQ-SEC-028 : kidDe rend huit caractères hexadécimaux, stables pour une valeur, distincts d’un secret à l’autre')` :
   un `kid` constant fait rougir ce contrôle (décision 8).
+- **Assertion** — `tests/unit/securite/chiffrement-avec-aad.spec.ts` ·
+  `it('REQ-SEC-024 : le bloc figé selon l’ADR se déchiffre, et seulement sous sa ligne (vecteur déterministe)')` :
+  un octet changé dans le format ou dans l'AAD rend le vecteur figé illisible (décisions 9 à 11).
+- **Assertion** — `tests/unit/securite/chiffrement-avec-aad.spec.ts` ·
+  `it('REQ-SEC-024 : deux chiffrements du même clair diffèrent, IV compris (IV tiré à chaque chiffrement)')` :
+  un IV constant fait rougir ce contrôle (décision 9, mesuré par SEC-08).
+- **Assertion** — `tests/unit/securite/chiffrement-avec-aad.spec.ts` ·
+  `it('REQ-SEC-024 : un bloc permuté vers un autre champ ou un autre modèle au même identifiant échoue')` :
+  une AAD réduite au modèle et à l'identifiant fait rougir ce contrôle (décision 10, mesuré par SEC-08).
+- **Assertion** — `tests/unit/securite/chiffrement-avec-aad.spec.ts` ·
+  `it('REQ-SEC-024 : un courriel et un téléphone écrits de plusieurs façons donnent l’empreinte figée')` :
+  une entrée d'empreinte changée d'un octet fait rougir ce contrôle (décision 12).
+- **Assertion** — `tests/unit/securite/chiffrement-avec-aad.spec.ts` ·
+  `it('REQ-SEC-024 : une colonne d’adresse réseau en clair (createdIp String?) rougit et nomme la colonne')` :
+  la garde `securite:schema-pii` qui admettrait une colonne de personne hors `…Chiffre`/`…Hash` fait
+  rougir ce contrôle (décision 13, mesuré par SEC-08).
 
 ## Reste à faire
 
-- **Décisions 9 à 13 (format chiffré, empreintes, nommage)** : leurs assertions seront posées par
-  SEC-08, qui livre le chiffrement ; elles se citeront ici quand elles existeront. Tant qu'elles
-  n'existent pas, cet ADR reste `propose`.
+- **Décisions 9 à 13** : leurs assertions sont posées par SEC-08 et citées ci-dessus. Le passage à
+  `accepte` reste à l'`architecte`.
 - **Le `kid` dans les jetons et la double clé pendant 24 heures** (HYP-E1-24, REQ-QA-030) : l'emploi
   du `kid` appartient aux producteurs de jetons (SEC-03, SEC-04, SEC-11) ; le trousseau à deux clés à
   QA-T04 et QA-T13.

@@ -1941,7 +1941,8 @@
         "src/server/securite/pii.ts",
         "scripts/gates/schema-pii.ts",
         "tests/unit/securite/chiffrement-avec-aad.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [
