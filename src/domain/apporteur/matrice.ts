@@ -52,7 +52,12 @@ export const TRANSITIONS_APPORTEUR: {
 };
 
 export type CodeTransition =
-  'statut_inconnu' | 'evenement_inconnu' | 'transition_refusee' | 'motif_requis' | 'motif_interdit';
+  | 'statut_inconnu'
+  | 'evenement_inconnu'
+  | 'transition_refusee'
+  | 'motif_requis'
+  | 'motif_inconnu'
+  | 'motif_interdit';
 
 export class ErreurTransitionApporteur extends Error {
   readonly code: CodeTransition;
@@ -91,8 +96,9 @@ export function transitionner(demande: DemandeTransition): StatutApresTransition
   const couple = `${de} × ${fait}`;
   if (vers === undefined) throw new ErreurTransitionApporteur('transition_refusee', couple);
   if (fait === 'resilier') {
-    if (motif === null || !estMotifResiliation(motif)) {
-      throw new ErreurTransitionApporteur('motif_requis', couple);
+    if (motif === null) throw new ErreurTransitionApporteur('motif_requis', couple);
+    if (!estMotifResiliation(motif)) {
+      throw new ErreurTransitionApporteur('motif_inconnu', `${couple} : ${String(motif)}`);
     }
     return { statut: vers, resiliationMotif: motif };
   }
