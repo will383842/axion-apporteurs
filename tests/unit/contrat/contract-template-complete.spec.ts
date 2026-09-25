@@ -566,6 +566,41 @@ describe('REQ-JUR-003 — la liste noire du gabarit (P-4)', () => {
       .filter((t) => !/art\. 19/.test(t));
   }
 
+  /**
+   * Les formes ATTENDUES, écrites ici en littéraux et indépendantes de la SSOT (A10 · mutation,
+   * PR #92) : le test « chaque terme rougit » itère sur la SSOT elle-même, et ne voyait donc pas
+   * une forme qu'on en retire. Une forme de plus dans la SSOT est permise ; une de moins rougit.
+   */
+  const FORMES_ATTENDUES = [
+    'L.134-12',
+    'L. 134-12',
+    'L.134-16',
+    'L. 134-16',
+    'indemnité de fin de contrat',
+    'indemnité de clientèle',
+    'renonce',
+    'renoncent',
+    'renoncer',
+    'renoncé',
+    'renoncée',
+    'renoncés',
+    'renoncées',
+    'renonçant',
+    'renonciation',
+    'renonciations',
+    'kit de vente',
+    'kits de vente',
+  ];
+
+  it('REQ-JUR-003 — chaque forme attendue est dans la SSOT, et refusée dans le gabarit réel', () => {
+    for (const forme of FORMES_ATTENDUES) {
+      expect(LISTE_NOIRE_GABARIT.formes as readonly string[], forme).toContain(forme);
+      const texte = `${gabarit()}\n\nL'Apporteur mentionne ${forme} ici.\n`;
+      const r = analyserGabarit({ chemin: GABARIT, contenu: texte });
+      expect(r.fautes.length, forme).toBe(1);
+    }
+  });
+
   it('REQ-JUR-003 — la SSOT couvre chaque terme de l’acceptation', () => {
     const termes = termesDeLAcceptation();
     expect(termes.length).toBeGreaterThanOrEqual(7);
@@ -732,6 +767,21 @@ describe('REQ-JUR-003 — un gabarit incomplet ne peut pas être publié', () =>
     expect(refus.join('\n')).toContain('forfait');
   });
 
+  it('REQ-JUR-003 — UNE seule question ouverte suffit à refuser, et elle est nommée', () => {
+    // A10 · mutation, PR #92 (P3) : `length > 1` survivait — le dernier arbitrage de Will ne
+    // bloquait plus rien. Toutes les variables pourvues : la question est le SEUL motif.
+    const derniere = QUESTIONS_POUR_WILL[0]!;
+    const entree = {
+      gabarit: gabarit(),
+      annexe2: annexe2(),
+      valeurs: toutesPourvues('forfait 12'),
+      questionsOuvertes: [derniere],
+      sentinelles: [SENTINELLE],
+    };
+    expect(motifsDeRefus(entree)).toEqual([`1 question(s) ouverte(s) : ${derniere.id}`]);
+    expect(() => exigerGabaritPubliable(entree)).toThrow(GabaritNonPubliable);
+  });
+
   it('REQ-JUR-003 — une valeur vide, nulle, blanche ou à la sentinelle ne résout pas : refus NOMMÉ', () => {
     // A09 · securite, PR #92 : la clé présente suffisait, et l'art. 14 se rendait « en qualité
     // de null » avec 0 motif. APPORTEUR_QUALITE fonde la validité de la clause attributive.
@@ -847,6 +897,17 @@ describe('REQ-JUR-003 — les lecteurs du gabarit et du registre, sur leurs cas 
     const r = concordances(sansFragment);
     expect(r.fautes.map((f) => f.famille)).toContain('hors_contrat_perimee');
     expect(r.fautes.map((f) => f.message).join('\n')).toContain("HYP-W15-NOTES cite l'art. 15");
+  });
+
+  it('REQ-JUR-003 — une déclaration hors contrat n’absout que SON article : un second article de la ligne reste à ancrer', () => {
+    // A10 · mutation, PR #92 (H3) : sans l'égalité d'article, la déclaration de l'art. 15 du
+    // RGPD absolvait toute référence de HYP-W15-NOTES, y compris une référence au contrat.
+    const avecContrat = registre().map((l) =>
+      l.id === 'HYP-W15-NOTES' ? { ...l, texte: `${l.texte} (contrat art. 4.6 al. 2)` } : l
+    );
+    const messages = concordances(avecContrat).fautes.map((f) => f.message);
+    expect(messages.join('\n')).toContain("HYP-W15-NOTES cite l'art. 4.6 al. 2");
+    expect(messages.join('\n')).not.toContain("HYP-W15-NOTES cite l'art. 15");
   });
 
   it('REQ-JUR-003 — un texte sans table, sans annexe, sans colonne CPF se lit sans rien inventer', () => {
