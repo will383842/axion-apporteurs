@@ -97,7 +97,7 @@ export interface PortsDEmission {
     adresseHash: string;
     survenuAt: Date;
   }): Promise<void>;
-  journaliser(evenement: 'travail_differe_echoue'): void;
+  signalerEchec(motif: 'travail_differe_echoue'): void;
 }
 
 export interface PortsDeDemande {
@@ -155,7 +155,7 @@ export async function demanderLien(
             })
           : emettreLien(emailHash, maintenant, ports));
       } catch {
-        ports.emission.journaliser('travail_differe_echoue');
+        ports.emission.signalerEchec('travail_differe_echoue');
       }
     });
     return 'envoye';

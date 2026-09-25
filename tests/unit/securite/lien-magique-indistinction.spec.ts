@@ -190,7 +190,7 @@ function univers(o: Options = {}) {
         noter('signalerPotDeMiel');
         signalements.push(signal);
       },
-      journaliser: (evenement) => {
+      signalerEchec: (evenement) => {
         journal.push(evenement);
       },
     },
