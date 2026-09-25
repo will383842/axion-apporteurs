@@ -25,7 +25,15 @@
  *     chaque fichier de `src/content/micro-copy/espace/` — tout champ chaîne, à toute profondeur,
  *     libellés d'action compris — et n'y admet un paramètre `{…}` que s'il figure dans la liste
  *     blanche de son contexte (`PARAMETRES_PERMIS`) : `{nomAutreApporteur}` dans la collision au
- *     dépôt rougit. Un fichier de l'espace que la garde ne parcourt pas rougit aussi. Aucun chiffre
+ *     dépôt rougit. Un fichier de micro-copie que la garde ne parcourt pas, et qui n'est pas déclaré
+ *     hors de la portée de l'apporteur, rougit aussi (`micro_copie_non_lue`). Un export qui n'est
+ *     pas un texte — une fonction hors de la liste blanche `UTILITAIRES_PERMIS`, une `Map`, un
+ *     `Set`, tout objet qui n'est ni un objet simple ni un tableau — rougit (`export_non_texte`), et
+ *     une clé d'objet qui porte un paramètre aussi. Le SOURCE des modules est lu par l'arbre
+ *     syntaxique : dans le corps d'une fonction, aucun gabarit à substitution, aucun littéral qui
+ *     écrit un texte, et, hors des utilitaires permis, aucune concaténation (`texte_calcule`). Au
+ *     niveau du module, un gabarit comme `${FORMULES.dejaReservee}` reste permis : il est évalué au
+ *     chargement, et c'est sa chaîne FINALE que la liste blanche juge. Aucun chiffre
  *     écrit en clair (hors renvoi à un article du contrat) : un délai ou un seuil est un paramètre
  *     (RM-10). Et aucun composant n'injecte de HTML brut : un paramètre qui reflète une saisie
  *     (`{recherche}`) est rendu en nœud texte, que React échappe.
@@ -58,6 +66,7 @@ import {
 import * as ISSUES_DE_L_ESPACE from '../../src/content/micro-copy/espace/issues-depot';
 import * as ETATS_VIDES_DE_L_ESPACE from '../../src/content/micro-copy/espace/etats-vides';
 import * as VOCABULAIRE_DE_L_ESPACE from '../../src/content/micro-copy/espace/vocabulaire';
+import * as TYPES_DE_LA_MICRO_COPIE from '../../src/content/micro-copy/types';
 import { ETATS_VIDES_CONSOLE } from '../../src/content/micro-copy/console/etats-vides';
 import type { ActionEcran, EtatVide, TexteIssue } from '../../src/content/micro-copy/types';
 import { fichiersSuivisOuRefus } from '../lot/fichiers-suivis';
@@ -84,7 +93,38 @@ const MICRO_COPIE_DE_L_ESPACE: Readonly<Record<string, unknown>> = {
   'espace/issues-depot.ts': ISSUES_DE_L_ESPACE,
   'espace/etats-vides.ts': ETATS_VIDES_DE_L_ESPACE,
   'espace/vocabulaire.ts': VOCABULAIRE_DE_L_ESPACE,
+  // Hors d'`espace/`, mais importé par chaque module de l'espace : parcouru comme eux.
+  'types.ts': TYPES_DE_LA_MICRO_COPIE,
 };
+
+/**
+ * Les modules de micro-copie qu'aucun apporteur ne lit — déclarés, chacun avec sa raison. Tout
+ * autre fichier suivi sous `src/content/micro-copy/` (ou `messages/fr.json`) est soit parcouru,
+ * soit rouge : un module posé à côté d'`espace/` n'échappe plus à la liste blanche.
+ */
+export const MICRO_COPIE_HORS_PORTEE: Readonly<Record<string, string>> = {
+  'console/etats-vides.ts': 'lu par Axion-IA seul, dans la console (portée dépôt, REQ-GOV-017)',
+};
+
+/**
+ * Les SEULES fonctions qu'un module de l'espace peut exporter — des utilitaires de mise en forme
+ * qui n'écrivent aucun texte et ne reçoivent aucune identité. Toute autre fonction exportée rougit :
+ * une fonction qui rend un texte est un texte que la garde ne lit pas.
+ */
+export const UTILITAIRES_PERMIS: Readonly<Record<string, string>> = {
+  // Reçoit une formule de `FORMULES`, lui rend sa capitale : elle n'écrit aucun mot.
+  'espace/vocabulaire.ts › enTete': 'met en capitale la première lettre d’une formule',
+  // Reçoit une valeur de l'enum `IssueDepot`, jamais une personne ni une date ; ne compose que des
+  // textes de la source unique (`TEXTES_DES_ISSUES`, `MENTIONS_HORODATAGE`, la mention du refus).
+  'espace/issues-depot.ts › issueRendue':
+    'compose le texte d’une issue à partir de la source unique',
+};
+
+/** Un paramètre `{nom}` — LA définition, lue par la garde et par le spec (une regex neuve à chaque appel). */
+export const parametre = (): RegExp => /\{([^}]*)\}/g;
+/** Les paramètres d'un texte, sans les accolades. */
+export const parametresDe = (texte: string): string[] =>
+  [...texte.matchAll(parametre())].map((m) => m[1]!);
 
 /**
  * La LISTE BLANCHE des paramètres, par contexte : un texte de l'espace ne porte un `{…}` que si son
@@ -320,7 +360,8 @@ export function libellesEnDur(chemin: string, contenu: string): LibelleEnDur[] {
 
 /**
  * Les composants qui injectent du HTML brut (`dangerouslySetInnerHTML`) : un paramètre qui reflète
- * une saisie (`{recherche}`) n'est échappé que rendu en nœud texte.
+ * une saisie (`{recherche}`) n'est échappé que rendu en nœud texte. Le NOM est cherché partout —
+ * attribut JSX, propriété d'un objet étalé en props, argument de `createElement`, clé calculée.
  */
 export function htmlBrut(chemin: string, contenu: string): LibelleEnDur[] {
   const source = ts.createSourceFile(
@@ -332,7 +373,7 @@ export function htmlBrut(chemin: string, contenu: string): LibelleEnDur[] {
   );
   const trouves: LibelleEnDur[] = [];
   const visiter = (n: ts.Node): void => {
-    if (ts.isJsxAttribute(n) && n.name.getText(source) === 'dangerouslySetInnerHTML') {
+    if ((ts.isIdentifier(n) || ts.isStringLiteral(n)) && n.text === 'dangerouslySetInnerHTML') {
       const ligne = source.getLineAndCharacterOfPosition(n.getStart(source)).line + 1;
       trouves.push({
         ligne,
@@ -345,6 +386,75 @@ export function htmlBrut(chemin: string, contenu: string): LibelleEnDur[] {
     ts.forEachChild(n, visiter);
   };
   visiter(source);
+  return trouves;
+}
+
+/** Un littéral qui écrit un texte : une espace, ou trois lettres de suite. */
+const ECRIT_UN_TEXTE = /\s|\p{L}{3}/u;
+
+/** Le nom d'une fonction déclarée au niveau du module (`function f` ou `const f = () =>`). */
+function nomDeLaFonction(n: ts.Node): string | null {
+  if (ts.isFunctionDeclaration(n)) return n.name?.text ?? null;
+  if (
+    (ts.isArrowFunction(n) || ts.isFunctionExpression(n)) &&
+    ts.isVariableDeclaration(n.parent) &&
+    ts.isIdentifier(n.parent.name)
+  ) {
+    return n.parent.name.text;
+  }
+  return null;
+}
+
+/**
+ * Les textes CALCULÉS dans le corps d'une fonction d'un module de micro-copie : un gabarit à
+ * substitution, un littéral qui écrit un texte, et — hors des utilitaires permis — une
+ * concaténation. `cle` est le chemin du module sous la micro-copie (`espace/vocabulaire.ts`).
+ */
+export function textesCalcules(
+  chemin: string,
+  cle: string,
+  contenu: string,
+  utilitaires: Readonly<Record<string, string>>
+): LibelleEnDur[] {
+  const source = ts.createSourceFile(chemin, contenu, ts.ScriptTarget.Latest, true);
+  const trouves: LibelleEnDur[] = [];
+  const noter = (n: ts.Node, quoi: string, fonction: string): void => {
+    const ligne = source.getLineAndCharacterOfPosition(n.getStart(source)).line + 1;
+    trouves.push({
+      ligne,
+      message:
+        `${chemin}:${ligne} — ${quoi} dans la fonction ${fonction}. Un texte calculé à l'appel ` +
+        `échappe à la liste blanche des paramètres : c'est ainsi qu'un nom ou une date de dépôt ` +
+        `d'un autre apporteur atteindrait un écran (REQ-SEC-022). Un texte s'écrit en donnée, avec ` +
+        `ses paramètres {…} ; une fonction exportée s'ajoute à UTILITAIRES_PERMIS, avec sa raison.`,
+    });
+  };
+  const visiter = (n: ts.Node, fonction: string | null, permise: boolean): void => {
+    let f = fonction;
+    let p = permise;
+    if (ts.isFunctionLike(n) && f === null) {
+      const nom = nomDeLaFonction(n);
+      f = nom ?? '(anonyme)';
+      p = nom !== null && `${cle} › ${nom}` in utilitaires;
+    }
+    if (f !== null) {
+      if (ts.isTemplateExpression(n)) noter(n, 'un gabarit à substitution', f);
+      else if (
+        (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) &&
+        ECRIT_UN_TEXTE.test(n.text)
+      ) {
+        noter(n, `le littéral « ${n.text} »`, f);
+      } else if (
+        !p &&
+        ts.isBinaryExpression(n) &&
+        n.operatorToken.kind === ts.SyntaxKind.PlusToken
+      ) {
+        noter(n, 'une concaténation', f);
+      }
+    }
+    ts.forEachChild(n, (c) => visiter(c, f, p));
+  };
+  visiter(source, null, false);
   return trouves;
 }
 
@@ -370,21 +480,50 @@ export type Vue = {
   fichiersDeMicroCopie: readonly string[];
   /** Les modules de l'espace, parcourus en entier : chemin sous la micro-copie → module. */
   microCopieEspace: Readonly<Record<string, unknown>>;
+  /** Le source de chaque module parcouru, lu par l'arbre syntaxique. */
+  sourcesMicroCopie: readonly FichierVu[];
   parametresPermis: Readonly<Record<string, readonly string[]>>;
+  utilitairesPermis: Readonly<Record<string, string>>;
+  horsPortee: Readonly<Record<string, string>>;
 };
 
 /** Un texte de l'espace et son chemin : `fichier › export › clé › … › champ`. */
 export type TexteLu = { chemin: string; texte: string };
 
-function parcourir(chemin: string, valeur: unknown): TexteLu[] {
-  if (typeof valeur === 'string') return [{ chemin, texte: valeur }];
-  if (valeur === null || typeof valeur !== 'object') return [];
-  return Object.entries(valeur).flatMap(([cle, v]) => parcourir(`${chemin} › ${cle}`, v));
+/** Ce que le parcours d'un module rend : ses textes, ses clés, et ce qui n'est pas un texte. */
+type Lecture = { textes: TexteLu[]; cles: TexteLu[]; nonTextes: TexteLu[] };
+
+function parcourir(chemin: string, valeur: unknown, lu: Lecture): void {
+  if (typeof valeur === 'string') {
+    lu.textes.push({ chemin, texte: valeur });
+    return;
+  }
+  if (typeof valeur === 'function') {
+    lu.nonTextes.push({ chemin, texte: 'une fonction' });
+    return;
+  }
+  if (valeur === null || typeof valeur !== 'object') return;
+  const proto: unknown = Object.getPrototypeOf(valeur);
+  if (!Array.isArray(valeur) && proto !== Object.prototype && proto !== null) {
+    const nom = (proto as { constructor?: { name?: string } }).constructor?.name ?? 'inconnu';
+    lu.nonTextes.push({ chemin, texte: `un objet ${nom}` });
+    return;
+  }
+  for (const [cle, v] of Object.entries(valeur)) {
+    lu.cles.push({ chemin: `${chemin} › ${cle}`, texte: cle });
+    parcourir(`${chemin} › ${cle}`, v, lu);
+  }
+}
+
+function lireLEspace(vue: Vue): Lecture {
+  const lu: Lecture = { textes: [], cles: [], nonTextes: [] };
+  for (const [fichier, m] of Object.entries(vue.microCopieEspace)) parcourir(fichier, m, lu);
+  return lu;
 }
 
 /** TOUS les textes de l'espace : tout champ chaîne, à toute profondeur, de chaque module lu. */
 export function textesDeLEspace(vue: Vue): TexteLu[] {
-  return Object.entries(vue.microCopieEspace).flatMap(([fichier, m]) => parcourir(fichier, m));
+  return lireLEspace(vue).textes;
 }
 
 /** Les paramètres que le contexte d'un texte permet : ceux de chaque entrée qui le contient. */
@@ -468,10 +607,19 @@ export const FAMILLES = [
     nom: 'html_brut',
     explication: 'un composant qui injecte du HTML brut (dangerouslySetInnerHTML).',
   },
+  {
+    nom: 'export_non_texte',
+    explication:
+      "un export de l'espace qui n'est pas un texte : une fonction hors de UTILITAIRES_PERMIS, une Map, un Set, un objet d'une classe.",
+  },
+  {
+    nom: 'texte_calcule',
+    explication:
+      "dans le corps d'une fonction d'un module de micro-copie, un gabarit à substitution, un littéral qui écrit un texte, ou une concaténation.",
+  },
 ] as const;
 
 const rempli = (s: string | undefined | null): boolean => typeof s === 'string' && s.trim() !== '';
-const PARAMETRE = /\{[^}]*\}/;
 
 export function controler(vue: Vue): Rapport {
   const fautes: Faute[] = [];
@@ -567,7 +715,7 @@ export function controler(vue: Vue): Rapport {
     const horodatage = vue.horodatages[i];
     const mention = horodatage === undefined ? '' : (vue.mentionsHorodatage[horodatage] ?? '');
     const champs = t === undefined ? [] : [t.pastille, t.titre, t.pourquoi, t.quoiFaire, mention];
-    const bavard = champs.find((c) => PARAMETRE.test(c));
+    const bavard = champs.find((c) => parametresDe(c).length > 0);
     if (bavard !== undefined) {
       ajouter(
         'refus_incomplet',
@@ -657,22 +805,62 @@ export function controler(vue: Vue): Rapport {
     for (const l of htmlBrut(f.chemin, f.contenu)) ajouter('html_brut', l.message);
   }
 
-  // Chaque fichier de l'espace est parcouru : aucun ne peut échapper à la liste blanche.
-  for (const f of vue.fichiersDeMicroCopie.filter((c) => c.startsWith(RACINE_ESPACE))) {
-    if (!(f.slice(RACINE_MICRO_COPIE.length) in vue.microCopieEspace)) {
+  // Chaque fichier de micro-copie est parcouru, ou déclaré hors de la portée de l'apporteur.
+  for (const f of vue.fichiersDeMicroCopie) {
+    const cle = f.startsWith(RACINE_MICRO_COPIE) ? f.slice(RACINE_MICRO_COPIE.length) : f;
+    if (!(cle in vue.microCopieEspace) && !(cle in vue.horsPortee)) {
       ajouter(
         'micro_copie_non_lue',
-        `${f} — ce fichier de l'espace n'est pas parcouru par la garde : ses textes, lus par un ` +
-          `apporteur, échappent à la liste blanche des paramètres. À ajouter à ` +
-          `MICRO_COPIE_DE_L_ESPACE dans scripts/gates/ux-exhaustivite.ts.`
+        `${f} — ce fichier de micro-copie n'est ni parcouru par la garde ni déclaré hors de la ` +
+          `portée de l'apporteur : ses textes échappent à la liste blanche des paramètres. À ajouter ` +
+          `à MICRO_COPIE_DE_L_ESPACE, ou à MICRO_COPIE_HORS_PORTEE avec sa raison, dans ` +
+          `scripts/gates/ux-exhaustivite.ts.`
+      );
+    }
+  }
+
+  // Le source de chaque module parcouru : aucun texte calculé dans une fonction.
+  for (const cle of Object.keys(vue.microCopieEspace)) {
+    const chemin = `${RACINE_MICRO_COPIE}${cle}`;
+    const f = vue.sourcesMicroCopie.find((x) => x.chemin === chemin);
+    if (f === undefined || f.contenu.trim() === '') {
+      ajouter(
+        'source_illisible',
+        `${chemin} — le source de ce module ne se lit pas : ses fonctions ne sont confrontées à rien.`
+      );
+      continue;
+    }
+    for (const l of textesCalcules(chemin, cle, f.contenu, vue.utilitairesPermis)) {
+      ajouter('texte_calcule', l.message);
+    }
+  }
+
+  // Ce qui n'est pas un texte ne se juge pas : une fonction non permise, une Map, un objet de classe.
+  const lu = lireLEspace(vue);
+  for (const { chemin, texte: quoi } of lu.nonTextes) {
+    if (quoi === 'une fonction' && chemin in vue.utilitairesPermis) continue;
+    ajouter(
+      'export_non_texte',
+      `${chemin} — ${quoi}, et non un texte : la garde ne sait pas lire ce qu'il rendra à l'écran, ` +
+        `donc ni la liste blanche des paramètres ni le snapshot ne le voient. Un texte de l'espace ` +
+        `est une chaîne, dans un objet simple ou un tableau ; un utilitaire de mise en forme ` +
+        `s'ajoute à UTILITAIRES_PERMIS, avec sa raison.`
+    );
+  }
+  for (const { chemin, texte: cle } of lu.cles) {
+    for (const nom of parametresDe(cle)) {
+      ajouter(
+        'parametre_non_permis',
+        `${chemin} — la clé porte le paramètre {${nom}}. Une clé ne porte aucun paramètre : elle ` +
+          `échappe à la liste blanche, qui ne juge que les textes.`
       );
     }
   }
 
   // NI QUI NI QUAND : tout texte de l'espace, tout paramètre, jugé par la liste blanche.
-  for (const { chemin, texte } of textesDeLEspace(vue)) {
+  for (const { chemin, texte } of lu.textes) {
     const permis = permisPour(chemin, vue.parametresPermis);
-    for (const m of texte.matchAll(/\{([^}]*)\}/g)) {
+    for (const m of texte.matchAll(parametre())) {
       if (!permis.has(m[1]!)) {
         ajouter(
           'parametre_non_permis',
@@ -683,7 +871,7 @@ export function controler(vue: Vue): Rapport {
         );
       }
     }
-    const nu = texte.replace(RENVOI_A_UN_ARTICLE, '').replace(/\{[^}]*\}/g, '');
+    const nu = texte.replace(RENVOI_A_UN_ARTICLE, '').replace(parametre(), '');
     const chiffre = /\d+/.exec(nu);
     if (chiffre) {
       ajouter(
@@ -754,7 +942,13 @@ export function vueDuDepot(sources: Sources = SOURCES_DU_DEPOT): Vue {
       (c) => c.startsWith(RACINE_MICRO_COPIE) || c === 'messages/fr.json'
     ),
     microCopieEspace: MICRO_COPIE_DE_L_ESPACE,
+    sourcesMicroCopie: Object.keys(MICRO_COPIE_DE_L_ESPACE).map((cle) => ({
+      chemin: `${RACINE_MICRO_COPIE}${cle}`,
+      contenu: lire(`${RACINE_MICRO_COPIE}${cle}`),
+    })),
     parametresPermis: PARAMETRES_PERMIS,
+    utilitairesPermis: UTILITAIRES_PERMIS,
+    horsPortee: MICRO_COPIE_HORS_PORTEE,
   };
 }
 
@@ -773,6 +967,19 @@ const V = (titre: string, route: string | null = null): EtatVide => ({
   phrase: 'Une phrase.',
   action: { libelle: 'Agir', route },
 });
+
+/** Le source de la fixture : un gabarit au niveau du module (permis), un utilitaire permis. */
+const SOURCE_DE_FIXTURE = [
+  "const RAISON = 'contrat';",
+  'export const RENVOI = `Refusé (${RAISON}, article 3.3 bis).`;',
+  'export const majuscule = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);',
+].join('\n');
+
+/** Le scénario du veto 5321319865 : une fonction qui rend un texte, nom et date en arguments. */
+const SOURCE_COLLISION = [
+  'export const collision = (nom: string, depuis: string): string =>',
+  '  `Déjà réservée par ${nom} depuis le ${depuis}`;',
+].join('\n');
 
 /** Une vue minimale et CONFORME : deux issues dont un refus, trois écrans d'espace, un de console. */
 export function vueDeFixture(): Vue {
@@ -800,9 +1007,13 @@ export function vueDeFixture(): Vue {
       'espace/fixture.ts': {
         ISSUES: { acceptee: { titre: 'Accepté le {date}', action: { libelle: 'Voir' } } },
         RENVOI: 'Refusé (contrat, article 3.3 bis).',
+        majuscule: (s: string): string => s.charAt(0).toUpperCase() + s.slice(1),
       },
     },
+    sourcesMicroCopie: [{ chemin: `${RACINE_ESPACE}fixture.ts`, contenu: SOURCE_DE_FIXTURE }],
     parametresPermis: { 'espace/fixture.ts › ISSUES › acceptee': ['date'] },
+    utilitairesPermis: { 'espace/fixture.ts › majuscule': 'met en capitale, n’écrit aucun mot' },
+    horsPortee: {},
   };
 }
 
@@ -980,6 +1191,27 @@ const TEMOINS: { famille: string; nomme: string; vue: () => Vue }[] = [
     }),
   },
   {
+    famille: 'export_non_texte',
+    nomme: 'espace/fixture.ts › collision',
+    vue: () => ({
+      ...vueDeFixture(),
+      microCopieEspace: {
+        'espace/fixture.ts': {
+          collision: (nom: string, depuis: string): string =>
+            `Déjà réservée par ${nom} depuis le ${depuis}`,
+        },
+      },
+    }),
+  },
+  {
+    famille: 'texte_calcule',
+    nomme: `${RACINE_ESPACE}fixture.ts:2`,
+    vue: () => ({
+      ...vueDeFixture(),
+      sourcesMicroCopie: [{ chemin: `${RACINE_ESPACE}fixture.ts`, contenu: SOURCE_COLLISION }],
+    }),
+  },
+  {
     famille: 'html_brut',
     nomme: `${COMPOSANT_FAUTIF.chemin}:1`,
     vue: () => ({
@@ -1000,7 +1232,7 @@ const CONTRE_TEMOINS: { quoi: string; vue: () => Vue }[] = [
   {
     // Elle porte un paramètre dans une issue qui N'EST PAS un refus (la date de son propre dépôt) :
     // c'est ce qui prouve que `refus_incomplet` vise le refus, pas le paramètre en soi.
-    quoi: 'la fixture conforme : un paramètre PERMIS dans son contexte, un renvoi à un article',
+    quoi: 'la fixture conforme : un paramètre PERMIS, un renvoi à un article, un utilitaire permis',
     vue: vueDeFixture,
   },
   {

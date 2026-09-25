@@ -47,6 +47,8 @@ import {
   ecransDeLaConsole,
   libellesEnDur,
   textesDeLEspace,
+  parametre,
+  parametresDe,
   SOURCES_DU_DEPOT,
   ECRAN_MES_ENTREPRISES,
   ROUTE_DU_DEPOT,
@@ -83,8 +85,11 @@ const messages = (vue: Vue): string =>
     .fautes.map((f) => f.message)
     .join('\n');
 
-/** Un paramètre `{…}` dans un texte : c'est ainsi qu'un nom ou une date entrent à l'écran. */
-const PARAMETRE = /\{[^}]*\}/;
+/** Ce qu'un libellé ne doit jamais écrire en clair — UNE définition pour tout le fichier. */
+const DATE_LITTERALE =
+  /\b\d{1,2}(er)?\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}\b/i;
+const UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i;
+const COURRIEL = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
 
 // ── 1. REQ-UX-002 : chaque issue d'un dépôt ─────────────────────────────────────
 
@@ -136,7 +141,7 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
       expect([i, r.refus?.mention]).toEqual([i, MENTION_DU_REFUS]);
       expect([i, r.refus?.contestation]).toEqual([i, CONTESTATION_ECRITE]);
       const tout = [r.pastille, r.titre, r.pourquoi, r.quoiFaire, r.horodatage].join(' ');
-      expect([i, PARAMETRE.test(tout)]).toEqual([i, false]);
+      expect([i, parametresDe(tout)]).toEqual([i, []]);
     }
     for (const i of ISSUES_DEPOT.filter((x) => !estUnRefus(x))) {
       expect([i, issueRendue(i).refus]).toEqual([i, null]);
@@ -150,14 +155,11 @@ describe('REQ-UX-002 — chaque issue du dépôt dit quoi, pourquoi, quoi faire 
   });
 
   it('REQ-UX-002 : aucun libellé ne porte de date, d’UUID ni d’adresse — seulement des paramètres', () => {
-    const DATE =
-      /\b\d{1,2}(er)?\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}\b/i;
-    const UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i;
-    const COURRIEL = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
     for (const i of ISSUES_DEPOT) {
       const r = issueRendue(i);
       const tout = [r.pastille, r.titre, r.pourquoi, r.quoiFaire, r.horodatage].join(' ');
-      for (const motif of [DATE, UUID, COURRIEL]) expect([i, motif.test(tout)]).toEqual([i, false]);
+      for (const motif of [DATE_LITTERALE, UUID, COURRIEL])
+        expect([i, motif.test(tout)]).toEqual([i, false]);
     }
   });
 
@@ -335,17 +337,106 @@ describe('REQ-UX-002 — un texte de l’espace ne porte que les paramètres que
     expect(familles(vue)).toEqual(['html_brut']);
     expect(messages(vue)).toContain(`${chemin}:3`);
   });
+
+  // Le veto 5321319865 : un texte de l'espace qui n'est pas une chaîne échappait à la garde.
+  const COLLISION =
+    'export const collision = (nom: string, depuis: string): string =>\n' +
+    '  `Déjà réservée par ${nom} depuis le ${depuis}`;\n';
+
+  it('REQ-UX-002 : une fonction exportée collision(nom, depuis) rougit, à l’exécution et dans le source', () => {
+    const base = vueDuDepot();
+    const vocabulaire = 'src/content/micro-copy/espace/vocabulaire.ts';
+    const vue: Vue = {
+      ...base,
+      microCopieEspace: {
+        ...base.microCopieEspace,
+        'espace/vocabulaire.ts': {
+          ...(base.microCopieEspace['espace/vocabulaire.ts'] as object),
+          collision: (nom: string, depuis: string): string =>
+            `Déjà réservée par ${nom} depuis le ${depuis}`,
+        },
+      },
+      sourcesMicroCopie: [
+        ...(base.sourcesMicroCopie ?? []).filter((f) => f.chemin !== vocabulaire),
+        { chemin: vocabulaire, contenu: COLLISION },
+      ],
+    };
+    expect([...new Set(familles(vue))].sort()).toEqual(['export_non_texte', 'texte_calcule']);
+    expect(messages(vue)).toContain('espace/vocabulaire.ts › collision');
+    expect(messages(vue)).toContain(`${vocabulaire}:2`);
+  });
+
+  it('REQ-UX-002 : une Map exportée rougit — la garde ne sait pas la lire comme un texte', () => {
+    const base = vueDuDepot();
+    const vue: Vue = {
+      ...base,
+      microCopieEspace: {
+        ...base.microCopieEspace,
+        'espace/vocabulaire.ts': {
+          ...(base.microCopieEspace['espace/vocabulaire.ts'] as object),
+          PAR_ISSUE: new Map([['en_attente', 'Déjà réservée par {nomAutreApporteur}']]),
+        },
+      },
+    };
+    expect(familles(vue)).toEqual(['export_non_texte']);
+    expect(messages(vue)).toContain('espace/vocabulaire.ts › PAR_ISSUE');
+  });
+
+  it('REQ-UX-002 : un paramètre écrit dans une CLÉ d’objet rougit', () => {
+    const base = vueDuDepot();
+    const vue: Vue = {
+      ...base,
+      microCopieEspace: {
+        ...base.microCopieEspace,
+        'espace/vocabulaire.ts': {
+          ...(base.microCopieEspace['espace/vocabulaire.ts'] as object),
+          PAR_NOM: { 'Réservée par {nomAutreApporteur}': 'Voir' },
+        },
+      },
+    };
+    expect(familles(vue)).toEqual(['parametre_non_permis']);
+    expect(messages(vue)).toContain('{nomAutreApporteur}');
+  });
+
+  it('REQ-UX-002 : un module de micro-copie HORS espace/, ni parcouru ni déclaré, rougit', () => {
+    const base = vueDuDepot();
+    const commun = 'src/content/micro-copy/commun/libelles.ts';
+    const vue: Vue = { ...base, fichiersDeMicroCopie: [...base.fichiersDeMicroCopie, commun] };
+    expect(familles(vue)).toEqual(['micro_copie_non_lue']);
+    expect(messages(vue)).toContain(commun);
+  });
+
+  it('REQ-UX-002 : contre-témoin — les deux utilitaires de la liste blanche et les textes actuels restent verts', () => {
+    const base = vueDuDepot();
+    expect(familles(base)).toEqual([]);
+    const lus = (base.sourcesMicroCopie ?? []).map((f) => f.chemin);
+    expect(lus).toEqual(
+      expect.arrayContaining([
+        'src/content/micro-copy/espace/vocabulaire.ts',
+        'src/content/micro-copy/espace/issues-depot.ts',
+      ])
+    );
+  });
+
+  it('REQ-UX-002 : HTML brut par une prop étalée ou par createElement rougit aussi', () => {
+    const chemin = 'src/app/(espace)/entreprise/page.tsx';
+    const contenu = [
+      "import { createElement } from 'react';",
+      'const brut = (t: string) => ({ dangerouslySetInnerHTML: { __html: t } });',
+      'export const P = ({ t }: { t: string }) => <p {...brut(t)} />;',
+      "export const Q = ({ t }: { t: string }) => createElement('p', { ['dangerouslySetInnerHTML']: { __html: t } });",
+    ].join('\n');
+    const vue: Vue = { ...vueDuDepot(), composants: [{ chemin, contenu }] };
+    expect([...new Set(familles(vue))]).toEqual(['html_brut']);
+    expect(messages(vue)).toContain(`${chemin}:2`);
+    expect(messages(vue)).toContain(`${chemin}:4`);
+  });
 });
 
 // ── 1 ter. REQ-UX-002 : le snapshot des libellés, sans date, sans nom, sans UUID ─
 
 /** Les marques et les noms d'écran qui portent une capitale en milieu de phrase — rien d'autre. */
 const CAPITALES_ADMISES = new Set(['Axion-IA', 'Société', 'OPCO', 'RIB', 'Mes']);
-const DATE_LITTERALE =
-  /\b\d{1,2}(er)?\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\/\d{1,2}\b/i;
-const UUID = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i;
-const COURRIEL = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
-
 /**
  * Ce qu'un libellé du snapshot révèle et ne doit pas révéler : une date écrite, un UUID, une
  * adresse, ou un nom propre — une capitale en milieu de phrase, hors des marques admises. Les
@@ -355,7 +446,7 @@ function fuites(lignes: readonly { chemin: string; texte: string }[]): string[] 
   const trouvees: string[] = [];
   for (const { chemin, texte: brut } of lignes) {
     // Un paramètre `{…}` n'est pas un nom : il est jugé par la liste blanche de la garde.
-    const texte = brut.replace(/\{[^}]*\}/g, '{}');
+    const texte = brut.replace(parametre(), '{}');
     for (const [nom, motif] of [
       ['une date', DATE_LITTERALE],
       ['un UUID', UUID],
@@ -612,7 +703,7 @@ describe('REQ-UX-002 REQ-UX-019 — une formule ou un libellé d’action s’é
     const echapper = (t: string): string => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const formules = Object.values(FORMULES).flatMap((f) =>
       f
-        .split(/\{[^}]*\}/)
+        .split(parametre())
         .map((morceau) => morceau.trim())
         .filter((morceau) => /\p{L}{3}/u.test(morceau))
     );
