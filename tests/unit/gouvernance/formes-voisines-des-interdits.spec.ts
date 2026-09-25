@@ -64,11 +64,14 @@ const HORS_DU_DOMAINE = 'src/server/__bac-d-essai-gov-076.ts';
 const eslint = new ESLint();
 
 /** Les identifiants de règle qui ont rougi sur ce texte, à ce chemin, avec leur ligne. */
-async function regles(texte: string, chemin: string): Promise<{ regle: string; ligne: number }[]> {
+async function regles(
+  texte: string,
+  chemin: string
+): Promise<{ regle: string; ligne: number; message: string }[]> {
   const [r] = await eslint.lintText(`${texte}\n`, { filePath: chemin });
   return (r?.messages ?? [])
     .filter((m) => m.severity === 2)
-    .map((m) => ({ regle: m.ruleId ?? '(interne)', ligne: m.line }));
+    .map((m) => ({ regle: m.ruleId ?? '(interne)', ligne: m.line, message: m.message }));
 }
 
 /** Le dossier du bac d'essai RÉEL, pour la face qui lance le linter en processus. */
@@ -102,6 +105,14 @@ describe('src/domain — chaque interdit juge ses formes voisines (GOV-076)', ()
       ).toBeGreaterThan(0);
       // La ligne est NOMMÉE : un refus qui ne dit pas où ne se corrige pas.
       expect(fautes.every((f) => f.ligne === 1)).toBe(true);
+      // ET C'EST LA FORME ELLE-MÊME QUI REFUSE, par son motif. Motif `mutation` (E4) sur 9ffb450 :
+      // le sélecteur de `horloge-par-acces-calcule` rendu inerte laissait ce test vert, parce que
+      // `no-restricted-properties` rougissait sur le même exemple — « au moins une règle » ne
+      // disait pas LAQUELLE. Une forme couverte par une autre n'est pas une forme exercée.
+      expect(
+        fautes.map((f) => f.message),
+        `la forme « ${forme.nom} » (${forme.exemple}) n’a pas été refusée par SON sélecteur`
+      ).toContain(forme.message);
       exercees.push(forme.nom);
     }
     // LE COMPTE DES FORMES RÉELLEMENT EXERCÉES, et non la longueur d'une liste déclarée.
@@ -168,6 +179,16 @@ describe('src/domain — chaque interdit juge ses formes voisines (GOV-076)', ()
         `« ${ligne} » traverse sous ${SOUS_LE_DOMAINE}`
       ).toContain('no-restricted-syntax');
     }
+  });
+
+  it('REQ-QA-001 — une horloge atteinte par une clé VARIABLE est refusée, nommément', async () => {
+    // `Date[k]()` : aucune règle de nom n'y voit « now ». Seule la forme par accès calculé la juge.
+    const calcule = FORMES_VOISINES.find((f) => f.nom === 'horloge-par-acces-calcule')!;
+    const fautes = await regles("const k = 'now';\nexport const t = Date[k]();", SOUS_LE_DOMAINE);
+    expect(
+      fautes.filter((f) => f.ligne === 2).map((f) => f.message),
+      '`Date[k]()` traverse sous le domaine'
+    ).toContain(calcule.message);
   });
 
   it('REQ-QA-001 — un module du cœur importé SANS son préfixe est refusé comme avec', async () => {
