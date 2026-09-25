@@ -703,6 +703,24 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'qu’on ne remesure jamais.*',
     },
     // ── UX-P0-02 : UNE sortie, à code VARIABLE ──────────────────────────────────────────────
+    'scripts/gates/ux-exhaustivite.ts': {
+      total: 2,
+      porte: 2,
+      // ZÉRO, et il est assumé : les deux sorties non nulles de cette garde ne sont vues par AUCUN
+      // test à travers la frontière du processus. Les familles, elles, sont prouvées une à une sur
+      // des vues INJECTÉES dans `controler`, qui est pure — c'est solide, mais ce n'est pas la
+      // même chose que voir le binaire sortir en 1. Inscrit ici pour que le manque soit CHIFFRÉ et
+      // cherchable, jamais pour le tenir pour couvert.
+      temoins: 0,
+      raison:
+        'UX-P0-01 — la garde d’exhaustivité du vocabulaire et de la micro-copie. DEUX sorties non ' +
+        'nulles : `echouer()`, atteinte sous `--prove` quand une famille n’a pas de témoin, et la ' +
+        'sortie de jugement du dépôt réel quand une faute est trouvée. `vocabulaire-et-micro-copy.' +
+        'spec.ts` lance le binaire DEUX fois — sur le dépôt réel et sous `--prove` — et les deux ' +
+        'fois il sort en 0 : aucun test ne l’a vu sortir en 1. Le REFUS DE PÉRIMÈTRE n’est pas ' +
+        'compté ici : il vient de `fichiersSuivisOuRefus`, et `GARDES_QUI_BALAIENT` le déclare ' +
+        'plus bas.',
+    },
     'scripts/gates/maquettes-validees.ts': {
       total: 1,
       porte: 1,
@@ -1023,6 +1041,17 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // base 44, les branches sœurs #82, #93 et #92 déclarent respectivement 45, 46 et 48. Celle qui
     // atterrira après celle-ci lira SON propre rouge et l'arbitrera à son tour.
     //
+    // 🔧 44 → 46 par UX-P0-01, ARBITRÉ et non subi : `scripts/gates/ux-exhaustivite.ts` naît
+    // avec DEUX sorties non nulles — `echouer()`, atteinte sous `--prove` quand une famille n'a pas
+    // de témoin, et la sortie de jugement du dépôt réel sur faute. Déclarées plus haut avec
+    // `temoins: 0`, assumé : `vocabulaire-et-micro-copy.spec.ts` lance le binaire DEUX fois et les
+    // deux fois il sort en 0 ; les familles sont prouvées sur des vues INJECTÉES dans `controler`,
+    // qui est pure. Solide, mais ce n'est pas voir le binaire sortir en 1, et le registre le DIT.
+    // La Gate A de la PR 93 a rougi d'abord sur l'identité, puis sur le compte — relu, pas deviné :
+    //
+    //     scripts/gates/ux-exhaustivite.ts ajoute 2 `process.exit(1)` et n’est PAS déclaré ici
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 46 to be 44
+    //
     // 🔧 44 → 48 par JUR-T01, ARBITRÉ et non subi : `scripts/gates/jur-grille-chiffree.ts` naît
     // avec QUATRE sorties non nulles (plus deux `exit(0)`), déclarées plus haut avec `temoins: 0` —
     // aucune n'a été vue rougir, et le registre le DIT au lieu de le taire. La Gate A de la PR 92 a
@@ -1057,6 +1086,9 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     //     scripts/prevol.ts : 6 exits ajoutés, 4 déclarés
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 50 to be 48
     //
+    // 🔧 50 + 2 = 52 a la fusion de `main` (`f7ea7c3`) dans la branche de la PR 93 : GOV-047 (prevol,
+    // cote `main`) et UX-P0-01 (les deux sorties de `ux-exhaustivite.ts`) ont incremente le MEME
+    // cliquet chacun de son cote.
     // 🔧 50 → 51 par SEC-08, ARBITRÉ et non subi. `scripts/gates/schema-pii.ts` naît avec UNE
     // sortie à code variable. Le cliquet a rougi dans ses deux tests, dans l'ordre — l'identité
     // en Gate A (run 36173435743), puis, la déclaration posée, le compte (`vitest -t`) :
@@ -1084,7 +1116,17 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     //
     //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 57 to be 56
     //
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(57);
+    // 🔧 54 + 2 = 56 a la fusion de `main` (`48b14b6`) dans la branche de la PR 93 : JUR-T01 (les
+    // quatre sorties de `jur-grille-chiffree.ts`, cote `main`) et UX-P0-01 (les deux sorties de
+    // `ux-exhaustivite.ts`) ont incremente le MEME cliquet chacun de son cote. Le nombre est
+    // DERIVE de la somme des `total` du registre, qui porte les trois entrees.
+    // 🔧 54 + 1 = 55 a la fusion de `main` (`48b14b6`) dans `t/sec-08` : la sortie de SEC-08 et les
+    // quatre de JUR-T01 s'ajoutent, le registre porte les deux entrees.
+    // 🔧 55 + 2 = 57 a la fusion de `main` (`835d899`) dans la branche de la PR 93 : SEC-08 (une sortie,
+    // cote `main`) et UX-P0-01 (deux sorties) s additionnent ; le total est lu par `vitest -t`, pas devine.
+    // 🔧 57 + 2 = 59 a la fusion de `main` (`51b0d1b`) dans `t/int-t09` : UX-P0-01 (#93, deux sorties)
+    // a atterri avant INT-T09 (deux). Le total est lu par `vitest -t`, pas devine.
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(59);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.
@@ -2148,6 +2190,11 @@ const GARDES_QUI_BALAIENT = [
   'scripts/gates/schema-pii.ts',
   // DM-02 — `partners:migrations:additive` lit TOUTES les migrations SUIVIES, pas celles de la PR.
   'scripts/gates/migrations-additive.ts',
+  // UX-P0-01 — `ux:exhaustivite` établit son périmètre par la primitive pour que les composants
+  // `.tsx` qu'elle relit soient ceux que `git` suit, et pour que son refus porte le nom
+  // `perimetre_illisible` plutôt qu'une erreur de lecture muette. La réciproque ci-dessous a rougi
+  // en la nommant — elle n'a pas été devinée.
+  'scripts/gates/ux-exhaustivite.ts',
   // GOV-046 — `perf:budgets` juge les routes des fichiers SUIVIS sous `src/`. Elle rendait `[]`
   // quand `src/` manquait ; elle établit désormais son périmètre par la source unique.
   'scripts/gates/perf-budgets.ts',
