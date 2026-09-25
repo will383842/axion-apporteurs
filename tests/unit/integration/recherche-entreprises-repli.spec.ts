@@ -51,6 +51,25 @@ vi.mock('../../../src/server/securite/rate-limit', async (original) => {
   };
 });
 
+// Le journal applicatif est ESPIONNÉ, pas remplacé : la ligne traverse le vrai `creerJournal`.
+const journalEspion = vi.hoisted(() => ({ lignes: [] as { msg: string; donnees: unknown }[] }));
+vi.mock('../../../src/lib/logger', async (original) => {
+  const m = await original<typeof import('../../../src/lib/logger')>();
+  return {
+    ...m,
+    creerJournal: (options?: Parameters<typeof m.creerJournal>[0]) => {
+      const vrai = m.creerJournal({ ...options, sortie: { write: () => true } });
+      return {
+        ...vrai,
+        info: (msg: string, donnees?: Record<string, unknown>) => {
+          journalEspion.lignes.push({ msg, donnees });
+          vrai.info(msg, donnees);
+        },
+      };
+    },
+  };
+});
+
 import {
   autocompleterEntreprise,
   etatDuDisjoncteur,
@@ -500,6 +519,12 @@ describe('REQ-SEC-013 — la garde « aucune année de naissance » sait rougir,
     expect(r.stdout).toMatch(/\(fiche\).*annee_de_naissance/);
   });
 
+  it('REQ-SEC-013 — `--fixtures` sans dossier : usage refusé, sortie 2, rien n’est jugé', () => {
+    const r = lancer(['--fixtures']);
+    expect(r.status, r.stdout + r.stderr).toBe(2);
+    expect(r.stderr).toMatch(/--fixtures attend un dossier/);
+  });
+
   it('REQ-SEC-013 — le MODE DÉPÔT (celui du job nocturne) sort en non nul sur un jeu fautif', () => {
     const source = 'tests/fixtures/recherche-entreprises';
     const fichiers = readdirSync(source).filter((x) => x.endsWith('.json'));
@@ -714,6 +739,31 @@ describe('REQ-SEC-013 — `dependancesDeProduction` : clés, adresse, délai et 
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+  });
+
+  it('REQ-SEC-013 — le journal de production ÉCRIT la ligne, par le journal applicatif', () => {
+    const ligne = {
+      signal: 'recherche_entreprises',
+      geste: 'autocompletion',
+      issue: 'saisie_manuelle',
+      motif: 'erreur_serveur',
+      origine: 'aucune',
+    } as const;
+    dependancesDeProduction(SECRETS).journaliser(ligne);
+    expect(journalEspion.lignes).toContainEqual({ msg: 'recherche_entreprises', donnees: ligne });
+  });
+
+  it('REQ-SEC-013 — format FIXÉ des empreintes : vecteurs connus (HMAC-SHA-256, étiquette, séparateur U+001F)', () => {
+    // Calculés une fois hors du code livré ; une empreinte persistée qui change de format rougit ici.
+    expect(empreinteurDeDirigeants('cle-de-vecteur')('pp\u001fLEFEVRE\u001fJEAN')).toBe(
+      'dafcc5f1e7e142fa48d4be88684d51e7bcafffa04f92497fce89270a6b73f180'
+    );
+    expect(
+      appelantDepuis('apporteur-42', new Headers(), {
+        PII_HASH_KEY: 'cle-de-vecteur',
+        IP_HASH_SALT: 'sel-de-vecteur',
+      }).identite
+    ).toBe('40b57674956ff1b631f9ea8c2ec192b9e243dd742d874b3620f305eaba9c9d13');
   });
 
   it('REQ-SEC-013 — les empreintes des dirigeants sont sous la clé des personnes reçue', () => {

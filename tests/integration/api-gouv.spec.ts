@@ -333,6 +333,7 @@ describe('REQ-INT-020 — mandataire serveur : requête minimale, pannes travers
     expect(lireRetryAfter('-3', INSTANT)).toBeNull();
     // Plafonné : un en-tête démesuré ne tient pas le disjoncteur ouvert jusqu'au redémarrage.
     const plafond = PARAMETRES.retryAfterPlafondMs.valeur;
+    expect(plafond, 'une heure').toBe(3_600_000);
     expect(lireRetryAfter(String(plafond / 1000 - 1), INSTANT)).toBe(plafond - 1_000);
     expect(lireRetryAfter('999999999', INSTANT)).toBe(plafond);
     expect(lireRetryAfter(new Date(INSTANT + plafond * 24).toUTCString(), INSTANT)).toBe(plafond);
@@ -501,6 +502,50 @@ describe('REQ-QA-028 — disjoncteur et limite de débit ≤ 5 req/s', () => {
     });
     expect(recues).toHaveLength(1);
     avancer(1_000);
+    expect((await autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps)).mode).toBe(
+      'autocompletion'
+    );
+    expect(recues).toHaveLength(2);
+  });
+
+  it('REQ-QA-028 — l’essai demi-ouvert revenu en 4xx est RENDU : l’appel suivant repart, le disjoncteur ne reste pas bloqué', async () => {
+    repondre = () => ({ statut: 429, corps: {}, entetes: { 'retry-after': '2' } });
+    const { deps, avancer } = banc();
+    await autocompleterEntreprise({ q: 'danone' }, APPELANT, deps);
+    avancer(2_000);
+    repondre = () => ({ statut: 400, corps: {} });
+    expect(await autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps)).toEqual({
+      mode: 'saisie_manuelle',
+      motif: 'requete_refusee',
+    });
+    expect(recues).toHaveLength(2);
+    repondre = () => ({ statut: 200, corps: avecResultats().reponse });
+    expect((await autocompleterEntreprise({ q: 'lvmh' }, APPELANT, deps)).mode).toBe(
+      'autocompletion'
+    );
+    expect(recues).toHaveLength(3);
+    expect(etatDuDisjoncteur(deps).etat).toBe('ferme');
+  });
+
+  it('REQ-INT-020 — un 429 SANS Retry-After pose la pause par défaut : rien ne repart avant son terme', async () => {
+    repondre = () => ({ statut: 429, corps: {} });
+    const { deps, avancer } = banc();
+    expect(await autocompleterEntreprise({ q: 'danone' }, APPELANT, deps)).toEqual({
+      mode: 'saisie_manuelle',
+      motif: 'refus_exces',
+    });
+    repondre = () => ({ statut: 200, corps: avecResultats().reponse });
+    expect(await autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps)).toEqual({
+      mode: 'saisie_manuelle',
+      motif: 'disjoncteur_ouvert',
+    });
+    avancer(PARAMETRES.disjoncteurPauseMs.valeur - 1);
+    expect(await autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps)).toEqual({
+      mode: 'saisie_manuelle',
+      motif: 'disjoncteur_ouvert',
+    });
+    expect(recues).toHaveLength(1);
+    avancer(1);
     expect((await autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps)).mode).toBe(
       'autocompletion'
     );
@@ -702,6 +747,41 @@ describe('REQ-INT-021 — la fiche persistée : exactement les champs énuméré
     expect(fiche.ok).toBe(true);
     expect(JSON.stringify(fiche)).not.toMatch(/naissance/);
     expect(recues).toHaveLength(2);
+  });
+
+  it('REQ-INT-020 — le cache de PRODUCTION se RECONNECTE : un client coupé (`end`) ou jamais ouvert (`wait`) est reconnecté au prochain appel', async () => {
+    // Le client réel n'a pas de reconnexion automatique (`retryStrategy: () => null`) : après une
+    // coupure il passe en `end`. C'est l'appel suivant qui le rouvre, sinon le cache est mort
+    // jusqu'au redémarrage et chaque saisie repart au tiers.
+    const connexions: string[] = [];
+    const entrees = new Map<string, string>();
+    const redis = {
+      status: 'end',
+      connect: async () => {
+        connexions.push(redis.status);
+        redis.status = 'ready';
+      },
+      get: async (cle: string) => {
+        if (redis.status !== 'ready') throw new Error('Connection is closed.');
+        return entrees.get(cle) ?? null;
+      },
+      set: async (cle: string, valeur: string) => {
+        if (redis.status !== 'ready') throw new Error('Connection is closed.');
+        entrees.set(cle, valeur);
+        return 'OK';
+      },
+    } satisfies ClientDuCache & { status: string };
+    const cache = cacheSurClient(() => redis);
+    const fiche = projeter(schemaReponseDuTiers.parse(avecResultats().reponse), empreindre)
+      .fiches[0]!;
+    await cache.ecrire(cleDeFiche(fiche.siren), fiche, 60);
+    expect(connexions).toEqual(['end']);
+    redis.status = 'wait';
+    expect(await cache.lire(cleDeFiche(fiche.siren))).toEqual(fiche);
+    expect(connexions).toEqual(['end', 'wait']);
+    // Prêt : aucune connexion de plus.
+    await cache.lire(cleDeFiche(fiche.siren));
+    expect(connexions).toHaveLength(2);
   });
 
   it('REQ-INT-020 — le cache de PRODUCTION écrit avec expiration : recherche ET fiche repartent à 24 h', async () => {
