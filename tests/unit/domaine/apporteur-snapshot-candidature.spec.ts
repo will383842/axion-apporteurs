@@ -62,6 +62,14 @@ describe('REQ-DM-035 — le snapshot de candidature, tel que le producteur l’�
     expect(message).not.toContain(String(PAYLOAD.scoreBaremeVersion));
   });
 
+  it('REQ-DM-035 : une charge qui n’est pas un objet est refusée en nommant la RACINE', () => {
+    for (const hors of [null, 'une chaine', 42]) {
+      expect(() => snapshotDeCandidature(hors)).toThrow(
+        'charge candidature.recue refusée : (racine)'
+      );
+    }
+  });
+
   it('REQ-DM-035 : une charge incomplète est REFUSÉE — aucun champ n’est complété', () => {
     const incomplete = { ...PAYLOAD };
     delete incomplete.scoreBaremeVersion;

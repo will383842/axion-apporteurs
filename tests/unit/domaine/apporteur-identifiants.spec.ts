@@ -9,7 +9,7 @@
  *
  * Aucun défaut sur ce que le test fait varier (RM-11) : chaque octet d'aléa est écrit.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import {
@@ -82,6 +82,18 @@ describe('REQ-DM-012 — le code de parrainage : lisible, unique, non énumérab
     const b = sourceAleatoireSysteme(OCTETS_JETON_DEPOT);
     expect(a).toHaveLength(OCTETS_JETON_DEPOT);
     expect(Buffer.from(a).equals(Buffer.from(b))).toBe(false);
+  });
+
+  it('REQ-DM-012 : la source de production DÉLÈGUE à crypto.getRandomValues', () => {
+    const espion = vi.spyOn(globalThis.crypto, 'getRandomValues');
+    try {
+      const o = sourceAleatoireSysteme(OCTETS_CODE_PARRAINAGE);
+      expect(espion).toHaveBeenCalledTimes(1);
+      expect(espion.mock.results[0]!.value).toBe(o);
+      expect(o).toHaveLength(OCTETS_CODE_PARRAINAGE);
+    } finally {
+      espion.mockRestore();
+    }
   });
 
   it('REQ-DM-012 : une source d’aléa qui rend un autre nombre d’octets est refusée', () => {
@@ -183,8 +195,53 @@ describe('REQ-DM-012 — la migration arme la base contre la réactivation (lect
     expect(sql).toMatch(/BEFORE TRUNCATE ON "jetons_depot"\s+FOR EACH STATEMENT/);
   });
 
-  it('REQ-DM-012 : la fonction gèle la ligne révoquée et fige l’empreinte', () => {
-    expect(sql).toMatch(/OLD\."revoque_at" IS NOT NULL THEN/);
-    expect(sql).toMatch(/NEW\."token_hash" IS DISTINCT FROM OLD\."token_hash"/);
+  // Le corps de la fonction, entre ses deux `$$` : chaque branche y est lue avec sa FORME — la
+  // condition suivie IMMÉDIATEMENT d'un RAISE — et dans son ORDRE. Pas un parseur SQL : assez pour
+  // qu'un RAISE remplacé par RETURN, ou une branche retirée, rougisse sans base réelle.
+  const corps = (() => {
+    const debut = sql.indexOf('CREATE FUNCTION jetons_depot_refuser_reactivation()');
+    expect(debut).toBeGreaterThanOrEqual(0);
+    const ouvre = sql.indexOf('$$', debut);
+    const ferme = sql.indexOf('$$', ouvre + 2);
+    return sql.slice(ouvre + 2, ferme);
+  })();
+  const branche = (condition: string) =>
+    new RegExp(condition + String.raw`\s+RAISE EXCEPTION 'jetons_depot_revocation_definitive`);
+
+  it('REQ-DM-012 : la fonction lève sur TRUNCATE, sur une ligne révoquée, sur une empreinte changée', () => {
+    expect(corps).toMatch(branche(String.raw`IF TG_OP = 'TRUNCATE' THEN`));
+    expect(corps).toMatch(branche(String.raw`IF OLD\."revoque_at" IS NOT NULL THEN`));
+    expect(corps).toMatch(
+      branche(String.raw`IF NEW\."token_hash" IS DISTINCT FROM OLD\."token_hash" THEN`)
+    );
+  });
+
+  it('REQ-DM-012 : les branches sont dans l’ORDRE qui les rend effectives', () => {
+    // TRUNCATE d'abord (OLD y est nul) ; puis le gel, avant que DELETE ne retourne ; l'empreinte
+    // après le retour du DELETE (NEW y est nul).
+    const rang = (motif: string) => corps.search(new RegExp(motif));
+    const truncate = rang(String.raw`TG_OP = 'TRUNCATE'`);
+    const gel = rang(String.raw`OLD\."revoque_at" IS NOT NULL`);
+    const retourDelete = rang(String.raw`IF TG_OP = 'DELETE' THEN\s+RETURN OLD`);
+    const empreinte = rang(String.raw`NEW\."token_hash" IS DISTINCT FROM`);
+    expect([truncate, gel, retourDelete, empreinte].every((r) => r >= 0)).toBe(true);
+    expect(truncate).toBeLessThan(gel);
+    expect(gel).toBeLessThan(retourDelete);
+    expect(retourDelete).toBeLessThan(empreinte);
+  });
+
+  it('REQ-DM-012 : les déclencheurs ne sont restreints par aucune clause WHEN', () => {
+    expect(sql).toMatch(
+      /BEFORE UPDATE OR DELETE ON "jetons_depot"\s+FOR EACH ROW EXECUTE FUNCTION jetons_depot_refuser_reactivation\(\);/
+    );
+    expect(sql).toMatch(
+      /BEFORE TRUNCATE ON "jetons_depot"\s+FOR EACH STATEMENT EXECUTE FUNCTION jetons_depot_refuser_reactivation\(\);/
+    );
+  });
+
+  it('REQ-DM-012 : une révocation ne précède pas la création — la contrainte est posée', () => {
+    expect(sql).toMatch(
+      /ADD CONSTRAINT "jetons_depot_revocation_apres_creation"\s+CHECK \("revoque_at" IS NULL OR "revoque_at" >= "cree_at"\);/
+    );
   });
 });

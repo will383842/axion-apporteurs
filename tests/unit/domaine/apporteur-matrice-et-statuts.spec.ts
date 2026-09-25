@@ -196,6 +196,58 @@ describe('REQ-DM-011 — la matrice état × événement : ce qui n’y est pas 
     expect(e.message).toContain('faute');
   });
 
+  it('REQ-DM-011 : tout motif hors liste est refusé, pas seulement le mot de la faute', () => {
+    for (const hors of ['sanction', 'faute_grave', 'ordinaire', '']) {
+      const e = levee(() =>
+        transitionner({
+          de: 'suspendu',
+          evenementApporteur: 'resilier',
+          motif: hors as MotifResiliation,
+        })
+      );
+      expect(e.code, hors).toBe('motif_inconnu');
+    }
+  });
+
+  it('REQ-DM-011 : l’erreur NOMME la valeur refusée, bornée à 64 caractères', () => {
+    const statut = levee(() =>
+      transitionner({ de: 'actif' as StatutApporteur, evenementApporteur: 'signer', motif: null })
+    );
+    expect(statut.message).toBe('statut_inconnu : actif');
+    const evt = levee(() =>
+      transitionner({
+        de: 'signe',
+        evenementApporteur: 'reactiver' as EvenementApporteur,
+        motif: null,
+      })
+    );
+    expect(evt.message).toBe('evenement_inconnu : reactiver');
+    // Une valeur hostile ne se recopie pas en entier dans un message qui finira au journal.
+    const long = 'x'.repeat(500);
+    for (const e of [
+      levee(() =>
+        transitionner({ de: long as StatutApporteur, evenementApporteur: 'signer', motif: null })
+      ),
+      levee(() =>
+        transitionner({
+          de: 'signe',
+          evenementApporteur: long as EvenementApporteur,
+          motif: null,
+        })
+      ),
+      levee(() =>
+        transitionner({
+          de: 'signe',
+          evenementApporteur: 'resilier',
+          motif: long as MotifResiliation,
+        })
+      ),
+    ]) {
+      expect(e.message).toContain('x'.repeat(64));
+      expect(e.message).not.toContain('x'.repeat(65));
+    }
+  });
+
   it('REQ-DM-011 : un statut ou un événement hors vocabulaire est refusé à l’entrée', () => {
     expect(
       levee(() =>

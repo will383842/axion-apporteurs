@@ -183,6 +183,30 @@ describe('REQ-DM-012 — une ligne révoquée est gelée, une empreinte ne chang
   });
 });
 
+describe('REQ-DM-012 — une révocation est postérieure à la création', () => {
+  it('REQ-DM-012 : face ROUGE — révoquer avant la date de création est refusé, contrainte nommée', async () => {
+    const id = await apporteur('AX0000D1');
+    const j = await jeton(id, 'jeton-anterieur');
+    const m = await refus(
+      base.prisma.jetonDepot.update({
+        where: { id: j.id },
+        data: { revoqueAt: new Date(creeAt.getTime() - 1000) },
+      })
+    );
+    expect(m).toContain('jetons_depot_revocation_apres_creation');
+  });
+
+  it('REQ-DM-012 : face VERTE — révoquer à l’instant même de la création passe', async () => {
+    const id = await apporteur('AX0000D2');
+    const j = await jeton(id, 'jeton-meme-instant');
+    const r = await base.prisma.jetonDepot.update({
+      where: { id: j.id },
+      data: { revoqueAt: creeAt },
+    });
+    expect(r.revoqueAt?.getTime()).toBe(creeAt.getTime());
+  });
+});
+
 describe('REQ-DM-012 — le code de parrainage en base', () => {
   it('REQ-DM-012 : un code déjà attribué est refusé — le code est unique', async () => {
     await apporteur('AX0000B1');
