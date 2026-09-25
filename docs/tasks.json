@@ -10661,7 +10661,8 @@
         "scripts/lot/revues.ts",
         "scripts/gates/gov-pr.ts",
         "tests/unit/gouvernance/accord-survit-au-journal.spec.ts",
-        "docs/PROTOCOLE-FUSION.md"
+        "docs/PROTOCOLE-FUSION.md",
+        "scripts/lot/corps-de-pr.ts"
       ],
       "schema": false,
       "sensible": [],
