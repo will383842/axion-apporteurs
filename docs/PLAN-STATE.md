@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `3625f6c` — 2026-09-25T06:41:19+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #88 (rien) · 2. #92 (rien) · 3. #82 (un contrôle requis rouge ou une revue manquante) · 4. #93 (un contrôle requis rouge ou une revue manquante) · 5. #99 (un contrôle requis rouge ou une revue manquante) · 6. #114 (un contrôle requis rouge ou une revue manquante) · 7. #91 (un conflit avec `main`) · 8. #116 (un conflit avec `main`) |
+| Où est `main` ? | `047c730` — 2026-09-25T10:31:47+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #88 (un conflit avec `main`) · 3. #91 (un conflit avec `main`) · 4. #92 (un conflit avec `main`) · 5. #93 (un conflit avec `main`) · 6. #114 (un conflit avec `main`) · 7. #116 (un conflit avec `main`) · 8. #120 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/106 tâches, reste 64.10 j |
-| Le prochain pas | fusionner #88, puis SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
+| Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #118 — 2026-09-23 |
 
-**Ce qu’on tape maintenant.** `gh pr view 88 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,14 +64,14 @@ Reste sur ce chemin : **14.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | rien — fusionnable maintenant |
-| 2 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | rien — fusionnable maintenant |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
-| 4 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un contrôle requis rouge ou une revue manquante |
-| 5 | #99 — feat(GOV-047): pnpm prevol existe enfin, derive du job gate-a et non de la chaine gov:check | `t/gov-047` | un contrôle requis rouge ou une revue manquante |
-| 6 | #114 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure | `t/lot-L0-02` | un contrôle requis rouge ou une revue manquante |
-| 7 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
-| 8 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #88 — feat(QA-T08): journal pino caviarde sur la ligne finale, Sentry filtre, notifieur | `t/qa-t08` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #92 — feat(JUR-T01): gabarit de contrat v1 public, variables resolues et refus de publication | `t/jur-t01` | un conflit avec `main` — à résoudre avant tout |
+| 5 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 6 | #114 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure | `t/lot-L0-02` | un conflit avec `main` — à résoudre avant tout |
+| 7 | #116 — feat(GOV-095): un accord de lentille survit a un commit qui ne touche que le journal | `t/gov-095-accord-survit` | un conflit avec `main` — à résoudre avant tout |
+| 8 | #120 — feat(GOV-097): quatre lentilles pour l'argent, la securite et les donnees, deux pour le reste | `t/gov-097-risque-reserve` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -96,15 +96,13 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
-**Fusionner #88** — elle est en tête de file et ne bloque sur rien.
-
 **SEC-08** — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (1 j, **sur le chemin critique**) : 46 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `3625f6c` (2026-09-25T06:41:19+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `047c730` (2026-09-25T10:31:47+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -183,6 +181,74 @@ mandataire IMPRIME ce qu'il injecte, sur la sortie d'erreur : sans cette ligne, 
 « l'injection n'a rien changé » de « l'injection n'a pas eu lieu », et c'est précisément la
 confusion qui a coûté un tour.
 
+### PR #114 — 2026-09-23 — chore(GOV-082): lot L0-02 — six gardes qui rendaient un verdict sans l'avoir mesure
+
+**Fait.** Six tâches de gouvernance construites en séquence sur une seule branche, un commit par
+tâche, une seule demande de fusion. Elles ferment la même famille : une garde qui rend un verdict
+sur ce qu'elle n'a pas mesuré. GOV-082 — une énumération de titres de test qui rend une liste vide
+avec le code zéro n'est plus lue comme une réponse : l'énumérateur est injectable, le plancher est
+dérivé du texte du fichier, et trois états se nomment, dont le refus `titres_non_resolus` qui
+n'accuse aucun test. GOV-086 — `docs/tasks.json` porte à la fois l'état voulu et les écritures qui
+le produisent, et leur divergence était muette ; deux refus nommés la disent, dans les deux sens.
+GOV-048 — le dépôt dont parle un chemin se dérive des fichiers suivis au lieu d'être supposé, et une
+affirmation sur du code d'ici se prouve par un sha d'ici. GOV-078 — le déclencheur de la section
+d'attaque compare des segments de chemin réels, et une demande de fusion qui réécrit l'entrée de
+registre d'une tâche sensible l'exige désormais, l'empreinte de l'entrée entière étant confrontée
+entre la base et la tête. GOV-076 — huit formes voisines des interdits du domaine sont armées,
+déclarées une fois, dérivées dans la configuration du linter, et chacune est exercée. GOV-046 —
+`perf-budgets` refuse un périmètre absent, et le témoin de famille qui l'accompagne dérive sa
+population du disque au lieu de la dériver de la présence du correctif. Quatre gardes reçoivent leur
+garde-fou d'import, sans lequel leur propre spécification tue le worker de test. Suite unitaire sur
+la tête de la branche : 65 fichiers, 1700 verts, 1 sauté. `pnpm gov:partiel`, `pnpm typecheck`,
+`pnpm lint`, `npx prettier --check .` et `pnpm lot:paths:check` sortent en zéro.
+
+**Reste.** GOV-058 est rendue en `stop`, et elle n'est pas dans ce lot : son acceptation demande
+d'écrire en ADR une règle d'arrêt que la charte et le protocole contredisent au nom d'une décision
+de Will postérieure de deux jours. Les deux autres décisions qu'elle nomme n'ont de contenu nulle
+part dans le dépôt, et elle demande un dossier d'ADR que REQ-GOV-008 interdit. Elle attend un
+arbitrage, pas un développeur. GOV-092 était déjà fusionnée à la base du lot et le registre la
+déclare encore `a_faire` : c'est `lot:cloture` qui le corrigera. Les six autres occurrences de la
+famille « chemin absent, liste vide » vivent dans des gardes que ce lot ne possède pas ; elles sont
+inscrites avec leur motif et le fichier qui les porte, et toute occurrence non déclarée rougit
+désormais. Les quatre lentilles ne sont pas passées : la relecture reste à faire.
+
+**Appris.** Le premier fait est le plus cher, et il a coûté deux tâches avant d'être vu : quatre des
+six tâches ont été construites CODE D'ABORD, et leur rouge a été obtenu par mutation du correctif,
+pas par un test écrit avant lui. Les deux premières, elles, ont été vues rougir avant leur code — et
+c'est la même cause qui a produit les deux rouges, le module qui sort par `process.exit` à
+l'import. Une fois ce garde-fou posé, la tentation d'écrire le code d'abord n'a plus rien qui
+l'arrête : rien dans l'outillage ne distingue un rouge obtenu par mutation d'un rouge obtenu avant
+le code, et les deux s'écrivent pareil dans un corps de demande de fusion. Le second fait est
+mécanique et il a rougi deux fois : `npx prettier --write` REFORMATE une ligne que `tsc` venait de
+valider, et une directive `@ts-expect-error` posée au-dessus d'un import devient inerte quand
+prettier découpe cet import sur plusieurs lignes. Le contrôle de types se relance APRES le
+formatage, jamais avant. Troisième fait, mesuré sur ce lot : le registre des sorties déclarées de
+`refus-de-rendre-et-de-publier` compte un DELTA contre la branche cible, pas un stock. Une entrée
+dormante depuis que ses sorties ont atterri reprend la valeur de la demande de fusion qui la
+réveille, et son total global BAISSE pendant que le dépôt gagne une sortie. Quatrième fait : une
+garde lexicale qui cherche un motif de code dans un fichier lit aussi le commentaire qui RACONTE ce
+motif. Le docblock qui explique le défaut faisait rougir la garde qui le ferme, sur son propre
+texte. Les commentaires se retirent avant de compter.
+
+**Relecture.** La tête `9ffb450` a été refusée par quatre lentilles. `simplicite` relevait quatre
+mécanismes parallèles à un existant, tous fermés : `perf-budgets` établit son périmètre par
+`fichiersSuivisOuRefus` au lieu de recopier le patron (GOV-046) ; les formes voisines du linter
+dérivent leurs noms des listes de base, et les quatre modules ajoutés hors périmètre sont retirés
+(GOV-076) ; `gov-sonde` réutilise `objetLisible` de `gov-pr` et dérive sa preuve datée de
+`DATE_ET_SHA` (GOV-048) ; le couple état/opération ne juge plus que les tâches de ce dépôt, celles
+d'ailleurs restant à l'attestation, une faute pour une famille (GOV-086). `securite` relevait deux
+échecs ouverts, fermés : un chemin suivi des deux côtés, comme `prisma/schema.prisma`, est ambigu et
+redemande son repère AFF-nn tant qu'il n'est pas qualifié `partners/` (GOV-048) ; une entrée
+sensible supprimée du registre compte comme réécrite et exige la section Attaque (GOV-078).
+`exactitude` relevait que le déclencheur par zone n'imprimait ce qu'il avait confronté qu'en cas
+d'échec : la ligne sort désormais sur toute PR (GOV-078). `mutation` relevait cinq survivants, qui
+avaient une cause commune : la fonction pure était testée, son branchement ne l'était pas. Chacun a
+désormais un témoin qui passe par l'appel réel, et il a été vu rougir sous son mutant. En route,
+deux faits mesurés : importer `gov-pr` tuait tout processus lancé hors de la racine, parce que son
+contrôle d'exhaustivité tournait au chargement ; et un plancher de titres compté sur le texte brut
+comptait des `it(` cités dans la prose, 7 au lieu de 5, si bien qu'il fallait le compter hors
+commentaires avant de pouvoir le confronter à autre chose que zéro.
+
 ### PR #113 — 2026-09-23 — feat(GOV-090): un label designe une SOURCE, jamais une vue, et un verbe hors depot se cite hors-depot/
 
 **Fait.** `partners/ADR-0019` tranche une question que rien ne tranchait : une vue dérivée est-elle
@@ -239,110 +305,7 @@ résolution de conflit n'est pas une fusion de deux textes : c'est un CHOIX, et 
 efface l'autre en silence. Une garde le dit — dans les limites de ce qu'elle balaye, et il faut
 savoir lesquelles.
 
-### PR #112 — 2026-09-23 — fix(GOV-092): une revision servie sans `diff` bloque la porte A, et les deux remedes nommes sont faux
-
-**Fait.** `pnpm gov:entite --corps-publie 102` rendait INDÉTERMINÉ et faisait échouer la porte A, et
-le défaut n'était pas l'écart annoncé/lu : il était dans le REMÈDE. Le message de
-`revisions_non_lues` nommait deux causes et deux remèdes, et aucun des deux ne s'appliquait à ce
-cas-là. La forge sert `diff: null` quand une édition a produit un corps VIDE ou un corps INCHANGÉ,
-et la PR #102 porte l'un et l'autre cas, aux horodatages `2026-09-23T00:21:32Z` et
-`2026-09-23T00:21:56Z` ; la pagination fonctionnait, `PAGES_MAX` n'était pas atteint, et relancer la
-garde ne changeait rien puisque la réponse est stable. `assemblerLecture` CLASSE désormais les
-nœuds au lieu d'en écarter certains en silence, `LectureDuCorps` porte `revisionsIllisibles`, et
-`jugerCorpsPublie` décompose l'écart en trois causes nommées, chacune avec son message et son
-remède. La sortie réutilise le mécanisme déjà conçu pour l'irréparable : une ligne de
-`config/exemptions-corps-publie.json` dont l'`empreinte` est ABSENTE absout la révision entière au
-lieu d'une coordonnée, `definitive` y est exigé vrai, et elle ne vaut QUE pour une révision
-illisible. Les lignes qui absolvent la PR #102 sont posées dans cette PR, avec leur motif. Mesure
-d'ouverture rejouée après correctif : exit 0, et le vert imprime la dette qu'il porte.
-
-**Reste.** ⚠ CE PARAGRAPHE A PORTÉ DEUX FOIS UN FAIT CHIFFRÉ FAUX, et la seconde fois était la
-CORRECTION de la première. D'abord « les cases 3, 4, 6 et 8 sont vides » ; puis, en corrigeant,
-« le corps en cochait deux, 4 et 8 ». La lentille `exactitude` a refusé les deux fois, et elle a
-mesuré : **seule la case 3 est vide parmi les sept premières** — « relecteur n'est pas l'auteur », que seules
-les lentilles peuvent rendre vraie — et la case 8 atteste la fusion, donc elle ne peut être que vide
-avant elle. La leçon est plus large que le chiffre : **une phrase écrite de mémoire dans un document
-permanent se vérifie en la MESURANT**, et `gov:pr --pr <n>` la mesure en dix secondes.
-Ce qui reste vrai : aucun ADR n'est ouvert parce que l'arbitrage de la forme
-large est prescrit par l'acceptance de GOV-092 plutôt que pris ici — s'il mérite son ADR, il
-appartient à l'`architecte` (A02) —, aucune route d'interface n'est touchée, et la fusion
-appartient à A04.
-
-Les quatre lentilles ont accepté. ⚠ Ce paragraphe a d'abord annoncé « dix dettes » : un total
-TAPÉ, qu'aucun des quatre avis ne porte et qu'aucun dédoublonnage n'annonçait — les avis déclarent
-sept, cinq, quatre et six. Les dettes se lisent donc **lentille par lentille, dans les avis**, qui
-les portent déjà avec leur fichier et leur ligne : `simplicite` revue 5285895325, `securite` revue
-5285899400, `exactitude` revue 5285927152, `mutation` revue 5285938658, et les reconfirmations
-5286021379, 5286034454, 5286032630 et 5286064623. Aucun total n'est recopié ici : un nombre tapé à
-côté de quatre documents qui le portent redevient faux au premier avis suivant. Celles qui suivent méritent
-cependant d'être NOMMÉES ici, parce qu'une dette qui n'entre pas au journal cesse d'exister à la
-fusion. ⚠ Ce paragraphe a porté DEUX comptes contradictoires sur cette même liste — « trois » à
-l'ouverture, « cinq » à la clôture, après qu'un commit en eut ajouté deux sans toucher au premier.
-Troisième occurrence de la même classe de défaut sur cette PR. La liste **se compte seule** : plus
-aucun nombre ne la précède ni ne la suit.
-(1) `mutation` a fait survivre le mutant qui retire le terme d'appariement sur l'absence
-d'empreinte : rien ne prouve qu'une exemption de COORDONNÉE ne blanchit pas une révision
-ILLISIBLE — le sens inverse, lui, est prouvé. (2) **Le banc de porte A ne sait pas qu'il a cessé
-de mesurer** : en retirant du banc les deux témoins neufs, `--corps-publie --prove` sort en 0 et
-imprime toujours que ses six familles rougissent, parce que la non-vacuité est au grain de la
-FAMILLE alors que les causes neuves vivent DANS une famille. C'est la dette la plus dangereuse de
-la PR, et elle a la forme exacte du défaut que la PR ferme : elle est portée par **GOV-094**, versée
-ici même, qui fait descendre le grain de la non-vacuité de la FAMILLE à la CAUSE. (3) Le
-discriminant des deux formes
-étant l'ABSENCE d'une clé, une ligne portant `empriente` mal orthographié est déclarée bien
-formée et absout la révision entière — sur la base, la même ligne rougissait. (4) Trois dettes
-que le premier tour avait laissées hors du journal, et qui y entrent : le `_commentaire` de
-`config/exemptions-corps-publie.json` s'ouvre en s'annonçant exhaustif (« les trois clés doivent
-concorder ») et n'annonce la seconde forme qu'en fin de chaîne ; le prédicat de la forme large est
-nommé une fois et retapé anonymement cinq fois ailleurs ; et **une seule ligne d'exemption absout
-toutes les révisions qui partagent son horodatage**, alors que le commentaire du registre affirme
-qu'elle couvre « UNE RÉVISION PRÉCISE ». (5) Et une dernière, nommée ici faute de mieux : le
-garde-fou qui **borne à zéro** le compteur
-des révisions jamais servies survit à sa mutation. Dès que la forge servirait plus de nœuds qu'elle
-n'en annonce, ce compteur passerait sous zéro, l'égalité à zéro qui commande l'évaluation de la
-famille des exemptions sans objet deviendrait fausse, et **cette famille cesserait d'être évaluée en
-silence**. GOV-094 ne la couvre pas.
-
-**Aucune de ces dettes ne laisse fuir une coordonnée** : `securite` l'a établi en fabriquant douze
-scénarios contre le code tel que livré et en balayant la population entière du dépôt, et `mutation`
-en posant ses mutants et en rejouant le banc de la porte A.
-
-Les dettes du quatrième point viennent de `simplicite` et de `securite`, la cinquième de `mutation`.
-
-⚠ CETTE PHRASE PORTAIT UNE CLAUSE FAUSSE, et la correction précédente l'avait FABRIQUÉE : elle
-ajoutait qu'aucune de ces dettes n'avait été mesurée par la sécurité à l'origine. `securite` et
-`exactitude` l'ont mesuré indépendamment : au moins deux le sont — la ligne d'exemption qui absout
-toutes les révisions partageant son horodatage, et l'orthographe qui élargit en silence — toutes
-deux dans la revue 5285899400, avec leur fichier et leur ligne. La première moitié de la phrase,
-elle, a été mesurée exacte par `simplicite`. **Quatrième fois qu'une clause est ajoutée sans
-retirer celle qu'elle contredit** : la clause est SUPPRIMÉE, pas nuancée.
-
-Le reste de l'attribution ne se recopie pas ici : chaque avis nomme déjà sa lentille, son fichier
-et sa ligne, et les revues sont listées plus haut.
-
-Le registre ne sait toujours pas distinguer une valeur fabriquée d'une valeur réelle : ce résidu est
-déclaré dans le `_commentaire` du fichier et cette PR ne le change pas. Rien n'empêche non plus
-qu'une ligne de la forme large soit écrite AVANT que la révision devienne illisible — la garde la
-refuserait en `exemption_sans_objet`, mais personne ne le verrait venir. Enfin, la cause d'un `diff`
-nul est AFFIRMÉE et non mesurée : `UserContentEdit` porte `deletedAt`, que la requête ne demande
-pas, et une révision dont le contenu a été SUPPRIMÉ est indiscernable d'un corps vide alors qu'elle
-a porté du texte. Sur la population entière du dépôt — 54 PR balayées par `securite` — les deux
-seuls nœuds à `diff` nul portent `deletedAt` nul, donc l'affirmation est vraie aujourd'hui ; elle
-n'est pas gardée pour demain.
-
-**Appris.** ⚠ Un remède FAUX coûte plus cher qu'un remède absent. Le message nommait deux causes
-avec l'autorité d'un diagnostic complet ; le lecteur a donc rejoué une commande qui ne pouvait rien
-changer, trois fois, avant de soupçonner le message lui-même. Un message de garde qui énumère des
-causes doit dire comment on SÉPARE celle qui s'applique, ou n'en nommer aucune. Deuxième fait
-mesuré, et il vaut pour toute garde qui lit une forge : `userContentEdits` rend des nœuds dont les
-champs sont nullables, et un `continue` sur un nœud illisible fait DISPARAÎTRE l'information que ce
-nœud a existé — elle retombe alors dans un compteur partagé avec une tout autre cause, et les deux
-deviennent indiscernables. Classer coûte un champ ; confondre coûte une porte A. Troisième fait :
-une exemption mal formée absolvait quand même sa cible, ici comme du côté de la forme à empreinte.
-Une ligne illisible qui absout reste indiscernable d'une ligne saine, puisque le verdict est le même
-des deux côtés.
-
-… 42 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 43 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

@@ -35,7 +35,12 @@ import { execFileSync } from 'node:child_process';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { LIVREE as LIVREE_DERIVEE, verifierExhaustivite } from '../lot/avancement';
 import { chargerRegistre, CHEMIN_REGISTRE, type Registre } from '../lot/registre-decisions';
-import { FAMILLES_ATTESTATION, controlerAttestation, type Attestation } from '../lot/attestation';
+import {
+  DEPOT_LOCAL,
+  FAMILLES_ATTESTATION,
+  controlerAttestation,
+  type Attestation,
+} from '../lot/attestation';
 
 const CHEMIN_TACHES = 'docs/tasks.json';
 const CHEMIN_SCHEMA = 'scripts/lot/tasks.schema.json';
@@ -58,7 +63,7 @@ const SCINDES: Record<string, string> = {
   'EXT-T02': 'EXT-T02a (phase 1) puis EXT-T02b (phase 2)',
 };
 
-type Tache = {
+export type Tache = {
   id: string;
   titre: string;
   phase: number;
@@ -102,8 +107,57 @@ const LIVREE = LIVREE_DERIVEE;
   }
 }
 
+// ── un état cible porte l'opération qui y mène (GOV-086, REQ-GOV-026) ────────
+/**
+ * LES ÉCRITURES QUI PRODUISENT UN ÉTAT DE CE DÉPÔT, et rien d'autre. `pnpm lot:cloture` les pose
+ * dans le même geste que le `statut` : `pr` pour une livraison, `branch` pour le travail en vol.
+ *
+ * 🔴 PAS `attestation`, et c'est le motif `simplicite` de la PR 114 : une livraison d'AILLEURS est
+ * déjà jugée, dans les deux sens, par `controlerAttestation` (`attestation_absente`,
+ * `attestation_sans_livraison`), et une attestation sur une tâche d'ici par
+ * `attestation_hors_sujet`. La compter ici faisait rougir la même faute deux fois, sous deux noms
+ * et deux remèdes. Une faute, une famille : le couple ne juge que CE dépôt.
+ *
+ * `owner` n'en est PAS : prendre une tâche n'est pas une écriture d'état — trois tâches « à faire »
+ * en portent un aujourd'hui, légitimement, et les compter ici ferait rougir la revendication.
+ */
+export const ECRITURES_D_ETAT = ['pr', 'branch'] as const;
+
+/**
+ * Les statuts qu'AUCUNE de ces écritures ne peut avoir produits : personne n'a encore pris la
+ * tâche. Le reste de l'échelle — `en_cours`, `bloquee`, `en_revue`, et tout ce qui est livré —
+ * suppose au contraire qu'un travail a commencé quelque part.
+ *
+ * ⚠️ DÉCLARÉE, ET SON APPARTENANCE AU SCHÉMA EST VÉRIFIÉE (même patron que `PLANCHER` dans
+ * `scripts/lot/avancement.ts`) : rien dans l'enum ne dit qu'`a_faire` précède une branche, mais un
+ * statut renommé doit faire rougir plutôt que sortir silencieusement de l'ensemble.
+ */
+export const AVANT_TOUTE_ECRITURE: ReadonlySet<string> = new Set(['proposee', 'a_faire']);
+
+/** Un couple (état voulu, écritures qui le produisent), tel que le registre le porte. */
+export type Couple = { id: string; statut: string; operations: string[] };
+
+/**
+ * LES COUPLES DE CE DÉPÔT — la population que le contrôle confronte, et qu'il COMPTE.
+ *
+ * Les tâches d'un AUTRE dépôt n'en sont pas : leur couple (statut, attestation) est confronté par
+ * `controlerAttestation`, et les confronter ici doublait chaque faute. Aucune tâche d'ICI n'est
+ * exclue ; le compte rendu est celui qui s'imprime, et il vaut le nombre de tâches de ce dépôt.
+ */
+export function couplesEtatOperation(taches: Tache[]): Couple[] {
+  return taches
+    .filter((t) => t.repo === DEPOT_LOCAL)
+    .map((t) => ({
+      id: t.id,
+      statut: t.statut,
+      operations: ECRITURES_D_ETAT.filter(
+        (champ) => (t as unknown as Record<string, unknown>)[champ] != null
+      ),
+    }));
+}
+
 // ── les contrôles ────────────────────────────────────────────────────────────
-function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
+export function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
   const fautes: Faute[] = [];
   const ajouter = (famille: string, message: string) => fautes.push({ famille, message });
 
@@ -210,6 +264,29 @@ function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
     for (const f of controlerAttestation(t, LIVREE.has(t.statut))) ajouter(f.famille, f.message);
   }
 
+  // ── l'état cible et l'opération qui y mène, DANS LES DEUX SENS (GOV-086) ──────────────────
+  for (const c of couplesEtatOperation(taches)) {
+    if (LIVREE.has(c.statut) && c.operations.length === 0) {
+      ajouter(
+        'etat_cible_sans_operation',
+        `${c.id} est « ${c.statut} » et ne porte AUCUNE des écritures qui produisent cet état ` +
+          `(${ECRITURES_D_ETAT.join(', ')}). L'état voulu et les écritures qui le produisent vivent ` +
+          `dans le même registre : quand ils divergent, chacun des deux se lit sans erreur et seul ` +
+          `leur rapprochement montre le trou. Ici le backlog affirme une livraison que rien ne ` +
+          `permet de retrouver.`
+      );
+    }
+    if (AVANT_TOUTE_ECRITURE.has(c.statut) && c.operations.length > 0) {
+      ajouter(
+        'operation_sans_effet',
+        `${c.id} porte ${c.operations.join(', ')} alors que son statut est « ${c.statut} » : ` +
+          `l'écriture a eu lieu, l'état ne l'a pas suivie. C'est le SENS SYMÉTRIQUE, et c'est celui ` +
+          `qu'on oublie — il ne manque rien, il y a une valeur de trop, et une valeur de trop ne se ` +
+          `cherche pas. Fais suivre le statut, ou retire l'écriture.`
+      );
+    }
+  }
+
   // acyclicité — parcours en profondeur, pile explicite pour nommer le cycle
   const BLANC = 0,
     GRIS = 1,
@@ -245,7 +322,7 @@ function controler(doc: unknown, schema: object, registre: Registre): Faute[] {
 // Les familles d'attestation ne sont pas RETAPÉES ici : elles sont importées de leur module, qui
 // est aussi celui qui les produit. Une liste de familles recopiée à côté du code qui les émet
 // laisse `--prove` réclamer un témoin pour une famille morte, ou en oublier une vivante (RM-01).
-const FAMILLES = [
+export const FAMILLES = [
   'schema',
   'id_double',
   'dep_inconnue',
@@ -258,19 +335,10 @@ const FAMILLES = [
   'estimation_hors_plafond',
   'externe_sans_attente',
   'dep_non_livree',
+  'etat_cible_sans_operation',
+  'operation_sans_effet',
   ...FAMILLES_ATTESTATION,
 ];
-
-// ── chargement ───────────────────────────────────────────────────────────────
-for (const f of [CHEMIN_TACHES, CHEMIN_SCHEMA, CHEMIN_DECISIONS]) {
-  if (!existsSync(f)) {
-    console.error(`❌ gov:tasks — ${f} est introuvable.`);
-    process.exit(1);
-  }
-}
-const schema = JSON.parse(readFileSync(CHEMIN_SCHEMA, 'utf8')) as object;
-const registre = chargerRegistre(CHEMIN_DECISIONS);
-const doc = JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] };
 
 // ── la vue : docs/TASKS.md est une VUE de docs/tasks.json ─────────────────────
 // `TASKS.md` a longtemps ete la source, tenue a la main : trois comptages differents y
@@ -393,441 +461,512 @@ function normaliserFins(t: string): string {
   return t.replace(/\r\n/g, '\n');
 }
 
-if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu')) {
-  const fautes = controler(doc, schema, registre);
-  if (fautes.length > 0) {
-    console.error(
-      `❌ Refus de rendre une vue d'un backlog fautif (${fautes.length}). Lance \`pnpm gov:tasks\`.`
-    );
-    process.exit(1);
+/**
+ * VRAI quand ce fichier est LANCÉ, faux quand il est IMPORTÉ (GOV-086).
+ *
+ * Sans ce garde-fou, la spécification de cette garde ne peut pas l'importer : le corps exécutable
+ * partait à l'import, lisait le backlog du dépôt et sortait par `process.exit` — ce qui tue le
+ * worker `vitest` avant le premier `it` (mesuré le 2026-09-23 ; le journal de la PR 52 l'avait
+ * déjà écrit ailleurs, et une lecture qu'on ne peut pas importer finit recopiée).
+ *
+ * ⚠️ LES DEUX SÉPARATEURS, et c'est la barre INVERSE qui compte ici : `process.argv[1]` porte le
+ * chemin natif, et sous Windows il n'y a pas une seule barre oblique dedans.
+ */
+const LANCE_EN_SCRIPT = /[\\/]gates[\\/]gov-tasks(\.ts)?$/.test(process.argv[1] ?? '');
+
+// ── le corps EXÉCUTABLE, sous le garde-fou d'import ──────────────────────────
+if (LANCE_EN_SCRIPT) {
+  // ── chargement ───────────────────────────────────────────────────────────────
+  for (const f of [CHEMIN_TACHES, CHEMIN_SCHEMA, CHEMIN_DECISIONS]) {
+    if (!existsSync(f)) {
+      console.error(`❌ gov:tasks — ${f} est introuvable.`);
+      process.exit(1);
+    }
   }
+  const schema = JSON.parse(readFileSync(CHEMIN_SCHEMA, 'utf8')) as object;
+  const registre = chargerRegistre(CHEMIN_DECISIONS);
+  const doc = JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: Tache[] };
 
-  const rendu = rendreVue(doc);
-  const total = doc.taches.reduce((a, t) => a + t.estimateDays, 0);
-
-  // ── mode --verifie-rendu : il COMPARE, il n'écrit rien ──────────────────────
-  // Une garde qui répare ce qu'elle contrôle est toujours verte, et ne garde donc rien.
-  //
-  // ⚠️ LA VUE S'ÉCRIT SANS ACCENTS, LA CONSOLE AVEC. Ce n'est pas une inattention : le corps de
-  // `docs/TASKS.md` est rendu sans accents depuis son premier jour, et les 1 445 lignes du fichier
-  // le sont ; les messages de cette garde, eux, sont du français ordinaire (`docs/CONVENTIONS.md`
-  // §1). Aligner l'un sur l'autre reécrirait la vue entière pour une raison de cosmétique.
-  if (process.argv.includes('--verifie-rendu')) {
-    if (!existsSync(CHEMIN_VUE)) {
+  if (process.argv.includes('--render') || process.argv.includes('--verifie-rendu')) {
+    const fautes = controler(doc, schema, registre);
+    if (fautes.length > 0) {
       console.error(
-        `❌ gov:tasks — vue_absente : ${CHEMIN_VUE} n'existe pas, alors que ${CHEMIN_TACHES} porte ` +
-          `${doc.taches.length} tâche(s). Lance \`pnpm gov:tasks --render\` et commite le résultat.`
+        `❌ Refus de rendre une vue d'un backlog fautif (${fautes.length}). Lance \`pnpm gov:tasks\`.`
       );
       process.exit(1);
     }
-    const surDisque = normaliserFins(readFileSync(CHEMIN_VUE, 'utf8'));
-    if (surDisque !== normaliserFins(rendu)) {
-      const vues = livreesAnnoncees(surDisque);
-      const reelles = livreesAnnoncees(rendu);
-      const ecart =
-        vues === reelles
-          ? `Le compte de tâches livrées est le même (${reelles}) : la dérive porte sur autre chose — ` +
-            `un titre, une acceptation, une dépendance, un statut non livré.`
-          : `La vue annonce ${vues} tâche(s) livrée(s), la source en porte ${reelles} — ` +
-            `${Math.abs(reelles - vues)} d'écart.`;
-      console.error(
-        `❌ gov:tasks — vue_perimee : ${CHEMIN_VUE} n'est plus ce que ${CHEMIN_TACHES} produit.\n` +
-          `   ${ecart}\n` +
-          `   La vue ne se corrige pas à la main : lance \`pnpm gov:tasks --render\` et commite le résultat.`
+
+    const rendu = rendreVue(doc);
+    const total = doc.taches.reduce((a, t) => a + t.estimateDays, 0);
+
+    // ── mode --verifie-rendu : il COMPARE, il n'écrit rien ──────────────────────
+    // Une garde qui répare ce qu'elle contrôle est toujours verte, et ne garde donc rien.
+    //
+    // ⚠️ LA VUE S'ÉCRIT SANS ACCENTS, LA CONSOLE AVEC. Ce n'est pas une inattention : le corps de
+    // `docs/TASKS.md` est rendu sans accents depuis son premier jour, et les 1 445 lignes du fichier
+    // le sont ; les messages de cette garde, eux, sont du français ordinaire (`docs/CONVENTIONS.md`
+    // §1). Aligner l'un sur l'autre reécrirait la vue entière pour une raison de cosmétique.
+    if (process.argv.includes('--verifie-rendu')) {
+      if (!existsSync(CHEMIN_VUE)) {
+        console.error(
+          `❌ gov:tasks — vue_absente : ${CHEMIN_VUE} n'existe pas, alors que ${CHEMIN_TACHES} porte ` +
+            `${doc.taches.length} tâche(s). Lance \`pnpm gov:tasks --render\` et commite le résultat.`
+        );
+        process.exit(1);
+      }
+      const surDisque = normaliserFins(readFileSync(CHEMIN_VUE, 'utf8'));
+      if (surDisque !== normaliserFins(rendu)) {
+        const vues = livreesAnnoncees(surDisque);
+        const reelles = livreesAnnoncees(rendu);
+        const ecart =
+          vues === reelles
+            ? `Le compte de tâches livrées est le même (${reelles}) : la dérive porte sur autre chose — ` +
+              `un titre, une acceptation, une dépendance, un statut non livré.`
+            : `La vue annonce ${vues} tâche(s) livrée(s), la source en porte ${reelles} — ` +
+              `${Math.abs(reelles - vues)} d'écart.`;
+        console.error(
+          `❌ gov:tasks — vue_perimee : ${CHEMIN_VUE} n'est plus ce que ${CHEMIN_TACHES} produit.\n` +
+            `   ${ecart}\n` +
+            `   La vue ne se corrige pas à la main : lance \`pnpm gov:tasks --render\` et commite le résultat.`
+        );
+        process.exit(1);
+      }
+      console.log(
+        `✅ gov:tasks — ${CHEMIN_VUE} est égal à ce que ${CHEMIN_TACHES} produit : ` +
+          `${doc.taches.length} tâches, ${livreesAnnoncees(rendu)} livrée(s), ${total.toFixed(2)} j.`
       );
-      process.exit(1);
+      process.exit(0);
     }
+
+    writeFileSync(CHEMIN_VUE, rendu);
     console.log(
-      `✅ gov:tasks — ${CHEMIN_VUE} est égal à ce que ${CHEMIN_TACHES} produit : ` +
-        `${doc.taches.length} tâches, ${livreesAnnoncees(rendu)} livrée(s), ${total.toFixed(2)} j.`
+      `✅ ${CHEMIN_VUE} rendu depuis ${CHEMIN_TACHES} — ${doc.taches.length} tâches, ` +
+        `${livreesAnnoncees(rendu)} livrée(s), ${total.toFixed(2)} j.`
     );
     process.exit(0);
   }
 
-  writeFileSync(CHEMIN_VUE, rendu);
-  console.log(
-    `✅ ${CHEMIN_VUE} rendu depuis ${CHEMIN_TACHES} — ${doc.taches.length} tâches, ` +
-      `${livreesAnnoncees(rendu)} livrée(s), ${total.toFixed(2)} j.`
-  );
-  process.exit(0);
-}
-
-// ── mode --prove : un défaut par famille, chacun vu rougir ────────────────────
-if (process.argv.includes('--prove')) {
-  const base = controler(doc, schema, registre);
-  if (base.length > 0) {
-    console.error(
-      `❌ La preuve part d'un document DÉJÀ fautif (${base.length}) — corrige d'abord :`
-    );
-    base.slice(0, 5).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
-    process.exit(1);
-  }
-
-  const copie = (): { taches: Tache[] } => JSON.parse(JSON.stringify(doc)) as { taches: Tache[] };
-  const premiere = (d: { taches: Tache[] }): Tache => d.taches[0]!;
-  const derniere = (d: { taches: Tache[] }): Tache => d.taches[d.taches.length - 1]!;
-
-  // ── de quoi éprouver l'attestation inter-dépôt (GOV-038) ────────────────────
-  //
-  // Les témoins partent d'une tâche DÉJÀ livrée dans ce dépôt et n'en changent qu'une chose : le
-  // dépôt, ou l'attestation. Promouvoir une tâche `a_faire` aurait demandé de lui inventer un
-  // `owner`, une `branch`, une `acceptance` et des `tests` — quatre mutations de plus, dont chacune
-  // peut faire rougir une autre famille et brouiller ce que le témoin prouve (RM-11).
-  const choisir = (d: { taches: Tache[] }, ou: (t: Tache) => boolean, quoi: string): Tache => {
-    const t = d.taches.find(ou);
-    if (!t) {
+  // ── mode --prove : un défaut par famille, chacun vu rougir ────────────────────
+  if (process.argv.includes('--prove')) {
+    const base = controler(doc, schema, registre);
+    if (base.length > 0) {
       console.error(
-        `❌ gov:tasks --prove — aucune tâche ${quoi} : le témoin ne peut plus être choisi.`
+        `❌ La preuve part d'un document DÉJÀ fautif (${base.length}) — corrige d'abord :`
       );
+      base.slice(0, 5).forEach((f) => console.error(`   [${f.famille}] ${f.message}`));
       process.exit(1);
     }
-    return t;
-  };
-  const livreeIci = (d: { taches: Tache[] }): Tache =>
-    choisir(d, (t) => LIVREE.has(t.statut) && t.repo === 'partners', 'livrée dans ce dépôt');
-  const aFaireIci = (d: { taches: Tache[] }): Tache =>
-    choisir(
-      d,
-      (t) => t.statut === 'a_faire' && t.repo === 'partners' && t.pr == null,
-      '« a_faire » de ce dépôt sans pr'
-    );
-  // Le témoin de `pr_nu_hors_depot` a besoin d'une tâche qui porte VRAIMENT un numéro : la première
-  // tâche livrée du backlog (`GOV-000`) a `pr: null`, et le témoin est resté VERT au premier essai
-  // — il déplaçait dans un autre dépôt une tâche qui n'avait aucun numéro à mal citer.
-  const livreeIciAvecPr = (d: { taches: Tache[] }): Tache =>
-    choisir(
-      d,
-      (t) => LIVREE.has(t.statut) && t.repo === 'partners' && t.pr != null,
-      'livrée ici AVEC un numéro de PR'
-    );
 
-  // Le SHA du témoin est LU dans git, jamais écrit en dur : une constante de 40 hexadécimaux tapée
-  // à la main est exactement la fixture inventée que RM-03 interdit, et elle ne prouverait pas
-  // qu'un vrai SHA passe. La valeur change à chaque commit ; le verdict, non — la garde juge la
-  // FORME, elle ne résout rien (aucun appel à la forge, cf. l'en-tête de `scripts/lot/attestation.ts`).
-  const shaReel = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-  const attestationValide = (): Attestation => ({
-    pr: 998,
-    sha: shaReel,
-    fusionneeAt: '2026-09-05T11:04:48Z',
-  });
-  /** Une tâche livrée AILLEURS, dans les règles : c'est la forme que GOV-038 introduit. */
-  const livreeAilleurs = (d: { taches: Tache[] }): Tache => {
-    const t = livreeIci(d);
-    t.repo = 'axionia';
-    t.pr = null;
-    t.attestation = attestationValide();
-    return t;
-  };
+    const copie = (): { taches: Tache[] } => JSON.parse(JSON.stringify(doc)) as { taches: Tache[] };
+    const premiere = (d: { taches: Tache[] }): Tache => d.taches[0]!;
+    const derniere = (d: { taches: Tache[] }): Tache => d.taches[d.taches.length - 1]!;
 
-  const TEMOINS: { famille: string; defaut: () => { taches: Tache[] } }[] = [
-    {
-      famille: 'schema',
-      defaut: () => {
-        const d = copie();
-        (premiere(d) as unknown as { phase: number }).phase = 42;
-        return d;
-      },
-    },
-    // Second témoin de `schema`, ciblé sur le motif de `branch` (partners/ADR-0007). Le témoin
-    // `phase = 42` ci-dessus prouve que la famille rougit ; il ne prouve rien du champ `branch`,
-    // dont le motif a été élargi. Une branche sans préfixe reconnu doit rester refusée.
-    {
-      famille: 'schema',
-      defaut: () => {
-        const d = copie();
-        premiere(d).branch = 'feature/ce-prefixe-nexiste-pas';
-        return d;
-      },
-    },
-    {
-      famille: 'id_double',
-      defaut: () => {
-        const d = copie();
-        d.taches.push(JSON.parse(JSON.stringify(premiere(d))) as Tache);
-        return d;
-      },
-    },
-    {
-      famille: 'dep_inconnue',
-      defaut: () => {
-        const d = copie();
-        premiere(d).deps.push('NEXISTE-PAS-01');
-        return d;
-      },
-    },
-    {
-      famille: 'dep_circulaire',
-      defaut: () => {
-        const d = copie();
-        const [a, b] = [d.taches[0]!, d.taches[1]!];
-        a.deps = [b.id];
-        b.deps = [a.id];
-        return d;
-      },
-    },
-    {
-      famille: 'dep_phase_ulterieure',
-      defaut: () => {
-        const d = copie();
-        const tard = d.taches.find((t) => t.phase === 3)!;
-        const tot = d.taches.find((t) => t.phase === -1)!;
-        tot.deps = [tard.id];
-        return d;
-      },
-    },
-    {
-      famille: 'dep_identifiant_scinde',
-      defaut: () => {
-        const d = copie();
-        premiere(d).deps.push('INT-T01');
-        return d;
-      },
-    },
-    {
-      famille: 'dep_decision_nue',
-      defaut: () => {
-        const d = copie();
-        premiere(d).deps.push('W6');
-        return d;
-      },
-    },
-    {
-      famille: 'hyp_hors_registre',
-      defaut: () => {
-        const d = copie();
-        premiere(d).hyp.push('HYP-JAMAIS-ECRITE');
-        return d;
-      },
-    },
-    {
-      famille: 'paths_vide',
-      defaut: () => {
-        const d = copie();
-        premiere(d).paths = [];
-        return d;
-      },
-    },
-    {
-      famille: 'estimation_hors_plafond',
-      defaut: () => {
-        const d = copie();
-        derniere(d).estimateDays = 3;
-        return d;
-      },
-    },
-    {
-      famille: 'externe_sans_attente',
-      defaut: () => {
-        const d = copie();
-        const e = d.taches.find((t) => t.externe !== null)!;
-        e.statut = 'a_faire';
-        return d;
-      },
-    },
-    // Une tâche livrée dont la dépendance ne l'est pas : le témoin prend une tâche `fusionnee`
-    // et remet sa dépendance à `a_faire`.
-    {
-      famille: 'dep_non_livree',
-      defaut: () => {
-        const d = copie();
-        const livree = d.taches.find((t) => LIVREE.has(t.statut) && t.deps.length > 0)!;
-        const dep = d.taches.find((t) => t.id === livree.deps[0])!;
-        dep.statut = 'a_faire';
-        dep.owner = null;
-        dep.branch = null;
-        return d;
-      },
-    },
-
-    // ── l'attestation inter-dépôt (GOV-038) ──────────────────────────────────
-    // Le cas réel : INT-T01b livrée par la PR 998 du dépôt axionia, et le backlog muet.
-    {
-      famille: 'attestation_absente',
-      defaut: () => {
-        const d = copie();
-        const t = livreeIci(d);
-        t.repo = 'axionia';
-        t.pr = null;
-        return d;
-      },
-    },
-    // Le cas DANGEREUX : le numéro écrit dans `pr`, que les vues rendent `PR#998` sans dépôt.
-    {
-      famille: 'pr_nu_hors_depot',
-      defaut: () => {
-        const d = copie();
-        const t = livreeIciAvecPr(d);
-        t.repo = 'axionia';
-        t.attestation = attestationValide();
-        return d;
-      },
-    },
-    {
-      famille: 'attestation_hors_sujet',
-      defaut: () => {
-        const d = copie();
-        livreeIci(d).attestation = attestationValide();
-        return d;
-      },
-    },
-    {
-      famille: 'attestation_sans_livraison',
-      defaut: () => {
-        const d = copie();
-        const t = aFaireIci(d);
-        t.repo = 'axionia';
-        t.attestation = attestationValide();
-        return d;
-      },
-    },
-    // Le numéro de PR mis à la place du SHA : la confusion même que l'attestation doit rendre
-    // impossible. `998` est réattribué dans chaque dépôt ; un SHA de 40 hex ne l'est nulle part.
-    {
-      famille: 'attestation_sha_non_conforme',
-      defaut: () => {
-        const d = copie();
-        livreeAilleurs(d).attestation = { ...attestationValide(), sha: '998' };
-        return d;
-      },
-    },
-    {
-      famille: 'attestation_date_non_conforme',
-      defaut: () => {
-        const d = copie();
-        livreeAilleurs(d).attestation = { ...attestationValide(), fusionneeAt: '05/09/2026 13:04' };
-        return d;
-      },
-    },
-    {
-      famille: 'livraison_repo_externe',
-      defaut: () => {
-        const d = copie();
-        const t = livreeIci(d);
-        t.repo = 'externe';
-        t.pr = null;
-        return d;
-      },
-    },
-  ];
-
-  /**
-   * Ce que la garde doit LAISSER PASSER. Un témoin prouve qu'une garde sait rougir ; il ne prouve
-   * jamais qu'elle ne rougit pas sur du légitime. Les deux formes de branche arrêtées par
-   * `partners/ADR-0007` sont exactement le cas où une garde trop stricte bloquerait
-   * `pnpm lot:cloture`, seul écrivain du statut — c'est ce qui est arrivé au lot L-1-01.
-   */
-  const CONTRE_TEMOINS: { nom: string; muter: () => { taches: Tache[] } }[] = [
-    {
-      nom: 'une branche de LOT — la forme normale (partners/ADR-0007)',
-      muter: () => {
-        const d = copie();
-        premiere(d).branch = 'lot/L-9-99-integration';
-        return d;
-      },
-    },
-    {
-      nom: 'une branche de TÂCHE — la forme dérogatoire (partners/ADR-0007)',
-      muter: () => {
-        const d = copie();
-        premiere(d).branch = 't/gov-012';
-        return d;
-      },
-    },
-
-    // ── attestation : ce que GOV-038 doit LAISSER PASSER ─────────────────────
-    // Sans ces trois-là, les sept familles ci-dessus prouveraient seulement qu'une garde sait
-    // rougir — jamais qu'elle sait se taire. Le troisième est le plus important : c'est la forme
-    // même que la tâche introduit, et une garde qui la refuserait bloquerait `pnpm lot:cloture`.
-    {
-      nom: 'une tâche `partners` livrée normalement, PR de ce dépôt et aucune attestation',
-      muter: () => {
-        const d = copie();
-        livreeIci(d).pr = 4242;
-        return d;
-      },
-    },
-    {
-      nom: 'une tâche `axionia` encore `a_faire` : rien à attester tant que rien n’est livré',
-      muter: () => {
-        const d = copie();
-        aFaireIci(d).repo = 'axionia';
-        return d;
-      },
-    },
-    {
-      nom: 'une tâche `axionia` LIVRÉE avec son attestation et sans `pr` nu — la forme de GOV-038',
-      muter: () => {
-        const d = copie();
-        livreeAilleurs(d);
-        return d;
-      },
-    },
-  ];
-
-  for (const c of CONTRE_TEMOINS) {
-    const f = controler(c.muter(), schema, registre);
-    if (f.length > 0) {
-      console.error(
-        `\u274c Le contre-t\u00e9moin \u00ab ${c.nom} \u00bb a fait rougir la garde alors qu'il est l\u00e9gitime :`
+    // ── de quoi éprouver l'attestation inter-dépôt (GOV-038) ────────────────────
+    //
+    // Les témoins partent d'une tâche DÉJÀ livrée dans ce dépôt et n'en changent qu'une chose : le
+    // dépôt, ou l'attestation. Promouvoir une tâche `a_faire` aurait demandé de lui inventer un
+    // `owner`, une `branch`, une `acceptance` et des `tests` — quatre mutations de plus, dont chacune
+    // peut faire rougir une autre famille et brouiller ce que le témoin prouve (RM-11).
+    const choisir = (d: { taches: Tache[] }, ou: (t: Tache) => boolean, quoi: string): Tache => {
+      const t = d.taches.find(ou);
+      if (!t) {
+        console.error(
+          `❌ gov:tasks --prove — aucune tâche ${quoi} : le témoin ne peut plus être choisi.`
+        );
+        process.exit(1);
+      }
+      return t;
+    };
+    const livreeIci = (d: { taches: Tache[] }): Tache =>
+      choisir(d, (t) => LIVREE.has(t.statut) && t.repo === 'partners', 'livrée dans ce dépôt');
+    const aFaireIci = (d: { taches: Tache[] }): Tache =>
+      choisir(
+        d,
+        (t) => t.statut === 'a_faire' && t.repo === 'partners' && t.pr == null,
+        '« a_faire » de ce dépôt sans pr'
       );
-      f.slice(0, 5).forEach((x) => console.error(`   [${x.famille}] ${x.message}`));
+    // Le témoin de `pr_nu_hors_depot` a besoin d'une tâche qui porte VRAIMENT un numéro : la première
+    // tâche livrée du backlog (`GOV-000`) a `pr: null`, et le témoin est resté VERT au premier essai
+    // — il déplaçait dans un autre dépôt une tâche qui n'avait aucun numéro à mal citer.
+    const livreeIciAvecPr = (d: { taches: Tache[] }): Tache =>
+      choisir(
+        d,
+        (t) => LIVREE.has(t.statut) && t.repo === 'partners' && t.pr != null,
+        'livrée ici AVEC un numéro de PR'
+      );
+
+    // Le SHA du témoin est LU dans git, jamais écrit en dur : une constante de 40 hexadécimaux tapée
+    // à la main est exactement la fixture inventée que RM-03 interdit, et elle ne prouverait pas
+    // qu'un vrai SHA passe. La valeur change à chaque commit ; le verdict, non — la garde juge la
+    // FORME, elle ne résout rien (aucun appel à la forge, cf. l'en-tête de `scripts/lot/attestation.ts`).
+    const shaReel = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    const attestationValide = (): Attestation => ({
+      pr: 998,
+      sha: shaReel,
+      fusionneeAt: '2026-09-05T11:04:48Z',
+    });
+    /** Une tâche livrée AILLEURS, dans les règles : c'est la forme que GOV-038 introduit. */
+    const livreeAilleurs = (d: { taches: Tache[] }): Tache => {
+      const t = livreeIci(d);
+      t.repo = 'axionia';
+      t.pr = null;
+      t.attestation = attestationValide();
+      return t;
+    };
+
+    const TEMOINS: { famille: string; defaut: () => { taches: Tache[] } }[] = [
+      {
+        famille: 'schema',
+        defaut: () => {
+          const d = copie();
+          (premiere(d) as unknown as { phase: number }).phase = 42;
+          return d;
+        },
+      },
+      // Second témoin de `schema`, ciblé sur le motif de `branch` (partners/ADR-0007). Le témoin
+      // `phase = 42` ci-dessus prouve que la famille rougit ; il ne prouve rien du champ `branch`,
+      // dont le motif a été élargi. Une branche sans préfixe reconnu doit rester refusée.
+      {
+        famille: 'schema',
+        defaut: () => {
+          const d = copie();
+          premiere(d).branch = 'feature/ce-prefixe-nexiste-pas';
+          return d;
+        },
+      },
+      {
+        famille: 'id_double',
+        defaut: () => {
+          const d = copie();
+          d.taches.push(JSON.parse(JSON.stringify(premiere(d))) as Tache);
+          return d;
+        },
+      },
+      {
+        famille: 'dep_inconnue',
+        defaut: () => {
+          const d = copie();
+          premiere(d).deps.push('NEXISTE-PAS-01');
+          return d;
+        },
+      },
+      {
+        famille: 'dep_circulaire',
+        defaut: () => {
+          const d = copie();
+          const [a, b] = [d.taches[0]!, d.taches[1]!];
+          a.deps = [b.id];
+          b.deps = [a.id];
+          return d;
+        },
+      },
+      {
+        famille: 'dep_phase_ulterieure',
+        defaut: () => {
+          const d = copie();
+          const tard = d.taches.find((t) => t.phase === 3)!;
+          const tot = d.taches.find((t) => t.phase === -1)!;
+          tot.deps = [tard.id];
+          return d;
+        },
+      },
+      {
+        famille: 'dep_identifiant_scinde',
+        defaut: () => {
+          const d = copie();
+          premiere(d).deps.push('INT-T01');
+          return d;
+        },
+      },
+      {
+        famille: 'dep_decision_nue',
+        defaut: () => {
+          const d = copie();
+          premiere(d).deps.push('W6');
+          return d;
+        },
+      },
+      {
+        famille: 'hyp_hors_registre',
+        defaut: () => {
+          const d = copie();
+          premiere(d).hyp.push('HYP-JAMAIS-ECRITE');
+          return d;
+        },
+      },
+      {
+        famille: 'paths_vide',
+        defaut: () => {
+          const d = copie();
+          premiere(d).paths = [];
+          return d;
+        },
+      },
+      {
+        famille: 'estimation_hors_plafond',
+        defaut: () => {
+          const d = copie();
+          derniere(d).estimateDays = 3;
+          return d;
+        },
+      },
+      {
+        famille: 'externe_sans_attente',
+        defaut: () => {
+          const d = copie();
+          const e = d.taches.find((t) => t.externe !== null)!;
+          e.statut = 'a_faire';
+          return d;
+        },
+      },
+      // Une tâche livrée dont la dépendance ne l'est pas : le témoin prend une tâche `fusionnee`
+      // et remet sa dépendance à `a_faire`.
+      {
+        famille: 'dep_non_livree',
+        defaut: () => {
+          const d = copie();
+          const livree = d.taches.find((t) => LIVREE.has(t.statut) && t.deps.length > 0)!;
+          const dep = d.taches.find((t) => t.id === livree.deps[0])!;
+          dep.statut = 'a_faire';
+          dep.owner = null;
+          dep.branch = null;
+          return d;
+        },
+      },
+
+      // ── l'état cible et son opération, DANS LES DEUX SENS (GOV-086) ──────────
+      // Premier sens : on RETIRE les écritures d'une livraison. L'état reste bien formé, le registre
+      // se lit sans erreur, et plus rien ne permet de retrouver la livraison qu'il affirme.
+      {
+        famille: 'etat_cible_sans_operation',
+        defaut: () => {
+          const d = copie();
+          const t = livreeIciAvecPr(d);
+          // `deployee` et non `fusionnee` : le schéma exige déjà `owner` et `branch` sur
+          // `fusionnee`, et le témoin rougirait en `schema` par-dessus — un témoin qui fait rougir
+          // deux familles ne prouve pas laquelle il visait. Au-delà de la fusion, le schéma
+          // n'exige plus rien, et c'est exactement le trou que cette famille ferme.
+          t.statut = 'deployee';
+          t.pr = null;
+          t.branch = null;
+          t.attestation = null;
+          return d;
+        },
+      },
+      // Second sens, et c'est celui qu'on oublie : l'écriture est là, l'état ne l'a pas suivie.
+      // Rien ne MANQUE — il y a une valeur de trop, et une valeur de trop ne se cherche pas.
+      {
+        famille: 'operation_sans_effet',
+        defaut: () => {
+          const d = copie();
+          aFaireIci(d).branch = 't/une-branche-sans-etat';
+          return d;
+        },
+      },
+
+      // ── l'attestation inter-dépôt (GOV-038) ──────────────────────────────────
+      // Le cas réel : INT-T01b livrée par la PR 998 du dépôt axionia, et le backlog muet.
+      {
+        famille: 'attestation_absente',
+        defaut: () => {
+          const d = copie();
+          const t = livreeIci(d);
+          t.repo = 'axionia';
+          t.pr = null;
+          return d;
+        },
+      },
+      // Le cas DANGEREUX : le numéro écrit dans `pr`, que les vues rendent `PR#998` sans dépôt.
+      {
+        famille: 'pr_nu_hors_depot',
+        defaut: () => {
+          const d = copie();
+          const t = livreeIciAvecPr(d);
+          t.repo = 'axionia';
+          t.attestation = attestationValide();
+          return d;
+        },
+      },
+      {
+        famille: 'attestation_hors_sujet',
+        defaut: () => {
+          const d = copie();
+          livreeIci(d).attestation = attestationValide();
+          return d;
+        },
+      },
+      {
+        famille: 'attestation_sans_livraison',
+        defaut: () => {
+          const d = copie();
+          const t = aFaireIci(d);
+          t.repo = 'axionia';
+          t.attestation = attestationValide();
+          return d;
+        },
+      },
+      // Le numéro de PR mis à la place du SHA : la confusion même que l'attestation doit rendre
+      // impossible. `998` est réattribué dans chaque dépôt ; un SHA de 40 hex ne l'est nulle part.
+      {
+        famille: 'attestation_sha_non_conforme',
+        defaut: () => {
+          const d = copie();
+          livreeAilleurs(d).attestation = { ...attestationValide(), sha: '998' };
+          return d;
+        },
+      },
+      {
+        famille: 'attestation_date_non_conforme',
+        defaut: () => {
+          const d = copie();
+          livreeAilleurs(d).attestation = {
+            ...attestationValide(),
+            fusionneeAt: '05/09/2026 13:04',
+          };
+          return d;
+        },
+      },
+      {
+        famille: 'livraison_repo_externe',
+        defaut: () => {
+          const d = copie();
+          const t = livreeIci(d);
+          t.repo = 'externe';
+          t.pr = null;
+          return d;
+        },
+      },
+    ];
+
+    /**
+     * Ce que la garde doit LAISSER PASSER. Un témoin prouve qu'une garde sait rougir ; il ne prouve
+     * jamais qu'elle ne rougit pas sur du légitime. Les deux formes de branche arrêtées par
+     * `partners/ADR-0007` sont exactement le cas où une garde trop stricte bloquerait
+     * `pnpm lot:cloture`, seul écrivain du statut — c'est ce qui est arrivé au lot L-1-01.
+     */
+    const CONTRE_TEMOINS: { nom: string; muter: () => { taches: Tache[] } }[] = [
+      {
+        nom: 'une branche de LOT — la forme normale (partners/ADR-0007)',
+        muter: () => {
+          const d = copie();
+          premiere(d).branch = 'lot/L-9-99-integration';
+          return d;
+        },
+      },
+      {
+        nom: 'une branche de TÂCHE — la forme dérogatoire (partners/ADR-0007)',
+        muter: () => {
+          const d = copie();
+          premiere(d).branch = 't/gov-012';
+          return d;
+        },
+      },
+
+      // ── attestation : ce que GOV-038 doit LAISSER PASSER ─────────────────────
+      // Sans ces trois-là, les sept familles ci-dessus prouveraient seulement qu'une garde sait
+      // rougir — jamais qu'elle sait se taire. Le troisième est le plus important : c'est la forme
+      // même que la tâche introduit, et une garde qui la refuserait bloquerait `pnpm lot:cloture`.
+      {
+        nom: 'une tâche `partners` livrée normalement, PR de ce dépôt et aucune attestation',
+        muter: () => {
+          const d = copie();
+          livreeIci(d).pr = 4242;
+          return d;
+        },
+      },
+      {
+        nom: 'une tâche `axionia` encore `a_faire` : rien à attester tant que rien n’est livré',
+        muter: () => {
+          const d = copie();
+          aFaireIci(d).repo = 'axionia';
+          return d;
+        },
+      },
+      {
+        nom: 'une tâche `axionia` LIVRÉE avec son attestation et sans `pr` nu — la forme de GOV-038',
+        muter: () => {
+          const d = copie();
+          livreeAilleurs(d);
+          return d;
+        },
+      },
+    ];
+
+    for (const c of CONTRE_TEMOINS) {
+      const f = controler(c.muter(), schema, registre);
+      if (f.length > 0) {
+        console.error(
+          `\u274c Le contre-t\u00e9moin \u00ab ${c.nom} \u00bb a fait rougir la garde alors qu'il est l\u00e9gitime :`
+        );
+        f.slice(0, 5).forEach((x) => console.error(`   [${x.famille}] ${x.message}`));
+        process.exit(1);
+      }
+    }
+
+    const prouvees = new Set<string>();
+    for (const t of TEMOINS) {
+      const f = controler(t.defaut(), schema, registre);
+      if (!f.some((x) => x.famille === t.famille)) {
+        console.error(
+          `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille ` +
+            `(${f.length} faute(s) d'autres familles). Le contrôle ne couvre pas ce qu'il prétend couvrir.`
+        );
+        process.exit(1);
+      }
+      prouvees.add(t.famille);
+    }
+
+    const sansTemoin = FAMILLES.filter((f) => !prouvees.has(f));
+    if (sansTemoin.length > 0) {
+      console.error(`❌ Famille(s) de contrôle sans témoin : ${sansTemoin.join(', ')}.`);
       process.exit(1);
     }
+
+    console.log(
+      `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
+    );
+    console.log(`   ${CONTRE_TEMOINS.length} contre-t\u00e9moin(s) restent verts.`);
+    console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
+    process.exit(0);
   }
 
-  const prouvees = new Set<string>();
-  for (const t of TEMOINS) {
-    const f = controler(t.defaut(), schema, registre);
-    if (!f.some((x) => x.famille === t.famille)) {
-      console.error(
-        `❌ Le témoin de « ${t.famille} » n'a PAS fait rougir sa famille ` +
-          `(${f.length} faute(s) d'autres familles). Le contrôle ne couvre pas ce qu'il prétend couvrir.`
-      );
-      process.exit(1);
-    }
-    prouvees.add(t.famille);
+  // ── mode normal ──────────────────────────────────────────────────────────────
+  const fautes = controler(doc, schema, registre);
+  if (fautes.length === 0) {
+    const j = doc.taches.reduce((s, t) => s + t.estimateDays, 0);
+    const parPhase = [-1, 0, 1, 2, 3].map((p) => {
+      const l = doc.taches.filter((t) => t.phase === p);
+      return `${p} : ${l.length} / ${l.reduce((s, t) => s + t.estimateDays, 0).toFixed(2)} j`;
+    });
+    const bloquantes = [...registre.parId.values()].filter(
+      (d) => d.section === 1 && d.trancheeLe === null
+    );
+    console.log(
+      `✅ gov:tasks — ${doc.taches.length} tâches, ${j.toFixed(2)} j, ${registre.declarees.size} décisions au registre ` +
+        `(${bloquantes.length} bloquante(s) : ${bloquantes.map((d) => d.id).join(', ') || 'aucune'}).`
+    );
+    console.log(`   ${parPhase.join('  ·  ')}`);
+    // GOV-086 — LE COMPTE DES COUPLES RÉELLEMENT CONFRONTÉS. Un contrôle qui ne dit pas sur
+    // combien il a porté laisse croire qu'il a tout vu ; celui-ci le compte, et le compte vaut
+    // le nombre de tâches de CE dépôt ou la garde en a sauté.
+    const couples = couplesEtatOperation(doc.taches);
+    const avecOperation = couples.filter((c) => c.operations.length > 0).length;
+    console.log(
+      `   ${couples.length} couple(s) (état voulu, écritures qui le produisent) confronté(s) pour ` +
+        `${DEPOT_LOCAL}, dont ${avecOperation} porteur(s) d'au moins une écriture parmi ` +
+        `${ECRITURES_D_ETAT.join(', ')} ; les ${doc.taches.length - couples.length} autre(s) sont ` +
+        `jugées par leur attestation.`
+    );
+    process.exit(0);
   }
 
-  const sansTemoin = FAMILLES.filter((f) => !prouvees.has(f));
-  if (sansTemoin.length > 0) {
-    console.error(`❌ Famille(s) de contrôle sans témoin : ${sansTemoin.join(', ')}.`);
-    process.exit(1);
+  const parFamille = new Map<string, Faute[]>();
+  for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
+  console.error(`❌ gov:tasks — ${fautes.length} incohérence(s) dans ${CHEMIN_TACHES} :\n`);
+  for (const [famille, liste] of parFamille) {
+    console.error(`   ── ${famille} (${liste.length})`);
+    liste.slice(0, 12).forEach((f) => console.error(`      ${f.message}`));
+    if (liste.length > 12) console.error(`      … et ${liste.length - 12} autre(s).`);
   }
-
-  console.log(
-    `✅ Les ${FAMILLES.length} familles rougissent chacune sur son témoin — preuve faite.`
-  );
-  console.log(`   ${CONTRE_TEMOINS.length} contre-t\u00e9moin(s) restent verts.`);
-  console.log(`   ${FAMILLES.map((f) => '• ' + f).join('\n   ')}`);
-  process.exit(0);
+  process.exit(1);
 }
-
-// ── mode normal ──────────────────────────────────────────────────────────────
-const fautes = controler(doc, schema, registre);
-if (fautes.length === 0) {
-  const j = doc.taches.reduce((s, t) => s + t.estimateDays, 0);
-  const parPhase = [-1, 0, 1, 2, 3].map((p) => {
-    const l = doc.taches.filter((t) => t.phase === p);
-    return `${p} : ${l.length} / ${l.reduce((s, t) => s + t.estimateDays, 0).toFixed(2)} j`;
-  });
-  const bloquantes = [...registre.parId.values()].filter(
-    (d) => d.section === 1 && d.trancheeLe === null
-  );
-  console.log(
-    `✅ gov:tasks — ${doc.taches.length} tâches, ${j.toFixed(2)} j, ${registre.declarees.size} décisions au registre ` +
-      `(${bloquantes.length} bloquante(s) : ${bloquantes.map((d) => d.id).join(', ') || 'aucune'}).`
-  );
-  console.log(`   ${parPhase.join('  ·  ')}`);
-  process.exit(0);
-}
-
-const parFamille = new Map<string, Faute[]>();
-for (const f of fautes) parFamille.set(f.famille, [...(parFamille.get(f.famille) ?? []), f]);
-console.error(`❌ gov:tasks — ${fautes.length} incohérence(s) dans ${CHEMIN_TACHES} :\n`);
-for (const [famille, liste] of parFamille) {
-  console.error(`   ── ${famille} (${liste.length})`);
-  liste.slice(0, 12).forEach((f) => console.error(`      ${f.message}`));
-  if (liste.length > 12) console.error(`      … et ${liste.length - 12} autre(s).`);
-}
-process.exit(1);

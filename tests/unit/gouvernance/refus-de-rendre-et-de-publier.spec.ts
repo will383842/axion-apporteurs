@@ -516,12 +516,11 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       temoins: 0,
       raison:
         'GOV-019 — budgets de performance. Quatre refus : registre illisible, budget dépassé, ' +
-        'mode inconnu, vue divergente. ⚠️ `fichiersDeSrc()` y rend `[]` si `src/` manque — la ' +
-        'variante affaiblie du patron que ce lot ferme ailleurs — invisible à la réciproque, au ' +
-        'témoin `ls-files` et aux trois `describe`, car elle ne balaie pas `git ls-files`. ' +
-        '⚠️ AUCUNE tâche du backlog ne porte cette dette : `GOV-019` LIVRE `perf-budgets`, elle ne ' +
-        'corrige pas son `if (!existsSync(racine)) return []`. Relevé par `mutation` — une dette ' +
-        'déclarée en prose sans porteur est une dette que personne ne reprendra.',
+        'mode inconnu, vue divergente. La dette que cette entrée déclarait est FERMÉE par GOV-046 : ' +
+        '`fichiersDeSrc()` rendait `[]` si `src/` manquait — zéro violation, donc un vert sur zéro ' +
+        'fichier regardé. Le périmètre vient désormais de `fichiersSuivisOuRefus`, la source unique, ' +
+        'et la garde est DÉCLARÉE dans `GARDES_QUI_BALAIENT` : ses refus `perimetre_illisible` sont ' +
+        'ceux de la primitive, sans sortie ajoutée ici — le total de cette entrée ne bouge donc pas.',
     },
     'scripts/gates/gov-conventions.ts': {
       total: 2,
@@ -2039,6 +2038,9 @@ const GARDES_QUI_BALAIENT = [
   'scripts/gates/journal-sans-pii.ts',
   // DM-02 — `partners:migrations:additive` lit TOUTES les migrations SUIVIES, pas celles de la PR.
   'scripts/gates/migrations-additive.ts',
+  // GOV-046 — `perf:budgets` juge les routes des fichiers SUIVIS sous `src/`. Elle rendait `[]`
+  // quand `src/` manquait ; elle établit désormais son périmètre par la source unique.
+  'scripts/gates/perf-budgets.ts',
 ] as const;
 
 it('REQ-CPL-018 — toute garde qui importe la primitive de périmètre est DÉCLARÉE ci-dessus', () => {
