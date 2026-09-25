@@ -264,6 +264,46 @@ describe('REQ-GOV-021 — src/domain ne relit pas le registre pour son compte (A
     expect(r.decision('W16')?.trancheeLe).toBe('2026-09-30');
   });
 
+  // Le lecteur vit sous src/domain, dont le seuil de couverture est 100 % : chaque issue a son effet.
+  const FEINT = [
+    '## 0. Alias',
+    '| DEC-SEUL |',
+    '| DEC-LIE | HYP-Z | ici |',
+    '## 1. Sans défaut',
+    '| EXT-9 | x | y |',
+    '| **W16** ✅ *tranchée 2026-09-30* | x | **avenant** |',
+    '## 2. Hypothèses',
+    '| HYP-Z | o | d | **avenant** | 2 | premier DocuSeal | — |',
+    '| HYP-C | o | d | paramètre |',
+  ].join('\n');
+
+  it('REQ-GOV-015 · `motif` : bloquante, sans hypothèse, ou codable (null)', () => {
+    const r = lireRegistre(FEINT);
+    expect(r.motif('EXT-9')).toBe('decision_bloquante_non_tranchee');
+    expect(r.motif('HYP-JAMAIS')).toBe('decision_sans_hypothese');
+    expect(r.motif('W16')).toBeNull();
+    expect(r.motif('HYP-Z')).toBeNull();
+    expect(r.motif('DEC-LIE')).toBeNull();
+  });
+
+  it('REQ-GOV-015 · une ligne de la §0 sans cible ne crée aucun alias', () => {
+    const r = lireRegistre(FEINT);
+    expect([...r.alias]).toEqual([['DEC-LIE', 'HYP-Z']]);
+    expect(r.canonique('DEC-SEUL')).toBe('DEC-SEUL');
+    expect(r.estDeclaree('DEC-SEUL')).toBe(false);
+  });
+
+  it('REQ-GOV-015 · la réversibilité se lit en §2 à sept colonnes seulement, décor retiré', () => {
+    const r = lireRegistre(FEINT);
+    expect(r.decision('HYP-Z')?.reversibilite).toBe('avenant');
+    expect(r.decision('HYP-C')?.reversibilite).toBeNull();
+    expect(r.decision('W16')?.reversibilite).toBeNull();
+    expect(r.decision('HYP-Z')?.brute).toBe(
+      '| HYP-Z | o | d | **avenant** | 2 | premier DocuSeal | — |'
+    );
+    expect(r.decision('HYP-Z')?.ligne).toBe(8);
+  });
+
   it('REQ-GOV-021 · toute `hyp` du backlog est déclarée au registre — dans les deux sens', () => {
     // C'est l'invariant que `gov:tasks` tient (famille `hyp_hors_registre`) : le lecteur unique
     // doit le préserver, sans quoi le remède aurait cassé la garde qu'il devait unifier.

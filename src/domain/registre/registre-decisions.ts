@@ -100,7 +100,8 @@ export function lireRegistre(texte: string): Registre {
     const cs = cellules(ligne);
     if (cs.length === 0) continue;
 
-    const premiere = nu(cs[0] ?? '');
+    // `cs` a au moins une cellule (test ci-dessus) : la première existe.
+    const premiere = nu(cs[0]!);
     const m = MOTIF_IDENTIFIANT.exec(premiere);
     if (!m || !m[1]) continue; // en-tête, séparateur, ou ligne dont la première cellule est en prose
     const id = m[1];
@@ -116,12 +117,12 @@ export function lireRegistre(texte: string): Registre {
     //   — §1 : le marqueur `✅ *tranchée 2026-09-03*` dans la première cellule ;
     //   — §2 : la colonne `Tranchée`, dernière du tableau.
     const marqueurPremiere = /tranch/i.test(premiere) ? MOTIF_DATE.exec(premiere) : null;
-    const derniere = nu(cs[cs.length - 1] ?? '');
+    const derniere = nu(cs[cs.length - 1]!);
     const marqueurDerniere =
       cs.length > 1 && /^\d{4}-\d{2}-\d{2}$/.test(derniere) ? [derniere, derniere] : null;
     const trancheeLe = marqueurPremiere?.[1] ?? marqueurDerniere?.[1] ?? null;
 
-    const reversibilite = section === 2 && cs.length === 7 ? nu(cs[3] ?? '') : null;
+    const reversibilite = section === 2 && cs.length === 7 ? nu(cs[3]!) : null;
 
     parId.set(id, {
       id,
