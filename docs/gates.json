@@ -347,12 +347,12 @@
       "preuveRouge": null
     },
     {
-      "id": "GATE-UX-EXHAUSTIVITE",
+      "id": "ux:exhaustivite",
       "phase": 1,
       "script": "scripts/gates/ux-exhaustivite.ts",
       "tache": "UX-P0-01",
       "alias": [
-        "ux:exhaustivite"
+        "GATE-UX-EXHAUSTIVITE"
       ],
       "verifie": "chaque valeur de IssueDepot a pastille, titre, pourquoi, quoi faire, action et mention d'horodatage (REQ-UX-002) ; l'enum est relu contre REQ-UX-002 dans les deux sens (valeur sans base contractuelle, categorie du contrat sans valeur) ; les refus sont exactement IssueDepot inter MotifRefusDepot (REQ-SEC-022) et aucun ne porte de parametre (ni qui ni quand) ; chaque ecran de docs/ESPACE-ROUTES.md et de la section Console de docs/maquettes/VALIDATION.md a un etat vide complet, celui de Mes entreprises mene au depot, toute action mene a une route de la carte (REQ-UX-019) ; aucun libelle en dur dans un composant .tsx, lu par l'arbre syntaxique TypeScript, et aucun HTML brut (dangerouslySetInnerHTML) ; TOUS les textes de src/content/micro-copy/espace/ (tout champ chaine, toute profondeur, libelles d'action compris) n'admettent un parametre {...} que dans la liste blanche de leur contexte (PARAMETRES_PERMIS : ni nom, ni date de depot, ni stade d'un autre apporteur, REQ-SEC-022), aucun chiffre en clair hors renvoi a un article (RM-10) ; un export qui n'est pas un texte (fonction hors UTILITAIRES_PERMIS, Map, Set, objet de classe) et une cle a parametre rougissent ; le SOURCE des modules est lu par l'arbre syntaxique : dans une fonction, ni gabarit a substitution, ni litteral qui ecrit un texte, ni concatenation hors utilitaire permis ; tout fichier de micro-copie est parcouru ou declare hors portee (MICRO_COPIE_HORS_PORTEE), sinon il rougit ; la vue du depot lit ses populations dans le registre, la carte et VALIDATION.md, jamais dans la micro-copie controlee. Les libelles d'etats d'attribution et leur phrase 'prochaine etape et par qui' relevent de UX-P0-01b",
       "fixtureRouge": "ajouter une valeur a l'enum sans libelle",

@@ -88,7 +88,7 @@ champ `preuveRouge` du registre, recopié verbatim par le rendu.
 
 | Gate | Tâche | Script | Alias | Preuve rouge |
 | ---- | ----- | ------ | ----- | ------------ |
-| `GATE-UX-EXHAUSTIVITE` | UX-P0-01 | `scripts/gates/ux-exhaustivite.ts` | `ux:exhaustivite` | pnpm ux:exhaustivite:prove — 17 familles rougissent chacune sur son temoin en nommant sa cible (valeur, ecran, chemin de texte ou fichier:ligne), 2 contre-temoins restent verts dont un composant qui lit la micro-copie, et la vue du depot lit ses six sources injectees, fichiers suivis et composants compris, et texte_calcule rougit sur ses trois branches (vu le 2026-09-25) |
+| `ux:exhaustivite` | UX-P0-01 | `scripts/gates/ux-exhaustivite.ts` | `GATE-UX-EXHAUSTIVITE` | pnpm ux:exhaustivite:prove — 17 familles rougissent chacune sur son temoin en nommant sa cible (valeur, ecran, chemin de texte ou fichier:ligne), 2 contre-temoins restent verts dont un composant qui lit la micro-copie, et la vue du depot lit ses six sources injectees, fichiers suivis et composants compris, et texte_calcule rougit sur ses trois branches (vu le 2026-09-25) |
 
 ## 3. Ce qui reste à prouver
 

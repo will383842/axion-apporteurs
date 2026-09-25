@@ -922,7 +922,7 @@ export const CITATIONS_DECLAREES: Citation[] = [
   // UX-P0-01 nomme sa VOISINE pour dire ce qui n'est PAS dans son périmètre. Retirer le nom rendrait
   // la phrase inutilisable : un lecteur saurait qu'une chose est exclue, sans savoir qui la porte.
   {
-    ou: 'docs/gates.json:GATE-UX-EXHAUSTIVITE.verifie',
+    ou: 'docs/gates.json:ux:exhaustivite.verifie',
     id: 'UX-P0-01b',
     nature: 'contexte',
     raison:
