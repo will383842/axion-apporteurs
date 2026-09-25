@@ -476,7 +476,7 @@
     "CPL-T22": [
       ".github/workflows/ci.yml",
       "docs/gates.json",
-      ".github/workflows/red-first.yml",
+      "scripts/gates/red-first.ts",
       "tests/unit/qualite/red-first.spec.ts"
     ],
     "SEC-08": [
