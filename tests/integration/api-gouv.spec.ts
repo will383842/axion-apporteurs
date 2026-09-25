@@ -76,7 +76,13 @@ import {
   lireFixtures,
   type FixtureEnregistree,
 } from '../../src/server/integrations/recherche-entreprises/fixtures';
-import type { CacheDeProjections } from '../../src/server/integrations/recherche-entreprises/cache';
+import {
+  cacheSurClient,
+  cleDeFiche,
+  cleDeRecherche,
+  type CacheDeProjections,
+  type ClientDuCache,
+} from '../../src/server/integrations/recherche-entreprises/cache';
 import {
   comparerFormes,
   formesDe,
@@ -174,6 +180,7 @@ function banc(delaiMs: number = PARAMETRES.delaiAttenteMs.valeur) {
   };
   return {
     deps,
+    maintenant: () => maintenant,
     avancer: (ms: number) => {
       maintenant += ms;
     },
@@ -422,6 +429,9 @@ describe('REQ-QA-028 — disjoncteur et limite de débit ≤ 5 req/s', () => {
     });
     expect(d.autoriser(INSTANT + 1_500)).toBe(true);
     expect(d.autoriser(INSTANT + 1_500)).toBe(true);
+    // Des échecs CONSÉCUTIFS : après la réussite, deux échecs ne suffisent plus à l'ouvrir.
+    for (let i = 0; i < 2; i++) d.echec(INSTANT + 1_500, 'erreur_serveur', null);
+    expect(d.vue(INSTANT + 1_500).etat).toBe('ferme');
   });
 
   it('REQ-QA-028 — l’essai demi-ouvert MANQUÉ rouvre le disjoncteur, même ouvert par un seul 429', () => {
@@ -474,6 +484,41 @@ describe('REQ-QA-028 — disjoncteur et limite de débit ≤ 5 req/s', () => {
     });
     expect(recues).toHaveLength(2);
     expect(etatDuDisjoncteur(deps).etat).toBe('ouvert');
+  });
+
+  it('REQ-QA-028 — en demi-ouvert, un refus du débit global REND l’essai : le disjoncteur ne reste pas bloqué', async () => {
+    repondre = () => ({ statut: 429, corps: {}, entetes: { 'retry-after': '2' } });
+    const { deps, avancer, maintenant } = banc();
+    await autocompleterEntreprise({ q: 'danone' }, APPELANT, deps);
+    avancer(2_000);
+    // Le débit global de cette seconde est épuisé par d'autres : l'essai ne part pas.
+    const limite = COMPTEURS['depot:entreprise-global'].limite;
+    for (let i = 0; i < limite; i++) await limiteurDuRegistre.global(maintenant());
+    repondre = () => ({ statut: 200, corps: avecResultats().reponse });
+    expect(await autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps)).toEqual({
+      mode: 'saisie_manuelle',
+      motif: 'debit_global',
+    });
+    expect(recues).toHaveLength(1);
+    avancer(1_000);
+    expect((await autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps)).mode).toBe(
+      'autocompletion'
+    );
+    expect(recues).toHaveLength(2);
+  });
+
+  it('REQ-QA-028 — un refus 4xx du tiers est la faute de la SAISIE : il n’ouvre pas le disjoncteur', async () => {
+    repondre = () => ({ statut: 400, corps: {} });
+    const { deps } = banc();
+    const seuil = PARAMETRES.disjoncteurSeuilEchecs.valeur;
+    for (let i = 0; i < seuil + 1; i++) {
+      expect(await autocompleterEntreprise({ q: `danone ${i}` }, APPELANT, deps)).toEqual({
+        mode: 'saisie_manuelle',
+        motif: 'requete_refusee',
+      });
+    }
+    expect(recues).toHaveLength(seuil + 1);
+    expect(etatDuDisjoncteur(deps)).toMatchObject({ etat: 'ferme', echecsConsecutifs: 0 });
   });
 
   it('REQ-QA-028 — six requêtes dans la même seconde : cinq partent, la sixième est refusée sans réseau', async () => {
@@ -596,6 +641,102 @@ describe('REQ-INT-021 — la fiche persistée : exactement les champs énuméré
       codePostal: null,
       commune: null,
     });
+    // Échec FERMÉ : une valeur que l'on ne connaît pas (ni `O` ni `P`) vaut partielle, jamais pleine.
+    for (const inconnue of ['N', '', 'o']) {
+      const ul = structuredClone(reponse);
+      ul.results[0]!.statut_diffusion = inconnue;
+      expect(projeter(ul, empreindre).suggestions[0], `unité légale « ${inconnue} »`).toMatchObject(
+        {
+          codePostal: null,
+          commune: null,
+        }
+      );
+      const siege = structuredClone(reponse);
+      siege.results[0]!.siege.statut_diffusion_etablissement = inconnue;
+      expect(projeter(siege, empreindre).suggestions[0], `siège « ${inconnue} »`).toMatchObject({
+        codePostal: null,
+        commune: null,
+      });
+    }
+  });
+
+  it('REQ-INT-021 — la fiche servie par le tiers est celle du SIREN DEMANDÉ, pas le premier résultat', async () => {
+    const f = FIXTURES.find((x) => (x.reponse as { results: unknown[] }).results.length >= 2)!;
+    const resultats = schemaReponseDuTiers.parse(f.reponse).results;
+    const demande = resultats[1]!.siren;
+    expect(demande).not.toBe(resultats[0]!.siren);
+    repondre = () => ({ statut: 200, corps: f.reponse });
+    const { deps } = banc();
+    const r = await ficheEntreprisePourServeur(demande, deps);
+    expect(r.ok && r.fiche.siren).toBe(demande);
+    expect(recues).toHaveLength(1);
+    // Un SIREN absent de la réponse : aucune fiche, pas celle d'un voisin.
+    expect(await ficheEntreprisePourServeur('000000000', banc().deps)).toMatchObject({
+      ok: false,
+      motif: 'siren_inconnu',
+    });
+  });
+
+  it('REQ-INT-021 — une entrée de cache ALTÉRÉE est une absence : relue par son schéma, jamais servie ni persistée', async () => {
+    const f = avecResultats();
+    repondre = () => ({ statut: 200, corps: f.reponse });
+    const { deps } = banc();
+    const projection = projeter(schemaReponseDuTiers.parse(f.reponse), empreindre);
+    const siren = projection.fiches[0]!.siren;
+    // Une projection et une fiche écrites par une autre version : un champ de personne en plus.
+    const alteree = structuredClone(projection) as unknown as {
+      suggestions: Record<string, unknown>[];
+    };
+    alteree.suggestions[0]!.annee_de_naissance = '1968';
+    await deps.cache.ecrire(cleDeRecherche(f.requete.q), alteree as never, 60);
+    const ficheAlteree = { ...projection.fiches[0]!, annee_de_naissance: '1968' };
+    await deps.cache.ecrire(cleDeFiche(siren), ficheAlteree as never, 60);
+
+    const rendu = await autocompleterEntreprise({ q: f.requete.q }, APPELANT, deps);
+    expect(rendu.mode).toBe('autocompletion');
+    expect(JSON.stringify(rendu)).not.toMatch(/naissance/);
+    expect(recues).toHaveLength(1);
+
+    await deps.cache.ecrire(cleDeFiche(siren), ficheAlteree as never, 60);
+    const fiche = await ficheEntreprisePourServeur(siren, deps);
+    expect(fiche.ok).toBe(true);
+    expect(JSON.stringify(fiche)).not.toMatch(/naissance/);
+    expect(recues).toHaveLength(2);
+  });
+
+  it('REQ-INT-020 — le cache de PRODUCTION écrit avec expiration : recherche ET fiche repartent à 24 h', async () => {
+    const f = avecResultats();
+    repondre = () => ({ statut: 200, corps: f.reponse });
+    const { deps, avancer, maintenant } = banc();
+    // Un Redis simulé au niveau de son API : il n'expire que ce qu'on lui demande d'expirer.
+    const entrees = new Map<string, { valeur: string; expireA: number }>();
+    const redis: ClientDuCache = {
+      status: 'ready',
+      connect: async () => undefined,
+      get: async (cle) => {
+        const e = entrees.get(cle);
+        return e === undefined || e.expireA <= maintenant() ? null : e.valeur;
+      },
+      set: async (cle: string, valeur: string, ...options: unknown[]) => {
+        const secondes = options[0] === 'EX' ? Number(options[1]) : Number.POSITIVE_INFINITY;
+        entrees.set(cle, { valeur, expireA: maintenant() + secondes * 1000 });
+        return 'OK';
+      },
+    };
+    deps.cache = cacheSurClient(() => redis);
+    const siren = schemaReponseDuTiers.parse(f.reponse).results[0]!.siren;
+    await autocompleterEntreprise({ q: f.requete.q }, APPELANT, deps);
+    expect(recues).toHaveLength(1);
+    avancer(PARAMETRES.cacheSecondes.valeur * 1000 - 1);
+    expect((await ficheEntreprisePourServeur(siren, deps)).ok).toBe(true);
+    await autocompleterEntreprise({ q: f.requete.q }, APPELANT, deps);
+    expect(recues).toHaveLength(1);
+    avancer(1);
+    expect((await ficheEntreprisePourServeur(siren, deps)).ok).toBe(true);
+    expect(recues, 'la fiche a expiré à 24 h').toHaveLength(2);
+    avancer(1);
+    await autocompleterEntreprise({ q: `${f.requete.q} ` }, APPELANT, deps);
+    expect(recues, 'la recherche a expiré à 24 h').toHaveLength(3);
   });
 
   it('REQ-INT-021 — la fiche d’un SIREN choisi se lit dans le cache de la recherche, sans nouvel appel', async () => {

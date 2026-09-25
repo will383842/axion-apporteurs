@@ -21,7 +21,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Horloge } from '../../../src/domain/temps/horloge';
@@ -57,11 +57,15 @@ import {
   type DependancesDuMandataire,
 } from '../../../src/server/integrations/recherche-entreprises/autocompletion';
 import { limiteurDuRegistre } from '../../../src/server/integrations/recherche-entreprises/limiteur';
-import { appelantDepuis } from '../../../src/server/integrations/recherche-entreprises/production';
+import {
+  appelantDepuis,
+  dependancesDeProduction,
+} from '../../../src/server/integrations/recherche-entreprises/production';
 import { empreinteAdresse } from '../../../src/server/integrations/axionia/api-entrante';
 import { clientDuTiers } from '../../../src/server/integrations/recherche-entreprises/tiers';
 import { creerDisjoncteur } from '../../../src/server/integrations/recherche-entreprises/disjoncteur';
 import { empreinteurDeDirigeants } from '../../../src/server/integrations/recherche-entreprises/projection';
+import { schemaReponseDuTiers } from '../../../src/server/integrations/recherche-entreprises/schemas';
 import {
   classerSuggestions,
   distanceDeLevenshtein,
@@ -305,6 +309,39 @@ describe('REQ-SEC-013 — limité par identité (120/j) et par empreinte d’adr
     );
   });
 
+  it('REQ-SEC-013 — le plafond par ADRESSE est atteint en changeant d’identité : l’adresse suivante refuse, une autre passe', async () => {
+    const f = fixtureAvecDirigeants();
+    const tiers = fetchFactice(() => ({ statut: 200, corps: f.reponse }));
+    const b = banc(tiers);
+    const limite = COMPTEURS['depot:entreprise-ip'].limite;
+    const identite = (i: number) => sujetDepuisEmpreinte(i.toString(16).padStart(64, '0'));
+    for (let i = 0; i < limite; i++) {
+      const r = await autocompleterEntreprise(
+        { q: f.requete.q },
+        { identite: identite(i), adresse: ADRESSE },
+        b.deps
+      );
+      if (r.mode !== 'autocompletion') throw new Error(`appel ${i + 1} : ${JSON.stringify(r)}`);
+    }
+    // Une identité NEUVE, jamais comptée : c'est l'adresse seule qui la refuse.
+    expect(
+      await autocompleterEntreprise(
+        { q: f.requete.q },
+        { identite: identite(limite), adresse: ADRESSE },
+        b.deps
+      )
+    ).toEqual({ mode: 'saisie_manuelle', motif: 'limite_atteinte' });
+    expect(
+      (
+        await autocompleterEntreprise(
+          { q: f.requete.q },
+          { identite: identite(limite), adresse: sujetDepuisEmpreinte('d'.repeat(64)) },
+          b.deps
+        )
+      ).mode
+    ).toBe('autocompletion');
+  });
+
   it('REQ-SEC-013 — le cache du registre en panne : l’identité refuse (conduite déclarée), le dépôt ne bloque pas', async () => {
     partage.magasin = magasinDepuis(() => Promise.reject(new Error('cache tombé')));
     const f = fixtureAvecDirigeants();
@@ -349,6 +386,19 @@ describe('REQ-SEC-013 — limité par identité (120/j) et par empreinte d’adr
     expect(a.adresse).toBe(droite.adresse);
     expect(JSON.stringify(a)).not.toMatch(/203\.0\.113\.9|apporteur-42/);
     expect(appelantDepuis('apporteur-42', new Headers(), secrets).adresse).toBeNull();
+    // L'identité est celle de l'apporteur AUTHENTIFIÉ, sous la clé des personnes : deux apporteurs,
+    // deux empreintes ; une autre clé, une autre empreinte ; aucun en-tête du client ne la déplace.
+    expect(appelantDepuis('apporteur-43', entetes, secrets).identite).not.toBe(a.identite);
+    expect(
+      appelantDepuis('apporteur-42', entetes, {
+        ...secrets,
+        PII_HASH_KEY: `${secrets.PII_HASH_KEY}-x`,
+      }).identite
+    ).not.toBe(a.identite);
+    const forge = new Headers(entetes);
+    for (const nom of ['x-apporteur', 'x-apporteur-id', 'x-user-id', 'authorization'])
+      forge.set(nom, 'apporteur-43');
+    expect(appelantDepuis('apporteur-42', forge, secrets).identite).toBe(a.identite);
     // Deux clés, deux usages : la même valeur ne donne pas la même empreinte sous l'autre clé.
     expect(
       appelantDepuis('apporteur-42', entetes, {
@@ -446,6 +496,20 @@ describe('REQ-SEC-013 — la garde « aucune année de naissance » sait rougir,
     expect(r.status, r.stdout + r.stderr).toBe(0);
     expect(r.stdout).toMatch(/dirigeants/);
     expect(r.stdout).toMatch(/annee_de_naissance/);
+    // La moitié FICHE de la garde a son témoin, jugé par le chemin du dépôt.
+    expect(r.stdout).toMatch(/\(fiche\).*annee_de_naissance/);
+  });
+
+  it('REQ-SEC-013 — le MODE DÉPÔT (celui du job nocturne) sort en non nul sur un jeu fautif', () => {
+    const source = 'tests/fixtures/recherche-entreprises';
+    const fichiers = readdirSync(source).filter((x) => x.endsWith('.json'));
+    for (const x of fichiers.slice(0, 19)) copyFileSync(join(source, x), join(dossier, x));
+    const r = lancer(['--fixtures', dossier]);
+    expect(r.status, r.stdout + r.stderr).toBe(1);
+    expect(r.stdout).toMatch(/perimetre_vide/);
+    // Le même jeu complet, par la même option : vert.
+    for (const x of fichiers.slice(19)) copyFileSync(join(source, x), join(dossier, x));
+    expect(lancer(['--fixtures', dossier]).status).toBe(0);
   });
 });
 
@@ -511,6 +575,11 @@ describe('REQ-UX-020 — le tiers tombe, le parcours bascule en saisie manuelle 
       ok: false,
       motif: 'cle_invalide',
     });
+    // Un SIRET dont la clé à 14 chiffres est JUSTE, mais dont le SIREN (9 premiers) est faux.
+    expect(controlerSaisieManuelle({ numero: '55203253500015' })).toEqual({
+      ok: false,
+      motif: 'cle_invalide',
+    });
   });
 
   it('REQ-UX-020 — un SIRET valide donne le SIREN ET le SIRET', () => {
@@ -549,6 +618,15 @@ describe('REQ-UX-020 — le tiers tombe, le parcours bascule en saisie manuelle 
         siren: '552032535',
       })
     ).toEqual({ ok: false, motif: 'cle_invalide' });
+    // Un SIRET valide donné pour SIREN est REFUSÉ, jamais tronqué en silence.
+    expect(
+      declarerEntrepriseIntrouvable({
+        raisonSociale: 'X',
+        ville: 'Y',
+        codePostal: '38000',
+        siren: '73282932000074',
+      })
+    ).toEqual({ ok: false, motif: 'format_invalide' });
     expect(
       declarerEntrepriseIntrouvable({ raisonSociale: 'X', ville: 'Y', codePostal: '380' })
     ).toEqual({
@@ -626,5 +704,59 @@ describe('REQ-UX-020 — anti-rebond de 300 ms', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// ── Le câblage de production : chaque valeur vient de sa source ─────────────────────────────────
+
+describe('REQ-SEC-013 — `dependancesDeProduction` : clés, adresse, délai et cache viennent de leur source', () => {
+  const SECRETS = { PII_HASH_KEY: 'cle-des-personnes-de-test-0123456789abcdef' };
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it('REQ-SEC-013 — les empreintes des dirigeants sont sous la clé des personnes reçue', () => {
+    const deps = dependancesDeProduction(SECRETS);
+    const texte = 'pp\u001fLEFEVRE\u001fJEAN';
+    expect(deps.empreindre(texte)).toBe(empreinteurDeDirigeants(SECRETS.PII_HASH_KEY)(texte));
+    expect(
+      dependancesDeProduction({ PII_HASH_KEY: 'une-autre-cle-0123456789abcdef' }).empreindre(texte)
+    ).not.toBe(deps.empreindre(texte));
+  });
+
+  it('REQ-INT-020 — le tiers est joint à l’adresse déclarée, sans aucun appel réseau réel', async () => {
+    const f = fixtureAvecDirigeants();
+    const faux = fetchFactice(() => ({ statut: 200, corps: f.reponse }));
+    vi.stubGlobal('fetch', faux);
+    const issue = await dependancesDeProduction(SECRETS).tiers(f.requete.q, INSTANT);
+    expect(issue.ok).toBe(true);
+    expect(faux.appels).toHaveLength(1);
+    expect(new URL(faux.appels[0]!).origin).toBe(PARAMETRES.urlDeBase.valeur);
+    if (issue.ok) expect(issue.reponse).toEqual(schemaReponseDuTiers.parse(f.reponse));
+  });
+
+  it('REQ-INT-020 — le délai d’attente est celui du réglage : un tiers muet est abandonné à temps', async () => {
+    vi.stubGlobal(
+      'fetch',
+      ((_url: string, init?: RequestInit) =>
+        new Promise((_resoudre, rejeter) => {
+          init?.signal?.addEventListener('abort', () => rejeter(init.signal?.reason));
+        })) as typeof fetch
+    );
+    const delai = PARAMETRES.delaiAttenteMs.valeur;
+    const debut = performance.now();
+    const issue = await dependancesDeProduction(SECRETS).tiers('danone', INSTANT);
+    const ecoule = performance.now() - debut;
+    expect(issue).toEqual({ ok: false, motif: 'delai_depasse', retryAfterMs: null });
+    expect(ecoule).toBeGreaterThanOrEqual(delai - 100);
+    expect(ecoule).toBeLessThan(delai + 1_500);
+  }, 10_000);
+
+  it('REQ-INT-020 — le cache lit `REDIS_URL` dans l’environnement : absente, il échoue sans rien inventer', async () => {
+    vi.stubEnv('REDIS_URL', '');
+    await expect(dependancesDeProduction(SECRETS).cache.lire('entreprise:v1:test')).rejects.toThrow(
+      /REDIS_URL absente/
+    );
   });
 });

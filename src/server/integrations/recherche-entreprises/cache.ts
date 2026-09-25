@@ -55,9 +55,20 @@ export function relireFiche(brut: unknown): FicheEntreprise | null {
   return lu.success ? lu.data : null;
 }
 
+/**
+ * Ce que le cache demande à Redis, et rien d'autre. Un test lui donne un Redis simulé au niveau de
+ * CETTE api — c'est donc la vraie écriture, `'EX'` compris, qui est jugée.
+ */
+export interface ClientDuCache {
+  readonly status: string;
+  connect(): Promise<unknown>;
+  get(cle: string): Promise<string | null>;
+  set(cle: string, valeur: string, mode: 'EX', secondes: number): Promise<unknown>;
+}
+
 let client: Redis | null = null;
 
-function clientRedis(): Redis {
+function clientRedis(): ClientDuCache {
   if (client !== null) return client;
   const url = process.env.REDIS_URL;
   if (url === undefined || url === '') throw new Error('cache : REDIS_URL absente');
@@ -68,21 +79,26 @@ function clientRedis(): Redis {
   return c;
 }
 
-async function pret(c: Redis): Promise<void> {
+async function pret(c: ClientDuCache): Promise<void> {
   if (c.status === 'wait' || c.status === 'end') await c.connect();
 }
 
-/** Le cache de production. Chaque méthode peut lever : c'est le mandataire qui en fait une absence. */
-export const cacheRedis: CacheDeProjections = {
-  async lire(cle) {
-    const c = clientRedis();
-    await pret(c);
-    const brut = await c.get(cle);
-    return brut === null ? null : (JSON.parse(brut) as unknown);
-  },
-  async ecrire(cle, valeur, ttlSecondes) {
-    const c = clientRedis();
-    await pret(c);
-    await c.set(cle, JSON.stringify(valeur), 'EX', ttlSecondes);
-  },
-};
+/** Le cache sur un client : chaque méthode peut lever, c'est le mandataire qui en fait une absence. */
+export function cacheSurClient(obtenir: () => ClientDuCache): CacheDeProjections {
+  return {
+    async lire(cle) {
+      const c = obtenir();
+      await pret(c);
+      const brut = await c.get(cle);
+      return brut === null ? null : (JSON.parse(brut) as unknown);
+    },
+    async ecrire(cle, valeur, ttlSecondes) {
+      const c = obtenir();
+      await pret(c);
+      await c.set(cle, JSON.stringify(valeur), 'EX', ttlSecondes);
+    },
+  };
+}
+
+/** Le cache de production. */
+export const cacheRedis: CacheDeProjections = cacheSurClient(clientRedis);

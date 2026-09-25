@@ -3,6 +3,7 @@
  * AUCUNE ANNÉE DE NAISSANCE NE TRAVERSE, et la liste des dirigeants n'atteint jamais le navigateur.
  *
  * USAGE : pnpm securite:annee-naissance                     juge le dépôt
+ *         pnpm securite:annee-naissance -- --fixtures <d>   juge le jeu d'un autre dossier (témoin)
  *         pnpm securite:annee-naissance -- --reponse <f>    juge UNE réponse (bac d'essai)
  *         pnpm securite:annee-naissance:prove              témoins et contre-témoin
  *
@@ -45,7 +46,10 @@ import {
   empreinteurDeDirigeants,
   projeter,
 } from '../../src/server/integrations/recherche-entreprises/projection';
-import { schemaReponseDuTiers } from '../../src/server/integrations/recherche-entreprises/schemas';
+import {
+  schemaReponseDuTiers,
+  type ReponseDuTiers,
+} from '../../src/server/integrations/recherche-entreprises/schemas';
 import {
   lireFixtures,
   type FixtureEnregistree,
@@ -165,8 +169,16 @@ const APPELANT = {
   adresse: sujetDepuisEmpreinte('1'.repeat(64)),
 };
 
+/** Ce qui est persisté d'une réponse lue : la VRAIE projection. Un témoin seul en donne une autre. */
+type FichesDe = (lu: ReponseDuTiers) => unknown;
+const fichesDeLaProjection: FichesDe = (lu) =>
+  projeter(lu, empreinteurDeDirigeants('garde-aucune-annee-de-naissance')).fiches;
+
 /** Juge une fixture : son rendu par le mandataire, et ses fiches par la projection. */
-export async function jugerUneFixture(f: FixtureEnregistree): Promise<Faute[]> {
+export async function jugerUneFixture(
+  f: FixtureEnregistree,
+  fichesDe: FichesDe = fichesDeLaProjection
+): Promise<Faute[]> {
   const lu = schemaReponseDuTiers.safeParse(f.reponse);
   if (!lu.success)
     return [{ famille: 'fixture_illisible', message: `${f.fichier} : refusée par le schéma` }];
@@ -176,10 +188,7 @@ export async function jugerUneFixture(f: FixtureEnregistree): Promise<Faute[]> {
     APPELANT,
     dependancesDeGarde(f.reponse)
   );
-  const fiches = projeter(
-    lu.data,
-    empreinteurDeDirigeants('garde-aucune-annee-de-naissance')
-  ).fiches;
+  const fiches = fichesDe(lu.data);
   return [
     ...jugerUneSortie(`${f.fichier} (rendu)`, rendu, INTERDIT_AU_RENDU, personnes),
     ...jugerUneSortie(`${f.fichier} (fiche)`, fiches, INTERDIT_A_LA_FICHE, personnes),
@@ -187,7 +196,8 @@ export async function jugerUneFixture(f: FixtureEnregistree): Promise<Faute[]> {
 }
 
 export async function jugerLeDepot(
-  fixtures: readonly FixtureEnregistree[]
+  fixtures: readonly FixtureEnregistree[],
+  fichesDe: FichesDe = fichesDeLaProjection
 ): Promise<{ fautes: Faute[]; lues: number }> {
   const fautes: Faute[] = [];
   if (fixtures.length < MINIMUM_DE_FIXTURES) {
@@ -196,7 +206,7 @@ export async function jugerLeDepot(
       message: `${fixtures.length} fixture(s) lue(s), il en faut au moins ${MINIMUM_DE_FIXTURES}`,
     });
   }
-  for (const f of fixtures) fautes.push(...(await jugerUneFixture(f)));
+  for (const f of fixtures) fautes.push(...(await jugerUneFixture(f, fichesDe)));
   return { fautes, lues: fixtures.length };
 }
 
@@ -277,6 +287,22 @@ async function prouver(): Promise<boolean> {
       },
     },
     {
+      // Par le CHEMIN DU DÉPÔT (`jugerLeDepot`), pas par `jugerUneSortie` : c'est la moitié
+      // « fiche » de la garde elle-même qui doit voir l'année, pas un appel isolé du motif.
+      nom: 'une fiche persistée portant une année de naissance',
+      famille: 'cle_interdite',
+      champ: '(fiche) : champ `annee_de_naissance`',
+      fautes: async () =>
+        (
+          await jugerLeDepot(fixtures, (lu) =>
+            (fichesDeLaProjection(lu) as Record<string, unknown>[]).map((fiche) => ({
+              ...fiche,
+              annee_de_naissance: personne.annee_de_naissance,
+            }))
+          )
+        ).fautes,
+    },
+    {
       nom: 'un jeu de moins de vingt fixtures',
       famille: 'perimetre_vide',
       champ: 'fixture',
@@ -322,7 +348,15 @@ async function principal(argv: readonly string[]): Promise<number> {
     imprimer(fautes);
     return fautes.length === 0 ? 0 : 1;
   }
-  const { fautes, lues } = await jugerLeDepot(lireFixtures());
+  const j = argv.indexOf('--fixtures');
+  const dossier = j >= 0 ? argv[j + 1] : undefined;
+  if (j >= 0 && dossier === undefined) {
+    process.stderr.write('--fixtures attend un dossier\n');
+    return 2;
+  }
+  const { fautes, lues } = await jugerLeDepot(
+    dossier === undefined ? lireFixtures() : lireFixtures(dossier)
+  );
   process.stdout.write(
     fautes.length === 0
       ? `✅ aucune-annee-de-naissance — ${lues} fixture(s) enregistrée(s) jugée(s), rendu et fiche : aucun champ ni valeur de personne\n`
