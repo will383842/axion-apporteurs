@@ -49,6 +49,8 @@ export const PARAMETRES = {
   delaiAttenteMs: { valeur: 1_500, source: CHOIX, verifieLe: '2026-09-19' },
   disjoncteurSeuilEchecs: { valeur: 3, source: CHOIX, verifieLe: '2026-09-19' },
   disjoncteurPauseMs: { valeur: 30_000, source: CHOIX, verifieLe: '2026-09-19' },
+  /** Le plus long `Retry-After` obéi : au-delà, le disjoncteur rouvre quand même à ce terme. */
+  retryAfterPlafondMs: { valeur: 3_600_000, source: CHOIX, verifieLe: '2026-09-25' },
   /** La documentation recommande un en-tête explicite ; aucune coordonnée dans un dépôt public. */
   agentUtilisateur: {
     valeur: 'axion-partners/recherche-entreprises (mandataire serveur)',

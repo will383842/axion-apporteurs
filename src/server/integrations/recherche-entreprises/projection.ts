@@ -32,15 +32,22 @@ export type Empreinteur = (texteNormalise: string) => string;
 
 const ETIQUETTE = 'partners.dirigeant.v1';
 
+/** HMAC-SHA-256 séparé par domaine (64 hex) : SEULE écriture du module, étiquette en paramètre. */
+export function empreinteEtiquetee(cle: string, etiquette: string, texte: string): string {
+  return createHmac('sha256', cle).update(`${etiquette}\u001f${texte}`, 'utf8').digest('hex');
+}
+
 /** La fabrique de l'empreinteur : la clé est reçue, jamais lue ici. */
 export function empreinteurDeDirigeants(cle: string): Empreinteur {
   if (cle === '') throw new Error('empreinteur_sans_cle : une empreinte sans clé est inversible');
-  return (texte) =>
-    createHmac('sha256', cle).update(`${ETIQUETTE}\u001f${texte}`, 'utf8').digest('hex');
+  return (texte) => empreinteEtiquetee(cle, ETIQUETTE, texte);
 }
 
-/** Majuscules, sans accents, toute ponctuation réduite à une espace, espaces réduites. */
-function normaliser(texte: string | null): string {
+/**
+ * Majuscules, sans accents, toute ponctuation réduite à une espace, espaces réduites. SEULE
+ * normalisation du module : l'empreinte des dirigeants et le classement des suggestions la partagent.
+ */
+export function normaliser(texte: string | null): string {
   return (texte ?? '')
     .normalize('NFD')
     .replace(/\p{M}+/gu, '')

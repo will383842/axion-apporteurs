@@ -212,8 +212,12 @@ export type IssueDeFiche =
  * La fiche d'un SIREN choisi, pour le dépôt : du cache si la recherche l'a déjà ramenée, sinon du
  * tiers (sous le disjoncteur et le débit global). Tout échec rend la marque `entreprise_a_verifier`
  * — le dépôt continue, et la qualification reprendra l'enrichissement.
+ *
+ * POUR LE SERVEUR SEULEMENT : la fiche porte les EMPREINTES des dirigeants (REQ-INT-021, à
+ * persister). Aucune action ne la renvoie au navigateur : ce qui lui est dû passe par
+ * `autocompleterEntreprise` et son schéma de rendu strict (REQ-SEC-013).
  */
-export async function ficheEntreprise(
+export async function ficheEntreprisePourServeur(
   siren: string,
   deps: DependancesDuMandataire
 ): Promise<IssueDeFiche> {

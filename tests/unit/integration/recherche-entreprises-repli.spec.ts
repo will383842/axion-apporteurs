@@ -58,6 +58,7 @@ import {
 } from '../../../src/server/integrations/recherche-entreprises/autocompletion';
 import { limiteurDuRegistre } from '../../../src/server/integrations/recherche-entreprises/limiteur';
 import { appelantDepuis } from '../../../src/server/integrations/recherche-entreprises/production';
+import { empreinteAdresse } from '../../../src/server/integrations/axionia/api-entrante';
 import { clientDuTiers } from '../../../src/server/integrations/recherche-entreprises/tiers';
 import { creerDisjoncteur } from '../../../src/server/integrations/recherche-entreprises/disjoncteur';
 import { empreinteurDeDirigeants } from '../../../src/server/integrations/recherche-entreprises/projection';
@@ -335,7 +336,10 @@ describe('REQ-SEC-013 — limité par identité (120/j) et par empreinte d’adr
     const entetes = new Headers({ 'x-forwarded-for': '198.51.100.7, 203.0.113.9' });
     const a = appelantDepuis('apporteur-42', entetes, secrets);
     expect(a.identite).toMatch(/^[0-9a-f]{64}$/);
-    expect(a.adresse).toMatch(/^[0-9a-f]{64}$/);
+    expect(a.adresse).toMatch(/^[0-9a-f]{16}$/);
+    // REQ-SEC-017 : une adresse, UNE empreinte. Le mandataire et la frontiere d'axionia la calculent
+    // par la meme fonction, sous le meme sel : le rapprochement par empreinte d'adresse les relie.
+    expect(a.adresse).toBe(empreinteAdresse('203.0.113.9', secrets.IP_HASH_SALT));
     // L'élément de DROITE (le dernier mandataire de confiance), jamais celui que le client écrit.
     const droite = appelantDepuis(
       'apporteur-42',

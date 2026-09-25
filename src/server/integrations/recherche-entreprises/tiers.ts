@@ -36,15 +36,18 @@ export interface ReglageDuClient {
 /**
  * `Retry-After` : un nombre de secondes, ou une date HTTP (RFC 9110 §10.2.3). Illisible, négatif
  * ou déjà passé : `null` — le disjoncteur prend alors sa pause par défaut, il n'invente pas.
+ * PLAFONNÉ à `retryAfterPlafondMs` : un seul en-tête démesuré ne tient pas le disjoncteur du
+ * processus ouvert jusqu'au redémarrage.
  */
 export function lireRetryAfter(valeur: string | null, maintenantMs: number): number | null {
   if (valeur === null) return null;
   const texte = valeur.trim();
-  if (/^\d+$/.test(texte)) return Number(texte) * 1000;
+  const plafond = PARAMETRES.retryAfterPlafondMs.valeur;
+  if (/^\d+$/.test(texte)) return Math.min(Number(texte) * 1000, plafond);
   if (!/[a-z]/i.test(texte)) return null;
   const date = Date.parse(texte);
   if (Number.isNaN(date) || date <= maintenantMs) return null;
-  return date - maintenantMs;
+  return Math.min(date - maintenantMs, plafond);
 }
 
 const panne = (

@@ -49,7 +49,8 @@ vi.mock('../../src/server/securite/rate-limit', async (original) => {
 
 import {
   autocompleterEntreprise,
-  ficheEntreprise,
+  etatDuDisjoncteur,
+  ficheEntreprisePourServeur,
   type DependancesDuMandataire,
 } from '../../src/server/integrations/recherche-entreprises/autocompletion';
 import { limiteurDuRegistre } from '../../src/server/integrations/recherche-entreprises/limiteur';
@@ -323,6 +324,11 @@ describe('REQ-INT-020 — mandataire serveur : requête minimale, pannes travers
     expect(lireRetryAfter('demain', INSTANT)).toBeNull();
     expect(lireRetryAfter(null, INSTANT)).toBeNull();
     expect(lireRetryAfter('-3', INSTANT)).toBeNull();
+    // Plafonné : un en-tête démesuré ne tient pas le disjoncteur ouvert jusqu'au redémarrage.
+    const plafond = PARAMETRES.retryAfterPlafondMs.valeur;
+    expect(lireRetryAfter(String(plafond / 1000 - 1), INSTANT)).toBe(plafond - 1_000);
+    expect(lireRetryAfter('999999999', INSTANT)).toBe(plafond);
+    expect(lireRetryAfter(new Date(INSTANT + plafond * 24).toUTCString(), INSTANT)).toBe(plafond);
   });
 
   it('REQ-INT-020 — 5xx : saisie manuelle', async () => {
@@ -392,6 +398,82 @@ describe('REQ-QA-028 — disjoncteur et limite de débit ≤ 5 req/s', () => {
       'autocompletion'
     );
     expect(recues).toHaveLength(seuil + 2);
+  });
+
+  it('REQ-QA-028 — le disjoncteur réel : N échecs l’ouvrent, UN SEUL essai en demi-ouvert, réussi il referme', () => {
+    const d = creerDisjoncteur({ seuilEchecs: 3, pauseMs: 1_000 });
+    for (let i = 0; i < 2; i++) d.echec(INSTANT, 'erreur_serveur', null);
+    expect(d.vue(INSTANT).etat).toBe('ferme');
+    expect(d.autoriser(INSTANT)).toBe(true);
+    d.echec(INSTANT, 'erreur_serveur', null);
+    expect(d.vue(INSTANT).etat).toBe('ouvert');
+    expect(d.autoriser(INSTANT + 999)).toBe(false);
+    expect(d.vue(INSTANT + 1_000).etat).toBe('demi_ouvert');
+    // L'essai unique : le premier appel passe, le second — concurrent, l'essai n'a pas rendu — non.
+    expect(d.autoriser(INSTANT + 1_000)).toBe(true);
+    expect(d.autoriser(INSTANT + 1_000)).toBe(false);
+    expect(d.autoriser(INSTANT + 1_500)).toBe(false);
+    d.reussite();
+    expect(d.vue(INSTANT + 1_500)).toEqual({
+      etat: 'ferme',
+      echecsConsecutifs: 0,
+      repriseAt: null,
+      dernierMotif: null,
+    });
+    expect(d.autoriser(INSTANT + 1_500)).toBe(true);
+    expect(d.autoriser(INSTANT + 1_500)).toBe(true);
+  });
+
+  it('REQ-QA-028 — l’essai demi-ouvert MANQUÉ rouvre le disjoncteur, même ouvert par un seul 429', () => {
+    const d = creerDisjoncteur({ seuilEchecs: 3, pauseMs: 1_000 });
+    d.echec(INSTANT, 'refus_exces', 2_000);
+    expect(d.vue(INSTANT + 1_999).etat).toBe('ouvert');
+    expect(d.autoriser(INSTANT + 2_000)).toBe(true);
+    // Un seul échec compté avant celui-ci : sous le seuil. C'est l'état demi-ouvert qui rouvre.
+    d.echec(INSTANT + 2_000, 'erreur_serveur', null);
+    expect(d.vue(INSTANT + 2_000)).toMatchObject({
+      etat: 'ouvert',
+      echecsConsecutifs: 2,
+      repriseAt: INSTANT + 3_000,
+    });
+    expect(d.autoriser(INSTANT + 2_999)).toBe(false);
+    expect(d.autoriser(INSTANT + 3_000)).toBe(true);
+  });
+
+  it('REQ-QA-028 — par le mandataire : en demi-ouvert, deux saisies concurrentes, UNE seule requête part', async () => {
+    repondre = () => ({ statut: 429, corps: {}, entetes: { 'retry-after': '2' } });
+    const { deps, avancer } = banc();
+    await autocompleterEntreprise({ q: 'danone' }, APPELANT, deps);
+    expect(recues).toHaveLength(1);
+    avancer(2_000);
+    repondre = () => ({ statut: 200, corps: avecResultats().reponse });
+    const [a, b] = await Promise.all([
+      autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps),
+      autocompleterEntreprise({ q: 'lvmh' }, APPELANT, deps),
+    ]);
+    const issues = [a, b].map((r) => (r.mode === 'saisie_manuelle' ? r.motif : r.mode));
+    expect(issues.sort()).toEqual(['autocompletion', 'disjoncteur_ouvert']);
+    expect(recues).toHaveLength(2);
+    expect(etatDuDisjoncteur(deps).etat).toBe('ferme');
+  });
+
+  it('REQ-QA-028 — par le mandataire : après un 429, l’essai demi-ouvert en 5xx rouvre, rien ne repart', async () => {
+    repondre = () => ({ statut: 429, corps: {}, entetes: { 'retry-after': '2' } });
+    const { deps, avancer } = banc();
+    await autocompleterEntreprise({ q: 'danone' }, APPELANT, deps);
+    avancer(2_000);
+    repondre = () => ({ statut: 503, corps: {} });
+    expect(await autocompleterEntreprise({ q: 'michelin' }, APPELANT, deps)).toEqual({
+      mode: 'saisie_manuelle',
+      motif: 'erreur_serveur',
+    });
+    expect(recues).toHaveLength(2);
+    expect(await autocompleterEntreprise({ q: 'lvmh' }, APPELANT, deps)).toEqual({
+      mode: 'saisie_manuelle',
+      motif: 'disjoncteur_ouvert',
+    });
+    expect(recues).toHaveLength(2);
+    expect(etatDuDisjoncteur(deps).etat).toBe('ouvert');
   });
 
   it('REQ-QA-028 — six requêtes dans la même seconde : cinq partent, la sixième est refusée sans réseau', async () => {
@@ -522,7 +604,7 @@ describe('REQ-INT-021 — la fiche persistée : exactement les champs énuméré
     const { deps } = banc();
     await autocompleterEntreprise({ q: f.requete.q }, APPELANT, deps);
     const siren = schemaReponseDuTiers.parse(f.reponse).results[0]!.siren;
-    const r = await ficheEntreprise(siren, deps);
+    const r = await ficheEntreprisePourServeur(siren, deps);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.fiche.siren).toBe(siren);
     expect(recues).toHaveLength(1);
@@ -531,7 +613,7 @@ describe('REQ-INT-021 — la fiche persistée : exactement les champs énuméré
   it('REQ-INT-021 — tiers coupé, la fiche d’un SIREN inconnu rend la marque `entreprise_a_verifier`, jamais une erreur', async () => {
     repondre = () => ({ statut: 503, corps: {} });
     const { deps } = banc();
-    expect(await ficheEntreprise('552032534', deps)).toEqual({
+    expect(await ficheEntreprisePourServeur('552032534', deps)).toEqual({
       ok: false,
       motif: 'erreur_serveur',
       marque: 'entreprise_a_verifier',

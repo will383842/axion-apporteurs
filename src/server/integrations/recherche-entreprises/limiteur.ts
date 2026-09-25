@@ -6,8 +6,7 @@
  *   — le débit GLOBAL vers le tiers (REQ-INT-020, 5 par seconde) : un seul sujet pour tout le
  *     processus, l'empreinte d'une étiquette fixe ;
  *   — l'IDENTITÉ de l'apporteur (REQ-SEC-013, 120 par 24 h) ;
- *   — l'EMPREINTE D'ADRESSE réseau (REQ-SEC-013, que l'exigence ne chiffre pas : la limite attend
- *     sa configuration, et d'ici là le compteur applique sa conduite déclarée).
+ *   — l'EMPREINTE D'ADRESSE réseau (REQ-SEC-013, 600 par heure).
  *
  * Chaque appel est DIRECT, à nom LITTÉRAL, sans magasin ni signaleur : c'est la forme que
  * `scripts/gates/rate-famille.ts` sait lire, et hors des tests `limiter` refuse toute injection.

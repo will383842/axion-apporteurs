@@ -14,16 +14,8 @@
  * n'est pas une faute. Elle compare la saisie au DÉBUT du nom de même longueur — c'est une
  * autocomplétion, l'apporteur n'a pas fini de taper — et au nom entier, et garde la plus petite.
  */
+import { normaliser } from './projection';
 import type { Suggestion } from './schemas';
-
-function normaliser(texte: string): string {
-  return texte
-    .normalize('NFD')
-    .replace(/\p{M}+/gu, '')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
-}
 
 /** Levenshtein classique (insertion, suppression, substitution), en deux lignes de mémoire. */
 export function distanceDeLevenshtein(a: string, b: string): number {
