@@ -291,23 +291,37 @@ sur les deux cas.
 fait-il exactement ce que disent les REQ citées, ni plus ni moins), `securite` (cloisonnement, défaut = refus,
 404 byte-identique, PII, journal, idempotence, absence d'oracle), `simplicite` (dérivation depuis une source
 unique, aucune duplication, nommage français conforme). **Combien de lentilles une PR reçoit dépend de son
-risque** — décision de Will du 2026-09-18, consignée par `partners/ADR-0012`. Le risque est dérivé par
+risque** — décision de Will du 2026-09-18, consignée par `partners/ADR-0012`, resserrée par sa décision du
+2026-09-25 (`partners/ADR-0021`, GOV-097) : **quatre lentilles seulement pour l'argent, la sécurité et les
+données ; deux pour tout le reste**. Le risque est dérivé par
 `risqueDeLaPr()` (`scripts/lot/revues.ts`), **la seule dérivation**, appelée par `gov:pr` et par le composeur
 du corps de PR ; `pnpm gov:pr --pr <numéro>` l'imprime avec ses raisons, et c'est cette ligne qu'on lit avant
 de lancer les lentilles.
 
-L'ordinaire se **prouve**, l'élevé est le défaut. Une PR est de risque **ordinaire** si et seulement si :
-(1) au moins une tâche est résolue, par le titre ou par le champ `pr` ; (2) le registre des tâches de la base
-est lisible ; (3) chaque tâche résolue, lue sur la tête **et** sur la base, est en zone `gouvernance` ou
-`qualite`, porte un champ `sensible` présent et vide, et n'est pas `schema: true` ; (4) la PR ne porte pas le
-label `schema` ; (5) le diff n'est pas vide, sa liste est **complète** (la forge plafonne la sienne sans
-erreur : une liste plus courte que le nombre de fichiers annoncé par la PR, ou au plafond, ne prouve rien),
-et chacun de ses fichiers est sous `docs/`, `scripts/` ou `tests/` — **jamais sous `.github/`, jamais à la
+L'élevé se **cherche**, par signaux ; et ce qu'on ne sait pas lire est élevé. Une PR est de risque **élevé**
+si et seulement si l'un de ces signaux est présent — sinon elle est **ordinaire** :
+(1) une tâche de la PR — résolue par le titre, le champ `pr` ou le champ `Lot:`, lue sur la tête **et** sur la
+base — porte un champ `sensible` **non vide** (`argent`, `attribution`, `auth`, `espace`, `rgpd` : l'argent, la
+sécurité et les données) ou **absent**, ou `schema: true`, ou une zone `argent` ou `securite`, ou une zone
+**absente** ou que le schéma du registre ne déclare pas ; (2) la PR porte le label `schema`, ou touche un chemin
+de schéma (§7) ; (3) un de ses fichiers est dans une **zone sensible du code** — un segment de son chemin nomme
+l'argent, la sécurité ou les données (`commission`, `attribution`, `auth`, `espace`, `securite`, `acces`,
+`donnees-personnelles`…, la liste est `SEGMENTS_DES_ZONES_SENSIBLES`) ; (4) un de ses fichiers appartient au
+**processus** : la garde des revues — ses trois racines (`scripts/lot/revues.ts`, `scripts/gates/gov-pr.ts`,
+`scripts/lot/corps-de-pr.ts`), la **fermeture transitive** de leurs imports, dérivée du disque, cette charte,
+`docs/agents.json` et le schéma du registre des tâches —, **`.github/`** et tout dossier caché, **toute la
 racine**, documents compris (`package.json`, les configurations d'outils, mais aussi `CLAUDE.md` et
-`AGENTS.md`, que chaque agent charge) —, hors de la garde des revues : ses trois racines
-(`scripts/lot/revues.ts`, `scripts/gates/gov-pr.ts`, `scripts/lot/corps-de-pr.ts`), la **fermeture
-transitive** de leurs imports, dérivée du disque, cette charte et `docs/agents.json`. Un fichier **renommé
-ou copié** compte par sa source ET sa destination. Sinon elle est de risque **élevé**.
+`AGENTS.md`, que chaque agent charge), et `config/`. Ces fichiers peuvent désarmer les gardes elles-mêmes :
+c'est la sécurité du processus ; (5) le diff est vide, sa liste est **incomplète** (la forge plafonne la sienne
+sans erreur : une liste plus courte que le nombre de fichiers annoncé par la PR, ou au plafond, ne prouve
+rien), aucune tâche n'est résolue, ou le registre de la base est illisible. Un fichier **renommé ou copié**
+compte par sa source ET sa destination.
+
+**Ce qui ne rend plus une PR élevée** depuis GOV-097 : une zone autre que l'argent et la sécurité (`espace`,
+`juridique`, `integration`, `domaine`…) avec `sensible: []`, et un fichier de code produit hors des zones
+sensibles. ⚠️ Les données se lisent par `sensible` : une tâche qui manipule des données personnelles avec
+`sensible: []` passe à deux lentilles. C'est une **erreur du registre**, qui se corrige en y portant `rgpd`
+(`partners/ADR-0021`, limite déclarée).
 
 | Risque | Lentilles exigées |
 | --- | --- |
@@ -317,6 +331,17 @@ ou copié** compte par sa source ET sa destination. Sinon elle est de risque **�
 Un même poste apparaît plusieurs fois dans `Relecteur:` : ce sont des **lectures** distinctes, pas des postes
 distincts — la règle porte sur les lentilles, jamais sur l'unicité des codes. Y déclarer plus de lentilles que
 le risque n'en exige est admis.
+
+**Ce qui est un refus, ce qui est une dette** (décision de Will du 2026-09-25, `partners/ADR-0021`). Un refus
+vise un **défaut de code ou de test** — une REQ non couverte, du code au-delà du périmètre, un test qui ne
+peut pas rougir, un cloisonnement ouvert —, ou une **affirmation fausse qui porte sur la sécurité, l'argent ou
+les données**, où qu'elle soit écrite. Une inexactitude de **prose** — corps de PR, entrée de journal, ADR,
+commentaire, docblock — qui ne porte sur aucun des trois **n'est pas un motif de refus** : la lentille rend
+`Verdict: accepte` et nomme l'inexactitude dans sa revue comme une **dette**, avec le fichier et la ligne ; elle
+se corrige au passage suivant sur ce fichier. C'est d'abord la règle de la lentille `exactitude`, qui
+confronte le code aux REQ. ⚠️ `gov:pr` ne distingue pas les motifs : **tout** `Verdict: refuse` bloque. La règle
+tient donc dans la main de la lentille, pas dans la garde — refuser pour une prose hors de ces trois domaines
+est une faute de la lentille, pas un refus que la garde saurait déclasser.
 
 **La troisième lentille sur une PR `schema`.** Toute PR touchant `prisma/**` ou `packages/contracts/**` porte
 le label `schema`. Sur cette PR, **A02 remplace la lentille `simplicite`** et son approbation est

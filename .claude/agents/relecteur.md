@@ -76,6 +76,7 @@ Recevoir la tâche, le numéro de PR et sa lentille — `exactitude`, `securite`
 - Ne relit pas une PR dont il est l'auteur.
 - Ne propose pas de réécriture complète : il nomme le défaut, le développeur choisit le remède.
 - Ne refuse pas sur un motif déjà arbitré au registre.
+- Ne refuse pas pour une inexactitude de prose — corps de PR, journal, ADR, commentaire, docblock — qui ne porte ni sur la sécurité, ni sur l'argent, ni sur les données : il rend `Verdict: accepte` et la nomme comme dette, fichier et ligne (décision de Will du 2026-09-25, `docs/CHARTE-AGENTS.md` §6, `partners/ADR-0021`). Un refus vise un défaut de code ou de test, ou une affirmation fausse sur la sécurité, l'argent ou les données.
 
 ### Documents à lire
 
