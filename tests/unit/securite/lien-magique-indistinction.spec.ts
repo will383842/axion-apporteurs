@@ -20,10 +20,11 @@
  * Les courriels sont en `example.org` ; secrets et jetons sont tirés à l'exécution.
  */
 import { describe, it, expect } from 'vitest';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import {
   consommerLien,
   demanderLien,
+  empreinteDeSession,
   empreinteDuJeton,
   type ConditionDeConsommation,
   type ConfigurationDuLien,
@@ -45,13 +46,22 @@ interface Compte {
 interface LigneLien {
   id: string;
   apporteurId: string;
-  jetonHash: string;
+  tokenHash: string;
   kid: string;
   creeAt: Date;
   expireAt: Date;
   consommeAt: Date | null;
   annuleAt: Date | null;
+}
+
+interface LigneSession {
+  apporteurId: string;
+  lienMagiqueId: string;
+  tokenHash: string;
+  kid: string;
   ipHash: string | null;
+  creeAt: Date;
+  expireAt: Date;
 }
 
 /** Oracle de REQ-SEC-002 : 10 par empreinte réseau, 5 par courriel, sur un quart d'heure. */
@@ -101,11 +111,7 @@ function univers(o: Options = {}) {
   const trace: string[] = [];
   const differe: Array<() => Promise<void>> = [];
   const liens: LigneLien[] = [];
-  const sessions: Array<{
-    apporteurId: string;
-    lienMagiqueId: string;
-    adresseHash: string | null;
-  }> = [];
+  const sessions: LigneSession[] = [];
   const envois: Array<{ a: string; url: string; expireAt: Date }> = [];
   const signalements: unknown[] = [];
   const journal: string[] = [];
@@ -119,6 +125,7 @@ function univers(o: Options = {}) {
     secret: secretLien,
     kid: randomBytes(4).toString('hex'),
     urlPublique: URL_PUBLIQUE,
+    session: { secret: randomBytes(32).toString('hex'), kid: randomBytes(4).toString('hex') },
   };
 
   const demande: PortsDeDemande = {
@@ -202,9 +209,9 @@ function univers(o: Options = {}) {
           for (const l of touchees) l.consommeAt = donnees.consommeAt;
           return touchees.length;
         },
-        lireLien: async (jetonHash) => {
+        lireLien: async (tokenHash) => {
           await Promise.resolve();
-          const l = liens.find((x) => x.jetonHash === jetonHash);
+          const l = liens.find((x) => x.tokenHash === tokenHash);
           return l ? { id: l.id, apporteurId: l.apporteurId, kid: l.kid } : null;
         },
         statutApporteur: async (apporteurId) => {
@@ -213,12 +220,7 @@ function univers(o: Options = {}) {
         },
         ouvrirSession: async (s) => {
           await Promise.resolve();
-          sessions.push({
-            apporteurId: s.apporteurId,
-            lienMagiqueId: s.lienMagiqueId,
-            adresseHash: s.adresseHash,
-          });
-          return randomBytes(32).toString('base64url');
+          sessions.push({ ...s });
         },
       });
     },
@@ -468,12 +470,24 @@ describe('REQ-SEC-001 — l’émission du lien, après la réponse', () => {
     const attendue = createHmac('sha256', u.configuration.secret)
       .update(`partners.lien.v1\u001f${jeton}`, 'utf8')
       .digest('hex');
-    expect(ligne.jetonHash).toBe(attendue);
+    expect(ligne.tokenHash).toBe(attendue);
     expect(empreinteDuJeton(jeton, u.configuration.secret)).toBe(attendue);
     expect(ligne.kid).toBe(u.configuration.kid);
     expect(ligne.expireAt.getTime() - ligne.creeAt.getTime()).toBe(15 * 60 * 1000);
     expect(DUREES_AUTH.lienMagiqueMs.source).toBe('REQ-SEC-001');
-    expect(ligne.ipHash).toMatch(/^[0-9a-f]{16}$/);
+    // La table des liens ne porte pas d'adresse réseau : c'est la session qui la garde.
+    expect(Object.keys(ligne).sort()).toEqual(
+      [
+        'annuleAt',
+        'apporteurId',
+        'consommeAt',
+        'creeAt',
+        'expireAt',
+        'id',
+        'kid',
+        'tokenHash',
+      ].sort()
+    );
   });
 
   it('REQ-SEC-001 : l’URL part de l’adresse publique configurée, jamais de l’en-tête `Host`', async () => {
@@ -499,10 +513,10 @@ describe('REQ-SEC-001 — l’émission du lien, après la réponse', () => {
     const u = univers({ comptes: [MARIE] });
     const ancien = await emettrePourMarie(u);
     const recent = await emettrePourMarie(u);
-    expect(await consommerLien({ jeton: ancien, adresseHash: null }, u.consommation)).toEqual({
+    expect(await consommerLien({ jeton: ancien, ipHash: null }, u.consommation)).toEqual({
       etat: 'lien_invalide',
     });
-    expect((await consommerLien({ jeton: recent, adresseHash: null }, u.consommation)).etat).toBe(
+    expect((await consommerLien({ jeton: recent, ipHash: null }, u.consommation)).etat).toBe(
       'ouverte'
     );
     expect(u.sessions).toHaveLength(1);
@@ -526,23 +540,69 @@ describe('REQ-SEC-001 — la consommation : unique, atomique, bornée à 15 minu
   it('REQ-SEC-001 : un lien frais ouvre UNE session ; consommé deux fois, la seconde est refusée', async () => {
     const u = univers({ comptes: [MARIE] });
     const jeton = await emettrePourMarie(u);
-    const premiere = await consommerLien(
-      { jeton, adresseHash: 'a1b2c3d4e5f60718' },
-      u.consommation
-    );
+    const premiere = await consommerLien({ jeton, ipHash: 'a1b2c3d4e5f60718' }, u.consommation);
     expect(premiere.etat).toBe('ouverte');
-    const seconde = await consommerLien({ jeton, adresseHash: null }, u.consommation);
+    const seconde = await consommerLien({ jeton, ipHash: null }, u.consommation);
     expect(seconde).toEqual({ etat: 'lien_invalide' });
-    expect(u.sessions).toEqual([
-      { apporteurId: MARIE.id, lienMagiqueId: 'lien-1', adresseHash: 'a1b2c3d4e5f60718' },
-    ]);
+    expect(u.sessions).toHaveLength(1);
+    expect(u.sessions[0]).toMatchObject({
+      apporteurId: MARIE.id,
+      lienMagiqueId: 'lien-1',
+      ipHash: 'a1b2c3d4e5f60718',
+      kid: u.configuration.session.kid,
+    });
+  });
+
+  it('REQ-SEC-001 : la session ne garde que le HMAC de son jeton, sous le secret de SESSION, 30 jours', async () => {
+    const u = univers({ comptes: [MARIE] });
+    const jeton = await emettrePourMarie(u);
+    const r = await consommerLien({ jeton, ipHash: null }, u.consommation);
+    if (r.etat !== 'ouverte') throw new Error(`attendu ouverte, reçu ${r.etat}`);
+    expect(r.jetonSession).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const session = u.sessions[0] as LigneSession;
+    expect(canonique(u.sessions)).not.toContain(r.jetonSession);
+    const sous = (secret: string) =>
+      createHmac('sha256', secret)
+        .update(`partners.session.v1\u001f${r.jetonSession}`, 'utf8')
+        .digest('hex');
+    expect(session.tokenHash).toBe(sous(u.configuration.session.secret));
+    expect(empreinteDeSession(r.jetonSession, u.configuration.session.secret)).toBe(
+      session.tokenHash
+    );
+    // Face 2 : ni le secret des liens, ni le domaine des liens ne donnent cette empreinte.
+    expect(session.tokenHash).not.toBe(sous(u.configuration.secret));
+    expect(session.tokenHash).not.toBe(
+      empreinteDuJeton(r.jetonSession, u.configuration.session.secret)
+    );
+    expect(session.expireAt.getTime() - session.creeAt.getTime()).toBe(30 * 24 * 60 * 60 * 1000);
+    expect(DUREES_AUTH.sessionMs.source).toBe('REQ-SEC-003');
+  });
+
+  it('REQ-SEC-001 : un lien stocké en SHA-256 SANS clé ne s’ouvre pas — seul le HMAC fait foi', async () => {
+    const u = univers({ comptes: [MARIE] });
+    const jeton = randomBytes(32).toString('base64url');
+    const creeAt = new Date(u.horloge.t);
+    u.liens.push({
+      id: 'lien-nu',
+      apporteurId: MARIE.id,
+      tokenHash: createHash('sha256').update(jeton, 'utf8').digest('hex'),
+      kid: u.configuration.kid,
+      creeAt,
+      expireAt: new Date(creeAt.getTime() + 60_000),
+      consommeAt: null,
+      annuleAt: null,
+    });
+    expect(await consommerLien({ jeton, ipHash: null }, u.consommation)).toEqual({
+      etat: 'lien_invalide',
+    });
+    expect(u.sessions).toHaveLength(0);
   });
 
   it('REQ-SEC-001 : dix consommations concurrentes n’ouvrent qu’UNE session', async () => {
     const u = univers({ comptes: [MARIE] });
     const jeton = await emettrePourMarie(u);
     const r = await Promise.all(
-      Array.from({ length: 10 }, () => consommerLien({ jeton, adresseHash: null }, u.consommation))
+      Array.from({ length: 10 }, () => consommerLien({ jeton, ipHash: null }, u.consommation))
     );
     expect(u.sessions).toHaveLength(1);
     expect(r.filter((x) => x.etat === 'lien_invalide')).toHaveLength(9);
@@ -551,19 +611,22 @@ describe('REQ-SEC-001 — la consommation : unique, atomique, bornée à 15 minu
   it('REQ-SEC-001 face 2 : lire puis écrire ouvre plusieurs sessions sous concurrence', async () => {
     const u = univers({ comptes: [MARIE] });
     const jeton = await emettrePourMarie(u);
-    const jetonHash = empreinteDuJeton(jeton, u.configuration.secret);
+    const tokenHash = empreinteDuJeton(jeton, u.configuration.secret);
     // La lecture rend un INSTANTANÉ ; l'écriture vient après l'aller-retour.
     const lirepuisEcrire = () =>
       u.consommation.transaction(async (tx) => {
-        const instantane = { ...u.liens.find((l) => l.jetonHash === jetonHash) };
-        const lien = await tx.lireLien(jetonHash);
+        const instantane = { ...u.liens.find((l) => l.tokenHash === tokenHash) };
+        const lien = await tx.lireLien(tokenHash);
         if (!lien || instantane.consommeAt !== null) return;
-        await tx.consommer({ jetonHash }, { consommeAt: new Date(u.horloge.t) });
+        await tx.consommer({ tokenHash }, { consommeAt: new Date(u.horloge.t) });
         await tx.ouvrirSession({
           apporteurId: lien.apporteurId,
           lienMagiqueId: lien.id,
-          adresseHash: null,
-          maintenant: new Date(u.horloge.t),
+          tokenHash: 'f'.repeat(64),
+          kid: u.configuration.session.kid,
+          ipHash: null,
+          creeAt: new Date(u.horloge.t),
+          expireAt: new Date(u.horloge.t + 1),
         });
       });
     await Promise.all(Array.from({ length: 10 }, lirepuisEcrire));
@@ -574,18 +637,16 @@ describe('REQ-SEC-001 — la consommation : unique, atomique, bornée à 15 minu
     const tot = univers({ comptes: [MARIE] });
     const jetonTot = await emettrePourMarie(tot);
     tot.horloge.t = (tot.liens[0] as LigneLien).expireAt.getTime() - 1;
-    expect(
-      (await consommerLien({ jeton: jetonTot, adresseHash: null }, tot.consommation)).etat
-    ).toBe('ouverte');
+    expect((await consommerLien({ jeton: jetonTot, ipHash: null }, tot.consommation)).etat).toBe(
+      'ouverte'
+    );
 
     const tard = univers({ comptes: [MARIE] });
     const jetonTard = await emettrePourMarie(tard);
     tard.horloge.t = (tard.liens[0] as LigneLien).expireAt.getTime();
-    expect(await consommerLien({ jeton: jetonTard, adresseHash: null }, tard.consommation)).toEqual(
-      {
-        etat: 'lien_invalide',
-      }
-    );
+    expect(await consommerLien({ jeton: jetonTard, ipHash: null }, tard.consommation)).toEqual({
+      etat: 'lien_invalide',
+    });
     expect(tard.sessions).toHaveLength(0);
   });
 
@@ -602,10 +663,10 @@ describe('REQ-SEC-001 — la consommation : unique, atomique, bornée à 15 minu
     expect(kid.comptes[0]?.statut).toBe('signe');
 
     const r = [
-      await consommerLien({ jeton: jetonKid, adresseHash: null }, kid.consommation),
-      await consommerLien({ jeton: jetonResilie, adresseHash: null }, resilie.consommation),
+      await consommerLien({ jeton: jetonKid, ipHash: null }, kid.consommation),
+      await consommerLien({ jeton: jetonResilie, ipHash: null }, resilie.consommation),
       await consommerLien(
-        { jeton: randomBytes(32).toString('base64url'), adresseHash: null },
+        { jeton: randomBytes(32).toString('base64url'), ipHash: null },
         inconnu.consommation
       ),
     ];
@@ -625,7 +686,7 @@ describe('REQ-SEC-001 — la consommation : unique, atomique, bornée à 15 minu
       `${jeton.slice(1)}=`,
       `${jeton.slice(1)}+`,
     ]) {
-      expect(await consommerLien({ jeton: hors, adresseHash: null }, u.consommation)).toEqual({
+      expect(await consommerLien({ jeton: hors, ipHash: null }, u.consommation)).toEqual({
         etat: 'lien_invalide',
       });
     }
