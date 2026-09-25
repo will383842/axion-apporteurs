@@ -20,6 +20,15 @@ dans ce fichier, et `gov:pr` rougit si ce n'est plus vrai.
     porte sur l'auteur et sur les LENTILLES (`exactitude`, `securite`, `simplicite`) plus la
     vérification de mutation — jamais sur l'unicité des codes de poste : un même poste peut tenir
     trois lectures distinctes.
+  · le champ « Lot: » de la section Identité porte les identifiants de tâche que cette PR livre EN
+    PLUS de celle que son titre nomme, séparés par des VIRGULES — et il RESTE VIDE pour une PR à
+    une seule tâche. Le titre ne peut nommer qu'une tâche, et `pnpm lot:cloture`, seul écrivain du
+    champ `pr` de `docs/tasks.json`, ne tourne qu'APRÈS la fusion : sans ce champ, les autres
+    tâches d'un lot ne résolvent par RIEN et `gov:pr` refuse leurs fichiers comme « hors des
+    `paths` des tâches » (GOV-096, mesuré sur la PR 114). Le seul séparateur est la virgule — un
+    espace, un point-virgule ou une parenthèse de commentaire font ROUGIR la garde, jamais une
+    liste vide en silence. Un identifiant inconnu du registre, déjà livré, ou rattaché à une autre
+    PR est refusé et nommé.
 
 Ne retire aucun marqueur : ils sont l'ancrage de la garde, pas de la décoration.
 
@@ -36,6 +45,7 @@ Titre de la PR : `<type>(<ID-TÂCHE>): <titre>` (`docs/CONVENTIONS.md` §5).
 Auteur: A__
 Relecteur: A__ exactitude · A__ securite · A__ simplicite · A__ mutation
 Couvre: REQ-___
+Lot:
 
 ## Ce que fait cette PR
 
