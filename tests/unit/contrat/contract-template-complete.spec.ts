@@ -662,6 +662,10 @@ describe('REQ-JUR-003 — art. 4.6 amendé par W15 (HYP-W15-ART-4-6, HYP-W15-PAR
       'vérification',
       'texte identique pour tous les parrains',
       '{{PARRAINAGE_MOIS}}',
+      // A10 · mutation, PR #92 : A6f, A6i, A6l
+      "l'envoi ou la signature d'un avenant ne le modifie pas",
+      'sans date calculée',
+      'ne sont portés à la connaissance du parrain',
     ]) {
       expect(al6, fragment).toContain(fragment);
     }
@@ -685,12 +689,23 @@ describe('REQ-JUR-003 — art. 4.6 amendé par W15 (HYP-W15-ART-4-6, HYP-W15-PAR
       "L'accord du parrain d'origine n'est pas requis",
       "Le filleul, le parrain d'origine et le nouveau parrain en sont informés",
       'sans indication du motif',
+      // A10 · mutation, PR #92 : A8a, A8f, A8h
+      'limitativement énumérés',
+      "prend effet à la date à laquelle la Société l'opère",
+      "qui n'est ni prolongée ni rouverte",
       "Une reprise opérée après la date d'effet sur une commission acquise avant cette date est imputée au parrain d'origine",
     ]) {
       expect(al8, fragment).toContain(fragment);
     }
     // motifs LIMITATIFS : aucune formule qui rouvrirait la liste
     expect(al8).not.toMatch(/notamment|tout autre motif|par exemple|tel que/i);
+    // ... et TROIS motifs, pas un de plus (A10 · mutation, PR #92 : A8c en ajoutait un quatrième)
+    const enumeration = /limitativement énumérés : (.+?)\. Le changement/.exec(al8)?.[1] ?? '';
+    expect(enumeration.split(' ; ')).toEqual([
+      'une erreur dans le rattachement initial',
+      'une fraude ou un auto-parrainage, au sens du quatrième alinéa',
+      'le départ du parrain ou la résiliation de son contrat',
+    ]);
     // l'al. 8 est le dernier : aucun alinéa ne le suit dans l'art. 4.6
     expect(unitesDuGabarit(gabarit()).get('4.6')!.alineas).toHaveLength(8);
   });
