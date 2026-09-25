@@ -2630,12 +2630,14 @@ if (LANCE_EN_SCRIPT) {
       portee += ', puis la PR de l’événement GitHub — SANS les revues, qui n’existent pas encore';
   }
 
-  const fautes = controler(depot, pr);
   // LE RISQUE EST IMPRIMÉ DÈS QU'UNE PR EST CONNUE (GOV-077) : c'est cette ligne que l'orchestrateur
   // lit AVANT de lancer les lentilles — deux sur une PR ordinaire, quatre sur une PR élevée.
   if (pr !== null) console.log(`ℹ️  gov:pr — ${direLeRisque(risqueDePr(depot, pr))}.`);
-  // GOV-078 (1) — le déclencheur par zone DIT ce qu'il a confronté, vert ou rouge.
+  // GOV-078 (1) — le déclencheur par zone DIT ce qu'il a confronté, vert ou rouge. Imprimé AVANT que
+  // les fautes n'existent : aucune condition sur le verdict ne peut plus le taire (survivant
+  // `mutation`, PR 114, tour 2 — le témoin de bout en bout ne sait jouer qu'une PR rouge).
   if (pr !== null) console.log(`ℹ️  gov:pr — ${direLesZones(pr.fichiers)}.`);
+  const fautes = controler(depot, pr);
   if (AVIS_HORS_CANAL.length > 0) {
     console.log(
       `ℹ️  gov:pr — ${AVIS_HORS_CANAL.length} avis posté(s) en COMMENTAIRE D’ISSUE, qui ne comptent ` +
