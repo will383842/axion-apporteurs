@@ -8,12 +8,12 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**284 taches · 214.85 j estimes.**
+**285 taches · 215.35 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 110 | 84.35 | 35 |
+| 0 — Socle technique | 111 | 84.85 | 35 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -714,17 +714,17 @@ Couvre : `REQ-INT-014`, `REQ-SEC-012`
 
 ### SEC-03 — Lien magique apporteur
 
-`1 j` · zone `securite` · sensible : auth · depend de `SEC-01`, `SEC-08`, `SEC-10`
+`1 j` · zone `securite` · `schema` · sensible : auth · depend de `SEC-01`, `SEC-08`, `SEC-10`
 
 Couvre : `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016`
 
-**Acceptation.** TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot) ET C'EST LE SEUL PARCOURS UTILISATEUR REEL DE LA PHASE 0. (1) Le lien de connexion a une duree de vie de 15 minutes, est a USAGE UNIQUE par une consommation ATOMIQUE conditionnelle — jamais un lire-puis-ecrire —, et n'est stocke qu'en empreinte SHA-256 (REQ-SEC-001). (2) LA REPONSE DU FORMULAIRE EST IDENTIQUE que l'adresse existe ou non : meme texte, meme code, meme duree observable. Une difference de duree est une difference. (3) La demande est limitee a 10 par quart d'heure et par empreinte d'adresse reseau, et 5 par quart d'heure et par adresse de courriel, avec refus en cas de panne du cache (REQ-SEC-002, REQ-SEC-016) ; le message de suspension explique la suspension SANS reveler l'existence du compte. (4) L'ecran `src/app/(espace)/connexion/` est la premiere page rendue de Partners : elle passe les controles d'accessibilite et de cibles que UX-P0-03 porte, et sa mesure de poids est collee dans la PR. (5) TEMOIN A DEUX FACES : un lien consomme deux fois n'ouvre de session qu'UNE fois — la seconde consommation est refusee et le test compte les sessions, pas les codes de reponse ; un lien de plus de 15 minutes est refuse ; un lien frais et unique ouvre la session et sort en zero. (6) TEMOIN A DEUX FACES sur l'indistinction : les reponses a une adresse existante et a une adresse inexistante sont comparees OCTET A OCTET et doivent etre egales ; une divergence introduite volontairement fait rougir le test.
+**Acceptation.** TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot) ET C'EST LE SEUL PARCOURS UTILISATEUR REEL DE LA PHASE 0. (1) Le lien de connexion a une duree de vie de 15 minutes, est a USAGE UNIQUE par une consommation ATOMIQUE conditionnelle — jamais un lire-puis-ecrire —, et n'est stocke qu'en empreinte HMAC-SHA-256 sous MAGIC_LINK_SECRET, domaine separe, kid stocke (partners/ADR-0013 decision 14 ; REQ-SEC-001). (2) LA REPONSE DU FORMULAIRE EST IDENTIQUE que l'adresse existe ou non : meme texte, meme code, meme duree observable. Une difference de duree est une difference. (3) La demande est limitee a 10 par quart d'heure et par empreinte d'adresse reseau, et 5 par quart d'heure et par adresse de courriel, avec refus en cas de panne du cache (REQ-SEC-002, REQ-SEC-016) ; le message de suspension explique la suspension SANS reveler l'existence du compte. (4) L'ecran `src/app/(espace)/connexion/` est la premiere page rendue de Partners : elle passe les controles d'accessibilite et de cibles que UX-P0-03 porte, et sa mesure de poids est collee dans la PR. (5) TEMOIN A DEUX FACES : un lien consomme deux fois n'ouvre de session qu'UNE fois — la seconde consommation est refusee et le test compte les sessions, pas les codes de reponse — les sessions sont les lignes de sessions_espace, dont lien_magique_id est unique ; un lien de plus de 15 minutes est refuse ; un lien frais et unique ouvre la session et sort en zero. (6) TEMOIN A DEUX FACES sur l'indistinction : les reponses a une adresse existante et a une adresse inexistante sont comparees OCTET A OCTET et doivent etre egales ; une divergence introduite volontairement fait rougir le test.
 
 **Tests.** `tests/integration/lien-magique.spec.ts` · `tests/unit/securite/lien-magique-indistinction.spec.ts`
 
 ### SEC-04 — Sessions révocables en base, `sessionVersion`, step-up
 
-`1 j` · zone `securite` · sensible : auth · depend de `SEC-03`
+`1 j` · zone `securite` · `schema` · sensible : auth · depend de `SEC-03`
 
 Couvre : `REQ-SEC-003`, `REQ-SEC-004`
 
@@ -1690,6 +1690,16 @@ Couvre : `REQ-GOV-011`
 Couvre : `REQ-GOV-015`
 
 **Acceptation.** TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le développeur de DM-06 a rendu `stop` sur trois contradictions ; les décisions prises le 2026-09-25 par l'orchestrateur, sur délégation de Will, sont inscrites : (1) REQ-DM-035 amendée — `sourceCanal` est une chaîne transportée figée ; la dérivation vers l'enum `CanalCandidature` et sa table chemin → canal appartiennent à EXT-T03 ; (2) le glossaire porte `RegimeTva`, `StatutApporteur`, `MotifResiliation` et `CanalCandidature` au §4, lus par `partners:schema:enums` ; (3) l'IBAN sort de DM-06 : il appartient à la pièce RIB du KYC (DM-11, SEC-08), `IdentitesFacturation` n'en porte qu'une référence (REQ-CPL-005 amendée) ; (4) format du code de parrainage (REQ-DM-012), `DORMANCE_JOURS` en paramètre, témoin du dépôt au-delà du seuil porté par DM-09 ; (5) `paths` de DM-06 complétés. Registres écrits par les verbes hors dépôt ; `gov:hypotheses`, `gov:tasks`, `gov:requirements`, `gov:identifiants`, `gov:attributions`, `gov:trace`, `partners:schema:enums` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier.
+
+**Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
+
+### GOV-100 — Cadrage de SEC-03 et SEC-04 : deux tables écrites au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-015`
+
+**Acceptation.** TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le cadrage décidé par l'architecte le 2026-09-26, sur délégation de Will, est inscrit : (1) SEC-03 et SEC-04 passent `schema: true` — SEC-03 crée `liens_magiques` et `sessions_espace` dans une même migration, SEC-04 étendra `sessions_espace` ; leurs `paths` portent `prisma/migrations/`, et ceux de SEC-03 les modules de durées, de dépôt du lien et d'accès à l'espace ; (2) l'empreinte des jetons d'authentification est un HMAC-SHA-256 sous le secret de l'usage, à domaine séparé, `kid` stocké : décision 14 de partners/ADR-0013, `docs/adr/INDEX.md` régénéré ; (3) `HYP-SEC03-ACCES` est inscrite au registre des décisions : l'espace est ouvert aux statuts `signe` et `suspendu` (REQ-SEC-032), `resilie` en lecture seule par SEC-19, `kyc_en_cours` et `pret_a_signer` fermés ; (4) les points (1) et (5) de l'acceptance de SEC-03 disent l'empreinte HMAC et la table des sessions. Registres écrits par les verbes hors dépôt ; `gov:tasks`, `gov:hypotheses`, `gov:attributions`, `gov:identifiants`, `gov:trace:verifier`, `lot:paths:check` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier.
 
 **Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
 

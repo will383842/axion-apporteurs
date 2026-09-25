@@ -16,7 +16,7 @@
 
 **334 exigences actives · 89 réputées testées · 89 couvertes · 0 orphelines.**
 
-284 tâches, dont 74 livrées · 91 fichiers de test exécutés par `vitest` sur 91 présents.
+285 tâches, dont 74 livrées · 91 fichiers de test exécutés par `vitest` sur 91 présents.
 
 ## Exigences réputées testées
 
@@ -59,7 +59,7 @@
 | `REQ-GOV-012` | `GOV-007`, `GOV-044`, `GOV-045`, `GOV-046`, `GOV-054`, `GOV-061`, `GOV-063`, `GOV-067`, `GOV-082`, `GOV-083`, `GOV-094` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts`, `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts`, `tests/unit/gouvernance/un-nom-une-garde.spec.ts`, `tests/unit/gouvernance/une-liste-vide-n-est-pas-une-reponse.spec.ts` | couverte |
 | `REQ-GOV-013` | `GOV-007`, `GOV-047`, `GOV-058`, `GOV-077`, `GOV-093`, `GOV-095` | `tests/gov/charte-pr.spec.ts`, `tests/unit/gouvernance/accord-survit-au-journal.spec.ts`, `tests/unit/gouvernance/aucune-revue-n-est-pas-toutes-refusent.spec.ts`, `tests/unit/gouvernance/prevol-existe-et-refuse.spec.ts` | couverte |
 | `REQ-GOV-014` | `GOV-000`, `GOV-012`, `GOV-057` | `tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts` | couverte |
-| `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `GOV-060`, `GOV-098`, `GOV-099`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
+| `REQ-GOV-015` | `GOV-005`, `GOV-022`, `GOV-027`, `GOV-060`, `GOV-098`, `GOV-099`, `GOV-100`, `JUR-T01b` | `tests/unit/gouvernance/gardes.spec.ts`, `tests/unit/gouvernance/registre-lecteur-unique.spec.ts` | couverte |
 | `REQ-GOV-016` | `GOV-006`, `GOV-088` | `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
 | `REQ-GOV-017` | `GOV-013`, `GOV-071` | `tests/unit/gouvernance/lexique.spec.ts` | couverte |
 | `REQ-GOV-018` | `GOV-014`, `GOV-031` | `tests/unit/gouvernance/gardes-transposees.spec.ts` | couverte |

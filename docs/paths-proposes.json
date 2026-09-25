@@ -2,9 +2,9 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 284,
-    "pairesEnIntersection": 4425,
-    "cheminsDeclares": 811,
+    "tachesCouvertes": 285,
+    "pairesEnIntersection": 4428,
+    "cheminsDeclares": 812,
     "cheminsDistincts": 527,
     "cheminsPartages": 100,
     "tachesSansAucuneIntersection": 84,
@@ -143,8 +143,6 @@
       "DM-03-P",
       "INT-T02",
       "SEC-06",
-      "SEC-03",
-      "SEC-04",
       "SEC-11",
       "DM-09",
       "DM-11",
@@ -1546,6 +1544,9 @@
       "tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts"
     ],
     "GOV-099": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "GOV-100": [
       "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
     ]
   }
