@@ -50,7 +50,7 @@ forme qui divise le coût du protocole de relecture.
 
 ### Le remède que la garde prescrivait est faux, et c'est ce qui rend le défaut bloquant
 
-Le message de la famille prescrivait : « Ajoute le chemin à la tâche par `outils/ajouter-path.mjs` ».
+Le message de la famille prescrivait : « Ajoute le chemin à la tâche par `hors-depot/ajouter-path.mjs` ».
 Appliqué à une PR de lot, cela revient à écrire dans `paths` de la tâche du **titre** des fichiers qui
 appartiennent à **cinq autres tâches**. Or la disjonction des lots — l'invariant « deux tâches d'un
 lot n'ont jamais de chemin en commun » — se calcule sur ces mêmes `paths` : on obtiendrait une
