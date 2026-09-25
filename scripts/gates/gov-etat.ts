@@ -691,11 +691,26 @@ if (process.argv.includes('--prove')) {
     {
       famille: 'pr_fusionnee_sans_journal',
       quoi: 'une PR fusionnée au-dessus du plancher, qu’aucune entrée ne cite',
+      // ⚠️ L'UNIVERS DE CE TÉMOIN EST CLOS (GOV-047). Il a porté `plancherPr + 72` — un numéro
+      // DÉRIVÉ du plancher réel — pendant que `entrees` venait, lui, du journal RÉEL. Le plancher
+      // vaut 27, donc la PR fictive valait 99 ; le jour où une branche a écrit son entrée
+      // « PR #99 », la PR « qu'aucune entrée ne cite » s'est retrouvée CITÉE, la famille s'est
+      // tue, et le témoin a cessé d'exercer quoi que ce soit. Même famille de défaut que le
+      // littéral `2026-12-31` de `journal_date_future` plus haut : un témoin dont l'univers dérive
+      // du dépôt vivant change de sujet à chaque lot, et le fait en silence.
+      //
+      // Le plancher, le journal et la PR fusionnée sont donc POSÉS ENSEMBLE ici, et ne se lisent
+      // plus du dépôt : l'entrée cite la PR 1, la PR fusionnée est la 2, le plancher est 0. Rien
+      // de ce que le dépôt écrira demain ne peut rendre cette PR-là journalisée. Le corps de
+      // l'entrée reste celui de `premiere` pour qu'elle soit bien formée — sans quoi ce serait
+      // `journal_entree_incomplete` qui rougirait, et pas la famille jugée (RM-11).
       etat: () =>
         copie({
+          plancherPr: 0,
+          entrees: [{ ...premiere, pr: 1 }],
           prFusionnees: [
             {
-              numero: plancherPr + 72,
+              numero: 2,
               titre: 'fusionnée sans journal',
               dateCommitIso: DATE_FUSION,
             },

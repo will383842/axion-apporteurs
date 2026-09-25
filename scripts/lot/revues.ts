@@ -615,6 +615,14 @@ export type TacheDeLaPr = {
   schema?: boolean;
   sensible?: readonly string[] | null;
   zone?: string | null;
+  /**
+   * Le statut de la tâche au registre. Ajouté par GOV-096 : le champ `Lot:` est le seul endroit
+   * où un identifiant ARBITRAIRE entre dans la dérivation, et une PR ne rouvre pas une tâche déjà
+   * LIVRÉE. Absent ou `null` : on ne refuse pas — un champ absent ne prouve pas qu'une tâche est
+   * livrée. C'est le seul sens où l'absence puisse être permissive sans ouvrir quoi que ce soit :
+   * la tâche reste confrontée aux deux autres refus, l'inconnue et le `pr` divergent.
+   */
+  statut?: string | null;
 };
 
 /**
@@ -758,14 +766,36 @@ export function estAncetreDe(sha: string, ref: string): boolean {
  * composeur, et « la garde exige moins que le corps n'affiche » devient impossible par
  * construction. Le composeur, lui, passe `null` : il décrit ce que la PR DÉCLARE porter, et c'est
  * exactement ce que `LISTE_SUR_LA_PR` et `COUVRE` doivent dire.
+ *
+ * 🔴 TROISIÈME TERME DE L'UNION, GOV-096 — MESURÉ LE 2026-09-23 SUR LA PR #114. Les deux termes
+ * ci-dessus ne savent pas lire une PR de LOT, qui est pourtant la forme NORMALE de ce dépôt
+ * (`docs/CONVENTIONS.md` §5 : « un lot, une branche, une PR, un commit par tâche »). La PR #114
+ * porte six tâches ; son titre ne peut en nommer qu'une, et `t.pr` n'est écrit que par
+ * `pnpm lot:cloture`, qui exige `fusion.atterri === true` — donc APRÈS la fusion. Les cinq autres
+ * tâches ne résolvent ni par l'un ni par l'autre : `fichier_hors_paths_des_taches` nommait douze
+ * fichiers « qu'aucune de ses tâches ne déclare » quand neuf étaient déclarés par ces cinq-là.
+ * Aucune PR de lot n'était donc fusionnable, et le lot est la seule forme qui divise le coût du
+ * protocole.
+ *
+ * ⚠️ LE NIVEAU DE CONFIANCE NE CHANGE PAS, et c'est l'argument qu'il faut peser plutôt que
+ * l'impression de laxisme. Le TITRE est déjà écrit par l'auteur de la PR, et la garde le croit
+ * depuis le premier jour : c'est lui qui résout la tâche dont les `paths` autorisent des fichiers.
+ * `Lot:` est exactement aussi fiable — même auteur, même corps de PR, même absence de
+ * contreseing —, et il est EXPLICITE et AUDITABLE là où le titre est implicite. Ce qu'on ajoute
+ * n'est pas un pouvoir neuf, c'est la même déclaration rendue lisible ; et elle est bornée par
+ * trois refus que le titre, lui, n'a jamais eus : un identifiant inconnu du registre, un
+ * identifiant déjà livré, un identifiant qui porte un `pr` différent (`resoudreLeLot`).
  */
 export function tachesDeLaPr<T extends TacheDeLaPr>(
   taches: readonly T[],
   pr: number | null,
-  idDuTitre: string | null
+  idDuTitre: string | null,
+  idsDuLot: readonly string[] = []
 ): T[] {
+  const duLot = new Set(idsDuLot);
   return taches.filter(
-    (t) => (pr !== null && t.pr === pr) || (idDuTitre !== null && t.id === idDuTitre)
+    (t) =>
+      (pr !== null && t.pr === pr) || (idDuTitre !== null && t.id === idDuTitre) || duLot.has(t.id)
   );
 }
 
@@ -773,9 +803,160 @@ export function tachesDeLaPr<T extends TacheDeLaPr>(
 export function tachesSchemaDeLaPr<T extends TacheDeLaPr>(
   taches: readonly T[],
   pr: number | null,
-  idDuTitre: string | null
+  idDuTitre: string | null,
+  idsDuLot: readonly string[] = []
 ): boolean {
-  return tachesDeLaPr(taches, pr, idDuTitre).some((t) => t.schema === true);
+  return tachesDeLaPr(taches, pr, idDuTitre, idsDuLot).some((t) => t.schema === true);
+}
+
+// ── LE CHAMP `Lot:` DU CORPS DE PR (GOV-096) ──────────────────────────────────────────────────
+
+/**
+ * LE CHAMP `Lot:` DU GABARIT, section Identité. Une ligne, au ras de la marge, portant les
+ * identifiants de tâche séparés par des VIRGULES — ou vide, pour une PR à une seule tâche.
+ *
+ * Le motif s'arrête à la fin de la ligne et ne mange pas le saut : un champ qui déborderait sur la
+ * ligne suivante avalerait le texte libre du corps.
+ */
+export const MOTIF_LIGNE_LOT = /^Lot:[^\S\r\n]*(.*)$/m;
+
+/**
+ * LA FORME D'UN IDENTIFIANT TEL QUE CE CHAMP L'ACCEPTE. Elle ne juge PAS qu'une tâche existe —
+ * c'est le registre qui le dit, et lui seul (RM-01) : elle ne fait qu'isoler ce qui est un jeton
+ * d'identifiant de ce qui est un séparateur non prévu. `GOV-046 GOV-048` (espace), `GOV-046;` ou
+ * `GOV-046 (lot L0-02)` sortent ici, en étant NOMMÉS.
+ */
+const MOTIF_JETON_DE_LOT = /^[A-Za-z0-9-]+$/;
+
+/** Ce que le champ `Lot:` d'un corps de PR déclare — et ce qui empêche de le lire. */
+export type LectureDuLot = {
+  /** Le corps porte-t-il la ligne ? Un champ ABSENT n'est pas un champ VIDE. */
+  present: boolean;
+  /** Les identifiants lus, dans l'ordre du champ. VIDE dès que la forme est refusée. */
+  ids: string[];
+  /**
+   * Ce qui rend le champ illisible, ou `null`. 🔴 IL N'EXISTE PAS DE TROISIÈME ÉTAT : un champ
+   * rempli qu'on ne sait pas lire rend une liste vide ET un motif. Rendre la liste vide SEULE
+   * serait dire « cette PR ne porte aucun lot » à propos d'une PR qui en déclare un — c'est
+   * GOV-082, « une liste vide rendue avec le code zéro n'est pas une réponse ».
+   */
+  malForme: string | null;
+};
+
+/** Lit le champ `Lot:` d'un corps de PR. Aucune I/O, aucun registre : la FORME seulement. */
+export function lireLeLot(corps: string): LectureDuLot {
+  const m = MOTIF_LIGNE_LOT.exec(corps ?? '');
+  if (m === null) return { present: false, ids: [], malForme: null };
+  const valeur = (m[1] ?? '').trim();
+  if (valeur.length === 0) return { present: true, ids: [], malForme: null };
+  const jetons = valeur.split(',').map((j) => j.trim());
+  const vides = jetons.filter((j) => j.length === 0).length;
+  if (vides > 0) {
+    return {
+      present: true,
+      ids: [],
+      malForme:
+        `« ${valeur} » — ${vides} séparateur(s) sans identifiant (virgule en trop, en tête ou en ` +
+        `fin). La forme attendue est « GOV-046, GOV-048 » : des identifiants de tâche séparés par ` +
+        `des virgules, ou un champ vide pour une PR à une seule tâche.`,
+    };
+  }
+  const horsForme = jetons.filter((j) => !MOTIF_JETON_DE_LOT.test(j));
+  if (horsForme.length > 0) {
+    return {
+      present: true,
+      ids: [],
+      malForme:
+        `« ${valeur} » — séparateur inattendu : ${horsForme.map((j) => `« ${j} »`).join(', ')} ` +
+        `n'est pas un identifiant de tâche. Le SEUL séparateur est la virgule ; ni l'espace, ni le ` +
+        `point-virgule, ni une parenthèse de commentaire ne le remplacent.`,
+    };
+  }
+  return { present: true, ids: jetons, malForme: null };
+}
+
+/** Un refus de lecture du champ `Lot:`, nommé par la famille que la garde imprimera. */
+export type RefusDuLot = { famille: string; message: string };
+
+/**
+ * LE CHAMP `Lot:` CONFRONTÉ AU REGISTRE — et les trois refus qui le bornent (GOV-096).
+ *
+ * `ids` ne contient QUE ce qui a passé les trois : un identifiant refusé n'élargit rien. Le sens
+ * de défaillance reste donc FERMÉ — un `Lot:` douteux ne peut jamais autoriser un fichier de plus.
+ *
+ * ⚠️ `deux_pr_meme_tache` EST LE NOM QUE `gov:etat` DONNE DÉJÀ À CETTE RÈGLE (REQ-GOV-007,
+ * `scripts/gates/gov-etat.ts`), et il est REPRIS ici plutôt que doublé : une seule règle, un seul
+ * nom (`partners/ADR-0011`). Les deux gardes l'observent sur deux POPULATIONS que ni l'une ni
+ * l'autre ne peut voir à la place de sa jumelle — `gov:etat` compare les TITRES de toutes les PR
+ * OUVERTES de la forge ; ici on confronte le champ `pr` du REGISTRE à la PR qu'on est en train de
+ * juger, sur une population d'une seule PR et sans aucun appel réseau. Fusionner les deux lectures
+ * demanderait à la garde d'une PR de lister la forge, c'est-à-dire d'ouvrir une seconde source là
+ * où ce fichier existe pour n'en avoir qu'une.
+ */
+export function resoudreLeLot<T extends TacheDeLaPr>(e: {
+  corps: string;
+  /** Le numéro de LA PR jugée — `null` si on ne le connaît pas (événement `pull_request`). */
+  numero: number | null;
+  taches: readonly T[];
+  /** Les statuts qui valent « livrée », DÉRIVÉS du barème unique de `scripts/lot/avancement.ts`. */
+  livrees: ReadonlySet<string>;
+}): { ids: string[]; refus: RefusDuLot[] } {
+  const lu = lireLeLot(e.corps);
+  if (lu.malForme !== null) {
+    return {
+      ids: [],
+      refus: [
+        {
+          famille: 'lot_mal_forme',
+          message:
+            `Corps de la PR — le champ \`Lot:\` ne se lit pas : ${lu.malForme} Tant qu'il est ` +
+            `illisible, les tâches qu'il déclare ne résolvent pas, et leurs \`paths\` n'autorisent ` +
+            `rien — la garde refuse plutôt que de rendre une liste vide en silence.`,
+        },
+      ],
+    };
+  }
+  const refus: RefusDuLot[] = [];
+  const ids: string[] = [];
+  const vus = new Set<string>();
+  for (const id of lu.ids) {
+    if (vus.has(id)) continue;
+    vus.add(id);
+    const t = e.taches.find((x) => x.id === id);
+    if (!t) {
+      refus.push({
+        famille: 'lot_tache_inconnue',
+        message:
+          `Corps de la PR — le champ \`Lot:\` cite ${id}, qui n'est une tâche d'aucun registre lu. ` +
+          `Un identifiant que personne ne connaît ne déclare aucun \`paths\` : la garde le REFUSE ` +
+          `au lieu de l'ignorer, faute de quoi une faute de frappe élargirait le lot en silence.`,
+      });
+      continue;
+    }
+    if (t.statut != null && e.livrees.has(t.statut)) {
+      refus.push({
+        famille: 'lot_tache_livree',
+        message:
+          `Corps de la PR — le champ \`Lot:\` cite ${id}, dont le statut est « ${t.statut} » : elle ` +
+          `est déjà livrée. Une PR ne rouvre pas une tâche livrée — si le travail reste à faire, ` +
+          `c'est une tâche NEUVE qui se verse (charte A11), pas une livrée qu'on réutilise.`,
+      });
+      continue;
+    }
+    if (t.pr != null && e.numero !== null && t.pr !== e.numero) {
+      refus.push({
+        famille: 'deux_pr_meme_tache',
+        message:
+          `Corps de la PR — le champ \`Lot:\` cite ${id}, que le registre rattache déjà à la PR ` +
+          `#${t.pr}, alors qu'on juge la PR #${e.numero}. Deux PR ne se disputent pas une tâche ` +
+          `(REQ-GOV-007) : ou bien le champ \`pr\` du registre est faux, ou bien ce \`Lot:\` ` +
+          `revendique le travail d'une autre PR.`,
+      });
+      continue;
+    }
+    ids.push(id);
+  }
+  return { ids, refus };
 }
 
 // ── LE RISQUE D'UNE PR, ET LES LENTILLES QU'IL EXIGE (GOV-077, levier 3 du 2026-09-18) ────────
@@ -1053,6 +1234,14 @@ export type EntreeDuRisque = {
   liste: ListeDesFichiers | null;
   labels: readonly string[];
   charte?: string;
+  /**
+   * Les identifiants du champ `Lot:`, DÉJÀ confrontés au registre par `resoudreLeLot()`
+   * (GOV-096). Sans eux, une PR de lot verrait le risque de sa SEULE tâche de titre : une tâche
+   * `sensible` ou `schema: true` portée par une des autres tâches du lot n'exigerait ni section
+   * Attaque ni approbation de l'architecte. La monotonie est préservée — un renseignement de plus
+   * ne peut que faire MONTER le risque.
+   */
+  idsDuLot?: readonly string[];
 };
 
 /**
@@ -1069,9 +1258,10 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
   const id = idDuTitre(e.titre);
   const ids = [
     ...new Set(
-      [...tachesDeLaPr(e.taches, e.pr, id), ...tachesDeLaPr(e.tachesBase ?? [], e.pr, id)].map(
-        (t) => t.id
-      )
+      [
+        ...tachesDeLaPr(e.taches, e.pr, id, e.idsDuLot ?? []),
+        ...tachesDeLaPr(e.tachesBase ?? [], e.pr, id, e.idsDuLot ?? []),
+      ].map((t) => t.id)
     ),
   ];
   if (ids.length === 0) {

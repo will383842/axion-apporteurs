@@ -50,7 +50,7 @@ import {
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
-import { estObjet, lireYaml } from './lire-yaml';
+import { estObjet, lireYaml } from '../../../scripts/lib/lire-yaml';
 
 const WORKFLOWS = '.github/workflows';
 const CI = `${WORKFLOWS}/ci.yml`;

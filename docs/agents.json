@@ -47,11 +47,11 @@
       "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
       "ecrit": "oui",
       "cheminsReserves": [
-        "docs/PLAN-STATE.md",
-        "docs/REQUIREMENTS.md",
         "docs/DECISIONS.md",
         "docs/GLOSSAIRE.md",
         "docs/PRESEANCE.md",
+        "docs/requirements.json",
+        "docs/gates.json",
         "docs/tasks.json"
       ]
     },
