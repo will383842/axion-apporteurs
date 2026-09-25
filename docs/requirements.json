@@ -809,7 +809,7 @@
     {
       "id": "REQ-SEC-013",
       "domaine": "anti-abus-securite",
-      "texte": "L'autocomplétion d'entreprise passe exclusivement par un proxy serveur rate-limité par identité (120/j) et par hash IP, journalisé, mis en cache 24 h ; la réponse ne contient jamais `dirigeants[]` ; le serveur les stocke côté base pour le signal F8 sans jamais les renvoyer.",
+      "texte": "L'autocomplétion d'entreprise passe exclusivement par un proxy serveur rate-limité à 120 / 86400 s par identité (`surPanne: refuser` ; 86 400 s = 24 h en fenêtre glissante, soit les 120 par jour du texte d'origine) et à 600 / 3600 s par hash IP (`surPanne: laisser-passer` ; plafond arbitré le 2026-09-23, `HYP-SEC-IP-AUTOCOMPLETION`, réversible par paramètre), journalisé, mis en cache 24 h ; la réponse ne contient jamais `dirigeants[]` ; le serveur les stocke côté base pour le signal F8 sans jamais les renvoyer.",
       "source": "audit-anti-abus F1, M5, F8 ; audit-attribution P4",
       "statut": "active",
       "remplaceePar": null,
@@ -2040,7 +2040,7 @@
     {
       "id": "REQ-INT-020",
       "domaine": "integration",
-      "texte": "L'autocomplétion entreprise passe par un proxy serveur : debounce 300 ms, `minimal=true&include=siege,dirigeants`, cache 24 h, limiteur global 5 req/s, respect de `Retry-After` ; sur 429/timeout/5xx, le dépôt bascule en saisie manuelle du SIREN/SIRET contrôlée par Luhn et la fiche est marquée `entreprise_a_verifier` — le dépôt n'est jamais bloqué.",
+      "texte": "L'autocomplétion entreprise passe par un proxy serveur : debounce 300 ms, `minimal=true&include=siege,dirigeants`, cache 24 h, un plafond de 5 / 1 s limiteur global (`surPanne: refuser` — si le cache de débit tombe, l'appel au tiers est refusé et c'est le repli ci-dessous qui prend la main), respect de `Retry-After` ; sur 429/timeout/5xx, le dépôt bascule en saisie manuelle du SIREN/SIRET contrôlée par Luhn et la fiche est marquée `entreprise_a_verifier` — le dépôt n'est jamais bloqué.",
       "source": "OpenAPI recherche-entreprises (7 req/s/IP, 30/s/ASN, per_page ≤ 25) ; audit-attribution P4 ; INT-F15",
       "statut": "active",
       "remplaceePar": null,

@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `835d899` — 2026-09-25T23:02:20+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #91 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #93 (un conflit avec `main`) |
+| Où est `main` ? | `51b0d1b` — 2026-09-25T23:46:10+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #91 (un conflit avec `main`) · 3. #129 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T08 (A05) · QA-T07 (A05) · GOV-092 (A03) · GOV-090 (A02) |
 | Où en est la phase ? | phase 0 — 21/110 tâches, reste 66.60 j |
 | Le prochain pas | SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma (chemin critique) |
@@ -58,15 +58,15 @@ Reste sur ce chemin : **14.50 j**.
 
 ## Hypothèses par défaut appliquées
 
-60 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
+61 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
 
 ## File de fusion
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #93 — feat(UX-P0-01): vocabulaire et micro-copie SSOT de l'espace, garde d'exhaustivite | `t/ux-p0-01` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #91 — feat(INT-T09): mandataire recherche-entreprises — cache, limiteur, disjoncteur, repli, minimisation, fixtures | `t/int-t09` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #129 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee | `t/registre-fusionnees` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -85,7 +85,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0020-le-champ-lot-declare-les-taches-d-une-pr-de-lot.md` — partners/ADR-0020 — Une PR de lot déclare ses tâches dans un champ `Lot:`, et la garde le croit exactement autant que le titre · `docs/adr/0021-quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.md` — partners/ADR-0021 — Quatre lentilles pour l'argent, la sécurité et les données, deux pour le reste ; la prose inexacte est une dette, pas un refus
+`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0020-le-champ-lot-declare-les-taches-d-une-pr-de-lot.md` — partners/ADR-0020 — Une PR de lot déclare ses tâches dans un champ `Lot:`, et la garde le croit exactement autant que le titre · `docs/adr/0021-quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.md` — partners/ADR-0021 — Quatre lentilles pour l'argent, la sécurité et les données, deux pour le reste ; la prose inexacte est une dette, pas un refus
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
@@ -97,7 +97,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `835d899` (2026-09-25T23:02:20+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `51b0d1b` (2026-09-25T23:46:10+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -263,7 +263,7 @@ glossaire : un enum que le glossaire énumère sans qu'il existe encore dans le 
 pas. Poser `StatutApporteur` et ses voisins au §4 AVANT DM-06 fait que la première migration de
 DM-06 sera jugée contre ces valeurs, au lieu d'en fixer elle-même le vocabulaire.
 
-… 52 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 53 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
