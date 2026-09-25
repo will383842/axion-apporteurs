@@ -4271,7 +4271,7 @@
     {
       "id": "REQ-CPL-005",
       "domaine": "complétude (REQ-CPL)",
-      "texte": "`Apporteur.IdentitesFacturation[]` datées (SIREN, régime TVA `RegimeTva`, **référence à la pièce RIB du KYC — jamais l'IBAN lui-même** —, validFrom/To). L'IBAN appartient à la pièce `rib` du KYC (`HYP-E1-14`, DM-11), chiffré selon SEC-08 (`encryptPii` avec AAD, recherche par `ibanHash`) ; aucune autre table ne le porte (décision du 2026-09-25, par délégation de Will, `HYP-DM06-IBAN`) ; un relevé chevauchant deux identités produit deux autofactures.",
+      "texte": "`Apporteur.IdentitesFacturation[]` datées (SIREN, régime TVA `RegimeTva`, validFrom/To), **créées par DM-06 sans aucune colonne de RIB ni d'IBAN** ; la **référence à la pièce RIB** du KYC (`PieceKyc` de type `rib`) et sa relation sont **posées par DM-11**, dans sa migration, parce que `PieceKyc` n'existe qu'avec DM-11 — jamais l'IBAN lui-même. L'IBAN appartient à la pièce `rib` du KYC (`HYP-E1-14`, DM-11), chiffré selon SEC-08 (`encryptPii` avec AAD, recherche par `ibanHash`) ; aucune autre table ne le porte (décision du 2026-09-25, par délégation de Will, `HYP-DM06-IBAN`) ; un relevé chevauchant deux identités produit deux autofactures.",
       "source": "critique de complétude (2026-09-03)",
       "statut": "active",
       "remplaceePar": null,

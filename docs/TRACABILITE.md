@@ -123,7 +123,7 @@
 | `REQ-ARG-033` | 2 | `T-ARG-010`, `T-ARG-016` | — |
 | `REQ-ARG-034` | 2 | `JUR-T16`, `T-ARG-015`, `T-ARG-039` | — |
 | `REQ-ARG-035` | 2 | `T-ARG-016`, `T-ARG-033`, `T-ARG-038`, `UX-P2-04` | — |
-| `REQ-CPL-005` | 0 | `DM-06`, `DM-11` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-activite.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-population-is-test.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` |
+| `REQ-CPL-005` | 0 | `DM-06`, `DM-11` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-activite.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-population-is-test.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts`, `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-CPL-006` | 1 | `CPL-T06` | — |
 | `REQ-CPL-007` | 2 | `INT-T23`, `UX-P2-05` | — |
 | `REQ-CPL-008` | 1 | `SEC-12` | — |
@@ -138,7 +138,7 @@
 | `REQ-CPL-020` | 0 | `DM-06`, `T-ARG-015` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-activite.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-population-is-test.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` |
 | `REQ-CPL-022` | 0 | `CPL-T22` | `tests/unit/qualite/red-first.spec.ts` |
 | `REQ-CPL-023` | 3 | `UX-P3-02` | — |
-| `REQ-CPL-024` | 1 | `DM-09`, `UX-P1-06` | — |
+| `REQ-CPL-024` | 1 | `DM-09`, `UX-P1-06` | `tests/unit/domaine/depot-au-dela-du-seuil.spec.ts` |
 | `REQ-CPL-025` | 3 | `T-ARG-033` | — |
 | `REQ-CPL-027` | 0 | `DM-06`, `JUR-T24`, `UX-P1-12`, `UX-P3-06` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-activite.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-population-is-test.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` |
 | `REQ-CPL-028` | 1 | `INT-T23`, `INT-T24` | — |
@@ -148,12 +148,12 @@
 | `REQ-DM-005` | 1 | `DM-07` | — |
 | `REQ-DM-006` | 1 | `DM-08`, `DM-13`, `DM-24` | — |
 | `REQ-DM-007` | 1 | `DM-08`, `DM-13` | — |
-| `REQ-DM-008` | 1 | `DM-09`, `DM-24` | — |
-| `REQ-DM-009` | 1 | `DM-09` | — |
-| `REQ-DM-010` | 0 | `DM-06`, `DM-09`, `JUR-T24`, `SEC-12` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-activite.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-population-is-test.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` |
+| `REQ-DM-008` | 1 | `DM-09`, `DM-24` | `tests/unit/domaine/depot-au-dela-du-seuil.spec.ts` |
+| `REQ-DM-009` | 1 | `DM-09` | `tests/unit/domaine/depot-au-dela-du-seuil.spec.ts` |
+| `REQ-DM-010` | 0 | `DM-06`, `DM-09`, `JUR-T24`, `SEC-12` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-activite.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-population-is-test.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts`, `tests/unit/domaine/depot-au-dela-du-seuil.spec.ts` |
 | `REQ-DM-011` | 0 | `DM-06`, `DM-18`, `SEC-19` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-activite.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-population-is-test.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` |
 | `REQ-DM-012` | 0 | `DM-06` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-activite.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts`, `tests/unit/domaine/apporteur-identites-facturation.spec.ts`, `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/domaine/apporteur-population-is-test.spec.ts`, `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` |
-| `REQ-DM-013` | 1 | `DM-11`, `DM-23`, `INT-T23` | — |
+| `REQ-DM-013` | 1 | `DM-11`, `DM-23`, `INT-T23` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-DM-014` | 0 | `DM-03-A`, `DM-03-P`, `GOV-080` | `axionia/src/server/partners-sync/__tests__/grille-export.spec.ts`, `tests/integration/grille-versionnee.spec.ts`, `tests/unit/domaine/grille-import.spec.ts`, `tests/unit/gouvernance/mention-de-gate-resolue.spec.ts` |
 | `REQ-DM-015` | 0 | `DM-04` | `tests/unit/domaine/commission-calcul.spec.ts`, `tests/unit/domaine/conservation.spec.ts` |
 | `REQ-DM-016` | 2 | `DM-15` | — |
@@ -166,7 +166,7 @@
 | `REQ-DM-023` | 2 | `DM-16` | — |
 | `REQ-DM-025` | 2 | `T-ARG-015` | — |
 | `REQ-DM-026` | 2 | `T-ARG-010`, `T-ARG-019` | — |
-| `REQ-DM-027` | 1 | `DM-11`, `DM-19`, `JUR-T16`, `T-ARG-032` | — |
+| `REQ-DM-027` | 1 | `DM-11`, `DM-19`, `JUR-T16`, `T-ARG-032` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-DM-028` | 1 | `DM-10-P` | — |
 | `REQ-DM-029` | 1 | `DM-10-P` | — |
 | `REQ-DM-030` | 1 | `DM-07`, `DM-21` | — |
@@ -241,7 +241,7 @@
 | `REQ-JUR-003` | 0 | `JUR-T01`, `JUR-T01b` | `decisions-ouvertes.spec.ts`, `tests/unit/contrat/contract-template-complete.spec.ts` |
 | `REQ-JUR-004` | 1 | `INT-T12`, `INT-T23` | — |
 | `REQ-JUR-005` | 1 | `INT-T12` | — |
-| `REQ-JUR-006` | 1 | `DM-09` | — |
+| `REQ-JUR-006` | 1 | `DM-09` | `tests/unit/domaine/depot-au-dela-du-seuil.spec.ts` |
 | `REQ-JUR-007` | 0 | `DM-25`, `JUR-T01`, `JUR-T01b`, `T-ARG-033` | `decisions-ouvertes.spec.ts`, `tests/unit/contrat/contract-template-complete.spec.ts` |
 | `REQ-JUR-008` | 1 | `SEC-12` | — |
 | `REQ-JUR-009` | 0 | `JUR-T04`, `JUR-T09` | `tests/unit/juridique/registre-rgpd.spec.ts` |
@@ -250,12 +250,12 @@
 | `REQ-JUR-013` | 1 | `JUR-T13`, `UX-P1-11` | `textes-apporteurs-charte-relationnelle.spec.ts` |
 | `REQ-JUR-015` | 0 | `JUR-T02` | `tests/unit/juridique/seuils-ssot.spec.ts` |
 | `REQ-JUR-020` | 2 | `DM-16` | — |
-| `REQ-JUR-022` | 1 | `DM-11` | — |
+| `REQ-JUR-022` | 1 | `DM-11` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-JUR-023` | 0 | `DM-23`, `JUR-T01`, `SEC-12` | `tests/unit/contrat/contract-template-complete.spec.ts` |
 | `REQ-JUR-024` | 0 | `JUR-T03` | `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-025` | 0 | `EXT-T01`, `JUR-T04`, `T-ARG-033` | `tests/unit/juridique/registre-rgpd.spec.ts` |
 | `REQ-JUR-028` | 1 | `SEC-21` | — |
-| `REQ-JUR-029` | 0 | `DM-11`, `JUR-T02`, `T-ARG-033` | `tests/unit/juridique/seuils-ssot.spec.ts` |
+| `REQ-JUR-029` | 0 | `DM-11`, `JUR-T02`, `T-ARG-033` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts`, `tests/unit/juridique/seuils-ssot.spec.ts` |
 | `REQ-JUR-030` | 3 | `JUR-T22` | — |
 | `REQ-JUR-031` | 0 | `JUR-T24`, `JUR-T27`, `JUR-T28`, `SEC-14`, `SEC-15`, `UX-P1-12` | `tests/unit/contrat/contrat-sobre.spec.ts` |
 | `REQ-JUR-032` | 1 | `JUR-T24` | — |
@@ -310,7 +310,7 @@
 | `REQ-SEC-023` | 0 | `SEC-17` | `tests/unit/securite/matrice-des-roles.spec.ts` |
 | `REQ-SEC-024` | 0 | `SEC-08` | `tests/unit/securite/chiffrement-avec-aad.spec.ts` |
 | `REQ-SEC-025` | 2 | `SEC-22` | — |
-| `REQ-SEC-026` | 1 | `DM-11` | — |
+| `REQ-SEC-026` | 1 | `DM-11` | `tests/unit/domaine/kyc-reference-piece-rib.spec.ts` |
 | `REQ-SEC-030` | 0 | `DM-20`, `JUR-T04` | `tests/unit/juridique/registre-rgpd.spec.ts` |
 | `REQ-SEC-031` | 1 | `SEC-18` | — |
 | `REQ-SEC-032` | 1 | `SEC-12`, `SEC-19`, `T-ARG-038` | — |
