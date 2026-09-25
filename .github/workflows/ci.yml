@@ -228,16 +228,12 @@ jobs:
       # REQ-GOV-001, `docs/GATES.md`). BLOQUANTE : pas de `continue-on-error` — la famille
       # `lint_non_bloquant` de `gov:conventions` le refuse, et une gate qui ne bloque rien ne garde rien.
       #
-      # ⚠️ APPELEE PAR UN NOM NEUTRE, ET NON PAR `pnpm gov:check` — ce n'est pas une coquetterie.
-      # Le nom `gov:check` designe DEUX choses dans ce depot : l'entree de `docs/gates.json` (cette
-      # garde-ci) et une CHAINE de gardes declaree dans `package.json`. Ecrire `pnpm gov:check`
-      # ici lancerait la chaine, PAS la garde — et satisferait quand meme la famille
-      # `garde_ecrite_jamais_appelee`, qui cherche l'identifiant OU le chemin.
-      # Le script `gov:termes-interdits` lance la garde elle-meme (`package.json`) : la commande
-      # reste sous la forme FERMEE `pnpm <script>` que GOV-031 exige de tout YAML suivi — `npx`
-      # peut resoudre un paquet hors du verrou. Et ce nom NEUF ne touche pas `gov:check` : il
-      # evite de trancher l'homonymie, que l'acceptation de GOV-030 renvoie a un ADR (« le choix
-      # … se tranche par un ADR, pas dans la PR »).
+      # `partners/ADR-0018` a tranche l'homonymie : l'identifiant de cette garde au registre EST la
+      # commande ecrite ci-dessous. Ces deux lignes `run:` sont donc ce que `gov:conventions` lit
+      # pour conclure que la garde est APPELEE — la reconnaissance ne tient plus au litteral d'un
+      # COMMENTAIRE, et le present commentaire peut disparaitre sans rien casser. La forme reste
+      # FERMEE `pnpm <script>`, que GOV-031 exige de tout YAML suivi : `npx` resoudrait un paquet
+      # hors du verrou.
       - name: Termes interdits — nomenclature, modeles d axionia et synonymes
         run: pnpm gov:termes-interdits
       - name: La garde des termes interdits sait rougir
