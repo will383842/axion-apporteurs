@@ -112,6 +112,27 @@ function recevoir(r: Request, environnement: Record<string, string> = env) {
 }
 
 const sansEffet: Dispatch = async () => undefined;
+
+/**
+ * Le nom de la contrainte d'unicité qui refuse une insertion, lu dans le diagnostic de Postgres :
+ * pour une requête brute, Prisma ne transmet que le code 23505 et le détail, jamais le nom
+ * (mesuré en porte A sur la PR 134). La valeur de l'insertion est littérale et tirée ici.
+ */
+async function uniciteRefusee(insertion: string): Promise<string> {
+  try {
+    await base.prisma.$executeRawUnsafe(`DO $$
+      DECLARE contrainte text;
+      BEGIN
+        ${insertion};
+      EXCEPTION WHEN unique_violation THEN
+        GET STACKED DIAGNOSTICS contrainte = CONSTRAINT_NAME;
+        RAISE EXCEPTION 'unicite_refusee:%', contrainte;
+      END $$`);
+  } catch (e) {
+    return String((e as Error).message);
+  }
+  throw new Error('aucun refus');
+}
 const passer = (dispatch: Dispatch = sansEffet) =>
   passerLeTravail({
     depot: depotDuTravail(base.prisma),
@@ -199,7 +220,12 @@ describe('REQ-ARG-002 — au plus un paiement par `paymentId`, tenu par l’inde
         'c'.repeat(64)
       );
     expect(await inserer()).toBe(1);
-    await expect(inserer()).rejects.toThrow(/evenements_recus_cle_metier_unique/);
+    expect(
+      await uniciteRefusee(
+        `INSERT INTO evenements_recus (id, source, event_id, event_type, schema_version, sequence, cle_metier, charge, payload_hash, statut, received_at, survenu_at)
+         VALUES ('${randomUUID()}'::uuid, 'axionia', '${randomUUID()}', 'paiement_recu', 1, 1, '${paymentId}', '{}'::jsonb, '${'c'.repeat(64)}', 'recu', now(), now())`
+      )
+    ).toContain('unicite_refusee:evenements_recus_cle_metier_unique');
   });
 });
 

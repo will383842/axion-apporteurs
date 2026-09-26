@@ -95,6 +95,27 @@ function recevoir(r: Request, declencher: () => void = () => undefined) {
 
 const compter = () => base.prisma.evenementRecu.count();
 
+/**
+ * Le nom de la contrainte d'unicité qui refuse une insertion, lu dans le diagnostic de Postgres :
+ * pour une requête brute, Prisma ne transmet que le code 23505 et le détail, jamais le nom
+ * (mesuré en porte A sur la PR 134). La valeur de l'insertion est littérale et tirée ici.
+ */
+async function uniciteRefusee(insertion: string): Promise<string> {
+  try {
+    await base.prisma.$executeRawUnsafe(`DO $$
+      DECLARE contrainte text;
+      BEGIN
+        ${insertion};
+      EXCEPTION WHEN unique_violation THEN
+        GET STACKED DIAGNOSTICS contrainte = CONSTRAINT_NAME;
+        RAISE EXCEPTION 'unicite_refusee:%', contrainte;
+      END $$`);
+  } catch (e) {
+    return String((e as Error).message);
+  }
+  throw new Error('aucun refus');
+}
+
 describe('REQ-DM-036 — témoin à deux faces, compté en lignes de evenements_recus', () => {
   it('REQ-DM-036 : face ROUGE — un autre secret, puis hors fenêtre de 300 s : 401 et AUCUNE ligne', async () => {
     const avant = await compter();
@@ -282,7 +303,12 @@ describe('REQ-DM-036 — chaque CHECK de evenements_recus, vu refuser', () => {
   it('REQ-DM-036 : face ROUGE — un même (source, eventId) deux fois est refusé par la base', async () => {
     const b = valide();
     await inserer(b);
-    await expect(inserer({ ...b })).rejects.toThrow(/evenements_recus_source_event_id_key/);
+    expect(
+      await uniciteRefusee(
+        `INSERT INTO evenements_recus (id, source, event_id, event_type, schema_version, sequence, charge, payload_hash, statut, received_at, survenu_at)
+         VALUES ('${randomUUID()}'::uuid, 'axionia', '${b.event_id}', 'client_cree', 1, 1, '{}'::jsonb, '${'a'.repeat(64)}', 'recu', now(), now())`
+      )
+    ).toContain('unicite_refusee:evenements_recus_source_event_id_key');
   });
 
   it('REQ-DM-036 : face ROUGE — une tâche de battement hors forme est refusée', async () => {

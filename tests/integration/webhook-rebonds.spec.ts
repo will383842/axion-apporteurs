@@ -114,6 +114,26 @@ function emetteur(drapeau: 'true' | 'false') {
 const hash = (a: string) => empreinteRecherche('courriel', a, cles);
 const lignesDe = (a: string) =>
   base.prisma.suppressionCourriel.count({ where: { emailHash: hash(a) } });
+/**
+ * Le nom de la contrainte d'unicité qui refuse une insertion, lu dans le diagnostic de Postgres :
+ * pour une requête brute, Prisma ne transmet que le code 23505 et le détail, jamais le nom
+ * (mesuré en porte A sur la PR 134). La valeur de l'insertion est littérale et tirée ici.
+ */
+async function uniciteRefusee(insertion: string): Promise<string> {
+  try {
+    await base.prisma.$executeRawUnsafe(`DO $$
+      DECLARE contrainte text;
+      BEGIN
+        ${insertion};
+      EXCEPTION WHEN unique_violation THEN
+        GET STACKED DIAGNOSTICS contrainte = CONSTRAINT_NAME;
+        RAISE EXCEPTION 'unicite_refusee:%', contrainte;
+      END $$`);
+  } catch (e) {
+    return String((e as Error).message);
+  }
+  throw new Error('aucun refus');
+}
 
 describe('REQ-INT-023 — témoin à deux faces, compté en lignes de suppressions_courriel', () => {
   it('REQ-INT-023 : face ROUGE — mal signée : refusée, AUCUNE ligne', async () => {
@@ -232,6 +252,10 @@ describe('REQ-INT-023 — chaque CHECK des deux tables, vu refuser', () => {
       /suppressions_courriel_email_hash_hex/
     );
     expect(await supprimer('e'.repeat(64))).toBe(1);
-    await expect(supprimer('e'.repeat(64))).rejects.toThrow(/suppressions_courriel_email_hash_key/);
+    expect(
+      await uniciteRefusee(
+        `INSERT INTO suppressions_courriel (id, email_hash, motif, survenu_at, cree_at) VALUES ('${randomUUID()}'::uuid, '${'e'.repeat(64)}', 'rebond_definitif', now(), now())`
+      )
+    ).toContain('unicite_refusee:suppressions_courriel_email_hash_key');
   });
 });
