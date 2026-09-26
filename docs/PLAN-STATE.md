@@ -107,7 +107,7 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 **Fait.** Lot L0-04 composé de trois tâches, une seule livrée : INT-T11. `POST /api/mcp` juge dans
 cet ordre le secret propre `PARTNERS_MCP_SHARED_SECRET` (absent : 503), le limiteur avant la serrure
 (429, ou 503 en panne), la serrure `x-mcp-secret` à temps constant (401), puis le JSON-RPC. Le contrat
-du socle axion-ops est porté dans `src/server/mcp/contrat.ts`, valeurs lues et sceau exécuté au commit
+du socle axion-ops est porté dans `src/server/mcp/socle.ts`, valeurs lues et sceau exécuté au commit
 `473e2aa`. Le manifeste est versionné dans `src/server/mcp/manifeste.json` et confronté au code par
 `pnpm mcp:manifeste`. Le registre est vide : le socle refuse un manifeste sans outil, et le fichier
 porte ce refus au lieu de le contourner. `pnpm harnais-mcp`, en porte A, joue les neuf contrôles, le
@@ -131,7 +131,9 @@ harnais refuse la déclaration dès qu'un outil existe. Le registre de débit ne
 que si l'exigence citée écrit sa conduite sur panne après l'ancre : une porte neuve sans chiffre dans
 son exigence ne se branche sur aucun limiteur réel, elle refuse. Enfin, le contrôle 2 du socle lit le
 source brut, commentaires compris : écrire le nom de l'environnement global dans un commentaire d'un
-fichier de l'adaptateur suffit à le faire rougir.
+fichier de l'adaptateur suffit à le faire rougir. Et un fichier de `src/` dont le nom contient
+`contrat` est pris par `gov:entite` pour le point de sortie du contrat d'apporteur : le contrat du socle
+vit donc dans `socle.ts`.
 
 ### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
 
