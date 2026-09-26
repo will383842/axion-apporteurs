@@ -140,8 +140,8 @@ const passer = (dispatch: Dispatch = sansEffet) =>
     maintenant: () => new Date(MAINTENANT_MS),
   });
 
-describe('REQ-QA-009 — les quatre verdicts de la porte, et jamais un 5xx pour un traitement qui lève', () => {
-  it('REQ-QA-009 : 503 sans secret, 401 hors tolérance, 401 signature, 200 duplicate — et une seule ligne en tout', async () => {
+describe('REQ-ARG-003 — les quatre verdicts de la porte, et jamais un 5xx pour un traitement qui lève', () => {
+  it('REQ-ARG-003 : 503 sans secret, 401 hors tolérance, 401 signature, 200 duplicate — et une seule ligne en tout', async () => {
     const avant = await base.prisma.evenementRecu.count();
     const c = corps(CLIENT, { client_id: randomUUID() }, {});
     const sansSecret = { ...env };
@@ -158,7 +158,7 @@ describe('REQ-QA-009 — les quatre verdicts de la porte, et jamais un 5xx pour 
     expect(await base.prisma.evenementRecu.count()).toBe(avant + 1);
   });
 
-  it('REQ-QA-009 : un dispatch qui lève — route 200, puis `en_erreur`, `processedAt` nul, `retryCount` 1', async () => {
+  it('REQ-ARG-003 : un dispatch qui lève — route 200, puis `en_erreur`, `processedAt` nul, `retryCount` 1', async () => {
     const sujet = randomUUID();
     expect((await recevoir(signee(SECRET, corps(CLIENT, { client_id: sujet }, {})))).status).toBe(
       200

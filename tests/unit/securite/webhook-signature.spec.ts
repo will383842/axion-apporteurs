@@ -247,8 +247,8 @@ describe('REQ-SEC-010 — le corps est borné à 128 Ko AVANT tout calcul', () =
 
 // ── L'alerte plafonnée ─────────────────────────────────────────────────────────────────────────
 
-describe('REQ-QA-008 — l’alerte de sécurité est PLAFONNÉE', () => {
-  it('REQ-QA-008 : dix refus du même motif, une seule alerte ; réarmée, la suivante dit combien ont été tues', () => {
+describe('REQ-SEC-010 — l’alerte de sécurité est PLAFONNÉE', () => {
+  it('REQ-SEC-010 : dix refus du même motif, une seule alerte ; réarmée, la suivante dit combien ont été tues', () => {
     const emises: (SignalDePorte & { tus: number })[] = [];
     const a = creerAlerteurPlafonne((s) => emises.push(s));
     for (let i = 0; i < 10; i++) a.signaler({ porte: 'axionia', motif: 'signature_invalide' });
@@ -260,7 +260,7 @@ describe('REQ-QA-008 — l’alerte de sécurité est PLAFONNÉE', () => {
     expect(emises[2]).toEqual({ porte: 'axionia', motif: 'signature_invalide', tus: 9 });
   });
 
-  it('REQ-QA-008 : réarmer une porte ne réarme pas l’autre', () => {
+  it('REQ-SEC-010 : réarmer une porte ne réarme pas l’autre', () => {
     const emises: SignalDePorte[] = [];
     const a = creerAlerteurPlafonne((s) => emises.push(s));
     a.signaler({ porte: 'axionia', motif: 'signature_invalide' });
@@ -273,7 +273,7 @@ describe('REQ-QA-008 — l’alerte de sécurité est PLAFONNÉE', () => {
 
 // ── La route, sur un dépôt qui compte ──────────────────────────────────────────────────────────
 
-describe('REQ-SEC-010 REQ-QA-008 — la route : témoin à deux faces, compté en lignes', () => {
+describe('REQ-SEC-010 — la route : témoin à deux faces, compté en lignes', () => {
   it('REQ-SEC-010 : face ROUGE — signée avec un autre secret, 401, AUCUNE ligne, une alerte', async () => {
     const env = environnementValide();
     const b = banc(env);
@@ -343,7 +343,7 @@ describe('REQ-SEC-010 REQ-QA-008 — la route : témoin à deux faces, compté e
     expect(b.declenchements()).toBe(1);
   });
 
-  it('REQ-QA-008 : livrée deux fois, la seconde rend 200 {duplicate:true}, n’écrit rien de plus et ne déclenche rien', async () => {
+  it('REQ-SEC-010 : livrée deux fois, la seconde rend 200 {duplicate:true}, n’écrit rien de plus et ne déclenche rien', async () => {
     const env = environnementValide();
     const b = banc(env);
     const corps = JSON.stringify(
@@ -456,7 +456,7 @@ describe('REQ-SEC-010 REQ-QA-008 — la route : témoin à deux faces, compté e
     expect(r.status).toBe(503);
   });
 
-  it('REQ-QA-008 : un déclenchement du travail de fond qui lève ne produit JAMAIS un 5xx — l’événement est inscrit, 200', async () => {
+  it('REQ-SEC-010 : un déclenchement du travail de fond qui lève ne produit JAMAIS un 5xx — l’événement est inscrit, 200', async () => {
     const env = environnementValide();
     const b = banc(env);
     b.d.declencher = () => {
@@ -470,7 +470,7 @@ describe('REQ-SEC-010 REQ-QA-008 — la route : témoin à deux faces, compté e
     expect(b.depot.lignes).toHaveLength(1);
   });
 
-  it('REQ-QA-008 : un événement bien formé de `schema_version` inconnue est inscrit `held` et alerté, jamais rejeté', async () => {
+  it('REQ-SEC-010 : un événement bien formé de `schema_version` inconnue est inscrit `held` et alerté, jamais rejeté', async () => {
     const env = environnementValide();
     const b = banc(env);
     const corps = JSON.stringify(
@@ -490,7 +490,7 @@ describe('REQ-SEC-010 REQ-QA-008 — la route : témoin à deux faces, compté e
     expect(b.declenchements()).toBe(0);
   });
 
-  it('REQ-QA-008 : la clé métier d’un paiement est son `paymentId` : deux événements distincts du même paiement, une ligne', async () => {
+  it('REQ-SEC-010 : la clé métier d’un paiement est son `paymentId` : deux événements distincts du même paiement, une ligne', async () => {
     const env = environnementValide();
     const b = banc(env);
     const s = env.AXIONIA_WEBHOOK_SECRET!;

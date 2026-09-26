@@ -140,8 +140,8 @@ describe('REQ-DM-036 — témoin à deux faces, compté en lignes de evenements_
   });
 });
 
-describe('REQ-INT-010 — inscrit AVANT tout traitement, traité HORS requête', () => {
-  it('REQ-INT-010 : la route rend 200 avec la ligne `recu` et sans date de traitement ; le travail de fond la passe `traite` et écrit son battement', async () => {
+describe('REQ-DM-036 — inscrit AVANT tout traitement, traité HORS requête', () => {
+  it('REQ-DM-036 : la route rend 200 avec la ligne `recu` et sans date de traitement ; le travail de fond la passe `traite` et écrit son battement', async () => {
     const sujet = randomUUID();
     let declenche = 0;
     const r = await recevoir(signee(SECRET, corpsDe(sujet), MAINTENANT_S), () => {
@@ -173,7 +173,7 @@ describe('REQ-INT-010 — inscrit AVANT tout traitement, traité HORS requête',
     expect(battement.dernierSuccesAt?.toISOString()).toBe(instant.toISOString());
   });
 
-  it('REQ-INT-010 : rejouer un événement déjà traité ne produit aucune écriture', async () => {
+  it('REQ-DM-036 : rejouer un événement déjà traité ne produit aucune écriture', async () => {
     const corps = corpsDe(randomUUID());
     await recevoir(signee(SECRET, corps, MAINTENANT_S));
     const depot = depotDuTravail(base.prisma);
@@ -203,7 +203,7 @@ describe('REQ-DM-036 — les enums et les index partiels, lus dans la base', () 
     expect(Object.values(TypeEvenementRecu)).toEqual(attendu);
   });
 
-  it('REQ-SEC-011 : les deux index partiels sont en base, avec leur clause', async () => {
+  it('REQ-DM-036 : les deux index partiels sont en base, avec leur clause', async () => {
     const lignes = await base.prisma.$queryRawUnsafe<{ indexname: string; indexdef: string }[]>(
       `SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'evenements_recus' AND indexname IN ('evenements_recus_cle_metier_unique', 'evenements_recus_en_attente') ORDER BY indexname`
     );
