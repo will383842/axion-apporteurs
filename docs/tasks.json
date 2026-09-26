@@ -2865,7 +2865,11 @@
         "tests/unit/securite/revocation.spec.ts",
         "docs/gates.json",
         "prisma/migrations/",
-        "prisma/seed/05-sessions.ts"
+        "prisma/seed/05-sessions.ts",
+        "tests/integration/sessions-revocables.spec.ts",
+        "src/server/auth/durees.ts",
+        "src/app/(espace)/connexion/actions.ts",
+        "tests/unit/securite/connexion-actions.spec.ts"
       ],
       "schema": true,
       "sensible": [
