@@ -463,6 +463,27 @@ describe('REQ-SEC-002 REQ-SEC-016 — limites par adresse réseau et par courrie
 
 // ── 3. l'émission ────────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Le VECTEUR FIGÉ de la décision 14 de partners/ADR-0013 : une clé de test publique (ce n'est pas
+ * un secret, elle ne sert qu'ici), le jeton de 32 octets nuls, et l'empreinte attendue ÉCRITE EN
+ * DUR. Un changement de domaine, de séparateur, d'algorithme ou d'encodage la fait rougir.
+ */
+const VECTEUR_LIEN = {
+  cle: 'partners-vecteur-fige-du-lien-magique-v1-aucun-secret-reel',
+  jeton: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+  empreinte: '1a39916cb2e5c2440314c66bbe84b98eb54d2d07441b6035ba2c849020cddf36',
+} as const;
+
+describe('REQ-SEC-001 — le vecteur figé de l’empreinte de lien (partners/ADR-0013, décision 14)', () => {
+  it('REQ-SEC-001 : HMAC-SHA-256, domaine partners.lien.v1 et U+001F, 64 hex minuscules', () => {
+    expect(empreinteDuJeton(VECTEUR_LIEN.jeton, VECTEUR_LIEN.cle)).toBe(VECTEUR_LIEN.empreinte);
+    // Face 2 : le même jeton sous le domaine de la session ne donne pas l'empreinte du lien.
+    expect(empreinteDeSession(VECTEUR_LIEN.jeton, VECTEUR_LIEN.cle)).not.toBe(
+      VECTEUR_LIEN.empreinte
+    );
+  });
+});
+
 describe('REQ-SEC-001 — l’émission du lien, après la réponse', () => {
   it('REQ-SEC-001 : seul le HMAC du jeton est stocké ; 15 minutes ; `kid` de la clé sur la ligne', async () => {
     const u = univers({ comptes: [MARIE] });

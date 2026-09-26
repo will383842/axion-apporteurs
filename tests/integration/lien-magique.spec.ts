@@ -184,7 +184,34 @@ describe('REQ-SEC-001 — usage unique et durée de vie, comptés en lignes de s
   });
 });
 
+/**
+ * Le VECTEUR FIGÉ de la décision 14 de partners/ADR-0013 : une clé de test publique (ce n'est pas
+ * un secret, elle ne sert qu'ici), le jeton de 32 octets nuls, et l'empreinte attendue ÉCRITE EN
+ * DUR. Un changement de domaine, de séparateur, d'algorithme ou d'encodage la fait rougir.
+ */
+const VECTEUR_LIEN = {
+  cle: 'partners-vecteur-fige-du-lien-magique-v1-aucun-secret-reel',
+  jeton: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+  empreinte: '1a39916cb2e5c2440314c66bbe84b98eb54d2d07441b6035ba2c849020cddf36',
+} as const;
+
 describe('REQ-SEC-001 — seule l’empreinte HMAC est stockée, et seule elle fait foi', () => {
+  it('REQ-SEC-001 : le vecteur figé de la décision 14 est ce que la base reçoit, octet pour octet', async () => {
+    const id = await apporteur('AX00SECD');
+    await ecrituresDeLien(base.prisma).insererLien({
+      apporteurId: id,
+      tokenHash: empreinteDuJeton(VECTEUR_LIEN.jeton, VECTEUR_LIEN.cle),
+      kid: kidDe(VECTEUR_LIEN.cle),
+      creeAt: new Date(t0),
+      expireAt: new Date(t0 + QUINZE_MINUTES),
+    });
+    const [ligne] = await base.prisma.$queryRawUnsafe<Array<{ token_hash: string }>>(
+      'SELECT token_hash FROM liens_magiques WHERE apporteur_id = $1::uuid',
+      id
+    );
+    expect(ligne?.token_hash).toBe(VECTEUR_LIEN.empreinte);
+  });
+
   it('REQ-SEC-001 : ni le jeton de lien ni le jeton de session n’apparaissent en base', async () => {
     const id = await apporteur('AX00SEC7');
     const jeton = await poserLien(id, new Date(t0));
