@@ -450,7 +450,14 @@ describe('REQ-INT-026 — le périmètre vide n’est admis QUE déclaré, motiv
     ],
     [
       'tâche repreneuse sans REQ-INT-027',
-      (a) => ({ ...a, perimetreVide: { motif: 'x'.repeat(30), tache: 'INT-T11' } }),
+      // Le statut de la repreneuse est POSÉ dans la fixture, jamais lu dans le registre réel :
+      // INT-T11 est passée `fusionnee` (PR #141), et la famille « est livrée » masquait alors
+      // celle que ce cas garde. Seule l'absence de REQ-INT-027 doit rester en cause.
+      (a) => ({
+        ...a,
+        perimetreVide: { motif: 'x'.repeat(30), tache: 'INT-T11' },
+        taches: a.taches.map((t) => (t.id === 'INT-T11' ? { ...t, statut: 'a_faire' } : t)),
+      }),
       /perimetre_vide_sans_repreneur : INT-T11 ne porte pas REQ-INT-027/,
     ],
     [

@@ -7,31 +7,31 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `7e25c56` — 2026-09-26T08:04:20+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #136 (un conflit avec `main`) · 3. #140 (un conflit avec `main`) |
+| Où est `main` ? | `4c1fa00` — 2026-09-26T08:39:08+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #140 (un contrôle requis rouge ou une revue manquante) · 2. #141 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
-| Où en est la phase ? | phase 0 — 35/115 tâches, reste 61.60 j |
-| Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
+| Où en est la phase ? | phase 0 — 43/115 tâches, reste 55.60 j |
+| Le prochain pas | SEC-04 — Sessions révocables en base, `sessionVersion`, step-up (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #139 — 2026-09-26 |
+| Dernière entrée de journal | PR #141 — 2026-09-26 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-35/115 tâches terminées · reste 61.60 j estimés.
+43/115 tâches terminées · reste 55.60 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 213 | JUR-T02, QA-T04, QA-T07, QA-T30, CPL-T22, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P … |
+| `a_faire` | 205 | JUR-T02, QA-T07, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P, DM-04, INT-T02, INT-T03 … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
 | `en_revue` | 0 | — |
-| `fusionnee` | 74 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
+| `fusionnee` | 82 | GOV-000, GOV-007, GOV-001, GOV-018, GOV-008, GOV-002, GOV-003, GOV-004, GOV-005, GOV-006, GOV-009, GOV-010 … |
 | `deployee` | 0 | — |
 | `verifiee` | 0 | — |
 
@@ -39,9 +39,9 @@
 
 **22.00 j** sur 23 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-07 (1 j, ph 1) → DM-08 (1.25 j, ph 1) → T-ARG-010 (1 j, ph 2) → DM-15 (1.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → ~~SEC-03~~ (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-07 (1 j, ph 1) → DM-08 (1.25 j, ph 1) → T-ARG-010 (1 j, ph 2) → DM-15 (1.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **14.75 j**.
+Reste sur ce chemin : **13.75 j**.
 
 ## Bloquées
 
@@ -64,9 +64,9 @@ Reste sur ce chemin : **14.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un contrôle requis rouge ou une revue manquante |
+| 2 | #141 — chore(GOV-012): registre rattrape, huit taches livrees par des PR fusionnees passent fusionnee | `t/registre-fusionnees-2` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -82,25 +82,35 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées
+`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition · `docs/adr/0023-route-des-coordonnees-de-candidature.md` — partners/ADR-0023 — Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
 
-**SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 42 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**SEC-04** — Sessions révocables en base, `sessionVersion`, step-up (1 j, **sur le chemin critique**) : 36 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `7e25c56` (2026-09-26T08:04:20+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `4c1fa00` (2026-09-26T08:39:08+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #141 — 2026-09-26 — chore(GOV-012): registre rattrape, huit taches livrees par des PR fusionnees passent fusionnee
+
+**Fait.** Huit tâches livrées par des PR fusionnées portaient encore `a_faire` : GOV-100 (PR 131), QA-T04, CPL-T22, QA-T30 et UX-P0-03 (PR 130, lot L0-03), SEC-03 (PR 134), INT-T11 (PR 136) et GOV-102 (PR 139). Elles passent `fusionnee` par `reclasser.mjs`, revendication constatée sur l'issue puis livraison constatée sur la forge, jamais à la main ; chaque couple a été confronté à la main au titre ou au champ `Lot:` de sa PR. Les trois tâches du lot sans issue en ont reçu une chacune (issues 142, 143 et 144), sur décision du donneur d'ordre. La phase 0 passe de 35 à 43 tâches terminées sur 115, et le prochain pas quitte SEC-03, déjà livrée, pour SEC-04.
+
+**Reste.** Les six tâches du lot de la PR 114 restent exclues (majuscule de `t/lot-L0-02`), et GOV-063 attend toujours GOV-061. QA-T30 porte la réserve écrite par la PR 130 : seuil de rupture à 79, et le blocage à 80 % sur les fichiers touchés n'existe pas. Le retard de fond reste l'objet de GOV-057.
+
+**Appris.** Une PR de lot peut avoir une tête `t/lot-...` et un champ `Lot:` vide : la PR 136 a composé trois tâches et n'en a livré qu'une, INT-T11, les deux autres rendues en `stop`. La tête de branche ne dit donc pas combien de tâches une PR livre ; seuls le titre et le champ `Lot:` le disent. Et une issue de lot ne peut revendiquer que la tâche qui ouvre son titre : le verbe ancre l'identifiant en tête et n'accepte qu'une tâche par issue, si bien qu'une tâche de lot sans issue propre ne passe pas `fusionnee` tant qu'on ne lui en ouvre pas une.
+
+Porte A : deux rouges sur la tête 79f50e2, verts sur `main` 4c1fa00, donc causés par cette PR, et d'une seule cause. Le témoin REQ-INT-026 « tâche repreneuse sans REQ-INT-027 » désignait INT-T11 et lisait son statut dans le registre réel : passée `fusionnee`, elle déclenchait d'abord la famille « est livrée », qui masquait celle que le cas garde. Le témoin REQ-QA-006 « démon absent », qui dérive ses comptes du disque, rougissait par ricochet : `adaptateur-mcp.spec.ts` est l'un des trois fichiers autonomes, et il échouait. Correctif : le statut de la repreneuse est posé dans la fixture (`a_faire`), la famille attendue reste la même ; le fichier de test est ajouté aux chemins de GOV-012 par `ajouter-path.mjs`. Mesuré en local : les 30 cas du fichier verts, le témoin REQ-QA-006 vert (6 dépendants en échec, 3 autonomes au vert), et le cas corrigé rougit encore quand on neutralise dans le harnais le contrôle de REQ-INT-027 (code 0 au lieu de 1). Un témoin qui nomme une tâche réelle pour son CONTENU dépend aussi de son STATUT, et un rattrapage du registre le décale.
 
 ### PR #139 — 2026-09-26 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées
 
@@ -235,87 +245,7 @@ sa survie ne dit rien de la garde. Enfin, la Gate A de ce tour a rougi sur le t�
 `gov:trace` : INT-T11 porte son périmètre à 90 tâches, exactement deux fois le plancher, et la tranche
 prise au milieu de la liste débordait d'une case. La tranche est désormais bornée à la liste.
 
-### PR #134 — 2026-09-26 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables
-
-**Fait.** Le parcours de connexion existe de bout en bout : l'écran `/connexion` (un champ de
-courriel étiqueté, un bouton, une réponse qui ne dépend que de l'état rendu par le noyau) et
-l'arrivée `/connexion/<jeton>` (une confirmation, jamais une consommation à l'affichage) appellent
-`demanderLien` et `consommerLien` par deux actions serveur. Le câblage
-(`src/server/auth/lien-magique-production.ts`) lit MAGIC_LINK_SECRET et SESSION_SECRET par le
-lecteur de SEC-01, leurs `kid` par `kidDe`, l'adresse publique au registre de l'entité ; les deux
-compteurs appellent `limiter` du registre (`magic:ip`, `magic:courriel`) ; le travail différé part
-dans `after()`. La migration `20260926000000_lien_magique_et_session` crée `liens_magiques` et
-`sessions_espace` et ajoute à `apporteurs` le courriel chiffré et son empreinte unique
-(`email_chiffre`, `email_hash`), que l'adaptateur lit pour trouver le compte et l'adresse stockée.
-Seules des empreintes HMAC-SHA-256 sont stockées (partners/ADR-0013, décision 14, vecteur figé vu
-rougir). SEC-03 porte la PR.
-
-**Reste.** Le cookie de session `__Host-` et la révocation appartiennent à SEC-04 (REQ-SEC-003) : la
-session est enregistrée en base, son jeton n'est pas encore remis au navigateur. L'envoi réel du
-courriel appartient à INT-T10 ; hors production le lien part au puits du notifieur (`NOTIFY_SINK`),
-qui n'écrit ni le lien ni l'adresse, et en production l'envoi échoue en le disant. Le harnais
-d'accessibilité de UX-P0-03 est sur `main`, mais il déclare lui-même les routes réelles « non
-mesurées » : le serveur de test du navigateur appartient à QA-T16, et le test du parcours sous ce
-harnais attend ce serveur. Les deux routes ont leur entrée `size-limit` (plafond dérivé de
-REQ-GOV-028) ; le mesureur par route appartient à QA-T20, et la mesure à la main dit que
-`/connexion` pèse 175 099 octets de JavaScript compressé (six fichiers, tous du cadriciel, aucun
-composant client), au-dessus des 75 Ko de REQ-UX-033. La page « lien déjà utilisé » et le code de repli appartiennent à UX-P1-04, la lecture
-seule du résilié à SEC-19. Les colonnes de courriel de l'apporteur, dues par l'acceptance (1) de
-SEC-08, sont posées ici. Le test en base réelle n'a tourné qu'en CI, faute de Docker sur le poste.
-
-**Appris.** `next build` réécrit `tsconfig.json` à chaque passage tant que ses réglages manquent,
-et le `allowJs` qu'il propose rend inutiles deux `@ts-expect-error` d'une spec de gouvernance :
-les réglages imposés sont écrits une fois, `allowJs` à faux. La garde `securite:rate-famille`
-refuse un magasin passé à `limiter` hors des tests : le câblage n'en passe aucun, et le témoin en
-base réelle remplace les deux ports de comptage dans le test. Une barre oblique inverse suivie de
-`b`, écrite dans un gabarit de script, devient un caractère de contrôle invisible dans le fichier
-produit.
-
-**Relecture.** La tête `b579da0` a été refusée par `exactitude` (revue 5323893967) : l'écran et le
-câblage manquaient, et le Reste disait à tort qu'aucune tâche ne porte l'envoi (INT-T10 le porte).
-Ce tour livre l'écran, les actions et leur câblage, et la spec lit l'oracle des limites au registre,
-lui-même confronté au texte de REQ-SEC-002. `mutation` a refusé la même tête (revue 5323944954) :
-l'adaptateur a désormais sa spec sur faux client (le filtre d'annulation, la condition transmise,
-le nombre rendu), chaque CHECK et chaque branche du déclencheur a son témoin en base et sa lecture
-statique, et les statuts qui ouvrent l'espace ont leur spec sous le domaine. Six mutants joués
-rougissent. Reste équivalent, nommé : `ecrites !== 1` remplacé par `ecrites < 1` survit, parce
-que l'empreinte est unique et qu'une consommation n'écrit jamais deux lignes.
-
-**Relecture, second tour.** La tête `d3d0586` a été acceptée par `schema` et `securite`, refusée
-par `exactitude` (revue 5324241478) sur un seul motif : l'écran d'arrivée réécrivait l'état vide de
-`/connexion/<jeton>`, déjà déclaré dans `etats-vides.ts`, avec un second titre, une seconde phrase
-et le même bouton sous une autre apostrophe. L'issue d'un lien qui ne vaut plus lit désormais cet
-état vide mot pour mot, les doublons sont retirés de `vocabulaire.ts`, et deux témoins rougissent
-si un écran affiche un texte absent de la micro-copie ou si un texte de l'espace existe en deux
-graphies. Deux dettes de `securite` sont fermées : un témoin rougit si le travail différé
-s'exécute avant la réponse (vu rougir sur le mutant qui l'exécute tout de suite), et l'issue de la
-consommation s'affiche sur `/connexion?issue=`, une URL qui ne porte plus le jeton.
-`mutation` a refusé la même tête (revue 5324263876) sur des survivants portés par le code ajouté au
-premier tour. Les compteurs du câblage sont jugés par leur effet : seul le magasin change, à la
-frontière du registre, et chaque port compte sous son nom et refuse à sa limite plus un, panne
-distinguée du refus ; le test en base réelle n'a plus de copie des compteurs. Les actions serveur
-et la page d'arrivée ont leur spec (piège évalué, travail différé confié à `after()`, empreinte
-réseau à la consommation, aucun jeton ni courriel dans les sorties, affichage qui ne consomme
-rien) ; le signalement du piège et l'empreinte réseau ont leurs témoins ; la lecture statique
-exige le connecteur OR de chaque colonne immuable et refuse tout désarmement dans la migration ;
-le statut des apporteurs d'intégration et le piège des observations sont écrits à chaque appel.
-Les quatorze mutants de la revue, rejoués un par un sur l'arbre commité, rougissent tous.
-
-**Porte A.** Les quatre lentilles ont accepté `c26a48b`, et la porte A a rougi (run 36214735286) sur
-trois témoins, tous défauts de test, aucun du code. Le témoin « la demande d'un apporteur n'annule
-pas le lien d'un autre » ne mesurait rien : son apporteur portait le code de parrainage
-`AX00SECL`, que la base refuse (`apporteurs_code_parrainage_format`, le L n'est pas dans
-l'alphabet Crockford), et la création échouait avant la demande. Le témoin de la seconde session
-attendait le nom de la contrainte dans un message que Prisma ne transmet pas pour une requête
-brute (code 23505 et détail seulement) : le bloc lit désormais le nom dans le diagnostic de
-Postgres (`GET STACKED DIAGNOSTICS`) et exige `sessions_espace_lien_magique_id_key`, sans se
-contenter d'un refus quelconque. Le témoin de `perf:budgets` sur le dépôt réel attendait zéro
-route : il lit maintenant le nombre de routes sur les fichiers suivis, et exige autant d'entrées.
-Les lignes « red-first, 0 rouge » du journal de la porte sont la sortie des témoins de
-`tests/unit/qualite/red-first.spec.ts`, sur leurs dépôts jetables : ce spec est vert, et
-`pnpm red-first` sur cette branche juge neuf tests nouveaux, neuf rouges contre `main`.
-
-… 59 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 60 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
