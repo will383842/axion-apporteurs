@@ -827,6 +827,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'Stryker, ce lecteur) est vue sortir en non nul puis en 0 sur un projet jetable dans la même ' +
         'spec ; ⛔ ce témoin d’effet ne vit pas dans `REFUS`. Dette DÉCLARÉE.',
     },
+    // ── INT-T11 : UNE sortie, à code VARIABLE ────────────────────────────────────────────────
+    'scripts/gates/harnais-mcp.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'INT-T11 — le harnais de l’adaptateur MCP et la confrontation du manifeste versionné. ' +
+        '`process.exit(code)` : sortie TERMINALE à code variable, commune aux trois modes (harnais, ' +
+        '`--manifeste`, `--ecrire-manifeste`). Le rapport est une fonction pure vue rendre 1 en ' +
+        'nommant le contrôle 8 sur trois adaptateurs fautifs (adaptateur-mcp.spec.ts), et le binaire ' +
+        'est vu sortir en 0 sur le dépôt dans la même spec ; ⛔ ce témoin d’effet ne vit pas dans ' +
+        '`REFUS`. Dette DÉCLARÉE.',
+    },
     'scripts/vues/fusion.ts': {
       total: 1,
       porte: 1,

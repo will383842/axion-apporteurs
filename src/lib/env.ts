@@ -96,6 +96,9 @@ export const schemaSecrets = z.object({
   PII_ENCRYPTION_KEY: cleHexadecimale,
   IP_HASH_SALT: secret,
   PII_HASH_KEY: secret,
+  // INT-T11 (REQ-INT-026) : le secret propre de la porte MCP. Dans CETTE liste pour qu'il suive les
+  // règles de REQ-SEC-028 — au moins 32 octets, distinct des autres, préfixes refusés en production.
+  PARTNERS_MCP_SHARED_SECRET: secret,
 });
 
 export type Secrets = z.infer<typeof schemaSecrets>;
@@ -329,6 +332,7 @@ const ROLES: Record<NomDeVariable, string> = {
   PII_ENCRYPTION_KEY: 'chiffre les données personnelles (AES-256-GCM)',
   IP_HASH_SALT: "sale l'empreinte des adresses réseau",
   PII_HASH_KEY: 'clé des empreintes de recherche des données personnelles',
+  PARTNERS_MCP_SHARED_SECRET: 'serrure de la porte MCP `POST /api/mcp`, en-tête `x-mcp-secret`',
   DATABASE_URL: 'la base Postgres ; `readyz` la sonde',
   REDIS_URL: 'le cache Redis ; `readyz` le sonde',
   NOTIFY_SINK: "retient toute notification dans le journal au lieu de l'envoyer",

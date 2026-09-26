@@ -3138,7 +3138,13 @@
         "scripts/gates/harnais-mcp.ts",
         "tests/integration/adaptateur-mcp.spec.ts",
         "docs/gates.json",
-        "scripts/gates/detect-pii.ts"
+        "scripts/gates/detect-pii.ts",
+        "src/app/api/mcp/route.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "src/lib/env.ts",
+        "src/server/securite/primitives-de-porte.ts",
+        "src/server/integrations/axionia/api-entrante.ts",
+        "tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts"
       ],
       "schema": false,
       "sensible": [],
