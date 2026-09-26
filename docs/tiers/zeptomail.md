@@ -41,8 +41,8 @@ le confronte ligne à ligne.
 | Élément | Forme appliquée par INT-T10 |
 | --- | --- |
 | En-tête de signature | `Producer-Signature: ts=<horodatage en millisecondes>;s=<condensat base64>;s-algorithm=HmacSHA256`, champs dans un ordre quelconque ; tout autre algorithme annoncé est refusé |
-| Condensat | HMAC-SHA256 du corps brut sous la clé d'authentification du webhook, en base64 ; le bourrage arrive percent-encodé et se décode avant la comparaison ; une seconde tentative porte sur le corps percent-décodé, que la documentation prescrirait selon axionia |
-| Tolérance | 300 secondes sur un horodatage en millisecondes (REQ-INT-023) ; l'horodatage n'entre pas dans le condensat, une livraison capturée reste donc rejouable dans sa fenêtre |
+| Condensat | HMAC-SHA256 du corps brut sous la clé d'authentification du webhook, en base64 ; le bourrage arrive percent-encodé et se décode avant la comparaison ; une seconde tentative porte sur le corps percent-décodé, que la documentation prescrirait selon axionia. La charge lue est exactement le texte dont la signature a été vérifiée : le corps brut, ou sa forme décodée quand c'est elle qui a été signée |
+| Tolérance | 300 secondes sur un horodatage en millisecondes (REQ-INT-023). ⚠️ Elle ne borne PAS le rejeu : l'horodatage `ts` n'entre pas dans le condensat, il est réécrivable, et une livraison capturée se rejoue sans limite de temps sous un `ts` frais. Effet nul aujourd'hui (la suppression est idempotente et aucun chemin ne la lève) ; dette nommée : dédoublonner par l'identifiant de livraison le jour où un chemin lève une suppression |
 | Exemple d'en-tête que cite axionia, attribué à la documentation | `ts=1596109465823;s=dN0yVozgabP5NPlxMDfP1r5u65bVO9kTGEZMIQlqI2o%3D;s-algorithm=HmacSHA256` |
 | Nom de l'événement de rebond définitif | `hardbounce` ; `softbounce` pour un rebond temporaire |
 | Chemin de l'adresse rebondie | `event_message.email_info.to[].email_address[].address` (tableau d'objets ; un objet seul est lu de même) |

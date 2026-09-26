@@ -124,7 +124,7 @@ describe('REQ-INT-023 — `Producer-Signature`, jugée seule', () => {
   it('REQ-INT-023 : la signature du relais est acceptée, bourrage percent-encodé ou non', () => {
     expect(
       verifierSignatureZeptomail(o(corps), signer(cle, corps, MAINTENANT_MS), cle, MAINTENANT_MS)
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, texte: corps });
     expect(
       verifierSignatureZeptomail(
         o(corps),
@@ -132,13 +132,16 @@ describe('REQ-INT-023 — `Producer-Signature`, jugée seule', () => {
         cle,
         MAINTENANT_MS
       )
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, texte: corps });
   });
 
   it('REQ-INT-023 : l’ordre des champs de l’en-tête n’est pas supposé', () => {
     const s = encodeURIComponent(createHmac('sha256', cle).update(corps, 'utf8').digest('base64'));
     const entete = `s-algorithm=HmacSHA256;s=${s};ts=${MAINTENANT_MS}`;
-    expect(verifierSignatureZeptomail(o(corps), entete, cle, MAINTENANT_MS)).toEqual({ ok: true });
+    expect(verifierSignatureZeptomail(o(corps), entete, cle, MAINTENANT_MS)).toEqual({
+      ok: true,
+      texte: corps,
+    });
   });
 
   it('REQ-INT-023 : un autre secret, un corps changé : `signature_invalide`', () => {
@@ -165,7 +168,7 @@ describe('REQ-INT-023 — `Producer-Signature`, jugée seule', () => {
           cle,
           MAINTENANT_MS
         )
-      ).toEqual({ ok: true });
+      ).toEqual({ ok: true, texte: corps });
     }
     for (const d of [-301_000, 301_000]) {
       expect(
@@ -323,5 +326,31 @@ describe('REQ-INT-023 — la route : témoin à deux faces, compté en entrées 
     });
     expect((await b.recevoir(corps, signer(b.cle, corps, MAINTENANT_MS))).status).toBe(413);
     expect(b.depot.entrees.size).toBe(0);
+  });
+});
+
+describe('REQ-INT-023 — la charge lue est EXACTEMENT le texte dont la signature a été vérifiée', () => {
+  it('REQ-INT-023 : un corps percent-encodé signé sous sa forme décodée est lu sous la forme SIGNÉE — jamais le corps reçu', async () => {
+    const b = banc();
+    const signe = JSON.stringify(charge('hardbounce', ['alice@exemple.test']));
+    const recu = signe.replace('alice@', 'alic%65@');
+    expect(recu).not.toBe(signe);
+    const r = await b.recevoir(recu, signer(b.cle, signe, MAINTENANT_MS));
+    expect(r.status).toBe(200);
+    expect([...b.depot.entrees.keys()]).toEqual([
+      empreinteRecherche('courriel', 'alice@exemple.test', clesPii(b.env)),
+    ]);
+  });
+
+  it('REQ-INT-023 : le vérificateur rend le texte vérifié — le corps brut à la première tentative, le décodé à la seconde', () => {
+    const cle = randomBytes(32).toString('hex');
+    const signe = JSON.stringify(charge('hardbounce', ['alice@exemple.test']));
+    const recu = signe.replace('alice@', 'alic%65@');
+    expect(
+      verifierSignatureZeptomail(o(signe), signer(cle, signe, MAINTENANT_MS), cle, MAINTENANT_MS)
+    ).toEqual({ ok: true, texte: signe });
+    expect(
+      verifierSignatureZeptomail(o(recu), signer(cle, signe, MAINTENANT_MS), cle, MAINTENANT_MS)
+    ).toEqual({ ok: true, texte: signe });
   });
 });

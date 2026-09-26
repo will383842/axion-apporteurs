@@ -18,10 +18,18 @@
  * `ts=<millisecondes>;s=<base64>;s-algorithm=HmacSHA256`, le bourrage `=` percent-encodé, le
  * condensat portant sur le CORPS seul (l'horodatage n'y entre pas), et une seconde tentative sur le
  * corps percent-décodé, que la documentation prescrit. Aucune des deux formes ne s'obtient sans la clé.
+ * La charge lue est EXACTEMENT le texte dont la signature a été vérifiée (`texte` du verdict) : le
+ * corps brut à la première tentative, sa forme décodée à la seconde — jamais le corps reçu quand
+ * c'est sa forme décodée qui a été signée, sans quoi plusieurs corps (`alice@`, `alic%65@`)
+ * passeraient sous une même signature et seraient lus différemment.
  *
- * LIMITE DÉCLARÉE. L'horodatage n'est pas dans le condensat : une livraison capturée reste rejouable
- * dans sa fenêtre de 300 s, et seule la fenêtre la borne. Rejouer un rebond définitif ne fait rien de
- * plus — l'adresse est déjà supprimée.
+ * LIMITE DÉCLARÉE — LE REJEU N'EST PAS BORNÉ. L'horodatage `ts` n'entre pas dans le condensat : il
+ * est RÉÉCRIVABLE par quiconque a capturé une livraison, qui la rejoue quand il veut avec un `ts`
+ * frais. La fenêtre de 300 s ne borne donc que les livraisons honnêtes, pas le rejeu. Effet nul
+ * aujourd'hui : le seul effet d'un rebond est une suppression, idempotente (unicité de l'empreinte),
+ * et aucun chemin ne lève une suppression. DETTE NOMMÉE : le jour où un chemin lève une suppression,
+ * dédoublonner les livraisons par leur identifiant de livraison, sans quoi un rejeu la rétablirait.
+ * Le schéma de signature est celui du relais : il ne se change pas ici.
  */
 import { createHmac } from 'node:crypto';
 import type { MotifSuppressionCourriel, PrismaClient } from '@prisma/client';
@@ -75,6 +83,14 @@ function decoderPourcent(valeur: string): string | null {
   }
 }
 
+function texteStrict(octets: Uint8Array): string | null {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(octets);
+  } catch {
+    return null;
+  }
+}
+
 /** Temps constant, sur la forme base64 canonique des 32 octets présentés. */
 function condensatEgal(presente: Buffer, attendu: Buffer): boolean {
   return egalATempsConstant(presente.toString('base64'), attendu.toString('base64'));
@@ -85,7 +101,7 @@ export function verifierSignatureZeptomail(
   entete: string | null,
   cle: string,
   maintenantMs: number
-): { ok: true } | { ok: false; motif: MotifDeSignatureZeptomail } {
+): { ok: true; texte: string | null } | { ok: false; motif: MotifDeSignatureZeptomail } {
   if (entete === null || entete === '') return { ok: false, motif: 'entete_absent' };
   const champs = champsDeLEntete(entete);
   if (champs === null || !/^[0-9]{1,16}$/.test(champs.ts))
@@ -100,14 +116,15 @@ export function verifierSignatureZeptomail(
   if (presente.length !== OCTETS_DU_CONDENSAT) return { ok: false, motif: 'signature_invalide' };
 
   const surLeCorps = createHmac('sha256', cle).update(octets).digest();
-  if (condensatEgal(presente, surLeCorps)) return { ok: true };
+  // Le texte signé est le corps brut : UTF-8 strict, sans quoi il n'y a pas de texte à lire.
+  if (condensatEgal(presente, surLeCorps)) return { ok: true, texte: texteStrict(octets) };
   // Seconde tentative : le corps percent-décodé, que la documentation du relais prescrit.
   const texte = new TextDecoder('utf-8').decode(octets);
   const decode = decoderPourcent(texte.replace(/\+/g, ' '));
   if (decode === null || decode === texte) return { ok: false, motif: 'signature_invalide' };
   const surLeDecode = createHmac('sha256', cle).update(decode, 'utf8').digest();
   return condensatEgal(presente, surLeDecode)
-    ? { ok: true }
+    ? { ok: true, texte: decode }
     : { ok: false, motif: 'signature_invalide' };
 }
 
@@ -219,9 +236,11 @@ export async function recevoirRebond(
     d.alerteur.signaler({ porte: PORTE_ZEPTOMAIL_CONTENU, motif });
     return Response.json({ ok: true });
   };
+  // EXACTEMENT le texte dont la signature a été vérifiée — jamais le corps reçu s'il diffère.
+  if (verdict.texte === null) return sansEffet('forme_inconnue');
   let charge: unknown;
   try {
-    charge = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(corps.octets));
+    charge = JSON.parse(verdict.texte);
   } catch {
     return sansEffet('forme_inconnue');
   }
