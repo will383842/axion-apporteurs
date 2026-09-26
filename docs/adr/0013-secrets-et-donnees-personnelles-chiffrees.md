@@ -95,6 +95,22 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
     lieu de les accepter pendant 24 heures. Un SHA-256 nu est écarté : l'empreinte d'un jeton
     lue en base serait vérifiable hors ligne sans aucun secret.
 
+### Le lien « ce n'est pas moi » (ajoutée le 2026-09-26, cadrage du schéma, GOV-102, partners/ADR-0022)
+
+15. **Le lien « ce n'est pas moi » de l'accusé de dépôt (REQ-SEC-006, SEC-11) est SANS ÉTAT** : aucune
+    table, aucune ligne à consommer. Il porte l'identifiant du jeton de dépôt, l'identifiant du dépôt
+    et le `kid`, et une signature HMAC-SHA-256 sous `MAGIC_LINK_SECRET`, entrée séparée par domaine :
+    `partners.pas-moi.v1`, U+001F, l'identifiant du jeton, U+001F, l'identifiant du dépôt ; sortie de
+    64 caractères hexadécimaux minuscules, comparée à temps constant. Son seul effet est de révoquer le
+    jeton désigné, et la révocation est **idempotente** : le même lien cliqué deux fois, ou après une
+    révocation par un autre chemin, ne change rien et rend la même page. Il ne vaut que pour le jeton
+    qu'il nomme : il ne révoque ni session ni autre jeton, et un identifiant de jeton qui n'appartient
+    pas à l'apporteur du dépôt rend la même page qu'un lien faux. Pas de double clé : un lien signé sous
+    une clé retirée est refusé, et l'apporteur garde la révocation depuis son espace. Un secret neuf est
+    écarté : le lien est une preuve de réception d'un courriel à l'adresse de l'apporteur, soit
+    exactement l'usage que `MAGIC_LINK_SECRET` couvre, et le domaine séparé empêche qu'une signature de
+    l'un vaille pour l'autre.
+
 ## Conséquences
 
 - Le démarrage refuse un jeu de secrets incomplet, faible, préfixé en production ou dédoublé, avec un
@@ -176,6 +192,10 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
 - **Décision 14** : son assertion est posée par SEC-03 (`tests/integration/lien-magique.spec.ts`, un
   vecteur figé d'empreinte de lien sous `MAGIC_LINK_SECRET` et son domaine) et par SEC-04 pour la
   session. Tant qu'elle n'est pas écrite et vue rougir, la décision reste `propose`.
+- **Décision 15** : son assertion est posée par SEC-11 — un vecteur figé de signature sous
+  `MAGIC_LINK_SECRET` et le domaine `partners.pas-moi.v1`, une signature d'un autre domaine refusée, et
+  le même lien joué deux fois qui ne révoque qu'une fois (compte des révocations, jamais le code de
+  réponse).
 - **Le câblage au démarrage réel** : QA-T04 appelle `exigerEnvironnement()` depuis le point d'entrée
   du serveur et étend CE schéma, jamais un second.
 - **Un secret optionnel** (par exemple celui d'une intégration qui doit rendre 503 s'il manque, INT-T11)

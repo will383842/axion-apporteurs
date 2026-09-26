@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**21 ADR · 13 `propose`, 8 `accepte`, 0 `remplace`.**
+**23 ADR · 15 `propose`, 8 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -32,3 +32,5 @@
 | [`partners/ADR-0019`](0019-un-label-designe-une-source-jamais-une-vue.md) | un label de rôle désigne une SOURCE, jamais une vue dérivée | `accepte` | 2026-09-22 | GOV-090 |
 | [`partners/ADR-0020`](0020-le-champ-lot-declare-les-taches-d-une-pr-de-lot.md) | Une PR de lot déclare ses tâches dans un champ `Lot:`, et la garde le croit exactement autant que le titre | `accepte` | 2026-09-23 | GOV-096 |
 | [`partners/ADR-0021`](0021-quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.md) | Quatre lentilles pour l'argent, la sécurité et les données, deux pour le reste ; la prose inexacte est une dette, pas un refus | `propose` | 2026-09-25 | GOV-097 |
+| [`partners/ADR-0022`](0022-carte-du-schema-des-phases-0-et-1.md) | La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition | `propose` | 2026-09-26 | GOV-102 |
+| [`partners/ADR-0023`](0023-route-des-coordonnees-de-candidature.md) | Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement | `propose` | 2026-09-26 | INT-T01c |
