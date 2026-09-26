@@ -16,14 +16,25 @@
 # puis `P.raw` est matché par `$C.Prisma.raw`), ce qu'aucune regex ne peut faire. Ce qu'une
 # regex apportait encore — la lecture du spécifieur de module — est réduit à UNE ancre,
 # `&specifieur-du-client`, définie une fois et réutilisée par `*specifieur-du-client`.
+#
+# ── CE QUE LA RÉSOLUTION NE SUIT PAS, ET CE QUI EN TIENT LIEU (revue `exactitude`, PR 82) ─────
+#
+# La résolution s'arrête dès que le namespace QUITTE sa liaison d'import : `Prisma?.raw`,
+# `Prisma!.raw`, `let P; P = Prisma`, `(x, P = Prisma) =>`, `{ P: Prisma }`, `Prisma satisfies
+# …` — tous passaient en exit 0 (mesuré sur 1.176.1). Courir après chaque écriture referait
+# l'erreur des orthographes. La règle n° 2 refuse donc la SORTIE elle-même : le namespace
+# `Prisma` n'a droit qu'à un membre IMMÉDIAT (`Prisma.sql`, `Prisma.join`, un type) ou à une
+# déstructuration directe sans `raw` ni reste ; toute autre apparition de sa valeur est refusée.
 rules:
   # REQ-SEC-008 (texte en vigueur ; REQ-QA-011 y est absorbée) : aucun import direct du client de
   # base sous l'espace apporteur. `import type` compris — l'espace reçoit ses types de la couche
   # d'accès. Un segment `prisma` ou `db` OÙ QU'IL SOIT dans le chemin compte (`../db/index` est
-  # le client sous un autre nom), AVEC OU SANS extension de fichier : sous
-  # `moduleResolution: "bundler"` (tsconfig.json:5), `../lib/prisma.js` et `../lib/prisma`
-  # résolvent le MÊME fichier, et la terminaison de l'ancienne regex n'admettait que `/` ou le
-  # guillemet — deux variantes d'extension plantées, deux passages en vert.
+  # le client sous un autre nom), AVEC OU SANS extension de fichier, déclaration `.d.ts` comprise :
+  # sous `moduleResolution: "bundler"` (tsconfig.json:5), `../lib/prisma.js` et `../lib/prisma`
+  # résolvent le MÊME fichier. `@prisma/` et `.prisma/` comptent aussi DERRIÈRE un chemin
+  # (`../../node_modules/@prisma/client`). Les chargeurs comptent tous : `import`, `require`,
+  # `import()` (avec ou sans attributs), `module.require`, le chargeur fabriqué
+  # (`createRequire(…)(…)`) — et `require` lui-même ne peut pas être ré-affecté sous l'espace.
   #
   # LIMITES DÉCLARÉES (aucune n'est fermée ici, et aucune ne se prétend fermée) :
   #   a) un module HORS de ces dossiers qui ENVELOPPE le client et que l'espace importe n'est pas
@@ -35,13 +46,16 @@ rules:
   #      TypeScript de semgrep 1.176.1 (mesuré : le motif `export type { ... } from "$M"` ne
   #      compile même pas, et aucun motif d'import ne les voit). C'est la SEULE forme du fichier
   #      qui reste textuelle — et elle DÉRIVE quand même sa lecture du spécifieur de l'ancre
-  #      commune, par un groupe nommé `(?P<M>…)` que `metavariable-regex` contraint ensuite.
+  #      commune, par un groupe nommé `(?P<M>…)` que `metavariable-regex` contraint ensuite ;
+  #   d) un chargeur obtenu AUTREMENT que par `require` écrit sous l'espace — reçu en paramètre,
+  #      déstructuré (`const { require: r } = module`), importé d'un module voisin — n'est pas
+  #      suivi : l'appel `r('../db')` n'a rien qui le distingue d'un appel quelconque.
   - id: axion-prisma-hors-couche-d-acces
     message: >-
       Accès direct au client de base sous l'espace apporteur (REQ-SEC-008). Toute lecture ou
       écriture de l'espace passe par la couche d'accès, qui injecte l'apporteurId de la session
       dans le `where`. Importez depuis la couche d'accès, jamais `@prisma/*`, `.prisma/*`, ni un
-      module `prisma` ou `db` — avec ou sans extension de fichier.
+      module `prisma` ou `db` — avec ou sans extension de fichier, par quelque chargeur que ce soit.
     severity: ERROR
     languages: [typescript, javascript]
     paths:
@@ -58,17 +72,28 @@ rules:
               - pattern: import { ... } from "$M"
               - pattern: import "$M"
               - pattern: require("$M")
+              - pattern: $O.require("$M")
+              # Le chargeur fabriqué : `createRequire(import.meta.url)('…')`.
+              - pattern: $F(...)("$M")
               - pattern: import("$M")
+              - pattern: import("$M", $ATTRIBUTS)
               - pattern: export * as $X from "$M"
               - pattern: export * from "$M"
           - metavariable-regex: &specifieur-du-client
               metavariable: $M
-              # `@prisma/…`, `.prisma/…`, ou un SEGMENT entier `prisma`/`db` — suivi de rien, de
-              # `/`, ou d'une extension JS/TS. `prismatique`, `db-outils`, `dbx` ne sont PAS des
-              # segments `prisma`/`db` : leur terminaison n'est ni `/`, ni une extension, ni la
-              # fin du spécifieur.
+              # `@prisma/…` ou `.prisma/…`, en tête ou derrière un chemin ; ou un SEGMENT entier
+              # `prisma`/`db` — suivi de rien, de `/`, d'une extension JS/TS ou d'une extension
+              # de déclaration. `prismatique`, `db-outils`, `dbx` ne sont PAS des segments
+              # `prisma`/`db` : leur terminaison n'est ni `/`, ni une extension, ni la fin.
               regex: |-
-                ^(@prisma/|\.prisma/|(.*/)?(prisma|db)(\.[cm]?[jt]sx?)?(/|$))
+                ^(.*/)?(@prisma/|\.prisma/|(prisma|db)(\.d\.[cm]?ts|\.[cm]?[jt]sx?)?(/|$))
+      # `require` ré-affecté (`const r = require`, `r = require`, paramètre par défaut) : le
+      # chargeur quitte son nom, et l'appel qui suit n'est plus reconnaissable. `require(…)` et
+      # `require.resolve(…)` (un chemin, pas un module) restent admis.
+      - patterns:
+          - pattern: require
+          - pattern-not-inside: require(...)
+          - pattern-not-inside: require.$PROPRIETE
       # Limite (c) : la seule forme textuelle, pour ce que l'AST de semgrep ne représente pas.
       - patterns:
           - pattern-regex: |-
@@ -77,59 +102,131 @@ rules:
       - pattern: new PrismaClient(...)
       - pattern: new $P.PrismaClient(...)
 
-  # SQL brut non paramétré. Ce que la règle refuse est une RÉFÉRENCE au membre dangereux, quelle
-  # que soit la manière de l'atteindre : membre pointé, accès calculé par littéral (guillemets ou
-  # gabarit), déstructuration, renommage à l'import, espace de noms, ré-affectation locale.
+  # SQL brut non paramétré. Ce que la règle refuse est une RÉFÉRENCE au membre dangereux —
+  # `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma.raw`, `Prisma.Sql`, le `raw` du runtime —
+  # par toute écriture que l'AST rend lisible : membre pointé, optionnel ou non nul, accès
+  # calculé par littéral (guillemets ou gabarit), nom écrit comme chaîne n'importe où,
+  # déstructuration, renommage à l'import, espace de noms, objet module. Pour `Prisma`, c'est en
+  # plus la SORTIE du namespace hors de son usage immédiat qui est refusée (voir l'en-tête).
   #
-  # LIMITES DÉCLARÉES : une clé FABRIQUÉE à l'exécution (`p['$query' + 'RawUnsafe']`, `p[k]` où
-  # `k` vient d'ailleurs) n'est pas lisible sans analyse de teinte ; une déstructuration à clé
-  # CALCULÉE (`const { ['raw']: r } = Prisma`) n'est représentée par aucun motif de semgrep
-  # 1.176.1 (mesuré : `var { "raw": $B } = $C.Prisma` ne matche pas) — l'élargir reviendrait à
-  # refuser toute déstructuration de `Prisma`, y compris le `sql` paramétré, ce qui punirait la
-  # bonne écriture ; un module tiers qui ré-exporte `raw` sous un autre nom n'est pas vu.
+  # LIMITES DÉCLARÉES, et elles bornent la phrase ci-dessus :
+  #   a) une clé `…Unsafe` que semgrep ne réduit pas à une constante (`p[k]` où `k` est un
+  #      paramètre ou vient d'un autre module) n'est pas lisible sans analyse de teinte. Mesuré :
+  #      une concaténation de littéraux (`p['$query' + 'RawUnsafe']`) est repliée, donc prise ;
+  #      et sur `Prisma`, tout accès calculé non littéral (`Prisma[k]`) est pris par le refus de
+  #      sortie ;
+  #   b) une déstructuration de `Prisma` à clé CALCULÉE (`const { ['raw']: r } = Prisma`) n'est
+  #      représentée par aucun motif de semgrep 1.176.1 (mesuré : `var { "raw": $B } =
+  #      $C.Prisma` ne matche pas) — l'élargir reviendrait à refuser toute déstructuration de
+  #      `Prisma`, y compris le `sql` paramétré, ce qui punirait la bonne écriture ;
+  #   c) un module tiers qui ré-exporte `raw` sous un autre nom n'est pas vu ;
+  #   d) l'objet module d'un spécifieur du client (espace de noms, `require`, `import()`) qui
+  #      QUITTE sa liaison — rangé dans un objet, passé en argument, `.then((m) => m.raw)` —
+  #      n'est pas suivi : le refus de sortie ne vaut que pour le namespace `Prisma`, parce que
+  #      la couche d'accès a le droit, elle, de manipuler l'objet module du client.
+  # Prix ASSUMÉ du refus de sortie : `typeof Prisma` en position de type, et une propriété
+  # `.Prisma` d'un objet quelconque qu'on range ailleurs, sont refusés aussi — l'AST de semgrep
+  # ne les distingue pas d'une sortie. Aucun fichier de `src/` ne les écrit.
   - id: axion-sql-brut-non-parametre
     message: >-
-      SQL brut NON paramétré : `$queryRawUnsafe`, `$executeRawUnsafe` et `Prisma.raw` concatènent
-      une chaîne dans la requête. Utilisez le gabarit étiqueté (`$queryRaw` / `$executeRaw` avec
-      des backticks, ou `Prisma.sql`), qui paramètre chaque valeur. Le renommage, l'accès par
-      crochets et la déstructuration ne changent rien à ce que le code FAIT.
+      SQL brut NON paramétré : `$queryRawUnsafe`, `$executeRawUnsafe`, `Prisma.raw` et
+      `Prisma.Sql` concatènent une chaîne dans la requête. Utilisez le gabarit étiqueté
+      (`$queryRaw` / `$executeRaw` avec des backticks, ou `Prisma.sql`), qui paramètre chaque
+      valeur. Le renommage, l'accès par crochets, la déstructuration et le passage du namespace
+      `Prisma` par une variable, un objet ou un paramètre ne changent rien à ce que le code FAIT.
     severity: ERROR
     languages: [typescript, javascript]
     paths:
       include:
         - "/src/**"
     pattern-either:
-      # — les membres `…Unsafe` : pointés, nus (déstructuration et renommage), calculés —
+      # — les membres `…Unsafe` : pointés (optionnels et non nuls compris), nus (déstructuration
+      #   et renommage) —
       - pattern: $C.$queryRawUnsafe
       - pattern: $queryRawUnsafe
       - pattern: $C.$executeRawUnsafe
       - pattern: $executeRawUnsafe
-      # Un littéral de chaîne dans le motif matche aussi un gabarit sans substitution (mesuré) :
-      # les deux écritures de l'accès calculé sont donc prises par le même motif.
-      - pattern: $O["$queryRawUnsafe"]
-      - pattern: $O["$executeRawUnsafe"]
+      # Le NOM écrit comme chaîne, où qu'elle soit : accès calculé `p['…']`, `Reflect.get(p,
+      # '…')`, clé calculée de déstructuration. Un littéral de chaîne dans le motif matche aussi
+      # un gabarit sans substitution (mesuré).
+      - pattern: '"$queryRawUnsafe"'
+      - pattern: '"$executeRawUnsafe"'
       # Déstructuration RENOMMÉE : la clé est un nom de propriété, pas un identifiant, et le
       # motif nu ci-dessus ne la voit pas (mesuré). La forme courte, elle, est un identifiant.
       - pattern: "var { $queryRawUnsafe: $B } = $O"
       - pattern: "var { $executeRawUnsafe: $B } = $O"
-      # — `Prisma.raw`, par son nom QUALIFIÉ : `$C.Prisma.raw` matche `Prisma.raw` (import nommé),
-      #   `P.raw` (`import { Prisma as P }`) et `C.Prisma.raw` (`import * as C`), et ne matche
-      #   PAS `autre.raw` ni `String.raw`, qui ne sont pas le `Prisma` de `@prisma/client`.
+      # — `Prisma.raw` et `Prisma.Sql`, par leur nom QUALIFIÉ : `$C.Prisma.raw` matche
+      #   `Prisma.raw` (import nommé), `P.raw` (`import { Prisma as P }`) et `C.Prisma.raw`
+      #   (`import * as C`), et ne matche PAS `autre.raw` ni `String.raw`, qui ne sont pas le
+      #   `Prisma` de `@prisma/client`. `new Prisma.Sql([x], [])` range `x` dans le TEXTE.
       - pattern: $C.Prisma.raw
       - pattern: Prisma.raw
       - pattern: $C.Prisma["raw"]
+      - pattern: $C.Prisma.Sql
+      - pattern: $C.Prisma["Sql"]
       # Déstructuration, forme courte comme renommée, au milieu d'autres clés (mesuré).
       - pattern: "var { raw: $B } = $C.Prisma"
-      # Ré-affectation locale de l'espace de noms, puis usage.
+      - pattern: "var { Sql: $B } = $C.Prisma"
+      # Ré-affectation locale de l'espace de noms, puis usage : la ligne de l'usage est nommée
+      # (la ligne de la ré-affectation l'est aussi, par le refus de sortie ci-dessous).
       - patterns:
           - pattern: $P.raw
           - pattern-inside: |
               var $P = $C.Prisma;
               ...
-      # Le `raw` du runtime, importé directement.
+      # — LE REFUS DE SORTIE : toute apparition de la valeur `Prisma` qui n'est ni un membre
+      #   immédiat (`Prisma.x`, `Prisma["x"]`), ni une déstructuration directe, ni une liaison
+      #   d'import. Ferme `Prisma?.raw`, `Prisma!.raw`, `let P; P = Prisma`, `(P = Prisma) =>`,
+      #   `{ P: Prisma }`, `Prisma satisfies …`, `Reflect.get(Prisma, 'raw')`, `f(Prisma)`.
       - patterns:
-          - pattern: import { ..., raw, ... } from "$M"
+          - pattern-either:
+              - pattern: $C.Prisma
+              - pattern: Prisma
+          - pattern-not-inside: $C.Prisma.$MEMBRE
+          - pattern-not-inside: Prisma.$MEMBRE
+          - pattern-not-inside: $C.Prisma["$MEMBRE"]
+          - pattern-not-inside: Prisma["$MEMBRE"]
+          - pattern-not-inside: import { ... } from "$M"
+          - pattern-not-inside: var { ... } = $C.Prisma
+          - pattern-not-inside: var { ... } = Prisma
+          # `const { Prisma } = await import('@prisma/client')` : la liaison garde son nom, et
+          # tout ce qui suit est jugé par nom.
+          - pattern-not-inside: "var { ..., Prisma, ... } = $E"
+      # La déstructuration directe avec RESTE emporte `raw` sans le nommer.
+      - pattern: "var { ..., ...$RESTE } = $C.Prisma"
+      # `Prisma` déstructuré SOUS UN AUTRE NOM (`const { Prisma: Q } = await import(…)`) : le
+      # nouveau nom n'est pas résolu, il est refusé à la liaison.
+      - patterns:
+          - pattern: "var { Prisma: $Q } = $E"
           - metavariable-regex:
-              metavariable: $M
-              regex: |-
-                ^(@prisma/|\.prisma/)
+              metavariable: $Q
+              regex: ^(?!Prisma$)
+      # — Le `raw` du runtime (ou de tout module du client), par l'objet module : espace de
+      #   noms, import par défaut, `require` affecté, `import()` attendu —
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  import * as $X from "$M";
+                  ...
+              - pattern-inside: |
+                  import $X from "$M";
+                  ...
+              - pattern-inside: |
+                  var $X = require("$M");
+                  ...
+              - pattern-inside: |
+                  var $X = await import("$M");
+                  ...
+          - pattern-either:
+              - pattern: $X.raw
+              - pattern: $X["raw"]
+          - metavariable-regex: *specifieur-du-client
+      # … et directement sur le chargeur, ou importé / déstructuré par son nom.
+      - patterns:
+          - pattern-either:
+              - pattern: require("$M").raw
+              - pattern: (await import("$M")).raw
+              - pattern: 'var { raw: $B } = require("$M")'
+              - pattern: 'var { raw: $B } = await import("$M")'
+              - pattern: import { ..., raw, ... } from "$M"
+          - metavariable-regex: *specifieur-du-client
