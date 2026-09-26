@@ -6,7 +6,7 @@
 | **Date** | 2026-09-18 |
 | **Décideur** | `architecte` — cet ADR est `propose` : il consigne les arbitrages du lead sécurité, il n'est pas encore accepté |
 | **Tâche** | SEC-01 |
-| **Exigences servies** | REQ-SEC-028, REQ-SEC-024 |
+| **Exigences servies** | REQ-SEC-028, REQ-SEC-024, REQ-SEC-001, REQ-SEC-003 |
 | **Décisions du registre citées** | HYP-E1-24 |
 | **Règle maison appliquée** | RM-01, RM-02 |
 | **Remplace / remplacé par** | — |
@@ -81,6 +81,20 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
     (`String`). Une tâche qui écrit une colonne de personne avant l'arrivée du chiffrement suit ce
     nommage et ce type.
 
+### L'empreinte des jetons d'authentification (ajoutée le 2026-09-26, cadrage de SEC-03 et SEC-04, GOV-100)
+
+14. **Un jeton d'authentification n'est stocké qu'en empreinte HMAC-SHA-256 sous le secret de son usage** :
+    `MAGIC_LINK_SECRET` pour le lien de connexion, `SESSION_SECRET` pour la session — **jamais
+    `PII_HASH_KEY`**, clé des empreintes de recherche des personnes (décision 12), qui est un autre
+    usage. L'entrée est séparée par domaine : `partners.lien.v1`, U+001F, le jeton pour le lien ;
+    `partners.session.v1`, U+001F, le jeton pour la session. La sortie fait 64 caractères
+    hexadécimaux minuscules (colonne `token_hash`, `char(64)`, unique). Le `kid` du secret employé
+    (`kidDe`, décision 8) est **stocké** à côté de l'empreinte (colonne `kid`, `char(8)`), pour que
+    la rotation sache sous quelle clé une ligne a été écrite. **Pas de double clé pour les liens** :
+    un lien vit 15 minutes (REQ-SEC-001), une rotation laisse expirer ceux de l'ancienne clé au
+    lieu de les accepter pendant 24 heures. Un SHA-256 nu est écarté : l'empreinte d'un jeton
+    lue en base serait vérifiable hors ligne sans aucun secret.
+
 ## Conséquences
 
 - Le démarrage refuse un jeu de secrets incomplet, faible, préfixé en production ou dédoublé, avec un
@@ -99,6 +113,9 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
 
 | Alternative | Pourquoi elle est écartée |
 | --- | --- |
+| Empreinte des jetons en SHA-256 nu | Une base lue suffit à tester un jeton candidat hors ligne ; le HMAC exige en plus le secret de l'usage (décision 14). |
+| Empreinte des jetons sous `PII_HASH_KEY` | Un secret pour deux usages : les empreintes de personnes et les jetons partageraient une clé, et une rotation de l'une toucherait l'autre. |
+| Double clé pendant 24 heures pour les liens | Un lien vit 15 minutes : l'accepter sous l'ancienne clé allonge la vie d'un jeton après une rotation sans aucun gain. |
 | Huit secrets, clé des empreintes dérivée de la clé de chiffrement par HKDF | Deux usages sur une même racine ; la tâche du chiffrement exige que la clé et le sel ne soient ni dérivés d'une autre variable ni partagés. |
 | Empreintes sous `IP_HASH_SALT` | Un sel d'adresse réseau servirait aussi aux courriels et aux IBAN : un seul secret pour deux usages. |
 | `NODE_ENV !== 'production'` comme prédicat | Échoue ouvert : `NODE_ENV` absent laisserait passer `stub…`. |
@@ -155,7 +172,10 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
   `accepte` reste à l'`architecte`.
 - **Le `kid` dans les jetons et la double clé pendant 24 heures** (HYP-E1-24, REQ-QA-030) : l'emploi
   du `kid` appartient aux producteurs de jetons (SEC-03, SEC-04, SEC-11) ; le trousseau à deux clés à
-  QA-T04 et QA-T13.
+  QA-T04 et QA-T13. Les liens de connexion n'y entrent pas (décision 14).
+- **Décision 14** : son assertion est posée par SEC-03 (`tests/integration/lien-magique.spec.ts`, un
+  vecteur figé d'empreinte de lien sous `MAGIC_LINK_SECRET` et son domaine) et par SEC-04 pour la
+  session. Tant qu'elle n'est pas écrite et vue rougir, la décision reste `propose`.
 - **Le câblage au démarrage réel** : QA-T04 appelle `exigerEnvironnement()` depuis le point d'entrée
   du serveur et étend CE schéma, jamais un second.
 - **Un secret optionnel** (par exemple celui d'une intégration qui doit rendre 503 s'il manque, INT-T11)
