@@ -64,7 +64,7 @@ paramètres), `peremptionAt` (seule colonne recalculée). Synonymes interdits : 
 | `kyc_en_cours`   | Pièces KYC en cours de collecte/vérification                                |
 | `pret_a_signer`  | KYC valide, contrat envoyé (`Contrat.statut = envoye`)                      |
 | `signe`          | Contrat `signe` en vigueur ; peut déposer                                   |
-| `suspendu`       | Accès coupé (`sessionVersion++`), dépôts refusés, aucun envoi hors `toujours` |
+| `suspendu`       | Accès à l'espace **maintenu** (aucun jeton révoqué, `sessionVersion` inchangé) ; nouveaux dépôts refusés ; aucun envoi hors `toujours` (REQ-SEC-032, REQ-SEC-019, `HYP-SEC03-ACCES`) |
 | `resilie`        | Sortie de collaboration ; `resiliationMotif ∈ {ordinaire_apporteur, ordinaire_axion, manquement_grave}` — **synonymes interdits** : faute grave, faute, sanction |
 
 **Dérivés, jamais stockés** (REQ-CPL-027, fonction pure `activite(apporteur, depots, now)`) :

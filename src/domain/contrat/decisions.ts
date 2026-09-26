@@ -357,6 +357,24 @@ export const CONCORDANCES: readonly Concordance[] = [
     gabarit: ['ni à un statut ou à une réglementation professionnelle'],
     absents: [],
   },
+  // ── HYP-SEC03-ACCES (2026-09-26, GOV-100) : qui ouvre l'espace. La suspension n'en coupe pas
+  //    l'accès (art. 3.7 al. 3) ; la résiliation laisse l'accès en lecture (art. 12.3).
+  {
+    decision: 'HYP-SEC03-ACCES',
+    article: '3.7',
+    alinea: 3,
+    registre: ["sans effet sur l'accès de l'Apporteur à son espace"],
+    gabarit: ["et sur l'accès de l'Apporteur à son espace"],
+    absents: [],
+  },
+  {
+    decision: 'HYP-SEC03-ACCES',
+    article: '12.3',
+    alinea: null,
+    registre: ['`resilie` : lecture seule'],
+    gabarit: ["L'Apporteur conserve l'accès en lecture à son espace"],
+    absents: [],
+  },
   // ── W15 (2026-09-25) : l'art. 4.6 amendé (al. 6) et complété (al. 8, correction du rattachement)
   {
     decision: 'W15',
