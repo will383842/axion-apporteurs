@@ -76,7 +76,10 @@ export interface SessionOuverte {
 export type VerdictDeSession =
   { ok: true; session: SessionOuverte } | { ok: false; motif: MotifDeRefus };
 
-const refus = (motif: MotifDeRefus): VerdictDeSession => ({ ok: false, motif });
+/** Une déclaration de fonction, pas une constante : évaluée à l'appel, jamais figée au chargement. */
+function refus(motif: MotifDeRefus): VerdictDeSession {
+  return { ok: false, motif };
+}
 
 /** Le juge, pur : chaque motif dans son ordre, le premier qui s'applique l'emporte. */
 export function jugerSession(
