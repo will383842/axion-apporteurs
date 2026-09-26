@@ -2771,7 +2771,14 @@
         "prisma/migrations/",
         "src/server/auth/durees.ts",
         "src/server/auth/lien-magique-depot.ts",
-        "src/domain/apporteur/acces-espace.ts"
+        "src/domain/apporteur/acces-espace.ts",
+        "tsconfig.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/server/auth/lien-magique-production.ts",
+        "src/content/micro-copy/espace/vocabulaire.ts",
+        "tests/unit/securite/lien-magique-production.spec.ts",
+        "tests/unit/securite/connexion-ecran.spec.tsx"
       ],
       "schema": true,
       "sensible": [
