@@ -385,6 +385,73 @@ export function etapesQuiLancentLaSuite(etapes: Etape[], scriptsDeLaSuite: strin
   );
 }
 
+// ── `pnpm pre-gate` : les étapes RAPIDES de la porte A (GOV-101) ──────────────────────────────
+
+/**
+ * 🔴 LE DÉFAUT MESURÉ (orchestrateur, 2026-09-26) : la porte A rougissait APRÈS les relectures — un
+ * nom de garde, `perf:budgets`, `red-first`, une vue périmée —, et chaque rouge relançait un tour.
+ * `pnpm prevol` rejouait déjà toute la porte A, suite comprise : trop long pour être lancé à chaque
+ * fois. `pnpm pre-gate` (`--rapide`) joue les MÊMES étapes, lues dans `ci.yml`, SAUF celles-ci —
+ * chacune nommée avec son motif, jamais tue. Les scripts qui lancent la suite (`vitest`) en sont
+ * écartés par DÉRIVATION (`scriptsQuiLancentLaSuite`) ; les trois ci-dessous sont DÉCLARÉS, et le
+ * témoin exige que chacun soit bien une étape de la porte A : une entrée morte rougit.
+ */
+export const ETAPES_LENTES: readonly { script: string; motif: string }[] = [
+  {
+    script: 'req:check',
+    motif: 'relit les résultats de `pnpm test`, qui ne tourne pas dans le pré-contrôle rapide',
+  },
+  {
+    script: 'a11y:navigateurs',
+    motif: 'télécharge et installe les navigateurs de Playwright, qui ne servent qu’à la suite',
+  },
+  {
+    script: 'mutation:pr',
+    motif:
+      'lance Stryker sur les fichiers mutables de la PR : étape SÉPARÉE, à lancer avant la PR ' +
+      'quand elle touche `src/domain/` ou `src/server/` (`pnpm mutation:pr`)',
+  },
+];
+
+/** Les étapes de la porte A partagées en RAPIDES (jouées) et LENTES (nommées, avec leur motif). */
+export function etapesRapides(
+  jouees: Etape[],
+  scripts: Record<string, string>
+): { rapides: Etape[]; lentes: Ecarte[] } {
+  const lance = (e: Etape, nom: string): boolean =>
+    new RegExp(`\\bpnpm\\s+${nom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w:-])`).test(
+      e.commande
+    );
+  const suite = scriptsQuiLancentLaSuite(scripts);
+  const rapides: Etape[] = [];
+  const lentes: Ecarte[] = [];
+  for (const e of jouees) {
+    const deLaSuite = suite.find((s) => lance(e, s));
+    const declaree = ETAPES_LENTES.find((s) => lance(e, s.script));
+    if (deLaSuite !== undefined) {
+      lentes.push({
+        nom: e.nom,
+        motif: `lance la suite de tests (\`pnpm ${deLaSuite}\`, dérivé : son script appelle vitest)`,
+      });
+    } else if (declaree !== undefined) {
+      lentes.push({ nom: e.nom, motif: declaree.motif });
+    } else {
+      rapides.push(e);
+    }
+  }
+  return { rapides, lentes };
+}
+
+/**
+ * La seule étape de PR que le pré-contrôle SIMULE : `red-first` porte en CI un `if:` de PR, parce
+ * que sa base vient de `GITHUB_BASE_REF`. En local, la base est `origin/main` — ce que la porte A
+ * lira pour une PR vers `main`.
+ */
+export const RED_FIRST_SIMULE: Etape = {
+  nom: 'red-first — simulé contre origin/main (étape de PR en porte A)',
+  commande: 'pnpm red-first --base origin/main',
+};
+
 /**
  * Les fichiers de test qui exigent le démon Docker — DÉRIVÉS du disque en deux sauts, jamais listés :
  * le harnais est le fichier suivi de `tests/` qui instancie le conteneur, les fichiers de banc sont
@@ -594,13 +661,18 @@ async function courir(): Promise<void> {
     console.error(`❌ prevol — \`${CI}\` est absent : le pré-vol n'a pas de source d'étapes.`);
     process.exit(1);
   }
-  const { jouees, ecartees } = await etapesDeLaPorteA(readFileSync(CI, 'utf8'));
-  const toutes = [...RENDUS, ...jouees];
+  const lecture = await etapesDeLaPorteA(readFileSync(CI, 'utf8'));
 
   const paquet = JSON.parse(readFileSync('package.json', 'utf8')) as {
     scripts?: Record<string, string>;
   };
   const scripts = paquet.scripts ?? {};
+  // `--rapide` (`pnpm pre-gate`, GOV-101) : les étapes lentes sont ÉCARTÉES ET NOMMÉES, comme
+  // toute étape non jouée ; `red-first` est simulé contre `origin/main`.
+  const partage = process.argv.includes('--rapide') ? etapesRapides(lecture.jouees, scripts) : null;
+  const jouees = partage === null ? lecture.jouees : [...partage.rapides, RED_FIRST_SIMULE];
+  const ecartees = [...lecture.ecartees, ...(partage?.lentes ?? [])];
+  const toutes = [...RENDUS, ...jouees];
   const suivis = fichiersSuivisOuRefus('prevol');
   const lire = (chemin: string): string => readFileSync(chemin, 'utf8');
   // Le chemin de CE fichier, DÉRIVÉ de son module et non tapé : le script ne se prescrit pas à
@@ -680,7 +752,13 @@ async function courir(): Promise<void> {
   for (const e of ecartees) console.log(`   · ${e.nom} — ${e.motif}`);
   console.log(`\nbalayage : ${balayage.resume}`);
   if (rouges.length === 0) {
-    console.log('\n✅ PRÉ-VOL VERT — la porte A ne devrait rien découvrir.');
+    console.log(
+      partage === null
+        ? '\n✅ PRÉ-VOL VERT — la porte A ne devrait rien découvrir.'
+        : `\n✅ PRÉ-CONTRÔLE RAPIDE VERT — les étapes rapides de la porte A passent. Les ` +
+            `${partage.lentes.length} étape(s) lentes nommées ci-dessus n'ont PAS tourné : ce vert ` +
+            'ne dit rien de la suite de tests ni de la mutation.'
+    );
     process.exit(0);
   }
   console.error(`\n❌ PRÉ-VOL ROUGE — ${rouges.length} étape(s) :`);

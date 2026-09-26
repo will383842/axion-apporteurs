@@ -17,9 +17,11 @@ dans ce fichier, et `gov:pr` rougit si ce n'est plus vrai.
   · la règle maison est un CHAMP, entre regle-maison:debut et regle-maison:fin — en case, elle
     ferait une neuvième case et fausserait le compte de REQ-GOV-013 ;
   · `Auteur:` n'apparaît jamais dans `Relecteur:`, et l'auteur ne s'auto-approuve pas. La règle
-    porte sur l'auteur et sur les LENTILLES (`exactitude`, `securite`, `simplicite`) plus la
-    vérification de mutation — jamais sur l'unicité des codes de poste : un même poste peut tenir
-    trois lectures distinctes.
+    porte sur l'auteur et sur les LENTILLES — deux partout, `exactitude` et `securite`, plus
+    `schema` (A02) sur une PR de schéma (GOV-101, partners/ADR-0022) — jamais sur l'unicité des
+    codes de poste. La mutation n'est plus un avis : Stryker la mesure en porte A.
+  · avant d'ouvrir la PR : `pnpm pre-gate` (et `pnpm mutation:pr` si la PR touche src/domain ou
+    src/server) ; les relectures démarrent quand la porte A est verte.
   · le champ « Lot: » de la section Identité porte les identifiants de tâche que cette PR livre EN
     PLUS de celle que son titre nomme, séparés par des VIRGULES — et il RESTE VIDE pour une PR à
     une seule tâche. Le titre ne peut nommer qu'une tâche, et `pnpm lot:cloture`, seul écrivain du
@@ -43,7 +45,7 @@ Titre de la PR : `<type>(<ID-TÂCHE>): <titre>` (`docs/CONVENTIONS.md` §5).
 ## Identité
 
 Auteur: A__
-Relecteur: A__ exactitude · A__ securite · A__ simplicite · A__ mutation
+Relecteur: A__ exactitude · A__ securite
 Couvre: REQ-___
 Lot:
 
@@ -93,7 +95,7 @@ Règle maison appliquée: RM-__ — vue dans (fichier):(ligne)
 
 - [ ] Les REQ couvertes sont listées dans `Couvre:`, et le code ne fait rien de plus qu'elles.
 - [ ] Chaque REQ a son test, nommé par son identifiant, annoté `// @req`, et vu ROUGE avant le correctif.
-- [ ] Relecteur ≠ auteur : les lentilles qu'exige le risque de la PR (docs/CHARTE-AGENTS.md §6), l'auteur ne s'auto-approuve pas.
+- [ ] Relecteur ≠ auteur : les deux lentilles, plus `schema` sur une PR de schéma (docs/CHARTE-AGENTS.md §6), l'auteur ne s'auto-approuve pas.
 - [ ] ADR ouverte si une décision de conception a été prise, ou `stop` rendu si elle appartient à Will.
 - [ ] Glossaire et vocabulaire à jour : aucune colonne de vocabulaire en chaîne libre, aucun libellé recopié.
 - [ ] Mesure avant/après du poids de la route si une route d'interface est touchée, à la main, chiffres collés.

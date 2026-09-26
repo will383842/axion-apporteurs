@@ -39,6 +39,10 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fichiersSuivis } from '../../../scripts/lot/fichiers-suivis';
+import { declarationsDeLaBase, declarationsRetirees } from './declarations-de-sorties';
+
+/** Ce fichier, tel que `origin/main` le porte : le cliquet des sorties se lit contre lui. */
+const CE_FICHIER = 'tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts';
 import {
   analyser as analyserAttributions,
   chargerSources as chargerSourcesAttributions,
@@ -823,36 +827,57 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'Stryker, ce lecteur) est vue sortir en non nul puis en 0 sur un projet jetable dans la même ' +
         'spec ; ⛔ ce témoin d’effet ne vit pas dans `REFUS`. Dette DÉCLARÉE.',
     },
+    'scripts/vues/fusion.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'GOV-101 — `pnpm vues:fusion`. `process.exit(issue.code)` : sortie TERMINALE à code ' +
+        'variable. La décision (`fusionnerMain`) est vue rendre 1 sur un conflit hors vue et sur un ' +
+        'rendu en échec, et 0 sur un conflit de vue seule, dans un VRAI dépôt git jetable ' +
+        '(relectures-sans-defaut.spec.ts) ; le binaire lui-même n’est pas lancé. Dette DÉCLARÉE.',
+    },
+    'scripts/mutation/pr.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'GOV-101 — `pnpm mutation:pr`. `process.exit(issue.code)` : sortie TERMINALE à code ' +
+        'variable ; le verdict est celui de `decider` (scripts/mutation/rapport.ts), dont chaque ' +
+        'famille est vue rendre 1 par score-de-mutation.spec.ts. Le binaire n’est pas lancé par un ' +
+        'témoin : il lance Stryker. Dette DÉCLARÉE.',
+    },
   };
 
-  it('REQ-GOV-032 — le compte DÉRIVÉ du diff égale le compte DÉCLARÉ, fichier par fichier', () => {
-    // 🔴 ON COMPTE SUR LE DISQUE, PAS DANS LE DIFF COMMITÉ. Ma première version lisait
-    // `git diff origin/main...HEAD` — le diff **commité**. Mutant posé : un 21e `process.exit(1)`
-    // glissé dans l'arbre de travail, **13/13 VERTS**. *Une garde qui lit l'historique ne voit pas
-    // l'état qu'elle garde* : elle aurait rougi en CI, où l'arbre EST le commit, et jamais chez
-    // celui qui écrit la ligne — c'est-à-dire au seul moment où elle sert.
-    //
-    // On compare donc le fichier TEL QU'IL EST au même fichier à `origin/main`.
-    // 🔴 ET ON COMPTE TOUTES LES SORTIES NON NULLES, PAS UNE ORTHOGRAPHE. Motif BLOQUANT de
-    // la lentille `schema` au 13e tour : la version précédente ne cherchait que le littéral
-    // `process.exit(1)` et manquait **six** sorties, dont la plus chère —
-    // `gov-entite.ts` : `process.exit(verdict.code)`, sortie TERMINALE de
-    // `gov:entite --corps-publie`, déclarée BLOQUANTE en Gate A. Mutée en `exit(0)`, la gate
-    // imprime `[coordonnee_en_clair]` sur un IBAN d'un corps publié en dépôt PUBLIC **et sort 0**,
-    // sans qu'aucun compteur ne bouge. *Un compteur qui cherche une orthographe ne compte pas une
-    // famille* — et c'est la deuxième fois que l'EXTENSION de cette garde est trop étroite.
-    const SORTIE_NON_NULLE = /process\.exit\(\s*(?!0\s*\))/g;
-    const compter = (texte: string) => (texte.match(SORTIE_NON_NULLE) ?? []).length;
-    const surMain = (f: string) => {
-      try {
-        return compter(
-          execFileSync('git', ['show', `origin/main:${f}`], { encoding: 'utf8', maxBuffer: 64e6 })
-        );
-      } catch {
-        return 0; // fichier neuf : tout ce qu'il porte est ajouté par la PR
-      }
-    };
+  // 🔴 ON COMPTE SUR LE DISQUE, PAS DANS LE DIFF COMMITÉ. Ma première version lisait
+  // `git diff origin/main...HEAD` — le diff **commité**. Mutant posé : un 21e `process.exit(1)`
+  // glissé dans l'arbre de travail, **13/13 VERTS**. *Une garde qui lit l'historique ne voit pas
+  // l'état qu'elle garde* : elle aurait rougi en CI, où l'arbre EST le commit, et jamais chez
+  // celui qui écrit la ligne — c'est-à-dire au seul moment où elle sert.
+  //
+  // On compare donc le fichier TEL QU'IL EST au même fichier à `origin/main`.
+  // 🔴 ET ON COMPTE TOUTES LES SORTIES NON NULLES, PAS UNE ORTHOGRAPHE. Motif BLOQUANT de
+  // la lentille `schema` au 13e tour : la version précédente ne cherchait que le littéral
+  // `process.exit(1)` et manquait **six** sorties, dont la plus chère —
+  // `gov-entite.ts` : `process.exit(verdict.code)`, sortie TERMINALE de
+  // `gov:entite --corps-publie`, déclarée BLOQUANTE en Gate A. Mutée en `exit(0)`, la gate
+  // imprime `[coordonnee_en_clair]` sur un IBAN d'un corps publié en dépôt PUBLIC **et sort 0**,
+  // sans qu'aucun compteur ne bouge. *Un compteur qui cherche une orthographe ne compte pas une
+  // famille* — et c'est la deuxième fois que l'EXTENSION de cette garde est trop étroite.
+  const SORTIE_NON_NULLE = /process\.exit\(\s*(?!0\s*\))/g;
+  const compter = (texte: string) => (texte.match(SORTIE_NON_NULLE) ?? []).length;
+  const surMain = (f: string) => {
+    try {
+      return compter(
+        execFileSync('git', ['show', `origin/main:${f}`], { encoding: 'utf8', maxBuffer: 64e6 })
+      );
+    } catch {
+      return 0; // fichier neuf : tout ce qu'il porte est ajouté par la PR
+    }
+  };
 
+  /** Les sorties non nulles que la PR AJOUTE, fichier par fichier (disque contre `origin/main`). */
+  function ajoutesParFichierDuDisque(): Map<string, number> {
     // 🔴 ON ÉNUMÈRE LE DISQUE, PAS L'INDEX. Lentille `mutation`, 13e tour : la version
     // précédente listait par `git ls-files`, **qui lit l'INDEX**. Un script NEUF et NON SUIVI
     // portant un `process.exit(1)` était donc invisible — 15/15 verts. *C'est mon propre motif
@@ -868,6 +893,11 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
       const n = compter(readFileSync(f, 'utf8')) - surMain(f);
       if (n > 0) ajoutesParFichier.set(f, n);
     }
+    return ajoutesParFichier;
+  }
+
+  it('REQ-GOV-032 — le compte DÉRIVÉ du diff égale le compte DÉCLARÉ, fichier par fichier', () => {
+    const ajoutesParFichier = ajoutesParFichierDuDisque();
 
     // 🔴 APRÈS LA FUSION, CETTE PROPRIÉTÉ CHANGE DE NATURE — trouvé par la revue de complétude
     // au 27e tour, et MESURÉ. Ce test compare le DISQUE à `origin/main`. Le jour où ce lot
@@ -972,195 +1002,38 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     expect(temoinsDeclares, 'la somme des `temoins` déclarés a divergé du tableau `REFUS`').toBe(
       couverts
     );
-    // Le nombre lui-même n'est pas la garde — la garde est le test ci-dessus. Celui-ci existe
-    // pour qu'on ne puisse pas faire baisser la dette en retirant des lignes de la déclaration.
-    // ⚠️ CE NOMBRE EST UNE SOMME DE DELTAS POSITIFS, PAS UN NET — et c'est la lentille
-    // `exactitude` qui a dû me le dire au 13e tour, après que je l'ai appelé « NET » deux fois.
-    // La boucle ci-dessus filtre `n > 0` : elle ne voit que les fichiers qui en GAGNENT. Sur les
-    // sorties non nulles : deltas positifs **25**, deltas négatifs **−2** (`gov-identifiants.ts`),
-    // donc net réel **23**. Les trois nombres disent des choses différentes, et c'est bien 25 qu'il
-    // faut ici — ce qu'on déclare, ce sont les sorties AJOUTÉES qu'il faut couvrir, pas un solde.
-    // *Nommer un compteur par ce qu'il n'est pas coûte plus cher qu'un compteur faux : celui-ci
-    // était juste, et son NOM le rendait invérifiable.*
-    // 🔧 25 → 26 au 24e tour, ARBITRÉ et non subi : `scripts/lot/fichiers-suivis.ts` ajoute LE
-    // refus qui manquait (`perimetre_illisible`). Ce cliquet a rougi pour ça — c'est exactement son
-    // office : le total ne bouge pas sans qu'on l'écrive. La sortie ajoutée est couverte par un
-    // témoin d'effet à DEUX faces (périmètre inconnu → refus ; dépôt réel → vert).
-    // 🔧 26 → 27 au 26e tour, ARBITRÉ et non subi : `fichiers-suivis.ts` ajoute le SECOND refus
-    // qui manquait (`perimetre_entame`). Ce cliquet a rougi pour ça, en NOMMANT le fichier et
-    // l'écart (« 2 exits ajoutés, 1 déclarés ») — c'est exactement son office. La sortie ajoutée
-    // est couverte par un témoin d'effet à deux faces (fichier suivi manquant → refus ; dépôt
-    // réel → vert).
-    // 🔧 27 → 35 à la RÉCONCILIATION de `gov-038`, ARBITRÉ et non subi. Dix sorties entrent avec
-    // quatre fichiers (`gov-attestation` +3, `perf-budgets` +4, `gov-conventions` +2,
-    // `gov-tasks` +1). Le cliquet a rougi en nommant le premier — il n'a pas été contourné, il a
-    // été LU. ⚠️ Le seuil est GLOBAL : il somme tout ce qui atterrit, jamais le sommet d'une
-    // branche. Mesuré sur l'arbre réconcilié : 179 sorties non nulles sous `scripts/`.
-    // 🔧 35 → 36 par GOV-030, ARBITRÉ et non subi. `scripts/gates/gov-check.ts` naît avec UNE
-    // sortie non nulle, `process.exit(decision.code)` : la décision est une fonction pure, vue
-    // rendre 1 par `termes-interdits.spec.ts`, et la sortie est vue en 1 sur un dépôt jetable.
-    // 🔧 36 → 37 par GOV-037, ARBITRÉ et non subi. Sur sa première base (`6237f96`, PR #35), la
-    // branche avait lu 35 → 36, et le rouge s'y lisait dans les DEUX tests de ce bloc — d'abord
-    // l'identité, puis le compte :
-    //
-    //     scripts/gates/gov-attributions.ts ajoute 1 `process.exit(1)` et n'est PAS déclaré ici
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 36 to be 35
-    //
-    // GOV-030 (PR #41) a atterri d'abord avec sa propre sortie et a pris le 36. Sur la fusion de
-    // `origin/main` = `ae56ce4`, les deux déclarations présentes, l'identité passe et le COMPTE
-    // rougit — relu, pas deviné :
-    //
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 37 to be 36
-    //
-    // ⚠️ **CE NOMBRE DÉPEND DE L'ORDRE DE FUSION, et rien ici ne peut le deviner.** Le seuil est
-    // GLOBAL : il somme tout ce qui a atterri. Une branche sœur qui atterrirait d'abord changerait
-    // ce nombre — et c'est alors la branche SUIVANTE qui lira son propre rouge et l'arbitrera.
-    // Déclarer un nombre « au cas où » donnerait le nombre sans la lecture, c'est-à-dire exactement
-    // ce que ce cliquet interdit :
-    // *le total ne bouge pas sans qu'on l'écrive, et on ne l'écrit pas sans l'avoir lu.*
-    // 🔧 37 → 38 par UX-P0-02, ARBITRÉ et non subi. `scripts/gates/maquettes-validees.ts` naît
-    // avec UNE sortie non nulle, terminale et à code variable. Lu en Gate A, dans l'ordre — d'abord
-    // l'identité (run 35435390710), puis, la déclaration posée, le compte (run 35436969947) :
-    //
-    //     scripts/gates/maquettes-validees.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 38 to be 37
-    //
-    // La sortie est vue en 1 puis en 0 sur un arbre jetable (maquettes-validees.spec.ts).
-    // 🔧 38 → 39 par DM-01, SECONDE à atterrir après UX-P0-02 (elle déclare la SOMME), ARBITRÉ et non subi : `scripts/gates/journal-sans-pii.ts` naît avec UNE
-    // sortie à code variable. Le cliquet a rougi en la nommant — relu, pas deviné :
-    //
-    //     scripts/gates/journal-sans-pii.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
-    //
-    // 🔧 39 → 40 par SEC-10, ARBITRÉ et non subi. Le cliquet a rougi en NOMMANT le fichier :
-    //
-    //     scripts/gates/rate-famille.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
-    //
-    // Une sortie à code variable, `process.exit(code)`, vue en 1 et en 0 sur le binaire. UX-P0-02
-    // (#79) a atterri d'abord et pris le 38 ; au rebase, le compte a rougi, relu et non deviné :
-    //
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 39 to be 38
-    //
-    // DM-01 (#75) a ensuite atterri avec sa propre sortie et pris le 39 ; à la fusion de `main`
-    // dans cette branche, le compte a rougi de nouveau, relu et non deviné :
-    //
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 40 to be 39
-    //
-    // 🔧 40 → 44 par DM-02, ARBITRÉ et non subi : deux gardes NEUVES, `schema-cents.ts` et
-    // `migrations-additive.ts`, deux sorties chacune (le `--prove` qui voit un témoin rester vert,
-    // la sortie terminale sur faute), déclarées plus haut. La Gate A de la PR 84 a rougi en le
-    // chiffrant — relu, pas deviné :
-    //
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
-    // 🔧 44 → 46 par INT-T09, ARBITRÉ et non subi : la garde NEUVE
-    // `scripts/gates/aucun-annee-de-naissance.ts` naît avec DEUX sorties non nulles — la terminale
-    // à code variable, et le `process.exit(2)` de la promesse rejetée. ⚠️ Cette branche était EN
-    // CONFLIT, donc MUETTE en CI : elle a rencontré le cliquet pour la première fois cette nuit.
-    // Lu sur CETTE branche, dans l'ordre — d'abord l'identité, puis, la déclaration posée, le
-    // compte —, relu et non deviné :
-    //
-    //     scripts/gates/aucun-annee-de-naissance.ts ajoute 2 `process.exit(1)` et n’est PAS déclaré ici: expected undefined to be defined
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 46 to be 44
-    //
-    // ⚠️ Le nombre dépend de L'ORDRE DE FUSION, et il se lit, il ne se devine pas : sur la même
-    // base 44, les branches sœurs #82, #93 et #92 déclarent respectivement 45, 46 et 48. Celle qui
-    // atterrira après celle-ci lira SON propre rouge et l'arbitrera à son tour.
-    //
-    // 🔧 44 → 46 par UX-P0-01, ARBITRÉ et non subi : `scripts/gates/ux-exhaustivite.ts` naît
-    // avec DEUX sorties non nulles — `echouer()`, atteinte sous `--prove` quand une famille n'a pas
-    // de témoin, et la sortie de jugement du dépôt réel sur faute. Déclarées plus haut avec
-    // `temoins: 0`, assumé : `vocabulaire-et-micro-copy.spec.ts` lance le binaire DEUX fois et les
-    // deux fois il sort en 0 ; les familles sont prouvées sur des vues INJECTÉES dans `controler`,
-    // qui est pure. Solide, mais ce n'est pas voir le binaire sortir en 1, et le registre le DIT.
-    // La Gate A de la PR 93 a rougi d'abord sur l'identité, puis sur le compte — relu, pas deviné :
-    //
-    //     scripts/gates/ux-exhaustivite.ts ajoute 2 `process.exit(1)` et n’est PAS déclaré ici
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 46 to be 44
-    //
-    // 🔧 44 → 48 par JUR-T01, ARBITRÉ et non subi : `scripts/gates/jur-grille-chiffree.ts` naît
-    // avec QUATRE sorties non nulles (plus deux `exit(0)`), déclarées plus haut avec `temoins: 0` —
-    // aucune n'a été vue rougir, et le registre le DIT au lieu de le taire. La Gate A de la PR 92 a
-    // rougi en le chiffrant — relu, pas deviné (run 35804660196) :
-    //
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 48 to be 44
-    //
-    // 🔧 40 → 44 par GOV-059 (suite), ARBITRÉ et non subi. `scripts/prevol.ts` naît avec QUATRE
-    // sorties non nulles, dont trois sont des refus de CONCLURE. Le cliquet a rougi dans ses deux
-    // tests, dans l'ordre — l'identité d'abord, le compte ensuite —, et les deux rouges ont été LUS
-    // avant d'écrire le nombre (`pnpm prevol`, puis `vitest -t "pas seulement"`) :
-    //
-    //     scripts/prevol.ts ajoute 4 `process.exit(1)` et n’est PAS déclaré ici
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 44 to be 40
-    //
-    // ⚠️ C'est le premier fichier déclaré ici qui ne soit PAS une garde de Gate A. Ce qu'il en
-    // est de ses TÉMOINS ne se lit qu'à son entrée du registre, plus haut — une seconde lecture
-    // ici a vécu le temps d'un commit et disait l'inverse de celle-là.
-    //
-    // 🔧 44 + 4 a la fusion de `main` dans cette branche. DM-02 et GOV-047 ont incremente le
-    // MEME cliquet chacun de son cote, et tous deux de 40 a 44 — la coincidence des nombres
-    // rendait le conflit trompeur : garder un seul cote donnait un total qui a l'air juste.
-    // Les deux recits sont conserves, et le nombre ci-dessous est DERIVE de la somme des
-    // `total` du registre, verifiee avant d'etre ecrite.
-    //
-    // 🔧 48 → 50 au tour de correction de la PR 99 : la lentille `securite` a mesuré que la
-    // dérivation de `ci.yml` SE TAISAIT au lieu de refuser (zéro étape → « PRÉ-VOL VERT », code
-    // 0) et qu'elle lisait le premier bloc `steps:` venu, fût-il d'un autre job. Les deux refus
-    // qui les ferment sont NEUFS, et le cliquet a rougi dans ses deux tests avant que le nombre
-    // ne soit écrit — relus, pas devinés :
-    //
-    //     scripts/prevol.ts : 6 exits ajoutés, 4 déclarés
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 50 to be 48
-    //
-    // 🔧 50 + 2 = 52 a la fusion de `main` (`f7ea7c3`) dans la branche de la PR 93 : GOV-047 (prevol,
-    // cote `main`) et UX-P0-01 (les deux sorties de `ux-exhaustivite.ts`) ont incremente le MEME
-    // cliquet chacun de son cote.
-    // 🔧 50 → 51 par SEC-08, ARBITRÉ et non subi. `scripts/gates/schema-pii.ts` naît avec UNE
-    // sortie à code variable. Le cliquet a rougi dans ses deux tests, dans l'ordre — l'identité
-    // en Gate A (run 36173435743), puis, la déclaration posée, le compte (`vitest -t`) :
-    //
-    //     scripts/gates/schema-pii.ts ajoute 1 `process.exit(1)` et n’est PAS déclaré ici
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 51 to be 50
-    //
-    // 🔧 50 + 4 = 54 a la fusion de `main` (`f7ea7c3`) dans cette branche : GOV-047 (prevol, cote
-    // `main`) et JUR-T01 (les quatre sorties de `jur-grille-chiffree.ts`) ont incremente le MEME
-    // cliquet chacun de son cote. Les deux recits sont conserves ; le nombre est DERIVE de la
-    // somme des `total` du registre, qui porte les deux entrees.
-    //
-    // 🔧 54 + 2 = 56 a la fusion de `main` (`48b14b6`) dans cette branche : JUR-T01 (#92, les
-    // quatre sorties de `jur-grille-chiffree.ts`) a atterri avant INT-T09 (les deux sorties de
-    // `aucun-annee-de-naissance.ts`). Les deux recits sont conserves ; le nombre a ete LU, pas
-    // devine — le cliquet laisse a 54 a rougi sur la somme du registre :
-    //
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 56 to be 54
-    //
-    // 🔧 54 + 1 = 55 a la fusion de `main` (`48b14b6`) dans `t/sec-08` : la sortie de SEC-08 et les
-    // quatre de JUR-T01 s'ajoutent, le registre porte les deux entrees.
-    //
-    // 🔧 56 + 1 = 57 a la fusion de `main` (`1ca6592`) dans `t/int-t09` : SEC-08 (#126, une sortie)
-    // a atterri avant INT-T09 (deux). Les recits sont conserves ; le nombre est LU sur le cliquet :
-    //
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 57 to be 56
-    //
-    // 🔧 54 + 2 = 56 a la fusion de `main` (`48b14b6`) dans la branche de la PR 93 : JUR-T01 (les
-    // quatre sorties de `jur-grille-chiffree.ts`, cote `main`) et UX-P0-01 (les deux sorties de
-    // `ux-exhaustivite.ts`) ont incremente le MEME cliquet chacun de son cote. Le nombre est
-    // DERIVE de la somme des `total` du registre, qui porte les trois entrees.
-    // 🔧 54 + 1 = 55 a la fusion de `main` (`48b14b6`) dans `t/sec-08` : la sortie de SEC-08 et les
-    // quatre de JUR-T01 s'ajoutent, le registre porte les deux entrees.
-    // 🔧 55 + 2 = 57 a la fusion de `main` (`835d899`) dans la branche de la PR 93 : SEC-08 (une sortie,
-    // cote `main`) et UX-P0-01 (deux sorties) s additionnent ; le total est lu par `vitest -t`, pas devine.
-    // 🔧 57 + 2 = 59 a la fusion de `main` (`51b0d1b`) dans `t/int-t09` : UX-P0-01 (#93, deux sorties)
-    // a atterri avant INT-T09 (deux). Le total est lu par `vitest -t`, pas devine.
-    // 🔧 55 → 56 par CPL-T22 (lot L0-03), ARBITRÉ et non subi. `scripts/gates/red-first.ts` naît
-    // avec UNE sortie à code variable. Lu par `vitest -t "process.exit"`, relu et non deviné :
-    //
-    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 56 to be 55
-    //
-    // 🔧 56 → 57 par QA-T30 (même lot), ARBITRÉ et non subi : `scripts/mutation/rapport.ts` naît avec
-    // UNE sortie à code variable.
-    // 🔧 59 + 2 = 61 a la fusion de `main` (`02a7949`) dans `t/lot-l0-03` : INT-T09 et UX-P0-01 ont
-    // atterri avec leurs sorties, et ce lot ajoute celles de CPL-T22 et de QA-T30, une chacune. Le
-    // total est lu par `vitest -t "process.exit"`, pas devine.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(61);
+    // 🔧 LE TOTAL N'EST PLUS UN LITTÉRAL (GOV-101). Il l'a été, et chaque PR qui ajoutait une garde
+    // l'incrémentait : deux PR ouvertes ensemble le faisaient passer chacune de N à N+k, et la
+    // seconde fusionnée rougissait sur un conflit qui ne portait AUCUN défaut — onze réconciliations
+    // de ce genre sont racontées dans l'historique de ce fichier (`git log -L`). Ce que le littéral
+    // gardait vraiment — qu'on ne fasse pas baisser la dette en retirant une ligne de `declares` —
+    // se lit désormais contre la BASE : une déclaration présente sur `origin/main` reste ici tant
+    // que son fichier existe, et son total ne baisse pas (`declarationsRetirees`). Les fichiers
+    // auxquels la PR ajoute des sorties sont tenus, eux, par l'égalité au delta du test ci-dessus.
+    // Une sortie ajoutée et non déclarée rougit donc toujours, là-haut ; une déclaration retirée
+    // rougit ici ; et deux PR qui ajoutent chacune leur entrée ne se rencontrent plus.
+    const texteDeLaBase = (() => {
+      try {
+        return execFileSync('git', ['show', `origin/main:${CE_FICHIER}`], {
+          encoding: 'utf8',
+          maxBuffer: 64e6,
+        });
+      } catch {
+        return null;
+      }
+    })();
+    expect(
+      texteDeLaBase,
+      `${CE_FICHIER} est illisible sur origin/main : la base ne se lit pas`
+    ).not.toBeNull();
+    const base = declarationsDeLaBase(texteDeLaBase!);
+    expect(
+      base.size,
+      'aucune déclaration lue sur la base : un registre illisible n’est pas un registre vide'
+    ).toBeGreaterThan(0);
+    const confrontes = new Set(ajoutesParFichierDuDisque().keys());
+    const retirees = declarationsRetirees(base, declares, existsSync, confrontes);
+    expect(retirees, `déclaration retirée ou baissée : ${retirees.join(' ; ')}`).toEqual([]);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.

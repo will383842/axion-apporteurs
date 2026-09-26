@@ -207,8 +207,9 @@ describe('REQ-GOV-011 — relecteur ≠ auteur, lentilles, section Attaque', () 
   });
 
   it('REQ-GOV-011 : la charte dérive de la fiche architecte la lentille que le label `schema` déplace', () => {
-    // La fiche est la SOURCE : elle écrit que l'architecte REMPLACE une lentille. Une charte qui
-    // en AJOUTERAIT une changerait le nombre d'avis exigés sans que personne ne l'ait décidé.
+    // La fiche est la SOURCE : elle écrit QUELLE lentille l'architecte tient — la troisième, après
+    // `exactitude` et `securite` depuis GOV-101 (partners/ADR-0022). Une charte qui en nommerait une
+    // autre changerait le nombre d'avis exigés sans que personne ne l'ait décidé.
     const fiche = readFileSync('.claude/agents/architecte.md', 'utf8');
     const attendu = /\b(première|deuxième|troisième|quatrième|cinquième)\s+lentille/i.exec(fiche);
     expect(attendu, 'la fiche architecte ne dit plus quelle lentille il tient').not.toBeNull();
@@ -217,7 +218,7 @@ describe('REQ-GOV-011 — relecteur ≠ auteur, lentilles, section Attaque', () 
     )) {
       expect(m[1]!.toLowerCase()).toBe(attendu![1]!.toLowerCase());
     }
-    expect(charte).toContain('remplace la troisième lentille');
+    expect(charte).toContain('tient la troisième lentille');
   });
 
   it('REQ-GOV-011 : la charte prévoit une suppléance pour le poste privé de Bash, qui ne peut pas produire un ROUGE', () => {

@@ -85,10 +85,15 @@ describe('REQ-GOV-011 — aucune revue n’est pas « toutes les revues refusent
     expect(texte).toContain('A09 securite');
   });
 
-  it('REQ-GOV-011 · trois revues acceptées sans l’avis de mutation, sur une PR élevée : l’absence de la revue de mutation est NOMMÉE', () => {
+  it('REQ-GOV-011 · GOV-101 : sur une PR élevée, aucun avis de mutation n’est plus réclamé — Stryker la mesure en porte A', () => {
+    // Ce témoin exigeait jusqu'au 2026-09-26 que l'absence d'un avis « mutation » soit NOMMÉE. La
+    // décision de Will (`W16`, `partners/ADR-0022`) a retiré cet avis : les mêmes revues ne
+    // laissent plus aucune faute, et aucun message ne parle plus de mutation.
     const f = fautes(LENTILLES.map((l) => avis('A09', l, 'accepte')));
-    expect(f.map((x) => x.famille)).toEqual(['lentilles_manquantes']);
-    expect(f[0]!.message).toContain('aucun avis « mutation »');
+    expect(f).toEqual([]);
+    const une = fautes([avis('A09', 'exactitude', 'accepte')]);
+    expect(une.map((x) => x.famille)).toEqual(['lentilles_manquantes']);
+    expect(une.map((x) => x.message).join(' ; ')).not.toMatch(/mutation/);
   });
 
   it('REQ-GOV-013 · CONTRE-TÉMOIN : quatre revues acceptées sur la tête ne laissent aucune faute', () => {

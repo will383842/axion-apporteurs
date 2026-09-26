@@ -11499,6 +11499,64 @@
         ]
       },
       "acceptance": "TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le cadrage décidé par l'architecte le 2026-09-26, sur délégation de Will, est inscrit : (1) SEC-03 et SEC-04 passent `schema: true` — SEC-03 crée `liens_magiques` et `sessions_espace` dans une même migration, SEC-04 étendra `sessions_espace` ; leurs `paths` portent `prisma/migrations/`, et ceux de SEC-03 les modules de durées, de dépôt du lien et d'accès à l'espace ; (2) l'empreinte des jetons d'authentification est un HMAC-SHA-256 sous le secret de l'usage, à domaine séparé, `kid` stocké : décision 14 de partners/ADR-0013, `docs/adr/INDEX.md` vérifié (inchangé) ; (3) `HYP-SEC03-ACCES` est inscrite au registre des décisions : l'espace est ouvert aux statuts `signe` et `suspendu` (REQ-SEC-032), `resilie` en lecture seule par SEC-19, `candidat`, `retenu`, `vivier`, `refuse`, `kyc_en_cours` et `pret_a_signer` fermés ; (4) les points (1) et (5) de l'acceptance de SEC-03 disent l'empreinte HMAC et la table des sessions. Sur décision du coordinateur du 2026-09-26, prise sur délégation de Will : (5) REQ-SEC-001 dit l'empreinte HMAC-SHA-256 de la décision 14 ; (6) la ligne `suspendu` du glossaire dit l'accès à l'espace maintenu et les nouveaux dépôts refusés, en citant `HYP-SEC03-ACCES` ; (7) DM-11 passe `schema: true`, dette nommée par la PR 124. Dette nommée par les lentilles : (8) REQ-SEC-003 et le point (2) de SEC-04 disent que la suspension ne révoque aucune session ; `HYP-SEC03-ACCES` est une liste blanche, et `HYP-E1-24` exclut les liens de connexion de la double clé ; (9) les articles 3.7 al. 3 et 12.3 que cite `HYP-SEC03-ACCES` ont leur ancrage dans `CONCORDANCES` (REQ-JUR-003). Registres écrits par les verbes hors dépôt ; `gov:tasks`, `gov:hypotheses`, `gov:attributions`, `gov:identifiants`, `gov:trace:verifier`, `lot:paths:check` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier."
+    },
+    {
+      "id": "GOV-101",
+      "titre": "Supprimer les relectures sans defaut : vues d etat hors des PR, cliquet calcule, accord qui survit a une fusion de main, pre-gate, deux lentilles et mutation par Stryker",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/revues.ts",
+        "scripts/gates/gov-pr.ts",
+        "scripts/lot/corps-de-pr.ts",
+        "scripts/prevol.ts",
+        "scripts/vues/",
+        "scripts/mutation/",
+        "scripts/gates/stryker.sh",
+        "stryker.config.json",
+        "package.json",
+        ".github/workflows/ci.yml",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".claude/agents/",
+        "tests/unit/gouvernance/",
+        "tests/unit/qualite/",
+        "docs/PROTOCOLE-FUSION.md",
+        "docs/CHARTE-AGENTS.md",
+        "docs/CONVENTIONS.md",
+        "docs/DECISIONS.md",
+        "docs/agents.json",
+        "docs/adr/",
+        "docs/journal/"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-011",
+        "REQ-GOV-013",
+        "REQ-GOV-032",
+        "REQ-QA-002"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "tests": {
+        "REQ-GOV-011": [
+          "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+        ],
+        "REQ-GOV-013": [
+          "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+        ],
+        "REQ-GOV-032": [
+          "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+        ],
+        "REQ-QA-002": [
+          "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+        ]
+      },
+      "acceptance": "DECISION DE L ORCHESTRATEUR SUR DELEGATION DE WILL (aller beaucoup plus vite), puis DECISION DE WILL DU 2026-09-26 sur les lentilles et la mutation. MESURE QUI L OUVRE : environ 9 PR en 12 h, 3 a 4 tours de relecture par PR, pres de la moitie des tours ne corrigent aucun defaut : chaque fusion met les autres PR en conflit sur les vues derivees commitees et sur le cliquet litteral des sorties non nulles ; fusionner main perime tous les accords meme quand le diff propre a la PR est identique ; la porte A rougit apres les relectures. LIVRABLES. (1) VUES D ETAT HORS DES PR, premier pas sur `docs/PLAN-STATE.md` et `docs/TRACABILITE.md` : en PR, la porte A les regenere sur l arbre fusionne avant toute garde qui les lit (`pnpm vues:fusion`), et sur `push` de main elle les regenere et les commite quand un verificateur strict rougit ou que le commit de tete ne porte pas l etat vivant, puis pousse par un jeton de bot nomme ; sans jeton elle rougit en le nommant. Les verificateurs stricts restent dans la porte A (REQ-GOV-032). (2) CLIQUET CALCULE : le total des sorties non nulles declarees n est plus un litteral ; une declaration presente sur la base ne disparait qu avec son fichier et son total ne baisse pas, une sortie ajoutee non declaree rougit toujours. (3) UN ACCORD SURVIT A UNE FUSION DE MAIN SANS CHANGEMENT DE PATCH : empreinte `git patch-id --stable` du diff propre a la PR (depuis la base de fusion avec main), hors vues d etat ; temoins a deux faces sur un vrai depot jetable : fusion de main sans changement du patch, accord conserve ; une ligne changee dans un fichier de la PR, perime ; resolution de conflit qui modifie une ligne de la PR, perime ; la lentille exactitude suit la meme regle. (4) `pnpm pre-gate` : les etapes rapides de la porte A lues dans ci.yml, sans la suite de tests ni les navigateurs, documente dans PROTOCOLE-FUSION et la charte. (5) DEUX LENTILLES PARTOUT, exactitude et securite, le refus securite reste un veto ; l avis signe A02 schema reste exige des qu une PR touche au schema ; decision datee au registre, ADR qui remplace partners/ADR-0021. (6) MUTATION PAR STRYKER : la lentille mutation n est plus une revue d agent ; `pnpm mutation:pr` mute en bac a sable les fichiers de src/domain, src/server et des scripts de garde touches par la PR, nomme chaque survivant fichier:ligne et rougit sous le seuil ; appele dans la porte A."
     }
   ]
 }

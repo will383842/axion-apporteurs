@@ -85,9 +85,9 @@ la question à Will ou à l'expert-comptable.
 *Fait.* `prisma/schema.prisma` et les migrations ; `packages/contracts/` — les onze événements et les deux
 API, consommés des deux côtés, avec leur hash. Rédige les ADR : une question de conception non tranchée par
 les documents s'y règle, jamais par un choix silencieux dans une PR. Sur toute PR portant le label `schema`,
-il **remplace la troisième lentille** (`simplicite`) et son approbation est **bloquante** — sa fiche
-`.claude/agents/architecte.md` et `docs/CONVENTIONS.md` §5 le disent dans ces termes : une PR `schema` reçoit
-**trois** lentilles, pas quatre.
+il **tient la troisième lentille**, après `exactitude` et `securite`, et son approbation est **bloquante** —
+sa fiche `.claude/agents/architecte.md` le dit dans ces termes : une PR `schema` reçoit **trois** lentilles
+(décision de Will du 2026-09-26, `partners/ADR-0022`).
 *Jamais.* N'implémente ni écran, ni e-mail, ni cas d'usage. N'accepte pas une migration qui perd de la donnée
 sans ADR **et** sauvegarde vérifiée. Ne réintroduit pas de référentiel entreprises local.
 *Outils.* Read, Write, Edit, Grep, Glob, Bash.
@@ -118,7 +118,8 @@ sessions).
 **A05 · `dev-partners` — développeur d'Axion Partners.**
 *Fait.* Prend **une** tâche, crée lui-même son worktree et sa branche, écrit **le test d'abord** avec son
 annotation `// @req`, le lance, copie le message d'échec verbatim, écrit le code **minimal**, passe
-`pnpm prevol`, ouvre la PR. Rend `livree` ou `stop`.
+`pnpm pre-gate` — et `pnpm mutation:pr` si la PR touche `src/domain/` ou `src/server/` —, ouvre la PR ;
+`pnpm prevol` reste la passe complète. En conflit avec `main`, il lance `pnpm vues:fusion` (GOV-101). Rend `livree` ou `stop`.
 *Jamais.* Ne devine pas une décision : si sa tâche cite une hypothèse absente de `docs/DECISIONS.md`, ou si
 une REQ n'est pas testable, il rend `stop` avec le motif — il ne code pas « en attendant ». Ne touche pas
 `prisma/**` ni `packages/contracts/**` si sa tâche ne porte pas `schema: true`. Ne recopie aucune valeur qui
@@ -165,8 +166,8 @@ dans un worktree.
 *Outils.* Read, Write, Edit, Grep, Glob, Bash.
 
 **A09 · `relecteur` — une lentille, un avis.**
-*Fait.* Reçoit la tâche, le numéro de PR et **sa** lentille — `exactitude`, `securite` ou `simplicite` — et ne
-lit que sous celle-là. Vérifie d'abord que le test annoncé comme rouge porte réellement sur la REQ et que le
+*Fait.* Reçoit la tâche, le numéro de PR et **sa** lentille — `exactitude` ou `securite` (§6) — et ne lit que
+sous celle-là, une fois la porte A **verte** sur la tête à relire. Vérifie d'abord que le test annoncé comme rouge porte réellement sur la REQ et que le
 message verbatim est plausible au vu du test écrit. Chaque motif de refus cite **un fichier et une ligne**.
 Ouvre sa revue GitHub par la ligne `A09 · <sa lentille>` : c'est ce que `gov:pr` compte (§8).
 *Jamais.* Ne modifie rien (il n'a ni Write ni Edit, c'est volontaire). Ne relit pas une PR dont il est
@@ -178,7 +179,8 @@ il nomme le défaut, le développeur choisit le remède. Ne refuse pas sur un mo
 *Fait.* Pour chaque garde introduite par la PR : mute (inverse une condition, retire un `where`, supprime un
 `CHECK`, retire la clause `WHERE` d'un index partiel), lance le test qui devrait la couvrir, note le message,
 **restaure**. Cherche en plus les trois pièges : fixture écrite à la main, paramètre par défaut sur ce que le
-test fait varier (RM-11), test qui teste son mock. Ouvre sa revue par `A10 · mutation`.
+test fait varier (RM-11), test qui teste son mock. **Sur demande**, et toujours pour produire le ROUGE d'une
+PR de A07 : aucune PR n'exige plus d'avis `A10 · mutation`, Stryker mesure la mutation en porte A (§6).
 *Jamais.* Ne corrige pas le code qu'il mute. Ne laisse aucune mutation en place — `git status` propre avant de
 rendre.
 *Outils.* Read, Write, Edit, Grep, Glob, Bash. Il écrit, mais **uniquement pour muter puis restaurer** : aucun
@@ -247,8 +249,8 @@ feuille est produite par l'expert-comptable ou par Will, **jamais par un agent**
 | Gardien du spec : seul à modifier les registres | **A01** | `docs/REQUIREMENTS.md`, `docs/DECISIONS.md`, `docs/GLOSSAIRE.md`, `docs/PRESEANCE.md` réservés |
 | Leads de domaine : découpent, valident l'acceptation | **A12** | une fiche, huit zones en paramètre ; l'arbitrage au deuxième tour est le sien |
 | Développeurs : une tâche revendiquée à la fois | **A05** (Partners) et **A08** (axionia) | `owner` de la tâche ; une tâche = une PR ≤ 600 lignes de diff |
-| Relecteurs adversariaux | **A09** (les lentilles qu'exige le risque, §6) et **A13**, **A14**, **A15** (fins de phase) | deux avis distincts sur une PR de risque ordinaire, trois sur une PR de risque élevé ; veto de la lentille sécurité sur toute PR |
-| Vérificateurs de tests | **A10** | un avis « mutation » par PR de risque élevé ; une garde sans mutation vue rougir est nommée |
+| Relecteurs adversariaux | **A09** (les deux lentilles du §6) et **A13**, **A14**, **A15** (fins de phase) | deux avis distincts sur toute PR, plus l'architecte sur une PR `schema` ; veto de la lentille sécurité sur toute PR |
+| Vérificateurs de tests | **A10** | le ROUGE des PR de A07, et une garde vue rougir sur demande ; la mutation de chaque PR est mesurée par Stryker en porte A (`pnpm mutation:pr`) |
 | Release manager : seul à fusionner | **A04** | une PR à la fois, atterrissage vérifié avant la suivante |
 | Documentaliste : `LECONS.md` | **A03** | date de dernière consolidation portée par le fichier |
 
@@ -287,16 +289,20 @@ Deux privations plus étroites, à ne pas confondre avec les précédentes :
 champ `Auteur:` n'apparaît **jamais** dans `Relecteur:`, et l'auteur ne s'auto-approuve pas. `gov:pr` rougit
 sur les deux cas.
 
-**Les lentilles, selon le risque.** Les avis sont portés par A09, un par lentille : `exactitude` (le code
-fait-il exactement ce que disent les REQ citées, ni plus ni moins), `securite` (cloisonnement, défaut = refus,
-404 byte-identique, PII, journal, idempotence, absence d'oracle), `simplicite` (dérivation depuis une source
-unique, aucune duplication, nommage français conforme). **Combien de lentilles une PR reçoit dépend de son
-risque** — décision de Will du 2026-09-18, consignée par `partners/ADR-0012`, resserrée par sa décision du
-2026-09-25 (`partners/ADR-0021`, GOV-097) : **quatre lentilles seulement pour l'argent, la sécurité et les
-données ; deux pour tout le reste**. Le risque est dérivé par
-`risqueDeLaPr()` (`scripts/lot/revues.ts`), **la seule dérivation**, appelée par `gov:pr` et par le composeur
-du corps de PR ; `pnpm gov:pr --pr <numéro>` l'imprime avec ses raisons, et c'est cette ligne qu'on lit avant
-de lancer les lentilles.
+**Deux lentilles partout** — décision de Will du 2026-09-26 (`W16`, `partners/ADR-0022`, GOV-101), qui
+remplace celle du 2026-09-25 (`partners/ADR-0021`, GOV-097). Les avis sont portés par A09, un par lentille :
+`exactitude` (le code fait-il exactement ce que disent les REQ citées, ni plus ni moins, sans retaper une valeur
+qui existe ailleurs — RM-01) et `securite` (cloisonnement, défaut = refus, 404 byte-identique, PII, journal,
+idempotence, absence d'oracle). **Toute PR reçoit ces deux-là, quel que soit son risque** ; une PR de schéma
+reçoit en plus l'avis de l'architecte (ci-dessous). Il n'y a plus de lentille `simplicite`, et plus d'avis
+`mutation` : la mutation est **mesurée** par Stryker en porte A (`pnpm mutation:pr`), sur les fichiers de
+`src/domain/` et `src/server/` que la PR touche. `lentillesExigees()` (`scripts/lot/revues.ts`) est la seule
+dérivation. **Les relectures démarrent quand la porte A est verte** sur la tête à relire, et le développeur
+passe `pnpm pre-gate` avant d'ouvrir sa PR (`docs/PROTOCOLE-FUSION.md`, « Avant la file »).
+
+**Le risque, qui ne compte plus de lentille.** Il reste dérivé par `risqueDeLaPr()` (`scripts/lot/revues.ts`),
+**la seule dérivation**, appelée par `gov:pr` et par le composeur du corps de PR ; `pnpm gov:pr --pr <numéro>`
+l'imprime avec ses raisons : c'est ce que la lentille `securite` lit en premier pour savoir où regarder.
 
 L'élevé se **cherche**, par signaux ; et ce qu'on ne sait pas lire est élevé. Une PR est de risque **élevé**
 si et seulement si l'un de ces signaux est présent — sinon elle est **ordinaire** :
@@ -328,18 +334,14 @@ compte par sa source ET sa destination.
 
 **Ce qui ne rend plus une PR élevée** depuis GOV-097 : une zone autre que l'argent et la sécurité (`espace`,
 `juridique`, `integration`, `domaine`…) avec `sensible: []`, et un fichier de code produit hors des zones
-sensibles qu'aucune tâche sensible ne déclare. ⚠️ Les données se lisent par `sensible` : une tâche qui manipule des données personnelles avec
-`sensible: []` passe à deux lentilles. C'est une **erreur du registre**, qui se corrige en y portant `rgpd`
-(`partners/ADR-0021`, limite déclarée).
-
-| Risque | Lentilles exigées |
-| --- | --- |
-| élevé | `exactitude`, `securite`, `simplicite` (ou `schema`, ci-dessous), et l'avis `mutation` |
-| ordinaire | `exactitude`, `securite` |
+sensibles qu'aucune tâche sensible ne déclare. ⚠️ Les données se lisent par `sensible` : une tâche qui manipule des
+données personnelles avec `sensible: []` sort ordinaire, et son corps de PR ne le signale pas au relecteur
+`securite`. C'est une **erreur du registre**, qui se corrige en y portant `rgpd` (`partners/ADR-0021`, limite
+déclarée).
 
 Un même poste apparaît plusieurs fois dans `Relecteur:` : ce sont des **lectures** distinctes, pas des postes
 distincts — la règle porte sur les lentilles, jamais sur l'unicité des codes. Y déclarer plus de lentilles que
-le risque n'en exige est admis.
+les deux exigées est admis.
 
 **Ce qui est un refus, ce qui est une dette** (décision de Will du 2026-09-25, `partners/ADR-0021`). Un refus
 vise un **défaut de code ou de test** — une REQ non couverte, du code au-delà du périmètre, un test qui ne
@@ -353,13 +355,13 @@ tient donc dans la main de la lentille, pas dans la garde — refuser pour une p
 est une faute de la lentille, pas un refus que la garde saurait déclasser.
 
 **La troisième lentille sur une PR `schema`.** Toute PR touchant `prisma/**` ou `packages/contracts/**` porte
-le label `schema`. Sur cette PR, **A02 remplace la lentille `simplicite`** et son approbation est
-**bloquante**. Le compte ne change pas : trois lentilles, dont la troisième est tenue par l'architecte. C'est
-la formulation de sa fiche (`.claude/agents/architecte.md`), de `docs/CONVENTIONS.md` §5 et de l'acceptation
-de GOV-007 — **aucune lentille n'est ajoutée**, l'une d'elles change de titulaire.
+le label `schema`. Sur cette PR, **A02 tient la troisième lentille**, `schema`, après `exactitude` et
+`securite`, et son approbation est **bloquante** (`schema_sans_approbation` dans `gov:pr`). C'est la
+formulation de sa fiche (`.claude/agents/architecte.md`).
 
-**La mutation.** Sur une PR de risque élevé, A10 rend un avis distinct, en plus des lentilles : chaque garde
-introduite a été vue rougir sur une mutation réelle.
+**La mutation.** Plus un avis d'agent depuis le 2026-09-26 : `pnpm mutation:pr` lance Stryker en bac à sable sur
+les fichiers mutables de la PR, en porte A, et nomme chaque survivant `fichier:ligne`. Les scripts de garde sont
+nommés et écartés : leur preuve de mutation est leur `--prove`, joué en porte A. A10 reste appelé sur demande.
 
 **Le veto.** Sur **toute** PR, le refus de la lentille `securite` **bloque à lui seul** (décision de Will du
 2026-09-18). Aucune majorité ne le rattrape, ni aucune autre : `gov:pr` refuse la fusion sur tout refus rendu,
@@ -471,7 +473,7 @@ marqueur existerait en double.
 | Moment | Commande | Ce qui est contrôlé |
 | --- | --- | --- |
 | Toute PR, dans `gate-a` | `pnpm gov:pr` | la structure (gabarit, CODEOWNERS, §2, §6, §7) ; puis, si l'événement GitHub fournit la PR : titre, champs, huit cases, bloc ROUGE/VERT, section Attaque, labels des chemins réservés |
-| Avant la fusion, par A04 | `pnpm gov:pr --pr <numéro>` | tout ce qui précède **plus** les revues : les lentilles qu'exige le risque de la PR (§6), imprimé avec ses raisons, l'avis de mutation sur une PR de risque élevé, l'approbation de A02 sur `schema`, l'auteur qui ne s'auto-approuve pas |
+| Avant la fusion, par A04 | `pnpm gov:pr --pr <numéro>` | tout ce qui précède **plus** les revues : les deux lentilles du §6, le risque imprimé avec ses raisons, l'approbation de A02 sur `schema`, l'auteur qui ne s'auto-approuve pas |
 | À chaque exécution de la garde | `pnpm gov:pr:prove` | chaque famille de règle rougit sur son propre témoin, et les contre-témoins restent verts |
 
 Les revues **n'existent pas** au moment où l'événement `pull_request` déclenche la CI : une gate qui les

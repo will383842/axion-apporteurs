@@ -333,8 +333,8 @@ describe('REQ-GOV-010 — TÉMOIN (3) : le discriminant `schema` se lit sur les 
     ]);
   });
 
-  it('REQ-GOV-010 · CONTRE-TÉMOIN : sans fichier de schéma ni label, c’est `simplicite`', () => {
-    expect(lentillesExigees(ELEVE).toutes).toContain('simplicite');
+  it('REQ-GOV-010 · CONTRE-TÉMOIN : sans fichier de schéma ni label, pas d’architecte — deux lentilles (GOV-101)', () => {
+    expect([...lentillesExigees(ELEVE).toutes]).toEqual(['exactitude', 'securite']);
     expect(lentillesExigees(ELEVE).toutes).not.toContain('schema');
     expect(lire(tourComplet()).coche).toBe(true);
   });
@@ -403,7 +403,7 @@ describe('REQ-GOV-011 — la péremption : le diff approuvé est le diff fusionn
   it('REQ-GOV-011 · un accord rendu sur une AUTRE tête est périmé, et nommé', () => {
     const lecture = lire(tourComplet({ commit: '10bf4dd672bbfadb457497da2228d31894d36bf2' }));
     expect(lecture.coche).toBe(false);
-    expect(lecture.perimees.length).toBe(4);
+    expect(lecture.perimees.length).toBe(lentillesExigees(ELEVE).toutes.length);
     expect(lecture.detail).toContain('10bf4dd');
   });
 
@@ -449,22 +449,12 @@ describe('REQ-GOV-011 — les deux mutants qui survivaient, rejoués comme témo
     // Toute troncature de `lentillesExigees()` — la SEULE fonction qui décide de cette liste —
     // rougit ici. Et elle est désormais la seule à pouvoir la décider : `lireRevues` reçoit le
     // RISQUE de la PR, pas une liste qu'un appelant pourrait rétrécir.
-    expect([...lentillesExigees(ELEVE).toutes]).toEqual([
-      'exactitude',
-      'securite',
-      'simplicite',
-      'mutation',
-    ]);
-    expect([...lentillesExigees(eleve(true)).toutes]).toEqual([
-      'exactitude',
-      'securite',
-      'schema',
-      'mutation',
-    ]);
-    // Sur une PR élevée, le compte ne change pas d'une PR à l'autre : trois lentilles plus la
-    // mutation, et sur une PR de schéma c'est la TROISIÈME qui change de titulaire (charte §6).
-    expect(lentillesExigees(eleve(true)).toutes.length).toBe(4);
-    expect(lentillesExigees(ELEVE).toutes.length).toBe(4);
+    // GOV-101 (décision de Will du 2026-09-26, `partners/ADR-0022`) : deux partout, et l'architecte
+    // en TROISIÈME sur une PR de schéma. Ni `simplicite` ni `mutation` ne sont plus exigées.
+    expect([...lentillesExigees(ELEVE).toutes]).toEqual(['exactitude', 'securite']);
+    expect([...lentillesExigees(eleve(true)).toutes]).toEqual(['exactitude', 'securite', 'schema']);
+    expect(lentillesExigees(eleve(true)).toutes.length).toBe(3);
+    expect(lentillesExigees(ELEVE).toutes.length).toBe(2);
     expect(lentillesExigees(eleve(true)).sansMutation.length).toBe(3);
     // Sur une PR ORDINAIRE (GOV-077), deux lentilles, et ce sont celles-là.
     const ordinaire: LECTEUR.Risque = { niveau: 'ordinaire', schema: false, raisons: [] };
@@ -484,12 +474,12 @@ describe('REQ-GOV-011 — les deux mutants qui survivaient, rejoués comme témo
   });
 
   it('REQ-GOV-011 · MUTANT (b) : un SOUS-ENSEMBLE d’avis ne coche pas, et le dit', () => {
-    // Trois lentilles sur quatre, toutes acceptées sur la tête, toutes par des postes habilités :
-    // la seule chose qui manque est la quatrième. La case reste vide et la nomme.
-    const troisSurQuatre = tourComplet().slice(0, 3);
-    const lecture = lire(troisSurQuatre);
+    // Une lentille sur les deux exigées, acceptée sur la tête, par un poste habilité : la seule
+    // chose qui manque est `securite`. La case reste vide et la nomme.
+    const uneSurDeux = tourComplet().slice(0, 1);
+    const lecture = lire(uneSurDeux);
     expect(lecture.coche).toBe(false);
-    expect(lecture.manquantes).toEqual(['mutation']);
+    expect(lecture.manquantes).toEqual(['securite']);
     expect(lecture.detail).toContain('manquante');
   });
 });

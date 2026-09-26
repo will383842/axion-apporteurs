@@ -67,11 +67,13 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { posix } from 'node:path';
 
 import { ANCRE_JOURNAL } from '../gates/gov-attributions';
 import { cheminsDeLaTache } from './chemins-de-tache';
+import { VUES_DERIVEES } from '../vues/vues';
 
 export const CHEMIN_AGENTS = 'docs/agents.json';
 export const CHEMIN_CHARTE = 'docs/CHARTE-AGENTS.md';
@@ -128,10 +130,12 @@ export const ASSOCIATIONS_HABILITEES: ReadonlySet<string> = new Set([
   'COLLABORATOR',
 ]);
 
-/** Les lentilles, nommées une fois (docs/CHARTE-AGENTS.md §6). */
-export const LENTILLE_SIMPLICITE = 'simplicite';
+/**
+ * La lentille de l'architecte, nommée une fois (docs/CHARTE-AGENTS.md §6). Depuis la décision de
+ * Will du 2026-09-26 (`W16`, `partners/ADR-0022`), `simplicite` et `mutation` ne sont plus exigées
+ * d'aucune PR : la mutation est mesurée par Stryker (`pnpm mutation:pr`), pas par un agent.
+ */
 export const LENTILLE_SCHEMA = 'schema';
-export const LENTILLE_MUTATION = 'mutation';
 
 /**
  * LA LENTILLE DONT LA MATIÈRE EST LA PROSE : son accord ne survit à aucune réécriture (GOV-095,
@@ -339,7 +343,7 @@ export type Survie =
   | { survit: true; fichiers: string[] }
   | { survit: false; motif: string; fichiers: string[] | null };
 
-/** Un accord qui a survécu à la tête : les cinq faits qu'un lecteur doit pouvoir contester. */
+/** Un accord qui a survécu à la tête : les faits qu'un lecteur doit pouvoir contester. */
 export type Survivance = {
   code: string;
   lentille: string;
@@ -347,8 +351,15 @@ export type Survivance = {
   commit: string;
   /** La tête à laquelle il survit. */
   tete: string;
-  /** Les fichiers changés entre les deux — tous des entrées par PR du journal, ou aucun. */
+  /**
+   * Les fichiers changés entre les deux. Règle `journal` : tous des entrées par PR du journal, ou
+   * aucun. Règle `patch` : ce que la fusion de la base a apporté, hors du diff propre à la PR.
+   */
   fichiers: string[];
+  /** La règle qui l'a fait survivre (GOV-095 : `journal` ; GOV-101 : `patch`). */
+  regle: 'journal' | 'patch';
+  /** Règle `patch` : l'empreinte du diff propre à la PR, égale sur les deux têtes. */
+  empreinte?: string;
 };
 
 /** Un accord périmé, avec le motif et les fichiers qui l'ont périmé (`null` : diff incalculable). */
@@ -531,15 +542,97 @@ export function fichiersEntre(accord: string, tete: string, cwd?: string): strin
 }
 
 /**
+ * ═══ UN ACCORD SURVIT À UNE FUSION DE LA BASE QUI NE CHANGE PAS LE PATCH (GOV-101) ═════════════
+ *
+ * 🔴 LE DÉFAUT MESURÉ (orchestrateur, 2026-09-26) : près de la moitié des tours de relecture ne
+ * corrigeaient rien. Le premier motif : fusionner `main` dans une PR — pour lever un conflit de vue,
+ * ou parce qu'une autre PR a atterri — change la tête, et la règle du journal (ci-dessus) périmait
+ * tous les accords, alors que le code que la PR APPORTE n'avait pas bougé d'un octet.
+ *
+ * LA RÈGLE. Un accord rendu sur C survit à la tête T si l'EMPREINTE DU DIFF PROPRE À LA PR est la
+ * même sur les deux : `git patch-id --stable` de `git diff <merge-base(base, X)> X`, pour X = C
+ * puis X = T, restreint aux fichiers de la PR HORS VUES DÉRIVÉES (`VUES_DERIVEES`), et complété du
+ * résumé des créations, suppressions et changements de mode (`--summary`), que `patch-id` ignore.
+ * Le diff part de la BASE DE FUSION : ce que `main` a apporté entre-temps n'y est pas, ce que la PR
+ * apporte y est tout entier. La lentille `exactitude` suit la MÊME règle : l'entrée de journal et
+ * toute la prose de la PR sont DANS ce diff — un patch identique, c'est une prose identique.
+ *
+ * CE QUI PÉRIME, PAR CONSTRUCTION ET SANS CAS À ÉNUMÉRER :
+ *   — une ligne changée dans un fichier de la PR : le patch change ;
+ *   — un conflit résolu en modifiant une ligne de la PR, ou en y reprenant le côté de `main` : le
+ *     diff depuis la nouvelle base de fusion n'est plus le même ;
+ *   — un changement voisin d'un morceau de la PR (moins de trois lignes) : le CONTEXTE entre dans
+ *     l'empreinte. C'est délibéré — sans contexte, DÉPLACER une ligne de garde dans le même fichier
+ *     gardait la même empreinte ;
+ *   — un mode, une création, une suppression : le résumé entre dans l'empreinte.
+ *
+ * ÉCHEC FERMÉ : un sha malformé ou absent du clone, une base introuvable, un diff VIDE, `git` en
+ * échec rendent `null`, et `null` ne survit jamais. Les vues exclues ne relâchent rien : chacune a
+ * son vérificateur en porte A, et sa SOURCE est dans l'empreinte.
+ */
+export const BASE_DE_L_EMPREINTE = 'origin/main';
+
+export function empreinteDuPatch(
+  sha: string,
+  o: { base?: string; cwd?: string } = {}
+): string | null {
+  const t = sha.trim();
+  const base = o.base ?? BASE_DE_L_EMPREINTE;
+  if (!/^[0-9a-f]{7,40}$/.test(t) || !/^[A-Za-z0-9][A-Za-z0-9._/~^-]*$/.test(base)) return null;
+  const opts = {
+    encoding: 'utf8' as const,
+    maxBuffer: 256e6,
+    ...(o.cwd === undefined ? {} : { cwd: o.cwd }),
+  };
+  const lire = (args: string[], input?: string): string =>
+    execFileSync('git', args, {
+      ...opts,
+      ...(input === undefined ? {} : { input }),
+      stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'ignore'],
+    });
+  try {
+    const mb = lire(['merge-base', base, t]).trim();
+    if (!/^[0-9a-f]{40}$/.test(mb)) return null;
+    const perimetre = ['--', ':(top)', ...VUES_DERIVEES.map((v) => `:(top,exclude)${v.chemin}`)];
+    const options = [
+      '-c',
+      'core.quotePath=false',
+      'diff',
+      '--no-renames',
+      '--no-color',
+      '--no-ext-diff',
+    ];
+    const diff = lire([...options, '--binary', mb, t, ...perimetre]);
+    if (diff.trim() === '') return null;
+    const id = lire(['patch-id', '--stable'], diff).trim().split(/\s+/)[0] ?? '';
+    if (!/^[0-9a-f]{40}$/.test(id)) return null;
+    const resume = lire([...options, '--summary', mb, t, ...perimetre]);
+    return createHash('sha1').update(`${id}\n${resume}`).digest('hex');
+  } catch {
+    return null;
+  }
+}
+
+/**
  * LA PHRASE QUI REND UNE SURVIE CONTESTABLE, dérivée une seule fois (RM-01). Une survie
  * silencieuse est invisible, donc inauditable : `gov:pr` l'imprime, et le corps publié la porte.
  * Les cinq faits y sont — le poste, la lentille, les deux sha, et LA LISTE DES FICHIERS — pour
  * qu'un lecteur puisse contester la survie sans relire le code.
  */
 export function direLaSurvivance(s: Survivance): string {
-  return (
+  const debut =
     `${s.code} · ${s.lentille} a accepté sur ${s.commit.slice(0, 7)} et SURVIT à la tête ` +
-    `${s.tete.slice(0, 7)} : ` +
+    `${s.tete.slice(0, 7)} : `;
+  if (s.regle === 'patch') {
+    return (
+      debut +
+      `le diff propre à la PR est identique sur les deux têtes (empreinte ` +
+      `${(s.empreinte ?? '').slice(0, 12)}, vues dérivées exclues) ; les ${s.fichiers.length} ` +
+      `fichier(s) qui les séparent viennent de la base fusionnée`
+    );
+  }
+  return (
+    debut +
     (s.fichiers.length === 0
       ? 'les deux arbres sont identiques, aucun fichier ne les sépare'
       : // « entièrement sous `docs/journal/` » serait plus large que ce qui a été mesuré : le
@@ -618,6 +711,11 @@ export type Entree = {
   numero?: number | null;
   /** Le texte d'un fichier À LA TÊTE — `contenuALaTete` par défaut. Injectable pour les témoins. */
   lireALaTete?: (tete: string, chemin: string) => string | null;
+  /**
+   * L'EMPREINTE DU DIFF PROPRE À LA PR sur un commit (GOV-101) — `empreinteDuPatch` par défaut,
+   * contre `origin/main`. Injectable pour que les témoins fassent varier l'empreinte SEULE.
+   */
+  empreinteDuPatch?: (sha: string) => string | null;
 };
 
 let codesEnCache: ReadonlySet<string> | null = null;
@@ -1049,12 +1147,18 @@ export function resoudreLeLot<T extends TacheDeLaPr>(e: {
   return { ids, refus };
 }
 
-// ── LE RISQUE D'UNE PR, ET LES LENTILLES QU'IL EXIGE (GOV-077, puis GOV-097) ─────────────────
+// ── LE RISQUE D'UNE PR (GOV-077, GOV-097) — IL NE COMPTE PLUS DE LENTILLE (GOV-101) ─────────
 
 /**
- * LA RELECTURE SE PROPORTIONNE AU RISQUE — décisions de Will du 2026-09-18 (`partners/ADR-0012`)
- * puis du 2026-09-25 (`partners/ADR-0021`, GOV-097) : **quatre lentilles seulement pour l'argent,
- * la sécurité et les données ; deux (`exactitude`, `securite`) pour tout le reste**.
+ * ⚠️ DEPUIS LA DÉCISION DE WILL DU 2026-09-26 (`W16`, `partners/ADR-0022`, GOV-101), LE RISQUE NE
+ * COMPTE PLUS DE LENTILLE : deux partout (`lentillesExigees`), plus `schema` sur une PR de schéma.
+ * Il reste calculé ici, publié par `direLeRisque`, et c'est son signal `schema` qui appelle
+ * l'architecte. Ce qui suit décrit la frontière telle que GOV-097 l'a tracée ; elle ne décide plus
+ * que de ce que le relecteur `securite` lit en tête du corps.
+ *
+ * LA RELECTURE SE PROPORTIONNAIT AU RISQUE — décisions de Will du 2026-09-18 (`partners/ADR-0012`)
+ * puis du 2026-09-25 (`partners/ADR-0021`, GOV-097) : quatre lentilles seulement pour l'argent,
+ * la sécurité et les données ; deux (`exactitude`, `securite`) pour tout le reste.
  *
  * POURQUOI LA RÈGLE A CHANGÉ. Celle du 2026-09-18 prouvait l'ordinaire par deux listes BLANCHES
  * (zones `gouvernance`/`qualite`, chemins `docs/`/`scripts/`/`tests/`) : toute tâche d'une autre
@@ -1632,25 +1736,25 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
 }
 
 /**
- * LES LENTILLES EXIGÉES, DÉRIVÉES DU RISQUE. Élevé : `exactitude`, `securite`, `simplicite` — que
- * A02 REMPLACE par `schema` sur une PR de schéma (charte §6) — et `mutation`. Ordinaire :
- * `exactitude` et `securite`, dont le refus bloque à lui seul.
+ * LES LENTILLES EXIGÉES — DEUX PARTOUT, décision de Will du 2026-09-26 (`W16`, `partners/ADR-0022`,
+ * GOV-101) : `exactitude` et `securite`, dont le refus bloque à lui seul ; plus l'avis `schema` de
+ * l'architecte dès que la PR touche au schéma. Le NIVEAU de risque ne compte plus de lentille : il
+ * reste calculé et publié (`direLeRisque`), parce qu'il dit au relecteur `securite` où regarder.
+ * `simplicite` et `mutation` ne sont plus exigées : la mutation est mesurée par Stryker en porte A
+ * (`pnpm mutation:pr`), et un agent qui la déclarait ne la mesurait pas.
  *
- * ⚠️ LA BRANCHE COURTE SE PROUVE, LA LONGUE EST LE DÉFAUT : on teste `=== 'ordinaire'` et
- * `schema === false`, jamais `=== 'eleve'`. Une valeur imprévue rend donc les quatre lentilles.
+ * ⚠️ LA BRANCHE COURTE SE PROUVE, LA LONGUE EST LE DÉFAUT : on teste `schema === false`, jamais
+ * `=== true`. Une valeur imprévue exige donc l'architecte.
+ *
+ * `sansMutation` est conservé pour ses appelants : depuis GOV-101, les deux listes sont égales.
  */
 export function lentillesExigees(risque: Risque): {
   sansMutation: readonly string[];
   toutes: readonly string[];
 } {
-  if (risque.niveau === 'ordinaire' && risque.schema === false) {
-    return { sansMutation: [...DEUX_PREMIERES], toutes: [...DEUX_PREMIERES] };
-  }
-  const sansMutation = [
-    ...DEUX_PREMIERES,
-    risque.schema === true ? LENTILLE_SCHEMA : LENTILLE_SIMPLICITE,
-  ];
-  return { sansMutation, toutes: [...sansMutation, LENTILLE_MUTATION] };
+  const exigees =
+    risque.schema === false ? [...DEUX_PREMIERES] : [...DEUX_PREMIERES, LENTILLE_SCHEMA];
+  return { sansMutation: exigees, toutes: [...exigees] };
 }
 
 /** Une ligne qui NOMME le risque et ses raisons — la garde l'imprime, le composeur la publie. */
@@ -1687,7 +1791,7 @@ export function lentilleDeLaRevue(
  * Les deux MESURES de la survie (GOV-095), injectables par un témoin qui traverse la garde ou le
  * composeur ENTIERS. Absentes : le vrai `git` du clone — c'est le seul chemin de production.
  */
-export type MesuresDeSurvie = Pick<Entree, 'fichiersEntre' | 'lireALaTete'>;
+export type MesuresDeSurvie = Pick<Entree, 'fichiersEntre' | 'lireALaTete' | 'empreinteDuPatch'>;
 
 export function lireRevues(entree: Entree): Lecture {
   const codes = entree.codes ?? codesDePoste();
@@ -1749,6 +1853,14 @@ export function lireRevues(entree: Entree): Lecture {
     // Un accord par lentille, mais plusieurs peuvent porter le MÊME commit : on ne relance pas
     // `git` pour une réponse déjà obtenue.
     const deja = new Map<string, string[] | null>();
+    // L'empreinte d'un commit ne dépend que de lui : mesurée une fois, et seulement si la règle du
+    // journal n'a pas suffi — la plupart des lectures n'appellent jamais `git patch-id`.
+    const mesurerLEmpreinte = entree.empreinteDuPatch ?? ((sha: string) => empreinteDuPatch(sha));
+    const empreintes = new Map<string, string | null>();
+    const empreinte = (sha: string): string | null => {
+      if (!empreintes.has(sha)) empreintes.set(sha, mesurerLEmpreinte(sha));
+      return empreintes.get(sha) ?? null;
+    };
     for (const x of accords) {
       if (!exigees.includes(x.lentille) || x.commit === tete) continue;
       if (!deja.has(x.commit)) deja.set(x.commit, mesurer(x.commit, tete));
@@ -1763,10 +1875,38 @@ export function lireRevues(entree: Entree): Lecture {
           commit: x.commit,
           tete,
           fichiers: survie.fichiers,
+          regle: 'journal',
         });
-      } else {
-        peremptions.push({ verdict: x, motif: survie.motif, fichiers: survie.fichiers });
+        continue;
       }
+      // GOV-101 : la seconde chance, et la seule. Le diff PROPRE à la PR est-il le même ?
+      const avant = empreinte(x.commit);
+      const apres = avant === null ? null : empreinte(tete);
+      if (avant !== null && avant === apres) {
+        survivantes.push({
+          code: x.code,
+          lentille: x.lentille,
+          commit: x.commit,
+          tete,
+          fichiers: survie.fichiers ?? [],
+          regle: 'patch',
+          empreinte: avant,
+        });
+        continue;
+      }
+      const pourquoi =
+        avant === null
+          ? `l’empreinte du diff propre à la PR n’a pas pu être mesurée sur ${x.commit.slice(0, 7)} ` +
+            '(commit absent du clone, base introuvable ou diff vide)'
+          : apres === null
+            ? `l’empreinte du diff propre à la PR n’a pas pu être mesurée sur la tête ${tete.slice(0, 7)}`
+            : `le diff propre à la PR a changé (empreinte ${avant.slice(0, 12)} sur ` +
+              `${x.commit.slice(0, 7)}, ${apres.slice(0, 12)} sur la tête)`;
+      peremptions.push({
+        verdict: x,
+        motif: `${survie.motif} ; et ${pourquoi}`,
+        fichiers: survie.fichiers,
+      });
     }
   }
   const perimees = peremptions.map((p) => p.verdict);
@@ -1848,8 +1988,8 @@ export function lireRevues(entree: Entree): Lecture {
   const survie =
     survivantes.length === 0
       ? ''
-      : ` — dont ${survivantes.length} accord(s) rendus sur un autre commit, qui SURVIVENT parce ` +
-        `que le delta ne juge aucun code : ${survivantes.map(direLaSurvivance).join(' ; ')}`;
+      : ` — dont ${survivantes.length} accord(s) rendus sur un autre commit, qui SURVIVENT : ` +
+        survivantes.map(direLaSurvivance).join(' ; ');
 
   const detail =
     (coche
@@ -1940,22 +2080,13 @@ export function fautesDesRevues(
   const accords = lecture.verdicts.filter((x) => x.verdict === 'accepte');
   const nommer = (liste: Verdict[], vide: string) =>
     liste.map((x) => `${x.code} ${x.lentille}`).join(' / ') || vide;
-  const manquantes = lecture.manquantes.filter((l) => l !== LENTILLE_MUTATION);
-  if (manquantes.length > 0) {
+  if (lecture.manquantes.length > 0) {
     fautes.push({
       famille: 'lentilles_manquantes',
       message:
-        `Revues — lentille(s) manquante(s) : ${manquantes.join(', ')}. Chaque revue s'ouvre par ` +
-        `« A<nn> · <lentille> » (docs/CHARTE-AGENTS.md §3). Vues — accords : ` +
+        `Revues — lentille(s) manquante(s) : ${lecture.manquantes.join(', ')}. Chaque revue ` +
+        `s'ouvre par « A<nn> · <lentille> » (docs/CHARTE-AGENTS.md §3). Vues — accords : ` +
         `${nommer(accords, '(aucun)')} ; refus : ${nommer(lecture.refusees, '(aucun)')}.`,
-    });
-  }
-  if (lecture.manquantes.includes(LENTILLE_MUTATION)) {
-    fautes.push({
-      famille: 'lentilles_manquantes',
-      message:
-        `Revues — aucun avis « mutation » : A10 n'a pas dit que les gardes introduites avaient été ` +
-        `vues rougir sur une mutation réelle (RM-02).`,
     });
   }
   return fautes;

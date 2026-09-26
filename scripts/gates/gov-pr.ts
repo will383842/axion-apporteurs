@@ -51,7 +51,6 @@ import {
   cheminsSchema,
   cheminsTouches,
   entreesDuDiff,
-  fichierEnZoneSensible,
   OPTIONS_DU_DIFF,
   direLaSurvivance,
   direLeRisque,
@@ -143,7 +142,8 @@ export function lignesDesAccordsSurvivants(): string[] {
   if (ACCORDS_SURVIVANTS.length === 0) return [];
   return [
     `ℹ️  gov:pr — ${ACCORDS_SURVIVANTS.length} accord(s) rendus sur un AUTRE commit que la tête et ` +
-      `qui y SURVIVENT (GOV-095) — le delta ne juge aucun code. Conteste-les sans relire le code :`,
+      `qui y SURVIVENT (GOV-095 : delta fait de la seule entrée de journal ; GOV-101 : diff propre à ` +
+      `la PR identique) — la règle de chacun est sur sa ligne. Conteste-les sans relire le code :`,
     ...ACCORDS_SURVIVANTS.map((e) => `      ${e}`),
   ];
 }
@@ -612,8 +612,8 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
         ajouter(
           'charte_lentille_non_derivee',
           `${CHEMIN_CHARTE} — « ${m[1]} lentille » alors que ${CHEMIN_FICHE_ARCHITECTE} écrit « ${attendu} lentille ». ` +
-            `L'architecte REMPLACE une lentille, il n'en ajoute pas une : la vue contredit sa source, et le ` +
-            `nombre d'avis exigés change sans que personne ne l'ait décidé.`
+            `L'architecte tient la lentille que sa fiche nomme (partners/ADR-0022) : la vue contredit sa ` +
+            `source, et le nombre d'avis exigés change sans que personne ne l'ait décidé.`
         );
       }
     }
@@ -1426,8 +1426,8 @@ function corpsRempli(gabarit: string): string {
   c = remplacer(c, 'Auteur: A__', 'Auteur: A05');
   c = remplacer(
     c,
-    'Relecteur: A__ exactitude · A__ securite · A__ simplicite · A__ mutation',
-    'Relecteur: A09 exactitude · A09 securite · A09 simplicite · A10 mutation'
+    'Relecteur: A__ exactitude · A__ securite',
+    'Relecteur: A09 exactitude · A09 securite'
   );
   c = remplacer(c, 'Couvre: REQ-___', 'Couvre: REQ-GOV-010, REQ-GOV-011, REQ-GOV-012, REQ-GOV-013');
   c = remplacer(c, '- [ ]', '- [x]');
@@ -1583,8 +1583,8 @@ if (LANCE_EN_SCRIPT) {
     };
     PR_SCHEMA.corps = remplacer(
       PR_SCHEMA.corps,
-      'Relecteur: A09 exactitude · A09 securite · A09 simplicite · A10 mutation',
-      'Relecteur: A09 exactitude · A09 securite · A02 schema · A10 mutation'
+      'Relecteur: A09 exactitude · A09 securite',
+      'Relecteur: A09 exactitude · A09 securite · A02 schema'
     );
 
     const PR_SENSIBLE: Pr = {
@@ -2060,18 +2060,14 @@ if (LANCE_EN_SCRIPT) {
         },
       },
       {
+        // GOV-101 : deux lentilles partout. La PR conforme privée de son avis `securite` n'en
+        // porte plus qu'une — c'est la lentille manquante qui doit rougir, sur toute PR.
         famille: 'lentilles_manquantes',
         defaut: () => {
           const p = copiePr(PR_TEMOIN);
-          p.revues = p.revues!.slice(0, 2);
+          p.revues = p.revues!.slice(0, 1);
           return [copieDepot(), p];
         },
-      },
-      {
-        // GOV-096 (8) — `risqueDeLaPr()` reçoit l'union : la PR ordinaire et ses DEUX lentilles, à
-        // laquelle le seul `Lot:` ajoute une tâche sensible, devient ÉLEVÉE et en exige quatre.
-        famille: 'lentilles_manquantes',
-        defaut: () => [copieDepot(), PR_DE_LOT_SENSIBLE()],
       },
       {
         // Une revue qui REFUSE n'est pas une lentille manquante : la distinguer est ce qui permet
@@ -2208,63 +2204,6 @@ if (LANCE_EN_SCRIPT) {
         },
       },
       {
-        // cas 6 ter (GOV-077) — un fichier de CI au milieu d'une PR ordinaire : quatre lentilles.
-        famille: 'lentilles_manquantes',
-        defaut: () => [copieDepot(), CI_AU_MILIEU()],
-      },
-      {
-        // cas 6 quater (GOV-077) — un fichier de configuration à la racine : quatre lentilles.
-        famille: 'lentilles_manquantes',
-        defaut: () => [copieDepot(), RACINE_AU_MILIEU()],
-      },
-      {
-        // (GOV-077, second refus de `securite`) — la liste de la FORGE plus courte que ce que la PR
-        // annonce : des fichiers invisibles, donc quatre lentilles.
-        famille: 'lentilles_manquantes',
-        defaut: () => {
-          const p = copiePr(PR_ORDINAIRE);
-          p.liste = { source: 'forge', lues: p.fichiers.length, annoncees: p.fichiers.length + 1 };
-          return [copieDepot(), p];
-        },
-      },
-      {
-        // GOV-097 (refus `securite` du 2026-09-25, motif 1) — la PR ordinaire, deux lentilles, qui
-        // touche un fichier que SEC-07 (`securite`, `sensible: [auth]`) déclare, et dont le NOM
-        // n'est dans aucune zone sensible : la sensibilité suit le fichier, quatre lentilles.
-        famille: 'lentilles_manquantes',
-        defaut: () => {
-          const f = cheminsDe('SEC-07').find(
-            (c) => c.startsWith('src/') && !c.endsWith('/') && !fichierEnZoneSensible(c)
-          );
-          if (f === undefined) {
-            throw new Error(
-              'gov:pr --prove — SEC-07 ne déclare plus de fichier de code hors zone sensible : le ' +
-                'témoin « la sensibilité suit le fichier » ne peut plus en dériver le sien.'
-            );
-          }
-          const p = copiePr(PR_ORDINAIRE);
-          p.fichiers = [...p.fichiers, f];
-          return [copieDepot(), p];
-        },
-      },
-      {
-        // GOV-097 — la PR ordinaire dont la tâche passe en zone `securite`, `sensible` toujours vide :
-        // la zone compte seule, quatre lentilles (décision de Will du 2026-09-25, partners/ADR-0021).
-        famille: 'lentilles_manquantes',
-        defaut: () => {
-          const d = depotAvecZone('QA-T01', 'securite');
-          return [d, { ...copiePr(PR_ORDINAIRE), tachesBase: d.taches }];
-        },
-      },
-      {
-        // cas 6 quinquies (GOV-077) — le fichier de CI RENOMMÉ hors de `.github/` : sa source compte.
-        famille: 'lentilles_manquantes',
-        defaut: () => [
-          copieDepot(),
-          RENOMMAGE_AU_MILIEU(`${DOSSIER_CI}workflows/ci.yml`, 'docs/archive/ci.yml'),
-        ],
-      },
-      {
         // cas 6 sexies (GOV-077) — le schéma RENOMMÉ hors de `prisma/` : le label `schema` reste exigé.
         famille: 'schema_sans_label',
         defaut: () => [
@@ -2276,66 +2215,11 @@ if (LANCE_EN_SCRIPT) {
         ],
       },
       {
-        // (lentille `mutation`, PR 64, G01) — l'APPELANT forge : un fichier de CI RENOMMÉ vers `docs/`,
-        // passé par `prDepuisLaForge()`, la partie pure de `prParGh()`. Sa source compte.
-        famille: 'lentilles_manquantes',
-        defaut: () => {
-          const base = copiePr(PR_ORDINAIRE);
-          const m = Math.floor(base.fichiers.length / 2);
-          const entrees: EntreeDeFichier[] = [
-            ...base.fichiers.slice(0, m).map((filename) => ({ filename })),
-            {
-              filename: 'docs/archive/ci.yml',
-              previous_filename: `${DOSSIER_CI}workflows/ci.yml`,
-              status: 'renamed',
-            },
-            ...base.fichiers.slice(m).map((filename) => ({ filename })),
-          ];
-          const p = prDepuisLaForge({
-            numero: '9998',
-            meta: { title: base.titre, body: base.corps, headRefOid: TETE_TEMOIN, labels: [] },
-            entrees,
-            annoncees: entrees.length,
-            revues: base.revues!,
-            commentaires: [],
-            tachesBase: depot.taches,
-          });
-          return [copieDepot(), p];
-        },
-      },
-      {
-        // (lentille `mutation`, PR 64, G02) — l'APPELANT événement : le même renommage, lu dans une
-        // sortie `git diff --name-status -z` par `prDepuisLEvenement()`. Revues ajoutées ensuite :
-        // l'événement n'en porte pas, et le risque ne se juge qu'avec elles.
-        famille: 'lentilles_manquantes',
-        defaut: () => {
-          const base = copiePr(PR_ORDINAIRE);
-          const Z = String.fromCharCode(0);
-          const sortie =
-            [
-              ...base.fichiers.flatMap((f) => ['M', f]),
-              'R100',
-              `${DOSSIER_CI}workflows/ci.yml`,
-              'docs/archive/ci.yml',
-            ].join(Z) + Z;
-          const p = prDepuisLEvenement(
-            {
-              title: base.titre,
-              body: base.corps,
-              labels: [],
-              base: { sha: '0'.repeat(40) },
-              head: { sha: TETE_TEMOIN },
-            },
-            sortie,
-            depot.taches
-          );
-          return [copieDepot(), { ...p, revues: base.revues, tete: TETE_TEMOIN }];
-        },
-      },
-      {
         // (lentille `mutation`, PR 64, G05) — `projeter()` sur un `sensible` ABSENT du registre brut :
         // il reste `null`, donc ÉLEVÉ. Le défaut d'avant (`?? []`) rendait la PR ordinaire.
-        famille: 'lentilles_manquantes',
+        // GOV-101 : ce témoin exigeait quatre lentilles ; le risque n'en compte plus. Ce que `projeter()`
+        // doit garder — un `sensible` ABSENT reste `null` — se lit désormais sur la section Attaque.
+        famille: 'attaque_absente',
         defaut: () => {
           const brut = (
             JSON.parse(readFileSync(CHEMIN_TACHES, 'utf8')) as { taches: TacheBrute[] }
@@ -2353,7 +2237,9 @@ if (LANCE_EN_SCRIPT) {
       {
         // cas 1 (GOV-077) — la PR ordinaire par son titre, mais qui PORTE trois tâches dont la sensible
         // est AU MILIEU du registre (QA-T01, DM-01 `rgpd`, GOV-039). Deux lentilles ne suffisent pas.
-        famille: 'lentilles_manquantes',
+        // GOV-101 : ce témoin exigeait quatre lentilles ; le risque n'en compte plus. Que la tâche
+        // sensible AU MILIEU du registre soit bien portée se lit désormais sur la section Attaque.
+        famille: 'attaque_absente',
         defaut: () => {
           const d = depotAvecPr(['QA-T01', 'DM-01', 'GOV-039']);
           return [d, { ...copiePr(PR_ORDINAIRE), numero: PR_R1, tachesBase: d.taches }];
@@ -2570,6 +2456,50 @@ if (LANCE_EN_SCRIPT) {
           p.fichiers = [...p.fichiers, CODE_NEUTRE];
           return [d, { ...p, tachesBase: d.taches }];
         },
+      },
+      // ── GOV-101 : CES CINQ CAS ÉTAIENT DES TÉMOINS DE `lentilles_manquantes`. Chacun élève le risque
+      // par un chemin différent (CI, racine, liste de la forge, zone, renommage) et exigeait quatre
+      // lentilles. Depuis la décision de Will du 2026-09-26 (`W16`, `partners/ADR-0022`), le risque ne
+      // compte plus de lentille : les mêmes PR, relues par `exactitude` et `securite`, sont VERTES.
+      // Les commentaires de chaque cas disent ce que le risque y détecte ; « quatre lentilles » y est
+      // l'exigence d'AVANT. La classification elle-même reste éprouvée par `risqueDeLaPr()` dans
+      // `lentilles-selon-le-risque.spec.ts` et `quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts`.
+      {
+        // cas 6 ter (GOV-077) — un fichier de CI au milieu d'une PR ordinaire : quatre lentilles.
+        quoi: 'GOV-101 — PR élevée, deux lentilles suffisent : cas 6 ter (GOV-077) — un fichier de CI au milieu d’une PR (voir le commentaire)',
+        cas: () => [copieDepot(), CI_AU_MILIEU()],
+      },
+      {
+        // cas 6 quater (GOV-077) — un fichier de configuration à la racine : quatre lentilles.
+        quoi: 'GOV-101 — PR élevée, deux lentilles suffisent : cas 6 quater (GOV-077) — un fichier de configuration à la (voir le commentaire)',
+        cas: () => [copieDepot(), RACINE_AU_MILIEU()],
+      },
+      {
+        // (GOV-077, second refus de `securite`) — la liste de la FORGE plus courte que ce que la PR
+        // annonce : des fichiers invisibles, donc quatre lentilles.
+        quoi: 'GOV-101 — PR élevée, deux lentilles suffisent : (GOV-077, second refus de `securite`) — la liste de la (voir le commentaire)',
+        cas: () => {
+          const p = copiePr(PR_ORDINAIRE);
+          p.liste = { source: 'forge', lues: p.fichiers.length, annoncees: p.fichiers.length + 1 };
+          return [copieDepot(), p];
+        },
+      },
+      {
+        // GOV-097 — la PR ordinaire dont la tâche passe en zone `securite`, `sensible` toujours vide :
+        // la zone compte seule, quatre lentilles (décision de Will du 2026-09-25, partners/ADR-0021).
+        quoi: 'GOV-101 — PR élevée, deux lentilles suffisent : GOV-097 — la PR ordinaire dont la tâche passe en zone (voir le commentaire)',
+        cas: () => {
+          const d = depotAvecZone('QA-T01', 'securite');
+          return [d, { ...copiePr(PR_ORDINAIRE), tachesBase: d.taches }];
+        },
+      },
+      {
+        // cas 6 quinquies (GOV-077) — le fichier de CI RENOMMÉ hors de `.github/` : sa source compte.
+        quoi: 'GOV-101 — PR élevée, deux lentilles suffisent : cas 6 quinquies (GOV-077) — le fichier de CI RENOMMÉ hors (voir le commentaire)',
+        cas: () => [
+          copieDepot(),
+          RENOMMAGE_AU_MILIEU(`${DOSSIER_CI}workflows/ci.yml`, 'docs/archive/ci.yml'),
+        ],
       },
     ];
 
