@@ -1,6 +1,6 @@
 // @req REQ-DM-036
-// @req REQ-INT-010
-// @req REQ-SEC-011
+// @req REQ-INT-010 → REQ-DM-036
+// @req REQ-SEC-011 → REQ-DM-036
 /**
  * La réception des événements d'axionia en base RÉELLE — SEC-06.
  *

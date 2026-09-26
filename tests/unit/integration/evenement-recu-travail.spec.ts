@@ -104,20 +104,20 @@ const DOSSIER: Omit<EvenementATraiter, 'retryCount'>[] = [
   {
     id: 'e1',
     eventType: TypeEvenementRecu.client_cree,
-    sujetRef: 'client:C1',
-    charge: { clientId: 'C1' },
+    sujetRef: 'client:cl-1',
+    charge: { clientId: 'cl-1' },
   },
   {
     id: 'e2',
     eventType: TypeEvenementRecu.devis_signe,
-    sujetRef: 'devis:D1',
-    charge: { clientId: 'C1', devisId: 'D1' },
+    sujetRef: 'devis:dv-1',
+    charge: { clientId: 'cl-1', devisId: 'dv-1' },
   },
   {
     id: 'e3',
     eventType: TypeEvenementRecu.facture_emise,
     sujetRef: 'facture:F1',
-    charge: { factureId: 'F1', clientId: 'C1' },
+    charge: { factureId: 'F1', clientId: 'cl-1' },
   },
   {
     id: 'e4',
@@ -159,7 +159,7 @@ describe('REQ-INT-011 — la dépendance manquante est conservée, puis rejouée
     m.arriver(DOSSIER[1]!);
     await passerLeTravail({ depot: m.depot, dispatch: sansEffet, maintenant: () => INSTANT });
     expect(m.lignes.map((l) => [l.statut, l.dependanceRef])).toEqual([
-      ['en_attente_dependance', 'client:C1'],
+      ['en_attente_dependance', 'client:cl-1'],
     ]);
     m.arriver(DOSSIER[0]!);
     const c = await passerLeTravail({
@@ -183,9 +183,9 @@ describe('REQ-INT-011 — la dépendance manquante est conservée, puis rejouée
 
   it('REQ-INT-011 : la dépendance se lit dans la charge, et un parent se désigne par son type', () => {
     expect(
-      dependanceDe({ eventType: TypeEvenementRecu.devis_signe, charge: { clientId: 'C1' } })
+      dependanceDe({ eventType: TypeEvenementRecu.devis_signe, charge: { clientId: 'cl-1' } })
     ).toEqual({
-      ref: 'client:C1',
+      ref: 'client:cl-1',
       parents: [TypeEvenementRecu.client_cree, TypeEvenementRecu.client_mis_a_jour],
     });
     expect(
@@ -195,7 +195,7 @@ describe('REQ-INT-011 — la dépendance manquante est conservée, puis rejouée
       parents: [TypeEvenementRecu.facture_emise],
     });
     expect(
-      dependanceDe({ eventType: TypeEvenementRecu.client_cree, charge: { clientId: 'C1' } })
+      dependanceDe({ eventType: TypeEvenementRecu.client_cree, charge: { clientId: 'cl-1' } })
     ).toBeNull();
     expect(dependanceDe({ eventType: TypeEvenementRecu.paiement_recu, charge: {} })).toBe(
       'illisible'

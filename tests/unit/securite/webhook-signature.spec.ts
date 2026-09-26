@@ -1,5 +1,5 @@
 // @req REQ-SEC-010
-// @req REQ-QA-008
+// @req REQ-QA-008 → REQ-SEC-010
 /**
  * `webhook-signature.spec.ts` — la porte des événements d'axionia (SEC-06), sans base.
  *

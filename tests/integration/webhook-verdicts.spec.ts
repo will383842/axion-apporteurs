@@ -1,7 +1,7 @@
 // @req REQ-ARG-002
 // @req REQ-ARG-003
 // @req REQ-INT-011
-// @req REQ-QA-009
+// @req REQ-QA-009 → REQ-ARG-003
 /**
  * Les verdicts de la réception des événements d'axionia, en base RÉELLE — SEC-06.
  *

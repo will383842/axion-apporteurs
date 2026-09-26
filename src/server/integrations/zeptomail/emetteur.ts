@@ -58,7 +58,7 @@ export interface ConfigurationDeLEmetteur {
 const FORME_D_ADRESSE =
   /^[^\s@,;<>()"\\]+@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/i;
 
-/** Un caractère de contrôle (C0 ou DEL) : dans un en-tête, il ouvre une ligne de plus. */
+/** Un caractère de contrôle (sous 0x20, ou 0x7f) : dans un en-tête, il ouvre une ligne de plus. */
 function porteUnControle(x: string): boolean {
   for (let i = 0; i < x.length; i++) {
     const c = x.charCodeAt(i);

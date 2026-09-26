@@ -16,7 +16,7 @@
 
 **334 exigences actives · 89 réputées testées · 89 couvertes · 0 orphelines.**
 
-289 tâches, dont 74 livrées · 109 fichiers de test exécutés par `vitest` sur 109 présents.
+289 tâches, dont 74 livrées · 118 fichiers de test exécutés par `vitest` sur 118 présents.
 
 ## Exigences réputées testées
 
@@ -42,7 +42,7 @@
 | `REQ-DM-012` | `DM-06` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts` | couverte |
 | `REQ-DM-024` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-chaine.spec.ts` | couverte |
 | `REQ-DM-035` | `DM-06`, `INT-T22`, `INT-T26` | `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` | couverte |
-| `REQ-DM-036` | `GOV-088`, `SEC-06` | `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
+| `REQ-DM-036` | `GOV-088`, `SEC-06` | `tests/integration/webhook.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts`, `tests/unit/securite/evenements-recus-migration.spec.ts` | couverte |
 | `REQ-DM-037` | `DM-02` | `tests/unit/domaine/gardes-de-schema.spec.ts` | couverte |
 | `REQ-DM-038` | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts` | couverte |
 | `REQ-DM-041` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-charge-fermee.spec.ts` | couverte |
@@ -81,7 +81,7 @@
 | `REQ-INT-014` | `INT-T07-A`, `INT-T07-P`, `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
 | `REQ-INT-020` | `INT-T09` | `tests/integration/api-gouv.spec.ts`, `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
 | `REQ-INT-021` | `INT-T09` | `tests/integration/api-gouv.spec.ts` | couverte |
-| `REQ-INT-029` | `INT-T01a`, `INT-T27-A` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
+| `REQ-INT-029` | `INT-T01a`, `INT-T27-A` | `tests/unit/integration/contrat-hash.spec.ts`, `tests/unit/securite/webhook-signature.spec.ts` | couverte |
 | `REQ-JUR-003` | `JUR-T01`, `JUR-T01b` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-007` | `DM-25`, `JUR-T01`, `JUR-T01b`, `T-ARG-033` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-023` | `DM-23`, `JUR-T01`, `SEC-12` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
@@ -462,6 +462,9 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/integration/lien-magique.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002` |
 | `tests/integration/rate-limit-redis.spec.ts` | oui | `REQ-QA-006`, `REQ-SEC-016` |
 | `tests/integration/sondes-de-vie.spec.ts` | oui | `REQ-QA-019`, `REQ-QA-020`, `REQ-QA-030` |
+| `tests/integration/webhook-rebonds.spec.ts` | oui | `REQ-INT-023` |
+| `tests/integration/webhook-verdicts.spec.ts` | oui | `REQ-ARG-002`, `REQ-ARG-003`, `REQ-INT-011`, `REQ-QA-009` |
+| `tests/integration/webhook.spec.ts` | oui | `REQ-DM-036`, `REQ-INT-010`, `REQ-SEC-011` |
 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | oui | `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013` |
 | `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` | oui | `REQ-QA-006` |
 | `tests/unit/contrat/contract-template-complete.spec.ts` | oui | `REQ-CPL-012`, `REQ-JUR-003`, `REQ-JUR-007`, `REQ-JUR-023` |
@@ -480,6 +483,9 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/domaine/schema-centimes.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-038` |
 | `tests/unit/domaine/seuil-prioritaire.spec.ts` | oui | `REQ-CPL-026` |
 | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | oui | `REQ-CPL-013`, `REQ-QA-027`, `REQ-UX-022`, `REQ-UX-028` |
+| `tests/unit/email/courriels-migration.spec.ts` | oui | `REQ-INT-023` |
+| `tests/unit/email/emetteur.spec.ts` | oui | `REQ-INT-022` |
+| `tests/unit/email/rebonds.spec.ts` | oui | `REQ-INT-023` |
 | `tests/unit/espace/maquettes-validees.spec.ts` | oui | `REQ-UX-008`, `REQ-UX-017`, `REQ-UX-034` |
 | `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts` | oui | `REQ-SEC-022`, `REQ-UX-002`, `REQ-UX-003`, `REQ-UX-019` |
 | `tests/unit/gouvernance/accord-survit-au-journal.spec.ts` | oui | `REQ-GOV-011`, `REQ-GOV-013` |
@@ -539,6 +545,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/gouvernance/verrou-de-phase.spec.ts` | oui | `REQ-GOV-027` |
 | `tests/unit/gouvernance/vues-derivees.spec.ts` | oui | `REQ-GOV-021`, `REQ-GOV-032` |
 | `tests/unit/integration/contrat-hash.spec.ts` | oui | `REQ-GOV-020`, `REQ-INT-003`, `REQ-INT-004`, `REQ-INT-029`, `REQ-QA-007` |
+| `tests/unit/integration/evenement-recu-travail.spec.ts` | oui | `REQ-ARG-003`, `REQ-INT-011` |
 | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | oui | `REQ-INT-020`, `REQ-SEC-013`, `REQ-UX-020` |
 | `tests/unit/qualite/env-fail-fast.spec.ts` | oui | `REQ-CPL-021`, `REQ-QA-030` |
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |
@@ -550,6 +557,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/securite/connexion-actions.spec.ts` | oui | `REQ-SEC-001` |
 | `tests/unit/securite/connexion-ecran.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002` |
 | `tests/unit/securite/env-boot.spec.ts` | oui | `REQ-SEC-028` |
+| `tests/unit/securite/evenements-recus-migration.spec.ts` | oui | `REQ-ARG-002`, `REQ-DM-036` |
 | `tests/unit/securite/headers.spec.ts` | oui | `REQ-SEC-029` |
 | `tests/unit/securite/lien-magique-compteurs.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016` |
 | `tests/unit/securite/lien-magique-depot.spec.ts` | oui | `REQ-SEC-001` |
@@ -557,3 +565,4 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/securite/lien-magique-migration.spec.ts` | oui | `REQ-SEC-001` |
 | `tests/unit/securite/lien-magique-production.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016` |
 | `tests/unit/securite/rate-famille.spec.ts` | oui | `REQ-SEC-002`, `REQ-SEC-016`, `REQ-SEC-035` |
+| `tests/unit/securite/webhook-signature.spec.ts` | oui | `REQ-INT-029`, `REQ-QA-008`, `REQ-SEC-010` |
