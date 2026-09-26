@@ -6,9 +6,9 @@ import base from './vitest.config';
  *
  * C'est `vitest.config.ts`, réduite aux tests UNITAIRES EN PROCESSUS du domaine et du serveur
  * (`tests/unit/domaine/**`, `tests/unit/contrat/**`, puis, depuis GOV-101, `tests/unit/securite/**`,
- * `tests/unit/integration/**` et `tests/unit/espace/**`) : le travail de nuit ne mute que
- * `src/domain/**`, `pnpm mutation:pr` mute aussi les fichiers de `src/server/**` et `src/lib/**`
- * que la PR touche, et chaque mutant est jugé par les tests qui le couvrent
+ * `tests/unit/integration/**` et `tests/unit/espace/**`, puis, depuis INT-T10, `tests/unit/email/**`) :
+ * le travail de nuit ne mute que `src/domain/**`, `pnpm mutation:pr` mute aussi les fichiers de
+ * `src/server/**` et `src/lib/**` que la PR touche, et chaque mutant est jugé par les tests qui le couvrent
  * (`coverageAnalysis: perTest`, `related`).
  * Les tests de `tests/integration/` exigent un démon Docker et ceux de gouvernance lancent des
  * gardes en sous-processus : ni l'un ni l'autre ne juge un mutant, et les deux feraient échouer la
@@ -57,6 +57,10 @@ export default defineConfig({
       'tests/unit/securite/**/*.spec.ts',
       'tests/unit/integration/**/*.spec.ts',
       'tests/unit/espace/**/*.spec.ts',
+      // Le relais de courriel (INT-T10) : l'émetteur, le webhook des rebonds et leur migration, jugés
+      // en processus avec des doubles — sans eux, les deux modules mutés sortaient « sans couverture »
+      // (porte A de la PR 145 : 0 % sur `emetteur.ts` et `rebonds.ts`).
+      'tests/unit/email/**/*.spec.ts',
       // `src/lib/` (GOV-101, second tour) : ses deux tests unitaires en processus, et eux seuls —
       // le reste de `tests/unit/qualite/` lance des gardes et Stryker lui-même en sous-processus.
       'tests/unit/qualite/env-fail-fast.spec.ts',
