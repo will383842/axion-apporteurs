@@ -7,11 +7,13 @@
  * dans `after()` (Next 16) : il s'exécute une fois la réponse envoyée, jamais avant. L'issue d'une
  * consommation s'affiche sur `/connexion?issue=` : l'URL de destination ne porte plus le jeton.
  *
- * NON FAIT ICI, ET NOMMÉ : le cookie de session `__Host-` (REQ-SEC-003) appartient à SEC-04 — la
- * session est enregistrée en base, son jeton n'est pas encore remis au navigateur ; l'envoi réel du
- * courriel appartient à INT-T10 (voir `dependancesDuProcessus`).
+ * Une consommation qui ouvre la session remet son jeton au navigateur dans le cookie `__Host-` de
+ * SEC-04 (REQ-SEC-003, `COOKIE_DE_SESSION`), AVANT la redirection ; un lien invalide n'en pose aucun.
+ *
+ * NON FAIT ICI, ET NOMMÉ : l'envoi réel du courriel appartient à INT-T10 (voir
+ * `dependancesDuProcessus`).
  */
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
 import { consommerLien, demanderLien } from '../../../server/auth/lien-magique';
@@ -21,6 +23,7 @@ import {
   portsDeConsommation,
   portsDeDemande,
 } from '../../../server/auth/lien-magique-production';
+import { COOKIE_DE_SESSION } from '../../../server/auth/session';
 import { clesPii } from '../../../server/securite/pii';
 import { evaluerPotDeMiel } from '../../../server/securite/pot-de-miel';
 
@@ -42,6 +45,10 @@ export async function demanderUnLienDeConnexion(formulaire: FormData): Promise<v
 export async function consommerUnLienDeConnexion(jeton: string): Promise<void> {
   const d = dependancesDuProcessus({ apres: after, env: process.env });
   const ipHash = empreinteReseauDeLaRequete(await headers(), clesPii(d.env));
-  const { etat } = await consommerLien({ jeton, ipHash }, portsDeConsommation(d));
-  redirect(`/connexion?issue=${etat}`);
+  const resultat = await consommerLien({ jeton, ipHash }, portsDeConsommation(d));
+  if (resultat.etat === 'ouverte') {
+    const { nom, attributs } = COOKIE_DE_SESSION;
+    (await cookies()).set(nom, resultat.jetonSession, attributs);
+  }
+  redirect(`/connexion?issue=${resultat.etat}`);
 }

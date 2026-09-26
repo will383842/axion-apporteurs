@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `da567f3` — 2026-09-26T18:55:32+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (rien) · 2. #148 (rien) · 3. #145 (un contrôle requis rouge ou une revue manquante) |
+| Où est `main` ? | `9d6fbad` — 2026-09-27T01:02:56+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #145 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 43/116 tâches, reste 56.60 j |
-| Le prochain pas | fusionner #82, puis SEC-04 — Sessions révocables en base, `sessionVersion`, step-up (chemin critique) |
+| Le prochain pas | SEC-04 — Sessions révocables en base, `sessionVersion`, step-up (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #141 — 2026-09-26 |
+| Dernière entrée de journal | PR #148 — 2026-09-26 |
 
-**Ce qu’on tape maintenant.** `gh pr view 82 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -60,9 +60,8 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | rien — fusionnable maintenant |
-| 2 | #148 — feat(SEC-04): sessions revocables en base, sessionVersion tenue par la base, relevement | `t/sec-04` | rien — fusionnable maintenant |
-| 3 | #145 — feat(SEC-06): lot L0-05 — réception des webhooks axionia, événements reçus et battements ; émetteur e-mail et rebonds | `t/lot-l0-05` | un contrôle requis rouge ou une revue manquante |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #145 — feat(SEC-06): lot L0-05 — réception des webhooks axionia, événements reçus et battements ; émetteur e-mail et rebonds | `t/lot-l0-05` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -78,13 +77,11 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition · `docs/adr/0023-route-des-coordonnees-de-candidature.md` — partners/ADR-0023 — Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement · `docs/adr/0024-deux-lentilles-mutation-par-stryker-et-relectures-sans-defaut.md` — partners/ADR-0024 — Deux lentilles partout, la mutation mesurée par Stryker, et les relectures qui ne corrigent aucun défaut
+Aucun ADR daté du 2026-09-27 (jour du dernier atterrissage).
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
-
-**Fusionner #82** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-04** — Sessions révocables en base, `sessionVersion`, step-up (1 j, **sur le chemin critique**) : 37 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -92,13 +89,21 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `da567f3` (2026-09-26T18:55:32+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `9d6fbad` (2026-09-27T01:02:56+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #148 — 2026-09-26 — feat(SEC-04): sessions revocables en base, sessionVersion tenue par la base, relevement
+
+**Fait.** La session de l'espace apporteur est révocable. La consommation d'un lien pose enfin le cookie `__Host-partners-session` (HttpOnly, Secure, SameSite=Lax, Path=/, 30 jours dérivés de `DUREES_AUTH`). `exigerSession` relit en base, à chaque appel, la session, la version et le statut de l'apporteur, et nomme un motif fermé ; `exigerSessionRelevee` exige un lien consommé depuis moins de 10 minutes par la session COURANTE. La base tient `sessionVersion` : le déclencheur `apporteurs_version_de_session` incrémente d'un cran à la résiliation et au changement d'empreinte de courriel, jamais à la suspension, et refuse toute descente ; chaque session ouverte copie la version de son apporteur ; une révocation est définitive. La migration `20260926100000_sessions_revocables` pose aussi les coordonnées chiffrées de l'apporteur (nom, prénom, téléphone et `phone_hash` non unique), l'acceptation de la politique de confidentialité, le code et ses essais sur `liens_magiques`, et la table `changements_courriel` ; module du semeur `prisma/seed/05-sessions.ts`. Mutation : 100 pour cent, 103 mutants sur 103.
+
+**Reste.** Appeler `exigerSession` depuis chaque page et action de l'espace, et effacer le cookie sur refus : SEC-05. Le déclencheur du changement de coordonnée bancaire : SEC-22, avec sa table. L'effet différé du changement de courriel et l'annulation des liens en vol vers l'ancienne adresse : UX-P1-09. La session en lecture seule après résiliation : SEC-19. Les chemins de SEC-04 attendent quatre ajouts au registre, nommés dans le corps de la PR, et `G-SEC-REVOCATION.preuveRouge` reste à poser.
+
+**Appris.** Stryker laisse survivre un mutant STATIQUE : une constante fléchée de module (`const refus = (motif) => ...`) est évaluée au chargement, avant toute activation de mutant, et `() => undefined` y survit alors que chaque test qui l'appelle rougirait. Une déclaration de fonction est évaluée à l'appel : même code, mutant tué. Et Prisma ne rend que la CLÉ d'une unicité violée, jamais le nom de l'index, même en SQL brut par `$executeRawUnsafe` : pour qu'un témoin nomme un index unique partiel, un bloc `DO` relève `CONSTRAINT_NAME` par `GET STACKED DIAGNOSTICS` et le relance dans son message. Les messages des `RAISE EXCEPTION` et des CHECK, eux, traversent.
 
 ### PR #141 — 2026-09-26 — chore(GOV-012): registre rattrape, huit taches livrees par des PR fusionnees passent fusionnee
 
@@ -144,83 +149,7 @@ L'empreinte a perdu son résumé `--summary` : muté hors de l'empreinte, il ne 
 témoin, `patch-id` hachant déjà les en-têtes de mode. `vues:fusion` défait la fusion sur toute
 levée, et l'API `sansMutation` est retirée.
 
-### PR #139 — 2026-09-26 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées
-
-**Fait.** Le cadrage du schéma des phases 0 et 1 décidé par l'architecte le 2026-09-26, sur
-délégation de Will, est inscrit au registre : le champ `schema` de vingt et une tâches est remis
-droit (DM-01, pourtant fusionnée, compris), les `paths`, `deps` et acceptances des tâches
-créatrices et écrivaines portent désormais le schéma exact de chaque table, avec une acceptance
-posée pour DM-07, DM-08, DM-12, SEC-11, CPL-T06, INT-T12 et UX-P1-10, qui n'en avaient pas ;
-INT-T01c et INT-T26 sont versées ; le glossaire porte vingt-deux enums nouveaux et, au §4.1, les
-treize valeurs de `TypeEvenementJournal` avec leur tâche créatrice ; douze exigences sont amendées
-ou alignées sur `EvenementRecu` ; `HYP-A02-RETENTION` et `HYP-A02-VOCABULAIRE-QUALIFICATION`
-entrent au registre des décisions. Contrôle champ par champ contre `origin/main` : seuls les champs
-décidés changent, aucune entrée perdue, aucun texte raccourci. Gardes jouées à 0 : `gov:tasks`,
-`gov:hypotheses`, `gov:requirements`, `gov:attributions`, `gov:identifiants`, `gov:lexique`,
-`gov:termes-interdits`, `gov:trace:verifier`, `plan-state:verifier`, `lot:paths:check`, `gov:etat`,
-`partners:schema:enums`, `gov:preseance`, `gov:publication` ; specs `tests/unit/contrat/`,
-`un-nom-une-garde.spec.ts`, `glossaire-enums.spec.ts`, `termes-interdits.spec.ts` et
-`contrat-hash.spec.ts` vertes. `gov:adr` rougit sur les trois renvois du glossaire à
-partners/ADR-0022, que l'architecte écrit sur cette même branche.
-
-Puis l'architecte, sur la même branche : partners/ADR-0022 (carte du schéma des phases 0 et 1),
-partners/ADR-0023 (route HMAC d'axionia des coordonnées de candidature, troisième API) et la
-décision 15 de partners/ADR-0013 (lien « ce n'est pas moi » sans état) sont écrits, l'index est
-régénéré et `gov:adr` sort à 0. Les créateurs de valeurs de journal (DM-07, DM-08, DM-11, DM-12,
-DM-23, SEC-15, CPL-T06, EXT-T01, EXT-T03) portent `src/domain/evenement/charges.ts` et
-`docs/GLOSSAIRE.md` dans leurs `paths`, et `prisma/migrations/` quand il manquait (SEC-15, DM-10-P,
-DM-23, EXT-T03) ; INT-T01c porte le fichier de partners/ADR-0023. Sur décision de l'orchestrateur,
-les colonnes nom, prénom, téléphone et `phoneHash` de `apporteurs` reviennent à SEC-04, dont
-l'acceptance gagne un point (7). La route des coordonnées côté axionia est versée en INT-T27-A
-(phase 0, `schema: false`, sensible `rgpd`), et INT-T26 en dépend ; EXT-T01 dépend de DM-12, qui
-pose le champ chiffré `texte` qu'elle réutilise. Contrôle champ par champ contre la tête
-précédente : seuls ces champs ont changé, une tâche ajoutée.
-
-**Relecture.** Lentille `securite` : accord. Lentille `exactitude` : refus sur un seul défaut,
-INT-T26 et EXT-T03 écrivaient ou lisaient les colonnes de coordonnées de `apporteurs` que SEC-04
-crée, sans dépendance vers SEC-04 ; SEC-04 est ajoutée à leurs `deps` depuis un fichier, relue sur
-le disque. Au passage : la décision 15 de partners/ADR-0013 précise que l'ouverture du lien « ce
-n'est pas moi » ne révoque rien, seule l'action de la page le fait, à cause des analyseurs de liens
-des messageries ; partners/ADR-0023 impose désormais le plafond de lecture qu'elle invoquait (cinq
-lectures par candidature sur vingt-quatre heures, point (7) d'INT-T27-A) ; UX-P1-09 reçoit une
-acceptance, dont une réponse identique quand la nouvelle adresse est déjà portée par un autre
-apporteur ; l'apostrophe perdue du point 3 d'INT-T26 est rendue, et le point 2 d'INT-T05 ne compte
-plus sept types ; partners/ADR-0022 nomme les tâches qui étendent `apporteurs`, colonne par colonne.
-Seconde relecture sur bed1887 : les deux lentilles accordent.
-
-**Porte A.** Deux rouges réels, causés par le registre que cette PR modifie. (1) Le témoin
-« REQ-GOV-011, cas 1 » lisait DM-01 dans le registre réel : DM-01 passée `schema: true`, la
-troisième lentille attendue devenait `schema` au lieu de `simplicite`. Les tâches de la PR fictive
-sont désormais fixées à `schema: false` dans le témoin, qui porte sur la sensibilité au milieu de la
-liste ; le risque élevé vient toujours du `sensible` réel de DM-01. (2) Le témoin du plancher de
-`gov:trace` retirait une tranche partant du milieu de la liste, et la tranche débordait dès que le
-périmètre dépassait deux fois le plancher (la tâche versée ici l'a fait passer) : son départ est
-borné à la liste, même correctif que la PR 136. Les deux specs passent en local, 45 cas ; leurs
-fichiers entrent aux `paths` de GOV-102.
-
-**Reste.** DM-11 cite encore REQ-DM-013 alors que `contrats` naît de DM-23 : aucun verbe n'écrit le
-champ `reqs`, la citation reste jusqu'à ce qu'un verbe le permette. Trois points de la décision restent dus : les `reqs` à ajouter à SEC-06, SEC-04, DM-12
-et UX-P1-08 (aucun verbe n'écrit ce champ) ; l'amendement de REQ-INT-004, REQ-QA-007 et
-REQ-GOV-020, porté par l'acceptance d'INT-T01c en même temps que le contrat ; la citation de
-REQ-EXT-009 par INT-T26. `ProfessionReglementee` est décidée par partners/ADR-0022 (point 16 :
-`expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance`, un par code NAF
-de REQ-JUR-022) et reste à inscrire au glossaire avant DM-11. `QualiteExercice` n'est tirée
-d'aucune exigence : la liste des statuts d'exercice et leur libellé dans l'article 14 du contrat
-sont une décision de Will, à consigner au registre avant DM-11 (proposition dans
-partners/ADR-0022).
-
-**Appris.** Une exigence de phase 1 citée par une tâche de phase 0 fait rougir
-`gov:requirements` en `phase_non_derivee`, et aucun verbe n'écrit la phase d'une exigence : une
-décision qui rattache une exigence à une tâche plus précoce ne s'applique pas par le registre des
-tâches seul. Et la ligne d'un enum déjà présent au schéma ne peut énumérer que ce que le schéma
-porte : y inscrire d'avance les valeurs d'une tâche future fait rougir `partners:schema:enums` en
-`enum_divergent_du_glossaire` le jour même ; les valeurs décidées vivent à côté (§4.1) et entrent
-dans la ligne avec la migration qui les crée. Enfin, une acceptance passée au verbe de réécriture
-depuis une chaîne entre guillemets doubles du shell a été corrompue en silence : chaque accent grave
-y a été exécuté comme une commande, et le verbe a écrit le reste, exit 0. Réécrite depuis un
-fichier, relue sur le disque ; le texte d'un champ de registre ne transite jamais par le shell.
-
-… 3 entrée(s) affichée(s) sur 64 ; les 61 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 65 ; les 62 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 

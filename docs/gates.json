@@ -609,9 +609,9 @@
       "phase": 0,
       "script": "tests/unit/securite/revocation.spec.ts",
       "tache": "SEC-04",
-      "verifie": "jeton revoque, sessionVersion++ et apporteur resilie -> refus (etendue en phase 1 par SEC-19)",
+      "verifie": "verification EN BASE a chaque requete (exigerSession, sans cache) : session revoquee, expiree, de cle perimee, de version perimee (sessionVersion de la session differente de celle de l apporteur) ou d apporteur au statut ferme -> refus a la requete SUIVANTE, motif d une liste fermee ; sessionVersion incrementee par declencheur en base a la resiliation et a tout changement de courriel (email_hash), JAMAIS a la suspension (l apporteur suspendu garde son espace), jamais decrementee ; revocation definitive (declencheur) ; releve (exigerSessionRelevee) lie au lien de la session COURANTE consomme depuis moins de 10 min (DUREES_AUTH.releveMs, borne stricte) ; cookie __Host-partners-session HttpOnly, Secure, SameSite=Lax, Path=/, sans domaine, 30 jours (etendue en phase 1 par SEC-19)",
       "fixtureRouge": "accepter une session apres sessionVersion++",
-      "preuveRouge": null
+      "preuveRouge": "ROUGE d origine de SEC-04 (commit de test seul 3b74c65) : `npx vitest run tests/unit/securite/revocation.spec.ts` rend `FAIL tests/unit/securite/revocation.spec.ts — Error: Failed to load url ../../../src/server/auth/session ... Does the file exist? Test Files 1 failed (1), Tests no tests`. Declencheurs de la migration 20260926100000_sessions_revocables vus rougir : quatre mutants poses dans la migration (increment de sessionVersion retire, descente de version admise, revocation reversible, version non recopiee a l ouverture) font tomber 5 tests sur 19 de tests/integration/sessions-revocables.spec.ts, puis retires. pnpm mutation:pr : 103 mutants sur 103 tues (100 %)."
     },
     {
       "id": "G-SEC-ROLES",

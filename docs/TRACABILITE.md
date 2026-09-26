@@ -16,7 +16,7 @@
 
 **334 exigences actives · 98 réputées testées · 98 couvertes · 0 orphelines.**
 
-290 tâches, dont 82 livrées · 116 fichiers de test exécutés par `vitest` sur 116 présents.
+290 tâches, dont 82 livrées · 118 fichiers de test exécutés par `vitest` sur 118 présents.
 
 ## Exigences réputées testées
 
@@ -461,6 +461,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/integration/journal.spec.ts` | oui | `REQ-DM-024`, `REQ-DM-041`, `REQ-JUR-026`, `REQ-SEC-027` |
 | `tests/integration/lien-magique.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002` |
 | `tests/integration/rate-limit-redis.spec.ts` | oui | `REQ-QA-006`, `REQ-SEC-016` |
+| `tests/integration/sessions-revocables.spec.ts` | oui | `REQ-SEC-003`, `REQ-SEC-004` |
 | `tests/integration/sondes-de-vie.spec.ts` | oui | `REQ-QA-019`, `REQ-QA-020`, `REQ-QA-030` |
 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | oui | `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013` |
 | `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` | oui | `REQ-QA-006` |
@@ -564,3 +565,4 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/securite/lien-magique-migration.spec.ts` | oui | `REQ-SEC-001` |
 | `tests/unit/securite/lien-magique-production.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016` |
 | `tests/unit/securite/rate-famille.spec.ts` | oui | `REQ-SEC-002`, `REQ-SEC-016`, `REQ-SEC-035` |
+| `tests/unit/securite/revocation.spec.ts` | oui | `REQ-SEC-003`, `REQ-SEC-004` |
