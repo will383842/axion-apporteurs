@@ -458,13 +458,39 @@ lignes.push('');
  */
 const STATUTS_DU_TABLEAU: readonly string[] = Object.keys(PLANCHER);
 
+/**
+ * LE PLAFOND D'UNE LISTE D'IDENTIFIANTS DANS LA VUE — DOUZE, ET SON MOTIF (GOV-079).
+ *
+ * Le motif : une liste d'identifiants vit dans UNE cellule de tableau, et la vue se lit d'un coup
+ * d'œil — douze identifiants tiennent sur la ligne rendue sans la faire déborder ; deux cents la
+ * rendraient illisible et noieraient les rubriques qui suivent. La liste complète existe déjà,
+ * entière, dans `docs/TASKS.md` : la vue d'état n'a pas à la recopier (RM-01).
+ *
+ * CE QUI N'ÉTAIT PAS BON, CE N'ÉTAIT PAS LE NOMBRE, C'ÉTAIT LE SILENCE : « JUR-T02, … » ne
+ * distinguait pas douze tâches à faire de douze affichées sur deux cents. Une liste tronquée dit
+ * donc, à l'endroit même de la troncature, l'affiché et le total — dérivés de la liste, jamais
+ * tapés — et la vue où lire le reste. `aucune-troncature-muette.spec.ts` recompte les deux.
+ */
+export const PLAFOND_D_UNE_LISTE = 12;
+const VUE_DE_LA_LISTE_COMPLETE = '`docs/TASKS.md`';
+/** Le nombre d'entrées de journal rendues en entier — motif écrit là où il s'applique (« Journal »). */
+const ENTREES_DE_JOURNAL_RENDUES = 3;
+
+function tronquer(ids: readonly string[], separateur = ', '): string {
+  if (ids.length <= PLAFOND_D_UNE_LISTE) return ids.join(separateur);
+  const affiches = ids.slice(0, PLAFOND_D_UNE_LISTE);
+  return `${affiches.join(separateur)} … (${affiches.length} affichées sur ${ids.length} — liste complète : ${VUE_DE_LA_LISTE_COMPLETE})`;
+}
+
 lignes.push('| Statut | Nombre | Détail |');
 lignes.push('| --- | --- | --- |');
 for (const s of STATUTS_DU_TABLEAU) {
   const l = par(s);
+  // LA MÊME TRONCATURE POUR TOUTES LES LISTES DE LA RUBRIQUE (GOV-079) : une liste détaillée qui
+  // dépasserait le plafond dirait son total comme les autres, jamais un silence de plus.
   const detail = ['en_cours', 'en_revue', 'bloquee', 'attente_externe'].includes(s)
-    ? l
-        .map((t) => {
+    ? tronquer(
+        l.map((t) => {
           // LA RÉFÉRENCE EST QUALIFIÉE PAR DÉPÔT (GOV-038). Cette ligne rendait `PR#<n>` sans dire de
           // quel dépôt : quatorze tâches de ce backlog vivent ailleurs, et la vue publique aurait
           // porté « INT-T01b (A01) PR#998 » pour une PR que la forge de CE dépôt ne connaît pas —
@@ -473,14 +499,10 @@ for (const s of STATUTS_DU_TABLEAU) {
           // (RM-01, RM-12).
           const ref = referencePr(t);
           return `${t.id}${t.owner ? ` (${t.owner})` : ''}${ref ? ` ${ref}` : ''}${t.motif ? ` — ${t.motif}` : ''}`;
-        })
-        .join(' · ')
-    : l.length > 12
-      ? `${l
-          .slice(0, 12)
-          .map((t) => t.id)
-          .join(', ')} …`
-      : l.map((t) => t.id).join(', ');
+        }),
+        ' · '
+      )
+    : tronquer(l.map((t) => t.id));
   lignes.push(`| \`${s}\` | ${l.length} | ${detail || '—'} |`);
 }
 lignes.push('');
@@ -853,14 +875,20 @@ if (!entrees.length) {
     'Aucune entrée. Toute PR fusionnée doit être précédée de la sienne (REQ-GOV-023) — `gov:etat` rougit sinon.'
   );
 } else {
-  for (const e of entrees.slice(0, 3)) {
+  // TROIS ENTRÉES, et leur motif : le journal est la seule prose de la vue, chaque entrée tient
+  // plusieurs paragraphes, et une session qui reprend a besoin des dernières, pas de l'histoire.
+  // La troncature dit l'affiché, le total et où lire le reste (GOV-079), comme celle de « Tâches ».
+  const rendues = entrees.slice(0, ENTREES_DE_JOURNAL_RENDUES);
+  for (const e of rendues) {
     lignes.push(`### PR #${e.pr} — ${e.date} — ${e.titre}`);
     lignes.push('');
     lignes.push(e.corps.split('\n').slice(1).join('\n').trim());
     lignes.push('');
   }
-  if (entrees.length > 3)
-    lignes.push(`… ${entrees.length - 3} entrée(s) plus ancienne(s) dans \`docs/journal/\`.`);
+  if (entrees.length > rendues.length)
+    lignes.push(
+      `… ${rendues.length} entrée(s) affichée(s) sur ${entrees.length} ; les ${entrees.length - rendues.length} plus ancienne(s) se lisent dans \`docs/journal/\`.`
+    );
 }
 // Chaque entrée rendue laisse déjà sa ligne vide derrière elle : en ajouter une ici produirait une
 // ligne vide en double, que le prochain `diff` du fichier dérivé ferait passer pour un changement.
