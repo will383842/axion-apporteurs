@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `7e25c56` — 2026-09-26T08:04:20+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #136 (un conflit avec `main`) · 3. #140 (un conflit avec `main`) |
+| Où est `main` ? | `2e57edd` — 2026-09-26T17:55:28+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #140 (un conflit avec `main`) · 3. #145 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/115 tâches, reste 61.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #139 — 2026-09-26 |
+| Dernière entrée de journal | PR #145 — 2026-09-26 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -65,8 +65,8 @@ Reste sur ce chemin : **14.75 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #145 — feat(SEC-06): lot L0-05 — réception des webhooks axionia, evenements_recus et battements ; émetteur e-mail et rebonds | `t/lot-l0-05` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -82,7 +82,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées
+`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition · `docs/adr/0023-route-des-coordonnees-de-candidature.md` — partners/ADR-0023 — Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
@@ -94,13 +94,55 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `7e25c56` (2026-09-26T08:04:20+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `2e57edd` (2026-09-26T17:55:28+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #145 — 2026-09-26 — feat(SEC-06): lot L0-05 — réception des webhooks axionia, evenements_recus et battements ; émetteur e-mail et rebonds
+
+**Fait.** SEC-06 porte la PR, INT-T10 est dans son champ `Lot:`. La réception des événements
+d'axionia vérifie le secret dédié, borne le corps à 128 Ko avant de le lire en entier, vérifie la
+signature `<secondes>.<corps exact>` à temps constant avec une tolérance de 300 s, juge l'enveloppe
+par le Zod publié du contrat et la frontière de REQ-INT-029, puis inscrit l'événement dans
+`evenements_recus` avant tout traitement ; le doublon, par `event_id` ou par `paymentId`, est refusé
+par la base et rend 200 `{duplicate:true}`. Une version inconnue bien formée est inscrite `held`. Le
+travail de fond, confié à `after()`, met en attente le devis sans client et le paiement sans
+facture, les réveille à l'arrivée du parent, écrit `en_erreur` sous le nom de l'erreur, et un
+battement par passage dans `battements`. La migration `20260927000000_evenements_recus_et_battements`
+pose les enums, les tables, les CHECK, les deux index partiels et le déclencheur qui ne laisse
+écrire que les cinq colonnes du traitement. L'émetteur d'INT-T10 écrit une ligne `courriels_envoyes`
+par demande, retenue et visible quand l'adresse est supprimée ou que le drapeau DMARC n'est pas
+vrai, sans appel au relais ; le webhook des rebonds vérifie `Producer-Signature` et seul un rebond
+définitif ajoute une ligne à `suppressions_courriel`. Migration
+`20260927000100_courriels_envoyes_et_suppressions`, secret et variables dans `src/lib/env.ts`.
+
+**Reste.** L'arbitrage des libellés de `type_evenement_recu` appartient à A02 : la base porte les
+identifiants en snake_case et non les noms de fil par `@map`, parce que `gov:termes-interdits`
+refuse un nom d'événement écrit hors de `packages/contracts`, y compris dans `prisma/` ; le point 10
+de `partners/ADR-0022` et l'acceptance (9) de SEC-06 sont à amender, ou la garde à ouvrir à une
+ligne `@map` d'enum. Les effets métier du traitement appartiennent à DM-10-P et DM-15, qui se
+brancheront sur le port `dispatch`. La reprise automatique d'un événement `en_erreur` n'est portée
+par aucune tâche à ce jour. L'appel réel à l'interface d'envoi du relais et le câblage de
+`demanderEnvoi` dans l'envoi du lien magique de SEC-03 attendent la lecture de la rubrique 2 de
+`docs/tiers/zeptomail.md`, que `A01` répartit, et la pose du drapeau par Will. La charge réelle d'un
+rebond, à enregistrer en fixture, attend la même lecture. Les preuves rouges de
+`partners:webhook:idempotent` et `webhook-4-verdicts` attendent un passage de porte A. REQ-QA-026
+reste à verser aux `reqs` de SEC-06 par le `gardien-spec`. Les trois specs d'intégration n'ont
+tourné qu'en CI, faute de Docker sur le poste.
+
+**Appris.** Le schéma tranché par l'architecte et une garde bloquante peuvent se contredire : un
+libellé Postgres `client.cree` posé par `@map` est refusé par `gov:termes-interdits`, qui lit
+`prisma/` et n'exempte que les commentaires des fichiers `.prisma` et `.sql`. Les fixtures du
+producteur axionia pseudonymisent `subject_ref` et le payload séparément : l'identifiant du sujet
+n'y est plus celui que la charge porte, et une dépendance entre deux événements ne se rejoue pas
+sur ces fixtures. Déplacer une constante vers un module partagé fait rougir le contrôle 3 de
+`harnais-mcp` : la liste des symboles que la porte MCP peut importer vit dans
+`src/server/mcp/registre.ts`. `journal:sans-pii` refuse le mot nu `evenement` jusque dans le nom
+d'un paramètre de type.
 
 ### PR #139 — 2026-09-26 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées
 
@@ -235,87 +277,7 @@ sa survie ne dit rien de la garde. Enfin, la Gate A de ce tour a rougi sur le t�
 `gov:trace` : INT-T11 porte son périmètre à 90 tâches, exactement deux fois le plancher, et la tranche
 prise au milieu de la liste débordait d'une case. La tranche est désormais bornée à la liste.
 
-### PR #134 — 2026-09-26 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables
-
-**Fait.** Le parcours de connexion existe de bout en bout : l'écran `/connexion` (un champ de
-courriel étiqueté, un bouton, une réponse qui ne dépend que de l'état rendu par le noyau) et
-l'arrivée `/connexion/<jeton>` (une confirmation, jamais une consommation à l'affichage) appellent
-`demanderLien` et `consommerLien` par deux actions serveur. Le câblage
-(`src/server/auth/lien-magique-production.ts`) lit MAGIC_LINK_SECRET et SESSION_SECRET par le
-lecteur de SEC-01, leurs `kid` par `kidDe`, l'adresse publique au registre de l'entité ; les deux
-compteurs appellent `limiter` du registre (`magic:ip`, `magic:courriel`) ; le travail différé part
-dans `after()`. La migration `20260926000000_lien_magique_et_session` crée `liens_magiques` et
-`sessions_espace` et ajoute à `apporteurs` le courriel chiffré et son empreinte unique
-(`email_chiffre`, `email_hash`), que l'adaptateur lit pour trouver le compte et l'adresse stockée.
-Seules des empreintes HMAC-SHA-256 sont stockées (partners/ADR-0013, décision 14, vecteur figé vu
-rougir). SEC-03 porte la PR.
-
-**Reste.** Le cookie de session `__Host-` et la révocation appartiennent à SEC-04 (REQ-SEC-003) : la
-session est enregistrée en base, son jeton n'est pas encore remis au navigateur. L'envoi réel du
-courriel appartient à INT-T10 ; hors production le lien part au puits du notifieur (`NOTIFY_SINK`),
-qui n'écrit ni le lien ni l'adresse, et en production l'envoi échoue en le disant. Le harnais
-d'accessibilité de UX-P0-03 est sur `main`, mais il déclare lui-même les routes réelles « non
-mesurées » : le serveur de test du navigateur appartient à QA-T16, et le test du parcours sous ce
-harnais attend ce serveur. Les deux routes ont leur entrée `size-limit` (plafond dérivé de
-REQ-GOV-028) ; le mesureur par route appartient à QA-T20, et la mesure à la main dit que
-`/connexion` pèse 175 099 octets de JavaScript compressé (six fichiers, tous du cadriciel, aucun
-composant client), au-dessus des 75 Ko de REQ-UX-033. La page « lien déjà utilisé » et le code de repli appartiennent à UX-P1-04, la lecture
-seule du résilié à SEC-19. Les colonnes de courriel de l'apporteur, dues par l'acceptance (1) de
-SEC-08, sont posées ici. Le test en base réelle n'a tourné qu'en CI, faute de Docker sur le poste.
-
-**Appris.** `next build` réécrit `tsconfig.json` à chaque passage tant que ses réglages manquent,
-et le `allowJs` qu'il propose rend inutiles deux `@ts-expect-error` d'une spec de gouvernance :
-les réglages imposés sont écrits une fois, `allowJs` à faux. La garde `securite:rate-famille`
-refuse un magasin passé à `limiter` hors des tests : le câblage n'en passe aucun, et le témoin en
-base réelle remplace les deux ports de comptage dans le test. Une barre oblique inverse suivie de
-`b`, écrite dans un gabarit de script, devient un caractère de contrôle invisible dans le fichier
-produit.
-
-**Relecture.** La tête `b579da0` a été refusée par `exactitude` (revue 5323893967) : l'écran et le
-câblage manquaient, et le Reste disait à tort qu'aucune tâche ne porte l'envoi (INT-T10 le porte).
-Ce tour livre l'écran, les actions et leur câblage, et la spec lit l'oracle des limites au registre,
-lui-même confronté au texte de REQ-SEC-002. `mutation` a refusé la même tête (revue 5323944954) :
-l'adaptateur a désormais sa spec sur faux client (le filtre d'annulation, la condition transmise,
-le nombre rendu), chaque CHECK et chaque branche du déclencheur a son témoin en base et sa lecture
-statique, et les statuts qui ouvrent l'espace ont leur spec sous le domaine. Six mutants joués
-rougissent. Reste équivalent, nommé : `ecrites !== 1` remplacé par `ecrites < 1` survit, parce
-que l'empreinte est unique et qu'une consommation n'écrit jamais deux lignes.
-
-**Relecture, second tour.** La tête `d3d0586` a été acceptée par `schema` et `securite`, refusée
-par `exactitude` (revue 5324241478) sur un seul motif : l'écran d'arrivée réécrivait l'état vide de
-`/connexion/<jeton>`, déjà déclaré dans `etats-vides.ts`, avec un second titre, une seconde phrase
-et le même bouton sous une autre apostrophe. L'issue d'un lien qui ne vaut plus lit désormais cet
-état vide mot pour mot, les doublons sont retirés de `vocabulaire.ts`, et deux témoins rougissent
-si un écran affiche un texte absent de la micro-copie ou si un texte de l'espace existe en deux
-graphies. Deux dettes de `securite` sont fermées : un témoin rougit si le travail différé
-s'exécute avant la réponse (vu rougir sur le mutant qui l'exécute tout de suite), et l'issue de la
-consommation s'affiche sur `/connexion?issue=`, une URL qui ne porte plus le jeton.
-`mutation` a refusé la même tête (revue 5324263876) sur des survivants portés par le code ajouté au
-premier tour. Les compteurs du câblage sont jugés par leur effet : seul le magasin change, à la
-frontière du registre, et chaque port compte sous son nom et refuse à sa limite plus un, panne
-distinguée du refus ; le test en base réelle n'a plus de copie des compteurs. Les actions serveur
-et la page d'arrivée ont leur spec (piège évalué, travail différé confié à `after()`, empreinte
-réseau à la consommation, aucun jeton ni courriel dans les sorties, affichage qui ne consomme
-rien) ; le signalement du piège et l'empreinte réseau ont leurs témoins ; la lecture statique
-exige le connecteur OR de chaque colonne immuable et refuse tout désarmement dans la migration ;
-le statut des apporteurs d'intégration et le piège des observations sont écrits à chaque appel.
-Les quatorze mutants de la revue, rejoués un par un sur l'arbre commité, rougissent tous.
-
-**Porte A.** Les quatre lentilles ont accepté `c26a48b`, et la porte A a rougi (run 36214735286) sur
-trois témoins, tous défauts de test, aucun du code. Le témoin « la demande d'un apporteur n'annule
-pas le lien d'un autre » ne mesurait rien : son apporteur portait le code de parrainage
-`AX00SECL`, que la base refuse (`apporteurs_code_parrainage_format`, le L n'est pas dans
-l'alphabet Crockford), et la création échouait avant la demande. Le témoin de la seconde session
-attendait le nom de la contrainte dans un message que Prisma ne transmet pas pour une requête
-brute (code 23505 et détail seulement) : le bloc lit désormais le nom dans le diagnostic de
-Postgres (`GET STACKED DIAGNOSTICS`) et exige `sessions_espace_lien_magique_id_key`, sans se
-contenter d'un refus quelconque. Le témoin de `perf:budgets` sur le dépôt réel attendait zéro
-route : il lit maintenant le nombre de routes sur les fichiers suivis, et exige autant d'entrées.
-Les lignes « red-first, 0 rouge » du journal de la porte sont la sortie des témoins de
-`tests/unit/qualite/red-first.spec.ts`, sur leurs dépôts jetables : ce spec est vert, et
-`pnpm red-first` sur cette branche juge neuf tests nouveaux, neuf rouges contre `main`.
-
-… 59 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 60 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
