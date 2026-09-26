@@ -128,6 +128,19 @@ function univers(o: Options = {}) {
     session: { secret: randomBytes(32).toString('hex'), kid: randomBytes(4).toString('hex') },
   };
 
+  /** Les deux compteurs de REQ-SEC-002, simulés ; la trace les nomme comme le registre. */
+  const compter = async (nom: string, sujet: string, maintenantMs: number) => {
+    noter('limiter', nom, sujet, maintenantMs);
+    if (o.limiteQuiLeve) throw new Error('cache injoignable');
+    if (o.limiteEnPanne) return { autorise: false, panne: true };
+    const cle = `${nom}${sujet}`;
+    const vus = (compteurs.get(cle) ?? []).filter((t) => t > maintenantMs - FENETRE_MS);
+    const autorise = vus.length < (LIMITES_REQ_SEC_002[nom] ?? 0);
+    if (autorise) vus.push(maintenantMs);
+    compteurs.set(cle, vus);
+    return { autorise, panne: false };
+  };
+
   const demande: PortsDeDemande = {
     maintenant: () => new Date(horloge.t),
     adresseDuClient: (entetes) => {
@@ -142,17 +155,8 @@ function univers(o: Options = {}) {
       noter('empreinteCourriel', saisie);
       return empreinteCourrielSimulee(saisie);
     },
-    limiter: async (nom, sujet, maintenantMs) => {
-      noter('limiter', nom, sujet, maintenantMs);
-      if (o.limiteQuiLeve) throw new Error('cache injoignable');
-      if (o.limiteEnPanne) return { autorise: false, panne: true };
-      const cle = `${nom}${sujet}`;
-      const vus = (compteurs.get(cle) ?? []).filter((t) => t > maintenantMs - FENETRE_MS);
-      const autorise = vus.length < (LIMITES_REQ_SEC_002[nom] ?? 0);
-      if (autorise) vus.push(maintenantMs);
-      compteurs.set(cle, vus);
-      return { autorise, panne: false };
-    },
+    compterAdresse: (sujet, maintenantMs) => compter('magic:ip', sujet, maintenantMs),
+    compterCourriel: (sujet, maintenantMs) => compter('magic:courriel', sujet, maintenantMs),
     planifier: (travail) => {
       noter('planifier');
       differe.push(travail);
