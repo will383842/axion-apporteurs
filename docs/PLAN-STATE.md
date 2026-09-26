@@ -133,7 +133,10 @@ son exigence ne se branche sur aucun limiteur réel, elle refuse. Enfin, le cont
 source brut, commentaires compris : écrire le nom de l'environnement global dans un commentaire d'un
 fichier de l'adaptateur suffit à le faire rougir. Et un fichier de `src/` dont le nom contient
 `contrat` est pris par `gov:entite` pour le point de sortie du contrat d'apporteur : le contrat du socle
-vit donc dans `socle.ts`.
+vit donc dans `socle.ts`. Enfin, un fichier de `tests/integration/` ne nomme pas l'objet global
+du processus, sauf `execPath` : la garde statique du harnais de conteneurs le refuse. Une variable
+d'environnement s'y pose par `vi.stubEnv`, et un binaire s'y lance par `execPath` et le chemin de
+`tsx`.
 
 ### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
 
