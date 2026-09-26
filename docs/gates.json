@@ -602,7 +602,7 @@
       "tache": "SEC-06",
       "verifie": "200 / 401 / 401 / 413 / duplicate ; fixtures signees par le producteur reel ; jamais de 5xx",
       "fixtureRouge": "accepter une signature plaintext seule",
-      "preuveRouge": null
+      "preuveRouge": "npx vitest run tests/unit/securite/webhook-signature.spec.ts sous le mutant de la fixtureRouge, lot L0-05 (SEC-06), 2026-09-26 : la signature egale au secret en clair acceptee -> 1 echec, REQ-SEC-010 un en-tete absent est refuse, sans repli en clair (AssertionError: expected true to be false), Tests 1 failed | 24 passed ; code restaure, 25/25"
     },
     {
       "id": "G-SEC-REVOCATION",
@@ -752,7 +752,7 @@
       "tache": "INT-T10",
       "verifie": "sendEmail refuse un expediteur noreply@ et refuse d'envoyer sans PARTNERS_EMAIL_DMARC_VERIFIE ; le domaine d'envoi est celui tranche par W3",
       "fixtureRouge": "envoyer depuis noreply@",
-      "preuveRouge": null
+      "preuveRouge": "npx vitest run tests/unit/email/emetteur.spec.ts sous deux mutants, lot L0-05 (INT-T10), 2026-09-26 : le refus des adresses sans reponse retire -> 4 echecs expediteur_sans_reponse (expected function to throw an error, but it didn't) ; la branche du drapeau DMARC neutralisee -> 2 echecs (face ROUGE drapeau faux, drapeau absent), Tests 2 failed | 21 passed ; code restaure, 23/23"
     },
     {
       "id": "sante",

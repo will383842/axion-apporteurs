@@ -29,6 +29,32 @@ d'envoi. La fiche n'est donc pas une documentation d'accompagnement : c'est la p
 lecture : la valeur exacte à inclure dans l'enregistrement SPF, la forme de l'enregistrement DKIM publié, la
 construction de l'en-tête de signature du webhook de rebonds, et la nomenclature des motifs de rebond.
 
+### Ce que Partners applique en attendant — lu chez notre producteur voisin, pas à la source
+
+Lu le 2026-09-26 dans axionia, qui reçoit déjà les rebonds du même relais
+(`src/server/email/zeptomail-webhook-signature.ts` et `src/server/email/bounce-service.ts`, commit
+`4461316ba`). **Ce n'est pas la documentation officielle** : ces lignes ne remplissent pas le tableau
+ci-dessus, dont la lecture reste à relever par le lecteur désigné par `A01`. Elles disent ce que le code
+d'INT-T10 applique (`src/server/integrations/zeptomail/rebonds.ts`), pour qu'une lecture de la source
+le confronte ligne à ligne.
+
+| Élément | Forme appliquée par INT-T10 |
+| --- | --- |
+| En-tête de signature | `Producer-Signature: ts=<horodatage en millisecondes>;s=<condensat base64>;s-algorithm=HmacSHA256`, champs dans un ordre quelconque ; tout autre algorithme annoncé est refusé |
+| Condensat | HMAC-SHA256 du corps brut sous la clé d'authentification du webhook, en base64 ; le bourrage arrive percent-encodé et se décode avant la comparaison ; une seconde tentative porte sur le corps percent-décodé, que la documentation prescrirait selon axionia |
+| Tolérance | 300 secondes sur un horodatage en millisecondes (REQ-INT-023) ; l'horodatage n'entre pas dans le condensat, une livraison capturée reste donc rejouable dans sa fenêtre |
+| Exemple d'en-tête que cite axionia, attribué à la documentation | `ts=1596109465823;s=dN0yVozgabP5NPlxMDfP1r5u65bVO9kTGEZMIQlqI2o%3D;s-algorithm=HmacSHA256` |
+| Nom de l'événement de rebond définitif | `hardbounce` ; `softbounce` pour un rebond temporaire |
+| Chemin de l'adresse rebondie | `event_message.email_info.to[].email_address[].address` (tableau d'objets ; un objet seul est lu de même) |
+| Instant du rebond | `event_message.event_data.details.time` |
+
+**Forme sûre tant que la charge réelle n'est pas enregistrée** : seul `hardbounce` ajoute une ligne à la
+liste de suppression, une par adresse ; `softbounce` est journalisé et n'ajoute rien ; tout autre nom
+d'événement, une charge illisible, une adresse absente ou plusieurs adresses distinctes rendent 200
+sans effet et lèvent une alerte — jamais une suppression par défaut. La fixture
+`tests/fixtures/zeptomail/rebond-definitif.json` transcrit cette forme et se déclare non confrontée ;
+la première charge réelle la remplace.
+
 ### Preuve d'alignement DMARC — condition de REQ-INT-022
 
 | Élément | État au 2026-09-03 |
@@ -100,6 +126,8 @@ panne longue est donc à surveiller, l'e-mail étant ici le support d'une obliga
 | Forme de l'en-tête de signature du webhook, extrait cité | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant la fixture de REQ-INT-023 |
 | Quotas du plan et nomenclature des motifs de rebond | `A01` répartit ; le lecteur date sa lecture dans la fiche | avant la fixture de REQ-INT-023 |
 | Région du compte et durée de conservation | Will | premier envoi réel |
+| Charge réelle d'un rebond définitif, enregistrée en fixture, et forme de la rubrique 2 confrontée à la source | `A01` répartit ; le lecteur date sa lecture dans la fiche | mise en service du webhook de rebonds |
+| Réponse qu'attend le relais à la création du webhook : axionia a mesuré qu'une sonde non signée y exige un 200, et Partners répond 401 à une signature refusée | Will, à la mise en service | création du webhook côté relais |
 
 ## 9. Référence à citer dans une fixture
 

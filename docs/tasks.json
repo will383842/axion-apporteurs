@@ -2675,7 +2675,12 @@
         "docs/gates.json",
         "prisma/migrations/",
         "prisma/seed/03-evenements-recus.ts",
-        "src/server/taches/registre.ts"
+        "src/server/taches/registre.ts",
+        "src/server/securite/primitives-de-porte.ts",
+        "src/server/mcp/porte.ts",
+        "tests/unit/securite/evenements-recus-migration.spec.ts",
+        "tests/unit/integration/evenement-recu-travail.spec.ts",
+        "src/server/mcp/registre.ts"
       ],
       "schema": true,
       "sensible": [],
@@ -3094,7 +3099,11 @@
         "prisma/schema.prisma",
         "prisma/migrations/",
         "prisma/seed/04-courriels.ts",
-        "src/server/notifications/table-ssot.ts"
+        "src/server/notifications/table-ssot.ts",
+        "src/lib/env.ts",
+        "tests/unit/email/rebonds.spec.ts",
+        "tests/unit/email/courriels-migration.spec.ts",
+        "tests/fixtures/zeptomail/rebond-definitif.json"
       ],
       "schema": true,
       "sensible": [],

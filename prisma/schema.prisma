@@ -181,6 +181,7 @@ model Apporteur {
   identitesFacturation IdentiteFacturation[]
   liensMagiques        LienMagique[]
   sessionsEspace       SessionEspace[]
+  courrielsEnvoyes     CourrielEnvoye[]
 
   @@map("apporteurs")
 }
@@ -250,4 +251,150 @@ model IdentiteFacturation {
 
   @@index([apporteurId])
   @@map("identites_facturation")
+}
+
+// ── SEC-06 : la réception des webhooks et le battement des tâches de fond (partners/ADR-0022) ──
+
+/// La source d'un événement reçu (REQ-DM-036, `docs/GLOSSAIRE.md` §4).
+enum SourceEvenementRecu {
+  axionia
+  docuseal
+
+  @@map("source_evenement_recu")
+}
+
+/// Les types d'événements reçus : les sept de `TYPES_EVENEMENT` (`packages/contracts/events.ts`),
+/// chacun sous son identifiant snake_case — le nom de fil dont le point devient un souligné. La
+/// base porte le MÊME libellé : un nom de fil écrit ici en clair serait une recopie du contrat que
+/// `gov:termes-interdits` refuse hors de `packages/contracts`. La correspondance est DÉRIVÉE par
+/// `identifiantDuType` et confrontée à `pg_enum` par `tests/integration/webhook.spec.ts`.
+/// INT-T01c y ajoutera les quatre types entrants, INT-T12 les types DocuSeal.
+enum TypeEvenementRecu {
+  client_cree
+  client_mis_a_jour
+  devis_signe
+  facture_emise
+  avoir_emis
+  paiement_recu
+  paiement_rembourse
+
+  @@map("type_evenement_recu")
+}
+
+/// Le statut d'un événement reçu. `held` : bien formé, de `schema_version` inconnue — inscrit et
+/// alerté, jamais rejeté (REQ-ARG-003).
+enum StatutEvenementRecu {
+  recu
+  traite
+  en_attente_dependance
+  held
+  en_erreur
+
+  @@map("statut_evenement_recu")
+}
+
+/// Réception des webhooks (REQ-DM-036, glossaire §5). Inscrite AVANT tout traitement ; le traitement
+/// est hors requête (`src/server/queue/workers/evenement-recu.ts`). En ajout seul : seules les cinq
+/// colonnes du traitement s'écrivent après l'inscription (déclencheur
+/// `evenements_recus_reception_immuable`, SQL brut).
+model EvenementRecu {
+  id            String              @id @default(uuid()) @db.Uuid
+  source        SourceEvenementRecu
+  /// axionia : `event_id` de l'enveloppe (uuid v4). DocuSeal : clé dérivée (REQ-SEC-034).
+  eventId       String              @map("event_id") @db.VarChar(200)
+  eventType     TypeEvenementRecu   @map("event_type")
+  schemaVersion Int                 @map("schema_version")
+  /// Séquence d'émission axionia (REQ-INT-012) ; nulle pour DocuSeal.
+  sequence      BigInt?
+  /// La référence de sujet de l'enveloppe, mise à plat (`client:<id>`) : c'est elle qu'un enfant en
+  /// attente cite comme dépendance.
+  sujetRef      String?             @map("sujet_ref") @db.VarChar(180)
+  /// Clé métier d'unicité : le `paymentId` des paiements ; nulle sinon (REQ-ARG-002).
+  cleMetier     String?             @map("cle_metier") @db.VarChar(120)
+  /// La référence du parent attendu, présente si et seulement si `en_attente_dependance`.
+  dependanceRef String?             @map("dependance_ref") @db.VarChar(180)
+  /// Le payload reçu, SANS donnée personnelle : la frontière de REQ-INT-029 est jugée à la porte.
+  charge        Json
+  /// SHA-256 du CORPS BRUT reçu, avant tout parse.
+  payloadHash   String              @map("payload_hash") @db.Char(64)
+  statut        StatutEvenementRecu
+  receivedAt    DateTime            @map("received_at") @db.Timestamptz(3)
+  survenuAt     DateTime            @map("survenu_at") @db.Timestamptz(3)
+  processedAt   DateTime?           @map("processed_at") @db.Timestamptz(3)
+  /// Nom de l'erreur de traitement ; jamais un extrait de la charge ni un message.
+  error         String?             @db.VarChar(500)
+  retryCount    Int                 @default(0) @map("retry_count")
+
+  @@unique([source, eventId])
+  @@index([statut, receivedAt])
+  @@index([sujetRef])
+  @@map("evenements_recus")
+}
+
+/// Battement des tâches de fond (REQ-QA-026). `tache` : clé de `src/server/taches/registre.ts`
+/// (exception E1 de partners/ADR-0022, point 9), forme tenue par un CHECK.
+model Battement {
+  tache           String    @id @db.VarChar(64)
+  dernierSuccesAt DateTime? @map("dernier_succes_at") @db.Timestamptz(3)
+  dernierEchecAt  DateTime? @map("dernier_echec_at") @db.Timestamptz(3)
+  /// Compteurs du dernier passage — identifiants et nombres seuls.
+  compteurs       Json?
+
+  @@map("battements")
+}
+
+// ── INT-T10 : l'émetteur de courriels et la liste de suppression (partners/ADR-0022) ──────────
+
+/// Le statut d'une demande d'envoi (REQ-INT-022, REQ-INT-023). Un envoi RETENU est visible, jamais
+/// jeté : il écrit sa ligne, et n'appelle pas le relais.
+enum StatutCourriel {
+  envoye
+  retenu_adresse_supprimee
+  retenu_dmarc_non_verifie
+  echec
+
+  @@map("statut_courriel")
+}
+
+/// Le motif d'une suppression. Une valeur de plainte n'entre ici que si le relais émet réellement
+/// cet événement (INT-T10, acceptance 6).
+enum MotifSuppressionCourriel {
+  rebond_definitif
+
+  @@map("motif_suppression_courriel")
+}
+
+/// Chaque demande d'envoi, qu'elle parte ou non (REQ-INT-022, REQ-INT-023, REQ-UX-016). Aucun corps,
+/// aucune adresse : l'empreinte de recherche seule. DM-07 y ajoutera `attribution_id`.
+model CourrielEnvoye {
+  id                   String         @id @default(uuid()) @db.Uuid
+  /// Exception E2 de partners/ADR-0022 (point 9) : clé de `src/server/notifications/table-ssot.ts`.
+  gabarit              String         @db.VarChar(64)
+  /// Empreinte de l'adresse de destination (`empreinteRecherche('courriel', …)`).
+  emailHash            String         @map("email_hash") @db.Char(64)
+  apporteurId          String?        @map("apporteur_id") @db.Uuid
+  apporteur            Apporteur?     @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  statut               StatutCourriel
+  demandeAt            DateTime       @map("demande_at") @db.Timestamptz(3)
+  /// La date qui fait courir un délai (REQ-UX-016) — jamais une date de lecture.
+  envoyeAt             DateTime?      @map("envoye_at") @db.Timestamptz(3)
+  fournisseurMessageId String?        @map("fournisseur_message_id") @db.VarChar(200)
+  /// Un code fermé, jamais la réponse du relais.
+  erreur               String?        @db.VarChar(300)
+
+  @@index([emailHash])
+  @@index([apporteurId, gabarit])
+  @@index([statut, demandeAt])
+  @@map("courriels_envoyes")
+}
+
+/// La liste de suppression (REQ-INT-023). Idempotente par construction : une adresse, une ligne.
+model SuppressionCourriel {
+  id        String                   @id @default(uuid()) @db.Uuid
+  emailHash String                   @unique @map("email_hash") @db.Char(64)
+  motif     MotifSuppressionCourriel
+  survenuAt DateTime                 @map("survenu_at") @db.Timestamptz(3)
+  creeAt    DateTime                 @map("cree_at") @db.Timestamptz(3)
+
+  @@map("suppressions_courriel")
 }

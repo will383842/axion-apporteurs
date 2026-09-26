@@ -1,0 +1,17 @@
+{
+  "Source": "Source: AUCUNE charge reelle du relais n a ete enregistree a ce jour (INT-T10, 2026-09-26). Cette charge est la TRANSCRIPTION de la forme que lit notre producteur voisin, axionia (src/server/email/bounce-service.ts, fonction lireRebond, et le spec src/app/api/zeptomail/webhook/rattachement-reponses.spec.ts, commit 4461316ba, lus le 2026-09-26) : event_name, event_message.email_info.to[].email_address[].address, event_message.event_data.details.time. Adresse et identifiants de test, domaine reserve .test. A REMPLACER par la premiere charge reelle enregistree, avec sa date (RM-03).",
+  "Confronte-a": "Confronte-a: docs/tiers/zeptomail.md#2-source-officielle — non confrontee : la rubrique 2 de la fiche est a relever.",
+  "charge": {
+    "event_name": "hardbounce",
+    "event_message": {
+      "request_id": "requete-de-test-1",
+      "email_info": {
+        "to": [{ "email_address": [{ "address": "adresse-morte@exemple.test" }] }],
+        "subject": "Sujet de test"
+      },
+      "event_data": {
+        "details": { "time": "2026-09-26T09:58:00Z", "reason": "motif de test du relais" }
+      }
+    }
+  }
+}
