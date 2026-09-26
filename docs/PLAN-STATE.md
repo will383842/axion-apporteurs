@@ -122,14 +122,28 @@ décidés changent, aucune entrée perdue, aucun texte raccourci. Gardes jouées
 `contrat-hash.spec.ts` vertes. `gov:adr` rougit sur les trois renvois du glossaire à
 partners/ADR-0022, que l'architecte écrit sur cette même branche.
 
-**Reste.** L'architecte écrit partners/ADR-0022, la décision 15 de partners/ADR-0013 et
-partners/ADR-0023 dans cette PR. Quatre points de la décision n'ont pas pu être appliqués et
-restent dus : les `reqs` à ajouter à SEC-06, SEC-04, DM-12 et UX-P1-08 (aucun verbe n'écrit ce
-champ) ; les colonnes nom, prénom, téléphone et `phoneHash` de `apporteurs`, que la décision
-confiait à SEC-03, fusionnée entre-temps par la PR 134 avec le seul courriel ; l'amendement de
-REQ-INT-004, REQ-QA-007 et REQ-GOV-020, porté par l'acceptance d'INT-T01c en même temps que le
-contrat ; la citation de REQ-EXT-009 par INT-T26. Les valeurs de `QualiteExercice` et
-`ProfessionReglementee` restent à inscrire au glossaire avant DM-11.
+Puis l'architecte, sur la même branche : partners/ADR-0022 (carte du schéma des phases 0 et 1),
+partners/ADR-0023 (route HMAC d'axionia des coordonnées de candidature, troisième API) et la
+décision 15 de partners/ADR-0013 (lien « ce n'est pas moi » sans état) sont écrits, l'index est
+régénéré et `gov:adr` sort à 0. Les créateurs de valeurs de journal (DM-07, DM-08, DM-11, DM-12,
+DM-23, SEC-15, CPL-T06, EXT-T01, EXT-T03) portent `src/domain/evenement/charges.ts` et
+`docs/GLOSSAIRE.md` dans leurs `paths`, et `prisma/migrations/` quand il manquait (SEC-15, DM-10-P,
+DM-23, EXT-T03) ; INT-T01c porte le fichier de partners/ADR-0023. Sur décision de l'orchestrateur,
+les colonnes nom, prénom, téléphone et `phoneHash` de `apporteurs` reviennent à SEC-04, dont
+l'acceptance gagne un point (7). La route des coordonnées côté axionia est versée en INT-T27-A
+(phase 0, `schema: false`, sensible `rgpd`), et INT-T26 en dépend ; EXT-T01 dépend de DM-12, qui
+pose le champ chiffré `texte` qu'elle réutilise. Contrôle champ par champ contre la tête
+précédente : seuls ces champs ont changé, une tâche ajoutée.
+
+**Reste.** Trois points de la décision restent dus : les `reqs` à ajouter à SEC-06, SEC-04, DM-12
+et UX-P1-08 (aucun verbe n'écrit ce champ) ; l'amendement de REQ-INT-004, REQ-QA-007 et
+REQ-GOV-020, porté par l'acceptance d'INT-T01c en même temps que le contrat ; la citation de
+REQ-EXT-009 par INT-T26. `ProfessionReglementee` est décidée par partners/ADR-0022 (point 16 :
+`expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance`, un par code NAF
+de REQ-JUR-022) et reste à inscrire au glossaire avant DM-11. `QualiteExercice` n'est tirée
+d'aucune exigence : la liste des statuts d'exercice et leur libellé dans l'article 14 du contrat
+sont une décision de Will, à consigner au registre avant DM-11 (proposition dans
+partners/ADR-0022).
 
 **Appris.** Une exigence de phase 1 citée par une tâche de phase 0 fait rougir
 `gov:requirements` en `phase_non_derivee`, et aucun verbe n'écrit la phase d'une exigence : une
@@ -137,7 +151,10 @@ décision qui rattache une exigence à une tâche plus précoce ne s'applique pa
 tâches seul. Et la ligne d'un enum déjà présent au schéma ne peut énumérer que ce que le schéma
 porte : y inscrire d'avance les valeurs d'une tâche future fait rougir `partners:schema:enums` en
 `enum_divergent_du_glossaire` le jour même ; les valeurs décidées vivent à côté (§4.1) et entrent
-dans la ligne avec la migration qui les crée.
+dans la ligne avec la migration qui les crée. Enfin, une acceptance passée au verbe de réécriture
+depuis une chaîne entre guillemets doubles du shell a été corrompue en silence : chaque accent grave
+y a été exécuté comme une commande, et le verbe a écrit le reste, exit 0. Réécrite depuis un
+fichier, relue sur le disque ; le texte d'un champ de registre ne transite jamais par le shell.
 
 ### PR #134 — 2026-09-26 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables
 
