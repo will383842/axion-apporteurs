@@ -7,26 +7,26 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `02a7949` — 2026-09-26T00:28:10+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #130 (brouillon) |
+| Où est `main` ? | `5552ef6` — 2026-09-26T02:34:56+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #130 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
-| Où en est la phase ? | phase 0 — 35/110 tâches, reste 57.10 j |
+| Où en est la phase ? | phase 0 — 35/111 tâches, reste 57.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #129 — 2026-09-25 |
+| Dernière entrée de journal | PR #134 — 2026-09-26 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-35/110 tâches terminées · reste 57.10 j estimés.
+35/111 tâches terminées · reste 57.60 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 208 | JUR-T02, QA-T04, QA-T07, QA-T30, CPL-T22, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P … |
+| `a_faire` | 209 | JUR-T02, QA-T04, QA-T07, QA-T30, CPL-T22, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -58,14 +58,15 @@ Reste sur ce chemin : **13.50 j**.
 
 ## Hypothèses par défaut appliquées
 
-61 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
+62 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
 
 ## File de fusion
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #130 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y | `t/lot-l0-03` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un contrôle requis rouge ou une revue manquante |
+| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #130 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y | `t/lot-l0-03` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -81,25 +82,85 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-Aucun ADR daté du 2026-09-26 (jour du dernier atterrissage).
+`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
 
-**SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 40 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `02a7949` (2026-09-26T00:28:10+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `5552ef6` (2026-09-26T02:34:56+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #134 — 2026-09-26 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables
+
+**Fait.** Le noyau du lien magique (`src/server/auth/lien-magique.ts`) répond à la demande sans lire
+le compte, limite par empreinte d'adresse réseau et par courriel en refusant sur panne, et consomme
+le lien par une écriture conditionnelle unique qui ouvre au plus une session. Seules des empreintes
+HMAC-SHA-256 sont stockées, sous `MAGIC_LINK_SECRET` pour le lien et `SESSION_SECRET` pour la
+session, chacune dans son domaine et avec son `kid` (partners/ADR-0013, décision 14, dont le vecteur
+figé est posé et vu rougir sous mutant). La migration `20260926000000_lien_magique_et_session` crée
+`liens_magiques` et `sessions_espace`, leurs CHECK et le déclencheur `liens_magiques_usage_unique` ;
+l'adaptateur Prisma des ports est `src/server/auth/lien-magique-depot.ts`. SEC-03 porte la PR.
+
+**Reste.** Le point (4) de l'acceptance, l'écran `/connexion`, n'est pas livré : le dépôt n'a aucune
+page, ni `@types/react`, ni `jsx` au `tsconfig.json`, ni layout racine, et le harnais de UX-P0-03
+n'existe pas encore. Les ports `trouverApporteur`, `adresseStockee` et `envoyer` n'ont pas
+d'adaptateur : `apporteurs` ne porte aucune colonne de courriel et aucune tâche du registre ne la
+pose (SEC-08 est fusionnée sans l'avoir fait), ni l'envoi de courriel. Le test en base réelle
+`tests/integration/lien-magique.spec.ts` n'a tourné qu'en CI, faute de Docker sur le poste.
+
+**Appris.** La garde `securite:rate-famille` refuse, hors du registre des compteurs, toute chaîne
+qui porte un préfixe de famille et tout port nommé `limiter` : un noyau à ports prend un port par
+compteur, sans nom de compteur, et seul l'appel direct câblé par l'action nomme le compteur. La
+garde `journal:sans-pii` refuse aussi un simple paramètre nommé `evenement` sous `src/`.
+
+### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
+
+**Fait.** Le cadrage de l'architecte du 2026-09-26, pris sur délégation de Will, est inscrit au
+registre : SEC-03 et SEC-04 portent `schema: true`, SEC-03 crée `liens_magiques` et
+`sessions_espace` dans une même migration et ses `paths` portent la migration et les modules de
+durées, de dépôt du lien et d'accès à l'espace ; SEC-04 étendra `sessions_espace`. L'empreinte des
+jetons d'authentification est la décision 14 de partners/ADR-0013 (HMAC-SHA-256 sous le secret de
+l'usage, domaine séparé, `kid` stocké, pas de double clé pour les liens), et `HYP-SEC03-ACCES`
+ouvre l'espace aux statuts `signe` et `suspendu` et le ferme à `candidat`, `retenu`, `vivier`,
+`refuse`, `kyc_en_cours` et `pret_a_signer`. Les points (1) et (5) de l'acceptance de SEC-03 le
+disent. Sur décision du coordinateur, prise sur délégation de Will, la PR aligne aussi REQ-SEC-001 sur la
+décision 14, corrige la ligne `suspendu` du glossaire (accès à l'espace maintenu, nouveaux dépôts
+refusés) et passe DM-11 à `schema: true`, dette nommée par la PR 124. Après les deux relectures,
+REQ-SEC-003 et le point (2) de SEC-04 ne font plus révoquer les sessions à la suspension, seulement
+à la résiliation, au changement de courriel ou d'IBAN et pour motif de sécurité (contrat art. 3.8) ;
+`HYP-SEC03-ACCES` devient une liste blanche, `HYP-E1-24` exclut les liens de la double clé, et les
+art. 3.7 al. 3 et 12.3 que cite `HYP-SEC03-ACCES` ont leur ancrage dans `CONCORDANCES`. GOV-100
+porte la PR. Gardes jouées à 0 : `gov:tasks`, `gov:hypotheses`,
+`gov:attributions`, `gov:trace:verifier`, `plan-state:verifier`, `lot:paths:check`,
+`gov:identifiants`, `gov:lexique`, `gov:termes-interdits`, `gov:adr`, `gov:requirements`,
+`gov:preseance`, `partners:schema:enums`, `gov:etat`, `gov:publication`,
+`tests/unit/gouvernance/un-nom-une-garde.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`
+et `tests/unit/contrat/`.
+
+**Reste.** SEC-03 peut être attribuée sur ce cadrage. L'assertion de la décision 14 (un vecteur
+figé d'empreinte de lien) est due par SEC-03, celle de la session par SEC-04 : d'ici là,
+partners/ADR-0013 reste `propose`. Le mot « suspension » de REQ-SEC-002 et du point (3) de SEC-03
+désigne le refus d'une demande de lien au-delà de la limite de débit, pas le statut `suspendu` :
+il ne contredit pas `HYP-SEC03-ACCES`.
+
+**Appris.** Aucun verbe hors dépôt ne savait écrire `schema` dans `docs/tasks.json` : la dette
+nommée par la PR 124 pour DM-11 bloquait aussi ce cadrage. Le champ est écrivable depuis ce jour
+par `reecrire-champ.mjs`, sa valeur jugée booléenne par le schéma du dépôt ; DM-11 a été corrigée
+par le même geste dans cette PR. Et une ligne du registre des décisions qui cite un article du
+contrat fait rougir REQ-JUR-003 tant que `CONCORDANCES` ne l'ancre pas : les gardes de gouvernance
+sortaient à 0, seule `tests/unit/contrat/` le voyait. Une PR qui écrit `docs/DECISIONS.md` la lance.
 
 ### PR #129 — 2026-09-25 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee
 
@@ -109,144 +170,7 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 **Appris.** `reclasser.mjs --fusionnee` vérifie que la PR est fusionnée et que le sha est son commit de fusion, mais ne confronte JAMAIS l'identifiant de la tâche au titre ni au champ `Lot:` de la PR : joué sur un arbre jetable, QA-T07 a été attestée par la PR 128 de DM-06, exit 0. Chaque couple de cette PR a donc été confronté à la main au titre de sa PR. Et l'option `--si-inchange` qu'on croyait exigée par ce verbe n'existe pas dans son source.
 
-### PR #128 — 2026-09-25 — feat(DM-06): entite Apporteur, statut et matrice, code de parrainage, jetons, isTest, identites datees
-
-**Fait.** L'entité Apporteur existe : `StatutApporteur` (neuf valeurs), `MotifResiliation` et
-`RegimeTva` au schéma, tables `apporteurs`, `jetons_depot` et `identites_facturation` par une
-migration additive, CHECK de forme et déclencheur `jetons_depot_revocation_definitive` en SQL brut.
-Le domaine `src/domain/apporteur/` porte la matrice de transitions, le code de parrainage Crockford
-sur 30 bits, le jeton de dépôt (empreinte seule), `actif` et `dormant` dérivés avec la durée en
-paramètre, la population hors `isTest`, les autofactures par identité datée et le snapshot de
-candidature figé, en parité sur la fixture du producteur réel.
-
-**Reste.** La spec d'intégration `tests/integration/apporteur-jeton-depot.spec.ts` n'a tourné qu'en
-CI : pas de démon Docker sur le poste de l'auteur. Les effets de la résiliation (attributions,
-lignes, événements) et la trace nominative d'une surcharge de seuil ne sont pas ici. La matrice de
-transitions est dérivée du sens des statuts au glossaire §2 : une flèche manquante s'ajoute par la
-tâche qui la cite. `scripts/gates/gov-attributions.ts` est touché hors des `paths` de DM-06, pour
-déclarer en contexte la ligne `Source:` de la fixture.
-
-**Appris.** `gov:publication` lit tout `montantCents: NN` à deux chiffres ou plus comme un montant de
-grille, y compris dans un test : un témoin d'agrégat s'écrit avec des montants à un chiffre.
-`gov:attributions` lit la ligne `Source:` d'une fixture comme une attribution : nommer la tâche du
-producteur exige une déclaration `contexte` dans `CITATIONS_DECLAREES`.
-
-**Relecture.** L'architecte A02 a refusé la tête `9178314` (revue 5321833681) sur deux motifs, et
-`exactitude` et `securite`, qui acceptaient, relevaient des dettes voisines. (1) Le déclencheur ne
-comparait que `revoque_at` : changer l'empreinte d'un jeton révoqué puis réinsérer l'ancienne le
-réactivait, et `TRUNCATE` passait. Désormais une ligne révoquée est gelée (tout `UPDATE` et tout
-`DELETE` refusés), l'empreinte ne change jamais, même sur un jeton actif, un déclencheur
-d'instruction refuse `TRUNCATE`, et `CHECK revoque_at >= cree_at` est posé ; trois témoins
-d'intégration et une lecture statique de la migration, qui rougit sans Docker. (2) La matrice
-passe à la forme `statut x evenement -> statut` de CONVENTIONS §2 : liste fermée
-`EVENEMENTS_APPORTEUR`, un événement par flèche, flèches inchangées, balayage de 9 x 9 cellules.
-Le champ de la demande s'appelle `evenementApporteur` : `journal:sans-pii` réserve le mot nu du
-journal à son écrivain unique. Enfin la source d'aléa de production du code de parrainage est
-exportée (`sourceAleatoireSysteme`, sur `crypto.getRandomValues`), avec un test qui la prouve non
-constante.
-
-`mutation` a refusé la même tête (revue 5321894722) : aucun test ne fixait les flèches, le balayage
-lisait la matrice qu'il jugeait. Les couples attendus sont désormais écrits en littéraux dans la
-spec, confrontés dans les deux sens ; un motif hors vocabulaire est refusé (`motif_inconnu`) ; le
-jeton en clair est prouvé égal aux octets injectés et son empreinte à leur SHA-256 ; le refus d'une
-charge nomme le champ, jamais une valeur. Rejoué par le harnais du relecteur, adapté à la matrice
-réécrite : 15 mutants sur 15 tués, dont les cinq survivants d'avant.
-
-Tour 3 : A02, `exactitude` et `securite` acceptent `6e69616` ; `mutation` refuse (revue
-5322200613) et `gate-a` est rouge sur la couverture des branches (90 % sur
-`snapshot-candidature.ts`). Un témoin fixe désormais le refus d'une charge qui n'est pas un objet
-(`(racine)`), la couverture de `src/domain/apporteur/**` est à 100 %. La contrainte
-`jetons_depot_revocation_apres_creation` est lue par la spec statique et jouée en intégration. La
-lecture statique de la migration juge la FORME des branches du déclencheur (chaque condition
-suivie d'un RAISE) et leur ORDRE, et refuse une clause WHEN : les mutants qui ne rougissaient
-qu'en intégration rougissent sans Docker. La valeur refusée par la matrice est nommée et bornée à
-64 caractères ; plusieurs motifs hors liste sont essayés ; un espion prouve que la source de
-production délègue à `crypto.getRandomValues`. Onze mutants rejoués, onze tués.
-
-Dettes nommées, non traitées ici : aucune sortie depuis `kyc_en_cours` ni `pret_a_signer` hors
-l'avancée, car ni le glossaire §2 ni REQ-DM-011 n'en prévoient (un KYC abandonné reste bloqué ; à
-trancher avant la tâche qui la citera) ; `parrain_code_capture` reste sans borne, faute de valeur
-décidée ; le chevauchement d'identités de facturation n'est refusé que par le domaine, une
-contrainte `EXCLUDE USING gist` demande l'extension `btree_gist` et revient à la tâche qui écrit
-les identités ; l'effacement d'un apporteur passe par l'anonymisation, ses jetons révoqués étant
-indélébiles.
-
-### PR #126 — 2026-09-25 — feat(SEC-08): chiffrement PII avec AAD, empreintes HMAC, empreinte d'adresse seule, garde de schema
-
-**Fait.** `src/server/securite/pii.ts` porte la primitive des données personnelles, au format de
-`partners/ADR-0013`. `clesPii(process.env)` fait juger l'environnement par `lireEnvironnement`
-(SEC-01) et rend trois clés, une par usage, dans un type marqué que nulle autre fonction ne
-fabrique. `encryptPii` et `decryptPii` chiffrent en AES-256-GCM, IV tiré à chaque appel, avec
-l'AAD `["partners.pii",1,modele,champ,id]` : un bloc déplacé vers une autre ligne, un autre champ
-ou un autre modèle échoue en nommant l'échec d'authentification. `colonnesPii` est le chemin
-d'écriture : il rend l'identifiant lié, les blocs de suffixe `Chiffre` et les empreintes
-`emailHash`, `phoneHash`, `ibanHash`. `empreinteRecherche` fait un HMAC sous `PII_HASH_KEY` pour
-le courriel, le téléphone, l'IBAN (clé jugée par `cleIbanValide`) et le SIRET.
-`empreinteAdresseReseau` appelle `empreinteAdresse` de la frontière sous `IP_HASH_SALT`. La garde
-`securite:schema-pii` (alias `G-SEC-SCHEMA-PII`, câblée en CI avec son `:prove`, 10 familles,
-32 témoins, 5 contre-témoins) refuse deux choses : une colonne de personne en clair dans le
-schéma, et un bloc ou une empreinte écrits hors de `pii.ts`. 24 tests. Huit défauts injectés un à
-un ont chacun fait rougir leur contrôle.
-
-**Reste.** Aucun modèle de personne n'existe encore : DM-06 et DM-07 poseront les premières
-colonnes, et la garde les jugera. L'IBAN de la pièce RIB (DM-11) passera par `colonnesPii`. La
-double clé de rotation (HYP-E1-24) appartient à QA-T04 et QA-T13. Le module client unique
-`src/server/db.ts`, que `journal-sans-pii.ts` attribue à SEC-08, n'est pas dans les chemins de la
-tâche et n'est pas posé. Le passage de `partners/ADR-0013` à `accepte` appartient à l'architecte.
-
-**Appris.** La branche du 19/09 recopiait la normalisation IPv6 de SEC-10 et le HMAC d'adresse de
-SEC-07, arrivés sur main après elle : une branche reprise se relit contre le main du jour, pas
-contre celui de sa naissance. Un type marqué ne se construit pas par un littéral sous la règle
-`consistent-type-assertions` : on type d'abord l'objet sans la marque, puis on l'affirme.
-`gates:prouvees` ne reconnaît une preuve que sous la forme `pnpm <garde>:prove`, suivie d'un tiret
-cadratin : un trait d'union simple la déclare non référencée. Une garde dont l'identifiant de
-registre diffère de son nom de commande grossit une dette figée par `un-nom-une-garde.spec.ts` :
-l'identifiant est donc le nom de commande, et l'ancien nom `G-SEC-...` passe en alias. Une garde
-qui balaie les fichiers suivis s'inscrit aussi dans les deux registres de
-`refus-de-rendre-et-de-publier.spec.ts` (sorties déclarées, gardes qui balaient), et établit son
-périmètre avant de lire quoi que ce soit.
-
-**Relecture.** La tête `a7e647a` a été refusée par `securite` (revue 5321613521, veto rgpd) et
-par `simplicite` (5321613688). `securite` : la garde remontait d'un littéral jusqu'à `data` sans
-traverser un ternaire, un ET logique ni un étalement. Ainsi
-`data: { ...(ip ? { ipHash: ip } : {}) }` et `data: { ...(e && { emailHash: e }) }` sortaient en
-0. La garde DESCEND désormais depuis la valeur de la clé d'écriture : objets, tableaux,
-étalements, ternaires sur leurs deux branches, `&&`, `||`, `??`, parenthèses, `as`, `satisfies`,
-`!`. Elle juge une valeur protégée sur chacune de ces branches. Les clés d'écriture comprennent
-aussi `createMany`, `updateMany`, `upsert` et `connectOrCreate`. Un champ protégé posé sous la clé
-dans une forme qu'elle ne descend pas (un appel, une fonction) rougit la nouvelle famille
-`ecriture_non_jugee`, en échec fermé. Seuls les arguments d'une fonction de `pii.ts` en sont
-exemptés. Les deux scénarios du relecteur, `??`, `satisfies`, un objet imbriqué conditionnel et
-une fonction immédiate sont des témoins. Un producteur dans un ternaire est un contre-témoin, et il
-était un faux positif avant. Couper une branche de la descente fait rougir `--prove`.
-`simplicite` : le test retapait l'expression de `HASH_HEX_64` ; il l'importe. Mutée en 63
-caractères, la copie restait verte et l'import rougit. L'alias `segments` est retiré. Dette
-laissée : `empreinteAdresseReseau` ne normalise pas son entrée. Elle attend le sujet que rend
-`adresseDuClient` (une IPv4, ou le /64 d'une IPv6), et une IPv6 complète passée par erreur serait
-hachée entière. La normaliser demande d'accepter la forme /64 et d'ajouter un motif de refus : cela
-reviendra au premier appelant (DM-07). Le lexique ne reconnaît pas `remoteAddr` : cela relève du
-propriétaire de `champs.ts`. Le registre `docs/gates.json` (champs `verifie` et `preuveRouge`,
-réécrits par `hors-depot/reecrire-champ.mjs`) et sa vue `docs/GATES.md` décrivent la nouvelle
-portée : sept clés d'écriture, 10 familles, 21 témoins, 5 contre-témoins.
-
-Second tour : `exactitude`, `securite` (veto levé) et `simplicite` acceptent la tête `2c2a6cf`, et
-`mutation` la refuse (5321838301). Cinq mutants de la garde survivaient. Chacun rendait admise une
-écriture de clair dans une colonne de suffixe Hash : tout appel pris pour un producteur, la clé
-`update` d'un `upsert` retirée, la branche fausse d'un ternaire en valeur ignorée, un ET logique en
-valeur toujours admis, et `||` ou `??` jugés sur leur seul opérande droit. Onze témoins les tuent,
-dans le spec comme au `--prove`, qui passe à 32 témoins. Le spec exige désormais la FAMILLE et plus
-seulement le code 1 : sans cela, `ecriture_non_jugee` masquait la coupure d'une branche de la
-descente. Dix mutants ont été rejoués sur le correctif, et chacun fait rougir le spec et le
-`--prove`. La règle de descente, écrite deux fois, n'est plus écrite qu'une fois (`issues`). La
-limite déclarée nomme aussi `Object.fromEntries` et les méthodes homonymes d'une fonction de
-`pii.ts`. Les champs `preuveRouge` et `verifie` sont réécrits par le même verbe. Les clés
-`createMany`, `updateMany`, `upsert` et `connectOrCreate` sont redondantes : en écriture Prisma
-imbriquée, elles vivent toujours sous une clé `data`, `create` ou `update`. Les retirer toutes les
-quatre est un mutant qui survit (rejoué), et c'est un mutant équivalent pour toute écriture posée
-dans l'appel. `main` a été refusionnée pour un conflit sur le cliquet des sorties déclarées (51 d'un
-côté, 54 de l'autre, 55 après la fusion).
-
-… 54 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 56 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
