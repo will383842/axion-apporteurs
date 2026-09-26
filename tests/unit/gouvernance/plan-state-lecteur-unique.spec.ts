@@ -169,7 +169,7 @@ describe('REQ-GOV-015 — la vue d’état lit le registre des décisions par le
     }
   });
 
-  it('REQ-GOV-006 · FACE 1 — une décision TRANCHÉE au registre n’est pas une question ouverte', () => {
+  it('REQ-GOV-006 · REQ-GOV-015 · FACE 1 — une décision TRANCHÉE au registre n’est pas une question ouverte', () => {
     const decisions = readFileSync('docs/DECISIONS.md', 'utf8');
     // Le témoin porte sur un fait du registre réel, lu par le lecteur unique — jamais supposé.
     expect(
@@ -184,7 +184,7 @@ describe('REQ-GOV-015 — la vue d’état lit le registre des décisions par le
     ).not.toMatch(/^- W6\b/m);
   });
 
-  it('REQ-GOV-006 · FACE 2 — la MÊME décision, rendue ouverte, apparaît — et bloquante', () => {
+  it('REQ-GOV-006 · REQ-GOV-015 · FACE 2 — la MÊME décision, rendue ouverte, apparaît — et bloquante', () => {
     const decisions = readFileSync('docs/DECISIONS.md', 'utf8');
     const marque = /^(\| \*\*W6\*\*) ✅ \*tranchée \d{4}-\d{2}-\d{2}\*/m;
     expect(
