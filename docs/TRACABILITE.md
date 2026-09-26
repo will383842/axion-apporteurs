@@ -14,9 +14,9 @@
 > **« Réputée testée » est DÉRIVÉ, pas lu.** Le registre ne porte aucune échelle de
 > maturité : une exigence l’est dès qu’une des tâches qui la portent est livrée.
 
-**334 exigences actives · 89 réputées testées · 89 couvertes · 0 orphelines.**
+**334 exigences actives · 95 réputées testées · 95 couvertes · 0 orphelines.**
 
-289 tâches, dont 74 livrées · 109 fichiers de test exécutés par `vitest` sur 109 présents.
+289 tâches, dont 79 livrées · 109 fichiers de test exécutés par `vitest` sur 109 présents.
 
 ## Exigences réputées testées
 
@@ -81,6 +81,7 @@
 | `REQ-INT-014` | `INT-T07-A`, `INT-T07-P`, `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
 | `REQ-INT-020` | `INT-T09` | `tests/integration/api-gouv.spec.ts`, `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
 | `REQ-INT-021` | `INT-T09` | `tests/integration/api-gouv.spec.ts` | couverte |
+| `REQ-INT-026` | `INT-T11` | `tests/integration/adaptateur-mcp.spec.ts` | couverte |
 | `REQ-INT-029` | `INT-T01a`, `INT-T27-A` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-JUR-003` | `JUR-T01`, `JUR-T01b` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-007` | `DM-25`, `JUR-T01`, `JUR-T01b`, `T-ARG-033` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
@@ -91,10 +92,15 @@
 | `REQ-QA-007` | `INT-T01a`, `INT-T01b`, `INT-T01c` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-QA-013` | `GOV-059`, `GOV-061`, `GOV-062`, `GOV-063`, `GOV-076`, `GOV-083`, `QA-T00`, `QA-T01`, `QA-T07`, `QA-T28` | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts`, `tests/unit/gouvernance/formes-voisines-des-interdits.spec.ts`, `tests/unit/gouvernance/revendication-par-branche.spec.ts`, `tests/unit/gouvernance/tout-check-est-cable.spec.ts`, `tests/unit/gouvernance/un-nom-une-garde.spec.ts` | couverte |
 | `REQ-QA-014` | `GOV-039`, `GOV-085`, `QA-T03` | `tests/unit/gouvernance/titres-de-test-resolvent.spec.ts`, `tests/unit/gouvernance/tracabilite.spec.ts`, `tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts`, `tests/unit/qualite/req-check.spec.ts` | couverte |
+| `REQ-QA-019` | `QA-T04` | `tests/integration/sondes-de-vie.spec.ts` | couverte |
+| `REQ-QA-020` | `QA-T04` | `tests/integration/sondes-de-vie.spec.ts`, `tests/unit/qualite/sondes-client-unique.spec.ts` | couverte |
 | `REQ-QA-024` | `QA-T08` | `tests/unit/qualite/journal-redige.spec.ts` | couverte |
 | `REQ-QA-027` | `CPL-T13`, `DM-13`, `T-ARG-015` | `tests/unit/domaine/temps-horloge-et-feries.spec.ts` | couverte |
 | `REQ-QA-028` | `INT-T09` | `tests/integration/api-gouv.spec.ts` | couverte |
+| `REQ-QA-030` | `QA-T04`, `QA-T13` | `tests/integration/sondes-de-vie.spec.ts`, `tests/unit/qualite/env-fail-fast.spec.ts` | couverte |
 | `REQ-QA-035` | `DM-06`, `INT-T22`, `INT-T26` | `tests/unit/domaine/apporteur-score-fige.spec.ts` | couverte |
+| `REQ-SEC-001` | `SEC-03` | `tests/integration/lien-magique.spec.ts`, `tests/unit/domaine/apporteur-acces-espace.spec.ts`, `tests/unit/securite/connexion-actions.spec.ts`, `tests/unit/securite/connexion-ecran.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-depot.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-migration.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts` | couverte |
+| `REQ-SEC-002` | `SEC-03` | `tests/integration/lien-magique.spec.ts`, `tests/unit/securite/connexion-ecran.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
 | `REQ-SEC-012` | `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
 | `REQ-SEC-013` | `INT-T09` | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
 | `REQ-SEC-016` | `SEC-03`, `SEC-10` | `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/securite/lien-magique-compteurs.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
@@ -243,7 +249,6 @@
 | `REQ-INT-023` | 0 | `INT-T10` | `tests/integration/webhook-rebonds.spec.ts`, `tests/unit/email/emetteur.spec.ts` |
 | `REQ-INT-024` | 0 | `INT-T14` | `tests/unit/integration/notif-sans-pii.spec.ts` |
 | `REQ-INT-025` | 3 | `UX-P3-01` | — |
-| `REQ-INT-026` | 0 | `INT-T11` | `tests/integration/adaptateur-mcp.spec.ts` |
 | `REQ-INT-027` | 1 | `INT-T13`, `INT-T17` | — |
 | `REQ-INT-030` | 1 | `INT-T08-A`, `INT-T08-P`, `QA-T19` | — |
 | `REQ-INT-031` | 0 | `INT-T02` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts` |
@@ -285,19 +290,14 @@
 | `REQ-QA-016` | 0 | `QA-T16`, `UX-P0-03` | `tests/a11y/axe.spec.ts`, `tests/a11y/cibles.spec.ts`, `tests/a11y/reflow.spec.ts` |
 | `REQ-QA-017` | 1 | `QA-T16` | — |
 | `REQ-QA-018` | 0 | `QA-T05` | `tests/unit/qualite/build-sans-base.spec.ts`, `tests/unit/qualite/pipeline-image.spec.ts` |
-| `REQ-QA-019` | 0 | `QA-T04` | `tests/integration/sondes-de-vie.spec.ts`, `tests/unit/qualite/env-fail-fast.spec.ts` |
-| `REQ-QA-020` | 0 | `QA-T04` | `tests/integration/sondes-de-vie.spec.ts`, `tests/unit/qualite/env-fail-fast.spec.ts` |
 | `REQ-QA-021` | 0 | `QA-T11` | `tests/integration/migrations-additives.spec.ts` |
 | `REQ-QA-022` | 0 | `QA-T13` | `tests/unit/qualite/retour-arriere.spec.ts`, `tests/unit/qualite/runbooks-exerces.spec.ts` |
 | `REQ-QA-023` | 0 | `QA-T12` | `tests/unit/qualite/sauvegarde-et-exercice.spec.ts` |
 | `REQ-QA-025` | 1 | `QA-T19` | — |
 | `REQ-QA-026` | 1 | `INT-T08-P`, `QA-T19`, `QA-T27` | — |
 | `REQ-QA-029` | 2 | `T-ARG-018` | — |
-| `REQ-QA-030` | 0 | `QA-T04`, `QA-T13` | `tests/integration/sondes-de-vie.spec.ts`, `tests/unit/qualite/env-fail-fast.spec.ts`, `tests/unit/qualite/retour-arriere.spec.ts`, `tests/unit/qualite/runbooks-exerces.spec.ts` |
 | `REQ-QA-032` | 0 | `QA-T05` | `tests/unit/qualite/build-sans-base.spec.ts`, `tests/unit/qualite/pipeline-image.spec.ts` |
 | `REQ-QA-034` | 0 | `QA-T13`, `QA-T25` | `tests/unit/qualite/retour-arriere.spec.ts`, `tests/unit/qualite/runbooks-exerces.spec.ts` |
-| `REQ-SEC-001` | 0 | `SEC-03` | `tests/integration/lien-magique.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts` |
-| `REQ-SEC-002` | 0 | `SEC-03` | `tests/integration/lien-magique.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts` |
 | `REQ-SEC-003` | 0 | `SEC-04`, `SEC-19`, `UX-P1-04` | `tests/unit/securite/revocation.spec.ts` |
 | `REQ-SEC-004` | 0 | `SEC-04`, `SEC-22` | `tests/unit/securite/revocation.spec.ts` |
 | `REQ-SEC-005` | 1 | `SEC-11`, `SEC-19`, `UX-P1-11` | — |
@@ -411,7 +411,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 2 | 3 | 1 |
 | 3 | 1 | 0 |
 | 4 | 15 | 6 |
-| 5 | 15 | 4 |
+| 5 | 15 | 5 |
 | 6 | 1 | 1 |
 | 7 | 2 | 0 |
 | 8 | 13 | 3 |
@@ -427,7 +427,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 18 | 4 | 1 |
 | 19 | 1 | 0 |
 | 20 | 3 | 0 |
-| 21 | 11 | 0 |
+| 21 | 11 | 1 |
 
 | Étape | Exigences | Dont réputées testées |
 | ---: | ---: | ---: |
@@ -435,14 +435,14 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | 2 | 12 | 2 |
 | 3 | 1 | 0 |
 | 4 | 16 | 6 |
-| 5 | 17 | 4 |
+| 5 | 17 | 5 |
 | 6 | 3 | 1 |
 | 7 | 57 | 13 |
 | 8 | 12 | 3 |
 | 9 | 23 | 7 |
 | 10 | 67 | 16 |
 | 11 | 30 | 6 |
-| 12 | 14 | 0 |
+| 12 | 14 | 1 |
 
 ## Fichiers de test
 
