@@ -99,7 +99,7 @@
 | `REQ-SEC-013` | `INT-T09` | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
 | `REQ-SEC-016` | `SEC-03`, `SEC-10` | `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
 | `REQ-SEC-024` | `SEC-08` | `tests/unit/securite/chiffrement-avec-aad.spec.ts` | couverte |
-| `REQ-SEC-028` | `SEC-01` | `tests/unit/securite/env-boot.spec.ts` | couverte |
+| `REQ-SEC-028` | `SEC-01` | `tests/integration/adaptateur-mcp.spec.ts`, `tests/unit/securite/env-boot.spec.ts` | couverte |
 | `REQ-SEC-029` | `SEC-02` | `tests/unit/securite/headers.spec.ts` | couverte |
 | `REQ-SEC-035` | `SEC-10` | `tests/unit/securite/rate-famille.spec.ts` | couverte |
 | `REQ-UX-002` | `DM-25`, `SEC-12`, `UX-P0-01`, `UX-P0-01b`, `UX-P1-02`, `UX-P3-05` | `tests/unit/espace/vocabulaire-et-micro-copy.spec.ts` | couverte |
@@ -452,7 +452,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/a11y/cibles.spec.ts` | oui | `REQ-UX-017` |
 | `tests/a11y/reflow.spec.ts` | oui | `REQ-UX-017` |
 | `tests/gov/charte-pr.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011`, `REQ-GOV-012`, `REQ-GOV-013`, `REQ-GOV-027` |
-| `tests/integration/adaptateur-mcp.spec.ts` | oui | `REQ-INT-026` |
+| `tests/integration/adaptateur-mcp.spec.ts` | oui | `REQ-INT-026`, `REQ-SEC-028` |
 | `tests/integration/api-gouv.spec.ts` | oui | `REQ-INT-020`, `REQ-INT-021`, `REQ-QA-028` |
 | `tests/integration/apporteur-jeton-depot.spec.ts` | oui | `REQ-DM-012` |
 | `tests/integration/frontiere.spec.ts` | oui | `REQ-INT-014`, `REQ-SEC-012` |

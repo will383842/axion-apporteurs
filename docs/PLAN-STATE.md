@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `05dcd2f` — 2026-09-26T04:04:04+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #136 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
+| Où est `main` ? | `76548e9` — 2026-09-26T06:06:25+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #136 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/111 tâches, reste 57.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
@@ -64,9 +64,8 @@ Reste sur ce chemin : **13.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un contrôle requis rouge ou une revue manquante |
-| 2 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un contrôle requis rouge ou une revue manquante |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -94,7 +93,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `05dcd2f` (2026-09-26T04:04:04+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `76548e9` (2026-09-26T06:06:25+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -120,7 +119,8 @@ exigent une table ou une valeur de plus dans `TypeEvenementJournal` (question à
 `Producer-Signature` attend aussi sa lecture dans `docs/tiers/zeptomail.md`. La route servie refuse
 tout (503) tant que le registre de débit ne porte pas de compteur pour elle : la limite et la conduite
 sur panne sont à chiffrer dans REQ-INT-026, et la famille `mcp:` à ouvrir dans REQ-SEC-016, par le
-gardien de la spécification avant INT-T13. Le secret est à poser par Will selon REQ-INT-031. Le
+gardien de la spécification avant INT-T13. Le secret est à poser par Will selon REQ-INT-031 ; il est désormais dans `schemaSecrets`, donc
+exigé au démarrage : sans lui, l'instance refuse de démarrer. Le
 plafond de 6 500 octets par outil et `detectPii` sur les jeux maximaux viennent avec le premier outil
 (INT-T13, INT-T17).
 
@@ -137,6 +137,24 @@ vit donc dans `socle.ts`. Enfin, un fichier de `tests/integration/` ne nomme pas
 du processus, sauf `execPath` : la garde statique du harnais de conteneurs le refuse. Une variable
 d'environnement s'y pose par `vi.stubEnv`, et un binaire s'y lance par `execPath` et le chemin de
 `tsx`.
+
+**Relecture.** Sur la tête `569c8e8`, `exactitude` (5324475209) et `securite` (5324475255)
+acceptent ; `simplicite` refuse (5324475297) et `mutation` refuse (5324475334). `simplicite` : les
+boucles des contrôles 7 et 13.3 parcouraient le brouillon du manifeste, qui exclut justement les
+outils en anomalie ; le contrôle 13.3 imprimait vert sur un champ de rang 2 obligatoire.
+`analyserOutils` range désormais chaque refus sous le contrôle qui le juge, et les contrôles 1, 5,
+6, 7 et 13.3 le lisent au lieu de retaper la règle ; un outil injecté par règle rougit son
+contrôle. La comparaison à temps constant et le limiteur non déclaré vivent dans
+`src/server/securite/primitives-de-porte.ts`, partagé avec la frontière axionia, et l'étape
+`mcp:manifeste` de la porte A, qui rejouait le contrôle 6, est retirée. `mutation` : les cinq
+conditions du périmètre vide, le contrôle 2 vidé, les planchers des contrôles 8 et 9, le limiteur
+consulté une seule fois et le champ inconnu du manifeste survivaient ; chacun a désormais son
+témoin, et les seize mutants rejoués sur la spec sont tous tués. Dans le même tour, sur la dette
+de `securite` : `PARTNERS_MCP_SHARED_SECRET` entre dans `schemaSecrets` et suit REQ-SEC-028 (trop
+court, égal à un autre secret ou préfixé `dev_` en production : 503), les deux 503 d'avant la
+serrure portent le même corps, et le corps est borné à 128 Ko (413), borne de REQ-SEC-010. Appris :
+un mutant écrit `[] && x` vaut `x` en JavaScript, un tableau vide étant vrai ; il ne mute rien, et
+sa survie ne dit rien de la garde.
 
 ### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
 
