@@ -457,6 +457,7 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
   function dependances() {
     const planifies: Array<() => Promise<void>> = [];
     const envois: Array<{ a: string; sujet: string; corps: string }> = [];
+    const avertissements: string[] = [];
     const d: DependancesDuLien = {
       env: ENV,
       prisma: base.prisma,
@@ -467,9 +468,9 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
           envois.push(m);
         },
       },
-      journal: { warn: () => undefined },
+      journal: { warn: (m: string) => avertissements.push(m) },
     };
-    return { d, planifies, envois };
+    return { d, planifies, envois, avertissements };
   }
 
   /**
@@ -527,6 +528,44 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
     expect(await sessionsDe(id)).toBe(1);
   });
 
+  it('REQ-SEC-001 : la demande d’un apporteur n’annule pas le lien d’un autre', async () => {
+    const a = await apporteurAvecCourriel('AX00SECL', 'alice@example.org');
+    const b = await apporteurAvecCourriel('AX00SECM', 'bruno@example.org');
+    for (const [saisie, adresse] of [
+      ['alice@example.org', '198.51.100.31'],
+      ['bruno@example.org', '198.51.100.32'],
+    ] as const) {
+      const { d, planifies, avertissements } = dependances();
+      expect(await demanderLien(demande(saisie, adresse), cablee(d))).toBe('envoye');
+      for (const t of planifies) await t();
+      expect(avertissements).toEqual([]);
+    }
+    const actifs = await base.prisma.$queryRawUnsafe<Array<{ apporteur_id: string }>>(
+      'SELECT apporteur_id::text FROM liens_magiques WHERE apporteur_id IN ($1::uuid, $2::uuid) AND annule_at IS NULL AND consomme_at IS NULL ORDER BY apporteur_id',
+      a,
+      b
+    );
+    expect(actifs.map((l) => l.apporteur_id).sort()).toEqual([a, b].sort());
+  });
+
+  it('REQ-SEC-001 : trois demandes successives ne lèvent rien et laissent UN lien actif', async () => {
+    const id = await apporteurAvecCourriel('AX00SECN', 'trois@example.org');
+    for (let i = 0; i < 3; i += 1) {
+      const { d, planifies, avertissements } = dependances();
+      d.horloge = horlogeFigee(t0 + i * 1000);
+      expect(
+        await demanderLien(demande('trois@example.org', `198.51.100.${40 + i}`), cablee(d))
+      ).toBe('envoye');
+      for (const t of planifies) await t();
+      expect(avertissements).toEqual([]);
+    }
+    const [compte] = await base.prisma.$queryRawUnsafe<Array<{ actifs: bigint; annules: bigint }>>(
+      'SELECT count(*) FILTER (WHERE annule_at IS NULL) AS actifs, count(*) FILTER (WHERE annule_at IS NOT NULL) AS annules FROM liens_magiques WHERE apporteur_id = $1::uuid',
+      id
+    );
+    expect([Number(compte?.actifs), Number(compte?.annules)]).toEqual([1, 2]);
+  });
+
   it('REQ-SEC-002 : au-delà de la limite par courriel du REGISTRE, la demande est suspendue, compte ou non', async () => {
     const limite = COMPTEURS['magic:courriel'].limite;
     if (typeof limite !== 'number') throw new Error('limite hors dépôt');
@@ -539,5 +578,179 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
       expect(etats.slice(0, limite).every((e) => e === 'envoye')).toBe(true);
       expect(etats[limite]).toBe('suspendu');
     }
+  });
+});
+
+// ── chaque CHECK et chaque branche du déclencheur, vus refuser en base ──────────────────────────────
+
+/** Une ligne de lien VALIDE, que chaque témoin altère d'un seul champ. */
+function ligneDeLien(apporteurId: string) {
+  return {
+    apporteur_id: apporteurId,
+    token_hash: empreinteDuJeton(tirerJeton(), configuration.secret),
+    kid: configuration.kid,
+    cree_at: new Date(t0),
+    expire_at: new Date(t0 + QUINZE_MINUTES),
+    consomme_at: null as Date | null,
+    annule_at: null as Date | null,
+  };
+}
+
+function insererLienBrut(l: ReturnType<typeof ligneDeLien>) {
+  return base.prisma.$executeRawUnsafe(
+    'INSERT INTO liens_magiques (id, apporteur_id, token_hash, kid, cree_at, expire_at, consomme_at, annule_at) VALUES (gen_random_uuid(), $1::uuid, $2, $3, $4, $5, $6, $7)',
+    l.apporteur_id,
+    l.token_hash,
+    l.kid,
+    l.cree_at,
+    l.expire_at,
+    l.consomme_at,
+    l.annule_at
+  );
+}
+
+/** Une session VALIDE sur un lien neuf, que chaque témoin altère d'un seul champ. */
+async function ligneDeSession(apporteurId: string) {
+  const l = ligneDeLien(apporteurId);
+  await insererLienBrut(l);
+  const [lien] = await base.prisma.$queryRawUnsafe<Array<{ id: string }>>(
+    'SELECT id::text FROM liens_magiques WHERE token_hash = $1',
+    l.token_hash
+  );
+  return {
+    apporteur_id: apporteurId,
+    lien_magique_id: lien?.id ?? '',
+    token_hash: empreinteDuJeton(tirerJeton(), configuration.session.secret),
+    kid: configuration.session.kid,
+    ip_hash: 'a1b2c3d4e5f60718' as string | null,
+    cree_at: new Date(t0),
+    expire_at: new Date(t0 + 1000),
+  };
+}
+
+function insererSessionBrute(x: Awaited<ReturnType<typeof ligneDeSession>>) {
+  return base.prisma.$executeRawUnsafe(
+    'INSERT INTO sessions_espace (id, apporteur_id, lien_magique_id, token_hash, kid, ip_hash, cree_at, expire_at) VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, $6, $7)',
+    x.apporteur_id,
+    x.lien_magique_id,
+    x.token_hash,
+    x.kid,
+    x.ip_hash,
+    x.cree_at,
+    x.expire_at
+  );
+}
+
+describe('REQ-SEC-001 — chaque CHECK de liens_magiques, vu refuser', () => {
+  let id = '';
+  beforeAll(async () => {
+    id = await apporteur('AX00SECP');
+  });
+
+  it('REQ-SEC-001 : face VERTE — une ligne valide insérée en SQL brut passe', async () => {
+    expect(await insererLienBrut(ligneDeLien(id))).toBe(1);
+  });
+
+  const cas: Array<[string, (l: ReturnType<typeof ligneDeLien>) => void]> = [
+    ['liens_magiques_token_hash_hex', (l) => (l.token_hash = 'Z'.repeat(64))],
+    ['liens_magiques_kid_hex', (l) => (l.kid = 'ZZZZZZZZ')],
+    ['liens_magiques_expire_apres_creation', (l) => (l.expire_at = l.cree_at)],
+    ['liens_magiques_consomme_avant_expiration', (l) => (l.consomme_at = l.expire_at)],
+    ['liens_magiques_annule_apres_creation', (l) => (l.annule_at = new Date(t0 - 1000))],
+    [
+      'liens_magiques_consomme_ou_annule',
+      (l) => {
+        l.consomme_at = new Date(t0 + 1000);
+        l.annule_at = new Date(t0 + 1000);
+      },
+    ],
+  ];
+  for (const [contrainte, alterer] of cas) {
+    it(`REQ-SEC-001 : face ROUGE — ${contrainte}`, async () => {
+      const l = ligneDeLien(id);
+      alterer(l);
+      expect(await refus(insererLienBrut(l))).toContain(contrainte);
+    });
+  }
+});
+
+describe('REQ-SEC-001 — chaque CHECK de sessions_espace, vu refuser', () => {
+  let id = '';
+  beforeAll(async () => {
+    id = await apporteur('AX00SECQ');
+  });
+
+  it('REQ-SEC-001 : face VERTE — une session valide insérée en SQL brut passe', async () => {
+    expect(await insererSessionBrute(await ligneDeSession(id))).toBe(1);
+  });
+
+  const cas: Array<[string, (x: Awaited<ReturnType<typeof ligneDeSession>>) => void]> = [
+    ['sessions_espace_token_hash_hex', (x) => (x.token_hash = 'Z'.repeat(64))],
+    ['sessions_espace_kid_hex', (x) => (x.kid = 'ZZZZZZZZ')],
+    ['sessions_espace_expire_apres_creation', (x) => (x.expire_at = x.cree_at)],
+    ['sessions_espace_ip_hash_hex', (x) => (x.ip_hash = '203.0.113.7-brut')],
+  ];
+  for (const [contrainte, alterer] of cas) {
+    it(`REQ-SEC-001 : face ROUGE — ${contrainte}`, async () => {
+      const x = await ligneDeSession(id);
+      alterer(x);
+      expect(await refus(insererSessionBrute(x))).toContain(contrainte);
+    });
+  }
+});
+
+describe('REQ-SEC-001 — chaque branche de liens_magiques_usage_unique, vue refuser', () => {
+  const GELE = 'liens_magiques_usage_unique : un lien consommé ou annulé est gelé (REQ-SEC-001)';
+  const IMMUABLE =
+    "liens_magiques_usage_unique : seules consomme_at et annule_at s'écrivent (REQ-SEC-001)";
+  let id = '';
+  let autre = '';
+  beforeAll(async () => {
+    id = await apporteur('AX00SECR');
+    autre = await apporteur('AX00SECS');
+  });
+
+  async function lienActif(): Promise<string> {
+    const l = ligneDeLien(id);
+    await insererLienBrut(l);
+    return l.token_hash;
+  }
+  const modifier = (ensemble: string, tokenHash: string, ...valeurs: unknown[]) =>
+    base.prisma.$executeRawUnsafe(
+      `UPDATE liens_magiques SET ${ensemble} WHERE token_hash = $1`,
+      tokenHash,
+      ...valeurs
+    );
+
+  it('REQ-SEC-001 : face ROUGE — un lien ANNULÉ est gelé : ni ré-annulé, ni consommé', async () => {
+    const h = await lienActif();
+    expect(await modifier('annule_at = $2', h, new Date(t0 + 1000))).toBe(1);
+    expect(await refus(modifier('annule_at = $2', h, new Date(t0 + 2000)))).toContain(GELE);
+    expect(
+      await refus(modifier('consomme_at = $2, annule_at = NULL', h, new Date(t0 + 2000)))
+    ).toContain(GELE);
+  });
+
+  const immuables: Array<[string, (h: string) => Promise<unknown>]> = [
+    ['id', (h) => modifier('id = gen_random_uuid()', h)],
+    ['apporteur_id', (h) => modifier('apporteur_id = $2::uuid', h, autre)],
+    ['token_hash', (h) => modifier('token_hash = $2', h, 'f'.repeat(64))],
+    ['kid', (h) => modifier("kid = '00000000'", h)],
+    ['cree_at', (h) => modifier('cree_at = $2', h, new Date(t0 - 1000))],
+    ['expire_at', (h) => modifier('expire_at = $2', h, new Date(t0 + 1000))],
+  ];
+  for (const [colonne, changer] of immuables) {
+    it(`REQ-SEC-001 : face ROUGE — ${colonne} ne change jamais, même sur un lien actif`, async () => {
+      const h = await lienActif();
+      expect(await refus(changer(h))).toContain(IMMUABLE);
+    });
+  }
+
+  it('REQ-SEC-001 : face VERTE — DELETE d’un lien consommé passe', async () => {
+    const h = await lienActif();
+    expect(await modifier('consomme_at = $2', h, new Date(t0 + 1000))).toBe(1);
+    expect(
+      await base.prisma.$executeRawUnsafe('DELETE FROM liens_magiques WHERE token_hash = $1', h)
+    ).toBe(1);
   });
 });

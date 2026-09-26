@@ -2779,7 +2779,10 @@
         "src/content/micro-copy/espace/vocabulaire.ts",
         "tests/unit/securite/lien-magique-production.spec.ts",
         "tests/unit/securite/connexion-ecran.spec.tsx",
-        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts",
+        "tests/unit/securite/lien-magique-depot.spec.ts",
+        "tests/unit/securite/lien-magique-migration.spec.ts",
+        "tests/unit/domaine/apporteur-acces-espace.spec.ts"
       ],
       "schema": true,
       "sensible": [

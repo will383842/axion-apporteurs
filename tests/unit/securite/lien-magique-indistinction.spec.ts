@@ -35,7 +35,6 @@ import {
   type PortsDeDemande,
 } from '../../../src/server/auth/lien-magique';
 import { DUREES_AUTH } from '../../../src/server/auth/durees';
-import { peutOuvrirLEspace } from '../../../src/domain/apporteur/acces-espace';
 
 // ── l'univers simulé ─────────────────────────────────────────────────────────────────────────────
 
@@ -754,25 +753,5 @@ describe('REQ-SEC-001 — la consommation : unique, atomique, bornée à 15 minu
       });
     }
     expect(u.appelsAuDepot()).toBe(0);
-  });
-});
-
-// ── 5. qui peut ouvrir l'espace ──────────────────────────────────────────────────────────────────
-
-describe('REQ-SEC-001 — statuts qui ouvrent l’espace, défaut fermé', () => {
-  it('REQ-SEC-001 : `signe` et `suspendu` ouvrent, tout autre statut de REQ-DM-011 ferme', () => {
-    const tous = [
-      'candidat',
-      'retenu',
-      'vivier',
-      'refuse',
-      'kyc_en_cours',
-      'pret_a_signer',
-      'signe',
-      'suspendu',
-      'resilie',
-    ];
-    expect(tous.filter(peutOuvrirLEspace)).toEqual(['signe', 'suspendu']);
-    expect(peutOuvrirLEspace('inconnu')).toBe(false);
   });
 });
