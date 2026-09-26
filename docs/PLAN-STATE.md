@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `76548e9` — 2026-09-26T06:06:25+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #136 (un contrôle requis rouge ou une revue manquante) · 2. #139 (un contrôle requis rouge ou une revue manquante) · 3. #140 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #136 (rien) · 2. #139 (un contrôle requis rouge ou une revue manquante) · 3. #140 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/115 tâches, reste 61.60 j |
-| Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
+| Le prochain pas | fusionner #136, puis SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #139 — 2026-09-26 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 136 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,7 +64,7 @@ Reste sur ce chemin : **14.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un contrôle requis rouge ou une revue manquante |
+| 1 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | rien — fusionnable maintenant |
 | 2 | #139 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées | `t/gov-102` | un contrôle requis rouge ou une revue manquante |
 | 3 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un contrôle requis rouge ou une revue manquante |
 | 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
@@ -88,6 +88,8 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #136** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 42 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -145,6 +147,17 @@ lectures par candidature sur vingt-quatre heures, point (7) d'INT-T27-A) ; UX-P1
 acceptance, dont une réponse identique quand la nouvelle adresse est déjà portée par un autre
 apporteur ; l'apostrophe perdue du point 3 d'INT-T26 est rendue, et le point 2 d'INT-T05 ne compte
 plus sept types ; partners/ADR-0022 nomme les tâches qui étendent `apporteurs`, colonne par colonne.
+Seconde relecture sur bed1887 : les deux lentilles accordent.
+
+**Porte A.** Deux rouges réels, causés par le registre que cette PR modifie. (1) Le témoin
+« REQ-GOV-011, cas 1 » lisait DM-01 dans le registre réel : DM-01 passée `schema: true`, la
+troisième lentille attendue devenait `schema` au lieu de `simplicite`. Les tâches de la PR fictive
+sont désormais fixées à `schema: false` dans le témoin, qui porte sur la sensibilité au milieu de la
+liste ; le risque élevé vient toujours du `sensible` réel de DM-01. (2) Le témoin du plancher de
+`gov:trace` retirait une tranche partant du milieu de la liste, et la tranche débordait dès que le
+périmètre dépassait deux fois le plancher (la tâche versée ici l'a fait passer) : son départ est
+borné à la liste, même correctif que la PR 136. Les deux specs passent en local, 45 cas ; leurs
+fichiers entrent aux `paths` de GOV-102.
 
 **Reste.** DM-11 cite encore REQ-DM-013 alors que `contrats` naît de DM-23 : aucun verbe n'écrit le
 champ `reqs`, la citation reste jusqu'à ce qu'un verbe le permette. Trois points de la décision restent dus : les `reqs` à ajouter à SEC-06, SEC-04, DM-12

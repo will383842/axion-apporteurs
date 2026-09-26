@@ -217,8 +217,15 @@ describe('REQ-GOV-011 — cas 0 : la PR ORDINAIRE existe, et deux lentilles de r
 
 describe('REQ-GOV-011 — cas 1 : plusieurs tâches sur la PR, la sensible AU MILIEU', () => {
   const IDS = ['QA-T01', 'DM-01', 'GOV-039'];
+  /**
+   * Les tâches de la PR fictive sont FIXÉES à `schema: false`. Ce témoin porte sur la SENSIBILITÉ au
+   * milieu de la liste, pas sur le label `schema` : lu tel quel dans le registre réel, le drapeau de
+   * DM-01 (passé `true` par GOV-102, partners/ADR-0022) remplaçait la troisième lentille
+   * `simplicite` par `schema`, et un attendu qui ne parle pas de schéma rougissait. Le risque élevé,
+   * lui, vient toujours du registre réel (`sensible` de DM-01) : c'est ce qui reste gardé.
+   */
   function avecPr(ids: string[]): TacheBrute[] {
-    return registre().map((t) => (ids.includes(t.id) ? { ...t, pr: 9999 } : t));
+    return registre().map((t) => (ids.includes(t.id) ? { ...t, pr: 9999, schema: false } : t));
   }
 
   it('REQ-GOV-011 · l’ordre du registre met DM-01 (rgpd) entre QA-T01 et GOV-039 — mesuré, pas supposé', () => {

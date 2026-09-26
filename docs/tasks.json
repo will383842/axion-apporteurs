@@ -11625,7 +11625,9 @@
         "docs/TRACABILITE.md",
         "docs/paths-proposes.json",
         "docs/PLAN-STATE.md",
-        "docs/journal/"
+        "docs/journal/",
+        "tests/unit/gouvernance/lentilles-selon-le-risque.spec.ts",
+        "tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts"
       ],
       "schema": false,
       "sensible": [],
