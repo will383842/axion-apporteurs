@@ -834,8 +834,10 @@ describe('REQ-GOV-011 — cas 10 : le composeur du corps de PR juge la case des 
   const revuesDeuxAccords = DEUX_ACCORDS;
 
   it('REQ-GOV-011 · la PR à tâche sensible au milieu, deux revues acceptées : la case se COCHE depuis GOV-101, et le risque nomme DM-01', () => {
+    // `schema: false` FIXÉ, pour la raison que donne le cas 1 : DM-01 est passé `schema: true` par
+    // GOV-102, et ce témoin porte sur la sensibilité au milieu, pas sur l'architecte.
     const T = registre().map((t) =>
-      ['QA-T01', 'DM-01', 'GOV-039'].includes(t.id) ? { ...t, pr: 9999 } : t
+      ['QA-T01', 'DM-01', 'GOV-039'].includes(t.id) ? { ...t, pr: 9999, schema: false } : t
     );
     const c = COMPOSEUR.jugerCaseRevues({
       titre: 'feat(QA-T01): x',
