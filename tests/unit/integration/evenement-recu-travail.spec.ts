@@ -15,11 +15,12 @@
  * La même chose en base réelle vit dans `tests/integration/webhook-verdicts.spec.ts`.
  */
 import { describe, it, expect } from 'vitest';
-import { TypeEvenementRecu } from '@prisma/client';
+import { TypeEvenementRecu, type PrismaClient } from '@prisma/client';
 import { TACHES } from '../../../src/server/taches/registre';
 import {
   TACHE_DE_RECEPTION,
   dependanceDe,
+  depotDuTravail,
   passerLeTravail,
   type Battre,
   type DepotDuTravail,
@@ -302,7 +303,7 @@ describe('REQ-ARG-003 — un dispatch qui lève, et le battement de chaque passa
     expect(c).toEqual({ traites: 0, enAttente: 0, enErreur: 1, reveilles: 0 });
   });
 
-  it('REQ-ARG-003 : chaque passage écrit le battement de sa tâche, clé du registre des tâches', async () => {
+  it('REQ-QA-026 : chaque passage écrit le battement de sa tâche, clé du registre des tâches', async () => {
     expect(Object.keys(TACHES)).toContain(TACHE_DE_RECEPTION);
     const m = depotEnMemoire();
     m.arriver(DOSSIER[0]!);
@@ -320,7 +321,7 @@ describe('REQ-ARG-003 — un dispatch qui lève, et le battement de chaque passa
     ]);
   });
 
-  it('REQ-ARG-003 : un dépôt qui lève écrit un battement d’ÉCHEC, puis l’erreur remonte', async () => {
+  it('REQ-QA-026 : un dépôt qui lève écrit un battement d’ÉCHEC, puis l’erreur remonte', async () => {
     const m = depotEnMemoire();
     const depot: DepotDuTravail = {
       ...m.depot,
@@ -336,5 +337,218 @@ describe('REQ-ARG-003 — un dispatch qui lève, et le battement de chaque passa
 
   it('REQ-ARG-003 : les clés du registre des tâches ont la forme que la colonne `battements.tache` exige', () => {
     for (const cle of Object.keys(TACHES)) expect(cle).toMatch(/^[a-z][a-z0-9_]*$/);
+  });
+});
+
+describe('REQ-INT-011 — la dépendance lue dans la charge, et ses bornes', () => {
+  const devis = (charge: unknown) => ({ eventType: TypeEvenementRecu.devis_signe, charge });
+
+  it('REQ-INT-011 : une charge qui n’est pas un objet, un champ absent, vide ou non textuel : `illisible`, jamais une dépendance devinée', () => {
+    for (const charge of [null, 'cl-1', ['cl-1'], {}, { clientId: '' }, { clientId: 7 }]) {
+      expect(dependanceDe(devis(charge)), JSON.stringify(charge)).toBe('illisible');
+    }
+    expect(dependanceDe({ eventType: TypeEvenementRecu.client_cree, charge: null })).toBeNull();
+  });
+
+  it('REQ-INT-011 : la référence tient la borne de `dependance_ref` — 180 caractères passent, 181 sont illisibles', () => {
+    const prefixe = 'client:';
+    const juste = 'x'.repeat(180 - prefixe.length);
+    expect(dependanceDe(devis({ clientId: juste }))).toEqual({
+      ref: `${prefixe}${juste}`,
+      parents: [TypeEvenementRecu.client_cree, TypeEvenementRecu.client_mis_a_jour],
+    });
+    expect(dependanceDe(devis({ clientId: `${juste}x` }))).toBe('illisible');
+  });
+});
+
+describe('REQ-INT-011 — le passage, sur ses cas de bord', () => {
+  it('REQ-INT-011 : une dépendance illisible écrit `en_erreur` sous un motif FERMÉ, sans dispatch', async () => {
+    const m = depotEnMemoire();
+    m.arriver({ id: 'd1', eventType: TypeEvenementRecu.devis_signe, sujetRef: null, charge: {} });
+    let dispatches = 0;
+    const c = await passerLeTravail({
+      depot: m.depot,
+      dispatch: async () => void (dispatches += 1),
+      maintenant: () => INSTANT,
+    });
+    expect(m.lignes.map((l) => [l.statut, l.error, l.retryCount])).toEqual([
+      ['en_erreur', 'dependance_illisible', 1],
+    ]);
+    expect(dispatches).toBe(0);
+    expect(c).toEqual({ traites: 0, enAttente: 0, enErreur: 1, reveilles: 0 });
+  });
+
+  it('REQ-INT-011 : le parent traité ENTRE la lecture et l’écriture de l’attente : l’enfant se réveille et passe dans le même passage', async () => {
+    const m = depotEnMemoire();
+    m.arriver(DOSSIER[1]!);
+    let lectures = 0;
+    const depot: DepotDuTravail = {
+      ...m.depot,
+      // Première lecture : pas encore ; la relecture après l'écriture : traité.
+      parentTraite: async () => (lectures += 1) > 1,
+    };
+    const c = await passerLeTravail({ depot, dispatch: sansEffet, maintenant: () => INSTANT });
+    expect(m.lignes.map((l) => [l.id, l.statut, l.dependanceRef])).toEqual([
+      ['e2', 'traite', null],
+    ]);
+    expect(c).toEqual({ traites: 1, enAttente: 0, enErreur: 0, reveilles: 0 });
+  });
+
+  it('REQ-INT-011 : un événement traité SANS référence de sujet ne réveille personne ; avec une référence, il réveille les siens', async () => {
+    const m = depotEnMemoire();
+    const reveils: string[] = [];
+    const depot: DepotDuTravail = {
+      ...m.depot,
+      reveiller: async (ref) => {
+        reveils.push(ref);
+        return m.depot.reveiller(ref);
+      },
+    };
+    m.arriver({ id: 's0', eventType: TypeEvenementRecu.client_cree, sujetRef: null, charge: {} });
+    m.arriver(DOSSIER[0]!);
+    await passerLeTravail({ depot, dispatch: sansEffet, maintenant: () => INSTANT });
+    expect(reveils).toEqual(['client:cl-1']);
+  });
+
+  it('REQ-INT-011 : une valeur levée qui n’est pas une erreur s’écrit `Erreur` ; un nom d’erreur est borné à 500 caractères', async () => {
+    const m = depotEnMemoire();
+    m.arriver({ ...DOSSIER[0]!, id: 'x1' });
+    m.arriver({ ...DOSSIER[0]!, id: 'x2', sujetRef: 'client:cl-2' });
+    const long = Object.assign(new Error('m'), { name: 'N'.repeat(600) });
+    await passerLeTravail({
+      depot: m.depot,
+      dispatch: async (e) => {
+        throw e.id === 'x1' ? 'une chaîne' : long;
+      },
+      maintenant: () => INSTANT,
+    });
+    expect(m.lignes.map((l) => l.error)).toEqual(['Erreur', 'N'.repeat(500)]);
+  });
+});
+
+describe('REQ-QA-026 — l’adaptateur Prisma du travail de fond, sur un client qui enregistre', () => {
+  function client(reponses: { count?: number; updateMany?: number } = {}) {
+    const appels: [string, unknown][] = [];
+    const note =
+      (nom: string, rendu: unknown) =>
+      async (args: unknown): Promise<unknown> => {
+        appels.push([nom, args]);
+        return rendu;
+      };
+    const prisma = {
+      evenementRecu: {
+        findMany: note('findMany', []),
+        count: note('count', reponses.count ?? 0),
+        update: note('update', {}),
+        updateMany: note('updateMany', { count: reponses.updateMany ?? 0 }),
+      },
+      battement: { upsert: note('upsert', {}) },
+    } as unknown as PrismaClient;
+    return { prisma, appels };
+  }
+
+  it('REQ-INT-011 : `aTraiter` lit les `recu` par ordre de réception, lot de 100, les seules colonnes du traitement', async () => {
+    const c = client();
+    expect(await depotDuTravail(c.prisma).aTraiter()).toEqual([]);
+    expect(c.appels).toEqual([
+      [
+        'findMany',
+        {
+          where: { statut: 'recu' },
+          orderBy: [{ receivedAt: 'asc' }, { id: 'asc' }],
+          take: 100,
+          select: { id: true, eventType: true, sujetRef: true, charge: true, retryCount: true },
+        },
+      ],
+    ]);
+  });
+
+  it('REQ-INT-011 : `parentTraite` compte un parent `traite` de la référence ET de l’un des types — zéro : non ; un : oui', async () => {
+    const types = [TypeEvenementRecu.client_cree, TypeEvenementRecu.client_mis_a_jour];
+    const zero = client({ count: 0 });
+    expect(await depotDuTravail(zero.prisma).parentTraite('client:c', types)).toBe(false);
+    expect(zero.appels).toEqual([
+      ['count', { where: { sujetRef: 'client:c', eventType: { in: types }, statut: 'traite' } }],
+    ]);
+    expect(await depotDuTravail(client({ count: 1 }).prisma).parentTraite('client:c', types)).toBe(
+      true
+    );
+  });
+
+  it('REQ-INT-011 : `marquer` écrit, pour chaque statut, ses colonnes et elles seules — la référence d’attente effacée hors attente', async () => {
+    const c = client();
+    const d = depotDuTravail(c.prisma);
+    await d.marquer('i1', { statut: 'traite', processedAt: INSTANT });
+    await d.marquer('i2', { statut: 'en_attente_dependance', dependanceRef: 'client:c' });
+    await d.marquer('i3', { statut: 'en_erreur', error: 'Panne', retryCount: 2 });
+    expect(c.appels).toEqual([
+      [
+        'update',
+        {
+          where: { id: 'i1' },
+          data: { statut: 'traite', processedAt: INSTANT, dependanceRef: null },
+        },
+      ],
+      [
+        'update',
+        {
+          where: { id: 'i2' },
+          data: { statut: 'en_attente_dependance', dependanceRef: 'client:c' },
+        },
+      ],
+      [
+        'update',
+        {
+          where: { id: 'i3' },
+          data: { statut: 'en_erreur', error: 'Panne', retryCount: 2, dependanceRef: null },
+        },
+      ],
+    ]);
+  });
+
+  it('REQ-INT-011 : `reveiller` repasse `recu` les seuls enfants qui attendent la référence, et rend leur nombre', async () => {
+    const c = client({ updateMany: 3 });
+    expect(await depotDuTravail(c.prisma).reveiller('facture:F1')).toBe(3);
+    expect(c.appels).toEqual([
+      [
+        'updateMany',
+        {
+          where: { statut: 'en_attente_dependance', dependanceRef: 'facture:F1' },
+          data: { statut: 'recu', dependanceRef: null },
+        },
+      ],
+    ]);
+  });
+
+  it('REQ-QA-026 : `battre` écrit le battement sous la clé du registre — succès et compteurs, ou échec seul — et refuse une clé hors registre', async () => {
+    const c = client();
+    const d = depotDuTravail(c.prisma);
+    const compteurs = { traites: 1, enAttente: 2, enErreur: 3, reveilles: 4 };
+    await d.battre(TACHE_DE_RECEPTION, { succesAt: INSTANT, compteurs });
+    await d.battre(TACHE_DE_RECEPTION, { echecAt: INSTANT });
+    const succes = { dernierSuccesAt: INSTANT, compteurs };
+    const echec = { dernierEchecAt: INSTANT };
+    expect(c.appels).toEqual([
+      [
+        'upsert',
+        {
+          where: { tache: TACHE_DE_RECEPTION },
+          create: { tache: TACHE_DE_RECEPTION, ...succes },
+          update: succes,
+        },
+      ],
+      [
+        'upsert',
+        {
+          where: { tache: TACHE_DE_RECEPTION },
+          create: { tache: TACHE_DE_RECEPTION, ...echec },
+          update: echec,
+        },
+      ],
+    ]);
+    await expect(
+      d.battre('hors_registre' as typeof TACHE_DE_RECEPTION, { echecAt: INSTANT })
+    ).rejects.toThrow();
+    expect(c.appels).toHaveLength(2);
   });
 });
