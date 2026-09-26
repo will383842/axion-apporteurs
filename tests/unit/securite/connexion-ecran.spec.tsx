@@ -17,7 +17,7 @@
  *   4. L'arrivée du lien ne consomme RIEN à l'affichage : elle rend un formulaire de confirmation
  *      (un lecteur de courriel qui précharge le lien ne l'use pas).
  *
- * Ce spec ne mesure ni le contraste ni les cibles tactiles : c'est le harnais de UX-P0-03.
+ * Ce spec ne mesure ni le contraste ni les cibles tactiles : c'est le rôle du harnais d'accessibilité.
  */
 import { describe, it, expect } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';

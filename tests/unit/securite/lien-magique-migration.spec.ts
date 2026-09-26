@@ -2,7 +2,7 @@
 /**
  * `lien-magique-migration.spec.ts` — lecture STATIQUE de la migration du lien magique (SEC-03),
  * sans Docker : un CHECK ou une branche du déclencheur retirés font rougir ce spec sur tout poste,
- * pas seulement en CI. Même forme que la garde de DM-06 (`apporteur-identifiants.spec.ts`).
+ * pas seulement en CI. Même forme que la garde des jetons de dépôt (`apporteur-identifiants.spec.ts`).
  *
  * Chaque contrainte est exigée avec SON expression : un nom gardé sur une expression affaiblie
  * rougit aussi. Les témoins qui prouvent que la base REFUSE vivent dans
