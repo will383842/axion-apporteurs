@@ -208,6 +208,54 @@ const FORMES_PRISMA: readonly { nom: string; ext: string; lignes: string[]; faut
     lignes: ["import { db } from '../../../db/index';"],
     fautive: 1,
   },
+  // Des CHARGEURS qui ne s'écrivent pas `require(...)` : le module par son objet, le chargeur
+  // fabriqué, le chargeur ré-affecté, l'import dynamique à attributs (revue `exactitude`, PR 82).
+  {
+    nom: 'module-require',
+    ext: 'ts',
+    lignes: ["export const client = module.require('@prisma/client');"],
+    fautive: 1,
+  },
+  {
+    nom: 'create-require',
+    ext: 'ts',
+    lignes: [
+      "import { createRequire } from 'node:module';",
+      "export const client = createRequire(import.meta.url)('@prisma/client');",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'require-reaffecte',
+    ext: 'ts',
+    lignes: ['const charger = require;', "export const client = charger('@prisma/client');"],
+    fautive: 1,
+  },
+  {
+    nom: 'import-dynamique-attributs',
+    ext: 'ts',
+    lignes: ["export const charger = () => import('@prisma/client', { with: { type: 'js' } });"],
+    fautive: 1,
+  },
+  // Le client atteint par son chemin DANS `node_modules`, et sa déclaration `.d.ts`.
+  {
+    nom: 'node-modules',
+    ext: 'ts',
+    lignes: ["import { PrismaClient } from '../../../../../node_modules/@prisma/client';"],
+    fautive: 1,
+  },
+  {
+    nom: 'node-modules-point-prisma',
+    ext: 'ts',
+    lignes: ["import type { Charge } from '../../../../../node_modules/.prisma/client/index.js';"],
+    fautive: 1,
+  },
+  {
+    nom: 'declaration-dts',
+    ext: 'ts',
+    lignes: ["import type { Charge } from '../../lib/prisma.d.ts';"],
+    fautive: 1,
+  },
   {
     nom: 'point-prisma',
     ext: 'ts',
@@ -372,6 +420,164 @@ const FORMES_SQL: readonly { nom: string; lignes: string[]; fautive: number }[] 
     lignes: ["import { Prisma } from '@prisma/client';", 'export const brut = Prisma.raw;'],
     fautive: 2,
   },
+  // Le namespace `Prisma` qui QUITTE sa liaison d'import — chaînage optionnel, assertion non
+  // nulle, ré-affectation, paramètre par défaut, objet, `satisfies`, reste, argument — n'est plus
+  // résolu par semgrep : c'est la SORTIE qui est refusée, pas chaque orthographe (revue
+  // `exactitude`, PR 82).
+  {
+    nom: 'prisma-raw-chainage-optionnel',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const fragment = (x: string) => Prisma?.raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-non-nul',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const fragment = (x: string) => Prisma!.raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-alias-optionnel',
+    lignes: [
+      "import { Prisma as P } from '@prisma/client';",
+      'export const fragment = (x: string) => P?.raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-espace-de-noms-non-nul',
+    lignes: [
+      "import * as C from '@prisma/client';",
+      'export const fragment = (x: string) => C.Prisma!.raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-satisfies',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'const { raw } = Prisma satisfies object;',
+      'export const fragment = (x: string) => raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-let-affecte',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'let P;',
+      'P = Prisma;',
+      'export const fragment = (x: string) => P.raw(x);',
+    ],
+    fautive: 3,
+  },
+  {
+    nom: 'prisma-raw-parametre-defaut',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const fragment = (x: string, P = Prisma) => P.raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-objet',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'const o = { P: Prisma };',
+      'export const fragment = (x: string) => o.P.raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-reste',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'const { sql, ...reste } = Prisma;',
+      'export const fragment = (x: string) => reste.raw(x) ?? sql;',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-reflect',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      "export const brut = Reflect.get(Prisma, 'raw');",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'prisma-raw-import-dynamique-renomme',
+    lignes: [
+      'export const fragment = async (x: string) => {',
+      "  const { Prisma: Q } = await import('@prisma/client');",
+      '  return Q.raw(x);',
+      '};',
+    ],
+    fautive: 2,
+  },
+  // Le constructeur de fragment : `new Prisma.Sql([x], [])` range `x` dans le TEXTE de la requête.
+  {
+    nom: 'prisma-sql-constructeur',
+    lignes: [
+      "import { Prisma } from '@prisma/client';",
+      'export const fragment = (x: string) => new Prisma.Sql([x], []);',
+    ],
+    fautive: 2,
+  },
+  // Le nom du membre `…Unsafe` écrit comme CHAÎNE, où qu'elle soit.
+  {
+    nom: 'query-raw-unsafe-reflect',
+    lignes: [
+      'declare const p: { $queryRawUnsafe(q: string): unknown };',
+      "export const brut = Reflect.get(p, '$queryRawUnsafe');",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'execute-raw-unsafe-cle-calculee',
+    lignes: [
+      'declare const p: { $executeRawUnsafe(q: string): unknown };',
+      "const { ['$executeRawUnsafe']: brut } = p;",
+      'export const ecrire = (q: string) => brut(q);',
+    ],
+    fautive: 2,
+  },
+  // Le `raw` du runtime atteint par l'objet module, et non par un import nommé.
+  {
+    nom: 'runtime-raw-espace-de-noms',
+    lignes: [
+      "import * as rt from '@prisma/client/runtime/library';",
+      'export const fragment = (x: string) => rt.raw(x);',
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'runtime-raw-require',
+    lignes: [
+      "export const fragment = (x: string) => require('@prisma/client/runtime/library').raw(x);",
+    ],
+    fautive: 1,
+  },
+  {
+    nom: 'runtime-raw-import-dynamique',
+    lignes: [
+      'export const fragment = async (x: string) =>',
+      "  (await import('@prisma/client/runtime/library')).raw(x);",
+    ],
+    fautive: 2,
+  },
+  {
+    nom: 'runtime-raw-require-destructure',
+    lignes: [
+      "const { raw: brut } = require('../../../node_modules/@prisma/client/runtime/library.js');",
+      'export const fragment = (x: string) => brut(x);',
+    ],
+    fautive: 1,
+  },
   {
     nom: 'prisma-raw-destructure',
     lignes: [
@@ -515,6 +721,9 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       "import { f } from './db-outils.ts';",
       "import { g } from './prisma-aide.mjs';",
       "export * as h from '@/server/acces/dbx.js';",
+      // Des chaînes qui RESSEMBLENT à un spécifieur sans être chargées comme module.
+      "export const i = fetch('/api/db');",
+      "export const j = require.resolve('./outil-prisma');",
     ],
     null,
     0
@@ -561,6 +770,12 @@ export const CONTRE_TEMOINS: readonly FichierDuBac[] = [
       'declare const p: { $queryRaw(s: TemplateStringsArray, ...v: unknown[]): unknown };',
       'export const lire = (id: string) => p.$queryRaw`SELECT 1 WHERE id = ${id}`;',
       'export const fragment = (id: string) => Prisma.sql`id = ${id}`;',
+      // Ce que le namespace a le DROIT de faire : membre immédiat, déstructuration sans `raw`,
+      // type `Prisma.Sql` en annotation, chargement paresseux non renommé.
+      'const { sql, join } = Prisma;',
+      'export const g = (v: Prisma.Sql): Prisma.Sql => join([v, sql`x`]);',
+      'export const h = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError;',
+      "export const k = async () => { const { Prisma } = await import('@prisma/client'); return Prisma.empty; };",
     ],
     null,
     0
