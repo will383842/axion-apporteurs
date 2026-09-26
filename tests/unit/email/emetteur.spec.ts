@@ -21,6 +21,8 @@ import {
   DemandeRefusee,
   configurationDeLEmetteur,
   demanderEnvoi,
+  type DemandeDEnvoi,
+  type DependancesDeLEmetteur,
   type DepotDesCourriels,
   type LigneCourriel,
   type Relais,
@@ -77,7 +79,7 @@ function banc(drapeau: string | undefined, supprimees: readonly string[] = []) {
   const relais = relaisSimule();
   const depot = depotEnMemoire(supprimees.map((a) => empreinteRecherche('courriel', a, cles)));
   let n = 0;
-  const d = {
+  const d: DependancesDeLEmetteur = {
     configuration: configurationDeLEmetteur(env, DOMAINE),
     relais,
     depot,
@@ -88,7 +90,7 @@ function banc(drapeau: string | undefined, supprimees: readonly string[] = []) {
   return { env, cles, relais, depot, d };
 }
 
-const demande = (a: string) => ({
+const demande = (a: string): DemandeDEnvoi => ({
   gabarit: GABARIT,
   a,
   sujet: 'Votre lien de connexion',
@@ -198,11 +200,7 @@ describe('REQ-INT-022 — une demande hors forme est refusée AVANT tout appel e
       { gabarit: 'gabarit_inconnu' },
       'gabarit_inconnu',
     ],
-    [
-      'un apporteur qui n’est pas un uuid',
-      { apporteurId: 'apporteur-1' } as Partial<ReturnType<typeof demande>>,
-      'apporteur_invalide',
-    ],
+    ['un apporteur qui n’est pas un uuid', { apporteurId: 'apporteur-1' }, 'apporteur_invalide'],
   ];
   for (const [quoi, champ, motif] of cas) {
     it(`REQ-INT-022 : ${quoi} → refus \`${motif}\`, aucun appel, aucune ligne`, async () => {
