@@ -227,11 +227,8 @@ describe('REQ-SEC-010 — le corps est borné à 128 Ko AVANT tout calcul', () =
         else c.enqueue(new Uint8Array(1024));
       },
     });
-    const r = new Request('https://partners.test/x', {
-      method: 'POST',
-      body: flux,
-      duplex: 'half',
-    } as RequestInit);
+    const init: RequestInit & { duplex: 'half' } = { method: 'POST', body: flux, duplex: 'half' };
+    const r = new Request('https://partners.test/x', init);
     expect(await lireCorpsBorne(r)).toEqual({ ok: false, motif: 'corps_trop_grand' });
     // La lecture s'arrête peu après la borne : elle n'a pas avalé le millier de blocs.
     expect(tires).toBeLessThan(200);

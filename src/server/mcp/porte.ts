@@ -15,7 +15,7 @@
  * harnais), et un test ou le harnais passent le leur.
  */
 import { lireEnvironnement, type Secrets } from '../../lib/env';
-import { egalATempsConstant } from '../securite/primitives-de-porte';
+import { CORPS_MAX_OCTETS, egalATempsConstant } from '../securite/primitives-de-porte';
 import type { VerdictDeLimite } from '../securite/rate-limit';
 import { nomComplet } from './socle';
 import { OUTILS } from './registre';
@@ -36,10 +36,11 @@ export interface OptionsDeLaPorte {
 }
 
 /**
- * La borne du corps, en octets : celle que REQ-SEC-010 fixe aux corps entrants des webhooks. Un
- * appel JSON-RPC du socle en fait quelques centaines ; au-delà, ce n'en est pas un.
+ * La borne du corps, en octets : celle que REQ-SEC-010 fixe aux corps entrants des webhooks, écrite
+ * une seule fois dans `primitives-de-porte.ts` (SEC-06). Un appel JSON-RPC du socle en fait quelques
+ * centaines ; au-delà, ce n'en est pas un.
  */
-export const CORPS_MAX_OCTETS = 128 * 1024;
+export { CORPS_MAX_OCTETS };
 
 function texte(statut: number, corps: string): Response {
   return new Response(corps, { status: statut });
