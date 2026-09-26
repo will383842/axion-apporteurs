@@ -168,6 +168,20 @@ exige le connecteur OR de chaque colonne immuable et refuse tout désarmement da
 le statut des apporteurs d'intégration et le piège des observations sont écrits à chaque appel.
 Les quatorze mutants de la revue, rejoués un par un sur l'arbre commité, rougissent tous.
 
+**Porte A.** Les quatre lentilles ont accepté `c26a48b`, et la porte A a rougi (run 36214735286) sur
+trois témoins, tous défauts de test, aucun du code. Le témoin « la demande d'un apporteur n'annule
+pas le lien d'un autre » ne mesurait rien : son apporteur portait le code de parrainage
+`AX00SECL`, que la base refuse (`apporteurs_code_parrainage_format`, le L n'est pas dans
+l'alphabet Crockford), et la création échouait avant la demande. Le témoin de la seconde session
+attendait le nom de la contrainte dans un message que Prisma ne transmet pas pour une requête
+brute (code 23505 et détail seulement) : le bloc lit désormais le nom dans le diagnostic de
+Postgres (`GET STACKED DIAGNOSTICS`) et exige `sessions_espace_lien_magique_id_key`, sans se
+contenter d'un refus quelconque. Le témoin de `perf:budgets` sur le dépôt réel attendait zéro
+route : il lit maintenant le nombre de routes sur les fichiers suivis, et exige autant d'entrées.
+Les lignes « red-first, 0 rouge » du journal de la porte sont la sortie des témoins de
+`tests/unit/qualite/red-first.spec.ts`, sur leurs dépôts jetables : ce spec est vert, et
+`pnpm red-first` sur cette branche juge neuf tests nouveaux, neuf rouges contre `main`.
+
 ### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
 
 **Fait.** Le cadrage de l'architecte du 2026-09-26, pris sur délégation de Will, est inscrit au
