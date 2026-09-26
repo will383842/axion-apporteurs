@@ -25,8 +25,15 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { ETATS_VIDES_ESPACE } from '../../../src/content/micro-copy/espace/etats-vides';
 import { CONNEXION } from '../../../src/content/micro-copy/espace/vocabulaire';
 import { ETATS_DE_CONSOMMATION, ETATS_DE_DEMANDE } from '../../../src/server/auth/lien-magique';
-import { EcranArrivee, EcranConnexion } from '../../../src/app/(espace)/connexion/ecran';
+import * as ETATS_VIDES_DE_L_ESPACE from '../../../src/content/micro-copy/espace/etats-vides';
+import * as VOCABULAIRE_DE_L_ESPACE from '../../../src/content/micro-copy/espace/vocabulaire';
+import {
+  EcranArrivee,
+  EcranConnexion,
+  EcranIssue,
+} from '../../../src/app/(espace)/connexion/ecran';
 import PageConnexion from '../../../src/app/(espace)/connexion/page';
+import PageArrivee from '../../../src/app/(espace)/connexion/[jeton]/page';
 
 const rien = async (): Promise<void> => undefined;
 const html = (etat: (typeof ETATS_DE_DEMANDE)[number] | null) =>
@@ -91,24 +98,112 @@ describe('REQ-SEC-001 — la page lit l’état et n’accepte que la liste ferm
 });
 
 describe('REQ-SEC-001 — l’arrivée du lien : une confirmation, jamais une consommation à l’affichage', () => {
-  const arrivee = (etat: (typeof ETATS_DE_CONSOMMATION)[number] | null) =>
-    renderToStaticMarkup(createElement(EcranArrivee, { etat, action: rien }));
+  const arrivee = () => renderToStaticMarkup(createElement(EcranArrivee, { action: rien }));
+  const issue = (etat: (typeof ETATS_DE_CONSOMMATION)[number]) =>
+    renderToStaticMarkup(createElement(EcranIssue, { etat }));
 
   it('REQ-SEC-001 : un formulaire et un bouton de confirmation, aucun message avant l’envoi', () => {
-    const h = arrivee(null);
+    const h = arrivee();
     expect(h).toContain(`<button type="submit">${CONNEXION.arrivee.action}</button>`);
     expect(h).toContain(`<h1>${CONNEXION.arrivee.titre}</h1>`);
     expect(h).not.toContain('role="status"');
   });
 
-  it('REQ-SEC-001 : chaque issue de la consommation a son message ; un lien invalide propose un nouveau lien', () => {
-    for (const etat of ETATS_DE_CONSOMMATION) {
-      expect(arrivee(etat)).toContain(
-        `<p role="status" aria-live="polite">${CONNEXION.arrivee.reponses[etat]}</p>`
-      );
-    }
-    expect(arrivee('lien_invalide')).toContain(
-      `<a href="/connexion">${CONNEXION.arrivee.nouveauLien}</a>`
+  it('REQ-SEC-001 : la page d’arrivée rend la confirmation, quels que soient ses paramètres', async () => {
+    const h = renderToStaticMarkup(
+      await PageArrivee({ params: Promise.resolve({ jeton: 'A'.repeat(43) }) })
     );
+    const sansAction = (x: string) => x.replace(/<form[^>]*>/, '<form>');
+    expect(sansAction(h)).toBe(sansAction(arrivee()));
+  });
+
+  it('REQ-SEC-001 : un lien invalide rend l’état de la SOURCE UNIQUE de /connexion/<jeton>, mot pour mot', () => {
+    const ssot = ETATS_VIDES_ESPACE['/connexion/<jeton>'];
+    expect(ssot).toBeDefined();
+    const h = issue('lien_invalide');
+    expect(textesDe(h)).toEqual([ssot?.titre, ssot?.phrase, ssot?.action.libelle]);
+    expect(h).toMatch(/<a href="\/connexion">/);
+    expect(h).toContain('role="status"');
+  });
+
+  it('REQ-SEC-001 : un lien utilisé le dit, sous le titre de la confirmation', () => {
+    expect(textesDe(issue('ouverte'))).toEqual([
+      CONNEXION.arrivee.titre,
+      CONNEXION.arrivee.ouverte,
+    ]);
+  });
+});
+
+describe('REQ-SEC-001 — la page /connexion rend l’issue d’une consommation, sans jeton dans l’URL', () => {
+  const page = async (recherche: Record<string, string | string[] | undefined>) =>
+    renderToStaticMarkup(await PageConnexion({ searchParams: Promise.resolve(recherche) }));
+
+  it('REQ-SEC-001 : `?issue=` d’une issue connue rend son écran, et l’emporte sur `?etat=`', async () => {
+    for (const etat of ETATS_DE_CONSOMMATION) {
+      const attendu = renderToStaticMarkup(createElement(EcranIssue, { etat }));
+      expect(await page({ issue: etat })).toBe(attendu);
+      expect(await page({ issue: etat, etat: 'envoye' })).toBe(attendu);
+    }
+  });
+
+  it('REQ-SEC-001 : une issue inconnue rend le formulaire nu', async () => {
+    const sansAction = (x: string) => x.replace(/<form[^>]*>/, '<form>');
+    expect(sansAction(await page({ issue: 'autre' }))).toBe(sansAction(html(null)));
+  });
+});
+
+// ── la source unique : aucun texte hors micro-copie, aucune double graphie ──────────────────────────
+
+/** Les textes visibles d'un rendu, entités décodées, dans l'ordre. */
+function textesDe(h: string): string[] {
+  return h
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/g, '')
+    .split(/<[^>]+>/)
+    .map((t) =>
+      t
+        .replace(/&#x27;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .trim()
+    )
+    .filter((t) => t !== '');
+}
+
+/** Toutes les chaînes d'un module de micro-copie, à toute profondeur. */
+function chaines(x: unknown): string[] {
+  if (typeof x === 'string') return [x];
+  if (Array.isArray(x)) return x.flatMap(chaines);
+  if (x && typeof x === 'object') return Object.values(x).flatMap(chaines);
+  return [];
+}
+const MICRO_COPIE = [...chaines(ETATS_VIDES_DE_L_ESPACE), ...chaines(VOCABULAIRE_DE_L_ESPACE)];
+
+describe('REQ-SEC-001 — les écrans de connexion ne disent que la source unique', () => {
+  it('REQ-SEC-001 : chaque texte affiché, dans chaque état, est une chaîne de la micro-copie', () => {
+    const rendus = [
+      html(null),
+      ...ETATS_DE_DEMANDE.map((e) => html(e)),
+      renderToStaticMarkup(createElement(EcranArrivee, { action: rien })),
+      ...ETATS_DE_CONSOMMATION.map((etat) =>
+        renderToStaticMarkup(createElement(EcranIssue, { etat }))
+      ),
+    ];
+    const hors = rendus.flatMap(textesDe).filter((t) => !MICRO_COPIE.includes(t));
+    // Plancher : les rendus portent des textes.
+    expect(rendus.flatMap(textesDe).length).toBeGreaterThan(10);
+    expect(hors).toEqual([]);
+  });
+
+  it('REQ-SEC-001 : aucun texte de l’espace n’existe en deux graphies (apostrophes, espaces)', () => {
+    const forme = (t: string) => t.replace(/[’‘]/g, "'").replace(/\s+/g, ' ').trim();
+    const parForme = new Map<string, Set<string>>();
+    for (const t of MICRO_COPIE) {
+      const cle = forme(t);
+      parForme.set(cle, (parForme.get(cle) ?? new Set()).add(t));
+    }
+    const doubles = [...parForme.values()].filter((g) => g.size > 1).map((g) => [...g]);
+    expect(doubles).toEqual([]);
   });
 });

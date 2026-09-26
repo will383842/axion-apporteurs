@@ -2801,7 +2801,8 @@
         "tests/unit/securite/lien-magique-migration.spec.ts",
         "tests/unit/domaine/apporteur-acces-espace.spec.ts",
         "tests/unit/securite/connexion-ecran.spec.ts",
-        "perf/budgets.json"
+        "perf/budgets.json",
+        "tests/unit/securite/connexion-actions.spec.ts"
       ],
       "schema": true,
       "sensible": [
