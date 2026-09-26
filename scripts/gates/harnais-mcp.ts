@@ -40,7 +40,7 @@ import {
   SCEAU_PROFILS,
   nomComplet,
   type OutilQuelconque,
-} from '../../src/server/mcp/contrat';
+} from '../../src/server/mcp/socle';
 import { canoniser, octetsCanoniques, versValeurJson } from '../../src/server/mcp/json-canonique';
 import {
   analyserOutils,

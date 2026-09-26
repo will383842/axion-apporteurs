@@ -14,7 +14,7 @@
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { VerdictDeLimite } from '../securite/rate-limit';
-import { nomComplet } from './contrat';
+import { nomComplet } from './socle';
 import { OUTILS } from './registre';
 
 /** Le NOM de la variable qui porte le secret propre à Partners — un nom, jamais la valeur. */

@@ -27,7 +27,7 @@ import {
   type LimiteurMcp,
   type OptionsDeLaPorte,
 } from '../../src/server/mcp/porte';
-import { PROFILS_DU_SOCLE, SCEAU_PROFILS } from '../../src/server/mcp/contrat';
+import { PROFILS_DU_SOCLE, SCEAU_PROFILS } from '../../src/server/mcp/socle';
 import { canoniser } from '../../src/server/mcp/json-canonique';
 import {
   analyserOutils,

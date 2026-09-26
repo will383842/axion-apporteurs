@@ -6,7 +6,7 @@
  * déclaration tant qu'aucun outil n'est inscrit, et la refuse dès qu'il y en a un
  * (`docs/CONVENTIONS.md` §11 — un périmètre vide se motive et se reprend).
  */
-import type { OutilQuelconque } from './contrat';
+import type { OutilQuelconque } from './socle';
 
 export const OUTILS: readonly OutilQuelconque[] = [];
 

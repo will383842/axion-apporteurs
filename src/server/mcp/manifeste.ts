@@ -30,7 +30,7 @@ import {
   VERSION_ADAPTATEUR,
   nomComplet,
   type OutilQuelconque,
-} from './contrat';
+} from './socle';
 import {
   canoniser,
   empreinteCanonique,
