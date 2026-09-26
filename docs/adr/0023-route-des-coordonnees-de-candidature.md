@@ -58,6 +58,13 @@ d'erreur.
 `en_attente_dependance` avec `dependance_ref = 'coordonnees:<candidatureId>'` et il est rejoué ; aucun
 apporteur n'est créé sans adresse.
 
+**8. Débit plafonné par candidature.** Une lecture sert le traitement, pas la consultation : au plus
+cinq lectures réussies par `candidatureId` sur vingt-quatre heures glissantes, par un limiteur dont la
+conduite sur panne est de refuser ; au-delà, la réponse est celle d'un identifiant inexistant, et
+l'écart est journalisé et alerté. Le plafond laisse passer les rejeux de Partners après une panne de
+son côté ; il interdit la lecture répétée. Il est porté par l'acceptance d'INT-T27-A. Une marque de
+lecture unique côté axionia est écartée : elle ferait perdre les coordonnées à une reprise légitime.
+
 ## Conséquences
 
 - axionia porte une route de plus, tenue par une tâche de son dépôt (versée par GOV-102), dont
@@ -78,7 +85,7 @@ apporteur n'est créé sans adresse.
 | Coordonnées dans la charge de `candidature.recue`, avec une exemption de la garde de frontière | Le corps exact est conservé dans la file de sortie pour la relecture : un clair de plus, conservé longtemps, là où axionia chiffre partout ailleurs ; et une garde exemptée une fois l'est ensuite pour d'autres. |
 | Coordonnées dans la charge, chiffrées par axionia | La signature porte sur le corps exact, et Partners devrait détenir la clé d'axionia : deux dépôts partageraient un secret de chiffrement. |
 | Faire ressaisir ses coordonnées au candidat dans Partners | Il faut déjà son adresse pour l'inviter à le faire. |
-| Tirer les coordonnées à chaque besoin | La route deviendrait un annuaire interrogeable à volonté ; une seule lecture, au traitement, suffit. |
+| Tirer les coordonnées à chaque besoin | La route deviendrait un annuaire interrogeable à volonté. Elle sert au traitement d'une candidature, et son débit par candidature est plafonné côté axionia (décision 8). |
 
 ## Ce qui le vérifie
 

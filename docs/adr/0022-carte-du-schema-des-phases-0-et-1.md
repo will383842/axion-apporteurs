@@ -47,6 +47,17 @@ EXT-T01 ; `campagnes_recrutement` et `pieces_jointes_candidature` par EXT-T03 ;
 `notifications_espace` et `preferences_notification` par UX-P1-10. Côté axionia,
 `partners_sync_outbox` par INT-T02.
 
+La table `apporteurs`, créée par DM-06, est la seule qu'ÉTENDENT plusieurs tâches, chacune pour ses
+propres colonnes et dans sa propre migration — une extension n'est pas une seconde création, et aucune
+colonne n'a deux auteurs : SEC-03 le courriel chiffré et son empreinte ; SEC-04 le nom, le prénom et
+le téléphone chiffrés, l'empreinte `phoneHash`, `sessionVersion` et l'acceptation de la politique de
+confidentialité ; SEC-15 l'état de gel et ses colonnes ; DM-11 la qualité d'exercice et la profession
+réglementée ; EXT-T03 l'origine, le canal et la campagne de la candidature, et le relâchement en
+nullable des colonnes du snapshot de candidature. Toute tâche qui lit ou écrit une de ces colonnes
+dépend, directement ou par transitivité, de la tâche qui la pose. Les tables `liens_magiques` et
+`sessions_espace` (SEC-03) sont étendues de même par SEC-04 et SEC-17, et `courriels_envoyes`
+(INT-T10) par DM-07.
+
 **2. Le créateur pose d'un coup toutes les colonnes connues des phases 0 et 1**, nulles quand elles ne
 sont pas écrites à la naissance. C'est ce qui laisse `schema: false` les tâches d'écran et de cron.
 

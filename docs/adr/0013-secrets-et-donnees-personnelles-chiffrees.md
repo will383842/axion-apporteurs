@@ -101,8 +101,13 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
     table, aucune ligne à consommer. Il porte l'identifiant du jeton de dépôt, l'identifiant du dépôt
     et le `kid`, et une signature HMAC-SHA-256 sous `MAGIC_LINK_SECRET`, entrée séparée par domaine :
     `partners.pas-moi.v1`, U+001F, l'identifiant du jeton, U+001F, l'identifiant du dépôt ; sortie de
-    64 caractères hexadécimaux minuscules, comparée à temps constant. Son seul effet est de révoquer le
-    jeton désigné, et la révocation est **idempotente** : le même lien cliqué deux fois, ou après une
+    64 caractères hexadécimaux minuscules, comparée à temps constant. **Ouvrir le lien ne révoque
+    rien** : la requête de lecture n'affiche qu'une page de confirmation, et seule l'ACTION envoyée
+    depuis cette page révoque — comme la consommation du lien de connexion de SEC-03. Les analyseurs
+    de liens des messageries ouvrent les URL d'un courriel sans que personne n'ait cliqué ; une
+    révocation déclenchée par la lecture couperait le jeton de tout apporteur dont la messagerie
+    inspecte les liens. Son seul effet est de révoquer le jeton désigné, et la révocation est
+    **idempotente** : le même lien cliqué deux fois, ou après une
     révocation par un autre chemin, ne change rien et rend la même page. Il ne vaut que pour le jeton
     qu'il nomme : il ne révoque ni session ni autre jeton, et un identifiant de jeton qui n'appartient
     pas à l'apporteur du dépôt rend la même page qu'un lien faux. Pas de double clé : un lien signé sous
@@ -195,7 +200,7 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
 - **Décision 15** : son assertion est posée par SEC-11 — un vecteur figé de signature sous
   `MAGIC_LINK_SECRET` et le domaine `partners.pas-moi.v1`, une signature d'un autre domaine refusée, et
   le même lien joué deux fois qui ne révoque qu'une fois (compte des révocations, jamais le code de
-  réponse).
+  réponse), et la seule ouverture du lien, sans l'action de la page, qui laisse le jeton actif.
 - **Le câblage au démarrage réel** : QA-T04 appelle `exigerEnvironnement()` depuis le point d'entrée
   du serveur et étend CE schéma, jamais un second.
 - **Un secret optionnel** (par exemple celui d'une intégration qui doit rendre 503 s'il manque, INT-T11)
