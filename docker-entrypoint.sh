@@ -19,7 +19,8 @@ DELAI_MIGRATION_S=55
 if [ "${SKIP_MIGRATE:-}" = "1" ]; then
   echo "SKIP_MIGRATE=1 : migration sautee (runbook de retour arriere seulement)." >&2
 else
-  if ! timeout "$DELAI_MIGRATION_S" node "$PRISMA" migrate deploy --schema prisma/schema.prisma; then
+  # `-k 5` : une migration qui ignore SIGTERM reçoit SIGKILL cinq secondes après — 60 s au plus.
+  if ! timeout -k 5 "$DELAI_MIGRATION_S" node "$PRISMA" migrate deploy --schema prisma/schema.prisma; then
     echo "Demarrage refuse : la migration a echoue ou depasse ${DELAI_MIGRATION_S} s. Le serveur n'est pas lance." >&2
     exit 1
   fi

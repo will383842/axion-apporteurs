@@ -22,6 +22,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import config, { PROFILS_A11Y, PROJETS } from '../../playwright.config';
 import {
+  E2E,
+  RACINE,
   SURFACE_PIEGE,
   auditAxe,
   juger,
@@ -68,7 +70,7 @@ describe('REQ-QA-016 — les projets Playwright', () => {
   });
 
   it('REQ-QA-016 : un spec de parcours d’espace sans projet mobile fait rougir — la liste est dérivée du disque', () => {
-    const specs = specsDuDisque();
+    const specs = specsDuDisque(E2E, RACINE);
     console.log(`${specs.length} spec(s) de parcours sous tests/e2e/ (aucun avant QA-T16).`);
     expect(specsSansProjet(config, specs)).toEqual([]);
     // Témoin : la même configuration privée de ses projets mobiles laisse un parcours d'espace orphelin.

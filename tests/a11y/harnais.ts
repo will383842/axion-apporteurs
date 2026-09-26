@@ -28,7 +28,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { chromium, webkit, type Page, type PlaywrightTestConfig } from '@playwright/test';
 import config from '../../playwright.config';
 
-const RACINE = process.cwd();
+/** La racine du dépôt : là où `specsDuDisque` lit les parcours réels. */
+export const RACINE = process.cwd();
 
 export type Espace = 'espace' | 'console';
 
@@ -382,14 +383,15 @@ export function juger(
 
 // ── REQ-QA-016 : chaque parcours a ses projets ──────────────────────────────────────────────────
 
-const E2E = 'tests/e2e';
+/** Le dossier des parcours, relatif à la racine. */
+export const E2E = 'tests/e2e';
 
 /** Les specs de parcours du DISQUE, relatives à la racine. */
-export function specsDuDisque(dossier = E2E): string[] {
-  if (!existsSync(join(RACINE, dossier))) return [];
-  return readdirSync(join(RACINE, dossier), { withFileTypes: true }).flatMap((e) => {
+export function specsDuDisque(dossier: string, racine: string): string[] {
+  if (!existsSync(join(racine, dossier))) return [];
+  return readdirSync(join(racine, dossier), { withFileTypes: true }).flatMap((e) => {
     const chemin = `${dossier}/${e.name}`;
-    if (e.isDirectory()) return specsDuDisque(chemin);
+    if (e.isDirectory()) return specsDuDisque(chemin, racine);
     return /\.spec\.ts$/.test(e.name) ? [chemin] : [];
   });
 }

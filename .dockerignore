@@ -6,3 +6,9 @@ test-results
 coverage
 reports
 .stryker-tmp
+# Aucun fichier d'environnement du poste : `next start` charge un `.env*` du répertoire AVANT
+# `register()`, et une variable absente de la plateforme y serait fournie en silence — le refus de
+# démarrer ne refuserait plus rien, et les secrets vivraient dans une couche de l'image. Seul le
+# modèle sans valeur entre (QA-T04, revue securite de la PR 130).
+.env*
+!.env.example

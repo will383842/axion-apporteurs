@@ -227,7 +227,16 @@ const git = (args: string[], cwd = process.cwd()): string =>
 
 /** Les chemins que `<base>...HEAD` porte avec le filtre donné (A : ajoutés ; AM : ajoutés ou modifiés). */
 function cheminsDuDiff(base: string, filtre: string): string[] {
-  return git(['diff', '--name-only', '-z', `--diff-filter=${filtre}`, `${base}...HEAD`])
+  // `--no-renames` : un test DÉPLACÉ puis réécrit est un fichier ajouté, jugé comme tel. Sans lui,
+  // git le voit renommé (statut R), et il sort du champ de la garde (revue securite de la PR 130).
+  return git([
+    'diff',
+    '--name-only',
+    '-z',
+    '--no-renames',
+    `--diff-filter=${filtre}`,
+    `${base}...HEAD`,
+  ])
     .split('\0')
     .filter((c) => c !== '');
 }

@@ -59,11 +59,33 @@ function clientDeBase(url: string): PrismaClient {
   return client;
 }
 
+/**
+ * UN client de cache par adresse, gardé d'un appel à l'autre : `readyz` est public, et une connexion
+ * neuve à chaque appel en ferait un amplificateur bon marché. Un client MORT (fermé, ou terminé
+ * après un échec — le client ne se relance jamais, `retryStrategy` rend `null`) est remplacé, et
+ * l'ancien fermé : il n'en vit jamais plus d'un par adresse.
+ */
+const clientsDeCache = new Map<string, Redis>();
+const ETATS_MORTS: ReadonlySet<string> = new Set(['end', 'close']);
+
+function clientDeCache(url: string): Redis {
+  const existant = clientsDeCache.get(url);
+  if (existant !== undefined && !ETATS_MORTS.has(existant.status)) return existant;
+  existant?.disconnect();
+  const client = new Redis(url, OPTIONS_DU_CLIENT);
+  client.on('error', () => undefined);
+  clientsDeCache.set(url, client);
+  return client;
+}
+
 /** Ferme les clients ouverts par les sondes (arrêt propre, fin d'un test). */
 export async function fermerSondes(): Promise<void> {
-  const clients = [...clientsDeBase.values()];
+  const bases = [...clientsDeBase.values()];
+  const caches = [...clientsDeCache.values()];
   clientsDeBase.clear();
-  await Promise.all(clients.map((c) => c.$disconnect()));
+  clientsDeCache.clear();
+  for (const c of caches) c.disconnect();
+  await Promise.all(bases.map((c) => c.$disconnect()));
 }
 
 /** Rend `true` si la sonde aboutit dans le délai, `false` si elle lève ou le dépasse. */
@@ -87,15 +109,10 @@ async function sonderBase(url: string): Promise<void> {
 
 /** Les options du client de débit (SEC-10), reprises : aucune file hors ligne, aucune relance. */
 async function sonderCache(url: string): Promise<void> {
-  const client = new Redis(url, OPTIONS_DU_CLIENT);
-  client.on('error', () => undefined);
-  try {
-    await client.connect();
-    const reponse = await client.ping();
-    if (reponse !== 'PONG') throw new Error('cache : réponse inattendue');
-  } finally {
-    client.disconnect();
-  }
+  const client = clientDeCache(url);
+  if (client.status === 'wait') await client.connect();
+  const reponse = await client.ping();
+  if (reponse !== 'PONG') throw new Error('cache : réponse inattendue');
 }
 
 /** Les migrations du disque : chaque dossier qui porte un `migration.sql`. */
@@ -108,10 +125,16 @@ function migrationsDuDisque(dossier: string): string[] {
 /** Aucune migration du disque n'attend : chacune est appliquée, terminée, et non annulée. */
 async function sonderMigrations(url: string, dossier: string): Promise<void> {
   const surLeDisque = migrationsDuDisque(dossier);
-  const appliquees = await clientDeBase(url).$queryRaw<{ migration_name: string }[]>`
-    SELECT migration_name FROM _prisma_migrations
-    WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL`;
-  const faites = new Set(appliquees.map((m) => m.migration_name));
+  // Toutes les lignes, jugées ICI : une ligne ÉCHOUÉE (fin nulle) ou ANNULÉE (annulation posée)
+  // n'applique rien. Le filtre vit dans le code, où un test le voit, pas dans une clause SQL.
+  const lignes = await clientDeBase(url).$queryRaw<
+    { migration_name: string; finished_at: Date | null; rolled_back_at: Date | null }[]
+  >`SELECT migration_name, finished_at, rolled_back_at FROM _prisma_migrations`;
+  const faites = new Set(
+    lignes
+      .filter((m) => m.finished_at !== null && m.rolled_back_at === null)
+      .map((m) => m.migration_name)
+  );
   const enAttente = surLeDisque.filter((m) => !faites.has(m));
   if (enAttente.length > 0) throw new Error(`${enAttente.length} migration(s) en attente`);
 }

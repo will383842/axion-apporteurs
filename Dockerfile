@@ -23,7 +23,10 @@ RUN pnpm exec next build
 
 FROM base AS execution
 ENV NODE_ENV=production
-COPY --from=construction --chown=node:node /app /app
+# Le code appartient à root, en lecture seule pour l'utilisateur d'exécution : seul le cache de
+# Next (images optimisées, régénérations) doit être écrit par lui.
+COPY --from=construction /app /app
+RUN mkdir -p /app/.next/cache && chown node:node /app/.next/cache
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=3 CMD node -e "fetch('http://127.0.0.1:3000/api/readyz').then((r) => process.exit(r.status === 200 ? 0 : 1), () => process.exit(1))"

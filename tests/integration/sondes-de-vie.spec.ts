@@ -87,7 +87,9 @@ function lancerEntree(cwd: string, poses: Record<string, string>): Sortie {
 function sExecuteOuSeDeploie(f: string): boolean {
   return (
     /^(src|scripts|\.github|docs\/runbooks|prisma)\//.test(f) ||
-    /^(Dockerfile|docker-entrypoint\.sh|package\.json|next\.config\.ts)$/.test(f)
+    /^(Dockerfile|docker-entrypoint\.sh|package\.json|next\.config\.ts)$/.test(f) ||
+    /^docker-compose[\w.-]*\.ya?ml$/.test(f) ||
+    /^Dockerfile\.[\w.-]+$/.test(f)
   );
 }
 
