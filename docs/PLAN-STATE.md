@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `9d6fbad` — 2026-09-27T01:02:56+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #145 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #82 (un contrôle requis rouge ou une revue manquante) · 2. #158 (un contrôle requis rouge ou une revue manquante) · 3. #145 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 43/116 tâches, reste 56.60 j |
 | Le prochain pas | SEC-04 — Sessions révocables en base, `sessionVersion`, step-up (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 0 question(s) pour Will |
-| Dernière entrée de journal | PR #148 — 2026-09-26 |
+| Dernière entrée de journal | PR #158 — 2026-09-27 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -60,8 +60,9 @@ Aucune : toutes les décisions dont la phase courante dépend ont une hypothèse
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #145 — feat(SEC-06): lot L0-05 — réception des webhooks axionia, événements reçus et battements ; émetteur e-mail et rebonds | `t/lot-l0-05` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 2 | #158 — chore(GOV-053): lot L0-06 — PLAN-STATE à la ligne, rubriques dues, lecteur unique, forme des chemins | `t/lot-l0-06` | un contrôle requis rouge ou une revue manquante |
+| 3 | #145 — feat(SEC-06): lot L0-05 — réception des webhooks axionia, événements reçus et battements ; émetteur e-mail et rebonds | `t/lot-l0-05` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -97,6 +98,14 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
 
+### PR #158 — 2026-09-27 — chore(GOV-053): lot L0-06 — PLAN-STATE à la ligne, rubriques dues, lecteur unique, forme des chemins
+
+**Fait.** Six tâches de phase 0, un commit rouge puis un commit de code chacune. Vue d'état : la liste des tâches éligibles de la rubrique Prochain pas est désignée par ce qu'elle dérive et son compte est une mesure du domaine ; le vert dit, rubrique exemptée par rubrique exemptée, ce qui est confronté et ce qui est libre (GOV-053). Les rubriques dues se lisent dans REQ-GOV-006, famille `rubrique_due_absente`, et Bloquées est émise sans condition (GOV-055). Le générateur lit le registre des décisions par `chargerRegistre` seul : les cinq questions ouvertes annoncées (W9, W6, DEC-INT-002, W12, W11) étaient tranchées le 2026-09-03, la vue en annonce zéro (GOV-060). Une liste tronquée dit son affiché, son total et la vue où lire le reste (GOV-079). Chemins : le schéma pose la forme d'un chemin de `paths` en quatre clauses fermées (GOV-050), et `isolation_depot` compare par la primitive unique `estSousLeDossier`, qui normalise et échoue fermée sur l'indécidable (GOV-051).
+
+**Reste.** Trois écritures de registre, demandées au donneur d'ordre et non faites ici : le texte de REQ-GOV-006 porte la phrase des rubriques dues (sans elle, le vert imprime 0/0 et trois témoins de `couverture-attendue.spec.ts` rougissent), `docs/REQUIREMENTS.md` à rendre ensuite, et `tests/unit/gouvernance/vues-derivees.spec.ts` aux `paths` de GOV-055. Six gardes comparent encore des chemins en chaîne brute, nommées dans `gov-conventions.ts` : composer, paths-proposes, chemins-de-tache, integrer, gov-pr et gov-attributions. Le tri des entrées de registre sans script, que `gov-conventions.ts` promettait à GOV-051, n'a pas de porteur. Les mesures du domaine et les lignes du bloc de reprise restent jugées contre le générateur lui-même.
+
+**Appris.** `gov:attributions` ne lit que les vingt premières lignes d'un fichier de `scripts/` ou de `tests/` : une définition insérée en tête de `tasks.schema.json` a poussé hors de cette fenêtre deux mentions déclarées en dette, qui sont devenues des déclarations périmées sans qu'un caractère change. Et une mesure d'ouverture écrite avant qu'une tâche voisine atterrisse peut être déjà fermée le jour où on la rejoue : celle de GOV-053 sortait en 1 depuis la PR 106, et c'est le reste de son acceptance, pas sa mesure, qui a porté la livraison.
+
 ### PR #148 — 2026-09-26 — feat(SEC-04): sessions revocables en base, sessionVersion tenue par la base, relevement
 
 **Fait.** La session de l'espace apporteur est révocable. La consommation d'un lien pose enfin le cookie `__Host-partners-session` (HttpOnly, Secure, SameSite=Lax, Path=/, 30 jours dérivés de `DUREES_AUTH`). `exigerSession` relit en base, à chaque appel, la session, la version et le statut de l'apporteur, et nomme un motif fermé ; `exigerSessionRelevee` exige un lien consommé depuis moins de 10 minutes par la session COURANTE. La base tient `sessionVersion` : le déclencheur `apporteurs_version_de_session` incrémente d'un cran à la résiliation et au changement d'empreinte de courriel, jamais à la suspension, et refuse toute descente ; chaque session ouverte copie la version de son apporteur ; une révocation est définitive. La migration `20260926100000_sessions_revocables` pose aussi les coordonnées chiffrées de l'apporteur (nom, prénom, téléphone et `phone_hash` non unique), l'acceptation de la politique de confidentialité, le code et ses essais sur `liens_magiques`, et la table `changements_courriel` ; module du semeur `prisma/seed/05-sessions.ts`. Mutation : 100 pour cent, 103 mutants sur 103.
@@ -115,41 +124,7 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 Porte A : deux rouges sur la tête 79f50e2, verts sur `main` 4c1fa00, donc causés par cette PR, et d'une seule cause. Le témoin REQ-INT-026 « tâche repreneuse sans REQ-INT-027 » désignait INT-T11 et lisait son statut dans le registre réel : passée `fusionnee`, elle déclenchait d'abord la famille « est livrée », qui masquait celle que le cas garde. Le témoin REQ-QA-006 « démon absent », qui dérive ses comptes du disque, rougissait par ricochet : `adaptateur-mcp.spec.ts` est l'un des trois fichiers autonomes, et il échouait. Correctif : le statut de la repreneuse est posé dans la fixture (`a_faire`), la famille attendue reste la même ; le fichier de test est ajouté aux chemins de GOV-012 par `ajouter-path.mjs`. Mesuré en local : les 30 cas du fichier verts, le témoin REQ-QA-006 vert (6 dépendants en échec, 3 autonomes au vert), et le cas corrigé rougit encore quand on neutralise dans le harnais le contrôle de REQ-INT-027 (code 0 au lieu de 1). Un témoin qui nomme une tâche réelle pour son CONTENU dépend aussi de son STATUT, et un rattrapage du registre le décale.
 
-### PR #140 — 2026-09-26 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr
-
-**Fait.** Deux lentilles partout, `exactitude` et `securite`, plus `schema` sur une PR de schéma :
-décision de Will du 2026-09-26, `W16`, consignée par `partners/ADR-0024`. La mutation n'est plus un
-avis d'agent : `pnpm mutation:pr` lance Stryker en bac à sable, en porte A, sur les fichiers de
-`src/domain/`, `src/server/` et `src/lib/` que la PR touche, et nomme chaque survivant. Un accord
-survit à une
-fusion de `main` quand l'empreinte du diff propre à la PR (`git patch-id --stable` depuis la base de
-fusion, vues dérivées exclues) est inchangée, `exactitude` comprise. `pnpm pre-gate` joue les étapes
-rapides de la porte A lues dans `ci.yml` ; `pnpm vues:fusion` fusionne `main` et rend les vues quand
-elles seules sont en conflit ; le total littéral du cliquet des sorties non nulles est remplacé par
-une lecture de la base. GOV-101 porte la PR.
-
-**Reste.** Sortir `docs/PLAN-STATE.md` et `docs/TRACABILITE.md` des PR : un workflow devrait pousser
-sur `main`, ce que `partners/ADR-0006` section 4 interdit (REQ-GOV-014) ; décision de Will à prendre,
-nommée dans `partners/ADR-0024`. Une passe Stryker sur les fonctions pures des gardes. La durée de
-`mutation:pr` en porte A sur une PR du domaine reste à mesurer en CI.
-
-**Appris.** Sur le diff de SEC-03 (cinq fichiers, 200 mutants), la configuration de test de Stryker
-limitée aux tests du domaine rendait 196 mutants sans couverture et un score de 0,51 pour cent : le
-code du serveur est jugé par `tests/unit/securite/`. Avec ces tests, 82,50 pour cent en 3 min 10 s,
-arbre de travail propre. Et `vues:fusion` a fusionné `main` dans cette branche en 51 s, vues
-rendues ; la seconde fois, il a abandonné sur un vrai conflit (`docs/tasks.json`, des tâches
-versées des deux côtés), résolu par identifiant, sans perte.
-
-**Relecture.** `exactitude` et `securite` ont accepté (revues 5326296410 et 5326296579) ; le second
-tour a fermé leurs dettes. L'acceptance de GOV-101 promettait un robot sur `main` et la mutation des
-scripts de garde : elle est réécrite par le verbe hors dépôt pour dire ce qui est livré. `mutation:pr`
-sautait en silence `src/lib/`, `src/app/` et `src/proxy.ts` : `src/lib/` est désormais muté, le reste
-de `src/` est écarté et nommé, et un commentaire de désactivation de Stryker fait échouer la passe.
-L'empreinte a perdu son résumé `--summary` : muté hors de l'empreinte, il ne faisait rougir aucun
-témoin, `patch-id` hachant déjà les en-têtes de mode. `vues:fusion` défait la fusion sur toute
-levée, et l'API `sansMutation` est retirée.
-
-… 3 entrée(s) affichée(s) sur 65 ; les 62 plus ancienne(s) se lisent dans `docs/journal/`.
+… 3 entrée(s) affichée(s) sur 66 ; les 63 plus ancienne(s) se lisent dans `docs/journal/`.
 
 ## Dette déclarée
 
