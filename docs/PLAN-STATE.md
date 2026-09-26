@@ -7,26 +7,26 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `05dcd2f` — 2026-09-26T04:04:04+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #136 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
+| Où est `main` ? | `76548e9` — 2026-09-26T06:06:25+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #136 (rien) · 2. #139 (un contrôle requis rouge ou une revue manquante) · 3. #140 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
-| Où en est la phase ? | phase 0 — 35/111 tâches, reste 57.60 j |
-| Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
+| Où en est la phase ? | phase 0 — 35/115 tâches, reste 61.60 j |
+| Le prochain pas | fusionner #136, puis SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #134 — 2026-09-26 |
+| Dernière entrée de journal | PR #139 — 2026-09-26 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 136 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
-35/111 tâches terminées · reste 57.60 j estimés.
+35/115 tâches terminées · reste 61.60 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 209 | JUR-T02, QA-T04, QA-T07, QA-T30, CPL-T22, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P … |
+| `a_faire` | 213 | JUR-T02, QA-T04, QA-T07, QA-T30, CPL-T22, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -37,11 +37,11 @@
 
 ## Chemin critique
 
-**20.75 j** sur 22 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
+**22.00 j** sur 23 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-07 (1 j, ph 1) → DM-08 (1.25 j, ph 1) → T-ARG-010 (1 j, ph 2) → DM-15 (1.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **13.50 j**.
+Reste sur ce chemin : **14.75 j**.
 
 ## Bloquées
 
@@ -58,15 +58,16 @@ Reste sur ce chemin : **13.50 j**.
 
 ## Hypothèses par défaut appliquées
 
-62 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
+64 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
 
 ## File de fusion
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un contrôle requis rouge ou une revue manquante |
-| 2 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un contrôle requis rouge ou une revue manquante |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | rien — fusionnable maintenant |
+| 2 | #139 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées | `t/gov-102` | un contrôle requis rouge ou une revue manquante |
+| 3 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un contrôle requis rouge ou une revue manquante |
+| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -82,25 +83,103 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées
+`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition · `docs/adr/0023-route-des-coordonnees-de-candidature.md` — partners/ADR-0023 — Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
 
-**SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**Fusionner #136** — elle est en tête de file et ne bloque sur rien.
+
+**SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 42 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `05dcd2f` (2026-09-26T04:04:04+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `76548e9` (2026-09-26T06:06:25+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #139 — 2026-09-26 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées
+
+**Fait.** Le cadrage du schéma des phases 0 et 1 décidé par l'architecte le 2026-09-26, sur
+délégation de Will, est inscrit au registre : le champ `schema` de vingt et une tâches est remis
+droit (DM-01, pourtant fusionnée, compris), les `paths`, `deps` et acceptances des tâches
+créatrices et écrivaines portent désormais le schéma exact de chaque table, avec une acceptance
+posée pour DM-07, DM-08, DM-12, SEC-11, CPL-T06, INT-T12 et UX-P1-10, qui n'en avaient pas ;
+INT-T01c et INT-T26 sont versées ; le glossaire porte vingt-deux enums nouveaux et, au §4.1, les
+treize valeurs de `TypeEvenementJournal` avec leur tâche créatrice ; douze exigences sont amendées
+ou alignées sur `EvenementRecu` ; `HYP-A02-RETENTION` et `HYP-A02-VOCABULAIRE-QUALIFICATION`
+entrent au registre des décisions. Contrôle champ par champ contre `origin/main` : seuls les champs
+décidés changent, aucune entrée perdue, aucun texte raccourci. Gardes jouées à 0 : `gov:tasks`,
+`gov:hypotheses`, `gov:requirements`, `gov:attributions`, `gov:identifiants`, `gov:lexique`,
+`gov:termes-interdits`, `gov:trace:verifier`, `plan-state:verifier`, `lot:paths:check`, `gov:etat`,
+`partners:schema:enums`, `gov:preseance`, `gov:publication` ; specs `tests/unit/contrat/`,
+`un-nom-une-garde.spec.ts`, `glossaire-enums.spec.ts`, `termes-interdits.spec.ts` et
+`contrat-hash.spec.ts` vertes. `gov:adr` rougit sur les trois renvois du glossaire à
+partners/ADR-0022, que l'architecte écrit sur cette même branche.
+
+Puis l'architecte, sur la même branche : partners/ADR-0022 (carte du schéma des phases 0 et 1),
+partners/ADR-0023 (route HMAC d'axionia des coordonnées de candidature, troisième API) et la
+décision 15 de partners/ADR-0013 (lien « ce n'est pas moi » sans état) sont écrits, l'index est
+régénéré et `gov:adr` sort à 0. Les créateurs de valeurs de journal (DM-07, DM-08, DM-11, DM-12,
+DM-23, SEC-15, CPL-T06, EXT-T01, EXT-T03) portent `src/domain/evenement/charges.ts` et
+`docs/GLOSSAIRE.md` dans leurs `paths`, et `prisma/migrations/` quand il manquait (SEC-15, DM-10-P,
+DM-23, EXT-T03) ; INT-T01c porte le fichier de partners/ADR-0023. Sur décision de l'orchestrateur,
+les colonnes nom, prénom, téléphone et `phoneHash` de `apporteurs` reviennent à SEC-04, dont
+l'acceptance gagne un point (7). La route des coordonnées côté axionia est versée en INT-T27-A
+(phase 0, `schema: false`, sensible `rgpd`), et INT-T26 en dépend ; EXT-T01 dépend de DM-12, qui
+pose le champ chiffré `texte` qu'elle réutilise. Contrôle champ par champ contre la tête
+précédente : seuls ces champs ont changé, une tâche ajoutée.
+
+**Relecture.** Lentille `securite` : accord. Lentille `exactitude` : refus sur un seul défaut,
+INT-T26 et EXT-T03 écrivaient ou lisaient les colonnes de coordonnées de `apporteurs` que SEC-04
+crée, sans dépendance vers SEC-04 ; SEC-04 est ajoutée à leurs `deps` depuis un fichier, relue sur
+le disque. Au passage : la décision 15 de partners/ADR-0013 précise que l'ouverture du lien « ce
+n'est pas moi » ne révoque rien, seule l'action de la page le fait, à cause des analyseurs de liens
+des messageries ; partners/ADR-0023 impose désormais le plafond de lecture qu'elle invoquait (cinq
+lectures par candidature sur vingt-quatre heures, point (7) d'INT-T27-A) ; UX-P1-09 reçoit une
+acceptance, dont une réponse identique quand la nouvelle adresse est déjà portée par un autre
+apporteur ; l'apostrophe perdue du point 3 d'INT-T26 est rendue, et le point 2 d'INT-T05 ne compte
+plus sept types ; partners/ADR-0022 nomme les tâches qui étendent `apporteurs`, colonne par colonne.
+Seconde relecture sur bed1887 : les deux lentilles accordent.
+
+**Porte A.** Deux rouges réels, causés par le registre que cette PR modifie. (1) Le témoin
+« REQ-GOV-011, cas 1 » lisait DM-01 dans le registre réel : DM-01 passée `schema: true`, la
+troisième lentille attendue devenait `schema` au lieu de `simplicite`. Les tâches de la PR fictive
+sont désormais fixées à `schema: false` dans le témoin, qui porte sur la sensibilité au milieu de la
+liste ; le risque élevé vient toujours du `sensible` réel de DM-01. (2) Le témoin du plancher de
+`gov:trace` retirait une tranche partant du milieu de la liste, et la tranche débordait dès que le
+périmètre dépassait deux fois le plancher (la tâche versée ici l'a fait passer) : son départ est
+borné à la liste, même correctif que la PR 136. Les deux specs passent en local, 45 cas ; leurs
+fichiers entrent aux `paths` de GOV-102.
+
+**Reste.** DM-11 cite encore REQ-DM-013 alors que `contrats` naît de DM-23 : aucun verbe n'écrit le
+champ `reqs`, la citation reste jusqu'à ce qu'un verbe le permette. Trois points de la décision restent dus : les `reqs` à ajouter à SEC-06, SEC-04, DM-12
+et UX-P1-08 (aucun verbe n'écrit ce champ) ; l'amendement de REQ-INT-004, REQ-QA-007 et
+REQ-GOV-020, porté par l'acceptance d'INT-T01c en même temps que le contrat ; la citation de
+REQ-EXT-009 par INT-T26. `ProfessionReglementee` est décidée par partners/ADR-0022 (point 16 :
+`expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance`, un par code NAF
+de REQ-JUR-022) et reste à inscrire au glossaire avant DM-11. `QualiteExercice` n'est tirée
+d'aucune exigence : la liste des statuts d'exercice et leur libellé dans l'article 14 du contrat
+sont une décision de Will, à consigner au registre avant DM-11 (proposition dans
+partners/ADR-0022).
+
+**Appris.** Une exigence de phase 1 citée par une tâche de phase 0 fait rougir
+`gov:requirements` en `phase_non_derivee`, et aucun verbe n'écrit la phase d'une exigence : une
+décision qui rattache une exigence à une tâche plus précoce ne s'applique pas par le registre des
+tâches seul. Et la ligne d'un enum déjà présent au schéma ne peut énumérer que ce que le schéma
+porte : y inscrire d'avance les valeurs d'une tâche future fait rougir `partners:schema:enums` en
+`enum_divergent_du_glossaire` le jour même ; les valeurs décidées vivent à côté (§4.1) et entrent
+dans la ligne avec la migration qui les crée. Enfin, une acceptance passée au verbe de réécriture
+depuis une chaîne entre guillemets doubles du shell a été corrompue en silence : chaque accent grave
+y a été exécuté comme une commande, et le verbe a écrit le reste, exit 0. Réécrite depuis un
+fichier, relue sur le disque ; le texte d'un champ de registre ne transite jamais par le shell.
 
 ### PR #134 — 2026-09-26 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables
 
@@ -219,77 +298,7 @@ par le même geste dans cette PR. Et une ligne du registre des décisions qui ci
 contrat fait rougir REQ-JUR-003 tant que `CONCORDANCES` ne l'ancre pas : les gardes de gouvernance
 sortaient à 0, seule `tests/unit/contrat/` le voyait. Une PR qui écrit `docs/DECISIONS.md` la lance.
 
-### PR #130 — 2026-09-25 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y
-
-**Fait.** Lot de quatre tâches, un commit rouge puis un commit de code par tâche. QA-T04 :
-`src/lib/env.ts` étend le schéma de SEC-01 à la configuration (base, cache, puits de
-notifications, niveau de journal, collecte d'erreurs). Hors production, `NOTIFY_SINK=true` est
-exigé, par le prédicat du notifieur importé. `register()` juge tout l'environnement par `exigerDemarrage`
-avant toute composition et sort en non nul ; les secrets gardent leur lecteur de SEC-01. `docs/env.md` est le rendu du schéma (`pnpm env:doc`), comparé par
-`env-fail-fast.spec.ts`. `/api/livez` et `/api/readyz` vivent dans `src/server/sante/disponibilite.ts` :
-la sonde de disponibilité juge quatre sous-systèmes et ne nomme qu'eux. L'entrée de l'image migre
-en bloquant, `SKIP_MIGRATE=1` n'est écrit que par elle et par le runbook de retour arrière, et le
-`HEALTHCHECK` interroge `readyz`. CPL-T22 : `pnpm red-first` en `gate-a` lance chaque fichier de
-test ajouté contre le code de la base, dans un arbre posé puis retiré. QA-T30 : Stryker sur
-`src/domain/**` dans le job `mutation` de la nuit ; première passe complète à 79,38 %, rupture
-alignée à 79, cible 80 déclarée ; `scripts/mutation/rapport.ts` nomme chaque mutant non détecté.
-UX-P0-03 : `playwright.config.ts` et trois passes d'accessibilité dans `pnpm test`, sur les huit
-maquettes lues dans `VALIDATION.md`, iPhone sous WebKit et bureau sous Chromium, au premier plan.
-
-**Reste.** Le bloc des pannes de `sondes-de-vie.spec.ts` n'a été vu vert qu'en Gate A : pas de
-démon Docker sur le poste de l'auteur. L'image n'est construite par aucun workflow (QA-T05), et la
-sonde de la plateforme se règle hors du dépôt. La double clé de rotation de REQ-QA-030 appartient à
-QA-T13. Le blocage à 80 % sur les fichiers touchés par une PR n'existe pas. Les 139 mutants sans
-couverture vivent dans quatre modules testés hors de `tests/unit/domaine` (données personnelles,
-charges du journal, lexique interdit, registre des décisions) : leurs tests lancent des gardes qui
-exigent un dépôt git. Dette a11y mesurée, non bloquante avant QA-T16 : `deposer.html` et
-`mes-commissions.html` portent un `p.doux.petit` à 16 px, que la charte ne permet qu'aux pastilles,
-dates et onglets. Les deux maquettes de console portent des cibles de 21 px sur le bureau et des
-cases de 24 px sur mobile. Les routes réelles de la phase 0 (SEC-03, JUR-T04) ne sont pas encore
-servies au harnais.
-
-**Appris.** Stryker en place (`inPlace`) réécrit TOUT fichier que couvre `disableTypeChecks`, bien
-au-delà de `src/domain` : une passe interrompue a laissé 220 fichiers suivis porteurs de
-`// @ts-nocheck`, rattrapés par `git checkout`. Le bac à sable n'est pas un dépôt git : les tests
-qui balaient les fichiers suivis ou lancent une garde y échouent à blanc, un par passe. Il faut les
-écarter par leur nom, et les nommer. Avec pnpm, Stryker ne trouve pas son greffon par le motif
-`@stryker-mutator/*` : il faut le citer par son chemin. La garde red-first a rougi sur sa propre
-spec, qui citait le marqueur en prose : une directive doit ouvrir une ligne de commentaire. Enfin,
-ajouter la bibliothèque `dom` pour typer le harnais change aussi le type `Headers` du reste du
-programme ; `dom.iterable` le rétablit. Et `vitest list --json` prend un CHEMIN de sortie : lancé
-avec un fichier de test à sa suite pour en sonder l'inclusion, il a écrasé ce fichier par la
-liste JSON, et le commit suivant l'a emporté sans que rien ne rougisse. C'est `red-first` qui
-l'a trahi, en rendant « aucune suite trouvée » au lieu d'une erreur de chargement ; la spec est
-restaurée depuis son commit de code. Enfin, étendre le schéma que lisent d'autres porteurs change
-leur contrat : `lireEnvironnement` exigeait soudain la base et le puits de notifications de la
-frontière axionia et des clés de chiffrement, qui n'en ont pas besoin, et la Gate A l'a vu
-(`frontiere.spec.ts`, et le témoin sans démon du harnais, qui compte les fichiers verts). Les
-secrets gardent leur lecteur ; le démarrage a le sien, `lireDemarrage`.
-
-**Relecture.** Sur la tête `42a83cc`, `schema` (5323675397) et `exactitude` (5323686046)
-acceptent ; `securite` refuse (5323686113) et `mutation` refuse (5323721215). `securite` : le
-contexte de construction n'excluait pas les fichiers `.env*`, qu'un `COPY . .` emportait dans
-l'image, où `next start` les charge avant `register()`. Le refus de démarrer n'aurait plus rien
-refusé, et les secrets du poste auraient vécu dans une couche publique. `.dockerignore` exclut
-désormais `.env*` et réintègre `.env.example` ; un témoin lit la règle comme Docker (dernière ligne
-qui correspond) et rougit si la ligne est retirée. Dettes fermées dans le même tour : le code de
-l'image appartient à root et seul `.next/cache` est écrit par l'utilisateur d'exécution ;
-`readyz` garde un client de cache unique par adresse, remplacé seulement s'il est mort, fermé par
-`fermerSondes` ; `red-first` passe `--no-renames`, et un test déplacé puis réécrit est jugé
-(témoin sur dépôt jetable, rouge avant le correctif). `exactitude` : `timeout -k 5 55` dans
-l'entrée, et la garde de l'échappatoire couvre les futurs `docker-compose*.yml` et `Dockerfile.*`.
-`mutation` : cinq survivants, chacun rejoué sous son mutant après le correctif et vu rouge. La
-configuration requise est écrite en toutes lettres dans le test (une base rendue facultative
-rougit) ; le délai de migration est lu dans le script, `-k 5` et 55 compris ; une justification de
-dix-neuf caractères est refusée et une de vingt admise ; `specsDuDisque` est jouée sur un bac posé
-dans le répertoire temporaire ; le dossier parent de l'arbre de `red-first` est vu retiré. Dans le
-même tour : les lignes de migration sont jugées dans le code (une ligne échouée ou annulée met
-`readyz` en défaut, témoin par doublure du client de base), le délai de sonde est fixé à deux
-secondes par un test, et les deux paramètres par défaut relevés par RM-11 sont devenus explicites.
-Ce qui reste hors de portée ici : aucune migration factice qui pend n'est jouée contre une vraie
-base, et le client de cache partagé n'est vu qu'en doublure hors de la porte A.
-
-… 57 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 58 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
