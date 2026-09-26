@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `05dcd2f` — 2026-09-26T04:04:04+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #134 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/111 tâches, reste 57.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
@@ -64,8 +64,8 @@ Reste sur ce chemin : **13.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un contrôle requis rouge ou une revue manquante |
+| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -146,6 +146,16 @@ le nombre rendu), chaque CHECK et chaque branche du déclencheur a son témoin e
 statique, et les statuts qui ouvrent l'espace ont leur spec sous le domaine. Six mutants joués
 rougissent. Reste équivalent, nommé : `ecrites !== 1` remplacé par `ecrites < 1` survit, parce
 que l'empreinte est unique et qu'une consommation n'écrit jamais deux lignes.
+
+**Relecture, second tour.** La tête `d3d0586` a été acceptée par `schema` et `securite`, refusée
+par `exactitude` (revue 5324241478) sur un seul motif : l'écran d'arrivée réécrivait l'état vide de
+`/connexion/<jeton>`, déjà déclaré dans `etats-vides.ts`, avec un second titre, une seconde phrase
+et le même bouton sous une autre apostrophe. L'issue d'un lien qui ne vaut plus lit désormais cet
+état vide mot pour mot, les doublons sont retirés de `vocabulaire.ts`, et deux témoins rougissent
+si un écran affiche un texte absent de la micro-copie ou si un texte de l'espace existe en deux
+graphies. Deux dettes de `securite` sont fermées : un témoin rougit si le travail différé
+s'exécute avant la réponse (vu rougir sur le mutant qui l'exécute tout de suite), et l'issue de la
+consommation s'affiche sur `/connexion?issue=`, une URL qui ne porte plus le jeton.
 
 ### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
 
