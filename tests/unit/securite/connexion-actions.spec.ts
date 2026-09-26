@@ -32,6 +32,8 @@ vi.mock('next/server', () => ({
 }));
 vi.mock('next/headers', () => ({
   headers: async () => new Headers({ 'x-forwarded-for': '203.0.113.7' }),
+  // Le cookie de session posé à l'ouverture : jugé par `revocation.spec.ts`.
+  cookies: async () => ({ set: () => undefined }),
 }));
 vi.mock('next/navigation', () => ({
   redirect: (url: string) => {
