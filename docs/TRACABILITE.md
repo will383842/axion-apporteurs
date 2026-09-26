@@ -16,7 +16,7 @@
 
 **334 exigences actives · 89 réputées testées · 89 couvertes · 0 orphelines.**
 
-285 tâches, dont 74 livrées · 93 fichiers de test exécutés par `vitest` sur 93 présents.
+285 tâches, dont 74 livrées · 98 fichiers de test exécutés par `vitest` sur 98 présents.
 
 ## Exigences réputées testées
 
@@ -38,7 +38,7 @@
 | `REQ-DM-001` | `DM-01`, `DM-02` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/domaine/schema-centimes.spec.ts` | couverte |
 | `REQ-DM-003` | `DM-02`, `DM-07`, `GOV-006`, `GOV-030`, `GOV-068`, `GOV-069`, `GOV-070` | `tests/integration/index-partiels.spec.ts`, `tests/unit/domaine/etats-occupants.spec.ts`, `tests/unit/domaine/gardes-de-schema.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`, `tests/unit/gouvernance/termes-interdits.spec.ts` | couverte |
 | `REQ-DM-010` | `DM-06`, `DM-09`, `JUR-T24`, `SEC-12` | `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` | couverte |
-| `REQ-DM-011` | `DM-06`, `DM-18`, `SEC-19` | `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts` | couverte |
+| `REQ-DM-011` | `DM-06`, `DM-18`, `SEC-19` | `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` | couverte |
 | `REQ-DM-012` | `DM-06` | `tests/integration/apporteur-jeton-depot.spec.ts`, `tests/unit/domaine/apporteur-identifiants.spec.ts` | couverte |
 | `REQ-DM-024` | `DM-01`, `DM-20` | `tests/integration/journal.spec.ts`, `tests/unit/domaine/journal-chaine.spec.ts` | couverte |
 | `REQ-DM-035` | `DM-06`, `INT-T22` | `tests/unit/domaine/apporteur-score-fige.spec.ts`, `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts` | couverte |
@@ -97,7 +97,7 @@
 | `REQ-QA-035` | `DM-06`, `INT-T22` | `tests/unit/domaine/apporteur-score-fige.spec.ts` | couverte |
 | `REQ-SEC-012` | `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
 | `REQ-SEC-013` | `INT-T09` | `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
-| `REQ-SEC-016` | `SEC-03`, `SEC-10` | `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
+| `REQ-SEC-016` | `SEC-03`, `SEC-10` | `tests/integration/rate-limit-redis.spec.ts`, `tests/unit/securite/lien-magique-indistinction.spec.ts`, `tests/unit/securite/lien-magique-production.spec.ts`, `tests/unit/securite/rate-famille.spec.ts` | couverte |
 | `REQ-SEC-024` | `SEC-08` | `tests/unit/securite/chiffrement-avec-aad.spec.ts` | couverte |
 | `REQ-SEC-028` | `SEC-01` | `tests/unit/securite/env-boot.spec.ts` | couverte |
 | `REQ-SEC-029` | `SEC-02` | `tests/unit/securite/headers.spec.ts` | couverte |
@@ -455,11 +455,12 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/integration/harnais-testcontainers.spec.ts` | oui | `REQ-QA-006` |
 | `tests/integration/index-partiels.spec.ts` | oui | `REQ-DM-001`, `REQ-DM-003`, `REQ-DM-038` |
 | `tests/integration/journal.spec.ts` | oui | `REQ-DM-024`, `REQ-DM-041`, `REQ-JUR-026`, `REQ-SEC-027` |
-| `tests/integration/lien-magique.spec.ts` | oui | `REQ-SEC-001` |
+| `tests/integration/lien-magique.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002` |
 | `tests/integration/rate-limit-redis.spec.ts` | oui | `REQ-QA-006`, `REQ-SEC-016` |
 | `tests/unit/ci/aucune-gate-en-continue-on-error.spec.ts` | oui | `REQ-QA-001`, `REQ-QA-002`, `REQ-QA-013` |
 | `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` | oui | `REQ-QA-006` |
 | `tests/unit/contrat/contract-template-complete.spec.ts` | oui | `REQ-CPL-012`, `REQ-JUR-003`, `REQ-JUR-007`, `REQ-JUR-023` |
+| `tests/unit/domaine/apporteur-acces-espace.spec.ts` | oui | `REQ-SEC-001` |
 | `tests/unit/domaine/apporteur-activite.spec.ts` | oui | `REQ-CPL-027` |
 | `tests/unit/domaine/apporteur-identifiants.spec.ts` | oui | `REQ-DM-012` |
 | `tests/unit/domaine/apporteur-identites-facturation.spec.ts` | oui | `REQ-CPL-005`, `REQ-CPL-020` |
@@ -537,7 +538,11 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |
 | `tests/unit/qualite/req-check.spec.ts` | oui | `REQ-QA-014` |
 | `tests/unit/securite/chiffrement-avec-aad.spec.ts` | oui | `REQ-SEC-024` |
+| `tests/unit/securite/connexion-ecran.spec.tsx` | oui | `REQ-SEC-001`, `REQ-SEC-002` |
 | `tests/unit/securite/env-boot.spec.ts` | oui | `REQ-SEC-028` |
 | `tests/unit/securite/headers.spec.ts` | oui | `REQ-SEC-029` |
-| `tests/unit/securite/lien-magique-indistinction.spec.ts` | oui | `REQ-DM-011`, `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016` |
+| `tests/unit/securite/lien-magique-depot.spec.ts` | oui | `REQ-SEC-001` |
+| `tests/unit/securite/lien-magique-indistinction.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016` |
+| `tests/unit/securite/lien-magique-migration.spec.ts` | oui | `REQ-SEC-001` |
+| `tests/unit/securite/lien-magique-production.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016` |
 | `tests/unit/securite/rate-famille.spec.ts` | oui | `REQ-SEC-002`, `REQ-SEC-016`, `REQ-SEC-035` |

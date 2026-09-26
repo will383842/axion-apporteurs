@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `5552ef6` — 2026-09-26T02:34:56+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #130 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #130 (rien) · 2. #134 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/111 tâches, reste 57.60 j |
-| Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
+| Le prochain pas | fusionner #130, puis SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #134 — 2026-09-26 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 130 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,9 +64,9 @@ Reste sur ce chemin : **13.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #130 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y | `t/lot-l0-03` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #130 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y | `t/lot-l0-03` | rien — fusionnable maintenant |
+| 2 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -88,6 +88,8 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
+**Fusionner #130** — elle est en tête de file et ne bloque sur rien.
+
 **SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 41 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
@@ -104,26 +106,47 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 
 ### PR #134 — 2026-09-26 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables
 
-**Fait.** Le noyau du lien magique (`src/server/auth/lien-magique.ts`) répond à la demande sans lire
-le compte, limite par empreinte d'adresse réseau et par courriel en refusant sur panne, et consomme
-le lien par une écriture conditionnelle unique qui ouvre au plus une session. Seules des empreintes
-HMAC-SHA-256 sont stockées, sous `MAGIC_LINK_SECRET` pour le lien et `SESSION_SECRET` pour la
-session, chacune dans son domaine et avec son `kid` (partners/ADR-0013, décision 14, dont le vecteur
-figé est posé et vu rougir sous mutant). La migration `20260926000000_lien_magique_et_session` crée
-`liens_magiques` et `sessions_espace`, leurs CHECK et le déclencheur `liens_magiques_usage_unique` ;
-l'adaptateur Prisma des ports est `src/server/auth/lien-magique-depot.ts`. SEC-03 porte la PR.
+**Fait.** Le parcours de connexion existe de bout en bout : l'écran `/connexion` (un champ de
+courriel étiqueté, un bouton, une réponse qui ne dépend que de l'état rendu par le noyau) et
+l'arrivée `/connexion/<jeton>` (une confirmation, jamais une consommation à l'affichage) appellent
+`demanderLien` et `consommerLien` par deux actions serveur. Le câblage
+(`src/server/auth/lien-magique-production.ts`) lit MAGIC_LINK_SECRET et SESSION_SECRET par le
+lecteur de SEC-01, leurs `kid` par `kidDe`, l'adresse publique au registre de l'entité ; les deux
+compteurs appellent `limiter` du registre (`magic:ip`, `magic:courriel`) ; le travail différé part
+dans `after()`. La migration `20260926000000_lien_magique_et_session` crée `liens_magiques` et
+`sessions_espace` et ajoute à `apporteurs` le courriel chiffré et son empreinte unique
+(`email_chiffre`, `email_hash`), que l'adaptateur lit pour trouver le compte et l'adresse stockée.
+Seules des empreintes HMAC-SHA-256 sont stockées (partners/ADR-0013, décision 14, vecteur figé vu
+rougir). SEC-03 porte la PR.
 
-**Reste.** Le point (4) de l'acceptance, l'écran `/connexion`, n'est pas livré : le dépôt n'a aucune
-page, ni `@types/react`, ni `jsx` au `tsconfig.json`, ni layout racine, et le harnais de UX-P0-03
-n'existe pas encore. Les ports `trouverApporteur`, `adresseStockee` et `envoyer` n'ont pas
-d'adaptateur : `apporteurs` ne porte aucune colonne de courriel et aucune tâche du registre ne la
-pose (SEC-08 est fusionnée sans l'avoir fait), ni l'envoi de courriel. Le test en base réelle
-`tests/integration/lien-magique.spec.ts` n'a tourné qu'en CI, faute de Docker sur le poste.
+**Reste.** Le cookie de session `__Host-` et la révocation appartiennent à SEC-04 (REQ-SEC-003) : la
+session est enregistrée en base, son jeton n'est pas encore remis au navigateur. L'envoi réel du
+courriel appartient à INT-T10 ; hors production le lien part au puits du notifieur (`NOTIFY_SINK`),
+qui n'écrit ni le lien ni l'adresse, et en production l'envoi échoue en le disant. Le harnais
+d'accessibilité et le test de navigateur du parcours appartiennent à UX-P0-03, qui n'est pas sur
+`main`. Le budget de poids appartient à QA-T20 : `/connexion` pèse 175 099 octets de JavaScript
+compressé (six fichiers, tous du cadriciel, aucun composant client), au-dessus des 75 Ko de
+REQ-UX-033. La page « lien déjà utilisé » et le code de repli appartiennent à UX-P1-04, la lecture
+seule du résilié à SEC-19. Les colonnes de courriel de l'apporteur, dues par l'acceptance (1) de
+SEC-08, sont posées ici. Le test en base réelle n'a tourné qu'en CI, faute de Docker sur le poste.
 
-**Appris.** La garde `securite:rate-famille` refuse, hors du registre des compteurs, toute chaîne
-qui porte un préfixe de famille et tout port nommé `limiter` : un noyau à ports prend un port par
-compteur, sans nom de compteur, et seul l'appel direct câblé par l'action nomme le compteur. La
-garde `journal:sans-pii` refuse aussi un simple paramètre nommé `evenement` sous `src/`.
+**Appris.** `next build` réécrit `tsconfig.json` à chaque passage tant que ses réglages manquent,
+et le `allowJs` qu'il propose rend inutiles deux `@ts-expect-error` d'une spec de gouvernance :
+les réglages imposés sont écrits une fois, `allowJs` à faux. La garde `securite:rate-famille`
+refuse un magasin passé à `limiter` hors des tests : le câblage n'en passe aucun, et le témoin en
+base réelle remplace les deux ports de comptage dans le test. Une barre oblique inverse suivie de
+`b`, écrite dans un gabarit de script, devient un caractère de contrôle invisible dans le fichier
+produit.
+
+**Relecture.** La tête `b579da0` a été refusée par `exactitude` (revue 5323893967) : l'écran et le
+câblage manquaient, et le Reste disait à tort qu'aucune tâche ne porte l'envoi (INT-T10 le porte).
+Ce tour livre l'écran, les actions et leur câblage, et la spec lit l'oracle des limites au registre,
+lui-même confronté au texte de REQ-SEC-002. `mutation` a refusé la même tête (revue 5323944954) :
+l'adaptateur a désormais sa spec sur faux client (le filtre d'annulation, la condition transmise,
+le nombre rendu), chaque CHECK et chaque branche du déclencheur a son témoin en base et sa lecture
+statique, et les statuts qui ouvrent l'espace ont leur spec sous le domaine. Six mutants joués
+rougissent. Reste équivalent, nommé : `ecrites !== 1` remplacé par `ecrites < 1` survit, parce
+que l'empreinte est unique et qu'une consommation n'écrit jamais deux lignes.
 
 ### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
 
