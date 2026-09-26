@@ -8,12 +8,12 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `05dcd2f` — 2026-09-26T04:04:04+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #136 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/111 tâches, reste 57.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #131 — 2026-09-26 |
+| Dernière entrée de journal | PR #136 — 2026-09-26 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -65,7 +65,8 @@ Reste sur ce chemin : **13.50 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -100,6 +101,37 @@ Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #136 — 2026-09-26 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide
+
+**Fait.** Lot L0-04 composé de trois tâches, une seule livrée : INT-T11. `POST /api/mcp` juge dans
+cet ordre le secret propre `PARTNERS_MCP_SHARED_SECRET` (absent : 503), le limiteur avant la serrure
+(429, ou 503 en panne), la serrure `x-mcp-secret` à temps constant (401), puis le JSON-RPC. Le contrat
+du socle axion-ops est porté dans `src/server/mcp/contrat.ts`, valeurs lues et sceau exécuté au commit
+`473e2aa`. Le manifeste est versionné dans `src/server/mcp/manifeste.json` et confronté au code par
+`pnpm mcp:manifeste`. Le registre est vide : le socle refuse un manifeste sans outil, et le fichier
+porte ce refus au lieu de le contourner. `pnpm harnais-mcp`, en porte A, joue les neuf contrôles, le
+rang 2 optionnel et le sceau, et imprime ce que chacun a confronté.
+
+**Reste.** SEC-06 rendue en stop : la table `WebhookRecu` de REQ-DM-036 et les index uniques sur
+`paymentId` et `refundId` exigent le schéma, et la tâche porte `schema: false` (question à A02).
+INT-T10 rendue en stop pour la même raison : la liste de suppression de REQ-INT-023 et l'envoi retenu
+exigent une table ou une valeur de plus dans `TypeEvenementJournal` (question à A02) ; la forme de
+`Producer-Signature` attend aussi sa lecture dans `docs/tiers/zeptomail.md`. La route servie refuse
+tout (503) tant que le registre de débit ne porte pas de compteur pour elle : la limite et la conduite
+sur panne sont à chiffrer dans REQ-INT-026, et la famille `mcp:` à ouvrir dans REQ-SEC-016, par le
+gardien de la spécification avant INT-T13. Le secret est à poser par Will selon REQ-INT-031. Le
+plafond de 6 500 octets par outil et `detectPii` sur les jeux maximaux viennent avec le premier outil
+(INT-T13, INT-T17).
+
+**Appris.** Le socle refuse un manifeste sans outil (`tools : vide`) et ses contrôles par outil ont
+un plancher de 1 : un adaptateur de phase 0 qui porterait le harnais du socle à l'identique serait
+rouge par construction. Le vide se déclare donc, avec un motif et la tâche qui le reprend, et le
+harnais refuse la déclaration dès qu'un outil existe. Le registre de débit ne peut porter un compteur
+que si l'exigence citée écrit sa conduite sur panne après l'ancre : une porte neuve sans chiffre dans
+son exigence ne se branche sur aucun limiteur réel, elle refuse. Enfin, le contrôle 2 du socle lit le
+source brut, commentaires compris : écrire le nom de l'environnement global dans un commentaire d'un
+fichier de l'adaptateur suffit à le faire rougir.
 
 ### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
 
@@ -208,15 +240,7 @@ secondes par un test, et les deux paramètres par défaut relevés par RM-11 son
 Ce qui reste hors de portée ici : aucune migration factice qui pend n'est jouée contre une vraie
 base, et le client de cache partagé n'est vu qu'en doublure hors de la porte A.
 
-### PR #129 — 2026-09-25 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee
-
-**Fait.** Quatorze tâches livrées par des PR fusionnées portaient encore `a_faire` : DM-06 (PR 128), SEC-08 (PR 126), GOV-099 (PR 124), GOV-098 (PR 122), GOV-097 (PR 120), GOV-096 (PR 118), GOV-095 (PR 116), GOV-090 (PR 113), GOV-092 (PR 112), GOV-047 (PR 99), JUR-T01 (PR 92), QA-T08 (PR 88), et les deux fusionnées pendant la revue, UX-P0-01 (PR 93) et INT-T09 (PR 91), ajoutées au tour de fusion de main. Elles passent `fusionnee` par `reclasser.mjs`, revendication constatée sur l'issue puis livraison constatée sur la forge, jamais à la main. La phase 0 passe de 21 à 35 tâches terminées sur 110.
-
-**Reste.** Les six tâches du lot de la PR 114 (GOV-082, GOV-046, GOV-048, GOV-076, GOV-078, GOV-086) restent `a_faire` : la branche de tête `t/lot-L0-02` porte une majuscule que le motif du schéma refuse, et cinq d'entre elles n'ont aucune issue. GOV-063 (PR 102) reste `a_faire` : sa dépendance GOV-061 ne l'est pas, et sa clause 2 est ouverte. La moitié datée de l'acceptance de JUR-T01 est portée par JUR-T01b. Le retard lui-même est l'objet de GOV-057 : le pas 8 du protocole ne sait pas clore une tâche livrée seule, hors de tout lot.
-
-**Appris.** `reclasser.mjs --fusionnee` vérifie que la PR est fusionnée et que le sha est son commit de fusion, mais ne confronte JAMAIS l'identifiant de la tâche au titre ni au champ `Lot:` de la PR : joué sur un arbre jetable, QA-T07 a été attestée par la PR 128 de DM-06, exit 0. Chaque couple de cette PR a donc été confronté à la main au titre de sa PR. Et l'option `--si-inchange` qu'on croyait exigée par ce verbe n'existe pas dans son source.
-
-… 56 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 57 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
