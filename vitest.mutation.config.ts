@@ -25,7 +25,7 @@ import base from './vitest.config';
  *    et sortent en échec quand elles ne le peuvent pas — le bac à sable n'est pas un dépôt git ;
  *  - trois tests LISENT le texte d'une source du domaine au lieu de l'exécuter : dans le bac, ce
  *    texte porte l'instrumentation de Stryker. Aucun mutant n'y survit ni n'y meurt ;
- *  - deux tests balaient les fichiers suivis sous `src/` (dépôt git requis) ;
+ *  - quatre tests balaient les fichiers suivis (dépôt git requis) ;
  *  - un test exécute le code, mais sous un BUDGET de temps (moins de 5 s pour quinze ans d'heures)
  *    que l'instrumentation fait dépasser : mesuré à 7,3 s.
  * Tous tournent dans `pnpm test`, sur le vrai texte. Les titres sont des fragments d'expression
@@ -41,6 +41,10 @@ const ECARTES = [
   'chaque heure de 2026 à 2040 : `versParis` concorde avec Intl',
   'aucun fichier suivi sous src/ n.importe à la fois la dérivation et un envoi',
   'aucun module suivi sous src/ ne porte de barème de score',
+  // `securite:schema-pii` sur le dépôt réel : balaie les fichiers suivis (vu rougir à blanc, porte A de la PR 145).
+  'le dépôt sort en zéro, et le vert imprime le compte des champs',
+  // la source unique des secrets (REQ-SEC-028) : `git ls-files` sur src/ et scripts/ (même passe).
+  'aucun fichier autre que src/lib/env.ts ne cite deux noms de secret',
 ];
 
 export default defineConfig({
