@@ -552,12 +552,13 @@ describe('REQ-INT-023 — la route, refus par refus', () => {
     const b = banc();
     const corps = JSON.stringify(charge('hardbounce', ['x@exemple.test']));
     const motifs: string[] = [];
-    b.d.depot = {
+    const enPanne: DepotDesSuppressions = {
       async supprimer(s) {
         motifs.push(s.motif);
         throw new Error('base_coupee');
       },
-    } as typeof b.depot;
+    };
+    (b.d as { depot: DepotDesSuppressions }).depot = enPanne;
     const r = await b.recevoir(corps, signer(b.cle, corps, MAINTENANT_MS));
     expect([r.status, await r.text()]).toEqual([503, 'rebonds_indisponibles']);
     expect(motifs).toEqual(['rebond_definitif']);
