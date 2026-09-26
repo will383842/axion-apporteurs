@@ -135,7 +135,9 @@ describe('REQ-INT-026 — la porte, sa serrure, et le limiteur avant la serrure'
       expect(r.status, quoi).toBe(503);
       const lu = lireEnvironnement(env);
       expect(lu.ok, quoi).toBe(false);
-      expect(lu.ok ? [] : lu.refus.map((x) => x.variable), quoi).toContain(VARIABLE_DU_SECRET);
+      expect(lu.ok ? [] : lu.refus.flatMap((x) => [x.variable, ...(x.avec ?? [])]), quoi).toContain(
+        VARIABLE_DU_SECRET
+      );
     }
     expect(l.appels()).toBe(0);
   });

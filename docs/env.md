@@ -21,6 +21,7 @@ posée est jugée comme les autres.
 | `PII_ENCRYPTION_KEY` | requise | exactement 64 caractères hexadécimaux | chiffre les données personnelles (AES-256-GCM) |
 | `IP_HASH_SALT` | requise | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | sale l'empreinte des adresses réseau |
 | `PII_HASH_KEY` | requise | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | clé des empreintes de recherche des données personnelles |
+| `PARTNERS_MCP_SHARED_SECRET` | requise | au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production | serrure de la porte MCP `POST /api/mcp`, en-tête `x-mcp-secret` |
 
 ## Configuration
 

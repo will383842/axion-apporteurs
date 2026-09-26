@@ -2,23 +2,26 @@
  * LA PORTE de l'adaptateur `partners` : `POST /api/mcp` (INT-T11, REQ-INT-026).
  *
  * L'ORDRE EST LE CONTRAT, et chaque étape peut refuser :
- *   1. aucun secret configuré        → 503 : la porte ne sert rien, elle ne s'ouvre jamais par défaut ;
+ *   1. secret absent ou refusé par les règles de REQ-SEC-028 (jugé avec TOUS les secrets, par
+ *      `lireEnvironnement`) → 503 : la porte ne sert rien, elle ne s'ouvre jamais par défaut ;
  *   2. le LIMITEUR, AVANT la serrure → 429 si la limite est atteinte, 503 s'il est en panne ou lève.
  *      Placé après, chaque essai de secret ne coûterait qu'une empreinte : la serrure deviendrait
- *      l'oracle de débit d'une force brute ;
- *   3. la SERRURE, à temps constant  → 401 pour un en-tête absent ou faux ;
- *   4. seulement alors, le corps est lu, en JSON-RPC 2.0.
+ *      l'oracle de débit d'une force brute. Les deux 503 portent le MÊME corps : un appelant
+ *      anonyme n'apprend pas lequel des deux manque ;
+ *   3. la SERRURE, à temps constant (primitive partagée) → 401 pour un en-tête absent ou faux ;
+ *   4. seulement alors, le corps est lu, borné, en JSON-RPC 2.0.
  *
  * Aucune valeur n'est lue d'un environnement global ici : la route passe le sien (contrôle 2 du
  * harnais), et un test ou le harnais passent le leur.
  */
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { lireEnvironnement, type Secrets } from '../../lib/env';
+import { egalATempsConstant } from '../securite/primitives-de-porte';
 import type { VerdictDeLimite } from '../securite/rate-limit';
 import { nomComplet } from './socle';
 import { OUTILS } from './registre';
 
 /** Le NOM de la variable qui porte le secret propre à Partners — un nom, jamais la valeur. */
-export const VARIABLE_DU_SECRET = 'PARTNERS_MCP_SHARED_SECRET';
+export const VARIABLE_DU_SECRET: keyof Secrets = 'PARTNERS_MCP_SHARED_SECRET';
 
 /** L'en-tête que le socle présente à chaque appel (`core/federe/appel.ts`, `ENTETE_SECRET_PARTAGE`). */
 export const ENTETE_DU_SECRET = 'x-mcp-secret';
@@ -33,29 +36,17 @@ export interface OptionsDeLaPorte {
 }
 
 /**
- * Le limiteur tant que le registre de débit ne porte pas de compteur pour cette porte : REFUS, en
- * panne, sous le motif que le registre emploie lui-même pour une limite qu'aucune exigence ne
- * chiffre — même conduite que la frontière axionia (`api-entrante.ts`, `debitNonConfigure`).
+ * La borne du corps, en octets : celle que REQ-SEC-010 fixe aux corps entrants des webhooks. Un
+ * appel JSON-RPC du socle en fait quelques centaines ; au-delà, ce n'en est pas un.
  */
-export const limiteurNonDeclare: LimiteurMcp = async () => ({
-  autorise: false,
-  restant: 0,
-  repriseAt: null,
-  panne: true,
-  motif: 'limite_non_configuree',
-});
+export const CORPS_MAX_OCTETS = 128 * 1024;
 
 function texte(statut: number, corps: string): Response {
   return new Response(corps, { status: statut });
 }
 
-/** Temps constant : les deux côtés réduits à une empreinte de même longueur avant la comparaison. */
-function secretAccepte(presente: string | null, attendu: string): boolean {
-  if (presente === null || presente === '') return false;
-  const a = createHash('sha256').update(presente, 'utf8').digest();
-  const b = createHash('sha256').update(attendu, 'utf8').digest();
-  return timingSafeEqual(a, b);
-}
+/** Le seul corps des deux 503 d'avant la serrure : ni « secret absent », ni « limiteur en panne ». */
+const INDISPONIBLE = 'mcp_indisponible';
 
 type IdJsonRpc = string | number | null;
 
@@ -69,28 +60,37 @@ function resultatJsonRpc(id: IdJsonRpc, result: unknown): Response {
 }
 
 export async function traiterAppelMcp(requete: Request, o: OptionsDeLaPorte): Promise<Response> {
-  const secret = o.environnement[VARIABLE_DU_SECRET];
-  if (secret === undefined || secret === '') return texte(503, 'mcp_secret_absent');
+  const lu = lireEnvironnement(o.environnement);
+  if (!lu.ok) return texte(503, INDISPONIBLE);
+  const secret = lu.env[VARIABLE_DU_SECRET];
 
   let verdict: VerdictDeLimite;
   try {
     verdict = await o.limiteur(requete, o.maintenantMs);
   } catch {
-    return texte(503, 'mcp_limiteur_indisponible');
+    return texte(503, INDISPONIBLE);
   }
   if (!verdict.autorise) {
-    return verdict.panne
-      ? texte(503, 'mcp_limiteur_indisponible')
-      : texte(429, 'mcp_debit_depasse');
+    return verdict.panne ? texte(503, INDISPONIBLE) : texte(429, 'mcp_debit_depasse');
   }
 
-  if (!secretAccepte(requete.headers.get(ENTETE_DU_SECRET), secret)) {
+  if (!egalATempsConstant(requete.headers.get(ENTETE_DU_SECRET) ?? '', secret)) {
     return texte(401, 'mcp_secret_refuse');
   }
 
+  const declaree = Number(requete.headers.get('content-length') ?? '0');
+  if (Number.isFinite(declaree) && declaree > CORPS_MAX_OCTETS)
+    return texte(413, 'mcp_corps_trop_grand');
+  let brut: string;
+  try {
+    brut = await requete.text();
+  } catch {
+    return erreurJsonRpc(null, -32700, 'corps illisible');
+  }
+  if (Buffer.byteLength(brut, 'utf8') > CORPS_MAX_OCTETS) return texte(413, 'mcp_corps_trop_grand');
   let enveloppe: unknown;
   try {
-    enveloppe = JSON.parse(await requete.text());
+    enveloppe = JSON.parse(brut);
   } catch {
     return erreurJsonRpc(null, -32700, 'corps illisible : JSON invalide');
   }

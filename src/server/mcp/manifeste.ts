@@ -3,9 +3,13 @@
  * REQ-INT-026).
  *
  * Les refus sont ceux du registre du socle (`core/adapter-kit/manifest.ts`, `analyserDefinition`)
- * qui se détectent sans lui, PORTÉS avec leur texte : schéma d'entrée fermé jusqu'au dernier
- * sous-objet, aucun nom réservé au contexte dans l'entrée, rang 2 optionnel en sortie, préfixe
- * dérivé, noms uniques, énumérations connues, mode fédéré sans secret — et `tools : vide`.
+ * qui se détectent sans lui : schéma d'entrée fermé jusqu'au dernier sous-objet, aucun nom réservé
+ * au contexte dans l'entrée, rang 2 optionnel en sortie, préfixe dérivé, noms uniques, énumérations
+ * connues, mode fédéré sans secret — et `tools : vide`. Les RÈGLES sont portées ; le TEXTE ne l'est
+ * mot pour mot que pour `tools : vide`, les autres refus sont reformulés.
+ *
+ * CHAQUE REFUS EST RANGÉ SOUS LE CONTRÔLE DU HARNAIS QUI LE JUGE (`parControle`) : la règle vit ici,
+ * une fois, et le harnais la lit au lieu de la retaper.
  *
  * UNE DIVERGENCE AVEC LE SOCLE EST UN REFUS NOMMÉ, JAMAIS UNE ADAPTATION. En phase 0 le registre
  * est vide, et le socle refuserait ce manifeste : le document versionné le dit (`etat: "refuse"`,
@@ -147,28 +151,54 @@ export function requisDesItems(schemaSortie: ValeurJson): readonly string[] {
   return Array.isArray(requis) ? requis.filter((r): r is string => typeof r === 'string') : [];
 }
 
+/** Les contrôles du harnais qu'une règle de ce fichier alimente ; le reste relève du manifeste. */
+export const CLES_DE_CONTROLE = [
+  'effect-dataclass',
+  'prefixes-derives',
+  'manifeste-sha-stable',
+  'autorisation-hors-input',
+  'tier2-optionnel',
+] as const;
+export type CleDeControle = (typeof CLES_DE_CONTROLE)[number];
+
 export interface AnalyseManifeste {
   /** `null` dès qu'une anomalie interdit de le publier. */
   readonly manifeste: Manifeste | null;
   /** Le document tel que le code le produit, publiable ou non : c'est lui qu'on versionne. */
   readonly brouillon: Manifeste;
   readonly anomalies: readonly string[];
+  /** Les mêmes refus, rangés par contrôle du harnais. */
+  readonly parControle: Readonly<Record<CleDeControle, readonly string[]>>;
   readonly outilsInspectes: number;
 }
 
 export function analyserOutils(outils: readonly OutilQuelconque[]): AnalyseManifeste {
   const anomalies: string[] = [];
-  if (!MOTIF_ID.test(ID_ADAPTATEUR)) anomalies.push(`id « ${ID_ADAPTATEUR} » hors forme.`);
-  if (!MOTIF_VERSION.test(VERSION_ADAPTATEUR)) anomalies.push("version d'adaptateur hors forme.");
+  const parControle = Object.fromEntries(
+    CLES_DE_CONTROLE.map((c) => [c, [] as string[]])
+  ) as Record<CleDeControle, string[]>;
+  const noter = (cle: CleDeControle, texte: string): void => {
+    anomalies.push(texte);
+    parControle[cle].push(texte);
+  };
+  if (!MOTIF_ID.test(ID_ADAPTATEUR))
+    noter('manifeste-sha-stable', `id « ${ID_ADAPTATEUR} » hors forme.`);
+  if (!MOTIF_VERSION.test(VERSION_ADAPTATEUR))
+    noter('manifeste-sha-stable', "version d'adaptateur hors forme.");
   if (MODE_ADAPTATEUR === 'fédéré' && SECRETS_DE_L_ADAPTATEUR.length > 0) {
-    anomalies.push('mode fédéré ⇒ secrets: [] — le socle refuserait l’enregistrement.');
+    noter(
+      'manifeste-sha-stable',
+      'mode fédéré ⇒ secrets: [] — le socle refuserait l’enregistrement.'
+    );
   }
   const profilsConnus = new Set<string>(PROFILS_DU_SOCLE.map((p) => p.nom));
   for (const profil of PROFILS_DE_L_ADAPTATEUR) {
-    if (!profilsConnus.has(profil)) anomalies.push(`profil « ${profil} » inconnu du socle.`);
+    if (!profilsConnus.has(profil))
+      noter('manifeste-sha-stable', `profil « ${profil} » inconnu du socle.`);
   }
   // Le texte du socle, mot pour mot (`core/adapter-kit/manifest.ts`).
-  if (outils.length === 0) anomalies.push("tools : vide — un adaptateur sans outil n'expose rien.");
+  if (outils.length === 0)
+    noter('manifeste-sha-stable', "tools : vide — un adaptateur sans outil n'expose rien.");
 
   const reserves = new Set<string>(NOMS_RESERVES_AU_CONTEXTE);
   const nomsVus = new Set<string>();
@@ -176,29 +206,34 @@ export function analyserOutils(outils: readonly OutilQuelconque[]): AnalyseManif
   for (const outil of outils) {
     const ou = `outil « ${outil.name} »`;
     const avant = anomalies.length;
-    if (!MOTIF_NOM_OUTIL.test(outil.name)) anomalies.push(`${ou} : nom hors forme.`);
+    if (!MOTIF_NOM_OUTIL.test(outil.name)) noter('manifeste-sha-stable', `${ou} : nom hors forme.`);
     if (outil.name.startsWith(`${ID_ADAPTATEUR}.`)) {
-      anomalies.push(`${ou} : le préfixe est DÉRIVÉ de l'id, jamais saisi (contrôle 5).`);
+      noter(
+        'prefixes-derives',
+        `${ou} : le préfixe est DÉRIVÉ de l'id, jamais saisi (contrôle 5).`
+      );
     }
-    if (!MOTIF_VERSION.test(outil.version)) anomalies.push(`${ou} : version hors forme.`);
-    if (outil.description.trim() === '') anomalies.push(`${ou} : description vide.`);
+    if (!MOTIF_VERSION.test(outil.version))
+      noter('manifeste-sha-stable', `${ou} : version hors forme.`);
+    if (outil.description.trim() === '') noter('manifeste-sha-stable', `${ou} : description vide.`);
     if (!(EFFECTS as readonly string[]).includes(outil.effect))
-      anomalies.push(`${ou} : effect inconnu.`);
+      noter('effect-dataclass', `${ou} : effect inconnu.`);
     if (!(DATA_CLASSES as readonly string[]).includes(outil.dataClass)) {
-      anomalies.push(`${ou} : dataClass inconnu.`);
+      noter('effect-dataclass', `${ou} : dataClass inconnu.`);
     }
     if (!(IDEMPOTENCES as readonly string[]).includes(outil.idempotency)) {
-      anomalies.push(`${ou} : idempotency inconnu.`);
+      noter('manifeste-sha-stable', `${ou} : idempotency inconnu.`);
     }
     if (!(PAGINATIONS as readonly string[]).includes(outil.pagination)) {
-      anomalies.push(`${ou} : pagination inconnu.`);
+      noter('manifeste-sha-stable', `${ou} : pagination inconnu.`);
     }
     if (!Number.isInteger(outil.maxBytes) || outil.maxBytes <= 0) {
-      anomalies.push(`${ou} : maxBytes doit être un entier strictement positif.`);
+      noter('manifeste-sha-stable', `${ou} : maxBytes doit être un entier strictement positif.`);
     }
-    if (outil.fixtureMax.trim() === '') anomalies.push(`${ou} : fixtureMax vide.`);
+    if (outil.fixtureMax.trim() === '') noter('manifeste-sha-stable', `${ou} : fixtureMax vide.`);
     const complet = nomComplet(outil.name);
-    if (nomsVus.has(complet)) anomalies.push(`${ou} : nom complet en double (${complet}).`);
+    if (nomsVus.has(complet))
+      noter('prefixes-derives', `${ou} : nom complet en double (${complet}).`);
     nomsVus.add(complet);
 
     let entree: ValeurJson | null = null;
@@ -207,16 +242,23 @@ export function analyserOutils(outils: readonly OutilQuelconque[]): AnalyseManif
       entree = versValeurJson(z.toJSONSchema(outil.input, { io: 'input' }), `${ou}, entrée`);
       sortie = versValeurJson(z.toJSONSchema(outil.output, { io: 'output' }), `${ou}, sortie`);
     } catch (erreur) {
-      anomalies.push(`${ou} : conversion en JSON Schema impossible — ${(erreur as Error).message}`);
+      noter(
+        'manifeste-sha-stable',
+        `${ou} : conversion en JSON Schema impossible — ${(erreur as Error).message}`
+      );
     }
     if (entree !== null) {
       const ouverts = objetsOuverts(entree);
       if (ouverts.length > 0) {
-        anomalies.push(`${ou} : schéma d'entrée OUVERT en ${ouverts.join(', ')} (contrôle 7).`);
+        noter(
+          'autorisation-hors-input',
+          `${ou} : schéma d'entrée OUVERT en ${ouverts.join(', ')} (contrôle 7).`
+        );
       }
       const interdits = proprietesProfondes(entree).filter((nom) => reserves.has(nom));
       if (interdits.length > 0) {
-        anomalies.push(
+        noter(
+          'autorisation-hors-input',
           `${ou} : nom(s) réservé(s) au contexte dans l'entrée — ${interdits.join(', ')} (contrôle 7).`
         );
       }
@@ -224,11 +266,12 @@ export function analyserOutils(outils: readonly OutilQuelconque[]): AnalyseManif
     if (sortie !== null) {
       const ouverts = objetsOuverts(sortie);
       if (ouverts.length > 0)
-        anomalies.push(`${ou} : schéma de sortie OUVERT en ${ouverts.join(', ')}.`);
+        noter('manifeste-sha-stable', `${ou} : schéma de sortie OUVERT en ${ouverts.join(', ')}.`);
       const requis = requisDesItems(sortie);
       const obligatoires = outil.compaction.tier2.filter((champ) => requis.includes(champ));
       if (obligatoires.length > 0) {
-        anomalies.push(
+        noter(
+          'tier2-optionnel',
           `${ou} : ${obligatoires.join(', ')} est de rang 2 mais OBLIGATOIRE au schéma de sortie (§ 13.3).`
         );
       }
@@ -271,6 +314,7 @@ export function analyserOutils(outils: readonly OutilQuelconque[]): AnalyseManif
     manifeste: anomalies.length === 0 ? brouillon : null,
     brouillon,
     anomalies,
+    parControle,
     outilsInspectes: outils.length,
   };
 }

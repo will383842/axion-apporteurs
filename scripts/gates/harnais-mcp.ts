@@ -21,15 +21,21 @@
  *     refuse devant un secret faux (429, le limiteur consulté une fois) — ce dernier appel est ce
  *     qui distingue un limiteur AVANT la serrure d'un limiteur APRÈS elle.
  *
- * Le témoin à deux faces vit dans `tests/integration/adaptateur-mcp.spec.ts` : l'adaptateur privé
- * de son secret, avec un secret faux, puis le limiteur après la serrure, rendent chacun un code
- * non nul en nommant le contrôle 8 ; l'adaptateur du dépôt rend 0.
+ * Les RÈGLES par outil (contrôles 1, 5, 7, § 13.3, et les refus propres du manifeste) vivent dans
+ * `analyserOutils`, qui range chaque refus sous le contrôle qui le juge (`parControle`) : le harnais
+ * les lit, il ne les retape pas.
+ *
+ * Les témoins vivent dans `tests/integration/adaptateur-mcp.spec.ts` : la porte privée de son
+ * secret, avec un secret faux, le limiteur après la serrure ou consulté deux fois (contrôle 8) ; un
+ * outil injecté par règle (1, 5, 7, § 13.3) ; chacune des cinq conditions du périmètre vide ; un
+ * motif d'accès au secret injecté (2) ; un fichier de moins (9). L'adaptateur du dépôt rend 0.
  */
 import { createHash, randomBytes } from 'node:crypto';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { format } from 'prettier';
+import { NOMS_DES_SECRETS } from '../../src/lib/env';
 import type { VerdictDeLimite } from '../../src/server/securite/rate-limit';
 import {
   DATA_CLASSES,
@@ -46,9 +52,9 @@ import {
   analyserOutils,
   confronterManifesteVersionne,
   documentDuManifeste,
-  proprietesProfondes,
-  requisDesItems,
   texteDuManifeste,
+  type AnalyseManifeste,
+  type CleDeControle,
 } from '../../src/server/mcp/manifeste';
 import {
   ENTETE_DU_SECRET,
@@ -237,7 +243,12 @@ async function sonder(a: AdaptateurSoumis): Promise<{ lignes: string[]; anomalie
     appelsDuLimiteur += 1;
     return verdict;
   };
-  const env = { [VARIABLE_DU_SECRET]: secret };
+  // Un environnement COMPLET : la porte juge son secret avec tous les autres (REQ-SEC-028).
+  const env: Record<string, string | undefined> = Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, randomBytes(32).toString('hex')])
+  );
+  env[VARIABLE_DU_SECRET] = secret;
+  const sansSecret = { ...env, [VARIABLE_DU_SECRET]: undefined };
   const sondes: {
     quoi: string;
     attendu: number;
@@ -248,7 +259,11 @@ async function sonder(a: AdaptateurSoumis): Promise<{ lignes: string[]; anomalie
       quoi: 'sans secret configuré',
       attendu: 503,
       jouer: () =>
-        a.porte(requete(secret), { environnement: {}, limiteur: limiteur(ADMIS), maintenantMs: 0 }),
+        a.porte(requete(secret), {
+          environnement: sansSecret,
+          limiteur: limiteur(ADMIS),
+          maintenantMs: 0,
+        }),
     },
     {
       quoi: 'sans en-tête',
@@ -309,6 +324,14 @@ function cibleDeLImport(fichier: string, specificateur: string): string | null {
   return relative(process.cwd(), resolve(dirname(fichier), specificateur)).replace(/\\/g, '/');
 }
 
+/**
+ * Les refus d'UNE règle, tels qu'`analyserOutils` les range : la règle vit dans `manifeste.ts`, une
+ * fois, et le contrôle la lit au lieu de la retaper.
+ */
+function regle(analyse: AnalyseManifeste, cle: CleDeControle): string[] {
+  return [...analyse.parControle[cle]];
+}
+
 const MOTIF_IMPORT = /import\s+(type\s+)?\{([^}]*)\}\s+from\s+["']([^"']+)["']/g;
 
 export async function executerHarnais(a: AdaptateurSoumis): Promise<RapportHarnais> {
@@ -319,14 +342,7 @@ export async function executerHarnais(a: AdaptateurSoumis): Promise<RapportHarna
   const premiere = analyserOutils(a.outils);
 
   {
-    const anomalies = [...perimetre.anomalies];
-    for (const outil of a.outils) {
-      if (!(EFFECTS as readonly string[]).includes(outil.effect))
-        anomalies.push(`« ${outil.name} » : effect inconnu.`);
-      if (!(DATA_CLASSES as readonly string[]).includes(outil.dataClass)) {
-        anomalies.push(`« ${outil.name} » : dataClass inconnu.`);
-      }
-    }
+    const anomalies = [...perimetre.anomalies, ...regle(premiere, 'effect-dataclass')];
     controles.push({
       numero: 1,
       cle: 'effect-dataclass',
@@ -420,14 +436,8 @@ export async function executerHarnais(a: AdaptateurSoumis): Promise<RapportHarna
     });
   }
   {
-    const anomalies: string[] = [];
+    const anomalies = regle(premiere, 'prefixes-derives');
     const noms = a.outils.map((o) => nomComplet(o.name));
-    for (const outil of a.outils) {
-      if (outil.name.startsWith(`${ID_ADAPTATEUR}.`))
-        anomalies.push(`« ${outil.name} » : préfixe écrit à la main.`);
-    }
-    if (new Set(noms).size !== noms.length)
-      anomalies.push('deux outils portent le même nom complet.');
     controles.push({
       numero: 5,
       cle: 'prefixes-derives',
@@ -449,10 +459,9 @@ export async function executerHarnais(a: AdaptateurSoumis): Promise<RapportHarna
     const attendus = perimetre.vide
       ? ["tools : vide — un adaptateur sans outil n'expose rien."]
       : [];
-    if (canoniser([...premiere.anomalies]) !== canoniser(attendus)) {
-      anomalies.push(
-        `refus du manifeste inattendus : ${premiere.anomalies.join(' · ') || '(aucun)'}.`
-      );
+    const propres = regle(premiere, 'manifeste-sha-stable');
+    if (canoniser(propres) !== canoniser(attendus)) {
+      anomalies.push(`refus du manifeste inattendus : ${propres.join(' · ') || '(aucun)'}.`);
     }
     anomalies.push(...confronterManifesteVersionne(a.manifesteVersionne, a.outils));
     const doc = documentDuManifeste(premiere);
@@ -470,17 +479,7 @@ export async function executerHarnais(a: AdaptateurSoumis): Promise<RapportHarna
     });
   }
   {
-    const anomalies: string[] = [];
-    const reserves = new Set<string>(NOMS_RESERVES_AU_CONTEXTE);
-    let proprietes = 0;
-    for (const outil of premiere.brouillon.tools) {
-      const noms = proprietesProfondes(outil.inputSchema);
-      proprietes += noms.length;
-      for (const nom of noms)
-        if (reserves.has(nom))
-          anomalies.push(`« ${outil.name} » : « ${nom} » est réservé au contexte.`);
-    }
-    anomalies.push(...premiere.anomalies.filter((x) => x.includes('(contrôle 7)')));
+    const anomalies = regle(premiere, 'autorisation-hors-input');
     controles.push({
       numero: 7,
       cle: 'autorisation-hors-input',
@@ -489,7 +488,7 @@ export async function executerHarnais(a: AdaptateurSoumis): Promise<RapportHarna
       plancher: plancherOutils,
       anomalies,
       detail: dit(
-        `${String(proprietes)} propriété(s) d'entrée confrontée(s) à ${String(reserves.size)} nom(s) réservé(s) : ${NOMS_RESERVES_AU_CONTEXTE.join(', ')}.`
+        `${String(a.outils.length)} schéma(s) d'entrée confronté(s), fermeture comprise, à ${String(NOMS_RESERVES_AU_CONTEXTE.length)} nom(s) réservé(s) : ${NOMS_RESERVES_AU_CONTEXTE.join(', ')}.`
       ),
     });
   }
@@ -520,15 +519,8 @@ export async function executerHarnais(a: AdaptateurSoumis): Promise<RapportHarna
     });
   }
   {
-    const anomalies: string[] = [];
-    let champs = 0;
-    for (const outil of premiere.brouillon.tools) {
-      const requis = requisDesItems(outil.outputSchema);
-      champs += outil.compaction.tier2.length;
-      for (const champ of outil.compaction.tier2)
-        if (requis.includes(champ))
-          anomalies.push(`« ${outil.name} » : « ${champ} » de rang 2 et obligatoire.`);
-    }
+    const anomalies = regle(premiere, 'tier2-optionnel');
+    const champs = a.outils.reduce((n, o) => n + o.compaction.tier2.length, 0);
     controles.push({
       numero: 0,
       cle: 'tier2-optionnel',

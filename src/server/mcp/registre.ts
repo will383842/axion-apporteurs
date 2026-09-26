@@ -25,9 +25,13 @@ export const PERIMETRE_VIDE: DeclarationDePerimetreVide | null = {
 
 /**
  * Contrôle 3 — les symboles de la couche service du produit qu'un fichier de l'adaptateur a le droit
- * d'importer, NOMMÉS, par module. Vide tant qu'aucun outil ne lit le produit.
+ * d'importer, NOMMÉS, par module (chemin du dépôt, sans extension). La porte seule en importe : le
+ * juge des secrets et la comparaison à temps constant.
  */
 export const SYMBOLES_AUTORISES: readonly {
   readonly module: string;
   readonly symboles: readonly string[];
-}[] = [];
+}[] = [
+  { module: 'src/lib/env', symboles: ['lireEnvironnement'] },
+  { module: 'src/server/securite/primitives-de-porte', symboles: ['egalATempsConstant'] },
+];

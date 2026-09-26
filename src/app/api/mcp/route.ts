@@ -12,7 +12,8 @@
  * `tools : vide`) : il n'y a rien à servir avant le premier outil.
  */
 import { horlogeSysteme } from '../../../lib/horloge';
-import { limiteurNonDeclare, traiterAppelMcp } from '../../../server/mcp/porte';
+import { traiterAppelMcp } from '../../../server/mcp/porte';
+import { limiteNonDeclaree } from '../../../server/securite/primitives-de-porte';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,12 +21,12 @@ export const dynamic = 'force-dynamic';
 export function POST(requete: Request): Promise<Response> {
   return traiterAppelMcp(requete, {
     environnement: process.env,
-    limiteur: limiteurNonDeclare,
+    limiteur: limiteNonDeclaree,
     maintenantMs: horlogeSysteme.maintenant(),
   });
 }
 
-/** Tout autre verbe : 405, dit par la route elle-même plutôt que laissé au cadre. */
+/** `GET` : 405, dit par la route ; les autres verbes reçoivent le 405 du cadre. */
 export function GET(): Response {
   return new Response('method_not_allowed', { status: 405, headers: { Allow: 'POST' } });
 }

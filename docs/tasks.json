@@ -3109,7 +3109,10 @@
         "docs/gates.json",
         "scripts/gates/detect-pii.ts",
         "src/app/api/mcp/route.ts",
-        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
+        "src/lib/env.ts",
+        "src/server/securite/primitives-de-porte.ts",
+        "src/server/integrations/axionia/api-entrante.ts"
       ],
       "schema": false,
       "sensible": [],
