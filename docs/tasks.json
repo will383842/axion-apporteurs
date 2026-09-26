@@ -2803,7 +2803,8 @@
         "tests/unit/securite/connexion-ecran.spec.ts",
         "perf/budgets.json",
         "tests/unit/securite/connexion-actions.spec.ts",
-        "tests/unit/securite/lien-magique-compteurs.spec.ts"
+        "tests/unit/securite/lien-magique-compteurs.spec.ts",
+        "tests/unit/gouvernance/poids-du-bundle-garde-vraiment.spec.ts"
       ],
       "schema": true,
       "sensible": [

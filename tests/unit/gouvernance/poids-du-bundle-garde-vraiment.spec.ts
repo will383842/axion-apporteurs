@@ -39,6 +39,7 @@ import {
   type Lighthouserc,
   type Vue,
 } from '../../../scripts/gates/perf-budgets';
+import { fichiersSuivisOuRefus } from '../../../scripts/lot/fichiers-suivis';
 
 const SCRIPT = 'scripts/gates/perf-budgets.ts';
 const BUDGETS = 'perf/budgets.json';
@@ -304,15 +305,23 @@ describe('REQ-GOV-028 — ne pas avoir pu lire n’est JAMAIS un vert', () => {
   });
 });
 
-describe('REQ-GOV-028 — sur l’état RÉEL du dépôt : zéro route, et elle le DIT', () => {
-  it('la garde est verte, et annonce le nombre de routes balayées', () => {
+describe('REQ-GOV-028 — sur l’état RÉEL du dépôt : le nombre de routes, et elle le DIT', () => {
+  it('la garde est verte, et annonce le nombre RÉEL de routes balayées', () => {
     const { code, sortie } = lancer();
     expect(sortie).toContain('✅');
     expect(code).toBe(0);
-    // Le compte est ce qui distingue « aucune route sans budget » de « je n'ai rien regardé ».
-    expect(sortie).toMatch(/\d+ route\(s\) de l’espace balayée\(s\)/);
-    expect(sortie).toContain('0 route(s) de l’espace balayée(s)');
-    expect(sortie).toContain('ce vert ne juge AUCUNE route');
+    // Le compte est ce qui distingue « aucune route sans budget » de « je n'ai rien regardé ». Il
+    // est LU sur les fichiers suivis (la même source que la garde), jamais retapé : la première
+    // route livrée (SEC-03) l'a fait passer de zéro à deux.
+    const routes = routesDeLEspace(fichiersSuivisOuRefus('perf:budgets'));
+    expect(sortie).toContain(`${routes.length} route(s) de l’espace balayée(s)`);
+    if (routes.length === 0) {
+      expect(sortie).toContain('ce vert ne juge AUCUNE route');
+    } else {
+      // Chaque route balayée a son entrée : autant d'entrées que de routes, dit par la garde.
+      expect(sortie).toContain(`${routes.length} entrée(s) \`size-limit\``);
+      expect(sortie).not.toContain('ce vert ne juge AUCUNE route');
+    }
   });
 
   it(`sait rougir : ses ${FAMILLES.length} familles ont chacune un témoin`, () => {

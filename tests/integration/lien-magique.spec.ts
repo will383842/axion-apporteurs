@@ -375,16 +375,22 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
     expect((await consommerLien({ jeton, ipHash: null }, ports(new Date(t0 + 1000)))).etat).toBe(
       'ouverte'
     );
+    // Une requête brute ne transmet que le code et le détail du refus, pas le NOM de la contrainte :
+    // le bloc le lit dans le diagnostic de Postgres et le relève. `id` est un UUID tiré par ce
+    // test, validé par le transtypage ::uuid.
     const m = await refus(
-      base.prisma.$executeRawUnsafe(
-        `INSERT INTO sessions_espace (id, apporteur_id, lien_magique_id, token_hash, kid, cree_at, expire_at)
-         SELECT gen_random_uuid(), apporteur_id, lien_magique_id, $2, kid, cree_at, expire_at
-         FROM sessions_espace WHERE apporteur_id = $1::uuid`,
-        id,
-        'e'.repeat(64)
-      )
+      base.prisma.$executeRawUnsafe(`DO $$
+        DECLARE contrainte text;
+        BEGIN
+          INSERT INTO sessions_espace (id, apporteur_id, lien_magique_id, token_hash, kid, cree_at, expire_at)
+          SELECT gen_random_uuid(), apporteur_id, lien_magique_id, repeat('e', 64), kid, cree_at, expire_at
+          FROM sessions_espace WHERE apporteur_id = '${id}'::uuid;
+        EXCEPTION WHEN unique_violation THEN
+          GET STACKED DIAGNOSTICS contrainte = CONSTRAINT_NAME;
+          RAISE EXCEPTION 'unicite_refusee:%', contrainte;
+        END $$`)
     );
-    expect(m).toContain('sessions_espace_lien_magique_id_key');
+    expect(m).toContain('unicite_refusee:sessions_espace_lien_magique_id_key');
   });
 });
 
@@ -539,7 +545,7 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
   });
 
   it('REQ-SEC-001 : la demande d’un apporteur n’annule pas le lien d’un autre', async () => {
-    const a = await apporteurAvecCourriel('AX00SECL', 'alice@example.org');
+    const a = await apporteurAvecCourriel('AX00SECT', 'alice@example.org');
     const b = await apporteurAvecCourriel('AX00SECM', 'bruno@example.org');
     for (const [saisie, adresse] of [
       ['alice@example.org', '198.51.100.31'],
