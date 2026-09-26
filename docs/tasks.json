@@ -1709,7 +1709,16 @@
         "docker-entrypoint.sh",
         "tests/integration/sondes-de-vie.spec.ts",
         "tests/unit/qualite/env-fail-fast.spec.ts",
-        "tests/unit/securite/env-boot.spec.ts"
+        "tests/unit/securite/env-boot.spec.ts",
+        ".dockerignore",
+        ".env.example",
+        "docs/env.md",
+        "docs/runbooks/retour-arriere.md",
+        "scripts/env/documenter.ts",
+        "package.json",
+        "src/instrumentation.ts",
+        "src/server/sante/disponibilite.ts",
+        "tests/unit/qualite/sondes-client-unique.spec.ts"
       ],
       "schema": true,
       "sensible": [],
@@ -1865,7 +1874,13 @@
         "scripts/gates/stryker.sh",
         ".github/workflows/nightly.yml",
         "tests/unit/qualite/score-de-mutation.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "vitest.mutation.config.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".gitignore",
+        "scripts/mutation/rapport.ts",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -1903,7 +1918,10 @@
         ".github/workflows/red-first.yml",
         ".github/workflows/ci.yml",
         "tests/unit/qualite/red-first.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "scripts/gates/red-first.ts",
+        "package.json",
+        "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
       "sensible": [],
@@ -3538,7 +3556,13 @@
         "tests/a11y/axe.spec.ts",
         "tests/a11y/cibles.spec.ts",
         "tests/a11y/reflow.spec.ts",
-        "docs/gates.json"
+        "docs/gates.json",
+        "tests/a11y/harnais.ts",
+        "tests/a11y/bac/piege.html",
+        "vitest.config.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".github/workflows/ci.yml"
       ],
       "schema": false,
       "sensible": [],

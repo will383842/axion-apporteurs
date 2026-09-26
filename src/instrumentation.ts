@@ -7,7 +7,7 @@
  * faire dans le runtime Edge, et y sont chargés par import dynamique, jamais au chargement.
  *
  * C'est le SEUL fichier de la tâche qui lit l'environnement (`SENTRY_DSN`, `PARTNERS_ENV`,
- * `NODE_ENV`, `LOG_LEVEL`) : `logger.ts`, `sentry.ts` et `notify.ts` reçoivent leur configuration
+ * `NODE_ENV`, `LOG_LEVEL`), et il le fait juger d'abord par `src/lib/env.ts` (QA-T04) : `logger.ts`, `sentry.ts` et `notify.ts` reçoivent leur configuration
  * en paramètres. Il n'importe pas `next` : ses types sont écrits ici, réduits à ce qui sert.
  */
 import type { Journal, Sortie } from './lib/logger';
@@ -58,8 +58,15 @@ export function traiterErreurDeRequete(composition: Composition) {
 
 let composition: Composition | undefined;
 
+/**
+ * QA-T04 (REQ-QA-030, REQ-CPL-021) : l'environnement est jugé AVANT toute composition. Une variable
+ * requise absente ou hors règle fait sortir le serveur en code non nul, en la nommant : une instance
+ * qui démarrerait quand même ne saurait pas servir, et `readyz` le découvrirait trop tard.
+ */
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
+  const { exigerDemarrage } = await import('./lib/env');
+  exigerDemarrage(process.env);
   composition = await composer(process.env);
 }
 

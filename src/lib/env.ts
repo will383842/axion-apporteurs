@@ -20,6 +20,7 @@
 
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
+import { productionDeclaree } from './notify';
 
 /** Les seuls motifs qu'un refus peut porter. Aucun n'est construit à partir de la valeur. */
 export const MOTIFS_DE_REFUS = [
@@ -29,6 +30,7 @@ export const MOTIFS_DE_REFUS = [
   'espace_en_bordure',
   'prefixe_interdit',
   'egale_a',
+  'requise_hors_production',
 ] as const;
 export type MotifDeRefus = (typeof MOTIFS_DE_REFUS)[number];
 
@@ -111,6 +113,64 @@ export type ClesDEmpreinte = CleDesPersonnes & Pick<Secrets, 'IP_HASH_SALT'>;
 /** Les noms, DÉRIVÉS du schéma, dans son ordre. */
 export const NOMS_DES_SECRETS: readonly string[] = Object.keys(schemaSecrets.shape);
 
+/**
+ * Une URL dont le protocole est l'un de ceux donnés. Ni repli ni rognage : une URL illisible, d'un
+ * autre protocole ou entourée d'une espace est un refus, et sa valeur n'est jamais imprimée.
+ */
+function urlDe(protocoles: readonly string[]) {
+  return z.string().superRefine((v, ctx) => {
+    if (!presenteEtNette(v, ctx)) return;
+    let protocole: string;
+    try {
+      protocole = new URL(v).protocol;
+    } catch {
+      refuser(ctx, 'format_invalide');
+      return;
+    }
+    if (!protocoles.includes(protocole)) refuser(ctx, 'format_invalide');
+  });
+}
+
+/** Facultative, mais nette si elle est posée : ni chaîne vide, ni espace en bordure. */
+const nette = z.string().superRefine((v, ctx) => {
+  presenteEtNette(v, ctx);
+});
+
+/**
+ * QA-T04 (REQ-QA-030) : la CONFIGURATION — ce qui n'est pas un secret, mais sans quoi l'instance ne
+ * sait pas servir. La base et le cache sont exactement ce que `readyz` sonde. `NOTIFY_SINK` n'est
+ * jugé ici que par sa présence : la règle de REQ-CPL-021 vit dans `lireEnvironnement`. Les niveaux
+ * de journal sont ceux de pino, que `creerJournal` reçoit tels quels.
+ */
+export const schemaConfiguration = z.object({
+  DATABASE_URL: urlDe(['postgresql:', 'postgres:']),
+  REDIS_URL: urlDe(['redis:', 'rediss:']),
+  NOTIFY_SINK: z.string().optional(),
+  PARTNERS_ENV: nette.optional(),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
+  SENTRY_DSN: urlDe(['https:']).optional(),
+});
+
+export type Configuration = z.infer<typeof schemaConfiguration>;
+export type Environnement = Secrets & Configuration;
+
+/** Les noms de configuration, DÉRIVÉS du schéma, dans son ordre. */
+export const NOMS_DE_CONFIGURATION: readonly string[] = Object.keys(schemaConfiguration.shape);
+
+/** TOUTES les variables jugées au démarrage : les secrets, puis la configuration. */
+export const NOMS_DES_VARIABLES: readonly string[] = [
+  ...NOMS_DES_SECRETS,
+  ...NOMS_DE_CONFIGURATION,
+];
+
+/**
+ * Les variables que le schéma déclare facultatives, DÉRIVÉES de lui. `NOTIFY_SINK` n'en est pas :
+ * facultative pour Zod, elle est exigée hors production par la règle de REQ-CPL-021.
+ */
+export const NOMS_FACULTATIFS: readonly string[] = Object.entries(schemaConfiguration.shape)
+  .filter(([nom, type]) => type.isOptional() && nom !== 'NOTIFY_SINK')
+  .map(([nom]) => nom);
+
 /** Le motif est construit ICI : le `message` d'une issue Zod peut porter la valeur reçue. */
 function motifDe(issue: z.ZodIssue): MotifDeRefus {
   if (issue.code === z.ZodIssueCode.custom && estMotif(issue.params?.motif)) {
@@ -123,8 +183,13 @@ function motifDe(issue: z.ZodIssue): MotifDeRefus {
 }
 
 export type Lecture = { ok: true; env: Secrets } | { ok: false; refus: Refus[] };
+export type LectureDuDemarrage = { ok: true; env: Environnement } | { ok: false; refus: Refus[] };
 
-/** PURE : juge un environnement, n'écrit rien, ne sort pas. */
+/**
+ * PURE : juge les SECRETS d'un environnement (SEC-01), n'écrit rien, ne sort pas. Ses porteurs
+ * (`clesPii`, la frontière axionia) n'ont besoin que des secrets : leur imposer la configuration
+ * les ferait refuser un jeu de secrets valide.
+ */
 export function lireEnvironnement(source: Readonly<Record<string, string | undefined>>): Lecture {
   const refus: Refus[] = [];
   const lu = schemaSecrets.safeParse(source);
@@ -163,25 +228,70 @@ export function lireEnvironnement(source: Readonly<Record<string, string | undef
   return { ok: true, env: lu.data };
 }
 
+/**
+ * PURE : juge TOUT l'environnement du démarrage (QA-T04, REQ-QA-030) — les secrets par
+ * `lireEnvironnement`, puis la configuration, puis la règle du puits de notifications. Les refus
+ * des secrets viennent d'abord, dans leur ordre ; aucun n'est perdu.
+ */
+export function lireDemarrage(
+  source: Readonly<Record<string, string | undefined>>
+): LectureDuDemarrage {
+  const secrets = lireEnvironnement(source);
+  const refus: Refus[] = secrets.ok ? [] : [...secrets.refus];
+  const configuration = schemaConfiguration.safeParse(source);
+  if (!configuration.success) {
+    for (const issue of configuration.error.issues) {
+      refus.push({ variable: String(issue.path[0]), motif: motifDe(issue) });
+    }
+  }
+  // REQ-CPL-021 : hors production, le puits de notifications est exigé. « Production » est le
+  // prédicat du notifieur, importé — jamais une seconde écriture qui divergerait de lui.
+  if (!productionDeclaree(source) && source.NOTIFY_SINK !== 'true') {
+    refus.push({ variable: 'NOTIFY_SINK', motif: 'requise_hors_production' });
+  }
+  if (!secrets.ok || !configuration.success || refus.length > 0) return { ok: false, refus };
+  return { ok: true, env: { ...secrets.env, ...configuration.data } };
+}
+
 /** Une ligne de refus : le nom, le motif, et pour une égalité les autres noms. Jamais la valeur. */
 export function formaterRefus(r: Refus): string {
   return `${r.variable} : ${r.motif}${r.avec ? ` ${r.avec.join(', ')}` : ''}`;
 }
 
+/** Écrit les refus sur la sortie d'erreur, une ligne chacun, et sort en 1. Jamais la valeur. */
+function refuserLeDemarrage(entete: string, refus: readonly Refus[]): never {
+  process.stderr.write(`${entete}\n${refus.map((r) => `  ${formaterRefus(r)}\n`).join('')}`);
+  process.exit(1);
+}
+
 /**
- * Le boot : rend les secrets, ou écrit les refus sur la sortie d'erreur et sort en 1. N'est appelé
- * par personne à l'import.
+ * Le boot des SECRETS (SEC-01) : rend les secrets, ou écrit les refus sur la sortie d'erreur et sort
+ * en 1. N'est appelé par personne à l'import.
  */
 export function exigerEnvironnement(
   source: Readonly<Record<string, string | undefined>> = process.env
 ): Secrets {
   const lu = lireEnvironnement(source);
   if (lu.ok) return lu.env;
-  process.stderr.write(
-    "Démarrage refusé : secrets d'environnement en défaut (src/lib/env.ts, .env.example).\n" +
-      lu.refus.map((r) => `  ${formaterRefus(r)}\n`).join('')
+  return refuserLeDemarrage(
+    "Démarrage refusé : secrets d'environnement en défaut (src/lib/env.ts, .env.example).",
+    lu.refus
   );
-  process.exit(1);
+}
+
+/**
+ * Le DÉMARRAGE du serveur (QA-T04) : tout l'environnement, ou la sortie en 1. C'est ce que
+ * `register()` de `src/instrumentation.ts` appelle avant toute composition.
+ */
+export function exigerDemarrage(
+  source: Readonly<Record<string, string | undefined>> = process.env
+): Environnement {
+  const lu = lireDemarrage(source);
+  if (lu.ok) return lu.env;
+  return refuserLeDemarrage(
+    "Démarrage refusé : variables d'environnement en défaut (src/lib/env.ts, docs/env.md).",
+    lu.refus
+  );
 }
 
 /**
@@ -195,4 +305,96 @@ export function kidDe(valeur: string): string {
     .update(`partners.kid.v1\u001f${valeur}`, 'utf8')
     .digest('hex')
     .slice(0, 8);
+}
+
+// ── docs/env.md : le RENDU du schéma (QA-T04, REQ-QA-030) ──────────────────────────────────────
+
+/** Le chemin de la vue. Elle se régénère par `pnpm env:doc`, et `env-fail-fast.spec.ts` la compare. */
+export const CHEMIN_DOC_ENV = 'docs/env.md';
+
+type NomDeVariable = keyof Environnement;
+
+/**
+ * Le RÔLE de chaque variable, en une phrase. Le type exige une entrée par nom du schéma : une
+ * variable ajoutée sans son rôle ne compile pas, et une variable retirée laisse une clé en trop qui
+ * ne compile pas non plus.
+ */
+const ROLES: Record<NomDeVariable, string> = {
+  SESSION_SECRET: "signe les sessions de la console et de l'espace",
+  MAGIC_LINK_SECRET: 'signe les liens de connexion envoyés par courriel',
+  DEPOSIT_TOKEN_SECRET: "signe les jetons de dépôt d'un contact",
+  AXIONIA_WEBHOOK_SECRET: "authentifie les webhooks reçus d'axionia",
+  AXIONIA_API_TOKEN: "authentifie les appels de l'API entrante d'axionia",
+  DOCUSEAL_WEBHOOK_SECRET: 'authentifie les webhooks reçus de DocuSeal',
+  PII_ENCRYPTION_KEY: 'chiffre les données personnelles (AES-256-GCM)',
+  IP_HASH_SALT: "sale l'empreinte des adresses réseau",
+  PII_HASH_KEY: 'clé des empreintes de recherche des données personnelles',
+  DATABASE_URL: 'la base Postgres ; `readyz` la sonde',
+  REDIS_URL: 'le cache Redis ; `readyz` le sonde',
+  NOTIFY_SINK: "retient toute notification dans le journal au lieu de l'envoyer",
+  PARTNERS_ENV: "nom de l'environnement ; `production` avec `NODE_ENV=production` vaut production",
+  LOG_LEVEL: 'niveau du journal (pino), `info` si absente',
+  SENTRY_DSN: 'adresse de collecte des erreurs ; absente, rien ne part',
+};
+
+/** La règle de forme, dite une fois par espèce de variable — celle que le schéma applique. */
+function regleDe(nom: NomDeVariable): string {
+  if (nom === 'PII_ENCRYPTION_KEY') return 'exactement 64 caractères hexadécimaux';
+  if (NOMS_DES_SECRETS.includes(nom)) {
+    return 'au moins 32 octets, distincte des autres secrets ; préfixes `dev_` et `stub` refusés en production';
+  }
+  switch (nom) {
+    case 'DATABASE_URL':
+      return 'URL `postgresql:` ou `postgres:`';
+    case 'REDIS_URL':
+      return 'URL `redis:` ou `rediss:`';
+    case 'NOTIFY_SINK':
+      return '`true` exigé hors production (REQ-CPL-021)';
+    case 'LOG_LEVEL':
+      return schemaConfiguration.shape.LOG_LEVEL.unwrap()
+        .options.map((n) => `\`${n}\``)
+        .join(', ');
+    case 'SENTRY_DSN':
+      return 'URL `https:`';
+    default:
+      return 'non vide, sans espace en bordure';
+  }
+}
+
+function presenceDe(nom: string): string {
+  if (nom === 'NOTIFY_SINK') return 'requise hors production';
+  return NOMS_FACULTATIFS.includes(nom) ? 'facultative' : 'requise';
+}
+
+/** PURE : le texte de `docs/env.md`, dérivé du schéma. Aucune valeur, jamais. */
+export function documenterEnvironnement(): string {
+  const lignes = (noms: readonly string[]) =>
+    noms.map((n) => {
+      const nom = n as NomDeVariable;
+      return `| \`${nom}\` | ${presenceDe(nom)} | ${regleDe(nom)} | ${ROLES[nom]} |`;
+    });
+  return [
+    "# Variables d'environnement — Axion Partners",
+    '',
+    '> VUE GÉNÉRÉE depuis le schéma de `src/lib/env.ts` par `pnpm env:doc` — ne pas éditer à la main.',
+    '> `tests/unit/qualite/env-fail-fast.spec.ts` rougit si ce fichier diffère du rendu.',
+    '',
+    'Toute variable requise absente, et toute valeur hors règle, fait refuser le démarrage en code',
+    'non nul (`register()` de `src/instrumentation.ts`) ; le refus nomme la variable et un motif,',
+    "jamais la valeur. Aucune variable requise n'a de valeur par défaut. Une variable facultative",
+    'posée est jugée comme les autres.',
+    '',
+    '## Secrets',
+    '',
+    '| Variable | Présence | Règle | Rôle |',
+    '| --- | --- | --- | --- |',
+    ...lignes(NOMS_DES_SECRETS),
+    '',
+    '## Configuration',
+    '',
+    '| Variable | Présence | Règle | Rôle |',
+    '| --- | --- | --- | --- |',
+    ...lignes(NOMS_DE_CONFIGURATION),
+    '',
+  ].join('\n');
 }

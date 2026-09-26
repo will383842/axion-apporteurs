@@ -51,6 +51,9 @@ dist/
 coverage/
 playwright-report/
 test-results/
+# Stryker (QA-T30) : le rapport de mutation et le bac de travail, régénérés à chaque passe.
+reports/
+.stryker-tmp/
 .nyc_output/
 *.log
 npm-debug.log*

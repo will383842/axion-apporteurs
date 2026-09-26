@@ -333,6 +333,24 @@ jobs:
         run: pnpm format:check
       - name: Typecheck
         run: pnpm typecheck
+      # CPL-T22, REQ-CPL-022. Les tests NOUVEAUX de la PR, lances contre le code de sa base, doivent
+      # ECHOUER : un test deja vert sur main ne prouve rien de ce que la PR ajoute (RM-02). La garde
+      # pose un arbre de la base a cote, y copie les tests de la PR, les lance un par un, puis retire
+      # l arbre. Seule sortie : `@no-red-first:` suivi d une justification, IMPRIMEE. Sur `push`, il
+      # n y a pas de PR a juger : l etape ne tourne que sur `pull_request`. Ici, et pas dans un
+      # workflow a part : seul `gate-a` est un check requis, et une garde qui ne bloque rien ne garde
+      # rien. Avant `Tests`, pour que son rouge se lise avant celui de la suite. La base est lue par la
+      # garde dans `GITHUB_BASE_REF`, que GitHub pose sur `pull_request` : la commande reste FERMEE.
+      - name: red-first — les tests nouveaux de la PR rougissent contre sa base
+        if: github.event_name == 'pull_request'
+        run: pnpm red-first
+      - name: La garde red-first sait rougir
+        run: pnpm red-first:prove
+      # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
+      # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
+      # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
+      - name: Navigateurs des passes d accessibilite
+        run: pnpm a11y:navigateurs
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
       # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
       # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
