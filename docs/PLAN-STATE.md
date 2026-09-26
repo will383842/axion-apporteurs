@@ -7,8 +7,8 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `5552ef6` — 2026-09-26T02:34:56+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #130 (un conflit avec `main`) |
+| Où est `main` ? | `05dcd2f` — 2026-09-26T04:04:04+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/111 tâches, reste 57.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
@@ -66,7 +66,6 @@ Reste sur ce chemin : **13.50 j**.
 | --- | --- | --- | --- |
 | 1 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un contrôle requis rouge ou une revue manquante |
 | 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #130 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y | `t/lot-l0-03` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -94,7 +93,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `5552ef6` (2026-09-26T02:34:56+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `05dcd2f` (2026-09-26T04:04:04+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 

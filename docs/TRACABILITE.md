@@ -16,7 +16,7 @@
 
 **334 exigences actives · 89 réputées testées · 89 couvertes · 0 orphelines.**
 
-285 tâches, dont 74 livrées · 99 fichiers de test exécutés par `vitest` sur 99 présents.
+285 tâches, dont 74 livrées · 100 fichiers de test exécutés par `vitest` sur 100 présents.
 
 ## Exigences réputées testées
 
@@ -452,6 +452,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/a11y/cibles.spec.ts` | oui | `REQ-UX-017` |
 | `tests/a11y/reflow.spec.ts` | oui | `REQ-UX-017` |
 | `tests/gov/charte-pr.spec.ts` | oui | `REQ-GOV-010`, `REQ-GOV-011`, `REQ-GOV-012`, `REQ-GOV-013`, `REQ-GOV-027` |
+| `tests/integration/adaptateur-mcp.spec.ts` | oui | `REQ-INT-026` |
 | `tests/integration/api-gouv.spec.ts` | oui | `REQ-INT-020`, `REQ-INT-021`, `REQ-QA-028` |
 | `tests/integration/apporteur-jeton-depot.spec.ts` | oui | `REQ-DM-012` |
 | `tests/integration/frontiere.spec.ts` | oui | `REQ-INT-014`, `REQ-SEC-012` |
