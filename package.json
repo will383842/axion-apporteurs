@@ -28,6 +28,7 @@
     "gov:hypotheses:avant-docuseal": "tsx scripts/gates/gov-hypotheses.ts --avant-docuseal",
     "plan-state:build": "tsx scripts/plan-state/build.ts",
     "plan-state:verifier": "tsx scripts/plan-state/build.ts --verifier",
+    "vues:fusion": "tsx scripts/vues/fusion.ts",
     "gov:tasks:render": "tsx scripts/gates/gov-tasks.ts --render",
     "gov:identifiants": "tsx scripts/gates/gov-identifiants.ts",
     "gov:identifiants:prove": "tsx scripts/gates/gov-identifiants.ts --prove",
@@ -119,6 +120,7 @@
     "securite:annee-naissance:prove": "tsx scripts/gates/aucun-annee-de-naissance.ts --prove",
     "integration:contrat-gouv": "tsx src/server/integrations/recherche-entreprises/derive-nocturne.ts",
     "prevol": "tsx scripts/prevol.ts",
+    "pre-gate": "tsx scripts/prevol.ts --rapide",
     "env:doc": "tsx scripts/env/documenter.ts",
     "harnais-mcp": "tsx scripts/gates/harnais-mcp.ts",
     "mcp:manifeste": "tsx scripts/gates/harnais-mcp.ts --manifeste",
@@ -127,6 +129,7 @@
     "red-first:prove": "tsx scripts/gates/red-first.ts --prove",
     "mutation": "bash scripts/gates/stryker.sh",
     "mutation:prove": "tsx scripts/mutation/rapport.ts --prove",
+    "mutation:pr": "tsx scripts/mutation/pr.ts",
     "a11y:navigateurs": "playwright install --with-deps chromium webkit"
   },
   "devDependencies": {

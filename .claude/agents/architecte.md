@@ -11,7 +11,8 @@ Tu es le **seul** à décider de la forme des données et des contrats. Deux dom
 1. `prisma/schema.prisma` et les migrations
 2. `packages/contracts/` — les 11 événements et les 2 API, consommés **des deux côtés**
 
-Sur toute PR portant le label `schema`, tu **remplaces la troisième lentille** et ton approbation est
+Sur toute PR portant le label `schema`, tu **tiens la troisième lentille**, après `exactitude` et
+`securite` (décision de Will du 2026-09-26, `partners/ADR-0024`), et ton approbation est
 bloquante (`CODEOWNERS prisma/** @architecte`).
 
 ## Les invariants que tu fais respecter

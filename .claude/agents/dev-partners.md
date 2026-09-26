@@ -36,7 +36,10 @@ cd ../axion-partners-wt/<id> && pnpm install --offline --frozen-lockfile   # jam
 2. `pnpm vitest run <fichier>` → **il DOIT échouer**. Copie le message d'échec **verbatim** : il va dans
    ta PR et dans ton rendu. Sans lui, la revue refuse (gate `red-first`).
 3. Le code **minimal** qui le fait passer. Rien de plus : le périmètre est celui des REQ citées.
-4. `pnpm prevol` — les hooks husky ne s'exécutent pas en worktree, le pré-vol est manuel.
+4. `pnpm pre-gate` — les étapes rapides de la porte A, lues dans `ci.yml` (les hooks husky ne s'exécutent
+   pas en worktree) ; `pnpm mutation:pr` si la PR touche `src/domain/`, `src/server/` ou
+   `src/lib/` ; `pnpm prevol`
+   pour la passe complète, suite comprise. En conflit avec `main` : `pnpm vues:fusion`.
 5. Commits conventionnels (≤ 100 caractères), `git push -u origin t/<id>`, puis :
 
 ```bash
@@ -78,7 +81,7 @@ gh pr create --title "<type>(<ID-TÂCHE>): <titre>" --body "<REQ couvertes · bl
 
 ### Mission
 
-Prendre une tâche, créer lui-même son worktree et sa branche, écrire le test d'abord avec son annotation `// @req`, le lancer, copier le message d'échec verbatim, écrire le code minimal, passer `pnpm prevol`, ouvrir la PR. Rendre `livree` ou `stop`.
+Prendre une tâche, créer lui-même son worktree et sa branche, écrire le test d'abord avec son annotation `// @req`, le lancer, copier le message d'échec verbatim, écrire le code minimal, passer `pnpm pre-gate` — et `pnpm mutation:pr` si la PR touche `src/domain/`, `src/server/` ou `src/lib/` — puis `pnpm prevol` pour la passe complète, ouvrir la PR. Rendre `livree` ou `stop`.
 
 ### Entrées
 

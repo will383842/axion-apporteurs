@@ -47,6 +47,29 @@ est un incident — dans les deux cas, on s'arrête et on remonte à Will.
 
 ---
 
+## Avant la file : ce que le développeur fait AVANT d'ouvrir sa PR (GOV-101)
+
+Mesuré par l'orchestrateur le 2026-09-26 : près de la moitié des tours de relecture ne corrigeaient
+aucun défaut. Une partie venait de la porte A qui rougissait **après** les relectures — un nom de
+garde, `perf:budgets`, `red-first`, une vue périmée. D'où trois gestes, dans cet ordre :
+
+1. **`pnpm pre-gate`** — les étapes **rapides** de la porte A, lues dans `.github/workflows/ci.yml`
+   (jamais recopiées) : typecheck, lint, format, toutes les gardes `gov:*` et leurs preuves,
+   `perf:budgets`, les vues, `red-first` simulé contre `origin/main`. Sans la suite de tests, sans
+   les navigateurs, sans Stryker : chaque étape écartée est **nommée avec son motif** dans la sortie.
+   Il doit sortir vert avant `gh pr create`. Le pré-vol complet (script `prevol`, suite comprise) reste la passe entière.
+2. **`pnpm mutation:pr`** si la PR touche `src/domain/`, `src/server/` ou `src/lib/` — Stryker,
+   en bac à
+   sable, sur les seuls fichiers mutables de la PR ; les survivants sont nommés `fichier:ligne`.
+   La porte A la rejoue : la lancer avant, c'est ne pas la découvrir après.
+3. **`pnpm vues:fusion`** quand la PR est en conflit avec `main` : `main` est fusionnée, un
+   conflit qui ne porte **que** sur des vues dérivées se résout en les **rendant**, tout autre conflit
+   abandonne la fusion et nomme le fichier. Le diff propre à la PR ne change pas : les accords
+   survivent (pas 5, seconde exception).
+
+**Les relectures démarrent quand la porte A est verte** sur la tête à relire — pas avant. Un
+relecteur qui juge une tête rouge juge un état qui va changer.
+
 ## La suite de gestes
 
 Chaque pas donne la **commande** exacte et **ce qu'on lit**. Un pas dont on ne peut pas lire le
@@ -82,8 +105,10 @@ changé.
 
 **Ce qu'on lit.** Vert. C'est le seul moment où les revues existent : l'événement `pull_request` de la
 CI n'en porte aucune, donc `gate-a` ne peut pas les juger (`docs/CHARTE-AGENTS.md` §8). Sont vérifiés
-ici : les lentilles qu'exige le risque imprimé par `gov:pr` (deux sur une PR ordinaire, trois plus l'avis
-de mutation sur une PR élevée — `docs/CHARTE-AGENTS.md` §6), l'auteur qui ne s'auto-approuve pas, les
+ici : les lentilles exigées — **deux partout**, `exactitude` et `securite`, plus l'avis `schema`
+de l'architecte quand la PR touche au schéma (décision de Will du 2026-09-26, `W16`,
+`partners/ADR-0024`, `docs/CHARTE-AGENTS.md` §6) ; la mutation n'est plus un avis d'agent, elle
+est mesurée par Stryker en porte A (`pnpm mutation:pr`) —, l'auteur qui ne s'auto-approuve pas, les
 sept premières cases de la DoD, le bloc ROUGE/VERT, et la section « Attaque » si la tâche est
 `sensible`. Sur toute PR, le refus de la lentille `securite` vaut **veto**, à lui seul.
 
@@ -104,6 +129,10 @@ n'arrivera **jamais** si son nom ne correspond à aucun job (c'est ce que le pas
 Le créneau est **déjà** réservé (pas 1) : c'est ce qui garantit qu'aucune autre fusion ne remettra
 cette branche en retard pendant que ses gates tournent. Chaque fusion sur `main` remet en `BEHIND`
 **toutes** les PR ouvertes ; c'est la raison d'être de la sérialisation, pas un incident.
+
+Si la branche est **en conflit** (`mergeable: CONFLICTING`), `update-branch` ne suffit pas : l'auteur
+lance `pnpm vues:fusion` dans son arbre et pousse. Depuis GOV-101, cette fusion ne périme plus les
+accords tant que le diff propre à la PR est inchangé (pas 5).
 
 ### Pas 5 — Le diff approuvé est le diff fusionné
 
@@ -163,6 +192,19 @@ périment, parce que la garde y **lit** `zone`, `sensible`, `schema` et `paths` 
 pas de la prose ; une vue dérivée périme, parce que si la vue a changé sa source a changé ; un ADR ou
 tout autre document normatif périme. Aucun de ces cas n'est énuméré dans le code : la liste blanche
 est **une seule forme ancrée**, et tout ce qui n'y est pas périme par construction.
+
+⚠️ **LA SECONDE EXCEPTION (GOV-101) : un accord survit à une fusion de `main` qui ne change pas le
+patch de la PR.** Fusionner `main` — pour lever un conflit de vue, ou parce qu'une autre PR a
+atterri — change la tête sans rien changer à ce que la PR **apporte**. Un accord rendu sur C survit
+à la tête T si l'**empreinte du diff propre à la PR** est la même sur les deux : `git patch-id
+--stable` de `git diff <merge-base(origin/main, X)> X`, vues dérivées exclues (`patch-id` hache aussi
+les en-têtes de création, de suppression et de mode). `exactitude` suit la même règle pour la prose
+écrite dans les fichiers — l'entrée de journal, les commentaires, les documents ; le **corps** de la PR
+n'est pas dans ce diff, et se relit à la main s'il a changé. Périment par construction : une ligne changée dans
+un fichier de la PR, un conflit résolu en modifiant une ligne de la PR, un changement à moins de
+trois lignes d'un morceau de la PR (le contexte est dans l'empreinte), et toute mesure impossible
+(commit absent du clone, base introuvable, diff vide). Témoins : `relectures-sans-defaut.spec.ts`,
+sur un vrai dépôt git jetable.
 
 **Ce pas ne se lit donc plus à l'œil.** `pnpm gov:pr --pr <n>` **imprime** chaque accord qui survit —
 le poste, la lentille, le sha de l'accord, le sha de la tête, et la liste des fichiers qui les

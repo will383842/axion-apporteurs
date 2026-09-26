@@ -7,7 +7,7 @@
 >
 > `0000-gabarit.md` est le moule, pas un ADR : il n’est pas indexé.
 
-**23 ADR · 15 `propose`, 8 `accepte`, 0 `remplace`.**
+**24 ADR · 16 `propose`, 8 `accepte`, 0 `remplace`.**
 
 | ADR | Titre | Statut | Date | Tâche |
 | --- | --- | --- | --- | --- |
@@ -34,3 +34,4 @@
 | [`partners/ADR-0021`](0021-quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.md) | Quatre lentilles pour l'argent, la sécurité et les données, deux pour le reste ; la prose inexacte est une dette, pas un refus | `propose` | 2026-09-25 | GOV-097 |
 | [`partners/ADR-0022`](0022-carte-du-schema-des-phases-0-et-1.md) | La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition | `propose` | 2026-09-26 | GOV-102 |
 | [`partners/ADR-0023`](0023-route-des-coordonnees-de-candidature.md) | Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement | `propose` | 2026-09-26 | INT-T01c |
+| [`partners/ADR-0024`](0024-deux-lentilles-mutation-par-stryker-et-relectures-sans-defaut.md) | Deux lentilles partout, la mutation mesurée par Stryker, et les relectures qui ne corrigent aucun défaut | `propose` | 2026-09-26 | GOV-101 |

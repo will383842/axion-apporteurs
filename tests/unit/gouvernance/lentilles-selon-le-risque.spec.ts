@@ -241,7 +241,10 @@ describe('REQ-GOV-011 — cas 1 : plusieurs tâches sur la PR, la sensible AU MI
     expect(surLaPr).toEqual(IDS);
   });
 
-  it('REQ-GOV-011 · la PR est ÉLEVÉE, la raison nomme DM-01, et deux revues laissent simplicite et mutation manquantes', () => {
+  it('REQ-GOV-011 · la PR est ÉLEVÉE, la raison nomme DM-01, et deux revues suffisent depuis GOV-101', () => {
+    // Jusqu'au 2026-09-26, ces deux revues laissaient `simplicite` et `mutation` manquantes. La
+    // décision de Will (`W16`, `partners/ADR-0024`) : deux lentilles partout. Le risque reste
+    // ÉLEVÉ et se dit — c'est ce que `securite` lit —, il ne compte plus de lentille.
     const T = avecPr(IDS);
     const r = risque({ titre: 'feat(QA-T01): x', pr: 9999, taches: T, tachesBase: T });
     expect(r.niveau).toBe('eleve');
@@ -252,11 +255,9 @@ describe('REQ-GOV-011 — cas 1 : plusieurs tâches sur la PR, la sensible AU MI
       tete: TETE,
       auteurPoste: 'A05',
     });
-    expect(lecture.manquantes).toEqual(['simplicite', 'mutation']);
-    const familles = LECTEUR.fautesDesRevues(lecture, { tacheSensible: true }).map(
-      (f) => f.famille
-    );
-    expect(familles).toContain('lentilles_manquantes');
+    expect(lecture.manquantes).toEqual([]);
+    expect(LECTEUR.fautesDesRevues(lecture, { tacheSensible: true })).toEqual([]);
+    expect(lecture.detail).toContain('DM-01');
   });
 
   it('REQ-GOV-011 · CONTRE-TÉMOIN : la même PR SANS la tâche sensible sort sans aucune faute de revue', () => {
@@ -353,7 +354,7 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
     }
   });
 
-  it('REQ-GOV-011 · cas 6 ter : un fichier de CI (.github/) au MILIEU du diff rend la PR élevée, quatre lentilles de revue', () => {
+  it('REQ-GOV-011 · cas 6 ter : un fichier de CI (.github/) au MILIEU du diff rend la PR élevée — deux lentilles depuis GOV-101', () => {
     // Une PR qui affaiblit la CI ou la propriété des chemins est exactement celle qu'on ne relit
     // pas à deux lentilles. Le fichier vient des `paths` RÉELS de QA-T01, glissé au milieu.
     expect(CI_DE_QA_T01, 'QA-T01 ne déclare plus de fichier de CI').toContain(
@@ -370,12 +371,7 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
     const r = risque({ titre: 'feat(QA-T01): x', fichiers: avecCi });
     expect(r.niveau).toBe('eleve');
     expect(r.raisons.join(' ; ')).toContain('.github/workflows/ci.yml');
-    expect([...LECTEUR.lentillesExigees(r).toutes]).toEqual([
-      'exactitude',
-      'securite',
-      'simplicite',
-      'mutation',
-    ]);
+    expect([...LECTEUR.lentillesExigees(r).toutes]).toEqual(['exactitude', 'securite']);
     // CONTRE-TÉMOIN : la même PR sans ce fichier est ordinaire.
     const sans = risque({ titre: 'feat(QA-T01): x', fichiers: FICHIERS_QA_T01 });
     expect(sans.niveau, sans.raisons.join(' ; ')).toBe('ordinaire');
@@ -447,7 +443,7 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
       const r = risque({ titre: 'feat(QA-T01): x', fichiers: LECTEUR.cheminsTouches(entrees) });
       expect(r.niveau, source).toBe('eleve');
       expect(r.schema, source).toBe(true);
-      expect([...LECTEUR.lentillesExigees(r).sansMutation]).toContain('schema');
+      expect([...LECTEUR.lentillesExigees(r).toutes]).toContain('schema');
     }
   });
 
@@ -619,11 +615,7 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
     });
     expect(r.niveau).toBe('eleve');
     expect(r.schema).toBe(true);
-    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toEqual([
-      'exactitude',
-      'securite',
-      'schema',
-    ]);
+    expect([...LECTEUR.lentillesExigees(r).toutes]).toEqual(['exactitude', 'securite', 'schema']);
   });
 });
 
@@ -652,11 +644,7 @@ describe('REQ-GOV-011 — témoins manquants relevés par la lentille mutation (
     const r = risque({ titre: 'feat(QA-T04): x', fichiers: NEUTRES });
     expect(r.niveau).toBe('eleve');
     expect(r.schema).toBe(true);
-    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toEqual([
-      'exactitude',
-      'securite',
-      'schema',
-    ]);
+    expect([...LECTEUR.lentillesExigees(r).toutes]).toEqual(['exactitude', 'securite', 'schema']);
     expect(r.raisons.join(' ; ')).toContain('schema: true');
   });
 
@@ -837,9 +825,11 @@ describe('REQ-GOV-011 — cas 9 : toute tâche du registre réel est classée, l
 describe('REQ-GOV-011 — cas 10 : le composeur du corps de PR juge la case des revues par le MÊME risque', () => {
   const revuesDeuxAccords = DEUX_ACCORDS;
 
-  it('REQ-GOV-011 · la PR à tâche sensible au milieu, deux revues acceptées : la case reste VIDE et nomme DM-01', () => {
+  it('REQ-GOV-011 · la PR à tâche sensible au milieu, deux revues acceptées : la case se COCHE depuis GOV-101, et le risque nomme DM-01', () => {
+    // `schema: false` FIXÉ, pour la raison que donne le cas 1 : DM-01 est passé `schema: true` par
+    // GOV-102, et ce témoin porte sur la sensibilité au milieu, pas sur l'architecte.
     const T = registre().map((t) =>
-      ['QA-T01', 'DM-01', 'GOV-039'].includes(t.id) ? { ...t, pr: 9999 } : t
+      ['QA-T01', 'DM-01', 'GOV-039'].includes(t.id) ? { ...t, pr: 9999, schema: false } : t
     );
     const c = COMPOSEUR.jugerCaseRevues({
       titre: 'feat(QA-T01): x',
@@ -854,8 +844,9 @@ describe('REQ-GOV-011 — cas 10 : le composeur du corps de PR juge la case des 
       auteurPoste: 'A05',
       auteurCompte: 'will383842',
     });
-    expect(c.marque).toBe('[ ]');
+    expect(c.marque, c.detail).toBe('[x]');
     expect(c.detail).toContain('DM-01');
+    expect(c.detail).toContain('élevé');
   });
 
   it('REQ-GOV-011 · la PR ordinaire, résolue par son SEUL titre, deux revues acceptées : la case se coche', () => {
@@ -893,7 +884,7 @@ describe('REQ-GOV-011 — cas 10 : le composeur du corps de PR juge la case des 
     expect(c.detail).toContain('ordinaire');
   });
 
-  it('REQ-GOV-011 · sans registre de base, le composeur ne coche pas la case d’une PR ordinaire', () => {
+  it('REQ-GOV-011 · sans registre de base, la PR est ÉLEVÉE et le dit — et deux revues la cochent depuis GOV-101', () => {
     const c = COMPOSEUR.jugerCaseRevues({
       titre: 'feat(QA-T01): x',
       pr: 9999,
@@ -907,25 +898,32 @@ describe('REQ-GOV-011 — cas 10 : le composeur du corps de PR juge la case des 
       auteurPoste: 'A05',
       auteurCompte: 'will383842',
     });
-    expect(c.marque).toBe('[ ]');
+    expect(c.marque, c.detail).toBe('[x]');
+    expect(c.detail).toContain('registre de base illisible');
   });
 });
 
-describe('REQ-GOV-011 — cas 11 : une valeur de risque imprévue exige les quatre lentilles de revue', () => {
-  it('REQ-GOV-011 · `niveau` inconnu : exactitude, securite, simplicite, mutation', () => {
+describe('REQ-GOV-011 — cas 11 : deux lentilles partout, et l’architecte dès que le schéma n’est pas PROUVÉ absent', () => {
+  it('REQ-GOV-011 · `niveau` inconnu : exactitude, securite — le niveau ne compte plus de lentille', () => {
     const l = LECTEUR.lentillesExigees({ niveau: 'inconnu' as never, schema: false, raisons: [] });
-    expect([...l.toutes]).toEqual(['exactitude', 'securite', 'simplicite', 'mutation']);
+    expect([...l.toutes]).toEqual(['exactitude', 'securite']);
   });
 
-  it('REQ-GOV-011 · les deux niveaux, contenu ET cardinal', () => {
+  it('REQ-GOV-011 · les deux niveaux, contenu ET cardinal ; `schema` non faux appelle l’architecte', () => {
     const ordinaire = LECTEUR.lentillesExigees({ niveau: 'ordinaire', schema: false, raisons: [] });
     expect([...ordinaire.toutes]).toEqual(['exactitude', 'securite']);
     expect(ordinaire.toutes.length).toBe(2);
     const eleve = LECTEUR.lentillesExigees({ niveau: 'eleve', schema: false, raisons: [] });
-    expect([...eleve.toutes]).toEqual(['exactitude', 'securite', 'simplicite', 'mutation']);
-    expect(eleve.toutes.length).toBe(4);
-    // `ordinaire` avec `schema: true` est un état incohérent : il ne raccourcit rien.
+    expect([...eleve.toutes]).toEqual(['exactitude', 'securite']);
+    expect(eleve.toutes.length).toBe(2);
+    // La branche courte se PROUVE : `schema === false`. Toute autre valeur exige l'architecte.
     const incoherent = LECTEUR.lentillesExigees({ niveau: 'ordinaire', schema: true, raisons: [] });
-    expect([...incoherent.toutes]).toEqual(['exactitude', 'securite', 'schema', 'mutation']);
+    expect([...incoherent.toutes]).toEqual(['exactitude', 'securite', 'schema']);
+    const imprevu = LECTEUR.lentillesExigees({
+      niveau: 'eleve',
+      schema: 'peut-etre' as never,
+      raisons: [],
+    });
+    expect([...imprevu.toutes]).toEqual(['exactitude', 'securite', 'schema']);
   });
 });
