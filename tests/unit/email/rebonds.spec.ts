@@ -20,6 +20,7 @@
 import { describe, it, expect } from 'vitest';
 import { createHmac, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import type { PrismaClient } from '@prisma/client';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { clesPii, empreinteRecherche } from '../../../src/server/securite/pii';
 import {
@@ -28,6 +29,7 @@ import {
 } from '../../../src/server/securite/primitives-de-porte';
 import {
   ENTETE_SIGNATURE_ZEPTOMAIL,
+  depotDesSuppressions,
   lireRebond,
   recevoirRebond,
   verifierSignatureZeptomail,
@@ -352,5 +354,265 @@ describe('REQ-INT-023 — la charge lue est EXACTEMENT le texte dont la signatur
     expect(
       verifierSignatureZeptomail(o(recu), signer(cle, signe, MAINTENANT_MS), cle, MAINTENANT_MS)
     ).toEqual({ ok: true, texte: signe });
+  });
+});
+
+describe('REQ-INT-023 — l’adaptateur Prisma des suppressions : l’unicité est celle de la BASE', () => {
+  it('REQ-INT-023 : une ligne insérée rend `ajoutee`, une ligne écartée comme doublon rend `deja`', async () => {
+    const appels: unknown[] = [];
+    const prisma = (count: number) =>
+      ({
+        suppressionCourriel: {
+          createMany: async (args: unknown) => {
+            appels.push(args);
+            return { count };
+          },
+        },
+      }) as unknown as PrismaClient;
+    const s = {
+      emailHash: 'h1',
+      motif: 'rebond_definitif' as const,
+      survenuAt: new Date(0),
+      creeAt: new Date(1),
+    };
+    expect(await depotDesSuppressions(prisma(1)).supprimer(s)).toBe('ajoutee');
+    expect(await depotDesSuppressions(prisma(0)).supprimer(s)).toBe('deja');
+    expect(appels).toEqual([
+      { data: [s], skipDuplicates: true },
+      { data: [s], skipDuplicates: true },
+    ]);
+  });
+});
+
+describe('REQ-INT-023 — `Producer-Signature`, forme par forme', () => {
+  const cle = randomBytes(32).toString('hex');
+  const corps = JSON.stringify(charge('hardbounce', ['x@exemple.test']));
+  const condensat = (texte: string, k = cle) =>
+    createHmac('sha256', k).update(texte, 'utf8').digest('base64');
+  const juger = (entete: string, octets = o(corps)) =>
+    verifierSignatureZeptomail(octets, entete, cle, MAINTENANT_MS);
+
+  it('REQ-INT-023 : un en-tête VIDE est un en-tête absent', () => {
+    expect(juger('')).toEqual({ ok: false, motif: 'entete_absent' });
+  });
+
+  it('REQ-INT-023 : chacun des trois champs manquant, ou un horodatage qui n’est pas fait de 1 à 16 chiffres : `entete_illisible`', () => {
+    const s = encodeURIComponent(condensat(corps));
+    for (const entete of [
+      `s=${s};s-algorithm=HmacSHA256`,
+      `ts=${MAINTENANT_MS};s-algorithm=HmacSHA256`,
+      `ts=${MAINTENANT_MS};s=${s}`,
+      `ts=x${MAINTENANT_MS};s=${s};s-algorithm=HmacSHA256`,
+      `ts=${MAINTENANT_MS}x;s=${s};s-algorithm=HmacSHA256`,
+      `ts=${'1'.repeat(17)};s=${s};s-algorithm=HmacSHA256`,
+    ]) {
+      expect(juger(entete), entete).toEqual({ ok: false, motif: 'entete_illisible' });
+    }
+  });
+
+  it('REQ-INT-023 : les espaces autour des noms et des valeurs sont tolérés ; une partie sans `=` est ignorée', () => {
+    const s = encodeURIComponent(condensat(corps));
+    expect(juger(` ts = ${MAINTENANT_MS} ; s = ${s} ; s-algorithm = HmacSHA256 `)).toEqual({
+      ok: true,
+      texte: corps,
+    });
+    // `tsX` n'a pas de `=` : ce n'est pas un champ, et il ne remplace pas `ts`.
+    expect(juger(`ts=${MAINTENANT_MS};s=${s};s-algorithm=HmacSHA256;tsX`)).toEqual({
+      ok: true,
+      texte: corps,
+    });
+  });
+
+  it('REQ-INT-023 : un condensat qui n’a pas 32 octets, ou un bourrage mal percent-encodé : `signature_invalide`', () => {
+    const court = createHmac('sha256', cle).update(corps, 'utf8').digest().subarray(0, 31);
+    for (const s of [court.toString('base64'), '%ZZ']) {
+      expect(juger(`ts=${MAINTENANT_MS};s=${s};s-algorithm=HmacSHA256`), s).toEqual({
+        ok: false,
+        motif: 'signature_invalide',
+      });
+    }
+  });
+
+  it('REQ-INT-023 : la seconde tentative décode `+` en espace ; elle refuse un autre secret, et un corps mal percent-encodé sans lever', () => {
+    const recu = '{"a":"x+y%41"}';
+    const decode = '{"a":"x yA"}';
+    expect(
+      juger(`ts=${MAINTENANT_MS};s=${condensat(decode)};s-algorithm=HmacSHA256`, o(recu))
+    ).toEqual({ ok: true, texte: decode });
+    const autre = randomBytes(32).toString('hex');
+    expect(
+      juger(`ts=${MAINTENANT_MS};s=${condensat(decode, autre)};s-algorithm=HmacSHA256`, o(recu))
+    ).toEqual({ ok: false, motif: 'signature_invalide' });
+    const casse = '{"a":"%ZZ"}';
+    expect(
+      juger(`ts=${MAINTENANT_MS};s=${condensat(casse, autre)};s-algorithm=HmacSHA256`, o(casse))
+    ).toEqual({ ok: false, motif: 'signature_invalide' });
+  });
+
+  it('REQ-INT-023 : un corps bien signé qui n’est pas de l’UTF-8 strict n’a pas de texte à lire', () => {
+    const octets = new Uint8Array([0x7b, 0xff, 0x7d]);
+    const s = createHmac('sha256', cle).update(octets).digest('base64');
+    expect(juger(`ts=${MAINTENANT_MS};s=${s};s-algorithm=HmacSHA256`, octets)).toEqual({
+      ok: true,
+      texte: null,
+    });
+  });
+});
+
+describe('REQ-INT-023 — la lecture d’une charge, forme par forme', () => {
+  const avec = (message: Record<string, unknown>) =>
+    lireRebond({ event_name: 'hardbounce', event_message: message });
+  const a = (to: unknown) => avec({ email_info: { to } });
+
+  it('REQ-INT-023 : une racine ou un message qui n’est pas un objet, des destinataires absents ou hors tableau : forme inconnue', () => {
+    expect(lireRebond(['hardbounce'])).toEqual({ genre: 'inconnu', motif: 'forme_inconnue' });
+    expect(lireRebond({ event_name: 'hardbounce', event_message: [] })).toEqual({
+      genre: 'inconnu',
+      motif: 'forme_inconnue',
+    });
+    for (const message of [
+      {},
+      { email_info: 'x' },
+      { email_info: { to: 'x' } },
+      { email_info: { to: {} } },
+    ]) {
+      expect(avec(message), JSON.stringify(message)).toEqual({
+        genre: 'inconnu',
+        motif: 'forme_inconnue',
+      });
+    }
+  });
+
+  it('REQ-INT-023 : les entrées illisibles sont ignorées — nulles, adresse absente, vide, blanche ou non textuelle — et l’adresse lue est rognée et en minuscules', () => {
+    expect(
+      a([
+        null,
+        { email_address: null },
+        { email_address: [null, { address: '   ' }, { address: 7 }, { address: '' }] },
+        { email_address: [{ address: '  Perdue@Exemple.TEST ' }] },
+      ])
+    ).toEqual({ genre: 'definitif', adresse: 'perdue@exemple.test', survenuAt: null });
+  });
+
+  it('REQ-INT-023 : un instant absent, sans détails, ou qui n’est pas une chaîne reste nul', () => {
+    const to = [{ email_address: [{ address: 'x@exemple.test' }] }];
+    for (const event_data of [
+      undefined,
+      {},
+      { details: 'x' },
+      { details: { time: 1_758_880_000_000 } },
+    ]) {
+      expect(avec({ email_info: { to }, event_data }), JSON.stringify(event_data)).toEqual({
+        genre: 'definitif',
+        adresse: 'x@exemple.test',
+        survenuAt: null,
+      });
+    }
+  });
+});
+
+describe('REQ-INT-023 — la route, refus par refus', () => {
+  it('REQ-INT-023 : chaque refus porte son corps fermé, et chaque 200 le même `{ok:true}`', async () => {
+    const b = banc();
+    const cle = b.cle;
+    const signe = (corps: string) => signer(cle, corps, MAINTENANT_MS);
+    const lu = async (r: Response): Promise<[number, string]> => [r.status, await r.text()];
+    const definitif = JSON.stringify(charge('hardbounce', ['x@exemple.test']));
+    expect(
+      await lu(await b.recevoir(definitif, signer('autre', definitif, MAINTENANT_MS)))
+    ).toEqual([401, 'signature_refusee']);
+    const grand = JSON.stringify({ g: 'x'.repeat(128 * 1024) });
+    expect(await lu(await b.recevoir(grand, signe(grand)))).toEqual([413, 'corps_trop_grand']);
+    const casse = new ReadableStream<Uint8Array>({
+      pull(c) {
+        c.error(new Error('coupé'));
+      },
+    });
+    const init: RequestInit & { duplex: 'half' } = { method: 'POST', body: casse, duplex: 'half' };
+    expect(
+      await lu(await recevoirRebond(new Request('https://partners.test/x', init), b.d))
+    ).toEqual([400, 'corps_illisible']);
+    for (const corps of [
+      definitif,
+      JSON.stringify(charge('softbounce', ['x@exemple.test'])),
+      JSON.stringify(charge('email_open', ['x@exemple.test'])),
+    ]) {
+      const r = await b.recevoir(corps, signe(corps));
+      expect([r.status, await r.json()]).toEqual([200, { ok: true }]);
+    }
+    const sans = banc();
+    delete sans.env.ZEPTOMAIL_WEBHOOK_SECRET;
+    expect(await lu(await sans.recevoir(definitif, signe(definitif)))).toEqual([
+      503,
+      'rebonds_indisponibles',
+    ]);
+  });
+
+  it('REQ-INT-023 : la liste de suppression en panne rend 503 — le relais retentera ; la suppression écrite porte le motif `rebond_definitif`', async () => {
+    const b = banc();
+    const corps = JSON.stringify(charge('hardbounce', ['x@exemple.test']));
+    const motifs: string[] = [];
+    b.d.depot = {
+      async supprimer(s) {
+        motifs.push(s.motif);
+        throw new Error('base_coupee');
+      },
+    } as typeof b.depot;
+    const r = await b.recevoir(corps, signer(b.cle, corps, MAINTENANT_MS));
+    expect([r.status, await r.text()]).toEqual([503, 'rebonds_indisponibles']);
+    expect(motifs).toEqual(['rebond_definitif']);
+  });
+
+  it('REQ-INT-023 : un corps bien signé qui n’est pas de l’UTF-8 strict rend 200 SANS effet, alerté en forme inconnue', async () => {
+    const b = banc();
+    const octets = new Uint8Array([0x7b, 0xff, 0x7d]);
+    const s = encodeURIComponent(createHmac('sha256', b.cle).update(octets).digest('base64'));
+    const r = await recevoirRebond(
+      new Request('https://partners.test/x', {
+        method: 'POST',
+        headers: {
+          [ENTETE_SIGNATURE_ZEPTOMAIL]: `ts=${MAINTENANT_MS};s=${s};s-algorithm=HmacSHA256`,
+        },
+        body: octets,
+      }),
+      b.d
+    );
+    expect(r.status).toBe(200);
+    expect(b.depot.entrees.size).toBe(0);
+    expect(b.signaux.map((x) => [x.porte, x.motif])).toEqual([
+      ['zeptomail.contenu', 'forme_inconnue'],
+    ]);
+  });
+
+  it('REQ-INT-023 : une livraison authentifiée RÉARME la signature, une suppression écrite RÉARME le contenu — le refus suivant est de nouveau alerté', async () => {
+    const b = banc();
+    const signe = (corps: string) => signer(b.cle, corps, MAINTENANT_MS);
+    const inconnu = JSON.stringify(charge('email_open', ['x@exemple.test']));
+    const definitif = JSON.stringify(charge('hardbounce', ['x@exemple.test']));
+    const faux = signer('autre', definitif, MAINTENANT_MS);
+    await b.recevoir(definitif, faux);
+    await b.recevoir(inconnu, signe(inconnu));
+    await b.recevoir(definitif, signe(definitif));
+    await b.recevoir(definitif, faux);
+    await b.recevoir(inconnu, signe(inconnu));
+    expect(b.signaux.map((x) => [x.porte, x.motif])).toEqual([
+      ['zeptomail', 'signature_invalide'],
+      ['zeptomail.contenu', 'evenement_inconnu'],
+      ['zeptomail', 'signature_invalide'],
+      ['zeptomail.contenu', 'evenement_inconnu'],
+    ]);
+  });
+});
+
+describe('REQ-INT-023 — une adresse que la normalisation refuse', () => {
+  it('REQ-INT-023 : un rebond définitif dont l’adresse ne se normalise pas rend 200 SANS effet, alerté en forme inconnue', async () => {
+    const b = banc();
+    const corps = JSON.stringify(charge('hardbounce', ['pas-une-adresse']));
+    const r = await b.recevoir(corps, signer(b.cle, corps, MAINTENANT_MS));
+    expect([r.status, await r.json()]).toEqual([200, { ok: true }]);
+    expect(b.depot.entrees.size).toBe(0);
+    expect(b.signaux.map((x) => [x.porte, x.motif])).toEqual([
+      ['zeptomail.contenu', 'forme_inconnue'],
+    ]);
   });
 });

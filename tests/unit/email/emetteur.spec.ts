@@ -13,6 +13,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { randomBytes } from 'node:crypto';
+import type { PrismaClient } from '@prisma/client';
 import { NOMS_DES_SECRETS } from '../../../src/lib/env';
 import { clesPii, empreinteRecherche } from '../../../src/server/securite/pii';
 import { GABARITS } from '../../../src/server/notifications/table-ssot';
@@ -26,6 +27,7 @@ import {
   type DepotDesCourriels,
   type LigneCourriel,
   type Relais,
+  depotDesCourriels,
 } from '../../../src/server/integrations/zeptomail/emetteur';
 
 const DOMAINE = 'envoi.partners.test';
@@ -262,5 +264,100 @@ describe('REQ-INT-022 — l’expéditeur est une ADRESSE HUMAINE du domaine d�
     const cles = Object.keys(GABARITS);
     expect(cles.length).toBeGreaterThan(0);
     for (const c of cles) expect(c).toMatch(/^[a-z][a-z0-9_]*$/);
+  });
+});
+
+describe('REQ-INT-022 — l’adaptateur Prisma de l’émetteur, sur un client qui enregistre', () => {
+  function client(trouvee: unknown) {
+    const appels: [string, unknown][] = [];
+    const prisma = {
+      suppressionCourriel: {
+        findUnique: async (args: unknown) => {
+          appels.push(['findUnique', args]);
+          return trouvee;
+        },
+      },
+      courrielEnvoye: {
+        create: async (args: unknown) => {
+          appels.push(['create', args]);
+          return {};
+        },
+      },
+    } as unknown as PrismaClient;
+    return { prisma, appels };
+  }
+
+  it('REQ-INT-022 : une adresse est supprimée si et seulement si la liste porte son empreinte', async () => {
+    const absente = client(null);
+    expect(await depotDesCourriels(absente.prisma).estSupprimee('h1')).toBe(false);
+    expect(absente.appels).toEqual([
+      ['findUnique', { where: { emailHash: 'h1' }, select: { id: true } }],
+    ]);
+    expect(await depotDesCourriels(client({ id: 's1' }).prisma).estSupprimee('h1')).toBe(true);
+  });
+
+  it('REQ-INT-022 : la ligne consignée est la ligne ENTIÈRE, telle que l’émetteur l’a construite', async () => {
+    const c = client(null);
+    const ligne = {
+      id: 'l1',
+      gabarit: 'lien_magique',
+      emailHash: 'h1',
+      apporteurId: null,
+      statut: 'retenu_dmarc_non_verifie' as const,
+      demandeAt: new Date(0),
+      envoyeAt: null,
+      fournisseurMessageId: null,
+      erreur: null,
+    };
+    await depotDesCourriels(c.prisma).consigner(ligne);
+    expect(c.appels).toEqual([['create', { data: ligne }]]);
+  });
+});
+
+describe('REQ-INT-022 — les refus, borne par borne', () => {
+  it('REQ-INT-022 : un domaine d’envoi BLANC n’est pas renseigné', () => {
+    expect(() =>
+      configurationDeLEmetteur(environnement(`camille@${DOMAINE}`, 'true'), '   ')
+    ).toThrow(expect.objectContaining({ motif: 'domaine_non_renseigne' }));
+  });
+
+  it('REQ-INT-022 : les refus se nomment — `ConfigurationRefusee` et `DemandeRefusee`, motif dans le message', async () => {
+    let configuration: unknown;
+    try {
+      configurationDeLEmetteur(environnement(undefined, 'true'), DOMAINE);
+    } catch (e) {
+      configuration = e;
+    }
+    expect(configuration).toBeInstanceOf(ConfigurationRefusee);
+    expect(configuration).toMatchObject({
+      name: 'ConfigurationRefusee',
+      message: 'configuration_refusee : expediteur_absent',
+      motif: 'expediteur_absent',
+    });
+    const b = banc('true');
+    const refus = await demanderEnvoi(
+      { ...demande('x@exemple.test'), gabarit: 'inconnu' },
+      b.d
+    ).catch((e: unknown) => e);
+    expect(refus).toBeInstanceOf(DemandeRefusee);
+    expect(refus).toMatchObject({
+      name: 'DemandeRefusee',
+      message: 'demande_refusee : gabarit_inconnu',
+      motif: 'gabarit_inconnu',
+    });
+  });
+
+  it('REQ-INT-022 : un sujet de 250 caractères part, 251 sont refusés ; le caractère DEL (0x7f) est un caractère de contrôle', async () => {
+    const b = banc('true');
+    expect(await demanderEnvoi({ ...demande('x@exemple.test'), sujet: 's'.repeat(250) }, b.d)).toBe(
+      'envoye'
+    );
+    for (const sujet of ['s'.repeat(251), 'avant\u007fapres']) {
+      await expect(
+        demanderEnvoi({ ...demande('x@exemple.test'), sujet }, b.d),
+        JSON.stringify(sujet)
+      ).rejects.toMatchObject({ motif: 'sujet_invalide' });
+    }
+    expect(b.relais.appels).toHaveLength(1);
   });
 });
