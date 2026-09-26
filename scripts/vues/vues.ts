@@ -11,6 +11,15 @@
  *     VÉRIFICATEUR en porte A, qui rougit si elle n'est pas le rendu exact de sa source, et sa
  *     source, elle, est dans l'empreinte.
  *
+ * ⚠️ LIMITE DÉCLARÉE — `docs/PLAN-STATE.md` N'EST PAS COMPARÉ OCTET PAR OCTET. Son vérificateur
+ * exempte ce que le générateur a LU SUR LA FORGE (le sha de `main`, la file des PR, « Prochain
+ * pas ») : une falsification écrite à la main dans ces zones, après l'accord, survit donc à
+ * l'empreinte. Ce que cela ouvre est borné : ces zones portent déjà, par construction, du texte que
+ * la forge contrôle — le titre de n'importe quelle PR, sur un dépôt public —, et le vérificateur y
+ * refuse tout ce qui sortirait de la zone au rendu (`horsDeSaZone`, `scripts/plan-state/build.ts`).
+ * Les six autres vues sont comparées entières par leur vérificateur. Le remède complet est de sortir
+ * PLAN-STATE des PR (`partners/ADR-0022`, « Reste à faire »).
+ *
  * L'ORDRE EST CELUI DU RENDU : `docs/PLAN-STATE.md` en DERNIER, il lit le journal, le backlog et
  * la traçabilité (même règle que `scripts/prevol.ts`).
  *

@@ -57,7 +57,7 @@ Un accord rendu sur C survit à la tête T si l'**empreinte du diff propre à la
 `git patch-id --stable` de `git diff <merge-base(origin/main, X)> X`, vues dérivées exclues
 (`scripts/vues/vues.ts`), complété du résumé `--summary` (créations, suppressions, modes). La lentille
 `exactitude` suit la même règle : l'entrée de journal et la prose de la PR sont dans ce diff. Toute
-mesure impossible (commit absent du clone, base introuvable, diff vide) périme.
+mesure impossible (commit absent du clone, base introuvable, diff vide) périme. **Limite déclarée** : le vérificateur de `docs/PLAN-STATE.md` exempte les zones lues sur la forge ; une falsification écrite à la main dans ces zones après l'accord survit à l'empreinte. Ces zones portent déjà, par construction, du texte que la forge contrôle (le titre de n'importe quelle PR d'un dépôt public), et le vérificateur y refuse tout ce qui sortirait de la zone au rendu. Les six autres vues sont comparées entières.
 
 ### (4) Le pré-contrôle et la fusion des vues
 
