@@ -41,6 +41,9 @@ const ECARTES = [
   'chaque heure de 2026 à 2040 : `versParis` concorde avec Intl',
   'aucun fichier suivi sous src/ n.importe à la fois la dérivation et un envoi',
   'aucun module suivi sous src/ ne porte de barème de score',
+  // SEC-17 : lance la garde `G-SEC-ROLES` en sous-processus, qui lit les fichiers SUIVIS par git — le
+  // bac à sable n'est pas un dépôt, la garde y sort en échec. Jugé dans `pnpm test`, sur le vrai dépôt.
+  'la garde sur la console du dépôt sort en 0',
 ];
 
 export default defineConfig({

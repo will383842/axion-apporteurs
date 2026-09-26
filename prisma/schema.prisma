@@ -225,47 +225,81 @@ model JetonDepot {
 /// sous MAGIC_LINK_SECRET, domaine séparé, avec le `kid` de ce secret (partners/ADR-0013). Usage
 /// unique : une ligne consommée ou annulée est gelée (déclencheur `liens_magiques_usage_unique`).
 model LienMagique {
-  id             String         @id @default(uuid()) @db.Uuid
-  apporteurId    String         @map("apporteur_id") @db.Uuid
-  apporteur      Apporteur      @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
-  tokenHash      String         @unique @map("token_hash") @db.Char(64)
-  kid            String         @db.Char(8)
-  creeAt         DateTime       @map("cree_at") @db.Timestamptz(3)
-  expireAt       DateTime       @map("expire_at") @db.Timestamptz(3)
-  consommeAt     DateTime?      @map("consomme_at") @db.Timestamptz(3)
-  annuleAt       DateTime?      @map("annule_at") @db.Timestamptz(3)
+  id                   String              @id @default(uuid()) @db.Uuid
+  /// La population du lien (SEC-17, partners/ADR-0022) : un apporteur OU un utilisateur de la
+  /// console, jamais les deux, jamais aucun (CHECK `liens_magiques_une_population`, SQL brut).
+  apporteurId          String?             @map("apporteur_id") @db.Uuid
+  apporteur            Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  utilisateurConsoleId String?             @map("utilisateur_console_id") @db.Uuid
+  utilisateurConsole   UtilisateurConsole? @relation(fields: [utilisateurConsoleId], references: [id], onDelete: Restrict)
+  tokenHash            String              @unique @map("token_hash") @db.Char(64)
+  kid                  String              @db.Char(8)
+  creeAt               DateTime            @map("cree_at") @db.Timestamptz(3)
+  expireAt             DateTime            @map("expire_at") @db.Timestamptz(3)
+  consommeAt           DateTime?           @map("consomme_at") @db.Timestamptz(3)
+  annuleAt             DateTime?           @map("annule_at") @db.Timestamptz(3)
   /// Le code à six chiffres du courriel (REQ-UX-015) : HMAC-SHA-256 sous MAGIC_LINK_SECRET, domaine
   /// `partners.code.v1` (partners/ADR-0013, décision 14). Figé une fois posé.
-  codeHash       String?        @map("code_hash") @db.Char(64)
+  codeHash             String?             @map("code_hash") @db.Char(64)
   /// Essais de code, entre 0 et 5, jamais décrémentés (CHECK et déclencheur `liens_magiques_code_fige`).
-  tentativesCode Int            @default(0) @map("tentatives_code")
-  session        SessionEspace?
+  tentativesCode       Int                 @default(0) @map("tentatives_code")
+  session              SessionEspace?
 
   @@index([apporteurId])
+  @@index([utilisateurConsoleId])
   @@map("liens_magiques")
 }
 
 /// Une session de l'espace apporteur (SEC-03, REQ-SEC-001, REQ-SEC-003). Seule l'EMPREINTE du jeton
 /// se stocke : HMAC-SHA-256 sous SESSION_SECRET, domaine séparé. Une session par lien au plus.
 model SessionEspace {
-  id             String      @id @default(uuid()) @db.Uuid
-  apporteurId    String      @map("apporteur_id") @db.Uuid
-  apporteur      Apporteur   @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
-  lienMagiqueId  String      @unique @map("lien_magique_id") @db.Uuid
-  lienMagique    LienMagique @relation(fields: [lienMagiqueId], references: [id], onDelete: Restrict)
-  tokenHash      String      @unique @map("token_hash") @db.Char(64)
-  kid            String      @db.Char(8)
-  ipHash         String?     @map("ip_hash") @db.Char(16)
-  creeAt         DateTime    @map("cree_at") @db.Timestamptz(3)
-  expireAt       DateTime    @map("expire_at") @db.Timestamptz(3)
+  id                   String              @id @default(uuid()) @db.Uuid
+  /// La population de la session (SEC-17), celle de son lien : un apporteur OU un utilisateur de
+  /// la console (CHECK `sessions_espace_une_population`, SQL brut). L'espace refuse une session de
+  /// la console ; `requireRole` refuse une session d'apporteur.
+  apporteurId          String?             @map("apporteur_id") @db.Uuid
+  apporteur            Apporteur?          @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  utilisateurConsoleId String?             @map("utilisateur_console_id") @db.Uuid
+  utilisateurConsole   UtilisateurConsole? @relation(fields: [utilisateurConsoleId], references: [id], onDelete: Restrict)
+  lienMagiqueId        String              @unique @map("lien_magique_id") @db.Uuid
+  lienMagique          LienMagique         @relation(fields: [lienMagiqueId], references: [id], onDelete: Restrict)
+  tokenHash            String              @unique @map("token_hash") @db.Char(64)
+  kid                  String              @db.Char(8)
+  ipHash               String?             @map("ip_hash") @db.Char(16)
+  creeAt               DateTime            @map("cree_at") @db.Timestamptz(3)
+  expireAt             DateTime            @map("expire_at") @db.Timestamptz(3)
   /// SEC-04 (REQ-SEC-003) : la révocation, définitive ; la dernière vue ; la version de l'apporteur
   /// COPIÉE par la base à l'ouverture (déclencheur `sessions_espace_version_copiee`), jamais réécrite.
-  revoqueAt      DateTime?   @map("revoque_at") @db.Timestamptz(3)
-  derniereVueAt  DateTime?   @map("derniere_vue_at") @db.Timestamptz(3)
-  sessionVersion Int         @default(0) @map("session_version")
+  revoqueAt            DateTime?           @map("revoque_at") @db.Timestamptz(3)
+  derniereVueAt        DateTime?           @map("derniere_vue_at") @db.Timestamptz(3)
+  sessionVersion       Int                 @default(0) @map("session_version")
 
   @@index([apporteurId])
+  @@index([utilisateurConsoleId])
   @@map("sessions_espace")
+}
+
+// ── SEC-17 : les utilisateurs de la console ─────────────────────────────────
+
+/// Un utilisateur de la console (SEC-17, REQ-SEC-023, partners/ADR-0022) : la cible de toutes les
+/// colonnes auteur, traitePar et decidePar des phases 1 à 3. AUCUN mot de passe : il se connecte par
+/// le même lien magique que l'apporteur (partners/ADR-0004 §1). Son RÔLE n'est jamais mis en
+/// cookie : `requireRole` le relit à chaque requête, avec `desactiveAt`. Le courriel et le nom sont
+/// des blocs écrits par `colonnesPii` ; l'empreinte du courriel est unique.
+model UtilisateurConsole {
+  id           String      @id @default(uuid()) @db.Uuid
+  role         ConsoleRole
+  nomChiffre   Bytes?      @map("nom_chiffre")
+  emailChiffre Bytes       @map("email_chiffre")
+  emailHash    String      @unique @map("email_hash") @db.Char(64)
+  creeAt       DateTime    @map("cree_at") @db.Timestamptz(3)
+  /// Non nulle : l'utilisateur ne franchit plus la requête suivante, quelle que soit la date posée.
+  desactiveAt  DateTime?   @map("desactive_at") @db.Timestamptz(3)
+
+  liensMagiques  LienMagique[]
+  sessionsEspace SessionEspace[]
+
+  @@map("utilisateurs_console")
 }
 
 /// Un changement de courriel en cours ou clos (SEC-04, REQ-CPL-019, REQ-SEC-004). La NOUVELLE adresse,

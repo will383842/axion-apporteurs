@@ -54,15 +54,18 @@ export const MOTIFS_DE_REFUS = [
 ] as const;
 export type MotifDeRefus = (typeof MOTIFS_DE_REFUS)[number];
 
-/** Une ligne de `sessions_espace`, avec ce que le juge lit de son apporteur et de son lien. */
+/**
+ * Une ligne de `sessions_espace`, avec ce que le juge lit de son apporteur et de son lien. Sans
+ * apporteur, c'est une session de la CONSOLE (SEC-17) : l'espace ne la reconnaît pas.
+ */
 export interface LigneDeSession {
   id: string;
-  apporteurId: string;
+  apporteurId: string | null;
   kid: string;
   expireAt: Date;
   revoqueAt: Date | null;
   sessionVersion: number;
-  apporteur: { statut: string; sessionVersion: number };
+  apporteur: { statut: string; sessionVersion: number } | null;
   lienMagique: { consommeAt: Date | null };
 }
 
@@ -87,7 +90,10 @@ export function jugerSession(
   maintenant: Date,
   kidCourant: string
 ): VerdictDeSession {
-  if (ligne === null) return refus('inconnue');
+  // Une session de la console est INCONNUE de l'espace : même motif qu'une empreinte absente.
+  if (ligne === null || ligne.apporteurId === null || ligne.apporteur === null) {
+    return refus('inconnue');
+  }
   if (ligne.kid !== kidCourant) return refus('cle_perimee');
   if (ligne.revoqueAt !== null) return refus('revoquee');
   if (ligne.expireAt.getTime() <= maintenant.getTime()) return refus('expiree');

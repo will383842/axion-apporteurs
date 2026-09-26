@@ -109,18 +109,19 @@ describe('REQ-SEC-023 — les quatre rôles et la matrice unique', () => {
 
 type Utilisateur = { id: string; role: ConsoleRole; desactiveAt: Date | null };
 
+type Session = Omit<LigneDeSessionConsole, 'utilisateurConsole'>;
+
+/** Une session de la console valide À T0 : chaque champ que le juge lit est écrit (RM-11). */
+const valide = (): Session => ({
+  kid: KID,
+  expireAt: new Date(T0.getTime() + HEURE),
+  revoqueAt: null,
+});
+
 /** Un dépôt en mémoire qui relit son état À CHAQUE appel, et compte ses lectures. */
-function univers(utilisateur: Utilisateur | null, session: Partial<LigneDeSessionConsole> = {}) {
-  const etat = {
-    utilisateur,
-    ligne: {
-      kid: KID,
-      expireAt: new Date(T0.getTime() + HEURE),
-      revoqueAt: null,
-      ...session,
-    } as Omit<LigneDeSessionConsole, 'utilisateurConsole'>,
-    lectures: [] as string[],
-  };
+function univers(utilisateur: Utilisateur | null, ligne: Session) {
+  const lectures: string[] = [];
+  const etat = { utilisateur, ligne, lectures };
   const ports: PortsDeRole = {
     maintenant: () => T0,
     configuration: { secret: SECRET, kid: KID },
@@ -143,12 +144,12 @@ const admin = (): Utilisateur => ({ id: 'u-admin', role: 'admin', desactiveAt: n
 
 describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est relu à chaque requête', () => {
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — `comptable` sur la levée de gel est refusé ; `admin`, même appel, passe', async () => {
-    const refuse = univers(comptable());
+    const refuse = univers(comptable(), valide());
     expect(await requireRole('action:lever_gel', JETON, refuse.ports)).toEqual({
       ok: false,
       motif: 'role_refuse',
     });
-    const autorise = univers(admin());
+    const autorise = univers(admin(), valide());
     expect(await requireRole('action:lever_gel', JETON, autorise.ports)).toEqual({
       ok: true,
       utilisateur: { id: 'u-admin', role: 'admin' },
@@ -156,17 +157,17 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
   });
 
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — `qualifieur` sur l’IBAN en clair est refusé ; `comptable` passe', async () => {
-    const q = univers({ id: 'u-q', role: 'qualifieur', desactiveAt: null });
+    const q = univers({ id: 'u-q', role: 'qualifieur', desactiveAt: null }, valide());
     expect(await requireRole('action:voir_iban_en_clair', JETON, q.ports)).toEqual({
       ok: false,
       motif: 'role_refuse',
     });
-    const c = univers(comptable());
+    const c = univers(comptable(), valide());
     expect((await requireRole('action:voir_iban_en_clair', JETON, c.ports)).ok).toBe(true);
   });
 
   it('REQ-SEC-023 / REQ-UX-024 : un droit absent de la matrice est refusé même à `admin`, avec son motif', async () => {
-    const u = univers(admin());
+    const u = univers(admin(), valide());
     const absent = 'action:inventee' as Parameters<typeof requireRole>[0];
     expect(await requireRole(absent, JETON, u.ports)).toEqual({
       ok: false,
@@ -177,7 +178,7 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
   });
 
   it('REQ-SEC-023 : le rôle est RELU en base à chaque requête — changé entre deux appels, le verdict suit', async () => {
-    const u = univers(comptable());
+    const u = univers(comptable(), valide());
     expect((await requireRole('action:approuver_lot', JETON, u.ports)).ok).toBe(true);
     u.etat.utilisateur = { ...comptable(), role: 'lecteur' };
     expect(await requireRole('action:approuver_lot', JETON, u.ports)).toEqual({
@@ -191,7 +192,7 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
   });
 
   it('REQ-SEC-023 : un utilisateur désactivé ne franchit plus la requête SUIVANTE — même session, même horloge', async () => {
-    const u = univers(admin());
+    const u = univers(admin(), valide());
     expect((await requireRole('action:exporter_das2', JETON, u.ports)).ok).toBe(true);
     u.etat.utilisateur = { ...admin(), desactiveAt: T0 };
     expect(await requireRole('action:exporter_das2', JETON, u.ports)).toEqual({
@@ -201,7 +202,7 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
   });
 
   it('REQ-SEC-023 : une désactivation DATÉE DANS LE FUTUR refuse déjà — le refus ne dépend pas de l’horloge', async () => {
-    const u = univers({ ...admin(), desactiveAt: new Date(T0.getTime() + 24 * HEURE) });
+    const u = univers({ ...admin(), desactiveAt: new Date(T0.getTime() + 24 * HEURE) }, valide());
     expect(await requireRole('action:lever_gel', JETON, u.ports)).toEqual({
       ok: false,
       motif: 'desactive',
@@ -209,7 +210,7 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
   });
 
   it('REQ-SEC-023 : chaque motif de refus de session est nommé, et sans jeton la base n’est pas lue', async () => {
-    const sans = univers(admin());
+    const sans = univers(admin(), valide());
     expect(await requireRole('action:lever_gel', undefined, sans.ports)).toEqual({
       ok: false,
       motif: 'absente',
@@ -220,32 +221,32 @@ describe('REQ-SEC-023 — requireRole : le défaut est le refus, le rôle est re
     });
     expect(sans.etat.lectures).toEqual([]);
 
-    const inconnu = univers(admin());
+    const inconnu = univers(admin(), valide());
     expect(await requireRole('action:lever_gel', 'X'.repeat(43), inconnu.ports)).toEqual({
       ok: false,
       motif: 'inconnue',
     });
-    const cle = univers(admin(), { kid: '00000000' });
+    const cle = univers(admin(), { ...valide(), kid: '00000000' });
     expect(await requireRole('action:lever_gel', JETON, cle.ports)).toEqual({
       ok: false,
       motif: 'cle_perimee',
     });
-    const revoquee = univers(admin(), { revoqueAt: T0 });
+    const revoquee = univers(admin(), { ...valide(), revoqueAt: T0 });
     expect(await requireRole('action:lever_gel', JETON, revoquee.ports)).toEqual({
       ok: false,
       motif: 'revoquee',
     });
-    const expiree = univers(admin(), { expireAt: T0 });
+    const expiree = univers(admin(), { ...valide(), expireAt: T0 });
     expect(await requireRole('action:lever_gel', JETON, expiree.ports)).toEqual({
       ok: false,
       motif: 'expiree',
     });
-    const juste = univers(admin(), { expireAt: new Date(T0.getTime() + 1) });
+    const juste = univers(admin(), { ...valide(), expireAt: new Date(T0.getTime() + 1) });
     expect((await requireRole('action:lever_gel', JETON, juste.ports)).ok).toBe(true);
   });
 
   it('REQ-SEC-023 : une session de l’espace apporteur n’ouvre rien dans la console', async () => {
-    const u = univers(null);
+    const u = univers(null, valide());
     expect(await requireRole('action:lever_gel', JETON, u.ports)).toEqual({
       ok: false,
       motif: 'hors_console',
@@ -306,16 +307,17 @@ describe('REQ-SEC-023 — l’adaptateur Prisma de requireRole', () => {
 
 // ── 4. l'espace ne s'ouvre pas à la console ──────────────────────────────────────────────────────
 
-const ligneEspace = (surcharge: Partial<LigneDeSession>): LigneDeSession => ({
+/** Une session valide à T0 ; sa POPULATION, que le test fait varier, est toujours écrite (RM-11). */
+const ligneEspace = (
+  population: Pick<LigneDeSession, 'apporteurId' | 'apporteur'>
+): LigneDeSession => ({
   id: 'session-a',
-  apporteurId: 'apporteur-a',
   kid: KID,
   expireAt: new Date(T0.getTime() + HEURE),
   revoqueAt: null,
   sessionVersion: 0,
-  apporteur: { statut: 'signe', sessionVersion: 0 },
   lienMagique: { consommeAt: T0 },
-  ...surcharge,
+  ...population,
 });
 
 describe('REQ-SEC-023 — la population d’une session et d’un lien', () => {
@@ -324,7 +326,16 @@ describe('REQ-SEC-023 — la population d’une session et d’un lien', () => {
       ok: false,
       motif: 'inconnue',
     });
-    expect(jugerSession(ligneEspace({}), T0, KID).ok).toBe(true);
+    expect(
+      jugerSession(
+        ligneEspace({
+          apporteurId: 'apporteur-a',
+          apporteur: { statut: 'signe', sessionVersion: 0 },
+        }),
+        T0,
+        KID
+      ).ok
+    ).toBe(true);
   });
 
   it('REQ-SEC-023 : TÉMOIN À DEUX FACES — un lien de la console ne s’ouvre pas dans l’espace ; celui d’un apporteur, si', async () => {

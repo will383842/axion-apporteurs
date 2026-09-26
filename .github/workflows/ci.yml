@@ -310,6 +310,13 @@ jobs:
         run: pnpm securite:schema-pii
       - name: La garde des donnees personnelles sait rougir
         run: pnpm securite:schema-pii:prove
+      # SEC-17, REQ-SEC-023. Chaque action et chaque route de la console appellent requireRole avec un droit litteral, present dans LA matrice
+      # (src/server/roles/matrice.ts) : la liste est DERIVEE du disque, et le defaut est le refus. Le vert imprime les fichiers lus, les actions
+      # et routes confrontees et le compte des couples ; un perimetre vide est dit, avec sa tache.
+      - name: Roles de la console — requireRole partout, droits dans la matrice
+        run: pnpm G-SEC-ROLES
+      - name: La garde des roles sait rougir
+        run: pnpm G-SEC-ROLES:prove
       # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
       # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
       # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le

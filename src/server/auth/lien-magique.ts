@@ -219,7 +219,10 @@ export function conditionDeConsommation(
 export interface TransactionDeConsommation {
   /** `updateMany` conditionnel : rend le nombre de lignes écrites. */
   consommer(condition: ConditionDeConsommation, donnees: { consommeAt: Date }): Promise<number>;
-  lireLien(tokenHash: string): Promise<{ id: string; apporteurId: string; kid: string } | null>;
+  /** Le lien et sa POPULATION : `apporteurId` nul pour un lien de la console (SEC-17). */
+  lireLien(
+    tokenHash: string
+  ): Promise<{ id: string; apporteurId: string | null; kid: string } | null>;
   statutApporteur(apporteurId: string): Promise<string | null>;
   /** Enregistre une session neuve. */
   ouvrirSession(s: NouvelleSession): Promise<void>;
@@ -247,6 +250,8 @@ export async function consommerLien(
     if (ecrites !== 1) return INVALIDE;
     const lien = await tx.lireLien(tokenHash);
     if (lien === null || lien.kid !== ports.configuration.kid) return INVALIDE;
+    // Un lien de la CONSOLE ne s'ouvre pas ici : l'espace n'ouvre de session qu'à un apporteur.
+    if (lien.apporteurId === null) return INVALIDE;
     const statut = await tx.statutApporteur(lien.apporteurId);
     if (statut === null || !peutOuvrirLEspace(statut)) return INVALIDE;
     const jetonSession = tirerJeton();

@@ -679,7 +679,7 @@ describe('REQ-SEC-001 — la consommation : unique, atomique, bornée à 15 minu
       u.consommation.transaction(async (tx) => {
         const instantane = { ...u.liens.find((l) => l.tokenHash === tokenHash) };
         const lien = await tx.lireLien(tokenHash);
-        if (!lien || instantane.consommeAt !== null) return;
+        if (!lien || lien.apporteurId === null || instantane.consommeAt !== null) return;
         await tx.consommer({ tokenHash }, { consommeAt: new Date(u.horloge.t) });
         await tx.ouvrirSession({
           apporteurId: lien.apporteurId,
