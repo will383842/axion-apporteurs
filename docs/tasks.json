@@ -3109,7 +3109,6 @@
         "docs/gates.json",
         "scripts/gates/detect-pii.ts",
         "src/app/api/mcp/route.ts",
-        "scripts/mcp/",
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts"
       ],
       "schema": false,
