@@ -117,6 +117,29 @@ describe('REQ-SEC-001 — le déclencheur liens_magiques_usage_unique (lecture s
     });
   }
 
+  it('REQ-SEC-001 : les colonnes immuables sont reliées par OR — une seule qui change suffit à refuser', () => {
+    const condition = IMMUABLES.map((c) => `NEW."${c}" IS DISTINCT FROM OLD."${c}"`).join(' OR ');
+    expect(corps).toContain(
+      `IF ${condition} THEN RAISE EXCEPTION 'liens_magiques_usage_unique : seules consomme_at et annule_at s''écrivent (REQ-SEC-001)';`
+    );
+  });
+
+  it('REQ-SEC-001 : la fonction rend la ligne, et la migration ne désarme rien de ce qu’elle arme', () => {
+    expect(corps.trimEnd()).toMatch(/RETURN NEW; END;$/);
+    expect(corps).not.toMatch(/RETURN NULL/i);
+    const code = sql.replace(/--.*$/gm, '').replace(/\s+/g, ' ');
+    for (const desarmement of [
+      /DROP CONSTRAINT/i,
+      /DROP TRIGGER/i,
+      /DISABLE TRIGGER/i,
+      /NOT VALID/i,
+      /DROP FUNCTION/i,
+      /CREATE OR REPLACE FUNCTION/i,
+    ]) {
+      expect(code).not.toMatch(desarmement);
+    }
+  });
+
   it('REQ-SEC-001 : DELETE et TRUNCATE restent permis, aucune branche ne les refuse', () => {
     expect(corps).not.toMatch(/TG_OP/);
     expect(plat).not.toMatch(/BEFORE (?:UPDATE OR )?(?:DELETE|TRUNCATE) ON "liens_magiques"/);

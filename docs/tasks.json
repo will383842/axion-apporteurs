@@ -2802,7 +2802,8 @@
         "tests/unit/domaine/apporteur-acces-espace.spec.ts",
         "tests/unit/securite/connexion-ecran.spec.ts",
         "perf/budgets.json",
-        "tests/unit/securite/connexion-actions.spec.ts"
+        "tests/unit/securite/connexion-actions.spec.ts",
+        "tests/unit/securite/lien-magique-compteurs.spec.ts"
       ],
       "schema": true,
       "sensible": [

@@ -291,7 +291,7 @@ type Demandeur = (
 ) => Promise<EtatDeDemande>;
 
 /** Ce qu'un observateur extérieur voit d'une demande : la réponse et les appels faits avant elle. */
-async function observer(demandeur: Demandeur, u: Univers, saisie: string, piege = false) {
+async function observer(demandeur: Demandeur, u: Univers, saisie: string, piege: boolean) {
   const etat = await demandeur({ saisie, piege, entetes: entetes() }, u.demande);
   return { etat, trace: [...u.trace] };
 }
@@ -327,8 +327,8 @@ const MARIE: Readonly<Compte> = Object.freeze({
 async function deuxUnivers(demandeur: Demandeur, saisie: string, o: Options = {}) {
   const connu = univers({ ...o, comptes: [MARIE] });
   const inconnu = univers({ ...o, comptes: [] });
-  const a = await observer(demandeur, connu, saisie);
-  const b = await observer(demandeur, inconnu, saisie);
+  const a = await observer(demandeur, connu, saisie, false);
+  const b = await observer(demandeur, inconnu, saisie, false);
   return { connu, inconnu, a, b };
 }
 
@@ -360,8 +360,8 @@ describe('REQ-SEC-001 REQ-SEC-002 — la demande de lien ne dépend pas de l’e
   it('REQ-SEC-001 : un compte au statut qui ne donne pas accès répond comme un compte absent', async () => {
     const ferme = univers({ comptes: [{ ...MARIE, statut: 'kyc_en_cours' }] });
     const absent = univers({ comptes: [] });
-    const a = await observer(demanderLien, ferme, MARIE.courriel);
-    const b = await observer(demanderLien, absent, MARIE.courriel);
+    const a = await observer(demanderLien, ferme, MARIE.courriel, false);
+    const b = await observer(demanderLien, absent, MARIE.courriel, false);
     expect(premierEcart(a, b)).toBeNull();
     await ferme.apresLaReponse();
     expect(ferme.envois).toHaveLength(0);
@@ -407,7 +407,7 @@ describe('REQ-SEC-001 REQ-SEC-002 — la demande de lien ne dépend pas de l’e
   it('REQ-SEC-001 : le champ piège fait la même réponse et la même trace, et ne signale qu’après', async () => {
     const nominal = univers({ comptes: [MARIE] });
     const piege = univers({ comptes: [MARIE] });
-    const a = await observer(demanderLien, nominal, MARIE.courriel);
+    const a = await observer(demanderLien, nominal, MARIE.courriel, false);
     const b = await observer(demanderLien, piege, MARIE.courriel, true);
     expect(premierEcart(a, b)).toBeNull();
     await piege.apresLaReponse();

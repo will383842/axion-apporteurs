@@ -18,7 +18,7 @@
  *
  * Secrets et jetons sont tirés à l'exécution ; aucune adresse de courriel n'est écrite en base.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { demarrerBase, demarrerCache, type Base, type Cache } from './harnais';
 import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
@@ -28,8 +28,7 @@ import {
   COMPTEURS,
   OPTIONS_DU_CLIENT,
   creerMagasinRedis,
-  limiter,
-  sujetDepuisEmpreinte,
+  type MagasinDeCompteurs,
   type MagasinRedis,
 } from '../../src/server/securite/rate-limit';
 import {
@@ -45,7 +44,6 @@ import {
   empreinteDuJeton,
   tirerJeton,
   type ConfigurationDuLien,
-  type PortsDeDemande,
   type PortsDeConsommation,
 } from '../../src/server/auth/lien-magique';
 import { DUREES_AUTH } from '../../src/server/auth/durees';
@@ -54,6 +52,27 @@ import {
   transactionDeConsommation,
 } from '../../src/server/auth/lien-magique-depot';
 
+/**
+ * Le magasin que `limiter` du REGISTRE reçoit dans ce fichier : le cache RÉEL du conteneur. C'est
+ * le SEUL élément substitué, à la frontière du module du registre — le câblage de production
+ * (`portsDeDemande`) est jugé tel quel, compteurs compris. Hors des tests, `limiter` refuse tout
+ * magasin fourni ; le câblage n'en passe aucun (garde `securite:rate-famille`).
+ */
+const frontiere = vi.hoisted(() => ({ magasin: undefined as unknown }));
+vi.mock('../../src/server/securite/rate-limit', async (original) => {
+  const m = await original<typeof import('../../src/server/securite/rate-limit')>();
+  return {
+    ...m,
+    limiter: (...args: Parameters<typeof m.limiter>) =>
+      m.limiter(
+        args[0],
+        args[1],
+        args[2],
+        frontiere.magasin as MagasinDeCompteurs,
+        () => undefined
+      ),
+  };
+});
 let base: Base;
 
 beforeAll(async () => {
@@ -86,7 +105,7 @@ function ports(maintenant: Date): PortsDeConsommation {
 }
 
 /** Un apporteur minimal : chaque champ obligatoire est ÉCRIT (RM-11). */
-async function apporteur(codeParrainage: string, statut: 'signe' | 'resilie' = 'signe') {
+async function apporteur(codeParrainage: string, statut: 'signe' | 'resilie') {
   const a = await base.prisma.apporteur.create({
     data: {
       statut,
@@ -138,7 +157,7 @@ async function refus(promesse: Promise<unknown>): Promise<string> {
 
 describe('REQ-SEC-001 — usage unique et durée de vie, comptés en lignes de sessions_espace', () => {
   it('REQ-SEC-001 : un lien frais et unique ouvre UNE session', async () => {
-    const id = await apporteur('AX00SEC1');
+    const id = await apporteur('AX00SEC1', 'signe');
     const jeton = await poserLien(id, new Date(t0));
     const r = await consommerLien(
       { jeton, ipHash: 'a1b2c3d4e5f60718' },
@@ -149,7 +168,7 @@ describe('REQ-SEC-001 — usage unique et durée de vie, comptés en lignes de s
   });
 
   it('REQ-SEC-001 : consommé deux fois, exactement 1 ligne de sessions_espace', async () => {
-    const id = await apporteur('AX00SEC2');
+    const id = await apporteur('AX00SEC2', 'signe');
     const jeton = await poserLien(id, new Date(t0));
     await consommerLien({ jeton, ipHash: null }, ports(new Date(t0 + 1000)));
     const seconde = await consommerLien({ jeton, ipHash: null }, ports(new Date(t0 + 2000)));
@@ -158,7 +177,7 @@ describe('REQ-SEC-001 — usage unique et durée de vie, comptés en lignes de s
   });
 
   it('REQ-SEC-001 : dix consommations concurrentes, exactement 1 ligne de sessions_espace', async () => {
-    const id = await apporteur('AX00SEC3');
+    const id = await apporteur('AX00SEC3', 'signe');
     const jeton = await poserLien(id, new Date(t0));
     const r = await Promise.all(
       Array.from({ length: 10 }, () =>
@@ -170,7 +189,7 @@ describe('REQ-SEC-001 — usage unique et durée de vie, comptés en lignes de s
   });
 
   it('REQ-SEC-001 : un lien de plus de 15 minutes ne laisse AUCUNE ligne', async () => {
-    const id = await apporteur('AX00SEC4');
+    const id = await apporteur('AX00SEC4', 'signe');
     const creeAt = new Date(t0 - QUINZE_MINUTES - 60_000);
     const jeton = await poserLien(id, creeAt);
     const r = await consommerLien({ jeton, ipHash: null }, ports(new Date(t0)));
@@ -187,7 +206,7 @@ describe('REQ-SEC-001 — usage unique et durée de vie, comptés en lignes de s
   });
 
   it('REQ-SEC-001 : émettre un nouveau lien annule l’ancien, qui ne s’ouvre plus', async () => {
-    const id = await apporteur('AX00SEC6');
+    const id = await apporteur('AX00SEC6', 'signe');
     const ancien = await poserLien(id, new Date(t0));
     await ecrituresDeLien(base.prisma).annulerLiensActifs(id, new Date(t0 + 500));
     const recent = await poserLien(id, new Date(t0 + 500));
@@ -216,7 +235,7 @@ const VECTEUR_LIEN = {
 
 describe('REQ-SEC-001 — seule l’empreinte HMAC est stockée, et seule elle fait foi', () => {
   it('REQ-SEC-001 : le vecteur figé de la décision 14 est ce que la base reçoit, octet pour octet', async () => {
-    const id = await apporteur('AX00SECD');
+    const id = await apporteur('AX00SECD', 'signe');
     await ecrituresDeLien(base.prisma).insererLien({
       apporteurId: id,
       tokenHash: empreinteDuJeton(VECTEUR_LIEN.jeton, VECTEUR_LIEN.cle),
@@ -232,7 +251,7 @@ describe('REQ-SEC-001 — seule l’empreinte HMAC est stockée, et seule elle f
   });
 
   it('REQ-SEC-001 : ni le jeton de lien ni le jeton de session n’apparaissent en base', async () => {
-    const id = await apporteur('AX00SEC7');
+    const id = await apporteur('AX00SEC7', 'signe');
     const jeton = await poserLien(id, new Date(t0));
     const r = await consommerLien({ jeton, ipHash: null }, ports(new Date(t0 + 1000)));
     if (r.etat !== 'ouverte') throw new Error(`attendu ouverte, reçu ${r.etat}`);
@@ -254,7 +273,7 @@ describe('REQ-SEC-001 — seule l’empreinte HMAC est stockée, et seule elle f
   });
 
   it('REQ-SEC-001 : une ligne en SHA-256 SANS clé se consomme en `lien_invalide`, aucune session', async () => {
-    const id = await apporteur('AX00SEC8');
+    const id = await apporteur('AX00SEC8', 'signe');
     const jeton = tirerJeton();
     await ecrituresDeLien(base.prisma).insererLien({
       apporteurId: id,
@@ -271,7 +290,7 @@ describe('REQ-SEC-001 — seule l’empreinte HMAC est stockée, et seule elle f
 
 describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
   it('REQ-SEC-001 : face VERTE — consommer puis annuler un lien actif en SQL passent', async () => {
-    const id = await apporteur('AX00SEC9');
+    const id = await apporteur('AX00SEC9', 'signe');
     await poserLien(id, new Date(t0));
     await poserLien(id, new Date(t0 + 1));
     const [premier, second] = await base.prisma.$queryRawUnsafe<Array<{ id: string }>>(
@@ -292,7 +311,7 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
   });
 
   it('REQ-SEC-001 : face ROUGE — remettre `consomme_at` à NULL est refusé, et le refus se nomme', async () => {
-    const id = await apporteur('AX00SECA');
+    const id = await apporteur('AX00SECA', 'signe');
     const jeton = await poserLien(id, new Date(t0));
     expect((await consommerLien({ jeton, ipHash: null }, ports(new Date(t0 + 1000)))).etat).toBe(
       'ouverte'
@@ -309,7 +328,7 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
   });
 
   it('REQ-SEC-001 : face ROUGE — une empreinte non hexadécimale est refusée par la base', async () => {
-    const id = await apporteur('AX00SECE');
+    const id = await apporteur('AX00SECE', 'signe');
     const m = await refus(
       ecrituresDeLien(base.prisma).insererLien({
         apporteurId: id,
@@ -323,7 +342,7 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
   });
 
   it('REQ-SEC-001 : face ROUGE — une échéance qui ne suit pas la création est refusée par la base', async () => {
-    const id = await apporteur('AX00SECF');
+    const id = await apporteur('AX00SECF', 'signe');
     const m = await refus(
       ecrituresDeLien(base.prisma).insererLien({
         apporteurId: id,
@@ -337,7 +356,7 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
   });
 
   it('REQ-SEC-001 : face ROUGE — prolonger `expire_at` est refusé', async () => {
-    const id = await apporteur('AX00SECB');
+    const id = await apporteur('AX00SECB', 'signe');
     await poserLien(id, new Date(t0));
     const m = await refus(
       base.prisma.$executeRawUnsafe(
@@ -351,7 +370,7 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
   });
 
   it('REQ-SEC-001 : face ROUGE — une seconde session pour le même lien est refusée par la base', async () => {
-    const id = await apporteur('AX00SECC');
+    const id = await apporteur('AX00SECC', 'signe');
     const jeton = await poserLien(id, new Date(t0));
     expect((await consommerLien({ jeton, ipHash: null }, ports(new Date(t0 + 1000)))).etat).toBe(
       'ouverte'
@@ -420,7 +439,7 @@ describe('REQ-SEC-001 — les colonnes de courriel d’apporteurs', () => {
   });
 
   it('REQ-SEC-001 : face ROUGE — une empreinte de courriel non hexadécimale, ou sans son bloc, est refusée', async () => {
-    const id = await apporteur('AX00SECJ');
+    const id = await apporteur('AX00SECJ', 'signe');
     const horsForme = await refus(
       base.prisma.$executeRawUnsafe(
         "UPDATE apporteurs SET email_hash = $2, email_chiffre = '\\x01'::bytea WHERE id = $1::uuid",
@@ -447,6 +466,7 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
   beforeAll(async () => {
     cache = await demarrerCache();
     magasin = creerMagasinRedis(cache.url, OPTIONS_DU_CLIENT);
+    frontiere.magasin = magasin;
   }, 180_000);
 
   afterAll(async () => {
@@ -473,19 +493,6 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
     return { d, planifies, envois, avertissements };
   }
 
-  /**
-   * Les ports de production, dont les deux compteurs appellent `limiter` du registre sur le cache
-   * RÉEL de ce fichier : hors des tests, `limiter` refuse tout magasin fourni, et le câblage de
-   * production n'en passe aucun (garde `securite:rate-famille`). Seul le magasin change ici.
-   */
-  const cablee = (d: DependancesDuLien): PortsDeDemande => ({
-    ...portsDeDemande(d),
-    compterAdresse: (sujet, maintenantMs) =>
-      limiter('magic:ip', sujetDepuisEmpreinte(sujet), maintenantMs, magasin),
-    compterCourriel: (sujet, maintenantMs) =>
-      limiter('magic:courriel', sujetDepuisEmpreinte(sujet), maintenantMs, magasin),
-  });
-
   const demande = (saisie: string, adresse: string) => ({
     saisie,
     piege: false,
@@ -496,10 +503,13 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
     const id = await apporteurAvecCourriel('AX00SECK', 'claire@example.org');
     const connu = dependances();
     const inconnu = dependances();
-    const a = await demanderLien(demande('Claire@Example.org', '198.51.100.21'), cablee(connu.d));
+    const a = await demanderLien(
+      demande('Claire@Example.org', '198.51.100.21'),
+      portsDeDemande(connu.d)
+    );
     const b = await demanderLien(
       demande('personne@example.org', '198.51.100.22'),
-      cablee(inconnu.d)
+      portsDeDemande(inconnu.d)
     );
     expect([a, b]).toEqual(['envoye', 'envoye']);
     // Plancher : les deux demandes ont bien planifié leur travail, et rien d'autre avant la réponse.
@@ -536,7 +546,7 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
       ['bruno@example.org', '198.51.100.32'],
     ] as const) {
       const { d, planifies, avertissements } = dependances();
-      expect(await demanderLien(demande(saisie, adresse), cablee(d))).toBe('envoye');
+      expect(await demanderLien(demande(saisie, adresse), portsDeDemande(d))).toBe('envoye');
       for (const t of planifies) await t();
       expect(avertissements).toEqual([]);
     }
@@ -554,7 +564,7 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
       const { d, planifies, avertissements } = dependances();
       d.horloge = horlogeFigee(t0 + i * 1000);
       expect(
-        await demanderLien(demande('trois@example.org', `198.51.100.${40 + i}`), cablee(d))
+        await demanderLien(demande('trois@example.org', `198.51.100.${40 + i}`), portsDeDemande(d))
       ).toBe('envoye');
       for (const t of planifies) await t();
       expect(avertissements).toEqual([]);
@@ -573,7 +583,7 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
       const { d } = dependances();
       const etats: string[] = [];
       for (let i = 0; i <= limite; i += 1) {
-        etats.push(await demanderLien(demande(saisie, `192.0.2.${i + 1}`), cablee(d)));
+        etats.push(await demanderLien(demande(saisie, `192.0.2.${i + 1}`), portsDeDemande(d)));
       }
       expect(etats.slice(0, limite).every((e) => e === 'envoye')).toBe(true);
       expect(etats[limite]).toBe('suspendu');
@@ -644,7 +654,7 @@ function insererSessionBrute(x: Awaited<ReturnType<typeof ligneDeSession>>) {
 describe('REQ-SEC-001 — chaque CHECK de liens_magiques, vu refuser', () => {
   let id = '';
   beforeAll(async () => {
-    id = await apporteur('AX00SECP');
+    id = await apporteur('AX00SECP', 'signe');
   });
 
   it('REQ-SEC-001 : face VERTE — une ligne valide insérée en SQL brut passe', async () => {
@@ -677,7 +687,7 @@ describe('REQ-SEC-001 — chaque CHECK de liens_magiques, vu refuser', () => {
 describe('REQ-SEC-001 — chaque CHECK de sessions_espace, vu refuser', () => {
   let id = '';
   beforeAll(async () => {
-    id = await apporteur('AX00SECQ');
+    id = await apporteur('AX00SECQ', 'signe');
   });
 
   it('REQ-SEC-001 : face VERTE — une session valide insérée en SQL brut passe', async () => {
@@ -706,8 +716,8 @@ describe('REQ-SEC-001 — chaque branche de liens_magiques_usage_unique, vue ref
   let id = '';
   let autre = '';
   beforeAll(async () => {
-    id = await apporteur('AX00SECR');
-    autre = await apporteur('AX00SECS');
+    id = await apporteur('AX00SECR', 'signe');
+    autre = await apporteur('AX00SECS', 'signe');
   });
 
   async function lienActif(): Promise<string> {
