@@ -4,12 +4,16 @@ import base from './vitest.config';
 /**
  * La configuration de test que Stryker lance — QA-T30 (REQ-QA-002).
  *
- * C'est `vitest.config.ts`, réduite aux tests du DOMAINE (`tests/unit/domaine/**`,
- * `tests/unit/contrat/**`) : Stryker ne mute que `src/domain/**`, et chaque mutant est jugé par
- * les tests qui le couvrent (`coverageAnalysis: perTest`). Les tests d'intégration exigent un
- * démon Docker et ceux de gouvernance lancent des gardes en sous-processus : ni l'un ni l'autre ne
- * juge un mutant du domaine, et les deux feraient échouer la passe à blanc. Tout le reste
- * (préparation, délais, parallélisme) est hérité, jamais recopié.
+ * C'est `vitest.config.ts`, réduite aux tests UNITAIRES EN PROCESSUS du domaine et du serveur
+ * (`tests/unit/domaine/**`, `tests/unit/contrat/**`, puis, depuis GOV-101, `tests/unit/securite/**`,
+ * `tests/unit/integration/**` et `tests/unit/espace/**`) : le travail de nuit ne mute que
+ * `src/domain/**`, `pnpm mutation:pr` mute aussi les fichiers de `src/server/**` que la PR touche,
+ * et chaque mutant est jugé par les tests qui le couvrent (`coverageAnalysis: perTest`, `related`).
+ * Les tests de `tests/integration/` exigent un démon Docker et ceux de gouvernance lancent des
+ * gardes en sous-processus : ni l'un ni l'autre ne juge un mutant, et les deux feraient échouer la
+ * passe à blanc. Mesuré le 2026-09-26 sur le diff de SEC-03 (cinq fichiers, 200 mutants) : sans les
+ * tests du serveur, 196 mutants « sans couverture » et un score de 0,51 % ; avec eux, 82,50 % en
+ * 3 min 10 s. Tout le reste (préparation, délais, parallélisme) est hérité, jamais recopié.
  *
  * CE QUI EST ÉCARTÉ, NOMMÉ, parce que cela ne juge pas le COMPORTEMENT du domaine et échoue sur le
  * bac à sable de Stryker — chacun vu rougir à blanc le 2026-09-25, un par passe :
@@ -41,7 +45,13 @@ export default defineConfig({
   ...base,
   test: {
     ...base.test,
-    include: ['tests/unit/domaine/**/*.spec.ts', 'tests/unit/contrat/**/*.spec.ts'],
+    include: [
+      'tests/unit/domaine/**/*.spec.ts',
+      'tests/unit/contrat/**/*.spec.ts',
+      'tests/unit/securite/**/*.spec.ts',
+      'tests/unit/integration/**/*.spec.ts',
+      'tests/unit/espace/**/*.spec.ts',
+    ],
     exclude: [
       ...(base.test?.exclude ?? []),
       'tests/unit/domaine/journal-charge-fermee.spec.ts',

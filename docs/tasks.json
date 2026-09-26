@@ -11527,7 +11527,9 @@
         "docs/DECISIONS.md",
         "docs/agents.json",
         "docs/adr/",
-        "docs/journal/"
+        "docs/journal/",
+        "vitest.mutation.config.ts",
+        "tests/gov/charte-pr.spec.ts"
       ],
       "schema": false,
       "sensible": [],
