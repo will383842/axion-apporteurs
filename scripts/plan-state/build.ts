@@ -33,6 +33,7 @@ import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 import { referencePr, type Attestation } from '../lot/attestation';
 import { LIVREE, PLANCHER } from '../lot/avancement';
+import { chargerRegistre } from '../lot/registre-decisions';
 
 const PLAFOND_QUESTIONS = 10;
 
@@ -84,18 +85,21 @@ const sh = (cmd: string, args: string[]) => {
 
 const doc = JSON.parse(readFileSync('docs/tasks.json', 'utf8')) as { taches: Tache[] };
 const taches = doc.taches;
-// La frontière §1 / §2 du registre fait foi : le §4 prescrit de DÉPLACER une ligne de la §2 vers la §1
-// quand une décision cesse d'avoir un défaut. Ratisser tout le fichier rendait ce déplacement invisible
-// et faisait écrire « Aucune question ouverte » sur une décision redevenue bloquante.
-const decisions = readFileSync('docs/DECISIONS.md', 'utf8');
-const section = (n: number) =>
-  decisions
-    .split(new RegExp(`^## ${n}\\.`, 'm'))[1]
-    ?.split(new RegExp(`^## ${n + 1}\\.`, 'm'))[0] ?? '';
-const ids = (texte: string) => new Set(texte.match(/\b(HYP|DEC)-[A-Z0-9-]+\b/g) || []);
-/** §2 = décisions avec une hypothèse par défaut posée. §1 = décisions SANS défaut, bloquantes. */
-const posees = ids(section(2));
-const bloquantes = ids(section(1));
+/**
+ * LE REGISTRE DES DÉCISIONS, LU PAR LE LECTEUR UNIQUE (GOV-060, REQ-GOV-015, REQ-GOV-024).
+ *
+ * Ce fichier découpait `docs/DECISIONS.md` par ses titres de section et y ramassait les identifiants
+ * `HYP-`/`DEC-` au fil du texte — la lecture que GOV-027 a retirée du composeur et de `gov:tasks`.
+ * C'était un TROISIÈME lecteur du même registre, et il divergeait : mesuré le 2026-09-26, la vue
+ * annonçait cinq questions ouvertes pour Will (W9, W6, DEC-INT-002 « bloquante », W12, W11) que le
+ * registre rend toutes tranchées le 2026-09-03. `plan-state:verifier` ne pouvait pas le voir : il
+ * compare la vue à son générateur, jamais le générateur à la source. Le registre fait foi ; la
+ * lecture passe donc par `chargerRegistre`, et `plan-state-lecteur-unique.spec.ts` refuse tout
+ * autre chemin de lecture dans ce fichier.
+ */
+const registre = chargerRegistre();
+/** Les décisions portant une hypothèse par défaut : les lignes de tableau de la §2. */
+const posees = [...registre.parId.values()].filter((d) => d.section === 2);
 
 // Phase courante = la plus petite phase qui porte encore une tâche non terminée.
 // Le vocabulaire « livrée » vient de `scripts/lot/avancement.ts`, qui le dérive du barème et le
@@ -109,15 +113,16 @@ const enCours = par('en_cours');
 const bloquees = par('bloquee');
 const attente = par('attente_externe');
 
-// Questions ouvertes = décisions SANS hypothèse posée, citées par une tâche de la phase courante.
+// Questions ouvertes = décisions qui empêchent de coder (le `motif` du lecteur unique), citées par une
+// tâche de la phase courante. Une décision TRANCHÉE n'en est plus une, où qu'elle soit rangée.
 const questions = [
   ...new Set(
     taches
       .filter((t) => t.phase === phaseCourante && !LIVREE.has(t.statut))
       .flatMap((t) => [
         ...t.hyp
-          .filter((h) => !posees.has(h))
-          .map((h) => (bloquantes.has(h) ? `${h} — **bloquante (§1 du registre)**` : h)),
+          .filter((h) => !registre.estCodable(h))
+          .map((h) => (registre.estBloquante(h) ? `${h} — **bloquante (§1 du registre)**` : h)),
         ...(t.externe ? [`externe:${t.externe}`] : []),
       ])
   ),
@@ -577,7 +582,7 @@ lignes.push('');
 titre('Hypothèses par défaut appliquées');
 lignes.push('');
 lignes.push(
-  `${posees.size} décisions portent une hypothèse datée dans \`docs/DECISIONS.md\` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.`
+  `${posees.length} décisions portent une hypothèse datée dans \`docs/DECISIONS.md\` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.`
 );
 lignes.push('');
 

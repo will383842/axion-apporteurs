@@ -147,7 +147,7 @@ describe('REQ-GOV-015 — la vue d’état lit le registre des décisions par le
     // Sans lui, « aucun second lecteur » serait indiscernable de « la garde ne regarde rien ».
     const source = readFileSync(PLAN, 'utf8').split('\n');
     // Juste après le dernier import : du CODE, jamais le milieu d'un commentaire de bloc.
-    const ou = source.findLastIndex((l) => l.startsWith('import ')) + 1;
+    const ou = Math.max(...source.map((l, i) => (l.startsWith('import ') ? i : -1))) + 1;
     expect(
       ou,
       'le générateur n’a plus d’import : le témoin ne sait plus où écrire'
