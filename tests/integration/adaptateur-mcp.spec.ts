@@ -16,7 +16,7 @@
  *     contrôles ; privé de son secret, avec un secret faux, ou le limiteur après la serrure, il rend
  *     un code non nul en nommant le contrôle en défaut.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import type { VerdictDeLimite } from '../../src/server/securite/rate-limit';
@@ -147,17 +147,16 @@ describe('REQ-INT-026 — la porte, sa serrure, et le limiteur avant la serrure'
   });
 
   it('REQ-INT-026 — la route servie par Next : 503 sans secret, 503 avec secret tant qu’aucun compteur n’est déclaré', async () => {
-    const avant = process.env[VARIABLE_DU_SECRET];
+    // L'environnement n'est pas LU ici : il est posé par la doublure de vitest, puis restauré.
     try {
-      delete process.env[VARIABLE_DU_SECRET];
+      vi.stubEnv(VARIABLE_DU_SECRET, '');
       const { POST, GET } = await import('../../src/app/api/mcp/route');
       expect((await POST(requete(SECRET, LISTE))).status).toBe(503);
-      process.env[VARIABLE_DU_SECRET] = SECRET;
+      vi.stubEnv(VARIABLE_DU_SECRET, SECRET);
       expect((await POST(requete(SECRET, LISTE))).status).toBe(503);
       expect(GET().status).toBe(405);
     } finally {
-      if (avant === undefined) delete process.env[VARIABLE_DU_SECRET];
-      else process.env[VARIABLE_DU_SECRET] = avant;
+      vi.unstubAllEnvs();
     }
   });
 });
@@ -249,10 +248,11 @@ describe('REQ-INT-026 — le harnais des neuf contrôles, à deux faces', () => 
   }
 
   it('REQ-INT-026 — la commande : `pnpm harnais-mcp` sort en 0 et imprime chaque contrôle', () => {
-    const r = spawnSync('npx', ['tsx', 'scripts/gates/harnais-mcp.ts'], {
-      encoding: 'utf8',
-      shell: process.platform === 'win32',
-    });
+    const r = spawnSync(
+      process.execPath,
+      ['node_modules/tsx/dist/cli.mjs', 'scripts/gates/harnais-mcp.ts'],
+      { encoding: 'utf8' }
+    );
     expect(r.status, `${r.stdout}\n${r.stderr}`).toBe(0);
     for (let n = 1; n <= 9; n += 1) expect(r.stdout).toMatch(new RegExp(`n°${n} `));
   }, 120_000);
