@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `05dcd2f` — 2026-09-26T04:04:04+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #136 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/111 tâches, reste 57.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
@@ -65,7 +65,8 @@ Reste sur ce chemin : **13.50 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -156,6 +157,16 @@ si un écran affiche un texte absent de la micro-copie ou si un texte de l'espac
 graphies. Deux dettes de `securite` sont fermées : un témoin rougit si le travail différé
 s'exécute avant la réponse (vu rougir sur le mutant qui l'exécute tout de suite), et l'issue de la
 consommation s'affiche sur `/connexion?issue=`, une URL qui ne porte plus le jeton.
+`mutation` a refusé la même tête (revue 5324263876) sur des survivants portés par le code ajouté au
+premier tour. Les compteurs du câblage sont jugés par leur effet : seul le magasin change, à la
+frontière du registre, et chaque port compte sous son nom et refuse à sa limite plus un, panne
+distinguée du refus ; le test en base réelle n'a plus de copie des compteurs. Les actions serveur
+et la page d'arrivée ont leur spec (piège évalué, travail différé confié à `after()`, empreinte
+réseau à la consommation, aucun jeton ni courriel dans les sorties, affichage qui ne consomme
+rien) ; le signalement du piège et l'empreinte réseau ont leurs témoins ; la lecture statique
+exige le connecteur OR de chaque colonne immuable et refuse tout désarmement dans la migration ;
+le statut des apporteurs d'intégration et le piège des observations sont écrits à chaque appel.
+Les quatorze mutants de la revue, rejoués un par un sur l'arbre commité, rougissent tous.
 
 ### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
 
