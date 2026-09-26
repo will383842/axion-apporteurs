@@ -27,7 +27,15 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
+import {
+  chmodSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  mkdirSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
@@ -693,6 +701,11 @@ describe('REQ-GOV-011 — l’empreinte tient le CONTEXTE et le MODE', () => {
     d.git('commit', '-q', '-am', 'pr');
     T = d.git('rev-parse', 'HEAD');
     // Mode seul : aucun octet de contenu ne change.
+    // Le bit posé des DEUX côtés : sous Linux (`core.filemode` vrai), un index exécutable sur un
+    // fichier qui ne l'est pas laisse l'arbre « modifié », et le `checkout` suivant refuse (mesuré
+    // en porte A, run 36251815392) ; sous Windows, seul l'index porte le mode.
+    d.git('config', 'core.filemode', 'false');
+    chmodSync(join(d.dir, 'src/code.ts'), 0o755);
     d.git('update-index', '--chmod=+x', 'src/code.ts');
     d.git('commit', '-q', '-m', 'mode');
     Tmode = d.git('rev-parse', 'HEAD');
