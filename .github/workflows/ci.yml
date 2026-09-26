@@ -375,6 +375,20 @@ jobs:
         run: pnpm req:check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # GOV-101, REQ-QA-002 — decision de Will du 2026-09-26 (W16, partners/ADR-0024) : la lentille
+      # `mutation` n est plus une revue d agent, c est cette mesure. Stryker, en BAC A SABLE, sur les
+      # seuls fichiers de `src/domain/`, `src/server/` et `src/lib/` que la PR ajoute ou modifie
+      # (base de fusion
+      # avec `origin/$GITHUB_BASE_REF`, que GitHub pose sur `pull_request`) ; sur `push` de main le
+      # diff est vide, et l etape le dit et passe. Sous `thresholds.break` de `stryker.config.json`,
+      # elle rougit et NOMME chaque survivant `fichier:ligne`. Les scripts de garde touches sont
+      # nommes et ecartes : leur preuve de mutation est leur `--prove`, joue plus haut. Ici, dans
+      # `gate-a`, et pas dans un job a part : seul `gate-a` est un check requis. Pas de
+      # `continue-on-error`. La preuve du lecteur d abord : un verdict qui ne sait plus rougir ne vaut rien.
+      - name: Le lecteur du rapport de mutation sait rougir
+        run: pnpm mutation:prove
+      - name: Mutation des fichiers de la PR — Stryker en bac a sable, survivants nommes
+        run: pnpm mutation:pr
       # GOV-059, REQ-QA-013. `gov:etat` vient APRES toutes les etapes de mesure. Elle lit l etat
       # GLOBAL de la forge : un rouge venu d une AUTRE demande de fusion faisait « sauter » lint,
       # format, typecheck et tests, qui avaient l air d avoir mesure et n avaient rien mesure.

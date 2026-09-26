@@ -89,14 +89,14 @@ function avis(poste: string, lentille: string, commit: string): RevueBrute {
   };
 }
 
-/** Le tour complet des quatre lentilles exigées par un risque élevé, toutes jugées au même commit. */
+/**
+ * Le tour complet des lentilles exigées, toutes jugées au même commit. Depuis GOV-101 (décision de
+ * Will du 2026-09-26, `partners/ADR-0024`), deux partout : `exactitude` et `securite`. Les avis
+ * `simplicite` et `mutation` que ce fichier posait ne sont plus exigés — ils ne survivent ni ne
+ * périment (voir « une lentille NON EXIGÉE »).
+ */
 function tourComplet(commit: string): RevueBrute[] {
-  return [
-    avis('A09', 'exactitude', commit),
-    avis('A09', 'securite', commit),
-    avis('A09', 'simplicite', commit),
-    avis('A10', 'mutation', commit),
-  ];
+  return [avis('A09', 'exactitude', commit), avis('A09', 'securite', commit)];
 }
 
 /** La lecture, avec la MESURE injectée : le témoin décide du delta, jamais `git`. */
@@ -487,16 +487,11 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
       lireALaTete: (t, f) => LECTEUR.contenuALaTete(t, f, dir),
     });
     expect(lecture.survivantes).toEqual([]);
-    expect(lecture.perimees.map((v) => v.lentille).sort()).toEqual([
-      'exactitude',
-      'mutation',
-      'securite',
-      'simplicite',
-    ]);
+    expect(lecture.perimees.map((v) => v.lentille).sort()).toEqual(['exactitude', 'securite']);
     expect(lecture.coche).toBe(false);
 
     // CONTRE-TÉMOIN, même dépôt, même commit d'accord : une tête qui ne touche QUE l'entrée de la
-    // PR laisse survivre les trois lentilles hors prose, et périme `exactitude`.
+    // PR laisse survivre `securite`, et périme `exactitude`.
     execFileSync('git', ['checkout', '--quiet', c], { cwd: dir, stdio: 'ignore' });
     const t2 = ecrireEtCommiter(
       dir,
@@ -512,11 +507,7 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
       numero: NUMERO,
       lireALaTete: (t, f) => LECTEUR.contenuALaTete(t, f, dir),
     });
-    expect(lecture2.survivantes.map((v) => v.lentille).sort()).toEqual([
-      'mutation',
-      'securite',
-      'simplicite',
-    ]);
+    expect(lecture2.survivantes.map((v) => v.lentille).sort()).toEqual(['securite']);
     expect(lecture2.perimees.map((v) => v.lentille)).toEqual([LECTEUR.LENTILLE_DE_LA_PROSE]);
   });
 
@@ -604,21 +595,17 @@ describe('REQ-GOV-011 — la mesure, contre un vrai `git`', () => {
 // ── la lecture des revues, bout en bout ─────────────────────────────────────
 
 describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, ce qui se dit', () => {
-  it('REQ-GOV-013 · les trois lentilles hors `exactitude` survivent, la quatrième périme', () => {
+  it('REQ-GOV-013 · `securite` survit, `exactitude` périme', () => {
     const lecture = lireAvecDelta(tourComplet(ACCORD), ['docs/journal/2026-09-pr-116.md']);
-    expect(lecture.survivantes.map((s) => s.lentille).sort()).toEqual([
-      'mutation',
-      'securite',
-      'simplicite',
-    ]);
+    expect(lecture.survivantes.map((s) => s.lentille).sort()).toEqual(['securite']);
     expect(lecture.perimees.map((v) => v.lentille)).toEqual(['exactitude']);
     // Une lentille exigée périmée suffit à ne pas cocher : la garde reste fermée.
     expect(lecture.coche).toBe(false);
   });
 
-  it('REQ-GOV-013 · `exactitude` rejugée sur la tête, les trois autres SURVIVENT et ça coche', () => {
+  it('REQ-GOV-013 · `exactitude` rejugée sur la tête, `securite` SURVIT et ça coche', () => {
     // C'est le cas que la demande de fusion 102 a payé trente avis : la prose a bougé, seule la
-    // lentille qui juge la prose est reprise, et le code n'a pas à être relu trois fois de plus.
+    // lentille qui juge la prose est reprise, et le code n'a pas à être relu une fois de plus.
     const revues = [
       avis('A09', 'exactitude', TETE),
       avis('A09', 'securite', ACCORD),
@@ -628,11 +615,7 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
     const lecture = lireAvecDelta(revues, ['docs/journal/2026-09-pr-116.md']);
     expect(lecture.perimees).toEqual([]);
     expect(lecture.coche).toBe(true);
-    expect(lecture.survivantes.map((s) => s.lentille).sort()).toEqual([
-      'mutation',
-      'securite',
-      'simplicite',
-    ]);
+    expect(lecture.survivantes.map((s) => s.lentille).sort()).toEqual(['securite']);
   });
 
   it('REQ-GOV-013 · la survie est IMPRIMÉE : poste, lentille, les deux sha, et les fichiers', () => {
@@ -669,34 +652,24 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
     expect(lecture.detail).toContain('docs/journal/2026-09-pr-116.md');
   });
 
-  it('REQ-GOV-013 · un delta qui touche `docs/tasks.json` périme les QUATRE lentilles', () => {
+  it('REQ-GOV-013 · un delta qui touche `docs/tasks.json` périme les DEUX lentilles', () => {
     const lecture = lireAvecDelta(tourComplet(ACCORD), [
       'docs/journal/2026-09-pr-116.md',
       'docs/tasks.json',
     ]);
     expect(lecture.survivantes).toEqual([]);
-    expect(lecture.perimees.map((v) => v.lentille).sort()).toEqual([
-      'exactitude',
-      'mutation',
-      'securite',
-      'simplicite',
-    ]);
+    expect(lecture.perimees.map((v) => v.lentille).sort()).toEqual(['exactitude', 'securite']);
     expect(lecture.coche).toBe(false);
   });
 
-  it('REQ-GOV-013 · un delta qui touche le README du journal périme les QUATRE lentilles', () => {
+  it('REQ-GOV-013 · un delta qui touche le README du journal périme les DEUX lentilles', () => {
     // L'attaque, de bout en bout : une tête qui ne change QUE le nombre du plancher éteindrait
     // `gov:attributions` et `gov:etat` pendant que trois accords survivraient — et le `detail`
     // publié affirmerait « le delta ne juge aucun code ». Il le dit désormais du delta entier.
     const readme = `${LECTEUR.CHEMIN_DU_JOURNAL}${LECTEUR.CONFIGURATION_DU_DOSSIER}`;
     const lecture = lireAvecDelta(tourComplet(ACCORD), [readme]);
     expect(lecture.survivantes).toEqual([]);
-    expect(lecture.perimees.map((v) => v.lentille).sort()).toEqual([
-      'exactitude',
-      'mutation',
-      'securite',
-      'simplicite',
-    ]);
+    expect(lecture.perimees.map((v) => v.lentille).sort()).toEqual(['exactitude', 'securite']);
     expect(lecture.coche).toBe(false);
     expect(lecture.detail).toContain(readme);
     expect(lecture.detail).not.toContain('SURVIT');
@@ -723,11 +696,7 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
       numero: NUMERO,
       lireALaTete: () => TEXTE_ENTREE,
     });
-    expect(lecture.survivantes.map((s) => s.lentille).sort()).toEqual([
-      'mutation',
-      'securite',
-      'simplicite',
-    ]);
+    expect(lecture.survivantes.map((s) => s.lentille).sort()).toEqual(['securite']);
     expect(lecture.auteurSeRelit.map((v) => v.lentille).sort()).toEqual(['securite', 'simplicite']);
     expect(lecture.coche).toBe(false);
     expect(lecture.raisons.some((r) => r.includes('A09'))).toBe(true);
@@ -754,7 +723,7 @@ describe('REQ-GOV-013 — la lecture complète : ce qui survit, ce qui périme, 
       auteurPoste: 'A05',
     });
     expect(lecture.survivantes).toEqual([]);
-    expect(lecture.perimees.length).toBe(4);
+    expect(lecture.perimees.length).toBe(2);
     expect(lecture.coche).toBe(false);
     expect(lecture.peremptions.every((p) => p.fichiers === null)).toBe(true);
     expect(lecture.detail).toMatch(/calcul|mesur/i);
@@ -851,12 +820,7 @@ describe('REQ-GOV-013 — contre-témoins : la garde reste verte là où elle l�
 
 /** Le tour que la survie laisse cocher : la prose rejugée sur la tête, le reste sur l'accord. */
 function tourSurvivant(): RevueBrute[] {
-  return [
-    avis('A09', 'exactitude', TETE),
-    avis('A09', 'securite', ACCORD),
-    avis('A09', 'simplicite', ACCORD),
-    avis('A10', 'mutation', ACCORD),
-  ];
+  return [avis('A09', 'exactitude', TETE), avis('A09', 'securite', ACCORD)];
 }
 
 const ENTREE_116 = 'docs/journal/2026-09-pr-116.md';
@@ -899,7 +863,8 @@ describe('REQ-GOV-013 — la survie traverse la garde et le composeur RÉELS', (
     expect(perimees(prJugee([ENTREE_116]))).toEqual([]);
     // Le discriminant POSITIF : l'absence de faute ne suffit pas, la survie doit être DITE.
     const lignes = GARDE.lignesDesAccordsSurvivants();
-    expect(lignes.length).toBe(4);
+    // L'en-tête, puis UN accord survivant : `securite` (deux lentilles partout depuis GOV-101).
+    expect(lignes.length).toBe(2);
     expect(lignes[0]).toContain('SURVIVENT');
     expect(lignes.join('\n')).toContain('A09 · securite a accepté sur 8ef35a3 et SURVIT');
     expect(lignes.join('\n')).toContain(ENTREE_116);
@@ -907,12 +872,12 @@ describe('REQ-GOV-013 — la survie traverse la garde et le composeur RÉELS', (
 
   it('REQ-GOV-013 · CONTRE-TÉMOIN `controler()` : un delta de code périme, et la famille le dit', () => {
     const fautes = perimees(prJugee(['scripts/lot/revues.ts']));
-    expect(fautes.length).toBe(3);
+    expect(fautes.length).toBe(1);
     expect(GARDE.lignesDesAccordsSurvivants()).toEqual([]);
   });
 
   it('REQ-GOV-013 · `controler()` sans numéro de PR : rien ne survit', () => {
-    expect(perimees(prJugee([ENTREE_116], null)).length).toBe(3);
+    expect(perimees(prJugee([ENTREE_116], null)).length).toBe(1);
   });
 
   it('REQ-GOV-013 · le mode script de `gov:pr` IMPRIME les lignes des accords survivants', () => {

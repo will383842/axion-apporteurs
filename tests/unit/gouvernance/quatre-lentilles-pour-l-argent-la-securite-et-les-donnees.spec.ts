@@ -107,17 +107,13 @@ describe('REQ-GOV-011 — GOV-097 : deux lentilles pour ce qui ne touche ni l’
   });
 });
 
-describe('REQ-GOV-011 — GOV-097 : ce qui reste à QUATRE lentilles, par la tâche', () => {
+describe('REQ-GOV-011 — GOV-097 : ce qui reste ÉLEVÉ, par la tâche (deux lentilles depuis GOV-101)', () => {
   it('REQ-GOV-011 · la même tâche avec `sensible: [argent]` est ÉLEVÉE, et la raison nomme l’argent', () => {
     const r = risque({ ...ESPACE_VIDE, sensible: ['argent'] });
     expect(r.niveau).toBe('eleve');
     expect(r.raisons.join(' ; ')).toContain('argent');
-    expect([...LECTEUR.lentillesExigees(r).toutes]).toEqual([
-      'exactitude',
-      'securite',
-      'simplicite',
-      'mutation',
-    ]);
+    // GOV-101 : l'élevé ne compte plus de lentille — deux partout (décision de Will du 2026-09-26).
+    expect([...LECTEUR.lentillesExigees(r).toutes]).toEqual(['exactitude', 'securite']);
   });
 
   it('REQ-GOV-011 · chaque étiquette `sensible` du schéma, seule, rend la PR ÉLEVÉE', () => {
@@ -163,7 +159,7 @@ describe('REQ-GOV-011 — GOV-097 : ce qui reste à QUATRE lentilles, par la tâ
     const r = risque({ ...ESPACE_VIDE, schema: true });
     expect(r.niveau).toBe('eleve');
     expect(r.schema).toBe(true);
-    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toContain('schema');
+    expect([...LECTEUR.lentillesExigees(r).toutes]).toContain('schema');
   });
 
   it('REQ-GOV-011 · une tâche déclassée sur la TÊTE mais sensible sur la BASE reste ÉLEVÉE', () => {

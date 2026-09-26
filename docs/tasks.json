@@ -11621,6 +11621,66 @@
       "motif": null
     },
     {
+      "id": "GOV-101",
+      "titre": "Supprimer les relectures sans defaut : vues d etat hors des PR, cliquet calcule, accord qui survit a une fusion de main, pre-gate, deux lentilles et mutation par Stryker",
+      "phase": 0,
+      "repo": "partners",
+      "zone": "gouvernance",
+      "paths": [
+        "scripts/lot/revues.ts",
+        "scripts/gates/gov-pr.ts",
+        "scripts/lot/corps-de-pr.ts",
+        "scripts/prevol.ts",
+        "scripts/vues/",
+        "scripts/mutation/",
+        "scripts/gates/stryker.sh",
+        "stryker.config.json",
+        "package.json",
+        ".github/workflows/ci.yml",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".claude/agents/",
+        "tests/unit/gouvernance/",
+        "tests/unit/qualite/",
+        "docs/PROTOCOLE-FUSION.md",
+        "docs/CHARTE-AGENTS.md",
+        "docs/CONVENTIONS.md",
+        "docs/DECISIONS.md",
+        "docs/agents.json",
+        "docs/adr/",
+        "docs/journal/",
+        "vitest.mutation.config.ts",
+        "tests/gov/charte-pr.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [],
+      "deps": [],
+      "reqs": [
+        "REQ-GOV-011",
+        "REQ-GOV-013",
+        "REQ-GOV-032",
+        "REQ-QA-002"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "tests": {
+        "REQ-GOV-011": [
+          "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+        ],
+        "REQ-GOV-013": [
+          "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+        ],
+        "REQ-GOV-032": [
+          "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+        ],
+        "REQ-QA-002": [
+          "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+        ]
+      },
+      "acceptance": "DECISION DE L ORCHESTRATEUR SUR DELEGATION DE WILL (aller beaucoup plus vite), puis DECISION DE WILL DU 2026-09-26 (W16) sur les lentilles et la mutation. MESURE QUI L OUVRE : environ 9 PR en 12 h, 3 a 4 tours de relecture par PR, pres de la moitie des tours ne corrigent aucun defaut : chaque fusion met les autres PR en conflit sur les vues derivees commitees et sur le cliquet litteral des sorties non nulles ; fusionner main perime tous les accords meme quand le diff propre a la PR est identique ; la porte A rougit apres les relectures. LIVRE. (1) LES VUES RESTENT COMMITEES DANS LES PR, et leur conflit ne coute plus de tour : `pnpm vues:fusion` (`scripts/vues/fusion.ts`, liste unique `scripts/vues/vues.ts`) fusionne `origin/main` dans la branche, resout un conflit qui ne porte QUE sur des vues derivees en les RENDANT dans l ordre (`docs/PLAN-STATE.md` en dernier), abandonne la fusion et nomme le fichier sur tout autre conflit, et laisse l arbre intact si un rendu echoue ou si une etape leve ; temoins sur un vrai depot git jetable. RESTE, CONDITIONNE : sortir `docs/PLAN-STATE.md` et `docs/TRACABILITE.md` des PR et les faire regenerer et pousser sur main par un robot exige une decision de Will qui amende partners/ADR-0006 section 4 (aucun workflow ne pousse sur main, REQ-GOV-014, tenu par `aucun-workflow-ne-pousse-sur-main.spec.ts`) et un jeton de robot (PAT fine-grained, Contents read and write) ; ce n est pas livre ici. (2) CLIQUET CALCULE : le total litteral des sorties non nulles declarees est remplace par une lecture de la base ; une declaration presente sur `origin/main` ne disparait qu avec son fichier et son total ne baisse pas, une sortie ajoutee non declaree rougit toujours. (3) UN ACCORD SURVIT A UNE FUSION DE MAIN SANS CHANGEMENT DE PATCH : empreinte `git patch-id --stable` du diff propre a la PR depuis sa base de fusion avec `origin/main`, en `--binary`, vues derivees exclues, contexte de diff conserve ; la lentille exactitude suit la meme regle pour la prose ecrite dans les fichiers, le corps de la PR n etant pas dans ce diff ; temoins a deux faces sur un vrai depot git jetable : fusion de main sans changement du patch, accord conserve ; une ligne changee dans un fichier de la PR, un conflit resolu en modifiant une ligne de la PR, un changement de main a deux lignes d un morceau de la PR, un changement de mode seul : perime ; limite declaree sur les zones de `docs/PLAN-STATE.md` lues sur la forge. (4) `pnpm pre-gate` : les etapes rapides de la porte A lues dans `ci.yml`, sans la suite, les navigateurs, `req:check` ni `mutation:pr`, chacune ecartee nommee avec son motif, `red-first` simule contre `origin/main` ; prescrit dans `docs/PROTOCOLE-FUSION.md` et la charte, les relectures demarrant quand la porte A est verte. (5) DEUX LENTILLES PARTOUT (W16), exactitude et securite, le refus securite restant un veto ; l avis signe A02 schema reste exige des qu une PR touche au schema ; `lentillesExigees()` ne rend plus que `toutes` ; ADR partners/ADR-0024, qui amende la regle (1) de partners/ADR-0021. (6) MUTATION PAR STRYKER, perimetre tranche par W16 : la lentille mutation n est plus une revue d agent ; `pnpm mutation:pr`, en porte A apres `req:check`, mute EN BAC A SABLE les sources de `src/domain/`, `src/server/` et `src/lib/` ajoutees ou modifiees par la PR, nomme chaque survivant fichier:ligne et rougit sous `thresholds.break` ; tout autre source touche sous `src/` (`src/app/`, `src/proxy.ts`, `src/instrumentation.ts`, configuration, contenu) et tout script de garde touche sont ECARTES ET NOMMES avec leur motif, jamais sautes en silence, les scripts de garde etant prouves par leur `--prove` joue en porte A ; un commentaire `Stryker disable` dans un fichier mute fait echouer la passe en se nommant fichier:ligne ; temoins de `passer()` avec mesures injectees."
+    },
+    {
       "id": "GOV-102",
       "titre": "Cadrage du schéma des phases 0 et 1 : une table, un créateur ; champ `schema` remis droit ; INT-T01c et INT-T26 versées",
       "phase": 0,
