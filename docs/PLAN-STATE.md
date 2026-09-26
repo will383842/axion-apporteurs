@@ -7,13 +7,13 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `5552ef6` — 2026-09-26T02:34:56+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #130 (un conflit avec `main`) |
+| Où est `main` ? | `05dcd2f` — 2026-09-26T04:04:04+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #134 (un contrôle requis rouge ou une revue manquante) · 2. #136 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/111 tâches, reste 57.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
-| Dernière entrée de journal | PR #131 — 2026-09-26 |
+| Dernière entrée de journal | PR #134 — 2026-09-26 |
 
 **Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
@@ -65,8 +65,8 @@ Reste sur ce chemin : **13.50 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #134 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables | `t/sec-03` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #130 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y | `t/lot-l0-03` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -94,13 +94,93 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `5552ef6` (2026-09-26T02:34:56+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `05dcd2f` (2026-09-26T04:04:04+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
 ## Journal
 
 Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écrite AVANT la fusion (`docs/journal/README.md`). Ce qu’une session a compris ne se dérive de rien : c’est le seul contenu de cet état vivant qui ait sa propre source.
+
+### PR #134 — 2026-09-26 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables
+
+**Fait.** Le parcours de connexion existe de bout en bout : l'écran `/connexion` (un champ de
+courriel étiqueté, un bouton, une réponse qui ne dépend que de l'état rendu par le noyau) et
+l'arrivée `/connexion/<jeton>` (une confirmation, jamais une consommation à l'affichage) appellent
+`demanderLien` et `consommerLien` par deux actions serveur. Le câblage
+(`src/server/auth/lien-magique-production.ts`) lit MAGIC_LINK_SECRET et SESSION_SECRET par le
+lecteur de SEC-01, leurs `kid` par `kidDe`, l'adresse publique au registre de l'entité ; les deux
+compteurs appellent `limiter` du registre (`magic:ip`, `magic:courriel`) ; le travail différé part
+dans `after()`. La migration `20260926000000_lien_magique_et_session` crée `liens_magiques` et
+`sessions_espace` et ajoute à `apporteurs` le courriel chiffré et son empreinte unique
+(`email_chiffre`, `email_hash`), que l'adaptateur lit pour trouver le compte et l'adresse stockée.
+Seules des empreintes HMAC-SHA-256 sont stockées (partners/ADR-0013, décision 14, vecteur figé vu
+rougir). SEC-03 porte la PR.
+
+**Reste.** Le cookie de session `__Host-` et la révocation appartiennent à SEC-04 (REQ-SEC-003) : la
+session est enregistrée en base, son jeton n'est pas encore remis au navigateur. L'envoi réel du
+courriel appartient à INT-T10 ; hors production le lien part au puits du notifieur (`NOTIFY_SINK`),
+qui n'écrit ni le lien ni l'adresse, et en production l'envoi échoue en le disant. Le harnais
+d'accessibilité de UX-P0-03 est sur `main`, mais il déclare lui-même les routes réelles « non
+mesurées » : le serveur de test du navigateur appartient à QA-T16, et le test du parcours sous ce
+harnais attend ce serveur. Les deux routes ont leur entrée `size-limit` (plafond dérivé de
+REQ-GOV-028) ; le mesureur par route appartient à QA-T20, et la mesure à la main dit que
+`/connexion` pèse 175 099 octets de JavaScript compressé (six fichiers, tous du cadriciel, aucun
+composant client), au-dessus des 75 Ko de REQ-UX-033. La page « lien déjà utilisé » et le code de repli appartiennent à UX-P1-04, la lecture
+seule du résilié à SEC-19. Les colonnes de courriel de l'apporteur, dues par l'acceptance (1) de
+SEC-08, sont posées ici. Le test en base réelle n'a tourné qu'en CI, faute de Docker sur le poste.
+
+**Appris.** `next build` réécrit `tsconfig.json` à chaque passage tant que ses réglages manquent,
+et le `allowJs` qu'il propose rend inutiles deux `@ts-expect-error` d'une spec de gouvernance :
+les réglages imposés sont écrits une fois, `allowJs` à faux. La garde `securite:rate-famille`
+refuse un magasin passé à `limiter` hors des tests : le câblage n'en passe aucun, et le témoin en
+base réelle remplace les deux ports de comptage dans le test. Une barre oblique inverse suivie de
+`b`, écrite dans un gabarit de script, devient un caractère de contrôle invisible dans le fichier
+produit.
+
+**Relecture.** La tête `b579da0` a été refusée par `exactitude` (revue 5323893967) : l'écran et le
+câblage manquaient, et le Reste disait à tort qu'aucune tâche ne porte l'envoi (INT-T10 le porte).
+Ce tour livre l'écran, les actions et leur câblage, et la spec lit l'oracle des limites au registre,
+lui-même confronté au texte de REQ-SEC-002. `mutation` a refusé la même tête (revue 5323944954) :
+l'adaptateur a désormais sa spec sur faux client (le filtre d'annulation, la condition transmise,
+le nombre rendu), chaque CHECK et chaque branche du déclencheur a son témoin en base et sa lecture
+statique, et les statuts qui ouvrent l'espace ont leur spec sous le domaine. Six mutants joués
+rougissent. Reste équivalent, nommé : `ecrites !== 1` remplacé par `ecrites < 1` survit, parce
+que l'empreinte est unique et qu'une consommation n'écrit jamais deux lignes.
+
+**Relecture, second tour.** La tête `d3d0586` a été acceptée par `schema` et `securite`, refusée
+par `exactitude` (revue 5324241478) sur un seul motif : l'écran d'arrivée réécrivait l'état vide de
+`/connexion/<jeton>`, déjà déclaré dans `etats-vides.ts`, avec un second titre, une seconde phrase
+et le même bouton sous une autre apostrophe. L'issue d'un lien qui ne vaut plus lit désormais cet
+état vide mot pour mot, les doublons sont retirés de `vocabulaire.ts`, et deux témoins rougissent
+si un écran affiche un texte absent de la micro-copie ou si un texte de l'espace existe en deux
+graphies. Deux dettes de `securite` sont fermées : un témoin rougit si le travail différé
+s'exécute avant la réponse (vu rougir sur le mutant qui l'exécute tout de suite), et l'issue de la
+consommation s'affiche sur `/connexion?issue=`, une URL qui ne porte plus le jeton.
+`mutation` a refusé la même tête (revue 5324263876) sur des survivants portés par le code ajouté au
+premier tour. Les compteurs du câblage sont jugés par leur effet : seul le magasin change, à la
+frontière du registre, et chaque port compte sous son nom et refuse à sa limite plus un, panne
+distinguée du refus ; le test en base réelle n'a plus de copie des compteurs. Les actions serveur
+et la page d'arrivée ont leur spec (piège évalué, travail différé confié à `after()`, empreinte
+réseau à la consommation, aucun jeton ni courriel dans les sorties, affichage qui ne consomme
+rien) ; le signalement du piège et l'empreinte réseau ont leurs témoins ; la lecture statique
+exige le connecteur OR de chaque colonne immuable et refuse tout désarmement dans la migration ;
+le statut des apporteurs d'intégration et le piège des observations sont écrits à chaque appel.
+Les quatorze mutants de la revue, rejoués un par un sur l'arbre commité, rougissent tous.
+
+**Porte A.** Les quatre lentilles ont accepté `c26a48b`, et la porte A a rougi (run 36214735286) sur
+trois témoins, tous défauts de test, aucun du code. Le témoin « la demande d'un apporteur n'annule
+pas le lien d'un autre » ne mesurait rien : son apporteur portait le code de parrainage
+`AX00SECL`, que la base refuse (`apporteurs_code_parrainage_format`, le L n'est pas dans
+l'alphabet Crockford), et la création échouait avant la demande. Le témoin de la seconde session
+attendait le nom de la contrainte dans un message que Prisma ne transmet pas pour une requête
+brute (code 23505 et détail seulement) : le bloc lit désormais le nom dans le diagnostic de
+Postgres (`GET STACKED DIAGNOSTICS`) et exige `sessions_espace_lien_magique_id_key`, sans se
+contenter d'un refus quelconque. Le témoin de `perf:budgets` sur le dépôt réel attendait zéro
+route : il lit maintenant le nombre de routes sur les fichiers suivis, et exige autant d'entrées.
+Les lignes « red-first, 0 rouge » du journal de la porte sont la sortie des témoins de
+`tests/unit/qualite/red-first.spec.ts`, sur leurs dépôts jetables : ce spec est vert, et
+`pnpm red-first` sur cette branche juge neuf tests nouveaux, neuf rouges contre `main`.
 
 ### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
 
@@ -209,15 +289,7 @@ secondes par un test, et les deux paramètres par défaut relevés par RM-11 son
 Ce qui reste hors de portée ici : aucune migration factice qui pend n'est jouée contre une vraie
 base, et le client de cache partagé n'est vu qu'en doublure hors de la porte A.
 
-### PR #129 — 2026-09-25 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee
-
-**Fait.** Quatorze tâches livrées par des PR fusionnées portaient encore `a_faire` : DM-06 (PR 128), SEC-08 (PR 126), GOV-099 (PR 124), GOV-098 (PR 122), GOV-097 (PR 120), GOV-096 (PR 118), GOV-095 (PR 116), GOV-090 (PR 113), GOV-092 (PR 112), GOV-047 (PR 99), JUR-T01 (PR 92), QA-T08 (PR 88), et les deux fusionnées pendant la revue, UX-P0-01 (PR 93) et INT-T09 (PR 91), ajoutées au tour de fusion de main. Elles passent `fusionnee` par `reclasser.mjs`, revendication constatée sur l'issue puis livraison constatée sur la forge, jamais à la main. La phase 0 passe de 21 à 35 tâches terminées sur 110.
-
-**Reste.** Les six tâches du lot de la PR 114 (GOV-082, GOV-046, GOV-048, GOV-076, GOV-078, GOV-086) restent `a_faire` : la branche de tête `t/lot-L0-02` porte une majuscule que le motif du schéma refuse, et cinq d'entre elles n'ont aucune issue. GOV-063 (PR 102) reste `a_faire` : sa dépendance GOV-061 ne l'est pas, et sa clause 2 est ouverte. La moitié datée de l'acceptance de JUR-T01 est portée par JUR-T01b. Le retard lui-même est l'objet de GOV-057 : le pas 8 du protocole ne sait pas clore une tâche livrée seule, hors de tout lot.
-
-**Appris.** `reclasser.mjs --fusionnee` vérifie que la PR est fusionnée et que le sha est son commit de fusion, mais ne confronte JAMAIS l'identifiant de la tâche au titre ni au champ `Lot:` de la PR : joué sur un arbre jetable, QA-T07 a été attestée par la PR 128 de DM-06, exit 0. Chaque couple de cette PR a donc été confronté à la main au titre de sa PR. Et l'option `--si-inchange` qu'on croyait exigée par ce verbe n'existe pas dans son source.
-
-… 56 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 57 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 
