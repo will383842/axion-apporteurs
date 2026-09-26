@@ -175,7 +175,7 @@ Une exigence sans tâche n'est portée par personne : `gov:requirements` la nomm
   <br>_phase 0 · tâches : `SEC-03`_ · _source : tableaux-de-bord §1 B8 ; patron `src/server/formateur/magic-link.ts` et `auth.actions.ts` (précision nouvelle)_
 - **REQ-SEC-002** — La demande de lien magique est limitée à 10 / 15 min par hash IP et 5 / 15 min par email, avec `surPanne: refuser` ; le message générique explique la suspension sans révéler l'existence du compte.
   <br>_module 21 · étape 12 · phase 0 · tâches : `SEC-03`_ · _source : nouvelle (patron `auth.actions.ts`)_
-- **REQ-SEC-003** — La session est un cookie `__Host-` HttpOnly Secure SameSite=Lax de 30 jours, enregistrée en base (hash, `revokedAt`, `lastSeenAt`, `ipHash`) ; `apporteurs.sessionVersion` est incrémenté à toute suspension, résiliation, changement d'email ou d'IBAN et invalide toutes les sessions antérieures.
+- **REQ-SEC-003** — La session est un cookie `__Host-` HttpOnly Secure SameSite=Lax de 30 jours, enregistrée en base (hash, `revokedAt`, `lastSeenAt`, `ipHash`) ; `apporteurs.sessionVersion` est incrémenté à toute résiliation, à tout changement d'email ou d'IBAN et à toute révocation pour motif de sécurité (contrat art. 3.8), et invalide toutes les sessions antérieures ; la suspension ne l'incrémente pas et ne révoque aucune session (REQ-SEC-032, REQ-SEC-019, `HYP-SEC03-ACCES`).
   <br>_module 21 · étape 12 · phase 0 · tâches : `SEC-04`, `SEC-19`, `UX-P1-04`_ · _source : audit-outil §5 étape 12 (« Accès coupé ») ; nouvelle_
 - **REQ-SEC-004** — Toute modification d'IBAN, d'email ou de téléphone exige un step-up : un lien magique consommé depuis moins de 10 minutes.
   <br>_module 4 · étape 4 · phase 0 · tâches : `SEC-04`, `SEC-22`_ · _source : nouvelle_

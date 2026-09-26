@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `02a7949` — 2026-09-26T00:28:10+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #131 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #130 (brouillon) |
+| Qu’est-ce qui est en vol ? | 1. #130 (un contrôle requis rouge ou une revue manquante) · 2. #131 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/111 tâches, reste 57.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
@@ -64,9 +64,9 @@ Reste sur ce chemin : **13.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #131 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace | `t/gov-100` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #130 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y | `t/lot-l0-03` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #130 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y | `t/lot-l0-03` | un contrôle requis rouge ou une revue manquante |
+| 2 | #131 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace | `t/gov-100` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -114,11 +114,17 @@ ouvre l'espace aux statuts `signe` et `suspendu` et le ferme à `candidat`, `ret
 `refuse`, `kyc_en_cours` et `pret_a_signer`. Les points (1) et (5) de l'acceptance de SEC-03 le
 disent. Sur décision du coordinateur, prise sur délégation de Will, la PR aligne aussi REQ-SEC-001 sur la
 décision 14, corrige la ligne `suspendu` du glossaire (accès à l'espace maintenu, nouveaux dépôts
-refusés) et passe DM-11 à `schema: true`, dette nommée par la PR 124. GOV-100 porte la PR. Gardes jouées à 0 : `gov:tasks`, `gov:hypotheses`,
+refusés) et passe DM-11 à `schema: true`, dette nommée par la PR 124. Après les deux relectures,
+REQ-SEC-003 et le point (2) de SEC-04 ne font plus révoquer les sessions à la suspension, seulement
+à la résiliation, au changement de courriel ou d'IBAN et pour motif de sécurité (contrat art. 3.8) ;
+`HYP-SEC03-ACCES` devient une liste blanche, `HYP-E1-24` exclut les liens de la double clé, et les
+art. 3.7 al. 3 et 12.3 que cite `HYP-SEC03-ACCES` ont leur ancrage dans `CONCORDANCES`. GOV-100
+porte la PR. Gardes jouées à 0 : `gov:tasks`, `gov:hypotheses`,
 `gov:attributions`, `gov:trace:verifier`, `plan-state:verifier`, `lot:paths:check`,
 `gov:identifiants`, `gov:lexique`, `gov:termes-interdits`, `gov:adr`, `gov:requirements`,
-`gov:preseance`, `partners:schema:enums`, `tests/unit/gouvernance/un-nom-une-garde.spec.ts` et
-`tests/unit/gouvernance/glossaire-enums.spec.ts`.
+`gov:preseance`, `partners:schema:enums`, `gov:etat`, `gov:publication`,
+`tests/unit/gouvernance/un-nom-une-garde.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`
+et `tests/unit/contrat/`.
 
 **Reste.** SEC-03 peut être attribuée sur ce cadrage. L'assertion de la décision 14 (un vecteur
 figé d'empreinte de lien) est due par SEC-03, celle de la session par SEC-04 : d'ici là,
@@ -129,7 +135,9 @@ il ne contredit pas `HYP-SEC03-ACCES`.
 **Appris.** Aucun verbe hors dépôt ne savait écrire `schema` dans `docs/tasks.json` : la dette
 nommée par la PR 124 pour DM-11 bloquait aussi ce cadrage. Le champ est écrivable depuis ce jour
 par `reecrire-champ.mjs`, sa valeur jugée booléenne par le schéma du dépôt ; DM-11 a été corrigée
-par le même geste dans cette PR.
+par le même geste dans cette PR. Et une ligne du registre des décisions qui cite un article du
+contrat fait rougir REQ-JUR-003 tant que `CONCORDANCES` ne l'ancre pas : les gardes de gouvernance
+sortaient à 0, seule `tests/unit/contrat/` le voyait. Une PR qui écrit `docs/DECISIONS.md` la lance.
 
 ### PR #129 — 2026-09-25 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee
 
