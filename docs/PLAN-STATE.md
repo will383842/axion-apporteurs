@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `02a7949` — 2026-09-26T00:28:10+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #131 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #130 (brouillon) |
+| Qu’est-ce qui est en vol ? | 1. #130 (rien) · 2. #131 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/110 tâches, reste 57.10 j |
-| Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
+| Le prochain pas | fusionner #130, puis SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #130 — 2026-09-25 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 130 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,9 +64,9 @@ Reste sur ce chemin : **13.50 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #131 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace | `t/gov-100` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #130 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y | `t/lot-l0-03` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #130 — feat(QA-T04): lot L0-03 — environnement fail-fast et sondes, red-first, mutation du domaine, harnais a11y | `t/lot-l0-03` | rien — fusionnable maintenant |
+| 2 | #131 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace | `t/gov-100` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -87,6 +87,8 @@ Aucun ADR daté du 2026-09-26 (jour du dernier atterrissage).
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
+
+**Fusionner #130** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 40 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -148,6 +150,29 @@ leur contrat : `lireEnvironnement` exigeait soudain la base et le puits de notif
 frontière axionia et des clés de chiffrement, qui n'en ont pas besoin, et la Gate A l'a vu
 (`frontiere.spec.ts`, et le témoin sans démon du harnais, qui compte les fichiers verts). Les
 secrets gardent leur lecteur ; le démarrage a le sien, `lireDemarrage`.
+
+**Relecture.** Sur la tête `42a83cc`, `schema` (5323675397) et `exactitude` (5323686046)
+acceptent ; `securite` refuse (5323686113) et `mutation` refuse (5323721215). `securite` : le
+contexte de construction n'excluait pas les fichiers `.env*`, qu'un `COPY . .` emportait dans
+l'image, où `next start` les charge avant `register()`. Le refus de démarrer n'aurait plus rien
+refusé, et les secrets du poste auraient vécu dans une couche publique. `.dockerignore` exclut
+désormais `.env*` et réintègre `.env.example` ; un témoin lit la règle comme Docker (dernière ligne
+qui correspond) et rougit si la ligne est retirée. Dettes fermées dans le même tour : le code de
+l'image appartient à root et seul `.next/cache` est écrit par l'utilisateur d'exécution ;
+`readyz` garde un client de cache unique par adresse, remplacé seulement s'il est mort, fermé par
+`fermerSondes` ; `red-first` passe `--no-renames`, et un test déplacé puis réécrit est jugé
+(témoin sur dépôt jetable, rouge avant le correctif). `exactitude` : `timeout -k 5 55` dans
+l'entrée, et la garde de l'échappatoire couvre les futurs `docker-compose*.yml` et `Dockerfile.*`.
+`mutation` : cinq survivants, chacun rejoué sous son mutant après le correctif et vu rouge. La
+configuration requise est écrite en toutes lettres dans le test (une base rendue facultative
+rougit) ; le délai de migration est lu dans le script, `-k 5` et 55 compris ; une justification de
+dix-neuf caractères est refusée et une de vingt admise ; `specsDuDisque` est jouée sur un bac posé
+dans le répertoire temporaire ; le dossier parent de l'arbre de `red-first` est vu retiré. Dans le
+même tour : les lignes de migration sont jugées dans le code (une ligne échouée ou annulée met
+`readyz` en défaut, témoin par doublure du client de base), le délai de sonde est fixé à deux
+secondes par un test, et les deux paramètres par défaut relevés par RM-11 sont devenus explicites.
+Ce qui reste hors de portée ici : aucune migration factice qui pend n'est jouée contre une vraie
+base, et le client de cache partagé n'est vu qu'en doublure hors de la porte A.
 
 ### PR #129 — 2026-09-25 — chore(GOV-012): registre rattrape, douze taches livrees par des PR fusionnees passent fusionnee
 
