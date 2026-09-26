@@ -20,10 +20,26 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { demarrerBase, type Base } from './harnais';
-import { kidDe } from '../../src/lib/env';
+import { demarrerBase, demarrerCache, type Base, type Cache } from './harnais';
+import { NOMS_DES_SECRETS, kidDe } from '../../src/lib/env';
+import { horlogeFigee } from '../../src/domain/temps/horloge';
+import { clesPii, colonnesPii } from '../../src/server/securite/pii';
+import {
+  COMPTEURS,
+  OPTIONS_DU_CLIENT,
+  creerMagasinRedis,
+  type MagasinRedis,
+} from '../../src/server/securite/rate-limit';
+import {
+  MODELE_APPORTEUR,
+  configurationDuLien,
+  portsDeConsommation,
+  portsDeDemande,
+  type DependancesDuLien,
+} from '../../src/server/auth/lien-magique-production';
 import {
   consommerLien,
+  demanderLien,
   empreinteDuJeton,
   tirerJeton,
   type ConfigurationDuLien,
@@ -289,6 +305,34 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
     );
   });
 
+  it('REQ-SEC-001 : face ROUGE — une empreinte non hexadécimale est refusée par la base', async () => {
+    const id = await apporteur('AX00SECE');
+    const m = await refus(
+      ecrituresDeLien(base.prisma).insererLien({
+        apporteurId: id,
+        tokenHash: 'Z'.repeat(64),
+        kid: configuration.kid,
+        creeAt: new Date(t0),
+        expireAt: new Date(t0 + QUINZE_MINUTES),
+      })
+    );
+    expect(m).toContain('liens_magiques_token_hash_hex');
+  });
+
+  it('REQ-SEC-001 : face ROUGE — une échéance qui ne suit pas la création est refusée par la base', async () => {
+    const id = await apporteur('AX00SECF');
+    const m = await refus(
+      ecrituresDeLien(base.prisma).insererLien({
+        apporteurId: id,
+        tokenHash: empreinteDuJeton(tirerJeton(), configuration.secret),
+        kid: configuration.kid,
+        creeAt: new Date(t0),
+        expireAt: new Date(t0),
+      })
+    );
+    expect(m).toContain('liens_magiques_expire_apres_creation');
+  });
+
   it('REQ-SEC-001 : face ROUGE — prolonger `expire_at` est refusé', async () => {
     const id = await apporteur('AX00SECB');
     await poserLien(id, new Date(t0));
@@ -319,5 +363,161 @@ describe('REQ-SEC-001 — la base refuse ce que le code ne ferait pas', () => {
       )
     );
     expect(m).toContain('sessions_espace_lien_magique_id_key');
+  });
+});
+
+// ── le parcours CÂBLÉ : les ports de production, la base et le cache réels ─────────────────────────
+
+/** L'environnement de test, DÉRIVÉ des noms de `src/lib/env.ts` (jamais recopié). */
+const CLE_HEX = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0')).join('');
+const ENV: Record<string, string> = {
+  NODE_ENV: 'test',
+  ...Object.fromEntries(
+    NOMS_DES_SECRETS.map((n) => [n, `temoin-sec03-integration-${n.toLowerCase()}-`.padEnd(56, '0')])
+  ),
+  PII_ENCRYPTION_KEY: CLE_HEX,
+};
+const CLES = clesPii(ENV);
+
+/** Un apporteur signé dont le courriel est posé comme la couche des données personnelles le pose. */
+async function apporteurAvecCourriel(codeParrainage: string, courriel: string): Promise<string> {
+  const id = randomUUID();
+  await base.prisma.apporteur.create({
+    data: {
+      ...colonnesPii({ modele: MODELE_APPORTEUR, id }, { email: courriel }, CLES),
+      statut: 'signe',
+      codeParrainage,
+      isTest: false,
+      candidatureId: randomUUID(),
+      reponsesJson: { version: 1 },
+      scoreInitial: 72,
+      scorePartsJson: { carnet: 72 },
+      scoreBaremeVersion: 'bareme-essai',
+      sourceCanal: '/connexion',
+      parrainCodeCapture: null,
+      creeAt: new Date(t0),
+    },
+  });
+  return id;
+}
+
+describe('REQ-SEC-001 — les colonnes de courriel d’apporteurs', () => {
+  it('REQ-SEC-001 : face ROUGE — deux apporteurs de même courriel sont refusés, l’empreinte est unique', async () => {
+    await apporteurAvecCourriel('AX00SECG', 'double@example.org');
+    const m = await refus(apporteurAvecCourriel('AX00SECH', 'double@example.org'));
+    expect(m).toMatch(/Unique constraint|email_hash/);
+  });
+
+  it('REQ-SEC-001 : face ROUGE — une empreinte de courriel non hexadécimale, ou sans son bloc, est refusée', async () => {
+    const id = await apporteur('AX00SECJ');
+    const horsForme = await refus(
+      base.prisma.$executeRawUnsafe(
+        "UPDATE apporteurs SET email_hash = $2, email_chiffre = '\\x01'::bytea WHERE id = $1::uuid",
+        id,
+        'Z'.repeat(64)
+      )
+    );
+    expect(horsForme).toContain('apporteurs_email_hash_hex');
+    const orpheline = await refus(
+      base.prisma.$executeRawUnsafe(
+        'UPDATE apporteurs SET email_hash = $2 WHERE id = $1::uuid',
+        id,
+        'a'.repeat(64)
+      )
+    );
+    expect(orpheline).toContain('apporteurs_courriel_complet');
+  });
+});
+
+describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels', () => {
+  let cache: Cache;
+  let magasin: MagasinRedis;
+
+  beforeAll(async () => {
+    cache = await demarrerCache();
+    magasin = creerMagasinRedis(cache.url, OPTIONS_DU_CLIENT);
+  }, 180_000);
+
+  afterAll(async () => {
+    magasin?.fermer();
+    await cache?.arreter();
+  });
+
+  function dependances() {
+    const planifies: Array<() => Promise<void>> = [];
+    const envois: Array<{ a: string; sujet: string; corps: string }> = [];
+    const d: DependancesDuLien = {
+      env: ENV,
+      prisma: base.prisma,
+      horloge: horlogeFigee(t0),
+      planifier: (travail) => planifies.push(travail),
+      envoi: {
+        envoyer: async (m) => {
+          envois.push(m);
+        },
+      },
+      journal: { warn: () => undefined },
+      magasin,
+    };
+    return { d, planifies, envois };
+  }
+
+  const demande = (saisie: string, adresse: string) => ({
+    saisie,
+    piege: false,
+    entetes: new Headers({ 'x-forwarded-for': adresse }),
+  });
+
+  it('REQ-SEC-001 : compte existant ou absent, même réponse ; seul l’existant reçoit un lien, à son adresse STOCKÉE, qui ouvre UNE session', async () => {
+    const id = await apporteurAvecCourriel('AX00SECK', 'claire@example.org');
+    const connu = dependances();
+    const inconnu = dependances();
+    const a = await demanderLien(
+      demande('Claire@Example.org', '198.51.100.21'),
+      portsDeDemande(connu.d)
+    );
+    const b = await demanderLien(
+      demande('personne@example.org', '198.51.100.22'),
+      portsDeDemande(inconnu.d)
+    );
+    expect([a, b]).toEqual(['envoye', 'envoye']);
+    // Plancher : les deux demandes ont bien planifié leur travail, et rien d'autre avant la réponse.
+    expect([connu.planifies.length, inconnu.planifies.length]).toEqual([1, 1]);
+    for (const t of [...connu.planifies, ...inconnu.planifies]) await t();
+
+    expect(inconnu.envois).toHaveLength(0);
+    expect(connu.envois.map((e) => e.a)).toEqual(['claire@example.org']);
+    const url = /https:\/\/\S+\/connexion\/([A-Za-z0-9_-]{43})/.exec(connu.envois[0]?.corps ?? '');
+    expect(url?.[0].startsWith(configurationDuLien(ENV).urlPublique)).toBe(true);
+    const jeton = url?.[1] ?? '';
+    const [ligne] = await base.prisma.$queryRawUnsafe<Array<{ token_hash: string; kid: string }>>(
+      'SELECT token_hash, kid FROM liens_magiques WHERE apporteur_id = $1::uuid',
+      id
+    );
+    expect(ligne).toEqual({
+      token_hash: empreinteDuJeton(jeton, ENV.MAGIC_LINK_SECRET ?? ''),
+      kid: kidDe(ENV.MAGIC_LINK_SECRET ?? ''),
+    });
+
+    const consommation = portsDeConsommation(connu.d);
+    expect((await consommerLien({ jeton, ipHash: null }, consommation)).etat).toBe('ouverte');
+    expect(await consommerLien({ jeton, ipHash: null }, consommation)).toEqual({
+      etat: 'lien_invalide',
+    });
+    expect(await sessionsDe(id)).toBe(1);
+  });
+
+  it('REQ-SEC-002 : au-delà de la limite par courriel du REGISTRE, la demande est suspendue, compte ou non', async () => {
+    const limite = COMPTEURS['magic:courriel'].limite;
+    if (typeof limite !== 'number') throw new Error('limite hors dépôt');
+    for (const saisie of ['limite@example.org', 'absente@example.org']) {
+      const { d } = dependances();
+      const etats: string[] = [];
+      for (let i = 0; i <= limite; i += 1) {
+        etats.push(await demanderLien(demande(saisie, `192.0.2.${i + 1}`), portsDeDemande(d)));
+      }
+      expect(etats.slice(0, limite).every((e) => e === 'envoye')).toBe(true);
+      expect(etats[limite]).toBe('suspendu');
+    }
   });
 });

@@ -20,6 +20,8 @@
  * Les courriels sont en `example.org` ; secrets et jetons sont tirés à l'exécution.
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { COMPTEURS } from '../../../src/server/securite/rate-limit';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import {
   consommerLien,
@@ -64,9 +66,28 @@ interface LigneSession {
   expireAt: Date;
 }
 
-/** Oracle de REQ-SEC-002 : 10 par empreinte réseau, 5 par courriel, sur un quart d'heure. */
-const LIMITES_REQ_SEC_002: Record<string, number> = { 'magic:ip': 10, 'magic:courriel': 5 };
-const FENETRE_MS = 15 * 60 * 1000;
+/**
+ * Les limites de REQ-SEC-002 viennent du REGISTRE des compteurs (`COMPTEURS`), jamais d'un
+ * littéral : le simulacre compte avec elles, et les boucles des témoins les lisent. Le registre est
+ * lui-même confronté au TEXTE de l'exigence, lu dans `docs/requirements.json` : une limite changée
+ * d'un côté seulement fait rougir le témoin du registre.
+ */
+type CompteurDuLien = 'magic:ip' | 'magic:courriel';
+const LIMITE = (nom: CompteurDuLien): number => {
+  const { limite } = COMPTEURS[nom];
+  if (typeof limite !== 'number') throw new Error(`${nom} : limite hors dépôt`);
+  return limite;
+};
+const FENETRE_MS = (nom: CompteurDuLien): number => {
+  const { fenetreSecondes } = COMPTEURS[nom];
+  if (typeof fenetreSecondes !== 'number') throw new Error(`${nom} : fenêtre hors dépôt`);
+  return fenetreSecondes * 1000;
+};
+const TEXTE_REQ_SEC_002 = (
+  JSON.parse(readFileSync('docs/requirements.json', 'utf8')) as {
+    exigences: Array<{ id: string; texte: string }>;
+  }
+).exigences.find((r) => r.id === 'REQ-SEC-002')?.texte;
 
 const CLE_EMPREINTES = randomBytes(32).toString('hex');
 const SEL_ADRESSES = randomBytes(32).toString('hex');
@@ -129,13 +150,13 @@ function univers(o: Options = {}) {
   };
 
   /** Les deux compteurs de REQ-SEC-002, simulés ; la trace les nomme comme le registre. */
-  const compter = async (nom: string, sujet: string, maintenantMs: number) => {
+  const compter = async (nom: CompteurDuLien, sujet: string, maintenantMs: number) => {
     noter('limiter', nom, sujet, maintenantMs);
     if (o.limiteQuiLeve) throw new Error('cache injoignable');
     if (o.limiteEnPanne) return { autorise: false, panne: true };
     const cle = `${nom}${sujet}`;
-    const vus = (compteurs.get(cle) ?? []).filter((t) => t > maintenantMs - FENETRE_MS);
-    const autorise = vus.length < (LIMITES_REQ_SEC_002[nom] ?? 0);
+    const vus = (compteurs.get(cle) ?? []).filter((t) => t > maintenantMs - FENETRE_MS(nom));
+    const autorise = vus.length < LIMITE(nom);
     if (autorise) vus.push(maintenantMs);
     compteurs.set(cle, vus);
     return { autorise, panne: false };
@@ -401,11 +422,28 @@ describe('REQ-SEC-001 REQ-SEC-002 — la demande de lien ne dépend pas de l’e
 // ── 2. les limites ───────────────────────────────────────────────────────────────────────────────
 
 describe('REQ-SEC-002 REQ-SEC-016 — limites par adresse réseau et par courriel, refus sur panne', () => {
-  it('REQ-SEC-002 : la 11ᵉ demande d’une même adresse réseau est suspendue, compte ou non', async () => {
+  it('REQ-SEC-002 : le registre porte les limites du texte de l’exigence, refus sur panne', () => {
+    expect(TEXTE_REQ_SEC_002).toBeDefined();
+    const lire = (motif: RegExp): { limite: number; fenetreSecondes: number } => {
+      const m = motif.exec(TEXTE_REQ_SEC_002 ?? '');
+      if (!m) throw new Error(`motif absent du texte de REQ-SEC-002 : ${motif}`);
+      return { limite: Number(m[1]), fenetreSecondes: Number(m[2]) * 60 };
+    };
+    expect(COMPTEURS['magic:ip']).toMatchObject({
+      ...lire(/(\d+) \/ (\d+) min par hash IP/),
+      surPanne: 'refuser',
+    });
+    expect(COMPTEURS['magic:courriel']).toMatchObject({
+      ...lire(/(\d+) \/ (\d+) min par email/),
+      surPanne: 'refuser',
+    });
+  });
+
+  it('REQ-SEC-002 : la demande au-delà de la limite réseau du registre est suspendue, compte ou non', async () => {
     for (const comptes of [[MARIE], []]) {
       const u = univers({ comptes });
       const etats: EtatDeDemande[] = [];
-      for (let i = 0; i < 11; i += 1) {
+      for (let i = 0; i <= LIMITE('magic:ip'); i += 1) {
         etats.push(
           await demanderLien(
             { saisie: `personne${i}@example.org`, piege: false, entetes: entetes() },
@@ -413,18 +451,18 @@ describe('REQ-SEC-002 REQ-SEC-016 — limites par adresse réseau et par courrie
           )
         );
       }
-      expect(etats.slice(0, 10).every((e) => e === 'envoye')).toBe(true);
-      expect(etats[10]).toBe('suspendu');
-      expect(u.differe).toHaveLength(10);
+      expect(etats.slice(0, LIMITE('magic:ip')).every((e) => e === 'envoye')).toBe(true);
+      expect(etats[LIMITE('magic:ip')]).toBe('suspendu');
+      expect(u.differe).toHaveLength(LIMITE('magic:ip'));
     }
   });
 
-  it('REQ-SEC-002 : la 6ᵉ demande d’un même courriel est suspendue, compte ou non, depuis six adresses', async () => {
+  it('REQ-SEC-002 : la demande au-delà de la limite par courriel est suspendue, compte ou non, depuis autant d’adresses', async () => {
     const reponses: string[] = [];
     for (const comptes of [[MARIE], []]) {
       const u = univers({ comptes });
       const etats: EtatDeDemande[] = [];
-      for (let i = 0; i < 6; i += 1) {
+      for (let i = 0; i <= LIMITE('magic:courriel'); i += 1) {
         u.demande.adresseDuClient = () => `198.51.100.${i + 1}`;
         etats.push(
           await demanderLien(
@@ -433,8 +471,8 @@ describe('REQ-SEC-002 REQ-SEC-016 — limites par adresse réseau et par courrie
           )
         );
       }
-      expect(etats.slice(0, 5).every((e) => e === 'envoye')).toBe(true);
-      expect(etats[5]).toBe('suspendu');
+      expect(etats.slice(0, LIMITE('magic:courriel')).every((e) => e === 'envoye')).toBe(true);
+      expect(etats[LIMITE('magic:courriel')]).toBe('suspendu');
       reponses.push(canonique({ etats, trace: u.trace }));
     }
     expect(reponses[0]).toBe(reponses[1]);
