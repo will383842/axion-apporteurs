@@ -3127,7 +3127,8 @@
         "tests/unit/gouvernance/refus-de-rendre-et-de-publier.spec.ts",
         "src/lib/env.ts",
         "src/server/securite/primitives-de-porte.ts",
-        "src/server/integrations/axionia/api-entrante.ts"
+        "src/server/integrations/axionia/api-entrante.ts",
+        "tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts"
       ],
       "schema": false,
       "sensible": [],

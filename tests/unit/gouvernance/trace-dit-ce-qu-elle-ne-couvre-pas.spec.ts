@@ -146,7 +146,9 @@ describe('gov:trace — le plancher déclaré (RM-02, RM-10)', () => {
       // MILIEU de la liste : un témoin construit contre le dernier élément ne distingue pas
       // « tous » de « le dernier ».
       const aRetirer = p!.dedans.length - p!.plancher + 1;
-      const milieu = Math.floor(p!.dedans.length / 2);
+      // Borné pour que la tranche tienne dans la liste : à 90 tâches pour un plancher de 45, le
+      // milieu (45) plus les 46 à retirer débordait d'une case, et la tranche n'en rendait que 45.
+      const milieu = Math.min(Math.floor(p!.dedans.length / 2), p!.dedans.length - aRetirer);
       const cibles = new Set(p!.dedans.slice(milieu, milieu + aRetirer));
       expect(cibles.size).toBe(aRetirer);
       const b = backlog();
