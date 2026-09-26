@@ -570,7 +570,8 @@
         "scripts/gates/gov-depot.ts",
         "tests/unit/gouvernance/aucun-workflow-ne-pousse-sur-main.spec.ts",
         "tests/unit/gouvernance/tout-check-est-cable.spec.ts",
-        "tests/unit/gouvernance/integration-livrable.spec.ts"
+        "tests/unit/gouvernance/integration-livrable.spec.ts",
+        "tests/integration/adaptateur-mcp.spec.ts"
       ],
       "schema": false,
       "sensible": [
