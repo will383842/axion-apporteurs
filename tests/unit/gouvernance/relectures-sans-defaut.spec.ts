@@ -42,7 +42,12 @@ import { VUES_DERIVEES, estUneVueDerivee } from '../../../scripts/vues/vues';
 import { fusionnerMain, trierLesConflits } from '../../../scripts/vues/fusion';
 import { etapesDeLaPorteA } from '../../../scripts/prevol';
 import { ETAPES_LENTES, etapesRapides } from '../../../scripts/prevol';
-import { configDeLaPr, fichiersAMuter } from '../../../scripts/mutation/pr';
+import {
+  configDeLaPr,
+  desactivationsDeStryker,
+  fichiersAMuter,
+  passer,
+} from '../../../scripts/mutation/pr';
 import { declarationsDeLaBase, declarationsRetirees } from './declarations-de-sorties';
 
 // ── outils de témoin ────────────────────────────────────────────────────────────────────────────
@@ -455,7 +460,7 @@ describe('REQ-GOV-013 — `pnpm pre-gate` : les étapes RAPIDES de la porte A, l
 // ── 5. mutation:pr ──────────────────────────────────────────────────────────────────────────────
 
 describe('REQ-QA-002 — `pnpm mutation:pr` : Stryker sur les fichiers mutables de la PR, en bac à sable', () => {
-  it('REQ-QA-002 — seuls les sources de src/domain et src/server sont mutés ; les gardes sont nommées à part', () => {
+  it('REQ-QA-002 — les sources de src/domain et src/server sont mutés ; les gardes et la surface Next sont nommées à part', () => {
     const { mutes, ecartes } = fichiersAMuter([
       'src/domain/depot/regle.ts',
       'src/server/securite/pii.ts',
@@ -466,8 +471,9 @@ describe('REQ-QA-002 — `pnpm mutation:pr` : Stryker sur les fichiers mutables 
       'docs/CHARTE-AGENTS.md',
     ]);
     expect(mutes).toEqual(['src/domain/depot/regle.ts', 'src/server/securite/pii.ts']);
-    expect(ecartes.map((e) => e.fichier)).toEqual(['scripts/gates/gov-pr.ts']);
-    expect(ecartes[0]!.motif).toMatch(/--prove/);
+    expect(ecartes.map((e) => e.fichier)).toEqual(['src/app/page.tsx', 'scripts/gates/gov-pr.ts']);
+    expect(ecartes[1]!.motif).toMatch(/--prove/);
+    expect(ecartes[0]!.motif).toMatch(/rendu/);
   });
 
   it('REQ-QA-002 — la configuration de la PR est DÉRIVÉE de stryker.config.json : bac à sable, seuil conservé', () => {
@@ -550,5 +556,204 @@ describe('REQ-GOV-032 — le cliquet des sorties non nulles est CALCULÉ : une d
 
   it('REQ-GOV-032 — une base illisible n’est pas une base vide : ZÉRO déclaration lue est un refus', () => {
     expect(declarationsDeLaBase('rien de lisible').size).toBe(0);
+  });
+});
+
+// ── 7. second tour de relecture (exactitude 5326296410, securite 5326296579) ───────────────────
+
+describe('REQ-QA-002 — `mutation:pr` ne saute RIEN en silence', () => {
+  it('REQ-QA-002 — src/lib est muté (forme-iban touche l’argent) ; src/app et src/proxy.ts sont NOMMÉS, jamais tus', () => {
+    const { mutes, ecartes } = fichiersAMuter([
+      'src/lib/forme-iban.ts',
+      'src/app/(espace)/connexion/page.tsx',
+      'src/proxy.ts',
+      'src/instrumentation.ts',
+    ]);
+    expect(mutes).toEqual(['src/lib/forme-iban.ts']);
+    expect(ecartes.map((e) => e.fichier)).toEqual([
+      'src/app/(espace)/connexion/page.tsx',
+      'src/proxy.ts',
+      'src/instrumentation.ts',
+    ]);
+    for (const e of ecartes) expect(e.motif.length).toBeGreaterThan(20);
+  });
+
+  it('REQ-QA-002 — tout source touché sous src/ ou scripts/ est soit muté, soit écarté avec motif', () => {
+    const touches = [
+      'src/domain/a.ts',
+      'src/server/b.ts',
+      'src/lib/c.ts',
+      'src/app/api/d/route.ts',
+      'src/proxy.ts',
+      'src/content/e.ts',
+      'scripts/gates/f.ts',
+    ];
+    const { mutes, ecartes } = fichiersAMuter(touches);
+    expect([...mutes, ...ecartes.map((e) => e.fichier)].sort()).toEqual([...touches].sort());
+  });
+
+  it('REQ-QA-002 — un `// Stryker disable` dans un fichier touché est nommé fichier:ligne', () => {
+    const textes: Record<string, string> = {
+      'src/domain/a.ts': 'const x = 1;\n// Stryker disable next-line all\nconst y = 2;\n',
+      'src/domain/b.ts': 'const z = 3;\n',
+    };
+    expect(desactivationsDeStryker(Object.keys(textes), (f) => textes[f]!)).toEqual([
+      'src/domain/a.ts:2',
+    ]);
+    expect(desactivationsDeStryker(['src/domain/b.ts'], (f) => textes[f]!)).toEqual([]);
+  });
+});
+
+describe('REQ-QA-002 — `passer()` : la passe entière, mesures injectées', () => {
+  const texteConfig = JSON.stringify({ thresholds: { break: 80 } });
+  const rapport = (statuts: string[]) => ({
+    files: {
+      'src/domain/a.ts': {
+        mutants: statuts.map((status, i) => ({
+          id: String(i),
+          mutatorName: 'ConditionalExpression',
+          status,
+          location: { start: { line: i + 1, column: 1 } },
+        })),
+      },
+    },
+  });
+
+  it('REQ-QA-002 — base illisible : code 1, et Stryker n’est PAS lancé', () => {
+    let lance = 0;
+    const r = passer('origin/main', {
+      fichiersDeLaPr: () => null,
+      lancerStryker: () => (lance++, 0),
+    });
+    expect(r.code).toBe(1);
+    expect(lance).toBe(0);
+    expect(r.lignes.join('\n')).toContain('introuvable');
+  });
+
+  it('REQ-QA-002 — rien de mutable : code 0, les écartés sont NOMMÉS', () => {
+    const r = passer('origin/main', {
+      fichiersDeLaPr: () => ['src/proxy.ts', 'docs/x.md'],
+      lancerStryker: () => 0,
+    });
+    expect(r.code).toBe(0);
+    expect(r.lignes.join('\n')).toContain('src/proxy.ts');
+  });
+
+  it('REQ-QA-002 — une désactivation de Stryker fait ÉCHOUER la passe, avant toute mutation', () => {
+    let lance = 0;
+    const r = passer('origin/main', {
+      fichiersDeLaPr: () => ['src/domain/a.ts'],
+      lire: () => '// Stryker disable all\nexport const a = 1;\n',
+      lancerStryker: () => (lance++, 0),
+    });
+    expect(r.code).toBe(1);
+    expect(lance).toBe(0);
+    expect(r.lignes.join('\n')).toContain('src/domain/a.ts:1');
+  });
+
+  it('REQ-QA-002 — sous le seuil : code 1 et survivant nommé ; au seuil : code 0 (contre-témoin)', () => {
+    const base = {
+      fichiersDeLaPr: () => ['src/domain/a.ts'],
+      lire: () => 'export const a = 1;\n',
+      texteConfig,
+      lancerStryker: () => 0,
+    };
+    const rouge = passer('origin/main', {
+      ...base,
+      lireRapport: () => rapport(['Killed', 'Survived']),
+    });
+    expect(rouge.code).toBe(1);
+    expect(rouge.lignes.join('\n')).toContain('src/domain/a.ts:2 Survived');
+    const vert = passer('origin/main', {
+      ...base,
+      lireRapport: () => rapport(['Killed', 'Killed', 'Killed', 'Killed', 'Survived']),
+    });
+    expect(vert.code).toBe(0);
+    const tombe = passer('origin/main', {
+      ...base,
+      lancerStryker: () => 1,
+      lireRapport: () => null,
+    });
+    expect(tombe.code).toBe(1);
+  });
+});
+
+describe('REQ-GOV-011 — l’empreinte tient le CONTEXTE et le MODE', () => {
+  let d: ReturnType<typeof depot>;
+  let T = '';
+  let Tvoisin = '';
+  let Tmode = '';
+  beforeAll(() => {
+    d = depot();
+    d.ecrire('src/code.ts', LIGNES(30, 'ligne'));
+    d.git('add', '-A');
+    d.git('commit', '-q', '-m', 'base');
+    d.git('checkout', '-q', '-b', 'pr');
+    d.ecrire('src/code.ts', LIGNES(30, 'ligne').replace('ligne 10\n', 'ligne 10 PR\n'));
+    d.git('commit', '-q', '-am', 'pr');
+    T = d.git('rev-parse', 'HEAD');
+    // Mode seul : aucun octet de contenu ne change.
+    d.git('update-index', '--chmod=+x', 'src/code.ts');
+    d.git('commit', '-q', '-m', 'mode');
+    Tmode = d.git('rev-parse', 'HEAD');
+    // main change une ligne VOISINE (deux lignes plus bas) : fusion propre, contexte changé.
+    d.git('checkout', '-q', 'main');
+    d.ecrire('src/code.ts', LIGNES(30, 'ligne').replace('ligne 12\n', 'ligne 12 main\n'));
+    d.git('commit', '-q', '-am', 'voisin');
+    d.git('checkout', '-q', '-b', 'pr-voisin', T);
+    d.git('merge', '-q', '--no-edit', 'main');
+    Tvoisin = d.git('rev-parse', 'HEAD');
+  });
+  afterAll(() => rmSync(d.dir, { recursive: true, force: true }));
+
+  it('REQ-GOV-011 — un changement de main à deux lignes d’un morceau de la PR périme : le contexte compte', () => {
+    const e = (sha: string) => empreinteDuPatch(sha, { base: 'main', cwd: d.dir });
+    expect(e(Tvoisin)).not.toBeNull();
+    expect(e(Tvoisin)).not.toBe(e(T));
+  });
+
+  it('REQ-GOV-011 — un changement de MODE seul périme : `patch-id` hache les en-têtes de mode', () => {
+    const e = (sha: string) => empreinteDuPatch(sha, { base: `${T}~1`, cwd: d.dir });
+    expect(e(Tmode)).not.toBeNull();
+    expect(e(Tmode)).not.toBe(e(T));
+  });
+});
+
+describe('REQ-GOV-011 — l’API morte `sansMutation` est retirée', () => {
+  it('REQ-GOV-011 — `lentillesExigees` ne rend plus que `toutes`', () => {
+    expect(Object.keys(lentillesExigees(ELEVE))).toEqual(['toutes']);
+  });
+});
+
+describe('REQ-GOV-032 — `vues:fusion` : une levée au milieu laisse l’arbre INTACT', () => {
+  it('REQ-GOV-032 — un rendu qui LÈVE : fusion annulée, tête inchangée, aucune fusion en cours, code 1', () => {
+    const d = depot();
+    try {
+      d.ecrire('docs/PLAN-STATE.md', 'etat 0\n');
+      d.git('add', '-A');
+      d.git('commit', '-q', '-m', 'base');
+      d.git('checkout', '-q', '-b', 'pr');
+      d.ecrire('docs/PLAN-STATE.md', 'etat PR\n');
+      d.git('commit', '-q', '-am', 'pr');
+      d.git('checkout', '-q', 'main');
+      d.ecrire('docs/PLAN-STATE.md', 'etat main\n');
+      d.git('commit', '-q', '-am', 'main');
+      d.git('checkout', '-q', 'pr');
+      const avant = d.git('rev-parse', 'HEAD');
+      const issue = fusionnerMain({
+        cwd: d.dir,
+        base: 'main',
+        rendre: () => {
+          throw new Error('rendu cassé');
+        },
+      });
+      expect(issue.code).toBe(1);
+      expect(issue.lignes.join('\n')).toContain('rendu cassé');
+      expect(d.git('rev-parse', 'HEAD')).toBe(avant);
+      expect(existsSync(join(d.dir, '.git', 'MERGE_HEAD'))).toBe(false);
+      expect(d.git('status', '--porcelain')).toBe('');
+    } finally {
+      rmSync(d.dir, { recursive: true, force: true });
+    }
   });
 });

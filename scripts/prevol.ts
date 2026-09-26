@@ -409,7 +409,7 @@ export const ETAPES_LENTES: readonly { script: string; motif: string }[] = [
     script: 'mutation:pr',
     motif:
       'lance Stryker sur les fichiers mutables de la PR : étape SÉPARÉE, à lancer avant la PR ' +
-      'quand elle touche `src/domain/` ou `src/server/` (`pnpm mutation:pr`)',
+      'quand elle touche `src/domain/`, `src/server/` ou `src/lib/` (`pnpm mutation:pr`)',
   },
 ];
 

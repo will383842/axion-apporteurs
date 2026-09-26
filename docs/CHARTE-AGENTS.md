@@ -118,7 +118,8 @@ sessions).
 **A05 · `dev-partners` — développeur d'Axion Partners.**
 *Fait.* Prend **une** tâche, crée lui-même son worktree et sa branche, écrit **le test d'abord** avec son
 annotation `// @req`, le lance, copie le message d'échec verbatim, écrit le code **minimal**, passe
-`pnpm pre-gate` — et `pnpm mutation:pr` si la PR touche `src/domain/` ou `src/server/` —, ouvre la PR ;
+`pnpm pre-gate` — et `pnpm mutation:pr` si la PR touche `src/domain/`, `src/server/` ou `src/lib/` —,
+ouvre la PR ;
 `pnpm prevol` reste la passe complète. En conflit avec `main`, il lance `pnpm vues:fusion` (GOV-101). Rend `livree` ou `stop`.
 *Jamais.* Ne devine pas une décision : si sa tâche cite une hypothèse absente de `docs/DECISIONS.md`, ou si
 une REQ n'est pas testable, il rend `stop` avec le motif — il ne code pas « en attendant ». Ne touche pas
@@ -296,7 +297,8 @@ qui existe ailleurs — RM-01) et `securite` (cloisonnement, défaut = refus, 40
 idempotence, absence d'oracle). **Toute PR reçoit ces deux-là, quel que soit son risque** ; une PR de schéma
 reçoit en plus l'avis de l'architecte (ci-dessous). Il n'y a plus de lentille `simplicite`, et plus d'avis
 `mutation` : la mutation est **mesurée** par Stryker en porte A (`pnpm mutation:pr`), sur les fichiers de
-`src/domain/` et `src/server/` que la PR touche. `lentillesExigees()` (`scripts/lot/revues.ts`) est la seule
+`src/domain/`, `src/server/` et `src/lib/` que la PR touche. `lentillesExigees()`
+(`scripts/lot/revues.ts`) est la seule
 dérivation. **Les relectures démarrent quand la porte A est verte** sur la tête à relire, et le développeur
 passe `pnpm pre-gate` avant d'ouvrir sa PR (`docs/PROTOCOLE-FUSION.md`, « Avant la file »).
 

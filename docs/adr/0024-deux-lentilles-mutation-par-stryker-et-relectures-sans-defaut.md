@@ -44,8 +44,13 @@ jugée par `exactitude`. Le refus de `securite` bloque à lui seul, comme avant.
 
 `pnpm mutation:pr` (`scripts/mutation/pr.ts`), dans `gate-a` après `req:check` : Stryker, **en bac à
 sable** (`inPlace: false` écrit dans la configuration dérivée — une passe en place interrompue a
-laissé 220 fichiers réécrits le 2026-09-25), sur les sources de `src/domain/` et `src/server/` que la
-PR ajoute ou modifie depuis sa base de fusion. La configuration dérive de `stryker.config.json` :
+laissé 220 fichiers réécrits le 2026-09-25), sur les sources de `src/domain/`, `src/server/` et
+`src/lib/` que la PR ajoute ou modifie depuis sa base de fusion (`src/lib/` ajouté au second tour de
+relecture : `forme-iban.ts` touche l'argent). Le reste de `src/` — `src/app/`, `src/proxy.ts`,
+`src/instrumentation.ts` — est jugé au rendu, hors du processus que Stryker instrumente : il est
+**écarté et nommé**, jamais tu. Un commentaire `// Stryker disable` dans un fichier muté fait
+**échouer** la passe en se nommant `fichier:ligne` : il retirerait des mutants du score sans en
+nommer aucun. La configuration dérive de `stryker.config.json` :
 seuil `thresholds.break`, lanceur, parallélisme. Le verdict est celui du lecteur unique du rapport
 (`scripts/mutation/rapport.ts`) : sous le seuil, rouge, chaque survivant nommé `fichier:ligne`. Sur
 `push` de `main`, le diff est vide et l'étape le dit. Les scripts de garde touchés sont **nommés et
@@ -55,8 +60,10 @@ seuil `thresholds.break`, lanceur, parallélisme. Le verdict est celui du lecteu
 
 Un accord rendu sur C survit à la tête T si l'**empreinte du diff propre à la PR** est la même :
 `git patch-id --stable` de `git diff <merge-base(origin/main, X)> X`, vues dérivées exclues
-(`scripts/vues/vues.ts`), complété du résumé `--summary` (créations, suppressions, modes). La lentille
-`exactitude` suit la même règle : l'entrée de journal et la prose de la PR sont dans ce diff. Toute
+(`scripts/vues/vues.ts`) ; `patch-id` hache aussi les en-têtes de création, de suppression et de
+mode (un résumé `--summary` posé en plus a été retiré au second tour : muté, il ne faisait rougir
+aucun témoin). La lentille `exactitude` suit la même règle pour la prose écrite dans les fichiers ;
+le corps de la PR n'est pas dans ce diff. Toute
 mesure impossible (commit absent du clone, base introuvable, diff vide) périme. **Limite déclarée** : le vérificateur de `docs/PLAN-STATE.md` exempte les zones lues sur la forge ; une falsification écrite à la main dans ces zones après l'accord survit à l'empreinte. Ces zones portent déjà, par construction, du texte que la forge contrôle (le titre de n'importe quelle PR d'un dépôt public), et le vérificateur y refuse tout ce qui sortirait de la zone au rendu. Les six autres vues sont comparées entières.
 
 ### (4) Le pré-contrôle et la fusion des vues
@@ -82,7 +89,8 @@ déclarée rougit toujours, par le cliquet du diff.
   `aucun-workflow-ne-pousse-sur-main.spec.ts`. Ce pas demande une décision de Will qui amende
   `partners/ADR-0006` ; il n'est pas pris ici. Ce qui en tient lieu : `pnpm vues:fusion`, et la
   survie des accords sur patch identique, qui ôtent au conflit de vue son coût en relecture.
-- **`gate-a` s'allonge** du temps de Stryker sur les PR qui touchent `src/domain/` ou `src/server/`.
+- **`gate-a` s'allonge** du temps de Stryker sur les PR qui touchent `src/domain/`, `src/server/`
+  ou `src/lib/`.
   Les PR de gouvernance, de loin les plus nombreuses, n'y passent que quelques secondes. Au-delà
   d'environ quinze minutes, le découpage proposé est un job à part, requis par la protection de
   `main` — un réglage que seul Will peut faire.

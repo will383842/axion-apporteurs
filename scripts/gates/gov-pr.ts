@@ -932,9 +932,9 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     ...(pr.mesures ?? {}),
   });
   const lues = lecture.verdicts.filter((v) => v.verdict === 'accepte');
-  // Les lentilles EXIGÉES par le risque, hors mutation : deux sur une PR ordinaire, trois sinon.
-  const exigees = [...lentillesExigees(risque).sansMutation];
-  const manquantes = lecture.manquantes.filter((l) => l !== 'mutation');
+  // Les lentilles EXIGÉES : deux partout, trois sur une PR de schéma (GOV-101, `W16`).
+  const exigees = [...lentillesExigees(risque).toutes];
+
   // AUCUNE REVUE, REFUS, LENTILLES MANQUANTES — décidés par le lecteur unique (GOV-077) : « aucune
   // revue » et « toutes les revues refusent » ne s'impriment plus de la même façon.
   for (const f of fautesDesRevues(lecture, { tacheSensible: attaqueExigee })) {
@@ -972,7 +972,7 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
       `Revues — l'auteur ${v.code} rend lui-même la lentille ${v.lentille} sur sa propre PR (REQ-GOV-011).`
     );
   }
-  if (lentillesDeclarees.length > 0 && manquantes.length === 0) {
+  if (lentillesDeclarees.length > 0 && lecture.manquantes.length === 0) {
     // la ligne `Relecteur:` et les revues doivent parler des mêmes lentilles — celles qu'EXIGE le
     // risque ; en déclarer davantage est admis (le gabarit en nomme quatre).
     for (const l of exigees) {
@@ -989,8 +989,8 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
     if (!lues.some((x) => x.lentille === 'schema' && suppleants.includes(x.code))) {
       ajouter(
         'schema_sans_approbation',
-        `Revues — PR \`schema\` sans approbation de ${suppleants.join(' ou ')} : l'architecte remplace la ` +
-          `troisième lentille et son refus est bloquant (docs/CONVENTIONS.md §5, fiche architecte).`
+        `Revues — PR \`schema\` sans approbation de ${suppleants.join(' ou ')} : l'architecte tient la ` +
+          `troisième lentille et son refus est bloquant (docs/CHARTE-AGENTS.md §6, fiche architecte).`
       );
     }
   }

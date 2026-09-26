@@ -58,7 +58,8 @@ garde, `perf:budgets`, `red-first`, une vue périmée. D'où trois gestes, dans 
    `perf:budgets`, les vues, `red-first` simulé contre `origin/main`. Sans la suite de tests, sans
    les navigateurs, sans Stryker : chaque étape écartée est **nommée avec son motif** dans la sortie.
    Il doit sortir vert avant `gh pr create`. Le pré-vol complet (script `prevol`, suite comprise) reste la passe entière.
-2. **`pnpm mutation:pr`** si la PR touche `src/domain/` ou `src/server/` — Stryker, en bac à
+2. **`pnpm mutation:pr`** si la PR touche `src/domain/`, `src/server/` ou `src/lib/` — Stryker,
+   en bac à
    sable, sur les seuls fichiers mutables de la PR ; les survivants sont nommés `fichier:ligne`.
    La porte A la rejoue : la lancer avant, c'est ne pas la découvrir après.
 3. **`pnpm vues:fusion`** quand la PR est en conflit avec `main` : `main` est fusionnée, un
@@ -196,9 +197,10 @@ est **une seule forme ancrée**, et tout ce qui n'y est pas périme par construc
 patch de la PR.** Fusionner `main` — pour lever un conflit de vue, ou parce qu'une autre PR a
 atterri — change la tête sans rien changer à ce que la PR **apporte**. Un accord rendu sur C survit
 à la tête T si l'**empreinte du diff propre à la PR** est la même sur les deux : `git patch-id
---stable` de `git diff <merge-base(origin/main, X)> X`, vues dérivées exclues, complété du résumé des
-créations, suppressions et changements de mode. `exactitude` suit la même règle : l'entrée de journal
-et toute la prose de la PR sont **dans** ce diff. Périment par construction : une ligne changée dans
+--stable` de `git diff <merge-base(origin/main, X)> X`, vues dérivées exclues (`patch-id` hache aussi
+les en-têtes de création, de suppression et de mode). `exactitude` suit la même règle pour la prose
+écrite dans les fichiers — l'entrée de journal, les commentaires, les documents ; le **corps** de la PR
+n'est pas dans ce diff, et se relit à la main s'il a changé. Périment par construction : une ligne changée dans
 un fichier de la PR, un conflit résolu en modifiant une ligne de la PR, un changement à moins de
 trois lignes d'un morceau de la PR (le contexte est dans l'empreinte), et toute mesure impossible
 (commit absent du clone, base introuvable, diff vide). Témoins : `relectures-sans-defaut.spec.ts`,

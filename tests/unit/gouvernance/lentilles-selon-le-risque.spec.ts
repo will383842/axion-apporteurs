@@ -443,7 +443,7 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
       const r = risque({ titre: 'feat(QA-T01): x', fichiers: LECTEUR.cheminsTouches(entrees) });
       expect(r.niveau, source).toBe('eleve');
       expect(r.schema, source).toBe(true);
-      expect([...LECTEUR.lentillesExigees(r).sansMutation]).toContain('schema');
+      expect([...LECTEUR.lentillesExigees(r).toutes]).toContain('schema');
     }
   });
 
@@ -615,11 +615,7 @@ describe('REQ-GOV-011 — cas 6 à 8 : ce que la PR TOUCHE décide aussi du risq
     });
     expect(r.niveau).toBe('eleve');
     expect(r.schema).toBe(true);
-    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toEqual([
-      'exactitude',
-      'securite',
-      'schema',
-    ]);
+    expect([...LECTEUR.lentillesExigees(r).toutes]).toEqual(['exactitude', 'securite', 'schema']);
   });
 });
 
@@ -648,11 +644,7 @@ describe('REQ-GOV-011 — témoins manquants relevés par la lentille mutation (
     const r = risque({ titre: 'feat(QA-T04): x', fichiers: NEUTRES });
     expect(r.niveau).toBe('eleve');
     expect(r.schema).toBe(true);
-    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toEqual([
-      'exactitude',
-      'securite',
-      'schema',
-    ]);
+    expect([...LECTEUR.lentillesExigees(r).toutes]).toEqual(['exactitude', 'securite', 'schema']);
     expect(r.raisons.join(' ; ')).toContain('schema: true');
   });
 

@@ -159,7 +159,7 @@ describe('REQ-GOV-011 — GOV-097 : ce qui reste ÉLEVÉ, par la tâche (deux le
     const r = risque({ ...ESPACE_VIDE, schema: true });
     expect(r.niveau).toBe('eleve');
     expect(r.schema).toBe(true);
-    expect([...LECTEUR.lentillesExigees(r).sansMutation]).toContain('schema');
+    expect([...LECTEUR.lentillesExigees(r).toutes]).toContain('schema');
   });
 
   it('REQ-GOV-011 · une tâche déclassée sur la TÊTE mais sensible sur la BASE reste ÉLEVÉE', () => {

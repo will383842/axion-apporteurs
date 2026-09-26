@@ -7,8 +7,9 @@ import base from './vitest.config';
  * C'est `vitest.config.ts`, réduite aux tests UNITAIRES EN PROCESSUS du domaine et du serveur
  * (`tests/unit/domaine/**`, `tests/unit/contrat/**`, puis, depuis GOV-101, `tests/unit/securite/**`,
  * `tests/unit/integration/**` et `tests/unit/espace/**`) : le travail de nuit ne mute que
- * `src/domain/**`, `pnpm mutation:pr` mute aussi les fichiers de `src/server/**` que la PR touche,
- * et chaque mutant est jugé par les tests qui le couvrent (`coverageAnalysis: perTest`, `related`).
+ * `src/domain/**`, `pnpm mutation:pr` mute aussi les fichiers de `src/server/**` et `src/lib/**`
+ * que la PR touche, et chaque mutant est jugé par les tests qui le couvrent
+ * (`coverageAnalysis: perTest`, `related`).
  * Les tests de `tests/integration/` exigent un démon Docker et ceux de gouvernance lancent des
  * gardes en sous-processus : ni l'un ni l'autre ne juge un mutant, et les deux feraient échouer la
  * passe à blanc. Mesuré le 2026-09-26 sur le diff de SEC-03 : sans les tests du serveur, presque
@@ -52,6 +53,10 @@ export default defineConfig({
       'tests/unit/securite/**/*.spec.ts',
       'tests/unit/integration/**/*.spec.ts',
       'tests/unit/espace/**/*.spec.ts',
+      // `src/lib/` (GOV-101, second tour) : ses deux tests unitaires en processus, et eux seuls —
+      // le reste de `tests/unit/qualite/` lance des gardes et Stryker lui-même en sous-processus.
+      'tests/unit/qualite/env-fail-fast.spec.ts',
+      'tests/unit/qualite/journal-redige.spec.ts',
     ],
     exclude: [
       ...(base.test?.exclude ?? []),

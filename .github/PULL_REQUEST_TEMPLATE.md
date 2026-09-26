@@ -20,8 +20,8 @@ dans ce fichier, et `gov:pr` rougit si ce n'est plus vrai.
     porte sur l'auteur et sur les LENTILLES — deux partout, `exactitude` et `securite`, plus
     `schema` (A02) sur une PR de schéma (GOV-101, partners/ADR-0024) — jamais sur l'unicité des
     codes de poste. La mutation n'est plus un avis : Stryker la mesure en porte A.
-  · avant d'ouvrir la PR : `pnpm pre-gate` (et `pnpm mutation:pr` si la PR touche src/domain ou
-    src/server) ; les relectures démarrent quand la porte A est verte.
+  · avant d'ouvrir la PR : `pnpm pre-gate` (et `pnpm mutation:pr` si la PR touche src/domain,
+    src/server ou src/lib) ; les relectures démarrent quand la porte A est verte.
   · le champ « Lot: » de la section Identité porte les identifiants de tâche que cette PR livre EN
     PLUS de celle que son titre nomme, séparés par des VIRGULES — et il RESTE VIDE pour une PR à
     une seule tâche. Le titre ne peut nommer qu'une tâche, et `pnpm lot:cloture`, seul écrivain du

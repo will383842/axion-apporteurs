@@ -455,12 +455,10 @@ describe('REQ-GOV-011 — les deux mutants qui survivaient, rejoués comme témo
     expect([...lentillesExigees(eleve(true)).toutes]).toEqual(['exactitude', 'securite', 'schema']);
     expect(lentillesExigees(eleve(true)).toutes.length).toBe(3);
     expect(lentillesExigees(ELEVE).toutes.length).toBe(2);
-    expect(lentillesExigees(eleve(true)).sansMutation.length).toBe(3);
     // Sur une PR ORDINAIRE (GOV-077), deux lentilles, et ce sont celles-là.
     const ordinaire: LECTEUR.Risque = { niveau: 'ordinaire', schema: false, raisons: [] };
     expect([...lentillesExigees(ordinaire).toutes]).toEqual(['exactitude', 'securite']);
     expect(lentillesExigees(ordinaire).toutes.length).toBe(2);
-    expect(lentillesExigees(ordinaire).sansMutation.length).toBe(2);
   });
 
   it('REQ-GOV-011 · MUTANT (b) : le texte publié ne peut pas annoncer MOINS qu’il n’en faut', () => {

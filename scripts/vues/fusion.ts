@@ -95,52 +95,71 @@ export function fusionnerMain(d: Demande): Issue {
     return { code: 1, lignes: [...lignes, motif] };
   };
 
-  if (!fusionPropre) {
-    const conflits = git('diff', '--name-only', '--diff-filter=U', '-z')
-      .split('\0')
-      .filter((f) => f !== '');
-    if (conflits.length === 0) {
-      return abandonner(`❌ vues:fusion — \`git merge ${d.base}\` a échoué sans conflit lisible.`);
+  // UNE LEVÉE AU MILIEU (un `git checkout --theirs`, un rendu, un commit qui lève) ne laisse ni
+  // fusion en cours ni tête déplacée : l'arbre est rendu tel qu'on l'a trouvé, et la levée est DITE.
+  try {
+    if (!fusionPropre) {
+      const conflits = git('diff', '--name-only', '--diff-filter=U', '-z')
+        .split('\0')
+        .filter((f) => f !== '');
+      if (conflits.length === 0) {
+        return abandonner(
+          `❌ vues:fusion — \`git merge ${d.base}\` a échoué sans conflit lisible.`
+        );
+      }
+      const { vues, autres } = trierLesConflits(conflits);
+      if (autres.length > 0) {
+        return abandonner(
+          `❌ vues:fusion — conflit sur ${autres.length} fichier(s) qui ne sont PAS des vues ` +
+            `dérivées : ${autres.join(', ')}. Fusion abandonnée ; ce conflit se résout à la main.`
+        );
+      }
+      for (const v of vues) git('checkout', '--theirs', '--', v);
+      lignes.push(`   conflit sur ${vues.length} vue(s) seule(s) : ${vues.join(', ')} — rendues.`);
     }
-    const { vues, autres } = trierLesConflits(conflits);
-    if (autres.length > 0) {
+
+    if (!d.rendre()) {
       return abandonner(
-        `❌ vues:fusion — conflit sur ${autres.length} fichier(s) qui ne sont PAS des vues ` +
-          `dérivées : ${autres.join(', ')}. Fusion abandonnée ; ce conflit se résout à la main.`
+        '❌ vues:fusion — un rendu de vue a échoué : fusion abandonnée, rien commité.'
       );
     }
-    for (const v of vues) git('checkout', '--theirs', '--', v);
-    lignes.push(`   conflit sur ${vues.length} vue(s) seule(s) : ${vues.join(', ')} — rendues.`);
-  }
-
-  if (!d.rendre()) {
+    const presentes = VUES_DERIVEES.map((v) => v.chemin).filter((c) =>
+      existsSync(join(d.cwd ?? '.', c))
+    );
+    if (presentes.length > 0) git('add', '--', ...presentes);
+    const restants = git('diff', '--name-only', '--diff-filter=U').trim();
+    if (restants !== '') {
+      return abandonner(`❌ vues:fusion — des conflits subsistent après le rendu : ${restants}.`);
+    }
+    const indexChange = !essayer('diff', '--cached', '--quiet');
+    if (enFusion) {
+      git('commit', '--no-edit', '-q');
+    } else if (indexChange) {
+      git('commit', '-q', '-m', `chore(vues): vues dérivées rendues après fusion de ${d.base}`);
+    }
+    const apres = git('rev-parse', 'HEAD').trim();
+    lignes.push(
+      apres === avant
+        ? `✅ vues:fusion — ${d.base} déjà contenue, vues déjà à jour : rien à commiter.`
+        : `✅ vues:fusion — ${d.base} fusionnée et vues rendues : ${avant.slice(0, 7)} → ${apres.slice(0, 7)}. ` +
+            'Le diff propre à la PR est inchangé si tu n’as rien résolu à la main : les accords ' +
+            'survivent (`empreinteDuPatch`).'
+    );
+    return { code: 0, lignes };
+  } catch (e) {
+    const motif = e instanceof Error ? e.message : String(e);
+    // Un commit de fusion déjà posé par CETTE commande est défait ; rien d'autre ne l'est.
+    if (essayer('rev-parse', 'HEAD') && git('rev-parse', 'HEAD').trim() !== avant) {
+      essayer('reset', '--hard', avant);
+      return {
+        code: 1,
+        lignes: [...lignes, `❌ vues:fusion — levée après le commit, fusion défaite : ${motif}`],
+      };
+    }
     return abandonner(
-      '❌ vues:fusion — un rendu de vue a échoué : fusion abandonnée, rien commité.'
+      `❌ vues:fusion — levée au milieu de la fusion, fusion abandonnée : ${motif}`
     );
   }
-  const presentes = VUES_DERIVEES.map((v) => v.chemin).filter((c) =>
-    existsSync(join(d.cwd ?? '.', c))
-  );
-  if (presentes.length > 0) git('add', '--', ...presentes);
-  const restants = git('diff', '--name-only', '--diff-filter=U').trim();
-  if (restants !== '') {
-    return abandonner(`❌ vues:fusion — des conflits subsistent après le rendu : ${restants}.`);
-  }
-  const indexChange = !essayer('diff', '--cached', '--quiet');
-  if (enFusion) {
-    git('commit', '--no-edit', '-q');
-  } else if (indexChange) {
-    git('commit', '-q', '-m', `chore(vues): vues dérivées rendues après fusion de ${d.base}`);
-  }
-  const apres = git('rev-parse', 'HEAD').trim();
-  lignes.push(
-    apres === avant
-      ? `✅ vues:fusion — ${d.base} déjà contenue, vues déjà à jour : rien à commiter.`
-      : `✅ vues:fusion — ${d.base} fusionnée et vues rendues : ${avant.slice(0, 7)} → ${apres.slice(0, 7)}. ` +
-          'Le diff propre à la PR est inchangé si tu n’as rien résolu à la main : les accords ' +
-          'survivent (`empreinteDuPatch`).'
-  );
-  return { code: 0, lignes };
 }
 
 // GARDÉE : ce module est IMPORTÉ par son test, et l'import ne doit ni fusionner ni sortir.

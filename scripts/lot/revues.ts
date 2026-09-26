@@ -67,7 +67,6 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { posix } from 'node:path';
 
@@ -551,11 +550,13 @@ export function fichiersEntre(accord: string, tete: string, cwd?: string): strin
  *
  * LA RÈGLE. Un accord rendu sur C survit à la tête T si l'EMPREINTE DU DIFF PROPRE À LA PR est la
  * même sur les deux : `git patch-id --stable` de `git diff <merge-base(base, X)> X`, pour X = C
- * puis X = T, restreint aux fichiers de la PR HORS VUES DÉRIVÉES (`VUES_DERIVEES`), et complété du
- * résumé des créations, suppressions et changements de mode (`--summary`), que `patch-id` ignore.
+ * puis X = T, restreint aux fichiers de la PR HORS VUES DÉRIVÉES (`VUES_DERIVEES`), en `--binary`.
  * Le diff part de la BASE DE FUSION : ce que `main` a apporté entre-temps n'y est pas, ce que la PR
- * apporte y est tout entier. La lentille `exactitude` suit la MÊME règle : l'entrée de journal et
- * toute la prose de la PR sont DANS ce diff — un patch identique, c'est une prose identique.
+ * apporte y est tout entier. La lentille `exactitude` suit la MÊME règle pour la prose ÉCRITE DANS
+ * LES FICHIERS — l'entrée de journal, les commentaires, les documents : elle est dans ce diff.
+ * ⚠️ LE CORPS DE LA PR N'Y EST PAS. Il se réécrit sans commit, donc sans changer la tête : aucune
+ * règle de survie ne le couvre, et aucune ne l'a jamais couvert (un accord sur la tête survit déjà à
+ * toute édition du corps). Ce que `exactitude` y juge se relit à la main s'il a changé.
  *
  * CE QUI PÉRIME, PAR CONSTRUCTION ET SANS CAS À ÉNUMÉRER :
  *   — une ligne changée dans un fichier de la PR : le patch change ;
@@ -564,7 +565,9 @@ export function fichiersEntre(accord: string, tete: string, cwd?: string): strin
  *   — un changement voisin d'un morceau de la PR (moins de trois lignes) : le CONTEXTE entre dans
  *     l'empreinte. C'est délibéré — sans contexte, DÉPLACER une ligne de garde dans le même fichier
  *     gardait la même empreinte ;
- *   — un mode, une création, une suppression : le résumé entre dans l'empreinte.
+ *   — un mode, une création, une suppression : `patch-id --stable` hache leurs en-têtes, et le
+ *     témoin « un changement de MODE seul périme » le tient. Un résumé `--summary` en plus a été
+ *     posé puis RETIRÉ : muté hors de l'empreinte, il laissait ce témoin vert — il ne gardait rien.
  *
  * ÉCHEC FERMÉ : un sha malformé ou absent du clone, une base introuvable, un diff VIDE, `git` en
  * échec rendent `null`, et `null` ne survit jamais. Les vues exclues ne relâchent rien : chacune a
@@ -606,8 +609,7 @@ export function empreinteDuPatch(
     if (diff.trim() === '') return null;
     const id = lire(['patch-id', '--stable'], diff).trim().split(/\s+/)[0] ?? '';
     if (!/^[0-9a-f]{40}$/.test(id)) return null;
-    const resume = lire([...options, '--summary', mb, t, ...perimetre]);
-    return createHash('sha1').update(`${id}\n${resume}`).digest('hex');
+    return id;
   } catch {
     return null;
   }
@@ -1745,16 +1747,11 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
  *
  * ⚠️ LA BRANCHE COURTE SE PROUVE, LA LONGUE EST LE DÉFAUT : on teste `schema === false`, jamais
  * `=== true`. Une valeur imprévue exige donc l'architecte.
- *
- * `sansMutation` est conservé pour ses appelants : depuis GOV-101, les deux listes sont égales.
  */
-export function lentillesExigees(risque: Risque): {
-  sansMutation: readonly string[];
-  toutes: readonly string[];
-} {
-  const exigees =
-    risque.schema === false ? [...DEUX_PREMIERES] : [...DEUX_PREMIERES, LENTILLE_SCHEMA];
-  return { sansMutation: exigees, toutes: [...exigees] };
+export function lentillesExigees(risque: Risque): { toutes: readonly string[] } {
+  return {
+    toutes: risque.schema === false ? [...DEUX_PREMIERES] : [...DEUX_PREMIERES, LENTILLE_SCHEMA],
+  };
 }
 
 /** Une ligne qui NOMME le risque et ses raisons — la garde l'imprime, le composeur la publie. */

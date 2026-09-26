@@ -8,14 +8,14 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `4c1fa00` — 2026-09-26T08:39:08+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #140 (un conflit avec `main`) · 2. #82 (état `UNKNOWN`) |
+| Qu’est-ce qui est en vol ? | 1. #140 (rien) · 2. #141 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/116 tâches, reste 62.60 j |
-| Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
+| Le prochain pas | fusionner #140, puis SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #140 — 2026-09-26 |
 
-**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** `gh pr view 140 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,8 +64,9 @@ Reste sur ce chemin : **14.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | état `UNKNOWN` — à qualifier à la main |
+| 1 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | rien — fusionnable maintenant |
+| 2 | #141 — chore(GOV-012): registre rattrape, huit taches livrees par des PR fusionnees passent fusionnee | `t/registre-fusionnees-2` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -87,6 +88,8 @@ Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage
 
 ## Prochain pas
 
+**Fusionner #140** — elle est en tête de file et ne bloque sur rien.
+
 **SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 43 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
@@ -106,7 +109,8 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 **Fait.** Deux lentilles partout, `exactitude` et `securite`, plus `schema` sur une PR de schéma :
 décision de Will du 2026-09-26, `W16`, consignée par `partners/ADR-0024`. La mutation n'est plus un
 avis d'agent : `pnpm mutation:pr` lance Stryker en bac à sable, en porte A, sur les fichiers de
-`src/domain/` et `src/server/` que la PR touche, et nomme chaque survivant. Un accord survit à une
+`src/domain/`, `src/server/` et `src/lib/` que la PR touche, et nomme chaque survivant. Un accord
+survit à une
 fusion de `main` quand l'empreinte du diff propre à la PR (`git patch-id --stable` depuis la base de
 fusion, vues dérivées exclues) est inchangée, `exactitude` comprise. `pnpm pre-gate` joue les étapes
 rapides de la porte A lues dans `ci.yml` ; `pnpm vues:fusion` fusionne `main` et rend les vues quand
@@ -124,6 +128,15 @@ code du serveur est jugé par `tests/unit/securite/`. Avec ces tests, 82,50 pour
 arbre de travail propre. Et `vues:fusion` a fusionné `main` dans cette branche en 51 s, vues
 rendues ; la seconde fois, il a abandonné sur un vrai conflit (`docs/tasks.json`, des tâches
 versées des deux côtés), résolu par identifiant, sans perte.
+
+**Relecture.** `exactitude` et `securite` ont accepté (revues 5326296410 et 5326296579) ; le second
+tour a fermé leurs dettes. L'acceptance de GOV-101 promettait un robot sur `main` et la mutation des
+scripts de garde : elle est réécrite par le verbe hors dépôt pour dire ce qui est livré. `mutation:pr`
+sautait en silence `src/lib/`, `src/app/` et `src/proxy.ts` : `src/lib/` est désormais muté, le reste
+de `src/` est écarté et nommé, et un commentaire de désactivation de Stryker fait échouer la passe.
+L'empreinte a perdu son résumé `--summary` : muté hors de l'empreinte, il ne faisait rougir aucun
+témoin, `patch-id` hachant déjà les en-têtes de mode. `vues:fusion` défait la fusion sur toute
+levée, et l'API `sansMutation` est retirée.
 
 ### PR #139 — 2026-09-26 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées
 

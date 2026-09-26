@@ -154,7 +154,7 @@
       "role": "dev-partners",
       "libelle": "Développeur Partners",
       "description": "Développeur d'Axion Partners. Prend UNE tâche du lot, la livre en PR : test rouge d'abord, code minimal, PR documentée. N'élargit jamais le périmètre.",
-      "mission": "Prendre une tâche, créer lui-même son worktree et sa branche, écrire le test d'abord avec son annotation `// @req`, le lancer, copier le message d'échec verbatim, écrire le code minimal, passer `pnpm pre-gate` — et `pnpm mutation:pr` si la PR touche `src/domain/` ou `src/server/` — puis `pnpm prevol` pour la passe complète, ouvrir la PR. Rendre `livree` ou `stop`.",
+      "mission": "Prendre une tâche, créer lui-même son worktree et sa branche, écrire le test d'abord avec son annotation `// @req`, le lancer, copier le message d'échec verbatim, écrire le code minimal, passer `pnpm pre-gate` — et `pnpm mutation:pr` si la PR touche `src/domain/`, `src/server/` ou `src/lib/` — puis `pnpm prevol` pour la passe complète, ouvrir la PR. Rendre `livree` ou `stop`.",
       "entrees": [
         "une tâche de `docs/tasks.json` : id, titre, reqs, paths, acceptance, tests, sensible",
         "le texte mot à mot de chaque REQ citée",
