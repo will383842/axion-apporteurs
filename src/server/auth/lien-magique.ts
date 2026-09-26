@@ -42,7 +42,19 @@ export function empreinteDeSession(jeton: string, secret: string): string {
 
 // ── les états rendus ─────────────────────────────────────────────────────────────────────────────
 
-export type EtatDeDemande = 'envoye' | 'suspendu' | 'indisponible' | 'adresse_invalide';
+/** Les états d'une demande : une liste FERMÉE, que l'écran relit pour n'afficher qu'eux. */
+export const ETATS_DE_DEMANDE = ['envoye', 'suspendu', 'indisponible', 'adresse_invalide'] as const;
+export type EtatDeDemande = (typeof ETATS_DE_DEMANDE)[number];
+/** Les issues d'une consommation, dans le même ordre que `ResultatDeConsommation`. */
+export const ETATS_DE_CONSOMMATION = ['ouverte', 'lien_invalide'] as const;
+export type EtatDeConsommation = (typeof ETATS_DE_CONSOMMATION)[number];
+
+/** Lit un état reçu de l'extérieur (une URL) : un état de la liste, ou `null`. */
+export function etatLu<E extends string>(liste: readonly E[], valeur: unknown): E | null {
+  return typeof valeur === 'string' && (liste as readonly string[]).includes(valeur)
+    ? (valeur as E)
+    : null;
+}
 export type ResultatDeConsommation =
   { etat: 'ouverte'; jetonSession: string } | { etat: 'lien_invalide' };
 

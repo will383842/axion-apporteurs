@@ -28,6 +28,8 @@ import {
   COMPTEURS,
   OPTIONS_DU_CLIENT,
   creerMagasinRedis,
+  limiter,
+  sujetDepuisEmpreinte,
   type MagasinRedis,
 } from '../../src/server/securite/rate-limit';
 import {
@@ -43,6 +45,7 @@ import {
   empreinteDuJeton,
   tirerJeton,
   type ConfigurationDuLien,
+  type PortsDeDemande,
   type PortsDeConsommation,
 } from '../../src/server/auth/lien-magique';
 import { DUREES_AUTH } from '../../src/server/auth/durees';
@@ -382,9 +385,17 @@ const CLES = clesPii(ENV);
 /** Un apporteur signé dont le courriel est posé comme la couche des données personnelles le pose. */
 async function apporteurAvecCourriel(codeParrainage: string, courriel: string): Promise<string> {
   const id = randomUUID();
+  const { emailChiffre, emailHash } = colonnesPii(
+    { modele: MODELE_APPORTEUR, id },
+    { email: courriel },
+    CLES
+  );
+  if (!emailChiffre || !emailHash) throw new Error('colonnes de courriel absentes');
   await base.prisma.apporteur.create({
     data: {
-      ...colonnesPii({ modele: MODELE_APPORTEUR, id }, { email: courriel }, CLES),
+      id,
+      emailChiffre: Buffer.from(emailChiffre),
+      emailHash,
       statut: 'signe',
       codeParrainage,
       isTest: false,
@@ -457,10 +468,22 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
         },
       },
       journal: { warn: () => undefined },
-      magasin,
     };
     return { d, planifies, envois };
   }
+
+  /**
+   * Les ports de production, dont les deux compteurs appellent `limiter` du registre sur le cache
+   * RÉEL de ce fichier : hors des tests, `limiter` refuse tout magasin fourni, et le câblage de
+   * production n'en passe aucun (garde `securite:rate-famille`). Seul le magasin change ici.
+   */
+  const cablee = (d: DependancesDuLien): PortsDeDemande => ({
+    ...portsDeDemande(d),
+    compterAdresse: (sujet, maintenantMs) =>
+      limiter('magic:ip', sujetDepuisEmpreinte(sujet), maintenantMs, magasin),
+    compterCourriel: (sujet, maintenantMs) =>
+      limiter('magic:courriel', sujetDepuisEmpreinte(sujet), maintenantMs, magasin),
+  });
 
   const demande = (saisie: string, adresse: string) => ({
     saisie,
@@ -472,13 +495,10 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
     const id = await apporteurAvecCourriel('AX00SECK', 'claire@example.org');
     const connu = dependances();
     const inconnu = dependances();
-    const a = await demanderLien(
-      demande('Claire@Example.org', '198.51.100.21'),
-      portsDeDemande(connu.d)
-    );
+    const a = await demanderLien(demande('Claire@Example.org', '198.51.100.21'), cablee(connu.d));
     const b = await demanderLien(
       demande('personne@example.org', '198.51.100.22'),
-      portsDeDemande(inconnu.d)
+      cablee(inconnu.d)
     );
     expect([a, b]).toEqual(['envoye', 'envoye']);
     // Plancher : les deux demandes ont bien planifié leur travail, et rien d'autre avant la réponse.
@@ -514,7 +534,7 @@ describe('REQ-SEC-001 REQ-SEC-002 — le parcours câblé, base et cache réels'
       const { d } = dependances();
       const etats: string[] = [];
       for (let i = 0; i <= limite; i += 1) {
-        etats.push(await demanderLien(demande(saisie, `192.0.2.${i + 1}`), portsDeDemande(d)));
+        etats.push(await demanderLien(demande(saisie, `192.0.2.${i + 1}`), cablee(d)));
       }
       expect(etats.slice(0, limite).every((e) => e === 'envoye')).toBe(true);
       expect(etats[limite]).toBe('suspendu');

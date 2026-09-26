@@ -8,17 +8,47 @@
  *  - Les empreintes arrivent CALCULÉES : aucun secret n'entre ici, aucun jeton en clair non plus.
  *  - La base double le code : `liens_magiques_usage_unique` refuse qu'un lien consommé redevienne
  *    consommable, et `sessions_espace.lien_magique_id` est unique (une session par lien au plus).
- *  - Il ne couvre PAS la recherche du compte par empreinte de courriel ni l'adresse stockée :
- *    `apporteurs` ne porte encore aucune colonne de courriel (tâche du chiffrement). Ces deux ports
- *    restent à câbler par l'action serveur quand ces colonnes existeront.
+ *  - Le compte se lit par l'EMPREINTE de recherche du courriel (`email_hash`, unique), jamais par
+ *    un clair ; l'adresse à laquelle le lien part est le bloc STOCKÉ, déchiffré sous la ligne qui le
+ *    porte (partners/ADR-0013, décisions 10 et 11) — jamais la saisie.
  */
 
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { CHAMPS_PII, decryptPii, type ClesPii } from '../securite/pii';
 import type {
   PortsDEmission,
   PortsDeConsommation,
   TransactionDeConsommation,
 } from './lien-magique';
+
+/** Le nom du modèle dans la donnée authentifiée des blocs chiffrés d'un apporteur. */
+export const MODELE_APPORTEUR = 'Apporteur';
+
+/** La lecture du compte : par empreinte de courriel, puis l'adresse stockée, déchiffrée. */
+export type LectureDuCompte = Pick<PortsDEmission, 'trouverApporteur' | 'adresseStockee'>;
+
+export function lectureDuCompte(prisma: PrismaClient, cles: ClesPii): LectureDuCompte {
+  return {
+    async trouverApporteur(emailHash) {
+      return prisma.apporteur.findUnique({
+        where: { emailHash },
+        select: { id: true, statut: true },
+      });
+    },
+    async adresseStockee(apporteurId) {
+      const ligne = await prisma.apporteur.findUnique({
+        where: { id: apporteurId },
+        select: { emailChiffre: true },
+      });
+      if (ligne?.emailChiffre == null) throw new Error('adresse_absente : aucun courriel stocké');
+      return decryptPii(
+        { modele: MODELE_APPORTEUR, champ: CHAMPS_PII.email.chiffre, id: apporteurId },
+        ligne.emailChiffre,
+        cles
+      );
+    },
+  };
+}
 
 /** Les écritures de l'émission : annuler les liens actifs d'un apporteur, poser le nouveau. */
 export type EcrituresDeLien = Pick<PortsDEmission, 'annulerLiensActifs' | 'insererLien'>;

@@ -171,6 +171,12 @@ model Apporteur {
 
   creeAt DateTime @map("cree_at") @db.Timestamptz(3)
 
+  /// Le courriel de l'apporteur (SEC-03, REQ-SEC-024, partners/ADR-0013 décisions 11 à 13) : le bloc
+  /// chiffré lié à la ligne, et l'empreinte de recherche HMAC sous PII_HASH_KEY. Jamais un clair.
+  /// Les deux ensemble ou aucun (CHECK en SQL brut) ; nuls pour une ligne posée avant eux.
+  emailChiffre Bytes?  @map("email_chiffre")
+  emailHash    String? @unique @map("email_hash") @db.Char(64)
+
   jetonsDepot          JetonDepot[]
   identitesFacturation IdentiteFacturation[]
   liensMagiques        LienMagique[]

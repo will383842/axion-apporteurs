@@ -51,7 +51,22 @@ ALTER TABLE "sessions_espace" ADD CONSTRAINT "sessions_espace_apporteur_id_fkey"
 ALTER TABLE "sessions_espace" ADD CONSTRAINT "sessions_espace_lien_magique_id_fkey" FOREIGN KEY ("lien_magique_id") REFERENCES "liens_magiques"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 
+-- AlterTable
+ALTER TABLE "apporteurs" ADD COLUMN     "email_chiffre" BYTEA,
+ADD COLUMN     "email_hash" CHAR(64);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "apporteurs_email_hash_key" ON "apporteurs"("email_hash");
+
 -- SQL brut : Prisma ne modélise ni CHECK, ni fonction, ni déclencheur (partners/ADR-0015).
+
+-- REQ-SEC-024 (partners/ADR-0013, décisions 11 à 13) : le courriel de l'apporteur n'existe qu'en bloc
+-- chiffré et en empreinte de recherche HMAC hexadécimale, les deux ensemble ou aucun. Colonnes
+-- nullables : une ligne posée avant elles reste valide (migration additive).
+ALTER TABLE "apporteurs" ADD CONSTRAINT "apporteurs_email_hash_hex"
+  CHECK ("email_hash" IS NULL OR "email_hash" ~ '^[0-9a-f]{64}$');
+ALTER TABLE "apporteurs" ADD CONSTRAINT "apporteurs_courriel_complet"
+  CHECK (("email_chiffre" IS NULL) = ("email_hash" IS NULL));
 -- Aucune durée n'est écrite ici : les 15 minutes du lien et les 30 jours de la session vivent dans
 -- `src/server/auth/durees.ts`, et la base ne tient que l'ordre des instants.
 

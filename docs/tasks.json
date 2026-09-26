@@ -2778,7 +2778,8 @@
         "src/server/auth/lien-magique-production.ts",
         "src/content/micro-copy/espace/vocabulaire.ts",
         "tests/unit/securite/lien-magique-production.spec.ts",
-        "tests/unit/securite/connexion-ecran.spec.tsx"
+        "tests/unit/securite/connexion-ecran.spec.tsx",
+        "tests/unit/espace/vocabulaire-et-micro-copy.spec.ts"
       ],
       "schema": true,
       "sensible": [

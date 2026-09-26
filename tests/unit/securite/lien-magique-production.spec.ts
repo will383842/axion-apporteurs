@@ -86,7 +86,8 @@ describe('REQ-SEC-001 — la configuration du lien vient des secrets de l’envi
   });
 
   it('REQ-SEC-001 : un environnement refusé lève en NOMMANT la variable, sans aucune valeur', () => {
-    const { MAGIC_LINK_SECRET: _retire, ...sansLien } = ENV;
+    const sansLien: Record<string, string> = { ...ENV };
+    delete sansLien.MAGIC_LINK_SECRET;
     let message = '';
     try {
       configurationDuLien(sansLien);

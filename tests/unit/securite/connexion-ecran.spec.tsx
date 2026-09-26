@@ -37,10 +37,10 @@ describe('REQ-SEC-001 — le formulaire de connexion', () => {
     const libre = ETATS_VIDES_ESPACE['/connexion'];
     expect(libre).toBeDefined();
     const champ = /<input[^>]*type="email"[^>]*>/.exec(h)?.[0] ?? '';
-    const id = /id="([^"]+)"/.exec(champ)?.[1];
+    const id = /id="([^"]+)"/.exec(champ)?.[1];
     expect(id).toBeDefined();
     expect(h).toContain(`<label for="${id}">${CONNEXION.champCourriel}</label>`);
-    for (const attribut of ['name="courriel"', 'autocomplete="email"', 'required=""']) {
+    for (const attribut of ['name="courriel"', 'autoComplete="email"', 'required=""']) {
       expect(champ).toContain(attribut);
     }
     expect(h).toContain(`<button type="submit">${libre?.action.libelle}</button>`);
@@ -52,7 +52,7 @@ describe('REQ-SEC-001 — le formulaire de connexion', () => {
     const h = html(null);
     const piege = /<div hidden="">.*?<\/div>/s.exec(h)?.[0] ?? '';
     const champ = /<input[^>]*name="site"[^>]*>/.exec(piege)?.[0] ?? '';
-    for (const attribut of ['tabindex="-1"', 'autocomplete="off"']) {
+    for (const attribut of ['tabindex="-1"', 'autoComplete="off"']) {
       expect(champ).toContain(attribut);
     }
   });

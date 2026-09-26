@@ -726,7 +726,20 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › ACTIONS_COMMUNES › ecrireAAxionIA › libelle : Écrire à Axion-IA
       espace/vocabulaire.ts › ACTIONS_COMMUNES › ecrireAAxionIA › route : /aide
       espace/vocabulaire.ts › NAVIGATION_AVANT_SIGNATURE › 0 : Ma conformité
-      espace/vocabulaire.ts › NAVIGATION_AVANT_SIGNATURE › 1 : Mon contrat"
+      espace/vocabulaire.ts › NAVIGATION_AVANT_SIGNATURE › 1 : Mon contrat
+      espace/vocabulaire.ts › CONNEXION › champCourriel : Adresse électronique
+      espace/vocabulaire.ts › CONNEXION › reponses › envoye : Si cette adresse est connue, un lien de connexion vient de lui être envoyé. Il ne sert qu’une fois et expire rapidement.
+      espace/vocabulaire.ts › CONNEXION › reponses › suspendu : Trop de demandes de lien ont été faites récemment. Pour votre sécurité, réessayez un peu plus tard.
+      espace/vocabulaire.ts › CONNEXION › reponses › indisponible : Votre demande n’a pas pu être traitée pour le moment. Réessayez un peu plus tard.
+      espace/vocabulaire.ts › CONNEXION › reponses › adresse_invalide : Cette adresse électronique n’a pas la forme attendue. Vérifiez-la, puis réessayez.
+      espace/vocabulaire.ts › CONNEXION › arrivee › titre : Ouvrir votre espace
+      espace/vocabulaire.ts › CONNEXION › arrivee › phrase : Confirmez pour utiliser votre lien de connexion sur cet appareil.
+      espace/vocabulaire.ts › CONNEXION › arrivee › action : Utiliser mon lien
+      espace/vocabulaire.ts › CONNEXION › arrivee › reponses › ouverte : Votre lien de connexion a bien été utilisé.
+      espace/vocabulaire.ts › CONNEXION › arrivee › reponses › lien_invalide : Ce lien n’est plus valable : il a déjà servi ou il a expiré. Un nouveau lien peut vous être envoyé.
+      espace/vocabulaire.ts › CONNEXION › arrivee › nouveauLien : M’envoyer un nouveau lien
+      espace/vocabulaire.ts › CONNEXION › courriel › sujet : Votre lien de connexion à votre espace
+      espace/vocabulaire.ts › CONNEXION › courriel › corps : Voici votre lien de connexion. Il ne sert qu’une fois et expire rapidement. Si vous n’avez rien demandé, ignorez ce message."
     `);
   });
 

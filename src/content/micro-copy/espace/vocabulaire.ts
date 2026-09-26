@@ -70,3 +70,40 @@ export const ACTIONS_COMMUNES = {
 
 /** Les deux seules entrées de l'espace avant la signature du contrat. */
 export const NAVIGATION_AVANT_SIGNATURE = ['Ma conformité', 'Mon contrat'] as const;
+
+/**
+ * La connexion à l'espace par lien de connexion (SEC-03). Une réponse à la demande ne dit JAMAIS si
+ * l'adresse est connue : le même texte part que le compte existe ou non (REQ-SEC-001) ; la limite
+ * de demandes s'explique sans rien révéler du compte (REQ-SEC-002). Le titre, la phrase et le
+ * bouton de la demande sont ceux de l'état de `/connexion` (`etats-vides.ts`) : ils ne sont pas
+ * réécrits ici.
+ */
+export const CONNEXION = {
+  champCourriel: 'Adresse électronique',
+  reponses: {
+    envoye:
+      'Si cette adresse est connue, un lien de connexion vient de lui être envoyé. Il ne sert qu’une fois et expire rapidement.',
+    suspendu:
+      'Trop de demandes de lien ont été faites récemment. Pour votre sécurité, réessayez un peu plus tard.',
+    indisponible:
+      'Votre demande n’a pas pu être traitée pour le moment. Réessayez un peu plus tard.',
+    adresse_invalide:
+      'Cette adresse électronique n’a pas la forme attendue. Vérifiez-la, puis réessayez.',
+  },
+  arrivee: {
+    titre: 'Ouvrir votre espace',
+    phrase: 'Confirmez pour utiliser votre lien de connexion sur cet appareil.',
+    action: 'Utiliser mon lien',
+    reponses: {
+      ouverte: 'Votre lien de connexion a bien été utilisé.',
+      lien_invalide:
+        'Ce lien n’est plus valable : il a déjà servi ou il a expiré. Un nouveau lien peut vous être envoyé.',
+    },
+    nouveauLien: 'M’envoyer un nouveau lien',
+  },
+  courriel: {
+    sujet: 'Votre lien de connexion à votre espace',
+    corps:
+      'Voici votre lien de connexion. Il ne sert qu’une fois et expire rapidement. Si vous n’avez rien demandé, ignorez ce message.',
+  },
+} as const;
