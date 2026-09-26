@@ -538,7 +538,7 @@ Les 21 modules et les 12 étapes de l’audit de bout en bout, tels que le regis
 | `tests/unit/qualite/journal-redige.spec.ts` | oui | `REQ-QA-024` |
 | `tests/unit/qualite/req-check.spec.ts` | oui | `REQ-QA-014` |
 | `tests/unit/securite/chiffrement-avec-aad.spec.ts` | oui | `REQ-SEC-024` |
-| `tests/unit/securite/connexion-ecran.spec.tsx` | oui | `REQ-SEC-001`, `REQ-SEC-002` |
+| `tests/unit/securite/connexion-ecran.spec.ts` | oui | `REQ-SEC-001`, `REQ-SEC-002` |
 | `tests/unit/securite/env-boot.spec.ts` | oui | `REQ-SEC-028` |
 | `tests/unit/securite/headers.spec.ts` | oui | `REQ-SEC-029` |
 | `tests/unit/securite/lien-magique-depot.spec.ts` | oui | `REQ-SEC-001` |

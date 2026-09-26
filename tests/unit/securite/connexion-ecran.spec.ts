@@ -1,7 +1,7 @@
 // @req REQ-SEC-001
 // @req REQ-SEC-002
 /**
- * `connexion-ecran.spec.tsx` — les écrans `/connexion` et `/connexion/<jeton>` (SEC-03), rendus en
+ * `connexion-ecran.spec.ts` — les écrans `/connexion` et `/connexion/<jeton>` (SEC-03), rendus en
  * HTML statique, sans navigateur.
  *
  * CE QU'IL PROUVE.
@@ -20,6 +20,7 @@
  * Ce spec ne mesure ni le contraste ni les cibles tactiles : c'est le rôle du harnais d'accessibilité.
  */
 import { describe, it, expect } from 'vitest';
+import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ETATS_VIDES_ESPACE } from '../../../src/content/micro-copy/espace/etats-vides';
 import { CONNEXION } from '../../../src/content/micro-copy/espace/vocabulaire';
@@ -29,7 +30,7 @@ import PageConnexion from '../../../src/app/(espace)/connexion/page';
 
 const rien = async (): Promise<void> => undefined;
 const html = (etat: (typeof ETATS_DE_DEMANDE)[number] | null) =>
-  renderToStaticMarkup(<EcranConnexion etat={etat} action={rien} />);
+  renderToStaticMarkup(createElement(EcranConnexion, { etat, action: rien }));
 
 describe('REQ-SEC-001 — le formulaire de connexion', () => {
   it('REQ-SEC-001 : un champ de courriel étiqueté, typé, requis, et un bouton de soumission', () => {
@@ -91,7 +92,7 @@ describe('REQ-SEC-001 — la page lit l’état et n’accepte que la liste ferm
 
 describe('REQ-SEC-001 — l’arrivée du lien : une confirmation, jamais une consommation à l’affichage', () => {
   const arrivee = (etat: (typeof ETATS_DE_CONSOMMATION)[number] | null) =>
-    renderToStaticMarkup(<EcranArrivee etat={etat} action={rien} />);
+    renderToStaticMarkup(createElement(EcranArrivee, { etat, action: rien }));
 
   it('REQ-SEC-001 : un formulaire et un bouton de confirmation, aucun message avant l’envoi', () => {
     const h = arrivee(null);
