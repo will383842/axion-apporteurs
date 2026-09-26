@@ -13,8 +13,20 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node"],
+    "isolatedModules": true,
+    "allowJs": false,
+    "incremental": false,
+    "plugins": [{ "name": "next" }]
   },
-  "include": ["scripts/**/*.ts", "src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"],
+  "include": [
+    "scripts/**/*.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
   "exclude": ["node_modules", "docs", ".next", "dist"]
 }
