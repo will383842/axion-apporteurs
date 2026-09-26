@@ -17,6 +17,9 @@
  * en code non nul — c'est le témoin à deux faces.
  */
 import { describe, it, expect } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import config, { PROFILS_A11Y, PROJETS } from '../../playwright.config';
 import {
   SURFACE_PIEGE,
@@ -39,6 +42,29 @@ describe('REQ-QA-016 — les projets Playwright', () => {
     expect(projets.get(PROJETS.mobileChrome)?.use?.isMobile).toBe(true);
     expect(projets.get(PROJETS.bureau)?.use?.isMobile).toBe(false);
     expect([...PROFILS_A11Y]).toEqual([PROJETS.mobileSafari, PROJETS.bureau]);
+  });
+
+  it('REQ-QA-016 : la liste des parcours est LUE sur le disque — un bac posé ailleurs est énuméré, sous-dossiers compris', () => {
+    const racine = mkdtempSync(join(tmpdir(), 'uxp003-'));
+    try {
+      for (const f of [
+        'espace/deposer.spec.ts',
+        'espace/profil/editer.spec.ts',
+        'console/lot.spec.ts',
+      ]) {
+        mkdirSync(join(racine, 'tests/e2e', f, '..'), { recursive: true });
+        writeFileSync(join(racine, 'tests/e2e', f), '');
+      }
+      writeFileSync(join(racine, 'tests/e2e/espace/aide.ts'), '');
+      expect(specsDuDisque('tests/e2e', racine).sort()).toEqual([
+        'tests/e2e/console/lot.spec.ts',
+        'tests/e2e/espace/deposer.spec.ts',
+        'tests/e2e/espace/profil/editer.spec.ts',
+      ]);
+      expect(specsSansProjet(config, specsDuDisque('tests/e2e', racine))).toEqual([]);
+    } finally {
+      rmSync(racine, { recursive: true, force: true });
+    }
   });
 
   it('REQ-QA-016 : un spec de parcours d’espace sans projet mobile fait rougir — la liste est dérivée du disque', () => {

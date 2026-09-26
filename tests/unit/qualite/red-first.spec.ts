@@ -19,6 +19,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   unlinkSync,
@@ -46,7 +47,7 @@ const vert: Execution = { code: 0, sortie: 'Tests  1 passed (1)' };
 
 function univers(
   nouveaux: { chemin: string; texte: string; execution: Execution }[],
-  horsVitest: string[] = []
+  horsVitest: string[]
 ): Univers {
   const parChemin = new Map(nouveaux.map((n) => [n.chemin, n.execution]));
   return {
@@ -64,10 +65,13 @@ function univers(
 describe('REQ-CPL-022 — la décision', () => {
   it('REQ-CPL-022 : un test nouveau déjà VERT contre main fait sortir la garde en non nul, et la sortie le nomme', () => {
     const d = decider(
-      univers([
-        { chemin: 'tests/unit/a.spec.ts', texte: "it('a', () => {});", execution: vert },
-        { chemin: 'tests/unit/b.spec.ts', texte: "it('b', () => {});", execution: rouge },
-      ])
+      univers(
+        [
+          { chemin: 'tests/unit/a.spec.ts', texte: "it('a', () => {});", execution: vert },
+          { chemin: 'tests/unit/b.spec.ts', texte: "it('b', () => {});", execution: rouge },
+        ],
+        []
+      )
     );
     expect(d.code).toBe(1);
     expect(d.fautes.map((f) => [f.famille, f.chemin])).toEqual([
@@ -79,10 +83,13 @@ describe('REQ-CPL-022 — la décision', () => {
 
   it('REQ-CPL-022 : tous les tests nouveaux rougissent contre main — la garde sort en 0 et imprime le compte jugé', () => {
     const d = decider(
-      univers([
-        { chemin: 'tests/unit/a.spec.ts', texte: "it('a', () => {});", execution: rouge },
-        { chemin: 'tests/unit/b.spec.ts', texte: "it('b', () => {});", execution: rouge },
-      ])
+      univers(
+        [
+          { chemin: 'tests/unit/a.spec.ts', texte: "it('a', () => {});", execution: rouge },
+          { chemin: 'tests/unit/b.spec.ts', texte: "it('b', () => {});", execution: rouge },
+        ],
+        []
+      )
     );
     expect(d.code).toBe(0);
     expect(d.fautes).toEqual([]);
@@ -91,7 +98,7 @@ describe('REQ-CPL-022 — la décision', () => {
 
   it('REQ-CPL-022 : @no-red-first suivi d’une justification exempte le fichier, sans l’exécuter, et l’imprime', () => {
     const texte = `// ${MARQUEUR}: caractérise un comportement déjà livré par la PR 59, avant son extraction\nit('a', () => {});`;
-    const d = decider(univers([{ chemin: 'tests/unit/a.spec.ts', texte, execution: vert }]));
+    const d = decider(univers([{ chemin: 'tests/unit/a.spec.ts', texte, execution: vert }], []));
     expect(d.code).toBe(0);
     expect(d.lignes.join('\n')).toContain('caractérise un comportement déjà livré');
     expect(justificationDe(texte)).toContain('PR 59');
@@ -99,22 +106,53 @@ describe('REQ-CPL-022 — la décision', () => {
 
   it('REQ-CPL-022 : @no-red-first sans justification, ou d’une justification trop courte, est un refus nommé', () => {
     for (const texte of [`// ${MARQUEUR}\nit('a', () => {});`, `// ${MARQUEUR}: parce que\n`]) {
-      const d = decider(univers([{ chemin: 'tests/unit/a.spec.ts', texte, execution: rouge }]));
+      const d = decider(univers([{ chemin: 'tests/unit/a.spec.ts', texte, execution: rouge }], []));
       expect(d.code, texte).toBe(1);
       expect(d.fautes.map((f) => f.famille)).toEqual(['no_red_first_sans_justification']);
     }
     expect(justificationDe("it('a', () => {});")).toBeUndefined();
   });
 
+  it('REQ-CPL-022 : la justification compte AU MOINS vingt caractères — dix-neuf refusés, vingt admis', () => {
+    // Le seuil est écrit ICI en toutes lettres : le dériver de la garde laisserait passer sa mutation.
+    const dixNeuf = 'a'.repeat(19);
+    const vingt = 'a'.repeat(20);
+    expect(justificationDe(`// ${MARQUEUR}: ${dixNeuf}`)).toBeNull();
+    expect(justificationDe(`// ${MARQUEUR}: ${vingt}`)).toBe(vingt);
+    const refuse = decider(
+      univers(
+        [
+          {
+            chemin: 'tests/unit/a.spec.ts',
+            texte: `// ${MARQUEUR}: ${dixNeuf}\n`,
+            execution: vert,
+          },
+        ],
+        []
+      )
+    );
+    expect(refuse.fautes.map((f) => f.famille)).toEqual(['no_red_first_sans_justification']);
+    const admis = decider(
+      univers(
+        [{ chemin: 'tests/unit/a.spec.ts', texte: `// ${MARQUEUR}: ${vingt}\n`, execution: vert }],
+        []
+      )
+    );
+    expect(admis.code).toBe(0);
+  });
+
   it('REQ-CPL-022 : un fichier que main n’a pas pu exécuter (aucun test trouvé) n’est pas un rouge — refus nommé', () => {
     const d = decider(
-      univers([
-        {
-          chemin: 'tests/unit/a.spec.ts',
-          texte: "it('a', () => {});",
-          execution: { code: 1, sortie: 'No test files found, exiting with code 1' },
-        },
-      ])
+      univers(
+        [
+          {
+            chemin: 'tests/unit/a.spec.ts',
+            texte: "it('a', () => {});",
+            execution: { code: 1, sortie: 'No test files found, exiting with code 1' },
+          },
+        ],
+        []
+      )
     );
     expect(d.code).toBe(1);
     expect(d.fautes.map((f) => f.famille)).toEqual(['non_execute_sur_main']);
@@ -206,11 +244,44 @@ describe('REQ-CPL-022 — le binaire, sur un dépôt git jetable', () => {
     );
     git('add', '-A');
     git('commit', '-q', '-m', 'test et code');
+    const avant = new Set(readdirSync(tmpdir()).filter((d) => d.startsWith('red-first-')));
     const s = lancer();
     console.log(s.sortie.trim().split('\n').slice(-4).join('\n'));
     expect(s.code).toBe(0);
     expect(s.sortie).toContain('tests/produit.spec.ts');
     expect(git('worktree', 'list').trim().split('\n')).toHaveLength(1);
+    // Le dossier temporaire PARENT de l'arbre est retiré aussi, pas seulement l'arbre.
+    const laisses = readdirSync(tmpdir()).filter(
+      (d) => d.startsWith('red-first-') && !avant.has(d)
+    );
+    expect(laisses, 'dossier red-first-* laissé dans le répertoire temporaire').toEqual([]);
+  }, 200_000);
+
+  it('REQ-CPL-022 : un test DÉPLACÉ puis réécrit est jugé comme nouveau — un renommage ne sort pas du champ', () => {
+    git('checkout', '-q', 'main');
+    ecrire(
+      'tests/ancien.spec.ts',
+      "import { it, expect } from 'vitest';\nimport { somme } from '../src/somme.mjs';\n" +
+        "it('somme', () => expect(somme(2, 2)).toBe(4));\n"
+    );
+    git('add', '-A');
+    git('commit', '-q', '-m', 'un test sur main');
+    git('checkout', '-q', '-b', 'deplace', 'main');
+    git('mv', 'tests/ancien.spec.ts', 'tests/deplace.spec.ts');
+    ecrire(
+      'tests/deplace.spec.ts',
+      "import { it, expect } from 'vitest';\nimport { somme } from '../src/somme.mjs';\n" +
+        "it('somme', () => expect(somme(2, 3)).toBe(5));\n"
+    );
+    git('add', '-A');
+    git('commit', '-q', '-m', 'test deplace et reecrit');
+    // Sans `--no-renames`, git le voit RENOMMÉ (statut R), et la garde ne le juge pas.
+    expect(git('diff', '--name-status', 'main...HEAD')).toMatch(/^R\d+/);
+    const s = lancer();
+    console.log(s.sortie.trim().split('\n').slice(-4).join('\n'));
+    expect(s.code).toBe(1);
+    expect(s.sortie).toContain('test_deja_vert_sur_main');
+    expect(s.sortie).toContain('tests/deplace.spec.ts');
   }, 200_000);
 });
 

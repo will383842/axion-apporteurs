@@ -83,6 +83,31 @@ function lancerEntree(cwd: string, poses: Record<string, string>): Sortie {
   return { code: r.status, stdout: r.stdout ?? '', stderr: r.stderr ?? '', ms: Date.now() - debut };
 }
 
+/** Ce qui s'exécute ou se déploie : le code, les scripts, l'image, les workflows, les runbooks. */
+function sExecuteOuSeDeploie(f: string): boolean {
+  return (
+    /^(src|scripts|\.github|docs\/runbooks|prisma)\//.test(f) ||
+    /^(Dockerfile|docker-entrypoint\.sh|package\.json|next\.config\.ts)$/.test(f)
+  );
+}
+
+/**
+ * La règle de `.dockerignore` pour un fichier de la RACINE du contexte : chaque motif (`*` hors
+ * `/`), `!` qui réintègre, et la DERNIÈRE ligne qui correspond l'emporte — la sémantique de Docker.
+ */
+function exclusParDockerignore(regles: string, fichier: string): boolean {
+  let exclu = false;
+  for (const brute of regles.split(/\r?\n/)) {
+    const l = brute.trim();
+    if (l === '' || l.startsWith('#')) continue;
+    const reintegre = l.startsWith('!');
+    const motif = (reintegre ? l.slice(1) : l).replace(/^\//, '');
+    const echappe = motif.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*');
+    if (new RegExp(`^${echappe}$`).test(fichier)) exclu = !reintegre;
+  }
+  return exclu;
+}
+
 async function lire(r: Response): Promise<{ statut: number; corps: EtatDisponibilite }> {
   return { statut: r.status, corps: (await r.json()) as EtatDisponibilite };
 }
@@ -113,11 +138,18 @@ describe('REQ-QA-019 — l’entrée de l’image migre en bloquant, et son éch
     const RUNBOOK = 'docs/runbooks/retour-arriere.md';
     const admis = new Set(['docker-entrypoint.sh', RUNBOOK]);
     // Ce qui s'exécute ou se déploie : le code, les scripts, l'image, les workflows, les runbooks.
-    const executables = fichiersSuivis().filter(
-      (f) =>
-        /^(src|scripts|\.github|docs\/runbooks|prisma)\//.test(f) ||
-        /^(Dockerfile|docker-entrypoint\.sh|package\.json|next\.config\.ts)$/.test(f)
-    );
+    const executables = fichiersSuivis().filter(sExecuteOuSeDeploie);
+    // Les fichiers de déploiement qui n'existent pas encore sont DANS le périmètre dès aujourd'hui :
+    // le jour où l'un d'eux naît, la garde le lit sans qu'on pense à l'y ajouter.
+    for (const futur of [
+      'docker-compose.yml',
+      'docker-compose.production.yml',
+      'docker-compose.prod.yaml',
+      'Dockerfile.coolify-pull',
+    ]) {
+      expect(sExecuteOuSeDeploie(futur), futur).toBe(true);
+    }
+    expect(sExecuteOuSeDeploie('docs/journal/2026-09-pr-130.md')).toBe(false);
     console.log(`${executables.length} fichiers suivis confrontés.`);
     expect(executables.length).toBeGreaterThan(20);
     expect(executables).toContain(RUNBOOK);
@@ -127,6 +159,43 @@ describe('REQ-QA-019 — l’entrée de l’image migre en bloquant, et son éch
     expect(porteurs.filter((f) => !admis.has(f))).toEqual([]);
     expect(porteurs.sort()).toEqual([...admis].sort());
     expect(readFileSync(join(RACINE, RUNBOOK), 'utf8')).toContain('SKIP_MIGRATE=1');
+  });
+
+  it('REQ-QA-019 : la migration est bornée par un délai qui TUE : timeout -k 5 55', () => {
+    const entree = readFileSync(ENTREE, 'utf8');
+    // Sans `-k`, une migration qui ignore SIGTERM survit au délai, et la sortie en moins de 60 s
+    // n'est plus garantie : `-k 5` envoie SIGKILL cinq secondes après.
+    expect(entree).toMatch(/\btimeout -k 5 "\$DELAI_MIGRATION_S" node /);
+    expect(entree).toMatch(/^DELAI_MIGRATION_S=55$/m);
+  });
+
+  it('REQ-QA-030 : aucun fichier d’environnement du poste n’entre dans l’image — .dockerignore exclut .env*, garde .env.example', () => {
+    const regles = readFileSync(join(RACINE, '.dockerignore'), 'utf8');
+    for (const f of ['.env', '.env.local', '.env.production', '.env.development.local']) {
+      expect(exclusParDockerignore(regles, f), f).toBe(true);
+    }
+    expect(exclusParDockerignore(regles, '.env.example')).toBe(false);
+    // Témoin : la même règle sans sa ligne `.env*` laisse entrer `.env.local` — `next start` le
+    // chargerait avant `register()`, et `exigerDemarrage` jugerait un environnement du poste.
+    const sansLaLigne = regles
+      .split(/\r?\n/)
+      .filter((l) => l.trim() !== '.env*')
+      .join('\n');
+    expect(exclusParDockerignore(sansLaLigne, '.env.local')).toBe(false);
+  });
+
+  it('REQ-QA-019 : le code de l’image appartient à root — seul le cache de Next est écrit par node', () => {
+    const lignes = readFileSync(join(RACINE, 'Dockerfile'), 'utf8').split(/\r?\n/);
+    const execution = lignes.slice(lignes.findIndex((l) => /^FROM .* AS execution$/.test(l)));
+    const copies = execution.filter((l) => /^COPY\b/.test(l));
+    expect(copies.length).toBeGreaterThan(0);
+    for (const c of copies) expect(c, c).not.toContain('--chown');
+    const chowns = execution.filter((l) => /\bchown\b/.test(l));
+    expect(chowns).toHaveLength(1);
+    expect(chowns[0]).toMatch(/chown node:node \/app\/\.next\/cache$/);
+    expect(execution.indexOf('USER node')).toBeGreaterThan(
+      execution.findIndex((l) => /\bchown\b/.test(l))
+    );
   });
 
   it('REQ-QA-020 : le HEALTHCHECK de l’image interroge readyz, jamais livez', () => {
@@ -160,14 +229,14 @@ describe('REQ-QA-020 — readyz nomme le sous-système en défaut, livez répond
     await cache?.arreter();
   }, 120_000);
 
-  async function juger(env: Record<string, string | undefined>, dossierMigrations = MIGRATIONS) {
+  async function juger(env: Record<string, string | undefined>, dossierMigrations: string) {
     const vie = await livez();
     expect(vie.status, 'livez dans cette situation').toBe(200);
     return lire(await repondreDisponibilite({ env, dossierMigrations }));
   }
 
   it('REQ-QA-020 : tout est en place — readyz 200, chaque sous-système ok, livez 200', async () => {
-    const { statut, corps } = await juger(sain);
+    const { statut, corps } = await juger(sain, MIGRATIONS);
     expect(statut).toBe(200);
     expect(corps.pret).toBe(true);
     expect(corps.enDefaut).toEqual([]);
@@ -175,7 +244,7 @@ describe('REQ-QA-020 — readyz nomme le sous-système en défaut, livez répond
   });
 
   it('REQ-QA-020 : base coupée — readyz 503 et nomme la base ; le cache et l’environnement restent ok', async () => {
-    const { statut, corps } = await juger({ ...sain, DATABASE_URL: BASE_COUPEE });
+    const { statut, corps } = await juger({ ...sain, DATABASE_URL: BASE_COUPEE }, MIGRATIONS);
     expect(statut).toBe(503);
     expect(corps.pret).toBe(false);
     expect(corps.enDefaut).toContain('base');
@@ -185,7 +254,7 @@ describe('REQ-QA-020 — readyz nomme le sous-système en défaut, livez répond
   });
 
   it('REQ-QA-020 : cache coupé — readyz 503 et nomme le cache, lui seul', async () => {
-    const { statut, corps } = await juger({ ...sain, REDIS_URL: CACHE_COUPE });
+    const { statut, corps } = await juger({ ...sain, REDIS_URL: CACHE_COUPE }, MIGRATIONS);
     expect(statut).toBe(503);
     expect(corps.enDefaut).toEqual(['cache']);
   });
@@ -203,13 +272,13 @@ describe('REQ-QA-020 — readyz nomme le sous-système en défaut, livez répond
   it('REQ-QA-020 : environnement invalide — readyz 503 et nomme l’environnement, lui seul', async () => {
     const env: Record<string, string | undefined> = { ...sain };
     delete env[NOMS_DES_SECRETS[0] ?? ''];
-    const { statut, corps } = await juger(env);
+    const { statut, corps } = await juger(env, MIGRATIONS);
     expect(statut).toBe(503);
     expect(corps.enDefaut).toEqual(['environnement']);
   });
 
   it('REQ-QA-020 : tout remis en place — readyz rend de nouveau 200', async () => {
-    const { statut, corps } = await juger(sain);
+    const { statut, corps } = await juger(sain, MIGRATIONS);
     expect(statut).toBe(200);
     expect(corps.enDefaut).toEqual([]);
   });

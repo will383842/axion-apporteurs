@@ -108,8 +108,15 @@ const refusImprimes = (stderr: string): string[] =>
     .filter((l) => l.startsWith('  '))
     .map((l) => l.trim());
 
-/** Les variables REQUISES, dérivées : toutes celles du schéma, moins celles qu'il déclare facultatives. */
-const REQUISES = NOMS_DES_VARIABLES.filter((n) => !NOMS_FACULTATIFS.includes(n));
+/**
+ * La configuration REQUISE au démarrage, écrite ICI en toutes lettres : la dériver de
+ * `NOMS_FACULTATIFS` ferait dépendre l'attente du code sous test, et une base rendue facultative
+ * dans le schéma resterait verte (mutant tenu par la revue de mutation de la PR 130). Les secrets
+ * sont tous requis (SEC-01) ; leurs noms restent lus dans le schéma, que `env-boot.spec.ts` confronte
+ * au texte de REQ-SEC-028.
+ */
+const CONFIGURATION_REQUISE = ['DATABASE_URL', 'REDIS_URL', 'NOTIFY_SINK'];
+const REQUISES = [...NOMS_DES_SECRETS, ...CONFIGURATION_REQUISE];
 
 describe('REQ-QA-030 — le schéma porte toutes les variables, et le démarrage réel les exige', () => {
   it('REQ-QA-030 : le schéma porte les secrets ET la configuration, sans doublon, et le code ne lit rien hors de lui', () => {
@@ -158,6 +165,8 @@ describe('REQ-QA-030 — le schéma porte toutes les variables, et le démarrage
 
   it('REQ-QA-030 : chaque variable requise retirée tour à tour — le démarrage réel sort en non nul et la nomme, elle seule', () => {
     expect(REQUISES.length).toBeGreaterThan(NOMS_DES_SECRETS.length);
+    // Et le schéma ne peut pas déclarer facultatif ce que le démarrage exige.
+    expect(NOMS_FACULTATIFS.filter((n) => REQUISES.includes(n))).toEqual([]);
     let confrontees = 0;
     for (const nom of REQUISES) {
       const env = environnementComplet();

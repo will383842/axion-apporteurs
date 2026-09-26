@@ -1717,7 +1717,8 @@
         "scripts/env/documenter.ts",
         "package.json",
         "src/instrumentation.ts",
-        "src/server/sante/disponibilite.ts"
+        "src/server/sante/disponibilite.ts",
+        "tests/unit/qualite/sondes-client-unique.spec.ts"
       ],
       "schema": true,
       "sensible": [],
