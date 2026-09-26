@@ -13,7 +13,7 @@
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 115 | 88.85 | 40 |
+| 0 — Socle technique | 115 | 88.85 | 43 |
 | 1 — Operationnel | 62 | 48.00 | 0 |
 | 2 — Argent | 45 | 33.50 | 0 |
 | 3 — Pilotage et conformite | 28 | 25.25 | 0 |
@@ -532,7 +532,7 @@ Couvre : `REQ-QA-011`, `REQ-QA-013`
 
 **Tests.** `tests/unit/qualite/semgrep-regles-maison.spec.ts`
 
-### QA-T30 — Stryker sur `src/domain` : seuil aligné sur la mesure puis ≥ 80 % bloquant sur fichiers touchés, complet en nightly
+### QA-T30 — Stryker sur `src/domain` : seuil aligné sur la mesure puis ≥ 80 % bloquant sur fichiers touchés, complet en nightly ✅ **fusionnee**
 
 `0.5 j` · zone `qualite` · depend de `QA-T01`
 
@@ -542,7 +542,7 @@ Couvre : `REQ-QA-002`
 
 **Tests.** `tests/unit/qualite/score-de-mutation.spec.ts`
 
-### CPL-T22 — Job CI « red-first »
+### CPL-T22 — Job CI « red-first » ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `QA-T01`
 
@@ -852,7 +852,7 @@ Couvre : `REQ-UX-008`, `REQ-UX-017`, `REQ-UX-034`
 
 **Tests.** `tests/unit/espace/maquettes-validees.spec.ts`
 
-### UX-P0-03 — Harnais a11y et mobile
+### UX-P0-03 — Harnais a11y et mobile ✅ **fusionnee**
 
 `1 j` · zone `espace` · depend de `QA-T01`
 
