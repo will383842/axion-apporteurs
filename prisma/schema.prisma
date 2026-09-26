@@ -177,11 +177,32 @@ model Apporteur {
   emailChiffre Bytes?  @map("email_chiffre")
   emailHash    String? @unique @map("email_hash") @db.Char(64)
 
+  /// Nom, prénom et téléphone (SEC-04, partners/ADR-0022) : blocs écrits par `colonnesPii`, empreinte
+  /// du téléphone par `empreinteRecherche('telephone', …)`. Jamais un clair. Le bloc et l'empreinte
+  /// du téléphone vont ensemble (CHECK en SQL brut) ; l'empreinte n'est PAS unique : deux personnes
+  /// peuvent partager un numéro de standard. Aucune empreinte de nom ni de prénom.
+  nomChiffre       Bytes?  @map("nom_chiffre")
+  prenomChiffre    Bytes?  @map("prenom_chiffre")
+  telephoneChiffre Bytes?  @map("telephone_chiffre")
+  phoneHash        String? @map("phone_hash") @db.Char(64)
+
+  /// Coupe d'un cran toutes les sessions du compte (REQ-SEC-003). Incrémentée PAR LA BASE à la
+  /// résiliation et au changement de courriel, jamais à la suspension, jamais décrémentée
+  /// (déclencheur `apporteurs_version_de_session`, SQL brut).
+  sessionVersion Int @default(0) @map("session_version")
+
+  /// L'acceptation de la politique de confidentialité (REQ-JUR-025) : la date et la version, ensemble
+  /// ou aucune (CHECK en SQL brut).
+  confidentialiteAccepteeAt DateTime? @map("confidentialite_acceptee_at") @db.Timestamptz(3)
+  confidentialiteVersion    String?   @map("confidentialite_version") @db.VarChar(32)
+
   jetonsDepot          JetonDepot[]
   identitesFacturation IdentiteFacturation[]
   liensMagiques        LienMagique[]
   sessionsEspace       SessionEspace[]
+  changementsCourriel  ChangementCourriel[]
 
+  @@index([phoneHash])
   @@map("apporteurs")
 }
 
@@ -204,16 +225,21 @@ model JetonDepot {
 /// sous MAGIC_LINK_SECRET, domaine séparé, avec le `kid` de ce secret (partners/ADR-0013). Usage
 /// unique : une ligne consommée ou annulée est gelée (déclencheur `liens_magiques_usage_unique`).
 model LienMagique {
-  id          String         @id @default(uuid()) @db.Uuid
-  apporteurId String         @map("apporteur_id") @db.Uuid
-  apporteur   Apporteur      @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
-  tokenHash   String         @unique @map("token_hash") @db.Char(64)
-  kid         String         @db.Char(8)
-  creeAt      DateTime       @map("cree_at") @db.Timestamptz(3)
-  expireAt    DateTime       @map("expire_at") @db.Timestamptz(3)
-  consommeAt  DateTime?      @map("consomme_at") @db.Timestamptz(3)
-  annuleAt    DateTime?      @map("annule_at") @db.Timestamptz(3)
-  session     SessionEspace?
+  id             String         @id @default(uuid()) @db.Uuid
+  apporteurId    String         @map("apporteur_id") @db.Uuid
+  apporteur      Apporteur      @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  tokenHash      String         @unique @map("token_hash") @db.Char(64)
+  kid            String         @db.Char(8)
+  creeAt         DateTime       @map("cree_at") @db.Timestamptz(3)
+  expireAt       DateTime       @map("expire_at") @db.Timestamptz(3)
+  consommeAt     DateTime?      @map("consomme_at") @db.Timestamptz(3)
+  annuleAt       DateTime?      @map("annule_at") @db.Timestamptz(3)
+  /// Le code à six chiffres du courriel (REQ-UX-015) : HMAC-SHA-256 sous MAGIC_LINK_SECRET, domaine
+  /// `partners.code.v1` (partners/ADR-0013, décision 14). Figé une fois posé.
+  codeHash       String?        @map("code_hash") @db.Char(64)
+  /// Essais de code, entre 0 et 5, jamais décrémentés (CHECK et déclencheur `liens_magiques_code_fige`).
+  tentativesCode Int            @default(0) @map("tentatives_code")
+  session        SessionEspace?
 
   @@index([apporteurId])
   @@map("liens_magiques")
@@ -222,19 +248,44 @@ model LienMagique {
 /// Une session de l'espace apporteur (SEC-03, REQ-SEC-001, REQ-SEC-003). Seule l'EMPREINTE du jeton
 /// se stocke : HMAC-SHA-256 sous SESSION_SECRET, domaine séparé. Une session par lien au plus.
 model SessionEspace {
-  id            String      @id @default(uuid()) @db.Uuid
-  apporteurId   String      @map("apporteur_id") @db.Uuid
-  apporteur     Apporteur   @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
-  lienMagiqueId String      @unique @map("lien_magique_id") @db.Uuid
-  lienMagique   LienMagique @relation(fields: [lienMagiqueId], references: [id], onDelete: Restrict)
-  tokenHash     String      @unique @map("token_hash") @db.Char(64)
-  kid           String      @db.Char(8)
-  ipHash        String?     @map("ip_hash") @db.Char(16)
-  creeAt        DateTime    @map("cree_at") @db.Timestamptz(3)
-  expireAt      DateTime    @map("expire_at") @db.Timestamptz(3)
+  id             String      @id @default(uuid()) @db.Uuid
+  apporteurId    String      @map("apporteur_id") @db.Uuid
+  apporteur      Apporteur   @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  lienMagiqueId  String      @unique @map("lien_magique_id") @db.Uuid
+  lienMagique    LienMagique @relation(fields: [lienMagiqueId], references: [id], onDelete: Restrict)
+  tokenHash      String      @unique @map("token_hash") @db.Char(64)
+  kid            String      @db.Char(8)
+  ipHash         String?     @map("ip_hash") @db.Char(16)
+  creeAt         DateTime    @map("cree_at") @db.Timestamptz(3)
+  expireAt       DateTime    @map("expire_at") @db.Timestamptz(3)
+  /// SEC-04 (REQ-SEC-003) : la révocation, définitive ; la dernière vue ; la version de l'apporteur
+  /// COPIÉE par la base à l'ouverture (déclencheur `sessions_espace_version_copiee`), jamais réécrite.
+  revoqueAt      DateTime?   @map("revoque_at") @db.Timestamptz(3)
+  derniereVueAt  DateTime?   @map("derniere_vue_at") @db.Timestamptz(3)
+  sessionVersion Int         @default(0) @map("session_version")
 
   @@index([apporteurId])
   @@map("sessions_espace")
+}
+
+/// Un changement de courriel en cours ou clos (SEC-04, REQ-CPL-019, REQ-SEC-004). La NOUVELLE adresse,
+/// chiffrée et empreinte (`colonnesPii`) ; le jeton de confirmation envoyé à l'ANCIENNE adresse en
+/// empreinte HMAC sous MAGIC_LINK_SECRET, domaine `partners.changement-courriel.v1`, `kid` stocké.
+/// Un seul changement en cours par apporteur (index unique partiel en SQL brut).
+model ChangementCourriel {
+  id           String    @id @default(uuid()) @db.Uuid
+  apporteurId  String    @map("apporteur_id") @db.Uuid
+  apporteur    Apporteur @relation(fields: [apporteurId], references: [id], onDelete: Restrict)
+  emailChiffre Bytes     @map("email_chiffre")
+  emailHash    String    @map("email_hash") @db.Char(64)
+  tokenHash    String    @unique @map("token_hash") @db.Char(64)
+  kid          String    @db.Char(8)
+  demandeAt    DateTime  @map("demande_at") @db.Timestamptz(3)
+  confirmeAt   DateTime? @map("confirme_at") @db.Timestamptz(3)
+  annuleAt     DateTime? @map("annule_at") @db.Timestamptz(3)
+
+  @@index([apporteurId])
+  @@map("changements_courriel")
 }
 
 /// Une identité de facturation DATÉE, valable sur [debutAt, finAt) (REQ-CPL-005). Un relevé qui
