@@ -2175,7 +2175,8 @@
       "etape": 9,
       "phase": -1,
       "taches": [
-        "INT-T01a"
+        "INT-T01a",
+        "INT-T27-A"
       ]
     },
     {
@@ -4624,7 +4625,8 @@
         "INT-T01c",
         "INT-T05",
         "INT-T22",
-        "INT-T26"
+        "INT-T26",
+        "INT-T27-A"
       ]
     },
     {

@@ -2888,7 +2888,7 @@
       "issue": null,
       "attempts": 0,
       "motif": null,
-      "acceptance": "TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot). (1) La session est un cookie a prefixe `__Host-`, inaccessible au script, transmis uniquement en TLS, en politique de site `Lax`, d'une duree de 30 jours, ENREGISTRE EN BASE avec son empreinte, sa date de revocation, sa derniere vue et l'empreinte de l'adresse reseau (REQ-SEC-003). Une session qu'on ne peut pas enumerer est une session qu'on ne peut pas revoquer. (2) `sessionVersion` est incremente a toute resiliation, a tout changement d'adresse de courriel ou de coordonnee bancaire et a toute revocation pour motif de securite (contrat art. 3.8), et INVALIDE IMMEDIATEMENT toutes les sessions ouvertes du compte — la verification se fait a chaque requete, pas au prochain renouvellement. Une SUSPENSION ne l'incremente PAS et ne revoque aucune session : l'apporteur suspendu garde l'acces a son espace, seuls ses nouveaux depots sont refuses (REQ-SEC-032, REQ-SEC-019, HYP-SEC03-ACCES) ; le temoin le prouve : une session ouverte, puis une suspension posee, franchit encore la requete suivante. (3) Toute modification de coordonnee bancaire, d'adresse de courriel ou de telephone exige un RELEVEMENT : un lien de connexion consomme depuis moins de 10 minutes (REQ-SEC-004). Le relevement porte sur l'ACTION, pas sur la page qui l'affiche. (4) TEMOIN A DEUX FACES : une session ouverte, puis `sessionVersion` incremente, ne franchit plus la requete SUIVANTE — le test mesure la requete suivante, jamais un delai ; sans incrementation, elle passe. (5) TEMOIN A DEUX FACES sur le relevement : une modification de coordonnee bancaire tentee avec un lien consomme depuis plus de 10 minutes est refusee et nomme le motif ; la meme avec un lien frais passe. (6) SCHEMA (partners/ADR-0022 ; extension de SEC-04, en plus de celle de `sessions_espace` decidee par GOV-100) : sur `apporteurs`, `sessionVersion` Int defaut 0 (CHECK `>= 0`, REQ-SEC-003), et `confidentialiteAccepteeAt` avec `confidentialiteVersion` VarChar(32), presentes ensemble (CHECK), colonnes de REQ-JUR-025 ecrites par UX-P1-08 ; sur `liens_magiques`, `codeHash` Char(64) nullable (HMAC-SHA-256 sous `MAGIC_LINK_SECRET`, domaine `partners.code.v1`, partners/ADR-0013 decision 14) et `tentativesCode` Int defaut 0 (CHECK entre 0 et 5 ; au-dela de 5 essais le lien est consomme comme echoue, REQ-UX-015, UX-P1-04) ; table `changements_courriel` (REQ-CPL-019, REQ-SEC-004, UX-P1-09) : `apporteurId`, la NOUVELLE adresse en `emailChiffre` et `emailHash` (`colonnesPii`), `tokenHash` Char(64) unique (HMAC sous `MAGIC_LINK_SECRET`, domaine `partners.changement-courriel.v1`), `kid` Char(8), `demandeAt`, `confirmeAt`, `annuleAt` ; un seul changement en cours par apporteur (index unique partiel `WHERE confirme_at IS NULL AND annule_at IS NULL`), jamais confirme et annule a la fois. L'effet, apres le delai SSOT, recopie l'empreinte et le bloc chiffre dans `apporteurs` et incremente `session_version` dans la meme transaction. Module du semeur `prisma/seed/05-sessions.ts`.",
+      "acceptance": "TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot). (1) La session est un cookie a prefixe `__Host-`, inaccessible au script, transmis uniquement en TLS, en politique de site `Lax`, d'une duree de 30 jours, ENREGISTRE EN BASE avec son empreinte, sa date de revocation, sa derniere vue et l'empreinte de l'adresse reseau (REQ-SEC-003). Une session qu'on ne peut pas enumerer est une session qu'on ne peut pas revoquer. (2) `sessionVersion` est incremente a toute resiliation, a tout changement d'adresse de courriel ou de coordonnee bancaire et a toute revocation pour motif de securite (contrat art. 3.8), et INVALIDE IMMEDIATEMENT toutes les sessions ouvertes du compte — la verification se fait a chaque requete, pas au prochain renouvellement. Une SUSPENSION ne l'incremente PAS et ne revoque aucune session : l'apporteur suspendu garde l'acces a son espace, seuls ses nouveaux depots sont refuses (REQ-SEC-032, REQ-SEC-019, HYP-SEC03-ACCES) ; le temoin le prouve : une session ouverte, puis une suspension posee, franchit encore la requete suivante. (3) Toute modification de coordonnee bancaire, d'adresse de courriel ou de telephone exige un RELEVEMENT : un lien de connexion consomme depuis moins de 10 minutes (REQ-SEC-004). Le relevement porte sur l'ACTION, pas sur la page qui l'affiche. (4) TEMOIN A DEUX FACES : une session ouverte, puis `sessionVersion` incremente, ne franchit plus la requete SUIVANTE — le test mesure la requete suivante, jamais un delai ; sans incrementation, elle passe. (5) TEMOIN A DEUX FACES sur le relevement : une modification de coordonnee bancaire tentee avec un lien consomme depuis plus de 10 minutes est refusee et nomme le motif ; la meme avec un lien frais passe. (6) SCHEMA (partners/ADR-0022 ; extension de SEC-04, en plus de celle de `sessions_espace` decidee par GOV-100) : sur `apporteurs`, `sessionVersion` Int defaut 0 (CHECK `>= 0`, REQ-SEC-003), et `confidentialiteAccepteeAt` avec `confidentialiteVersion` VarChar(32), presentes ensemble (CHECK), colonnes de REQ-JUR-025 ecrites par UX-P1-08 ; sur `liens_magiques`, `codeHash` Char(64) nullable (HMAC-SHA-256 sous `MAGIC_LINK_SECRET`, domaine `partners.code.v1`, partners/ADR-0013 decision 14) et `tentativesCode` Int defaut 0 (CHECK entre 0 et 5 ; au-dela de 5 essais le lien est consomme comme echoue, REQ-UX-015, UX-P1-04) ; table `changements_courriel` (REQ-CPL-019, REQ-SEC-004, UX-P1-09) : `apporteurId`, la NOUVELLE adresse en `emailChiffre` et `emailHash` (`colonnesPii`), `tokenHash` Char(64) unique (HMAC sous `MAGIC_LINK_SECRET`, domaine `partners.changement-courriel.v1`), `kid` Char(8), `demandeAt`, `confirmeAt`, `annuleAt` ; un seul changement en cours par apporteur (index unique partiel `WHERE confirme_at IS NULL AND annule_at IS NULL`), jamais confirme et annule a la fois. L'effet, apres le delai SSOT, recopie l'empreinte et le bloc chiffre dans `apporteurs` et incremente `session_version` dans la meme transaction. Module du semeur `prisma/seed/05-sessions.ts`. (7) COORDONNEES DE L'APPORTEUR (decision de l'orchestrateur du 2026-09-26 sur delegation de Will, partners/ADR-0022 : les colonnes que le cadrage confiait a SEC-03, fusionnee par la PR 134 avec le seul courriel, reviennent a SEC-04, qui migre deja `apporteurs`) : dans la MEME migration, sur `apporteurs`, `nomChiffre`, `prenomChiffre` et `telephoneChiffre` en Bytes nullables, et `phoneHash` Char(64) nullable, noms de `CHAMPS_PII` ; les blocs ne naissent que de `colonnesPii` et l'empreinte que de `empreinteRecherche('telephone', ...)` (garde `securite:schema-pii`), jamais un clair ; CHECK `phone_hash IS NULL OR phone_hash ~ '^[0-9a-f]{64}$'` et CHECK de completude `(telephone_chiffre IS NULL) = (phone_hash IS NULL)`, sur le modele du courriel pose par SEC-03 ; index NON unique sur `phone_hash` (le rattachement par telephone de REQ-EXT-009 cherche, il ne contraint pas : deux personnes peuvent partager un numero de standard) ; aucune empreinte de nom ni de prenom sur cette table. Nullables : les lignes naissent de la candidature (INT-T26) et de la saisie console (EXT-T03). TEMOIN : une ecriture de `telephoneChiffre` sans `phoneHash` est refusee par la base et nomme la contrainte ; le couple ecrit par `colonnesPii` passe.",
       "tests": {
         "REQ-SEC-003": [
           "tests/unit/securite/revocation.spec.ts"
@@ -3870,7 +3870,8 @@
         "src/server/securite/pii.ts",
         "src/server/integrations/recherche-entreprises/projection.ts",
         "src/domain/evenement/charges.ts",
-        "prisma/seed/10-attributions.ts"
+        "prisma/seed/10-attributions.ts",
+        "docs/GLOSSAIRE.md"
       ],
       "schema": true,
       "sensible": [
@@ -3919,7 +3920,8 @@
         "src/domaine/DM-08",
         "prisma/schema.prisma",
         "prisma/migrations/",
-        "src/domain/evenement/charges.ts"
+        "src/domain/evenement/charges.ts",
+        "docs/GLOSSAIRE.md"
       ],
       "schema": true,
       "sensible": [
@@ -4312,7 +4314,8 @@
       "zone": "domaine",
       "paths": [
         "src/domaine/DM-10-P",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "prisma/migrations/"
       ],
       "schema": true,
       "sensible": [
@@ -4352,7 +4355,9 @@
         "src/domaine/DM-11",
         "prisma/schema.prisma",
         "prisma/migrations/",
-        "tests/unit/domaine/kyc-reference-piece-rib.spec.ts"
+        "tests/unit/domaine/kyc-reference-piece-rib.spec.ts",
+        "src/domain/evenement/charges.ts",
+        "docs/GLOSSAIRE.md"
       ],
       "schema": true,
       "sensible": [
@@ -4410,7 +4415,8 @@
         "prisma/migrations/",
         "src/server/securite/pii.ts",
         "src/domain/evenement/charges.ts",
-        "prisma/seed/12-console-cas.ts"
+        "prisma/seed/12-console-cas.ts",
+        "docs/GLOSSAIRE.md"
       ],
       "schema": true,
       "sensible": [],
@@ -4528,7 +4534,10 @@
       "zone": "securite",
       "paths": [
         "src/securite/SEC-15",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "src/domain/evenement/charges.ts",
+        "docs/GLOSSAIRE.md"
       ],
       "schema": true,
       "sensible": [
@@ -4974,7 +4983,8 @@
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/domain/evenement/charges.ts",
-        "prisma/seed/13-candidatures.ts"
+        "prisma/seed/13-candidatures.ts",
+        "docs/GLOSSAIRE.md"
       ],
       "schema": true,
       "sensible": [],
@@ -5549,7 +5559,10 @@
       "zone": "domaine",
       "paths": [
         "src/domaine/DM-23",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "src/domain/evenement/charges.ts",
+        "docs/GLOSSAIRE.md"
       ],
       "schema": true,
       "sensible": [
@@ -7734,7 +7747,8 @@
         "prisma/schema.prisma",
         "prisma/migrations/",
         "src/server/securite/pii.ts",
-        "src/domain/evenement/charges.ts"
+        "src/domain/evenement/charges.ts",
+        "docs/GLOSSAIRE.md"
       ],
       "schema": true,
       "sensible": [
@@ -7745,6 +7759,7 @@
       "deps": [
         "DM-07",
         "DM-08",
+        "DM-12",
         "SEC-05",
         "UX-P0-01",
         "UX-P1-05"
@@ -7811,7 +7826,10 @@
       "zone": "espace",
       "paths": [
         "src/app/EXT-T03",
-        "prisma/schema.prisma"
+        "prisma/schema.prisma",
+        "prisma/migrations/",
+        "src/domain/evenement/charges.ts",
+        "docs/GLOSSAIRE.md"
       ],
       "schema": true,
       "sensible": [
@@ -11638,7 +11656,8 @@
         "docs/GLOSSAIRE.md",
         "docs/requirements.json",
         "docs/REQUIREMENTS.md",
-        "tests/unit/integration/contrat-v2-frontiere.spec.ts"
+        "tests/unit/integration/contrat-v2-frontiere.spec.ts",
+        "docs/adr/0023-route-des-coordonnees-de-candidature.md"
       ],
       "schema": true,
       "sensible": [
@@ -11687,6 +11706,7 @@
       "deps": [
         "SEC-06",
         "INT-T01c",
+        "INT-T27-A",
         "SEC-03",
         "DM-06"
       ],
@@ -11711,6 +11731,43 @@
         ]
       },
       "acceptance": "AUCUNE MIGRATION : elle écrit dans des tables créées ailleurs (partners/ADR-0022, une table un créateur). Cadrage de l'architecte du 2026-09-26. (1) Le travail de fond de SEC-06 traite `candidature.recue` : il crée l'`Apporteur` au statut `candidat` avec le snapshot FIGÉ de DM-06 (REQ-DM-035, REQ-QA-035), dans une seule transaction avec le passage de l'événement reçu à `traite`. (2) Il TIRE les coordonnées par la route de coordonnées d'axionia (INT-T01c, partners/ADR-0023) et les écrit par `colonnesPii` dans les colonnes chiffrées et les empreintes de `apporteurs` — jamais un clair en base ni au journal. (3) Il RATTACHE par `emailHash` puis `phoneHash` au lieu de créer un doublon (la règle de REQ-EXT-009, que EXT-T03 porte en phase 1 ; INT-T26 ne la cite pas, sans quoi la phase dérivée de l exigence passerait à 0) : une seconde candidature de la même personne ne crée aucune ligne `apporteurs`. (4) Échec de la route de coordonnées : l'événement reste `en_attente_dependance` (`dependance_ref = 'coordonnees:<candidatureId>'`) et est rejoué ; aucun apporteur sans adresse n'est créé. (5) TÉMOIN À DEUX FACES : la même candidature livrée deux fois laisse UNE ligne `apporteurs`, compte de lignes à l'appui ; une route de coordonnées en panne laisse zéro ligne et un événement en attente, puis la reprise en crée exactement une."
+    },
+    {
+      "id": "INT-T27-A",
+      "titre": "Route axionia des coordonnées d'un candidat émis vers Partners : HMAC, portée limitée aux candidatures émises, réponse fermée, journal sans clair",
+      "phase": 0,
+      "repo": "axionia",
+      "zone": "integration",
+      "paths": [
+        "axionia/src/app/api/partners/candidatures/[candidatureId]/coordonnees/route.ts",
+        "axionia/src/server/partners-sync/coordonnees.ts",
+        "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
+      ],
+      "schema": false,
+      "sensible": [
+        "rgpd"
+      ],
+      "deps": [
+        "INT-T02",
+        "INT-T01c"
+      ],
+      "reqs": [
+        "REQ-INT-032",
+        "REQ-INT-029"
+      ],
+      "hyp": [],
+      "externe": null,
+      "estimateDays": 1,
+      "statut": "a_faire",
+      "tests": {
+        "REQ-INT-032": [
+          "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
+        ],
+        "REQ-INT-029": [
+          "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
+        ]
+      },
+      "acceptance": "DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. TACHE SENSIBLE — donnees personnelles. Cadrage de l'architecte du 2026-09-26 (partners/ADR-0023). AUCUNE MIGRATION : la route lit `Submission` et `partners_sync_outbox`, elle n'ecrit aucune table ; son journal d'appel passe par le journal structure d'axionia. (1) `GET /api/partners/candidatures/{candidatureId}/coordonnees` verifie une signature HMAC-SHA-256 de l'horodatage et de la requete sous le secret d'integration dedie, tolerance 300 s, comparaison a temps constant, liste d'autorisation d'adresses reseau ; toute requete non signee, mal signee ou hors fenetre est refusee et n'a lu aucune ligne. (2) PORTEE : la route ne repond que pour une candidature effectivement emise vers Partners (une ligne existe dans `partners_sync_outbox` pour ce `candidatureId`) ; un identifiant non emis rend EXACTEMENT la meme reponse qu'un identifiant inexistant, corps et statut compares octet a octet. (3) REPONSE FERMEE : `{nom, prenom, email, telephone}`, dechiffres depuis les colonnes chiffrees de `Submission` au moment de la reponse, chaque champ nul s'il est absent, aucun autre champ ; son schema est celui de `packages/contracts/api.ts` (INT-T01c), jamais retape. Aucun cache. (4) JOURNAL SANS CLAIR : chaque appel journalise l'identifiant de candidature, l'empreinte de l'adresse reseau et le resultat, jamais une coordonnee ; un test inspecte la ligne de journal. (5) INERTIE : sans le drapeau d'activation de la synchronisation, la route rend la reponse d'un identifiant inexistant. (6) TEMOIN A DEUX FACES : une candidature emise rend ses quatre champs et rien d'autre ; la meme requete pour une candidature non emise, puis avec une signature fausse, ne rend aucune coordonnee et le test le prouve sur le corps."
     }
   ]
 }

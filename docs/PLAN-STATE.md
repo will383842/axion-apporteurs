@@ -8,9 +8,9 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `76548e9` — 2026-09-26T06:06:25+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #136 (un contrôle requis rouge ou une revue manquante) · 2. #82 (un conflit avec `main`) · 3. #139 (brouillon) |
+| Qu’est-ce qui est en vol ? | 1. #136 (un contrôle requis rouge ou une revue manquante) · 2. #140 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #139 (brouillon) |
 | Qui tient quoi ? | QA-T07 (A05) |
-| Où en est la phase ? | phase 0 — 35/114 tâches, reste 60.60 j |
+| Où en est la phase ? | phase 0 — 35/115 tâches, reste 61.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #139 — 2026-09-26 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : 0
 
-35/114 tâches terminées · reste 60.60 j estimés.
+35/115 tâches terminées · reste 61.60 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 212 | JUR-T02, QA-T04, QA-T07, QA-T30, CPL-T22, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P … |
+| `a_faire` | 213 | JUR-T02, QA-T04, QA-T07, QA-T30, CPL-T22, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -65,8 +65,9 @@ Reste sur ce chemin : **14.75 j**.
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
 | 1 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un contrôle requis rouge ou une revue manquante |
-| 2 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 3 | #139 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées | `t/gov-102` | brouillon — hors file tant qu’il n’est pas prêt |
+| 2 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un contrôle requis rouge ou une revue manquante |
+| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 4 | #139 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées | `t/gov-102` | brouillon — hors file tant qu’il n’est pas prêt |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -82,7 +83,7 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées
+`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition · `docs/adr/0023-route-des-coordonnees-de-candidature.md` — partners/ADR-0023 — Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 

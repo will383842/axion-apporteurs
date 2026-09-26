@@ -16,7 +16,7 @@
 
 **334 exigences actives · 89 réputées testées · 89 couvertes · 0 orphelines.**
 
-288 tâches, dont 74 livrées · 108 fichiers de test exécutés par `vitest` sur 108 présents.
+289 tâches, dont 74 livrées · 108 fichiers de test exécutés par `vitest` sur 108 présents.
 
 ## Exigences réputées testées
 
@@ -81,7 +81,7 @@
 | `REQ-INT-014` | `INT-T07-A`, `INT-T07-P`, `SEC-07` | `tests/integration/frontiere.spec.ts` | couverte |
 | `REQ-INT-020` | `INT-T09` | `tests/integration/api-gouv.spec.ts`, `tests/unit/integration/recherche-entreprises-repli.spec.ts` | couverte |
 | `REQ-INT-021` | `INT-T09` | `tests/integration/api-gouv.spec.ts` | couverte |
-| `REQ-INT-029` | `INT-T01a` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
+| `REQ-INT-029` | `INT-T01a`, `INT-T27-A` | `tests/unit/integration/contrat-hash.spec.ts` | couverte |
 | `REQ-JUR-003` | `JUR-T01`, `JUR-T01b` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-007` | `DM-25`, `JUR-T01`, `JUR-T01b`, `T-ARG-033` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
 | `REQ-JUR-023` | `DM-23`, `JUR-T01`, `SEC-12` | `tests/unit/contrat/contract-template-complete.spec.ts` | couverte |
@@ -247,7 +247,7 @@
 | `REQ-INT-027` | 1 | `INT-T13`, `INT-T17` | — |
 | `REQ-INT-030` | 1 | `INT-T08-A`, `INT-T08-P`, `QA-T19` | — |
 | `REQ-INT-031` | 0 | `INT-T02` | `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts` |
-| `REQ-INT-032` | -1 | `DM-15`, `INT-T01b`, `INT-T01c`, `INT-T05`, `INT-T22`, `INT-T26` | `axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts`, `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`, `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts`, `tests/integration/candidature-recue.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts`, `tests/unit/integration/contrat-v2-frontiere.spec.ts` |
+| `REQ-INT-032` | -1 | `DM-15`, `INT-T01b`, `INT-T01c`, `INT-T05`, `INT-T22`, `INT-T26`, `INT-T27-A` | `axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts`, `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`, `axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts`, `axionia/src/server/partners/__tests__/commission.spec.ts`, `axionia/src/server/partners/__tests__/derivation-ht.spec.ts`, `axionia/src/server/partners/__tests__/enveloppe.spec.ts`, `axionia/src/server/partners/__tests__/fixtures-et-frontiere.spec.ts`, `axionia/src/server/partners/__tests__/payloads.spec.ts`, `axionia/src/server/partners/__tests__/transcription-du-contrat.spec.ts`, `tests/integration/candidature-recue.spec.ts`, `tests/unit/integration/contrat-hash.spec.ts`, `tests/unit/integration/contrat-v2-frontiere.spec.ts` |
 | `REQ-JUR-001` | 0 | `JUR-T03`, `JUR-T29` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts`, `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-002` | 0 | `JUR-T03`, `JUR-T29` | `axionia/src/content/__tests__/remuneration-indicative.spec.ts`, `axionia/src/content/__tests__/vocabulaire-apporteur.spec.ts` |
 | `REQ-JUR-004` | 1 | `INT-T12`, `INT-T23` | — |
