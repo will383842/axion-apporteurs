@@ -276,6 +276,78 @@ export interface PerimetreVu extends Perimetre {
 
 /** Le dossier où vivent les gardes de ce dépôt. Le préfixe est écrit UNE fois. */
 export const DOSSIER_DES_GARDES = 'scripts/gates/';
+
+// ── comparer un chemin, c'est le normaliser (GOV-051, REQ-GOV-029) ───────────────────────────
+
+/**
+ * LA PRIMITIVE UNIQUE DE COMPARAISON DE CHEMINS DE CE FICHIER.
+ *
+ * « La propriété protégée n'est pas une propriété du CHEMIN, c'est une propriété de la
+ * COMPARAISON. » Un `startsWith('axionia/')` brut était défait par cinq familles, chacune jouée de
+ * bout en bout le 2026-09-12 : (1) un caractère de la classe C en tête ; (2) un caractère sans
+ * glyphe hors de cette classe — remplisseur hangul, braille vide, marque non espaçante ; (3) un
+ * homoglyphe ; (4) la casse ; (5) une forme non canonique. Le schéma (GOV-050) ferme (1) et (5)
+ * pour ses écrivains ; aucune clause de forme ne ferme (2) ni (3), et deux lentilles ont refusé
+ * d'en exiger l'inventaire. La défense est donc ICI, à la lecture, dans cet ordre :
+ *
+ *   1. la forme de compatibilité (NFKD) : un `ａ` pleine chasse devient `a`, une lettre accentuée
+ *      se sépare de sa marque ;
+ *   2. on RETIRE ce qui ne s'écrit pas : classe C, marques (`\p{M}`), points de code ignorables par
+ *      défaut (`Default_Ignorable_Code_Point`, dont le remplisseur hangul), et les blancs Unicode en
+ *      bordure de segment ;
+ *   3. la forme canonique : antislash lu comme séparateur, segments vides et `.` retirés, `..`
+ *      résolu — un remontant en tête reste un segment `..`, qui ne désigne rien du dépôt ;
+ *   4. la CASSE EST TRANCHÉE, et tranchée insensible : sur les systèmes de fichiers par défaut de
+ *      Windows et de macOS, `AXIONIA/` désigne le même dossier que `axionia/` — les postes des
+ *      agents sont des Windows ;
+ *   5. ce qui reste hors de l'ASCII imprimable dans un segment comparé est INDÉCIDABLE : un `а`
+ *      cyrillique ou un braille vide ne se ramène à rien sans une table de confusables, et une
+ *      table serait l'inventaire que deux lentilles ont refusé. La primitive le DIT, et l'appelant
+ *      échoue fermé.
+ *
+ * CE QU'ELLE NE PRÉTEND PAS : rendre la comparaison infaillible. Elle ne décode aucun
+ * percent-encodage (le schéma le refuse) et ne suit aucun lien symbolique.
+ *
+ * ⚠️ LES AUTRES GARDES QUI COMPARENT DES CHEMINS NE PASSENT PAS ENCORE PAR ELLE — comptées, pas
+ * tues : `scripts/lot/composer.ts` (collisions par égalité de chaîne, `pris.has`),
+ * `scripts/lot/paths-proposes.ts` (le préfixe `axionia/`, deux fois), `scripts/lot/chemins-de-tache.ts`
+ * (`declares` / `promis`, par égalité), `scripts/lot/integrer.ts` (égalité et préfixe de dossier),
+ * `scripts/gates/gov-pr.ts` (`touche()`, fichiers de la PR contre les `paths`) et
+ * `scripts/gates/gov-attributions.ts` (`estGabarit`). Six fichiers, hors du périmètre de GOV-051.
+ */
+export const DEPOT_VOISIN = 'axionia';
+
+const IMPRIMABLE_ASCII = /^[\x20-\x7e]*$/;
+
+/** Les segments d'un chemin sous sa forme de COMPARAISON (étapes 1 à 4 ci-dessus). */
+export function formeDeComparaison(chemin: string): string[] {
+  const nettoye = chemin
+    .normalize('NFKD')
+    .replace(/[\p{C}\p{M}\p{Default_Ignorable_Code_Point}]/gu, '')
+    .replaceAll('\\', '/')
+    .toLowerCase();
+  const segments: string[] = [];
+  for (const brut of nettoye.split('/')) {
+    const s = brut.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, '');
+    if (s === '' || s === '.') continue;
+    if (s === '..' && segments.length > 0 && segments[segments.length - 1] !== '..') segments.pop();
+    else segments.push(s);
+  }
+  return segments;
+}
+
+/**
+ * Le chemin désigne-t-il le dossier `dossier` ou ce qui vit dessous ? `indecidable` quand un segment
+ * comparé porte encore, normalisé, un caractère hors de l'ASCII imprimable — l'appelant échoue fermé.
+ */
+export function estSousLeDossier(chemin: string, dossier: string): 'oui' | 'non' | 'indecidable' {
+  const c = formeDeComparaison(chemin);
+  const d = formeDeComparaison(dossier);
+  // Plus court que le dossier : rien dessous, quelle que soit l'écriture de ses segments.
+  if (d.length === 0 || c.length < d.length) return 'non';
+  if (d.every((s, i) => c[i] === s)) return 'oui';
+  return c.slice(0, d.length).some((s) => !IMPRIMABLE_ASCII.test(s)) ? 'indecidable' : 'non';
+}
 /**
  * L'extension qui fait entrer un fichier suivi dans la population de DÉPART.
  * ⚠️ LIMITE DÉCLARÉE, pas supposée : trois fichiers `.js` suivis vivent sous `scripts/gates/`
@@ -331,7 +403,9 @@ export interface Confrontation {
   /**
    * Les entrées du registre sous `scripts/gates/` dont le script n'est pas suivi. HORS PÉRIMÈTRE,
    * et RENDUES plutôt que tues : autre dépôt, garde promise à une phase future, entrée fautive —
-   * les trois se taisent aujourd'hui de la même façon, et les distinguer est le travail de GOV-051.
+   * les trois se taisent aujourd'hui de la même façon. Ce texte disait que les distinguer était le
+   * travail de GOV-051 ; son acceptance porte la COMPARAISON des chemins, pas ce tri, et aucune
+   * tâche ne le porte au 2026-09-27.
    */
   readonly entreesSansScript: readonly GateVue[];
   /** Les fichiers suivis du dossier que l'extension exclut. La LIMITE, nommée. */
@@ -339,9 +413,12 @@ export interface Confrontation {
 }
 
 export function confronterDisqueEtRegistre(vue: Vue): Confrontation {
-  const duDossier = vue.fichiersSuivis.filter((f) => f.startsWith(DOSSIER_DES_GARDES));
+  // Par la primitive unique (GOV-051). Une écriture indécidable ENTRE dans la population : une
+  // population de gardes à juger échoue fermée en jugeant plus, jamais en taisant.
+  const sousLesGardes = (c: string) => estSousLeDossier(c, DOSSIER_DES_GARDES) !== 'non';
+  const duDossier = vue.fichiersSuivis.filter(sousLesGardes);
   const surLeDisque = duDossier.filter((f) => f.endsWith(EXTENSION_DES_GARDES));
-  const duRegistre = vue.gates.filter((g) => g.script.startsWith(DOSSIER_DES_GARDES));
+  const duRegistre = vue.gates.filter((g) => sousLesGardes(g.script));
   return {
     surLeDisque,
     horsExtension: duDossier.filter((f) => !f.endsWith(EXTENSION_DES_GARDES)),
@@ -476,15 +553,23 @@ export function controler(vue: Vue): Faute[] {
   }
 
   // ── isolation des deux dépôts, sens Partners → axionia ──
+  // La comparaison passe par `estSousLeDossier` (GOV-051) : un `startsWith` brut était défait par
+  // cinq familles d'écriture du même chemin. Ce qu'elle ne sait pas comparer, elle le REFUSE.
   for (const t of vue.taches) {
     if (t.repo !== 'partners') continue;
     for (const p of t.paths) {
-      if (!p.startsWith('axionia/')) continue;
+      const verdict = estSousLeDossier(p, DEPOT_VOISIN);
+      if (verdict === 'non') continue;
       fautes.push({
         famille: 'isolation_depot',
         message:
-          `${t.id} — tâche \`repo: partners\` qui revendique \`${p}\`, un chemin du dépôt ` +
-          `voisin. Une tâche écrit dans UN dépôt : le composeur de lots suppose cet invariant ` +
+          `${t.id} — tâche \`repo: partners\` qui revendique ${JSON.stringify(p)}, ` +
+          (verdict === 'oui'
+            ? `un chemin du dépôt voisin (forme comparée : \`${formeDeComparaison(p).join('/')}\`). `
+            : `un chemin dont le premier segment porte, une fois normalisé, un caractère hors de ` +
+              `l'ASCII imprimable : la comparaison à \`${DEPOT_VOISIN}/\` est INDÉCIDABLE (un ` +
+              `homoglyphe est une lettre ordinaire), et elle échoue fermée. `) +
+          `Une tâche écrit dans UN dépôt : le composeur de lots suppose cet invariant ` +
           `pour ne jamais mêler deux dépôts dans un même lot. Le sens inverse est déjà gardé par ` +
           `tests/unit/gouvernance/paths-derives.spec.ts (REQ-GOV-025) ; celui-ci ne l'était pas.`,
       });
@@ -1139,7 +1224,7 @@ export function lignesDeConfrontation(vue: Vue): string[] {
   lignes.push(
     `   • entrées sous \`${DOSSIER_DES_GARDES}\` dont le script n'est pas suivi ici, donc HORS ` +
       `périmètre : ${c.entreesSansScript.length} — autre dépôt, phase future ou entrée fautive, ` +
-      `les trois se taisent de la même façon et GOV-051 les distinguera.`
+      `les trois se taisent de la même façon, et aucune tâche ne les distingue encore.`
   );
   if (c.horsExtension.length > 0) {
     lignes.push(
