@@ -24,7 +24,7 @@
  * POURQUOI PAS UN ROBOT QUI RÉGÉNÈRE LES VUES SUR `main`. `partners/ADR-0006` §4 (REQ-GOV-014) :
  * aucun workflow ne pousse sur la branche principale, et `aucun-workflow-ne-pousse-sur-main.spec.ts`
  * le tient. Sortir les vues des PR exigerait d'amender cette règle : c'est une décision de Will,
- * pas de cette commande (`partners/ADR-0022`).
+ * pas de cette commande (`partners/ADR-0024`).
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';

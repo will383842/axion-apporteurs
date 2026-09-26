@@ -7,10 +7,10 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `76548e9` — 2026-09-26T06:06:25+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #136 (un contrôle requis rouge ou une revue manquante) · 2. #140 (un contrôle requis rouge ou une revue manquante) · 3. #82 (un conflit avec `main`) · 4. #139 (brouillon) |
+| Où est `main` ? | `7e25c56` — 2026-09-26T08:04:20+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #136 (un conflit avec `main`) · 3. #140 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
-| Où en est la phase ? | phase 0 — 35/112 tâches, reste 58.60 j |
+| Où en est la phase ? | phase 0 — 35/116 tâches, reste 62.60 j |
 | Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #140 — 2026-09-26 |
@@ -19,14 +19,14 @@
 
 ## Phase courante : 0
 
-35/112 tâches terminées · reste 58.60 j estimés.
+35/116 tâches terminées · reste 62.60 j estimés.
 
 ## Tâches
 
 | Statut | Nombre | Détail |
 | --- | --- | --- |
 | `proposee` | 0 | — |
-| `a_faire` | 210 | JUR-T02, QA-T04, QA-T07, QA-T30, CPL-T22, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P … |
+| `a_faire` | 214 | JUR-T02, QA-T04, QA-T07, QA-T30, CPL-T22, QA-T05, QA-T11, QA-T06, QA-T12, QA-T13, DM-03-A, DM-03-P … |
 | `en_cours` | 0 | — |
 | `bloquee` | 0 | — |
 | `attente_externe` | 2 | JUR-T01b · JUR-T01c |
@@ -37,11 +37,11 @@
 
 ## Chemin critique
 
-**20.75 j** sur 22 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
+**22.00 j** sur 23 taches enchainees — duree PLANCHER du projet. Aucune flotte d'agents ne la raccourcit : ces taches ne peuvent pas se faire en parallele.
 
-~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-11 (1.5 j, ph 1) → INT-T12 (1.5 j, ph 1) → JUR-T16 (0.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
+~~GOV-000~~ (1 j, ph -1) → ~~GOV-007~~ (0.5 j, ph -1) → ~~GOV-012~~ (0.5 j, ph -1) → ~~GOV-013~~ (0.25 j, ph -1) → ~~GOV-014~~ (1 j, ph -1) → ~~QA-T01~~ (0.5 j, ph 0) → ~~DM-01~~ (1 j, ph 0) → ~~DM-02~~ (1.5 j, ph 0) → ~~SEC-08~~ (1 j, ph 0) → SEC-03 (1 j, ph 0) → SEC-04 (1 j, ph 0) → SEC-17 (1 j, ph 0) → DM-07 (1 j, ph 1) → DM-08 (1.25 j, ph 1) → T-ARG-010 (1 j, ph 2) → DM-15 (1.5 j, ph 2) → T-ARG-015 (1 j, ph 2) → T-ARG-016 (1.5 j, ph 2) → T-ARG-017 (0.5 j, ph 2) → T-ARG-018 (1 j, ph 2) → T-ARG-019 (1 j, ph 2) → T-ARG-030 (1 j, ph 3) → T-ARG-033 (1 j, ph 3)
 
-Reste sur ce chemin : **13.50 j**.
+Reste sur ce chemin : **14.75 j**.
 
 ## Bloquées
 
@@ -58,16 +58,15 @@ Reste sur ce chemin : **13.50 j**.
 
 ## Hypothèses par défaut appliquées
 
-62 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
+64 décisions portent une hypothèse datée dans `docs/DECISIONS.md` (avec leur réversibilité). Les décisions marquées « avenant » se tranchent **avant le premier envoi DocuSeal**.
 
 ## File de fusion
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un contrôle requis rouge ou une revue manquante |
-| 2 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un contrôle requis rouge ou une revue manquante |
-| 3 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 4 | #139 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées | `t/gov-102` | brouillon — hors file tant qu’il n’est pas prêt |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -83,19 +82,19 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0022-deux-lentilles-mutation-par-stryker-et-relectures-sans-defaut.md` — partners/ADR-0022 — Deux lentilles partout, la mutation mesurée par Stryker, et les relectures qui ne corrigent aucun défaut
+`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
 
-**SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 42 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
+**SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 43 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
 Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeStateStatus` et fusionner dans le MÊME appel (RM-09), puis vérifier l’atterrissage —, la tâche ensuite. L’ordre de la file se corrige à la rubrique « File de fusion », jamais ici.
 
 ## Dernier atterrissage
 
-`origin/main` = `76548e9` (2026-09-26T06:06:25+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `7e25c56` (2026-09-26T08:04:20+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -106,7 +105,7 @@ Source : `docs/journal/` — une entrée par PR, **fait / reste / appris**, écr
 ### PR #140 — 2026-09-26 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr
 
 **Fait.** Deux lentilles partout, `exactitude` et `securite`, plus `schema` sur une PR de schéma :
-décision de Will du 2026-09-26, `W16`, consignée par `partners/ADR-0022`. La mutation n'est plus un
+décision de Will du 2026-09-26, `W16`, consignée par `partners/ADR-0024`. La mutation n'est plus un
 avis d'agent : `pnpm mutation:pr` lance Stryker en bac à sable, en porte A, sur les fichiers de
 `src/domain/` et `src/server/` que la PR touche, et nomme chaque survivant. Un accord survit à une
 fusion de `main` quand l'empreinte du diff propre à la PR (`git patch-id --stable` depuis la base de
@@ -117,13 +116,91 @@ une lecture de la base. GOV-101 porte la PR.
 
 **Reste.** Sortir `docs/PLAN-STATE.md` et `docs/TRACABILITE.md` des PR : un workflow devrait pousser
 sur `main`, ce que `partners/ADR-0006` section 4 interdit (REQ-GOV-014) ; décision de Will à prendre,
-nommée dans `partners/ADR-0022`. Une passe Stryker sur les fonctions pures des gardes. La durée de
+nommée dans `partners/ADR-0024`. Une passe Stryker sur les fonctions pures des gardes. La durée de
 `mutation:pr` en porte A sur une PR du domaine reste à mesurer en CI.
 
 **Appris.** Sur le diff de SEC-03 (cinq fichiers, 200 mutants), la configuration de test de Stryker
 limitée aux tests du domaine rendait 196 mutants sans couverture et un score de 0,51 pour cent : le
 code du serveur est jugé par `tests/unit/securite/`. Avec ces tests, 82,50 pour cent en 3 min 10 s,
-arbre de travail propre. Et `vues:fusion` a fusionné `main` dans cette branche en 51 s, vues rendues.
+arbre de travail propre. Et `vues:fusion` a fusionné `main` dans cette branche en 51 s, vues
+rendues ; la seconde fois, il a abandonné sur un vrai conflit (`docs/tasks.json`, des tâches
+versées des deux côtés), résolu par identifiant, sans perte.
+
+### PR #139 — 2026-09-26 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées
+
+**Fait.** Le cadrage du schéma des phases 0 et 1 décidé par l'architecte le 2026-09-26, sur
+délégation de Will, est inscrit au registre : le champ `schema` de vingt et une tâches est remis
+droit (DM-01, pourtant fusionnée, compris), les `paths`, `deps` et acceptances des tâches
+créatrices et écrivaines portent désormais le schéma exact de chaque table, avec une acceptance
+posée pour DM-07, DM-08, DM-12, SEC-11, CPL-T06, INT-T12 et UX-P1-10, qui n'en avaient pas ;
+INT-T01c et INT-T26 sont versées ; le glossaire porte vingt-deux enums nouveaux et, au §4.1, les
+treize valeurs de `TypeEvenementJournal` avec leur tâche créatrice ; douze exigences sont amendées
+ou alignées sur `EvenementRecu` ; `HYP-A02-RETENTION` et `HYP-A02-VOCABULAIRE-QUALIFICATION`
+entrent au registre des décisions. Contrôle champ par champ contre `origin/main` : seuls les champs
+décidés changent, aucune entrée perdue, aucun texte raccourci. Gardes jouées à 0 : `gov:tasks`,
+`gov:hypotheses`, `gov:requirements`, `gov:attributions`, `gov:identifiants`, `gov:lexique`,
+`gov:termes-interdits`, `gov:trace:verifier`, `plan-state:verifier`, `lot:paths:check`, `gov:etat`,
+`partners:schema:enums`, `gov:preseance`, `gov:publication` ; specs `tests/unit/contrat/`,
+`un-nom-une-garde.spec.ts`, `glossaire-enums.spec.ts`, `termes-interdits.spec.ts` et
+`contrat-hash.spec.ts` vertes. `gov:adr` rougit sur les trois renvois du glossaire à
+partners/ADR-0022, que l'architecte écrit sur cette même branche.
+
+Puis l'architecte, sur la même branche : partners/ADR-0022 (carte du schéma des phases 0 et 1),
+partners/ADR-0023 (route HMAC d'axionia des coordonnées de candidature, troisième API) et la
+décision 15 de partners/ADR-0013 (lien « ce n'est pas moi » sans état) sont écrits, l'index est
+régénéré et `gov:adr` sort à 0. Les créateurs de valeurs de journal (DM-07, DM-08, DM-11, DM-12,
+DM-23, SEC-15, CPL-T06, EXT-T01, EXT-T03) portent `src/domain/evenement/charges.ts` et
+`docs/GLOSSAIRE.md` dans leurs `paths`, et `prisma/migrations/` quand il manquait (SEC-15, DM-10-P,
+DM-23, EXT-T03) ; INT-T01c porte le fichier de partners/ADR-0023. Sur décision de l'orchestrateur,
+les colonnes nom, prénom, téléphone et `phoneHash` de `apporteurs` reviennent à SEC-04, dont
+l'acceptance gagne un point (7). La route des coordonnées côté axionia est versée en INT-T27-A
+(phase 0, `schema: false`, sensible `rgpd`), et INT-T26 en dépend ; EXT-T01 dépend de DM-12, qui
+pose le champ chiffré `texte` qu'elle réutilise. Contrôle champ par champ contre la tête
+précédente : seuls ces champs ont changé, une tâche ajoutée.
+
+**Relecture.** Lentille `securite` : accord. Lentille `exactitude` : refus sur un seul défaut,
+INT-T26 et EXT-T03 écrivaient ou lisaient les colonnes de coordonnées de `apporteurs` que SEC-04
+crée, sans dépendance vers SEC-04 ; SEC-04 est ajoutée à leurs `deps` depuis un fichier, relue sur
+le disque. Au passage : la décision 15 de partners/ADR-0013 précise que l'ouverture du lien « ce
+n'est pas moi » ne révoque rien, seule l'action de la page le fait, à cause des analyseurs de liens
+des messageries ; partners/ADR-0023 impose désormais le plafond de lecture qu'elle invoquait (cinq
+lectures par candidature sur vingt-quatre heures, point (7) d'INT-T27-A) ; UX-P1-09 reçoit une
+acceptance, dont une réponse identique quand la nouvelle adresse est déjà portée par un autre
+apporteur ; l'apostrophe perdue du point 3 d'INT-T26 est rendue, et le point 2 d'INT-T05 ne compte
+plus sept types ; partners/ADR-0022 nomme les tâches qui étendent `apporteurs`, colonne par colonne.
+Seconde relecture sur bed1887 : les deux lentilles accordent.
+
+**Porte A.** Deux rouges réels, causés par le registre que cette PR modifie. (1) Le témoin
+« REQ-GOV-011, cas 1 » lisait DM-01 dans le registre réel : DM-01 passée `schema: true`, la
+troisième lentille attendue devenait `schema` au lieu de `simplicite`. Les tâches de la PR fictive
+sont désormais fixées à `schema: false` dans le témoin, qui porte sur la sensibilité au milieu de la
+liste ; le risque élevé vient toujours du `sensible` réel de DM-01. (2) Le témoin du plancher de
+`gov:trace` retirait une tranche partant du milieu de la liste, et la tranche débordait dès que le
+périmètre dépassait deux fois le plancher (la tâche versée ici l'a fait passer) : son départ est
+borné à la liste, même correctif que la PR 136. Les deux specs passent en local, 45 cas ; leurs
+fichiers entrent aux `paths` de GOV-102.
+
+**Reste.** DM-11 cite encore REQ-DM-013 alors que `contrats` naît de DM-23 : aucun verbe n'écrit le
+champ `reqs`, la citation reste jusqu'à ce qu'un verbe le permette. Trois points de la décision restent dus : les `reqs` à ajouter à SEC-06, SEC-04, DM-12
+et UX-P1-08 (aucun verbe n'écrit ce champ) ; l'amendement de REQ-INT-004, REQ-QA-007 et
+REQ-GOV-020, porté par l'acceptance d'INT-T01c en même temps que le contrat ; la citation de
+REQ-EXT-009 par INT-T26. `ProfessionReglementee` est décidée par partners/ADR-0022 (point 16 :
+`expertise_comptable`, `auxiliaire_services_financiers`, `intermediaire_assurance`, un par code NAF
+de REQ-JUR-022) et reste à inscrire au glossaire avant DM-11. `QualiteExercice` n'est tirée
+d'aucune exigence : la liste des statuts d'exercice et leur libellé dans l'article 14 du contrat
+sont une décision de Will, à consigner au registre avant DM-11 (proposition dans
+partners/ADR-0022).
+
+**Appris.** Une exigence de phase 1 citée par une tâche de phase 0 fait rougir
+`gov:requirements` en `phase_non_derivee`, et aucun verbe n'écrit la phase d'une exigence : une
+décision qui rattache une exigence à une tâche plus précoce ne s'applique pas par le registre des
+tâches seul. Et la ligne d'un enum déjà présent au schéma ne peut énumérer que ce que le schéma
+porte : y inscrire d'avance les valeurs d'une tâche future fait rougir `partners:schema:enums` en
+`enum_divergent_du_glossaire` le jour même ; les valeurs décidées vivent à côté (§4.1) et entrent
+dans la ligne avec la migration qui les crée. Enfin, une acceptance passée au verbe de réécriture
+depuis une chaîne entre guillemets doubles du shell a été corrompue en silence : chaque accent grave
+y a été exécuté comme une commande, et le verbe a écrit le reste, exit 0. Réécrite depuis un
+fichier, relue sur le disque ; le texte d'un champ de registre ne transite jamais par le shell.
 
 ### PR #134 — 2026-09-26 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables
 
@@ -205,44 +282,7 @@ Les lignes « red-first, 0 rouge » du journal de la porte sont la sortie des t�
 `tests/unit/qualite/red-first.spec.ts`, sur leurs dépôts jetables : ce spec est vert, et
 `pnpm red-first` sur cette branche juge neuf tests nouveaux, neuf rouges contre `main`.
 
-### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
-
-**Fait.** Le cadrage de l'architecte du 2026-09-26, pris sur délégation de Will, est inscrit au
-registre : SEC-03 et SEC-04 portent `schema: true`, SEC-03 crée `liens_magiques` et
-`sessions_espace` dans une même migration et ses `paths` portent la migration et les modules de
-durées, de dépôt du lien et d'accès à l'espace ; SEC-04 étendra `sessions_espace`. L'empreinte des
-jetons d'authentification est la décision 14 de partners/ADR-0013 (HMAC-SHA-256 sous le secret de
-l'usage, domaine séparé, `kid` stocké, pas de double clé pour les liens), et `HYP-SEC03-ACCES`
-ouvre l'espace aux statuts `signe` et `suspendu` et le ferme à `candidat`, `retenu`, `vivier`,
-`refuse`, `kyc_en_cours` et `pret_a_signer`. Les points (1) et (5) de l'acceptance de SEC-03 le
-disent. Sur décision du coordinateur, prise sur délégation de Will, la PR aligne aussi REQ-SEC-001 sur la
-décision 14, corrige la ligne `suspendu` du glossaire (accès à l'espace maintenu, nouveaux dépôts
-refusés) et passe DM-11 à `schema: true`, dette nommée par la PR 124. Après les deux relectures,
-REQ-SEC-003 et le point (2) de SEC-04 ne font plus révoquer les sessions à la suspension, seulement
-à la résiliation, au changement de courriel ou d'IBAN et pour motif de sécurité (contrat art. 3.8) ;
-`HYP-SEC03-ACCES` devient une liste blanche, `HYP-E1-24` exclut les liens de la double clé, et les
-art. 3.7 al. 3 et 12.3 que cite `HYP-SEC03-ACCES` ont leur ancrage dans `CONCORDANCES`. GOV-100
-porte la PR. Gardes jouées à 0 : `gov:tasks`, `gov:hypotheses`,
-`gov:attributions`, `gov:trace:verifier`, `plan-state:verifier`, `lot:paths:check`,
-`gov:identifiants`, `gov:lexique`, `gov:termes-interdits`, `gov:adr`, `gov:requirements`,
-`gov:preseance`, `partners:schema:enums`, `gov:etat`, `gov:publication`,
-`tests/unit/gouvernance/un-nom-une-garde.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`
-et `tests/unit/contrat/`.
-
-**Reste.** SEC-03 peut être attribuée sur ce cadrage. L'assertion de la décision 14 (un vecteur
-figé d'empreinte de lien) est due par SEC-03, celle de la session par SEC-04 : d'ici là,
-partners/ADR-0013 reste `propose`. Le mot « suspension » de REQ-SEC-002 et du point (3) de SEC-03
-désigne le refus d'une demande de lien au-delà de la limite de débit, pas le statut `suspendu` :
-il ne contredit pas `HYP-SEC03-ACCES`.
-
-**Appris.** Aucun verbe hors dépôt ne savait écrire `schema` dans `docs/tasks.json` : la dette
-nommée par la PR 124 pour DM-11 bloquait aussi ce cadrage. Le champ est écrivable depuis ce jour
-par `reecrire-champ.mjs`, sa valeur jugée booléenne par le schéma du dépôt ; DM-11 a été corrigée
-par le même geste dans cette PR. Et une ligne du registre des décisions qui cite un article du
-contrat fait rougir REQ-JUR-003 tant que `CONCORDANCES` ne l'ancre pas : les gardes de gouvernance
-sortaient à 0, seule `tests/unit/contrat/` le voyait. Une PR qui écrit `docs/DECISIONS.md` la lance.
-
-… 58 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 59 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

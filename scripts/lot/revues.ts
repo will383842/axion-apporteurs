@@ -132,7 +132,7 @@ export const ASSOCIATIONS_HABILITEES: ReadonlySet<string> = new Set([
 
 /**
  * La lentille de l'architecte, nommée une fois (docs/CHARTE-AGENTS.md §6). Depuis la décision de
- * Will du 2026-09-26 (`W16`, `partners/ADR-0022`), `simplicite` et `mutation` ne sont plus exigées
+ * Will du 2026-09-26 (`W16`, `partners/ADR-0024`), `simplicite` et `mutation` ne sont plus exigées
  * d'aucune PR : la mutation est mesurée par Stryker (`pnpm mutation:pr`), pas par un agent.
  */
 export const LENTILLE_SCHEMA = 'schema';
@@ -1150,7 +1150,7 @@ export function resoudreLeLot<T extends TacheDeLaPr>(e: {
 // ── LE RISQUE D'UNE PR (GOV-077, GOV-097) — IL NE COMPTE PLUS DE LENTILLE (GOV-101) ─────────
 
 /**
- * ⚠️ DEPUIS LA DÉCISION DE WILL DU 2026-09-26 (`W16`, `partners/ADR-0022`, GOV-101), LE RISQUE NE
+ * ⚠️ DEPUIS LA DÉCISION DE WILL DU 2026-09-26 (`W16`, `partners/ADR-0024`, GOV-101), LE RISQUE NE
  * COMPTE PLUS DE LENTILLE : deux partout (`lentillesExigees`), plus `schema` sur une PR de schéma.
  * Il reste calculé ici, publié par `direLeRisque`, et c'est son signal `schema` qui appelle
  * l'architecte. Ce qui suit décrit la frontière telle que GOV-097 l'a tracée ; elle ne décide plus
@@ -1736,7 +1736,7 @@ export function risqueDeLaPr(e: EntreeDuRisque): Risque {
 }
 
 /**
- * LES LENTILLES EXIGÉES — DEUX PARTOUT, décision de Will du 2026-09-26 (`W16`, `partners/ADR-0022`,
+ * LES LENTILLES EXIGÉES — DEUX PARTOUT, décision de Will du 2026-09-26 (`W16`, `partners/ADR-0024`,
  * GOV-101) : `exactitude` et `securite`, dont le refus bloque à lui seul ; plus l'avis `schema` de
  * l'architecte dès que la PR touche au schéma. Le NIVEAU de risque ne compte plus de lentille : il
  * reste calculé et publié (`direLeRisque`), parce qu'il dit au relecteur `securite` où regarder.

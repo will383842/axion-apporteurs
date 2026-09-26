@@ -217,8 +217,15 @@ describe('REQ-GOV-011 — cas 0 : la PR ORDINAIRE existe, et deux lentilles de r
 
 describe('REQ-GOV-011 — cas 1 : plusieurs tâches sur la PR, la sensible AU MILIEU', () => {
   const IDS = ['QA-T01', 'DM-01', 'GOV-039'];
+  /**
+   * Les tâches de la PR fictive sont FIXÉES à `schema: false`. Ce témoin porte sur la SENSIBILITÉ au
+   * milieu de la liste, pas sur le label `schema` : lu tel quel dans le registre réel, le drapeau de
+   * DM-01 (passé `true` par GOV-102, partners/ADR-0022) remplaçait la troisième lentille
+   * `simplicite` par `schema`, et un attendu qui ne parle pas de schéma rougissait. Le risque élevé,
+   * lui, vient toujours du registre réel (`sensible` de DM-01) : c'est ce qui reste gardé.
+   */
   function avecPr(ids: string[]): TacheBrute[] {
-    return registre().map((t) => (ids.includes(t.id) ? { ...t, pr: 9999 } : t));
+    return registre().map((t) => (ids.includes(t.id) ? { ...t, pr: 9999, schema: false } : t));
   }
 
   it('REQ-GOV-011 · l’ordre du registre met DM-01 (rgpd) entre QA-T01 et GOV-039 — mesuré, pas supposé', () => {
@@ -236,7 +243,7 @@ describe('REQ-GOV-011 — cas 1 : plusieurs tâches sur la PR, la sensible AU MI
 
   it('REQ-GOV-011 · la PR est ÉLEVÉE, la raison nomme DM-01, et deux revues suffisent depuis GOV-101', () => {
     // Jusqu'au 2026-09-26, ces deux revues laissaient `simplicite` et `mutation` manquantes. La
-    // décision de Will (`W16`, `partners/ADR-0022`) : deux lentilles partout. Le risque reste
+    // décision de Will (`W16`, `partners/ADR-0024`) : deux lentilles partout. Le risque reste
     // ÉLEVÉ et se dit — c'est ce que `securite` lit —, il ne compte plus de lentille.
     const T = avecPr(IDS);
     const r = risque({ titre: 'feat(QA-T01): x', pr: 9999, taches: T, tachesBase: T });

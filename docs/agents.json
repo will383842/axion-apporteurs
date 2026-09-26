@@ -280,7 +280,7 @@
       "role": "relecteur",
       "libelle": "Relecteur d'une lentille",
       "description": "Relit une PR sous UNE lentille imposée (exactitude ou sécurité). Ne modifie jamais le code. Le refus de la lentille sécurité est un veto, sur toute PR.",
-      "mission": "Recevoir la tâche, le numéro de PR et sa lentille — `exactitude` ou `securite`, les deux seules exigées depuis la décision de Will du 2026-09-26 (`partners/ADR-0022`) — et ne lire que sous celle-là, une fois la porte A verte sur la tête ; vérifier d'abord que le test annoncé comme rouge porte réellement sur la REQ ; citer un fichier et une ligne à chaque motif de refus.",
+      "mission": "Recevoir la tâche, le numéro de PR et sa lentille — `exactitude` ou `securite`, les deux seules exigées depuis la décision de Will du 2026-09-26 (`partners/ADR-0024`) — et ne lire que sous celle-là, une fois la porte A verte sur la tête ; vérifier d'abord que le test annoncé comme rouge porte réellement sur la REQ ; citer un fichier et une ligne à chaque motif de refus.",
       "entrees": [
         "la tâche, le numéro de PR et la lentille imposée",
         "le diff complet et le corps de la PR (REQ annoncées, bloc ROUGE/VERT)"
@@ -317,7 +317,7 @@
         "le message ROUGE que son auteur affirme avoir constaté"
       ],
       "sorties": [
-        "la ligne `Rouge constaté par:` quand il supplée A07 — aucune revue `A10 · mutation` n'est plus exigée (décision de Will du 2026-09-26, `partners/ADR-0022`)",
+        "la ligne `Rouge constaté par:` quand il supplée A07 — aucune revue `A10 · mutation` n'est plus exigée (décision de Will du 2026-09-26, `partners/ADR-0024`)",
         "un rendu `{ prouve, mutations: [{ fichier, mutation, testRouge }] }`, dépôt propre"
       ],
       "interdits": [

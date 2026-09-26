@@ -115,11 +115,11 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `ResultatContact`      | `confirme`, `non_confirme`, `injoignable`, `ne_se_souvient_pas`                           | REQ-DM-008   |
 | `ResultatVerification` | `libre`, `suivie`, `cliente`, `liste_noire`, `fermee` (journal serveur, jamais exposé tel quel) | REQ-DM-032 |
 | `EtatVerificationDto`  | `libre`, `suivie_place_disponible`, `suivie_file_complete`, `non_disponible` — **4 états** exposés à l'apporteur ; un client existant est rendu `non_disponible` ou `suivie_*` ; aucune clé ne distingue cliente de suivie (REQ-UX-007 corrigée, HYP-E1-10) | REQ-UX-007 |
-| `IssueDepot`           | `enregistree`, `prioritaire`, `en_attente`, `file_complete`, `fermee`, `financeur`, `deja_connue`, `gele`, `captcha`, `brouillon_hors_ligne` | REQ-UX-002 |
+| `IssueDepot`           | `enregistree`, `prioritaire`, `en_attente`, `file_complete`, `anteriorite_client`, `anteriorite_devis`, `etablissement_cesse`, `entreprise_hors_perimetre`, `opposition_demarchage`, `gele`, `captcha`, `brouillon_hors_ligne` — alignée le 2026-09-26 sur REQ-UX-002 et sur `ISSUES_DEPOT` : `fermee`, `financeur` et `deja_connue` sont renommées sur les catégories du contrat | REQ-UX-002 |
 | `StatutLot`            | `brouillon`, `approuve`, `exporte`, `rapproche`                                            | REQ-UX-025   |
 | `StatutAnomalie`       | `ouverte`, `levee`, `confirmee`                                                            | REQ-DM-033   |
 | `MotifListeNoire`      | `opco`, `france_travail`, `region`, `of_partenaire`, `autre`                               | REQ-DM-028   |
-| `OrigineEntrepriseConnue` | `client`, `devis`, `demande_entrante`, `financeur`                                     | REQ-DM-029   |
+| `OrigineEntrepriseConnue` | `client`, `devis`, `financeur` — `demande_entrante` retirée le 2026-09-26, comme REQ-DM-029 l'a retirée : aucun événement ne la transporte | REQ-DM-029   |
 | `TypeReprise`          | `avoir`, `paiement_rembourse` (synonyme interdit : `payment_refund`)                       | REQ-DM-019   |
 | `ConsoleRole`          | `admin`, `qualifieur`, `comptable`, `lecteur`                                              | REQ-SEC-023  |
 | `StatutApporteur`      | `candidat`, `retenu`, `vivier`, `refuse`, `kyc_en_cours`, `pret_a_signer`, `signe`, `suspendu`, `resilie` — sens au §2 ; `actif` et `dormant` sont dérivés, jamais stockés | REQ-DM-011 |
@@ -127,8 +127,30 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 | `RegimeTva`            | `assujetti`, `franchise_293b` — historique daté, figé sur chaque autofacture | REQ-ARG-033 |
 | `CanalCandidature`     | `site`, `linkedin`, `jobboard`, `saisie_console`, `autre` — dérivé par EXT-T03 de `sourceCanal`, chaîne transportée figée ; chemin inconnu → `autre`, journalisé | REQ-DM-035, REQ-EXT-008 |
 | `StatutTache`          | `a_faire`, `en_cours`, `en_revue`, `fusionnee`, `deployee`, `verifiee`, `bloquee`, `attente_externe`, `proposee` — **neuf valeurs**, celles de `scripts/lot/tasks.schema.json` ; `proposee` manquait ici depuis GOV-017a et rien ne l'attrapait | REQ-GOV-021 |
-| `TypeEvenementJournal` | `journal_ouvert` — la genèse du journal `evenements`, écrite par la première migration et portant l'algorithme de hachage ; ensuite, un type par transition journalisée, chacun à charge fermée sans donnée personnelle | REQ-DM-024, REQ-DM-041 |
+| `TypeEvenementJournal` | `journal_ouvert` — la genèse du journal `evenements`, écrite par la première migration et portant l'algorithme de hachage ; ensuite, un type par GENRE de transition journalisée (partners/ADR-0022), chacun à charge fermée sans donnée personnelle ; les treize valeurs décidées pour les phases 0 et 1 et leur tâche créatrice sont au §4.1, et chacune entre dans cette ligne avec la migration qui la crée | REQ-DM-024, REQ-DM-041 |
 | `AgregatJournal`       | `attribution`, `apporteur`, `ligne_commission`, `releve`, `piece_kyc`, `contrat` — l'agrégat dont la transition s'écrit au journal, dans la même transaction ; l'événement le désigne par `agregatId`, jamais par une donnée de la personne | REQ-DM-024 |
+| `SourceEvenementRecu`  | `axionia`, `docuseal` — colonne `source` de `EvenementRecu` (SEC-06) | REQ-DM-036 |
+| `TypeEvenementRecu`    | `client_cree`, `client_mis_a_jour`, `devis_signe`, `facture_emise`, `avoir_emis`, `paiement_recu`, `paiement_rembourse` — identifiant Prisma en snake_case, libellé Postgres égal au nom de fil par `@map` (`client_cree` porte `client.cree`), généré depuis `TYPES_EVENEMENT` (SEC-06) ; INT-T01c y fera entrer `candidature_recue`, `financement_mis_a_jour`, `facture_annulee` et `client_fusionne`, INT-T12 `submission_completed`, `form_declined` et `submission_expired` : chacune passe dans cette liste avec la migration qui la crée | REQ-DM-036, REQ-INT-004 |
+| `StatutEvenementRecu`  | `recu`, `traite`, `en_attente_dependance`, `held`, `en_erreur` — `held` : un événement bien formé de `schema_version` inconnue, inscrit et alerté, jamais rejeté (SEC-06) | REQ-DM-036, REQ-ARG-003, REQ-INT-011 |
+| `StatutCourriel`       | `envoye`, `retenu_adresse_supprimee`, `retenu_dmarc_non_verifie`, `echec` — colonne `statut` de `courriels_envoyes` (INT-T10) : un envoi retenu est visible, jamais jeté | REQ-INT-022, REQ-INT-023 |
+| `MotifSuppressionCourriel` | `rebond_definitif` — une valeur de plainte n'y entre que si le relais émet réellement cet événement (INT-T10) | REQ-INT-023 |
+| `CanalDepot`           | `espace`, `lien_prive` — le canal d'un dépôt ou d'un refus (DM-07) | REQ-DM-012 |
+| `EtatAdministratif`    | `actif`, `cesse` — projection de l'état administratif rendu par l'API publique, « A » et « C » (DM-07) ; ce `actif` qualifie un établissement, jamais un apporteur | REQ-DM-030 |
+| `CategorieEntreprise`  | `pme`, `eti`, `ge` — catégorie rendue par l'API publique (DM-07) | REQ-DM-030 |
+| `MotifRefusDepot`      | `anteriorite_client`, `anteriorite_devis`, `etablissement_cesse`, `entreprise_hors_perimetre`, `file_complete`, `opposition_demarchage`, `insincerite` — sept exactement, colonne `motif` de `depots_refuses` (DM-07) | REQ-SEC-022 |
+| `InteretContact`       | `eleve`, `moyen`, `faible`, `nul` — `HYP-A02-VOCABULAIRE-QUALIFICATION` (DM-09) | REQ-DM-008 |
+| `ProchaineEtape`       | `rdv`, `rappeler`, `proposition`, `perdue`, `aucune` — `HYP-A02-VOCABULAIRE-QUALIFICATION` (DM-09) | REQ-DM-008, REQ-UX-021 |
+| `MotifPerte`           | `pas_de_besoin`, `deja_equipe`, `hors_cible`, `injoignable_definitif`, `autre` — `HYP-A02-VOCABULAIRE-QUALIFICATION` (DM-09) ; aucune valeur `non_confirme` : une déclaration `non_confirme` mène l'attribution à `invalidee` | REQ-DM-008, REQ-UX-021 |
+| `TypeAnomalie`         | `sincerite`, `appareil_inconnu`, `ramassage`, `auto_parrainage` — aucune valeur de rythme (DM-12) | REQ-DM-033, REQ-SEC-017 |
+| `ObjetContestation`    | `refus_depot`, `annulation_attribution`, `demande_rattachement` — objet d'une contestation écrite (DM-12) | REQ-DM-043, REQ-DM-034 |
+| `EtatGel`              | `libre`, `gele_non_confirmation`, `gele_fraude` — le statut vaut `suspendu` si et seulement si le gel n'est pas `libre` (SEC-15) | REQ-SEC-019, REQ-SEC-038 |
+| `ResultatDecisionCandidature` | `retenu`, `vivier`, `refuse` — une décision est une ligne nouvelle, jamais une réécriture (CPL-T06) | REQ-CPL-006 |
+| `StatutEnveloppe`      | `envoyee`, `signee`, `refusee`, `expiree`, `annulee` — l'enveloppe DocuSeal d'un contrat (INT-T12) | REQ-SEC-034, REQ-JUR-004 |
+| `CanalEchange`         | `appel`, `email`, `visite`, `linkedin`, `autre` — canal d'un échange saisi (EXT-T01) | REQ-EXT-002 |
+| `OrigineCandidature`   | `tunnel`, `saisie_console`, `import`, `parrainage` — origine d'une candidature (EXT-T03) | REQ-EXT-008 |
+| `TypeFichierCv`        | `pdf`, `docx`, `jpg`, `png` — type RÉEL d'un CV, vérifié par ses octets (EXT-T03) | REQ-EXT-011 |
+| `TypeLigneGrille`      | `forfait`, `pourcentage`, `aucune` — type d'une ligne de grille (DM-23) | REQ-EXT-026 |
+| `FamillePrestation`    | `formation_collective`, `accompagnement_individuel`, `audit`, `implementation` — famille d'une ligne de grille (DM-23) | REQ-EXT-026 |
 
 > ⚠️ **La légende d'avancement de REQ-GOV-026 n'est PAS un enum de colonne**, et n'a donc pas de
 > ligne dans ce tableau. Ses sept états — `specifie`, `code`, `teste`, `revu`, `fusionne`,
@@ -140,13 +162,42 @@ ordinaire **reste `prevue`** (l'attribution passe `figee_resiliation`) ; `conser
 > toujours. Détail dans `docs/INVENTAIRE-CHANTIERS.md` §1.
 
 
+### 4.1 Valeurs de `TypeEvenementJournal` décidées pour les phases 0 et 1 (partners/ADR-0022)
+
+Un type par **GENRE** de transition, pas par transition : ajouter un événement à une matrice modifie une
+charge Zod de `src/domain/evenement/charges.ts`, jamais le schéma. Chaque valeur entre dans la ligne
+`TypeEvenementJournal` du §4 **avec la migration de sa tâche créatrice**, et pas avant : la ligne énumère ce
+que le schéma porte, sans quoi `partners:schema:enums` rougirait en `enum_divergent_du_glossaire`. Un texte
+qui nomme un événement pointé — `attribution.confirmee_tacitement` (REQ-DM-042) — désigne
+`attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'`.
+
+| Valeur | Agrégat | Créateur | Charge fermée |
+| --- | --- | --- | --- |
+| `attribution_etat_modifie` | `attribution` | DM-08 | `{de, vers, evenement, acteurId?, lienInteret?}` ; `de` : `EtatAttribution` ou nul ; `evenement` : `z.enum(EVENEMENTS_ATTRIBUTION)` ; `lienInteret` : `declare` ou `non_declare` |
+| `attribution_peremption_suspendue` | `attribution` | DM-08 | `{acteurId, suspendueAt}` |
+| `attribution_contact_purge` | `attribution` | DM-07 | `{purgeAt}` |
+| `apporteur_statut_modifie` | `apporteur` | CPL-T06 | `{de, vers, evenement, resiliationMotif?, acteurId?}` ; `evenement` : `z.enum(EVENEMENTS_APPORTEUR)` |
+| `apporteur_gel_modifie` | `apporteur` | SEC-15 | `{de, vers, par, anomalieId?, acteurId?}` ; `de` et `vers` : `EtatGel` ; `par` : `role` ou `plein_droit` |
+| `anomalie_statut_modifie` | `apporteur` | DM-12 | `{anomalieId, de?, vers, acteurId?}` |
+| `contestation_modifiee` | `apporteur` | DM-12 | `{contestationId, de?, vers, acteurId?}` |
+| `rattachement_manuel_modifie` | `attribution` | DM-12 | `{rattachementId, vers, acteurId}` ; `vers` : `decide` ou `revoque` |
+| `piece_kyc_statut_modifie` | `piece_kyc` | DM-11 | `{de, vers, type, acteurId?}` ; `vers` : `StatutPieceKyc` ; `type` : `TypePieceKyc` |
+| `contrat_statut_modifie` | `contrat` | DM-23 | `{de?, vers, acteurId?}` ; `vers` : `StatutContrat` |
+| `grille_contrat_modifiee` | `contrat` | DM-23 | `{grilleContratId, lignes, acteurId}` ; `lignes` : les identifiants des lignes modifiées, jamais un compte |
+| `echange_saisi` | `attribution` | EXT-T01 | `{echangeId, canal}` ; `canal` : `CanalEchange` |
+| `candidature_rattachee` | `apporteur` | EXT-T03 | `{apporteurIdRattache}` |
+
+Un booléen s'écrit dans une charge `z.enum(['oui', 'non'])`, jamais une chaîne libre (REQ-DM-041).
+
 ## 5. Événements
 
 ### `EvenementRecu` — un seul nom
 
 Table de réception des webhooks entrants (axionia, DocuSeal) : `{source enum {axionia, docuseal}, eventId unique par
 source, eventType, payloadHash, receivedAt, processedAt, error, retryCount}` (REQ-DM-036, REQ-QA-008, patron
-`DocusealWebhookEvent`). Rejouer un événement déjà traité ne produit **aucune** écriture métier.
+`DocusealWebhookEvent`). Rejouer un événement déjà traité ne produit **aucune** écriture métier. Confirmé le
+2026-09-26 (partners/ADR-0022, REQ-DM-036 amendée) : modèle `EvenementRecu`, table `evenements_recus`, créée par
+SEC-06 ; ses enums sont `SourceEvenementRecu`, `TypeEvenementRecu` et `StatutEvenementRecu` (§4).
 
 Synonymes interdits : `WebhookRecu`, `InboundEvent`, `WebhookEvent`, `EventLog` pour cette table. Ne pas confondre
 avec `evenements` (journal append-only chaîné du domaine, REQ-DM-041).

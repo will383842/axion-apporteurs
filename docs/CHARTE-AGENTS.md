@@ -87,7 +87,7 @@ API, consommés des deux côtés, avec leur hash. Rédige les ADR : une question
 les documents s'y règle, jamais par un choix silencieux dans une PR. Sur toute PR portant le label `schema`,
 il **tient la troisième lentille**, après `exactitude` et `securite`, et son approbation est **bloquante** —
 sa fiche `.claude/agents/architecte.md` le dit dans ces termes : une PR `schema` reçoit **trois** lentilles
-(décision de Will du 2026-09-26, `partners/ADR-0022`).
+(décision de Will du 2026-09-26, `partners/ADR-0024`).
 *Jamais.* N'implémente ni écran, ni e-mail, ni cas d'usage. N'accepte pas une migration qui perd de la donnée
 sans ADR **et** sauvegarde vérifiée. Ne réintroduit pas de référentiel entreprises local.
 *Outils.* Read, Write, Edit, Grep, Glob, Bash.
@@ -289,7 +289,7 @@ Deux privations plus étroites, à ne pas confondre avec les précédentes :
 champ `Auteur:` n'apparaît **jamais** dans `Relecteur:`, et l'auteur ne s'auto-approuve pas. `gov:pr` rougit
 sur les deux cas.
 
-**Deux lentilles partout** — décision de Will du 2026-09-26 (`W16`, `partners/ADR-0022`, GOV-101), qui
+**Deux lentilles partout** — décision de Will du 2026-09-26 (`W16`, `partners/ADR-0024`, GOV-101), qui
 remplace celle du 2026-09-25 (`partners/ADR-0021`, GOV-097). Les avis sont portés par A09, un par lentille :
 `exactitude` (le code fait-il exactement ce que disent les REQ citées, ni plus ni moins, sans retaper une valeur
 qui existe ailleurs — RM-01) et `securite` (cloisonnement, défaut = refus, 404 byte-identique, PII, journal,

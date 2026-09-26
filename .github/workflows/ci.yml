@@ -369,7 +369,7 @@ jobs:
         run: pnpm req:check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # GOV-101, REQ-QA-002 — decision de Will du 2026-09-26 (W16, partners/ADR-0022) : la lentille
+      # GOV-101, REQ-QA-002 — decision de Will du 2026-09-26 (W16, partners/ADR-0024) : la lentille
       # `mutation` n est plus une revue d agent, c est cette mesure. Stryker, en BAC A SABLE, sur les
       # seuls fichiers de `src/domain/` et `src/server/` que la PR ajoute ou modifie (base de fusion
       # avec `origin/$GITHUB_BASE_REF`, que GitHub pose sur `pull_request`) ; sur `push` de main le

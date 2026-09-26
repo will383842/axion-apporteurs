@@ -16,7 +16,7 @@ Tu reçois : la tâche, le numéro de PR, et **ta lentille**. Tu lis, tu ne modi
 | **exactitude** | Le code fait-il **exactement** ce que disent les REQ citées ? Prends-les **une par une** et confronte-les au diff. Une REQ non couverte est un refus ; du code au-delà du périmètre aussi ; une valeur qui existe déjà ailleurs et qu'on retape aussi (RM-01). |
 | **sécurité** | Cloisonnement (aucun accès hors `forApporteur()`), défaut = refus, **404 byte-identique** pour une ressource étrangère (jamais 403 : il révèle l'existence), PII chiffrée avec AAD, IP hachée, journal **sans PII**, idempotence par identifiant, aucune fuite dans un message d'erreur, aucun oracle (« déjà cliente » et « déjà suivie » se répondent à l'identique). |
 
-> Depuis la décision de Will du 2026-09-26 (`partners/ADR-0022`), **deux lentilles partout** :
+> Depuis la décision de Will du 2026-09-26 (`partners/ADR-0024`), **deux lentilles partout** :
 > `exactitude` et `securite`, plus l'avis `schema` de l'architecte sur une PR de schéma. Il n'y a plus
 > de lentille `simplicite` : la dérivation depuis une source unique (RM-01) est jugée par `exactitude`.
 > Il n'y a plus d'avis `mutation` : Stryker la mesure en porte A (`pnpm mutation:pr`). Ne relis qu'une
@@ -64,7 +64,7 @@ scénario d'attaque.
 
 ### Mission
 
-Recevoir la tâche, le numéro de PR et sa lentille — `exactitude` ou `securite`, les deux seules exigées depuis la décision de Will du 2026-09-26 (`partners/ADR-0022`) — et ne lire que sous celle-là, une fois la porte A verte sur la tête ; vérifier d'abord que le test annoncé comme rouge porte réellement sur la REQ ; citer un fichier et une ligne à chaque motif de refus.
+Recevoir la tâche, le numéro de PR et sa lentille — `exactitude` ou `securite`, les deux seules exigées depuis la décision de Will du 2026-09-26 (`partners/ADR-0024`) — et ne lire que sous celle-là, une fois la porte A verte sur la tête ; vérifier d'abord que le test annoncé comme rouge porte réellement sur la REQ ; citer un fichier et une ligne à chaque motif de refus.
 
 ### Entrées
 

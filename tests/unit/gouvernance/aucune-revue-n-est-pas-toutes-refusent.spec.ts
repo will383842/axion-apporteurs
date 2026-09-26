@@ -87,7 +87,7 @@ describe('REQ-GOV-011 — aucune revue n’est pas « toutes les revues refusent
 
   it('REQ-GOV-011 · GOV-101 : sur une PR élevée, aucun avis de mutation n’est plus réclamé — Stryker la mesure en porte A', () => {
     // Ce témoin exigeait jusqu'au 2026-09-26 que l'absence d'un avis « mutation » soit NOMMÉE. La
-    // décision de Will (`W16`, `partners/ADR-0022`) a retiré cet avis : les mêmes revues ne
+    // décision de Will (`W16`, `partners/ADR-0024`) a retiré cet avis : les mêmes revues ne
     // laissent plus aucune faute, et aucun message ne parle plus de mutation.
     const f = fautes(LENTILLES.map((l) => avis('A09', l, 'accepte')));
     expect(f).toEqual([]);

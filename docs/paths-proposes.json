@@ -2,15 +2,14 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 286,
-    "pairesEnIntersection": 4428,
-    "cheminsDeclares": 813,
-    "cheminsDistincts": 528,
-    "cheminsPartages": 100,
-    "tachesSansAucuneIntersection": 85,
+    "tachesCouvertes": 290,
+    "pairesEnIntersection": 4425,
+    "cheminsDeclares": 818,
+    "cheminsDistincts": 531,
+    "cheminsPartages": 101,
+    "tachesSansAucuneIntersection": 89,
     "listeDesTachesIsolees": [
       "QA-T08",
-      "QA-T06",
       "QA-T12",
       "QA-T13",
       "DM-03-A",
@@ -38,11 +37,14 @@
       "GOV-029",
       "GOV-039",
       "GOV-041",
+      "GOV-042",
       "GOV-043",
       "GOV-045",
       "GOV-046",
       "GOV-047",
       "GOV-048",
+      "GOV-049",
+      "GOV-050",
       "GOV-051",
       "GOV-052",
       "GOV-053",
@@ -93,7 +95,9 @@
       "UX-P3-09",
       "UX-P3-11",
       "GOV-097",
-      "GOV-101"
+      "GOV-101",
+      "INT-T26",
+      "INT-T27-A"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -139,26 +143,17 @@
       "INT-T08-A"
     ],
     "schemaContredit": [
-      "DM-01",
-      "QA-T06",
-      "DM-03-P",
-      "INT-T02",
-      "SEC-06",
-      "SEC-11",
-      "DM-09",
-      "DM-12",
       "SEC-18",
-      "INT-T12",
+      "SEC-19",
       "SEC-21",
-      "CPL-T06",
       "UX-P1-15",
+      "UX-P1-12",
       "DM-16",
       "DM-19",
       "T-ARG-032",
       "CPL-T11",
       "CPL-T15",
-      "EXT-T08",
-      "EXT-T01"
+      "EXT-T08"
     ],
     "gardesSansEntreeAuRegistre": [
       "JUR-T30 — jur:aucune-instruction",
@@ -502,7 +497,8 @@
       ".github/workflows/preview.yml",
       "prisma/seed.ts",
       "tests/integration/semeur-deterministe.spec.ts",
-      "tests/unit/qualite/preview-par-pr.spec.ts"
+      "tests/unit/qualite/preview-par-pr.spec.ts",
+      "prisma/schema.prisma"
     ],
     "QA-T12": [
       ".github/workflows/backup.yml",
@@ -619,7 +615,8 @@
       "src/app/api/webhooks/zeptomail/route.ts",
       "tests/unit/email/emetteur.spec.ts",
       "docs/gates.json",
-      "tests/integration/webhook-rebonds.spec.ts"
+      "tests/integration/webhook-rebonds.spec.ts",
+      "prisma/schema.prisma"
     ],
     "INT-T11": [
       "src/server/mcp/",
@@ -723,7 +720,8 @@
       "src/domain/attribution/machine.ts",
       "src/domain/attribution/etats.ts",
       "tests/domain/transitions.spec.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "prisma/schema.prisma"
     ],
     "DM-24": [
       "src/server/crons/confirmation-tacite.ts",
@@ -793,8 +791,7 @@
     "SEC-28": [
       "src/server/crons/levee-gel.ts",
       "src/domain/apporteur/suspension.ts",
-      "tests/security/cliquet-gel.spec.ts",
-      "prisma/schema.prisma"
+      "tests/security/cliquet-gel.spec.ts"
     ],
     "SEC-16": [
       "src/server/verification/dto.ts",
@@ -897,7 +894,8 @@
     ],
     "UX-P1-10": [
       "src/server/notifications/table-ssot.ts",
-      "emails/apporteur/"
+      "emails/apporteur/",
+      "prisma/schema.prisma"
     ],
     "UX-P1-11": [
       "src/server/queue/workers/onboarding.ts",
@@ -1237,8 +1235,7 @@
       "src/domain/apporteur/activite.ts",
       "emails/apporteur/",
       "tests/domain/suspension-motifs.spec.ts",
-      "docs/gates.json",
-      "prisma/schema.prisma"
+      "docs/gates.json"
     ],
     "JUR-T30": [
       "scripts/gates/jur-aucune-instruction.ts",
@@ -1319,8 +1316,7 @@
       "tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts"
     ],
     "GOV-042": [
-      "tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts",
-      "prisma/schema.prisma"
+      "tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts"
     ],
     "GOV-043": [
       "tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts"
@@ -1341,12 +1337,10 @@
       "tests/unit/gouvernance/sonde-distingue-les-deux-depots.spec.ts"
     ],
     "GOV-049": [
-      "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts",
-      "prisma/schema.prisma"
+      "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts"
     ],
     "GOV-050": [
-      "tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts",
-      "prisma/schema.prisma"
+      "tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts"
     ],
     "GOV-051": [
       "tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts"
@@ -1551,6 +1545,20 @@
     ],
     "GOV-101": [
       "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+    ],
+    "GOV-102": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "INT-T01c": [
+      "tests/unit/integration/contrat-hash.spec.ts",
+      "tests/unit/integration/contrat-v2-frontiere.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "INT-T26": [
+      "tests/integration/candidature-recue.spec.ts"
+    ],
+    "INT-T27-A": [
+      "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
     ]
   }
 }

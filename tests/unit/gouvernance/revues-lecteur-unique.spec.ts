@@ -449,7 +449,7 @@ describe('REQ-GOV-011 — les deux mutants qui survivaient, rejoués comme témo
     // Toute troncature de `lentillesExigees()` — la SEULE fonction qui décide de cette liste —
     // rougit ici. Et elle est désormais la seule à pouvoir la décider : `lireRevues` reçoit le
     // RISQUE de la PR, pas une liste qu'un appelant pourrait rétrécir.
-    // GOV-101 (décision de Will du 2026-09-26, `partners/ADR-0022`) : deux partout, et l'architecte
+    // GOV-101 (décision de Will du 2026-09-26, `partners/ADR-0024`) : deux partout, et l'architecte
     // en TROISIÈME sur une PR de schéma. Ni `simplicite` ni `mutation` ne sont plus exigées.
     expect([...lentillesExigees(ELEVE).toutes]).toEqual(['exactitude', 'securite']);
     expect([...lentillesExigees(eleve(true)).toutes]).toEqual(['exactitude', 'securite', 'schema']);

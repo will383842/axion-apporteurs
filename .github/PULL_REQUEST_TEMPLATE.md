@@ -18,7 +18,7 @@ dans ce fichier, et `gov:pr` rougit si ce n'est plus vrai.
     ferait une neuvième case et fausserait le compte de REQ-GOV-013 ;
   · `Auteur:` n'apparaît jamais dans `Relecteur:`, et l'auteur ne s'auto-approuve pas. La règle
     porte sur l'auteur et sur les LENTILLES — deux partout, `exactitude` et `securite`, plus
-    `schema` (A02) sur une PR de schéma (GOV-101, partners/ADR-0022) — jamais sur l'unicité des
+    `schema` (A02) sur une PR de schéma (GOV-101, partners/ADR-0024) — jamais sur l'unicité des
     codes de poste. La mutation n'est plus un avis : Stryker la mesure en porte A.
   · avant d'ouvrir la PR : `pnpm pre-gate` (et `pnpm mutation:pr` si la PR touche src/domain ou
     src/server) ; les relectures démarrent quand la porte A est verte.

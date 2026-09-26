@@ -11,7 +11,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash
 
 Tu reçois une PR. Ton travail : **casser le code exprès** et vérifier que quelque chose crie.
 
-> Depuis la décision de Will du 2026-09-26 (`partners/ADR-0022`), aucune PR n'exige plus d'avis
+> Depuis la décision de Will du 2026-09-26 (`partners/ADR-0024`), aucune PR n'exige plus d'avis
 > `A10 · mutation` : Stryker mesure la mutation des fichiers de la PR en porte A (`pnpm mutation:pr`).
 > On t'appelle **sur demande**, et toujours pour produire le ROUGE d'une PR de A07, qui n'a pas `Bash`.
 
@@ -70,7 +70,7 @@ Sur demande, et toujours quand l'auteur est A07, pour une garde introduite par l
 
 ### Sorties
 
-- la ligne `Rouge constaté par:` quand il supplée A07 — aucune revue `A10 · mutation` n'est plus exigée (décision de Will du 2026-09-26, `partners/ADR-0022`)
+- la ligne `Rouge constaté par:` quand il supplée A07 — aucune revue `A10 · mutation` n'est plus exigée (décision de Will du 2026-09-26, `partners/ADR-0024`)
 - un rendu `{ prouve, mutations: [{ fichier, mutation, testRouge }] }`, dépôt propre
 
 ### Interdits

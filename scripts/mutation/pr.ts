@@ -2,7 +2,7 @@
  * `pnpm mutation:pr [--base <ref>]` — Stryker sur les fichiers mutables d'UNE PR (GOV-101,
  * REQ-QA-002). Appelé par la porte A ; lancé à la main avant d'ouvrir une PR qui touche le code.
  *
- * POURQUOI. Décision de Will du 2026-09-26 (`W16`, `partners/ADR-0022`) : la lentille `mutation`
+ * POURQUOI. Décision de Will du 2026-09-26 (`W16`, `partners/ADR-0024`) : la lentille `mutation`
  * n'est plus une revue d'agent. Un agent qui écrivait « les gardes ont été vues rougir sur une
  * mutation réelle » le DÉCLARAIT ; Stryker le MESURE, et nomme chaque survivant `fichier:ligne`.
  *
@@ -15,7 +15,7 @@
  * la garde en SOUS-PROCESSUS (`npx tsx scripts/gates/…`) : l'instrumentation de Stryker n'y active
  * aucun mutant, chaque mutant y « survivrait », et la porte A rougirait sur un faux. Leur preuve
  * de mutation est leur `--prove`, joué en porte A pour CHAQUE garde (un témoin par famille, vu
- * rougir). Dette nommée dans `partners/ADR-0022` : une passe Stryker sur les fonctions PURES des
+ * rougir). Dette nommée dans `partners/ADR-0024` : une passe Stryker sur les fonctions PURES des
  * gardes, jugées en processus.
  *
  * LE BAC À SABLE EST OBLIGATOIRE (`inPlace: false`, écrit en toutes lettres dans la configuration

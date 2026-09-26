@@ -91,7 +91,7 @@ function avis(poste: string, lentille: string, commit: string): RevueBrute {
 
 /**
  * Le tour complet des lentilles exigées, toutes jugées au même commit. Depuis GOV-101 (décision de
- * Will du 2026-09-26, `partners/ADR-0022`), deux partout : `exactitude` et `securite`. Les avis
+ * Will du 2026-09-26, `partners/ADR-0024`), deux partout : `exactitude` et `securite`. Les avis
  * `simplicite` et `mutation` que ce fichier posait ne sont plus exigés — ils ne survivent ni ne
  * périment (voir « une lentille NON EXIGÉE »).
  */

@@ -612,7 +612,7 @@ export function controler(depot: Depot, pr: Pr | null): Faute[] {
         ajouter(
           'charte_lentille_non_derivee',
           `${CHEMIN_CHARTE} — « ${m[1]} lentille » alors que ${CHEMIN_FICHE_ARCHITECTE} écrit « ${attendu} lentille ». ` +
-            `L'architecte tient la lentille que sa fiche nomme (partners/ADR-0022) : la vue contredit sa ` +
+            `L'architecte tient la lentille que sa fiche nomme (partners/ADR-0024) : la vue contredit sa ` +
             `source, et le nombre d'avis exigés change sans que personne ne l'ait décidé.`
         );
       }
@@ -2459,7 +2459,7 @@ if (LANCE_EN_SCRIPT) {
       },
       // ── GOV-101 : CES CINQ CAS ÉTAIENT DES TÉMOINS DE `lentilles_manquantes`. Chacun élève le risque
       // par un chemin différent (CI, racine, liste de la forge, zone, renommage) et exigeait quatre
-      // lentilles. Depuis la décision de Will du 2026-09-26 (`W16`, `partners/ADR-0022`), le risque ne
+      // lentilles. Depuis la décision de Will du 2026-09-26 (`W16`, `partners/ADR-0024`), le risque ne
       // compte plus de lentille : les mêmes PR, relues par `exactitude` et `securite`, sont VERTES.
       // Les commentaires de chaque cas disent ce que le risque y détecte ; « quatre lentilles » y est
       // l'exigence d'AVANT. La classification elle-même reste éprouvée par `risqueDeLaPr()` dans

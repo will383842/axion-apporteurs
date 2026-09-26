@@ -190,7 +190,7 @@
     {
       "id": "REQ-DM-013",
       "domaine": "domaine-donnees",
-      "texte": "Un Contrat est versionné {apporteurId, gabaritVersion, grilleVersionId, docusealSubmissionId, signedAt, pdfHash SHA-256, auditTrailJson, statut enum {envoye, signe, remplace, resilie}} ; un apporteur a au plus un contrat `signe` en vigueur (index unique partiel).",
+      "texte": "Un Contrat est versionné {apporteurId, gabaritVersion, grilleCommissionId NOT NULL, grilleContratId NOT NULL, statut enum {envoye, signe, remplace, resilie}, signeAt, pdfHash SHA-256, auditTrailHash SHA-256, pdfCle, auditTrailCle, creeAt} — table `contrats` créée par DM-23 (partners/ADR-0022) ; l'enveloppe DocuSeal et son `submissionId` vivent dans `enveloppes_signature` (INT-T12) ; un apporteur a au plus un contrat `signe` en vigueur (index unique partiel).",
       "source": "outil §6.2, D10",
       "statut": "active",
       "remplaceePar": null,
@@ -396,7 +396,7 @@
     {
       "id": "REQ-DM-027",
       "domaine": "domaine-donnees",
-      "texte": "PieceKyc {apporteurId, type enum {siret, tva, rib, identite, vigilance, rc_pro}, statut enum {manquante, a_verifier, valide, perimee, refusee}, verifieeAt, expireAt (**NOT NULL si type = vigilance OU rc_pro**), fichierRef, fichierPurgeAt} unique par (apporteurId, type) ; la fonction pure `piecesBloquantPaiement(pieces, cumulContratHtCents, seuilCents)` décide du blocage. 🔴 **`rc_pro` porte une échéance et un rappel, et ne bloque AUCUN versement** (corrigé le 2026-09-03, A-10) : l'attestation de responsabilité civile professionnelle est exigée à la signature puis à chaque échéance annuelle (contrat art. 6.4), avec rappel J-30 et alerte console à l'expiration, mais elle **n'entre pas dans `piecesBloquantPaiement()` ni dans `controlesVersement()`** — l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement à SIREN valide, coordonnées bancaires au nom de l'apporteur, et attestation de vigilance **au seul seuil légal**. Tests : `rc_pro` périmée → alerte console, relevé **payé** ; ajouter `rc_pro` à la liste bloquante → gate rouge (test-cliquet nominatif sur le contenu de la liste).",
+      "texte": "PieceKyc {apporteurId, type enum {siret, tva, rib, identite, vigilance, rc_pro}, statut enum {manquante, a_verifier, valide, perimee, refusee}, verifieeAt, expireAt (**NOT NULL si type = vigilance OU rc_pro**), fichierRef, fichierPurgeAt, remplaceeAt} ; au plus une pièce COURANTE par (apporteurId, type) — index unique partiel `WHERE remplacee_at IS NULL AND statut <> 'a_verifier'` — et au plus une pièce EN VÉRIFICATION — index unique partiel `WHERE statut = 'a_verifier'` : un changement de RIB crée une pièce `a_verifier` pendant que l'ancienne reste active (REQ-UX-027) ; la fonction pure `piecesBloquantPaiement(pieces, cumulContratHtCents, seuilCents)` décide du blocage. 🔴 **`rc_pro` porte une échéance et un rappel, et ne bloque AUCUN versement** (corrigé le 2026-09-03, A-10) : l'attestation de responsabilité civile professionnelle est exigée à la signature puis à chaque échéance annuelle (contrat art. 6.4), avec rappel J-30 et alerte console à l'expiration, mais elle **n'entre pas dans `piecesBloquantPaiement()` ni dans `controlesVersement()`** — l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement à SIREN valide, coordonnées bancaires au nom de l'apporteur, et attestation de vigilance **au seul seuil légal**. Tests : `rc_pro` périmée → alerte console, relevé **payé** ; ajouter `rc_pro` à la liste bloquante → gate rouge (test-cliquet nominatif sur le contenu de la liste).",
       "source": "outil §6.1, §3.3, D6, D7 ; contrat art. 5.4 et 6.4 ; synthèse du 2026-09-03, A-5 et A-10",
       "statut": "active",
       "remplaceePar": null,
@@ -501,7 +501,7 @@
     {
       "id": "REQ-DM-034",
       "domaine": "domaine-donnees",
-      "texte": "RattachementManuel {attributionId, sirenCommande, motif ≥ 20 caractères, `lienControleEtabliAt`, `lienControleSource`, decidePar, decideAt, revoqueAt} avec unique partiel (sirenCommande) WHERE revoqueAt IS NULL ; c'est l'unique exception à la règle « zéro arbitrage » et elle est tracée. 🔴 **Le rattachement n'est jamais automatique** (le contrat le disait, le produit disait l'inverse — corrigé le 2026-09-03, M-8 : aucune source ne rend de lien capitalistique, l'API recherche-entreprises pas davantage) : il est **décidé par la Société**, motivé, tracé et **notifié à l'apporteur avec son motif** ; l'apporteur peut le **demander** en justifiant du lien de contrôle, et la décision lui est notifiée motivée dans les quinze jours. 🔴 **Le lien de contrôle (L.233-3 C. com.) doit exister à la DATE DE LA DÉCLARATION** et être établi par les données publiques disponibles à cette date (`lienControleEtabliAt` ≤ `attribution.deposeeAt`, `lienControleSource` non vide) : un lien né postérieurement n'ouvre aucun droit — sans quoi un rachat postérieur étendrait seul le périmètre de l'apporteur. Tests : lien daté après le dépôt → rattachement refusé (vu rougir) ; rattachement sans `lienControleSource` → refus ; demande de l'apporteur sans réponse à J+16 → alerte console.",
+      "texte": "RattachementManuel {attributionId, sirenCommande, justification ≥ 20 caractères, `lienControleEtabliAt`, `lienControleSource`, decidePar, decideAt, revoqueAt} avec unique partiel (sirenCommande) WHERE revoqueAt IS NULL ; c'est l'unique exception à la règle « zéro arbitrage » et elle est tracée. 🔴 **Le rattachement n'est jamais automatique** (le contrat le disait, le produit disait l'inverse — corrigé le 2026-09-03, M-8 : aucune source ne rend de lien capitalistique, l'API recherche-entreprises pas davantage) : il est **décidé par la Société**, motivé, tracé et **notifié à l'apporteur avec son motif** ; l'apporteur peut le **demander** en justifiant du lien de contrôle, et la décision lui est notifiée motivée dans les quinze jours. 🔴 **Le lien de contrôle (L.233-3 C. com.) doit exister à la DATE DE LA DÉCLARATION** et être établi par les données publiques disponibles à cette date (`lienControleEtabliAt` ≤ `attribution.deposeeAt`, `lienControleSource` non vide) : un lien né postérieurement n'ouvre aucun droit — sans quoi un rachat postérieur étendrait seul le périmètre de l'apporteur. Tests : lien daté après le dépôt → rattachement refusé (vu rougir) ; rattachement sans `lienControleSource` → refus ; demande de l'apporteur sans réponse à J+16 → alerte console.",
       "source": "fonctionnement R11 ; contrat art. 3.6 al. 2 ; anti-abus F15 ; synthèse du 2026-09-03, M-8",
       "statut": "active",
       "remplaceePar": null,
@@ -525,13 +525,14 @@
       "phase": 0,
       "taches": [
         "DM-06",
-        "INT-T22"
+        "INT-T22",
+        "INT-T26"
       ]
     },
     {
       "id": "REQ-DM-036",
       "domaine": "domaine-donnees",
-      "texte": "WebhookRecu {source enum {axionia, docuseal}, eventId unique par source, type, payloadHash, receivedAt, processedAt, error, retryCount} — dérivé du patron DocusealWebhookEvent ; rejouer un événement déjà traité ne produit aucune écriture métier.",
+      "texte": "EvenementRecu {source enum {axionia, docuseal}, eventId unique par source, eventType, payloadHash, receivedAt, processedAt, error, retryCount} — table `evenements_recus`, nom unique du glossaire §5, créée par SEC-06 (partners/ADR-0022) ; dérivé du patron DocusealWebhookEvent ; rejouer un événement déjà traité ne produit aucune écriture métier.",
       "source": "outil §2.3 ; schema.prisma DocusealWebhookEvent",
       "statut": "active",
       "remplaceePar": null,
@@ -605,7 +606,7 @@
     {
       "id": "REQ-DM-042",
       "domaine": "domaine-donnees",
-      "texte": "🔴 **Confirmation tacite à trente jours — le porteur manquant.** Le contrat promet depuis toujours qu'« à défaut de contact tenté dans les trente jours, l'attribution est réputée confirmée » (art. 3.2 al. 4) ; **aucune REQ, aucune tâche et aucun cron ne portaient cette promesse** — REQ-DM-006 ne promeut que sur qualification humaine, et une attribution `injoignable` n'avait alors ni terme ni horloge (constaté le 2026-09-03, M-7). Un cron quotidien, horloge injectée, promeut en `active` toute attribution `provisoire` dont l'enregistrement remonte à plus de `CONFIRMATION_TACITE_JOURS` (= 30, SSOT, contrat art. 3.2) **sans Qualification `confirme` ni `non_confirme`** ; il écrit l'événement `attribution.confirmee_tacitement` dans la même transaction et fait courir `fenetreFinAt` **à compter de cette date**. La promotion s'applique aussi aux attributions `injoignable` et `ne_se_souvient_pas` (REQ-DM-008). **C'est la seule conséquence attachée au défaut ou au retard de contact** : aucune autre sanction, aucun dédommagement, aucun signal. Tests frontière : J+29 aucune promotion, J+30 promotion unique ; deux passages du cron → une seule promotion et un seul événement ; une Qualification `non_confirme` posée à J+29 empêche la promotion.",
+      "texte": "🔴 **Confirmation tacite à trente jours — le porteur manquant.** Le contrat promet depuis toujours qu'« à défaut de contact tenté dans les trente jours, l'attribution est réputée confirmée » (art. 3.2 al. 4) ; **aucune REQ, aucune tâche et aucun cron ne portaient cette promesse** — REQ-DM-006 ne promeut que sur qualification humaine, et une attribution `injoignable` n'avait alors ni terme ni horloge (constaté le 2026-09-03, M-7). Un cron quotidien, horloge injectée, promeut en `active` toute attribution `provisoire` dont l'enregistrement remonte à plus de `CONFIRMATION_TACITE_JOURS` (= 30, SSOT, contrat art. 3.2) **sans Qualification `confirme` ni `non_confirme`** ; il écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` (un type de journal par genre de transition, partners/ADR-0022) dans la même transaction et fait courir `fenetreFinAt` **à compter de cette date**. La promotion s'applique aussi aux attributions `injoignable` et `ne_se_souvient_pas` (REQ-DM-008). **C'est la seule conséquence attachée au défaut ou au retard de contact** : aucune autre sanction, aucun dédommagement, aucun signal. Tests frontière : J+29 aucune promotion, J+30 promotion unique ; deux passages du cron → une seule promotion et un seul événement ; une Qualification `non_confirme` posée à J+29 empêche la promotion.",
       "source": "contrat art. 3.2 al. 3 et 4 ; synthèse du 2026-09-03, M-7",
       "statut": "active",
       "remplaceePar": null,
@@ -693,7 +694,7 @@
     {
       "id": "REQ-SEC-005",
       "domaine": "anti-abus-securite",
-      "texte": "Le jeton de dépôt privé est un HMAC de scope `depot` lié à l'apporteurId, stocké en hash, multi-usage, expirant à 12 mois, révocable ; un seul jeton actif par apporteur (index unique partiel `WHERE revoked_at IS NULL`) ; régénérable par l'apporteur ; révoqué automatiquement à suspension/résiliation ; jamais dérivé du code de parrainage ni exposé dans une URL publique.",
+      "texte": "Le jeton de dépôt privé est un HMAC de scope `depot` lié à l'apporteurId, stocké en hash, multi-usage, expirant à 12 mois, révocable ; un seul jeton actif par apporteur (index unique partiel `WHERE revoked_at IS NULL`) ; régénérable par l'apporteur ; révoqué automatiquement à la résiliation, jamais à la suspension (REQ-SEC-019, REQ-SEC-032) ; jamais dérivé du code de parrainage ni exposé dans une URL publique.",
       "source": "audit-anti-abus §2 M3, §7 C6 ; audit-outil §5 étape 6",
       "statut": "active",
       "remplaceePar": null,
@@ -925,7 +926,7 @@
     {
       "id": "REQ-SEC-021",
       "domaine": "anti-abus-securite",
-      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité et par hash IP selon la configuration, journalisé (`verification_events`) ; un rythme de dépôt au-delà des seuils de configuration pose un signal d'anomalie ; la date de libération est arrondie au mois ; l'identité de l'autre apporteur n'est jamais révélée.",
+      "texte": "« Vérifier une entreprise » n'est accessible qu'en session authentifiée, limité par identité et par hash IP selon la configuration, journalisé (`verification_events`) ; aucun rythme de dépôt ne pose de signal d'anomalie (REQ-SEC-017, REQ-JUR-031 : `TypeAnomalie` n'a pas de valeur de rythme) ; la date de libération est arrondie au mois ; l'identité de l'autre apporteur n'est jamais révélée.",
       "source": "audit-outil §1.3 D5 (précisé)",
       "statut": "active",
       "remplaceePar": null,
@@ -1116,7 +1117,7 @@
     {
       "id": "REQ-SEC-034",
       "domaine": "anti-abus-securite",
-      "texte": "Le webhook DocuSeal est vérifié en HMAC strict `<ts>.<hex64>` avec tolérance 300 s et sans repli en clair ; il est dédupliqué par WebhookRecu (clé (event_type, submission_id, timestamp)) ; le `metadata.apporteurId` est confronté à la soumission émise ; au `submission.completed`, le PDF signé et l'audit trail sont téléchargés immédiatement par l'API (le payload peut être incomplet, rejeu 48 h), stockés, et leur SHA-256 est persisté avec signeAt et gabaritVersion puis recomparé à chaque téléchargement.",
+      "texte": "Le webhook DocuSeal est vérifié en HMAC strict `<ts>.<hex64>` avec tolérance 300 s et sans repli en clair ; il est dédupliqué par EvenementRecu (clé (event_type, submission_id, timestamp)) ; le `metadata.apporteurId` est confronté à la soumission émise ; au `submission.completed`, le PDF signé et l'audit trail sont téléchargés immédiatement par l'API (le payload peut être incomplet, rejeu 48 h), stockés, et leur SHA-256 est persisté avec signeAt et gabaritVersion puis recomparé à chaque téléchargement.",
       "source": "audit-outil §6.2 ; patron `src/lib/docuseal.ts` ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
@@ -1247,7 +1248,7 @@
     {
       "id": "REQ-ARG-003",
       "domaine": "argent",
-      "texte": "Rejeu : l'état des commissions est recalculable depuis WebhookRecu ; rejouer dans l'ordre l'intégralité des événements reçus sur une base vide reproduit un registre identique (mêmes montants, mêmes statuts, même hash de registre — golden) ; toute permutation des événements d'un même dossier produit le même état final (property-based, garanti par `en_attente_dependance`, REQ-INT-011) ; un événement bien formé dont la schemaVersion est inconnue est conservé en `held` et alerté, jamais perdu.",
+      "texte": "Rejeu : l'état des commissions est recalculable depuis EvenementRecu ; rejouer dans l'ordre l'intégralité des événements reçus sur une base vide reproduit un registre identique (mêmes montants, mêmes statuts, même hash de registre — golden) ; toute permutation des événements d'un même dossier produit le même état final (property-based, garanti par `en_attente_dependance`, REQ-INT-011) ; un événement bien formé dont la schemaVersion est inconnue est conservé en `held` et alerté, jamais perdu.",
       "source": "nouvelle (audit-outil §2.3 « rejouables ») ; texte décidé de l'annexe de dédoublonnage, remis le 2026-09-19 (décision de Will)",
       "statut": "active",
       "remplaceePar": null,
@@ -1804,6 +1805,7 @@
         "GOV-069",
         "GOV-088",
         "INT-T01a",
+        "INT-T01c",
         "INT-T05"
       ]
     },
@@ -2173,7 +2175,8 @@
       "etape": 9,
       "phase": -1,
       "taches": [
-        "INT-T01a"
+        "INT-T01a",
+        "INT-T27-A"
       ]
     },
     {
@@ -2957,7 +2960,7 @@
     {
       "id": "REQ-UX-021",
       "domaine": "produit-ux",
-      "texte": "La fiche de qualification console est un formulaire à validation conditionnelle testée cas par cas (date obligatoire si rdv/rappeler ; motif obligatoire si perdue ; `non_confirme` force perdue + motif `non_confirme`), avec bouton d'appel `tel:`, compteur de tentatives et prochaine tentative ; le cas nominal (confirmé + rdv + date) se remplit en ≤ 6 interactions en E2E mobile (projet mobile-chrome), toutes les cibles ≥ 44 px.",
+      "texte": "La fiche de qualification console est un formulaire à validation conditionnelle testée cas par cas (date obligatoire si rdv/rappeler ; motif obligatoire si perdue ; `non_confirme` mène l'attribution à `invalidee` (REQ-DM-008, glossaire §1) et n'est pas une perte : `MotifPerte` n'a pas de valeur `non_confirme`), avec bouton d'appel `tel:`, compteur de tentatives et prochaine tentative ; le cas nominal (confirmé + rdv + date) se remplit en ≤ 6 interactions en E2E mobile (projet mobile-chrome), toutes les cibles ≥ 44 px.",
       "source": "audit-outil §8 ; anti-abus M1 ; reformulation d'annexe appliquée le 2026-09-03",
       "statut": "active",
       "remplaceePar": null,
@@ -3276,7 +3279,8 @@
       "phase": -1,
       "taches": [
         "INT-T01a",
-        "INT-T01b"
+        "INT-T01b",
+        "INT-T01c"
       ]
     },
     {
@@ -3949,6 +3953,7 @@
         "GOV-098",
         "GOV-099",
         "GOV-100",
+        "GOV-102",
         "JUR-T01b"
       ]
     },
@@ -4620,8 +4625,11 @@
       "taches": [
         "DM-15",
         "INT-T01b",
+        "INT-T01c",
         "INT-T05",
-        "INT-T22"
+        "INT-T22",
+        "INT-T26",
+        "INT-T27-A"
       ]
     },
     {
@@ -4898,7 +4906,8 @@
       "phase": 0,
       "taches": [
         "DM-06",
-        "INT-T22"
+        "INT-T22",
+        "INT-T26"
       ]
     },
     {
@@ -5263,7 +5272,7 @@
     {
       "id": "REQ-EXT-026",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "Une ligne de `GrilleContrat` porte : `palierId` (identifiant du palier, dérivé de `pricing.ts`), `prestationFamille` enum `{formation_collective, accompagnement_individuel, audit, implementation}`, `type` enum **`{forfait, pourcentage, aucune}`**, `montantCents` (**Int, centimes, HT** — non nul ssi `type = forfait`, CHECK), `tauxBps` (**Int, points de base** — le point de base vaut un centième de pour cent — non nul ssi `type = pourcentage`, CHECK) , **`cpfEligible` (Boolean, NOT NULL, DÉRIVÉ de `pricing.ts` par le script d'export de REQ-DM-014 — jamais saisi, jamais retapé)** et `motifEcart`. 🔴 **`cpfEligible` manquait, et toute la garde CPF reposait dessus** : REQ-JUR-023 fonde l'interdiction sur ce champ, le contrat y renvoyait deux fois (art. 8.1 al. 2 et annexe A1.6), et **aucune ligne de grille ne le portait** — la garde n'avait pas de donnée à lire (M-15). Il est présent sur les lignes de `GrillePubliee` **et** de `GrilleContrat`, et rendu en **colonne « CPF »** dans l'annexe 1 générée (REQ-EXT-028 a) ; si aucun palier n'est éligible à la date d'une version, l'annexe porte la mention explicite « à la date de la présente version, aucun palier de la présente grille n'est éligible au compte personnel de formation ». **Aucun flottant nulle part** : ni pour un montant, ni pour un taux. Les paliers « sur devis » (`impl-mission-pme`, `impl-mission-eti`, `impl-grand-programme`, `impl-ia-custom`) n'admettent pas `forfait` — un forfait n'a pas de sens sans prix affiché : seuls `pourcentage` et `aucune` sont acceptés (CHECK + test). C'est là que se règle la dégressivité : un taux plus bas sur `impl-grand-programme` que sur `impl-poc`.",
+      "texte": "Une ligne de `GrilleContrat` porte : `commissionId` (identifiant du palier, nom de REQ-INT-006, dérivé de `pricing.ts`), `prestationFamille` enum `{formation_collective, accompagnement_individuel, audit, implementation}`, `type` enum **`{forfait, pourcentage, aucune}`**, `montantCents` (**Int, centimes, HT** — non nul ssi `type = forfait`, CHECK), `tauxBps` (**Int, points de base** — le point de base vaut un centième de pour cent — non nul ssi `type = pourcentage`, CHECK) , **`cpfEligible` (Boolean, NOT NULL, DÉRIVÉ de `pricing.ts` par le script d'export de REQ-DM-014 — jamais saisi, jamais retapé)** et `ecartJustification`. 🔴 **`cpfEligible` manquait, et toute la garde CPF reposait dessus** : REQ-JUR-023 fonde l'interdiction sur ce champ, le contrat y renvoyait deux fois (art. 8.1 al. 2 et annexe A1.6), et **aucune ligne de grille ne le portait** — la garde n'avait pas de donnée à lire (M-15). Il est présent sur les lignes de `GrillePubliee` **et** de `GrilleContrat`, et rendu en **colonne « CPF »** dans l'annexe 1 générée (REQ-EXT-028 a) ; si aucun palier n'est éligible à la date d'une version, l'annexe porte la mention explicite « à la date de la présente version, aucun palier de la présente grille n'est éligible au compte personnel de formation ». **Aucun flottant nulle part** : ni pour un montant, ni pour un taux. Les paliers « sur devis » (`impl-mission-pme`, `impl-mission-eti`, `impl-grand-programme`, `impl-ia-custom`) n'admettent pas `forfait` — un forfait n'a pas de sens sans prix affiché : seuls `pourcentage` et `aucune` sont acceptés (CHECK + test). C'est là que se règle la dégressivité : un taux plus bas sur `impl-grand-programme` que sur `impl-poc`.",
       "source": "GRILLE-PAR-APPORTEUR §2.1, §6.1",
       "statut": "active",
       "remplaceePar": null,
@@ -5277,7 +5286,7 @@
     {
       "id": "REQ-EXT-027",
       "domaine": "extensions du 2026-09-03 (REQ-EXT)",
-      "texte": "🔴 **Motif d'écart obligatoire (W12).** La grille d'un contrat **peut** être inférieure à la grille publiée — tranché par Will le 2026-09-03 — et le contrôle console est donc un **avertissement**, jamais un refus : « cette ligne est inférieure à la grille publiée ». En contrepartie, **toute ligne qui diffère de la grille publiée, dans un sens ou dans l'autre, porte un `motifEcart` non vide, journalisé avec son auteur et sa date ; l'enregistrement de la grille est refusé tant qu'un écart est sans motif** (échec fermé, test vu rougir). L'écart, son motif, qui l'a fixé et quand sont visibles dans l'écran Contrats de la console. 🔴 **L'écart et son motif sont en outre portés à la connaissance de l'APPORTEUR AVANT la signature** (contrat art. 4.1 al. nouveau, M-9) : le produit stockait déjà `motifEcart`, mais rien n'obligeait à le montrer à celui qui signe — un contrat d'adhésion dont une ligne est inférieure à la grille publiée **sans que le signataire en soit informé** est le cas d'école de l'art. 1112-1 C. civ. Le **document de présentation qui accompagne l'enveloppe DocuSeal** (généré, jamais retapé) liste chaque ligne en écart, sa valeur publiée, sa valeur contractuelle et le motif ; l'envoi de l'enveloppe est **refusé** si une ligne en écart n'y figure pas. Un écart documenté et communiqué est une décision commerciale ; un écart inexpliqué ou caché nourrit l'argument du déséquilibre significatif (art. L.442-1 C. com.). Test : grille portant deux écarts → le document d'accompagnement les porte tous les deux avec leur motif ; écart absent du document → **envoi refusé** (vu rougir). La contrepartie publique — la page de commissions passe en **formulation indicative** — est portée par la tâche `JUR-T29`.",
+      "texte": "🔴 **Motif d'écart obligatoire (W12).** La grille d'un contrat **peut** être inférieure à la grille publiée — tranché par Will le 2026-09-03 — et le contrôle console est donc un **avertissement**, jamais un refus : « cette ligne est inférieure à la grille publiée ». En contrepartie, **toute ligne qui diffère de la grille publiée, dans un sens ou dans l'autre, porte un `ecartJustification` non vide, journalisé avec son auteur et sa date ; l'enregistrement de la grille est refusé tant qu'un écart est sans motif** (échec fermé, test vu rougir). L'écart, son motif, qui l'a fixé et quand sont visibles dans l'écran Contrats de la console. 🔴 **L'écart et son motif sont en outre portés à la connaissance de l'APPORTEUR AVANT la signature** (contrat art. 4.1 al. nouveau, M-9) : le produit stockait déjà `ecartJustification`, mais rien n'obligeait à le montrer à celui qui signe — un contrat d'adhésion dont une ligne est inférieure à la grille publiée **sans que le signataire en soit informé** est le cas d'école de l'art. 1112-1 C. civ. Le **document de présentation qui accompagne l'enveloppe DocuSeal** (généré, jamais retapé) liste chaque ligne en écart, sa valeur publiée, sa valeur contractuelle et le motif ; l'envoi de l'enveloppe est **refusé** si une ligne en écart n'y figure pas. Un écart documenté et communiqué est une décision commerciale ; un écart inexpliqué ou caché nourrit l'argument du déséquilibre significatif (art. L.442-1 C. com.). Test : grille portant deux écarts → le document d'accompagnement les porte tous les deux avec leur motif ; écart absent du document → **envoi refusé** (vu rougir). La contrepartie publique — la page de commissions passe en **formulation indicative** — est portée par la tâche `JUR-T29`.",
       "source": "GRILLE-PAR-APPORTEUR §2.2 ; décision W12 du 2026-09-03",
       "statut": "active",
       "remplaceePar": null,

@@ -208,7 +208,7 @@ describe('REQ-GOV-011 — relecteur ≠ auteur, lentilles, section Attaque', () 
 
   it('REQ-GOV-011 : la charte dérive de la fiche architecte la lentille que le label `schema` déplace', () => {
     // La fiche est la SOURCE : elle écrit QUELLE lentille l'architecte tient — la troisième, après
-    // `exactitude` et `securite` depuis GOV-101 (partners/ADR-0022). Une charte qui en nommerait une
+    // `exactitude` et `securite` depuis GOV-101 (partners/ADR-0024). Une charte qui en nommerait une
     // autre changerait le nombre d'avis exigés sans que personne ne l'ait décidé.
     const fiche = readFileSync('.claude/agents/architecte.md', 'utf8');
     const attendu = /\b(première|deuxième|troisième|quatrième|cinquième)\s+lentille/i.exec(fiche);

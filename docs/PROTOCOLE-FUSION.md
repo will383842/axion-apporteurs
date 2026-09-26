@@ -106,7 +106,7 @@ changé.
 CI n'en porte aucune, donc `gate-a` ne peut pas les juger (`docs/CHARTE-AGENTS.md` §8). Sont vérifiés
 ici : les lentilles exigées — **deux partout**, `exactitude` et `securite`, plus l'avis `schema`
 de l'architecte quand la PR touche au schéma (décision de Will du 2026-09-26, `W16`,
-`partners/ADR-0022`, `docs/CHARTE-AGENTS.md` §6) ; la mutation n'est plus un avis d'agent, elle
+`partners/ADR-0024`, `docs/CHARTE-AGENTS.md` §6) ; la mutation n'est plus un avis d'agent, elle
 est mesurée par Stryker en porte A (`pnpm mutation:pr`) —, l'auteur qui ne s'auto-approuve pas, les
 sept premières cases de la DoD, le bloc ROUGE/VERT, et la section « Attaque » si la tâche est
 `sensible`. Sur toute PR, le refus de la lentille `securite` vaut **veto**, à lui seul.
