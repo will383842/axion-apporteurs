@@ -7,15 +7,15 @@
 
 | Question | Réponse |
 | --- | --- |
-| Où est `main` ? | `76548e9` — 2026-09-26T06:06:25+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #136 (rien) · 2. #139 (un contrôle requis rouge ou une revue manquante) · 3. #140 (un contrôle requis rouge ou une revue manquante) · 4. #82 (un conflit avec `main`) |
+| Où est `main` ? | `7e25c56` — 2026-09-26T08:04:20+02:00 |
+| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #136 (un conflit avec `main`) · 3. #140 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 35/115 tâches, reste 61.60 j |
-| Le prochain pas | fusionner #136, puis SEC-03 — Lien magique apporteur (chemin critique) |
+| Le prochain pas | SEC-03 — Lien magique apporteur (chemin critique) |
 | Ce qui bloque | 2 tâche(s) bloquée(s) ou en attente externe · 5 question(s) pour Will |
 | Dernière entrée de journal | PR #139 — 2026-09-26 |
 
-**Ce qu’on tape maintenant.** `gh pr view 136 --json mergeStateStatus` puis la fusion dans le MÊME appel (RM-09). Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
+**Ce qu’on tape maintenant.** débloquer la tête de file ci-dessus — aucune PR n’est fusionnable en l’état. Avant d’écrire une ligne : `docs/REGLES-MAISON.md`, la fiche de rôle, la tâche, ses REQ.
 
 ## Phase courante : 0
 
@@ -64,10 +64,9 @@ Reste sur ce chemin : **14.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | rien — fusionnable maintenant |
-| 2 | #139 — chore(GOV-102): cadrage du schéma des phases 0 et 1 — une table, un créateur ; champ schema remis droit ; INT-T01c et INT-T26 versées | `t/gov-102` | un contrôle requis rouge ou une revue manquante |
-| 3 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un contrôle requis rouge ou une revue manquante |
-| 4 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
+| 2 | #136 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide | `t/lot-l0-04` | un conflit avec `main` — à résoudre avant tout |
+| 3 | #140 — feat(GOV-101): relectures sans defaut — deux lentilles, accord sur patch, pre-gate, mutation:pr | `t/gov-101` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -83,13 +82,11 @@ Deux sources, aucune troisième : les labels `en_cours` + `owner:Axx` de l’iss
 
 ## Décisions du jour
 
-`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées · `docs/adr/0022-carte-du-schema-des-phases-0-et-1.md` — partners/ADR-0022 — La carte du schéma des phases 0 et 1 : une table, un créateur ; un type de journal par genre de transition · `docs/adr/0023-route-des-coordonnees-de-candidature.md` — partners/ADR-0023 — Les coordonnées d'un candidat se tirent par une route HMAC d'axionia, jamais par un événement
+`docs/adr/0013-secrets-et-donnees-personnelles-chiffrees.md` — partners/ADR-0013 — Secrets et données personnelles chiffrées
 
 Dérivé de `git log` sur `docs/adr/`, restreint au jour du dernier atterrissage. Une décision de Will n’est pas un ADR : elle vit au registre `docs/DECISIONS.md`, tranchée ou tenue par une hypothèse datée.
 
 ## Prochain pas
-
-**Fusionner #136** — elle est en tête de file et ne bloque sur rien.
 
 **SEC-03** — Lien magique apporteur (1 j, **sur le chemin critique**) : 42 tâche(s) éligible(s) en tout. `pnpm lot:composer` compose le lot.
 
@@ -97,7 +94,7 @@ Deux pas, jamais un seul : la fusion en tête de file d’abord — lire `mergeS
 
 ## Dernier atterrissage
 
-`origin/main` = `76548e9` (2026-09-26T06:06:25+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
+`origin/main` = `7e25c56` (2026-09-26T08:04:20+02:00). Vérifier `x-partners-build-sha` avant toute nouvelle fusion.
 
 Ce SHA est celui lu **au moment de la génération**, donc avant la fusion de la PR qui porte ce fichier : il a par construction un atterrissage de retard. La fraîcheur se garde par la DATE du commit (`gov:etat`, famille `plan_state_perime`), jamais par ce SHA.
 
@@ -181,6 +178,63 @@ depuis une chaîne entre guillemets doubles du shell a été corrompue en silenc
 y a été exécuté comme une commande, et le verbe a écrit le reste, exit 0. Réécrite depuis un
 fichier, relue sur le disque ; le texte d'un champ de registre ne transite jamais par le shell.
 
+### PR #136 — 2026-09-26 — feat(INT-T11): adaptateur MCP partners — porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide
+
+**Fait.** Lot L0-04 composé de trois tâches, une seule livrée : INT-T11. `POST /api/mcp` juge dans
+cet ordre le secret propre `PARTNERS_MCP_SHARED_SECRET` (absent : 503), le limiteur avant la serrure
+(429, ou 503 en panne), la serrure `x-mcp-secret` à temps constant (401), puis le JSON-RPC. Le contrat
+du socle axion-ops est porté dans `src/server/mcp/socle.ts`, valeurs lues et sceau exécuté au commit
+`473e2aa`. Le manifeste est versionné dans `src/server/mcp/manifeste.json` et confronté au code par
+`pnpm mcp:manifeste`. Le registre est vide : le socle refuse un manifeste sans outil, et le fichier
+porte ce refus au lieu de le contourner. `pnpm harnais-mcp`, en porte A, joue les neuf contrôles, le
+rang 2 optionnel et le sceau, et imprime ce que chacun a confronté.
+
+**Reste.** SEC-06 rendue en stop : la table `WebhookRecu` de REQ-DM-036 et les index uniques sur
+`paymentId` et `refundId` exigent le schéma, et la tâche porte `schema: false` (question à A02).
+INT-T10 rendue en stop pour la même raison : la liste de suppression de REQ-INT-023 et l'envoi retenu
+exigent une table ou une valeur de plus dans `TypeEvenementJournal` (question à A02) ; la forme de
+`Producer-Signature` attend aussi sa lecture dans `docs/tiers/zeptomail.md`. La route servie refuse
+tout (503) tant que le registre de débit ne porte pas de compteur pour elle : la limite et la conduite
+sur panne sont à chiffrer dans REQ-INT-026, et la famille `mcp:` à ouvrir dans REQ-SEC-016, par le
+gardien de la spécification avant INT-T13. Le secret est à poser par Will selon REQ-INT-031 ; il est désormais dans `schemaSecrets`, donc
+exigé au démarrage : sans lui, l'instance refuse de démarrer. Le
+plafond de 6 500 octets par outil et `detectPii` sur les jeux maximaux viennent avec le premier outil
+(INT-T13, INT-T17).
+
+**Appris.** Le socle refuse un manifeste sans outil (`tools : vide`) et ses contrôles par outil ont
+un plancher de 1 : un adaptateur de phase 0 qui porterait le harnais du socle à l'identique serait
+rouge par construction. Le vide se déclare donc, avec un motif et la tâche qui le reprend, et le
+harnais refuse la déclaration dès qu'un outil existe. Le registre de débit ne peut porter un compteur
+que si l'exigence citée écrit sa conduite sur panne après l'ancre : une porte neuve sans chiffre dans
+son exigence ne se branche sur aucun limiteur réel, elle refuse. Enfin, le contrôle 2 du socle lit le
+source brut, commentaires compris : écrire le nom de l'environnement global dans un commentaire d'un
+fichier de l'adaptateur suffit à le faire rougir. Et un fichier de `src/` dont le nom contient
+`contrat` est pris par `gov:entite` pour le point de sortie du contrat d'apporteur : le contrat du socle
+vit donc dans `socle.ts`. Enfin, un fichier de `tests/integration/` ne nomme pas l'objet global
+du processus, sauf `execPath` : la garde statique du harnais de conteneurs le refuse. Une variable
+d'environnement s'y pose par `vi.stubEnv`, et un binaire s'y lance par `execPath` et le chemin de
+`tsx`.
+
+**Relecture.** Sur la tête `569c8e8`, `exactitude` (5324475209) et `securite` (5324475255)
+acceptent ; `simplicite` refuse (5324475297) et `mutation` refuse (5324475334). `simplicite` : les
+boucles des contrôles 7 et 13.3 parcouraient le brouillon du manifeste, qui exclut justement les
+outils en anomalie ; le contrôle 13.3 imprimait vert sur un champ de rang 2 obligatoire.
+`analyserOutils` range désormais chaque refus sous le contrôle qui le juge, et les contrôles 1, 5,
+6, 7 et 13.3 le lisent au lieu de retaper la règle ; un outil injecté par règle rougit son
+contrôle. La comparaison à temps constant et le limiteur non déclaré vivent dans
+`src/server/securite/primitives-de-porte.ts`, partagé avec la frontière axionia, et l'étape
+`mcp:manifeste` de la porte A, qui rejouait le contrôle 6, est retirée. `mutation` : les cinq
+conditions du périmètre vide, le contrôle 2 vidé, les planchers des contrôles 8 et 9, le limiteur
+consulté une seule fois et le champ inconnu du manifeste survivaient ; chacun a désormais son
+témoin, et les seize mutants rejoués sur la spec sont tous tués. Dans le même tour, sur la dette
+de `securite` : `PARTNERS_MCP_SHARED_SECRET` entre dans `schemaSecrets` et suit REQ-SEC-028 (trop
+court, égal à un autre secret ou préfixé `dev_` en production : 503), les deux 503 d'avant la
+serrure portent le même corps, et le corps est borné à 128 Ko (413), borne de REQ-SEC-010. Appris :
+un mutant écrit `[] && x` vaut `x` en JavaScript, un tableau vide étant vrai ; il ne mute rien, et
+sa survie ne dit rien de la garde. Enfin, la Gate A de ce tour a rougi sur le témoin du plancher de
+`gov:trace` : INT-T11 porte son périmètre à 90 tâches, exactement deux fois le plancher, et la tranche
+prise au milieu de la liste débordait d'une case. La tranche est désormais bornée à la liste.
+
 ### PR #134 — 2026-09-26 — feat(SEC-03): lien magique apporteur — demande indistincte, consommation unique, empreintes HMAC, tables
 
 **Fait.** Le parcours de connexion existe de bout en bout : l'écran `/connexion` (un champ de
@@ -261,44 +315,7 @@ Les lignes « red-first, 0 rouge » du journal de la porte sont la sortie des t�
 `tests/unit/qualite/red-first.spec.ts`, sur leurs dépôts jetables : ce spec est vert, et
 `pnpm red-first` sur cette branche juge neuf tests nouveaux, neuf rouges contre `main`.
 
-### PR #131 — 2026-09-26 — chore(GOV-100): cadrage de SEC-03 et SEC-04 — deux tables au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace
-
-**Fait.** Le cadrage de l'architecte du 2026-09-26, pris sur délégation de Will, est inscrit au
-registre : SEC-03 et SEC-04 portent `schema: true`, SEC-03 crée `liens_magiques` et
-`sessions_espace` dans une même migration et ses `paths` portent la migration et les modules de
-durées, de dépôt du lien et d'accès à l'espace ; SEC-04 étendra `sessions_espace`. L'empreinte des
-jetons d'authentification est la décision 14 de partners/ADR-0013 (HMAC-SHA-256 sous le secret de
-l'usage, domaine séparé, `kid` stocké, pas de double clé pour les liens), et `HYP-SEC03-ACCES`
-ouvre l'espace aux statuts `signe` et `suspendu` et le ferme à `candidat`, `retenu`, `vivier`,
-`refuse`, `kyc_en_cours` et `pret_a_signer`. Les points (1) et (5) de l'acceptance de SEC-03 le
-disent. Sur décision du coordinateur, prise sur délégation de Will, la PR aligne aussi REQ-SEC-001 sur la
-décision 14, corrige la ligne `suspendu` du glossaire (accès à l'espace maintenu, nouveaux dépôts
-refusés) et passe DM-11 à `schema: true`, dette nommée par la PR 124. Après les deux relectures,
-REQ-SEC-003 et le point (2) de SEC-04 ne font plus révoquer les sessions à la suspension, seulement
-à la résiliation, au changement de courriel ou d'IBAN et pour motif de sécurité (contrat art. 3.8) ;
-`HYP-SEC03-ACCES` devient une liste blanche, `HYP-E1-24` exclut les liens de la double clé, et les
-art. 3.7 al. 3 et 12.3 que cite `HYP-SEC03-ACCES` ont leur ancrage dans `CONCORDANCES`. GOV-100
-porte la PR. Gardes jouées à 0 : `gov:tasks`, `gov:hypotheses`,
-`gov:attributions`, `gov:trace:verifier`, `plan-state:verifier`, `lot:paths:check`,
-`gov:identifiants`, `gov:lexique`, `gov:termes-interdits`, `gov:adr`, `gov:requirements`,
-`gov:preseance`, `partners:schema:enums`, `gov:etat`, `gov:publication`,
-`tests/unit/gouvernance/un-nom-une-garde.spec.ts`, `tests/unit/gouvernance/glossaire-enums.spec.ts`
-et `tests/unit/contrat/`.
-
-**Reste.** SEC-03 peut être attribuée sur ce cadrage. L'assertion de la décision 14 (un vecteur
-figé d'empreinte de lien) est due par SEC-03, celle de la session par SEC-04 : d'ici là,
-partners/ADR-0013 reste `propose`. Le mot « suspension » de REQ-SEC-002 et du point (3) de SEC-03
-désigne le refus d'une demande de lien au-delà de la limite de débit, pas le statut `suspendu` :
-il ne contredit pas `HYP-SEC03-ACCES`.
-
-**Appris.** Aucun verbe hors dépôt ne savait écrire `schema` dans `docs/tasks.json` : la dette
-nommée par la PR 124 pour DM-11 bloquait aussi ce cadrage. Le champ est écrivable depuis ce jour
-par `reecrire-champ.mjs`, sa valeur jugée booléenne par le schéma du dépôt ; DM-11 a été corrigée
-par le même geste dans cette PR. Et une ligne du registre des décisions qui cite un article du
-contrat fait rougir REQ-JUR-003 tant que `CONCORDANCES` ne l'ancre pas : les gardes de gouvernance
-sortaient à 0, seule `tests/unit/contrat/` le voyait. Une PR qui écrit `docs/DECISIONS.md` la lance.
-
-… 58 entrée(s) plus ancienne(s) dans `docs/journal/`.
+… 59 entrée(s) plus ancienne(s) dans `docs/journal/`.
 
 ## Dette déclarée
 

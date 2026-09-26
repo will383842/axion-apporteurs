@@ -823,6 +823,19 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
         'Stryker, ce lecteur) est vue sortir en non nul puis en 0 sur un projet jetable dans la même ' +
         'spec ; ⛔ ce témoin d’effet ne vit pas dans `REFUS`. Dette DÉCLARÉE.',
     },
+    // ── INT-T11 : UNE sortie, à code VARIABLE ────────────────────────────────────────────────
+    'scripts/gates/harnais-mcp.ts': {
+      total: 1,
+      porte: 1,
+      temoins: 0,
+      raison:
+        'INT-T11 — le harnais de l’adaptateur MCP et la confrontation du manifeste versionné. ' +
+        '`process.exit(code)` : sortie TERMINALE à code variable, commune aux trois modes (harnais, ' +
+        '`--manifeste`, `--ecrire-manifeste`). Le rapport est une fonction pure vue rendre 1 en ' +
+        'nommant le contrôle 8 sur trois adaptateurs fautifs (adaptateur-mcp.spec.ts), et le binaire ' +
+        'est vu sortir en 0 sur le dépôt dans la même spec ; ⛔ ce témoin d’effet ne vit pas dans ' +
+        '`REFUS`. Dette DÉCLARÉE.',
+    },
   };
 
   it('REQ-GOV-032 — le compte DÉRIVÉ du diff égale le compte DÉCLARÉ, fichier par fichier', () => {
@@ -1160,7 +1173,12 @@ describe('REQ-GOV-032 — AUCUN `process.exit(1)` n’entre dans cette PR sans �
     // 🔧 59 + 2 = 61 a la fusion de `main` (`02a7949`) dans `t/lot-l0-03` : INT-T09 et UX-P0-01 ont
     // atterri avec leurs sorties, et ce lot ajoute celles de CPL-T22 et de QA-T30, une chacune. Le
     // total est lu par `vitest -t "process.exit"`, pas devine.
-    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(61);
+    // 🔧 61 → 62 par INT-T11 (lot L0-04), ARBITRÉ et non subi. `scripts/gates/harnais-mcp.ts` naît
+    // avec UNE sortie à code variable. Lu par `vitest -t "process.exit"`, relu et non deviné :
+    //
+    //     le total déclaré a changé sans que le test ci-dessus rougisse: expected 62 to be 61
+    //
+    expect(total, 'le total déclaré a changé sans que le test ci-dessus rougisse').toBe(62);
     // ⚠️ AUCUN LITTÉRAL ICI : `couverts` est DÉRIVÉ de `REFUS`, et le confronter à un nombre
     // tapé remettrait exactement la faute que ce bloc vient de fermer. La seule confrontation
     // qui vaut est celle du DÉCLARÉ au DÉRIVÉ, faite juste au-dessus.

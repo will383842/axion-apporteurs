@@ -732,9 +732,9 @@
       "phase": 0,
       "script": "scripts/gates/harnais-mcp.ts",
       "tache": "INT-T11",
-      "verifie": "9 controles plus C13.3 ; manifeste a jour (pnpm mcp:manifeste) ; <= 6 500 octets par outil ; detectPii = 0 sur les fixtures maximales (etendue par INT-T13 et INT-T17)",
+      "verifie": "les neuf controles du paragraphe 09 du socle axion-ops (core/adapter-kit/conformite.ts), plus le rang 2 optionnel (paragraphe 13.3) et le sceau des profils recalcule avec l'algorithme du socle, chacun imprime avec son compte, son plancher et ce qu'il a confronte, contre l'adaptateur du depot (src/server/mcp/, lu sur le disque). Controle 8 : la porte POST /api/mcp sondee en cinq appels - sans secret configure 503, sans en-tete 401, secret faux 401, bon secret 200, limiteur qui refuse devant un secret faux 429 et consulte une fois (limiteur AVANT la serrure). Controle 6 : deux productions du manifeste au texte canonique identique, et src/server/mcp/manifeste.json confronte au code (pnpm mcp:manifeste, refus nomme manifeste_diverge). PERIMETRE VIDE : registre sans outil en phase 0, les controles par outil (1, 3, 4, 5, 7, 13.3) ont un plancher nul seulement si PERIMETRE_VIDE le declare avec un motif et une tache du backlog non livree portant REQ-INT-027 ; le manifeste est alors refuse par la regle du socle (tools : vide), et ce refus est ecrit dans le fichier versionne. PAS ENCORE TENU : maxBytes <= 6 500 par outil et detectPii = 0 sur les fixtures maximales, ajoutes avec le premier outil (INT-T13, INT-T17)",
       "fixtureRouge": "publier un outil de 6 501 octets",
-      "preuveRouge": null
+      "preuveRouge": "tests/integration/adaptateur-mcp.spec.ts vue ROUGE avant le code (INT-T11, 2026-09-26) : Failed to load url ../../src/server/mcp/porte. Temoin a deux faces dans la meme spec : le harnais contre l'adaptateur prive de son secret, avec un secret faux, puis avec le limiteur place apres la serrure, rend un code non nul et ne rougit QUE le controle 8, nomme ; contre l'adaptateur du depot il rend 0 et le binaire pnpm harnais-mcp sort en 0 en imprimant n°1 a n°9. Rouge constate par: A05"
     },
     {
       "id": "api-gouv-degrade",

@@ -346,6 +346,12 @@ jobs:
         run: pnpm red-first
       - name: La garde red-first sait rougir
         run: pnpm red-first:prove
+      # INT-T11, REQ-INT-026. L adaptateur MCP federe `partners` : les neuf controles du socle, chacun
+      # imprime avec ce qu il a confronte (la porte est sondee en cinq appels, dont le limiteur AVANT la
+      # serrure). Le controle 6 confronte deja le manifeste versionne au code : `pnpm mcp:manifeste`
+      # n est pas rejoue ici. Le temoin a deux faces vit dans `tests/integration/adaptateur-mcp.spec.ts`.
+      - name: Harnais de l adaptateur MCP
+        run: pnpm harnais-mcp
       # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
       # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
       # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
