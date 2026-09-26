@@ -1,0 +1,206 @@
+{
+  "Source": "GET https://recherche-entreprises.api.gouv.fr/search?q=552032534&minimal=true&include=siege,dirigeants&per_page=10&page=1, enregistré le 2026-09-19T17:36:18.859Z par src/server/integrations/recherche-entreprises/enregistrer-fixtures.ts. PROJECTION appliquée à la capture, et elle seule : résultats d’entrepreneurs individuels (nature_juridique 1000) retirés — leur dénomination est un nom de personne ; pour chaque dirigeant personne physique, nom et prenoms remplacés par un pseudonyme, annee_de_naissance et date_de_naissance par une valeur de même forme, tirés d’un HMAC sous une clé aléatoire non conservée (dépôt public : aucune donnée de personne réelle).",
+  "Confronte-a": "docs/tiers/recherche-entreprises.md#2-source-officielle — non confrontée : la rubrique 2 de la fiche ne porte pas encore d’exemple officiel (à la date de l’enregistrement)",
+  "enregistreLe": "2026-09-19T17:36:18.859Z",
+  "cas": "numero-siren",
+  "requete": {
+    "q": "552032534"
+  },
+  "url": "https://recherche-entreprises.api.gouv.fr/search?q=552032534&minimal=true&include=siege,dirigeants&per_page=10&page=1",
+  "statut": 200,
+  "reponse": {
+    "results": [
+      {
+        "siren": "552032534",
+        "siren_conserve": null,
+        "nom_complet": "DANONE",
+        "nom_raison_sociale": "DANONE",
+        "sigle": null,
+        "nombre_etablissements": 19,
+        "nombre_etablissements_ouverts": 3,
+        "siege": {
+          "activite_principale": "70.10Z",
+          "activite_principale_naf25": "66.30Y",
+          "activite_principale_registre_metier": null,
+          "annee_tranche_effectif_salarie": null,
+          "adresse": "59-61 RUE LA FAYETTE 75009 PARIS",
+          "caractere_employeur": "O",
+          "cedex": null,
+          "code_pays_etranger": null,
+          "code_postal": "75009",
+          "commune": "75109",
+          "complement_adresse": null,
+          "coordonnees": "48.8763540066087,2.34353640229216",
+          "date_creation": "2025-08-19",
+          "date_debut_activite": "2025-11-03",
+          "date_fermeture": null,
+          "date_mise_a_jour": null,
+          "date_mise_a_jour_insee": "2025-11-18T13:21:57",
+          "departement": "75",
+          "distribution_speciale": null,
+          "epci": "200054781",
+          "est_siege": true,
+          "etat_administratif": "A",
+          "geo_adresse": null,
+          "geo_id": null,
+          "indice_repetition": null,
+          "latitude": "48.8763540066087",
+          "libelle_cedex": null,
+          "libelle_commune": "PARIS",
+          "libelle_commune_etranger": null,
+          "libelle_pays_etranger": null,
+          "libelle_voie": "LA FAYETTE",
+          "liste_enseignes": null,
+          "liste_finess": null,
+          "liste_id_bio": null,
+          "liste_idcc": ["9999"],
+          "liste_id_organisme_formation": null,
+          "liste_rge": null,
+          "liste_uai": null,
+          "longitude": "2.34353640229216",
+          "nom_commercial": null,
+          "numero_voie": "59",
+          "dernier_numero_voie": "61",
+          "region": "11",
+          "siret": "55203253400703",
+          "statut_diffusion_etablissement": "O",
+          "tranche_effectif_salarie": "NN",
+          "type_voie": "RUE"
+        },
+        "activite_principale": "70.10Z",
+        "activite_principale_naf25": "70.10Y",
+        "categorie_entreprise": "GE",
+        "caractere_employeur": null,
+        "annee_categorie_entreprise": "2023",
+        "date_creation": "1955-01-01",
+        "date_fermeture": null,
+        "date_mise_a_jour": "2026-09-19T11:47:04",
+        "date_mise_a_jour_insee": "2026-09-10T13:14:57.687",
+        "date_mise_a_jour_rne": "2026-09-10T02:09:29",
+        "dirigeants": [
+          {
+            "nom": "NOM 146AE906",
+            "prenoms": "PRENOM 9A3A0170",
+            "annee_de_naissance": "1995",
+            "date_de_naissance": "1995-07",
+            "qualite": "Directeur Général",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 0805044D",
+            "prenoms": "PRENOM 1C96DE9A",
+            "annee_de_naissance": "1966",
+            "date_de_naissance": "1966-10",
+            "qualite": "Administrateur",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM CF14341D",
+            "prenoms": "PRENOM 777B9D8C",
+            "annee_de_naissance": "1974",
+            "date_de_naissance": "1974-09",
+            "qualite": "Administrateur",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM EF0A9B20",
+            "prenoms": "PRENOM C23BC08C",
+            "annee_de_naissance": "1980",
+            "date_de_naissance": "1980-10",
+            "qualite": "Administrateur",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 8D05A266",
+            "prenoms": "PRENOM 2650AB56",
+            "annee_de_naissance": "1976",
+            "date_de_naissance": "1976-02",
+            "qualite": "Administrateur",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 9A806C6E",
+            "prenoms": "PRENOM 020948CC",
+            "annee_de_naissance": "1961",
+            "date_de_naissance": "1961-12",
+            "qualite": "Administrateur",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM FDED243C",
+            "prenoms": "PRENOM E46BB079",
+            "annee_de_naissance": "1991",
+            "date_de_naissance": "1991-06",
+            "qualite": "Administrateur",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 32C1AD06",
+            "prenoms": "PRENOM 916185DC",
+            "annee_de_naissance": "1954",
+            "date_de_naissance": "1954-01",
+            "qualite": "Administrateur",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM C45A351C",
+            "prenoms": "PRENOM F62C4E3A",
+            "annee_de_naissance": "1989",
+            "date_de_naissance": "1989-09",
+            "qualite": "Administrateur",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM B9E61456",
+            "prenoms": "PRENOM C98A6E81",
+            "annee_de_naissance": "1981",
+            "date_de_naissance": "1981-02",
+            "qualite": "Administrateur",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM E563CB99",
+            "prenoms": "PRENOM 6CB3C2F0",
+            "annee_de_naissance": "1951",
+            "date_de_naissance": "1951-04",
+            "qualite": "Président du conseil d’administration",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "siren": "344366315",
+            "denomination": "ERNST & YOUNG AUDIT",
+            "qualite": "Commissaire aux comptes titulaire",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "784824153",
+            "denomination": "FORVIS MAZARS SA",
+            "qualite": "Commissaire aux comptes titulaire",
+            "type_dirigeant": "personne morale"
+          }
+        ],
+        "etat_administratif": "A",
+        "nature_juridique": "5599",
+        "section_activite_principale": "M",
+        "tranche_effectif_salarie": "42",
+        "annee_tranche_effectif_salarie": "2023",
+        "statut_diffusion": "O"
+      }
+    ],
+    "total_results": 1,
+    "page": 1,
+    "per_page": 10,
+    "total_pages": 1
+  }
+}

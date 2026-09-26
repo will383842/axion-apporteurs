@@ -34,7 +34,7 @@
 | Route | Écran | REQ | Maquette | Tâche |
 | --- | --- | --- | --- | --- |
 | `/documents` | Contrat (chaque version), avenants, relevés, autofactures, attestation annuelle, export RGPD | REQ-UX-006, REQ-UX-030, REQ-UX-032 | — | UX-P2-04 |
-| `/filleuls` | Filleuls, échéance des 12 mois, lien de parrainage partageable — **agrégé, sans montant par filleul** | REQ-UX-030 | — | UX-P2-04 |
+| `/filleuls` | Filleuls, règle des 12 mois en **texte fixe** sans aucune date calculée (W15), lien de parrainage partageable — **agrégé, sans montant par filleul** ; liste des filleuls directs réduite à trois clés exactes — prénom, initiale du nom, état du contrat (« en signature » ou « signé », règle fermée de REQ-UX-041, sur l'ensemble des versions du contrat) —, jamais les filleuls des filleuls (W15) ; aucune échéance ni date propre à un filleul, ni par filleul ni agrégée | REQ-UX-030, REQ-UX-041 | — | UX-P2-04, UX-P2-09 |
 | `/conformite` | Pièces KYC avec état et upload — c'est ici qu'on voit pourquoi un paiement est bloqué | REQ-UX-016, REQ-UX-027 | `conformite.html` | UX-P1-09 |
 | `/profil` | Zones, secteur, disponibilité, canal de notification, RIB (step-up), e-mail (confirmation sur l'ancienne adresse) | REQ-UX-027, REQ-UX-031, REQ-CPL-019 | `conformite.html` | UX-P1-09 |
 | `/activite` | Mon activité — ses chiffres, son palier, **aucun objectif, aucun classement** | REQ-UX-029 | — | UX-P3-02 |

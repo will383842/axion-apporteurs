@@ -1,0 +1,45 @@
+<!doctype html>
+<!--
+  Page-piège du bac d'essai — UX-P0-03. Elle porte, EXPRÈS, les trois défauts que le harnais
+  d'accessibilité doit nommer : un bouton de 24 px, un texte de 14 px à faible contraste, et un
+  bloc de largeur fixe qui déborde à 320 px. Ce n'est pas une surface du produit : elle ne sert
+  qu'à prouver que les trois passes savent rougir (tests/a11y/*.spec.ts, A11Y_BAC=1).
+-->
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bac d'essai — page-piège d'accessibilité</title>
+    <style>
+      body {
+        margin: 0;
+        font:
+          18px/1.5 system-ui,
+          sans-serif;
+        color: #1c1917;
+        background: #ffffff;
+      }
+      #bouton-24 {
+        width: 24px;
+        height: 24px;
+        padding: 0;
+      }
+      .contraste-faible {
+        font-size: 14px;
+        color: #b0b0b0;
+      }
+      .largeur-fixe {
+        width: 600px;
+        background: #f5f5f4;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Page-piège</h1>
+      <button id="bouton-24" type="button" aria-label="Fermer">×</button>
+      <p class="contraste-faible">Un texte trop petit et trop pâle pour être lu.</p>
+      <div class="largeur-fixe"><p>Un bloc de six cents pixels de large.</p></div>
+    </main>
+  </body>
+</html>

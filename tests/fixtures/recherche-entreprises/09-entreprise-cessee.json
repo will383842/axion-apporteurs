@@ -1,0 +1,861 @@
+{
+  "Source": "GET https://recherche-entreprises.api.gouv.fr/search?q=virgin+stores&minimal=true&include=siege,dirigeants&per_page=10&page=1, enregistré le 2026-09-19T17:36:23.506Z par src/server/integrations/recherche-entreprises/enregistrer-fixtures.ts. PROJECTION appliquée à la capture, et elle seule : résultats d’entrepreneurs individuels (nature_juridique 1000) retirés — leur dénomination est un nom de personne ; pour chaque dirigeant personne physique, nom et prenoms remplacés par un pseudonyme, annee_de_naissance et date_de_naissance par une valeur de même forme, tirés d’un HMAC sous une clé aléatoire non conservée (dépôt public : aucune donnée de personne réelle).",
+  "Confronte-a": "docs/tiers/recherche-entreprises.md#2-source-officielle — non confrontée : la rubrique 2 de la fiche ne porte pas encore d’exemple officiel (à la date de l’enregistrement)",
+  "enregistreLe": "2026-09-19T17:36:23.506Z",
+  "cas": "entreprise-cessee",
+  "requete": {
+    "q": "virgin stores"
+  },
+  "url": "https://recherche-entreprises.api.gouv.fr/search?q=virgin+stores&minimal=true&include=siege,dirigeants&per_page=10&page=1",
+  "statut": 200,
+  "reponse": {
+    "results": [
+      {
+        "siren": "344260286",
+        "siren_conserve": null,
+        "nom_complet": "VIRGIN STORES",
+        "nom_raison_sociale": "VIRGIN STORES",
+        "sigle": null,
+        "nombre_etablissements": 39,
+        "nombre_etablissements_ouverts": 0,
+        "siege": {
+          "activite_principale": "47.63Z",
+          "activite_principale_naf25": null,
+          "activite_principale_registre_metier": null,
+          "annee_tranche_effectif_salarie": null,
+          "adresse": "NOS 052 A 60 52 AVENUE DES CHAMPS ELYSEES 75008 PARIS",
+          "caractere_employeur": "O",
+          "cedex": null,
+          "code_pays_etranger": null,
+          "code_postal": "75008",
+          "commune": "75108",
+          "complement_adresse": "NOS 052 A 60",
+          "coordonnees": "48.870597872,2.3063787516",
+          "date_creation": "1988-02-24",
+          "date_debut_activite": "2025-05-20",
+          "date_fermeture": "2025-05-20",
+          "date_mise_a_jour": null,
+          "date_mise_a_jour_insee": "2025-05-22T17:25:02",
+          "departement": "75",
+          "distribution_speciale": null,
+          "epci": "200054781",
+          "est_siege": true,
+          "etat_administratif": "F",
+          "geo_adresse": null,
+          "geo_id": null,
+          "indice_repetition": null,
+          "latitude": "48.870597872",
+          "libelle_cedex": null,
+          "libelle_commune": "PARIS",
+          "libelle_commune_etranger": null,
+          "libelle_pays_etranger": null,
+          "libelle_voie": "DES CHAMPS ELYSEES",
+          "liste_enseignes": null,
+          "liste_finess": null,
+          "liste_id_bio": null,
+          "liste_idcc": null,
+          "liste_id_organisme_formation": null,
+          "liste_rge": null,
+          "liste_uai": null,
+          "longitude": "2.3063787516",
+          "nom_commercial": null,
+          "numero_voie": "52",
+          "dernier_numero_voie": null,
+          "region": "11",
+          "siret": "34426028600010",
+          "statut_diffusion_etablissement": "O",
+          "tranche_effectif_salarie": "NN",
+          "type_voie": "AVENUE"
+        },
+        "activite_principale": "47.63Z",
+        "activite_principale_naf25": null,
+        "categorie_entreprise": "PME",
+        "caractere_employeur": null,
+        "annee_categorie_entreprise": "2023",
+        "date_creation": "1988-02-24",
+        "date_fermeture": "2025-05-20",
+        "date_mise_a_jour": "2026-09-19T08:29:36",
+        "date_mise_a_jour_insee": "2025-05-22T17:25:02",
+        "date_mise_a_jour_rne": "2026-08-26T21:02:24",
+        "dirigeants": [
+          {
+            "nom": "NOM 3C0DD228",
+            "prenoms": "PRENOM 24371EA5",
+            "annee_de_naissance": "1983",
+            "date_de_naissance": "1983-02",
+            "qualite": "Membre du directoire",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 02F33691",
+            "prenoms": "PRENOM 0D651E8E",
+            "annee_de_naissance": "1966",
+            "date_de_naissance": "1966-09",
+            "qualite": "Vice-Président",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 9982B473",
+            "prenoms": "PRENOM 21D743BC",
+            "annee_de_naissance": "1994",
+            "date_de_naissance": "1994-05",
+            "qualite": "Président du directoire",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM FA1E434E",
+            "prenoms": "PRENOM 5B4A45F5",
+            "annee_de_naissance": "1952",
+            "date_de_naissance": "1952-10",
+            "qualite": "Président du conseil de surveillance",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "siren": "330814732",
+            "denomination": "LAGARDERE SERVICES",
+            "qualite": "Membre du conseil de surveillance",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "418930434",
+            "denomination": "BUTLER CAPITAL PARTNERS",
+            "qualite": "Membre du conseil de surveillance",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "502580822",
+            "denomination": "FINANCOM",
+            "qualite": "Membre du conseil de surveillance",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "632013843",
+            "denomination": "GRANT THORNTON",
+            "qualite": "Commissaire aux comptes titulaire",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "662000512",
+            "denomination": "INSTITUT DE GESTION ET D'EXPERTISE COMPTABLE - IGEC",
+            "qualite": "Commissaire aux comptes suppléant",
+            "type_dirigeant": "personne morale"
+          }
+        ],
+        "etat_administratif": "C",
+        "nature_juridique": "5699",
+        "section_activite_principale": "G",
+        "tranche_effectif_salarie": "NN",
+        "annee_tranche_effectif_salarie": null,
+        "statut_diffusion": "O"
+      },
+      {
+        "siren": "348852732",
+        "siren_conserve": null,
+        "nom_complet": "VIRGIN STORES HOLDING",
+        "nom_raison_sociale": "VIRGIN STORES HOLDING",
+        "sigle": null,
+        "nombre_etablissements": 1,
+        "nombre_etablissements_ouverts": 0,
+        "siege": {
+          "activite_principale": "65.2E",
+          "activite_principale_naf25": null,
+          "activite_principale_registre_metier": null,
+          "annee_tranche_effectif_salarie": null,
+          "adresse": "52 AV DES CHAMPS ELYSEES 75008 PARIS 8",
+          "caractere_employeur": "N",
+          "cedex": null,
+          "code_pays_etranger": null,
+          "code_postal": "75008",
+          "commune": "75108",
+          "complement_adresse": null,
+          "coordonnees": "48.870597872,2.3063787516",
+          "date_creation": null,
+          "date_debut_activite": "1994-12-30",
+          "date_fermeture": "1994-12-30",
+          "date_mise_a_jour": null,
+          "date_mise_a_jour_insee": "2024-03-22T15:40:57",
+          "departement": "75",
+          "distribution_speciale": null,
+          "epci": "200054781",
+          "est_siege": true,
+          "etat_administratif": "F",
+          "geo_adresse": null,
+          "geo_id": null,
+          "indice_repetition": null,
+          "latitude": "48.870597872",
+          "libelle_cedex": null,
+          "libelle_commune": "PARIS 8",
+          "libelle_commune_etranger": null,
+          "libelle_pays_etranger": null,
+          "libelle_voie": "DES CHAMPS ELYSEES",
+          "liste_enseignes": null,
+          "liste_finess": null,
+          "liste_id_bio": null,
+          "liste_idcc": null,
+          "liste_id_organisme_formation": null,
+          "liste_rge": null,
+          "liste_uai": null,
+          "longitude": "2.3063787516",
+          "nom_commercial": null,
+          "numero_voie": "52",
+          "dernier_numero_voie": null,
+          "region": "11",
+          "siret": "34885273200026",
+          "statut_diffusion_etablissement": "O",
+          "tranche_effectif_salarie": "NN",
+          "type_voie": "AV"
+        },
+        "activite_principale": "65.2E",
+        "activite_principale_naf25": null,
+        "categorie_entreprise": null,
+        "caractere_employeur": null,
+        "annee_categorie_entreprise": null,
+        "date_creation": "1988-11-15",
+        "date_fermeture": "1994-12-30",
+        "date_mise_a_jour": "2026-09-19T08:31:27",
+        "date_mise_a_jour_insee": "2024-03-22T14:26:06",
+        "date_mise_a_jour_rne": "2024-02-27T19:48:33",
+        "dirigeants": [],
+        "etat_administratif": "C",
+        "nature_juridique": "5599",
+        "section_activite_principale": "K",
+        "tranche_effectif_salarie": "NN",
+        "annee_tranche_effectif_salarie": null,
+        "statut_diffusion": "O"
+      },
+      {
+        "siren": "448414136",
+        "siren_conserve": null,
+        "nom_complet": "SYNDICAT DES DISTRIBUTEURS DE LOISIRS CULTURELS (SDLC)",
+        "nom_raison_sociale": "SYNDICAT DES DISTRIBUTEURS DE LOISIRS CULTURELS",
+        "sigle": "SDLC",
+        "nombre_etablissements": 2,
+        "nombre_etablissements_ouverts": 1,
+        "siege": {
+          "activite_principale": "94.11Z",
+          "activite_principale_naf25": "94.11Y",
+          "activite_principale_registre_metier": null,
+          "annee_tranche_effectif_salarie": null,
+          "adresse": "34 BOULEVARD DES ITALIENS 75009 PARIS",
+          "caractere_employeur": "O",
+          "cedex": null,
+          "code_pays_etranger": null,
+          "code_postal": "75009",
+          "commune": "75109",
+          "complement_adresse": null,
+          "coordonnees": "48.871304436,2.3351021413",
+          "date_creation": "2013-03-21",
+          "date_debut_activite": "2013-03-21",
+          "date_fermeture": null,
+          "date_mise_a_jour": null,
+          "date_mise_a_jour_insee": "2025-12-05T17:32:49",
+          "departement": "75",
+          "distribution_speciale": null,
+          "epci": "200054781",
+          "est_siege": true,
+          "etat_administratif": "A",
+          "geo_adresse": null,
+          "geo_id": null,
+          "indice_repetition": null,
+          "latitude": "48.871304436",
+          "libelle_cedex": null,
+          "libelle_commune": "PARIS",
+          "libelle_commune_etranger": null,
+          "libelle_pays_etranger": null,
+          "libelle_voie": "DES ITALIENS",
+          "liste_enseignes": null,
+          "liste_finess": null,
+          "liste_id_bio": null,
+          "liste_idcc": null,
+          "liste_id_organisme_formation": null,
+          "liste_rge": null,
+          "liste_uai": null,
+          "longitude": "2.3351021413",
+          "nom_commercial": null,
+          "numero_voie": "34",
+          "dernier_numero_voie": null,
+          "region": "11",
+          "siret": "44841413600029",
+          "statut_diffusion_etablissement": "O",
+          "tranche_effectif_salarie": "NN",
+          "type_voie": "BOULEVARD"
+        },
+        "activite_principale": "94.11Z",
+        "activite_principale_naf25": "94.11Y",
+        "categorie_entreprise": "PME",
+        "caractere_employeur": null,
+        "annee_categorie_entreprise": "2023",
+        "date_creation": "2002-03-04",
+        "date_fermeture": null,
+        "date_mise_a_jour": "2026-09-19T09:17:36",
+        "date_mise_a_jour_insee": "2025-12-06T09:22:26",
+        "date_mise_a_jour_rne": null,
+        "dirigeants": [],
+        "etat_administratif": "A",
+        "nature_juridique": "8420",
+        "section_activite_principale": "S",
+        "tranche_effectif_salarie": "NN",
+        "annee_tranche_effectif_salarie": null,
+        "statut_diffusion": "O"
+      },
+      {
+        "siren": "383869039",
+        "siren_conserve": null,
+        "nom_complet": "GIE COMMERCANT CENTRE COMMERCIAL BERCY 2",
+        "nom_raison_sociale": "GIE COMMERCANT CENTRE COMMERCIAL BERCY 2",
+        "sigle": null,
+        "nombre_etablissements": 1,
+        "nombre_etablissements_ouverts": 1,
+        "siege": {
+          "activite_principale": "82.30Z",
+          "activite_principale_naf25": "93.29Y",
+          "activite_principale_registre_metier": null,
+          "annee_tranche_effectif_salarie": null,
+          "adresse": "4 PLACE DE L'EUROPE 94220 CHARENTON-LE-PONT",
+          "caractere_employeur": "N",
+          "cedex": null,
+          "code_pays_etranger": null,
+          "code_postal": "94220",
+          "commune": "94018",
+          "complement_adresse": null,
+          "coordonnees": "48.8254302174211,2.39433031536496",
+          "date_creation": "1993-06-03",
+          "date_debut_activite": "2008-01-01",
+          "date_fermeture": null,
+          "date_mise_a_jour": null,
+          "date_mise_a_jour_insee": "2025-12-06T02:27:03",
+          "departement": "94",
+          "distribution_speciale": null,
+          "epci": "200054781",
+          "est_siege": true,
+          "etat_administratif": "A",
+          "geo_adresse": null,
+          "geo_id": null,
+          "indice_repetition": null,
+          "latitude": "48.8254302174211",
+          "libelle_cedex": null,
+          "libelle_commune": "CHARENTON-LE-PONT",
+          "libelle_commune_etranger": null,
+          "libelle_pays_etranger": null,
+          "libelle_voie": "DE L'EUROPE",
+          "liste_enseignes": null,
+          "liste_finess": null,
+          "liste_id_bio": null,
+          "liste_idcc": null,
+          "liste_id_organisme_formation": null,
+          "liste_rge": null,
+          "liste_uai": null,
+          "longitude": "2.39433031536496",
+          "nom_commercial": null,
+          "numero_voie": "4",
+          "dernier_numero_voie": null,
+          "region": "11",
+          "siret": "38386903900024",
+          "statut_diffusion_etablissement": "O",
+          "tranche_effectif_salarie": "NN",
+          "type_voie": "PLACE"
+        },
+        "activite_principale": "82.30Z",
+        "activite_principale_naf25": "93.29Y",
+        "categorie_entreprise": "PME",
+        "caractere_employeur": null,
+        "annee_categorie_entreprise": "2023",
+        "date_creation": "1990-04-05",
+        "date_fermeture": null,
+        "date_mise_a_jour": "2026-09-19T08:40:02",
+        "date_mise_a_jour_insee": "2025-12-06T10:40:41",
+        "date_mise_a_jour_rne": "2026-07-17T19:56:12",
+        "dirigeants": [
+          {
+            "nom": "NOM 1C84F4E3",
+            "prenoms": "PRENOM 04CD5CC0",
+            "annee_de_naissance": "1952",
+            "date_de_naissance": "1952-10",
+            "qualite": "Contrôleur des comptes",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 8338C85E",
+            "prenoms": "PRENOM 4A4FD520",
+            "annee_de_naissance": "1964",
+            "date_de_naissance": "1964-06",
+            "qualite": "Contrôleur de gestion",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM EF9AC23C",
+            "prenoms": "PRENOM A044066F",
+            "annee_de_naissance": "1997",
+            "date_de_naissance": "1997-08",
+            "qualite": "Administrateur",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 23440019",
+            "prenoms": "PRENOM 89215B61",
+            "annee_de_naissance": "1985",
+            "date_de_naissance": "1985-10",
+            "qualite": "Contrôleur de gestion",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 232A5DBA",
+            "prenoms": null,
+            "annee_de_naissance": null,
+            "date_de_naissance": null,
+            "qualite": "Membre",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM B7AA77D2",
+            "prenoms": "PRENOM 48CF9EEF",
+            "annee_de_naissance": "1998",
+            "date_de_naissance": "1998-08",
+            "qualite": "Contrôleur de gestion",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 61105051",
+            "prenoms": "PRENOM 0A3A919B",
+            "annee_de_naissance": "1951",
+            "date_de_naissance": "1951-03",
+            "qualite": "Membre",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM A1A357D1",
+            "prenoms": "PRENOM FFEF53E7",
+            "annee_de_naissance": "1985",
+            "date_de_naissance": "1985-01",
+            "qualite": "Membre",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM 67FD5B6B",
+            "prenoms": null,
+            "annee_de_naissance": "1970",
+            "date_de_naissance": "1970-01",
+            "qualite": "Membre",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "nom": "NOM FD684F20",
+            "prenoms": "PRENOM 38E5EE37",
+            "annee_de_naissance": "1955",
+            "date_de_naissance": "1955-04",
+            "qualite": "Contrôleur de gestion",
+            "nationalite": null,
+            "type_dirigeant": "personne physique"
+          },
+          {
+            "siren": "300217544",
+            "denomination": "JEFF DE BRUGES SAS",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "308449024",
+            "denomination": "VIVARTE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "313334856",
+            "denomination": "MARC LAURENT",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "326019775",
+            "denomination": "DU PAREIL AU MEME",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "326661774",
+            "denomination": "SOCIETE SEIZE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "332292531",
+            "denomination": "AMB",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "344260286",
+            "denomination": "VIRGIN STORES",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "345086177",
+            "denomination": "CAMAIEU INTERNATIONAL",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "349074906",
+            "denomination": "LES OPTICIENS ASSOCIES",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "352929103",
+            "denomination": "PHOTO SERVICE SA",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "352967152",
+            "denomination": "LE PETIT BOEUF",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "352967160",
+            "denomination": "LE XIIEME AVENUE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "353515299",
+            "denomination": "L-S BOUTIQUE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "353535180",
+            "denomination": "PRESSING BERCY 2 MIL",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "353580103",
+            "denomination": "BERCY 2 COIFFURE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "354038812",
+            "denomination": "CNT BERCY 2 SARL",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "377531512",
+            "denomination": "JORICA",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "377687769",
+            "denomination": "EMSTIL",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "377859921",
+            "denomination": "NATURE ET FRAICHEUR",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "378243497",
+            "denomination": "GO SPORT",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "378876155",
+            "denomination": "NOS ENFANTS AUSSI",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "379601974",
+            "denomination": "CARREFOUR VACANCES",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "380129866",
+            "denomination": "FRANCE TELECOM",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "380622332",
+            "denomination": "ARMAND THIERY SA",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "381737030",
+            "denomination": "ADEQUATION SERVICES",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "387818727",
+            "denomination": "HDB",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "389730599",
+            "denomination": "MARC ORIAN",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "390446425",
+            "denomination": "RALPH B",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "391829462",
+            "denomination": "ESPRIT DE CORP. FRANCE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "392462529",
+            "denomination": "LES OPTICIENS ECONOMES LOE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "398979310",
+            "denomination": "H & M HENNES & MAURITZ",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "399861194",
+            "denomination": "TEXTO FRANCE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "402937502",
+            "denomination": "MAMILISON",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "403263809",
+            "denomination": "HAMMERSON ASSET MANAGEMENT",
+            "qualite": "Administrateur",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "409454451",
+            "denomination": "SARL BERCY 2 MICRO",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "413281494",
+            "denomination": "J C D A",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "414138842",
+            "denomination": "PALLAS LA GRANDE RECRE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "417585023",
+            "denomination": "YFAL",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "418096392",
+            "denomination": "MICROMANIA",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "419065404",
+            "denomination": "HYPCO INVEST",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "419659958",
+            "denomination": "NCF",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "421784240",
+            "denomination": "MK DIFFUSION",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "422508507",
+            "denomination": "FIRST WENDY",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "423032598",
+            "denomination": "RESEAU CLUBS BOUYGUES TELECOM - RCBT",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "424849610",
+            "denomination": "BERCY JUNIOR",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "428767859",
+            "denomination": "CARREFOUR HYPERMARCHE FRANCE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "438591208",
+            "denomination": "B 2 SPORT",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "443063201",
+            "denomination": "SITLAN",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "450309513",
+            "denomination": "BERCYVAL",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "451375430",
+            "denomination": "SODE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "452041981",
+            "denomination": "LA NOUVELLE CITY D'OR",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "453177388",
+            "denomination": "SUSHI'BAR",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "477990576",
+            "denomination": "2J2R",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "479789349",
+            "denomination": "LCDG",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "542110291",
+            "denomination": "SOCIETE IART",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "552015307",
+            "denomination": "ETAM",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "552049447",
+            "denomination": "SOCIETE NATIONALE DES CHEMINS DE FER FRANCAIS S N C F",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "552091795",
+            "denomination": "BRED BANQUE POPULAIRE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "582120267",
+            "denomination": "MINIT FRANCE",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "592033930",
+            "denomination": "PORTREX",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "632051017",
+            "denomination": "TOLBIAC SPORT",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "650500036",
+            "denomination": "MARIONNAUD DRUET",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": "689800225",
+            "denomination": "FRANCE ARNO",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          },
+          {
+            "siren": null,
+            "denomination": "SOCIETE CHANA",
+            "qualite": "Membre",
+            "type_dirigeant": "personne morale"
+          }
+        ],
+        "etat_administratif": "A",
+        "nature_juridique": "6220",
+        "section_activite_principale": "N",
+        "tranche_effectif_salarie": "NN",
+        "annee_tranche_effectif_salarie": null,
+        "statut_diffusion": "O"
+      }
+    ],
+    "total_results": 4,
+    "page": 1,
+    "per_page": 10,
+    "total_pages": 1
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$note": "Généré par `pnpm mcp:manifeste:ecrire`. Ne pas éditer à la main : `pnpm mcp:manifeste` et le contrôle 6 du harnais le confrontent au code. `manifestSha` couvre le texte canonique du manifeste. `etat: \"refuse\"` : le socle refuserait ce manifeste, pour les motifs de `refus`.",
+  "etat": "refuse",
+  "refus": ["tools : vide — un adaptateur sans outil n'expose rien."],
+  "manifestSha": "sha256:43cd2074bcdb99b75fefdc259b228ae90fc519aa47b898fe7aac31c89fccd3fd",
+  "octetsCanoniques": 226,
+  "manifeste": {
+    "manifestVersion": 1,
+    "id": "partners",
+    "version": "0.1.0",
+    "mode": "fédéré",
+    "profilesVersion": "1.0.0",
+    "profilesSha": "6b9646f62b9451abeb4a5744e983bd1870cd62c5b9dccf0cc9af4c1fec27ed0a",
+    "profiles": ["admin"],
+    "secrets": [],
+    "tools": []
+  }
+}

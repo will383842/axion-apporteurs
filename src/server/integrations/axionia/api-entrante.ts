@@ -36,12 +36,13 @@
  * la plateforme. Un conteneur joignable SANS lui lit un en-tête écrit par le client : la liste tombe,
  * le jeton reste. Une IPv6 est comparée par son /64, la granularité du normaliseur de SEC-10.
  */
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { lireEnvironnement } from '../../../lib/env';
 import { horlogeSysteme } from '../../../lib/horloge';
 import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../../securite/adresse-du-client';
 import { executerAuPlancher, type HorlogeDePlancher } from '../../securite/pot-de-miel';
+import { egalATempsConstant, limiteNonDeclaree } from '../../securite/primitives-de-porte';
 import {
   sujetDepuisEmpreinte,
   type SujetDeCompteur,
@@ -132,18 +133,6 @@ export interface Frontiere {
   readonly puits: PuitsDAppels;
 }
 
-/**
- * Le débit tant que le registre ne porte pas son compteur : REFUS, en panne, sous le motif que le
- * registre emploie lui-même pour une limite qu'aucune exigence ne chiffre.
- */
-const debitNonConfigure: LimiteurDeLaFrontiere = async () => ({
-  autorise: false,
-  restant: 0,
-  repriseAt: null,
-  panne: true,
-  motif: 'limite_non_configuree',
-});
-
 const lecteurNonBranche: LecteurDAttribution = async () => {
   throw new Error('lecteur_non_branche : la lecture des attributions est livrée par INT-T07-P');
 };
@@ -156,7 +145,8 @@ export function frontiereDeProduction(): Frontiere {
       maintenantMs: () => horlogeSysteme.maintenant(),
       attendre: (ms) => new Promise((resoudre) => setTimeout(resoudre, ms)),
     },
-    debit: debitNonConfigure,
+    // Tant que le registre ne porte pas son compteur : refus, en panne (primitive partagée).
+    debit: limiteNonDeclaree,
     lire: lecteurNonBranche,
     puits: (ligne) => {
       process.stderr.write(`${ligne}\n`);
@@ -199,15 +189,10 @@ function listeDAdresses(brut: string | undefined): ReadonlySet<string> | null {
   return sujets;
 }
 
-/**
- * Temps constant : les deux côtés sont réduits à une empreinte de même longueur AVANT la
- * comparaison — ni la longueur ni le premier octet différent ne se mesurent.
- */
+/** Le jeton porteur, comparé à temps constant par la primitive partagée. */
 function jetonAccepte(autorisation: string | null, attendu: string): boolean {
   const presente = /^Bearer (\S+)$/.exec(autorisation ?? '')?.[1] ?? '';
-  const a = createHash('sha256').update(presente, 'utf8').digest();
-  const b = createHash('sha256').update(attendu, 'utf8').digest();
-  return timingSafeEqual(a, b) && presente !== '';
+  return egalATempsConstant(presente, attendu);
 }
 
 // ── Le chemin d'un appel ────────────────────────────────────────────────────────────────────────

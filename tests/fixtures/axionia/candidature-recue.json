@@ -1,0 +1,54 @@
+{
+  "Source": "Source: INT-T01b. Copie, jamais editee a la main, de l evenement candidature.recue de la fixture GENEREE par le producteur reel axionia (scripts/partners/fixtures.ts ; fichier src/server/partners/contrat/fixtures.v1.json, dernier commit 41d71a793, lu sur origin/main le 2026-09-25 ; lecture seule cote axionia). Consommateur : DM-06, parite du snapshot de candidature et du score fige (REQ-DM-035, REQ-QA-035).",
+  "evenement": {
+    "event_type": "candidature.recue",
+    "occurred_at": "2026-08-20T08:30:00.000Z",
+    "subject_ref": {
+      "submission_id": "0a1b2c3d-0006-4000-8000-000000000006"
+    },
+    "payload": {
+      "candidatureId": "270022c1-2cc8-4a05-ba5a-4e7584250470",
+      "reponsesJson": {
+        "ia": {
+          "outils": ["chatgpt"],
+          "utilise": true
+        },
+        "b2b": {
+          "annees": 8,
+          "dejaVendu": true
+        },
+        "zone": {
+          "zones": ["auvergne-rhone-alpes"],
+          "mobile": true
+        },
+        "statut": "auto_entrepreneur",
+        "version": 1,
+        "informatique": {
+          "usages": ["crm"],
+          "utilise": true
+        },
+        "disponibilite": "immediate",
+        "permisVehicule": true
+      },
+      "scoreInitial": 72,
+      "scorePartsJson": {
+        "ia": 0,
+        "zone": 0,
+        "carnet": 25,
+        "statut": 12,
+        "b2bAnnees": 25,
+        "deplacement": 0,
+        "informatique": 0,
+        "typesClients": 10
+      },
+      "scoreBaremeVersion": "48b8b385795f",
+      "sourceCanal": "/devenir-commercial-ia/candidature",
+      "utm": {
+        "utm_source": "linkedin",
+        "utm_campaign": "apporteurs-q1"
+      },
+      "campagneId": null,
+      "parrainCodeCapture": null
+    }
+  }
+}

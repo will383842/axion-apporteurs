@@ -247,6 +247,13 @@ jobs:
         run: pnpm gov:lexique
       - name: La garde du lexique sait rougir, et laisse passer la negation qui protege
         run: pnpm gov:lexique:prove
+      # JUR-T01 : l'annexe 1 du gabarit de contrat ne nomme jamais un forfait, un bareme ou un
+      # pourcentage sans valeur numerique. Sur le gabarit source les montants sont des variables :
+      # c'est un fil tendu ; la regle protege au rendu (exigerGabaritPubliable, src/domain/contrat).
+      - name: Grille du contrat — aucun forfait, bareme ou pourcentage sans chiffre dans l annexe 1
+        run: pnpm jur:grille-chiffree
+      - name: La garde de la grille chiffree sait rougir
+        run: pnpm jur:grille-chiffree:prove
       # UX-P0-02 : une tache d'ecran ne s'attribue pas avant que Will ait valide sa maquette
       # (docs/maquettes/VALIDATION.md). Le composeur l'appliquait seul, au moment de composer ;
       # une attribution faite a la main ne rougissait nulle part. La garde lit le tableau par ses
@@ -256,6 +263,14 @@ jobs:
         run: pnpm gov:maquettes-validees
       - name: La garde des maquettes sait rougir, y compris sur une ligne du milieu du tableau
         run: pnpm gov:maquettes-validees:prove
+      # UX-P0-01 (REQ-UX-002, REQ-UX-019) : la micro-copie de l'espace est complete et elle est la
+      # seule — chaque issue de IssueDepot relue contre le registre, un etat vide par ecran de la
+      # carte des routes et de la console, aucun libelle en dur dans un composant. Elle IMPRIME ce
+      # qu'elle a confronte : « 0 composant » n'est pas « aucun defaut », la preuve le dit.
+      - name: Micro-copie — chaque issue et chaque ecran ont leur texte, aucun libelle en dur
+        run: pnpm ux:exhaustivite
+      - name: La garde de la micro-copie sait rougir, en nommant la valeur, l'ecran ou le fichier
+        run: pnpm ux:exhaustivite:prove
       # GOV-019, REQ-GOV-028. Elle ne MESURE aucun octet : elle tient les budgets en place et
       # refuse qu'une route naisse sans le sien. Elle IMPRIME son perimetre — « 0 route balayee »
       # n'est pas « aucun defaut », et elle le dit en toutes lettres. Pas de `continue-on-error` :
@@ -288,6 +303,13 @@ jobs:
         run: pnpm journal:sans-pii
       - name: La garde du journal sait rougir
         run: pnpm journal:sans-pii:prove
+      # SEC-08, REQ-SEC-024. Aucune colonne de personne en clair dans le schema (chiffree ou
+      # empreinte seulement, adresse reseau par empreinte seule) et aucun bloc ni empreinte ecrit
+      # hors de src/server/securite/pii.ts. Le vert imprime les champs, fichiers et sites confrontes.
+      - name: Donnees personnelles chiffrees, schema et chemins d ecriture
+        run: pnpm securite:schema-pii
+      - name: La garde des donnees personnelles sait rougir
+        run: pnpm securite:schema-pii:prove
       # GOV-031, REQ-GOV-018. LES DEUX ETAPES QUI MANQUAIENT, ET SANS LESQUELLES LES DEUX
       # FAMILLES CI-DESSUS NE MESURAIENT RIEN. `outillage_non_epingle` et `lint_non_bloquant`
       # ne s'arment qu'en PRESENCE d'une etape qui lance l'outil — l'acceptation de GOV-031 le
@@ -321,6 +343,30 @@ jobs:
         run: pnpm format:check
       - name: Typecheck
         run: pnpm typecheck
+      # CPL-T22, REQ-CPL-022. Les tests NOUVEAUX de la PR, lances contre le code de sa base, doivent
+      # ECHOUER : un test deja vert sur main ne prouve rien de ce que la PR ajoute (RM-02). La garde
+      # pose un arbre de la base a cote, y copie les tests de la PR, les lance un par un, puis retire
+      # l arbre. Seule sortie : `@no-red-first:` suivi d une justification, IMPRIMEE. Sur `push`, il
+      # n y a pas de PR a juger : l etape ne tourne que sur `pull_request`. Ici, et pas dans un
+      # workflow a part : seul `gate-a` est un check requis, et une garde qui ne bloque rien ne garde
+      # rien. Avant `Tests`, pour que son rouge se lise avant celui de la suite. La base est lue par la
+      # garde dans `GITHUB_BASE_REF`, que GitHub pose sur `pull_request` : la commande reste FERMEE.
+      - name: red-first — les tests nouveaux de la PR rougissent contre sa base
+        if: github.event_name == 'pull_request'
+        run: pnpm red-first
+      - name: La garde red-first sait rougir
+        run: pnpm red-first:prove
+      # INT-T11, REQ-INT-026. L adaptateur MCP federe `partners` : les neuf controles du socle, chacun
+      # imprime avec ce qu il a confronte (la porte est sondee en cinq appels, dont le limiteur AVANT la
+      # serrure). Le controle 6 confronte deja le manifeste versionne au code : `pnpm mcp:manifeste`
+      # n est pas rejoue ici. Le temoin a deux faces vit dans `tests/integration/adaptateur-mcp.spec.ts`.
+      - name: Harnais de l adaptateur MCP
+        run: pnpm harnais-mcp
+      # UX-P0-03, REQ-UX-017. Les passes d accessibilite de `tests/a11y/` tournent DANS `pnpm test`
+      # et pilotent un vrai navigateur : WebKit pour le profil iPhone, Chromium pour le bureau. Sans
+      # eux, la suite rougirait sur une absence d outil, pas sur une faute. Avant `Tests`, donc.
+      - name: Navigateurs des passes d accessibilite
+        run: pnpm a11y:navigateurs
       # `pnpm test` a besoin du jeton pour la MEME raison que l etape `gov:etat` ci-dessous :
       # `plan-state-frais.spec.ts` et `une-tache-un-owner.spec.ts` lancent la garde contre le depot
       # REEL, et elle echoue quand elle ne peut pas lire la forge — c est ce qu on lui demande.
@@ -339,6 +385,20 @@ jobs:
         run: pnpm req:check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # GOV-101, REQ-QA-002 — decision de Will du 2026-09-26 (W16, partners/ADR-0024) : la lentille
+      # `mutation` n est plus une revue d agent, c est cette mesure. Stryker, en BAC A SABLE, sur les
+      # seuls fichiers de `src/domain/`, `src/server/` et `src/lib/` que la PR ajoute ou modifie
+      # (base de fusion
+      # avec `origin/$GITHUB_BASE_REF`, que GitHub pose sur `pull_request`) ; sur `push` de main le
+      # diff est vide, et l etape le dit et passe. Sous `thresholds.break` de `stryker.config.json`,
+      # elle rougit et NOMME chaque survivant `fichier:ligne`. Les scripts de garde touches sont
+      # nommes et ecartes : leur preuve de mutation est leur `--prove`, joue plus haut. Ici, dans
+      # `gate-a`, et pas dans un job a part : seul `gate-a` est un check requis. Pas de
+      # `continue-on-error`. La preuve du lecteur d abord : un verdict qui ne sait plus rougir ne vaut rien.
+      - name: Le lecteur du rapport de mutation sait rougir
+        run: pnpm mutation:prove
+      - name: Mutation des fichiers de la PR — Stryker en bac a sable, survivants nommes
+        run: pnpm mutation:pr
       # GOV-059, REQ-QA-013. `gov:etat` vient APRES toutes les etapes de mesure. Elle lit l etat
       # GLOBAL de la forge : un rouge venu d une AUTRE demande de fusion faisait « sauter » lint,
       # format, typecheck et tests, qui avaient l air d avoir mesure et n avaient rien mesure.

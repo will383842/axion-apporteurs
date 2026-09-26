@@ -6,7 +6,7 @@
 | **Date** | 2026-09-18 |
 | **Décideur** | `architecte` — cet ADR est `propose` : il consigne les arbitrages du lead sécurité, il n'est pas encore accepté |
 | **Tâche** | SEC-01 |
-| **Exigences servies** | REQ-SEC-028, REQ-SEC-024 |
+| **Exigences servies** | REQ-SEC-028, REQ-SEC-024, REQ-SEC-001, REQ-SEC-003 |
 | **Décisions du registre citées** | HYP-E1-24 |
 | **Règle maison appliquée** | RM-01, RM-02 |
 | **Remplace / remplacé par** | — |
@@ -81,6 +81,41 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
     (`String`). Une tâche qui écrit une colonne de personne avant l'arrivée du chiffrement suit ce
     nommage et ce type.
 
+### L'empreinte des jetons d'authentification (ajoutée le 2026-09-26, cadrage de SEC-03 et SEC-04, GOV-100)
+
+14. **Un jeton d'authentification n'est stocké qu'en empreinte HMAC-SHA-256 sous le secret de son usage** :
+    `MAGIC_LINK_SECRET` pour le lien de connexion, `SESSION_SECRET` pour la session — **jamais
+    `PII_HASH_KEY`**, clé des empreintes de recherche des personnes (décision 12), qui est un autre
+    usage. L'entrée est séparée par domaine : `partners.lien.v1`, U+001F, le jeton pour le lien ;
+    `partners.session.v1`, U+001F, le jeton pour la session. La sortie fait 64 caractères
+    hexadécimaux minuscules (colonne `token_hash`, `char(64)`, unique). Le `kid` du secret employé
+    (`kidDe`, décision 8) est **stocké** à côté de l'empreinte (colonne `kid`, `char(8)`), pour que
+    la rotation sache sous quelle clé une ligne a été écrite. **Pas de double clé pour les liens** :
+    un lien vit 15 minutes (REQ-SEC-001), une rotation laisse expirer ceux de l'ancienne clé au
+    lieu de les accepter pendant 24 heures. Un SHA-256 nu est écarté : l'empreinte d'un jeton
+    lue en base serait vérifiable hors ligne sans aucun secret.
+
+### Le lien « ce n'est pas moi » (ajoutée le 2026-09-26, cadrage du schéma, GOV-102, partners/ADR-0022)
+
+15. **Le lien « ce n'est pas moi » de l'accusé de dépôt (REQ-SEC-006, SEC-11) est SANS ÉTAT** : aucune
+    table, aucune ligne à consommer. Il porte l'identifiant du jeton de dépôt, l'identifiant du dépôt
+    et le `kid`, et une signature HMAC-SHA-256 sous `MAGIC_LINK_SECRET`, entrée séparée par domaine :
+    `partners.pas-moi.v1`, U+001F, l'identifiant du jeton, U+001F, l'identifiant du dépôt ; sortie de
+    64 caractères hexadécimaux minuscules, comparée à temps constant. **Ouvrir le lien ne révoque
+    rien** : la requête de lecture n'affiche qu'une page de confirmation, et seule l'ACTION envoyée
+    depuis cette page révoque — comme la consommation du lien de connexion de SEC-03. Les analyseurs
+    de liens des messageries ouvrent les URL d'un courriel sans que personne n'ait cliqué ; une
+    révocation déclenchée par la lecture couperait le jeton de tout apporteur dont la messagerie
+    inspecte les liens. Son seul effet est de révoquer le jeton désigné, et la révocation est
+    **idempotente** : le même lien cliqué deux fois, ou après une
+    révocation par un autre chemin, ne change rien et rend la même page. Il ne vaut que pour le jeton
+    qu'il nomme : il ne révoque ni session ni autre jeton, et un identifiant de jeton qui n'appartient
+    pas à l'apporteur du dépôt rend la même page qu'un lien faux. Pas de double clé : un lien signé sous
+    une clé retirée est refusé, et l'apporteur garde la révocation depuis son espace. Un secret neuf est
+    écarté : le lien est une preuve de réception d'un courriel à l'adresse de l'apporteur, soit
+    exactement l'usage que `MAGIC_LINK_SECRET` couvre, et le domaine séparé empêche qu'une signature de
+    l'un vaille pour l'autre.
+
 ## Conséquences
 
 - Le démarrage refuse un jeu de secrets incomplet, faible, préfixé en production ou dédoublé, avec un
@@ -99,6 +134,9 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
 
 | Alternative | Pourquoi elle est écartée |
 | --- | --- |
+| Empreinte des jetons en SHA-256 nu | Une base lue suffit à tester un jeton candidat hors ligne ; le HMAC exige en plus le secret de l'usage (décision 14). |
+| Empreinte des jetons sous `PII_HASH_KEY` | Un secret pour deux usages : les empreintes de personnes et les jetons partageraient une clé, et une rotation de l'une toucherait l'autre. |
+| Double clé pendant 24 heures pour les liens | Un lien vit 15 minutes : l'accepter sous l'ancienne clé allonge la vie d'un jeton après une rotation sans aucun gain. |
 | Huit secrets, clé des empreintes dérivée de la clé de chiffrement par HKDF | Deux usages sur une même racine ; la tâche du chiffrement exige que la clé et le sel ne soient ni dérivés d'une autre variable ni partagés. |
 | Empreintes sous `IP_HASH_SALT` | Un sel d'adresse réseau servirait aussi aux courriels et aux IBAN : un seul secret pour deux usages. |
 | `NODE_ENV !== 'production'` comme prédicat | Échoue ouvert : `NODE_ENV` absent laisserait passer `stub…`. |
@@ -132,15 +170,37 @@ le chiffrement ; elles lisent le dépôt, pas un brief : le format doit être é
 - **Assertion** — `tests/unit/securite/env-boot.spec.ts` ·
   `it('REQ-SEC-028 : kidDe rend huit caractères hexadécimaux, stables pour une valeur, distincts d’un secret à l’autre')` :
   un `kid` constant fait rougir ce contrôle (décision 8).
+- **Assertion** — `tests/unit/securite/chiffrement-avec-aad.spec.ts` ·
+  `it('REQ-SEC-024 : le bloc figé selon l’ADR se déchiffre, et seulement sous sa ligne (vecteur déterministe)')` :
+  un octet changé dans le format ou dans l'AAD rend le vecteur figé illisible (décisions 9 à 11).
+- **Assertion** — `tests/unit/securite/chiffrement-avec-aad.spec.ts` ·
+  `it('REQ-SEC-024 : deux chiffrements du même clair diffèrent, IV compris (IV tiré à chaque chiffrement)')` :
+  un IV constant fait rougir ce contrôle (décision 9, mesuré par SEC-08).
+- **Assertion** — `tests/unit/securite/chiffrement-avec-aad.spec.ts` ·
+  `it('REQ-SEC-024 : un bloc permuté vers un autre champ ou un autre modèle au même identifiant échoue')` :
+  une AAD réduite au modèle et à l'identifiant fait rougir ce contrôle (décision 10, mesuré par SEC-08).
+- **Assertion** — `tests/unit/securite/chiffrement-avec-aad.spec.ts` ·
+  `it('REQ-SEC-024 : un courriel et un téléphone écrits de plusieurs façons donnent l’empreinte figée')` :
+  une entrée d'empreinte changée d'un octet fait rougir ce contrôle (décision 12).
+- **Assertion** — `tests/unit/securite/chiffrement-avec-aad.spec.ts` ·
+  `it('REQ-SEC-024 : une colonne d’adresse réseau en clair (createdIp String?) rougit et nomme la colonne')` :
+  la garde `securite:schema-pii` qui admettrait une colonne de personne hors `…Chiffre`/`…Hash` fait
+  rougir ce contrôle (décision 13, mesuré par SEC-08).
 
 ## Reste à faire
 
-- **Décisions 9 à 13 (format chiffré, empreintes, nommage)** : leurs assertions seront posées par
-  SEC-08, qui livre le chiffrement ; elles se citeront ici quand elles existeront. Tant qu'elles
-  n'existent pas, cet ADR reste `propose`.
+- **Décisions 9 à 13** : leurs assertions sont posées par SEC-08 et citées ci-dessus. Le passage à
+  `accepte` reste à l'`architecte`.
 - **Le `kid` dans les jetons et la double clé pendant 24 heures** (HYP-E1-24, REQ-QA-030) : l'emploi
   du `kid` appartient aux producteurs de jetons (SEC-03, SEC-04, SEC-11) ; le trousseau à deux clés à
-  QA-T04 et QA-T13.
+  QA-T04 et QA-T13. Les liens de connexion n'y entrent pas (décision 14).
+- **Décision 14** : son assertion est posée par SEC-03 (`tests/integration/lien-magique.spec.ts`, un
+  vecteur figé d'empreinte de lien sous `MAGIC_LINK_SECRET` et son domaine) et par SEC-04 pour la
+  session. Tant qu'elle n'est pas écrite et vue rougir, la décision reste `propose`.
+- **Décision 15** : son assertion est posée par SEC-11 — un vecteur figé de signature sous
+  `MAGIC_LINK_SECRET` et le domaine `partners.pas-moi.v1`, une signature d'un autre domaine refusée, et
+  le même lien joué deux fois qui ne révoque qu'une fois (compte des révocations, jamais le code de
+  réponse), et la seule ouverture du lien, sans l'action de la page, qui laisse le jeton actif.
 - **Le câblage au démarrage réel** : QA-T04 appelle `exigerEnvironnement()` depuis le point d'entrée
   du serveur et étend CE schéma, jamais un second.
 - **Un secret optionnel** (par exemple celui d'une intégration qui doit rendre 503 s'il manque, INT-T11)

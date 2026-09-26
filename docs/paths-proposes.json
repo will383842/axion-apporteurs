@@ -2,15 +2,14 @@
   "version": 1,
   "resume": {
     "_methode": "une PAIRE est comptée quand l'intersection des deux `paths[]` n'est pas vide, par égalité de chaîne. ⚠️ Elle ne lit PAS le champ `paths` des tâches : deux tâches peuvent y figurer comme « sans intersection » alors que leurs `paths` déclarés se recouvrent — c'est le cas de GOV-025 et GOV-028, qui partagent `scripts/gates/gov-identifiants.ts`. Le composeur, lui, compare bien `t.paths` : cette vue ne dit donc pas ce qu'il fera. Ces trois totaux sont écrits par `scripts/lot/paths-proposes.ts` et par rien d'autre ; `tsx scripts/lot/paths-proposes.ts --check` échoue si le fichier rendu en diverge.",
-    "tachesCouvertes": 270,
-    "pairesEnIntersection": 4287,
-    "cheminsDeclares": 783,
-    "cheminsDistincts": 504,
-    "cheminsPartages": 99,
-    "tachesSansAucuneIntersection": 76,
+    "tachesCouvertes": 290,
+    "pairesEnIntersection": 4425,
+    "cheminsDeclares": 818,
+    "cheminsDistincts": 531,
+    "cheminsPartages": 101,
+    "tachesSansAucuneIntersection": 89,
     "listeDesTachesIsolees": [
       "QA-T08",
-      "QA-T06",
       "QA-T12",
       "QA-T13",
       "DM-03-A",
@@ -34,16 +33,18 @@
       "JUR-T22",
       "GOV-022",
       "GOV-025",
-      "GOV-027",
       "GOV-028",
       "GOV-029",
       "GOV-039",
       "GOV-041",
+      "GOV-042",
       "GOV-043",
       "GOV-045",
       "GOV-046",
       "GOV-047",
       "GOV-048",
+      "GOV-049",
+      "GOV-050",
       "GOV-051",
       "GOV-052",
       "GOV-053",
@@ -84,7 +85,19 @@
       "GOV-093",
       "GOV-095",
       "GOV-096",
-      "GOV-097"
+      "DM-27",
+      "UX-P2-08",
+      "UX-P2-09",
+      "DM-28",
+      "DM-29",
+      "UX-P3-07",
+      "UX-P3-08",
+      "UX-P3-09",
+      "UX-P3-11",
+      "GOV-097",
+      "GOV-101",
+      "INT-T26",
+      "INT-T27-A"
     ],
     "cheminsLesPlusPartages": [
       {
@@ -93,7 +106,7 @@
       },
       {
         "chemin": "prisma/schema.prisma",
-        "taches": 44
+        "taches": 47
       },
       {
         "chemin": ".github/workflows/ci.yml",
@@ -130,29 +143,17 @@
       "INT-T08-A"
     ],
     "schemaContredit": [
-      "DM-01",
-      "QA-T06",
-      "DM-03-P",
-      "INT-T02",
-      "SEC-06",
-      "SEC-03",
-      "SEC-04",
-      "SEC-11",
-      "DM-09",
-      "DM-11",
-      "DM-12",
       "SEC-18",
-      "INT-T12",
+      "SEC-19",
       "SEC-21",
-      "CPL-T06",
       "UX-P1-15",
+      "UX-P1-12",
       "DM-16",
       "DM-19",
       "T-ARG-032",
       "CPL-T11",
       "CPL-T15",
-      "EXT-T08",
-      "EXT-T01"
+      "EXT-T08"
     ],
     "gardesSansEntreeAuRegistre": [
       "JUR-T30 — jur:aucune-instruction",
@@ -468,7 +469,7 @@
     "CPL-T22": [
       ".github/workflows/ci.yml",
       "docs/gates.json",
-      ".github/workflows/red-first.yml",
+      "scripts/gates/red-first.ts",
       "tests/unit/qualite/red-first.spec.ts"
     ],
     "SEC-08": [
@@ -496,7 +497,8 @@
       ".github/workflows/preview.yml",
       "prisma/seed.ts",
       "tests/integration/semeur-deterministe.spec.ts",
-      "tests/unit/qualite/preview-par-pr.spec.ts"
+      "tests/unit/qualite/preview-par-pr.spec.ts",
+      "prisma/schema.prisma"
     ],
     "QA-T12": [
       ".github/workflows/backup.yml",
@@ -613,7 +615,8 @@
       "src/app/api/webhooks/zeptomail/route.ts",
       "tests/unit/email/emetteur.spec.ts",
       "docs/gates.json",
-      "tests/integration/webhook-rebonds.spec.ts"
+      "tests/integration/webhook-rebonds.spec.ts",
+      "prisma/schema.prisma"
     ],
     "INT-T11": [
       "src/server/mcp/",
@@ -632,9 +635,13 @@
       "src/domain/apporteur/statut.ts",
       "src/domain/apporteur/matrice.ts",
       "tests/unit/domaine/apporteur-identites-facturation.spec.ts",
+      "tests/unit/domaine/apporteur-population-is-test.spec.ts",
       "tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts",
+      "tests/unit/domaine/apporteur-activite.spec.ts",
       "tests/integration/apporteur-jeton-depot.spec.ts",
-      "tests/unit/domaine/apporteur-score-fige.spec.ts"
+      "tests/unit/domaine/apporteur-identifiants.spec.ts",
+      "tests/unit/domaine/apporteur-score-fige.spec.ts",
+      "tests/unit/domaine/apporteur-snapshot-candidature.spec.ts"
     ],
     "JUR-T01": [
       "docs/contrat/CONTRAT-APPORTEUR-V1.md",
@@ -713,7 +720,8 @@
       "src/domain/attribution/machine.ts",
       "src/domain/attribution/etats.ts",
       "tests/domain/transitions.spec.ts",
-      "docs/gates.json"
+      "docs/gates.json",
+      "prisma/schema.prisma"
     ],
     "DM-24": [
       "src/server/crons/confirmation-tacite.ts",
@@ -749,7 +757,8 @@
     ],
     "DM-09": [
       "prisma/schema.prisma",
-      "src/domain/qualification/"
+      "src/domain/qualification/",
+      "tests/unit/domaine/depot-au-dela-du-seuil.spec.ts"
     ],
     "DM-10-P": [
       "prisma/schema.prisma",
@@ -758,7 +767,8 @@
     ],
     "DM-11": [
       "prisma/schema.prisma",
-      "src/domain/kyc/pieces.ts"
+      "src/domain/kyc/pieces.ts",
+      "tests/unit/domaine/kyc-reference-piece-rib.spec.ts"
     ],
     "DM-12": [
       "prisma/schema.prisma",
@@ -781,8 +791,7 @@
     "SEC-28": [
       "src/server/crons/levee-gel.ts",
       "src/domain/apporteur/suspension.ts",
-      "tests/security/cliquet-gel.spec.ts",
-      "prisma/schema.prisma"
+      "tests/security/cliquet-gel.spec.ts"
     ],
     "SEC-16": [
       "src/server/verification/dto.ts",
@@ -885,7 +894,8 @@
     ],
     "UX-P1-10": [
       "src/server/notifications/table-ssot.ts",
-      "emails/apporteur/"
+      "emails/apporteur/",
+      "prisma/schema.prisma"
     ],
     "UX-P1-11": [
       "src/server/queue/workers/onboarding.ts",
@@ -1225,8 +1235,7 @@
       "src/domain/apporteur/activite.ts",
       "emails/apporteur/",
       "tests/domain/suspension-motifs.spec.ts",
-      "docs/gates.json",
-      "prisma/schema.prisma"
+      "docs/gates.json"
     ],
     "JUR-T30": [
       "scripts/gates/jur-aucune-instruction.ts",
@@ -1307,8 +1316,7 @@
       "tests/unit/gouvernance/cloture-refuse-ce-qu-elle-n-a-pas-mesure.spec.ts"
     ],
     "GOV-042": [
-      "tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts",
-      "prisma/schema.prisma"
+      "tests/unit/gouvernance/un-statut-fusionnee-porte-sa-preuve.spec.ts"
     ],
     "GOV-043": [
       "tests/unit/gouvernance/trace-dit-ce-qu-elle-ne-couvre-pas.spec.ts"
@@ -1329,12 +1337,10 @@
       "tests/unit/gouvernance/sonde-distingue-les-deux-depots.spec.ts"
     ],
     "GOV-049": [
-      "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts",
-      "prisma/schema.prisma"
+      "tests/unit/gouvernance/une-tache-en-cours-appartient-a-un-lot.spec.ts"
     ],
     "GOV-050": [
-      "tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts",
-      "prisma/schema.prisma"
+      "tests/unit/gouvernance/un-path-designe-ce-depot-ci.spec.ts"
     ],
     "GOV-051": [
       "tests/unit/gouvernance/comparer-un-chemin-c-est-le-normaliser.spec.ts"
@@ -1481,8 +1487,78 @@
       "tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts",
       "tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts"
     ],
+    "GOV-098": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "DM-26": [
+      "tests/unit/domaine/changement-de-parrain.spec.ts",
+      "tests/integration/changement-de-parrain.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "DM-27": [
+      "tests/unit/domaine/lignee.spec.ts",
+      "tests/unit/domaine/lignee-hors-du-calcul-des-commissions.spec.ts"
+    ],
+    "UX-P2-08": [
+      "tests/unit/console/lignee.spec.ts"
+    ],
+    "UX-P2-09": [
+      "tests/unit/espace/mes-filleuls-liste.spec.ts"
+    ],
+    "DM-28": [
+      "tests/unit/domaine/code-naf-au-depot.spec.ts"
+    ],
+    "DM-29": [
+      "tests/unit/domaine/statistiques.spec.ts",
+      "tests/unit/domaine/nomenclature-naf.spec.ts"
+    ],
+    "UX-P3-07": [
+      "tests/unit/console/statistiques.spec.ts",
+      "tests/unit/console/tris-reserves-a-la-console.spec.ts"
+    ],
+    "UX-P3-08": [
+      "tests/unit/console/graphiques-svg.spec.ts"
+    ],
+    "UX-P3-09": [
+      "tests/unit/console/export-csv.spec.ts"
+    ],
+    "UX-P3-10": [
+      "tests/unit/console/notes-internes.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "UX-P3-11": [
+      "tests/unit/pilotage/alertes-de-pilotage.spec.ts"
+    ],
+    "UX-P3-12": [
+      "tests/unit/console/bibliotheque.spec.ts",
+      "tests/integration/bibliotheque-cloisonnement.spec.ts",
+      "prisma/schema.prisma"
+    ],
     "GOV-097": [
       "tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts"
+    ],
+    "GOV-099": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "GOV-100": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "GOV-101": [
+      "tests/unit/gouvernance/relectures-sans-defaut.spec.ts"
+    ],
+    "GOV-102": [
+      "tests/unit/gouvernance/registre-lecteur-unique.spec.ts"
+    ],
+    "INT-T01c": [
+      "tests/unit/integration/contrat-hash.spec.ts",
+      "tests/unit/integration/contrat-v2-frontiere.spec.ts",
+      "prisma/schema.prisma"
+    ],
+    "INT-T26": [
+      "tests/integration/candidature-recue.spec.ts"
+    ],
+    "INT-T27-A": [
+      "axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts"
     ]
   }
 }

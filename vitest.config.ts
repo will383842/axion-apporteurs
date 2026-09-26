@@ -27,6 +27,10 @@ export default defineConfig({
       // (partners/ADR-0015, décision 7 ; partners/ADR-0001). ⚠️ AUCUNE APOSTROPHE dans ce bloc :
       // `gates:prouvees` lit les motifs entre guillemets simples, et une apostrophe y ouvre un faux motif.
       'tests/integration/**/*.{test,spec}.{ts,tsx}',
+      // UX-P0-03 : les passes d accessibilite pilotent un vrai navigateur (Playwright, WebKit et
+      // Chromium) sur les surfaces du depot. Elles tournent DANS la suite, pour que `req:check` les
+      // voie vertes ; la suite exige donc aussi les navigateurs (`pnpm a11y:navigateurs`).
+      'tests/a11y/**/*.{test,spec}.{ts,tsx}',
     ],
     exclude: ['node_modules', '.next', 'tests/e2e/**'],
     // QA-T01 : chargé avant chaque fichier de test. Minimal — voir son en-tête.

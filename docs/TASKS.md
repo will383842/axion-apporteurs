@@ -8,15 +8,15 @@
 >
 > Une tache = une PR, **≤ 1,5 jour**. Le plafond est porte par la garde `gov:tasks`.
 
-**270 taches · 202.35 j estimes.**
+**290 taches · 220.85 j estimes.**
 
 | Phase | Taches | Jours | Terminees |
 | --- | ---: | ---: | ---: |
 | -1 — Gouvernance (prealable bloquant) | 39 | 23.75 | 39 |
-| 0 — Socle technique | 108 | 83.35 | 21 |
-| 1 — Operationnel | 61 | 47.50 | 0 |
-| 2 — Argent | 41 | 30.00 | 0 |
-| 3 — Pilotage et conformite | 21 | 17.75 | 0 |
+| 0 — Socle technique | 116 | 90.35 | 43 |
+| 1 — Operationnel | 62 | 48.00 | 0 |
+| 2 — Argent | 45 | 33.50 | 0 |
+| 3 — Pilotage et conformite | 28 | 25.25 | 0 |
 
 ## Phase -1 — Gouvernance (prealable bloquant)
 
@@ -462,9 +462,9 @@ Couvre : `REQ-SEC-016`, `REQ-SEC-035`
 
 **Tests.** `tests/unit/securite/rate-famille.spec.ts`
 
-### QA-T08 — Logger pino structuré, redaction PII, Sentry, notify
+### QA-T08 — Logger pino structuré, redaction PII, Sentry, notify ✅ **fusionnee**
 
-`0.5 j` · zone `qualite` · sensible : espace, rgpd · depend de `QA-T01`
+`1 j` · zone `qualite` · sensible : espace, rgpd · depend de `QA-T01`, `DM-01`
 
 Couvre : `REQ-QA-024`
 
@@ -474,7 +474,7 @@ Couvre : `REQ-QA-024`
 
 ### DM-01 — Socle du schéma Partners : conventions, enums de base, journal Evenement chaîné immuable ✅ **fusionnee**
 
-`1 j` · zone `domaine` · sensible : rgpd · depend de `QA-T01`
+`1 j` · zone `domaine` · `schema` · sensible : rgpd · depend de `QA-T01`
 
 Couvre : `REQ-DM-001`, `REQ-DM-024`, `REQ-DM-038`, `REQ-DM-041`, `REQ-JUR-026`, `REQ-SEC-027`
 
@@ -502,7 +502,7 @@ Couvre : `REQ-QA-006`
 
 **Tests.** `tests/integration/harnais-testcontainers.spec.ts` · `tests/unit/ci/integration-collectee-par-gate-a.spec.ts` · `tests/integration/rate-limit-redis.spec.ts`
 
-### QA-T04 — env.ts Zod fail-fast, /api/livez, /api/readyz, entrypoint bloquant, Dockerfile + HEALTHCHECK
+### QA-T04 — env.ts Zod fail-fast, /api/livez, /api/readyz, entrypoint bloquant, Dockerfile + HEALTHCHECK ✅ **fusionnee**
 
 `1 j` · zone `qualite` · `schema` · depend de `QA-T02`, `SEC-01`
 
@@ -532,7 +532,7 @@ Couvre : `REQ-QA-011`, `REQ-QA-013`
 
 **Tests.** `tests/unit/qualite/semgrep-regles-maison.spec.ts`
 
-### QA-T30 — Stryker sur `src/domain` : seuil aligné sur la mesure puis ≥ 80 % bloquant sur fichiers touchés, complet en nightly
+### QA-T30 — Stryker sur `src/domain` : seuil aligné sur la mesure puis ≥ 80 % bloquant sur fichiers touchés, complet en nightly ✅ **fusionnee**
 
 `0.5 j` · zone `qualite` · depend de `QA-T01`
 
@@ -542,7 +542,7 @@ Couvre : `REQ-QA-002`
 
 **Tests.** `tests/unit/qualite/score-de-mutation.spec.ts`
 
-### CPL-T22 — Job CI « red-first »
+### CPL-T22 — Job CI « red-first » ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `QA-T01`
 
@@ -552,7 +552,7 @@ Couvre : `REQ-CPL-022`
 
 **Tests.** `tests/unit/qualite/red-first.spec.ts`
 
-### SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma
+### SEC-08 — Chiffrement PII avec AAD, hash de recherche, hash IP seul, garde de schéma ✅ **fusionnee**
 
 `1 j` · zone `securite` · sensible : rgpd · depend de `DM-02`, `SEC-01`
 
@@ -584,11 +584,11 @@ Couvre : `REQ-QA-021`
 
 ### QA-T06 — Preview par PR sur Coolify, base éphémère, seed déterministe
 
-`1 j` · zone `qualite` · depend de `QA-T05`
+`1 j` · zone `qualite` · `schema` · depend de `QA-T05`
 
 Couvre : `REQ-QA-015`
 
-**Acceptation.** DEPEND DE QA-T05 ET D'UN TIERS : quota de DEUX previews simultanees, duree de vie 48 h (hypothese du registre, non levee). (1) Chaque PR obtient un environnement de preview isole, base ephemere semee par un SEMEUR DETERMINISTE — jamais un vidage de production, et cette interdiction est gardee, pas seulement ecrite (REQ-QA-015). (2) L'URL de la preview est commentee sur la PR ; l'environnement est DETRUIT a la fermeture, base comprise, et une preview qui survit a sa PR est un defaut nomme. (3) LE PLAFOND DE DEUX EST TENU PAR LA MACHINE : une troisieme PR attend, elle ne cree pas une troisieme preview qui ferait tomber les deux autres. (4) Les tests de bout en bout et le balayage de securite authentifie s'executent CONTRE cette preview, pas contre la production. (5) TEMOIN A DEUX FACES : un semeur rendu non deterministe (deux executions, deux jeux de donnees) fait sortir la garde en code non nul et nomme la table qui diverge ; le semeur du depot la fait sortir en zero sur deux executions consecutives. (6) TEMOIN A DEUX FACES sur le plafond : trois demandes simultanees laissent exactement deux previews vivantes et une en attente, jamais trois.
+**Acceptation.** DEPEND DE QA-T05 ET D'UN TIERS : quota de DEUX previews simultanees, duree de vie 48 h (hypothese du registre, non levee). (1) Chaque PR obtient un environnement de preview isole, base ephemere semee par un SEMEUR DETERMINISTE — jamais un vidage de production, et cette interdiction est gardee, pas seulement ecrite (REQ-QA-015). (2) L'URL de la preview est commentee sur la PR ; l'environnement est DETRUIT a la fermeture, base comprise, et une preview qui survit a sa PR est un defaut nomme. (3) LE PLAFOND DE DEUX EST TENU PAR LA MACHINE : une troisieme PR attend, elle ne cree pas une troisieme preview qui ferait tomber les deux autres. (4) Les tests de bout en bout et le balayage de securite authentifie s'executent CONTRE cette preview, pas contre la production. (5) TEMOIN A DEUX FACES : un semeur rendu non deterministe (deux executions, deux jeux de donnees) fait sortir la garde en code non nul et nomme la table qui diverge ; le semeur du depot la fait sortir en zero sur deux executions consecutives. (6) TEMOIN A DEUX FACES sur le plafond : trois demandes simultanees laissent exactement deux previews vivantes et une en attente, jamais trois. (7) `prisma/seed.ts` n'ecrit aucune table lui-meme : il execute dans l'ordre de leur prefixe les modules `prisma/seed/<NN>-<table>.ts`, chacun livre par la tache qui cree sa table (partners/ADR-0022). (8) Le semeur n'ecrit une donnee personnelle que par `colonnesPii` et des identifiants par uuid v5 d'un espace de noms fixe ; aucun `Date.now()`, horloge injectee. (9) Une valeur de vocabulaire ecrite par le semeur est lue dans l'enum Prisma, jamais tapee.
 
 **Tests.** `tests/integration/semeur-deterministe.spec.ts` · `tests/unit/qualite/preview-par-pr.spec.ts`
 
@@ -624,11 +624,11 @@ Couvre : `REQ-ARG-031`, `REQ-DM-014`, `REQ-GOV-019`, `REQ-INT-017`, `REQ-JUR-019
 
 ### DM-03-P — Import de la grille côté Partners : `GrilleCommission` versionnée, `partners:grille:check`
 
-`0.5 j` · zone `domaine` · sensible : argent · depend de `DM-01`, `DM-03-A`
+`0.5 j` · zone `domaine` · `schema` · sensible : argent · depend de `DM-01`, `DM-03-A`
 
 Couvre : `REQ-ARG-031`, `REQ-DM-014`, `REQ-INT-017`
 
-**Acceptation.** TACHE SENSIBLE — argent. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot) ET DEPEND DE L'AUTRE DEPOT (DM-03-A). (1) Partners importe la grille de commission publiee par axionia et en conserve CHAQUE version sous la forme d'une entite versionnee `GrilleCommission { version, contenuJson, hash, publieeAt }` (REQ-DM-014). (2) AUCUNE VALEUR DE COMMISSION N'EST RETAPEE DANS PARTNERS : le contenu est celui que l'export a produit, l'empreinte est celle qu'axionia a calculee, et un controle croise compare l'empreinte recue a l'empreinte recalculee sur le contenu recu (REQ-ARG-031, REQ-INT-017). Une valeur recopiee est une seconde source, et c'est la regle maison n°1. (3) CONTRAT ET ATTRIBUTION REFERENCENT UNE VERSION, jamais la grille « courante » : une grille republiee ne change retroactivement aucun droit deja ne. (4) UNE VERSION DEJA IMPORTEE N'EST JAMAIS REECRITE : le second import de la meme empreinte est inerte et le dit. (5) TEMOIN A DEUX FACES : un contenu dont on modifie un centime sans toucher l'empreinte annoncee fait sortir l'import en code non nul et NOMME la ligne de bareme divergente ; le contenu publie par axionia le fait sortir en zero, avec le compte des lignes de bareme reellement confrontees. (6) TEMOIN A DEUX FACES sur la reference : une attribution creee sans version de grille est refusee ; une attribution portant une version existante passe.
+**Acceptation.** TACHE SENSIBLE — argent. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot) ET DEPEND DE L'AUTRE DEPOT (DM-03-A). (1) Partners importe la grille de commission publiee par axionia et en conserve CHAQUE version sous la forme d'une entite versionnee `GrilleCommission { version, contenuJson, hash, publieeAt }` (REQ-DM-014). (2) AUCUNE VALEUR DE COMMISSION N'EST RETAPEE DANS PARTNERS : le contenu est celui que l'export a produit, l'empreinte est celle qu'axionia a calculee, et un controle croise compare l'empreinte recue a l'empreinte recalculee sur le contenu recu (REQ-ARG-031, REQ-INT-017). Une valeur recopiee est une seconde source, et c'est la regle maison n°1. (3) LA TABLE EST LA CIBLE DES CLES ETRANGERES que DM-07 (attribution) et DM-23 (contrat) poseront, vers une version et jamais vers la grille « courante » : une grille republiee ne change retroactivement aucun droit deja ne. (4) UNE VERSION DEJA IMPORTEE N'EST JAMAIS REECRITE : le second import de la meme empreinte est inerte et le dit. (5) TEMOIN A DEUX FACES : un contenu dont on modifie un centime sans toucher l'empreinte annoncee fait sortir l'import en code non nul et NOMME la ligne de bareme divergente ; le contenu publie par axionia le fait sortir en zero, avec le compte des lignes de bareme reellement confrontees. (6) TEMOIN A DEUX FACES sur l'immuabilite : un `UPDATE` puis un `DELETE` d'une version importee sont refuses par la base et nomment le declencheur ; un second import de la meme empreinte n'ecrit aucune ligne et le dit. Le temoin de la reference (une attribution sans version de grille est refusee) appartient a DM-07, `attributions` n'existant qu'en phase 1. (7) L'empreinte recalculee l'est sur la forme canonique JCS de `contenuJson` ; un test prouve que le passage par `jsonb` ne change pas l'empreinte de la fixture publiee (entiers seulement : centimes et points de base). (8) SCHEMA (partners/ADR-0022) : `GrilleCommission` -> `grilles_commission` : `id` uuid, `version` Int unique (le N de `commissions.v<N>.json`), `hash` Char(64) unique, `contenuJson` Json, `publieeAt`, `importeeAt` ; CHECK `version > 0` et `hash` hexadecimal ; declencheurs `grilles_commission_immuable` (BEFORE UPDATE OR DELETE, ligne) et `grilles_commission_troncature` (BEFORE TRUNCATE, instruction), forme du journal. Module du semeur `prisma/seed/02-grilles-commission.ts`.
 
 **Tests.** `tests/unit/domaine/grille-import.spec.ts` · `tests/integration/grille-versionnee.spec.ts`
 
@@ -644,11 +644,11 @@ Couvre : `REQ-ARG-004`, `REQ-ARG-006`, `REQ-ARG-007`, `REQ-ARG-017`, `REQ-DM-015
 
 ### INT-T02 — Outbox Partners côté axionia
 
-`1 j` · zone `integration` · `axionia` · depend de `INT-T01b`
+`1 j` · zone `integration` · `axionia` · `schema` · depend de `INT-T01b`
 
 Couvre : `REQ-INT-001`, `REQ-INT-002`, `REQ-INT-008`, `REQ-INT-009`, `REQ-INT-012`, `REQ-INT-031`
 
-**Acceptation.** DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. (1) Tout evenement destine a Partners est ecrit dans une file de sortie PERSISTANTE, DANS LA TRANSACTION de l'ecriture metier qui le produit : un retour arriere metier ne laisse AUCUN evenement, une validation metier en laisse EXACTEMENT UN (REQ-INT-001). C'est la seule forme qui ne perd ni ne duplique. (2) Chaque requete sortante est signee sur « horodatage point corps exact », en-tetes dedies, et le recepteur refuse hors d'une fenetre de 300 s (REQ-INT-002). La signature porte sur le corps EXACT transmis, jamais sur un objet re-serialise. (3) INERTIE PAR DEFAUT : sans le drapeau d'activation, aucune ligne de file de sortie, aucun travail de fond, aucun appel reseau ; et au build du depot axionia — celui qui s'execute sans base reelle — aucun code d'integration ne s'execute (REQ-INT-008). (4) Le rejeu suit un recul exponentiel, 8 tentatives au plus, delai d'attente 10 s ; un refus definitif abandonne immediatement avec alerte, une indisponibilite ne compte pas de tentative ; apres abandon la ligne reste visible et rejouable a la main par identifiant d'evenement (REQ-INT-009). (5) Une route de relecture de la file de sortie permet a Partners de rattraper toute lacune a partir d'un numero de sequence, avec la charge EXACTE conservee (REQ-INT-012). (6) Aucun secret d'integration ne transite en clair dans le depot ni dans une conversation : ils sont poses par le chemin de secrets de la forge (REQ-INT-031). (7) TEMOIN A DEUX FACES : une transaction metier annulee apres ecriture de l'evenement laisse ZERO ligne de file de sortie et le test le prouve ; la meme transaction validee en laisse exactement une. Et sans le drapeau d'activation, un appel metier complet laisse zero ligne, zero travail, zero appel reseau, ce qui se mesure et ne se suppose pas.
+**Acceptation.** DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. (1) Tout evenement destine a Partners est ecrit dans une file de sortie PERSISTANTE, DANS LA TRANSACTION de l'ecriture metier qui le produit : un retour arriere metier ne laisse AUCUN evenement, une validation metier en laisse EXACTEMENT UN (REQ-INT-001). C'est la seule forme qui ne perd ni ne duplique. (2) Chaque requete sortante est signee sur « horodatage point corps exact », en-tetes dedies, et le recepteur refuse hors d'une fenetre de 300 s (REQ-INT-002). La signature porte sur le corps EXACT transmis, jamais sur un objet re-serialise. (3) INERTIE PAR DEFAUT : sans le drapeau d'activation, aucune ligne de file de sortie, aucun travail de fond, aucun appel reseau ; et au build du depot axionia — celui qui s'execute sans base reelle — aucun code d'integration ne s'execute (REQ-INT-008). (4) Le rejeu suit un recul exponentiel, 8 tentatives au plus, delai d'attente 10 s ; un refus definitif abandonne immediatement avec alerte, une indisponibilite ne compte pas de tentative ; apres abandon la ligne reste visible et rejouable a la main par identifiant d'evenement (REQ-INT-009). (5) Une route de relecture de la file de sortie permet a Partners de rattraper toute lacune a partir d'un numero de sequence, avec la charge EXACTE conservee (REQ-INT-012). (6) Aucun secret d'integration ne transite en clair dans le depot ni dans une conversation : ils sont poses par le chemin de secrets de la forge (REQ-INT-031). (7) TEMOIN A DEUX FACES : une transaction metier annulee apres ecriture de l'evenement laisse ZERO ligne de file de sortie et le test le prouve ; la meme transaction validee en laisse exactement une. Et sans le drapeau d'activation, un appel metier complet laisse zero ligne, zero travail, zero appel reseau, ce qui se mesure et ne se suppose pas. (8) `sequence` est attribuee par le relais, sous verrou consultatif, au premier envoi : monotonie GLOBALE et d'EMISSION (portee laissee ouverte a INT-T02 par partners/ADR-0008, tranchee par l'architecte le 2026-09-26) ; la route de relecture ne rend que des lignes numerotees ; un test fait valider deux transactions dans l'ordre inverse de leur creation et prouve qu'aucune ligne n'est sautee. (9) Le corps signe et transmis est stocke en TEXTE (`corps`), jamais en Json (jsonb reordonne les cles), et relu octet a octet par un test. (10) SCHEMA axionia (conventions d'axionia, patron `CrmSyncOutbox`, partners/ADR-0022) : enum `PartnersSyncStatus {pending, sent, failed, gave_up}` ; `PartnersSyncOutbox` -> `partners_sync_outbox` : `eventId` uuid unique, `eventType` VarChar(64) valide contre `TYPES_EVENEMENT` avant insertion (422 sinon), `subjectRef` VarChar(180), `sequence` BigInt unique nulle tant que la ligne n'a pas ete prise, `corps` Text, `status` (defaut `pending`), `attempts`, `lastError`, `lastAttemptAt`, `nextAttemptAt`, `sentAt`, `responseStatus`, `createdAt` ; index `(status, nextAttemptAt)` et `subjectRef`.
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/outbox-produit-des-evenements-valides.spec.ts`
 
@@ -674,31 +674,31 @@ Couvre : `REQ-INT-006`, `REQ-INT-007`
 
 ### INT-T05 — Producteurs `facture.emise`, `facture.annulee`, `avoir.emis`, `paiement.recu`, `paiement.rembourse`
 
-`1 j` · zone `integration` · `axionia` · `schema` · sensible : argent, auth · depend de `INT-T02`
+`1 j` · zone `integration` · `axionia` · `schema` · sensible : argent, auth · depend de `INT-T02`, `INT-T01c`
 
 Couvre : `REQ-ARG-001`, `REQ-ARG-005`, `REQ-ARG-030`, `REQ-DM-039`, `REQ-INT-004`, `REQ-INT-005`, `REQ-INT-007`, `REQ-INT-032`
 
-**Acceptation.** DEPOT AXIONIA. TACHE SENSIBLE — argent et authentification. UN REFUS DE LA LENTILLE SECURITE Y VAUT VETO. (1) Les evenements `facture.emise`, `avoir.emis`, `paiement.recu` et `paiement.rembourse` sont produits par la fonction d'emission unique, et le cliquet nominatif couvre leurs ecrivains (REQ-INT-007). (2) LES NOMS SONT CEUX DES MODELES REELS D'AXIONIA (Client, Devis, FactureFormation, Payment) : aucun evenement ne reference un modele qui n'existe pas, et la liste des sept types est FERMEE (REQ-INT-004). (3) `paiement.recu` porte l'identifiant de paiement, l'identifiant de facture, l'identifiant de CLIENT BENEFICIAIRE — jamais le destinataire de la facture —, le SIREN, le montant encaisse TTC, les montants HT et TTC de la facture, le regime de TVA, le cumul encaisse TTC, la date d'encaissement et le fournisseur d'encaissement (REQ-INT-005) ; Partners derive le HT encaisse, il ne le recoit pas. (4) BENEFICIAIRE, JAMAIS DESTINATAIRE : quand un tiers payeur regle la facture d'une entreprise, c'est l'entreprise beneficiaire qui porte l'attribution. Une confusion des deux verse la commission a la mauvaise personne, et c'est le defaut le plus couteux de cette famille. (5) Une resolution de client impossible produit une ligne non resolue ALERTEE, jamais un evenement ignore (REQ-ARG-030) ; les encaissements de plusieurs payeurs sur les factures d'une meme prestation se proratisent sans cas particulier (REQ-ARG-005). (6) `facture.emise` transporte le destinataire tel que defini cote axionia et l'echeance de financeur attendue ; Partners stocke le type de payeur dans un enum GENERE depuis le meme fichier de contrat partage, jamais retape (REQ-DM-039). (7) Les charges manquantes du contrat sont ajoutees : `facture.annulee` et `financement.mis_a_jour` (REQ-INT-032). (8) TEMOIN A DEUX FACES : une charge de bac d'essai portant l'identifiant du DESTINATAIRE la ou le contrat exige le BENEFICIAIRE est refusee au schema et nomme le champ ; la charge conforme passe. Et une charge ou le HT encaisse est transmis au lieu d'etre derive est refusee, avec le nom du champ en trop.
+**Acceptation.** DEPOT AXIONIA. TACHE SENSIBLE — argent et authentification. UN REFUS DE LA LENTILLE SECURITE Y VAUT VETO. (1) Les evenements `facture.emise`, `avoir.emis`, `paiement.recu` et `paiement.rembourse` sont produits par la fonction d'emission unique, et le cliquet nominatif couvre leurs ecrivains (REQ-INT-007). (2) LES NOMS SONT CEUX DES MODELES REELS D'AXIONIA (Client, Devis, FactureFormation, Payment) : aucun evenement ne reference un modele qui n'existe pas, et la liste des types est FERMEE par le contrat, onze depuis INT-T01c (REQ-INT-004). (3) `paiement.recu` porte l'identifiant de paiement, l'identifiant de facture, l'identifiant de CLIENT BENEFICIAIRE — jamais le destinataire de la facture —, le SIREN, le montant encaisse TTC, les montants HT et TTC de la facture, le regime de TVA, le cumul encaisse TTC, la date d'encaissement et le fournisseur d'encaissement (REQ-INT-005) ; Partners derive le HT encaisse, il ne le recoit pas. (4) BENEFICIAIRE, JAMAIS DESTINATAIRE : quand un tiers payeur regle la facture d'une entreprise, c'est l'entreprise beneficiaire qui porte l'attribution. Une confusion des deux verse la commission a la mauvaise personne, et c'est le defaut le plus couteux de cette famille. (5) Une resolution de client impossible produit une ligne non resolue ALERTEE, jamais un evenement ignore (REQ-ARG-030) ; les encaissements de plusieurs payeurs sur les factures d'une meme prestation se proratisent sans cas particulier (REQ-ARG-005). (6) `facture.emise` transporte le destinataire tel que defini cote axionia et l'echeance de financeur attendue ; Partners stocke le type de payeur dans un enum GENERE depuis le meme fichier de contrat partage, jamais retape (REQ-DM-039). (7) `facture.annulee` et `financement.mis_a_jour` entrent au contrat par INT-T01c (dependance, changement en lockstep cote Partners) ; INT-T05 les PRODUIT par la fonction d'emission unique (REQ-INT-032). (8) TEMOIN A DEUX FACES : une charge de bac d'essai portant l'identifiant du DESTINATAIRE la ou le contrat exige le BENEFICIAIRE est refusee au schema et nomme le champ ; la charge conforme passe. Et une charge ou le HT encaisse est transmis au lieu d'etre derive est refusee, avec le nom du champ en trop.
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteurs-facturation.spec.ts`
 
 ### INT-T22 — Producteur `candidature.recue`
 
-`0.5 j` · zone `integration` · `axionia` · depend de `INT-T02`
+`0.5 j` · zone `integration` · `axionia` · depend de `INT-T02`, `INT-T01c`
 
 Couvre : `REQ-CPL-015`, `REQ-DM-035`, `REQ-INT-032`, `REQ-QA-035`
 
-**Acceptation.** émission depuis l'écrivain de `Submission` (cliquet nominatif) ; payload `{candidatureId, reponsesJson, scoreInitial, scorePartsJson, scoreBaremeVersion, sourceCanal, utm, campagneId, parrainCodeCapture}`.
+**Acceptation.** émission depuis l'écrivain de `Submission` (cliquet nominatif) ; payload `{candidatureId, reponsesJson, scoreInitial, scorePartsJson, scoreBaremeVersion, sourceCanal, utm, campagneId, parrainCodeCapture}`. Le type `candidature.recue` entre au contrat par INT-T01c (dependance). Le payload ne porte aucune coordonnee du candidat : Partners les tire par la route de coordonnees d'axionia (INT-T01c, partners/ADR-0023).
 
 **Tests.** `axionia/src/server/partners-sync/__tests__/producteur-candidature.spec.ts`
 
 ### SEC-06 — Réception des webhooks axionia : signature, tolérance, outbox, rejeu, attente de dépendance, worker
 
-`1 j` · zone `securite` · depend de `INT-T01a`, `INT-T01b`, `QA-T02`, `SEC-01`
+`1 j` · zone `securite` · `schema` · depend de `INT-T01a`, `INT-T01b`, `QA-T02`, `SEC-01`
 
 Couvre : `REQ-ARG-002`, `REQ-ARG-003`, `REQ-DM-036`, `REQ-INT-010`, `REQ-INT-011`, `REQ-QA-008`, `REQ-QA-009`, `REQ-SEC-010`, `REQ-SEC-011`
 
-**Acceptation.** ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) La route de reception des evenements d'axionia verifie la signature sur « horodatage point corps brut » avec un secret dedie, en comparaison a temps constant, tolerance 300 s, corps lu en texte et limite a 128 Ko ; un echec rend 401 et leve une alerte PLAFONNEE (REQ-SEC-010, REQ-QA-008). (2) L'EVENEMENT EST INSCRIT DANS UNE TABLE A CONTRAINTE UNIQUE SUR SON IDENTIFIANT AVANT TOUT TRAITEMENT ; un doublon rend 200 sans effet ; le traitement se fait HORS REQUETE, dans un travail de fond, et la route ne rend JAMAIS 5xx pour un echec de traitement (REQ-INT-010, REQ-SEC-011, REQ-ARG-002). Une route qui rend 5xx sur un echec de traitement invite l'emetteur a rejouer ce qui est deja enregistre. (3) UN EVENEMENT DONT LA DEPENDANCE MANQUE — facture inconnue pour un paiement, client inconnu pour un devis — est conserve en attente de dependance et rejoue AUTOMATIQUEMENT a l'arrivee du parent ; il n'est jamais rejete (REQ-INT-011). (4) IL EXISTE AU PLUS UNE LIGNE DE COMMISSION PAR IDENTIFIANT DE PAIEMENT et au plus une reprise par identifiant de remboursement, tenus par des index UNIQUES en base, pas par une verification applicative (REQ-SEC-011). (5) LE REJEU COMPLET DE L'HISTORIQUE SUR UNE BASE VIDE REPRODUIT UN REGISTRE IDENTIQUE — memes montants, memes statuts, meme empreinte de registre — et toute PERMUTATION des evenements d'un meme dossier rend le meme etat final (REQ-ARG-003, REQ-QA-009). (6) TEMOIN A DEUX FACES : une requete signee avec un secret faux, puis une requete hors fenetre de 300 s, rendent 401 et n'ecrivent RIEN ; la requete correctement signee rend 200 et ecrit exactement une ligne. Et la meme requete livree deux fois rend 200 la seconde fois en n'ecrivant rien de plus, ce qui se mesure par le compte de lignes, jamais par le code de reponse seul.
+**Acceptation.** ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) La route de reception des evenements d'axionia verifie la signature sur « horodatage point corps brut » avec un secret dedie, en comparaison a temps constant, tolerance 300 s, corps lu en texte et limite a 128 Ko ; un echec rend 401 et leve une alerte PLAFONNEE (REQ-SEC-010, REQ-QA-008). (2) L'EVENEMENT EST INSCRIT DANS UNE TABLE A CONTRAINTE UNIQUE SUR SON IDENTIFIANT AVANT TOUT TRAITEMENT ; un doublon rend 200 sans effet ; le traitement se fait HORS REQUETE, dans un travail de fond, et la route ne rend JAMAIS 5xx pour un echec de traitement (REQ-INT-010, REQ-SEC-011, REQ-ARG-002). Une route qui rend 5xx sur un echec de traitement invite l'emetteur a rejouer ce qui est deja enregistre. (3) UN EVENEMENT DONT LA DEPENDANCE MANQUE — facture inconnue pour un paiement, client inconnu pour un devis — est conserve en attente de dependance et rejoue AUTOMATIQUEMENT a l'arrivee du parent ; il n'est jamais rejete (REQ-INT-011). (4) AU PLUS UN EVENEMENT `paiement.recu` ET UN `paiement.rembourse` PAR `paymentId`, tenus par l'index unique partiel `evenements_recus_cle_metier_unique` sur `(event_type, cle_metier) WHERE cle_metier IS NOT NULL`, jamais par une verification applicative (REQ-SEC-011, REQ-ARG-002) ; le doublon rend 200 `{duplicate:true}`. L'unicite des lignes de commission appartient a DM-15 (phase 2). (5) LE REJEU COMPLET DE `evenements_recus` SUR UNE BASE VIDE, dans l'ordre puis sous permutation d'un meme dossier, rend le meme ensemble de statuts et la meme resolution des dependances (REQ-ARG-003, REQ-QA-009) ; le golden du registre de commissions appartient a T-ARG-022. (6) TEMOIN A DEUX FACES : une requete signee avec un secret faux, puis une requete hors fenetre de 300 s, rendent 401 et n'ecrivent RIEN ; la requete correctement signee rend 200 et ecrit exactement une ligne. Et la meme requete livree deux fois rend 200 la seconde fois en n'ecrivant rien de plus, ce qui se mesure par le compte de lignes, jamais par le code de reponse seul. (7) Un evenement bien forme de `schema_version` inconnue est inscrit `held` et alerte, jamais rejete. (8) Chaque passage du travail de fond ecrit `battements` (REQ-QA-026). (9) SCHEMA (partners/ADR-0022 ; SEC-06 cree `evenements_recus` et `battements`) : enums `SourceEvenementRecu {axionia, docuseal}`, `TypeEvenementRecu` (les sept types de `TYPES_EVENEMENT`, identifiant Prisma en snake_case et libelle de fil exact par `@map`, generes depuis `packages/contracts/events.ts` ; un test compare les libelles de `pg_enum` a la constante) et `StatutEvenementRecu {recu, traite, en_attente_dependance, held, en_erreur}`. `EvenementRecu` -> `evenements_recus` : `source`, `eventId` VarChar(200) (uuid v4 pour axionia ; cle derivee `event_type:submission_id:timestamp` pour DocuSeal, REQ-SEC-034), `eventType`, `schemaVersion`, `sequence` BigInt (nulle hors axionia, REQ-INT-012), `sujetRef`, `cleMetier` (`paymentId` des paiements, nulle sinon), `dependanceRef` (presente si et seulement si `en_attente_dependance`), `charge` Json sans donnee personnelle, `payloadHash` Char(64) du CORPS BRUT, `statut`, `receivedAt`, `survenuAt`, `processedAt`, `error` VarChar(500) (nom et code, jamais un extrait de la charge), `retryCount` ; unique `(source, eventId)`. `Battement` -> `battements` : `tache` VarChar(64), cle de `src/server/taches/registre.ts` (exception E1), `dernierSuccesAt`, `dernierEchecAt`, `compteurs` Json (identifiants et nombres seuls). CHECK : `payload_hash` hexadecimal, `retry_count >= 0`, `(statut = 'traite') = (processed_at IS NOT NULL)`, `(statut = 'en_attente_dependance') = (dependance_ref IS NOT NULL)`, `(source = 'axionia') = (sequence IS NOT NULL)`, `event_id` uuid v4 pour axionia, `tache ~ '^[a-z][a-z0-9_]*$'` ; index partiel des attentes sur `dependance_ref`. Declencheur `evenements_recus_reception_immuable` : UPDATE permis sur `statut`, `processed_at`, `error`, `retry_count` et `dependance_ref` SEULEMENT ; DELETE et TRUNCATE refuses. Les deux index partiels sont verifies par `pg_indexes`. Module du semeur `prisma/seed/03-evenements-recus.ts`.
 
 **Tests.** `tests/integration/webhook-verdicts.spec.ts` · `tests/integration/webhook.spec.ts` · `tests/unit/securite/webhook-signature.spec.ts`
 
@@ -712,23 +712,23 @@ Couvre : `REQ-INT-014`, `REQ-SEC-012`
 
 **Tests.** `tests/integration/frontiere.spec.ts`
 
-### SEC-03 — Lien magique apporteur
+### SEC-03 — Lien magique apporteur ✅ **fusionnee**
 
-`1 j` · zone `securite` · sensible : auth · depend de `SEC-01`, `SEC-08`, `SEC-10`
+`1 j` · zone `securite` · `schema` · sensible : auth · depend de `SEC-01`, `SEC-08`, `SEC-10`
 
 Couvre : `REQ-SEC-001`, `REQ-SEC-002`, `REQ-SEC-016`
 
-**Acceptation.** TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot) ET C'EST LE SEUL PARCOURS UTILISATEUR REEL DE LA PHASE 0. (1) Le lien de connexion a une duree de vie de 15 minutes, est a USAGE UNIQUE par une consommation ATOMIQUE conditionnelle — jamais un lire-puis-ecrire —, et n'est stocke qu'en empreinte SHA-256 (REQ-SEC-001). (2) LA REPONSE DU FORMULAIRE EST IDENTIQUE que l'adresse existe ou non : meme texte, meme code, meme duree observable. Une difference de duree est une difference. (3) La demande est limitee a 10 par quart d'heure et par empreinte d'adresse reseau, et 5 par quart d'heure et par adresse de courriel, avec refus en cas de panne du cache (REQ-SEC-002, REQ-SEC-016) ; le message de suspension explique la suspension SANS reveler l'existence du compte. (4) L'ecran `src/app/(espace)/connexion/` est la premiere page rendue de Partners : elle passe les controles d'accessibilite et de cibles que UX-P0-03 porte, et sa mesure de poids est collee dans la PR. (5) TEMOIN A DEUX FACES : un lien consomme deux fois n'ouvre de session qu'UNE fois — la seconde consommation est refusee et le test compte les sessions, pas les codes de reponse ; un lien de plus de 15 minutes est refuse ; un lien frais et unique ouvre la session et sort en zero. (6) TEMOIN A DEUX FACES sur l'indistinction : les reponses a une adresse existante et a une adresse inexistante sont comparees OCTET A OCTET et doivent etre egales ; une divergence introduite volontairement fait rougir le test.
+**Acceptation.** TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot) ET C'EST LE SEUL PARCOURS UTILISATEUR REEL DE LA PHASE 0. (1) Le lien de connexion a une duree de vie de 15 minutes, est a USAGE UNIQUE par une consommation ATOMIQUE conditionnelle — jamais un lire-puis-ecrire —, et n'est stocke qu'en empreinte HMAC-SHA-256 sous MAGIC_LINK_SECRET, domaine separe, kid stocke (partners/ADR-0013 decision 14 ; REQ-SEC-001). (2) LA REPONSE DU FORMULAIRE EST IDENTIQUE que l'adresse existe ou non : meme texte, meme code, meme duree observable. Une difference de duree est une difference. (3) La demande est limitee a 10 par quart d'heure et par empreinte d'adresse reseau, et 5 par quart d'heure et par adresse de courriel, avec refus en cas de panne du cache (REQ-SEC-002, REQ-SEC-016) ; le message de suspension explique la suspension SANS reveler l'existence du compte. (4) L'ecran `src/app/(espace)/connexion/` est la premiere page rendue de Partners : elle passe les controles d'accessibilite et de cibles que UX-P0-03 porte, et sa mesure de poids est collee dans la PR. (5) TEMOIN A DEUX FACES : un lien consomme deux fois n'ouvre de session qu'UNE fois — la seconde consommation est refusee et le test compte les sessions, pas les codes de reponse — les sessions sont les lignes de sessions_espace, dont lien_magique_id est unique ; un lien de plus de 15 minutes est refuse ; un lien frais et unique ouvre la session et sort en zero. (6) TEMOIN A DEUX FACES sur l'indistinction : les reponses a une adresse existante et a une adresse inexistante sont comparees OCTET A OCTET et doivent etre egales ; une divergence introduite volontairement fait rougir le test.
 
 **Tests.** `tests/integration/lien-magique.spec.ts` · `tests/unit/securite/lien-magique-indistinction.spec.ts`
 
 ### SEC-04 — Sessions révocables en base, `sessionVersion`, step-up
 
-`1 j` · zone `securite` · sensible : auth · depend de `SEC-03`
+`1 j` · zone `securite` · `schema` · sensible : auth · depend de `SEC-03`
 
 Couvre : `REQ-SEC-003`, `REQ-SEC-004`
 
-**Acceptation.** TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot). (1) La session est un cookie a prefixe `__Host-`, inaccessible au script, transmis uniquement en TLS, en politique de site `Lax`, d'une duree de 30 jours, ENREGISTRE EN BASE avec son empreinte, sa date de revocation, sa derniere vue et l'empreinte de l'adresse reseau (REQ-SEC-003). Une session qu'on ne peut pas enumerer est une session qu'on ne peut pas revoquer. (2) `sessionVersion` est incremente a TOUTE suspension, resiliation, changement d'adresse de courriel ou de coordonnee bancaire, et INVALIDE IMMEDIATEMENT toutes les sessions ouvertes du compte — la verification se fait a chaque requete, pas au prochain renouvellement. (3) Toute modification de coordonnee bancaire, d'adresse de courriel ou de telephone exige un RELEVEMENT : un lien de connexion consomme depuis moins de 10 minutes (REQ-SEC-004). Le relevement porte sur l'ACTION, pas sur la page qui l'affiche. (4) TEMOIN A DEUX FACES : une session ouverte, puis `sessionVersion` incremente, ne franchit plus la requete SUIVANTE — le test mesure la requete suivante, jamais un delai ; sans incrementation, elle passe. (5) TEMOIN A DEUX FACES sur le relevement : une modification de coordonnee bancaire tentee avec un lien consomme depuis plus de 10 minutes est refusee et nomme le motif ; la meme avec un lien frais passe.
+**Acceptation.** TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot). (1) La session est un cookie a prefixe `__Host-`, inaccessible au script, transmis uniquement en TLS, en politique de site `Lax`, d'une duree de 30 jours, ENREGISTRE EN BASE avec son empreinte, sa date de revocation, sa derniere vue et l'empreinte de l'adresse reseau (REQ-SEC-003). Une session qu'on ne peut pas enumerer est une session qu'on ne peut pas revoquer. (2) `sessionVersion` est incremente a toute resiliation, a tout changement d'adresse de courriel ou de coordonnee bancaire et a toute revocation pour motif de securite (contrat art. 3.8), et INVALIDE IMMEDIATEMENT toutes les sessions ouvertes du compte — la verification se fait a chaque requete, pas au prochain renouvellement. Une SUSPENSION ne l'incremente PAS et ne revoque aucune session : l'apporteur suspendu garde l'acces a son espace, seuls ses nouveaux depots sont refuses (REQ-SEC-032, REQ-SEC-019, HYP-SEC03-ACCES) ; le temoin le prouve : une session ouverte, puis une suspension posee, franchit encore la requete suivante. (3) Toute modification de coordonnee bancaire, d'adresse de courriel ou de telephone exige un RELEVEMENT : un lien de connexion consomme depuis moins de 10 minutes (REQ-SEC-004). Le relevement porte sur l'ACTION, pas sur la page qui l'affiche. (4) TEMOIN A DEUX FACES : une session ouverte, puis `sessionVersion` incremente, ne franchit plus la requete SUIVANTE — le test mesure la requete suivante, jamais un delai ; sans incrementation, elle passe. (5) TEMOIN A DEUX FACES sur le relevement : une modification de coordonnee bancaire tentee avec un lien consomme depuis plus de 10 minutes est refusee et nomme le motif ; la meme avec un lien frais passe. (6) SCHEMA (partners/ADR-0022 ; extension de SEC-04, en plus de celle de `sessions_espace` decidee par GOV-100) : sur `apporteurs`, `sessionVersion` Int defaut 0 (CHECK `>= 0`, REQ-SEC-003), et `confidentialiteAccepteeAt` avec `confidentialiteVersion` VarChar(32), presentes ensemble (CHECK), colonnes de REQ-JUR-025 ecrites par UX-P1-08 ; sur `liens_magiques`, `codeHash` Char(64) nullable (HMAC-SHA-256 sous `MAGIC_LINK_SECRET`, domaine `partners.code.v1`, partners/ADR-0013 decision 14) et `tentativesCode` Int defaut 0 (CHECK entre 0 et 5 ; au-dela de 5 essais le lien est consomme comme echoue, REQ-UX-015, UX-P1-04) ; table `changements_courriel` (REQ-CPL-019, REQ-SEC-004, UX-P1-09) : `apporteurId`, la NOUVELLE adresse en `emailChiffre` et `emailHash` (`colonnesPii`), `tokenHash` Char(64) unique (HMAC sous `MAGIC_LINK_SECRET`, domaine `partners.changement-courriel.v1`), `kid` Char(8), `demandeAt`, `confirmeAt`, `annuleAt` ; un seul changement en cours par apporteur (index unique partiel `WHERE confirme_at IS NULL AND annule_at IS NULL`), jamais confirme et annule a la fois. L'effet, apres le delai SSOT, recopie l'empreinte et le bloc chiffre dans `apporteurs` et incremente `session_version` dans la meme transaction. Module du semeur `prisma/seed/05-sessions.ts`. (7) COORDONNEES DE L'APPORTEUR (decision de l'orchestrateur du 2026-09-26 sur delegation de Will, partners/ADR-0022 : les colonnes que le cadrage confiait a SEC-03, fusionnee par la PR 134 avec le seul courriel, reviennent a SEC-04, qui migre deja `apporteurs`) : dans la MEME migration, sur `apporteurs`, `nomChiffre`, `prenomChiffre` et `telephoneChiffre` en Bytes nullables, et `phoneHash` Char(64) nullable, noms de `CHAMPS_PII` ; les blocs ne naissent que de `colonnesPii` et l'empreinte que de `empreinteRecherche('telephone', ...)` (garde `securite:schema-pii`), jamais un clair ; CHECK `phone_hash IS NULL OR phone_hash ~ '^[0-9a-f]{64}$'` et CHECK de completude `(telephone_chiffre IS NULL) = (phone_hash IS NULL)`, sur le modele du courriel pose par SEC-03 ; index NON unique sur `phone_hash` (le rattachement par telephone de REQ-EXT-009 cherche, il ne contraint pas : deux personnes peuvent partager un numero de standard) ; aucune empreinte de nom ni de prenom sur cette table. Nullables : les lignes naissent de la candidature (INT-T26) et de la saisie console (EXT-T03). TEMOIN : une ecriture de `telephoneChiffre` sans `phoneHash` est refusee par la base et nomme la contrainte ; le couple ecrit par `colonnesPii` passe.
 
 **Tests.** `tests/unit/securite/revocation.spec.ts`
 
@@ -748,11 +748,11 @@ Couvre : `REQ-ARG-029`, `REQ-QA-010`, `REQ-QA-011`, `REQ-QA-012`, `REQ-SEC-008`,
 
 Couvre : `REQ-SEC-023`, `REQ-UX-024`
 
-**Acceptation.** TACHE SENSIBLE — attribution et espace. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot). ELLE EST LA PORTE DE SORTIE DE LA PHASE 0 VERS LA PHASE 1 : rien de la phase 1 ne bouge avant elle. (1) Un enum `ConsoleRole { admin, qualifieur, comptable, lecteur }` et une matrice droits x actions vivent dans UN SEUL fichier, consommee par la disposition de page ET par chaque action de serveur (REQ-SEC-023, REQ-UX-024). (2) LE DEFAUT EST LE REFUS : un ecran ou une action ABSENT de la matrice est refuse, jamais autorise par omission. C'est la regle maison sur le masquage qui echoue ouvert, appliquee aux roles. (3) Les operations les plus sensibles — coordonnee bancaire en clair, approbation d'un lot de paiement — sont nommement restreintes. (4) `requireRole` est appele par CHAQUE action et CHAQUE route de console ; une garde DERIVE du disque la liste des actions et des routes et la confronte a la matrice. (5) TEMOIN A DEUX FACES : une action de console ajoutee sans entree dans la matrice fait sortir la garde en code non nul et nomme l'action ; la console du depot la fait sortir en zero avec le compte des couples ecran-role reellement confrontes. (6) TEMOIN A DEUX FACES sur le refus par defaut : un role non admin appelant une action reservee recoit le refus, et le meme appel par le role autorise passe.
+**Acceptation.** TACHE SENSIBLE — attribution et espace. ELLE ECRIT LE SCHEMA (label `schema`, seule de sa famille dans son lot). ELLE EST LA PORTE DE SORTIE DE LA PHASE 0 VERS LA PHASE 1 : rien de la phase 1 ne bouge avant elle. (1) Un enum `ConsoleRole { admin, qualifieur, comptable, lecteur }` et une matrice droits x actions vivent dans UN SEUL fichier, consommee par la disposition de page ET par chaque action de serveur (REQ-SEC-023, REQ-UX-024). (2) LE DEFAUT EST LE REFUS : un ecran ou une action ABSENT de la matrice est refuse, jamais autorise par omission. C'est la regle maison sur le masquage qui echoue ouvert, appliquee aux roles. (3) Les operations les plus sensibles — coordonnee bancaire en clair, approbation d'un lot de paiement — sont nommement restreintes. (4) `requireRole` est appele par CHAQUE action et CHAQUE route de console ; une garde DERIVE du disque la liste des actions et des routes et la confronte a la matrice. (5) TEMOIN A DEUX FACES : une action de console ajoutee sans entree dans la matrice fait sortir la garde en code non nul et nomme l'action ; la console du depot la fait sortir en zero avec le compte des couples ecran-role reellement confrontes. (6) TEMOIN A DEUX FACES sur le refus par defaut : un role non admin appelant une action reservee recoit le refus, et le meme appel par le role autorise passe. (7) Un utilisateur desactive ne franchit plus la requete suivante. (8) SCHEMA (partners/ADR-0022) : `UtilisateurConsole` -> `utilisateurs_console` : `role ConsoleRole`, `nomChiffre` nullable, `emailChiffre`, `emailHash` Char(64) unique, `creeAt`, `desactiveAt` ; cible de toutes les colonnes auteur, traitePar et decidePar des phases 1 a 3. La console se connecte par le MEME lien magique : `liens_magiques.utilisateurConsoleId` et `sessions_espace.utilisateurConsoleId` (uuid, cle etrangere), `apporteur_id` relache en nullable (relacher un NOT NULL est additif), CHECK `(apporteur_id IS NULL) <> (utilisateur_console_id IS NULL)` sur les deux tables. Aucun mot de passe (partners/ADR-0004 §1 vaut pour la console). Le role est RELU a chaque requete par `requireRole`, jamais mis en cookie. Module du semeur `prisma/seed/06-console.ts`.
 
 **Tests.** `tests/unit/securite/matrice-des-roles.spec.ts`
 
-### INT-T09 — Client recherche-entreprises : proxy, cache, limiteur, circuit-breaker, repli manuel, minimisation, fixtures enregistrées, contrat nightly
+### INT-T09 — Client recherche-entreprises : proxy, cache, limiteur, circuit-breaker, repli manuel, minimisation, fixtures enregistrées, contrat nightly ✅ **fusionnee**
 
 `1 j` · zone `integration` · depend de `GOV-015`, `SEC-10`
 
@@ -764,15 +764,15 @@ Couvre : `REQ-INT-020`, `REQ-INT-021`, `REQ-QA-028`, `REQ-SEC-013`, `REQ-UX-020`
 
 ### INT-T10 — Émetteur e-mail Partners : agent ZeptoMail, domaine, DKIM, drapeau DMARC, webhook rebonds
 
-`0.5 j` · zone `integration` · depend de `SEC-01` · decisions `DEC-INT-002`
+`0.5 j` · zone `integration` · `schema` · depend de `SEC-01` · decisions `DEC-INT-002`
 
 Couvre : `REQ-INT-022`, `REQ-INT-023`
 
-**Acceptation.** DEPEND D'UN TIERS : compte d'envoi, SOUS-DOMAINE D'ENVOI DEDIE, et enregistrements DKIM, SPF et DMARC poses dans la zone. Ce prerequis est NOMME ici : un envoi dont l'alignement DMARC n'est pas pose part et n'arrive pas, et la panne se lit « courriel pas recu ». (1) Partners emet depuis une ADRESSE HUMAINE, jamais une adresse sans reponse, sur un domaine dont la politique d'expediteur inclut le relais et dont la signature DKIM du relais est publiee (REQ-INT-022). (2) L'ENVOI AUTOMATIQUE N'EST POSSIBLE QUE SI LE DRAPEAU DE VERIFICATION DMARC VAUT VRAI, et un test prouve qu'aucun courriel ne part quand il est faux. Un drapeau qu'aucun test ne tient est un commentaire. (3) Les rebonds sont recus par une route de webhook qui VERIFIE la signature du relais (decodage en base 64 apres decodage de pourcentage, tolerance 300 s) et alimentent une liste de suppression ; un envoi vers une adresse supprimee est RETENU et VISIBLE, jamais jete en silence (REQ-INT-023). (4) TEMOIN A DEUX FACES : avec le drapeau a faux, une demande d'envoi ne produit AUCUN appel au relais et le test compte les appels ; avec le drapeau a vrai et un relais simule, elle en produit exactement un. (5) TEMOIN A DEUX FACES sur les rebonds : une notification de rebond mal signee est refusee et n'ajoute rien a la liste de suppression ; la meme correctement signee y ajoute exactement une entree.
+**Acceptation.** DEPEND D'UN TIERS : compte d'envoi, SOUS-DOMAINE D'ENVOI DEDIE, et enregistrements DKIM, SPF et DMARC poses dans la zone. Ce prerequis est NOMME ici : un envoi dont l'alignement DMARC n'est pas pose part et n'arrive pas, et la panne se lit « courriel pas recu ». (1) Partners emet depuis une ADRESSE HUMAINE, jamais une adresse sans reponse, sur un domaine dont la politique d'expediteur inclut le relais et dont la signature DKIM du relais est publiee (REQ-INT-022). (2) L'ENVOI AUTOMATIQUE N'EST POSSIBLE QUE SI LE DRAPEAU DE VERIFICATION DMARC VAUT VRAI, et un test prouve qu'aucun courriel ne part quand il est faux. Un drapeau qu'aucun test ne tient est un commentaire. (3) Les rebonds sont recus par une route de webhook qui VERIFIE la signature du relais (decodage en base 64 apres decodage de pourcentage, tolerance 300 s) et alimentent une liste de suppression ; un envoi vers une adresse supprimee est RETENU et VISIBLE, jamais jete en silence (REQ-INT-023) : il ecrit une ligne `courriels_envoyes` `retenu_adresse_supprimee` et AUCUN appel au relais ; avec le drapeau DMARC faux, la ligne est `retenu_dmarc_non_verifie`. (4) TEMOIN A DEUX FACES : avec le drapeau a faux, une demande d'envoi ne produit AUCUN appel au relais et le test compte les appels ; avec le drapeau a vrai et un relais simule, elle en produit exactement un. (5) TEMOIN A DEUX FACES sur les rebonds : une notification de rebond mal signee est refusee et n'ajoute rien a la liste de suppression ; la meme correctement signee y ajoute exactement une entree, et la livrer deux fois n'en ajoute pas une seconde. (6) INFORMATION EXTERNE REQUISE AVANT LE CODE : le format du webhook de rebonds ZeptoMail (nom de l'evenement de rebond DEFINITIF, chemin JSON de l'adresse rebondie, en-tete `Producer-Signature`) est consigne dans `docs/tiers/zeptomail.md` avec une charge reelle enregistree en fixture (RM-03). Forme sure en attendant : seul un rebond definitif ajoute une ligne ; un rebond temporaire est journalise par le logger et n'ajoute rien ; un nom d'evenement inconnu rend 200 sans effet et est alerte, jamais supprime par defaut. La valeur `plainte` n'entre dans l'enum que si le relais emet reellement cet evenement. (7) SCHEMA (partners/ADR-0022 ; INT-T10 cree `courriels_envoyes` et `suppressions_courriel`) : enums `StatutCourriel {envoye, retenu_adresse_supprimee, retenu_dmarc_non_verifie, echec}` et `MotifSuppressionCourriel {rebond_definitif}`. `CourrielEnvoye` -> `courriels_envoyes`, chaque demande d'envoi qu'elle parte ou non, aucun corps, aucune adresse en clair : `gabarit` VarChar(64), cle de la table SSOT des notifications (exception E2 ; table minimale posee ici dans `src/server/notifications/table-ssot.ts`, reprise par UX-P1-10), `emailHash` Char(64) (`empreinteRecherche('courriel', ...)`), `apporteurId` nullable, `statut`, `demandeAt`, `envoyeAt` (la date qui fait courir un delai, REQ-UX-016, jamais une date de lecture), `fournisseurMessageId`, `erreur`. `SuppressionCourriel` -> `suppressions_courriel` : `emailHash` unique, `motif`, `survenuAt`, `creeAt`. CHECK : empreintes hexadecimales, `(statut = 'envoye') = (envoye_at IS NOT NULL)`, `gabarit ~ '^[a-z][a-z0-9_]*$'`. DM-07 y ajoutera `attribution_id`. Module du semeur `prisma/seed/04-courriels.ts`.
 
 **Tests.** `tests/unit/email/emetteur.spec.ts` · `tests/integration/webhook-rebonds.spec.ts`
 
-### INT-T11 — Adaptateur MCP `partners` : porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide
+### INT-T11 — Adaptateur MCP `partners` : porte, serrure, contrat porté, harnais 9 contrôles, manifeste vide ✅ **fusionnee**
 
 `1 j` · zone `integration` · depend de `SEC-01`
 
@@ -792,23 +792,23 @@ Couvre : `REQ-INT-024`
 
 **Tests.** `tests/unit/integration/notif-sans-pii.spec.ts`
 
-### DM-06 — Entité Apporteur : statut enum + matrice, snapshot candidature/score, codeParrainage, JetonDepot, `isTest`, `IdentitesFacturation
+### DM-06 — Entité Apporteur : statut enum + matrice, snapshot candidature/score, codeParrainage, JetonDepot, `isTest`, `IdentitesFacturation ✅ **fusionnee**
 
 `1 j` · zone `domaine` · `schema` · sensible : auth · depend de `DM-01`, `DM-02` · decisions `DEC-DM-013`
 
 Couvre : `REQ-CPL-005`, `REQ-CPL-020`, `REQ-CPL-027`, `REQ-DM-010`, `REQ-DM-011`, `REQ-DM-012`, `REQ-DM-035`, `REQ-QA-035`
 
-**Acceptation.** TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) Le statut d'apporteur est un ENUM {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec une MATRICE DE TRANSITIONS explicite : une transition absente de la matrice est refusee, jamais autorisee par omission (REQ-DM-011). Le motif de resiliation est un enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} ; le vocabulaire de la faute n'y figure pas. (2) Un apporteur porte DEUX identifiants distincts : un code de parrainage public, unique, lisible et NON ENUMERABLE (prefixe plus 6 caracteres tires au hasard), et un ou plusieurs jetons de depot {empreinte unique, date de creation, date de revocation eventuelle, dernier usage} (REQ-DM-012). Un jeton revoque ne se reactive pas. (3) `actif` et `dormant` sont DERIVES par fonction pure, JAMAIS STOCKES, et restent des indicateurs de console : AUCUN MESSAGE N'EST ENVOYE A UN APPORTEUR EN RAISON DE SON INACTIVITE (REQ-CPL-027). C'est une interdiction de produit, pas une preference d'ergonomie. (4) `isTest` est exclu de TOUS les agregats d'argent, du lot de paiement, de la declaration annuelle et de l'entonnoir (REQ-CPL-020) ; les identites de facturation sont DATEES, et un releve qui chevauche deux identites produit DEUX autofactures (REQ-CPL-005). (5) Le seuil de verification prioritaire est une colonne entiere au defaut derive du palier, surcharge manuelle tracee ; AUCUN DEPOT N'EST REFUSE POUR DEPASSEMENT DE SEUIL — au-dela, l'attribution porte simplement le drapeau de verification prioritaire (REQ-DM-010). (6) Le score de candidature est transporte FIGE depuis axionia et JAMAIS recalcule par Partners ; un test de parite sur fixtures exportees le prouve (REQ-DM-035, REQ-QA-035). (7) TEMOIN A DEUX FACES : une transition absente de la matrice est refusee et la nomme ; une transition declaree passe. Un depot au-dela du seuil est ACCEPTE et porte le drapeau, et le test verifie l'acceptation, pas seulement le drapeau. Un agregat d'argent calcule sur une population incluant `isTest` diverge du meme agregat sans, et le test nomme l'ecart en centimes.
+**Acceptation.** TACHE SENSIBLE — authentification. ELLE ECRIT LE SCHEMA (label `schema`, SEULE de sa famille dans son lot). (1) Le statut d'apporteur est un ENUM {candidat, retenu, vivier, refuse, kyc_en_cours, pret_a_signer, signe, suspendu, resilie} avec une MATRICE DE TRANSITIONS explicite : une transition absente de la matrice est refusee, jamais autorisee par omission (REQ-DM-011). Le motif de resiliation est un enum {ordinaire_apporteur, ordinaire_axion, manquement_grave} ; le vocabulaire de la faute n'y figure pas. (2) Un apporteur porte DEUX identifiants distincts : un code de parrainage public, unique, lisible et NON ENUMERABLE — prefixe `AX` puis 6 caracteres de l'alphabet Crockford base32 (sans I, L, O, U), 30 bits aleatoires (HYP-DM06-CODE-PARRAINAGE) —, et un ou plusieurs jetons de depot {empreinte unique, date de creation, date de revocation eventuelle, dernier usage} (REQ-DM-012). Un jeton revoque ne se reactive pas. (3) `actif` et `dormant` sont DERIVES par fonction pure, JAMAIS STOCKES ; la fonction de dormance RECOIT `DORMANCE_JOURS` EN PARAMETRE tant que la SSOT des seuils (JUR-T02) n'existe pas — jamais un litteral dans le code (RM-10) ; et restent des indicateurs de console : AUCUN MESSAGE N'EST ENVOYE A UN APPORTEUR EN RAISON DE SON INACTIVITE (REQ-CPL-027). C'est une interdiction de produit, pas une preference d'ergonomie. (4) `isTest` est exclu de TOUS les agregats d'argent, du lot de paiement, de la declaration annuelle et de l'entonnoir (REQ-CPL-020) ; les identites de facturation sont DATEES, et un releve qui chevauche deux identites produit DEUX autofactures (REQ-CPL-005). L'IBAN ET LA PIECE RIB NE SONT PAS DANS DM-06 : DM-06 cree `IdentitesFacturation` SANS AUCUNE colonne de RIB ni d'IBAN ; la reference a la piece RIB et sa relation a `PieceKyc` sont posees par DM-11, qui depend de DM-06 (HYP-DM06-IBAN). (5) Le seuil de verification prioritaire est une colonne entiere au defaut derive du palier, surcharge manuelle tracee ; DM-06 porte la COLONNE et son defaut ; le comportement du depot au-dela du seuil (accepte, drapeau pose) et son temoin appartiennent a DM-09, qui porte le depot (REQ-DM-010). (6) Le score de candidature est transporte FIGE depuis axionia et JAMAIS recalcule par Partners ; un test de parite sur la fixture du producteur reel `tests/fixtures/axionia/candidature-recue.json` (Source: INT-T01b) le prouve (REQ-DM-035, REQ-QA-035). `sourceCanal` est stockee TELLE QUE RECUE, longueur bornee (HYP-DM06-SOURCE-CANAL) : aucun enum de canal dans DM-06, la derivation appartient a EXT-T03. (7) TEMOIN A DEUX FACES : une transition absente de la matrice est refusee et la nomme ; une transition declaree passe. Une `sourceCanal` au-dela de la borne n'est pas tronquee : elle est stockee nulle et l'ecart est journalise en consignant sa LONGUEUR, jamais sa valeur. Un agregat d'argent calcule sur une population incluant `isTest` diverge du meme agregat sans, et le test nomme l'ecart en centimes.
 
-**Tests.** `tests/unit/domaine/apporteur-identites-facturation.spec.ts` · `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` · `tests/integration/apporteur-jeton-depot.spec.ts` · `tests/unit/domaine/apporteur-score-fige.spec.ts`
+**Tests.** `tests/unit/domaine/apporteur-identites-facturation.spec.ts` · `tests/unit/domaine/apporteur-population-is-test.spec.ts` · `tests/unit/domaine/apporteur-matrice-et-statuts.spec.ts` · `tests/unit/domaine/apporteur-activite.spec.ts` · `tests/integration/apporteur-jeton-depot.spec.ts` · `tests/unit/domaine/apporteur-identifiants.spec.ts` · `tests/unit/domaine/apporteur-score-fige.spec.ts` · `tests/unit/domaine/apporteur-snapshot-candidature.spec.ts`
 
-### JUR-T01 — Gabarit de contrat v1 complet
+### JUR-T01 — Gabarit de contrat v1 complet ✅ **fusionnee**
 
 `0.5 j` · zone `juridique` · depend de `CPL-T01`
 
 Couvre : `REQ-CPL-012`, `REQ-JUR-003`, `REQ-JUR-007`, `REQ-JUR-023`
 
-**Acceptation.** le gabarit reprend `CONTRAT-APPORTEUR-V1.md` **dans sa version corrigée par les cinq examens du 2026-09-03** (12 bloquants + 30 majeurs), annoté des identifiants `CL-*` ; `docs/DECISIONS.md` porte une valeur **tranchée et datée** pour chacune des lignes marquées `avenant` du registre (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ des 12 mois E.1-9). 🔴 **Complétée le 2026-09-03 (synthèse M-20 et P-4).** (1) **Six acceptations distinctes**, et la **note encadrée** qui les signale figure **dans le corps** sous chacun des articles 3.7, 4.5, 5.2, 7, 12 **et** 14 — le corps ne la portait que sous l'art. 14, et la mention « très apparente » de l'art. 48 CPC était renvoyée à une note **hors clause**. (2) La variable `{{APPORTEUR_QUALITE}}` est **alimentée depuis le statut d'exercice recueilli au KYC** (DM-11), jamais saisie à la main : la validité de la clause attributive dépend d'un fait — la qualité de commerçant des deux parties — qu'une part significative des 300 apporteurs (professions libérales, retraités en cumul, associations) ne remplira pas. (3) **Gate lexicale étendue au gabarit de contrat** (P-4 ; elle ne couvrait que `micro-copy/**`, `emails/apporteur/**`, `src/app/(espace)/**`), liste noire : `L.134-12`, `L.134-16`, « indemnité de fin de contrat », « indemnité de clientèle », « renonce », « renonciation » (hors le titre de l'art. 19, exclu nommément), « kit de vente ». C'est le seul moyen d'empêcher qu'une relecture future « améliore » l'art. 11.3 : **une renonciation par avance à un droit d'ordre public est sans effet**, et sa seule présence affaiblit rétrospectivement la portée des articles 1 et 2.
+**Acceptation.** le gabarit reprend `CONTRAT-APPORTEUR-V1.md` **dans sa version corrigée par les cinq examens du 2026-09-03** (12 bloquants + 30 majeurs), annoté des identifiants `CL-*` ; `docs/DECISIONS.md` porte une valeur **tranchée et datée** pour chacune des lignes marquées `avenant` du registre (C1, C12, D9, D11, D14, horodatage E.1-12, point de départ des 12 mois E.1-9). 🔴 **Complétée le 2026-09-03 (synthèse M-20 et P-4).** (1) **Six acceptations distinctes**, et la **note encadrée** qui les signale figure **dans le corps** sous chacun des articles 3.7, 4.5, 5.2, 7, 12 **et** 14 — le corps ne la portait que sous l'art. 14, et la mention « très apparente » de l'art. 48 CPC était renvoyée à une note **hors clause**. (2) La variable `{{APPORTEUR_QUALITE}}` est **alimentée depuis le statut d'exercice recueilli au KYC** (DM-11), jamais saisie à la main : la validité de la clause attributive dépend d'un fait — la qualité de commerçant des deux parties — qu'une part significative des 300 apporteurs (professions libérales, retraités en cumul, associations) ne remplira pas. (3) **Gate lexicale étendue au gabarit de contrat** (P-4 ; elle ne couvrait que `micro-copy/**`, `emails/apporteur/**`, `src/app/(espace)/**`), liste noire : `L.134-12`, `L.134-16`, « indemnité de fin de contrat », « indemnité de clientèle », « renonce », « renonciation » (hors le titre de l'art. 19, exclu nommément), « kit de vente ». C'est le seul moyen d'empêcher qu'une relecture future « améliore » l'art. 11.3 : **une renonciation par avance à un droit d'ordre public est sans effet**, et sa seule présence affaiblit rétrospectivement la portée des articles 1 et 2. 🔴 **Complétée le 2026-09-25 (décision W15 de Will, « fais selon tes recommandations »).** Le gabarit porte DEUX clauses de plus à l'art. 4.6, chacune annotée d'un identifiant CL-* et d'un test de présence : (a) **al. 6 amendé** (HYP-W15-ART-4-6) — le parrain voit la liste de ses filleuls DIRECTS réduite au prénom, à l'initiale du nom et à l'état de son contrat, « en signature » ou « signé » seulement, apprécié sur les versions du contrat postérieures à sa dernière résiliation (un avenant en cours de signature n'y changeant rien, une relation reprise étant lue sur ses seules versions nouvelles) ; un filleul dont la relation est résiliée sort de la liste — le parrain en apprend la fin, mais ni le motif ni aucune mesure intermédiaire prise à l'égard du filleul (suspension, vérification) ; aucune échéance ni date propre au filleul ; aucun montant par filleul, aucune donnée d'activité, aucun filleul de filleul. (b) **Nouvel alinéa de correction du rattachement** (HYP-W15-PARRAIN-A-DATE) — la Société peut rattacher un filleul à un autre parrain sur motif LIMITATIVEMENT énuméré : erreur de rattachement, fraude ou auto-parrainage, départ ou résiliation du parrain ; effet pour les commissions futures seulement, les sommes de parrainage déjà nées restant acquises au parrain d'origine ; les trois personnes sont informées ; aucun accord du parrain d'origine n'est requis. Le texte définitif de ces deux clauses reste soumis à la relecture de Will avant toute signature (JUR-T01b).
 
 **Tests.** `tests/unit/contrat/contract-template-complete.spec.ts`
 
@@ -832,7 +832,7 @@ Couvre : `REQ-CPL-009`, `REQ-JUR-009`, `REQ-JUR-025`, `REQ-SEC-030`
 
 **Tests.** `tests/unit/juridique/registre-rgpd.spec.ts`
 
-### UX-P0-01 — Vocabulaire et micro-copy SSOT
+### UX-P0-01 — Vocabulaire et micro-copy SSOT ✅ **fusionnee**
 
 `0.5 j` · zone `espace` · sensible : attribution · depend de `GOV-006`
 
@@ -852,7 +852,7 @@ Couvre : `REQ-UX-008`, `REQ-UX-017`, `REQ-UX-034`
 
 **Tests.** `tests/unit/espace/maquettes-validees.spec.ts`
 
-### UX-P0-03 — Harnais a11y et mobile
+### UX-P0-03 — Harnais a11y et mobile ✅ **fusionnee**
 
 `1 j` · zone `espace` · depend de `QA-T01`
 
@@ -944,7 +944,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-026`
 
 ### GOV-042 — L'attestation d'une livraison existe pour l'autre depot, pas pour celui-ci
 
-`1 j` · zone `gouvernance` · `schema` · depend de `GOV-038`
+`1 j` · zone `gouvernance` · depend de `GOV-038`
 
 Couvre : `REQ-GOV-026`
 
@@ -994,7 +994,7 @@ Couvre : `REQ-GOV-012`
 
 **Tests.** `tests/unit/gouvernance/perf-budgets-refuse-un-perimetre-absent.spec.ts`
 
-### GOV-047 — Six porteurs ordonnent une commande qui n'existe pas, dont un qui l'injecte dans chaque prompt
+### GOV-047 — Six porteurs ordonnent une commande qui n'existe pas, dont un qui l'injecte dans chaque prompt ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · depend de `GOV-000`
 
@@ -1016,7 +1016,7 @@ Couvre : `REQ-GOV-004`
 
 ### GOV-049 — Une tache en cours sans lot est invisible de TOUTES les gardes, et c'est ce lot qui l'a rencontre
 
-`0.5 j` · zone `gouvernance` · `schema` · depend de `GOV-038`
+`0.5 j` · zone `gouvernance` · depend de `GOV-038`
 
 Couvre : `REQ-GOV-021`
 
@@ -1036,7 +1036,7 @@ TEMOINS EXIGES, TROIS FACES. (a) ROUGE : une tache `en_cours` rattachee a un lot
 
 ### GOV-050 — Le champ paths n'a AUCUNE forme : un chemin hors du depot traverse toute la chaine
 
-`0.5 j` · zone `gouvernance` · `schema` · depend de `GOV-038`
+`0.5 j` · zone `gouvernance` · depend de `GOV-038`
 
 Couvre : `REQ-GOV-021`
 
@@ -1570,7 +1570,7 @@ Couvre : `REQ-GOV-013`
 
 **Tests.** `tests/unit/gouvernance/tasks-schema-et-paths.spec.ts`
 
-### GOV-092 — Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux
+### GOV-092 — Une revision de corps de PR servie sans `diff` bloque `gov:entite` DEFINITIVEMENT, et les deux remedes que la garde nomme sont faux ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1590,7 +1590,7 @@ Couvre : `REQ-GOV-031`, `REQ-GOV-012`
 
 **Tests.** `tests/unit/gouvernance/entite-registre.spec.ts`
 
-### GOV-095 — Un accord de lentille survit a un commit qui ne touche que le journal
+### GOV-095 — Un accord de lentille survit a un commit qui ne touche que le journal ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1600,7 +1600,7 @@ Couvre : `REQ-GOV-011`, `REQ-GOV-013`
 
 **Tests.** `tests/unit/gouvernance/accord-survit-au-journal.spec.ts`
 
-### GOV-096 — `gov:pr` ne sait pas lire une PR de LOT : le titre ne nomme qu une tache, `t.pr` n est ecrit qu apres la fusion, et aucune PR de lot n est fusionnable
+### GOV-096 — `gov:pr` ne sait pas lire une PR de LOT : le titre ne nomme qu une tache, `t.pr` n est ecrit qu apres la fusion, et aucune PR de lot n est fusionnable ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1610,7 +1610,7 @@ Couvre : `REQ-GOV-021`, `REQ-GOV-007`
 
 **Tests.** `tests/unit/gouvernance/gov-pr-lit-une-pr-de-lot.spec.ts`
 
-### GOV-090 — La table des chemins reserves etiquette des VUES et laisse deux SOURCES ouvertes, et une garde prescrit un outil par un chemin irresolvable
+### GOV-090 — La table des chemins reserves etiquette des VUES et laisse deux SOURCES ouvertes, et une garde prescrit un outil par un chemin irresolvable ✅ **fusionnee**
 
 `1 j` · zone `gouvernance` · aucune dependance
 
@@ -1663,7 +1663,17 @@ Seuls `scripts/`, `src/` et `tests/` sont confrontes par la famille des fichiers
 
 **Tests.** `tests/unit/gouvernance/perimetre-des-gardes-derive-du-disque.spec.ts` · `tests/unit/gouvernance/plan-state-rubrique-exemptee.spec.ts` · `tests/unit/gouvernance/citation-d-outil-hors-depot.spec.ts`
 
-### GOV-097 — Quatre lentilles seulement pour l argent, la securite et les donnees, deux pour le reste ; une inexactitude de prose n est plus un motif de refus
+### GOV-098 — Inscrire au plan la décision W15 de Will (2026-09-25) : lignées, changement de parrain, statistiques, secteur, bibliothèque, outils de console ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-015`
+
+**Acceptation.** TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. (1) `docs/DECISIONS.md` porte la ligne W15 en §1 (tranchée le 2026-09-25, propriétaire Will) et dix lignes `HYP-W15-*` en §2, chacune avec sa réversibilité et, pour les deux lignes `avenant`, « premier DocuSeal » ; `pnpm gov:hypotheses` sort 0. (2) `docs/requirements.json` porte treize exigences nouvelles (REQ-DM-044 à 047, REQ-UX-040 à 046, REQ-SEC-039 et 040), chacune testable et citant W15, et REQ-UX-006 amendée par W15 : la liste minimale des filleuls directs devient la seule exception à l'interdiction d'identité ; `pnpm gov:requirements` et `pnpm gov:requirements:verifie-rendu` sortent 0. (3) Les douze tâches qui livrent W15 sont versées par le verbe hors dépôt `hors-depot/verser-tache.mjs`, jamais à la main ; `pnpm gov:tasks` sort 0. (4) Le glossaire définit « lignée » et « équipe », `docs/ESPACE-ROUTES.md` rattache `/filleuls` à REQ-UX-041. (5) Toutes les vues dérivées sont régénérées, `docs/PLAN-STATE.md` en dernier.
+
+**Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
+
+### GOV-097 — Quatre lentilles seulement pour l argent, la securite et les donnees, deux pour le reste ; une inexactitude de prose n est plus un motif de refus ✅ **fusionnee**
 
 `0.5 j` · zone `gouvernance` · aucune dependance
 
@@ -1672,6 +1682,76 @@ Couvre : `REQ-GOV-011`
 **Acceptation.** DECISION DE WILL, proprietaire, du 2026-09-25, en reponse a « pourquoi c est si long ». MESURE QUI L OUVRE, rapportee avec la decision : sept fusions le 22/09, puis deux, une, une ; 156 des 207 taches restantes en risque ELEVE, donc relues par quatre lentilles, et chaque refus fait relire les quatre. (1) QUATRE LENTILLES SEULEMENT POUR L ARGENT, LA SECURITE ET LES DONNEES ; DEUX (exactitude + securite) POUR TOUT LE RESTE. `risqueDeLaPr()` (`scripts/lot/revues.ts`, la seule derivation, appelee par `gov:pr` et le composeur du corps) rend ELEVE si et seulement si l un de ces signaux est present : une tache de la PR (titre, `pr`, `Lot:` ; tete ET base) porte un `sensible` non vide ou ABSENT, `schema: true`, une `zone` argent ou securite, une `zone` absente ou inconnue du schema du registre ; le label `schema` ou un chemin de schema ; un fichier dans une zone sensible du code ; un fichier de la garde des revues, de la CI, d un dossier cache, de configuration a la racine ou de `config/` ; un diff vide, une liste incomplete, aucune tache resolue, un registre de base illisible (echec FERME, conserve). CE QUI CESSE D ELEVER : une zone hors {gouvernance, qualite} autre que argent et securite avec `sensible: []`, et un fichier de code produit hors zones sensibles. La liste des zones et des segments sensibles est une DONNEE nommee (`ZONES_A_RISQUE_ELEVE`, `SEGMENTS_DES_ZONES_SENSIBLES`, `DOSSIERS_DU_PROCESSUS`), les zones connues se LISENT dans `scripts/lot/tasks.schema.json` (RM-01), et `ZONES_SENSIBLES` quitte `gov-pr.ts` pour le lecteur unique. TEMOINS VUS ROUGES AVANT LE CODE : une tache `zone: espace, sensible: []` touchant `src/` est ORDINAIRE ; chaque zone du schema hors argent et securite est ordinaire ; le schema du registre appartient a la garde des revues. CONTRE-TEMOINS qui restent ELEVES : `sensible: [argent]` et chaque etiquette du schema, `zone: securite`, `zone: argent`, `sensible` absent, `zone` absente ou inconnue, `schema: true`, `.github/workflows/*`, `eslint.config.mjs` et la racine, `.claude/`, `config/`, chaque fichier de la garde des revues, les fichiers de code des zones sensibles, `prisma/`. `pnpm gov:pr:prove` sort en 0 et garde toutes ses familles. (2) UNE INEXACTITUDE DE PROSE (corps de PR, journal, ADR, commentaire, docblock) N EST PLUS UN MOTIF DE REFUS : c est une dette nommee dans la revue, corrigee au passage suivant. Un refus vise un defaut de code ou de test, ou une affirmation fausse qui porte sur la securite, l argent ou les donnees. Ecrit dans `docs/CHARTE-AGENTS.md` §6 et dans les interdits du poste A09 (`docs/agents.json`, fiche regeneree). ADR `partners/ADR-0021` : la decision, le cout mesure, ce qui reste a quatre lentilles et pourquoi, la limite declaree (les taches qui manipulent des donnees personnelles avec `sensible: []`), le retour arriere. Ligne au registre `docs/DECISIONS.md`.
 
 **Tests.** `tests/unit/gouvernance/quatre-lentilles-pour-l-argent-la-securite-et-les-donnees.spec.ts`
+
+### GOV-099 — Cadrage de DM-06 : sourceCanal transporté figé, IBAN hors de DM-06, glossaire des enums d'apporteur ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-015`
+
+**Acceptation.** TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le développeur de DM-06 a rendu `stop` sur trois contradictions ; les décisions prises le 2026-09-25 par l'orchestrateur, sur délégation de Will, sont inscrites : (1) REQ-DM-035 amendée — `sourceCanal` est une chaîne transportée figée ; la dérivation vers l'enum `CanalCandidature` et sa table chemin → canal appartiennent à EXT-T03 ; (2) le glossaire porte `RegimeTva`, `StatutApporteur`, `MotifResiliation` et `CanalCandidature` au §4, lus par `partners:schema:enums` ; (3) l'IBAN sort de DM-06 : il appartient à la pièce RIB du KYC (DM-11, SEC-08), `IdentitesFacturation` n'en porte qu'une référence (REQ-CPL-005 amendée) ; (4) format du code de parrainage (REQ-DM-012), `DORMANCE_JOURS` en paramètre, témoin du dépôt au-delà du seuil porté par DM-09 ; (5) `paths` de DM-06 complétés. Registres écrits par les verbes hors dépôt ; `gov:hypotheses`, `gov:tasks`, `gov:requirements`, `gov:identifiants`, `gov:attributions`, `gov:trace`, `partners:schema:enums` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier.
+
+**Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
+
+### GOV-100 — Cadrage de SEC-03 et SEC-04 : deux tables écrites au schéma, empreinte HMAC des jetons, statuts qui ouvrent l'espace ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-015`
+
+**Acceptation.** TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le cadrage décidé par l'architecte le 2026-09-26, sur délégation de Will, est inscrit : (1) SEC-03 et SEC-04 passent `schema: true` — SEC-03 crée `liens_magiques` et `sessions_espace` dans une même migration, SEC-04 étendra `sessions_espace` ; leurs `paths` portent `prisma/migrations/`, et ceux de SEC-03 les modules de durées, de dépôt du lien et d'accès à l'espace ; (2) l'empreinte des jetons d'authentification est un HMAC-SHA-256 sous le secret de l'usage, à domaine séparé, `kid` stocké : décision 14 de partners/ADR-0013, `docs/adr/INDEX.md` vérifié (inchangé) ; (3) `HYP-SEC03-ACCES` est inscrite au registre des décisions : l'espace est ouvert aux statuts `signe` et `suspendu` (REQ-SEC-032), `resilie` en lecture seule par SEC-19, `candidat`, `retenu`, `vivier`, `refuse`, `kyc_en_cours` et `pret_a_signer` fermés ; (4) les points (1) et (5) de l'acceptance de SEC-03 disent l'empreinte HMAC et la table des sessions. Sur décision du coordinateur du 2026-09-26, prise sur délégation de Will : (5) REQ-SEC-001 dit l'empreinte HMAC-SHA-256 de la décision 14 ; (6) la ligne `suspendu` du glossaire dit l'accès à l'espace maintenu et les nouveaux dépôts refusés, en citant `HYP-SEC03-ACCES` ; (7) DM-11 passe `schema: true`, dette nommée par la PR 124. Dette nommée par les lentilles : (8) REQ-SEC-003 et le point (2) de SEC-04 disent que la suspension ne révoque aucune session ; `HYP-SEC03-ACCES` est une liste blanche, et `HYP-E1-24` exclut les liens de connexion de la double clé ; (9) les articles 3.7 al. 3 et 12.3 que cite `HYP-SEC03-ACCES` ont leur ancrage dans `CONCORDANCES` (REQ-JUR-003). Registres écrits par les verbes hors dépôt ; `gov:tasks`, `gov:hypotheses`, `gov:attributions`, `gov:identifiants`, `gov:trace:verifier`, `lot:paths:check` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier.
+
+**Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
+
+### GOV-101 — Supprimer les relectures sans defaut : vues d etat hors des PR, cliquet calcule, accord qui survit a une fusion de main, pre-gate, deux lentilles et mutation par Stryker
+
+`1 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-011`, `REQ-GOV-013`, `REQ-GOV-032`, `REQ-QA-002`
+
+**Acceptation.** DECISION DE L ORCHESTRATEUR SUR DELEGATION DE WILL (aller beaucoup plus vite), puis DECISION DE WILL DU 2026-09-26 (W16) sur les lentilles et la mutation. MESURE QUI L OUVRE : environ 9 PR en 12 h, 3 a 4 tours de relecture par PR, pres de la moitie des tours ne corrigent aucun defaut : chaque fusion met les autres PR en conflit sur les vues derivees commitees et sur le cliquet litteral des sorties non nulles ; fusionner main perime tous les accords meme quand le diff propre a la PR est identique ; la porte A rougit apres les relectures. LIVRE. (1) LES VUES RESTENT COMMITEES DANS LES PR, et leur conflit ne coute plus de tour : `pnpm vues:fusion` (`scripts/vues/fusion.ts`, liste unique `scripts/vues/vues.ts`) fusionne `origin/main` dans la branche, resout un conflit qui ne porte QUE sur des vues derivees en les RENDANT dans l ordre (`docs/PLAN-STATE.md` en dernier), abandonne la fusion et nomme le fichier sur tout autre conflit, et laisse l arbre intact si un rendu echoue ou si une etape leve ; temoins sur un vrai depot git jetable. RESTE, CONDITIONNE : sortir `docs/PLAN-STATE.md` et `docs/TRACABILITE.md` des PR et les faire regenerer et pousser sur main par un robot exige une decision de Will qui amende partners/ADR-0006 section 4 (aucun workflow ne pousse sur main, REQ-GOV-014, tenu par `aucun-workflow-ne-pousse-sur-main.spec.ts`) et un jeton de robot (PAT fine-grained, Contents read and write) ; ce n est pas livre ici. (2) CLIQUET CALCULE : le total litteral des sorties non nulles declarees est remplace par une lecture de la base ; une declaration presente sur `origin/main` ne disparait qu avec son fichier et son total ne baisse pas, une sortie ajoutee non declaree rougit toujours. (3) UN ACCORD SURVIT A UNE FUSION DE MAIN SANS CHANGEMENT DE PATCH : empreinte `git patch-id --stable` du diff propre a la PR depuis sa base de fusion avec `origin/main`, en `--binary`, vues derivees exclues, contexte de diff conserve ; la lentille exactitude suit la meme regle pour la prose ecrite dans les fichiers, le corps de la PR n etant pas dans ce diff ; temoins a deux faces sur un vrai depot git jetable : fusion de main sans changement du patch, accord conserve ; une ligne changee dans un fichier de la PR, un conflit resolu en modifiant une ligne de la PR, un changement de main a deux lignes d un morceau de la PR, un changement de mode seul : perime ; limite declaree sur les zones de `docs/PLAN-STATE.md` lues sur la forge. (4) `pnpm pre-gate` : les etapes rapides de la porte A lues dans `ci.yml`, sans la suite, les navigateurs, `req:check` ni `mutation:pr`, chacune ecartee nommee avec son motif, `red-first` simule contre `origin/main` ; prescrit dans `docs/PROTOCOLE-FUSION.md` et la charte, les relectures demarrant quand la porte A est verte. (5) DEUX LENTILLES PARTOUT (W16), exactitude et securite, le refus securite restant un veto ; l avis signe A02 schema reste exige des qu une PR touche au schema ; `lentillesExigees()` ne rend plus que `toutes` ; ADR partners/ADR-0024, qui amende la regle (1) de partners/ADR-0021. (6) MUTATION PAR STRYKER, perimetre tranche par W16 : la lentille mutation n est plus une revue d agent ; `pnpm mutation:pr`, en porte A apres `req:check`, mute EN BAC A SABLE les sources de `src/domain/`, `src/server/` et `src/lib/` ajoutees ou modifiees par la PR, nomme chaque survivant fichier:ligne et rougit sous `thresholds.break` ; tout autre source touche sous `src/` (`src/app/`, `src/proxy.ts`, `src/instrumentation.ts`, configuration, contenu) et tout script de garde touche sont ECARTES ET NOMMES avec leur motif, jamais sautes en silence, les scripts de garde etant prouves par leur `--prove` joue en porte A ; un commentaire `Stryker disable` dans un fichier mute fait echouer la passe en se nommant fichier:ligne ; temoins de `passer()` avec mesures injectees.
+
+**Tests.** `tests/unit/gouvernance/relectures-sans-defaut.spec.ts`
+
+### GOV-102 — Cadrage du schéma des phases 0 et 1 : une table, un créateur ; champ `schema` remis droit ; INT-T01c et INT-T26 versées ✅ **fusionnee**
+
+`0.5 j` · zone `gouvernance` · aucune dependance
+
+Couvre : `REQ-GOV-015`
+
+**Acceptation.** TÂCHE D'ÉCRITURE DU REGISTRE, AUCUN CODE. Le cadrage du schéma des phases 0 et 1 décidé par l'architecte le 2026-09-26, sur délégation de Will (partners/ADR-0022), est inscrit : (1) le champ `schema` de vingt et une tâches est remis droit ; (2) `paths`, `deps` et acceptances des tâches créatrices et écrivaines portent le registre des tables ; (3) INT-T01c et INT-T26 sont versées ; (4) le glossaire porte les enums nouveaux et les valeurs de `TypeEvenementJournal` des phases 0 et 1 avec leur créateur ; (5) les exigences contradictoires sont amendées ; (6) `HYP-A02-RETENTION` et `HYP-A02-VOCABULAIRE-QUALIFICATION` entrent au registre des décisions. Registres écrits par les verbes hors dépôt ; `gov:tasks`, `gov:hypotheses`, `gov:requirements`, `gov:attributions`, `gov:identifiants`, `gov:trace:verifier`, `lot:paths:check`, `partners:schema:enums` sortent à 0 ; vues régénérées, `docs/PLAN-STATE.md` en dernier.
+
+**Tests.** `tests/unit/gouvernance/registre-lecteur-unique.spec.ts`
+
+### INT-T01c — Contrat d'événements v2 côté Partners : quatre types hors contrat entrent, payloads fermés, API des coordonnées du candidat
+
+`1.5 j` · zone `integration` · `schema` · sensible : rgpd · depend de `INT-T01b`, `SEC-06`
+
+Couvre : `REQ-INT-004`, `REQ-INT-032`, `REQ-QA-007`
+
+**Acceptation.** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) ET CHANGE LE CONTRAT EN LOCKSTEP (partners/ADR-0008 : publication des deux côtés dans la même fenêtre). Cadrage de l'architecte du 2026-09-26 (partners/ADR-0022, partners/ADR-0023). (1) Les quatre types de `TYPES_HORS_CONTRAT_V1` — `candidature.recue`, `financement.mis_a_jour`, `facture.annulee`, `client.fusionne` — entrent dans `TYPES_EVENEMENT`, qui passe à ONZE, `schema_version` 2 ; INT-T05 et INT-T22 les produisent ensuite. Dans la MÊME PR, et avec le `gardien-spec` : REQ-INT-004 énumère les onze types, REQ-QA-007 dit trois API au lieu de deux, et le glossaire §5 passe les quatre valeurs dans la ligne de `TypeEvenementRecu` ; sans ce lockstep `tests/unit/integration/contrat-hash.spec.ts` et `termes-interdits.spec.ts` rougissent, et c'est voulu. (2) Les `$defs` des onze payloads sont FERMÉS dans `packages/contracts/`, dérivés des fixtures du producteur réel (RM-03), jamais écrits à la main. (3) Frontière `identite_autre_apporteur` : `parrainCodeCapture` est exempté sur `candidature.recue` SEULEMENT, exemption écrite avec REQ-INT-032 (partners/ADR-0008 §4) ; la garde `coordonnees_du_contact` n'est pas affaiblie et le contrat reste SANS donnée personnelle. (4) Les coordonnées du candidat sont TIRÉES par Partners au traitement de `candidature.recue` : le schéma de la route `GET /api/partners/candidatures/{candidatureId}/coordonnees` d'axionia (même authentification HMAC que la relecture, liste d'autorisation, réponse `{nom, prenom, email, telephone}` pour les seules candidatures émises vers Partners, chaque appel journalisé) vit dans `packages/contracts/api.ts`, troisième API (partners/ADR-0023). Échec de la route : l'événement reste `en_attente_dependance` avec `dependance_ref = 'coordonnees:<candidatureId>'` et est rejoué, jamais un apporteur sans adresse. (5) Une migration Partners ajoute les quatre valeurs à `type_evenement_recu`, identifiant Prisma en `snake_case` et libellé de fil exact par `@map` (`candidature_recue @map("candidature.recue")`), générées depuis `TYPES_EVENEMENT` ; un test compare les libellés de `pg_enum` à la constante (RM-01). (6) TÉMOIN À DEUX FACES : un payload portant un champ non déclaré est refusé au schéma et nomme le champ ; la fixture du producteur réel passe. Et l'empreinte du contrat diffère d'un côté : `contrat-hash.spec.ts` rougit.
+
+**Tests.** `tests/unit/integration/contrat-hash.spec.ts` · `tests/unit/integration/contrat-v2-frontiere.spec.ts`
+
+### INT-T26 — Consommateur Partners de `candidature.recue` : apporteur `candidat`, coordonnées tirées et chiffrées, rattachement par empreinte
+
+`1 j` · zone `integration` · sensible : rgpd · depend de `SEC-06`, `INT-T01c`, `INT-T27-A`, `SEC-03`, `SEC-04`, `DM-06`
+
+Couvre : `REQ-INT-032`, `REQ-DM-035`, `REQ-QA-035`
+
+**Acceptation.** AUCUNE MIGRATION : elle écrit dans des tables créées ailleurs (partners/ADR-0022, une table un créateur). Cadrage de l'architecte du 2026-09-26. (1) Le travail de fond de SEC-06 traite `candidature.recue` : il crée l'`Apporteur` au statut `candidat` avec le snapshot FIGÉ de DM-06 (REQ-DM-035, REQ-QA-035), dans une seule transaction avec le passage de l'événement reçu à `traite`. (2) Il TIRE les coordonnées par la route de coordonnées d'axionia (INT-T01c, partners/ADR-0023) et les écrit par `colonnesPii` dans les colonnes chiffrées et les empreintes de `apporteurs` — jamais un clair en base ni au journal. (3) Il RATTACHE par `emailHash` puis `phoneHash` au lieu de créer un doublon (la règle de REQ-EXT-009, que EXT-T03 porte en phase 1 ; INT-T26 ne la cite pas, sans quoi la phase dérivée de l'exigence passerait à 0) : une seconde candidature de la même personne ne crée aucune ligne `apporteurs`. (4) Échec de la route de coordonnées : l'événement reste `en_attente_dependance` (`dependance_ref = 'coordonnees:<candidatureId>'`) et est rejoué ; aucun apporteur sans adresse n'est créé. (5) TÉMOIN À DEUX FACES : la même candidature livrée deux fois laisse UNE ligne `apporteurs`, compte de lignes à l'appui ; une route de coordonnées en panne laisse zéro ligne et un événement en attente, puis la reprise en crée exactement une.
+
+**Tests.** `tests/integration/candidature-recue.spec.ts`
+
+### INT-T27-A — Route axionia des coordonnées d'un candidat émis vers Partners : HMAC, portée limitée aux candidatures émises, réponse fermée, journal sans clair
+
+`1 j` · zone `integration` · `axionia` · sensible : rgpd · depend de `INT-T02`, `INT-T01c`
+
+Couvre : `REQ-INT-032`, `REQ-INT-029`
+
+**Acceptation.** DEPOT AXIONIA — la PR porte l'etiquette de depot et suit le runbook de fusion d'axionia. TACHE SENSIBLE — donnees personnelles. Cadrage de l'architecte du 2026-09-26 (partners/ADR-0023). AUCUNE MIGRATION : la route lit `Submission` et `partners_sync_outbox`, elle n'ecrit aucune table ; son journal d'appel passe par le journal structure d'axionia. (1) `GET /api/partners/candidatures/{candidatureId}/coordonnees` verifie une signature HMAC-SHA-256 de l'horodatage et de la requete sous le secret d'integration dedie, tolerance 300 s, comparaison a temps constant, liste d'autorisation d'adresses reseau ; toute requete non signee, mal signee ou hors fenetre est refusee et n'a lu aucune ligne. (2) PORTEE : la route ne repond que pour une candidature effectivement emise vers Partners (une ligne existe dans `partners_sync_outbox` pour ce `candidatureId`) ; un identifiant non emis rend EXACTEMENT la meme reponse qu'un identifiant inexistant, corps et statut compares octet a octet. (3) REPONSE FERMEE : `{nom, prenom, email, telephone}`, dechiffres depuis les colonnes chiffrees de `Submission` au moment de la reponse, chaque champ nul s'il est absent, aucun autre champ ; son schema est celui de `packages/contracts/api.ts` (INT-T01c), jamais retape. Aucun cache. (4) JOURNAL SANS CLAIR : chaque appel journalise l'identifiant de candidature, l'empreinte de l'adresse reseau et le resultat, jamais une coordonnee ; un test inspecte la ligne de journal. (5) INERTIE : sans le drapeau d'activation de la synchronisation, la route rend la reponse d'un identifiant inexistant. (6) TEMOIN A DEUX FACES : une candidature emise rend ses quatre champs et rien d'autre ; la meme requete pour une candidature non emise, puis avec une signature fausse, ne rend aucune coordonnee et le test le prouve sur le corps. (7) DÉBIT PLAFONNÉ PAR CANDIDATURE (partners/ADR-0023 : la route sert au traitement, elle n'est pas un annuaire) : au plus 5 lectures réussies par `candidatureId` sur 24 heures glissantes, par le limiteur à conduite sur panne déclarée `refuser` ; au-delà, la réponse est celle d'un identifiant inexistant et l'écart est journalisé et alerté. Le plafond laisse passer les rejeux légitimes de Partners après une panne de son côté ; il interdit la lecture répétée. TÉMOIN : la sixième lecture d'une même candidature dans les 24 heures ne rend aucune coordonnée, et la première lecture d'une autre candidature passe.
+
+**Tests.** `axionia/src/server/partners-sync/__tests__/route-coordonnees.spec.ts`
 
 ## Phase 1 — Operationnel
 
@@ -1695,15 +1775,19 @@ Couvre : `REQ-ARG-018`, `REQ-JUR-017`
 
 ### DM-07 — Entité Attribution : colonnes structurées, chiffrement + hashes du contact, index unique partiel occupant et file
 
-`1 j` · zone `domaine` · `schema` · sensible : attribution, rgpd · depend de `DM-01`, `DM-02`, `DM-06`, `QA-T02`, `SEC-08`
+`1 j` · zone `domaine` · `schema` · sensible : attribution, rgpd · depend de `DM-01`, `DM-02`, `DM-06`, `QA-T02`, `SEC-08`, `DM-03-P`, `INT-T10`, `SEC-17`
 
 Couvre : `REQ-DM-002`, `REQ-DM-003`, `REQ-DM-004`, `REQ-DM-005`, `REQ-DM-030`, `REQ-DM-031`, `REQ-SEC-014`
 
+**Acceptation.** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) ET PORTE TOUTE LA PERSISTANCE DU DÉPÔT (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). (1) Enums `CanalDepot {espace, lien_prive}`, `EtatAdministratif {actif, cesse}` (projection de « A » et « C »), `CategorieEntreprise {pme, eti, ge}`, `MotifRefusDepot` à sept valeurs exactement : `anteriorite_client`, `anteriorite_devis`, `etablissement_cesse`, `entreprise_hors_perimetre`, `file_complete`, `opposition_demarchage`, `insincerite` (REQ-SEC-022). (2) `Attribution` -> `attributions` : `apporteurId`, `statut EtatAttribution`, `rangAttente`, `siren` Char(9), `siret` Char(14) nullable, `grilleCommissionId` NOT NULL vers `grilles_commission` (REQ-DM-014), `canal`, `jetonDepotId` nullable, `deposeeAt` Timestamptz(6) posé par l'horloge de la TRANSACTION serveur, jamais fourni par le client (REQ-DM-005), `clientCapturedAt`, `dateContact` en date calendaire (REQ-JUR-040), `informationTiersVersion` (REQ-JUR-008), `verificationPrioritaire`, `ipHash` Char(16), `agentHash` Char(64) ; l'entreprise telle que rendue par l'API publique (REQ-DM-030, REQ-INT-021) : `raisonSociale`, `natureJuridique`, `codeNaf` (nul en repli, DM-28), `trancheEffectif`, `etatAdministratif`, `categorieEntreprise`, `codePostalChiffre`, `communeSiege`, `departement`, `region`, `latitudeMicrodeg` et `longitudeMicrodeg` en micro-degrés Int (EXT-T08 ; aucun Float, aucun Decimal), `dirigeantsJson` (empreinte et qualité seulement), `entrepriseAVerifier` (REQ-INT-020) ; le contact rencontré (REQ-DM-031), noms de `CHAMPS_PII` : `nomChiffre`, `prenomChiffre`, `nomHash` (type `nom_personne`), `emailChiffre`, `emailHash`, `telephoneChiffre`, `phoneHash`, `fonctionContact`, `contexteChiffre`, `personneDeclareeId` (UX-P1-15), `lienInteretDeclare` et `lienInteretPrecisionChiffre` (REQ-UX-039) ; le temps de la machine (REQ-DM-004, REQ-DM-007, REQ-UX-022) : `aQualifierDepuisAt`, `premierContactAt`, `confirmeeAt`, `fenetreFinAt`, `peremptionAt`, `peremptionSuspendueAt`, `peremptionSuspendueParId`, `peremptionSuspendueJustification`, `fenetreRedeclarationFinAt`, `purgeContactAt`, `contactPurgeAt`, et `versionQualification`, verrou optimiste de la fiche (REQ-CPL-024). Toutes les colonnes connues des phases 0 et 1 sont posées d'un coup, nulles si elles ne sont pas écrites à la naissance. (3) `DepotRefuse` -> `depots_refuses` : `apporteurId`, `siren`, `motif MotifRefusDepot`, `canal`, `refuseAt` — de quoi contester (REQ-DM-043), aucune coordonnée du contact. `PersonneDeclaree` -> `personnes_declarees` (REQ-CPL-029) : `apporteurId`, `nomChiffre`, `prenomChiffre`, `qualite`, `declareeAt`, `retireeAt`. Relations vers `Apporteur`, `GrilleCommission`, `JetonDepot`, `PersonneDeclaree` et `UtilisateurConsole` en `onDelete: Restrict`, écrites en entier. (4) SQL brut : l'index unique partiel occupant `ON attributions (siren) WHERE statut IN (...)` est GÉNÉRÉ depuis `ETATS_OCCUPANTS`, jamais tapé, et vérifié par `pg_indexes` ; `UNIQUE (siren, rang_attente) WHERE statut = 'en_attente'`, `rang_attente IN (1,2)` et `(statut = 'en_attente') = (rang_attente IS NOT NULL)` ; formes du SIREN et du SIRET, `left(siret,9) = siren` (REQ-DM-002), idem pour `depots_refuses.siren` ; forme du code NAF ; latitude entre -90000000 et 90000000, longitude entre -180000000 et 180000000, présentes ensemble ; `lien_interet_precision_chiffre` seulement si `lien_interet_declare` ; les trois colonnes de suspension de péremption présentes ensemble, justification d'au moins 20 caractères utiles ; empreintes hexadécimales. (5) `courriels_envoyes` reçoit `attribution_id` (clé étrangère `Restrict`, index) ; la valeur de journal `attribution_contact_purge` (agrégat `attribution`, charge `{purgeAt}`) entre au schéma et dans `charges.ts`. `CHAMPS_PII` gagne `codePostal`, `contexte` et `lienInteretPrecision` ; `NORMALISATIONS` gagne `nom_personne` et `agent` ; `projection.ts` (INT-T09) calcule l'empreinte des dirigeants par `empreinteRecherche('nom_personne', ...)` — aucune n'est encore stockée. Module du semeur `prisma/seed/10-attributions.ts`. (6) TÉMOIN À DEUX FACES sur la référence de grille (repris de DM-03-P, conflit C14) : une attribution créée sans version de grille est refusée par la base ; une attribution portant une version existante passe.
+
 ### DM-08 — Machine à états d'attribution : matrice, délais recalculés, **file d'attente sans promotion automatique**, événement en transaction
 
-`1.25 j` · zone `domaine` · sensible : attribution · depend de `DM-07` · decisions `HYP-E1-9`
+`1.25 j` · zone `domaine` · `schema` · sensible : attribution · depend de `DM-07` · decisions `HYP-E1-9`
 
 Couvre : `REQ-DM-004`, `REQ-DM-006`, `REQ-DM-007`, `REQ-DM-022`, `REQ-QA-004`
+
+**Acceptation.** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : seul écrivain légitime de la matrice d'attribution (partners/ADR-0022, cadrage de l'architecte du 2026-09-26 sur délégation de Will). Le comportement de la machine est celui de ses exigences ; ce qui suit est ce qu'elle écrit au schéma. (1) Elle ajoute à `TypeEvenementJournal` deux valeurs par `ALTER TYPE type_evenement_journal ADD VALUE`, jamais employées dans la même migration : `attribution_etat_modifie` (agrégat `attribution`, charge fermée `{de: EtatAttribution | null, vers, evenement: z.enum(EVENEMENTS_ATTRIBUTION), acteurId?: uuid, lienInteret?: 'declare' | 'non_declare'}`) et `attribution_peremption_suspendue` (`{acteurId: uuid, suspendueAt}`). (2) UN TYPE PAR GENRE DE TRANSITION, PAS PAR TRANSITION : `EVENEMENTS_ATTRIBUTION` est exporté de `machine.ts` et lu par la charge ; ajouter un événement à la matrice modifie une charge Zod dans `charges.ts`, jamais le schéma. (3) La charge reste fermée (REQ-DM-041) : un booléen s'y écrit `z.enum(['oui','non'])`, aucune chaîne libre.
 
 ### DM-24 — Cron de **confirmation tacite à trente jours** — le porteur manquant
 
@@ -1711,11 +1795,11 @@ Couvre : `REQ-DM-004`, `REQ-DM-006`, `REQ-DM-007`, `REQ-DM-022`, `REQ-QA-004`
 
 Couvre : `REQ-DM-006`, `REQ-DM-008`, `REQ-DM-042`
 
-**Acceptation.** cron quotidien, horloge injectée, qui promeut en `active` toute `provisoire` de plus de `CONFIRMATION_TACITE_JOURS` (30) **sans Qualification `confirme` ni `non_confirme`** — y compris `injoignable` et `ne_se_souvient_pas` —, écrit `attribution.confirmee_tacitement` **dans la même transaction** et fait courir `fenetreFinAt` à compter de cette date ; c'est la **seule** conséquence attachée au défaut ou au retard de contact.
+**Acceptation.** cron quotidien, horloge injectée, qui promeut en `active` toute `provisoire` de plus de `CONFIRMATION_TACITE_JOURS` (30) **sans Qualification `confirme` ni `non_confirme`** — y compris `injoignable` et `ne_se_souvient_pas` —, écrit l'événement `attribution_etat_modifie` avec `evenement: 'confirmee_tacitement'` **dans la même transaction** (un type de journal par genre de transition, partners/ADR-0022, REQ-DM-042 amendée) et fait courir `fenetreFinAt` à compter de cette date ; c'est la **seule** conséquence attachée au défaut ou au retard de contact.
 
 ### DM-25 — Antériorité établie **après** l'enregistrement + contestation écrite d'un refus
 
-`0.5 j` · zone `domaine` · sensible : argent, attribution, espace · depend de `DM-08`, `DM-10-P`, `SEC-17`, `UX-P1-10`
+`0.5 j` · zone `domaine` · sensible : argent, attribution, espace · depend de `DM-08`, `DM-10-P`, `SEC-17`, `UX-P1-10`, `DM-12`
 
 Couvre : `REQ-DM-043`, `REQ-JUR-007`, `REQ-SEC-022`, `REQ-UX-002`
 
@@ -1747,45 +1831,53 @@ Couvre : `REQ-INT-012`, `REQ-INT-013`, `REQ-INT-030`, `REQ-QA-026`
 
 ### SEC-11 — Jeton de dépôt privé : émission, hash, révocation, régénération, accusé « ce n'est pas moi »
 
-`1 j` · zone `securite` · sensible : attribution, auth · depend de `DM-01`, `DM-06`, `SEC-08`, `SEC-10` · decisions `HYP-C6`
+`1 j` · zone `securite` · `schema` · sensible : attribution, auth · depend de `DM-01`, `DM-06`, `SEC-08`, `SEC-10`, `DM-12`, `DM-07` · decisions `HYP-C6`
 
 Couvre : `REQ-SEC-005`, `REQ-SEC-006`, `REQ-SEC-007`
 
+**Acceptation.** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022). (1) Un seul jeton actif par apporteur, tenu par la base : `CREATE UNIQUE INDEX jetons_depot_un_actif_par_apporteur ON jetons_depot (apporteur_id) WHERE revoque_at IS NULL`, vérifié par `pg_indexes` (REQ-SEC-005). (2) Aucune colonne d'expiration : l'échéance est `cree_at` plus `JETON_DEPOT_DUREE_MOIS`, SSOT. (3) Le jeton est révoqué à la RÉSILIATION, jamais à la suspension (REQ-SEC-019 et REQ-SEC-032 prévalent, REQ-SEC-005 amendée, conflit C8). (4) Le lien « ce n'est pas moi » est SANS ÉTAT : HMAC sous `MAGIC_LINK_SECRET`, domaine `partners.pas-moi.v1`, portant l'identifiant du jeton et celui du dépôt ; la révocation est idempotente (décision 15 de partners/ADR-0013).
+
 ### SEC-12 — Contrôles de dépôt atomiques : verrous, index partiel, quota glissant, file M2, horodatage µs, relecture du statut, case RGPD serveur, **motifs de refus alignés sur les articles 3.3 et 3.3 bis**, lien
 
-`1.25 j` · zone `securite` · sensible : attribution, rgpd · depend de `DM-08`, `DM-10-P`, `INT-T09`, `SEC-11`
+`1.25 j` · zone `securite` · sensible : attribution, rgpd · depend de `DM-08`, `DM-10-P`, `INT-T09`, `SEC-11`, `DM-07`
 
 Couvre : `REQ-CPL-008`, `REQ-DM-010`, `REQ-JUR-008`, `REQ-JUR-023`, `REQ-SEC-014`, `REQ-SEC-015`, `REQ-SEC-020`, `REQ-SEC-022`, `REQ-SEC-032`, `REQ-UX-002`, `REQ-UX-039`
 
 ### DM-09 — Qualification append-only, dérivation du palier et du seuil, verrou optimiste
 
-`1 j` · zone `domaine` · sensible : attribution, auth, espace · depend de `CPL-T13`, `DM-08` · decisions `HYP-C1`
+`1 j` · zone `domaine` · `schema` · sensible : attribution, auth, espace · depend de `CPL-T13`, `DM-08`, `SEC-17` · decisions `HYP-C1`
 
 Couvre : `REQ-CPL-024`, `REQ-DM-008`, `REQ-DM-009`, `REQ-DM-010`, `REQ-JUR-006`
 
-**Acceptation.** le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13).
+**Acceptation.** le seuil prioritaire est lu depuis `seuilPrioritaire()` de CPL-T13 (règle D3 : `min(palierConfiance, capaciteRestante)`, surcharge manuelle > 0 remplace le min), jamais recalculé ici ; **aucun compteur de gradation, aucun rang, aucun délai de « contradictoire »** (décision du 2026-09-03) — une déclaration `non_confirme` suspend, c'est SEC-15 qui porte la suspension. 🔴 **Complétée le 2026-09-03 (synthèse A-3 et M-7) : les QUATRE résultats de contact n'ont pas les mêmes effets.** Seul `non_confirme` — le représentant indique **expressément** n'avoir eu aucun échange — éteint l'attribution et ouvre l'article 3.7 ; `injoignable`, `ne_se_souvient_pas`, le changement d'interlocuteur et le refus de répondre **maintiennent l'attribution `provisoire`** et ne sont imputables à personne : aucune suspension, aucun signal défavorable, aucune invalidation. La Qualification **journalise la date, la personne interrogée et les termes** de la réponse, et l'extrait en est communiqué à l'apporteur sur sa demande (route cloisonnée). `premierContactAt` est posé ici et c'est lui qui démarre le chrono de péremption (DM-13). 🔴 **Complétée le 2026-09-25 (cadrage de DM-06, GOV-099).** DM-09 porte le TÉMOIN de REQ-DM-010 retiré de DM-06 : un dépôt au-delà du seuil de vérification prioritaire est ACCEPTÉ, horodaté et porte `verificationPrioritaire = true` ; le test vérifie l'acceptation, pas seulement le drapeau, et un témoin qui refuserait ce dépôt le fait rougir. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : enums `InteretContact {eleve, moyen, faible, nul}`, `ProchaineEtape {rdv, rappeler, proposition, perdue, aucune}` et `MotifPerte {pas_de_besoin, deja_equipe, hors_cible, injoignable_definitif, autre}` — valeurs décidées sous `HYP-A02-VOCABULAIRE-QUALIFICATION`, aucune n'est `non_confirme` (une déclaration `non_confirme` mène à `invalidee`, REQ-UX-021 amendée) — avec `ResultatContact`. `Qualification` -> `qualifications`, APPEND-ONLY (REQ-DM-008) : `attributionId`, `resultatContact`, `interet` nullable, `prochaineEtape`, `motifPerte` nullable, `rdvAt`, `rappelerAt`, `personneInterrogeeChiffre` et `termesReponseChiffre` (données d'un tiers, chiffrées, purgées avec le contact, REQ-DM-031), `auteurId` vers `utilisateurs_console`, `creeAt` posé par la base en Timestamptz(6). CHECK : `(prochaine_etape = 'perdue') = (motif_perte IS NOT NULL)`, `rdv_at` exigé pour `rdv`, `rappeler_at` exigé pour `rappeler` ; déclencheur append-only dont la seule exception est la remise à NULL des deux colonnes chiffrées par la purge, toute autre colonne inchangée. `CHAMPS_PII` gagne `personneInterrogee` et `termesReponse`. Le compteur de tentatives « injoignable » est DÉRIVÉ du compte des qualifications, jamais stocké. Module du semeur `prisma/seed/11-qualifications.ts`.
+
+**Tests.** `tests/unit/domaine/depot-au-dela-du-seuil.spec.ts`
 
 ### DM-10-P — EntrepriseConnue
 
-`0.5 j` · zone `domaine` · `schema` · sensible : argent, attribution · depend de `DM-07`, `INT-T05`
+`0.5 j` · zone `domaine` · `schema` · sensible : argent, attribution · depend de `DM-07`, `INT-T05`, `SEC-17`
 
 Couvre : `REQ-DM-028`, `REQ-DM-029`, `REQ-SEC-022`
 
-**Acceptation.** évaluation **locale**, sans appel réseau au dépôt (la dépendance à DM-10-A est retirée) ; `origine` enum réduit à **{client, devis, financeur}** — **`demande_entrante` est retirée**, aucun des cinq événements arrêtés ne la transporte ; **deux fenêtres distinctes** alignées sur l'art. 3.3 réécrit, `ANTERIORITE_CLIENT_MOIS = 24` (prestation **facturée**) et `ANTERIORITE_DEVIS_MOIS = 6` (**devis** émis), toutes deux en SSOT (JUR-T02), jamais un paramètre unique ; `financeur` est alimentée par la liste tenue par la Société (DM-028), **dont l'existence et le principe sont portés à la connaissance de l'apporteur** (art. 3.3 bis b) et dont le refus est notifié avec sa **catégorie**.
+**Acceptation.** évaluation **locale**, sans appel réseau au dépôt (la dépendance à DM-10-A est retirée) ; `origine` enum réduit à **{client, devis, financeur}** — **`demande_entrante` est retirée**, aucun des cinq événements arrêtés ne la transporte ; **deux fenêtres distinctes** alignées sur l'art. 3.3 réécrit, `ANTERIORITE_CLIENT_MOIS = 24` (prestation **facturée**) et `ANTERIORITE_DEVIS_MOIS = 6` (**devis** émis), toutes deux en SSOT (JUR-T02), jamais un paramètre unique ; `financeur` est alimentée par la liste tenue par la Société (DM-028), **dont l'existence et le principe sont portés à la connaissance de l'apporteur** (art. 3.3 bis b) et dont le refus est notifié avec sa **catégorie**. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `sirens_liste_noire {siren Char(9) clé primaire, motif MotifListeNoire, ajouteParId vers utilisateurs_console, ajouteAt}` et `entreprises_connues {siren, origine OrigineEntrepriseConnue, connueDepuisAt, dernierContactAt, clientStatut}` (REQ-DM-029) ; la ligne `OrigineEntrepriseConnue` du glossaire est alignée AVANT cette tâche — `demande_entrante` retirée —, faute de quoi `partners:schema:enums` rougirait en `enum_divergent_du_glossaire`.
 
-### DM-11 — Contrat versionné
+### DM-11 — KYC versionné
 
-`1.5 j` · zone `domaine` · sensible : argent, attribution, espace, rgpd · depend de `DM-03-P`, `DM-06`, `INT-T09`, `SEC-17` · decisions `HYP-RESIDENCE`
+`1.5 j` · zone `domaine` · `schema` · sensible : argent, attribution, espace, rgpd · depend de `DM-03-P`, `DM-06`, `INT-T09`, `SEC-17`, `SEC-08` · decisions `HYP-RESIDENCE`
 
 Couvre : `REQ-CPL-004`, `REQ-CPL-005`, `REQ-DM-013`, `REQ-DM-027`, `REQ-JUR-018`, `REQ-JUR-022`, `REQ-JUR-029`, `REQ-SEC-026`
 
-**Acceptation.** se limite aux données KYC et à `PieceKyc.valideJusquAu` ; la règle de vigilance et le blocage du versement sont la propriété de JUR-T16 (`controlesVersement()`). 🔴 **Complétée le 2026-09-03 (synthèse A-10 et M-20).** (1) **`rc_pro` porte `expireAt NOT NULL`** et un rappel d'échéance annuel (contrat art. 6.4 : attestation à la signature puis à chaque échéance, information de toute résiliation de police sous 15 jours) — **sans être ajoutée à `piecesBloquantPaiement()` ni à `controlesVersement()`** : l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement. (2) Le KYC recueille et stocke le **statut d'exercice** de l'apporteur (`qualiteExercice`), qui alimente `{{APPORTEUR_QUALITE}}` du gabarit (JUR-T01) et la déclaration de l'art. 23 (« exercer sous un statut régulièrement déclaré l'autorisant à percevoir et à facturer les commissions », « ne faire l'objet ni d'une liquidation judiciaire ni d'une interdiction de gérer », M-29).
+**Acceptation.** se limite aux données KYC et à `PieceKyc.valideJusquAu` ; la règle de vigilance et le blocage du versement sont la propriété de JUR-T16 (`controlesVersement()`). 🔴 **Complétée le 2026-09-03 (synthèse A-10 et M-20).** (1) **`rc_pro` porte `expireAt NOT NULL`** et un rappel d'échéance annuel (contrat art. 6.4 : attestation à la signature puis à chaque échéance, information de toute résiliation de police sous 15 jours) — **sans être ajoutée à `piecesBloquantPaiement()` ni à `controlesVersement()`** : l'art. 5.4 réécrit ferme la liste des pièces pouvant différer un versement. (2) Le KYC recueille et stocke le **statut d'exercice** de l'apporteur (`qualiteExercice`), qui alimente `{{APPORTEUR_QUALITE}}` du gabarit (JUR-T01) et la déclaration de l'art. 23 (« exercer sous un statut régulièrement déclaré l'autorisant à percevoir et à facturer les commissions », « ne faire l'objet ni d'une liquidation judiciaire ni d'une interdiction de gérer », M-29). 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099, `HYP-DM06-IBAN`).** L'IBAN vit dans la pièce `rib` du KYC et nulle part ailleurs : chiffré par SEC-08 (`encryptPii` avec AAD égale à l'identifiant de la ligne), recherché par `ibanHash` ; **DM-11 pose, dans SA migration, la colonne de référence de `IdentitesFacturation` (créée par DM-06 sans elle) vers `PieceKyc` de type `rib`, et sa relation** ; la référence ne porte jamais l'IBAN. Tests : une identité de facturation référence une pièce `rib`, et une référence vers une pièce d'un autre type est refusée ; **aucune autre colonne du schéma ne porte un IBAN**, en clair ou chiffré (témoin : une colonne `iban` ajoutée ailleurs fait rougir le test). 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** **Recentrée, conflit C1 : DM-11 NE CRÉE PAS `contrats`**, c'est DM-23 qui la crée, avec `grille_contrat_id` NOT NULL dès la naissance (Gate D refuserait l'ajout après coup d'une colonne NOT NULL sans défaut) ; REQ-DM-013, que DM-11 cite encore, est portée par DM-23. DM-11 crée `pieces_kyc` (REQ-DM-027, plus `ibanChiffre`, `ibanHash` et `remplaceeAt`), avec CHECK `(type = 'rib') OR (iban_chiffre IS NULL AND iban_hash IS NULL)`, `expire_at` NOT NULL pour `vigilance` et `rc_pro`, et DEUX index uniques partiels (conflit C6) : au plus une pièce COURANTE par (apporteur, type) `WHERE remplacee_at IS NULL AND statut <> 'a_verifier'`, au plus une EN VÉRIFICATION `WHERE statut = 'a_verifier'` — un changement de RIB crée une pièce `a_verifier` pendant que l'ancienne reste active (REQ-UX-027) ; `identites_facturation.piece_rib_id` ; sur `apporteurs`, `qualiteExercice` et `professionReglementee`, nullables, dont les valeurs restent à inscrire au glossaire depuis le gabarit (JUR-T01) et REQ-JUR-022 AVANT cette tâche. Journal `piece_kyc_statut_modifie` (agrégat `piece_kyc`, charge `{de, vers: StatutPieceKyc, type: TypePieceKyc, acteurId?}`).
+
+**Tests.** `tests/unit/domaine/kyc-reference-piece-rib.spec.ts`
 
 ### DM-12 — Verification, AlerteLiberation, Anomalie, RattachementManuel
 
-`0.5 j` · zone `domaine` · depend de `DM-07`, `DM-08`
+`0.5 j` · zone `domaine` · `schema` · depend de `DM-07`, `DM-08`, `SEC-17`
 
 Couvre : `REQ-DM-032`, `REQ-DM-033`, `REQ-DM-034`
+
+**Acceptation.** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) Enums `TypeAnomalie {sincerite, appareil_inconnu, ramassage, auto_parrainage}` — aucune valeur de rythme (REQ-SEC-017, REQ-JUR-031, REQ-SEC-021 amendée) — et `ObjetContestation {refus_depot, annulation_attribution, demande_rattachement}`, avec `ResultatVerification` et `StatutAnomalie`. (2) `Verification` -> `verifications` (REQ-DM-032, REQ-SEC-021), append-only : `apporteurId`, `siren`, `resultat`, `ipHash` Char(16), `verifieeAt` ; le plafond de vérifications est un compte, jamais une colonne. `AlerteLiberation` -> `alertes_liberation` : `apporteurId`, `siren`, `creeAt`, `envoyeeAt`, unique tant que non envoyée (`WHERE envoyee_at IS NULL`). `Anomalie` -> `anomalies` (REQ-DM-033) : `type`, `score` (présent si et seulement si `sincerite`), `apporteurId`, `attributionId`, `statut`, `ouverteAt`, `traiteParId`, `traiteAt`, `justification` ; CHECK `(statut = 'ouverte') = (traite_at IS NULL)` et `(traite_at IS NULL) = (traite_par_id IS NULL)`. `RattachementManuel` -> `rattachements_manuels` (REQ-DM-034) : `attributionId`, `sirenCommande`, `justification` d'au moins 20 caractères utiles (renommée de `motif` : un texte libre ne porte jamais un nom de vocabulaire), `lienControleEtabliAt`, `lienControleSource` non vide, `decideParId`, `decideAt`, `revoqueAt` ; `UNIQUE (siren_commande) WHERE revoque_at IS NULL` ; le déclencheur `rattachement_lien_anterieur` refuse `lien_controle_etabli_at > attributions.deposee_at`. `Contestation` -> `contestations` (REQ-DM-043, et la DEMANDE de rattachement de REQ-DM-034) : `apporteurId`, `objet`, `depotRefuseId` (si et seulement si `refus_depot`, `attributionId` sinon), `texteChiffre`, `recueAt`, `reponseChiffre`, `repondueParId`, `repondueAt` (réponse présente ensemble) ; l'échéance de réponse est `recueAt` plus la durée SSOT, jamais stockée. (3) Journal : `anomalie_statut_modifie` et `contestation_modifiee` (agrégat `apporteur`, charge `{anomalieId | contestationId, de?, vers, acteurId?}`), `rattachement_manuel_modifie` (agrégat `attribution`, `{rattachementId, vers: 'decide' | 'revoque', acteurId}`). `CHAMPS_PII` gagne `texte` et `reponse`. Module du semeur `prisma/seed/12-console-cas.ts`.
 
 ### DM-13 — Crons péremption 90 j **depuis le premier contact**, expiration 12 mois, injoignable ×3, **file d'attente
 
@@ -1795,7 +1887,7 @@ Couvre : `REQ-DM-004`, `REQ-DM-006`, `REQ-DM-007`, `REQ-DM-031`, `REQ-DM-042`, `
 
 ### SEC-14 — Détecteurs de sincérité : **5 signaux de CONTENU**, score, ouverture d'Anomalie
 
-`1 j` · zone `securite` · sensible : attribution, auth, espace · depend de `INT-T09`, `SEC-12`, `SEC-17`
+`1 j` · zone `securite` · sensible : attribution, auth, espace · depend de `INT-T09`, `SEC-12`, `SEC-17`, `DM-12`
 
 Couvre : `REQ-DM-033`, `REQ-JUR-031`, `REQ-JUR-040`, `REQ-SEC-017`, `REQ-SEC-020`, `REQ-SEC-036`, `REQ-SEC-038`
 
@@ -1803,15 +1895,15 @@ Couvre : `REQ-DM-033`, `REQ-JUR-031`, `REQ-JUR-040`, `REQ-SEC-017`, `REQ-SEC-020
 
 ### SEC-15 — Suspension de vérification : **faculté** posée par un rôle, point d'entrée unique, portée limitée, levée de plein droit à 15 jours
 
-`1 j` · zone `securite` · `schema` · sensible : argent, attribution, auth, espace · depend de `DM-09`, `SEC-14`, `SEC-17`
+`1 j` · zone `securite` · `schema` · sensible : argent, attribution, auth, espace · depend de `DM-09`, `SEC-14`, `SEC-17`, `DM-12`
 
 Couvre : `REQ-JUR-031`, `REQ-SEC-018`, `REQ-SEC-019`, `REQ-SEC-038`
 
-**Acceptation.** (1) **c'est une FACULTÉ, pas un automatisme** — une déclaration `non_confirme` ouvre une entrée console, elle ne suspend rien toute seule ; la mesure est **posée par un rôle habilité**, notifiée avec les faits qui la motivent (le contrat écrit « la Société **peut** suspendre » ; le produit exécutait de plein droit) ; (2) **enum de gel à TROIS valeurs** — `libre`, `gele_non_confirmation`, `gele_fraude` : `gele_anomalie` est renommée, **`gele_manuel` est supprimée** ; (3) **un seul point d'entrée**, la fonction typée sur ces deux motifs, gardée par `jur:suspension-motifs-fermes` **et par le test-cliquet nominatif des appelants** (SEC-28) ; (4) **portée strictement limitée à l'enregistrement de nouvelles déclarations** : sans effet sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès à l'espace** — aucun jeton révoqué, `sessionVersion` inchangé, aucune attribution annulée ; les `provisoire` restent `provisoire` avec `verificationPrioritaire` ; (5) **quinze jours maximum** (`SUSPENSION_MAX_JOURS`) — un cron lève de plein droit, écrit l'événement et notifie, la Société demeurant libre de résilier selon l'art. 11 ; **aucun seuil, aucun compteur, aucun rang**, et aucune conséquence attachée au nombre de suspensions antérieures (REQ-JUR-031, M-17).
+**Acceptation.** (1) **c'est une FACULTÉ, pas un automatisme** — une déclaration `non_confirme` ouvre une entrée console, elle ne suspend rien toute seule ; la mesure est **posée par un rôle habilité**, notifiée avec les faits qui la motivent (le contrat écrit « la Société **peut** suspendre » ; le produit exécutait de plein droit) ; (2) **enum de gel à TROIS valeurs** — `libre`, `gele_non_confirmation`, `gele_fraude` : `gele_anomalie` est renommée, **`gele_manuel` est supprimée** ; (3) **un seul point d'entrée**, la fonction typée sur ces deux motifs, gardée par `jur:suspension-motifs-fermes` **et par le test-cliquet nominatif des appelants** (SEC-28) ; (4) **portée strictement limitée à l'enregistrement de nouvelles déclarations** : sans effet sur les attributions en cours, provisoires ou définitives, sur les commandes signées, sur les commissions acquises ou à venir, et **sur l'accès à l'espace** — aucun jeton révoqué, `sessionVersion` inchangé, aucune attribution annulée ; les `provisoire` restent `provisoire` avec `verificationPrioritaire` ; (5) **quinze jours maximum** (`SUSPENSION_MAX_JOURS`) — un cron lève de plein droit, écrit l'événement et notifie, la Société demeurant libre de résilier selon l'art. 11 ; **aucun seuil, aucun compteur, aucun rang**, et aucune conséquence attachée au nombre de suspensions antérieures (REQ-JUR-031, M-17). 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Contenu du schéma : `enum EtatGel {libre, gele_non_confirmation, gele_fraude}` ; sur `apporteurs` : `etatGel` (défaut `libre`), `depotsGelesDepuis` (nom de REQ-SEC-038), `gelAnomalieId` vers `anomalies`, `gelPoseParId`. CHECK : `(etat_gel = 'libre') = (depots_geles_depuis IS NULL)`, `(etat_gel = 'gele_fraude') = (gel_anomalie_id IS NOT NULL)`, et `(statut = 'suspendu') = (etat_gel <> 'libre')` : la fonction unique écrit le statut et le gel dans la même instruction (conflit C7). Journal `apporteur_gel_modifie` (agrégat `apporteur`, charge `{de: EtatGel, vers: EtatGel, par: 'role' | 'plein_droit', anomalieId?, acteurId?}`).
 
 ### SEC-28 — Test-cliquet nominatif des poseurs et leveurs de gel + cron de levée de plein droit à 15 jours
 
-`0.5 j` · zone `securite` · `schema` · sensible : attribution · depend de `DM-13`, `QA-T01`, `SEC-15`
+`0.5 j` · zone `securite` · sensible : attribution · depend de `DM-13`, `QA-T01`, `SEC-15`
 
 Couvre : `REQ-INT-007`, `REQ-SEC-019`, `REQ-SEC-038`
 
@@ -1825,23 +1917,25 @@ Couvre : `REQ-JUR-011`, `REQ-QA-012`, `REQ-SEC-021`, `REQ-SEC-022`, `REQ-UX-007`
 
 ### SEC-18 — Anti auto-parrainage par hash, à la candidature et au RIB
 
-`0.5 j` · zone `securite` · depend de `DM-06`, `SEC-08`
+`0.5 j` · zone `securite` · depend de `DM-06`, `SEC-08`, `DM-11`, `DM-12`, `SEC-03`
 
 Couvre : `REQ-JUR-021`, `REQ-SEC-031`
 
 ### SEC-19 — **Résiliation** : transaction unique de coupure + session en lecture seule survivante
 
-`0.75 j` · zone `securite` · `schema` · sensible : argent, attribution, auth · depend de `DM-08`, `SEC-04`, `SEC-11`, `SEC-17`
+`0.75 j` · zone `securite` · sensible : argent, attribution, auth · depend de `DM-08`, `SEC-04`, `SEC-11`, `SEC-17`, `CPL-T06`
 
 Couvre : `REQ-DM-011`, `REQ-JUR-042`, `REQ-SEC-003`, `REQ-SEC-005`, `REQ-SEC-032`
 
-**Acceptation.** (1) **la coupure appartient à la RÉSILIATION seule** — la suspension n'en produit aucun effet (SEC-15) ; le nom de la tâche et le module cessent de traiter les deux ensemble ; (2) après résiliation, une **session en LECTURE SEULE survit** : l'apporteur accède à ses relevés, factures, motifs de blocage et au journal de ses propres déclarations **jusqu'à l'extinction de ses droits** (contrat art. 12.3), ou les reçoit par e-mail à sa dernière adresse déclarée (UX-P1-10) — sans quoi la Société notifierait valablement dans un espace fermé et devrait payer des commissions que l'apporteur ne peut plus lire ; aucune écriture n'est ouverte ; (3) `resiliationMotif` reste l'enum **fermé** `{ordinaire_apporteur, ordinaire_axion, manquement_grave}`, **aucun motif d'inactivité**, ni en liste ni en texte libre (REQ-JUR-042).
+**Acceptation.** (1) **la coupure appartient à la RÉSILIATION seule** — la suspension n'en produit aucun effet (SEC-15) ; le nom de la tâche et le module cessent de traiter les deux ensemble ; (2) après résiliation, une **session en LECTURE SEULE survit** : l'apporteur accède à ses relevés, factures, motifs de blocage et au journal de ses propres déclarations **jusqu'à l'extinction de ses droits** (contrat art. 12.3), ou les reçoit par e-mail à sa dernière adresse déclarée (UX-P1-10) — sans quoi la Société notifierait valablement dans un espace fermé et devrait payer des commissions que l'apporteur ne peut plus lire ; aucune écriture n'est ouverte ; (3) `resiliationMotif` reste l'enum **fermé** `{ordinaire_apporteur, ordinaire_axion, manquement_grave}`, **aucun motif d'inactivité**, ni en liste ni en texte libre (REQ-JUR-042). (4) **Aucune colonne** (conflit C17, partners/ADR-0022) : après résiliation, l'apporteur se reconnecte par lien magique et `acces-espace.ts` (SEC-03) rend « lecture seule » pour `resilie` (HYP-SEC03-ACCES) ; `session_version` est incrémenté à la résiliation (SEC-04). SEC-19 écrit `apporteur_statut_modifie` (CPL-T06) et `attribution_etat_modifie` (DM-08) sans migration.
 
 ### INT-T12 — DocuSeal Partners : client REST, gabarit versionné, cases d'acceptation distinctes, webhook strict, archivage PDF + audit trail + SHA-256, rattrapage 24 h, blocage du dépôt avant signature
 
-`1.5 j` · zone `integration` · sensible : attribution · depend de `DM-11`, `JUR-T01`, `JUR-T01b`, `JUR-T01c`, `SEC-03`, `SEC-06` · decisions `DEC-INT-001`
+`1.5 j` · zone `integration` · `schema` · sensible : attribution · depend de `DM-11`, `JUR-T01`, `JUR-T01b`, `JUR-T01c`, `SEC-03`, `SEC-06`, `DM-23` · decisions `DEC-INT-001`
 
 Couvre : `REQ-INT-018`, `REQ-INT-019`, `REQ-JUR-004`, `REQ-JUR-005`, `REQ-SEC-034`
+
+**Acceptation.** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `contrats` est créée par DM-23 (dépendance, conflit C1) ; INT-T12 crée `enveloppes_signature` : `enum StatutEnveloppe {envoyee, signee, refusee, expiree, annulee}` ; `contratId`, `submissionId` unique, `statut`, `emailHash` (l'adresse d'envoi en empreinte seule), `envoyeeAt`, `relancesEnvoyees` (0 à 3), `derniereRelanceAt`, `termineeAt` (nulle si et seulement si `envoyee`), `remplaceeParId` unique ; une seule enveloppe `envoyee` par contrat (`UNIQUE (contrat_id) WHERE statut = 'envoyee'`). (2) Elle ajoute à `type_evenement_recu` les valeurs DocuSeal réellement traitées : `submission_completed` (`submission.completed`), `form_declined` (`form.declined`), `submission_expired` (`submission.expired`), identifiant en snake_case et libellé de fil par `@map`. (3) INFORMATION EXTERNE REQUISE AVANT LE CODE : les noms d'événements émis, la forme exacte de la signature `<ts>.<hex64>` et l'emplacement de `metadata.apporteurId` sont consignés dans `docs/tiers/docuseal.md` avec une charge réelle enregistrée. Forme sûre : un type non listé rend 200 sans effet et est alerté, jamais traité par défaut.
 
 ### INT-T13 — Outils MCP `partners.verifier_entreprise` et `partners.contacts_a_qualifier`
 
@@ -1883,9 +1977,11 @@ Couvre : `REQ-JUR-012`, `REQ-JUR-013`
 
 ### CPL-T06 — Étape 3 du cycle : `DecisionCandidature`, présence webinaire déclarative, seuil initial, séquence vivier
 
-`1 j` · zone `gouvernance` · depend de `DM-06`, `INT-T10`
+`1 j` · zone `gouvernance` · `schema` · depend de `DM-06`, `INT-T10`, `SEC-17`
 
 Couvre : `REQ-CPL-006`
+
+**Acceptation.** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `enum ResultatDecisionCandidature {retenu, vivier, refuse}` ; `DecisionCandidature` -> `decisions_candidature` (REQ-CPL-006), APPEND-ONLY — une nouvelle décision est une nouvelle ligne, trio de déclencheurs du journal : `apporteurId`, `resultat`, `justification`, `webinaireSuivi` Boolean nullable, déclaratif et informatif, dont aucune transition ne dépend (REQ-JUR-013), `auteurId` vers `utilisateurs_console`, `decideeAt`. (2) Journal `apporteur_statut_modifie` (agrégat `apporteur`, charge fermée `{de: StatutApporteur, vers, evenement: z.enum(EVENEMENTS_APPORTEUR), resiliationMotif?: MotifResiliation, acteurId?: uuid}`) : CPL-T06 en est le premier écrivain ; SEC-19, DM-11 et INT-T12 l'emploient ensuite sans migration. Module du semeur `prisma/seed/13-candidatures.ts`.
 
 ### UX-P1-04 — Lien magique mobile : code 6 chiffres, page « lien déjà utilisé », détection standalone
 
@@ -1947,9 +2043,11 @@ Couvre : `REQ-QA-031`
 
 ### UX-P1-09 — Ma conformité + Mon profil : pièces, changement de RIB sécurisé, changement d'e-mail sécurisé, dernières connexions, préférences
 
-`1 j` · zone `espace` · sensible : argent, espace, rgpd · depend de `DM-11`, `SEC-04`, `UX-P1-08`
+`1 j` · zone `espace` · sensible : argent, espace, rgpd · depend de `DM-11`, `SEC-04`, `UX-P1-08`, `UX-P1-10`
 
 Couvre : `REQ-CPL-019`, `REQ-UX-016`, `REQ-UX-027`, `REQ-UX-031`
+
+**Acceptation.** Écrans Ma conformité et Mon profil de l'espace, sans migration : ils écrivent dans des tables créées ailleurs (partners/ADR-0022, une table un créateur) — pièces du dossier de conformité (DM-11), changement de courriel (`changements_courriel`, SEC-04), préférences de notification (UX-P1-10), dernières connexions lues dans `sessions_espace`. (1) Chaque pièce affiche son état, sa date et ce qu'elle bloque ; un changement de RIB crée une pièce `a_verifier`, l'ancienne restant active, et exige le relèvement de SEC-04 (REQ-UX-027, REQ-UX-031). (2) CHANGEMENT DE COURRIEL (REQ-CPL-019) : confirmation par un lien envoyé à l'ANCIENNE adresse, effet après le délai de la source unique, révocation des sessions par `session_version`, dans une seule transaction ; sans confirmation, rien ne change. (3) AUCUNE RÉVÉLATION PAR L'UNICITÉ : quand la nouvelle adresse est déjà portée par un autre apporteur (`apporteurs.email_hash` est unique), la réponse à la demande est IDENTIQUE à celle d'une adresse libre — même texte, même code, même durée observable — ; la demande n'aboutit simplement jamais, aucun courriel n'est envoyé à la nouvelle adresse, et l'écart est journalisé côté console sans l'identité de l'autre apporteur. La contrainte d'unicité ne doit jamais remonter comme une erreur visible. (4) Les dernières connexions n'affichent que la date et une empreinte tronquée de l'adresse réseau, jamais une adresse en clair. (5) TÉMOIN À DEUX FACES : une demande vers une adresse déjà portée par un autre apporteur et une demande vers une adresse libre rendent des réponses comparées octet à octet et égales ; une divergence introduite volontairement fait rougir le test ; et le compte des courriels envoyés prouve qu'aucun n'est parti vers l'adresse déjà portée.
 
 ### UX-P1-15 — Mon profil : **personnes agissant pour le compte de l'apporteur**
 
@@ -1961,9 +2059,11 @@ Couvre : `REQ-CPL-029`, `REQ-UX-039`
 
 ### UX-P1-10 — Table SSOT des notifications + e-mail + liens profonds + **drapeau `faitCourirUnDelai`**
 
-`1.25 j` · zone `espace` · sensible : argent, attribution · depend de `INT-T10`, `JUR-T02`, `UX-P0-01`
+`1.25 j` · zone `espace` · `schema` · sensible : argent, attribution · depend de `INT-T10`, `JUR-T02`, `UX-P0-01`, `DM-07`
 
 Couvre : `REQ-JUR-033`, `REQ-JUR-039`, `REQ-JUR-042`, `REQ-UX-003`, `REQ-UX-016`, `REQ-UX-038`
+
+**Acceptation.** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot). Cadrage de l'architecte du 2026-09-26 sur délégation de Will (partners/ADR-0022) : ce que la tâche crée ; le comportement est celui de ses exigences. (1) `notifications_espace {id, apporteurId, cle, attributionId, creeAt, lueAt}` et `preferences_notification {apporteurId, cle, active, modifieeAt}`, clé primaire `(apporteur_id, cle)`. (2) `cle` est l'exception E3 de partners/ADR-0022 : VarChar(64), `CHECK (cle ~ '^[a-z][a-z0-9_]*$')`, validée par Zod contre `src/server/notifications/table-ssot.ts` à l'écriture, et un test d'intégration confronte les valeurs écrites à la table de code ; aucune règle métier ne branche dessus. (3) Elle REPREND la table SSOT minimale posée par INT-T10. (4) `lueAt` n'est lu par AUCUN calcul de délai (REQ-JUR-039), et une garde le tient : un délai court de `courriels_envoyes.envoyeAt`.
 
 ### UX-P1-11 — Onboarding J0/J2/J7 depuis Partners
 
@@ -1975,7 +2075,7 @@ Couvre : `REQ-JUR-012`, `REQ-JUR-013`, `REQ-JUR-041`, `REQ-SEC-005`, `REQ-UX-016
 
 ### UX-P1-12 — Console Apporteurs : liste, fiche 5 blocs
 
-`1 j` · zone `espace` · `schema` · sensible : espace · depend de `DM-06`, `DM-09`, `SEC-15`, `SEC-17`, `SEC-19`
+`1 j` · zone `espace` · sensible : espace · depend de `DM-06`, `DM-09`, `SEC-15`, `SEC-17`, `SEC-19`
 
 Couvre : `REQ-CPL-027`, `REQ-JUR-031`, `REQ-JUR-042`, `REQ-UX-036`
 
@@ -1991,7 +2091,7 @@ Couvre : `REQ-UX-037`
 
 Couvre : `REQ-DM-013`, `REQ-EXT-021`, `REQ-EXT-022`, `REQ-EXT-023`, `REQ-EXT-024`, `REQ-EXT-025`, `REQ-EXT-026`, `REQ-EXT-027`, `REQ-JUR-019`, `REQ-JUR-023`
 
-**Acceptation.** `GrilleContrat` (une par contrat, figée à la signature, `Contrat.grilleId` **non nul**) et `GrilleModele` (jeu complet nommé et réutilisable : « Standard », « Tête de réseau », « Zone difficile »…) ; la granularité n'est pas la famille mais **le palier** — les quatre familles commissionnées (W6, tranchée le 2026-09-03) comptent **30 paliers vendables** dans `pricing.ts`, la durée y étant un axe distinct ; une ligne porte `prestationPalier`, `type ∈ {forfait, pourcentage, aucune}`, `montantCents` entier si `forfait`, `tauxBps` entier en points de base si `pourcentage` (le point de base vaut un centième de pour cent), jamais un flottant, **`cpfEligible` Boolean NOT NULL dérivé de `pricing.ts` par le script d'export (jamais saisi — 🔴 ce champ MANQUAIT et toute la garde CPF de REQ-JUR-023 reposait dessus : la gate n'avait aucune donnée à lire, synthèse M-15)**, et `motifEcart` **obligatoire dès que la ligne diffère de la grille publiée** ; 🔴 **un forfait est dû UNE FOIS par commande portant le palier — la durée est déjà dans le palier, `montantCents` n'est jamais multiplié par les journées** (DM-04, synthèse A-2) ; les cinq familles non commissionnées (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) n'ont aucune ligne et sont énoncées dans l'annexe 1 ; **séquence verrouillée** KYC complet → grille complète 30/30 → génération du contrat → envoi DocuSeal : la fonction de génération refuse une grille incomplète, la fonction d'envoi refuse un contrat sans grille figée ; annexe 1 **générée** depuis la grille, jamais retapée ; une grille figée ne se modifie que par avenant (INT-T23), les lignes de commission déjà nées gardant leur `grilleVersionId` ; un palier créé au catalogue **après** la signature n'existe dans aucune grille figée → ligne `bloquee` motif **`a_qualifier`** (le cas « barème indéfini » ; `bareme_indefini` n'est pas une valeur de l'enum, arbitrage l. 410), libellé apporteur « Prestation hors grille de commissions », jamais un taux deviné, jamais u
+**Acceptation.** `GrilleContrat` (une par contrat, figée à la signature, `Contrat.grilleId` **non nul**) et `GrilleModele` (jeu complet nommé et réutilisable : « Standard », « Tête de réseau », « Zone difficile »…) ; la granularité n'est pas la famille mais **le palier** — les quatre familles commissionnées (W6, tranchée le 2026-09-03) comptent **30 paliers vendables** dans `pricing.ts`, la durée y étant un axe distinct ; une ligne porte `commissionId` (nom de REQ-INT-006), `prestationFamille`, `type ∈ {forfait, pourcentage, aucune}`, `montantCents` entier si `forfait`, `tauxBps` entier en points de base si `pourcentage` (le point de base vaut un centième de pour cent), jamais un flottant, **`cpfEligible` Boolean NOT NULL dérivé de `pricing.ts` par le script d'export (jamais saisi — 🔴 ce champ MANQUAIT et toute la garde CPF de REQ-JUR-023 reposait dessus : la gate n'avait aucune donnée à lire, synthèse M-15)**, et `motifEcart` **obligatoire dès que la ligne diffère de la grille publiée** ; 🔴 **un forfait est dû UNE FOIS par commande portant le palier — la durée est déjà dans le palier, `montantCents` n'est jamais multiplié par les journées** (DM-04, synthèse A-2) ; les cinq familles non commissionnées (développement web, maintenance, coaching récurrent, conférences, interventions sur demande) n'ont aucune ligne et sont énoncées dans l'annexe 1 ; **séquence verrouillée** KYC complet → grille complète 30/30 → génération du contrat → envoi DocuSeal : la fonction de génération refuse une grille incomplète, la fonction d'envoi refuse un contrat sans grille figée ; annexe 1 **générée** depuis la grille, jamais retapée ; une grille figée ne se modifie que par avenant (INT-T23), les lignes de commission déjà nées gardant leur `grilleVersionId` ; un palier créé au catalogue **après** la signature n'existe dans aucune grille figée → ligne `bloquee` motif **`a_qualifier`** (le cas « barème indéfini » ; `bareme_indefini` n'est pas une valeur de l'enum, arbitrage l. 410), libellé apporteur « Prestation hors grille de commissions », jamais un taux deviné, jamais u 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** **DM-23 CRÉE `contrats`** (conflit C1, REQ-DM-013 amendée) : `apporteurId`, `gabaritVersion`, `grilleCommissionId` NOT NULL, `grilleContratId` NOT NULL dès la naissance, `statut StatutContrat`, `signeAt`, `pdfHash`, `auditTrailHash`, `pdfCle`, `auditTrailCle`, `creeAt`, et `UNIQUE (apporteur_id) WHERE statut = 'signe'` ; ainsi que `grilles_modele`, `lignes_grille_modele`, `grilles_contrat` et `lignes_grille_contrat`. Une ligne : `commissionId`, `prestationFamille FamillePrestation`, `type TypeLigneGrille {forfait, pourcentage, aucune}`, `montantCents` Int, `tauxBps` Int, `cpfEligible`, et `ecartJustification` Text — le `motifEcart` des lignes précédentes : un texte libre ne s'appelle jamais `motif...` ni `palier...` (REQ-EXT-026 et REQ-EXT-027 amendées) ; CHECK `(type = 'forfait') = (montant_cents IS NOT NULL)`, `(type = 'pourcentage') = (taux_bps IS NOT NULL)`, `montant_cents > 0`, `taux_bps` entre 1 et 10000. Journal `contrat_statut_modifie` (`{de?, vers: StatutContrat, acteurId?}`) et `grille_contrat_modifiee` (`{grilleContratId, lignes: uuid[], acteurId}` : les identifiants des lignes modifiées, jamais un compte).
 
 ### UX-P1-14 — Éditeur de grille en console : modèles, édition en masse, complétude 30/30 bloquante
 
@@ -2039,11 +2139,11 @@ Couvre : `REQ-EXT-015`
 
 ### EXT-T01 — Fiche prospect et suivi des échanges, espace apporteur
 
-`1.5 j` · zone `espace` · sensible : attribution, espace, rgpd · depend de `DM-07`, `DM-08`, `SEC-05`, `UX-P0-01`, `UX-P1-05`
+`1.5 j` · zone `espace` · `schema` · sensible : attribution, espace, rgpd · depend de `DM-07`, `DM-08`, `DM-12`, `SEC-05`, `UX-P0-01`, `UX-P1-05`
 
 Couvre : `REQ-EXT-001`, `REQ-EXT-002`, `REQ-EXT-003`, `REQ-EXT-004`, `REQ-JUR-025`
 
-**Acceptation.** une frise unique (événements Axion-IA + échanges), formulaire d'échange à 4 champs, **mention explicite avant la première saisie que les échanges sont visibles de la Société** (reprise dans la politique de confidentialité, JUR-T04), purge branchée sur le cron d'attribution.
+**Acceptation.** une frise unique (événements Axion-IA + échanges), formulaire d'échange à 4 champs, **mention explicite avant la première saisie que les échanges sont visibles de la Société** (reprise dans la politique de confidentialité, JUR-T04), purge branchée sur le cron d'attribution. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** ELLE ÉCRIT LE SCHÉMA (label `schema`, seule de sa famille dans son lot) : `enum CanalEchange {appel, email, visite, linkedin, autre}` ; `Echange` -> `echanges` (REQ-EXT-002 : aucun drapeau de visibilité, tout échange est visible de la Société) : `attributionId`, `apporteurId`, `dateEchange` en date calendaire, `canal`, `texteChiffre` et `prochaineActionChiffre` (nuls après effacement, REQ-EXT-004), `prochaineActionDate`, `creeAt`, `contenuEffaceAt` ; CHECK `contenu_efface_at IS NULL OR (texte_chiffre IS NULL AND prochaine_action_chiffre IS NULL)`. Journal `echange_saisi` (agrégat `attribution`, charge `{echangeId, canal}`). `CHAMPS_PII` gagne `prochaineAction` ; `texte` est posé par DM-12.
 
 ### EXT-T02a — Fiche prospect console : échanges, fiche de qualification, journal
 
@@ -2053,11 +2153,11 @@ Couvre : `REQ-EXT-003`, `REQ-EXT-005`
 
 ### EXT-T03 — Candidatures multi-canal : origine, canal, campagne, anti-doublon
 
-`1 j` · zone `espace` · `schema` · sensible : espace · depend de `DM-06`, `INT-T22`
+`1 j` · zone `espace` · `schema` · sensible : espace · depend de `DM-06`, `INT-T22`, `SEC-04`
 
 Couvre : `REQ-EXT-008`, `REQ-EXT-009`, `REQ-EXT-010`
 
-**Acceptation.** enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création.
+**Acceptation.** enum `origine`, `canal` contraint par `CampagneRecrutement`, hash e-mail et téléphone normalisés, rattachement au lieu de création. 🔴 **Complétée le 2026-09-25 (décision du 2026-09-25, par délégation de Will, GOV-099).** EXT-T03 porte la dérivation de `sourceCanal` — chaîne transportée figée par DM-06 (REQ-DM-035) — vers l'enum `CanalCandidature` (`site`, `linkedin`, `jobboard`, `saisie_console`, `autre`, glossaire §4) : une table de correspondance chemin → canal, côté Partners, en SSOT ; un chemin inconnu donne `autre` et est journalisé, jamais un canal deviné. Tests : chaque entrée de la table → son canal ; chemin inconnu → `autre` et une entrée de journal ; `sourceCanal` nulle → `autre` ; la valeur transportée n'est jamais modifiée par la dérivation. ⚠️ **Dette de cadrage, NON tranchée ici — à cadrer avant EXT-T03** : le producteur axionia émet aujourd'hui une **constante de chemin** pour `sourceCanal` ; `linkedin` et `jobboard` ne seront donc atteignables que par les paramètres `utm`, que DM-06 ne stocke pas. Tant que ce point n'est pas cadré, la table chemin → canal ne sait produire que `site`, `saisie_console` ou `autre`. 🔴 **Complétée le 2026-09-26 (cadrage de l'architecte sur délégation de Will, partners/ADR-0022, GOV-102).** Schéma : `enum OrigineCandidature {tunnel, saisie_console, import, parrainage}` et `enum TypeFichierCv {pdf, docx, jpg, png}` ; sur `apporteurs` : `origine`, `canalCandidature` et `campagneId` (clé étrangère), nullables ; NOT NULL RELÂCHÉ sur `candidature_id`, `reponses_json`, `score_initial`, `score_parts_json` et `score_bareme_version` (saisie console et `score_indisponible`, REQ-EXT-010 ; relâcher est additif), avec CHECK « les trois colonnes de score présentes ensemble ». Tables `campagnes_recrutement {canal CanalCandidature, libelle, coutCents Int >= 0, debutAt, finAt}` et `pieces_jointes_candidature {apporteurId, cle (objet privé), typeFichier, tailleOctets entre 1 et 10485760, empreinteSha256 Char(64), deposeeAt, purgeeAt}`. Journal `candidature_rattachee` (agrégat `apporteur`, charge `{apporteurIdRattache}`). EXT-T04 écrit dans ces tables sans migration.
 
 ### EXT-T04 — Saisie manuelle en console + pièce jointe CV
 
@@ -2077,7 +2177,7 @@ Couvre : `REQ-EXT-006`, `REQ-EXT-007`
 
 ### JUR-T24 — Reformulation de la suspension et du palier + **verrou « aucune résiliation pour inactivité »**
 
-`0.75 j` · zone `juridique` · `schema` · sensible : attribution, espace, rgpd · depend de `DM-09`, `JUR-T26`, `SEC-15`, `SEC-19`, `UX-P0-01`
+`0.75 j` · zone `juridique` · sensible : attribution, espace, rgpd · depend de `DM-09`, `JUR-T26`, `SEC-15`, `SEC-19`, `UX-P0-01`
 
 Couvre : `REQ-CPL-027`, `REQ-DM-010`, `REQ-JUR-031`, `REQ-JUR-032`, `REQ-JUR-042`
 
@@ -2100,6 +2200,16 @@ Couvre : `REQ-UX-002`, `REQ-UX-003`
 **Acceptation.** SUITE DE UX-P0-01, DECOUPEE LE 2026-09-16 POUR NE PAS POSER D'EXEMPTION PERMANENTE AU CONTROLE DES PHASES. Les treize etats d'attribution sont livres par DM-07 (phase 1) : leurs libelles visibles ne peuvent donc pas etre ecrits en phase 0 sans dependre d'une tache de phase superieure. A LIVRER. (1) CHACUN des etats declares par l'enum a son libelle visible, sa phrase d'explication, et — quand l'etat en a une — sa date de fin affichee ; la liste des etats est DERIVEE de l'enum, jamais retapee (RM-01). (2) AUCUN LIBELLE NE NOMME L'AUTRE APPORTEUR, ni par son identite, ni par une date de depot, ni par un stade : la reponse « deja suivie » ne dit que la date de fin (REQ-QA-012 tient la meme regle cote serveur, ce texte ne doit pas la contredire). (3) Aucun de ces libelles ne contient les mots que REQ-UX-003 refuse, notamment celui qui designe l'attribution elle-meme. (4) TEMOIN A DEUX FACES : un etat ajoute a l'enum sans son libelle fait sortir la garde en code non nul et NOMME l'etat ; les treize etats libelles la font sortir en zero, avec le compte des etats reellement confrontes. Un libelle qui nommerait l'autre apporteur fait sortir la garde lexicale en code non nul.
 
 **Tests.** `tests/unit/espace/libelles-d-etats.spec.ts`
+
+### DM-28 — Code NAF au dépôt : stocké depuis le client recherche-entreprises, complété après un repli manuel, jamais deviné
+
+`0.5 j` · zone `domaine` · sensible : attribution · depend de `DM-07`, `INT-T09` · decisions `HYP-W15-SECTEUR`
+
+Couvre : `REQ-DM-046`
+
+**Acceptation.** (1) Sur chacune des fixtures ENREGISTRÉES d'INT-T09, le code NAF stocké sur l'attribution égale `activite_principale` de la fixture — jamais `activite_principale_naf25`, que REQ-INT-021 n'énumère pas. (2) Dépôt en repli manuel → code NAF nul ; le formulaire de dépôt ne porte aucun champ de code NAF. (3) La reprise, déclenchée à la fermeture du disjoncteur, complète les codes nuls par un nouvel appel au tiers (fixture) et n'écrase jamais un code déjà présent. (4) Un tiers qui ne rend pas le code laisse le champ nul (« non renseigné »), sans valeur par défaut. (5) TÉMOIN : une reprise qui écrirait une valeur par défaut fait rougir le test (4).
+
+**Tests.** `tests/unit/domaine/code-naf-au-depot.spec.ts`
 
 ## Phase 2 — Argent
 
@@ -2257,6 +2367,8 @@ Couvre : `REQ-UX-009`
 
 Couvre : `REQ-ARG-035`, `REQ-EXT-029`, `REQ-UX-006`, `REQ-UX-030`, `REQ-UX-032`
 
+**Acceptation.** PAS D'ÉCHÉANCE SUR « MES FILLEULS » (décision du 2026-09-25, par délégation de Will, HYP-W15-FILLEULS-VUE, W15) : l'échéance des 12 mois de la fenêtre de parrainage N'EST PAS AFFICHÉE sur `/filleuls` — ni par filleul, ni agrégée, ni conditionnée à un seuil : toute agrégation de dates (minimum, prochaine échéance) vaut exactement la date d'un filleul, et un seuil fuit le jour où il est franchi. À la place, un TEXTE FIXE, identique pour tous : « Vos gains de parrainage sur un filleul courent 12 mois à compter de la signature de son contrat », sans aucune date calculée. Tests : aucune clé ni valeur de date d'échéance dans le DTO de `/filleuls`, pour 0, 1, 2 et N filleuls ; deux fixtures qui ne diffèrent QUE par la date de signature d'un filleul donnent un DTO identique à l'octet près ; le texte fixe est le même pour tous les parrains. Les autres points de la tâche (documents, relevés, autofactures, attestation, export RGPD, parrainage agrégé par mois, lien partageable, REQ-UX-006, REQ-UX-030, REQ-UX-032, REQ-EXT-029, REQ-ARG-035) restent à écrire en acceptance avant son attribution.
+
 ### UX-P2-05 — Paramètres console : grille lecture seule
 
 `0.75 j` · zone `espace` · sensible : espace · depend de `DM-03-P`, `DM-11`, `SEC-17`
@@ -2378,6 +2490,46 @@ Couvre : `REQ-GOV-021`, `REQ-DM-014`
 **Acceptation.** LA TRENTE-CINQUIEME ATTRIBUTION ROMPUE, ET ELLE EST LATENTE — elle n'existera qu'au jour ou UX-P2-05 quittera son chemin gabarit. FAIT MESURE le 2026-09-16 : `partners:grille:check` nomme UX-P2-05 dans sa prose (« etendue par UX-P2-05 »), et le `script` de cette gate vit chez axionia depuis le lot preparatoire. UX-P2-05 est une tache PARTNERS, de phase 2, sans acceptance et dont les chemins sont encore un gabarit. La mention est donc CROSS-DEPOT : aucun chemin ne pourra JAMAIS la refermer, puisque la refermer reviendrait a donner a une tache de Partners un fichier d'axionia. Elle est aujourd'hui masquee par l'exemption « chemins pas encore resolus », et ce masque tombera avec le gabarit. POURQUOI ON NE LA RETIRE PAS AUJOURD'HUI, ET C'EST LE POINT : retirer « etendue par UX-P2-05 » supprimerait le SEUL lien ecrit entre cette tache et la grille de commission. UX-P2-05 n'a aucune acceptance ou le reloger — on effacerait l'information au lieu de la deplacer, et le lecteur suivant ne saurait plus pourquoi cet ecran touche la grille. L'ORDRE COMPTE, et il est l'objet de cette tache. A livrer, DANS CET ORDRE : (1) l'acceptance d'UX-P2-05 est ecrite et dit ce que cet ecran fait de la grille versionnee — ou elle la lit, ce qu'elle en affiche, ce qu'elle n'a pas le droit de recalculer (REQ-DM-014 : le contrat reference une version, l'ecran l'affiche sans la modifier) ; (2) SEULEMENT ENSUITE, la mention est retiree du champ de prose de `partners:grille:check`. (3) La regle qui gouverne les deux gestes est ecrite une fois pour toutes : une entree de `docs/gates.json` ne nomme que des taches du depot de son `script`. TEMOIN A DEUX FACES : une entree de gate qui nomme une tache de l'autre depot fait sortir la garde en code non nul et NOMME la gate, la tache et les deux depots ; le registre du depot, une fois UX-P2-05 relogee, la fait sortir en zero, avec le compte des mentions reellement confrontees. ⚠️ CE QUE CETTE TACHE NE FAIT PAS : elle ne touche a aucune des neuf autres mentions encore masquees par un gabarit (SEC-19, UX-P2-06, SEC-26, QA-T21, JUR-T13, QA-T28, QA-T19 deux fois, QA-T27). Celles-la sont du MEME depot que le script de leur gate : elles se referment par un chemin de plus le jour de leur lot, et ce sont des exemptions legitimes, pas des dettes.
 
 **Tests.** `tests/unit/gouvernance/mention-de-gate-resolue.spec.ts`
+
+### DM-26 — Changement de parrain en console : admin seul, motif, journal chaîné, effet à date, refus du cycle et de l'auto-parrainage
+
+`1.5 j` · zone `domaine` · `schema` · sensible : argent, attribution, rgpd · depend de `DM-16`, `SEC-18`, `SEC-17`, `DM-01`, `JUR-T01` · decisions `HYP-W15-PARRAIN-A-DATE`, `HYP-W15-NOTIF-PARRAIN`
+
+Couvre : `REQ-DM-044`
+
+**Acceptation.** TÂCHE SENSIBLE — argent et attribution ; ELLE ÉCRIT LE SCHÉMA (historique daté du rattachement de parrainage). (1) L'action de console n'est permise qu'au rôle `admin` (matrice de SEC-17) ; tout autre rôle reçoit le refus, et le test joue `qualifieur` et `comptable`. (2) Le motif est choisi dans une LISTE FERMÉE — erreur de rattachement, fraude ou auto-parrainage, départ ou résiliation du parrain (clause de correction du rattachement, contrat art. 4.6 nouvel alinéa, HYP-W15-PARRAIN-A-DATE tranchée le 2026-09-25) — et porte une précision écrite ; motif hors liste, précision vide ou blanche → refus, aucun événement écrit. Aucun accord écrit du parrain d'origine n'est demandé. (3) L'action écrit UN événement au journal `Evenement` chaîné (ancien parrain, nouveau parrain, date d'effet, motif, auteur) ; la vérification de chaîne passe après l'action. (4) EFFET POUR LES LIGNES FUTURES SEULEMENT, les lignes déjà nées restant acquises au parrain d'origine : sur une fixture, une ligne `commission` du filleul acquise la veille de l'effet engendre sa ligne `parrainage` au profit du parrain d'origine, une ligne acquise le lendemain au profit du nouveau parrain ; une `reprise` d'une ligne d'avant l'effet suit le parrain d'origine ; la fenêtre `contratFilleulSigneAt + 12 mois` est inchangée. (5) REFUS NOMMÉS, journal inchangé : nouveau parrain = le filleul ; nouveau parrain = un descendant du filleul (cycle) ; nouveau parrain partageant un hash de SIRET, d'e-mail, de téléphone ou d'IBAN avec le filleul (règle de SEC-18, réutilisée, jamais recopiée). (6) Les e-mails suivent `HYP-W15-NOTIF-PARRAIN` : trois destinataires, ni motif ni montant ni identité d'un autre apporteur (assertion sur les gabarits). (7) Aucune ligne n'est jamais créée au second niveau (REQ-DM-023 reste vert). La clause elle-même est rédigée dans le gabarit par JUR-T01 : cette tâche n'arme pas en production avant la signature du premier contrat qui la porte.
+
+**Tests.** `tests/unit/domaine/changement-de-parrain.spec.ts` · `tests/integration/changement-de-parrain.spec.ts`
+
+### DM-27 — Lignée et équipe : fonctions pures de lecture, deux niveaux, jamais appelées par le calcul des commissions
+
+`0.5 j` · zone `domaine` · sensible : attribution · depend de `DM-16`, `DM-26` · decisions `HYP-W15-EQUIPE`
+
+Couvre : `REQ-DM-045`
+
+**Acceptation.** (1) `lignee(a, t)` rend exactement les filleuls de `a` (niveau 1) et les filleuls de ceux-ci (niveau 2) à la date `t` : fixture à trois niveaux, le troisième est absent. (2) La date compte : une fixture avec un changement de parrain (DM-26) rend deux lignées différentes avant et après l'effet. (3) `equipe(a, t)` = `a` et sa lignée ; deux équipes qui se chevauchent sont rendues séparément, jamais fusionnées. (4) Fonctions pures, horloge injectée, aucune I/O (règle de `src/domain/**`). (5) GARDE STATIQUE, TÉMOIN À DEUX FACES : un fichier du calcul des commissions qui importe `lignee` ou `equipe` fait rougir la garde et la nomme ; le dépôt réel la fait sortir verte avec le compte des fichiers confrontés.
+
+**Tests.** `tests/unit/domaine/lignee.spec.ts` · `tests/unit/domaine/lignee-hors-du-calcul-des-commissions.spec.ts`
+
+### UX-P2-08 — Console : lignée d'un apporteur en liste et en arbre SVG, deux niveaux
+
+`1 j` · zone `console` · sensible : attribution, rgpd · depend de `DM-27`, `SEC-17`, `UX-P1-12` · decisions `HYP-W15-EQUIPE`
+
+Couvre : `REQ-UX-040`
+
+**Acceptation.** (1) Depuis la fiche apporteur (UX-P1-12), la console affiche la lignée en LISTE et en ARBRE SVG rendu côté serveur, sans bibliothèque ; chaque nœud porte l'état du contrat et la date de rattachement. (2) Fixture à trois niveaux → exactement les niveaux 1 et 2 ; la liste et l'arbre portent le même ensemble d'apporteurs (comparaison des identifiants). (3) L'écran est dans la matrice des rôles ; retiré de la matrice → refus. `lecteur` → aucune clé d'identité dans le DTO. (4) Aucun montant du second niveau n'est présenté comme revenant à l'apporteur consulté. (5) axe-core : 0 violation serious ou critical ; poids de la route mesuré avant/après et collé dans la PR.
+
+**Tests.** `tests/unit/console/lignee.spec.ts`
+
+### UX-P2-09 — Mes filleuls : liste des filleuls directs, prénom, initiale et état du contrat, sans montant par filleul
+
+`0.5 j` · zone `espace` · sensible : espace, rgpd · depend de `DM-16`, `SEC-05`, `UX-P2-04`, `JUR-T01` · decisions `HYP-W15-FILLEULS-VUE`, `HYP-W15-ART-4-6`
+
+Couvre : `REQ-UX-041`, `REQ-UX-006`
+
+**Acceptation.** TÂCHE SENSIBLE — espace et données personnelles. (1) Toute lecture passe par `forApporteur` (SEC-05). (2) RÈGLE FERMÉE DES ÉTATS (REQ-UX-041, HYP-W15-ART-4-6 tranchée le 2026-09-25), dérivée de l'ENSEMBLE des versions du contrat du filleul, jamais d'une version « courante », lues dans l'ordre chronologique de leur création, seules comptant celles POSTÉRIEURES À LA DERNIÈRE `resilie` (toutes s'il n'y en a aucune) : dernière version `resilie` → le filleul SORT de la liste ; une `signe` parmi les versions comptées → `signe` ; versions comptées toutes `envoye` → `en_signature` ; aucune version → absent ; toute autre combinaison → ÉCHEC FERMÉ, filleul absent et écart journalisé côté console, jamais un libellé par défaut. Tests, une fixture par branche : AVENANT ENVOYÉ SUR UN CONTRAT SIGNÉ → « signé », élément identique à l'octet près avant et après l'envoi de l'avenant ; avenant jamais signé → « signé » indéfiniment, horloge avancée ; premier contrat envoyé jamais signé → « en signature » ; résiliation → absent ; combinaison incohérente → absent et écart journalisé ; RELATION REPRISE : {signe, resilie, envoye} → « en signature », {signe, resilie, signe} → « signé », {signe, resilie} → absent, avenant après la reprise → « signé ». Le statut d'apporteur du filleul (`suspendu`, `resilie`, gel, anomalie, sincérité) n'est JAMAIS lu : un filleul au contrat `signe` dont l'apporteur passe `suspendu` reste affiché « signé », élément byte-identique avant et après ; aucun DTO de l'espace ne porte de champ de statut d'apporteur ni les valeurs `resilie`, `remplace`, `suspendu` (témoin qui les porte → rouge). (3) CLÉS EXACTES de chaque élément du DTO de liste : `prenom`, `initialeNom`, `etatContrat` — rien d'autre ; un témoin portant une clé d'activité (`nbDepots`, `actif`, `derniereVente`, `lastSeenAt`) ou un montant fait rougir le test. (4) Fixture à deux niveaux → les filleuls des filleuls sont absents. (5) Deux filleuls au même état de contrat, l'un actif et l'autre non → éléments byte-identiques hors prénom et initiale. (6) Le montant de parrainage reste agrégé par mois, jamais ventilé par filleul (REQ-UX-006). (7) Le filleul d'un autre apporteur n'apparaît jamais ; son identifiant sur une route paramétrée rend le 404 byte-identique. L'alinéa amendé est rédigé dans le gabarit par JUR-T01 : cette tâche n'arme pas en production avant la signature du premier contrat qui le porte.
+
+**Tests.** `tests/unit/espace/mes-filleuls-liste.spec.ts`
 
 ## Phase 3 — Pilotage et conformite
 
@@ -2516,4 +2668,74 @@ Couvre : `REQ-EXT-013`
 Couvre : `REQ-JUR-033`
 
 **Acceptation.** envoi à intervalle fixe, **contenu identique pour tous**, la fonction d'envoi ne reçoit aucun filtre d'activité (signature sans paramètre de date de dernier dépôt) ; désinscription ; « dormant » reste un indicateur de console.
+
+### DM-29 — Agrégats de pilotage : candidatures, statuts, part d'actifs, CA et commissions par apporteur, lignée et équipe, secteur, séries mensuelles
+
+`1.5 j` · zone `domaine` · sensible : argent · depend de `CPL-T15`, `UX-P3-06`, `DM-21`, `DM-27`, `DM-28`, `DM-15` · decisions `HYP-W15-EQUIPE`, `HYP-W15-SECTEUR`
+
+Couvre : `REQ-UX-042`, `REQ-DM-047`
+
+**Acceptation.** FONCTIONS PURES, horloge injectée, montants en centimes HT. (1) Jeu de fixture à totaux connus : candidatures par canal et par période, apporteurs par statut, part d'actifs parmi les apporteurs sous contrat, CA et commissions par apporteur, par lignée et par équipe — chaque valeur égale la valeur attendue écrite dans le test. (2) `actif`/`dormant` viennent de la fonction de REQ-CPL-027 (UX-P3-06), importée, jamais recalculée : une garde rougit sur une seconde dérivation. (3) Équipes chevauchantes : leurs totaux ne sont jamais additionnés entre eux. (4) Séries mensuelles : un mois sans donnée vaut 0, jamais absent. (5) Secteur : la table rattache chacune des 88 divisions NAF rév. 2 à une section ; `70.10Z` → M/70 ; code nul → « non renseigné » ; la somme des secteurs égale le total non filtré.
+
+**Tests.** `tests/unit/domaine/statistiques.spec.ts` · `tests/unit/domaine/nomenclature-naf.spec.ts`
+
+### UX-P3-07 — Console Statistiques : tableaux filtrables (période, canal, statut, secteur), tris réservés à la console
+
+`1 j` · zone `console` · sensible : argent, rgpd · depend de `DM-29`, `UX-P3-04`, `SEC-17`
+
+Couvre : `REQ-UX-042`, `REQ-UX-044`, `REQ-DM-047`
+
+**Acceptation.** (1) L'écran rend les indicateurs de DM-29 sur une période choisie, filtrables par canal, statut et secteur (section et division). (2) Les montants par apporteur ne sortent que pour les rôles que la matrice autorise ; `lecteur` → aucune clé de montant par apporteur dans le DTO. (3) TRIS RÉSERVÉS À LA CONSOLE : garde statique, témoin à deux faces — un fichier sous `src/app/(espace)/**` qui importe un module de statistiques fait rougir la garde et le nomme ; le dépôt réel sort vert avec le compte des fichiers confrontés. Le terme que REQ-GOV-017 bannit n'apparaît pas (`pnpm gov:lexique`). (4) axe-core 0 violation serious ou critical ; poids de la route mesuré avant/après, ≤ 75 KB gz.
+
+**Tests.** `tests/unit/console/statistiques.spec.ts` · `tests/unit/console/tris-reserves-a-la-console.spec.ts`
+
+### UX-P3-08 — Graphiques de console en SVG maison : courbes et barres, alternative tabulaire, aucune bibliothèque de tracé
+
+`1 j` · zone `console` · depend de `UX-P3-07`, `GOV-019`
+
+Couvre : `REQ-UX-043`
+
+**Acceptation.** (1) Un composant maison rend, côté serveur, une courbe et un histogramme en `<svg>` ; sur une série de fixture, les coordonnées des points égalent les données (test de forme). (2) Chaque graphique porte une alternative tabulaire accessible ; axe-core 0 violation serious ou critical. (3) GARDE, TÉMOIN À DEUX FACES : une dépendance de tracé ajoutée à `package.json` (liste en configuration de la garde) la fait rougir et la nomme ; le `package.json` réel la fait sortir verte. (4) La route Statistiques a son entrée dans `perf/budgets.json` et tient ≤ 75 KB gz de First Load JS, chiffres avant/après collés dans la PR (REQ-GOV-028).
+
+**Tests.** `tests/unit/console/graphiques-svg.spec.ts`
+
+### UX-P3-09 — Export CSV de chaque tableau de console : sans coordonnées directes, journalisé, neutralisation des formules
+
+`0.5 j` · zone `console` · sensible : rgpd · depend de `UX-P3-07`, `SEC-17`, `DM-01` · decisions `HYP-W15-EXPORT`
+
+Couvre : `REQ-SEC-040`
+
+**Acceptation.** TÂCHE SENSIBLE — données personnelles. (1) Un seul exporteur sert tous les tableaux de console ; une garde dérive du disque la liste des tableaux et rougit sur un tableau sans export. (2) En-têtes exacts sur une fixture ; AUCUNE colonne d'e-mail, de téléphone, d'IBAN ni d'adresse — témoin : un tableau qui en déclare une fait rougir l'exporteur. (3) Cellule de texte `=1+1` neutralisée ; montant négatif laissé intact. (4) `lecteur` → refus. (5) Chaque export écrit un événement au journal chaîné (auteur, tableau, filtres, nombre de lignes), et le test relit le nombre de lignes.
+
+**Tests.** `tests/unit/console/export-csv.spec.ts`
+
+### UX-P3-10 — Notes internes par apporteur en console : jamais servies à l'espace, journalisées, incluses dans l'export art. 15
+
+`1 j` · zone `console` · `schema` · sensible : rgpd · depend de `UX-P1-12`, `SEC-17`, `SEC-05`, `DM-20` · decisions `HYP-W15-NOTES`
+
+Couvre : `REQ-SEC-039`
+
+**Acceptation.** TÂCHE SENSIBLE — données personnelles ; ELLE ÉCRIT LE SCHÉMA (modèle de note). (1) Création, modification et suppression réservées aux rôles de la matrice ; rôle absent → refus. (2) Chaque geste écrit un événement au journal chaîné. (3) GARDE STATIQUE, TÉMOIN À DEUX FACES : AUCUN écran ni DTO d'écran de l'espace ne porte une note — le modèle de note est inaccessible par `forApporteur`, et la garde rougit sur tout lecteur des notes autre que la console et la fonction d'export art. 15 du module RGPD (DM-20), seule exemptée et nommée dans la garde ; un DTO de l'espace portant une clé de note la fait rougir. (4) Aucune note n'entre dans un e-mail, une alerte Telegram, un score ni un déclencheur. (5) L'export d'accès art. 15 d'une fixture (DM-20), quel que soit le canal de la demande — y compris le téléchargement depuis l'espace (REQ-UX-030, REQ-JUR-025), qui ne sert que le fichier produit —, CONTIENT les notes, chacune horodatée et son auteur désigné par son rôle de console, jamais par son nom (HYP-W15-NOTES).
+
+**Tests.** `tests/unit/console/notes-internes.spec.ts`
+
+### UX-P3-11 — Alertes de pilotage : baisse d'activité d'un apporteur ou d'une lignée, candidatures en attente, par les canaux existants
+
+`1 j` · zone `console` · sensible : rgpd · depend de `INT-T14`, `UX-P1-10`, `UX-P3-06`, `DM-29` · decisions `HYP-W15-SEUILS-ALERTE`
+
+Couvre : `REQ-UX-045`
+
+**Acceptation.** (1) Les alertes passent par le bot de console d'INT-T14 (dédoublonnage, plafond horaire, aucune coordonnée) et par la table des notifications de console d'UX-P1-10 — aucun autre canal n'est créé. (2) Seuils lus en configuration ; fixture sous le seuil → une alerte, au-dessus → aucune. (3) L'activité se mesure sur les dépôts confirmés ; une règle lisant `lastSeenAt` ou `dernierUsageAt` fait rougir la garde de REQ-JUR-039. (4) ESPION SUR LES EXPÉDITEURS : aucun envoi n'a un apporteur pour destinataire, et aucun état d'apporteur ne change ; témoin : un envoi à l'apporteur fait rougir le test. (5) Le message Telegram ne porte qu'une catégorie, un compte et un identifiant technique.
+
+**Tests.** `tests/unit/pilotage/alertes-de-pilotage.spec.ts`
+
+### UX-P3-12 — Bibliothèque de documents : console (ajout, remplacement versionné, retrait, ciblage, publication datée) et affichage ciblé dans Ressources
+
+`1.5 j` · zone `console` · `schema` · sensible : espace, rgpd · depend de `UX-P3-02`, `UX-P2-04`, `SEC-05`, `SEC-17`, `DM-11`, `JUR-T30` · decisions `HYP-W15-BIBLIOTHEQUE`
+
+Couvre : `REQ-UX-046`
+
+**Acceptation.** TÂCHE SENSIBLE — espace et données personnelles ; ELLE ÉCRIT LE SCHÉMA (document et versions). (1) Console : ajout, remplacement versionné (l'ancienne version conservée et plus jamais servie), retrait par dépublication, ciblage tous / un palier / un apporteur, date de publication ; chaque geste journalisé. (2) Espace, par `forApporteur` : un document ciblé sur un palier est visible de ce palier ; pour un autre apporteur, sa route rend le 404 byte-identique à un identifiant inexistant (test en boîte noire). (3) Publication datée de demain → invisible aujourd'hui (horloge injectée). (4) Fichier non PDF, jugé sur ses octets d'en-tête → refus ; stockage privé, URL signée courte. (5) Inventaire des ressources téléchargeables : aucun fichier de logo ni de charte (REQ-JUR-041) ; le terme que REQ-JUR-041 bannit n'apparaît nulle part (`pnpm gov:lexique`).
+
+**Tests.** `tests/unit/console/bibliotheque.spec.ts` · `tests/integration/bibliotheque-cloisonnement.spec.ts`
 

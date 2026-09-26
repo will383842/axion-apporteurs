@@ -22,5 +22,18 @@
     "`lighthouserc.json` (racine) est RENDU par la meme commande, depuis le meme texte d'exigence.",
     "Ne jamais l'editer a la main : la garde compare le disque au rendu et rougit sur l'ecart."
   ],
-  "sizeLimit": []
+  "sizeLimit": [
+    {
+      "name": "/connexion",
+      "path": ".next/static/chunks/app/(espace)/connexion/page*.js",
+      "limit": "75 KB",
+      "gzip": true
+    },
+    {
+      "name": "/connexion/[jeton]",
+      "path": ".next/static/chunks/app/(espace)/connexion/\\[jeton\\]/**/*.js",
+      "limit": "75 KB",
+      "gzip": true
+    }
+  ]
 }

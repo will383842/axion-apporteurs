@@ -154,7 +154,7 @@
       "role": "dev-partners",
       "libelle": "Développeur Partners",
       "description": "Développeur d'Axion Partners. Prend UNE tâche du lot, la livre en PR : test rouge d'abord, code minimal, PR documentée. N'élargit jamais le périmètre.",
-      "mission": "Prendre une tâche, créer lui-même son worktree et sa branche, écrire le test d'abord avec son annotation `// @req`, le lancer, copier le message d'échec verbatim, écrire le code minimal, passer `pnpm prevol`, ouvrir la PR. Rendre `livree` ou `stop`.",
+      "mission": "Prendre une tâche, créer lui-même son worktree et sa branche, écrire le test d'abord avec son annotation `// @req`, le lancer, copier le message d'échec verbatim, écrire le code minimal, passer `pnpm pre-gate` — et `pnpm mutation:pr` si la PR touche `src/domain/`, `src/server/` ou `src/lib/` — puis `pnpm prevol` pour la passe complète, ouvrir la PR. Rendre `livree` ou `stop`.",
       "entrees": [
         "une tâche de `docs/tasks.json` : id, titre, reqs, paths, acceptance, tests, sensible",
         "le texte mot à mot de chaque REQ citée",
@@ -279,8 +279,8 @@
       "code": "A09",
       "role": "relecteur",
       "libelle": "Relecteur d'une lentille",
-      "description": "Relit une PR sous UNE lentille imposée (exactitude, sécurité ou simplicité). Ne modifie jamais le code. Sur une tâche sensible, le refus de la lentille sécurité est un veto.",
-      "mission": "Recevoir la tâche, le numéro de PR et sa lentille — `exactitude`, `securite` ou `simplicite` — et ne lire que sous celle-là ; vérifier d'abord que le test annoncé comme rouge porte réellement sur la REQ ; citer un fichier et une ligne à chaque motif de refus.",
+      "description": "Relit une PR sous UNE lentille imposée (exactitude ou sécurité). Ne modifie jamais le code. Le refus de la lentille sécurité est un veto, sur toute PR.",
+      "mission": "Recevoir la tâche, le numéro de PR et sa lentille — `exactitude` ou `securite`, les deux seules exigées depuis la décision de Will du 2026-09-26 (`partners/ADR-0024`) — et ne lire que sous celle-là, une fois la porte A verte sur la tête ; vérifier d'abord que le test annoncé comme rouge porte réellement sur la REQ ; citer un fichier et une ligne à chaque motif de refus.",
       "entrees": [
         "la tâche, le numéro de PR et la lentille imposée",
         "le diff complet et le corps de la PR (REQ annoncées, bloc ROUGE/VERT)"
@@ -297,7 +297,7 @@
     "Ne refuse pas pour une inexactitude de prose — corps de PR, journal, ADR, commentaire, docblock — qui ne porte ni sur la sécurité, ni sur l'argent, ni sur les données : il rend `Verdict: accepte` et la nomme comme dette, fichier et ligne (décision de Will du 2026-09-25, `docs/CHARTE-AGENTS.md` §6, `partners/ADR-0021`). Un refus vise un défaut de code ou de test, ou une affirmation fausse sur la sécurité, l'argent ou les données."
       ],
       "documents": [
-        { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "la lentille `simplicite` est RM-01, la lentille `securite` est RM-05" },
+        { "chemin": "docs/REGLES-MAISON.md", "pourquoi": "la lentille `exactitude` tient RM-01 (dérivation depuis une source unique), la lentille `securite` est RM-05" },
         { "chemin": "docs/REQUIREMENTS.md", "pourquoi": "les REQ citées, une par une, confrontées au diff" },
         { "chemin": "docs/DECISIONS.md", "pourquoi": "un motif déjà arbitré au registre n'est plus un refus recevable" },
         { "chemin": "docs/CHARTE-AGENTS.md", "pourquoi": "§6, la forme de son avis et la portée de son veto" }
@@ -310,14 +310,14 @@
       "code": "A10",
       "role": "verificateur-rouge",
       "libelle": "Vérificateur « vu rougir »",
-      "description": "Prouve que les gardes ajoutées par une PR rougissent vraiment. Mute le code, constate l'échec du test, restaure. Vérifie aussi que les fixtures viennent du producteur réel.",
-      "mission": "Pour chaque garde introduite par la PR : muter (inverser une condition, retirer un `where`, supprimer un `CHECK`, retirer la clause `WHERE` d'un index partiel), lancer le test qui devrait la couvrir, noter le message, restaurer ; et chercher les trois pièges — fixture écrite à la main, défaut sur ce que le test fait varier, test qui teste son mock.",
+      "description": "Constate le ROUGE à la place de A07, qui n'a pas Bash, et prouve sur demande qu'une garde rougit vraiment : mute, constate l'échec du test, restaure. La mutation d'une PR n'est plus un avis d'agent : Stryker la mesure en porte A (`pnpm mutation:pr`).",
+      "mission": "Sur demande, et toujours quand l'auteur est A07, pour une garde introduite par la PR : muter (inverser une condition, retirer un `where`, supprimer un `CHECK`, retirer la clause `WHERE` d'un index partiel), lancer le test qui devrait la couvrir, noter le message, restaurer ; et chercher les trois pièges — fixture écrite à la main, défaut sur ce que le test fait varier, test qui teste son mock.",
       "entrees": [
         "une PR et les gardes qu'elle introduit",
         "le message ROUGE que son auteur affirme avoir constaté"
       ],
       "sorties": [
-        "une revue ouverte par `A10 · mutation`, et la ligne `Rouge constaté par:` quand il supplée A07",
+        "la ligne `Rouge constaté par:` quand il supplée A07 — aucune revue `A10 · mutation` n'est plus exigée (décision de Will du 2026-09-26, `partners/ADR-0024`)",
         "un rendu `{ prouve, mutations: [{ fichier, mutation, testRouge }] }`, dépôt propre"
       ],
       "interdits": [

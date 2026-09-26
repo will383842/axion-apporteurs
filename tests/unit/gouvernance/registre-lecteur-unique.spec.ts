@@ -31,7 +31,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import {
   lireRegistre,
   lireRegistreHerite,
@@ -217,6 +217,91 @@ describe('REQ-GOV-021 — un seul lecteur, importé par la garde ET par le compo
     const explication =
       '// la forme d’avant : /\\b(HYP|DEC)-[A-Z0-9-]+\\b/ sur le texte brut.\nconst x = 1;';
     expect(sansCommentaires(explication)).not.toMatch(LECTURE_AD_HOC);
+  });
+});
+
+describe('REQ-GOV-021 — src/domain ne relit pas le registre pour son compte (A09 · simplicite, PR #92)', () => {
+  /**
+   * Le quatrième lecteur est né sous `src/domain/contrat/decisions.ts`, hors du balayage : il
+   * découpait les sections par leur titre `## n.` et lisait la date de la §1 par
+   * `/tranchée (\d{4}-…)/` exact — `✅ *Tranchée le 2026-09-30*` y rendait `null`, quand le
+   * lecteur unique rend la date. La lecture PURE vit désormais sous `src/domain/registre/`, que
+   * `scripts/lot/registre-decisions.ts` réexporte : c'est le SEUL fichier de `src/domain` exempté.
+   */
+  const LECTEUR = 'src/domain/registre/registre-decisions.ts';
+  /** Le découpage des sections du registre par leur titre numéroté : `/^## (\d+)\./`, `/^##\s+(\d)\./`. */
+  const DECOUPAGE_DES_SECTIONS = /\/\^## ?\(\\d|\/\^##\\s[+*]\(\\d/;
+
+  const sourcesDuDomaine = (): string[] =>
+    (readdirSync('src/domain', { recursive: true }) as string[])
+      .map((f) => `src/domain/${f.replace(/\\/g, '/')}`)
+      .filter((f) => f.endsWith('.ts') && f !== LECTEUR);
+
+  it('REQ-GOV-021 · aucun module de src/domain, hors le lecteur, ne découpe le registre', () => {
+    const fautifs = sourcesDuDomaine().filter((f) => {
+      const code = sansCommentaires(readFileSync(f, 'utf8'));
+      return DECOUPAGE_DES_SECTIONS.test(code) || LECTURE_AD_HOC.test(code);
+    });
+    expect(fautifs).toEqual([]);
+  });
+
+  it('REQ-GOV-021 · TÉMOIN : le code de l’ancien doublon rougit, et le lecteur existe', () => {
+    const doublon = [
+      'for (const brute of md.split(/\\r?\\n/)) {',
+      '  const titre = /^## (\\d+)\\./.exec(brute);',
+    ].join('\n');
+    expect(DECOUPAGE_DES_SECTIONS.test(sansCommentaires(doublon))).toBe(true);
+    expect(DECOUPAGE_DES_SECTIONS.test('const ms = /^##\\s+(\\d)\\./.exec(l);')).toBe(true);
+    expect(sourcesDuDomaine().length).toBeGreaterThan(0);
+    expect(readFileSync(LECTEUR, 'utf8')).toContain('export function lireRegistre');
+  });
+
+  it('REQ-GOV-021 · `scripts/lot/registre-decisions.ts` réexporte le lecteur de src/domain', () => {
+    expect(readFileSync('scripts/lot/registre-decisions.ts', 'utf8')).toContain(
+      "from '../../src/domain/registre/registre-decisions'"
+    );
+    const r = lireRegistre('## 1. S\n| **W16** ✅ *Tranchée le 2026-09-30* | x |');
+    expect(r.decision('W16')?.trancheeLe).toBe('2026-09-30');
+  });
+
+  // Le lecteur vit sous src/domain, dont le seuil de couverture est 100 % : chaque issue a son effet.
+  const FEINT = [
+    '## 0. Alias',
+    '| DEC-SEUL |',
+    '| DEC-LIE | HYP-Z | ici |',
+    '## 1. Sans défaut',
+    '| EXT-9 | x | y |',
+    '| **W16** ✅ *tranchée 2026-09-30* | x | **avenant** |',
+    '## 2. Hypothèses',
+    '| HYP-Z | o | d | **avenant** | 2 | premier DocuSeal | — |',
+    '| HYP-C | o | d | paramètre |',
+  ].join('\n');
+
+  it('REQ-GOV-015 · `motif` : bloquante, sans hypothèse, ou codable (null)', () => {
+    const r = lireRegistre(FEINT);
+    expect(r.motif('EXT-9')).toBe('decision_bloquante_non_tranchee');
+    expect(r.motif('HYP-JAMAIS')).toBe('decision_sans_hypothese');
+    expect(r.motif('W16')).toBeNull();
+    expect(r.motif('HYP-Z')).toBeNull();
+    expect(r.motif('DEC-LIE')).toBeNull();
+  });
+
+  it('REQ-GOV-015 · une ligne de la §0 sans cible ne crée aucun alias', () => {
+    const r = lireRegistre(FEINT);
+    expect([...r.alias]).toEqual([['DEC-LIE', 'HYP-Z']]);
+    expect(r.canonique('DEC-SEUL')).toBe('DEC-SEUL');
+    expect(r.estDeclaree('DEC-SEUL')).toBe(false);
+  });
+
+  it('REQ-GOV-015 · la réversibilité se lit en §2 à sept colonnes seulement, décor retiré', () => {
+    const r = lireRegistre(FEINT);
+    expect(r.decision('HYP-Z')?.reversibilite).toBe('avenant');
+    expect(r.decision('HYP-C')?.reversibilite).toBeNull();
+    expect(r.decision('W16')?.reversibilite).toBeNull();
+    expect(r.decision('HYP-Z')?.brute).toBe(
+      '| HYP-Z | o | d | **avenant** | 2 | premier DocuSeal | — |'
+    );
+    expect(r.decision('HYP-Z')?.ligne).toBe(8);
   });
 
   it('REQ-GOV-021 · toute `hyp` du backlog est déclarée au registre — dans les deux sens', () => {
