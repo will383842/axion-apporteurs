@@ -8,7 +8,7 @@
 | Question | Réponse |
 | --- | --- |
 | Où est `main` ? | `9d6fbad` — 2026-09-27T01:02:56+02:00 |
-| Qu’est-ce qui est en vol ? | 1. #82 (un conflit avec `main`) · 2. #145 (un conflit avec `main`) |
+| Qu’est-ce qui est en vol ? | 1. #82 (un contrôle requis rouge ou une revue manquante) · 2. #158 (un contrôle requis rouge ou une revue manquante) · 3. #145 (un conflit avec `main`) |
 | Qui tient quoi ? | QA-T07 (A05) |
 | Où en est la phase ? | phase 0 — 43/116 tâches, reste 56.60 j |
 | Le prochain pas | SEC-04 — Sessions révocables en base, `sessionVersion`, step-up (chemin critique) |
@@ -64,8 +64,9 @@ Reste sur ce chemin : **13.75 j**.
 
 | # | PR | Branche | Ce qui la bloque |
 | --- | --- | --- | --- |
-| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un conflit avec `main` — à résoudre avant tout |
-| 2 | #145 — feat(SEC-06): lot L0-05 — réception des webhooks axionia, événements reçus et battements ; émetteur e-mail et rebonds | `t/lot-l0-05` | un conflit avec `main` — à résoudre avant tout |
+| 1 | #82 — feat(QA-T07): gate securite semgrep, regles maison vues rougir, image epinglee | `t/qa-t07` | un contrôle requis rouge ou une revue manquante |
+| 2 | #158 — chore(GOV-053): lot L0-06 — PLAN-STATE à la ligne, rubriques dues, lecteur unique, forme des chemins | `t/lot-l0-06` | un contrôle requis rouge ou une revue manquante |
+| 3 | #145 — feat(SEC-06): lot L0-05 — réception des webhooks axionia, événements reçus et battements ; émetteur e-mail et rebonds | `t/lot-l0-05` | un conflit avec `main` — à résoudre avant tout |
 
 Ordre : la plus prête d’abord. **Une seule fusion à la fois** (RM-09, `partners/ADR-0006` §1) ; le créneau se réserve AVANT `gh pr update-branch`, et la suivante attend l’atterrissage.
 
@@ -161,9 +162,11 @@ garde l'absorbée avec son renvoi, la seule forme que `gov:trace` et ce témoin 
 du relais à 0 %, sans couverture) et que la porte MCP, touchée d'une ligne, n'était jugée que par un
 test d'intégration. Les tests du relais entrent dans la passe, et des témoins en processus tuent les
 survivants : la porte MCP, les adaptateurs Prisma sur un client qui enregistre, les corps de refus,
-les bornes et les réarmements. `pnpm mutation:pr` rend 94,07 % en local : 1110 mutants tués sur 1180
-jugés. Les 70 restants : 51 dans `src/lib/env.ts`, du code antérieur à la PR dont les tests vivent
-hors de ses `paths` ; 19 équivalents nommés dans le corps de la PR — encodage `utf8` passé à une API
+les bornes et les réarmements. `pnpm mutation:pr` rend 93,99 % en local : 1110 mutants tués sur 1181
+jugés. Les 71 restants : 51 dans `src/lib/env.ts`, du code antérieur à la PR dont les tests vivent
+hors de ses `paths` ; la constante `CORPS_MAX_OCTETS`, mutée au chargement du module que la passe
+incrémentale ne recharge pas (le témoin de la borne rougit sur ce mutant posé à la main) ; 19
+équivalents nommés dans le corps de la PR — encodage `utf8` passé à une API
 qui l'a par défaut, repli `?? ''` ou `?? '0'` qui donne le même verdict, garde redondante avec la
 suivante. La lentille `securite` a relevé que la seconde tentative de `Producer-Signature` vérifiait
 le HMAC sur le corps percent-décodé puis lisait le corps reçu : le verdict porte désormais le texte
