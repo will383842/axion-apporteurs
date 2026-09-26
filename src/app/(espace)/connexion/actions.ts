@@ -4,58 +4,25 @@
  *
  * Toutes deux répondent par une redirection (303 sans script) vers un ÉTAT de la liste fermée du
  * noyau : même code, même texte que le compte existe ou non. Le travail qui dépend du compte part
- * dans `after()` (Next 16) : il s'exécute une fois la réponse envoyée.
+ * dans `after()` (Next 16) : il s'exécute une fois la réponse envoyée, jamais avant. L'issue d'une
+ * consommation s'affiche sur `/connexion?issue=` : l'URL de destination ne porte plus le jeton.
  *
  * NON FAIT ICI, ET NOMMÉ : le cookie de session `__Host-` (REQ-SEC-003) appartient à SEC-04 — la
  * session est enregistrée en base, son jeton n'est pas encore remis au navigateur ; l'envoi réel du
- * courriel appartient à INT-T10 — d'ici là, hors production le lien part au puits du notifieur
- * (`NOTIFY_SINK`), et en production l'envoi échoue en le disant.
+ * courriel appartient à INT-T10 (voir `dependancesDuProcessus`).
  */
-import { PrismaClient } from '@prisma/client';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { after } from 'next/server';
-import { horlogeSysteme } from '../../../lib/horloge';
-import { creerJournal } from '../../../lib/logger';
-import { creerNotifieur } from '../../../lib/notify';
 import { consommerLien, demanderLien } from '../../../server/auth/lien-magique';
 import {
+  dependancesDuProcessus,
   empreinteReseauDeLaRequete,
-  envoiParLeNotifieur,
   portsDeConsommation,
   portsDeDemande,
-  type DependancesDuLien,
 } from '../../../server/auth/lien-magique-production';
 import { clesPii } from '../../../server/securite/pii';
 import { evaluerPotDeMiel } from '../../../server/securite/pot-de-miel';
-
-let client: PrismaClient | null = null;
-
-function dependances(): DependancesDuLien {
-  client ??= new PrismaClient();
-  const journal = creerJournal();
-  return {
-    env: process.env,
-    prisma: client,
-    horloge: horlogeSysteme,
-    planifier: (travail) => after(travail),
-    envoi: envoiParLeNotifieur(
-      creerNotifieur({
-        env: process.env,
-        journal,
-        transports: [
-          {
-            nom: 'courriel',
-            envoyer: async () => {
-              throw new Error('envoi_courriel_non_cable : le transport réel appartient à INT-T10');
-            },
-          },
-        ],
-      })
-    ),
-    journal,
-  };
-}
 
 const texte = (valeur: FormDataEntryValue | null): string | null =>
   typeof valeur === 'string' ? valeur : null;
@@ -67,14 +34,14 @@ export async function demanderUnLienDeConnexion(formulaire: FormData): Promise<v
       piege: evaluerPotDeMiel(texte(formulaire.get('site'))).piege,
       entetes: await headers(),
     },
-    portsDeDemande(dependances())
+    portsDeDemande(dependancesDuProcessus({ apres: after, env: process.env }))
   );
   redirect(`/connexion?etat=${etat}`);
 }
 
 export async function consommerUnLienDeConnexion(jeton: string): Promise<void> {
-  const d = dependances();
+  const d = dependancesDuProcessus({ apres: after, env: process.env });
   const ipHash = empreinteReseauDeLaRequete(await headers(), clesPii(d.env));
   const { etat } = await consommerLien({ jeton, ipHash }, portsDeConsommation(d));
-  redirect(`/connexion/${encodeURIComponent(jeton)}?etat=${etat}`);
+  redirect(`/connexion?issue=${etat}`);
 }

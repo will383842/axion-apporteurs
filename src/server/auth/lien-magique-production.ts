@@ -18,12 +18,13 @@
  * motif ; le puits du notifieur n'écrit que le sujet et la taille du corps.
  */
 
-import type { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { domaines } from '../../config/entite';
 import type { Horloge } from '../../domain/temps/horloge';
+import { horlogeSysteme } from '../../lib/horloge';
 import { formaterRefus, kidDe, lireEnvironnement } from '../../lib/env';
-import type { Journal } from '../../lib/logger';
-import type { Notifieur } from '../../lib/notify';
+import { creerJournal, type Journal } from '../../lib/logger';
+import { creerNotifieur, type Notifieur } from '../../lib/notify';
 import { SAUTS_DE_CONFIANCE, adresseDuClient } from '../securite/adresse-du-client';
 import { clesPii, empreinteAdresseReseau, empreinteRecherche, type ClesPii } from '../securite/pii';
 import { signalerPotDeMiel } from '../securite/pot-de-miel';
@@ -130,5 +131,44 @@ export function portsDeConsommation(
 export function envoiParLeNotifieur(notifieur: Notifieur): EnvoiDuLien {
   return {
     envoyer: ({ sujet, corps }) => notifieur.notifier({ sujet, corps }),
+  };
+}
+
+let client: PrismaClient | null = null;
+
+/**
+ * Les dépendances du processus, pour les actions serveur : le client de base (un par processus),
+ * l'horloge du système, le journal, le notifieur, et `planifier` branché sur `apres` — `after()`
+ * de Next, que l'action passe. Le travail planifié n'est JAMAIS exécuté ici : il est confié.
+ *
+ * L'envoi : hors production, le puits du notifieur (`NOTIFY_SINK`) ; en production, le seul
+ * transport déclaré refuse d'envoyer en le disant — le transport réel appartient à INT-T10.
+ */
+export function dependancesDuProcessus(outils: {
+  apres: (travail: () => Promise<void>) => void;
+  env: DependancesDuLien['env'];
+}): DependancesDuLien {
+  client ??= new PrismaClient();
+  const journal = creerJournal();
+  return {
+    env: outils.env,
+    prisma: client,
+    horloge: horlogeSysteme,
+    planifier: (travail) => outils.apres(travail),
+    envoi: envoiParLeNotifieur(
+      creerNotifieur({
+        env: outils.env,
+        journal,
+        transports: [
+          {
+            nom: 'courriel',
+            envoyer: async () => {
+              throw new Error('envoi_courriel_non_cable : le transport réel appartient à INT-T10');
+            },
+          },
+        ],
+      })
+    ),
+    journal,
   };
 }

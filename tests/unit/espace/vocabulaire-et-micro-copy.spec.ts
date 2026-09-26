@@ -735,9 +735,7 @@ describe('REQ-UX-002 — snapshot des libellés de l’espace, sans date, sans n
       espace/vocabulaire.ts › CONNEXION › arrivee › titre : Ouvrir votre espace
       espace/vocabulaire.ts › CONNEXION › arrivee › phrase : Confirmez pour utiliser votre lien de connexion sur cet appareil.
       espace/vocabulaire.ts › CONNEXION › arrivee › action : Utiliser mon lien
-      espace/vocabulaire.ts › CONNEXION › arrivee › reponses › ouverte : Votre lien de connexion a bien été utilisé.
-      espace/vocabulaire.ts › CONNEXION › arrivee › reponses › lien_invalide : Ce lien n’est plus valable : il a déjà servi ou il a expiré. Un nouveau lien peut vous être envoyé.
-      espace/vocabulaire.ts › CONNEXION › arrivee › nouveauLien : M’envoyer un nouveau lien
+      espace/vocabulaire.ts › CONNEXION › arrivee › ouverte : Votre lien de connexion a bien été utilisé.
       espace/vocabulaire.ts › CONNEXION › courriel › sujet : Votre lien de connexion à votre espace
       espace/vocabulaire.ts › CONNEXION › courriel › corps : Voici votre lien de connexion. Il ne sert qu’une fois et expire rapidement. Si vous n’avez rien demandé, ignorez ce message."
     `);

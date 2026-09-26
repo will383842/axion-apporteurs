@@ -75,8 +75,9 @@ export const NAVIGATION_AVANT_SIGNATURE = ['Ma conformité', 'Mon contrat'] as c
  * La connexion à l'espace par lien de connexion (SEC-03). Une réponse à la demande ne dit JAMAIS si
  * l'adresse est connue : le même texte part que le compte existe ou non (REQ-SEC-001) ; la limite
  * de demandes s'explique sans rien révéler du compte (REQ-SEC-002). Le titre, la phrase et le
- * bouton de la demande sont ceux de l'état de `/connexion` (`etats-vides.ts`) : ils ne sont pas
- * réécrits ici.
+ * bouton de la demande sont ceux de l'état de `/connexion`, et l'écran d'un lien qui ne vaut plus
+ * est celui de `/connexion/<jeton>` (`etats-vides.ts`) : ils ne sont pas réécrits ici. Seuls
+ * vivent ici les textes qu'aucun état vide ne porte : la confirmation et le lien utilisé.
  */
 export const CONNEXION = {
   champCourriel: 'Adresse électronique',
@@ -94,12 +95,7 @@ export const CONNEXION = {
     titre: 'Ouvrir votre espace',
     phrase: 'Confirmez pour utiliser votre lien de connexion sur cet appareil.',
     action: 'Utiliser mon lien',
-    reponses: {
-      ouverte: 'Votre lien de connexion a bien été utilisé.',
-      lien_invalide:
-        'Ce lien n’est plus valable : il a déjà servi ou il a expiré. Un nouveau lien peut vous être envoyé.',
-    },
-    nouveauLien: 'M’envoyer un nouveau lien',
+    ouverte: 'Votre lien de connexion a bien été utilisé.',
   },
   courriel: {
     sujet: 'Votre lien de connexion à votre espace',
